@@ -48,7 +48,7 @@ export const createAdminOrgColumns = ({
 		accessorKey: "name",
 		cell: ({ row }: { row: Row<AdminOrg> }) => {
 			const value = row.getValue("name") as string;
-			return <div className="font-medium text-t1">{value}</div>;
+			return <div className="font-medium text-foreground">{value}</div>;
 		},
 	},
 	{
@@ -71,7 +71,7 @@ export const createAdminOrgColumns = ({
 		cell: ({ row }: { row: Row<AdminOrg> }) => {
 			const value = row.getValue("createdAt") as string;
 			return (
-				<div className="text-xs text-t4 whitespace-nowrap">
+				<div className="text-xs text-subtle whitespace-nowrap">
 					{format(new Date(value), "dd MMM HH:mm")}
 				</div>
 			);
@@ -84,7 +84,7 @@ export const createAdminOrgColumns = ({
 		cell: ({ row }: { row: Row<AdminOrg> }) => {
 			const users = row.getValue("users") as User[];
 			return (
-				<div className="text-xs text-t3 truncate">
+				<div className="text-xs text-tertiary-foreground truncate">
 					{users.map((user) => user.email).join(", ")}
 				</div>
 			);

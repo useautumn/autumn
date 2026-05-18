@@ -46,7 +46,7 @@ export const APIKeyToolbar = ({ apiKey }: { apiKey: ApiKey }) => {
 				<DropdownMenuTrigger asChild>
 					<ToolbarButton />
 				</DropdownMenuTrigger>
-				<DropdownMenuContent className="text-t2" align="end">
+				<DropdownMenuContent className="text-muted-foreground" align="end">
 					<APIKeyToolbarItems setDeleteOpen={setDeleteOpen} />
 				</DropdownMenuContent>
 			</DropdownMenu>

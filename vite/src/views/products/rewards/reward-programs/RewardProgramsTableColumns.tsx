@@ -23,7 +23,7 @@ export const createRewardProgramsTableColumns = (): ColumnDef<
 							className="w-fit bg-transparent justify-end px-0! border-none shadow-none hover:text-primary [&_svg]:opacity-0 group-hover:[&_svg]:opacity-100 max-w-full"
 						/>
 					) : (
-						<span className="px-1 text-t3">NULL</span>
+						<span className="px-1 text-tertiary-foreground">NULL</span>
 					)}
 				</div>
 			);
@@ -36,7 +36,7 @@ export const createRewardProgramsTableColumns = (): ColumnDef<
 		cell: ({ row }: { row: Row<RewardProgram> }) => {
 			const program = row.original;
 			return (
-				<div className="text-t2">
+				<div className="text-muted-foreground">
 					{program.when === RewardTriggerEvent.CustomerCreation
 						? "Customer Redemption"
 						: keyToTitle(program.when)}
@@ -51,7 +51,7 @@ export const createRewardProgramsTableColumns = (): ColumnDef<
 		cell: ({ row }: { row: Row<RewardProgram> }) => {
 			const program = row.original;
 			return (
-				<div className="text-t2">
+				<div className="text-muted-foreground">
 					{program.unlimited_redemptions
 						? "Unlimited"
 						: program.max_redemptions}
@@ -66,7 +66,7 @@ export const createRewardProgramsTableColumns = (): ColumnDef<
 		cell: ({ row }: { row: Row<RewardProgram> }) => {
 			const program = row.original;
 			return (
-				<div className="text-t2">
+				<div className="text-muted-foreground">
 					{program.when === RewardTriggerEvent.CustomerCreation
 						? "Sign Up"
 						: program.when === RewardTriggerEvent.Checkout

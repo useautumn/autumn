@@ -49,11 +49,11 @@ const IconBadge = React.forwardRef<HTMLSpanElement, IconBadgeProps>(
 		const getIconColor = () => {
 			switch (variant) {
 				case "muted":
-					return "text-t4";
+					return "text-subtle";
 				case "default":
 					return "text-zinc-50";
 				default:
-					return "text-t4"; // Default fallback
+					return "text-subtle"; // Default fallback
 			}
 		};
 

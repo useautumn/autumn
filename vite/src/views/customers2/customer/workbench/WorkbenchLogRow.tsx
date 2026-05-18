@@ -40,10 +40,10 @@ export const WorkbenchLogRow = ({
 		>
 			{log.method ?? "—"}
 		</span>
-		<span className="flex-1 font-mono text-t1 text-[11px] truncate">
+		<span className="flex-1 font-mono text-foreground text-[11px] truncate">
 			{log.path ?? "(unknown)"}
 		</span>
-		<span className="shrink-0 font-mono text-t4 text-[10px] tabular-nums">
+		<span className="shrink-0 font-mono text-subtle text-[10px] tabular-nums">
 			{formatLogTime(log.time)}
 		</span>
 	</button>

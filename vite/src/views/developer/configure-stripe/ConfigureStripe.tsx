@@ -276,9 +276,9 @@ export const ConfigureStripe = () => {
 
 				<div>
 					<FormLabel className="mb-1">
-						<span className="text-t2">Success URL</span>
+						<span className="text-muted-foreground">Success URL</span>
 					</FormLabel>
-					<p className="text-t3 text-sm mb-2">
+					<p className="text-tertiary-foreground text-sm mb-2">
 						This will be the default URL that users are redirected to after a
 						successful checkout session. It can be overriden through the API.
 					</p>
@@ -293,9 +293,9 @@ export const ConfigureStripe = () => {
 
 				<div>
 					<FormLabel className="mb-1">
-						<span className="text-t2">Default Currency</span>
+						<span className="text-muted-foreground">Default Currency</span>
 					</FormLabel>
-					<p className="text-t3 text-sm mb-2">
+					<p className="text-tertiary-foreground text-sm mb-2">
 						This currency that your prices will be created in. This setting is
 						shared between your sandbox and production environment.
 					</p>

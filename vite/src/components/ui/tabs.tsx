@@ -35,7 +35,7 @@ const TabsTrigger = React.forwardRef<
 			"inline-flex items-center justify-center whitespace-nowrap rounded-md px-2 py-1 text-sm font-medium ring-offset-background transition-all cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-950 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[active]:text-primary hover:bg-interactive-secondary-hover dark:focus-visible:ring-zinc-300 dark:data-[active]:bg-zinc-950 dark:data-[active]:text-zinc-50",
 			className,
 			variant === "onboarding" &&
-				"data-[active]:bg-stone-200 data-[active]:text-t2 data-[active]:font-medium",
+				"data-[active]:bg-stone-200 data-[active]:text-muted-foreground data-[active]:font-medium",
 		)}
 		{...props}
 	/>

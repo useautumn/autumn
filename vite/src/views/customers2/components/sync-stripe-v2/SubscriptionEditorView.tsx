@@ -430,19 +430,19 @@ export function SubscriptionEditorView({
 				<button
 					type="button"
 					onClick={onBack}
-					className="flex items-center gap-1 text-xs text-t3 hover:text-t1"
+					className="flex items-center gap-1 text-xs text-tertiary-foreground hover:text-foreground"
 				>
 					<ArrowLeftIcon size={14} /> Back to subscriptions
 				</button>
 
 				<div className="space-y-1">
-					<div className="text-xs text-t3">
+					<div className="text-xs text-tertiary-foreground">
 						{proposal.stripe_subscription_id
 							? "Stripe subscription"
 							: "Stripe schedule"}
 					</div>
 					<div className="flex items-center gap-1.5">
-						<code className="text-xs font-mono text-t1">
+						<code className="text-xs font-mono text-foreground">
 							{proposal.stripe_subscription_id ?? proposal.stripe_schedule_id}
 						</code>
 						{(proposal.stripe_subscription_id ||
@@ -450,7 +450,7 @@ export function SubscriptionEditorView({
 							<button
 								type="button"
 								onClick={handleOpenStripe}
-								className="text-t4 hover:text-t2 transition-colors"
+								className="text-subtle hover:text-muted-foreground transition-colors"
 								aria-label="Open in Stripe"
 							>
 								<ArrowSquareOutIcon size={13} />
@@ -472,10 +472,10 @@ export function SubscriptionEditorView({
 						>
 							{isMultiPhase && (
 								<div className="flex items-center justify-between">
-									<div className="text-xs font-medium text-t1">
+									<div className="text-xs font-medium text-foreground">
 										Phase {phaseIndex + 1}
 									</div>
-									<div className="text-xs text-t3">
+									<div className="text-xs text-tertiary-foreground">
 										{formatPhaseStart(section.phase.starts_at)}
 									</div>
 								</div>
@@ -483,15 +483,15 @@ export function SubscriptionEditorView({
 
 							{section.displayItems.length > 0 && (
 								<div className="space-y-1">
-									<div className="text-xs text-t3">Subscription items</div>
+									<div className="text-xs text-tertiary-foreground">Subscription items</div>
 									<div className="space-y-1">
 										{section.displayItems.map((item) => (
 											<div
 												key={item.key}
 												className="flex items-center justify-between text-xs"
 											>
-												<span className="text-t1">{item.name}</span>
-												<span className="text-t3">{item.priceLabel}</span>
+												<span className="text-foreground">{item.name}</span>
+												<span className="text-tertiary-foreground">{item.priceLabel}</span>
 											</div>
 										))}
 									</div>
@@ -499,7 +499,7 @@ export function SubscriptionEditorView({
 							)}
 
 							<div className="space-y-2">
-								<div className="text-xs text-t3">Autumn plans</div>
+								<div className="text-xs text-tertiary-foreground">Autumn plans</div>
 								{phasePlans.map((plan, planIndex) => (
 									<SyncPlanRow
 										key={plan._key}

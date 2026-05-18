@@ -75,7 +75,7 @@ export function SearchableSelect<T>({
 	};
 
 	const defaultRenderValue = (option: T | undefined) => {
-		if (!option) return <span className="text-t3">{placeholder}</span>;
+		if (!option) return <span className="text-tertiary-foreground">{placeholder}</span>;
 		return <span>{getOptionLabel(option)}</span>;
 	};
 
@@ -155,7 +155,7 @@ export function SearchableSelect<T>({
 								{searchable && <CommandInput placeholder={searchPlaceholder} />}
 								{header}
 								<CommandList>
-									<CommandEmpty className="text-t3">{emptyText}</CommandEmpty>
+									<CommandEmpty className="text-tertiary-foreground">{emptyText}</CommandEmpty>
 									<CommandGroup>
 										{options.map((option) => {
 											const optionValue = getOptionValue(option);
@@ -171,7 +171,7 @@ export function SearchableSelect<T>({
 													className={cn(
 														"min-w-0",
 														isDisabled &&
-															"text-t4 pointer-events-none opacity-50",
+															"text-subtle pointer-events-none opacity-50",
 													)}
 												>
 													{renderOption

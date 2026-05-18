@@ -240,7 +240,7 @@ export function EdgeConfigDialog({
 						<div className="flex flex-col gap-2">
 							<label
 								htmlFor="edge-config-org-id"
-								className="text-sm font-medium text-t1"
+								className="text-sm font-medium text-foreground"
 							>
 								Organization ID
 							</label>
@@ -262,28 +262,28 @@ export function EdgeConfigDialog({
 						</div>
 					</div>
 				) : loading ? (
-					<div className="py-8 text-sm text-t3 text-center">Loading...</div>
+					<div className="py-8 text-sm text-tertiary-foreground text-center">Loading...</div>
 				) : (
 					<div className="grid grid-cols-2 gap-6">
 						{/* Left: structured editor */}
 						<div className="flex flex-col gap-4">
-							<div className="text-xs font-medium text-t3 uppercase tracking-wide">
+							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">
 								Structured Editor
 							</div>
 
 							{/* Block all toggle */}
 							<div className="flex items-center justify-between rounded-lg border border-border p-3">
 								<div className="flex flex-col gap-1">
-									<div className="text-sm font-medium text-t1">
+									<div className="text-sm font-medium text-foreground">
 										Block all `/v1` requests
 									</div>
-									<div className="text-xs text-t3">
+									<div className="text-xs text-tertiary-foreground">
 										Use this as the org-wide kill switch.
 									</div>
 								</div>
 								<label
 									htmlFor="edge-config-block-all"
-									className="flex items-center gap-2 text-sm text-t2"
+									className="flex items-center gap-2 text-sm text-muted-foreground"
 								>
 									<input
 										id="edge-config-block-all"
@@ -299,10 +299,10 @@ export function EdgeConfigDialog({
 							<div className="rounded-lg border border-border p-3">
 								<div className="mb-3 flex items-center justify-between">
 									<div>
-										<div className="text-sm font-medium text-t1">
+										<div className="text-sm font-medium text-foreground">
 											Selective endpoint rules
 										</div>
-										<div className="text-xs text-t3">
+										<div className="text-xs text-tertiary-foreground">
 											Method + pattern rules use exact route matching.
 										</div>
 									</div>
@@ -313,7 +313,7 @@ export function EdgeConfigDialog({
 								</div>
 								<div className="flex flex-col gap-2">
 									{rules.length === 0 ? (
-										<div className="text-xs text-t3">
+										<div className="text-xs text-tertiary-foreground">
 											No selective rules configured.
 										</div>
 									) : (
@@ -359,7 +359,7 @@ export function EdgeConfigDialog({
 							</div>
 
 							{/* Config health */}
-							<div className="rounded-lg border border-border p-3 text-xs text-t3">
+							<div className="rounded-lg border border-border p-3 text-xs text-tertiary-foreground">
 								<div className="mb-2 flex items-center gap-2">
 									<Badge
 										variant="muted"
@@ -391,7 +391,7 @@ export function EdgeConfigDialog({
 
 						{/* Right: Monaco */}
 						<div className="flex flex-col gap-2">
-							<div className="text-xs font-medium text-t3 uppercase tracking-wide">
+							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">
 								Raw JSON
 							</div>
 							<div className="rounded-md border border-border overflow-hidden">

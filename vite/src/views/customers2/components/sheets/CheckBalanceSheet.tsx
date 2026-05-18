@@ -82,7 +82,7 @@ export function CheckBalanceSheet() {
 				<div className="flex-1 overflow-hidden flex flex-col px-4 pb-4">
 					{isLoading && (
 						<div className="flex items-center justify-center py-12">
-							<Spinner className="size-6 animate-spin text-t3" />
+							<Spinner className="size-6 animate-spin text-tertiary-foreground" />
 						</div>
 					)}
 

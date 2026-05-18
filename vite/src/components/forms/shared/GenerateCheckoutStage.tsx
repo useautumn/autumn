@@ -92,7 +92,7 @@ function ActivationPreviewStage({
 				<button
 					type="button"
 					onClick={onBack}
-					className="flex items-center gap-1 text-t3 text-sm cursor-pointer mt-2 hover:text-foreground transition-colors"
+					className="flex items-center gap-1 text-tertiary-foreground text-sm cursor-pointer mt-2 hover:text-foreground transition-colors"
 				>
 					<ArrowLeft size={14} />
 					Back

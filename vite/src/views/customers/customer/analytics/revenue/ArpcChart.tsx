@@ -48,17 +48,17 @@ function CustomTooltip({
 
 	return (
 		<div className="rounded-md border bg-background px-3 py-2 text-xs shadow-sm">
-			<p className="mb-1 font-medium text-t2">{label}</p>
+			<p className="mb-1 font-medium text-muted-foreground">{label}</p>
 			{payload.map((entry) => (
 				<div key={entry.dataKey} className="flex items-center gap-2">
 					<span
 						className="inline-block h-2 w-2 rounded-full"
 						style={{ backgroundColor: entry.color }}
 					/>
-					<span className="text-t3">
+					<span className="text-tertiary-foreground">
 						{entry.dataKey === "arpc" ? "ARPC" : "Customers"}:
 					</span>
-					<span className="font-medium text-t1">
+					<span className="font-medium text-foreground">
 						{entry.dataKey === "arpc"
 							? formatCurrency({ value: entry.value, currency })
 							: entry.value.toLocaleString()}
@@ -90,11 +90,11 @@ export function ArpcChart({
 	return (
 		<div>
 			<div className="flex flex-wrap items-center gap-2 min-h-10 pb-4">
-				<div className="text-t3 text-md flex gap-2 items-center">
+				<div className="text-tertiary-foreground text-md flex gap-2 items-center">
 					<TrendUpIcon size={16} weight="fill" className="text-subtle" />
 					Average Revenue per Customer
 				</div>
-				<div className="flex items-center gap-3 text-xs text-t3 ml-auto">
+				<div className="flex items-center gap-3 text-xs text-tertiary-foreground ml-auto">
 					<span className="flex items-center gap-1.5">
 						<span
 							className="inline-block h-2 w-2 rounded-full"
@@ -116,7 +116,7 @@ export function ArpcChart({
 
 				{isEmpty && (
 					<div className="h-[260px] flex items-center justify-center">
-						<p className="text-sm text-t3">No data available</p>
+						<p className="text-sm text-tertiary-foreground">No data available</p>
 					</div>
 				)}
 
@@ -133,7 +133,7 @@ export function ArpcChart({
 								tickLine={false}
 								axisLine={false}
 								tick={{ fontSize: 11 }}
-								className="fill-t3"
+								className="fill-tertiary-foreground"
 								tickMargin={4}
 								interval="equidistantPreserveStart"
 							/>
@@ -144,7 +144,7 @@ export function ArpcChart({
 								axisLine={false}
 								width={60}
 								tick={{ fontSize: 11 }}
-								className="fill-t3"
+								className="fill-tertiary-foreground"
 								tickFormatter={(v: number) =>
 									formatCurrency({ value: v, currency })
 								}
@@ -156,7 +156,7 @@ export function ArpcChart({
 								axisLine={false}
 								width={40}
 								tick={{ fontSize: 11 }}
-								className="fill-t3"
+								className="fill-tertiary-foreground"
 								tickFormatter={(v: number) =>
 									v >= 1000 ? `${(v / 1000).toFixed(1)}k` : String(v)
 								}

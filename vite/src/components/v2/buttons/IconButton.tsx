@@ -60,7 +60,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
 				case "destructive":
 					return "text-error-light";
 				default:
-					return "text-t3"; // Default fallback
+					return "text-tertiary-foreground"; // Default fallback
 			}
 		};
 

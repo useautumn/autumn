@@ -59,7 +59,7 @@ export const ProcessorSubMenu = () => {
 			<DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
 				Processors
 				{hasSelections && (
-					<span className="text-xs text-t3 bg-muted px-1 py-0 rounded-md">
+					<span className="text-xs text-tertiary-foreground bg-muted px-1 py-0 rounded-md">
 						{selectedProcessors.length}
 					</span>
 				)}

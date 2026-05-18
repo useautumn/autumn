@@ -36,7 +36,7 @@ const processorColumn = {
 				<Tooltip delayDuration={0}>
 					<TooltipTrigger asChild>
 						<span
-							className="flex w-full min-w-0 items-center gap-1.5 text-t2"
+							className="flex w-full min-w-0 items-center gap-1.5 text-muted-foreground"
 							title={PROCESSOR_LABELS[processor]}
 						>
 							<ProcessorIcon processor={processor} />
@@ -92,7 +92,7 @@ export const getCustomerInvoicesColumns = ({
 				<div>
 					{invoice.total.toFixed(2)} {invoice.currency.toUpperCase()}
 					{discountAmount > 0 && (
-						<span className="text-t3"> (-{discountAmount.toFixed(2)})</span>
+						<span className="text-tertiary-foreground"> (-{discountAmount.toFixed(2)})</span>
 					)}
 				</div>
 			);

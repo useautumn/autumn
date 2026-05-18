@@ -47,7 +47,7 @@ function TimePicker({
 	return (
 		<div className="border-t px-3 py-3">
 			<div className="flex items-center rounded-lg h-input input-base input-shadow-default input-state-focus-within px-2 bg-popover">
-				<Clock className="size-3.5 shrink-0 text-t3 mr-1" />
+				<Clock className="size-3.5 shrink-0 text-tertiary-foreground mr-1" />
 				<TimePickerInput
 					picker={use24Hour ? "hours" : "12hours"}
 					period={use24Hour ? undefined : period}
@@ -56,7 +56,7 @@ function TimePicker({
 					ref={hourRef}
 					onRightFocus={() => minuteRef.current?.focus()}
 				/>
-				<span className="text-xs text-t3 select-none">:</span>
+				<span className="text-xs text-tertiary-foreground select-none">:</span>
 				<TimePickerInput
 					picker="minutes"
 					date={date}
@@ -70,7 +70,7 @@ function TimePicker({
 						<button
 							type="button"
 							onClick={togglePeriod}
-							className="rounded-sm px-1.5 py-0.5 text-xs font-medium text-t2 transition-none hover:bg-accent select-none"
+							className="rounded-sm px-1.5 py-0.5 text-xs font-medium text-muted-foreground transition-none hover:bg-accent select-none"
 						>
 							{period}
 						</button>
@@ -170,7 +170,7 @@ export const DateInputUnix = ({
 						className,
 					)}
 				>
-					<CalendarIcon className="size-3.5 shrink-0 text-t3 ml-1" />
+					<CalendarIcon className="size-3.5 shrink-0 text-tertiary-foreground ml-1" />
 					{unixDate ? (
 						format(new Date(unixDate), displayFormat)
 					) : (

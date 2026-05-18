@@ -60,16 +60,16 @@ export function PreviewTotalsBlock({
 	return (
 		<div className="space-y-2">
 			<div className="flex items-center justify-between">
-				<span className="text-sm font-medium text-t2">Subtotal</span>
-				<span className="text-sm font-medium tabular-nums text-t2">
+				<span className="text-sm font-medium text-muted-foreground">Subtotal</span>
+				<span className="text-sm font-medium tabular-nums text-muted-foreground">
 					{fmt(previewData.subtotal, currency)}
 				</span>
 			</div>
 
 			{showTaxRow && (
 				<div className="flex items-center justify-between">
-					<span className="text-sm text-t2">Tax</span>
-					<span className="text-sm tabular-nums text-t2">
+					<span className="text-sm text-muted-foreground">Tax</span>
+					<span className="text-sm tabular-nums text-muted-foreground">
 						{fmt(taxAmount, currency)}
 					</span>
 				</div>
@@ -80,7 +80,7 @@ export function PreviewTotalsBlock({
 					{creditRollover > 0 ? (
 						<Tooltip>
 							<TooltipTrigger asChild>
-								<span className="text-sm text-t2 underline decoration-dotted decoration-t3/40 underline-offset-4 cursor-help">
+								<span className="text-sm text-muted-foreground underline decoration-dotted decoration-tertiary-foreground/40 underline-offset-4 cursor-help">
 									Invoice Credits
 								</span>
 							</TooltipTrigger>
@@ -91,9 +91,9 @@ export function PreviewTotalsBlock({
 							</TooltipContent>
 						</Tooltip>
 					) : (
-						<span className="text-sm text-t2">Invoice Credits</span>
+						<span className="text-sm text-muted-foreground">Invoice Credits</span>
 					)}
-					<span className="text-sm tabular-nums text-t2">
+					<span className="text-sm tabular-nums text-muted-foreground">
 						-{fmt(creditApplied, currency)}
 					</span>
 				</div>

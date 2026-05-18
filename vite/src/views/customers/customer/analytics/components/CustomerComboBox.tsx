@@ -102,7 +102,7 @@ export function CustomerComboBox() {
 					<CommandList>
 						{isSearching ? (
 							<div className="flex items-center justify-center py-4">
-								<Loader2 className="animate-spin text-t3" size={14} />
+								<Loader2 className="animate-spin text-tertiary-foreground" size={14} />
 								<span className="ml-2 text-sm text-muted-foreground">
 									Searching...
 								</span>
@@ -155,7 +155,7 @@ export function CustomerComboBox() {
 													className="w-full"
 												>
 													{c.name || c.email}{" "}
-													<span className="text-xs text-t3">
+													<span className="text-xs text-tertiary-foreground">
 														{c.id && `(${c.id.slice(0, 10)}...)`}
 													</span>
 												</CommandItem>

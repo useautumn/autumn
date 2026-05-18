@@ -214,7 +214,7 @@ export function BalanceCreateSheet() {
 													setRollover(null);
 												}
 											}}
-											className="py-1 w-26 text-t4 gap-2"
+											className="py-1 w-26 text-subtle gap-2"
 										>
 											Unlimited
 										</IconCheckbox>
@@ -258,7 +258,7 @@ export function BalanceCreateSheet() {
 													setRollover(null);
 												}
 											}}
-											className="py-1 w-26 text-t4 gap-2 justify-start"
+											className="py-1 w-26 text-subtle gap-2 justify-start"
 										>
 											One-off
 										</IconCheckbox>
