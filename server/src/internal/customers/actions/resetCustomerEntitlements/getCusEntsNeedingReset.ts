@@ -5,6 +5,7 @@ import {
 	fullCustomerToCustomerEntitlements,
 } from "@autumn/shared";
 import { getResettableCustomerEntitlements } from "../resetCustomerEntitlementsV2/getResettableCustomerEntitlements.js";
+import { getWebhookOwnedIntervals } from "./getWebhookOwnedIntervals.js";
 
 /** Collects cusEnts from a FullCustomer that need resetting (next_reset_at < now). */
 export const getCusEntsNeedingReset = ({
@@ -19,5 +20,11 @@ export const getCusEntsNeedingReset = ({
 		inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
 	});
 
-	return getResettableCustomerEntitlements({ customerEntitlements, now });
+	const webhookOwnedIntervals = getWebhookOwnedIntervals({ fullCus });
+
+	return getResettableCustomerEntitlements({
+		customerEntitlements,
+		now,
+		webhookOwnedIntervals,
+	});
 };

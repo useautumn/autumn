@@ -5,6 +5,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { type BatchResetCusEntsPayload, workflows } from "@/queue/workflows.js";
+import { getWebhookOwnedIntervals } from "../resetCustomerEntitlements/getWebhookOwnedIntervals.js";
 import { getResettableCustomerEntitlements } from "./getResettableCustomerEntitlements.js";
 
 export const triggerBatchResetSubjectEntitlements = async ({
@@ -22,9 +23,13 @@ export const triggerBatchResetSubjectEntitlements = async ({
 			fullSubject,
 			inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
 		});
+		const webhookOwnedIntervals = getWebhookOwnedIntervals({
+			customerProducts: fullSubject.customer_products,
+		});
 		const cusEntsNeedingReset = getResettableCustomerEntitlements({
 			customerEntitlements,
 			now,
+			webhookOwnedIntervals,
 		});
 
 		if (cusEntsNeedingReset.length === 0) continue;

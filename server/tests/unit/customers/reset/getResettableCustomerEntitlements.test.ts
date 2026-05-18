@@ -1,10 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import {
 	CusProductStatus,
+	EntInterval,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomerPrice,
 	type FullProduct,
 } from "@autumn/shared";
+import { getDate } from "date-fns";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { products } from "@tests/utils/fixtures/db/products";
@@ -76,6 +78,42 @@ const buildCusEnt = ({
 		customerPrices,
 		status: productStatus,
 		product,
+	});
+
+	return {
+		...cusEnt,
+		customer_product: cusProduct,
+	};
+};
+
+const buildCusEntWithInterval = ({
+	interval,
+	intervalCount = 1,
+	nextResetAt,
+}: {
+	interval: EntInterval;
+	intervalCount?: number;
+	nextResetAt: number | null;
+}): FullCusEntWithFullCusProduct => {
+	const cusEnt = customerEntitlements.create({
+		featureId: FEATURE_ID,
+		featureName: "Messages",
+		allowance: 100,
+		balance: 50,
+		nextResetAt,
+		customerProductId: CUS_PROD_ID,
+		interval,
+		intervalCount,
+	});
+
+	const baseProduct = products.createFull({ id: PRODUCT_ID });
+	const cusProduct = customerProducts.create({
+		id: CUS_PROD_ID,
+		productId: PRODUCT_ID,
+		customerEntitlements: [cusEnt],
+		customerPrices: [],
+		status: CusProductStatus.Active,
+		product: baseProduct,
 	});
 
 	return {
@@ -235,5 +273,148 @@ describe(chalk.yellowBright("getResettableCustomerEntitlements"), () => {
 
 		expect(result).toHaveLength(1);
 		expect(result[0].customer_product).toBeNull();
+	});
+
+	test("skips free cusEnt when webhookOwnedIntervals contains matching interval and same day", () => {
+		const cusEnt = buildCusEntWithInterval({
+			interval: EntInterval.Month,
+			intervalCount: 1,
+			nextResetAt: PAST,
+		});
+
+		const result = getResettableCustomerEntitlements({
+			customerEntitlements: [cusEnt],
+			now: NOW,
+			webhookOwnedIntervals: [
+				{ interval: "month", intervalCount: 1, resetDayOfMonth: getDate(PAST) },
+			],
+		});
+
+		expect(result).toHaveLength(0);
+	});
+
+	test("returns free cusEnt when interval matches but day-of-month differs", () => {
+		const cusEnt = buildCusEntWithInterval({
+			interval: EntInterval.Month,
+			intervalCount: 1,
+			nextResetAt: PAST,
+		});
+
+		const differentDay = getDate(PAST) === 15 ? 20 : 15;
+		const result = getResettableCustomerEntitlements({
+			customerEntitlements: [cusEnt],
+			now: NOW,
+			webhookOwnedIntervals: [
+				{ interval: "month", intervalCount: 1, resetDayOfMonth: differentDay },
+			],
+		});
+
+		expect(result).toHaveLength(1);
+	});
+
+	test("skips free cusEnt when resetDayOfMonth is null (first cycle, no reference yet)", () => {
+		const cusEnt = buildCusEntWithInterval({
+			interval: EntInterval.Month,
+			intervalCount: 1,
+			nextResetAt: PAST,
+		});
+
+		const result = getResettableCustomerEntitlements({
+			customerEntitlements: [cusEnt],
+			now: NOW,
+			webhookOwnedIntervals: [
+				{ interval: "month", intervalCount: 1, resetDayOfMonth: null },
+			],
+		});
+
+		expect(result).toHaveLength(0);
+	});
+
+	test("returns free cusEnt when interval does NOT match webhookOwnedIntervals", () => {
+		const cusEnt = buildCusEntWithInterval({
+			interval: EntInterval.Week,
+			intervalCount: 1,
+			nextResetAt: PAST,
+		});
+
+		const result = getResettableCustomerEntitlements({
+			customerEntitlements: [cusEnt],
+			now: NOW,
+			webhookOwnedIntervals: [
+				{ interval: "month", intervalCount: 1, resetDayOfMonth: getDate(PAST) },
+			],
+		});
+
+		expect(result).toHaveLength(1);
+	});
+
+	test("returns free cusEnt when webhookOwnedIntervals is empty", () => {
+		const cusEnt = buildCusEntWithInterval({
+			interval: EntInterval.Month,
+			intervalCount: 1,
+			nextResetAt: PAST,
+		});
+
+		const result = getResettableCustomerEntitlements({
+			customerEntitlements: [cusEnt],
+			now: NOW,
+			webhookOwnedIntervals: [],
+		});
+
+		expect(result).toHaveLength(1);
+	});
+
+	test("still skips price-backed cusEnt regardless of webhookOwnedIntervals", () => {
+		const customerEntitlements = [
+			buildCusEnt({
+				productStatus: CusProductStatus.Active,
+				nextResetAt: PAST,
+				withMatchingPrice: true,
+			}),
+		];
+
+		const result = getResettableCustomerEntitlements({
+			customerEntitlements,
+			now: NOW,
+			webhookOwnedIntervals: [],
+		});
+
+		expect(result).toHaveLength(0);
+	});
+
+	test("skips free cusEnt when interval_count matches and same day", () => {
+		const cusEnt = buildCusEntWithInterval({
+			interval: EntInterval.Month,
+			intervalCount: 3,
+			nextResetAt: PAST,
+		});
+
+		const result = getResettableCustomerEntitlements({
+			customerEntitlements: [cusEnt],
+			now: NOW,
+			webhookOwnedIntervals: [
+				{ interval: "month", intervalCount: 3, resetDayOfMonth: getDate(PAST) },
+			],
+		});
+
+		expect(result).toHaveLength(0);
+	});
+
+	test("returns free cusEnt when interval matches but interval_count differs", () => {
+		const cusEnt = buildCusEntWithInterval({
+			interval: EntInterval.Month,
+			intervalCount: 1,
+			nextResetAt: PAST,
+		});
+
+		const result = getResettableCustomerEntitlements({
+			customerEntitlements: [cusEnt],
+			now: NOW,
+			webhookOwnedIntervals: [
+				{ interval: "month", intervalCount: 3, resetDayOfMonth: getDate(PAST) },
+			],
+		});
+
+		expect(result).toHaveLength(1);
 	});
 });
