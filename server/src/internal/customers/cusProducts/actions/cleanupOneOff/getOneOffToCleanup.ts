@@ -21,9 +21,15 @@ import type { OneOffCustomerProductResult } from "../oneOffCustomerProductResult
  */
 export const getOneOffCustomerProductsToCleanup = async ({
 	ctx,
+	internalCustomerIds,
 }: {
 	ctx: CronContext;
+	internalCustomerIds?: string[];
 }): Promise<OneOffCustomerProductResult[]> => {
+	const customerFilter = internalCustomerIds?.length
+		? `AND cp.internal_customer_id = ANY(ARRAY[${internalCustomerIds.map((id) => `'${id.replace(/'/g, "''")}'`).join(",")}]::text[])`
+		: "";
+
 	const result = await ctx.db.execute<OneOffCustomerProductResult>(`
 		WITH 
 		-- CTE 1: Active customer products with at least one price
@@ -34,6 +40,7 @@ export const getOneOffCustomerProductsToCleanup = async ({
 			  AND EXISTS (
 				SELECT 1 FROM customer_prices cpr WHERE cpr.customer_product_id = cp.id
 			)
+			  ${customerFilter}
 		),
 		
 		-- CTE 2: Exclude customer products that have ANY price that is NOT one_off

@@ -151,11 +151,13 @@ export class CusEntService {
 		customDateUnix,
 		batchSize = 1000,
 		limit,
+		internalCustomerIds,
 	}: {
 		db: DrizzleCli;
 		customDateUnix?: number;
 		batchSize?: number;
 		limit?: number;
+		internalCustomerIds?: string[];
 	}) {
 		const allResults: FullCusEntWithProduct[] = [];
 		let offset = 0;
@@ -172,6 +174,10 @@ export class CusEntService {
 			customer_products: customerProducts,
 		};
 
+		const customerFilter = internalCustomerIds
+			? inArray(customers.internal_id, internalCustomerIds)
+			: undefined;
+
 		// Common reset predicates applied in every branch: next_reset_at has
 		// passed and the entitlement has not expired.
 		const commonResetPredicates = () =>
@@ -181,6 +187,7 @@ export class CusEntService {
 					isNull(customerEntitlements.expires_at),
 					gt(customerEntitlements.expires_at, customDateUnix ?? Date.now()),
 				),
+				customerFilter,
 			);
 
 		// Exclude price-backed cusEnts: their reset is owned by the Stripe

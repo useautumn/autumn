@@ -39,10 +39,18 @@ export type OrgEnvExpiredTrials = {
 export const fetchExpiredTrialProducts = async ({
 	batchSize,
 	db,
+	nowMs,
+	internalCustomerIds,
 }: {
 	batchSize: number;
 	db: DrizzleCli;
+	nowMs?: number;
+	internalCustomerIds?: string[];
 }) => {
+	const nowExpr = nowMs
+		? sql`${nowMs}::bigint`
+		: sql`(EXTRACT(EPOCH FROM NOW()) * 1000)::bigint`;
+
 	return db
 		.select({
 			customerProduct: customerProducts,
@@ -68,10 +76,10 @@ export const fetchExpiredTrialProducts = async ({
 				),
 				inArray(customerProducts.status, ACTIVE_STATUSES),
 				isNotNull(customerProducts.trial_ends_at),
-				lt(
-					customerProducts.trial_ends_at,
-					sql`(EXTRACT(EPOCH FROM NOW()) * 1000)::bigint`,
-				),
+				lt(customerProducts.trial_ends_at, nowExpr),
+				internalCustomerIds
+					? inArray(customers.internal_id, internalCustomerIds)
+					: undefined,
 			),
 		)
 		.limit(batchSize);

@@ -22,13 +22,17 @@ export type CleanupOneOffResult = {
  */
 export const cleanupOneOffCustomerProducts = async ({
 	ctx,
+	internalCustomerIds,
 }: {
 	ctx: CronContext;
+	internalCustomerIds?: string[];
 }): Promise<CleanupOneOffResult> => {
 	const { logger } = ctx;
 
-	// 1. Get customer products eligible for cleanup
-	const toCleanup = await getOneOffCustomerProductsToCleanup({ ctx });
+	const toCleanup = await getOneOffCustomerProductsToCleanup({
+		ctx,
+		internalCustomerIds,
+	});
 
 	if (toCleanup.length === 0) {
 		logger.info("[One-off Cleanup] No customer products to cleanup");
