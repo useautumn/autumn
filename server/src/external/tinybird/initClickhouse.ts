@@ -6,6 +6,7 @@ import { type ClickHouseClient, createClient } from "@clickhouse/client";
 const TINYBIRD_CLICKHOUSE_URL = process.env.TINYBIRD_US_EAST_CLICKHOUSE_URL;
 const TINYBIRD_TOKEN = process.env.TINYBIRD_US_EAST_TOKEN;
 
+// Debug logging
 if (TINYBIRD_CLICKHOUSE_URL && TINYBIRD_TOKEN) {
 	console.log(
 		`[Tinybird ClickHouse] Configured with URL: ${TINYBIRD_CLICKHOUSE_URL}`,

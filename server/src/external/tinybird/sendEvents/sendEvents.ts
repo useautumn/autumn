@@ -23,7 +23,6 @@ export const sendEventsToTinybird = async ({
 		return;
 	}
 
-	// Gate on either being configured — a broken primary must not silence the secondary.
 	if (!tinybirdIngest && !tinybirdSecondaryApi) {
 		logger?.debug(
 			"Tinybird not configured (neither primary nor secondary), skipping event send",
