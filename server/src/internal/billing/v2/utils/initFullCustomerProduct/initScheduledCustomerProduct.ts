@@ -28,6 +28,7 @@ export const initScheduledCustomerProduct = ({
 	externalId,
 	subscriptionId,
 	subscriptionScheduleId,
+	internalEntityId,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
@@ -44,6 +45,7 @@ export const initScheduledCustomerProduct = ({
 	 * Stripe linkage and downstream actions (cancel, restore) can find it. */
 	subscriptionId?: string;
 	subscriptionScheduleId?: string;
+	internalEntityId?: string;
 }): FullCusProduct => {
 	return initFullCustomerProduct({
 		ctx,
@@ -64,6 +66,7 @@ export const initScheduledCustomerProduct = ({
 			externalId,
 			subscriptionId,
 			subscriptionScheduleId,
+			internalEntityId,
 		},
 	});
 };
