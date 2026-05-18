@@ -43,46 +43,41 @@ export const RewardsPage = () => {
 	}
 
 	return (
-		<div className="h-fit max-h-full px-4 sm:px-10">
-			<div className="flex flex-col gap-8">
-				{/* Rewards Table */}
-				<div>
-					<Table.Toolbar>
-						<div className="flex w-full justify-between items-center">
-							<Table.Heading>
-								<GiftIcon size={16} weight="fill" className="text-subtle" />
-								Rewards
-							</Table.Heading>
-							<Table.Actions>
-								<CreateRewardSheet
-									open={createSheetOpen}
-									onOpenChange={setCreateSheetOpen}
-								/>
-							</Table.Actions>
-						</div>
-					</Table.Toolbar>
-					<RewardsTable />
-				</div>
-
-				{/* Referral Programs Table */}
-				<div>
-					<Table.Toolbar>
-						<div className="flex w-full justify-between items-center">
-							<Table.Heading>
-								<UsersThreeIcon
-									size={16}
-									weight="fill"
-									className="text-subtle"
-								/>
-								Referral Programs
-							</Table.Heading>
-							<Table.Actions>
-								<CreateRewardProgramSheet />
-							</Table.Actions>
-						</div>
-					</Table.Toolbar>
-					<RewardProgramsTable />
-				</div>
+		<div className="flex flex-col gap-8">
+			<div>
+				<Table.Toolbar>
+					<div className="flex w-full justify-between items-center">
+						<Table.Heading>
+							<GiftIcon size={16} weight="fill" className="text-subtle" />
+							Rewards
+						</Table.Heading>
+						<Table.Actions>
+							<CreateRewardSheet
+								open={createSheetOpen}
+								onOpenChange={setCreateSheetOpen}
+							/>
+						</Table.Actions>
+					</div>
+				</Table.Toolbar>
+				<RewardsTable />
+			</div>
+			<div>
+				<Table.Toolbar>
+					<div className="flex w-full justify-between items-center">
+						<Table.Heading>
+							<UsersThreeIcon
+								size={16}
+								weight="fill"
+								className="text-subtle"
+							/>
+							Referral Programs
+						</Table.Heading>
+						<Table.Actions>
+							<CreateRewardProgramSheet />
+						</Table.Actions>
+					</div>
+				</Table.Toolbar>
+				<RewardProgramsTable />
 			</div>
 		</div>
 	);
