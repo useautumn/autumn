@@ -48,16 +48,19 @@ export function ImpersonateRedirect() {
 					return;
 				}
 
-				// Step 2: Stop existing impersonation only if one is active. Fire and
-				// forget — the impersonateUser call below issues a fresh session
-				// cookie that overwrites the old one server-side.
+				// Step 2: Stop existing impersonation only if one is active.
+				// Must be awaited — the active session is the impersonated user's
+				// (non-admin) session, so impersonateUser would otherwise fail with
+				// FORBIDDEN. stopImpersonating restores the admin session.
 				if (isCurrentlyImpersonating) {
 					setStatus("Stopping existing impersonation...");
-					traceAsync("impersonate.stopImpersonating", () =>
-						authClient.admin.stopImpersonating(),
-					).catch(() => {
-						// Ignore - server-side reset happens via impersonateUser below
-					});
+					try {
+						await traceAsync("impersonate.stopImpersonating", () =>
+							authClient.admin.stopImpersonating(),
+						);
+					} catch {
+						// Server-side resets happen via the next call too
+					}
 				}
 
 				// Step 3: Impersonate the user

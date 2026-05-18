@@ -55,11 +55,16 @@ export const impersonateUser = async ({
 	userId: string;
 	organizationId?: string;
 	/**
-	 * Pass true when the caller's session has `impersonatedBy` set. When false,
-	 * we skip the stopImpersonating round-trip entirely (saves ~270ms).
-	 * When true, stopImpersonating is fired without await — server-side the
-	 * impersonateUser endpoint creates a fresh session anyway, so we don't
-	 * need to wait for the stop to complete.
+	 * Pass true when the caller's session has `impersonatedBy` set.
+	 *
+	 * When false: skip stopImpersonating entirely (saves ~270ms — the common
+	 * case where an admin is starting their first impersonation).
+	 *
+	 * When true: stopImpersonating MUST be awaited before impersonateUser.
+	 * The currently-active session is the IMPERSONATED user's session (not an
+	 * admin), so calling impersonateUser directly would fail with FORBIDDEN.
+	 * stopImpersonating restores the admin session via the admin_session
+	 * cookie, which is required for impersonateUser's permission check.
 	 */
 	isCurrentlyImpersonating?: boolean;
 }) => {
@@ -67,11 +72,13 @@ export const impersonateUser = async ({
 	startSpan("impersonate.total");
 	try {
 		if (isCurrentlyImpersonating) {
-			// Fire-and-forget — the new impersonateUser call below issues a fresh
-			// session cookie that overwrites the old one server-side.
-			traceAsync("impersonate.stopImpersonating", () =>
-				authClient.admin.stopImpersonating(),
-			).catch((error) => console.error(error));
+			try {
+				await traceAsync("impersonate.stopImpersonating", () =>
+					authClient.admin.stopImpersonating(),
+				);
+			} catch (error) {
+				console.error(error);
+			}
 		}
 		const res = await traceAsync("impersonate.impersonateUser", () =>
 			authClient.admin.impersonateUser({ userId }),
