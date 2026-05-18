@@ -1,5 +1,6 @@
 import { ac, roles } from "@autumn/shared";
 import { oauthProviderClient } from "@better-auth/oauth-provider/client";
+import { passkeyClient } from "@better-auth/passkey/client";
 import {
 	adminClient,
 	emailOTPClient,
@@ -14,6 +15,7 @@ export const authClient = createAuthClient({
 		organizationClient({ ac, roles }),
 		adminClient(),
 		oauthProviderClient(),
+		passkeyClient(),
 	],
 });
 

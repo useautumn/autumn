@@ -8,6 +8,7 @@ import {
 	oauthClient,
 	oauthConsent,
 	oauthRefreshToken,
+	passkey,
 	session,
 	user,
 } from "./auth-schema.js";
@@ -21,6 +22,14 @@ export const userRelations = relations(user, ({ many }) => ({
 	oauthRefreshTokens: many(oauthRefreshToken),
 	oauthAccessTokens: many(oauthAccessToken),
 	oauthConsents: many(oauthConsent),
+	passkeys: many(passkey),
+}));
+
+export const passkeyRelations = relations(passkey, ({ one }) => ({
+	user: one(user, {
+		fields: [passkey.userId],
+		references: [user.id],
+	}),
 }));
 
 const sessionRelations = relations(session, ({ one, many }) => ({
