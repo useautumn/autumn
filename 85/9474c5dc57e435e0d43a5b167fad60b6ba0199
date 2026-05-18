@@ -1,0 +1,22 @@
+server/src/internal/analytics/internalHandlers/handleInternalAggregateEvents.ts
+  s_2a52989fd493bf::t_8930f77ecefcd2 178
+  s_2a52989fd493bf::t_80c2265547723e 134-143
+  s_2a52989fd493bf::t_d2cb3afe58d864 205
+  s_2a52989fd493bf::t_d01e6aa1eabe4c 226
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "859474c5dc57e435e0d43a5b167fad60b6ba0199",
+  "prompts": {},
+  "sessions": {
+    "s_2a52989fd493bf": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c36bf1b8ffeK2ePAMuCaZUMRy",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
