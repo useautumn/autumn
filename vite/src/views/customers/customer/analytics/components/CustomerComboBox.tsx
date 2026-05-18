@@ -45,7 +45,6 @@ export function CustomerComboBox() {
 	const { customers: data, refetch: mutate } = useCusSearchQueryV2({
 		search: value || "",
 		filters: {},
-		page: 1,
 		page_size: 25,
 	});
 
