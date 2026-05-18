@@ -56,7 +56,7 @@ export const SettingsView = () => {
 	};
 
 	return (
-		<PageContainer className="flex-row gap-10">
+		<PageContainer className="flex-row gap-10 h-full">
 			<nav className="hidden sm:flex flex-col w-44 shrink-0 pt-1">
 				<h1 className="text-sm font-semibold text-t1 mb-4">Settings</h1>
 				<div className="flex flex-col gap-0.5">
