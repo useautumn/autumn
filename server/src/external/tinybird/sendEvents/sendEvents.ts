@@ -4,6 +4,7 @@ import * as Sentry from "@sentry/bun";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { tinybirdIngest } from "../initTinybird.js";
 import { tinybirdSecondaryApi } from "../initTinybirdV2.js";
+import { isTinybirdConfigured } from "../tinybirdUtils.js";
 import { mapToTinybirdEvent } from "./mapEvent.js";
 
 /** Generate a unique error ID for tracking */
@@ -11,7 +12,11 @@ const generateErrorId = (): string => {
 	return `TB_ERR_${crypto.randomBytes(8).toString("hex").toUpperCase()}`;
 };
 
-/** Dual-write to Tinybird primary + secondary. Failures logged, never thrown. */
+/**
+ * Send EventInsert[] to Tinybird using zod-bird client.
+ * The zod-bird client has built-in retry logic (10 retries with exponential backoff).
+ * Does not throw - logs and captures errors in Sentry instead.
+ */
 export const sendEventsToTinybird = async ({
 	events,
 	logger,
@@ -23,10 +28,8 @@ export const sendEventsToTinybird = async ({
 		return;
 	}
 
-	if (!tinybirdIngest && !tinybirdSecondaryApi) {
-		logger?.debug(
-			"Tinybird not configured (neither primary nor secondary), skipping event send",
-		);
+	if (!isTinybirdConfigured() || !tinybirdIngest) {
+		logger?.debug("Tinybird not configured, skipping event send");
 		return;
 	}
 
@@ -65,20 +68,18 @@ export const sendEventsToTinybird = async ({
 	};
 
 	const primaryWrite = tinybirdIngest
-		? tinybirdIngest
-				.events(tinybirdEvents)
-				.then((result) => {
-					logger?.info(`Sent ${events.length} events to Tinybird (primary)`, {
-						data: {
-							region: "primary",
-							eventCount: events.length,
-							successfulRows: result.successful_rows,
-							quarantinedRows: result.quarantined_rows,
-						},
-					});
-				})
-				.catch((error: unknown) => reportFailure(error, "primary"))
-		: Promise.resolve();
+		.events(tinybirdEvents)
+		.then((result) => {
+			logger?.info(`Sent ${events.length} events to Tinybird (primary)`, {
+				data: {
+					region: "primary",
+					eventCount: events.length,
+					successfulRows: result.successful_rows,
+					quarantinedRows: result.quarantined_rows,
+				},
+			});
+		})
+		.catch((error: unknown) => reportFailure(error, "primary"));
 
 	const secondaryWrite = tinybirdSecondaryApi
 		? tinybirdSecondaryApi
