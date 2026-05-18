@@ -12,7 +12,7 @@ import { z } from "./tinybirdZod.js";
  * Primary Tinybird REST API client — handles reads (pipes) and primary
  * writes (ingest). Configured from `TINYBIRD_US_EAST_*` env vars during the
  * us-west → us-east cutover transition (see `tinybirdUtils.ts`). The
- * dual-write safety-net secondary lives in `initTinybirdSecondary.ts` and
+ * dual-write safety-net secondary lives in `initTinybirdV2.ts` and
  * reads the legacy `TINYBIRD_API_URL` / `TINYBIRD_TOKEN` vars.
  */
 const tinybirdClient: Tinybird | null = tinybirdConfig

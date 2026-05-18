@@ -5,12 +5,12 @@ import { StatusCodes } from "http-status-codes";
  * Primary Tinybird config — reads from `TINYBIRD_US_EAST_API_URL` /
  * `TINYBIRD_US_EAST_TOKEN` during the us-west → us-east cutover transition.
  * The legacy `TINYBIRD_API_URL` / `TINYBIRD_TOKEN` env vars now feed the
- * dual-write *secondary* client (`initTinybirdSecondary.ts`) as a safety net
+ * dual-write *secondary* client (`initTinybirdV2.ts`) as a safety net
  * during the transition. After cutover stabilises, the secondary client and
  * legacy env vars get removed in a follow-up cleanup.
  */
-const TINYBIRD_PRIMARY_API_URL = process.env.TINYBIRD_US_EAST_API_URL;
-const TINYBIRD_PRIMARY_TOKEN = process.env.TINYBIRD_US_EAST_TOKEN;
+const primaryApiUrl = process.env.TINYBIRD_US_EAST_API_URL;
+const primaryToken = process.env.TINYBIRD_US_EAST_TOKEN;
 
 export type TinybirdConfig = {
 	baseUrl: string;
@@ -18,10 +18,10 @@ export type TinybirdConfig = {
 };
 
 export const tinybirdConfig: TinybirdConfig | null =
-	TINYBIRD_PRIMARY_API_URL && TINYBIRD_PRIMARY_TOKEN
+	primaryApiUrl && primaryToken
 		? {
-				baseUrl: TINYBIRD_PRIMARY_API_URL,
-				token: TINYBIRD_PRIMARY_TOKEN,
+				baseUrl: primaryApiUrl,
+				token: primaryToken,
 			}
 		: null;
 
