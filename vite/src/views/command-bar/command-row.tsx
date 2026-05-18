@@ -23,6 +23,10 @@ const KeystrokeContainer = ({ keyStroke }: { keyStroke: string }) => {
 	);
 };
 
+/**
+ * Props for CommandRow.
+ * Supports an optional `value` prop for cmdk row identification.
+ */
 interface CommandRowProps {
 	/** Icon to display (React node) */
 	icon?: React.ReactNode;
@@ -38,6 +42,8 @@ interface CommandRowProps {
 	onSelect: () => void;
 	/** Additional className for the CommandItem */
 	className?: string;
+	/** Optional value identifier for cmdk row lookup */
+	value?: string;
 }
 
 /**
@@ -45,7 +51,7 @@ interface CommandRowProps {
  */
 export const CommandRow = React.forwardRef<HTMLDivElement, CommandRowProps>(
 	(
-		{ icon, title, subtext, shortcutKey, customShortcuts, onSelect, className },
+		{ icon, title, subtext, shortcutKey, customShortcuts, onSelect, className, value },
 		ref,
 	) => {
 		const renderIcon = (icon: React.ReactNode) => {
@@ -90,6 +96,7 @@ export const CommandRow = React.forwardRef<HTMLDivElement, CommandRowProps>(
 		return (
 			<CommandItem
 				ref={ref}
+				value={value}
 				onSelect={onSelect}
 				className={cn("flex justify-between items-center", className)}
 			>
