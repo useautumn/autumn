@@ -1,5 +1,4 @@
 import { differenceInSeconds } from "date-fns";
-import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -12,11 +11,6 @@ import {
 } from "@/components/ui/input-otp";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-
-const fadeUp = {
-	initial: { opacity: 0, y: 8 },
-	animate: { opacity: 1, y: 0 },
-};
 
 export const OTPSignIn = ({
 	email,
@@ -88,21 +82,12 @@ export const OTPSignIn = ({
 
 	return (
 		<div className="text-center flex flex-col items-center justify-center gap-5">
-			<motion.div
-				{...fadeUp}
-				transition={{ duration: 0.4, delay: 0.05 }}
-			>
-				<p className="text-sm text-muted-foreground">
-					We sent a 6-digit code to{" "}
-					<span className="font-medium text-foreground">{email}</span>
-				</p>
-			</motion.div>
+			<p className="text-sm text-muted-foreground">
+				We sent a 6-digit code to{" "}
+				<span className="font-medium text-foreground">{email}</span>
+			</p>
 
-			<motion.div
-				className={cn(verifying && "shimmer")}
-				{...fadeUp}
-				transition={{ duration: 0.4, delay: 0.12 }}
-			>
+			<div className={cn(verifying && "shimmer")}>
 				<InputOTP
 					maxLength={6}
 					value={otp}
@@ -122,13 +107,9 @@ export const OTPSignIn = ({
 						<InputOTPSlot index={5} />
 					</InputOTPGroup>
 				</InputOTP>
-			</motion.div>
+			</div>
 
-			<motion.div
-				className="flex flex-col items-center justify-center gap-2"
-				{...fadeUp}
-				transition={{ duration: 0.4, delay: 0.2 }}
-			>
+			<div className="flex flex-col items-center justify-center gap-2">
 				<Button
 					variant="skeleton"
 					className={cn(
@@ -141,7 +122,7 @@ export const OTPSignIn = ({
 					Didn't receive the code? Resend{" "}
 					{resendCountdown > 0 && `(${resendCountdown})`}
 				</Button>
-			</motion.div>
+			</div>
 		</div>
 	);
 };

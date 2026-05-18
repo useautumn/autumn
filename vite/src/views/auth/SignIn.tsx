@@ -1,7 +1,6 @@
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Mail } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
@@ -29,12 +28,6 @@ function getOAuthRedirectUrl(searchParams: URLSearchParams): string | null {
 }
 
 export const emailRegex = /^[^@]+@[^@]+\.[^@]+$/;
-
-const STAGGER_BASE = 0.06;
-
-function staggerDelay(index: number): { delay: number } {
-	return { delay: 0.15 + index * STAGGER_BASE };
-}
 
 export const SignIn = () => {
 	const [email, setEmail] = useState("");
@@ -113,21 +106,12 @@ export const SignIn = () => {
 		}
 	};
 
-	const fadeUp = {
-		initial: { opacity: 0, y: 10 },
-		animate: { opacity: 1, y: 0 },
-	};
-
 	return (
 		<AuthBackground>
 			<CustomToaster />
 			<div className="flex flex-col items-center gap-6">
 				{/* Wordmark logo + welcome text */}
-				<motion.div
-					className="flex flex-col items-center gap-3"
-					{...fadeUp}
-					transition={{ duration: 0.5, ...staggerDelay(0) }}
-				>
+				<div className="flex flex-col items-center gap-3">
 					<svg
 						viewBox="0 0 114 28"
 						fill="currentColor"
@@ -150,98 +134,63 @@ export const SignIn = () => {
 					<p className="text-sm text-muted-foreground">
 						Welcome to Autumn, sign in to continue
 					</p>
-				</motion.div>
+				</div>
 
-				{/* Form content with AnimatePresence for OTP transition */}
-				<AnimatePresence mode="wait">
-					{otpSent ? (
-						<motion.div
-							key="otp"
-							initial={{ opacity: 0, y: 8 }}
-							animate={{ opacity: 1, y: 0 }}
-							exit={{ opacity: 0, y: -8 }}
-							transition={{ duration: 0.3 }}
-							className="w-full"
+				{otpSent ? (
+					<OTPSignIn
+						email={email}
+						newPath={newPath}
+						callbackPath={callbackPath}
+					/>
+				) : (
+					<div className="w-full space-y-5">
+						<IconButton
+							variant="primary"
+							onClick={handleGoogleSignIn}
+							isLoading={googleLoading}
+							icon={<FontAwesomeIcon icon={faGoogle} />}
+							className="w-full gap-2"
 						>
-							<OTPSignIn
-								email={email}
-								newPath={newPath}
-								callbackPath={callbackPath}
-							/>
-						</motion.div>
-					) : (
-						<motion.div
-							key="form"
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							exit={{ opacity: 0, y: -8 }}
-							transition={{ duration: 0.3 }}
-							className="w-full space-y-5"
-						>
-							{/* Google Sign In */}
-							<motion.div
-								{...fadeUp}
-								transition={{ duration: 0.4, ...staggerDelay(2) }}
-							>
-								<IconButton
-									variant="primary"
-									onClick={handleGoogleSignIn}
-									isLoading={googleLoading}
-									icon={<FontAwesomeIcon icon={faGoogle} />}
-									className="w-full gap-2"
-								>
-									Continue with Google
-								</IconButton>
-							</motion.div>
+							Continue with Google
+						</IconButton>
 
-							{/* Divider */}
-							<motion.div
-								className="relative"
-								{...fadeUp}
-								transition={{ duration: 0.4, ...staggerDelay(3) }}
-							>
-								<div className="absolute inset-0 flex items-center">
-									<span className="w-full border-t border-border" />
-								</div>
-								<div className="relative flex justify-center text-xs uppercase">
+						<div className="relative">
+							<div className="absolute inset-0 flex items-center">
+								<span className="w-full border-t border-border" />
+							</div>
+							<div className="relative flex justify-center text-xs uppercase">
 								<span className="bg-background px-2 text-muted-foreground">
 									Or
 								</span>
-								</div>
-							</motion.div>
+							</div>
+						</div>
 
-							{/* Email form */}
-							<motion.div
-								className="flex flex-col gap-2 w-full"
-								{...fadeUp}
-								transition={{ duration: 0.4, ...staggerDelay(4) }}
+						<div className="flex flex-col gap-2 w-full">
+							<Input
+								type="email"
+								placeholder="Email"
+								value={email}
+								onChange={(e) => setEmail(e.target.value)}
+								onKeyDown={(e) => {
+									if (e.key === "Enter") handleEmailSignIn(e);
+								}}
+								required
+								className="text-base !w-full"
+								autoComplete="email"
+							/>
+							<IconButton
+								type="submit"
+								variant="secondary"
+								isLoading={sendOtpLoading}
+								onClick={handleEmailSignIn}
+								className="gap-2 w-full"
+								icon={<Mail size={14} className="text-t4" />}
 							>
-								<Input
-									type="email"
-									placeholder="Email"
-									value={email}
-									onChange={(e) => setEmail(e.target.value)}
-									onKeyDown={(e) => {
-										if (e.key === "Enter") handleEmailSignIn(e);
-									}}
-									required
-									className="text-base !w-full"
-									autoComplete="email"
-								/>
-								<IconButton
-									type="submit"
-									variant="secondary"
-									isLoading={sendOtpLoading}
-									onClick={handleEmailSignIn}
-									className="gap-2 w-full"
-									icon={<Mail size={14} className="text-t4" />}
-								>
-									Continue with Email
-								</IconButton>
-							</motion.div>
-						</motion.div>
-					)}
-				</AnimatePresence>
+								Continue with Email
+							</IconButton>
+						</div>
+					</div>
+				)}
 			</div>
 		</AuthBackground>
 	);
