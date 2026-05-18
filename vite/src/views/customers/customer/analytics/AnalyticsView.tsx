@@ -1,20 +1,18 @@
 import { ErrCode } from "@autumn/shared";
-import { ChartBarIcon, DatabaseIcon } from "@phosphor-icons/react";
-import type { AgGridReact } from "ag-grid-react";
+import { ChartBarIcon } from "@phosphor-icons/react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { PageContainer } from "@/components/general/PageContainer";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { Card, CardContent } from "@/components/v2/cards/Card";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useEnv } from "@/utils/envUtils";
 import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
 import { AnalyticsContext } from "./AnalyticsContext";
-import { EventsAGGrid, EventsBarChart } from "./AnalyticsGraph";
-import { colors } from "./components/AGGrid";
+import { EventsBarChart } from "./AnalyticsGraph";
+import { colors } from "./components/analytics-types";
 import { ChartLegend, type ChartLegendEntry } from "./components/ChartLegend";
-import PaginationPanel from "./components/PaginationPanel";
+import { EventsTable } from "./components/EventsTable";
 import { QueryTopbar } from "./components/QueryTopbar";
 import {
 	useAnalyticsData,
@@ -33,12 +31,7 @@ export const AnalyticsView = () => {
 	const [featureIds, setFeatureIds] = useState<string[]>([]);
 	const [clickHouseDisabled, setClickHouseDisabled] = useState(false);
 	const [hasCleared, setHasCleared] = useState(false);
-	const [pageSize, setPageSize] = useState(500);
-	const [currentPage, setCurrentPage] = useState(0);
-	const [totalPages, setTotalPages] = useState(0);
-	const [totalRows, setTotalRows] = useState(0);
 	const [groupFilter, setGroupFilter] = useState<string | null>(null);
-	const gridRef = useRef<AgGridReact>(null);
 	const navigate = useNavigate();
 
 	const env = useEnv();
@@ -310,7 +303,6 @@ export const AnalyticsView = () => {
 					newParams.set("bin_size", binSize);
 					navigate(`${location.pathname}?${newParams.toString()}`);
 				},
-
 				setEventNames,
 				featureIds,
 				setFeatureIds,
@@ -318,15 +310,6 @@ export const AnalyticsView = () => {
 				bcExclusionFlag,
 				hasCleared,
 				setHasCleared,
-				gridRef,
-				pageSize,
-				setPageSize,
-				currentPage,
-				setCurrentPage,
-				totalPages,
-				setTotalPages,
-				totalRows,
-				setTotalRows,
 				propertyKeys,
 				groupFilter,
 				setGroupFilter,
@@ -336,7 +319,7 @@ export const AnalyticsView = () => {
 				planNames,
 			}}
 		>
-			<PageContainer className="h-full text-sm">
+			<PageContainer className="text-sm">
 				<OnboardingGuide />
 				{showRevenueMetrics && <RevenueMetricsSection />}
 				<div className="max-h-[400px] min-h-[400px] pb-6 shrink-0">
@@ -387,20 +370,6 @@ export const AnalyticsView = () => {
 				</div>
 
 				<div className="flex-1 min-h-[400px] pb-8">
-					<div className="flex justify-between pb-4 h-10">
-						<div className="text-t3 text-md flex gap-2 items-center">
-							<DatabaseIcon size={16} weight="fill" className="text-subtle" />
-							Events
-						</div>
-						{/* event count  */}
-						<div className="flex items-center gap-2">
-							<span className="text-sm text-t3">
-								Showing {totalRows} events
-							</span>
-							<PaginationPanel />
-						</div>
-					</div>
-
 					{rawQueryLoading && (
 						<div className="flex-1">
 							<p className="text-t3 text-sm shimmer w-fit">
@@ -408,11 +377,8 @@ export const AnalyticsView = () => {
 							</p>
 						</div>
 					)}
-
 					{rawEvents && !rawQueryLoading && (
-						<div className="w-full h-[calc(100%-2.5rem)]">
-							<EventsAGGrid data={rawEvents} />
-						</div>
+						<EventsTable data={rawEvents.data} />
 					)}
 				</div>
 			</PageContainer>
