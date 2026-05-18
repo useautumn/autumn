@@ -596,6 +596,18 @@ export const AttachDurationType = {
 export type AttachDurationType = ClosedEnum<typeof AttachDurationType>;
 
 /**
+ * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+ */
+export const AttachOnEnd = {
+  Bill: "bill",
+  Revert: "revert",
+} as const;
+/**
+ * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+ */
+export type AttachOnEnd = ClosedEnum<typeof AttachOnEnd>;
+
+/**
  * Free trial configuration for a plan.
  */
 export type AttachFreeTrialParams = {
@@ -611,6 +623,10 @@ export type AttachFreeTrialParams = {
    * If true, payment method required to start trial. Customer is charged after trial ends.
    */
   cardRequired?: boolean | undefined;
+  /**
+   * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+   */
+  onEnd?: AttachOnEnd | undefined;
 };
 
 /**
@@ -1567,10 +1583,15 @@ export const AttachDurationType$outboundSchema: z.ZodMiniEnum<
 > = z.enum(AttachDurationType);
 
 /** @internal */
+export const AttachOnEnd$outboundSchema: z.ZodMiniEnum<typeof AttachOnEnd> = z
+  .enum(AttachOnEnd);
+
+/** @internal */
 export type AttachFreeTrialParams$Outbound = {
   duration_length: number;
   duration_type: string;
   card_required: boolean;
+  on_end?: string | undefined;
 };
 
 /** @internal */
@@ -1582,12 +1603,14 @@ export const AttachFreeTrialParams$outboundSchema: z.ZodMiniType<
     durationLength: z.number(),
     durationType: z._default(AttachDurationType$outboundSchema, "month"),
     cardRequired: z._default(z.boolean(), true),
+    onEnd: z.optional(AttachOnEnd$outboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
       durationLength: "duration_length",
       durationType: "duration_type",
       cardRequired: "card_required",
+      onEnd: "on_end",
     });
   }),
 );

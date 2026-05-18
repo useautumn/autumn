@@ -31,9 +31,11 @@ const isPaidRecurring = (customerProduct: FullCusProduct) => {
 export const setupRestoreContext = async ({
 	ctx,
 	customerId,
+	subscriptionIdsFilter,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
+	subscriptionIdsFilter?: string[];
 }): Promise<RestoreContext> => {
 	const fullCustomer = await setupFullCustomerContext({
 		ctx,
@@ -45,11 +47,18 @@ export const setupRestoreContext = async ({
 		fullCus: fullCustomer,
 	});
 
+	const allowedSubscriptionIds = subscriptionIdsFilter
+		? new Set(subscriptionIdsFilter)
+		: null;
+
 	const uniqueSubscriptionIds = new Set<string>();
 	for (const customerProduct of fullCustomer.customer_products) {
 		if (!isPaidRecurring(customerProduct)) continue;
 		const subscriptionId = customerProduct.subscription_ids?.[0];
-		if (subscriptionId) uniqueSubscriptionIds.add(subscriptionId);
+		if (!subscriptionId) continue;
+		if (allowedSubscriptionIds && !allowedSubscriptionIds.has(subscriptionId))
+			continue;
+		uniqueSubscriptionIds.add(subscriptionId);
 	}
 
 	return {

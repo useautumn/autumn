@@ -540,6 +540,15 @@ PlanDurationType = Union[
 r"""Unit of time for the trial duration ('day', 'month', 'year')."""
 
 
+OnEnd = Union[
+    Literal[
+        "bill",
+        "revert",
+    ],
+    UnrecognizedStr,
+]
+
+
 class FreeTrialTypedDict(TypedDict):
     r"""Free trial configuration. If set, new customers can try this plan before being charged."""
 
@@ -549,6 +558,8 @@ class FreeTrialTypedDict(TypedDict):
     r"""Unit of time for the trial duration ('day', 'month', 'year')."""
     card_required: bool
     r"""Whether a payment method is required to start the trial. If true, customer will be charged after trial ends."""
+    on_end: NotRequired[Nullable[OnEnd]]
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
 
 class FreeTrial(BaseModel):
@@ -562,6 +573,34 @@ class FreeTrial(BaseModel):
 
     card_required: bool
     r"""Whether a payment method is required to start the trial. If true, customer will be charged after trial ends."""
+
+    on_end: OptionalNullable[OnEnd] = UNSET
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["on_end"])
+        nullable_fields = set(["on_end"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
 
 
 PlanEnv = Union[
