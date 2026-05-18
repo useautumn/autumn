@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { PageContainer } from "@/components/general/PageContainer";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useEnv } from "@/utils/envUtils";
 import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
@@ -32,6 +31,7 @@ export const AnalyticsView = () => {
 	const [clickHouseDisabled, setClickHouseDisabled] = useState(false);
 	const [hasCleared, setHasCleared] = useState(false);
 	const [groupFilter, setGroupFilter] = useState<string | null>(null);
+	const [planDeselected, setPlanDeselected] = useState<Set<string>>(new Set());
 	const navigate = useNavigate();
 
 	const env = useEnv();
@@ -50,60 +50,10 @@ export const AnalyticsView = () => {
 		truncated,
 		entityNames,
 		customerNames,
+		planNames,
 		totals,
 		eventNames: responseEventNames,
 	} = useAnalyticsData({ hasCleared });
-
-	// Build internal_product_id → display name from the products cache so the
-	// chart can label plan_id groups (backend ships raw internal ids).
-	// `/products/products` only returns the latest version per public id, so
-	// historical versions (e.g. a customer still on v1 after we ship v2) get
-	// merged in from `customer.customer_products`. When the same public id has
-	// multiple versions in scope, suffix with ` v{version}`.
-	const { products } = useProductsQuery({ allVersions: true });
-	const planNames = useMemo(() => {
-		type Entry = {
-			internal_id: string;
-			id: string;
-			name: string;
-			version: number;
-		};
-		const entries: Entry[] = [];
-		const seen = new Set<string>();
-		const push = (e: Partial<Entry> & { internal_id?: string | null }) => {
-			if (!e.internal_id || seen.has(e.internal_id)) return;
-			seen.add(e.internal_id);
-			entries.push({
-				internal_id: e.internal_id,
-				id: e.id ?? e.internal_id,
-				name: e.name ?? e.id ?? e.internal_id,
-				version: e.version ?? 1,
-			});
-		};
-
-		for (const p of products) push(p);
-		for (const cp of customer?.customer_products ?? []) {
-			push({
-				internal_id: cp.product?.internal_id,
-				id: cp.product?.id,
-				name: cp.product?.name,
-				version: cp.product?.version,
-			});
-		}
-
-		// Count public id occurrences so we only suffix when there's ambiguity.
-		const idCount = new Map<string, number>();
-		for (const e of entries) {
-			idCount.set(e.id, (idCount.get(e.id) ?? 0) + 1);
-		}
-
-		const map: Record<string, string> = {};
-		for (const e of entries) {
-			const showVersion = (idCount.get(e.id) ?? 0) >= 2;
-			map[e.internal_id] = showVersion ? `${e.name} v${e.version}` : e.name;
-		}
-		return map;
-	}, [products, customer]);
 
 	// Show toast when data is truncated due to too many unique group values
 	const hasShownTruncationToast = useRef(false);
@@ -119,9 +69,9 @@ export const AnalyticsView = () => {
 		}
 	}, [truncated, groupBy]);
 
-	// Clear the filter when groupBy changes
 	useEffect(() => {
 		setGroupFilter(null);
+		setPlanDeselected(new Set());
 	}, [groupBy]);
 
 	// Extract unique group values from events data for filtering
@@ -165,16 +115,20 @@ export const AnalyticsView = () => {
 			return { chartData: null, chartConfig: null };
 		}
 
-		// Apply frontend filter if a group filter is selected. Use an
-		// explicit null check because empty string is a meaningful filter
-		// value for plan_id ("no plan").
 		let filteredEvents = events;
-		if (groupBy && groupFilter !== null) {
-			// Handle special case for column-based operators (not a property)
+		if (groupBy === "plan_id" && planDeselected.size > 0) {
+			const filteredData = events.data.filter(
+				(row: Record<string, string | number>) =>
+					!planDeselected.has(String(row.plan_id ?? "")),
+			);
+			filteredEvents = {
+				...events,
+				data: filteredData,
+				rows: filteredData.length,
+			};
+		} else if (groupBy && groupBy !== "plan_id" && groupFilter !== null) {
 			const groupByColumn =
-				groupBy === "customer_id" ||
-				groupBy === "entity_id" ||
-				groupBy === "plan_id"
+				groupBy === "customer_id" || groupBy === "entity_id"
 					? groupBy
 					: `properties.${groupBy}`;
 			const filteredData = events.data.filter(
@@ -206,7 +160,7 @@ export const AnalyticsView = () => {
 			});
 
 		return { chartData: transformed, chartConfig: config };
-	}, [events, features, groupBy, groupFilter, entityNames, customerNames, planNames]);
+	}, [events, features, groupBy, groupFilter, planDeselected, entityNames, customerNames, planNames]);
 
 	// Build legend entries (sorted desc, zero-values filtered). The
 	// width-aware overflow logic lives in ChartLegend.
@@ -313,6 +267,8 @@ export const AnalyticsView = () => {
 				propertyKeys,
 				groupFilter,
 				setGroupFilter,
+				planDeselected,
+				setPlanDeselected,
 				availableGroupValues,
 				entityNames,
 				customerNames,
@@ -356,7 +312,7 @@ export const AnalyticsView = () => {
 							</div>
 						)}
 
-						{!chartData && !queryLoading && (
+						{(!chartData || chartData.data.length === 0) && !queryLoading && (
 							<div className="flex-1 px-10 pt-6">
 								<p className="text-t3 text-sm">
 									No events found. Please widen your filters.{" "}

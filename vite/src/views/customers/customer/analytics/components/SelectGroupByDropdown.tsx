@@ -7,13 +7,16 @@ import { Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
-	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
+	DropdownMenuSub,
+	DropdownMenuSubContent,
+	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
 import { cn } from "@/lib/utils";
@@ -34,11 +37,29 @@ export const SelectGroupByDropdown = ({
 	const {
 		groupFilter,
 		setGroupFilter,
+		planDeselected,
+		setPlanDeselected,
 		availableGroupValues,
 		entityNames,
 		customerNames,
 		planNames,
 	} = useAnalyticsContext();
+
+	const togglePlanDeselected = (value: string) => {
+		setPlanDeselected((prev: Set<string>) => {
+			const next = new Set(prev);
+			if (next.has(value)) next.delete(value);
+			else next.add(value);
+			return next;
+		});
+	};
+
+	const allPlansSelected = (planDeselected?.size ?? 0) === 0;
+	const handlePlanSelectAll = (e: React.MouseEvent) => {
+		e.preventDefault();
+		e.stopPropagation();
+		setPlanDeselected(new Set());
+	};
 
 	const currentGroupBy = searchParams.get("group_by") || "";
 	const customerId = searchParams.get("customer_id");
@@ -244,11 +265,82 @@ export const SelectGroupByDropdown = ({
 						</>
 					)}
 
-					{/* Filter section - only shown when a groupBy is selected */}
-					{currentGroupBy && availableGroupValues.length > 0 && (
-						<>
-							<DropdownMenuSeparator />
-							<DropdownMenuGroup>
+					{currentGroupBy === "plan_id" &&
+						availableGroupValues.length > 0 && (
+							<>
+								<DropdownMenuSeparator />
+								<DropdownMenuSub>
+									<DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
+										<span className="text-xs">Filter plans</span>
+										{!allPlansSelected && (
+											<span className="text-xs text-t3 bg-muted px-1 py-0 rounded-md">
+												{availableGroupValues.length -
+													(planDeselected?.size ?? 0)}
+											</span>
+										)}
+									</DropdownMenuSubTrigger>
+									<DropdownMenuSubContent className="min-w-56 max-w-none w-max !overflow-x-visible">
+										<div className="flex items-center justify-between px-2 h-6">
+											<button
+												type="button"
+												onClick={handlePlanSelectAll}
+												className={cn(
+													"px-1 h-5 flex items-center gap-1 text-t2 text-xs hover:text-t1 bg-accent cursor-pointer rounded-md",
+													allPlansSelected &&
+														"bg-primary/10 text-primary hover:text-primary/80",
+												)}
+											>
+												Select all
+											</button>
+										</div>
+										<DropdownMenuSeparator />
+										<div className="max-h-64 overflow-y-auto overflow-x-visible">
+											{availableGroupValues.map((value: string) => {
+												const displayValue =
+													value === "AUTUMN_RESERVED"
+														? "Other values"
+														: value === ""
+															? "No plan"
+															: (planNames?.[value] ?? value);
+												const isChecked = !planDeselected?.has(value);
+												const wouldDeselectLast =
+													isChecked &&
+													availableGroupValues.length -
+														(planDeselected?.size ?? 0) ===
+														1;
+												return (
+													<DropdownMenuItem
+														key={value}
+														closeOnClick={false}
+														disabled={wouldDeselectLast}
+														onClick={(e) => {
+															e.preventDefault();
+															if (wouldDeselectLast) return;
+															togglePlanDeselected(value);
+														}}
+														className="flex items-center gap-2 cursor-pointer"
+													>
+														<Checkbox
+															checked={isChecked}
+															className="border-border"
+														/>
+														<span className="text-xs whitespace-nowrap">
+															{displayValue}
+														</span>
+													</DropdownMenuItem>
+												);
+											})}
+										</div>
+									</DropdownMenuSubContent>
+								</DropdownMenuSub>
+							</>
+						)}
+
+					{currentGroupBy &&
+						currentGroupBy !== "plan_id" &&
+						availableGroupValues.length > 0 && (
+							<>
+								<DropdownMenuSeparator />
 								<DropdownMenuLabel className="text-xs text-t4 font-normal">
 									Filter by value
 								</DropdownMenuLabel>
@@ -266,15 +358,11 @@ export const SelectGroupByDropdown = ({
 									const displayValue =
 										value === "AUTUMN_RESERVED"
 											? "Other values"
-											: value === "" && currentGroupBy === "plan_id"
-												? "No plan"
-												: currentGroupBy === "entity_id"
-													? (entityNames?.[value] ?? value)
-													: currentGroupBy === "customer_id"
-														? (customerNames?.[value] ?? value)
-														: currentGroupBy === "plan_id"
-															? (planNames?.[value] ?? value)
-															: value;
+											: currentGroupBy === "entity_id"
+												? (entityNames?.[value] ?? value)
+												: currentGroupBy === "customer_id"
+													? (customerNames?.[value] ?? value)
+													: value;
 									return (
 										<DropdownMenuItem
 											key={value}
@@ -291,9 +379,8 @@ export const SelectGroupByDropdown = ({
 										</DropdownMenuItem>
 									);
 								})}
-							</DropdownMenuGroup>
-						</>
-					)}
+							</>
+						)}
 				</div>
 			</DropdownMenuContent>
 		</DropdownMenu>
