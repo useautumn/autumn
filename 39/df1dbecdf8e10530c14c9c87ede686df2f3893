@@ -1,0 +1,55 @@
+others/python-sdk/src/autumn_sdk/models/previewupdateop.py
+  s_908ac486543512::t_c7aa51a1e446cb 901
+packages/sdk/src/models/aggregate-events-op.ts
+  s_908ac486543512::t_c7aa51a1e446cb 75
+others/python-sdk/src/autumn_sdk/events.py
+  s_908ac486543512::t_c7aa51a1e446cb 263,386
+others/python-sdk/src/autumn_sdk/models/billingupdateop.py
+  s_908ac486543512::t_c7aa51a1e446cb 900
+others/python-sdk/src/autumn_sdk/models/previewattachop.py
+  s_908ac486543512::t_c7aa51a1e446cb 901
+others/python-sdk/src/autumn_sdk/models/aggregateeventsop.py
+  s_908ac486543512::t_c7aa51a1e446cb 95,119
+packages/sdk/README.md
+  s_908ac486543512::t_c7aa51a1e446cb 274,785
+others/python-sdk/src/autumn_sdk/models/createplanop.py
+  s_908ac486543512::t_c7aa51a1e446cb 464
+packages/sdk/src/funcs/billing-create-schedule.ts
+  s_908ac486543512::t_c7aa51a1e446cb 37
+packages/sdk/.speakeasy/out.openapi.yaml
+  s_908ac486543512::t_c7aa51a1e446cb 7982,15165
+others/python-sdk/src/autumn_sdk/models/updateplanop.py
+  s_908ac486543512::t_c7aa51a1e446cb 464
+others/python-sdk/src/autumn_sdk/models/checkop.py
+  s_908ac486543512::t_c7aa51a1e446cb 782-783,1710-1711
+packages/sdk/src/sdk/billing.ts
+  s_908ac486543512::t_c7aa51a1e446cb 89
+others/python-sdk/src/autumn_sdk/models/setuppaymentop.py
+  s_908ac486543512::t_c7aa51a1e446cb 899
+others/python-sdk/src/autumn_sdk/models/multiattachop.py
+  s_908ac486543512::t_c7aa51a1e446cb 597
+apps/docs/mintlify/api/openapi.yml
+  s_908ac486543512::t_c7aa51a1e446cb 16722
+others/python-sdk/src/autumn_sdk/models/previewmultiattachop.py
+  s_908ac486543512::t_c7aa51a1e446cb 602
+others/python-sdk/src/autumn_sdk/models/attachop.py
+  s_908ac486543512::t_c7aa51a1e446cb 896
+apps/docs/mintlify/api-reference/events/aggregateEvents.mdx
+  s_908ac486543512::t_c7aa51a1e446cb 136
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "39df1dbecdf8e10530c14c9c87ede686df2f3893",
+  "prompts": {},
+  "sessions": {
+    "s_908ac486543512": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c8e718f6ffem3nYswa9rcmYLs",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
