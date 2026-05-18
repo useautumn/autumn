@@ -131,7 +131,16 @@ export const handleInternalAggregateEvents = createRoute({
 			return { start: aligned.getTime(), end: now.getTime() };
 		})();
 
-		const isPlanIdGrouping = group_by === "plan_id" || group_by === "$plan_id";
+		let resolvedGroupBy = group_by;
+		if (group_by === "$customer_id") {
+			resolvedGroupBy = "customer_id";
+		} else if (group_by === "$entity_id") {
+			resolvedGroupBy = "entity_id";
+		} else if (group_by === "$plan_id") {
+			resolvedGroupBy = "plan_id";
+		}
+
+		const isPlanIdGrouping = resolvedGroupBy === "plan_id";
 		let internalIdToPublicId: Record<string, string> | undefined;
 		let planNames: Record<string, string> | undefined;
 		let effectiveMaxGroups: number | undefined;
@@ -166,7 +175,7 @@ export const handleInternalAggregateEvents = createRoute({
 					event_names,
 					bin_size: binSize,
 					aggregateAll,
-					group_by: group_by,
+					group_by: resolvedGroupBy,
 					customer,
 					timezone: timezone,
 					max_groups: isPlanIdGrouping ? effectiveMaxGroups : max_groups,
@@ -193,7 +202,7 @@ export const handleInternalAggregateEvents = createRoute({
 
 		// When grouping by entity_id, resolve entity names from ClickHouse
 		let entityNames: Record<string, string> | undefined;
-		if (group_by === "entity_id" && events?.data) {
+		if (resolvedGroupBy === "entity_id" && events?.data) {
 			const entityIds = [
 				...new Set(
 					events.data
@@ -214,7 +223,7 @@ export const handleInternalAggregateEvents = createRoute({
 		}
 
 		let customerNames: Record<string, string> | undefined;
-		if (group_by === "customer_id" && events?.data) {
+		if (resolvedGroupBy === "customer_id" && events?.data) {
 			const customerIds = [
 				...new Set(
 					events.data
