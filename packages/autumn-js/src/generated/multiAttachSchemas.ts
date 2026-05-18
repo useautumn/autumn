@@ -139,6 +139,7 @@ export const multiAttachFreeTrialParamsOutboundSchema = z.object({
 	duration_length: z.number(),
 	duration_type: z.string(),
 	card_required: z.boolean(),
+	on_end: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const multiAttachInvoiceModeOutboundSchema = z.object({
@@ -283,12 +284,15 @@ export const multiAttachPlanSchema = z.object({
 
 export const multiAttachDurationTypeSchema = closedEnumSchema;
 
+export const multiAttachOnEndSchema = closedEnumSchema;
+
 export const multiAttachFreeTrialParamsSchema = z.object({
 	durationLength: z.number(),
 	durationType: z
 		.union([multiAttachDurationTypeSchema, z.undefined()])
 		.optional(),
 	cardRequired: z.union([z.boolean(), z.undefined()]).optional(),
+	onEnd: z.union([multiAttachOnEndSchema, z.undefined()]).optional(),
 });
 
 export const multiAttachRedirectModeSchema = closedEnumSchema;

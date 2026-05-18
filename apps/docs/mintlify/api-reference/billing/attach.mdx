@@ -388,6 +388,10 @@ This is useful for attaching custom metadata to the Stripe subscription created 
           If true, payment method required to start trial. Customer is charged after trial ends.
         </DynamicParamField>
 
+        <DynamicParamField body="on_end" type="'bill' | 'revert'">
+          Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+        </DynamicParamField>
+
       </Expandable>
     </DynamicParamField>
 

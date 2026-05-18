@@ -16,12 +16,16 @@ export function convertPeriodsToEpoch(
 }
 
 /**
- * Normalize a group value to a string.
- * @param value - The value to normalize.
- * @returns The normalized value as a string or null if the value is null or empty.
+ * Normalize a group value to a string. For `plan_id`, an empty string is a
+ * meaningful bucket ("no plan") and is preserved; for other fields, empty is
+ * treated as missing.
  */
-function normalizeGroupValue(value: unknown): string | null {
-	if (value == null || value === "") return null;
+function normalizeGroupValue(
+	value: unknown,
+	groupByField?: string,
+): string | null {
+	if (value == null) return null;
+	if (value === "" && groupByField !== "plan_id") return null;
 	return String(value);
 }
 
@@ -41,8 +45,8 @@ export function collectGroupingMetadata(
 	for (const row of rows) {
 		// biome-ignore lint/correctness/noUnusedVariables: period is required here but appears unused
 		const { [groupByField]: groupValue, period, ...metrics } = row;
-		const normalized = normalizeGroupValue(groupValue);
-		if (normalized) {
+		const normalized = normalizeGroupValue(groupValue, groupByField);
+		if (normalized !== null) {
 			groupValues.add(normalized);
 		}
 		for (const featureName of Object.keys(metrics)) {
@@ -76,8 +80,8 @@ export function buildGroupedTimeseries(
 			grouped.set(periodNum, { period: periodNum });
 		}
 
-		const normalized = normalizeGroupValue(groupValue);
-		if (!normalized) continue;
+		const normalized = normalizeGroupValue(groupValue, groupByField);
+		if (normalized === null) continue;
 
 		const periodData = grouped.get(periodNum)!;
 		for (const [featureName, value] of Object.entries(metrics)) {

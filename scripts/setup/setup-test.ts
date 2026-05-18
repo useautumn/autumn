@@ -1,101 +1,104 @@
 #!/usr/bin/env node
 import chalk from "chalk";
 import inquirer from "inquirer";
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 import {
 	createTestOrg,
 	TEST_ORG_CONFIG,
+	TEST_ORG_PUBLISHABLE_KEY,
 } from "../setupTestUtils/createTestOrg.js";
+import { mergeEnvFile } from "../dw/helpers/env-files.js";
+import { PROJECT_ROOT } from "../dw/constants.js";
 
-async function showPreparationChecklist() {
-	console.log(
-		chalk.magentaBright(
-			"\n================ Autumn Test Setup ================\n",
-		),
-	);
-	console.log(
-		chalk.cyan(
-			"This script will set up a test organization for development.\n",
-		),
-	);
-	console.log(
-		chalk.yellowBright(
-			"Before you begin, ensure the following are configured in your environment:\n",
-		),
-	);
+// Worktree .env.local loading happens in scripts/preload-env.ts (auto-run by
+// Bun via bunfig.toml's `preload`). DATABASE_URL flips to the worktree branch
+// before this module's top-level statements execute.
 
-	console.log(chalk.whiteBright("1. Stripe Sandbox Environment Variables"));
-	console.log(chalk.gray("   Required in your .env file:"));
-	console.log(chalk.gray("   → STRIPE_SANDBOX_CLIENT_ID"));
-	console.log(chalk.gray("   → STRIPE_SANDBOX_SECRET_KEY"));
-	console.log(chalk.gray("   → STRIPE_SANDBOX_WEBHOOK_SECRET\n"));
+function maskDatabaseUrl(url: string | undefined): string {
+	if (!url) return "(unset)";
+	try {
+		const u = new URL(url);
+		const host = u.host;
+		const db = u.pathname.replace(/^\//, "");
+		return `${u.protocol}//***@${host}/${db}`;
+	} catch {
+		return "(unparseable)";
+	}
+}
 
-	console.log(chalk.whiteBright("2. Stripe Webhook URL"));
-	console.log(
-		chalk.gray(
-			"   → A tunnel URL (e.g., ngrok) pointing to localhost:8080 for webhooks\n",
-		),
-	);
-
-	console.log(chalk.whiteBright("3. Cache URL"));
-	console.log(chalk.gray("   → Redis on your machine\n"));
-
-	// Prompt user to continue
+async function maybeConfirm(yes: boolean): Promise<boolean> {
+	if (yes) return true;
+	if (!process.stdin.isTTY) return true;
+	const target = maskDatabaseUrl(process.env.DATABASE_URL);
 	const { ready } = await inquirer.prompt([
 		{
 			type: "confirm",
 			name: "ready",
 			message: chalk.cyan(
-				"Have you configured all the above? Ready to create test org?",
+				`About to seed '${TEST_ORG_CONFIG.slug}' into DATABASE_URL=${target}. Continue?`,
 			),
 			default: true,
 		},
 	]);
-
-	if (!ready) {
-		console.log(
-			chalk.yellow(
-				"\nSetup cancelled. Run the script again when you're ready!\n",
-			),
-		);
-		process.exit(0);
-	}
+	return Boolean(ready);
 }
 
 async function main() {
-	// Show preparation checklist
-	await showPreparationChecklist();
+	const yes = process.argv.includes("--yes");
+	console.log(
+		chalk.magentaBright(
+			`\n================ Autumn setup-test ================\n`,
+		),
+	);
+	console.log(
+		chalk.cyan(`Target: ${maskDatabaseUrl(process.env.DATABASE_URL)}\n`),
+	);
+
+	const proceed = await maybeConfirm(yes);
+	if (!proceed) {
+		console.log(chalk.yellow("Cancelled."));
+		process.exit(0);
+	}
 
 	try {
-		// Import db from server
+		const hadKey = Boolean(process.env.UNIT_TEST_AUTUMN_SECRET_KEY);
 		const { db } = await import("@server/db/initDrizzle.js");
-
-		// Create test organization in database and get API key
 		const autumnSecretKey = await createTestOrg({ db });
 
-		console.log(
-			chalk.magentaBright(
-				"\n================ Setup Complete! ================\n",
-			),
-		);
-		console.log(chalk.greenBright("🎉 Test organization setup complete! 🎉\n"));
-		console.log(chalk.cyan("Test Organization Details:"));
-		console.log(chalk.whiteBright(`  Organization: ${TEST_ORG_CONFIG.slug}`));
-		console.log(chalk.whiteBright(`  ID: ${TEST_ORG_CONFIG.id}`));
-		console.log(chalk.whiteBright(`  Secret Key: ${autumnSecretKey}\n`));
+		if (!hadKey) {
+			const envPath = join(PROJECT_ROOT, "server", ".env.local");
+			const existing = existsSync(envPath) ? readFileSync(envPath, "utf-8") : null;
+			const merged = mergeEnvFile(existing, {
+				UNIT_TEST_AUTUMN_SECRET_KEY: autumnSecretKey,
+			});
+			writeFileSync(envPath, merged);
+			process.env.UNIT_TEST_AUTUMN_SECRET_KEY = autumnSecretKey;
+			console.log(
+				chalk.cyan(`[setup-test] persisted UNIT_TEST_AUTUMN_SECRET_KEY to server/.env.local`),
+			);
+		}
 
-		console.log(chalk.cyan("Next steps:"));
+		const envPath = join(PROJECT_ROOT, "server", ".env.local");
+		const existing = existsSync(envPath) ? readFileSync(envPath, "utf-8") : null;
+		const merged = mergeEnvFile(existing, {
+			UNIT_TEST_AUTUMN_PUBLIC_KEY: TEST_ORG_PUBLISHABLE_KEY,
+		});
+		writeFileSync(envPath, merged);
+		process.env.UNIT_TEST_AUTUMN_PUBLIC_KEY = TEST_ORG_PUBLISHABLE_KEY;
 		console.log(
-			chalk.whiteBright("1. Start your tunnel (e.g., ngrok http 8080)"),
-		);
-		console.log(chalk.whiteBright("2. Start your development server"));
-		console.log(
-			chalk.whiteBright("3. Run tests with your new test organization!\n"),
+			chalk.cyan(`[setup-test] persisted UNIT_TEST_AUTUMN_PUBLIC_KEY to server/.env.local`),
 		);
 
+		console.log(chalk.greenBright("\n✅ setup-test complete"));
+		console.log(chalk.cyan("Org:"));
+		console.log(chalk.whiteBright(`  slug: ${TEST_ORG_CONFIG.slug}`));
+		console.log(chalk.whiteBright(`  id:   ${TEST_ORG_CONFIG.id}`));
+		console.log(chalk.whiteBright(`  key:  ${autumnSecretKey}\n`));
 		process.exit(0);
 	} catch (error) {
 		console.error(
-			chalk.red("\n❌ Setup failed:"),
+			chalk.red("\n❌ setup-test failed:"),
 			error instanceof Error ? error.message : error,
 		);
 		process.exit(1);

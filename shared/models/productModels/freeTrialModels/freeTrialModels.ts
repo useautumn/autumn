@@ -1,6 +1,9 @@
 import { z } from "zod/v4";
 import { FreeTrialDuration } from "./freeTrialEnums";
 
+export const TrialOnEnd = ["bill", "revert"] as const;
+export type TrialOnEnd = (typeof TrialOnEnd)[number];
+
 export const FreeTrialSchema = z.object({
 	id: z.string(),
 	duration: z.enum(FreeTrialDuration),
@@ -11,6 +14,7 @@ export const FreeTrialSchema = z.object({
 	internal_product_id: z.string(),
 	is_custom: z.boolean(),
 	card_required: z.boolean(),
+	on_end: z.enum(TrialOnEnd).nullish(),
 });
 
 export const CreateFreeTrialSchema = z.object({
@@ -24,6 +28,7 @@ export const CreateFreeTrialSchema = z.object({
 	unique_fingerprint: z.boolean().default(false),
 	duration: z.enum(FreeTrialDuration).default(FreeTrialDuration.Day),
 	card_required: z.boolean().default(true),
+	on_end: z.enum(TrialOnEnd).nullish(),
 });
 
 export type FreeTrial = z.infer<typeof FreeTrialSchema>;

@@ -15,6 +15,7 @@ export type TinybirdEvent = {
 	set_usage: number | null;
 	entity_id: string | null;
 	internal_entity_id: string | null;
+	internal_product_id: string | null;
 	customer_id: string;
 	properties: string | null;
 	deductions: string | null;
@@ -45,8 +46,11 @@ export const mapToTinybirdEvent = (event: EventInsert): TinybirdEvent => {
 		set_usage: event.set_usage ? 1 : 0,
 		entity_id: event.entity_id ?? null,
 		internal_entity_id: event.internal_entity_id ?? null,
+		internal_product_id: event.internal_product_id ?? null,
 		customer_id: event.customer_id,
 		properties: event.properties ? JSON.stringify(event.properties) : null,
-		deductions: event.deductions ? JSON.stringify(event.deductions) : null,
+		deductions: event.deductions
+			? JSON.stringify({ list: event.deductions })
+			: "{}",
 	};
 };

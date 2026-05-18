@@ -2,7 +2,6 @@ import { sql } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
-	jsonb,
 	numeric,
 	pgTable,
 	text,
@@ -16,6 +15,7 @@ export const MigrationRunStatus = {
 	Running: "running",
 	Succeeded: "succeeded",
 	Failed: "failed",
+	Canceled: "canceled",
 } as const;
 
 export type MigrationRunStatus =
@@ -38,7 +38,11 @@ export const migrationRuns = pgTable(
 		lazy_run: boolean().notNull().default(false),
 		trigger_run_id: text(),
 		error_message: text(),
-		target_customer_ids: jsonb().$type<string[]>(),
+		/** When set, the run only processes items with these IDs (the `only`
+		 *  param on /migrations.run). Item kind matches the operation scope
+		 *  — typically customer IDs for customer ops, plan IDs for plan
+		 *  ops, etc. Null = unscoped run-all. */
+		only_ids: text("only_ids").array(),
 		target_limit: numeric({ mode: "number" }),
 		created_at: numeric({ mode: "number" }).notNull(),
 		updated_at: numeric({ mode: "number" }),

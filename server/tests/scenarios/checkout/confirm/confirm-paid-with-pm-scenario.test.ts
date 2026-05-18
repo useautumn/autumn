@@ -66,7 +66,7 @@ test(
 
 		// 3. Confirm the checkout - should create invoice and charge PM
 		const confirmResponse = await axios.post<ConfirmCheckoutResponse>(
-			`http://localhost:8080/checkouts/${checkoutId}/confirm`,
+			`${process.env.AUTUMN_TEST_BASE_URL ?? "http://localhost:8080"}/checkouts/${checkoutId}/confirm`,
 			{},
 			{ timeout: 15000 },
 		);

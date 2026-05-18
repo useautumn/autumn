@@ -10,6 +10,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { DateInputUnix } from "@/components/general/DateInputUnix";
 import { Button } from "@/components/v2/buttons/Button";
+import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import { FormLabel } from "@/components/v2/form/FormLabel";
@@ -225,12 +226,12 @@ export function BalanceCreateSheet() {
 								<div>
 									<FormLabel>Interval</FormLabel>
 									<div className="flex items-center gap-2">
-									<Select
-										value={oneOff ? undefined : resetInterval}
-										onValueChange={setResetInterval}
-										disabled={oneOff}
-										items={RESET_INTERVAL_LABELS}
-									>
+										<Select
+											value={oneOff ? undefined : resetInterval}
+											onValueChange={setResetInterval}
+											disabled={oneOff}
+											items={RESET_INTERVAL_LABELS}
+										>
 											<SelectTrigger className="w-full">
 												<SelectValue placeholder="None" />
 											</SelectTrigger>
@@ -299,15 +300,16 @@ export function BalanceCreateSheet() {
 					>
 						Cancel
 					</Button>
-					<Button
+					<ShortcutButton
 						variant="primary"
 						className="w-full"
-						onClick={handleCreate}
+						onClick={() => handleCreate()}
 						isLoading={isCreating}
 						disabled={!featureId}
+						metaShortcut="enter"
 					>
 						Create
-					</Button>
+					</ShortcutButton>
 				</SheetFooter>
 			</div>
 		</LayoutGroup>

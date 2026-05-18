@@ -3,7 +3,7 @@ import { Globe, Sliders } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/v2/buttons/Button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { authClient } from "@/lib/auth-client";
 import { useEnv } from "@/utils/envUtils";
@@ -51,7 +51,7 @@ export const AdminView = () => {
 				<CreateUser />
 				<Button
 					onClick={() => navigate(`${adminBasePath}/edge-config`)}
-					variant="outline"
+					variant="secondary"
 					size="sm"
 					className="w-fit"
 				>
@@ -60,7 +60,7 @@ export const AdminView = () => {
 				</Button>
 				<Button
 					onClick={() => navigate(`${adminBasePath}/oauth`)}
-					variant="outline"
+					variant="secondary"
 					size="sm"
 					className="w-fit"
 				>
@@ -69,7 +69,7 @@ export const AdminView = () => {
 				</Button>
 				<Button
 					onClick={handleStopImpersonating}
-					variant="outline"
+					variant="secondary"
 					size="sm"
 					className="w-fit"
 				>

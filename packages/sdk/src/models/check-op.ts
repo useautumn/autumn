@@ -362,6 +362,12 @@ export const FreeTrialDuration2 = {
  */
 export type FreeTrialDuration2 = OpenEnum<typeof FreeTrialDuration2>;
 
+export const CheckOnEnd2 = {
+  Bill: "bill",
+  Revert: "revert",
+} as const;
+export type CheckOnEnd2 = OpenEnum<typeof CheckOnEnd2>;
+
 export type CheckFreeTrial2 = {
   /**
    * The duration type of the free trial
@@ -379,6 +385,10 @@ export type CheckFreeTrial2 = {
    * Whether the free trial requires a card. If false, the customer can attach the product without going through a checkout flow or having a card on file.
    */
   cardRequired: boolean;
+  /**
+   * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+   */
+  onEnd?: CheckOnEnd2 | null | undefined;
   /**
    * Used in customer context. Whether the free trial is available for the customer if they were to attach the product.
    */
@@ -844,6 +854,12 @@ export const FreeTrialDuration1 = {
  */
 export type FreeTrialDuration1 = OpenEnum<typeof FreeTrialDuration1>;
 
+export const CheckOnEnd1 = {
+  Bill: "bill",
+  Revert: "revert",
+} as const;
+export type CheckOnEnd1 = OpenEnum<typeof CheckOnEnd1>;
+
 export type CheckFreeTrial1 = {
   /**
    * The duration type of the free trial
@@ -861,6 +877,10 @@ export type CheckFreeTrial1 = {
    * Whether the free trial requires a card. If false, the customer can attach the product without going through a checkout flow or having a card on file.
    */
   cardRequired: boolean;
+  /**
+   * Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan.
+   */
+  onEnd?: CheckOnEnd1 | null | undefined;
   /**
    * Used in customer context. Whether the free trial is available for the customer if they were to attach the product.
    */
@@ -1427,6 +1447,10 @@ export const FreeTrialDuration2$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(FreeTrialDuration2);
 
 /** @internal */
+export const CheckOnEnd2$inboundSchema: z.ZodMiniType<CheckOnEnd2, unknown> =
+  openEnums.inboundSchema(CheckOnEnd2);
+
+/** @internal */
 export const CheckFreeTrial2$inboundSchema: z.ZodMiniType<
   CheckFreeTrial2,
   unknown
@@ -1436,12 +1460,14 @@ export const CheckFreeTrial2$inboundSchema: z.ZodMiniType<
     length: types.number(),
     unique_fingerprint: types.boolean(),
     card_required: types.boolean(),
+    on_end: z.optional(z.nullable(CheckOnEnd2$inboundSchema)),
     trial_available: z.nullable(z._default(types.boolean(), true)),
   }),
   z.transform((v) => {
     return remap$(v, {
       "unique_fingerprint": "uniqueFingerprint",
       "card_required": "cardRequired",
+      "on_end": "onEnd",
       "trial_available": "trialAvailable",
     });
   }),
@@ -1915,6 +1941,10 @@ export const FreeTrialDuration1$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(FreeTrialDuration1);
 
 /** @internal */
+export const CheckOnEnd1$inboundSchema: z.ZodMiniType<CheckOnEnd1, unknown> =
+  openEnums.inboundSchema(CheckOnEnd1);
+
+/** @internal */
 export const CheckFreeTrial1$inboundSchema: z.ZodMiniType<
   CheckFreeTrial1,
   unknown
@@ -1924,12 +1954,14 @@ export const CheckFreeTrial1$inboundSchema: z.ZodMiniType<
     length: types.number(),
     unique_fingerprint: types.boolean(),
     card_required: types.boolean(),
+    on_end: z.optional(z.nullable(CheckOnEnd1$inboundSchema)),
     trial_available: z.nullable(z._default(types.boolean(), true)),
   }),
   z.transform((v) => {
     return remap$(v, {
       "unique_fingerprint": "uniqueFingerprint",
       "card_required": "cardRequired",
+      "on_end": "onEnd",
       "trial_available": "trialAvailable",
     });
   }),

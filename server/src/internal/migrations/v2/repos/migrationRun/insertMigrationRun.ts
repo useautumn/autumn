@@ -21,7 +21,7 @@ export const insertMigrationRun = async ({
 		| "migration_internal_id"
 		| "dry_run"
 		| "lazy_run"
-		| "target_customer_ids"
+		| "only_ids"
 		| "target_limit"
 	>;
 }): Promise<MigrationRun | null> => {
@@ -37,7 +37,7 @@ export const insertMigrationRun = async ({
 			status: MigrationRunStatus.Queued,
 			dry_run: insert.dry_run,
 			lazy_run: insert.lazy_run ?? false,
-			target_customer_ids: insert.target_customer_ids ?? null,
+			only_ids: insert.only_ids ?? null,
 			target_limit: insert.target_limit ?? null,
 			created_at: now,
 			updated_at: null,

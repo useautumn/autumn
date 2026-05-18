@@ -103,7 +103,7 @@ test(`${chalk.yellowBright("migration run scoping: only persists target_customer
 		internalId: runResponse.run_id,
 	});
 	expect(run).toBeDefined();
-	expect(run.target_customer_ids).toEqual([firstId]);
+	expect(run.only_ids).toEqual([firstId]);
 	expect(run.target_limit).toBeNull();
 	expect(run.dry_run).toBe(true);
 
@@ -193,7 +193,7 @@ test(`${chalk.yellowBright("migration run scoping: limit persists target_limit o
 		internalId: runResponse.run_id,
 	});
 	expect(run).toBeDefined();
-	expect(run.target_customer_ids).toBeNull();
+	expect(run.only_ids).toBeNull();
 	expect(run.target_limit).toBe(2);
 
 	const events = await autumnV2_2.migrationsV2.listItemEvents({
@@ -243,6 +243,6 @@ test(`${chalk.yellowBright("migration run scoping: full run has null target fiel
 		internalId: runResponse.run_id,
 	});
 	expect(run).toBeDefined();
-	expect(run.target_customer_ids).toBeNull();
+	expect(run.only_ids).toBeNull();
 	expect(run.target_limit).toBeNull();
 });

@@ -2,7 +2,7 @@ import type { Row } from "@tanstack/react-table";
 import { flexRender } from "@tanstack/react-table";
 import { memo, type ReactNode } from "react";
 import { Link } from "react-router";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
 	TableBody as ShadcnTableBody,
 	TableCell,

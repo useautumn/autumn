@@ -1098,7 +1098,7 @@ export async function initScenario({
 			"[TEST] Creating sub-org:",
 			slug,
 			" | Impersonate via: ",
-			`http://localhost:3000/impersonate-redirect?org_id=${ctx.org.id}`,
+			`${process.env.AUTUMN_TEST_VITE_URL ?? "http://localhost:3000"}/impersonate-redirect?org_id=${ctx.org.id}`,
 		);
 	}
 

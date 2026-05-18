@@ -6,7 +6,8 @@
 	"scripts": {
 		"setup": "tsx setup/setup.js",
 		"setup-test": "tsx setup/setup-test.ts",
-		"replicate": "bun run db/replicate.ts"
+		"replicate": "bun run db/replicate.ts",
+		"ts": "bunx tsgo --build --noEmit"
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.1017.0",

@@ -48,6 +48,11 @@ export type PlanFilter = {
 	/** `recurring: true` already implies a paid plan. */
 	paid?: z.infer<typeof BooleanMatcherSchema>;
 	recurring?: z.infer<typeof BooleanMatcherSchema>;
+	/** Mirrors `customer_products.custom`. Migrations that bump a plan
+	 *  version inject `custom: false` automatically (see
+	 *  `preProcessMigrationOperations`) so admin-customized plans are never
+	 *  touched. Set explicitly to override. */
+	custom?: z.infer<typeof BooleanMatcherSchema>;
 	item?:
 		| z.infer<typeof PlanItemFilterSchema>
 		| {
@@ -65,6 +70,7 @@ export const PlanFilterSchema: z.ZodType<PlanFilter> = z.lazy(() =>
 		addon: BooleanMatcherSchema.optional(),
 		paid: BooleanMatcherSchema.optional(),
 		recurring: BooleanMatcherSchema.optional(),
+		custom: BooleanMatcherSchema.optional(),
 		item: arrayFilter(PlanItemFilterSchema).optional(),
 		$or: z.array(PlanFilterSchema).optional(),
 	}),
