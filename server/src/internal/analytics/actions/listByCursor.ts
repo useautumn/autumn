@@ -1,14 +1,19 @@
-import type { ApiEventsListItem, TrackDeduction } from "@autumn/shared";
+import type {
+	ApiEventsListItem,
+	CursorPaginatedResponse,
+	TrackDeduction,
+} from "@autumn/shared";
+import { StandardCursor } from "@autumn/shared";
 import {
 	epochToDateTime,
+	epochToDateTimeMillis,
 	tinybirdTimestampToEpochMs,
 } from "@autumn/shared/api/common/epochUtils";
 import { getTinybirdPipes } from "@/external/tinybird/initTinybird.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { validatePropertyPathForJSON } from "@/internal/analytics/actions/eventValidationUtils.js";
 
-/** Lists events for the external API with offset-based pagination */
-export const listEvents = async ({
+export const listByCursor = async ({
 	ctx,
 	params,
 }: {
@@ -18,15 +23,16 @@ export const listEvents = async ({
 		entity_id?: string;
 		feature_ids?: string[];
 		custom_range?: { start?: number; end?: number };
-		offset: number;
+		cursor: string;
 		limit: number;
 		filter_by?: Record<string, string>;
 	};
-}) => {
+}): Promise<CursorPaginatedResponse<ApiEventsListItem>> => {
 	const pipes = getTinybirdPipes();
 	const { org, env } = ctx;
 
-	// Convert epoch ms to DateTime strings (if provided)
+	const cursor = StandardCursor.decode(params.cursor);
+
 	const startDate = params.custom_range?.start
 		? epochToDateTime(params.custom_range.start)
 		: undefined;
@@ -34,15 +40,14 @@ export const listEvents = async ({
 		? epochToDateTime(params.custom_range.end)
 		: undefined;
 
-	// Fetch N+1 for has_more calculation
 	const fetchLimit = params.limit + 1;
 
-	ctx.logger.debug("Listing events for API via Tinybird", {
+	ctx.logger.debug("Listing events via cursor", {
 		customerId: params.customer_id,
 		featureIds: params.feature_ids,
 		startDate,
 		endDate,
-		offset: params.offset,
+		cursor,
 		limit: params.limit,
 	});
 
@@ -59,7 +64,7 @@ export const listEvents = async ({
 	}
 
 	const startTime = performance.now();
-	const result = await pipes.listEventsPaginated({
+	const result = await pipes.listEventsCursor({
 		org_id: org.id,
 		env,
 		start_date: startDate,
@@ -68,7 +73,12 @@ export const listEvents = async ({
 		entity_id: params.entity_id,
 		event_names: params.feature_ids,
 		limit: fetchLimit,
-		offset: params.offset,
+		...(cursor
+			? {
+					cursor_timestamp: epochToDateTimeMillis(cursor.t),
+					cursor_id: cursor.id,
+				}
+			: {}),
 		...filterParams,
 	});
 
@@ -113,7 +123,16 @@ export const listEvents = async ({
 		};
 	});
 
-	ctx.logger.debug("Events list result", {
+	const lastItem = list[list.length - 1];
+	const next_cursor =
+		hasMore && lastItem
+			? StandardCursor.encode({
+					id: lastItem.id,
+					t: lastItem.timestamp,
+				})
+			: null;
+
+	ctx.logger.debug("Events listByCursor result", {
 		queryMs: Math.round(queryDuration),
 		rowCount: list.length,
 		hasMore,
@@ -121,9 +140,6 @@ export const listEvents = async ({
 
 	return {
 		list,
-		has_more: hasMore,
-		total: list.length,
-		offset: params.offset,
-		limit: params.limit,
+		next_cursor,
 	};
 };
