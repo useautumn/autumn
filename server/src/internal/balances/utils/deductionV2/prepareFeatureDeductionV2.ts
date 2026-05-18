@@ -1,5 +1,7 @@
 import {
+	AllowanceType,
 	cusEntToStartingBalance,
+	type FullCusEntWithFullCusProduct,
 	type FullSubject,
 	fullSubjectToCustomerEntitlements,
 	fullSubjectToOverageAllowedByFeatureId,
@@ -58,6 +60,15 @@ export const prepareFeatureDeductionV2 = ({
 	});
 
 	const unlimitedFeatureIds: string[] = [];
+	// Track the chosen unlimited cusEnt so the deduction short-circuit can
+	// still attribute the event to a plan. Prefer cusEnts whose feature
+	// matches the tracked one (over credit-system parents); within that,
+	// take the first match in the already-sorted customerEntitlements list.
+	let unlimitedCusEntPrimary: FullCusEntWithFullCusProduct | undefined;
+	let unlimitedCusEntFallback: FullCusEntWithFullCusProduct | undefined;
+	const isUnlimitedCusEnt = (ce: FullCusEntWithFullCusProduct): boolean =>
+		ce.entitlement.allowance_type === AllowanceType.Unlimited ||
+		Boolean(ce.unlimited);
 
 	for (const relevantFeature of relevantFeatures) {
 		const { unlimited: featureUnlimited } = getUnlimitedAndUsageAllowed({
@@ -67,8 +78,21 @@ export const prepareFeatureDeductionV2 = ({
 
 		if (featureUnlimited) {
 			unlimitedFeatureIds.push(relevantFeature.id);
+			const matchingCusEnt = customerEntitlements.find(
+				(ce) =>
+					ce.internal_feature_id === relevantFeature.internal_id &&
+					isUnlimitedCusEnt(ce),
+			);
+			if (!matchingCusEnt) continue;
+			if (relevantFeature.id === feature.id) {
+				unlimitedCusEntPrimary ??= matchingCusEnt;
+			} else {
+				unlimitedCusEntFallback ??= matchingCusEnt;
+			}
 		}
 	}
+
+	const unlimitedCusEnt = unlimitedCusEntPrimary ?? unlimitedCusEntFallback;
 
 	const effectiveFeatureIds = relevantFeatures.map((candidate) => candidate.id);
 	const spendLimitByFeatureId = fullSubjectToSpendLimitByFeatureId({
@@ -194,6 +218,7 @@ export const prepareFeatureDeductionV2 = ({
 			credit_cost: rollover.credit_cost,
 		})),
 		unlimitedFeatureIds,
+		unlimitedCusEnt,
 		lock: preparedLock,
 	};
 };
