@@ -1,0 +1,50 @@
+server/src/internal/events/handlers/handleExternalListEvents.ts
+  s_22f9aac100b835::t_2bf666274f06aa 41
+server/tests/integration/crud/customers/cross-version-list-customers.test.ts
+  s_22f9aac100b835::t_50a606e4afb8a8 30
+server/src/internal/entities/handlers/handleListEntitiesV2.ts
+  s_22f9aac100b835::t_d7f131ad707dab 186
+shared/api/customers/crud/listCustomersParamsV2_3.ts
+  s_22f9aac100b835::t_67c2f80cceb1ff 9
+server/tests/integration/crud/events/list-events-v22-vs-v23-parity.test.ts
+  s_22f9aac100b835::t_1c9506af0d2757 150
+  s_22f9aac100b835::t_a9275dc0d53372 162
+server/tests/integration/others/rate-limits/rate-limit-list-customers.test.ts
+  s_22f9aac100b835::t_323fdf3429ff18 53,61
+server/tests/integration/crud/customers/list-customers-v22-vs-v23-parity.test.ts
+  s_22f9aac100b835::t_20f83c3d3d7e60 143
+  s_22f9aac100b835::t_24d6f951159d80 71
+  s_22f9aac100b835::t_f1bb3f17eefe5a 131
+server/src/internal/customers/CusBatchService.ts
+  s_22f9aac100b835::t_bc5ab5690e4b91 196
+packages/openapi/v2.3/contracts/customersContract.ts
+  s_22f9aac100b835::t_1b2dc601eff011 86
+  s_22f9aac100b835::t_af1eabc8025577 97
+server/src/internal/analytics/actions/listByCursor.ts
+  s_22f9aac100b835::t_2077a00535e88b 27
+  s_22f9aac100b835::t_210ef9f110d09a 35
+shared/api/events/list/eventsListParamsV2_3.ts
+  s_22f9aac100b835::t_d7516c0372a19d 9
+shared/api/entities/crud/listEntitiesParamsV2_3.ts
+  s_22f9aac100b835::t_97b99fcebac6e4 9
+server/src/external/autumn/autumnCli.ts
+  s_22f9aac100b835::t_f034ac9dce4be2 425
+packages/openapi/v2.3/contracts/entitiesContract.ts
+  s_22f9aac100b835::t_71031e57225576 131
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "ef067da91459f04fdceaeaefec456ee0fbe44afa",
+  "prompts": {},
+  "sessions": {
+    "s_22f9aac100b835": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c48aaa07ffeAe3HS2d5CLDNuw",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
