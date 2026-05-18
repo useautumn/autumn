@@ -18,7 +18,7 @@ class AggregateEventsGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.3.0"
+    ] = "2.2.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -92,7 +92,7 @@ class EventsAggregateParamsTypedDict(TypedDict):
     entity_id: NotRequired[str]
     r"""Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)"""
     group_by: NotRequired[str]
-    r"""Property to group events by (e.g. \"properties.region\"), or \"$customer_id\" / \"$entity_id\" to group by those columns"""
+    r"""Property to group events by (e.g. \"properties.region\"), or \"$customer_id\" / \"$entity_id\" / \"$plan_id\" to group by those columns"""
     range: NotRequired[Range]
     r"""Time range to aggregate events for. Either range or custom_range must be provided"""
     bin_size: NotRequired[BinSize]
@@ -116,7 +116,7 @@ class EventsAggregateParams(BaseModel):
     r"""Entity ID to filter aggregated events for (e.g., per-seat or per-resource limits)"""
 
     group_by: Optional[str] = None
-    r"""Property to group events by (e.g. \"properties.region\"), or \"$customer_id\" / \"$entity_id\" to group by those columns"""
+    r"""Property to group events by (e.g. \"properties.region\"), or \"$customer_id\" / \"$entity_id\" / \"$plan_id\" to group by those columns"""
 
     range: Optional[Range] = None
     r"""Time range to aggregate events for. Either range or custom_range must be provided"""

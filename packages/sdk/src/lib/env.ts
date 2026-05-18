@@ -25,7 +25,7 @@ export interface Env {
 export const envSchema: z.ZodMiniType<Env, unknown> = z.object({
   AUTUMN_SECRET_KEY: z.optional(z.string()),
 
-  AUTUMN_X_API_VERSION: z._default(z.string(), "2.3.0"),
+  AUTUMN_X_API_VERSION: z._default(z.string(), "2.2.0"),
   AUTUMN_FAIL_OPEN: z.pipe(
     z._default(z.enum(["true", "false"]), "true"),
     z.transform(v => v === "true"),

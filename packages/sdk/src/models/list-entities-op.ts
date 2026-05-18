@@ -45,11 +45,11 @@ export type ListEntitiesProcessor = ClosedEnum<typeof ListEntitiesProcessor>;
 
 export type ListEntitiesParams = {
   /**
-   * Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
+   * Number of items to skip
    */
-  cursor?: string | undefined;
+  offset?: number | undefined;
   /**
-   * Number of items to return. Default 50, hard ceiling 5000.
+   * Number of items to return. Default 10, max 1000.
    */
   limit?: number | undefined;
   /**
@@ -443,19 +443,35 @@ export type ListEntitiesList = {
 /**
  * OK
  */
-export type ListEntitiesResponseBody = {
+export type ListEntitiesResponse = {
   /**
-   * Items for current page.
+   * Array of items for current page
    */
   list: Array<ListEntitiesList>;
   /**
-   * Opaque cursor for the next page. Null when there are no more results.
+   * Whether more results exist after this page
    */
-  nextCursor: string | null;
-};
-
-export type ListEntitiesResponse = {
-  result: ListEntitiesResponseBody;
+  hasMore: boolean;
+  /**
+   * Current offset position
+   */
+  offset: number;
+  /**
+   * Limit passed in the request
+   */
+  limit: number;
+  /**
+   * Total number of items returned in the current page
+   */
+  total: number;
+  /**
+   * Total number of entities available in the current organization and environment
+   */
+  totalCount: number;
+  /**
+   * Total number of entities matching the current filter before pagination is applied
+   */
+  totalFilteredCount: number;
 };
 
 /** @internal */
@@ -493,7 +509,7 @@ export const ListEntitiesProcessor$outboundSchema: z.ZodMiniEnum<
 
 /** @internal */
 export type ListEntitiesParams$Outbound = {
-  cursor: string;
+  offset: number;
   limit: number;
   plans?: Array<ListEntitiesPlan$Outbound> | undefined;
   subscription_status?: string | undefined;
@@ -507,8 +523,8 @@ export const ListEntitiesParams$outboundSchema: z.ZodMiniType<
   ListEntitiesParams
 > = z.pipe(
   z.object({
-    cursor: z._default(z.string(), ""),
-    limit: z._default(z.int(), 50),
+    offset: z._default(z.int(), 0),
+    limit: z._default(z.int(), 10),
     plans: z.optional(z.array(z.lazy(() => ListEntitiesPlan$outboundSchema))),
     subscriptionStatus: z.optional(
       ListEntitiesSubscriptionStatus$outboundSchema,
@@ -955,42 +971,24 @@ export function listEntitiesListFromJSON(
 }
 
 /** @internal */
-export const ListEntitiesResponseBody$inboundSchema: z.ZodMiniType<
-  ListEntitiesResponseBody,
-  unknown
-> = z.pipe(
-  z.object({
-    list: z.array(z.lazy(() => ListEntitiesList$inboundSchema)),
-    next_cursor: types.nullable(types.string()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      "next_cursor": "nextCursor",
-    });
-  }),
-);
-
-export function listEntitiesResponseBodyFromJSON(
-  jsonString: string,
-): SafeParseResult<ListEntitiesResponseBody, SDKValidationError> {
-  return safeParse(
-    jsonString,
-    (x) => ListEntitiesResponseBody$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'ListEntitiesResponseBody' from JSON`,
-  );
-}
-
-/** @internal */
 export const ListEntitiesResponse$inboundSchema: z.ZodMiniType<
   ListEntitiesResponse,
   unknown
 > = z.pipe(
   z.object({
-    Result: z.lazy(() => ListEntitiesResponseBody$inboundSchema),
+    list: z.array(z.lazy(() => ListEntitiesList$inboundSchema)),
+    has_more: types.boolean(),
+    offset: types.number(),
+    limit: types.number(),
+    total: types.number(),
+    total_count: types.number(),
+    total_filtered_count: types.number(),
   }),
   z.transform((v) => {
     return remap$(v, {
-      "Result": "result",
+      "has_more": "hasMore",
+      "total_count": "totalCount",
+      "total_filtered_count": "totalFilteredCount",
     });
   }),
 );

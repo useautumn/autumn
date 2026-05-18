@@ -1,6 +1,6 @@
 info:
   title: Autumn API
-  version: 2.3.0
+  version: 2.2.0
 servers:
   - url: https://api.useautumn.com
     description: Production server
@@ -1282,6 +1282,16 @@ components:
               type: boolean
               description: Whether a payment method is required to start the trial. If true,
                 customer will be charged after trial ends.
+            on_end:
+              anyOf:
+                - enum:
+                    - bill
+                    - revert
+                  type: string
+                - type: "null"
+              description: Behavior when the trial ends. 'bill' charges the customer
+                (default). 'revert' expires the trial and restores the
+                customer's previous plan.
           required:
             - duration_length
             - duration_type
@@ -1865,13 +1875,12 @@ paths:
               example: *a2
       x-speakeasy-name-override: getOrCreate
       parameters:
-        - &a5
-          name: x-api-version
+        - name: x-api-version
           in: header
           required: true
           schema:
             type: string
-            default: 2.3.0
+            default: 2.2.0
           x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
@@ -2724,7 +2733,13 @@ paths:
               example: *a4
       x-speakeasy-name-override: get
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -2747,30 +2762,28 @@ paths:
   /v1/customers.list:
     post:
       operationId: listCustomers
-      description: 'Lists customers with cursor pagination and optional filters. Pass
-        `cursor: ""` (or omit) for the first page; use `next_cursor` from a
-        prior response for subsequent pages.'
+      description: Lists customers with pagination and optional filters.
       tags:
         - customers
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
               type: object
               properties:
-                cursor:
-                  type: string
-                  default: ""
-                  description: Opaque pagination cursor. Empty string (default) requests the first
-                    page; use next_cursor from a prior response for subsequent
-                    pages.
+                offset:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                  default: 0
+                  description: Number of items to skip
                 limit:
                   type: integer
                   minimum: 1
-                  maximum: 5000
-                  default: 50
-                  description: Number of items to return. Default 50, hard ceiling 5000.
+                  maximum: 1000
+                  default: 10
+                  description: Number of items to return. Default 10, max 1000.
                 plans:
                   type: array
                   items:
@@ -2791,11 +2804,10 @@ paths:
                     - active
                     - scheduled
                   type: string
-                  description: Filter by customer product status. Defaults to active and
-                    scheduled.
+                  description: Filter by customer product status. Defaults to active and scheduled
                 search:
                   type: string
-                  description: Search customers by id, name, or email.
+                  description: Search customers by id, name, or email
                 processors:
                   type: array
                   items:
@@ -2804,13 +2816,13 @@ paths:
                       - revenuecat
                       - vercel
                     type: string
-                  description: Filter by customer processor type (stripe, revenuecat, vercel).
+                  description: Filter by customer processor type (stripe, revenuecat, vercel)
               title: ListCustomersParams
               examples:
-                - &a6
-                  cursor: ""
+                - &a5
                   limit: 10
-            example: *a6
+                  offset: 0
+            example: *a5
       responses:
         "200":
           description: OK
@@ -3385,18 +3397,37 @@ paths:
                               feature_id: advanced_workflows
                           config:
                             disable_pooled_balance: false
-                    description: Items for current page.
-                  next_cursor:
-                    anyOf:
-                      - type: string
-                      - type: "null"
-                    description: Opaque cursor for the next page. Null when there are no more
-                      results.
+                    description: Array of items for current page
+                  has_more:
+                    type: boolean
+                    description: Whether more results exist after this page
+                  offset:
+                    type: number
+                    description: Current offset position
+                  limit:
+                    type: number
+                    description: Limit passed in the request
+                  total:
+                    type: number
+                    description: Total number of items returned in the current page
+                  total_count:
+                    type: number
+                    description: Total number of customers available in the current organization and
+                      environment
+                  total_filtered_count:
+                    type: number
+                    description: Total number of customers matching the current filter before
+                      pagination is applied
                 required:
                   - list
-                  - next_cursor
+                  - has_more
+                  - offset
+                  - limit
+                  - total
+                  - total_count
+                  - total_filtered_count
                 examples:
-                  - &a7
+                  - &a6
                     list:
                       - id: 2ee25a41-0d81-4ad2-8451-ec1aadaefe58
                         name: Patrick
@@ -3457,22 +3488,22 @@ paths:
                             feature_id: advanced_workflows
                         config:
                           disable_pooled_balance: false
-                    next_cursor: null
-              example: *a7
+                    has_more: false
+                    offset: 0
+                    total: 1
+                    limit: 10
+                    total_count: 100
+                    total_filtered_count: 42
+              example: *a6
       x-speakeasy-name-override: list
       parameters:
-        - *a5
-      x-speakeasy-pagination:
-        type: cursor
-        inputs:
-          - name: cursor
-            in: requestBody
-            type: cursor
-          - name: limit
-            in: requestBody
-            type: limit
-        outputs:
-          nextCursor: $.next_cursor
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -3481,13 +3512,7 @@ paths:
 
             const autumn = new Autumn()
 
-            const result = await autumn.customers.list({
-              limit: 10,
-            });
-
-            for await (const page of result) {
-              console.log(page);
-            }
+            const result = await autumn.customers.list({});
         - lang: python
           label: Python (SDK)
           source: |-
@@ -3495,12 +3520,9 @@ paths:
 
             autumn = Autumn(secret_key="am_sk_test...")
 
-            res = autumn.customers.list(cursor="", limit=10)
-
-            while res is not None:
-                # Handle items
-
-                res = res.next()
+            res = autumn.customers.list(
+                request={},
+            )
   /v1/customers.update:
     post:
       operationId: updateCustomer
@@ -3692,11 +3714,11 @@ paths:
                 - customer_id
               title: UpdateCustomerParams
               examples:
-                - &a8
+                - &a7
                   customer_id: cus_123
                   name: Jane Doe
                   email: jane@example.com
-            example: *a8
+            example: *a7
       responses:
         "200":
           description: OK
@@ -4204,7 +4226,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a9
+                  - &a8
                     id: 2ee25a41-0d81-4ad2-8451-ec1aadaefe58
                     name: Patrick
                     email: patrick@useautumn.com
@@ -4264,10 +4286,16 @@ paths:
                         feature_id: advanced_workflows
                     config:
                       disable_pooled_balance: false
-              example: *a9
+              example: *a8
       x-speakeasy-name-override: update
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -4318,10 +4346,10 @@ paths:
                 - customer_id
               title: DeleteCustomerParams
               examples:
-                - &a10
+                - &a9
                   customer_id: cus_123
                   delete_in_stripe: false
-            example: *a10
+            example: *a9
       responses:
         "200":
           description: OK
@@ -4336,7 +4364,13 @@ paths:
                   - success
       x-speakeasy-name-override: delete
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -4609,6 +4643,14 @@ paths:
                       default: true
                       description: If true, payment method required to start trial. Customer is
                         charged after trial ends.
+                    on_end:
+                      enum:
+                        - bill
+                        - revert
+                      type: string
+                      description: Behavior when the trial ends. 'bill' charges the customer
+                        (default). 'revert' expires the trial and restores the
+                        customer's previous plan.
                   required:
                     - duration_length
                   description: Free trial configuration. Customers can try this plan before being
@@ -4631,7 +4673,7 @@ paths:
                 - name
               title: CreatePlanParams
               examples:
-                - &a11
+                - &a10
                   plan_id: free_plan
                   name: Free
                   auto_enable: true
@@ -4668,7 +4710,7 @@ paths:
                         interval: month
                         billing_units: 1
                         billing_method: prepaid
-            example: *a11
+            example: *a10
       responses:
         "200":
           description: OK
@@ -4980,6 +5022,16 @@ paths:
                         type: boolean
                         description: Whether a payment method is required to start the trial. If true,
                           customer will be charged after trial ends.
+                      on_end:
+                        anyOf:
+                          - enum:
+                              - bill
+                              - revert
+                            type: string
+                          - type: "null"
+                        description: Behavior when the trial ends. 'bill' charges the customer
+                          (default). 'revert' expires the trial and restores the
+                          customer's previous plan.
                     required:
                       - duration_length
                       - duration_type
@@ -5066,7 +5118,7 @@ paths:
                 description: A plan defines a set of features, pricing, and entitlements that
                   can be attached to customers.
                 examples:
-                  - &a12
+                  - &a11
                     id: pro
                     name: Pro Plan
                     description: null
@@ -5113,10 +5165,16 @@ paths:
                     baseVariantId: null
                     config:
                       ignore_past_due: false
-              example: *a12
+              example: *a11
       x-speakeasy-name-override: create
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -5193,11 +5251,11 @@ paths:
                 - plan_id
               title: GetPlanParams
               examples:
-                - &a13
+                - &a12
                   plan_id: pro_plan
                 - plan_id: pro_plan
                   version: 2
-            example: *a13
+            example: *a12
       responses:
         "200":
           description: OK
@@ -5509,6 +5567,16 @@ paths:
                         type: boolean
                         description: Whether a payment method is required to start the trial. If true,
                           customer will be charged after trial ends.
+                      on_end:
+                        anyOf:
+                          - enum:
+                              - bill
+                              - revert
+                            type: string
+                          - type: "null"
+                        description: Behavior when the trial ends. 'bill' charges the customer
+                          (default). 'revert' expires the trial and restores the
+                          customer's previous plan.
                     required:
                       - duration_length
                       - duration_type
@@ -5595,7 +5663,7 @@ paths:
                 description: A plan defines a set of features, pricing, and entitlements that
                   can be attached to customers.
                 examples:
-                  - &a14
+                  - &a13
                     id: pro
                     name: Pro Plan
                     description: null
@@ -5642,10 +5710,16 @@ paths:
                     baseVariantId: null
                     config:
                       ignore_past_due: false
-              example: *a14
+              example: *a13
       x-speakeasy-name-override: get
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -5696,10 +5770,10 @@ paths:
                   description: If true, includes archived plans in the response.
               title: ListPlansParams
               examples:
-                - &a15 {}
+                - &a14 {}
                 - customer_id: cus_123
                 - include_archived: true
-            example: *a15
+            example: *a14
       responses:
         "200":
           description: OK
@@ -6019,6 +6093,16 @@ paths:
                               type: boolean
                               description: Whether a payment method is required to start the trial. If true,
                                 customer will be charged after trial ends.
+                            on_end:
+                              anyOf:
+                                - enum:
+                                    - bill
+                                    - revert
+                                  type: string
+                                - type: "null"
+                              description: Behavior when the trial ends. 'bill' charges the customer
+                                (default). 'revert' expires the trial and
+                                restores the customer's previous plan.
                           required:
                             - duration_length
                             - duration_type
@@ -6107,7 +6191,7 @@ paths:
                 required:
                   - list
                 examples:
-                  - &a16
+                  - &a15
                     list:
                       - id: pro
                         name: Pro Plan
@@ -6155,10 +6239,16 @@ paths:
                         baseVariantId: null
                         config:
                           ignore_past_due: false
-              example: *a16
+              example: *a15
       x-speakeasy-name-override: list
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -6425,6 +6515,14 @@ paths:
                           default: true
                           description: If true, payment method required to start trial. Customer is
                             charged after trial ends.
+                        on_end:
+                          enum:
+                            - bill
+                            - revert
+                          type: string
+                          description: Behavior when the trial ends. 'bill' charges the customer
+                            (default). 'revert' expires the trial and restores
+                            the customer's previous plan.
                       required:
                         - duration_length
                       title: FreeTrialParams
@@ -6459,7 +6557,7 @@ paths:
                 - plan_id
               title: UpdatePlanParams
               examples:
-                - &a17
+                - &a16
                   plan_id: pro_plan
                   name: Pro Plan (Updated)
                   price:
@@ -6469,7 +6567,7 @@ paths:
                   price: null
                 - plan_id: old_plan
                   archived: true
-            example: *a17
+            example: *a16
       responses:
         "200":
           description: OK
@@ -6781,6 +6879,16 @@ paths:
                         type: boolean
                         description: Whether a payment method is required to start the trial. If true,
                           customer will be charged after trial ends.
+                      on_end:
+                        anyOf:
+                          - enum:
+                              - bill
+                              - revert
+                            type: string
+                          - type: "null"
+                        description: Behavior when the trial ends. 'bill' charges the customer
+                          (default). 'revert' expires the trial and restores the
+                          customer's previous plan.
                     required:
                       - duration_length
                       - duration_type
@@ -6867,7 +6975,7 @@ paths:
                 description: A plan defines a set of features, pricing, and entitlements that
                   can be attached to customers.
                 examples:
-                  - &a18
+                  - &a17
                     id: pro
                     name: Pro Plan
                     description: null
@@ -6914,10 +7022,16 @@ paths:
                     baseVariantId: null
                     config:
                       ignore_past_due: false
-              example: *a18
+              example: *a17
       x-speakeasy-name-override: update
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -6984,11 +7098,11 @@ paths:
                 - plan_id
               title: DeletePlanParams
               examples:
-                - &a19
+                - &a18
                   plan_id: unused_plan
                 - plan_id: legacy_plan
                   all_versions: true
-            example: *a19
+            example: *a18
       responses:
         "200":
           description: OK
@@ -7003,7 +7117,13 @@ paths:
                   - success
       x-speakeasy-name-override: delete
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -7103,7 +7223,7 @@ paths:
                 - feature_id
               title: CreateFeatureParams
               examples:
-                - &a20
+                - &a19
                   feature_id: api-calls
                   name: API Calls
                   type: metered
@@ -7117,7 +7237,7 @@ paths:
                       credit_cost: 1
                     - metered_feature_id: image-generations
                       credit_cost: 10
-            example: *a20
+            example: *a19
       responses:
         "200":
           description: OK
@@ -7194,7 +7314,7 @@ paths:
                   - consumable
                   - archived
                 examples:
-                  - &a21
+                  - &a20
                     id: api-calls
                     name: API Calls
                     type: metered
@@ -7203,10 +7323,16 @@ paths:
                     display:
                       singular: API call
                       plural: API calls
-              example: *a21
+              example: *a20
       x-speakeasy-name-override: create
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -7257,9 +7383,9 @@ paths:
                 - feature_id
               title: GetFeatureParams
               examples:
-                - &a22
+                - &a21
                   feature_id: api-calls
-            example: *a22
+            example: *a21
       responses:
         "200":
           description: OK
@@ -7336,7 +7462,7 @@ paths:
                   - consumable
                   - archived
                 examples:
-                  - &a23
+                  - &a22
                     id: api-calls
                     name: API Calls
                     type: metered
@@ -7345,10 +7471,16 @@ paths:
                     display:
                       singular: API call
                       plural: API calls
-              example: *a23
+              example: *a22
       x-speakeasy-name-override: get
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -7462,7 +7594,7 @@ paths:
                 required:
                   - list
                 examples:
-                  - &a24
+                  - &a23
                     list:
                       - id: api-calls
                         name: API Calls
@@ -7485,10 +7617,16 @@ paths:
                         display:
                           singular: credit
                           plural: credits
-              example: *a24
+              example: *a23
       x-speakeasy-name-override: list
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -7590,7 +7728,7 @@ paths:
                 - feature_id
               title: UpdateFeatureParams
               examples:
-                - &a25
+                - &a24
                   feature_id: api-calls
                   name: API Requests
                   display:
@@ -7598,7 +7736,7 @@ paths:
                     plural: API requests
                 - feature_id: old-feature
                   archived: true
-            example: *a25
+            example: *a24
       responses:
         "200":
           description: OK
@@ -7675,7 +7813,7 @@ paths:
                   - consumable
                   - archived
                 examples:
-                  - &a26
+                  - &a25
                     id: api-calls
                     name: API Calls
                     type: metered
@@ -7684,10 +7822,16 @@ paths:
                     display:
                       singular: API call
                       plural: API calls
-              example: *a26
+              example: *a25
       x-speakeasy-name-override: update
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -7744,9 +7888,9 @@ paths:
                 - feature_id
               title: DeleteFeatureParams
               examples:
-                - &a27
+                - &a26
                   feature_id: old-feature
-            example: *a27
+            example: *a26
       responses:
         "200":
           description: OK
@@ -7760,12 +7904,18 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a28
+                  - &a27
                     success: true
-              example: *a28
+              example: *a27
       x-speakeasy-name-override: delete
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -8232,6 +8382,14 @@ paths:
                               default: true
                               description: If true, payment method required to start trial. Customer is
                                 charged after trial ends.
+                            on_end:
+                              enum:
+                                - bill
+                                - revert
+                              type: string
+                              description: Behavior when the trial ends. 'bill' charges the customer
+                                (default). 'revert' expires the trial and
+                                restores the customer's previous plan.
                           required:
                             - duration_length
                           title: FreeTrialParams
@@ -8416,10 +8574,10 @@ paths:
                 - plan_id
               title: AttachParams
               examples:
-                - &a29
+                - &a28
                   customer_id: cus_123
                   plan_id: pro_plan
-            example: *a29
+            example: *a28
       responses:
         "200":
           description: OK
@@ -8493,13 +8651,19 @@ paths:
                   - customer_id
                   - payment_url
                 examples:
-                  - &a30
+                  - &a29
                     customer_id: cus_123
                     payment_url: https://checkout.stripe.com/...
-              example: *a30
+              example: *a29
       x-speakeasy-name-override: attach
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -9086,7 +9250,7 @@ paths:
                 - phases
               title: CreateScheduleParams
               examples:
-                - &a31
+                - &a30
                   customer_id: cus_123
                   phases:
                     - starts_at: 1735689600000
@@ -9095,7 +9259,7 @@ paths:
                     - starts_at: 1736899200000
                       plans:
                         - plan_id: pro_plan
-            example: *a31
+            example: *a30
       responses:
         "200":
           description: OK
@@ -9209,7 +9373,7 @@ paths:
                   - payment_url
                 title: CreateScheduleResponse
                 examples:
-                  - &a32
+                  - &a31
                     customer_id: cus_123
                     entity_id: null
                     status: created
@@ -9225,10 +9389,16 @@ paths:
                           - cus_prod_2222
                     invoice: null
                     payment_url: null
-              example: *a32
+              example: *a31
       x-speakeasy-name-override: createSchedule
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -9562,6 +9732,14 @@ paths:
                           default: true
                           description: If true, payment method required to start trial. Customer is
                             charged after trial ends.
+                        on_end:
+                          enum:
+                            - bill
+                            - revert
+                          type: string
+                          description: Behavior when the trial ends. 'bill' charges the customer
+                            (default). 'revert' expires the trial and restores
+                            the customer's previous plan.
                       required:
                         - duration_length
                       title: FreeTrialParams
@@ -9726,7 +9904,7 @@ paths:
                 - plans
               title: MultiAttachParams
               examples:
-                - &a33
+                - &a32
                   customer_id: cus_123
                   plans:
                     - plan_id: pro_plan
@@ -9734,7 +9912,7 @@ paths:
                       feature_quantities:
                         - feature_id: seats
                           quantity: 5
-            example: *a33
+            example: *a32
       responses:
         "200":
           description: OK
@@ -9808,7 +9986,7 @@ paths:
                   - customer_id
                   - payment_url
                 examples:
-                  - &a34
+                  - &a33
                     customer_id: cus_123
                     invoice:
                       status: paid
@@ -9817,10 +9995,16 @@ paths:
                       currency: usd
                       hosted_invoice_url: https://invoice.stripe.com/...
                     payment_url: null
-              example: *a34
+              example: *a33
       x-speakeasy-name-override: multiAttach
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -10318,6 +10502,14 @@ paths:
                               default: true
                               description: If true, payment method required to start trial. Customer is
                                 charged after trial ends.
+                            on_end:
+                              enum:
+                                - bill
+                                - revert
+                              type: string
+                              description: Behavior when the trial ends. 'bill' charges the customer
+                                (default). 'revert' expires the trial and
+                                restores the customer's previous plan.
                           required:
                             - duration_length
                           title: FreeTrialParams
@@ -10502,10 +10694,10 @@ paths:
                 - plan_id
               title: PreviewAttachParams
               examples:
-                - &a35
+                - &a34
                   customer_id: cus_123
                   plan_id: pro_plan
-            example: *a35
+            example: *a34
       responses:
         "200":
           description: OK
@@ -10901,7 +11093,7 @@ paths:
                   - redirect_to_checkout
                   - checkout_type
                 examples:
-                  - &a36
+                  - &a35
                     customerId: charles
                     lineItems:
                       - display_name: Pro seed
@@ -10912,10 +11104,16 @@ paths:
                     subtotal: 20
                     total: 20
                     currency: usd
-              example: *a36
+              example: *a35
       x-speakeasy-name-override: previewAttach
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -11214,6 +11412,14 @@ paths:
                           default: true
                           description: If true, payment method required to start trial. Customer is
                             charged after trial ends.
+                        on_end:
+                          enum:
+                            - bill
+                            - revert
+                          type: string
+                          description: Behavior when the trial ends. 'bill' charges the customer
+                            (default). 'revert' expires the trial and restores
+                            the customer's previous plan.
                       required:
                         - duration_length
                       title: FreeTrialParams
@@ -11378,7 +11584,7 @@ paths:
                 - plans
               title: PreviewMultiAttachParams
               examples:
-                - &a37
+                - &a36
                   customer_id: cus_123
                   plans:
                     - plan_id: pro_plan
@@ -11386,7 +11592,7 @@ paths:
                       feature_quantities:
                         - feature_id: seats
                           quantity: 5
-            example: *a37
+            example: *a36
       responses:
         "200":
           description: OK
@@ -11782,7 +11988,7 @@ paths:
                   - redirect_to_checkout
                   - checkout_type
                 examples:
-                  - &a38
+                  - &a37
                     customerId: charles
                     lineItems:
                       - display_name: Pro seed
@@ -11793,10 +11999,16 @@ paths:
                     subtotal: 20
                     total: 20
                     currency: usd
-              example: *a38
+              example: *a37
       x-speakeasy-name-override: previewMultiAttach
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -12295,6 +12507,14 @@ paths:
                               default: true
                               description: If true, payment method required to start trial. Customer is
                                 charged after trial ends.
+                            on_end:
+                              enum:
+                                - bill
+                                - revert
+                              type: string
+                              description: Behavior when the trial ends. 'bill' charges the customer
+                                (default). 'revert' expires the trial and
+                                restores the customer's previous plan.
                           required:
                             - duration_length
                           title: FreeTrialParams
@@ -12396,13 +12616,13 @@ paths:
                 - customer_id
               title: UpdateSubscriptionParams
               examples:
-                - &a39
+                - &a38
                   customer_id: cus_123
                   plan_id: pro_plan
                   feature_quantities:
                     - feature_id: seats
                       quantity: 10
-            example: *a39
+            example: *a38
       responses:
         "200":
           description: OK
@@ -12476,7 +12696,7 @@ paths:
                   - customer_id
                   - payment_url
                 examples:
-                  - &a40
+                  - &a39
                     customer_id: cus_123
                     invoice:
                       status: paid
@@ -12485,10 +12705,16 @@ paths:
                       currency: usd
                       hosted_invoice_url: https://invoice.stripe.com/...
                     payment_url: null
-              example: *a40
+              example: *a39
       x-speakeasy-name-override: update
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -12973,6 +13199,14 @@ paths:
                               default: true
                               description: If true, payment method required to start trial. Customer is
                                 charged after trial ends.
+                            on_end:
+                              enum:
+                                - bill
+                                - revert
+                              type: string
+                              description: Behavior when the trial ends. 'bill' charges the customer
+                                (default). 'revert' expires the trial and
+                                restores the customer's previous plan.
                           required:
                             - duration_length
                           title: FreeTrialParams
@@ -13074,13 +13308,13 @@ paths:
                 - customer_id
               title: PreviewUpdateParams
               examples:
-                - &a41
+                - &a40
                   customer_id: cus_123
                   plan_id: pro_plan
                   feature_quantities:
                     - feature_id: seats
                       quantity: 15
-            example: *a41
+            example: *a40
       responses:
         "200":
           description: OK
@@ -13472,7 +13706,7 @@ paths:
                   - outgoing
                   - intent
                 examples:
-                  - &a42
+                  - &a41
                     customerId: charles
                     lineItems:
                       - display_name: Pro seed
@@ -13483,10 +13717,16 @@ paths:
                     subtotal: 20
                     total: 20
                     currency: usd
-              example: *a42
+              example: *a41
       x-speakeasy-name-override: previewUpdate
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -13552,10 +13792,10 @@ paths:
                 - customer_id
               title: OpenCustomerPortalParams
               examples:
-                - &a43
+                - &a42
                   customer_id: cus_123
                   return_url: https://useautumn.com
-            example: *a43
+            example: *a42
       responses:
         "200":
           description: OK
@@ -13574,13 +13814,19 @@ paths:
                   - customer_id
                   - url
                 examples:
-                  - &a44
+                  - &a43
                     customer_id: cus_123
                     url: https://billing.stripe.com/session/...
-              example: *a44
+              example: *a43
       x-speakeasy-name-override: openCustomerPortal
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -14047,6 +14293,14 @@ paths:
                               default: true
                               description: If true, payment method required to start trial. Customer is
                                 charged after trial ends.
+                            on_end:
+                              enum:
+                                - bill
+                                - revert
+                              type: string
+                              description: Behavior when the trial ends. 'bill' charges the customer
+                                (default). 'revert' expires the trial and
+                                restores the customer's previous plan.
                           required:
                             - duration_length
                           title: FreeTrialParams
@@ -14183,10 +14437,10 @@ paths:
                 - customer_id
               title: SetupPaymentParams
               examples:
-                - &a45
+                - &a44
                   customer_id: cus_123
                   success_url: https://example.com/account/billing
-            example: *a45
+            example: *a44
       responses:
         "200":
           description: OK
@@ -14210,13 +14464,19 @@ paths:
                   - url
                 title: SetupPaymentResponse
                 examples:
-                  - &a46
+                  - &a45
                     customer_id: cus_123
                     url: https://checkout.stripe.com/...
-              example: *a46
+              example: *a45
       x-speakeasy-name-override: setupPayment
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -14332,13 +14592,13 @@ paths:
                 - feature_id
               title: CreateBalanceParams
               examples:
-                - &a47
+                - &a46
                   customer_id: cus_123
                   feature_id: api_calls
                   included: 1000
                   reset:
                     interval: month
-            example: *a47
+            example: *a46
       responses:
         "200":
           description: OK
@@ -14353,7 +14613,13 @@ paths:
                   - success
       x-speakeasy-name-override: create
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -14450,11 +14716,11 @@ paths:
                 - feature_id
               title: UpdateBalanceParams
               examples:
-                - &a48
+                - &a47
                   customer_id: cus_123
                   feature_id: api_calls
                   remaining: 5
-            example: *a48
+            example: *a47
       responses:
         "200":
           description: OK
@@ -14469,7 +14735,13 @@ paths:
                   - success
       x-speakeasy-name-override: update
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -14546,10 +14818,10 @@ paths:
                 - customer_id
               title: DeleteBalanceParams
               examples:
-                - &a49
+                - &a48
                   customer_id: cus_123
                   feature_id: api_calls
-            example: *a49
+            example: *a48
       responses:
         "200":
           description: OK
@@ -14564,7 +14836,13 @@ paths:
                   - success
       x-speakeasy-name-override: delete
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -14626,7 +14904,7 @@ paths:
                 - action
               title: FinalizeBalanceParams
               examples:
-                - &a50
+                - &a49
                   lock_id: lock_abc123
                   action: confirm
                 - lock_id: lock_abc123
@@ -14634,7 +14912,7 @@ paths:
                   override_value: 3
                 - lock_id: lock_abc123
                   action: release
-            example: *a50
+            example: *a49
       responses:
         "200":
           description: OK
@@ -14661,7 +14939,13 @@ paths:
                   - success
       x-speakeasy-name-override: finalize
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -14756,14 +15040,14 @@ paths:
                 - feature_id
               title: CheckParams
               examples:
-                - &a51
+                - &a50
                   customer_id: cus_123
                   feature_id: messages
                 - customer_id: cus_123
                   feature_id: messages
                   required_balance: 3
                   send_event: true
-            example: *a51
+            example: *a50
       responses:
         "200":
           description: OK
@@ -15181,6 +15465,17 @@ paths:
                                         attach the product without going through
                                         a checkout flow or having a card on
                                         file.
+                                    on_end:
+                                      anyOf:
+                                        - enum:
+                                            - bill
+                                            - revert
+                                          type: string
+                                        - type: "null"
+                                      description: Behavior when the trial ends. 'bill' charges the customer
+                                        (default). 'revert' expires the trial
+                                        and restores the customer's previous
+                                        plan.
                                     trial_available:
                                       anyOf:
                                         - type: boolean
@@ -15274,7 +15569,7 @@ paths:
                   - balance
                   - flag
                 examples:
-                  - &a52
+                  - &a51
                     allowed: true
                     customer_id: cus_123
                     entity_id: null
@@ -15301,7 +15596,7 @@ paths:
                             resets_at: 1773851121437
                           price: null
                           expires_at: null
-              example: *a52
+              example: *a51
         "202":
           description: Accepted. Autumn is experiencing degraded service from a downstream
             provider, so access was allowed fail-open.
@@ -15719,6 +16014,17 @@ paths:
                                         attach the product without going through
                                         a checkout flow or having a card on
                                         file.
+                                    on_end:
+                                      anyOf:
+                                        - enum:
+                                            - bill
+                                            - revert
+                                          type: string
+                                        - type: "null"
+                                      description: Behavior when the trial ends. 'bill' charges the customer
+                                        (default). 'revert' expires the trial
+                                        and restores the customer's previous
+                                        plan.
                                     trial_available:
                                       anyOf:
                                         - type: boolean
@@ -15812,7 +16118,7 @@ paths:
                   - balance
                   - flag
                 examples:
-                  - &a53
+                  - &a52
                     allowed: true
                     customer_id: cus_123
                     entity_id: null
@@ -15839,10 +16145,16 @@ paths:
                             resets_at: 1773851121437
                           price: null
                           expires_at: null
-              example: *a53
+              example: *a52
       x-speakeasy-name-override: check
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -15930,14 +16242,160 @@ paths:
                 - customer_id
               title: TrackParams
               examples:
-                - &a54
+                - &a53
                   customer_id: cus_123
                   feature_id: messages
                   value: 1
-            example: *a54
+            example: *a53
       responses:
         "200":
           description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer_id:
+                    type: string
+                    description: The ID of the customer whose usage was tracked.
+                  entity_id:
+                    type: string
+                    description: The ID of the entity, if entity-scoped tracking was performed.
+                  event_name:
+                    type: string
+                    description: The event name that was tracked, if event_name was used instead of
+                      feature_id.
+                  value:
+                    type: number
+                    description: The amount of usage that was recorded.
+                  balance:
+                    anyOf:
+                      - $ref: "#/components/schemas/Balance"
+                      - type: "null"
+                    description: The updated balance for the tracked feature. Null if tracking by
+                      event_name that affects multiple features.
+                  balances:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      anyOf:
+                        - $ref: "#/components/schemas/Balance"
+                        - type: "null"
+                    description: Map of feature_id to updated balance for the tracked feature and
+                      any related features (e.g. linked credit systems). Value
+                      is null when the customer has no balance for that feature.
+                  deductions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        balance_id:
+                          type: string
+                          description: ID of the underlying balance row that was deducted from
+                            (customer_entitlement or rollover).
+                        feature_id:
+                          type: string
+                          description: The feature this balance belongs to.
+                        plan_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: ID of the plan/product this balance belongs to. Null when the
+                            balance can't be attributed to a single plan (e.g.
+                            it spans multiple).
+                        reset:
+                          anyOf:
+                            - type: object
+                              properties:
+                                interval:
+                                  anyOf:
+                                    - enum:
+                                        - one_off
+                                        - minute
+                                        - hour
+                                        - day
+                                        - week
+                                        - month
+                                        - quarter
+                                        - semi_annual
+                                        - year
+                                      type: string
+                                    - const: multiple
+                                  description: The reset interval (hour, day, week, month, etc.) or 'multiple' if
+                                    combined from different intervals.
+                                interval_count:
+                                  type: number
+                                  description: Number of intervals between resets (eg. 2 for bi-monthly).
+                                resets_at:
+                                  anyOf:
+                                    - type: number
+                                    - type: "null"
+                                  description: Timestamp when the balance will next reset.
+                              required:
+                                - interval
+                                - resets_at
+                            - type: "null"
+                          description: Reset configuration for the balance this deduction came from, or
+                            null if the balance doesn't reset.
+                        value:
+                          type: number
+                          description: Amount deducted from this balance. Positive when usage was
+                            consumed, negative when credit was restored (e.g. a
+                            refund via negative track value).
+                      required:
+                        - balance_id
+                        - feature_id
+                        - plan_id
+                        - reset
+                        - value
+                    description: Per-balance breakdown of what this event deducted. A single event
+                      can consume from multiple balance rows when credit systems
+                      or rollovers are involved; this surfaces each one so
+                      callers can build per-feature usage views without polling.
+                required:
+                  - customer_id
+                  - value
+                  - balance
+                examples:
+                  - &a54
+                    customer_id: cus_123
+                    value: 1
+                    balance:
+                      feature_id: messages
+                      granted: 100
+                      remaining: 72
+                      usage: 28
+                      unlimited: false
+                      overage_allowed: false
+                      max_purchase: null
+                      next_reset_at: 1773851121437
+                      breakdown:
+                        - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                          plan_id: pro_plan
+                          included_grant: 100
+                          prepaid_grant: 0
+                          remaining: 72
+                          usage: 28
+                          unlimited: false
+                          reset:
+                            interval: month
+                            resets_at: 1773851121437
+                          price: null
+                          expires_at: null
+                    deductions:
+                      - balance_id: cus_ent_3DdSDoyFmoA9Neecl2a2Gc507X2
+                        feature_id: messages
+                        plan_id: pro
+                        reset:
+                          interval: month
+                          resets_at: 1781288736881
+                        value: 1
+              example: *a54
+        "202":
+          description: Accepted. Autumn is experiencing degraded service from a downstream
+            provider, so the event was accepted for replay and will be tracked
+            as soon as the service is restored.
           content:
             application/json:
               schema:
@@ -16080,155 +16538,15 @@ paths:
                           resets_at: 1781288736881
                         value: 1
               example: *a55
-        "202":
-          description: Accepted. Autumn is experiencing degraded service from a downstream
-            provider, so the event was accepted for replay and will be tracked
-            as soon as the service is restored.
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  customer_id:
-                    type: string
-                    description: The ID of the customer whose usage was tracked.
-                  entity_id:
-                    type: string
-                    description: The ID of the entity, if entity-scoped tracking was performed.
-                  event_name:
-                    type: string
-                    description: The event name that was tracked, if event_name was used instead of
-                      feature_id.
-                  value:
-                    type: number
-                    description: The amount of usage that was recorded.
-                  balance:
-                    anyOf:
-                      - $ref: "#/components/schemas/Balance"
-                      - type: "null"
-                    description: The updated balance for the tracked feature. Null if tracking by
-                      event_name that affects multiple features.
-                  balances:
-                    type: object
-                    propertyNames:
-                      type: string
-                    additionalProperties:
-                      anyOf:
-                        - $ref: "#/components/schemas/Balance"
-                        - type: "null"
-                    description: Map of feature_id to updated balance for the tracked feature and
-                      any related features (e.g. linked credit systems). Value
-                      is null when the customer has no balance for that feature.
-                  deductions:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        balance_id:
-                          type: string
-                          description: ID of the underlying balance row that was deducted from
-                            (customer_entitlement or rollover).
-                        feature_id:
-                          type: string
-                          description: The feature this balance belongs to.
-                        plan_id:
-                          anyOf:
-                            - type: string
-                            - type: "null"
-                          description: ID of the plan/product this balance belongs to. Null when the
-                            balance can't be attributed to a single plan (e.g.
-                            it spans multiple).
-                        reset:
-                          anyOf:
-                            - type: object
-                              properties:
-                                interval:
-                                  anyOf:
-                                    - enum:
-                                        - one_off
-                                        - minute
-                                        - hour
-                                        - day
-                                        - week
-                                        - month
-                                        - quarter
-                                        - semi_annual
-                                        - year
-                                      type: string
-                                    - const: multiple
-                                  description: The reset interval (hour, day, week, month, etc.) or 'multiple' if
-                                    combined from different intervals.
-                                interval_count:
-                                  type: number
-                                  description: Number of intervals between resets (eg. 2 for bi-monthly).
-                                resets_at:
-                                  anyOf:
-                                    - type: number
-                                    - type: "null"
-                                  description: Timestamp when the balance will next reset.
-                              required:
-                                - interval
-                                - resets_at
-                            - type: "null"
-                          description: Reset configuration for the balance this deduction came from, or
-                            null if the balance doesn't reset.
-                        value:
-                          type: number
-                          description: Amount deducted from this balance. Positive when usage was
-                            consumed, negative when credit was restored (e.g. a
-                            refund via negative track value).
-                      required:
-                        - balance_id
-                        - feature_id
-                        - plan_id
-                        - reset
-                        - value
-                    description: Per-balance breakdown of what this event deducted. A single event
-                      can consume from multiple balance rows when credit systems
-                      or rollovers are involved; this surfaces each one so
-                      callers can build per-feature usage views without polling.
-                required:
-                  - customer_id
-                  - value
-                  - balance
-                examples:
-                  - &a56
-                    customer_id: cus_123
-                    value: 1
-                    balance:
-                      feature_id: messages
-                      granted: 100
-                      remaining: 72
-                      usage: 28
-                      unlimited: false
-                      overage_allowed: false
-                      max_purchase: null
-                      next_reset_at: 1773851121437
-                      breakdown:
-                        - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
-                          plan_id: pro_plan
-                          included_grant: 100
-                          prepaid_grant: 0
-                          remaining: 72
-                          usage: 28
-                          unlimited: false
-                          reset:
-                            interval: month
-                            resets_at: 1773851121437
-                          price: null
-                          expires_at: null
-                    deductions:
-                      - balance_id: cus_ent_3DdSDoyFmoA9Neecl2a2Gc507X2
-                        feature_id: messages
-                        plan_id: pro
-                        reset:
-                          interval: month
-                          resets_at: 1781288736881
-                        value: 1
-              example: *a56
       x-speakeasy-name-override: track
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -16308,14 +16626,14 @@ paths:
                   description: Filter events by time range
               title: EventsListParams
               examples:
-                - &a57
+                - &a56
                   customer_id: cus_123
                   limit: 50
                 - feature_id: api_calls
                   custom_range:
                     start: 1704067200000
                     end: 1706745600000
-            example: *a57
+            example: *a56
       responses:
         "200":
           description: OK
@@ -16449,7 +16767,7 @@ paths:
                   - limit
                   - total
                 examples:
-                  - &a58
+                  - &a57
                     list:
                       - id: evt_36xpk2TmuQX5zVPPQ8tCtnR5Weg
                         timestamp: 1765958215459
@@ -16476,10 +16794,16 @@ paths:
                     has_more: false
                     offset: 0
                     limit: 100
-              example: *a58
+              example: *a57
       x-speakeasy-name-override: list
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -16539,7 +16863,8 @@ paths:
                 group_by:
                   type: string
                   description: Property to group events by (e.g. "properties.region"), or
-                    "$customer_id" / "$entity_id" to group by those columns
+                    "$customer_id" / "$entity_id" / "$plan_id" to group by those
+                    columns
                 range:
                   enum:
                     - 24h
@@ -16592,7 +16917,7 @@ paths:
                 - feature_id
               title: EventsAggregateParams
               examples:
-                - &a59
+                - &a58
                   customer_id: cus_123
                   feature_id: api_calls
                   range: 30d
@@ -16603,7 +16928,7 @@ paths:
                     - messages
                   range: 7d
                   group_by: properties.model
-            example: *a59
+            example: *a58
       responses:
         "200":
           description: OK
@@ -16665,7 +16990,7 @@ paths:
                   - list
                   - total
                 examples:
-                  - &a60
+                  - &a59
                     list:
                       - period: 1762905600000
                         values:
@@ -16712,10 +17037,16 @@ paths:
                       sessions:
                         count: 2
                         sum: 15
-              example: *a60
+              example: *a59
       x-speakeasy-name-override: aggregate
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -16858,12 +17189,12 @@ paths:
                 - entity_id
               title: CreateEntityParams
               examples:
-                - &a61
+                - &a60
                   customer_id: cus_123
                   entity_id: seat_42
                   feature_id: seats
                   name: Seat 42
-            example: *a61
+            example: *a60
       responses:
         "200":
           description: OK
@@ -17245,7 +17576,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a62
+                  - &a61
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -17290,10 +17621,16 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a62
+              example: *a61
       x-speakeasy-name-override: create
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -17349,11 +17686,11 @@ paths:
                 - entity_id
               title: GetEntityParams
               examples:
-                - &a63
+                - &a62
                   entity_id: seat_42
                 - customer_id: cus_123
                   entity_id: seat_42
-            example: *a63
+            example: *a62
       responses:
         "200":
           description: OK
@@ -17735,7 +18072,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a64
+                  - &a63
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -17780,10 +18117,16 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a64
+              example: *a63
       x-speakeasy-name-override: get
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -17816,24 +18159,24 @@ paths:
       tags:
         - entities
       requestBody:
-        required: true
+        required: false
         content:
           application/json:
             schema:
               type: object
               properties:
-                cursor:
-                  type: string
-                  default: ""
-                  description: Opaque pagination cursor. Empty string (default) requests the first
-                    page; use next_cursor from a prior response for subsequent
-                    pages.
+                offset:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                  default: 0
+                  description: Number of items to skip
                 limit:
                   type: integer
                   minimum: 1
-                  maximum: 5000
-                  default: 50
-                  description: Number of items to return. Default 50, hard ceiling 5000.
+                  maximum: 1000
+                  default: 10
+                  description: Number of items to return. Default 10, max 1000.
                 plans:
                   type: array
                   items:
@@ -17872,12 +18215,12 @@ paths:
                     vercel).
               title: ListEntitiesParams
               examples:
-                - &a65
-                  cursor: ""
+                - &a64
                   limit: 10
+                  offset: 0
                 - plans:
                     - id: pro_plan
-            example: *a65
+            example: *a64
       responses:
         "200":
           description: OK
@@ -18263,18 +18606,37 @@ paths:
                         - purchases
                         - balances
                         - flags
-                    description: Items for current page.
-                  next_cursor:
-                    anyOf:
-                      - type: string
-                      - type: "null"
-                    description: Opaque cursor for the next page. Null when there are no more
-                      results.
+                    description: Array of items for current page
+                  has_more:
+                    type: boolean
+                    description: Whether more results exist after this page
+                  offset:
+                    type: number
+                    description: Current offset position
+                  limit:
+                    type: number
+                    description: Limit passed in the request
+                  total:
+                    type: number
+                    description: Total number of items returned in the current page
+                  total_count:
+                    type: number
+                    description: Total number of entities available in the current organization and
+                      environment
+                  total_filtered_count:
+                    type: number
+                    description: Total number of entities matching the current filter before
+                      pagination is applied
                 required:
                   - list
-                  - next_cursor
+                  - has_more
+                  - offset
+                  - limit
+                  - total
+                  - total_count
+                  - total_filtered_count
                 examples:
-                  - &a66
+                  - &a65
                     list:
                       - id: seat_42
                         name: Seat 42
@@ -18320,22 +18682,22 @@ paths:
                                 price: null
                                 expires_at: null
                         invoices: []
-                    next_cursor: null
-              example: *a66
+                    has_more: false
+                    offset: 0
+                    total: 1
+                    limit: 10
+                    total_count: 100
+                    total_filtered_count: 42
+              example: *a65
       x-speakeasy-name-override: list
       parameters:
-        - *a5
-      x-speakeasy-pagination:
-        type: cursor
-        inputs:
-          - name: cursor
-            in: requestBody
-            type: cursor
-          - name: limit
-            in: requestBody
-            type: limit
-        outputs:
-          nextCursor: $.next_cursor
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -18344,13 +18706,7 @@ paths:
 
             const autumn = new Autumn()
 
-            const result = await autumn.entities.list({
-              limit: 10,
-            });
-
-            for await (const page of result) {
-              console.log(page);
-            }
+            const result = await autumn.entities.list({});
         - lang: python
           label: Python (SDK)
           source: |-
@@ -18358,12 +18714,9 @@ paths:
 
             autumn = Autumn(secret_key="am_sk_test...")
 
-            res = autumn.entities.list(cursor="", limit=10)
-
-            while res is not None:
-                # Handle items
-
-                res = res.next()
+            res = autumn.entities.list(
+                request={},
+            )
   /v1/entities.update:
     post:
       operationId: updateEntity
@@ -18465,7 +18818,7 @@ paths:
                 - entity_id
               title: UpdateEntityParams
               examples:
-                - &a67
+                - &a66
                   customer_id: cus_123
                   entity_id: seat_42
                   billing_controls:
@@ -18473,7 +18826,7 @@ paths:
                       - feature_id: messages
                         enabled: true
                         overage_limit: 25
-            example: *a67
+            example: *a66
       responses:
         "200":
           description: OK
@@ -18855,7 +19208,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a68
+                  - &a67
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -18900,10 +19253,16 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a68
+              example: *a67
       x-speakeasy-name-override: update
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -18973,10 +19332,10 @@ paths:
                 - entity_id
               title: DeleteEntityParams
               examples:
-                - &a69
+                - &a68
                   customer_id: cus_123
                   entity_id: seat_42
-            example: *a69
+            example: *a68
       responses:
         "200":
           description: OK
@@ -18990,12 +19349,18 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a70
+                  - &a69
                     success: true
-              example: *a70
+              example: *a69
       x-speakeasy-name-override: delete
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -19043,10 +19408,10 @@ paths:
                 - program_id
               title: CreateReferralCodeParams
               examples:
-                - &a71
+                - &a70
                   customer_id: cus_123
                   program_id: prog_123
-            example: *a71
+            example: *a70
       responses:
         "200":
           description: OK
@@ -19069,14 +19434,20 @@ paths:
                   - customer_id
                   - created_at
                 examples:
-                  - &a72
+                  - &a71
                     code: <string>
                     customer_id: <string>
                     created_at: 123
-              example: *a72
+              example: *a71
       x-speakeasy-name-override: createCode
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -19124,10 +19495,10 @@ paths:
                 - customer_id
               title: RedeemReferralCodeParams
               examples:
-                - &a73
+                - &a72
                   code: REF123
                   customer_id: cus_456
-            example: *a73
+            example: *a72
       responses:
         "200":
           description: OK
@@ -19150,14 +19521,20 @@ paths:
                   - customer_id
                   - reward_id
                 examples:
-                  - &a74
+                  - &a73
                     id: <string>
                     customer_id: <string>
                     reward_id: <string>
-              example: *a74
+              example: *a73
       x-speakeasy-name-override: redeemCode
       parameters:
-        - *a5
+        - name: x-api-version
+          in: header
+          required: true
+          schema:
+            type: string
+            default: 2.2.0
+          x-speakeasy-globals-hidden: true
       x-codeSamples:
         - lang: typescript
           label: Typescript (SDK)
@@ -19190,7 +19567,7 @@ x-speakeasy-globals:
       required: true
       schema:
         type: string
-        default: 2.3.0
+        default: 2.2.0
       x-speakeasy-globals-hidden: true
     - name: fail-open
       in: header

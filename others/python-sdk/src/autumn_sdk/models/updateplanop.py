@@ -25,7 +25,7 @@ class UpdatePlanGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.3.0"
+    ] = "2.2.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -436,6 +436,13 @@ UpdatePlanDurationTypeRequest = Literal[
 r"""Unit of time for the trial ('day', 'month', 'year')."""
 
 
+UpdatePlanOnEndRequest = Literal[
+    "bill",
+    "revert",
+]
+r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+
 class UpdatePlanFreeTrialParamsTypedDict(TypedDict):
     r"""Free trial configuration for a plan."""
 
@@ -445,6 +452,8 @@ class UpdatePlanFreeTrialParamsTypedDict(TypedDict):
     r"""Unit of time for the trial ('day', 'month', 'year')."""
     card_required: NotRequired[bool]
     r"""If true, payment method required to start trial. Customer is charged after trial ends."""
+    on_end: NotRequired[UpdatePlanOnEndRequest]
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
 
 class UpdatePlanFreeTrialParams(BaseModel):
@@ -459,9 +468,12 @@ class UpdatePlanFreeTrialParams(BaseModel):
     card_required: Optional[bool] = True
     r"""If true, payment method required to start trial. Customer is charged after trial ends."""
 
+    on_end: Optional[UpdatePlanOnEndRequest] = None
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["duration_type", "card_required"])
+        optional_fields = set(["duration_type", "card_required", "on_end"])
         serialized = handler(self)
         m = {}
 
@@ -1140,6 +1152,15 @@ UpdatePlanDurationTypeResponse = Union[
 r"""Unit of time for the trial duration ('day', 'month', 'year')."""
 
 
+UpdatePlanOnEndResponse = Union[
+    Literal[
+        "bill",
+        "revert",
+    ],
+    UnrecognizedStr,
+]
+
+
 class UpdatePlanFreeTrialTypedDict(TypedDict):
     r"""Free trial configuration. If set, new customers can try this plan before being charged."""
 
@@ -1149,6 +1170,8 @@ class UpdatePlanFreeTrialTypedDict(TypedDict):
     r"""Unit of time for the trial duration ('day', 'month', 'year')."""
     card_required: bool
     r"""Whether a payment method is required to start the trial. If true, customer will be charged after trial ends."""
+    on_end: NotRequired[Nullable[UpdatePlanOnEndResponse]]
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
 
 class UpdatePlanFreeTrial(BaseModel):
@@ -1162,6 +1185,34 @@ class UpdatePlanFreeTrial(BaseModel):
 
     card_required: bool
     r"""Whether a payment method is required to start the trial. If true, customer will be charged after trial ends."""
+
+    on_end: OptionalNullable[UpdatePlanOnEndResponse] = UNSET
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["on_end"])
+        nullable_fields = set(["on_end"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
 
 
 UpdatePlanEnv = Union[

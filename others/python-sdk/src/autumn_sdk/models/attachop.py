@@ -26,7 +26,7 @@ class AttachGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.3.0"
+    ] = "2.2.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -868,6 +868,13 @@ AttachDurationType = Literal[
 r"""Unit of time for the trial ('day', 'month', 'year')."""
 
 
+AttachOnEnd = Literal[
+    "bill",
+    "revert",
+]
+r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
+
 class AttachFreeTrialParamsTypedDict(TypedDict):
     r"""Free trial configuration for a plan."""
 
@@ -877,6 +884,8 @@ class AttachFreeTrialParamsTypedDict(TypedDict):
     r"""Unit of time for the trial ('day', 'month', 'year')."""
     card_required: NotRequired[bool]
     r"""If true, payment method required to start trial. Customer is charged after trial ends."""
+    on_end: NotRequired[AttachOnEnd]
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
 
 
 class AttachFreeTrialParams(BaseModel):
@@ -891,9 +900,12 @@ class AttachFreeTrialParams(BaseModel):
     card_required: Optional[bool] = True
     r"""If true, payment method required to start trial. Customer is charged after trial ends."""
 
+    on_end: Optional[AttachOnEnd] = None
+    r"""Behavior when the trial ends. 'bill' charges the customer (default). 'revert' expires the trial and restores the customer's previous plan."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["duration_type", "card_required"])
+        optional_fields = set(["duration_type", "card_required", "on_end"])
         serialized = handler(self)
         m = {}
 
