@@ -52,6 +52,8 @@ export const handleRunMigration = createRoute({
 			ctx,
 			migration,
 			dryRun,
+			targetCustomerIds: only,
+			targetLimit: limit,
 			claimed: async (migrationRunId) => {
 				const handle = await runMigrationTask.trigger(
 					{

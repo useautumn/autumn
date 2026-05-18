@@ -98,6 +98,8 @@ export const useMigrationRunsQuery = ({
 		isLoadingRuns: runsQuery.isLoading,
 		isActive,
 		activeRunDryRun: activeRun?.dry_run ?? null,
+		activeRunTargetCustomerIds:
+			(activeRun?.target_customer_ids as string[] | null) ?? null,
 		itemEvents: (eventsQuery.data?.list ?? []) as MigrationItemEvent[],
 		isLoadingEvents: eventsQuery.isLoading,
 		invalidate,
