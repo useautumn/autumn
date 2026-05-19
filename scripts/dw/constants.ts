@@ -25,3 +25,5 @@ export const ENV_LOCAL_TARGETS = [
 	"vite/.env.local",
 	"apps/checkout/.env.local",
 ] as const;
+
+export const ENV_LOCAL_DISABLED_SUFFIX = ".disabled";
