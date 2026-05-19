@@ -43,7 +43,7 @@ export const RewardProgramRowToolbar = ({
 			<DropdownMenuTrigger asChild>
 				<ToolbarButton />
 			</DropdownMenuTrigger>
-			<DropdownMenuContent className="text-t2" align="end">
+			<DropdownMenuContent className="text-muted-foreground" align="end">
 				<DropdownMenuItem
 					className="flex items-center"
 					onClick={async (e) => {
@@ -57,7 +57,7 @@ export const RewardProgramRowToolbar = ({
 						{deleteLoading ? (
 							<SmallSpinner />
 						) : (
-							<Delete size={12} className="text-t3" />
+							<Delete size={12} className="text-tertiary-foreground" />
 						)}
 					</div>
 				</DropdownMenuItem>

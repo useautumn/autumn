@@ -71,7 +71,7 @@ export function FeatureSearchDropdown({
 							<span className="truncate">{selectedFeature.name}</span>
 						</div>
 					) : (
-						<span className="text-t4">{placeholder}</span>
+						<span className="text-subtle">{placeholder}</span>
 					)}
 					<CaretDownIcon className="size-4 opacity-50" />
 				</button>
@@ -81,19 +81,19 @@ export function FeatureSearchDropdown({
 				className="w-(--anchor-width) p-0"
 			>
 				<div className="flex items-center gap-2 px-3 py-2 border-b border-border/40">
-					<MagnifyingGlassIcon className="size-3.5 text-t4" />
+					<MagnifyingGlassIcon className="size-3.5 text-subtle" />
 					<input
 						type="text"
 						placeholder="Search features..."
 						value={search}
 						onChange={(e) => setSearch(e.target.value)}
 						onKeyDown={(e) => e.stopPropagation()}
-						className="flex-1 bg-transparent text-xs outline-none placeholder:text-t4"
+						className="flex-1 bg-transparent text-xs outline-none placeholder:text-subtle"
 					/>
 				</div>
 				<div className="max-h-56 overflow-y-auto p-1">
 					{filteredFeatures.length === 0 ? (
-						<div className="py-3 text-center text-xs text-t4">
+						<div className="py-3 text-center text-xs text-subtle">
 							No features found.
 						</div>
 					) : (

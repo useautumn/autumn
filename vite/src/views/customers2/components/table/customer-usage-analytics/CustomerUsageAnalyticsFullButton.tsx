@@ -21,7 +21,7 @@ export function CustomerUsageAnalyticsFullButton() {
 				});
 			}}
 		>
-			<ChartBarIcon className="text-t3" />
+			<ChartBarIcon className="text-tertiary-foreground" />
 			Full Analytics
 		</Button>
 	);

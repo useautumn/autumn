@@ -33,7 +33,7 @@ const PriceLabel = ({
 	<span
 		className={cn(
 			"text-xs tabular-nums",
-			isCustom ? "text-emerald-500 font-medium" : "text-t3",
+			isCustom ? "text-emerald-500 font-medium" : "text-tertiary-foreground",
 		)}
 	>
 		{label}
@@ -75,9 +75,9 @@ const EntityScopeSubRow = ({
 				emptyText="No entities found"
 				renderValue={(option) =>
 					option === null || option === undefined ? (
-						<span className="text-t2 text-xs">Customer-level</span>
+						<span className="text-muted-foreground text-xs">Customer-level</span>
 					) : (
-						<span className="text-t2 text-xs truncate">
+						<span className="text-muted-foreground text-xs truncate">
 							{option.name || option.id || "PENDING"}
 						</span>
 					)
@@ -97,7 +97,7 @@ const EntityScopeSubRow = ({
 								{option.name && (
 									<span className="text-sm shrink-0">{option.name}</span>
 								)}
-								<span className="truncate text-t3 font-mono text-xs min-w-0">
+								<span className="truncate text-tertiary-foreground font-mono text-xs min-w-0">
 									{option.id || "PENDING"}
 								</span>
 							</div>
@@ -133,7 +133,7 @@ export function SyncPlanRow({
 	const availableProducts = products.filter((p) => !p.archived);
 	const selectedProduct = products.find((p) => p.id === plan.plan_id);
 	const hasCustomize = Boolean(plan.customize);
-	const hasEntityScope = Boolean(plan.internal_entity_id);
+	const hasEntityScope = Boolean(plan.entity_id);
 
 	const [scopeOpen, setScopeOpen] = useState<boolean>(hasEntityScope);
 
@@ -150,7 +150,7 @@ export function SyncPlanRow({
 					<>
 						<span className="flex-1 truncate min-w-0">{product.name}</span>
 						{usedPlanIds.has(product.id) && (
-							<span className="text-xs text-t4 shrink-0">Already added</span>
+							<span className="text-xs text-subtle shrink-0">Already added</span>
 						)}
 					</>
 				)}
@@ -188,13 +188,13 @@ export function SyncPlanRow({
 			<div
 				className={cn(
 					"group flex h-input min-w-0 w-full items-center gap-2 rounded-lg",
-					"input-base input-shadow-default px-3 text-sm text-t1",
+					"input-base input-shadow-default px-3 text-sm text-foreground",
 				)}
 			>
 				{isAddOn ? (
-					<PuzzlePieceIcon className="size-3.5 shrink-0 text-t3" />
+					<PuzzlePieceIcon className="size-3.5 shrink-0 text-tertiary-foreground" />
 				) : (
-					<PackageIcon className="size-3.5 shrink-0 text-t3" />
+					<PackageIcon className="size-3.5 shrink-0 text-tertiary-foreground" />
 				)}
 				<span className="flex-1 truncate min-w-0">
 					{selectedProduct?.name ?? plan.plan_id}
@@ -249,7 +249,7 @@ export function SyncPlanRow({
 									"h-6 w-6",
 									scopeOpen || hasEntityScope
 										? "text-primary"
-										: "text-t3 hover:text-t1",
+										: "text-tertiary-foreground hover:text-foreground",
 								)}
 								onClick={() => setScopeOpen((v) => !v)}
 								aria-label="Set entity scope"
@@ -260,14 +260,14 @@ export function SyncPlanRow({
 						<Button
 							variant="ghost"
 							size="icon"
-							className="h-6 w-6 text-t3 hover:text-t1"
+							className="h-6 w-6 text-tertiary-foreground hover:text-foreground"
 							onClick={onCustomize}
 						>
 							<PencilSimpleIcon size={13} />
 						</Button>
 						<button
 							type="button"
-							className="p-1 text-t4 hover:text-destructive transition-colors"
+							className="p-1 text-subtle hover:text-destructive transition-colors"
 							onClick={onRemove}
 						>
 							<XIcon size={13} />
@@ -279,9 +279,9 @@ export function SyncPlanRow({
 			{entities.length > 0 && scopeOpen && (
 				<EntityScopeSubRow
 					entities={entities}
-					scopeEntityId={plan.internal_entity_id}
+					scopeEntityId={plan.entity_id}
 					onChange={(entityId) =>
-						onChange({ ...plan, internal_entity_id: entityId })
+						onChange({ ...plan, entity_id: entityId })
 					}
 				/>
 			)}

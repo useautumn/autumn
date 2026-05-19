@@ -228,7 +228,7 @@ export function SyncStripeSheet() {
 			<div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
 				{isLoading && (
 					<div className="flex items-center justify-center py-12">
-						<SmallSpinner size={20} className="text-t3" />
+						<SmallSpinner size={20} className="text-tertiary-foreground" />
 					</div>
 				)}
 
@@ -239,7 +239,7 @@ export function SyncStripeSheet() {
 				)}
 
 				{!isLoading && !error && proposals.length === 0 && (
-					<div className="text-sm text-t3 py-8 text-center">
+					<div className="text-sm text-tertiary-foreground py-8 text-center">
 						No Stripe subscriptions found for this customer.
 					</div>
 				)}

@@ -40,9 +40,9 @@ export function IncludedUsage() {
 		<div className="space-y-4">
 			<div className="w-full h-auto flex items-end gap-2">
 				<div className="flex-1">
-					<div className="text-t3 text-sm block mb-2">
+					<div className="text-tertiary-foreground text-sm block mb-2">
 						Quantity of&nbsp;
-						<span className="font-medium text-t1">
+						<span className="font-medium text-foreground">
 							{getFeatureName({
 								feature: features.find((f) => f.id === item.feature_id),
 								plural: true,
@@ -102,7 +102,7 @@ export function IncludedUsage() {
 									});
 								}
 							}}
-							className="py-1 w-26 text-t4 gap-2"
+							className="py-1 w-26 text-subtle gap-2"
 						>
 							Unlimited
 						</IconCheckbox>

@@ -152,10 +152,10 @@ export function ChartLegend({
 											className="w-2 h-2 rounded-sm shrink-0"
 											style={{ background: e.color }}
 										/>
-										<span className="text-t4 text-tiny truncate min-w-0 flex-1">
+										<span className="text-subtle text-tiny truncate min-w-0 flex-1">
 											{e.label}
 										</span>
-										<span className="text-t2 text-tiny tabular-nums shrink-0">
+										<span className="text-muted-foreground text-tiny tabular-nums shrink-0">
 											{e.value.toLocaleString()}
 										</span>
 									</div>
@@ -188,14 +188,14 @@ function LegendItem({
 				<span
 					className={
 						forMeasurement
-							? "text-t4 text-tiny shrink-0"
-							: "text-t4 text-tiny truncate min-w-0 max-w-[140px]"
+							? "text-subtle text-tiny shrink-0"
+							: "text-subtle text-tiny truncate min-w-0 max-w-[140px]"
 					}
 				>
 					{entry.label}
 				</span>
 			)}
-			<span className="text-t2 text-tiny tabular-nums shrink-0">
+			<span className="text-muted-foreground text-tiny tabular-nums shrink-0">
 				{entry.value.toLocaleString()}
 			</span>
 		</div>
@@ -205,9 +205,9 @@ function LegendItem({
 function OverflowPill({ count, total }: { count: number; total: number }) {
 	return (
 		<div className="flex items-center gap-1.5 min-w-0">
-			<span className="w-2 h-2 rounded-sm shrink-0 bg-t4" />
-			<span className="text-t4 text-tiny shrink-0">+{count} more</span>
-			<span className="text-t2 text-tiny tabular-nums shrink-0">
+			<span className="w-2 h-2 rounded-sm shrink-0 bg-subtle" />
+			<span className="text-subtle text-tiny shrink-0">+{count} more</span>
+			<span className="text-muted-foreground text-tiny tabular-nums shrink-0">
 				{total.toLocaleString()}
 			</span>
 		</div>

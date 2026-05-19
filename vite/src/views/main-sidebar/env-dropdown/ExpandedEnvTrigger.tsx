@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { useSidebarContext } from "../SidebarContext";
 
-const sandboxStyles = "text-t8 bg-t8/10 border-t8 ";
+const sandboxStyles = "text-sandbox bg-sandbox/10 border-sandbox ";
 const liveStyles = "text-primary bg-primary/10 border-primary";
 
 export const ExpandedEnvTrigger = ({ isHovered }: { isHovered: boolean }) => {
@@ -16,7 +16,7 @@ export const ExpandedEnvTrigger = ({ isHovered }: { isHovered: boolean }) => {
 	return (
 		<DropdownMenuTrigger
 			className={cn(
-				"ring-0 focus:ring-0 text-t2  w-full flex items-center bg-transparent h-6 transition-all duration-300 cursor-pointer select-none",
+				"ring-0 focus:ring-0 text-muted-foreground  w-full flex items-center bg-transparent h-6 transition-all duration-300 cursor-pointer select-none",
 			)}
 		>
 			<div

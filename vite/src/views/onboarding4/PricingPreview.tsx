@@ -70,7 +70,7 @@ export function PricingPreview({
 					<div className="w-3 h-3 rounded-full bg-[#27C93F]" />
 				</div>
 				<div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-					<span className="text-xs text-t3 font-medium">
+					<span className="text-xs text-tertiary-foreground font-medium">
 						your-app.com/pricing
 					</span>
 				</div>

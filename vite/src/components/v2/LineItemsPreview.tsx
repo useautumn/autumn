@@ -127,12 +127,12 @@ export function LineItemsPreview<T extends BillingLineItem>({
 														key={item.description}
 														className="flex items-center justify-between"
 													>
-														<span className="text-sm truncate max-w-75 text-t3">
+														<span className="text-sm truncate max-w-75 text-tertiary-foreground">
 															{item.description}
 														</span>
 														<div className="flex w-24 justify-end gap-1.5">
 															{item.subtotal !== item.total && (
-																<span className="text-sm text-t3 line-through">
+																<span className="text-sm text-tertiary-foreground line-through">
 																	{formatAmount({
 																		amount: new Decimal(item.subtotal)
 																			.toDecimalPlaces(2)
@@ -145,7 +145,7 @@ export function LineItemsPreview<T extends BillingLineItem>({
 																	})}
 																</span>
 															)}
-															<span className="text-sm text-t1 font-semibold text-right">
+															<span className="text-sm text-foreground font-semibold text-right">
 																{formatAmount({
 																	amount: new Decimal(item.total)
 																		.toDecimalPlaces(2)
@@ -178,7 +178,7 @@ export function LineItemsPreview<T extends BillingLineItem>({
 												className={cn(
 													"font-medium flex items-center gap-2",
 													total.variant === "secondary"
-														? "text-t4"
+														? "text-subtle"
 														: "text-foreground",
 												)}
 											>
@@ -190,7 +190,7 @@ export function LineItemsPreview<T extends BillingLineItem>({
 											<span
 												className={
 													total.variant === "secondary"
-														? "font-semibold text-t4"
+														? "font-semibold text-subtle"
 														: "font-semibold text-foreground"
 												}
 											>

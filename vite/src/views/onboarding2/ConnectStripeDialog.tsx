@@ -43,7 +43,7 @@ export default function ConnectStripeDialog({
 					<DialogTitle>Paste your Stripe secret key</DialogTitle>
 					<DialogDescription>
 						<div className="flex items-center gap-2">
-							<span className="text-t3 text-sm">
+							<span className="text-tertiary-foreground text-sm">
 								If you want to use a restricted key
 							</span>
 							<InfoTooltip>

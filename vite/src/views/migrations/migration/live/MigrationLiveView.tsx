@@ -368,7 +368,7 @@ export function MigrationLiveView({
 
 			<StepIndicator step={step} onStepChange={onStepChange}>
 				{count !== null && (
-					<span className="text-xs text-t3">
+					<span className="text-xs text-tertiary-foreground">
 						{count} {count === 1 ? "customer" : "customers"}
 					</span>
 				)}
@@ -533,8 +533,8 @@ export function MigrationLiveView({
 									className={cn(
 										"flex-1 pb-2 text-sm font-medium transition-colors border-b-2 -mb-px",
 										sample.mode === "limit"
-											? "border-primary text-t1"
-											: "border-transparent text-t3 hover:text-t2",
+											? "border-primary text-foreground"
+											: "border-transparent text-tertiary-foreground hover:text-muted-foreground",
 									)}
 								>
 									By count
@@ -547,8 +547,8 @@ export function MigrationLiveView({
 									className={cn(
 										"flex-1 pb-2 text-sm font-medium transition-colors border-b-2 -mb-px",
 										sample.mode === "select"
-											? "border-primary text-t1"
-											: "border-transparent text-t3 hover:text-t2",
+											? "border-primary text-foreground"
+											: "border-transparent text-tertiary-foreground hover:text-muted-foreground",
 									)}
 								>
 									Select customers
@@ -557,7 +557,7 @@ export function MigrationLiveView({
 							<div className="min-h-[220px]">
 								{sample.mode === "limit" ? (
 									<div className="flex flex-col gap-1.5">
-										<label className="text-xs text-t3">
+										<label className="text-xs text-tertiary-foreground">
 											Number of customers
 										</label>
 										<Input
@@ -576,7 +576,7 @@ export function MigrationLiveView({
 											customers={enrichedCustomers}
 											limit={Number(sample.limit) || 0}
 										/>
-										<span className="text-xs text-t3">
+										<span className="text-xs text-tertiary-foreground">
 											{Math.min(
 												Number(sample.limit) || 0,
 												enrichedCustomers.filter((c) => !c._event).length,
@@ -586,7 +586,7 @@ export function MigrationLiveView({
 									</div>
 								) : (
 									<div className="flex flex-col gap-1.5">
-										<label className="text-xs text-t3">
+										<label className="text-xs text-tertiary-foreground">
 											Select customers to run
 										</label>
 										<SampleCustomerPicker
@@ -689,7 +689,7 @@ export function MigrationLiveView({
 				<div className="relative flex items-center flex-1 min-w-0">
 					<ListMagnifyingGlassIcon
 						size={16}
-						className="text-t3 absolute left-2.5 pointer-events-none"
+						className="text-tertiary-foreground absolute left-2.5 pointer-events-none"
 					/>
 					<Input
 						value={search}
@@ -709,7 +709,7 @@ export function MigrationLiveView({
 						disabled={!canPrev}
 						className={cn(!canPrev && "pointer-events-none opacity-50")}
 					/>
-					<span className="text-xs text-t2 font-medium">
+					<span className="text-xs text-muted-foreground font-medium">
 						{currentPage} / {pageCount}
 					</span>
 					<IconButton
@@ -780,7 +780,7 @@ function SampleCustomerPreview({
 	return (
 		<div className="h-48 overflow-y-auto rounded-xl border border-border mt-1.5">
 			{previewed.length === 0 ? (
-				<div className="px-3 py-4 text-center text-xs text-t4">
+				<div className="px-3 py-4 text-center text-xs text-subtle">
 					No customers to preview
 				</div>
 			) : (
@@ -789,11 +789,11 @@ function SampleCustomerPreview({
 						key={c.internal_id}
 						className="flex items-center gap-2 w-full px-3 py-1.5 text-sm"
 					>
-						<span className="flex-1 truncate text-t1">
+						<span className="flex-1 truncate text-foreground">
 							{c.name || c.id || c.internal_id}
 						</span>
 						{c.email && (
-							<span className="text-xs text-t4 truncate max-w-32">
+							<span className="text-xs text-subtle truncate max-w-32">
 								{c.email}
 							</span>
 						)}
@@ -843,7 +843,7 @@ function SampleCustomerPicker({
 			/>
 			<div className="h-48 overflow-y-auto rounded-xl border border-border">
 				{filtered.length === 0 ? (
-					<div className="px-3 py-4 text-center text-xs text-t4">
+					<div className="px-3 py-4 text-center text-xs text-subtle">
 						No customers found
 					</div>
 				) : (
@@ -871,11 +871,11 @@ function SampleCustomerPicker({
 										<CheckIcon size={10} className="text-white" />
 									)}
 								</div>
-								<span className="flex-1 truncate text-t1">
+								<span className="flex-1 truncate text-foreground">
 									{c.name || c.id || c.internal_id}
 								</span>
 								{c.email && (
-									<span className="text-xs text-t4 truncate max-w-32">
+									<span className="text-xs text-subtle truncate max-w-32">
 										{c.email}
 									</span>
 								)}
@@ -884,7 +884,7 @@ function SampleCustomerPicker({
 					})
 				)}
 			</div>
-			<span className="text-xs text-t3">
+			<span className="text-xs text-tertiary-foreground">
 				{selectedIds.length} selected
 			</span>
 		</div>

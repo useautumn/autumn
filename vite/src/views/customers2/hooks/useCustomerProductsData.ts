@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { filterCustomerProductsByType } from "../components/table/customer-products/customerProductsTableFilters";
-import { withEffectiveCustomerProductStatus } from "../utils/effectiveCustomerProductStatus";
 
 function filterBySelectedEntity({
 	products,
@@ -37,26 +36,14 @@ export function useCustomerProductsData() {
 		"customerProductsShowExpired",
 		parseAsBoolean.withDefault(false),
 	);
-	const customerWithEffectiveStatuses = useMemo(
-		() => ({
-			...customer,
-			customer_products: customer.customer_products.map((customerProduct) =>
-				withEffectiveCustomerProductStatus({
-					customerProduct,
-					nowMs: testClockFrozenTimeMs,
-				}),
-			),
-		}),
-		[customer, testClockFrozenTimeMs],
-	);
 
 	const { subscriptions, purchases } = useMemo(
 		() =>
 			filterCustomerProductsByType({
-				customer: customerWithEffectiveStatuses,
+				customer,
 				showExpired: showExpired ?? false,
 			}),
-		[customerWithEffectiveStatuses, showExpired],
+		[customer, showExpired],
 	);
 
 	// Filter entity-level products by selected entity (if any)

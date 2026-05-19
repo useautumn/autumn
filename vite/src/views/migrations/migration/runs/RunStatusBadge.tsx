@@ -13,13 +13,13 @@ export function ActiveRunDot({ className }: { className?: string }) {
 
 const LIVE_STYLES: Record<MigrationItemEventStatus, string> = {
 	succeeded: "bg-green-500/10 text-green-500 border-transparent",
-	skipped: "bg-muted text-t2 border-transparent",
+	skipped: "bg-muted text-muted-foreground border-transparent",
 	failed: "bg-red-500/10 text-red-500 border-transparent",
 };
 
 const DRY_STYLES: Record<MigrationItemEventStatus, string> = {
 	succeeded: "bg-blue-500/10 text-blue-500 border-blue-500/30 border-dashed",
-	skipped: "bg-muted text-t2 border-border border-dashed",
+	skipped: "bg-muted text-muted-foreground border-border border-dashed",
 	failed: "bg-orange-500/10 text-orange-500 border-orange-500/30 border-dashed",
 };
 
@@ -60,7 +60,7 @@ export function ItemEventStatusBadge({
 			<Badge
 				variant="muted"
 				className={cn(
-					"bg-muted text-t3",
+					"bg-muted text-tertiary-foreground",
 					dryRun ? "border-border border-dashed" : "border-transparent",
 				)}
 			>

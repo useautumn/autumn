@@ -39,7 +39,7 @@ export function CustomerListSearchBar() {
 		<div className="relative flex items-center flex-1 min-w-0">
 			<ListMagnifyingGlassIcon
 				size={16}
-				className="text-t3 absolute left-2.5 pointer-events-none"
+				className="text-tertiary-foreground absolute left-2.5 pointer-events-none"
 			/>
 			<Input
 				value={localQuery}

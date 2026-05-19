@@ -16,9 +16,9 @@ export const InfoBox = ({
 	return (
 		<div
 			className={cn(
-				"px-4 py-2 text-t8 flex gap-2 rounded-lg text-sm",
-				variant === "note" && "bg-t8/10 text-t8",
-				variant === "info" && "bg-t3/10 text-t3",
+				"px-4 py-2 text-sandbox flex gap-2 rounded-lg text-sm",
+				variant === "note" && "bg-sandbox/10 text-sandbox",
+				variant === "info" && "bg-tertiary-foreground/10 text-tertiary-foreground",
 				variant === "warning" && "bg-yellow-500/10 text-yellow-500",
 				variant === "error" && "bg-red-500/10 text-red-500",
 				variant === "success" && "bg-green-500/10 text-green-500",

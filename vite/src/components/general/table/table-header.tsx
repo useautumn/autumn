@@ -93,7 +93,7 @@ export function TableHeader({
 			{headerGroups.map((headerGroup) => (
 				<TableRow
 					className={cn(
-						"bg-card text-t4",
+						"bg-card text-subtle",
 						!hideBorder && "border-b",
 						!rows.length && "border-dashed",
 					)}
@@ -121,7 +121,7 @@ export function TableHeader({
 						return (
 							<TableHead
 								className={cn(
-									"h-7 px-2 text-t4 text-tiny font-medium!",
+									"h-7 px-2 text-subtle text-tiny font-medium!",
 									index === 0 && "pl-4",
 									isLast && enableColumnVisibility && "pr-8",
 								)}
