@@ -1,12 +1,21 @@
 #!/bin/bash
 # Run current file
 filename="$1"
+line="$2"
 
 if [[ "$filename" == *"shell"* ]]; then
     "$filename" "${@:2}"
 elif [[ "$filename" == *".test.ts" ]]; then
-    # Test files: use bun test (preload configured in bunfig.toml)
-    NODE_ENV=development infisical run --env=dev --recursive -- bun test --timeout 0 "$filename"
+    repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+    if [[ -n "$line" && "$line" =~ ^[0-9]+$ ]]; then
+        # Targeted: run only the test enclosing the given line.
+        test_name="$(bun "$repo_root/scripts/testScripts/getDescribeAtCursor.ts" "$filename" "$line")"
+        NODE_ENV=development infisical run --env=dev --recursive -- bun test --timeout 0 "$filename" -t "$test_name"
+    else
+        # Test files: use bun test (preload configured in bunfig.toml)
+        NODE_ENV=development infisical run --env=dev --recursive -- bun test --timeout 0 "$filename"
+    fi
 elif [[ "$filename" == *".sh"* ]]; then
     "$filename"
 else
