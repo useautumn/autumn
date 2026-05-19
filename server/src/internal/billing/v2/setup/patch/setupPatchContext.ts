@@ -12,6 +12,7 @@ import { duplicateCustomerProduct } from "@/internal/billing/v2/utils/initFullCu
 import { generateId } from "@/utils/genUtils";
 import { handleCustomizeAddItems } from "./handleCustomizeAddItems";
 import { handleCustomizeDeleteItems } from "./handleCustomizeDeleteItems";
+import { handleCustomizeNoopItems } from "./handleCustomizeNoopItems";
 import { handleCustomizePrice } from "./handleCustomizePrice";
 import type { ReusePricesAndEntitlements } from "./types";
 
@@ -137,10 +138,16 @@ export const setupPatchContext = ({
 		reusePricesAndEntitlements,
 	});
 
+	const { addItems: nonNoopAddItems } = handleCustomizeNoopItems({
+		customize: params.customize,
+		targetCustomerProduct: finalCustomerProduct,
+		features: ctx.features,
+	});
+
 	const { prices: customItemPrices, entitlements: customEntitlements } =
 		handleCustomizeAddItems({
 			ctx,
-			customize: params.customize,
+			customize: { ...params.customize, add_items: nonNoopAddItems },
 			fullProduct: patchFullProduct,
 			reusePricesAndEntitlements,
 		});
