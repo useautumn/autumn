@@ -3,9 +3,9 @@
 from .basesdk import BaseSDK
 from autumn_sdk import errors, models, utils
 from autumn_sdk._hooks import HookContext
-from autumn_sdk.types import BaseModel, Nullable, OptionalNullable, UNSET
+from autumn_sdk.types import Nullable, OptionalNullable, UNSET
 from autumn_sdk.utils.unmarshal_json_response import unmarshal_json_response
-from typing import Any, Dict, List, Mapping, Optional, Union, cast
+from typing import Any, Dict, List, Mapping, Optional, Union
 
 
 class Customers(BaseSDK):
@@ -480,17 +480,29 @@ class Customers(BaseSDK):
     def list(
         self,
         *,
-        request: Optional[
-            Union[models.ListCustomersParams, models.ListCustomersParamsTypedDict]
+        start_cursor: Optional[str] = "",
+        limit: Optional[int] = 50,
+        plans: Optional[
+            Union[
+                List[models.ListCustomersPlan], List[models.ListCustomersPlanTypedDict]
+            ]
         ] = None,
+        subscription_status: Optional[models.ListCustomersSubscriptionStatus] = None,
+        search: Optional[str] = None,
+        processors: Optional[List[models.ListCustomersProcessor]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
     ) -> models.ListCustomersResponse:
-        r"""Lists customers with pagination and optional filters.
+        r"""Lists customers with cursor pagination and optional filters. Pass `start_cursor: \"\"` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
 
-        :param request: The request object to send.
+        :param start_cursor: Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
+        :param limit: Number of items to return. Default 50, hard ceiling 5000.
+        :param plans: Filter by plan ID and version. Returns customers with active subscriptions to this plan.
+        :param subscription_status: Filter by customer product status. Defaults to active and scheduled.
+        :param search: Search customers by id, name, or email.
+        :param processors: Filter by customer processor type (stripe, revenuecat, vercel).
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -506,9 +518,16 @@ class Customers(BaseSDK):
         else:
             base_url = self._get_url(base_url, url_variables)
 
-        if not isinstance(request, BaseModel):
-            request = utils.unmarshal(request, Optional[models.ListCustomersParams])
-        request = cast(Optional[models.ListCustomersParams], request)
+        request = models.ListCustomersParams(
+            start_cursor=start_cursor,
+            limit=limit,
+            plans=utils.get_pydantic_model(
+                plans, Optional[List[models.ListCustomersPlan]]
+            ),
+            subscription_status=subscription_status,
+            search=search,
+            processors=processors,
+        )
 
         req = self._build_request(
             method="POST",
@@ -516,7 +535,7 @@ class Customers(BaseSDK):
             base_url=base_url,
             url_variables=url_variables,
             request=request,
-            request_body_required=False,
+            request_body_required=True,
             request_has_path_params=False,
             request_has_query_params=True,
             user_agent_header="user-agent",
@@ -527,7 +546,7 @@ class Customers(BaseSDK):
             ),
             security=self.sdk_configuration.security,
             get_serialized_body=lambda: utils.serialize_request_body(
-                request, False, True, "json", Optional[models.ListCustomersParams]
+                request, False, False, "json", models.ListCustomersParams
             ),
             allow_empty_value=None,
             timeout_ms=timeout_ms,
@@ -572,17 +591,29 @@ class Customers(BaseSDK):
     async def list_async(
         self,
         *,
-        request: Optional[
-            Union[models.ListCustomersParams, models.ListCustomersParamsTypedDict]
+        start_cursor: Optional[str] = "",
+        limit: Optional[int] = 50,
+        plans: Optional[
+            Union[
+                List[models.ListCustomersPlan], List[models.ListCustomersPlanTypedDict]
+            ]
         ] = None,
+        subscription_status: Optional[models.ListCustomersSubscriptionStatus] = None,
+        search: Optional[str] = None,
+        processors: Optional[List[models.ListCustomersProcessor]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
         http_headers: Optional[Mapping[str, str]] = None,
     ) -> models.ListCustomersResponse:
-        r"""Lists customers with pagination and optional filters.
+        r"""Lists customers with cursor pagination and optional filters. Pass `start_cursor: \"\"` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
 
-        :param request: The request object to send.
+        :param start_cursor: Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
+        :param limit: Number of items to return. Default 50, hard ceiling 5000.
+        :param plans: Filter by plan ID and version. Returns customers with active subscriptions to this plan.
+        :param subscription_status: Filter by customer product status. Defaults to active and scheduled.
+        :param search: Search customers by id, name, or email.
+        :param processors: Filter by customer processor type (stripe, revenuecat, vercel).
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -598,9 +629,16 @@ class Customers(BaseSDK):
         else:
             base_url = self._get_url(base_url, url_variables)
 
-        if not isinstance(request, BaseModel):
-            request = utils.unmarshal(request, Optional[models.ListCustomersParams])
-        request = cast(Optional[models.ListCustomersParams], request)
+        request = models.ListCustomersParams(
+            start_cursor=start_cursor,
+            limit=limit,
+            plans=utils.get_pydantic_model(
+                plans, Optional[List[models.ListCustomersPlan]]
+            ),
+            subscription_status=subscription_status,
+            search=search,
+            processors=processors,
+        )
 
         req = self._build_request_async(
             method="POST",
@@ -608,7 +646,7 @@ class Customers(BaseSDK):
             base_url=base_url,
             url_variables=url_variables,
             request=request,
-            request_body_required=False,
+            request_body_required=True,
             request_has_path_params=False,
             request_has_query_params=True,
             user_agent_header="user-agent",
@@ -619,7 +657,7 @@ class Customers(BaseSDK):
             ),
             security=self.sdk_configuration.security,
             get_serialized_body=lambda: utils.serialize_request_body(
-                request, False, True, "json", Optional[models.ListCustomersParams]
+                request, False, False, "json", models.ListCustomersParams
             ),
             allow_empty_value=None,
             timeout_ms=timeout_ms,

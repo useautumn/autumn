@@ -54,7 +54,7 @@ import { Result } from "../types/fp.js";
  */
 export function entitiesList(
   client: AutumnCore,
-  request?: models.ListEntitiesParams | undefined,
+  request: models.ListEntitiesParams,
   options?: RequestOptions,
 ): APIPromise<
   Result<
@@ -78,7 +78,7 @@ export function entitiesList(
 
 async function $do(
   client: AutumnCore,
-  request?: models.ListEntitiesParams | undefined,
+  request: models.ListEntitiesParams,
   options?: RequestOptions,
 ): Promise<
   [
@@ -98,17 +98,14 @@ async function $do(
 > {
   const parsed = safeParse(
     request,
-    (value) =>
-      z.parse(z.optional(models.ListEntitiesParams$outboundSchema), value),
+    (value) => z.parse(models.ListEntitiesParams$outboundSchema, value),
     "Input validation failed",
   );
   if (!parsed.ok) {
     return [parsed, { status: "invalid" }];
   }
   const payload = parsed.value;
-  const body = payload === undefined
-    ? null
-    : encodeJSON("body", payload, { explode: true });
+  const body = encodeJSON("body", payload, { explode: true });
 
   const path = pathToFunc("/v1/entities.list")();
 

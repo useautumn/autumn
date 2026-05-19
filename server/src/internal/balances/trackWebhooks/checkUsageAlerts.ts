@@ -4,6 +4,7 @@ import {
 	type Feature,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
+	fullCustomerToTags,
 	getApiBalance,
 	WebhookEventType,
 } from "@autumn/shared";
@@ -151,6 +152,8 @@ const processAlerts = async ({
 			minuteBucket,
 		].join(":");
 
+		const tags = fullCustomerToTags({ fullCustomer: newFullCus });
+
 		await sendSvixEvent({
 			ctx,
 			eventType: WebhookEventType.BalancesUsageAlertTriggered,
@@ -165,6 +168,7 @@ const processAlerts = async ({
 					threshold_type: alert.threshold_type,
 				},
 			},
+			tags,
 		});
 
 		ctx.logger.info(

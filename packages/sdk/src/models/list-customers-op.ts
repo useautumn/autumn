@@ -24,14 +24,14 @@ export type ListCustomersPlan = {
 };
 
 /**
- * Filter by customer product status. Defaults to active and scheduled
+ * Filter by customer product status. Defaults to active and scheduled.
  */
 export const ListCustomersSubscriptionStatus = {
   Active: "active",
   Scheduled: "scheduled",
 } as const;
 /**
- * Filter by customer product status. Defaults to active and scheduled
+ * Filter by customer product status. Defaults to active and scheduled.
  */
 export type ListCustomersSubscriptionStatus = ClosedEnum<
   typeof ListCustomersSubscriptionStatus
@@ -46,11 +46,11 @@ export type ListCustomersProcessor = ClosedEnum<typeof ListCustomersProcessor>;
 
 export type ListCustomersParams = {
   /**
-   * Number of items to skip
+   * Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
    */
-  offset?: number | undefined;
+  startCursor?: string | undefined;
   /**
-   * Number of items to return. Default 10, max 1000.
+   * Number of items to return. Default 50, hard ceiling 5000.
    */
   limit?: number | undefined;
   /**
@@ -58,15 +58,15 @@ export type ListCustomersParams = {
    */
   plans?: Array<ListCustomersPlan> | undefined;
   /**
-   * Filter by customer product status. Defaults to active and scheduled
+   * Filter by customer product status. Defaults to active and scheduled.
    */
   subscriptionStatus?: ListCustomersSubscriptionStatus | undefined;
   /**
-   * Search customers by id, name, or email
+   * Search customers by id, name, or email.
    */
   search?: string | undefined;
   /**
-   * Filter by customer processor type (stripe, revenuecat, vercel)
+   * Filter by customer processor type (stripe, revenuecat, vercel).
    */
   processors?: Array<ListCustomersProcessor> | undefined;
 };
@@ -588,33 +588,13 @@ export type ListCustomersList = {
  */
 export type ListCustomersResponse = {
   /**
-   * Array of items for current page
+   * Items for current page.
    */
   list: Array<ListCustomersList>;
   /**
-   * Whether more results exist after this page
+   * Opaque cursor for the next page. Null when there are no more results.
    */
-  hasMore: boolean;
-  /**
-   * Current offset position
-   */
-  offset: number;
-  /**
-   * Limit passed in the request
-   */
-  limit: number;
-  /**
-   * Total number of items returned in the current page
-   */
-  total: number;
-  /**
-   * Total number of customers available in the current organization and environment
-   */
-  totalCount: number;
-  /**
-   * Total number of customers matching the current filter before pagination is applied
-   */
-  totalFilteredCount: number;
+  nextCursor: string | null;
 };
 
 /** @internal */
@@ -652,7 +632,7 @@ export const ListCustomersProcessor$outboundSchema: z.ZodMiniEnum<
 
 /** @internal */
 export type ListCustomersParams$Outbound = {
-  offset: number;
+  start_cursor: string;
   limit: number;
   plans?: Array<ListCustomersPlan$Outbound> | undefined;
   subscription_status?: string | undefined;
@@ -666,8 +646,8 @@ export const ListCustomersParams$outboundSchema: z.ZodMiniType<
   ListCustomersParams
 > = z.pipe(
   z.object({
-    offset: z._default(z.int(), 0),
-    limit: z._default(z.int(), 10),
+    startCursor: z._default(z.string(), ""),
+    limit: z._default(z.int(), 50),
     plans: z.optional(z.array(z.lazy(() => ListCustomersPlan$outboundSchema))),
     subscriptionStatus: z.optional(
       ListCustomersSubscriptionStatus$outboundSchema,
@@ -677,6 +657,7 @@ export const ListCustomersParams$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      startCursor: "start_cursor",
       subscriptionStatus: "subscription_status",
     });
   }),
@@ -1314,18 +1295,11 @@ export const ListCustomersResponse$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     list: z.array(z.lazy(() => ListCustomersList$inboundSchema)),
-    has_more: types.boolean(),
-    offset: types.number(),
-    limit: types.number(),
-    total: types.number(),
-    total_count: types.number(),
-    total_filtered_count: types.number(),
+    next_cursor: types.nullable(types.string()),
   }),
   z.transform((v) => {
     return remap$(v, {
-      "has_more": "hasMore",
-      "total_count": "totalCount",
-      "total_filtered_count": "totalFilteredCount",
+      "next_cursor": "nextCursor",
     });
   }),
 );

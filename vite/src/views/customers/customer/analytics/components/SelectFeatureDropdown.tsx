@@ -76,14 +76,16 @@ export const SelectFeatureDropdown = () => {
 	const currentEventNames =
 		searchParams.get("event_names")?.split(",").filter(Boolean) || [];
 
-	// Build event options from useEventNames data, enriched with feature info
+	// Build event options from useEventNames data, keeping only those linked to a feature
 	const eventOptions: EventOption[] = useMemo(() => {
-		return eventNamesData.map((item) => ({
-			eventName: item.event_name,
-			eventCount: item.event_count,
-			linkedFeatures: getFeaturesForEventName(item.event_name, features),
-			selected: currentEventNames.includes(item.event_name),
-		}));
+		return eventNamesData
+			.map((item) => ({
+				eventName: item.event_name,
+				eventCount: item.event_count,
+				linkedFeatures: getFeaturesForEventName(item.event_name, features),
+				selected: currentEventNames.includes(item.event_name),
+			}))
+			.filter((option) => option.linkedFeatures.length > 0);
 	}, [eventNamesData, features, currentEventNames]);
 
 	// Filter options based on search (search both event name and feature ids)

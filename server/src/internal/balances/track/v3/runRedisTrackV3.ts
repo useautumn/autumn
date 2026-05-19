@@ -1,21 +1,21 @@
 import type {
-	FullSubject,
-	TrackDeduction,
-	TrackParams,
-	TrackResponseV3,
+    FullSubject,
+    TrackDeduction,
+    TrackParams,
+    TrackResponseV3,
 } from "@autumn/shared";
 import { tryCatch } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { globalEventBatchingManager } from "@/internal/balances/events/EventBatchingManager.js";
 import { resolveInternalProductIdForEvent } from "@/internal/balances/events/resolveInternalProductIdForEvent.js";
 import {
-	buildEventInfo,
-	initEvent,
+    buildEventInfo,
+    initEvent,
 } from "@/internal/balances/events/initEvent.js";
 import {
-	deductionToTrackResponseV2,
-	executeRedisDeductionV2,
-	projectMutationLogsToTrackDeductionsV2,
+    deductionToTrackResponseV2,
+    executeRedisDeductionV2,
+    projectMutationLogsToTrackDeductionsV2,
 } from "@/internal/balances/utils/deductionV2/index.js";
 import { globalSyncBatchingManagerV3 } from "@/internal/balances/utils/sync/SyncBatchingManagerV3.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
@@ -40,7 +40,7 @@ const queueSyncItem = ({
 
 	if (cusEntIds.length === 0 && rolloverIds.length === 0) return;
 
-	ctx.logger.info(`[QUEUE SYNC V4] (${body.customer_id})`);
+
 	globalSyncBatchingManagerV3.addSyncItem({
 		customerId: body.customer_id,
 		orgId: ctx.org.id,

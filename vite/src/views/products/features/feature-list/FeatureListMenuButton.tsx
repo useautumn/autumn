@@ -18,7 +18,7 @@ export function FeatureListMenuButton() {
 			<DropdownMenuTrigger asChild>
 				<IconButton
 					icon={<EllipsisVertical />}
-					variant="secondary"
+					variant="skeleton"
 					size="default"
 					iconOrientation="center"
 					className="h-7!"

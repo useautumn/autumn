@@ -14,7 +14,7 @@ dotenv.config();
 import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
-  xApiVersion: "2.2.0",
+  xApiVersion: "2.3.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 

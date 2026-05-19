@@ -18,7 +18,7 @@ class ListEventsGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.2.0"
+    ] = "2.3.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -83,10 +83,10 @@ class ListEventsCustomRange(BaseModel):
 
 
 class EventsListParamsTypedDict(TypedDict):
-    offset: NotRequired[int]
-    r"""Number of items to skip"""
+    start_cursor: NotRequired[str]
+    r"""Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages."""
     limit: NotRequired[int]
-    r"""Number of items to return. Default 100, max 1000."""
+    r"""Number of items to return. Default 50, hard ceiling 5000."""
     customer_id: NotRequired[str]
     r"""Filter events by customer ID"""
     entity_id: NotRequired[str]
@@ -98,11 +98,11 @@ class EventsListParamsTypedDict(TypedDict):
 
 
 class EventsListParams(BaseModel):
-    offset: Optional[int] = 0
-    r"""Number of items to skip"""
+    start_cursor: Optional[str] = ""
+    r"""Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages."""
 
-    limit: Optional[int] = 100
-    r"""Number of items to return. Default 100, max 1000."""
+    limit: Optional[int] = 50
+    r"""Number of items to return. Default 50, hard ceiling 5000."""
 
     customer_id: Optional[str] = None
     r"""Filter events by customer ID"""
@@ -120,7 +120,7 @@ class EventsListParams(BaseModel):
     def serialize_model(self, handler):
         optional_fields = set(
             [
-                "offset",
+                "start_cursor",
                 "limit",
                 "customer_id",
                 "entity_id",
@@ -317,31 +317,30 @@ class ListEventsResponseTypedDict(TypedDict):
     r"""OK"""
 
     list: List[ListEventsListTypedDict]
-    r"""Array of items for current page"""
-    has_more: bool
-    r"""Whether more results exist after this page"""
-    offset: float
-    r"""Current offset position"""
-    limit: float
-    r"""Limit passed in the request"""
-    total: float
-    r"""Total number of items returned in the current page"""
+    r"""Items for current page."""
+    next_cursor: Nullable[str]
+    r"""Opaque cursor for the next page. Null when there are no more results."""
 
 
 class ListEventsResponse(BaseModel):
     r"""OK"""
 
     list: List[ListEventsList]
-    r"""Array of items for current page"""
+    r"""Items for current page."""
 
-    has_more: bool
-    r"""Whether more results exist after this page"""
+    next_cursor: Nullable[str]
+    r"""Opaque cursor for the next page. Null when there are no more results."""
 
-    offset: float
-    r"""Current offset position"""
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        serialized = handler(self)
+        m = {}
 
-    limit: float
-    r"""Limit passed in the request"""
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
 
-    total: float
-    r"""Total number of items returned in the current page"""
+            if val != UNSET_SENTINEL:
+                m[k] = val
+
+        return m
