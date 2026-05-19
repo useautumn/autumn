@@ -55,7 +55,7 @@ export function ValuePicker({
 						className="flex items-center gap-1.5 h-8 px-3 rounded-xl input-base input-state-open-tiny cursor-pointer min-w-0 w-full text-sm overflow-hidden"
 					>
 						{selectedValues.length === 0 ? (
-							<span className="text-t3">{placeholder}</span>
+							<span className="text-tertiary-foreground">{placeholder}</span>
 						) : (
 							<>
 								{selectedValues.slice(0, MAX_VISIBLE_CHIPS).map((val) => {
@@ -63,7 +63,7 @@ export function ValuePicker({
 									return (
 										<span
 											key={val}
-											className="flex items-center gap-0.5 bg-accent border border-border text-t1 rounded px-1 h-4.5 text-[10px] shrink-0 max-w-48"
+											className="flex items-center gap-0.5 bg-accent border border-border text-foreground rounded px-1 h-4.5 text-[10px] shrink-0 max-w-48"
 										>
 											{opt?.icon && (
 												<span className="shrink-0 [&_svg]:size-3">
@@ -72,7 +72,7 @@ export function ValuePicker({
 											)}
 											<span className="truncate">{opt?.label ?? val}</span>
 											<span
-												className="cursor-pointer text-t3 hover:text-destructive ml-0.5"
+												className="cursor-pointer text-tertiary-foreground hover:text-destructive ml-0.5"
 												onClick={(e) => {
 													e.stopPropagation();
 													onRemove(val);
@@ -85,7 +85,7 @@ export function ValuePicker({
 									);
 								})}
 								{selectedValues.length > MAX_VISIBLE_CHIPS && (
-									<span className="text-sm text-t3 px-1 shrink-0">
+									<span className="text-sm text-tertiary-foreground px-1 shrink-0">
 										+{selectedValues.length - MAX_VISIBLE_CHIPS}
 									</span>
 								)}
@@ -103,7 +103,7 @@ export function ValuePicker({
 					<Command className="bg-interactive-secondary">
 						<CommandInput placeholder="Search..." className="text-sm" />
 						<CommandList>
-							<CommandEmpty className="text-t3 text-sm p-2">
+							<CommandEmpty className="text-tertiary-foreground text-sm p-2">
 								No results
 							</CommandEmpty>
 							<CommandGroup>
@@ -129,7 +129,7 @@ export function ValuePicker({
 												(suggestion.value !== suggestion.label
 													? suggestion.value
 													: null)) && (
-												<span className="shrink-0 max-w-48 truncate text-t3 text-xs font-mono">
+												<span className="shrink-0 max-w-48 truncate text-tertiary-foreground text-xs font-mono">
 													{suggestion.sublabel ?? suggestion.value}
 												</span>
 											)}

@@ -25,7 +25,7 @@ export function CheckboxField({
 					checked={field.state.value}
 					onCheckedChange={(checked) => field.handleChange(checked === true)}
 				/>
-				<label htmlFor={id} className={labelClassName ?? "text-sm text-t3"}>
+				<label htmlFor={id} className={labelClassName ?? "text-sm text-tertiary-foreground"}>
 					{label}
 				</label>
 			</div>

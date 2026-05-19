@@ -102,11 +102,11 @@ export function CustomerUsageAnalyticsChart({
 									style={{ background: color }}
 								/>
 								{showName && (
-									<span className="text-t4 text-tiny truncate min-w-0">
+									<span className="text-subtle text-tiny truncate min-w-0">
 										{name}
 									</span>
 								)}
-								<span className="text-t2 text-tiny tabular-nums shrink-0">
+								<span className="text-muted-foreground text-tiny tabular-nums shrink-0">
 									{primary.toLocaleString()}
 								</span>
 							</div>

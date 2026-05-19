@@ -21,11 +21,11 @@ export const RevenueCatWebhookSecret = ({
 	return (
 		<div>
 			<FormLabel className="mb-1">
-				<span className="text-t2">
+				<span className="text-muted-foreground">
 					{env === "live" ? "Webhook Secret" : "Sandbox Webhook Secret"}
 				</span>
 			</FormLabel>
-			<p className="text-t3 text-sm mb-2">
+			<p className="text-tertiary-foreground text-sm mb-2">
 				This is the webhook secret for RevenueCat events. You must set this
 				value in the RevenueCat console.
 			</p>

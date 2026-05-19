@@ -48,7 +48,7 @@ export function GrantedBalancePopover({
 				</PopoverTrigger>
 				<PopoverContent align="start" className="w-56 p-3">
 					<div className="flex flex-col gap-3">
-						<div className="text-sm font-medium text-t2">
+						<div className="text-sm font-medium text-muted-foreground">
 							Edit Granted Balance
 						</div>
 						<Input

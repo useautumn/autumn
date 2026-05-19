@@ -191,7 +191,7 @@ const ProductSelector = ({
 	};
 
 	if (!products || products.length === 0) {
-		return <p className="text-sm text-t3">No products available</p>;
+		return <p className="text-sm text-tertiary-foreground">No products available</p>;
 	}
 
 	const getProductText = (productId: string) => {
@@ -213,9 +213,9 @@ const ProductSelector = ({
 						: rewardProgram.product_ids?.map((productId: string) => (
 								<div
 									key={productId}
-									className="py-0 px-3 text-xs text-t3 border-zinc-300 bg-zinc-100 rounded-full w-fit flex items-center gap-2 h-fit"
+									className="py-0 px-3 text-xs text-tertiary-foreground border-zinc-300 bg-zinc-100 rounded-full w-fit flex items-center gap-2 h-fit"
 								>
-									<p className="text-t2">{getProductText(productId)}</p>
+									<p className="text-muted-foreground">{getProductText(productId)}</p>
 									<Button
 										variant="skeleton"
 										size="sm"
@@ -225,7 +225,7 @@ const ProductSelector = ({
 										}}
 										className="bg-transparent hover:bg-transparent p-0 w-5 h-5"
 									>
-										<X size={12} className="text-t3" />
+										<X size={12} className="text-tertiary-foreground" />
 									</Button>
 								</div>
 							))}
@@ -248,7 +248,7 @@ const ProductSelector = ({
 									>
 										<div className="flex items-center">{product.name}</div>
 										{rewardProgram.product_ids?.includes(product.id) && (
-											<Check size={12} className="text-t3" />
+											<Check size={12} className="text-tertiary-foreground" />
 										)}
 									</CommandItem>
 								))}

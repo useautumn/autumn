@@ -17,7 +17,7 @@ export const createFeatureListColumns = ({
 		accessorKey: "name",
 		cell: ({ row }: { row: Row<Feature> }) => {
 			return (
-				<div className="font-medium text-t1">
+				<div className="font-medium text-foreground">
 					<AdminHover texts={getFeatureHoverTexts({ feature: row.original })}>
 						{row.original.name}
 					</AdminHover>
@@ -36,7 +36,7 @@ export const createFeatureListColumns = ({
 					{feature.id ? (
 						<MiniCopyButton text={feature.id} />
 					) : (
-						<span className="px-1 text-t3">NULL</span>
+						<span className="px-1 text-tertiary-foreground">NULL</span>
 					)}
 				</div>
 			);
@@ -53,9 +53,9 @@ export const createFeatureListColumns = ({
 				feature.config?.usage_type,
 			);
 			return (
-				<div className="flex items-center gap-2 text-t2">
+				<div className="flex items-center gap-2 text-muted-foreground">
 					{getFeatureIcon({ feature })}
-					<span className="text-xs text-t3">{config.label}</span>
+					<span className="text-xs text-tertiary-foreground">{config.label}</span>
 				</div>
 			);
 		},
@@ -72,7 +72,7 @@ export const createFeatureListColumns = ({
 							feature.event_names && feature.event_names.length > 0
 								? feature.event_names.join(", ")
 								: "—";
-						return <div className="text-t2 truncate">{eventNames}</div>;
+						return <div className="text-muted-foreground truncate">{eventNames}</div>;
 					},
 				},
 			]

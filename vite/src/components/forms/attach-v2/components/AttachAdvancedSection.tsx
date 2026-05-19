@@ -78,7 +78,7 @@ function FeatureSelectDropdown({
 					)}
 				>
 					{label}
-					<CaretDownIcon className="size-3.5 text-t3" />
+					<CaretDownIcon className="size-3.5 text-tertiary-foreground" />
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end" className="min-w-48">
@@ -346,7 +346,7 @@ export function AttachAdvancedSection() {
 							size="sm"
 							onClick={handleAddCustomLineItem}
 							icon={<PlusIcon size={12} />}
-							className="text-t3"
+							className="text-tertiary-foreground"
 						>
 							Add
 						</IconButton>
@@ -393,7 +393,7 @@ export function AttachAdvancedSection() {
 												size="sm"
 												onClick={() => handleRemoveCustomLineItem({ index })}
 												icon={<XIcon size={12} />}
-												className="shrink-0 text-t3 hover:text-red-500"
+												className="shrink-0 text-tertiary-foreground hover:text-red-500"
 											/>
 										</div>
 									</motion.div>
@@ -466,7 +466,7 @@ export function AttachAdvancedSection() {
 						size="sm"
 						onClick={handleAddDiscount}
 						icon={<PlusIcon size={12} />}
-						className="text-t3"
+						className="text-tertiary-foreground"
 					>
 						Add
 					</IconButton>

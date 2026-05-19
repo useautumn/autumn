@@ -125,7 +125,7 @@ export function SubscriptionCancelSheet() {
 					title="Cancel Subscription"
 					description="Loading subscription..."
 				/>
-				<div className="p-4 text-sm text-t3">Loading...</div>
+				<div className="p-4 text-sm text-tertiary-foreground">Loading...</div>
 			</div>
 		);
 	}
@@ -134,7 +134,7 @@ export function SubscriptionCancelSheet() {
 		return (
 			<div className="flex flex-col h-full">
 				<SheetHeader title="Cancel Subscription" description="Loading..." />
-				<div className="p-4 text-sm text-t3">Loading...</div>
+				<div className="p-4 text-sm text-tertiary-foreground">Loading...</div>
 			</div>
 		);
 	}

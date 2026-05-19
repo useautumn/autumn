@@ -98,7 +98,7 @@ export const TransferProductDialog = ({
 				</DialogHeader>
 
 				<div className="flex flex-col gap-3">
-					<p className="text-sm text-t2">
+					<p className="text-sm text-muted-foreground">
 						{isOnEntity
 							? "Transfer this plan to another entity or move it back to the customer level."
 							: "Transfer this plan to an entity."}
@@ -135,7 +135,7 @@ export const TransferProductDialog = ({
 												{entity.name}
 											</span>
 										)}
-										<span className="truncate text-t3 font-mono text-xs">
+										<span className="truncate text-tertiary-foreground font-mono text-xs">
 											{entity.id || entity.internal_id}
 										</span>
 									</div>

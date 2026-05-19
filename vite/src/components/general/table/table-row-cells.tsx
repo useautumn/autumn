@@ -55,8 +55,8 @@ function TableRowCellsInner<T>({
 				return (
 					<TableCell
 						className={cn(
-							"px-2 h-4 text-t3",
-							cellIndex === 0 && "pl-4 text-t2 font-medium",
+							"px-2 h-4 text-tertiary-foreground",
+							cellIndex === 0 && "pl-4 text-muted-foreground font-medium",
 							rowHref && "p-0",
 						)}
 						key={cell.id}
@@ -124,7 +124,7 @@ export function TableEmptyState({
 							<SmallSpinner />
 						</div>
 					) : (
-						<div className="text-t4 text-xs text-center w-full h-full items-center justify-center flex">
+						<div className="text-subtle text-xs text-center w-full h-full items-center justify-center flex">
 							{emptyStateChildren || emptyStateText}
 						</div>
 					)}

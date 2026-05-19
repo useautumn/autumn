@@ -102,9 +102,9 @@ const getRightIcon = (
 				color: "text-yellow-500",
 			}; // Paid - orange
 		case "none":
-			return { icon: <XIcon size={size} weight={weight} />, color: "text-t4" }; // None - gray
+			return { icon: <XIcon size={size} weight={weight} />, color: "text-subtle" }; // None - gray
 		default:
-			return { icon: <XIcon size={size} weight={weight} />, color: "text-t4" }; // Default - gray
+			return { icon: <XIcon size={size} weight={weight} />, color: "text-subtle" }; // Default - gray
 	}
 };
 

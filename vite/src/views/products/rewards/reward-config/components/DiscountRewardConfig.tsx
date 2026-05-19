@@ -107,7 +107,7 @@ export function DiscountRewardConfig({
 								className="flex-1 bg-transparent outline-none"
 							/>
 							<InputGroupAddon align="inline-end">
-								<InputGroupText className="text-t3">
+								<InputGroupText className="text-tertiary-foreground">
 									{reward.discountType === "percentage"
 										? "%"
 										: org?.default_currency.toUpperCase() || "USD"}

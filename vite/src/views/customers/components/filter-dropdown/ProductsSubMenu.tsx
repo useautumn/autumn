@@ -132,14 +132,14 @@ export const ProductsSubMenu = () => {
 			<DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
 				Plans
 				{hasSelections && (
-					<span className="text-xs text-t3 bg-muted px-1 py-0 rounded-md">
+					<span className="text-xs text-tertiary-foreground bg-muted px-1 py-0 rounded-md">
 						{selectedProductsCount}
 					</span>
 				)}
 			</DropdownMenuSubTrigger>
 			<DropdownMenuSubContent className="w-64">
 				{uniqueProducts.length === 0 ? (
-					<div className="px-2 py-3 text-center text-t3 text-sm">
+					<div className="px-2 py-3 text-center text-tertiary-foreground text-sm">
 						No products found
 					</div>
 				) : (
@@ -149,7 +149,7 @@ export const ProductsSubMenu = () => {
 								type="button"
 								onClick={handleSelectAll}
 								className={cn(
-									"px-1 h-5 flex items-center gap-1 text-t2 text-xs hover:text-t1 bg-accent cursor-pointer rounded-md",
+									"px-1 h-5 flex items-center gap-1 text-muted-foreground text-xs hover:text-foreground bg-accent cursor-pointer rounded-md",
 									allProductVersions.length > 0 &&
 										allProductVersions.every((pv) =>
 											selectedVersions.includes(pv.key),
@@ -163,7 +163,7 @@ export const ProductsSubMenu = () => {
 								type="button"
 								onClick={handleSelectNone}
 								className={cn(
-									"px-1 h-5 flex items-center gap-1 text-t3 text-xs hover:text-t1 hover:bg-accent cursor-pointer rounded-md",
+									"px-1 h-5 flex items-center gap-1 text-tertiary-foreground text-xs hover:text-foreground hover:bg-accent cursor-pointer rounded-md",
 									queryStates.none &&
 										"bg-primary/10 text-primary hover:text-primary/80",
 								)}

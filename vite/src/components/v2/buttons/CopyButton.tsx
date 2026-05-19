@@ -61,7 +61,7 @@ const AnimatedCopyIcon = ({
 		<CheckIcon
 			className={cn(
 				size,
-				"absolute text-t1 transition-all duration-100",
+				"absolute text-foreground transition-all duration-100",
 				copied ? "opacity-100 scale-100" : "opacity-0 scale-95",
 			)}
 		/>
@@ -158,7 +158,7 @@ export const MiniCopyButton = ({
 	);
 
 	return (
-		<div className="flex items-center gap-1 w-fit max-w-full group text-t3">
+		<div className="flex items-center gap-1 w-fit max-w-full group text-tertiary-foreground">
 			{iconOrientation === "left" && copyIcon}
 			{children}
 			<span

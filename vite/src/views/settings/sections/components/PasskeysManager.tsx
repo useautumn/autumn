@@ -129,8 +129,8 @@ export const PasskeysManager = () => {
 		<div className="flex flex-col gap-4">
 			<div className="flex items-center justify-between">
 				<div>
-					<h3 className="text-sm font-medium text-t1">Passkeys</h3>
-					<p className="text-xs text-t3 mt-0.5">
+					<h3 className="text-sm font-medium text-foreground">Passkeys</h3>
+					<p className="text-xs text-tertiary-foreground mt-0.5">
 						Sign in faster with Touch ID, Face ID, or a security key.
 					</p>
 				</div>
@@ -153,7 +153,7 @@ export const PasskeysManager = () => {
 						</DialogHeader>
 						<div>
 							<FormLabel>
-								<span className="text-t2">Name</span>
+								<span className="text-muted-foreground">Name</span>
 							</FormLabel>
 							<Input
 								autoFocus
@@ -192,18 +192,18 @@ export const PasskeysManager = () => {
 			</div>
 
 			{isLoading ? (
-				<p className="text-t3 text-sm py-4">Loading passkeys…</p>
+				<p className="text-tertiary-foreground text-sm py-4">Loading passkeys…</p>
 			) : isError ? (
-				<p className="text-t3 text-sm py-4">Failed to load passkeys.</p>
+				<p className="text-tertiary-foreground text-sm py-4">Failed to load passkeys.</p>
 			) : passkeys.length === 0 ? (
-				<p className="text-t3 text-sm py-4">
+				<p className="text-tertiary-foreground text-sm py-4">
 					No passkeys yet. Add one to sign in without a code.
 				</p>
 			) : (
 				<SettingsTable columns={COLUMNS}>
 					{passkeys.map((pk) => (
 						<TableRow key={pk.id} className={SETTINGS_ROW_CLASS}>
-							<TableCell className="pl-4 text-t1">
+							<TableCell className="pl-4 text-foreground">
 								{pk.name || "Unnamed passkey"}
 							</TableCell>
 							<TableCell>
@@ -211,7 +211,7 @@ export const PasskeysManager = () => {
 									{friendlyDeviceType(pk.deviceType)}
 								</Badge>
 							</TableCell>
-							<TableCell className="text-t3 text-xs">
+							<TableCell className="text-tertiary-foreground text-xs">
 								{pk.createdAt ? formatDateStr(pk.createdAt) : "—"}
 							</TableCell>
 							<TableCell className="pr-2">
@@ -221,7 +221,7 @@ export const PasskeysManager = () => {
 										size="sm"
 										onClick={() => handleDelete(pk.id)}
 										isLoading={deletingId === pk.id}
-										className="h-7 px-2 text-t3 hover:text-destructive"
+										className="h-7 px-2 text-tertiary-foreground hover:text-destructive"
 										aria-label={`Remove ${pk.name || "passkey"}`}
 									>
 										<Trash2 size={14} />

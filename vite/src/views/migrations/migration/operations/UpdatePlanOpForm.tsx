@@ -181,11 +181,11 @@ export function UpdatePlanOpForm({
 		<div className="flex flex-col gap-2">
 			<div className="flex items-center justify-between group/row">
 				<div className="flex items-center gap-2">
-					<span className="text-sm font-medium text-t1">
+					<span className="text-sm font-medium text-foreground">
 						{selectedPlanIds.length > 1 ? "Update Plans" : "Update Plan"}
 					</span>
 					{selectedPlanIds.length > 0 && (
-						<span className="text-xs text-t3">
+						<span className="text-xs text-tertiary-foreground">
 							{selectedPlanIds.length}{" "}
 							{selectedPlanIds.length === 1 ? "plan" : "plans"}
 						</span>
@@ -208,7 +208,7 @@ export function UpdatePlanOpForm({
 
 			{value.version !== undefined && (
 				<div className="flex items-center gap-2 group/row">
-					<span className="text-xs text-t4 w-14 shrink-0 select-none">
+					<span className="text-xs text-subtle w-14 shrink-0 select-none">
 						Version
 					</span>
 					<Select
@@ -242,7 +242,7 @@ export function UpdatePlanOpForm({
 
 			{customize?.price !== undefined && (
 				<div className="flex items-center gap-2 group/row">
-					<span className="text-xs text-t4 w-14 shrink-0 select-none">
+					<span className="text-xs text-subtle w-14 shrink-0 select-none">
 						Price
 					</span>
 					<button
@@ -270,7 +270,7 @@ export function UpdatePlanOpForm({
 
 			{addItems.map((item, index) => (
 				<div key={`add-${index}`} className="flex items-center gap-2 group/row">
-					<span className="text-xs text-t4 w-14 shrink-0 select-none">Add</span>
+					<span className="text-xs text-subtle w-14 shrink-0 select-none">Add</span>
 					<ItemSummaryRow
 						item={item}
 						onClick={() => openSheet("edit-feature", index)}

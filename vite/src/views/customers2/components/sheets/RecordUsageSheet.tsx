@@ -158,7 +158,7 @@ export function RecordUsageSheet() {
 								variant="ghost"
 								size="sm"
 								onClick={handleAddProperty}
-								className="h-6 gap-1 text-xs text-t3"
+								className="h-6 gap-1 text-xs text-tertiary-foreground"
 							>
 								<PlusIcon size={12} />
 								Add
@@ -166,7 +166,7 @@ export function RecordUsageSheet() {
 						</div>
 
 						{properties.length === 0 && (
-							<p className="text-xs text-t3">
+							<p className="text-xs text-tertiary-foreground">
 								No properties added. Click "Add" to attach metadata.
 							</p>
 						)}
@@ -200,7 +200,7 @@ export function RecordUsageSheet() {
 								<button
 									type="button"
 									onClick={() => handleRemoveProperty({ index })}
-									className="shrink-0 p-1 text-t3 hover:text-destructive transition-colors"
+									className="shrink-0 p-1 text-tertiary-foreground hover:text-destructive transition-colors"
 								>
 									<TrashIcon size={14} />
 								</button>

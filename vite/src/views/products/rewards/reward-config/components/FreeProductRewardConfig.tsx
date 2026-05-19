@@ -60,7 +60,7 @@ export function FreeProductRewardConfig({
 					</SelectContent>
 				</Select>
 				{isEmpty && (
-					<p className="text-xs text-t3 mt-1">
+					<p className="text-xs text-tertiary-foreground mt-1">
 						You need to create a free add-on product to use this reward type
 					</p>
 				)}

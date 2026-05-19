@@ -44,7 +44,7 @@ function StatusValue({
 		return (
 			<div className="flex items-center gap-2">
 				<ActiveRunDot />
-				<span className="text-xs text-t2">
+				<span className="text-xs text-muted-foreground">
 					{activeRunDryRun ? "Dry run in progress" : "Running"}
 				</span>
 			</div>
@@ -54,7 +54,7 @@ function StatusValue({
 		return (
 			<div className="flex items-center gap-1.5">
 				{event.dry_run && (
-					<span className="text-[10px] font-medium text-t3">Dry Run:</span>
+					<span className="text-[10px] font-medium text-tertiary-foreground">Dry Run:</span>
 				)}
 				<ItemEventStatusBadge
 					status={event.status}
@@ -167,10 +167,10 @@ export function CustomerRunSheet({
 					title={
 						<div className="flex items-center justify-between w-full">
 							<span className="flex items-center gap-1.5">
-								<LightningIcon size={14} weight="fill" className="text-t3" />
+								<LightningIcon size={14} weight="fill" className="text-tertiary-foreground" />
 								Live Run
 							</span>
-							<span className="text-xs text-t3 font-normal">
+							<span className="text-xs text-tertiary-foreground font-normal">
 								{formatEventTimestamp(latestLiveEvent.timestamp)}
 							</span>
 						</div>
@@ -185,10 +185,10 @@ export function CustomerRunSheet({
 					title={
 						<div className="flex items-center justify-between w-full">
 							<span className="flex items-center gap-1.5">
-								<EyeIcon size={14} weight="duotone" className="text-t3" />
+								<EyeIcon size={14} weight="duotone" className="text-tertiary-foreground" />
 								Preview
 							</span>
-							<span className="text-xs text-t3 font-normal">
+							<span className="text-xs text-tertiary-foreground font-normal">
 								{formatEventTimestamp(latestDryEvent.timestamp)}
 							</span>
 						</div>
@@ -211,7 +211,7 @@ export function CustomerRunSheet({
 									dryRun={event.dry_run}
 									response={event.response}
 								/>
-								<span className="text-xs text-t3 shrink-0">
+								<span className="text-xs text-tertiary-foreground shrink-0">
 									{formatEventTimestamp(event.timestamp)}
 								</span>
 							</div>

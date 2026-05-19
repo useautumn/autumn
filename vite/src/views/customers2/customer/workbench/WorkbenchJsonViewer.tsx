@@ -92,14 +92,14 @@ export const WorkbenchJsonViewer = ({
 					onClick={() => {
 						editorRef.current?.getAction("actions.find")?.run();
 					}}
-					className="text-[10px] font-mono text-t4 hover:text-t2 cursor-pointer px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-800/80 border border-border/40"
+					className="text-[10px] font-mono text-subtle hover:text-muted-foreground cursor-pointer px-1.5 py-0.5 rounded bg-stone-100 dark:bg-stone-800/80 border border-border/40"
 					title="Find (Ctrl+F)"
 				>
 					⌘F
 				</button>
 				<CopyButton
 					text={formatted}
-					className="bg-stone-100 dark:bg-stone-800/80 shadow-none hover:bg-stone-200 dark:hover:bg-stone-800 w-5 gap-0 h-5 !px-0 py-0 flex items-center justify-center text-t3 cursor-pointer border border-border/40 rounded"
+					className="bg-stone-100 dark:bg-stone-800/80 shadow-none hover:bg-stone-200 dark:hover:bg-stone-800 w-5 gap-0 h-5 !px-0 py-0 flex items-center justify-center text-tertiary-foreground cursor-pointer border border-border/40 rounded"
 				/>
 			</div>
 			<Editor
