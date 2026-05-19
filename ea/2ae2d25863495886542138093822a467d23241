@@ -1,0 +1,167 @@
+vite/src/hooks/stores/useViewAsStore.ts
+  s_d0feb935866964::t_cc5dccfd4327f8 1-18
+vite/src/views/customers2/components/table/customer-usage-analytics/CustomerUsageAnalyticsTable.tsx
+  s_ecf33ff4e2ee39::t_4bd8ba5f18463c 29
+  s_ecf33ff4e2ee39::t_203ca9c53e5b14 14
+  s_75eefd5676ab7c::t_2b5c78223ccc96 63-72,146-151,168-190,192-239
+  s_ecf33ff4e2ee39::t_8cbec758fe3776 109-125
+vite/src/views/customers2/components/sheets/SubscriptionDetailSheet.tsx
+  s_75eefd5676ab7c::t_f58571d91d4cae 47
+  s_f2b171184f7fd4::t_13231c080629ef 126,140-141
+  s_75eefd5676ab7c::t_a3857071b67f2c 132-134,142-146
+  s_f2b171184f7fd4::t_ff12563957e348 393,404,416
+  s_75eefd5676ab7c::t_2b5c78223ccc96 48-51
+vite/src/views/customers2/hooks/useCustomerProductsData.ts
+  s_75eefd5676ab7c::t_78cda4eaa31653 1-5
+  s_75eefd5676ab7c::t_ecbe5f82a1add0 9
+  s_75eefd5676ab7c::t_05d35e969273bb 17-18,24-27,32-37
+  s_75eefd5676ab7c::t_02d8c90903c30c 83-86,88-90
+  s_75eefd5676ab7c::t_0d9f1cebc6df2e 15-16,19-23,38
+  s_75eefd5676ab7c::t_6f517df50f50cf 81,91
+  s_20acd4e135f1e3::t_48c1f40b2def1e 71-72,75-79,82,92-93,103
+  s_75eefd5676ab7c::t_df469e91da6d35 28-31,87
+  s_20acd4e135f1e3::t_ecd52bb65dd1c9 142-143
+  s_75eefd5676ab7c::t_43ee307b9d54ed 73,80,94
+  s_75eefd5676ab7c::t_6cf36496261adc 100-101
+vite/src/views/customers2/components/table/customer-feature-usage/CustomerFeatureUsageTable.tsx
+  s_5c8bdf5cb36e87::t_b832ef8e1e949b 99-101,124
+  s_75eefd5676ab7c::t_df469e91da6d35 19,69
+  s_75eefd5676ab7c::t_2b5c78223ccc96 20-23
+  s_5c8bdf5cb36e87::t_0bf459cd02367e 221-231
+  s_75eefd5676ab7c::t_64b2a100e434c0 44
+  s_5c8bdf5cb36e87::t_18d8f375b4cac7 38,42-43
+  s_75eefd5676ab7c::t_b97d3b9fcdbaaf 15
+  s_5c8bdf5cb36e87::t_7c03c5346b02c3 58,64,74-75,77,80
+  s_75eefd5676ab7c::t_82cf50c5e3a45a 61-62,86-92
+  s_75eefd5676ab7c::t_5905919e1f6990 63,65-68,70-73
+vite/src/views/customers2/customer/CustomerView2.tsx
+  s_c56355cf78eda0::t_59c241fc305951 6
+  s_c56355cf78eda0::t_8a3a4c6acc1a30 42
+  s_75eefd5676ab7c::t_2b5c78223ccc96 19,35
+  s_c56355cf78eda0::t_465e50cf487711 108-109
+  s_c56355cf78eda0::t_daa048f4654347 132
+  s_c56355cf78eda0::t_114f79b384a5d4 62-73
+vite/src/views/customers2/hooks/useEffectiveNow.ts
+  s_55818b8a4fb385::t_fa25a641c237d7 1-17
+vite/src/views/customers2/components/table/customer-products/CustomerProductsTable.tsx
+  s_51bb60c07d9b6a::t_c92658caa7643b 149,151-152
+  s_75eefd5676ab7c::t_2b5c78223ccc96 12
+  s_51bb60c07d9b6a::t_b985a3bc83ce3f 129,132,134-136
+  s_51bb60c07d9b6a::t_1c4d0779b7850a 231-239
+  s_51bb60c07d9b6a::t_6e968da2ac67ac 74-75
+  s_51bb60c07d9b6a::t_1a8307699504a9 85
+  s_75eefd5676ab7c::t_74d460fb966def 130-131,133
+vite/src/views/customers2/customer/ViewAsBanner.tsx
+  s_75eefd5676ab7c::t_cd3200deb87550 1,14,21
+  s_a60a344119afe9::t_23dfc94a7338bf 2-13,15-20,22-29
+vite/src/views/customers2/customer/CustomerContext.tsx
+  s_2e12c33d69052c::t_36ed832dfe06cf 10-11
+vite/src/views/customers2/components/table/customer-products/CustomerProductsColumns.tsx
+  s_1cc7eec12880f3::t_af9dab718e54e0 95,97,103-106
+  s_1cc7eec12880f3::t_42e5fb414b8147 111-121,136,148,160,171
+  s_1cc7eec12880f3::t_fb4a6c555cd5dd 1-5,8
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "ea2ae2d25863495886542138093822a467d23241",
+  "prompts": {},
+  "sessions": {
+    "s_1cc7eec12880f3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c0420361ffedCqbmgKcQz7mtC",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_20acd4e135f1e3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c042a7ddffePP9GcdD7xwC0m1",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_2e12c33d69052c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c0443b52ffeQq9oJwyL7k3gb9",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_51bb60c07d9b6a": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c0419ec6ffexomJIf7azrP4as",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_55818b8a4fb385": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c044af51ffeBuYCBQ2WhLq7cN",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_5c8bdf5cb36e87": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c03f5be9ffexDSB3XDZYuclVP",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_75eefd5676ab7c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c05cef01ffep7Lw0G1MRuFBSm",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_a60a344119afe9": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c04460a0ffe45t7oocHjS4dSE",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_c56355cf78eda0": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c0413567ffeTvVJjLZ3th62T0",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_d0feb935866964": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c044d84affeVHS1GNf5vVWCIX",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_ecf33ff4e2ee39": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c03ed24dfferC6h633SSdi5Bh",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    },
+    "s_f2b171184f7fd4": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c03e74d6ffeiM1F0PWoDVg7zt",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
