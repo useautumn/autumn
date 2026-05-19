@@ -14,6 +14,7 @@ import {
 	isFreeProduct,
 	isOneOffProduct,
 } from "../../productUtils/classifyProduct/classifyProductUtils";
+import { ms } from "../../common";
 import { notNullish, nullish } from "../../utils";
 import { ACTIVE_STATUSES, RELEVANT_STATUSES } from "..";
 import { cusProductToPrices } from "../convertCusProduct";
@@ -111,22 +112,16 @@ export const isCustomerProductExpired = (cp?: FullCusProduct) => {
 	return cp.status === CusProductStatus.Expired;
 };
 
-/**
- * Checks if a canceling customer product has reached its end time.
- * Uses an optional tolerance to handle timing differences between Stripe and webhook arrival.
- *
- * @param toleranceMs - Tolerance in milliseconds (default: 10 minutes)
- */
-
 export const hasCustomerProductEnded = (
 	cp: FullCusProduct,
-	params?: { nowMs?: number },
+	params?: { nowMs?: number; toleranceMs?: number },
 ) => {
 	const nowMs = params?.nowMs ?? Date.now();
+	const toleranceMs = params?.toleranceMs ?? ms.seconds(1);
 
 	const hasEnded =
 		// isCustomerProductCanceling(cp) &&
-		notNullish(cp.ended_at) && nowMs >= cp.ended_at;
+		notNullish(cp.ended_at) && nowMs + toleranceMs >= cp.ended_at;
 	return hasEnded;
 };
 

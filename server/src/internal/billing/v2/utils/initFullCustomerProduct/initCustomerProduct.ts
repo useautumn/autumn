@@ -26,6 +26,7 @@ export const initCustomerProduct = ({
 		freeTrial,
 		trialEndsAt,
 		now,
+		entity,
 	} = initContext;
 	const {
 		subscriptionId,
@@ -40,8 +41,9 @@ export const initCustomerProduct = ({
 		onTrialEnd,
 	} = initOptions ?? {};
 
-	const internalEntityId = fullCustomer.entity?.internal_id;
-	const entityId = fullCustomer.entity?.id;
+	const scopedEntity = entity ?? fullCustomer.entity;
+	const internalEntityId = scopedEntity?.internal_id;
+	const entityId = scopedEntity?.id;
 
 	const startsAt = initOptions?.startsAt ?? now;
 	const endedAt = initOptions?.endedAt;

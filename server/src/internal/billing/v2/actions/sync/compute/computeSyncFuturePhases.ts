@@ -77,6 +77,7 @@ export const computeSyncFuturePhases = ({
 				fullCustomer,
 				fullProduct: productContext.fullProduct,
 				featureQuantities: productContext.featureQuantities,
+				entity: productContext.entity,
 				startsAt: phaseContext.startsAt,
 				endsAt: phaseContext.endsAt,
 				currentEpochMs,
