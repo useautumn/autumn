@@ -1,44 +1,19 @@
-import {
-	CusProductStatus,
-	type Entity,
-	type FullCusProduct,
-} from "@autumn/shared";
+import type { Entity, FullCusProduct } from "@autumn/shared";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { useViewAsStore } from "@/hooks/stores/useViewAsStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { filterCustomerProductsByType } from "../components/table/customer-products/customerProductsTableFilters";
-import { withEffectiveCustomerProductStatus } from "../utils/effectiveCustomerProductStatus";
+import {
+	filterAndRewriteAsLiveAt,
+	filterEntitiesVisibleAt,
+	withEffectiveCustomerProductStatus,
+} from "../utils/effectiveCustomerProductStatus";
 import {
 	useEffectiveEntityId,
 	useEffectiveNow,
 	useIsViewingAsPast,
 } from "./useEffectiveNow";
-
-/**
- * Rewrites a customer product so it renders as "alive at nowMs": clears Expired
- * status, pre-nowMs cancellations, and future end timestamps. Used in view-as mode
- * so downstream filters and detail panels don't show post-nowMs facts.
- */
-export function rewriteCusProductAsLiveAt(
-	cp: FullCusProduct,
-	nowMs: number,
-): FullCusProduct {
-	let next: FullCusProduct = cp;
-	if (next.status === CusProductStatus.Expired) {
-		next = { ...next, status: CusProductStatus.Active };
-	}
-	if (
-		next.canceled &&
-		(next.canceled_at == null || next.canceled_at >= nowMs)
-	) {
-		next = { ...next, canceled: false, canceled_at: null };
-	}
-	if (next.ended_at != null && next.ended_at >= nowMs) {
-		next = { ...next, ended_at: null };
-	}
-	return next;
-}
 
 function filterBySelectedEntity({
 	products,
@@ -76,18 +51,14 @@ export function useCustomerProductsData() {
 	const pinnedCusProductId = useViewAsStore((s) => s.cusProductId);
 	const pinnedEntityId = useViewAsStore((s) => s.entityId);
 
-	// In view-as mode, hide entities created after asOfMs (best-effort historical
-	// snapshot). The pinned entity is always kept so the page never goes blank.
 	const visibleEntities = useMemo(() => {
 		const entities: Entity[] = customer?.entities ?? [];
 		if (!isViewAs) return entities;
-		return entities.filter(
-			(e) =>
-				e.id === pinnedEntityId ||
-				e.internal_id === pinnedEntityId ||
-				e.created_at == null ||
-				e.created_at <= nowMs,
-		);
+		return filterEntitiesVisibleAt({
+			entities,
+			nowMs,
+			pinnedEntityId,
+		});
 	}, [customer?.entities, isViewAs, nowMs, pinnedEntityId]);
 
 	const customerWithEffectiveStatuses = useMemo(() => {
@@ -95,19 +66,12 @@ export function useCustomerProductsData() {
 			(customerProduct: FullCusProduct) =>
 				withEffectiveCustomerProductStatus({ customerProduct, nowMs }),
 		);
-		// In view-as mode, hide add-ons / one-offs and anything not alive at nowMs.
-		// The pinned product is always included so zero-lifetime edges still render.
-		// Status + canceled are rewritten so the row renders as "live at nowMs".
 		const filtered = isViewAs
-			? effective
-					.filter((cp) => {
-						if (cp.id === pinnedCusProductId) return true;
-						if (cp.product?.is_add_on) return false;
-						const startedBefore = cp.starts_at == null || cp.starts_at <= nowMs;
-						const endedAfter = cp.ended_at == null || cp.ended_at > nowMs;
-						return startedBefore && endedAfter;
-					})
-					.map((cp) => rewriteCusProductAsLiveAt(cp, nowMs))
+			? filterAndRewriteAsLiveAt({
+					customerProducts: effective,
+					nowMs,
+					pinnedCusProductId,
+				})
 			: effective;
 		return { ...customer, customer_products: filtered };
 	}, [customer, nowMs, isViewAs, pinnedCusProductId]);
@@ -122,7 +86,6 @@ export function useCustomerProductsData() {
 		[customerWithEffectiveStatuses, showExpired, isViewAs],
 	);
 
-	// Filter entity-level products by selected entity (if any)
 	const filteredSubscriptionsEntityLevel = useMemo(
 		() =>
 			filterBySelectedEntity({
@@ -143,7 +106,6 @@ export function useCustomerProductsData() {
 		[purchases.entityLevel, entityId, visibleEntities],
 	);
 
-	// Combine customer-level (always shown) + filtered entity-level products
 	const allSubscriptions = useMemo(
 		() => [...subscriptions.customerLevel, ...filteredSubscriptionsEntityLevel],
 		[subscriptions.customerLevel, filteredSubscriptionsEntityLevel],

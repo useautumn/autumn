@@ -3,7 +3,7 @@
 import { AppEnv, ProcessorType } from "@autumn/shared";
 import { ClockIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
@@ -33,6 +33,7 @@ import { CustomerFeatureUsageTable } from "../components/table/customer-feature-
 import { CustomerInvoicesTable } from "../components/table/customer-invoices/CustomerInvoicesTable";
 import { CustomerUsageAnalyticsTable } from "../components/table/customer-usage-analytics/CustomerUsageAnalyticsTable";
 import { useIsViewingAsPast } from "../hooks/useEffectiveNow";
+import { useViewAsLifecycle } from "../hooks/useViewAsLifecycle";
 import { CustomerBreadcrumbs } from "./CustomerBreadcrumbs2";
 import { CustomerContext } from "./CustomerContext";
 import { CustomerPageDetails } from "./CustomerPageDetails";
@@ -61,15 +62,7 @@ export default function CustomerView2() {
 
 	const isViewAs = useIsViewingAsPast();
 	const asOfMs = useViewAsStore((s) => s.asOfMs);
-	const clearViewAs = useViewAsStore((s) => s.clearViewAs);
-
-	// Clear view-as state when navigating to a different customer or unmounting.
-	useEffect(() => {
-		return () => clearViewAs();
-	}, [clearViewAs]);
-	useEffect(() => {
-		clearViewAs();
-	}, [customer?.id, clearViewAs]);
+	useViewAsLifecycle(customer?.id);
 
 	const env = useEnv();
 	const { isDismissed } = useOnboardingVisibility();

@@ -44,11 +44,11 @@ import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeSubLink } from "@/utils/linkUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { rewriteCusProductAsLiveAt } from "@/views/customers2/hooks/useCustomerProductsData";
 import {
 	useEffectiveNow,
 	useIsViewingAsPast,
 } from "@/views/customers2/hooks/useEffectiveNow";
+import { rewriteCusProductAsLiveAt } from "@/views/customers2/utils/effectiveCustomerProductStatus";
 import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/BasePriceDisplay";
 import { PlanFeatureRow } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";

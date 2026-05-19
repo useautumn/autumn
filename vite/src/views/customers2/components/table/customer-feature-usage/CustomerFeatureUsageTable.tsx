@@ -14,8 +14,10 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useViewAsStore } from "@/hooks/stores/useViewAsStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
-import { withEffectiveCustomerProductStatus } from "@/views/customers2/utils/effectiveCustomerProductStatus";
-import { rewriteCusProductAsLiveAt } from "../../../hooks/useCustomerProductsData";
+import {
+	filterAndRewriteAsLiveAt,
+	withEffectiveCustomerProductStatus,
+} from "@/views/customers2/utils/effectiveCustomerProductStatus";
 import {
 	useEffectiveEntityId,
 	useEffectiveNow,
@@ -58,19 +60,12 @@ export function CustomerFeatureUsageTable() {
 				withEffectiveCustomerProductStatus({ customerProduct, nowMs }),
 		);
 
-		// In view-as mode, only main products alive at nowMs are eligible for balance
-		// attribution. The pinned product always wins to cover same-ms upgrade edges.
-		// Status + canceled are rewritten so filterCustomerFeatureUsage doesn't drop it.
 		const viewAsFiltered = isViewAs
-			? customerProducts
-					.filter((cp: FullCusProduct) => {
-						if (cp.id === pinnedCusProductId) return true;
-						if (cp.product?.is_add_on) return false;
-						const startedBefore = cp.starts_at == null || cp.starts_at <= nowMs;
-						const endedAfter = cp.ended_at == null || cp.ended_at > nowMs;
-						return startedBefore && endedAfter;
-					})
-					.map((cp) => rewriteCusProductAsLiveAt(cp, nowMs))
+			? filterAndRewriteAsLiveAt({
+					customerProducts,
+					nowMs,
+					pinnedCusProductId,
+				})
 			: customerProducts;
 
 		if (!selectedEntity) {

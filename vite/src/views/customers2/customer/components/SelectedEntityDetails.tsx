@@ -13,6 +13,7 @@ import {
 	useEffectiveEntityId,
 	useIsViewingAsPast,
 } from "@/views/customers2/hooks/useEffectiveNow";
+import { filterEntitiesVisibleAt } from "@/views/customers2/utils/effectiveCustomerProductStatus";
 import { useCusQuery } from "../../../customers/customer/hooks/useCusQuery";
 import { CreateEntity } from "./CreateEntity";
 import { DeleteEntity } from "./DeleteEntity";
@@ -38,13 +39,11 @@ export const SelectedEntityDetails = () => {
 	const rawEntities = (customer as FullCustomer)?.entities || [];
 	const entities =
 		isViewAs && asOfMs != null
-			? rawEntities.filter(
-					(e: Entity) =>
-						e.id === entityId ||
-						e.internal_id === entityId ||
-						e.created_at == null ||
-						e.created_at <= asOfMs,
-				)
+			? filterEntitiesVisibleAt({
+					entities: rawEntities,
+					nowMs: asOfMs,
+					pinnedEntityId: entityId,
+				})
 			: rawEntities;
 
 	const fullEntity = entities.find(
