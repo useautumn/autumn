@@ -12,7 +12,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -35,7 +35,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -61,7 +61,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -84,7 +84,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -107,7 +107,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -131,7 +131,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -155,7 +155,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -178,7 +178,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -218,7 +218,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -254,7 +254,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -277,7 +277,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -300,7 +300,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -336,7 +336,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -365,7 +365,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -388,7 +388,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -417,7 +417,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -439,7 +439,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -461,7 +461,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -485,12 +485,14 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
             async function run() {
-              const result = await autumn.customers.list({});
+              const result = await autumn.customers.list({
+                limit: 10,
+              });
 
               console.log(result);
             }
@@ -505,7 +507,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -529,7 +531,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -554,7 +556,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -577,7 +579,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -599,12 +601,14 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
             async function run() {
-              const result = await autumn.entities.list({});
+              const result = await autumn.entities.list({
+                limit: 10,
+              });
 
               console.log(result);
             }
@@ -619,7 +623,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -651,7 +655,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -675,13 +679,12 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
             async function run() {
               const result = await autumn.events.list({
-                limit: 50,
                 customerId: "cus_123",
               });
 
@@ -698,7 +701,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -723,7 +726,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -745,7 +748,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -767,7 +770,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -787,7 +790,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -814,7 +817,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -847,7 +850,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -869,7 +872,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -891,7 +894,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -911,7 +914,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -938,7 +941,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
@@ -961,7 +964,7 @@ actions:
             import { Autumn } from "@useautumn/sdk";
 
             const autumn = new Autumn({
-              xApiVersion: "2.2.0",
+              xApiVersion: "2.3.0",
               secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
             });
 
