@@ -13,6 +13,7 @@
 	],
 	"ignore": ["ai/**", "others/**", ".trigger/**"],
 	"ignoreWorkspaces": [
+		"packages/ai-sdk",
 		"packages/atmn",
 		"packages/autumn-js",
 		"packages/openapi",

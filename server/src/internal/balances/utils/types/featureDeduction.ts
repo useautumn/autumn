@@ -4,8 +4,17 @@ export type FeatureDeduction = {
 	feature: Feature;
 	deduction: number;
 	targetBalance?: number;
-	lock?: LockParams;
 
+	tokenUsage?: {
+		modelName: string;
+		inputTokens: number;
+		outputTokens: number;
+	};
+
+	/** Pre-computed dollar cost; if set, the deduction layer skips its own getCreditCost call. */
+	precomputedCreditCost?: number;
+
+	lock?: LockParams;
 	lockReceipt?: LockReceipt;
 	lockReceiptKey?: string;
 	unwindValue?: number;

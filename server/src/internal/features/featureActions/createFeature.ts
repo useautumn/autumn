@@ -9,15 +9,15 @@ import {
 } from "../featureUtils.js";
 
 const validateFeature = (data: any) => {
-	const featureType = data.type;
-
-	// validateFeatureId(data.id);
+	const featureType = data.type as FeatureType;
 
 	let config = data.config;
 	if (featureType === FeatureType.Metered) {
 		config = validateMeteredConfig(config);
 	} else if (featureType === FeatureType.CreditSystem) {
-		config = validateCreditSystem(config);
+		config = validateCreditSystem(config, { isAiCreditSystem: false });
+	} else if (featureType === FeatureType.AiCreditSystem) {
+		config = validateCreditSystem(config, { isAiCreditSystem: true });
 	}
 
 	const parsedFeature = CreateFeatureSchema.parse({ ...data, config });
@@ -32,6 +32,14 @@ interface CreateFeatureParams {
 		type: string;
 		config?: any;
 		event_names?: string[];
+		model_markups?: Record<
+			string,
+			{
+				markup: number;
+				input_cost?: number;
+				output_cost?: number;
+			}
+		> | null;
 	};
 	skipGenerateDisplay?: boolean;
 }
@@ -54,6 +62,7 @@ export const createFeature = async ({
 		created_at: Date.now(),
 		env: ctx.env,
 		...parsedFeature,
+		model_markups: data.model_markups ?? null,
 	};
 
 	const insertedData = await FeatureService.insert({

@@ -85,11 +85,17 @@ export type CreditSystemFeature = FeatureBase & {
   }>;
 };
 
-/**
- * Feature definition with type-safe constraints:
- * - Boolean features cannot have consumable
- * - Metered features require consumable (true = single_use style, false = continuous_use style)
- * - Credit system features are always consumable and require creditSchema
- */
-export type Feature = BooleanFeature | MeteredFeature | CreditSystemFeature;
+export type ModelMarkupEntry = {
+  markup: number;
+  inputCost?: number;
+  outputCost?: number;
+};
+
+/** AI credit system feature - uses model-based pricing */
+export type AiCreditSystemFeature = FeatureBase & {
+  type: "ai_credit_system";
+  modelMarkups?: Record<string, ModelMarkupEntry>;
+};
+
+export type Feature = BooleanFeature | MeteredFeature | CreditSystemFeature | AiCreditSystemFeature;
 

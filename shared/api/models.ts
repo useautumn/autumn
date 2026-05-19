@@ -47,6 +47,7 @@ export * from "./balances/index.js";
 export * from "./balances/prevVersions/legacyUpdateBalanceModels.js";
 export * from "./balances/track/prevVersions/trackResponseV1.js";
 export * from "./balances/track/trackParams.js";
+export * from "./balances/track/trackTokensParams.js";
 export * from "./balances/track/trackResponseV2.js";
 export * from "./balances/track/trackResponseV3.js";
 export * from "./balances/update/updateBalanceParams.js";

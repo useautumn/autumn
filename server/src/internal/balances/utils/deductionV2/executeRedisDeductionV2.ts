@@ -122,7 +122,7 @@ export const executeRedisDeductionV2 = async ({
 			unlimitedFeatureIds,
 			unlimitedCusEnt,
 			lock: preparedLock,
-		} = prepareFeatureDeductionV2({
+		} = await prepareFeatureDeductionV2({
 			ctx,
 			fullSubject,
 			deduction,

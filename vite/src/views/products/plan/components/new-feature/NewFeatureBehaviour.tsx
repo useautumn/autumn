@@ -17,7 +17,10 @@ export function NewFeatureBehaviour({
 }) {
 	if (feature.type === FeatureType.CreditSystem) {
 		return (
-			<CreditSystemSchema creditSystem={feature} setCreditSystem={setFeature} />
+			<CreditSystemSchema
+				creditSystem={feature}
+				setCreditSystem={setFeature}
+			/>
 		);
 	}
 

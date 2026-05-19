@@ -216,7 +216,7 @@ test.concurrent(`${chalk.yellowBright("track-postgres-entity-spend-limit3: credi
 	const creditsFeature = ctx.features.find(
 		(feature) => feature.id === TestFeature.Credits,
 	)!;
-	const action1CreditCost = getCreditCost({
+	const action1CreditCost = await getCreditCost({
 		featureId: TestFeature.Action1,
 		creditSystem: creditsFeature,
 		amount: 1,
@@ -334,7 +334,7 @@ test.concurrent(`${chalk.yellowBright("track-postgres-entity-spend-limit4: prepa
 	const creditsFeature = ctx.features.find(
 		(feature) => feature.id === TestFeature.Credits,
 	)!;
-	const action1CreditCost = getCreditCost({
+	const action1CreditCost = await getCreditCost({
 		featureId: TestFeature.Action1,
 		creditSystem: creditsFeature,
 		amount: 1,

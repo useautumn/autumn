@@ -9,12 +9,17 @@ const create = ({
 	name,
 	type = FeatureType.Metered,
 	config = {},
+	modelMarkups = null,
 }: {
 	id: string;
 	internalId?: string;
 	name: string;
 	type?: FeatureType;
 	config?: Record<string, unknown>;
+	modelMarkups?: Record<
+		string,
+		{ markup: number; input_cost?: number; output_cost?: number }
+	> | null;
 }) => ({
 	internal_id: internalId ?? `internal_${id}`,
 	org_id: "org_test",
@@ -27,6 +32,7 @@ const create = ({
 	display: null,
 	archived: false,
 	event_names: [],
+	model_markups: modelMarkups ?? null,
 });
 
 // ═══════════════════════════════════════════════════════════════════

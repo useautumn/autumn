@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
+import { useModelsDevPricing } from "@/hooks/queries/useAiModelsQuery";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useEnv } from "@/utils/envUtils";
 import { useProductsQueryState } from "@/views/products/hooks/useProductsQueryState";
@@ -18,6 +19,7 @@ import { FeatureListMenuButton } from "./FeatureListMenuButton";
 export function FeatureListTable() {
 	const env = useEnv();
 	const { features } = useFeaturesQuery();
+	const { providers } = useModelsDevPricing();
 	const { queryStates } = useProductsQueryState();
 	const [selectedFeature, setSelectedFeature] = useState<Feature | null>(null);
 	const [updateFeatureOpen, setUpdateFeatureOpen] = useState(false);
@@ -52,7 +54,10 @@ export function FeatureListTable() {
 		() => createFeatureListColumns({ showEventNames: hasEventNames }),
 		[hasEventNames],
 	);
-	const creditColumns = useMemo(() => createCreditListColumns(), []);
+	const creditColumns = useMemo(
+		() => createCreditListColumns(providers),
+		[providers],
+	);
 
 	const featureTable = useProductTable({
 		data: regularFeatures || [],

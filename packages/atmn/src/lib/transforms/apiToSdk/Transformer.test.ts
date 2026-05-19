@@ -6,14 +6,14 @@ import { createTransformer } from "./Transformer.js";
 describe("Transformer", () => {
 	describe("Feature transforms", () => {
 		test("boolean feature", () => {
-			const apiFeature = {
+			const result = transformApiFeature({
 				id: "enabled",
 				name: "Feature Enabled",
 				type: "boolean",
+				consumable: false,
+				archived: false,
 				event_names: [],
-			};
-
-			const result = transformApiFeature(apiFeature);
+			});
 
 			expect(result.type).toBe("boolean");
 			expect(result.id).toBe("enabled");
@@ -21,47 +21,72 @@ describe("Transformer", () => {
 		});
 
 		test("single_use → metered with consumable=true", () => {
-			const apiFeature = {
+			const result = transformApiFeature({
 				id: "api_calls",
 				name: "API Calls",
 				type: "single_use",
+				consumable: true,
+				archived: false,
 				event_names: ["api.call"],
-			};
-
-			const result = transformApiFeature(apiFeature);
+			});
 
 			expect(result.type).toBe("metered");
-			expect(result.consumable).toBe(true);
+			if (result.type === "metered") {
+				expect(result.consumable).toBe(true);
+			}
 			expect(result.id).toBe("api_calls");
 		});
 
 		test("continuous_use → metered with consumable=false", () => {
-			const apiFeature = {
+			const result = transformApiFeature({
 				id: "seats",
 				name: "Seats",
 				type: "continuous_use",
+				consumable: false,
+				archived: false,
 				event_names: [],
-			};
-
-			const result = transformApiFeature(apiFeature);
+			});
 
 			expect(result.type).toBe("metered");
-			expect(result.consumable).toBe(false);
+			if (result.type === "metered") {
+				expect(result.consumable).toBe(false);
+			}
 		});
 
 		test("credit_system", () => {
-			const apiFeature = {
+			const result = transformApiFeature({
 				id: "credits",
 				name: "Credits",
 				type: "credit_system",
+				consumable: true,
+				archived: false,
 				credit_schema: [{ metered_feature_id: "api_calls", credit_cost: 10 }],
-			};
-
-			const result = transformApiFeature(apiFeature);
+			});
 
 			expect(result.type).toBe("credit_system");
-			expect(result.consumable).toBe(true);
-			expect(result.creditSchema).toHaveLength(1);
+			if (result.type === "credit_system") {
+				expect(result.consumable).toBe(true);
+				expect(result.creditSchema).toHaveLength(1);
+			}
+		});
+
+		test("ai_credit_system", () => {
+			const result = transformApiFeature({
+				id: "ai_credits",
+				name: "AI Credits",
+				type: "ai_credit_system",
+				consumable: true,
+				archived: false,
+				model_markups: {
+					"anthropic/claude-opus-4-5": { markup: 20 },
+				},
+			});
+
+			expect(result.type).toBe("ai_credit_system");
+			if (result.type === "ai_credit_system") {
+				expect(result.modelMarkups).toBeDefined();
+				expect(result.modelMarkups!["anthropic/claude-opus-4-5"].markup).toBe(20);
+			}
 		});
 	});
 
