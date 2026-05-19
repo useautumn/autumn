@@ -37,11 +37,11 @@ export type ListEventsCustomRange = {
 
 export type EventsListParams = {
   /**
-   * Number of items to skip
+   * Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
    */
-  offset?: number | undefined;
+  startCursor?: string | undefined;
   /**
-   * Number of items to return. Default 100, max 1000.
+   * Number of items to return. Default 50, hard ceiling 5000.
    */
   limit?: number | undefined;
   /**
@@ -154,25 +154,13 @@ export type ListEventsList = {
  */
 export type ListEventsResponse = {
   /**
-   * Array of items for current page
+   * Items for current page.
    */
   list: Array<ListEventsList>;
   /**
-   * Whether more results exist after this page
+   * Opaque cursor for the next page. Null when there are no more results.
    */
-  hasMore: boolean;
-  /**
-   * Current offset position
-   */
-  offset: number;
-  /**
-   * Limit passed in the request
-   */
-  limit: number;
-  /**
-   * Total number of items returned in the current page
-   */
-  total: number;
+  nextCursor: string | null;
 };
 
 /** @internal */
@@ -217,7 +205,7 @@ export function listEventsCustomRangeToJSON(
 
 /** @internal */
 export type EventsListParams$Outbound = {
-  offset: number;
+  start_cursor: string;
   limit: number;
   customer_id?: string | undefined;
   entity_id?: string | undefined;
@@ -231,8 +219,8 @@ export const EventsListParams$outboundSchema: z.ZodMiniType<
   EventsListParams
 > = z.pipe(
   z.object({
-    offset: z._default(z.int(), 0),
-    limit: z._default(z.int(), 100),
+    startCursor: z._default(z.string(), ""),
+    limit: z._default(z.int(), 50),
     customerId: z.optional(z.string()),
     entityId: z.optional(z.string()),
     featureId: z.optional(smartUnion([z.string(), z.array(z.string())])),
@@ -240,6 +228,7 @@ export const EventsListParams$outboundSchema: z.ZodMiniType<
   }),
   z.transform((v) => {
     return remap$(v, {
+      startCursor: "start_cursor",
       customerId: "customer_id",
       entityId: "entity_id",
       featureId: "feature_id",
@@ -377,14 +366,11 @@ export const ListEventsResponse$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     list: z.array(z.lazy(() => ListEventsList$inboundSchema)),
-    has_more: types.boolean(),
-    offset: types.number(),
-    limit: types.number(),
-    total: types.number(),
+    next_cursor: types.nullable(types.string()),
   }),
   z.transform((v) => {
     return remap$(v, {
-      "has_more": "hasMore",
+      "next_cursor": "nextCursor",
     });
   }),
 );

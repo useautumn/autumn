@@ -109,7 +109,7 @@ export class Entities extends ClientSDK {
    * @returns A paginated list of entity objects including their current subscriptions, purchases, balances, and flags.
    */
   async list(
-    request?: models.ListEntitiesParams | undefined,
+    request: models.ListEntitiesParams,
     options?: RequestOptions,
   ): Promise<models.ListEntitiesResponse> {
     return unwrapAsync(entitiesList(

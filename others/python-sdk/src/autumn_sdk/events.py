@@ -12,8 +12,8 @@ class Events(BaseSDK):
     def list(
         self,
         *,
-        offset: Optional[int] = 0,
-        limit: Optional[int] = 100,
+        start_cursor: Optional[str] = "",
+        limit: Optional[int] = 50,
         customer_id: Optional[str] = None,
         entity_id: Optional[str] = None,
         feature_id: Optional[
@@ -29,8 +29,8 @@ class Events(BaseSDK):
     ) -> models.ListEventsResponse:
         r"""List usage events for your organization. Filter by customer, feature, or time range.
 
-        :param offset: Number of items to skip
-        :param limit: Number of items to return. Default 100, max 1000.
+        :param start_cursor: Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
+        :param limit: Number of items to return. Default 50, hard ceiling 5000.
         :param customer_id: Filter events by customer ID
         :param entity_id: Filter events by entity ID (e.g., per-seat or per-resource)
         :param feature_id: Filter by specific feature ID(s)
@@ -51,7 +51,7 @@ class Events(BaseSDK):
             base_url = self._get_url(base_url, url_variables)
 
         request = models.EventsListParams(
-            offset=offset,
+            start_cursor=start_cursor,
             limit=limit,
             customer_id=customer_id,
             entity_id=entity_id,
@@ -123,8 +123,8 @@ class Events(BaseSDK):
     async def list_async(
         self,
         *,
-        offset: Optional[int] = 0,
-        limit: Optional[int] = 100,
+        start_cursor: Optional[str] = "",
+        limit: Optional[int] = 50,
         customer_id: Optional[str] = None,
         entity_id: Optional[str] = None,
         feature_id: Optional[
@@ -140,8 +140,8 @@ class Events(BaseSDK):
     ) -> models.ListEventsResponse:
         r"""List usage events for your organization. Filter by customer, feature, or time range.
 
-        :param offset: Number of items to skip
-        :param limit: Number of items to return. Default 100, max 1000.
+        :param start_cursor: Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
+        :param limit: Number of items to return. Default 50, hard ceiling 5000.
         :param customer_id: Filter events by customer ID
         :param entity_id: Filter events by entity ID (e.g., per-seat or per-resource)
         :param feature_id: Filter by specific feature ID(s)
@@ -162,7 +162,7 @@ class Events(BaseSDK):
             base_url = self._get_url(base_url, url_variables)
 
         request = models.EventsListParams(
-            offset=offset,
+            start_cursor=start_cursor,
             limit=limit,
             customer_id=customer_id,
             entity_id=entity_id,

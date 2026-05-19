@@ -1,10 +1,10 @@
 info:
   title: Autumn API
-  version: 2.2.0
+  version: 2.3.0
 servers:
   - url: https://api.useautumn.com
     description: Production server
-openapi: 3.1.1
+openapi: 3.1.0
 components:
   schemas:
     CustomerId:
@@ -1808,7 +1808,7 @@ paths:
           required: true
           schema:
             type: string
-            default: 2.2.0
+            default: 2.3.0
           x-speakeasy-globals-hidden: true
   /v1/customers.get:
     post:
@@ -2624,28 +2624,26 @@ paths:
   /v1/customers.list:
     post:
       operationId: listCustomers
-      description: Lists customers with pagination and optional filters.
+      description: 'Lists customers with cursor pagination and optional filters. Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.'
       tags:
         - customers
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
               type: object
               properties:
-                offset:
-                  type: integer
-                  minimum: 0
-                  maximum: 9.007199254740991e+15
-                  default: 0
-                  description: Number of items to skip
+                start_cursor:
+                  type: string
+                  default: ""
+                  description: Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
                 limit:
                   type: integer
                   minimum: 1
-                  maximum: 1000
-                  default: 10
-                  description: Number of items to return. Default 10, max 1000.
+                  maximum: 5000
+                  default: 50
+                  description: Number of items to return. Default 50, hard ceiling 5000.
                 plans:
                   type: array
                   items:
@@ -2665,10 +2663,10 @@ paths:
                     - active
                     - scheduled
                   type: string
-                  description: Filter by customer product status. Defaults to active and scheduled
+                  description: Filter by customer product status. Defaults to active and scheduled.
                 search:
                   type: string
-                  description: Search customers by id, name, or email
+                  description: Search customers by id, name, or email.
                 processors:
                   type: array
                   items:
@@ -2677,11 +2675,11 @@ paths:
                       - revenuecat
                       - vercel
                     type: string
-                  description: Filter by customer processor type (stripe, revenuecat, vercel)
+                  description: Filter by customer processor type (stripe, revenuecat, vercel).
               title: ListCustomersParams
               examples:
-                - limit: 10
-                  offset: 0
+                - start_cursor: ""
+                  limit: 10
       responses:
         "200":
           description: OK
@@ -3219,33 +3217,15 @@ paths:
                               feature_id: advanced_workflows
                           config:
                             disable_pooled_balance: false
-                    description: Array of items for current page
-                  has_more:
-                    type: boolean
-                    description: Whether more results exist after this page
-                  offset:
-                    type: number
-                    description: Current offset position
-                  limit:
-                    type: number
-                    description: Limit passed in the request
-                  total:
-                    type: number
-                    description: Total number of items returned in the current page
-                  total_count:
-                    type: number
-                    description: Total number of customers available in the current organization and environment
-                  total_filtered_count:
-                    type: number
-                    description: Total number of customers matching the current filter before pagination is applied
+                    description: Items for current page.
+                  next_cursor:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: Opaque cursor for the next page. Null when there are no more results.
                 required:
                   - list
-                  - has_more
-                  - offset
-                  - limit
-                  - total
-                  - total_count
-                  - total_filtered_count
+                  - next_cursor
                 examples:
                   - list:
                       - id: 2ee25a41-0d81-4ad2-8451-ec1aadaefe58
@@ -3307,12 +3287,7 @@ paths:
                             feature_id: advanced_workflows
                         config:
                           disable_pooled_balance: false
-                    has_more: false
-                    offset: 0
-                    total: 1
-                    limit: 10
-                    total_count: 100
-                    total_filtered_count: 42
+                    next_cursor: null
       x-speakeasy-name-override: list
       parameters:
         - *a1
@@ -8037,7 +8012,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779094773453,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780304373453,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779185921682,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780395521682,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -15043,18 +15018,16 @@ paths:
             schema:
               type: object
               properties:
-                offset:
-                  type: integer
-                  minimum: 0
-                  maximum: 9.007199254740991e+15
-                  default: 0
-                  description: Number of items to skip
+                start_cursor:
+                  type: string
+                  default: ""
+                  description: Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
                 limit:
                   type: integer
                   minimum: 1
-                  maximum: 1000
-                  default: 100
-                  description: Number of items to return. Default 100, max 1000.
+                  maximum: 5000
+                  default: 50
+                  description: Number of items to return. Default 50, hard ceiling 5000.
                 customer_id:
                   type: string
                   description: Filter events by customer ID
@@ -15083,9 +15056,11 @@ paths:
                   description: Filter events by time range
               title: EventsListParams
               examples:
-                - customer_id: cus_123
+                - start_cursor: ""
+                  customer_id: cus_123
                   limit: 50
-                - feature_id: api_calls
+                - start_cursor: ""
+                  feature_id: api_calls
                   custom_range:
                     start: 1704067200000
                     end: 1706745600000
@@ -15191,25 +15166,15 @@ paths:
                         - value
                         - properties
                         - deductions
-                    description: Array of items for current page
-                  has_more:
-                    type: boolean
-                    description: Whether more results exist after this page
-                  offset:
-                    type: number
-                    description: Current offset position
-                  limit:
-                    type: number
-                    description: Limit passed in the request
-                  total:
-                    type: number
-                    description: Total number of items returned in the current page
+                    description: Items for current page.
+                  next_cursor:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: Opaque cursor for the next page. Null when there are no more results.
                 required:
                   - list
-                  - has_more
-                  - offset
-                  - limit
-                  - total
+                  - next_cursor
                 examples:
                   - list:
                       - id: evt_36xpk2TmuQX5zVPPQ8tCtnR5Weg
@@ -15233,10 +15198,7 @@ paths:
                         value: 49
                         properties: {}
                         deductions: null
-                    total: 2
-                    has_more: false
-                    offset: 0
-                    limit: 100
+                    next_cursor: eyJ2IjowLCJpZCI6ImV2dF8zNnhtSHh4akFrcXh1ZkRmOXlIQVBOZlJyTE0iLCJ0IjoxNzY1OTU2NTEyMDU3fQ
       x-speakeasy-name-override: list
       parameters:
         - *a1
@@ -16508,24 +16470,22 @@ paths:
       tags:
         - entities
       requestBody:
-        required: false
+        required: true
         content:
           application/json:
             schema:
               type: object
               properties:
-                offset:
-                  type: integer
-                  minimum: 0
-                  maximum: 9.007199254740991e+15
-                  default: 0
-                  description: Number of items to skip
+                start_cursor:
+                  type: string
+                  default: ""
+                  description: Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
                 limit:
                   type: integer
                   minimum: 1
-                  maximum: 1000
-                  default: 10
-                  description: Number of items to return. Default 10, max 1000.
+                  maximum: 5000
+                  default: 50
+                  description: Number of items to return. Default 50, hard ceiling 5000.
                 plans:
                   type: array
                   items:
@@ -16560,8 +16520,8 @@ paths:
                   description: Filter by parent customer processor type (stripe, revenuecat, vercel).
               title: ListEntitiesParams
               examples:
-                - limit: 10
-                  offset: 0
+                - start_cursor: ""
+                  limit: 10
                 - plans:
                     - id: pro_plan
       responses:
@@ -16930,33 +16890,15 @@ paths:
                         - purchases
                         - balances
                         - flags
-                    description: Array of items for current page
-                  has_more:
-                    type: boolean
-                    description: Whether more results exist after this page
-                  offset:
-                    type: number
-                    description: Current offset position
-                  limit:
-                    type: number
-                    description: Limit passed in the request
-                  total:
-                    type: number
-                    description: Total number of items returned in the current page
-                  total_count:
-                    type: number
-                    description: Total number of entities available in the current organization and environment
-                  total_filtered_count:
-                    type: number
-                    description: Total number of entities matching the current filter before pagination is applied
+                    description: Items for current page.
+                  next_cursor:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: Opaque cursor for the next page. Null when there are no more results.
                 required:
                   - list
-                  - has_more
-                  - offset
-                  - limit
-                  - total
-                  - total_count
-                  - total_filtered_count
+                  - next_cursor
                 examples:
                   - list:
                       - id: seat_42
@@ -17003,12 +16945,7 @@ paths:
                                 price: null
                                 expires_at: null
                         invoices: []
-                    has_more: false
-                    offset: 0
-                    total: 1
-                    limit: 10
-                    total_count: 100
-                    total_filtered_count: 42
+                    next_cursor: null
       x-speakeasy-name-override: list
       parameters:
         - *a1
@@ -17715,7 +17652,7 @@ x-speakeasy-globals:
       required: true
       schema:
         type: string
-        default: 2.2.0
+        default: 2.3.0
       x-speakeasy-globals-hidden: true
     - name: fail-open
       in: header
