@@ -68,7 +68,7 @@ export function PreviewCreditSchemaCard({
 								<span className="text-xs text-foreground truncate">
 									{targetName}
 								</span>
-								<span className="text-xs text-t2 font-medium shrink-0 ml-2">
+								<span className="text-xs text-muted-foreground font-medium shrink-0 ml-2">
 									{mapping.credit_cost}{" "}
 									{mapping.credit_cost === 1
 										? creditSingular

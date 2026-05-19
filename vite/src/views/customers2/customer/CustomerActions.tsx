@@ -154,7 +154,7 @@ export function CustomerActions() {
 						className={cn("gap-1", actionsOpen && "btn-secondary-active")}
 					>
 						Actions
-						<CaretDownIcon className="size-3.5 text-t3" />
+						<CaretDownIcon className="size-3.5 text-tertiary-foreground" />
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" keepMounted>

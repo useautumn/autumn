@@ -136,9 +136,9 @@ export function EditPlanFeatureSheet({
 						description={
 							<p>
 								Define how customers on plan{" "}
-								<span className="font-medium text-t1">{product.name}</span> can
+								<span className="font-medium text-foreground">{product.name}</span> can
 								use feature{" "}
-								<span className="font-medium text-t1">{feature?.name}</span>
+								<span className="font-medium text-foreground">{feature?.name}</span>
 							</p>
 						}
 						action={

@@ -171,7 +171,7 @@ export const ConfigureRedis = () => {
 										readOnly
 										className="w-24 font-mono text-xs"
 									/>
-									<span className="text-t3 text-xs">
+									<span className="text-tertiary-foreground text-xs">
 										of customers on dedicated Redis
 									</span>
 								</div>
@@ -192,7 +192,7 @@ export const ConfigureRedis = () => {
 								</Button>
 							</div>
 							{redisConfig.migrationPercent > 0 && (
-								<p className="text-t3 text-xs">
+								<p className="text-tertiary-foreground text-xs">
 									Set migration to 0% before removing the Redis connection.
 								</p>
 							)}
@@ -269,7 +269,7 @@ export const ConfigureRedis = () => {
 								onChange={(event) => setNewMigrationPercent(event.target.value)}
 								className="w-24 font-mono text-xs"
 							/>
-							<span className="text-t3 text-sm">%</span>
+							<span className="text-tertiary-foreground text-sm">%</span>
 						</div>
 					</div>
 					<DialogFooter>

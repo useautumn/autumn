@@ -218,13 +218,13 @@ export function SyncProposalCard({
 							weight="fill"
 						/>
 					)}
-					<span className="text-xs font-mono text-t3 truncate">
+					<span className="text-xs font-mono text-tertiary-foreground truncate">
 						{proposal.stripe_subscription_id}
 					</span>
 					<button
 						type="button"
 						onClick={handleOpenStripe}
-						className="shrink-0 text-t4 hover:text-t2 transition-colors"
+						className="shrink-0 text-subtle hover:text-muted-foreground transition-colors"
 					>
 						<ArrowSquareOutIcon className="size-3.5" />
 					</button>
@@ -236,7 +236,7 @@ export function SyncProposalCard({
 						"text-xs px-2 py-0.5 rounded-md shrink-0 font-medium transition-colors cursor-pointer",
 						isEnabled
 							? "bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20"
-							: "bg-muted text-t4 border border-border hover:text-t2 hover:border-primary/30",
+							: "bg-muted text-subtle border border-border hover:text-muted-foreground hover:border-primary/30",
 					)}
 				>
 					Import
@@ -245,7 +245,7 @@ export function SyncProposalCard({
 
 			{/* Stripe prices */}
 			<div className="space-y-1.5">
-				<span className="text-xs text-t3 font-medium">
+				<span className="text-xs text-tertiary-foreground font-medium">
 					Subscription items
 				</span>
 				{proposal.items.map((item) => {
@@ -263,16 +263,16 @@ export function SyncProposalCard({
 						>
 							<span
 								className={cn(
-									"text-t2 truncate min-w-0",
-									!item.stripe_product_name && "font-mono text-t3",
+									"text-muted-foreground truncate min-w-0",
+									!item.stripe_product_name && "font-mono text-tertiary-foreground",
 								)}
 							>
 								{displayName}
 							</span>
-							<span className="text-t3 shrink-0 ml-3 text-right">
+							<span className="text-tertiary-foreground shrink-0 ml-3 text-right">
 								{priceLabel}
 								{showQuantity && (
-									<span className="text-t4 ml-1">×{item.quantity}</span>
+									<span className="text-subtle ml-1">×{item.quantity}</span>
 								)}
 							</span>
 						</div>
@@ -283,7 +283,7 @@ export function SyncProposalCard({
 			{/* Plan mappings */}
 			{isEnabled && (
 				<div className="space-y-3.5">
-					<span className="text-xs text-t3 font-medium">Autumn plans</span>
+					<span className="text-xs text-tertiary-foreground font-medium">Autumn plans</span>
 					<div className="space-y-1.5">
 						{mappings.map((mapping, index) => (
 							<SyncMappingRow
@@ -300,7 +300,7 @@ export function SyncProposalCard({
 						<button
 							type="button"
 							onClick={handleAddMapping}
-							className="flex items-center gap-1 text-xs text-t3 hover:text-t1 transition-colors"
+							className="flex items-center gap-1 text-xs text-tertiary-foreground hover:text-foreground transition-colors"
 						>
 							<PlusIcon className="size-3" />
 							Add another plan
@@ -314,7 +314,7 @@ export function SyncProposalCard({
 								"text-xs px-2 py-0.5 rounded-md font-medium transition-colors cursor-pointer w-fit",
 								expirePrevious
 									? "bg-amber-500/10 text-amber-600 border border-amber-500/30 hover:bg-amber-500/20"
-									: "bg-muted text-t4 border border-border hover:text-t2 hover:border-amber-500/30",
+									: "bg-muted text-subtle border border-border hover:text-muted-foreground hover:border-amber-500/30",
 							)}
 						>
 							Expire current plans in same group
@@ -370,7 +370,7 @@ function SyncMappingRow({
 						"shrink-0 p-1.5 rounded-md transition-colors",
 						hasCustomItems
 							? "text-blue-500 bg-blue-500/10 hover:bg-blue-500/20"
-							: "text-t4 hover:text-t2 hover:bg-sidebar",
+							: "text-subtle hover:text-muted-foreground hover:bg-sidebar",
 					)}
 					title="Customize plan items"
 				>
@@ -382,7 +382,7 @@ function SyncMappingRow({
 				<button
 					type="button"
 					onClick={() => onRemove({ index })}
-					className="shrink-0 p-1.5 text-t4 hover:text-red-500 rounded-md hover:bg-red-500/10 transition-colors"
+					className="shrink-0 p-1.5 text-subtle hover:text-red-500 rounded-md hover:bg-red-500/10 transition-colors"
 					title="Remove this plan"
 				>
 					<TrashIcon className="size-3.5" />

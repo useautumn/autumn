@@ -47,10 +47,10 @@ export function BillingUnits() {
 						variant="muted"
 						className={cn(
 							item.tiers?.length && item.tiers.length > 1
-								? "max-w-20 text-t3"
-								: "w-full text-t3",
+								? "max-w-20 text-tertiary-foreground"
+								: "w-full text-tertiary-foreground",
 							// "w-fit max-w-32 text-body-secondary overflow-hidden hover:bg-transparent justify-start p-1 h-auto [&:focus]:outline-none [&:focus-visible]:outline-none [&:focus]:ring-0 [&:focus-visible]:ring-0",
-							// "underline hover:text-t3",
+							// "underline hover:text-tertiary-foreground",
 						)}
 					>
 						<span className={cn("truncate text-xs")}>

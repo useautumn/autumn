@@ -49,7 +49,7 @@ export function createEventsColumns(): ColumnDef<IRow, unknown>[] {
 			accessorKey: "properties",
 			header: "Properties",
 			cell: ({ getValue }) => (
-				<span className="truncate text-t3">
+				<span className="truncate text-tertiary-foreground">
 					{formatProperties(getValue())}
 				</span>
 			),

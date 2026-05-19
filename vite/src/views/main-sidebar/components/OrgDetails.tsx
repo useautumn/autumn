@@ -55,7 +55,7 @@ export const OrgDetails = () => {
 			<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 				<div className="flex flex-col">
 					<FormLabel>
-						<span className="text-t2">Name</span>
+						<span className="text-muted-foreground">Name</span>
 					</FormLabel>
 					<Input
 						value={inputs.name}
@@ -64,7 +64,7 @@ export const OrgDetails = () => {
 				</div>
 				<div className="flex flex-col">
 					<FormLabel>
-						<span className="text-t2">Slug</span>
+						<span className="text-muted-foreground">Slug</span>
 					</FormLabel>
 					<Input
 						value={inputs.slug}

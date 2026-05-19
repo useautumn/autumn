@@ -132,7 +132,7 @@ function StepCard({
 						)}
 						<div className="flex items-center gap-1.5">
 							<div className="text-primary">{step.icon}</div>
-							<span className="font-medium text-sm text-t2 whitespace-nowrap">
+							<span className="font-medium text-sm text-muted-foreground whitespace-nowrap">
 								{step.shortTitle}
 							</span>
 						</div>
@@ -152,7 +152,7 @@ function StepCard({
 							<h3 className="font-medium text-sm text-foreground mb-1">
 								{step.title}
 							</h3>
-							<p className="text-xs text-t2">{step.description}</p>
+							<p className="text-xs text-muted-foreground">{step.description}</p>
 						</div>
 
 						<div className="flex flex-col gap-3 items-end justify-center">
@@ -163,7 +163,7 @@ function StepCard({
 								</div>
 							)}
 							{step.waitingFor && !isComplete && (
-								<div className="flex items-center gap-2 text-tiny text-t4">
+								<div className="flex items-center gap-2 text-tiny text-subtle">
 									{step.waitingFor}
 									<span className="relative flex size-2">
 										<span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-yellow-500/60 opacity-75" />
@@ -307,7 +307,7 @@ export function OnboardingGuide() {
 							: "Get started with Autumn"}
 					</h2>
 					{!allStepsComplete && (
-						<span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-muted text-t3 text-[10px]">
+						<span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-muted text-tertiary-foreground text-[10px]">
 							<ClockIcon size={10} />
 							~30 mins
 						</span>

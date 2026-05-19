@@ -62,7 +62,7 @@ export const RolloutCreateDialog = ({
 
 				<div className="flex flex-col gap-4">
 					<div className="flex flex-col gap-2">
-						<label className="text-xs font-medium text-t2" htmlFor="rollout-id">
+						<label className="text-xs font-medium text-muted-foreground" htmlFor="rollout-id">
 							Rollout ID
 						</label>
 						<Input
@@ -75,7 +75,7 @@ export const RolloutCreateDialog = ({
 
 					<div className="flex flex-col gap-2">
 						<label
-							className="text-xs font-medium text-t2"
+							className="text-xs font-medium text-muted-foreground"
 							htmlFor="rollout-percent"
 						>
 							Global Percent

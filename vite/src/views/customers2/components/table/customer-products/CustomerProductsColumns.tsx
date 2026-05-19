@@ -21,12 +21,12 @@ export const CustomerProductsColumns = [
 			const showQuantity = quantity && quantity > 1;
 
 			return (
-				<div className="font-medium text-t1 flex items-center gap-2 ">
+				<div className="font-medium text-foreground flex items-center gap-2 ">
 					<AdminHover texts={getCusProductHoverTexts(row.original)}>
 						{row.original.product.name}
 					</AdminHover>
 					{showQuantity && (
-						<div className="text-t3 bg-muted rounded-sm p-1 py-0">
+						<div className="text-tertiary-foreground bg-muted rounded-sm p-1 py-0">
 							{quantity}
 						</div>
 					)}

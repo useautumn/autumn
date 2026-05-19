@@ -26,7 +26,7 @@ export const CheckboxButton = React.forwardRef<
 				}
 			}}
 			className={cn(
-				"cursor-pointer select-none bg-transparent flex items-center gap-1.5 rounded-lg h-6 pr-1.5 pl-[7px] py-[5px] text-t4 hover:text-t1 text-xs font-medium",
+				"cursor-pointer select-none bg-transparent flex items-center gap-1.5 rounded-lg h-6 pr-1.5 pl-[7px] py-[5px] text-subtle hover:text-foreground text-xs font-medium",
 				className,
 			)}
 		>

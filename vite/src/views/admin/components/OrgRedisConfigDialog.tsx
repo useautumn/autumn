@@ -188,7 +188,7 @@ export function OrgRedisConfigDialog({
 				</DialogHeader>
 
 				{isLoading ? (
-					<div className="py-8 text-center text-t3 text-sm">Loading…</div>
+					<div className="py-8 text-center text-tertiary-foreground text-sm">Loading…</div>
 				) : cfg ? (
 					<div className="flex flex-col gap-4">
 						<div className="flex flex-col gap-1">
@@ -207,7 +207,7 @@ export function OrgRedisConfigDialog({
 									onChange={(e) => setMigrationInputDraft(e.target.value)}
 									className="w-24 font-mono text-xs"
 								/>
-								<span className="text-t3 text-xs">
+								<span className="text-tertiary-foreground text-xs">
 									% of customers routed to this Redis
 								</span>
 								<Button
@@ -222,7 +222,7 @@ export function OrgRedisConfigDialog({
 								</Button>
 							</div>
 							{cfg.previousMigrationPercent !== cfg.migrationPercent && (
-								<span className="text-t4 text-[11px]">
+								<span className="text-subtle text-[11px]">
 									Previous: {cfg.previousMigrationPercent}% — changed{" "}
 									{new Date(cfg.migrationChangedAt).toLocaleString()}
 								</span>
@@ -231,7 +231,7 @@ export function OrgRedisConfigDialog({
 
 						<div className="flex flex-col gap-2 border-t border-stroke pt-4">
 							<FormLabel>Remove Redis config</FormLabel>
-							<span className="text-t4 text-xs">
+							<span className="text-subtle text-xs">
 								{cfg.migrationPercent > 0
 									? `Set migrationPercent to 0 first (currently ${cfg.migrationPercent}%).`
 									: `Type "${CONFIRM_REMOVE_TEXT}" to confirm removal.`}
@@ -268,7 +268,7 @@ export function OrgRedisConfigDialog({
 							placeholder="rediss://default:password@host:port"
 							className="font-mono text-xs"
 						/>
-						<span className="text-t4 text-[11px]">
+						<span className="text-subtle text-[11px]">
 							Stored encrypted (AES-256-CBC). Frontend never sees the connection
 							string after save — only the host. Migration starts at 0% (no
 							traffic routed) until you bump it.

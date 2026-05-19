@@ -33,7 +33,7 @@ export function UrlSuccessView({
 							className="text-green-500"
 						/>
 					</div>
-					<p className="text-sm text-t2 text-center">{message}</p>
+					<p className="text-sm text-muted-foreground text-center">{message}</p>
 				</div>
 			</SheetSection>
 
@@ -47,7 +47,7 @@ export function UrlSuccessView({
 				</Button>
 				<CopyButton
 					text={url}
-					innerClassName="text-xs text-t3 font-mono w-96"
+					innerClassName="text-xs text-tertiary-foreground font-mono w-96"
 				/>
 			</SheetFooter>
 		</>

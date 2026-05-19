@@ -192,7 +192,7 @@ export function FeatureGrantRewardConfig({
 								<button
 									type="button"
 									onClick={() => removePromoCode({ index })}
-									className="p-2 text-t4 hover:text-t1 transition-colors"
+									className="p-2 text-subtle hover:text-foreground transition-colors"
 								>
 									<TrashIcon size={14} />
 								</button>
@@ -226,7 +226,7 @@ export function FeatureGrantRewardConfig({
 										<button
 											type="button"
 											onClick={() => removeEntitlement({ index })}
-											className="absolute top-2 right-2 p-1 text-t4 hover:text-t1 transition-colors cursor-pointer"
+											className="absolute top-2 right-2 p-1 text-subtle hover:text-foreground transition-colors cursor-pointer"
 										>
 											<TrashIcon size={12} />
 										</button>
@@ -260,7 +260,7 @@ export function FeatureGrantRewardConfig({
 											renderValue={(feature) => {
 												if (!feature) {
 													return (
-														<span className="text-t3 leading-none">
+														<span className="text-tertiary-foreground leading-none">
 															Select a feature or credit system...
 														</span>
 													);
@@ -364,7 +364,7 @@ export function FeatureGrantRewardConfig({
 															updates: { expiry: undefined },
 														})
 													}
-													className="text-xs text-t4 hover:text-t1 transition-colors whitespace-nowrap"
+													className="text-xs text-subtle hover:text-foreground transition-colors whitespace-nowrap"
 												>
 													Clear
 												</button>
@@ -383,7 +383,7 @@ export function FeatureGrantRewardConfig({
 														},
 													})
 												}
-												className="text-xs text-t4 hover:text-t1 transition-colors cursor-pointer"
+												className="text-xs text-subtle hover:text-foreground transition-colors cursor-pointer"
 											>
 												No expiry (permanent). Click to set one.
 											</button>

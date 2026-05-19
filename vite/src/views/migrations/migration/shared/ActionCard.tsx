@@ -25,8 +25,8 @@ export function ActionCard({
 		>
 			{icon}
 			<div className="flex flex-col gap-0.5">
-				<span className="text-sm font-medium text-t1">{heading}</span>
-				<span className="text-xs text-t3">{subheading}</span>
+				<span className="text-sm font-medium text-foreground">{heading}</span>
+				<span className="text-xs text-tertiary-foreground">{subheading}</span>
 			</div>
 		</button>
 	);

@@ -164,7 +164,7 @@ export function CodeSheet({ stepId, title, description }: CodeSheetProps) {
 								excludeSDKs={stepId === "usage" ? ["react"] : undefined}
 							/>
 						</div>
-						<p className="text-t3 text-sm mt-1.5">{description}</p>
+						<p className="text-tertiary-foreground text-sm mt-1.5">{description}</p>
 					</div>
 
 					<div className="px-4 pb-4 pt-4">

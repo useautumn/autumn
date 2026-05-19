@@ -53,7 +53,7 @@ export function NumberField({
 	return (
 		<div className={cn("*:not-first:mt-2", className)}>
 			{label && <Label>{label}</Label>}
-			{description && <p className="text-t3 text-xs">{description}</p>}
+			{description && <p className="text-tertiary-foreground text-xs">{description}</p>}
 			<Input
 				type="number"
 				min={min}
