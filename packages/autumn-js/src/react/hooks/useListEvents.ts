@@ -18,13 +18,33 @@ export const useListEvents = (params: UseListEventsParams = {}) => {
 	const {
 		queryOptions,
 		limit: passedLimit,
+		startCursor: passedStartCursor,
 		customRange,
 		...restParams
 	} = params;
 
 	const limit = passedLimit ?? 100;
-	const [page, setPage] = useState(0);
-	const offset = page * limit;
+	const initialStartCursor = passedStartCursor ?? "";
+	const paginationKey = JSON.stringify({
+		...restParams,
+		customRange,
+		limit,
+		initialStartCursor,
+	});
+	const [paginationState, setPaginationState] = useState({
+		key: paginationKey,
+		page: 0,
+		startCursors: [initialStartCursor],
+	});
+	const pagination =
+		paginationState.key === paginationKey
+			? paginationState
+			: {
+					key: paginationKey,
+					page: 0,
+					startCursors: [initialStartCursor],
+				};
+	const startCursor = pagination.startCursors[pagination.page] ?? initialStartCursor;
 
 	const startDate = customRange?.start
 		? new Date(customRange.start).toISOString().slice(0, 13)
@@ -39,41 +59,83 @@ export const useListEvents = (params: UseListEventsParams = {}) => {
 			"events",
 			"list",
 			restParams.featureId,
+			restParams.entityId,
 			startDate,
 			endDate,
-			offset,
+			startCursor,
 			limit,
 		],
 		queryFn: () =>
 			client.listEvents({
 				...restParams,
 				customRange,
-				offset,
+				startCursor,
 				limit,
 			}),
 		...queryOptions,
 	});
 
-	const hasMore = query.data?.hasMore ?? false;
-	const hasPrevious = page > 0;
+	const hasMore = query.data?.nextCursor !== null && query.data?.nextCursor !== undefined;
+	const hasPrevious = pagination.page > 0;
 
 	const nextPage = useCallback(() => {
 		if (!hasMore) return;
-		setPage((currentPage) => currentPage + 1);
-	}, [hasMore]);
+		setPaginationState((current) => {
+			const activeState =
+				current.key === paginationKey
+					? current
+					: {
+							key: paginationKey,
+							page: 0,
+							startCursors: [initialStartCursor],
+						};
+			const startCursors = activeState.startCursors.slice(
+				0,
+				activeState.page + 1,
+			);
+			startCursors[activeState.page + 1] = query.data?.nextCursor ?? "";
+
+			return {
+				key: paginationKey,
+				page: activeState.page + 1,
+				startCursors,
+			};
+		});
+	}, [hasMore, initialStartCursor, paginationKey, query.data?.nextCursor]);
 
 	const prevPage = useCallback(() => {
 		if (!hasPrevious) return;
-		setPage((currentPage) => currentPage - 1);
-	}, [hasPrevious]);
+		setPaginationState((current) => {
+			const activeState = current.key === paginationKey ? current : pagination;
+
+			return {
+				...activeState,
+				page: Math.max(0, activeState.page - 1),
+			};
+		});
+	}, [hasPrevious, pagination, paginationKey]);
 
 	const goToPage = useCallback(({ pageNum }: { pageNum: number }) => {
-		setPage(Math.max(0, pageNum));
-	}, []);
+		setPaginationState((current) => {
+			const activeState = current.key === paginationKey ? current : pagination;
+
+			return {
+				...activeState,
+				page: Math.max(
+					0,
+					Math.min(pageNum, activeState.startCursors.length - 1),
+				),
+			};
+		});
+	}, [pagination, paginationKey]);
 
 	const resetPagination = useCallback(() => {
-		setPage(0);
-	}, []);
+		setPaginationState({
+			key: paginationKey,
+			page: 0,
+			startCursors: [initialStartCursor],
+		});
+	}, [initialStartCursor, paginationKey]);
 
 	return useMemo(
 		() => ({
@@ -81,7 +143,7 @@ export const useListEvents = (params: UseListEventsParams = {}) => {
 			list: query.data?.list,
 			hasMore,
 			hasPrevious,
-			page,
+			page: pagination.page,
 			nextPage,
 			prevPage,
 			goToPage,
@@ -91,7 +153,7 @@ export const useListEvents = (params: UseListEventsParams = {}) => {
 			query,
 			hasMore,
 			hasPrevious,
-			page,
+			pagination.page,
 			nextPage,
 			prevPage,
 			goToPage,
