@@ -109,6 +109,7 @@ export const executePostgresDeductionV2 = async ({
 				rollovers,
 				customerEntitlements,
 				unlimitedFeatureIds,
+				unlimitedCusEnt,
 				lock: preparedLock,
 			} = prepareFeatureDeductionV2({
 				ctx,
@@ -128,6 +129,25 @@ export const executePostgresDeductionV2 = async ({
 						overrideLockValue: toDeduct,
 						redisInstance: ctx.redisV2,
 					});
+				}
+				// Attribute the event to the unlimited plan even though we skip
+				// the actual deduction. Without this, resolveInternalProductIdForEvent
+				// gets an empty mutation log and the event lands in "No plan".
+				if (unlimitedCusEnt) {
+					const syntheticDelta = -(toDeduct ?? deduction.deduction ?? 1);
+					if (syntheticDelta !== 0) {
+						allMutationLogs.push({
+							target_type: "customer_entitlement",
+							customer_entitlement_id: unlimitedCusEnt.id,
+							rollover_id: null,
+							entity_id: entityId ?? null,
+							credit_cost: 1,
+							balance_delta: syntheticDelta,
+							adjustment_delta: 0,
+							usage_delta: 0,
+							value_delta: 0,
+						});
+					}
 				}
 				continue;
 			}

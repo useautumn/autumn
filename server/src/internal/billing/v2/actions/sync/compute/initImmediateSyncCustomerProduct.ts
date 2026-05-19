@@ -67,6 +67,7 @@ export const initImmediateSyncCustomerProduct = ({
 			status: stripeSubscriptionToAutumnStatus({
 				stripeStatus: stripeSubscription.status,
 			}),
+			internalEntityId: plan.internal_entity_id,
 		},
 	});
 };

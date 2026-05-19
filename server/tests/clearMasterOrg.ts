@@ -12,7 +12,9 @@ import { initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { redis } from "@/external/redis/initRedis.js";
 import { redisV2 } from "@/external/redis/initRedisV2.js";
+import { getSqsClient } from "@/queue/initSqs.js";
 import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
+import { PurgeQueueCommand } from "@aws-sdk/client-sqs";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { clearOrg } from "./utils/setup/clearOrg.js";
 import { setupOrg } from "./utils/setup/setupOrg.js";
@@ -138,6 +140,20 @@ export const clearMasterOrg = async () => {
 				);
 			}
 		}
+		const purgeQueue = async (queueUrl: string | undefined, label: string) => {
+			if (!queueUrl) return;
+			try {
+				const sqs = getSqsClient({ queueUrl });
+				await sqs.send(new PurgeQueueCommand({ QueueUrl: queueUrl }));
+				console.log(chalk.green(`✅ Purged ${label} SQS queue.`));
+			} catch (err) {
+				console.log(chalk.yellow(`⚠️  Skipped ${label} SQS purge: ${err}`));
+			}
+		};
+
+		await purgeQueue(process.env.SQS_QUEUE_URL_V2, "primary");
+		await purgeQueue(process.env.TRACK_SQS_QUEUE_URL, "track");
+
 		console.log(chalk.green("\n✅ Master org setup complete!\n"));
 	} catch (error) {
 		console.error(chalk.red("\n❌ Error:"), error);

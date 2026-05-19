@@ -96,6 +96,7 @@ export const useMigrationsQuery = () => {
 			limit?: number;
 			only?: string[];
 			concurrency?: number;
+			lazy_run?: boolean;
 		}) => {
 			const { data } = await axiosInstance.post<{
 				migration_id: string;
