@@ -6,6 +6,7 @@ import type {
 	FullCusProduct,
 } from "../../cusProductModels/cusProductModels";
 import type { FullCustomer } from "../../cusModels/fullCusModel";
+import type { Entity } from "../../cusModels/entityModels/entityModels";
 import type { Entitlement } from "../../productModels/entModels/entModels";
 import type { Price } from "../../productModels/priceModels/priceModels";
 import type { FullProduct } from "../../productModels/productModels";
@@ -16,6 +17,8 @@ export interface SyncProductContext {
 	customPrices: Price[];
 	customEntitlements: Entitlement[];
 	featureQuantities: FeatureOptions[];
+	/** Resolved per-plan entity scope (from plan.entity_id), if any. */
+	entity?: Entity;
 	/** Existing active cusProduct in the same product group, if `expire_previous` was set. */
 	currentCustomerProduct?: FullCusProduct;
 	accessStartsAt?: number;
