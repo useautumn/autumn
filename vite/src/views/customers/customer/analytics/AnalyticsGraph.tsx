@@ -22,6 +22,7 @@ interface ChartSeriesConfig {
 
 const MAX_TOOLTIP_ITEMS = 5;
 const CHART_STYLE = { cursor: "default" } as const;
+const TRANSPARENT_CURSOR = { fill: "transparent", strokeWidth: 0 } as const;
 const X_TICK = { fontSize: 11, fill: "#666" } as const;
 const Y_TICK = {
 	fontSize: 11,
@@ -61,16 +62,22 @@ export const EventsBarChart = memo(function EventsBarChart({
 }) {
 	const { selectedInterval } = useAnalyticsContext();
 	const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+	const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
 	const handleBarMouseEnter = useCallback(
-		(dataKey: string) => () =>
-			startTransition(() => setHoveredKey(dataKey)),
+		(dataKey: string) => (_data: unknown, index: number) =>
+			startTransition(() => {
+				setHoveredKey(dataKey);
+				setActiveIndex(index);
+			}),
 		[],
 	);
-	const handleBarMouseLeave = useCallback(
-		() => startTransition(() => setHoveredKey(null)),
-		[],
-	);
+	const handleChartMouseLeave = useCallback(() => {
+		startTransition(() => {
+			setHoveredKey(null);
+			setActiveIndex(null);
+		});
+	}, []);
 
 	const formatXAxis = useCallback(
 		(value: string): string => {
@@ -92,26 +99,35 @@ export const EventsBarChart = memo(function EventsBarChart({
 	}, [chartConfig]);
 
 	const tooltipContent = useCallback(
-		({ active, payload, label }: { active?: boolean; payload?: any[]; label?: string | number }) => {
-			if (!active || !payload?.length) return null;
+		({ active }: { active?: boolean }) => {
+			if (!active || activeIndex == null) return null;
+			const row = data.data[activeIndex];
+			if (!row) return null;
+			const period = String(row.period);
+
+			// Build items from our tracked index, not Recharts' payload
+			const allItems = chartConfig
+				.map((s) => ({ dataKey: s.yKey, value: Number(row[s.yKey] ?? 0), color: s.fill }))
+				.filter((i) => i.value !== 0);
 			const items = hoveredKey
-				? payload.filter((p: any) => String(p.dataKey) === hoveredKey && Number(p.value) !== 0)
-				: [...payload].filter((p: any) => Number(p.value) !== 0).sort((a: any, b: any) => (b.value as number) - (a.value as number));
+				? allItems.filter((i) => i.dataKey === hoveredKey)
+				: allItems.sort((a, b) => b.value - a.value);
 			if (!items.length) return null;
+
 			const visible = items.slice(0, MAX_TOOLTIP_ITEMS);
 			const overflow = items.length - visible.length;
 			const overflowSum = overflow > 0
-				? items.slice(MAX_TOOLTIP_ITEMS).reduce((s: number, p: any) => s + Number(p.value), 0)
+				? items.slice(MAX_TOOLTIP_ITEMS).reduce((s, i) => s + i.value, 0)
 				: 0;
 			return (
 				<div className="bg-popover text-popover-foreground grid min-w-[8rem] items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-xs shadow-md ring-1 ring-foreground/10">
-					<div className="font-medium">{formatXAxis(String(label))}</div>
+					<div className="font-medium">{formatXAxis(period)}</div>
 					<div className="grid gap-1">
-						{visible.map((item: any) => (
+						{visible.map((item) => (
 							<TooltipItem
-								key={String(item.dataKey)}
+								key={item.dataKey}
 								item={item}
-								label={rechartsConfig[String(item.dataKey)]?.label as string ?? String(item.dataKey)}
+								label={rechartsConfig[item.dataKey]?.label as string ?? item.dataKey}
 							/>
 						))}
 						{overflow > 0 && (
@@ -125,16 +141,12 @@ export const EventsBarChart = memo(function EventsBarChart({
 				</div>
 			);
 		},
-		[hoveredKey, formatXAxis, rechartsConfig],
+		[activeIndex, hoveredKey, data.data, chartConfig, formatXAxis, rechartsConfig],
 	);
 
 	const barHandlers = useMemo(
-		() =>
-			chartConfig.map((series) => ({
-				onMouseEnter: handleBarMouseEnter(series.yKey),
-				onMouseLeave: handleBarMouseLeave,
-			})),
-		[chartConfig, handleBarMouseEnter, handleBarMouseLeave],
+		() => chartConfig.map((series) => handleBarMouseEnter(series.yKey)),
+		[chartConfig, handleBarMouseEnter],
 	);
 
 	return (
@@ -154,6 +166,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 					barCategoryGap="10%"
 					style={CHART_STYLE}
 					throttleDelay="raf"
+					onMouseLeave={handleChartMouseLeave}
 				>
 					<CartesianGrid
 						vertical={false}
@@ -180,7 +193,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 						tickFormatter={formatCompactNumber}
 					/>
 					<Tooltip
-						cursor={false}
+						cursor={TRANSPARENT_CURSOR}
 						isAnimationActive={false}
 						content={tooltipContent}
 					/>
@@ -192,8 +205,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 							fill={series.fill}
 							activeBar={false}
 							style={CHART_STYLE}
-							onMouseEnter={barHandlers[si].onMouseEnter}
-							onMouseLeave={barHandlers[si].onMouseLeave}
+							onMouseEnter={barHandlers[si]}
 						/>
 					))}
 				</BarChart>

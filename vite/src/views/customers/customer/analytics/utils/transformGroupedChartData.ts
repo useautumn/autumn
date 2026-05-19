@@ -68,6 +68,50 @@ function getFeatureName({
 }
 
 /**
+ * Keeps only the top-N series by total volume and orders them so the
+ * largest renders last (top of a stacked bar chart).
+ */
+export function trimToTopSeries({
+	events,
+	maxSeries,
+}: {
+	events: EventsData;
+	maxSeries: number;
+}): EventsData {
+	const seriesCols = events.meta
+		.filter((m) => m.name !== "period")
+		.map((m) => m.name);
+
+	const totals = new Map<string, number>();
+	for (const col of seriesCols) totals.set(col, 0);
+	for (const row of events.data) {
+		for (const col of seriesCols) {
+			totals.set(col, (totals.get(col) ?? 0) + Number(row[col] ?? 0));
+		}
+	}
+
+	// Sorted ascending so the largest series is last → top of stack
+	const sorted = [...totals.entries()]
+		.sort((a, b) => a[1] - b[1]);
+	const kept = sorted.length > maxSeries
+		? sorted.slice(-maxSeries)
+		: sorted;
+	const orderedCols = kept.map(([col]) => col);
+
+	const meta = [
+		{ name: "period" },
+		...orderedCols.map((name) => ({ name })),
+	];
+	const data = events.data.map((row) => {
+		const slim: EventRow = { period: row.period };
+		for (const col of orderedCols) slim[col] = row[col] ?? 0;
+		return slim;
+	});
+
+	return { meta, rows: data.length, data };
+}
+
+/**
  * Transforms grouped data from backend format to chart-ready format.
  *
  * Backend returns (when group_by is used):
