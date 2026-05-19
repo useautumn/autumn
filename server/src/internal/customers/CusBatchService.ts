@@ -14,7 +14,10 @@ import {
 } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import type { AutumnContext, RequestContext } from "@/honoUtils/HonoEnv.js";
-import { getOrgCusProductLimit } from "../misc/edgeConfig/orgLimitsStore.js";
+import {
+	getOrgCusProductLimit,
+	getOrgEntitiesLimit,
+} from "../misc/edgeConfig/orgLimitsStore.js";
 import { triggerBatchResetCustomerEntitlements } from "./actions/resetCustomerEntitlements/triggerBatchResetCustomerEntitlements.js";
 import { CusSearchService } from "./CusSearchService.js";
 import { getCursorPaginatedFullCusQuery } from "./cursorPaginatedFullCusQuery.js";
@@ -324,6 +327,10 @@ export class CusBatchService {
 			orgId: ctx.org.id,
 			orgSlug: ctx.org.slug,
 		});
+		const entitiesLimit = getOrgEntitiesLimit({
+			orgId: ctx.org.id,
+			orgSlug: ctx.org.slug,
+		});
 
 		const statusFilters = (filters?.status ?? []).filter(
 			(s): s is DashboardStatusFilter =>
@@ -373,6 +380,9 @@ export class CusBatchService {
 			env: ctx.env,
 			inStatuses: RELEVANT_STATUSES,
 			withSubs: true,
+			withEntities: true,
+			includeInvoices: true,
+			entitiesLimit,
 			limit: internalIds ? internalIds.length : limit,
 			cursor:
 				!requiresResolveStep && cursor
@@ -403,6 +413,8 @@ export class CusBatchService {
 			replaceables: [],
 			free_trials: [],
 			subscriptions: [],
+			entities: [],
+			invoices: [],
 		}) as unknown as FlattenedCustomerRow;
 
 		const allCustomers = reassembleFlattenedCustomer(flat);
