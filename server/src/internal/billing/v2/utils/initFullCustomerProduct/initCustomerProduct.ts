@@ -41,9 +41,14 @@ export const initCustomerProduct = ({
 		onTrialEnd,
 	} = initOptions ?? {};
 
-	const scopedEntity = entity ?? fullCustomer.entity;
-	const internalEntityId = scopedEntity?.internal_id;
-	const entityId = scopedEntity?.id;
+	const internalEntityId =
+		initOptions?.internalEntityId ?? fullCustomer.entity?.internal_id;
+	const entityId =
+		initOptions?.internalEntityId && initOptions.internalEntityId !== fullCustomer.entity?.internal_id
+			? fullCustomer.entities?.find(
+					(e) => e.internal_id === initOptions.internalEntityId,
+				)?.id
+			: fullCustomer.entity?.id;
 
 	const startsAt = initOptions?.startsAt ?? now;
 	const endedAt = initOptions?.endedAt;

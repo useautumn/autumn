@@ -10,6 +10,7 @@ import {
 	CheckIcon,
 	PackageIcon,
 	PencilSimpleIcon,
+	PlusIcon,
 } from "@phosphor-icons/react";
 
 import {
@@ -19,6 +20,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
 import { ActionCard } from "../shared/ActionCard";
+import { DASHED_BUTTON_CLASS } from "../shared/AddButton";
 import { AutumnMark, StripeMark } from "../shared/BillingScopeMarks";
 import { AddPlansSection } from "./AddPlanOpForm";
 import { UpdatePlanOpForm } from "./UpdatePlanOpForm";
@@ -184,45 +186,41 @@ export function OperationsForm({
 						</>
 					)}
 
-					<div className="border-t mt-3 pt-3 flex flex-col gap-2">
-						<span className="text-sm font-medium text-t1">Add Operation</span>
-						<div className="flex gap-3">
-							<ActionCard
-								icon={
-									<PencilSimpleIcon
-										size={20}
-										weight="duotone"
-										className="text-t3 shrink-0"
-									/>
-								}
-								heading="Update Plan"
-								subheading="Modify existing customer plans"
-								onClick={() =>
-									setOperations([...operations, DEFAULT_UPDATE_PLAN])
-								}
-								className="flex-1"
-							/>
-							{!hasAddPlans && (
-								<ActionCard
-									icon={
-										<PackageIcon
-											size={20}
-											weight="duotone"
-											className="text-t3 shrink-0"
-										/>
-									}
-									heading="Add Plan"
-									subheading="Assign a new plan to customers"
+					<div className="border-t mt-3 pt-3">
+						<DropdownMenu>
+							<DropdownMenuTrigger className={DASHED_BUTTON_CLASS}>
+								<PlusIcon size={10} />
+								Add Operation
+							</DropdownMenuTrigger>
+							<DropdownMenuContent
+								align="start"
+								className="w-(--anchor-width)"
+							>
+								<DropdownMenuItem
+									closeOnClick
 									onClick={() =>
-										setOperations([
-											...operations,
-											{ type: "add_plan", plan_id: "" },
-										])
+										setOperations([...operations, DEFAULT_UPDATE_PLAN])
 									}
-									className="flex-1"
-								/>
-							)}
-						</div>
+								>
+									<PencilSimpleIcon size={14} weight="duotone" />
+									Update Plan
+								</DropdownMenuItem>
+								{!hasAddPlans && (
+									<DropdownMenuItem
+										closeOnClick
+										onClick={() =>
+											setOperations([
+												...operations,
+												{ type: "add_plan", plan_id: "" },
+											])
+										}
+									>
+										<PackageIcon size={14} weight="duotone" />
+										Add Plan
+									</DropdownMenuItem>
+								)}
+							</DropdownMenuContent>
+						</DropdownMenu>
 					</div>
 				</>
 			)}
