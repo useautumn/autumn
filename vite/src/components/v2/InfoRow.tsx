@@ -14,19 +14,19 @@ export function InfoRow({ icon, label, value, className, mono }: InfoRowProps) {
 
 	return (
 		<div className="flex items-center gap-2 min-w-0 overflow-hidden">
-			{icon && <div className="text-t4/60 shrink-0">{icon}</div>}
+			{icon && <div className="text-subtle/60 shrink-0">{icon}</div>}
 			<div className="flex min-w-0 items-center overflow-hidden">
-				<div className="text-t3 text-sm font-medium w-24 shrink-0 whitespace-nowrap">
+				<div className="text-tertiary-foreground text-sm font-medium w-24 shrink-0 whitespace-nowrap">
 					{label}
 				</div>
 				{isReactNode ? (
-					<div className={cn("text-t1 text-sm wrap-break-word", className)}>
+					<div className={cn("text-foreground text-sm wrap-break-word", className)}>
 						{value}
 					</div>
 				) : (
 					<div
 						className={cn(
-							"text-t1 text-sm wrap-break-word",
+							"text-foreground text-sm wrap-break-word",
 							mono && "font-mono text-xs",
 							className,
 						)}

@@ -41,7 +41,7 @@ export const UserDetails = () => {
 			<div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 				<div className="flex flex-col">
 					<FormLabel>
-						<span className="text-t2">Name</span>
+						<span className="text-muted-foreground">Name</span>
 					</FormLabel>
 					<Input
 						value={name}
@@ -51,9 +51,9 @@ export const UserDetails = () => {
 				</div>
 				<div className="flex flex-col">
 					<FormLabel>
-						<span className="text-t2">Email</span>
+						<span className="text-muted-foreground">Email</span>
 					</FormLabel>
-					<Input value={user?.email || ""} disabled className="text-t3" />
+					<Input value={user?.email || ""} disabled className="text-tertiary-foreground" />
 				</div>
 			</div>
 			<div>

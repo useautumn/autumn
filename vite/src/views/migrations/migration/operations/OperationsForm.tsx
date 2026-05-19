@@ -72,12 +72,12 @@ export function OperationsForm({
 	return (
 		<div className="flex flex-col">
 			<div className="flex flex-col gap-2 border-b pb-3 mb-3">
-				<span className="text-sm font-medium text-t1">Billing Scope</span>
+				<span className="text-sm font-medium text-foreground">Billing Scope</span>
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
 						<button
 							type="button"
-							className="flex items-center gap-2 h-8 px-3 rounded-xl text-sm cursor-pointer input-base text-t1 whitespace-nowrap overflow-hidden"
+							className="flex items-center gap-2 h-8 px-3 rounded-xl text-sm cursor-pointer input-base text-foreground whitespace-nowrap overflow-hidden"
 						>
 							{noBillingChanges ? (
 								<AutumnMark size={14} />
@@ -89,7 +89,7 @@ export function OperationsForm({
 									? "Billing changes apply to Autumn only"
 									: "Billing changes apply to Autumn and Stripe"}
 							</span>
-							<CaretDownIcon size={12} className="text-t3 shrink-0" />
+							<CaretDownIcon size={12} className="text-tertiary-foreground shrink-0" />
 						</button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="start" className="w-(--anchor-width)">
@@ -101,7 +101,7 @@ export function OperationsForm({
 							<span className="flex-1">
 								Billing changes apply to Autumn only
 							</span>
-							{noBillingChanges && <CheckIcon size={14} className="text-t3" />}
+							{noBillingChanges && <CheckIcon size={14} className="text-tertiary-foreground" />}
 						</DropdownMenuItem>
 						<DropdownMenuItem
 							closeOnClick
@@ -111,7 +111,7 @@ export function OperationsForm({
 							<span className="flex-1">
 								Billing changes apply to Autumn and Stripe
 							</span>
-							{!noBillingChanges && <CheckIcon size={14} className="text-t3" />}
+							{!noBillingChanges && <CheckIcon size={14} className="text-tertiary-foreground" />}
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
@@ -119,14 +119,14 @@ export function OperationsForm({
 
 			{isEmpty ? (
 				<div className="flex flex-col gap-2">
-					<span className="text-sm font-medium text-t1">Add Operation</span>
+					<span className="text-sm font-medium text-foreground">Add Operation</span>
 					<div className="flex gap-3">
 						<ActionCard
 							icon={
 								<PencilSimpleIcon
 									size={20}
 									weight="duotone"
-									className="text-t3 shrink-0"
+									className="text-tertiary-foreground shrink-0"
 								/>
 							}
 							heading="Update Plan"
@@ -142,7 +142,7 @@ export function OperationsForm({
 								<PackageIcon
 									size={20}
 									weight="duotone"
-									className="text-t3 shrink-0"
+									className="text-tertiary-foreground shrink-0"
 								/>
 							}
 							heading="Add Plan"

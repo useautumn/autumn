@@ -36,7 +36,7 @@ export const WorkbenchFilters = () => {
 				/>
 				<MagnifyingGlassIcon
 					size={12}
-					className="absolute right-2 top-1/2 -translate-y-1/2 text-t4 pointer-events-none z-10"
+					className="absolute right-2 top-1/2 -translate-y-1/2 text-subtle pointer-events-none z-10"
 				/>
 			</div>
 

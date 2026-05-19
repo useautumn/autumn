@@ -261,7 +261,7 @@ export function SendInvoiceStage({
 				<button
 					type="button"
 					onClick={onBack}
-					className="flex items-center gap-1 text-t3 text-sm cursor-pointer mt-2 hover:text-foreground transition-colors"
+					className="flex items-center gap-1 text-tertiary-foreground text-sm cursor-pointer mt-2 hover:text-foreground transition-colors"
 				>
 					<ArrowLeft size={14} />
 					Back
@@ -270,7 +270,7 @@ export function SendInvoiceStage({
 
 			{needsEmail && (
 				<SheetSection title="Customer Email" withSeparator>
-					<p className="text-t3 text-sm mb-3">
+					<p className="text-tertiary-foreground text-sm mb-3">
 						An email address is required to send an invoice. Add one for this
 						customer to continue.
 					</p>

@@ -48,7 +48,7 @@ export function ProductsViewToggle({
 						title={option.title}
 						onClick={() => onValueChange(option.value)}
 						className={cn(
-							"flex items-center justify-center p-1.5 h-7 w-7 border transition-none outline-none text-t3",
+							"flex items-center justify-center p-1.5 h-7 w-7 border transition-none outline-none text-tertiary-foreground",
 							"hover:text-primary focus-visible:text-primary",
 							isActive && "text-primary bg-white dark:bg-zinc-900",
 							!isActive && "bg-zinc-100 dark:bg-zinc-800",

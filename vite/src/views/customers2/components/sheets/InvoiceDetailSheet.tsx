@@ -260,7 +260,7 @@ export function InvoiceDetailSheet({
 					withSeparator={true}
 				>
 					<div className="mb-2">
-						<span className="text-xs font-medium text-t3 truncate">
+						<span className="text-xs font-medium text-tertiary-foreground truncate">
 							{productGroup.productName}
 						</span>
 					</div>
@@ -284,8 +284,8 @@ export function InvoiceDetailSheet({
 				<div className="space-y-2">
 					{taxedAmount != null && taxedAmount > 0 && (
 						<div className="flex items-center justify-between">
-							<span className="text-sm text-t2">Tax</span>
-							<span className="text-sm tabular-nums text-t2">
+							<span className="text-sm text-muted-foreground">Tax</span>
+							<span className="text-sm tabular-nums text-muted-foreground">
 								{formatSignedAmount(taxedAmount, invoice.currency)}
 							</span>
 						</div>
@@ -299,8 +299,8 @@ export function InvoiceDetailSheet({
 					{invoice.amount_paid != null &&
 						invoice.amount_paid !== invoice.total && (
 							<div className="flex items-center justify-between">
-								<span className="text-sm text-t2">Amount Paid</span>
-								<span className="text-sm tabular-nums text-t2">
+								<span className="text-sm text-muted-foreground">Amount Paid</span>
+								<span className="text-sm tabular-nums text-muted-foreground">
 									{formatSignedAmount(invoice.amount_paid, invoice.currency)}
 								</span>
 							</div>
@@ -308,13 +308,13 @@ export function InvoiceDetailSheet({
 					{invoice.refunded_amount > 0 && (
 						<>
 							<div className="flex items-center justify-between">
-								<span className="text-sm text-t3">Refunded</span>
+								<span className="text-sm text-tertiary-foreground">Refunded</span>
 								<span className="text-sm text-amber-500 tabular-nums">
 									-{formatAmount(invoice.refunded_amount, invoice.currency)}
 								</span>
 							</div>
 							<div className="flex items-center justify-between pt-1">
-								<span className="text-sm text-t3">Net</span>
+								<span className="text-sm text-tertiary-foreground">Net</span>
 								<span className="text-sm font-semibold text-foreground tabular-nums">
 									{formatSignedAmount(
 										invoice.total - invoice.refunded_amount,
@@ -335,14 +335,14 @@ export function InvoiceDetailSheet({
 						value={
 							<MiniCopyButton
 								text={invoice.id}
-								innerClassName="text-sm text-t1 font-mono"
+								innerClassName="text-sm text-foreground font-mono"
 							/>
 						}
 					/>
 					<InfoRow
 						icon={<ProcessorIcon processor={invoiceProcessor} size={16} />}
 						label="Processor"
-						value={<span className="text-sm text-t1">{processorLabel}</span>}
+						value={<span className="text-sm text-foreground">{processorLabel}</span>}
 					/>
 					<InfoRow
 						icon={<CreditCardIcon size={16} weight="duotone" />}
@@ -350,7 +350,7 @@ export function InvoiceDetailSheet({
 						value={
 							<MiniCopyButton
 								text={invoice.stripe_id}
-								innerClassName="text-sm text-t1 font-mono"
+								innerClassName="text-sm text-foreground font-mono"
 							/>
 						}
 					/>
@@ -360,7 +360,7 @@ export function InvoiceDetailSheet({
 						value={
 							<MiniCopyButton
 								text={format(new Date(invoice.created_at), "MMM d, yyyy HH:mm")}
-								innerClassName="text-sm text-t1"
+								innerClassName="text-sm text-foreground"
 							/>
 						}
 					/>
@@ -445,22 +445,22 @@ function LineItemGroupRow({
 				<div className="flex items-start justify-between gap-2">
 					<div className="flex flex-col min-w-0 flex-1 gap-0.5">
 						<div className="flex items-center gap-1.5">
-							<span className="text-sm text-t1">{group.label}</span>
+							<span className="text-sm text-foreground">{group.label}</span>
 							{totalQuantity > 0 && (
 								<Badge
 									variant="muted"
-									className="text-[10px] px-1.5 py-0 text-t3"
+									className="text-[10px] px-1.5 py-0 text-tertiary-foreground"
 								>
 									Qty: {totalQuantity}
 								</Badge>
 							)}
 						</div>
 						{firstItem.description && (
-							<span className="text-xs text-t3">{firstItem.description}</span>
+							<span className="text-xs text-tertiary-foreground">{firstItem.description}</span>
 						)}
-						{period && <span className="text-xs text-t4">{period}</span>}
+						{period && <span className="text-xs text-subtle">{period}</span>}
 					</div>
-					<span className="text-sm tabular-nums text-t1 shrink-0">
+					<span className="text-sm tabular-nums text-foreground shrink-0">
 						{formatAmount(group.totalAmount, currency)}
 					</span>
 				</div>
@@ -489,14 +489,14 @@ function LineItemGroupRow({
 				<div className="flex items-start justify-between gap-2">
 					<div className="flex flex-col min-w-0 flex-1 gap-0.5">
 						<div className="flex items-center gap-1.5">
-							<span className="text-sm text-t1">{group.label}</span>
+							<span className="text-sm text-foreground">{group.label}</span>
 							{(!group.isBasePrice && firstItem.total_quantity) ||
 							(group.isBasePrice &&
 								firstItem.stripe_quantity &&
 								firstItem.stripe_quantity > 1) ? (
 								<Badge
 									variant="muted"
-									className="text-[10px] px-1.5 py-0 text-t3"
+									className="text-[10px] px-1.5 py-0 text-tertiary-foreground"
 								>
 									Qty:{" "}
 									{group.isBasePrice
@@ -506,13 +506,13 @@ function LineItemGroupRow({
 							) : null}
 						</div>
 						{firstItem.description && (
-							<span className="text-xs text-t3">{firstItem.description}</span>
+							<span className="text-xs text-tertiary-foreground">{firstItem.description}</span>
 						)}
-						{period && <span className="text-xs text-t4">{period}</span>}
+						{period && <span className="text-xs text-subtle">{period}</span>}
 					</div>
 					<div className="flex flex-col items-end shrink-0">
 						{hasDiscounts && paidAmount !== firstItem.amount && (
-							<span className="text-xs tabular-nums text-t4 line-through">
+							<span className="text-xs tabular-nums text-subtle line-through">
 								{isRefund ? "-" : ""}
 								{formatAmount(firstItem.amount, firstItem.currency)}
 							</span>
@@ -520,7 +520,7 @@ function LineItemGroupRow({
 						<span
 							className={cn(
 								"text-sm tabular-nums",
-								isRefund ? "text-amber-600" : "text-t1",
+								isRefund ? "text-amber-600" : "text-foreground",
 							)}
 						>
 							{isRefund ? "-" : ""}
@@ -564,12 +564,12 @@ function TierRow({
 
 	return (
 		<AdminHover texts={hoverTexts}>
-			<div className="flex items-center justify-between text-xs text-t3">
+			<div className="flex items-center justify-between text-xs text-tertiary-foreground">
 				<span>{item.description}</span>
 				<span
 					className={cn(
 						"tabular-nums",
-						isRefund ? "text-amber-500" : "text-t3",
+						isRefund ? "text-amber-500" : "text-tertiary-foreground",
 					)}
 				>
 					{isRefund ? "-" : ""}

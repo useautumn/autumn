@@ -46,7 +46,7 @@ export const ApiKeyDialog = ({
 				<div className="flex flex-col gap-4">
 					<div>
 						<FormLabel>
-							<span className="text-t2">
+							<span className="text-muted-foreground">
 								{env === "live" ? "API Key" : "Sandbox API Key"}
 							</span>
 						</FormLabel>

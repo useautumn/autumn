@@ -16,14 +16,14 @@ interface SettingsTableProps {
 	readonly children: React.ReactNode;
 }
 
-const HEAD_CELL_CLASS = "h-7 text-t4 text-tiny font-medium!";
+const HEAD_CELL_CLASS = "h-7 text-subtle text-tiny font-medium!";
 
 export const SettingsTable = ({ columns, children }: SettingsTableProps) => {
 	return (
 		<div className="rounded-lg shadow-card border">
 			<Table className="p-0 rounded-lg overflow-hidden" flexibleTableColumns>
 				<TableHeader>
-					<TableRow className="border-b bg-card text-t4">
+					<TableRow className="border-b bg-card text-subtle">
 						{columns.map((col, i) => (
 							<TableHead
 								key={col.label || i}
@@ -47,4 +47,4 @@ export const SettingsTable = ({ columns, children }: SettingsTableProps) => {
 export { TableCell, TableRow } from "@/components/ui/table";
 
 export const SETTINGS_ROW_CLASS =
-	"text-t3 h-10 hover:bg-interactive-secondary-hover";
+	"text-tertiary-foreground h-10 hover:bg-interactive-secondary-hover";

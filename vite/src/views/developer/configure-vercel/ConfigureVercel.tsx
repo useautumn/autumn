@@ -212,7 +212,7 @@ export const ConfigureVercel = () => {
 						<div className="grid grid-cols-2 gap-4 w-full">
 							<div>
 								<FormLabel className="mb-1">
-									<span className="text-t2">Client (Integration) ID</span>
+									<span className="text-muted-foreground">Client (Integration) ID</span>
 								</FormLabel>
 								<Input
 									value={vercelConfig.client_integration_id || ""}
@@ -230,7 +230,7 @@ export const ConfigureVercel = () => {
 							</div>
 							<div>
 								<FormLabel className="mb-1">
-									<span className="text-t2">Client (Integration) Secret</span>
+									<span className="text-muted-foreground">Client (Integration) Secret</span>
 								</FormLabel>
 								<Input
 									value={vercelConfig.client_secret || ""}
@@ -247,11 +247,11 @@ export const ConfigureVercel = () => {
 							</div>
 							<div className="col-span-2">
 								<FormLabel className="mb-1">
-									<span className="text-t2">
+									<span className="text-muted-foreground">
 										Stripe Custom Payment Method ID
 									</span>
 								</FormLabel>
-								<p className="text-t3 text-sm mb-2">
+								<p className="text-tertiary-foreground text-sm mb-2">
 									Create a custom payment method in{" "}
 									<a
 										href="https://dashboard.stripe.com/settings/custom_payment_methods"
@@ -279,11 +279,11 @@ export const ConfigureVercel = () => {
 							</div>
 							<div className="col-span-2">
 								<FormLabel className="mb-1">
-									<span className="text-t2">
+									<span className="text-muted-foreground">
 										Allowed Product IDs (Optional)
 									</span>
 								</FormLabel>
-								<p className="text-t3 text-sm mb-2">
+								<p className="text-tertiary-foreground text-sm mb-2">
 									Optional: choose product IDs to show in Vercel plans.
 								</p>
 								<TagSelect
@@ -295,7 +295,7 @@ export const ConfigureVercel = () => {
 									renderContent={(setOpen) => (
 										<>
 											{productOptions.length === 0 ? (
-												<div className="p-2 text-t6">No products found</div>
+												<div className="p-2 text-placeholder">No products found</div>
 											) : (
 												productOptions.map((option) => {
 													const isSelected = activeAllowedProductIds.includes(
@@ -362,9 +362,9 @@ export const ConfigureVercel = () => {
 
 				<div>
 					<FormLabel className="mb-0">
-						<span className="text-t2">Base URL</span>
+						<span className="text-muted-foreground">Base URL</span>
 					</FormLabel>
-					<p className="text-t3 text-sm mb-2">
+					<p className="text-tertiary-foreground text-sm mb-2">
 						This is the base URL for connecting to your Vercel project. You
 						should provide this to Vercel as the Webhook URL and Base URL.
 					</p>
@@ -411,7 +411,7 @@ export const ConfigureVercel = () => {
 								}}
 							/>
 						) : (
-							<div className="text-t3">Dashboard URL not found.</div>
+							<div className="text-tertiary-foreground">Dashboard URL not found.</div>
 						)}
 					</CardContent>
 				</Card>

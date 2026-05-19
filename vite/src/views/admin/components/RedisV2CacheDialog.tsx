@@ -129,11 +129,11 @@ export function RedisV2CacheDialog({
 				</DialogHeader>
 
 				{loading ? (
-					<div className="py-8 text-center text-sm text-t3">Loading...</div>
+					<div className="py-8 text-center text-sm text-tertiary-foreground">Loading...</div>
 				) : (
 					<div className="flex flex-col gap-4">
 						<div className="flex flex-col gap-2">
-							<div className="text-xs font-medium uppercase tracking-wide text-t3">
+							<div className="text-xs font-medium uppercase tracking-wide text-tertiary-foreground">
 								Active Instance
 							</div>
 						<Select
@@ -148,8 +148,8 @@ export function RedisV2CacheDialog({
 									{INSTANCE_OPTIONS.map((option) => (
 										<SelectItem key={option.value} value={option.value}>
 											<div className="flex flex-col">
-												<span className="text-sm text-t1">{option.label}</span>
-												<span className="text-xs text-t3">
+												<span className="text-sm text-foreground">{option.label}</span>
+												<span className="text-xs text-tertiary-foreground">
 													{option.description}
 												</span>
 											</div>
@@ -157,15 +157,15 @@ export function RedisV2CacheDialog({
 									))}
 								</SelectContent>
 							</Select>
-							<div className="text-xs text-t3">
+							<div className="text-xs text-tertiary-foreground">
 								Currently active:{" "}
-								<span className="font-mono text-t1">
+								<span className="font-mono text-foreground">
 									{config.activeInstance}
 								</span>
 							</div>
 						</div>
 
-						<div className="rounded-lg border border-border p-3 text-xs text-t3">
+						<div className="rounded-lg border border-border p-3 text-xs text-tertiary-foreground">
 							<div className="mb-2 flex items-center gap-2">
 								<Badge
 									variant="muted"

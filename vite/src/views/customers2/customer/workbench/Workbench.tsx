@@ -74,7 +74,7 @@ export const Workbench = () => {
 							>
 								<WorkbenchLogList customerId={customer?.id} isOpen={isOpen} />
 							</ResizablePanel>
-							<ResizableHandle className="!w-px bg-border hover:bg-t4 transition-colors cursor-col-resize after:!w-2 after:cursor-col-resize" />
+							<ResizableHandle className="!w-px bg-border hover:bg-subtle transition-colors cursor-col-resize after:!w-2 after:cursor-col-resize" />
 							<ResizablePanel
 								defaultSize={58}
 								minSize={35}
@@ -110,16 +110,16 @@ const WorkbenchHeader = ({
 			aria-label="Resize workbench"
 			className="absolute -top-1 inset-x-0 h-2 cursor-row-resize group z-10 bg-transparent border-0 p-0"
 		>
-			<div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-10 h-0.5 rounded-full bg-border group-hover:bg-t4 transition-colors" />
+			<div className="absolute top-1/2 -translate-y-1/2 left-1/2 -translate-x-1/2 w-10 h-0.5 rounded-full bg-border group-hover:bg-subtle transition-colors" />
 		</button>
 
 		<div className="flex items-center gap-2 min-w-0">
-			<div className="flex items-center gap-1.5 text-t1 text-xs font-semibold shrink-0">
+			<div className="flex items-center gap-1.5 text-foreground text-xs font-semibold shrink-0">
 				<TerminalWindowIcon size={13} weight="fill" />
 				Workbench
 			</div>
 			<div className="h-3 w-px bg-border shrink-0" />
-			<div className="text-xs text-t1 font-medium px-1.5 py-0.5 rounded bg-interactive-secondary shrink-0">
+			<div className="text-xs text-foreground font-medium px-1.5 py-0.5 rounded bg-interactive-secondary shrink-0">
 				Logs
 			</div>
 		</div>

@@ -14,7 +14,7 @@ export function SnippetStep({ snippet, stepNumber }: SnippetStepProps) {
 				<StepBadge>{stepNumber}</StepBadge>
 				<span className="font-medium text-sm">{snippet.title}</span>
 			</div>
-			<p className="text-sm text-t2 pl-[34px]">{snippet.description}</p>
+			<p className="text-sm text-muted-foreground pl-[34px]">{snippet.description}</p>
 			<div className="pl-[34px]">
 				<SnippetCodeBlock snippet={snippet} />
 			</div>

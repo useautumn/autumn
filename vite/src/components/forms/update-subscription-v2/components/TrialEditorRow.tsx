@@ -121,7 +121,7 @@ export function TrialEditorRow({
 							weight="fill"
 							className="text-red-400"
 						/>
-						<span className="text-sm text-t2">Free Trial</span>
+						<span className="text-sm text-muted-foreground">Free Trial</span>
 					</div>
 					<StatusBadge variant="removed">Removed</StatusBadge>
 				</div>
@@ -132,7 +132,7 @@ export function TrialEditorRow({
 								icon={<ArrowCounterClockwiseIcon size={14} />}
 								variant="skeleton"
 								size="sm"
-								className="text-t4 hover:text-t2 hover:bg-muted"
+								className="text-subtle hover:text-muted-foreground hover:bg-muted"
 								onClick={onRevert}
 							/>
 						</TooltipTrigger>
@@ -161,12 +161,12 @@ export function TrialEditorRow({
 							weight="fill"
 							className="text-blue-400"
 						/>
-						<span className="text-sm text-t2">Free Trial</span>
+						<span className="text-sm text-muted-foreground">Free Trial</span>
 					</div>
 					{isTrialModified && initialTrialFormatted ? (
 						<span className="text-xs flex items-center gap-1">
 							<span className="text-red-500">{initialTrialFormatted} left</span>
-							<span className="text-t3">→</span>
+							<span className="text-tertiary-foreground">→</span>
 							<span className="text-green-500">{formattedDuration} left</span>
 						</span>
 					) : formattedDuration && !isCurrentlyTrialing ? (
@@ -174,7 +174,7 @@ export function TrialEditorRow({
 							{formattedDuration}
 						</span>
 					) : initialTrialFormatted ? (
-						<span className="text-xs text-t3">
+						<span className="text-xs text-tertiary-foreground">
 							{initialTrialFormatted} left
 						</span>
 					) : null}
@@ -193,7 +193,7 @@ export function TrialEditorRow({
 								icon={<PencilSimpleIcon size={14} />}
 								variant="skeleton"
 								size="sm"
-								className="text-t4 hover:text-t2 hover:bg-muted"
+								className="text-subtle hover:text-muted-foreground hover:bg-muted"
 								onClick={() => {
 									setIsEditing(true);
 									setIsAddingNewTrial(false);
@@ -241,7 +241,7 @@ export function TrialEditorRow({
 						weight="fill"
 						className="text-blue-400"
 					/>
-					<span className="text-sm text-t2">Free Trial</span>
+					<span className="text-sm text-muted-foreground">Free Trial</span>
 				</div>
 			</div>
 			<div className="flex items-center h-10 px-3 rounded-xl input-base gap-2 overflow-hidden">
@@ -300,7 +300,7 @@ export function TrialEditorRow({
 							icon={<TrashIcon size={14} />}
 							variant="skeleton"
 							size="sm"
-							className="text-t4 hover:text-red-400!"
+							className="text-subtle hover:text-red-400!"
 							onClick={handleClearTrial}
 						/>
 					</motion.div>

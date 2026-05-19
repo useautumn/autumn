@@ -95,10 +95,10 @@ export function EventsBarChart({
 													className="h-2.5 w-2.5 shrink-0 rounded-sm"
 													style={{ background: item.color }}
 												/>
-												<span className="flex-1 truncate text-t3">
+												<span className="flex-1 truncate text-tertiary-foreground">
 													{rechartsConfig[key]?.label ?? key}
 												</span>
-												<span className="tabular-nums text-t2">
+												<span className="tabular-nums text-muted-foreground">
 													{Number(item.value).toLocaleString()}
 												</span>
 											</div>

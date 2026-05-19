@@ -91,8 +91,8 @@ export const OrgMembersList = () => {
 
 				return (
 					<TableRow key={user.id} className={SETTINGS_ROW_CLASS}>
-						<TableCell className="pl-4 text-t1">{user.email}</TableCell>
-						<TableCell className="text-t3">
+						<TableCell className="pl-4 text-foreground">{user.email}</TableCell>
+						<TableCell className="text-tertiary-foreground">
 							{user.name || "No name"}
 						</TableCell>
 						<TableCell>
@@ -103,7 +103,7 @@ export const OrgMembersList = () => {
 								onRoleChanged={refetch}
 							/>
 						</TableCell>
-						<TableCell className="text-t3 text-xs">
+						<TableCell className="text-tertiary-foreground text-xs">
 							{formatDateStr(member.createdAt)}
 						</TableCell>
 						<TableCell className="pr-2">

@@ -36,7 +36,7 @@ export function EventsTable({ data }: { data: IRow[] }) {
 	return (
 		<>
 			<div className="flex items-center justify-between pb-4 h-10">
-				<div className="text-t3 text-md flex gap-2 items-center">
+				<div className="text-tertiary-foreground text-md flex gap-2 items-center">
 					<DatabaseIcon size={16} weight="fill" className="text-subtle" />
 					Events
 				</div>
@@ -67,7 +67,7 @@ export function EventsTable({ data }: { data: IRow[] }) {
 						disabled={!canGoPrev}
 						className={cn(!canGoPrev && "pointer-events-none opacity-50")}
 					/>
-					<span className="text-t2 text-xs font-medium">
+					<span className="text-muted-foreground text-xs font-medium">
 						{currentPage} / {Math.max(totalPages, 1)}
 					</span>
 					<IconButton

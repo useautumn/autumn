@@ -67,8 +67,8 @@ export const SaveViewPopover = ({ onClose }: SaveViewPopoverProps) => {
 				<button
 					type="button"
 					className={cn(
-						"flex-1 flex items-center justify-center gap-1.5 rounded-br-lg px-2 py-1.5 text-xs text-t3 hover:text-t2 hover:bg-accent cursor-default",
-						open && "bg-accent text-t1",
+						"flex-1 flex items-center justify-center gap-1.5 rounded-br-lg px-2 py-1.5 text-xs text-tertiary-foreground hover:text-muted-foreground hover:bg-accent cursor-default",
+						open && "bg-accent text-foreground",
 					)}
 				>
 					<Pin size={10} />
@@ -83,8 +83,8 @@ export const SaveViewPopover = ({ onClose }: SaveViewPopoverProps) => {
 				onPointerDownOutside={() => setOpen(false)}
 			>
 				<div className="flex flex-col gap-1">
-					<p className="text-t2 text-sm">Save view</p>
-					<span className="text-t3 text-xs">
+					<p className="text-muted-foreground text-sm">Save view</p>
+					<span className="text-tertiary-foreground text-xs">
 						Save your current filters to easily access them later.
 					</span>
 				</div>

@@ -44,10 +44,10 @@ export const CloseScreen = () => {
 			<div className="w-screen h-screen flex items-center justify-center p-8">
 				<div className="max-w-md flex flex-col gap-4 text-center">
 					<div className="text-red-600 text-5xl mb-2">⚠️</div>
-					<h1 className="text-xl font-semibold text-t1">Connection Failed</h1>
+					<h1 className="text-xl font-semibold text-foreground">Connection Failed</h1>
 
 					{error === "account_already_connected" && accountId ? (
-						<p className="text-t2 text-sm">
+						<p className="text-muted-foreground text-sm">
 							The Stripe account <strong>{accountId}</strong>
 							{accountName && <> ({accountName})</>} is already connected to the
 							Autumn organization{" "}
@@ -57,7 +57,7 @@ export const CloseScreen = () => {
 							organization.
 						</p>
 					) : (
-						<p className="text-t2 text-sm">
+						<p className="text-muted-foreground text-sm">
 							{error === "invalid_state" &&
 								"Invalid authentication state. Please try connecting again."}
 							{error === "org_not_found" &&
@@ -94,7 +94,7 @@ export const CloseScreen = () => {
 		<div className="w-screen h-screen flex items-center justify-center">
 			<div className="flex flex-col items-center gap-4">
 				<p className="text-lg text-green-600">✓ Connection successful!</p>
-				<p className="text-t3">You can close this window now.</p>
+				<p className="text-tertiary-foreground">You can close this window now.</p>
 			</div>
 		</div>
 	);

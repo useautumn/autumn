@@ -59,7 +59,7 @@ export function BalanceDeleteSheet() {
 					title="Delete Balance"
 					description="Loading balance details..."
 				/>
-				<div className="p-4 text-sm text-t3">Loading...</div>
+				<div className="p-4 text-sm text-tertiary-foreground">Loading...</div>
 			</div>
 		);
 	}
@@ -138,11 +138,11 @@ export function BalanceDeleteSheet() {
 
 				{!canDeductFromOtherBalances && (
 					<SheetSection withSeparator={false}>
-						<p className="text-sm text-t3">
+						<p className="text-sm text-tertiary-foreground">
 							{balanceId ? (
 								<>
 									Deleting the{" "}
-									<span className="text-tiny-id bg-muted px-1.5 py-0.5 rounded-md text-t2">
+									<span className="text-tiny-id bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground">
 										{balanceId}
 									</span>{" "}
 									balance
@@ -173,7 +173,7 @@ export function BalanceDeleteSheet() {
 								{balanceId ? (
 									<>
 										Deleting the{" "}
-										<span className="text-tiny-id bg-muted px-1.5 py-0.5 rounded-md text-t2">
+										<span className="text-tiny-id bg-muted px-1.5 py-0.5 rounded-md text-muted-foreground">
 											{balanceId}
 										</span>{" "}
 										balance

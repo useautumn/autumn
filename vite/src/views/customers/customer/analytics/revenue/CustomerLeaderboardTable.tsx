@@ -41,7 +41,7 @@ const createColumns = ({
 		id: "rank",
 		size: 50,
 		cell: ({ row }: { row: Row<LeaderboardRow> }) => (
-			<span className="text-t3 tabular-nums">{row.index + 1}</span>
+			<span className="text-tertiary-foreground tabular-nums">{row.index + 1}</span>
 		),
 	},
 	{
@@ -49,13 +49,13 @@ const createColumns = ({
 		accessorKey: "customer_name",
 		cell: ({ row }: { row: Row<LeaderboardRow> }) => (
 			<div className="flex flex-col">
-				<span className="text-t1 truncate max-w-[200px]">
+				<span className="text-foreground truncate max-w-[200px]">
 					{row.original.customer_name ||
 						row.original.customer_id ||
 						row.original.internal_customer_id}
 				</span>
 				{row.original.customer_email && (
-					<span className="text-[11px] text-t3 truncate max-w-[200px]">
+					<span className="text-[11px] text-tertiary-foreground truncate max-w-[200px]">
 						{row.original.customer_email}
 					</span>
 				)}
@@ -77,7 +77,7 @@ const createColumns = ({
 						value: row.original.total_volume,
 						currency: row.original.currency,
 					})}
-					<span className="text-t4 ml-1">({pct}%)</span>
+					<span className="text-subtle ml-1">({pct}%)</span>
 				</span>
 			);
 		},
@@ -135,7 +135,7 @@ export const CustomerLeaderboardTable = ({
 		>
 			<Table.Container>
 				<Table.Toolbar>
-					<div className="text-t3 text-md flex gap-2 items-center px-2">
+					<div className="text-tertiary-foreground text-md flex gap-2 items-center px-2">
 						<TrophyIcon size={16} weight="fill" className="text-subtle" />
 						Top Customers by Revenue
 					</div>

@@ -31,7 +31,7 @@ export const RevenueMetricsSection = () => {
 	return (
 		<div className="flex flex-col gap-4 pb-6">
 			<div className="flex justify-between h-10">
-				<div className="text-t3 text-md flex gap-2 items-center">
+				<div className="text-tertiary-foreground text-md flex gap-2 items-center">
 					<CurrencyCircleDollarIcon
 						size={16}
 						weight="fill"
@@ -42,7 +42,7 @@ export const RevenueMetricsSection = () => {
 						Beta
 					</Badge>
 				</div>
-				<span className="text-xs text-t4 flex items-center">
+				<span className="text-xs text-subtle flex items-center">
 					Invoice data may be incomplete, and may be up to 24 hours behind.
 				</span>
 			</div>

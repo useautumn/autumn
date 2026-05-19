@@ -97,7 +97,7 @@ const CopyUrl = ({
 			)}
 			<div className="w-full bg-gray-100 p-3 rounded-md">
 				<Link
-					className="text-xs text-t2 break-all hover:underline"
+					className="text-xs text-muted-foreground break-all hover:underline"
 					to={url}
 					target="_blank"
 				>

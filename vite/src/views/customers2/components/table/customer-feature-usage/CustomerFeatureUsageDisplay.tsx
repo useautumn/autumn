@@ -30,7 +30,7 @@ export function CustomerFeatureUsageDisplay({
 
 	if (allowanceType === AllowanceType.Unlimited) {
 		return (
-			<div className={isSubRow ? "text-sm text-t3" : "text-t3"}>Unlimited</div>
+			<div className={isSubRow ? "text-sm text-tertiary-foreground" : "text-tertiary-foreground"}>Unlimited</div>
 		);
 	}
 
