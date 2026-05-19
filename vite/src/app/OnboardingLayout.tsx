@@ -34,7 +34,7 @@ export function OnboardingLayout() {
 				)}
 				includeCredentials={true}
 			>
-				<div className="w-screen h-screen flex items-center justify-center bg-stone-100">
+				<div className="w-screen h-screen flex items-center justify-center bg-background">
 					<LoadingScreen />
 				</div>
 			</AutumnProvider>
@@ -56,7 +56,7 @@ export function OnboardingLayout() {
 			includeCredentials={true}
 		>
 			<NuqsAdapter>
-				<main className="w-screen h-screen bg-stone-100">
+				<main className="w-screen h-screen bg-background">
 					<CustomToaster />
 					<Outlet />
 				</main>
