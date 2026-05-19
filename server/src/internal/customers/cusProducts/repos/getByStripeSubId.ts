@@ -21,9 +21,9 @@ export const getByStripeSubId = async ({
 	inStatuses?: string[];
 }): Promise<FullCusProduct[]> => {
 	const data = await db.query.customerProducts.findMany({
-		where: (_table, { and: dAnd, or: dOr, inArray: dInArray }) =>
+		where: (_table, { and: dAnd, inArray: dInArray }) =>
 			dAnd(
-				dOr(arrayContains(customerProducts.subscription_ids, [stripeSubId])),
+				arrayContains(customerProducts.subscription_ids, [stripeSubId]),
 				inStatuses ? dInArray(customerProducts.status, inStatuses) : undefined,
 			),
 		with: {

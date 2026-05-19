@@ -1,3 +1,4 @@
+import type { FullCustomer } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { isFirstSubscriptionInvoice } from "@/external/stripe/invoices/utils/classifyStripeInvoice.js";
@@ -49,6 +50,7 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 	);
 
 	let customPaymentMethod: Stripe.PaymentMethod | null = null;
+	let customer: FullCustomer | null = null;
 
 	try {
 		const partialCustomer = await CusService.getByStripeId({
@@ -63,7 +65,7 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 			throw new Error("Customer not found");
 		}
 
-		const customer = await CusService.getFull({
+		customer = await CusService.getFull({
 			ctx,
 			idOrInternalId: partialCustomer.internal_id,
 		});
@@ -105,26 +107,6 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 			});
 		}
 
-		// If this is the first invoice for the subscription and it failed, expire the
-		// optimistically-provisioned cus_product so the customer falls back to the default plan.
-		// Renewals are handled by Stripe dunning + customer.subscription.deleted webhook.
-		if (isFirstSubscriptionInvoice(invoice)) {
-			const existingCusProducts = await customerProductRepo.getByStripeSubId({
-				db,
-				stripeSubId: subscription.id,
-				orgId: org.id,
-				env,
-			});
-
-			if (existingCusProducts.length > 0) {
-				await customerProductActions.expireAndActivateDefault({
-					ctx,
-					customerProduct: existingCusProducts[0],
-					fullCustomer: customer,
-				});
-			}
-		}
-
 		const product = await ProductService.getFull({
 			db,
 			orgId: org.id,
@@ -143,6 +125,25 @@ export const handleMarketplaceInvoiceNotPaid = async ({
 			error: error.message,
 		});
 		// Continue anyway - we still need to report payment
+	}
+
+	// Expire optimistically-provisioned cus_product on first-invoice failure.
+	// Must run outside the broad catch — swallowing this leaves active access after payment failure.
+	if (customer && isFirstSubscriptionInvoice(invoice)) {
+		const existingCusProducts = await customerProductRepo.getByStripeSubId({
+			db,
+			stripeSubId: subscription.id,
+			orgId: org.id,
+			env,
+		});
+
+		if (existingCusProducts.length > 0) {
+			await customerProductActions.expireAndActivateDefault({
+				ctx,
+				customerProduct: existingCusProducts[0],
+				fullCustomer: customer,
+			});
+		}
 	}
 
 	if (!customPaymentMethod) {
