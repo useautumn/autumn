@@ -16,7 +16,7 @@ export const listEventsCustomRangeSchema = z.object({
 });
 
 export const eventsListParamsSchema = z.object({
-	offset: z.union([z.number(), z.undefined()]).optional(),
+	startCursor: z.union([z.string(), z.undefined()]).optional(),
 	limit: z.union([z.number(), z.undefined()]).optional(),
 	customerId: z.union([z.string(), z.undefined()]).optional(),
 	entityId: z.union([z.string(), z.undefined()]).optional(),
@@ -37,7 +37,7 @@ export const listEventsCustomRangeOutboundSchema = z.object({
 });
 
 export const eventsListParamsOutboundSchema = z.object({
-	offset: z.number(),
+	start_cursor: z.string(),
 	limit: z.number(),
 	customer_id: z.union([z.string(), z.undefined()]).optional(),
 	entity_id: z.union([z.string(), z.undefined()]).optional(),
@@ -84,8 +84,5 @@ export const listEventsListSchema = z.object({
 
 export const listEventsResponseSchema = z.object({
 	list: z.array(listEventsListSchema),
-	hasMore: z.boolean(),
-	offset: z.number(),
-	limit: z.number(),
-	total: z.number(),
+	nextCursor: z.string().nullable(),
 });

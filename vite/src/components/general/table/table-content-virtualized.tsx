@@ -83,11 +83,14 @@ export function TableContentVirtualized({
 		scrollContainer,
 	};
 
+	const isFlexFill = virtualization?.containerHeight === "100%";
+
 	return (
 		<TableContext.Provider value={contextWithRef}>
 			<div
 				className={cn(
 					"rounded-lg border relative z-50 min-w-0 overflow-hidden",
+					isFlexFill && "h-full flex flex-col",
 					!rows.length &&
 						"border-dashed bg-interactive-secondary dark:bg-transparent",
 					className,
@@ -97,10 +100,9 @@ export function TableContentVirtualized({
 					<div className="bg-white/60 dark:bg-black/60 absolute pointer-events-none rounded-lg -inset-[1px] z-70" />
 				)}
 
-			{/* Fixed header table - scrolls horizontally in sync with body */}
 				<div
 					ref={headerRef}
-					className="overflow-x-auto overflow-y-hidden scrollbar-none"
+					className="overflow-x-auto overflow-y-hidden scrollbar-none shrink-0"
 					style={{ scrollbarWidth: "none" }}
 				>
 					<div
@@ -110,7 +112,6 @@ export function TableContentVirtualized({
 							paddingRight: scrollbarWidth,
 						}}
 					>
-						{/* Column visibility toggle - only render if not in toolbar */}
 						{enableColumnVisibility && !columnVisibilityInToolbar && (
 							<div
 								className={cn(
@@ -130,17 +131,20 @@ export function TableContentVirtualized({
 					</div>
 				</div>
 
-				{/* Scroll container for body only - key forces remount when columns change */}
 				<div
 					key={visibleColumnKey}
 					ref={setScrollContainer}
 					onScroll={handleScroll}
-					className="w-full overflow-auto"
+					className={cn(
+						"w-full overflow-auto",
+						isFlexFill && "flex-1 min-h-0",
+					)}
 					style={{
-						minHeight,
-						maxHeight: virtualization?.containerHeight
-							? `calc(${virtualization.containerHeight} - ${headerHeight}px)`
-							: undefined,
+						minHeight: isFlexFill ? undefined : minHeight,
+						maxHeight:
+							!isFlexFill && virtualization?.containerHeight
+								? `calc(${virtualization.containerHeight} - ${headerHeight}px)`
+								: undefined,
 						willChange: "scroll-position",
 					}}
 				>
@@ -149,7 +153,6 @@ export function TableContentVirtualized({
 						flexibleTableColumns={flexibleTableColumns}
 						style={{ minWidth: `${totalWidth}px` }}
 					>
-						{/* Clone children with key to force remount when columns change */}
 						{React.Children.map(children, (child) =>
 							React.isValidElement(child)
 								? React.cloneElement(child, { key: visibleColumnKey })

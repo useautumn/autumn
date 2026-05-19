@@ -1,9 +1,11 @@
 import { groupAndFormatScopes } from "@autumn/shared";
-import { Calendar, Key, Shield, Trash2 } from "lucide-react";
+import { EllipsisVertical, Key, Shield, TrashIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
+import { TableCell, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	Dialog,
 	DialogContent,
@@ -12,60 +14,91 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { getBackendErr } from "@/utils/genUtils";
+import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
+import {
+	SETTINGS_ROW_CLASS,
+	SettingsTable,
+} from "@/views/settings/SettingsTable";
 
 interface OAuthConsent {
-	id: string;
-	clientId: string;
-	scopes: string[];
-	referenceId: string | null;
-	createdAt: string;
-	updatedAt: string;
+	readonly id: string;
+	readonly clientId: string;
+	readonly scopes: string[];
+	readonly referenceId: string | null;
+	readonly createdAt: string;
+	readonly updatedAt: string;
 }
 
 interface ClientInfo {
-	client_id: string;
-	name: string;
+	readonly client_id: string;
+	readonly name: string;
 }
 
 interface ApiKeyPreview {
-	prefix: string;
-	name: string;
-	env: string;
+	readonly prefix: string;
+	readonly name: string;
+	readonly env: string;
 }
 
-// Helper to render scope badges
-function renderScopeBadges(scopes: string[]): JSX.Element {
-	const grouped = groupAndFormatScopes(scopes);
+const COLUMNS = [
+	{ label: "Application", width: "20%" },
+	{ label: "Permissions", width: "50%" },
+	{ label: "Authorized", width: "25%" },
+] as const;
 
-	if (grouped.length === 0) {
-		return (
-			<span className="text-sm text-muted-foreground">No permissions</span>
-		);
-	}
+const ConsentRowToolbar = ({
+	consentId,
+	clientName,
+	onRevoke,
+}: {
+	readonly consentId: string;
+	readonly clientName: string;
+	readonly onRevoke: (consentId: string, clientName: string) => void;
+}) => {
+	const [open, setOpen] = useState(false);
 
 	return (
-		<div className="flex flex-wrap gap-1.5">
-			{grouped.map((permission) => (
-				<Badge
-					key={permission.resource}
-					variant="secondary"
-					className="text-xs"
+		<DropdownMenu open={open} onOpenChange={setOpen}>
+			<DropdownMenuTrigger asChild>
+				<IconButton
+					variant="skeleton"
+					size="icon"
+					iconOrientation="center"
+					icon={<EllipsisVertical />}
+					className="!h-5 !w-5 rounded-lg hover:bg-interactive-secondary-hover"
+				/>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent align="end" className="z-[200]">
+				<DropdownMenuItem
+					variant="destructive"
+					className="flex justify-between"
+					onClick={() => {
+						onRevoke(consentId, clientName);
+						setOpen(false);
+					}}
 				>
-					{permission.resourceName}: {permission.actions.join(", ")}
-				</Badge>
-			))}
-		</div>
+					<div className="flex justify-between items-center w-full gap-4">
+						<span>Revoke</span>
+						<TrashIcon size={12} />
+					</div>
+				</DropdownMenuItem>
+			</DropdownMenuContent>
+		</DropdownMenu>
 	);
-}
+};
 
 export const AuthorizedApps = () => {
 	const [consents, setConsents] = useState<OAuthConsent[]>([]);
 	const [clientNames, setClientNames] = useState<Record<string, string>>({});
 	const [isLoading, setIsLoading] = useState(true);
 	const [revokingId, setRevokingId] = useState<string | null>(null);
-
-	// Revoke confirmation dialog state
 	const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
 	const [revokeTarget, setRevokeTarget] = useState<{
 		consentId: string;
@@ -77,25 +110,18 @@ export const AuthorizedApps = () => {
 	const fetchConsents = async () => {
 		setIsLoading(true);
 		try {
-			// Use our new org-level consent endpoint
 			const response = await fetch(
 				`${import.meta.env.VITE_BACKEND_URL}/consents`,
-				{
-					credentials: "include",
-				},
+				{ credentials: "include" },
 			);
-
 			if (!response.ok) {
 				const error = await response.json().catch(() => ({}));
 				toast.error(error.message || "Failed to fetch authorized apps");
 				return;
 			}
-
 			const data = await response.json();
 			const consentList = (data.consents as OAuthConsent[]) || [];
 			setConsents(consentList);
-
-			// Fetch client names for each consent
 			const names: Record<string, string> = {};
 			await Promise.all(
 				consentList.map(async (consent) => {
@@ -131,22 +157,17 @@ export const AuthorizedApps = () => {
 		setRevokeDialogOpen(true);
 		setLoadingApiKeys(true);
 		setLinkedApiKeys([]);
-
-		// Fetch API keys linked to this consent
 		try {
 			const response = await fetch(
 				`${import.meta.env.VITE_BACKEND_URL}/consents/${consentId}/api-keys`,
-				{
-					credentials: "include",
-				},
+				{ credentials: "include" },
 			);
-
 			if (response.ok) {
 				const data = await response.json();
 				setLinkedApiKeys(data.apiKeys || []);
 			}
 		} catch {
-			// If we can't fetch API keys, just show the basic dialog
+			// Silent — dialog still usable without API key preview
 		} finally {
 			setLoadingApiKeys(false);
 		}
@@ -154,23 +175,17 @@ export const AuthorizedApps = () => {
 
 	const handleConfirmRevoke = async () => {
 		if (!revokeTarget) return;
-
 		setRevokingId(revokeTarget.consentId);
 		try {
 			const response = await fetch(
 				`${import.meta.env.VITE_BACKEND_URL}/consents/${revokeTarget.consentId}`,
-				{
-					method: "DELETE",
-					credentials: "include",
-				},
+				{ method: "DELETE", credentials: "include" },
 			);
-
 			if (!response.ok) {
 				const error = await response.json().catch(() => ({}));
 				toast.error(error.message || "Failed to revoke access");
 				return;
 			}
-
 			const result = await response.json();
 			toast.success(
 				`Access revoked for ${revokeTarget.clientName}${result.deletedApiKeys > 0 ? ` (${result.deletedApiKeys} API key${result.deletedApiKeys > 1 ? "s" : ""} deleted)` : ""}`,
@@ -186,81 +201,70 @@ export const AuthorizedApps = () => {
 		}
 	};
 
-	const formatDate = (dateString: string) => {
-		return new Date(dateString).toLocaleDateString("en-US", {
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-		});
-	};
+	if (isLoading) return null;
+
+	if (consents.length === 0) {
+		return (
+			<div className="rounded-lg shadow-card border bg-interactive-secondary px-4 py-12 text-center">
+				<Shield className="size-8 mx-auto mb-3 text-subtle" />
+				<p className="text-sm text-tertiary-foreground">
+					No applications have been authorized
+				</p>
+				<p className="text-xs text-subtle mt-1">
+					When you authorize an app to access this organization, it will appear
+					here
+				</p>
+			</div>
+		);
+	}
 
 	return (
-		<div className="flex flex-col">
-			<div className="border border-border rounded-xl overflow-hidden">
-				<div className="divide-y divide-border">
-					{isLoading ? (
-						<div className="px-4 py-12 text-center text-sm text-tertiary-foreground">
-							<span className="shimmer">Loading authorized apps...</span>
-						</div>
-					) : consents.length === 0 ? (
-						<div className="px-4 py-12 text-center">
-							<Shield className="w-8 h-8 mx-auto mb-3 text-subtle" />
-							<p className="text-sm text-tertiary-foreground">
-								No applications have been authorized
-							</p>
-							<p className="text-xs text-subtle mt-1">
-								When you authorize an app to access this organization, it will
-								appear here
-							</p>
-						</div>
-					) : (
-						consents.map((consent) => (
-							<div
-								key={consent.id}
-								className="px-4 py-4 flex items-start justify-between gap-4"
-							>
-								<div className="flex-1 min-w-0">
-									<div className="flex items-center gap-2">
-										<p className="text-sm font-medium text-foreground">
-											{clientNames[consent.clientId] || "Loading..."}
-										</p>
-									</div>
-
-									{/* Scopes - Grouped by Resource */}
-									<div className="mt-2">
-										{renderScopeBadges(consent.scopes)}
-									</div>
-
-									{/* Date */}
-									<div className="flex items-center gap-1 mt-2 text-xs text-tertiary-foreground">
-										<Calendar className="w-3 h-3" />
-										<span>Authorized on {formatDate(consent.createdAt)}</span>
-									</div>
+		<>
+			<SettingsTable columns={COLUMNS}>
+				{consents.map((consent) => {
+					const grouped = groupAndFormatScopes(consent.scopes);
+					const name = clientNames[consent.clientId] || "Loading...";
+					return (
+						<TableRow key={consent.id} className={SETTINGS_ROW_CLASS}>
+							<TableCell className="pl-4 text-foreground font-medium">
+								{name}
+							</TableCell>
+							<TableCell>
+								<div className="flex flex-wrap gap-1">
+									{grouped.length === 0 ? (
+										<span className="text-xs text-tertiary-foreground">
+											No permissions
+										</span>
+									) : (
+										grouped.map((p) => (
+											<Badge
+												key={p.resource}
+												variant="muted"
+												size="sm"
+											>
+												{p.resourceName}: {p.actions.join(", ")}
+											</Badge>
+										))
+									)}
 								</div>
+							</TableCell>
+							<TableCell className="text-tertiary-foreground text-xs">
+								{formatDateStr(consent.createdAt)}
+							</TableCell>
+							<TableCell className="pr-2">
+								<div className="flex justify-end">
+									<ConsentRowToolbar
+										consentId={consent.id}
+										clientName={name}
+										onRevoke={handleRevokeClick}
+									/>
+								</div>
+							</TableCell>
+						</TableRow>
+					);
+				})}
+			</SettingsTable>
 
-								{/* Revoke Button */}
-								<Button
-									variant="secondary"
-									size="sm"
-									onClick={() =>
-										handleRevokeClick(
-											consent.id,
-											clientNames[consent.clientId] || "this app",
-										)
-									}
-									disabled={revokingId === consent.id}
-									className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-950/30"
-								>
-									<Trash2 className="w-3.5 h-3.5 mr-1.5" />
-									{revokingId === consent.id ? "Revoking..." : "Revoke"}
-								</Button>
-							</div>
-						))
-					)}
-				</div>
-			</div>
-
-			{/* Revoke Confirmation Dialog */}
 			<Dialog open={revokeDialogOpen} onOpenChange={setRevokeDialogOpen}>
 				<DialogContent>
 					<DialogHeader>
@@ -273,8 +277,6 @@ export const AuthorizedApps = () => {
 							? This app will no longer be able to access your organization.
 						</DialogDescription>
 					</DialogHeader>
-
-					{/* Show linked API keys that will be deleted */}
 					{loadingApiKeys ? (
 						<div className="py-3 text-sm text-tertiary-foreground">
 							Checking for linked API keys...
@@ -282,7 +284,7 @@ export const AuthorizedApps = () => {
 					) : linkedApiKeys.length > 0 ? (
 						<div className="py-2">
 							<div className="flex items-center gap-2 text-sm font-medium text-amber-600 dark:text-amber-400 mb-2">
-								<Key className="w-4 h-4" />
+								<Key className="size-4" />
 								<span>The following API keys will also be deleted:</span>
 							</div>
 							<div className="space-y-1.5 bg-input/50 dark:bg-input/30 rounded-md p-3">
@@ -295,7 +297,9 @@ export const AuthorizedApps = () => {
 											{key.prefix}...
 										</code>
 										<div className="flex items-center gap-2">
-											<span className="text-tertiary-foreground text-xs">{key.name}</span>
+											<span className="text-tertiary-foreground text-xs">
+												{key.name}
+											</span>
 											<span
 												className={`text-xs px-1.5 py-0.5 rounded ${
 													key.env === "live"
@@ -311,7 +315,6 @@ export const AuthorizedApps = () => {
 							</div>
 						</div>
 					) : null}
-
 					<DialogFooter>
 						<Button
 							variant="secondary"
@@ -329,6 +332,6 @@ export const AuthorizedApps = () => {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
-		</div>
+		</>
 	);
 };
