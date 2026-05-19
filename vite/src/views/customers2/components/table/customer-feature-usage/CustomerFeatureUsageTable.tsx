@@ -11,13 +11,13 @@ import { Table } from "@/components/general/table";
 import { SectionTag } from "@/components/v2/badges/SectionTag";
 import { Button } from "@/components/v2/buttons/Button";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useViewAsStore } from "@/hooks/stores/useViewAsStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { withEffectiveCustomerProductStatus } from "@/views/customers2/utils/effectiveCustomerProductStatus";
 import { rewriteCusProductAsLiveAt } from "../../../hooks/useCustomerProductsData";
 import {
+	useEffectiveEntityId,
 	useEffectiveNow,
 	useIsViewingAsPast,
 } from "../../../hooks/useEffectiveNow";
@@ -38,7 +38,7 @@ export function CustomerFeatureUsageTable() {
 	const { customer, features, isLoading } = useCusQuery();
 	const { setSheet } = useSheetStore();
 
-	const { entityId } = useEntity();
+	const entityId = useEffectiveEntityId();
 	const nowMs = useEffectiveNow();
 	const isViewAs = useIsViewingAsPast();
 	const pinnedCusProductId = useViewAsStore((s) => s.cusProductId);
@@ -47,7 +47,7 @@ export function CustomerFeatureUsageTable() {
 
 	const selectedEntity = useMemo(() => {
 		if (!entityId) return null;
-		return customer?.entities.find(
+		return (customer?.entities ?? []).find(
 			(e: Entity) => e.id === entityId || e.internal_id === entityId,
 		);
 	}, [customer?.entities, entityId]);

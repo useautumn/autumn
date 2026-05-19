@@ -8,6 +8,11 @@ import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
+import { useViewAsStore } from "@/hooks/stores/useViewAsStore";
+import {
+	useEffectiveEntityId,
+	useIsViewingAsPast,
+} from "@/views/customers2/hooks/useEffectiveNow";
 import { useCusQuery } from "../../../customers/customer/hooks/useCusQuery";
 import { CreateEntity } from "./CreateEntity";
 import { DeleteEntity } from "./DeleteEntity";
@@ -23,9 +28,24 @@ export const SelectedEntityDetails = () => {
 	const [createEntityOpen, setCreateEntityOpen] = useState(false);
 	const { features } = useFeaturesQuery();
 
-	const { entityId, setEntityId } = useEntity();
+	const { setEntityId } = useEntity();
+	const isViewAs = useIsViewingAsPast();
+	// In view-as mode, the effective entity comes from the pinned view-as scope
+	// (not the URL). The switcher is read-only in this mode.
+	const entityId = useEffectiveEntityId();
+	const asOfMs = useViewAsStore((s) => s.asOfMs);
 
-	const entities = (customer as FullCustomer)?.entities || [];
+	const rawEntities = (customer as FullCustomer)?.entities || [];
+	const entities =
+		isViewAs && asOfMs != null
+			? rawEntities.filter(
+					(e: Entity) =>
+						e.id === entityId ||
+						e.internal_id === entityId ||
+						e.created_at == null ||
+						e.created_at <= asOfMs,
+				)
+			: rawEntities;
 
 	const fullEntity = entities.find(
 		(e: Entity) => e.id === entityId || e.internal_id === entityId,
@@ -87,6 +107,7 @@ export const SelectedEntityDetails = () => {
 						getOptionLabel={getEntityLabel}
 						placeholder="Select entity"
 						searchable
+						disabled={isViewAs}
 						searchPlaceholder="Search entities..."
 						emptyText="No entities found"
 						triggerClassName="w-full sm:w-72"
@@ -116,16 +137,21 @@ export const SelectedEntityDetails = () => {
 							);
 						}}
 						footer={
-							<div className="border-t py-1.5 px-2">
-								<Button
-									variant="muted"
-									className="w-full"
-									onClick={() => setCreateEntityOpen(true)}
-								>
-									<PlusIcon className="size-[14px] text-t2" weight="regular" />
-									Create new entity
-								</Button>
-							</div>
+							isViewAs ? undefined : (
+								<div className="border-t py-1.5 px-2">
+									<Button
+										variant="muted"
+										className="w-full"
+										onClick={() => setCreateEntityOpen(true)}
+									>
+										<PlusIcon
+											className="size-[14px] text-t2"
+											weight="regular"
+										/>
+										Create new entity
+									</Button>
+								</div>
+							)
 						}
 					/>
 					{entityId && (
@@ -133,7 +159,7 @@ export const SelectedEntityDetails = () => {
 							size="icon"
 							variant="skeleton"
 							onClick={handleClearSelection}
-							disabled={!entityId}
+							disabled={!entityId || isViewAs}
 							className="text-t3 hover:text-t1 h-5 w-5 disabled:opacity-50 -mx-1"
 						>
 							<XIcon size={12} />
@@ -159,7 +185,7 @@ export const SelectedEntityDetails = () => {
 							size="icon"
 							variant="secondary"
 							onClick={() => setDeleteDialogOpen(true)}
-							disabled={!entityId}
+							disabled={!entityId || isViewAs}
 						>
 							<TrashIcon className="text-t3" />
 						</Button>

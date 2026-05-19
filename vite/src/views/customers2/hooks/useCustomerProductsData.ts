@@ -5,12 +5,15 @@ import {
 } from "@autumn/shared";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { useMemo } from "react";
-import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useViewAsStore } from "@/hooks/stores/useViewAsStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { filterCustomerProductsByType } from "../components/table/customer-products/customerProductsTableFilters";
 import { withEffectiveCustomerProductStatus } from "../utils/effectiveCustomerProductStatus";
-import { useEffectiveNow, useIsViewingAsPast } from "./useEffectiveNow";
+import {
+	useEffectiveEntityId,
+	useEffectiveNow,
+	useIsViewingAsPast,
+} from "./useEffectiveNow";
 
 /**
  * Rewrites a customer product so it renders as "alive at nowMs": clears Expired
@@ -63,7 +66,7 @@ function filterBySelectedEntity({
 
 export function useCustomerProductsData() {
 	const { customer, isLoading, testClockFrozenTimeMs } = useCusQuery();
-	const { entityId } = useEntity();
+	const entityId = useEffectiveEntityId();
 	const [showExpired, setShowExpired] = useQueryState(
 		"customerProductsShowExpired",
 		parseAsBoolean.withDefault(false),
@@ -71,6 +74,21 @@ export function useCustomerProductsData() {
 	const nowMs = useEffectiveNow();
 	const isViewAs = useIsViewingAsPast();
 	const pinnedCusProductId = useViewAsStore((s) => s.cusProductId);
+	const pinnedEntityId = useViewAsStore((s) => s.entityId);
+
+	// In view-as mode, hide entities created after asOfMs (best-effort historical
+	// snapshot). The pinned entity is always kept so the page never goes blank.
+	const visibleEntities = useMemo(() => {
+		const entities: Entity[] = customer?.entities ?? [];
+		if (!isViewAs) return entities;
+		return entities.filter(
+			(e) =>
+				e.id === pinnedEntityId ||
+				e.internal_id === pinnedEntityId ||
+				e.created_at == null ||
+				e.created_at <= nowMs,
+		);
+	}, [customer?.entities, isViewAs, nowMs, pinnedEntityId]);
 
 	const customerWithEffectiveStatuses = useMemo(() => {
 		const effective = customer.customer_products.map((customerProduct) =>
@@ -109,9 +127,9 @@ export function useCustomerProductsData() {
 			filterBySelectedEntity({
 				products: subscriptions.entityLevel,
 				entityId,
-				entities: customer.entities,
+				entities: visibleEntities,
 			}),
-		[subscriptions.entityLevel, entityId, customer.entities],
+		[subscriptions.entityLevel, entityId, visibleEntities],
 	);
 
 	const filteredPurchasesEntityLevel = useMemo(
@@ -119,9 +137,9 @@ export function useCustomerProductsData() {
 			filterBySelectedEntity({
 				products: purchases.entityLevel,
 				entityId,
-				entities: customer.entities,
+				entities: visibleEntities,
 			}),
-		[purchases.entityLevel, entityId, customer.entities],
+		[purchases.entityLevel, entityId, visibleEntities],
 	);
 
 	// Combine customer-level (always shown) + filtered entity-level products
@@ -144,7 +162,7 @@ export function useCustomerProductsData() {
 		showExpired,
 		setShowExpired,
 		entityId,
-		hasEntities: customer.entities.length > 0,
+		hasEntities: visibleEntities.length > 0,
 		subscriptions: {
 			all: allSubscriptions,
 			hasEntityProducts: subscriptions.entityLevel.length > 0,

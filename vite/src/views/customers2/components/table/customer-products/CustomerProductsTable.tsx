@@ -131,7 +131,9 @@ export function CustomerProductsTable() {
 		// when starts_at and ended_at are within the same millisecond (rapid upgrade).
 		const realNow = Date.now();
 		const asOfMs = product.starts_at ?? product.canceled_at ?? realNow;
-		setViewAs({ cusProductId: product.id, asOfMs });
+		const pinnedEntityId =
+			product.entity_id ?? product.internal_entity_id ?? null;
+		setViewAs({ cusProductId: product.id, asOfMs, entityId: pinnedEntityId });
 	};
 
 	const handleRowClick = (cusProduct: FullCusProduct) => {
