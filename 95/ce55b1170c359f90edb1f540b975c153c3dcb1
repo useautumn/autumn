@@ -1,0 +1,19 @@
+server/src/internal/customers/CusService.ts
+  s_eae5d29921fad3::t_3f163202eacc15 110-118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.10",
+  "base_commit_sha": "95ce55b1170c359f90edb1f540b975c153c3dcb1",
+  "prompts": {},
+  "sessions": {
+    "s_eae5d29921fad3": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1bec80993ffeH46ln8ydC9j54p",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
