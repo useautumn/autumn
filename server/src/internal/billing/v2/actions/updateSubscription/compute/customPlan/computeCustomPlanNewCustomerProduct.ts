@@ -91,6 +91,13 @@ export const computeCustomPlanNewCustomerProduct = ({
 				: {}),
 
 			...(params.status ? { status: params.status } : {}),
+
+			onTrialEnd:
+				trialContext?.onEnd ??
+				currentCustomerProduct.on_trial_end ??
+				undefined,
+			previousCustomerProductId:
+				currentCustomerProduct.previous_customer_product_id ?? undefined,
 		},
 	});
 
