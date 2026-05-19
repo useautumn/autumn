@@ -125,6 +125,7 @@ export function createRoute<
 	versionedQuery?: Query extends ZodType ? VersionedSchemas<Query> : never;
 	params?: Params;
 	resource?: AffectedResource;
+	/** Be VERY careful — wraps the ENTIRE handler in a txn; bad for handlers that call Stripe (writes aren't visible until response returns). */
 	withTx?: boolean;
 	handler?: (
 		c: ValidatedContext<HonoEnv, Body, Query, Params>,
