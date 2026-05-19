@@ -1,0 +1,35 @@
+vite/src/views/customers2/customer/CustomerView2.tsx
+  s_f7c7846d6ff3b4::t_926d1ac0c0e617 6
+  s_f7c7846d6ff3b4::t_7b406f1a7ddad9 65
+  s_f7c7846d6ff3b4::t_a8f4165ea3a262 36
+vite/src/views/customers2/utils/effectiveCustomerProductStatus.ts
+  s_f7c7846d6ff3b4::t_2db59e4667ae33 3,21-84
+vite/src/views/customers2/hooks/useCustomerProductsData.ts
+  s_f7c7846d6ff3b4::t_8904424f7ecd6b 1,7-11,57-61,70-74
+vite/src/views/customers2/components/sheets/SubscriptionDetailSheet.tsx
+  s_f7c7846d6ff3b4::t_9ea625198d338d 51
+vite/src/views/customers2/hooks/useViewAsLifecycle.ts
+  s_f7c7846d6ff3b4::t_7818adff0ea383 1-14
+vite/src/views/customers2/customer/components/SelectedEntityDetails.tsx
+  s_f7c7846d6ff3b4::t_48ce28f9159a78 16
+  s_f7c7846d6ff3b4::t_bed35e485bf3b3 42-46
+vite/src/views/customers2/components/table/customer-feature-usage/CustomerFeatureUsageTable.tsx
+  s_f7c7846d6ff3b4::t_310f076cf8afde 64-68
+  s_f7c7846d6ff3b4::t_f65e68c5a8f531 17-20
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.10",
+  "base_commit_sha": "608941d8f5a9a2085c39da9e634cedbe4a219c7c",
+  "prompts": {},
+  "sessions": {
+    "s_f7c7846d6ff3b4": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1be7a13f9ffe8WqRZzNynrVIQs",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
