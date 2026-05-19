@@ -107,11 +107,15 @@ export class CusService {
 					orgSlug: org.slug,
 				});
 
-				const useFlatModel = isOnNewFlatCusModel({
-					orgId,
-					env,
-					customerId: idOrInternalId,
-				});
+				const useFlatModel =
+					isOnNewFlatCusModel({
+						orgId,
+						env,
+						customerId: idOrInternalId,
+					}) &&
+					!withTrialsUsed &&
+					!withEvents &&
+					!entityId;
 
 				const query = useFlatModel
 					? getCursorPaginatedFullCusQuery({
