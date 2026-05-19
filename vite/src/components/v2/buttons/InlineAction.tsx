@@ -15,7 +15,7 @@ export function InlineAction({
 		<button
 			type="button"
 			className={cn(
-				"flex items-center gap-1 text-xs text-t4 hover:text-t2 transition-colors py-1 disabled:opacity-40 disabled:pointer-events-none",
+				"flex items-center gap-1 text-xs text-subtle hover:text-muted-foreground transition-colors py-1 disabled:opacity-40 disabled:pointer-events-none",
 				className,
 			)}
 			{...props}

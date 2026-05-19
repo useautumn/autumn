@@ -35,7 +35,7 @@ export const CustomerListRowToolbar = ({
 					</DropdownMenuTrigger>
 				</div>
 				<DropdownMenuContent
-					className="text-t2"
+					className="text-muted-foreground"
 					align="end"
 					onClick={(e) => e.stopPropagation()}
 				>
@@ -48,7 +48,7 @@ export const CustomerListRowToolbar = ({
 					>
 						<div className="flex items-center text-sm justify-between w-full gap-2">
 							Delete
-							<Trash size={12} className="text-t3" />
+							<Trash size={12} className="text-tertiary-foreground" />
 						</div>
 					</DropdownMenuItem>
 				</DropdownMenuContent>

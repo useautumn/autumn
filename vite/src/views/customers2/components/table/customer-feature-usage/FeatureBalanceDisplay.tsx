@@ -41,16 +41,16 @@ export function FeatureBalanceDisplay({
 		<div className={cn("flex items-baseline gap-1 truncate", className)}>
 			{shouldShowOutOfBalance && (
 				<>
-					<span className="text-t1">{formatNumber(displayBalance)}</span>
+					<span className="text-foreground">{formatNumber(displayBalance)}</span>
 					{allowance > 0 && (
-						<span className="text-t4">
+						<span className="text-subtle">
 							{compact
 								? `/ ${formatNumber(allowance)}`
 								: `/ ${formatNumber(allowance)} left`}
 						</span>
 					)}
 					{rolloverBalance > 0 && (
-						<span className="text-t4">
+						<span className="text-subtle">
 							(+{formatNumber(rolloverBalance)} rollover)
 						</span>
 					)}
@@ -60,7 +60,7 @@ export function FeatureBalanceDisplay({
 				<span className="truncate">
 					{shouldShowOutOfBalance && shouldShowUsed && " +"}
 					{formatNumber(overage)}{" "}
-					<span className="text-t4 truncate">{getUsedLabel()}</span>
+					<span className="text-subtle truncate">{getUsedLabel()}</span>
 				</span>
 			)}
 		</div>

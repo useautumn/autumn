@@ -96,7 +96,7 @@ export function SubscriptionUncancelSheet() {
 					title="Uncancel Subscription"
 					description="Loading subscription..."
 				/>
-				<div className="p-4 text-sm text-t3">Loading...</div>
+				<div className="p-4 text-sm text-tertiary-foreground">Loading...</div>
 			</div>
 		);
 	}
@@ -105,7 +105,7 @@ export function SubscriptionUncancelSheet() {
 		return (
 			<div className="flex flex-col h-full">
 				<SheetHeader title="Uncancel Subscription" description="Loading..." />
-				<div className="p-4 text-sm text-t3">Loading...</div>
+				<div className="p-4 text-sm text-tertiary-foreground">Loading...</div>
 			</div>
 		);
 	}

@@ -18,7 +18,7 @@ export function StackSelector({
 			<div className="flex flex-col gap-4">
 				{STACK_SECTIONS.map((section) => (
 					<div key={section.configKey} className="flex flex-col gap-2">
-						<h4 className="text-xs font-medium text-t3">{section.label}</h4>
+						<h4 className="text-xs font-medium text-tertiary-foreground">{section.label}</h4>
 						<div className="flex flex-row gap-1.5 flex-wrap">
 							{section.options.map((option) => (
 								<StackBadge

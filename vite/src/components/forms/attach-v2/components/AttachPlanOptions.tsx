@@ -50,7 +50,7 @@ export function AttachPlanOptions() {
 												)}
 											>
 												Version {selectedVersion}
-												<CaretDownIcon className="size-3.5 text-t3" />
+												<CaretDownIcon className="size-3.5 text-tertiary-foreground" />
 											</Button>
 										</DropdownMenuTrigger>
 										<DropdownMenuContent align="end">

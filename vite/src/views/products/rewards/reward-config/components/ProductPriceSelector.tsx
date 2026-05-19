@@ -98,7 +98,7 @@ export function ProductPriceSelector({
 	});
 
 	if (!products || products.length === 0) {
-		return <p className="text-sm text-t3">No products available</p>;
+		return <p className="text-sm text-tertiary-foreground">No products available</p>;
 	}
 
 	// Build options list - not used for display, just for reference

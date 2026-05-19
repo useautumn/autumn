@@ -215,7 +215,7 @@ export function BillingUsageAlertSheet() {
 				<SheetSection withSeparator>
 					<FormLabel>Feature</FormLabel>
 					{isEdit ? (
-						<div className="text-sm text-t2">
+						<div className="text-sm text-muted-foreground">
 							{featureId
 								? (nonArchivedFeatures.find((f: Feature) => f.id === featureId)
 										?.name ?? featureId)
@@ -236,14 +236,14 @@ export function BillingUsageAlertSheet() {
 						<div className="flex items-center gap-4">
 							<div className="flex flex-col">
 								<FormLabel>Remaining</FormLabel>
-								<span className="text-sm text-t2">
+								<span className="text-sm text-muted-foreground">
 									{featureRemaining.remaining.toLocaleString()}
 								</span>
 							</div>
 							{featureRemaining.remainingPercentage !== null && (
 								<div className="flex flex-col">
 									<FormLabel>Remaining %</FormLabel>
-									<span className="text-sm text-t2">
+									<span className="text-sm text-muted-foreground">
 										{Math.round(featureRemaining.remainingPercentage)}%
 									</span>
 								</div>

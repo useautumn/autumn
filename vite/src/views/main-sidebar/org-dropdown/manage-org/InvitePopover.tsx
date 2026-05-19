@@ -84,7 +84,7 @@ export const InvitePopover = () => {
 					<div className="flex flex-col gap-3">
 						<div>
 							<FormLabel>
-								<span className="text-t2">Email</span>
+								<span className="text-muted-foreground">Email</span>
 							</FormLabel>
 							<input
 								type="email"
@@ -119,7 +119,7 @@ export const InvitePopover = () => {
 						</div>
 						<div>
 							<FormLabel>
-								<span className="text-t2">Role</span>
+								<span className="text-muted-foreground">Role</span>
 							</FormLabel>
 							<RoleSelect
 								value={role}

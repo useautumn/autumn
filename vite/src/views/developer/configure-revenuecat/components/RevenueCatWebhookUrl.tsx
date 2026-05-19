@@ -21,10 +21,10 @@ export const RevenueCatWebhookUrl = ({
 
 	return (
 		<div>
-			<FormLabel className="mb-1 text-t2">
+			<FormLabel className="mb-1 text-muted-foreground">
 				<span>Webhook URL</span>
 			</FormLabel>
-			<p className="text-t3 text-sm mb-2">
+			<p className="text-tertiary-foreground text-sm mb-2">
 				This is the webhook URL for your RevenueCat integration. You should
 				provide this to RevenueCat as the webhook URL in your project settings.
 			</p>

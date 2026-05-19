@@ -128,7 +128,7 @@ export function SelectFeatureSheet({
 						onOpenChange={setSelectOpen}
 						renderExtra={(feature) =>
 							featuresInPlan.has(feature.id) ? (
-								<span className="shrink-0 text-xs text-t3 bg-muted px-1 py-0 rounded-md">
+								<span className="shrink-0 text-xs text-tertiary-foreground bg-muted px-1 py-0 rounded-md">
 									Already in plan
 								</span>
 							) : null
@@ -139,7 +139,7 @@ export function SelectFeatureSheet({
 								className="w-full"
 								onClick={handleCreateNew}
 							>
-								<PlusIcon className="size-[14px] text-t2" weight="regular" />
+								<PlusIcon className="size-[14px] text-muted-foreground" weight="regular" />
 								Create new feature
 							</Button>
 						}

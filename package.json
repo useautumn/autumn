@@ -56,7 +56,8 @@
 		"diff": "8.0.3",
 		"@smithy/config-resolver": "^4.4.0",
 		"lodash": "4.17.23",
-		"lodash-es": "4.17.23"
+		"lodash-es": "4.17.23",
+		"@types/pg": "8.11.10"
 	},
 	"resolutions": {
 		"@better-auth/core": "1.6.5",
@@ -69,7 +70,8 @@
 		"diff": "8.0.3",
 		"@smithy/config-resolver": "^4.4.0",
 		"lodash": "4.17.23",
-		"lodash-es": "4.17.23"
+		"lodash-es": "4.17.23",
+		"@types/pg": "8.11.10"
 	},
 	"type": "module",
 	"scripts": {
@@ -112,9 +114,7 @@
 		"setupci": "node scripts/setup/setupci.js",
 		"replicate": "bun scripts/db/replicate.ts",
 		"db:pull": "bun scripts/db/pull.ts",
-		"db:push": " bun -F @autumn/shared db:push",
-		"db:generate": "bun -F @autumn/shared db:generate",
-		"db:migrate": " bun -F @autumn/shared db:migrate",
+		"db": "bun scripts/db/index.ts",
 		"test:integration": "cd server && bun test:integration",
 		"exp": "sh -c 'infisical run --recursive --env=staging -- bun run server/experiments/$0'",
 		"q": "lsof -ti:8080 -ti:3000 | xargs kill -9",

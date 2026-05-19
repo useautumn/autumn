@@ -19,8 +19,8 @@ export function ScheduledPlanGuard({ children }: { children: ReactNode }) {
 			transition={{ duration: 0.2, ease: [0.23, 1, 0.32, 1] }}
 		>
 			<div className="space-y-1">
-				<p className="text-sm font-medium text-t1">Managed by a schedule</p>
-				<p className="text-xs text-t3 leading-relaxed">
+				<p className="text-sm font-medium text-foreground">Managed by a schedule</p>
+				<p className="text-xs text-tertiary-foreground leading-relaxed">
 					Updates to this plan must be made through the active schedule.
 				</p>
 			</div>

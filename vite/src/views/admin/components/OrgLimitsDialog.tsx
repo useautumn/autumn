@@ -194,11 +194,11 @@ export function OrgLimitsDialog({
 				</DialogHeader>
 
 				{loading ? (
-					<div className="py-8 text-center text-sm text-t3">Loading...</div>
+					<div className="py-8 text-center text-sm text-tertiary-foreground">Loading...</div>
 				) : (
 					<div className="grid grid-cols-[320px_1fr] gap-6">
 						<div className="flex flex-col gap-4">
-							<div className="text-xs font-medium uppercase tracking-wide text-t3">
+							<div className="text-xs font-medium uppercase tracking-wide text-tertiary-foreground">
 								Org Overrides
 							</div>
 
@@ -233,7 +233,7 @@ export function OrgLimitsDialog({
 
 								<div className="flex flex-col gap-2 border-t border-border pt-3">
 									{entryRows.length === 0 ? (
-										<div className="text-xs italic text-t3">
+										<div className="text-xs italic text-tertiary-foreground">
 											No org overrides — all orgs use default (
 											{DEFAULT_CUS_PRODUCT_LIMIT})
 										</div>
@@ -244,10 +244,10 @@ export function OrgLimitsDialog({
 												className="flex items-start justify-between gap-3 rounded-lg border border-border p-2"
 											>
 												<div className="min-w-0 flex-1">
-													<div className="truncate font-mono text-xs text-t1">
+													<div className="truncate font-mono text-xs text-foreground">
 														{entry.orgId}
 													</div>
-													<div className="text-xs text-t2">
+													<div className="text-xs text-muted-foreground">
 														maxCusProducts: {entry.maxCusProducts}
 													</div>
 												</div>
@@ -264,7 +264,7 @@ export function OrgLimitsDialog({
 								</div>
 							</div>
 
-							<div className="rounded-lg border border-border p-3 text-xs text-t3">
+							<div className="rounded-lg border border-border p-3 text-xs text-tertiary-foreground">
 								<div className="mb-2 flex items-center gap-2">
 									<Badge
 										variant="muted"
@@ -295,7 +295,7 @@ export function OrgLimitsDialog({
 						</div>
 
 						<div className="flex flex-col gap-2">
-							<div className="text-xs font-medium uppercase tracking-wide text-t3">
+							<div className="text-xs font-medium uppercase tracking-wide text-tertiary-foreground">
 								Raw JSON
 							</div>
 							<div className="overflow-hidden rounded-md border border-border">

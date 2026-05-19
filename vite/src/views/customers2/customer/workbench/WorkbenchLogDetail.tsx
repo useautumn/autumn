@@ -29,7 +29,7 @@ export const WorkbenchLogDetail = ({
 
 	if (!log) {
 		return (
-			<div className="flex-1 min-h-0 flex items-center justify-center text-xs text-t4">
+			<div className="flex-1 min-h-0 flex items-center justify-center text-xs text-subtle">
 				Select a request to view details
 			</div>
 		);
@@ -47,7 +47,7 @@ export const WorkbenchLogDetail = ({
 };
 
 const SectionLabel = ({ children }: { children: React.ReactNode }) => (
-	<div className="text-[10px] uppercase tracking-wide text-t4 font-semibold mb-1.5">
+	<div className="text-[10px] uppercase tracking-wide text-subtle font-semibold mb-1.5">
 		{children}
 	</div>
 );
@@ -86,14 +86,14 @@ const ContextViewer = ({ raw }: { raw: Record<string, unknown> }) => {
 
 const DetailHeader = ({ log }: { log: RequestLogEntry }) => (
 	<div className="mb-4 pb-3 border-b border-border/40">
-		<div className="text-[10px] uppercase tracking-wide text-t4 font-semibold mb-1">
+		<div className="text-[10px] uppercase tracking-wide text-subtle font-semibold mb-1">
 			API request
 		</div>
 		<div className="flex items-center gap-2 font-mono text-sm">
 			<span className={cn("font-semibold", methodColorClass(log.method))}>
 				{log.method ?? "—"}
 			</span>
-			<span className="text-t1 break-all">{log.path ?? "(unknown)"}</span>
+			<span className="text-foreground break-all">{log.path ?? "(unknown)"}</span>
 		</div>
 	</div>
 );
@@ -106,8 +106,8 @@ const Row = ({
 	children: React.ReactNode;
 }) => (
 	<>
-		<dt className="text-t3 text-xs py-1">{label}</dt>
-		<dd className="text-t1 text-xs py-1 min-w-0">{children}</dd>
+		<dt className="text-tertiary-foreground text-xs py-1">{label}</dt>
+		<dd className="text-foreground text-xs py-1 min-w-0">{children}</dd>
 	</>
 );
 
@@ -130,7 +130,7 @@ const DetailRows = ({ log }: { log: RequestLogEntry }) => (
 					<span className="font-mono break-all">{log.reqId}</span>
 					<CopyButton
 						text={log.reqId}
-						className="bg-transparent shadow-none hover:bg-stone-200 dark:hover:bg-stone-800 w-5 gap-0 h-5 !px-0 py-0 flex items-center justify-center text-t3 shrink-0"
+						className="bg-transparent shadow-none hover:bg-stone-200 dark:hover:bg-stone-800 w-5 gap-0 h-5 !px-0 py-0 flex items-center justify-center text-tertiary-foreground shrink-0"
 					/>
 				</div>
 			</Row>

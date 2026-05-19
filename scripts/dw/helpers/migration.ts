@@ -1,71 +1,33 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { sh, fatal, log } from "./shell.ts";
-import { SHARED_DIR, PROJECT_ROOT } from "../constants.ts";
+import { sh, shInherit, fatal, log } from "./shell.ts";
+import { PROJECT_ROOT } from "../constants.ts";
 
-export function listSqlFiles(dir: string): string[] {
-	if (!existsSync(dir)) return [];
-	return readdirSync(dir).filter((f) => f.endsWith(".sql"));
-}
-
-export function writeTempDrizzleConfig(outDir: string): string {
-	const tmp = join(SHARED_DIR, `.dw-${process.pid}.config.ts`);
-	const content = `import { defineConfig } from "drizzle-kit";\nexport default defineConfig({\n\tdialect: "postgresql",\n\tout: ${JSON.stringify(outDir)},\n\tschema: "./db/schema.ts",\n\tdbCredentials: { url: process.env.DATABASE_URL! },\n});\n`;
-	writeFileSync(tmp, content);
-	return tmp;
-}
-
-export function generateAndApplyMigration(
+/**
+ * Brings a freshly-provisioned Neon branch up to the canonical schema.
+ *
+ * Strategy: invoke the shared `bun db migrate --bootstrap` CLI with the new
+ * branch's DATABASE_URL injected directly (bypassing infisical). `--bootstrap`
+ * skips the index-DDL safety check, which is safe here because the DB is empty
+ * and has no concurrent traffic.
+ */
+export function applyCommittedMigrations(
 	branchName: string,
 	databaseUrl: string,
 ): void {
-	// Use the worktree's own shared/drizzle/ as the migration dir (matches
-	// drizzle.config.ts out: "./drizzle"). Empty it first so the baseline
-	// generated for this fresh Neon branch isn't a diff against the canonical
-	// repo's migration history — subsequent `bun db:generate` runs then emit
-	// clean incrementals against this worktree's actual DB state.
-	const outDir = join(SHARED_DIR, "drizzle");
-	if (existsSync(outDir)) rmSync(outDir, { recursive: true, force: true });
-	mkdirSync(outDir, { recursive: true });
+	log(`applying committed migrations to ${branchName}`);
 
-	const drizzleConfigPath = writeTempDrizzleConfig(outDir);
-	try {
-		log(`generating initial migration for ${branchName}`);
-		const gen = sh(
-			"bunx",
-			["drizzle-kit", "generate", "--config", drizzleConfigPath],
-			{
-				cwd: SHARED_DIR,
-				env: {
-					...(process.env as Record<string, string>),
-					NODE_OPTIONS: "--import tsx",
-				},
-			},
-		);
-		if (gen.code !== 0) {
-			fatal(`drizzle-kit generate failed:\n${gen.stdout}\n${gen.stderr}`);
-		}
+	const code = shInherit("bun", ["db", "migrate", "--bootstrap"], {
+		cwd: PROJECT_ROOT,
+		env: {
+			...(process.env as Record<string, string>),
+			DATABASE_URL: databaseUrl,
+			AUTUMN_DB_DIRECT: "1",
+		},
+	});
 
-		const sqlFiles = listSqlFiles(outDir);
-		if (sqlFiles.length === 0) {
-			fatal(`no .sql files generated in ${outDir}`);
-		}
-
-		log(`applying ${sqlFiles.length} migration file(s) to ${branchName}`);
-		for (const f of sqlFiles) {
-			const p = join(outDir, f);
-			const sqlBody = readFileSync(p, "utf-8");
-			const mig = sh("psql", [databaseUrl, "-v", "ON_ERROR_STOP=1"], {
-				stdin: sqlBody,
-			});
-			if (mig.code !== 0) {
-				fatal(
-					`applying migration ${f} failed:\n${mig.stdout}\n${mig.stderr}`,
-				);
-			}
-		}
-	} finally {
-		if (existsSync(drizzleConfigPath)) rmSync(drizzleConfigPath);
+	if (code !== 0) {
+		fatal(`bun db migrate --bootstrap failed for ${branchName} (exit ${code})`);
 	}
 }
 

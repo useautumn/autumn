@@ -46,7 +46,7 @@ export function FeatureUsageCell({
 	}
 
 	if (isUnlimited) {
-		return <span className="text-t3 text-tiny px-1">Unlimited</span>;
+		return <span className="text-tertiary-foreground text-tiny px-1">Unlimited</span>;
 	}
 
 	return (

@@ -83,7 +83,7 @@ const OrgLogoUploader: React.FC = () => {
 	return (
 		<div className="flex flex-col gap-1">
 			<FormLabel>
-				<span className="text-t2">Logo</span>
+				<span className="text-muted-foreground">Logo</span>
 			</FormLabel>
 			<div className="flex items-center gap-3">
 				<input
@@ -100,7 +100,7 @@ const OrgLogoUploader: React.FC = () => {
 						className="w-10 h-10 rounded-md object-cover border border-border"
 					/>
 				) : (
-					<div className="w-10 h-10 rounded-md flex items-center justify-center border border-border border-dashed text-t4">
+					<div className="w-10 h-10 rounded-md flex items-center justify-center border border-border border-dashed text-subtle">
 						<ImageIcon className="size-4" />
 					</div>
 				)}
@@ -125,7 +125,7 @@ const OrgLogoUploader: React.FC = () => {
 						</Button>
 					)}
 				</div>
-				<span className="text-xs text-t4">1:1, up to {MAX_SIZE_MB}MB</span>
+				<span className="text-xs text-subtle">1:1, up to {MAX_SIZE_MB}MB</span>
 			</div>
 			{error && <span className="text-xs text-destructive">{error}</span>}
 		</div>

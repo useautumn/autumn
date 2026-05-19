@@ -28,8 +28,8 @@ export const WorkbenchButton = () => {
 				toggle();
 			}}
 			className={cn(
-				"cursor-pointer font-medium text-sm flex items-center text-t2 px-2 h-7 rounded-lg w-full hover:text-t1 border border-transparent focus:outline-none focus-visible:outline-none",
-				isOpen && "border border-border !text-t1 bg-interactive-secondary",
+				"cursor-pointer font-medium text-sm flex items-center text-muted-foreground px-2 h-7 rounded-lg w-full hover:text-foreground border border-transparent focus:outline-none focus-visible:outline-none",
+				isOpen && "border border-border !text-foreground bg-interactive-secondary",
 			)}
 		>
 			<div className="flex items-center gap-2">

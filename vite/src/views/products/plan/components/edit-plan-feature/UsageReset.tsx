@@ -127,7 +127,7 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 					checked={isOneOff}
 					onCheckedChange={handleOneOffToggle}
 					disabled={isUnlimited}
-					className="py-1 w-26 text-t4 gap-2 justify-start"
+					className="py-1 w-26 text-subtle gap-2 justify-start"
 				>
 					One-off
 				</IconCheckbox>
