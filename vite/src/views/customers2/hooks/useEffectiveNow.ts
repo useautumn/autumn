@@ -1,15 +1,20 @@
+import { useMemo } from "react";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useViewAsStore } from "@/hooks/stores/useViewAsStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 
 /**
  * Returns the effective "now" timestamp (ms) for the customer view.
- * Precedence: view-as `asOfMs` > test-clock frozen time > `Date.now()`.
+ * Precedence: view-as `asOfMs` > test-clock frozen time > a stable `Date.now()`
+ * captured once per consumer so downstream memos don't churn.
  */
 export function useEffectiveNow(): number {
 	const asOfMs = useViewAsStore((s) => s.asOfMs);
 	const { testClockFrozenTimeMs } = useCusQuery();
-	return asOfMs ?? testClockFrozenTimeMs ?? Date.now();
+	return useMemo(
+		() => asOfMs ?? testClockFrozenTimeMs ?? Date.now(),
+		[asOfMs, testClockFrozenTimeMs],
+	);
 }
 
 /** True iff the customer is being viewed at a past, pinned date. */

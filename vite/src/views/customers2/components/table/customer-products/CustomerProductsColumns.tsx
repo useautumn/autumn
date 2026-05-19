@@ -100,10 +100,13 @@ export const CustomerProductsColumns = [
 			if (!meta?.onCancelClick) return null;
 
 			const isCanceling = row.original.canceled;
-			const isMain = !row.original.product.is_add_on;
+			const isMain = !row.original.product?.is_add_on;
 			const isExpired = row.original.status === CusProductStatus.Expired;
 			const canViewAs = isMain && (isExpired || isCanceling);
 			const disabledByViewAs = meta.isViewAs === true;
+			// Avoid passing `disabled={false}` to Radix items; only set the prop
+			// when actually disabling so unrelated rerenders behave like before.
+			const disabledProps = disabledByViewAs ? { disabled: true } : {};
 
 			return (
 				<div className="flex justify-end">
@@ -133,7 +136,7 @@ export const CustomerProductsColumns = [
 						{meta.hasEntities && meta.onTransferClick && (
 							<DropdownMenuItem
 								className="flex items-center gap-2 text-xs"
-								disabled={disabledByViewAs}
+								{...disabledProps}
 								onClick={(e) => {
 									e.stopPropagation();
 									meta.onTransferClick?.(row.original);
@@ -145,7 +148,7 @@ export const CustomerProductsColumns = [
 						{meta.onUpdateClick && (
 							<DropdownMenuItem
 								className="flex items-center gap-2 text-xs"
-								disabled={disabledByViewAs}
+								{...disabledProps}
 								onClick={(e) => {
 									e.stopPropagation();
 									meta.onUpdateClick?.(row.original);
@@ -157,7 +160,7 @@ export const CustomerProductsColumns = [
 						{isCanceling ? (
 							<DropdownMenuItem
 								className="flex items-center gap-2 text-xs"
-								disabled={disabledByViewAs}
+								{...disabledProps}
 								onClick={(e) => {
 									e.stopPropagation();
 									meta.onUncancelClick?.(row.original);
@@ -168,7 +171,7 @@ export const CustomerProductsColumns = [
 						) : (
 							<DropdownMenuItem
 								className="flex items-center gap-2 text-xs text-red-500 dark:text-red-400"
-								disabled={disabledByViewAs}
+								{...disabledProps}
 								onClick={(e) => {
 									e.stopPropagation();
 									meta.onCancelClick?.(row.original);

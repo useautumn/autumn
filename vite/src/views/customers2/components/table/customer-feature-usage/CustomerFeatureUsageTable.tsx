@@ -65,7 +65,7 @@ export function CustomerFeatureUsageTable() {
 			? customerProducts
 					.filter((cp: FullCusProduct) => {
 						if (cp.id === pinnedCusProductId) return true;
-						if (cp.product.is_add_on) return false;
+						if (cp.product?.is_add_on) return false;
 						const startedBefore = cp.starts_at == null || cp.starts_at <= nowMs;
 						const endedAfter = cp.ended_at == null || cp.ended_at > nowMs;
 						return startedBefore && endedAfter;

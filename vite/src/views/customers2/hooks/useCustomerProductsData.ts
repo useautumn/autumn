@@ -91,8 +91,9 @@ export function useCustomerProductsData() {
 	}, [customer?.entities, isViewAs, nowMs, pinnedEntityId]);
 
 	const customerWithEffectiveStatuses = useMemo(() => {
-		const effective = customer.customer_products.map((customerProduct) =>
-			withEffectiveCustomerProductStatus({ customerProduct, nowMs }),
+		const effective = (customer?.customer_products ?? []).map(
+			(customerProduct: FullCusProduct) =>
+				withEffectiveCustomerProductStatus({ customerProduct, nowMs }),
 		);
 		// In view-as mode, hide add-ons / one-offs and anything not alive at nowMs.
 		// The pinned product is always included so zero-lifetime edges still render.
@@ -101,7 +102,7 @@ export function useCustomerProductsData() {
 			? effective
 					.filter((cp) => {
 						if (cp.id === pinnedCusProductId) return true;
-						if (cp.product.is_add_on) return false;
+						if (cp.product?.is_add_on) return false;
 						const startedBefore = cp.starts_at == null || cp.starts_at <= nowMs;
 						const endedAfter = cp.ended_at == null || cp.ended_at > nowMs;
 						return startedBefore && endedAfter;
