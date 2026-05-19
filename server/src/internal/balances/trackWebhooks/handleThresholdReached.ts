@@ -10,6 +10,7 @@ import {
 	dbToApiFeatureV1,
 	type Feature,
 	type FullCustomer,
+	fullCustomerToTags,
 	WebhookEventType,
 } from "@autumn/shared";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
@@ -99,6 +100,7 @@ const handleAllowanceUsed = async ({
 					targetVersion: ctx.apiVersion,
 				}),
 			},
+			tags: fullCustomerToTags({ fullCustomer: newFullCus }),
 		});
 	}
 };
@@ -172,6 +174,7 @@ export const handleThresholdReached = async ({
 						targetVersion: ctx.apiVersion,
 					}),
 				},
+				tags: fullCustomerToTags({ fullCustomer: newFullCus }),
 			});
 			ctx.logger.info(
 				"Sent Svix event for threshold reached (type: limit_reached)",
