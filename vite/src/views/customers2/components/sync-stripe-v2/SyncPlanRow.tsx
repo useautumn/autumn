@@ -133,7 +133,7 @@ export function SyncPlanRow({
 	const availableProducts = products.filter((p) => !p.archived);
 	const selectedProduct = products.find((p) => p.id === plan.plan_id);
 	const hasCustomize = Boolean(plan.customize);
-	const hasEntityScope = Boolean(plan.internal_entity_id);
+	const hasEntityScope = Boolean(plan.entity_id);
 
 	const [scopeOpen, setScopeOpen] = useState<boolean>(hasEntityScope);
 
@@ -279,9 +279,9 @@ export function SyncPlanRow({
 			{entities.length > 0 && scopeOpen && (
 				<EntityScopeSubRow
 					entities={entities}
-					scopeEntityId={plan.internal_entity_id}
+					scopeEntityId={plan.entity_id}
 					onChange={(entityId) =>
-						onChange({ ...plan, internal_entity_id: entityId })
+						onChange({ ...plan, entity_id: entityId })
 					}
 				/>
 			)}

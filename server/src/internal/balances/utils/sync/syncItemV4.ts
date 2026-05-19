@@ -10,6 +10,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCachedFeatureBalance } from "@/internal/customers/cache/fullSubject/balances/getCachedFeatureBalances.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { globalRefreshEntityAggregateBatchingManager } from "../refreshEntityAggregate/RefreshEntityAggregateBatchingManager";
+import { logSyncItem } from "./logs/logSyncItem";
 
 const SYNC_CONFLICT_CODES = {
 	ResetAtMismatch: "RESET_AT_MISMATCH",
@@ -69,7 +70,7 @@ interface SyncItemV4 {
 	modifiedCusEntIdsByFeatureId: Record<string, string[]>;
 }
 
-interface SyncEntry {
+export interface SyncEntry {
 	customer_entitlement_id: string;
 	feature_id: string;
 	balance: number;
@@ -80,7 +81,7 @@ interface SyncEntry {
 	cache_version: number | null;
 }
 
-interface RolloverSyncEntry {
+export interface RolloverSyncEntry {
 	rollover_id: string;
 	balance: number;
 	usage: number;
@@ -104,26 +105,6 @@ const subjectBalanceToSyncEntry = ({
 	cache_version: subjectBalance.cache_version ?? 0,
 });
 
-const formatSyncEntry = ({ entry }: { entry: SyncEntry }): string => {
-	const hasEntities = entry.entities && Object.keys(entry.entities).length > 0;
-	const entitiesStr = hasEntities
-		? `, entities= ${Object.keys(entry.entities!).length}`
-		: "";
-	return `${entry.feature_id} (${entry.customer_entitlement_id}): bal= ${entry.balance}, adj= ${entry.adjustment}${entitiesStr}`;
-};
-
-const formatRolloverSyncEntry = ({
-	entry,
-}: {
-	entry: RolloverSyncEntry;
-}): string => {
-	const hasEntities = entry.entities && Object.keys(entry.entities).length > 0;
-	const entitiesStr = hasEntities
-		? `, entities= ${Object.keys(entry.entities!).length}`
-		: "";
-	return `rollover ${entry.rollover_id}: bal= ${entry.balance}, usage= ${entry.usage}${entitiesStr}`;
-};
-
 /** Sync cached subject balances to Postgres using targeted hash reads. */
 export const syncItemV4 = async ({
 	ctx,
@@ -134,7 +115,7 @@ export const syncItemV4 = async ({
 }): Promise<void> => {
 	const { customerId, entityId, rolloverIds, modifiedCusEntIdsByFeatureId } =
 		payload;
-	const { db, logger } = ctx;
+	const { db } = ctx;
 
 	// Read targeted balance hashes
 	const allSubjectBalances: SubjectBalance[] = [];
@@ -150,9 +131,14 @@ export const syncItemV4 = async ({
 		});
 
 		if (outcome.kind !== "ok") {
-			logger.info(
-				`[SYNC V4] (${customerId}) Cache ${outcome.kind} for feature=${featureId}, skipping`,
-			);
+			logSyncItem({
+				ctx,
+				result: {
+					kind: "skipped",
+					reason: "cache_miss",
+					feature: featureId,
+				},
+			});
 			return;
 		}
 
@@ -184,17 +170,8 @@ export const syncItemV4 = async ({
 	}
 
 	if (entries.length === 0 && rolloverEntries.length === 0) {
-		logger.info(`[SYNC V4] (${customerId}) No entries to sync`);
+		logSyncItem({ ctx, result: { kind: "skipped", reason: "no_entries" } });
 		return;
-	}
-
-	for (const entry of entries) {
-		logger.info(`[SYNC V4] (${customerId}) ${formatSyncEntry({ entry })}`);
-	}
-	for (const entry of rolloverEntries) {
-		logger.info(
-			`[SYNC V4] (${customerId}) ${formatRolloverSyncEntry({ entry })}`,
-		);
 	}
 
 	const { data: result, error } = await tryCatch(
@@ -230,9 +207,16 @@ export const syncItemV4 = async ({
 		? Object.keys(syncResult.rollover_updates).length
 		: 0;
 
-	logger.info(
-		`[SYNC V4] (${customerId}) Done: ${updateCount} cus_ents, ${rolloverUpdateCount} rollovers updated`,
-	);
+	logSyncItem({
+		ctx,
+		result: {
+			kind: "synced",
+			entries,
+			rolloverEntries,
+			updateCount,
+			rolloverUpdateCount,
+		},
+	});
 
 	const hasEntityLevel = allSubjectBalances.some(
 		(subjectBalance) => subjectBalance.isEntityLevel,
