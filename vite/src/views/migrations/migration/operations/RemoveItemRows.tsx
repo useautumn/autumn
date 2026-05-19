@@ -17,7 +17,7 @@ export function RemoveItemRows({
 
 	return (
 		<div className="flex items-center gap-2 group/row">
-			<span className="text-xs text-t4 w-14 shrink-0 select-none">Remove</span>
+			<span className="text-xs text-subtle w-14 shrink-0 select-none">Remove</span>
 			<FeatureSearchDropdown
 				features={features}
 				value={featureId}

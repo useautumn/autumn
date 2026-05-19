@@ -16,7 +16,7 @@ export function BooleanPill({
 			{value ? (
 				<CheckCircleIcon size={14} weight="fill" className="text-green-500" />
 			) : (
-				<XCircleIcon size={14} weight="fill" className="text-t3" />
+				<XCircleIcon size={14} weight="fill" className="text-tertiary-foreground" />
 			)}
 			{value ? "True" : "False"}
 		</button>

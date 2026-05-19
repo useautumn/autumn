@@ -62,7 +62,7 @@ export const PlanCardHeader = () => {
 			</div>
 
 			{product.description && (
-				<span className="text-sm text-t3 max-w-[80%] line-clamp-2">
+				<span className="text-sm text-tertiary-foreground max-w-[80%] line-clamp-2">
 					{product.description}
 				</span>
 			)}

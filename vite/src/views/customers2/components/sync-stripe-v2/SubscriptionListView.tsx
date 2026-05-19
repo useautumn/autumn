@@ -73,10 +73,10 @@ const StripeItemRow = ({ item }: { item: Stripe.SubscriptionItem }) => {
 
 	return (
 		<div className="flex items-center justify-between text-xs gap-3">
-			<span className="text-t2 truncate min-w-0">{productName}</span>
-			<div className="shrink-0 ml-2 text-t3 text-right">
+			<span className="text-muted-foreground truncate min-w-0">{productName}</span>
+			<div className="shrink-0 ml-2 text-tertiary-foreground text-right">
 				{priceLabel}
-				{showQuantity && <span className="text-t4"> × {quantity}</span>}
+				{showQuantity && <span className="text-subtle"> × {quantity}</span>}
 			</div>
 		</div>
 	);
@@ -98,10 +98,10 @@ const ScheduleItemRow = ({
 
 	return (
 		<div className="flex items-center justify-between text-xs gap-3">
-			<span className="text-t2 truncate min-w-0">{productName}</span>
-			<div className="shrink-0 ml-2 text-t3 text-right">
+			<span className="text-muted-foreground truncate min-w-0">{productName}</span>
+			<div className="shrink-0 ml-2 text-tertiary-foreground text-right">
 				{priceLabel}
-				{showQuantity && <span className="text-t4"> × {quantity}</span>}
+				{showQuantity && <span className="text-subtle"> × {quantity}</span>}
 			</div>
 		</div>
 	);
@@ -147,13 +147,13 @@ const ProposalCard = ({
 				</div>
 			)}
 
-			<span className="block text-xs font-mono text-t3 truncate">
+			<span className="block text-xs font-mono text-tertiary-foreground truncate">
 				{objectLabel}
 			</span>
 
 			{sub && sub.items.data.length > 0 && (
 				<div className="space-y-1.5">
-					<span className="text-xs text-t3 font-medium">
+					<span className="text-xs text-tertiary-foreground font-medium">
 						Subscription items
 					</span>
 					<div className="space-y-1">
@@ -166,7 +166,7 @@ const ProposalCard = ({
 
 			{!sub && schedulePhaseItems.length > 0 && (
 				<div className="space-y-1.5">
-					<span className="text-xs text-t3 font-medium">Schedule items</span>
+					<span className="text-xs text-tertiary-foreground font-medium">Schedule items</span>
 					<div className="space-y-1">
 						{schedulePhaseItems.map((item, index) => (
 							<ScheduleItemRow key={`${objectId}-${index}`} item={item} />
@@ -177,7 +177,7 @@ const ProposalCard = ({
 
 			{matchedPlans.length > 0 && (
 				<div className="space-y-1.5">
-					<span className="text-xs text-t3 font-medium">Matched Plans</span>
+					<span className="text-xs text-tertiary-foreground font-medium">Matched Plans</span>
 					<div className="space-y-1">
 						{matchedPlans.map((plan, index) => {
 							const name = productNamesById[plan.plan_id] ?? plan.plan_id;
@@ -187,9 +187,9 @@ const ProposalCard = ({
 									key={`${plan.plan_id}-${index}`}
 									className="flex items-center justify-between text-xs gap-3"
 								>
-									<span className="text-t2 truncate">{name}</span>
+									<span className="text-muted-foreground truncate">{name}</span>
 									{quantity > 1 && (
-										<span className="text-t4 shrink-0 ml-2">× {quantity}</span>
+										<span className="text-subtle shrink-0 ml-2">× {quantity}</span>
 									)}
 								</div>
 							);
@@ -221,7 +221,7 @@ export function SubscriptionListView({
 		<div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
 			{isLoading && (
 				<div className="flex items-center justify-center py-12">
-					<SmallSpinner size={20} className="text-t3" />
+					<SmallSpinner size={20} className="text-tertiary-foreground" />
 				</div>
 			)}
 			{Boolean(error) && (
@@ -230,7 +230,7 @@ export function SubscriptionListView({
 				</div>
 			)}
 			{!isLoading && !error && proposals.length === 0 && (
-				<div className="text-sm text-t3 py-8 text-center">
+				<div className="text-sm text-tertiary-foreground py-8 text-center">
 					No Stripe subscriptions found for this customer.
 				</div>
 			)}

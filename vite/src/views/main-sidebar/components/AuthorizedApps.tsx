@@ -199,16 +199,16 @@ export const AuthorizedApps = () => {
 			<div className="border border-border rounded-xl overflow-hidden">
 				<div className="divide-y divide-border">
 					{isLoading ? (
-						<div className="px-4 py-12 text-center text-sm text-t3">
+						<div className="px-4 py-12 text-center text-sm text-tertiary-foreground">
 							<span className="shimmer">Loading authorized apps...</span>
 						</div>
 					) : consents.length === 0 ? (
 						<div className="px-4 py-12 text-center">
-							<Shield className="w-8 h-8 mx-auto mb-3 text-t4" />
-							<p className="text-sm text-t3">
+							<Shield className="w-8 h-8 mx-auto mb-3 text-subtle" />
+							<p className="text-sm text-tertiary-foreground">
 								No applications have been authorized
 							</p>
-							<p className="text-xs text-t4 mt-1">
+							<p className="text-xs text-subtle mt-1">
 								When you authorize an app to access this organization, it will
 								appear here
 							</p>
@@ -221,7 +221,7 @@ export const AuthorizedApps = () => {
 							>
 								<div className="flex-1 min-w-0">
 									<div className="flex items-center gap-2">
-										<p className="text-sm font-medium text-t1">
+										<p className="text-sm font-medium text-foreground">
 											{clientNames[consent.clientId] || "Loading..."}
 										</p>
 									</div>
@@ -232,7 +232,7 @@ export const AuthorizedApps = () => {
 									</div>
 
 									{/* Date */}
-									<div className="flex items-center gap-1 mt-2 text-xs text-t3">
+									<div className="flex items-center gap-1 mt-2 text-xs text-tertiary-foreground">
 										<Calendar className="w-3 h-3" />
 										<span>Authorized on {formatDate(consent.createdAt)}</span>
 									</div>
@@ -267,7 +267,7 @@ export const AuthorizedApps = () => {
 						<DialogTitle>Revoke Access</DialogTitle>
 						<DialogDescription>
 							Are you sure you want to revoke access for{" "}
-							<span className="font-semibold text-t1">
+							<span className="font-semibold text-foreground">
 								{revokeTarget?.clientName}
 							</span>
 							? This app will no longer be able to access your organization.
@@ -276,7 +276,7 @@ export const AuthorizedApps = () => {
 
 					{/* Show linked API keys that will be deleted */}
 					{loadingApiKeys ? (
-						<div className="py-3 text-sm text-t3">
+						<div className="py-3 text-sm text-tertiary-foreground">
 							Checking for linked API keys...
 						</div>
 					) : linkedApiKeys.length > 0 ? (
@@ -291,11 +291,11 @@ export const AuthorizedApps = () => {
 										key={index}
 										className="flex items-center justify-between text-sm"
 									>
-										<code className="font-mono text-xs text-t2 bg-background px-2 py-0.5 rounded">
+										<code className="font-mono text-xs text-muted-foreground bg-background px-2 py-0.5 rounded">
 											{key.prefix}...
 										</code>
 										<div className="flex items-center gap-2">
-											<span className="text-t3 text-xs">{key.name}</span>
+											<span className="text-tertiary-foreground text-xs">{key.name}</span>
 											<span
 												className={`text-xs px-1.5 py-0.5 rounded ${
 													key.env === "live"

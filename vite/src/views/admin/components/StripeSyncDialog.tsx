@@ -173,11 +173,11 @@ export function StripeSyncDialog({
 				</DialogHeader>
 
 				{loading ? (
-					<div className="py-8 text-center text-sm text-t3">Loading...</div>
+					<div className="py-8 text-center text-sm text-tertiary-foreground">Loading...</div>
 				) : (
 					<div className="grid grid-cols-[320px_1fr] gap-6">
 						<div className="flex flex-col gap-4">
-							<div className="text-xs font-medium uppercase tracking-wide text-t3">
+							<div className="text-xs font-medium uppercase tracking-wide text-tertiary-foreground">
 								Enabled Orgs
 							</div>
 
@@ -203,7 +203,7 @@ export function StripeSyncDialog({
 
 								<div className="flex flex-col gap-2 border-t border-border pt-3">
 									{sortedOrgIds.length === 0 ? (
-										<div className="text-xs italic text-t3">
+										<div className="text-xs italic text-tertiary-foreground">
 											No orgs enabled — sync is disabled for all orgs.
 										</div>
 									) : (
@@ -212,7 +212,7 @@ export function StripeSyncDialog({
 												key={orgId}
 												className="flex items-center justify-between gap-3 rounded-lg border border-border p-2"
 											>
-												<div className="truncate font-mono text-xs text-t1">
+												<div className="truncate font-mono text-xs text-foreground">
 													{orgId}
 												</div>
 												<Button
@@ -228,7 +228,7 @@ export function StripeSyncDialog({
 								</div>
 							</div>
 
-							<div className="rounded-lg border border-border p-3 text-xs text-t3">
+							<div className="rounded-lg border border-border p-3 text-xs text-tertiary-foreground">
 								<div className="mb-2 flex items-center gap-2">
 									<Badge
 										variant="muted"
@@ -259,7 +259,7 @@ export function StripeSyncDialog({
 						</div>
 
 						<div className="flex flex-col gap-2">
-							<div className="text-xs font-medium uppercase tracking-wide text-t3">
+							<div className="text-xs font-medium uppercase tracking-wide text-tertiary-foreground">
 								Raw JSON
 							</div>
 							<div className="overflow-hidden rounded-md border border-border">

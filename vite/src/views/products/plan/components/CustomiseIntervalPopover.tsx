@@ -37,7 +37,7 @@ export const CustomiseIntervalPopover = ({
 					variant="skeleton"
 					disabled={item.included_usage === Infinite || item.interval == null}
 				>
-					<p className="text-t3 group-hover/btn:text-primary">
+					<p className="text-tertiary-foreground group-hover/btn:text-primary">
 						Customize Interval
 					</p>
 				</Button>

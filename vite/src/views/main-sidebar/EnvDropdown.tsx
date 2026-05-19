@@ -48,7 +48,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 
 	if (!canSwitch) {
 		return (
-			<div className={cn("flex text-t2 text-xs gap-1 px-3")}>
+			<div className={cn("flex text-muted-foreground text-xs gap-1 px-3")}>
 				<StaticEnvPill />
 			</div>
 		);
@@ -56,7 +56,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 
 	return (
 		<div
-			className={cn("flex text-t2 text-xs gap-1 px-3")}
+			className={cn("flex text-muted-foreground text-xs gap-1 px-3")}
 			onMouseEnter={() => setIsHovered(true)}
 			onMouseLeave={() => setIsHovered(false)}
 		>
@@ -65,26 +65,26 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 
 				<DropdownMenuContent side="bottom" align="start" className="w-[180px]">
 					<DropdownMenuItem
-						className="flex justify-between items-center text-t2"
+						className="flex justify-between items-center text-muted-foreground"
 						onClick={() => {
 							handleEnvChange(AppEnv.Sandbox);
 						}}
 					>
 						<span>Sandbox</span>
 						{env === AppEnv.Sandbox && (
-							<Check size={12} className="!h-4 text-t3" />
+							<Check size={12} className="!h-4 text-tertiary-foreground" />
 						)}
 					</DropdownMenuItem>
 
 					<DropdownMenuItem
-						className="flex justify-between items-center text-t2"
+						className="flex justify-between items-center text-muted-foreground"
 						onClick={() => {
 							handleEnvChange(AppEnv.Live);
 						}}
 					>
 						<span>Production</span>
 						{env === AppEnv.Live && (
-							<Check size={12} className="!h-4 text-t3" />
+							<Check size={12} className="!h-4 text-tertiary-foreground" />
 						)}
 					</DropdownMenuItem>
 				</DropdownMenuContent>

@@ -30,7 +30,7 @@ export function CustomerUsageAnalyticsSelectDays({
 					className={cn("gap-1", open && "btn-secondary-active")}
 				>
 					{displayText}
-					<CaretDownIcon className="size-3.5 text-t3" />
+					<CaretDownIcon className="size-3.5 text-tertiary-foreground" />
 				</Button>
 			</DropdownMenuTrigger>
 			<DropdownMenuContent align="end">

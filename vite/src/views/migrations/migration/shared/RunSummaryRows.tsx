@@ -5,7 +5,7 @@ import { AutumnMark, StripeMark } from "./BillingScopeMarks";
 import { getOperationsSummaryText } from "./operationUtils";
 
 const SUMMARY_ROW_CLASS =
-	"flex items-center gap-2 rounded-xl h-8 px-3 text-sm input-base text-t1";
+	"flex items-center gap-2 rounded-xl h-8 px-3 text-sm input-base text-foreground";
 
 export function RunSummaryRows({
 	customerIcon,

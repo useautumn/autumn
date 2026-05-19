@@ -46,7 +46,7 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 			return (
 				<Tooltip>
 					<TooltipTrigger asChild>
-						<div className="font-medium text-t1 truncate max-w-[150px]">
+						<div className="font-medium text-foreground truncate max-w-[150px]">
 							{row.original.name}
 						</div>
 					</TooltipTrigger>
@@ -66,7 +66,7 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 					{apiKey.prefix ? (
 						<span className="text-tiny-id"> {apiKey.prefix}</span>
 					) : (
-						<span className="px-1 text-t3">—</span>
+						<span className="px-1 text-tertiary-foreground">—</span>
 					)}
 				</div>
 			);
@@ -104,7 +104,7 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 			if (source.type === "dashboard" && source.author) {
 				return (
 					<div className="flex justify-start items-center">
-						<span className="text-tiny flex items-center gap-1 px-1.5 py-0.5 bg-muted text-t2 rounded-md">
+						<span className="text-tiny flex items-center gap-1 px-1.5 py-0.5 bg-muted text-muted-foreground rounded-md">
 							<UserIcon size={12} className="shrink-0" />
 							{source.author}
 						</span>
@@ -112,7 +112,7 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 				);
 			}
 
-			return <div className="text-t4">—</div>;
+			return <div className="text-subtle">—</div>;
 		},
 	},
 	{
@@ -158,7 +158,7 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 	{
 		header: () => (
 			<div className="flex items-center gap-1.5">
-				<CalendarIcon size={14} className="text-t4" />
+				<CalendarIcon size={14} className="text-subtle" />
 				<span>Created</span>
 			</div>
 		),
@@ -167,7 +167,7 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 		cell: ({ row }: { row: Row<ApiKey> }) => {
 			const { date, time } = formatUnixToDateTime(row.original.created_at);
 			return (
-				<div className="text-xs text-t3 pr-4 w-full">
+				<div className="text-xs text-tertiary-foreground pr-4 w-full">
 					{date} <span className="truncate">{time}</span>
 				</div>
 			);

@@ -41,7 +41,7 @@ export const methodColorClass = (method: string | null): string => {
 		case "DELETE":
 			return "text-red-600 dark:text-red-400";
 		default:
-			return "text-t2";
+			return "text-muted-foreground";
 	}
 };
 

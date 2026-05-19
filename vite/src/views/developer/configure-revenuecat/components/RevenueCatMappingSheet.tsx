@@ -62,8 +62,8 @@ const MappingRow = memo(function MappingRow({
 	return (
 		<div className="flex flex-col gap-2 p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg">
 			<div className="flex items-center gap-2">
-				<span className="font-medium text-t2">{mapping.autumnProductName}</span>
-				<span className="text-tiny-id text-t3 bg-muted px-1.5 py-0.5 rounded-md">
+				<span className="font-medium text-muted-foreground">{mapping.autumnProductName}</span>
+				<span className="text-tiny-id text-tertiary-foreground bg-muted px-1.5 py-0.5 rounded-md">
 					{mapping.autumnProductId}
 				</span>
 			</div>
@@ -86,7 +86,7 @@ const MappingRow = memo(function MappingRow({
 									}
 									className="hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-sm p-0.5 transition-colors cursor-pointer"
 								>
-									<X size={12} className="size-3 text-t4" />
+									<X size={12} className="size-3 text-subtle" />
 								</button>
 							</div>
 						);
@@ -96,12 +96,12 @@ const MappingRow = memo(function MappingRow({
 
 			{/* Select to add more products */}
 			{hasNoRcProducts ? (
-				<div className="text-t3 text-xs py-1">
+				<div className="text-tertiary-foreground text-xs py-1">
 					No RevenueCat products found. Create products in RevenueCat before
 					mapping.
 				</div>
 			) : availableProducts.length === 0 ? (
-				<div className="text-t3 text-xs py-1">
+				<div className="text-tertiary-foreground text-xs py-1">
 					All RevenueCat products are already mapped to Autumn products. Remove
 					an existing mapping to change assignments.
 				</div>
@@ -274,7 +274,7 @@ export function RevenueCatMappingSheet({
 
 				<div className="flex-1 overflow-y-auto px-4 pt-4">
 					{mappings.length === 0 ? (
-						<div className="text-t3 text-sm text-center py-8">
+						<div className="text-tertiary-foreground text-sm text-center py-8">
 							No products found. Create products to map them to RevenueCat.
 						</div>
 					) : (

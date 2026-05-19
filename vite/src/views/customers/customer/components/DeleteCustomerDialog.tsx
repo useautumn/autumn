@@ -81,7 +81,7 @@ export const DeleteCustomerDialog = ({
 				</DialogHeader>
 
 				<div className="mb-2 text-sm">
-					<p className="text-t2">
+					<p className="text-muted-foreground">
 						Are you sure you want to delete this customer in Autumn? This action
 						cannot be undone. Select whether to delete this customer in Stripe
 						as well.

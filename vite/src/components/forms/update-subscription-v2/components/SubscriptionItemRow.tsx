@@ -110,7 +110,7 @@ function PrepaidQuantityControl({
 	if (readOnly) {
 		return (
 			<div className="flex items-center h-10 px-3 rounded-xl input-base w-fit shrink-0">
-				<span className="text-sm tabular-nums text-t3">{displayText}</span>
+				<span className="text-sm tabular-nums text-tertiary-foreground">{displayText}</span>
 			</div>
 		);
 	}
@@ -164,7 +164,7 @@ function PrepaidQuantityControl({
 						className="flex items-center gap-2"
 					>
 						{inputQuantity !== undefined && (
-							<span className="text-sm tabular-nums text-t3">
+							<span className="text-sm tabular-nums text-tertiary-foreground">
 								{displayText}
 							</span>
 						)}
@@ -172,7 +172,7 @@ function PrepaidQuantityControl({
 							icon={<PencilSimpleIcon size={14} />}
 							variant="skeleton"
 							size="sm"
-							className="text-t4 hover:text-t2 hover:bg-muted"
+							className="text-subtle hover:text-muted-foreground hover:bg-muted"
 							onClick={() => onEditingChange(true)}
 						/>
 					</motion.div>
@@ -270,7 +270,7 @@ export function SubscriptionItemRow({
 						<PlanFeatureIcon item={item} position="right" />
 					</div>
 					<p className="whitespace-nowrap truncate flex-1 min-w-0">
-						<span className={cn("text-body", !hasFeatureName && "text-t4!")}>
+						<span className={cn("text-body", !hasFeatureName && "text-subtle!")}>
 							{displayText}
 						</span>
 						<span className="text-body-secondary">

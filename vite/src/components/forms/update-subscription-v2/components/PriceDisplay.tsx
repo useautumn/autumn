@@ -47,15 +47,15 @@ export function PriceDisplay({ product, currency }: PriceDisplayProps) {
 	const priceDisplay = getProductPriceDisplay({ product, currency });
 
 	if (priceDisplay.type === "free") {
-		return <span className="text-t2">Free</span>;
+		return <span className="text-muted-foreground">Free</span>;
 	}
 
 	return (
 		<span className="flex items-center gap-1">
-			<span className="text-t1 font-semibold">
+			<span className="text-foreground font-semibold">
 				{priceDisplay.formattedPrice}
 			</span>
-			<span className="text-t3">{priceDisplay.intervalText}</span>
+			<span className="text-tertiary-foreground">{priceDisplay.intervalText}</span>
 		</span>
 	);
 }

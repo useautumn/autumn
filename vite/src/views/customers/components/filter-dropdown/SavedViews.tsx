@@ -86,7 +86,7 @@ export const SavedViews = ({
 		<>
 			<DropdownMenuGroup className="p-1">
 				<DropdownMenuLabel className="p-0 pt-1 px-3">
-					<span className="text-t3 text-xs">Saved views</span>
+					<span className="text-tertiary-foreground text-xs">Saved views</span>
 				</DropdownMenuLabel>
 				{views.map((view: SavedView) => (
 					<div
@@ -114,7 +114,7 @@ export const SavedViews = ({
 								>
 									<TrashIcon
 										size={12}
-										className="text-t3 group-hover:text-red-500"
+										className="text-tertiary-foreground group-hover:text-red-500"
 									/>
 								</button>
 							</PopoverTrigger>
@@ -126,7 +126,7 @@ export const SavedViews = ({
 								onCloseAutoFocus={(e) => e.preventDefault()}
 							>
 								<div className="flex flex-col gap-3 text-sm">
-									<p className="text-t3">
+									<p className="text-tertiary-foreground">
 										Are you sure you want to delete the view "{view.name}"?
 									</p>
 									<div className="flex gap-2">

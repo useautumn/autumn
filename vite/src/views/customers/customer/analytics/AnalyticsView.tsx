@@ -230,7 +230,7 @@ export const AnalyticsView = () => {
 	if (clickHouseDisabled) {
 		return (
 			<div className="flex flex-col items-center justify-center h-full">
-				<h3 className="text-sm text-t2 font-bold">Tinybird is disabled</h3>
+				<h3 className="text-sm text-muted-foreground font-bold">Tinybird is disabled</h3>
 			</div>
 		);
 	}
@@ -280,7 +280,7 @@ export const AnalyticsView = () => {
 				{showRevenueMetrics && <RevenueMetricsSection />}
 				<div className="pb-6 shrink-0">
 					<div className="flex justify-between pb-4 h-10">
-						<div className="text-t3 text-md flex gap-2 items-center">
+						<div className="text-tertiary-foreground text-md flex gap-2 items-center">
 							<ChartBarIcon size={16} weight="fill" className="text-subtle" />
 							Usage
 						</div>
@@ -288,7 +288,7 @@ export const AnalyticsView = () => {
 					</div>
 					{queryLoading && (
 						<div className="flex-1">
-							<p className="text-t3 text-sm shimmer w-fit">
+							<p className="text-tertiary-foreground text-sm shimmer w-fit">
 								Loading chart {customerId ? `for ${customerId}` : ""}
 							</p>
 						</div>
@@ -314,7 +314,7 @@ export const AnalyticsView = () => {
 
 						{(!chartData || chartData.data.length === 0) && !queryLoading && (
 							<div className="flex-1 px-10 pt-6">
-								<p className="text-t3 text-sm">
+								<p className="text-tertiary-foreground text-sm">
 									No events found. Please widen your filters.{" "}
 									{eventNames.length === 0
 										? "Try to select some events in the dropdown above."
@@ -328,7 +328,7 @@ export const AnalyticsView = () => {
 				<div className="flex-1 min-h-[400px] pb-8">
 					{rawQueryLoading && (
 						<div className="flex-1">
-							<p className="text-t3 text-sm shimmer w-fit">
+							<p className="text-tertiary-foreground text-sm shimmer w-fit">
 								Loading events {customerId ? `for ${customerId}` : ""}
 							</p>
 						</div>

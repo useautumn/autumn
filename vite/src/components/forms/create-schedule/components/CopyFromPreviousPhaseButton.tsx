@@ -19,7 +19,7 @@ export function CopyFromPreviousPhaseButton({
 	return (
 		<button
 			type="button"
-			className="flex w-full items-center gap-2 px-2 py-1.5 text-xs text-t3 hover:bg-interactive-secondary-hover transition-colors border-b border-border/50"
+			className="flex w-full items-center gap-2 px-2 py-1.5 text-xs text-tertiary-foreground hover:bg-interactive-secondary-hover transition-colors border-b border-border/50"
 			onClick={() => handleCopyFromPreviousPhase({ phaseIndex })}
 		>
 			<CopySimpleIcon size={12} />
