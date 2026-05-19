@@ -1,0 +1,771 @@
+{
+  "items": [
+    {
+      "id": "free",
+      "name": "Free",
+      "description": null,
+      "group": null,
+      "version": 8,
+      "add_on": false,
+      "auto_enable": true,
+      "price": null,
+      "items": [
+        {
+          "feature_id": "orbs_credit",
+          "included": 10,
+          "unlimited": false,
+          "reset": {
+            "interval": "week"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "10 orbs credits"
+          },
+          "rollover": {
+            "max": 20,
+            "max_percentage": null,
+            "expiry_duration_type": "forever",
+            "expiry_duration_length": 1
+          }
+        },
+        {
+          "feature_id": "orbs_credit",
+          "included": 10,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "10 orbs credits"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 3,
+          "unlimited": false,
+          "reset": {
+            "interval": "week"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "3 read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 3,
+          "unlimited": false,
+          "reset": {
+            "interval": "week"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "3 read notes"
+          }
+        },
+        {
+          "feature_id": "remix_question_new",
+          "included": 1,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "1 remix question"
+          }
+        }
+      ],
+      "created_at": 1778484988714,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus",
+      "name": "Plus",
+      "description": null,
+      "group": null,
+      "version": 2,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 29,
+        "interval": "month",
+        "display": {
+          "primary_text": "$29",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "all_diagnostic_tests",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "All diagnostic tests"
+          }
+        },
+        {
+          "feature_id": "all_predicted_papers",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "All predicted papers"
+          }
+        },
+        {
+          "feature_id": "orbs_credit",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited orbs credits"
+          }
+        },
+        {
+          "feature_id": "premium_questions",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Premium Questions"
+          }
+        }
+      ],
+      "created_at": 1776913987190,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_12m",
+      "name": "Pro (12 months)",
+      "description": null,
+      "group": null,
+      "version": 4,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 216,
+        "interval": "month",
+        "interval_count": 12,
+        "display": {
+          "primary_text": "$216",
+          "secondary_text": "per 12 months"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "all_diagnostic_tests",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "All diagnostic tests"
+          }
+        },
+        {
+          "feature_id": "all_predicted_papers",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "All predicted papers"
+          }
+        },
+        {
+          "feature_id": "error_analytics",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Error analytics"
+          }
+        },
+        {
+          "feature_id": "orbs_credit",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited orbs credits"
+          }
+        },
+        {
+          "feature_id": "premium_cheatsheets",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Premium Cheatsheets"
+          }
+        },
+        {
+          "feature_id": "premium_questions",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Premium Questions"
+          }
+        },
+        {
+          "feature_id": "remix_question_new",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited remix questions"
+          }
+        }
+      ],
+      "created_at": 1778656068706,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_1m",
+      "name": "Pro (1 month)",
+      "description": null,
+      "group": null,
+      "version": 5,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 43.5,
+        "interval": "month",
+        "display": {
+          "primary_text": "$43.5",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "all_diagnostic_tests",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "All diagnostic tests"
+          }
+        },
+        {
+          "feature_id": "all_predicted_papers",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "All predicted papers"
+          }
+        },
+        {
+          "feature_id": "error_analytics",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Error analytics"
+          }
+        },
+        {
+          "feature_id": "orbs_credit",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited orbs credits"
+          }
+        },
+        {
+          "feature_id": "premium_cheatsheets",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Premium Cheatsheets"
+          }
+        },
+        {
+          "feature_id": "premium_questions",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Premium Questions"
+          }
+        },
+        {
+          "feature_id": "remix_question_new",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited remix questions"
+          }
+        }
+      ],
+      "created_at": 1778656038341,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_1w",
+      "name": "Pro (1 week)",
+      "description": null,
+      "group": null,
+      "version": 4,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 28.5,
+        "interval": "week",
+        "display": {
+          "primary_text": "$28.5",
+          "secondary_text": "per week"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "all_diagnostic_tests",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "All diagnostic tests"
+          }
+        },
+        {
+          "feature_id": "all_predicted_papers",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "All predicted papers"
+          }
+        },
+        {
+          "feature_id": "error_analytics",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Error analytics"
+          }
+        },
+        {
+          "feature_id": "orbs_credit",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited orbs credits"
+          }
+        },
+        {
+          "feature_id": "premium_cheatsheets",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Premium Cheatsheets"
+          }
+        },
+        {
+          "feature_id": "premium_questions",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Premium Questions"
+          }
+        },
+        {
+          "feature_id": "remix_question_new",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited remix questions"
+          }
+        }
+      ],
+      "created_at": 1778656024331,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_3m",
+      "name": "Pro (3 months)",
+      "description": null,
+      "group": null,
+      "version": 4,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 103.5,
+        "interval": "month",
+        "interval_count": 3,
+        "display": {
+          "primary_text": "$103.5",
+          "secondary_text": "per 3 months"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "all_diagnostic_tests",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "All diagnostic tests"
+          }
+        },
+        {
+          "feature_id": "all_predicted_papers",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "All predicted papers"
+          }
+        },
+        {
+          "feature_id": "error_analytics",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Error analytics"
+          }
+        },
+        {
+          "feature_id": "orbs_credit",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited orbs credits"
+          }
+        },
+        {
+          "feature_id": "premium_cheatsheets",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Premium Cheatsheets"
+          }
+        },
+        {
+          "feature_id": "premium_questions",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Premium Questions"
+          }
+        },
+        {
+          "feature_id": "remix_question_new",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited remix questions"
+          }
+        }
+      ],
+      "created_at": 1778655992720,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_6m",
+      "name": "Pro (6 months)",
+      "description": null,
+      "group": null,
+      "version": 4,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 144,
+        "interval": "month",
+        "interval_count": 6,
+        "display": {
+          "primary_text": "$144",
+          "secondary_text": "per 6 months"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "all_diagnostic_tests",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "All diagnostic tests"
+          }
+        },
+        {
+          "feature_id": "all_predicted_papers",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "All predicted papers"
+          }
+        },
+        {
+          "feature_id": "error_analytics",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Error analytics"
+          }
+        },
+        {
+          "feature_id": "orbs_credit",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited orbs credits"
+          }
+        },
+        {
+          "feature_id": "premium_cheatsheets",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Premium Cheatsheets"
+          }
+        },
+        {
+          "feature_id": "premium_questions",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Premium Questions"
+          }
+        },
+        {
+          "feature_id": "remix_question_new",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited remix questions"
+          }
+        }
+      ],
+      "created_at": 1778655965941,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_june_2026",
+      "name": "Pro (June 2026)",
+      "description": null,
+      "group": null,
+      "version": 3,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 35.99,
+        "interval": "one_off",
+        "display": {
+          "primary_text": "$35.99"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "all_diagnostic_tests",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "All diagnostic tests"
+          }
+        },
+        {
+          "feature_id": "all_predicted_papers",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "All predicted papers"
+          }
+        },
+        {
+          "feature_id": "error_analytics",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Error analytics"
+          }
+        },
+        {
+          "feature_id": "orbs_credit",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited orbs credits"
+          }
+        },
+        {
+          "feature_id": "premium_cheatsheets",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Premium Cheatsheets"
+          }
+        },
+        {
+          "feature_id": "premium_questions",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Premium Questions"
+          }
+        },
+        {
+          "feature_id": "question_remix",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited question remixes"
+          }
+        },
+        {
+          "feature_id": "remix_question_new",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited remix questions"
+          }
+        }
+      ],
+      "created_at": 1779075195611,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    }
+  ]
+}

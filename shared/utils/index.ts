@@ -65,6 +65,10 @@ export * from "./productV2Utils/productV2ToFrontendProduct";
 export * from "./productV2Utils/productV2ToV1";
 export * from "./productV3Utils/productItemUtils/productV3ItemUtils";
 
+// Plan V1 diff/apply utils
+export * from "./planV1Utils/diff/diffPlanV1";
+export * from "./planV1Utils/diff/applyDiff";
+
 // Stripe resource utils
 export * from "./stripeUtils/classifyStripeResource/isPreviewStripeId";
 

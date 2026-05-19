@@ -34,5 +34,11 @@ export const matchesPlanItemFilter = ({
 	)
 		return false;
 
+	if (
+		filter.interval_count !== undefined &&
+		(item.interval_count ?? 1) !== filter.interval_count
+	)
+		return false;
+
 	return true;
 };
