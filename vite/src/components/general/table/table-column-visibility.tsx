@@ -61,14 +61,14 @@ function ColumnGroupSubmenu<T>({
 			<DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer text-sm">
 				{group.label}
 				{visibleCount > 0 && (
-					<span className="text-xs text-t3 bg-muted px-1 py-0 rounded-md">
+					<span className="text-xs text-tertiary-foreground bg-muted px-1 py-0 rounded-md">
 						{visibleCount}
 					</span>
 				)}
 			</DropdownMenuSubTrigger>
 			<DropdownMenuSubContent className="min-w-[200px]">
 				{groupColumns.length === 0 ? (
-					<div className="px-2 py-3 text-center text-t3 text-sm">
+					<div className="px-2 py-3 text-center text-tertiary-foreground text-sm">
 						No columns available
 					</div>
 				) : (
@@ -120,7 +120,7 @@ export function TableColumnVisibility() {
 					<IconButton
 						variant="secondary"
 						className={cn(isOpen && "btn-secondary-active")}
-						icon={<FadersHorizontalIcon size={14} className="text-t3" />}
+						icon={<FadersHorizontalIcon size={14} className="text-tertiary-foreground" />}
 					>
 						Display
 					</IconButton>
@@ -139,7 +139,7 @@ export function TableColumnVisibility() {
 						<FadersHorizontalIcon
 							size={14}
 							weight="bold"
-							className="text-t3 size-3.5"
+							className="text-tertiary-foreground size-3.5"
 						/>
 					</Button>
 				)}

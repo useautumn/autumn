@@ -49,7 +49,7 @@ const getCusProductsInfo = ({
 	customer: CustomerWithProducts;
 }) => {
 	if (!customer.customer_products || customer.customer_products.length === 0) {
-		return <span className="text-t3"></span>;
+		return <span className="text-tertiary-foreground"></span>;
 	}
 
 	// Filter out expired and scheduled products first
@@ -74,7 +74,7 @@ const getCusProductsInfo = ({
 	// 	console.log("activeProducts", activeProducts, "customer", customer);
 
 	if (activeProducts.length === 0) {
-		return <span className="text-t3"></span>;
+		return <span className="text-tertiary-foreground"></span>;
 	}
 
 	return (
@@ -84,7 +84,7 @@ const getCusProductsInfo = ({
 				.map((cusProduct: (typeof activeProducts)[number], index: number) => {
 					return (
 						<div key={index} className="flex items-center gap-2 w-full">
-							<span className="text-t3 truncate">
+							<span className="text-tertiary-foreground truncate">
 								{(cusProduct as FullCusProduct).product.name}
 							</span>
 							<CustomerProductsStatus
@@ -109,7 +109,7 @@ const getCusProductsInfo = ({
 								<TooltipProvider>
 									<Tooltip delayDuration={0}>
 										<TooltipTrigger>
-											<span className="ml-1 bg-muted text-t3 px-1 py-0.5 rounded-md font-medium">
+											<span className="ml-1 bg-muted text-tertiary-foreground px-1 py-0.5 rounded-md font-medium">
 												+{activeProducts.length - 1}
 											</span>
 										</TooltipTrigger>
@@ -142,7 +142,7 @@ export const createCustomerListColumns = (): ColumnDef<
 		accessorKey: "name",
 		size: 150,
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
-			return <div className="font-medium text-t1">{row.original.name}</div>;
+			return <div className="font-medium text-foreground">{row.original.name}</div>;
 		},
 	},
 	{
@@ -157,7 +157,7 @@ export const createCustomerListColumns = (): ColumnDef<
 					{customer.id ? (
 						<MiniCopyButton text={customer.id} />
 					) : (
-						<span className="px-1 text-t3">PENDING</span>
+						<span className="px-1 text-tertiary-foreground">PENDING</span>
 					)}
 				</div>
 			);
@@ -197,7 +197,7 @@ export const createCustomerListColumns = (): ColumnDef<
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			const { date, time } = formatUnixToDateTime(row.original.created_at);
 			return (
-				<div className="text-xs text-t4 pr-4 w-full">
+				<div className="text-xs text-subtle pr-4 w-full">
 					{date} <span className=" truncate">{time}</span>
 				</div>
 			);
@@ -246,7 +246,7 @@ export const createProductVersionColumn = (): ColumnDef<
 		const version = activeProduct?.product?.version;
 		if (version == null) return null;
 
-		return <span className="text-t6">v{version}</span>;
+		return <span className="text-placeholder">v{version}</span>;
 	},
 });
 

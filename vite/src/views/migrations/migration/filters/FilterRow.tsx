@@ -70,7 +70,7 @@ export function FilterRow({
 	return (
 		<div className="flex items-center gap-2.5 group/row">
 			{connector && (
-				<span className="text-xs text-t4 w-8 shrink-0 select-none">
+				<span className="text-xs text-subtle w-8 shrink-0 select-none">
 					{connector}
 				</span>
 			)}
@@ -124,7 +124,7 @@ export function FilterRow({
 			) : (
 				<span
 					className={cn(
-						"text-sm text-t3 px-1",
+						"text-sm text-tertiary-foreground px-1",
 						config.valueType === "none" ? "flex-1" : "shrink-0",
 					)}
 				>
@@ -190,7 +190,7 @@ function FilterValueInput({
 
 	return (
 		<input
-			className="h-8 text-sm rounded-xl px-3 input-base flex-1 min-w-0 text-t1 placeholder:text-t3"
+			className="h-8 text-sm rounded-xl px-3 input-base flex-1 min-w-0 text-foreground placeholder:text-tertiary-foreground"
 			placeholder="Value"
 			value={rule.values[0] ?? ""}
 			onChange={(e) => onChange({ ...rule, values: [e.target.value] })}

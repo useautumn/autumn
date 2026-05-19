@@ -73,7 +73,7 @@ function TooltipContent({
 				<TooltipPrimitive.Popup
 					data-slot="tooltip-content"
 					className={cn(
-						`overflow-hidden rounded-[6px] px-2 py-[3px] text-t2 border
+						`overflow-hidden rounded-[6px] px-2 py-[3px] text-muted-foreground border
          bg-interactive-secondary dark:bg-card
           text-[13px] font-medium leading-[1.6] tracking-[-0.039px]
           shadow-[0px_0px_4px_2px_rgba(0,0,0,0.05)]

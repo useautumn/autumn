@@ -5,7 +5,7 @@ import {
 	connectionString,
 	findBranchByName,
 } from "./neon.ts";
-import { generateAndApplyMigration, loadDbFunctions } from "./migration.ts";
+import { applyCommittedMigrations, loadDbFunctions } from "./migration.ts";
 import { loadRegistry, saveRegistry } from "./registry.ts";
 import { PROJECT_ROOT, NEON_TEMPLATE_BRANCH } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
@@ -36,7 +36,7 @@ export async function setupAgentWorktree(
 	const branch = createBranch(branchName, NEON_TEMPLATE_BRANCH);
 	// Use direct (non-pooled) URL for DDL; pooler can interfere with some DDL paths.
 	const directUrl = connectionString(branchName, { pooled: false });
-	generateAndApplyMigration(branchName, directUrl);
+	applyCommittedMigrations(branchName, directUrl);
 	loadDbFunctions(branchName, directUrl);
 	// Pooled URL for runtime.
 	const pooledUrl = connectionString(branchName, { pooled: true });

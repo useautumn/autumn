@@ -94,8 +94,8 @@ export const TerminalView = () => {
 			<div className="mx-auto flex w-full max-w-4xl flex-col gap-4 px-4 py-8 sm:px-6">
 				<Card className="shadow-none bg-interactive-secondary">
 					<CardHeader className="gap-2">
-						<CardTitle className="flex items-center gap-2 text-base text-t1">
-							<Terminal className="size-4 text-t3" />
+						<CardTitle className="flex items-center gap-2 text-base text-foreground">
+							<Terminal className="size-4 text-tertiary-foreground" />
 							TRMNL
 						</CardTitle>
 						<CardDescription>
@@ -132,7 +132,7 @@ export const TerminalView = () => {
 										Hide revenue
 										<Tooltip>
 											<TooltipTrigger asChild>
-												<span className="inline-flex cursor-pointer text-t3/70">
+												<span className="inline-flex cursor-pointer text-tertiary-foreground/70">
 													<Info className="size-3.5" />
 												</span>
 											</TooltipTrigger>
@@ -163,7 +163,7 @@ export const TerminalView = () => {
 						</CardDescription>
 					</CardHeader>
 					<CardContent>
-						<ol className="list-decimal space-y-2 pl-4 text-sm text-t2">
+						<ol className="list-decimal space-y-2 pl-4 text-sm text-muted-foreground">
 							<li>
 								Follow this{" "}
 								<a

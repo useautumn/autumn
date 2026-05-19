@@ -49,7 +49,7 @@ export function PricingConfigSheet({
 			<SheetContent className="flex flex-col overflow-hidden bg-background min-w-xl">
 				<SheetHeader>
 					<SheetTitle>Pricing Configuration</SheetTitle>
-					<p className="text-t3 text-sm">
+					<p className="text-tertiary-foreground text-sm">
 						Generated configuration with {config.products.length} product(s) and{" "}
 						{config.features.length} feature(s)
 					</p>

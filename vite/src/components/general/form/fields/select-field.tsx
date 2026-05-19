@@ -67,7 +67,7 @@ export function SelectField<T extends string | number = string>({
 				defaultOpen={defaultOpen}
 				renderValue={(opt) => (
 					<>
-						<span className={!opt ? "text-t3" : undefined}>
+						<span className={!opt ? "text-tertiary-foreground" : undefined}>
 							{opt?.label || placeholder}
 						</span>
 						{selectValueAfter && opt && (
@@ -79,7 +79,7 @@ export function SelectField<T extends string | number = string>({
 					<>
 						<span className="flex-1 truncate min-w-0">{opt.label}</span>
 						{(opt.disabledValue || opt.badgeValue) && (
-							<span className="shrink-0 text-xs text-t3 bg-muted px-1 py-0 rounded-md">
+							<span className="shrink-0 text-xs text-tertiary-foreground bg-muted px-1 py-0 rounded-md">
 								{opt.disabledValue || opt.badgeValue}
 							</span>
 						)}

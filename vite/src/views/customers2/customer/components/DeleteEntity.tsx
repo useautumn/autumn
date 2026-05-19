@@ -68,27 +68,27 @@ export const DeleteEntity = ({
 					<DialogTitle>Delete Entity</DialogTitle>
 				</DialogHeader>
 				<div className="flex flex-col gap-4 overflow-hidden">
-					<p className="text-sm text-t2">
+					<p className="text-sm text-muted-foreground">
 						Are you sure you want to delete this entity? This action cannot be
 						undone.
 					</p>
 					<div className="flex flex-col gap-2 bg-secondary p-3 rounded-lg border shrink-0">
 						{entity.name && (
 							<div className="flex gap-2">
-								<span className="text-t3 text-sm font-medium">Name:</span>
-								<span className="text-t1 text-sm truncate">{entity.name}</span>
+								<span className="text-tertiary-foreground text-sm font-medium">Name:</span>
+								<span className="text-foreground text-sm truncate">{entity.name}</span>
 							</div>
 						)}
 						<div className="flex gap-2">
-							<span className="text-t3 text-sm font-medium">ID:</span>
-							<span className="text-t1 text-sm font-mono truncate">
+							<span className="text-tertiary-foreground text-sm font-medium">ID:</span>
+							<span className="text-foreground text-sm font-mono truncate">
 								{entity.id || entity.internal_id}
 							</span>
 						</div>
 						{entity.feature_id && (
 							<div className="flex gap-2">
-								<span className="text-t3 text-sm font-medium">Feature:</span>
-								<span className="text-t1 text-sm truncate">
+								<span className="text-tertiary-foreground text-sm font-medium">Feature:</span>
+								<span className="text-foreground text-sm truncate">
 									{entity.feature_id}
 								</span>
 							</div>

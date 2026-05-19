@@ -62,7 +62,7 @@ export default function StackBadge({
 			<div
 				className={cn(
 					"justify-start text-xs font-medium font-['Inter']",
-					isSelected ? "text-primary" : "text-t2",
+					isSelected ? "text-primary" : "text-muted-foreground",
 				)}
 			>
 				{stack}

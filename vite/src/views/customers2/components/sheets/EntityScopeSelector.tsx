@@ -49,9 +49,9 @@ export function EntityScopeSelector({
 				triggerClassName="w-full"
 				renderValue={(option) =>
 					option === null || option === undefined ? (
-						<span className="text-t2">Customer-level</span>
+						<span className="text-muted-foreground">Customer-level</span>
 					) : (
-						<span className="text-t2 truncate">
+						<span className="text-muted-foreground truncate">
 							{option.name || option.id || "PENDING"}
 						</span>
 					)
@@ -72,7 +72,7 @@ export function EntityScopeSelector({
 								{option.name && (
 									<span className="text-sm shrink-0">{option.name}</span>
 								)}
-								<span className="truncate text-t3 font-mono text-xs min-w-0">
+								<span className="truncate text-tertiary-foreground font-mono text-xs min-w-0">
 									{entityLabel}
 								</span>
 							</div>

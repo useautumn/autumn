@@ -18,13 +18,13 @@ export function FeatureListMenuButton() {
 			<DropdownMenuTrigger asChild>
 				<IconButton
 					icon={<EllipsisVertical />}
-					variant="secondary"
+					variant="skeleton"
 					size="default"
 					iconOrientation="center"
 					className="h-7!"
 				/>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent align="end" className="text-t2">
+			<DropdownMenuContent align="end" className="text-muted-foreground">
 				<DropdownMenuItem
 					className="flex items-center cursor-pointer"
 					onClick={() => {

@@ -63,7 +63,7 @@ export const PlanToolbar = () => {
 				>
 					<div className="flex items-center justify-between w-full gap-2">
 						Copy
-						<Copy size={12} className="text-t3" />
+						<Copy size={12} className="text-tertiary-foreground" />
 					</div>
 				</DropdownMenuItem>
 				<DropdownMenuItem
@@ -77,7 +77,7 @@ export const PlanToolbar = () => {
 				>
 						<div className="flex items-center justify-between w-full gap-2">
 							Delete Plan
-							<Trash2 size={12} className="text-t3" />
+							<Trash2 size={12} className="text-tertiary-foreground" />
 						</div>
 					</DropdownMenuItem>
 				</DropdownMenuContent>

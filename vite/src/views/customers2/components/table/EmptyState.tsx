@@ -14,7 +14,7 @@ export const EmptyState = ({
 				className,
 			)}
 		>
-			<span className="text-xs text-t4 truncate">{text}</span>
+			<span className="text-xs text-subtle truncate">{text}</span>
 		</div>
 	);
 };

@@ -45,12 +45,12 @@ export function FeatureSelector({
 							<div className="shrink-0">
 								{getFeatureIcon({ feature: selectedFeature })}
 							</div>
-							<span className="text-t2 truncate w-26 text-left">
+							<span className="text-muted-foreground truncate w-26 text-left">
 								{selectedFeature.name}
 							</span>
 						</div>
 					) : (
-						<span className="text-t4 text-xs">Select feature</span>
+						<span className="text-subtle text-xs">Select feature</span>
 					)}
 					<CaretDownIcon className="size-3 opacity-50" />
 				</button>
@@ -58,7 +58,7 @@ export function FeatureSelector({
 			<DropdownMenuContent align="start" className="z-[160]">
 				<div className="max-h-60 overflow-y-auto">
 					{features.length === 0 ? (
-						<div className="py-4 text-center text-sm text-t4">
+						<div className="py-4 text-center text-sm text-subtle">
 							No features found.
 						</div>
 					) : (

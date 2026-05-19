@@ -21,7 +21,7 @@ export const CustomerProductPrice = ({
 
 	// Handle edge case of no items
 	if (!frontendProduct.items || frontendProduct.items.length === 0) {
-		return <div className="text-t3">-</div>;
+		return <div className="text-tertiary-foreground">-</div>;
 	}
 
 	// Get the base price display information
@@ -35,14 +35,14 @@ export const CustomerProductPrice = ({
 		case "price":
 			return (
 				<div className="flex items-center gap-1">
-					<span className="text-t2">{priceDisplay.formattedAmount}</span>
-					<span className="text-t3">{priceDisplay.intervalText}</span>
+					<span className="text-muted-foreground">{priceDisplay.formattedAmount}</span>
+					<span className="text-tertiary-foreground">{priceDisplay.intervalText}</span>
 				</div>
 			);
 		case "free":
 		case "variable":
-			return <div className="text-t3">{priceDisplay.displayText}</div>;
+			return <div className="text-tertiary-foreground">{priceDisplay.displayText}</div>;
 		case "placeholder":
-			return <div className="text-t3">-</div>;
+			return <div className="text-tertiary-foreground">-</div>;
 	}
 };

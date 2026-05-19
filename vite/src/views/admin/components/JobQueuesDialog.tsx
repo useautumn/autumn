@@ -155,7 +155,7 @@ export function JobQueuesDialog({
 				</DialogHeader>
 
 				{loading ? (
-					<div className="py-8 text-center text-sm text-t3">Loading...</div>
+					<div className="py-8 text-center text-sm text-tertiary-foreground">Loading...</div>
 				) : (
 					<div className="flex flex-col gap-4">
 						<div className="flex flex-col gap-3">
@@ -165,13 +165,13 @@ export function JobQueuesDialog({
 									className="flex items-center justify-between rounded-lg border border-border p-3"
 								>
 									<div className="flex flex-col gap-0.5 pr-4">
-										<div className="text-sm font-medium text-t1">
+										<div className="text-sm font-medium text-foreground">
 											{queue.label}
 										</div>
-										<div className="text-xs text-t3">
+										<div className="text-xs text-tertiary-foreground">
 											{queue.description}
 										</div>
-										<div className="text-[11px] text-t3">
+										<div className="text-[11px] text-tertiary-foreground">
 											Default: {queue.defaultEnabled ? "enabled" : "disabled"}
 										</div>
 									</div>
@@ -185,7 +185,7 @@ export function JobQueuesDialog({
 							))}
 						</div>
 
-						<div className="rounded-lg border border-border p-3 text-xs text-t3">
+						<div className="rounded-lg border border-border p-3 text-xs text-tertiary-foreground">
 							<div className="mb-2 flex items-center gap-2">
 								<Badge
 									variant="muted"

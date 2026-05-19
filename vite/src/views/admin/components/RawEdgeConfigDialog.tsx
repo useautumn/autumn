@@ -130,12 +130,12 @@ export function RawEdgeConfigDialog({
 				</DialogHeader>
 
 				{loading ? (
-					<div className="py-8 text-sm text-t3 text-center">Loading...</div>
+					<div className="py-8 text-sm text-tertiary-foreground text-center">Loading...</div>
 				) : (
 					<div className="grid grid-cols-2 gap-6">
 						{/* Left: summary */}
 						<div className="flex flex-col gap-3">
-							<div className="text-xs font-medium text-t3 uppercase tracking-wide">
+							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">
 								Config Summary
 							</div>
 							<div className="flex items-center gap-2">
@@ -150,26 +150,26 @@ export function RawEdgeConfigDialog({
 									{fullConfig?.configHealthy ? "Healthy" : "Unavailable"}
 								</Badge>
 								{fullConfig?.lastSuccessAt && (
-									<span className="text-xs text-t3">
+									<span className="text-xs text-tertiary-foreground">
 										Last refresh:{" "}
 										{new Date(fullConfig.lastSuccessAt).toLocaleString()}
 									</span>
 								)}
 							</div>
 							{orgEntries.length === 0 ? (
-								<div className="text-xs text-t3">No orgs configured.</div>
+								<div className="text-xs text-tertiary-foreground">No orgs configured.</div>
 							) : (
 								<div className="rounded-lg border border-border overflow-hidden">
 									<table className="w-full text-xs">
 										<thead>
 											<tr className="border-b border-border">
-												<th className="text-left px-3 py-2 font-medium text-t2">
+												<th className="text-left px-3 py-2 font-medium text-muted-foreground">
 													Org ID
 												</th>
-												<th className="text-left px-3 py-2 font-medium text-t2">
+												<th className="text-left px-3 py-2 font-medium text-muted-foreground">
 													Block All
 												</th>
-												<th className="text-left px-3 py-2 font-medium text-t2">
+												<th className="text-left px-3 py-2 font-medium text-muted-foreground">
 													Rules
 												</th>
 											</tr>
@@ -180,13 +180,13 @@ export function RawEdgeConfigDialog({
 													key={oid}
 													className="border-b border-border last:border-b-0"
 												>
-													<td className="px-3 py-2 font-mono truncate max-w-[120px] text-t1">
+													<td className="px-3 py-2 font-mono truncate max-w-[120px] text-foreground">
 														{oid}
 													</td>
-													<td className="px-3 py-2 text-t2">
+													<td className="px-3 py-2 text-muted-foreground">
 														{entry.blockAll ? "Yes" : "No"}
 													</td>
-													<td className="px-3 py-2 text-t2">
+													<td className="px-3 py-2 text-muted-foreground">
 														{entry.blockedEndpoints.length}
 													</td>
 												</tr>
@@ -202,7 +202,7 @@ export function RawEdgeConfigDialog({
 
 						{/* Right: Monaco */}
 						<div className="flex flex-col gap-2">
-							<div className="text-xs font-medium text-t3 uppercase tracking-wide">
+							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">
 								Raw JSON
 							</div>
 							<div className="rounded-md border border-border overflow-hidden">

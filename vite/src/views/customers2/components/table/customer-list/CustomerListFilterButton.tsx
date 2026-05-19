@@ -60,7 +60,7 @@ export function CustomerListFilterButton({
 				<IconButton
 					variant="secondary"
 					className={cn("gap-2", open && "btn-secondary-active")}
-					icon={<FunnelSimpleIcon size={14} className="text-t3" />}
+					icon={<FunnelSimpleIcon size={14} className="text-tertiary-foreground" />}
 				>
 					Filter
 				</IconButton>
@@ -90,7 +90,7 @@ export function CustomerListFilterButton({
 					<button
 						type="button"
 						onClick={clearFilters}
-						className="flex-1 flex items-center justify-center gap-1.5 rounded-bl-lg px-2 py-1.5 text-xs text-t3 hover:text-t2 hover:bg-accent cursor-default"
+						className="flex-1 flex items-center justify-center gap-1.5 rounded-bl-lg px-2 py-1.5 text-xs text-tertiary-foreground hover:text-muted-foreground hover:bg-accent cursor-default"
 					>
 						<X size={10} />
 						Clear

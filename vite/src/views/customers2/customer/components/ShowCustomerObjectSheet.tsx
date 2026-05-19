@@ -62,7 +62,7 @@ export function ShowCustomerObjectSheet({
 			<SheetContent className="flex flex-col overflow-hidden bg-background min-w-xl">
 				<SheetHeader>
 					<SheetTitle>Customer Object</SheetTitle>
-					<p className="text-t3 text-sm">
+					<p className="text-tertiary-foreground text-sm">
 						Customer state from GET /customers/{customer_id}
 					</p>
 				</SheetHeader>
@@ -70,7 +70,7 @@ export function ShowCustomerObjectSheet({
 				<div className="flex-1 overflow-hidden flex flex-col px-4 pb-4">
 					{isLoading && (
 						<div className="flex items-center justify-center py-12">
-							<Spinner className="size-6 animate-spin text-t3" />
+							<Spinner className="size-6 animate-spin text-tertiary-foreground" />
 						</div>
 					)}
 
