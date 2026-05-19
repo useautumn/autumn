@@ -45,6 +45,11 @@ export type PreparedFeatureDeduction = {
 	// rolloverIds: string[];
 	rollovers: RolloverDeduction[];
 	unlimitedFeatureIds: string[];
+	// Chosen unlimited cusEnt to attribute events to when the deduction
+	// short-circuits via unlimitedFeatureIds. Prefers a cusEnt matching the
+	// tracked feature over a credit-system parent. Undefined when no
+	// unlimited cusEnt is present.
+	unlimitedCusEnt?: FullCusEntWithFullCusProduct;
 	lock?: {
 		enabled: true;
 		lock_id?: string;
