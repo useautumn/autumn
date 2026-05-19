@@ -5,6 +5,7 @@ import type {
 	TrialOnEnd,
 } from "@models/productModels/freeTrialModels/freeTrialModels";
 import type { ApiVersion } from "../../../api/versionUtils/ApiVersion";
+import type { Entity } from "../../cusModels/entityModels/entityModels";
 import type { FullCustomer } from "../../cusModels/fullCusModel";
 import type {
 	CollectionMethod,
@@ -30,6 +31,13 @@ export interface InitFullCustomerProductContext {
 	fullCustomer: FullCustomer;
 	fullProduct: FullProduct;
 	featureQuantities: FeatureOptions[];
+
+	/**
+	 * Per-call override for the entity the resulting cusProduct should bind to.
+	 * Wins over `fullCustomer.entity`. Used by flows (e.g. sync) where the
+	 * entity is plan-specific rather than request-wide.
+	 */
+	entity?: Entity;
 
 	// For customer entitlements
 	resetCycleAnchor: number | "now"; // Unix timestamp of the next

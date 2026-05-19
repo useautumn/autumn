@@ -56,7 +56,8 @@
 		"diff": "8.0.3",
 		"@smithy/config-resolver": "^4.4.0",
 		"lodash": "4.17.23",
-		"lodash-es": "4.17.23"
+		"lodash-es": "4.17.23",
+		"@types/pg": "8.11.10"
 	},
 	"resolutions": {
 		"@better-auth/core": "1.6.5",
@@ -69,7 +70,8 @@
 		"diff": "8.0.3",
 		"@smithy/config-resolver": "^4.4.0",
 		"lodash": "4.17.23",
-		"lodash-es": "4.17.23"
+		"lodash-es": "4.17.23",
+		"@types/pg": "8.11.10"
 	},
 	"type": "module",
 	"scripts": {
@@ -128,6 +130,7 @@
 		"docs": "bun -F @autumn/docs dev",
 		"docs:build": "bun -F @autumn/docs build",
 		"ts": "turbo run ts --filter=@autumn/server --filter=autumn-js --filter=@autumn/openapi --filter=atmn --filter=checkout",
+		"kill:ts": "while pgrep -f tsgo > /dev/null; do pkill -9 -f tsgo; sleep 0.1; done",
 		"atmn:build": "bun -F atmn build",
 		"openapi:ts": "bun -F @autumn/openapi ts",
 		"js:ts": "bun -F autumn-js ts",

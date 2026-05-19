@@ -1,4 +1,6 @@
 import {
+	type Entity,
+	EntityNotFoundError,
 	ErrCode,
 	type FullCusProduct,
 	type FullCustomer,
@@ -41,6 +43,23 @@ const fetchStripeSchedule = async ({
 	return stripeCli.subscriptionSchedules.retrieve(stripeScheduleId);
 };
 
+const resolvePlanEntity = ({
+	plan,
+	fullCustomer,
+}: {
+	plan: SyncPlanInstance;
+	fullCustomer: FullCustomer;
+}): Entity | undefined => {
+	if (!plan.entity_id) return undefined;
+	const entity = fullCustomer.entities.find(
+		(e) => e.id === plan.entity_id || e.internal_id === plan.entity_id,
+	);
+	if (!entity) {
+		throw new EntityNotFoundError({ entityId: plan.entity_id });
+	}
+	return entity;
+};
+
 const buildProductContext = async ({
 	ctx,
 	fullCustomer,
@@ -67,6 +86,8 @@ const buildProductContext = async ({
 		initializeUndefinedQuantities: true,
 	});
 
+	const entity = resolvePlanEntity({ plan, fullCustomer });
+
 	let currentCustomerProduct: FullCusProduct | undefined;
 	if ((isImmediate || plan.enable_plan_immediately) && plan.expire_previous) {
 		const transition = setupAttachTransitionContext({
@@ -82,6 +103,7 @@ const buildProductContext = async ({
 		customPrices,
 		customEntitlements,
 		featureQuantities,
+		entity,
 		currentCustomerProduct,
 		accessStartsAt,
 	};
