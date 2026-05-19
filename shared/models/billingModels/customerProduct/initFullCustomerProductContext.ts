@@ -88,6 +88,9 @@ export interface InitFullCustomerProductOptions {
 	/** When true, preserve subscription_ids even for non-paid-recurring products (used by sync). */
 	keepSubscriptionIds?: boolean;
 
+	/** Override the entity the customer product is bound to. Used by sync to honor `plan.internal_entity_id` instead of falling back to `fullCustomer.entity`. */
+	internalEntityId?: string;
+
 	previousCustomerProductId?: string;
 	onTrialEnd?: TrialOnEnd;
 }

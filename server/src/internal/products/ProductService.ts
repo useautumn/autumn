@@ -28,7 +28,11 @@ import {
 import { StatusCodes } from "http-status-codes";
 import type { Logger } from "@/external/logtail/logtailUtils";
 import { queryWithCache } from "@/utils/cacheUtils/queryWithCache";
-import { buildProductsCacheKey, PRODUCTS_CACHE_TTL } from "./productCacheUtils";
+import {
+	buildAllVersionsProductsCacheKey,
+	buildProductsCacheKey,
+	PRODUCTS_CACHE_TTL,
+} from "./productCacheUtils";
 import { getLatestProducts, isFreeProduct } from "./productUtils";
 import { sortFullProducts } from "./productUtils/sortProductUtils";
 
@@ -294,6 +298,31 @@ export class ProductService {
 				version ? eq(products.version, version) : undefined,
 			),
 			orderBy: [desc(products.version)],
+		});
+	}
+
+	static async listCachedAllVersions({
+		db,
+		orgId,
+		env,
+	}: {
+		db: DrizzleCli;
+		orgId: string;
+		env: AppEnv;
+	}): Promise<Array<{ internal_id: string; id: string; name: string; version: number }>> {
+		return queryWithCache({
+			key: buildAllVersionsProductsCacheKey({ orgId, env }),
+			ttl: PRODUCTS_CACHE_TTL,
+			fn: () =>
+				db
+					.select({
+						internal_id: products.internal_id,
+						id: products.id,
+						name: products.name,
+						version: products.version,
+					})
+					.from(products)
+					.where(and(eq(products.org_id, orgId), eq(products.env, env))),
 		});
 	}
 
