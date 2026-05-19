@@ -46,7 +46,7 @@ export const ProjectIdDialog = ({
 				<div className="flex flex-col gap-4">
 					<div>
 						<FormLabel>
-							<span className="text-t2">
+							<span className="text-muted-foreground">
 								{env === "live" ? "Project ID" : "Sandbox Project ID"}
 							</span>
 						</FormLabel>

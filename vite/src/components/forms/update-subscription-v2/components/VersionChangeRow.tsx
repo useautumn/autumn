@@ -20,11 +20,11 @@ export function VersionChangeRow({
 		>
 			<div className="flex flex-row items-center flex-1 gap-2 min-w-0 overflow-hidden">
 				<GitBranchIcon size={14} weight="duotone" className="text-purple-500" />
-				<span className="text-sm text-t2">Plan Version</span>
+				<span className="text-sm text-muted-foreground">Plan Version</span>
 			</div>
 			<div className="flex items-center gap-1 text-xs">
 				<span className="text-red-500">v{currentVersion}</span>
-				<span className="text-t3">→</span>
+				<span className="text-tertiary-foreground">→</span>
 				<span className="text-green-500">v{selectedVersion}</span>
 			</div>
 		</div>

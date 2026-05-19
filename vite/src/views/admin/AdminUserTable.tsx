@@ -114,7 +114,7 @@ export const AdminUserTable = () => {
 				>
 					Previous
 				</Button>
-				<span className="text-sm text-t3">Page {pageInfo.page}</span>
+				<span className="text-sm text-tertiary-foreground">Page {pageInfo.page}</span>
 				<Button
 					variant="secondary"
 					size="sm"

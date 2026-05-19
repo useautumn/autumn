@@ -26,6 +26,7 @@ export const initCustomerProduct = ({
 		freeTrial,
 		trialEndsAt,
 		now,
+		entity,
 	} = initContext;
 	const {
 		subscriptionId,

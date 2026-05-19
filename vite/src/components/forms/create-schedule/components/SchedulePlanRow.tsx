@@ -103,13 +103,13 @@ export function SchedulePlanRow({
 						<>
 							<span className="flex-1 truncate min-w-0">{product.name}</span>
 							{selectedProductIdsInPhase.has(product.id) && (
-								<span className="text-xs text-t4 shrink-0">
+								<span className="text-xs text-subtle shrink-0">
 									Already selected
 								</span>
 							)}
 							{!selectedProductIdsInPhase.has(product.id) &&
 								usedKeys.has(product.group ?? product.id) && (
-									<span className="text-xs text-t4 shrink-0">
+									<span className="text-xs text-subtle shrink-0">
 										Group conflict
 									</span>
 								)}
@@ -132,14 +132,14 @@ export function SchedulePlanRow({
 	const row = (
 		<div
 			className={cn(
-				"group flex h-input min-w-0 w-full items-center gap-2 rounded-lg input-base input-shadow-default px-3 text-sm text-t1",
+				"group flex h-input min-w-0 w-full items-center gap-2 rounded-lg input-base input-shadow-default px-3 text-sm text-foreground",
 				isLocked && "opacity-60",
 			)}
 		>
 			{selectedProduct?.is_add_on ? (
-				<PuzzlePieceIcon className="size-3.5 shrink-0 text-t3" />
+				<PuzzlePieceIcon className="size-3.5 shrink-0 text-tertiary-foreground" />
 			) : (
-				<PackageIcon className="size-3.5 shrink-0 text-t3" />
+				<PackageIcon className="size-3.5 shrink-0 text-tertiary-foreground" />
 			)}
 			<span className="flex-1 truncate min-w-0">
 				{selectedProduct?.name ?? plan.productId}
@@ -157,7 +157,7 @@ export function SchedulePlanRow({
 						</Badge>
 					)}
 					{priceProduct && (
-						<span className="text-xs text-t3 tabular-nums">
+						<span className="text-xs text-tertiary-foreground tabular-nums">
 							<PriceDisplay
 								product={priceProduct}
 								currency={org?.default_currency ?? "USD"}
@@ -174,7 +174,7 @@ export function SchedulePlanRow({
 					<Button
 						variant="ghost"
 						size="icon"
-						className="h-6 w-6 text-t3 hover:text-t1"
+						className="h-6 w-6 text-tertiary-foreground hover:text-foreground"
 						onClick={handleEditClick}
 						disabled={isLocked}
 					>
@@ -182,7 +182,7 @@ export function SchedulePlanRow({
 					</Button>
 					<button
 						type="button"
-						className="p-1 text-t4 hover:text-destructive transition-colors disabled:pointer-events-none disabled:opacity-50"
+						className="p-1 text-subtle hover:text-destructive transition-colors disabled:pointer-events-none disabled:opacity-50"
 						onClick={() => handleRemovePlan({ phaseIndex, planIndex })}
 						disabled={isLocked}
 					>

@@ -191,7 +191,7 @@ export function PriceTiers({
 							}}
 						/>
 						<InputGroupAddon align="inline-end">
-							<span className="text-t3 text-tiny">{currency}</span>
+							<span className="text-tertiary-foreground text-tiny">{currency}</span>
 						</InputGroupAddon>
 					</InputGroup>
 
@@ -200,7 +200,7 @@ export function PriceTiers({
 					<div className="flex items-center ml-auto gap-1">
 						<IconButton
 							variant="muted"
-							className="text-t3 text-xs"
+							className="text-tertiary-foreground text-xs"
 							onClick={() => addTier({ item, setItem })}
 							icon={<PlusIcon size={12} />}
 							iconOrientation="left"
@@ -224,7 +224,7 @@ export function PriceTiers({
 
 				return (
 					<div key={index} className="flex gap-2 w-full items-center">
-						<span className="text-t3 text-xs min-w-0 w-18 shrink-0 h-full">
+						<span className="text-tertiary-foreground text-xs min-w-0 w-18 shrink-0 h-full">
 							{Number(includedUsage) === 0 && index === 0
 								? "first"
 								: "then, up to"}
@@ -249,7 +249,7 @@ export function PriceTiers({
 								placeholder="0.00"
 							/>
 							<InputGroupAddon align="inline-end">
-								<span className="text-t3 text-tiny">{currency}</span>
+								<span className="text-tertiary-foreground text-tiny">{currency}</span>
 							</InputGroupAddon>
 						</InputGroup>
 
@@ -260,7 +260,7 @@ export function PriceTiers({
 								variant="muted"
 								onClick={() => removeTier({ item, setItem, index })}
 								icon={<TrashSimpleIcon size={10} />}
-								className="p-1 text-t3 hover:text-red-500"
+								className="p-1 text-tertiary-foreground hover:text-red-500"
 							/>
 						</div>
 					</div>
@@ -268,7 +268,7 @@ export function PriceTiers({
 			})}
 			<IconButton
 				variant="muted"
-				className="w-full text-t3 text-xs"
+				className="w-full text-tertiary-foreground text-xs"
 				size="sm"
 				onClick={() => addTier({ item, setItem })}
 				icon={<PlusIcon size={8} />}

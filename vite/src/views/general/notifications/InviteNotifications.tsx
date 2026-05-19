@@ -108,7 +108,7 @@ export const InviteNotifications = () => {
 										<p className="text-sm font-medium">
 											Invitation Unavailable
 										</p>
-										<p className="text-sm text-t3">
+										<p className="text-sm text-tertiary-foreground">
 											This invitation has expired or been revoked.
 										</p>
 										<Button
@@ -125,17 +125,17 @@ export const InviteNotifications = () => {
 											<p className="text-sm font-medium">
 												Organization Invitation
 											</p>
-											<p className="text-xs text-t3">
+											<p className="text-xs text-tertiary-foreground">
 												Expires {expiresAtFormatted}
 											</p>
 										</div>
 
-										<p className="text-sm text-t2">
-											<span className="font-medium text-t1">
+										<p className="text-sm text-muted-foreground">
+											<span className="font-medium text-foreground">
 												{invite.inviter.name || "Someone"}
 											</span>{" "}
 											invited you to join{" "}
-											<span className="font-medium text-t1">
+											<span className="font-medium text-foreground">
 												{invite.organization.name}
 											</span>{" "}
 											as <Badge variant="outline">{invite.role}</Badge>

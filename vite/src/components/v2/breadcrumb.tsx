@@ -27,9 +27,9 @@ export default function V2Breadcrumb({
 
 	return (
 		<Breadcrumb
-			className={cn("text-t3 pt-6 pl-4 flex justify-center", className)}
+			className={cn("text-tertiary-foreground pt-6 pl-4 flex justify-center", className)}
 		>
-			<BreadcrumbList className="text-t3 text-xs w-full">
+			<BreadcrumbList className="text-tertiary-foreground text-xs w-full">
 				{items.map((item, index) => (
 					<React.Fragment key={index}>
 						<BreadcrumbItem

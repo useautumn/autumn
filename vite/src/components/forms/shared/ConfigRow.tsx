@@ -27,9 +27,9 @@ export function ConfigRow({
 		<div className="flex flex-col gap-2">
 			<div className="flex items-center justify-between gap-3">
 				<div className="flex flex-col gap-0.5 min-w-0">
-					<span className="text-sm font-medium text-t1">{title}</span>
+					<span className="text-sm font-medium text-foreground">{title}</span>
 					{description && (
-						<span className="text-xs text-t3">{description}</span>
+						<span className="text-xs text-tertiary-foreground">{description}</span>
 					)}
 				</div>
 				{action && <div className="flex shrink-0">{action}</div>}

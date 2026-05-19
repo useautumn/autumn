@@ -72,8 +72,8 @@ export const logSyncContext = ({
 						const expire = pc.currentCustomerProduct
 							? ` expire=${pc.currentCustomerProduct.id}`
 							: "";
-						const entity = pc.plan.internal_entity_id
-							? ` entity=${pc.plan.internal_entity_id}`
+						const entity = pc.entity
+							? ` entity=${pc.entity.internal_id}`
 							: "";
 						return `${pc.fullProduct.id}${customize}${expire}${entity}`;
 					})

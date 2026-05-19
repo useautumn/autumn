@@ -9,7 +9,7 @@ import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 
 const navBtnBase =
-	"inline-flex items-center justify-center size-5 rounded text-t4 transition-colors hover:text-t2 disabled:pointer-events-none disabled:opacity-30";
+	"inline-flex items-center justify-center size-5 rounded text-subtle transition-colors hover:text-muted-foreground disabled:pointer-events-none disabled:opacity-30";
 
 export const TableFooter = <TData,>({
 	table,
@@ -36,16 +36,16 @@ export const TableFooter = <TData,>({
 
 	return (
 		<tfoot className={cn("bg-card", className)}>
-			<tr className="border-t text-t4">
+			<tr className="border-t text-subtle">
 				<td colSpan={resolvedColSpan} className="h-8 px-4">
 					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-3 text-tiny font-medium text-t4">
+						<div className="flex items-center gap-3 text-tiny font-medium text-subtle">
 							<div className="flex items-center gap-1.5">
 								<span>Rows</span>
 								<select
 									value={pageSize}
 									onChange={(e) => table.setPageSize(Number(e.target.value))}
-									className="h-5 cursor-pointer appearance-none rounded bg-transparent px-1 text-tiny font-medium text-t3 outline-none hover:text-t2"
+									className="h-5 cursor-pointer appearance-none rounded bg-transparent px-1 text-tiny font-medium text-tertiary-foreground outline-none hover:text-muted-foreground"
 								>
 									{pageSizeOptions.map((opt) => (
 										<option key={opt} value={opt}>
@@ -54,7 +54,7 @@ export const TableFooter = <TData,>({
 									))}
 								</select>
 							</div>
-							<span className="text-t4">
+							<span className="text-subtle">
 								{start}–{end} of {rowCount}
 							</span>
 							{leftSlot}
@@ -79,7 +79,7 @@ export const TableFooter = <TData,>({
 							>
 								<ChevronLeftIcon size={14} />
 							</button>
-							<span className="min-w-10 text-center text-tiny font-medium text-t3">
+							<span className="min-w-10 text-center text-tiny font-medium text-tertiary-foreground">
 								{pageIndex + 1} / {pageCount}
 							</span>
 							<button

@@ -35,7 +35,7 @@ export const initImmediateSyncCustomerProduct = ({
 	stripeSubscription: Stripe.Subscription;
 	currentEpochMs: number;
 }): FullCusProduct => {
-	const { plan, fullProduct, featureQuantities } = productContext;
+	const { plan, fullProduct, featureQuantities, entity } = productContext;
 
 	const trialEndsAt = getTrialEndsAtFromStripe({ stripeSubscription });
 	const { canceledAt, endedAt } = getCancelFieldsFromStripe({
@@ -49,6 +49,7 @@ export const initImmediateSyncCustomerProduct = ({
 			fullCustomer,
 			fullProduct,
 			featureQuantities,
+			entity,
 			resetCycleAnchor: resetCycleAnchorMs,
 			now: currentEpochMs,
 			freeTrial: null,
@@ -67,7 +68,7 @@ export const initImmediateSyncCustomerProduct = ({
 			status: stripeSubscriptionToAutumnStatus({
 				stripeStatus: stripeSubscription.status,
 			}),
-			internalEntityId: plan.internal_entity_id,
+			internalEntityId: entity?.internal_id,
 		},
 	});
 };

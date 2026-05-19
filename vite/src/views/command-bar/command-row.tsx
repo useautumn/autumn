@@ -60,7 +60,7 @@ export const CommandRow = React.forwardRef<HTMLDivElement, CommandRowProps>(
 			// Clone the icon and add consistent sizing and lighter stroke weight
 			if (React.isValidElement(icon)) {
 				return React.cloneElement(icon, {
-					className: cn("mr-1 size-3.5 text-t3", icon.props.className),
+					className: cn("mr-1 size-3.5 text-tertiary-foreground", icon.props.className),
 					strokeWidth: icon.props.strokeWidth ?? 1.5,
 				} as React.HTMLAttributes<HTMLElement>);
 			}

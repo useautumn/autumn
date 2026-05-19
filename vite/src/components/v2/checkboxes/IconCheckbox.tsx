@@ -111,8 +111,8 @@ const IconCheckbox = React.forwardRef<HTMLButtonElement, IconCheckboxProps>(
 				className={cn(
 					iconButtonVariants({ iconOrientation }),
 					iconToMainClass(),
-					"text-t3!",
-					checked && "text-t1! border-primary",
+					"text-tertiary-foreground!",
+					checked && "text-foreground! border-primary",
 					className,
 				)}
 				onClick={handleClick}

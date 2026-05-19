@@ -265,7 +265,7 @@ export function BillingAutoTopupSheet() {
 				<SheetSection withSeparator>
 					<FormLabel>Feature</FormLabel>
 					{isEdit ? (
-						<div className="text-sm text-t2">
+						<div className="text-sm text-muted-foreground">
 							{consumableFeatures.find((f: Feature) => f.id === featureId)
 								?.name ?? featureId}
 						</div>
@@ -478,7 +478,7 @@ function PurchaseLimitIntervalPopover({
 					variant="skeleton"
 					disabled={disabled}
 				>
-					<p className="text-t3 group-hover/btn:text-primary">
+					<p className="text-tertiary-foreground group-hover/btn:text-primary">
 						Customize Interval
 					</p>
 				</Button>
