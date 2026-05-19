@@ -6,7 +6,7 @@ import {
 	CoinVerticalIcon,
 	CubeIcon,
 	DatabaseIcon,
-	IdentificationCardIcon,
+	UsersIcon,
 	LegoIcon,
 	OptionIcon,
 	TerminalWindowIcon,
@@ -206,7 +206,7 @@ export const MainSidebar = ({
 									{
 										title: "All Customers",
 										value: "customers",
-										icon: <IdentificationCardIcon size={16} weight="fill" />,
+										icon: <UsersIcon size={16} weight="fill" />,
 									},
 									{
 										title: "Migrations",

@@ -48,12 +48,6 @@ import {
 	HoverCardContent,
 	HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import {
-	InputGroup,
-	InputGroupAddon,
-	InputGroupButton,
-	InputGroupTextarea,
-} from "@/components/v2/inputs/InputGroup";
 import { Button } from "@/components/v2/buttons/Button";
 import {
 	DropdownMenu,
@@ -301,7 +295,7 @@ export function PromptInputAttachment({
 			<HoverCardTrigger asChild>
 				<div
 					className={cn(
-						"group relative flex h-8 cursor-pointer select-none items-center gap-1.5 rouplaceholder:text-md border border-border px-1.5 font-medium text-sm transition-all hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
+						"group relative flex h-8 cursor-pointer select-none items-center gap-1.5 rounded-md border border-border px-1.5 font-medium text-sm transition-all hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
 						className,
 					)}
 					key={data.id}
@@ -344,7 +338,7 @@ export function PromptInputAttachment({
 			<PromptInputHoverCardContent className="w-auto p-2">
 				<div className="w-auto space-y-3">
 					{isImage && (
-						<div className="flex max-h-96 w-96 items-center justify-center overflow-hidden rouplaceholder:text-md border">
+						<div className="flex max-h-96 w-96 items-center justify-center overflow-hidden rounded-md border">
 							<img
 								alt={filename || "attachment preview"}
 								className="max-h-full max-w-full object-contain"
@@ -789,9 +783,20 @@ export const PromptInput = ({
 				ref={formRef}
 				{...props}
 			>
-				<InputGroup className="overflow-hidden border-border/60 rounded-2xl dark:border-white/15 bg-interactive-secondary/70">
+				<div
+					data-slot="prompt-input"
+					className="group/input-group relative flex w-full flex-col overflow-hidden rounded-2xl border border-border/60 dark:border-white/15 bg-interactive-secondary/70 shadow-md outline-none cursor-text input-state-focus-within"
+					onClick={(e) => {
+						if ((e.target as HTMLElement).closest("button")) return;
+						const el = e.currentTarget.querySelector("input, textarea") as
+							| HTMLInputElement
+							| HTMLTextAreaElement
+							| null;
+						el?.focus();
+					}}
+				>
 					{children}
-				</InputGroup>
+				</div>
 			</form>
 		</>
 	);
@@ -814,9 +819,7 @@ export const PromptInputBody = ({
 	<div className={cn("contents", className)} {...props} />
 );
 
-export type PromptInputTextareaProps = ComponentProps<
-	typeof InputGroupTextarea
->;
+export type PromptInputTextareaProps = ComponentProps<"textarea">;
 
 export const PromptInputTextarea = ({
 	onChange,
@@ -901,9 +904,10 @@ export const PromptInputTextarea = ({
 			};
 
 	return (
-		<InputGroupTextarea
+		<textarea
+			data-slot="input-group-control"
 			className={cn(
-				"field-sizing-content max-h-48 min-h-16 placeholder:text-subtle",
+				"field-sizing-content max-h-48 min-h-16 w-full flex-1 resize-none bg-transparent py-3 px-3 text-sm text-foreground outline-none placeholder:text-subtle placeholder:select-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
 				className,
 			)}
 			name="message"
@@ -918,34 +922,32 @@ export const PromptInputTextarea = ({
 	);
 };
 
-export type PromptInputHeaderProps = Omit<
-	ComponentProps<typeof InputGroupAddon>,
-	"align"
->;
+export type PromptInputHeaderProps = HTMLAttributes<HTMLDivElement>;
 
 export const PromptInputHeader = ({
 	className,
 	...props
 }: PromptInputHeaderProps) => (
-	<InputGroupAddon
-		align="block-end"
-		className={cn("order-first flex-wrap gap-1", className)}
+	<div
+		className={cn(
+			"order-first flex w-full items-center justify-start gap-2 px-3 pt-3 flex-wrap",
+			className,
+		)}
 		{...props}
 	/>
 );
 
-export type PromptInputFooterProps = Omit<
-	ComponentProps<typeof InputGroupAddon>,
-	"align"
->;
+export type PromptInputFooterProps = HTMLAttributes<HTMLDivElement>;
 
 export const PromptInputFooter = ({
 	className,
 	...props
 }: PromptInputFooterProps) => (
-	<InputGroupAddon
-		align="block-end"
-		className={cn("justify-between gap-1", className)}
+	<div
+		className={cn(
+			"flex w-full items-center justify-between gap-1 px-3 pb-3",
+			className,
+		)}
 		{...props}
 	/>
 );
@@ -959,27 +961,22 @@ export const PromptInputTools = ({
 	<div className={cn("flex items-center gap-1", className)} {...props} />
 );
 
-export type PromptInputButtonProps = ComponentProps<typeof InputGroupButton>;
+export type PromptInputButtonProps = ComponentProps<typeof Button>;
 
 export const PromptInputButton = ({
 	variant = "skeleton",
 	className,
-	size,
+	size = "icon",
 	...props
-}: PromptInputButtonProps) => {
-	const newSize =
-		size ?? (Children.count(props.children) > 1 ? "sm" : "icon-sm");
-
-	return (
-		<InputGroupButton
-			className={cn(className)}
-			size={newSize}
-			type="button"
-			variant={variant}
-			{...props}
-		/>
-	);
-};
+}: PromptInputButtonProps) => (
+	<Button
+		type="button"
+		variant={variant}
+		size={size}
+		className={cn("shadow-none", className)}
+		{...props}
+	/>
+);
 
 export type PromptInputActionMenuProps = ComponentProps<typeof DropdownMenu>;
 export const PromptInputActionMenu = (props: PromptInputActionMenuProps) => (
@@ -1023,14 +1020,14 @@ export const PromptInputActionMenuItem = ({
 // Note: Actions that perform side-effects (like opening a file dialog)
 // are provided in opt-in modules (e.g., prompt-input-attachments).
 
-export type PromptInputSubmitProps = ComponentProps<typeof InputGroupButton> & {
+export type PromptInputSubmitProps = ComponentProps<typeof Button> & {
 	status?: ChatStatus;
 };
 
 export const PromptInputSubmit = ({
 	className,
 	variant = "primary",
-	size = "icon-sm",
+	size = "icon",
 	status,
 	children,
 	...props
@@ -1046,16 +1043,16 @@ export const PromptInputSubmit = ({
 	}
 
 	return (
-		<InputGroupButton
+		<Button
 			aria-label="Submit"
-			className={cn(className)}
-			size={size}
 			type="submit"
 			variant={variant}
+			size={size}
+			className={cn("shadow-none", className)}
 			{...props}
 		>
 			{children ?? Icon}
-		</InputGroupButton>
+		</Button>
 	);
 };
 

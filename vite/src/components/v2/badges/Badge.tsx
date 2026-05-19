@@ -17,7 +17,7 @@ const badgeVariants = cva(
 				default:
 					"border-transparent bg-zinc-900 text-zinc-50 shadow hover:bg-zinc-900/80 dark:bg-zinc-50 dark:text-zinc-900 dark:hover:bg-zinc-50/80",
 
-				muted: "bg-muted border border-transparent",
+				muted: "bg-muted border border-border/50",
 				green: "bg-green-500/10 text-green-500 border-transparent",
 			},
 			size: {

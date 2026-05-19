@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
@@ -338,11 +339,12 @@ export const SelectGroupByDropdown = ({
 							</>
 						)}
 
-					{currentGroupBy &&
-						currentGroupBy !== "plan_id" &&
-						availableGroupValues.length > 0 && (
-							<>
-								<DropdownMenuSeparator />
+				{currentGroupBy &&
+					currentGroupBy !== "plan_id" &&
+					availableGroupValues.length > 0 && (
+						<>
+							<DropdownMenuSeparator />
+							<DropdownMenuGroup>
 								<DropdownMenuLabel className="text-xs text-subtle font-normal">
 									Filter by value
 								</DropdownMenuLabel>
@@ -381,8 +383,9 @@ export const SelectGroupByDropdown = ({
 										</DropdownMenuItem>
 									);
 								})}
-							</>
-						)}
+							</DropdownMenuGroup>
+						</>
+					)}
 				</div>
 			</DropdownMenuContent>
 		</DropdownMenu>

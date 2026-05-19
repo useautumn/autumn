@@ -78,7 +78,7 @@ export const OrgDropdown = () => {
 	if (!org || error) return null;
 
 	return (
-		<div className={cn("flex px-3")}>
+		<div className={cn("flex", expanded ? "px-3" : "px-2")}>
 			<CreateNewOrg dialogType={dialogType} setDialogType={setDialogType} />
 
 			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
@@ -94,8 +94,10 @@ export const OrgDropdown = () => {
 					<DropdownMenuTrigger asChild>
 						<Button
 							className={cn(
-								"bg-transparent! shimmer-hover p-0.5 gap-2 rounded-md justify-start items-center transition-all duration-200 cursor-pointer",
-								expanded ? "h-7 min-w-28" : "h-7 w-7 p-0.5",
+								"bg-transparent! gap-2 rounded-md items-center transition-all duration-200 cursor-pointer",
+								expanded
+									? "h-7 min-w-28 p-0.5 justify-start shimmer-hover"
+									: "h-7 w-full px-2 justify-center hover:bg-transparent",
 							)}
 							variant="skeleton"
 						>

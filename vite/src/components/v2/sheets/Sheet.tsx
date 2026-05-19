@@ -59,7 +59,7 @@ function SheetPortal({
 	container?: HTMLElement | null;
 }) {
 	const resolvedContainer =
-		container ?? document.querySelector("[data-main-content]");
+		container ?? document.querySelector("[data-main-content]") ?? document.body;
 	return (
 		<SheetPrimitive.Portal
 			data-slot="sheet-portal"
