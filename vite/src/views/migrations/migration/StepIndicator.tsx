@@ -33,13 +33,13 @@ export function StepIndicator({
 					const StepIcon = s.icon;
 					return (
 						<div key={s.id} className="flex items-center gap-2">
-							{i > 0 && <CaretRightIcon size={14} className="text-t4" />}
+							{i > 0 && <CaretRightIcon size={14} className="text-subtle" />}
 							<button
 								type="button"
 								onClick={() => onStepChange(s.id)}
 								className={cn(
 									"flex items-center gap-2 text-md cursor-pointer transition-colors",
-									isActive ? "text-t1 font-medium" : "text-t3 hover:text-t2",
+									isActive ? "text-foreground font-medium" : "text-tertiary-foreground hover:text-muted-foreground",
 								)}
 							>
 								<StepIcon

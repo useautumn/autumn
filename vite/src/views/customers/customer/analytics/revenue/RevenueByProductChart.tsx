@@ -63,15 +63,15 @@ function CustomTooltip({
 
 	return (
 		<div className="rounded-md border bg-background px-3 py-2 text-xs shadow-sm">
-			<p className="mb-1 font-medium text-t2">{label}</p>
+			<p className="mb-1 font-medium text-muted-foreground">{label}</p>
 			{payload.map((entry) => (
 				<div key={entry.name} className="flex items-center gap-2">
 					<span
 						className="inline-block h-2 w-2 rounded-full"
 						style={{ backgroundColor: entry.color }}
 					/>
-					<span className="text-t3">{entry.name}:</span>
-					<span className="font-medium text-t1">
+					<span className="text-tertiary-foreground">{entry.name}:</span>
+					<span className="font-medium text-foreground">
 						{formatCurrency({ value: entry.value, currency })}
 					</span>
 				</div>
@@ -134,7 +134,7 @@ export function RevenueByProductChart({
 	return (
 		<div>
 			<div className="flex flex-wrap items-center gap-2 min-h-10 pb-4">
-				<div className="text-t3 text-md flex gap-2 items-center">
+				<div className="text-tertiary-foreground text-md flex gap-2 items-center">
 					<ChartBarIcon size={16} weight="fill" className="text-subtle" />
 					Revenue by Product
 				</div>
@@ -146,8 +146,8 @@ export function RevenueByProductChart({
 							onClick={() => setGranularity(g.value)}
 							className={`px-2.5 py-1 text-xs rounded-md transition-colors ${
 								granularity === g.value
-									? "bg-interactive-secondary text-t1 font-medium border"
-									: "text-t3 hover:text-t2"
+									? "bg-interactive-secondary text-foreground font-medium border"
+									: "text-tertiary-foreground hover:text-muted-foreground"
 							}`}
 						>
 							{g.label}
@@ -160,7 +160,7 @@ export function RevenueByProductChart({
 
 				{isEmpty && (
 					<div className="h-[260px] flex items-center justify-center">
-						<p className="text-sm text-t3">No revenue data</p>
+						<p className="text-sm text-tertiary-foreground">No revenue data</p>
 					</div>
 				)}
 
@@ -178,7 +178,7 @@ export function RevenueByProductChart({
 								axisLine={false}
 								tick={{ fontSize: 11 }}
 								tickMargin={4}
-								className="fill-t3"
+								className="fill-tertiary-foreground"
 								interval="equidistantPreserveStart"
 							/>
 							<YAxis
@@ -186,7 +186,7 @@ export function RevenueByProductChart({
 								axisLine={false}
 								width={60}
 								tick={{ fontSize: 11 }}
-								className="fill-t3"
+								className="fill-tertiary-foreground"
 								tickFormatter={(v: number) =>
 									formatCurrency({ value: v, currency })
 								}

@@ -20,18 +20,18 @@ function FieldLabel({
 	}
 	if (!description) {
 		return (
-			<div className={cn("text-t3 text-sm mb-2", className)}>{children}</div>
+			<div className={cn("text-tertiary-foreground text-sm mb-2", className)}>{children}</div>
 		);
 	}
 	return (
-		<div className={cn("text-t3 text-sm mb-2", className)}>
+		<div className={cn("text-tertiary-foreground text-sm mb-2", className)}>
 			{children}
 			{description && !tooltip && (
-				<p className="text-t3 text-xs">{description}</p>
+				<p className="text-tertiary-foreground text-xs">{description}</p>
 			)}
 			{tooltip && description && (
 				<div className="flex items-center gap-2">
-					<p className="text-t3 text-xs">{description}</p>
+					<p className="text-tertiary-foreground text-xs">{description}</p>
 					<InfoTooltip>{tooltip}</InfoTooltip>
 				</div>
 			)}

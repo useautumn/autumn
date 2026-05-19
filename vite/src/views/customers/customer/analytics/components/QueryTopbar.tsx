@@ -140,7 +140,7 @@ export const QueryTopbar = () => {
 							>
 								{SIMPLE_INTERVALS[interval]}
 								{selectedInterval === interval && (
-									<Check className="ml-2 h-3 w-3 text-t3" />
+									<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
 								)}
 							</DropdownMenuItem>
 						))}
@@ -158,7 +158,7 @@ export const QueryTopbar = () => {
 								<DropdownMenuSubTrigger className="flex items-center justify-between">
 									{BIN_SIZE_INTERVALS[interval]}
 									{selectedInterval === interval && (
-										<Check className="mr-1 h-3 w-3 text-t3" />
+										<Check className="mr-1 h-3 w-3 text-tertiary-foreground" />
 									)}
 								</DropdownMenuSubTrigger>
 								<DropdownMenuSubContent>
@@ -173,7 +173,7 @@ export const QueryTopbar = () => {
 											{label}
 											{selectedInterval === interval &&
 												selectedBinSize === binSize && (
-													<Check className="ml-2 h-3 w-3 text-t3" />
+													<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
 												)}
 										</DropdownMenuItem>
 									))}

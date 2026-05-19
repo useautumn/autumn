@@ -263,7 +263,7 @@ function SelectContent() {
 										onClick={() => setCreateEntityOpen(true)}
 									>
 										<PlusIcon
-											className="size-[14px] text-t2"
+											className="size-[14px] text-muted-foreground"
 											weight="regular"
 										/>
 										Create new entity

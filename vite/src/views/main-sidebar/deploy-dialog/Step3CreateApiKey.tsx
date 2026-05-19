@@ -64,11 +64,11 @@ export const Step3CreateApiKey = () => {
 							}}
 							className="flex flex-col gap-2"
 						>
-							<div className="flex justify-between bg-interactive-secondary border p-2 px-3 text-t2 rounded-md items-center w-50 h-7">
+							<div className="flex justify-between bg-interactive-secondary border p-2 px-3 text-muted-foreground rounded-md items-center w-50 h-7">
 								<p className="text-sm font-mono truncate">{apiKey}</p>
 								<button
 									type="button"
-									className="text-t2 hover:text-t2/80 ml-4"
+									className="text-muted-foreground hover:text-muted-foreground/80 ml-4"
 									onClick={() => {
 										setCopied(true);
 										navigator.clipboard.writeText(apiKey);
@@ -77,7 +77,7 @@ export const Step3CreateApiKey = () => {
 									{copied ? <Check size={15} /> : <Copy size={15} />}
 								</button>
 							</div>
-							{/* <p className="text-xs text-t3">
+							{/* <p className="text-xs text-tertiary-foreground">
 								You won't be able to view this key anymore after closing the
 								dialog.
 							</p> */}

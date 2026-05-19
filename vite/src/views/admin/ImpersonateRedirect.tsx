@@ -96,10 +96,10 @@ export function ImpersonateRedirect() {
 									<AlertCircle className="w-6 h-6 text-red-600 dark:text-red-400" />
 								</div>
 							</div>
-							<h2 className="text-lg font-semibold text-t1 mb-2">
+							<h2 className="text-lg font-semibold text-foreground mb-2">
 								Impersonation Failed
 							</h2>
-							<p className="text-sm text-t3 mb-6">{error}</p>
+							<p className="text-sm text-tertiary-foreground mb-6">{error}</p>
 							<Button
 								variant="primary"
 								onClick={() => {
@@ -117,15 +117,15 @@ export function ImpersonateRedirect() {
 									<ShieldCheck className="w-6 h-6 text-blue-600 dark:text-blue-400" />
 								</div>
 							</div>
-							<h2 className="text-lg font-semibold text-t1 mb-2">
+							<h2 className="text-lg font-semibold text-foreground mb-2">
 								Admin Impersonation
 							</h2>
-							<div className="flex items-center justify-center gap-2 text-sm text-t3 mb-4">
+							<div className="flex items-center justify-center gap-2 text-sm text-tertiary-foreground mb-4">
 								<Loader2 className="w-4 h-4 animate-spin" />
 								<span>{status}</span>
 							</div>
 							<div className="bg-muted/50 rounded-lg p-3 mt-4">
-								<p className="text-xs text-t4">
+								<p className="text-xs text-subtle">
 									Switching to organization context...
 								</p>
 							</div>

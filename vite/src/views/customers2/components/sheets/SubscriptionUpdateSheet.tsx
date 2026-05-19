@@ -199,7 +199,7 @@ export function SubscriptionUpdateSheet() {
 					title="Update Subscription"
 					description="Loading subscription..."
 				/>
-				<div className="p-4 text-sm text-t3">Loading...</div>
+				<div className="p-4 text-sm text-tertiary-foreground">Loading...</div>
 			</div>
 		);
 	}
@@ -211,7 +211,7 @@ export function SubscriptionUpdateSheet() {
 					title="Update Subscription"
 					description="Loading product..."
 				/>
-				<div className="p-4 text-sm text-t3">Loading product data...</div>
+				<div className="p-4 text-sm text-tertiary-foreground">Loading product data...</div>
 			</div>
 		);
 	}
@@ -220,7 +220,7 @@ export function SubscriptionUpdateSheet() {
 		return (
 			<div className="flex flex-col h-full">
 				<SheetHeader title="Update Subscription" description="Loading..." />
-				<div className="p-4 text-sm text-t3">Loading...</div>
+				<div className="p-4 text-sm text-tertiary-foreground">Loading...</div>
 			</div>
 		);
 	}

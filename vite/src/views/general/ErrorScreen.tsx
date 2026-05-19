@@ -60,13 +60,13 @@ function ErrorScreen({
 	if (errorCode === "USER_REMOVED_FROM_ORG") {
 		return (
 			<div className="flex h-full w-full items-center justify-center flex-col gap-4">
-				<div className="text-t2 text-lg max-w-md text-center">
+				<div className="text-muted-foreground text-lg max-w-md text-center">
 					<h2 className="text-xl font-semibold mb-2">Access Denied</h2>
-					<p className="text-t3 mb-4">
+					<p className="text-tertiary-foreground mb-4">
 						You no longer have access to this organization. Redirecting you to
 						an available organization...
 					</p>
-					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-t3 mx-auto"></div>
+					<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-tertiary-foreground mx-auto"></div>
 				</div>
 			</div>
 		);
@@ -74,10 +74,10 @@ function ErrorScreen({
 
 	return (
 		<div className="flex h-full w-full items-center justify-center flex-col gap-2">
-			<div className="text-t2 text-sm max-w-sm text-center">{children}</div>
+			<div className="text-muted-foreground text-sm max-w-sm text-center">{children}</div>
 			{returnUrl && (
 				<Link
-					className="text-t3 text-sm hover:underline"
+					className="text-tertiary-foreground text-sm hover:underline"
 					to={getRedirectUrl(returnUrl, env)}
 				>
 					Return

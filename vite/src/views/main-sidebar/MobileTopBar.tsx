@@ -7,7 +7,7 @@ export function MobileTopBar({ onMenuClick }: { onMenuClick: () => void }) {
 			<button
 				type="button"
 				onClick={onMenuClick}
-				className="flex items-center justify-center size-8 -ml-1 rounded-md text-t2 hover:text-t1 hover:bg-accent/50 transition-colors"
+				className="flex items-center justify-center size-8 -ml-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/50 transition-colors"
 				aria-label="Open menu"
 			>
 				<ListIcon size={18} weight="bold" />

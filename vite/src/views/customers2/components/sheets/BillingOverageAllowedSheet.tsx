@@ -151,7 +151,7 @@ export function BillingOverageAllowedSheet() {
 				<SheetSection withSeparator>
 					<FormLabel>Feature</FormLabel>
 					{isEdit ? (
-						<div className="text-sm text-t2">
+						<div className="text-sm text-muted-foreground">
 							{nonArchivedFeatures.find((f: Feature) => f.id === featureId)
 								?.name ?? featureId}
 						</div>

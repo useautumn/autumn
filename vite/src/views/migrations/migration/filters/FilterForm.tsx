@@ -161,7 +161,7 @@ export function FilterForm({
 					<FunnelSimpleIcon
 						size={20}
 						weight="duotone"
-						className="text-t3 shrink-0"
+						className="text-tertiary-foreground shrink-0"
 					/>
 				}
 				heading="Add Filter"
@@ -194,7 +194,7 @@ export function FilterForm({
 						variant="skeleton"
 						size="sm"
 						onClick={clearAll}
-						className="text-t3 hover:text-destructive shrink-0"
+						className="text-tertiary-foreground hover:text-destructive shrink-0"
 					>
 						Clear all
 					</Button>

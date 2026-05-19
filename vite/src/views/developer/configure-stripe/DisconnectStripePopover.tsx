@@ -48,7 +48,7 @@ export const DisconnectStripePopover = ({
 			</PopoverTrigger>
 			<PopoverContent align="start" className="border border-zinc-200">
 				<div className="flex flex-col gap-4 text-sm w-fit">
-					<p className="text-t3">
+					<p className="text-tertiary-foreground">
 						Are you sure you want to disconnect your Stripe account?
 					</p>
 					<Input

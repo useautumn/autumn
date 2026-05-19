@@ -44,7 +44,7 @@ export const WorkbenchLogList = ({
 		if (unconfigured) {
 			return (
 				<WorkbenchEmptyState title="Axiom not configured">
-					Set <code className="text-t2">AXIOM_ADMIN_TOKEN</code> on the server
+					Set <code className="text-muted-foreground">AXIOM_ADMIN_TOKEN</code> on the server
 					to enable the workbench.
 				</WorkbenchEmptyState>
 			);
@@ -58,7 +58,7 @@ export const WorkbenchLogList = ({
 		}
 		return groups.map((group) => (
 			<div key={group.label}>
-				<div className="px-3 py-1 text-[10px] uppercase tracking-wide font-semibold text-t4 bg-stone-50 dark:bg-stone-900/50 border-b border-border/40 sticky top-0 z-10">
+				<div className="px-3 py-1 text-[10px] uppercase tracking-wide font-semibold text-subtle bg-stone-50 dark:bg-stone-900/50 border-b border-border/40 sticky top-0 z-10">
 					{group.label}
 				</div>
 				{group.entries.map((log) => (

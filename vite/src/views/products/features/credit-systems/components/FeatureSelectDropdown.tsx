@@ -58,7 +58,7 @@ export function FeatureSelectDropdown({
 				{selectedFeature ? (
 					<span className="truncate">{selectedFeature.name}</span>
 				) : (
-					<span className="text-t4">Select feature</span>
+					<span className="text-subtle">Select feature</span>
 				)}
 				<CaretDownIcon className="size-4 opacity-50 shrink-0" />
 			</DropdownMenuTrigger>
@@ -99,7 +99,7 @@ export function FeatureSelectDropdown({
 									setTimeout(() => nameInputRef.current?.focus(), 0);
 								}}
 							>
-								<PlusIcon className="size-[14px] text-t2" weight="regular" />
+								<PlusIcon className="size-[14px] text-muted-foreground" weight="regular" />
 								Create new feature
 							</Button>
 						</div>

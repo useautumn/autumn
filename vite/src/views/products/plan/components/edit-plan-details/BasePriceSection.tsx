@@ -266,7 +266,7 @@ export const BasePriceSection = ({
 							}}
 						/>
 						<InputGroupAddon align="inline-end">
-							<span className="text-t3 text-xs">{defaultCurrency}</span>
+							<span className="text-tertiary-foreground text-xs">{defaultCurrency}</span>
 						</InputGroupAddon>
 					</InputGroup>
 					</div>

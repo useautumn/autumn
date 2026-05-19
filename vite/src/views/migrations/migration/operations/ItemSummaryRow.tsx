@@ -43,7 +43,7 @@ export function ItemSummaryRow({
 				<PlanFeatureIcon item={productItem} position="right" />
 			</div>
 			<p className="whitespace-nowrap truncate flex-1 min-w-0">
-				<span className={cn("text-body", !hasFeatureName && "text-t4!")}>
+				<span className={cn("text-body", !hasFeatureName && "text-subtle!")}>
 					{hasFeatureName ? display.primary_text : "Unconfigured"}
 				</span>
 				<span className="text-body-secondary"> {display.secondary_text}</span>

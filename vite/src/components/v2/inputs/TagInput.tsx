@@ -112,7 +112,7 @@ function TagInput({
 			className={cn(
 				"file:text-foreground selection:bg-primary selection:text-primary-foreground dark:bg-input/30 border-input w-full min-w-0 rounded-lg border bg-transparent outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
 				"aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
-				"placeholder:text-t6 placeholder:select-none min-h-input",
+				"placeholder:text-placeholder placeholder:select-none min-h-input",
 				"flex items-center flex-wrap gap-2 p-2 cursor-text text-left",
 				isFocused && "data-state-open",
 				"input-base input-shadow-default input-state-focus-within",
@@ -137,7 +137,7 @@ function TagInput({
 								removeTag(index);
 							}}
 						>
-							<X size={12} className="size-3 text-t4" />
+							<X size={12} className="size-3 text-subtle" />
 						</button>
 					</div>
 				);

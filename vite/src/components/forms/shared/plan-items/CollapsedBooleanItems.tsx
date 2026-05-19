@@ -34,7 +34,7 @@ export function CollapsedBooleanItems({
 			className="w-full"
 		>
 			<AccordionItem value="boolean-flags" className="border-none">
-				<AccordionTrigger className="py-2 px-3 rounded-xl text-t3 hover:bg-interative-secondary hover:no-underline">
+				<AccordionTrigger className="py-2 px-3 rounded-xl text-tertiary-foreground hover:bg-interative-secondary hover:no-underline">
 					<span className="text-sm font-normal">
 						{label} boolean flag{items.length === 1 ? "" : "s"}
 					</span>

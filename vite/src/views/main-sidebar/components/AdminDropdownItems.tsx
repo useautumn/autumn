@@ -38,7 +38,7 @@ export const AdminDropdownItems = () => {
 					}}
 					shimmer={stopImpersonatingLoading}
 				>
-					<div className="flex justify-between w-full items-center gap-2 text-t2">
+					<div className="flex justify-between w-full items-center gap-2 text-muted-foreground">
 						<span>End Impersonation</span>
 						<LogOut size={12} />
 					</div>
@@ -49,7 +49,7 @@ export const AdminDropdownItems = () => {
 					window.location.href = adminPath;
 				}}
 			>
-				<div className="flex justify-between w-full items-center gap-2 text-t2">
+				<div className="flex justify-between w-full items-center gap-2 text-muted-foreground">
 					Admin
 					<Shield size={12} />
 				</div>

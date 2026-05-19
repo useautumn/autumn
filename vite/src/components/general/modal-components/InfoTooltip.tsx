@@ -25,7 +25,7 @@ export const InfoTooltip = ({
 				onFocus={(e) => e.preventDefault()}
 			>
 				<span className="outline-none inline-flex items-center cursor-pointer">
-					<InfoIcon className="text-t3/50 size-3" />
+					<InfoIcon className="text-tertiary-foreground/50 size-3" />
 				</span>
 			</TooltipTrigger>
 			<TooltipContent sideOffset={10} {...props} className="">
