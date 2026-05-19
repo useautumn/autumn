@@ -79,10 +79,10 @@ export class Customers extends ClientSDK {
   }
 
   /**
-   * Lists customers with pagination and optional filters.
+   * Lists customers with cursor pagination and optional filters. Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
    */
   async list(
-    request?: models.ListCustomersParams | undefined,
+    request: models.ListCustomersParams,
     options?: RequestOptions,
   ): Promise<models.ListCustomersResponse> {
     return unwrapAsync(customersList(

@@ -1,5 +1,3 @@
-import { useEffect, useMemo, useState } from "react";
-
 /**
  * A dynamic response example that shows JSON in the sidebar.
  * Displays two tabs (TypeScript/Response) and auto-switches based on selected language.
