@@ -1,10 +1,10 @@
-import { existsSync, readFileSync, writeFileSync, rmSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, writeFileSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import { log } from "./shell.ts";
 import { forceSslVerifyFull } from "./url.ts";
 import { aliasesFor, dragonflyPortFor, elasticMqPortFor } from "./ports.ts";
-import { PROJECT_ROOT, ENV_LOCAL_TARGETS } from "../constants.ts";
+import { PROJECT_ROOT, ENV_LOCAL_TARGETS, ENV_LOCAL_DISABLED_SUFFIX } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
 
 // Simple KEY=VALUE parse (no quoting/multiline). Sufficient for .env.local
@@ -121,5 +121,52 @@ export function removeEnvLocalFiles(): void {
 			rmSync(abs, { force: true });
 			log(`removed ${rel}`);
 		}
+		const disabled = `${abs}${ENV_LOCAL_DISABLED_SUFFIX}`;
+		if (existsSync(disabled)) {
+			rmSync(disabled, { force: true });
+			log(`removed ${rel}${ENV_LOCAL_DISABLED_SUFFIX}`);
+		}
 	}
+}
+
+export function disableEnvLocalFiles(): { moved: number; missing: number; alreadyDisabled: number } {
+	let moved = 0;
+	let missing = 0;
+	let alreadyDisabled = 0;
+	for (const rel of ENV_LOCAL_TARGETS) {
+		const abs = join(PROJECT_ROOT, rel);
+		const disabled = `${abs}${ENV_LOCAL_DISABLED_SUFFIX}`;
+		if (existsSync(abs)) {
+			if (existsSync(disabled)) rmSync(disabled, { force: true });
+			renameSync(abs, disabled);
+			log(`disabled ${rel} -> ${rel}${ENV_LOCAL_DISABLED_SUFFIX}`);
+			moved++;
+		} else if (existsSync(disabled)) {
+			alreadyDisabled++;
+		} else {
+			missing++;
+		}
+	}
+	return { moved, missing, alreadyDisabled };
+}
+
+export function enableEnvLocalFiles(): { moved: number; missing: number; alreadyEnabled: number } {
+	let moved = 0;
+	let missing = 0;
+	let alreadyEnabled = 0;
+	for (const rel of ENV_LOCAL_TARGETS) {
+		const abs = join(PROJECT_ROOT, rel);
+		const disabled = `${abs}${ENV_LOCAL_DISABLED_SUFFIX}`;
+		if (existsSync(disabled)) {
+			if (existsSync(abs)) rmSync(abs, { force: true });
+			renameSync(disabled, abs);
+			log(`enabled ${rel}`);
+			moved++;
+		} else if (existsSync(abs)) {
+			alreadyEnabled++;
+		} else {
+			missing++;
+		}
+	}
+	return { moved, missing, alreadyEnabled };
 }
