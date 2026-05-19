@@ -99,12 +99,12 @@ export function PricingChatPanel({
 															Building pricing configuration
 														</Shimmer>
 													) : toolPart.state === "output-error" ? (
-														<span className="text-t4">
+														<span className="text-subtle">
 															Error generating pricing
 														</span>
 													) : (
 														<>
-															<span className="text-t4 font-normal">
+															<span className="text-subtle font-normal">
 																Generated {toolPart.input?.products.length ?? 0}{" "}
 																product(s) and{" "}
 																{toolPart.input?.features.length ?? 0}{" "}
@@ -119,7 +119,7 @@ export function PricingChatPanel({
 																			onViewJson(toolPart.input);
 																		}
 																	}}
-																	className="text-t3 text-xs"
+																	className="text-tertiary-foreground text-xs"
 																>
 																	View JSON
 																</Button>
@@ -140,7 +140,7 @@ export function PricingChatPanel({
 					{isLoading &&
 						messages.length > 0 &&
 						messages[messages.length - 1]?.role === "user" && (
-							<div className="flex items-center gap-2 text-t3 text-sm">
+							<div className="flex items-center gap-2 text-tertiary-foreground text-sm">
 								<Shimmer>Planning next steps</Shimmer>
 							</div>
 						)}

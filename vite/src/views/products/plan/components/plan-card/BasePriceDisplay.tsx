@@ -54,7 +54,7 @@ export const BasePriceDisplay = ({
 			case "price":
 				return (
 					<span className="text-body-secondary flex items-center gap-1">
-						<span className="text-main-sec text-t2! font-semibold!">
+						<span className="text-main-sec text-muted-foreground! font-semibold!">
 							{priceDisplay.formattedAmount}
 						</span>{" "}
 						<span className="mt-0.5">{priceDisplay.intervalText}</span>
@@ -62,11 +62,11 @@ export const BasePriceDisplay = ({
 				);
 
 			case "variable":
-				return <span className="text-t3!">{priceDisplay.displayText}</span>;
+				return <span className="text-tertiary-foreground!">{priceDisplay.displayText}</span>;
 
 			case "placeholder":
 				return (
-					<span className="text-t4 text-body-secondary inline-block">
+					<span className="text-subtle text-body-secondary inline-block">
 						{priceDisplay.displayText}
 					</span>
 				);

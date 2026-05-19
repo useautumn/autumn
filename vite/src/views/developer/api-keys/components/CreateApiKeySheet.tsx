@@ -126,11 +126,11 @@ export const CreateApiKeySheet = ({
 
 				<div className="overflow-y-auto px-4 pb-4">
 					{apiKey ? (
-						<div className="flex justify-between bg-input/50 dark:bg-input/30 p-2 px-3 text-t2 rounded-md items-center">
+						<div className="flex justify-between bg-input/50 dark:bg-input/30 p-2 px-3 text-muted-foreground rounded-md items-center">
 							<p className="text-sm truncate min-w-0">{apiKey}</p>
 							<button
 								type="button"
-								className="text-t2 hover:text-t2/80 cursor-pointer shrink-0 ml-2"
+								className="text-muted-foreground hover:text-muted-foreground/80 cursor-pointer shrink-0 ml-2"
 								onClick={() => {
 									setCopied(true);
 									navigator.clipboard.writeText(apiKey);
@@ -141,7 +141,7 @@ export const CreateApiKeySheet = ({
 						</div>
 					) : (
 						<div>
-							<p className="mb-2 text-sm text-t3">Name</p>
+							<p className="mb-2 text-sm text-tertiary-foreground">Name</p>
 							<Input
 								placeholder="Name"
 								value={name}

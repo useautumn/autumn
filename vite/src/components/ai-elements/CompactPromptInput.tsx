@@ -44,7 +44,7 @@ export function CompactPromptInput({
 					onKeyDown={handleKeyDown}
 					placeholder={placeholder}
 					disabled={isLoading}
-					className="flex-1 bg-transparent text-sm outline-none placeholder:text-t4"
+					className="flex-1 bg-transparent text-sm outline-none placeholder:text-subtle"
 				/>
 				<InputGroupButton
 					type="submit"

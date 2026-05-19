@@ -26,7 +26,7 @@ import { useCustomerContext } from "../customer/CustomerContext";
 import { EmptyState } from "./table/EmptyState";
 
 const pillClassName =
-	"rounded-md bg-muted px-1.5 py-0.5 text-xs text-t3 whitespace-nowrap";
+	"rounded-md bg-muted px-1.5 py-0.5 text-xs text-tertiary-foreground whitespace-nowrap";
 const rowClassName =
 	"flex items-center gap-2 rounded-lg border h-12 px-3 min-w-0 cursor-pointer transition-none bg-interactive-secondary hover:bg-interactive-secondary-hover";
 
@@ -45,7 +45,7 @@ const StatusPill = ({ enabled }: { enabled: boolean }) => (
 	<span
 		className={cn(
 			"shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium",
-			enabled ? "bg-green-500/10 text-green-600" : "bg-muted text-t3",
+			enabled ? "bg-green-500/10 text-green-600" : "bg-muted text-tertiary-foreground",
 		)}
 	>
 		{enabled ? "Enabled" : "Disabled"}
@@ -96,7 +96,7 @@ const AutoTopupRow = ({
 	return (
 		<button type="button" className={rowClassName} onClick={onClick}>
 			<StatusPill enabled={autoTopup.enabled} />
-			<span className="truncate text-sm text-t1 font-medium">
+			<span className="truncate text-sm text-foreground font-medium">
 				{getFeatureLabel({
 					featureId: autoTopup.feature_id,
 					featureNameById,
@@ -133,7 +133,7 @@ const SpendLimitRow = ({
 }) => (
 	<button type="button" className={rowClassName} onClick={onClick}>
 		<StatusPill enabled={spendLimit.enabled} />
-		<span className="truncate text-sm text-t1 font-medium">
+		<span className="truncate text-sm text-foreground font-medium">
 			{getFeatureLabel({
 				featureId: spendLimit.feature_id,
 				featureNameById,
@@ -177,14 +177,14 @@ const UsageAlertRow = ({
 	return (
 		<button type="button" className={rowClassName} onClick={onClick}>
 			<StatusPill enabled={usageAlert.enabled} />
-			<span className="truncate text-sm text-t1 font-medium">
+			<span className="truncate text-sm text-foreground font-medium">
 				{getFeatureLabel({
 					featureId: usageAlert.feature_id,
 					featureNameById,
 				})}
 			</span>
 			{usageAlert.name && (
-				<span className="truncate text-xs text-t3 font-mono ml-4">
+				<span className="truncate text-xs text-tertiary-foreground font-mono ml-4">
 					{usageAlert.name}
 				</span>
 			)}
@@ -209,7 +209,7 @@ const OverageAllowedRow = ({
 }) => (
 	<button type="button" className={rowClassName} onClick={onClick}>
 		<StatusPill enabled={overageAllowed.enabled} />
-		<span className="truncate text-sm text-t1 font-medium">
+		<span className="truncate text-sm text-foreground font-medium">
 			{getFeatureLabel({
 				featureId: overageAllowed.feature_id,
 				featureNameById,

@@ -78,7 +78,7 @@ export const NavButton = ({
 					<ChevronRight
 						size={14}
 						className={cn(
-							"ml-1 text-t2 transition-all duration-100 ease-in-out",
+							"ml-1 text-muted-foreground transition-all duration-100 ease-in-out",
 							isOpen ? "rotate-90" : "rotate-0",
 						)}
 					/>
@@ -89,11 +89,11 @@ export const NavButton = ({
 
 	const outerDivClass = cn(
 		`cursor-pointer font-medium
-           text-sm flex items-center text-t2 px-2 h-7 rounded-lg w-full hover:text-t1 border border-transparent`,
-		(!isGroup || !expanded) && " hover:text-t1 text-t2",
-		isActive && "border border-border !text-t1 bg-interactive-secondary",
+           text-sm flex items-center text-muted-foreground px-2 h-7 rounded-lg w-full hover:text-foreground border border-transparent`,
+		(!isGroup || !expanded) && " hover:text-foreground text-muted-foreground",
+		isActive && "border border-border !text-foreground bg-interactive-secondary",
 		isSubNav &&
-			"pl-4 font-normal rounded-none rounded-tr-md rounded-br-md border-l-0 text-t3",
+			"pl-4 font-normal rounded-none rounded-tr-md rounded-br-md border-l-0 text-tertiary-foreground",
 		className,
 	);
 

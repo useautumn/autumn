@@ -262,17 +262,17 @@ export function SubscriptionDetailSheet() {
 						)}
 						{cusProduct.subscription_ids?.length > 0 && (
 							<div className="flex items-center gap-2 min-w-0 overflow-hidden">
-								<div className="text-t4/60 shrink-0">
+								<div className="text-subtle/60 shrink-0">
 									<CreditCardIcon size={16} />
 								</div>
 								<div className="flex min-w-0 items-center overflow-hidden">
-									<div className="text-t3 text-sm font-medium w-20 shrink-0 whitespace-nowrap">
+									<div className="text-tertiary-foreground text-sm font-medium w-20 shrink-0 whitespace-nowrap">
 										Stripe ID
 									</div>
 									<div className="min-w-0 overflow-hidden">
 										<MiniCopyButton
 											text={cusProduct.subscription_ids[0]}
-											innerClassName="text-sm text-t1 font-mono truncate"
+											innerClassName="text-sm text-foreground font-mono truncate"
 										/>
 									</div>
 								</div>

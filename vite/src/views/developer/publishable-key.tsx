@@ -9,7 +9,7 @@ export const PublishableKeySection = () => {
 	return (
 		<div>
 			<div className="py-4 flex flex-col gap-6">
-				<p className="text-sm text-t3">
+				<p className="text-sm text-tertiary-foreground">
 					You can safely use this from your frontend with certain endpoints,
 					such as <span className="font-mono text-red-500">/attach</span> and{" "}
 					<span className="font-mono text-red-500">/entitled</span>.
@@ -39,7 +39,7 @@ const CopyPublishableKey = ({
 	return (
 		<div className="flex flex-col justify-between gap-2 w-full">
 			<div className="flex items-center whitespace-nowrap overflow-hidden">
-				<div className="text-sm text-t3">{type}</div>
+				<div className="text-sm text-tertiary-foreground">{type}</div>
 			</div>
 
 			<CopyButton text={value}>{value}</CopyButton>

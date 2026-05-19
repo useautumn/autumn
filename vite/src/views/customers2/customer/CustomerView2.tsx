@@ -67,9 +67,9 @@ export default function CustomerView2() {
 	if (!customer) {
 		return (
 			<ErrorScreen>
-				<div className="text-t2 text-sm">Customer not found</div>
+				<div className="text-muted-foreground text-sm">Customer not found</div>
 				<Link
-					className="text-t3 text-xs hover:underline"
+					className="text-tertiary-foreground text-xs hover:underline"
 					to={pushPage({ path: "/customers" })}
 				>
 					Return
@@ -122,10 +122,10 @@ export default function CustomerView2() {
 											<h3
 												className={`text-md font-semibold truncate min-w-0 ${
 													customer.name
-														? "text-t1"
+														? "text-foreground"
 														: customer.email
-															? "text-t3"
-															: "text-t4 font-mono font-medium!"
+															? "text-tertiary-foreground"
+															: "text-subtle font-mono font-medium!"
 												}`}
 											>
 												{customer.name || customer.email || customer.id}

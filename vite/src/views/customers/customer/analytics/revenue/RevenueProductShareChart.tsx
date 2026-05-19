@@ -58,8 +58,8 @@ function CustomTooltip({
 	const entry = payload[0].payload;
 	return (
 		<div className="rounded-md border bg-background px-3 py-2 text-xs shadow-sm">
-			<p className="font-medium text-t2">{entry.product_name}</p>
-			<p className="text-t3">
+			<p className="font-medium text-muted-foreground">{entry.product_name}</p>
+			<p className="text-tertiary-foreground">
 				{formatCurrency({ value: entry.volume, currency })} (
 				{entry.percent.toFixed(1)}%)
 			</p>
@@ -113,7 +113,7 @@ export function RevenueProductShareChart({
 	return (
 		<div className="flex flex-col">
 			<div className="flex flex-wrap items-center gap-2 min-h-10 pb-4">
-				<div className="text-t3 text-md flex gap-2 items-center">
+				<div className="text-tertiary-foreground text-md flex gap-2 items-center">
 					<ChartPieIcon size={16} weight="fill" className="text-subtle" />
 					Revenue Share
 				</div>
@@ -121,7 +121,7 @@ export function RevenueProductShareChart({
 			<div className="border rounded-lg overflow-hidden bg-interactive-secondary p-4 flex items-center justify-center min-h-[260px] flex-1">
 				{loading && <div className="h-[220px] w-full shimmer rounded" />}
 
-				{isEmpty && <p className="text-sm text-t3">No data available</p>}
+				{isEmpty && <p className="text-sm text-tertiary-foreground">No data available</p>}
 
 				{!loading && slices.length > 0 && (
 					<div className="flex items-center gap-4 w-full">
@@ -162,8 +162,8 @@ export function RevenueProductShareChart({
 											backgroundColor: CHART_COLORS[i % CHART_COLORS.length],
 										}}
 									/>
-									<span className="text-t2 truncate">{slice.product_name}</span>
-									<span className="text-t3 ml-auto whitespace-nowrap tabular-nums">
+									<span className="text-muted-foreground truncate">{slice.product_name}</span>
+									<span className="text-tertiary-foreground ml-auto whitespace-nowrap tabular-nums">
 										{formatCurrency({ value: slice.volume, currency })} (
 										{slice.percent.toFixed(1)}%)
 									</span>

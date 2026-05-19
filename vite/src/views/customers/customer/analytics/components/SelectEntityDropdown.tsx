@@ -75,14 +75,14 @@ export const SelectEntityDropdown = () => {
 			<DropdownMenuContent align="end" className="w-[200px]">
 				{entities.length > 5 && (
 					<div className="flex items-center gap-2 px-2 py-1.5 border-b border-border">
-						<MagnifyingGlassIcon className="size-4 text-t4" />
+						<MagnifyingGlassIcon className="size-4 text-subtle" />
 						<input
 							type="text"
 							placeholder="Search entities..."
 							value={searchValue}
 							onChange={(e) => setSearchValue(e.target.value)}
 							onKeyDown={(e) => e.stopPropagation()}
-							className="flex-1 bg-transparent text-sm outline-none placeholder:text-t4"
+							className="flex-1 bg-transparent text-sm outline-none placeholder:text-subtle"
 						/>
 					</div>
 				)}
@@ -93,13 +93,13 @@ export const SelectEntityDropdown = () => {
 						className="flex items-center justify-between"
 					>
 						<span className="text-xs">All entities</span>
-						{!currentEntityId && <Check className="ml-2 h-3 w-3 text-t3" />}
+						{!currentEntityId && <Check className="ml-2 h-3 w-3 text-tertiary-foreground" />}
 					</DropdownMenuItem>
 
 					{entities.length > 0 && <DropdownMenuSeparator />}
 
 					{filteredEntities.length === 0 && entities.length > 0 && (
-						<div className="py-4 text-center text-sm text-t4">
+						<div className="py-4 text-center text-sm text-subtle">
 							No entities found
 						</div>
 					)}
@@ -114,7 +114,7 @@ export const SelectEntityDropdown = () => {
 								{entity.name || entity.id}
 							</span>
 							{currentEntityId === entity.id && (
-								<Check className="ml-2 h-3 w-3 text-t3 shrink-0" />
+								<Check className="ml-2 h-3 w-3 text-tertiary-foreground shrink-0" />
 							)}
 						</DropdownMenuItem>
 					))}

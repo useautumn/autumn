@@ -53,9 +53,9 @@ export function TagSelect({
 			>
 				<div className="flex items-center flex-wrap gap-2 w-full pointer-events-none">
 					{showAllProducts ? (
-						<span className="text-t2">All Products</span>
+						<span className="text-muted-foreground">All Products</span>
 					) : value.length === 0 ? (
-						<span className="text-t6">{placeholder}</span>
+						<span className="text-placeholder">{placeholder}</span>
 					) : (
 						value.map((val) => (
 							<div
@@ -90,7 +90,7 @@ export function TagSelect({
 										e.stopPropagation();
 									}}
 								>
-									<X className="size-3 text-t4" />
+									<X className="size-3 text-subtle" />
 								</button>
 							</div>
 						))

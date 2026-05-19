@@ -64,9 +64,9 @@ export function PanelButton({
 			/>
 
 			{/* Vertical seams - touch inner border edge */}
-			<div className="absolute left-1/4 top-0 bottom-0 w-px bg-t4/30" />
-			<div className="absolute left-1/2 top-0 bottom-0 w-px bg-t4/30" />
-			<div className="absolute left-3/4 top-0 bottom-0 w-px bg-t4/30" />
+			<div className="absolute left-1/4 top-0 bottom-0 w-px bg-subtle/30" />
+			<div className="absolute left-1/2 top-0 bottom-0 w-px bg-subtle/30" />
+			<div className="absolute left-3/4 top-0 bottom-0 w-px bg-subtle/30" />
 
 			{/* Centered icon */}
 			<div
@@ -75,7 +75,7 @@ export function PanelButton({
 					// isSelected ? "bg-interactive-secondary-hover" : " border-input",
 				)}
 			>
-				<div className={isSelected ? "text-primary" : "text-t2"}>{icon}</div>
+				<div className={isSelected ? "text-primary" : "text-muted-foreground"}>{icon}</div>
 			</div>
 		</button>
 	);

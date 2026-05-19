@@ -47,7 +47,7 @@ export function MigrationView() {
 	if (!migration) {
 		return (
 			<ErrorScreen>
-				<div className="text-t2 text-sm">Migration not found</div>
+				<div className="text-muted-foreground text-sm">Migration not found</div>
 			</ErrorScreen>
 		);
 	}
@@ -64,8 +64,8 @@ export function MigrationView() {
 				<div className="flex flex-col overflow-y-auto absolute inset-0 pb-8">
 					<div className="flex flex-col h-fit w-full max-w-5xl mx-auto pt-4 sm:pt-8">
 						<div className="px-4 sm:px-10 flex flex-col gap-2">
-							<Breadcrumb className="text-t3 flex">
-								<BreadcrumbList className="text-t3 text-xs w-full">
+							<Breadcrumb className="text-tertiary-foreground flex">
+								<BreadcrumbList className="text-tertiary-foreground text-xs w-full">
 									<BreadcrumbItem
 										onClick={goToMigrations}
 										className="cursor-pointer"
@@ -73,7 +73,7 @@ export function MigrationView() {
 										Migrations
 									</BreadcrumbItem>
 									<BreadcrumbSeparator />
-									<BreadcrumbItem className="text-t2">
+									<BreadcrumbItem className="text-muted-foreground">
 										{migration.id}
 									</BreadcrumbItem>
 								</BreadcrumbList>

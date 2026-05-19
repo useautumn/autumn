@@ -47,7 +47,7 @@ function useSuggestionsForField(
 					value: c.id,
 					label,
 					sublabel: label === c.id ? undefined : c.id,
-					icon: <UserIcon size={14} className="text-t3" />,
+					icon: <UserIcon size={14} className="text-tertiary-foreground" />,
 				};
 			});
 	}
@@ -109,11 +109,11 @@ export function FilterGroup({
 		<div className="flex flex-col gap-2">
 			<div className="flex items-center justify-between group/row">
 				<div className="flex items-center gap-2">
-					<span className="text-sm font-medium text-t1">
+					<span className="text-sm font-medium text-foreground">
 						{groupIndex === 0 ? "Where" : "Or"}
 					</span>
 					{group.rules.length > 0 && (
-						<span className="text-xs text-t3">
+						<span className="text-xs text-tertiary-foreground">
 							{group.rules.length}{" "}
 							{group.rules.length === 1 ? "condition" : "conditions"}
 						</span>

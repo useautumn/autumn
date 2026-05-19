@@ -86,7 +86,7 @@ export const DummyPlanFeatureRow = () => {
 
 				<p className="whitespace-nowrap truncate flex-1 min-w-0">
 					<span className="text-body-secondary">eg, </span>
-					<span className={cn("text-body", !hasName && "text-t4!")}>
+					<span className={cn("text-body", !hasName && "text-subtle!")}>
 						{displayText.primary}
 					</span>
 					{displayText.secondary && (

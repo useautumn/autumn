@@ -39,7 +39,7 @@ export function UpdateSubscriptionAdvancedSection() {
 						size="sm"
 						onClick={handleAddDiscount}
 						icon={<PlusIcon size={12} />}
-						className="text-t3"
+						className="text-tertiary-foreground"
 					>
 						Add
 					</IconButton>

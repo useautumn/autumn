@@ -45,7 +45,7 @@ export function SheetHeader({
 			<div className="flex items-end justify-between gap-2 mt-1">
 				<p
 					className={cn(
-						"text-t3 text-sm flex-1",
+						"text-tertiary-foreground text-sm flex-1",
 						isOnboarding && "text-body-secondary",
 					)}
 				>
@@ -177,14 +177,14 @@ function SheetBreadcrumbs({
 				<button
 					type="button"
 					key={breadcrumb.name}
-					className="flex items-center gap-1 text-t3 cursor-pointer min-w-0 shrink"
+					className="flex items-center gap-1 text-tertiary-foreground cursor-pointer min-w-0 shrink"
 					onClick={() => {
 						if (breadcrumb.sheet) {
 							setSheet({ type: breadcrumb.sheet as SheetType, itemId: itemId });
 						}
 					}}
 				>
-					<h2 className="text-t3! text-main truncate">{breadcrumb.name}</h2>
+					<h2 className="text-tertiary-foreground! text-main truncate">{breadcrumb.name}</h2>
 					<CaretRightIcon size={14} className="shrink-0" />
 				</button>
 			))}

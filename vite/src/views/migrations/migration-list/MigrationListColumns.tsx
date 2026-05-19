@@ -21,7 +21,7 @@ export const createMigrationListColumns = (): ColumnDef<
 		header: "Filter",
 		size: 120,
 		cell: ({ row }: { row: Row<Migration> }) => (
-			<span className="text-xs text-t3">
+			<span className="text-xs text-tertiary-foreground">
 				{row.original.filter ? "Configured" : "—"}
 			</span>
 		),
@@ -30,7 +30,7 @@ export const createMigrationListColumns = (): ColumnDef<
 		header: "Operations",
 		size: 120,
 		cell: ({ row }: { row: Row<Migration> }) => (
-			<span className="text-xs text-t3">
+			<span className="text-xs text-tertiary-foreground">
 				{row.original.operations ? "Configured" : "—"}
 			</span>
 		),
@@ -40,7 +40,7 @@ export const createMigrationListColumns = (): ColumnDef<
 		size: 160,
 		accessorKey: "created_at",
 		cell: ({ row }: { row: Row<Migration> }) => (
-			<span className="text-xs text-t3">
+			<span className="text-xs text-tertiary-foreground">
 				{format(new Date(row.original.created_at), "PP")}
 			</span>
 		),

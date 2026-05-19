@@ -6,7 +6,7 @@ import {
 	CoinVerticalIcon,
 	CubeIcon,
 	DatabaseIcon,
-	IdentificationCardIcon,
+	UsersIcon,
 	LegoIcon,
 	OptionIcon,
 	TerminalWindowIcon,
@@ -157,7 +157,7 @@ export const MainSidebar = ({
 								setExpanded((prev) => !prev);
 							}}
 							className={cn(
-								"absolute top-1 right-4 text-t3 hover:bg-stone-200 w-5 h-5 p-0 border-none border-0 shadow-none !bg-transparent",
+								"absolute top-1 right-4 text-tertiary-foreground hover:bg-stone-200 w-5 h-5 p-0 border-none border-0 shadow-none !bg-transparent",
 								expanded
 									? "opacity-100 transition-opacity duration-100"
 									: "opacity-0 transition-opacity duration-100",
@@ -206,7 +206,7 @@ export const MainSidebar = ({
 									{
 										title: "All Customers",
 										value: "customers",
-										icon: <IdentificationCardIcon size={16} weight="fill" />,
+										icon: <UsersIcon size={16} weight="fill" />,
 									},
 									{
 										title: "Migrations",

@@ -50,8 +50,8 @@ function FlagToggle({
 	return (
 		<div className="flex items-center justify-between rounded-lg border border-border p-3">
 			<div className="flex flex-col gap-0.5">
-				<div className="text-sm font-medium text-t1">{label}</div>
-				<div className="text-xs text-t3">{description}</div>
+				<div className="text-sm font-medium text-foreground">{label}</div>
+				<div className="text-xs text-tertiary-foreground">{description}</div>
 			</div>
 			<button
 				type="button"
@@ -243,12 +243,12 @@ export function FeatureFlagsDialog({
 				</DialogHeader>
 
 				{loading ? (
-					<div className="py-8 text-sm text-t3 text-center">Loading...</div>
+					<div className="py-8 text-sm text-tertiary-foreground text-center">Loading...</div>
 				) : (
 					<div className="grid grid-cols-[300px_1fr] gap-6">
 						{/* Left: toggles */}
 						<div className="flex flex-col gap-4">
-							<div className="text-xs font-medium text-t3 uppercase tracking-wide">Maintenance Modes</div>
+							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">Maintenance Modes</div>
 
 							<FlagToggle
 								label="Disable Revenue Metrics"
@@ -257,21 +257,21 @@ export function FeatureFlagsDialog({
 								onChange={(v) => setFlag(["maintenanceModes", "analytics", "disableRevenueMetrics"], v)}
 							/>
 
-							<div className="text-xs font-medium text-t3 uppercase tracking-wide">Skip Overage Submission</div>
+							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">Skip Overage Submission</div>
 							<div className="rounded-lg border border-border p-3 flex flex-col gap-2">
 								{Object.entries(config.skipOverageSubmissionFlags).length === 0 && (
-									<div className="text-xs text-t3 italic">No entries</div>
+									<div className="text-xs text-tertiary-foreground italic">No entries</div>
 								)}
 								{Object.entries(config.skipOverageSubmissionFlags).map(([orgId, customerIds]) => (
 									<div key={orgId} className="flex items-center justify-between gap-2">
 										<div className="min-w-0 flex-1">
-											<div className="text-xs font-mono text-t1 truncate">{orgId}</div>
-											<div className="text-xs text-t3 truncate">{customerIds.join(", ")}</div>
+											<div className="text-xs font-mono text-foreground truncate">{orgId}</div>
+											<div className="text-xs text-tertiary-foreground truncate">{customerIds.join(", ")}</div>
 										</div>
 										<button
 											type="button"
 											onClick={() => removeOverageEntry(orgId)}
-											className="shrink-0 text-t3 hover:text-red-500 transition-colors"
+											className="shrink-0 text-tertiary-foreground hover:text-red-500 transition-colors"
 										>
 											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 												<path d="M18 6L6 18M6 6l12 12" />
@@ -285,14 +285,14 @@ export function FeatureFlagsDialog({
 										placeholder="Org ID"
 										value={newOrgId}
 										onChange={(e) => setNewOrgId(e.target.value)}
-										className="w-full px-2 py-1 text-xs rounded border border-border bg-input text-t1 placeholder:text-t3 focus:outline-none focus:ring-1 focus:ring-ring"
+										className="w-full px-2 py-1 text-xs rounded border border-border bg-input text-foreground placeholder:text-tertiary-foreground focus:outline-none focus:ring-1 focus:ring-ring"
 									/>
 									<input
 										type="text"
 										placeholder="Customer IDs (comma-separated)"
 										value={newCustomerIds}
 										onChange={(e) => setNewCustomerIds(e.target.value)}
-										className="w-full px-2 py-1 text-xs rounded border border-border bg-input text-t1 placeholder:text-t3 focus:outline-none focus:ring-1 focus:ring-ring"
+										className="w-full px-2 py-1 text-xs rounded border border-border bg-input text-foreground placeholder:text-tertiary-foreground focus:outline-none focus:ring-1 focus:ring-ring"
 									/>
 									<Button variant="secondary" size="sm" onClick={addOverageEntry} disabled={!newOrgId.trim() || !newCustomerIds.trim()}>
 										Add
@@ -300,7 +300,7 @@ export function FeatureFlagsDialog({
 								</div>
 							</div>
 
-							<div className="rounded-lg border border-border p-3 text-xs text-t3">
+							<div className="rounded-lg border border-border p-3 text-xs text-tertiary-foreground">
 								<div className="mb-2 flex items-center gap-2">
 									<Badge
 										variant="muted"
@@ -326,7 +326,7 @@ export function FeatureFlagsDialog({
 
 						{/* Right: Monaco */}
 						<div className="flex flex-col gap-2">
-							<div className="text-xs font-medium text-t3 uppercase tracking-wide">Raw JSON</div>
+							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">Raw JSON</div>
 							<div className="rounded-md border border-border overflow-hidden h-[300px]">
 								<Editor
 									height="100%"

@@ -12,7 +12,7 @@ export const CustomerUsageAnalyticsColumns: ColumnDef<Event>[] = [
 		minSize: 80,
 		cell: ({ row }: { row: Row<Event> }) => {
 			return (
-				<div className="text-tiny font-mono truncate text-t2!">
+				<div className="text-tiny font-mono truncate text-muted-foreground!">
 					{row.original.event_name}
 				</div>
 			);
@@ -26,7 +26,7 @@ export const CustomerUsageAnalyticsColumns: ColumnDef<Event>[] = [
 		cell: ({ row }: { row: Row<Event> }) => {
 			const event = row.original;
 			return (
-				<div className="text-t3 text-tiny truncate">
+				<div className="text-tertiary-foreground text-tiny truncate">
 					{event.value ?? event.properties?.value ?? 1}
 				</div>
 			);
@@ -48,7 +48,7 @@ export const CustomerUsageAnalyticsColumns: ColumnDef<Event>[] = [
 			const dateObj = new Date(timestampStr);
 
 			return (
-				<div className="text-tiny text-t3 font-mono truncate">
+				<div className="text-tiny text-tertiary-foreground font-mono truncate">
 					{format(dateObj, "d MMM HH:mm:ss")}
 				</div>
 			);
@@ -98,7 +98,7 @@ export function generatePropertyColumns({
 		cell: ({ getValue }: { getValue: () => unknown }) => {
 			const value = String(getValue() ?? "");
 			return (
-				<div className="text-t3 text-tiny truncate font-mono">{value}</div>
+				<div className="text-tertiary-foreground text-tiny truncate font-mono">{value}</div>
 			);
 		},
 	}));

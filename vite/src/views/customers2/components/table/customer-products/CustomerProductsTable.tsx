@@ -31,7 +31,7 @@ function createScopeColumn(
 			const product = row.original;
 
 			if (!product.internal_entity_id && !product.entity_id) {
-				return <span className="text-t2">Customer</span>;
+				return <span className="text-muted-foreground">Customer</span>;
 			}
 
 			const entity = entities.find(
@@ -40,7 +40,7 @@ function createScopeColumn(
 					e.id === product.entity_id,
 			);
 
-			if (!entity) return <span className="text-t3">—</span>;
+			if (!entity) return <span className="text-tertiary-foreground">—</span>;
 
 			return (
 				<Button

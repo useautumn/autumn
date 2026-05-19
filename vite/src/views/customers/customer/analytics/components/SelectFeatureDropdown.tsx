@@ -76,14 +76,16 @@ export const SelectFeatureDropdown = () => {
 	const currentEventNames =
 		searchParams.get("event_names")?.split(",").filter(Boolean) || [];
 
-	// Build event options from useEventNames data, enriched with feature info
+	// Build event options from useEventNames data, keeping only those linked to a feature
 	const eventOptions: EventOption[] = useMemo(() => {
-		return eventNamesData.map((item) => ({
-			eventName: item.event_name,
-			eventCount: item.event_count,
-			linkedFeatures: getFeaturesForEventName(item.event_name, features),
-			selected: currentEventNames.includes(item.event_name),
-		}));
+		return eventNamesData
+			.map((item) => ({
+				eventName: item.event_name,
+				eventCount: item.event_count,
+				linkedFeatures: getFeaturesForEventName(item.event_name, features),
+				selected: currentEventNames.includes(item.event_name),
+			}))
+			.filter((option) => option.linkedFeatures.length > 0);
 	}, [eventNamesData, features, currentEventNames]);
 
 	// Filter options based on search (search both event name and feature ids)
@@ -156,25 +158,25 @@ export const SelectFeatureDropdown = () => {
 			<DropdownMenuContent align="end" className="w-[300px]">
 				{/* Search input */}
 				<div className="flex items-center gap-2 px-2 py-1.5 border-b border-border">
-					<MagnifyingGlassIcon className="size-4 text-t4" />
+					<MagnifyingGlassIcon className="size-4 text-subtle" />
 					<input
 						type="text"
 						placeholder="Search events..."
 						value={searchValue}
 						onChange={(e) => setSearchValue(e.target.value)}
 						onKeyDown={(e) => e.stopPropagation()}
-						className="flex-1 bg-transparent text-sm outline-none placeholder:text-t4"
+						className="flex-1 bg-transparent text-sm outline-none placeholder:text-subtle"
 					/>
 				</div>
 
 				<div className="max-h-[300px] overflow-y-auto">
 					{hasNoResults ? (
-						<div className="py-4 text-center text-sm text-t4">
+						<div className="py-4 text-center text-sm text-subtle">
 							No events found.
 						</div>
 					) : (
 						<DropdownMenuGroup>
-							<DropdownMenuLabel className="text-xs text-t4">
+							<DropdownMenuLabel className="text-xs text-subtle">
 								Events
 							</DropdownMenuLabel>
 							{filteredOptions.map((option) => {
@@ -191,7 +193,7 @@ export const SelectFeatureDropdown = () => {
 												{option.eventName}
 											</span>
 											{featureLabel && (
-												<span className="text-xs text-t4 truncate">
+												<span className="text-xs text-subtle truncate">
 													({featureLabel})
 												</span>
 											)}
@@ -207,7 +209,7 @@ export const SelectFeatureDropdown = () => {
 					<button
 						type="button"
 						onClick={handleClear}
-						className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-t3 hover:text-t2 hover:bg-accent cursor-default"
+						className="w-full flex items-center justify-center gap-1.5 px-2 py-1.5 text-xs text-tertiary-foreground hover:text-muted-foreground hover:bg-accent cursor-default"
 					>
 						Clear
 					</button>

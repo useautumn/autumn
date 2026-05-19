@@ -1,6 +1,6 @@
 import { ErrCode } from "@autumn/shared";
 import { ChartBarIcon } from "@phosphor-icons/react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { PageContainer } from "@/components/general/PageContainer";
@@ -22,6 +22,7 @@ import { extractPropertyKeys } from "./utils/extractPropertyKeys";
 import {
 	generateChartConfig,
 	transformGroupedData,
+	trimToTopSeries,
 } from "./utils/transformGroupedChartData";
 
 export const AnalyticsView = () => {
@@ -36,8 +37,6 @@ export const AnalyticsView = () => {
 
 	const env = useEnv();
 	const { flags, isLoading: isFeatureFlagsLoading } = useFeatureFlags();
-
-	const customerId = searchParams.get("customer_id");
 
 	const {
 		customer,
@@ -142,24 +141,46 @@ export const AnalyticsView = () => {
 			};
 		}
 
-		// Transform data for grouped display (pivots rows into columns per group)
+		// 1. Drop raw rows where every feature column is zero — cuts ~95%
+		//    of rows before the pivot so it runs on hundreds, not thousands.
+		const groupCol =
+			groupBy === "customer_id" || groupBy === "entity_id" || groupBy === "plan_id"
+				? groupBy
+				: groupBy ? `properties.${groupBy}` : null;
+		const skipKeys = new Set(["period", groupCol].filter(Boolean) as string[]);
+		const nonZeroData = filteredEvents.data.filter(
+			(row: Record<string, string | number>) => {
+				for (const key in row) {
+					if (skipKeys.has(key)) continue;
+					if (Number(row[key]) !== 0) return true;
+				}
+				return false;
+			},
+		);
+		const nonZeroEvents = nonZeroData.length === filteredEvents.data.length
+			? filteredEvents
+			: { ...filteredEvents, data: nonZeroData, rows: nonZeroData.length };
+
+		// 2. Pivot into one column per group×feature
 		const transformed = transformGroupedData({
-			events: filteredEvents,
+			events: nonZeroEvents,
 			groupBy,
 		});
 
-		// Generate chart config with different colors per group
-		const config = generateChartConfig({
-				events: transformed,
-				features,
-				groupBy,
-				originalColors: colors,
-				entityNames,
-				customerNames,
-				planNames,
-			});
+		// 3. Keep only top 30 series by volume so Recharts renders ≤30 <Bar>s
+		const trimmed = trimToTopSeries({ events: transformed, maxSeries: 30 });
 
-		return { chartData: transformed, chartConfig: config };
+		const config = generateChartConfig({
+			events: trimmed,
+			features,
+			groupBy,
+			originalColors: colors,
+			entityNames,
+			customerNames,
+			planNames,
+		});
+
+		return { chartData: trimmed, chartConfig: config };
 	}, [events, features, groupBy, groupFilter, planDeselected, entityNames, customerNames, planNames]);
 
 	// Build legend entries (sorted desc, zero-values filtered). The
@@ -227,10 +248,77 @@ export const AnalyticsView = () => {
 		}
 	}, [error]);
 
+	const selectedInterval = searchParams.get("interval") || "30d";
+	const selectedBinSize = searchParams.get("bin_size") || "day";
+
+	const setSelectedInterval = useCallback(
+		(interval: string) => {
+			const newParams = new URLSearchParams(searchParams);
+			newParams.set("interval", interval);
+			navigate(`${location.pathname}?${newParams.toString()}`);
+		},
+		[searchParams, navigate],
+	);
+
+	const setSelectedBinSize = useCallback(
+		(binSize: string) => {
+			const newParams = new URLSearchParams(searchParams);
+			newParams.set("bin_size", binSize);
+			navigate(`${location.pathname}?${newParams.toString()}`);
+		},
+		[searchParams, navigate],
+	);
+
+	const contextValue = useMemo(
+		() => ({
+			customer,
+			eventNames,
+			selectedInterval,
+			setSelectedInterval,
+			selectedBinSize,
+			setSelectedBinSize,
+			setEventNames,
+			featureIds,
+			setFeatureIds,
+			features,
+			bcExclusionFlag,
+			hasCleared,
+			setHasCleared,
+			propertyKeys,
+			groupFilter,
+			setGroupFilter,
+			planDeselected,
+			setPlanDeselected,
+			availableGroupValues,
+			entityNames,
+			customerNames,
+			planNames,
+		}),
+		[
+			customer,
+			eventNames,
+			selectedInterval,
+			setSelectedInterval,
+			selectedBinSize,
+			setSelectedBinSize,
+			featureIds,
+			features,
+			bcExclusionFlag,
+			hasCleared,
+			propertyKeys,
+			groupFilter,
+			planDeselected,
+			availableGroupValues,
+			entityNames,
+			customerNames,
+			planNames,
+		],
+	);
+
 	if (clickHouseDisabled) {
 		return (
 			<div className="flex flex-col items-center justify-center h-full">
-				<h3 className="text-sm text-t2 font-bold">Tinybird is disabled</h3>
+				<h3 className="text-sm text-muted-foreground font-bold">Tinybird is disabled</h3>
 			</div>
 		);
 	}
@@ -241,101 +329,59 @@ export const AnalyticsView = () => {
 		!flags.maintenanceModes.analytics.disableRevenueMetrics;
 
 	return (
-		<AnalyticsContext.Provider
-			value={{
-				customer,
-				eventNames,
-				selectedInterval: searchParams.get("interval") || "30d",
-				setSelectedInterval: (interval: string) => {
-					const newParams = new URLSearchParams(searchParams);
-					newParams.set("interval", interval);
-					navigate(`${location.pathname}?${newParams.toString()}`);
-				},
-				selectedBinSize: searchParams.get("bin_size") || "day",
-				setSelectedBinSize: (binSize: string) => {
-					const newParams = new URLSearchParams(searchParams);
-					newParams.set("bin_size", binSize);
-					navigate(`${location.pathname}?${newParams.toString()}`);
-				},
-				setEventNames,
-				featureIds,
-				setFeatureIds,
-				features,
-				bcExclusionFlag,
-				hasCleared,
-				setHasCleared,
-				propertyKeys,
-				groupFilter,
-				setGroupFilter,
-				planDeselected,
-				setPlanDeselected,
-				availableGroupValues,
-				entityNames,
-				customerNames,
-				planNames,
-			}}
-		>
-			<PageContainer className="text-sm">
+		<AnalyticsContext.Provider value={contextValue}>
+			<PageContainer className="text-sm h-full overflow-hidden">
 				<OnboardingGuide />
 				{showRevenueMetrics && <RevenueMetricsSection />}
 				<div className="pb-6 shrink-0">
 					<div className="flex justify-between pb-4 h-10">
-						<div className="text-t3 text-md flex gap-2 items-center">
+						<div className="text-tertiary-foreground text-md flex gap-2 items-center">
 							<ChartBarIcon size={16} weight="fill" className="text-subtle" />
 							Usage
 						</div>
 						<QueryTopbar />
 					</div>
+				<div className="flex flex-col bg-interactive-secondary border rounded-lg aspect-[3/1] overflow-hidden">
 					{queryLoading && (
-						<div className="flex-1">
-							<p className="text-t3 text-sm shimmer w-fit">
-								Loading chart {customerId ? `for ${customerId}` : ""}
+						<div className="flex-1 animate-pulse" />
+					)}
+					{!queryLoading && chartData && chartData.data.length > 0 && (
+						<>
+							<ChartLegend
+								entries={legendEntries}
+								showLabels={!!groupBy || legendEntries.length <= 3}
+							/>
+							<div className="flex-1 min-h-0">
+								<EventsBarChart
+									data={chartData as Parameters<typeof EventsBarChart>[0]["data"]}
+									chartConfig={chartConfig}
+								/>
+							</div>
+						</>
+					)}
+					{!queryLoading && (!chartData || chartData.data.length === 0) && (
+						<div className="flex-1 flex flex-col items-center justify-center gap-2">
+							<ChartBarIcon size={28} weight="duotone" className="text-muted-foreground/50" />
+							<p className="text-muted-foreground text-sm">
+								{eventNames.length === 0
+									? "Start sending events to view usage data."
+									: "No events found for these filters."}
 							</p>
 						</div>
 					)}
-
-					<div>
-						{chartData && chartData.data.length > 0 && (
-							<div className="flex flex-col bg-interactive-secondary border rounded-lg aspect-[3/1]">
-								<ChartLegend
-									entries={legendEntries}
-									showLabels={!!groupBy || legendEntries.length <= 3}
-								/>
-								<div className="flex-1 min-h-0">
-									<EventsBarChart
-										data={
-											chartData as Parameters<typeof EventsBarChart>[0]["data"]
-										}
-										chartConfig={chartConfig}
-									/>
-								</div>
-							</div>
-						)}
-
-						{(!chartData || chartData.data.length === 0) && !queryLoading && (
-							<div className="flex-1 px-10 pt-6">
-								<p className="text-t3 text-sm">
-									No events found. Please widen your filters.{" "}
-									{eventNames.length === 0
-										? "Try to select some events in the dropdown above."
-										: ""}
-								</p>
-							</div>
-						)}
-					</div>
+				</div>
 				</div>
 
-				<div className="flex-1 min-h-[400px] pb-8">
-					{rawQueryLoading && (
-						<div className="flex-1">
-							<p className="text-t3 text-sm shimmer w-fit">
-								Loading events {customerId ? `for ${customerId}` : ""}
-							</p>
-						</div>
-					)}
-					{rawEvents && !rawQueryLoading && (
-						<EventsTable data={rawEvents.data} />
-					)}
+				<div className="flex-1 min-h-[200px] pb-2">
+					<EventsTable
+						data={rawEvents?.data ?? []}
+						isLoading={rawQueryLoading}
+						emptyMessage={
+							eventNames.length === 0
+								? "Start sending events to view usage data."
+								: "No events found for these filters."
+						}
+					/>
 				</div>
 			</PageContainer>
 		</AnalyticsContext.Provider>

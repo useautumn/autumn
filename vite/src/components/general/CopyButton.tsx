@@ -32,7 +32,7 @@ function CopyButton({
 			variant={variant as ButtonProps["variant"]}
 			size="icon"
 			className={cn(
-				"h-6 px-2 text-t2 w-fit font-mono rounded-md truncate justify-start",
+				"h-6 px-2 text-muted-foreground w-fit font-mono rounded-md truncate justify-start",
 				className,
 			)}
 			onClick={(e) => {
@@ -45,7 +45,7 @@ function CopyButton({
 			{children && <span className="truncate block">{children}</span>}
 			<div className="flex items-center justify-center">
 				{copied ? (
-					<Check size={copySize || 13} className="text-t1" />
+					<Check size={copySize || 13} className="text-foreground" />
 				) : (
 					<Copy size={copySize || 13} />
 				)}

@@ -13,7 +13,7 @@ export function ProductsPageHeader({ children }: ProductsPageHeaderProps) {
 	return (
 		<div className="flex flex-wrap items-center gap-2 h-10 pb-4">
 			<div className="flex w-full justify-between items-center">
-				<div className="text-t2 text-md py-0 px-2 rounded-lg flex gap-2 items-center">
+				<div className="text-muted-foreground text-md py-0 px-2 rounded-lg flex gap-2 items-center">
 					<CubeIcon size={16} weight="fill" className="text-subtle" />
 					Plans
 				</div>

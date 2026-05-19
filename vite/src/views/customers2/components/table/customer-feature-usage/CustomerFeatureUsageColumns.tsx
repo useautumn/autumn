@@ -128,7 +128,7 @@ export const CustomerFeatureUsageColumns = [
 				const { meteredCusEnt, credit_amount } = subRowData;
 
 				if (!meteredCusEnt?.entitlement) {
-					return <div className="text-sm text-t3">-</div>;
+					return <div className="text-sm text-tertiary-foreground">-</div>;
 				}
 
 				featureType = meteredCusEnt.entitlement.feature.type;
@@ -224,7 +224,7 @@ export const CustomerFeatureUsageColumns = [
 							e.stopPropagation();
 							row.getToggleExpandedHandler()(e);
 						}}
-						className="text-t3 hover:text-t2"
+						className="text-tertiary-foreground hover:text-muted-foreground"
 					>
 						{isExpanded ? (
 							<CaretDownIcon size={16} weight="bold" />

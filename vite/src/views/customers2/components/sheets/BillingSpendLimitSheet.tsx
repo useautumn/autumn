@@ -163,7 +163,7 @@ export function BillingSpendLimitSheet() {
 				<SheetSection withSeparator>
 					<FormLabel>Feature</FormLabel>
 					{isEdit ? (
-						<div className="text-sm text-t2">
+						<div className="text-sm text-muted-foreground">
 							{featureId
 								? (nonArchivedFeatures.find((f: Feature) => f.id === featureId)
 										?.name ?? featureId)

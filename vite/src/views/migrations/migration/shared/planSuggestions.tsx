@@ -16,6 +16,6 @@ export function buildPlanSuggestions(
 			value: p.id,
 			label: p.name || p.id,
 			sublabel: p.name ? p.id : undefined,
-			icon: <PackageIcon size={14} weight="duotone" className="text-t3" />,
+			icon: <PackageIcon size={14} weight="duotone" className="text-tertiary-foreground" />,
 		}));
 }

@@ -195,7 +195,7 @@ export const SignIn = () => {
 								isLoading={sendOtpLoading}
 								onClick={handleEmailSignIn}
 								className="gap-2 w-full"
-								icon={<Mail size={14} className="text-t4" />}
+								icon={<Mail size={14} className="text-subtle" />}
 							>
 								Continue with Email
 							</IconButton>
