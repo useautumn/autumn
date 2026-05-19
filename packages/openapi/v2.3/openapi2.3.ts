@@ -3,7 +3,7 @@ import { SuccessResponseSchema } from "@api/common/commonResponses.js";
 import {
 	ApiBalanceV1Schema,
 	ApiCustomerV5Schema,
-	ApiEventsListParamsSchema,
+	ApiEventsListV2_3ParamsSchema,
 	ApiPlanV1Schema,
 	AttachParamsV1Schema,
 	AttachPreviewResponseSchema,
@@ -75,7 +75,7 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 	registerInternalSchemas(CheckResponseV3Schema);
 	registerInternalSchemas(TrackResponseV3Schema);
 	registerInternalSchemas(CustomerDataSchema);
-	registerInternalSchemas(ApiEventsListParamsSchema);
+	registerInternalSchemas(ApiEventsListV2_3ParamsSchema);
 
 	const openApiDocument = (await generator.generate(v2_3ContractRouter, {
 		info: {
@@ -116,6 +116,9 @@ async function generateOpenApiDocument(): Promise<Record<string, unknown>> {
 			},
 		],
 	})) as Record<string, unknown>;
+
+	// Mintlify only supports OpenAPI 3.0 and 3.1.0; @orpc/openapi defaults to 3.1.1.
+	openApiDocument.openapi = "3.1.0";
 
 	applySpeakeasySettings({
 		openApiDocument,

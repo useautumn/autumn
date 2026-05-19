@@ -3,9 +3,9 @@
 from .basesdk import BaseSDK
 from autumn_sdk import errors, models, utils
 from autumn_sdk._hooks import HookContext
-from autumn_sdk.types import BaseModel, OptionalNullable, UNSET
+from autumn_sdk.types import OptionalNullable, UNSET
 from autumn_sdk.utils.unmarshal_json_response import unmarshal_json_response
-from typing import Mapping, Optional, Union, cast
+from typing import List, Mapping, Optional, Union
 
 
 class Entities(BaseSDK):
@@ -438,9 +438,14 @@ class Entities(BaseSDK):
     def list(
         self,
         *,
-        request: Optional[
-            Union[models.ListEntitiesParams, models.ListEntitiesParamsTypedDict]
+        start_cursor: Optional[str] = "",
+        limit: Optional[int] = 50,
+        plans: Optional[
+            Union[List[models.ListEntitiesPlan], List[models.ListEntitiesPlanTypedDict]]
         ] = None,
+        subscription_status: Optional[models.ListEntitiesSubscriptionStatus] = None,
+        search: Optional[str] = None,
+        processors: Optional[List[models.ListEntitiesProcessor]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -450,7 +455,12 @@ class Entities(BaseSDK):
 
         Use this to page through entities globally, including filtering by plans inherited from parent customers or attached directly to entities.
 
-        :param request: The request object to send.
+        :param start_cursor: Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
+        :param limit: Number of items to return. Default 50, hard ceiling 5000.
+        :param plans: Filter by plan ID and version. Returns entities with active subscriptions to this plan, including plans inherited from the parent customer.
+        :param subscription_status: Filter customer products used for entity hydration and plan matching. Defaults to active and scheduled.
+        :param search: Search entities by id or name.
+        :param processors: Filter by parent customer processor type (stripe, revenuecat, vercel).
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -466,9 +476,16 @@ class Entities(BaseSDK):
         else:
             base_url = self._get_url(base_url, url_variables)
 
-        if not isinstance(request, BaseModel):
-            request = utils.unmarshal(request, Optional[models.ListEntitiesParams])
-        request = cast(Optional[models.ListEntitiesParams], request)
+        request = models.ListEntitiesParams(
+            start_cursor=start_cursor,
+            limit=limit,
+            plans=utils.get_pydantic_model(
+                plans, Optional[List[models.ListEntitiesPlan]]
+            ),
+            subscription_status=subscription_status,
+            search=search,
+            processors=processors,
+        )
 
         req = self._build_request(
             method="POST",
@@ -476,7 +493,7 @@ class Entities(BaseSDK):
             base_url=base_url,
             url_variables=url_variables,
             request=request,
-            request_body_required=False,
+            request_body_required=True,
             request_has_path_params=False,
             request_has_query_params=True,
             user_agent_header="user-agent",
@@ -487,7 +504,7 @@ class Entities(BaseSDK):
             ),
             security=self.sdk_configuration.security,
             get_serialized_body=lambda: utils.serialize_request_body(
-                request, False, True, "json", Optional[models.ListEntitiesParams]
+                request, False, False, "json", models.ListEntitiesParams
             ),
             allow_empty_value=None,
             timeout_ms=timeout_ms,
@@ -532,9 +549,14 @@ class Entities(BaseSDK):
     async def list_async(
         self,
         *,
-        request: Optional[
-            Union[models.ListEntitiesParams, models.ListEntitiesParamsTypedDict]
+        start_cursor: Optional[str] = "",
+        limit: Optional[int] = 50,
+        plans: Optional[
+            Union[List[models.ListEntitiesPlan], List[models.ListEntitiesPlanTypedDict]]
         ] = None,
+        subscription_status: Optional[models.ListEntitiesSubscriptionStatus] = None,
+        search: Optional[str] = None,
+        processors: Optional[List[models.ListEntitiesProcessor]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -544,7 +566,12 @@ class Entities(BaseSDK):
 
         Use this to page through entities globally, including filtering by plans inherited from parent customers or attached directly to entities.
 
-        :param request: The request object to send.
+        :param start_cursor: Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
+        :param limit: Number of items to return. Default 50, hard ceiling 5000.
+        :param plans: Filter by plan ID and version. Returns entities with active subscriptions to this plan, including plans inherited from the parent customer.
+        :param subscription_status: Filter customer products used for entity hydration and plan matching. Defaults to active and scheduled.
+        :param search: Search entities by id or name.
+        :param processors: Filter by parent customer processor type (stripe, revenuecat, vercel).
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -560,9 +587,16 @@ class Entities(BaseSDK):
         else:
             base_url = self._get_url(base_url, url_variables)
 
-        if not isinstance(request, BaseModel):
-            request = utils.unmarshal(request, Optional[models.ListEntitiesParams])
-        request = cast(Optional[models.ListEntitiesParams], request)
+        request = models.ListEntitiesParams(
+            start_cursor=start_cursor,
+            limit=limit,
+            plans=utils.get_pydantic_model(
+                plans, Optional[List[models.ListEntitiesPlan]]
+            ),
+            subscription_status=subscription_status,
+            search=search,
+            processors=processors,
+        )
 
         req = self._build_request_async(
             method="POST",
@@ -570,7 +604,7 @@ class Entities(BaseSDK):
             base_url=base_url,
             url_variables=url_variables,
             request=request,
-            request_body_required=False,
+            request_body_required=True,
             request_has_path_params=False,
             request_has_query_params=True,
             user_agent_header="user-agent",
@@ -581,7 +615,7 @@ class Entities(BaseSDK):
             ),
             security=self.sdk_configuration.security,
             get_serialized_body=lambda: utils.serialize_request_body(
-                request, False, True, "json", Optional[models.ListEntitiesParams]
+                request, False, False, "json", models.ListEntitiesParams
             ),
             allow_empty_value=None,
             timeout_ms=timeout_ms,
