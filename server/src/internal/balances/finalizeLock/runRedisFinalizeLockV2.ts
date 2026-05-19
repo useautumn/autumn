@@ -47,7 +47,7 @@ export const runRedisFinalizeLockV2 = async ({
 	const rolloverIds = Object.keys(rolloverUpdates);
 
 	if (modifiedCusEntIds.length > 0 || rolloverIds.length > 0) {
-		ctx.logger.info(`[QUEUE SYNC V4] (${receipt.customer_id})`);
+
 		globalSyncBatchingManagerV3.addSyncItem({
 			customerId: receipt.customer_id,
 			orgId: ctx.org.id,

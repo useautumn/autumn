@@ -19,13 +19,13 @@ import {
 	cusProductToProduct,
 	type EntityLegacyData,
 	enrichFullCustomerWithEntity,
-	findCustomerProductById,
 	fullCustomerToTags,
 	type PlanLegacyData,
 } from "@autumn/shared";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { getApiEntityBase } from "@/internal/entities/entityUtils/apiEntityUtils/getApiEntityBase.js";
 import { getPlanResponse } from "@/internal/products/productUtils/productResponseUtils/getPlanResponse.js";
@@ -41,19 +41,21 @@ export const sendProductsUpdated = async ({
 	const { features, logger } = ctx;
 	const { customerProductId, scenario, customerId } = payload;
 
-	// Fetch FullCustomer
-	const fullCustomer = await CusService.getFull({
-		ctx,
-		idOrInternalId: customerId ?? "",
-		withEntities: true,
-		withSubs: true,
-		allowNotFound: true,
-	});
-
-	const customerProduct = findCustomerProductById({
-		fullCustomer,
-		customerProductId,
-	});
+	// Fetch cusProduct directly by ID — CusService.getFull filters by
+	// RELEVANT_STATUSES and applies a per-org cusProduct limit, so a cusProduct
+	// that transitioned to Expired (cancel/downgrade, or replaced by a
+	// subsequent create_schedule) between enqueue and worker pickup would be
+	// dropped before findCustomerProductById sees it.
+	const [fullCustomer, customerProduct] = await Promise.all([
+		CusService.getFull({
+			ctx,
+			idOrInternalId: customerId ?? "",
+			withEntities: true,
+			withSubs: true,
+			allowNotFound: true,
+		}),
+		CusProductService.getFull({ db: ctx.db, id: customerProductId }),
+	]);
 
 	if (!fullCustomer) {
 		logger.warn(`[sendProductsUpdated] Customer ${customerId ?? ""} not found`);
