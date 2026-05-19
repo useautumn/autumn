@@ -9,6 +9,8 @@ export type FlattenedCustomerRow = {
 	replaceables: any[];
 	free_trials: any[];
 	subscriptions: any[];
+	entities?: any[];
+	invoices?: any[];
 };
 
 export type FlatCustomerEntitlement = {
