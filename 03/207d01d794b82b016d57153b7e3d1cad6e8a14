@@ -1,0 +1,27 @@
+vite/src/views/customers2/components/table/customer-feature-usage/CustomerFeatureUsageTable.tsx
+  s_75eefd5676ab7c::t_3a474bc65c09a8 68
+vite/src/views/customers2/hooks/useCustomerProductsData.ts
+  s_75eefd5676ab7c::t_6d9936fffd7dd9 94-96
+  s_75eefd5676ab7c::t_77f5f3560145e0 105
+vite/src/views/customers2/hooks/useEffectiveNow.ts
+  s_75eefd5676ab7c::t_77e2b89c7e1add 1,8-9,14-17
+vite/src/views/customers2/components/table/customer-products/CustomerProductsColumns.tsx
+  s_75eefd5676ab7c::t_d5e53ccc5f2c1c 139,151,163,174
+  s_75eefd5676ab7c::t_60dee2cbecf76d 103,107-109
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "03207d01d794b82b016d57153b7e3d1cad6e8a14",
+  "prompts": {},
+  "sessions": {
+    "s_75eefd5676ab7c": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1c05cef01ffep7Lw0G1MRuFBSm",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
