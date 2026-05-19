@@ -39,12 +39,18 @@ import {
 	getOrgCusProductLimit,
 	getOrgEntitiesLimit,
 } from "../misc/edgeConfig/orgLimitsStore.js";
+import { isOnNewFlatCusModel } from "../misc/miscellaneousEdgeConfig/miscellaneousEdgeConfigStore.js";
 import { resetCustomerEntitlements } from "./actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
+import { getCursorPaginatedFullCusQuery } from "./cursorPaginatedFullCusQuery.js";
 import {
 	ACTIVE_STATUSES,
 	RELEVANT_STATUSES,
 } from "./cusProducts/CusProductService.js";
 import { getFullCusQuery, hasCustomerListFilters } from "./getFullCusQuery.js";
+import {
+	type FlattenedCustomerRow,
+	reassembleFlattenedCustomer,
+} from "./reassembleFlattenedCustomer/index.js";
 
 // const tracer = trace.getTracer("express");
 
@@ -101,20 +107,40 @@ export class CusService {
 					orgSlug: org.slug,
 				});
 
-				const query = getFullCusQuery({
-					idOrInternalId,
+				const useFlatModel = isOnNewFlatCusModel({
 					orgId,
 					env,
-					inStatuses,
-					includeInvoices,
-					withEntities,
-					withTrialsUsed,
-					withSubs,
-					withEvents,
-					entityId,
-					cusProductLimit,
-					entitiesLimit,
+					customerId: idOrInternalId,
 				});
+
+				const query = useFlatModel
+					? getCursorPaginatedFullCusQuery({
+							orgId,
+							env,
+							inStatuses,
+							withSubs,
+							withEntities,
+							includeInvoices,
+							entitiesLimit,
+							invoicesLimit: 10,
+							limit: 1,
+							customerId: idOrInternalId,
+							cusProductLimit,
+						})
+					: getFullCusQuery({
+							idOrInternalId,
+							orgId,
+							env,
+							inStatuses,
+							includeInvoices,
+							withEntities,
+							withTrialsUsed,
+							withSubs,
+							withEvents,
+							entityId,
+							cusProductLimit,
+							entitiesLimit,
+						});
 
 				if (explain) {
 					const explainQuery = sql`EXPLAIN (ANALYZE, BUFFERS, FORMAT TEXT) ${query}`;
@@ -122,36 +148,68 @@ export class CusService {
 					return result as unknown as FullCustomer;
 				}
 
+				const tSqlStart = performance.now();
 				const { result, usedReplica } = await executeWithHealthTracking({
 					db,
 					query,
 					useReplica: ctx.testOptions?.useReplica,
 				});
+				const sqlMs = performance.now() - tSqlStart;
 
-				if (!result || result.length === 0) {
-					if (allowNotFound) {
-						return null as unknown as FullCustomer;
+				ctx.logger.info(
+					`[CusService.getFull] path=${useFlatModel ? "flat" : "legacy"} orgId=${orgId} customer=${idOrInternalId} sqlMs=${sqlMs.toFixed(0)}`,
+				);
+
+				let fullCus: FullCustomer;
+				if (useFlatModel) {
+					const flat = (result?.[0] ?? {
+						customers: [],
+						customer_products: [],
+						customer_entitlements: [],
+						extra_customer_entitlements: [],
+						customer_prices: [],
+						entitlements: [],
+						rollovers: [],
+						replaceables: [],
+						free_trials: [],
+						subscriptions: [],
+					}) as unknown as FlattenedCustomerRow;
+					const reassembled = reassembleFlattenedCustomer(flat);
+					if (reassembled.length === 0) {
+						if (allowNotFound) {
+							return null as unknown as FullCustomer;
+						}
+						throw new CustomerNotFoundError({
+							customerId: idOrInternalId,
+						});
+					}
+					fullCus = reassembled[0];
+				} else {
+					if (!result || result.length === 0) {
+						if (allowNotFound) {
+							return null as unknown as FullCustomer;
+						}
+
+						throw new CustomerNotFoundError({
+							customerId: idOrInternalId,
+						});
 					}
 
-					throw new CustomerNotFoundError({
-						customerId: idOrInternalId,
-					});
+					const data = result[0];
+					data.created_at = Number(data.created_at);
+
+					for (const product of data.customer_products as FullCusProduct[]) {
+						if (!product.customer_prices) {
+							product.customer_prices = [];
+						}
+
+						if (!product.customer_entitlements) {
+							product.customer_entitlements = [];
+						}
+					}
+
+					fullCus = data as FullCustomer;
 				}
-
-				const data = result[0];
-				data.created_at = Number(data.created_at);
-
-				for (const product of data.customer_products as FullCusProduct[]) {
-					if (!product.customer_prices) {
-						product.customer_prices = [];
-					}
-
-					if (!product.customer_entitlements) {
-						product.customer_entitlements = [];
-					}
-				}
-
-				const fullCus = data as FullCustomer;
 
 				// if (orgId === "org_2x5sJDcxhpVDjyUSqs4khaaNnxq") {
 				// 	fullCus.customer_products = (
