@@ -49,16 +49,41 @@ export const reassembleFlattenedCustomer = (
 		subscriptionByStripeId: maps.subscriptionByStripeId,
 	});
 
+	const entitiesByCusId = groupByInternalCustomerId(flat.entities);
+	const invoicesByCusId = groupByInternalCustomerId(flat.invoices);
+
 	const out: FullCustomer[] = [];
 	for (const c of flat.customers) {
 		const internalId = c.internal_id as string;
-		out.push({
+		const hydrated: Record<string, unknown> = {
 			...c,
 			created_at: toTimestamp(c.created_at),
 			customer_products: cpsByCusId.get(internalId) ?? [],
 			extra_customer_entitlements: looseCesByCusId.get(internalId) ?? [],
 			subscriptions: subsByCusId.get(internalId) ?? [],
-		} as unknown as FullCustomer);
+		};
+		if (flat.entities !== undefined) {
+			hydrated.entities = entitiesByCusId.get(internalId) ?? [];
+		}
+		if (flat.invoices !== undefined) {
+			hydrated.invoices = invoicesByCusId.get(internalId) ?? [];
+		}
+		out.push(hydrated as unknown as FullCustomer);
+	}
+	return out;
+};
+
+const groupByInternalCustomerId = (
+	rows: { internal_customer_id?: string; [k: string]: unknown }[] | undefined,
+): Map<string, unknown[]> => {
+	const out = new Map<string, unknown[]>();
+	if (!rows) return out;
+	for (const row of rows) {
+		const cusId = row.internal_customer_id;
+		if (!cusId) continue;
+		const list = out.get(cusId);
+		if (list) list.push(row);
+		else out.set(cusId, [row]);
 	}
 	return out;
 };
