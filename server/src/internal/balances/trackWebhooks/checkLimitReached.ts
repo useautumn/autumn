@@ -4,6 +4,7 @@ import {
 	apiBalanceToAllowed,
 	type Feature,
 	type FullCustomer,
+	fullCustomerToTags,
 	WebhookEventType,
 } from "@autumn/shared";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
@@ -79,6 +80,7 @@ const checkLimitForSubject = async ({
 	if (!oldResult.allowed || newResult.allowed) return;
 
 	const customerId = newFullCus.id || newFullCus.internal_id;
+	const tags = fullCustomerToTags({ fullCustomer: newFullCus });
 
 	await sendSvixEvent({
 		ctx,
@@ -89,6 +91,7 @@ const checkLimitForSubject = async ({
 			limit_type: newResult.limitType ?? "included",
 			...(entityId && { entity_id: entityId }),
 		},
+		tags,
 	});
 
 	ctx.logger.info(

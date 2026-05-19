@@ -20,6 +20,7 @@ import {
 	type EntityLegacyData,
 	enrichFullCustomerWithEntity,
 	findCustomerProductById,
+	fullCustomerToTags,
 	type PlanLegacyData,
 } from "@autumn/shared";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
@@ -138,6 +139,8 @@ export const sendProductsUpdated = async ({
 		`[sendProductsUpdated] Sending webhook for customer ${customerId}, product ${fullProduct.name}, scenario: ${scenario}`,
 	);
 
+	const tags = fullCustomerToTags({ fullCustomer });
+
 	await sendSvixEvent({
 		ctx,
 		eventType: "customer.products.updated",
@@ -147,5 +150,6 @@ export const sendProductsUpdated = async ({
 			entity,
 			updated_product: versionedPlan,
 		},
+		tags,
 	});
 };
