@@ -3,6 +3,7 @@ import {
 	type AggregatedFeatureBalance,
 	type AggregatedSubjectFlag,
 	type Customer,
+	CusProductStatus,
 	type DbCustomerEntitlement,
 	type DbCustomerPrice,
 	type DbFreeTrial,
@@ -140,6 +141,24 @@ export const subjectQueryRowToNormalized = ({
 		);
 	};
 
+	// `flags` is keyed by feature_id (one slot per feature), but a customer
+	// can have multiple cus_ents for the same boolean — e.g. an active
+	// cus_product, a scheduled next-cycle cus_product, and loose extras
+	// from a prior plan. We prefer the most "currently effective" source so
+	// the API surfaces the right plan_id (and so a Scheduled flag doesn't
+	// land in `flags`, get routed to a Scheduled cus_product, and then be
+	// dropped downstream by orgToInStatuses).
+	const flagPriorityByFeatureId: Record<string, number> = {};
+	const getFlagPriority = (cusEnt: DbCustomerEntitlement): number => {
+		if (!cusEnt.customer_product_id) return 2;
+		const owningCusProduct = customerProductsById.get(
+			cusEnt.customer_product_id,
+		);
+		if (owningCusProduct?.status === CusProductStatus.Active) return 0;
+		if (owningCusProduct?.status === CusProductStatus.PastDue) return 1;
+		return 3;
+	};
+
 	const partitionCustomerEntitlement = (
 		customerEntitlement: DbCustomerEntitlement,
 	) => {
@@ -149,6 +168,13 @@ export const subjectQueryRowToNormalized = ({
 		if (!catalogEntitlement) return;
 
 		if (catalogEntitlement.feature.type === FeatureType.Boolean) {
+			const newPriority = getFlagPriority(customerEntitlement);
+			const existingPriority =
+				flagPriorityByFeatureId[catalogEntitlement.feature.id];
+			if (existingPriority !== undefined && existingPriority <= newPriority) {
+				return;
+			}
+			flagPriorityByFeatureId[catalogEntitlement.feature.id] = newPriority;
 			flags[catalogEntitlement.feature.id] = {
 				featureId: catalogEntitlement.feature.id,
 				internalFeatureId: customerEntitlement.internal_feature_id,

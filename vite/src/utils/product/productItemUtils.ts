@@ -107,7 +107,13 @@ export const getItemId = ({
 	item: ProductItem;
 	itemIndex: number;
 }) => {
-	// || item.entitlement_id || item.price_id;
+	if (item.entitlement_id) return `ent-${item.entitlement_id}`;
+	if (item.price_id) return `price-${item.price_id}`;
+	if (item.feature_id) {
+		return item.entity_feature_id
+			? `feature-${item.feature_id}-${item.entity_feature_id}`
+			: `feature-${item.feature_id}`;
+	}
 	return `item-${itemIndex}`;
 };
 
