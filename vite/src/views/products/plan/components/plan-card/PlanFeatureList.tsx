@@ -96,7 +96,7 @@ export const PlanFeatureList = ({
 		const itemIndex = product.items?.indexOf(item) ?? -1;
 		return (
 			<PlanFeatureRow
-				key={item.entitlement_id || item.price_id || itemIndex}
+				key={getItemId({ item, itemIndex })}
 				item={item}
 				index={itemIndex}
 				onDelete={handleDelete}
