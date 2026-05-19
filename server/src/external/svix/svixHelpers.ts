@@ -44,12 +44,14 @@ export const sendSvixEvent = async ({
 	data,
 	payloadFields,
 	idempotencyKey,
+	tags,
 }: {
 	ctx: AutumnContext;
 	eventType: string;
 	data: unknown;
 	payloadFields?: { id?: string; occurred_at?: number };
 	idempotencyKey?: string;
+	tags?: string[];
 }) => {
 	if (!process.env.SVIX_API_KEY) return;
 
@@ -71,6 +73,7 @@ export const sendSvixEvent = async ({
 					...payloadFields,
 					data,
 				},
+				...(tags && tags.length > 0 ? { tags } : {}),
 			},
 			idempotencyKey ? { idempotencyKey } : undefined,
 		);
