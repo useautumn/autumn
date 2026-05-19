@@ -15,6 +15,7 @@ import {
 	type EntityLegacyData,
 	type FullCusProduct,
 	type FullProduct,
+	fullCustomerToTags,
 	type Organization,
 	type PlanLegacyData,
 } from "@autumn/shared";
@@ -203,5 +204,6 @@ export const handleProductsUpdated = async ({
 			entity,
 			updated_product: versionedPlan,
 		},
+		tags: fullCustomerToTags({ fullCustomer: fullCus }),
 	});
 };
