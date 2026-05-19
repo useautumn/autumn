@@ -7,6 +7,7 @@
 
 import {
 	AffectedResource,
+	ALL_STATUSES,
 	type ApiCustomerV5,
 	type ApiEntityV2,
 	type ApiPlanV1,
@@ -40,10 +41,12 @@ export const sendProductsUpdated = async ({
 	const { features, logger } = ctx;
 	const { customerProductId, scenario, customerId } = payload;
 
-	// Fetch FullCustomer
+	// ALL_STATUSES: immediate upgrades set the old product to Expired, which
+	// the default RELEVANT_STATUSES filter excludes -- causing the webhook to drop.
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customerId ?? "",
+		inStatuses: ALL_STATUSES,
 		withEntities: true,
 		withSubs: true,
 		allowNotFound: true,
