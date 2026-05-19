@@ -22,6 +22,7 @@ import { extractPropertyKeys } from "./utils/extractPropertyKeys";
 import {
 	generateChartConfig,
 	transformGroupedData,
+	trimToTopSeries,
 } from "./utils/transformGroupedChartData";
 
 export const AnalyticsView = () => {
@@ -140,30 +141,44 @@ export const AnalyticsView = () => {
 			};
 		}
 
-		// Transform data for grouped display (pivots rows into columns per group)
+		// 1. Drop raw rows where every feature column is zero — cuts ~95%
+		//    of rows before the pivot so it runs on hundreds, not thousands.
+		const groupCol =
+			groupBy === "customer_id" || groupBy === "entity_id" || groupBy === "plan_id"
+				? groupBy
+				: groupBy ? `properties.${groupBy}` : null;
+		const skipKeys = new Set(["period", groupCol].filter(Boolean) as string[]);
+		const nonZeroData = filteredEvents.data.filter(
+			(row: Record<string, string | number>) => {
+				for (const key in row) {
+					if (skipKeys.has(key)) continue;
+					if (Number(row[key]) !== 0) return true;
+				}
+				return false;
+			},
+		);
+		const nonZeroEvents = nonZeroData.length === filteredEvents.data.length
+			? filteredEvents
+			: { ...filteredEvents, data: nonZeroData, rows: nonZeroData.length };
+
+		// 2. Pivot into one column per group×feature
 		const transformed = transformGroupedData({
-			events: filteredEvents,
+			events: nonZeroEvents,
 			groupBy,
 		});
 
-		const nonEmptyData = transformed.data.filter((row) => {
-			for (const key in row) {
-				if (key === "period") continue;
-				if (Number(row[key]) !== 0) return true;
-			}
-			return false;
-		});
-		const trimmed = { ...transformed, data: nonEmptyData, rows: nonEmptyData.length };
+		// 3. Keep only top 30 series by volume so Recharts renders ≤30 <Bar>s
+		const trimmed = trimToTopSeries({ events: transformed, maxSeries: 30 });
 
 		const config = generateChartConfig({
-				events: trimmed,
-				features,
-				groupBy,
-				originalColors: colors,
-				entityNames,
-				customerNames,
-				planNames,
-			});
+			events: trimmed,
+			features,
+			groupBy,
+			originalColors: colors,
+			entityNames,
+			customerNames,
+			planNames,
+		});
 
 		return { chartData: trimmed, chartConfig: config };
 	}, [events, features, groupBy, groupFilter, planDeselected, entityNames, customerNames, planNames]);
@@ -315,7 +330,7 @@ export const AnalyticsView = () => {
 
 	return (
 		<AnalyticsContext.Provider value={contextValue}>
-			<PageContainer className="text-sm">
+			<PageContainer className="text-sm h-full overflow-hidden">
 				<OnboardingGuide />
 				{showRevenueMetrics && <RevenueMetricsSection />}
 				<div className="pb-6 shrink-0">
@@ -326,11 +341,12 @@ export const AnalyticsView = () => {
 						</div>
 						<QueryTopbar />
 					</div>
+				<div className="flex flex-col bg-interactive-secondary border rounded-lg aspect-[3/1] overflow-hidden">
 					{queryLoading && (
-						<div className="flex flex-col bg-interactive-secondary border rounded-lg aspect-[3/1] animate-pulse" />
+						<div className="flex-1 animate-pulse" />
 					)}
 					{!queryLoading && chartData && chartData.data.length > 0 && (
-						<div className="flex flex-col bg-interactive-secondary border rounded-lg aspect-[3/1]">
+						<>
 							<ChartLegend
 								entries={legendEntries}
 								showLabels={!!groupBy || legendEntries.length <= 3}
@@ -341,24 +357,30 @@ export const AnalyticsView = () => {
 									chartConfig={chartConfig}
 								/>
 							</div>
-						</div>
+						</>
 					)}
 					{!queryLoading && (!chartData || chartData.data.length === 0) && (
-						<div className="flex-1 px-10 pt-6">
-							<p className="text-tertiary-foreground text-sm">
-								No events found. Please widen your filters.{" "}
+						<div className="flex-1 flex flex-col items-center justify-center gap-2">
+							<ChartBarIcon size={28} weight="duotone" className="text-muted-foreground/50" />
+							<p className="text-muted-foreground text-sm">
 								{eventNames.length === 0
-									? "Try to select some events in the dropdown above."
-									: ""}
+									? "Start sending events to view usage data."
+									: "No events found for these filters."}
 							</p>
 						</div>
 					)}
 				</div>
+				</div>
 
-				<div className="flex-1 min-h-[400px] pb-8">
+				<div className="flex-1 min-h-[200px] pb-2">
 					<EventsTable
 						data={rawEvents?.data ?? []}
 						isLoading={rawQueryLoading}
+						emptyMessage={
+							eventNames.length === 0
+								? "Start sending events to view usage data."
+								: "No events found for these filters."
+						}
 					/>
 				</div>
 			</PageContainer>
