@@ -1,0 +1,37 @@
+server/tests/integration/crud/plans/diffing/diffPlanV1.oneprep.fixtures.ts
+  s_967141dc71d828::t_7be619106dcfda 2-14
+server/tests/integration/crud/plans/diffing/diffPlanV1.revisiondojo.fixtures.ts
+  s_967141dc71d828::t_e536e1964a8bbd 2-69
+server/tests/integration/crud/plans/diffing/utils/findById.ts
+  s_967141dc71d828::t_ae4446158cdf90 1-5
+server/tests/integration/crud/plans/diffing/diffPlanV1.runable.fixtures.ts
+  s_967141dc71d828::t_5f4a9a12118b01 2-64
+server/tests/integration/crud/plans/diffing/diffPlanV1.firecrawl.test.ts
+  s_967141dc71d828::t_2f4184bd7c32ce 18
+server/tests/integration/crud/plans/diffing/diffPlanV1.firecrawl.fixtures.ts
+  s_967141dc71d828::t_754df43efcfd78 2-54
+server/tests/integration/crud/plans/diffing/utils/normalizePlan.ts
+  s_967141dc71d828::t_46679c41b75254 1-72
+server/tests/integration/crud/plans/diffing/diffPlanV1.oneprep.test.ts
+  s_967141dc71d828::t_1b17a657c95687 6
+server/tests/integration/crud/plans/diffing/diffPlanV1.revisiondojo.test.ts
+  s_967141dc71d828::t_fa36c3d35139bd 13
+server/tests/integration/crud/plans/diffing/diffPlanV1.runable.test.ts
+  s_967141dc71d828::t_bf620d9d4223bf 19
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.9",
+  "base_commit_sha": "1c25a564df4095be37d197e229cde63a743eafee",
+  "prompts": {},
+  "sessions": {
+    "s_967141dc71d828": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1bf5f446fffeI8e65FQVVgZ1R0",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
