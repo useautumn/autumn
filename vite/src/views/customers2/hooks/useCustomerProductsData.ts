@@ -1,10 +1,41 @@
-import type { Entity, FullCusProduct } from "@autumn/shared";
+import {
+	CusProductStatus,
+	type Entity,
+	type FullCusProduct,
+} from "@autumn/shared";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
+import { useViewAsStore } from "@/hooks/stores/useViewAsStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { filterCustomerProductsByType } from "../components/table/customer-products/customerProductsTableFilters";
 import { withEffectiveCustomerProductStatus } from "../utils/effectiveCustomerProductStatus";
+import { useEffectiveNow, useIsViewingAsPast } from "./useEffectiveNow";
+
+/**
+ * Rewrites a customer product so it renders as "alive at nowMs": clears Expired
+ * status, pre-nowMs cancellations, and future end timestamps. Used in view-as mode
+ * so downstream filters and detail panels don't show post-nowMs facts.
+ */
+export function rewriteCusProductAsLiveAt(
+	cp: FullCusProduct,
+	nowMs: number,
+): FullCusProduct {
+	let next: FullCusProduct = cp;
+	if (next.status === CusProductStatus.Expired) {
+		next = { ...next, status: CusProductStatus.Active };
+	}
+	if (
+		next.canceled &&
+		(next.canceled_at == null || next.canceled_at >= nowMs)
+	) {
+		next = { ...next, canceled: false, canceled_at: null };
+	}
+	if (next.ended_at != null && next.ended_at >= nowMs) {
+		next = { ...next, ended_at: null };
+	}
+	return next;
+}
 
 function filterBySelectedEntity({
 	products,
@@ -37,26 +68,39 @@ export function useCustomerProductsData() {
 		"customerProductsShowExpired",
 		parseAsBoolean.withDefault(false),
 	);
-	const customerWithEffectiveStatuses = useMemo(
-		() => ({
-			...customer,
-			customer_products: customer.customer_products.map((customerProduct) =>
-				withEffectiveCustomerProductStatus({
-					customerProduct,
-					nowMs: testClockFrozenTimeMs,
-				}),
-			),
-		}),
-		[customer, testClockFrozenTimeMs],
-	);
+	const nowMs = useEffectiveNow();
+	const isViewAs = useIsViewingAsPast();
+	const pinnedCusProductId = useViewAsStore((s) => s.cusProductId);
+
+	const customerWithEffectiveStatuses = useMemo(() => {
+		const effective = customer.customer_products.map((customerProduct) =>
+			withEffectiveCustomerProductStatus({ customerProduct, nowMs }),
+		);
+		// In view-as mode, hide add-ons / one-offs and anything not alive at nowMs.
+		// The pinned product is always included so zero-lifetime edges still render.
+		// Status + canceled are rewritten so the row renders as "live at nowMs".
+		const filtered = isViewAs
+			? effective
+					.filter((cp) => {
+						if (cp.id === pinnedCusProductId) return true;
+						if (cp.product.is_add_on) return false;
+						const startedBefore = cp.starts_at == null || cp.starts_at <= nowMs;
+						const endedAfter = cp.ended_at == null || cp.ended_at > nowMs;
+						return startedBefore && endedAfter;
+					})
+					.map((cp) => rewriteCusProductAsLiveAt(cp, nowMs))
+			: effective;
+		return { ...customer, customer_products: filtered };
+	}, [customer, nowMs, isViewAs, pinnedCusProductId]);
 
 	const { subscriptions, purchases } = useMemo(
 		() =>
 			filterCustomerProductsByType({
 				customer: customerWithEffectiveStatuses,
-				showExpired: showExpired ?? false,
+				// In view-as mode the upstream filter is authoritative; let everything through.
+				showExpired: isViewAs ? true : (showExpired ?? false),
 			}),
-		[customerWithEffectiveStatuses, showExpired],
+		[customerWithEffectiveStatuses, showExpired, isViewAs],
 	);
 
 	// Filter entity-level products by selected entity (if any)
@@ -95,6 +139,8 @@ export function useCustomerProductsData() {
 		customer,
 		isLoading,
 		testClockFrozenTimeMs,
+		nowMs,
+		isViewAs,
 		showExpired,
 		setShowExpired,
 		entityId,

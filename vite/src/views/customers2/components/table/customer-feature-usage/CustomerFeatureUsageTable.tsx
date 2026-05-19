@@ -12,9 +12,15 @@ import { SectionTag } from "@/components/v2/badges/SectionTag";
 import { Button } from "@/components/v2/buttons/Button";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
+import { useViewAsStore } from "@/hooks/stores/useViewAsStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { withEffectiveCustomerProductStatus } from "@/views/customers2/utils/effectiveCustomerProductStatus";
+import { rewriteCusProductAsLiveAt } from "../../../hooks/useCustomerProductsData";
+import {
+	useEffectiveNow,
+	useIsViewingAsPast,
+} from "../../../hooks/useEffectiveNow";
 import { CustomerBalanceTable } from "../customer-balance/CustomerBalanceTable";
 import { EmptyState } from "../EmptyState";
 import { CustomerFeatureUsageColumns } from "./CustomerFeatureUsageColumns";
@@ -29,10 +35,13 @@ import {
 } from "./customerFeatureUsageUtils";
 
 export function CustomerFeatureUsageTable() {
-	const { customer, features, isLoading, testClockFrozenTimeMs } = useCusQuery();
+	const { customer, features, isLoading } = useCusQuery();
 	const { setSheet } = useSheetStore();
 
 	const { entityId } = useEntity();
+	const nowMs = useEffectiveNow();
+	const isViewAs = useIsViewingAsPast();
+	const pinnedCusProductId = useViewAsStore((s) => s.cusProductId);
 
 	const [expanded, setExpanded] = useState<ExpandedState>({});
 
@@ -46,28 +55,49 @@ export function CustomerFeatureUsageTable() {
 	const filteredCustomerProducts = useMemo(() => {
 		const customerProducts = (customer?.customer_products ?? []).map(
 			(customerProduct) =>
-				withEffectiveCustomerProductStatus({
-					customerProduct,
-					nowMs: testClockFrozenTimeMs,
-				}),
+				withEffectiveCustomerProductStatus({ customerProduct, nowMs }),
 		);
 
+		// In view-as mode, only main products alive at nowMs are eligible for balance
+		// attribution. The pinned product always wins to cover same-ms upgrade edges.
+		// Status + canceled are rewritten so filterCustomerFeatureUsage doesn't drop it.
+		const viewAsFiltered = isViewAs
+			? customerProducts
+					.filter((cp: FullCusProduct) => {
+						if (cp.id === pinnedCusProductId) return true;
+						if (cp.product.is_add_on) return false;
+						const startedBefore = cp.starts_at == null || cp.starts_at <= nowMs;
+						const endedAfter = cp.ended_at == null || cp.ended_at > nowMs;
+						return startedBefore && endedAfter;
+					})
+					.map((cp) => rewriteCusProductAsLiveAt(cp, nowMs))
+			: customerProducts;
+
 		if (!selectedEntity) {
-			return customerProducts;
+			return viewAsFiltered;
 		}
 
-		return customerProducts.filter(
+		return viewAsFiltered.filter(
 			(cp: FullCusProduct) =>
 				(!cp.internal_entity_id && !cp.entity_id) ||
 				cp.internal_entity_id === selectedEntity.internal_id ||
 				cp.entity_id === selectedEntity.id,
 		);
-	}, [customer?.customer_products, selectedEntity, testClockFrozenTimeMs]);
+	}, [
+		customer?.customer_products,
+		selectedEntity,
+		nowMs,
+		isViewAs,
+		pinnedCusProductId,
+	]);
 
 	const cusEnts = useMemo((): FullCusEntWithFullCusProduct[] => {
 		const productEnts = flattenCustomerEntitlements({
 			customerProducts: filteredCustomerProducts,
 		});
+
+		// Loose admin-granted entitlements don't belong in a historical state view.
+		if (isViewAs) return productEnts;
 
 		// Add extra entitlements (loose entitlements not tied to a product)
 		// Customer level: show ALL loose entitlements (customer can access entity-scoped balances at top level)
@@ -76,11 +106,9 @@ export function CustomerFeatureUsageTable() {
 			customer?.extra_customer_entitlements || []
 		)
 			.filter((ent: FullCustomerEntitlement) => {
-				// If no entity selected (customer level), show ALL loose entitlements
 				if (!selectedEntity) {
 					return true;
 				}
-				// If entity selected, show ONLY that entity's loose entitlements
 				return ent.internal_entity_id === selectedEntity.internal_id;
 			})
 			.map((ent: FullCustomerEntitlement) => ({
@@ -93,6 +121,7 @@ export function CustomerFeatureUsageTable() {
 		filteredCustomerProducts,
 		customer?.extra_customer_entitlements,
 		selectedEntity,
+		isViewAs,
 	]);
 
 	const featuresMap = useMemo(
@@ -189,15 +218,17 @@ export function CustomerFeatureUsageTable() {
 							Features
 						</Table.Heading>
 						<Table.Actions>
-							<Button
-								variant="secondary"
-								size="mini"
-								className="gap-2 font-medium"
-								onClick={() => setSheet({ type: "balance-create" })}
-							>
-								<PlusIcon className="size-3.5" />
-								Create Balance
-							</Button>
+							{!isViewAs && (
+								<Button
+									variant="secondary"
+									size="mini"
+									className="gap-2 font-medium"
+									onClick={() => setSheet({ type: "balance-create" })}
+								>
+									<PlusIcon className="size-3.5" />
+									Create Balance
+								</Button>
+							)}
 						</Table.Actions>
 					</Table.Toolbar>
 					{hasBooleanFlags && <SectionTag>Balances</SectionTag>}

@@ -1,7 +1,11 @@
-import { type FullCusProduct, isCustomerProductTrialing } from "@autumn/shared";
+import {
+	CusProductStatus,
+	type FullCusProduct,
+	isCustomerProductTrialing,
+} from "@autumn/shared";
 import { FlaskIcon, PencilIcon } from "@phosphor-icons/react";
 import type { Row, Table } from "@tanstack/react-table";
-import { ArrowRightLeft, Delete, RotateCcw } from "lucide-react";
+import { ArrowRightLeft, Clock, Delete, RotateCcw } from "lucide-react";
 import { TableDropdownMenuCell } from "@/components/general/table/table-dropdown-menu-cell";
 import { DropdownMenuItem } from "@/components/v2/dropdowns/DropdownMenu";
 import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
@@ -88,16 +92,33 @@ export const CustomerProductsColumns = [
 				onUncancelClick?: (product: FullCusProduct) => void;
 				onTransferClick?: (product: FullCusProduct) => void;
 				onTestSheetClick?: (product: FullCusProduct) => void;
+				onViewAsClick?: (product: FullCusProduct) => void;
 				hasEntities?: boolean;
+				isViewAs?: boolean;
 			};
 
 			if (!meta?.onCancelClick) return null;
 
 			const isCanceling = row.original.canceled;
+			const isMain = !row.original.product.is_add_on;
+			const isExpired = row.original.status === CusProductStatus.Expired;
+			const canViewAs = isMain && (isExpired || isCanceling);
+			const disabledByViewAs = meta.isViewAs === true;
 
 			return (
 				<div className="flex justify-end">
 					<TableDropdownMenuCell>
+						{canViewAs && meta.onViewAsClick && (
+							<DropdownMenuItem
+								className="flex items-center gap-2 text-xs"
+								onClick={(e) => {
+									e.stopPropagation();
+									meta.onViewAsClick?.(row.original);
+								}}
+							>
+								<Clock size={16} /> View customer as of this date
+							</DropdownMenuItem>
+						)}
 						{meta.onTestSheetClick && (
 							<DropdownMenuItem
 								className="flex items-center gap-2 text-xs"
@@ -112,6 +133,7 @@ export const CustomerProductsColumns = [
 						{meta.hasEntities && meta.onTransferClick && (
 							<DropdownMenuItem
 								className="flex items-center gap-2 text-xs"
+								disabled={disabledByViewAs}
 								onClick={(e) => {
 									e.stopPropagation();
 									meta.onTransferClick?.(row.original);
@@ -123,6 +145,7 @@ export const CustomerProductsColumns = [
 						{meta.onUpdateClick && (
 							<DropdownMenuItem
 								className="flex items-center gap-2 text-xs"
+								disabled={disabledByViewAs}
 								onClick={(e) => {
 									e.stopPropagation();
 									meta.onUpdateClick?.(row.original);
@@ -134,6 +157,7 @@ export const CustomerProductsColumns = [
 						{isCanceling ? (
 							<DropdownMenuItem
 								className="flex items-center gap-2 text-xs"
+								disabled={disabledByViewAs}
 								onClick={(e) => {
 									e.stopPropagation();
 									meta.onUncancelClick?.(row.original);
@@ -144,6 +168,7 @@ export const CustomerProductsColumns = [
 						) : (
 							<DropdownMenuItem
 								className="flex items-center gap-2 text-xs text-red-500 dark:text-red-400"
+								disabled={disabledByViewAs}
 								onClick={(e) => {
 									e.stopPropagation();
 									meta.onCancelClick?.(row.original);

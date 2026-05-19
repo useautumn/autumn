@@ -7,6 +7,8 @@ type CustomerContextType = {
 	setEntityId: (entityId: string | null) => void;
 	isInlineEditorOpen: boolean;
 	setIsInlineEditorOpen: (isOpen: boolean) => void;
+	isViewAs: boolean;
+	asOfMs: number | null;
 };
 export const CustomerContext = createContext<CustomerContextType | null>(null);
 
