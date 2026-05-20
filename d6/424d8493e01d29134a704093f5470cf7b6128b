@@ -1,0 +1,40 @@
+server/src/queue/initWorkers.ts
+  s_91c73052f770ec::t_1045cb8bd9f82c 426
+  s_91c73052f770ec::t_f21e7dd8a87a0b 435
+  s_91c73052f770ec::t_93b1eb9ecdc046 425
+  s_91c73052f770ec::t_78c16e25ddda9a 13
+server/src/db/initDrizzle.ts
+  s_91c73052f770ec::t_25ef6ab77362ac 48,56-57,67-68,75-78
+  s_91c73052f770ec::t_22021ae8cebce2 43
+  s_91c73052f770ec::t_92e9a7020b802f 12
+  s_91c73052f770ec::t_a8d7015bad136e 101,113,120-122,124-125
+  s_91c73052f770ec::t_92bafd328c6288 102
+  s_91c73052f770ec::t_3790c0c43bed2a 123
+server/src/db/pgPoolMonitor.ts
+  s_91c73052f770ec::t_9d85ac616299c4 1-90
+server/src/cron/cronInit.ts
+  s_91c73052f770ec::t_78c16e25ddda9a 4
+  s_91c73052f770ec::t_6d12a1b6e0ddcc 22
+  s_91c73052f770ec::t_e4c1c95cd4a078 83,92
+  s_91c73052f770ec::t_833261cc426c42 23
+server/src/init.ts
+  s_91c73052f770ec::t_dd49ac4466c968 167
+  s_91c73052f770ec::t_78c16e25ddda9a 13
+  s_91c73052f770ec::t_7b0cd87e8ce00c 60
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.10",
+  "base_commit_sha": "d6424d8493e01d29134a704093f5470cf7b6128b",
+  "prompts": {},
+  "sessions": {
+    "s_91c73052f770ec": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1bb0e5b54ffeJ9UpxNK3N30DiX",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
