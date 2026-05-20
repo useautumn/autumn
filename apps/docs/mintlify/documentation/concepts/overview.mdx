@@ -99,9 +99,27 @@ Your app interacts with Autumn primarily through balances — calling `/check` t
 
 ## Runtime
 
-Once your features, plans and pricing are configured, your app interacts with Autumn through four core endpoints.
+Once your features, plans and pricing are configured, your app interacts with Autumn through a few core endpoints.
 
-- **[Customer](/api-reference/customers/getOrCreateCustomer)**: Idempotent get-or-create. Call on every login/signup and Autumn returns the existing customer or creates a new one. Aggregates subscriptions, balances, invoices and payment methods in a single response.
-- **[Attach](/api-reference/billing/attach)**: Subscribe a customer to a plan or purchase a one-time product. Handles new subscriptions, upgrades, downgrades and add-ons, creating the Stripe subscription and provisioning balances automatically.
-- **[Check](/api-reference/core/check)**: Feature gate. Returns whether a customer has access based on their active plans and remaining balance. Set `send_event` to atomically deduct usage while checking.
-- **[Track](/api-reference/core/track)**: Record usage against a customer's balance. Each call decrements the remaining allowance for a feature, powering metered billing and usage limits.
+<Steps>
+<Step title="Model your pricing in Autumn">
+Model your pricing plans in the Autumn UI, or through a config file. Define your free, paid and any add-on pricing tiers.
+
+You can link features to these plans and define their usage limits: both recurring (monthly, yearly), one-time top ups, rollovers, etc.
+</Step>
+<Step title="Handle payments">
+The [attach](/api-reference/billing/attach) endpoint subscribes a customer to a plan or purchases a one-time product. It handles new subscriptions, upgrades, downgrades and add-ons — creating the Stripe subscription and provisioning balances automatically.
+
+Once paid, Autumn grants access to the features on their plan.
+</Step>
+<Step title="Check permissions and limits">
+When a customer tries to do something (eg, use a credit), [check](/api-reference/core/check) in real-time whether they're allowed to based on their active plans and remaining balance.
+
+Set `send_event` to atomically deduct usage while checking.
+</Step>
+<Step title="Track usage">
+If the customer is allowed access, let them use the feature. Afterwards, [track](/api-reference/core/track) the usage to update their balance, or bill them for any usage-pricing.
+</Step>
+</Steps>
+
+Autumn also provides endpoints to [get customer billing data](/api-reference/customers/getOrCreateCustomer) (subscriptions, balances, invoices, payment methods), open Stripe billing portal, display usage analytics, handle org billing, and more.
