@@ -10,6 +10,7 @@ import {
 	initPgHealthMonitor,
 	shutdownPgHealthMonitor,
 } from "./db/pgHealthMonitor.js";
+import { startPgPoolMonitor, stopPgPoolMonitor } from "./db/pgPoolMonitor.js";
 import { getRedactedDatabaseUrls } from "./db/redactDatabaseUrl.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import {
@@ -56,6 +57,7 @@ const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 	const app = createHonoApp();
 
 	initPgHealthMonitor({ client: clientCritical });
+	startPgPoolMonitor();
 
 	void warmupRegionalRedis().catch((error) => {
 		logger.warn("[Redis] Warmup failed", { error });
@@ -162,6 +164,7 @@ async function gracefulShutdown() {
 			await otelSdk.shutdown();
 		}
 		shutdownPgHealthMonitor();
+		stopPgPoolMonitor();
 		stopRedisMonitor();
 		stopRedisV2Monitor();
 		stopAllEdgeConfigPolling();
