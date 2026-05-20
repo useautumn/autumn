@@ -1,10 +1,10 @@
 import {
-	ApiVersionClass,
-	AppEnv,
-	AuthType,
-	LATEST_VERSION,
-	type Organization,
-	tryCatch,
+    ApiVersionClass,
+    AppEnv,
+    AuthType,
+    LATEST_VERSION,
+    type Organization,
+    tryCatch,
 } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import { db, dbGeneral } from "@/db/initDrizzle.js";
@@ -114,7 +114,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 		// Query params
 		expand: [],
-		skipCache: c.req.header("x-skip-cache") === "true",
+		skipCache: c.req.header("x-skip-cache") === "true" || c.req.query("skip_cache") === "true",
 
 		// Test params:
 		extraLogs: {},

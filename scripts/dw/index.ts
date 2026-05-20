@@ -8,6 +8,8 @@ import { cmdReset } from "./commands/reset.ts";
 import { cmdLogs } from "./commands/logs.ts";
 import { cmdAttach } from "./commands/attach.ts";
 import { cmdIdentify } from "./commands/identify.ts";
+import { cmdEnable } from "./commands/enable.ts";
+import { cmdDisable } from "./commands/disable.ts";
 
 async function main(): Promise<void> {
 	const sub = process.argv[2];
@@ -40,9 +42,15 @@ async function main(): Promise<void> {
 		case "identify":
 			cmdIdentify();
 			break;
+		case "enable":
+			cmdEnable();
+			break;
+		case "disable":
+			cmdDisable();
+			break;
 		default:
 			fatal(
-				`unknown subcommand: ${sub} (use: setup | run | teardown | list | reset | logs | attach | identify)`,
+				`unknown subcommand: ${sub} (use: setup | run | teardown | list | reset | logs | attach | identify | enable | disable)`,
 			);
 	}
 }
