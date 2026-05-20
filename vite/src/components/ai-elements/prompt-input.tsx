@@ -968,21 +968,15 @@ export const PromptInputButton = ({
 	className,
 	size = "icon",
 	...props
-<<<<<<< HEAD
-}: PromptInputButtonProps) => {
-	const newSize =
-		size ?? (Children.count(props.children) > 1 ? "sm" : "icon-sm");
-
-	return (
-		<InputGroupButton
-			className={className}
-			size={newSize}
-			type="button"
-			variant={variant}
-			{...props}
-		/>
-	);
-};
+}: PromptInputButtonProps) => (
+	<Button
+		type="button"
+		variant={variant}
+		size={size}
+		className={cn("shadow-none", className)}
+		{...props}
+	/>
+);
 
 export type PromptInputActionMenuProps = ComponentProps<typeof DropdownMenu>;
 export const PromptInputActionMenu = (props: PromptInputActionMenuProps) => (
@@ -1049,12 +1043,12 @@ export const PromptInputSubmit = ({
 	}
 
 	return (
-		<InputGroupButton
+		<Button
 			aria-label="Submit"
-			className={className}
-			size={size}
 			type="submit"
 			variant={variant}
+			size={size}
+			className={cn("shadow-none", className)}
 			{...props}
 		>
 			{children ?? Icon}
