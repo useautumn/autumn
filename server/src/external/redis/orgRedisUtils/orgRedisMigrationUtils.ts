@@ -13,23 +13,18 @@ const dedupeRedisInstances = ({ candidates }: { candidates: Redis[] }) =>
 		(candidate, index) => candidates.indexOf(candidate) === index,
 	);
 
-/** Adds BOTH primary and ramp destination clients to the candidate list when
- *  the ramp is non-zero for this org. During ramp, lock/cleanup state may
- *  exist on EITHER cluster — scanning both prevents loss across boundary
- *  crossings.
+/** Adds BOTH primary and ramp destination to the candidate list when the ramp
+ *  is active. Lock/cleanup state may exist on EITHER cluster mid-ramp.
  *
  *  Gated on `activeInstance === "dragonfly"` so the upstash/redis kill switch
- *  disables ramp fan-out (when active is non-dragonfly, ramp traffic isn't
- *  routed to either cluster). */
+ *  also disables ramp fan-out. */
 const withRampClustersIfActive = ({
 	candidates,
-	orgId,
 }: {
 	candidates: Redis[];
-	orgId?: string;
 }): Redis[] => {
 	if (getActiveRedisV2Instance() !== "dragonfly") return candidates;
-	if (!isCacheV2RampActive({ orgId })) return candidates;
+	if (!isCacheV2RampActive()) return candidates;
 	const destination = getRampDestinationRedis();
 	if (!destination) return candidates;
 	return [...candidates, destination, resolveRedisV2()];
@@ -47,10 +42,7 @@ export const getRedisV2LockReceiptCandidates = ({
 	}
 
 	return dedupeRedisInstances({
-		candidates: withRampClustersIfActive({
-			candidates,
-			orgId: ctx.org.id,
-		}),
+		candidates: withRampClustersIfActive({ candidates }),
 	});
 };
 
@@ -66,9 +58,6 @@ export const getRedisV2OrgCleanupCandidates = ({
 	}
 
 	return dedupeRedisInstances({
-		candidates: withRampClustersIfActive({
-			candidates,
-			orgId: ctx.org.id,
-		}),
+		candidates: withRampClustersIfActive({ candidates }),
 	});
 };

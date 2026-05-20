@@ -2,66 +2,49 @@ import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import {
-	CacheV2RampInvariantError,
 	closeRampDestinationClient,
 	getCacheV2RampConfig,
-	removeCacheV2RampOrg,
-	updateCacheV2RampDestination,
-	updateCacheV2RampPercent,
+	getRampDestinationRedis,
+	removeCacheV2RampConfig,
+	updateCacheV2RampMigrationPercent,
+	upsertCacheV2RampConnection,
 } from "@/internal/misc/cacheV2Ramp/index.js";
 import { encryptData } from "@/utils/encryptUtils.js";
 
-/** Wrap a store update that may throw `CacheV2RampInvariantError` and convert
- *  invariant failures to HTTP 400. Anything else propagates as 500. */
-const runWithInvariantGuard = async <T>(fn: () => Promise<T>): Promise<T> => {
-	try {
-		return await fn();
-	} catch (error) {
-		if (error instanceof CacheV2RampInvariantError) {
-			throw new RecaseError({
-				message: error.message,
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
-		throw error;
-	}
-};
-
 const REDIS_PROTOCOLS = new Set(["redis:", "rediss:"]);
-
-const orgIdParam = z.object({ org_id: z.string().min(1) });
 
 const actorString = (ctx: { user?: { email?: string }; userId?: string }) =>
 	ctx.user?.email ?? ctx.userId ?? "unknown";
 
 /**
  * GET /admin/cache-v2-ramp
- * Returns the current ramp config WITHOUT the encrypted connectionString —
- * we never echo ciphertext back to the UI. URL (host:port), percent, org
- * overrides, and timestamps are safe.
+ * Returns the current ramp config in frontend-safe shape (host + percent only).
+ * Never echoes the encrypted connectionString.
  */
 export const handleGetAdminCacheV2Ramp = createRoute({
 	scopes: [Scopes.Superuser],
 	handler: async (c) => {
 		const config = getCacheV2RampConfig();
 		return c.json({
-			destination: config.destination ? { url: config.destination.url } : null,
-			percent: config.percent,
-			previousPercent: config.previousPercent,
-			changedAt: config.changedAt,
-			orgs: config.orgs,
+			cache_v2_ramp: config
+				? {
+						host: config.url,
+						migrationPercent: config.migrationPercent,
+						previousMigrationPercent: config.previousMigrationPercent,
+						migrationChangedAt: config.migrationChangedAt,
+					}
+				: null,
 		});
 	},
 });
 
 /**
- * PUT /admin/cache-v2-ramp/destination  body: { connectionString }
- * Accepts a PLAINTEXT redis:// or rediss:// connection string. Validates the
- * scheme, extracts host:port for logging, encrypts the connection string,
- * and persists. The plaintext never lands in S3.
+ * PATCH /admin/cache-v2-ramp  body: { connectionString }
+ * Upsert the destination. Accepts a PLAINTEXT redis:// or rediss:// URI;
+ * server validates the scheme, extracts host:port for logging, encrypts the
+ * connection string, and persists. Refuses while migrationPercent > 0.
  */
-export const handleUpsertAdminCacheV2RampDestination = createRoute({
+export const handleUpsertAdminCacheV2Ramp = createRoute({
 	scopes: [Scopes.Superuser],
 	body: z.object({ connectionString: z.string().min(1) }),
 	handler: async (c) => {
@@ -95,17 +78,22 @@ export const handleUpsertAdminCacheV2RampDestination = createRoute({
 			});
 		}
 
-		await runWithInvariantGuard(() =>
-			updateCacheV2RampDestination({
-				destination: {
-					connectionString: encryptData(connectionString),
-					url: redisUrl.host,
-				},
-			}),
-		);
+		const current = getCacheV2RampConfig();
+		if (current && current.migrationPercent > 0) {
+			throw new RecaseError({
+				message: `Cannot update destination while migrationPercent is ${current.migrationPercent}%. Set it to 0 first.`,
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		await upsertCacheV2RampConnection({
+			connectionString: encryptData(connectionString),
+			url: redisUrl.host,
+		});
 
 		logger.info(
-			`[admin/handleUpsertAdminCacheV2RampDestination] destination set, url=${redisUrl.host}, actor=${actorString(ctx)}`,
+			`[admin/handleUpsertAdminCacheV2Ramp] ${current ? "updated" : "created"}, url=${redisUrl.host}, actor=${actorString(ctx)}`,
 		);
 
 		return c.json({ success: true });
@@ -113,134 +101,67 @@ export const handleUpsertAdminCacheV2RampDestination = createRoute({
 });
 
 /**
- * DELETE /admin/cache-v2-ramp/destination
- * Clears the destination. Refuses while percent > 0 to prevent yanking the
- * rug from under in-flight ramped customers.
+ * PATCH /admin/cache-v2-ramp/migration  body: { migrationPercent }
+ * Updates the percent. Stores previous value + timestamp.
  */
-export const handleDeleteAdminCacheV2RampDestination = createRoute({
+export const handleUpdateAdminCacheV2RampMigration = createRoute({
+	scopes: [Scopes.Superuser],
+	body: z.object({ migrationPercent: z.number().int().min(0).max(100) }),
+	handler: async (c) => {
+		const ctx = c.get("ctx");
+		const { logger } = ctx;
+		const { migrationPercent } = c.req.valid("json");
+
+		const current = getCacheV2RampConfig();
+		if (!current) {
+			throw new RecaseError({
+				message:
+					"No cache V2 ramp config set. Configure destination first via PATCH /admin/cache-v2-ramp.",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		await updateCacheV2RampMigrationPercent({ migrationPercent });
+
+		// Warm the destination client on first ramp-up so the first ramped
+		// requests don't pay the connect-handshake latency.
+		if (migrationPercent > 0 && current.migrationPercent === 0) {
+			getRampDestinationRedis();
+		}
+
+		logger.info(
+			`[admin/handleUpdateAdminCacheV2RampMigration] ${current.migrationPercent}% -> ${migrationPercent}%, actor=${actorString(ctx)}`,
+		);
+
+		return c.json({ success: true });
+	},
+});
+
+/**
+ * DELETE /admin/cache-v2-ramp
+ * Removes the cache V2 ramp config entirely. Refuses while migrationPercent > 0.
+ */
+export const handleDeleteAdminCacheV2Ramp = createRoute({
 	scopes: [Scopes.Superuser],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { logger } = ctx;
-		const config = getCacheV2RampConfig();
+		const current = getCacheV2RampConfig();
 
-		if (config.percent > 0) {
+		if (current && current.migrationPercent > 0) {
 			throw new RecaseError({
-				message: `Cannot clear destination while percent is ${config.percent}%. Set it to 0 first.`,
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
-		const activeOrgPercent = Object.entries(config.orgs).find(
-			([, entry]) => entry.percent > 0,
-		);
-		if (activeOrgPercent) {
-			throw new RecaseError({
-				message: `Cannot clear destination while org "${activeOrgPercent[0]}" has percent ${activeOrgPercent[1].percent}%. Set it to 0 first.`,
+				message: `Cannot remove cache V2 ramp while migrationPercent is ${current.migrationPercent}%. Set it to 0 first.`,
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
 			});
 		}
 
-		await runWithInvariantGuard(() =>
-			updateCacheV2RampDestination({ destination: null }),
-		);
+		await removeCacheV2RampConfig();
 		closeRampDestinationClient();
 
 		logger.info(
-			`[admin/handleDeleteAdminCacheV2RampDestination] destination cleared, actor=${actorString(ctx)}`,
-		);
-
-		return c.json({ success: true });
-	},
-});
-
-/**
- * PUT /admin/cache-v2-ramp/percent  body: { percent }
- * Updates the global ramp percent. Refuses to go above 0 unless a destination
- * is configured (otherwise traffic would silently fall back to primary).
- */
-export const handleUpdateAdminCacheV2RampPercent = createRoute({
-	scopes: [Scopes.Superuser],
-	body: z.object({ percent: z.number().int().min(0).max(100) }),
-	handler: async (c) => {
-		const ctx = c.get("ctx");
-		const { logger } = ctx;
-		const { percent } = c.req.valid("json");
-		const config = getCacheV2RampConfig();
-
-		if (percent > 0 && !config.destination) {
-			throw new RecaseError({
-				message:
-					"Cannot ramp above 0% without a destination configured. Set destination first.",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
-
-		await runWithInvariantGuard(() => updateCacheV2RampPercent({ percent }));
-
-		logger.info(
-			`[admin/handleUpdateAdminCacheV2RampPercent] ${config.percent}% -> ${percent}%, actor=${actorString(ctx)}`,
-		);
-
-		return c.json({ success: true });
-	},
-});
-
-/**
- * PUT /admin/cache-v2-ramp/orgs/:org_id  body: { percent }
- * Sets a per-org override.
- */
-export const handleUpdateAdminCacheV2RampOrg = createRoute({
-	scopes: [Scopes.Superuser],
-	params: orgIdParam,
-	body: z.object({ percent: z.number().int().min(0).max(100) }),
-	handler: async (c) => {
-		const ctx = c.get("ctx");
-		const { logger } = ctx;
-		const { org_id: orgId } = c.req.param();
-		const { percent } = c.req.valid("json");
-		const config = getCacheV2RampConfig();
-
-		if (percent > 0 && !config.destination) {
-			throw new RecaseError({
-				message:
-					"Cannot set org override above 0% without a destination configured.",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
-
-		await runWithInvariantGuard(() =>
-			updateCacheV2RampPercent({ percent, orgId }),
-		);
-
-		const previous = config.orgs[orgId]?.percent ?? 0;
-		logger.info(
-			`[admin/handleUpdateAdminCacheV2RampOrg] org=${orgId}: ${previous}% -> ${percent}%, actor=${actorString(ctx)}`,
-		);
-
-		return c.json({ success: true });
-	},
-});
-
-/**
- * DELETE /admin/cache-v2-ramp/orgs/:org_id
- * Removes a per-org override (org falls back to the global percent).
- */
-export const handleDeleteAdminCacheV2RampOrg = createRoute({
-	scopes: [Scopes.Superuser],
-	params: orgIdParam,
-	handler: async (c) => {
-		const ctx = c.get("ctx");
-		const { logger } = ctx;
-		const { org_id: orgId } = c.req.param();
-
-		await removeCacheV2RampOrg({ orgId });
-
-		logger.info(
-			`[admin/handleDeleteAdminCacheV2RampOrg] org=${orgId} override removed, actor=${actorString(ctx)}`,
+			`[admin/handleDeleteAdminCacheV2Ramp] removed, actor=${actorString(ctx)}`,
 		);
 
 		return c.json({ success: true });

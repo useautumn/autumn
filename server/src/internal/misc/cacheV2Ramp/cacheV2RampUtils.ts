@@ -1,69 +1,25 @@
 import { getCustomerBucket } from "@/internal/misc/rollouts/rolloutUtils.js";
-import { type CacheV2RampPercent, getCacheV2RampConfig } from "./index.js";
+import { getCacheV2RampConfig } from "./cacheV2RampStore.js";
 
-const resolveCacheV2RampPercent = ({
-	orgId,
-}: {
-	orgId?: string;
-}): CacheV2RampPercent => {
-	const config = getCacheV2RampConfig();
-	if (orgId && config.orgs[orgId]) return config.orgs[orgId];
-	return {
-		percent: config.percent,
-		previousPercent: config.previousPercent,
-		changedAt: config.changedAt,
-	};
-};
-
-/** True when the given customer should be routed to the cache V2 ramp destination. */
+/** True when the given customer should be routed to the ramp destination. */
 export const isCacheV2RampEnabled = ({
-	orgId,
 	customerId,
 }: {
-	orgId?: string;
 	customerId?: string;
 }): boolean => {
-	const resolved = resolveCacheV2RampPercent({ orgId });
-	if (resolved.percent >= 100) return true;
-	if (resolved.percent <= 0) return false;
+	const config = getCacheV2RampConfig();
+	if (!config) return false;
+	if (config.migrationPercent >= 100) return true;
+	if (config.migrationPercent <= 0) return false;
 	if (!customerId) return false;
-
 	const bucket = getCustomerBucket({ customerId });
-	return bucket < resolved.percent;
+	return bucket < config.migrationPercent;
 };
 
-/** True when the cache V2 ramp is non-zero for the given org (or globally).
- *  Used by invalidation/lock-receipt code that needs to fan out to BOTH clusters
- *  during the ramp window, even when it doesn't know the customer. */
-export const isCacheV2RampActive = ({ orgId }: { orgId?: string }): boolean => {
-	const resolved = resolveCacheV2RampPercent({ orgId });
-	return resolved.percent > 0;
-};
-
-/** True when a cached entry should be treated as stale because the customer's
- *  bucket crossed the ramp boundary after the entry was written.
- *
- *  Mirrors `isSnapshotCacheStale` in rolloutUtils.ts. Use when reading from
- *  either V2 cluster — if the customer was on the OTHER cluster when the
- *  entry was written, and has since crossed back, the entry is stale. */
-export const isCacheV2RampCacheStale = ({
-	orgId,
-	customerId,
-	cachedAt,
-}: {
-	orgId?: string;
-	customerId?: string;
-	cachedAt?: number;
-}): boolean => {
-	const resolved = resolveCacheV2RampPercent({ orgId });
-	if (!resolved.changedAt) return false;
-	if (!customerId) return false;
-
-	const bucket = getCustomerBucket({ customerId });
-	const wasEnabled = bucket < resolved.previousPercent;
-	const isEnabled = bucket < resolved.percent;
-	if (wasEnabled === isEnabled) return false;
-
-	if (!cachedAt) return true;
-	return cachedAt < resolved.changedAt;
+/** True when migrationPercent > 0. Used by invalidation/lock-receipt code that
+ *  fans out to BOTH clusters during a ramp, even when it doesn't know the
+ *  customer. */
+export const isCacheV2RampActive = (): boolean => {
+	const config = getCacheV2RampConfig();
+	return !!config && config.migrationPercent > 0;
 };
