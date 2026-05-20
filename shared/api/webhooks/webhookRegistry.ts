@@ -55,7 +55,7 @@ export const webhookRegistry: WebhookDefinition[] = [
 	{
 		eventType: WebhookEventType.BillingUpdated,
 		operationId: "billingUpdated",
-		title: "Billing Updated",
+		title: "Plans Updated",
 		schema: BillingUpdatedSchema,
 		group: "Billing",
 		description:
