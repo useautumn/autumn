@@ -9,16 +9,21 @@ import { REDIS_V2_COMMAND_TIMEOUT_MS } from "@/external/redis/initUtils/redisV2C
 import { decryptData } from "@/utils/encryptUtils.js";
 import { getDragonflyRampConfig } from "./dragonflyRampStore.js";
 
-type CachedClient = { url: string; instance: Redis };
+type CachedClient = {
+	url: string;
+	connectionString: string;
+	instance: Redis;
+};
 let cached: CachedClient | null = null;
-let lastDecryptFailureUrl: string | null = null;
+let lastDecryptFailureKey: string | null = null;
 
 /** Returns the Redis client for the ramp destination configured in the edge config.
  *
- *  Lazy: creates the client on first call after the destination URL is set.
- *  Hot-swappable: when the admin changes the destination URL, the next call
- *  disconnects the old client and creates a new one keyed on the new URL.
- *  Returns null when no destination is configured (ramp is dormant). */
+ *  Lazy: creates the client on first call after the destination is set.
+ *  Hot-swappable: when the admin changes the URL OR rotates the encrypted
+ *  connection string (e.g. credential rotation on the same host), the next
+ *  call disconnects the old client and creates a new one. Returns null when
+ *  no destination is configured (ramp is dormant). */
 export const getRampDestinationRedis = (): Redis | null => {
 	const config = getDragonflyRampConfig();
 	if (!config.destination) {
@@ -28,11 +33,21 @@ export const getRampDestinationRedis = (): Redis | null => {
 
 	const { connectionString, url } = config.destination;
 
-	if (cached && cached.url === url) return cached.instance;
+	if (
+		cached &&
+		cached.url === url &&
+		cached.connectionString === connectionString
+	) {
+		return cached.instance;
+	}
 
 	if (cached) {
+		const reason =
+			cached.url !== url
+				? `URL changed (${cached.url} -> ${url})`
+				: "credentials rotated";
 		logger.info(
-			`[dragonflyRamp] destination URL changed (${cached.url} -> ${url}); disconnecting old client`,
+			`[dragonflyRamp] destination ${reason}; disconnecting old client`,
 		);
 		try {
 			cached.instance.disconnect();
@@ -48,15 +63,16 @@ export const getRampDestinationRedis = (): Redis | null => {
 	try {
 		decrypted = decryptData(connectionString);
 	} catch (error) {
-		if (lastDecryptFailureUrl !== url) {
-			lastDecryptFailureUrl = url;
+		const failureKey = `${url}|${connectionString}`;
+		if (lastDecryptFailureKey !== failureKey) {
+			lastDecryptFailureKey = failureKey;
 			logger.error(
 				`[dragonflyRamp] failed to decrypt destination connectionString for ${url}: ${error}. Ramp will route to primary until fixed.`,
 			);
 		}
 		return null;
 	}
-	lastDecryptFailureUrl = null;
+	lastDecryptFailureKey = null;
 
 	const reachable = getReachableDragonflyUrl(decrypted);
 	const instance = createRedisConnection({
@@ -74,7 +90,7 @@ export const getRampDestinationRedis = (): Redis | null => {
 		logger.info(`[dragonflyRamp] destination=${url}: connected`);
 	});
 
-	cached = { url, instance };
+	cached = { url, connectionString, instance };
 	return instance;
 };
 
@@ -93,9 +109,17 @@ export const closeRampDestinationClient = () => {
 
 /** Test-only: inject a Redis instance directly, bypassing the config + decryption. */
 export const _setRampDestinationClientForTesting = (
-	client: { url: string; instance: Redis } | null,
+	client: {
+		url: string;
+		connectionString: string;
+		instance: Redis;
+	} | null,
 ) => {
-	if (cached && cached.url !== client?.url) {
+	if (
+		cached &&
+		(cached.url !== client?.url ||
+			cached.connectionString !== client?.connectionString)
+	) {
 		try {
 			cached.instance.disconnect();
 		} catch {
