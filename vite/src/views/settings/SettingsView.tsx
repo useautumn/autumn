@@ -1,5 +1,6 @@
 import {
 	BuildingIcon,
+	PaletteIcon,
 	ShieldCheckIcon,
 	UserIcon,
 	UsersIcon,
@@ -11,8 +12,9 @@ import { AccountSection } from "./sections/AccountSection";
 import { OrganizationSection } from "./sections/OrganizationSection";
 import { MembersSection } from "./sections/MembersSection";
 import { AuthorizedAppsSection } from "./sections/AuthorizedAppsSection";
+import { AppearanceSection } from "./sections/AppearanceSection";
 
-type SettingsTab = "account" | "organization" | "members" | "apps";
+type SettingsTab = "account" | "organization" | "members" | "apps" | "appearance";
 
 interface SettingsNavItem {
 	readonly id: SettingsTab;
@@ -33,6 +35,11 @@ const SETTINGS_TABS: readonly SettingsNavItem[] = [
 		icon: <UsersIcon className="size-4" />,
 	},
 	{
+		id: "appearance",
+		label: "Appearance",
+		icon: <PaletteIcon className="size-4" />,
+	},
+	{
 		id: "apps",
 		label: "Authorized Apps",
 		icon: <ShieldCheckIcon className="size-4" />,
@@ -44,6 +51,7 @@ const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
 	organization: OrganizationSection,
 	members: MembersSection,
 	apps: AuthorizedAppsSection,
+	appearance: AppearanceSection,
 };
 
 export const SettingsView = () => {
