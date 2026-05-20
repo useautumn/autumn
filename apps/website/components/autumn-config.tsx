@@ -27,22 +27,22 @@ const autumnTheme = {
 	hljs: {
 		display: "block",
 		background: "transparent",
-		color: "#BFBFBF",
+		color: "#E4E4E7",
 		padding: "0",
 		margin: "0",
 	},
-	"hljs-comment": { color: "#6B6B6B" },
+	"hljs-comment": { color: "#6B6B6B", fontStyle: "italic" },
 	"hljs-keyword": { color: "#9564ff" },
-	"hljs-built_in": { color: "#BFBFBF" },
-	"hljs-string": { color: "#2B8C3F" },
-	"hljs-number": { color: "#9564ff" },
-	"hljs-literal": { color: "#2B8C3F" },
-	"hljs-attr": { color: "#FF1F12" },
-	"hljs-property": { color: "#FF1F12" },
-	"hljs-variable": { color: "#0161B5" },
-	"hljs-title": { color: "#BFBFBF" },
-	"hljs-params": { color: "#0161B5" },
-	"hljs-punctuation": { color: "#BFBFBF" },
+	"hljs-built_in": { color: "#E4E4E7" },
+	"hljs-string": { color: "#f860c4" },
+	"hljs-number": { color: "#b040f8" },
+	"hljs-literal": { color: "#f860c4" },
+	"hljs-attr": { color: "#f60060" },
+	"hljs-property": { color: "#f60060" },
+	"hljs-variable": { color: "#8080f5" },
+	"hljs-title": { color: "#8080f5" },
+	"hljs-params": { color: "#E4E4E7" },
+	"hljs-punctuation": { color: "#9CA3AF" },
 };
 
 const TOTAL_LINES = 19;
@@ -102,7 +102,7 @@ export default function AutumnConfig({
 		const el = containerRef.current;
 		if (!el) return;
 		const measure = () =>
-			setFontSize(Math.min(Math.max(el.offsetWidth * 0.0385, 10), 20));
+			setFontSize(Math.min(Math.max(el.offsetWidth * 0.03, 9), 16));
 		measure();
 		const ro = new ResizeObserver(measure);
 		ro.observe(el);
@@ -199,7 +199,10 @@ export default function AutumnConfig({
 			</div>
 
 			{/* Code area — fluidly driven by container query relative font sizes so height never distorts */}
-			<div className="relative px-4 py-3 font-mono text-sm overflow-hidden">
+			<div
+				className="relative px-4 py-3 text-sm overflow-hidden"
+				style={{ fontFamily: "var(--font-jetbrains-mono), monospace" }}
+			>
 				{/* Dynamic-height inner box: 20 lines × 1.25em */}
 				<div
 					style={{
@@ -213,9 +216,10 @@ export default function AutumnConfig({
 						style={autumnTheme}
 						showLineNumbers
 						lineNumberStyle={{
-							color: "#fff",
+							color: "#4B5563",
 							minWidth: "2rem",
 							paddingRight: "1rem",
+							fontSize: "0.75em",
 							userSelect: "none",
 						}}
 						customStyle={{
@@ -224,7 +228,8 @@ export default function AutumnConfig({
 							margin: 0,
 							fontSize: "inherit",
 							lineHeight: `${LINE_HEIGHT}px`,
-							fontWeight: "300",
+							fontWeight: "400",
+							fontFamily: "var(--font-jetbrains-mono), monospace",
 							overflow: "hidden",
 						}}
 					>
@@ -245,7 +250,10 @@ export default function AutumnConfig({
 				<div className="pointer-events-none absolute bottom-0 left-0 right-0 h-28 bg-linear-to-t from-[#000000] via-[#000000]/70 to-transparent z-10" />
 
 				<div className="px-1 sm:px-2">
-					<div className="absolute left-2 right-2 sm:left-3 sm:right-3 bottom-[10px] flex items-center justify-between border border-[#9564ff] bg-[#20143C] px-2 sm:px-4 py-2 sm:py-2.5 font-mono text-[10px] sm:text-sm shadow-[0_4px_20px_rgba(149,100,255,0.1)] z-20">
+					<div
+						className="absolute left-2 right-2 sm:left-3 sm:right-3 bottom-[10px] flex items-center justify-between border border-[#9564ff] bg-[#20143C] px-2 sm:px-4 py-2 sm:py-2.5 text-[10px] sm:text-sm shadow-[0_4px_20px_rgba(149,100,255,0.1)] z-20 font-medium"
+						style={{ fontFamily: "var(--font-jetbrains-mono), monospace" }}
+					>
 						<div className="flex items-center gap-1 sm:gap-2">
 							<span className="text-[#959494]">allowed:</span>
 							<span className="text-[#2B8C3F]">true</span>

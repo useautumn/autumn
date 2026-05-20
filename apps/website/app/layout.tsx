@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, JetBrains_Mono } from "next/font/google";
 import type { LayoutProps } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import "./globals.css";
@@ -14,6 +14,13 @@ const geistMono = Geist_Mono({
 	variable: "--font-geist-mono",
 	subsets: ["latin"],
 	display: "swap",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+	variable: "--font-jetbrains-mono",
+	subsets: ["latin"],
+	display: "swap",
+	weight: ["400", "500", "600", "700"],
 });
 
 const url = "https://useautumn.com";
@@ -83,6 +90,7 @@ export default function RootLayout({ children }: LayoutProps) {
 			className={cn(
 				geistSans.variable,
 				geistMono.variable,
+				jetbrainsMono.variable,
 				"h-full bg-black antialiased",
 			)}
 		>
