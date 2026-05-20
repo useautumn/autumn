@@ -95,6 +95,11 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 		description:
 			"If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.",
 	}),
+
+	tax_rate_id: z.string().optional().meta({
+		description:
+			"Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.",
+	}),
 });
 
 export type AttachParamsV1 = z.infer<typeof AttachParamsV1Schema>;
