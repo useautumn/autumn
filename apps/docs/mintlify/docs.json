@@ -278,7 +278,8 @@
 							{
 								"group": "Billing",
 								"pages": [
-									"api-reference/webhooks/billingAutoTopupSucceeded"
+									"api-reference/webhooks/billingAutoTopupSucceeded",
+									"api-reference/webhooks/billingUpdated"
 								]
 							},
 							{
