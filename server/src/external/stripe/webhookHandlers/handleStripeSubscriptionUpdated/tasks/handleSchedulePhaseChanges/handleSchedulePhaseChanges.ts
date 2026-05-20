@@ -48,15 +48,11 @@ export const handleSchedulePhaseChanges = async ({
 		notNullish(previousAttributes?.items) &&
 		notNullish(stripeSubscription.schedule);
 
-	if (!phasePossiblyChanged) {
-		if (
-			eventContext.updatedCustomerProducts.length > updatesBefore ||
-			eventContext.insertedCustomerProducts.length > insertsBefore
-		) {
-			addBillingChangeTag(eventContext, "phase_changed");
-		}
-		return;
-	}
+	// `activateScheduledCustomerProducts` can still mutate cusProducts on
+	// non-phase-change events (e.g. checkout trial-end flows). Those are
+	// NOT phase changes — only tag `phase_changed` once the canonical
+	// Stripe-schedule advance signal is confirmed below.
+	if (!phasePossiblyChanged) return;
 
 	const stripeSubscriptionSchedule = stripeSubscription.schedule;
 
