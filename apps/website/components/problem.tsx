@@ -43,7 +43,7 @@ export default function Problem() {
 							</span>
 						</h2>
 						<p className="text-[#888888] font-light text-[16px] md:text-[18px] xl:text-[16px] tracking-[-2%] leading-[20px] mb-8 xl:mb-10 max-w-sm md:max-w-lg xl:max-w-sm text-center xl:text-left">
-							AI billing is harder to maintain than seat-based. Managing payments, balances and entitlements
+							AI billing is harder than seat-based. Managing payments, balances and entitlements
 							across pricing and product changes becomes messy quickly.
 							<span className="text-white">
 								{" "}
