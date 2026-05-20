@@ -11,7 +11,6 @@ import { useSidebarContext } from "./SidebarContext";
 export default function SidebarBottom() {
 	const env = useEnv();
 	const { expanded } = useSidebarContext();
-	// const { user, isLoaded } = useUser();
 
 	return (
 		<div className="">
