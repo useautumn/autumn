@@ -59,7 +59,7 @@ export const createWorkerAutumnContext = async ({
 		db,
 		dbGeneral: db,
 		logger,
-		redisV2: resolveRedisV2(),
+		redisV2: resolveRedisV2({ orgId: org.id }),
 		expand: [],
 
 		id: workerId,
