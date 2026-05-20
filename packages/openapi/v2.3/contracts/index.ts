@@ -53,7 +53,6 @@ import {
 import {
 	referralsCreateCodeContract,
 	referralsRedeemCodeContract,
-	rewardsRedeemCodeContract,
 } from "./referralsContract.js";
 
 export const v2_3ContractRouter = oc.router({
@@ -108,8 +107,7 @@ export const v2_3ContractRouter = oc.router({
 	entitiesUpdate: updateEntityContract,
 	entitiesDelete: deleteEntityContract,
 
-	// Rewards & Referrals
+	// Referrals
 	referralsCreateCode: referralsCreateCodeContract,
 	referralsRedeemCode: referralsRedeemCodeContract,
-	rewardsRedeemCode: rewardsRedeemCodeContract,
 });

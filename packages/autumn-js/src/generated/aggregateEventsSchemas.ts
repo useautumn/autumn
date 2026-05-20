@@ -2,49 +2,64 @@
 import { z } from "zod/v4";
 
 export const aggregateEventsGlobalsSchema = z.object({
-    xApiVersion: z.union([z.string(), z.undefined()]).optional()
+	xApiVersion: z.union([z.string(), z.undefined()]).optional(),
 });
 
-export const aggregateEventsFeatureIdSchema = z.union([z.string(), z.array(z.string())]);
+export const aggregateEventsFeatureIdSchema = z.union([
+	z.string(),
+	z.array(z.string()),
+]);
 
 export const aggregateEventsCustomRangeSchema = z.object({
-    start: z.number(),
-    end: z.number()
+	start: z.number(),
+	end: z.number(),
 });
 
 export const aggregateEventsListSchema = z.object({
-    period: z.number(),
-    values: z.record(z.string(), z.number()),
-    groupedValues: z.union([z.record(z.string(), z.record(z.string(), z.number())), z.undefined()]).optional()
+	period: z.number(),
+	values: z.record(z.string(), z.number()),
+	groupedValues: z
+		.union([
+			z.record(z.string(), z.record(z.string(), z.number())),
+			z.undefined(),
+		])
+		.optional(),
 });
 
 export const totalSchema = z.object({
-    count: z.number(),
-    sum: z.number()
+	count: z.number(),
+	sum: z.number(),
 });
 
 export const aggregateEventsResponseSchema = z.object({
-    list: z.array(aggregateEventsListSchema),
-    total: z.record(z.string(), totalSchema)
+	list: z.array(aggregateEventsListSchema),
+	total: z.record(z.string(), totalSchema),
 });
 
-export const aggregateEventsFeatureIdOutboundSchema = z.union([z.string(), z.array(z.string())]);
+export const aggregateEventsFeatureIdOutboundSchema = z.union([
+	z.string(),
+	z.array(z.string()),
+]);
 
 export const aggregateEventsCustomRangeOutboundSchema = z.object({
-    start: z.number(),
-    end: z.number()
+	start: z.number(),
+	end: z.number(),
 });
 
 export const eventsAggregateParamsOutboundSchema = z.object({
-    customer_id: z.union([z.string(), z.undefined()]).optional(),
-    entity_id: z.union([z.string(), z.undefined()]).optional(),
-    feature_id: z.union([z.string(), z.array(z.string())]),
-    group_by: z.union([z.string(), z.undefined()]).optional(),
-    range: z.union([z.string(), z.undefined()]).optional(),
-    bin_size: z.string(),
-    custom_range: z.union([aggregateEventsCustomRangeOutboundSchema, z.undefined()]).optional(),
-    filter_by: z.union([z.record(z.string(), z.string()), z.undefined()]).optional(),
-    max_groups: z.union([z.number(), z.undefined()]).optional()
+	customer_id: z.union([z.string(), z.undefined()]).optional(),
+	entity_id: z.union([z.string(), z.undefined()]).optional(),
+	feature_id: z.union([z.string(), z.array(z.string())]),
+	group_by: z.union([z.string(), z.undefined()]).optional(),
+	range: z.union([z.string(), z.undefined()]).optional(),
+	bin_size: z.string(),
+	custom_range: z
+		.union([aggregateEventsCustomRangeOutboundSchema, z.undefined()])
+		.optional(),
+	filter_by: z
+		.union([z.record(z.string(), z.string()), z.undefined()])
+		.optional(),
+	max_groups: z.union([z.number(), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -54,13 +69,17 @@ export const rangeSchema = closedEnumSchema;
 export const binSizeSchema = closedEnumSchema;
 
 export const eventsAggregateParamsSchema = z.object({
-    customerId: z.union([z.string(), z.undefined()]).optional(),
-    entityId: z.union([z.string(), z.undefined()]).optional(),
-    featureId: z.union([z.string(), z.array(z.string())]),
-    groupBy: z.union([z.string(), z.undefined()]).optional(),
-    range: z.union([rangeSchema, z.undefined()]).optional(),
-    binSize: z.union([binSizeSchema, z.undefined()]).optional(),
-    customRange: z.union([aggregateEventsCustomRangeSchema, z.undefined()]).optional(),
-    filterBy: z.union([z.record(z.string(), z.string()), z.undefined()]).optional(),
-    maxGroups: z.union([z.number(), z.undefined()]).optional()
+	customerId: z.union([z.string(), z.undefined()]).optional(),
+	entityId: z.union([z.string(), z.undefined()]).optional(),
+	featureId: z.union([z.string(), z.array(z.string())]),
+	groupBy: z.union([z.string(), z.undefined()]).optional(),
+	range: z.union([rangeSchema, z.undefined()]).optional(),
+	binSize: z.union([binSizeSchema, z.undefined()]).optional(),
+	customRange: z
+		.union([aggregateEventsCustomRangeSchema, z.undefined()])
+		.optional(),
+	filterBy: z
+		.union([z.record(z.string(), z.string()), z.undefined()])
+		.optional(),
+	maxGroups: z.union([z.number(), z.undefined()]).optional(),
 });
