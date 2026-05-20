@@ -315,8 +315,8 @@
 		]
 	},
 	"logo": {
-		"light": "/assets/logo/autumn-dark.png",
-		"dark": "/assets/logo/autumn-light.png"
+		"light": "/assets/logo/autumn-dark.svg",
+		"dark": "/assets/logo/autumn-light.svg"
 	},
 	"api": {
 		"playground": {
