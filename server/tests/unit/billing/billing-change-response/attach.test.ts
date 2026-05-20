@@ -188,7 +188,7 @@ describe("buildBillingChangeResponse — attach", () => {
 			action: "scheduled",
 			planId: "free",
 		});
-		expect(scheduled?.plan.status).toBe("scheduled");
+		expect(scheduled?.subscription?.status).toBe("scheduled");
 	});
 
 	test("attach addon (no current product mutated)", () => {
@@ -230,19 +230,22 @@ describe("buildBillingChangeResponse — attach", () => {
 		});
 		logChangeResponse("attach / trial revert (pause current)", response);
 
+		// Paused internally maps to "expired" in the public lifecycle —
+		// from a consumer's perspective the base plan is no longer in effect,
+		// so the action is `expired` (not `updated`).
 		expectBillingChangeResponse(response, {
-			updated: ["pro"],
+			expired: ["pro"],
 			activated: ["premium"],
 		});
-		const updated = findPlanChange(response, {
-			action: "updated",
+		const expired = findPlanChange(response, {
+			action: "expired",
 			planId: "pro",
 		});
-		expectPlanChange(updated, {
-			action: "updated",
+		expectPlanChange(expired, {
+			action: "expired",
 			planId: "pro",
-			previousAttributes: { status: CusProductStatus.Active },
+			previousAttributes: { status: "active" },
 		});
-		expect(updated?.plan.status).toBe("paused");
+		expect(expired?.subscription?.status).toBe("expired");
 	});
 });

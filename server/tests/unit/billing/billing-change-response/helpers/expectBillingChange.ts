@@ -5,12 +5,21 @@ import type {
 } from "@autumn/shared";
 import { expect } from "bun:test";
 
+/**
+ * Returns the plan_id of a change regardless of whether it carries a
+ * `subscription` or a `purchase` snapshot.
+ */
+export const getChangePlanId = (
+	change: CustomerPlanChange,
+): string | undefined =>
+	change.subscription?.plan_id ?? change.purchase?.plan_id;
+
 export const findPlanChange = (
 	response: BillingChangeResponse,
 	{ action, planId }: { action: PlanChangeAction; planId: string },
 ): CustomerPlanChange | undefined =>
 	response.plan_changes.find(
-		(change) => change.action === action && change.plan.plan_id === planId,
+		(change) => change.action === action && getChangePlanId(change) === planId,
 	);
 
 export const expectPlanChange = (
@@ -30,7 +39,7 @@ export const expectPlanChange = (
 	expect(change, `expected ${action} change for plan ${planId}`).toBeDefined();
 	const resolved = change as CustomerPlanChange;
 	expect(resolved.action).toBe(action);
-	expect(resolved.plan.plan_id).toBe(planId);
+	expect(getChangePlanId(resolved)).toBe(planId);
 
 	if (previousAttributes === null) {
 		expect(resolved.previous_attributes).toBeNull();
@@ -76,7 +85,7 @@ export const expectBillingChangeResponse = (
 	const byAction = (action: PlanChangeAction) =>
 		response.plan_changes
 			.filter((change) => change.action === action)
-			.map((change) => change.plan.plan_id)
+			.map((change) => getChangePlanId(change) ?? "")
 			.sort();
 
 	expect(byAction("activated")).toEqual([...activated].sort());

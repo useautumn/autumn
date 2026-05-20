@@ -2,6 +2,7 @@ import type { z } from "zod/v4";
 import { BalancesLimitReachedSchema } from "./balances/balancesLimitReached.js";
 import { BalancesUsageAlertTriggeredSchema } from "./balances/balancesUsageAlertTriggered.js";
 import { BillingAutoTopupSucceededSchema } from "./billing/billingAutoTopupSucceeded.js";
+import { BillingUpdatedSchema } from "./billing/billingUpdated.js";
 import { VercelResourceDeletedSchema } from "./vercel/vercelResourceDeleted.js";
 import { VercelResourceProvisionedSchema } from "./vercel/vercelResourceProvisioned.js";
 import { VercelResourceRotateSecretsSchema } from "./vercel/vercelResourceRotateSecrets.js";
@@ -50,6 +51,15 @@ export const webhookRegistry: WebhookDefinition[] = [
 		group: "Billing",
 		description:
 			"Fired when an automatic top-up grants additional prepaid balance.",
+	},
+	{
+		eventType: WebhookEventType.BillingUpdated,
+		operationId: "billingUpdated",
+		title: "Billing Updated",
+		schema: BillingUpdatedSchema,
+		group: "Billing",
+		description:
+			"Fired when a customer's plans change — activated, scheduled, updated, or expired. Each event carries a `plan_changes` array describing what happened and a `tags` array (e.g. `trial_ended`, `phase_changed`) describing why.",
 	},
 
 	// ── Vercel ────────────────────────────────────────────────────────────

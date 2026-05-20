@@ -2,6 +2,7 @@ import { formatMs, notNullish } from "@autumn/shared";
 import { stripeSubscriptionScheduleToPhaseIndex } from "@/external/stripe/subscriptionSchedules/utils/convertStripeSubscriptionScheduleUtils";
 import { getStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
+import { addBillingChangeTag } from "../../../common";
 import type { StripeSubscriptionUpdatedContext } from "../../stripeSubscriptionUpdatedContext";
 import { activateScheduledCustomerProducts } from "./activateScheduledCustomerProducts";
 import { expireEndedCustomerProducts } from "./expireEndedCustomerProducts";
@@ -34,6 +35,11 @@ export const handleSchedulePhaseChanges = async ({
 		return;
 	}
 
+	// Snapshot counts so we can detect whether this task actually moved any
+	// customer products — i.e., a phase truly changed in this event.
+	const updatesBefore = eventContext.updatedCustomerProducts.length;
+	const insertsBefore = eventContext.insertedCustomerProducts.length;
+
 	// Step 1: Activate scheduled products; checkout trial-end updates have no schedule phase change.
 	await activateScheduledCustomerProducts({ ctx, eventContext });
 
@@ -42,7 +48,15 @@ export const handleSchedulePhaseChanges = async ({
 		notNullish(previousAttributes?.items) &&
 		notNullish(stripeSubscription.schedule);
 
-	if (!phasePossiblyChanged) return;
+	if (!phasePossiblyChanged) {
+		if (
+			eventContext.updatedCustomerProducts.length > updatesBefore ||
+			eventContext.insertedCustomerProducts.length > insertsBefore
+		) {
+			addBillingChangeTag(eventContext, "phase_changed");
+		}
+		return;
+	}
 
 	const stripeSubscriptionSchedule = stripeSubscription.schedule;
 
@@ -60,4 +74,11 @@ export const handleSchedulePhaseChanges = async ({
 
 	// Step 3: Release schedule if at last phase
 	await releaseScheduleIfLastPhase({ ctx, eventContext });
+
+	if (
+		eventContext.updatedCustomerProducts.length > updatesBefore ||
+		eventContext.insertedCustomerProducts.length > insertsBefore
+	) {
+		addBillingChangeTag(eventContext, "phase_changed");
+	}
 };

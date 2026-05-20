@@ -2,7 +2,7 @@ import { z } from "zod/v4";
 import { CustomerPlanChangeSchema } from "./customerPlanChange";
 
 export const BillingChangeResponseSchema = z.object({
-	object: z.literal("billing.plans_changed"),
+	object: z.literal("billing.updated"),
 	customer_id: z.string().meta({
 		description: "The ID of the customer whose plans changed.",
 	}),
@@ -18,6 +18,13 @@ export const BillingChangeResponseSchema = z.object({
 		description:
 			"The plans that were activated, scheduled, updated, or expired.",
 	}),
+	tags: z
+		.array(z.string())
+		.default([])
+		.meta({
+			description:
+				"Reason tags describing why this event fired (e.g. 'trial_ended', 'phase_changed'). Always present; empty when no specific reason applies.",
+		}),
 });
 
 export type BillingChangeResponse = z.infer<typeof BillingChangeResponseSchema>;
