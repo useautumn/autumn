@@ -27,11 +27,11 @@ import { APICall, APIPromise } from "../types/async.js";
 import { Result } from "../types/fp.js";
 
 /**
- * Lists customers with pagination and optional filters.
+ * Lists customers with cursor pagination and optional filters. Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
  */
 export function customersList(
   client: AutumnCore,
-  request?: models.ListCustomersParams | undefined,
+  request: models.ListCustomersParams,
   options?: RequestOptions,
 ): APIPromise<
   Result<
@@ -55,7 +55,7 @@ export function customersList(
 
 async function $do(
   client: AutumnCore,
-  request?: models.ListCustomersParams | undefined,
+  request: models.ListCustomersParams,
   options?: RequestOptions,
 ): Promise<
   [
@@ -75,17 +75,14 @@ async function $do(
 > {
   const parsed = safeParse(
     request,
-    (value) =>
-      z.parse(z.optional(models.ListCustomersParams$outboundSchema), value),
+    (value) => z.parse(models.ListCustomersParams$outboundSchema, value),
     "Input validation failed",
   );
   if (!parsed.ok) {
     return [parsed, { status: "invalid" }];
   }
   const payload = parsed.value;
-  const body = payload === undefined
-    ? null
-    : encodeJSON("body", payload, { explode: true });
+  const body = encodeJSON("body", payload, { explode: true });
 
   const path = pathToFunc("/v1/customers.list")();
 

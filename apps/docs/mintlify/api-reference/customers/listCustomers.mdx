@@ -3,18 +3,18 @@ title: "List Customers"
 openapi: "openapi POST /v1/customers.list"
 ---
 
-import { DynamicParamField } from "/components/dynamic-param-field.jsx";
-import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
-import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
 ### Body Parameters
 
-<DynamicParamField body="offset" type="integer">
-  Number of items to skip
+<DynamicParamField body="start_cursor" type="string">
+  Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages.
 </DynamicParamField>
 
 <DynamicParamField body="limit" type="integer">
-  Number of items to return. Default 10, max 1000.
+  Number of items to return. Default 50, hard ceiling 5000.
 </DynamicParamField>
 
 <DynamicParamField body="plans" type="object[]">
@@ -28,22 +28,22 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
 </DynamicParamField>
 
 <DynamicParamField body="subscription_status" type="'active' | 'scheduled'">
-  Filter by customer product status. Defaults to active and scheduled
+  Filter by customer product status. Defaults to active and scheduled.
 </DynamicParamField>
 
 <DynamicParamField body="search" type="string">
-  Search customers by id, name, or email
+  Search customers by id, name, or email.
 </DynamicParamField>
 
 <DynamicParamField body="processors" type="('stripe' | 'revenuecat' | 'vercel')[]">
-  Filter by customer processor type (stripe, revenuecat, vercel)
+  Filter by customer processor type (stripe, revenuecat, vercel).
 </DynamicParamField>
 
 
 ### Response
 
 <DynamicResponseField name="list" type="object[]">
-  Array of items for current page
+  Items for current page.
   <Expandable title="properties">
     <DynamicResponseField name="id" type="string | null">
       Your unique identifier for the customer.
@@ -1184,28 +1184,8 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
   </Expandable>
 </DynamicResponseField>
 
-<DynamicResponseField name="has_more" type="boolean">
-  Whether more results exist after this page
-</DynamicResponseField>
-
-<DynamicResponseField name="offset" type="number">
-  Current offset position
-</DynamicResponseField>
-
-<DynamicResponseField name="limit" type="number">
-  Limit passed in the request
-</DynamicResponseField>
-
-<DynamicResponseField name="total" type="number">
-  Total number of items returned in the current page
-</DynamicResponseField>
-
-<DynamicResponseField name="total_count" type="number">
-  Total number of customers available in the current organization and environment
-</DynamicResponseField>
-
-<DynamicResponseField name="total_filtered_count" type="number">
-  Total number of customers matching the current filter before pagination is applied
+<DynamicResponseField name="next_cursor" type="string | null">
+  Opaque cursor for the next page. Null when there are no more results.
 </DynamicResponseField>
 
 
@@ -1290,12 +1270,7 @@ import { DynamicResponseExample } from "/components/dynamic-response-example.jsx
       }
     }
   ],
-  "has_more": false,
-  "offset": 0,
-  "total": 1,
-  "limit": 10,
-  "total_count": 100,
-  "total_filtered_count": 42
+  "next_cursor": null
 }
 ```
 </ResponseExample>

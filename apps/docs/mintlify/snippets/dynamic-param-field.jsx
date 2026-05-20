@@ -1,5 +1,3 @@
-import { useEffect, useMemo, useState } from "react";
-
 /**
  * A wrapper around Mintlify's ParamField that dynamically switches
  * between snake_case and camelCase based on the selected code language.
