@@ -2,43 +2,43 @@
 import { z } from "zod/v4";
 
 export const listPlansGlobalsSchema = z.object({
-	xApiVersion: z.union([z.string(), z.undefined()]).optional(),
+    xApiVersion: z.union([z.string(), z.undefined()]).optional()
 });
 
 export const listPlansParamsSchema = z.object({
-	customerId: z.union([z.string(), z.undefined()]).optional(),
-	entityId: z.union([z.string(), z.undefined()]).optional(),
-	includeArchived: z.union([z.boolean(), z.undefined()]).optional(),
+    customerId: z.union([z.string(), z.undefined()]).optional(),
+    entityId: z.union([z.string(), z.undefined()]).optional(),
+    includeArchived: z.union([z.boolean(), z.undefined()]).optional()
 });
 
 export const listPlansPriceDisplaySchema = z.object({
-	primaryText: z.string(),
-	secondaryText: z.union([z.string(), z.undefined()]).optional(),
+    primaryText: z.string(),
+    secondaryText: z.union([z.string(), z.undefined()]).optional()
 });
 
 export const listPlansFeatureDisplaySchema = z.object({
-	singular: z.string(),
-	plural: z.string(),
+    singular: z.string(),
+    plural: z.string()
 });
 
 export const listPlansCreditSchemaSchema = z.object({
-	meteredFeatureId: z.string(),
-	creditCost: z.number(),
+    meteredFeatureId: z.string(),
+    creditCost: z.number()
 });
 
 export const listPlansItemDisplaySchema = z.object({
-	primaryText: z.string(),
-	secondaryText: z.union([z.string(), z.undefined()]).optional(),
+    primaryText: z.string(),
+    secondaryText: z.union([z.string(), z.undefined()]).optional()
 });
 
 export const listPlansConfigSchema = z.object({
-	ignorePastDue: z.boolean(),
+    ignorePastDue: z.boolean()
 });
 
 export const listPlansParamsOutboundSchema = z.object({
-	customer_id: z.union([z.string(), z.undefined()]).optional(),
-	entity_id: z.union([z.string(), z.undefined()]).optional(),
-	include_archived: z.union([z.boolean(), z.undefined()]).optional(),
+    customer_id: z.union([z.string(), z.undefined()]).optional(),
+    entity_id: z.union([z.string(), z.undefined()]).optional(),
+    include_archived: z.union([z.boolean(), z.undefined()]).optional()
 });
 
 const openEnumSchema = z.any();
@@ -46,34 +46,28 @@ const openEnumSchema = z.any();
 export const listPlansPriceIntervalSchema = openEnumSchema;
 
 export const listPlansPriceSchema = z.object({
-	amount: z.number(),
-	interval: listPlansPriceIntervalSchema,
-	intervalCount: z.union([z.number(), z.undefined()]).optional(),
-	display: z.union([listPlansPriceDisplaySchema, z.undefined()]).optional(),
+    amount: z.number(),
+    interval: listPlansPriceIntervalSchema,
+    intervalCount: z.union([z.number(), z.undefined()]).optional(),
+    display: z.union([listPlansPriceDisplaySchema, z.undefined()]).optional()
 });
 
 export const listPlansTypeSchema = openEnumSchema;
 
 export const listPlansFeatureSchema = z.object({
-	id: z.string(),
-	name: z.union([z.string(), z.undefined()]).optional().nullable(),
-	type: listPlansTypeSchema,
-	display: z
-		.union([listPlansFeatureDisplaySchema, z.undefined()])
-		.optional()
-		.nullable(),
-	creditSchema: z
-		.union([z.array(listPlansCreditSchemaSchema), z.undefined()])
-		.optional()
-		.nullable(),
-	archived: z.union([z.boolean(), z.undefined()]).optional().nullable(),
+    id: z.string(),
+    name: z.union([z.string(), z.undefined()]).optional().nullable(),
+    type: listPlansTypeSchema,
+    display: z.union([listPlansFeatureDisplaySchema, z.undefined()]).optional().nullable(),
+    creditSchema: z.union([z.array(listPlansCreditSchemaSchema), z.undefined()]).optional().nullable(),
+    archived: z.union([z.boolean(), z.undefined()]).optional().nullable()
 });
 
 export const listPlansResetIntervalSchema = openEnumSchema;
 
 export const listPlansResetSchema = z.object({
-	interval: listPlansResetIntervalSchema,
-	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+    interval: listPlansResetIntervalSchema,
+    intervalCount: z.union([z.number(), z.undefined()]).optional()
 });
 
 export const listPlansTierBehaviorSchema = openEnumSchema;
@@ -83,36 +77,34 @@ export const listPlansPriceItemIntervalSchema = openEnumSchema;
 export const listPlansBillingMethodSchema = openEnumSchema;
 
 export const listPlansItemPriceSchema = z.object({
-	amount: z.union([z.number(), z.undefined()]).optional(),
-	tiers: z.union([z.array(z.any().nullable()), z.undefined()]).optional(),
-	tierBehavior: z
-		.union([listPlansTierBehaviorSchema, z.undefined()])
-		.optional(),
-	interval: listPlansPriceItemIntervalSchema,
-	intervalCount: z.union([z.number(), z.undefined()]).optional(),
-	billingUnits: z.number(),
-	billingMethod: listPlansBillingMethodSchema,
-	maxPurchase: z.number().nullable(),
+    amount: z.union([z.number(), z.undefined()]).optional(),
+    tiers: z.union([z.array(z.any().nullable()), z.undefined()]).optional(),
+    tierBehavior: z.union([listPlansTierBehaviorSchema, z.undefined()]).optional(),
+    interval: listPlansPriceItemIntervalSchema,
+    intervalCount: z.union([z.number(), z.undefined()]).optional(),
+    billingUnits: z.number(),
+    billingMethod: listPlansBillingMethodSchema,
+    maxPurchase: z.number().nullable()
 });
 
 export const listPlansExpiryDurationTypeSchema = openEnumSchema;
 
 export const listPlansRolloverSchema = z.object({
-	max: z.number().nullable(),
-	maxPercentage: z.union([z.number(), z.undefined()]).optional().nullable(),
-	expiryDurationType: listPlansExpiryDurationTypeSchema,
-	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
+    max: z.number().nullable(),
+    maxPercentage: z.union([z.number(), z.undefined()]).optional().nullable(),
+    expiryDurationType: listPlansExpiryDurationTypeSchema,
+    expiryDurationLength: z.union([z.number(), z.undefined()]).optional()
 });
 
 export const listPlansItemSchema = z.object({
-	featureId: z.string(),
-	feature: z.union([listPlansFeatureSchema, z.undefined()]).optional(),
-	included: z.number(),
-	unlimited: z.boolean(),
-	reset: listPlansResetSchema.nullable(),
-	price: listPlansItemPriceSchema.nullable(),
-	display: z.union([listPlansItemDisplaySchema, z.undefined()]).optional(),
-	rollover: z.union([listPlansRolloverSchema, z.undefined()]).optional(),
+    featureId: z.string(),
+    feature: z.union([listPlansFeatureSchema, z.undefined()]).optional(),
+    included: z.number(),
+    unlimited: z.boolean(),
+    reset: listPlansResetSchema.nullable(),
+    price: listPlansItemPriceSchema.nullable(),
+    display: z.union([listPlansItemDisplaySchema, z.undefined()]).optional(),
+    rollover: z.union([listPlansRolloverSchema, z.undefined()]).optional()
 });
 
 export const listPlansDurationTypeSchema = openEnumSchema;
@@ -120,10 +112,10 @@ export const listPlansDurationTypeSchema = openEnumSchema;
 export const listPlansOnEndSchema = openEnumSchema;
 
 export const listPlansFreeTrialSchema = z.object({
-	durationLength: z.number(),
-	durationType: listPlansDurationTypeSchema,
-	cardRequired: z.boolean(),
-	onEnd: z.union([listPlansOnEndSchema, z.undefined()]).optional().nullable(),
+    durationLength: z.number(),
+    durationType: listPlansDurationTypeSchema,
+    cardRequired: z.boolean(),
+    onEnd: z.union([listPlansOnEndSchema, z.undefined()]).optional().nullable()
 });
 
 export const listPlansEnvSchema = openEnumSchema;
@@ -133,34 +125,32 @@ export const listPlansStatusSchema = openEnumSchema;
 export const listPlansAttachActionSchema = openEnumSchema;
 
 export const listPlansCustomerEligibilitySchema = z.object({
-	trialAvailable: z.union([z.boolean(), z.undefined()]).optional(),
-	status: z.union([listPlansStatusSchema, z.undefined()]).optional(),
-	canceling: z.union([z.boolean(), z.undefined()]).optional(),
-	trialing: z.union([z.boolean(), z.undefined()]).optional(),
-	attachAction: listPlansAttachActionSchema,
+    trialAvailable: z.union([z.boolean(), z.undefined()]).optional(),
+    status: z.union([listPlansStatusSchema, z.undefined()]).optional(),
+    canceling: z.union([z.boolean(), z.undefined()]).optional(),
+    trialing: z.union([z.boolean(), z.undefined()]).optional(),
+    attachAction: listPlansAttachActionSchema
 });
 
 export const listPlansListSchema = z.object({
-	id: z.string(),
-	name: z.string(),
-	description: z.string().nullable(),
-	group: z.string().nullable(),
-	version: z.number(),
-	addOn: z.boolean(),
-	autoEnable: z.boolean(),
-	price: listPlansPriceSchema.nullable(),
-	items: z.array(listPlansItemSchema),
-	freeTrial: z.union([listPlansFreeTrialSchema, z.undefined()]).optional(),
-	createdAt: z.number(),
-	env: listPlansEnvSchema,
-	archived: z.boolean(),
-	baseVariantId: z.string().nullable(),
-	config: listPlansConfigSchema,
-	customerEligibility: z
-		.union([listPlansCustomerEligibilitySchema, z.undefined()])
-		.optional(),
+    id: z.string(),
+    name: z.string(),
+    description: z.string().nullable(),
+    group: z.string().nullable(),
+    version: z.number(),
+    addOn: z.boolean(),
+    autoEnable: z.boolean(),
+    price: listPlansPriceSchema.nullable(),
+    items: z.array(listPlansItemSchema),
+    freeTrial: z.union([listPlansFreeTrialSchema, z.undefined()]).optional(),
+    createdAt: z.number(),
+    env: listPlansEnvSchema,
+    archived: z.boolean(),
+    baseVariantId: z.string().nullable(),
+    config: listPlansConfigSchema,
+    customerEligibility: z.union([listPlansCustomerEligibilitySchema, z.undefined()]).optional()
 });
 
 export const listPlansResponseSchema = z.object({
-	list: z.array(listPlansListSchema),
+    list: z.array(listPlansListSchema)
 });

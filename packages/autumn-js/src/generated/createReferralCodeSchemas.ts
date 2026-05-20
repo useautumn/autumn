@@ -2,21 +2,21 @@
 import { z } from "zod/v4";
 
 export const createReferralCodeGlobalsSchema = z.object({
-	xApiVersion: z.union([z.string(), z.undefined()]).optional(),
+    xApiVersion: z.union([z.string(), z.undefined()]).optional()
 });
 
 export const createReferralCodeParamsSchema = z.object({
-	customerId: z.string(),
-	programId: z.string(),
+    customerId: z.string(),
+    programId: z.string()
 });
 
 export const createReferralCodeResponseSchema = z.object({
-	code: z.string(),
-	customerId: z.string(),
-	createdAt: z.number(),
+    code: z.string(),
+    customerId: z.string(),
+    createdAt: z.number()
 });
 
 export const createReferralCodeParamsOutboundSchema = z.object({
-	customer_id: z.string(),
-	program_id: z.string(),
+    customer_id: z.string(),
+    program_id: z.string()
 });
