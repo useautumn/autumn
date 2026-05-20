@@ -27,7 +27,7 @@ class ListCustomersGlobals(BaseModel):
         Optional[str],
         pydantic.Field(alias="x-api-version"),
         FieldMetadata(header=HeaderMetadata(style="simple", explode=False)),
-    ] = "2.2.0"
+    ] = "2.3.0"
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -77,7 +77,7 @@ ListCustomersSubscriptionStatus = Literal[
     "active",
     "scheduled",
 ]
-r"""Filter by customer product status. Defaults to active and scheduled"""
+r"""Filter by customer product status. Defaults to active and scheduled."""
 
 
 ListCustomersProcessor = Literal[
@@ -88,43 +88,50 @@ ListCustomersProcessor = Literal[
 
 
 class ListCustomersParamsTypedDict(TypedDict):
-    offset: NotRequired[int]
-    r"""Number of items to skip"""
+    start_cursor: NotRequired[str]
+    r"""Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages."""
     limit: NotRequired[int]
-    r"""Number of items to return. Default 10, max 1000."""
+    r"""Number of items to return. Default 50, hard ceiling 5000."""
     plans: NotRequired[List[ListCustomersPlanTypedDict]]
     r"""Filter by plan ID and version. Returns customers with active subscriptions to this plan."""
     subscription_status: NotRequired[ListCustomersSubscriptionStatus]
-    r"""Filter by customer product status. Defaults to active and scheduled"""
+    r"""Filter by customer product status. Defaults to active and scheduled."""
     search: NotRequired[str]
-    r"""Search customers by id, name, or email"""
+    r"""Search customers by id, name, or email."""
     processors: NotRequired[List[ListCustomersProcessor]]
-    r"""Filter by customer processor type (stripe, revenuecat, vercel)"""
+    r"""Filter by customer processor type (stripe, revenuecat, vercel)."""
 
 
 class ListCustomersParams(BaseModel):
-    offset: Optional[int] = 0
-    r"""Number of items to skip"""
+    start_cursor: Optional[str] = ""
+    r"""Opaque pagination cursor. Empty string (default) requests the first page; use next_cursor from a prior response for subsequent pages."""
 
-    limit: Optional[int] = 10
-    r"""Number of items to return. Default 10, max 1000."""
+    limit: Optional[int] = 50
+    r"""Number of items to return. Default 50, hard ceiling 5000."""
 
     plans: Optional[List[ListCustomersPlan]] = None
     r"""Filter by plan ID and version. Returns customers with active subscriptions to this plan."""
 
     subscription_status: Optional[ListCustomersSubscriptionStatus] = None
-    r"""Filter by customer product status. Defaults to active and scheduled"""
+    r"""Filter by customer product status. Defaults to active and scheduled."""
 
     search: Optional[str] = None
-    r"""Search customers by id, name, or email"""
+    r"""Search customers by id, name, or email."""
 
     processors: Optional[List[ListCustomersProcessor]] = None
-    r"""Filter by customer processor type (stripe, revenuecat, vercel)"""
+    r"""Filter by customer processor type (stripe, revenuecat, vercel)."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["offset", "limit", "plans", "subscription_status", "search", "processors"]
+            [
+                "start_cursor",
+                "limit",
+                "plans",
+                "subscription_status",
+                "search",
+                "processors",
+            ]
         )
         serialized = handler(self)
         m = {}
@@ -1094,41 +1101,30 @@ class ListCustomersResponseTypedDict(TypedDict):
     r"""OK"""
 
     list: List[ListCustomersListTypedDict]
-    r"""Array of items for current page"""
-    has_more: bool
-    r"""Whether more results exist after this page"""
-    offset: float
-    r"""Current offset position"""
-    limit: float
-    r"""Limit passed in the request"""
-    total: float
-    r"""Total number of items returned in the current page"""
-    total_count: float
-    r"""Total number of customers available in the current organization and environment"""
-    total_filtered_count: float
-    r"""Total number of customers matching the current filter before pagination is applied"""
+    r"""Items for current page."""
+    next_cursor: Nullable[str]
+    r"""Opaque cursor for the next page. Null when there are no more results."""
 
 
 class ListCustomersResponse(BaseModel):
     r"""OK"""
 
     list: List[ListCustomersList]
-    r"""Array of items for current page"""
+    r"""Items for current page."""
 
-    has_more: bool
-    r"""Whether more results exist after this page"""
+    next_cursor: Nullable[str]
+    r"""Opaque cursor for the next page. Null when there are no more results."""
 
-    offset: float
-    r"""Current offset position"""
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        serialized = handler(self)
+        m = {}
 
-    limit: float
-    r"""Limit passed in the request"""
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
 
-    total: float
-    r"""Total number of items returned in the current page"""
+            if val != UNSET_SENTINEL:
+                m[k] = val
 
-    total_count: float
-    r"""Total number of customers available in the current organization and environment"""
-
-    total_filtered_count: float
-    r"""Total number of customers matching the current filter before pagination is applied"""
+        return m
