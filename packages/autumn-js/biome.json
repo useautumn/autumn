@@ -1,12 +1,10 @@
 {
-  "root": false,
-  "$schema": "https://biomejs.dev/schemas/2.2.2/schema.json",
-  "extends": [
-    "/Users/amianthus/.superset/worktrees/06ef6d27-730a-4eec-a0b1-3f2853221478/rewards-redeem-docs-updat/biome.json"
-  ],
-  "css": {
-    "parser": {
-      "tailwindDirectives": true
-    }
-  }
+	"root": false,
+	"$schema": "https://biomejs.dev/schemas/2.2.2/schema.json",
+	"extends": ["../../biome.json"],
+	"css": {
+		"parser": {
+			"tailwindDirectives": true
+		}
+	}
 }
