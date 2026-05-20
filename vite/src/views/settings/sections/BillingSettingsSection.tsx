@@ -83,6 +83,7 @@ export const BillingSettingsSection = () => {
 						<Switch
 							checked={!!displayConfig[key]}
 							onCheckedChange={(val) => handleToggle(key, val)}
+							disabled={isPending}
 						/>
 					</div>
 				))}
