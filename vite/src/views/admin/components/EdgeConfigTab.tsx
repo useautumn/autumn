@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { CacheV2RampDialog } from "./CacheV2RampDialog";
 import { CustomerBlockDialog } from "./CustomerBlockDialog";
 import { EdgeConfigDialog } from "./EdgeConfigDialog";
 import { FeatureFlagsDialog } from "./FeatureFlagsDialog";
@@ -32,6 +33,7 @@ export function EdgeConfigTab() {
 	const [jobQueuesOpen, setJobQueuesOpen] = useState(false);
 	const [stripeSyncOpen, setStripeSyncOpen] = useState(false);
 	const [redisV2CacheOpen, setRedisV2CacheOpen] = useState(false);
+	const [cacheV2RampOpen, setCacheV2RampOpen] = useState(false);
 	const [miscellaneousOpen, setMiscellaneousOpen] = useState(false);
 
 	const { data: source } = useQuery<EdgeConfigSource>({
@@ -229,6 +231,25 @@ export function EdgeConfigTab() {
 				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
 					<div className="flex flex-col gap-0.5">
 						<div className="text-sm font-medium text-foreground">
+							Cache V2 Ramp
+						</div>
+						<div className="text-xs text-tertiary-foreground">
+							Global percentage ramp routing customer cache traffic to a new V2
+							Redis destination. Only active while dragonfly is the V2 instance.
+						</div>
+					</div>
+					<Button
+						variant="primary"
+						size="sm"
+						onClick={() => setCacheV2RampOpen(true)}
+					>
+						Edit
+					</Button>
+				</div>
+
+				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
+					<div className="flex flex-col gap-0.5">
+						<div className="text-sm font-medium text-foreground">
 							Miscellaneous
 						</div>
 						<div className="text-xs text-tertiary-foreground">
@@ -281,6 +302,11 @@ export function EdgeConfigTab() {
 			<RedisV2CacheDialog
 				open={redisV2CacheOpen}
 				onOpenChange={setRedisV2CacheOpen}
+			/>
+
+			<CacheV2RampDialog
+				open={cacheV2RampOpen}
+				onOpenChange={setCacheV2RampOpen}
 			/>
 
 			<MiscellaneousEdgeConfigDialog
