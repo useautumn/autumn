@@ -1,0 +1,40 @@
+server/src/cron/cronInit.ts
+  s_91c73052f770ec::t_e4c1c95cd4a078 83,92
+  s_91c73052f770ec::t_833261cc426c42 23
+  s_91c73052f770ec::t_78c16e25ddda9a 4
+  s_91c73052f770ec::t_436325c2e0ab2d 22
+server/src/db/initDrizzle.ts
+  s_91c73052f770ec::t_92e9a7020b802f 12
+  s_91c73052f770ec::t_a8d7015bad136e 101,113,120-122,124-125
+  s_91c73052f770ec::t_1e7c352fe2d104 102
+  s_91c73052f770ec::t_d2297cb10959ca 123
+  s_91c73052f770ec::t_2905a1dbde374c 43
+  s_91c73052f770ec::t_25ef6ab77362ac 48,56-57,67-68,75-78
+server/src/db/pgPoolMonitor.ts
+  s_91c73052f770ec::t_9d85ac616299c4 1-90
+server/src/queue/initWorkers.ts
+  s_91c73052f770ec::t_78c16e25ddda9a 13
+  s_91c73052f770ec::t_1045cb8bd9f82c 426
+  s_91c73052f770ec::t_f21e7dd8a87a0b 435
+  s_91c73052f770ec::t_315372363c7ee8 425
+server/src/init.ts
+  s_91c73052f770ec::t_7b0cd87e8ce00c 60
+  s_91c73052f770ec::t_dd49ac4466c968 167
+  s_91c73052f770ec::t_78c16e25ddda9a 13
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.10",
+  "base_commit_sha": "2d548c9dfa7996e21b73a9b9f77bf225b9b8edb5",
+  "prompts": {},
+  "sessions": {
+    "s_91c73052f770ec": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1bb0e5b54ffeJ9UpxNK3N30DiX",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": null
+    }
+  }
+}
