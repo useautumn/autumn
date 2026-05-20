@@ -1,5 +1,5 @@
 import { existsSync, renameSync } from "node:fs";
-import { basename, dirname, join } from "node:path";
+import { dirname, join } from "node:path";
 import { homedir } from "node:os";
 import { fileURLToPath } from "node:url";
 import { fatal, log } from "../dw/helpers/shell.ts";
@@ -17,42 +17,6 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = join(SCRIPT_DIR, "../..");
 const STASH_SUFFIX = ".pw-stash";
 
-/* ------------------------------------------------------------------ */
-//  Stash / restore .env.local files
-/* ------------------------------------------------------------------ */
-
-const stashedThisRun: string[] = [];
-
-function stashEnvLocalFiles(): void {
-	for (const rel of ENV_LOCAL_TARGETS) {
-		const abs = join(PROJECT_ROOT, rel);
-		const backup = abs + STASH_SUFFIX;
-		if (!existsSync(abs)) continue;
-		if (existsSync(backup)) {
-			log(
-				`warning: ${rel}${STASH_SUFFIX} already exists (previous pw run crashed?), skipping stash`,
-			);
-			continue;
-		}
-		renameSync(abs, backup);
-		stashedThisRun.push(abs);
-		log(`stashed ${rel} → ${rel}${STASH_SUFFIX}`);
-	}
-}
-
-function restoreEnvLocalFiles(): void {
-	for (const abs of stashedThisRun) {
-		const backup = abs + STASH_SUFFIX;
-		if (!existsSync(backup)) continue;
-		renameSync(backup, abs);
-		log(`restored ${basename(abs)}`);
-	}
-}
-
-/* ------------------------------------------------------------------ */
-//  Commands
-/* ------------------------------------------------------------------ */
-
 async function cmdRun(): Promise<void> {
 	const cwd = getCurrentWorktree();
 	const registry = loadRegistry();
@@ -63,13 +27,14 @@ async function cmdRun(): Promise<void> {
 
 	const { worktreeNum } = entry;
 
-	// Clean up any lingering dw dev server / tmux session on these ports.
 	killOwnPorts(worktreeNum);
 	killTmuxSession(tmuxSessionName(worktreeNum));
 
-	// Temporarily hide .env.local files so preload-env.ts can't override
-	// Infisical-injected prod secrets with dev Neon branch URLs.
-	stashEnvLocalFiles();
+	if (process.env.PW_MODE !== "1") {
+		fatal(
+			"PW_MODE=1 not set. Run via 'bun pw' (package.json script) — required so preload-env.ts skips .env.local.",
+		);
+	}
 
 	const offset = (worktreeNum - 1) * 100;
 	const env: Record<string, string> = {
@@ -77,6 +42,9 @@ async function cmdRun(): Promise<void> {
 		SERVER_PORT: String(8080 + offset),
 		VITE_PORT: String(3000 + offset),
 		CHECKOUT_PORT: String(3001 + offset),
+		// Empty string overrides dev.ts's `?? "https://google.emulate.localhost"`
+		// fallback so real Google OAuth is used against the prod DB.
+		EMULATE_GOOGLE_URL: "",
 	};
 
 	if (worktreeNum > 1) {
@@ -95,7 +63,7 @@ async function cmdRun(): Promise<void> {
 		env.NODE_EXTRA_CA_CERTS = portlessCa;
 	}
 
-	log(`starting dev with prod env (worktree=${worktreeNum})`);
+	log(`starting dev with prod env (worktree=${worktreeNum}, emulate=disabled)`);
 
 	const proc = Bun.spawn(
 		[
@@ -113,16 +81,9 @@ async function cmdRun(): Promise<void> {
 		},
 	);
 
-	const cleanupAndExit = (code: number | null) => {
-		restoreEnvLocalFiles();
-		process.exit(code ?? 0);
-	};
-
 	process.on("SIGINT", () => proc.kill("SIGINT"));
 	process.on("SIGTERM", () => proc.kill("SIGTERM"));
-
-	// Ensure restore runs even if the child exits on its own.
-	proc.exited.then(cleanupAndExit);
+	await proc.exited.then((c) => process.exit(c ?? 0));
 }
 
 function cmdIdentify(): void {
@@ -141,14 +102,8 @@ function cmdIdentify(): void {
 	const vitePort = 3000 + offset;
 	const [serverUrl, viteUrl] =
 		worktreeNum === 1
-			? [
-					`http://localhost:${serverPort}`,
-					`http://localhost:${vitePort}`,
-				]
-			: [
-					aliasesFor(worktreeNum).apiUrl,
-					aliasesFor(worktreeNum).viteUrl,
-				];
+			? [`http://localhost:${serverPort}`, `http://localhost:${vitePort}`]
+			: [aliasesFor(worktreeNum).apiUrl, aliasesFor(worktreeNum).viteUrl];
 
 	console.log(`Worktree #${worktreeNum}  (${entry.path})`);
 	console.log(`  Branch:        ${branchName ?? "(canonical)"}`);
@@ -164,24 +119,30 @@ function cmdIdentify(): void {
 	console.log(`PW_VITE_PORT=${vitePort}`);
 }
 
+// Manual cleanup for .pw-stash files left by older buggy pw versions that
+// renamed .env.local. Safe — refuses to overwrite an existing .env.local.
 function cmdRestore(): void {
 	let restored = 0;
+	let conflicts = 0;
 	for (const rel of ENV_LOCAL_TARGETS) {
 		const abs = join(PROJECT_ROOT, rel);
 		const backup = abs + STASH_SUFFIX;
 		if (!existsSync(backup)) continue;
+		if (existsSync(abs)) {
+			log(
+				`skip ${rel}: target already exists, leaving ${rel}${STASH_SUFFIX} in place`,
+			);
+			conflicts++;
+			continue;
+		}
 		renameSync(backup, abs);
 		log(`restored ${rel}`);
 		restored++;
 	}
-	if (restored === 0) {
+	if (restored === 0 && conflicts === 0) {
 		log("no stashed .env.local files found");
 	}
 }
-
-/* ------------------------------------------------------------------ */
-//  Main
-/* ------------------------------------------------------------------ */
 
 async function main(): Promise<void> {
 	const sub = process.argv[2];
@@ -197,9 +158,7 @@ async function main(): Promise<void> {
 			cmdRestore();
 			break;
 		default:
-			fatal(
-				`unknown subcommand: ${sub} (use: run | identify | restore)`,
-			);
+			fatal(`unknown subcommand: ${sub} (use: run | identify | restore)`);
 	}
 }
 
