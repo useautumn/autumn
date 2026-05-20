@@ -87,6 +87,8 @@
 		"dw:identify": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts identify",
 		"dw:setup": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts setup",
 		"dw:run": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts run",
+		"pw": "ENV_FILE=.env.prod infisical run --env=prod --recursive -- bun scripts/pw/index.ts",
+		"pw:identify": "ENV_FILE=.env.prod infisical run --env=prod --recursive -- bun scripts/pw/index.ts identify",
 		"dw:enable": "bun scripts/dw/index.ts enable",
 		"dw:disable": "bun scripts/dw/index.ts disable",
 		"d": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dev.ts",
