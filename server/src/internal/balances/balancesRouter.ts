@@ -20,7 +20,7 @@ balancesRouter.post("/balances/update", ...handleUpdateBalance);
 // Track
 balancesRouter.post("/events", ...handleTrack);
 balancesRouter.post("/track", ...handleTrack);
-balancesRouter.post("/trackTokens", ...handleTrackTokens);
+balancesRouter.post("/track_tokens", ...handleTrackTokens);
 
 // Check
 balancesRouter.post("/entitled", ...handleCheck);
@@ -35,6 +35,6 @@ balancesRpcRouter.post("/balances.update", ...handleUpdateBalance);
 balancesRpcRouter.post("/balances.delete", ...handleDeleteBalance);
 
 balancesRpcRouter.post("/balances.track", ...handleTrack);
-balancesRpcRouter.post("/balances.trackTokens", ...handleTrackTokens);
+balancesRpcRouter.post("/balances.track_tokens", ...handleTrackTokens);
 balancesRpcRouter.post("/balances.check", ...handleCheck);
 balancesRpcRouter.post("/balances.finalize", ...handleFinalizeLock);

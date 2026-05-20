@@ -17,7 +17,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
+import { computeCreditCosts } from "../deduction/computeCreditCosts.js";
 import type {
 	CustomerEntitlementDeduction,
 	DeductionOptions,
@@ -115,31 +115,14 @@ export const prepareFeatureDeductionV2 = async ({
 			.map((customerEntitlement) => customerEntitlement.entitlement.feature.id),
 	);
 
-	const creditCostByCustomerEntitlementId = new Map<string, number>();
-	await Promise.all(
-		customerEntitlements.map(async (customerEntitlement) => {
-			const creditCost =
-				deduction.precomputedCreditCost ??
-				(await getCreditCost({
-					featureId: feature.id,
-					creditSystem: customerEntitlement.entitlement.feature,
-					modelName: deduction.tokenUsage?.modelName,
-					tokens: deduction.tokenUsage
-						? {
-								input: deduction.tokenUsage.inputTokens,
-								output: deduction.tokenUsage.outputTokens,
-							}
-						: undefined,
-				}));
-			creditCostByCustomerEntitlementId.set(customerEntitlement.id, creditCost);
-		}),
-	);
+	const getCreditCostForEnt = await computeCreditCosts({
+		cusEnts: customerEntitlements,
+		deduction,
+	});
 
 	const customerEntitlementDeductions: CustomerEntitlementDeduction[] =
 		customerEntitlements.map((customerEntitlement) => {
-			const creditCost = creditCostByCustomerEntitlementId.get(
-				customerEntitlement.id,
-			)!;
+			const creditCost = getCreditCostForEnt(customerEntitlement.id);
 
 			const maxOverage = getMaxOverage({
 				cusEnt: customerEntitlement,
@@ -182,9 +165,7 @@ export const prepareFeatureDeductionV2 = async ({
 		});
 
 	const rolloverArrays = customerEntitlements.map((customerEntitlement) => {
-		const creditCost = creditCostByCustomerEntitlementId.get(
-			customerEntitlement.id,
-		)!;
+		const creditCost = getCreditCostForEnt(customerEntitlement.id);
 		return (customerEntitlement.rollovers || []).map((rollover) => ({
 			...rollover,
 			credit_cost: creditCost,

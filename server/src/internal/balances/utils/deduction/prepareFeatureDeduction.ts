@@ -15,7 +15,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
+import { computeCreditCosts } from "./computeCreditCosts.js";
 import type {
 	CustomerEntitlementDeduction,
 	DeductionOptions,
@@ -68,7 +68,7 @@ export const prepareFeatureDeduction = async ({
 	for (const rf of relevantFeatures) {
 		const { unlimited: featureUnlimited } = getUnlimitedAndUsageAllowed({
 			cusEnts,
-			internalFeatureId: rf.internal_id!,
+			internalFeatureId: rf.internal_id,
 		});
 
 		if (featureUnlimited) {
@@ -101,31 +101,12 @@ export const prepareFeatureDeduction = async ({
 			.map((ce) => ce.entitlement.feature.id),
 	);
 
-	// Compute credit cost once per customer entitlement
-	const creditCostByEntitlementId = new Map<string, number>();
-	await Promise.all(
-		cusEnts.map(async (ce) => {
-			const creditCost =
-				deduction.precomputedCreditCost ??
-				(await getCreditCost({
-					featureId: feature.id,
-					creditSystem: ce.entitlement.feature,
-					modelName: deduction.tokenUsage?.modelName,
-					tokens: deduction.tokenUsage
-						? {
-								input: deduction.tokenUsage.inputTokens,
-								output: deduction.tokenUsage.outputTokens,
-							}
-						: undefined,
-				}));
-			creditCostByEntitlementId.set(ce.id, creditCost);
-		}),
-	);
+	const getCreditCostForEnt = await computeCreditCosts({ cusEnts, deduction });
 
 	// Build input for each customer entitlement
 	const customerEntitlementDeductions: CustomerEntitlementDeduction[] =
 		cusEnts.map((ce) => {
-			const creditCost = creditCostByEntitlementId.get(ce.id)!;
+			const creditCost = getCreditCostForEnt(ce.id);
 			const maxOverage = getMaxOverage({ cusEnt: ce });
 
 			const isFreeAllocated =
@@ -165,7 +146,7 @@ export const prepareFeatureDeduction = async ({
 	// Collect and sort rollovers by expires_at (oldest first), including credit_cost from parent entitlement
 	const sortedRollovers = cusEnts
 		.flatMap((ce) => {
-			const creditCost = creditCostByEntitlementId.get(ce.id)!;
+			const creditCost = getCreditCostForEnt(ce.id);
 			return (ce.rollovers || []).map((r) => ({
 				...r,
 				credit_cost: creditCost,

@@ -43,9 +43,10 @@ export const validateMeteredConfig = (config: MeteredConfig) => {
 
 export const validateCreditSystem = (
 	config: CreditSystemConfig,
-	{ isAiCreditSystem = false }: { isAiCreditSystem?: boolean } = {},
+	featureType: FeatureType = FeatureType.CreditSystem,
 ) => {
 	const schema = config.schema;
+	const isAiCreditSystem = featureType === FeatureType.AiCreditSystem;
 
 	if (!isAiCreditSystem && (!schema || schema.length === 0)) {
 		throw new RecaseError({
@@ -55,11 +56,6 @@ export const validateCreditSystem = (
 		});
 	}
 
-	if (isAiCreditSystem) {
-		return { ...config, usage_type: FeatureUsageType.Single };
-	}
-
-	// Check if multiple of the same feature
 	const meteredFeatureIds = schema.map(
 		(schemaItem) => schemaItem.metered_feature_id,
 	);
@@ -91,6 +87,7 @@ export const validateCreditSystem = (
 
 	return newConfig;
 };
+
 
 const getCusFeatureType = ({ feature }: { feature: Feature }) => {
 	if (feature.type === FeatureType.Boolean) {

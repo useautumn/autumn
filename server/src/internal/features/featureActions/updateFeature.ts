@@ -176,16 +176,19 @@ export const updateFeature = async ({
 	}
 
 	const effectiveType = updates.type ?? feature.type;
-	const isAiCreditSystem = effectiveType === FeatureType.AiCreditSystem;
 
-	const newConfig =
-		updates.config !== undefined
-			? effectiveType === FeatureType.CreditSystem || isAiCreditSystem
-				? validateCreditSystem(updates.config, { isAiCreditSystem })
-				: effectiveType === FeatureType.Metered
-					? validateMeteredConfig(updates.config)
-					: updates.config
-			: feature.config;
+	const newConfig = (() => {
+		if (updates.config === undefined) return feature.config;
+		switch (effectiveType) {
+			case FeatureType.AiCreditSystem:
+			case FeatureType.CreditSystem:
+				return validateCreditSystem(updates.config, effectiveType);
+			case FeatureType.Metered:
+				return validateMeteredConfig(updates.config);
+			default:
+				return updates.config;
+		}
+	})();
 
 	// Update the feature
 	const updatedFeature = await FeatureService.update({

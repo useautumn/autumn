@@ -14,10 +14,8 @@ const validateFeature = (data: any) => {
 	let config = data.config;
 	if (featureType === FeatureType.Metered) {
 		config = validateMeteredConfig(config);
-	} else if (featureType === FeatureType.CreditSystem) {
-		config = validateCreditSystem(config, { isAiCreditSystem: false });
-	} else if (featureType === FeatureType.AiCreditSystem) {
-		config = validateCreditSystem(config, { isAiCreditSystem: true });
+	} else if (featureType === FeatureType.CreditSystem || featureType === FeatureType.AiCreditSystem) {
+		config = validateCreditSystem(config, featureType);
 	}
 
 	const parsedFeature = CreateFeatureSchema.parse({ ...data, config });

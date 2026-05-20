@@ -48,7 +48,7 @@ test.concurrent(`${chalk.yellowBright("track-tokens-1: basic trackTokens with mo
 		tokens: { input: inputTokens, output: outputTokens },
 	});
 
-	const trackRes: TrackResponseV2 = await autumnV2.post("/trackTokens", {
+	const trackRes: TrackResponseV2 = await autumnV2.post("/track_tokens", {
 		customer_id: customerId,
 		feature_id: TestFeature.AiCredits,
 		model_id: modelId,
@@ -93,7 +93,7 @@ test.concurrent(`${chalk.yellowBright("track-tokens-2: disambiguation error and 
 	// Without feature_id, should fail with disambiguation error
 	let error: any;
 	try {
-		await autumnV2.post("/trackTokens", {
+		await autumnV2.post("/track_tokens", {
 			customer_id: customerId,
 			model_id: "anthropic/claude-sonnet-4-20250514",
 			input_tokens: 100,
@@ -121,7 +121,7 @@ test.concurrent(`${chalk.yellowBright("track-tokens-2: disambiguation error and 
 		tokens: { input: inputTokens, output: outputTokens },
 	});
 
-	const trackRes: TrackResponseV2 = await autumnV2.post("/trackTokens", {
+	const trackRes: TrackResponseV2 = await autumnV2.post("/track_tokens", {
 		customer_id: customerId,
 		feature_id: TestFeature.AiCredits,
 		model_id: modelId,
@@ -170,7 +170,7 @@ test.concurrent(`${chalk.yellowBright("track-tokens-3: custom model pricing with
 		.div(1_000_000)
 		.toNumber(); // 0.125
 
-	const trackRes1: TrackResponseV2 = await autumnV2.post("/trackTokens", {
+	const trackRes1: TrackResponseV2 = await autumnV2.post("/track_tokens", {
 		customer_id: customerId,
 		feature_id: TestFeature.AiCredits,
 		model_id: "custom/internal-model",
@@ -189,7 +189,7 @@ test.concurrent(`${chalk.yellowBright("track-tokens-3: custom model pricing with
 		.mul(new Decimal(1).add(new Decimal(50).div(100)))
 		.toNumber(); // 0.21
 
-	const trackRes2: TrackResponseV2 = await autumnV2.post("/trackTokens", {
+	const trackRes2: TrackResponseV2 = await autumnV2.post("/track_tokens", {
 		customer_id: customerId,
 		feature_id: TestFeature.AiCredits,
 		model_id: "custom/marked-up-model",
@@ -250,7 +250,7 @@ test.concurrent(`${chalk.yellowBright("track-tokens-4: models.dev markup and non
 		tokens: { input: inputTokens, output: outputTokens },
 	});
 
-	const trackRes: TrackResponseV2 = await autumnV2.post("/trackTokens", {
+	const trackRes: TrackResponseV2 = await autumnV2.post("/track_tokens", {
 		customer_id: customerId,
 		feature_id: TestFeature.AiCredits,
 		model_id: modelId,
@@ -269,7 +269,7 @@ test.concurrent(`${chalk.yellowBright("track-tokens-4: models.dev markup and non
 	// Pointing at a regular credit system should fail
 	let error: any;
 	try {
-		await autumnV2.post("/trackTokens", {
+		await autumnV2.post("/track_tokens", {
 			customer_id: customerId,
 			feature_id: TestFeature.Credits,
 			model_id: "anthropic/claude-sonnet-4-20250514",
@@ -315,7 +315,7 @@ test.concurrent(`${chalk.yellowBright("track-tokens-5: multiple tracks accumulat
 		tokens: { input: 5000, output: 2000 },
 	});
 
-	await autumnV2.post("/trackTokens", {
+	await autumnV2.post("/track_tokens", {
 		customer_id: customerId,
 		feature_id: TestFeature.AiCredits,
 		model_id: "custom/internal-model",
@@ -331,7 +331,7 @@ test.concurrent(`${chalk.yellowBright("track-tokens-5: multiple tracks accumulat
 		tokens: { input: 3000, output: 1000 },
 	});
 
-	await autumnV2.post("/trackTokens", {
+	await autumnV2.post("/track_tokens", {
 		customer_id: customerId,
 		feature_id: TestFeature.AiCredits,
 		model_id: "custom/marked-up-model",
