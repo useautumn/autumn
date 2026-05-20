@@ -43,6 +43,9 @@ export interface StripeSubscriptionDeletedContext {
 	deletedCustomerProducts: FullCusProduct[];
 	/** Tracks all insertions (new customer products created) during this handler */
 	insertedCustomerProducts: FullCusProduct[];
+	/** Tags accumulated by tasks during this handler — appended to the
+	 * `billing.updated` webhook payload. */
+	billingChangeTags: Set<string>;
 }
 
 /**
@@ -135,5 +138,6 @@ export const setupStripeSubscriptionDeletedContext = async ({
 		updatedCustomerProducts: [],
 		deletedCustomerProducts: [],
 		insertedCustomerProducts: [],
+		billingChangeTags: new Set<string>(),
 	};
 };

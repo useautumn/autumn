@@ -86,15 +86,23 @@ export const parseEventBody = <T = unknown>(event: SvixPlayEvent): T => {
 	return JSON.parse(decoded) as T;
 };
 
-/** Poll Svix Play until a webhook matching `predicate` appears, or timeout. */
+/**
+ * Poll Svix Play until a webhook matching `predicate` appears, or timeout.
+ *
+ * When `logWebhook` is true (default), the matched payload is pretty-printed
+ * to stdout — useful for eyeballing webhook shapes during local test runs.
+ * Set to false to suppress (e.g., in CI).
+ */
 export const waitForWebhook = async <T = unknown>({
 	token,
 	predicate,
 	timeoutMs = 10000,
+	logWebhook = true,
 }: {
 	token: string;
 	predicate: (payload: T) => boolean;
 	timeoutMs?: number;
+	logWebhook?: boolean;
 }): Promise<{ event: SvixPlayEvent; payload: T } | null> => {
 	const startTime = Date.now();
 
@@ -104,7 +112,13 @@ export const waitForWebhook = async <T = unknown>({
 		for (const event of history.data) {
 			try {
 				const payload = parseEventBody<T>(event);
-				if (predicate(payload)) return { event, payload };
+				if (predicate(payload)) {
+					if (logWebhook) {
+						process.stdout.write("\n── webhook ────────────────────────\n");
+						process.stdout.write(`${JSON.stringify(payload, null, 2)}\n`);
+					}
+					return { event, payload };
+				}
 			} catch {
 				// Skip events that can't be parsed
 			}
@@ -114,6 +128,29 @@ export const waitForWebhook = async <T = unknown>({
 	}
 
 	return null;
+};
+
+// ─── Event Type Registration ───────────────────────────────────────────────
+
+/**
+ * Idempotently registers an event type. Svix requires event types referenced
+ * in `filterTypes` to be pre-registered at the org level; without this the
+ * endpoint.create call fails with HTTP 422.
+ *
+ * Catches "already exists" (409) errors so this can be called every test run.
+ */
+export const ensureSvixEventType = async (name: string): Promise<void> => {
+	const svix = getSvixClient();
+	try {
+		await svix.eventType.create({
+			name,
+			description: `Auto-registered by integration tests: ${name}`,
+		});
+	} catch (error) {
+		const status = (error as { code?: number })?.code;
+		if (status === 409 || status === 400) return;
+		throw error;
+	}
 };
 
 // ─── Endpoint Lifecycle ─────────────────────────────────────────────────────
@@ -174,6 +211,12 @@ export const setupWebhookTest = async ({
 	appId: string;
 	filterTypes: string[];
 }): Promise<WebhookTestSetup> => {
+	// Ensure every filter type is registered in Svix before creating the
+	// endpoint, otherwise endpoint.create fails with HTTP 422.
+	for (const eventType of filterTypes) {
+		await ensureSvixEventType(eventType);
+	}
+
 	const playToken = await generatePlayToken();
 	console.log(`Generated Svix Play token: ${playToken}`);
 

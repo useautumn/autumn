@@ -8,6 +8,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { checkoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkoutSessionLock";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { executeStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/execute/executeStripeBillingPlan";
+import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { workflows } from "@/queue/workflows";
 
@@ -79,6 +80,13 @@ export const executeBillingPlan = async ({
 		ctx,
 		autumnBillingPlan: billingPlan.autumn,
 		billingContext,
+	});
+
+	// Fire-and-forget: don't block the action on svix delivery
+	void sendBillingUpdatedWebhook({
+		ctx,
+		autumnBillingPlan: billingPlan.autumn,
+		originalFullCustomer: billingContext.fullCustomer,
 	});
 
 	return { stripe: stripeBillingResult };

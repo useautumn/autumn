@@ -1,12 +1,4 @@
-import {
-	type AppEnv,
-	CusProductStatus,
-	ms,
-	orgToFeaturesByOrgEnv,
-} from "@autumn/shared";
-import { getRedisTargetsForCustomer } from "@/external/redis/customerRedisRouting.js";
-import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects";
-import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
+import { ms } from "@autumn/shared";
 import { ProductService } from "@/internal/products/ProductService";
 import type { CronContext } from "../utils/CronContext";
 import {
@@ -32,12 +24,14 @@ const partitionRevertRows = (rows: ExpiredTrialRow[]) => {
 
 const BATCH_SIZE = 250;
 
-const processRevertRows = async ({
+const processRowsInBatches = async ({
 	ctx,
 	rows,
+	defaultProducts,
 }: {
 	ctx: OrgEnvExpiredTrials["ctx"];
 	rows: ExpiredTrialRow[];
+	defaultProducts: Awaited<ReturnType<typeof ProductService.listDefault>>;
 }) => {
 	for (let i = 0; i < rows.length; i += BATCH_SIZE) {
 		const batch = rows.slice(i, i + BATCH_SIZE);
@@ -47,7 +41,7 @@ const processRevertRows = async ({
 					ctx,
 					customerProduct: row.customerProduct,
 					customer: row.customer,
-					defaultProducts: [],
+					defaultProducts,
 				}),
 			),
 		);
@@ -84,12 +78,16 @@ export const runProductCron = async ({
 
 			const resultsByOrgEnv = await groupByOrgEnv({ results, cronContext });
 
-			for (const { ctx, org, features, rows } of resultsByOrgEnv) {
+			for (const { ctx, rows } of resultsByOrgEnv) {
 				const { revert: revertRows, standard: standardRows } =
 					partitionRevertRows(rows);
 
 				if (revertRows.length > 0) {
-					await processRevertRows({ ctx, rows: revertRows });
+					await processRowsInBatches({
+						ctx,
+						rows: revertRows,
+						defaultProducts: [],
+					});
 				}
 
 				if (standardRows.length === 0) continue;
@@ -101,53 +99,15 @@ export const runProductCron = async ({
 					onlyFree: true,
 				});
 
-				if (defaultProducts.length === 0) {
-					await customerProductRepo.batchUpdate({
-						ctx,
-						updates: standardRows.map((row) => ({
-							id: row.customerProduct.id,
-							updates: {
-								status: CusProductStatus.Expired,
-							},
-						})),
-					});
-					const customersToDelete = standardRows.map((row) => ({
-						orgId: row.customer.org_id,
-						env: row.customer.env as AppEnv,
-						customerId: row.customer.id ?? "",
-					}));
-					const featuresByOrgEnv = orgToFeaturesByOrgEnv({
-						org,
-						env: ctx.env,
-						features,
-					});
-
-					await batchInvalidateCachedFullSubjects({
-						customers: customersToDelete,
-						featuresByOrgEnv,
-						getRedisTargetsForCustomer: () =>
-							getRedisTargetsForCustomer({
-								org,
-							}),
-					});
-					console.log(`Expired ${standardRows.length} customer products`);
-					continue;
-				}
-
-				const processBatchSize = 250;
-				for (let i = 0; i < standardRows.length; i += processBatchSize) {
-					const batch = standardRows.slice(i, i + processBatchSize);
-					await Promise.all(
-						batch.map((row) =>
-							processExpiredTrialRow({
-								ctx,
-								customerProduct: row.customerProduct,
-								customer: row.customer,
-								defaultProducts,
-							}),
-						),
-					);
-				}
+				// Always route through `processExpiredTrialRow` so the
+				// `billing.updated` webhook (tagged "trial_ended") fires from
+				// a single emission site — regardless of whether a free default
+				// is being activated alongside the expiry.
+				await processRowsInBatches({
+					ctx,
+					rows: standardRows,
+					defaultProducts,
+				});
 			}
 
 			totalExpired += results.length;
