@@ -1,6 +1,14 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "../../honoUtils/HonoEnv";
 import {
+	handleDeleteAdminCacheV2RampDestination,
+	handleDeleteAdminCacheV2RampOrg,
+	handleGetAdminCacheV2Ramp,
+	handleUpdateAdminCacheV2RampOrg,
+	handleUpdateAdminCacheV2RampPercent,
+	handleUpsertAdminCacheV2RampDestination,
+} from "./handleAdminCacheV2Ramp";
+import {
 	handleDeleteAdminOrgRedisConfig,
 	handleGetAdminOrgRedisConfig,
 	handleUpdateAdminOrgRedisMigration,
@@ -112,6 +120,27 @@ honoAdminRouter.get(
 honoAdminRouter.put(
 	"/redis-v2-cache-config",
 	...handleUpsertAdminRedisV2CacheConfig,
+);
+honoAdminRouter.get("/cache-v2-ramp", ...handleGetAdminCacheV2Ramp);
+honoAdminRouter.put(
+	"/cache-v2-ramp/destination",
+	...handleUpsertAdminCacheV2RampDestination,
+);
+honoAdminRouter.delete(
+	"/cache-v2-ramp/destination",
+	...handleDeleteAdminCacheV2RampDestination,
+);
+honoAdminRouter.put(
+	"/cache-v2-ramp/percent",
+	...handleUpdateAdminCacheV2RampPercent,
+);
+honoAdminRouter.put(
+	"/cache-v2-ramp/orgs/:org_id",
+	...handleUpdateAdminCacheV2RampOrg,
+);
+honoAdminRouter.delete(
+	"/cache-v2-ramp/orgs/:org_id",
+	...handleDeleteAdminCacheV2RampOrg,
 );
 honoAdminRouter.get("/org-member", ...handleGetOrgMember);
 honoAdminRouter.get("/master-stripe-account", ...handleGetMasterStripeAccount);

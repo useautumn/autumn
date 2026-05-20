@@ -1,5 +1,10 @@
 import type { Redis } from "ioredis";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import {
+	getRampDestinationRedis,
+	isCacheV2RampActive,
+} from "@/internal/misc/cacheV2Ramp/index.js";
+import { getActiveRedisV2Instance } from "@/internal/misc/redisV2Cache/redisV2CacheStore.js";
 import { getOrgRedis, type OrgWithRedisConfig } from "./orgRedisPool.js";
 import { resolveRedisV2 } from "./resolveRedisV2.js";
 
@@ -46,7 +51,7 @@ export const resolveCustomerRedisRouting = ({
 
 	return {
 		...routingInfo,
-		redis: resolveRedisV2(),
+		redis: resolveRedisV2({ orgId: org.id, customerId }),
 	};
 };
 
@@ -105,6 +110,20 @@ export const getRedisTargetsForCustomer = ({
 	const redisTargets = [currentRedis ?? resolveRedisV2()];
 	if (org.redis_config) {
 		redisTargets.push(resolveRedisV2(), getOrgRedis({ org }));
+	}
+	// During ramp, fan out to BOTH primary and destination. `currentRedis` may
+	// already be the destination (ramped customer) or the primary (non-ramped);
+	// without explicitly including both, the other cluster keeps stale entries
+	// until TTL. Gated on activeInstance === "dragonfly" so the upstash/redis
+	// kill switch disables the ramp fan-out.
+	if (
+		getActiveRedisV2Instance() === "dragonfly" &&
+		isCacheV2RampActive({ orgId: org.id })
+	) {
+		const destination = getRampDestinationRedis();
+		if (destination) {
+			redisTargets.push(destination, resolveRedisV2());
+		}
 	}
 	return [...new Set(redisTargets)];
 };
