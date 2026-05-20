@@ -4,6 +4,86 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="May 20th 2026">
+  ## `billing.updated` webhook
+
+  A new **`billing.updated`** webhook fires whenever a customer's plans change — activations, scheduled future plans, in-place updates, and expirations. The payload includes per-plan `action`, the post-change subscription state, and the previous attributes so you can diff what changed in a single event.
+
+  Useful for syncing entitlements to your own database, triggering lifecycle emails, or fanning out plan changes to internal systems without stitching together multiple Stripe webhooks.
+
+  See the [`billing.updated` reference](/api-reference/webhooks/billingUpdated).
+
+  ## `entities.list` endpoint
+
+  You can now list entities for a customer via a dedicated [`entities.list`](/api-reference/entities/listEntities) endpoint. Filter by plan, subscription status, search term, or custom fields, and paginate through results with cursors.
+
+  ## Cursor-based pagination on list endpoints
+
+  `customers.list`, `entities.list`, and `events.list` now support cursor-based pagination via `start_cursor` and `next_cursor`. Cursors are faster and more stable than offset-based pagination on large datasets — pass an empty `start_cursor` for the first page, then forward `next_cursor` from each response.
+
+  ## Trial expiry behaviour: `on_end`
+
+  `billing.attach` now accepts an **`on_end`** parameter on `free_trial` to control what happens when a trial ends:
+
+  - **`bill`** (default): charge the customer and continue the subscription
+  - **`revert`**: expire the trial and restore the customer's previous plan
+
+  See the [attach API reference](/api-reference/billing/attach).
+
+  ## Passkey sign-in
+
+  You can now sign in to the Autumn dashboard with a passkey. Register passkeys from **Settings → Account**, and use Touch ID, Face ID, Windows Hello, or a hardware security key on subsequent sign-ins. Existing email and Google sign-in continue to work.
+
+  ## Manual auto top-ups
+
+  You can now manually trigger an auto top-up for a customer from the dashboard's subscription update flow, independent of the configured threshold. Useful for sales-led top-ups, support adjustments, and testing top-up wiring before going live.
+
+  ## Vercel pre-provisioning
+
+  Vercel Marketplace customers are now provisioned on resource create with payment pre-authorisation, so plans and balances are ready before the first request — no race between resource creation and first usage.
+
+  See the [Vercel Marketplace guide](/documentation/external-providers/vercel-marketplace).
+
+  ## Plan grouping in analytics
+
+  The customer analytics view now lets you group usage by `plan_id` alongside features and entities. Switch grouping from the chart legend to break down consumption per plan and spot which plans drive which features.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - `billing.updated` webhook for plan activations, schedules, updates, and expirations - [#1637](https://github.com/useautumn/autumn/pull/1637)
+      - `entities.list` endpoint with plan, status, and custom-field filters - [#1505](https://github.com/useautumn/autumn/pull/1505)
+      - Cursor-based pagination on `customers.list`, `entities.list`, and `events.list` - [#1596](https://github.com/useautumn/autumn/pull/1596)
+      - `on_end` parameter on `free_trial` for `attach` to revert or bill at trial end - [#1554](https://github.com/useautumn/autumn/pull/1554)
+      - Passkey (WebAuthn) sign-in and management in the dashboard - [#1587](https://github.com/useautumn/autumn/pull/1587)
+      - Manually trigger auto top-ups from the dashboard subscription update flow - [#1532](https://github.com/useautumn/autumn/pull/1532)
+      - Vercel Marketplace customers pre-provisioned with payment pre-auth on resource create - [#1578](https://github.com/useautumn/autumn/pull/1578)
+      - Group analytics by `plan_id` and unlimited-balance deductions in charts - [#1568](https://github.com/useautumn/autumn/pull/1568)
+      - Cancelling a plan that has a future-dated `starts_at` now cleans up the scheduled start - [#1507](https://github.com/useautumn/autumn/pull/1507)
+      - Reuse Stripe products and prices across plan versions to avoid duplicates - [#1524](https://github.com/useautumn/autumn/pull/1524)
+      - Auto top-up purchase limit windows now normalise live in the dashboard - [#1520](https://github.com/useautumn/autumn/pull/1520)
+      - External payment processor signals exposed on customer responses - [#1498](https://github.com/useautumn/autumn/pull/1498)
+      - SDK and OpenAPI updates for the new endpoints and webhook
+    </Accordion>
+    <Accordion title="Bug fixes">
+      - Fixed tax rate ID handling on `attach` - [#1641](https://github.com/useautumn/autumn/pull/1641)
+      - Fixed shadow flags appearing on customer responses - [#1632](https://github.com/useautumn/autumn/pull/1632)
+      - Fixed reverted trials when re-attaching the previous plan - [#1635](https://github.com/useautumn/autumn/pull/1635)
+      - Fixed no-op plan PATCH requests writing unchanged data - [#1628](https://github.com/useautumn/autumn/pull/1628)
+      - Fixed deleting custom items from subscriptions - [#1629](https://github.com/useautumn/autumn/pull/1629)
+      - Fixed `events.list` hook typing - [#1633](https://github.com/useautumn/autumn/pull/1633)
+      - Fixed webhook race condition on rapid subscription changes - [#1620](https://github.com/useautumn/autumn/pull/1620)
+      - Fixed cache invalidation on dashboard customer pages - [#1612](https://github.com/useautumn/autumn/pull/1612), [#1531](https://github.com/useautumn/autumn/pull/1531)
+      - Fixed entity sync edge cases - [#1607](https://github.com/useautumn/autumn/pull/1607), [#1614](https://github.com/useautumn/autumn/pull/1614)
+      - Fixed `attach` running when there were no billing changes - [#1586](https://github.com/useautumn/autumn/pull/1586)
+      - Fixed Stripe Checkout session race when re-opening a session - [#1548](https://github.com/useautumn/autumn/pull/1548)
+      - Fixed schedule sync and free-price customization on scheduled plans - [#1504](https://github.com/useautumn/autumn/pull/1504), [#1556](https://github.com/useautumn/autumn/pull/1556)
+      - Fixed subscription detail showing duplicated items - [#1575](https://github.com/useautumn/autumn/pull/1575)
+      - Fixed interval count input inside select popovers - [#1573](https://github.com/useautumn/autumn/pull/1573)
+      - Fixed sync sheet showing empty when detection matched zero plans - [#1502](https://github.com/useautumn/autumn/pull/1502)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="May 7th 2026">
   ## Scheduled subscriptions with `starts_at`
 
