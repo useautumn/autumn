@@ -13,6 +13,7 @@
 import {
 	type AutumnBillingPlan,
 	type FullCustomer,
+	fullCustomerToTags,
 	WebhookEventType,
 } from "@autumn/shared";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
@@ -42,10 +43,16 @@ export const sendBillingUpdatedWebhook = async ({
 
 		if (response.plan_changes.length === 0) return;
 
+		// Svix message tags (separate from the payload `tags` field) — used
+		// for routing/filtering at the Svix dashboard level. Mirrors the
+		// pattern in sendProductsUpdated.
+		const svixTags = fullCustomerToTags({ fullCustomer: originalFullCustomer });
+
 		await sendSvixEvent({
 			ctx,
 			eventType: WebhookEventType.BillingUpdated,
 			data: response,
+			tags: svixTags,
 		});
 
 		ctx.logger.info(
