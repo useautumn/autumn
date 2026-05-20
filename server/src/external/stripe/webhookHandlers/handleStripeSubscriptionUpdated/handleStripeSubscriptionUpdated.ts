@@ -2,11 +2,12 @@ import type Stripe from "stripe";
 import { handleStripeSubscriptionCanceled } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/tasks/handleStripeSubscriptionCanceled/handleStripeSubscriptionCanceled.js";
 import { syncAutumnSubscription } from "@/external/stripe/webhookHandlers/handleStripeSubscriptionUpdated/tasks/syncAutumnSubscription.js";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext.js";
-import { logCustomerProductUpdates } from "../common";
+import { emitBillingChangeWebhook, logCustomerProductUpdates } from "../common";
 import { setupStripeSubscriptionUpdatedContext } from "./setupStripeSubscriptionUpdatedContext.js";
 import { handleCancelOnPastDue } from "./tasks/handleCancelOnPastDue.js";
 import { handleSchedulePhaseChanges } from "./tasks/handleSchedulePhaseChanges/handleSchedulePhaseChanges.js";
 import { handleStripeSubscriptionRenewed } from "./tasks/handleStripeSubscriptionRenewed/handleStripeSubscriptionRenewed.js";
+import { handleStripeSubscriptionTrialEnded } from "./tasks/handleStripeSubscriptionTrialEnded/handleStripeSubscriptionTrialEnded.js";
 import { syncCustomerProductStatus } from "./tasks/syncCustomerProductStatus/syncCustomerProductStatus.js";
 
 export const handleStripeSubscriptionUpdated = async ({
@@ -64,8 +65,20 @@ export const handleStripeSubscriptionUpdated = async ({
 		subscriptionUpdatedContext,
 	});
 
-	// 6. Log all customer product updates
+	// 6. Detect trial-end transition (tags only — no DB writes)
+	handleStripeSubscriptionTrialEnded({
+		ctx,
+		subscriptionUpdatedContext,
+	});
+
+	// 7. Log all customer product updates
 	logCustomerProductUpdates({
+		ctx,
+		eventContext: subscriptionUpdatedContext,
+	});
+
+	// 8. Emit billing.updated webhook (fire-and-forget) if anything changed
+	emitBillingChangeWebhook({
 		ctx,
 		eventContext: subscriptionUpdatedContext,
 	});

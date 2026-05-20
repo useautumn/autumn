@@ -644,9 +644,9 @@ if TYPE_CHECKING:
         DeletePlanResponseTypedDict,
     )
     from .finalizelockop import (
-        Action,
         FinalizeBalanceParams,
         FinalizeBalanceParamsTypedDict,
+        FinalizeLockAction,
         FinalizeLockGlobals,
         FinalizeLockGlobalsTypedDict,
         FinalizeLockResponse,
@@ -1773,7 +1773,6 @@ if TYPE_CHECKING:
     from . import internal
 
 __all__ = [
-    "Action",
     "AggregateEventsCustomRange",
     "AggregateEventsCustomRangeTypedDict",
     "AggregateEventsFeatureID",
@@ -2312,6 +2311,7 @@ __all__ = [
     "FeatureType2",
     "FinalizeBalanceParams",
     "FinalizeBalanceParamsTypedDict",
+    "FinalizeLockAction",
     "FinalizeLockGlobals",
     "FinalizeLockGlobalsTypedDict",
     "FinalizeLockResponse",
@@ -4058,9 +4058,9 @@ _dynamic_imports: dict[str, str] = {
     "DeletePlanParamsTypedDict": ".deleteplanop",
     "DeletePlanResponse": ".deleteplanop",
     "DeletePlanResponseTypedDict": ".deleteplanop",
-    "Action": ".finalizelockop",
     "FinalizeBalanceParams": ".finalizelockop",
     "FinalizeBalanceParamsTypedDict": ".finalizelockop",
+    "FinalizeLockAction": ".finalizelockop",
     "FinalizeLockGlobals": ".finalizelockop",
     "FinalizeLockGlobalsTypedDict": ".finalizelockop",
     "FinalizeLockResponse": ".finalizelockop",
