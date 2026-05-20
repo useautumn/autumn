@@ -1,19 +1,20 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "../../honoUtils/HonoEnv";
-import { handleGetAdminCustomerBlockConfig } from "./handleGetAdminCustomerBlockConfig";
-import { handleGetAdminEdgeConfigSources } from "./handleGetAdminEdgeConfigSources";
-import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsConfig";
-import { handleGetAdminJobQueueConfig } from "./handleGetAdminJobQueueConfig";
-import { handleGetAdminOrgLimitsConfig } from "./handleGetAdminOrgLimitsConfig";
 import {
 	handleDeleteAdminOrgRedisConfig,
 	handleGetAdminOrgRedisConfig,
 	handleUpdateAdminOrgRedisMigration,
 	handleUpsertAdminOrgRedisConfig,
 } from "./handleAdminOrgRedisConfig";
+import { handleGetAdminCustomerBlockConfig } from "./handleGetAdminCustomerBlockConfig";
+import { handleGetAdminEdgeConfigSources } from "./handleGetAdminEdgeConfigSources";
+import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsConfig";
+import { handleGetAdminJobQueueConfig } from "./handleGetAdminJobQueueConfig";
+import { handleGetAdminMiscellaneousEdgeConfig } from "./handleGetAdminMiscellaneousEdgeConfig";
+import { handleGetAdminOrgLimitsConfig } from "./handleGetAdminOrgLimitsConfig";
 import { handleGetAdminOrgRequestBlock } from "./handleGetAdminOrgRequestBlock";
-import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
 import { handleGetAdminRedisV2CacheConfig } from "./handleGetAdminRedisV2CacheConfig";
+import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
 import { handleGetAdminStripeSyncConfig } from "./handleGetAdminStripeSyncConfig";
 
 import { handleGetInvoiceLineItems } from "./handleGetInvoiceLineItems";
@@ -25,10 +26,11 @@ import { handleListOAuthClients } from "./handleListOAuthClients";
 import { handleUpsertAdminCustomerBlockConfig } from "./handleUpsertAdminCustomerBlockConfig";
 import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureFlagsConfig";
 import { handleUpsertAdminJobQueueConfig } from "./handleUpsertAdminJobQueueConfig";
+import { handleUpsertAdminMiscellaneousEdgeConfig } from "./handleUpsertAdminMiscellaneousEdgeConfig";
 import { handleUpsertAdminOrgLimitsConfig } from "./handleUpsertAdminOrgLimitsConfig";
 import { handleUpsertAdminOrgRequestBlock } from "./handleUpsertAdminOrgRequestBlock";
-import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
 import { handleUpsertAdminRedisV2CacheConfig } from "./handleUpsertAdminRedisV2CacheConfig";
+import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
 import { handleUpsertAdminStripeSyncConfig } from "./handleUpsertAdminStripeSyncConfig";
 import { handleDeleteRollout } from "./rollouts/handleDeleteRollout";
 import { handleDeleteRolloutOrg } from "./rollouts/handleDeleteRolloutOrg";
@@ -77,6 +79,14 @@ honoAdminRouter.get(
 honoAdminRouter.put(
 	"/feature-flags-config",
 	...handleUpsertAdminFeatureFlagsConfig,
+);
+honoAdminRouter.get(
+	"/miscellaneous-edge-config",
+	...handleGetAdminMiscellaneousEdgeConfig,
+);
+honoAdminRouter.put(
+	"/miscellaneous-edge-config",
+	...handleUpsertAdminMiscellaneousEdgeConfig,
 );
 honoAdminRouter.get(
 	"/customer-block-config",
