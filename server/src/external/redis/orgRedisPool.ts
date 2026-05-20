@@ -47,7 +47,7 @@ const createOrgRedisConnection = ({
 };
 
 export const getOrgRedis = ({ org }: { org: OrgWithRedisConfig }): Redis => {
-	if (!org.redis_config) return resolveRedisV2({ orgId: org.id });
+	if (!org.redis_config) return resolveRedisV2();
 
 	const existing = pool.get(org.id);
 	if (existing) {
@@ -66,7 +66,7 @@ export const getOrgRedis = ({ org }: { org: OrgWithRedisConfig }): Redis => {
 		if (error instanceof Error) {
 			logger.error(error);
 		}
-		return resolveRedisV2({ orgId: org.id });
+		return resolveRedisV2();
 	}
 
 	const instance = createOrgRedisConnection({
