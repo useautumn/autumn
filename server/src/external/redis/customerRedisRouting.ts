@@ -1,5 +1,9 @@
 import type { Redis } from "ioredis";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import {
+	getRampDestinationRedis,
+	isDragonflyRampActive,
+} from "@/internal/misc/dragonflyRamp/index.js";
 import { getOrgRedis, type OrgWithRedisConfig } from "./orgRedisPool.js";
 import { resolveRedisV2 } from "./resolveRedisV2.js";
 
@@ -46,7 +50,7 @@ export const resolveCustomerRedisRouting = ({
 
 	return {
 		...routingInfo,
-		redis: resolveRedisV2(),
+		redis: resolveRedisV2({ orgId: org.id, customerId }),
 	};
 };
 
@@ -105,6 +109,13 @@ export const getRedisTargetsForCustomer = ({
 	const redisTargets = [currentRedis ?? resolveRedisV2()];
 	if (org.redis_config) {
 		redisTargets.push(resolveRedisV2(), getOrgRedis({ org }));
+	}
+	// Fan out invalidations to the ramp destination when the ramp is non-zero —
+	// without this, ramped customers can read stale entries from whichever
+	// cluster invalidation skipped.
+	if (isDragonflyRampActive({ orgId: org.id })) {
+		const destination = getRampDestinationRedis();
+		if (destination) redisTargets.push(destination);
 	}
 	return [...new Set(redisTargets)];
 };
