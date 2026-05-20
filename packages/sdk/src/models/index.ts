@@ -42,6 +42,7 @@ export * from "./preview-attach-op.js";
 export * from "./preview-multi-attach-op.js";
 export * from "./preview-update-op.js";
 export * from "./redeem-referral-code-op.js";
+export * from "./redeem-reward-code-op.js";
 export * from "./response-validation-error.js";
 export * from "./sdk-validation-error.js";
 export * from "./security.js";
