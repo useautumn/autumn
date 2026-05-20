@@ -27,6 +27,8 @@ interface AiCreditSchemaTableProps {
 	modelFullIds: string[];
 	provider: ModelsDevProvider;
 	isLoading: boolean;
+	removeKeys: (keys: string[]) => void;
+	renameKey: (oldKey: string, newKey: string) => void;
 }
 
 function formatCost(value: number | null | undefined): string {
@@ -41,26 +43,10 @@ export function AiCreditSchemaTable({
 	modelFullIds,
 	provider,
 	isLoading,
+	removeKeys,
+	renameKey,
 }: AiCreditSchemaTableProps) {
 	const isCustom = providerKey === "custom";
-
-
-	const removeKeys = (keys: string[]) =>
-		form.setFieldValue("model_markups", (prev) => {
-			const updated = { ...prev };
-			for (const k of keys) delete updated[k];
-			return updated;
-		});
-
-	const renameKey = (oldKey: string, newKey: string) =>
-		form.setFieldValue("model_markups", (prev) => {
-			if (newKey in prev) return prev;
-			const updated = { ...prev };
-			const entry = updated[oldKey];
-			delete updated[oldKey];
-			updated[newKey] = { ...entry };
-			return updated;
-		});
 
 	const data: ModelRow[] = useMemo(
 		() =>

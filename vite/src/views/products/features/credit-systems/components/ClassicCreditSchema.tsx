@@ -1,15 +1,11 @@
 import type { CreditSchemaItem, Feature } from "@autumn/shared";
-import { FeatureType } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
-import { useStore } from "@tanstack/react-form";
 import { X } from "lucide-react";
-import { useMemo, useRef } from "react";
-import { toast } from "sonner";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
+import { useCreditSchema } from "../hooks/useCreditSchema";
 import { FeatureSelectDropdown } from "./FeatureSelectDropdown";
 
 interface ClassicCreditSchemaProps {
@@ -17,58 +13,14 @@ interface ClassicCreditSchemaProps {
 }
 
 export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
-	const { features } = useFeaturesQuery();
-	const config = useStore(form.store, (s) => s.values.config);
-	const schema: CreditSchemaItem[] = config?.schema || [];
-
-	const schemaKeysRef = useRef<string[]>([]);
-	const schemaKeys = useMemo(() => {
-		const nextKeys = [...schemaKeysRef.current];
-		while (nextKeys.length < schema.length) {
-			nextKeys.push(crypto.randomUUID());
-		}
-		while (nextKeys.length > schema.length) {
-			nextKeys.pop();
-		}
-		schemaKeysRef.current = nextKeys;
-		return nextKeys;
-	}, [schema.length]);
-
-	const allMeteredFeatures = features.filter(
-		(feature: Feature) => feature.type === FeatureType.Metered,
-	);
-
-	const handleSchemaChange = (
-		index: number,
-		key: keyof CreditSchemaItem,
-		value: string | number,
-	) => {
-		const newSchema = [...schema];
-		newSchema[index] = { ...newSchema[index], [key]: value };
-		form.setFieldValue("config", { ...config, schema: newSchema });
-	};
-
-	const addSchemaItem = () => {
-		schemaKeysRef.current = [...schemaKeysRef.current, crypto.randomUUID()];
-		const newSchema = [
-			...schema,
-			{ metered_feature_id: "", feature_amount: 1, credit_amount: 0 },
-		];
-		form.setFieldValue("config", { ...config, schema: newSchema });
-	};
-
-	const removeSchemaItem = (index: number) => {
-		if (schema.length === 1) {
-			toast.error("There must be at least one item in the credit system");
-			return;
-		}
-		const nextKeys = [...schemaKeysRef.current];
-		nextKeys.splice(index, 1);
-		schemaKeysRef.current = nextKeys;
-		const newSchema = [...schema];
-		newSchema.splice(index, 1);
-		form.setFieldValue("config", { ...config, schema: newSchema });
-	};
+	const {
+		schema,
+		schemaKeys,
+		allMeteredFeatures,
+		handleSchemaChange,
+		addSchemaItem,
+		removeSchemaItem,
+	} = useCreditSchema(form);
 
 	return (
 		<div className="flex flex-col gap-0">

@@ -2,6 +2,7 @@ import { useStore } from "@tanstack/react-form";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
+import { slugify } from "@/utils/formatUtils/formatTextUtils";
 import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
 
 interface CreditSystemDetailsProps {
@@ -39,11 +40,4 @@ export function CreditSystemDetails({ form }: CreditSystemDetailsProps) {
 			</div>
 		</SheetSection>
 	);
-}
-
-function slugify(text: string): string {
-	return text
-		.toLowerCase()
-		.replace(/[^a-z0-9]+/g, "_")
-		.replace(/^_+|_+$/g, "");
 }
