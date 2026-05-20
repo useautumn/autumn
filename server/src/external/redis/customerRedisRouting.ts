@@ -4,6 +4,7 @@ import {
 	getRampDestinationRedis,
 	isDragonflyRampActive,
 } from "@/internal/misc/dragonflyRamp/index.js";
+import { getActiveRedisV2Instance } from "@/internal/misc/redisV2Cache/redisV2CacheStore.js";
 import { getOrgRedis, type OrgWithRedisConfig } from "./orgRedisPool.js";
 import { resolveRedisV2 } from "./resolveRedisV2.js";
 
@@ -110,12 +111,19 @@ export const getRedisTargetsForCustomer = ({
 	if (org.redis_config) {
 		redisTargets.push(resolveRedisV2(), getOrgRedis({ org }));
 	}
-	// Fan out invalidations to the ramp destination when the ramp is non-zero —
-	// without this, ramped customers can read stale entries from whichever
-	// cluster invalidation skipped.
-	if (isDragonflyRampActive({ orgId: org.id })) {
+	// During ramp, fan out to BOTH primary and destination. `currentRedis` may
+	// already be the destination (ramped customer) or the primary (non-ramped);
+	// without explicitly including both, the other cluster keeps stale entries
+	// until TTL. Gated on activeInstance === "dragonfly" so the upstash/redis
+	// kill switch disables the ramp fan-out.
+	if (
+		getActiveRedisV2Instance() === "dragonfly" &&
+		isDragonflyRampActive({ orgId: org.id })
+	) {
 		const destination = getRampDestinationRedis();
-		if (destination) redisTargets.push(destination);
+		if (destination) {
+			redisTargets.push(destination, resolveRedisV2());
+		}
 	}
 	return [...new Set(redisTargets)];
 };

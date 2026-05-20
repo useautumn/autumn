@@ -3,10 +3,22 @@ import { RolloutPercentSchema } from "@/internal/misc/rollouts/rolloutSchemas.js
 
 /** Destination Redis the ramp targets. Stored in the edge config; admin-editable.
  *  `connectionString` is AES-256-CBC encrypted (same scheme as per-org redis_config).
- *  `url` is a plain host:port for logs/visibility — no credentials. */
+ *  `url` is a plain host:port for logs/visibility — no scheme, no credentials.
+ *  Schema rejects scheme/credentials so secrets never accidentally land in this
+ *  field (which is logged + surfaced in Axiom). */
 export const RampDestinationSchema = z.object({
 	connectionString: z.string().min(1),
-	url: z.string().min(1),
+	url: z
+		.string()
+		.min(1)
+		.refine(
+			(value) =>
+				!value.includes("://") && !value.includes("@") && !/\s/.test(value),
+			{
+				message:
+					"url must be a credential-free host:port (no scheme, no '@', no whitespace)",
+			},
+		),
 });
 
 export const DragonflyRampConfigSchema = z.object({
