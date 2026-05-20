@@ -116,10 +116,7 @@ export const getRedisTargetsForCustomer = ({
 	// without explicitly including both, the other cluster keeps stale entries
 	// until TTL. Gated on activeInstance === "dragonfly" so the upstash/redis
 	// kill switch disables the ramp fan-out.
-	if (
-		getActiveRedisV2Instance() === "dragonfly" &&
-		isCacheV2RampActive({ orgId: org.id })
-	) {
+	if (getActiveRedisV2Instance() === "dragonfly" && isCacheV2RampActive()) {
 		const destination = getRampDestinationRedis();
 		if (destination) {
 			redisTargets.push(destination, resolveRedisV2());

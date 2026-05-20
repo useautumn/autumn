@@ -40,7 +40,7 @@ export const resolveRedisV2 = (opts?: {
 	}
 
 	if (activeInstance === "dragonfly") {
-		if (opts && isCacheV2RampEnabled(opts)) {
+		if (isCacheV2RampEnabled({ customerId: opts?.customerId })) {
 			const destination = getRampDestinationRedis();
 			if (destination) return destination;
 			if (!publicRouteWarned) {

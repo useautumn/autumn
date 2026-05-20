@@ -26,12 +26,12 @@ let lastDecryptFailureKey: string | null = null;
  *  no destination is configured (ramp is dormant). */
 export const getRampDestinationRedis = (): Redis | null => {
 	const config = getCacheV2RampConfig();
-	if (!config.destination) {
+	if (!config) {
 		closeRampDestinationClient();
 		return null;
 	}
 
-	const { connectionString, url } = config.destination;
+	const { connectionString, url } = config;
 
 	if (
 		cached &&
