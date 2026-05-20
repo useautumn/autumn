@@ -67,7 +67,7 @@ AWS_ACCESS_KEY_ID=x
 AWS_SECRET_ACCESS_KEY=x
 
 # ClickHouse (local)
-TINYBIRD_CLICKHOUSE_URL=http://localhost:8123
+TINYBIRD_US_EAST_CLICKHOUSE_URL=http://localhost:8123
 
 # App URLs
 BETTER_AUTH_URL=http://localhost:${serverPort}
