@@ -74,7 +74,7 @@ export const createWorkerContext = async ({
 		db,
 		dbGeneral: db,
 		logger: workerLogger,
-		redisV2: resolveRedisV2({ orgId: org.id, customerId }),
+		redisV2: resolveRedisV2(),
 
 		id: requestId || generateId("job"),
 		timestamp: Date.now(),
