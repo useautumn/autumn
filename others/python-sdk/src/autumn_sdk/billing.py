@@ -61,7 +61,6 @@ class Billing(BaseSDK):
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
-        tax_rate_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -95,7 +94,6 @@ class Billing(BaseSDK):
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
-        :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -150,7 +148,6 @@ class Billing(BaseSDK):
             metadata=metadata,
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
-            tax_rate_id=tax_rate_id,
         )
 
         req = self._build_request(
@@ -264,7 +261,6 @@ class Billing(BaseSDK):
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
-        tax_rate_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -298,7 +294,6 @@ class Billing(BaseSDK):
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
-        :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -353,7 +348,6 @@ class Billing(BaseSDK):
             metadata=metadata,
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
-            tax_rate_id=tax_rate_id,
         )
 
         req = self._build_request_async(
@@ -1032,7 +1026,6 @@ class Billing(BaseSDK):
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
-        tax_rate_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1066,7 +1059,6 @@ class Billing(BaseSDK):
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
-        :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1122,7 +1114,6 @@ class Billing(BaseSDK):
             metadata=metadata,
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
-            tax_rate_id=tax_rate_id,
         )
 
         req = self._build_request(
@@ -1243,7 +1234,6 @@ class Billing(BaseSDK):
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
-        tax_rate_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1277,7 +1267,6 @@ class Billing(BaseSDK):
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
-        :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1333,7 +1322,6 @@ class Billing(BaseSDK):
             metadata=metadata,
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
-            tax_rate_id=tax_rate_id,
         )
 
         req = self._build_request_async(
@@ -2617,7 +2605,6 @@ class Billing(BaseSDK):
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
-        tax_rate_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2645,7 +2632,6 @@ class Billing(BaseSDK):
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
-        :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2694,7 +2680,6 @@ class Billing(BaseSDK):
             metadata=metadata,
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
-            tax_rate_id=tax_rate_id,
         )
 
         req = self._build_request(
@@ -2806,7 +2791,6 @@ class Billing(BaseSDK):
         metadata: Optional[Dict[str, str]] = None,
         no_billing_changes: Optional[bool] = None,
         enable_plan_immediately: Optional[bool] = None,
-        tax_rate_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2834,7 +2818,6 @@ class Billing(BaseSDK):
         :param metadata: Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped.
         :param no_billing_changes: If true, skips any billing changes for the attach operation.
         :param enable_plan_immediately: If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
-        :param tax_rate_id: Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2883,7 +2866,6 @@ class Billing(BaseSDK):
             metadata=metadata,
             no_billing_changes=no_billing_changes,
             enable_plan_immediately=enable_plan_immediately,
-            tax_rate_id=tax_rate_id,
         )
 
         req = self._build_request_async(

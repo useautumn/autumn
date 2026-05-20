@@ -2,82 +2,108 @@
 import { z } from "zod/v4";
 
 export const getOrCreateCustomerGlobalsSchema = z.object({
-    xApiVersion: z.union([z.string(), z.undefined()]).optional()
+	xApiVersion: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const getOrCreateCustomerSpendLimitSchema = z.object({
-    featureId: z.union([z.string(), z.undefined()]).optional(),
-    enabled: z.union([z.boolean(), z.undefined()]).optional(),
-    overageLimit: z.union([z.number(), z.undefined()]).optional()
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	overageLimit: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const getOrCreateCustomerOverageAllowedSchema = z.object({
-    featureId: z.string(),
-    enabled: z.union([z.boolean(), z.undefined()]).optional()
+	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const getOrCreateCustomerConfigSchema = z.object({
-    disablePooledBalance: z.union([z.boolean(), z.undefined()]).optional()
+	disablePooledBalance: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const getOrCreateCustomerPurchaseLimitOutboundSchema = z.object({
-    interval: z.string(),
-    interval_count: z.number(),
-    limit: z.number()
+	interval: z.string(),
+	interval_count: z.number(),
+	limit: z.number(),
 });
 
 export const getOrCreateCustomerAutoTopupOutboundSchema = z.object({
-    feature_id: z.string(),
-    enabled: z.boolean(),
-    threshold: z.number(),
-    quantity: z.number(),
-    purchase_limit: z.union([getOrCreateCustomerPurchaseLimitOutboundSchema, z.undefined()]).optional(),
-    invoice_mode: z.union([z.boolean(), z.undefined()]).optional()
+	feature_id: z.string(),
+	enabled: z.boolean(),
+	threshold: z.number(),
+	quantity: z.number(),
+	purchase_limit: z
+		.union([getOrCreateCustomerPurchaseLimitOutboundSchema, z.undefined()])
+		.optional(),
+	invoice_mode: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const getOrCreateCustomerSpendLimitOutboundSchema = z.object({
-    feature_id: z.union([z.string(), z.undefined()]).optional(),
-    enabled: z.boolean(),
-    overage_limit: z.union([z.number(), z.undefined()]).optional()
+	feature_id: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.boolean(),
+	overage_limit: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const getOrCreateCustomerUsageAlertOutboundSchema = z.object({
-    feature_id: z.union([z.string(), z.undefined()]).optional(),
-    enabled: z.boolean(),
-    threshold: z.number(),
-    threshold_type: z.string(),
-    name: z.union([z.string(), z.undefined()]).optional()
+	feature_id: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.boolean(),
+	threshold: z.number(),
+	threshold_type: z.string(),
+	name: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const getOrCreateCustomerOverageAllowedOutboundSchema = z.object({
-    feature_id: z.string(),
-    enabled: z.boolean()
+	feature_id: z.string(),
+	enabled: z.boolean(),
 });
 
 export const getOrCreateCustomerBillingControlsOutboundSchema = z.object({
-    auto_topups: z.union([z.array(getOrCreateCustomerAutoTopupOutboundSchema), z.undefined()]).optional(),
-    spend_limits: z.union([z.array(getOrCreateCustomerSpendLimitOutboundSchema), z.undefined()]).optional(),
-    usage_alerts: z.union([z.array(getOrCreateCustomerUsageAlertOutboundSchema), z.undefined()]).optional(),
-    overage_allowed: z.union([z.array(getOrCreateCustomerOverageAllowedOutboundSchema), z.undefined()]).optional()
+	auto_topups: z
+		.union([z.array(getOrCreateCustomerAutoTopupOutboundSchema), z.undefined()])
+		.optional(),
+	spend_limits: z
+		.union([
+			z.array(getOrCreateCustomerSpendLimitOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	usage_alerts: z
+		.union([
+			z.array(getOrCreateCustomerUsageAlertOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	overage_allowed: z
+		.union([
+			z.array(getOrCreateCustomerOverageAllowedOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
 });
 
 export const getOrCreateCustomerConfigOutboundSchema = z.object({
-    disable_pooled_balance: z.union([z.boolean(), z.undefined()]).optional()
+	disable_pooled_balance: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const getOrCreateCustomerParamsOutboundSchema = z.object({
-    customer_id: z.string().nullable(),
-    name: z.union([z.string(), z.undefined()]).optional().nullable(),
-    email: z.union([z.string(), z.undefined()]).optional().nullable(),
-    fingerprint: z.union([z.string(), z.undefined()]).optional().nullable(),
-    metadata: z.union([z.record(z.string(), z.any()), z.undefined()]).optional().nullable(),
-    stripe_id: z.union([z.string(), z.undefined()]).optional().nullable(),
-    create_in_stripe: z.union([z.boolean(), z.undefined()]).optional(),
-    auto_enable_plan_id: z.union([z.string(), z.undefined()]).optional(),
-    send_email_receipts: z.union([z.boolean(), z.undefined()]).optional(),
-    billing_controls: z.union([getOrCreateCustomerBillingControlsOutboundSchema, z.undefined()]).optional(),
-    config: z.union([getOrCreateCustomerConfigOutboundSchema, z.undefined()]).optional(),
-    expand: z.union([z.array(z.string()), z.undefined()]).optional()
+	customer_id: z.string().nullable(),
+	name: z.union([z.string(), z.undefined()]).optional().nullable(),
+	email: z.union([z.string(), z.undefined()]).optional().nullable(),
+	fingerprint: z.union([z.string(), z.undefined()]).optional().nullable(),
+	metadata: z
+		.union([z.record(z.string(), z.any()), z.undefined()])
+		.optional()
+		.nullable(),
+	stripe_id: z.union([z.string(), z.undefined()]).optional().nullable(),
+	create_in_stripe: z.union([z.boolean(), z.undefined()]).optional(),
+	auto_enable_plan_id: z.union([z.string(), z.undefined()]).optional(),
+	send_email_receipts: z.union([z.boolean(), z.undefined()]).optional(),
+	billing_controls: z
+		.union([getOrCreateCustomerBillingControlsOutboundSchema, z.undefined()])
+		.optional(),
+	config: z
+		.union([getOrCreateCustomerConfigOutboundSchema, z.undefined()])
+		.optional(),
+	expand: z.union([z.array(z.string()), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -87,48 +113,63 @@ const customerExpandSchema = z.any();
 export const getOrCreateCustomerIntervalSchema = closedEnumSchema;
 
 export const getOrCreateCustomerPurchaseLimitSchema = z.object({
-    interval: getOrCreateCustomerIntervalSchema,
-    intervalCount: z.union([z.number(), z.undefined()]).optional(),
-    limit: z.number()
+	interval: getOrCreateCustomerIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	limit: z.number(),
 });
 
 export const getOrCreateCustomerAutoTopupSchema = z.object({
-    featureId: z.string(),
-    enabled: z.union([z.boolean(), z.undefined()]).optional(),
-    threshold: z.number(),
-    quantity: z.number(),
-    purchaseLimit: z.union([getOrCreateCustomerPurchaseLimitSchema, z.undefined()]).optional(),
-    invoiceMode: z.union([z.boolean(), z.undefined()]).optional()
+	featureId: z.string(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	threshold: z.number(),
+	quantity: z.number(),
+	purchaseLimit: z
+		.union([getOrCreateCustomerPurchaseLimitSchema, z.undefined()])
+		.optional(),
+	invoiceMode: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const getOrCreateCustomerThresholdTypeSchema = closedEnumSchema;
 
 export const getOrCreateCustomerUsageAlertSchema = z.object({
-    featureId: z.union([z.string(), z.undefined()]).optional(),
-    enabled: z.union([z.boolean(), z.undefined()]).optional(),
-    threshold: z.number(),
-    thresholdType: getOrCreateCustomerThresholdTypeSchema,
-    name: z.union([z.string(), z.undefined()]).optional()
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	enabled: z.union([z.boolean(), z.undefined()]).optional(),
+	threshold: z.number(),
+	thresholdType: getOrCreateCustomerThresholdTypeSchema,
+	name: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const getOrCreateCustomerBillingControlsSchema = z.object({
-    autoTopups: z.union([z.array(getOrCreateCustomerAutoTopupSchema), z.undefined()]).optional(),
-    spendLimits: z.union([z.array(getOrCreateCustomerSpendLimitSchema), z.undefined()]).optional(),
-    usageAlerts: z.union([z.array(getOrCreateCustomerUsageAlertSchema), z.undefined()]).optional(),
-    overageAllowed: z.union([z.array(getOrCreateCustomerOverageAllowedSchema), z.undefined()]).optional()
+	autoTopups: z
+		.union([z.array(getOrCreateCustomerAutoTopupSchema), z.undefined()])
+		.optional(),
+	spendLimits: z
+		.union([z.array(getOrCreateCustomerSpendLimitSchema), z.undefined()])
+		.optional(),
+	usageAlerts: z
+		.union([z.array(getOrCreateCustomerUsageAlertSchema), z.undefined()])
+		.optional(),
+	overageAllowed: z
+		.union([z.array(getOrCreateCustomerOverageAllowedSchema), z.undefined()])
+		.optional(),
 });
 
 export const getOrCreateCustomerParamsSchema = z.object({
-    customerId: z.string().nullable(),
-    name: z.union([z.string(), z.undefined()]).optional().nullable(),
-    email: z.union([z.string(), z.undefined()]).optional().nullable(),
-    fingerprint: z.union([z.string(), z.undefined()]).optional().nullable(),
-    metadata: z.union([z.record(z.string(), z.any()), z.undefined()]).optional().nullable(),
-    stripeId: z.union([z.string(), z.undefined()]).optional().nullable(),
-    createInStripe: z.union([z.boolean(), z.undefined()]).optional(),
-    autoEnablePlanId: z.union([z.string(), z.undefined()]).optional(),
-    sendEmailReceipts: z.union([z.boolean(), z.undefined()]).optional(),
-    billingControls: z.union([getOrCreateCustomerBillingControlsSchema, z.undefined()]).optional(),
-    config: z.union([getOrCreateCustomerConfigSchema, z.undefined()]).optional(),
-    expand: z.union([z.array(customerExpandSchema), z.undefined()]).optional()
+	customerId: z.string().nullable(),
+	name: z.union([z.string(), z.undefined()]).optional().nullable(),
+	email: z.union([z.string(), z.undefined()]).optional().nullable(),
+	fingerprint: z.union([z.string(), z.undefined()]).optional().nullable(),
+	metadata: z
+		.union([z.record(z.string(), z.any()), z.undefined()])
+		.optional()
+		.nullable(),
+	stripeId: z.union([z.string(), z.undefined()]).optional().nullable(),
+	createInStripe: z.union([z.boolean(), z.undefined()]).optional(),
+	autoEnablePlanId: z.union([z.string(), z.undefined()]).optional(),
+	sendEmailReceipts: z.union([z.boolean(), z.undefined()]).optional(),
+	billingControls: z
+		.union([getOrCreateCustomerBillingControlsSchema, z.undefined()])
+		.optional(),
+	config: z.union([getOrCreateCustomerConfigSchema, z.undefined()]).optional(),
+	expand: z.union([z.array(customerExpandSchema), z.undefined()]).optional(),
 });

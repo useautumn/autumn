@@ -3,8 +3,8 @@ import { type ClickHouseClient, createClient } from "@clickhouse/client";
 // ClickHouse URL is different from API URL
 // API: https://api.europe-west2.gcp.tinybird.co
 // ClickHouse: https://europe-west2.gcp.clickhouse.tinybird.co
-const TINYBIRD_CLICKHOUSE_URL = process.env.TINYBIRD_US_EAST_CLICKHOUSE_URL;
-const TINYBIRD_TOKEN = process.env.TINYBIRD_US_EAST_TOKEN;
+const TINYBIRD_CLICKHOUSE_URL = process.env.TINYBIRD_CLICKHOUSE_URL;
+const TINYBIRD_TOKEN = process.env.TINYBIRD_TOKEN;
 
 // Debug logging
 if (TINYBIRD_CLICKHOUSE_URL && TINYBIRD_TOKEN) {
