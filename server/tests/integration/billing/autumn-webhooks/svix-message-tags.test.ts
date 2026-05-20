@@ -23,7 +23,32 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiEntityV0, ApiProduct } from "@autumn/shared";
 import chalk from "chalk";
-import { Svix } from "svix";
+import { type MessageOut, Svix } from "svix";
+
+/**
+ * `svix.message.get` can return 404 briefly after delivery while the message
+ * is still being indexed. Retry with a short backoff so we tolerate that
+ * indexing lag without flaking.
+ */
+const getSvixMessageWithRetry = async (
+	svix: Svix,
+	appId: string,
+	messageId: string,
+	{ retries = 5, delayMs = 500 }: { retries?: number; delayMs?: number } = {},
+): Promise<MessageOut> => {
+	let lastError: unknown;
+	for (let attempt = 0; attempt < retries; attempt++) {
+		try {
+			return await svix.message.get(appId, messageId);
+		} catch (error) {
+			lastError = error;
+			const code = (error as { code?: number })?.code;
+			if (code !== 404) throw error;
+			await new Promise((resolve) => setTimeout(resolve, delayMs));
+		}
+	}
+	throw lastError;
+};
 import {
 	getTestSvixAppId,
 	setupWebhookTest,
@@ -110,7 +135,7 @@ test.concurrent(
 		expect(svixId).toBeDefined();
 
 		// ── Contract assertion 1: MessageOut.tags contains customer_id tag ───────
-		const message = await svix.message.get(appId, svixId);
+		const message = await getSvixMessageWithRetry(svix, appId, svixId);
 		const customerTag = `customer_id.${customerId}`;
 		expect(message.tags).toContain(customerTag);
 
@@ -161,7 +186,7 @@ test.concurrent(
 		expect(svixId).toBeDefined();
 
 		// ── Contract assertion: tags include BOTH customer_id and entity_id ──────
-		const message = await svix.message.get(appId, svixId);
+		const message = await getSvixMessageWithRetry(svix, appId, svixId);
 		const customerTag = `customer_id.${customerId}`;
 		const entityTag = `entity_id.${entityId}`;
 		expect(message.tags).toContain(customerTag);

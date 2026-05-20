@@ -4,6 +4,7 @@ import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan.js";
+import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook.js";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated.js";
 import type { CreateCustomerContext } from "@/internal/customers/actions/createWithDefaults/createCustomerContext.js";
 import { captureOrgEvent } from "@/utils/posthog.js";
@@ -93,6 +94,13 @@ export const executeAutumnCreateCustomerPlan = async ({
 		ctx,
 		autumnBillingPlan,
 		billingContext: context,
+	});
+
+	// Fire-and-forget: don't block customer creation on svix delivery
+	void sendBillingUpdatedWebhook({
+		ctx,
+		autumnBillingPlan,
+		originalFullCustomer: context.fullCustomer,
 	});
 
 	if (ctx.authType === AuthType.SecretKey) {
