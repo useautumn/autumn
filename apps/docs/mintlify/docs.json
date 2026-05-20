@@ -4,7 +4,7 @@
 	"name": "Autumn",
 	"colors": {
 		"primary": "#8838ff",
-		"light": "#8838ff",
+		"light": "#9b5cff",
 		"dark": "#8838ff"
 	},
 	"appearance": {
@@ -332,8 +332,8 @@
 	},
 	"background": {
 		"color": {
-			"light": "#FAFAFA",
-			"dark": "#121212"
+			"light": "#FFFFFF",
+			"dark": "#0A0A0A"
 		}
 	},
 	"navbar": {
