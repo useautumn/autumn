@@ -5,6 +5,12 @@ import react from "@vitejs/plugin-react";
 import { defineConfig, type Plugin } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
+// Defaults so the app works when no .env.local is present
+// (e.g. after `bun dw disable`). Real values from .env / infisical /
+// process.env still take precedence.
+process.env.VITE_BACKEND_URL ||= "http://localhost:8080";
+process.env.VITE_FRONTEND_URL ||= "http://localhost:3000";
+
 function printPortlessUrl(): Plugin {
 	return {
 		name: "print-portless-url",

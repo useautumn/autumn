@@ -1,5 +1,5 @@
-import { memo, startTransition, useCallback, useMemo, useState } from "react";
-import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
+import { memo, startTransition, useCallback, useMemo, useRef, useState } from "react";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
 import { useAnalyticsContext } from "./AnalyticsContext";
@@ -22,7 +22,6 @@ interface ChartSeriesConfig {
 
 const MAX_TOOLTIP_ITEMS = 5;
 const CHART_STYLE = { cursor: "default" } as const;
-const TRANSPARENT_CURSOR = { fill: "transparent", strokeWidth: 0 } as const;
 const X_TICK = { fontSize: 11, fill: "#666" } as const;
 const Y_TICK = {
 	fontSize: 11,
@@ -62,21 +61,26 @@ export const EventsBarChart = memo(function EventsBarChart({
 }) {
 	const { selectedInterval } = useAnalyticsContext();
 	const [hoveredKey, setHoveredKey] = useState<string | null>(null);
-	const [activeIndex, setActiveIndex] = useState<number | null>(null);
+	const [activeRow, setActiveRow] = useState<Row | null>(null);
+	const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+	const containerRef = useRef<HTMLDivElement>(null);
 
 	const handleBarMouseEnter = useCallback(
-		(dataKey: string) => (_data: unknown, index: number) =>
+		(dataKey: string) => (entry: any) =>
 			startTransition(() => {
 				setHoveredKey(dataKey);
-				setActiveIndex(index);
+				setActiveRow(entry?.payload ?? null);
 			}),
 		[],
 	);
+	const handleMouseMove = useCallback((e: React.MouseEvent) => {
+		const rect = containerRef.current?.getBoundingClientRect();
+		if (rect) setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+	}, []);
 	const handleChartMouseLeave = useCallback(() => {
-		startTransition(() => {
-			setHoveredKey(null);
-			setActiveIndex(null);
-		});
+		setHoveredKey(null);
+		setActiveRow(null);
+		setMousePos(null);
 	}, []);
 
 	const formatXAxis = useCallback(
@@ -98,59 +102,36 @@ export const EventsBarChart = memo(function EventsBarChart({
 		return config;
 	}, [chartConfig]);
 
-	const tooltipContent = useCallback(
-		({ active }: { active?: boolean }) => {
-			if (!active || activeIndex == null) return null;
-			const row = data.data[activeIndex];
-			if (!row) return null;
-			const period = String(row.period);
-
-			// Build items from our tracked index, not Recharts' payload
-			const allItems = chartConfig
-				.map((s) => ({ dataKey: s.yKey, value: Number(row[s.yKey] ?? 0), color: s.fill }))
-				.filter((i) => i.value !== 0);
-			const items = hoveredKey
-				? allItems.filter((i) => i.dataKey === hoveredKey)
-				: allItems.sort((a, b) => b.value - a.value);
-			if (!items.length) return null;
-
-			const visible = items.slice(0, MAX_TOOLTIP_ITEMS);
-			const overflow = items.length - visible.length;
-			const overflowSum = overflow > 0
-				? items.slice(MAX_TOOLTIP_ITEMS).reduce((s, i) => s + i.value, 0)
-				: 0;
-			return (
-				<div className="bg-popover text-popover-foreground grid min-w-[8rem] items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-xs shadow-md ring-1 ring-foreground/10">
-					<div className="font-medium">{formatXAxis(period)}</div>
-					<div className="grid gap-1">
-						{visible.map((item) => (
-							<TooltipItem
-								key={item.dataKey}
-								item={item}
-								label={rechartsConfig[item.dataKey]?.label as string ?? item.dataKey}
-							/>
-						))}
-						{overflow > 0 && (
-							<div className="flex items-center gap-2 text-muted-foreground">
-								<span className="h-2.5 w-2.5 shrink-0" />
-								<span className="flex-1">+{overflow} more</span>
-								<span className="tabular-nums">{overflowSum.toLocaleString()}</span>
-							</div>
-						)}
-					</div>
-				</div>
-			);
-		},
-		[activeIndex, hoveredKey, data.data, chartConfig, formatXAxis, rechartsConfig],
-	);
+	const tooltipData = useMemo(() => {
+		if (!activeRow) return null;
+		const allItems = chartConfig
+			.map((s) => ({ dataKey: s.yKey, value: Number(activeRow[s.yKey] ?? 0), color: s.fill }))
+			.filter((i) => i.value !== 0);
+		const items = hoveredKey
+			? allItems.filter((i) => i.dataKey === hoveredKey)
+			: allItems.sort((a, b) => b.value - a.value);
+		if (!items.length) return null;
+		return { period: String(activeRow.period), items };
+	}, [activeRow, hoveredKey, chartConfig]);
 
 	const barHandlers = useMemo(
 		() => chartConfig.map((series) => handleBarMouseEnter(series.yKey)),
 		[chartConfig, handleBarMouseEnter],
 	);
 
+	const visible = tooltipData?.items.slice(0, MAX_TOOLTIP_ITEMS) ?? [];
+	const overflow = (tooltipData?.items.length ?? 0) - visible.length;
+	const overflowSum = overflow > 0
+		? tooltipData!.items.slice(MAX_TOOLTIP_ITEMS).reduce((s, i) => s + i.value, 0)
+		: 0;
+
 	return (
-		<div className="h-full w-full">
+		<div
+			ref={containerRef}
+			className="h-full w-full relative"
+			onMouseMove={handleMouseMove}
+			onMouseLeave={handleChartMouseLeave}
+		>
 			<ChartContainer
 				config={rechartsConfig}
 				className={cn(
@@ -166,7 +147,6 @@ export const EventsBarChart = memo(function EventsBarChart({
 					barCategoryGap="10%"
 					style={CHART_STYLE}
 					throttleDelay="raf"
-					onMouseLeave={handleChartMouseLeave}
 				>
 					<CartesianGrid
 						vertical={false}
@@ -192,11 +172,6 @@ export const EventsBarChart = memo(function EventsBarChart({
 						tick={Y_TICK}
 						tickFormatter={formatCompactNumber}
 					/>
-					<Tooltip
-						cursor={TRANSPARENT_CURSOR}
-						isAnimationActive={false}
-						content={tooltipContent}
-					/>
 					{chartConfig.map((series, si) => (
 						<Bar
 							key={series.yKey}
@@ -210,6 +185,35 @@ export const EventsBarChart = memo(function EventsBarChart({
 					))}
 				</BarChart>
 			</ChartContainer>
+			{tooltipData && mousePos && (
+				<div
+					className="pointer-events-none absolute z-50 bg-popover text-popover-foreground grid min-w-[8rem] items-start gap-1.5 rounded-lg px-2.5 py-1.5 text-xs shadow-md ring-1 ring-foreground/10"
+					style={{
+						top: mousePos.y - 12,
+						...((containerRef.current?.offsetWidth ?? 0) - mousePos.x < 200
+							? { right: (containerRef.current?.offsetWidth ?? 0) - mousePos.x + 12 }
+							: { left: mousePos.x + 12 }),
+					}}
+				>
+					<div className="font-medium">{formatXAxis(tooltipData.period)}</div>
+					<div className="grid gap-1">
+						{visible.map((item) => (
+							<TooltipItem
+								key={item.dataKey}
+								item={item}
+								label={rechartsConfig[item.dataKey]?.label as string ?? item.dataKey}
+							/>
+						))}
+						{overflow > 0 && (
+							<div className="flex items-center gap-2 text-muted-foreground">
+								<span className="h-2.5 w-2.5 shrink-0" />
+								<span className="flex-1">+{overflow} more</span>
+								<span className="tabular-nums">{overflowSum.toLocaleString()}</span>
+							</div>
+						)}
+					</div>
+				</div>
+			)}
 		</div>
 	);
 });

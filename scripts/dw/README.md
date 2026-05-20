@@ -34,6 +34,8 @@ bun dw logs         # tail last 2000 lines without attaching
 bun dw reset        # nuke DB branch + containers → re-provision
 bun dw teardown     # full cleanup of this worktree
 bun dw teardown --all   # full cleanup of every agent worktree
+bun dw disable      # rename .env.local -> .env.local.disabled (fall back to canonical env)
+bun dw enable       # rename .env.local.disabled -> .env.local
 ```
 
 ## Subcommands
@@ -111,6 +113,20 @@ Attaches your terminal to the worktree's tmux session. Detach with `Ctrl+B` then
 
 ```sh
 bun dw attach
+```
+
+### `bun dw disable`
+Renames each managed `.env.local` to `.env.local.disabled` so tooling falls back to the canonical (infisical-injected) env. Useful when a test or script needs the canonical env without nuking your worktree provisioning.
+
+```sh
+bun dw disable
+```
+
+### `bun dw enable`
+Inverse of `disable` — restores each `.env.local.disabled` to `.env.local`.
+
+```sh
+bun dw enable
 ```
 
 ### `bun dw teardown`
