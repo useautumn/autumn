@@ -6,7 +6,7 @@ const REGION_US_WEST_2 = "us-west-2";
 const ALL_REGIONS = [REGION_US_EAST_2, REGION_US_WEST_2] as const;
 
 // Current region this instance is running in
-export const currentRegion = process.env.AWS_REGION || REGION_US_EAST_2;
+export const currentRegion = process.env.AWS_REGION || REGION_US_WEST_2;
 
 export const cacheBackupUrl = process.env.CACHE_BACKUP_URL?.trim();
 
@@ -35,4 +35,4 @@ export const getCacheUrlForRegion = ({ region }: { region: string }) => {
 	return regionToCacheUrl[region];
 };
 
-export const PRIMARY_REGION = REGION_US_EAST_2;
+export const PRIMARY_REGION = REGION_US_WEST_2;
