@@ -2,8 +2,8 @@ import type { Redis } from "ioredis";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	getRampDestinationRedis,
-	isDragonflyRampActive,
-} from "@/internal/misc/dragonflyRamp/index.js";
+	isCacheV2RampActive,
+} from "@/internal/misc/cacheV2Ramp/index.js";
 import { getActiveRedisV2Instance } from "@/internal/misc/redisV2Cache/redisV2CacheStore.js";
 import { getOrgRedis } from "../orgRedisPool.js";
 import { resolveRedisV2 } from "../resolveRedisV2.js";
@@ -29,7 +29,7 @@ const withRampClustersIfActive = ({
 	orgId?: string;
 }): Redis[] => {
 	if (getActiveRedisV2Instance() !== "dragonfly") return candidates;
-	if (!isDragonflyRampActive({ orgId })) return candidates;
+	if (!isCacheV2RampActive({ orgId })) return candidates;
 	const destination = getRampDestinationRedis();
 	if (!destination) return candidates;
 	return [...candidates, destination, resolveRedisV2()];

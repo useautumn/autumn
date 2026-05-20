@@ -7,7 +7,7 @@ import {
 } from "@/external/redis/initRedis.js";
 import { REDIS_V2_COMMAND_TIMEOUT_MS } from "@/external/redis/initUtils/redisV2Config.js";
 import { decryptData } from "@/utils/encryptUtils.js";
-import { getDragonflyRampConfig } from "./dragonflyRampStore.js";
+import { getCacheV2RampConfig } from "./cacheV2RampStore.js";
 
 type CachedClient = {
 	url: string;
@@ -25,7 +25,7 @@ let lastDecryptFailureKey: string | null = null;
  *  call disconnects the old client and creates a new one. Returns null when
  *  no destination is configured (ramp is dormant). */
 export const getRampDestinationRedis = (): Redis | null => {
-	const config = getDragonflyRampConfig();
+	const config = getCacheV2RampConfig();
 	if (!config.destination) {
 		closeRampDestinationClient();
 		return null;
@@ -47,13 +47,13 @@ export const getRampDestinationRedis = (): Redis | null => {
 				? `URL changed (${cached.url} -> ${url})`
 				: "credentials rotated";
 		logger.info(
-			`[dragonflyRamp] destination ${reason}; disconnecting old client`,
+			`[cacheV2Ramp] destination ${reason}; disconnecting old client`,
 		);
 		try {
 			cached.instance.disconnect();
 		} catch (error) {
 			logger.warn(
-				`[dragonflyRamp] failed to disconnect old destination client: ${error}`,
+				`[cacheV2Ramp] failed to disconnect old destination client: ${error}`,
 			);
 		}
 		cached = null;
@@ -67,7 +67,7 @@ export const getRampDestinationRedis = (): Redis | null => {
 		if (lastDecryptFailureKey !== failureKey) {
 			lastDecryptFailureKey = failureKey;
 			logger.error(
-				`[dragonflyRamp] failed to decrypt destination connectionString for ${url}: ${error}. Ramp will route to primary until fixed.`,
+				`[cacheV2Ramp] failed to decrypt destination connectionString for ${url}: ${error}. Ramp will route to primary until fixed.`,
 			);
 		}
 		return null;
@@ -83,11 +83,11 @@ export const getRampDestinationRedis = (): Redis | null => {
 	});
 
 	instance.on("error", (error) => {
-		logger.error(`[dragonflyRamp] destination=${url}: ${error.message}`);
+		logger.error(`[cacheV2Ramp] destination=${url}: ${error.message}`);
 	});
 
 	instance.on("ready", () => {
-		logger.info(`[dragonflyRamp] destination=${url}: connected`);
+		logger.info(`[cacheV2Ramp] destination=${url}: connected`);
 	});
 
 	cached = { url, connectionString, instance };
@@ -101,7 +101,7 @@ export const closeRampDestinationClient = () => {
 		cached.instance.disconnect();
 	} catch (error) {
 		logger.warn(
-			`[dragonflyRamp] failed to disconnect destination client during close: ${error}`,
+			`[cacheV2Ramp] failed to disconnect destination client during close: ${error}`,
 		);
 	}
 	cached = null;

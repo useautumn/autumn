@@ -1,12 +1,12 @@
 import { getCustomerBucket } from "@/internal/misc/rollouts/rolloutUtils.js";
-import { type DragonflyRampPercent, getDragonflyRampConfig } from "./index.js";
+import { type CacheV2RampPercent, getCacheV2RampConfig } from "./index.js";
 
-const resolveDragonflyRampPercent = ({
+const resolveCacheV2RampPercent = ({
 	orgId,
 }: {
 	orgId?: string;
-}): DragonflyRampPercent => {
-	const config = getDragonflyRampConfig();
+}): CacheV2RampPercent => {
+	const config = getCacheV2RampConfig();
 	if (orgId && config.orgs[orgId]) return config.orgs[orgId];
 	return {
 		percent: config.percent,
@@ -16,14 +16,14 @@ const resolveDragonflyRampPercent = ({
 };
 
 /** True when the given customer should be routed to the public Dragonfly URL. */
-export const isDragonflyPublicEnabled = ({
+export const isCacheV2RampEnabled = ({
 	orgId,
 	customerId,
 }: {
 	orgId?: string;
 	customerId?: string;
 }): boolean => {
-	const resolved = resolveDragonflyRampPercent({ orgId });
+	const resolved = resolveCacheV2RampPercent({ orgId });
 	if (resolved.percent >= 100) return true;
 	if (resolved.percent <= 0) return false;
 	if (!customerId) return false;
@@ -35,12 +35,8 @@ export const isDragonflyPublicEnabled = ({
 /** True when the dragonfly public-ramp is non-zero for the given org (or globally).
  *  Used by invalidation/lock-receipt code that needs to fan out to BOTH clusters
  *  during the ramp window, even when it doesn't know the customer. */
-export const isDragonflyRampActive = ({
-	orgId,
-}: {
-	orgId?: string;
-}): boolean => {
-	const resolved = resolveDragonflyRampPercent({ orgId });
+export const isCacheV2RampActive = ({ orgId }: { orgId?: string }): boolean => {
+	const resolved = resolveCacheV2RampPercent({ orgId });
 	return resolved.percent > 0;
 };
 
@@ -50,7 +46,7 @@ export const isDragonflyRampActive = ({
  *  Mirrors `isSnapshotCacheStale` in rolloutUtils.ts. Use when reading from
  *  either Dragonfly cluster — if the customer was on the OTHER cluster when
  *  the entry was written, and has since crossed back, the entry is stale. */
-export const isDragonflyRampCacheStale = ({
+export const isCacheV2RampCacheStale = ({
 	orgId,
 	customerId,
 	cachedAt,
@@ -59,7 +55,7 @@ export const isDragonflyRampCacheStale = ({
 	customerId?: string;
 	cachedAt?: number;
 }): boolean => {
-	const resolved = resolveDragonflyRampPercent({ orgId });
+	const resolved = resolveCacheV2RampPercent({ orgId });
 	if (!resolved.changedAt) return false;
 	if (!customerId) return false;
 

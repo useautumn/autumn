@@ -6,8 +6,7 @@ export const ADMIN_CUSTOMER_BLOCK_CONFIG_KEY =
 export const ADMIN_ORG_LIMITS_CONFIG_KEY = "admin/org-limits-config.json";
 export const ADMIN_REDIS_V2_CACHE_CONFIG_KEY =
 	"admin/redis-v2-cache-config.json";
-export const ADMIN_DRAGONFLY_RAMP_CONFIG_KEY =
-	"admin/dragonfly-ramp-config.json";
+export const ADMIN_CACHE_V2_RAMP_CONFIG_KEY = "admin/cache-v2-ramp-config.json";
 export const ADMIN_JOB_QUEUE_CONFIG_KEY = "admin/job-queue-config.json";
 export const ADMIN_MISCELLANEOUS_EDGE_CONFIG_KEY =
 	"admin/miscellaneous-edge-config.json";
@@ -52,9 +51,9 @@ export const getAdminEdgeConfigSources = () => ({
 			key: ADMIN_REDIS_V2_CACHE_CONFIG_KEY,
 		},
 		{
-			id: "dragonfly-ramp",
-			label: "Dragonfly Public Ramp",
-			key: ADMIN_DRAGONFLY_RAMP_CONFIG_KEY,
+			id: "cache-v2-ramp",
+			label: "Cache V2 Ramp",
+			key: ADMIN_CACHE_V2_RAMP_CONFIG_KEY,
 		},
 		{
 			id: "job-queues",

@@ -2,8 +2,8 @@ import type { Redis } from "ioredis";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import {
 	getRampDestinationRedis,
-	isDragonflyPublicEnabled,
-} from "@/internal/misc/dragonflyRamp/index.js";
+	isCacheV2RampEnabled,
+} from "@/internal/misc/cacheV2Ramp/index.js";
 import type { RedisV2InstanceName } from "@/internal/misc/redisV2Cache/redisV2CacheSchemas.js";
 import { getActiveRedisV2Instance } from "@/internal/misc/redisV2Cache/redisV2CacheStore.js";
 import {
@@ -40,7 +40,7 @@ export const resolveRedisV2 = (opts?: {
 	}
 
 	if (activeInstance === "dragonfly") {
-		if (opts && isDragonflyPublicEnabled(opts)) {
+		if (opts && isCacheV2RampEnabled(opts)) {
 			const destination = getRampDestinationRedis();
 			if (destination) return destination;
 			if (!publicRouteWarned) {

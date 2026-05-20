@@ -21,7 +21,7 @@ export const RampDestinationSchema = z.object({
 		),
 });
 
-export const DragonflyRampConfigSchema = z.object({
+export const CacheV2RampConfigSchema = z.object({
 	destination: RampDestinationSchema.nullable().default(null),
 	percent: z.number().min(0).max(100).default(0),
 	previousPercent: z.number().min(0).max(100).default(0),
@@ -30,5 +30,5 @@ export const DragonflyRampConfigSchema = z.object({
 });
 
 export type RampDestination = z.infer<typeof RampDestinationSchema>;
-export type DragonflyRampConfig = z.infer<typeof DragonflyRampConfigSchema>;
-export type DragonflyRampPercent = z.infer<typeof RolloutPercentSchema>;
+export type CacheV2RampConfig = z.infer<typeof CacheV2RampConfigSchema>;
+export type CacheV2RampPercent = z.infer<typeof RolloutPercentSchema>;

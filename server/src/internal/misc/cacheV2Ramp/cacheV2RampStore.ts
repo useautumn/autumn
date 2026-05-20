@@ -1,16 +1,16 @@
 import { ms } from "@autumn/shared";
-import { ADMIN_DRAGONFLY_RAMP_CONFIG_KEY } from "@/external/aws/s3/adminS3Config.js";
+import { ADMIN_CACHE_V2_RAMP_CONFIG_KEY } from "@/external/aws/s3/adminS3Config.js";
 import { registerEdgeConfig } from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
 import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
 import {
-	type DragonflyRampConfig,
-	DragonflyRampConfigSchema,
+	type CacheV2RampConfig,
+	CacheV2RampConfigSchema,
 	type RampDestination,
-} from "./dragonflyRampSchemas.js";
+} from "./cacheV2RampSchemas.js";
 
-const store = createEdgeConfigStore<DragonflyRampConfig>({
-	s3Key: ADMIN_DRAGONFLY_RAMP_CONFIG_KEY,
-	schema: DragonflyRampConfigSchema,
+const store = createEdgeConfigStore<CacheV2RampConfig>({
+	s3Key: ADMIN_CACHE_V2_RAMP_CONFIG_KEY,
+	schema: CacheV2RampConfigSchema,
 	defaultValue: () => ({
 		destination: null,
 		percent: 0,
@@ -23,11 +23,11 @@ const store = createEdgeConfigStore<DragonflyRampConfig>({
 
 registerEdgeConfig({ store });
 
-export const getDragonflyRampConfig = (): DragonflyRampConfig => store.get();
+export const getCacheV2RampConfig = (): CacheV2RampConfig => store.get();
 
-export const getDragonflyRampStatus = () => store.getStatus();
+export const getCacheV2RampStatus = () => store.getStatus();
 
-export const updateDragonflyRampPercent = async ({
+export const updateCacheV2RampPercent = async ({
 	percent,
 	orgId,
 }: {
@@ -61,7 +61,7 @@ export const updateDragonflyRampPercent = async ({
 	});
 };
 
-export const removeDragonflyRampOrg = async ({ orgId }: { orgId: string }) => {
+export const removeCacheV2RampOrg = async ({ orgId }: { orgId: string }) => {
 	const current = await store.readFromSource();
 	if (!current.orgs[orgId]) return;
 	const { [orgId]: _removed, ...rest } = current.orgs;
@@ -69,7 +69,7 @@ export const removeDragonflyRampOrg = async ({ orgId }: { orgId: string }) => {
 };
 
 /** Write the destination URL + encrypted connection string. Pass null to clear. */
-export const updateDragonflyRampDestination = async ({
+export const updateCacheV2RampDestination = async ({
 	destination,
 }: {
 	destination: RampDestination | null;
@@ -79,8 +79,8 @@ export const updateDragonflyRampDestination = async ({
 };
 
 /** Test-only: override the in-memory config without writing to S3. */
-export const _setDragonflyRampConfigForTesting = (
-	config: Partial<DragonflyRampConfig>,
+export const _setCacheV2RampConfigForTesting = (
+	config: Partial<CacheV2RampConfig>,
 ) => {
 	store._setRuntimeConfigForTesting({
 		destination: null,

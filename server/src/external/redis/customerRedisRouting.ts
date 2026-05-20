@@ -2,8 +2,8 @@ import type { Redis } from "ioredis";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	getRampDestinationRedis,
-	isDragonflyRampActive,
-} from "@/internal/misc/dragonflyRamp/index.js";
+	isCacheV2RampActive,
+} from "@/internal/misc/cacheV2Ramp/index.js";
 import { getActiveRedisV2Instance } from "@/internal/misc/redisV2Cache/redisV2CacheStore.js";
 import { getOrgRedis, type OrgWithRedisConfig } from "./orgRedisPool.js";
 import { resolveRedisV2 } from "./resolveRedisV2.js";
@@ -118,7 +118,7 @@ export const getRedisTargetsForCustomer = ({
 	// kill switch disables the ramp fan-out.
 	if (
 		getActiveRedisV2Instance() === "dragonfly" &&
-		isDragonflyRampActive({ orgId: org.id })
+		isCacheV2RampActive({ orgId: org.id })
 	) {
 		const destination = getRampDestinationRedis();
 		if (destination) {
