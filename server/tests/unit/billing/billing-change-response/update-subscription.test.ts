@@ -274,4 +274,56 @@ describe("buildBillingChangeResponse — updateSubscription", () => {
 		});
 		expect(updated?.previous_attributes).toEqual({});
 	});
+
+	// Regression for the collapseSamePlanIdPairs double-match bug: an inserted
+	// `activated` paired with an expired update of the same plan_id must merge
+	// to exactly one `updated`; a SECOND expired update for the same plan_id
+	// must remain a standalone `expired` — not re-pair with the already-merged
+	// activated entry.
+	test("collapse same-plan_id pairs — only one activated+expired merges, extras stay as-is", () => {
+		const newPro = makeFullCusProduct({
+			planId: "pro",
+			status: CusProductStatus.Active,
+			startedAt: NOW,
+			id: "cp_pro_new",
+		});
+		const oldPro = makeFullCusProduct({
+			planId: "pro",
+			startedAt: NOW - 30_000,
+			id: "cp_pro_old",
+		});
+		const olderPro = makeFullCusProduct({
+			planId: "pro",
+			startedAt: NOW - 60_000,
+			id: "cp_pro_older",
+		});
+
+		const response = buildBillingChangeResponse({
+			ctx,
+			originalFullCustomer: makeFullCustomer({
+				customerProducts: [oldPro, olderPro],
+			}),
+			autumnBillingPlan: makeAutumnBillingPlan({
+				inserts: [newPro],
+				updates: [
+					makeUpdate({
+						customerProduct: oldPro,
+						updates: { status: CusProductStatus.Expired },
+					}),
+					makeUpdate({
+						customerProduct: olderPro,
+						updates: { status: CusProductStatus.Expired },
+					}),
+				],
+			}),
+		});
+		logChangeResponse("update / triple same-plan_id collapse", response);
+
+		// Expect ONE `updated` (newPro + the first expired merged) and ONE
+		// `expired` (the second leftover) — not two `updated`.
+		expectBillingChangeResponse(response, {
+			updated: ["pro"],
+			expired: ["pro"],
+		});
+	});
 });

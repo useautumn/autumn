@@ -51,6 +51,11 @@ const collapseSamePlanIdPairs = (
 			continue;
 		}
 
+		// Mark BOTH ends of the pair consumed — otherwise a later iteration's
+		// `findIndex` could re-match the current index `i` (the loop's
+		// top-of-iteration `consumed.has(i)` only guards revisiting `i` as
+		// the iterator, not as a pairing candidate).
+		consumed.add(i);
 		consumed.add(pairIdx);
 		const activatedChange = change.action === "activated" ? change : changes[pairIdx];
 		const expiredChange = change.action === "expired" ? change : changes[pairIdx];
