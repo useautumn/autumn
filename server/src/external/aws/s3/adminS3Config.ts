@@ -7,6 +7,8 @@ export const ADMIN_ORG_LIMITS_CONFIG_KEY = "admin/org-limits-config.json";
 export const ADMIN_REDIS_V2_CACHE_CONFIG_KEY =
 	"admin/redis-v2-cache-config.json";
 export const ADMIN_JOB_QUEUE_CONFIG_KEY = "admin/job-queue-config.json";
+export const ADMIN_MISCELLANEOUS_EDGE_CONFIG_KEY =
+	"admin/miscellaneous-edge-config.json";
 export const BLUE_GREEN_ACTIVE_SLOT_KEY = "admin/blue-green-active-slot.json";
 export const BLUE_GREEN_CRON_ACTIVE_SLOT_KEY =
 	"admin/blue-green-cron-active-slot.json";
@@ -51,6 +53,11 @@ export const getAdminEdgeConfigSources = () => ({
 			id: "job-queues",
 			label: "Job Queues",
 			key: ADMIN_JOB_QUEUE_CONFIG_KEY,
+		},
+		{
+			id: "miscellaneous",
+			label: "Miscellaneous",
+			key: ADMIN_MISCELLANEOUS_EDGE_CONFIG_KEY,
 		},
 		{
 			id: "stripe-sync",
