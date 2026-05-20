@@ -36,18 +36,18 @@ export default function Problem() {
 					<div className="flex flex-col mb-2 gap-3 pl-[28px] xl:pl-[90px] pr-6 xl:pr-8 pt-14 sm:pt-16 xl:pt-16 items-center xl:items-start">
 						<h2 className="font-normal tracking-[-4%] leading-[32px] xl:leading-[40px] mb-2 xl:mb-4 text-center xl:text-left">
 							<span className="block text-[#686868] text-[30px] md:text-[36px] xl:text-[40px]">
-								Say goodbye to the 
+								Say goodbye to your 
 							</span>
 							<span className="block text-white text-[30px] md:text-[36px] xl:text-[40px]">
-								old way of billing.
+								vibecoded infra.
 							</span>
 						</h2>
 						<p className="text-[#888888] font-light text-[16px] md:text-[18px] xl:text-[16px] tracking-[-2%] leading-[20px] mb-8 xl:mb-10 max-w-sm md:max-w-lg xl:max-w-sm text-center xl:text-left">
-							Maintaining payment logic, customer balances and feature access
-							across pricing and product changes is months of work.
+							AI billing is harder than seat-based. Managing payments, balances and entitlements
+							across pricing and product changes becomes messy quickly.
 							<span className="text-white">
 								{" "}
-								Autumn replaces all the billing code you're building yourself.
+								Autumn decouples your billing logic from code.
 							</span>
 						</p>
 					</div>
