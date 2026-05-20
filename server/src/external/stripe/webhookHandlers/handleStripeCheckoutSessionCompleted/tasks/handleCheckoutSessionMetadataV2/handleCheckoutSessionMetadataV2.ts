@@ -7,10 +7,11 @@ import { modifyStripeSubscriptionFromCheckout } from "@/external/stripe/webhookH
 import { syncSubscriptionItemMetadataFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/syncSubscriptionItemMetadataFromCheckout";
 import { updateBillingPlanFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/updateBillingPlanFromCheckout";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import { checkoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkoutSessionLock";
 import { persistDeferredCreateSchedule } from "@/internal/billing/v2/actions/createSchedule/utils/persistDeferredCreateSchedule";
+import { checkoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkoutSessionLock";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
+import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { billingPlanToSendProductsUpdated } from "@/internal/billing/v2/workflows/sendProductsUpdated/billingPlanToSendProductsUpdated";
 import { MetadataService } from "@/internal/metadata/MetadataService";
 import { workflows } from "@/queue/workflows";
@@ -92,6 +93,13 @@ export const handleCheckoutSessionMetadataV2 = async ({
 		ctx,
 		autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
 		billingContext: updatedDeferredData.billingContext,
+	});
+
+	// Fire-and-forget billing.updated webhook (mirrors executeBillingPlan)
+	void sendBillingUpdatedWebhook({
+		ctx,
+		autumnBillingPlan: updatedDeferredData.billingPlan.autumn,
+		originalFullCustomer: updatedDeferredData.billingContext.fullCustomer,
 	});
 
 	// Delete metadata after successful execution

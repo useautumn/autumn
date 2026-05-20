@@ -37,7 +37,7 @@ class FinalizeLockGlobals(BaseModel):
         return m
 
 
-Action = Literal[
+FinalizeLockAction = Literal[
     "confirm",
     "release",
 ]
@@ -47,7 +47,7 @@ r"""Use 'confirm' to commit the deduction, or 'release' to return the held balan
 class FinalizeBalanceParamsTypedDict(TypedDict):
     lock_id: str
     r"""The lock ID that was passed into the previous check call."""
-    action: Action
+    action: FinalizeLockAction
     r"""Use 'confirm' to commit the deduction, or 'release' to return the held balance."""
     override_value: NotRequired[float]
     r"""Additional properties to attach to this finalize lock event."""
@@ -59,7 +59,7 @@ class FinalizeBalanceParams(BaseModel):
     lock_id: str
     r"""The lock ID that was passed into the previous check call."""
 
-    action: Action
+    action: FinalizeLockAction
     r"""Use 'confirm' to commit the deduction, or 'release' to return the held balance."""
 
     override_value: Optional[float] = None
