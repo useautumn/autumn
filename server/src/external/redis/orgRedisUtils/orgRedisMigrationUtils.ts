@@ -4,6 +4,7 @@ import {
 	getRampDestinationRedis,
 	isDragonflyRampActive,
 } from "@/internal/misc/dragonflyRamp/index.js";
+import { getActiveRedisV2Instance } from "@/internal/misc/redisV2Cache/redisV2CacheStore.js";
 import { getOrgRedis } from "../orgRedisPool.js";
 import { resolveRedisV2 } from "../resolveRedisV2.js";
 
@@ -12,20 +13,26 @@ const dedupeRedisInstances = ({ candidates }: { candidates: Redis[] }) =>
 		(candidate, index) => candidates.indexOf(candidate) === index,
 	);
 
-/** Adds the ramp destination client to the candidate list when the ramp is
- *  non-zero for this org. During ramp, locks/cleanup state may exist on EITHER
- *  cluster — scanning both prevents loss across boundary crossings. */
-const withRampDestinationIfActive = ({
+/** Adds BOTH primary and ramp destination clients to the candidate list when
+ *  the ramp is non-zero for this org. During ramp, lock/cleanup state may
+ *  exist on EITHER cluster — scanning both prevents loss across boundary
+ *  crossings.
+ *
+ *  Gated on `activeInstance === "dragonfly"` so the upstash/redis kill switch
+ *  disables ramp fan-out (when active is non-dragonfly, ramp traffic isn't
+ *  routed to either cluster). */
+const withRampClustersIfActive = ({
 	candidates,
 	orgId,
 }: {
 	candidates: Redis[];
 	orgId?: string;
 }): Redis[] => {
+	if (getActiveRedisV2Instance() !== "dragonfly") return candidates;
 	if (!isDragonflyRampActive({ orgId })) return candidates;
 	const destination = getRampDestinationRedis();
 	if (!destination) return candidates;
-	return [...candidates, destination];
+	return [...candidates, destination, resolveRedisV2()];
 };
 
 export const getRedisV2LockReceiptCandidates = ({
@@ -40,7 +47,7 @@ export const getRedisV2LockReceiptCandidates = ({
 	}
 
 	return dedupeRedisInstances({
-		candidates: withRampDestinationIfActive({
+		candidates: withRampClustersIfActive({
 			candidates,
 			orgId: ctx.org.id,
 		}),
@@ -59,7 +66,7 @@ export const getRedisV2OrgCleanupCandidates = ({
 	}
 
 	return dedupeRedisInstances({
-		candidates: withRampDestinationIfActive({
+		candidates: withRampClustersIfActive({
 			candidates,
 			orgId: ctx.org.id,
 		}),
