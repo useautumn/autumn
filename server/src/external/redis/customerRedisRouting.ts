@@ -5,6 +5,7 @@ import {
 	isCacheV2RampActive,
 } from "@/internal/misc/cacheV2Ramp/index.js";
 import { getActiveRedisV2Instance } from "@/internal/misc/redisV2Cache/redisV2CacheStore.js";
+import { redisV2 as redisV2Primary } from "./initRedisV2.js";
 import { getOrgRedis, type OrgWithRedisConfig } from "./orgRedisPool.js";
 import { resolveRedisV2 } from "./resolveRedisV2.js";
 
@@ -51,7 +52,7 @@ export const resolveCustomerRedisRouting = ({
 
 	return {
 		...routingInfo,
-		redis: resolveRedisV2({ orgId: org.id, customerId }),
+		redis: resolveRedisV2({ customerId }),
 	};
 };
 
@@ -119,7 +120,11 @@ export const getRedisTargetsForCustomer = ({
 	if (getActiveRedisV2Instance() === "dragonfly" && isCacheV2RampActive()) {
 		const destination = getRampDestinationRedis();
 		if (destination) {
-			redisTargets.push(destination, resolveRedisV2());
+			// Use redisV2Primary directly: at 100% ramp, resolveRedisV2() with no
+			// args still goes through isCacheV2RampEnabled (which returns true
+			// when migrationPercent >= 100 regardless of customerId), so it
+			// would return the destination — leaving primary out of the fan-out.
+			redisTargets.push(destination, redisV2Primary);
 		}
 	}
 	return [...new Set(redisTargets)];

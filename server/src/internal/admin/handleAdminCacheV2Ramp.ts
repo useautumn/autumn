@@ -78,22 +78,17 @@ export const handleUpsertAdminCacheV2Ramp = createRoute({
 			});
 		}
 
-		const current = getCacheV2RampConfig();
-		if (current && current.migrationPercent > 0) {
-			throw new RecaseError({
-				message: `Cannot update destination while migrationPercent is ${current.migrationPercent}%. Set it to 0 first.`,
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
-
+		// Store enforces "refuse while migrationPercent > 0" atomically against
+		// fresh S3 state — no separate handler-level guard against the polled
+		// snapshot (which can lag in multi-instance deployments).
+		const wasConfigured = !!getCacheV2RampConfig();
 		await upsertCacheV2RampConnection({
 			connectionString: encryptData(connectionString),
 			url: redisUrl.host,
 		});
 
 		logger.info(
-			`[admin/handleUpsertAdminCacheV2Ramp] ${current ? "updated" : "created"}, url=${redisUrl.host}, actor=${actorString(ctx)}`,
+			`[admin/handleUpsertAdminCacheV2Ramp] ${wasConfigured ? "updated" : "created"}, url=${redisUrl.host}, actor=${actorString(ctx)}`,
 		);
 
 		return c.json({ success: true });
@@ -112,26 +107,22 @@ export const handleUpdateAdminCacheV2RampMigration = createRoute({
 		const { logger } = ctx;
 		const { migrationPercent } = c.req.valid("json");
 
-		const current = getCacheV2RampConfig();
-		if (!current) {
-			throw new RecaseError({
-				message:
-					"No cache V2 ramp config set. Configure destination first via PATCH /admin/cache-v2-ramp.",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
-
+		// Snapshot the previous percent for logging only; the store enforces
+		// "config must exist" atomically against fresh S3 state.
+		const previousSnapshot = getCacheV2RampConfig();
 		await updateCacheV2RampMigrationPercent({ migrationPercent });
 
 		// Warm the destination client on first ramp-up so the first ramped
 		// requests don't pay the connect-handshake latency.
-		if (migrationPercent > 0 && current.migrationPercent === 0) {
+		if (
+			migrationPercent > 0 &&
+			(previousSnapshot?.migrationPercent ?? 0) === 0
+		) {
 			getRampDestinationRedis();
 		}
 
 		logger.info(
-			`[admin/handleUpdateAdminCacheV2RampMigration] ${current.migrationPercent}% -> ${migrationPercent}%, actor=${actorString(ctx)}`,
+			`[admin/handleUpdateAdminCacheV2RampMigration] ${previousSnapshot?.migrationPercent ?? 0}% -> ${migrationPercent}%, actor=${actorString(ctx)}`,
 		);
 
 		return c.json({ success: true });
@@ -147,16 +138,8 @@ export const handleDeleteAdminCacheV2Ramp = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { logger } = ctx;
-		const current = getCacheV2RampConfig();
-
-		if (current && current.migrationPercent > 0) {
-			throw new RecaseError({
-				message: `Cannot remove cache V2 ramp while migrationPercent is ${current.migrationPercent}%. Set it to 0 first.`,
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
-
+		// Store enforces "refuse while migrationPercent > 0" atomically against
+		// fresh S3 state.
 		await removeCacheV2RampConfig();
 		closeRampDestinationClient();
 

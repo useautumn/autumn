@@ -26,10 +26,7 @@ let publicRouteWarned = false;
  *
  *  Called by every ctx-building middleware/worker — request-path code reads
  *  ctx.redisV2 rather than calling this. */
-export const resolveRedisV2 = (opts?: {
-	orgId?: string;
-	customerId?: string;
-}): Redis => {
+export const resolveRedisV2 = (opts?: { customerId?: string }): Redis => {
 	const activeInstance = getActiveRedisV2Instance();
 
 	if (activeInstance !== lastLoggedInstance) {

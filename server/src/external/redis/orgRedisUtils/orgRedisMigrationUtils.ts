@@ -5,6 +5,7 @@ import {
 	isCacheV2RampActive,
 } from "@/internal/misc/cacheV2Ramp/index.js";
 import { getActiveRedisV2Instance } from "@/internal/misc/redisV2Cache/redisV2CacheStore.js";
+import { redisV2 as redisV2Primary } from "../initRedisV2.js";
 import { getOrgRedis } from "../orgRedisPool.js";
 import { resolveRedisV2 } from "../resolveRedisV2.js";
 
@@ -27,7 +28,10 @@ const withRampClustersIfActive = ({
 	if (!isCacheV2RampActive()) return candidates;
 	const destination = getRampDestinationRedis();
 	if (!destination) return candidates;
-	return [...candidates, destination, resolveRedisV2()];
+	// Use redisV2Primary directly: at 100% ramp, resolveRedisV2() with no
+	// args returns the destination (isCacheV2RampEnabled short-circuits to
+	// true when migrationPercent >= 100 regardless of customerId).
+	return [...candidates, destination, redisV2Primary];
 };
 
 export const getRedisV2LockReceiptCandidates = ({
