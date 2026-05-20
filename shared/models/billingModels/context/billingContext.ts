@@ -86,6 +86,7 @@ export interface BillingContext {
 	successUrl?: string;
 	checkoutSessionParams?: Record<string, unknown>;
 	userMetadata?: Record<string, string>;
+	taxRateId?: string;
 
 	skipBillingChanges?: boolean;
 	dryRunStripe?: boolean;

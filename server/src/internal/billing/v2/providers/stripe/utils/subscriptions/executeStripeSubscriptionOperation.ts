@@ -51,6 +51,10 @@ export const executeStripeSubscriptionOperation = async ({
 	const wantsAutoTax =
 		!!ctx.org.config.automatic_tax && !billingContext.invoiceMode;
 
+	const taxRateParams = billingContext.taxRateId
+		? { default_tax_rates: [billingContext.taxRateId] }
+		: {};
+
 	switch (subscriptionAction.type) {
 		case "update": {
 			let stripeSubscription = billingContext.stripeSubscription;
@@ -99,6 +103,7 @@ export const executeStripeSubscriptionOperation = async ({
 					...(updateWillCreateInvoice ? invoiceModeParams : {}),
 					...(autumnMeta && { metadata: autumnMeta }),
 					...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
+					...taxRateParams,
 					expand: ["latest_invoice"],
 				},
 			);
@@ -110,6 +115,7 @@ export const executeStripeSubscriptionOperation = async ({
 				...fallbackPaymentMethodParams,
 				...(autumnMeta && { metadata: autumnMeta }),
 				...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
+				...taxRateParams,
 
 				billing_mode: { type: "flexible" },
 
