@@ -1,4 +1,4 @@
-import { CreateFeatureSchema, type Feature, FeatureType } from "@autumn/shared";
+import { CreateFeatureSchema, type Feature, FeatureType, type ModelMarkups } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { workflows } from "@/queue/workflows.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -30,14 +30,7 @@ interface CreateFeatureParams {
 		type: string;
 		config?: any;
 		event_names?: string[];
-		model_markups?: Record<
-			string,
-			{
-				markup: number;
-				input_cost?: number;
-				output_cost?: number;
-			}
-		> | null;
+		model_markups?: ModelMarkups;
 	};
 	skipGenerateDisplay?: boolean;
 }
