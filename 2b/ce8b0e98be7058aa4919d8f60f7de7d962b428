@@ -1,0 +1,19 @@
+package.json
+  s_bad397efa5eecb::t_b097af20221846 163
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.10",
+  "base_commit_sha": "2bce8b0e98be7058aa4919d8f60f7de7d962b428",
+  "prompts": {},
+  "sessions": {
+    "s_bad397efa5eecb": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1b9da9e73ffefgEHcU7lEWIkas",
+        "model": "anthropic.claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
