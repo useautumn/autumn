@@ -48,14 +48,14 @@ export default function Solution() {
 				{/* Heading */}
 				<div className="text-center mb-16 lg:mb-4 flex flex-col items-center">
 					<h2 className="text-[30px] leading-[30px] md:text-[40px] md:leading-[40px] font-normal tracking-tight mb-6">
-						<span className="text-[#A3A3A3]">Replace it all with </span>
-						<span className="text-white">Autumn</span>
+						<span className="text-[#A3A3A3]">Your app's </span>
+						<span className="text-white">customer record</span>
 					</h2>
 					<p className="text-[#A3A3A3] text-[14px] md:text-[16px] sm:text-base max-w-2xl mx-auto font-light leading-[20px] tracking-[-2%]">
-						Autumn is a database purpose-built for billing state. Configure your
+						Autumn is a database purpose-built for real-time monetization. Configure your
 						pricing
 						<br className="hidden sm:block" />
-						in the dashboard.{" "}
+						in the dashboard or CLI.{" "}
 						<span className="text-white">
 							Three API calls handle everything else.
 						</span>

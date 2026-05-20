@@ -30,6 +30,7 @@ export type CursorPaginatedFullCusQueryArgs = {
 	noneFilter?: boolean;
 	productVersionFilters?: DashboardProductVersionFilter[];
 	cusProductLimit: number;
+	customerId?: string;
 };
 
 /**
@@ -56,6 +57,7 @@ export const getCursorPaginatedFullCusQuery = ({
 	noneFilter,
 	productVersionFilters,
 	cusProductLimit,
+	customerId,
 }: CursorPaginatedFullCusQueryArgs) => {
 	const cpStatusFilter = inStatuses?.length
 		? sql`AND cp.status = ANY(ARRAY[${sql.join(
@@ -137,13 +139,12 @@ export const getCursorPaginatedFullCusQuery = ({
 				c.id,
 				c.created_at,
 				row_to_json(c) AS row_json
-			FROM customers c
-			WHERE c.org_id = ${orgId}
-				AND c.env = ${env}
-				${customerListFilterSql}
-				${cursorPredicate}
-			ORDER BY c.created_at DESC, c.id DESC
-			LIMIT ${fetchLimit}
+		FROM customers c
+		WHERE c.org_id = ${orgId}
+			AND c.env = ${env}
+			${customerId ? sql`AND (c.id = ${customerId} OR c.internal_id = ${customerId})` : sql`${customerListFilterSql}${cursorPredicate}`}
+		ORDER BY c.created_at DESC, c.id DESC
+		LIMIT ${fetchLimit}
 		),
 		cp_ranked_raw AS MATERIALIZED (
 			SELECT
