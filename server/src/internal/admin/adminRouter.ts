@@ -1,6 +1,12 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "../../honoUtils/HonoEnv";
 import {
+	handleDeleteAdminCacheV2Ramp,
+	handleGetAdminCacheV2Ramp,
+	handleUpdateAdminCacheV2RampMigration,
+	handleUpsertAdminCacheV2Ramp,
+} from "./handleAdminCacheV2Ramp";
+import {
 	handleDeleteAdminOrgRedisConfig,
 	handleGetAdminOrgRedisConfig,
 	handleUpdateAdminOrgRedisMigration,
@@ -113,6 +119,13 @@ honoAdminRouter.put(
 	"/redis-v2-cache-config",
 	...handleUpsertAdminRedisV2CacheConfig,
 );
+honoAdminRouter.get("/cache-v2-ramp", ...handleGetAdminCacheV2Ramp);
+honoAdminRouter.patch("/cache-v2-ramp", ...handleUpsertAdminCacheV2Ramp);
+honoAdminRouter.patch(
+	"/cache-v2-ramp/migration",
+	...handleUpdateAdminCacheV2RampMigration,
+);
+honoAdminRouter.delete("/cache-v2-ramp", ...handleDeleteAdminCacheV2Ramp);
 honoAdminRouter.get("/org-member", ...handleGetOrgMember);
 honoAdminRouter.get("/master-stripe-account", ...handleGetMasterStripeAccount);
 honoAdminRouter.get("/oauth-clients", ...handleListOAuthClients);
