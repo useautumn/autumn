@@ -4,6 +4,91 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="May 7th 2026">
+  ## Scheduled subscriptions with `starts_at`
+
+  You can now schedule a plan to start at a future date by passing a `starts_at` Unix timestamp (milliseconds) to `billing.attach`. Future-dated attaches create a Stripe subscription schedule that activates on the start date — perfect for delayed onboarding, contract renewals, or sales-led handoffs.
+
+  Pair `starts_at` with `ends_at` to grant access for a fixed window. One-off products now also support `ends_at` and are automatically cleaned up when the window expires.
+
+  See the [attach API reference](/api-reference/billing/attach).
+
+  ## Auto top-up succeeded webhook
+
+  A new **`billing.auto_topup_succeeded`** webhook fires whenever an auto top-up is processed for a customer. The payload includes the customer ID, feature ID, quantity granted, threshold that triggered the top-up, post-top-up balance, and the full Stripe invoice (status, total, currency, hosted URL, and PDF link).
+
+  Useful for sending receipts, syncing top-ups to your own ledger, or alerting customers that their card was charged. Supports both auto-charged and `send_invoice` modes.
+
+  See the [auto top-up webhook reference](/api-reference/webhooks/billingAutoTopupSucceeded) and the [auto top-ups guide](/documentation/modelling-pricing/auto-top-ups).
+
+  ## Promo codes in Autumn Checkout
+
+  Customers can now apply promo codes directly in Autumn Checkout. The order summary surfaces a collapsed promo trigger that expands into an input — applied codes show their discount and expiry inline, and the totals update before confirmation.
+
+  ## Discounts and coupons in subscription updates
+
+  The dashboard's subscription update flow now supports applying discounts. Existing coupons are visible in the subscription detail sheet, and you can attach a discount when changing a plan or quantities.
+
+  ## Tax and invoice credits in attach preview
+
+  `billing.preview_attach` now returns two new optional fields:
+
+  - **`tax`**: Tax breakdown for the immediate charge (total, inclusive/exclusive amounts, currency, calculation status). Powered by Stripe Tax — contact us to enable the tax flag on your organisation.
+  - **`invoice_credits`**: The customer's available Stripe invoice credit balance, so you can show "Account credit" line items in custom checkouts.
+
+  See the [preview attach reference](/api-reference/billing/previewAttach).
+
+  ## `balances` field in `track` responses
+
+  The `/track` endpoint now returns the affected feature balances — including a per-plan `breakdown` of grants, prepaid credits, usage, remaining, and rollovers — directly in the response. This removes the need for a follow-up `check` call after recording usage.
+
+  See the [track endpoint](/api-reference/core/track).
+
+  ## `processors` field on customer responses
+
+  Customer endpoints (`get`, `getOrCreate`, `update`, `list`) now return a `processors` object listing every payment processor the customer is connected to: Stripe, Vercel, and RevenueCat. The field is omitted for customers not yet present in any processor.
+
+  You can also filter `customers.list` by processor with the new `processors` query parameter.
+
+  ## Auto top-up purchase limits in customer expand
+
+  Expand `billing_controls.auto_topups.purchase_limit` on customer endpoints to retrieve the configured top-up rate limit, the current count of top-ups in the period, and the next reset timestamp. Useful for showing customers how close they are to their auto top-up cap.
+
+  ## RevenueCat invoice sync
+
+  RevenueCat-billed subscriptions now record full invoices on initial purchase, renewal, and refund events. Invoices appear alongside Stripe invoices in customer responses and the dashboard, giving you a unified view of revenue across processors.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - `starts_at` parameter on `billing.attach` for scheduled subscription start dates - [#1411](https://github.com/useautumn/autumn/pull/1411), [#1467](https://github.com/useautumn/autumn/pull/1467), [#1476](https://github.com/useautumn/autumn/pull/1476)
+      - `ends_at` on one-off products with automatic expiry cron - [#1476](https://github.com/useautumn/autumn/pull/1476)
+      - `billing.auto_topup_succeeded` webhook - [#1429](https://github.com/useautumn/autumn/pull/1429)
+      - Promo code support in Autumn Checkout - [#1446](https://github.com/useautumn/autumn/pull/1446)
+      - Discount support on subscription updates and coupon display in subscription detail - [#1463](https://github.com/useautumn/autumn/pull/1463)
+      - Tax preview in `billing.preview_attach` - [#1417](https://github.com/useautumn/autumn/pull/1417), [#1424](https://github.com/useautumn/autumn/pull/1424)
+      - Invoice credits preview in `billing.preview_attach` - [#1464](https://github.com/useautumn/autumn/pull/1464)
+      - `balances` field returned in `/track` responses - [#1470](https://github.com/useautumn/autumn/pull/1470)
+      - `processors` field and `processors` filter on customer endpoints - [#1490](https://github.com/useautumn/autumn/pull/1490)
+      - `billing_controls.auto_topups.purchase_limit` expand on customer endpoints - [#1423](https://github.com/useautumn/autumn/pull/1423)
+      - RevenueCat invoice recording on initial purchase, renewal, and refund - [#1490](https://github.com/useautumn/autumn/pull/1490)
+      - OpenAPI spec, SDKs, and dashboard updated with `starts_at` / `ends_at` fields - [#1485](https://github.com/useautumn/autumn/pull/1485)
+      - Checkout `enable_immediately` flow improvements - [#1415](https://github.com/useautumn/autumn/pull/1415)
+      - API key sheet and table UI cleanup
+    </Accordion>
+    <Accordion title="Bug fixes">
+      - Proration settings now visible during cross-entity free-to-paid attach - [#1491](https://github.com/useautumn/autumn/pull/1491)
+      - Dashboard org switcher now lists the full set of organizations - [#1475](https://github.com/useautumn/autumn/pull/1475)
+      - Balance validation no longer rejects valid edits - [#1477](https://github.com/useautumn/autumn/pull/1477)
+      - Schedule sync edge cases fixed - [#1443](https://github.com/useautumn/autumn/pull/1443)
+      - Orphaned customer products cleaned up correctly - [#1440](https://github.com/useautumn/autumn/pull/1440)
+      - Auto-sync paid feature mapping on plan edits - [#1448](https://github.com/useautumn/autumn/pull/1448)
+      - Member toolbar z-index fixed in the dashboard - [#1449](https://github.com/useautumn/autumn/pull/1449)
+      - Prepaid price v2 fixes - [#1451](https://github.com/useautumn/autumn/pull/1451)
+      - Vercel customer filtering when no Stripe is connected - [#1455](https://github.com/useautumn/autumn/pull/1455), [#1458](https://github.com/useautumn/autumn/pull/1458)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="March 23rd 2026">
   ## Usage alerts and `balances.limit_reached` webhook
 
