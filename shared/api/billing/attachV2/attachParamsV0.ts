@@ -35,6 +35,8 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
 	// For importing an existing subscription...?
 	processor_subscription_id: z.string().optional(),
 	no_billing_changes: z.boolean().optional(),
+
+	tax_rate_id: z.string().optional(),
 });
 
 export const AttachParamsV0Schema = ExtAttachParamsV0Schema.extend({

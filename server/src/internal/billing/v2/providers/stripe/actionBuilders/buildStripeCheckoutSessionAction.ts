@@ -42,10 +42,18 @@ export const buildStripeCheckoutSessionAction = ({
 		? "payment"
 		: "subscription";
 
-	// 3. Build line_items from recurring items and one-off items
+	// Payment-mode checkout has no top-level default_tax_rates, so one-off items take per-line tax_rates.
+	const taxRateId = billingContext.taxRateId;
+	const applyTaxRateToLineItem = (
+		item: Stripe.Checkout.SessionCreateParams.LineItem,
+	): Stripe.Checkout.SessionCreateParams.LineItem =>
+		taxRateId ? { ...item, tax_rates: [taxRateId] } : item;
+
 	const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
 		...recurringLineItems.filter((item) => item.quantity !== 0),
-		...oneOffLineItems.filter((item) => item.quantity !== 0),
+		...oneOffLineItems
+			.filter((item) => item.quantity !== 0)
+			.map(applyTaxRateToLineItem),
 	];
 
 	// 4. Trial handling (only for subscription mode)
@@ -66,6 +74,7 @@ export const buildStripeCheckoutSessionAction = ({
 							end_behavior: { missing_payment_method: "cancel" },
 						},
 					}),
+					...(taxRateId && { default_tax_rates: [taxRateId] }),
 					metadata: buildAutumnSubscriptionMetadata({
 						actionSource: billingContext.actionSource,
 					}),
