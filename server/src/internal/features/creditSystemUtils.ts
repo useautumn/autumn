@@ -7,7 +7,9 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import { getModelsDevPricing } from "@/internal/features/utils/getModelPricing";
+import { getModelsDevPricing } from "@/internal/features/utils/getModelPricing.js";
+
+type TokenInput = { input: number; output: number };
 
 const creditSystemContainsFeature = ({
 	creditSystem,
@@ -103,9 +105,7 @@ const getModelCreditCost = async ({
 }: {
 	modelName: string;
 	creditSystem: Feature;
-	input: number;
-	output: number;
-}) => {
+} & TokenInput) => {
 	const markups = creditSystem.model_markups || {};
 	const markupEntry = markups[modelName];
 	const { markup } = markupEntry ?? { markup: 0 };
@@ -168,10 +168,7 @@ export const getCreditCost = async ({
 	creditSystem: Feature;
 	amount?: number;
 	modelName?: string;
-	tokens?: {
-		input: number;
-		output: number;
-	};
+	tokens?: TokenInput;
 }) => {
 	if (creditSystem.type !== FeatureType.CreditSystem && creditSystem.type !== FeatureType.AiCreditSystem) {
 		return amount;

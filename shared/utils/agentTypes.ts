@@ -10,6 +10,7 @@
  * - Converters: AgentFeature ↔ Feature, AgentProduct ↔ ProductV2
  */
 
+import type { ModelMarkups } from "../models/featureModels/featureConfig/creditConfig.js";
 import {
 	FeatureType,
 	FeatureUsageType,
@@ -42,14 +43,7 @@ export interface AgentFeature {
 		metered_feature_id: string;
 		credit_cost: number;
 	}> | null;
-	model_markups?: Record<
-		string,
-		{
-			markup: number;
-			input_cost?: number;
-			output_cost?: number;
-		}
-	> | null;
+	model_markups?: ModelMarkups;
 }
 
 export interface AgentProductItem {

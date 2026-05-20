@@ -217,7 +217,8 @@ export const updateFeature = async ({
 	}
 
 	// Queue cache clear for credit system if schema or model markups changed
-	if ((feature.type === FeatureType.CreditSystem || feature.type === FeatureType.AiCreditSystem) && updatedFeature) {
+	const isCreditSystem = feature.type === FeatureType.CreditSystem || feature.type === FeatureType.AiCreditSystem;
+	if (isCreditSystem && updatedFeature) {
 		const schemaChanged =
 			updates.config != null &&
 			hasCreditSchemaChanged({

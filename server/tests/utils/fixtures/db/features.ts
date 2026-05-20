@@ -1,4 +1,4 @@
-import { AppEnv, FeatureType } from "@autumn/shared";
+import { AppEnv, FeatureType, type ModelMarkups } from "@autumn/shared";
 
 /**
  * Create a feature fixture
@@ -16,10 +16,7 @@ const create = ({
 	name: string;
 	type?: FeatureType;
 	config?: Record<string, unknown>;
-	modelMarkups?: Record<
-		string,
-		{ markup: number; input_cost?: number; output_cost?: number }
-	> | null;
+	modelMarkups?: ModelMarkups;
 }) => ({
 	internal_id: internalId ?? `internal_${id}`,
 	org_id: "org_test",

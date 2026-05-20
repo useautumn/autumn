@@ -2,6 +2,7 @@ import {
 	AllowanceType,
 	type EntInterval,
 	FeatureType,
+	type ModelMarkups,
 	type RolloverConfig,
 } from "@autumn/shared";
 import { features } from "./features";
@@ -34,10 +35,7 @@ const create = ({
 	intervalCount?: number;
 	entityFeatureId?: string | null;
 	rollover?: RolloverConfig | null;
-	modelMarkups?: Record<
-		string,
-		{ markup: number; input_cost?: number; output_cost?: number }
-	> | null;
+	modelMarkups?: ModelMarkups;
 }) => ({
 	id: id ?? `ent_${featureId}_${crypto.randomUUID().slice(0, 8)}`,
 	created_at: Date.now(),

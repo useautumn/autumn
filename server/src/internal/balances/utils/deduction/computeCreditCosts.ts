@@ -25,18 +25,17 @@ export const computeCreditCosts = async ({
 		return () => cost;
 	}
 
+	const tokens = deduction.tokenUsage
+		? { input: deduction.tokenUsage.inputTokens, output: deduction.tokenUsage.outputTokens }
+		: undefined;
+
 	await Promise.all(
 		cusEnts.map(async (ce) => {
 			const creditCost = await getCreditCost({
 				featureId: deduction.feature.id,
 				creditSystem: ce.entitlement.feature,
 				modelName: deduction.tokenUsage?.modelName,
-				tokens: deduction.tokenUsage
-					? {
-							input: deduction.tokenUsage.inputTokens,
-							output: deduction.tokenUsage.outputTokens,
-						}
-					: undefined,
+				tokens,
 			});
 			costMap.set(ce.id, creditCost);
 		}),
