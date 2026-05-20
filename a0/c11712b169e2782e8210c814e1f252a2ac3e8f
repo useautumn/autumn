@@ -1,0 +1,125 @@
+packages/sdk/src/funcs/billing-attach.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 77
+packages/autumn-js/src/generated/multiAttachSchemas.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 5,11-13,17-19,23-25,29-30,34-36,40-41,45-49,53-55,59-60,66-68,72-79,83-84,88-91,95-101,105-106,110-112,116-120,124-127,131-133,137-138,142-144,148-152,156-157,161-163,167-169,183-185,191-192,202-209,217-218,224-227,231-237,241-242,246-250,258-261,269-273,277-279,283-285,289-301,307-308,312-316,320-332
+packages/openapi/v2.3/contracts/referralsContract.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 8-42,114-148
+packages/sdk/src/funcs/rewards-redeem-code.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 1-165
+apps/docs/mintlify/documentation/concepts/overview.mdx
+  s_d3a96070227a8a::t_93080284f4ecb0 102-107
+packages/autumn-js/src/generated/redeemReferralCodeSchemas.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 5,9-10,14-16,20-21
+packages/autumn-js/src/generated/openCustomerPortalSchemas.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 5,9-11,15-16,20-22
+others/python-sdk/src/autumn_sdk/rewards_sdk.py
+  s_d3a96070227a8a::t_93080284f4ecb0 1-196
+packages/autumn-js/src/generated/createReferralCodeSchemas.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 5,9-10,14-16,20-21
+packages/sdk/README.md
+  s_d3a96070227a8a::t_93080284f4ecb0 265,275,360,709-712,782,792,878,1239
+packages/autumn-js/src/generated/aggregateEventsSchemas.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 5,8,11-12,16-18,22-23,27-28,31,34-35,39-47,57-65
+packages/sdk/.speakeasy/code-samples.overlay.yaml
+  s_d3a96070227a8a::t_93080284f4ecb0 981-1002
+packages/autumn-js/src/generated/setupPaymentSchemas.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 5,9-11,17-19,25-27,31-32,36-37,41-42,46-47,51-53,57-59,63-65,69-70,73,76-78,82-89,93-94,98-101,105-111,115-116,119,122-124,128-135,139-140,144-147,151-157,161-163,167-170,174-178,182-183,187-188,192-193,197-198,202-223,231-233,239-240,250-257,265-266,272-275,279-285,291-292,302-309,317-318,324-327,331-337,345-347,355-358,362-366,372-393
+packages/sdk/src/models/index.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 45
+apps/docs/mintlify/api-reference/billing/setupPayment.mdx
+  s_d3a96070227a8a::t_93080284f4ecb0 434-437
+others/python-sdk/src/autumn_sdk/models/setuppaymentop.py
+  s_d3a96070227a8a::t_93080284f4ecb0 1157-1158,1228-1230,1255
+others/python-sdk/src/autumn_sdk/sdk.py
+  s_d3a96070227a8a::t_93080284f4ecb0 28,40,50
+packages/autumn-js/src/generated/getOrCreateCustomerSchemas.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 5,9-11,15-16,20,24-26,30-35,39-41,45-49,53-54,58-61,65,69-80,90-92,96-101,107-111,115-118,122-133
+packages/autumn-js/src/generated/previewUpdateSubscriptionSchemas.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 5,9-11,17-19,25-27,31-33,37-38,42,46-49,53-54,58-66,70-73,77-78,82-90,94-95,99-102,106-110,114-115,119-120,124-125,129-131,135-137,141-142,145,148-150,154-161,165-166,170-173,177-183,187-188,191,194-196,200-207,211-212,216-219,223-229,233-235,239-242,246-250,254-256,260-261,265,269-283,295-297,303-304,314-321,329-330,336-339,343-349,355-356,366-373,381-382,388-391,395-401,409-411,419-422,426-430,440-454,458-463,467-472,480-484,488-499
+packages/openapi/openapi-stripped.yml
+  s_d3a96070227a8a::t_93080284f4ecb0 8105-8109,10080-10084,13630-13634,18234-18297
+apps/docs/mintlify/api-reference/billing/attach.mdx
+  s_d3a96070227a8a::t_93080284f4ecb0 531-534
+packages/sdk/src/models/preview-attach-op.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 884-887,2220,2271,2296
+packages/sdk/src/models/redeem-reward-code-op.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 1-135
+others/python-sdk/src/autumn_sdk/billing.py
+  s_d3a96070227a8a::t_93080284f4ecb0 64,98,153,267,301,356,1035,1069,1125,1246,1280,1336,2620,2648,2697,2809,2837,2886
+packages/autumn-js/src/generated/previewMultiAttachSchemas.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 5,11-13,17-19,23-25,29-30,34-36,40-41,45-48,52-53,57-65,69-72,76-77,81-89,93-94,98-101,105-109,113-114,118-119,123-124,128-130,134-135,138,141-143,147-154,158-159,163-166,170-176,180-181,185-187,191-195,199-202,206-208,212-213,217-219,223-227,231-232,236-238,242-244,260-262,268-269,279-286,294-295,301-304,308-314,318-319,323-327,335-338,346-350,354-356,360-362,366-378,382-387,391-396,404-408,412-424,428-440
+packages/autumn-js/src/generated/listPlansSchemas.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 5,9-11,15-16,20-21,25-26,30-31,35,39-41,49-52,58-63,69-70,80-87,93-96,100-107,115-118,128-132,136-151,155
+apps/docs/mintlify/welcome.mdx
+  s_d3a96070227a8a::t_93080284f4ecb0 9,11,13-38,48,50-57,71,73,75-79,90,92-94,96-99,101,103,105-106,108,110,112-113,115-116,118,129-130
+packages/sdk/src/sdk/rewards.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 1-24
+packages/openapi/openapi.yml
+  s_d3a96070227a8a::t_93080284f4ecb0 7949-7952,8580-8584,8681,10062-10065,10693-10697,14402-14406,19198-19257
+packages/autumn-js/src/generated/attachSchemas.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 5,9-11,17-19,25-27,31-33,37-38,42-43,47-48,52-53,57-61,65-67,71-73,77-78,84-86,90-97,101-102,106-109,113-119,123-124,130-132,136-143,147-148,152-155,159-165,169-171,175-178,182-186,190-192,196-197,201-202,206-207,211-212,216-241,251-253,259-260,270-277,285-286,292-295,299-305,311-312,322-329,337-338,344-347,351-357,365-367,375-378,382-386,396-421,427-428,432-436
+packages/sdk/src/sdk/billing.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 14-15,19-80,82-115,117-163,165-214,216-250,252-302,304-342,344-356,358-370
+others/python-sdk/src/autumn_sdk/models/redeemrewardcodeop.py
+  s_d3a96070227a8a::t_93080284f4ecb0 1-86
+packages/autumn-js/src/generated/previewAttachSchemas.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 5,9-11,17-19,25-27,31-33,37-38,42-43,47-48,52-53,57-60,64-65,69-77,81-84,88-89,93-101,105-106,110-113,117-121,125-126,130-131,135-136,140-142,146-148,152-153,156,159-161,165-172,176-177,181-184,188-194,198-199,202,205-207,211-218,222-223,227-230,234-240,244-246,250-253,257-261,265-267,271-272,276-277,281-282,286-287,291-316,328-330,336-337,347-354,362-363,369-372,376-382,388-389,399-406,414-415,421-424,428-434,442-444,452-455,459-463,473-498,502-507,511-516,524-528,532-544
+packages/sdk/src/funcs/billing-create-schedule.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 6,12,15-21,24-27,37,54-56,58-68,70-74,78-80,82-95,97-106,108,110-118,120-122,124-128,130,132-137,139-152,154-164,166-183,185
+packages/autumn-js/src/generated/listEventsSchemas.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 5,8,11-12,16-21,24,27-28,32-37,44,47-49,53-57,61-67,71-72
+packages/autumn-js/src/generated-test/test.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 1
+others/python-sdk/src/autumn_sdk/models/previewattachop.py
+  s_d3a96070227a8a::t_93080284f4ecb0 1222-1223,1305-1307,1335
+packages/sdk/src/models/attach-op.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 869-872,1860,1904,1929
+apps/docs/mintlify/api/openapi.yml
+  s_d3a96070227a8a::t_93080284f4ecb0 8468-8472,10575-10579,14294-14298,19293-19380
+others/python-sdk/README.md
+  s_d3a96070227a8a::t_93080284f4ecb0 303-306
+packages/sdk/src/sdk/sdk.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 18,61-63
+packages/sdk/src/models/setup-payment-op.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 819-822,1753,1793,1814
+others/python-sdk/src/autumn_sdk/models/attachop.py
+  s_d3a96070227a8a::t_93080284f4ecb0 1217-1218,1300-1302,1330
+apps/docs/mintlify/api-reference/billing/previewAttach.mdx
+  s_d3a96070227a8a::t_93080284f4ecb0 464-467
+packages/autumn-js/src/generated/index.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 5,7,9,11-17
+packages/sdk/.speakeasy/out.openapi.yaml
+  s_d3a96070227a8a::t_93080284f4ecb0 7365-7366,7925-7927,8020,9264-9265,9824-9826,13192-13194,17657-17718
+apps/docs/mintlify/api-reference/rewards/redeemRewardCode.mdx
+  s_d3a96070227a8a::t_93080284f4ecb0 1-54
+apps/docs/mintlify/docs.json
+  s_d3a96070227a8a::t_93080284f4ecb0 262,265-266
+others/python-sdk/.speakeasy/code-samples.overlay.yaml
+  s_d3a96070227a8a::t_93080284f4ecb0 785-800
+others/python-sdk/src/autumn_sdk/models/__init__.py
+  s_d3a96070227a8a::t_93080284f4ecb0 1455-1464,2313-2314,3143-3148,4852-4859
+packages/autumn-js/src/generated/updateSubscriptionSchemas.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 5,9-11,17-19,25-27,31-33,37-38,42,46-50,54-56,60-62,66-67,70,73-75,79-86,90-91,95-98,102-108,112-113,116,119-121,125-132,136-137,141-144,148-154,158-160,164-167,171-175,179-181,185-186,190,194-208,218-220,226-227,237-244,252-253,259-262,266-272,278-279,289-296,304-305,311-314,318-324,332-334,342-345,349-353,363-377,383-384,388-392
+packages/sdk/src/funcs/billing-preview-attach.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 65
+package.json
+  s_d3a96070227a8a::t_93080284f4ecb0 163
+packages/openapi/v2.3/contracts/index.ts
+  s_d3a96070227a8a::t_93080284f4ecb0 56,111,114
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.11",
+  "base_commit_sha": "a0c11712b169e2782e8210c814e1f252a2ac3e8f",
+  "prompts": {},
+  "sessions": {
+    "s_d3a96070227a8a": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "ff026dad-c70f-4032-88a5-150a348b0b90",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
