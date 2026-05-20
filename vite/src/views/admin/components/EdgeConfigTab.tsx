@@ -6,6 +6,7 @@ import { CustomerBlockDialog } from "./CustomerBlockDialog";
 import { EdgeConfigDialog } from "./EdgeConfigDialog";
 import { FeatureFlagsDialog } from "./FeatureFlagsDialog";
 import { JobQueuesDialog } from "./JobQueuesDialog";
+import { MiscellaneousEdgeConfigDialog } from "./MiscellaneousEdgeConfigDialog";
 import { OrgLimitsDialog } from "./OrgLimitsDialog";
 import { RawEdgeConfigDialog } from "./RawEdgeConfigDialog";
 import { RedisV2CacheDialog } from "./RedisV2CacheDialog";
@@ -31,6 +32,7 @@ export function EdgeConfigTab() {
 	const [jobQueuesOpen, setJobQueuesOpen] = useState(false);
 	const [stripeSyncOpen, setStripeSyncOpen] = useState(false);
 	const [redisV2CacheOpen, setRedisV2CacheOpen] = useState(false);
+	const [miscellaneousOpen, setMiscellaneousOpen] = useState(false);
 
 	const { data: source } = useQuery<EdgeConfigSource>({
 		queryKey: ["admin-edge-config-sources"],
@@ -72,7 +74,9 @@ export function EdgeConfigTab() {
 										className="min-w-0 text-xs text-muted-foreground"
 										title={config.key}
 									>
-										<span className="text-tertiary-foreground">{config.label}:</span>{" "}
+										<span className="text-tertiary-foreground">
+											{config.label}:
+										</span>{" "}
 										<span className="font-mono">{config.key}</span>
 									</span>
 								))}
@@ -85,7 +89,9 @@ export function EdgeConfigTab() {
 			<div className="rounded-lg border border-border overflow-hidden">
 				<div className="flex items-center justify-between p-4 border-b border-border">
 					<div className="flex flex-col gap-0.5">
-						<div className="text-sm font-medium text-foreground">Feature Flags</div>
+						<div className="text-sm font-medium text-foreground">
+							Feature Flags
+						</div>
 						<div className="text-xs text-tertiary-foreground">
 							Toggle maintenance modes and feature gates globally.
 						</div>
@@ -101,7 +107,9 @@ export function EdgeConfigTab() {
 
 				<div className="flex items-center justify-between p-4 last:border-b-0">
 					<div className="flex flex-col gap-0.5">
-						<div className="text-sm font-medium text-foreground">Request Blocking</div>
+						<div className="text-sm font-medium text-foreground">
+							Request Blocking
+						</div>
 						<div className="text-xs text-tertiary-foreground">
 							Block /v1 API requests org-wide or by endpoint pattern.
 						</div>
@@ -126,7 +134,9 @@ export function EdgeConfigTab() {
 
 				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
 					<div className="flex flex-col gap-0.5">
-						<div className="text-sm font-medium text-foreground">Customer Blocking</div>
+						<div className="text-sm font-medium text-foreground">
+							Customer Blocking
+						</div>
 						<div className="text-xs text-tertiary-foreground">
 							Block a specific org, environment, and customer combination after
 							customer ID resolution.
@@ -143,7 +153,9 @@ export function EdgeConfigTab() {
 
 				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
 					<div className="flex flex-col gap-0.5">
-						<div className="text-sm font-medium text-foreground">Org Limits</div>
+						<div className="text-sm font-medium text-foreground">
+							Org Limits
+						</div>
 						<div className="text-xs text-tertiary-foreground">
 							Per-org overrides for max customer products returned in queries
 							(default 15).
@@ -160,7 +172,9 @@ export function EdgeConfigTab() {
 
 				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
 					<div className="flex flex-col gap-0.5">
-						<div className="text-sm font-medium text-foreground">Job Queues</div>
+						<div className="text-sm font-medium text-foreground">
+							Job Queues
+						</div>
 						<div className="text-xs text-tertiary-foreground">
 							Pause or resume worker consumption for shared and dedicated SQS
 							queues.
@@ -177,7 +191,9 @@ export function EdgeConfigTab() {
 
 				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
 					<div className="flex flex-col gap-0.5">
-						<div className="text-sm font-medium text-foreground">Stripe Sync</div>
+						<div className="text-sm font-medium text-foreground">
+							Stripe Sync
+						</div>
 						<div className="text-xs text-tertiary-foreground">
 							Enable Stripe webhook event syncing to the sync DB per org.
 						</div>
@@ -193,7 +209,9 @@ export function EdgeConfigTab() {
 
 				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
 					<div className="flex flex-col gap-0.5">
-						<div className="text-sm font-medium text-foreground">V2 Redis Instance</div>
+						<div className="text-sm font-medium text-foreground">
+							V2 Redis Instance
+						</div>
 						<div className="text-xs text-tertiary-foreground">
 							Switch the active V2 Redis between upstash, redis, and dragonfly
 							at runtime.
@@ -203,6 +221,25 @@ export function EdgeConfigTab() {
 						variant="primary"
 						size="sm"
 						onClick={() => setRedisV2CacheOpen(true)}
+					>
+						Edit
+					</Button>
+				</div>
+
+				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
+					<div className="flex flex-col gap-0.5">
+						<div className="text-sm font-medium text-foreground">
+							Miscellaneous
+						</div>
+						<div className="text-xs text-tertiary-foreground">
+							Catch-all rollout switches. Includes the new flat customer-model
+							allowlist for the faster set-based getFull query.
+						</div>
+					</div>
+					<Button
+						variant="primary"
+						size="sm"
+						onClick={() => setMiscellaneousOpen(true)}
 					>
 						Edit
 					</Button>
@@ -234,10 +271,7 @@ export function EdgeConfigTab() {
 
 			<OrgLimitsDialog open={orgLimitsOpen} onOpenChange={setOrgLimitsOpen} />
 
-			<JobQueuesDialog
-				open={jobQueuesOpen}
-				onOpenChange={setJobQueuesOpen}
-			/>
+			<JobQueuesDialog open={jobQueuesOpen} onOpenChange={setJobQueuesOpen} />
 
 			<StripeSyncDialog
 				open={stripeSyncOpen}
@@ -247,6 +281,11 @@ export function EdgeConfigTab() {
 			<RedisV2CacheDialog
 				open={redisV2CacheOpen}
 				onOpenChange={setRedisV2CacheOpen}
+			/>
+
+			<MiscellaneousEdgeConfigDialog
+				open={miscellaneousOpen}
+				onOpenChange={setMiscellaneousOpen}
 			/>
 		</div>
 	);
