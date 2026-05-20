@@ -179,6 +179,32 @@ html {
 	color-scheme: dark;
 }
 
+/* Midnight preset — deeper contrast */
+.preset-modern {
+	background-color: #ffffff;
+	--background: #ffffff;
+	--outer-background: #fafaf9;
+	--card: #fafaf9;
+}
+
+.preset-modern.dark {
+	--background: #0a0a0a;
+	--outer-background: #000000;
+	--interactive-secondary: #141414;
+	--interactive-secondary-hover: #1e1e1e;
+	--active-primary: #1e1e1e;
+	--input-background: #111111;
+	--muted: #111111;
+	--card: #050505;
+	--border: #1e1e1e;
+	--chart-grid-stroke: #1a1a1a;
+}
+
+.preset-modern.dark [data-slot="sheet-overlay"],
+.preset-modern.dark [data-slot="dialog-overlay"] {
+	background-color: rgb(0 0 0 / 0.6) !important;
+}
+
 @theme inline {
 	/* CUSTOM STUFF */
 	--color-tertiary-foreground: var(--tertiary-foreground);
