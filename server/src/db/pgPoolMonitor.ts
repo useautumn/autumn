@@ -54,7 +54,7 @@ const emitSnapshot = (): void => {
 		const totalCount = pool.totalCount;
 		const idleCount = pool.idleCount;
 		const waitingCount = pool.waitingCount;
-		logger.info("pg_pool_stats", {
+		logger.debug("pg_pool_stats", {
 			type: "pg_pool_stats",
 			pool: name,
 			pid: process.pid,
