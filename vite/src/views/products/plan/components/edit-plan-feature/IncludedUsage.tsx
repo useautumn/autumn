@@ -49,24 +49,10 @@ export function IncludedUsage() {
 			<div className="w-full h-auto flex items-end gap-2">
 				<div className="flex-1">
 					<div className="text-tertiary-foreground text-sm block mb-2">
-						{isAiCreditSystem ? (
-							<>
-								USD budget{" "}
-								{!isFeaturePrice
-									? "allocated to this plan"
-									: "granted before billing"}
-							</>
-						) : (
-							<>
-								Quantity of&nbsp;
-								<span className="font-medium text-foreground">
-									{getFeatureName({ feature, plural: true })}{" "}
-								</span>
-								{!isFeaturePrice
-									? " that can be used"
-									: " granted before billing"}
-							</>
-						)}
+						{isAiCreditSystem
+							? `USD budget ${isFeaturePrice ? "granted before billing" : "allocated to this plan"}`
+							: <>Quantity of&nbsp;<span className="font-medium text-foreground">{getFeatureName({ feature, plural: true })}</span>{isFeaturePrice ? " granted before billing" : " that can be used"}</>
+						}
 					</div>
 					<div className="flex items-center gap-2">
 					{isAiCreditSystem ? (

@@ -2,11 +2,11 @@ import type { ModelsDevProvider } from "@autumn/shared";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { useStore } from "@tanstack/react-form";
 import { InfoIcon, PlusIcon, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { IconButton } from "@/components/v2/buttons/IconButton";
-import { Input } from "@/components/v2/inputs/Input";
 import {
+
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
@@ -14,6 +14,8 @@ import {
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
 import { AiModelSelectDropdown } from "./AiModelSelectDropdown";
+import { CustomModelInput } from "./CustomModelInput";
+import { EditableNumberCell } from "./EditableNumberCell";
 
 interface ModelRow {
 	fullId: string;
@@ -257,99 +259,5 @@ export function AiCreditSchemaTable({
 				)}
 			</div>
 		</div>
-	);
-}
-
-function CustomModelInput({
-	modelKey,
-	onRename,
-}: {
-	modelKey: string;
-	onRename: (newKey: string) => void;
-}) {
-	const [local, setLocal] = useState(modelKey);
-	return (
-		<Input
-			variant="headless"
-			value={local}
-			onChange={(e) => setLocal(e.target.value)}
-			onBlur={() => {
-				if (local !== modelKey) onRename(local);
-			}}
-			placeholder="my-model-id"
-			className="text-sm"
-		/>
-	);
-}
-
-function EditableNumberCell({
-	form,
-	fullId,
-	field,
-	useDefaultAsPlaceholder = false,
-	allowUndefined = false,
-}: {
-	form: CreditSystemFormInstance;
-	fullId: string;
-	field: "markup" | "input_cost" | "output_cost";
-	useDefaultAsPlaceholder?: boolean;
-	allowUndefined?: boolean;
-}) {
-	const currentValue = useStore(
-		form.store,
-		(s) => s.values.model_markups[fullId]?.[field],
-	);
-	const placeholder = useStore(form.store, (s) =>
-		useDefaultAsPlaceholder ? String(s.values.defaultMarkup) : "0",
-	);
-	const [local, setLocal] = useState("");
-	const [focused, setFocused] = useState(false);
-
-	const hasValue = allowUndefined ? currentValue != null && currentValue !== 0 : currentValue != null;
-	const displayed = focused ? local : hasValue ? String(currentValue) : "";
-
-	return (
-		<Input
-			variant="headless"
-			type="text"
-			inputMode="numeric"
-			value={displayed}
-			onChange={(e) => {
-				const raw = e.target.value;
-				if (raw === "" || /^-?\d*\.?\d*$/.test(raw)) {
-					setLocal(raw);
-					if (raw === "" && allowUndefined) {
-						form.setFieldValue("model_markups", (prev) => {
-							const entry = { ...prev[fullId] };
-							delete entry[field];
-							return { ...prev, [fullId]: entry };
-						});
-					} else if (raw !== "") {
-						const parsed = Number(raw);
-						if (!Number.isNaN(parsed)) {
-							form.setFieldValue("model_markups", (prev) => ({
-								...prev,
-								[fullId]: { ...prev[fullId], [field]: parsed },
-							}));
-						}
-					}
-				}
-			}}
-			onFocus={() => {
-				setLocal(hasValue ? String(currentValue) : "");
-				setFocused(true);
-			}}
-			onBlur={() => {
-				setFocused(false);
-				if (local === "" && !allowUndefined) {
-					form.setFieldValue("model_markups", (prev) => ({
-						...prev,
-						[fullId]: { ...prev[fullId], [field]: 0 },
-					}));
-				}
-			}}
-			placeholder={placeholder}
-			className="text-sm"
-		/>
 	);
 }
