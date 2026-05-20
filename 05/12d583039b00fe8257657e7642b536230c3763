@@ -1,0 +1,23 @@
+scripts/preload-env.ts
+  s_7a008c562a6b49::t_396af922e2ad9b 11-30
+scripts/pw/index.ts
+  s_7a008c562a6b49::t_9593b800703208 2,33-37,45-47,66,86,105-106,122-123,126,131-137,142,161
+package.json
+  s_7a008c562a6b49::t_8ca497c6f5de67 90-91
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.10",
+  "base_commit_sha": "0512d583039b00fe8257657e7642b536230c3763",
+  "prompts": {},
+  "sessions": {
+    "s_7a008c562a6b49": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1bb33cca4ffeP9qRU3VlLVDmFX",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
