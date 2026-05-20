@@ -4,6 +4,92 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="May 20th 2026">
+  ## `billing.updated` webhook
+
+  A new **`billing.updated`** webhook fires whenever a customer's plans change — activations, scheduled switches, in-place updates, and expirations all flow through a single event. The payload includes the customer, optional entity, and a normalized `plan_changes` array with subscription state, item-level diffs, and previous attributes.
+
+  Use this to keep your own systems in sync without polling — see the [billing.updated reference](/api-reference/webhooks/billingUpdated).
+
+  ## List entities endpoint
+
+  You can now list all entities on a customer in one call with the new `POST /v1/entities.list` endpoint. Supports cursor-based pagination, plan filters, and search.
+
+  See the [list entities reference](/api-reference/entities/listEntities).
+
+  ## Manual top-ups
+
+  In addition to automatic top-ups, you can now grant a customer a one-off top-up of a feature on demand. Useful for sales-led grants, overage credits, or remediation — top-ups are billed through the same flow as auto top-ups and respect existing purchase limits.
+
+  See the [auto top-ups guide](/documentation/modelling-pricing/auto-top-ups) for details.
+
+  ## `on_end` for free trials
+
+  Free trials now accept an `on_end` parameter on `billing.attach`:
+
+  - **`bill`** (default): charges the customer when the trial ends.
+  - **`revert`**: expires the trial and restores the customer's previous plan instead of billing them.
+
+  Great for "try this plan for 7 days, then go back to your current one" flows. See the [attach reference](/api-reference/billing/attach).
+
+  ## Cursor pagination on list endpoints
+
+  List endpoints now support cursor-based pagination via `start_cursor` / `next_cursor` and a `limit` of up to 5000. Existing offset behavior continues to work; switch to cursors for stable iteration across large customer or entity sets.
+
+  ## Customer workbench
+
+  The dashboard customer page now includes a **Workbench** panel — a resizable, Stripe-style log viewer for every API request scoped to that customer. Filter by endpoint or status, expand any row to see the full request/response JSON, and debug integrations without leaving the customer view.
+
+  ## Vercel pre-provisioning
+
+  Vercel Marketplace customers now get their plan provisioned the moment a resource is created, with payment authorization handled up front. Invoice handling for created, paid, and not-paid states has been split into dedicated flows for clearer billing across the marketplace lifecycle.
+
+  ## Passkey sign-in
+
+  You can now register passkeys for your Autumn dashboard account and sign in without a password. Manage passkeys from **Settings → Account**.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - `billing.updated` webhook covering activations, scheduled switches, in-place updates, and expirations - [#1637](https://github.com/useautumn/autumn/pull/1637)
+      - `POST /v1/entities.list` endpoint with cursor pagination, plan filters, and search - [#1505](https://github.com/useautumn/autumn/pull/1505), [#1513](https://github.com/useautumn/autumn/pull/1513)
+      - Manual top-ups via attach - [#1532](https://github.com/useautumn/autumn/pull/1532)
+      - `on_end` (`bill` | `revert`) parameter on attach free trials - [#1554](https://github.com/useautumn/autumn/pull/1554), [#1581](https://github.com/useautumn/autumn/pull/1581), [#1589](https://github.com/useautumn/autumn/pull/1589)
+      - Cursor-based pagination across list endpoints - [#1596](https://github.com/useautumn/autumn/pull/1596)
+      - Customer Workbench panel for per-customer API request logs - [#1525](https://github.com/useautumn/autumn/pull/1525)
+      - Vercel pre-provisioning on resource create with payment pre-authorization - [#1578](https://github.com/useautumn/autumn/pull/1578)
+      - Passkey support for dashboard sign-in - [#1587](https://github.com/useautumn/autumn/pull/1587)
+      - Per-balance mutations exposed on `/track` responses (`deductions` as JSON, plus `plan_id` and reset info) - [#1535](https://github.com/useautumn/autumn/pull/1535), [#1538](https://github.com/useautumn/autumn/pull/1538)
+      - Live normalization of expired auto top-up purchase-limit windows - [#1520](https://github.com/useautumn/autumn/pull/1520)
+      - Handle cancel with a future `starts_at` correctly - [#1507](https://github.com/useautumn/autumn/pull/1507)
+      - Favourite organizations and users in the admin command bar for faster impersonation - [#1597](https://github.com/useautumn/autumn/pull/1597)
+      - Frontend cleanups: analytics table, sidebar, empty states, and settings - [#1542](https://github.com/useautumn/autumn/pull/1542), [#1552](https://github.com/useautumn/autumn/pull/1552), [#1553](https://github.com/useautumn/autumn/pull/1553), [#1555](https://github.com/useautumn/autumn/pull/1555), [#1565](https://github.com/useautumn/autumn/pull/1565), [#1595](https://github.com/useautumn/autumn/pull/1595), [#1599](https://github.com/useautumn/autumn/pull/1599), [#1613](https://github.com/useautumn/autumn/pull/1613), [#1619](https://github.com/useautumn/autumn/pull/1619)
+      - Migration UI cleanups and "run all" reliability - [#1545](https://github.com/useautumn/autumn/pull/1545), [#1566](https://github.com/useautumn/autumn/pull/1566), [#1571](https://github.com/useautumn/autumn/pull/1571), [#1573](https://github.com/useautumn/autumn/pull/1573), [#1590](https://github.com/useautumn/autumn/pull/1590), [#1605](https://github.com/useautumn/autumn/pull/1605)
+      - Shadcn components migrated from Radix UI to Base UI for a more consistent dashboard feel - [#1519](https://github.com/useautumn/autumn/pull/1519)
+    </Accordion>
+    <Accordion title="Bug fixes">
+      - Webhook race condition resolved so events are no longer emitted with stale state - [#1620](https://github.com/useautumn/autumn/pull/1620)
+      - Added missing tags to webhook events so they can be filtered in Svix - [#1617](https://github.com/useautumn/autumn/pull/1617)
+      - Tax rate IDs now apply correctly during attach - [#1641](https://github.com/useautumn/autumn/pull/1641)
+      - Stripe Tax disabled for Vercel customers; metadata defaults applied - [#1558](https://github.com/useautumn/autumn/pull/1558)
+      - Trial revert no longer fails for customers with entities - [#1635](https://github.com/useautumn/autumn/pull/1635), [#1581](https://github.com/useautumn/autumn/pull/1581)
+      - Attach no longer errors when there are no billing changes - [#1586](https://github.com/useautumn/autumn/pull/1586)
+      - Boolean "shadow" flags no longer leak between plans on the customer object - [#1632](https://github.com/useautumn/autumn/pull/1632)
+      - List events response type corrected - [#1633](https://github.com/useautumn/autumn/pull/1633)
+      - No-op plan patches are now skipped instead of bumping the plan version - [#1628](https://github.com/useautumn/autumn/pull/1628)
+      - Custom items are deleted cleanly from a customer's plan - [#1629](https://github.com/useautumn/autumn/pull/1629)
+      - Dashboard customer cache invalidation fixed after edits - [#1612](https://github.com/useautumn/autumn/pull/1612)
+      - Entity sync and entity-id sync edge cases fixed - [#1607](https://github.com/useautumn/autumn/pull/1607), [#1614](https://github.com/useautumn/autumn/pull/1614)
+      - One-off items no longer duplicate in the subscription detail sheet - [#1574](https://github.com/useautumn/autumn/pull/1574), [#1575](https://github.com/useautumn/autumn/pull/1575)
+      - Schedule customization fixes and stale-schedule cleanup - [#1556](https://github.com/useautumn/autumn/pull/1556)
+      - Checkout session race condition resolved - [#1548](https://github.com/useautumn/autumn/pull/1548)
+      - Duplicate Stripe customer ID creation prevented - [#1528](https://github.com/useautumn/autumn/pull/1528)
+      - Cache invalidation reliability improvements across attach and edits - [#1529](https://github.com/useautumn/autumn/pull/1529), [#1530](https://github.com/useautumn/autumn/pull/1530), [#1531](https://github.com/useautumn/autumn/pull/1531)
+      - Unlimited-balance features now persist lock receipts correctly - [#1534](https://github.com/useautumn/autumn/pull/1534)
+      - Vercel marketplace bugs around customer filtering and invoicing - [#1579](https://github.com/useautumn/autumn/pull/1579)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="May 7th 2026">
   ## Scheduled subscriptions with `starts_at`
 
