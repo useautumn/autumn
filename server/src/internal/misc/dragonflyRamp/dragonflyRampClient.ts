@@ -47,16 +47,15 @@ export const getRampDestinationRedis = (): Redis | null => {
 				? `URL changed (${cached.url} -> ${url})`
 				: "credentials rotated";
 		logger.info(
-			`[dragonflyRamp] destination ${reason}; gracefully closing old client`,
+			`[dragonflyRamp] destination ${reason}; disconnecting old client`,
 		);
-		// quit() lets in-flight commands complete before closing the socket,
-		// avoiding "Connection is closed" errors on requests that still hold a
-		// reference to this client via ctx.redisV2.
-		cached.instance.quit().catch((error) => {
+		try {
+			cached.instance.disconnect();
+		} catch (error) {
 			logger.warn(
-				`[dragonflyRamp] error during old destination client quit: ${error}`,
+				`[dragonflyRamp] failed to disconnect old destination client: ${error}`,
 			);
-		});
+		}
 		cached = null;
 	}
 
@@ -95,16 +94,16 @@ export const getRampDestinationRedis = (): Redis | null => {
 	return instance;
 };
 
-/** Tear down the cached destination client. Safe to call multiple times.
- *  Uses quit() so in-flight commands held by ctx.redisV2 references can
- *  complete before the socket closes. */
+/** Tear down the cached destination client. Safe to call multiple times. */
 export const closeRampDestinationClient = () => {
 	if (!cached) return;
-	cached.instance.quit().catch((error) => {
+	try {
+		cached.instance.disconnect();
+	} catch (error) {
 		logger.warn(
-			`[dragonflyRamp] error during destination client close: ${error}`,
+			`[dragonflyRamp] failed to disconnect destination client during close: ${error}`,
 		);
-	});
+	}
 	cached = null;
 };
 
@@ -121,9 +120,11 @@ export const _setRampDestinationClientForTesting = (
 		(cached.url !== client?.url ||
 			cached.connectionString !== client?.connectionString)
 	) {
-		cached.instance.quit().catch(() => {
+		try {
+			cached.instance.disconnect();
+		} catch {
 			// best effort
-		});
+		}
 	}
 	cached = client;
 };
