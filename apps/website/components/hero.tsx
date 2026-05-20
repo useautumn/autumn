@@ -149,12 +149,9 @@ export default function Hero() {
 							<p className="hero-reveal lg:opacity-0 tracking-[-2%] w-full max-w-xs sm:max-w-[480px] md:max-w-xl text-[#FFFFFF99] md:text-[16px] text-[14px] font-light leading-5 font-sans">
 								Your {" "}
 								<span className="text-white font-light">
-									 single source of truth
+									 real-time source of truth
 								</span>{" "}
-								for usage-based, PLG and sales-led monetization. Replace your {" "}
-								<span className="text-white font-light">
-								usage limits, credit ledger and Stripe billing logic
-								</span>{" "}
+								for usage-based, PLG and sales-led monetization. Replace your usage limits, credit ledger and Stripe billing logic
 								with a flexible control plane.
 							</p>
 							
