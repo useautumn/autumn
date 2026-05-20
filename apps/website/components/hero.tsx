@@ -142,17 +142,19 @@ export default function Hero() {
 						<div className="flex flex-col gap-6 w-full px-0 lg:px-0">
 							<h1 className="hero-reveal lg:opacity-0 text-[44px] md:text-[56px] w-full max-w-sm sm:max-w-[480px] md:max-w-xl leading-[44px] tracking-[-5%] md:leading-14 font-sans">
 								<span className="text-[#FFFFFF99] font-normal">
-									Drop-in credits and billing for
+									The revenue runtime for
 								</span>{" "}
-								<span className="text-white block md:inline">AI agents</span>
+								<span className="text-white block md:inline"> AI companies</span>
 							</h1>
 							<p className="hero-reveal lg:opacity-0 tracking-[-2%] w-full max-w-xs sm:max-w-[480px] md:max-w-xl text-[#FFFFFF99] md:text-[16px] text-[14px] font-light leading-5 font-sans">
-								Stop rebuilding usage limits, credit ledgers and payment logic.{" "}
+								Your {" "}
 								<span className="text-white font-light">
-									Autumn is the customer database
+									 real-time source of truth
 								</span>{" "}
-								that scales from your first user to your largest contract.
+								for usage-based, PLG and sales-led monetization. Replace your usage limits, credit ledger and Stripe billing logic
+								with a flexible control plane.
 							</p>
+							
 						</div>
 					</div>
 					{/*
