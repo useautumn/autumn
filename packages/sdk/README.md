@@ -89,7 +89,7 @@ For supported JavaScript runtimes, please consult [RUNTIMES.md](RUNTIMES.md).
 import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
-  xApiVersion: "2.2.0",
+  xApiVersion: "2.3.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 
@@ -124,7 +124,7 @@ import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
-  xApiVersion: "2.2.0",
+  xApiVersion: "2.3.0",
 });
 
 async function run() {
@@ -271,7 +271,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779094773453,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780304373453,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779274895233,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780484495233,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -492,7 +492,7 @@ const response = await client.get({ customerId: "cus_123", expand: ["invoices","
 
 @param customerId - ID of the customer to fetch
 @param expand - Expand related customer data like invoices or entities, or expand nested objects like balances.feature, flags.feature, subscriptions.plan, and purchases.plan. (optional)
-* [list](docs/sdks/customers/README.md#list) - Lists customers with pagination and optional filters.
+* [list](docs/sdks/customers/README.md#list) - Lists customers with cursor pagination and optional filters. Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
 * [update](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
 * [delete](docs/sdks/customers/README.md#delete) - Deletes a customer by ID.
 
@@ -782,7 +782,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779094773453,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780304373453,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779274895233,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780484495233,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -1033,7 +1033,7 @@ const response = await client.getOrCreate({ customerId: "cus_123", name: "John D
 @param billingControls - Billing controls for the customer (auto top-ups, etc.) (optional)
 @param config - Miscellaneous configurations for the customer. (optional)
 @param expand - Fields to expand in the returned customer response, such as subscriptions.plan, purchases.plan, balances.feature, or flags.feature. (optional)
-- [`customersList`](docs/sdks/customers/README.md#list) - Lists customers with pagination and optional filters.
+- [`customersList`](docs/sdks/customers/README.md#list) - Lists customers with cursor pagination and optional filters. Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
 - [`customersUpdate`](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
 - [`entitiesCreate`](docs/sdks/entities/README.md#create) - Creates an entity for a customer and feature, then returns the entity with balances and subscriptions.
 
@@ -1266,7 +1266,7 @@ To change the default retry strategy for a single API call, simply provide a ret
 import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
-  xApiVersion: "2.2.0",
+  xApiVersion: "2.3.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 
@@ -1309,7 +1309,7 @@ const autumn = new Autumn({
     },
     retryConnectionErrors: false,
   },
-  xApiVersion: "2.2.0",
+  xApiVersion: "2.3.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 
@@ -1346,7 +1346,7 @@ import * as models from "@useautumn/sdk";
 import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
-  xApiVersion: "2.2.0",
+  xApiVersion: "2.3.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 
@@ -1405,7 +1405,7 @@ import { Autumn } from "@useautumn/sdk";
 
 const autumn = new Autumn({
   serverURL: "https://api.useautumn.com",
-  xApiVersion: "2.2.0",
+  xApiVersion: "2.3.0",
   secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
 });
 

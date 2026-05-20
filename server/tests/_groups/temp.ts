@@ -5,10 +5,11 @@ export const temp: TestGroup = {
 	description: "failed retry tests",
 	tier: "domain",
 	paths: [
-		"integration/billing/setup-payment/setup-payment-with-plan.test.ts",
-		"integration/crud/customers/customer-processors.test.ts",
-		"integration/crud/customers/get-customer-aggregated-balances.test.ts",
-		"integration/billing/stripe-webhooks/subscription-updated/subscription-updated-past-due.test.ts",
-		"integration/billing/stripe-webhooks/invoice-created/invoice-created-entity-consumable.test.ts",
+		"integration/billing/autumn-webhooks/billing-updated/billing-updated-attach.test.ts",
+		"integration/billing/autumn-webhooks/billing-updated/billing-updated-multi-attach.test.ts",
+		"integration/billing/autumn-webhooks/billing-updated/billing-updated-create-schedule.test.ts",
+		"integration/billing/autumn-webhooks/billing-updated/billing-updated-update-subscription.test.ts",
+		"integration/billing/autumn-webhooks/billing-updated/billing-updated-subscription-updated.test.ts",
+		"integration/billing/autumn-webhooks/billing-updated/billing-updated-subscription-deleted.test.ts",
 	],
 };

@@ -61,7 +61,7 @@ const cards = [
 	{
 		bg: "#A175FF",
 		icon: "/images/production/uptime2.svg",
-		metric: "1 Billion +",
+		metric: "> 5 billion",
 		label: "Monthly events",
 		description:
 			"Autumn handles billions of billing events monthly for some of your favorite apps.",
@@ -70,7 +70,7 @@ const cards = [
 	{
 		bg: "#FFE8FA",
 		icon: "/images/production/latency.svg",
-		metric: "<50ms",
+		metric: "< 50ms",
 		label: "US latency",
 		description:
 			"Every billing check resolves in under 50ms. Your users never wait for a gate.",

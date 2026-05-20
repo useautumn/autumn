@@ -1201,10 +1201,16 @@ export const faqData = [
 			"Yes. Autumn works with Stripe—it handles the billing logic that Stripe doesn't. You keep your Stripe account, your customer relationships, and your payment data. Autumn sits between your app and Stripe, managing webhooks, usage limits, and state.\n\nYou're never locked in. Your subscriptions live in Stripe.",
 	},
 	{
+		id: 7,
+		question: "Do I need to call Autumn before every action?",
+		answer:
+			"For latency-sensitive operations, you may not want to make an `autumn.check()` network call before every action. \n\n Instead, you can either cache the Autumn customer data on your end, or use our single `customer.products.updated` webhook to replicate the Autumn state into your own system.",
+	},
+	{
 		id: 2,
 		question: "What if Autumn goes down? Will my app go down?",
 		answer:
-			"We run on redundant infrastructure and high availability is our priority. However, not being able to reach Autumn does not mean that your app will go down. Our SDKs default to fail open and fail fast, meaning that in a worst case scenario, some users may get temporary additional access.\n\nWe can work with you to reconcile usage tracking and balances afterward if needed.",
+			"We run on redundant infrastructure and high availability is our priority. However, not being able to reach Autumn does not mean that your app will go down. Our app and SDKs default to fail open and fail fast, meaning that in a worst case scenario, some users may get temporary additional access.\n\nWe can work with you to reconcile usage tracking and balances afterward if needed.",
 	},
 	{
 		id: 3,
@@ -1216,11 +1222,11 @@ export const faqData = [
 		id: 4,
 		question: "What if I need to move off Autumn? Am I locked in?",
 		answer:
-			"Autumn is open source. You can self-host anytime, or export all your data. Your Stripe subscriptions, customers and payment details remain yours. Moving off Autumn is simply a case of building what you would have built in-house without Autumn (but this has never happened, touch wood!). ",
+			"Autumn is open source. You can self-host anytime, or export all your data. Your Stripe subscriptions, customers and payment details remain yours. Moving off Autumn is simply a case of building what you would have built in-house anyway (but this has never happened, touch wood!). \n\n You can even do this gradually: first by replicating customer state into your own system via our webhooks, then making a full transition after.",
 	},
 	{
 		id: 5,
-		question: "How long would it take to go live?",
+		question: "Can you do the implementation for us?",
 		answer:
 			"If you're setting up payments for the first time, most teams go live in under an hour. Migrating from an existing billing system typically takes 1–2 weeks, depending on complexity.\n\n For Series A+ companies, we provide a forward deployed service to work with your team, dual-write to your internal system and Autumn, then smoothly migrate over. Minimal work needed on your part.",
 	},
@@ -1230,67 +1236,61 @@ export const faqData = [
 		answer:
 			"Yes. Autumn supports 10,000+ events per second per end customer. We've processed millions of billing events daily for AI companies at scale. If you have specific requirements, reach out—we'll walk through our architecture.",
 	},
-	{
-		id: 7,
-		question: "What if I can't use `check()`?",
-		answer:
-			"Latency-sensitive customers may not be able to use `check()` in real-time. In these cases, you can cache the Autumn customer data on your end, or use our single `customer.products.updated` webhook to replicate the Autumn state into your own system.",
-	},
 ];
 
 export const featuresData = [
 	{
-		title: "Usage Ledgers",
+		title: "Real-time balances",
 		description:
 			"Recurring, one-time and rollover credit balances. Stack balances across plans and topups. Deduct from soonest expiry first.",
 		Icon: IconWebhooks,
 	},
 	{
-		title: "Payment Logic",
-		description:
-			"Checkouts, upgrades, downgrades, add-ons, proration, 3DS, edge cases, webhooks: all handled in a single API call.",
-		Icon: IconWebhooks,
-	},
-	{
-		title: "Custom Plans",
-		description:
-			"Create one-off deals for enterprise customers. Unique pricing, features, and limits without touching code.",
-		Icon: IconPlans,
-	},
-	{
-		title: "Usage Analytics",
-		description:
-			"Fast timeseries charts and event logs out of the box. Powered by ClickHouse.",
-		Icon: IconAnalytics,
-	},
-	{
-		title: "Team Billing",
-		description:
-			"Grant plans and features to entities under an organization. Create pools of credits, or assign to users directly.",
-		Icon: IconTeam,
-	},
-	{
-		title: "Auto Top-ups",
-		description:
-			"Let users refill credits when balance runs low. Configure thresholds and amounts. Fully automated.",
-		Icon: IconTopUp,
-	},
-	{
-		title: "Pricing Versioning",
+		title: "Instant pricing changes",
 		description:
 			"Change your pricing model without breaking existing customers. Grandfather old plans or migrate users gradually. No database or Stripe migrations.",
 		Icon: IconVersioning,
 	},
 	{
-		title: "Alerts and Spend Limits",
+		title: "Custom contracts",
+		description:
+			"Create one-off deals for enterprise customers. Unique pricing, features, and limits without touching code.",
+		Icon: IconPlans,
+	},
+	{
+		title: "Usage history",
+		description:
+			"Fast timeseries charts and event logs out of the box. Powered by ClickHouse.",
+		Icon: IconAnalytics,
+	},
+	{
+		title: "Organization billing",
+		description:
+			"Grant plans and features to entities under an organization. Create pools of credits, or assign to users directly.",
+		Icon: IconTeam,
+	},
+	{
+		title: "Auto top-ups",
+		description:
+			"Let users refill credits when balance runs low. Configure thresholds and amounts. Fully automated.",
+		Icon: IconTopUp,
+	},
+	{
+		title: "Alerts and spend limits",
 		description:
 			"Give customers governance over their usage. Configure alerts, limits and overage per customer.",
 		Icon: IconReact,
 	},
 	{
-		title: "Coupons and Referrals",
+		title: "Payment logic",
 		description:
-			"Built-in referral system with rewards, tracking, and attribution. Launch referral programs in minutes.",
+			"Checkouts, upgrades, downgrades, add-ons, proration, 3DS, edge cases, webhooks: all handled in a single API call.",
+		Icon: IconWebhooks,
+	},
+	{
+		title: "Coupons and referrals",
+		description:
+			"Grant expiring coupon credit grants to customers. Launch referral programs in minutes.",
 		Icon: IconReferral,
 	},
 ];

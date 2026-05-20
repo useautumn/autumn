@@ -184,7 +184,10 @@ export class CusProductService {
 	static async getFull({ db, id }: { db: DrizzleCli; id: string }) {
 		const data = await db.query.customerProducts.findFirst({
 			where: eq(customerProducts.id, id),
-			with: getFullCusProdRelations(),
+			with: {
+				product: true,
+				...getFullCusProdRelations(),
+			},
 		});
 
 		return data as FullCusProduct | undefined;

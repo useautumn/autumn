@@ -1,4 +1,4 @@
-import { ErrCode } from "@autumn/shared";
+import { ErrCode, FeatureType } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useSearchParams } from "react-router";
@@ -47,10 +47,21 @@ export const useAnalyticsData = ({
 			: `properties.${groupBy}`
 		: undefined;
 
+	const featureLinkedEventNames = useMemo(() => {
+		if (!featuresData?.length) return cachedEventNames;
+		return cachedEventNames.filter((e) =>
+			featuresData.some(
+				(f) =>
+					(f.type === FeatureType.Metered || f.type === FeatureType.CreditSystem) &&
+					(f.event_names?.includes(e.event_name) || f.id === e.event_name),
+			),
+		);
+	}, [cachedEventNames, featuresData]);
+
 	const selectedEventNames =
 		eventNames || featureIds
 			? [...(eventNames || []), ...(featureIds || [])]
-			: cachedEventNames.slice(0, 3).map((e) => e.event_name);
+			: featureLinkedEventNames.slice(0, 3).map((e) => e.event_name);
 
 	const postBody = {
 		customer_id: customerId || undefined,

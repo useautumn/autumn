@@ -108,11 +108,9 @@
 		"migrate-functions:prod": "infisical run --env=prod --recursive -- bun scripts/migrations/migrate-functions.ts",
 		"validate-schema": "infisical run --env=prod --recursive -- bun scripts/migrations/validate-schema.ts",
 		"validate-shebangs": "infisical run --env=prod --recursive -- bun scripts/migrations/validate-fullsubject-shebangs.ts",
-
 		"tb": "bun scripts/tinybird/index.ts",
 		"tb:prod": "bun scripts/tinybird/index.ts prod",
 		"tb:prod-legacy": "bun scripts/tinybird/index.ts prod-legacy",
-
 		"trigger:deploy": "bunx trigger.dev deploy",
 		"setupci": "node scripts/setup/setupci.js",
 		"replicate": "bun scripts/db/replicate.ts",
@@ -160,7 +158,7 @@
 	},
 	"devDependencies": {
 		"@better-auth/cli": "^1.4.21",
-		"@biomejs/biome": "^2.2.7",
+		"@biomejs/biome": "2.2.2",
 		"@trigger.dev/build": "4.4.6",
 		"@types/node": "^24.9.1",
 		"concurrently": "^9.2.1",

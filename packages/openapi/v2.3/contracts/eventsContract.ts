@@ -4,11 +4,11 @@ import {
 	EVENTS_AGGREGATE_EXAMPLE_V1_GROUPED,
 	EventsAggregateResponseV1Schema,
 } from "@api/events/aggregate/eventsAggregateResponseV1.js";
-import { ApiEventsListParamsSchema } from "@api/events/list/eventsListParams.js";
+import { ApiEventsListV2_3ParamsSchema } from "@api/events/list/eventsListParamsV2_3.js";
 import {
-	ApiEventsListResponseSchema,
-	EVENTS_LIST_EXAMPLE,
-} from "@api/events/list/eventsListResponse.js";
+	EVENTS_LIST_V2_3_EXAMPLE,
+	ApiEventsListV2_3ResponseSchema,
+} from "@api/events/list/eventsListResponseV2_3.js";
 import { oc } from "@orpc/contract";
 
 export const eventsListContract = oc
@@ -25,14 +25,16 @@ export const eventsListContract = oc
 		}),
 	})
 	.input(
-		ApiEventsListParamsSchema.meta({
+		ApiEventsListV2_3ParamsSchema.meta({
 			title: "EventsListParams",
 			examples: [
 				{
+					start_cursor: "",
 					customer_id: "cus_123",
 					limit: 50,
 				},
 				{
+					start_cursor: "",
 					feature_id: "api_calls",
 					custom_range: {
 						start: 1704067200000,
@@ -43,8 +45,8 @@ export const eventsListContract = oc
 		}),
 	)
 	.output(
-		ApiEventsListResponseSchema.meta({
-			examples: [EVENTS_LIST_EXAMPLE],
+		ApiEventsListV2_3ResponseSchema.meta({
+			examples: [EVENTS_LIST_V2_3_EXAMPLE],
 		}),
 	);
 

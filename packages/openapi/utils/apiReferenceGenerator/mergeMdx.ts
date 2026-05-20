@@ -1,9 +1,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import type { ParsedOperation } from "./parseOpenApi.js";
 
-const IMPORTS = `import { DynamicParamField } from "/components/dynamic-param-field.jsx";
-import { DynamicResponseField } from "/components/dynamic-response-field.jsx";
-import { DynamicResponseExample } from "/components/dynamic-response-example.jsx";`;
+const IMPORTS = `import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";`;
 
 /**
  * Merge manual MDX content with generated fields.
