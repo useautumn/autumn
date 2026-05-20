@@ -4,7 +4,7 @@
 	"name": "Autumn",
 	"colors": {
 		"primary": "#8838ff",
-		"light": "#8838ff",
+		"light": "#9b5cff",
 		"dark": "#8838ff"
 	},
 	"appearance": {
@@ -22,7 +22,10 @@
 		"content": "You're viewing the docs for Autumn's v2 API. You can find the previous API version [here](https://docs-v1.useautumn.com).",
 		"dismissible": true
 	},
-	"favicon": "/favicon.png",
+	"favicon": {
+		"light": "/favicon.svg",
+		"dark": "/favicon-dark.svg"
+	},
 	"interaction": {
 		"drilldown": true
 	},
@@ -316,8 +319,8 @@
 		]
 	},
 	"logo": {
-		"light": "/assets/logo/autumn-dark.png",
-		"dark": "/assets/logo/autumn-light.png"
+		"light": "/assets/logo/autumn-dark.svg",
+		"dark": "/assets/logo/autumn-light.svg"
 	},
 	"api": {
 		"playground": {
@@ -333,8 +336,8 @@
 	},
 	"background": {
 		"color": {
-			"light": "#FAFAFA",
-			"dark": "#121212"
+			"light": "#FFFFFF",
+			"dark": "#0A0A0A"
 		}
 	},
 	"navbar": {
