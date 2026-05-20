@@ -1,6 +1,6 @@
 import type Stripe from "stripe";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
-import { logCustomerProductUpdates } from "../common";
+import { emitBillingChangeWebhook, logCustomerProductUpdates } from "../common";
 import { setupStripeSubscriptionDeletedContext } from "./setupStripeSubscriptionDeletedContext";
 import { expireAndActivateCustomerProducts } from "./tasks/expireAndActivateCustomerProducts";
 import { processConsumablePricesForSubscriptionDeleted } from "./tasks/processConsumablePricesForSubscriptionDeleted";
@@ -45,6 +45,12 @@ export const handleStripeSubscriptionDeleted = async ({
 
 	// Task 4: Log all customer product updates, deletions, and insertions
 	logCustomerProductUpdates({
+		ctx,
+		eventContext,
+	});
+
+	// Task 5: Emit billing.updated webhook (fire-and-forget) if anything changed
+	emitBillingChangeWebhook({
 		ctx,
 		eventContext,
 	});

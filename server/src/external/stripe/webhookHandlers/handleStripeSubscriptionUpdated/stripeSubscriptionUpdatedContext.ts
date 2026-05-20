@@ -42,4 +42,11 @@ export interface StripeSubscriptionUpdatedContext {
 	deletedCustomerProducts: FullCusProduct[];
 	/** Tracks all insertions (new customer products created) during this handler */
 	insertedCustomerProducts: FullCusProduct[];
+	/**
+	 * Tags accumulated by tasks during this handler — appended to the
+	 * `billing.updated` webhook payload. Tasks call
+	 * `addBillingChangeTag` to push their own signal (e.g. "trial_ended",
+	 * "phase_changed") when their condition is detected.
+	 */
+	billingChangeTags: Set<string>;
 }

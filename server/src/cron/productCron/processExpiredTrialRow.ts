@@ -2,11 +2,13 @@ import {
 	CusProductStatus,
 	type customerProducts,
 	type customers,
+	type FullCusProduct,
 	type FullProduct,
 } from "@autumn/shared";
 import { customerProductToDefaultProduct } from "@utils/cusProductUtils/convertCusProduct/customerProductToDefaultProduct";
 import type { InferSelectModel } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { sendBillingUpdatedWebhook } from "@/internal/billing/v2/workflows/sendBillingUpdatedWebhook/sendBillingUpdatedWebhook";
 import { CusService } from "@/internal/customers/CusService";
 import { activateFreeDefaultProduct } from "@/internal/customers/cusProducts/actions/activateFreeDefaultProduct";
 import { tryProcessRevertExpiry } from "@/internal/customers/cusProducts/actions/revertTrialExpiry";
@@ -24,6 +26,7 @@ export const processExpiredTrialRow = async ({
 	customer: InferSelectModel<typeof customers>;
 	defaultProducts: FullProduct[];
 }) => {
+	// Revert path owns its own webhook emission.
 	const reverted = await tryProcessRevertExpiry({
 		ctx,
 		customerProduct,
@@ -31,6 +34,10 @@ export const processExpiredTrialRow = async ({
 	});
 	if (reverted) return;
 
+	// Standard path: snapshot fullCustomer BEFORE mutations so the webhook
+	// payload reflects pre-expiry state in `previous_attributes`. Default
+	// RELEVANT_STATUSES is sufficient — the trial cusProduct is Active
+	// (with a past trial_ends_at) at this point.
 	const fullCustomer = await CusService.getFull({
 		ctx,
 		idOrInternalId: customer.internal_id,
@@ -38,29 +45,29 @@ export const processExpiredTrialRow = async ({
 		withSubs: true,
 	});
 
-	const fullCustomerProduct = fullCustomer.customer_products.find(
+	const trialFullCusProduct = fullCustomer.customer_products.find(
 		(cp) => cp.id === customerProduct.id,
 	);
-
-	if (!fullCustomerProduct) return;
+	if (!trialFullCusProduct) return;
 
 	const defaultProduct = customerProductToDefaultProduct({
 		ctx,
-		customerProduct: fullCustomerProduct,
+		customerProduct: trialFullCusProduct,
 		defaultProducts,
 	});
 
+	let activatedDefault: FullCusProduct | undefined;
 	if (defaultProduct) {
-		await activateFreeDefaultProduct({
+		activatedDefault = await activateFreeDefaultProduct({
 			ctx,
-			customerProduct: fullCustomerProduct,
+			customerProduct: trialFullCusProduct,
 			fullCustomer,
 			defaultProduct,
 		});
 	}
 	await CusProductService.update({
 		ctx,
-		cusProductId: fullCustomerProduct.id,
+		cusProductId: trialFullCusProduct.id,
 		updates: {
 			status: CusProductStatus.Expired,
 		},
@@ -70,5 +77,21 @@ export const processExpiredTrialRow = async ({
 		ctx,
 		customerId: fullCustomer.id ?? "",
 		source: "productCron",
+	});
+
+	void sendBillingUpdatedWebhook({
+		ctx,
+		autumnBillingPlan: {
+			customerId: fullCustomer.id ?? fullCustomer.internal_id,
+			insertCustomerProducts: activatedDefault ? [activatedDefault] : [],
+			updateCustomerProducts: [
+				{
+					customerProduct: trialFullCusProduct,
+					updates: { status: CusProductStatus.Expired },
+				},
+			],
+		},
+		originalFullCustomer: fullCustomer,
+		tags: ["trial_ended"],
 	});
 };
