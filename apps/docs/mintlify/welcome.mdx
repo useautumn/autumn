@@ -6,37 +6,13 @@ description: "Drop-in, open-source control layer for AI and SaaS monetization."
 
 ## What is Autumn?
 
-Autumn is a pricing and billing layer between your application and Stripe. It owns the subscription lifecycle, credit ledgers, and entitlement state that you'd otherwise build and maintain yourself.
+Autumn is your source of truth for billing and entitlements between your application and Stripe. 
 
-Instead of billing logic living in your code and database, your app can query Autumn in real-time to check if a customer is allowed to do something (eg, send an AI message, access SSO, etc).
+It manages subscription state, credit balances, feature entitlements, and usage enforcement — the logic you'd otherwise build and maintain across your codebase, database, and Stripe webhooks.
 
-This saves you months of engineering time, and makes pricing changes a simple configuration change.
+Your app can query Autumn inline to determine what a customer is allowed to do (send an AI message, access SSO, add a seat) and to track usage against their balance.
 
-```mermaid actions={false}
-flowchart TD
-    subgraph app["Your Application"]
-        A["Frontend App"]
-        B["Backend Server"]
-    end
-
-    subgraph autumn["Autumn"]
-        C["Autumn API"]
-        D["Dashboard or CLI"]
-        E["Database & Cache"]
-    end
-
-    subgraph stripe["Stripe"]
-        F["Stripe billing API"]
-    end
-
-    A -- "Autumn hooks (optional)" --> B
-    B -- "Plan changes, access checks, usage tracking" --> C
-    C -- "Customer state, credit ledger" --> E
-    C -- "Subscriptions" --> F
-    F -- "Webhooks" --> C
-    D -- "Configure Pricing" --> C
-```
-
+Because billing logic lives in Autumn, pricing changes and custom deals become a simple configuration change. No migrations or rebuild.
 
 
 
@@ -45,16 +21,18 @@ flowchart TD
 
 ## Why use Autumn?
 
-For reference, here's what a production-grade monetization system looks like in the AI era. OpenAI wrote a [blog post](https://openai.com/index/beyond-rate-limits/) about their in-house system.
+AI monetization is harder than what came before. For reference, OpenAI wrote a [post](https://openai.com/index/beyond-rate-limits/) about their in-house system.
 
-| Feature               | Requirements                                                                                          |
-|-----------------------|--------------------------------------------------------------------------------------------------|
-| Subscription logic    | Checkouts, prorated upgrades, scheduled downgrades, add-ons, trials. 10+ webhook cases.  |
-| Credit ledgers        | Real-time enforcement, periodic vs one-time grants, rollovers, expiration, concurrency control |
-| Controls and observability        | Auto top ups, spend caps, per-seat allowances, usage analytics, event logs  |
-| Versioning and grandfathering     | Various price IDs, migration scripts, backwards compatibility                |
-| Enterprise and custom plans   | Custom code, tiered pricing, custom credit grants, pilots, expansion logic    |
-| Edge cases            | Plan switching, monthly/annual changes, failed payments, 3DS, race conditions, refunds   |
+| Area | What you'd build |
+|---|----------------------|
+| Subscriptions | Checkouts, proration, schedules, add-ons, trials. |
+| Credit ledgers | Real-time enforcement, periodic and one-time grants, rollovers, expiration, concurrency control. |
+| Observability | Usage history charts, groups and filters, logs, ClickHouse. |
+| Entitlements | Feature gating per plan, boolean and metered features, seat-based allowances. |
+| Billing Controls | Spend caps, auto top-ups, overage handling, usage alerts. |
+| Pricing changes | Versioning, grandfathering, migration scripts, backwards compatibility. |
+| Enterprise | Custom contracts, tiered pricing, per-customer credit grants, expansion logic. |
+| Edge cases | Plan switching, monthly↔annual changes, failed payments, 3DS, race conditions, refunds. |
 
 Billing starts with a simple checkout flow, and balloons in complexity as you add more features and scale. And when you want to change your pricing, you need to rebuild everything. Yet, it's a critical part of your product that you cannot afford to get wrong.
 
@@ -68,15 +46,11 @@ You can choose to build this yourself, or use Autumn to offload all this logic o
 
 ## How is this different?
 
-Most billing tools, including Stripe's built-in metering, are designed for post-hoc invoicing: you send usage events, they generate invoices at end of period. Your app still owns who gets access, when limits apply, how downgrades work (and all the other logic described above).
+Other billing tools are designed for post-hoc invoicing: you send usage events, they generate invoices at end of period. Your app still owns access control, usage limits, and plan change logic.
 
-Autumn flips this. The `check` function is a low-latency API designed to be called _before_ an action is taken, to gate access based on the customer's plan and balance. Because it runs before the action, Autumn becomes your system of record for subscriptions and entitlements — not your database or Stripe.
+Autumn is a real-time system of record. You can query it for the current state of any customer (plan, entitlements, balances) inline, via cache, or via webhooks. Because Autumn owns the state (not your code or database), edge cases like proration, failed payments, and concurrency are handled automatically. Pricing changes become config, not code.
 
-This means credit ledgers, real-time enforcement, spend caps, and edge cases around upgrades, downgrades and failed payments are handled automatically. Changing pricing, migrating plans, or setting up custom enterprise contracts become configuration changes instead of code changes.
-
-Architecture-wise, `check` is designed to be called inline — before every AI generation, API request, or feature gate. Response times are under 50ms via multi-region caching, with atomic handling of concurrent requests so balances stay consistent at scale.
-
-Autumn is built on top of Stripe rather than replacing it. Your subscriptions, customers, and payment details live in your own Stripe account.
+Autumn builds on top of Stripe rather than replacing it. Your subscriptions, customers, and payment details stay in your own Stripe account.
 
 <Check>
 While Autumn's core focus is credit-based AI monetization, it handles any SaaS pricing model. Many of our users have no usage-based features at all, and just prefer the developer experience (eg, no webhooks).
@@ -87,45 +61,68 @@ While Autumn's core focus is credit-based AI monetization, it handles any SaaS p
 
 
 
-## Core flow
-
-<Steps>
-<Step title="Model your pricing in Autumn">
-Model your pricing plans in the Autumn UI, or through a config file. Define your free, paid and any add-on pricing tiers.
-
-You can link features to these plans and define their usage limits: both recurring (monthly, yearly), one-time top ups, rollovers, etc.
-</Step>
-<Step title="Handle payments">
-The `attach` function will return a Stripe checkout URL, or confirmation data for an upgrade/downgrade for the plans you defined in step 1.
-
-Once paid, the Autumn will grant access to the features on their plan.
-
-</Step>
-
-<Step title="Check permissions and limits">
-When a customer tries to do something (eg, use a credit), [check](/documentation/customers/check) in real-time whether they're allowed to. 
-
-If the user has access to the feature on their plan, and hasn't exceeded their usage limit, they will be allowed to do it.
-
-</Step>
-
-<Step title="Track usage">
-If Autumn tells you they're `allowed` access, let them use the feature. Afterwards, you can [track the usage](/documentation/customers/tracking-usage) to update their balance, or bill them for any usage-pricing.
-
-</Step>
-</Steps>
-
-Autumn also provides APIs to easily get customer billing data (to display on a billing page), open Stripe billing portal, display usage analytics, handle org billing, setup referral programs and more.
 
 
+## FAQ
+
+<AccordionGroup>
+
+<Accordion title="Do I still need Stripe?">
+Yes. Autumn works with Stripe — it handles the billing logic that Stripe doesn't. You keep your Stripe account, your customer relationships, and your payment data. Autumn sits between your app and Stripe, managing webhooks, usage limits, and state.
+
+Your subscriptions live in Stripe. You're never locked in.
+</Accordion>
+
+<Accordion title="Do I need to call Autumn before every action?">
+For latency-sensitive operations, you may not want to make an `autumn.check()` network call before every action.
+
+You can either cache the Autumn customer data on your end, or use the `customer.products.updated` webhook to replicate Autumn state into your own system.
+</Accordion>
+
+<Accordion title="What if Autumn goes down?">
+Not being able to reach Autumn does not mean your app goes down. The SDKs default to fail-open and fail-fast, meaning in a worst case, some users get temporary additional access.
+
+We can help reconcile usage tracking and balances afterward if needed.
+</Accordion>
+
+<Accordion title="How is Autumn different from Orb or Metronome?">
+Orb and Metronome focus on usage metering — tracking how much customers consume for end-of-period invoicing. You still build access control and state management separately.
+
+Autumn is a complete system of record: usage metering, entitlements, feature gating, and billing state in one API.
+</Accordion>
+
+<Accordion title="Am I locked in?">
+Autumn is open source. You can self-host anytime, or export all your data. Your Stripe subscriptions, customers, and payment details remain yours.
+
+You can migrate gradually: replicate customer state into your own system via webhooks, then make a full transition.
+</Accordion>
+
+<Accordion title="Can you do the implementation for us?">
+If you're setting up payments for the first time, most teams go live in under an hour. Migrating from an existing billing system typically takes 1–2 weeks depending on complexity.
+
+For larger companies, we provide a forward-deployed service: dual-write to your internal system and Autumn, then migrate over.
+</Accordion>
+
+<Accordion title="Can you handle our event volume?">
+Autumn supports 10,000+ events per second per end customer. If you have specific throughput requirements, reach out and we'll walk through the architecture.
+</Accordion>
+
+</AccordionGroup>
 
 
-
+<CardGroup cols={2}>
+<Card
+  title="Reach out to us"
+  icon="envelope"
+  href="mailto:hey@useautumn.com"
+>
+  We'll help you model your pricing and go live in a couple of days.
+</Card>
 <Card
   title="Join us on Discord"
   icon="discord"
   href="https://discord.gg/STqxY92zuS"
 >
-  Connect with us, other users, and get integration support within minutes --
-  we're always online (if we're awake)
+  Connect with us, other users, and get integration support within minutes.
 </Card>
+</CardGroup>
