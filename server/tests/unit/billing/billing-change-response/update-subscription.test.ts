@@ -60,7 +60,7 @@ describe("buildBillingChangeResponse — updateSubscription", () => {
 			action: "scheduled",
 			planId: "free",
 		});
-		expect(scheduled?.plan.status).toBe("scheduled");
+		expect(scheduled?.subscription?.status).toBe("scheduled");
 	});
 
 	test("cancel immediately", () => {
@@ -141,8 +141,8 @@ describe("buildBillingChangeResponse — updateSubscription", () => {
 			action: "updated",
 			planId: "pro",
 		});
-		expect(updated?.plan.canceled_at).toBeNull();
-		expect(updated?.plan.expires_at).toBeNull();
+		expect(updated?.subscription?.canceled_at).toBeNull();
+		expect(updated?.subscription?.expires_at).toBeNull();
 	});
 
 	test("update plan via custom plan (replace product)", () => {

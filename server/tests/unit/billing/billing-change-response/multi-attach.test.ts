@@ -105,14 +105,14 @@ describe("buildBillingChangeResponse — multiAttach", () => {
 			scheduled: ["seats_addon"],
 		});
 		expect(
-			findPlanChange(response, { action: "activated", planId: "pro" })?.plan
-				.status,
+			findPlanChange(response, { action: "activated", planId: "pro" })
+				?.subscription?.status,
 		).toBe("active");
 		expect(
 			findPlanChange(response, {
 				action: "scheduled",
 				planId: "seats_addon",
-			})?.plan.status,
+			})?.subscription?.status,
 		).toBe("scheduled");
 	});
 });

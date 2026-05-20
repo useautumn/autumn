@@ -62,16 +62,16 @@ describe("buildBillingChangeResponse — createSchedule", () => {
 			scheduled: ["premium", "enterprise"],
 		});
 		expect(
-			findPlanChange(response, { action: "activated", planId: "pro" })?.plan
-				.status,
+			findPlanChange(response, { action: "activated", planId: "pro" })?.subscription
+				?.status,
 		).toBe("active");
 		expect(
-			findPlanChange(response, { action: "scheduled", planId: "premium" })?.plan
-				.status,
+			findPlanChange(response, { action: "scheduled", planId: "premium" })?.subscription
+				?.status,
 		).toBe("scheduled");
 		expect(
 			findPlanChange(response, { action: "scheduled", planId: "enterprise" })
-				?.plan.status,
+				?.subscription?.status,
 		).toBe("scheduled");
 	});
 

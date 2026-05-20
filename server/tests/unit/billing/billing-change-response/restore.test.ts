@@ -59,8 +59,8 @@ describe("buildBillingChangeResponse — restore", () => {
 				expires_at: PERIOD_END,
 			},
 		});
-		expect(updated?.plan.canceled_at).toBeNull();
-		expect(updated?.plan.expires_at).toBeNull();
+		expect(updated?.subscription?.canceled_at).toBeNull();
+		expect(updated?.subscription?.expires_at).toBeNull();
 	});
 
 	test("restore multiple via updateCustomerProducts array", () => {
