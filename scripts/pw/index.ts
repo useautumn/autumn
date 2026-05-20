@@ -27,14 +27,14 @@ async function cmdRun(): Promise<void> {
 
 	const { worktreeNum } = entry;
 
-	killOwnPorts(worktreeNum);
-	killTmuxSession(tmuxSessionName(worktreeNum));
-
 	if (process.env.PW_MODE !== "1") {
 		fatal(
 			"PW_MODE=1 not set. Run via 'bun pw' (package.json script) — required so preload-env.ts skips .env.local.",
 		);
 	}
+
+	killOwnPorts(worktreeNum);
+	killTmuxSession(tmuxSessionName(worktreeNum));
 
 	const offset = (worktreeNum - 1) * 100;
 	const env: Record<string, string> = {
