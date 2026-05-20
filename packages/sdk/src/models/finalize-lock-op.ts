@@ -18,14 +18,14 @@ export type FinalizeLockGlobals = {
 /**
  * Use 'confirm' to commit the deduction, or 'release' to return the held balance.
  */
-export const Action = {
+export const FinalizeLockAction = {
   Confirm: "confirm",
   Release: "release",
 } as const;
 /**
  * Use 'confirm' to commit the deduction, or 'release' to return the held balance.
  */
-export type Action = ClosedEnum<typeof Action>;
+export type FinalizeLockAction = ClosedEnum<typeof FinalizeLockAction>;
 
 export type FinalizeBalanceParams = {
   /**
@@ -35,7 +35,7 @@ export type FinalizeBalanceParams = {
   /**
    * Use 'confirm' to commit the deduction, or 'release' to return the held balance.
    */
-  action: Action;
+  action: FinalizeLockAction;
   /**
    * Additional properties to attach to this finalize lock event.
    */
@@ -65,9 +65,9 @@ export type FinalizeLockResponse =
   | FinalizeLockResponseBody2;
 
 /** @internal */
-export const Action$outboundSchema: z.ZodMiniEnum<typeof Action> = z.enum(
-  Action,
-);
+export const FinalizeLockAction$outboundSchema: z.ZodMiniEnum<
+  typeof FinalizeLockAction
+> = z.enum(FinalizeLockAction);
 
 /** @internal */
 export type FinalizeBalanceParams$Outbound = {
@@ -84,7 +84,7 @@ export const FinalizeBalanceParams$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     lockId: z.string(),
-    action: Action$outboundSchema,
+    action: FinalizeLockAction$outboundSchema,
     overrideValue: z.optional(z.number()),
     properties: z.optional(z.record(z.string(), z.any())),
   }),
