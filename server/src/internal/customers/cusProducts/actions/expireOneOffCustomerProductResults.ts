@@ -49,7 +49,7 @@ export const expireOneOffCustomerProductResults = async ({
 			org: group.org,
 			env: group.env,
 			logger: ctx.logger,
-			redisV2: resolveRedisV2({ orgId: group.org.id }),
+			redisV2: resolveRedisV2(),
 		};
 
 		await batchUpdateCustomerProducts({
