@@ -19,32 +19,20 @@ interface PreviewColors {
 	readonly dot: string;
 }
 
-const PREVIEW_LIGHT: PreviewColors = {
-	bg: "bg-white",
-	sidebar: "bg-[#f5f5f4]",
-	card: "bg-[#fafaf9]",
-	line: "bg-[#e5e5e5]",
-	header: "bg-[#f5f5f4]",
-	dot: "bg-[#d1d1d1]",
+const LIGHT: PreviewColors = {
+	bg: "bg-white", sidebar: "bg-[#f5f5f4]", card: "bg-[#fafaf9]",
+	line: "bg-[#e5e5e5]", header: "bg-[#f5f5f4]", dot: "bg-[#d1d1d1]",
 };
 
-const PREVIEW_DARK: PreviewColors = {
-	bg: "bg-[#0a0a0a]",
-	sidebar: "bg-[#000000]",
-	card: "bg-[#0f0f0f]",
-	line: "bg-[#1e1e1e]",
-	header: "bg-[#111111]",
-	dot: "bg-[#333333]",
+const DARK: PreviewColors = {
+	bg: "bg-[#0a0a0a]", sidebar: "bg-[#000000]", card: "bg-[#0f0f0f]",
+	line: "bg-[#1e1e1e]", header: "bg-[#111111]", dot: "bg-[#333333]",
 };
-
-const systemPrefersDark =
-	typeof window !== "undefined" &&
-	window.matchMedia("(prefers-color-scheme: dark)").matches;
 
 const MODE_OPTIONS = [
-	{ id: "light", label: "Light", icon: <Sun className="size-4" />, preview: PREVIEW_LIGHT },
-	{ id: "dark", label: "Dark", icon: <Moon className="size-4" />, preview: PREVIEW_DARK },
-	{ id: "system", label: "System", icon: <Monitor className="size-4" />, preview: systemPrefersDark ? PREVIEW_DARK : PREVIEW_LIGHT },
+	{ id: "light", label: "Light", icon: <Sun className="size-4" /> },
+	{ id: "dark", label: "Dark", icon: <Moon className="size-4" /> },
+	{ id: "system", label: "System", icon: <Monitor className="size-4" /> },
 ] as const;
 
 const PRESET_OPTIONS = [
@@ -66,28 +54,30 @@ const PRESET_OPTIONS = [
 	},
 ] as const;
 
+const tc = "transition-colors duration-200";
+
 function ThemePreview({ colors, height = "h-[72px]" }: { colors: PreviewColors; height?: string }) {
 	return (
-		<div className={cn("rounded-md border overflow-hidden transition-colors duration-200", height, colors.bg)}>
+		<div className={cn("rounded-md border overflow-hidden", tc, height, colors.bg)}>
 			<div className="flex h-full">
-				<div className={cn("w-[22%] h-full flex flex-col transition-colors duration-200", colors.sidebar)}>
+				<div className={cn("w-[22%] h-full flex flex-col", tc, colors.sidebar)}>
 					<div className="p-1.5 flex items-center gap-1">
-						<div className={cn("size-2 rounded-full transition-colors duration-200", colors.dot)} />
+						<div className={cn("size-2 rounded-full", tc, colors.dot)} />
 					</div>
 					<div className="flex flex-col gap-1 px-1.5">
-						<div className={cn("h-1 w-full rounded-sm transition-colors duration-200", colors.line)} />
-						<div className={cn("h-1 w-3/4 rounded-sm transition-colors duration-200", colors.line)} />
-						<div className={cn("h-1 w-4/5 rounded-sm transition-colors duration-200", colors.line)} />
+						<div className={cn("h-1 w-full rounded-sm", tc, colors.line)} />
+						<div className={cn("h-1 w-3/4 rounded-sm", tc, colors.line)} />
+						<div className={cn("h-1 w-4/5 rounded-sm", tc, colors.line)} />
 					</div>
 				</div>
-				<div className="flex-1 flex flex-col transition-colors duration-200">
-					<div className={cn("h-4 border-b border-transparent flex items-center px-2 transition-colors duration-200", colors.header)}>
-						<div className={cn("h-1 w-8 rounded-sm transition-colors duration-200", colors.line)} />
+				<div className={cn("flex-1 flex flex-col", tc)}>
+					<div className={cn("h-4 border-b border-transparent flex items-center px-2", tc, colors.header)}>
+						<div className={cn("h-1 w-8 rounded-sm", tc, colors.line)} />
 					</div>
 					<div className="flex-1 p-2 flex flex-col gap-1.5">
-						<div className={cn("h-3 w-3/4 rounded transition-colors duration-200", colors.card)} />
-						<div className={cn("h-1.5 w-1/2 rounded-sm transition-colors duration-200", colors.line)} />
-						<div className={cn("h-1.5 w-2/3 rounded-sm transition-colors duration-200", colors.line)} />
+						<div className={cn("h-3 w-3/4 rounded", tc, colors.card)} />
+						<div className={cn("h-1.5 w-1/2 rounded-sm", tc, colors.line)} />
+						<div className={cn("h-1.5 w-2/3 rounded-sm", tc, colors.line)} />
 					</div>
 				</div>
 			</div>
@@ -95,8 +85,13 @@ function ThemePreview({ colors, height = "h-[72px]" }: { colors: PreviewColors; 
 	);
 }
 
+function resolvePresetLabel(label: string | { light: string; dark: string }, isDark: boolean): string {
+	return typeof label === "string" ? label : isDark ? label.dark : label.light;
+}
+
 export const AppearanceSection = () => {
 	const { mode, setMode, preset, setPreset, isDark } = useTheme();
+	const modePreview = isDark ? DARK : LIGHT;
 
 	return (
 		<SettingsSection
@@ -118,7 +113,9 @@ export const AppearanceSection = () => {
 									: "border-border hover:border-muted-foreground/30",
 							)}
 						>
-							<ThemePreview colors={option.preview} />
+							<ThemePreview
+								colors={option.id === "light" ? LIGHT : option.id === "dark" ? DARK : modePreview}
+							/>
 							<div className="flex items-center gap-1.5 px-0.5">
 								{option.icon}
 								<span className="text-sm font-medium">{option.label}</span>
@@ -131,18 +128,12 @@ export const AppearanceSection = () => {
 			<Card className="shadow-none bg-interactive-secondary">
 				<CardHeader>
 					<CardTitle>Theme</CardTitle>
-					<CardDescription>
-						Select a visual style for the dashboard
-					</CardDescription>
+					<CardDescription>Select a visual style for the dashboard</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<div className="grid grid-cols-2 gap-3">
 						{PRESET_OPTIONS.map((option) => {
 							const isActive = preset === option.id;
-							const colors = isDark ? option.dark : option.light;
-							const label = typeof option.label === "string"
-								? option.label
-								: isDark ? option.label.dark : option.label.light;
 							return (
 								<button
 									key={option.id}
@@ -155,14 +146,14 @@ export const AppearanceSection = () => {
 											: "border-border hover:border-muted-foreground/30",
 									)}
 								>
-									<ThemePreview colors={colors} height="h-[80px]" />
+									<ThemePreview colors={isDark ? option.dark : option.light} height="h-[80px]" />
 									<div className="flex items-center gap-2.5 px-0.5">
 										{option.icon}
 										<div className="flex flex-col gap-0.5">
-											<span className="text-sm font-medium">{label}</span>
-											<span className="text-xs text-muted-foreground">
-												{option.description}
+											<span className="text-sm font-medium">
+												{resolvePresetLabel(option.label, isDark)}
 											</span>
+											<span className="text-xs text-muted-foreground">{option.description}</span>
 										</div>
 									</div>
 								</button>
