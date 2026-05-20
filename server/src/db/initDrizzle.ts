@@ -40,7 +40,7 @@ const normalizeDbExecute = <
 
 /** Creates a Drizzle pool with the given configuration. */
 export const initDrizzle = ({
-	maxConnections = 70,
+	maxConnections = isProd ? 70 : 10,
 	replica = false,
 	connectTimeout = 5,
 	databaseUrl,
