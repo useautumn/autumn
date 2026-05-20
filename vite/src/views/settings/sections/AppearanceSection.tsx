@@ -89,9 +89,12 @@ function resolvePresetLabel(label: string | { light: string; dark: string }, isD
 	return typeof label === "string" ? label : isDark ? label.dark : label.light;
 }
 
+const systemPrefersDark = () =>
+	typeof window !== "undefined" &&
+	window.matchMedia("(prefers-color-scheme: dark)").matches;
+
 export const AppearanceSection = () => {
 	const { mode, setMode, preset, setPreset, isDark } = useTheme();
-	const modePreview = isDark ? DARK : LIGHT;
 
 	return (
 		<SettingsSection
@@ -114,7 +117,7 @@ export const AppearanceSection = () => {
 							)}
 						>
 							<ThemePreview
-								colors={option.id === "light" ? LIGHT : option.id === "dark" ? DARK : modePreview}
+								colors={option.id === "light" ? LIGHT : option.id === "dark" ? DARK : systemPrefersDark() ? DARK : LIGHT}
 							/>
 							<div className="flex items-center gap-1.5 px-0.5">
 								{option.icon}
