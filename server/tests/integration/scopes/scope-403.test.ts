@@ -99,6 +99,33 @@ const ROUTES = [
 		isWebhookExempt: false,
 	},
 	{
+		handlerName: "handleGetAdminMiscellaneousEdgeConfig",
+		handlerFile: "src/internal/admin/handleGetAdminMiscellaneousEdgeConfig.ts",
+		method: "GET",
+		path: "/admin/miscellaneous-edge-config",
+		style: "REST",
+		group: "admin",
+		mountChain: ["", "admin", "/miscellaneous-edge-config"],
+		sourceRouterFile: "src/internal/admin/adminRouter.ts",
+		routeKind: "createRoute",
+		needsScopes: true,
+		isWebhookExempt: false,
+	},
+	{
+		handlerName: "handleUpsertAdminMiscellaneousEdgeConfig",
+		handlerFile:
+			"src/internal/admin/handleUpsertAdminMiscellaneousEdgeConfig.ts",
+		method: "PUT",
+		path: "/admin/miscellaneous-edge-config",
+		style: "REST",
+		group: "admin",
+		mountChain: ["", "admin", "/miscellaneous-edge-config"],
+		sourceRouterFile: "src/internal/admin/adminRouter.ts",
+		routeKind: "createRoute",
+		needsScopes: true,
+		isWebhookExempt: false,
+	},
+	{
 		handlerName: "handleGetInvoiceLineItems",
 		handlerFile: "src/internal/admin/handleGetInvoiceLineItems.ts",
 		method: "POST",
@@ -3664,6 +3691,20 @@ const SCOPE_DECISIONS: Record<
 		shape: "array",
 		decidedAt: "2026-04-24T15:14:53.392Z",
 	},
+	"GET|/admin/miscellaneous-edge-config|handleGetAdminMiscellaneousEdgeConfig":
+		{
+			decision: "decided",
+			scopes: ["superuser"],
+			shape: "array",
+			decidedAt: "2026-05-19T16:00:00.000Z",
+		},
+	"PUT|/admin/miscellaneous-edge-config|handleUpsertAdminMiscellaneousEdgeConfig":
+		{
+			decision: "decided",
+			scopes: ["superuser"],
+			shape: "array",
+			decidedAt: "2026-05-19T16:00:00.000Z",
+		},
 	"POST|/admin/invoice-line-items|handleGetInvoiceLineItems": {
 		decision: "decided",
 		scopes: ["superuser"],
