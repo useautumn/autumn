@@ -23,7 +23,7 @@ export function AiModelSelectDropdown({
 	return (
 		<div onWheel={(e) => e.stopPropagation()}>
 			<SearchableSelect
-				contentClassName="w-full"
+				triggerClassName="!border-0 !shadow-none !ring-0 !bg-transparent !p-0 !px-0.5 !rounded-none"
 				value={value || null}
 				onValueChange={onValueChange}
 				options={models}
@@ -31,18 +31,18 @@ export function AiModelSelectDropdown({
 				getOptionLabel={(model) => model.name}
 				renderValue={(option) =>
 					option ? (
-						<span>{option.name}</span>
+						<span className="text-sm">{option.name}</span>
 					) : provider.models[value]?.name ? (
-						<span>{provider.models[value].name}</span>
+						<span className="text-sm">{provider.models[value].name}</span>
 					) : value ? (
-						<span>{value}</span>
+						<span className="text-sm">{value}</span>
 					) : (
-						<span className="text-tertiary-foreground">
-							{isLoading ? "Loading models..." : "Select model"}
+						<span className="text-sm text-tertiary-foreground">
+							{isLoading ? "Loading..." : "Select model"}
 						</span>
 					)
 				}
-				placeholder={isLoading ? "Loading models..." : "Select model"}
+				placeholder={isLoading ? "Loading..." : "Select model"}
 				searchable
 				searchPlaceholder="Search models..."
 				emptyText="No models found"

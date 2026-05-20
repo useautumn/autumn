@@ -69,9 +69,8 @@ export function IncludedUsage() {
 						)}
 					</div>
 					<div className="flex items-center gap-2">
-						{isAiCreditSystem ? (
-							// Couldn't find a disabled property but data-disabled is accounted for in CSS
-							<InputGroup data-disabled={includedUsage === Infinite}>
+					{isAiCreditSystem ? (
+						<InputGroup data-disabled={includedUsage === Infinite}>
 								<InputGroupText>$</InputGroupText>
 								<InputGroupInput
 									key={`included-usage-${item.feature_id || item.price_id || "default"}`}

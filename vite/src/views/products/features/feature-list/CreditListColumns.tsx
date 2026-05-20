@@ -1,4 +1,5 @@
-import type { Feature, ModelsDevProvider } from "@autumn/shared";
+import { type Feature, FeatureType, type ModelsDevProvider } from "@autumn/shared";
+import { CoinsIcon, CpuIcon } from "@phosphor-icons/react";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { AdminHover } from "@/components/general/AdminHover";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
@@ -49,8 +50,31 @@ export const createCreditListColumns = (
 		},
 	},
 	{
+		header: "Type",
+		size: 120,
+		accessorKey: "type",
+		cell: ({ row }: { row: Row<Feature> }) => {
+			const isAi = row.original.type === FeatureType.AiCreditSystem;
+			return (
+				<div className="flex items-center gap-1.5 text-muted-foreground text-sm">
+					{isAi ? (
+						<>
+							<CpuIcon size={14} weight="fill" className="text-yellow-500" />
+							AI
+						</>
+					) : (
+						<>
+							<CoinsIcon size={14} weight="fill" className="text-pink-500" />
+							Standard
+						</>
+					)}
+				</div>
+			);
+		},
+	},
+	{
 		header: "Features",
-		size: 250,
+		size: 200,
 		accessorKey: "features",
 		cell: ({ row }: { row: Row<Feature> }) => {
 			const creditSystem = row.original;

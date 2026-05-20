@@ -29,15 +29,19 @@ export function FeatureListTable() {
 
 	// Filter features and credit systems based on archived state
 	const { regularFeatures, creditSystems, hasEventNames } = useMemo(() => {
+		const isCreditType = (type: string) =>
+			type === FeatureType.CreditSystem ||
+			type === FeatureType.AiCreditSystem;
+
 		const regularFeatures = features?.filter((feature) => {
-			if (feature.type === FeatureType.CreditSystem) return false;
+			if (isCreditType(feature.type)) return false;
 			return queryStates.showArchivedFeatures
 				? feature.archived
 				: !feature.archived;
 		});
 
 		const creditSystems = features?.filter((feature) => {
-			if (feature.type !== FeatureType.CreditSystem) return false;
+			if (!isCreditType(feature.type)) return false;
 			return queryStates.showArchivedFeatures
 				? feature.archived
 				: !feature.archived;

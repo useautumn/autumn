@@ -7,6 +7,40 @@ import { AreaRadioGroupItem } from "@/components/v2/radio-groups/AreaRadioGroupI
 import { RadioGroup } from "@/components/v2/radio-groups/RadioGroup";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { CreditSystemSchema } from "@/views/products/features/credit-systems/components/CreditSystemSchema";
+import { useCreditSystemForm } from "@/views/products/features/credit-systems/hooks/useCreditSystemForm";
+
+function NewFeatureCreditSchema({
+	feature,
+	setFeature,
+}: {
+	feature: CreateFeature;
+	setFeature: (feature: CreateFeature) => void;
+}) {
+	const form = useCreditSystemForm({
+		feature: {
+			internal_id: "",
+			org_id: "",
+			created_at: 0,
+			env: "sandbox" as any,
+			id: feature.id ?? "",
+			name: feature.name ?? "",
+			type: feature.type,
+			config: feature.config ?? {},
+			archived: false,
+			event_names: feature.event_names ?? [],
+			model_markups: feature.model_markups ?? null,
+		},
+		onChange: (values) =>
+			setFeature({
+				...feature,
+				type: values.type,
+				config: values.config,
+				model_markups: values.model_markups,
+			}),
+	});
+
+	return <CreditSystemSchema form={form} />;
+}
 
 export function NewFeatureBehaviour({
 	feature,
@@ -15,13 +49,11 @@ export function NewFeatureBehaviour({
 	feature: CreateFeature;
 	setFeature: (feature: CreateFeature) => void;
 }) {
-	if (feature.type === FeatureType.CreditSystem) {
-		return (
-			<CreditSystemSchema
-				creditSystem={feature}
-				setCreditSystem={setFeature}
-			/>
-		);
+	if (
+		feature.type === FeatureType.CreditSystem ||
+		feature.type === FeatureType.AiCreditSystem
+	) {
+		return <NewFeatureCreditSchema feature={feature} setFeature={setFeature} />;
 	}
 
 	if (feature.type === FeatureType.Metered) {

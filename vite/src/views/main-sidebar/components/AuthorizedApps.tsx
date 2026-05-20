@@ -15,26 +15,25 @@ import {
 import { getBackendErr } from "@/utils/genUtils";
 
 interface OAuthConsent {
-	id: string;
-	clientId: string;
-	scopes: string[];
-	referenceId: string | null;
-	createdAt: string;
-	updatedAt: string;
+	readonly id: string;
+	readonly clientId: string;
+	readonly scopes: string[];
+	readonly referenceId: string | null;
+	readonly createdAt: string;
+	readonly updatedAt: string;
 }
 
 interface ClientInfo {
-	client_id: string;
-	name: string;
+	readonly client_id: string;
+	readonly name: string;
 }
 
 interface ApiKeyPreview {
-	prefix: string;
-	name: string;
-	env: string;
+	readonly prefix: string;
+	readonly name: string;
+	readonly env: string;
 }
 
-// Helper to render scope badges
 function renderScopeBadges(scopes: string[]): JSX.Element {
 	const grouped = groupAndFormatScopes(scopes);
 
@@ -64,8 +63,6 @@ export const AuthorizedApps = () => {
 	const [clientNames, setClientNames] = useState<Record<string, string>>({});
 	const [isLoading, setIsLoading] = useState(true);
 	const [revokingId, setRevokingId] = useState<string | null>(null);
-
-	// Revoke confirmation dialog state
 	const [revokeDialogOpen, setRevokeDialogOpen] = useState(false);
 	const [revokeTarget, setRevokeTarget] = useState<{
 		consentId: string;
@@ -77,25 +74,18 @@ export const AuthorizedApps = () => {
 	const fetchConsents = async () => {
 		setIsLoading(true);
 		try {
-			// Use our new org-level consent endpoint
 			const response = await fetch(
 				`${import.meta.env.VITE_BACKEND_URL}/consents`,
-				{
-					credentials: "include",
-				},
+				{ credentials: "include" },
 			);
-
 			if (!response.ok) {
 				const error = await response.json().catch(() => ({}));
 				toast.error(error.message || "Failed to fetch authorized apps");
 				return;
 			}
-
 			const data = await response.json();
 			const consentList = (data.consents as OAuthConsent[]) || [];
 			setConsents(consentList);
-
-			// Fetch client names for each consent
 			const names: Record<string, string> = {};
 			await Promise.all(
 				consentList.map(async (consent) => {
@@ -131,22 +121,17 @@ export const AuthorizedApps = () => {
 		setRevokeDialogOpen(true);
 		setLoadingApiKeys(true);
 		setLinkedApiKeys([]);
-
-		// Fetch API keys linked to this consent
 		try {
 			const response = await fetch(
 				`${import.meta.env.VITE_BACKEND_URL}/consents/${consentId}/api-keys`,
-				{
-					credentials: "include",
-				},
+				{ credentials: "include" },
 			);
-
 			if (response.ok) {
 				const data = await response.json();
 				setLinkedApiKeys(data.apiKeys || []);
 			}
 		} catch {
-			// If we can't fetch API keys, just show the basic dialog
+			// Silent — dialog still usable without API key preview
 		} finally {
 			setLoadingApiKeys(false);
 		}
@@ -154,23 +139,17 @@ export const AuthorizedApps = () => {
 
 	const handleConfirmRevoke = async () => {
 		if (!revokeTarget) return;
-
 		setRevokingId(revokeTarget.consentId);
 		try {
 			const response = await fetch(
 				`${import.meta.env.VITE_BACKEND_URL}/consents/${revokeTarget.consentId}`,
-				{
-					method: "DELETE",
-					credentials: "include",
-				},
+				{ method: "DELETE", credentials: "include" },
 			);
-
 			if (!response.ok) {
 				const error = await response.json().catch(() => ({}));
 				toast.error(error.message || "Failed to revoke access");
 				return;
 			}
-
 			const result = await response.json();
 			toast.success(
 				`Access revoked for ${revokeTarget.clientName}${result.deletedApiKeys > 0 ? ` (${result.deletedApiKeys} API key${result.deletedApiKeys > 1 ? "s" : ""} deleted)` : ""}`,
@@ -226,20 +205,16 @@ export const AuthorizedApps = () => {
 										</p>
 									</div>
 
-									{/* Scopes - Grouped by Resource */}
-									<div className="mt-2">
-										{renderScopeBadges(consent.scopes)}
-									</div>
-
-									{/* Date */}
-									<div className="flex items-center gap-1 mt-2 text-xs text-tertiary-foreground">
+								<div className="mt-2">
+									{renderScopeBadges(consent.scopes)}
+								</div>
+								<div className="flex items-center gap-1 mt-2 text-xs text-tertiary-foreground">
 										<Calendar className="w-3 h-3" />
 										<span>Authorized on {formatDate(consent.createdAt)}</span>
 									</div>
 								</div>
 
-								{/* Revoke Button */}
-								<Button
+							<Button
 									variant="secondary"
 									size="sm"
 									onClick={() =>
@@ -260,8 +235,7 @@ export const AuthorizedApps = () => {
 				</div>
 			</div>
 
-			{/* Revoke Confirmation Dialog */}
-			<Dialog open={revokeDialogOpen} onOpenChange={setRevokeDialogOpen}>
+		<Dialog open={revokeDialogOpen} onOpenChange={setRevokeDialogOpen}>
 				<DialogContent>
 					<DialogHeader>
 						<DialogTitle>Revoke Access</DialogTitle>
@@ -274,8 +248,7 @@ export const AuthorizedApps = () => {
 						</DialogDescription>
 					</DialogHeader>
 
-					{/* Show linked API keys that will be deleted */}
-					{loadingApiKeys ? (
+				{loadingApiKeys ? (
 						<div className="py-3 text-sm text-tertiary-foreground">
 							Checking for linked API keys...
 						</div>

@@ -1,26 +1,26 @@
-import type { CreateFeature, CreditSchemaItem, Feature } from "@autumn/shared";
+import type { CreditSchemaItem, Feature } from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
+import { useStore } from "@tanstack/react-form";
 import { X } from "lucide-react";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { toast } from "sonner";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
 import { FeatureSelectDropdown } from "./FeatureSelectDropdown";
 
 interface ClassicCreditSchemaProps {
-	creditSystem: CreateFeature;
-	setCreditSystem: (creditSystem: CreateFeature) => void;
+	form: CreditSystemFormInstance;
 }
 
-export function ClassicCreditSchema({
-	creditSystem,
-	setCreditSystem,
-}: ClassicCreditSchemaProps) {
+export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 	const { features } = useFeaturesQuery();
-	const schema = creditSystem.config?.schema || [];
+	const config = useStore(form.store, (s) => s.values.config);
+	const schema: CreditSchemaItem[] = config?.schema || [];
+
 	const schemaKeysRef = useRef<string[]>([]);
 	const schemaKeys = useMemo(() => {
 		const nextKeys = [...schemaKeysRef.current];
@@ -30,12 +30,9 @@ export function ClassicCreditSchema({
 		while (nextKeys.length > schema.length) {
 			nextKeys.pop();
 		}
+		schemaKeysRef.current = nextKeys;
 		return nextKeys;
 	}, [schema.length]);
-
-	useEffect(() => {
-		schemaKeysRef.current = schemaKeys;
-	}, [schemaKeys]);
 
 	const allMeteredFeatures = features.filter(
 		(feature: Feature) => feature.type === FeatureType.Metered,
@@ -48,26 +45,16 @@ export function ClassicCreditSchema({
 	) => {
 		const newSchema = [...schema];
 		newSchema[index] = { ...newSchema[index], [key]: value };
-		setCreditSystem({
-			...creditSystem,
-			config: { ...creditSystem.config, schema: newSchema },
-		});
+		form.setFieldValue("config", { ...config, schema: newSchema });
 	};
 
 	const addSchemaItem = () => {
 		schemaKeysRef.current = [...schemaKeysRef.current, crypto.randomUUID()];
 		const newSchema = [
 			...schema,
-			{
-				metered_feature_id: "",
-				feature_amount: 1,
-				credit_amount: 0,
-			},
+			{ metered_feature_id: "", feature_amount: 1, credit_amount: 0 },
 		];
-		setCreditSystem({
-			...creditSystem,
-			config: { ...creditSystem.config, schema: newSchema },
-		});
+		form.setFieldValue("config", { ...config, schema: newSchema });
 	};
 
 	const removeSchemaItem = (index: number) => {
@@ -80,10 +67,7 @@ export function ClassicCreditSchema({
 		schemaKeysRef.current = nextKeys;
 		const newSchema = [...schema];
 		newSchema.splice(index, 1);
-		setCreditSystem({
-			...creditSystem,
-			config: { ...creditSystem.config, schema: newSchema },
-		});
+		form.setFieldValue("config", { ...config, schema: newSchema });
 	};
 
 	return (

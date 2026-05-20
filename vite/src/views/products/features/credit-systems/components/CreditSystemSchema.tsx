@@ -1,8 +1,10 @@
-import { type CreateFeature, FeatureType, type ModelsDevProvider } from "@autumn/shared";
+import { FeatureType, type ModelsDevProvider } from "@autumn/shared";
+import { useStore } from "@tanstack/react-form";
 import { useMemo } from "react";
 import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useModelsDevPricing } from "@/hooks/queries/useAiModelsQuery";
+import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
 import { AiCreditSchema } from "./AiCreditSchema";
 import { ClassicCreditSchema } from "./ClassicCreditSchema";
 
@@ -18,8 +20,8 @@ const getReleaseDateMs = (releaseDate?: string) => {
 
 function getDefaultModelMarkups(
 	providers: Record<string, ModelsDevProvider>,
-): Record<string, { markup: number }> {
-	const result: Record<string, { markup: number }> = {};
+): Record<string, { markup?: number }> {
+	const result: Record<string, { markup?: number }> = {};
 	const preferredProvider =
 		providers["openrouter"] ?? Object.values(providers)[0];
 	if (!preferredProvider) return result;
@@ -34,60 +36,50 @@ function getDefaultModelMarkups(
 			[string, ModelsDevProvider["models"][string]] | null
 		>((currentLatest, candidate) => {
 			if (!currentLatest) return candidate;
-
 			const currentRelease = getReleaseDateMs(currentLatest[1].release_date);
 			const candidateRelease = getReleaseDateMs(candidate[1].release_date);
-
 			return candidateRelease > currentRelease ? candidate : currentLatest;
 		}, null);
 
 		if (!latestModel) continue;
 
 		const [modelKey] = latestModel;
-		result[`${providerKey}/${modelKey}`] = {
-			markup: 0,
-		};
+		result[`${providerKey}/${modelKey}`] = {};
 	}
 	return result;
 }
 
 interface CreditSystemSchemaProps {
-	creditSystem: CreateFeature;
-	setCreditSystem: (creditSystem: CreateFeature) => void;
+	form: CreditSystemFormInstance;
 	disableModeSwitch?: boolean;
 }
 
 export function CreditSystemSchema({
-	creditSystem,
-	setCreditSystem,
+	form,
 	disableModeSwitch = false,
 }: CreditSystemSchemaProps) {
 	const { providers } = useModelsDevPricing();
+	const type = useStore(form.store, (s) => s.values.type);
 
 	const mode: CreditSchemaMode =
-		creditSystem.type === FeatureType.AiCreditSystem ? "ai" : "classic";
+		type === FeatureType.AiCreditSystem ? "ai" : "classic";
 
 	const handleModeChange = (newMode: string) => {
 		if (newMode === "ai") {
 			const modelMarkups = getDefaultModelMarkups(providers);
-			setCreditSystem({
-				...creditSystem,
-				type: FeatureType.AiCreditSystem,
-				config: { ...creditSystem.config, schema: [] },
-				model_markups: Object.keys(modelMarkups).length > 0 ? modelMarkups : {},
-			});
+			form.setFieldValue("type", FeatureType.AiCreditSystem);
+			form.setFieldValue("config", { ...form.state.values.config, schema: [] });
+			form.setFieldValue(
+				"model_markups",
+				Object.keys(modelMarkups).length > 0 ? modelMarkups : {},
+			);
 		} else {
-			setCreditSystem({
-				...creditSystem,
-				type: FeatureType.CreditSystem,
-				config: {
-					...creditSystem.config,
-					schema: [
-						{ metered_feature_id: "", feature_amount: 1, credit_amount: 0 },
-					],
-				},
-				model_markups: null,
+			form.setFieldValue("type", FeatureType.CreditSystem);
+			form.setFieldValue("config", {
+				...form.state.values.config,
+				schema: [{ metered_feature_id: "", feature_amount: 1, credit_amount: 0 }],
 			});
+			form.setFieldValue("model_markups", {});
 		}
 	};
 
@@ -105,7 +97,7 @@ export function CreditSystemSchema({
 			withSeparator={false}
 			description={
 				mode === "ai"
-					? "Select AI models and set a markup on top of their base pricing"
+					? "Select AI models and set a markup on top of their base pricing. All prices in $/M tokens."
 					: "When you track usage for these features, the value will be multiplied by the credit cost, then deducted from the balance"
 			}
 		>
@@ -120,16 +112,9 @@ export function CreditSystemSchema({
 				)}
 
 				{mode === "classic" ? (
-					<ClassicCreditSchema
-						creditSystem={creditSystem}
-						setCreditSystem={setCreditSystem}
-					/>
+					<ClassicCreditSchema form={form} />
 				) : (
-					<AiCreditSchema
-						key={creditSystem.id}
-						creditSystem={creditSystem}
-						setCreditSystem={setCreditSystem}
-					/>
+					<AiCreditSchema form={form} />
 				)}
 			</div>
 		</SheetSection>

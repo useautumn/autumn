@@ -1,189 +1,115 @@
-import type { CreateFeature } from "@autumn/shared";
-import { PlusIcon, X } from "lucide-react";
-import { IconButton } from "@/components/v2/buttons/IconButton";
+import { PlusIcon } from "lucide-react";
+import { useMemo } from "react";
+import { useStore } from "@tanstack/react-form";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
-import { useAiCreditSchema } from "../hooks/useAiCreditSchema";
-import { AiCreditSchemaRow } from "./AiCreditSchemaRow";
+import { useModelsDevPricing } from "@/hooks/queries/useAiModelsQuery";
+import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
+import { AiCreditSchemaTable } from "./AiCreditSchemaTable";
 
 interface AiCreditSchemaProps {
-	creditSystem: CreateFeature;
-	setCreditSystem: (
-		creditSystem: CreateFeature | ((prev: CreateFeature) => CreateFeature),
-	) => void;
+	form: CreditSystemFormInstance;
 }
 
-export function AiCreditSchema({
-	creditSystem,
-	setCreditSystem,
-}: AiCreditSchemaProps) {
-	const {
-		providers,
-		modelsLoading,
-		modelMarkups,
-		defaultMarkup,
-		providerGroups,
-		activeProviderKeys,
-		availableProviders,
-		handleModelChange,
-		handleMarkupChange,
-		handleDefaultMarkupChange,
-		handleCostChange,
-		handleRemoveModel,
-		handleRemoveProvider,
-		addProvider,
-		addModelToProvider,
-	} = useAiCreditSchema({ creditSystem, setCreditSystem });
+function groupByProvider(markups: Record<string, unknown>) {
+	const groups: Record<string, string[]> = {};
+	for (const fullId of Object.keys(markups)) {
+		const [provider] = fullId.split("/");
+		(groups[provider] ??= []).push(fullId);
+	}
+	return groups;
+}
+
+export function AiCreditSchema({ form }: AiCreditSchemaProps) {
+	const { providers, isLoading } = useModelsDevPricing();
+	const modelMarkups = useStore(form.store, (s) => s.values.model_markups);
+	const defaultMarkup = useStore(form.store, (s) => s.values.defaultMarkup);
+
+	const providerGroups = useMemo(() => groupByProvider(modelMarkups), [modelMarkups]);
+	const activeProviderKeys = Object.keys(providerGroups);
+
+	const availableProviders = useMemo(() => {
+		const filtered = Object.values(providers).filter(
+			(p) => !activeProviderKeys.includes(p.id),
+		);
+		if (!activeProviderKeys.includes("custom")) {
+			filtered.push({ id: "custom", name: "Custom", models: {} });
+		}
+		return filtered;
+	}, [providers, activeProviderKeys]);
+
+	const addProvider = (providerKey: string) => {
+		form.setFieldValue("model_markups", (prev) => {
+			if (providerKey === "custom") {
+				const existing = Object.keys(prev).filter((k) => k.startsWith("custom/"));
+				let i = 1;
+				while (existing.includes(`custom/model-${i}`)) i++;
+				return { ...prev, [`custom/model-${i}`]: { input_cost: 0, output_cost: 0 } };
+			}
+			const provider = providers[providerKey];
+			if (!provider) return prev;
+			const firstKey = Object.keys(provider.models)[0];
+			if (!firstKey) return prev;
+			return { ...prev, [`${providerKey}/${firstKey}`]: {} };
+		});
+	};
 
 	return (
-		<div className="flex flex-col gap-0">
-			<div className="flex items-center gap-2 mb-3">
-				<FormLabel className="whitespace-nowrap">Default Markup %</FormLabel>
+		<div className="flex flex-col gap-4">
+			<div className="flex flex-col gap-1.5">
+				<FormLabel>Default Markup %</FormLabel>
 				<Input
-					type="number"
-					lang="en"
-					value={defaultMarkup}
-					onChange={(e) =>
-						handleDefaultMarkupChange(Number(e.target.value) || 0)
-					}
-					onBlur={(e) => handleDefaultMarkupChange(Number(e.target.value) || 0)}
+					type="text"
+					inputMode="numeric"
+					value={defaultMarkup === 0 ? "" : String(defaultMarkup)}
+					onChange={(e) => {
+						const raw = e.target.value;
+						if (raw === "" || /^-?\d*\.?\d*$/.test(raw)) {
+							form.setFieldValue("defaultMarkup", raw === "" ? 0 : Number(raw));
+						}
+					}}
 					placeholder="0"
-					className="w-24"
 				/>
 			</div>
-			<div className="flex flex-col gap-2">
+
+			<div className="flex flex-col gap-3">
 				{activeProviderKeys.map((providerKey) => {
 					const provider = providers[providerKey];
 					const modelFullIds = providerGroups[providerKey] ?? [];
 					const providerName =
-						provider?.name ??
-						providerKey.charAt(0).toUpperCase() + providerKey.slice(1);
+						provider?.name ?? providerKey.charAt(0).toUpperCase() + providerKey.slice(1);
 
 					return (
-						<div
+						<AiCreditSchemaTable
 							key={providerKey}
-							className="py-1.5 border-b border-border/30 last:border-b-0"
-						>
-							<div className="flex items-center justify-between px-0.5 py-1">
-								<span className="flex items-center gap-2 text-sm font-medium">
-									{providerName}
-									{providerKey !== "custom" && (
-										<img
-											src={`https://models.dev/logos/${providerKey}.svg`}
-											alt={providerName}
-											className="h-4 w-4 dark:invert"
-										/>
-									)}
-								</span>
-								<IconButton
-									variant="skeleton"
-									iconOrientation="center"
-									icon={<X className="h-3.5 w-3.5" />}
-									onClick={() => handleRemoveProvider(providerKey)}
-								/>
-							</div>
-
-							<div className="flex flex-col gap-1 px-0.5 py-1">
-								{providerKey === "custom" && (
-									<p className="text-xs text-t-tertiary mb-0.5">
-										In your API tracking, use the format{" "}
-										<code className="bg-muted px-1 py-0.5 rounded">
-											custom/{"modelId"}
-										</code>
-									</p>
-								)}
-
-								<div className="grid grid-cols-[minmax(0,2.7fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_minmax(0,0.8fr)_auto] items-center gap-1 px-0.5 pb-0.5">
-									<div className="min-w-0 text-xs font-semibold text-t-tertiary whitespace-nowrap">
-										Model
-									</div>
-									<div className="text-xs font-semibold text-t-tertiary whitespace-nowrap">
-										{providerKey === "custom" ? "In $/M" : "Cost In"}
-									</div>
-									<div className="text-xs font-semibold text-t-tertiary whitespace-nowrap">
-										{providerKey === "custom" ? "Out $/M" : "Cost Out"}
-									</div>
-									<div className="text-xs font-semibold text-t-tertiary whitespace-nowrap">
-										Markup %
-									</div>
-									<div className="w-6" />
-								</div>
-
-								{modelFullIds.map((fullId) => {
-									const [, ...parts] = fullId.split("/");
-									const modelKey = parts.join("/");
-									const isCustom = providerKey === "custom";
-									return (
-										<AiCreditSchemaRow
-											key={fullId}
-											modelKey={modelKey}
-											markup={modelMarkups[fullId]?.markup ?? 0}
-											provider={
-												provider ?? {
-													id: providerKey,
-													name: providerKey,
-													models: {},
-												}
-											}
-											isLoading={modelsLoading}
-											isCustom={isCustom}
-											inputCost={modelMarkups[fullId]?.input_cost}
-											outputCost={modelMarkups[fullId]?.output_cost}
-											onModelChange={(oldKey, newKey) =>
-												handleModelChange(providerKey, oldKey, newKey)
-											}
-											onMarkupChange={(key, newMarkup) =>
-												handleMarkupChange(providerKey, key, newMarkup)
-											}
-											onCostChange={(key, field, value) =>
-												handleCostChange(providerKey, key, field, value)
-											}
-											onRemove={(key) => handleRemoveModel(providerKey, key)}
-										/>
-									);
-								})}
-
-								<IconButton
-									variant="muted"
-									onClick={() => addModelToProvider(providerKey)}
-									className="w-fit mt-0.5"
-									icon={<PlusIcon className="h-3.5 w-3.5" />}
-									disabled={
-										providerKey === "custom"
-											? false
-											: Object.keys(provider?.models ?? {}).length ===
-												modelFullIds.length
-									}
-								>
-									Add model
-								</IconButton>
-							</div>
-						</div>
+							form={form}
+							providerKey={providerKey}
+							providerName={providerName}
+							modelFullIds={modelFullIds}
+							provider={provider ?? { id: providerKey, name: providerKey, models: {} }}
+							isLoading={isLoading}
+						/>
 					);
 				})}
 			</div>
 
-			<p className="text-xs text-t-tertiary my-2">All prices in $/M tokens</p>
-
-			<div className="mt-3 w-64" onWheel={(e) => e.stopPropagation()}>
+			<div className="flex flex-col gap-1.5" onWheel={(e) => e.stopPropagation()}>
+				<FormLabel>Add Provider</FormLabel>
 				<SearchableSelect
 					value={null}
 					onValueChange={addProvider}
 					options={availableProviders}
-					getOptionValue={(provider) => provider.id}
-					getOptionLabel={(provider) => provider.name}
+					getOptionValue={(p) => p.id}
+					getOptionLabel={(p) => p.name}
 					renderValue={() => (
-						<span className="flex items-center gap-1.5">
-							<PlusIcon className="h-3.5 w-3.5" />
-							Add provider
-						</span>
+						<span className="text-tertiary-foreground">Select provider</span>
 					)}
-					placeholder="Add provider"
+					placeholder="Select provider"
 					searchable
 					searchPlaceholder="Search providers..."
 					emptyText="No providers available"
-					disabled={modelsLoading}
+					disabled={isLoading}
 				/>
 			</div>
 		</div>

@@ -97,8 +97,7 @@ export function TableContentVirtualized({
 					<div className="bg-white/60 dark:bg-black/60 absolute pointer-events-none rounded-lg -inset-[1px] z-70" />
 				)}
 
-			{/* Fixed header table - scrolls horizontally in sync with body */}
-				<div
+			<div
 					ref={headerRef}
 					className="overflow-x-auto overflow-y-hidden scrollbar-none"
 					style={{ scrollbarWidth: "none" }}
@@ -110,8 +109,7 @@ export function TableContentVirtualized({
 							paddingRight: scrollbarWidth,
 						}}
 					>
-						{/* Column visibility toggle - only render if not in toolbar */}
-						{enableColumnVisibility && !columnVisibilityInToolbar && (
+					{enableColumnVisibility && !columnVisibilityInToolbar && (
 							<div
 								className={cn(
 									"absolute right-7 top-1 z-45",
@@ -130,8 +128,7 @@ export function TableContentVirtualized({
 					</div>
 				</div>
 
-				{/* Scroll container for body only - key forces remount when columns change */}
-				<div
+			<div
 					key={visibleColumnKey}
 					ref={setScrollContainer}
 					onScroll={handleScroll}
@@ -149,8 +146,7 @@ export function TableContentVirtualized({
 						flexibleTableColumns={flexibleTableColumns}
 						style={{ minWidth: `${totalWidth}px` }}
 					>
-						{/* Clone children with key to force remount when columns change */}
-						{React.Children.map(children, (child) =>
+					{React.Children.map(children, (child) =>
 							React.isValidElement(child)
 								? React.cloneElement(child, { key: visibleColumnKey })
 								: child,

@@ -7,6 +7,7 @@ import {
 import {
 	BatteryHighIcon,
 	CoinsIcon,
+	CpuIcon,
 	TicketIcon,
 	ToggleRightIcon,
 } from "@phosphor-icons/react";
@@ -65,6 +66,18 @@ export const getFeatureIconConfig = (
 			icon: <ToggleRightIcon size={size} weight={weight} />,
 			color: "text-red-500",
 			label: "Boolean",
+		};
+	}
+
+	// Handle AI credit system
+	if (
+		typeStr === FeatureType.AiCreditSystem ||
+		typeStr === "ai_credit_system"
+	) {
+		return {
+			icon: <CpuIcon size={size} weight={weight} />,
+			color: "text-yellow-500",
+			label: "AI Credit System",
 		};
 	}
 

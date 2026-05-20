@@ -63,13 +63,13 @@ export const V1_2_FeatureChange = defineVersionChange({
 			v0Type = ApiFeatureType.Boolean;
 		} else if (input.type === FeatureType.CreditSystem) {
 			v0Type = ApiFeatureType.CreditSystem;
+		} else if (input.type === FeatureType.AiCreditSystem) {
+			v0Type = ApiFeatureType.AiCreditSystem;
 		} else if (input.type === FeatureType.Metered) {
-			// Use consumable flag to determine single_use vs continuous_use
 			v0Type = input.consumable
 				? ApiFeatureType.SingleUsage
 				: ApiFeatureType.ContinuousUse;
 		} else {
-			// Fallback (should never happen)
 			v0Type = ApiFeatureType.Boolean;
 		}
 

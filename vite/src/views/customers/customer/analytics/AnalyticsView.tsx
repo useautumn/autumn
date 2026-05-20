@@ -156,14 +156,14 @@ export const AnalyticsView = () => {
 		const trimmed = { ...transformed, data: nonEmptyData, rows: nonEmptyData.length };
 
 		const config = generateChartConfig({
-				events: trimmed,
-				features,
-				groupBy,
-				originalColors: colors,
-				entityNames,
-				customerNames,
-				planNames,
-			});
+			events: trimmed,
+			features,
+			groupBy,
+			originalColors: colors,
+			entityNames,
+			customerNames,
+			planNames,
+		});
 
 		return { chartData: trimmed, chartConfig: config };
 	}, [events, features, groupBy, groupFilter, planDeselected, entityNames, customerNames, planNames]);

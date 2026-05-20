@@ -140,8 +140,6 @@ const getFeatureString = ({
 	item: ProductItem;
 	features: Feature[];
 }) => {
-	// This function isn't exported or used
-	// Just updated it to account for the new AI Credit System features, but it may be unused and can probably be deleted
 	const feature = features.find((f: Feature) => f.id === item.feature_id);
 
 	if (feature?.type === FeatureType.Boolean) {
