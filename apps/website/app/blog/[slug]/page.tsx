@@ -119,7 +119,7 @@ export default async function BlogPostPage({ params }: { params: BlogParams }) {
 
 				<hr className="border-[#292929] mb-12" />
 
-				<article className="prose prose-invert prose-lg max-w-none">
+				<article className="prose prose-invert prose-lg max-w-none prose-p:text-[#E5E5E5] prose-li:text-[#E5E5E5]">
 					<Content components={mdxComponents} />
 				</article>
 			</div>

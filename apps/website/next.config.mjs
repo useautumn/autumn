@@ -2,6 +2,11 @@ import createMDX from "@next/mdx";
 
 const isProd = process.env.NODE_ENV === "production";
 
+const rehypePrettyCodeOptions = {
+  theme: "github-dark-dimmed",
+  keepBackground: false,
+};
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   pageExtensions: ["ts", "tsx", "md", "mdx"],
@@ -79,6 +84,7 @@ const nextConfig = {
 const withMDX = createMDX({
   options: {
     remarkPlugins: ["remark-frontmatter"],
+    rehypePlugins: [["rehype-pretty-code", rehypePrettyCodeOptions]],
   },
 });
 
