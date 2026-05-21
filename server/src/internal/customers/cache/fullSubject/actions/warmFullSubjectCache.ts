@@ -67,20 +67,6 @@ const readCurrentEpoch = async ({
 	return Number.isNaN(parsed) ? 0 : parsed;
 };
 
-/**
- * Eagerly re-populate the customer-level FullSubject cache after invalidation.
- * Fire-and-forget — never blocks the caller, never throws.
- *
- * Gated by `WARM_CACHE_CUSTOMER_IDS` env var to limit blast radius. Uses an
- * in-process single-flight Map so a write burst against the same customer
- * doesn't fan out into N concurrent hydrations. The underlying Lua write
- * is conditional on `fetchedSubjectViewEpoch`, so a racing invalidate is
- * safe: the warm becomes a no-op when its epoch is stale.
- *
- * Scope: customer-level subject only. Entity-level keys are NOT re-warmed
- * (one warm per entity would itself be a storm). Reads for individual
- * entities still hydrate on miss.
- */
 export const warmFullSubjectCache = ({
 	ctx,
 	customerId,
@@ -92,8 +78,6 @@ export const warmFullSubjectCache = ({
 }): void => {
 	if (!shouldWarmCache(customerId)) return;
 	const id = customerId as string;
-	// Scope single-flight to (org, env, customer) so two orgs sharing an
-	// upstream customer id don't suppress each other's warms.
 	const inflightKey = `${ctx.org.id}:${ctx.env}:${id}`;
 
 	if (inflight.has(inflightKey)) {
@@ -122,7 +106,6 @@ export const warmFullSubjectCache = ({
 			if (writeResult === "OK") {
 				warmCompletedCounter.add(1, { source: source ?? "unknown" });
 			} else {
-				// STALE_WRITE / CACHE_EXISTS / FAILED — Lua bailed; no value written.
 				warmSkippedCounter.add(1, { reason: writeResult.toLowerCase() });
 			}
 		} catch (error) {
@@ -131,8 +114,6 @@ export const warmFullSubjectCache = ({
 				`[warmFullSubjectCache] customer=${id} source=${source} error=${error}`,
 			);
 		} finally {
-			// Inside the try/catch scope so a throw from the metric or logger
-			// above doesn't escape as an unhandled rejection.
 			inflight.delete(inflightKey);
 		}
 	})();
