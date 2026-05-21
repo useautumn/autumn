@@ -4,11 +4,11 @@ import { AnimatePresence, motion } from "motion/react";
 import { type ReactNode, useState } from "react";
 
 export function Expand({
-	title,
+	title = "",
 	children,
 }: {
-	title: string;
-	children: ReactNode;
+	title?: string;
+	children?: ReactNode;
 }) {
 	const [open, setOpen] = useState(false);
 
