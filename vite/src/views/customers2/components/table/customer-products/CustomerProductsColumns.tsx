@@ -8,6 +8,7 @@ import type { Row, Table } from "@tanstack/react-table";
 import { ArrowRightLeft, Clock, Delete, RotateCcw } from "lucide-react";
 import { TableDropdownMenuCell } from "@/components/general/table/table-dropdown-menu-cell";
 import { DropdownMenuItem } from "@/components/v2/dropdowns/DropdownMenu";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
 import { AdminHover } from "../../../../../components/general/AdminHover";
 import { getCusProductHoverTexts } from "../../../../admin/adminUtils";
@@ -86,6 +87,7 @@ export const CustomerProductsColumns = [
 			row: Row<FullCusProduct>;
 			table: Table<FullCusProduct>;
 		}) => {
+			const { isAdmin, isPending: isAdminPending } = useAdmin();
 			const meta = table.options.meta as {
 				onCancelClick?: (product: FullCusProduct) => void;
 				onUpdateClick?: (product: FullCusProduct) => void;
@@ -102,7 +104,8 @@ export const CustomerProductsColumns = [
 			const isCanceling = row.original.canceled;
 			const isMain = !row.original.product?.is_add_on;
 			const isExpired = row.original.status === CusProductStatus.Expired;
-			const canViewAs = isMain && (isExpired || isCanceling);
+			const canViewAs =
+				isMain && (isExpired || isCanceling) && isAdmin && !isAdminPending;
 			const disabledByViewAs = meta.isViewAs === true;
 			// Avoid passing `disabled={false}` to Radix items; only set the prop
 			// when actually disabling so unrelated rerenders behave like before.
