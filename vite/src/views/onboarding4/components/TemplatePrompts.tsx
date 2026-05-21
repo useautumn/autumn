@@ -12,7 +12,7 @@ export function TemplatePrompts({ onSelectTemplate }: TemplatePromptsProps) {
 
 			<div className="flex items-center gap-3 w-full justify-center">
 				<div className="h-px w-8 bg-border border-border/50" />
-				<span className=" text-t4 font-normal text-xs">Copy a template</span>
+				<span className=" text-subtle font-normal text-xs">Copy a template</span>
 				<div className="h-px w-8 bg-border border-border/50" />
 			</div>
 
@@ -31,7 +31,7 @@ export function TemplatePrompts({ onSelectTemplate }: TemplatePromptsProps) {
 							alt={template.label}
 							className="size-4 object-contain opacity-50 dark:invert"
 						/>
-						<span className="text-sm font-medium text-t2">
+						<span className="text-sm font-medium text-muted-foreground">
 							{template.label}
 						</span>
 					</Button>

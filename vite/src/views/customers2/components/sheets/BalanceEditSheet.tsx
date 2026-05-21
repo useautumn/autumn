@@ -224,7 +224,7 @@ function RolloversSection({
 	return (
 		<SheetSection withSeparator>
 			<div className="flex flex-col gap-2">
-				<div className="flex items-center gap-1.5 text-t3 text-sm font-medium">
+				<div className="flex items-center gap-1.5 text-tertiary-foreground text-sm font-medium">
 					<ClockCountdownIcon size={14} weight="duotone" />
 					Rollovers
 				</div>
@@ -239,17 +239,17 @@ function RolloversSection({
 								key={`rollover-${index}-${rollover.expires_at}`}
 								className="flex items-center justify-between text-sm px-2 py-0.5 rounded-md"
 							>
-								<span className="text-t1 font-medium">
+								<span className="text-foreground font-medium">
 									+{numberWithCommas(rollover.balance)}
 								</span>
-								<span className="text-t3 text-xs">
+								<span className="text-tertiary-foreground text-xs">
 									{rollover.expires_at ? `Expires ${expiryText}` : expiryText}
 								</span>
 							</div>
 						);
 					})}
 				</div>
-				<div className="flex items-center justify-between text-xs text-t4 px-2">
+				<div className="flex items-center justify-between text-xs text-subtle px-2">
 					<span>Total rollover</span>
 					<span>+{numberWithCommas(rolloverFields.balance)}</span>
 				</div>
@@ -291,7 +291,7 @@ function EntitlementInfoRows({
 			<InfoRow
 				label="Interval"
 				value={
-					<span className="bg-muted px-1 py-0.5 rounded-md text-t3">
+					<span className="bg-muted px-1 py-0.5 rounded-md text-tertiary-foreground">
 						{selectedCusEnt.entitlement.interval === "lifetime"
 							? "Lifetime"
 							: selectedCusEnt.entitlement.interval}
@@ -302,7 +302,7 @@ function EntitlementInfoRows({
 				<InfoRow
 					label="Balance"
 					value={
-						<span className="bg-muted px-1 py-0.5 rounded-md text-t3">
+						<span className="bg-muted px-1 py-0.5 rounded-md text-tertiary-foreground">
 							Unlimited
 						</span>
 					}
@@ -425,7 +425,7 @@ function SetBalanceFields({
 							)}
 						</form.Field>
 					)}
-					<div className="text-t4 text-sm truncate mb-1 flex justify-center max-w-full w-full">
+					<div className="text-subtle text-sm truncate mb-1 flex justify-center max-w-full w-full">
 						<span className="truncate">
 							{numberWithCommas(
 								(gpb ?? 0) + form.rolloverBalance - (balance ?? 0),

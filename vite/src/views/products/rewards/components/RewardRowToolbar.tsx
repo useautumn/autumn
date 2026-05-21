@@ -63,7 +63,7 @@ export const RewardRowToolbar = ({ reward }: { reward: Reward }) => {
 			<DropdownMenuTrigger asChild>
 				<ToolbarButton />
 			</DropdownMenuTrigger>
-			<DropdownMenuContent className="text-t2" align="end">
+			<DropdownMenuContent className="text-muted-foreground" align="end">
 				{isDiscountReward && reward.id && (
 					<DropdownMenuItem
 						className="flex items-center"
@@ -74,7 +74,7 @@ export const RewardRowToolbar = ({ reward }: { reward: Reward }) => {
 					>
 						<div className="flex items-center justify-between w-full gap-2">
 							Open in Stripe
-							<ArrowSquareOut size={12} className="text-t3" />
+							<ArrowSquareOut size={12} className="text-tertiary-foreground" />
 						</div>
 					</DropdownMenuItem>
 				)}
@@ -91,7 +91,7 @@ export const RewardRowToolbar = ({ reward }: { reward: Reward }) => {
 						{deleteLoading ? (
 							<SmallSpinner />
 						) : (
-							<Trash size={12} className="text-t3" />
+							<Trash size={12} className="text-tertiary-foreground" />
 						)}
 					</div>
 				</DropdownMenuItem>

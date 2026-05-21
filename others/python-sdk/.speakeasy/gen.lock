@@ -1,16 +1,16 @@
 lockVersion: 2.0.0
 id: 05940b80-1ef8-40f4-9878-822fb2792070
 management:
-  docChecksum: 932df88c151e0ec14207c14a42226c15
-  docVersion: 2.2.0
+  docChecksum: f7445cb18c3f49c563032c18efee5a5e
+  docVersion: 2.3.0
   speakeasyVersion: 1.762.0
   generationVersion: 2.882.0
   releaseVersion: 0.4.18
   configChecksum: 2263d20254e354a1792248274002f650
 persistentEdits:
-  generation_id: de3d7b31-df08-4ffc-a2e2-ad7ce75ec74b
-  pristine_commit_hash: fd8c83857ce67ece55ef5a223e90b5394804c9b7
-  pristine_tree_hash: 92a87692bee9941efe458e10e8a3996f54ccd6d1
+  generation_id: e37d7642-1d8b-4556-bb09-4e747cc0ecaf
+  pristine_commit_hash: aef17ce6561fe32d616dbb634223326f7aaee97f
+  pristine_tree_hash: c4c3e69e2fa148b268b701bbf97cf7c7d57bf3a0
 features:
   python:
     additionalDependencies: 1.0.0
@@ -45,12 +45,8 @@ trackedFiles:
     pristine_git_object: 8d79f0abb72526f1fb34a4c03e5bba612c6ba2ae
   USAGE.md:
     id: 3aed33ce6e6f
-    last_write_checksum: sha1:56fbca3ffdf97dfd213c67aff08e329aae496d0f
-    pristine_git_object: 338e57de579fc8a219b6580798c5632db01380b2
-  docs/models/action.md:
-    id: 3b583d6a609e
-    last_write_checksum: sha1:098b94f92de64e0d8913334d0889fd85ebe460b6
-    pristine_git_object: 7d100638aec1c657cb7cb6696ec0818b19661e80
+    last_write_checksum: sha1:d776c370bc736e3682169477ceb6ce139fe24d86
+    pristine_git_object: 69e9b3db23297366f991f0869a701a0b24f9b452
   docs/models/aggregateeventscustomrange.md:
     id: 6bcfabf82b0c
     last_write_checksum: sha1:db82c5b951354ad2d10f2346cf57b098402df524
@@ -245,8 +241,8 @@ trackedFiles:
     pristine_git_object: 4e5b98683ba20f81f472537eea0928392ef05e0f
   docs/models/attachparams.md:
     id: cc19aeb7efcc
-    last_write_checksum: sha1:bec028ea324d83150e93026fb49d05b1c2626823
-    pristine_git_object: 906d7baa045b247b05003f119e1da90a409d1ae8
+    last_write_checksum: sha1:c1941c66290a762182f66e2af34b8c6ae6dddddf
+    pristine_git_object: 3e6eda6d5447687d5f9d6f3263ffd22f4fd40abf
   docs/models/attachplanitemfilter.md:
     id: "884913245528"
     last_write_checksum: sha1:edac027910fdd364a1c828d0b388241ca39d7c0f
@@ -1351,6 +1347,10 @@ trackedFiles:
     id: 003b28f6c8a6
     last_write_checksum: sha1:eb0472fff7f22cd14dab19ffd555e4709f3a3c67
     pristine_git_object: 8a89358d990e3cfc0c1fbd1d474292b885e9468f
+  docs/models/entitlementsgranted.md:
+    id: a2f10b587937
+    last_write_checksum: sha1:05bb6f7408cabdf776490b878cc14cbcdbfb2dec
+    pristine_git_object: 82df9892c6c29f25d45624146f6e64dfb7072cfb
   docs/models/entity.md:
     id: 903c73579a5c
     last_write_checksum: sha1:d2cdd42eb9f255a103ade4912597ddf4d1eb79e2
@@ -1361,8 +1361,8 @@ trackedFiles:
     pristine_git_object: c1950ae7b75cbddefbb82acd0466f698520c81e3
   docs/models/eventslistparams.md:
     id: ab92b0ecc15c
-    last_write_checksum: sha1:5e6a8d722d79547d925198b7bab35f071c0fa1fe
-    pristine_git_object: 81ab707fd50986600be0a0bc1cf4f8af1e6b6eb9
+    last_write_checksum: sha1:94a3cd01e037761af88b5105b7061fa98f6512b6
+    pristine_git_object: 697198175854e321c902248cc725ad9bdafbb5ed
   docs/models/expirydurationtype.md:
     id: 7ba992bf53cc
     last_write_checksum: sha1:368f1d47012462b1ce9bd136fd0aa4a88cf419fb
@@ -1377,8 +1377,12 @@ trackedFiles:
     pristine_git_object: 9c0128850f8805a81bf4f631c12b19c31fc893f7
   docs/models/finalizebalanceparams.md:
     id: 610af9b4049c
-    last_write_checksum: sha1:9f6c1e1ac2c7c0670ee998fe33e2f633edfe5c0b
-    pristine_git_object: a295c77b9467111bb0e35746658df1acd5e4b51f
+    last_write_checksum: sha1:2c966f16004e08e546d2c04b408c8c7a59299796
+    pristine_git_object: 247b270724cb7fcc2dca44bf896b1ea6e40059cb
+  docs/models/finalizelockaction.md:
+    id: d62a2aba5849
+    last_write_checksum: sha1:95aa74b72b2c130af8cc4c2dd53b255d4b50dc5a
+    pristine_git_object: 80b3946081fdaf5c2500f1e1dd1722fbb2130f47
   docs/models/finalizelockglobals.md:
     id: 9d4bb30ca240
     last_write_checksum: sha1:21e04ffc835a849a55954edb45b61cc2a450d7da
@@ -1929,8 +1933,8 @@ trackedFiles:
     pristine_git_object: 196b6576bb0e6cd383dce7b9ca8809a5e516be6d
   docs/models/listcustomersparams.md:
     id: 8ac823390bd3
-    last_write_checksum: sha1:719e9f12cbcd82be36ab0e00332002ffe58f2dfa
-    pristine_git_object: 22499091dc914bb3b142af5727ce53f04ece6f1a
+    last_write_checksum: sha1:ee5fb1cef90fcbcbb7104ab28a3882ca930598eb
+    pristine_git_object: 2d22b90c77b474d406c1869a6c47e10cc109b514
   docs/models/listcustomersplan.md:
     id: 676e48e73f55
     last_write_checksum: sha1:d7d03d3d56264e691c90389b4ea7d94d66b90963
@@ -1961,8 +1965,8 @@ trackedFiles:
     pristine_git_object: b5a71cec323a5f010ec5393952655622d9957bf6
   docs/models/listcustomersresponse.md:
     id: 8bcc0ece3648
-    last_write_checksum: sha1:ea3bc6a1dec87761cce68202aea50e53ec061419
-    pristine_git_object: e51d209ca8ae108f5b18b5e418b9c94fde3a1191
+    last_write_checksum: sha1:bb231bcaa0609393f4b2c8f6d0d88057cb452d1c
+    pristine_git_object: 768c9f98a88555fae8dfbc3190041dc9c2caf3ca
   docs/models/listcustomersrevenuecat.md:
     id: 10d90016c4cd
     last_write_checksum: sha1:6f2f3a096c1128270aac1f472374dd996aacae0b
@@ -1985,8 +1989,8 @@ trackedFiles:
     pristine_git_object: f2257cb7235a82b97ba6a773a19a81345252e112
   docs/models/listcustomerssubscriptionstatus.md:
     id: f24b4a03e2ed
-    last_write_checksum: sha1:58115caac1e295f2d820402c1cf2db7b732dfa9d
-    pristine_git_object: 33fe11c96fdba7d466f2ae033f60ba3a370955c5
+    last_write_checksum: sha1:157530dabd0d28e5fd4a40b12d9a7b71a6addeea
+    pristine_git_object: 98b163a961fe45b25f8b94f59a92d5e7cb0e70dc
   docs/models/listcustomersthresholdtype.md:
     id: 891ad14c54c6
     last_write_checksum: sha1:504aac5244104ff09d4ebff1e830af82defc9bf9
@@ -2045,8 +2049,8 @@ trackedFiles:
     pristine_git_object: 0d6ca7bd4d0aff01cfbb4b2d81703523d24b1e6e
   docs/models/listentitiesparams.md:
     id: a98fa41dacb7
-    last_write_checksum: sha1:5c605039c907b42e10f1e8333f539ff2d6415c9c
-    pristine_git_object: c9bcfdec95553523717ec1c75fea47565c580856
+    last_write_checksum: sha1:92519d46339ac94f703fab562a52d26eb4b52cc1
+    pristine_git_object: 0fa5a5d8ee0d78889fb2049b2fe6c69632848b29
   docs/models/listentitiesplan.md:
     id: 35b85f6fd4b3
     last_write_checksum: sha1:fa8c2a8ef01dfe81b72c9103d38db67585ac55ae
@@ -2065,8 +2069,8 @@ trackedFiles:
     pristine_git_object: 6cc60dd796c7645d56e0b31bc85d79040261e519
   docs/models/listentitiesresponse.md:
     id: 795662eb1108
-    last_write_checksum: sha1:693193e2de204619f91348bf571691dc620f6ed6
-    pristine_git_object: 653ea83aacb56f39d9138566cd8b0bc7ea56aff1
+    last_write_checksum: sha1:898c1d9cb5e52991df0477c7ba8a73796d3a1844
+    pristine_git_object: f1b5599f926f0f17b49de1ca9c207010fc83afaf
   docs/models/listentitiesspendlimit.md:
     id: 3e35ba77a8ca
     last_write_checksum: sha1:7488d1c40d09b3ba994613980780646f4a572cdd
@@ -2125,8 +2129,8 @@ trackedFiles:
     pristine_git_object: 8fd9f92aef2315a6e9289700bbbc317dff8bc201
   docs/models/listeventsresponse.md:
     id: 150f903b0ed9
-    last_write_checksum: sha1:9eb8f98df1804fd7d9b0c1cedd5fad119992cb56
-    pristine_git_object: 0350b288fb5d4c93b021b448add0415bb9d66556
+    last_write_checksum: sha1:b82e8d94cf837a5dc4d066278853d0498c75d405
+    pristine_git_object: d0e11b78ece6784584fea25443b9549cd6b012c6
   docs/models/listfeaturescreditschema.md:
     id: bfa151aef980
     last_write_checksum: sha1:50f8d085ceaebbdd7e246a48eaaf185b49329d95
@@ -2749,8 +2753,8 @@ trackedFiles:
     pristine_git_object: 7ec5834b5a153e688ba7faab51dfd5a65fe868d7
   docs/models/previewattachparams.md:
     id: 3ba40d589e3d
-    last_write_checksum: sha1:390737daf2f97e86e2c9c81dd8324b65b7caad77
-    pristine_git_object: ad8739867cb6a052e0f2eb4cd45d63c509beff2e
+    last_write_checksum: sha1:9c153cbb9b8d079f2e690d67a0ae392bfc72494d
+    pristine_git_object: b2059bb1254fade50c96ecc45a5f6aa92b41b55e
   docs/models/previewattachplanitemfilter.md:
     id: 9b150cfddab6
     last_write_checksum: sha1:60f113b637ae5e532fe4eb259252d8e57afdd587
@@ -3323,6 +3327,18 @@ trackedFiles:
     id: 50431d3adf83
     last_write_checksum: sha1:3043cfd1115e727d195512b3e8cfd899b9e0483c
     pristine_git_object: 86a305301634b94d48578a51e9a840d322389f52
+  docs/models/redeemrewardcodeglobals.md:
+    id: c611d11982cd
+    last_write_checksum: sha1:4db7f571a569feb2c5a81f91844e651f3339c636
+    pristine_git_object: 17e808377bf4069c5416eb21d36075c042843d60
+  docs/models/redeemrewardcodeparams.md:
+    id: eeb921e6cfa0
+    last_write_checksum: sha1:0162350044f088e103748eca64232621321b73ef
+    pristine_git_object: 1987581847f08ece86656301d75ca37f1c14123f
+  docs/models/redeemrewardcoderesponse.md:
+    id: 7a717fcaea41
+    last_write_checksum: sha1:4b6c33b353bde10465d8c819da48b654d1a4c966
+    pristine_git_object: da7c6f02483ac8e9f9d275f0234bedf5790dd791
   docs/models/referral.md:
     id: b58def2d8bbe
     last_write_checksum: sha1:530cc33b44fb8bca73dd423110f205a48e0e565e
@@ -3509,8 +3525,8 @@ trackedFiles:
     pristine_git_object: a21257e2184285614bf21c2987233bbea09297f3
   docs/models/setuppaymentparams.md:
     id: d71f82dde273
-    last_write_checksum: sha1:e3245adfd17651294ced77941a1e56cb43beec27
-    pristine_git_object: 1c93307fc1d2c921caa1409e7fd4dea34d5a3d0b
+    last_write_checksum: sha1:03ec682b98c437054921dde98c313edca8e3d938
+    pristine_git_object: 1794f35da19a56d2ab70ddb573b4e940f11798a4
   docs/models/setuppaymentplanitemfilter.md:
     id: 7c5b09498e12
     last_write_checksum: sha1:fc27daa749036af8a312122b3249c513e2a83b5e
@@ -4109,40 +4125,44 @@ trackedFiles:
     pristine_git_object: 9632d9df66ca144a883a6a61092994f90b6b636c
   docs/sdks/autumn/README.md:
     id: d27c9292a1a3
-    last_write_checksum: sha1:fd96ce6718b4ade1cd4676d3a88bdd879e0dbafe
-    pristine_git_object: 8f377e35ef96f161e3d1899234b3d9d7576f3941
+    last_write_checksum: sha1:10fe85a3489ddeb4e769136e5a5d8199901ca6a8
+    pristine_git_object: 140a3ecb60eafa96438e9b8723a8ac35f688fbcd
   docs/sdks/balances/README.md:
     id: 6ca85866f00d
-    last_write_checksum: sha1:71ae48253fc0cba2f21f5aa8aa31170c5f6b446e
-    pristine_git_object: db2b13c3ee155b8d0740c164c952f2adb7413138
+    last_write_checksum: sha1:486057543b5d9ba28039e8c521c6da05b318a378
+    pristine_git_object: a90be00054691592cd72127dfcdf499c3dc38fb3
   docs/sdks/billing/README.md:
     id: dc915331dd9d
-    last_write_checksum: sha1:4ae19aa53a8e85f4c606f2accf9f2431104014bf
-    pristine_git_object: 75a0f38995718815c8b9a761f127416e586edab0
+    last_write_checksum: sha1:5d8fb24ebc60773e8dbed2794d1ec047749f13bd
+    pristine_git_object: a8e93d3d0daff0d045432d569ffbb00f7414457d
   docs/sdks/customers/README.md:
     id: 9332759cffc2
-    last_write_checksum: sha1:a242d24e05645c1d7e193a2de6b05cd0d75ec1ec
-    pristine_git_object: 629f6540f827518a16bdb4b97ce334ec4ceed8cb
+    last_write_checksum: sha1:3ba96b62f6a62480122a03a7f8c27c119eefade6
+    pristine_git_object: 45bb7e0da6bc397921f731c45f2a8bb8e1ecc664
   docs/sdks/entities/README.md:
     id: a140ac5181b9
-    last_write_checksum: sha1:70e5e30e50ef656d3877819f385d7c07d55116de
-    pristine_git_object: ac31c0445c4e24f84af187662a57ea740d14b024
+    last_write_checksum: sha1:ce657711d3d6ba38e92cd3d96964248dffafbabe
+    pristine_git_object: 51e73e75e6156f7471111069d2a84223089dd56e
   docs/sdks/events/README.md:
     id: cf45a4390b9b
-    last_write_checksum: sha1:cea99762b01b7bae01def1685a4ad7807a4d60dd
-    pristine_git_object: 428407a3e960acd6188d6241d16268fcb4868503
+    last_write_checksum: sha1:2291068c2b8ae415d71094b02d38cdac7ad83284
+    pristine_git_object: d5ead9109b17b6e015de5af749a240dadd440068
   docs/sdks/features/README.md:
     id: e885cfb7247b
-    last_write_checksum: sha1:ab8f4c6032ebaa6e2636c27c6a0c66138cb00a7d
-    pristine_git_object: f15f599301140e1f7af1a6e1c9462464b71a4437
+    last_write_checksum: sha1:7f8cc6ca8855001c309a48738fb12782b09d3cf1
+    pristine_git_object: e780c68e76247300ddcad095c859c1312e268eed
   docs/sdks/plans/README.md:
     id: 2d8c741fff57
-    last_write_checksum: sha1:19e53edc483ea98f9e427c9165f4d625c3ac7109
-    pristine_git_object: d13a6b26e488dbcbb08f1db69ff102a54dffcf78
+    last_write_checksum: sha1:a956c9b35832ad1b4b988220bbf133aa87c73301
+    pristine_git_object: 25a47ac0fdb8bc31110b3d96d2656bf744969f37
   docs/sdks/referrals/README.md:
     id: 50b71f597f20
-    last_write_checksum: sha1:583c44cd70208e8ea9e286b54a5b82f837c8a4be
-    pristine_git_object: 9a0dd0aec6d9b00b984510dfe6b8c12e43b60adf
+    last_write_checksum: sha1:de99a40759f0d5c8850f2f59613d20d646161c53
+    pristine_git_object: 72f6ca33937b57d77f1969e98a91c0f567893837
+  docs/sdks/rewardssdk/README.md:
+    id: 37bf7d853e55
+    last_write_checksum: sha1:1f880a0f2f30597cc1c0483eb04cd5f7f9e90bfe
+    pristine_git_object: 35ac2b08782396bfc76cba51a97059db107c3002
   py.typed:
     id: 258c3ed47ae4
     last_write_checksum: sha1:8efc425ffe830805ffcc0f3055871bdcdc542c60
@@ -4177,28 +4197,28 @@ trackedFiles:
     pristine_git_object: 3e604651c1eae73d815b276806e73b2f1334bb79
   src/autumn_sdk/_version.py:
     id: a98babfdf4fc
-    last_write_checksum: sha1:48d80ec79d1e2d4c26194db9db1ac7886acd76f1
-    pristine_git_object: 6fd40e5912793561523e90b1595f3300d62bf238
+    last_write_checksum: sha1:e9f37410254f0de534a9a04e67c8c736e38bf56d
+    pristine_git_object: 5876591b27e7f0ae36490c47c2893b48a3eaa8af
   src/autumn_sdk/balances.py:
     id: 0a15be654dad
-    last_write_checksum: sha1:51d725f62f14d78037909fd4399d77a1291df149
-    pristine_git_object: e03f676bfe86690f4c87d78f0b205764f46d1def
+    last_write_checksum: sha1:acf16860484910c0acca47291418a5f38997769f
+    pristine_git_object: 8798a61c5415cfb6ab870fe26264447ddb134f63
   src/autumn_sdk/basesdk.py:
     id: 8c9c35fe744d
     last_write_checksum: sha1:7fefc93ebfec063a4ffcb8ab6f4ed5675e7f50dd
     pristine_git_object: 4db96641966f6337a1a1613ea731050ed25a1fb9
   src/autumn_sdk/billing.py:
     id: e6cffdbf2221
-    last_write_checksum: sha1:29192e47a5237473b5e7801839c5facb3a0320fe
-    pristine_git_object: fac65762df83ced2a21a69d2d5b50a06f2ff0105
+    last_write_checksum: sha1:cad46c4bca26de53802a61a41a82277ddfc732fe
+    pristine_git_object: 715116867f3ddec54a536bee69e673fd0c0c0881
   src/autumn_sdk/customers.py:
     id: 5c5a0a07a433
-    last_write_checksum: sha1:9e122b366aaf67db8fbc4866c6173f0f57362cbb
-    pristine_git_object: 0f6c4580e9aeacd2441b8bc7bf8602f7e2451a70
+    last_write_checksum: sha1:bbdd432fc314a94a6ac5bd6335c8cf9474e02b66
+    pristine_git_object: aaf9171b48544d4e5039a9a210a67350bf2a8e71
   src/autumn_sdk/entities.py:
     id: 32ba2aa0874c
-    last_write_checksum: sha1:a314d4f2e26711b74a6be67b6d08e7fa24871213
-    pristine_git_object: 8fcca916bb052891a25cba998554e3a429a494e8
+    last_write_checksum: sha1:ced8d05bea86e3c180b1247bd3bbb6c72ed6c2f8
+    pristine_git_object: 8b05ef6046e2704c45a50c5149774c0aacaa552c
   src/autumn_sdk/errors/__init__.py:
     id: 242853123cf2
     last_write_checksum: sha1:1c4f4e0181a6598b531c2621340548b003df6e2a
@@ -4221,8 +4241,8 @@ trackedFiles:
     pristine_git_object: 1efa993593b78b8f93587adf8a12ce2efbb11002
   src/autumn_sdk/events.py:
     id: 3421eef7bbd5
-    last_write_checksum: sha1:5ede26c69706f2288a19d281f3695d3bd05d2b46
-    pristine_git_object: 8c9400ea6614688183791d4b49e8ba6d9b4e2fcc
+    last_write_checksum: sha1:0fb766e1ff058eb694f3e2eaadd06047f57223ad
+    pristine_git_object: b346cbffe1811393d45f0e89673cd2b27e64b27f
   src/autumn_sdk/features.py:
     id: 79d780190f74
     last_write_checksum: sha1:24f5dcce8bc1f0afc6f2dc0af6e2bc71ca1c1d8d
@@ -4233,52 +4253,52 @@ trackedFiles:
     pristine_git_object: 89560b566073785535643e694c112bedbd3db13d
   src/autumn_sdk/models/__init__.py:
     id: bcf3802243ff
-    last_write_checksum: sha1:6e443839dc7cb5aa18fae8aad4abb4145f1bdb01
-    pristine_git_object: 831468bf4b03022abfdccae15ce97d2739d92cde
+    last_write_checksum: sha1:827d959dcb8d6dd2bfe1f3afadd0ee1e2b0f9f70
+    pristine_git_object: 3d6f44b9a0b649a6ee82b500a2b7069ac27d9e5d
   src/autumn_sdk/models/aggregateeventsop.py:
     id: 01321099f2a5
-    last_write_checksum: sha1:e8135648e39b731396565bcf59ec5a5cc400ae90
-    pristine_git_object: 898d3fdd6f7207730f04e9ca09bd19c3b3ae51d1
+    last_write_checksum: sha1:bbaf78080f665b38e531d2427c787e40ca0635a7
+    pristine_git_object: 3a4476749ea87675039e23243ed3865d3bdf57ca
   src/autumn_sdk/models/attachop.py:
     id: ebb59e06476c
-    last_write_checksum: sha1:a7f59812fa59058b5360c8af62ed0fc4a811cd47
-    pristine_git_object: fe27daebcf872612132a8500f274190b8b57fed5
+    last_write_checksum: sha1:8f45e81656acb1f6aefb1f906bc845069637a773
+    pristine_git_object: b1dc3605a14e938b42f221a8693f0df50ad4492e
   src/autumn_sdk/models/balance.py:
     id: a6354d7c4b97
     last_write_checksum: sha1:54a4422123d262666370d2e1238d990ef1dba324
     pristine_git_object: 10a5b2ae10d0daf7adc5e9f90de4d25665732a62
   src/autumn_sdk/models/billingupdateop.py:
     id: a2f17c75cfd3
-    last_write_checksum: sha1:b02b9483bc27f88bec0d3d3866735ca500929f34
-    pristine_git_object: 8a31641131897d8e8ab7b866b1a1bb14454f2d93
+    last_write_checksum: sha1:aade53f9ad5783e23c5141426ef05934d252a763
+    pristine_git_object: 25636ae22d123f0f378d41dc695dba42d18b4bee
   src/autumn_sdk/models/checkop.py:
     id: 31c2f84723c6
-    last_write_checksum: sha1:0dc2592b51e741677419a26ee6557815eeb33b03
-    pristine_git_object: 45a5f66396b8b0716c4eafa4a595817f3c6f680f
+    last_write_checksum: sha1:7cb0cbbf11f480372aa2c5a3466b07f78e301226
+    pristine_git_object: b165ecfba6d2d2d1ccf9a21029d6fa87db67b470
   src/autumn_sdk/models/createbalanceop.py:
     id: 27daf4da75bf
-    last_write_checksum: sha1:b6da2d7778cd4b98f0e6612810726512203eb1de
-    pristine_git_object: 29b8f2f3236a1fd875aac10ee13416ddecb62445
+    last_write_checksum: sha1:f034893074f11952de2b174c8f2991232e512858
+    pristine_git_object: 42d3636f3548ca45bcb5059f38f4a3d6762948f6
   src/autumn_sdk/models/createentityop.py:
     id: bf9521c0cfec
-    last_write_checksum: sha1:cb70cf946c37ffcc39c1cf128ff0fb2b4f880a03
-    pristine_git_object: 856605cbf8532734f7786ba40092082fb4f2f0d1
+    last_write_checksum: sha1:6a026ae9529f5ba00688fa306914ba058c9e9c05
+    pristine_git_object: 55fbc8631313633e7bdc82a707a11ab1dad04e1f
   src/autumn_sdk/models/createfeatureop.py:
     id: 68487033fbe5
-    last_write_checksum: sha1:7700b9041190ce954caa13d6981c0c1460e5ee20
-    pristine_git_object: 35a43e4dd6ea06d0ffbbde5ffaead959ce207632
+    last_write_checksum: sha1:c68f6e79a3dc3d3436d607fae75e4c4a958b7141
+    pristine_git_object: 3a3fa7e5caf97561ce5ea6f494941cb1ce64b67c
   src/autumn_sdk/models/createplanop.py:
     id: 077e6c7db2ad
-    last_write_checksum: sha1:0c61ef749d904298fb13666629dd8279e72dfff6
-    pristine_git_object: 83a58b0e78861300af0d4ddf3901e3474e2683d6
+    last_write_checksum: sha1:abd3f7dda2a80ddeeee92ec78efb394384f8db93
+    pristine_git_object: 1b6499a88233db6b079ec7add34d9726331f329d
   src/autumn_sdk/models/createreferralcodeop.py:
     id: 2f5f7b136c39
-    last_write_checksum: sha1:aee36f911153fc0dab9fd096dbb82d1083a61d28
-    pristine_git_object: cd3ad48900dab5fd4b07db41d62388e68a1818b2
+    last_write_checksum: sha1:9ef6a7e87ffd4cb0fb91f3592abb3b1ef51cb415
+    pristine_git_object: fea4d1bb3875848e66502705e4cb818233ec3f5a
   src/autumn_sdk/models/createscheduleop.py:
     id: afb0cf1cf7f2
-    last_write_checksum: sha1:b45fd72cb5e8c76c29f837a4da4afcf76c8e8bf2
-    pristine_git_object: 01b44eae27d95ceaca00b0b035202830305d99b4
+    last_write_checksum: sha1:435695ce987ee9e5393bb64ba84f479007f7cfd3
+    pristine_git_object: 97d115471f43fcbbc6c27f64112c0dd76dea3252
   src/autumn_sdk/models/customer.py:
     id: 8ed0174f7272
     last_write_checksum: sha1:b34d9296ba774e5a622b84a48ce38cdab983953c
@@ -4293,136 +4313,140 @@ trackedFiles:
     pristine_git_object: 6d020a0f8da88109f10c72fd81248a4d5194a31e
   src/autumn_sdk/models/deletebalanceop.py:
     id: 97d06f64852a
-    last_write_checksum: sha1:ba767e7c2cfe20f213abff1235768b6e789ef11b
-    pristine_git_object: d8b06d3c0000690d712dfeb7771a4c08d0c9932f
+    last_write_checksum: sha1:f8c0f83b5afa8636d3cb97e4c52ae472e55415a2
+    pristine_git_object: ba888a4d97ab8d8fb72e044756e574adf3f4335b
   src/autumn_sdk/models/deletecustomerop.py:
     id: dc7a1e2cc90b
-    last_write_checksum: sha1:8b345d4715c2fa291674b86287439e824cd479ce
-    pristine_git_object: f731ec176a58301941259ea8c4b36353703802bb
+    last_write_checksum: sha1:552184c914a58b499809d828293484a812015511
+    pristine_git_object: 9012d64fcd53fa2b0e9a3162814d0eab49d8ba33
   src/autumn_sdk/models/deleteentityop.py:
     id: f875e07e0401
-    last_write_checksum: sha1:a596e590cb293b64f97549972cb674f0ea6661c0
-    pristine_git_object: 994654d79145e1b31ccf1bb2400732e13060c11c
+    last_write_checksum: sha1:1ea6eb0899b768e16506aca2b4642b79b1a9cece
+    pristine_git_object: b83e92df7f07e812a2b742858f1057ea36f109b7
   src/autumn_sdk/models/deletefeatureop.py:
     id: 2cde77bc8684
-    last_write_checksum: sha1:eb0e3de24676ed9ca638050e753adcf77d9e9273
-    pristine_git_object: d16ff515bd2fd4ae2c67c7b3099b9bbc981e966d
+    last_write_checksum: sha1:bc4e0d34b684036d267adb46f3f5d568d89a895d
+    pristine_git_object: 73d6550e9d3d672e269f03d0123682e31081a4e5
   src/autumn_sdk/models/deleteplanop.py:
     id: 4dd8168b93d3
-    last_write_checksum: sha1:b66060053ba95103b6f9c21583c837aff5bf4f5b
-    pristine_git_object: 8399927609dfaba9ca603a77e3f85ada3861d2f2
+    last_write_checksum: sha1:13d5c802291fe3009fc2e75c417d9eaaa4a0e6f1
+    pristine_git_object: 7ceead5c6d6226a1e28dabb594031b4e7f223142
   src/autumn_sdk/models/finalizelockop.py:
     id: 8ae2484b0916
-    last_write_checksum: sha1:50898394734e6e9a366363ef64dd6ac917d61ad2
-    pristine_git_object: d7744bc3f223baddeed24f3e14315d9f6da0b84d
+    last_write_checksum: sha1:81748d2c2608a6ce2da6eaab88384263f194b724
+    pristine_git_object: f10712da219176f9298c3426dd7b1372ae8777dd
   src/autumn_sdk/models/getcustomerop.py:
     id: 266e08dde55d
-    last_write_checksum: sha1:26c01f348d7b5fa3d7416cd032f39c4e2fa40ef3
-    pristine_git_object: 8ce7e5cbc0aeb86645dad533bb80758be9e4fc5d
+    last_write_checksum: sha1:99d1a3e00f783dbeb7e90362549917fc6e892140
+    pristine_git_object: 2770ceced0327c6b2c38fa3fd91662bb5da786f9
   src/autumn_sdk/models/getentityop.py:
     id: 6a624594b41f
-    last_write_checksum: sha1:c269882e521ec211782e7ea02149157a2d09b5d5
-    pristine_git_object: 29cba6a2449a90f021a82911a730592d102ef992
+    last_write_checksum: sha1:3b71deedab3c21399d5d6afd4372dd31322afcc8
+    pristine_git_object: 2b8a05c98adc64b7f24d1078ec27d190a0138f2d
   src/autumn_sdk/models/getfeatureop.py:
     id: 72b158789497
-    last_write_checksum: sha1:89a9f44a1af9b36cf229f80000cae16054da17a5
-    pristine_git_object: 63aec0714ea5d7f98ffdb2d7125d0b9db6fe8537
+    last_write_checksum: sha1:dccbc8de6a2d4cc07a4045585f12d8649b9f4c0a
+    pristine_git_object: a3b6d982c56568f07fc5b226e4d836b62dc7d331
   src/autumn_sdk/models/getorcreatecustomerop.py:
     id: acfac0d7be14
-    last_write_checksum: sha1:9e7565db7d134b1c5925e4e4d18e26695b74e4f1
-    pristine_git_object: c929128d66a9269897320872bf8eefb7b64bd9e1
+    last_write_checksum: sha1:524b618ee1defe01311abb69aebedfa737015214
+    pristine_git_object: ecf53428c556a2515c44ee3bb7e31a2aab91f1f4
   src/autumn_sdk/models/getplanop.py:
     id: 590fb77ac88d
-    last_write_checksum: sha1:81ea83faee9199b1c02f72521ed5dff3c1da74c4
-    pristine_git_object: d08f2c9fc8056c6adb96024112c4aaade0ee5cb5
+    last_write_checksum: sha1:4b545b24018986ba9d93107df7840f39fb1f861c
+    pristine_git_object: e619e84014109d0ac73df596b4926a8f6dc92ee3
   src/autumn_sdk/models/internal/__init__.py:
     id: 2906fe7f2cde
     last_write_checksum: sha1:1905b58b74ecc52346d8f5c24ded2b6d6e1dad4a
     pristine_git_object: ceabb1b83cb7cc1e21e65639c69c30749d36f6e2
   src/autumn_sdk/models/internal/globals.py:
     id: 4e33eb99f463
-    last_write_checksum: sha1:68407c632e298626a027a6da8e5c87bfc34ce496
-    pristine_git_object: 857f87628bd168b87758ac04fc88a926255d7451
+    last_write_checksum: sha1:b12bb60e74b8678b0fd0543223c09cc3d77dcc8b
+    pristine_git_object: 2614675c993545d5df1e516d043649e50281c2a3
   src/autumn_sdk/models/listcustomersop.py:
     id: d7074740b8b0
-    last_write_checksum: sha1:927f6bd702f74d13fb90e93865b7c38f7ec6ea9d
-    pristine_git_object: 66eccd8ee4fddda461be05ee7516c5e591380464
+    last_write_checksum: sha1:a5d8ecb8aa876fbc13e45895238fdd4b8ef00262
+    pristine_git_object: efb7ae861ed3c85269dea269465c198119fe37fe
   src/autumn_sdk/models/listentitiesop.py:
     id: 918a05430967
-    last_write_checksum: sha1:8fa96fde2c49b269a489e2a7a44533f2d71f2ed4
-    pristine_git_object: 25e5f40817b1bf1d885ff7ee6b23db636c3e11be
+    last_write_checksum: sha1:dbcc46f4782eab84662ba8426cadecdae7473927
+    pristine_git_object: 7fe4e89b0d9c2a6cb6df185e6f0fc995687a4f97
   src/autumn_sdk/models/listeventsop.py:
     id: 751b0200d91d
-    last_write_checksum: sha1:d1fc02ee236167757b24b0ff5d07ef6c50ca8422
-    pristine_git_object: 2dee5460c65ef6cc4be4cd23b5d798ecf26274a7
+    last_write_checksum: sha1:a57b8d56c96c341e8572b4395c12209a62ff6b74
+    pristine_git_object: 86a98a1d2f3df5e7a53326e54a9ddb2883b711ed
   src/autumn_sdk/models/listfeaturesop.py:
     id: 95f88614bd8e
-    last_write_checksum: sha1:983c9bab14d984cdc250fd5822ca98dc373c3cae
-    pristine_git_object: 710a3e36719b112a82fa98903073bb090f72c2ec
+    last_write_checksum: sha1:3c2e2e44a81954ab08a70e7fa8dfbea30ab0aeb8
+    pristine_git_object: 8819d5dc8edea75b53ba1d465773b158eb95f310
   src/autumn_sdk/models/listplansop.py:
     id: fdf892c403f4
-    last_write_checksum: sha1:113ab9ebeee0eefbde8f8127c707c0e877ce44ce
-    pristine_git_object: eeb10aef025dba4e535b1b752707dba2b8c0cc44
+    last_write_checksum: sha1:eec171b45ca5d8b9e7d13e307c9125a0e6c92970
+    pristine_git_object: cc085894937b7e149381b51729063f03d39e4eb5
   src/autumn_sdk/models/multiattachop.py:
     id: dfdf7952c870
-    last_write_checksum: sha1:bc0ef7eee37a54bb0823e7270535ed079fff9113
-    pristine_git_object: 8cf4105bebefbcf73a641cc92f3bbf176fc1eba8
+    last_write_checksum: sha1:58d91eee19f9d021419ef6d98e15f65a435fdc8f
+    pristine_git_object: 98621cdbe47a5109f68dd5c1dce3127b1aa2545d
   src/autumn_sdk/models/opencustomerportalop.py:
     id: 004cc9a6466f
-    last_write_checksum: sha1:b190ddc8e45b3198fa12ae5f49deb9d8cac20a5e
-    pristine_git_object: 8383509aa89e0c11988baef8e424f5ae682d5c8e
+    last_write_checksum: sha1:e32037dcfea1c4bd953f749f74775b3d7d1d83c3
+    pristine_git_object: 79ac016f241d82916ccc1aab7c7e3a7e3fb9aef1
   src/autumn_sdk/models/plan.py:
     id: f85c4e07540d
     last_write_checksum: sha1:69a6d5e972a3d1d16bda1771940d66bbf403726d
     pristine_git_object: 99032117da3cc10b694f41fd0bc7a0c1f2bd7973
   src/autumn_sdk/models/previewattachop.py:
     id: 2b361be4bfa8
-    last_write_checksum: sha1:269b008a7f1899ba875a08bb44d37096d74b89c7
-    pristine_git_object: 4752cdb0c8e333a6407ffbb152463cce963fcada
+    last_write_checksum: sha1:c3a5206503713084c1438eb00307ded46cdcdac0
+    pristine_git_object: af3e60dd107681e7b78da218a45bbaf29e43feb7
   src/autumn_sdk/models/previewmultiattachop.py:
     id: 963ffcd646a4
-    last_write_checksum: sha1:2095cb695b366c95cf32a25041b747596adc9cbd
-    pristine_git_object: 2540dad98d3028429071d41245b4e1db0a65371d
+    last_write_checksum: sha1:b8ff436f7435ce227a5426ae9fe5059e08cbef2b
+    pristine_git_object: 3a0561ab842ec6d09dda0e9bae06e6059c92e75a
   src/autumn_sdk/models/previewupdateop.py:
     id: 081d5f08508d
-    last_write_checksum: sha1:084d58dd000211d786551d314b08ff2ec7f3f180
-    pristine_git_object: 6c1ba3ccca01be177621b11ca4724fc658179434
+    last_write_checksum: sha1:dbf17616256e92fb18393f95bd536098ee4b6f7a
+    pristine_git_object: 346a1eb769186d700e50c3243fdbe09fea9ea251
   src/autumn_sdk/models/redeemreferralcodeop.py:
     id: 0abd7bfae718
-    last_write_checksum: sha1:df1248aa8876e069c8094cba0541acc4911db620
-    pristine_git_object: 2e67e9b952a5107efcb3d79f2d9b6b63c06b4030
+    last_write_checksum: sha1:b1a584450f1f79e796dd755a9305dc30a07ed601
+    pristine_git_object: 93b78a37bc7276b56d330f437e43eba7af4302c4
+  src/autumn_sdk/models/redeemrewardcodeop.py:
+    id: 53456b75b7fb
+    last_write_checksum: sha1:04d4516762c1a2925b6e151b03a9248125187284
+    pristine_git_object: d72b0ccc0ef218e36c3680880e6146e3cc96bff4
   src/autumn_sdk/models/security.py:
     id: 27d01b755fbe
     last_write_checksum: sha1:e5ac2e52ed9c2db46d4989c4744c230dd12bdf01
     pristine_git_object: aa686dd6f85ae1e27450392fcfe02527adfe8e61
   src/autumn_sdk/models/setuppaymentop.py:
     id: 603339ee67e3
-    last_write_checksum: sha1:67d270cd5abfb97b1225fd1fb90fdeb732772edd
-    pristine_git_object: dee5c4638d610b7dbad937804b7e9a30269d16cf
+    last_write_checksum: sha1:150fe20e97a015206cebf298c977e9d5600077fd
+    pristine_git_object: d8b1e016389672f6e4fd96a20052e645423a2855
   src/autumn_sdk/models/trackop.py:
     id: 2a744315e781
-    last_write_checksum: sha1:bf7bba4e903181d599be5be9c9fa55556be4b409
-    pristine_git_object: b6ba6867a53fc108da23705b39cb29ba6566f296
+    last_write_checksum: sha1:a03320b078d71050927407e1149770bf357bb7ae
+    pristine_git_object: 6a5c9d1796caf9aab48df3315196337c1c82d028
   src/autumn_sdk/models/updatebalanceop.py:
     id: cd80d90d4cae
-    last_write_checksum: sha1:7b6b881cc82b937e93cfd58f17d7f3d83bdb39f1
-    pristine_git_object: d69bad2bc308f31e4983cf5e2cd0639cedd9c9aa
+    last_write_checksum: sha1:729cd503f116f20564b7bccc79c60ac1011554f2
+    pristine_git_object: c0bbec7e538787d31d5eaebafa5c9033b6df9da3
   src/autumn_sdk/models/updatecustomerop.py:
     id: 28b9d5b59bae
-    last_write_checksum: sha1:3e8a1554ca804b5224f6610db19469d1f33baba7
-    pristine_git_object: 16ed7797c797ef1fd60c1de0c38770d30282c853
+    last_write_checksum: sha1:76c2569065030ec3f17314b057cec06d300aecd6
+    pristine_git_object: 63e06deec671e219be422630460b483fc31e16bd
   src/autumn_sdk/models/updateentityop.py:
     id: a49305af1e2e
-    last_write_checksum: sha1:ddd0da8cc96a40bf7ba51bfb060028b2b281d5e4
-    pristine_git_object: 9b6d1378b4defc1056a93eef6694159b5e91b326
+    last_write_checksum: sha1:448d0b049bedfd94fba404a9053da4f959200dcf
+    pristine_git_object: 80fe86883274d4bcd47b2f4f66d9a8286c98cdbe
   src/autumn_sdk/models/updatefeatureop.py:
     id: 2fdfed4aa2f2
-    last_write_checksum: sha1:67e6bcbdf14980e19787d10e0ab42485acff0862
-    pristine_git_object: 9507c8601dca2cefbc0b8b7d423a38a8272fe580
+    last_write_checksum: sha1:31b590aab5fd341dbf9d3ae8ec97f01fc6fe5090
+    pristine_git_object: 563058b5a7d4a5805ba9d5109c7383ecbecd3d1c
   src/autumn_sdk/models/updateplanop.py:
     id: 753ddf45ca40
-    last_write_checksum: sha1:8c4355ce9a7f7f5d7e59b95b9106d697c40a4048
-    pristine_git_object: 2bc28f5cdf9a47eabcd2536355c5fc431866e3a7
+    last_write_checksum: sha1:7806983a99cefbb6ed167afdf8f4401d7d7f802d
+    pristine_git_object: 9a4531386163eb8a82dd510b4db243541535d7dd
   src/autumn_sdk/plans.py:
     id: cf1ebabb687c
     last_write_checksum: sha1:8cca1565af6b67ab6947b016d0ab8f7a431fa824
@@ -4435,10 +4459,14 @@ trackedFiles:
     id: fb7e9ff59ffd
     last_write_checksum: sha1:c1b1d5b3da720d41ba417596b5e38825096825ec
     pristine_git_object: 479586dfa3c7c2bb380283ad7099f02beec3e155
+  src/autumn_sdk/rewards_sdk.py:
+    id: 48280b2a7da9
+    last_write_checksum: sha1:557e9d48cd3048eca6df5288e18ba0d63fe3d4c6
+    pristine_git_object: c52c86dd77e753356560ebcf0ee10f8dc46de593
   src/autumn_sdk/sdk.py:
     id: 9e733b372628
-    last_write_checksum: sha1:3eaf831867918f13b43b50ee0686f104d423c26c
-    pristine_git_object: f77537463d65a420116dccc1f94491111396e87b
+    last_write_checksum: sha1:8bc4ad5c8c4c9835ad4b9e584ff4de90af45c135
+    pristine_git_object: 6a5908ff9c33517ffffdf5a26ad5c22e42941b3d
   src/autumn_sdk/sdkconfiguration.py:
     id: e65df2e44fc0
     last_write_checksum: sha1:233b710dff940202f00e389e0c8fa6a33f6ae7b4
@@ -4546,7 +4574,7 @@ examples:
     speakeasy-default-attach:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "plan_id": "pro_plan", "redirect_mode": "if_required", "billing_cycle_anchor": "now"}
       responses:
@@ -4556,7 +4584,7 @@ examples:
     speakeasy-default-get-or-create-customer:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "name": "John Doe", "email": "john@example.com"}
       responses:
@@ -4566,17 +4594,17 @@ examples:
     speakeasy-default-list-customers:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
-        application/json: {"offset": 0, "limit": 10}
+        application/json: {"start_cursor": "", "limit": 10}
       responses:
         "200":
-          application/json: {"list": [{"id": "2ee25a41-0d81-4ad2-8451-ec1aadaefe58", "name": "Patrick", "email": "patrick@useautumn.com", "created_at": 2358.1, "fingerprint": null, "stripe_id": null, "env": "sandbox", "metadata": {}, "send_email_receipts": false, "billing_controls": {}, "subscriptions": [{"id": "<id>", "plan_id": "<id>", "auto_enable": true, "add_on": false, "status": "active", "past_due": true, "canceled_at": 1145.98, "expires_at": 4027.68, "trial_ends_at": 910.35, "started_at": 7325.71, "current_period_start": 406.39, "current_period_end": 2629.33, "quantity": 1}], "purchases": [], "balances": {"messages": {"feature_id": "<id>", "granted": 100, "remaining": 0, "usage": 100, "unlimited": false, "overage_allowed": false, "max_purchase": 4531.44, "next_reset_at": 1010.14, "breakdown": [{"id": "cus_ent_39qmLooixXLAqMywgXywjAz96rV", "plan_id": "<id>", "included_grant": 4967.46, "prepaid_grant": 6928.7, "remaining": 0, "usage": 100, "unlimited": false, "reset": {"interval": "month", "resets_at": 7938.58}, "price": null, "expires_at": 7264.51}]}}, "flags": {"advanced_workflows": {"id": "cus_ent_abc123", "plan_id": "pro_plan", "expires_at": null, "feature_id": "advanced_workflows"}}, "config": {"disable_pooled_balance": false}, "processors": {"stripe": {"id": "cus_U0BKxpq1mFhuJO"}}}], "has_more": false, "offset": 0, "limit": 10, "total": 1, "total_count": 100, "total_filtered_count": 42}
+          application/json: {"list": [{"id": "2ee25a41-0d81-4ad2-8451-ec1aadaefe58", "name": "Patrick", "email": "patrick@useautumn.com", "created_at": 2358.1, "fingerprint": null, "stripe_id": null, "env": "sandbox", "metadata": {}, "send_email_receipts": false, "billing_controls": {}, "subscriptions": [{"id": "<id>", "plan_id": "<id>", "auto_enable": true, "add_on": false, "status": "active", "past_due": true, "canceled_at": 1145.98, "expires_at": 4027.68, "trial_ends_at": 910.35, "started_at": 7325.71, "current_period_start": 406.39, "current_period_end": 2629.33, "quantity": 1}], "purchases": [], "balances": {"messages": {"feature_id": "<id>", "granted": 100, "remaining": 0, "usage": 100, "unlimited": false, "overage_allowed": false, "max_purchase": 4531.44, "next_reset_at": 1010.14, "breakdown": [{"id": "cus_ent_39qmLooixXLAqMywgXywjAz96rV", "plan_id": "<id>", "included_grant": 4967.46, "prepaid_grant": 6928.7, "remaining": 0, "usage": 100, "unlimited": false, "reset": {"interval": "month", "resets_at": 7938.58}, "price": null, "expires_at": 7264.51}]}}, "flags": {"advanced_workflows": {"id": "cus_ent_abc123", "plan_id": "pro_plan", "expires_at": null, "feature_id": "advanced_workflows"}}, "config": {"disable_pooled_balance": false}, "processors": {"stripe": {"id": "cus_U0BKxpq1mFhuJO"}}}], "next_cursor": null}
   updateCustomer:
     speakeasy-default-update-customer:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "name": "Jane Doe", "email": "jane@example.com"}
       responses:
@@ -4586,7 +4614,7 @@ examples:
     speakeasy-default-delete-customer:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "delete_in_stripe": false}
       responses:
@@ -4616,7 +4644,7 @@ examples:
     speakeasy-default-billing-update:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "plan_id": "pro_plan", "feature_quantities": [{"feature_id": "seats", "quantity": 10}], "redirect_mode": "if_required", "billing_cycle_anchor": "now"}
       responses:
@@ -4686,7 +4714,7 @@ examples:
     speakeasy-default-list-plans:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {}
       responses:
@@ -4696,7 +4724,7 @@ examples:
     speakeasy-default-preview-attach:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "plan_id": "pro_plan", "redirect_mode": "if_required", "billing_cycle_anchor": "now"}
       responses:
@@ -4726,7 +4754,7 @@ examples:
     speakeasy-default-setup-payment:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "success_url": "https://example.com/account/billing", "billing_cycle_anchor": "now"}
       responses:
@@ -4756,7 +4784,7 @@ examples:
     speakeasy-default-open-customer-portal:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "return_url": "https://useautumn.com"}
       responses:
@@ -4766,7 +4794,7 @@ examples:
     speakeasy-default-preview-update:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "plan_id": "pro_plan", "feature_quantities": [{"feature_id": "seats", "quantity": 15}], "redirect_mode": "if_required", "billing_cycle_anchor": "now"}
       responses:
@@ -4776,7 +4804,7 @@ examples:
     speakeasy-default-create-balance:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "feature_id": "api_calls", "reset": {"interval": "month"}}
       responses:
@@ -4786,7 +4814,7 @@ examples:
     speakeasy-default-update-balance:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "feature_id": "api_calls", "remaining": 5}
       responses:
@@ -4796,7 +4824,7 @@ examples:
     speakeasy-default-check:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "feature_id": "messages"}
       responses:
@@ -4808,7 +4836,7 @@ examples:
     speakeasy-default-track:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "feature_id": "messages", "value": 1}
       responses:
@@ -4840,7 +4868,7 @@ examples:
     speakeasy-default-create-referral-code:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "program_id": "prog_123"}
       responses:
@@ -4850,7 +4878,7 @@ examples:
     speakeasy-default-redeem-referral-code:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"code": "REF123", "customer_id": "cus_456"}
       responses:
@@ -4860,7 +4888,7 @@ examples:
     speakeasy-default-create-entity:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"name": "Seat 42", "feature_id": "seats", "customer_id": "cus_123", "entity_id": "seat_42"}
       responses:
@@ -4870,7 +4898,7 @@ examples:
     speakeasy-default-get-entity:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"entity_id": "seat_42"}
       responses:
@@ -4880,7 +4908,7 @@ examples:
     speakeasy-default-delete-entity:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "entity_id": "seat_42"}
       responses:
@@ -4890,17 +4918,17 @@ examples:
     speakeasy-default-list-events:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
-        application/json: {"offset": 0, "limit": 50, "customer_id": "cus_123"}
+        application/json: {"start_cursor": "", "limit": 50, "customer_id": "cus_123"}
       responses:
         "200":
-          application/json: {"list": [{"id": "evt_36xpk2TmuQX5zVPPQ8tCtnR5Weg", "timestamp": 1765958215459, "feature_id": "credits", "customer_id": "0pCIbS4AMAFDB1iBMNhARWZt2gDtVwQx", "value": 30, "properties": {}, "deductions": [{"balance_id": "cus_ent_3DdSDtFBlvDbjyUuJeUIbQlyN12", "feature_id": "credits", "plan_id": "pro", "reset": {"interval": "month", "resets_at": 1765958215459}, "value": 30}]}, {"id": "evt_36xmHxxjAkqxufDf9yHAPNfRrLM", "timestamp": 1765956512057, "feature_id": "credits", "customer_id": "0pCIbS4AMAFDB1iBMNhARWZt2gDtVwQx", "value": 49, "properties": {}, "deductions": null}], "has_more": false, "offset": 0, "limit": 100, "total": 2}
+          application/json: {"list": [{"id": "evt_36xpk2TmuQX5zVPPQ8tCtnR5Weg", "timestamp": 1765958215459, "feature_id": "credits", "customer_id": "0pCIbS4AMAFDB1iBMNhARWZt2gDtVwQx", "value": 30, "properties": {}, "deductions": [{"balance_id": "cus_ent_3DdSDtFBlvDbjyUuJeUIbQlyN12", "feature_id": "credits", "plan_id": "pro", "reset": {"interval": "month", "resets_at": 1765958215459}, "value": 30}]}, {"id": "evt_36xmHxxjAkqxufDf9yHAPNfRrLM", "timestamp": 1765956512057, "feature_id": "credits", "customer_id": "0pCIbS4AMAFDB1iBMNhARWZt2gDtVwQx", "value": 49, "properties": {}, "deductions": null}], "next_cursor": "eyJ2IjowLCJpZCI6ImV2dF8zNnhtSHh4akFrcXh1ZkRmOXlIQVBOZlJyTE0iLCJ0IjoxNzY1OTU2NTEyMDU3fQ"}
   aggregateEvents:
     speakeasy-default-aggregate-events:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "feature_id": "api_calls", "range": "30d", "bin_size": "day"}
       responses:
@@ -4910,7 +4938,7 @@ examples:
     speakeasy-default-create-feature:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"name": "API Calls", "type": "metered", "consumable": true, "feature_id": "api-calls"}
       responses:
@@ -4920,7 +4948,7 @@ examples:
     speakeasy-default-get-feature:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"feature_id": "api-calls"}
       responses:
@@ -4930,7 +4958,7 @@ examples:
     speakeasy-default-list-features:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       responses:
         "200":
           application/json: {"list": [{"id": "api-calls", "name": "API Calls", "type": "metered", "consumable": true, "display": {"singular": "API call", "plural": "API calls"}, "archived": false}, {"id": "credits", "name": "Credits", "type": "credit_system", "consumable": true, "credit_schema": [{"metered_feature_id": "api-calls", "credit_cost": 1}, {"metered_feature_id": "image-generations", "credit_cost": 10}], "display": {"singular": "credit", "plural": "credits"}, "archived": false}]}
@@ -4938,7 +4966,7 @@ examples:
     speakeasy-default-update-feature:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"name": "API Requests", "display": {"singular": "API request", "plural": "API requests"}, "feature_id": "api-calls"}
       responses:
@@ -4948,7 +4976,7 @@ examples:
     speakeasy-default-delete-feature:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"feature_id": "old-feature"}
       responses:
@@ -4958,7 +4986,7 @@ examples:
     speakeasy-default-create-plan:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"plan_id": "free_plan", "group": "", "name": "Free", "add_on": false, "auto_enable": true, "items": [{"feature_id": "messages", "included": 100, "reset": {"interval": "month"}}], "create_in_stripe": true}
       responses:
@@ -4968,7 +4996,7 @@ examples:
     speakeasy-default-get-plan:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"plan_id": "pro_plan"}
       responses:
@@ -4978,7 +5006,7 @@ examples:
     speakeasy-default-update-plan:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"plan_id": "pro_plan", "group": "", "name": "Pro Plan (Updated)", "price": {"amount": 15, "interval": "month"}, "create_in_stripe": true, "archived": false}
       responses:
@@ -4988,7 +5016,7 @@ examples:
     speakeasy-default-delete-plan:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"plan_id": "unused_plan", "all_versions": false}
       responses:
@@ -5008,7 +5036,7 @@ examples:
     speakeasy-default-preview-multi-attach:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "plans": [{"plan_id": "pro_plan"}, {"plan_id": "addon_seats", "feature_quantities": [{"feature_id": "seats", "quantity": 5}]}], "redirect_mode": "if_required"}
       responses:
@@ -5018,7 +5046,7 @@ examples:
     speakeasy-default-multi-attach:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "plans": [{"plan_id": "pro_plan"}, {"plan_id": "addon_seats", "feature_quantities": [{"feature_id": "seats", "quantity": 5}]}], "redirect_mode": "if_required"}
       responses:
@@ -5028,7 +5056,7 @@ examples:
     speakeasy-default-delete-balance:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "feature_id": "api_calls"}
       responses:
@@ -5048,7 +5076,7 @@ examples:
     speakeasy-default-finalize-lock:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"lock_id": "lock_abc123", "action": "confirm"}
       responses:
@@ -5060,7 +5088,7 @@ examples:
     speakeasy-default-update-entity:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "entity_id": "seat_42", "billing_controls": {"spend_limits": [{"feature_id": "messages", "enabled": true, "overage_limit": 25}]}}
       responses:
@@ -5070,7 +5098,7 @@ examples:
     speakeasy-default-get-customer:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123"}
       responses:
@@ -5080,7 +5108,7 @@ examples:
     speakeasy-default-create-schedule:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
         application/json: {"customer_id": "cus_123", "redirect_mode": "if_required", "billing_cycle_anchor": "now", "phases": [{"starts_at": 1735689600000, "plans": [{"plan_id": "trial_plan"}]}, {"starts_at": 1736899200000, "plans": [{"plan_id": "pro_plan"}]}]}
       responses:
@@ -5090,10 +5118,20 @@ examples:
     speakeasy-default-list-entities:
       parameters:
         header:
-          x-api-version: "2.2.0"
+          x-api-version: "2.3.0"
       requestBody:
-        application/json: {"offset": 0, "limit": 10}
+        application/json: {"start_cursor": "", "limit": 10}
       responses:
         "200":
-          application/json: {"list": [{"id": "seat_42", "name": "Seat 42", "customer_id": "cus_123", "feature_id": "seats", "created_at": 1771409161016, "env": "sandbox", "subscriptions": [{"id": "<id>", "plan_id": "pro_plan", "auto_enable": true, "add_on": false, "status": "active", "past_due": false, "canceled_at": null, "expires_at": null, "trial_ends_at": null, "started_at": 1771431921437, "current_period_start": 1771431921437, "current_period_end": 1771999921437, "quantity": 1}], "purchases": [], "balances": {"messages": {"feature_id": "messages", "granted": 100, "remaining": 72, "usage": 28, "unlimited": false, "overage_allowed": false, "max_purchase": null, "next_reset_at": 1773851121437, "breakdown": [{"id": "cus_ent_39qmLooixXLAqMywgXywjAz96rV", "plan_id": "pro_plan", "included_grant": 100, "prepaid_grant": 0, "remaining": 72, "usage": 28, "unlimited": false, "reset": {"interval": "month", "resets_at": 1773851121437}, "price": null, "expires_at": null}]}}, "flags": {"key": {"id": "cus_ent_39qmLooixXLAqMywgXywjAz96rV", "plan_id": "pro_plan", "expires_at": null, "feature_id": "dashboard"}}, "invoices": []}], "has_more": false, "offset": 0, "limit": 10, "total": 1, "total_count": 100, "total_filtered_count": 42}
+          application/json: {"list": [{"id": "seat_42", "name": "Seat 42", "customer_id": "cus_123", "feature_id": "seats", "created_at": 1771409161016, "env": "sandbox", "subscriptions": [{"id": "<id>", "plan_id": "pro_plan", "auto_enable": true, "add_on": false, "status": "active", "past_due": false, "canceled_at": null, "expires_at": null, "trial_ends_at": null, "started_at": 1771431921437, "current_period_start": 1771431921437, "current_period_end": 1771999921437, "quantity": 1}], "purchases": [], "balances": {"messages": {"feature_id": "messages", "granted": 100, "remaining": 72, "usage": 28, "unlimited": false, "overage_allowed": false, "max_purchase": null, "next_reset_at": 1773851121437, "breakdown": [{"id": "cus_ent_39qmLooixXLAqMywgXywjAz96rV", "plan_id": "pro_plan", "included_grant": 100, "prepaid_grant": 0, "remaining": 72, "usage": 28, "unlimited": false, "reset": {"interval": "month", "resets_at": 1773851121437}, "price": null, "expires_at": null}]}}, "flags": {"key": {"id": "cus_ent_39qmLooixXLAqMywgXywjAz96rV", "plan_id": "pro_plan", "expires_at": null, "feature_id": "dashboard"}}, "invoices": []}], "next_cursor": null}
+  redeemRewardCode:
+    speakeasy-default-redeem-reward-code:
+      parameters:
+        header:
+          x-api-version: "2.3.0"
+      requestBody:
+        application/json: {"code": "REWARD10", "customer_id": "cus_456"}
+      responses:
+        "200":
+          application/json: {"reward_id": "reward_789", "entitlements_granted": [{"feature_id": "messages", "balance": 100}]}
 examplesVersion: 1.0.2

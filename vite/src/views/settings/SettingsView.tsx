@@ -1,5 +1,7 @@
 import {
 	BuildingIcon,
+	CreditCardIcon,
+	PaletteIcon,
 	ShieldCheckIcon,
 	UserIcon,
 	UsersIcon,
@@ -11,8 +13,10 @@ import { AccountSection } from "./sections/AccountSection";
 import { OrganizationSection } from "./sections/OrganizationSection";
 import { MembersSection } from "./sections/MembersSection";
 import { AuthorizedAppsSection } from "./sections/AuthorizedAppsSection";
+import { AppearanceSection } from "./sections/AppearanceSection";
+import { BillingSettingsSection } from "./sections/BillingSettingsSection";
 
-type SettingsTab = "account" | "organization" | "members" | "apps";
+type SettingsTab = "account" | "organization" | "members" | "billing" | "appearance" | "apps";
 
 interface SettingsNavItem {
 	readonly id: SettingsTab;
@@ -33,6 +37,16 @@ const SETTINGS_TABS: readonly SettingsNavItem[] = [
 		icon: <UsersIcon className="size-4" />,
 	},
 	{
+		id: "billing",
+		label: "Billing",
+		icon: <CreditCardIcon className="size-4" />,
+	},
+	{
+		id: "appearance",
+		label: "Appearance",
+		icon: <PaletteIcon className="size-4" />,
+	},
+	{
 		id: "apps",
 		label: "Authorized Apps",
 		icon: <ShieldCheckIcon className="size-4" />,
@@ -43,6 +57,8 @@ const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
 	account: AccountSection,
 	organization: OrganizationSection,
 	members: MembersSection,
+	billing: BillingSettingsSection,
+	appearance: AppearanceSection,
 	apps: AuthorizedAppsSection,
 };
 
@@ -58,7 +74,7 @@ export const SettingsView = () => {
 	return (
 		<PageContainer className="flex-row gap-10 h-full">
 			<nav className="hidden sm:flex flex-col w-44 shrink-0 pt-1">
-				<h1 className="text-sm font-semibold text-t1 mb-4">Settings</h1>
+				<h1 className="text-sm font-semibold text-foreground mb-4">Settings</h1>
 				<div className="flex flex-col gap-0.5">
 					{SETTINGS_TABS.map((tab) => (
 						<button
@@ -68,8 +84,8 @@ export const SettingsView = () => {
 							className={cn(
 								"flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors cursor-pointer text-left",
 								activeTab === tab.id
-									? "bg-interactive-secondary text-t1 font-medium"
-									: "text-t3 hover:text-t2 hover:bg-interactive-secondary/50",
+									? "bg-interactive-secondary text-foreground font-medium"
+									: "text-tertiary-foreground hover:text-muted-foreground hover:bg-interactive-secondary/50",
 							)}
 						>
 							{tab.icon}

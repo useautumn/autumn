@@ -44,11 +44,11 @@ export function AddPlansSection({
 		<div className="flex flex-col gap-2">
 			<div className="flex items-center justify-between group/row">
 				<div className="flex items-center gap-2">
-					<span className="text-sm font-medium text-t1">
+					<span className="text-sm font-medium text-foreground">
 						{selectedPlanIds.length > 1 ? "Add Plans" : "Add Plan"}
 					</span>
 					{selectedPlanIds.length > 0 && (
-						<span className="text-xs text-t3">
+						<span className="text-xs text-tertiary-foreground">
 							{selectedPlanIds.length}{" "}
 							{selectedPlanIds.length === 1 ? "plan" : "plans"}
 						</span>

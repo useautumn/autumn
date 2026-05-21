@@ -4,7 +4,7 @@ info:
 servers:
   - url: https://api.useautumn.com
     description: Production server
-openapi: 3.1.1
+openapi: 3.1.0
 components:
   schemas:
     CustomerId:
@@ -2781,8 +2781,8 @@ paths:
     post:
       operationId: listCustomers
       description: 'Lists customers with cursor pagination and optional filters. Pass
-        `cursor: ""` (or omit) for the first page; use `next_cursor` from a
-        prior response for subsequent pages.'
+        `start_cursor: ""` (or omit) for the first page; use `next_cursor` from
+        a prior response for subsequent pages.'
       tags:
         - customers
       requestBody:
@@ -2792,7 +2792,7 @@ paths:
             schema:
               type: object
               properties:
-                cursor:
+                start_cursor:
                   type: string
                   default: ""
                   description: Opaque pagination cursor. Empty string (default) requests the first
@@ -2840,7 +2840,7 @@ paths:
                   description: Filter by customer processor type (stripe, revenuecat, vercel).
               title: ListCustomersParams
               examples:
-                - cursor: ""
+                - start_cursor: ""
                   limit: 10
       responses:
         "200":
@@ -3491,17 +3491,6 @@ paths:
       x-speakeasy-name-override: list
       parameters:
         - *a1
-      x-speakeasy-pagination:
-        type: cursor
-        inputs:
-          - name: cursor
-            in: requestBody
-            type: cursor
-          - name: limit
-            in: requestBody
-            type: limit
-        outputs:
-          nextCursor: $.next_cursor
   /v1/customers.update:
     post:
       operationId: updateCustomer
@@ -7957,6 +7946,10 @@ paths:
         (Stripe checkout). For Stripe checkout, the customer_product is inserted
         before the customer completes the hosted form. (optional)
 
+        @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default
+        tax rate on the created subscription, invoice, or checkout session line
+        items. (optional)
+
 
         @returns A billing response with customer ID, invoice details, and
         payment URL (if checkout required).
@@ -8584,6 +8577,11 @@ paths:
                     payment is deferred (invoice mode) or pending (Stripe
                     checkout). For Stripe checkout, the customer_product is
                     inserted before the customer completes the hosted form.
+                tax_rate_id:
+                  type: string
+                  description: Stripe tax rate ID (txr_...) to apply as the default tax rate on
+                    the created subscription, invoice, or checkout session line
+                    items.
               required:
                 - customer_id
                 - plan_id
@@ -8680,7 +8678,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1778752127560,"plans":[{"planId":"trial_plan"}]},{"startsAt":1779961727560,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779292757190,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780502357190,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -10061,6 +10059,10 @@ paths:
         (Stripe checkout). For Stripe checkout, the customer_product is inserted
         before the customer completes the hosted form. (optional)
 
+        @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default
+        tax rate on the created subscription, invoice, or checkout session line
+        items. (optional)
+
 
         @returns A preview response with line items, totals, and effective dates
         for the proposed changes.
@@ -10688,6 +10690,11 @@ paths:
                     payment is deferred (invoice mode) or pending (Stripe
                     checkout). For Stripe checkout, the customer_product is
                     inserted before the customer completes the hosted form.
+                tax_rate_id:
+                  type: string
+                  description: Stripe tax rate ID (txr_...) to apply as the default tax rate on
+                    the created subscription, invoice, or checkout session line
+                    items.
               required:
                 - customer_id
                 - plan_id
@@ -14392,6 +14399,11 @@ paths:
                     payment is deferred (invoice mode) or pending (Stripe
                     checkout). For Stripe checkout, the customer_product is
                     inserted before the customer completes the hosted form.
+                tax_rate_id:
+                  type: string
+                  description: Stripe tax rate ID (txr_...) to apply as the default tax rate on
+                    the created subscription, invoice, or checkout session line
+                    items.
               required:
                 - customer_id
               title: SetupPaymentParams
@@ -16418,18 +16430,18 @@ paths:
             schema:
               type: object
               properties:
-                offset:
-                  type: integer
-                  minimum: 0
-                  maximum: 9007199254740991
-                  default: 0
-                  description: Number of items to skip
+                start_cursor:
+                  type: string
+                  default: ""
+                  description: Opaque pagination cursor. Empty string (default) requests the first
+                    page; use next_cursor from a prior response for subsequent
+                    pages.
                 limit:
                   type: integer
                   minimum: 1
-                  maximum: 1000
-                  default: 100
-                  description: Number of items to return. Default 100, max 1000.
+                  maximum: 5000
+                  default: 50
+                  description: Number of items to return. Default 50, hard ceiling 5000.
                 customer_id:
                   type: string
                   description: Filter events by customer ID
@@ -16458,9 +16470,11 @@ paths:
                   description: Filter events by time range
               title: EventsListParams
               examples:
-                - customer_id: cus_123
+                - start_cursor: ""
+                  customer_id: cus_123
                   limit: 50
-                - feature_id: api_calls
+                - start_cursor: ""
+                  feature_id: api_calls
                   custom_range:
                     start: 1704067200000
                     end: 1706745600000
@@ -16577,25 +16591,16 @@ paths:
                         - value
                         - properties
                         - deductions
-                    description: Array of items for current page
-                  has_more:
-                    type: boolean
-                    description: Whether more results exist after this page
-                  offset:
-                    type: number
-                    description: Current offset position
-                  limit:
-                    type: number
-                    description: Limit passed in the request
-                  total:
-                    type: number
-                    description: Total number of items returned in the current page
+                    description: Items for current page.
+                  next_cursor:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: Opaque cursor for the next page. Null when there are no more
+                      results.
                 required:
                   - list
-                  - has_more
-                  - offset
-                  - limit
-                  - total
+                  - next_cursor
                 examples:
                   - list:
                       - id: evt_36xpk2TmuQX5zVPPQ8tCtnR5Weg
@@ -16619,10 +16624,7 @@ paths:
                         value: 49
                         properties: {}
                         deductions: null
-                    total: 2
-                    has_more: false
-                    offset: 0
-                    limit: 100
+                    next_cursor: eyJ2IjowLCJpZCI6ImV2dF8zNnhtSHh4akFrcXh1ZkRmOXlIQVBOZlJyTE0iLCJ0IjoxNzY1OTU2NTEyMDU3fQ
       x-speakeasy-name-override: list
       parameters:
         - *a1
@@ -17974,7 +17976,7 @@ paths:
             schema:
               type: object
               properties:
-                cursor:
+                start_cursor:
                   type: string
                   default: ""
                   description: Opaque pagination cursor. Empty string (default) requests the first
@@ -18024,7 +18026,7 @@ paths:
                     vercel).
               title: ListEntitiesParams
               examples:
-                - cursor: ""
+                - start_cursor: ""
                   limit: 10
                 - plans:
                     - id: pro_plan
@@ -18473,17 +18475,6 @@ paths:
       x-speakeasy-name-override: list
       parameters:
         - *a1
-      x-speakeasy-pagination:
-        type: cursor
-        inputs:
-          - name: cursor
-            in: requestBody
-            type: cursor
-          - name: limit
-            in: requestBody
-            type: limit
-        outputs:
-          nextCursor: $.next_cursor
   /v1/entities.update:
     post:
       operationId: updateEntity
@@ -19204,6 +19195,69 @@ paths:
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a1
+  /v1/rewards.redeem:
+    post:
+      operationId: redeemRewardCode
+      description: Redeem a reward promo code for a customer.
+      tags:
+        - rewards
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: The reward promo code to redeem
+                customer_id:
+                  type: string
+                  description: The unique identifier of the customer redeeming the code
+              required:
+                - code
+                - customer_id
+              title: RedeemRewardCodeParams
+              examples:
+                - code: REWARD10
+                  customer_id: cus_456
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reward_id:
+                    type: string
+                    description: The ID of the redeemed reward
+                  entitlements_granted:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        feature_id:
+                          type: string
+                          description: The ID of the feature granted by the reward
+                        balance:
+                          type: number
+                          description: The balance granted for the feature
+                      required:
+                        - feature_id
+                        - balance
+                    description: The feature balances granted to the customer
+                required:
+                  - reward_id
+                  - entitlements_granted
+                examples:
+                  - reward_id: reward_789
+                    entitlements_granted:
+                      - feature_id: messages
+                        balance: 100
+      x-speakeasy-name-override: redeemCode
+      parameters:
+        - *a1
 security:
   - secretKey: []
 x-speakeasy-globals:
@@ -19471,6 +19525,268 @@ webhooks:
                   total: 1000
                   currency: usd
                   hosted_invoice_url: https://invoice.stripe.com/i/acct_123/test_456
+      responses:
+        "200":
+          description: Webhook received successfully.
+  billing.updated:
+    post:
+      operationId: billingUpdated
+      summary: Plans Updated
+      description: Fired when a customer's plans change — activated, scheduled,
+        updated, or expired. Each event carries a `plan_changes` array
+        describing what happened and a `tags` array (e.g. `trial_ended`,
+        `phase_changed`) describing why.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+                - data
+              properties:
+                type:
+                  type: string
+                  const: billing.updated
+                  description: The webhook event type.
+                data:
+                  examples:
+                    - object: billing.updated
+                      customer_id: cus_123
+                      plan_changes:
+                        - action: activated
+                          subscription:
+                            plan_id: pro
+                            status: active
+                            past_due: false
+                            started_at: 1779000000000
+                            canceled_at: null
+                            expires_at: null
+                            trial_ends_at: null
+                            current_period_start: 1779000000000
+                            current_period_end: 1781592000000
+                          previous_attributes: null
+                          item_changes: []
+                        - action: expired
+                          subscription:
+                            plan_id: free
+                            status: expired
+                            past_due: false
+                            started_at: 1776000000000
+                            canceled_at: 1779000000000
+                            expires_at: 1779000000000
+                            trial_ends_at: null
+                            current_period_start: null
+                            current_period_end: null
+                          previous_attributes:
+                            status: active
+                          item_changes: []
+                      tags: []
+                  type: object
+                  properties:
+                    object:
+                      type: string
+                      const: billing.updated
+                    customer_id:
+                      description: The ID of the customer whose plans changed.
+                      type: string
+                    entity_id:
+                      description: The ID of the entity, if the changes are scoped to a specific
+                        entity.
+                      anyOf:
+                        - type: string
+                        - type: "null"
+                    plan_changes:
+                      description: The plans that were activated, scheduled, updated, or expired.
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          action:
+                            description: "The lifecycle action applied to this plan: activated (newly active
+                              on the customer), scheduled (queued for a future
+                              start), updated (mutated in place), or expired
+                              (ended)."
+                            type: string
+                            enum:
+                              - activated
+                              - scheduled
+                              - updated
+                              - expired
+                          subscription:
+                            description: The subscription as it stands after this change. Present when the
+                              plan is billed as a recurring subscription.
+                            type: object
+                            properties:
+                              plan_id:
+                                description: The ID of the customer plan.
+                                type: string
+                              status:
+                                description: The current status of the subscription on the customer.
+                                type: string
+                                enum:
+                                  - active
+                                  - scheduled
+                                  - expired
+                              past_due:
+                                description: Whether the subscription has overdue payments.
+                                type: boolean
+                              started_at:
+                                description: When the subscription started, in milliseconds since the Unix
+                                  epoch.
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                              canceled_at:
+                                description: When the subscription was canceled, in milliseconds since the Unix
+                                  epoch, or null if not canceled.
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                              expires_at:
+                                description: When the subscription ends, in milliseconds since the Unix epoch,
+                                  or null if no expiry is set.
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                              trial_ends_at:
+                                description: When the trial ends, in milliseconds since the Unix epoch. Null
+                                  when not actively trialing.
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                              current_period_start:
+                                description: Start of the current billing period, or null if not applicable.
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                              current_period_end:
+                                description: End of the current billing period, or null if not applicable.
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                            required:
+                              - plan_id
+                              - status
+                              - past_due
+                              - started_at
+                              - canceled_at
+                              - expires_at
+                              - trial_ends_at
+                              - current_period_start
+                              - current_period_end
+                            additionalProperties: false
+                          purchase:
+                            description: The purchase as it stands after this change. Present when the plan
+                              is a one-off purchase.
+                            type: object
+                            properties:
+                              plan_id:
+                                description: The ID of the customer plan.
+                                type: string
+                              status:
+                                description: The current status of the purchase on the customer.
+                                type: string
+                                enum:
+                                  - active
+                                  - scheduled
+                                  - expired
+                              expires_at:
+                                description: When the purchase ends, in milliseconds since the Unix epoch, or
+                                  null if no expiry is set.
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
+                            required:
+                              - plan_id
+                              - status
+                              - expires_at
+                            additionalProperties: false
+                          previous_attributes:
+                            description: Sparse map of scalar fields whose values changed, holding their
+                              previous values. Null when the plan is newly
+                              activated or scheduled.
+                            anyOf:
+                              - type: object
+                                propertyNames:
+                                  type: string
+                                additionalProperties: {}
+                              - type: "null"
+                          item_changes:
+                            description: Features that were added to or removed from this plan. Only
+                              populated for updated plans.
+                            default: []
+                            type: array
+                            items:
+                              type: object
+                              properties:
+                                action:
+                                  description: Whether the feature was added to or removed from the plan.
+                                  type: string
+                                  enum:
+                                    - created
+                                    - deleted
+                                feature_id:
+                                  description: The ID of the feature that was added or removed.
+                                  type: string
+                              required:
+                                - action
+                                - feature_id
+                              additionalProperties: false
+                        required:
+                          - action
+                          - previous_attributes
+                          - item_changes
+                        additionalProperties: false
+                    tags:
+                      description: Reason tags describing why this event fired (e.g. 'trial_ended',
+                        'phase_changed'). Always present; empty when no specific
+                        reason applies.
+                      default: []
+                      type: array
+                      items:
+                        type: string
+                  required:
+                    - object
+                    - customer_id
+                    - plan_changes
+                    - tags
+                  additionalProperties: false
+            example:
+              type: billing.updated
+              data:
+                object: billing.updated
+                customer_id: cus_123
+                plan_changes:
+                  - action: activated
+                    subscription:
+                      plan_id: pro
+                      status: active
+                      past_due: false
+                      started_at: 1779000000000
+                      canceled_at: null
+                      expires_at: null
+                      trial_ends_at: null
+                      current_period_start: 1779000000000
+                      current_period_end: 1781592000000
+                    previous_attributes: null
+                    item_changes: []
+                  - action: expired
+                    subscription:
+                      plan_id: free
+                      status: expired
+                      past_due: false
+                      started_at: 1776000000000
+                      canceled_at: 1779000000000
+                      expires_at: 1779000000000
+                      trial_ends_at: null
+                      current_period_start: null
+                      current_period_end: null
+                    previous_attributes:
+                      status: active
+                    item_changes: []
+                tags: []
       responses:
         "200":
           description: Webhook received successfully.

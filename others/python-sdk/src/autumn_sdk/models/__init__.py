@@ -644,9 +644,9 @@ if TYPE_CHECKING:
         DeletePlanResponseTypedDict,
     )
     from .finalizelockop import (
-        Action,
         FinalizeBalanceParams,
         FinalizeBalanceParamsTypedDict,
+        FinalizeLockAction,
         FinalizeLockGlobals,
         FinalizeLockGlobalsTypedDict,
         FinalizeLockResponse,
@@ -1452,6 +1452,16 @@ if TYPE_CHECKING:
         RedeemReferralCodeResponse,
         RedeemReferralCodeResponseTypedDict,
     )
+    from .redeemrewardcodeop import (
+        EntitlementsGranted,
+        EntitlementsGrantedTypedDict,
+        RedeemRewardCodeGlobals,
+        RedeemRewardCodeGlobalsTypedDict,
+        RedeemRewardCodeParams,
+        RedeemRewardCodeParamsTypedDict,
+        RedeemRewardCodeResponse,
+        RedeemRewardCodeResponseTypedDict,
+    )
     from .security import Security, SecurityTypedDict
     from .setuppaymentop import (
         SetupPaymentAddItemBillingMethod,
@@ -1773,7 +1783,6 @@ if TYPE_CHECKING:
     from . import internal
 
 __all__ = [
-    "Action",
     "AggregateEventsCustomRange",
     "AggregateEventsCustomRangeTypedDict",
     "AggregateEventsFeatureID",
@@ -2301,6 +2310,8 @@ __all__ = [
     "DeletePlanResponseTypedDict",
     "Discount",
     "DiscountTypedDict",
+    "EntitlementsGranted",
+    "EntitlementsGrantedTypedDict",
     "Entity",
     "EntityTypedDict",
     "EventsAggregateParams",
@@ -2312,6 +2323,7 @@ __all__ = [
     "FeatureType2",
     "FinalizeBalanceParams",
     "FinalizeBalanceParamsTypedDict",
+    "FinalizeLockAction",
     "FinalizeLockGlobals",
     "FinalizeLockGlobalsTypedDict",
     "FinalizeLockResponse",
@@ -3128,6 +3140,12 @@ __all__ = [
     "RedeemReferralCodeParamsTypedDict",
     "RedeemReferralCodeResponse",
     "RedeemReferralCodeResponseTypedDict",
+    "RedeemRewardCodeGlobals",
+    "RedeemRewardCodeGlobalsTypedDict",
+    "RedeemRewardCodeParams",
+    "RedeemRewardCodeParamsTypedDict",
+    "RedeemRewardCodeResponse",
+    "RedeemRewardCodeResponseTypedDict",
     "Referral",
     "ReferralCustomer",
     "ReferralCustomerTypedDict",
@@ -4058,9 +4076,9 @@ _dynamic_imports: dict[str, str] = {
     "DeletePlanParamsTypedDict": ".deleteplanop",
     "DeletePlanResponse": ".deleteplanop",
     "DeletePlanResponseTypedDict": ".deleteplanop",
-    "Action": ".finalizelockop",
     "FinalizeBalanceParams": ".finalizelockop",
     "FinalizeBalanceParamsTypedDict": ".finalizelockop",
+    "FinalizeLockAction": ".finalizelockop",
     "FinalizeLockGlobals": ".finalizelockop",
     "FinalizeLockGlobalsTypedDict": ".finalizelockop",
     "FinalizeLockResponse": ".finalizelockop",
@@ -4831,6 +4849,14 @@ _dynamic_imports: dict[str, str] = {
     "RedeemReferralCodeParamsTypedDict": ".redeemreferralcodeop",
     "RedeemReferralCodeResponse": ".redeemreferralcodeop",
     "RedeemReferralCodeResponseTypedDict": ".redeemreferralcodeop",
+    "EntitlementsGranted": ".redeemrewardcodeop",
+    "EntitlementsGrantedTypedDict": ".redeemrewardcodeop",
+    "RedeemRewardCodeGlobals": ".redeemrewardcodeop",
+    "RedeemRewardCodeGlobalsTypedDict": ".redeemrewardcodeop",
+    "RedeemRewardCodeParams": ".redeemrewardcodeop",
+    "RedeemRewardCodeParamsTypedDict": ".redeemrewardcodeop",
+    "RedeemRewardCodeResponse": ".redeemrewardcodeop",
+    "RedeemRewardCodeResponseTypedDict": ".redeemrewardcodeop",
     "Security": ".security",
     "SecurityTypedDict": ".security",
     "SetupPaymentAddItemBillingMethod": ".setuppaymentop",

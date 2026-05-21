@@ -10,10 +10,9 @@ export const SyncPlanInstanceSchema = MultiPlanInstanceSchema.extend({
 		description:
 			"Number of customer product instances to create from this plan entry. Defaults to 1. Used to express add-ons with quantity > 1.",
 	}),
-	internal_entity_id: z.string().optional().meta({
+	entity_id: z.string().optional().meta({
 		description:
-			"If set, the resulting customer product is bound to this entity.",
-		internal: true,
+			"If set, the resulting customer product is bound to this entity. Resolved against the customer's entities; pass the public entity id.",
 	}),
 	expire_previous: z.boolean().optional().meta({
 		description:

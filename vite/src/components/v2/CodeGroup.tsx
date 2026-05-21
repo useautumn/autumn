@@ -41,7 +41,7 @@ const CodeGroupTab = React.forwardRef<
 		className={cn(
 			"flex items-center justify-center flex-1 min-w-0 h-6 px-2 py-1 text-[13px] font-semibold tracking-[-0.039px] leading-normal whitespace-nowrap",
 			"bg-interactive-secondary border border-r-0",
-			"text-t3 transition-none outline-none",
+			"text-tertiary-foreground transition-none outline-none",
 			"hover:text-primary",
 			"focus-visible:text-primary",
 			"data-selected:bg-interactive-secondary-hover  data-selected:shadow-[0px_3px_4px_0px_inset_rgba(0,0,0,0.04)]",
@@ -175,7 +175,7 @@ const CodeGroupCodeSolidColour = React.forwardRef<
 	React.ComponentPropsWithoutRef<"pre">
 >(({ className, children, ...props }, ref) => {
 	return (
-		<pre ref={ref} className={cn("text-t8", className)} {...props}>
+		<pre ref={ref} className={cn("text-sandbox", className)} {...props}>
 			{children}
 		</pre>
 	);

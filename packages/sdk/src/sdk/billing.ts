@@ -64,6 +64,7 @@ export class Billing extends ClientSDK {
    * @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
    * @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
    * @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
+   * @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
    *
    * @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
    */
@@ -86,7 +87,7 @@ export class Billing extends ClientSDK {
    * @example
    * ```typescript
    * // Schedule a transition from a trial plan to a paid plan
-   * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779094773453,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780304373453,"plans":[{"planId":"pro_plan"}]}] });
+   * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779292757190,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780502357190,"plans":[{"planId":"pro_plan"}]}] });
    * ```
    *
    * @param customerId - The ID of the customer to create the schedule for.
@@ -197,6 +198,7 @@ export class Billing extends ClientSDK {
    * @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
    * @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
    * @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
+   * @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
    *
    * @returns A preview response with line items, totals, and effective dates for the proposed changes.
    */

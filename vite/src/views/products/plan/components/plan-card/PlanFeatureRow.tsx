@@ -34,7 +34,7 @@ interface PlanFeatureRowProps {
 
 export const PlanFeatureRow = ({
 	item: itemProp,
-	onDelete: _onDelete,
+	onDelete,
 	index,
 	readOnly = false,
 	prepaidQuantity,
@@ -42,7 +42,7 @@ export const PlanFeatureRow = ({
 	const { org } = useOrg();
 	const { features } = useFeaturesQuery();
 	const { setItem } = useProductItemContext();
-	const { product, setProduct } = useProduct();
+	const { product } = useProduct();
 	const { itemId, setSheet } = useSheet();
 	const isOnboarding = useOnboardingStore((s) => s.isOnboarding);
 	const playgroundMode = useOnboardingStore((s) => s.playgroundMode);
@@ -92,12 +92,8 @@ export const PlanFeatureRow = ({
 	};
 
 	const handleDeleteRow = () => {
-		const newItems = product.items?.filter((i) => i !== item) || [];
-
-		setProduct({ ...product, items: newItems });
-
-		if (isSelected) {
-			setSheet({ type: "edit-plan" });
+		if (onDelete) {
+			onDelete(item);
 		}
 	};
 
@@ -205,7 +201,7 @@ export const PlanFeatureRow = ({
 				</AdminHover>
 
 				<p className="whitespace-nowrap truncate flex-1 min-w-0">
-					<span className={cn("text-body", !hasFeatureName && "text-t4!")}>
+					<span className={cn("text-body", !hasFeatureName && "text-subtle!")}>
 						{displayText}
 					</span>
 

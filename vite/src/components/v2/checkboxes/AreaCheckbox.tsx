@@ -57,8 +57,8 @@ function AreaCheckbox({
 				<label
 					htmlFor={id}
 					className={cn(
-						"text-t2 font-medium select-none w-fit",
-						!isDisabled && "hover:text-t1",
+						"text-muted-foreground font-medium select-none w-fit",
+						!isDisabled && "hover:text-foreground",
 						isDisabled && "cursor-not-allowed opacity-50",
 					)}
 				>
@@ -75,7 +75,7 @@ function AreaCheckbox({
 						)}
 					>
 						<div className="overflow-hidden space-y-2">
-							{description && <p className="text-t3">{description}</p>}
+							{description && <p className="text-tertiary-foreground">{description}</p>}
 							{children}
 						</div>
 					</div>

@@ -1,4 +1,5 @@
 import { VercelMarketplaceMode } from "@models/genModels/processorSchemas";
+import { OrgConfigSchema } from "./orgConfig";
 import { z } from "zod/v4";
 
 export const FrontendOrgSchema = z.object({
@@ -24,6 +25,7 @@ export const FrontendOrgSchema = z.object({
 	through_master: z.boolean(),
 	onboarded: z.boolean(),
 	deployed: z.boolean(),
+	config: OrgConfigSchema,
 	redis_config: z
 		.object({
 			host: z.string(),

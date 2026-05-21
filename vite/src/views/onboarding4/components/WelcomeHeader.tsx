@@ -12,7 +12,7 @@ export function WelcomeHeader() {
 			<h1 className="text-2xl font-semibold text-foreground mb-1">
 				Welcome to Autumn
 			</h1>
-			<p className="text-md text-t3 font-normal">
+			<p className="text-md text-tertiary-foreground font-normal">
 				Get started by describing your app's pricing model, or paste a
 				screenshot.
 			</p>

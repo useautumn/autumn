@@ -10,6 +10,7 @@ import {
 	initPgHealthMonitor,
 	shutdownPgHealthMonitor,
 } from "./db/pgHealthMonitor.js";
+import { startPgPoolMonitor, stopPgPoolMonitor } from "./db/pgPoolMonitor.js";
 import { getRedactedDatabaseUrls } from "./db/redactDatabaseUrl.js";
 import { logger } from "./external/logtail/logtailUtils.js";
 import {
@@ -25,6 +26,7 @@ import "./internal/misc/customerBlocks/customerBlockStore.js";
 import "./internal/misc/edgeConfig/orgLimitsStore.js";
 import "./internal/misc/stripeSync/stripeSyncStore.js";
 import "./internal/misc/redisV2Cache/redisV2CacheStore.js";
+import "./internal/misc/cacheV2Ramp/cacheV2RampStore.js";
 import "./internal/misc/jobQueues/jobQueueStore.js";
 // Side-effect: configures trigger.dev SDK to use TRIGGER_SERVER_SECRET_KEY.
 import "./trigger/configureTrigger.js";
@@ -56,6 +58,7 @@ const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 	const app = createHonoApp();
 
 	initPgHealthMonitor({ client: clientCritical });
+	startPgPoolMonitor();
 
 	void warmupRegionalRedis().catch((error) => {
 		logger.warn("[Redis] Warmup failed", { error });
@@ -162,6 +165,7 @@ async function gracefulShutdown() {
 			await otelSdk.shutdown();
 		}
 		shutdownPgHealthMonitor();
+		stopPgPoolMonitor();
 		stopRedisMonitor();
 		stopRedisV2Monitor();
 		stopAllEdgeConfigPolling();

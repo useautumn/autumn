@@ -44,12 +44,12 @@ const CUSTOMER_TYPE_OPTIONS: StackOption[] = [
 	{
 		value: "user",
 		label: "Users",
-		icon: <UserCircleIcon size={16} color="var(--t7)" />,
+		icon: <UserCircleIcon size={16} color="var(--tertiary-foreground)" />,
 	},
 	{
 		value: "org",
 		label: "Orgs",
-		icon: <AtIcon size={16} color="var(--t7)" />,
+		icon: <AtIcon size={16} color="var(--tertiary-foreground)" />,
 	},
 ];
 

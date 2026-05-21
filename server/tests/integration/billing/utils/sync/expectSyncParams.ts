@@ -4,7 +4,7 @@ import type { SyncParamsV1 } from "@autumn/shared";
 export type ExpectedPlan = {
 	plan_id: string;
 	quantity?: number;
-	internal_entity_id?: string;
+	entity_id?: string;
 	expire_previous?: boolean;
 	customize?:
 		| null
@@ -43,8 +43,8 @@ const expectPlanCorrect = ({
 	if (expected.quantity !== undefined) {
 		expect(plan.quantity ?? 1).toBe(expected.quantity);
 	}
-	if (expected.internal_entity_id !== undefined) {
-		expect(plan.internal_entity_id).toBe(expected.internal_entity_id);
+	if (expected.entity_id !== undefined) {
+		expect(plan.entity_id).toBe(expected.entity_id);
 	}
 	if (expected.expire_previous !== undefined) {
 		expect(plan.expire_previous).toBe(expected.expire_previous);

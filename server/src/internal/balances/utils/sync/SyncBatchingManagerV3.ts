@@ -297,7 +297,7 @@ export class SyncBatchingManagerV3 {
 				messageDeduplicationId,
 			});
 
-			logger.info(
+			logger.debug(
 				`[SyncV4] Queued sync for ${context.customerId}, ${cusEntIds.length} entitlements, ${rolloverIds.length} rollovers`,
 			);
 		} catch (error) {

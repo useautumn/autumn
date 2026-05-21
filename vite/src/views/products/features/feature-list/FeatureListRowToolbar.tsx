@@ -48,7 +48,7 @@ export const FeatureListRowToolbar = ({ feature }: { feature: Feature }) => {
 				<DropdownMenuTrigger asChild>
 					<ToolbarButton />
 				</DropdownMenuTrigger>
-				<DropdownMenuContent className="text-t2" align="end">
+				<DropdownMenuContent className="text-muted-foreground" align="end">
 					<DropdownMenuItem
 						className="flex items-center text-xs"
 						onClick={(e) => {
@@ -60,7 +60,7 @@ export const FeatureListRowToolbar = ({ feature }: { feature: Feature }) => {
 					>
 						<div className="flex items-center justify-between w-full gap-2">
 							Edit
-							<Pen size={12} className="text-t3" />
+							<Pen size={12} className="text-tertiary-foreground" />
 						</div>
 					</DropdownMenuItem>
 					<DropdownMenuItem
@@ -74,7 +74,7 @@ export const FeatureListRowToolbar = ({ feature }: { feature: Feature }) => {
 					>
 						<div className="flex items-center justify-between w-full gap-2">
 							{deleteText}
-							<DeleteIcon size={12} className="text-t3" />
+							<DeleteIcon size={12} className="text-tertiary-foreground" />
 						</div>
 					</DropdownMenuItem>
 				</DropdownMenuContent>

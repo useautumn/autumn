@@ -22,7 +22,7 @@ export const createProductListColumns = ({
 		enableSorting: true,
 		cell: ({ row }: { row: Row<ProductV2> }) => {
 			return (
-				<div className="font-medium text-t1 flex gap-1">
+				<div className="font-medium text-foreground flex gap-1">
 					<AdminHover texts={getPlanHoverTexts({ plan: row.original })}>
 						{row.original.name}
 					</AdminHover>
@@ -46,7 +46,7 @@ export const createProductListColumns = ({
 					{product.id ? (
 						<MiniCopyButton text={product.id} />
 					) : (
-						<span className="px-1 text-t3">NULL</span>
+						<span className="px-1 text-tertiary-foreground">NULL</span>
 					)}
 				</div>
 			);
@@ -59,7 +59,7 @@ export const createProductListColumns = ({
 					accessorKey: "group",
 					enableSorting: false,
 					cell: ({ row }: { row: Row<ProductV2> }) => {
-						return <div className="text-t2">{row.original.group || ""}</div>;
+						return <div className="text-muted-foreground">{row.original.group || ""}</div>;
 					},
 				},
 			]
@@ -70,7 +70,7 @@ export const createProductListColumns = ({
 		enableSorting: true,
 		cell: ({ row }: { row: Row<ProductV2 & { active_count?: number }> }) => {
 			return (
-				<div className="text-t2">
+				<div className="text-muted-foreground">
 					<ProductCountsTooltip product={row.original} />
 				</div>
 			);
@@ -83,7 +83,7 @@ export const createProductListColumns = ({
 		enableSorting: true,
 		cell: ({ row }: { row: Row<ProductV2> }) => {
 			return (
-				<div className="text-t4 text-xs ">
+				<div className="text-subtle text-xs ">
 					{formatUnixToDateTime(row.original.created_at).date}
 				</div>
 			);

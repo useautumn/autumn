@@ -5,7 +5,7 @@ import { CustomerActions } from "./CustomerActions";
 import { useCustomerContext } from "./CustomerContext";
 
 const mutedDivClassName =
-	"py-0.5 px-1.5 rounded-lg text-t3 text-tiny flex items-center gap-2 h-6 max-w-48 truncate bg-muted text-tiny-id";
+	"py-0.5 px-1.5 rounded-lg text-tertiary-foreground text-tiny flex items-center gap-2 h-6 max-w-48 truncate bg-muted text-tiny-id";
 
 const placeholderText = "PENDING";
 
@@ -28,7 +28,7 @@ export const CustomerPageDetails = () => {
 						text={customer.email ?? placeholderText}
 						title={emailTitle}
 						size="mini"
-						className="text-t3"
+						className="text-tertiary-foreground"
 						innerClassName="max-w-30 text-tiny-id truncate !font-normal"
 					></CopyButton>
 				)}
@@ -36,7 +36,7 @@ export const CustomerPageDetails = () => {
 					text={customer.id ?? placeholderText}
 					title={idTitle}
 					size="mini"
-					className="text-t3"
+					className="text-tertiary-foreground"
 					innerClassName="max-w-30 text-tiny-id truncate !font-normal"
 				></CopyButton>
 				{customer.fingerprint && (

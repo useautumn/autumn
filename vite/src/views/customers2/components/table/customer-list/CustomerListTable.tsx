@@ -37,7 +37,7 @@ export function CustomerListTable({
 	const env = useEnv();
 
 	const tableContainerHeight =
-		env === AppEnv.Sandbox ? "calc(100vh - 174px)" : "calc(100vh - 134px)";
+		env === AppEnv.Sandbox ? "calc(100vh - 230px)" : "calc(100vh - 190px)";
 
 	const { features } = useFeaturesQuery();
 	const { products } = useProductsQuery();

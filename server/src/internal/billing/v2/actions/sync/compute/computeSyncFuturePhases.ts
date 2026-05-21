@@ -77,13 +77,14 @@ export const computeSyncFuturePhases = ({
 				fullCustomer,
 				fullProduct: productContext.fullProduct,
 				featureQuantities: productContext.featureQuantities,
+				entity: productContext.entity,
 				startsAt: phaseContext.startsAt,
 				endsAt: phaseContext.endsAt,
 				currentEpochMs,
 				accessStartsAt: productContext.accessStartsAt,
 				subscriptionId: stripeSubscription?.id,
 				subscriptionScheduleId: stripeSchedule?.id,
-				internalEntityId: productContext.plan.internal_entity_id,
+				internalEntityId: productContext.entity?.internal_id,
 			});
 			insertCustomerProducts.push(cusProduct);
 			phaseIds.push(cusProduct.id);

@@ -16,6 +16,10 @@ export type CursorPaginatedFullCusQueryArgs = {
 	env: AppEnv;
 	inStatuses?: CusProductStatus[];
 	withSubs?: boolean;
+	withEntities?: boolean;
+	includeInvoices?: boolean;
+	entitiesLimit?: number;
+	invoicesLimit?: number;
 	limit: number;
 	cursor?: StandardCursorFields;
 	internalCustomerIds?: string[];
@@ -26,6 +30,7 @@ export type CursorPaginatedFullCusQueryArgs = {
 	noneFilter?: boolean;
 	productVersionFilters?: DashboardProductVersionFilter[];
 	cusProductLimit: number;
+	customerId?: string;
 };
 
 /**
@@ -38,6 +43,10 @@ export const getCursorPaginatedFullCusQuery = ({
 	env,
 	inStatuses,
 	withSubs = true,
+	withEntities = false,
+	includeInvoices = false,
+	entitiesLimit = 300,
+	invoicesLimit = 10,
 	limit,
 	cursor,
 	internalCustomerIds,
@@ -48,6 +57,7 @@ export const getCursorPaginatedFullCusQuery = ({
 	noneFilter,
 	productVersionFilters,
 	cusProductLimit,
+	customerId,
 }: CursorPaginatedFullCusQueryArgs) => {
 	const cpStatusFilter = inStatuses?.length
 		? sql`AND cp.status = ANY(ARRAY[${sql.join(
@@ -86,6 +96,42 @@ export const getCursorPaginatedFullCusQuery = ({
 			) AS subscriptions`
 		: sql`'[]'::json AS subscriptions`;
 
+	const entitiesCte = withEntities
+		? sql`, entities_all AS MATERIALIZED (
+				SELECT e.internal_customer_id, row_to_json(e) AS row_json
+				FROM cr
+				JOIN LATERAL (
+					SELECT e.*
+					FROM entities e
+					WHERE e.internal_customer_id = cr.internal_id
+					ORDER BY e.internal_id DESC
+					LIMIT ${entitiesLimit}
+				) e ON true
+			)`
+		: sql``;
+
+	const invoicesCte = includeInvoices
+		? sql`, invoices_all AS MATERIALIZED (
+				SELECT i.internal_customer_id, row_to_json(i) AS row_json
+				FROM cr
+				JOIN LATERAL (
+					SELECT i.*
+					FROM invoices i
+					WHERE i.internal_customer_id = cr.internal_id
+					ORDER BY i.created_at DESC, i.id DESC
+					LIMIT ${invoicesLimit}
+				) i ON true
+			)`
+		: sql``;
+
+	const entitiesSelect = withEntities
+		? sql`, (SELECT COALESCE(json_agg(row_json), '[]'::json) FROM entities_all) AS entities`
+		: sql``;
+
+	const invoicesSelect = includeInvoices
+		? sql`, (SELECT COALESCE(json_agg(row_json), '[]'::json) FROM invoices_all) AS invoices`
+		: sql``;
+
 	return sql`
 		WITH cr AS MATERIALIZED (
 			SELECT
@@ -93,13 +139,12 @@ export const getCursorPaginatedFullCusQuery = ({
 				c.id,
 				c.created_at,
 				row_to_json(c) AS row_json
-			FROM customers c
-			WHERE c.org_id = ${orgId}
-				AND c.env = ${env}
-				${customerListFilterSql}
-				${cursorPredicate}
-			ORDER BY c.created_at DESC, c.id DESC
-			LIMIT ${fetchLimit}
+		FROM customers c
+		WHERE c.org_id = ${orgId}
+			AND c.env = ${env}
+			${customerId ? sql`AND (c.id = ${customerId} OR c.internal_id = ${customerId})` : sql`${customerListFilterSql}${cursorPredicate}`}
+		ORDER BY c.created_at DESC, c.id DESC
+		LIMIT ${fetchLimit}
 		),
 		cp_ranked_raw AS MATERIALIZED (
 			SELECT
@@ -155,6 +200,8 @@ export const getCursorPaginatedFullCusQuery = ({
 			UNION ALL
 			SELECT id, entitlement_id FROM ces_loose
 		)
+		${entitiesCte}
+		${invoicesCte}
 		SELECT
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cr) AS customers,
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cps_ranked) AS customer_products,
@@ -184,5 +231,7 @@ export const getCursorPaginatedFullCusQuery = ({
 				JOIN free_trials ft ON ft.id = cps.free_trial_id
 			) AS free_trials,
 			${subscriptionsSelect}
+			${entitiesSelect}
+			${invoicesSelect}
 	`;
 };

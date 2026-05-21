@@ -13,7 +13,7 @@ export const createRewardsTableColumns = (): ColumnDef<Reward, unknown>[] => {
 			header: "Name",
 			accessorKey: "name",
 			cell: ({ row }: { row: Row<Reward> }) => {
-				return <div className="font-medium text-t1">{row.original.name}</div>;
+				return <div className="font-medium text-foreground">{row.original.name}</div>;
 			},
 		},
 		{
@@ -30,7 +30,7 @@ export const createRewardsTableColumns = (): ColumnDef<Reward, unknown>[] => {
 						{promoCodes ? (
 							<MiniCopyButton text={promoCodes} />
 						) : (
-							<span className="px-1 text-t3">—</span>
+							<span className="px-1 text-tertiary-foreground">—</span>
 						)}
 					</div>
 				);
@@ -49,7 +49,7 @@ export const createRewardsTableColumns = (): ColumnDef<Reward, unknown>[] => {
 					[RewardType.FeatureGrant]: "Feature Grant",
 				};
 				return (
-					<div className="text-t2">
+					<div className="text-muted-foreground">
 						{typeLabels[row.original.type] || row.original.type}
 					</div>
 				);
@@ -91,14 +91,14 @@ const RewardValueCell = ({ reward }: { reward: Reward }) => {
 		const product = products.find(
 			(p: ProductV2) => p.id === reward.free_product_id,
 		);
-		return <div className="text-t2">{product?.name || "—"}</div>;
+		return <div className="text-muted-foreground">{product?.name || "—"}</div>;
 	}
 
 	if (reward.type === RewardType.FeatureGrant) {
 		const grantCount = reward.entitlements?.length ?? 0;
 
 		return (
-			<div className="text-t2">
+			<div className="text-muted-foreground">
 				{grantCount > 0
 					? `${grantCount} feature grant${grantCount === 1 ? "" : "s"}`
 					: "—"}
@@ -107,7 +107,7 @@ const RewardValueCell = ({ reward }: { reward: Reward }) => {
 	}
 
 	return (
-		<div className="text-t2">
+		<div className="text-muted-foreground">
 			{reward.discount_config?.discount_value}
 			{reward.type === RewardType.PercentageDiscount
 				? "%"

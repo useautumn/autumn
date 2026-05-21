@@ -5,7 +5,6 @@ import {
 	Moon,
 	PanelRight,
 	Plus,
-	Settings,
 	Sun,
 } from "lucide-react";
 import { useState } from "react";
@@ -47,7 +46,7 @@ import { LogOutItem } from "./LogOutItem";
 export const OrgDropdown = () => {
 	const { org, isLoading, error } = useOrg();
 	const { expanded, setExpanded } = useSidebarContext();
-	const { theme, setTheme } = useTheme();
+	const { mode, setMode } = useTheme();
 	const navigate = useNavigate();
 
 	const { data: orgsData } = useListOrganizations();
@@ -78,7 +77,7 @@ export const OrgDropdown = () => {
 	if (!org || error) return null;
 
 	return (
-		<div className={cn("flex px-3")}>
+		<div className={cn("flex", expanded ? "px-3" : "px-2")}>
 			<CreateNewOrg dialogType={dialogType} setDialogType={setDialogType} />
 
 			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
@@ -94,8 +93,10 @@ export const OrgDropdown = () => {
 					<DropdownMenuTrigger asChild>
 						<Button
 							className={cn(
-								"bg-transparent! shimmer-hover p-0.5 gap-2 rounded-md justify-start items-center transition-all duration-200 cursor-pointer",
-								expanded ? "h-7 min-w-28" : "h-7 w-7 p-0.5",
+								"bg-transparent! gap-2 rounded-md items-center transition-all duration-200 cursor-pointer",
+								expanded
+									? "h-7 min-w-28 p-0.5 justify-start shimmer-hover"
+									: "h-7 w-full px-2 justify-center hover:bg-transparent",
 							)}
 							variant="skeleton"
 						>
@@ -108,8 +109,8 @@ export const OrgDropdown = () => {
 										: "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0",
 								)}
 							>
-								<span className="text-t2 max-w-24 truncate">{org?.name}</span>
-								<ChevronDown size={14} className="text-t3" />
+								<span className="text-muted-foreground max-w-24 truncate">{org?.name}</span>
+								<ChevronDown size={14} className="text-tertiary-foreground" />
 							</div>
 						</Button>
 					</DropdownMenuTrigger>
@@ -120,7 +121,7 @@ export const OrgDropdown = () => {
 				>
 					<AdminDropdownItems />
 					<DropdownMenuItem
-						className="flex justify-between w-full items-center gap-2 text-t2 cursor-pointer"
+						className="flex justify-between w-full items-center gap-2 text-muted-foreground cursor-pointer"
 						onClick={() => {
 							navigateTo("/settings", navigate);
 							setDropdownOpen(false);
@@ -135,23 +136,47 @@ export const OrgDropdown = () => {
 					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuGroup>
-						<DropdownMenuItem
-							onClick={() => {
-								navigateTo("/settings", navigate);
-								setDropdownOpen(false);
-							}}
-						>
-							<div className="flex justify-between w-full items-center gap-2 text-t2">
-								<span>Settings</span>
-								<Settings size={14} />
-							</div>
-						</DropdownMenuItem>
 						<DropdownMenuItem onClick={() => setDialogType("create")}>
-							<div className="flex justify-between w-full items-center gap-2 text-t2">
+							<div className="flex justify-between w-full items-center gap-2 text-muted-foreground">
 								<span>Create Organization</span>
 								<Plus size={14} />
 							</div>
 						</DropdownMenuItem>
+						<DropdownMenuSub>
+							<DropdownMenuSubTrigger className="text-muted-foreground">
+								<div className="flex justify-between w-full items-center gap-2">
+									<span>Theme</span>
+									{mode === "light" && <Sun size={14} />}
+									{mode === "dark" && <Moon size={14} />}
+									{mode === "system" && <Monitor size={14} />}
+								</div>
+							</DropdownMenuSubTrigger>
+							<DropdownMenuPortal>
+								<DropdownMenuSubContent className="w-36">
+									<DropdownMenuItem
+										onClick={() => setMode("light")}
+										className="flex justify-between items-center"
+									>
+										<span className="text-muted-foreground">Light</span>
+										<Sun size={14} />
+									</DropdownMenuItem>
+									<DropdownMenuItem
+										onClick={() => setMode("dark")}
+										className="flex justify-between items-center"
+									>
+										<span className="text-muted-foreground">Dark</span>
+										<Moon size={14} />
+									</DropdownMenuItem>
+									<DropdownMenuItem
+										onClick={() => setMode("system")}
+										className="flex justify-between items-center"
+									>
+										<span className="text-muted-foreground">System</span>
+										<Monitor size={14} />
+									</DropdownMenuItem>
+								</DropdownMenuSubContent>
+							</DropdownMenuPortal>
+						</DropdownMenuSub>
 						{!expanded && (
 							<DropdownMenuItem
 								onClick={() => {
@@ -159,52 +184,17 @@ export const OrgDropdown = () => {
 									setDropdownOpen(false);
 								}}
 							>
-								<div className="flex justify-between w-full items-center gap-2 text-t2">
+								<div className="flex justify-between w-full items-center gap-2 text-muted-foreground">
 									<span>Open Sidebar</span>
 									<PanelRight size={14} />
 								</div>
 							</DropdownMenuItem>
 						)}
-						<DropdownMenuSub>
-							<DropdownMenuSubTrigger className="text-t2">
-								<div className="flex justify-between w-full items-center gap-2">
-									<span>Theme</span>
-									{theme === "light" && <Sun size={14} />}
-									{theme === "dark" && <Moon size={14} />}
-									{theme === "system" && <Monitor size={14} />}
-								</div>
-							</DropdownMenuSubTrigger>
-							<DropdownMenuPortal>
-								<DropdownMenuSubContent className="w-36">
-									<DropdownMenuItem
-										onClick={() => setTheme("light")}
-										className="flex justify-between items-center"
-									>
-										<span className="text-t2">Light</span>
-										<Sun size={14} />
-									</DropdownMenuItem>
-									<DropdownMenuItem
-										onClick={() => setTheme("dark")}
-										className="flex justify-between items-center"
-									>
-										<span className="text-t2">Dark</span>
-										<Moon size={14} />
-									</DropdownMenuItem>
-									<DropdownMenuItem
-										onClick={() => setTheme("system")}
-										className="flex justify-between items-center"
-									>
-										<span className="text-t2">System</span>
-										<Monitor size={14} />
-									</DropdownMenuItem>
-								</DropdownMenuSubContent>
-							</DropdownMenuPortal>
-						</DropdownMenuSub>
 						{orgs && orgs.length > 0 && (
 							<>
 								<DropdownMenuSeparator />
 								<DropdownMenuSub>
-									<DropdownMenuSubTrigger className="text-t2">
+									<DropdownMenuSubTrigger className="text-muted-foreground">
 										Switch Organization
 									</DropdownMenuSubTrigger>
 									<DropdownMenuPortal>
@@ -299,7 +289,7 @@ const SwitchOrgItem = ({
 			shimmer={loading}
 			className="flex justify-between"
 		>
-			<span className={cn("text-t2")}>{org.name}</span>
+			<span className={cn("text-muted-foreground")}>{org.name}</span>
 		</DropdownMenuItem>
 	);
 };

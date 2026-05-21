@@ -13,7 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-	"inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-sm text-t3 font-medium w-fit shrink-0 bg-muted",
+	"inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[6px] text-sm text-tertiary-foreground font-medium w-fit shrink-0 bg-muted",
 	{
 		variants: {
 			variant: {
@@ -47,27 +47,27 @@ export const PlanTypeBadge = ({
 				return (
 					<RadioButtonIcon
 						size={14}
-						className="text-t4 mt-0.25"
+						className="text-subtle mt-0.25"
 						weight="fill"
 					/>
 				);
 			case "freeTrial":
 				return (
-					<ClockIcon size={13} className="text-t4 mt-0.25" weight="fill" />
+					<ClockIcon size={13} className="text-subtle mt-0.25" weight="fill" />
 				);
 			case "addon":
 				return (
-					<PlusCircleIcon size={13} className="text-t4 mt-0.25" weight="fill" />
+					<PlusCircleIcon size={13} className="text-subtle mt-0.25" weight="fill" />
 				);
 			case "autoTrial":
 				return (
 					<>
 						<RadioButtonIcon
 							size={14}
-							className="text-t4 mt-0.25"
+							className="text-subtle mt-0.25"
 							weight="fill"
 						/>
-						<ClockIcon size={13} className="text-t4 mt-0.25" weight="fill" />
+						<ClockIcon size={13} className="text-subtle mt-0.25" weight="fill" />
 					</>
 				);
 			default:

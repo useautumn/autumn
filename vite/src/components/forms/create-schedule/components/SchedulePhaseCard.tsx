@@ -71,14 +71,14 @@ export function SchedulePhaseCard({
 
 	const phaseHeader =
 		!isExistingSchedule && isFirstPhase ? (
-			<div className="flex h-input items-center gap-3 rounded-lg input-base input-shadow-default px-3 text-sm text-t1">
-				<CalendarIcon className="size-3.5 shrink-0 text-t3 ml-1" />
+			<div className="flex h-input items-center gap-3 rounded-lg input-base input-shadow-default px-3 text-sm text-foreground">
+				<CalendarIcon className="size-3.5 shrink-0 text-tertiary-foreground ml-1" />
 				<span className="flex-1">Now</span>
 				<Tooltip>
 					<TooltipTrigger asChild>
 						<InfoIcon
 							size={13}
-							className="shrink-0 text-t4 hover:text-t2 transition-colors cursor-default"
+							className="shrink-0 text-subtle hover:text-muted-foreground transition-colors cursor-default"
 						/>
 					</TooltipTrigger>
 					<TooltipContent>
@@ -100,7 +100,7 @@ export function SchedulePhaseCard({
 						withTime
 						className={cn(
 							"group-hover/phase-date:border-primary",
-							isDateLocked && "text-t3 border-border/70",
+							isDateLocked && "text-tertiary-foreground border-border/70",
 							phaseTimingError && "border-destructive",
 						)}
 					/>
@@ -108,7 +108,7 @@ export function SchedulePhaseCard({
 						<button
 							type="button"
 							onClick={() => handleRemovePhase({ phaseIndex })}
-							className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-t4 hover:text-destructive transition-colors opacity-0 group-hover/phase-date:opacity-100 disabled:pointer-events-none disabled:opacity-50"
+							className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-subtle hover:text-destructive transition-colors opacity-0 group-hover/phase-date:opacity-100 disabled:pointer-events-none disabled:opacity-50"
 							disabled={hasStarted}
 						>
 							<TrashIcon size={13} />
@@ -147,7 +147,7 @@ export function SchedulePhaseCard({
 					<button
 						type="button"
 						onClick={() => handleInsertPhase({ afterIndex: phaseIndex })}
-						className="absolute left-[12px] bottom-2 z-10 size-[15px] rounded-full bg-card border border-border/60 text-t4 hover:text-t1 hover:border-primary hover:bg-card flex items-center justify-center opacity-0 group-hover/connector:opacity-100 transition-all duration-150"
+						className="absolute left-[12px] bottom-2 z-10 size-[15px] rounded-full bg-card border border-border/60 text-subtle hover:text-foreground hover:border-primary hover:bg-card flex items-center justify-center opacity-0 group-hover/connector:opacity-100 transition-all duration-150"
 					>
 						<PlusIcon size={9} weight="bold" />
 					</button>

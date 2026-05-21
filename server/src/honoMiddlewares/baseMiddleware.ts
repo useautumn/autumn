@@ -93,7 +93,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		db,
 		dbGeneral,
 		logger: childLogger,
-		redisV2: resolveRedisV2(),
+		redisV2: resolveRedisV2({ customerId }),
 
 		// Request info
 		id,
@@ -114,7 +114,9 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 		// Query params
 		expand: [],
-		skipCache: c.req.header("x-skip-cache") === "true",
+		skipCache:
+			c.req.header("x-skip-cache") === "true" ||
+			c.req.query("skip_cache") === "true",
 
 		// Test params:
 		extraLogs: {},

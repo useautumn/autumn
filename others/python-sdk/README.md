@@ -122,7 +122,7 @@ from autumn_sdk import Autumn
 
 
 with Autumn(
-    x_api_version="2.2.0",
+    x_api_version="2.3.0",
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
 
@@ -144,7 +144,7 @@ from autumn_sdk import Autumn
 async def main():
 
     async with Autumn(
-        x_api_version="2.2.0",
+        x_api_version="2.3.0",
         secret_key="<YOUR_BEARER_TOKEN_HERE>",
     ) as autumn:
 
@@ -175,7 +175,7 @@ from autumn_sdk import Autumn
 
 with Autumn(
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
-    x_api_version="2.2.0",
+    x_api_version="2.3.0",
 ) as autumn:
 
     res = autumn.check(customer_id="cus_123", feature_id="messages")
@@ -242,7 +242,7 @@ Use this as the primary entrypoint before billing operations so the customer rec
 * [get](docs/sdks/customers/README.md#get) - Fetches a customer by ID, optionally expanding related data such as invoices or entities.
 
 Use this when you know the customer exists or assert they exist without creating them.
-* [list](docs/sdks/customers/README.md#list) - Lists customers with pagination and optional filters.
+* [list](docs/sdks/customers/README.md#list) - Lists customers with cursor pagination and optional filters. Pass `start_cursor: ""` (or omit) for the first page; use `next_cursor` from a prior response for subsequent pages.
 * [update](docs/sdks/customers/README.md#update) - Updates an existing customer by ID.
 * [delete](docs/sdks/customers/README.md#delete) - Deletes a customer by ID.
 
@@ -300,6 +300,10 @@ Use this to permanently remove a feature. Note: features that are used in produc
 * [create_code](docs/sdks/referrals/README.md#create_code) - Create or fetch a referral code for a customer in a referral program.
 * [redeem_code](docs/sdks/referrals/README.md#redeem_code) - Redeem a referral code for a customer.
 
+### [Rewards](docs/sdks/rewardssdk/README.md)
+
+* [redeem_code](docs/sdks/rewardssdk/README.md#redeem_code) - Redeem a reward promo code for a customer.
+
 </details>
 <!-- End Available Resources and Operations [operations] -->
 
@@ -315,7 +319,7 @@ from autumn_sdk.utils import BackoffStrategy, RetryConfig
 
 
 with Autumn(
-    x_api_version="2.2.0",
+    x_api_version="2.3.0",
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
 
@@ -335,7 +339,7 @@ from autumn_sdk.utils import BackoffStrategy, RetryConfig
 
 with Autumn(
     retry_config=RetryConfig("backoff", BackoffStrategy(1, 50, 1.1, 100), False),
-    x_api_version="2.2.0",
+    x_api_version="2.3.0",
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
 
@@ -366,7 +370,7 @@ from autumn_sdk import Autumn, errors
 
 
 with Autumn(
-    x_api_version="2.2.0",
+    x_api_version="2.3.0",
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
     res = None
@@ -420,7 +424,7 @@ from autumn_sdk import Autumn
 
 with Autumn(
     server_url="https://api.useautumn.com",
-    x_api_version="2.2.0",
+    x_api_version="2.3.0",
     secret_key="<YOUR_BEARER_TOKEN_HERE>",
 ) as autumn:
 
@@ -525,7 +529,7 @@ from autumn_sdk import Autumn
 def main():
 
     with Autumn(
-        x_api_version="2.2.0",
+        x_api_version="2.3.0",
         secret_key="<YOUR_BEARER_TOKEN_HERE>",
     ) as autumn:
         # Rest of application here...
@@ -535,7 +539,7 @@ def main():
 async def amain():
 
     async with Autumn(
-        x_api_version="2.2.0",
+        x_api_version="2.3.0",
         secret_key="<YOUR_BEARER_TOKEN_HERE>",
     ) as autumn:
         # Rest of application here...

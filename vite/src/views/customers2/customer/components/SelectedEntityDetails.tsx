@@ -19,7 +19,7 @@ import { CreateEntity } from "./CreateEntity";
 import { DeleteEntity } from "./DeleteEntity";
 
 const mutedDivClassName =
-	"py-0.5 px-1.5 bg-muted rounded-lg text-t3 text-sm flex items-center gap-1 h-6 max-w-48 truncate ";
+	"py-0.5 px-1.5 bg-muted rounded-lg text-tertiary-foreground text-sm flex items-center gap-1 h-6 max-w-48 truncate ";
 
 const placeholderText = "PENDING";
 
@@ -112,11 +112,11 @@ export const SelectedEntityDetails = () => {
 						triggerClassName="w-full sm:w-72"
 						renderValue={(entity) =>
 							entity ? (
-								<span className="text-t2 truncate">
+								<span className="text-muted-foreground truncate">
 									{entity.name || entity.id || placeholderText}
 								</span>
 							) : (
-								<span className="text-t3">Select entity</span>
+								<span className="text-tertiary-foreground">Select entity</span>
 							)
 						}
 						renderOption={(entity, isSelected) => {
@@ -127,7 +127,7 @@ export const SelectedEntityDetails = () => {
 										{entity.name && (
 											<span className="text-sm shrink-0">{entity.name}</span>
 										)}
-										<span className="truncate text-t3 font-mono text-xs min-w-0">
+										<span className="truncate text-tertiary-foreground font-mono text-xs min-w-0">
 											{entityLabel}
 										</span>
 									</div>
@@ -144,7 +144,7 @@ export const SelectedEntityDetails = () => {
 										onClick={() => setCreateEntityOpen(true)}
 									>
 										<PlusIcon
-											className="size-[14px] text-t2"
+											className="size-[14px] text-muted-foreground"
 											weight="regular"
 										/>
 										Create new entity
@@ -159,7 +159,7 @@ export const SelectedEntityDetails = () => {
 							variant="skeleton"
 							onClick={handleClearSelection}
 							disabled={!entityId || isViewAs}
-							className="text-t3 hover:text-t1 h-5 w-5 disabled:opacity-50 -mx-1"
+							className="text-tertiary-foreground hover:text-foreground h-5 w-5 disabled:opacity-50 -mx-1"
 						>
 							<XIcon size={12} />
 						</Button>
@@ -170,7 +170,7 @@ export const SelectedEntityDetails = () => {
 						<CopyButton
 							text={fullEntity?.id || placeholderText}
 							size="mini"
-							className="text-t3"
+							className="text-tertiary-foreground"
 							innerClassName="max-w-48 text-tiny-id truncate !font-normal"
 						/>
 						{fullEntity?.feature_id && (
@@ -186,11 +186,11 @@ export const SelectedEntityDetails = () => {
 							onClick={() => setDeleteDialogOpen(true)}
 							disabled={!entityId || isViewAs}
 						>
-							<TrashIcon className="text-t3" />
+							<TrashIcon className="text-tertiary-foreground" />
 						</Button>
 					</div>
 				) : (
-					<div className="text-t3 text-sm pr-2">
+					<div className="text-tertiary-foreground text-sm pr-2">
 						{entities.length} {getEntityTypeText()} active
 					</div>
 				)}
