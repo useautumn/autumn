@@ -1,4 +1,4 @@
-import { Leaf, Monitor, Moon, Sun } from "lucide-react";
+import { Leaf, Monitor, Moon, Skull, Sun } from "lucide-react";
 import {
 	Card,
 	CardContent,
@@ -8,6 +8,7 @@ import {
 } from "@/components/v2/cards/Card";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { cn } from "@/lib/utils";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { SettingsSection } from "../SettingsSection";
 
 interface PreviewColors {
@@ -52,6 +53,14 @@ const PRESET_OPTIONS = [
 		light: { bg: "bg-white", sidebar: "bg-[#fafaf9]", card: "bg-[#f7f7f7]", line: "bg-[#e5e5e5]", header: "bg-[#fafaf9]", dot: "bg-[#d1d1d1]" },
 		dark: { bg: "bg-[#0a0a0a]", sidebar: "bg-[#000000]", card: "bg-[#0f0f0f]", line: "bg-[#1a1a1a]", header: "bg-[#0f0f0f]", dot: "bg-[#2a2a2a]" },
 	},
+	{
+		id: "cursed",
+		label: "Cursed",
+		description: "A̸ ̷g̶r̴e̵a̷t̸ ̶T̵a̴n̶v̷i̴r̸ ̵A̶h̷m̴e̸d̵ ̷s̶p̴e̵c̷i̸a̶l̴",
+		icon: <Skull className="size-5 text-muted-foreground" />,
+		light: { bg: "bg-[#ff00aa]", sidebar: "bg-[#00ff88]", card: "bg-[#00ddff]", line: "bg-[#ff0000]", header: "bg-[#ffff00]", dot: "bg-[#ff8800]" },
+		dark: { bg: "bg-[#2a0033]", sidebar: "bg-[#003322]", card: "bg-[#330044]", line: "bg-[#ff00ff]", header: "bg-[#441166]", dot: "bg-[#00ff88]" },
+	},
 ] as const;
 
 const tc = "transition-colors duration-200";
@@ -95,6 +104,10 @@ const systemPrefersDark = () =>
 
 export const AppearanceSection = () => {
 	const { mode, setMode, preset, setPreset, isDark } = useTheme();
+	const { isAdmin } = useAdmin();
+	const presetOptions = PRESET_OPTIONS.filter(
+		(p) => p.id !== "cursed" || isAdmin,
+	);
 
 	return (
 		<SettingsSection
@@ -135,19 +148,20 @@ export const AppearanceSection = () => {
 				</CardHeader>
 				<CardContent>
 					<div className="grid grid-cols-2 gap-3">
-						{PRESET_OPTIONS.map((option) => {
+						{presetOptions.map((option) => {
 							const isActive = preset === option.id;
 							return (
 								<button
 									key={option.id}
 									type="button"
 									onClick={() => setPreset(option.id)}
-									className={cn(
-										"flex flex-col gap-2.5 rounded-lg border p-2.5 transition-all duration-200 cursor-pointer text-left",
-										isActive
-											? "border-primary ring-2 ring-primary/20 ring-offset-1 ring-offset-background"
-											: "border-border hover:border-muted-foreground/30",
-									)}
+								className={cn(
+									"flex flex-col gap-2.5 rounded-lg border p-2.5 transition-all duration-200 cursor-pointer text-left",
+									option.id === "cursed" && "col-span-2",
+									isActive
+										? "border-primary ring-2 ring-primary/20 ring-offset-1 ring-offset-background"
+										: "border-border hover:border-muted-foreground/30",
+								)}
 								>
 									<ThemePreview colors={isDark ? option.dark : option.light} height="h-[80px]" />
 									<div className="flex items-center gap-2.5 px-0.5">
