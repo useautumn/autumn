@@ -1,6 +1,7 @@
 # Autumn
 
-![Autumn](assets/github_hero.png)
+<img width="1983" height="793" alt="image" src="https://github.com/user-attachments/assets/f2b6271d-19af-4b16-be73-b55a3303b7f1" />
+
 
 [![Discord](https://img.shields.io/badge/Join%20Community-5865F2?logo=discord&logoColor=white)](https://discord.gg/53emPtY9tA)
 [![Follow](https://img.shields.io/twitter/follow/autumnpricing?style=social)](https://x.com/autumnpricing)
