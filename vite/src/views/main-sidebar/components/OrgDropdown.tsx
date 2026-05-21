@@ -5,7 +5,6 @@ import {
 	Moon,
 	PanelRight,
 	Plus,
-	Settings,
 	Sun,
 } from "lucide-react";
 import { useState } from "react";
@@ -47,7 +46,7 @@ import { LogOutItem } from "./LogOutItem";
 export const OrgDropdown = () => {
 	const { org, isLoading, error } = useOrg();
 	const { expanded, setExpanded } = useSidebarContext();
-	const { theme, setTheme } = useTheme();
+	const { mode, setMode } = useTheme();
 	const navigate = useNavigate();
 
 	const { data: orgsData } = useListOrganizations();
@@ -137,23 +136,47 @@ export const OrgDropdown = () => {
 					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuGroup>
-						<DropdownMenuItem
-							onClick={() => {
-								navigateTo("/settings", navigate);
-								setDropdownOpen(false);
-							}}
-						>
-							<div className="flex justify-between w-full items-center gap-2 text-muted-foreground">
-								<span>Settings</span>
-								<Settings size={14} />
-							</div>
-						</DropdownMenuItem>
 						<DropdownMenuItem onClick={() => setDialogType("create")}>
 							<div className="flex justify-between w-full items-center gap-2 text-muted-foreground">
 								<span>Create Organization</span>
 								<Plus size={14} />
 							</div>
 						</DropdownMenuItem>
+						<DropdownMenuSub>
+							<DropdownMenuSubTrigger className="text-muted-foreground">
+								<div className="flex justify-between w-full items-center gap-2">
+									<span>Theme</span>
+									{mode === "light" && <Sun size={14} />}
+									{mode === "dark" && <Moon size={14} />}
+									{mode === "system" && <Monitor size={14} />}
+								</div>
+							</DropdownMenuSubTrigger>
+							<DropdownMenuPortal>
+								<DropdownMenuSubContent className="w-36">
+									<DropdownMenuItem
+										onClick={() => setMode("light")}
+										className="flex justify-between items-center"
+									>
+										<span className="text-muted-foreground">Light</span>
+										<Sun size={14} />
+									</DropdownMenuItem>
+									<DropdownMenuItem
+										onClick={() => setMode("dark")}
+										className="flex justify-between items-center"
+									>
+										<span className="text-muted-foreground">Dark</span>
+										<Moon size={14} />
+									</DropdownMenuItem>
+									<DropdownMenuItem
+										onClick={() => setMode("system")}
+										className="flex justify-between items-center"
+									>
+										<span className="text-muted-foreground">System</span>
+										<Monitor size={14} />
+									</DropdownMenuItem>
+								</DropdownMenuSubContent>
+							</DropdownMenuPortal>
+						</DropdownMenuSub>
 						{!expanded && (
 							<DropdownMenuItem
 								onClick={() => {
@@ -167,41 +190,6 @@ export const OrgDropdown = () => {
 								</div>
 							</DropdownMenuItem>
 						)}
-						<DropdownMenuSub>
-							<DropdownMenuSubTrigger className="text-muted-foreground">
-								<div className="flex justify-between w-full items-center gap-2">
-									<span>Theme</span>
-									{theme === "light" && <Sun size={14} />}
-									{theme === "dark" && <Moon size={14} />}
-									{theme === "system" && <Monitor size={14} />}
-								</div>
-							</DropdownMenuSubTrigger>
-							<DropdownMenuPortal>
-								<DropdownMenuSubContent className="w-36">
-									<DropdownMenuItem
-										onClick={() => setTheme("light")}
-										className="flex justify-between items-center"
-									>
-										<span className="text-muted-foreground">Light</span>
-										<Sun size={14} />
-									</DropdownMenuItem>
-									<DropdownMenuItem
-										onClick={() => setTheme("dark")}
-										className="flex justify-between items-center"
-									>
-										<span className="text-muted-foreground">Dark</span>
-										<Moon size={14} />
-									</DropdownMenuItem>
-									<DropdownMenuItem
-										onClick={() => setTheme("system")}
-										className="flex justify-between items-center"
-									>
-										<span className="text-muted-foreground">System</span>
-										<Monitor size={14} />
-									</DropdownMenuItem>
-								</DropdownMenuSubContent>
-							</DropdownMenuPortal>
-						</DropdownMenuSub>
 						{orgs && orgs.length > 0 && (
 							<>
 								<DropdownMenuSeparator />
