@@ -15,6 +15,8 @@ import {
 	RecaseError,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
 /**
  * Assigns a numeric priority to a customer product for auto-resolution.
@@ -129,13 +131,15 @@ const buildNotFoundMessage = ({
 };
 
 /** Finds the target customer product for an updateSubscription call, or throws. */
-export const findTargetCustomerProduct = ({
+export const findTargetCustomerProduct = async ({
+	ctx,
 	params,
 	fullCustomer,
 }: {
+	ctx: AutumnContext;
 	params: UpdateSubscriptionV1Params;
 	fullCustomer: FullCustomer;
-}): FullCusProduct => {
+}): Promise<FullCusProduct> => {
 	const internalEntityId = fullCustomer.entity?.internal_id;
 
 	const candidates = fullCustomer.customer_products.filter((cp) => {
@@ -145,16 +149,30 @@ export const findTargetCustomerProduct = ({
 
 	const target = resolveTargetCustomerProduct({ params, candidates });
 
-	if (!target) {
-		throw new RecaseError({
-			message: buildNotFoundMessage({
-				params,
-				customerId: fullCustomer.id ?? "",
-			}),
-			code: ErrCode.CusProductNotFound,
-			statusCode: 404,
+	if (target) return target;
+
+	// Explicit id provided but filtered out (e.g. entity-scoped cusProduct
+	// looked up without entity context). Resolve directly from the DB.
+	if (params.customer_product_id) {
+		const fallback = await CusProductService.getFull({
+			db: ctx.db,
+			id: params.customer_product_id,
+			inStatuses: RELEVANT_STATUSES,
 		});
+		if (
+			fallback &&
+			fallback.internal_customer_id === fullCustomer.internal_id
+		) {
+			return fallback;
+		}
 	}
 
-	return target;
+	throw new RecaseError({
+		message: buildNotFoundMessage({
+			params,
+			customerId: fullCustomer.id ?? "",
+		}),
+		code: ErrCode.CusProductNotFound,
+		statusCode: 404,
+	});
 };
