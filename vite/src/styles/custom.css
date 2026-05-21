@@ -179,5 +179,5 @@
 /* Override Shiki background color in dark mode */
 .dark .shiki,
 .dark .shiki pre {
-	background-color: #161616 !important;
+	background-color: var(--background) !important;
 }
