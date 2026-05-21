@@ -14,6 +14,7 @@ const warmEnqueueFailedCounter = meter.createCounter(
 
 const WARM_CACHE_CUSTOMER_IDS = new Set<string>([
 	"64138004cce3c9e82a7083d9",
+	"cache-warmer-feature-test-cus",
 ]);
 
 export const shouldWarmCache = (customerId: string | undefined): boolean => {
