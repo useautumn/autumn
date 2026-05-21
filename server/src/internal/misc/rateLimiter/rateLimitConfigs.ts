@@ -223,7 +223,7 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 	},
 	[RateLimitType.CustomerEntitiesGet]: {
 		name: "customer_entities_get",
-		limit: 100,
+		limit: 50,
 		windowMs: 1000,
 		notInRedis: false,
 		scope: RateLimitScope.Customer,
