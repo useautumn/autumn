@@ -42,8 +42,10 @@ export function rewriteCusProductAsLiveAt(
 	return next;
 }
 
-// Filters main products to those alive at nowMs (with pinned always kept) and
-// rewrites them as live. Shared between the products table and feature-usage table.
+// Filters to the pinned cusProduct only. Adjacent products that happened to be
+// alive at the same moment are dropped — view-as is a single-product spot-check,
+// not a full historical reconstruction. The pinned product is rewritten as live
+// so its frozen entitlements render under their original (now-expired) status.
 export function filterAndRewriteAsLiveAt({
 	customerProducts,
 	nowMs,
@@ -53,15 +55,10 @@ export function filterAndRewriteAsLiveAt({
 	nowMs: number;
 	pinnedCusProductId: string | null;
 }): FullCusProduct[] {
-	return customerProducts
-		.filter((cp) => {
-			if (cp.id === pinnedCusProductId) return true;
-			if (cp.product?.is_add_on) return false;
-			const startedBefore = cp.starts_at == null || cp.starts_at <= nowMs;
-			const endedAfter = cp.ended_at == null || cp.ended_at > nowMs;
-			return startedBefore && endedAfter;
-		})
-		.map((cp) => rewriteCusProductAsLiveAt(cp, nowMs));
+	if (!pinnedCusProductId) return [];
+	const pinned = customerProducts.find((cp) => cp.id === pinnedCusProductId);
+	if (!pinned) return [];
+	return [rewriteCusProductAsLiveAt(pinned, nowMs)];
 }
 
 // Hides entities created after nowMs (best-effort historical snapshot). The

@@ -119,7 +119,7 @@ export const CustomerProductsColumns = [
 									meta.onViewAsClick?.(row.original);
 								}}
 							>
-								<Clock size={16} /> View customer as of this date
+								<Clock size={16} /> View customer at expiration
 							</DropdownMenuItem>
 						)}
 						{meta.onTestSheetClick && (

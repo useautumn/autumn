@@ -28,7 +28,7 @@ export function ViewAsBanner() {
 			<div className="flex items-center gap-2 min-w-0">
 				<Clock className="size-4 shrink-0 text-orange-500" />
 				<span className="truncate">
-					You are viewing this customer at the date <strong>{stamp}</strong>
+					You are viewing this customer at expiration <strong>{stamp}</strong>
 					{entityLabel ? (
 						<>
 							{" "}
