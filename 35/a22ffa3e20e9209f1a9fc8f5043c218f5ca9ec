@@ -1,0 +1,30 @@
+vite/src/contexts/ThemeProvider.tsx
+  s_83808d834a89e0::t_677098a65f845f 6
+  s_83808d834a89e0::t_465cc711ad7d8e 43
+vite/src/views/settings/sections/AppearanceSection.tsx
+  s_83808d834a89e0::t_8a18d0414df470 107-110
+  s_83808d834a89e0::t_8866b511d5ef6e 56-58,60-63
+  s_83808d834a89e0::t_d21737b4076834 1,11
+  s_83808d834a89e0::t_fd72f704f779b2 151
+  s_83808d834a89e0::t_21e83cad3b967d 158-164
+  s_83808d834a89e0::t_f4c6374fc227a6 59
+vite/src/index.css
+  s_83808d834a89e0::t_c8215fa2b3357e 6
+  s_83808d834a89e0::t_396f886f998546 209-248
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.11",
+  "base_commit_sha": "35a22ffa3e20e9209f1a9fc8f5043c218f5ca9ec",
+  "prompts": {},
+  "sessions": {
+    "s_83808d834a89e0": {
+      "agent_id": {
+        "tool": "cursor",
+        "id": "f0e15674-4878-443a-9e4f-d3f27d462ffb",
+        "model": "claude-opus-4-7"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
