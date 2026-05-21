@@ -1,15 +1,15 @@
 import type { FrontendOrg, OrgConfig } from "@autumn/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/v2/buttons/Button";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { SettingsSection } from "../SettingsSection";
 
 const BILLING_TOGGLES = [
-	{ key: "anchor_start_of_month", label: "Anchor billing to start of month", description: "Billing cycles start on the 1st of each month" },
 	{ key: "cancel_on_past_due", label: "Cancel on past due", description: "Automatically cancel subscriptions when payment is past due" },
 	{ key: "reverse_deduction_order", label: "Reverse deduction order", description: "Deduct from newest balance first instead of oldest" },
 	{ key: "include_past_due", label: "Include past due", description: "Include past-due subscriptions when checking entitlements" },
@@ -21,51 +21,52 @@ const BILLING_TOGGLES = [
 	{ key: "automatic_tax", label: "Automatic tax", description: "Enable Stripe Tax for automatic tax calculation" },
 ] as const satisfies readonly { key: keyof OrgConfig; label: string; description: string }[];
 
-const REFETCH_DELAY_MS = 1000;
-
 export const BillingSettingsSection = () => {
 	const { org } = useOrg();
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
 	const env = useEnv();
 	const queryKey = ["org", env];
-	const refetchTimer = useRef<ReturnType<typeof setTimeout>>();
+	const [pending, setPending] = useState<Partial<OrgConfig>>({});
 
-	useEffect(() => () => clearTimeout(refetchTimer.current), []);
+	const serverConfig = org?.config ?? {};
+	const displayConfig = { ...serverConfig, ...pending };
+	const isDirty = Object.keys(pending).length > 0;
 
-	const { mutate } = useMutation({
+	const { mutate, isPending } = useMutation({
 		mutationFn: async (updates: Partial<OrgConfig>) => {
 			const { data } = await axiosInstance.patch("/organization/config", updates);
 			return data as { config: OrgConfig };
 		},
-		onMutate: async (updates) => {
-			clearTimeout(refetchTimer.current);
-			await queryClient.cancelQueries({ queryKey });
-			queryClient.setQueryData<FrontendOrg>(queryKey, (old) =>
-				old ? { ...old, config: { ...old.config, ...updates } } : old,
-			);
-		},
 		onSuccess: (data) => {
+			setPending({});
 			queryClient.setQueryData<FrontendOrg>(queryKey, (old) =>
 				old ? { ...old, config: data.config } : old,
 			);
+			toast.success("Billing settings saved");
 		},
 		onError: () => {
 			toast.error("Failed to update billing settings");
 			queryClient.invalidateQueries({ queryKey });
 		},
-		onSettled: () => {
-			clearTimeout(refetchTimer.current);
-			refetchTimer.current = setTimeout(
-				() => queryClient.invalidateQueries({ queryKey }),
-				REFETCH_DELAY_MS,
-			);
-		},
 	});
 
-	if (!org) return null;
+	const handleToggle = (key: keyof OrgConfig, value: boolean) => {
+		setPending((prev) => {
+			const next = { ...prev, [key]: value };
+			if (serverConfig[key] === value) {
+				delete next[key];
+			}
+			return next;
+		});
+	};
 
-	const config = org.config ?? {};
+	const handleSave = () => {
+		if (!isDirty || isPending) return;
+		mutate(pending);
+	};
+
+	if (!org) return null;
 
 	return (
 		<SettingsSection
@@ -80,12 +81,22 @@ export const BillingSettingsSection = () => {
 							<span className="text-xs text-muted-foreground">{description}</span>
 						</div>
 						<Switch
-							checked={!!config[key]}
-							onCheckedChange={(val) => mutate({ [key]: val })}
+							checked={!!displayConfig[key]}
+							onCheckedChange={(val) => handleToggle(key, val)}
+							disabled={isPending}
 						/>
 					</div>
 				))}
 			</div>
+			<Button
+				variant="primary"
+				onClick={handleSave}
+				disabled={!isDirty}
+				isLoading={isPending}
+				className="w-full"
+			>
+				Save Changes
+			</Button>
 		</SettingsSection>
 	);
 };
