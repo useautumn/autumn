@@ -99,12 +99,14 @@ const isProd = process.env.NODE_ENV === "production";
 
 export const { db: dbCritical, client: clientCritical } = initDrizzle({
 	name: "critical",
-	maxConnections: 15,
+	maxConnections: isProd ? 100 : 10,
 	connectTimeout: isProd ? 2 : 30,
 	databaseUrl: process.env.DATABASE_CRITICAL_URL,
 	poolConfig: {
 		application_name: "autumn-critical",
 		query_timeout: isProd ? 2_000 : 30_000,
+		// Keep 10 warm conns to avoid TLS-handshake stampedes on bursty traffic.
+		min: 10,
 	},
 });
 
