@@ -4,6 +4,8 @@ export const ADMIN_FEATURE_FLAGS_CONFIG_KEY = "admin/feature-flags-config.json";
 export const ADMIN_CUSTOMER_BLOCK_CONFIG_KEY =
 	"admin/customer-block-config.json";
 export const ADMIN_ORG_LIMITS_CONFIG_KEY = "admin/org-limits-config.json";
+export const ADMIN_RATE_LIMIT_OVERRIDES_CONFIG_KEY =
+	"admin/rate-limit-overrides-config.json";
 export const ADMIN_REDIS_V2_CACHE_CONFIG_KEY =
 	"admin/redis-v2-cache-config.json";
 export const ADMIN_CACHE_V2_RAMP_CONFIG_KEY = "admin/cache-v2-ramp-config.json";
@@ -45,6 +47,11 @@ export const getAdminEdgeConfigSources = () => ({
 			key: ADMIN_CUSTOMER_BLOCK_CONFIG_KEY,
 		},
 		{ id: "org-limits", label: "Org Limits", key: ADMIN_ORG_LIMITS_CONFIG_KEY },
+		{
+			id: "rate-limit-overrides",
+			label: "Rate Limit Overrides",
+			key: ADMIN_RATE_LIMIT_OVERRIDES_CONFIG_KEY,
+		},
 		{
 			id: "redis-v2-cache",
 			label: "V2 Redis Instance",

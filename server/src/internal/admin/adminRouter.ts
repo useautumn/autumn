@@ -18,6 +18,7 @@ import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsCo
 import { handleGetAdminJobQueueConfig } from "./handleGetAdminJobQueueConfig";
 import { handleGetAdminMiscellaneousEdgeConfig } from "./handleGetAdminMiscellaneousEdgeConfig";
 import { handleGetAdminOrgLimitsConfig } from "./handleGetAdminOrgLimitsConfig";
+import { handleGetAdminRateLimitOverridesConfig } from "./handleGetAdminRateLimitOverridesConfig";
 import { handleGetAdminOrgRequestBlock } from "./handleGetAdminOrgRequestBlock";
 import { handleGetAdminRedisV2CacheConfig } from "./handleGetAdminRedisV2CacheConfig";
 import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
@@ -34,6 +35,7 @@ import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureF
 import { handleUpsertAdminJobQueueConfig } from "./handleUpsertAdminJobQueueConfig";
 import { handleUpsertAdminMiscellaneousEdgeConfig } from "./handleUpsertAdminMiscellaneousEdgeConfig";
 import { handleUpsertAdminOrgLimitsConfig } from "./handleUpsertAdminOrgLimitsConfig";
+import { handleUpsertAdminRateLimitOverridesConfig } from "./handleUpsertAdminRateLimitOverridesConfig";
 import { handleUpsertAdminOrgRequestBlock } from "./handleUpsertAdminOrgRequestBlock";
 import { handleUpsertAdminRedisV2CacheConfig } from "./handleUpsertAdminRedisV2CacheConfig";
 import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
@@ -104,6 +106,14 @@ honoAdminRouter.put(
 );
 honoAdminRouter.get("/org-limits-config", ...handleGetAdminOrgLimitsConfig);
 honoAdminRouter.put("/org-limits-config", ...handleUpsertAdminOrgLimitsConfig);
+honoAdminRouter.get(
+	"/rate-limit-overrides-config",
+	...handleGetAdminRateLimitOverridesConfig,
+);
+honoAdminRouter.put(
+	"/rate-limit-overrides-config",
+	...handleUpsertAdminRateLimitOverridesConfig,
+);
 honoAdminRouter.get("/job-queue-config", ...handleGetAdminJobQueueConfig);
 honoAdminRouter.put("/job-queue-config", ...handleUpsertAdminJobQueueConfig);
 honoAdminRouter.get("/stripe-sync-config", ...handleGetAdminStripeSyncConfig);
