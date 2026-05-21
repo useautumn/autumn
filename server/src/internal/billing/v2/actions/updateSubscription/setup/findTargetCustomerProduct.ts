@@ -157,8 +157,12 @@ export const findTargetCustomerProduct = async ({
 		const fallback = await CusProductService.getFull({
 			db: ctx.db,
 			id: params.customer_product_id,
+			inStatuses: RELEVANT_STATUSES,
 		});
-		if (fallback && fallback.internal_customer_id === fullCustomer.internal_id) {
+		if (
+			fallback &&
+			fallback.internal_customer_id === fullCustomer.internal_id
+		) {
 			return fallback;
 		}
 	}

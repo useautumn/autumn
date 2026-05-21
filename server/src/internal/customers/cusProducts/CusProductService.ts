@@ -181,9 +181,20 @@ export class CusProductService {
 		return cusProducts as FullCusProduct[];
 	}
 
-	static async getFull({ db, id }: { db: DrizzleCli; id: string }) {
+	static async getFull({
+		db,
+		id,
+		inStatuses,
+	}: {
+		db: DrizzleCli;
+		id: string;
+		inStatuses?: CusProductStatus[];
+	}) {
 		const data = await db.query.customerProducts.findFirst({
-			where: eq(customerProducts.id, id),
+			where: and(
+				eq(customerProducts.id, id),
+				inStatuses ? inArray(customerProducts.status, inStatuses) : undefined,
+			),
 			with: {
 				product: true,
 				...getFullCusProdRelations(),
