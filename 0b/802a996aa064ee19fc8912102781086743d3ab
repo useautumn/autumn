@@ -1,0 +1,21 @@
+vite/src/views/customers2/utils/effectiveCustomerProductStatus.ts
+  s_2ce3d97e82b0ad::t_51450c8bd17a71 45-48,58-61
+vite/src/views/customers2/components/table/customer-products/CustomerProductsColumns.tsx
+  s_2ce3d97e82b0ad::t_bce205de979c6d 122
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.11",
+  "base_commit_sha": "0b802a996aa064ee19fc8912102781086743d3ab",
+  "prompts": {},
+  "sessions": {
+    "s_2ce3d97e82b0ad": {
+      "agent_id": {
+        "tool": "opencode",
+        "id": "ses_1b58608fdffeFLfeGYdmSuBbtS",
+        "model": "accounts/fireworks/routers/kimi-k2p6-turbo"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
