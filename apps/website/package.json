@@ -34,6 +34,8 @@
 		"@types/react-syntax-highlighter": "^15.5.13",
 		"eslint": "^10.2.0",
 		"eslint-config-next": "16.2.1",
+		"rehype-pretty-code": "^0.14.3",
+		"shiki": "^4.0.2",
 		"tailwindcss": "^4.2.2",
 		"typescript": "^6.0.2"
 	}
