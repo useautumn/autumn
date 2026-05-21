@@ -1,5 +1,6 @@
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { warmFullSubjectCache } from "@/internal/customers/cache/fullSubject/actions/warmFullSubjectCache.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { getRefreshCacheRouteConfig } from "./refreshCacheConfigs.js";
 
@@ -34,6 +35,12 @@ export const refreshCacheMiddleware = async (
 		customerId: ctx.customerId,
 		entityId: ctx.entityId,
 		ctx,
+		source: "refreshCacheMiddleware",
+	});
+
+	warmFullSubjectCache({
+		ctx,
+		customerId: ctx.customerId,
 		source: "refreshCacheMiddleware",
 	});
 };
