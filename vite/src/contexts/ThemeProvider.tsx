@@ -3,7 +3,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 
 type ThemeMode = "light" | "dark" | "system";
-type ThemePreset = "modern" | "classic";
+export type ThemePreset = "modern" | "classic" | "cursed";
 
 interface ThemeContextType {
 	mode: ThemeMode;
@@ -40,7 +40,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 	useEffect(() => {
 		const root = document.documentElement;
-		root.classList.remove("preset-classic", "preset-modern");
+		root.classList.remove("preset-classic", "preset-modern", "preset-cursed");
 		root.classList.add(`preset-${preset}`);
 	}, [preset]);
 
