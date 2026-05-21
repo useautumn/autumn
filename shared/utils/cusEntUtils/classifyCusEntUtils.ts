@@ -1,6 +1,7 @@
 import { InternalError } from "@api/errors";
 import { ms } from "@utils/common";
 import {
+	isOneOffPrice,
 	isPayPerUsePrice,
 	isPrepaidPrice,
 	isVolumePrice,
@@ -142,3 +143,15 @@ export const isPayPerUseCustomerEntitlement = (
 	if (!cusPrice) return false;
 	return isPayPerUsePrice({ price: cusPrice.price });
 };
+
+export const isOneOffCustomerEntitlement = (
+	cusEnt: FullCusEntWithFullCusProduct,
+) => {
+	const cusPrice = cusEntToCusPrice({ cusEnt });
+	if (!cusPrice) return false;
+	return isOneOffPrice(cusPrice.price);
+};
+
+export const isConsumableCustomerEntitlement = (
+	cusEnt: FullCusEntWithFullCusProduct,
+) => !isAllocatedCustomerEntitlement(cusEnt);

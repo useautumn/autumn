@@ -5,6 +5,7 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
+import { cusProductsToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import { billingContextToRecurringAndScheduled } from "../utils/billingContextToRecurringAndScheduled";
 import { computeImmediatePhaseCustomerProducts } from "./computeImmediatePhaseCustomerProducts";
 import { computeScheduledCustomerProducts } from "./computeScheduledCustomerProducts";
@@ -59,6 +60,11 @@ export const computeCreateSchedulePlan = ({
 		includeArrearLineItems: currentRecurringCustomerProducts.length > 0,
 	});
 
+	const oneOffPrepaidCarryOvers = cusProductsToOneOffPrepaidCarryOvers({
+		currentCustomerProducts: currentRecurringCustomerProducts,
+		fullCustomer: billingContext.fullCustomer,
+	});
+
 	const autumnBillingPlan: AutumnBillingPlan = {
 		customerId:
 			billingContext.fullCustomer.id ?? billingContext.fullCustomer.internal_id,
@@ -66,10 +72,14 @@ export const computeCreateSchedulePlan = ({
 		updateCustomerProducts: immediate.updateCustomerProducts,
 		deleteCustomerProducts: scheduled.deleteCustomerProducts,
 		customPrices: billingContext.customPrices,
-		customEntitlements: billingContext.customEnts,
+		customEntitlements: [
+			...(billingContext.customEnts ?? []),
+			...oneOffPrepaidCarryOvers.entitlements,
+		],
 		customFreeTrial: billingContext.trialContext?.customFreeTrial,
 		lineItems: allLineItems,
 		updateCustomerEntitlements,
+		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,
 	};
 
 	autumnBillingPlan.lineItems = finalizeLineItems({

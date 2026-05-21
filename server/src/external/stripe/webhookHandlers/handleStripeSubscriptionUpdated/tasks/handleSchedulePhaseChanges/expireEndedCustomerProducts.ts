@@ -17,7 +17,8 @@ export const expireEndedCustomerProducts = async ({
 	eventContext: StripeSubscriptionUpdatedContext;
 }): Promise<void> => {
 	const { logger } = ctx;
-	const { customerProducts, stripeSubscription, nowMs } = eventContext;
+	const { customerProducts, stripeSubscription, nowMs, fullCustomer } =
+		eventContext;
 
 	const expiredCustomerProducts: FullCusProduct[] = [];
 
@@ -33,6 +34,25 @@ export const expireEndedCustomerProducts = async ({
 		logger.info(
 			`Expiring product: ${customerProduct.product.name}${customerProduct.entity_id ? `@${customerProduct.entity_id}` : ""}`,
 		);
+
+		// Auto-preserve remaining one-off prepaid balances as lifetime cusEnts
+		// before the product is expired. Billing-action flows already do this
+		// at compute time; this is the webhook-driven equivalent for scheduled
+		// phase transitions. The eventContext entry is consumed by
+		// logCustomerProductUpdates so the structured summary lands in one place.
+		const carryOver = await customerProductActions.preserveOneOffPrepaid({
+			ctx,
+			customerProduct,
+			fullCustomer,
+		});
+		if (carryOver.preservedCount > 0) {
+			eventContext.oneOffPrepaidCarryOvers.push({
+				customerProductId: customerProduct.id,
+				productName: customerProduct.product.name,
+				preservedCount: carryOver.preservedCount,
+				preservedFeatureIds: carryOver.preservedFeatureIds,
+			});
+		}
 
 		const { expiredCustomerProduct } = await expireAndActivateWithTracking({
 			ctx,
