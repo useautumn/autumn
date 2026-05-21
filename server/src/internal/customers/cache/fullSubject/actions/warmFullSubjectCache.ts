@@ -1,7 +1,7 @@
 import { metrics } from "@opentelemetry/api";
+import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
-import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import { buildFullSubjectViewEpochKey } from "../builders/buildFullSubjectViewEpochKey.js";
 import { setCachedFullSubject } from "./setCachedFullSubject/setCachedFullSubject.js";
 
@@ -18,30 +18,18 @@ const warmSkippedCounter = meter.createCounter("autumn.cache.warm.skipped", {
 		"FullSubject cache warms skipped (already running, missing data, etc.)",
 });
 const warmFailedCounter = meter.createCounter("autumn.cache.warm.failed", {
-	description: "FullSubject cache warms that threw",
+	description: "FullSubject cache warms that threw or failed to write",
 });
 
 const inflight = new Map<string, Promise<void>>();
 
-const parseAllowlist = (): Set<string> => {
-	const raw = process.env.WARM_CACHE_CUSTOMER_IDS ?? "";
-	return new Set(
-		raw
-			.split(",")
-			.map((s) => s.trim())
-			.filter(Boolean),
-	);
-};
-
-let allowlist: Set<string> | null = null;
-const getAllowlist = (): Set<string> => {
-	if (allowlist === null) allowlist = parseAllowlist();
-	return allowlist;
-};
+const WARM_CACHE_CUSTOMER_IDS = new Set<string>([
+	"64138004cce3c9e82a7083d9",
+]);
 
 export const shouldWarmCache = (customerId: string | undefined): boolean => {
 	if (!customerId) return false;
-	return getAllowlist().has(customerId);
+	return WARM_CACHE_CUSTOMER_IDS.has(customerId);
 };
 
 const readCurrentEpoch = async ({
@@ -75,14 +63,15 @@ export const warmFullSubjectCache = ({
 	ctx: AutumnContext;
 	customerId: string | undefined;
 	source?: string;
-}): void => {
-	if (!shouldWarmCache(customerId)) return;
+}): Promise<void> | undefined => {
+	if (!shouldWarmCache(customerId)) return undefined;
 	const id = customerId as string;
 	const inflightKey = `${ctx.org.id}:${ctx.env}:${id}`;
 
-	if (inflight.has(inflightKey)) {
+	const existingPromise = inflight.get(inflightKey);
+	if (existingPromise) {
 		warmSkippedCounter.add(1, { reason: "already_running" });
-		return;
+		return existingPromise;
 	}
 
 	warmStartedCounter.add(1, { source: source ?? "unknown" });
@@ -105,11 +94,22 @@ export const warmFullSubjectCache = ({
 			});
 			if (writeResult === "OK") {
 				warmCompletedCounter.add(1, { source: source ?? "unknown" });
+			} else if (writeResult === "FAILED") {
+				warmFailedCounter.add(1, {
+					source: source ?? "unknown",
+					reason: "write_failed",
+				});
+				ctx.logger.error(
+					`[warmFullSubjectCache] Cache warm write FAILED for customer=${id} source=${source}`,
+				);
 			} else {
 				warmSkippedCounter.add(1, { reason: writeResult.toLowerCase() });
 			}
 		} catch (error) {
-			warmFailedCounter.add(1, { source: source ?? "unknown" });
+			warmFailedCounter.add(1, {
+				source: source ?? "unknown",
+				reason: "exception",
+			});
 			ctx.logger.warn(
 				`[warmFullSubjectCache] customer=${id} source=${source} error=${error}`,
 			);
@@ -119,4 +119,5 @@ export const warmFullSubjectCache = ({
 	})();
 
 	inflight.set(inflightKey, promise);
+	return promise;
 };
