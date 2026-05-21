@@ -2,21 +2,21 @@
 import { z } from "zod/v4";
 
 export const redeemReferralCodeGlobalsSchema = z.object({
-	xApiVersion: z.union([z.string(), z.undefined()]).optional(),
+    xApiVersion: z.union([z.string(), z.undefined()]).optional()
 });
 
 export const redeemReferralCodeParamsSchema = z.object({
-	code: z.string(),
-	customerId: z.string(),
+    code: z.string(),
+    customerId: z.string()
 });
 
 export const redeemReferralCodeResponseSchema = z.object({
-	id: z.string(),
-	customerId: z.string(),
-	rewardId: z.string(),
+    id: z.string(),
+    customerId: z.string(),
+    rewardId: z.string()
 });
 
 export const redeemReferralCodeParamsOutboundSchema = z.object({
-	code: z.string(),
-	customer_id: z.string(),
+    code: z.string(),
+    customer_id: z.string()
 });
