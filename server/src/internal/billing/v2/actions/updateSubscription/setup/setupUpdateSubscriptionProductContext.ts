@@ -43,7 +43,8 @@ export const setupUpdateSubscriptionProductContext = async ({
 		};
 	}
 
-	const targetCustomerProduct = findTargetCustomerProduct({
+	const targetCustomerProduct = await findTargetCustomerProduct({
+		ctx,
 		params,
 		fullCustomer,
 	});
