@@ -1,0 +1,9 @@
+vite/src/views/customers2/components/table/customer-products/CustomerProductsColumns.tsx
+  ai_agent 11,90,107-108
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.11",
+  "base_commit_sha": "926b6ef7186e302d7ff59e80684756925d3748c4",
+  "prompts": {}
+}
