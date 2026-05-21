@@ -333,13 +333,17 @@ test.concurrent(`${chalk.yellowBright("mixed: recurring with one-off → updated
 		usage: 0,
 	});
 
-	// One-off messages should retain usage and quantity
+	// One-off prepaid auto-preservation: the remaining 100 from the old plan
+	// carries forward as a lifetime cusEnt and the fresh 200 pack is added
+	// on top. Total balance = 100 preserved + 200 new = 300, usage starts
+	// at 0 on the new plan because the preserved 100 already accounts for
+	// the prior usage.
 	expectCustomerFeatureCorrect({
 		customer,
 		featureId: TestFeature.Messages,
-		includedUsage: initialQuantity,
-		balance: initialQuantity - messagesUsed,
-		usage: messagesUsed,
+		includedUsage: initialQuantity + (initialQuantity - messagesUsed),
+		balance: initialQuantity + (initialQuantity - messagesUsed),
+		usage: 0,
 	});
 
 	// Should have 2 invoices: initial attach with one-off + update with price increase

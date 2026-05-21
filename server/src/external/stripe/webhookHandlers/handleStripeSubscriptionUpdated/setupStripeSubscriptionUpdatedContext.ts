@@ -42,6 +42,7 @@ export const setupStripeSubscriptionUpdatedContext = async ({
 		updatedCustomerProducts: [],
 		deletedCustomerProducts: [],
 		insertedCustomerProducts: [],
+		oneOffPrepaidCarryOvers: [],
 		billingChangeTags: new Set<string>(),
 	};
 };

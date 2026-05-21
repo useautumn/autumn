@@ -1,5 +1,16 @@
 import { member, organizations, user, Scopes } from "@autumn/shared";
-import { and, desc, eq, gt, gte, ilike, inArray, lt, or } from "drizzle-orm";
+import {
+	and,
+	desc,
+	eq,
+	gt,
+	gte,
+	ilike,
+	inArray,
+	isNull,
+	lt,
+	or,
+} from "drizzle-orm";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 import { getRequestBlockConfigFromSource } from "../misc/requestBlocks/requestBlockStore.js";
 
@@ -43,6 +54,7 @@ export const handleListAdminOrgs = createRoute({
 			.from(organizations)
 			.where(
 				and(
+					isNull(organizations.created_by),
 					searchTerm
 						? or(
 								eq(organizations.id, searchTerm),
