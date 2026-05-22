@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { AppEnv } from "@autumn/shared";
 
 // Tight limits so the assertions are clear: per-org=4, per-customer=2.
 // Must be set BEFORE the gate module is imported — its env reads happen at
@@ -35,6 +36,7 @@ describe("runWithFullSubjectGate", () => {
 			runWithFullSubjectGate({
 				customerId: "cus-same",
 				orgId: "org-a",
+				env: AppEnv.Live,
 				queryFn: () => queryFn(index),
 			}),
 		);
@@ -51,6 +53,7 @@ describe("runWithFullSubjectGate", () => {
 			runWithFullSubjectGate({
 				customerId: `cus-${index}`,
 				orgId: "org-shared",
+				env: AppEnv.Live,
 				queryFn: () => queryFn(index),
 			}),
 		);
@@ -68,11 +71,11 @@ describe("runWithFullSubjectGate", () => {
 			runWithFullSubjectGate({
 				customerId: `cus-${index}`,
 				orgId: index < 6 ? "org-x" : "org-y",
+				env: AppEnv.Live,
 				queryFn: () => queryFn(index),
 			}),
 		);
 		await Promise.all(tasks);
-		// Each org caps at 4, two orgs in parallel → up to 8 concurrent.
 		expect(counter.peak).toBeLessThanOrEqual(8);
 		expect(counter.peak).toBeGreaterThan(4);
 		expect(counter.current).toBe(0);
@@ -85,10 +88,67 @@ describe("runWithFullSubjectGate", () => {
 			runWithFullSubjectGate({
 				customerId: undefined,
 				orgId: "org-no-cus",
+				env: AppEnv.Live,
 				queryFn: () => queryFn(index),
 			}),
 		);
 		await Promise.all(tasks);
+		expect(counter.peak).toBeLessThanOrEqual(4);
+		expect(counter.current).toBe(0);
+	});
+
+	test("same customerId in different orgs does NOT share a per-customer cap", async () => {
+		const counter = makeCounter();
+		const queryFn = makeQueryFn(counter, 30);
+		const tasks = [
+			...Array.from({ length: 5 }, (_, index) =>
+				runWithFullSubjectGate({
+					customerId: "cus-shared-id",
+					orgId: "org-a",
+					env: AppEnv.Live,
+					queryFn: () => queryFn(`a-${index}`),
+				}),
+			),
+			...Array.from({ length: 5 }, (_, index) =>
+				runWithFullSubjectGate({
+					customerId: "cus-shared-id",
+					orgId: "org-b",
+					env: AppEnv.Live,
+					queryFn: () => queryFn(`b-${index}`),
+				}),
+			),
+		];
+		await Promise.all(tasks);
+		// Keys are scoped per-org so each org keeps its own per-customer cap.
+		expect(counter.peak).toBeGreaterThan(2);
+		expect(counter.peak).toBeLessThanOrEqual(4);
+		expect(counter.current).toBe(0);
+	});
+
+	test("same customerId in live and sandbox of the same org do NOT share a per-customer cap", async () => {
+		const counter = makeCounter();
+		const queryFn = makeQueryFn(counter, 30);
+		const tasks = [
+			...Array.from({ length: 5 }, (_, index) =>
+				runWithFullSubjectGate({
+					customerId: "cus-live-vs-sandbox",
+					orgId: "org-c",
+					env: AppEnv.Live,
+					queryFn: () => queryFn(`live-${index}`),
+				}),
+			),
+			...Array.from({ length: 5 }, (_, index) =>
+				runWithFullSubjectGate({
+					customerId: "cus-live-vs-sandbox",
+					orgId: "org-c",
+					env: AppEnv.Sandbox,
+					queryFn: () => queryFn(`sandbox-${index}`),
+				}),
+			),
+		];
+		await Promise.all(tasks);
+		// Per-env keys — live and sandbox run independently, peak up to 4.
+		expect(counter.peak).toBeGreaterThan(2);
 		expect(counter.peak).toBeLessThanOrEqual(4);
 		expect(counter.current).toBe(0);
 	});
@@ -108,6 +168,7 @@ describe("runWithFullSubjectGate", () => {
 				runWithFullSubjectGate({
 					customerId: "cus-reject",
 					orgId: "org-reject",
+					env: AppEnv.Live,
 					queryFn: failing,
 				}),
 			),
@@ -115,13 +176,13 @@ describe("runWithFullSubjectGate", () => {
 		expect(failures.every((result) => result.status === "rejected")).toBe(true);
 		expect(counter.current).toBe(0);
 
-		// Subsequent calls succeed — proves slots were released, not leaked.
 		const queryFn = makeQueryFn(counter, 5);
 		const followUp = await Promise.all(
 			Array.from({ length: 4 }, (_, index) =>
 				runWithFullSubjectGate({
 					customerId: "cus-reject",
 					orgId: "org-reject",
+					env: AppEnv.Live,
 					queryFn: () => queryFn(index),
 				}),
 			),
