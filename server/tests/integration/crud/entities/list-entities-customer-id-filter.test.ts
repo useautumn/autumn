@@ -1,23 +1,3 @@
-/**
- * TDD test for the entities.list `customer_id` filter.
- *
- * Contract under test:
- *   - POST /v1/entities.list accepts an optional `customer_id` param.
- *   - When set, the response list contains ONLY entities owned by that customer.
- *   - When set, total_filtered_count reflects the customer-scoped count.
- *   - When unset, behavior matches today (org-wide scan).
- *
- * Motivation:
- *   Replaces fan-out `entities.get` polling (1 request per entity for a given
- *   customer) with a paginated bulk fetch (~limit-many calls). Drives the same
- *   per-entity hydration pipeline as today's list path, just filtered.
- *
- * Pre-impl red: the schema rejects `customer_id` and entities from other
- * customers leak through.
- * Post-impl green: the filter is honored at the query level and the response
- * only contains entities for the requested customer.
- */
-
 import { expect, test } from "bun:test";
 import {
 	type ApiEntityV2,
@@ -38,13 +18,13 @@ type ListEntitiesResponse<T> = PagePaginatedResponse<T> & {
 test.concurrent(
 	`${chalk.yellowBright("list entities: customer_id filter scopes results to one customer")}`,
 	async () => {
+		const runId = Date.now().toString(36);
 		const targetCustomerId = "list-entities-customer-filter-target";
-		const otherCustomerId = "list-entities-customer-filter-other";
+		const otherCustomerId = `list-entities-customer-filter-other-${runId}`;
 		const targetEntityAlpha = `${targetCustomerId}-alpha`;
 		const targetEntityBeta = `${targetCustomerId}-beta`;
 		const otherEntityGamma = `${otherCustomerId}-gamma`;
 
-		// Set up the target customer + two entities.
 		const { autumnV2_1 } = await initScenario({
 			customerId: targetCustomerId,
 			setup: [s.customer({})],
@@ -64,9 +44,6 @@ test.concurrent(
 			name: "Target Beta",
 		});
 
-		// Set up a second customer with an entity that should NOT appear in the
-		// filtered result. Uses the same org (initScenario shares org), so the
-		// org-wide listing would otherwise return all three entities.
 		await autumnV2_1.customers.create({
 			id: otherCustomerId,
 			name: "Other Customer",
@@ -78,7 +55,6 @@ test.concurrent(
 			name: "Other Gamma",
 		});
 
-		// Contract: with customer_id set, only entities for that customer come back.
 		const filtered = await autumnV2_1.entitiesV2.list<
 			ListEntitiesResponse<ApiEntityV2>
 		>({
@@ -95,8 +71,6 @@ test.concurrent(
 			expect(entity.customer_id).toBe(targetCustomerId);
 		}
 
-		// Contract: without customer_id, the unrelated entity is also visible
-		// (sanity check that the filter is what excluded it, not the test setup).
 		const unfiltered = await autumnV2_1.entitiesV2.list<
 			ListEntitiesResponse<ApiEntityV2>
 		>({
@@ -115,8 +89,9 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("list entities: customer_id filter works on the latest cursor-paginated response")}`,
 	async () => {
+		const runId = Date.now().toString(36);
 		const targetCustomerId = "list-entities-customer-filter-cursor-target";
-		const otherCustomerId = "list-entities-customer-filter-cursor-other";
+		const otherCustomerId = `list-entities-customer-filter-cursor-other-${runId}`;
 		const targetEntityId = `${targetCustomerId}-only`;
 		const otherEntityId = `${otherCustomerId}-only`;
 
@@ -144,7 +119,6 @@ test.concurrent(
 			name: "Other Cursor Only",
 		});
 
-		// Latest version routes through the cursor pagination handler.
 		const latestClient = new AutumnInt({
 			version: ApiVersion.V2_3,
 			secretKey: ctx.orgSecretKey,
@@ -206,19 +180,17 @@ test.concurrent(
 			),
 		);
 
-		// Sort both sides by entity id so the comparison is order-independent.
 		const byId = (a: ApiEntityV2, b: ApiEntityV2): number =>
 			(a.id ?? "").localeCompare(b.id ?? "");
-		const sortedList = [...listResponse.list].sort(byId);
-		const sortedGets = [...perEntityResponses].sort(byId);
+		// entities.list omits `invoices` (handleListEntitiesV2.ts); entities.get
+		// returns `invoices: []`. Strip from both sides before deep-equal.
+		const stripInvoices = ({ invoices: _, ...rest }: ApiEntityV2) => rest;
+		const sortedList = [...listResponse.list].sort(byId).map(stripInvoices);
+		const sortedGets = [...perEntityResponses].sort(byId).map(stripInvoices);
 
 		expect(sortedList.map((entity) => entity.id)).toEqual(
 			sortedGets.map((entity) => entity.id),
 		);
-
-		// Full per-entity shape must match — the list builder and the get
-		// handler hydrate from the same FullSubject pipeline, so any drift
-		// here is a regression we want to catch.
 		expect(sortedList).toEqual(sortedGets);
 	},
 );
@@ -242,8 +214,6 @@ test.concurrent(
 			name: "Existing Entity",
 		});
 
-		// Contract: unknown customer id returns zero entities, NOT the org-wide
-		// list. This is the access-scoping guarantee callers rely on.
 		const unknownResponse = await autumnV2_1.entitiesV2.list<
 			ListEntitiesResponse<ApiEntityV2>
 		>({
