@@ -1,15 +1,13 @@
-import { describe, expect, test } from "bun:test";
+import { beforeAll, describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
+import { _setFullSubjectGateConfigForTesting } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
+import { runWithFullSubjectGate } from "@/internal/customers/repos/getFullSubject/getFullSubjectGate.js";
 
-// Tight limits so the assertions are clear: per-org=4, per-customer=2.
-// Must be set BEFORE the gate module is imported — its env reads happen at
-// module init.
-process.env.FULL_SUBJECT_PER_CUSTOMER_LIMIT = "2";
-process.env.FULL_SUBJECT_PER_ORG_LIMIT = "4";
-
-const { runWithFullSubjectGate } = await import(
-	"@/internal/customers/repos/getFullSubject/getFullSubjectGate.js"
-);
+beforeAll(() => {
+	_setFullSubjectGateConfigForTesting({
+		config: { per_customer_limit: 2, per_org_limit: 4 },
+	});
+});
 
 type Counter = {
 	current: number;
@@ -119,7 +117,6 @@ describe("runWithFullSubjectGate", () => {
 			),
 		];
 		await Promise.all(tasks);
-		// Keys are scoped per-org so each org keeps its own per-customer cap.
 		expect(counter.peak).toBeGreaterThan(2);
 		expect(counter.peak).toBeLessThanOrEqual(4);
 		expect(counter.current).toBe(0);
@@ -147,10 +144,33 @@ describe("runWithFullSubjectGate", () => {
 			),
 		];
 		await Promise.all(tasks);
-		// Per-env keys — live and sandbox run independently, peak up to 4.
 		expect(counter.peak).toBeGreaterThan(2);
 		expect(counter.peak).toBeLessThanOrEqual(4);
 		expect(counter.current).toBe(0);
+	});
+
+	test("limit changes take effect at runtime without recreating limiters", async () => {
+		_setFullSubjectGateConfigForTesting({
+			config: { per_customer_limit: 1, per_org_limit: 4 },
+		});
+
+		const counter = makeCounter();
+		const queryFn = makeQueryFn(counter, 20);
+		const tasks = Array.from({ length: 5 }, (_, index) =>
+			runWithFullSubjectGate({
+				customerId: "cus-runtime-change",
+				orgId: "org-runtime-change",
+				env: AppEnv.Live,
+				queryFn: () => queryFn(index),
+			}),
+		);
+		await Promise.all(tasks);
+		expect(counter.peak).toBe(1);
+
+		// Restore for any subsequent tests.
+		_setFullSubjectGateConfigForTesting({
+			config: { per_customer_limit: 2, per_org_limit: 4 },
+		});
 	});
 
 	test("rejection releases the per-customer and per-org slots", async () => {
