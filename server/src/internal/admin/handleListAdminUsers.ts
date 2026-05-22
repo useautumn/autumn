@@ -1,5 +1,5 @@
 import { user, Scopes } from "@autumn/shared";
-import { and, desc, eq, gt, gte, ilike, lt, or } from "drizzle-orm";
+import { and, desc, eq, gt, gte, ilike, isNull, lt, or } from "drizzle-orm";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 
 export const handleListAdminUsers = createRoute({
@@ -42,6 +42,7 @@ export const handleListAdminUsers = createRoute({
 			.from(user)
 			.where(
 				and(
+					isNull(user.createdBy),
 					searchTerm
 						? or(
 								eq(user.id, searchTerm),
