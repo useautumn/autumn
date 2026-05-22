@@ -1,0 +1,32 @@
+server/src/internal/customers/attach/attachFunctions/addProductFlow/handleOneOffFunction.ts
+  s_33222b39da4024::t_bca45037de217f 14,139-142
+server/src/internal/customers/attach/attachUtils/attachParams/attachParamsUtils/getStripeCusData.ts
+  s_33222b39da4024::t_a9757dcca33a6d 27-29
+MIGRATIONS_FIX_TARGET_LIMIT.md
+  s_33222b39da4024::t_ea72aadefe876d 1-95
+server/src/internal/billing/v2/providers/stripe/utils/tax/shouldEnableStripeAutomaticTax.ts
+  s_33222b39da4024::t_bca45037de217f 9-11,40
+  s_33222b39da4024::t_b50197538657ad 12
+server/src/internal/billing/v2/providers/stripe/setup/fetchStripeCustomerForBilling.ts
+  s_33222b39da4024::t_b50197538657ad 30
+server/src/internal/customers/attach/attachFunctions/addProductFlow/createStripeSub2.ts
+  s_33222b39da4024::t_bca45037de217f 12,67-69
+server/src/external/stripe/customers/operations/getOrCreateStripeCustomer.ts
+  s_33222b39da4024::t_b50197538657ad 17,27-30,35,48,52
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "f2253622831b2dfa973f95d4388047a2bef7c795",
+  "prompts": {},
+  "sessions": {
+    "s_33222b39da4024": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fe2-d7be-7b12-8b1a-2d52b6e849ea",
+        "model": "gpt-5.5"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
