@@ -5,7 +5,10 @@ import {
 	type FullCusProduct,
 	featureUtils,
 	isBooleanCusEnt,
+	isConsumableCustomerEntitlement,
 	isEntityScopedCusEnt,
+	isOneOffCustomerEntitlement,
+	isPrepaidCustomerEntitlement,
 	isUnlimitedCusEnt,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -39,6 +42,17 @@ export const cusProductToExistingUsages = ({
 		if (isBooleanCusEnt({ cusEnt })) continue;
 
 		if (isUnlimitedCusEnt(cusEnt)) continue;
+
+		const cusEntWithCusProduct = addCusProductToCusEnt({
+			cusEnt,
+			cusProduct,
+		});
+
+		const isOneOffPrepaidConsumable =
+			isPrepaidCustomerEntitlement(cusEntWithCusProduct) &&
+			isConsumableCustomerEntitlement(cusEntWithCusProduct) &&
+			isOneOffCustomerEntitlement(cusEntWithCusProduct);
+		if (isOneOffPrepaidConsumable) continue;
 
 		const isAllocated = featureUtils.isAllocated(cusEnt.entitlement.feature);
 
@@ -75,11 +89,6 @@ export const cusProductToExistingUsages = ({
 			}
 			continue;
 		}
-
-		const cusEntWithCusProduct = addCusProductToCusEnt({
-			cusEnt,
-			cusProduct,
-		});
 
 		// 2. If it's not entity scoped
 		const usage = cusEntsToUsage({

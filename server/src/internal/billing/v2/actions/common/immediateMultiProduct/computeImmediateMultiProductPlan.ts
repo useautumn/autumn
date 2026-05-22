@@ -9,6 +9,7 @@ import { computeAttachTransitionUpdates } from "@/internal/billing/v2/actions/at
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
 import { productContextToAttachBillingContext } from "@/internal/billing/v2/utils/billingContext/productContextToAttachBillingContext";
+import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 
 /** Compute the billing plan for immediate multi-product billing. */
 export const computeImmediateMultiProductPlan = ({
@@ -59,6 +60,13 @@ export const computeImmediateMultiProductPlan = ({
 		includeArrearLineItems: deletedCustomerProduct !== undefined,
 	});
 
+	const oneOffPrepaidCarryOvers = deletedCustomerProduct
+		? cusProductToOneOffPrepaidCarryOvers({
+				currentCustomerProduct: deletedCustomerProduct,
+				fullCustomer: billingContext.fullCustomer,
+			})
+		: { entitlements: [], customerEntitlements: [] };
+
 	const billingPlan: AutumnBillingPlan = {
 		customerId:
 			billingContext.fullCustomer.id ?? billingContext.fullCustomer.internal_id,
@@ -66,10 +74,14 @@ export const computeImmediateMultiProductPlan = ({
 		updateCustomerProduct,
 		deleteCustomerProduct: scheduledCustomerProduct,
 		customPrices: billingContext.customPrices,
-		customEntitlements: billingContext.customEnts,
+		customEntitlements: [
+			...(billingContext.customEnts ?? []),
+			...oneOffPrepaidCarryOvers.entitlements,
+		],
 		customFreeTrial: billingContext.trialContext?.customFreeTrial,
 		lineItems: allLineItems,
 		updateCustomerEntitlements,
+		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,
 	};
 
 	billingPlan.lineItems = finalizeLineItems({

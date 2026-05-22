@@ -43,6 +43,17 @@ export interface StripeSubscriptionUpdatedContext {
 	/** Tracks all insertions (new customer products created) during this handler */
 	insertedCustomerProducts: FullCusProduct[];
 	/**
+	 * Tracks one-off prepaid lifetime cusEnts persisted by
+	 * `customerProductActions.preserveOneOffPrepaid` as each outgoing cusProduct
+	 * is expired. Surfaced in the structured summary by logCustomerProductUpdates.
+	 */
+	oneOffPrepaidCarryOvers: {
+		customerProductId: string;
+		productName: string;
+		preservedCount: number;
+		preservedFeatureIds: string[];
+	}[];
+	/**
 	 * Tags accumulated by tasks during this handler — appended to the
 	 * `billing.updated` webhook payload. Tasks call
 	 * `addBillingChangeTag` to push their own signal (e.g. "trial_ended",
