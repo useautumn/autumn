@@ -6,8 +6,10 @@ const hasUsableTaxAddress = (address?: Stripe.Address | null) => {
 	return Boolean(address?.country);
 };
 
-const customerHasUsableTaxLocation = (stripeCustomer?: Stripe.Customer) => {
-	if (!stripeCustomer) return true;
+export const customerHasUsableTaxLocationForStripeTax = (
+	stripeCustomer?: Stripe.Customer,
+) => {
+	if (!stripeCustomer) return false;
 
 	if (stripeCustomer.tax?.automatic_tax) {
 		return ["supported", "not_collecting"].includes(
@@ -35,7 +37,7 @@ export const shouldEnableStripeAutomaticTax = ({
 
 	// Use only the already-fetched Stripe customer. If setup did not fetch one,
 	// do not fetch again on the write path.
-	if (!customerHasUsableTaxLocation(billingContext.stripeCustomer)) {
+	if (!customerHasUsableTaxLocationForStripeTax(billingContext.stripeCustomer)) {
 		return false;
 	}
 
