@@ -1,11 +1,17 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
-import { _setFullSubjectGateConfigForTesting } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
 import { runWithFullSubjectGate } from "@/internal/customers/repos/getFullSubject/getFullSubjectGate.js";
+import { _setFullSubjectGateConfigForTesting } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
 
 beforeAll(() => {
 	_setFullSubjectGateConfigForTesting({
-		config: { per_customer_limit: 2, per_org_limit: 4 },
+		config: {
+			per_customer_limit: 2,
+			per_org_limit: 4,
+			max_wait_ms: 60_000,
+			per_customer_pending_max: 1000,
+			per_org_pending_max: 1000,
+		},
 	});
 });
 
@@ -151,7 +157,13 @@ describe("runWithFullSubjectGate", () => {
 
 	test("limit changes take effect at runtime without recreating limiters", async () => {
 		_setFullSubjectGateConfigForTesting({
-			config: { per_customer_limit: 1, per_org_limit: 4 },
+			config: {
+				per_customer_limit: 1,
+				per_org_limit: 4,
+				max_wait_ms: 60_000,
+				per_customer_pending_max: 1000,
+				per_org_pending_max: 1000,
+			},
 		});
 
 		const counter = makeCounter();
@@ -167,9 +179,97 @@ describe("runWithFullSubjectGate", () => {
 		await Promise.all(tasks);
 		expect(counter.peak).toBe(1);
 
-		// Restore for any subsequent tests.
 		_setFullSubjectGateConfigForTesting({
-			config: { per_customer_limit: 2, per_org_limit: 4 },
+			config: {
+				per_customer_limit: 2,
+				per_org_limit: 4,
+				max_wait_ms: 60_000,
+				per_customer_pending_max: 1000,
+				per_org_pending_max: 1000,
+			},
+		});
+	});
+
+	test("rejects with 429 when per-customer pending queue is full", async () => {
+		_setFullSubjectGateConfigForTesting({
+			config: {
+				per_customer_limit: 1,
+				per_org_limit: 100,
+				max_wait_ms: 60_000,
+				per_customer_pending_max: 2,
+				per_org_pending_max: 1000,
+			},
+		});
+
+		const slow = () => new Promise((resolve) => setTimeout(resolve, 100));
+		const results = await Promise.allSettled(
+			Array.from({ length: 10 }, () =>
+				runWithFullSubjectGate({
+					customerId: "cus-queue-full",
+					orgId: "org-queue-full",
+					env: AppEnv.Live,
+					queryFn: slow,
+				}),
+			),
+		);
+
+		const rejected = results.filter((r) => r.status === "rejected");
+		expect(rejected.length).toBeGreaterThan(0);
+		for (const r of rejected as PromiseRejectedResult[]) {
+			expect(r.reason.statusCode).toBe(429);
+			expect(r.reason.code).toBe("full_subject_gate_overloaded");
+		}
+
+		_setFullSubjectGateConfigForTesting({
+			config: {
+				per_customer_limit: 2,
+				per_org_limit: 4,
+				max_wait_ms: 60_000,
+				per_customer_pending_max: 1000,
+				per_org_pending_max: 1000,
+			},
+		});
+	});
+
+	test("rejects with 429 when a queued request exceeds max_wait_ms", async () => {
+		_setFullSubjectGateConfigForTesting({
+			config: {
+				per_customer_limit: 1,
+				per_org_limit: 100,
+				max_wait_ms: 30,
+				per_customer_pending_max: 1000,
+				per_org_pending_max: 1000,
+			},
+		});
+
+		const slow = () => new Promise((resolve) => setTimeout(resolve, 80));
+		const results = await Promise.allSettled(
+			Array.from({ length: 4 }, () =>
+				runWithFullSubjectGate({
+					customerId: "cus-wait-timeout",
+					orgId: "org-wait-timeout",
+					env: AppEnv.Live,
+					queryFn: slow,
+				}),
+			),
+		);
+
+		const timeouts = results.filter(
+			(r) =>
+				r.status === "rejected" &&
+				(r as PromiseRejectedResult).reason.code ===
+					"full_subject_gate_overloaded",
+		);
+		expect(timeouts.length).toBeGreaterThan(0);
+
+		_setFullSubjectGateConfigForTesting({
+			config: {
+				per_customer_limit: 2,
+				per_org_limit: 4,
+				max_wait_ms: 60_000,
+				per_customer_pending_max: 1000,
+				per_org_pending_max: 1000,
+			},
 		});
 	});
 
