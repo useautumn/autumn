@@ -1,0 +1,39 @@
+server/src/internal/billing/v2/providers/stripe/utils/tax/shouldEnableStripeAutomaticTax.ts
+  s_33222b39da4024::t_fd632dab025155 1-11,18-43
+  s_33222b39da4024::t_596777fef3feba 12-17
+server/src/internal/billing/v2/providers/stripe/utils/subscriptions/executeStripeSubscriptionOperation.ts
+  s_33222b39da4024::t_d7f5c4b8d0b513 7,50
+server/src/external/stripe/customers/operations/createStripeCustomer.ts
+  s_33222b39da4024::t_5783ec07b8049b 17,47
+server/tests/integration/billing/tax/automatic-tax-no-address-error.test.ts
+  s_33222b39da4024::t_0c16d4bd98b459 46-48
+  s_33222b39da4024::t_f8c2c70c4bfb98 2-11,15,19,21-26,28-30,34-39,41,43-45,49,64-68,70-76,78,80-85,87-89,91-100
+  s_33222b39da4024::t_74ba6be82bbf60 40,51-56,59-62
+  s_33222b39da4024::t_41a7aa2b391c53 31-33
+server/src/external/stripe/customers/operations/getExpandedStripeCustomer.ts
+  s_33222b39da4024::t_a5b4158aebb6b5 31,36,42,47,53,58,72
+server/src/internal/billing/v2/providers/stripe/setup/fetchStripeCustomerForBilling.ts
+  s_33222b39da4024::t_65e334066a6b2d 22,28-30,35
+server/src/internal/billing/v2/providers/stripe/utils/invoices/createInvoiceForBilling.ts
+  s_33222b39da4024::t_ece24cf80cace6 19,97
+server/src/internal/billing/v2/providers/stripe/utils/subscriptions/buildStripeSubscriptionUpdateAction.ts
+  s_33222b39da4024::t_206c47e9245bcf 12,100-102
+server/src/external/stripe/customers/operations/getOrCreateStripeCustomer.ts
+  s_33222b39da4024::t_f7a00ebaafd463 25,33,45-47
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.5.0",
+  "base_commit_sha": "2bf07e935ffef89e30b8f53a9a617bf42ead14f5",
+  "prompts": {},
+  "sessions": {
+    "s_33222b39da4024": {
+      "agent_id": {
+        "tool": "codex",
+        "id": "019e4fe2-d7be-7b12-8b1a-2d52b6e849ea",
+        "model": "gpt-5.5"
+      },
+      "human_author": "amianthus <49116958+SirTenzin@users.noreply.github.com>"
+    }
+  }
+}
