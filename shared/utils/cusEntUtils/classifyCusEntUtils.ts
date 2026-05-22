@@ -155,3 +155,16 @@ export const isOneOffCustomerEntitlement = (
 export const isConsumableCustomerEntitlement = (
 	cusEnt: FullCusEntWithFullCusProduct,
 ) => !isAllocatedCustomerEntitlement(cusEnt);
+
+/**
+ * One-off prepaid consumable cusEnts are auto-preserved as a lifetime cusEnt
+ * on product transitions (cusProductToOneOffPrepaidCarryOvers). Any other
+ * carry-over / existing-usage path that iterates cusEnts must skip these to
+ * avoid double-counting the same balance.
+ */
+export const isOneOffPrepaidConsumableCustomerEntitlement = (
+	cusEnt: FullCusEntWithFullCusProduct,
+) =>
+	isPrepaidCustomerEntitlement(cusEnt) &&
+	isConsumableCustomerEntitlement(cusEnt) &&
+	isOneOffCustomerEntitlement(cusEnt);
