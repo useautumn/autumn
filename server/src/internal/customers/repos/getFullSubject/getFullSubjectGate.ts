@@ -1,3 +1,4 @@
+import type { AppEnv } from "@autumn/shared";
 import { metrics } from "@opentelemetry/api";
 import { LRUCache } from "lru-cache";
 import pLimit, { type LimitFunction } from "p-limit";
@@ -24,19 +25,35 @@ const perOrgLimiters = new LRUCache<string, LimitFunction>({
 	updateAgeOnGet: true,
 });
 
-const getCustomerLimiter = (customerId: string): LimitFunction => {
-	const existing = perCustomerLimiters.get(customerId);
+const getCustomerLimiter = ({
+	orgId,
+	env,
+	customerId,
+}: {
+	orgId: string;
+	env: AppEnv;
+	customerId: string;
+}): LimitFunction => {
+	const key = `${orgId}:${env}:${customerId}`;
+	const existing = perCustomerLimiters.get(key);
 	if (existing) return existing;
 	const limiter = pLimit(PER_CUSTOMER_LIMIT);
-	perCustomerLimiters.set(customerId, limiter);
+	perCustomerLimiters.set(key, limiter);
 	return limiter;
 };
 
-const getOrgLimiter = (orgId: string): LimitFunction => {
-	const existing = perOrgLimiters.get(orgId);
+const getOrgLimiter = ({
+	orgId,
+	env,
+}: {
+	orgId: string;
+	env: AppEnv;
+}): LimitFunction => {
+	const key = `${orgId}:${env}`;
+	const existing = perOrgLimiters.get(key);
 	if (existing) return existing;
 	const limiter = pLimit(PER_ORG_LIMIT);
-	perOrgLimiters.set(orgId, limiter);
+	perOrgLimiters.set(key, limiter);
 	return limiter;
 };
 
@@ -71,12 +88,15 @@ const perOrgActiveCounter = meter.createUpDownCounter(
 const attrs = ({
 	customerId,
 	orgId,
+	env,
 }: {
 	customerId: string | undefined;
 	orgId: string;
+	env: AppEnv;
 }) => ({
 	customer_id: customerId ?? "unknown",
 	org_id: orgId,
+	env,
 });
 
 /**
@@ -94,14 +114,16 @@ const attrs = ({
 export const runWithFullSubjectGate = async <T>({
 	customerId,
 	orgId,
+	env,
 	queryFn,
 }: {
 	customerId: string | undefined;
 	orgId: string;
+	env: AppEnv;
 	queryFn: () => Promise<T>;
 }): Promise<T> => {
 	const enqueuedAt = Date.now();
-	const labels = attrs({ customerId, orgId });
+	const labels = attrs({ customerId, orgId, env });
 	startedCounter.add(1, labels);
 
 	const execute = async (): Promise<T> => {
@@ -120,10 +142,12 @@ export const runWithFullSubjectGate = async <T>({
 		}
 	};
 
-	const orgLimit = getOrgLimiter(orgId);
-
 	if (customerId) {
-		return getCustomerLimiter(customerId)(() => orgLimit(execute));
+		// Resolve the org limiter inside the customer callback so a stale
+		// LRU-evicted org limiter can't be used after a customer slot opens.
+		return getCustomerLimiter({ orgId, env, customerId })(() =>
+			getOrgLimiter({ orgId, env })(execute),
+		);
 	}
-	return orgLimit(execute);
+	return getOrgLimiter({ orgId, env })(execute);
 };

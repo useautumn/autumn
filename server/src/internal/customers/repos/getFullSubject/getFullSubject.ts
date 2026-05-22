@@ -36,6 +36,7 @@ export async function getFullSubject({
 	const result = await runWithFullSubjectGate({
 		customerId,
 		orgId: org.id,
+		env,
 		queryFn: () =>
 			db.execute(
 				getFullSubjectQuery({
@@ -86,6 +87,7 @@ export async function getFullSubjectNormalized({
 	const result = await runWithFullSubjectGate({
 		customerId,
 		orgId: org.id,
+		env,
 		queryFn: () =>
 			db.execute(
 				getFullSubjectQuery({
