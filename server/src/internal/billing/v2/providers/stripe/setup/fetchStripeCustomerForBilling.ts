@@ -19,15 +19,20 @@ export const fetchStripeCustomerForBilling = async ({
 }) => {
 	const { org, env } = ctx;
 	const stripeCli = createStripeCli({ org, env });
+	const expandTax = !!ctx.org.config.automatic_tax;
 
 	const stripeCus = createIfMissing
 		? await getOrCreateStripeCustomer({
 				ctx,
 				customer: fullCus,
+				options: {
+					expandTax,
+				},
 			})
 		: await getExpandedStripeCustomer({
 				ctx,
 				stripeCustomerId: fullCus.processor?.id,
+				expandTax,
 			});
 
 	if (!stripeCus) {

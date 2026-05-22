@@ -22,6 +22,7 @@ export const getOrCreateStripeCustomer = async ({
 	customer: Customer;
 	options?: {
 		updateDb?: boolean;
+		expandTax?: boolean;
 	};
 }): Promise<ExpandedStripeCustomer | undefined> => {
 	const { logger } = ctx;
@@ -29,6 +30,7 @@ export const getOrCreateStripeCustomer = async ({
 	const currentStripeCustomer = await getExpandedStripeCustomer({
 		ctx,
 		stripeCustomerId: customer.processor?.id,
+		expandTax: options.expandTax,
 	});
 
 	if (currentStripeCustomer) return currentStripeCustomer;
@@ -40,6 +42,9 @@ export const getOrCreateStripeCustomer = async ({
 	const stripeCustomer = await createStripeCustomer({
 		ctx,
 		customer,
+		options: {
+			expandTax: options.expandTax,
+		},
 	});
 
 	if (options.updateDb) {
