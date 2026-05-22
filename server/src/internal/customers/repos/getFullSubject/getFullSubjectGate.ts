@@ -79,13 +79,9 @@ const waitHistogram = meter.createHistogram(
 		unit: "ms",
 	},
 );
-const perCustomerActiveCounter = meter.createUpDownCounter(
-	"autumn.full_subject.gate.per_customer_active",
-	{ description: "Hydrations currently executing for a given customer" },
-);
-const perOrgActiveCounter = meter.createUpDownCounter(
-	"autumn.full_subject.gate.per_org_active",
-	{ description: "Hydrations currently executing for a given org" },
+const activeCounter = meter.createUpDownCounter(
+	"autumn.full_subject.gate.active",
+	{ description: "FullSubject hydrations currently executing" },
 );
 
 const attrs = ({ orgId, env }: { orgId: string; env: AppEnv }) => ({
@@ -120,16 +116,14 @@ export const runWithFullSubjectGate = async <T>({
 				`[full_subject_gate] queued ${waitMs}ms customer=${customerId ?? "unknown"} org=${orgId} env=${env}`,
 			);
 		}
-		perOrgActiveCounter.add(1, labels);
-		perCustomerActiveCounter.add(1, labels);
+		activeCounter.add(1, labels);
 		try {
 			return await queryFn();
 		} catch (error) {
 			failedCounter.add(1, labels);
 			throw error;
 		} finally {
-			perOrgActiveCounter.add(-1, labels);
-			perCustomerActiveCounter.add(-1, labels);
+			activeCounter.add(-1, labels);
 			completedCounter.add(1, labels);
 		}
 	};
