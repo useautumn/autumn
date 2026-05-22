@@ -2,6 +2,12 @@ import type { AppEnv } from "@autumn/shared";
 import { metrics } from "@opentelemetry/api";
 import { LRUCache } from "lru-cache";
 import pLimit, { type LimitFunction } from "p-limit";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
+
+// Log per-customer attribution when a request queued for at least this long.
+// Sub-threshold engagements are still counted in metrics — just not logged
+// (avoids spam under healthy load).
+const GATE_LOG_WAIT_MS_THRESHOLD = 50;
 
 const PER_CUSTOMER_LIMIT = Number(
 	process.env.FULL_SUBJECT_PER_CUSTOMER_LIMIT ?? 15,
@@ -85,16 +91,10 @@ const perOrgActiveCounter = meter.createUpDownCounter(
 	{ description: "Hydrations currently executing for a given org" },
 );
 
-const attrs = ({
-	customerId,
-	orgId,
-	env,
-}: {
-	customerId: string | undefined;
-	orgId: string;
-	env: AppEnv;
-}) => ({
-	customer_id: customerId ?? "unknown",
+// Metric labels intentionally exclude customer_id — that's high-cardinality
+// (hundreds of thousands of customers) and would balloon time-series count
+// + ingestion cost. Per-customer attribution lives in log lines, not metrics.
+const attrs = ({ orgId, env }: { orgId: string; env: AppEnv }) => ({
 	org_id: orgId,
 	env,
 });
@@ -115,19 +115,27 @@ export const runWithFullSubjectGate = async <T>({
 	customerId,
 	orgId,
 	env,
+	logger,
 	queryFn,
 }: {
 	customerId: string | undefined;
 	orgId: string;
 	env: AppEnv;
+	logger?: Logger;
 	queryFn: () => Promise<T>;
 }): Promise<T> => {
 	const enqueuedAt = Date.now();
-	const labels = attrs({ customerId, orgId, env });
+	const labels = attrs({ orgId, env });
 	startedCounter.add(1, labels);
 
 	const execute = async (): Promise<T> => {
-		waitHistogram.record(Date.now() - enqueuedAt, labels);
+		const waitMs = Date.now() - enqueuedAt;
+		waitHistogram.record(waitMs, labels);
+		if (waitMs >= GATE_LOG_WAIT_MS_THRESHOLD) {
+			logger?.info(
+				`[full_subject_gate] queued ${waitMs}ms customer=${customerId ?? "unknown"} org=${orgId} env=${env}`,
+			);
+		}
 		perOrgActiveCounter.add(1, labels);
 		perCustomerActiveCounter.add(1, labels);
 		try {

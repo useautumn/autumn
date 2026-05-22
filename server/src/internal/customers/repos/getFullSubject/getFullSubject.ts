@@ -37,6 +37,7 @@ export async function getFullSubject({
 		customerId,
 		orgId: org.id,
 		env,
+		logger: ctx.logger,
 		queryFn: () =>
 			db.execute(
 				getFullSubjectQuery({
@@ -88,6 +89,7 @@ export async function getFullSubjectNormalized({
 		customerId,
 		orgId: org.id,
 		env,
+		logger: ctx.logger,
 		queryFn: () =>
 			db.execute(
 				getFullSubjectQuery({
