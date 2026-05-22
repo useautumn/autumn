@@ -15,6 +15,7 @@ import {
 import { handleGetAdminCustomerBlockConfig } from "./handleGetAdminCustomerBlockConfig";
 import { handleGetAdminEdgeConfigSources } from "./handleGetAdminEdgeConfigSources";
 import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsConfig";
+import { handleGetAdminFullSubjectGateConfig } from "./handleGetAdminFullSubjectGateConfig";
 import { handleGetAdminJobQueueConfig } from "./handleGetAdminJobQueueConfig";
 import { handleGetAdminMiscellaneousEdgeConfig } from "./handleGetAdminMiscellaneousEdgeConfig";
 import { handleGetAdminOrgLimitsConfig } from "./handleGetAdminOrgLimitsConfig";
@@ -32,6 +33,7 @@ import { handleListAdminUsers } from "./handleListAdminUsers";
 import { handleListOAuthClients } from "./handleListOAuthClients";
 import { handleUpsertAdminCustomerBlockConfig } from "./handleUpsertAdminCustomerBlockConfig";
 import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureFlagsConfig";
+import { handleUpsertAdminFullSubjectGateConfig } from "./handleUpsertAdminFullSubjectGateConfig";
 import { handleUpsertAdminJobQueueConfig } from "./handleUpsertAdminJobQueueConfig";
 import { handleUpsertAdminMiscellaneousEdgeConfig } from "./handleUpsertAdminMiscellaneousEdgeConfig";
 import { handleUpsertAdminOrgLimitsConfig } from "./handleUpsertAdminOrgLimitsConfig";
@@ -95,6 +97,14 @@ honoAdminRouter.get(
 honoAdminRouter.put(
 	"/miscellaneous-edge-config",
 	...handleUpsertAdminMiscellaneousEdgeConfig,
+);
+honoAdminRouter.get(
+	"/full-subject-gate-config",
+	...handleGetAdminFullSubjectGateConfig,
+);
+honoAdminRouter.put(
+	"/full-subject-gate-config",
+	...handleUpsertAdminFullSubjectGateConfig,
 );
 honoAdminRouter.get(
 	"/customer-block-config",
