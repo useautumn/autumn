@@ -3,22 +3,12 @@ import { metrics } from "@opentelemetry/api";
 import { LRUCache } from "lru-cache";
 import pLimit, { type LimitFunction } from "p-limit";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
+import { getRuntimeFullSubjectGateConfig } from "@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js";
 
-// Log per-customer attribution when a request queued for at least this long.
-// Sub-threshold engagements are still counted in metrics — just not logged
-// (avoids spam under healthy load).
 const GATE_LOG_WAIT_MS_THRESHOLD = 50;
-
-const PER_CUSTOMER_LIMIT = Number(
-	process.env.FULL_SUBJECT_PER_CUSTOMER_LIMIT ?? 15,
-);
-const PER_ORG_LIMIT = Number(process.env.FULL_SUBJECT_PER_ORG_LIMIT ?? 30);
 const LIMITER_CACHE_MAX = 5000;
 const LIMITER_CACHE_TTL_MS = 30 * 60 * 1000;
 
-// updateAgeOnGet keeps active customers/orgs alive — without it, an in-flight
-// burst that straddles a TTL expiry could see a fresh limiter and effectively
-// double the cap.
 const perCustomerLimiters = new LRUCache<string, LimitFunction>({
 	max: LIMITER_CACHE_MAX,
 	ttl: LIMITER_CACHE_TTL_MS,
@@ -31,37 +21,44 @@ const perOrgLimiters = new LRUCache<string, LimitFunction>({
 	updateAgeOnGet: true,
 });
 
+const getOrUpdateLimiter = (
+	cache: LRUCache<string, LimitFunction>,
+	key: string,
+	concurrency: number,
+): LimitFunction => {
+	const existing = cache.get(key);
+	if (existing) {
+		if (existing.concurrency !== concurrency) existing.concurrency = concurrency;
+		return existing;
+	}
+	const limiter = pLimit(concurrency);
+	cache.set(key, limiter);
+	return limiter;
+};
+
 const getCustomerLimiter = ({
 	orgId,
 	env,
 	customerId,
+	limit,
 }: {
 	orgId: string;
 	env: AppEnv;
 	customerId: string;
-}): LimitFunction => {
-	const key = `${orgId}:${env}:${customerId}`;
-	const existing = perCustomerLimiters.get(key);
-	if (existing) return existing;
-	const limiter = pLimit(PER_CUSTOMER_LIMIT);
-	perCustomerLimiters.set(key, limiter);
-	return limiter;
-};
+	limit: number;
+}): LimitFunction =>
+	getOrUpdateLimiter(perCustomerLimiters, `${orgId}:${env}:${customerId}`, limit);
 
 const getOrgLimiter = ({
 	orgId,
 	env,
+	limit,
 }: {
 	orgId: string;
 	env: AppEnv;
-}): LimitFunction => {
-	const key = `${orgId}:${env}`;
-	const existing = perOrgLimiters.get(key);
-	if (existing) return existing;
-	const limiter = pLimit(PER_ORG_LIMIT);
-	perOrgLimiters.set(key, limiter);
-	return limiter;
-};
+	limit: number;
+}): LimitFunction =>
+	getOrUpdateLimiter(perOrgLimiters, `${orgId}:${env}`, limit);
 
 const meter = metrics.getMeter("autumn-server");
 const startedCounter = meter.createCounter("autumn.full_subject.gate.started", {
@@ -91,26 +88,11 @@ const perOrgActiveCounter = meter.createUpDownCounter(
 	{ description: "Hydrations currently executing for a given org" },
 );
 
-// Metric labels intentionally exclude customer_id — that's high-cardinality
-// (hundreds of thousands of customers) and would balloon time-series count
-// + ingestion cost. Per-customer attribution lives in log lines, not metrics.
 const attrs = ({ orgId, env }: { orgId: string; env: AppEnv }) => ({
 	org_id: orgId,
 	env,
 });
 
-/**
- * Wrap a FullSubject DB hydration so it goes through per-customer + per-org
- * concurrency gates. Per-customer slot is acquired FIRST so one customer's
- * burst can't hold per-org slots while waiting on its own customer cap
- * (head-of-line starves siblings within the same org).
- *
- * Limits are PER-PROCESS, not cluster-wide — with N API replicas, effective
- * caps are PER_CUSTOMER_LIMIT*N and PER_ORG_LIMIT*N. Sized accordingly.
- *
- * Defaults: 15 per-customer, 30 per-org per process. Override via
- * FULL_SUBJECT_PER_CUSTOMER_LIMIT / FULL_SUBJECT_PER_ORG_LIMIT.
- */
 export const runWithFullSubjectGate = async <T>({
 	customerId,
 	orgId,
@@ -124,6 +106,8 @@ export const runWithFullSubjectGate = async <T>({
 	logger?: Logger;
 	queryFn: () => Promise<T>;
 }): Promise<T> => {
+	const { per_customer_limit, per_org_limit } =
+		getRuntimeFullSubjectGateConfig();
 	const enqueuedAt = Date.now();
 	const labels = attrs({ orgId, env });
 	startedCounter.add(1, labels);
@@ -151,11 +135,14 @@ export const runWithFullSubjectGate = async <T>({
 	};
 
 	if (customerId) {
-		// Resolve the org limiter inside the customer callback so a stale
-		// LRU-evicted org limiter can't be used after a customer slot opens.
-		return getCustomerLimiter({ orgId, env, customerId })(() =>
-			getOrgLimiter({ orgId, env })(execute),
+		return getCustomerLimiter({
+			orgId,
+			env,
+			customerId,
+			limit: per_customer_limit,
+		})(() =>
+			getOrgLimiter({ orgId, env, limit: per_org_limit })(execute),
 		);
 	}
-	return getOrgLimiter({ orgId, env })(execute);
+	return getOrgLimiter({ orgId, env, limit: per_org_limit })(execute);
 };
