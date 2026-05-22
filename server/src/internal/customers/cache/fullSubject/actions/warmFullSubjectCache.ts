@@ -13,7 +13,7 @@ const warmEnqueueFailedCounter = meter.createCounter(
 
 const WARM_CACHE_CUSTOMER_IDS = new Set<string>([
 	"64138004cce3c9e82a7083d9",
-	"GG6tnmO7cHb40PNhwYBTZtxQdeL74NHF",
+	"698fb72e4c5fa12c1cd11ddc",
 	"cache-warmer-feature-test-cus",
 ]);
 
