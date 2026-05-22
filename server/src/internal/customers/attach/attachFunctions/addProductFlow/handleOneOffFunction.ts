@@ -11,6 +11,7 @@ import {
 import { addMinutes } from "date-fns";
 import { Decimal } from "decimal.js";
 import { payForInvoice } from "@/external/stripe/stripeInvoiceUtils.js";
+import { customerHasUsableTaxLocationForStripeTax } from "@/internal/billing/v2/providers/stripe/utils/tax/shouldEnableStripeAutomaticTax.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { handleCreateCheckout } from "@/internal/customers/add-product/handleCreateCheckout.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
@@ -135,8 +136,10 @@ export const handleOneOffFunction = async ({
 
 	// Skip auto_tax in invoice mode: send_invoice has no
 	// address-collection UI so Stripe Tax rejects.
-	const wantsAutoTax =
-		!!org.config.automatic_tax && !attachParams.invoiceOnly;
+const wantsAutoTax =
+		!!org.config.automatic_tax &&
+		!attachParams.invoiceOnly &&
+		customerHasUsableTaxLocationForStripeTax(attachParams.stripeCus);
 
 	let stripeInvoice = await stripeCli.invoices.create({
 		customer: customer.processor.id!,
