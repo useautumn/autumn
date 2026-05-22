@@ -9,6 +9,7 @@ import { notNullish } from "@shared/utils/utils";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { stripeDiscountsToParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
+import { shouldEnableStripeAutomaticTax } from "@/internal/billing/v2/providers/stripe/utils/tax/shouldEnableStripeAutomaticTax";
 
 export const buildStripeSubscriptionUpdateAction = ({
 	ctx,
@@ -96,10 +97,9 @@ export const buildStripeSubscriptionUpdateAction = ({
 		}),
 
 		// Propagate auto_tax onto every sub.update so existing subs catch up
-		// when the org flag flips. Baked in here (not execute) for log
-		// self-description. Skipped in invoice mode: send_invoice invoices
-		// can't collect address, so Stripe Tax rejects.
-		...(ctx.org.config.automatic_tax && !billingContext.invoiceMode
+		// when the org flag flips. Baked in here for log self-description;
+		// execute re-applies the same preflight before writing to Stripe.
+		...(shouldEnableStripeAutomaticTax({ ctx, billingContext })
 			? { automatic_tax: { enabled: true } }
 			: {}),
 	};
