@@ -4,6 +4,62 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="May 22nd 2026">
+  ## Redeem reward codes via API
+
+  A new **`POST /v1/rewards.redeem`** endpoint lets you redeem a reward promo code for a customer programmatically. Pass `code` and `customer_id`, and the response returns the redeemed `reward_id` along with any feature balances granted by the reward.
+
+  Use it to wire promo codes into your own onboarding flows, in-app redemption screens, or partner integrations — no need to send customers through Autumn Checkout to apply a code.
+
+  See the [redeem reward code reference](/api-reference/rewards/redeemRewardCode).
+
+  ## Stripe tax rates on `preview_attach` and `setup_payment`
+
+  `billing.preview_attach` and `billing.setup_payment` now accept a **`tax_rate_id`** parameter (e.g. `txr_…`), matching the option already available on `billing.attach`. The provided Stripe tax rate is applied as the default on the previewed subscription, invoice, or checkout session line items.
+
+  This makes it possible to model the exact tax treatment of an upcoming charge before the customer commits, and to keep tax behaviour consistent across attach, preview, and setup flows.
+
+  See the [preview attach](/api-reference/billing/previewAttach) and [setup payment](/api-reference/billing/setupPayment) references.
+
+  ## Dashboard appearance settings
+
+  Settings now includes an **Appearance** section where you can pick a theme mode (Light, Dark, or System) and a colour preset. Previews update inline, and your choice is saved per account so the dashboard matches your environment on every device.
+
+  ## Org-level billing settings panel
+
+  A new **Billing** section in Settings exposes organisation-wide billing toggles directly in the dashboard, including:
+
+  - Anchor billing cycles to the start of the month
+  - Cancel subscriptions on past due
+  - Reverse deduction order (newest balance first)
+  - Include past-due subscriptions in entitlement checks
+  - Invoice line-item memos
+  - Entity-level product assignments
+  - Void open invoices on subscription deletion
+  - Default plan applies to entities
+  - Disable Stripe writes (read-only mode)
+  - Automatic tax (Stripe Tax)
+
+  Previously these required a support request or API call to change.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - `POST /v1/rewards.redeem` endpoint and SDK support — [#1658](https://github.com/useautumn/autumn/pull/1658)
+      - `tax_rate_id` support on `preview_attach` and `setup_payment` — [#1658](https://github.com/useautumn/autumn/pull/1658)
+      - Appearance section in dashboard settings (light / dark / system + presets) — [#1669](https://github.com/useautumn/autumn/pull/1669)
+      - Org config UI for billing settings — [#1673](https://github.com/useautumn/autumn/pull/1673), [#1674](https://github.com/useautumn/autumn/pull/1674)
+      - Higher throughput from increased database connection pooling — [#1678](https://github.com/useautumn/autumn/pull/1678)
+      - Faster cold reads from background cache warming for high-traffic customers — [#1680](https://github.com/useautumn/autumn/pull/1680)
+      - Lower-latency cache revalidation strategy — [#1684](https://github.com/useautumn/autumn/pull/1684)
+    </Accordion>
+    <Accordion title="Bug fixes">
+      - Resolved an edge case where a customer product could be missing after rapid attach changes — [#1681](https://github.com/useautumn/autumn/pull/1681)
+      - Rate limits on `GET` entities tightened to keep noisy clients from impacting shared throughput — [#1685](https://github.com/useautumn/autumn/pull/1685)
+      - Per-organisation rate limit overrides now apply correctly — [#1686](https://github.com/useautumn/autumn/pull/1686)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="May 20th 2026">
   ## `billing.updated` webhook
 
