@@ -70,6 +70,9 @@ export const runWarmFullSubjectCache = async ({
 			ctx,
 			customerId,
 			source: source ?? "warm-full-subject-cache",
+			// The warmer IS the revalidator — never serve stale here, or we'd
+			// loop on our own stale read and never rebuild.
+			staleWhileRevalidate: false,
 		});
 		warmCustomerCounter.add(1, { source: source ?? "unknown" });
 		warmedCustomer = 1;
@@ -98,6 +101,7 @@ export const runWarmFullSubjectCache = async ({
 					customerId,
 					entityId,
 					source: source ?? "warm-full-subject-cache",
+					staleWhileRevalidate: false,
 				});
 				return true;
 			}),

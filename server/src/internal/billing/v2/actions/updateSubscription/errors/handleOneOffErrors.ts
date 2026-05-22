@@ -99,7 +99,12 @@ export const handleOneOffErrors = ({
 	// (handleManualTopUpErrors) owns rejecting non-conforming requests.
 	if (billingContext.intent === UpdateSubscriptionIntent.ManualTopUp) return;
 
-	blockOneOffQuantityChangeOutsideManualTopUp({ billingContext, params });
+	// UpdatePlan combined with a one-off feature_quantity change is allowed:
+	// the custom-plan flow creates a new cusProduct billed for the requested
+	// quantity, and the one-off carryover helper preserves the existing balance.
+	if (billingContext.intent !== UpdateSubscriptionIntent.UpdatePlan) {
+		blockOneOffQuantityChangeOutsideManualTopUp({ billingContext, params });
+	}
 
 	// Only apply these checks to one-off products
 	if (!isCustomerProductOneOff(customerProduct)) return;
