@@ -1,4 +1,5 @@
 import {
+	addCusProductToCusEnt,
 	type AttachBillingContext,
 	type AttachParamsV1,
 	type Entitlement,
@@ -6,6 +7,7 @@ import {
 	type InsertCustomerEntitlement,
 	isBooleanCusEnt,
 	isEntityScopedCusEnt,
+	isOneOffPrepaidConsumableCustomerEntitlement,
 	isUnlimitedCusEnt,
 } from "@autumn/shared";
 import {
@@ -47,6 +49,17 @@ export const cusProductToExistingBalanceCarryOvers = ({
 		if (isBooleanCusEnt({ cusEnt })) continue;
 		if (isUnlimitedCusEnt(cusEnt)) continue;
 		if (featureUtils.isAllocated(cusEnt.entitlement.feature)) continue;
+
+		// One-off prepaid consumable cusEnts are already auto-preserved as a
+		// lifetime cusEnt by cusProductToOneOffPrepaidCarryOvers — skip here
+		// to avoid minting a second carry-over row for the same balance.
+		const cusEntWithCusProduct = addCusProductToCusEnt({
+			cusEnt,
+			cusProduct: currentCustomerProduct,
+		});
+		if (isOneOffPrepaidConsumableCustomerEntitlement(cusEntWithCusProduct))
+			continue;
+
 		if (featureIds && !featureIds.includes(cusEnt.entitlement.feature.id))
 			continue;
 
