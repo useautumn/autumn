@@ -7,20 +7,24 @@ import { type SQL, sql } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectRowsQuery } from "@/internal/customers/repos/getFullSubject/getFullSubjectRowsQuery.js";
 
+type EntityListFilters = Pick<
+	ListEntitiesParams,
+	"plans" | "processors" | "search"
+> & {
+	customerId?: string;
+};
+
 export const hasEntityListFilters = ({
 	plans,
 	processors,
 	search,
-	customer_id,
-}: Pick<
-	ListEntitiesParams,
-	"plans" | "processors" | "search" | "customer_id"
->) => {
+	customerId,
+}: EntityListFilters) => {
 	return Boolean(
 		(plans && plans.length > 0) ||
 			(processors && processors.length > 0) ||
 			search?.trim() ||
-			customer_id?.trim(),
+			customerId?.trim(),
 	);
 };
 
@@ -28,17 +32,14 @@ const getEntityListFilterSql = ({
 	plans,
 	processors,
 	search,
-	customer_id,
+	customerId,
 	inStatuses,
-}: Pick<
-	ListEntitiesParams,
-	"plans" | "processors" | "search" | "customer_id"
-> & {
+}: EntityListFilters & {
 	inStatuses: CusProductStatus[];
 }) => {
 	const filters: SQL[] = [];
 
-	const trimmedCustomerId = customer_id?.trim();
+	const trimmedCustomerId = customerId?.trim();
 	if (trimmedCustomerId) {
 		filters.push(sql`AND c.id = ${trimmedCustomerId}`);
 	}
@@ -141,7 +142,7 @@ export const getPaginatedEntitySubjectsQuery = ({
 		plans: query.plans,
 		processors: query.processors,
 		search: query.search,
-		customer_id: query.customer_id,
+		customerId: query.customer_id,
 		inStatuses,
 	});
 
@@ -211,10 +212,7 @@ export const countFilteredEntitiesByOrgIdAndEnv = async ({
 	inStatuses,
 }: {
 	ctx: AutumnContext;
-	query: Pick<
-		ListEntitiesParams,
-		"plans" | "processors" | "search" | "customer_id"
-	>;
+	query: EntityListFilters;
 	inStatuses: CusProductStatus[];
 }) => {
 	if (!hasEntityListFilters(query)) {
@@ -227,7 +225,7 @@ export const countFilteredEntitiesByOrgIdAndEnv = async ({
 			plans: query.plans,
 			processors: query.processors,
 			search: query.search,
-			customer_id: query.customer_id,
+			customerId: query.customerId,
 			inStatuses,
 		}),
 	});

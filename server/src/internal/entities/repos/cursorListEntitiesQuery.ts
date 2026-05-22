@@ -11,17 +11,15 @@ const getEntityListFilterSql = ({
 	plans,
 	processors,
 	search,
-	customer_id,
+	customerId,
 	inStatuses,
-}: Pick<
-	ListEntitiesParams,
-	"plans" | "processors" | "search" | "customer_id"
-> & {
+}: Pick<ListEntitiesParams, "plans" | "processors" | "search"> & {
+	customerId?: string;
 	inStatuses: CusProductStatus[];
 }) => {
 	const filters: SQL[] = [];
 
-	const trimmedCustomerId = customer_id?.trim();
+	const trimmedCustomerId = customerId?.trim();
 	if (trimmedCustomerId) {
 		filters.push(sql`AND c.id = ${trimmedCustomerId}`);
 	}
@@ -114,7 +112,7 @@ export const getCursorPaginatedEntitySubjectsQuery = ({
 		plans,
 		processors,
 		search,
-		customer_id: customerId,
+		customerId,
 		inStatuses,
 	});
 

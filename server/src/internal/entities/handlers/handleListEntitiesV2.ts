@@ -113,7 +113,7 @@ const runOffsetListEntities = async ({
 		plans: body.plans,
 		processors: body.processors,
 		search: body.search,
-		customer_id: body.customer_id,
+		customerId: body.customer_id,
 	});
 
 	const [subjectRows, totalCount] = await Promise.all([
@@ -135,7 +135,7 @@ const runOffsetListEntities = async ({
 					plans: body.plans,
 					processors: body.processors,
 					search: body.search,
-					customer_id: body.customer_id,
+					customerId: body.customer_id,
 				},
 				inStatuses,
 			})
