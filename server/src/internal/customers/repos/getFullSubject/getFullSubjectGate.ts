@@ -108,9 +108,11 @@ const rejectOverloaded = ({
 }): never => {
 	rejectedCounter.add(1, { ...labels, reason });
 	throw new RecaseError({
-		message: `FullSubject concurrency gate overloaded (${reason})`,
-		code: "full_subject_gate_overloaded",
+		message:
+			"Too many concurrent requests for this customer. Please retry shortly.",
+		code: "rate_limit_exceeded",
 		statusCode: 429,
+		data: { reason },
 	});
 };
 

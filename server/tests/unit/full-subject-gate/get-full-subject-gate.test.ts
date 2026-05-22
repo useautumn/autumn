@@ -217,7 +217,7 @@ describe("runWithFullSubjectGate", () => {
 		expect(rejected.length).toBeGreaterThan(0);
 		for (const r of rejected as PromiseRejectedResult[]) {
 			expect(r.reason.statusCode).toBe(429);
-			expect(r.reason.code).toBe("full_subject_gate_overloaded");
+			expect(r.reason.code).toBe("rate_limit_exceeded");
 		}
 
 		_setFullSubjectGateConfigForTesting({
@@ -258,7 +258,7 @@ describe("runWithFullSubjectGate", () => {
 			(r) =>
 				r.status === "rejected" &&
 				(r as PromiseRejectedResult).reason.code ===
-					"full_subject_gate_overloaded",
+					"rate_limit_exceeded",
 		);
 		expect(timeouts.length).toBeGreaterThan(0);
 
