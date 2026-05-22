@@ -231,6 +231,57 @@ describe("runWithFullSubjectGate", () => {
 		});
 	});
 
+	test("rejects with 429 (per_org_queue_full) when per-org queue fills via many customers in one org", async () => {
+		_setFullSubjectGateConfigForTesting({
+			config: {
+				per_customer_limit: 1,
+				per_org_limit: 1,
+				max_wait_ms: 60_000,
+				per_customer_pending_max: 1000,
+				per_org_pending_max: 2,
+			},
+		});
+
+		const slow = () => new Promise((resolve) => setTimeout(resolve, 100));
+		const results = await Promise.allSettled(
+			Array.from({ length: 10 }, (_, idx) =>
+				runWithFullSubjectGate({
+					customerId: `cus-org-cap-${idx}`,
+					orgId: "org-cap",
+					env: AppEnv.Live,
+					queryFn: slow,
+				}),
+			),
+		);
+
+		const rejectedReasons = results
+			.filter((r) => r.status === "rejected")
+			.map(
+				(r) =>
+					(r as PromiseRejectedResult).reason.data?.reason as string | undefined,
+			);
+		expect(rejectedReasons.length).toBeGreaterThan(0);
+		expect(rejectedReasons.some((reason) => reason === "per_org_queue_full")).toBe(
+			true,
+		);
+		for (const r of results.filter(
+			(x) => x.status === "rejected",
+		) as PromiseRejectedResult[]) {
+			expect(r.reason.statusCode).toBe(429);
+			expect(r.reason.code).toBe("rate_limit_exceeded");
+		}
+
+		_setFullSubjectGateConfigForTesting({
+			config: {
+				per_customer_limit: 2,
+				per_org_limit: 4,
+				max_wait_ms: 60_000,
+				per_customer_pending_max: 1000,
+				per_org_pending_max: 1000,
+			},
+		});
+	});
+
 	test("rejects with 429 when a queued request exceeds max_wait_ms", async () => {
 		_setFullSubjectGateConfigForTesting({
 			config: {
