@@ -28,28 +28,34 @@ export function getExpandedStripeCustomer({
 	ctx,
 	stripeCustomerId,
 	errorOnNotFound,
+	expandTax,
 }: {
 	ctx: AutumnContext;
 	stripeCustomerId: string;
 	errorOnNotFound: true;
+	expandTax?: boolean;
 }): Promise<ExpandedStripeCustomer>;
 export function getExpandedStripeCustomer({
 	ctx,
 	stripeCustomerId,
 	errorOnNotFound,
+	expandTax,
 }: {
 	ctx: AutumnContext;
 	stripeCustomerId?: string;
 	errorOnNotFound?: false;
+	expandTax?: boolean;
 }): Promise<ExpandedStripeCustomer | undefined>;
 export async function getExpandedStripeCustomer({
 	ctx,
 	stripeCustomerId,
 	errorOnNotFound = false,
+	expandTax = false,
 }: {
 	ctx: AutumnContext;
 	stripeCustomerId?: string;
 	errorOnNotFound?: boolean;
+	expandTax?: boolean;
 }): Promise<ExpandedStripeCustomer | undefined> {
 	const { org, env } = ctx;
 	const stripeCli = createStripeCli({ org, env });
@@ -63,6 +69,7 @@ export async function getExpandedStripeCustomer({
 					"test_clock",
 					"invoice_settings.default_payment_method",
 					"discount.source.coupon.applies_to",
+					...(expandTax ? ["tax"] : []),
 				],
 			}),
 		);
