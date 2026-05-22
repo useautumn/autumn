@@ -1,0 +1,6 @@
+Index Scan using idx_products_org_env_id_version on products  (cost=0.41..2.14 rows=1 width=32) (actual time=0.015..0.015 rows=1.00 loops=1)
+  Index Cond: ((org_id = 'biu9vSF7vghBLSKW1UTDwxHBAivjnPaK'::text) AND (env = 'live'::text) AND (id = 'legacy_starter'::text))
+  Index Searches: 1
+  Buffers: shared hit=4
+Planning Time: 0.044 ms
+Execution Time: 0.034 ms

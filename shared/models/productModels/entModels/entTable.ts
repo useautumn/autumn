@@ -68,6 +68,12 @@ export const entitlements = pgTable(
 			table.internal_reward_id,
 			table.internal_feature_id,
 		),
+		// Serves joins on rewards.internal_id (collation C). The plain
+		// internal_reward_id index above is default-collation and can't be used
+		// when the join collation is C.
+		index("idx_entitlements_internal_reward_id_c_partial")
+			.on(sql`${table.internal_reward_id} COLLATE "C"`)
+			.where(sql`${table.internal_reward_id} IS NOT NULL`),
 	],
 );
 
