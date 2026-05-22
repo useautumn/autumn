@@ -9,6 +9,7 @@ import {
 } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { sanitizeSubItems } from "@/external/stripe/stripeSubUtils/getStripeSubItems.js";
 import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata.js";
+import { customerHasUsableTaxLocationForStripeTax } from "@/internal/billing/v2/providers/stripe/utils/tax/shouldEnableStripeAutomaticTax.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
 import { buildInvoiceMemoFromEntitlements } from "@/internal/invoices/invoiceMemoUtils.js";
 import { freeTrialToStripeTimestamp } from "@/internal/products/free-trials/freeTrialUtils.js";
@@ -63,7 +64,9 @@ export const createStripeSub2 = async ({
 		// Skip auto_tax in invoice mode: send_invoice has no
 		// address-collection UI so Stripe Tax rejects.
 		const wantsAutoTax =
-			!!org.config.automatic_tax && !attachParams.invoiceOnly;
+			!!org.config.automatic_tax &&
+			!attachParams.invoiceOnly &&
+			customerHasUsableTaxLocationForStripeTax(attachParams.stripeCus);
 
 		const subscription = await stripeCli.subscriptions.create({
 			...paymentMethodData,

@@ -27,6 +27,7 @@ export const fetchStripeCustomerForBilling = async ({
 				customer: fullCus,
 				options: {
 					expandTax,
+					updateDb: true,
 				},
 			})
 		: await getExpandedStripeCustomer({
