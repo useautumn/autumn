@@ -272,7 +272,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779292757190,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780502357190,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779471392768,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780680992768,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -566,6 +566,7 @@ const response = await client.entities.list({ search: "workspace" });
 @param subscriptionStatus - Filter customer products used for entity hydration and plan matching. Defaults to active and scheduled. (optional)
 @param search - Search entities by id or name. (optional)
 @param processors - Filter by parent customer processor type (stripe, revenuecat, vercel). (optional)
+@param customerId - Restrict the response to entities owned by this customer id. Use to bulk-fetch all entities for one customer in a single paginated call instead of iterating entities.get. (optional)
 
 @returns A paginated list of entity objects including their current subscriptions, purchases, balances, and flags.
 * [update](docs/sdks/entities/README.md#update) - Updates an existing entity and returns the refreshed entity object.
@@ -789,7 +790,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779292757190,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780502357190,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779471392768,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780680992768,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -1123,6 +1124,7 @@ const response = await client.entities.list({ search: "workspace" });
 @param subscriptionStatus - Filter customer products used for entity hydration and plan matching. Defaults to active and scheduled. (optional)
 @param search - Search entities by id or name. (optional)
 @param processors - Filter by parent customer processor type (stripe, revenuecat, vercel). (optional)
+@param customerId - Restrict the response to entities owned by this customer id. Use to bulk-fetch all entities for one customer in a single paginated call instead of iterating entities.get. (optional)
 
 @returns A paginated list of entity objects including their current subscriptions, purchases, balances, and flags.
 - [`entitiesUpdate`](docs/sdks/entities/README.md#update) - Updates an existing entity and returns the refreshed entity object.
