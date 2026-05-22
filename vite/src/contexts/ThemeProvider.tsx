@@ -2,62 +2,65 @@ import { createContext, useContext, useEffect, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 
-type Theme = "light" | "dark" | "system";
+type ThemeMode = "light" | "dark" | "system";
+export type ThemePreset = "modern" | "classic" | "cursed";
 
 interface ThemeContextType {
-	theme: Theme;
-	setTheme: (theme: Theme) => void;
+	mode: ThemeMode;
+	setMode: (mode: ThemeMode) => void;
+	preset: ThemePreset;
+	setPreset: (preset: ThemePreset) => void;
 	isDark: boolean;
+	/** @deprecated Use `mode` */
+	theme: ThemeMode;
+	/** @deprecated Use `setMode` */
+	setTheme: (mode: ThemeMode) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
+function resolveSystemTheme(): "light" | "dark" {
+	return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function applyMode(mode: ThemeMode): boolean {
+	const root = document.documentElement;
+	root.classList.remove("light", "dark");
+	const resolved = mode === "system" ? resolveSystemTheme() : mode;
+	root.classList.add(resolved);
+	return resolved === "dark";
+}
+
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-	const [theme, setTheme] = useLocalStorage<Theme>("theme", "system");
-	const [isDark, setIsDark] = useState(false);
+	const [mode, setMode] = useLocalStorage<ThemeMode>("theme", "system");
+	const [preset, setPreset] = useLocalStorage<ThemePreset>("theme-preset", "classic");
+	const [isDark, setIsDark] = useState(() => applyMode(mode));
+
+	useEffect(() => setIsDark(applyMode(mode)), [mode]);
 
 	useEffect(() => {
 		const root = document.documentElement;
+		root.classList.remove("preset-classic", "preset-modern", "preset-cursed");
+		root.classList.add(`preset-${preset}`);
+	}, [preset]);
 
-		// Remove both classes first
-		root.classList.remove("light", "dark");
-
-		if (theme === "system") {
-			const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-				.matches
-				? "dark"
-				: "light";
-			root.classList.add(systemTheme);
-			setIsDark(systemTheme === "dark");
-		} else {
-			root.classList.add(theme);
-			setIsDark(theme === "dark");
-		}
-	}, [theme]);
-
-	// Listen for system theme changes
 	useEffect(() => {
-		if (theme !== "system") return;
+		if (mode !== "system") return;
+		const mq = window.matchMedia("(prefers-color-scheme: dark)");
+		const onChange = () => setIsDark(applyMode("system"));
+		mq.addEventListener("change", onChange);
+		return () => mq.removeEventListener("change", onChange);
+	}, [mode]);
 
-		const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-		const handleChange = (e: MediaQueryListEvent) => {
-			const root = document.documentElement;
-			root.classList.remove("light", "dark");
-			root.classList.add(e.matches ? "dark" : "light");
-			setIsDark(e.matches);
-		};
-
-		mediaQuery.addEventListener("change", handleChange);
-		return () => mediaQuery.removeEventListener("change", handleChange);
-	}, [theme]);
-
-	useHotkeys("t", () => setTheme(isDark ? "light" : "dark"), {
+	useHotkeys("t", () => setMode(isDark ? "light" : "dark"), {
 		enabled: import.meta.env.DEV,
 		enableOnFormTags: false,
 	});
 
 	return (
-		<ThemeContext.Provider value={{ theme, setTheme, isDark }}>
+		<ThemeContext.Provider
+			value={{ mode, setMode, preset, setPreset, isDark, theme: mode, setTheme: setMode }}
+		>
 			{children}
 		</ThemeContext.Provider>
 	);
@@ -65,8 +68,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 export function useTheme() {
 	const context = useContext(ThemeContext);
-	if (context === undefined) {
-		throw new Error("useTheme must be used within a ThemeProvider");
-	}
+	if (!context) throw new Error("useTheme must be used within a ThemeProvider");
 	return context;
 }

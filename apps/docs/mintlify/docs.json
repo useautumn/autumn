@@ -259,10 +259,11 @@
 						]
 					},
 					{
-						"group": "Referrals",
+						"group": "Rewards & Referrals",
 						"pages": [
 							"api-reference/referrals/createReferralCode",
-							"api-reference/referrals/redeemReferralCode"
+							"api-reference/referrals/redeemReferralCode",
+							"api-reference/rewards/redeemRewardCode"
 						]
 					},
 					{

@@ -83,6 +83,7 @@ export function SheetOverlay({ inline = false }: { inline?: boolean }) {
 					initial={{ opacity: 0 }}
 					animate={{ opacity: 1 }}
 					exit={{ opacity: 0 }}
+					data-slot="sheet-overlay"
 					className="absolute inset-0 bg-white/70 dark:bg-black/70"
 					style={{ zIndex: 40 }}
 					onMouseDown={handleMouseDown}

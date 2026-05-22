@@ -2,87 +2,72 @@
 import { z } from "zod/v4";
 
 export const listEventsGlobalsSchema = z.object({
-	xApiVersion: z.union([z.string(), z.undefined()]).optional(),
+    xApiVersion: z.union([z.string(), z.undefined()]).optional()
 });
 
-export const listEventsFeatureIdSchema = z.union([
-	z.string(),
-	z.array(z.string()),
-]);
+export const listEventsFeatureIdSchema = z.union([z.string(), z.array(z.string())]);
 
 export const listEventsCustomRangeSchema = z.object({
-	start: z.union([z.number(), z.undefined()]).optional(),
-	end: z.union([z.number(), z.undefined()]).optional(),
+    start: z.union([z.number(), z.undefined()]).optional(),
+    end: z.union([z.number(), z.undefined()]).optional()
 });
 
 export const eventsListParamsSchema = z.object({
-	startCursor: z.union([z.string(), z.undefined()]).optional(),
-	limit: z.union([z.number(), z.undefined()]).optional(),
-	customerId: z.union([z.string(), z.undefined()]).optional(),
-	entityId: z.union([z.string(), z.undefined()]).optional(),
-	featureId: z
-		.union([z.string(), z.array(z.string()), z.undefined()])
-		.optional(),
-	customRange: z.union([listEventsCustomRangeSchema, z.undefined()]).optional(),
+    startCursor: z.union([z.string(), z.undefined()]).optional(),
+    limit: z.union([z.number(), z.undefined()]).optional(),
+    customerId: z.union([z.string(), z.undefined()]).optional(),
+    entityId: z.union([z.string(), z.undefined()]).optional(),
+    featureId: z.union([z.string(), z.array(z.string()), z.undefined()]).optional(),
+    customRange: z.union([listEventsCustomRangeSchema, z.undefined()]).optional()
 });
 
-export const listEventsFeatureIdOutboundSchema = z.union([
-	z.string(),
-	z.array(z.string()),
-]);
+export const listEventsFeatureIdOutboundSchema = z.union([z.string(), z.array(z.string())]);
 
 export const listEventsCustomRangeOutboundSchema = z.object({
-	start: z.union([z.number(), z.undefined()]).optional(),
-	end: z.union([z.number(), z.undefined()]).optional(),
+    start: z.union([z.number(), z.undefined()]).optional(),
+    end: z.union([z.number(), z.undefined()]).optional()
 });
 
 export const eventsListParamsOutboundSchema = z.object({
-	start_cursor: z.string(),
-	limit: z.number(),
-	customer_id: z.union([z.string(), z.undefined()]).optional(),
-	entity_id: z.union([z.string(), z.undefined()]).optional(),
-	feature_id: z
-		.union([z.string(), z.array(z.string()), z.undefined()])
-		.optional(),
-	custom_range: z
-		.union([listEventsCustomRangeOutboundSchema, z.undefined()])
-		.optional(),
+    start_cursor: z.string(),
+    limit: z.number(),
+    customer_id: z.union([z.string(), z.undefined()]).optional(),
+    entity_id: z.union([z.string(), z.undefined()]).optional(),
+    feature_id: z.union([z.string(), z.array(z.string()), z.undefined()]).optional(),
+    custom_range: z.union([listEventsCustomRangeOutboundSchema, z.undefined()]).optional()
 });
 
 const openEnumSchema = z.any();
 
 export const listEventsIntervalEnumSchema = openEnumSchema;
 
-export const listEventsIntervalUnionSchema = z.union([
-	listEventsIntervalEnumSchema,
-	z.string(),
-]);
+export const listEventsIntervalUnionSchema = z.union([listEventsIntervalEnumSchema, z.string()]);
 
 export const listEventsResetSchema = z.object({
-	interval: z.union([listEventsIntervalEnumSchema, z.string()]),
-	intervalCount: z.union([z.number(), z.undefined()]).optional(),
-	resetsAt: z.number().nullable(),
+    interval: z.union([listEventsIntervalEnumSchema, z.string()]),
+    intervalCount: z.union([z.number(), z.undefined()]).optional(),
+    resetsAt: z.number().nullable()
 });
 
 export const deductionsSchema = z.object({
-	balanceId: z.string(),
-	featureId: z.string(),
-	planId: z.string().nullable(),
-	reset: listEventsResetSchema.nullable(),
-	value: z.number(),
+    balanceId: z.string(),
+    featureId: z.string(),
+    planId: z.string().nullable(),
+    reset: listEventsResetSchema.nullable(),
+    value: z.number()
 });
 
 export const listEventsListSchema = z.object({
-	id: z.string(),
-	timestamp: z.number(),
-	featureId: z.string(),
-	customerId: z.string(),
-	value: z.number(),
-	properties: z.record(z.string(), z.any()),
-	deductions: z.array(deductionsSchema).nullable(),
+    id: z.string(),
+    timestamp: z.number(),
+    featureId: z.string(),
+    customerId: z.string(),
+    value: z.number(),
+    properties: z.record(z.string(), z.any()),
+    deductions: z.array(deductionsSchema).nullable()
 });
 
 export const listEventsResponseSchema = z.object({
-	list: z.array(listEventsListSchema),
-	nextCursor: z.string().nullable(),
+    list: z.array(listEventsListSchema),
+    nextCursor: z.string().nullable()
 });

@@ -9,9 +9,10 @@ import {
 	RATE_LIMIT_CONFIGS,
 	type RateLimitConfig,
 	RateLimitScope,
-	type RateLimitType,
+	RateLimitType,
 	resolveRateLimit,
 } from "./rateLimitConfigs";
+import { getOrgRateLimitOverride } from "./rateLimitOverridesStore";
 
 // Helper to get rate limit key from context
 const getRateLimitKeyFromContext = (c: Context): string => {
@@ -37,14 +38,24 @@ const warnRateLimitBypass = () => {
 	);
 };
 
-export const rateLimitFactory = (
-	config: RateLimitConfig,
-): ReturnType<typeof rateLimiter> => {
+export const rateLimitFactory = ({
+	type,
+	config,
+}: {
+	type: RateLimitType;
+	config: RateLimitConfig;
+}): ReturnType<typeof rateLimiter> => {
 	const { windowMs, notInRedis } = config;
 
 	const dynamicLimit = (c: Context): number => {
 		const ctx = (c as Context<HonoEnv>).get("ctx");
 		const apiVersion = ctx?.apiVersion?.value as ApiVersion | undefined;
+		const orgId = ctx?.org?.id;
+		const orgSlug = ctx?.org?.slug;
+
+		const override = getOrgRateLimitOverride({ orgId, orgSlug, type });
+		if (override !== undefined) return override;
+
 		return resolveRateLimit({ config, apiVersion }).limit;
 	};
 
@@ -99,7 +110,7 @@ export const rateLimitFactory = (
 const limiters = Object.fromEntries(
 	Object.entries(RATE_LIMIT_CONFIGS).map(([type, config]) => [
 		type,
-		rateLimitFactory(config),
+		rateLimitFactory({ type: type as RateLimitType, config }),
 	]),
 ) as Record<RateLimitType, ReturnType<typeof rateLimiter>>;
 

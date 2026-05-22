@@ -1,0 +1,54 @@
+---
+title: "Redeem Reward Code"
+openapi: "openapi POST /v1/rewards.redeem"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="code" type="string" required>
+  The reward promo code to redeem
+</DynamicParamField>
+
+<DynamicParamField body="customer_id" type="string" required>
+  The unique identifier of the customer redeeming the code
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="reward_id" type="string">
+  The ID of the redeemed reward
+</DynamicResponseField>
+
+<DynamicResponseField name="entitlements_granted" type="object[]">
+  The feature balances granted to the customer
+  <Expandable title="properties">
+    <DynamicResponseField name="feature_id" type="string">
+      The ID of the feature granted by the reward
+    </DynamicResponseField>
+
+    <DynamicResponseField name="balance" type="number">
+      The balance granted for the feature
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "reward_id": "reward_789",
+  "entitlements_granted": [
+    {
+      "feature_id": "messages",
+      "balance": 100
+    }
+  ]
+}
+```
+</ResponseExample>

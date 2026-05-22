@@ -300,6 +300,10 @@ Use this to permanently remove a feature. Note: features that are used in produc
 * [create_code](docs/sdks/referrals/README.md#create_code) - Create or fetch a referral code for a customer in a referral program.
 * [redeem_code](docs/sdks/referrals/README.md#redeem_code) - Redeem a referral code for a customer.
 
+### [Rewards](docs/sdks/rewardssdk/README.md)
+
+* [redeem_code](docs/sdks/rewardssdk/README.md#redeem_code) - Redeem a reward promo code for a customer.
+
 </details>
 <!-- End Available Resources and Operations [operations] -->
 

@@ -1,6 +1,12 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "../../honoUtils/HonoEnv";
 import {
+	handleDeleteAdminCacheV2Ramp,
+	handleGetAdminCacheV2Ramp,
+	handleUpdateAdminCacheV2RampMigration,
+	handleUpsertAdminCacheV2Ramp,
+} from "./handleAdminCacheV2Ramp";
+import {
 	handleDeleteAdminOrgRedisConfig,
 	handleGetAdminOrgRedisConfig,
 	handleUpdateAdminOrgRedisMigration,
@@ -12,6 +18,7 @@ import { handleGetAdminFeatureFlagsConfig } from "./handleGetAdminFeatureFlagsCo
 import { handleGetAdminJobQueueConfig } from "./handleGetAdminJobQueueConfig";
 import { handleGetAdminMiscellaneousEdgeConfig } from "./handleGetAdminMiscellaneousEdgeConfig";
 import { handleGetAdminOrgLimitsConfig } from "./handleGetAdminOrgLimitsConfig";
+import { handleGetAdminRateLimitOverridesConfig } from "./handleGetAdminRateLimitOverridesConfig";
 import { handleGetAdminOrgRequestBlock } from "./handleGetAdminOrgRequestBlock";
 import { handleGetAdminRedisV2CacheConfig } from "./handleGetAdminRedisV2CacheConfig";
 import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
@@ -28,6 +35,7 @@ import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureF
 import { handleUpsertAdminJobQueueConfig } from "./handleUpsertAdminJobQueueConfig";
 import { handleUpsertAdminMiscellaneousEdgeConfig } from "./handleUpsertAdminMiscellaneousEdgeConfig";
 import { handleUpsertAdminOrgLimitsConfig } from "./handleUpsertAdminOrgLimitsConfig";
+import { handleUpsertAdminRateLimitOverridesConfig } from "./handleUpsertAdminRateLimitOverridesConfig";
 import { handleUpsertAdminOrgRequestBlock } from "./handleUpsertAdminOrgRequestBlock";
 import { handleUpsertAdminRedisV2CacheConfig } from "./handleUpsertAdminRedisV2CacheConfig";
 import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
@@ -98,6 +106,14 @@ honoAdminRouter.put(
 );
 honoAdminRouter.get("/org-limits-config", ...handleGetAdminOrgLimitsConfig);
 honoAdminRouter.put("/org-limits-config", ...handleUpsertAdminOrgLimitsConfig);
+honoAdminRouter.get(
+	"/rate-limit-overrides-config",
+	...handleGetAdminRateLimitOverridesConfig,
+);
+honoAdminRouter.put(
+	"/rate-limit-overrides-config",
+	...handleUpsertAdminRateLimitOverridesConfig,
+);
 honoAdminRouter.get("/job-queue-config", ...handleGetAdminJobQueueConfig);
 honoAdminRouter.put("/job-queue-config", ...handleUpsertAdminJobQueueConfig);
 honoAdminRouter.get("/stripe-sync-config", ...handleGetAdminStripeSyncConfig);
@@ -113,6 +129,13 @@ honoAdminRouter.put(
 	"/redis-v2-cache-config",
 	...handleUpsertAdminRedisV2CacheConfig,
 );
+honoAdminRouter.get("/cache-v2-ramp", ...handleGetAdminCacheV2Ramp);
+honoAdminRouter.patch("/cache-v2-ramp", ...handleUpsertAdminCacheV2Ramp);
+honoAdminRouter.patch(
+	"/cache-v2-ramp/migration",
+	...handleUpdateAdminCacheV2RampMigration,
+);
+honoAdminRouter.delete("/cache-v2-ramp", ...handleDeleteAdminCacheV2Ramp);
 honoAdminRouter.get("/org-member", ...handleGetOrgMember);
 honoAdminRouter.get("/master-stripe-account", ...handleGetMasterStripeAccount);
 honoAdminRouter.get("/oauth-clients", ...handleListOAuthClients);

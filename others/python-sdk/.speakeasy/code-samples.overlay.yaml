@@ -782,3 +782,21 @@ actions:
 
                 # Handle response
                 print(res)
+  - target: $["paths"]["/v1/rewards.redeem"]["post"]
+    update:
+      x-codeSamples:
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+
+            with Autumn(
+                x_api_version="2.3.0",
+                secret_key="<YOUR_BEARER_TOKEN_HERE>",
+            ) as autumn:
+
+                res = autumn.rewards.redeem_code(code="REWARD10", customer_id="cus_456")
+
+                # Handle response
+                print(res)
