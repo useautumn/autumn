@@ -100,6 +100,8 @@ class ListEntitiesParamsTypedDict(TypedDict):
     r"""Search entities by id or name."""
     processors: NotRequired[List[ListEntitiesProcessor]]
     r"""Filter by parent customer processor type (stripe, revenuecat, vercel)."""
+    customer_id: NotRequired[str]
+    r"""Restrict the response to entities owned by this customer id. Use to bulk-fetch all entities for one customer in a single paginated call instead of iterating entities.get."""
 
 
 class ListEntitiesParams(BaseModel):
@@ -121,6 +123,9 @@ class ListEntitiesParams(BaseModel):
     processors: Optional[List[ListEntitiesProcessor]] = None
     r"""Filter by parent customer processor type (stripe, revenuecat, vercel)."""
 
+    customer_id: Optional[str] = None
+    r"""Restrict the response to entities owned by this customer id. Use to bulk-fetch all entities for one customer in a single paginated call instead of iterating entities.get."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -131,6 +136,7 @@ class ListEntitiesParams(BaseModel):
                 "subscription_status",
                 "search",
                 "processors",
+                "customer_id",
             ]
         )
         serialized = handler(self)
