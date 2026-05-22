@@ -6,6 +6,7 @@ import { CacheV2RampDialog } from "./CacheV2RampDialog";
 import { CustomerBlockDialog } from "./CustomerBlockDialog";
 import { EdgeConfigDialog } from "./EdgeConfigDialog";
 import { FeatureFlagsDialog } from "./FeatureFlagsDialog";
+import { FullSubjectGateDialog } from "./FullSubjectGateDialog";
 import { JobQueuesDialog } from "./JobQueuesDialog";
 import { MiscellaneousEdgeConfigDialog } from "./MiscellaneousEdgeConfigDialog";
 import { OrgLimitsDialog } from "./OrgLimitsDialog";
@@ -37,6 +38,7 @@ export function EdgeConfigTab() {
 	const [redisV2CacheOpen, setRedisV2CacheOpen] = useState(false);
 	const [cacheV2RampOpen, setCacheV2RampOpen] = useState(false);
 	const [miscellaneousOpen, setMiscellaneousOpen] = useState(false);
+	const [fullSubjectGateOpen, setFullSubjectGateOpen] = useState(false);
 
 	const { data: source } = useQuery<EdgeConfigSource>({
 		queryKey: ["admin-edge-config-sources"],
@@ -271,6 +273,26 @@ export function EdgeConfigTab() {
 				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
 					<div className="flex flex-col gap-0.5">
 						<div className="text-sm font-medium text-foreground">
+							FullSubject Concurrency Gate
+						</div>
+						<div className="text-xs text-tertiary-foreground">
+							Per-customer + per-org caps on concurrent FullSubject DB
+							hydrations. 429s with rate_limit_exceeded when queues/waits
+							exceed thresholds.
+						</div>
+					</div>
+					<Button
+						variant="primary"
+						size="sm"
+						onClick={() => setFullSubjectGateOpen(true)}
+					>
+						Edit
+					</Button>
+				</div>
+
+				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
+					<div className="flex flex-col gap-0.5">
+						<div className="text-sm font-medium text-foreground">
 							Miscellaneous
 						</div>
 						<div className="text-xs text-tertiary-foreground">
@@ -338,6 +360,11 @@ export function EdgeConfigTab() {
 			<MiscellaneousEdgeConfigDialog
 				open={miscellaneousOpen}
 				onOpenChange={setMiscellaneousOpen}
+			/>
+
+			<FullSubjectGateDialog
+				open={fullSubjectGateOpen}
+				onOpenChange={setFullSubjectGateOpen}
 			/>
 		</div>
 	);
