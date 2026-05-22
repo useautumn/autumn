@@ -5,10 +5,8 @@ import {
 	type FullCusProduct,
 	featureUtils,
 	isBooleanCusEnt,
-	isConsumableCustomerEntitlement,
 	isEntityScopedCusEnt,
-	isOneOffCustomerEntitlement,
-	isPrepaidCustomerEntitlement,
+	isOneOffPrepaidConsumableCustomerEntitlement,
 	isUnlimitedCusEnt,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -48,11 +46,8 @@ export const cusProductToExistingUsages = ({
 			cusProduct,
 		});
 
-		const isOneOffPrepaidConsumable =
-			isPrepaidCustomerEntitlement(cusEntWithCusProduct) &&
-			isConsumableCustomerEntitlement(cusEntWithCusProduct) &&
-			isOneOffCustomerEntitlement(cusEntWithCusProduct);
-		if (isOneOffPrepaidConsumable) continue;
+		if (isOneOffPrepaidConsumableCustomerEntitlement(cusEntWithCusProduct))
+			continue;
 
 		const isAllocated = featureUtils.isAllocated(cusEnt.entitlement.feature);
 
