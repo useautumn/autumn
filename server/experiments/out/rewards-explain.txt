@@ -1,0 +1,15 @@
+Nested Loop Left Join  (cost=8463.99..169378.77 rows=20 width=474) (actual time=0.039..0.622 rows=27.00 loops=1)
+  Buffers: shared hit=926
+  ->  Index Scan Backward using coupons_pkey on rewards  (cost=0.28..104.12 rows=20 width=442) (actual time=0.020..0.568 rows=27.00 loops=1)
+        Filter: ((org_id = 'org_2x3YWDWucn3OSul12pIV6XrcXyo'::text) AND (env = 'live'::text))
+        Rows Removed by Filter: 1442
+        Index Searches: 1
+        Buffers: shared hit=898
+  ->  Aggregate  (cost=8463.71..8463.72 rows=1 width=32) (actual time=0.001..0.001 rows=1.00 loops=27)
+        Buffers: shared hit=28
+        ->  Index Scan using idx_entitlements_internal_reward_id_c_partial on entitlements rewards_entitlements  (cost=0.13..8409.56 rows=10830 width=359) (actual time=0.001..0.001 rows=0.04 loops=27)
+              Index Cond: (internal_reward_id = rewards.internal_id)
+              Index Searches: 27
+              Buffers: shared hit=28
+Planning Time: 0.111 ms
+Execution Time: 0.667 ms
