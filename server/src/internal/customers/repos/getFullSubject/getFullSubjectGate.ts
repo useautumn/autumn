@@ -138,12 +138,8 @@ export const runWithFullSubjectGate = async <T>({
 	} = getRuntimeFullSubjectGateConfig();
 	const enqueuedAt = Date.now();
 	const labels = attrs({ orgId, env });
-	startedCounter.add(1, labels);
 
 	const orgLimiter = getOrgLimiter({ orgId, env, limit: per_org_limit });
-	if (orgLimiter.pendingCount >= per_org_pending_max) {
-		rejectOverloaded({ reason: "per_org_queue_full", labels });
-	}
 
 	let customerLimiter: LimitFunction | undefined;
 	if (customerId) {
@@ -156,7 +152,11 @@ export const runWithFullSubjectGate = async <T>({
 		if (customerLimiter.pendingCount >= per_customer_pending_max) {
 			rejectOverloaded({ reason: "per_customer_queue_full", labels });
 		}
+	} else if (orgLimiter.pendingCount >= per_org_pending_max) {
+		rejectOverloaded({ reason: "per_org_queue_full", labels });
 	}
+
+	startedCounter.add(1, labels);
 
 	const execute = async (): Promise<T> => {
 		const waitMs = Date.now() - enqueuedAt;
@@ -182,7 +182,12 @@ export const runWithFullSubjectGate = async <T>({
 	};
 
 	if (customerLimiter) {
-		return customerLimiter(() => orgLimiter(execute));
+		return customerLimiter(() => {
+			if (orgLimiter.pendingCount >= per_org_pending_max) {
+				rejectOverloaded({ reason: "per_org_queue_full", labels });
+			}
+			return orgLimiter(execute);
+		});
 	}
 	return orgLimiter(execute);
 };
