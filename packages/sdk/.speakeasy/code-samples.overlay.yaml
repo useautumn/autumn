@@ -978,3 +978,26 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/rewards.redeem"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.rewards.redeemCode({
+                code: "REWARD10",
+                customerId: "cus_456",
+              });
+
+              console.log(result);
+            }
+
+            run();

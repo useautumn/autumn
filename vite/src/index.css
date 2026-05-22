@@ -3,6 +3,7 @@
 @import url("https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap");
 @import url("https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Ubuntu+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Rubik+Glitch&family=Nabla&family=Noto+Sans+Cuneiform&display=swap");
 
 @import "tailwindcss";
 @import "tailwind-scrollbar-hide/v4";
@@ -177,6 +178,72 @@ html {
 	--sidebar-border: oklch(0.274 0.006 286.033);
 	--sidebar-ring: oklch(0.442 0.017 285.786);
 	color-scheme: dark;
+}
+
+/* Midnight preset — deeper contrast */
+.preset-modern {
+	background-color: #ffffff;
+	--background: #ffffff;
+	--outer-background: #fafaf9;
+	--card: #fafaf9;
+}
+
+.preset-modern.dark {
+	--background: #0a0a0a;
+	--outer-background: #000000;
+	--interactive-secondary: #141414;
+	--interactive-secondary-hover: #1e1e1e;
+	--active-primary: #1e1e1e;
+	--input-background: #111111;
+	--muted: #111111;
+	--card: #050505;
+	--border: #1e1e1e;
+	--chart-grid-stroke: #1a1a1a;
+}
+
+.preset-modern.dark [data-slot="sheet-overlay"],
+.preset-modern.dark [data-slot="dialog-overlay"] {
+	background-color: rgb(0 0 0 / 0.6) !important;
+}
+
+/* Cursed preset — admin-only joke. Eldritch space font + hideous palette. */
+.preset-cursed {
+	font-family: "Rubik Glitch", "Nabla", "Noto Sans Cuneiform", "Comic Sans MS", cursive !important;
+	background-color: #ff00aa;
+	--background: #ff00aa;
+	--outer-background: #00ff88;
+	--foreground: #ffff00;
+	--muted-foreground: #00ffff;
+	--tertiary-foreground: #ff8800;
+	--primary: #00ff00;
+	--primary-foreground: #ff00ff;
+	--active-primary: #ffff00;
+	--hover-primary: #00ffff;
+	--interactive-secondary: #ff66cc;
+	--interactive-secondary-hover: #ccff00;
+	--card: #00ddff;
+	--border: #ff0000;
+	--input: #ff0000;
+	--input-background: #ffff00;
+	--muted: #ff66cc;
+	--destructive: #00ff00;
+	letter-spacing: 0.05em;
+}
+
+.preset-cursed.dark {
+	background-color: #2a0033;
+	--background: #2a0033;
+	--outer-background: #003322;
+	--foreground: #00ff88;
+	--muted-foreground: #ff66cc;
+	--card: #330044;
+	--border: #ff00ff;
+	--interactive-secondary: #220033;
+	--interactive-secondary-hover: #441166;
+}
+
+.preset-cursed * {
+	font-family: inherit !important;
 }
 
 @theme inline {

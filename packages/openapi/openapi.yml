@@ -7946,6 +7946,10 @@ paths:
         (Stripe checkout). For Stripe checkout, the customer_product is inserted
         before the customer completes the hosted form. (optional)
 
+        @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default
+        tax rate on the created subscription, invoice, or checkout session line
+        items. (optional)
+
 
         @returns A billing response with customer ID, invoice details, and
         payment URL (if checkout required).
@@ -8573,6 +8577,11 @@ paths:
                     payment is deferred (invoice mode) or pending (Stripe
                     checkout). For Stripe checkout, the customer_product is
                     inserted before the customer completes the hosted form.
+                tax_rate_id:
+                  type: string
+                  description: Stripe tax rate ID (txr_...) to apply as the default tax rate on
+                    the created subscription, invoice, or checkout session line
+                    items.
               required:
                 - customer_id
                 - plan_id
@@ -8669,7 +8678,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779274895233,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780484495233,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779292757190,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780502357190,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -10050,6 +10059,10 @@ paths:
         (Stripe checkout). For Stripe checkout, the customer_product is inserted
         before the customer completes the hosted form. (optional)
 
+        @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default
+        tax rate on the created subscription, invoice, or checkout session line
+        items. (optional)
+
 
         @returns A preview response with line items, totals, and effective dates
         for the proposed changes.
@@ -10677,6 +10690,11 @@ paths:
                     payment is deferred (invoice mode) or pending (Stripe
                     checkout). For Stripe checkout, the customer_product is
                     inserted before the customer completes the hosted form.
+                tax_rate_id:
+                  type: string
+                  description: Stripe tax rate ID (txr_...) to apply as the default tax rate on
+                    the created subscription, invoice, or checkout session line
+                    items.
               required:
                 - customer_id
                 - plan_id
@@ -14381,6 +14399,11 @@ paths:
                     payment is deferred (invoice mode) or pending (Stripe
                     checkout). For Stripe checkout, the customer_product is
                     inserted before the customer completes the hosted form.
+                tax_rate_id:
+                  type: string
+                  description: Stripe tax rate ID (txr_...) to apply as the default tax rate on
+                    the created subscription, invoice, or checkout session line
+                    items.
               required:
                 - customer_id
               title: SetupPaymentParams
@@ -19169,6 +19192,69 @@ paths:
                   - id: <string>
                     customer_id: <string>
                     reward_id: <string>
+      x-speakeasy-name-override: redeemCode
+      parameters:
+        - *a1
+  /v1/rewards.redeem:
+    post:
+      operationId: redeemRewardCode
+      description: Redeem a reward promo code for a customer.
+      tags:
+        - rewards
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: The reward promo code to redeem
+                customer_id:
+                  type: string
+                  description: The unique identifier of the customer redeeming the code
+              required:
+                - code
+                - customer_id
+              title: RedeemRewardCodeParams
+              examples:
+                - code: REWARD10
+                  customer_id: cus_456
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reward_id:
+                    type: string
+                    description: The ID of the redeemed reward
+                  entitlements_granted:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        feature_id:
+                          type: string
+                          description: The ID of the feature granted by the reward
+                        balance:
+                          type: number
+                          description: The balance granted for the feature
+                      required:
+                        - feature_id
+                        - balance
+                    description: The feature balances granted to the customer
+                required:
+                  - reward_id
+                  - entitlements_granted
+                examples:
+                  - reward_id: reward_789
+                    entitlements_granted:
+                      - feature_id: messages
+                        balance: 100
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a1

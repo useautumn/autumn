@@ -27,7 +27,10 @@ mock.module("@/external/logtail/logtailUtils.js", () => ({
 }));
 
 import { rateLimitFactory } from "@/internal/misc/rateLimiter/rateLimitFactory.js";
-import { RateLimitScope } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
+import {
+	RateLimitScope,
+	RateLimitType,
+} from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
 
 describe("rateLimitFactory", () => {
 	beforeEach(() => {
@@ -38,11 +41,14 @@ describe("rateLimitFactory", () => {
 	test("fails open and warns when Redis is unavailable", async () => {
 		let nextCalls = 0;
 		const middleware = rateLimitFactory({
-			name: "test",
-			limit: 5,
-			windowMs: 1000,
-			notInRedis: false,
-			scope: RateLimitScope.Org,
+			type: RateLimitType.General,
+			config: {
+				name: "test",
+				limit: 5,
+				windowMs: 1000,
+				notInRedis: false,
+				scope: RateLimitScope.Org,
+			},
 		});
 
 		await middleware({} as never, async () => {

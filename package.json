@@ -160,6 +160,7 @@
 		"@biomejs/biome": "2.2.2",
 		"@trigger.dev/build": "4.4.6",
 		"@types/node": "^24.9.1",
+		"ajv": "8.20.0",
 		"concurrently": "^9.2.1",
 		"dotenv": "^16.6.1",
 		"husky": "^9.1.7",

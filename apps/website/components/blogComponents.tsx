@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ComponentPropsWithoutRef, ElementType, ReactNode } from "react";
+import { Expand } from "./blogExpand";
 
 function BlogHeading({
 	as: Tag,
@@ -107,4 +108,5 @@ export const mdxComponents = {
 			{children}
 		</td>
 	),
+	Expand,
 };

@@ -6,6 +6,7 @@ import {
 	CoinVerticalIcon,
 	CubeIcon,
 	DatabaseIcon,
+	GearIcon,
 	UsersIcon,
 	LegoIcon,
 	OptionIcon,
@@ -230,17 +231,23 @@ export const MainSidebar = ({
 							title="Analytics"
 							env={env}
 						/>
-						{canSeeDev && (
-							<CollapsibleNavGroup
-								value="dev"
-								icon={<TerminalWindowIcon size={16} weight="fill" />}
-								title="Developer"
-								env={env}
-								isOpen={devGroupOpen}
-								onToggle={() => setDevGroupOpen((prev) => !prev)}
-								subTabs={buildDevSubTabs({ flags, isAdmin })}
-							/>
-						)}
+					{canSeeDev && (
+						<CollapsibleNavGroup
+							value="dev"
+							icon={<TerminalWindowIcon size={16} weight="fill" />}
+							title="Developer"
+							env={env}
+							isOpen={devGroupOpen}
+							onToggle={() => setDevGroupOpen((prev) => !prev)}
+							subTabs={buildDevSubTabs({ flags, isAdmin })}
+						/>
+					)}
+					<NavButton
+						value="settings"
+						icon={<GearIcon size={16} weight="fill" />}
+						title="Settings"
+						env={env}
+					/>
 					</div>
 				</div>
 
