@@ -91,16 +91,21 @@ export const useCusQuery = ({
 	// (which historically read `customer.schedule` and `entity.schedule`) keep
 	// working without having to plumb a second data source through every caller.
 	const customerWithSchedules = useMemo(() => {
-		if (!fetchSchedule || !customer) return customer;
+		if (!customer) return customer;
+		// Normalize entities to an array so every consumer can rely on .length / .find / .map.
+		const baseEntities = (customer as any).entities ?? [];
+		if (!fetchSchedule) {
+			return { ...customer, entities: baseEntities };
+		}
 		const entitySchedules = scheduleData?.entity_schedules ?? {};
-		const entities = (customer as any).entities?.map((entity: any) => ({
+		const entities = baseEntities.map((entity: any) => ({
 			...entity,
 			schedule: entitySchedules[entity.internal_id] ?? undefined,
 		}));
 		return {
 			...customer,
 			schedule: scheduleData?.schedule ?? undefined,
-			...(entities ? { entities } : {}),
+			entities,
 		};
 	}, [customer, scheduleData, fetchSchedule]);
 

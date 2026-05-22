@@ -9,6 +9,7 @@ import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
+import { useViewAsStore } from "@/hooks/stores/useViewAsStore";
 import { useEnv } from "@/utils/envUtils";
 import { useFullCusSearchQuery } from "@/views/customers/hooks/useFullCusSearchQuery";
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
@@ -70,7 +71,8 @@ export function CustomerProductsTable() {
 		subscriptions,
 		hasEntities,
 		purchases,
-		testClockFrozenTimeMs,
+		nowMs,
+		isViewAs,
 	} = useCustomerProductsData();
 
 	const { setEntityId } = useEntity();
@@ -80,6 +82,7 @@ export function CustomerProductsTable() {
 	);
 	const selectedItemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
+	const setViewAs = useViewAsStore((s) => s.setViewAs);
 
 	useSavedViewsQuery();
 	useFullCusSearchQuery();
@@ -123,6 +126,16 @@ export function CustomerProductsTable() {
 		setSheet({ type: "subscription-update", itemId: product.id });
 	};
 
+	const handleViewAsClick = (product: FullCusProduct) => {
+		// Anchor at starts_at so the pinned product always wins its own filter, even
+		// when starts_at and ended_at are within the same millisecond (rapid upgrade).
+		const realNow = Date.now();
+		const asOfMs = product.starts_at ?? product.canceled_at ?? realNow;
+		const pinnedEntityId =
+			product.entity_id ?? product.internal_entity_id ?? null;
+		setViewAs({ cusProductId: product.id, asOfMs, entityId: pinnedEntityId });
+	};
+
 	const handleRowClick = (cusProduct: FullCusProduct) => {
 		setSheet({
 			type: "subscription-detail",
@@ -135,8 +148,10 @@ export function CustomerProductsTable() {
 		onUncancelClick: handleUncancelClick,
 		onTransferClick: handleTransferClick,
 		onUpdateClick: handleUpdateClick,
+		onViewAsClick: handleViewAsClick,
 		hasEntities,
-		nowMs: testClockFrozenTimeMs,
+		nowMs,
+		isViewAs,
 	};
 
 	const subscriptionTable = useCustomerTable({
@@ -215,11 +230,15 @@ export function CustomerProductsTable() {
 							Plans
 						</Table.Heading>
 						<Table.Actions>
-							<ShowExpiredActionButton
-								showExpired={showExpired}
-								setShowExpired={setShowExpired}
-							/>
-							<AttachProductSheetTrigger />
+							{!isViewAs && (
+								<>
+									<ShowExpiredActionButton
+										showExpired={showExpired}
+										setShowExpired={setShowExpired}
+									/>
+									<AttachProductSheetTrigger />
+								</>
+							)}
 						</Table.Actions>
 					</Table.Toolbar>
 					{hasPurchases && <SectionTag>Subscriptions</SectionTag>}

@@ -16,6 +16,7 @@ import {
 import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
+import { useViewAsStore } from "@/hooks/stores/useViewAsStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
@@ -31,12 +32,15 @@ import { CustomerPlansSection } from "../components/CustomerPlansSection";
 import { CustomerFeatureUsageTable } from "../components/table/customer-feature-usage/CustomerFeatureUsageTable";
 import { CustomerInvoicesTable } from "../components/table/customer-invoices/CustomerInvoicesTable";
 import { CustomerUsageAnalyticsTable } from "../components/table/customer-usage-analytics/CustomerUsageAnalyticsTable";
+import { useIsViewingAsPast } from "../hooks/useEffectiveNow";
+import { useViewAsLifecycle } from "../hooks/useViewAsLifecycle";
 import { CustomerBreadcrumbs } from "./CustomerBreadcrumbs2";
 import { CustomerContext } from "./CustomerContext";
 import { CustomerPageDetails } from "./CustomerPageDetails";
 import { CustomerSheets } from "./CustomerSheets";
 import { SelectedEntityDetails } from "./components/SelectedEntityDetails";
 import { SHEET_ANIMATION } from "./customerAnimations";
+import { ViewAsBanner } from "./ViewAsBanner";
 import { Workbench } from "./workbench/Workbench";
 
 export default function CustomerView2() {
@@ -55,6 +59,10 @@ export default function CustomerView2() {
 	const closeProductSheet = useSheetStore((s) => s.closeSheet);
 	const isMobile = useIsMobile();
 	const [isInlineEditorOpen, setIsInlineEditorOpen] = useState(false);
+
+	const isViewAs = useIsViewingAsPast();
+	const asOfMs = useViewAsStore((s) => s.asOfMs);
+	useViewAsLifecycle(customer?.id);
 
 	const env = useEnv();
 	const { isDismissed } = useOnboardingVisibility();
@@ -90,6 +98,8 @@ export default function CustomerView2() {
 				setEntityId,
 				isInlineEditorOpen,
 				setIsInlineEditorOpen,
+				isViewAs,
+				asOfMs,
 			}}
 		>
 			<div className="flex w-full h-full overflow-hidden relative">
@@ -112,6 +122,7 @@ export default function CustomerView2() {
 								showOnboarding ? "pt-4" : "pt-4 sm:pt-8",
 							)}
 						>
+							<ViewAsBanner />
 							<div className="flex flex-col gap-2 w-full">
 								<div className="flex flex-col w-full">
 									<div className="flex items-center justify-between w-full gap-4">

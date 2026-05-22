@@ -1,9 +1,14 @@
-import { type FullCusProduct, isCustomerProductTrialing } from "@autumn/shared";
+import {
+	CusProductStatus,
+	type FullCusProduct,
+	isCustomerProductTrialing,
+} from "@autumn/shared";
 import { FlaskIcon, PencilIcon } from "@phosphor-icons/react";
 import type { Row, Table } from "@tanstack/react-table";
-import { ArrowRightLeft, Delete, RotateCcw } from "lucide-react";
+import { ArrowRightLeft, Clock, Delete, RotateCcw } from "lucide-react";
 import { TableDropdownMenuCell } from "@/components/general/table/table-dropdown-menu-cell";
 import { DropdownMenuItem } from "@/components/v2/dropdowns/DropdownMenu";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
 import { AdminHover } from "../../../../../components/general/AdminHover";
 import { getCusProductHoverTexts } from "../../../../admin/adminUtils";
@@ -82,22 +87,44 @@ export const CustomerProductsColumns = [
 			row: Row<FullCusProduct>;
 			table: Table<FullCusProduct>;
 		}) => {
+			const { isAdmin, isPending: isAdminPending } = useAdmin();
 			const meta = table.options.meta as {
 				onCancelClick?: (product: FullCusProduct) => void;
 				onUpdateClick?: (product: FullCusProduct) => void;
 				onUncancelClick?: (product: FullCusProduct) => void;
 				onTransferClick?: (product: FullCusProduct) => void;
 				onTestSheetClick?: (product: FullCusProduct) => void;
+				onViewAsClick?: (product: FullCusProduct) => void;
 				hasEntities?: boolean;
+				isViewAs?: boolean;
 			};
 
 			if (!meta?.onCancelClick) return null;
 
 			const isCanceling = row.original.canceled;
+			const isMain = !row.original.product?.is_add_on;
+			const isExpired = row.original.status === CusProductStatus.Expired;
+			const canViewAs =
+				isMain && (isExpired || isCanceling) && isAdmin && !isAdminPending;
+			const disabledByViewAs = meta.isViewAs === true;
+			// Avoid passing `disabled={false}` to Radix items; only set the prop
+			// when actually disabling so unrelated rerenders behave like before.
+			const disabledProps = disabledByViewAs ? { disabled: true } : {};
 
 			return (
 				<div className="flex justify-end">
 					<TableDropdownMenuCell>
+						{canViewAs && meta.onViewAsClick && (
+							<DropdownMenuItem
+								className="flex items-center gap-2 text-xs"
+								onClick={(e) => {
+									e.stopPropagation();
+									meta.onViewAsClick?.(row.original);
+								}}
+							>
+								<Clock size={16} /> View customer at expiration
+							</DropdownMenuItem>
+						)}
 						{meta.onTestSheetClick && (
 							<DropdownMenuItem
 								className="flex items-center gap-2 text-xs"
@@ -112,6 +139,7 @@ export const CustomerProductsColumns = [
 						{meta.hasEntities && meta.onTransferClick && (
 							<DropdownMenuItem
 								className="flex items-center gap-2 text-xs"
+								{...disabledProps}
 								onClick={(e) => {
 									e.stopPropagation();
 									meta.onTransferClick?.(row.original);
@@ -123,6 +151,7 @@ export const CustomerProductsColumns = [
 						{meta.onUpdateClick && (
 							<DropdownMenuItem
 								className="flex items-center gap-2 text-xs"
+								{...disabledProps}
 								onClick={(e) => {
 									e.stopPropagation();
 									meta.onUpdateClick?.(row.original);
@@ -134,6 +163,7 @@ export const CustomerProductsColumns = [
 						{isCanceling ? (
 							<DropdownMenuItem
 								className="flex items-center gap-2 text-xs"
+								{...disabledProps}
 								onClick={(e) => {
 									e.stopPropagation();
 									meta.onUncancelClick?.(row.original);
@@ -144,6 +174,7 @@ export const CustomerProductsColumns = [
 						) : (
 							<DropdownMenuItem
 								className="flex items-center gap-2 text-xs text-red-500 dark:text-red-400"
+								{...disabledProps}
 								onClick={(e) => {
 									e.stopPropagation();
 									meta.onCancelClick?.(row.original);

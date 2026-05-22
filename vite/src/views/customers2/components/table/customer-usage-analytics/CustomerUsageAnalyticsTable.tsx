@@ -11,6 +11,7 @@ import { useCusEventsQuery } from "@/views/customers/customer/hooks/useCusEvents
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { useCustomerTimeseriesEvents } from "@/views/customers2/hooks/useCustomerTimeseriesEvents";
+import { useIsViewingAsPast } from "@/views/customers2/hooks/useEffectiveNow";
 import { EmptyState } from "../EmptyState";
 import { CustomerUsageAnalyticsChart } from "./CustomerUsageAnalyticsChart";
 import {
@@ -25,6 +26,7 @@ import { EventDetailsDialog } from "./EventDetailsDialog";
 export function CustomerUsageAnalyticsTable() {
 	const env = useEnv();
 	const { customer } = useCustomerContext();
+	const isViewAs = useIsViewingAsPast();
 	const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
 	const [eventDialogOpen, setEventDialogOpen] = useState(false);
 
@@ -58,13 +60,16 @@ export function CustomerUsageAnalyticsTable() {
 	// have fully settled (including background revalidations) to avoid firing with
 	// stale cached event names from a previously viewed customer.
 	// Pass the external customer ID since events are keyed by that.
-	const { timeseriesEvents, totals, isLoading: timeseriesLoading } =
-		useCustomerTimeseriesEvents({
-			interval,
-			eventNames: customerEventNames,
-			enabled: !rawEventsFetching,
-			customerId: customer.id ?? undefined,
-		});
+	const {
+		timeseriesEvents,
+		totals,
+		isLoading: timeseriesLoading,
+	} = useCustomerTimeseriesEvents({
+		interval,
+		eventNames: customerEventNames,
+		enabled: !rawEventsFetching && !isViewAs,
+		customerId: customer.id ?? undefined,
+	});
 
 	const isLoading = rawEventsLoading || rawEventsFetching || timeseriesLoading;
 	// Synced loading state for the layout — excludes background refetches to avoid disruption
@@ -101,6 +106,23 @@ export function CustomerUsageAnalyticsTable() {
 
 	const hasEvents = rawEvents?.length > 0;
 
+	if (isViewAs) {
+		return (
+			<div className="flex flex-col">
+				<div className="flex items-center gap-2 py-2 px-1 text-t2 text-sm">
+					<ChartBarIcon size={16} weight="fill" className="text-subtle" />
+					Usage
+				</div>
+				<div className="w-full h-[250px] rounded-lg bg-interactive-secondary">
+					<EmptyState
+						className="h-full"
+						text="Analytics unavailable in this view"
+					/>
+				</div>
+			</div>
+		);
+	}
+
 	return (
 		<>
 			<EventDetailsDialog
@@ -121,12 +143,12 @@ export function CustomerUsageAnalyticsTable() {
 					enableColumnVisibility: true,
 					columnVisibilityStorageKey: "customer-usage-analytics",
 					columnVisibilityClassName: "right-3",
-				virtualization: {
-					containerHeight: "250px",
-					rowHeight: 32,
-					overscan: 15,
-					fixedHeight: true,
-				},
+					virtualization: {
+						containerHeight: "250px",
+						rowHeight: 32,
+						overscan: 15,
+						fixedHeight: true,
+					},
 				}}
 			>
 				<Table.Container>
@@ -143,75 +165,78 @@ export function CustomerUsageAnalyticsTable() {
 							<CustomerUsageAnalyticsFullButton />
 						</Table.Actions>
 					</Table.Toolbar>
-				<div className="flex flex-col lg:flex-row w-full gap-4 lg:gap-2">
-					{isSyncedLoading ? (
-						<>
-							<div className="w-full lg:max-w-1/2 h-[250px]">
-								<EmptyState
-									className="h-full"
-									text={<LoadingShimmerText text="Loading events" />}
-								/>
-							</div>
-							<div className="flex lg:max-w-1/2 w-full min-w-0 h-[250px]">
-								<CustomerUsageAnalyticsChart isLoading={true} daysToShow={selectedDays ?? 7} />
-							</div>
-						</>
-					) : hasEvents ? (
-						<>
-							<div className="w-full lg:max-w-1/2 h-[250px]">
-								<Table.VirtualizedContent className="rounded-lg w-full h-full bg-interactive-secondary">
-									<Table.VirtualizedBody />
-								</Table.VirtualizedContent>
-							</div>
+					<div className="flex flex-col lg:flex-row w-full gap-4 lg:gap-2">
+						{isSyncedLoading ? (
+							<>
+								<div className="w-full lg:max-w-1/2 h-[250px]">
+									<EmptyState
+										className="h-full"
+										text={<LoadingShimmerText text="Loading events" />}
+									/>
+								</div>
+								<div className="flex lg:max-w-1/2 w-full min-w-0 h-[250px]">
+									<CustomerUsageAnalyticsChart
+										isLoading={true}
+										daysToShow={selectedDays ?? 7}
+									/>
+								</div>
+							</>
+						) : hasEvents ? (
+							<>
+								<div className="w-full lg:max-w-1/2 h-[250px]">
+									<Table.VirtualizedContent className="rounded-lg w-full h-full bg-interactive-secondary">
+										<Table.VirtualizedBody />
+									</Table.VirtualizedContent>
+								</div>
 
-							<div className="flex lg:max-w-1/2 w-full min-w-0 h-[250px]">
-								<CustomerUsageAnalyticsChart
-									timeseriesEvents={timeseriesEvents}
-									totals={totals}
-									daysToShow={selectedDays ?? 7}
-								/>
-							</div>
-						</>
-					) : (
-						<>
-						<div className="w-full lg:max-w-1/2 min-w-0 h-[250px]">
-							<EmptyState
-								className="h-full"
-								text={
-									<>
-										Track an event to display feature usage
-											{env === AppEnv.Sandbox && (
-												<IconButton
-													variant="muted"
-													size="sm"
-													iconOrientation="right"
-													icon={
-														<ArrowSquareOutIcon
-															size={16}
-															className="-translate-y-px"
-														/>
-													}
-													className="px-1! ml-2"
-													onClick={() =>
-														window.open(
-															"https://docs.useautumn.com/documentation/getting-started/gating",
-															"_blank",
-														)
-													}
-												>
-													Docs
-												</IconButton>
-											)}
-										</>
-									}
-								/>
-							</div>
-							<div className="flex lg:max-w-1/2 w-full min-w-0 h-[250px]">
-								<CustomerUsageAnalyticsChart daysToShow={selectedDays ?? 7} />
-							</div>
-						</>
-					)}
-				</div>
+								<div className="flex lg:max-w-1/2 w-full min-w-0 h-[250px]">
+									<CustomerUsageAnalyticsChart
+										timeseriesEvents={timeseriesEvents}
+										totals={totals}
+										daysToShow={selectedDays ?? 7}
+									/>
+								</div>
+							</>
+						) : (
+							<>
+								<div className="w-full lg:max-w-1/2 min-w-0 h-[250px]">
+									<EmptyState
+										className="h-full"
+										text={
+											<>
+												Track an event to display feature usage
+												{env === AppEnv.Sandbox && (
+													<IconButton
+														variant="muted"
+														size="sm"
+														iconOrientation="right"
+														icon={
+															<ArrowSquareOutIcon
+																size={16}
+																className="-translate-y-px"
+															/>
+														}
+														className="px-1! ml-2"
+														onClick={() =>
+															window.open(
+																"https://docs.useautumn.com/documentation/getting-started/gating",
+																"_blank",
+															)
+														}
+													>
+														Docs
+													</IconButton>
+												)}
+											</>
+										}
+									/>
+								</div>
+								<div className="flex lg:max-w-1/2 w-full min-w-0 h-[250px]">
+									<CustomerUsageAnalyticsChart daysToShow={selectedDays ?? 7} />
+								</div>
+							</>
+						)}
+					</div>
 				</Table.Container>
 			</Table.Provider>
 		</>

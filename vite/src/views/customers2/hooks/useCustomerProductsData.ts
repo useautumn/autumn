@@ -1,9 +1,19 @@
 import type { Entity, FullCusProduct } from "@autumn/shared";
 import { parseAsBoolean, useQueryState } from "nuqs";
 import { useMemo } from "react";
-import { useEntity } from "@/hooks/stores/useSubscriptionStore";
+import { useViewAsStore } from "@/hooks/stores/useViewAsStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { filterCustomerProductsByType } from "../components/table/customer-products/customerProductsTableFilters";
+import {
+	filterAndRewriteAsLiveAt,
+	filterEntitiesVisibleAt,
+	withEffectiveCustomerProductStatus,
+} from "../utils/effectiveCustomerProductStatus";
+import {
+	useEffectiveEntityId,
+	useEffectiveNow,
+	useIsViewingAsPast,
+} from "./useEffectiveNow";
 
 function filterBySelectedEntity({
 	products,
@@ -31,30 +41,59 @@ function filterBySelectedEntity({
 
 export function useCustomerProductsData() {
 	const { customer, isLoading, testClockFrozenTimeMs } = useCusQuery();
-	const { entityId } = useEntity();
+	const entityId = useEffectiveEntityId();
 	const [showExpired, setShowExpired] = useQueryState(
 		"customerProductsShowExpired",
 		parseAsBoolean.withDefault(false),
 	);
+	const nowMs = useEffectiveNow();
+	const isViewAs = useIsViewingAsPast();
+	const pinnedCusProductId = useViewAsStore((s) => s.cusProductId);
+	const pinnedEntityId = useViewAsStore((s) => s.entityId);
+
+	const visibleEntities = useMemo(() => {
+		const entities: Entity[] = customer?.entities ?? [];
+		if (!isViewAs) return entities;
+		return filterEntitiesVisibleAt({
+			entities,
+			nowMs,
+			pinnedEntityId,
+		});
+	}, [customer?.entities, isViewAs, nowMs, pinnedEntityId]);
+
+	const customerWithEffectiveStatuses = useMemo(() => {
+		const effective = (customer?.customer_products ?? []).map(
+			(customerProduct: FullCusProduct) =>
+				withEffectiveCustomerProductStatus({ customerProduct, nowMs }),
+		);
+		const filtered = isViewAs
+			? filterAndRewriteAsLiveAt({
+					customerProducts: effective,
+					nowMs,
+					pinnedCusProductId,
+				})
+			: effective;
+		return { ...customer, customer_products: filtered };
+	}, [customer, nowMs, isViewAs, pinnedCusProductId]);
 
 	const { subscriptions, purchases } = useMemo(
 		() =>
 			filterCustomerProductsByType({
-				customer,
-				showExpired: showExpired ?? false,
+				customer: customerWithEffectiveStatuses,
+				// In view-as mode the upstream filter is authoritative; let everything through.
+				showExpired: isViewAs ? true : (showExpired ?? false),
 			}),
-		[customer, showExpired],
+		[customerWithEffectiveStatuses, showExpired, isViewAs],
 	);
 
-	// Filter entity-level products by selected entity (if any)
 	const filteredSubscriptionsEntityLevel = useMemo(
 		() =>
 			filterBySelectedEntity({
 				products: subscriptions.entityLevel,
 				entityId,
-				entities: customer.entities,
+				entities: visibleEntities,
 			}),
-		[subscriptions.entityLevel, entityId, customer.entities],
+		[subscriptions.entityLevel, entityId, visibleEntities],
 	);
 
 	const filteredPurchasesEntityLevel = useMemo(
@@ -62,12 +101,11 @@ export function useCustomerProductsData() {
 			filterBySelectedEntity({
 				products: purchases.entityLevel,
 				entityId,
-				entities: customer.entities,
+				entities: visibleEntities,
 			}),
-		[purchases.entityLevel, entityId, customer.entities],
+		[purchases.entityLevel, entityId, visibleEntities],
 	);
 
-	// Combine customer-level (always shown) + filtered entity-level products
 	const allSubscriptions = useMemo(
 		() => [...subscriptions.customerLevel, ...filteredSubscriptionsEntityLevel],
 		[subscriptions.customerLevel, filteredSubscriptionsEntityLevel],
@@ -82,10 +120,12 @@ export function useCustomerProductsData() {
 		customer,
 		isLoading,
 		testClockFrozenTimeMs,
+		nowMs,
+		isViewAs,
 		showExpired,
 		setShowExpired,
 		entityId,
-		hasEntities: customer.entities.length > 0,
+		hasEntities: visibleEntities.length > 0,
 		subscriptions: {
 			all: allSubscriptions,
 			hasEntityProducts: subscriptions.entityLevel.length > 0,

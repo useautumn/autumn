@@ -44,6 +44,11 @@ import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
 import { useEnv } from "@/utils/envUtils";
 import { getStripeSubLink } from "@/utils/linkUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import {
+	useEffectiveNow,
+	useIsViewingAsPast,
+} from "@/views/customers2/hooks/useEffectiveNow";
+import { rewriteCusProductAsLiveAt } from "@/views/customers2/utils/effectiveCustomerProductStatus";
 import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/BasePriceDisplay";
 import { PlanFeatureRow } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
@@ -118,19 +123,27 @@ function SubscriptionDetailItems({
 }
 
 export function SubscriptionDetailSheet() {
-	const { customer, testClockFrozenTimeMs } = useCusQuery();
+	const { customer } = useCusQuery();
 	const { stripeAccount } = useOrgStripeQuery();
 	const env = useEnv();
 	const itemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
 	// Get customer product and productV2 by itemId
-	const { cusProduct, productV2 } = useSubscriptionById({ itemId });
+	const { cusProduct: rawCusProduct, productV2 } = useSubscriptionById({
+		itemId,
+	});
 	const { getDiscountsForSubscription } = useCusRewardsQuery();
 
 	// Prefetch product version data so the update sheet has it cached immediately
 	useProductVersionQuery({ productId: productV2?.id });
 
-	const nowMs = testClockFrozenTimeMs ?? Date.now();
+	const nowMs = useEffectiveNow();
+	const isViewAs = useIsViewingAsPast();
+	// In view-as mode, render the product as it was at nowMs (clear Expired + pre-nowMs cancel).
+	const cusProduct =
+		isViewAs && rawCusProduct
+			? rewriteCusProductAsLiveAt(rawCusProduct, nowMs)
+			: rawCusProduct;
 	const isExpired = cusProduct?.status === CusProductStatus.Expired;
 	const isCanceled = cusProduct?.canceled;
 	const isOneOff = cp(cusProduct).oneOff().valid;
@@ -377,6 +390,7 @@ export function SubscriptionDetailSheet() {
 							<Button
 								variant="secondary"
 								className="flex-1"
+								disabled={isViewAs}
 								onClick={() =>
 									setSheet({ type: "subscription-uncancel", itemId })
 								}
@@ -387,6 +401,7 @@ export function SubscriptionDetailSheet() {
 							<Button
 								variant="secondary"
 								className="flex-1"
+								disabled={isViewAs}
 								onClick={() =>
 									setSheet({ type: "subscription-cancel", itemId })
 								}
@@ -398,6 +413,7 @@ export function SubscriptionDetailSheet() {
 						<Button
 							variant="primary"
 							className="flex-1"
+							disabled={isViewAs}
 							onClick={handleUpdateSubscription}
 						>
 							Update Subscription
