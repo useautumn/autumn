@@ -11,11 +11,16 @@ export const hasEntityListFilters = ({
 	plans,
 	processors,
 	search,
-}: Pick<ListEntitiesParams, "plans" | "processors" | "search">) => {
+	customer_id,
+}: Pick<
+	ListEntitiesParams,
+	"plans" | "processors" | "search" | "customer_id"
+>) => {
 	return Boolean(
 		(plans && plans.length > 0) ||
 			(processors && processors.length > 0) ||
-			search?.trim(),
+			search?.trim() ||
+			customer_id?.trim(),
 	);
 };
 
@@ -23,11 +28,20 @@ const getEntityListFilterSql = ({
 	plans,
 	processors,
 	search,
+	customer_id,
 	inStatuses,
-}: Pick<ListEntitiesParams, "plans" | "processors" | "search"> & {
+}: Pick<
+	ListEntitiesParams,
+	"plans" | "processors" | "search" | "customer_id"
+> & {
 	inStatuses: CusProductStatus[];
 }) => {
 	const filters: SQL[] = [];
+
+	const trimmedCustomerId = customer_id?.trim();
+	if (trimmedCustomerId) {
+		filters.push(sql`AND c.id = ${trimmedCustomerId}`);
+	}
 
 	if (plans && plans.length > 0) {
 		const planConditions = plans.map((plan) => {
@@ -127,6 +141,7 @@ export const getPaginatedEntitySubjectsQuery = ({
 		plans: query.plans,
 		processors: query.processors,
 		search: query.search,
+		customer_id: query.customer_id,
 		inStatuses,
 	});
 
@@ -196,7 +211,10 @@ export const countFilteredEntitiesByOrgIdAndEnv = async ({
 	inStatuses,
 }: {
 	ctx: AutumnContext;
-	query: Pick<ListEntitiesParams, "plans" | "processors" | "search">;
+	query: Pick<
+		ListEntitiesParams,
+		"plans" | "processors" | "search" | "customer_id"
+	>;
 	inStatuses: CusProductStatus[];
 }) => {
 	if (!hasEntityListFilters(query)) {
@@ -209,6 +227,7 @@ export const countFilteredEntitiesByOrgIdAndEnv = async ({
 			plans: query.plans,
 			processors: query.processors,
 			search: query.search,
+			customer_id: query.customer_id,
 			inStatuses,
 		}),
 	});
