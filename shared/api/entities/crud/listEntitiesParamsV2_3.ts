@@ -1,7 +1,7 @@
 import { z } from "zod/v4";
 import {
-	createCursorLimitSchema,
 	CursorRequestFieldSchema,
+	createCursorLimitSchema,
 	PaginationDefaults,
 } from "../../common/cursorPaginationSchemas.js";
 
@@ -40,6 +40,11 @@ export const ListEntitiesV2_3ParamsSchema = z.object({
 			description:
 				"Filter by parent customer processor type (stripe, revenuecat, vercel).",
 		}),
+
+	customer_id: z.string().trim().min(1).optional().meta({
+		description:
+			"Restrict the response to entities owned by this customer id. Use to bulk-fetch all entities for one customer in a single paginated call instead of iterating entities.get.",
+	}),
 });
 
 export type ListEntitiesV2_3Params = z.infer<
