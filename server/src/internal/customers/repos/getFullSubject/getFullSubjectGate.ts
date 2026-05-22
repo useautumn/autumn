@@ -1,4 +1,5 @@
 import type { AppEnv } from "@autumn/shared";
+import { RecaseError } from "@autumn/shared";
 import { metrics } from "@opentelemetry/api";
 import { LRUCache } from "lru-cache";
 import pLimit, { type LimitFunction } from "p-limit";
@@ -28,7 +29,8 @@ const getOrUpdateLimiter = (
 ): LimitFunction => {
 	const existing = cache.get(key);
 	if (existing) {
-		if (existing.concurrency !== concurrency) existing.concurrency = concurrency;
+		if (existing.concurrency !== concurrency)
+			existing.concurrency = concurrency;
 		return existing;
 	}
 	const limiter = pLimit(concurrency);
@@ -47,7 +49,11 @@ const getCustomerLimiter = ({
 	customerId: string;
 	limit: number;
 }): LimitFunction =>
-	getOrUpdateLimiter(perCustomerLimiters, `${orgId}:${env}:${customerId}`, limit);
+	getOrUpdateLimiter(
+		perCustomerLimiters,
+		`${orgId}:${env}:${customerId}`,
+		limit,
+	);
 
 const getOrgLimiter = ({
 	orgId,
@@ -83,11 +89,32 @@ const activeCounter = meter.createUpDownCounter(
 	"autumn.full_subject.gate.active",
 	{ description: "FullSubject hydrations currently executing" },
 );
+const rejectedCounter = meter.createCounter(
+	"autumn.full_subject.gate.rejected",
+	{ description: "FullSubject hydrations rejected (queue full or timed out)" },
+);
 
 const attrs = ({ orgId, env }: { orgId: string; env: AppEnv }) => ({
 	org_id: orgId,
 	env,
 });
+
+const rejectOverloaded = ({
+	reason,
+	labels,
+}: {
+	reason: string;
+	labels: Record<string, string>;
+}): never => {
+	rejectedCounter.add(1, { ...labels, reason });
+	throw new RecaseError({
+		message:
+			"Too many concurrent requests for this customer. Please retry shortly.",
+		code: "rate_limit_exceeded",
+		statusCode: 429,
+		data: { reason },
+	});
+};
 
 export const runWithFullSubjectGate = async <T>({
 	customerId,
@@ -102,15 +129,41 @@ export const runWithFullSubjectGate = async <T>({
 	logger?: Logger;
 	queryFn: () => Promise<T>;
 }): Promise<T> => {
-	const { per_customer_limit, per_org_limit } =
-		getRuntimeFullSubjectGateConfig();
+	const {
+		per_customer_limit,
+		per_org_limit,
+		max_wait_ms,
+		per_customer_pending_max,
+		per_org_pending_max,
+	} = getRuntimeFullSubjectGateConfig();
 	const enqueuedAt = Date.now();
 	const labels = attrs({ orgId, env });
 	startedCounter.add(1, labels);
 
+	const orgLimiter = getOrgLimiter({ orgId, env, limit: per_org_limit });
+	if (orgLimiter.pendingCount >= per_org_pending_max) {
+		rejectOverloaded({ reason: "per_org_queue_full", labels });
+	}
+
+	let customerLimiter: LimitFunction | undefined;
+	if (customerId) {
+		customerLimiter = getCustomerLimiter({
+			orgId,
+			env,
+			customerId,
+			limit: per_customer_limit,
+		});
+		if (customerLimiter.pendingCount >= per_customer_pending_max) {
+			rejectOverloaded({ reason: "per_customer_queue_full", labels });
+		}
+	}
+
 	const execute = async (): Promise<T> => {
 		const waitMs = Date.now() - enqueuedAt;
 		waitHistogram.record(waitMs, labels);
+		if (waitMs >= max_wait_ms) {
+			rejectOverloaded({ reason: "wait_timeout", labels });
+		}
 		if (waitMs >= GATE_LOG_WAIT_MS_THRESHOLD) {
 			logger?.info(
 				`[full_subject_gate] queued ${waitMs}ms customer=${customerId ?? "unknown"} org=${orgId} env=${env}`,
@@ -128,15 +181,8 @@ export const runWithFullSubjectGate = async <T>({
 		}
 	};
 
-	if (customerId) {
-		return getCustomerLimiter({
-			orgId,
-			env,
-			customerId,
-			limit: per_customer_limit,
-		})(() =>
-			getOrgLimiter({ orgId, env, limit: per_org_limit })(execute),
-		);
+	if (customerLimiter) {
+		return customerLimiter(() => orgLimiter(execute));
 	}
-	return getOrgLimiter({ orgId, env, limit: per_org_limit })(execute);
+	return orgLimiter(execute);
 };
