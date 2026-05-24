@@ -23,8 +23,8 @@ const wasThresholdCrossed = ({
 }) => {
 	if (alert.threshold_type === "usage") {
 		const shldAlert =
-			oldApiBalance.usage < alert.threshold &&
-			newApiBalance.usage >= alert.threshold;
+			oldApiBalance.usage <= alert.threshold &&
+			newApiBalance.usage > alert.threshold;
 
 		return shldAlert;
 	}
@@ -43,8 +43,8 @@ const wasThresholdCrossed = ({
 			.toNumber();
 
 		return (
-			currentRemainingPercentage < alert.threshold &&
-			oldRemainingPercentage >= alert.threshold
+			currentRemainingPercentage <= alert.threshold &&
+			oldRemainingPercentage > alert.threshold
 		);
 	}
 
@@ -53,7 +53,7 @@ const wasThresholdCrossed = ({
 		const oldRemaining = oldApiBalance.remaining;
 
 		return (
-			currentRemaining < alert.threshold && oldRemaining >= alert.threshold
+			currentRemaining <= alert.threshold && oldRemaining > alert.threshold
 		);
 	}
 
@@ -70,7 +70,7 @@ const wasThresholdCrossed = ({
 			.mul(100)
 			.toNumber();
 
-		return oldPercentage < alert.threshold && newPercentage >= alert.threshold;
+		return oldPercentage <= alert.threshold && newPercentage > alert.threshold;
 	}
 
 	return false;
