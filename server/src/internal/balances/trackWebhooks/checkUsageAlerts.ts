@@ -43,8 +43,8 @@ const wasThresholdCrossed = ({
 			.toNumber();
 
 		return (
-			currentRemainingPercentage < alert.threshold &&
-			oldRemainingPercentage >= alert.threshold
+			currentRemainingPercentage <= alert.threshold &&
+			oldRemainingPercentage > alert.threshold
 		);
 	}
 
@@ -53,7 +53,7 @@ const wasThresholdCrossed = ({
 		const oldRemaining = oldApiBalance.remaining;
 
 		return (
-			currentRemaining < alert.threshold && oldRemaining >= alert.threshold
+			currentRemaining <= alert.threshold && oldRemaining > alert.threshold
 		);
 	}
 

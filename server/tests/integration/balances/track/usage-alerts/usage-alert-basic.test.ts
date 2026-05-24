@@ -463,6 +463,62 @@ test(`${chalk.yellowBright("usage-alert6: remaining threshold crossing triggers 
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// TEST 6b: Remaining threshold of 0 fires when balance lands on 0 (no overage)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+test(`${chalk.yellowBright("usage-alert6b: remaining=0 threshold fires when balance hits 0 with overage disabled")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
+	const freeProd = products.base({
+		id: "ua-remaining-zero-1",
+		items: [messagesItem],
+	});
+
+	const { customerId, autumnV2_1 } = await initScenario({
+		customerId: "usage-alert-remaining-zero-1",
+		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
+		actions: [s.attach({ productId: freeProd.id })],
+	});
+
+	await setCustomerUsageAlerts({
+		autumn: autumnV2_1,
+		customerId,
+		usageAlerts: [
+			{
+				feature_id: TestFeature.Messages,
+				threshold: 0,
+				threshold_type: "remaining",
+				enabled: true,
+			},
+		],
+	});
+
+	// Track exactly 1000 usage — remaining hits 0 (lands on threshold, doesn't go below)
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 1000,
+	});
+
+	const result = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === "balances.usage_alert_triggered" &&
+			payload.data?.customer_id === customerId &&
+			payload.data?.usage_alert?.threshold === 0,
+		timeoutMs: 15000,
+	});
+
+	expect(result).not.toBeNull();
+	expect(result?.payload.type).toBe("balances.usage_alert_triggered");
+
+	const { data } = result!.payload;
+	expect(data.customer_id).toBe(customerId);
+	expect(data.feature_id).toBe(TestFeature.Messages);
+	expect(data.usage_alert.threshold).toBe(0);
+	expect(data.usage_alert.threshold_type).toBe("remaining");
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // TEST 7: Remaining percentage threshold crossing triggers webhook
 // ═══════════════════════════════════════════════════════════════════════════════
 
