@@ -14,11 +14,13 @@ export const getOrSetCachedFullSubject = async ({
 	customerId,
 	entityId,
 	source,
+	staleWhileRevalidate = true,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
 	source?: string;
+	staleWhileRevalidate?: boolean;
 }): Promise<FullSubject> => {
 	const { skipCache, logger } = ctx;
 	const useRedis = !skipCache;
@@ -35,6 +37,7 @@ export const getOrSetCachedFullSubject = async ({
 				customerId,
 				entityId,
 				source,
+				staleWhileRevalidate,
 			});
 		fetchedSubjectViewEpoch = subjectViewEpoch;
 

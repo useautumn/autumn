@@ -36,6 +36,7 @@ const makeUpdatedContext = ({
 		insertedCustomerProducts: inserted,
 		updatedCustomerProducts: updated,
 		deletedCustomerProducts: deleted,
+		oneOffPrepaidCarryOvers: [],
 		billingChangeTags: new Set<string>(),
 	};
 };

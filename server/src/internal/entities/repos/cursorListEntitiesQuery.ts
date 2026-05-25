@@ -11,11 +11,18 @@ const getEntityListFilterSql = ({
 	plans,
 	processors,
 	search,
+	customerId,
 	inStatuses,
 }: Pick<ListEntitiesParams, "plans" | "processors" | "search"> & {
+	customerId?: string;
 	inStatuses: CusProductStatus[];
 }) => {
 	const filters: SQL[] = [];
+
+	const trimmedCustomerId = customerId?.trim();
+	if (trimmedCustomerId) {
+		filters.push(sql`AND c.id = ${trimmedCustomerId}`);
+	}
 
 	if (plans && plans.length > 0) {
 		const planConditions = plans.map((plan) => {
@@ -89,6 +96,7 @@ export const getCursorPaginatedEntitySubjectsQuery = ({
 	plans,
 	processors,
 	search,
+	customerId,
 }: {
 	orgId: string;
 	env: AppEnv;
@@ -98,11 +106,13 @@ export const getCursorPaginatedEntitySubjectsQuery = ({
 	plans?: ListEntitiesParams["plans"];
 	processors?: ListEntitiesParams["processors"];
 	search?: string;
+	customerId?: string;
 }) => {
 	const filterSql = getEntityListFilterSql({
 		plans,
 		processors,
 		search,
+		customerId,
 		inStatuses,
 	});
 

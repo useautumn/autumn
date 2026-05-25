@@ -113,6 +113,7 @@ const runOffsetListEntities = async ({
 		plans: body.plans,
 		processors: body.processors,
 		search: body.search,
+		customerId: body.customer_id,
 	});
 
 	const [subjectRows, totalCount] = await Promise.all([
@@ -134,6 +135,7 @@ const runOffsetListEntities = async ({
 					plans: body.plans,
 					processors: body.processors,
 					search: body.search,
+					customerId: body.customer_id,
 				},
 				inStatuses,
 			})
@@ -198,6 +200,7 @@ export const handleListEntitiesV2 = createRoute({
 					plans: body.plans,
 					processors: body.processors,
 					search: body.search,
+					customerId: body.customer_id,
 				}),
 			);
 

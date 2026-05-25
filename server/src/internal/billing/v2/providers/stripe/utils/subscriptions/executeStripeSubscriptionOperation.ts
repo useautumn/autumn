@@ -4,6 +4,7 @@ import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { mergeStripeMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/mergeStripeMetadata";
+import { shouldEnableStripeAutomaticTax } from "@/internal/billing/v2/providers/stripe/utils/tax/shouldEnableStripeAutomaticTax";
 import { willStripeSubscriptionUpdateCreateInvoice } from "./willStripeSubscriptionUpdateCreateInvoice";
 
 export const executeStripeSubscriptionOperation = async ({
@@ -46,10 +47,7 @@ export const executeStripeSubscriptionOperation = async ({
 			actionSource: billingContext.actionSource,
 		}),
 	});
-	// Skip auto_tax in invoice mode: send_invoice has no address-collection
-	// UI so Stripe Tax rejects.
-	const wantsAutoTax =
-		!!ctx.org.config.automatic_tax && !billingContext.invoiceMode;
+	const wantsAutoTax = shouldEnableStripeAutomaticTax({ ctx, billingContext });
 
 	const taxRateParams = billingContext.taxRateId
 		? { default_tax_rates: [billingContext.taxRateId] }
