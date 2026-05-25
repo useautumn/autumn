@@ -10,10 +10,13 @@ import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated.js";
 import { ProductService } from "@/internal/products/ProductService.js";
-import { nullish } from "@/utils/genUtils.js";
 import { CusService } from "../CusService.js";
-import { CusProductService } from "../cusProducts/CusProductService.js";
 import { handleDecreaseAndTransfer } from "./handleTransferProduct/handleDecreaseAndTransfer.js";
+import {
+	findExistingTransferTargetProduct,
+	findTransferCustomerProduct,
+	transferRelatedCustomerProducts,
+} from "./handleTransferProduct/transferRelatedCustomerProducts.js";
 
 const TransferProductSchema = z.object({
 	from_entity_id: z.string().nullish(),
@@ -61,12 +64,11 @@ export const handleTransferProductV2 = createRoute({
 			});
 		}
 
-		const fromEntity = customer.entities.find(
-			(e: any) => e.id === from_entity_id,
-		);
+		const fromEntity =
+			customer.entities.find((entity) => entity.id === from_entity_id) ?? null;
 
 		const toEntity = to_entity_id
-			? customer.entities.find((e: any) => e.id === to_entity_id)
+			? (customer.entities.find((entity) => entity.id === to_entity_id) ?? null)
 			: null;
 
 		if (to_entity_id && !toEntity) {
@@ -75,23 +77,24 @@ export const handleTransferProductV2 = createRoute({
 			});
 		}
 
-		const cusProduct = customer.customer_products.find(
-			(cp: any) =>
-				(fromEntity
-					? cp.internal_entity_id === fromEntity.internal_id
-					: nullish(cp.internal_entity_id)) && cp.product.id === product_id,
-		);
+		const cusProduct = findTransferCustomerProduct({
+			fullCustomer: customer,
+			fromEntity,
+			productId: product_id,
+		});
 
-		const toCusProduct = customer.customer_products.find((cp: any) => {
-			const productMatch = cusProduct?.product.is_add_on
-				? cp.product.product_id === product.id
-				: cp.product.group === product.group && !cp.product.is_add_on;
+		if (!cusProduct) {
+			throw new CusProductNotFoundError({
+				customerId: customer_id,
+				productId: product_id,
+				entityId: from_entity_id || undefined,
+			});
+		}
 
-			const entityMatch = toEntity?.internal_id
-				? cp.internal_entity_id === toEntity.internal_id
-				: nullish(cp.internal_entity_id);
-
-			return entityMatch && productMatch;
+		const toCusProduct = findExistingTransferTargetProduct({
+			fullCustomer: customer,
+			toEntity,
+			product,
 		});
 
 		if (toCusProduct) {
@@ -99,14 +102,6 @@ export const handleTransferProductV2 = createRoute({
 				productId: toCusProduct.product?.id,
 				entityId: toEntity?.id ?? toEntity?.internal_id,
 				customerId: from_entity_id && !to_entity_id ? customer_id : undefined,
-			});
-		}
-
-		if (!cusProduct) {
-			throw new CusProductNotFoundError({
-				customerId: customer_id,
-				productId: product_id,
-				entityId: from_entity_id || undefined,
 			});
 		}
 
@@ -119,13 +114,12 @@ export const handleTransferProductV2 = createRoute({
 				toEntity: toEntity,
 			});
 		} else {
-			await CusProductService.update({
+			const updates = await transferRelatedCustomerProducts({
 				ctx,
-				cusProductId: cusProduct.id,
-				updates: {
-					entity_id: toEntity?.id || null,
-					internal_entity_id: toEntity?.internal_id || null,
-				},
+				fullCustomer: customer,
+				fromEntity,
+				toEntity,
+				product,
 			});
 
 			await addProductsUpdatedWebhookTask({
@@ -137,8 +131,7 @@ export const handleTransferProductV2 = createRoute({
 				scenario: AttachScenario.New,
 				cusProduct: {
 					...cusProduct,
-					entity_id: toEntity?.id || null,
-					internal_entity_id: toEntity?.internal_id || null,
+					...updates,
 				},
 			});
 		}
