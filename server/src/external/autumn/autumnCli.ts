@@ -345,8 +345,8 @@ export class AutumnInt {
 	async transfer(
 		customerId: string,
 		params: {
-			from_entity_id?: string;
-			to_entity_id: string;
+			from_entity_id?: string | null;
+			to_entity_id?: string | null;
 			product_id: string;
 		},
 	) {

@@ -1,4 +1,4 @@
-import type { AppEnv } from "@autumn/shared";
+import { OrgConfigSchema, type AppEnv } from "@autumn/shared";
 import { getFeatures } from "@tests/setup/v2Features.js";
 import axios from "axios";
 import { initDrizzle } from "@/db/initDrizzle";
