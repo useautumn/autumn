@@ -66,8 +66,10 @@ export const OrgUsageAlertDialog = ({
 			toast.error("Please enter a valid threshold");
 			return;
 		}
-		if (isPercentageType(draft.threshold_type) && draft.threshold > 100) {
-			toast.error("Percentage threshold must be between 0 and 100");
+		if (draft.threshold_type === "remaining_percentage" && draft.threshold > 100) {
+			toast.error(
+				"Remaining percentage threshold must be between 0 and 100",
+			);
 			return;
 		}
 

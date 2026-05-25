@@ -147,12 +147,10 @@ export function BillingUsageAlertSheet() {
 			return;
 		}
 
-		if (
-			(thresholdType === "usage_percentage" ||
-				thresholdType === "remaining_percentage") &&
-			parsedThreshold > 100
-		) {
-			toast.error("Percentage threshold must be between 0 and 100");
+		if (thresholdType === "remaining_percentage" && parsedThreshold > 100) {
+			toast.error(
+				"Remaining percentage threshold must be between 0 and 100",
+			);
 			return;
 		}
 
