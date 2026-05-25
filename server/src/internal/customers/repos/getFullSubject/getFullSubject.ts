@@ -10,6 +10,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
 import { lazyResetSubjectEntitlements } from "../../actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
 import { RELEVANT_STATUSES } from "../../cusProducts/CusProductService.js";
+import { runWithFullSubjectGate } from "./getFullSubjectGate.js";
 import { getFullSubjectQuery } from "./getFullSubjectQuery.js";
 import {
 	resultToFullSubject,
@@ -32,16 +33,23 @@ export async function getFullSubject({
 }): Promise<FullSubject | undefined> {
 	const { db, org, env } = ctx;
 
-	const result = await db.execute(
-		getFullSubjectQuery({
-			orgId: org.id,
-			env,
-			customerId,
-			entityId,
-			inStatuses,
-			allowMissingEntity,
-		}),
-	);
+	const result = await runWithFullSubjectGate({
+		customerId,
+		orgId: org.id,
+		env,
+		logger: ctx.logger,
+		queryFn: () =>
+			db.execute(
+				getFullSubjectQuery({
+					orgId: org.id,
+					env,
+					customerId,
+					entityId,
+					inStatuses,
+					allowMissingEntity,
+				}),
+			),
+	});
 
 	if (!result?.length) return undefined;
 
@@ -77,16 +85,23 @@ export async function getFullSubjectNormalized({
 > {
 	const { db, org, env } = ctx;
 
-	const result = await db.execute(
-		getFullSubjectQuery({
-			orgId: org.id,
-			env,
-			customerId,
-			entityId,
-			inStatuses,
-			allowMissingEntity,
-		}),
-	);
+	const result = await runWithFullSubjectGate({
+		customerId,
+		orgId: org.id,
+		env,
+		logger: ctx.logger,
+		queryFn: () =>
+			db.execute(
+				getFullSubjectQuery({
+					orgId: org.id,
+					env,
+					customerId,
+					entityId,
+					inStatuses,
+					allowMissingEntity,
+				}),
+			),
+	});
 
 	if (!result?.length) return undefined;
 

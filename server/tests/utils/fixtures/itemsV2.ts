@@ -72,6 +72,25 @@ const prepaidMessages = ({
 	},
 });
 
+const oneOffPrepaidMessages = ({
+	amount = 10,
+	billingUnits = 100,
+	included = 0,
+}: {
+	amount?: number;
+	billingUnits?: number;
+	included?: number;
+} = {}) => ({
+	feature_id: TestFeature.Messages,
+	included,
+	price: {
+		amount,
+		interval: BillingInterval.OneOff,
+		billing_method: BillingMethod.Prepaid,
+		billing_units: billingUnits,
+	},
+});
+
 const prepaidWords = ({
 	amount = 10,
 	billingUnits = 100,
@@ -243,6 +262,7 @@ export const itemsV2 = {
 	prepaidMessages,
 	prepaidUsers,
 	prepaidWords,
+	oneOffPrepaidMessages,
 	consumableMessages,
 	consumableWords,
 	allocatedUsers,

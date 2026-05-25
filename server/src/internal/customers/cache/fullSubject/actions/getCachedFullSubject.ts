@@ -22,6 +22,7 @@ import {
 import { sanitizeCachedFullSubject } from "../sanitize/index.js";
 import { invalidateCachedFullSubject } from "./invalidate/invalidateFullSubject.js";
 import { invalidateCachedFullSubjectExact } from "./invalidate/invalidateFullSubjectExact.js";
+import { shouldWarmCache } from "./warmFullSubjectCache.js";
 
 export type GetCachedFullSubjectResult = {
 	fullSubject: FullSubject | undefined;
@@ -33,11 +34,13 @@ export const getCachedFullSubject = async ({
 	customerId,
 	entityId,
 	source,
+	staleWhileRevalidate = false,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
 	source?: string;
+	staleWhileRevalidate?: boolean;
 }): Promise<GetCachedFullSubjectResult> => {
 	const { org, env, logger, redisV2 } = ctx;
 	const subjectKey = buildFullSubjectKey({
@@ -106,19 +109,28 @@ export const getCachedFullSubject = async ({
 	}
 
 	if (cached.subjectViewEpoch !== currentSubjectViewEpoch) {
-		logger.warn(
-			`[getCachedFullSubject] Stale subject view epoch for ${customerId}${entityId ? `:${entityId}` : ""}, cached=${cached.subjectViewEpoch}, current=${currentSubjectViewEpoch}, source: ${source}`,
-		);
-		await invalidateCachedFullSubjectExact({
-			ctx,
-			customerId,
-			entityId,
-			source: "stale-subject-view-epoch",
-		});
-		return {
-			fullSubject: undefined,
-			subjectViewEpoch: currentSubjectViewEpoch,
-		};
+		// Allow-listed high-cardinality customers serve the stale subject and
+		// rehydrate via the warm task, instead of rebuilding 10k+ entities
+		// inline on every reader.
+		if (staleWhileRevalidate && shouldWarmCache(customerId)) {
+			logger.warn(
+				`[getCachedFullSubject] Serving stale-while-revalidate for ${customerId}${entityId ? `:${entityId}` : ""}, cached= ${cached.subjectViewEpoch}, current= ${currentSubjectViewEpoch}, source: ${source}`,
+			);
+		} else {
+			logger.warn(
+				`[getCachedFullSubject] Stale subject view epoch for ${customerId}${entityId ? `:${entityId}` : ""}, cached=${cached.subjectViewEpoch}, current= ${currentSubjectViewEpoch}, source: ${source}`,
+			);
+			await invalidateCachedFullSubjectExact({
+				ctx,
+				customerId,
+				entityId,
+				source: "stale-subject-view-epoch",
+			});
+			return {
+				fullSubject: undefined,
+				subjectViewEpoch: currentSubjectViewEpoch,
+			};
+		}
 	}
 
 	if (cached._schemaVersion !== FULL_SUBJECT_CACHE_SCHEMA_VERSION) {

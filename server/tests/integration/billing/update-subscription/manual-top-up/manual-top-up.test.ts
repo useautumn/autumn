@@ -486,14 +486,14 @@ test.concurrent(
 );
 
 // ─────────────────────────────────────────────────────────────────────────────
-// 5b. UpdatePlan call that *changes* a one-off prepaid quantity is rejected.
-//     Dashboard-style payload: items + options with new quantity → "Update too
-//     complex to perform." Carry-through (same quantity) and first-time
-//     set-balance (no existing options entry) remain allowed.
+// 5b. UpdatePlan call that *changes* a one-off prepaid quantity is allowed.
+//     The custom-plan flow creates the new cusProduct with the requested
+//     quantity AND the one-off carryover helper preserves the existing
+//     remaining balance as a lifetime cusEnt.
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.concurrent(
-	`${chalk.yellowBright("manual top-up 5b: UpdatePlan changing a one-off prepaid quantity is blocked")}`,
+	`${chalk.yellowBright("manual top-up 5b: UpdatePlan changing a one-off prepaid quantity is allowed and preserves remaining balance")}`,
 	async () => {
 		const oneOffItem = items.oneOffMessages({
 			includedUsage: 0,
@@ -503,11 +503,11 @@ test.concurrent(
 		const dashboard = items.dashboard();
 
 		const plan = products.pro({
-			id: "manual-topup-block-updateplan",
+			id: "manual-topup-allow-updateplan",
 			items: [dashboard, oneOffItem],
 		});
 
-		const customerId = "manual-topup-block-updateplan-cus";
+		const customerId = "manual-topup-allow-updateplan-cus";
 
 		const { autumnV1 } = await initScenario({
 			customerId,
@@ -525,17 +525,16 @@ test.concurrent(
 
 		// Dashboard-style: legacy V0 `items` + `options` with a NEW quantity for
 		// the one-off prepaid feature. Items differ from the original plan (raised
-		// base price) so customize.items wins the intent → UpdatePlan, but the
-		// new gate inside handleOneOffErrors must reject the quantity change.
+		// base price) so customize.items wins the intent → UpdatePlan. The
+		// combined update is now permitted: the remaining 100 carries forward
+		// as a lifetime cusEnt and the new 1300 pack is charged on top.
 		const raisedBasePrice = items.monthlyPrice({ price: 30 });
-		await expect(
-			autumnV1.subscriptions.update({
-				customer_id: customerId,
-				product_id: plan.id,
-				items: [raisedBasePrice, dashboard, oneOffItem],
-				options: [{ feature_id: TestFeature.Messages, quantity: 1300 }],
-			}),
-		).rejects.toThrow(/Updating a one off prepaid feature quantity/i);
+		await autumnV1.subscriptions.update({
+			customer_id: customerId,
+			product_id: plan.id,
+			items: [raisedBasePrice, dashboard, oneOffItem],
+			options: [{ feature_id: TestFeature.Messages, quantity: 1300 }],
+		});
 	},
 );
 
