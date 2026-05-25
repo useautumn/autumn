@@ -14,10 +14,3 @@ NODE_ENV = "test"
 [install]
 # Only install package versions published at least 3 days ago
 minimumReleaseAge = 259200 # seconds
-minimumReleaseAgeExcludes = [
-	"@trigger.dev/build",
-	"@trigger.dev/core",
-	"@trigger.dev/schema-to-json",
-	"@trigger.dev/sdk",
-	"trigger.dev",
-]
