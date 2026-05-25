@@ -25,24 +25,25 @@ export const OidcClaimsSchema = z.object({
 
 export type OidcClaims = z.infer<typeof OidcClaimsSchema>;
 
-/**
- * Test-mode short-circuit. Outside production, accept a sentinel bearer token
- * of the form `test_oidc:<installationId>` (or `test_oidc:` for no
- * installation) and synthesize matching claims. This lets integration tests
- * exercise the OIDC-protected routes without going through Vercel's JWKS.
- */
+type VercelOidcTestOptions = {
+	allowVercelTestOidc?: boolean;
+};
+
 const TEST_OIDC_PREFIX = "test_oidc:";
 
 const synthesizeTestClaims = ({
 	token,
 	org,
 	env,
+	testOptions,
 }: {
 	token: string;
 	org: Organization;
 	env: AppEnv;
+	testOptions?: VercelOidcTestOptions;
 }): OidcClaims | null => {
 	if (process.env.NODE_ENV === "production") return null;
+	if (testOptions?.allowVercelTestOidc !== true) return null;
 	if (!token.startsWith(TEST_OIDC_PREFIX)) return null;
 
 	const installationId = token.slice(TEST_OIDC_PREFIX.length) || null;
@@ -68,12 +69,14 @@ export async function verifyToken({
 	token,
 	org,
 	env,
+	testOptions,
 }: {
 	token: string;
 	org: Organization;
 	env: AppEnv;
+	testOptions?: VercelOidcTestOptions;
 }): Promise<OidcClaims> {
-	const testClaims = synthesizeTestClaims({ token, org, env });
+	const testClaims = synthesizeTestClaims({ token, org, env, testOptions });
 	if (testClaims) return testClaims;
 
 	try {
@@ -189,7 +192,7 @@ export class AuthError extends Error {}
  * 5. Store validated claims in context
  */
 export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
-	const { org, env, logger } = c.get("ctx");
+	const { org, env, logger, testOptions } = c.get("ctx");
 	const authHeader = c.req.header("authorization");
 	const authType = c.req.header("x-vercel-auth");
 	const path = c.req.path;
@@ -246,7 +249,7 @@ export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
 	// Verify JWT using JWKS
 	let claims: OidcClaims;
 	try {
-		claims = await verifyToken({ token, org, env });
+		claims = await verifyToken({ token, org, env, testOptions });
 	} catch (error: any) {
 		logCaughtError({
 			logger,
