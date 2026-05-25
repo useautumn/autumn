@@ -4,6 +4,7 @@ import { handleRotateResourceSecret } from "@/external/vercel/handlers/resources
 import { analyticsMiddleware } from "@/honoMiddlewares/analyticsMiddleware.js";
 import { traceEnrichMiddleware } from "@/honoMiddlewares/traceMiddleware.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { logCaughtError } from "@/utils/logging/logCaughtError.js";
 import { sendCustomSvixEvent } from "../svix/svixHelpers.js";
 import { handleVercelListBillingPlans } from "./handlers/handleListBillingPlans.js";
 import { handleUpdateVercelBillingPlan } from "./handlers/handleUpdateBillingPlan.js";
@@ -122,7 +123,13 @@ vercelWebhookRouter.post(
 		let body: any;
 		try {
 			body = await c.req.json();
-		} catch {
+		} catch (parseError) {
+			logCaughtError({
+				logger,
+				message: "[vercel/webhook] Failed to parse request body as JSON",
+				error: parseError,
+				level: "warn",
+			});
 			body = {};
 		}
 
@@ -168,19 +175,31 @@ vercelWebhookRouter.post(
 					return c.json({ received: true }, 200);
 			}
 		} catch (error: any) {
-			logger.error("Failed to process Vercel marketplace webhook", {
-				eventType,
-				errorName: error?.name,
-				errorMessage: error?.message,
-				errorStack: error?.stack,
-				errorString: String(error),
+			logCaughtError({
+				logger,
+				message: "Failed to process Vercel marketplace webhook",
+				error,
+				data: { eventType },
 			});
 			return c.json({ error: error?.message ?? String(error) }, 500);
 		}
 	},
 );
 
-// Fallback for other methods
 vercelWebhookRouter.all("/:orgId/:env/*", async (c) => {
-	return c.body(null, 200);
+	console.warn(
+		"[vercel/webhook] Unmapped route hit fallback",
+		"\n  method:",
+		c.req.method,
+		"\n  path:",
+		c.req.path,
+	);
+	return c.json(
+		{
+			error: "vercel_webhook_route_not_found",
+			method: c.req.method,
+			path: c.req.path,
+		},
+		404,
+	);
 });

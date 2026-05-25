@@ -5,14 +5,13 @@ import {
 	submitBillingDataToVercel,
 	submitInvoiceToVercel,
 } from "@/external/vercel/misc/vercelInvoicing";
+import { enrichVercelEventLogger } from "@/external/vercel/misc/vercelLogContext";
 import { logVercelWebhook } from "@/external/vercel/misc/vercelMiddleware";
+import { ensureVercelInvoiceModeSubscription } from "@/external/vercel/misc/vercelStripeInvoiceMode";
 import { FeatureService } from "@/internal/features/FeatureService";
 import { ProductService } from "@/internal/products/ProductService";
+import { logCaughtError } from "@/utils/logging/logCaughtError";
 
-/**
- * Handles Vercel custom payment method invoices.
- * Submits billing data and invoice to Vercel marketplace for payment processing.
- */
 export const processVercelInvoice = async ({
 	ctx,
 	stripeInvoice,
@@ -24,9 +23,14 @@ export const processVercelInvoice = async ({
 	>;
 	stripeSubscription: Stripe.Subscription | null;
 }): Promise<void> => {
-	const { stripeCli, org, env, db, logger, fullCustomer } = ctx;
+	const { stripeCli, org, env, db, fullCustomer } = ctx;
+	let { logger } = ctx;
 
 	if (stripeInvoice.amount_due <= 0) {
+		return;
+	}
+
+	if (!fullCustomer) {
 		return;
 	}
 
@@ -46,21 +50,17 @@ export const processVercelInvoice = async ({
 		return;
 	}
 
-	const pmId =
-		(stripeSubscription?.default_payment_method as string | undefined) ??
-		fullCustomer?.processors?.vercel?.custom_payment_method_id;
+	logger = enrichVercelEventLogger({
+		ctx,
+		vercelEventContext: {
+			type: "marketplace.invoice.finalized",
+			id: stripeInvoice.id,
+			installation_id: vercelInstallationId,
+			external_invoice_id: stripeInvoice.id,
+		},
+	});
+	const vercelCtx = { ...ctx, logger };
 
-	if (!pmId) {
-		return;
-	}
-
-	const paymentMethod = await stripeCli.paymentMethods.retrieve(pmId);
-
-	if (paymentMethod.type !== "custom" || !fullCustomer) {
-		return;
-	}
-
-	// Log Vercel webhook event
 	logVercelWebhook({
 		logger,
 		org,
@@ -69,6 +69,16 @@ export const processVercelInvoice = async ({
 			id: stripeInvoice.id,
 		},
 	});
+
+	// Lazily migrate legacy Vercel subscriptions to invoice mode. No-op if
+	// already `send_invoice` or if the subscription is canceled.
+	if (stripeSubscription) {
+		await ensureVercelInvoiceModeSubscription({
+			ctx: vercelCtx,
+			stripeCli,
+			subscription: stripeSubscription,
+		});
+	}
 
 	// Get product for Vercel billing
 	const product = await ProductService.getFull({
@@ -97,6 +107,7 @@ export const processVercelInvoice = async ({
 			invoice: stripeInvoice,
 			customer: fullCustomer,
 			product,
+			testOptions: ctx.testOptions,
 		});
 
 		await submitInvoiceToVercel({
@@ -106,12 +117,17 @@ export const processVercelInvoice = async ({
 			product,
 			org,
 			features,
+			logger,
+			testOptions: ctx.testOptions,
 		});
 	} catch (error) {
-		logger.error("Failed to process Vercel invoice", {
+		logCaughtError({
+			logger,
+			message: "Failed to process Vercel invoice",
+			error,
 			data: {
-				error: String(error),
 				invoiceId: stripeInvoice.id,
+				installationId: vercelInstallationId,
 			},
 		});
 	}

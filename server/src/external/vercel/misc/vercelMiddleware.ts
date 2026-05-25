@@ -7,7 +7,13 @@ import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { FeatureService } from "@/internal/features/FeatureService.js";
 import { computeRolloutSnapshot } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { addAppContextToLogs } from "@/utils/logging/addContextToLogs";
+import { logCaughtError } from "@/utils/logging/logCaughtError.js";
+import {
+	addVercelCustomerToContext,
+	buildVercelEventContext,
+	enrichVercelAppLogger,
+	enrichVercelEventLogger,
+} from "./vercelLogContext.js";
 
 export const vercelSeederMiddleware = async (
 	c: Context<HonoEnv>,
@@ -38,6 +44,7 @@ export const vercelSeederMiddleware = async (
 		org,
 		env,
 		features,
+		authType: AuthType.Vercel,
 		rolloutSnapshot: computeRolloutSnapshot({
 			orgId: org?.id,
 			customerId: ctx.customerId,
@@ -48,16 +55,7 @@ export const vercelSeederMiddleware = async (
 		? getCtxWithCustomerRedis({ ctx: nextCtx }).ctx
 		: nextCtx;
 
-	routedCtx.logger = addAppContextToLogs({
-		logger: routedCtx.logger,
-		appContext: {
-			org_id: routedCtx.org?.id,
-			org_slug: routedCtx.org?.slug,
-			env: routedCtx.env,
-			auth_type: AuthType.Vercel,
-			api_version: routedCtx.apiVersion?.semver,
-		},
-	});
+	routedCtx.logger = enrichVercelAppLogger({ ctx: routedCtx });
 
 	c.set("ctx", routedCtx);
 
@@ -71,18 +69,42 @@ export const logVercelWebhook = ({
 }: {
 	logger: Logger;
 	org: Organization;
-	event: { type: string; id: string };
+	event: { type?: string; id?: string };
 }) => {
+	const eventType = event.type ?? "unknown";
+	const eventId = event.id ?? "unknown";
+
 	logger.info(
-		`${chalk.magenta("VERCEL").padEnd(18)} ${event.type.padEnd(30)} ${org.slug} | ${event.id}`,
+		`${chalk.magenta("VERCEL").padEnd(18)} ${eventType.padEnd(30)} ${org.slug} | ${eventId}`,
 	);
 };
 
 export const vercelLogMiddleware = async (c: Context<HonoEnv>, next: Next) => {
-	const { logger, org } = c.get("ctx");
+	let ctx = c.get("ctx");
 	const body = await c.req.json();
+	const vercelEventContext = buildVercelEventContext(body);
 
-	logVercelWebhook({ logger, org, event: body });
+	if (vercelEventContext.installation_id) {
+		try {
+			ctx = await addVercelCustomerToContext({
+				ctx,
+				vercelInstallationId: vercelEventContext.installation_id,
+			});
+		} catch (error) {
+			logCaughtError({
+				logger: ctx.logger,
+				message: "[vercel/webhook] Failed to enrich customer log context",
+				error,
+				data: { installationId: vercelEventContext.installation_id },
+				level: "warn",
+			});
+		}
+	}
+
+	ctx.logger = enrichVercelEventLogger({ ctx, vercelEventContext });
+	c.set("ctx", ctx);
+
+	logVercelWebhook({ logger: ctx.logger, org: ctx.org, event: body });
 
 	await next();
 };
