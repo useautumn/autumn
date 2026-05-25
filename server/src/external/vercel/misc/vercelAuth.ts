@@ -94,14 +94,14 @@ export async function verifyToken({
 			// Dump both sides so an audience mismatch is debuggable end-to-end.
 			// Common causes: org config has the wrong env's client_id, or the
 			// integration was re-installed and the org's `sandbox_client_id`
-			// hasn't been refreshed.
+			// hasn't been refreshed. Claim values are intentionally redacted —
+			// `aud` is the only one relevant here; surface present keys for
+			// schema-drift debugging without leaking user_email/etc.
 			console.warn("[vercel/oidc] Invalid audience", {
 				env,
 				"token.aud (from Vercel)": claims.aud,
 				"configured (from org.processor_configs.vercel)": clientIntegrationId,
-				...Object.fromEntries(
-					Object.entries(claims).map(([key, value]) => [`token.${key}`, value]),
-				),
+				tokenClaimKeys: Object.keys(claims),
 			});
 			throw new AuthError("Invalid audience");
 		}
@@ -118,12 +118,8 @@ export async function verifyToken({
 
 		return claims;
 	} catch (err) {
-		logCaughtError({
-			message: "[vercel/oidc] JWT verification failed",
-			error: err,
-			level: "warn",
-		});
-
+		// Don't log here — the caller (vercelOidcAuthMiddleware) already runs
+		// logCaughtError on the re-thrown error with the request-scoped logger.
 		if (err instanceof JWTExpired) {
 			throw new AuthError("Auth expired");
 		}
@@ -208,7 +204,7 @@ export const vercelOidcAuthMiddleware = async (c: any, next: any) => {
 			path,
 			reason: reason ?? "(none)",
 			authType: authType ?? "(absent)",
-			authHeader: authHeader ? `${authHeader.slice(0, 20)}...` : "(absent)",
+			authHeaderPresent: Boolean(authHeader),
 		});
 		const error = status === 401 ? "Unauthorized" : "Forbidden";
 		return c.json({ error, code }, status);

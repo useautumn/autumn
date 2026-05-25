@@ -194,12 +194,5 @@ vercelWebhookRouter.all("/:orgId/:env/*", async (c) => {
 		"\n  path:",
 		c.req.path,
 	);
-	return c.json(
-		{
-			error: "vercel_webhook_route_not_found",
-			method: c.req.method,
-			path: c.req.path,
-		},
-		404,
-	);
+	return c.json(null, 200);
 });
