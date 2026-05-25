@@ -8,6 +8,7 @@ import {
 	isCustomerProductEntityScoped,
 	priceUtils,
 } from "@autumn/shared";
+import { Decimal } from "decimal.js";
 import { stripeCheckoutSessionUtils } from "@/external/stripe/checkoutSessions/utils";
 import type { CheckoutSessionCompletedContext } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/setupCheckoutSessionCompletedContext";
 import { initCustomerEntitlementEntities } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerEntitlement/initCustomerEntitlementEntities";
@@ -74,36 +75,45 @@ export const updateOptionsFromStripeCheckoutSession = async ({
 					product: fullProduct,
 				});
 
-			newCustomerProduct.options[i].quantity = featureOptionsQuantity;
-
-			// // Update customer entitlement with the right balance
-			// const customerEntitlement =
-			// 	featureOptionUtils.convert.toCustomerEntitlement({
-			// 		featureOptions,
-			// 		customerEntitlements: newCustomerProduct.customer_entitlements,
-			// 	});
-
 			if (customerEntitlement) {
-				const startingBalance = getStartingBalance({
+				// The compute-time balance already has any existing-usage carry-over
+				// applied. Stripe may report a quantity that differs from what we
+				// initially planned (e.g. the customer edited it on the hosted
+				// checkout page) — apply only the *delta* in starting balance to the
+				// existing balance so the carry-over is preserved.
+				const oldStartingBalance = getStartingBalance({
 					entitlement: customerEntitlement.entitlement,
 					options: featureOptions,
+					relatedPrice: price,
+				});
+
+				newCustomerProduct.options[i].quantity = featureOptionsQuantity;
+
+				const newStartingBalance = getStartingBalance({
+					entitlement: customerEntitlement.entitlement,
+					options: newCustomerProduct.options[i],
 					relatedPrice: price,
 				});
 
 				const entities = initCustomerEntitlementEntities({
 					entitlement: customerEntitlement.entitlement,
 					customerEntities: fullCustomer.entities,
-					startingBalance,
+					startingBalance: newStartingBalance,
 				});
 
 				if (entities) {
 					customerEntitlement.entities = entities;
 				} else {
-					customerEntitlement.balance = startingBalance;
+					const startingBalanceDelta = new Decimal(newStartingBalance).sub(
+						oldStartingBalance,
+					);
+					customerEntitlement.balance = new Decimal(
+						customerEntitlement.balance ?? 0,
+					)
+						.add(startingBalanceDelta)
+						.toNumber();
 				}
 			}
 		}
-
-		
 	}
 };
