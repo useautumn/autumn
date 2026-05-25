@@ -31,16 +31,15 @@ export const DbUsageAlertSchema = z
 	.check((ctx) => {
 		const { threshold_type, threshold } = ctx.value;
 
-		if (
-			(threshold_type === "usage_percentage" ||
-				threshold_type === "remaining_percentage") &&
-			threshold > 100
-		) {
+		// remaining_percentage is bounded by granted, so > 100 has no sensible
+		// firing semantics. usage_percentage can legitimately exceed 100 when a
+		// customer is over their allowance (e.g. alert at 200% or 300% usage).
+		if (threshold_type === "remaining_percentage" && threshold > 100) {
 			ctx.issues.push({
 				code: "custom",
 				input: threshold,
 				path: ["threshold"],
-				message: `Threshold must be between 0 and 100 for ${threshold_type}`,
+				message: "Threshold must be between 0 and 100 for remaining_percentage",
 			});
 		}
 	});
