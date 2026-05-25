@@ -28,7 +28,7 @@ export const handleListEntitiesInternal = createRoute({
 			.limit(1);
 
 		if (internalCustomerResult.length === 0) {
-			return c.json({ list: [], total: 0 });
+			return c.json({ list: [], total_count: 0 });
 		}
 
 		const internalCustomerId = internalCustomerResult[0].internal_id;
@@ -59,7 +59,7 @@ export const handleListEntitiesInternal = createRoute({
 			ctx.db
 				.select({ count: sql<number>`count(*)::int` })
 				.from(entities)
-				.where(baseConditions),
+				.where(searchCondition),
 		]);
 
 		return c.json({
