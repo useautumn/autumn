@@ -1,23 +1,5 @@
-/**
- * Vercel resource provisioning (full HTTP via OIDC test bypass).
- *
- * Drives `POST /webhooks/vercel/:orgId/:env/v1/installations/:integrationConfigurationId/resources`
- * end-to-end through `vercelOidcAuthMiddleware`, which accepts the test
- * bearer token `test_oidc:<installationId>` outside production (see
- * `vercelAuth.ts:synthesizeTestClaims`).
- *
- * The handler eventually calls `provisionVercelCusProduct`, which is the
- * subject under test. We assert:
- *  - Stripe subscription has `collection_method: "send_invoice"`,
- *    `days_until_due: 30`.
- *  - Subscription has Vercel metadata (`vercel_installation_id`, etc).
- *  - No `default_payment_method` is set on the subscription (no CPM-based flow).
- *  - First invoice is finalized (`open`) so the finalize webhook fires.
- *  - Customer's Autumn cus_product is active (top-level
- *    `enable_plan_immediately: true`).
- *  - A subsequent provisioning request is idempotent and short-circuits with
- *    the existing subscription/cus_product.
- */
+/** Drives Vercel resource provisioning through HTTP auth middleware.
+ * Uses the explicit test OIDC allow header from the Vercel test helper. */
 
 import { expect, test } from "bun:test";
 import { ApiVersion, AppEnv, CusProductStatus } from "@autumn/shared";
@@ -30,6 +12,7 @@ import { CusProductService } from "@/internal/customers/cusProducts/CusProductSe
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0";
 import {
 	buildTestOidcHeaders,
+	buildTestOidcToken,
 	seedVercelCustomer,
 	setupVercelOrg,
 } from "./utils/vercel-test-helpers";
@@ -246,7 +229,7 @@ test.concurrent(
 
 test.concurrent(
 	`${chalk.yellowBright(
-		"vercel-provisioning: OIDC middleware rejects calls without a valid token (test bypass requires test_oidc: prefix)",
+		"vercel-provisioning: OIDC middleware rejects invalid and disallowed test tokens",
 	)}`,
 	async () => {
 		const installationId = `icfg_${TEST_CASE}_noauth`;
@@ -266,6 +249,22 @@ test.concurrent(
 		});
 
 		expect(response.status).toBe(401);
+
+		const bypassWithoutAllowHeader = await fetch(resourcesUrl(installationId), {
+			method: "POST",
+			headers: {
+				authorization: `Bearer ${buildTestOidcToken(installationId)}`,
+				"x-vercel-auth": "user",
+				"content-type": "application/json",
+			},
+			body: JSON.stringify({
+				productId: "fake",
+				billingPlanId: "fake",
+				name: "Should be rejected",
+			}),
+		});
+
+		expect(bypassWithoutAllowHeader.status).toBe(401);
 	},
 );
 

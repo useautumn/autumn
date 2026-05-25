@@ -302,13 +302,7 @@ const require_eq = (
 // OIDC test token
 // ──────────────────────────────────────────────────────────────────────────
 
-/**
- * Builds the bearer token that `verifyToken` (in `vercelAuth.ts`) accepts
- * outside production. The middleware synthesizes OIDC claims with
- * `installation_id` set to whatever follows the `test_oidc:` prefix, so
- * routes that check `claims.installation_id === :integrationConfigurationId`
- * pass when the URL and the token agree.
- */
+/** Builds the test-only bearer token accepted with the explicit allow header. */
 export const buildTestOidcToken = (installationId: string): string =>
 	`test_oidc:${installationId}`;
 
@@ -318,6 +312,7 @@ export const buildTestOidcHeaders = (
 ) => ({
 	authorization: `Bearer ${buildTestOidcToken(installationId)}`,
 	"x-vercel-auth": authType,
+	"x-allow-vercel-test-oidc": "true",
 	"content-type": "application/json",
 });
 

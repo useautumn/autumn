@@ -128,6 +128,9 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			keepInternalFields: c.req.header("x-strip-internal") === "false",
 			useReplica: c.req.header("x-use-replica") === "true",
 			mockVercelApi: c.req.header("x-mock-vercel-api") === "true",
+			allowVercelTestOidc:
+				process.env.NODE_ENV !== "production" &&
+				c.req.header("x-allow-vercel-test-oidc") === "true",
 		},
 	});
 

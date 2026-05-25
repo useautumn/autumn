@@ -80,6 +80,7 @@ export type RequestContext = {
 		keepInternalFields?: boolean;
 		useReplica?: boolean;
 		mockVercelApi?: boolean;
+		allowVercelTestOidc?: boolean;
 	};
 };
 
