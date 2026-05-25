@@ -47,7 +47,8 @@ export const useCusQuery = ({
 	const entityAlreadyLoaded =
 		!entityId ||
 		(currentCustomer as FullCustomer)?.customer_products?.some(
-			(cp: FullCusProduct) => cp.entity_id === entityId,
+			(cp: FullCusProduct) =>
+				cp.entity_id === entityId || cp.internal_entity_id === entityId,
 		);
 
 	const effectiveEntityId = entityAlreadyLoaded ? null : entityId;
