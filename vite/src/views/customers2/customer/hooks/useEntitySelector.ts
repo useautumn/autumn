@@ -65,12 +65,14 @@ export const useEntitySelector = () => {
 		enabled: isVisible,
 	});
 
-	const selectedEntity = entities.find(
-		(e) => e.id === entityId || e.internal_id === entityId,
-	);
+	const selectedEntity =
+		entities.find((e) => e.id === entityId || e.internal_id === entityId) ??
+		customerEntities.find((e) => e.id === entityId || e.internal_id === entityId);
+
+	const effectiveTotalCount = totalCount ?? customerEntities.length;
 
 	const entityTypeText = deriveEntityTypeText({
-		totalCount: totalCount || customerEntities.length,
+		totalCount: effectiveTotalCount,
 		entities: entities.length > 0 ? entities : customerEntities,
 		features: features ?? [],
 	});
@@ -79,7 +81,7 @@ export const useEntitySelector = () => {
 		entities,
 		selectedEntity,
 		entityId,
-		totalCount: totalCount || customerEntities.length,
+		totalCount: effectiveTotalCount,
 		entityTypeText,
 		isLoading,
 		isVisible,

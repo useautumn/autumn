@@ -38,12 +38,13 @@ export const handleListEntitiesInternal = createRoute({
 			eq(entities.deleted, false),
 		);
 
-		const searchCondition = search
+		const escapedSearch = search?.replace(/[%_\\]/g, "\\$&");
+		const searchCondition = escapedSearch
 			? and(
 					baseConditions,
 					or(
-						ilike(entities.id, `%${search}%`),
-						ilike(entities.name, `%${search}%`),
+						ilike(entities.id, `%${escapedSearch}%`),
+						ilike(entities.name, `%${escapedSearch}%`),
 					),
 				)
 			: baseConditions;
@@ -63,7 +64,6 @@ export const handleListEntitiesInternal = createRoute({
 
 		return c.json({
 			list: results as Entity[],
-			total: results.length,
 			total_count: countResult[0]?.count ?? 0,
 		});
 	},

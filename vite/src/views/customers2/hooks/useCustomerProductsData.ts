@@ -26,7 +26,7 @@ function filterBySelectedEntity({
 
 	return products.filter(
 		(product) =>
-			!product.internal_entity_id ||
+			(!product.internal_entity_id && !product.entity_id) ||
 			product.internal_entity_id === selectedEntity.internal_id ||
 			product.entity_id === selectedEntity.id,
 	);
@@ -41,8 +41,9 @@ export function useCustomerProductsData() {
 	);
 
 	const { subscriptions, purchases, hasEntityProducts } = useMemo(() => {
+		const allProducts = filterCustomerProducts({ customer, showExpired: showExpired ?? false });
 		const filtered = filterBySelectedEntity({
-			products: filterCustomerProducts({ customer, showExpired: showExpired ?? false }),
+			products: allProducts,
 			entityId,
 			entities: customer.entities,
 		});
@@ -50,7 +51,7 @@ export function useCustomerProductsData() {
 		return {
 			subscriptions: filtered.filter((p) => !isOneOffCusProduct(p)),
 			purchases: filtered.filter((p) => isOneOffCusProduct(p)),
-			hasEntityProducts: filtered.some(
+			hasEntityProducts: allProducts.some(
 				(p) => p.internal_entity_id || p.entity_id,
 			),
 		};

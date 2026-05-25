@@ -21,7 +21,6 @@ export const useEntitiesQuery = ({
 
 	const fetcher = async (): Promise<{
 		list: Entity[];
-		total: number;
 		total_count: number;
 	}> => {
 		const params = new URLSearchParams();
@@ -42,7 +41,6 @@ export const useEntitiesQuery = ({
 
 	return {
 		entities: (data?.list ?? []) as Entity[],
-		total: data?.total ?? 0,
 		totalCount: data?.total_count ?? 0,
 		isLoading,
 		error,
