@@ -3,6 +3,7 @@ import { sendCustomSvixEvent } from "@/external/svix/svixHelpers.js";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { customerActions } from "@/internal/customers/actions/index.js";
+import { logCaughtError } from "@/utils/logging/logCaughtError.js";
 import {
 	type VercelResourceDeletedEvent,
 	VercelWebhooks,
@@ -64,9 +65,11 @@ export const handleDeleteInstallation = createRoute({
 				);
 			}
 		} catch (error) {
-			logger.error("Error deleting installation", {
+			logCaughtError({
+				logger,
+				message: "[vercel/installations.delete] FAILED",
 				error,
-				integrationConfigurationId,
+				data: { integrationConfigurationId },
 			});
 		}
 		return c.json(

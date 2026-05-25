@@ -2,10 +2,10 @@ import {
 	AppEnv,
 	InternalError,
 	type Organization,
+	Scopes,
 	UpsertVercelProcessorConfigSchema,
 	type VercelMarketplaceMode,
 	type VercelProcessorConfig,
-	Scopes,
 } from "@autumn/shared";
 import { createSvixApp } from "@server/external/svix/svixHelpers.js";
 import { createSvixCli } from "@server/external/svix/svixUtils.js";
@@ -55,17 +55,15 @@ export const getVercelConfigDisplay = ({
 		env === AppEnv.Live
 			? vercelConfig.webhook_url
 			: vercelConfig.sandbox_webhook_url;
-	const customPaymentMethod =
-		env === AppEnv.Live
-			? vercelConfig.custom_payment_method?.live
-			: vercelConfig.custom_payment_method?.sandbox;
 
 	return {
 		connected: !!clientId && !!clientSecret && !!webhookUrl,
 		client_integration_id: mask(clientId, 3, 2),
 		client_secret: mask(clientSecret, 3, 2),
 		webhook_url: mask(webhookUrl, 8, 6),
-		custom_payment_method: mask(customPaymentMethod, 5, 3),
+		// `custom_payment_method` intentionally omitted from the display payload —
+		// see the no-vercel-config branch above for rationale.
+		custom_payment_method: undefined,
 		marketplace_mode: vercelConfig.marketplace_mode,
 		allowed_product_ids_live: vercelConfig.allowed_product_ids_live,
 		allowed_product_ids_sandbox: vercelConfig.allowed_product_ids_sandbox,

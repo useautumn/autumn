@@ -79,6 +79,7 @@ export type RequestContext = {
 		eventId?: string;
 		keepInternalFields?: boolean;
 		useReplica?: boolean;
+		mockVercelApi?: boolean;
 	};
 };
 
