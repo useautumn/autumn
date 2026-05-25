@@ -346,7 +346,7 @@ export class AutumnInt {
 		customerId: string,
 		params: {
 			from_entity_id?: string;
-			to_entity_id: string;
+			to_entity_id?: string;
 			product_id: string;
 		},
 	) {
