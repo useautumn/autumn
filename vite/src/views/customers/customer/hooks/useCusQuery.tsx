@@ -1,3 +1,4 @@
+import type { FullCusProduct, FullCustomer } from "@autumn/shared";
 import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useParams } from "react-router";
@@ -40,13 +41,13 @@ export const useCusQuery = ({
 	const cachedCustomer = useMemo(getCachedCustomer, [getCachedCustomer]);
 
 	const baseKey = buildKey(["customer", customer_id, null]);
-	const cachedData = queryClient.getQueryData<any>(baseKey);
+	const cachedData = queryClient.getQueryData<{ customer?: FullCustomer }>(baseKey);
 	const currentCustomer = cachedData?.customer ?? cachedCustomer;
 
 	const entityAlreadyLoaded =
 		!entityId ||
-		currentCustomer?.customer_products?.some(
-			(cp: any) => cp.entity_id === entityId,
+		(currentCustomer as FullCustomer)?.customer_products?.some(
+			(cp: FullCusProduct) => cp.entity_id === entityId,
 		);
 
 	const effectiveEntityId = entityAlreadyLoaded ? null : entityId;
