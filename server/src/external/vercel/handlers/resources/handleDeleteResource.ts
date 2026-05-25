@@ -38,6 +38,7 @@ export const handleDeleteResource = createRoute({
 				data: { resourceId },
 				level: "warn",
 			});
+			throw error;
 		}
 
 		try {
