@@ -1,9 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useParams } from "react-router";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { throwBackendError } from "@/utils/genUtils";
 import { useCachedCustomer } from "./useCachedCustomer";
@@ -33,12 +34,31 @@ export const useCusQuery = ({
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 	const { getCachedCustomer } = useCachedCustomer(customer_id);
+	const { entityId } = useEntity();
 
+	const queryClient = useQueryClient();
 	const cachedCustomer = useMemo(getCachedCustomer, [getCachedCustomer]);
+
+	const baseKey = buildKey(["customer", customer_id, null]);
+	const cachedData = queryClient.getQueryData<any>(baseKey);
+	const currentCustomer = cachedData?.customer ?? cachedCustomer;
+
+	const entityAlreadyLoaded =
+		!entityId ||
+		currentCustomer?.customer_products?.some(
+			(cp: any) => cp.entity_id === entityId,
+		);
+
+	const effectiveEntityId = entityAlreadyLoaded ? null : entityId;
 
 	const fetcher = async () => {
 		try {
-			const { data } = await axiosInstance.get(`/customers/${customer_id}`);
+			const params = effectiveEntityId
+				? `?entity_id=${effectiveEntityId}`
+				: "";
+			const { data } = await axiosInstance.get(
+				`/customers/${customer_id}${params}`,
+			);
 			return data;
 		} catch (error) {
 			throwBackendError(error);
@@ -48,13 +68,16 @@ export const useCusQuery = ({
 	const {
 		data,
 		isLoading: customerLoading,
+		isFetching: customerFetching,
+		isPlaceholderData,
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: buildKey(["customer", customer_id]),
+		queryKey: buildKey(["customer", customer_id, effectiveEntityId]),
 		queryFn: fetcher,
 		enabled: enabled && !!customer_id,
 		retry: false,
+		placeholderData: keepPreviousData,
 	});
 
 	const scheduleFetcher = async (): Promise<ScheduleResponse> => {
@@ -125,6 +148,8 @@ export const useCusQuery = ({
 		products,
 		features,
 		isLoading,
+		isFetching: customerFetching,
+		isPlaceholderData,
 		error,
 		refetch,
 		refetchSchedule,

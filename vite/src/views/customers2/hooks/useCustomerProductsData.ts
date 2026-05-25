@@ -3,7 +3,10 @@ import { parseAsBoolean, useQueryState } from "nuqs";
 import { useMemo } from "react";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { filterCustomerProductsByType } from "../components/table/customer-products/customerProductsTableFilters";
+import {
+	filterCustomerProducts,
+	isOneOffCusProduct,
+} from "../components/table/customer-products/customerProductsTableFilters";
 
 function filterBySelectedEntity({
 	products,
@@ -19,80 +22,58 @@ function filterBySelectedEntity({
 	const selectedEntity = entities.find(
 		(e: Entity) => e.id === entityId || e.internal_id === entityId,
 	);
-
 	if (!selectedEntity) return products;
 
 	return products.filter(
 		(product) =>
+			!product.internal_entity_id ||
 			product.internal_entity_id === selectedEntity.internal_id ||
 			product.entity_id === selectedEntity.id,
 	);
 }
 
 export function useCustomerProductsData() {
-	const { customer, isLoading, testClockFrozenTimeMs } = useCusQuery();
+	const { customer, isLoading, isFetching, isPlaceholderData, testClockFrozenTimeMs } = useCusQuery();
 	const { entityId } = useEntity();
 	const [showExpired, setShowExpired] = useQueryState(
 		"customerProductsShowExpired",
 		parseAsBoolean.withDefault(false),
 	);
 
-	const { subscriptions, purchases } = useMemo(
-		() =>
-			filterCustomerProductsByType({
-				customer,
-				showExpired: showExpired ?? false,
-			}),
-		[customer, showExpired],
-	);
+	const { subscriptions, purchases, hasEntityProducts } = useMemo(() => {
+		const filtered = filterBySelectedEntity({
+			products: filterCustomerProducts({ customer, showExpired: showExpired ?? false }),
+			entityId,
+			entities: customer.entities,
+		});
 
-	// Filter entity-level products by selected entity (if any)
-	const filteredSubscriptionsEntityLevel = useMemo(
-		() =>
-			filterBySelectedEntity({
-				products: subscriptions.entityLevel,
-				entityId,
-				entities: customer.entities,
-			}),
-		[subscriptions.entityLevel, entityId, customer.entities],
-	);
+		return {
+			subscriptions: filtered.filter((p) => !isOneOffCusProduct(p)),
+			purchases: filtered.filter((p) => isOneOffCusProduct(p)),
+			hasEntityProducts: filtered.some(
+				(p) => p.internal_entity_id || p.entity_id,
+			),
+		};
+	}, [customer, showExpired, entityId]);
 
-	const filteredPurchasesEntityLevel = useMemo(
-		() =>
-			filterBySelectedEntity({
-				products: purchases.entityLevel,
-				entityId,
-				entities: customer.entities,
-			}),
-		[purchases.entityLevel, entityId, customer.entities],
-	);
-
-	// Combine customer-level (always shown) + filtered entity-level products
-	const allSubscriptions = useMemo(
-		() => [...subscriptions.customerLevel, ...filteredSubscriptionsEntityLevel],
-		[subscriptions.customerLevel, filteredSubscriptionsEntityLevel],
-	);
-
-	const allPurchases = useMemo(
-		() => [...purchases.customerLevel, ...filteredPurchasesEntityLevel],
-		[purchases.customerLevel, filteredPurchasesEntityLevel],
-	);
+	const isEntityTransitioning = isFetching && isPlaceholderData;
 
 	return {
 		customer,
 		isLoading,
+		isEntityTransitioning,
 		testClockFrozenTimeMs,
 		showExpired,
 		setShowExpired,
 		entityId,
 		hasEntities: customer.entities.length > 0,
 		subscriptions: {
-			all: allSubscriptions,
-			hasEntityProducts: subscriptions.entityLevel.length > 0,
+			all: subscriptions,
+			hasEntityProducts,
 		},
 		purchases: {
-			all: allPurchases,
-			hasEntityProducts: purchases.entityLevel.length > 0,
+			all: purchases,
+			hasEntityProducts,
 		},
 	};
 }
