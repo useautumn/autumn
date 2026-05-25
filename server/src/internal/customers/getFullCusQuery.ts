@@ -112,7 +112,7 @@ const buildOptimizedCusProductsCTE = ({
       ) ft_data ON true
       WHERE cp.internal_customer_id = (SELECT internal_id FROM customer_record)
       ${withStatusFilter()}
-      ORDER BY ${entityId ? sql`CASE WHEN cp.entity_id = ${entityId} THEN 0 WHEN cp.entity_id IS NULL THEN 1 ELSE 2 END,` : sql``} ${relevantStatusFirst}, ${hasCustomerPrices} DESC, prod.is_add_on ASC, cp.created_at DESC
+      ORDER BY ${entityId ? sql`CASE WHEN cp.entity_id = ${entityId} OR cp.internal_entity_id = ${entityId} THEN 0 WHEN cp.entity_id IS NULL THEN 1 ELSE 2 END,` : sql``} ${relevantStatusFirst}, ${hasCustomerPrices} DESC, prod.is_add_on ASC, cp.created_at DESC
       LIMIT ${cusProductLimit}
     )
   `;
@@ -438,7 +438,7 @@ export const getFullCusQuery = ({
     COALESCE(
       (
         SELECT json_agg(cpwp ORDER BY
-          ${entityId ? sql`CASE WHEN cpwp.entity_id = ${entityId} THEN 0 WHEN cpwp.entity_id IS NULL THEN 1 ELSE 2 END,` : sql``}
+          ${entityId ? sql`CASE WHEN cpwp.entity_id = ${entityId} OR cpwp.internal_entity_id = ${entityId} THEN 0 WHEN cpwp.entity_id IS NULL THEN 1 ELSE 2 END,` : sql``}
           CASE WHEN cpwp.status = ANY(ARRAY[${sql.join(
 						RELEVANT_STATUSES.map((status) => sql`${status}`),
 						sql`, `,
