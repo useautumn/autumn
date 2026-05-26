@@ -176,6 +176,41 @@ function FilterValueInput({
 			</div>
 		);
 
+	if (config.valueType === "number") {
+		const isMulti = rule.operator === "in" || rule.operator === "not_in";
+		if (isMulti)
+			return (
+				<input
+					className="h-8 text-sm rounded-xl px-3 input-base flex-1 min-w-0 text-foreground placeholder:text-tertiary-foreground"
+					placeholder="1, 2, 3"
+					value={rule.values.join(", ")}
+					onChange={(e) =>
+						onChange({
+							...rule,
+							values: e.target.value
+								.split(",")
+								.map((s) => s.trim())
+								.filter(Boolean),
+						})
+					}
+				/>
+			);
+		return (
+			<input
+				type="number"
+				className="h-8 text-sm rounded-xl px-3 input-base flex-1 min-w-0 text-foreground placeholder:text-tertiary-foreground"
+				placeholder="Number"
+				value={rule.values[0] ?? ""}
+				onChange={(e) =>
+					onChange({
+						...rule,
+						values: e.target.value === "" ? [] : [e.target.value],
+					})
+				}
+			/>
+		);
+	}
+
 	if (suggestions && suggestions.length > 0)
 		return (
 			<ValuePicker

@@ -64,7 +64,9 @@ export const setupUpdatePlanProductContext = async ({
 		preparedOp.version === undefined &&
 		customize.price === undefined &&
 		customize.add_items?.length === 0 &&
-		customize.remove_items === undefined
+		customize.remove_items === undefined &&
+		(customize.update_items === undefined ||
+			customize.update_items.length === 0)
 	) {
 		return undefined;
 	}
