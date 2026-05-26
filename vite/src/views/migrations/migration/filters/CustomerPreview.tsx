@@ -3,7 +3,6 @@ import {
 	CaretLeftIcon,
 	CaretRightIcon,
 	ListMagnifyingGlassIcon,
-	UsersIcon,
 } from "@phosphor-icons/react";
 import type { PaginationState } from "@tanstack/react-table";
 import { debounce } from "lodash";
@@ -87,19 +86,6 @@ export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 	return (
 		<div className="flex flex-col gap-3">
 			<Separator />
-			<Table.Toolbar>
-				<Table.Heading>
-					<UsersIcon size={16} weight="fill" className="text-subtle" />
-					Filtered Customers
-				</Table.Heading>
-				<Table.Actions>
-					<span className="text-xs text-tertiary-foreground">
-						{count !== null
-							? `${count} ${count === 1 ? "match" : "matches"}`
-							: ""}
-					</span>
-				</Table.Actions>
-			</Table.Toolbar>
 			<div className="flex items-center gap-2">
 				<div className="relative flex items-center flex-1 min-w-0">
 					<ListMagnifyingGlassIcon
