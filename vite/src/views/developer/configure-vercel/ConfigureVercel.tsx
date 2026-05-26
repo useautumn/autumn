@@ -39,7 +39,6 @@ type VercelConfigState = {
 	client_integration_id: string;
 	client_secret: string;
 	webhook_url: string;
-	custom_payment_method: string;
 	marketplace_mode: VercelMarketplaceMode;
 	allowed_product_ids_live: string[];
 	allowed_product_ids_sandbox: string[];
@@ -59,7 +58,6 @@ export const ConfigureVercel = () => {
 		client_integration_id: "",
 		client_secret: "",
 		webhook_url: "",
-		custom_payment_method: "",
 		marketplace_mode: "" as VercelMarketplaceMode,
 		allowed_product_ids_live: [],
 		allowed_product_ids_sandbox: [],
@@ -105,8 +103,6 @@ export const ConfigureVercel = () => {
 		org?.processor_configs?.vercel?.client_integration_id;
 	const currentClientSecret = org?.processor_configs?.vercel?.client_secret;
 	const currentWebhookUrl = org?.processor_configs?.vercel?.webhook_url;
-	const currentCustomPaymentMethod =
-		org?.processor_configs?.vercel?.custom_payment_method;
 
 	const { isDark } = useTheme();
 
@@ -144,12 +140,6 @@ export const ConfigureVercel = () => {
 				}
 			}
 
-			if (vercelConfig.custom_payment_method?.trim()) {
-				filteredConfig.custom_payment_method = {
-					[env]: vercelConfig.custom_payment_method.trim(),
-				};
-			}
-
 			if (vercelConfig.marketplace_mode) {
 				filteredConfig.marketplace_mode = vercelConfig.marketplace_mode;
 			}
@@ -175,7 +165,6 @@ export const ConfigureVercel = () => {
 					client_integration_id: "",
 					client_secret: "",
 					webhook_url: "",
-					custom_payment_method: "",
 					marketplace_mode:
 						filteredConfig.marketplace_mode as VercelMarketplaceMode,
 				}));
@@ -242,38 +231,6 @@ export const ConfigureVercel = () => {
 									}
 									placeholder={
 										currentClientSecret || "eg. VAxvZFz8ST4d5b9pa2EuXkWG"
-									}
-								/>
-							</div>
-							<div className="col-span-2">
-								<FormLabel className="mb-1">
-									<span className="text-muted-foreground">
-										Stripe Custom Payment Method ID
-									</span>
-								</FormLabel>
-								<p className="text-tertiary-foreground text-sm mb-2">
-									Create a custom payment method in{" "}
-									<a
-										href="https://dashboard.stripe.com/settings/custom_payment_methods"
-										target="_blank"
-										rel="noopener noreferrer"
-										className="text-primary"
-									>
-										Stripe
-									</a>
-									.
-								</p>
-								<Input
-									value={vercelConfig.custom_payment_method || ""}
-									onChange={(e) =>
-										setVercelConfig((prev) => ({
-											...prev,
-											custom_payment_method: e.target.value,
-										}))
-									}
-									placeholder={
-										currentCustomPaymentMethod ||
-										"eg. cpmt_Yij7OBT6Fxu0UOa12XguA0vGB"
 									}
 								/>
 							</div>

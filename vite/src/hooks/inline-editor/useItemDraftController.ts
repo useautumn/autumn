@@ -5,6 +5,10 @@ import { getItemId } from "@/utils/product/productItemUtils";
 
 export interface DraftItemSession {
 	itemId: string;
+	// Resolved on session start so in-session patches write by index, not by
+	// recomputing getItemId(). Without this, editing an interval mid-session
+	// changes the item's id and subsequent updates silently no-op.
+	itemIndex: number;
 	initialItem: ProductItem;
 	draftItem: ProductItem;
 }
@@ -67,18 +71,26 @@ const areEqual = ({ left, right }: { left: unknown; right: unknown }) => {
 const patchItemOnProduct = ({
 	product,
 	itemId,
+	itemIndex: knownIndex,
 	item,
 }: {
 	product: FrontendProduct;
 	itemId: string;
+	// When provided, write directly to this index instead of re-deriving it
+	// from getItemId(). Required for edits that mutate id-affecting fields
+	// (e.g. interval), since the recomputed id no longer matches itemId.
+	itemIndex?: number;
 	item: ProductItem;
 }): FrontendProduct => {
 	if (!product.items?.length) return product;
 
-	const itemIndex = product.items.findIndex((currentItem, itemIndex) => {
-		const currentItemId = getItemId({ item: currentItem, itemIndex });
-		return currentItemId === itemId;
-	});
+	const itemIndex =
+		knownIndex !== undefined && knownIndex >= 0 && knownIndex < product.items.length
+			? knownIndex
+			: product.items.findIndex((currentItem, i) => {
+					const currentItemId = getItemId({ item: currentItem, itemIndex: i });
+					return currentItemId === itemId;
+				});
 
 	if (itemIndex === -1) return product;
 
@@ -152,12 +164,21 @@ export const useItemDraftController = ({
 	);
 
 	const patchPlanItem = useCallback(
-		({ itemId, item }: { itemId: string; item: ProductItem }) => {
+		({
+			itemId,
+			itemIndex,
+			item,
+		}: {
+			itemId: string;
+			itemIndex?: number;
+			item: ProductItem;
+		}) => {
 			setDraftProduct((previousProduct) => {
 				if (!previousProduct) return previousProduct;
 				return patchItemOnProduct({
 					product: previousProduct,
 					itemId,
+					itemIndex,
 					item,
 				});
 			});
@@ -168,21 +189,30 @@ export const useItemDraftController = ({
 	const startItemDraft = useCallback(
 		({ itemId, item }: { itemId: string; item: ProductItem }) => {
 			const clonedItem = structuredClone(item);
+			const resolvedIndex =
+				draftProduct?.items?.findIndex((candidate, i) => {
+					return getItemId({ item: candidate, itemIndex: i }) === itemId;
+				}) ?? -1;
 			setDraftItemSession({
 				itemId,
+				itemIndex: resolvedIndex,
 				initialItem: clonedItem,
 				draftItem: clonedItem,
 			});
 			setInitialItemState(clonedItem);
 		},
-		[setInitialItemState],
+		[draftProduct, setInitialItemState],
 	);
 
 	const updateItemDraft = useCallback(
 		({ item }: { item: ProductItem }) => {
 			setDraftItemSession((prev) => {
 				if (!prev) return prev;
-				patchPlanItem({ itemId: prev.itemId, item });
+				patchPlanItem({
+					itemId: prev.itemId,
+					itemIndex: prev.itemIndex,
+					item,
+				});
 				return {
 					...prev,
 					draftItem: item,
@@ -197,7 +227,11 @@ export const useItemDraftController = ({
 			if (!prev) return prev;
 			const restoredItem = structuredClone(prev.initialItem);
 			setInitialItemState(restoredItem);
-			patchPlanItem({ itemId: prev.itemId, item: restoredItem });
+			patchPlanItem({
+				itemId: prev.itemId,
+				itemIndex: prev.itemIndex,
+				item: restoredItem,
+			});
 			return {
 				...prev,
 				draftItem: restoredItem,
@@ -209,7 +243,11 @@ export const useItemDraftController = ({
 		setDraftItemSession((session) => {
 			if (!session) return session;
 
-			patchPlanItem({ itemId: session.itemId, item: session.draftItem });
+			patchPlanItem({
+				itemId: session.itemId,
+				itemIndex: session.itemIndex,
+				item: session.draftItem,
+			});
 
 			const committedItem = structuredClone(session.draftItem);
 			setInitialItemState(committedItem);

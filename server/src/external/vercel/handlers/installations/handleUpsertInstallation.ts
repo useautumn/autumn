@@ -5,6 +5,7 @@ import { createCustomStripeCard } from "@/external/stripe/stripeCardUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { customerActions } from "@/internal/customers/actions/index.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { logCaughtError } from "@/utils/logging/logCaughtError.js";
 import {
 	AuthError,
 	getAuthorizationToken,
@@ -131,8 +132,11 @@ export const handleUpsertInstallation = createRoute({
 				);
 			}
 		} catch (error) {
-			logger.error(`Error creating vercel customer ${error}`, {
+			logCaughtError({
+				logger,
+				message: "[vercel/installations.upsert] FAILED",
 				error,
+				data: { integrationConfigurationId },
 			});
 		}
 
