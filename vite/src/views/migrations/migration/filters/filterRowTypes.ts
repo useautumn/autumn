@@ -1,8 +1,9 @@
-import type { PlanFilter, StringMatcher } from "@autumn/shared";
+import type { NumberMatcher, PlanFilter, StringMatcher } from "@autumn/shared";
 
 export type FilterField =
 	| "customer_id"
 	| "plan_id"
+	| "version"
 	| "paid"
 	| "recurring"
 	| "price"
@@ -20,7 +21,11 @@ export type FilterOperator =
 	| "regex"
 	| "starts_with"
 	| "exists"
-	| "not_exists";
+	| "not_exists"
+	| "gt"
+	| "gte"
+	| "lt"
+	| "lte";
 
 export type FilterRule = {
 	field: FilterField;
@@ -38,6 +43,7 @@ export const FILTER_FIELD_OPTIONS: {
 }[] = [
 	{ value: "customer_id", label: "Customer" },
 	{ value: "plan_id", label: "Plan" },
+	{ value: "version", label: "Version" },
 	{ value: "paid", label: "Paid" },
 	{ value: "recurring", label: "Recurring" },
 	{ value: "price", label: "Base Price" },
@@ -51,7 +57,7 @@ export const FILTER_FIELD_OPTIONS: {
 type OperatorOption = { value: FilterOperator; label: string };
 export type FieldConfig = {
 	operators: OperatorOption[];
-	valueType: "string" | "boolean" | "none";
+	valueType: "string" | "boolean" | "number" | "none";
 };
 
 const STRING_OPERATORS: OperatorOption[] = [
@@ -66,6 +72,17 @@ const STRING_OPERATORS: OperatorOption[] = [
 const STRING_MATCH_OPERATORS: OperatorOption[] = [
 	{ value: "is", label: "is" },
 	{ value: "is_not", label: "is not" },
+	{ value: "in", label: "in" },
+	{ value: "not_in", label: "not in" },
+];
+
+const NUMBER_OPERATORS: OperatorOption[] = [
+	{ value: "is", label: "is" },
+	{ value: "is_not", label: "is not" },
+	{ value: "gt", label: ">" },
+	{ value: "gte", label: "≥" },
+	{ value: "lt", label: "<" },
+	{ value: "lte", label: "≤" },
 	{ value: "in", label: "in" },
 	{ value: "not_in", label: "not in" },
 ];
@@ -86,6 +103,7 @@ const NULLABLE_ONLY: FieldConfig = {
 export const FIELD_CONFIGS: Record<FilterField, FieldConfig> = {
 	customer_id: { operators: STRING_MATCH_OPERATORS, valueType: "string" },
 	plan_id: { operators: STRING_OPERATORS, valueType: "string" },
+	version: { operators: NUMBER_OPERATORS, valueType: "number" },
 	paid: BOOLEAN_ONLY,
 	recurring: BOOLEAN_ONLY,
 	price: NULLABLE_ONLY,
@@ -135,6 +153,61 @@ function stringMatcherToRule(
 			values: [matcher.$startsWith],
 		};
 	return { field, operator: "is", values: [] };
+}
+
+function numberMatcherToRule(
+	field: FilterField,
+	matcher: NumberMatcher | undefined,
+): FilterRule | null {
+	if (matcher === undefined) return null;
+	if (matcher === null) return { field, operator: "is", values: [] };
+	if (typeof matcher === "number")
+		return { field, operator: "is", values: [String(matcher)] };
+	if (matcher.$eq !== undefined && matcher.$eq !== null)
+		return { field, operator: "is", values: [String(matcher.$eq)] };
+	if (matcher.$ne !== undefined && matcher.$ne !== null)
+		return { field, operator: "is_not", values: [String(matcher.$ne)] };
+	if (matcher.$in !== undefined)
+		return { field, operator: "in", values: matcher.$in.map(String) };
+	if (matcher.$nin !== undefined)
+		return { field, operator: "not_in", values: matcher.$nin.map(String) };
+	if (matcher.$gt !== undefined)
+		return { field, operator: "gt", values: [String(matcher.$gt)] };
+	if (matcher.$gte !== undefined)
+		return { field, operator: "gte", values: [String(matcher.$gte)] };
+	if (matcher.$lt !== undefined)
+		return { field, operator: "lt", values: [String(matcher.$lt)] };
+	if (matcher.$lte !== undefined)
+		return { field, operator: "lte", values: [String(matcher.$lte)] };
+	return { field, operator: "is", values: [] };
+}
+
+function ruleToNumberMatcher(rule: FilterRule): NumberMatcher | undefined {
+	const nums = rule.values
+		.map((v) => Number.parseFloat(v))
+		.filter((n) => !Number.isNaN(n));
+	if (nums.length === 0) return undefined;
+	const first = nums[0];
+	switch (rule.operator) {
+		case "is":
+			return nums.length > 1 ? { $in: nums } : first;
+		case "is_not":
+			return { $ne: first };
+		case "in":
+			return { $in: nums };
+		case "not_in":
+			return { $nin: nums };
+		case "gt":
+			return { $gt: first };
+		case "gte":
+			return { $gte: first };
+		case "lt":
+			return { $lt: first };
+		case "lte":
+			return { $lte: first };
+		default:
+			return first;
+	}
 }
 
 function ruleToStringMatcher(rule: FilterRule): StringMatcher {
@@ -191,6 +264,9 @@ export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
 
 	const planIdRule = stringMatcherToRule("plan_id", filter.plan_id);
 	if (planIdRule) mainRules.push(planIdRule);
+
+	const versionRule = numberMatcherToRule("version", filter.version);
+	if (versionRule) mainRules.push(versionRule);
 
 	if (filter.paid !== undefined)
 		mainRules.push(booleanRule("paid", filter.paid));
@@ -271,6 +347,9 @@ export function groupsToPlanFilter(groups: FilterGroupData[]): PlanFilter {
 		switch (rule.field) {
 			case "plan_id":
 				filter.plan_id = ruleToStringMatcher(rule);
+				break;
+			case "version":
+				filter.version = ruleToNumberMatcher(rule);
 				break;
 			case "paid":
 				filter.paid = rule.values[0] === "true";

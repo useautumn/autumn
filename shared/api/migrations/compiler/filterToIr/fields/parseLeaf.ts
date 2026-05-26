@@ -4,7 +4,8 @@ import { translateValue } from "./translateValue.js";
 
 /**
  * Parse a single field's matcher value into one IR leaf or a small AND of
- * leaves. Handles the four supported operators: eq, ne, in, exists.
+ * leaves. Handles the supported operators: eq, ne, in, nin, exists, gt,
+ * gte, lt, lte.
  *
  * Spelling normalization:
  * - bare value         → eq
@@ -12,6 +13,7 @@ import { translateValue } from "./translateValue.js";
  * - { $ne: null }      → exists (true)
  * - { $eq: null }      → eq null
  * - { $in: [...] }     → in
+ * - { $gt: n }         → gt   (and same for $gte / $lt / $lte)
  *
  * Multiple operators on one field are combined with AND.
  */
@@ -37,6 +39,14 @@ export function parseLeaf({
 		else leaves.push(makeLeaf(field, "ne", ops.$ne, ctx) as IRLeaf);
 	}
 	if ("$in" in ops) leaves.push(makeLeaf(field, "in", ops.$in, ctx) as IRLeaf);
+	if ("$nin" in ops)
+		leaves.push(makeLeaf(field, "nin", ops.$nin, ctx) as IRLeaf);
+	if ("$gt" in ops) leaves.push(makeLeaf(field, "gt", ops.$gt, ctx) as IRLeaf);
+	if ("$gte" in ops)
+		leaves.push(makeLeaf(field, "gte", ops.$gte, ctx) as IRLeaf);
+	if ("$lt" in ops) leaves.push(makeLeaf(field, "lt", ops.$lt, ctx) as IRLeaf);
+	if ("$lte" in ops)
+		leaves.push(makeLeaf(field, "lte", ops.$lte, ctx) as IRLeaf);
 
 	if (leaves.length === 0)
 		throw new Error(`No supported operator found on field "${field}"`);
