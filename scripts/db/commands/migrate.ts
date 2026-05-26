@@ -10,6 +10,7 @@ import {
 	type BlockingStatement,
 	findBlockingIndexStatements,
 } from "../helpers/safetyCheck.ts";
+import { runBootstrapMigrate } from "../helpers/bootstrapMigrate.ts";
 
 export async function cmdMigrate(
 	env: Env,
@@ -41,11 +42,13 @@ export async function cmdMigrate(
 	let pending: PendingMigration[];
 	try {
 		pending = await getPendingMigrations(client);
-	} finally {
+	} catch (err) {
 		await client.end();
+		throw err;
 	}
 
 	if (pending.length === 0) {
+		await client.end();
 		console.log("no pending migrations");
 		return;
 	}
@@ -58,6 +61,7 @@ export async function cmdMigrate(
 	const blockers = opts.bootstrap ? [] : collectBlockers(pending);
 
 	if (opts.dryRun) {
+		await client.end();
 		console.log("");
 		console.log("--- SQL preview ---");
 		for (const migration of pending) {
@@ -78,10 +82,24 @@ export async function cmdMigrate(
 	}
 
 	if (blockers.length > 0) {
+		await client.end();
 		printBlockerError(blockers);
 		process.exit(1);
 	}
 
+	// Bootstrap mode (`bun dw setup`) uses our custom transactionless runner so
+	// `CREATE INDEX CONCURRENTLY` works. Non-bootstrap defers to drizzle-kit.
+	if (opts.bootstrap) {
+		try {
+			await runBootstrapMigrate(client, pending);
+			console.log(`applied ${pending.length} migration(s)`);
+		} finally {
+			await client.end();
+		}
+		return;
+	}
+
+	await client.end();
 	const { code } = await run("bun", ["-F", "@autumn/shared", "db:migrate"], {
 		cwd: REPO_ROOT,
 	});
