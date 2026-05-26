@@ -8,6 +8,13 @@
       "when": 1779096275848,
       "tag": "0000_bumpy_tinkerer",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779827379835,
+      "tag": "0001_vengeful_paibok",
+      "breakpoints": true
     }
   ]
 }
