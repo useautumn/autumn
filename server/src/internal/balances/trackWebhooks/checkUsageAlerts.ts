@@ -1,5 +1,6 @@
 import {
 	type ApiBalanceV1,
+	AppEnv,
 	type DbUsageAlert,
 	type Feature,
 	type FullCustomer,
@@ -206,8 +207,12 @@ export const checkUsageAlerts = async ({
 		scope: "customer",
 	});
 
-	// 2. Org-level alerts (apply to all customers; evaluated against customer-level balance)
-	const orgAlerts = ctx.org.config?.usage_alerts ?? [];
+	// 2. Org-level alerts (apply to all customers; evaluated against customer-level balance).
+	// Env-scoped: sandbox reads sandbox_usage_alerts, live reads usage_alerts.
+	const orgAlerts =
+		ctx.env === AppEnv.Sandbox
+			? (ctx.org.config?.sandbox_usage_alerts ?? [])
+			: (ctx.org.config?.usage_alerts ?? []);
 	if (orgAlerts.length > 0) {
 		await processAlerts({
 			ctx,

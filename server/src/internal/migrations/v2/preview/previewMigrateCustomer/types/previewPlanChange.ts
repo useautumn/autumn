@@ -1,8 +1,9 @@
 import { z } from "zod/v4";
 
 export const PreviewPlanItemChangeSchema = z.object({
-	action: z.enum(["created", "deleted"]),
+	action: z.enum(["created", "updated", "deleted"]),
 	feature_id: z.string(),
+	previous_attributes: z.record(z.string(), z.unknown()).default({}),
 });
 
 export const PreviewPlanChangeSchema = z.object({

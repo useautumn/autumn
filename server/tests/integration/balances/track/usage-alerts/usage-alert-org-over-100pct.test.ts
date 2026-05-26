@@ -68,13 +68,15 @@ afterEach(async () => {
 });
 
 async function setOrgUsageAlerts(usageAlerts: DbUsageAlert[]) {
+	// Tests run in AppEnv.Sandbox — checkUsageAlerts reads
+	// sandbox_usage_alerts, not the live `usage_alerts` field.
 	await OrgService.update({
 		db,
 		orgId: defaultCtx.org.id,
 		updates: {
 			config: {
 				...defaultCtx.org.config,
-				usage_alerts: usageAlerts,
+				sandbox_usage_alerts: usageAlerts,
 			},
 		},
 	});
