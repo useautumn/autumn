@@ -9,6 +9,11 @@
 			"types": "./index.ts",
 			"import": "./index.ts",
 			"default": "./index.ts"
+		},
+		"./scopeDefinitions": {
+			"types": "./utils/scopeDefinitions.ts",
+			"import": "./utils/scopeDefinitions.ts",
+			"default": "./utils/scopeDefinitions.ts"
 		}
 	},
 	"author": "Recase Inc.",

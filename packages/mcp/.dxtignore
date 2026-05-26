@@ -1,0 +1,5 @@
+.speakeasy
+.vscode
+bun.lock
+eslint.config.mjs
+node_modules

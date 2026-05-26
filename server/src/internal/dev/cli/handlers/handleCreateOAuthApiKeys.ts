@@ -1,15 +1,54 @@
 import {
 	AppEnv,
+	checkScopes,
 	ErrCode,
 	oauthAccessToken,
 	oauthConsent,
 	RecaseError,
+	type ScopeString,
 	Scopes,
 } from "@autumn/shared";
+import { verifyAccessToken } from "better-auth/oauth2";
 import { and, eq, gt } from "drizzle-orm";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { hashOAuthToken } from "@/utils/oauthUtils.js";
 import { ApiKeyPrefix, createKey } from "../../api-keys/apiKeyUtils.js";
+import {
+	type OAuthApiKeyRequestBody,
+	parseRequestedScopes,
+	tokenRecordFromResourceToken,
+} from "../oauthApiKeyUtils.js";
+
+const getOAuthIssuer = () =>
+	`${process.env.BETTER_AUTH_URL?.replace(/\/$/, "") ?? ""}/api/auth`;
+
+const verifyResourceAccessToken = async ({
+	accessToken,
+	resource,
+	requestedScopes,
+}: {
+	accessToken: string;
+	resource: string | null;
+	requestedScopes: ScopeString[] | null;
+}) => {
+	if (!resource) return null;
+
+	const issuer = getOAuthIssuer();
+	try {
+		const payload = await verifyAccessToken(accessToken, {
+			jwksUrl: `${issuer}/jwks`,
+			verifyOptions: {
+				audience: resource,
+				issuer,
+			},
+			scopes: requestedScopes ?? undefined,
+		});
+
+		return tokenRecordFromResourceToken(payload as Record<string, unknown>);
+	} catch {
+		return null;
+	}
+};
 
 /**
  * Create API keys from an OAuth access token.
@@ -24,6 +63,10 @@ export const handleCreateOAuthApiKeys = createRoute({
 	scopes: [Scopes.Public],
 	handler: async (c) => {
 		const db = c.get("ctx").db;
+		const rawBody = await c.req.text();
+		const body = rawBody ? (JSON.parse(rawBody) as OAuthApiKeyRequestBody) : {};
+		const requestedScopes = parseRequestedScopes(body.scopes);
+		const resource = typeof body.resource === "string" ? body.resource : null;
 
 		// Get Bearer token from Authorization header
 		const authHeader = c.req.header("Authorization");
@@ -52,7 +95,15 @@ export const handleCreateOAuthApiKeys = createRoute({
 			)
 			.limit(1);
 
-		if (tokenRecords.length === 0) {
+		const tokenRecord =
+			tokenRecords[0] ??
+			(await verifyResourceAccessToken({
+				accessToken,
+				resource,
+				requestedScopes,
+			}));
+
+		if (!tokenRecord) {
 			throw new RecaseError({
 				message: "Invalid or expired access token",
 				code: ErrCode.InvalidRequest,
@@ -60,7 +111,19 @@ export const handleCreateOAuthApiKeys = createRoute({
 			});
 		}
 
-		const tokenRecord = tokenRecords[0];
+		if (requestedScopes) {
+			const { allowed, missing } = checkScopes(
+				requestedScopes,
+				tokenRecord.scopes,
+			);
+			if (!allowed) {
+				throw new RecaseError({
+					message: `Insufficient scopes. Missing: ${missing.join(", ")}`,
+					code: ErrCode.InsufficientScopes,
+					statusCode: 403,
+				});
+			}
+		}
 
 		const userId = tokenRecord.userId;
 		if (!userId) {
@@ -115,6 +178,7 @@ export const handleCreateOAuthApiKeys = createRoute({
 				userId,
 				prefix: ApiKeyPrefix.Sandbox,
 				meta,
+				scopes: requestedScopes,
 			}),
 			createKey({
 				db,
@@ -124,6 +188,7 @@ export const handleCreateOAuthApiKeys = createRoute({
 				userId,
 				prefix: ApiKeyPrefix.Live,
 				meta,
+				scopes: requestedScopes,
 			}),
 		]);
 
@@ -131,6 +196,7 @@ export const handleCreateOAuthApiKeys = createRoute({
 			sandbox_key: sandboxKey,
 			prod_key: prodKey,
 			org_id: orgId,
+			scopes: requestedScopes,
 		});
 	},
 });

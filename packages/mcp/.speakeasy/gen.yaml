@@ -1,0 +1,65 @@
+configVersion: 2.0.0
+generation:
+  devContainers:
+    enabled: false
+    schemaPath: .speakeasy/out.openapi.yaml
+  sdkClassName: AutumnMcp
+  maintainOpenAPIOrder: true
+  usageSnippets:
+    optionalPropertyRendering: withExample
+    sdkInitStyle: constructor
+  useClassNamesForArrayFields: true
+  fixes:
+    nameResolutionDec2023: true
+    nameResolutionFeb2025: true
+    parameterOrderingFeb2024: true
+    requestResponseComponentNamesFeb2024: true
+    securityFeb2025: true
+    sharedErrorComponentsApr2025: true
+    sharedNestedComponentsJan2026: true
+    nameOverrideFeb2026: true
+  auth:
+    oAuth2ClientCredentialsEnabled: false
+    oAuth2PasswordEnabled: false
+    hoistGlobalSecurity: true
+  inferSSEOverload: true
+  sdkHooksConfigAccess: true
+  schemas:
+    allOfMergeStrategy: shallowMerge
+  requestBodyFieldName: body
+  versioningStrategy: manual
+  persistentEdits: {}
+  tests:
+    generateTests: false
+    generateNewTests: true
+    skipResponseBodyAssertions: false
+mcp-typescript:
+  version: 0.0.1
+  additionalDependencies:
+    dependencies: {}
+    devDependencies: {}
+    peerDependencies: {}
+  advancedFlags: []
+  author: Speakeasy
+  baseErrorName: AutumnMcpError
+  compileCommand:
+    - bun
+    - install
+    - --ignore-scripts
+  cloudflareEnabled: false
+  envVarPrefix: AUTUMN
+  fixEnumNameSanitization: false
+  formStringArrayEncodeMode: array
+  gramEnabled: false
+  inferUnionDiscriminators: true
+  inputModelSuffix: input
+  maxMethodParams: 0
+  mcpbManifestOverlay:
+    description: Operational MCP tools for selected Autumn customer, plan, and billing API routes.
+    displayName: Autumn MCP
+    version: 0.0.1
+  multipartArrayFormat: standard
+  outputModelSuffix: output
+  packageName: '@autumn/mcp'
+  responseFormat: flat
+  validateResponse: false

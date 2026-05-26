@@ -1,0 +1,15 @@
+workflowVersion: 1.0.0
+speakeasyVersion: latest
+sources:
+    Autumn MCP API:
+        inputs:
+            - location: ../openapi/openapi-mcp.yml
+        transformations:
+            - removeUnused: false
+        output: .speakeasy/out.openapi.yaml
+        registry:
+            location: registry.speakeasyapi.dev/autumn-gne/autumn/autumn-mcp-api
+targets:
+    autumn-mcp:
+        target: mcp-typescript
+        source: Autumn MCP API

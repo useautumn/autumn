@@ -1,0 +1,87 @@
+overlay: 1.0.0
+info:
+  title: Autumn MCP tool metadata
+  version: 0.0.0
+actions:
+  - target: $["paths"]["/v1/customers.list"]["post"]
+    update:
+      x-speakeasy-mcp:
+        name: list_customers
+        title: List customers
+        readOnlyHint: true
+        destructiveHint: false
+        description: List Autumn customers. Use the search field to find customers by ID, name, or email.
+      x-autumn-scopes:
+        - customers:read
+  - target: $["paths"]["/v1/customers.get"]["post"]
+    update:
+      x-speakeasy-mcp:
+        name: get_customer
+        title: Get customer
+        readOnlyHint: true
+        destructiveHint: false
+        description: Get one Autumn customer by customer ID, with optional expanded fields.
+      x-autumn-scopes:
+        - customers:read
+  - target: $["paths"]["/v1/plans.list"]["post"]
+    update:
+      x-speakeasy-mcp:
+        name: list_plans
+        title: List plans
+        readOnlyHint: true
+        destructiveHint: false
+        description: List Autumn plans. Optionally pass a customer ID to include customer eligibility.
+      x-autumn-scopes:
+        - plans:read
+  - target: $["paths"]["/v1/plans.get"]["post"]
+    update:
+      x-speakeasy-mcp:
+        name: get_plan
+        title: Get plan
+        readOnlyHint: true
+        destructiveHint: false
+        description: Get one Autumn plan by plan ID and optional version.
+      x-autumn-scopes:
+        - plans:read
+  - target: $["paths"]["/v1/billing.preview_attach"]["post"]
+    update:
+      x-speakeasy-mcp:
+        name: preview_attach
+        title: Preview attach
+        readOnlyHint: true
+        destructiveHint: false
+        description: Preview the billing impact of attaching a plan to a customer. This does not execute the attach.
+      x-autumn-scopes:
+        - billing:read
+  - target: $["paths"]["/v1/billing.attach"]["post"]
+    update:
+      x-speakeasy-mcp:
+        name: attach
+        title: Attach
+        readOnlyHint: false
+        destructiveHint: true
+        idempotentHint: false
+        description: Attach a plan to a customer. This may create or update subscriptions, invoices, or payment links.
+      x-autumn-scopes:
+        - billing:write
+  - target: $["paths"]["/v1/billing.preview_update"]["post"]
+    update:
+      x-speakeasy-mcp:
+        name: preview_update_subscription
+        title: Preview update subscription
+        readOnlyHint: true
+        destructiveHint: false
+        description: Preview the billing impact of updating a customer subscription. This does not execute the update.
+      x-autumn-scopes:
+        - billing:read
+  - target: $["paths"]["/v1/billing.update"]["post"]
+    update:
+      x-speakeasy-mcp:
+        name: update_subscription
+        title: Update subscription
+        readOnlyHint: false
+        destructiveHint: true
+        idempotentHint: false
+        description: Update a customer subscription. This may change quantities, cancel, uncancel, invoice, or update billing state.
+      x-autumn-scopes:
+        - billing:write

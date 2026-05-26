@@ -1,0 +1,90 @@
+{
+  "author": {
+    "name": "Speakeasy"
+  },
+  "description": "Operational MCP tools for selected Autumn customer, plan, and billing API routes.",
+  "displayName": "Autumn MCP",
+  "display_name": "@autumn/mcp",
+  "keywords": [
+    "@autumn/mcp"
+  ],
+  "long_description": "",
+  "manifest_version": "0.3",
+  "name": "@autumn/mcp",
+  "prompts": [],
+  "server": {
+    "type": "node",
+    "entry_point": "./bin/mcp-server.js",
+    "mcp_config": {
+      "command": "node",
+      "args": [
+        "${__dirname}/bin/mcp-server.js",
+        "start",
+        "--secret-key",
+        "${user_config.secret_key}",
+        "--x-api-version",
+        "${user_config.x_api_version}",
+        "--fail-open",
+        "${user_config.fail_open}"
+      ]
+    }
+  },
+  "user_config": {
+    "secret_key": {
+      "type": "string",
+      "title": "secretKey",
+      "description": "The secretKey to use for the request",
+      "required": true,
+      "sensitive": true
+    },
+    "x_api_version": {
+      "type": "string",
+      "title": "xApiVersion",
+      "description": "The xApiVersion to use for the request",
+      "required": false,
+      "default": "2.3.0"
+    },
+    "fail_open": {
+      "type": "boolean",
+      "title": "failOpen",
+      "description": "The failOpen to use for the request",
+      "required": false,
+      "default": true
+    }
+  },
+  "version": "0.0.1",
+  "tools": [
+    {
+      "name": "get_customer",
+      "description": "Get one Autumn customer by customer ID, with optional expanded fields."
+    },
+    {
+      "name": "list_customers",
+      "description": "List Autumn customers. Use the search field to find customers by ID, name, or email."
+    },
+    {
+      "name": "get_plan",
+      "description": "Get one Autumn plan by plan ID and optional version."
+    },
+    {
+      "name": "list_plans",
+      "description": "List Autumn plans. Optionally pass a customer ID to include customer eligibility."
+    },
+    {
+      "name": "attach",
+      "description": "Attach a plan to a customer. This may create or update subscriptions, invoices, or payment links."
+    },
+    {
+      "name": "preview_attach",
+      "description": "Preview the billing impact of attaching a plan to a customer. This does not execute the attach."
+    },
+    {
+      "name": "update_subscription",
+      "description": "Update a customer subscription. This may change quantities, cancel, uncancel, invoice, or update billing state."
+    },
+    {
+      "name": "preview_update_subscription",
+      "description": "Preview the billing impact of updating a customer subscription. This does not execute the update."
+    }
+  ]
+}

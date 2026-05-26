@@ -5,6 +5,8 @@
 	"private": true,
 	"scripts": {
 		"generate": "bun api.ts",
+		"mcp:spec": "bun scripts/generateMcpSpec.ts",
+		"mcp:validate": "bun scripts/validateMcpSpec.ts",
 		"ts": "bunx tsgo --build --noEmit"
 	},
 	"dependencies": {
