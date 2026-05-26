@@ -147,10 +147,19 @@ export const setupAutoTopupContext = async ({
 		return null;
 	}
 
+	const vercelInstallationId =
+		fullCustomer.processors?.vercel?.installation_id;
+	const shouldUseInvoiceMode =
+		autoTopupConfig.invoice_mode === true || Boolean(vercelInstallationId);
+
+	const invoiceMode = shouldUseInvoiceMode
+		? { finalizeInvoice: true, enableProductImmediately: true }
+		: undefined;
+
 	const { stripeCus, paymentMethod, testClockFrozenTime } =
 		await fetchStripeCustomerForBilling({ ctx, fullCus: fullCustomer });
 
-	if (!paymentMethod) {
+	if (!paymentMethod && !invoiceMode) {
 		logger.warn(
 			`[setupAutoTopupContext] No payment method for customer ${stripeCus?.id}, skipping`,
 		);
@@ -167,10 +176,6 @@ export const setupAutoTopupContext = async ({
 		);
 		return null;
 	}
-
-	const invoiceMode = autoTopupConfig.invoice_mode
-		? { finalizeInvoice: true, enableProductImmediately: true }
-		: undefined;
 
 	return {
 		// BillingContext fields

@@ -134,22 +134,16 @@ const handlePrepaidErrors = async ({
 	}
 };
 
+/**
+ * Blocks attach attempts against customers managed by an external billing
+ * platform (today: Vercel marketplace).
+ */
 export const handleCustomPaymentMethodErrors = ({
 	attachParams,
 }: {
 	attachParams: AttachParams;
 }) => {
-	const { paymentMethod } = attachParams;
-	if (
-		paymentMethod?.type === "custom" &&
-		attachParams.customer.processors?.vercel?.custom_payment_method_id ===
-			paymentMethod?.custom?.type
-	) {
-		throw new RecaseError({
-			message:
-				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",
-		});
-	} else if (attachParams.customer.processors?.vercel?.installation_id) {
+	if (attachParams.customer.processors?.vercel?.installation_id) {
 		throw new RecaseError({
 			message:
 				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",
@@ -157,26 +151,22 @@ export const handleCustomPaymentMethodErrors = ({
 	}
 };
 
+/**
+ * V2 attach equivalent of `handleCustomPaymentMethodErrors`. Origin platforms
+ * (e.g. Vercel marketplace handlers calling attach internally) opt out of
+ * this guard via `contextOverride.skipCustomPaymentMethodGuard`.
+ *
+ * See the V1 docstring above for why we block on `installation_id` rather
+ * than on the resolved PaymentMethod shape.
+ */
 export const handleCustomPaymentMethodErrorsV2 = ({
 	billingContext,
 }: {
 	billingContext: BillingContext;
 }) => {
-	// Origin platforms (e.g. Vercel marketplace handlers calling attach internally)
-	// opt out of this guard via contextOverride.skipCustomPaymentMethodGuard.
 	if (billingContext.skipCustomPaymentMethodGuard) return;
 
-	const { paymentMethod } = billingContext;
-	if (
-		paymentMethod?.type === "custom" &&
-		billingContext.fullCustomer.processors?.vercel?.custom_payment_method_id ===
-			paymentMethod?.custom?.type
-	) {
-		throw new RecaseError({
-			message:
-				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",
-		});
-	} else if (billingContext.fullCustomer.processors?.vercel?.installation_id) {
+	if (billingContext.fullCustomer.processors?.vercel?.installation_id) {
 		throw new RecaseError({
 			message:
 				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",

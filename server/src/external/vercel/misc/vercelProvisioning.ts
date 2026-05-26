@@ -7,8 +7,8 @@ import type {
 import { ErrCode, RecaseError } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
-import { getCusPaymentMethod } from "@/external/stripe/stripeCusUtils.js";
 import { parseVercelPrepaidQuantities } from "@/external/vercel/misc/vercelInvoicing.js";
+import { ensureVercelInvoiceModeSubscription } from "@/external/vercel/misc/vercelStripeInvoiceMode.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { attach } from "@/internal/billing/v2/actions/attach/attach";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
@@ -18,8 +18,9 @@ import { ProductService } from "@/internal/products/ProductService.js";
  * Provisions a Vercel customer product via V2 attach.
  *
  * Idempotency-checks via existing Stripe subscription metadata, then calls V2
- * `attach()` with internal-only `contextOverride` flags for Vercel's custom
- * payment-method flow.
+ * `attach()` in invoice mode (`send_invoice`). Vercel marketplace moves the
+ * money; Stripe is the ledger. The legacy custom-payment-method path is no
+ * longer required for provisioning.
  */
 export const provisionVercelCusProduct = async ({
 	ctx,
@@ -77,9 +78,17 @@ export const provisionVercelCusProduct = async ({
 			env,
 		});
 
+		// Lazily migrate existing Vercel subs to invoice mode before short-circuit.
+		// Idempotent — no-op if already `send_invoice`.
+		const migratedSub = await ensureVercelInvoiceModeSubscription({
+			ctx,
+			stripeCli,
+			subscription: existingSub,
+		});
+
 		if (existingCusProducts.length > 0) {
 			return {
-				subscription: existingSub,
+				subscription: migratedSub,
 				cusProduct: existingCusProducts[0],
 				product,
 			};
@@ -99,8 +108,8 @@ export const provisionVercelCusProduct = async ({
 			"[provisionVercelCusProduct] Existing sub without cus_product — skipping (likely in-flight provision elsewhere)",
 			{
 				data: {
-					subscriptionId: existingSub.id,
-					subscriptionStatus: existingSub.status,
+					subscriptionId: migratedSub.id,
+					subscriptionStatus: migratedSub.status,
 					installationId: integrationConfigurationId,
 				},
 			},
@@ -112,24 +121,7 @@ export const provisionVercelCusProduct = async ({
 		});
 	}
 
-	// 3. Resolve custom payment method
-	const customPaymentMethod = await getCusPaymentMethod({
-		stripeCli,
-		stripeId: customer.processor.id,
-		errorIfNone: false,
-		typeFilter: org.processor_configs?.vercel?.custom_payment_method?.[env],
-	});
-
-	if (!customPaymentMethod) {
-		throw new RecaseError({
-			message:
-				"No payment method found. Customer may need to reinstall integration.",
-			code: ErrCode.PaymentMethodNotFound,
-			statusCode: StatusCodes.BAD_REQUEST,
-		});
-	}
-
-	// 4. Parse prepaid options
+	// 3. Parse prepaid options
 	const optionsList =
 		metadata && Object.keys(metadata).length > 0
 			? parseVercelPrepaidQuantities({
@@ -139,7 +131,7 @@ export const provisionVercelCusProduct = async ({
 				})
 			: [];
 
-	// 5. Call V2 attach
+	// 4. Call V2 attach in invoice mode
 	const featureQuantities = optionsList.map((opt) => ({
 		feature_id: opt.feature_id,
 		quantity: opt.quantity,
@@ -149,17 +141,19 @@ export const provisionVercelCusProduct = async ({
 	// `setupFullCustomerContext` reloads it with `withEntities: true, withSubs: true`,
 	// which downstream usage merging requires. Overriding would skip that load and
 	// cause `mergeEntitiesWithExistingUsages` to throw on `undefined` entities.
+	//
+	// We pass a stripeBillingContext WITHOUT a payment method. Vercel handles
+	// money movement out of band; Stripe is just the ledger. Invoice mode
+	// (`send_invoice`) auto-activates the subscription regardless of first
+	// invoice status, so we don't need default_incomplete + custom-PM gymnastics.
 	const contextOverride: BillingContextOverride = {
 		productContext: {
 			fullProduct: product,
 		},
 		stripeBillingContext: {
 			stripeCustomer,
-			paymentMethod: customPaymentMethod,
 			stripeDiscounts: [],
 		},
-		paymentBehaviorIntent: "default_incomplete",
-		shouldFinalizeFirstInvoice: true,
 		// We ARE the Vercel origin platform — opt out of the "billed outside Stripe" guard.
 		skipCustomPaymentMethodGuard: true,
 	};
@@ -171,10 +165,19 @@ export const provisionVercelCusProduct = async ({
 			plan_id: billingPlanId,
 			redirect_mode: "if_required",
 			feature_quantities: featureQuantities,
-			// Vercel marketplace handles payment async (custom PM + Payment Records).
-			// We must provision the cus_product immediately on resource creation;
-			// don't wait for invoice.paid before inserting the autumn billing plan.
+			// Top-level enable_plan_immediately keeps the Autumn cus_product
+			// active on attach. Without it we'd wait for the first invoice to be
+			// paid before granting access, which breaks Vercel UX.
 			enable_plan_immediately: true,
+			// Invoice mode puts the Stripe subscription into `send_invoice`
+			// collection (no auto-charge), finalizes the first invoice so the
+			// finalize webhook fires and we submit the invoice to Vercel, and
+			// keeps the sub active without needing a payment intent.
+			invoice_mode: {
+				enabled: true,
+				finalize: true,
+				enable_plan_immediately: true,
+			},
 			metadata: {
 				vercel_installation_id: integrationConfigurationId,
 				vercel_billing_plan_id: billingPlanId,
@@ -186,7 +189,7 @@ export const provisionVercelCusProduct = async ({
 		skipAutumnCheckout: true,
 	});
 
-	// 6. Extract subscription and cus_product
+	// 5. Extract subscription and cus_product
 	const subscription = result.billingResult?.stripe?.stripeSubscription ?? null;
 
 	if (subscription) {
