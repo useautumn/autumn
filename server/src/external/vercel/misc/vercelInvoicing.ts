@@ -150,6 +150,14 @@ export const submitInvoiceToVercel = async ({
 	const periodEnd =
 		rawPeriodEnd > rawPeriodStart ? rawPeriodEnd : rawPeriodStart + 1;
 
+	// Vercel requires period.start <= invoiceDate <= period.end. For manual InvoiceItem
+	// charges (top-ups) the InvoiceItem is created after the Invoice, so invoice.created
+	// can fall before the line item's period.start — clamp into range.
+	const invoiceDateSec = Math.max(
+		periodStart,
+		Math.min(invoice.created, periodEnd),
+	);
+
 	// Calculate total amount from invoice (includes subscription + usage charges)
 	const totalAmount = invoice.amount_due / 100;
 
@@ -173,7 +181,7 @@ export const submitInvoiceToVercel = async ({
 		integrationConfigurationId: installationId,
 		requestBody: {
 			externalId: invoice.id,
-			invoiceDate: new Date(invoice.created * 1000),
+			invoiceDate: new Date(invoiceDateSec * 1000),
 			items: [
 				{
 					resourceId: installationId,

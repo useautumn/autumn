@@ -2,225 +2,279 @@
 import { z } from "zod/v4";
 
 export const setupPaymentGlobalsSchema = z.object({
-    xApiVersion: z.union([z.string(), z.undefined()]).optional()
+	xApiVersion: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const setupPaymentFeatureQuantitySchema = z.object({
-    featureId: z.string(),
-    quantity: z.union([z.number(), z.undefined()]).optional(),
-    adjustable: z.union([z.boolean(), z.undefined()]).optional()
+	featureId: z.string(),
+	quantity: z.union([z.number(), z.undefined()]).optional(),
+	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const setupPaymentItemToSchema = z.union([z.number(), z.string()]);
 
 export const setupPaymentItemTierSchema = z.object({
-    to: z.union([z.number(), z.string()]),
-    amount: z.union([z.number(), z.undefined()]).optional(),
-    flatAmount: z.union([z.number(), z.undefined()]).optional()
+	to: z.union([z.number(), z.string()]),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentAddItemToSchema = z.union([z.number(), z.string()]);
 
 export const setupPaymentAddItemTierSchema = z.object({
-    to: z.union([z.number(), z.string()]),
-    amount: z.union([z.number(), z.undefined()]).optional(),
-    flatAmount: z.union([z.number(), z.undefined()]).optional()
+	to: z.union([z.number(), z.string()]),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flatAmount: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentAttachDiscountSchema = z.object({
-    rewardId: z.union([z.string(), z.undefined()]).optional(),
-    promotionCode: z.union([z.string(), z.undefined()]).optional()
+	rewardId: z.union([z.string(), z.undefined()]).optional(),
+	promotionCode: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const setupPaymentCustomLineItemSchema = z.object({
-    amount: z.number(),
-    description: z.string()
+	amount: z.number(),
+	description: z.string(),
 });
 
 export const setupPaymentCarryOverBalancesSchema = z.object({
-    enabled: z.boolean(),
-    featureIds: z.union([z.array(z.string()), z.undefined()]).optional()
+	enabled: z.boolean(),
+	featureIds: z.union([z.array(z.string()), z.undefined()]).optional(),
 });
 
 export const setupPaymentCarryOverUsagesSchema = z.object({
-    enabled: z.boolean(),
-    featureIds: z.union([z.array(z.string()), z.undefined()]).optional()
+	enabled: z.boolean(),
+	featureIds: z.union([z.array(z.string()), z.undefined()]).optional(),
 });
 
 export const setupPaymentResponseSchema = z.object({
-    customerId: z.string(),
-    entityId: z.union([z.string(), z.undefined()]).optional(),
-    url: z.string()
+	customerId: z.string(),
+	entityId: z.union([z.string(), z.undefined()]).optional(),
+	url: z.string(),
 });
 
 export const setupPaymentFeatureQuantityOutboundSchema = z.object({
-    feature_id: z.string(),
-    quantity: z.union([z.number(), z.undefined()]).optional(),
-    adjustable: z.union([z.boolean(), z.undefined()]).optional()
+	feature_id: z.string(),
+	quantity: z.union([z.number(), z.undefined()]).optional(),
+	adjustable: z.union([z.boolean(), z.undefined()]).optional(),
 });
 
 export const setupPaymentBasePriceOutboundSchema = z.object({
-    amount: z.number(),
-    interval: z.string(),
-    interval_count: z.union([z.number(), z.undefined()]).optional()
+	amount: z.number(),
+	interval: z.string(),
+	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentItemResetOutboundSchema = z.object({
-    interval: z.string(),
-    interval_count: z.union([z.number(), z.undefined()]).optional()
+	interval: z.string(),
+	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const setupPaymentItemToOutboundSchema = z.union([z.number(), z.string()]);
+export const setupPaymentItemToOutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
 
 export const setupPaymentItemTierOutboundSchema = z.object({
-    to: z.union([z.number(), z.string()]),
-    amount: z.union([z.number(), z.undefined()]).optional(),
-    flat_amount: z.union([z.number(), z.undefined()]).optional()
+	to: z.union([z.number(), z.string()]),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flat_amount: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentItemPriceOutboundSchema = z.object({
-    amount: z.union([z.number(), z.undefined()]).optional(),
-    tiers: z.union([z.array(setupPaymentItemTierOutboundSchema), z.undefined()]).optional(),
-    tier_behavior: z.union([z.string(), z.undefined()]).optional(),
-    interval: z.string(),
-    interval_count: z.number(),
-    billing_units: z.number(),
-    billing_method: z.string(),
-    max_purchase: z.union([z.number(), z.undefined()]).optional()
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	tiers: z
+		.union([z.array(setupPaymentItemTierOutboundSchema), z.undefined()])
+		.optional(),
+	tier_behavior: z.union([z.string(), z.undefined()]).optional(),
+	interval: z.string(),
+	interval_count: z.number(),
+	billing_units: z.number(),
+	billing_method: z.string(),
+	max_purchase: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentItemProrationOutboundSchema = z.object({
-    on_increase: z.string(),
-    on_decrease: z.string()
+	on_increase: z.string(),
+	on_decrease: z.string(),
 });
 
 export const setupPaymentItemRolloverOutboundSchema = z.object({
-    max: z.union([z.number(), z.undefined()]).optional(),
-    max_percentage: z.union([z.number(), z.undefined()]).optional(),
-    expiry_duration_type: z.string(),
-    expiry_duration_length: z.union([z.number(), z.undefined()]).optional()
+	max: z.union([z.number(), z.undefined()]).optional(),
+	max_percentage: z.union([z.number(), z.undefined()]).optional(),
+	expiry_duration_type: z.string(),
+	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentItemPlanItemOutboundSchema = z.object({
-    feature_id: z.string(),
-    included: z.union([z.number(), z.undefined()]).optional(),
-    unlimited: z.union([z.boolean(), z.undefined()]).optional(),
-    reset: z.union([setupPaymentItemResetOutboundSchema, z.undefined()]).optional(),
-    price: z.union([setupPaymentItemPriceOutboundSchema, z.undefined()]).optional(),
-    proration: z.union([setupPaymentItemProrationOutboundSchema, z.undefined()]).optional(),
-    rollover: z.union([setupPaymentItemRolloverOutboundSchema, z.undefined()]).optional()
+	feature_id: z.string(),
+	included: z.union([z.number(), z.undefined()]).optional(),
+	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	reset: z
+		.union([setupPaymentItemResetOutboundSchema, z.undefined()])
+		.optional(),
+	price: z
+		.union([setupPaymentItemPriceOutboundSchema, z.undefined()])
+		.optional(),
+	proration: z
+		.union([setupPaymentItemProrationOutboundSchema, z.undefined()])
+		.optional(),
+	rollover: z
+		.union([setupPaymentItemRolloverOutboundSchema, z.undefined()])
+		.optional(),
 });
 
 export const setupPaymentAddItemResetOutboundSchema = z.object({
-    interval: z.string(),
-    interval_count: z.union([z.number(), z.undefined()]).optional()
+	interval: z.string(),
+	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
-export const setupPaymentAddItemToOutboundSchema = z.union([z.number(), z.string()]);
+export const setupPaymentAddItemToOutboundSchema = z.union([
+	z.number(),
+	z.string(),
+]);
 
 export const setupPaymentAddItemTierOutboundSchema = z.object({
-    to: z.union([z.number(), z.string()]),
-    amount: z.union([z.number(), z.undefined()]).optional(),
-    flat_amount: z.union([z.number(), z.undefined()]).optional()
+	to: z.union([z.number(), z.string()]),
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	flat_amount: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentAddItemPriceOutboundSchema = z.object({
-    amount: z.union([z.number(), z.undefined()]).optional(),
-    tiers: z.union([z.array(setupPaymentAddItemTierOutboundSchema), z.undefined()]).optional(),
-    tier_behavior: z.union([z.string(), z.undefined()]).optional(),
-    interval: z.string(),
-    interval_count: z.number(),
-    billing_units: z.number(),
-    billing_method: z.string(),
-    max_purchase: z.union([z.number(), z.undefined()]).optional()
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	tiers: z
+		.union([z.array(setupPaymentAddItemTierOutboundSchema), z.undefined()])
+		.optional(),
+	tier_behavior: z.union([z.string(), z.undefined()]).optional(),
+	interval: z.string(),
+	interval_count: z.number(),
+	billing_units: z.number(),
+	billing_method: z.string(),
+	max_purchase: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentAddItemProrationOutboundSchema = z.object({
-    on_increase: z.string(),
-    on_decrease: z.string()
+	on_increase: z.string(),
+	on_decrease: z.string(),
 });
 
 export const setupPaymentAddItemRolloverOutboundSchema = z.object({
-    max: z.union([z.number(), z.undefined()]).optional(),
-    max_percentage: z.union([z.number(), z.undefined()]).optional(),
-    expiry_duration_type: z.string(),
-    expiry_duration_length: z.union([z.number(), z.undefined()]).optional()
+	max: z.union([z.number(), z.undefined()]).optional(),
+	max_percentage: z.union([z.number(), z.undefined()]).optional(),
+	expiry_duration_type: z.string(),
+	expiry_duration_length: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentAddItemPlanItemOutboundSchema = z.object({
-    feature_id: z.string(),
-    included: z.union([z.number(), z.undefined()]).optional(),
-    unlimited: z.union([z.boolean(), z.undefined()]).optional(),
-    reset: z.union([setupPaymentAddItemResetOutboundSchema, z.undefined()]).optional(),
-    price: z.union([setupPaymentAddItemPriceOutboundSchema, z.undefined()]).optional(),
-    proration: z.union([setupPaymentAddItemProrationOutboundSchema, z.undefined()]).optional(),
-    rollover: z.union([setupPaymentAddItemRolloverOutboundSchema, z.undefined()]).optional()
+	feature_id: z.string(),
+	included: z.union([z.number(), z.undefined()]).optional(),
+	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	reset: z
+		.union([setupPaymentAddItemResetOutboundSchema, z.undefined()])
+		.optional(),
+	price: z
+		.union([setupPaymentAddItemPriceOutboundSchema, z.undefined()])
+		.optional(),
+	proration: z
+		.union([setupPaymentAddItemProrationOutboundSchema, z.undefined()])
+		.optional(),
+	rollover: z
+		.union([setupPaymentAddItemRolloverOutboundSchema, z.undefined()])
+		.optional(),
 });
 
 export const setupPaymentPlanItemFilterOutboundSchema = z.object({
-    feature_id: z.union([z.string(), z.undefined()]).optional(),
-    billing_method: z.union([z.string(), z.undefined()]).optional(),
-    interval: z.union([z.string(), z.undefined()]).optional()
+	feature_id: z.union([z.string(), z.undefined()]).optional(),
+	billing_method: z.union([z.string(), z.undefined()]).optional(),
+	interval: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const setupPaymentFreeTrialParamsOutboundSchema = z.object({
-    duration_length: z.number(),
-    duration_type: z.string(),
-    card_required: z.boolean(),
-    on_end: z.union([z.string(), z.undefined()]).optional()
+	duration_length: z.number(),
+	duration_type: z.string(),
+	card_required: z.boolean(),
+	on_end: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const setupPaymentCustomizeOutboundSchema = z.object({
-    price: z.union([setupPaymentBasePriceOutboundSchema, z.undefined()]).optional().nullable(),
-    items: z.union([z.array(setupPaymentItemPlanItemOutboundSchema), z.undefined()]).optional(),
-    add_items: z.union([z.array(setupPaymentAddItemPlanItemOutboundSchema), z.undefined()]).optional(),
-    remove_items: z.union([z.array(setupPaymentPlanItemFilterOutboundSchema), z.undefined()]).optional(),
-    free_trial: z.union([setupPaymentFreeTrialParamsOutboundSchema, z.undefined()]).optional().nullable()
+	price: z
+		.union([setupPaymentBasePriceOutboundSchema, z.undefined()])
+		.optional()
+		.nullable(),
+	items: z
+		.union([z.array(setupPaymentItemPlanItemOutboundSchema), z.undefined()])
+		.optional(),
+	add_items: z
+		.union([z.array(setupPaymentAddItemPlanItemOutboundSchema), z.undefined()])
+		.optional(),
+	remove_items: z
+		.union([z.array(setupPaymentPlanItemFilterOutboundSchema), z.undefined()])
+		.optional(),
+	free_trial: z
+		.union([setupPaymentFreeTrialParamsOutboundSchema, z.undefined()])
+		.optional()
+		.nullable(),
 });
 
 export const setupPaymentAttachDiscountOutboundSchema = z.object({
-    reward_id: z.union([z.string(), z.undefined()]).optional(),
-    promotion_code: z.union([z.string(), z.undefined()]).optional()
+	reward_id: z.union([z.string(), z.undefined()]).optional(),
+	promotion_code: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const setupPaymentCustomLineItemOutboundSchema = z.object({
-    amount: z.number(),
-    description: z.string()
+	amount: z.number(),
+	description: z.string(),
 });
 
 export const setupPaymentCarryOverBalancesOutboundSchema = z.object({
-    enabled: z.boolean(),
-    feature_ids: z.union([z.array(z.string()), z.undefined()]).optional()
+	enabled: z.boolean(),
+	feature_ids: z.union([z.array(z.string()), z.undefined()]).optional(),
 });
 
 export const setupPaymentCarryOverUsagesOutboundSchema = z.object({
-    enabled: z.boolean(),
-    feature_ids: z.union([z.array(z.string()), z.undefined()]).optional()
+	enabled: z.boolean(),
+	feature_ids: z.union([z.array(z.string()), z.undefined()]).optional(),
 });
 
 export const setupPaymentParamsOutboundSchema = z.object({
-    customer_id: z.string(),
-    entity_id: z.union([z.string(), z.undefined()]).optional(),
-    plan_id: z.union([z.string(), z.undefined()]).optional(),
-    feature_quantities: z.union([z.array(setupPaymentFeatureQuantityOutboundSchema), z.undefined()]).optional(),
-    version: z.union([z.number(), z.undefined()]).optional(),
-    customize: z.union([setupPaymentCustomizeOutboundSchema, z.undefined()]).optional(),
-    proration_behavior: z.union([z.string(), z.undefined()]).optional(),
-    subscription_id: z.union([z.string(), z.undefined()]).optional(),
-    discounts: z.union([z.array(setupPaymentAttachDiscountOutboundSchema), z.undefined()]).optional(),
-    success_url: z.union([z.string(), z.undefined()]).optional(),
-    billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
-    starts_at: z.union([z.number(), z.undefined()]).optional(),
-    ends_at: z.union([z.number(), z.undefined()]).optional(),
-    checkout_session_params: z.union([z.record(z.string(), z.any()), z.undefined()]).optional(),
-    custom_line_items: z.union([z.array(setupPaymentCustomLineItemOutboundSchema), z.undefined()]).optional(),
-    processor_subscription_id: z.union([z.string(), z.undefined()]).optional(),
-    carry_over_balances: z.union([setupPaymentCarryOverBalancesOutboundSchema, z.undefined()]).optional(),
-    carry_over_usages: z.union([setupPaymentCarryOverUsagesOutboundSchema, z.undefined()]).optional(),
-    metadata: z.union([z.record(z.string(), z.string()), z.undefined()]).optional(),
-    no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
-    enable_plan_immediately: z.union([z.boolean(), z.undefined()]).optional(),
-    tax_rate_id: z.union([z.string(), z.undefined()]).optional()
+	customer_id: z.string(),
+	entity_id: z.union([z.string(), z.undefined()]).optional(),
+	plan_id: z.union([z.string(), z.undefined()]).optional(),
+	feature_quantities: z
+		.union([z.array(setupPaymentFeatureQuantityOutboundSchema), z.undefined()])
+		.optional(),
+	version: z.union([z.number(), z.undefined()]).optional(),
+	customize: z
+		.union([setupPaymentCustomizeOutboundSchema, z.undefined()])
+		.optional(),
+	proration_behavior: z.union([z.string(), z.undefined()]).optional(),
+	subscription_id: z.union([z.string(), z.undefined()]).optional(),
+	discounts: z
+		.union([z.array(setupPaymentAttachDiscountOutboundSchema), z.undefined()])
+		.optional(),
+	success_url: z.union([z.string(), z.undefined()]).optional(),
+	billing_cycle_anchor: z.union([z.literal("now"), z.undefined()]).optional(),
+	starts_at: z.union([z.number(), z.undefined()]).optional(),
+	ends_at: z.union([z.number(), z.undefined()]).optional(),
+	checkout_session_params: z
+		.union([z.record(z.string(), z.any()), z.undefined()])
+		.optional(),
+	custom_line_items: z
+		.union([z.array(setupPaymentCustomLineItemOutboundSchema), z.undefined()])
+		.optional(),
+	processor_subscription_id: z.union([z.string(), z.undefined()]).optional(),
+	carry_over_balances: z
+		.union([setupPaymentCarryOverBalancesOutboundSchema, z.undefined()])
+		.optional(),
+	carry_over_usages: z
+		.union([setupPaymentCarryOverUsagesOutboundSchema, z.undefined()])
+		.optional(),
+	metadata: z
+		.union([z.record(z.string(), z.string()), z.undefined()])
+		.optional(),
+	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
+	enable_plan_immediately: z.union([z.boolean(), z.undefined()]).optional(),
+	tax_rate_id: z.union([z.string(), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -228,16 +282,16 @@ const closedEnumSchema = z.any();
 export const setupPaymentPriceIntervalSchema = closedEnumSchema;
 
 export const setupPaymentBasePriceSchema = z.object({
-    amount: z.number(),
-    interval: setupPaymentPriceIntervalSchema,
-    intervalCount: z.union([z.number(), z.undefined()]).optional()
+	amount: z.number(),
+	interval: setupPaymentPriceIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentItemResetIntervalSchema = closedEnumSchema;
 
 export const setupPaymentItemResetSchema = z.object({
-    interval: setupPaymentItemResetIntervalSchema,
-    intervalCount: z.union([z.number(), z.undefined()]).optional()
+	interval: setupPaymentItemResetIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentItemTierBehaviorSchema = closedEnumSchema;
@@ -247,14 +301,18 @@ export const setupPaymentItemPriceIntervalSchema = closedEnumSchema;
 export const setupPaymentItemBillingMethodSchema = closedEnumSchema;
 
 export const setupPaymentItemPriceSchema = z.object({
-    amount: z.union([z.number(), z.undefined()]).optional(),
-    tiers: z.union([z.array(setupPaymentItemTierSchema), z.undefined()]).optional(),
-    tierBehavior: z.union([setupPaymentItemTierBehaviorSchema, z.undefined()]).optional(),
-    interval: setupPaymentItemPriceIntervalSchema,
-    intervalCount: z.union([z.number(), z.undefined()]).optional(),
-    billingUnits: z.union([z.number(), z.undefined()]).optional(),
-    billingMethod: setupPaymentItemBillingMethodSchema,
-    maxPurchase: z.union([z.number(), z.undefined()]).optional()
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	tiers: z
+		.union([z.array(setupPaymentItemTierSchema), z.undefined()])
+		.optional(),
+	tierBehavior: z
+		.union([setupPaymentItemTierBehaviorSchema, z.undefined()])
+		.optional(),
+	interval: setupPaymentItemPriceIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	billingMethod: setupPaymentItemBillingMethodSchema,
+	maxPurchase: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentItemOnIncreaseSchema = closedEnumSchema;
@@ -262,34 +320,36 @@ export const setupPaymentItemOnIncreaseSchema = closedEnumSchema;
 export const setupPaymentItemOnDecreaseSchema = closedEnumSchema;
 
 export const setupPaymentItemProrationSchema = z.object({
-    onIncrease: setupPaymentItemOnIncreaseSchema,
-    onDecrease: setupPaymentItemOnDecreaseSchema
+	onIncrease: setupPaymentItemOnIncreaseSchema,
+	onDecrease: setupPaymentItemOnDecreaseSchema,
 });
 
 export const setupPaymentItemExpiryDurationTypeSchema = closedEnumSchema;
 
 export const setupPaymentItemRolloverSchema = z.object({
-    max: z.union([z.number(), z.undefined()]).optional(),
-    maxPercentage: z.union([z.number(), z.undefined()]).optional(),
-    expiryDurationType: setupPaymentItemExpiryDurationTypeSchema,
-    expiryDurationLength: z.union([z.number(), z.undefined()]).optional()
+	max: z.union([z.number(), z.undefined()]).optional(),
+	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
+	expiryDurationType: setupPaymentItemExpiryDurationTypeSchema,
+	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentItemPlanItemSchema = z.object({
-    featureId: z.string(),
-    included: z.union([z.number(), z.undefined()]).optional(),
-    unlimited: z.union([z.boolean(), z.undefined()]).optional(),
-    reset: z.union([setupPaymentItemResetSchema, z.undefined()]).optional(),
-    price: z.union([setupPaymentItemPriceSchema, z.undefined()]).optional(),
-    proration: z.union([setupPaymentItemProrationSchema, z.undefined()]).optional(),
-    rollover: z.union([setupPaymentItemRolloverSchema, z.undefined()]).optional()
+	featureId: z.string(),
+	included: z.union([z.number(), z.undefined()]).optional(),
+	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	reset: z.union([setupPaymentItemResetSchema, z.undefined()]).optional(),
+	price: z.union([setupPaymentItemPriceSchema, z.undefined()]).optional(),
+	proration: z
+		.union([setupPaymentItemProrationSchema, z.undefined()])
+		.optional(),
+	rollover: z.union([setupPaymentItemRolloverSchema, z.undefined()]).optional(),
 });
 
 export const setupPaymentAddItemResetIntervalSchema = closedEnumSchema;
 
 export const setupPaymentAddItemResetSchema = z.object({
-    interval: setupPaymentAddItemResetIntervalSchema,
-    intervalCount: z.union([z.number(), z.undefined()]).optional()
+	interval: setupPaymentAddItemResetIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentAddItemTierBehaviorSchema = closedEnumSchema;
@@ -299,14 +359,18 @@ export const setupPaymentAddItemPriceIntervalSchema = closedEnumSchema;
 export const setupPaymentAddItemBillingMethodSchema = closedEnumSchema;
 
 export const setupPaymentAddItemPriceSchema = z.object({
-    amount: z.union([z.number(), z.undefined()]).optional(),
-    tiers: z.union([z.array(setupPaymentAddItemTierSchema), z.undefined()]).optional(),
-    tierBehavior: z.union([setupPaymentAddItemTierBehaviorSchema, z.undefined()]).optional(),
-    interval: setupPaymentAddItemPriceIntervalSchema,
-    intervalCount: z.union([z.number(), z.undefined()]).optional(),
-    billingUnits: z.union([z.number(), z.undefined()]).optional(),
-    billingMethod: setupPaymentAddItemBillingMethodSchema,
-    maxPurchase: z.union([z.number(), z.undefined()]).optional()
+	amount: z.union([z.number(), z.undefined()]).optional(),
+	tiers: z
+		.union([z.array(setupPaymentAddItemTierSchema), z.undefined()])
+		.optional(),
+	tierBehavior: z
+		.union([setupPaymentAddItemTierBehaviorSchema, z.undefined()])
+		.optional(),
+	interval: setupPaymentAddItemPriceIntervalSchema,
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
+	billingUnits: z.union([z.number(), z.undefined()]).optional(),
+	billingMethod: setupPaymentAddItemBillingMethodSchema,
+	maxPurchase: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentAddItemOnIncreaseSchema = closedEnumSchema;
@@ -314,27 +378,31 @@ export const setupPaymentAddItemOnIncreaseSchema = closedEnumSchema;
 export const setupPaymentAddItemOnDecreaseSchema = closedEnumSchema;
 
 export const setupPaymentAddItemProrationSchema = z.object({
-    onIncrease: setupPaymentAddItemOnIncreaseSchema,
-    onDecrease: setupPaymentAddItemOnDecreaseSchema
+	onIncrease: setupPaymentAddItemOnIncreaseSchema,
+	onDecrease: setupPaymentAddItemOnDecreaseSchema,
 });
 
 export const setupPaymentAddItemExpiryDurationTypeSchema = closedEnumSchema;
 
 export const setupPaymentAddItemRolloverSchema = z.object({
-    max: z.union([z.number(), z.undefined()]).optional(),
-    maxPercentage: z.union([z.number(), z.undefined()]).optional(),
-    expiryDurationType: setupPaymentAddItemExpiryDurationTypeSchema,
-    expiryDurationLength: z.union([z.number(), z.undefined()]).optional()
+	max: z.union([z.number(), z.undefined()]).optional(),
+	maxPercentage: z.union([z.number(), z.undefined()]).optional(),
+	expiryDurationType: setupPaymentAddItemExpiryDurationTypeSchema,
+	expiryDurationLength: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const setupPaymentAddItemPlanItemSchema = z.object({
-    featureId: z.string(),
-    included: z.union([z.number(), z.undefined()]).optional(),
-    unlimited: z.union([z.boolean(), z.undefined()]).optional(),
-    reset: z.union([setupPaymentAddItemResetSchema, z.undefined()]).optional(),
-    price: z.union([setupPaymentAddItemPriceSchema, z.undefined()]).optional(),
-    proration: z.union([setupPaymentAddItemProrationSchema, z.undefined()]).optional(),
-    rollover: z.union([setupPaymentAddItemRolloverSchema, z.undefined()]).optional()
+	featureId: z.string(),
+	included: z.union([z.number(), z.undefined()]).optional(),
+	unlimited: z.union([z.boolean(), z.undefined()]).optional(),
+	reset: z.union([setupPaymentAddItemResetSchema, z.undefined()]).optional(),
+	price: z.union([setupPaymentAddItemPriceSchema, z.undefined()]).optional(),
+	proration: z
+		.union([setupPaymentAddItemProrationSchema, z.undefined()])
+		.optional(),
+	rollover: z
+		.union([setupPaymentAddItemRolloverSchema, z.undefined()])
+		.optional(),
 });
 
 export const setupPaymentRemoveItemBillingMethodSchema = closedEnumSchema;
@@ -342,9 +410,13 @@ export const setupPaymentRemoveItemBillingMethodSchema = closedEnumSchema;
 export const setupPaymentRemoveItemIntervalSchema = closedEnumSchema;
 
 export const setupPaymentPlanItemFilterSchema = z.object({
-    featureId: z.union([z.string(), z.undefined()]).optional(),
-    billingMethod: z.union([setupPaymentRemoveItemBillingMethodSchema, z.undefined()]).optional(),
-    interval: z.union([setupPaymentRemoveItemIntervalSchema, z.undefined()]).optional()
+	featureId: z.union([z.string(), z.undefined()]).optional(),
+	billingMethod: z
+		.union([setupPaymentRemoveItemBillingMethodSchema, z.undefined()])
+		.optional(),
+	interval: z
+		.union([setupPaymentRemoveItemIntervalSchema, z.undefined()])
+		.optional(),
 });
 
 export const setupPaymentDurationTypeSchema = closedEnumSchema;
@@ -352,43 +424,73 @@ export const setupPaymentDurationTypeSchema = closedEnumSchema;
 export const setupPaymentOnEndSchema = closedEnumSchema;
 
 export const setupPaymentFreeTrialParamsSchema = z.object({
-    durationLength: z.number(),
-    durationType: z.union([setupPaymentDurationTypeSchema, z.undefined()]).optional(),
-    cardRequired: z.union([z.boolean(), z.undefined()]).optional(),
-    onEnd: z.union([setupPaymentOnEndSchema, z.undefined()]).optional()
+	durationLength: z.number(),
+	durationType: z
+		.union([setupPaymentDurationTypeSchema, z.undefined()])
+		.optional(),
+	cardRequired: z.union([z.boolean(), z.undefined()]).optional(),
+	onEnd: z.union([setupPaymentOnEndSchema, z.undefined()]).optional(),
 });
 
 export const setupPaymentCustomizeSchema = z.object({
-    price: z.union([setupPaymentBasePriceSchema, z.undefined()]).optional().nullable(),
-    items: z.union([z.array(setupPaymentItemPlanItemSchema), z.undefined()]).optional(),
-    addItems: z.union([z.array(setupPaymentAddItemPlanItemSchema), z.undefined()]).optional(),
-    removeItems: z.union([z.array(setupPaymentPlanItemFilterSchema), z.undefined()]).optional(),
-    freeTrial: z.union([setupPaymentFreeTrialParamsSchema, z.undefined()]).optional().nullable()
+	price: z
+		.union([setupPaymentBasePriceSchema, z.undefined()])
+		.optional()
+		.nullable(),
+	items: z
+		.union([z.array(setupPaymentItemPlanItemSchema), z.undefined()])
+		.optional(),
+	addItems: z
+		.union([z.array(setupPaymentAddItemPlanItemSchema), z.undefined()])
+		.optional(),
+	removeItems: z
+		.union([z.array(setupPaymentPlanItemFilterSchema), z.undefined()])
+		.optional(),
+	freeTrial: z
+		.union([setupPaymentFreeTrialParamsSchema, z.undefined()])
+		.optional()
+		.nullable(),
 });
 
 export const setupPaymentProrationBehaviorSchema = closedEnumSchema;
 
 export const setupPaymentParamsSchema = z.object({
-    customerId: z.string(),
-    entityId: z.union([z.string(), z.undefined()]).optional(),
-    planId: z.union([z.string(), z.undefined()]).optional(),
-    featureQuantities: z.union([z.array(setupPaymentFeatureQuantitySchema), z.undefined()]).optional(),
-    version: z.union([z.number(), z.undefined()]).optional(),
-    customize: z.union([setupPaymentCustomizeSchema, z.undefined()]).optional(),
-    prorationBehavior: z.union([setupPaymentProrationBehaviorSchema, z.undefined()]).optional(),
-    subscriptionId: z.union([z.string(), z.undefined()]).optional(),
-    discounts: z.union([z.array(setupPaymentAttachDiscountSchema), z.undefined()]).optional(),
-    successUrl: z.union([z.string(), z.undefined()]).optional(),
-    billingCycleAnchor: z.union([z.literal("now"), z.undefined()]).optional(),
-    startsAt: z.union([z.number(), z.undefined()]).optional(),
-    endsAt: z.union([z.number(), z.undefined()]).optional(),
-    checkoutSessionParams: z.union([z.record(z.string(), z.any()), z.undefined()]).optional(),
-    customLineItems: z.union([z.array(setupPaymentCustomLineItemSchema), z.undefined()]).optional(),
-    processorSubscriptionId: z.union([z.string(), z.undefined()]).optional(),
-    carryOverBalances: z.union([setupPaymentCarryOverBalancesSchema, z.undefined()]).optional(),
-    carryOverUsages: z.union([setupPaymentCarryOverUsagesSchema, z.undefined()]).optional(),
-    metadata: z.union([z.record(z.string(), z.string()), z.undefined()]).optional(),
-    noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
-    enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
-    taxRateId: z.union([z.string(), z.undefined()]).optional()
+	customerId: z.string(),
+	entityId: z.union([z.string(), z.undefined()]).optional(),
+	planId: z.union([z.string(), z.undefined()]).optional(),
+	featureQuantities: z
+		.union([z.array(setupPaymentFeatureQuantitySchema), z.undefined()])
+		.optional(),
+	version: z.union([z.number(), z.undefined()]).optional(),
+	customize: z.union([setupPaymentCustomizeSchema, z.undefined()]).optional(),
+	prorationBehavior: z
+		.union([setupPaymentProrationBehaviorSchema, z.undefined()])
+		.optional(),
+	subscriptionId: z.union([z.string(), z.undefined()]).optional(),
+	discounts: z
+		.union([z.array(setupPaymentAttachDiscountSchema), z.undefined()])
+		.optional(),
+	successUrl: z.union([z.string(), z.undefined()]).optional(),
+	billingCycleAnchor: z.union([z.literal("now"), z.undefined()]).optional(),
+	startsAt: z.union([z.number(), z.undefined()]).optional(),
+	endsAt: z.union([z.number(), z.undefined()]).optional(),
+	checkoutSessionParams: z
+		.union([z.record(z.string(), z.any()), z.undefined()])
+		.optional(),
+	customLineItems: z
+		.union([z.array(setupPaymentCustomLineItemSchema), z.undefined()])
+		.optional(),
+	processorSubscriptionId: z.union([z.string(), z.undefined()]).optional(),
+	carryOverBalances: z
+		.union([setupPaymentCarryOverBalancesSchema, z.undefined()])
+		.optional(),
+	carryOverUsages: z
+		.union([setupPaymentCarryOverUsagesSchema, z.undefined()])
+		.optional(),
+	metadata: z
+		.union([z.record(z.string(), z.string()), z.undefined()])
+		.optional(),
+	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
+	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
+	taxRateId: z.union([z.string(), z.undefined()]).optional(),
 });

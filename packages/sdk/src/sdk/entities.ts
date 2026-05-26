@@ -105,6 +105,7 @@ export class Entities extends ClientSDK {
    * @param subscriptionStatus - Filter customer products used for entity hydration and plan matching. Defaults to active and scheduled. (optional)
    * @param search - Search entities by id or name. (optional)
    * @param processors - Filter by parent customer processor type (stripe, revenuecat, vercel). (optional)
+   * @param customerId - Restrict the response to entities owned by this customer id. Use to bulk-fetch all entities for one customer in a single paginated call instead of iterating entities.get. (optional)
    *
    * @returns A paginated list of entity objects including their current subscriptions, purchases, balances, and flags.
    */

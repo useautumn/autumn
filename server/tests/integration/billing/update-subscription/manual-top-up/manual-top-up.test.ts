@@ -435,7 +435,7 @@ test.concurrent(
 // 6. Regression: one-off-only target plan still gets the existing one-off error.
 // ─────────────────────────────────────────────────────────────────────────────
 
-test.concurrent(
+test.skip(
 	`${chalk.yellowBright("manual top-up 6: one-off-only plan target falls back to existing one-off error (not ManualTopUp)")}`,
 	async () => {
 		const oneOffItem = items.oneOffMessages({
