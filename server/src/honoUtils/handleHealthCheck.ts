@@ -6,11 +6,16 @@ import type { HonoEnv } from "./HonoEnv";
 
 let startupReady = false;
 
+const isDisabledRedis = (status: string) => status === "end";
+
 const tryLatchStartupReady = () => {
 	if (startupReady) return;
-	if (redis.status !== "ready" || redisV2.status !== "ready") return;
+	const redisOk = redis.status === "ready" || isDisabledRedis(redis.status);
+	const redisV2Ok =
+		redisV2.status === "ready" || isDisabledRedis(redisV2.status);
+	if (!redisOk || !redisV2Ok) return;
 	startupReady = true;
-	logger.info("[health-check] startup gate latched (Redis ready)", {
+	logger.info("[health-check] startup gate latched", {
 		redis_status: redis.status,
 		redis_v2_status: redisV2.status,
 	});
