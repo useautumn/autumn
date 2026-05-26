@@ -29,6 +29,47 @@ export const handleResetDefaultAccount = createRoute({
 			});
 		}
 
+		const isWorktree =
+			!!process.env.DEV_EXTRA_CORS_ORIGINS &&
+			process.env.NODE_ENV !== "production";
+
+		if (isWorktree) {
+			const webhookBaseUrl =
+				process.env.STRIPE_WEBHOOK_URL ||
+				process.env.SERVER_URL ||
+				process.env.BETTER_AUTH_URL;
+
+			if (!webhookBaseUrl || !/^https:\/\//.test(webhookBaseUrl)) {
+				throw new RecaseError({
+					message: "Worktree reset requires a public HTTPS URL — start sparq first",
+					code: ErrCode.InvalidRequest,
+					statusCode: 400,
+				});
+			}
+
+			const { registerMasterConnectWebhook } = await import(
+				"@/external/connect/registerMasterConnectWebhook.js"
+			);
+			const result = await registerMasterConnectWebhook({
+				db,
+				orgId: org.id,
+				env: AppEnv.Sandbox,
+				webhookBaseUrl,
+			});
+
+			logger.info(
+				`Reset webhook for worktree org ${org.slug}: ${result.webhookId} (${
+					result.reused ? "reused" : "created"
+				})`,
+			);
+
+			return c.json({
+				message: "Worktree webhook registered",
+				webhook_id: result.webhookId,
+				reused: result.reused,
+			});
+		}
+
 		const currentDefaultAccountId = org.test_stripe_connect?.default_account_id;
 
 		// Delete the current default account if it exists

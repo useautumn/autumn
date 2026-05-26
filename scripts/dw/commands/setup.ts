@@ -14,7 +14,7 @@ import {
 } from "../helpers/setup.ts";
 import { ensureComposeStack } from "../helpers/compose.ts";
 import { writeEnvLocalFiles } from "../helpers/env-files.ts";
-import { ensureEmulateRunning } from "../helpers/emulate.ts";
+import { ensureSparqTunnel, writeSparqWebhookUrlToEnvFile } from "../helpers/sparq.ts";
 import { PROJECT_ROOT } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
 
@@ -60,16 +60,20 @@ export async function cmdSetup(): Promise<RegistryEntry> {
 	}
 
 	if (entry.worktreeNum > 1) {
-		// Order matters: provision branch → write .env.local → apply migrations.
+		// Order matters: provision branch → sparq tunnel → write .env.local → apply migrations.
 		// If migrations fail, .env.local already points at the half-migrated
 		// branch so the user can recover with `bun dw reset` (or manually
 		// re-run `bun db migrate --bootstrap` once the underlying issue is fixed).
 		entry = await provisionNeonBranch(entry, registry);
 		ensureComposeStack(entry.worktreeNum);
+		const sparqUrls = ensureSparqTunnel(entry);
 		writeEnvLocalFiles(entry);
+		if (sparqUrls) {
+			writeSparqWebhookUrlToEnvFile(sparqUrls.apiUrl);
+			process.env.STRIPE_WEBHOOK_URL = sparqUrls.apiUrl;
+		}
 		applyMigrationsAndFunctions(entry);
 		await autoSetupTestOrg(entry);
-		ensureEmulateRunning();
 	}
 
 	return entry;

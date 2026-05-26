@@ -27,3 +27,11 @@ export const ENV_LOCAL_TARGETS = [
 ] as const;
 
 export const ENV_LOCAL_DISABLED_SUFFIX = ".disabled";
+
+export const SPARQ_DOMAIN = "atmn.lol";
+export const SPARQ_CONFIG_DIR = ".sparq";
+
+// Vercel-hosted @emulators/google. Matches the default baked into
+// server/src/utils/auth.ts; written to .env.local for visibility / override.
+export const EMULATE_GOOGLE_URL_DEFAULT =
+	"https://emulate-vercel.vercel.app/emulate/google";

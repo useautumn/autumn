@@ -17,14 +17,34 @@ export const ALLOWED_ORIGINS = [
 	"https://localhost:8080",
 ];
 
+// Comma-separated hostname suffixes injected by per-developer tooling (e.g.
+// agent worktree tunnels). Each entry matches `<anything>.<suffix>` over
+// http or https. Dev-only — never consulted in production.
+function devExtraSuffixes(): string[] {
+	return (process.env.DEV_EXTRA_CORS_ORIGINS ?? "")
+		.split(",")
+		.map((s) => s.trim())
+		.filter(Boolean);
+}
+
+function matchesDevExtraSuffix(origin: string, suffixes: string[]): boolean {
+	if (suffixes.length === 0) return false;
+	let host: string;
+	try {
+		host = new URL(origin).hostname;
+	} catch {
+		return false;
+	}
+	return suffixes.some((sfx) => host === sfx || host.endsWith(`.${sfx}`));
+}
+
 /** Allow any *.localhost or localhost origin in dev for multi-worktree support */
 export const isAllowedOrigin = (origin: string): string | undefined => {
 	if (ALLOWED_ORIGINS.includes(origin)) return origin;
-	if (
-		process.env.NODE_ENV !== "production" &&
-		/^https?:\/\/(?:[a-zA-Z0-9-]+\.)*localhost(?::\d+)?$/.test(origin)
-	) {
+	if (process.env.NODE_ENV === "production") return undefined;
+	if (/^https?:\/\/(?:[a-zA-Z0-9-]+\.)*localhost(?::\d+)?$/.test(origin)) {
 		return origin;
 	}
+	if (matchesDevExtraSuffix(origin, devExtraSuffixes())) return origin;
 	return undefined;
 };

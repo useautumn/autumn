@@ -11,7 +11,7 @@ import tsconfigPaths from "vite-tsconfig-paths";
 process.env.VITE_BACKEND_URL ||= "http://localhost:8080";
 process.env.VITE_FRONTEND_URL ||= "http://localhost:3000";
 
-function printPortlessUrl(): Plugin {
+function printDevUrls(): Plugin {
 	return {
 		name: "print-portless-url",
 		apply: "serve",
@@ -24,6 +24,26 @@ function printPortlessUrl(): Plugin {
 				server.config.logger.info(
 					`  \x1b[32m➜\x1b[0m  \x1b[1mPortless\x1b[0m: \x1b[36m${portlessUrl}/\x1b[0m`,
 				);
+
+				// Sparq public tunnel URL (optional — only when sparq is active).
+				let sparqUrl: string | undefined;
+				try {
+					const cfg = JSON.parse(
+						fs.readFileSync(
+							path.resolve(__dirname, "..", ".sparq", "config.json"),
+							"utf-8",
+						),
+					) as { routes?: { hostname: string }[] };
+					const web = cfg.routes?.find((r) => r.hostname.includes("-web."));
+					if (web) sparqUrl = `https://${web.hostname}`;
+				} catch {
+					/* missing file is the normal case */
+				}
+				if (sparqUrl) {
+					server.config.logger.info(
+						`  \x1b[32m➜\x1b[0m  \x1b[1mSparq\x1b[0m:    \x1b[36m${sparqUrl}/\x1b[0m`,
+					);
+				}
 			};
 		},
 	};
@@ -46,7 +66,7 @@ export default defineConfig({
 			project: process.env.VITE_SENTRY_PROJECT,
 			telemetry: false,
 		}),
-		printPortlessUrl(),
+		printDevUrls(),
 	],
 
 	resolve: {
