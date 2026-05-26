@@ -7,8 +7,17 @@ import {
 import type { Autumn } from "autumn-js";
 
 type TokenCount =
-	| LanguageModelV3Usage["inputTokens"]
-	| LanguageModelUsage["inputTokens"];
+	| number
+	| {
+			total?: number | null;
+	  }
+	| null
+	| undefined;
+
+type TokenUsage = (LanguageModelV3Usage | LanguageModelUsage) & {
+	promptTokens?: TokenCount;
+	completionTokens?: TokenCount;
+};
 
 export const withTokenTracking = ({
 	autumn,
@@ -46,15 +55,20 @@ export const withTokenTracking = ({
 		return value;
 	};
 
-	const trackUsage = async (
-		usage: LanguageModelV3Usage | LanguageModelUsage,
-	) => {
+	const trackUsage = async (usage: TokenUsage) => {
 		try {
+			// @ts-ignore trackTokens is generated from OpenAPI; local autumn-js types may not include it yet.
 			await autumn.balances.trackTokens({
 				customerId,
 				modelId: modelName,
-				inputTokens: resolveTokens(usage.inputTokens, "Input"),
-				outputTokens: resolveTokens(usage.outputTokens, "Output"),
+				inputTokens: resolveTokens(
+					usage.inputTokens ?? usage.promptTokens,
+					"Input",
+				),
+				outputTokens: resolveTokens(
+					usage.outputTokens ?? usage.completionTokens,
+					"Output",
+				),
 				featureId,
 				entityId,
 				properties,
