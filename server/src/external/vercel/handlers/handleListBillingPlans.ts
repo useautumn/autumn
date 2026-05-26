@@ -18,6 +18,7 @@ import { parseVercelPrepaidQuantities } from "@/external/vercel/misc/vercelInvoi
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
+import { logCaughtError } from "@/utils/logging/logCaughtError.js";
 import { sortProductsByPrice } from "../../../internal/products/productUtils/sortProductUtils.js";
 import {
 	isFreeProduct,
@@ -287,9 +288,12 @@ export const handleVercelListBillingPlans = createRoute({
 			try {
 				metadata = JSON.parse(metadataParam);
 			} catch (error: any) {
-				logger.warn("Failed to parse metadata query param", {
-					error: error.message,
-					metadataParam,
+				logCaughtError({
+					logger,
+					message: "[vercel/plans.list] Failed to parse metadata query param",
+					error,
+					data: { metadataParam },
+					level: "warn",
 				});
 			}
 		}
