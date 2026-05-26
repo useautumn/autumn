@@ -60,9 +60,7 @@ export default function CustomerView2() {
 	const { isDismissed } = useOnboardingVisibility();
 	const showOnboarding = env === AppEnv.Sandbox && !isDismissed;
 
-	// useSheetCleanup();
-
-	if (cusLoading) return <LoadingScreen />;
+	if (cusLoading && !customer) return <LoadingScreen />;
 
 	if (!customer) {
 		return (

@@ -19,10 +19,12 @@ export const DeleteEntity = ({
 	open,
 	setOpen,
 	entity,
+	onDeleted,
 }: {
 	open: boolean;
 	setOpen: (open: boolean) => void;
 	entity: Entity | null | undefined;
+	onDeleted?: () => void;
 }) => {
 	const { customer, refetch } = useCusQuery();
 	const { setEntityId } = useCustomerContext();
@@ -42,9 +44,9 @@ export const DeleteEntity = ({
 			);
 
 			await refetch();
+			onDeleted?.();
 			setOpen(false);
 
-			// Clear the selection
 			const params = new URLSearchParams(location.search);
 			params.delete("entity_id");
 			navigate(`${location.pathname}?${params.toString()}`);
