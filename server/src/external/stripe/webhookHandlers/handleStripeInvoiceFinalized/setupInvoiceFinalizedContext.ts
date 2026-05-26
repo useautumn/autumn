@@ -54,34 +54,34 @@ export const setupInvoiceFinalizedContext = async ({
 		expand: ["discounts.source.coupon", "total_discount_amounts"],
 	});
 
-	// 2. Get subscription ID - return null if not a subscription invoice
-	const stripeSubscriptionId =
-		stripeInvoiceToStripeSubscriptionId(stripeInvoice);
-
-	if (!stripeSubscriptionId) {
-		logger.debug("[invoice.finalized] No subscription ID, skipping");
-		return null;
-	}
-
-	// 3. Check fullCustomer exists
 	if (!fullCustomer) {
 		logger.debug("[invoice.finalized] fullCustomer not found, skipping");
 		return null;
 	}
 
-	// 4. Get expanded stripe subscription
-	const stripeSubscription = await getExpandedStripeSubscription({
-		ctx,
-		subscriptionId: stripeSubscriptionId,
-	});
+	// 2. Get subscription ID. Vercel manual invoices can be subscriptionless.
+	const stripeSubscriptionId =
+		stripeInvoiceToStripeSubscriptionId(stripeInvoice);
 
-	// 5. Vercel custom-PM invoices submit out-of-band BEFORE the cus_product
-	// gate — the cus_product is created downstream by marketplace.invoice.paid.
+	let stripeSubscription: Stripe.Subscription | null = null;
+	if (stripeSubscriptionId) {
+		stripeSubscription = await getExpandedStripeSubscription({
+			ctx,
+			subscriptionId: stripeSubscriptionId,
+		});
+	}
+
+	// 3. Vercel invoices submit out-of-band before the cus_product gate.
 	if (isVercelInvoice({ stripeInvoice, stripeSubscription })) {
 		await processVercelInvoice({ ctx, stripeInvoice, stripeSubscription });
 	}
 
-	// 6. Get customer products by subscription ID
+	if (!stripeSubscriptionId || !stripeSubscription) {
+		logger.debug("[invoice.finalized] No subscription ID, skipping");
+		return null;
+	}
+
+	// 4. Get customer products by subscription ID
 	const currentCustomerProducts = fullCustomer.customer_products.filter((cp) =>
 		isCustomerProductOnStripeSubscription({
 			customerProduct: cp,

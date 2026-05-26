@@ -446,6 +446,7 @@ class Entities(BaseSDK):
         subscription_status: Optional[models.ListEntitiesSubscriptionStatus] = None,
         search: Optional[str] = None,
         processors: Optional[List[models.ListEntitiesProcessor]] = None,
+        customer_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -461,6 +462,7 @@ class Entities(BaseSDK):
         :param subscription_status: Filter customer products used for entity hydration and plan matching. Defaults to active and scheduled.
         :param search: Search entities by id or name.
         :param processors: Filter by parent customer processor type (stripe, revenuecat, vercel).
+        :param customer_id: Restrict the response to entities owned by this customer id. Use to bulk-fetch all entities for one customer in a single paginated call instead of iterating entities.get.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -485,6 +487,7 @@ class Entities(BaseSDK):
             subscription_status=subscription_status,
             search=search,
             processors=processors,
+            customer_id=customer_id,
         )
 
         req = self._build_request(
@@ -557,6 +560,7 @@ class Entities(BaseSDK):
         subscription_status: Optional[models.ListEntitiesSubscriptionStatus] = None,
         search: Optional[str] = None,
         processors: Optional[List[models.ListEntitiesProcessor]] = None,
+        customer_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -572,6 +576,7 @@ class Entities(BaseSDK):
         :param subscription_status: Filter customer products used for entity hydration and plan matching. Defaults to active and scheduled.
         :param search: Search entities by id or name.
         :param processors: Filter by parent customer processor type (stripe, revenuecat, vercel).
+        :param customer_id: Restrict the response to entities owned by this customer id. Use to bulk-fetch all entities for one customer in a single paginated call instead of iterating entities.get.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -596,6 +601,7 @@ class Entities(BaseSDK):
             subscription_status=subscription_status,
             search=search,
             processors=processors,
+            customer_id=customer_id,
         )
 
         req = self._build_request_async(

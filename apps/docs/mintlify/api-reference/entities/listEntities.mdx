@@ -39,6 +39,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   Filter by parent customer processor type (stripe, revenuecat, vercel).
 </DynamicParamField>
 
+<DynamicParamField body="customer_id" type="string">
+  Restrict the response to entities owned by this customer id. Use to bulk-fetch all entities for one customer in a single paginated call instead of iterating entities.get.
+</DynamicParamField>
+
 
 ### Response
 

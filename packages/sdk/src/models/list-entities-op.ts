@@ -68,6 +68,10 @@ export type ListEntitiesParams = {
    * Filter by parent customer processor type (stripe, revenuecat, vercel).
    */
   processors?: Array<ListEntitiesProcessor> | undefined;
+  /**
+   * Restrict the response to entities owned by this customer id. Use to bulk-fetch all entities for one customer in a single paginated call instead of iterating entities.get.
+   */
+  customerId?: string | undefined;
 };
 
 /**
@@ -495,6 +499,7 @@ export type ListEntitiesParams$Outbound = {
   subscription_status?: string | undefined;
   search?: string | undefined;
   processors?: Array<string> | undefined;
+  customer_id?: string | undefined;
 };
 
 /** @internal */
@@ -511,11 +516,13 @@ export const ListEntitiesParams$outboundSchema: z.ZodMiniType<
     ),
     search: z.optional(z.string()),
     processors: z.optional(z.array(ListEntitiesProcessor$outboundSchema)),
+    customerId: z.optional(z.string()),
   }),
   z.transform((v) => {
     return remap$(v, {
       startCursor: "start_cursor",
       subscriptionStatus: "subscription_status",
+      customerId: "customer_id",
     });
   }),
 );

@@ -1,6 +1,7 @@
-import type {
-	AutumnBillingPlan,
-	UpdateSubscriptionBillingContext,
+import {
+	type AutumnBillingPlan,
+	isOneOffPrice,
+	type UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeUpdateQuantityDetails } from "./computeUpdateQuantityDetails";
@@ -14,7 +15,15 @@ export const computeUpdateQuantityPlan = ({
 }): AutumnBillingPlan => {
 	const { customerProduct, featureQuantities } = updateSubscriptionContext;
 
-	const newOptions = featureQuantities;
+	// One-off prepaid mutations belong to the ManualTopUp intent. setupFeature-
+	// QuantitiesContext synthesizes placeholders for every prepaid price (incl.
+	// one-off), so filter them out here before computeUpdateQuantityDetails.
+	const newOptions = featureQuantities.filter((option) => {
+		const cusPrice = customerProduct.customer_prices.find(
+			(cp) => cp.price.config.internal_feature_id === option.internal_feature_id,
+		);
+		return cusPrice ? !isOneOffPrice(cusPrice.price) : true;
+	});
 
 	const quantityUpdateDetails = newOptions.map((updatedOptions) =>
 		computeUpdateQuantityDetails({

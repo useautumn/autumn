@@ -1,4 +1,4 @@
-import { type Entity, Scopes, entities } from "@autumn/shared";
+import { customers, type Entity, entities, Scopes } from "@autumn/shared";
 import { and, eq, ilike, or, sql } from "drizzle-orm";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
@@ -14,15 +14,15 @@ export const handleListEntitiesInternal = createRoute({
 
 		const internalCustomerResult = await ctx.db
 			.select({ internal_id: sql<string>`internal_id` })
-			.from(sql`customers`)
+			.from(customers)
 			.where(
 				and(
 					or(
-						eq(sql`id`, customer_id),
-						eq(sql`internal_id`, customer_id),
+						eq(customers.id, customer_id),
+						eq(customers.internal_id, customer_id),
 					),
-					eq(sql`org_id`, ctx.org.id),
-					eq(sql`env`, ctx.env),
+					eq(customers.org_id, ctx.org.id),
+					eq(customers.env, ctx.env),
 				),
 			)
 			.limit(1);
