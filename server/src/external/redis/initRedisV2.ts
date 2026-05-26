@@ -18,6 +18,8 @@ const dragonflyUrl = rawDragonflyUrl
 	? getReachableDragonflyUrl(rawDragonflyUrl)
 	: undefined;
 
+export const hasRedisV2Config = Boolean(dragonflyUrl);
+
 export const redisV2: Redis = createRedisConnection({
 	cacheUrl: dragonflyUrl || "",
 	region: `${currentRegion}:v2`,
