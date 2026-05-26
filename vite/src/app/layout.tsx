@@ -20,7 +20,6 @@ import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import CommandBar from "@/views/command-bar/CommandBar";
 import { useEventNames } from "@/views/customers/customer/analytics/hooks/useEventNames";
-import LoadingScreen from "@/views/general/LoadingScreen";
 import { InviteNotifications } from "@/views/general/notifications/InviteNotifications";
 import { DeployToProdDialog } from "@/views/main-sidebar/components/deploy-button/DeployToProdDialog";
 import { MainSidebar } from "@/views/main-sidebar/MainSidebar";
@@ -68,28 +67,7 @@ export function MainLayout() {
 		}
 	}, [orgLoading, org, env, navigate]);
 
-	if (isPending || orgLoading) {
-		return (
-			<AutumnProvider
-				backendUrl={import.meta.env.VITE_BACKEND_URL}
-				includeCredentials={true}
-			>
-				<div className="w-screen h-screen flex bg-outer-background">
-					<div className="hidden sm:flex">
-						<MainSidebar />
-					</div>
-					<div className="w-full h-screen flex flex-col overflow-hidden sm:py-3 sm:pr-3">
-						<div className="w-full h-full flex flex-col overflow-hidden sm:rounded-lg sm:border">
-							{env === AppEnv.Sandbox && <SandboxBanner />}
-							<div className="flex bg-background flex-col h-full">
-								<LoadingScreen />
-							</div>
-						</div>
-					</div>
-				</div>
-			</AutumnProvider>
-		);
-	}
+	if (isPending) return null;
 
 	if (!data) {
 		return <Navigate to="/sign-in" replace={true} />;

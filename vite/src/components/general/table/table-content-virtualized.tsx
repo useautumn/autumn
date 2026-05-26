@@ -22,7 +22,7 @@ export function TableContentVirtualized({
 		table,
 		virtualization,
 	} = context;
-	const { isLoading } = context;
+	const { isLoading, isTransitioning } = context;
 	const rows = table.getRowModel().rows;
 
 	// Use state instead of ref so changes trigger re-renders for virtualizer
@@ -96,12 +96,12 @@ export function TableContentVirtualized({
 					className,
 				)}
 			>
-				{isLoading && (
-					<div className="bg-white/60 dark:bg-black/60 absolute pointer-events-none rounded-lg -inset-[1px] z-70" />
-				)}
+			{(isLoading || isTransitioning) && (
+				<div className="bg-white/40 dark:bg-black/40 absolute pointer-events-none rounded-lg -inset-[1px] z-70" />
+			)}
 
-				<div
-					ref={headerRef}
+			<div
+				ref={headerRef}
 					className="overflow-x-auto overflow-y-hidden scrollbar-none shrink-0"
 					style={{ scrollbarWidth: "none" }}
 				>

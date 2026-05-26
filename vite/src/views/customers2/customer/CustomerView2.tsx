@@ -198,8 +198,12 @@ export default function CustomerView2() {
 								<SelectedEntityDetails />
 							</div>
 							<div className="flex flex-col gap-16 w-full">
-								<CustomerPlansSection />
-								<CustomerFeatureUsageTable />
+								<div style={{ minHeight: 340 }}>
+									<CustomerPlansSection />
+								</div>
+								<div style={{ minHeight: 200 }}>
+									<CustomerFeatureUsageTable />
+								</div>
 								{!entityId && <CustomerUsageAnalyticsTable />}
 								<CustomerBillingControlsSection />
 								{!entityId && <CustomerInvoicesTable />}

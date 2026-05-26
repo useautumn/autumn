@@ -1,11 +1,12 @@
 import type { Row } from "@tanstack/react-table";
 import type { VirtualItem } from "@tanstack/react-virtual";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { memo, useCallback, useMemo } from "react";
-import { TableBody as ShadcnTableBody, TableRow } from "@/components/ui/table";
+import { memo, useCallback, useMemo, useRef } from "react";
+import { TableCell, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { useTableContext } from "./table-context";
-import { TableEmptyState, TableRowCells } from "./table-row-cells";
+import { MotionTbody, TABLE_FADE_IN, TABLE_TRANSITION } from "./table-motion";
+import { TableRowCells, TableSkeletonRows } from "./table-row-cells";
 
 const DEFAULT_ROW_HEIGHT = 40;
 const DEFAULT_OVERSCAN = 30;
@@ -91,6 +92,7 @@ export function TableBodyVirtualized() {
 		numberOfColumns,
 		enableSelection,
 		isLoading,
+		isTransitioning,
 		getRowHref,
 		onRowClick,
 		onRowDoubleClick,
@@ -106,6 +108,18 @@ export function TableBodyVirtualized() {
 	const rows = table.getRowModel().rows;
 	const rowHeight = virtualization?.rowHeight ?? DEFAULT_ROW_HEIGHT;
 	const overscan = virtualization?.overscan ?? DEFAULT_OVERSCAN;
+	const lastRowCountRef = useRef(20);
+
+	const hasEverHadDataRef = useRef(false);
+
+	if (rows.length > 0) {
+		lastRowCountRef.current = rows.length;
+		hasEverHadDataRef.current = true;
+	}
+
+	const hasRows = rows.length > 0;
+	const showSkeleton =
+		isLoading || !!isTransitioning || (!hasRows && !hasEverHadDataRef.current);
 
 	// Don't initialize virtualizer until scroll container is ready
 	// This prevents incorrect virtual item calculations on initial render
@@ -150,21 +164,60 @@ export function TableBodyVirtualized() {
 		.map((col) => col.id)
 		.join(",");
 
-	// Don't render until scroll container is available to prevent virtualization issues
-	if (!scrollContainer || !rows.length) {
+	const columns = table.getVisibleLeafColumns().map((col) => ({
+		id: col.id,
+		size: col.getSize(),
+		skeleton: col.columnDef.meta?.skeleton,
+	}));
+
+	const containerPx = scrollContainer?.clientHeight ?? 0;
+	const skeletonRowCount = containerPx > 0
+		? Math.floor(containerPx / rowHeight) + 1
+		: lastRowCountRef.current;
+
+	if (showSkeleton) {
 		return (
-			<TableEmptyState
-				numberOfColumns={numberOfColumns}
-				isLoading={isLoading}
-				emptyStateChildren={emptyStateChildren}
-				emptyStateText={emptyStateText}
-			/>
+			<MotionTbody
+				key="skeleton"
+				{...TABLE_FADE_IN}
+				transition={TABLE_TRANSITION}
+				className="divide-y bg-interactive-secondary"
+			>
+				<TableSkeletonRows
+					columns={columns}
+					rowCount={skeletonRowCount}
+					rowClassName={rowClassName}
+					flexibleTableColumns={flexibleTableColumns}
+					asFragment
+				/>
+			</MotionTbody>
+		);
+	}
+
+	if (!hasRows) {
+		return (
+			<MotionTbody key="empty" {...TABLE_FADE_IN} transition={TABLE_TRANSITION}>
+				<TableRow className="hover:bg-transparent dark:hover:bg-transparent">
+					<TableCell
+						className="h-10 text-center py-0"
+						colSpan={numberOfColumns}
+					>
+						<div className="text-subtle text-xs text-center w-full h-full items-center justify-center flex">
+							{emptyStateChildren || emptyStateText}
+						</div>
+					</TableCell>
+				</TableRow>
+			</MotionTbody>
 		);
 	}
 
 	return (
-		<ShadcnTableBody className="bg-interactive-secondary">
-			{/* Top spacer row */}
+		<MotionTbody
+			key="content"
+			{...TABLE_FADE_IN}
+			transition={TABLE_TRANSITION}
+			className="bg-interactive-secondary"
+		>
 			{paddingTop > 0 && (
 				<tr style={{ height: paddingTop }}>
 					<td
@@ -174,7 +227,6 @@ export function TableBodyVirtualized() {
 				</tr>
 			)}
 
-			{/* Visible rows - using memoized VirtualRow component */}
 			{virtualRows.map((virtualRow) => {
 				const row = rows[virtualRow.index];
 				const isSelected =
@@ -198,7 +250,6 @@ export function TableBodyVirtualized() {
 				);
 			})}
 
-			{/* Bottom spacer row */}
 			{paddingBottom > 0 && (
 				<tr style={{ height: paddingBottom }}>
 					<td
@@ -207,6 +258,6 @@ export function TableBodyVirtualized() {
 					/>
 				</tr>
 			)}
-		</ShadcnTableBody>
+		</MotionTbody>
 	);
 }

@@ -3,6 +3,11 @@ import { FlaskIcon, PencilIcon } from "@phosphor-icons/react";
 import type { Row, Table } from "@tanstack/react-table";
 import { ArrowRightLeft, Delete, RotateCcw } from "lucide-react";
 import { TableDropdownMenuCell } from "@/components/general/table/table-dropdown-menu-cell";
+import {
+	dateSkeleton,
+	hiddenSkeleton,
+	statusSkeleton,
+} from "@/components/general/table/table-skeleton-presets";
 import { DropdownMenuItem } from "@/components/v2/dropdowns/DropdownMenu";
 import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
 import { AdminHover } from "../../../../../components/general/AdminHover";
@@ -44,6 +49,7 @@ export const CustomerProductsColumns = [
 	{
 		header: "Status",
 		accessorKey: "status",
+		meta: { skeleton: statusSkeleton },
 		cell: ({
 			row,
 			table,
@@ -75,6 +81,7 @@ export const CustomerProductsColumns = [
 		id: "actions",
 		header: "",
 		size: 40,
+		meta: { skeleton: hiddenSkeleton },
 		cell: ({
 			row,
 			table,
