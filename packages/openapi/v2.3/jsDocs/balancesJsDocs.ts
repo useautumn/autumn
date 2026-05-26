@@ -1,4 +1,8 @@
-import { ExtCheckParamsSchema, TrackParamsSchema } from "@autumn/shared";
+import {
+	ExtCheckParamsSchema,
+	TrackParamsSchema,
+	TrackTokensParamsSchema,
+} from "@autumn/shared";
 import { createJSDocDescription, example } from "../../utils/jsDocs/index.js";
 
 export const balancesCheckJsDoc = createJSDocDescription({
@@ -57,4 +61,27 @@ export const balancesTrackJsDoc = createJSDocDescription({
 	methodName: "track",
 	returns:
 		"The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.",
+});
+
+export const balancesTrackTokensJsDoc = createJSDocDescription({
+	description:
+		"Records AI token usage for a customer and returns the updated AI credit balance.",
+	whenToUse:
+		"Use this after an LLM request when you have input and output token counts. Autumn converts token usage to a dollar amount using the configured model pricing and markup, then tracks that value against the customer's AI credit system.",
+	body: TrackTokensParamsSchema,
+	examples: [
+		example({
+			description: "Track one LLM response",
+			values: {
+				customerId: "cus_123",
+				featureId: "ai_credits",
+				modelId: "anthropic/claude-sonnet-4-20250514",
+				inputTokens: 1000,
+				outputTokens: 500,
+			},
+		}),
+	],
+	methodName: "trackTokens",
+	returns:
+		"The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.",
 });

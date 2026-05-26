@@ -1,6 +1,6 @@
 ---
 title: "Track Token Usage"
-openapi: "openapi POST /v1/balances.trackTokens"
+openapi: "openapi POST /v1/balances.track_tokens"
 ---
 
 import { DynamicParamField } from "/components/dynamic-param-field.jsx";
@@ -66,7 +66,7 @@ await autumn.balances.trackTokens({
   The ID of the customer.
 </DynamicParamField>
 
-<DynamicParamField body="modelId" type="string" required>
+<DynamicParamField body="model_id" type="string" required>
   The AI model in `provider/model` format, matching keys from [Models.dev](https://models.dev) (e.g., `anthropic/claude-opus-4-6`, `openai/gpt-4o`, `openrouter/anthropic/claude-opus-4.6`).
 </DynamicParamField>
 

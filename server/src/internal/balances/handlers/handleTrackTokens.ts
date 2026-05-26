@@ -1,7 +1,11 @@
+import {
+	AffectedResource,
+	Scopes,
+	TrackTokensParamsSchema,
+} from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { runTrackV2 } from "@/internal/balances/track/runTrackV2.js";
+import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
 import { getTokenTrackParams } from "@/internal/balances/track/utils/getTokenTrackParams.js";
-import { AffectedResource, Scopes, TrackTokensParamsSchema } from "@autumn/shared";
 
 export const handleTrackTokens = createRoute({
 	scopes: [Scopes.Balances.Write],
@@ -16,12 +20,13 @@ export const handleTrackTokens = createRoute({
 			input: body,
 		});
 
-		return c.json(
-			await runTrackV2({
-				ctx,
-				body: trackBody,
-				featureDeductions,
-			}),
-		);
+		const response = await runTrackWithRollout({
+			ctx,
+			body: trackBody,
+			featureDeductions,
+		});
+		const status = ctx.extraLogs.trackQueuedForReplay ? 202 : 200;
+
+		return c.json(response, status);
 	},
 });
