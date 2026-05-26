@@ -27,6 +27,7 @@ export const handleGetCustomer = createRoute({
 		const { customer_id } = c.req.param();
 
 		const expandParam = c.req.query("expand");
+		const entityId = c.req.query("entity_id");
 		const extraExpands = expandParam
 			? (expandParam.split(",").filter(Boolean) as CustomerExpand[])
 			: [];
@@ -38,6 +39,7 @@ export const handleGetCustomer = createRoute({
 			withEntities: true,
 			expand,
 			inStatuses: ALL_STATUSES,
+			entityId: entityId || undefined,
 		});
 
 		const [testClockFrozenTimeMs, autoTopupsWithLimits, rewards] =

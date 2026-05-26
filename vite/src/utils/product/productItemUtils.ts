@@ -100,6 +100,24 @@ const itemsHaveSameInterval = ({
 	);
 };
 
+/**
+ * Builds an interval discriminator suffix so two items sharing the same
+ * feature/entitlement/price-id but differing in billing cadence (e.g. a
+ * monthly entitlement and a one-off price for the same feature) hash to
+ * distinct ids. Without this, the plan editor sheet retargets whichever
+ * item happens to come first in the list and the second item becomes
+ * uneditable. `null`/`undefined` interval is one-off; `interval_count` of
+ * `1`/missing is treated the same as omitted.
+ */
+const intervalSuffix = (item: ProductItem): string => {
+	if (!item.interval) return "-oneoff";
+	const count =
+		item.interval_count && item.interval_count !== 1
+			? `x${item.interval_count}`
+			: "";
+	return `-${item.interval}${count}`;
+};
+
 export const getItemId = ({
 	item,
 	itemIndex,
@@ -107,12 +125,14 @@ export const getItemId = ({
 	item: ProductItem;
 	itemIndex: number;
 }) => {
-	if (item.entitlement_id) return `ent-${item.entitlement_id}`;
-	if (item.price_id) return `price-${item.price_id}`;
+	const interval = intervalSuffix(item);
+	if (item.entitlement_id) return `ent-${item.entitlement_id}${interval}`;
+	if (item.price_id) return `price-${item.price_id}${interval}`;
 	if (item.feature_id) {
-		return item.entity_feature_id
+		const base = item.entity_feature_id
 			? `feature-${item.feature_id}-${item.entity_feature_id}`
 			: `feature-${item.feature_id}`;
+		return `${base}${interval}`;
 	}
 	return `item-${itemIndex}`;
 };
