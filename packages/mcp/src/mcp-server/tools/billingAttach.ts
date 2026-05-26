@@ -13,7 +13,7 @@ const args = {
 export const tool$billingAttach: ToolDefinition<typeof args> = {
   name: "attach",
   description:
-    `Attach a plan to a customer. This may create or update subscriptions, invoices, or payment links.`,
+    `Attach a plan to a customer. This may create or update subscriptions, invoices, or payment links. Call preview_attach first, show the billing impact to the user, and get explicit confirmation before calling this tool.`,
   annotations: {
     "title": "Attach",
     "destructiveHint": true,

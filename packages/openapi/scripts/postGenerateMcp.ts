@@ -11,10 +11,19 @@ const pkg = JSON.parse(readFileSync(pkgPath, "utf8"));
 const sharedPath = path.join(rootDir, "packages/mcp/src/mcp-server/shared.ts");
 const toolsPath = path.join(rootDir, "packages/mcp/src/mcp-server/tools.ts");
 const oauthPath = path.join(rootDir, "packages/mcp/src/mcp-server/oauth.ts");
+const resourcesPath = path.join(
+	rootDir,
+	"packages/mcp/src/mcp-server/autumn-resources.ts",
+);
 const oauthTemplatePath = path.join(
 	rootDir,
 	"packages/openapi/mcp/oauth.template",
 );
+const resourcesTemplatePath = path.join(
+	rootDir,
+	"packages/openapi/mcp/resources.template",
+);
+const serverPath = path.join(rootDir, "packages/mcp/src/mcp-server/server.ts");
 const serveCommandPath = path.join(
 	rootDir,
 	"packages/mcp/src/mcp-server/cli/serve/command.ts",
@@ -36,6 +45,17 @@ const replaceGenerated = (
 		);
 	}
 	return input.replace(search, replacement);
+};
+
+const patchGeneratedFile = (
+	filePath: string,
+	patches: Array<{ search: string; replacement: string }>,
+) => {
+	let input = readFileSync(filePath, "utf8");
+	for (const patch of patches) {
+		input = replaceGenerated(input, patch.search, patch.replacement);
+	}
+	writeFileSync(filePath, input);
 };
 
 pkg.scripts = {
@@ -62,6 +82,7 @@ for (const dep of [
 
 writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
 copyFileSync(oauthTemplatePath, oauthPath);
+copyFileSync(resourcesTemplatePath, resourcesPath);
 writeFileSync(
 	sharedPath,
 	replaceGenerated(
@@ -232,6 +253,30 @@ serveImpl = replaceGenerated(
 	`      getSDK: () => sdk,`,
 );
 writeFileSync(serveImplPath, serveImpl);
+
+patchGeneratedFile(serverPath, [
+	{
+		search: `import { SDKOptions } from "../lib/config.js";`,
+		replacement: [
+			`import { SDKOptions } from "../lib/config.js";`,
+			`import { registerAutumnResources } from "./autumn-resources.js";`,
+		].join("\n"),
+	},
+	{
+		search: [
+			`  const register = { tool, resource, resourceTemplate, prompt };`,
+			`  void register; // suppress unused warnings`,
+			``,
+			`  tool(tool$customersGet);`,
+		].join("\n"),
+		replacement: [
+			`  const register = { tool, resource, resourceTemplate, prompt };`,
+			`  registerAutumnResources(register);`,
+			``,
+			`  tool(tool$customersGet);`,
+		].join("\n"),
+	},
+]);
 
 rmSync(path.join(rootDir, "packages/mcp/eslint.config.mjs"), { force: true });
 rmSync(path.join(rootDir, "packages/mcp/.eslintcache"), { force: true });

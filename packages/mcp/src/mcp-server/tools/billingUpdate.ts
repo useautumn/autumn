@@ -13,7 +13,7 @@ const args = {
 export const tool$billingUpdate: ToolDefinition<typeof args> = {
   name: "update_subscription",
   description:
-    `Update a customer subscription. This may change quantities, cancel, uncancel, invoice, or update billing state.`,
+    `Update a customer subscription. This may change quantities, cancel, uncancel, invoice, or update billing state. Call preview_update_subscription first, show the billing impact to the user, and get explicit confirmation before calling this tool.`,
   annotations: {
     "title": "Update subscription",
     "destructiveHint": true,

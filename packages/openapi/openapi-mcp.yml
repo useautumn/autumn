@@ -3951,7 +3951,7 @@ paths:
         readOnlyHint: false
         destructiveHint: true
         idempotentHint: false
-        description: Attach a plan to a customer. This may create or update subscriptions, invoices, or payment links.
+        description: Attach a plan to a customer. This may create or update subscriptions, invoices, or payment links. Call preview_attach first, show the billing impact to the user, and get explicit confirmation before calling this tool.
       x-autumn-scopes:
         - billing:write
   /v1/billing.preview_attach:
@@ -5551,7 +5551,7 @@ paths:
         readOnlyHint: false
         destructiveHint: true
         idempotentHint: false
-        description: Update a customer subscription. This may change quantities, cancel, uncancel, invoice, or update billing state.
+        description: Update a customer subscription. This may change quantities, cancel, uncancel, invoice, or update billing state. Call preview_update_subscription first, show the billing impact to the user, and get explicit confirmation before calling this tool.
       x-autumn-scopes:
         - billing:write
   /v1/billing.preview_update:

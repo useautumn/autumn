@@ -5,6 +5,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { AutumnMcpCore } from "../core.js";
 import { SDKOptions } from "../lib/config.js";
+import { registerAutumnResources } from "./autumn-resources.js";
 import type { ConsoleLogger } from "./console-logger.js";
 import { createRegisterPrompt } from "./prompts.js";
 import {
@@ -86,7 +87,7 @@ export function createMCPServer(deps: {
   );
   const prompt = createRegisterPrompt(deps.logger, server, getClient, scopes);
   const register = { tool, resource, resourceTemplate, prompt };
-  void register; // suppress unused warnings
+  registerAutumnResources(register);
 
   tool(tool$customersGet);
   tool(tool$customersList);
