@@ -10,7 +10,14 @@ import { loadRegistry, saveRegistry } from "./registry.ts";
 import { PROJECT_ROOT, NEON_TEMPLATE_BRANCH } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
 
-export async function setupAgentWorktree(
+/**
+ * Step 1 of agent-worktree setup: create the Neon branch and persist its
+ * pooled URL onto the entry. Cheap and idempotent — does NOT touch schema.
+ * Splitting this out from migration application means cmdSetup can write
+ * .env.local *before* migrations run, so a migration failure leaves the
+ * worktree in a recoverable state (`bun db migrate` / `bun dw reset` work).
+ */
+export async function provisionNeonBranch(
 	entry: RegistryEntry,
 	registry: Record<string, RegistryEntry>,
 ): Promise<RegistryEntry> {
@@ -30,15 +37,9 @@ export async function setupAgentWorktree(
 		return next;
 	}
 
-	// First-run provisioning.
 	log(`first run for ${branchName} — provisioning neon branch`);
 	ensureTemplateBranch();
 	const branch = createBranch(branchName, NEON_TEMPLATE_BRANCH);
-	// Use direct (non-pooled) URL for DDL; pooler can interfere with some DDL paths.
-	const directUrl = connectionString(branchName, { pooled: false });
-	applyCommittedMigrations(branchName, directUrl);
-	loadDbFunctions(branchName, directUrl);
-	// Pooled URL for runtime.
 	const pooledUrl = connectionString(branchName, { pooled: true });
 	const next: RegistryEntry = {
 		...entry,
@@ -49,6 +50,20 @@ export async function setupAgentWorktree(
 	registry[entry.path] = next;
 	saveRegistry(registry);
 	return next;
+}
+
+/**
+ * Step 2 of agent-worktree setup: apply committed migrations + load DB
+ * functions. Idempotent on resume — drizzle's migration ledger skips
+ * already-applied migrations. Uses the direct (non-pooled) URL for DDL
+ * because Neon's pooler can interfere with DDL paths.
+ */
+export function applyMigrationsAndFunctions(entry: RegistryEntry): void {
+	const { branchName } = entry;
+	if (!branchName) fatal("entry missing branchName");
+	const directUrl = connectionString(branchName, { pooled: false });
+	applyCommittedMigrations(branchName, directUrl);
+	loadDbFunctions(branchName, directUrl);
 }
 
 // Auto-seed unit test org into the per-worktree Neon branch.

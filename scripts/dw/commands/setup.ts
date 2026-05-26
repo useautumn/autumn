@@ -7,7 +7,11 @@ import {
 	allocateWorktreeNumber,
 	deriveBranchName,
 } from "../helpers/registry.ts";
-import { setupAgentWorktree, autoSetupTestOrg } from "../helpers/setup.ts";
+import {
+	provisionNeonBranch,
+	applyMigrationsAndFunctions,
+	autoSetupTestOrg,
+} from "../helpers/setup.ts";
 import { ensureComposeStack } from "../helpers/compose.ts";
 import { writeEnvLocalFiles } from "../helpers/env-files.ts";
 import { ensureEmulateRunning } from "../helpers/emulate.ts";
@@ -56,9 +60,14 @@ export async function cmdSetup(): Promise<RegistryEntry> {
 	}
 
 	if (entry.worktreeNum > 1) {
-		entry = await setupAgentWorktree(entry, registry);
+		// Order matters: provision branch → write .env.local → apply migrations.
+		// If migrations fail, .env.local already points at the half-migrated
+		// branch so the user can recover with `bun dw reset` (or manually
+		// re-run `bun db migrate --bootstrap` once the underlying issue is fixed).
+		entry = await provisionNeonBranch(entry, registry);
 		ensureComposeStack(entry.worktreeNum);
 		writeEnvLocalFiles(entry);
+		applyMigrationsAndFunctions(entry);
 		await autoSetupTestOrg(entry);
 		ensureEmulateRunning();
 	}
