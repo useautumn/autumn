@@ -11,6 +11,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { generateId } from "@/utils/genUtils.js";
+import { logCaughtError } from "@/utils/logging/logCaughtError.js";
 import {
 	type VercelResourceCreatedEvent,
 	VercelWebhooks,
@@ -38,7 +39,7 @@ export const handleCreateResource = createRoute({
 	handler: async (c) => {
 		const { orgId, env, integrationConfigurationId } = c.req.param();
 		const ctx = c.get("ctx");
-		const { db, org, fullCustomer: customer } = ctx;
+		const { db, org, logger, fullCustomer: customer } = ctx;
 		const { productId, name, metadata, billingPlanId } = c.req.valid("json");
 
 		if (!customer) {
@@ -244,7 +245,12 @@ export const handleCreateResource = createRoute({
 
 			return c.json(buildResourceResponse(product));
 		} catch (error) {
-			console.error(error);
+			logCaughtError({
+				logger,
+				message: "[vercel/resources.create] FAILED",
+				error,
+				data: { integrationConfigurationId },
+			});
 			return c.json(
 				{
 					error: {

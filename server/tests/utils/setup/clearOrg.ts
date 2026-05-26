@@ -1,7 +1,9 @@
 import {
 	AppEnv,
+	customerProducts,
 	migrationItemRuns,
 	migrations,
+	products,
 } from "@autumn/shared";
 import { and, eq, inArray } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
@@ -30,6 +32,18 @@ export const clearOrgDbOnly = async ({
 	env: AppEnv;
 }) => {
 	await CusService.deleteByOrgId({ db, orgId, env });
+
+	// customer_products_internal_product_id_fkey has no ON DELETE CASCADE.
+	// Explicitly wipe any remaining rows so the subsequent product delete succeeds.
+	const orgProductIds = db
+		.select({ internal_id: products.internal_id })
+		.from(products)
+		.where(and(eq(products.org_id, orgId), eq(products.env, env)));
+
+	await db
+		.delete(customerProducts)
+		.where(inArray(customerProducts.internal_product_id, orgProductIds));
+
 	await ProductService.deleteByOrgId({ db, orgId, env });
 	await rewardRepo.deleteByOrgId({ db, orgId, env });
 	await FeatureService.deleteByOrgId({ db, orgId, env });

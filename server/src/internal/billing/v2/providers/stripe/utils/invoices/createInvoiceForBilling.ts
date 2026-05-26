@@ -71,9 +71,7 @@ export const createInvoiceForBilling = async ({
 		: "charge_automatically";
 
 	const vercelInstallationId =
-		billingContext.paymentMethod?.type === "custom"
-			? billingContext.fullCustomer?.processors?.vercel?.installation_id
-			: undefined;
+		billingContext.fullCustomer?.processors?.vercel?.installation_id;
 
 	const invoiceMetadata = mergeStripeMetadata({
 		userMetadata: billingContext.userMetadata,

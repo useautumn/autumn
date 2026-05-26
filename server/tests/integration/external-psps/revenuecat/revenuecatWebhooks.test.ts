@@ -22,7 +22,7 @@ import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js"
 import {
 	expectWebhookSuccess,
 	RevenueCatWebhookClient,
-} from "./revenue-cat-webhook-client.js";
+} from "./utils/revenue-cat-webhook-client.js";
 
 const testCase = "rc1";
 const RC_WEBHOOK_SECRET = "test_rc_webhook_secret_12345";
