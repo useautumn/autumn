@@ -65,6 +65,7 @@ export function CustomerProductsTable() {
 	const {
 		customer,
 		isLoading,
+		isEntityTransitioning,
 		showExpired,
 		setShowExpired,
 		subscriptions,
@@ -92,7 +93,7 @@ export function CustomerProductsTable() {
 	const columns = useMemo(() => {
 		const baseColumns = [CustomerProductsColumns[0]];
 
-		if (hasEntityProducts) {
+		if (hasEntities) {
 			baseColumns.push(createScopeColumn(customer.entities, setEntityId));
 		}
 
@@ -104,7 +105,7 @@ export function CustomerProductsTable() {
 		);
 
 		return baseColumns;
-	}, [hasEntityProducts, customer.entities, setEntityId]);
+	}, [hasEntities, customer.entities, setEntityId]);
 
 	const handleCancelClick = (product: FullCusProduct) => {
 		setSheet({ type: "subscription-cancel", itemId: product.id });
@@ -201,7 +202,7 @@ export function CustomerProductsTable() {
 					table: subscriptionTable,
 					numberOfColumns: columns.length,
 					enableSorting: false,
-					isLoading,
+					isLoading: isLoading || isEntityTransitioning,
 					onRowClick: handleRowClick,
 					emptyStateChildren,
 					flexibleTableColumns: true,
@@ -237,7 +238,7 @@ export function CustomerProductsTable() {
 						table: purchaseTable,
 						numberOfColumns: columns.length,
 						enableSorting: false,
-						isLoading,
+						isLoading: isLoading || isEntityTransitioning,
 						onRowClick: handleRowClick,
 						emptyStateText: "No purchases found",
 						flexibleTableColumns: true,

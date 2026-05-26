@@ -29,9 +29,11 @@ import { useCustomerContext } from "../CustomerContext";
 export const CreateEntity = ({
 	open,
 	setOpen,
+	onCreated,
 }: {
 	open: boolean;
 	setOpen: (open: boolean) => void;
+	onCreated?: () => void;
 }) => {
 	const { customer, refetch } = useCusQuery();
 	const { setEntityId } = useCustomerContext();
@@ -84,6 +86,7 @@ export const CreateEntity = ({
 			);
 
 			await refetch();
+			onCreated?.();
 			setOpen(false);
 
 			const params = new URLSearchParams(location.search);
