@@ -52,7 +52,10 @@ function CreateFeatureSheet({
 
 	const handleCreateFeature = async () => {
 		// Validate credit system specific fields first
-		if (feature.type === FeatureType.CreditSystem) {
+		if (
+			feature.type === FeatureType.CreditSystem ||
+			feature.type === FeatureType.AiCreditSystem
+		) {
 			const validationError = validateCreditSystem(feature);
 			if (validationError) {
 				toast.error(validationError);

@@ -85,6 +85,13 @@ export const featureV1ToDbFeatureConfig = ({
 }) => {
 	const type = apiFeature.type || originalFeature.type;
 
+	if (apiFeature.type === FeatureType.AiCreditSystem) {
+		return {
+			schema: [],
+			usage_type: FeatureUsageType.Single,
+		};
+	}
+
 	if (nullish(apiFeature.consumable) && nullish(apiFeature.credit_schema))
 		return;
 
@@ -139,6 +146,11 @@ export const featureV1ToDbFeature = ({
 		newConfig.usage_type = apiFeature.consumable
 			? FeatureUsageType.Single
 			: FeatureUsageType.Continuous;
+	}
+
+	if (apiFeature.type === FeatureType.AiCreditSystem) {
+		newConfig.usage_type = FeatureUsageType.Single;
+		newConfig.schema = [];
 	}
 
 	if (apiFeature.credit_schema) {

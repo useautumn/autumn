@@ -45,10 +45,10 @@ export const validateCreditSystem = (
 	config: CreditSystemConfig,
 	featureType: FeatureType = FeatureType.CreditSystem,
 ) => {
-	const schema = config.schema;
 	const isAiCreditSystem = featureType === FeatureType.AiCreditSystem;
+	const schema = Array.isArray(config?.schema) ? config.schema : [];
 
-	if (!isAiCreditSystem && (!schema || schema.length === 0)) {
+	if (!isAiCreditSystem && schema.length === 0) {
 		throw new RecaseError({
 			message: `At least one metered feature is required for credit system`,
 			code: ErrCode.InvalidFeature,
@@ -68,7 +68,7 @@ export const validateCreditSystem = (
 		});
 	}
 
-	const newConfig = { ...config, usage_type: FeatureUsageType.Single };
+	const newConfig = { ...config, schema, usage_type: FeatureUsageType.Single };
 	for (let i = 0; i < newConfig.schema.length; i++) {
 		const creditAmount = parseFloat(
 			newConfig.schema[i].credit_amount.toString(),
