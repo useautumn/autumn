@@ -27,11 +27,23 @@ import { beforeSessionCreated } from "./authUtils/beforeSessionCreated.js";
 import { getScopesForUserInOrg } from "./authUtils/customSessionScopes.js";
 import { ADMIN_USER_IDs } from "./constants.js";
 
-// emulate.dev Google: rewrite outbound Google OAuth host so agent worktrees
+// Vercel-hosted @emulators/google. Endpoints live under <base>/oauth2/...
+// and the OIDC discovery doc lives under <base>/.well-known/openid-configuration,
+// matching real Google's path layout exactly. Override per-env via EMULATE_GOOGLE_URL.
+const EMULATE_GOOGLE_URL_DEFAULT =
+	"https://emulate-vercel.vercel.app/emulate/google";
+
+const emulateGoogleUrl =
+	process.env.NODE_ENV !== "production"
+		? (process.env.EMULATE_GOOGLE_URL ?? EMULATE_GOOGLE_URL_DEFAULT).replace(/\/$/, "")
+		: undefined;
+
+// Rewrite outbound Google OAuth requests so agent worktrees / preview deploys
 // can use any redirect URI without registering it in the real Google console.
-// Real Google's oauth2.googleapis.com/token maps to emulate's /oauth2/token path.
-if (process.env.EMULATE_GOOGLE_URL && process.env.NODE_ENV !== "production") {
-	const emulate = process.env.EMULATE_GOOGLE_URL.replace(/\/$/, "");
+// - https://oauth2.googleapis.com/token       -> <emulate>/oauth2/token
+// - https://www.googleapis.com/oauth2/v2/...  -> <emulate>/oauth2/v2/...
+if (emulateGoogleUrl) {
+	const emulate = emulateGoogleUrl;
 	const originalFetch = globalThis.fetch;
 	globalThis.fetch = ((input: any, init?: any) => {
 		const url =
@@ -55,11 +67,6 @@ if (process.env.EMULATE_GOOGLE_URL && process.env.NODE_ENV !== "production") {
 		return originalFetch(input, init);
 	}) as typeof fetch;
 }
-
-const emulateGoogleUrl =
-  process.env.NODE_ENV !== "production"
-    ? process.env.EMULATE_GOOGLE_URL?.replace(/\/$/, "")
-    : undefined;
 
 // HTTPS agent worktrees go through portless (e.g. wtN-api.localhost). The
 // OAuth flow leaves and returns via a third-party host (emulate.dev), so the
@@ -175,6 +182,15 @@ const options = {
 		) {
 			origins.push(origin);
 		}
+		// Mirror the dev-only allowlist from corsOrigins.ts so origins served via
+		// per-developer tunnels (e.g. agent worktrees) also pass better-auth's
+		// own trusted-origin check, not just hono/cors.
+		const devSuffixes = (process.env.DEV_EXTRA_CORS_ORIGINS ?? "")
+			.split(",")
+			.map((s) => s.trim())
+			.filter(Boolean);
+		for (const sfx of devSuffixes) origins.push(`https://*.${sfx}`);
+
 		if (process.env.CLIENT_URL) origins.push(process.env.CLIENT_URL);
 		if (process.env.BETTER_AUTH_URL) origins.push(process.env.BETTER_AUTH_URL);
 		return origins;

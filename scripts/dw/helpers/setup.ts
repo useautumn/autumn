@@ -85,6 +85,12 @@ export async function autoSetupTestOrg(entry: RegistryEntry): Promise<void> {
 				...(process.env as Record<string, string>),
 				DATABASE_URL: entry.databaseUrl,
 				DATABASE_CRITICAL_URL: entry.databaseUrl,
+				...(process.env.STRIPE_WEBHOOK_URL && {
+					STRIPE_WEBHOOK_URL: process.env.STRIPE_WEBHOOK_URL,
+				}),
+				...(process.env.DEV_EXTRA_CORS_ORIGINS && {
+					DEV_EXTRA_CORS_ORIGINS: process.env.DEV_EXTRA_CORS_ORIGINS,
+				}),
 			},
 		},
 	);

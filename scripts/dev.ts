@@ -226,33 +226,35 @@ async function startDev() {
 					: `"cd apps/checkout && VITE_PORT=${CHECKOUT_PORT} bun dev"`,
 			);
 
-			// Stripe CLI webhook tunnel — silently skip if CLI absent.
-			// Forwards to the direct localhost port (not portless) so we avoid CA trust issues.
-			const stripeAvailable =
-				Bun.spawnSync(["which", "stripe"]).exitCode === 0;
-			if (stripeAvailable) {
-				const auth = Bun.spawnSync(
-					["stripe", "customers", "list", "--limit", "1"],
-					{ stdout: "pipe", stderr: "pipe" },
-				);
-				if (auth.exitCode !== 0) {
-					const stderr = new TextDecoder().decode(auth.stderr);
-					console.error(
-						"\nStripe CLI is installed but not authenticated (or key expired).",
+			if (worktreeNum === 1) {
+				// Stripe CLI webhook tunnel — silently skip if CLI absent.
+				// Forwards to the direct localhost port (not portless) so we avoid CA trust issues.
+				const stripeAvailable =
+					Bun.spawnSync(["which", "stripe"]).exitCode === 0;
+				if (stripeAvailable) {
+					const auth = Bun.spawnSync(
+						["stripe", "customers", "list", "--limit", "1"],
+						{ stdout: "pipe", stderr: "pipe" },
 					);
-					console.error(`  ${stderr.trim().split("\n").slice(-3).join("\n  ")}`);
-					console.error("\nRun `stripe login` and try again.\n");
-					process.exit(1);
+					if (auth.exitCode !== 0) {
+						const stderr = new TextDecoder().decode(auth.stderr);
+						console.error(
+							"\nStripe CLI is installed but not authenticated (or key expired).",
+						);
+						console.error(`  ${stderr.trim().split("\n").slice(-3).join("\n  ")}`);
+						console.error("\nRun `stripe login` and try again.\n");
+						process.exit(1);
+					}
+					const forwardUrl = `http://localhost:${SERVER_PORT}/webhooks/connect/sandbox`;
+					names.push("stripe");
+					colors.push("cyan");
+					// --forward-connect-to forwards events from connected accounts;
+					// the /webhooks/connect/* endpoint expects Connect-mode events.
+					const stripeCmd = `stripe listen --forward-connect-to ${forwardUrl} --skip-verify`;
+					cmds.push(
+						isWindows ? `"${stripeCmd}"` : `"${stripeCmd}"`,
+					);
 				}
-				const forwardUrl = `http://localhost:${SERVER_PORT}/webhooks/connect/sandbox`;
-				names.push("stripe");
-				colors.push("cyan");
-				// --forward-connect-to forwards events from connected accounts;
-				// the /webhooks/connect/* endpoint expects Connect-mode events.
-				const stripeCmd = `stripe listen --forward-connect-to ${forwardUrl} --skip-verify`;
-				cmds.push(
-					isWindows ? `"${stripeCmd}"` : `"${stripeCmd}"`,
-				);
 			}
 
 			shellArgs = [

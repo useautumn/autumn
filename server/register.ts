@@ -1,29 +1,36 @@
 import "dotenv/config";
 import { loadLocalEnv } from "./src/utils/envUtils";
-import Stripe from "stripe";
-import {
-	MAIN_STRIPE_EVENT_TYPES,
-	SYNC_STRIPE_EVENT_TYPES,
-} from "./src/external/stripe/common/stripeConstants";
+import { AppEnv } from "@autumn/shared";
+import { db } from "./src/db/initDrizzle";
+import { registerMasterConnectWebhook } from "./src/external/connect/registerMasterConnectWebhook";
 
 loadLocalEnv();
 
-const allEventTypes = [
-	...new Set([...MAIN_STRIPE_EVENT_TYPES, ...SYNC_STRIPE_EVENT_TYPES]),
-] as Stripe.WebhookEndpointCreateParams.EnabledEvent[];
-
 const main = async () => {
-	const stripe = new Stripe(process.env.STRIPE_SANDBOX_SECRET_KEY || "");
+  const orgId = process.env.TESTS_ORG_ID;
+  const webhookBaseUrl = process.env.STRIPE_WEBHOOK_URL;
 
-	const result = await stripe.webhookEndpoints.create({
-		url: `${process.env.STRIPE_WEBHOOK_URL}/webhooks/connect/sandbox`,
-		enabled_events: allEventTypes,
-		connect: true,
-	});
+  if (!orgId) {
+    console.error("TESTS_ORG_ID env variable is not set");
+    process.exit(1);
+  }
+  if (!webhookBaseUrl) {
+    console.error("STRIPE_WEBHOOK_URL env variable is not set");
+    process.exit(1);
+  }
 
-	console.log(result);
+  const result = await registerMasterConnectWebhook({
+    db,
+    orgId,
+    env: AppEnv.Sandbox,
+    webhookBaseUrl,
+  });
+
+  console.log(
+    `Stripe connect webhook ${result.reused ? "reused" : "registered"}: ${result.webhookId}`,
+  );
 };
 
 main()
-	.catch(console.error)
-	.then(() => process.exit(0));
+  .catch(console.error)
+  .then(() => process.exit(0));

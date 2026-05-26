@@ -2,6 +2,7 @@ import { loadRegistry } from "../helpers/registry.ts";
 import { getCurrentWorktree } from "../helpers/git.ts";
 import { aliasesFor } from "../helpers/ports.ts";
 import { tmuxSessionName } from "../helpers/tmux.ts";
+import { getSparqUrls } from "../helpers/sparq.ts";
 
 export function cmdIdentify(): void {
 	const cwd = getCurrentWorktree();
@@ -33,11 +34,16 @@ export function cmdIdentify(): void {
 	}
 
 	const tmuxHuman = tmux || "(canonical worktree — not in tmux)";
+	const sparq = getSparqUrls(cwd, worktreeNum);
 
 	console.log(`Worktree #${worktreeNum}  (${entry.path})`);
 	console.log(`  Branch:        ${branchName ?? "(canonical)"}`);
 	console.log(`  Server URL:    ${serverUrl}`);
 	console.log(`  Vite URL:      ${viteUrl}`);
+	if (sparq) {
+		console.log(`  Sparq API URL: ${sparq.apiUrl}`);
+		console.log(`  Sparq Vite URL: ${sparq.viteUrl}`);
+	}
 	console.log(`  Tmux session:  ${tmuxHuman}`);
 	console.log(`  Server port:   ${serverPort}`);
 	console.log(`  Vite port:     ${vitePort}`);
@@ -48,4 +54,8 @@ export function cmdIdentify(): void {
 	console.log(`DW_TMUX_SESSION=${tmux}`);
 	console.log(`DW_SERVER_PORT=${serverPort}`);
 	console.log(`DW_VITE_PORT=${vitePort}`);
+	if (sparq) {
+		console.log(`DW_SPARQ_API_URL=${sparq.apiUrl}`);
+		console.log(`DW_SPARQ_VITE_URL=${sparq.viteUrl}`);
+	}
 }

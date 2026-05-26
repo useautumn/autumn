@@ -6,7 +6,11 @@ import { registerPortlessAliases } from "./portless.ts";
 import { rewriteDbEnv } from "./url.ts";
 import { aliasesFor, killOwnPorts } from "./ports.ts";
 import { tmuxSessionName, spawnDevInTmux } from "./tmux.ts";
-import { PROJECT_ROOT } from "../constants.ts";
+import {
+	PROJECT_ROOT,
+	SPARQ_DOMAIN,
+	EMULATE_GOOGLE_URL_DEFAULT,
+} from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
 
 export function buildDevEnvAndArgs(entry: RegistryEntry): {
@@ -21,7 +25,10 @@ export function buildDevEnvAndArgs(entry: RegistryEntry): {
 		if (!databaseUrl) fatal("agent worktree missing databaseUrl");
 		env = rewriteDbEnv(env, databaseUrl);
 		if (!env.EMULATE_GOOGLE_URL) {
-			env.EMULATE_GOOGLE_URL = "https://google.emulate.localhost";
+			env.EMULATE_GOOGLE_URL = EMULATE_GOOGLE_URL_DEFAULT;
+		}
+		if (!env.DEV_EXTRA_CORS_ORIGINS) {
+			env.DEV_EXTRA_CORS_ORIGINS = SPARQ_DOMAIN;
 		}
 		const portlessCa = join(homedir(), ".portless", "ca.pem");
 		if (existsSync(portlessCa) && !env.NODE_EXTRA_CA_CERTS) {

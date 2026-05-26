@@ -4,7 +4,13 @@ import { homedir } from "node:os";
 import { log } from "./shell.ts";
 import { forceSslVerifyFull } from "./url.ts";
 import { aliasesFor, dragonflyPortFor, elasticMqPortFor } from "./ports.ts";
-import { PROJECT_ROOT, ENV_LOCAL_TARGETS, ENV_LOCAL_DISABLED_SUFFIX } from "../constants.ts";
+import {
+	PROJECT_ROOT,
+	ENV_LOCAL_TARGETS,
+	ENV_LOCAL_DISABLED_SUFFIX,
+	SPARQ_DOMAIN,
+	EMULATE_GOOGLE_URL_DEFAULT,
+} from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
 
 // Simple KEY=VALUE parse (no quoting/multiline). Sufficient for .env.local
@@ -68,7 +74,11 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 		DATABASE_CRITICAL_URL: dbUrl,
 		BETTER_AUTH_URL: aliases.apiUrl,
 		CLIENT_URL: aliases.viteUrl,
-		EMULATE_GOOGLE_URL: "https://google.emulate.localhost",
+		STRIPE_WEBHOOK_URL: aliases.apiUrl,
+		EMULATE_GOOGLE_URL: EMULATE_GOOGLE_URL_DEFAULT,
+		// Sparq tunnel hostnames live under this suffix; the server treats them as
+		// trusted origins (CORS + better-auth) only when this env is set.
+		DEV_EXTRA_CORS_ORIGINS: SPARQ_DOMAIN,
 		AUTUMN_TEST_BASE_URL: `http://localhost:${serverPort}`,
 		AUTUMN_TEST_VITE_URL: aliases.viteUrl,
 		STRIPE_WEBHOOK_SKIP_VERIFY: "true",

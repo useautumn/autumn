@@ -1,0 +1,17 @@
+{
+	"tunnel_id": "ecee4cb3-bc1c-4854-a5e4-30eec626e3a0",
+	"tunnel_name": "sparq-wt24-amianthus",
+	"account_id": "50e85e8a3180b0acd6f43d7a1f6dd07e",
+	"routes": [
+		{
+			"hostname": "wt24-amianthus-api.atmn.lol",
+			"port": 10380,
+			"protocol": "http"
+		},
+		{
+			"hostname": "wt24-amianthus-web.atmn.lol",
+			"port": 5300,
+			"protocol": "http"
+		}
+	]
+}

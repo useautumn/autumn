@@ -90,6 +90,38 @@ async function main() {
 			chalk.cyan(`[setup-test] persisted UNIT_TEST_AUTUMN_PUBLIC_KEY to server/.env.local`),
 		);
 
+		const apiUrl = process.env.STRIPE_WEBHOOK_URL || process.env.BETTER_AUTH_URL;
+		const isPublic = apiUrl?.startsWith("https://") && !!process.env.DEV_EXTRA_CORS_ORIGINS;
+		if (isPublic) {
+			try {
+				const { registerMasterConnectWebhook } = await import(
+					"@server/external/connect/registerMasterConnectWebhook.js"
+				);
+				const { AppEnv } = await import("@autumn/shared");
+				const result = await registerMasterConnectWebhook({
+					db,
+					orgId: TEST_ORG_CONFIG.id,
+					env: AppEnv.Sandbox,
+					webhookBaseUrl: apiUrl!,
+				});
+				console.log(
+					chalk.greenBright(
+						`✅ Stripe webhook ${result.reused ? "reused" : "registered"}: ${result.webhookId}`,
+					),
+				);
+			} catch (err) {
+				console.warn(
+					chalk.yellow(
+						`[setup-test] webhook registration failed (continuing): ${
+							err instanceof Error ? err.message : err
+						}`,
+					),
+				);
+			}
+		} else {
+			console.log(chalk.gray(`[setup-test] no sparq URL set — skipping webhook registration`));
+		}
+
 		console.log(chalk.greenBright("\n✅ setup-test complete"));
 		console.log(chalk.cyan("Org:"));
 		console.log(chalk.whiteBright(`  slug: ${TEST_ORG_CONFIG.slug}`));

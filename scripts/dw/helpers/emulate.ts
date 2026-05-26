@@ -1,3 +1,8 @@
+// LEGACY: Local emulate.dev daemon, kept for manual use only. The active OAuth
+// emulator is hosted at https://emulate-vercel.vercel.app/emulate/google (see
+// `EMULATE_GOOGLE_URL` in env files). Nothing in the `bun dw` flow calls
+// `ensureEmulateRunning` anymore — invoke `scripts/setup/start-emulate.sh` by
+// hand if you need to run it locally.
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { sh, log } from "./shell.ts";
 import {
@@ -56,10 +61,15 @@ export function killHostProcessByName(name: string): boolean {
 	return true;
 }
 
-export function stopEmulateAndPortless(): void {
-	const fromPid = killPidFromFile(EMULATE_PID_FILE);
-	const fromScan = killHostProcessByName("emulate --portless");
-	if (fromPid || fromScan) log("stopped emulate.dev");
+export function stopPortlessProxy(): void {
 	const stop = sh("portless", ["proxy", "stop"]);
 	if (stop.code === 0) log("stopped portless proxy");
+}
+
+// LEGACY: only stops the local daemon if one happens to be running. Safe to
+// call at teardown to reclaim port 443; otherwise a no-op.
+export function stopLocalEmulateIfRunning(): void {
+	const fromPid = killPidFromFile(EMULATE_PID_FILE);
+	const fromScan = killHostProcessByName("emulate --portless");
+	if (fromPid || fromScan) log("stopped local emulate.dev");
 }

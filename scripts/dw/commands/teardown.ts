@@ -7,10 +7,11 @@ import {
 } from "../helpers/registry.ts";
 import { deleteBranch } from "../helpers/neon.ts";
 import { unregisterPortlessAliases } from "../helpers/portless.ts";
+import { destroySparqTunnel } from "../helpers/sparq.ts";
 import { tmuxSessionName, killTmuxSession } from "../helpers/tmux.ts";
 import { removeComposeStack, removeAllAutumnComposeStacks } from "../helpers/compose.ts";
 import { removeEnvLocalFiles } from "../helpers/env-files.ts";
-import { stopEmulateAndPortless } from "../helpers/emulate.ts";
+import { stopLocalEmulateIfRunning, stopPortlessProxy } from "../helpers/emulate.ts";
 import type { Registry } from "../types.ts";
 
 export async function cmdTeardown(opts: { all?: boolean }): Promise<void> {
@@ -21,6 +22,7 @@ export async function cmdTeardown(opts: { all?: boolean }): Promise<void> {
 			if (entry.worktreeNum === 1) continue;
 			if (entry.branchName) deleteBranch(entry.branchName);
 			unregisterPortlessAliases(entry.worktreeNum);
+			destroySparqTunnel(entry);
 			killTmuxSession(tmuxSessionName(entry.worktreeNum));
 		}
 		removeAllAutumnComposeStacks();
@@ -32,7 +34,8 @@ export async function cmdTeardown(opts: { all?: boolean }): Promise<void> {
 		// Only the cwd's .env.local lives at PROJECT_ROOT; other worktrees own
 		// their own copy and aren't reachable from here. Acceptable trade-off.
 		removeEnvLocalFiles();
-		stopEmulateAndPortless();
+		stopLocalEmulateIfRunning();
+		stopPortlessProxy();
 		log("teardown --all complete");
 		return;
 	}
@@ -48,6 +51,7 @@ export async function cmdTeardown(opts: { all?: boolean }): Promise<void> {
 	}
 	if (entry.branchName) deleteBranch(entry.branchName);
 	unregisterPortlessAliases(entry.worktreeNum);
+	destroySparqTunnel(entry);
 	killTmuxSession(tmuxSessionName(entry.worktreeNum));
 	removeComposeStack(entry.worktreeNum);
 	delete registry[cwd];
@@ -56,8 +60,9 @@ export async function cmdTeardown(opts: { all?: boolean }): Promise<void> {
 	log(`tore down ${entry.branchName ?? "worktree " + entry.worktreeNum}`);
 
 	if (!hasOtherActiveWorktrees(registry, cwd)) {
-		stopEmulateAndPortless();
+		stopLocalEmulateIfRunning();
+		stopPortlessProxy();
 	} else {
-		log("other agent worktrees still active; leaving emulate + portless running");
+		log("other agent worktrees still active; leaving portless running");
 	}
 }
