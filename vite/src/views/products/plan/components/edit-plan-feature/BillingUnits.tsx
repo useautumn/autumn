@@ -67,6 +67,7 @@ export function BillingUnits() {
 					<LabelInput
 						label={`Billing units (${unitName})`}
 						type="number"
+						step="any"
 						value={billingUnits === 0 ? "" : (billingUnits ?? "")}
 						onChange={(e) => setBillingUnits(Number(e.target.value))}
 						placeholder="e.g. 100 units"
