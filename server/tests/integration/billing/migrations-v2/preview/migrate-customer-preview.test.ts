@@ -18,26 +18,29 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 
+type PreviewPlanItemChange = {
+	action: "created" | "updated" | "deleted";
+	feature_id: string;
+	previous_attributes: Record<string, unknown>;
+};
+
 type PreviewPlanChange = {
 	action: "created" | "updated" | "deleted";
 	plan_id: string;
 	entity_id?: string | null;
-	item_changes: Array<{
-		action: "created" | "deleted";
-		feature_id: string;
-	}>;
+	item_changes: PreviewPlanItemChange[];
 };
 
 type PreviewBalanceChange = {
 	feature_id: string;
-	granted: number;
-	remaining: number;
-	usage: number;
-	before: {
+	balance: {
 		granted: number;
 		remaining: number;
 		usage: number;
+		unlimited: boolean;
+		next_reset_at: number | null;
 	};
+	previous_attributes: Record<string, unknown>;
 };
 
 type PreviewFlagChange = {
@@ -58,10 +61,39 @@ type MigrationClient = Awaited<ReturnType<typeof initScenario>>["autumnV2_2"];
 const timeout = (ms: number) =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
+/**
+ * Tinybird's `t.json` storage round-trips nested values as JSON-encoded
+ * strings at one or more levels. Walk the tree, JSON.parse any string that
+ * looks like a JSON object/array, and return a fully-parsed structure.
+ */
+const deepParse = (value: unknown): unknown => {
+	if (typeof value === "string") {
+		const trimmed = value.trim();
+		if (
+			(trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+			(trimmed.startsWith("[") && trimmed.endsWith("]"))
+		) {
+			try {
+				return deepParse(JSON.parse(value));
+			} catch {
+				return value;
+			}
+		}
+		return value;
+	}
+	if (Array.isArray(value)) return value.map(deepParse);
+	if (value && typeof value === "object") {
+		const result: Record<string, unknown> = {};
+		for (const [k, v] of Object.entries(value)) result[k] = deepParse(v);
+		return result;
+	}
+	return value;
+};
+
 const parseResponse = (response: unknown): Record<string, unknown> => {
-	if (typeof response === "string") return JSON.parse(response);
-	if (response && typeof response === "object")
-		return response as Record<string, unknown>;
+	const parsed = deepParse(response);
+	if (parsed && typeof parsed === "object" && !Array.isArray(parsed))
+		return parsed as Record<string, unknown>;
 	throw new Error(`Invalid migration event response: ${String(response)}`);
 };
 
@@ -182,8 +214,16 @@ test(`${chalk.yellowBright("migrations preview: boolean item add/remove emits fl
 			action: "updated",
 			plan_id: freePlan.id,
 			item_changes: expect.arrayContaining([
-				{ action: "deleted", feature_id: TestFeature.AdminRights },
-				{ action: "created", feature_id: TestFeature.Dashboard },
+				{
+					action: "deleted",
+					feature_id: TestFeature.AdminRights,
+					previous_attributes: {},
+				},
+				{
+					action: "created",
+					feature_id: TestFeature.Dashboard,
+					previous_attributes: {},
+				},
 			]),
 		}),
 	]);
@@ -231,32 +271,44 @@ test(`${chalk.yellowBright("migrations preview: metered grant replacement emits 
 	});
 
 	expect(preview.flag_changes).toEqual([]);
-	expect(preview.balance_changes).toEqual([
-		{
+	expect(preview.balance_changes.length).toBe(1);
+	expect(preview.balance_changes[0]).toEqual(
+		expect.objectContaining({
 			feature_id: TestFeature.Credits,
-			granted: 300,
-			remaining: 300,
-			usage: 0,
-			before: {
+			balance: expect.objectContaining({
+				granted: 300,
+				remaining: 300,
+				usage: 0,
+			}),
+			previous_attributes: expect.objectContaining({
 				granted: 100,
 				remaining: 100,
-				usage: 0,
-			},
-		},
-	]);
+			}),
+		}),
+	);
+	// usage stayed at 0 — must NOT appear in previous_attributes
+	expect(
+		preview.balance_changes[0].previous_attributes,
+	).not.toHaveProperty("usage");
 	expect(
 		preview.balance_changes.some(
 			(change) => change.feature_id === TestFeature.Messages,
 		),
 	).toBe(false);
+	// remove + add on the same feature collapses into a single "updated" item_change
 	expect(preview.plan_changes).toEqual([
 		expect.objectContaining({
 			action: "updated",
 			plan_id: freePlan.id,
-			item_changes: expect.arrayContaining([
-				{ action: "deleted", feature_id: TestFeature.Credits },
-				{ action: "created", feature_id: TestFeature.Credits },
-			]),
+			item_changes: [
+				expect.objectContaining({
+					action: "updated",
+					feature_id: TestFeature.Credits,
+					previous_attributes: expect.objectContaining({
+						included: 100,
+					}),
+				}),
+			],
 		}),
 	]);
 });
@@ -302,25 +354,27 @@ test(`${chalk.yellowBright("migrations preview: version update emits plan, balan
 		expect.arrayContaining([
 			expect.objectContaining({
 				feature_id: TestFeature.Messages,
-				granted: 200,
-				remaining: 200,
-				usage: 0,
-				before: {
+				balance: expect.objectContaining({
+					granted: 200,
+					remaining: 200,
+					usage: 0,
+				}),
+				previous_attributes: expect.objectContaining({
 					granted: 100,
 					remaining: 100,
-					usage: 0,
-				},
+				}),
 			}),
 			expect.objectContaining({
 				feature_id: TestFeature.Credits,
-				granted: 50,
-				remaining: 50,
-				usage: 0,
-				before: {
+				balance: expect.objectContaining({
+					granted: 50,
+					remaining: 50,
+					usage: 0,
+				}),
+				previous_attributes: expect.objectContaining({
 					granted: 0,
 					remaining: 0,
-					usage: 0,
-				},
+				}),
 			}),
 		]),
 	);

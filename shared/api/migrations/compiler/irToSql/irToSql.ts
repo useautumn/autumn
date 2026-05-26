@@ -179,17 +179,32 @@ function compileLeaf({
 		params.push(leaf.value);
 		return `${col} <> ?`;
 	}
-	if (leaf.op === "in") {
+	if (leaf.op === "in" || leaf.op === "nin") {
 		if (!Array.isArray(leaf.value))
-			throw new Error(`$in expects an array on field "${leaf.field}"`);
-		if (leaf.value.length === 0) return "FALSE";
+			throw new Error(`$${leaf.op} expects an array on field "${leaf.field}"`);
+		const keyword = leaf.op === "in" ? "IN" : "NOT IN";
+		if (leaf.value.length === 0) return leaf.op === "in" ? "FALSE" : "TRUE";
 		const placeholders = leaf.value
 			.map((v) => {
 				params.push(v);
 				return "?";
 			})
 			.join(", ");
-		return `${col} IN (${placeholders})`;
+		return `${col} ${keyword} (${placeholders})`;
+	}
+	if (
+		leaf.op === "gt" ||
+		leaf.op === "gte" ||
+		leaf.op === "lt" ||
+		leaf.op === "lte"
+	) {
+		if (leaf.value === null || Array.isArray(leaf.value))
+			throw new Error(
+				`$${leaf.op} requires a scalar value on field "${leaf.field}"`,
+			);
+		const symbol = { gt: ">", gte: ">=", lt: "<", lte: "<=" }[leaf.op];
+		params.push(leaf.value);
+		return `${col} ${symbol} ?`;
 	}
 	throw new Error(`Unsupported op: ${(leaf as IRLeaf).op}`);
 }

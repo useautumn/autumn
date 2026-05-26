@@ -3,6 +3,7 @@ import {
 	isFreeProduct,
 	isOneOffProduct,
 } from "../../../../utils/productUtils/classifyProduct/classifyProductUtils.js";
+import { numberMatcherMatches } from "../../../migrations/filters/match/numberMatcherMatches.js";
 import { stringMatcherMatches } from "../../../migrations/filters/match/index.js";
 import type { PlanFilter } from "../../../migrations/filters/planFilter.js";
 
@@ -28,6 +29,17 @@ export const planFilterMatchesProduct = ({
 			!stringMatcherMatches({
 				matcher: filter.plan_id,
 				value: product.id,
+			})
+		) {
+			return false;
+		}
+	}
+
+	if (filter.version !== undefined) {
+		if (
+			!numberMatcherMatches({
+				matcher: filter.version,
+				value: product.version ?? null,
 			})
 		) {
 			return false;
