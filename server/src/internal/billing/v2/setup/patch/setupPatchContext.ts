@@ -14,6 +14,7 @@ import { handleCustomizeAddItems } from "./handleCustomizeAddItems";
 import { handleCustomizeDeleteItems } from "./handleCustomizeDeleteItems";
 import { handleCustomizeNoopItems } from "./handleCustomizeNoopItems";
 import { handleCustomizePrice } from "./handleCustomizePrice";
+import { handleCustomizeUpdateItems } from "./handleCustomizeUpdateItems";
 import type { ReusePricesAndEntitlements } from "./types";
 
 const applyProductDefinitionToCustomerProduct = ({
@@ -123,9 +124,32 @@ export const setupPatchContext = ({
 		targetCustomerProduct: finalCustomerProduct,
 	});
 
+	const {
+		customerPrices: updateDeleteCustomerPrices,
+		customerEntitlements: updateDeleteCustomerEntitlements,
+		prices: updateNewPrices,
+		entitlements: updateNewEntitlements,
+	} = handleCustomizeUpdateItems({
+		customize: params.customize ?? {},
+		targetCustomerProduct: finalCustomerProduct,
+		features: ctx.features,
+	});
+
 	const patchFullProduct = cusProductToProduct({
 		cusProduct: finalCustomerProduct,
 	});
+
+	// Surface update_items' new entitlements / prices on the patched product
+	// snapshot so downstream consumers (initPatchedCustomerEntitlementsAndPrices,
+	// add_items noop check) see the updated shape.
+	for (const newEnt of updateNewEntitlements) {
+		const feature = ctx.features.find(
+			(candidate) => candidate.internal_id === newEnt.internal_feature_id,
+		);
+		if (!feature) continue;
+		patchFullProduct.entitlements.push({ ...newEnt, feature });
+	}
+	patchFullProduct.prices.push(...updateNewPrices);
 
 	const {
 		customerPrices: deletePriceCustomerPrices,
@@ -161,11 +185,19 @@ export const setupPatchContext = ({
 		insertCustomerEntitlements: [],
 		deleteCustomerPrices: uniqueCustomerPrices([
 			...deleteCustomerPrices,
+			...updateDeleteCustomerPrices,
 			...deletePriceCustomerPrices,
 		]),
-		deleteCustomerEntitlements,
-		customPrices: [...customPricePrices, ...customItemPrices],
-		customEntitlements,
+		deleteCustomerEntitlements: [
+			...deleteCustomerEntitlements,
+			...updateDeleteCustomerEntitlements,
+		],
+		customPrices: [
+			...customPricePrices,
+			...updateNewPrices,
+			...customItemPrices,
+		],
+		customEntitlements: [...updateNewEntitlements, ...customEntitlements],
 	};
 
 	return patchContext;
