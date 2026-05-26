@@ -1,16 +1,24 @@
-import type { Operations } from "@autumn/shared";
+import type { Operations, UpdatePlanOp } from "@autumn/shared";
 
 export function hasValidOperations(operations: Operations): boolean {
 	const ops = operations.customer ?? [];
 	if (ops.length === 0) return false;
 	return ops.every((op) => {
 		if (op.type === "update_plan")
-			return (
-				op.version !== undefined || (op.customize && op.customize.length > 0)
-			);
+			return op.version !== undefined || hasCustomizations(op.customize);
 		if (op.type === "add_plan") return !!op.plan_id;
 		return false;
 	});
+}
+
+function hasCustomizations(
+	customize: UpdatePlanOp["customize"],
+): boolean {
+	if (!customize) return false;
+	if ((customize.add_items?.length ?? 0) > 0) return true;
+	if ((customize.remove_items?.length ?? 0) > 0) return true;
+	if (customize.price !== undefined) return true;
+	return false;
 }
 
 export function getOperationsSummaryText(operations: Operations): string {

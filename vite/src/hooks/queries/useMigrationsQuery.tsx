@@ -37,7 +37,12 @@ export const useMigrationsQuery = () => {
 	const invalidate = () => queryClient.invalidateQueries({ queryKey });
 
 	const createMutation = useMutation({
-		mutationFn: async (body: { id: string }) => {
+		mutationFn: async (body: {
+			id: string;
+			filter?: MigrationFilter | null;
+			operations?: Operations | null;
+			no_billing_changes?: boolean;
+		}) => {
 			const { data } = await axiosInstance.post<Migration>(
 				"/migrations.create",
 				body,

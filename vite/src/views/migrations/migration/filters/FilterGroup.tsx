@@ -132,7 +132,7 @@ export function FilterGroup({
 				/>
 			))}
 			<AddButton
-				label={group.rules.length === 0 ? "Add condition" : "Add and condition"}
+				label={group.rules.length === 0 ? "Add condition" : "AND condition"}
 				onClick={addRule}
 				className="mt-1"
 			/>

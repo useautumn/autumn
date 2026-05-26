@@ -188,8 +188,8 @@ export function FilterForm({
 				</div>
 			))}
 			{hasConditions && (
-				<div className="flex items-center gap-2 border-t mt-3 pt-3">
-					<AddButton label="Add or condition" onClick={addGroup} className="flex-1" />
+				<div className="flex items-center gap-2 mt-3">
+					<AddButton label="OR condition" onClick={addGroup} className="flex-1" />
 					<Button
 						variant="skeleton"
 						size="sm"

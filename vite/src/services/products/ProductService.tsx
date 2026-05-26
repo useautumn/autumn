@@ -11,10 +11,15 @@ export class ProductService {
 		axiosInstance: AxiosInstance,
 		productId: string,
 		data: any,
-		version?: number,
+		options?: { version?: number; disableVersion?: boolean },
 	) {
-		const url = notNullish(version)
-			? `/v1/products/${productId}?version=${version}`
+		const params = new URLSearchParams();
+		if (notNullish(options?.version))
+			params.set("version", String(options.version));
+		if (options?.disableVersion) params.set("disable_version", "true");
+		const qs = params.toString();
+		const url = qs
+			? `/v1/products/${productId}?${qs}`
 			: `/v1/products/${productId}`;
 		const response = await axiosInstance.post(url, data);
 		return response.data;
