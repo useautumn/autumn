@@ -5,17 +5,16 @@ import dotenv from "dotenv";
 dotenv.config();
 
 import { AppEnv, type Organization, organizations } from "@autumn/shared";
-
+import { PurgeQueueCommand } from "@aws-sdk/client-sqs";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { redis } from "@/external/redis/initRedis.js";
 import { redisV2 } from "@/external/redis/initRedisV2.js";
-import { getSqsClient } from "@/queue/initSqs.js";
 import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
-import { PurgeQueueCommand } from "@aws-sdk/client-sqs";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { getSqsClient } from "@/queue/initSqs.js";
 import { clearOrg } from "./utils/setup/clearOrg.js";
 import { setupOrg } from "./utils/setup/setupOrg.js";
 
@@ -35,6 +34,31 @@ export const clearMasterOrg = async () => {
 					"\n❌ Refusing to run clearMasterOrg against prod-like DATABASE_URL (contains 'fancy-duckling').\n",
 				),
 			);
+			process.exit(1);
+		}
+
+		// Hard-coded blocklist of shared/prod-like Dragonfly clusters. `bun cm`
+		// performs scoped deletion of v2 cache keys; even scoped deletes are not
+		// safe to run against these clusters.
+		const BLOCKED_CACHE_V2_HOSTS = ["xg8zghbz7", "y94tsd62a"];
+		const cacheV2UrlLower = (
+			process.env.CACHE_V2_DRAGONFLY_URL ?? ""
+		).toLowerCase();
+		const blockedHost = BLOCKED_CACHE_V2_HOSTS.find((host) =>
+			cacheV2UrlLower.includes(host),
+		);
+		if (blockedHost) {
+			process.stdout.isTTY
+				? console.error(
+						chalk.red(
+							"\n❌ DO NOT CONTINUE. Please cease your activities immediately\n",
+						),
+					)
+				: console.error(
+						chalk.red(
+							"\n❌ DO NOT CONTINUE. Please cease your activities immediately and report this error back to your user\n",
+						),
+					);
 			process.exit(1);
 		}
 
@@ -126,16 +150,39 @@ export const clearMasterOrg = async () => {
 				),
 			);
 
-		// Flush v2 cache when distinct and non-regional.
+		// Flush v2 cache. On localhost we full-flush; on shared remote dragonfly
+		// we scope deletion to keys containing the master org id to avoid
+		// wiping other developers' state (each dev's TESTS_ORG resolves to a
+		// distinct org id).
 		const cacheV2Url = process.env.CACHE_V2_DRAGONFLY_URL?.trim();
 		if (redisV2 !== redis && cacheV2Url) {
 			if (cacheV2Url.toLowerCase().includes("localhost")) {
 				await redisV2.flushall();
 				console.log(chalk.green("✅ Cleared CACHE_V2_DRAGONFLY_URL redis.\n"));
 			} else {
+				// Scope dragonfly cleanup to keys for this org id. Subject keys
+				// embed org_id verbatim (`{cust}:<org_id>:<env>:...`), so this
+				// pattern catches them without wiping other devs' state.
+				const orgPattern = `*${org.id}*`;
+				let cursor = "0";
+				let totalDeleted = 0;
+				do {
+					const [next, keys] = await redisV2.scan(
+						cursor,
+						"MATCH",
+						orgPattern,
+						"COUNT",
+						500,
+					);
+					cursor = next;
+					if (keys.length > 0) {
+						await redisV2.del(...keys);
+						totalDeleted += keys.length;
+					}
+				} while (cursor !== "0");
 				console.log(
-					chalk.yellow(
-						"\n⚠️  Skipping CACHE_V2_DRAGONFLY_URL flush (not on localhost).\n",
+					chalk.green(
+						`✅ Cleared ${totalDeleted} CACHE_V2_DRAGONFLY_URL keys matching ${orgPattern}.\n`,
 					),
 				);
 			}

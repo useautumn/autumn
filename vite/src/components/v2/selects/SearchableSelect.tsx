@@ -2,6 +2,7 @@ import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import SmallSpinner from "@/components/general/SmallSpinner";
 import {
 	Command,
 	CommandEmpty,
@@ -36,6 +37,8 @@ export type SearchableSelectProps<T> = {
 	defaultOpen?: boolean;
 	header?: ReactNode;
 	footer?: ReactNode;
+	onSearchChange?: (search: string) => void;
+	isLoading?: boolean;
 };
 
 export function SearchableSelect<T>({
@@ -57,6 +60,8 @@ export function SearchableSelect<T>({
 	defaultOpen = false,
 	header,
 	footer,
+	onSearchChange,
+	isLoading = false,
 }: SearchableSelectProps<T>) {
 	const [open, setOpen] = useState(false);
 
@@ -134,28 +139,43 @@ export function SearchableSelect<T>({
 							<Command
 								className="bg-interactive-secondary"
 								filter={
-									searchable
-										? (optionValue, search) => {
-												const option = options.find(
-													(opt) => getOptionValue(opt) === optionValue,
-												);
-												if (!option) return 0;
-												const searchLower = search.toLowerCase();
-												const labelMatch = getOptionLabel(option)
-													.toLowerCase()
-													.includes(searchLower);
-												const valueMatch = optionValue
-													.toLowerCase()
-													.includes(searchLower);
-												return labelMatch || valueMatch ? 1 : 0;
-											}
-										: undefined
+									onSearchChange
+										? () => 1
+										: searchable
+											? (optionValue, search) => {
+													const option = options.find(
+														(opt) => getOptionValue(opt) === optionValue,
+													);
+													if (!option) return 0;
+													const searchLower = search.toLowerCase();
+													const labelMatch = getOptionLabel(option)
+														.toLowerCase()
+														.includes(searchLower);
+													const valueMatch = optionValue
+														.toLowerCase()
+														.includes(searchLower);
+													return labelMatch || valueMatch ? 1 : 0;
+												}
+											: undefined
 								}
 							>
-								{searchable && <CommandInput placeholder={searchPlaceholder} />}
+								{searchable && (
+									<CommandInput
+										placeholder={searchPlaceholder}
+										onValueChange={onSearchChange}
+									/>
+								)}
 								{header}
 								<CommandList>
-									<CommandEmpty className="text-tertiary-foreground">{emptyText}</CommandEmpty>
+									<CommandEmpty className="text-tertiary-foreground">
+										{isLoading ? (
+											<div className="flex justify-center items-center py-2">
+												<SmallSpinner size={14} />
+											</div>
+										) : (
+											emptyText
+										)}
+									</CommandEmpty>
 									<CommandGroup>
 										{options.map((option) => {
 											const optionValue = getOptionValue(option);

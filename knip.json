@@ -11,7 +11,6 @@
 		"enumMembers",
 		"duplicates"
 	],
-	"ignore": ["ai/**", "others/**", ".trigger/**"],
 	"ignoreWorkspaces": [
 		"packages/atmn",
 		"packages/autumn-js",
@@ -20,12 +19,12 @@
 	],
 	"workspaces": {
 		".": {
-			"entry": ["apps/scope-picker/**/*", "trigger.config.ts"]
+			"entry": ["apps/scope-picker/**/*", "trigger.config.ts"],
+			"project": ["apps/scope-picker/**/*"]
 		},
 		"server": {
 			"entry": [
 				"src/internal/customers/cusUtils/createNewCustomer.ts",
-				"src/internal/rewards/RewardRedemptionService.ts",
 				"src/utils/importUtils/addProductFromSubs.ts",
 				"src/utils/scriptUtils/readOnlyStripe.ts",
 				"src/utils/scriptUtils/scriptUtils.ts",

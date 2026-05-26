@@ -6,6 +6,7 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/utils/handleCarryOvers/cusProductToExistingBalanceCarryOvers";
+import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
 import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
 import { computeAttachTransitionUpdates } from "./computeAttachTransitionUpdates";
 import { finalizeAttachPlan } from "./finalizeAttachPlan";
@@ -57,6 +58,18 @@ export const computeAttachPlan = ({
 		params,
 	});
 
+	// Auto-preserve one-off prepaid balances on immediate transitions so the
+	// credits the customer already paid for don't vanish when the cusProduct
+	// expires. Skipped on scheduled transitions — the outgoing product remains
+	// active until end-of-cycle and the preservation runs at activation time.
+	const oneOffPrepaidCarryOvers =
+		planTiming === "immediate" && currentCustomerProduct
+			? cusProductToOneOffPrepaidCarryOvers({
+					currentCustomerProduct,
+					fullCustomer: attachBillingContext.fullCustomer,
+				})
+			: { entitlements: [], customerEntitlements: [] };
+
 	const includeArrearLineItems = !params.carry_over_usages?.enabled;
 	const shouldBuildLineItems = shouldBuildImmediateLineItems({
 		planTiming,
@@ -84,10 +97,14 @@ export const computeAttachPlan = ({
 		customEntitlements: [
 			...(customEnts ?? []),
 			...(carriedOverEntitlements ?? []),
+			...oneOffPrepaidCarryOvers.entitlements,
 		],
 		customFreeTrial: trialContext?.customFreeTrial,
 		lineItems,
-		insertCustomerEntitlements: [...(carriedOverCustomerEntitlements ?? [])],
+		insertCustomerEntitlements: [
+			...(carriedOverCustomerEntitlements ?? []),
+			...oneOffPrepaidCarryOvers.customerEntitlements,
+		],
 		updateCustomerEntitlements,
 	};
 

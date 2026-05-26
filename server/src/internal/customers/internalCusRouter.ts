@@ -7,6 +7,7 @@ import { handleGetCustomerProduct } from "./internalHandlers/handleGetCustomerPr
 import { handleGetCustomerSchedule } from "./internalHandlers/handleGetCustomerSchedule.js";
 import { handleGetFullCustomers } from "./internalHandlers/handleGetFullCustomers.js";
 import { handleGetInvoiceLineItems } from "./internalHandlers/handleGetInvoiceLineItems.js";
+import { handleListEntitiesInternal } from "./internalHandlers/handleListEntitiesInternal.js";
 import { handleSearchCustomers } from "./internalHandlers/handleSearchCustomers.js";
 
 export const internalCusRouter = new Hono<HonoEnv>();
@@ -21,6 +22,10 @@ internalCusRouter.get(
 );
 internalCusRouter.get("/:customer_id/referrals", ...handleGetCusReferrals);
 internalCusRouter.get("/:customer_id/schedule", ...handleGetCustomerSchedule);
+internalCusRouter.get(
+	"/:customer_id/entities",
+	...handleListEntitiesInternal,
+);
 internalCusRouter.post(
 	"/:customer_id/invoice-line-items",
 	...handleGetInvoiceLineItems,

@@ -6,9 +6,11 @@ import { CacheV2RampDialog } from "./CacheV2RampDialog";
 import { CustomerBlockDialog } from "./CustomerBlockDialog";
 import { EdgeConfigDialog } from "./EdgeConfigDialog";
 import { FeatureFlagsDialog } from "./FeatureFlagsDialog";
+import { FullSubjectGateDialog } from "./FullSubjectGateDialog";
 import { JobQueuesDialog } from "./JobQueuesDialog";
 import { MiscellaneousEdgeConfigDialog } from "./MiscellaneousEdgeConfigDialog";
 import { OrgLimitsDialog } from "./OrgLimitsDialog";
+import { RateLimitOverridesDialog } from "./RateLimitOverridesDialog";
 import { RawEdgeConfigDialog } from "./RawEdgeConfigDialog";
 import { RedisV2CacheDialog } from "./RedisV2CacheDialog";
 import { StripeSyncDialog } from "./StripeSyncDialog";
@@ -30,11 +32,13 @@ export function EdgeConfigTab() {
 	const [featureFlagsOpen, setFeatureFlagsOpen] = useState(false);
 	const [customerBlockOpen, setCustomerBlockOpen] = useState(false);
 	const [orgLimitsOpen, setOrgLimitsOpen] = useState(false);
+	const [rateLimitOverridesOpen, setRateLimitOverridesOpen] = useState(false);
 	const [jobQueuesOpen, setJobQueuesOpen] = useState(false);
 	const [stripeSyncOpen, setStripeSyncOpen] = useState(false);
 	const [redisV2CacheOpen, setRedisV2CacheOpen] = useState(false);
 	const [cacheV2RampOpen, setCacheV2RampOpen] = useState(false);
 	const [miscellaneousOpen, setMiscellaneousOpen] = useState(false);
+	const [fullSubjectGateOpen, setFullSubjectGateOpen] = useState(false);
 
 	const { data: source } = useQuery<EdgeConfigSource>({
 		queryKey: ["admin-edge-config-sources"],
@@ -175,6 +179,25 @@ export function EdgeConfigTab() {
 				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
 					<div className="flex flex-col gap-0.5">
 						<div className="text-sm font-medium text-foreground">
+							Rate Limit Overrides
+						</div>
+						<div className="text-xs text-tertiary-foreground">
+							Per-org overrides for any rate-limit bucket (track, check,
+							attach, customer_entities_get, etc.).
+						</div>
+					</div>
+					<Button
+						variant="primary"
+						size="sm"
+						onClick={() => setRateLimitOverridesOpen(true)}
+					>
+						Edit
+					</Button>
+				</div>
+
+				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
+					<div className="flex flex-col gap-0.5">
+						<div className="text-sm font-medium text-foreground">
 							Job Queues
 						</div>
 						<div className="text-xs text-tertiary-foreground">
@@ -250,6 +273,26 @@ export function EdgeConfigTab() {
 				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
 					<div className="flex flex-col gap-0.5">
 						<div className="text-sm font-medium text-foreground">
+							FullSubject Concurrency Gate
+						</div>
+						<div className="text-xs text-tertiary-foreground">
+							Per-customer + per-org caps on concurrent FullSubject DB
+							hydrations. 429s with rate_limit_exceeded when queues/waits
+							exceed thresholds.
+						</div>
+					</div>
+					<Button
+						variant="primary"
+						size="sm"
+						onClick={() => setFullSubjectGateOpen(true)}
+					>
+						Edit
+					</Button>
+				</div>
+
+				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
+					<div className="flex flex-col gap-0.5">
+						<div className="text-sm font-medium text-foreground">
 							Miscellaneous
 						</div>
 						<div className="text-xs text-tertiary-foreground">
@@ -292,6 +335,11 @@ export function EdgeConfigTab() {
 
 			<OrgLimitsDialog open={orgLimitsOpen} onOpenChange={setOrgLimitsOpen} />
 
+			<RateLimitOverridesDialog
+				open={rateLimitOverridesOpen}
+				onOpenChange={setRateLimitOverridesOpen}
+			/>
+
 			<JobQueuesDialog open={jobQueuesOpen} onOpenChange={setJobQueuesOpen} />
 
 			<StripeSyncDialog
@@ -312,6 +360,11 @@ export function EdgeConfigTab() {
 			<MiscellaneousEdgeConfigDialog
 				open={miscellaneousOpen}
 				onOpenChange={setMiscellaneousOpen}
+			/>
+
+			<FullSubjectGateDialog
+				open={fullSubjectGateOpen}
+				onOpenChange={setFullSubjectGateOpen}
 			/>
 		</div>
 	);

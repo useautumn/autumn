@@ -36,14 +36,16 @@ export const AdminHover = forwardRef<
 				>
 					<PreviewCard.Popup className="bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm shadow-sm border rounded-md px-2 pr-6 py-2 max-w-none origin-(--transform-origin) transition-[opacity,scale] duration-150 data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95">
 						<div className="text-xs text-gray-500 dark:text-gray-400 flex flex-col gap-2 whitespace-nowrap">
-							{texts.map((text) => {
+							{texts.map((text, i) => {
 								if (!text) return null;
 								if (typeof text === "object") {
 									return (
-										<div key={text.key}>
-											<p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-												{text.key}
-											</p>
+										<div key={`${text.key || i}-${text.value}`}>
+											{text.key && (
+												<p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+													{text.key}
+												</p>
+											)}
 											<CopyText text={text.value} />
 										</div>
 									);
