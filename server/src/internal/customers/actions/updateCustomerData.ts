@@ -23,7 +23,11 @@ export const updateCustomerData = async ({
 		updates.name = customerData.name;
 	}
 	if (!fullSubject.customer.email && customerData?.email) {
-		if (z.string().email().safeParse(customerData.email).error) {
+		if (
+			z
+				.email({ pattern: z.regexes.unicodeEmail })
+				.safeParse(customerData.email).error
+		) {
 			logger.info(`Invalid email ${customerData.email}, skipping update`);
 		} else {
 			updates.email = customerData.email;
