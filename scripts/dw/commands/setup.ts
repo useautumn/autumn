@@ -14,7 +14,7 @@ import {
 } from "../helpers/setup.ts";
 import { ensureComposeStack } from "../helpers/compose.ts";
 import { writeEnvLocalFiles } from "../helpers/env-files.ts";
-import { ensureSparqTunnel, writeSparqWebhookUrlToEnvFile } from "../helpers/sparq.ts";
+import { ensureSparqTunnel, writeSparqUrlsToEnvFiles } from "../helpers/sparq.ts";
 import { PROJECT_ROOT } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
 
@@ -69,8 +69,14 @@ export async function cmdSetup(): Promise<RegistryEntry> {
 		const sparqUrls = ensureSparqTunnel(entry);
 		writeEnvLocalFiles(entry);
 		if (sparqUrls) {
-			writeSparqWebhookUrlToEnvFile(sparqUrls.apiUrl);
+			// Sparq URLs become the single source of truth; portless aliases stay
+			// available locally but the bundled vite app talks to sparq.
+			writeSparqUrlsToEnvFiles(sparqUrls);
 			process.env.STRIPE_WEBHOOK_URL = sparqUrls.apiUrl;
+			process.env.BETTER_AUTH_URL = sparqUrls.apiUrl;
+			process.env.CLIENT_URL = sparqUrls.viteUrl;
+			process.env.VITE_BACKEND_URL = sparqUrls.apiUrl;
+			process.env.VITE_FRONTEND_URL = sparqUrls.viteUrl;
 		}
 		applyMigrationsAndFunctions(entry);
 		await autoSetupTestOrg(entry);

@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { join, dirname } from "node:path";
 import { userInfo } from "node:os";
 import { sh, log } from "./shell.ts";
 import { PROJECT_ROOT, SPARQ_DOMAIN, SPARQ_CONFIG_DIR } from "../constants.ts";
@@ -50,6 +50,38 @@ export function writeSparqWebhookUrlToEnvFile(sparqApiUrl: string): void {
 	const merged = mergeEnvFile(existing, { STRIPE_WEBHOOK_URL: sparqApiUrl });
 	writeFileSync(envPath, merged);
 	log(`set STRIPE_WEBHOOK_URL=${sparqApiUrl} in server/.env.local`);
+}
+
+// Overwrites the URL keys in every managed .env.local so the bundled vite app
+// (and server) talk to the sparq hostname instead of portless.
+export function writeSparqUrlsToEnvFiles(urls: SparqUrls): void {
+	const targets: Array<{ rel: string; keys: Record<string, string> }> = [
+		{
+			rel: "server/.env.local",
+			keys: {
+				BETTER_AUTH_URL: urls.apiUrl,
+				CLIENT_URL: urls.viteUrl,
+				STRIPE_WEBHOOK_URL: urls.apiUrl,
+				AUTUMN_TEST_VITE_URL: urls.viteUrl,
+			},
+		},
+		{
+			rel: "vite/.env.local",
+			keys: { VITE_BACKEND_URL: urls.apiUrl, VITE_FRONTEND_URL: urls.viteUrl },
+		},
+		{
+			rel: "apps/checkout/.env.local",
+			keys: { VITE_BACKEND_URL: urls.apiUrl },
+		},
+	];
+	for (const { rel, keys } of targets) {
+		const abs = join(PROJECT_ROOT, rel);
+		// Skip if the workspace dir doesn't exist (defensive against partial checkouts).
+		if (!existsSync(dirname(abs))) continue;
+		const existing = existsSync(abs) ? readFileSync(abs, "utf-8") : null;
+		writeFileSync(abs, mergeEnvFile(existing, keys));
+	}
+	log(`wrote sparq URLs into ${targets.length} .env.local file(s)`);
 }
 
 // Idempotent: re-runs `sparq up --headless` with the same seed, which reuses

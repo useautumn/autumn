@@ -5,6 +5,7 @@ import { log, fatal } from "./shell.ts";
 import { registerPortlessAliases } from "./portless.ts";
 import { rewriteDbEnv } from "./url.ts";
 import { aliasesFor, killOwnPorts } from "./ports.ts";
+import { getSparqUrls } from "./sparq.ts";
 import { tmuxSessionName, spawnDevInTmux } from "./tmux.ts";
 import {
 	PROJECT_ROOT,
@@ -35,10 +36,16 @@ export function buildDevEnvAndArgs(entry: RegistryEntry): {
 			env.NODE_EXTRA_CA_CERTS = portlessCa;
 		}
 		const aliases = registerPortlessAliases(worktreeNum);
-		env.BETTER_AUTH_URL = aliases.apiUrl;
-		env.CLIENT_URL = aliases.viteUrl;
-		env.VITE_BACKEND_URL = aliases.apiUrl;
-		env.VITE_FRONTEND_URL = aliases.viteUrl;
+		// Sparq URLs take precedence — the bundled vite app is loaded over the
+		// sparq hostname, so server-side BETTER_AUTH_URL/CLIENT_URL must match
+		// or auth cookies / OAuth callbacks break on origin mismatch.
+		const sparq = getSparqUrls(entry.path, worktreeNum);
+		const apiUrl = sparq?.apiUrl ?? aliases.apiUrl;
+		const viteUrl = sparq?.viteUrl ?? aliases.viteUrl;
+		env.BETTER_AUTH_URL = apiUrl;
+		env.CLIENT_URL = viteUrl;
+		env.VITE_BACKEND_URL = apiUrl;
+		env.VITE_FRONTEND_URL = viteUrl;
 	}
 
 	const args = [
