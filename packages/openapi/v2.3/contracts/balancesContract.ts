@@ -90,7 +90,7 @@ export const balancesTrackContract = oc
 			withAcceptedResponse(
 				spec,
 				"track",
-				"Accepted. Autumn is experiencing degraded service from a downstream provider, so the event was accepted for replay and will be tracked as soon as the service is restored.",
+				"Event accepted. Returned in two cases: (1) the request was sent with `async: true`, so the event was placed on the dedicated async ingest queue, or (2) Autumn was unable to process the event synchronously (e.g. transient Redis unavailability) and queued it on the replay queue. The balance is not returned in this response.",
 			),
 	})
 	.input(

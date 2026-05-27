@@ -40,4 +40,13 @@ await autumn.track({
 });
 ```
 
+```typescript Async (fire-and-forget)
+await autumn.track({
+  customerId: "cus_123",
+  featureId: "ai_messages",
+  value: 1,
+  async: true // Returns 202 immediately; usage processed in the background
+});
+```
+
 </CodeGroup>
