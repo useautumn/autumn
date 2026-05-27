@@ -6,6 +6,7 @@ import type { HonoEnv } from "../../../honoUtils/HonoEnv";
 export enum RateLimitType {
 	General = "general",
 	Track = "track",
+	BatchTrack = "batch_track",
 	Check = "check",
 	Events = "events",
 	Attach = "attach",
@@ -84,6 +85,10 @@ const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 			route({ method: "POST", url: "/v1/balances.finalize" }),
 			route({ method: "POST", url: "/v1/balances.update" }),
 		],
+	},
+	{
+		type: RateLimitType.BatchTrack,
+		patterns: [route({ method: "POST", url: "/v1/balances.batchTrack" })],
 	},
 	{
 		type: RateLimitType.Check,
@@ -188,6 +193,13 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		windowMs: 1000,
 		notInRedis: true,
 		scope: RateLimitScope.Customer,
+	},
+	[RateLimitType.BatchTrack]: {
+		name: "batch_track",
+		limit: 10,
+		windowMs: 1000,
+		notInRedis: false,
+		scope: RateLimitScope.Org,
 	},
 	[RateLimitType.Check]: {
 		name: "check",
