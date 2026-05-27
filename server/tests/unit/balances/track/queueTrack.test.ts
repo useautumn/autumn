@@ -11,13 +11,16 @@ const mockState = {
 const trackQueueUrl =
 	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo";
 
-mock.module("@/internal/balances/track/utils/getQueuedTrackResponse.js", () => ({
-	getQueuedTrackResponse: () => ({
-		customer_id: "cus_123",
-		value: 2,
-		balance: null,
+mock.module(
+	"@/internal/balances/track/utils/getQueuedTrackResponse.js",
+	() => ({
+		getQueuedTrackResponse: () => ({
+			customer_id: "cus_123",
+			value: 2,
+			balance: null,
+		}),
 	}),
-}));
+);
 
 import { queueTrack } from "@/internal/balances/track/utils/queueTrack.js";
 
@@ -62,7 +65,9 @@ describe("queueTrack", () => {
 			MessageGroupId: "org_123:sandbox:cus_123:ent_123",
 			MessageDeduplicationId: "req_123",
 		});
-		expect(JSON.parse(mockState.queueCommands[0]?.MessageBody as string)).toMatchObject({
+		expect(
+			JSON.parse(mockState.queueCommands[0]?.MessageBody as string),
+		).toMatchObject({
 			name: "track",
 			data: {
 				orgId: "org_123",
@@ -73,6 +78,100 @@ describe("queueTrack", () => {
 				apiVersion: ApiVersion.V2_1,
 			},
 		});
+	});
+
+	test("routes to explicit queueUrl when passed, ignoring TRACK_SQS_QUEUE_URL", async () => {
+		const asyncQueueUrl =
+			"https://sqs.eu-west-1.amazonaws.com/123456789012/track-async-dev.fifo";
+
+		const sqsClient = getSqsClient({ queueUrl: asyncQueueUrl });
+		const originalAsyncSend = sqsClient.send.bind(sqsClient);
+		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
+			mockState.queueCommands.push(command.input);
+			return {};
+		}) as typeof sqsClient.send;
+
+		const ctx = {
+			id: "req_async_1",
+			org: { id: "org_123" },
+			env: AppEnv.Sandbox,
+			apiVersion: new ApiVersionClass(ApiVersion.V2_1),
+			logger: {
+				warn: mock(() => {}),
+			},
+		} as unknown as AutumnContext;
+
+		await queueTrack({
+			ctx,
+			body: {
+				customer_id: "cus_123",
+				feature_id: "messages",
+				value: 1,
+			},
+			queueUrl: asyncQueueUrl,
+		});
+
+		expect(mockState.queueCommands).toHaveLength(1);
+		expect(mockState.queueCommands[0]).toMatchObject({
+			QueueUrl: asyncQueueUrl,
+		});
+
+		sqsClient.send = originalAsyncSend;
+	});
+
+	test("falls back to TRACK_SQS_QUEUE_URL when queueUrl arg is undefined", async () => {
+		const ctx = {
+			id: "req_fallback_1",
+			org: { id: "org_123" },
+			env: AppEnv.Sandbox,
+			apiVersion: new ApiVersionClass(ApiVersion.V2_1),
+			logger: {
+				warn: mock(() => {}),
+			},
+		} as unknown as AutumnContext;
+
+		await queueTrack({
+			ctx,
+			body: {
+				customer_id: "cus_123",
+				feature_id: "messages",
+				value: 1,
+			},
+		});
+
+		expect(mockState.queueCommands).toHaveLength(1);
+		expect(mockState.queueCommands[0]).toMatchObject({
+			QueueUrl: trackQueueUrl,
+		});
+	});
+
+	test("returns null when no queueUrl arg and env var is unset", async () => {
+		const previousEnv = process.env.TRACK_SQS_QUEUE_URL;
+		process.env.TRACK_SQS_QUEUE_URL = undefined;
+
+		const warnSpy = mock(() => {});
+		const ctx = {
+			id: "req_no_queue",
+			org: { id: "org_123" },
+			env: AppEnv.Sandbox,
+			apiVersion: new ApiVersionClass(ApiVersion.V2_1),
+			logger: { warn: warnSpy },
+		} as unknown as AutumnContext;
+
+		const result = await queueTrack({
+			ctx,
+			body: {
+				customer_id: "cus_123",
+				feature_id: "messages",
+				value: 1,
+			},
+		});
+
+		expect(result).toBeNull();
+		expect(mockState.queueCommands).toHaveLength(0);
+		expect(warnSpy).toHaveBeenCalled();
+
+		process.env.TRACK_SQS_QUEUE_URL = previousEnv;
 	});
 
 	afterEach(() => {
