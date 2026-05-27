@@ -3,16 +3,33 @@ import {
 	ApiVersion,
 	ApiVersionClass,
 	AppEnv,
+	type BatchTrackParams,
 	BatchTrackParamsSchema,
 	ErrCode,
 } from "@autumn/shared";
-import type { SQSClient } from "@aws-sdk/client-sqs";
+import type { SendMessageBatchCommand, SQSClient } from "@aws-sdk/client-sqs";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getSqsClient } from "@/queue/initSqs.js";
 
+type BatchEntry = {
+	Id?: string;
+	MessageBody?: string;
+	MessageGroupId?: string;
+	MessageDeduplicationId?: string;
+};
+
+type BatchCommandInput = {
+	QueueUrl?: string;
+	Entries?: BatchEntry[];
+};
+
 const mockState = {
-	queueCommands: [] as Record<string, unknown>[],
-	queueFailureIndex: null as number | null,
+	queueCommands: [] as BatchCommandInput[],
+	queueFailure: null as null | {
+		batchIndex: number;
+		entryId: string;
+		message?: string;
+	},
 	originalSend: null as null | SQSClient["send"],
 };
 
@@ -69,20 +86,36 @@ describe("runBatchTrack", () => {
 
 	beforeEach(() => {
 		mockState.queueCommands = [];
-		mockState.queueFailureIndex = null;
+		mockState.queueFailure = null;
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackAsyncQueueUrl;
 
 		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
 		mockState.originalSend = sqsClient.send.bind(sqsClient);
-		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
-			const callIndex = mockState.queueCommands.length;
-			mockState.queueCommands.push(command.input);
+		sqsClient.send = (async (command: SendMessageBatchCommand) => {
+			const batchIndex = mockState.queueCommands.length;
+			const input = command.input as BatchCommandInput;
+			const entries = input.Entries ?? [];
+			mockState.queueCommands.push(input);
+			const successful = entries.map((entry) => ({ Id: entry.Id }));
+			const failure = mockState.queueFailure;
 
-			if (mockState.queueFailureIndex === callIndex) {
-				throw new Error("SQS unavailable");
+			if (failure?.batchIndex === batchIndex) {
+				return {
+					Successful: successful.filter(
+						(entry) => entry.Id !== failure.entryId,
+					),
+					Failed: [
+						{
+							Id: failure.entryId,
+							Code: "InternalError",
+							Message: failure.message ?? "SQS unavailable",
+							SenderFault: false,
+						},
+					],
+				};
 			}
 
-			return {};
+			return { Successful: successful };
 		}) as typeof sqsClient.send;
 	});
 
@@ -94,29 +127,33 @@ describe("runBatchTrack", () => {
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalEnv;
 	});
 
-	test("validates all items before enqueueing each item with per-item deduplication", async () => {
+	test("validates all items before enqueueing one batch with per-item deduplication", async () => {
 		const ctx = buildCtx();
 
 		await runBatchTrack({ ctx, body });
 
-		expect(mockState.queueCommands).toHaveLength(3);
+		expect(mockState.queueCommands).toHaveLength(1);
 		expect(mockState.queueCommands[0]).toMatchObject({
 			QueueUrl: trackAsyncQueueUrl,
+		});
+		expect(mockState.queueCommands[0]?.Entries).toHaveLength(3);
+		expect(mockState.queueCommands[0]?.Entries?.[0]).toMatchObject({
+			Id: "0",
 			MessageGroupId: "org_123:sandbox:cus_123:none",
 			MessageDeduplicationId: "req_batch_1-0",
 		});
-		expect(mockState.queueCommands[1]).toMatchObject({
-			QueueUrl: trackAsyncQueueUrl,
+		expect(mockState.queueCommands[0]?.Entries?.[1]).toMatchObject({
+			Id: "1",
 			MessageGroupId: "org_123:sandbox:cus_123:ent_123",
 			MessageDeduplicationId: "req_batch_1-1",
 		});
-		expect(mockState.queueCommands[2]).toMatchObject({
-			QueueUrl: trackAsyncQueueUrl,
+		expect(mockState.queueCommands[0]?.Entries?.[2]).toMatchObject({
+			Id: "2",
 			MessageGroupId: "org_123:sandbox:cus_456:none",
 			MessageDeduplicationId: "req_batch_1-2",
 		});
 		expect(
-			JSON.parse(mockState.queueCommands[1]?.MessageBody as string),
+			JSON.parse(mockState.queueCommands[0]?.Entries?.[1]?.MessageBody ?? "{}"),
 		).toMatchObject({
 			name: "track",
 			data: {
@@ -141,8 +178,8 @@ describe("runBatchTrack", () => {
 		expect(ctx.logger.error).toHaveBeenCalled();
 	});
 
-	test("throws 503 RecaseError when queueTrack returns null", async () => {
-		mockState.queueFailureIndex = 1;
+	test("throws 503 RecaseError when SQS reports batch failure", async () => {
+		mockState.queueFailure = { batchIndex: 0, entryId: "1" };
 		const ctx = buildCtx();
 
 		await expect(runBatchTrack({ ctx, body })).rejects.toMatchObject({
@@ -151,7 +188,47 @@ describe("runBatchTrack", () => {
 			message: "Async track is not available right now",
 		});
 
-		expect(mockState.queueCommands).toHaveLength(2);
+		expect(mockState.queueCommands).toHaveLength(1);
+		expect(ctx.logger.error).toHaveBeenCalledWith(
+			"[track] batch track enqueue had failures",
+			expect.objectContaining({
+				failure_count: 1,
+				failures: [{ index: 1, reason: "SQS unavailable" }],
+				success_count: 2,
+				total_count: 3,
+			}),
+		);
+	});
+
+	test("chunks 1000 items into 100 SQS batch calls", async () => {
+		const ctx = buildCtx();
+		const largeBody: BatchTrackParams = Array.from(
+			{ length: 1000 },
+			(_, index) => ({
+				customer_id: `cus_${index}`,
+				feature_id: "messages",
+				value: index + 1,
+			}),
+		);
+
+		await runBatchTrack({ ctx, body: largeBody });
+
+		expect(mockState.queueCommands).toHaveLength(100);
+
+		for (const command of mockState.queueCommands) {
+			expect(command.Entries).toHaveLength(10);
+		}
+
+		expect(mockState.queueCommands[0]?.Entries?.[0]).toMatchObject({
+			Id: "0",
+			MessageGroupId: "org_123:sandbox:cus_0:none",
+			MessageDeduplicationId: "req_batch_1-0",
+		});
+		expect(mockState.queueCommands[99]?.Entries?.[9]).toMatchObject({
+			Id: "9",
+			MessageGroupId: "org_123:sandbox:cus_999:none",
+			MessageDeduplicationId: "req_batch_1-999",
+		});
 	});
 
 	test("rejects empty batch body at schema parse time", () => {
