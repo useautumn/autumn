@@ -1,6 +1,5 @@
 import {
 	AffectedResource,
-	ApiVersion,
 	backwardsChangeActive,
 	CustomerExpand,
 	GetCustomerParamsSchema,
