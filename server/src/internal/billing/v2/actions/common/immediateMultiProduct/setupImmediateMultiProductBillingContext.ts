@@ -172,6 +172,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		stripeSubscriptionSchedule,
 		stripeCustomer,
 		stripeDiscounts,
+		stripeTaxRate,
 		paymentMethod,
 		testClockFrozenTime,
 	} = await setupStripeBillingContext({
@@ -242,6 +243,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		stripeSubscription,
 		stripeSubscriptionSchedule,
 		stripeDiscounts,
+		stripeTaxRate,
 		paymentMethod,
 		customPrices,
 		customEnts,
