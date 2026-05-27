@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { ApiVersion, ApiVersionClass, AppEnv, ErrCode } from "@autumn/shared";
+import {
+	ApiVersion,
+	ApiVersionClass,
+	AppEnv,
+	BatchTrackParamsSchema,
+	ErrCode,
+} from "@autumn/shared";
 import type { SQSClient } from "@aws-sdk/client-sqs";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getSqsClient } from "@/queue/initSqs.js";
@@ -13,14 +19,23 @@ const mockState = {
 const trackAsyncQueueUrl =
 	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-async-dev.fifo";
 
-import { runAsyncTrack } from "@/internal/balances/track/runAsyncTrack.js";
+import { runBatchTrack } from "@/internal/balances/track/runBatchTrack.js";
 
 const buildCtx = () =>
 	({
-		id: "req_async_1",
+		id: "req_batch_1",
 		org: { id: "org_123" },
 		env: AppEnv.Sandbox,
 		apiVersion: new ApiVersionClass(ApiVersion.V2_1),
+		features: [
+			{
+				id: "messages",
+				event_names: ["message.sent"],
+			},
+			{
+				id: "credits",
+			},
+		],
 		extraLogs: {},
 		logger: {
 			warn: mock(() => {}),
@@ -28,14 +43,28 @@ const buildCtx = () =>
 		},
 	}) as unknown as AutumnContext;
 
-const body = {
-	customer_id: "cus_123",
-	feature_id: "messages",
-	value: 1,
-	async: true,
-};
+const body = [
+	{
+		customer_id: "cus_123",
+		feature_id: "messages",
+		value: 1,
+		async: false,
+	},
+	{
+		customer_id: "cus_123",
+		entity_id: "ent_123",
+		event_name: "message.sent",
+		value: 2,
+		async: true,
+	},
+	{
+		customer_id: "cus_456",
+		feature_id: "credits",
+		value: 3,
+	},
+];
 
-describe("runAsyncTrack", () => {
+describe("runBatchTrack", () => {
 	const originalEnv = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
 
 	beforeEach(() => {
@@ -65,33 +94,61 @@ describe("runAsyncTrack", () => {
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalEnv;
 	});
 
-	test("queues track with TRACK_ASYNC_SQS_QUEUE_URL and resolves without throwing", async () => {
+	test("validates all items before enqueueing each item with per-item deduplication", async () => {
 		const ctx = buildCtx();
 
-		await runAsyncTrack({ ctx, body });
+		await runBatchTrack({ ctx, body });
 
-		expect(mockState.queueCommands).toHaveLength(1);
+		expect(mockState.queueCommands).toHaveLength(3);
 		expect(mockState.queueCommands[0]).toMatchObject({
 			QueueUrl: trackAsyncQueueUrl,
 			MessageGroupId: "org_123:sandbox:cus_123:none",
-			MessageDeduplicationId: "req_async_1",
+			MessageDeduplicationId: "req_batch_1-0",
+		});
+		expect(mockState.queueCommands[1]).toMatchObject({
+			QueueUrl: trackAsyncQueueUrl,
+			MessageGroupId: "org_123:sandbox:cus_123:ent_123",
+			MessageDeduplicationId: "req_batch_1-1",
+		});
+		expect(mockState.queueCommands[2]).toMatchObject({
+			QueueUrl: trackAsyncQueueUrl,
+			MessageGroupId: "org_123:sandbox:cus_456:none",
+			MessageDeduplicationId: "req_batch_1-2",
 		});
 		expect(
-			JSON.parse(mockState.queueCommands[0]?.MessageBody as string),
+			JSON.parse(mockState.queueCommands[1]?.MessageBody as string),
 		).toMatchObject({
 			name: "track",
 			data: {
 				customerId: "cus_123",
-				body,
+				entityId: "ent_123",
+				body: body[1],
 			},
 		});
+	});
+
+	test("rejects a validation failure without enqueueing any items", async () => {
+		const ctx = buildCtx();
+		const invalidBody = [
+			body[0],
+			{
+				customer_id: "cus_123",
+				feature_id: "missing_feature",
+				value: 1,
+			},
+			body[2],
+		];
+
+		await expect(runBatchTrack({ ctx, body: invalidBody })).rejects.toThrow();
+
+		expect(mockState.queueCommands).toHaveLength(0);
 	});
 
 	test("throws 503 RecaseError when TRACK_ASYNC_SQS_QUEUE_URL is unset", async () => {
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = undefined;
 		const ctx = buildCtx();
 
-		await expect(runAsyncTrack({ ctx, body })).rejects.toMatchObject({
+		await expect(runBatchTrack({ ctx, body })).rejects.toMatchObject({
 			code: ErrCode.InternalError,
 			statusCode: 503,
 			message: "Async track is not available right now",
@@ -102,15 +159,19 @@ describe("runAsyncTrack", () => {
 	});
 
 	test("throws 503 RecaseError when queueTrack returns null", async () => {
-		mockState.queueFailureIndex = 0;
+		mockState.queueFailureIndex = 1;
 		const ctx = buildCtx();
 
-		await expect(runAsyncTrack({ ctx, body })).rejects.toMatchObject({
+		await expect(runBatchTrack({ ctx, body })).rejects.toMatchObject({
 			code: ErrCode.InternalError,
 			statusCode: 503,
 			message: "Async track is not available right now",
 		});
 
-		expect(mockState.queueCommands).toHaveLength(1);
+		expect(mockState.queueCommands).toHaveLength(2);
+	});
+
+	test("rejects empty batch body at schema parse time", () => {
+		expect(() => BatchTrackParamsSchema.parse([])).toThrow();
 	});
 });
