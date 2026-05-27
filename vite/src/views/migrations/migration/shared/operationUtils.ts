@@ -17,6 +17,7 @@ function hasCustomizations(
 	if (!customize) return false;
 	if ((customize.add_items?.length ?? 0) > 0) return true;
 	if ((customize.remove_items?.length ?? 0) > 0) return true;
+	if ((customize.update_items?.length ?? 0) > 0) return true;
 	if (customize.price !== undefined) return true;
 	return false;
 }

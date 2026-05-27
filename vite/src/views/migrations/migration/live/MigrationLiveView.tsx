@@ -367,11 +367,6 @@ export function MigrationLiveView({
 			)}
 
 			<StepIndicator step={step} onStepChange={onStepChange}>
-				{count !== null && (
-					<span className="text-xs text-tertiary-foreground">
-						{count} {count === 1 ? "customer" : "customers"}
-					</span>
-				)}
 				{onPrevious && (
 					<Button variant="secondary" size="default" onClick={onPrevious}>
 						<ArrowLeftIcon size={14} />

@@ -1,6 +1,13 @@
 import { BillingMethod } from "@api/products/components/billingMethod";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
+import { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import { z } from "zod/v4";
+
+const billingSet = new Set<string>(Object.values(BillingInterval));
+const AllIntervals = [
+	...Object.values(BillingInterval),
+	...Object.values(EntInterval).filter((v) => !billingSet.has(v)),
+] as [string, ...string[]];
 
 export const PlanItemFilterSchema = z
 	.object({
@@ -11,7 +18,7 @@ export const PlanItemFilterSchema = z
 			description:
 				"Match items with this billing method (prepaid or usage_based).",
 		}),
-		interval: z.enum(BillingInterval).optional().meta({
+		interval: z.enum(AllIntervals).optional().meta({
 			description: "Match items with this interval.",
 		}),
 	})

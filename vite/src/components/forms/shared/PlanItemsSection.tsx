@@ -15,7 +15,7 @@ import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents"
 import { CollapsedBooleanItems } from "./plan-items/CollapsedBooleanItems";
 import { DeletedItemRow } from "./plan-items/DeletedItemRow";
 import { PlanEditButton } from "./plan-items/PlanEditButton";
-import { PlanItemRow } from "./plan-items/PlanItemRow";
+import { getItemMatchKey, hasItemChanged, PlanItemRow } from "./plan-items/PlanItemRow";
 import { PlanPriceHeader } from "./plan-items/PlanPriceHeader";
 import {
 	PlanTrialEditor,
@@ -45,7 +45,7 @@ export interface PlanItemsSectionProps {
 	initialPrepaidOptions: Record<string, number | undefined>;
 	existingOptions?: FeatureOptions[];
 
-	form: UseUpdateSubscriptionForm | UseAttachForm;
+	form?: UseUpdateSubscriptionForm | UseAttachForm;
 
 	showDiff: boolean;
 	currency: string;
@@ -57,6 +57,7 @@ export interface PlanItemsSectionProps {
 	trialConfig?: TrialConfig;
 
 	gateDeletedItemsByDiff?: boolean;
+	changesOnly?: boolean;
 	readOnly?: boolean;
 
 	adminIds?: import(
@@ -79,37 +80,52 @@ export function PlanItemsSection({
 	versionChange,
 	trialConfig,
 	gateDeletedItemsByDiff = false,
+	changesOnly = false,
 	readOnly = false,
 	adminIds,
 }: PlanItemsSectionProps) {
 	const originalItemsMap = new Map<string, ProductItem>(
 		originalItems
 			?.filter((i) => i.feature_id)
-			.map((i) => [`${i.feature_id}:${i.usage_model ?? ""}`, i]) ?? [],
+			.map((i) => [getItemMatchKey(i), i]) ?? [],
 	);
 
-	const currentFeatureIds = new Set(
-		product?.items?.map((i) => i.feature_id).filter(Boolean) ?? [],
+	const currentItemKeys = new Set(
+		product?.items
+			?.filter((i) => i.feature_id)
+			.map((i) => getItemMatchKey(i)) ?? [],
 	);
+
+	const isItemDeleted = (i: ProductItem) =>
+		!!i.feature_id && !currentItemKeys.has(getItemMatchKey(i));
 
 	const deletedItems = gateDeletedItemsByDiff
 		? showDiff && originalItems
-			? originalItems.filter(
-					(i) => i.feature_id && !currentFeatureIds.has(i.feature_id),
-				)
+			? originalItems.filter(isItemDeleted)
 			: []
-		: (originalItems?.filter(
-				(i) => i.feature_id && !currentFeatureIds.has(i.feature_id),
-			) ?? []);
+		: (originalItems?.filter(isItemDeleted) ?? []);
 
 	const sortedItems = useMemo(
 		() => sortPlanItems({ items: product?.items ?? [] }),
 		[product?.items],
 	);
-	const { visibleItems, collapsedBooleanItems } = useMemo(
+	const { visibleItems: allVisibleItems, collapsedBooleanItems: allCollapsedBooleanItems } = useMemo(
 		() => splitBooleanItems({ items: sortedItems }),
 		[sortedItems],
 	);
+
+	const isItemChanged = (item: ProductItem) => {
+		const originalItem = originalItemsMap.get(getItemMatchKey(item));
+		if (!originalItem) return true;
+		return hasItemChanged({ originalItem, updatedItem: item });
+	};
+
+	const visibleItems = changesOnly
+		? allVisibleItems.filter(isItemChanged)
+		: allVisibleItems;
+	const collapsedBooleanItems = changesOnly
+		? allCollapsedBooleanItems.filter(isItemChanged)
+		: allCollapsedBooleanItems;
 
 	const hasItems = (product?.items?.length ?? 0) > 0 || deletedItems.length > 0;
 
