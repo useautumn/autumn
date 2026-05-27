@@ -57,6 +57,11 @@ export const getAdminEdgeConfigSources = () => ({
 			key: ADMIN_RATE_LIMIT_OVERRIDES_CONFIG_KEY,
 		},
 		{
+			id: "rate-limit-redis-allowlist",
+			label: "Rate Limit Redis Allowlist",
+			key: ADMIN_RATE_LIMIT_REDIS_ALLOWLIST_CONFIG_KEY,
+		},
+		{
 			id: "redis-v2-cache",
 			label: "V2 Redis Instance",
 			key: ADMIN_REDIS_V2_CACHE_CONFIG_KEY,
