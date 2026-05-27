@@ -66,4 +66,21 @@ describe("MCP OAuth auth resolution", () => {
 			globalThis.fetch = originalFetch;
 		}
 	});
+
+	test("missing static secret-key returns the auth error path", async () => {
+		await expect(
+			buildAuthForRequest(
+				new Headers(),
+				{
+					...flags,
+					"disable-static-auth": false,
+					"oauth-enabled": false,
+				} as MCPOAuthFlags,
+				logger,
+			),
+		).rejects.toMatchObject({
+			status: 401,
+			error: "invalid_token",
+		} satisfies Partial<OAuthHttpError>);
+	});
 });

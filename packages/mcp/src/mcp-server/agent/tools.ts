@@ -10,7 +10,10 @@ import { createTool } from "@mastra/core/tools";
 import * as z from "zod/v4";
 import { createAutumnClient, getAutumnAuth } from "./auth.js";
 import { createAxiomTools } from "./axiom.js";
-import { createPendingAction } from "./pending-actions.js";
+import {
+	claimLatestPendingAction,
+	createPendingAction,
+} from "./pending-actions.js";
 
 type ToolContext = Parameters<
 	NonNullable<ReturnType<typeof createTool>["execute"]>
@@ -33,6 +36,11 @@ const endpointByTool = {
 	previewUpdateSubscription: "/v1/billing.preview_update",
 	updateSubscription: "/v1/billing.update",
 } as const;
+
+const billingWriteSchemaByTool = {
+	attach: AttachParamsV1Schema,
+	updateSubscription: UpdateSubscriptionV1ParamsSchema,
+} as const satisfies Record<BillingWriteToolName, z.ZodType>;
 
 const toolConfigs: OperationToolConfig[] = [
 	{
@@ -155,17 +163,37 @@ export const createAutumnOperationTools = () => ({
 			})
 			.strict(),
 		execute: async ({ toolName, request, preview }, context) => {
+			const parsedRequest = billingWriteSchemaByTool[toolName].parse(request);
 			const pending = createPendingAction({
 				auth: getAutumnAuth(context),
 				toolName,
-				request,
+				request: parsedRequest,
 				preview,
 			});
 			return {
 				pending: true,
 				expires_at: new Date(pending.expiresAt).toISOString(),
 				message:
-					"Preview ready. Ask the user to reply with confirm to apply this exact change, or cancel to discard it. Do not mention internal ids or server bookkeeping details.",
+					"Preview ready. Ask the user to explicitly apply or approve this exact change. Do not mention internal ids or server bookkeeping details.",
+			};
+		},
+	}),
+	confirmBillingAction: createTool({
+		id: "confirmBillingAction",
+		description:
+			"Apply the latest pending billing action after the user semantically confirms the preview.",
+		inputSchema: z.object({}).strict(),
+		execute: async (_input, context) => {
+			const auth = getAutumnAuth(context);
+			const action = claimLatestPendingAction(auth);
+			const result = await executeConfirmedBillingAction({
+				auth,
+				toolName: action.toolName,
+				request: action.request,
+			});
+			return {
+				message: `Confirmed and applied ${action.toolName}.`,
+				result,
 			};
 		},
 	}),
@@ -183,5 +211,5 @@ export const executeConfirmedBillingAction = async ({
 	callAutumn({
 		context: { mcp: { extra: { authInfo: auth } } } as never,
 		endpoint: endpointByTool[toolName],
-		request,
+		request: billingWriteSchemaByTool[toolName].parse(request),
 	});

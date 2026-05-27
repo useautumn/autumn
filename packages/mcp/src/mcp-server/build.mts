@@ -51,6 +51,7 @@ export const toolNames: Array<{ name: string; description: string }>= ${JSON.str
 
   if (shouldPack) {
     const stageDir = ".mcpb-stage";
+    await rm(stageDir, { recursive: true, force: true });
     await mkdir(join(stageDir, "bin"), { recursive: true });
     await cp(
       join(destinationDir, "mcp-server.js"),

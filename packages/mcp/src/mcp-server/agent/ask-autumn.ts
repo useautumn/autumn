@@ -6,20 +6,9 @@ import {
 	createRequestContext,
 	getAutumnAuth,
 } from "./auth.js";
-import {
-	cancelLatestPendingAction,
-	cancelPendingAction,
-	claimLatestPendingAction,
-	claimPendingAction,
-} from "./pending-actions.js";
-import {
-	createAutumnOperationTools,
-	executeConfirmedBillingAction,
-} from "./tools.js";
+import { createAutumnOperationTools } from "./tools.js";
 
 const model = "anthropic/claude-sonnet-4-6";
-
-const tokenPattern = /\bact_[a-f0-9-]{8}\b/i;
 
 const instructions = `You are Autumn's operational billing assistant.
 Use Autumn tools for customer, plan, and billing work.
@@ -32,8 +21,9 @@ Rules:
 - For billing changes, call previewAttach or previewUpdateSubscription first.
 - After a billing preview, call createBillingConfirmation with the exact write request and a concise preview summary.
 - Never expose internal ids or server bookkeeping details.
-- After a billing preview, tell the user to reply with confirm to apply the exact previewed change, or cancel to discard it.
-- Never claim a billing write has been applied unless the user confirms and the confirmed action succeeds.
+- After a billing preview, tell the user to explicitly apply or approve the exact previewed change.
+- If the user semantically confirms a pending billing preview, call confirmBillingAction.
+- Never claim a billing write has been applied unless confirmBillingAction succeeds.
 - If customer, plan, entity, subscription, or environment is ambiguous, ask a short clarifying question.
 - Keep responses concise. Use JSON only when it materially helps debugging.`;
 
@@ -53,13 +43,6 @@ const createAgent = () =>
 		model,
 		tools: createAutumnOperationTools(),
 	});
-
-const getToken = (message: string) => message.match(tokenPattern)?.[0];
-
-const isConfirm = (message: string) =>
-	/^\s*(confirm|approve|yes)\b/i.test(message);
-const isCancel = (message: string) =>
-	/^\s*(cancel|decline|no)\b/i.test(message);
 
 const getAuth = (
 	toolContext: Parameters<
@@ -95,32 +78,6 @@ export const createAskAutumnTool = (defaultAuth?: AutumnMcpAuth) =>
 		},
 		execute: async ({ message, context }, toolContext) => {
 			const auth = getAuth(toolContext, defaultAuth);
-			const token = getToken(message);
-
-			if (isCancel(message)) {
-				if (token) {
-					cancelPendingAction(auth, token);
-				} else {
-					cancelLatestPendingAction(auth);
-				}
-				return "Cancelled the pending billing action.";
-			}
-
-			if (isConfirm(message)) {
-				const action = token
-					? claimPendingAction(auth, token)
-					: claimLatestPendingAction(auth);
-				const result = await executeConfirmedBillingAction({
-					auth,
-					toolName: action.toolName,
-					request: action.request,
-				});
-				return {
-					message: `Confirmed and applied ${action.toolName}.`,
-					result,
-				};
-			}
-
 			const contextText = context
 				? `\n\nCaller context:\n${JSON.stringify(context, null, 2)}`
 				: "";

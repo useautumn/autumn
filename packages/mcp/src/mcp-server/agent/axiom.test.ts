@@ -55,6 +55,17 @@ describe("Axiom MCP tools", () => {
 		).toThrow("only use the express dataset source once");
 	});
 
+	test("rejects malformed time ranges that produce invalid dates", () => {
+		expect(() =>
+			prepareAxiomQuery({
+				auth,
+				apl: "['express'] | limit 10",
+				startTime: "now-999999999999999999999999999999999999999999999999d",
+				endTime: "now",
+			}),
+		).toThrow("bounded time range");
+	});
+
 	test("rejects Axiom access without analytics read scope", () => {
 		expect(() =>
 			prepareAxiomQuery({

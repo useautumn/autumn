@@ -267,7 +267,7 @@ export async function buildAuthForRequest(
 	const apiKey = resolveStaticHeader(
 		headers,
 		"secret-key",
-		z.string(),
+		z.string().optional(),
 		flags["secret-key"],
 		flags["disable-static-auth"],
 	);

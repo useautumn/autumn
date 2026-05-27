@@ -27,17 +27,26 @@ const matchesAuth = (action: PendingBillingAction, auth: AutumnMcpAuth) =>
 	action.resource === auth.resource &&
 	action.env === auth.env;
 
+const cleanupExpiredPendingActions = () => {
+	for (const action of pending.values()) {
+		if (isExpired(action)) pending.delete(action.token);
+	}
+};
+
 const getLatestPendingAction = (auth: AutumnMcpAuth) => {
 	let latest: PendingBillingAction | null = null;
+	cleanupExpiredPendingActions();
 	for (const action of pending.values()) {
-		if (isExpired(action)) {
-			pending.delete(action.token);
-			continue;
-		}
 		if (!matchesAuth(action, auth)) continue;
 		if (!latest || action.createdAt > latest.createdAt) latest = action;
 	}
 	return latest;
+};
+
+const getPendingAction = (token: string) => {
+	cleanupExpiredPendingActions();
+	const action = pending.get(token);
+	return action ?? null;
 };
 
 export const createPendingAction = ({
@@ -51,6 +60,7 @@ export const createPendingAction = ({
 	request: unknown;
 	preview: string;
 }) => {
+	cleanupExpiredPendingActions();
 	const action = {
 		token: createToken(),
 		principalId: auth.principalId,
@@ -67,9 +77,8 @@ export const createPendingAction = ({
 };
 
 export const claimPendingAction = (auth: AutumnMcpAuth, token: string) => {
-	const action = pending.get(token);
-	if (!action || isExpired(action)) {
-		pending.delete(token);
+	const action = getPendingAction(token);
+	if (!action) {
 		throw new Error("Confirmation token is invalid or expired.");
 	}
 	if (!matchesAuth(action, auth)) {
@@ -87,9 +96,8 @@ export const claimLatestPendingAction = (auth: AutumnMcpAuth) => {
 };
 
 export const cancelPendingAction = (auth: AutumnMcpAuth, token: string) => {
-	const action = pending.get(token);
-	if (!action || isExpired(action)) {
-		pending.delete(token);
+	const action = getPendingAction(token);
+	if (!action) {
 		throw new Error("Confirmation token is invalid or expired.");
 	}
 	if (!matchesAuth(action, auth)) {

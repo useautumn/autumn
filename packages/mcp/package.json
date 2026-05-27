@@ -4,6 +4,11 @@
   "author": "Autumn",
   "type": "module",
   "sideEffects": false,
+  "files": [
+    "bin",
+    "manifest.json",
+    "README.md"
+  ],
   "bin": {
     "@autumn/mcp": "bin/mcp-server.js",
     "mcp": "bin/mcp-server.js"
@@ -13,7 +18,9 @@
     "mcpb:build": "bun src/mcp-server/build.mts --pack && tsc",
     "start": "node bin/mcp-server.js start",
     "ts": "tsc --noEmit",
-    "test": "bun test src"
+    "test": "bun test src",
+    "prepack": "bun run build",
+    "prepublishOnly": "bun run build"
   },
   "dependencies": {
     "@autumn/shared": "workspace:*",

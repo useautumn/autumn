@@ -44,12 +44,14 @@ const parseAxiomTime = (value: string, now = new Date()) => {
 	const relative = value.match(/^now-(\d+)([mhd])$/);
 	if (relative) {
 		const count = Number(relative[1]);
+		if (!Number.isFinite(count)) return null;
 		const unit = relative[2];
-		return add(now, {
+		const date = add(now, {
 			minutes: unit === "m" ? -count : 0,
 			hours: unit === "h" ? -count : 0,
 			days: unit === "d" ? -count : 0,
 		});
+		return isValid(date) ? date : null;
 	}
 
 	const absolute = parseISO(value);
@@ -60,7 +62,8 @@ const getRangeMs = (startTime: string, endTime: string) => {
 	const start = parseAxiomTime(startTime);
 	const end = parseAxiomTime(endTime);
 	if (start === null || end === null) return null;
-	return differenceInMilliseconds(end, start);
+	const rangeMs = differenceInMilliseconds(end, start);
+	return Number.isFinite(rangeMs) ? rangeMs : null;
 };
 
 const assertCanUseAxiom = (auth: AutumnMcpAuth) => {
