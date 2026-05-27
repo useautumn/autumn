@@ -132,6 +132,7 @@ export const useMigrationsQuery = () => {
 		isLoading,
 		error,
 		refetch,
+		invalidate,
 		createMigration: createMutation.mutateAsync,
 		isCreating: createMutation.isPending,
 		updateMigration: updateMutation.mutateAsync,

@@ -6,6 +6,10 @@ import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/c
 import type { UseUpdateSubscriptionForm } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionForm";
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 
+export function getItemMatchKey(item: ProductItem): string {
+	return `${item.feature_id}:${item.usage_model ?? ""}:${item.interval ?? ""}`;
+}
+
 export function getPlanItemPrepaidQuantity({
 	featureId,
 	prepaidOptions,
@@ -38,7 +42,7 @@ export function getPlanItemPrepaidQuantity({
 	return prepaidOption?.quantity;
 }
 
-function hasItemChanged({
+export function hasItemChanged({
 	originalItem,
 	updatedItem,
 }: {
@@ -85,7 +89,7 @@ export function PlanItemRow({
 	prepaidOptions: Record<string, number | undefined>;
 	initialPrepaidOptions: Record<string, number | undefined>;
 	existingOptions?: FeatureOptions[];
-	form: UseUpdateSubscriptionForm | UseAttachForm;
+	form?: UseUpdateSubscriptionForm | UseAttachForm;
 	showDiff: boolean;
 	readOnly?: boolean;
 }) {
@@ -103,9 +107,7 @@ export function PlanItemRow({
 			})
 		: undefined;
 
-	const originalItem = originalItemsMap.get(
-		`${featureId}:${item.usage_model ?? ""}`,
-	);
+	const originalItem = originalItemsMap.get(getItemMatchKey(item));
 
 	const isCreated =
 		showDiff && !originalItem && !!originalItems && originalItems.length > 0;
