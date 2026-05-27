@@ -73,9 +73,9 @@ For each endpoint, as we walk through the request, we intentionally write functi
 
 ### Teaching our AI agent how to investigate
 
-With our logs structure in place, investigations became much more definable too. It's simply a process of identifying the type of investigation based on the incoming ticket, then iterating over queries until you have the right set of logs to make an assumption on what happened.
+With our logs structure in place, investigations became much more definable. It's simply a process of iterating over queries until you have the right set of logs to make an accurate assumption on what happened.
 
-As such, passing this information to an agent wasn't too difficult. All we did was:
+To pass this information to an agent, all we did was:
 
 - Hook Claude Code up to Axiom's MCP and skills
 - Write a couple of custom skills detailing how we structure our logs, the different "domains" of investigations (billing, stripe webhooks, entitlements, etc.)
@@ -360,8 +360,6 @@ With these skills, Claude would be able to run freely on its own and figure out 
 The agent was also accurate because it ran over our codebase. It could link log results to the actual code paths producing them, which made debugging much sharper.
 
 It really felt like a step change for our team.
-
----
 
 ### Taking it one step further
 
