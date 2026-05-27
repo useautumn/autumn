@@ -467,6 +467,10 @@ export const initWorkers = async ({
 			queueId: JOB_QUEUE_IDS.track,
 			queueUrl: process.env.TRACK_SQS_QUEUE_URL,
 		},
+		{
+			queueId: JOB_QUEUE_IDS.trackAsync,
+			queueUrl: process.env.TRACK_ASYNC_SQS_QUEUE_URL,
+		},
 	]) {
 		if (!queueUrl) continue;
 
