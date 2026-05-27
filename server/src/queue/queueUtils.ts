@@ -5,7 +5,10 @@ import type {
 	Price,
 	TrackParams,
 } from "@autumn/shared";
-import { SendMessageCommand } from "@aws-sdk/client-sqs";
+import {
+	SendMessageBatchCommand,
+	SendMessageCommand,
+} from "@aws-sdk/client-sqs";
 import { generateId } from "@server/utils/genUtils";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import type { GenerateFeatureDisplayPayload } from "@/internal/features/workflows/generateFeatureDisplay.js";
@@ -101,6 +104,8 @@ export interface Payloads {
 	[key: string]: unknown;
 }
 
+const SQS_SEND_MESSAGE_BATCH_LIMIT = 10;
+
 /**
  * Add a task to the queue (auto-detects SQS or BullMQ)
  */
@@ -161,4 +166,74 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	}
 
 	throw new Error("No queue configured. Set SQS_QUEUE_URL_V2");
+};
+
+export const addTasksToQueueBatch = async <T extends keyof Payloads>({
+	jobName,
+	queueUrl,
+	entries,
+}: {
+	jobName: T;
+	queueUrl: string;
+	entries: Array<{
+		payload: Payloads[T];
+		messageGroupId: string;
+		messageDeduplicationId: string;
+	}>;
+}): Promise<{
+	successCount: number;
+	failures: Array<{ index: number; reason: string }>;
+}> => {
+	const sqsClient = getSqsClient({ queueUrl });
+	const failures: Array<{ index: number; reason: string }> = [];
+	let successCount = 0;
+
+	for (
+		let chunkStartIndex = 0;
+		chunkStartIndex < entries.length;
+		chunkStartIndex += SQS_SEND_MESSAGE_BATCH_LIMIT
+	) {
+		const chunk = entries
+			.slice(chunkStartIndex, chunkStartIndex + SQS_SEND_MESSAGE_BATCH_LIMIT)
+			.map((entry, index) => {
+				const originalIndex = chunkStartIndex + index;
+
+				return {
+					originalIndex,
+					sqsEntry: {
+						Id: index.toString(),
+						MessageBody: JSON.stringify({
+							name: jobName as string,
+							data: entry.payload,
+						}),
+						MessageGroupId: entry.messageGroupId,
+						MessageDeduplicationId: entry.messageDeduplicationId,
+					},
+				};
+			});
+		const originalIndexById = new Map(
+			chunk.map((entry) => [entry.sqsEntry.Id, entry.originalIndex]),
+		);
+
+		const response = await sqsClient.send(
+			new SendMessageBatchCommand({
+				QueueUrl: queueUrl,
+				Entries: chunk.map((entry) => entry.sqsEntry),
+			}),
+		);
+
+		successCount += response.Successful?.length ?? 0;
+
+		for (const failedEntry of response.Failed ?? []) {
+			failures.push({
+				index: originalIndexById.get(failedEntry.Id ?? "") ?? chunkStartIndex,
+				reason:
+					failedEntry.Message ??
+					failedEntry.Code ??
+					"Unknown SQS batch failure",
+			});
+		}
+	}
+
+	return { successCount, failures };
 };
