@@ -1,3 +1,4 @@
+import fs from "node:fs";
 import path from "node:path";
 import { sentryVitePlugin } from "@sentry/vite-plugin";
 import tailwindcss from "@tailwindcss/vite";
@@ -128,6 +129,12 @@ export default defineConfig({
 			"client.dev.useautumn.com",
 			"localhost",
 			".localhost",
+			// Per-developer tunnel suffixes (e.g. agent worktree sparq URLs).
+			...(process.env.DEV_EXTRA_CORS_ORIGINS ?? "")
+				.split(",")
+				.map((s) => s.trim())
+				.filter(Boolean)
+				.flatMap((sfx) => [sfx, `.${sfx}`]),
 		],
 		watch: {
 			usePolling: true, // Required for file watching in Docker on Windows
@@ -137,6 +144,11 @@ export default defineConfig({
 			port: process.env.VITE_PORT
 				? Number.parseInt(process.env.VITE_PORT)
 				: 3000,
+			// Worktree URLs (wt<N>.localhost / wt<N>-USER-web.atmn.lol) are served
+			// via portless/sparq on :443; the HMR WS must dial that, not the local port.
+			clientPort: /^https?:\/\/wt\d/.test(process.env.VITE_FRONTEND_URL ?? "")
+				? 443
+				: undefined,
 		},
 		fs: {
 			// Allow serving files from workspace root (monorepo support)
