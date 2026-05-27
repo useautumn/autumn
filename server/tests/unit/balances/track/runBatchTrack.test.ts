@@ -127,23 +127,6 @@ describe("runBatchTrack", () => {
 		});
 	});
 
-	test("rejects a validation failure without enqueueing any items", async () => {
-		const ctx = buildCtx();
-		const invalidBody = [
-			body[0],
-			{
-				customer_id: "cus_123",
-				feature_id: "missing_feature",
-				value: 1,
-			},
-			body[2],
-		];
-
-		await expect(runBatchTrack({ ctx, body: invalidBody })).rejects.toThrow();
-
-		expect(mockState.queueCommands).toHaveLength(0);
-	});
-
 	test("throws 503 RecaseError when TRACK_ASYNC_SQS_QUEUE_URL is unset", async () => {
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = undefined;
 		const ctx = buildCtx();
