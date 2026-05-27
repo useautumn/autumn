@@ -28,9 +28,11 @@ export const handleTrack = createRoute({
 		if (body.async === true) {
 			const queueUrl = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
 			if (!queueUrl) {
+				ctx.logger.error(
+					"[track] async=true requested but TRACK_ASYNC_SQS_QUEUE_URL is unset",
+				);
 				throw new RecaseError({
-					message:
-						"Async track requested but TRACK_ASYNC_SQS_QUEUE_URL is unset",
+					message: "Async track is not available right now",
 					code: ErrCode.InternalError,
 					statusCode: 503,
 				});
@@ -38,7 +40,7 @@ export const handleTrack = createRoute({
 			const queued = await queueTrack({ ctx, body, queueUrl });
 			if (!queued) {
 				throw new RecaseError({
-					message: "Failed to enqueue async track",
+					message: "Async track is not available right now",
 					code: ErrCode.InternalError,
 					statusCode: 503,
 				});
