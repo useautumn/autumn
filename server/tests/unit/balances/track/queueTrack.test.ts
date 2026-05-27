@@ -10,6 +10,8 @@ const mockState = {
 };
 const trackQueueUrl =
 	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-dev.fifo";
+const trackAsyncQueueUrl =
+	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-async-dev.fifo";
 
 mock.module(
 	"@/internal/balances/track/utils/getQueuedTrackResponse.js",
@@ -81,10 +83,7 @@ describe("queueTrack", () => {
 	});
 
 	test("routes to explicit queueUrl when passed, ignoring TRACK_SQS_QUEUE_URL", async () => {
-		const asyncQueueUrl =
-			"https://sqs.eu-west-1.amazonaws.com/123456789012/track-async-dev.fifo";
-
-		const sqsClient = getSqsClient({ queueUrl: asyncQueueUrl });
+		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
 		const originalAsyncSend = sqsClient.send.bind(sqsClient);
 		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
 			mockState.queueCommands.push(command.input);
@@ -108,12 +107,12 @@ describe("queueTrack", () => {
 				feature_id: "messages",
 				value: 1,
 			},
-			queueUrl: asyncQueueUrl,
+			queueUrl: trackAsyncQueueUrl,
 		});
 
 		expect(mockState.queueCommands).toHaveLength(1);
 		expect(mockState.queueCommands[0]).toMatchObject({
-			QueueUrl: asyncQueueUrl,
+			QueueUrl: trackAsyncQueueUrl,
 		});
 
 		sqsClient.send = originalAsyncSend;

@@ -1,16 +1,14 @@
 import {
 	AffectedResource,
 	ApiVersion,
-	ErrCode,
-	RecaseError,
 	Scopes,
 	TrackParamsSchema,
 	TrackQuerySchema,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { runAsyncTrack } from "@/internal/balances/track/runAsyncTrack.js";
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
 import { getTrackFeatureDeductionsForBody } from "@/internal/balances/track/utils/getFeatureDeductions.js";
-import { queueTrack } from "@/internal/balances/track/utils/queueTrack.js";
 
 export const handleTrack = createRoute({
 	scopes: [Scopes.Balances.Write],
@@ -26,25 +24,7 @@ export const handleTrack = createRoute({
 		const featureDeductions = getTrackFeatureDeductionsForBody({ ctx, body });
 
 		if (body.async === true) {
-			const queueUrl = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
-			if (!queueUrl) {
-				ctx.logger.error(
-					"[track] async=true requested but TRACK_ASYNC_SQS_QUEUE_URL is unset",
-				);
-				throw new RecaseError({
-					message: "Async track is not available right now",
-					code: ErrCode.InternalError,
-					statusCode: 503,
-				});
-			}
-			const queued = await queueTrack({ ctx, body, queueUrl });
-			if (!queued) {
-				throw new RecaseError({
-					message: "Async track is not available right now",
-					code: ErrCode.InternalError,
-					statusCode: 503,
-				});
-			}
+			await runAsyncTrack({ ctx, body });
 			return c.json({ success: true }, 202);
 		}
 
