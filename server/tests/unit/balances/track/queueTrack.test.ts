@@ -108,11 +108,13 @@ describe("queueTrack", () => {
 				value: 1,
 			},
 			queueUrl: trackAsyncQueueUrl,
+			messageDeduplicationId: "req_async_1-0",
 		});
 
 		expect(mockState.queueCommands).toHaveLength(1);
 		expect(mockState.queueCommands[0]).toMatchObject({
 			QueueUrl: trackAsyncQueueUrl,
+			MessageDeduplicationId: "req_async_1-0",
 		});
 
 		sqsClient.send = originalAsyncSend;

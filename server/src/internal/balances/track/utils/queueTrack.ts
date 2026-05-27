@@ -9,10 +9,12 @@ export const queueTrack = async ({
 	ctx,
 	body,
 	queueUrl,
+	messageDeduplicationId,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	queueUrl?: string;
+	messageDeduplicationId?: string;
 }) => {
 	try {
 		const resolvedQueueUrl = queueUrl ?? process.env.TRACK_SQS_QUEUE_URL;
@@ -27,7 +29,7 @@ export const queueTrack = async ({
 			jobName: JobName.Track,
 			queueUrl: resolvedQueueUrl,
 			messageGroupId: `${ctx.org.id}:${ctx.env}:${body.customer_id}:${body.entity_id ?? "none"}`,
-			messageDeduplicationId: ctx.id,
+			messageDeduplicationId: messageDeduplicationId ?? ctx.id,
 			payload: {
 				orgId: ctx.org.id,
 				env: ctx.env,

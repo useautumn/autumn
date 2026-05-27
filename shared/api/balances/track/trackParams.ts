@@ -77,3 +77,9 @@ export const TrackParamsSchema = BalanceParamsBaseSchema.extend({
 
 export type TrackParams = z.infer<typeof TrackParamsSchema>;
 export type TrackQuery = z.infer<typeof TrackQuerySchema>;
+
+export const BatchTrackParamsSchema = z
+	.array(TrackParamsSchema)
+	.min(1)
+	.max(1000);
+export type BatchTrackParams = z.infer<typeof BatchTrackParamsSchema>;
