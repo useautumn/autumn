@@ -1,5 +1,3 @@
-import { createTool } from "@mastra/core/tools";
-import * as z from "zod/v4";
 import {
 	AttachParamsV1Schema,
 	GetCustomerParamsV1Schema,
@@ -8,10 +6,15 @@ import {
 	ListPlanParamsSchema,
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared/publicApiSchemas";
+import { createTool } from "@mastra/core/tools";
+import * as z from "zod/v4";
 import { createAutumnClient, getAutumnAuth } from "./auth.js";
+import { createAxiomTools } from "./axiom.js";
 import { createPendingAction } from "./pending-actions.js";
 
-type ToolContext = Parameters<NonNullable<ReturnType<typeof createTool>["execute"]>>[1];
+type ToolContext = Parameters<
+	NonNullable<ReturnType<typeof createTool>["execute"]>
+>[1];
 type BillingWriteToolName = "attach" | "updateSubscription";
 type OperationToolConfig = {
 	id: string;
@@ -136,15 +139,21 @@ export const createAutumnOperationTools = () => ({
 	...Object.fromEntries(
 		toolConfigs.map((config) => [config.id, operationTool(config)]),
 	),
+	// ...createAxiomTools(), leave out axiom investigate tool for now
 	createBillingConfirmation: createTool({
 		id: "createBillingConfirmation",
 		description:
 			"Create an internal pending billing action after previewing a billing write.",
-		inputSchema: z.object({
-			toolName: z.enum(["attach", "updateSubscription"]),
-			request: z.union([AttachParamsV1Schema, UpdateSubscriptionV1ParamsSchema]),
-			preview: z.string(),
-		}).strict(),
+		inputSchema: z
+			.object({
+				toolName: z.enum(["attach", "updateSubscription"]),
+				request: z.union([
+					AttachParamsV1Schema,
+					UpdateSubscriptionV1ParamsSchema,
+				]),
+				preview: z.string(),
+			})
+			.strict(),
 		execute: async ({ toolName, request, preview }, context) => {
 			const pending = createPendingAction({
 				auth: getAutumnAuth(context),

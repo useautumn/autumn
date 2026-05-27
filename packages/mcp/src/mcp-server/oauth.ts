@@ -1,4 +1,6 @@
 import { type ScopeString, Scopes } from "@autumn/shared/scopeDefinitions";
+import { ms } from "@autumn/shared/unixUtils";
+import { addMilliseconds, isFuture } from "date-fns";
 import * as z from "zod/v4";
 import type { AutumnMcpAuth } from "./agent/auth.js";
 import { principalFromSecret } from "./agent/auth.js";
@@ -10,6 +12,7 @@ export const MCP_OAUTH_SCOPES = [
 	Scopes.Plans.Read,
 	Scopes.Billing.Read,
 	Scopes.Billing.Write,
+	Scopes.Analytics.Read,
 ] as const satisfies readonly ScopeString[];
 
 export type OAuthEnvironment = "sandbox" | "live";
@@ -34,7 +37,15 @@ export class OAuthHttpError extends Error {
 	}
 }
 
-const apiKeyCache = new Map<string, { key: string; expiresAt: number }>();
+const apiKeyCache = new Map<
+	string,
+	{
+		key: string;
+		orgId?: string | undefined;
+		scopes?: string[] | undefined;
+		expiresAt: Date;
+	}
+>();
 
 function trimTrailingSlash(url: string): string {
 	return url.endsWith("/") ? url.slice(0, -1) : url;
@@ -142,11 +153,11 @@ async function exchangeOAuthToken(
 	flags: MCPOAuthFlags,
 	resource: string,
 	token: string,
-): Promise<string> {
+): Promise<{ key: string; orgId?: string | undefined; scopes?: string[] }> {
 	const env = getEnvironment(headers, flags);
 	const cacheKey = `${token}:${resource}:${env}`;
 	const cached = apiKeyCache.get(cacheKey);
-	if (cached && cached.expiresAt > Date.now()) return cached.key;
+	if (cached && isFuture(cached.expiresAt)) return cached;
 
 	const response = await fetch(getApiKeyUrl(flags), {
 		method: "POST",
@@ -171,6 +182,8 @@ async function exchangeOAuthToken(
 	const data = (await response.json()) as {
 		sandbox_key?: string;
 		prod_key?: string;
+		org_id?: string;
+		scopes?: string[];
 	};
 	const key = env === "live" ? data.prod_key : data.sandbox_key;
 	if (!key) {
@@ -180,8 +193,14 @@ async function exchangeOAuthToken(
 		);
 	}
 
-	apiKeyCache.set(cacheKey, { key, expiresAt: Date.now() + 60_000 });
-	return key;
+	const exchanged = {
+		key,
+		orgId: data.org_id,
+		scopes: data.scopes,
+		expiresAt: addMilliseconds(new Date(), ms.minutes(1)),
+	};
+	apiKeyCache.set(cacheKey, exchanged);
+	return exchanged;
 }
 
 function resolveStaticHeader<T>(
@@ -231,13 +250,14 @@ export async function buildAuthForRequest(
 		}
 
 		const token = authHeader.slice("Bearer ".length);
-		const apiKey = await exchangeOAuthToken(headers, flags, resource, token);
+		const exchanged = await exchangeOAuthToken(headers, flags, resource, token);
 		return {
-			apiKey,
+			apiKey: exchanged.key,
 			env,
 			resource,
 			principalId: principalFromSecret("oauth", token),
-			scopes: [...MCP_OAUTH_SCOPES],
+			scopes: exchanged.scopes ?? [...MCP_OAUTH_SCOPES],
+			orgId: exchanged.orgId,
 			serverURL: flags["server-url"],
 			xApiVersion,
 			failOpen,

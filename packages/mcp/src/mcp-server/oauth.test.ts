@@ -42,7 +42,12 @@ describe("MCP OAuth auth resolution", () => {
 				resource: "http://localhost:2718/mcp",
 				scopes: MCP_OAUTH_SCOPES,
 			});
-			return Response.json({ sandbox_key: "sk_sandbox", prod_key: "sk_live" });
+			return Response.json({
+				sandbox_key: "sk_sandbox",
+				prod_key: "sk_live",
+				org_id: "org_123",
+				scopes: MCP_OAUTH_SCOPES,
+			});
 		}) as typeof fetch;
 
 		try {
@@ -56,6 +61,7 @@ describe("MCP OAuth auth resolution", () => {
 			expect(auth.env).toBe("sandbox");
 			expect(auth.resource).toBe("http://localhost:2718/mcp");
 			expect(auth.scopes).toEqual([...MCP_OAUTH_SCOPES]);
+			expect(auth.orgId).toBe("org_123");
 		} finally {
 			globalThis.fetch = originalFetch;
 		}

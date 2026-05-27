@@ -266,9 +266,11 @@
       },
       "dependencies": {
         "@autumn/shared": "workspace:*",
+        "@axiomhq/js": "^1.6.1",
         "@mastra/core": "^1.36.0",
         "@mastra/mcp": "^1.8.0",
         "@stricli/core": "^1.1.2",
+        "date-fns": "^4.1.0",
         "express": "^5.1.0",
         "zod": "^3.25.76",
       },
