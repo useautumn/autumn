@@ -1,12 +1,9 @@
-/*
- * Autumn OAuth wrapper for the generated MCP server.
- */
-
 import { type ScopeString, Scopes } from "@autumn/shared/scopeDefinitions";
-import type { AutumnMcpCore } from "../core.js";
+import * as z from "zod/v4";
+import type { AutumnMcpAuth } from "./agent/auth.js";
+import { principalFromSecret } from "./agent/auth.js";
 import type { ConsoleLogger } from "./console-logger.js";
 import type { MCPServerFlags } from "./flags.js";
-import { buildSDK } from "./tools.js";
 
 export const MCP_OAUTH_SCOPES = [
 	Scopes.Customers.Read,
@@ -187,37 +184,86 @@ async function exchangeOAuthToken(
 	return key;
 }
 
-export async function buildSDKForRequest(
+function resolveStaticHeader<T>(
+	headers: Headers,
+	headerName: string,
+	schema: z.ZodType<T>,
+	cliFlagValue: T | undefined,
+	disableStaticAuth: boolean,
+): T | undefined {
+	const value = headers.get(headerName);
+	if (value != null) return schema.parse(value);
+	if (disableStaticAuth) return undefined;
+	return cliFlagValue === undefined ? schema.parse(undefined) : cliFlagValue;
+}
+
+export async function buildAuthForRequest(
 	headers: Headers,
 	flags: MCPOAuthFlags,
 	logger: ConsoleLogger,
-): Promise<AutumnMcpCore> {
-	if (!flags["oauth-enabled"]) {
-		return buildSDK(headers, flags, flags["disable-static-auth"], logger);
-	}
-
+): Promise<AutumnMcpAuth> {
+	const env = getEnvironment(headers, flags);
 	const resource = getResourceUrl(headers, flags);
-	const authHeader = headers.get("authorization");
-	if (authHeader?.startsWith("Bearer ")) {
-		const apiKey = await exchangeOAuthToken(
-			headers,
-			flags,
+	const xApiVersion = resolveStaticHeader(
+		headers,
+		"x-api-version",
+		z.string().default("2.3.0"),
+		flags["x-api-version"],
+		flags["disable-static-auth"],
+	);
+	const failOpen = resolveStaticHeader(
+		headers,
+		"fail-open",
+		z.enum(["true", "false"]).default("true").transform((v) => v === "true"),
+		flags["fail-open"],
+		flags["disable-static-auth"],
+	);
+
+	if (flags["oauth-enabled"]) {
+		const authHeader = headers.get("authorization");
+		if (!authHeader?.startsWith("Bearer ")) {
+			throw new OAuthHttpError(
+				401,
+				"Missing Authorization bearer token",
+				"invalid_token",
+				getWWWAuthenticate(resource),
+			);
+		}
+
+		const token = authHeader.slice("Bearer ".length);
+		const apiKey = await exchangeOAuthToken(headers, flags, resource, token);
+		return {
+			apiKey,
+			env,
 			resource,
-			authHeader.slice("Bearer ".length),
-		);
-		const sdkHeaders = new Headers(headers);
-		sdkHeaders.set("secret-key", apiKey);
-		return buildSDK(sdkHeaders, flags, false, logger);
+			principalId: principalFromSecret("oauth", token),
+			scopes: [...MCP_OAUTH_SCOPES],
+			serverURL: flags["server-url"],
+			xApiVersion,
+			failOpen,
+		};
 	}
 
-	if (flags["disable-static-auth"]) {
-		throw new OAuthHttpError(
-			401,
-			"Missing Authorization bearer token",
-			"invalid_token",
-			getWWWAuthenticate(resource),
-		);
+	const apiKey = resolveStaticHeader(
+		headers,
+		"secret-key",
+		z.string(),
+		flags["secret-key"],
+		flags["disable-static-auth"],
+	);
+	if (!apiKey) {
+		logger.warning("Missing secret-key for MCP request");
+		throw new OAuthHttpError(401, "Missing secret-key", "invalid_token");
 	}
 
-	return buildSDK(headers, flags, false, logger);
+	return {
+		apiKey,
+		env,
+		resource,
+		principalId: principalFromSecret("secret-key", apiKey),
+		scopes: [...MCP_OAUTH_SCOPES],
+		serverURL: flags["server-url"],
+		xApiVersion,
+		failOpen,
+	};
 }

@@ -1,7 +1,7 @@
 {
   "name": "@autumn/mcp",
   "version": "0.0.1",
-  "author": "Speakeasy",
+  "author": "Autumn",
   "type": "module",
   "sideEffects": false,
   "bin": {
@@ -9,21 +9,19 @@
     "mcp": "bin/mcp-server.js"
   },
   "scripts": {
-    "generate": "speakeasy run -t autumn-mcp -y -o console",
     "build": "bun src/mcp-server/build.mts && tsc",
     "mcpb:build": "bun src/mcp-server/build.mts --pack && tsc",
     "start": "node bin/mcp-server.js start",
-    "ts": "tsc --noEmit"
+    "ts": "tsc --noEmit",
+    "test": "bun test src"
   },
   "dependencies": {
     "@autumn/shared": "workspace:*",
-    "@modelcontextprotocol/sdk": "1.29.0",
+    "@mastra/core": "^1.36.0",
+    "@mastra/mcp": "^1.8.0",
     "@stricli/core": "^1.1.2",
     "express": "^5.1.0",
-    "zod": "^4.0.0"
-  },
-  "overrides": {
-    "@modelcontextprotocol/sdk": "1.29.0"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@anthropic-ai/mcpb": "^1.2.0",
