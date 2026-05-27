@@ -116,7 +116,7 @@ export const rateLimitFactory = ({
 
 		if (!shouldUseRedis()) {
 			warnRateLimitBypass();
-			return next();
+			return notInRedis ? getInMemoryLimiter()(c, next) : next();
 		}
 
 		return getRedisLimiter()(c, next);
