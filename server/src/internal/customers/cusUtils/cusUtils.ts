@@ -7,10 +7,10 @@ import {
 	type Feature,
 	type FullCustomer,
 	type Invoice,
+	isPermissiveEmail,
 	sortCusEntsForDeduction,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { z } from "zod";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import {
@@ -41,11 +41,10 @@ export const updateCustomerDetails = async ({
 		updates.name = customerData.name;
 	}
 	if (!fullCustomer.email && customerData?.email) {
-		// Check that email is valid, if not skip...
-		if (z.string().email().safeParse(customerData.email).error) {
-			logger.info(`Invalid email ${customerData.email}, skipping update`);
-		} else {
+		if (isPermissiveEmail(customerData.email)) {
 			updates.email = customerData.email;
+		} else {
+			logger.info(`Invalid email ${customerData.email}, skipping update`);
 		}
 	}
 	// Update send_email_receipts if explicitly provided

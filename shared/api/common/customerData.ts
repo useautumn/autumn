@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import { CustomerBillingControlsParamsSchema } from "../../models/cusModels/billingControls/customerBillingControls";
 import { ExternalProcessorsSchema } from "../../models/genModels/processorSchemas";
+import { isPermissiveEmail } from "../../utils/common/emailUtils";
 
 // for internal use only
 export const CreateCustomerInternalOptionsSchema = z.object({
@@ -19,9 +20,13 @@ export const CustomerDataSchema = z
 		name: z.string().nullish().meta({
 			description: "Customer's name",
 		}),
-		email: z.email({ message: "not a valid email address" }).nullish().meta({
-			description: "Customer's email address",
-		}),
+		email: z
+			.string()
+			.refine(isPermissiveEmail, { message: "not a valid email address" })
+			.nullish()
+			.meta({
+				description: "Customer's email address",
+			}),
 
 		fingerprint: z.string().nullish().meta({
 			description:

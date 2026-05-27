@@ -1,5 +1,9 @@
-import type { Customer, CustomerData, FullSubject } from "@autumn/shared";
-import { z } from "zod/v4";
+import {
+	type Customer,
+	type CustomerData,
+	type FullSubject,
+	isPermissiveEmail,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import { updateCachedCustomerData } from "@/internal/customers/cache/fullSubject/index.js";
@@ -23,10 +27,10 @@ export const updateCustomerData = async ({
 		updates.name = customerData.name;
 	}
 	if (!fullSubject.customer.email && customerData?.email) {
-		if (z.string().email().safeParse(customerData.email).error) {
-			logger.info(`Invalid email ${customerData.email}, skipping update`);
-		} else {
+		if (isPermissiveEmail(customerData.email)) {
 			updates.email = customerData.email;
+		} else {
+			logger.info(`Invalid email ${customerData.email}, skipping update`);
 		}
 	}
 	if (
