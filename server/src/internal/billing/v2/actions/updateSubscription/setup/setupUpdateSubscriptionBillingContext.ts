@@ -97,6 +97,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		stripeSubscriptionSchedule,
 		stripeCustomer,
 		stripeDiscounts,
+		stripeTaxRate,
 		paymentMethod,
 		testClockFrozenTime,
 	} = await setupStripeBillingContext({
@@ -189,6 +190,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		stripeSubscriptionSchedule,
 		stripeDiscounts,
 		stripeCustomer,
+		stripeTaxRate,
 		paymentMethod,
 
 		currentEpochMs,
