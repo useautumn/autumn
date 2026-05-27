@@ -1,19 +1,42 @@
 "use client";
 
 import { AnimatePresence, motion } from "motion/react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 
 export function Expand({
+	id,
 	title = "",
 	children,
 }: {
+	id?: string;
 	title?: string;
 	children?: ReactNode;
 }) {
 	const [open, setOpen] = useState(false);
+	const rootRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		if (!id) return;
+
+		const openIfMatches = () => {
+			if (window.location.hash.slice(1) !== id) return;
+			setOpen(true);
+			requestAnimationFrame(() => {
+				rootRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+			});
+		};
+
+		openIfMatches();
+		window.addEventListener("hashchange", openIfMatches);
+		return () => window.removeEventListener("hashchange", openIfMatches);
+	}, [id]);
 
 	return (
-		<div className="my-4 rounded-lg border border-[#292929] bg-[#141414]">
+		<div
+			id={id}
+			ref={rootRef}
+			className="my-4 rounded-lg border border-[#292929] bg-[#141414] scroll-mt-24"
+		>
 			<button
 				type="button"
 				onClick={() => setOpen((o) => !o)}
