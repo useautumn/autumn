@@ -4,6 +4,7 @@ import {
 	isCustomerProductPaid,
 	isCustomerProductPaidRecurring,
 } from "../../../../utils/cusProductUtils/classifyCustomerProduct/classifyCustomerProduct.js";
+import { numberMatcherMatches } from "../../../migrations/filters/match/numberMatcherMatches.js";
 import { stringMatcherMatches } from "../../../migrations/filters/match/index.js";
 import type { PlanFilter } from "../../../migrations/filters/planFilter.js";
 
@@ -37,6 +38,16 @@ export const planFilterMatchesCustomerProduct = ({
 			!stringMatcherMatches({
 				matcher: filter.plan_id,
 				value: cusProduct.product_id,
+			})
+		)
+			return false;
+	}
+
+	if (filter.version !== undefined) {
+		if (
+			!numberMatcherMatches({
+				matcher: filter.version,
+				value: cusProduct.product?.version ?? null,
 			})
 		)
 			return false;
