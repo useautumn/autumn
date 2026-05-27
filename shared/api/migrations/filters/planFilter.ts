@@ -3,6 +3,7 @@ import { arrayFilter } from "./arrayFilter.js";
 import {
 	BooleanMatcherSchema,
 	nullableObjectFilter,
+	NumberMatcherSchema,
 	StringMatcherSchema,
 } from "./matcher.js";
 import { PlanItemFilterSchema } from "./planItemFilter.js";
@@ -40,6 +41,8 @@ const PlanPriceFilterInner = z.object({});
 
 export type PlanFilter = {
 	plan_id?: z.infer<typeof StringMatcherSchema>;
+	/** Mirrors `products.version`. */
+	version?: z.infer<typeof NumberMatcherSchema>;
 	price?:
 		| null
 		| { $eq?: null; $ne?: null }
@@ -66,6 +69,7 @@ export type PlanFilter = {
 export const PlanFilterSchema: z.ZodType<PlanFilter> = z.lazy(() =>
 	z.object({
 		plan_id: StringMatcherSchema.optional(),
+		version: NumberMatcherSchema.optional(),
 		price: nullableObjectFilter(PlanPriceFilterInner).optional(),
 		addon: BooleanMatcherSchema.optional(),
 		paid: BooleanMatcherSchema.optional(),

@@ -241,3 +241,90 @@ describe("customerIdToStrings -> stringsToCustomerId roundtrip", () => {
 		expect(stringsToCustomerId(customerIdToStrings(undefined))).toBeUndefined();
 	});
 });
+
+describe("planFilterToGroups -> groupsToPlanFilter: version (NumberMatcher)", () => {
+	const roundtrip = (input: PlanFilter): PlanFilter => {
+		const groups = planFilterToGroups(input);
+		return groupsToPlanFilter(groups);
+	};
+
+	test("bare number roundtrips", () => {
+		expect(roundtrip({ version: 2 })).toEqual({ version: 2 });
+	});
+
+	test("explicit null roundtrips", () => {
+		// Regression: previously the UI dropped `version: null` because
+		// ruleToNumberMatcher returned undefined for an empty values array.
+		expect(roundtrip({ version: null })).toEqual({ version: null });
+	});
+
+	test("$eq number roundtrips (simplified to bare value)", () => {
+		expect(roundtrip({ version: { $eq: 3 } })).toEqual({ version: 3 });
+	});
+
+	test("$ne number roundtrips", () => {
+		const input = { version: { $ne: 1 } };
+		expect(roundtrip(input)).toEqual(input);
+	});
+
+	test("$in roundtrips", () => {
+		const input = { version: { $in: [1, 2, 3] } };
+		expect(roundtrip(input)).toEqual(input);
+	});
+
+	test("$nin roundtrips", () => {
+		const input = { version: { $nin: [4, 5] } };
+		expect(roundtrip(input)).toEqual(input);
+	});
+
+	test("$gte roundtrips", () => {
+		const input = { version: { $gte: 2 } };
+		expect(roundtrip(input)).toEqual(input);
+	});
+
+	test("$lt roundtrips", () => {
+		const input = { version: { $lt: 5 } };
+		expect(roundtrip(input)).toEqual(input);
+	});
+
+	test("$gte + $lte (range) preserves BOTH constraints", () => {
+		// Regression: previously emitted only the first operator, silently
+		// broadening "versions 2–4" to "versions ≥ 2".
+		const input = { version: { $gte: 2, $lte: 4 } };
+		expect(roundtrip(input)).toEqual(input);
+	});
+
+	test("$gt + $lt (open range) preserves BOTH constraints", () => {
+		const input = { version: { $gt: 1, $lt: 10 } };
+		expect(roundtrip(input)).toEqual(input);
+	});
+});
+
+describe("planFilterToGroups: version emits multiple rules for combined matchers", () => {
+	test("single operator → single rule", () => {
+		const groups = planFilterToGroups({ version: { $gte: 2 } });
+		const versionRules = groups[0].rules.filter((r) => r.field === "version");
+		expect(versionRules.length).toBe(1);
+		expect(versionRules[0]).toEqual({
+			field: "version",
+			operator: "gte",
+			values: ["2"],
+		});
+	});
+
+	test("$gte + $lte → two rules in the same group", () => {
+		const groups = planFilterToGroups({ version: { $gte: 2, $lte: 4 } });
+		const versionRules = groups[0].rules.filter((r) => r.field === "version");
+		expect(versionRules.length).toBe(2);
+		const operators = versionRules.map((r) => r.operator).sort();
+		expect(operators).toEqual(["gte", "lte"]);
+	});
+
+	test("null → single empty `is` rule", () => {
+		const groups = planFilterToGroups({ version: null });
+		const versionRules = groups[0].rules.filter((r) => r.field === "version");
+		expect(versionRules).toEqual([
+			{ field: "version", operator: "is", values: [] },
+		]);
+	});
+});
