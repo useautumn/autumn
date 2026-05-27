@@ -1,4 +1,4 @@
-import { ApiVersion } from "@autumn/shared";
+import type { ApiVersion } from "@autumn/shared";
 import { RedisStore } from "@hono-rate-limiter/redis";
 import type { Context } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
@@ -9,10 +9,11 @@ import {
 	RATE_LIMIT_CONFIGS,
 	type RateLimitConfig,
 	RateLimitScope,
-	RateLimitType,
+	type RateLimitType,
 	resolveRateLimit,
 } from "./rateLimitConfigs";
 import { getOrgRateLimitOverride } from "./rateLimitOverridesStore";
+import { isCustomerInRedisAllowlist } from "./rateLimitRedisAllowlistStore";
 
 // Helper to get rate limit key from context
 const getRateLimitKeyFromContext = (c: Context): string => {
@@ -66,18 +67,15 @@ export const rateLimitFactory = ({
 		keyGenerator: getRateLimitKeyFromContext,
 	};
 
-	if (notInRedis) {
-		return rateLimiter(options);
-	}
-
+	let inMemoryLimiter: ReturnType<typeof rateLimiter> | null = null;
 	let redisLimiter: ReturnType<typeof rateLimiter> | null = null;
 
-	return async (c, next) => {
-		if (!shouldUseRedis()) {
-			warnRateLimitBypass();
-			return next();
-		}
+	const getInMemoryLimiter = () => {
+		inMemoryLimiter ??= rateLimiter(options);
+		return inMemoryLimiter;
+	};
 
+	const getRedisLimiter = () => {
 		redisLimiter ??= rateLimiter({
 			...options,
 			store: new RedisStore({
@@ -102,7 +100,26 @@ export const rateLimitFactory = ({
 			}),
 		});
 
-		return redisLimiter(c, next);
+		return redisLimiter;
+	};
+
+	return async (c, next) => {
+		if (notInRedis) {
+			const ctx = (c as Context<HonoEnv>).get("ctx");
+			const customerId = ctx?.customerId;
+			const isAllowlisted = isCustomerInRedisAllowlist({ customerId });
+
+			if (!isAllowlisted) {
+				return getInMemoryLimiter()(c, next);
+			}
+		}
+
+		if (!shouldUseRedis()) {
+			warnRateLimitBypass();
+			return next();
+		}
+
+		return getRedisLimiter()(c, next);
 	};
 };
 
