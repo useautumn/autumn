@@ -11,6 +11,7 @@ import { JobQueuesDialog } from "./JobQueuesDialog";
 import { MiscellaneousEdgeConfigDialog } from "./MiscellaneousEdgeConfigDialog";
 import { OrgLimitsDialog } from "./OrgLimitsDialog";
 import { RateLimitOverridesDialog } from "./RateLimitOverridesDialog";
+import { RateLimitRedisAllowlistDialog } from "./RateLimitRedisAllowlistDialog";
 import { RawEdgeConfigDialog } from "./RawEdgeConfigDialog";
 import { RedisV2CacheDialog } from "./RedisV2CacheDialog";
 import { StripeSyncDialog } from "./StripeSyncDialog";
@@ -33,6 +34,8 @@ export function EdgeConfigTab() {
 	const [customerBlockOpen, setCustomerBlockOpen] = useState(false);
 	const [orgLimitsOpen, setOrgLimitsOpen] = useState(false);
 	const [rateLimitOverridesOpen, setRateLimitOverridesOpen] = useState(false);
+	const [rateLimitRedisAllowlistOpen, setRateLimitRedisAllowlistOpen] =
+		useState(false);
 	const [jobQueuesOpen, setJobQueuesOpen] = useState(false);
 	const [stripeSyncOpen, setStripeSyncOpen] = useState(false);
 	const [redisV2CacheOpen, setRedisV2CacheOpen] = useState(false);
@@ -182,14 +185,35 @@ export function EdgeConfigTab() {
 							Rate Limit Overrides
 						</div>
 						<div className="text-xs text-tertiary-foreground">
-							Per-org overrides for any rate-limit bucket (track, check,
-							attach, customer_entities_get, etc.).
+							Per-org overrides for any rate-limit bucket (track, check, attach,
+							customer_entities_get, etc.).
 						</div>
 					</div>
 					<Button
 						variant="primary"
 						size="sm"
 						onClick={() => setRateLimitOverridesOpen(true)}
+					>
+						Edit
+					</Button>
+				</div>
+
+				<div className="flex items-center justify-between border-t border-border p-4 last:border-b-0">
+					<div className="flex flex-col gap-0.5">
+						<div className="text-sm font-medium text-foreground">
+							Rate Limit Redis Allowlist
+						</div>
+						<div className="text-xs text-tertiary-foreground">
+							Per-customer allowlist that forces Track and Check rate limits
+							through the shared Redis counter instead of the in-memory per-task
+							counter. Use for strict global enforcement on high-volume
+							customers.
+						</div>
+					</div>
+					<Button
+						variant="primary"
+						size="sm"
+						onClick={() => setRateLimitRedisAllowlistOpen(true)}
 					>
 						Edit
 					</Button>
@@ -277,8 +301,8 @@ export function EdgeConfigTab() {
 						</div>
 						<div className="text-xs text-tertiary-foreground">
 							Per-customer + per-org caps on concurrent FullSubject DB
-							hydrations. 429s with rate_limit_exceeded when queues/waits
-							exceed thresholds.
+							hydrations. 429s with rate_limit_exceeded when queues/waits exceed
+							thresholds.
 						</div>
 					</div>
 					<Button
@@ -338,6 +362,11 @@ export function EdgeConfigTab() {
 			<RateLimitOverridesDialog
 				open={rateLimitOverridesOpen}
 				onOpenChange={setRateLimitOverridesOpen}
+			/>
+
+			<RateLimitRedisAllowlistDialog
+				open={rateLimitRedisAllowlistOpen}
+				onOpenChange={setRateLimitRedisAllowlistOpen}
 			/>
 
 			<JobQueuesDialog open={jobQueuesOpen} onOpenChange={setJobQueuesOpen} />
