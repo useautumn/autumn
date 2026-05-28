@@ -200,6 +200,7 @@ Use this to gate access before a feature action. Enable sendEvent when you want 
 * [track](docs/sdks/autumn/README.md#track) - Records usage for a customer feature and returns updated balances.
 
 Use this after an action happens to decrement usage, or send a negative value to credit balance back.
+* [batch_track](docs/sdks/autumn/README.md#batch_track) - Track multiple usage events asynchronously.
 
 ### [Balances](docs/sdks/balances/README.md)
 

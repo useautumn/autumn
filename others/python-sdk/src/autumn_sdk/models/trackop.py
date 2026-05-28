@@ -91,6 +91,8 @@ class TrackParamsTypedDict(TypedDict):
     r"""The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat)."""
     properties: NotRequired[Dict[str, Any]]
     r"""Additional properties to attach to this usage event."""
+    async_: NotRequired[bool]
+    r"""If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information."""
     lock: NotRequired[TrackLockTypedDict]
 
 
@@ -113,12 +115,23 @@ class TrackParams(BaseModel):
     properties: Optional[Dict[str, Any]] = None
     r"""Additional properties to attach to this usage event."""
 
+    async_: Annotated[Optional[bool], pydantic.Field(alias="async")] = None
+    r"""If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information."""
+
     lock: Optional[TrackLock] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["feature_id", "entity_id", "event_name", "value", "properties", "lock"]
+            [
+                "feature_id",
+                "entity_id",
+                "event_name",
+                "value",
+                "properties",
+                "async",
+                "lock",
+            ]
         )
         serialized = handler(self)
         m = {}
@@ -519,5 +532,9 @@ TrackResponse = TypeAliasType(
 
 try:
     TrackLock.model_rebuild()
+except NameError:
+    pass
+try:
+    TrackParams.model_rebuild()
 except NameError:
     pass

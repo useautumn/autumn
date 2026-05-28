@@ -8,12 +8,22 @@ from .utils.retries import RetryConfig
 from autumn_sdk import errors, models, utils
 from autumn_sdk._hooks import HookContext, SDKHooks
 from autumn_sdk.models import internal
-from autumn_sdk.types import OptionalNullable, UNSET
+from autumn_sdk.types import BaseModel, OptionalNullable, UNSET
 from autumn_sdk.utils.unmarshal_json_response import unmarshal_json_response
 import httpx
 import importlib
 import sys
-from typing import Any, Callable, Dict, Mapping, Optional, TYPE_CHECKING, Union, cast
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    List,
+    Mapping,
+    Optional,
+    TYPE_CHECKING,
+    Union,
+    cast,
+)
 import weakref
 
 if TYPE_CHECKING:
@@ -450,6 +460,7 @@ class Autumn(BaseSDK):
         event_name: Optional[str] = None,
         value: Optional[float] = None,
         properties: Optional[Dict[str, Any]] = None,
+        async_: Optional[bool] = None,
         lock: Optional[Union[models.TrackLock, models.TrackLockTypedDict]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -466,6 +477,7 @@ class Autumn(BaseSDK):
         :param event_name: Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event.
         :param value: The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat).
         :param properties: Additional properties to attach to this usage event.
+        :param async_: If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information.
         :param lock:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -489,6 +501,7 @@ class Autumn(BaseSDK):
             event_name=event_name,
             value=value,
             properties=properties,
+            async_=async_,
             lock=utils.get_pydantic_model(lock, Optional[models.TrackLock]),
         )
 
@@ -562,6 +575,7 @@ class Autumn(BaseSDK):
         event_name: Optional[str] = None,
         value: Optional[float] = None,
         properties: Optional[Dict[str, Any]] = None,
+        async_: Optional[bool] = None,
         lock: Optional[Union[models.TrackLock, models.TrackLockTypedDict]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -578,6 +592,7 @@ class Autumn(BaseSDK):
         :param event_name: Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event.
         :param value: The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat).
         :param properties: Additional properties to attach to this usage event.
+        :param async_: If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information.
         :param lock:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -601,6 +616,7 @@ class Autumn(BaseSDK):
             event_name=event_name,
             value=value,
             properties=properties,
+            async_=async_,
             lock=utils.get_pydantic_model(lock, Optional[models.TrackLock]),
         )
 
@@ -652,6 +668,186 @@ class Autumn(BaseSDK):
             return unmarshal_json_response(models.TrackResponseBody1, http_res)
         if utils.match_response(http_res, "202", "application/json"):
             return unmarshal_json_response(models.TrackResponseBody2, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    def batch_track(
+        self,
+        *,
+        request: Union[List[models.RequestBody], List[models.RequestBodyTypedDict]],
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.BatchTrackResponse:
+        r"""Track multiple usage events asynchronously.
+
+        :param request: The request object to send.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        if not isinstance(request, BaseModel):
+            request = utils.unmarshal(request, List[models.RequestBody])
+        request = cast(List[models.RequestBody], request)
+
+        req = self._build_request(
+            method="POST",
+            path="/v1/balances.batch_track",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.BatchTrackGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", List[models.RequestBody]
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = self.do_request(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="batchTrack",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "202", "application/json"):
+            return unmarshal_json_response(models.BatchTrackResponse, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    async def batch_track_async(
+        self,
+        *,
+        request: Union[List[models.RequestBody], List[models.RequestBodyTypedDict]],
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.BatchTrackResponse:
+        r"""Track multiple usage events asynchronously.
+
+        :param request: The request object to send.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        if not isinstance(request, BaseModel):
+            request = utils.unmarshal(request, List[models.RequestBody])
+        request = cast(List[models.RequestBody], request)
+
+        req = self._build_request_async(
+            method="POST",
+            path="/v1/balances.batch_track",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.BatchTrackGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", List[models.RequestBody]
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = await self.do_request_async(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="batchTrack",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "202", "application/json"):
+            return unmarshal_json_response(models.BatchTrackResponse, http_res)
         if utils.match_response(http_res, "4XX", "*"):
             http_res_text = await utils.stream_to_text_async(http_res)
             raise errors.AutumnDefaultError(

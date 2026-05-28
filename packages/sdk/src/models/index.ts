@@ -7,6 +7,7 @@ export * from "./attach-op.js";
 export * from "./autumn-default-error.js";
 export * from "./autumn-error.js";
 export * from "./balance.js";
+export * from "./batch-track-op.js";
 export * from "./billing-update-op.js";
 export * from "./check-op.js";
 export * from "./create-balance-op.js";

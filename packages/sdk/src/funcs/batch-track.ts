@@ -27,36 +27,15 @@ import { APICall, APIPromise } from "../types/async.js";
 import { Result } from "../types/fp.js";
 
 /**
- * Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
- *
- * Use this endpoint to schedule future plan changes (e.g. switch from a trial plan to a paid plan on a specific date) or to define a sequence of plans that should activate over time.
- *
- * @example
- * ```typescript
- * // Schedule a transition from a trial plan to a paid plan
- * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779976938401,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781186538401,"plans":[{"planId":"pro_plan"}]}] });
- * ```
- *
- * @param customerId - The ID of the customer to create the schedule for.
- * @param entityId - Optional entity ID for an entity-scoped schedule. (optional)
- * @param invoiceMode - Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase. (optional)
- * @param successUrl - URL to redirect to after successful checkout. (optional)
- * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
- * @param redirectMode - Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects. (optional)
- * @param billingBehavior - Whether to prorate the immediate phase. 'none' skips proration charges and credits. (optional)
- * @param billingCycleAnchor - Pass 'now' to reset the billing cycle anchor of the immediate phase to the current time. (optional)
- * @param enablePlanImmediately - If true, the immediate-phase cusProducts are activated immediately (and scheduled-phase cusProducts pre-inserted) even when payment is pending via Stripe checkout. The Autumn schedule rows are persisted on checkout.session.completed. (optional)
- * @param phases - Ordered phase definitions for the schedule.
- *
- * @returns A create-schedule response with the schedule ID, persisted phases, and any required payment or checkout URL.
+ * Track multiple usage events asynchronously.
  */
-export function billingCreateSchedule(
+export function batchTrack(
   client: AutumnCore,
-  request: models.CreateScheduleParams,
+  request: Array<models.RequestBody>,
   options?: RequestOptions,
 ): APIPromise<
   Result<
-    models.CreateScheduleResponse,
+    models.BatchTrackResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -76,12 +55,12 @@ export function billingCreateSchedule(
 
 async function $do(
   client: AutumnCore,
-  request: models.CreateScheduleParams,
+  request: Array<models.RequestBody>,
   options?: RequestOptions,
 ): Promise<
   [
     Result<
-      models.CreateScheduleResponse,
+      models.BatchTrackResponse,
       | AutumnError
       | ResponseValidationError
       | ConnectionError
@@ -96,7 +75,7 @@ async function $do(
 > {
   const parsed = safeParse(
     request,
-    (value) => z.parse(models.CreateScheduleParams$outboundSchema, value),
+    (value) => z.parse(z.array(models.RequestBody$outboundSchema), value),
     "Input validation failed",
   );
   if (!parsed.ok) {
@@ -105,7 +84,7 @@ async function $do(
   const payload = parsed.value;
   const body = encodeJSON("body", payload, { explode: true });
 
-  const path = pathToFunc("/v1/billing.create_schedule")();
+  const path = pathToFunc("/v1/balances.batch_track")();
 
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
@@ -124,7 +103,7 @@ async function $do(
   const context = {
     options: client._options,
     baseURL: options?.serverURL ?? client._baseURL ?? "",
-    operationID: "createSchedule",
+    operationID: "batchTrack",
     oAuth2Scopes: null,
 
     resolvedSecurity: requestSecurity,
@@ -164,7 +143,7 @@ async function $do(
   const response = doResult.value;
 
   const [result] = await M.match<
-    models.CreateScheduleResponse,
+    models.BatchTrackResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -174,7 +153,7 @@ async function $do(
     | UnexpectedClientError
     | SDKValidationError
   >(
-    M.json(200, models.CreateScheduleResponse$inboundSchema),
+    M.json(202, models.BatchTrackResponse$inboundSchema),
     M.fail("4XX"),
     M.fail("5XX"),
   )(response, req);
