@@ -1,3 +1,9 @@
+import {
+	ErrCode,
+	RecaseError,
+	ResetInterval,
+	resetIntvToEntIntv,
+} from "@autumn/shared";
 import type {
 	CustomizePlanV1,
 	Entitlement,
@@ -12,6 +18,8 @@ import type {
 import { planItemFilterMatchesCustomerPair } from "@shared/api/products/items/utils/match";
 import { cusEntToCusPrice } from "@shared/utils/cusEntUtils/convertCusEntUtils/cusEntToCusPrice";
 import { customerPriceToCustomerEntitlement } from "@shared/utils/cusPriceUtils/convertCustomerPrice/customerPriceToCustomerEntitlement";
+import { isOneOffPrice } from "@shared/utils/productUtils/priceUtils/classifyPriceUtils";
+import { StatusCodes } from "http-status-codes";
 import { generateId } from "@/utils/genUtils";
 
 type CustomerProductItemPair = {
@@ -49,20 +57,49 @@ const getCustomerProductItemPairs = ({
 	return pairs;
 };
 
+const assertAllowedIntervalUpdate = ({
+	customerPrice,
+	overrides,
+}: {
+	customerPrice?: FullCustomerPrice;
+	overrides: UpdatePlanItemParamsV1;
+}) => {
+	if (overrides.interval === undefined || overrides.interval === ResetInterval.OneOff)
+		return;
+	if (!customerPrice || !isOneOffPrice(customerPrice.price)) return;
+
+	throw new RecaseError({
+		message:
+			"update_items cannot change intervals for one-off paid items. Use remove_items and add_items instead.",
+		code: ErrCode.InvalidProductItem,
+		statusCode: StatusCodes.BAD_REQUEST,
+	});
+};
+
 const applyOverridesToEntitlement = ({
 	source,
+	customerPrice,
 	overrides,
 }: {
 	source: Entitlement;
+	customerPrice?: FullCustomerPrice;
 	overrides: UpdatePlanItemParamsV1;
-}): Entitlement => ({
-	...source,
-	id: generateId("ent"),
-	is_custom: true,
-	created_at: Date.now(),
-	allowance:
-		overrides.included !== undefined ? overrides.included : source.allowance,
-});
+}): Entitlement => {
+	assertAllowedIntervalUpdate({ customerPrice, overrides });
+
+	return {
+		...source,
+		id: generateId("ent"),
+		is_custom: true,
+		created_at: Date.now(),
+		allowance:
+			overrides.included !== undefined ? overrides.included : source.allowance,
+		interval:
+			overrides.interval !== undefined
+				? resetIntvToEntIntv({ resetIntv: overrides.interval })
+				: source.interval,
+	};
+};
 
 const applyOverridesToPrice = ({
 	source,
@@ -78,13 +115,8 @@ const applyOverridesToPrice = ({
 	entitlement_id: newEntitlementId,
 });
 
-/**
- * Patch existing items in place. For each `update_items[i]`, find matching
- * customer-entitlement / customer-price pairs on the target customer product,
- * clone the underlying entitlement (and price, if any) with the overrides
- * applied, and emit them as delete + add buckets. Existing usage and rollovers
- * carry forward via the shared patch carry plumbing.
- */
+/** Patch existing items in place by emitting matched items as delete + add buckets.
+ * Existing usage and rollovers carry forward via patch carry links. */
 export const handleCustomizeUpdateItems = ({
 	customize,
 	targetCustomerProduct,
@@ -98,6 +130,10 @@ export const handleCustomizeUpdateItems = ({
 	customerEntitlements: FullCustomerEntitlement[];
 	prices: Price[];
 	entitlements: Entitlement[];
+	carryLinks: {
+		fromCustomerEntitlementId: string;
+		toEntitlementId: string;
+	}[];
 } => {
 	const updateItems = customize.update_items ?? [];
 	if (updateItems.length === 0) {
@@ -106,6 +142,7 @@ export const handleCustomizeUpdateItems = ({
 			customerEntitlements: [],
 			prices: [],
 			entitlements: [],
+			carryLinks: [],
 		};
 	}
 
@@ -115,6 +152,10 @@ export const handleCustomizeUpdateItems = ({
 	const deleteCustomerEntitlements: FullCustomerEntitlement[] = [];
 	const newPrices: Price[] = [];
 	const newEntitlements: Entitlement[] = [];
+	const carryLinks: {
+		fromCustomerEntitlementId: string;
+		toEntitlementId: string;
+	}[] = [];
 
 	const pairs = getCustomerProductItemPairs({ targetCustomerProduct });
 
@@ -134,9 +175,14 @@ export const handleCustomizeUpdateItems = ({
 
 			const newEntitlement = applyOverridesToEntitlement({
 				source: pair.customerEntitlement.entitlement,
+				customerPrice: pair.customerPrice,
 				overrides: update,
 			});
 			newEntitlements.push(newEntitlement);
+			carryLinks.push({
+				fromCustomerEntitlementId: pair.customerEntitlement.id,
+				toEntitlementId: newEntitlement.id,
+			});
 			deleteCustomerEntitlements.push(pair.customerEntitlement);
 			deleteCustomerEntitlementIds.add(pair.customerEntitlement.id);
 
@@ -182,5 +228,6 @@ export const handleCustomizeUpdateItems = ({
 		customerEntitlements: deleteCustomerEntitlements,
 		prices: newPrices,
 		entitlements: newEntitlements,
+		carryLinks,
 	};
 };

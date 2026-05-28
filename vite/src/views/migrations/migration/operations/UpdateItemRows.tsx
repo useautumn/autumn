@@ -1,6 +1,13 @@
 import type { ProductItem, UpdatePlanItemParamsV1 } from "@autumn/shared";
+import { CaretDownIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import { Input } from "@/components/v2/inputs/Input";
 import {
@@ -29,7 +36,39 @@ function updateFilterToProductItem(item: UpdatePlanItemParamsV1): ProductItem {
 		interval: item.filter?.interval,
 		billing_method: item.filter?.billing_method,
 	});
-	return { ...base, included_usage: item.included } as ProductItem;
+	return {
+		...base,
+		included_usage: item.included,
+		interval: item.interval ?? base.interval,
+	} as ProductItem;
+}
+
+function updateFilterFromProductItem(item: UpdatePlanItemParamsV1): ProductItem {
+	return filterToProductItem({
+		feature_id: item.filter?.feature_id,
+		interval: item.filter?.interval,
+		billing_method: item.filter?.billing_method,
+	});
+}
+
+function getIntervalLabel(interval?: string) {
+	if (!interval) return null;
+	return INTERVAL_OPTIONS.find((o) => o.value === interval)?.label ?? interval;
+}
+
+function normalizeIncludedValue(value: unknown) {
+	if (value === "" || value === null || value === undefined) return undefined;
+	const numericValue = typeof value === "number" ? value : Number(value);
+	return Number.isFinite(numericValue) ? numericValue : undefined;
+}
+
+function normalizeUpdateItem(item: UpdatePlanItemParamsV1): UpdatePlanItemParamsV1 {
+	const { included: _included, ...rest } = item;
+	const included = normalizeIncludedValue(
+		(item as { included?: unknown }).included,
+	);
+
+	return included === undefined ? rest : { ...rest, included };
 }
 
 export function UpdateItemRows({
@@ -45,12 +84,17 @@ export function UpdateItemRows({
 	const [sheetOpen, setSheetOpen] = useState(false);
 
 	const hasFeature = !!item.filter?.feature_id;
-	const summary = hasFeature ? getFilterSummary(
-		{ feature_id: item.filter?.feature_id, interval: item.filter?.interval },
-		features,
-	) : null;
-	const secondary =
-		item.included !== undefined ? `→ ${item.included} included` : "";
+	const summary = hasFeature
+		? getFilterSummary(
+				{ feature_id: item.filter?.feature_id, interval: item.filter?.interval },
+				features,
+			)
+		: null;
+	const updates = [
+		item.included !== undefined ? `${item.included} included` : null,
+		getIntervalLabel(item.interval),
+	].filter(Boolean);
+	const secondary = updates.length > 0 ? `→ ${updates.join(" · ")}` : "";
 
 	return (
 		<>
@@ -66,9 +110,15 @@ export function UpdateItemRows({
 					{hasFeature ? (
 						<>
 							<div className="flex flex-row items-center gap-1 shrink-0">
-								<PlanFeatureIcon item={updateFilterToProductItem(item)} position="left" />
+								<PlanFeatureIcon
+									item={updateFilterFromProductItem(item)}
+									position="left"
+								/>
 								<CustomDotIcon />
-								<PlanFeatureIcon item={updateFilterToProductItem(item)} position="right" />
+								<PlanFeatureIcon
+									item={updateFilterToProductItem(item)}
+									position="right"
+								/>
 							</div>
 							<p className="whitespace-nowrap truncate flex-1 min-w-0">
 								<span className="text-body">
@@ -148,8 +198,13 @@ function UpdateItemSheetContent({
 		() => structuredClone(item),
 	);
 
+	const normalizedDraft = normalizeUpdateItem(draft);
 	const featureId = draft.filter?.feature_id ?? null;
-	const canSave = !!featureId;
+	const canSave =
+		!!featureId &&
+		(normalizedDraft.included !== undefined ||
+			normalizedDraft.interval !== undefined);
+	const newIntervalLabel = getIntervalLabel(draft.interval);
 
 	return (
 		<div className="flex flex-col h-full">
@@ -253,7 +308,7 @@ function UpdateItemSheetContent({
 						/>
 					</div>
 
-					<div className="border-t pt-3 mt-1">
+					<div className="border-t pt-3 mt-1 flex flex-col gap-3">
 						<div className="flex flex-col gap-1.5">
 							<label className="text-xs font-medium text-foreground">
 								New Included Usage
@@ -276,8 +331,65 @@ function UpdateItemSheetContent({
 								className="h-8 rounded-xl"
 							/>
 							<p className="text-xs text-tertiary-foreground">
-								The new allowance for matched items. Existing
-								usage carries forward.
+								The new allowance for matched items.
+							</p>
+						</div>
+
+						<div className="flex flex-col gap-1.5">
+							<label className="text-xs font-medium text-foreground">
+								New Interval
+							</label>
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<button
+										type="button"
+										className="flex items-center justify-between w-full rounded-lg border bg-transparent text-sm outline-none h-input input-base input-shadow-default input-state-open p-2"
+									>
+										<span
+											className={
+												newIntervalLabel
+													? "truncate"
+													: "truncate text-muted-foreground"
+											}
+										>
+											{newIntervalLabel ?? "Leave unchanged"}
+										</span>
+										<CaretDownIcon className="size-4 opacity-50" />
+									</button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent
+									align="start"
+									className="w-(--anchor-width) p-1"
+								>
+									{draft.interval && (
+										<DropdownMenuItem
+											onClick={() =>
+												setDraft({ ...draft, interval: undefined })
+											}
+											className="py-1.5 px-2 text-muted-foreground"
+										>
+											Leave unchanged
+										</DropdownMenuItem>
+									)}
+									{INTERVAL_OPTIONS.map((o) => (
+										<DropdownMenuItem
+											key={o.value}
+											onClick={() =>
+												setDraft({
+													...draft,
+													interval:
+														o.value as UpdatePlanItemParamsV1["interval"],
+												})
+											}
+											className="py-1.5 px-2"
+										>
+											{o.label}
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuContent>
+							</DropdownMenu>
+							<p className="text-xs text-tertiary-foreground">
+								Change the reset interval for matched items.
 							</p>
 						</div>
 					</div>
@@ -294,7 +406,7 @@ function UpdateItemSheetContent({
 				</Button>
 				<Button
 					variant="primary"
-					onClick={() => onSave(draft)}
+					onClick={() => onSave(normalizedDraft)}
 					disabled={!canSave}
 					className="flex-1"
 				>
