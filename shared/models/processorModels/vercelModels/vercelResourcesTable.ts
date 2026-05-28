@@ -1,5 +1,12 @@
 import { organizations } from "@models/orgModels/orgTable.js";
-import { foreignKey, jsonb, pgTable, text } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import {
+	foreignKey,
+	jsonb,
+	pgTable,
+	text,
+	uniqueIndex,
+} from "drizzle-orm/pg-core";
 
 export const vercelResources = pgTable(
 	"vercel_resources",
@@ -18,6 +25,11 @@ export const vercelResources = pgTable(
 			foreignColumns: [organizations.id],
 			name: "vercel_resources_org_id_fkey",
 		}).onDelete("cascade"),
+		// Partial unique index: enforces one live name per installation.
+		// Excludes soft-deleted rows so a name can be reused after uninstall.
+		uniqueIndex("vercel_resources_installation_name_unique_idx")
+			.on(table.org_id, table.env, table.installation_id, table.name)
+			.where(sql`status <> 'uninstalled'`),
 	],
 );
 

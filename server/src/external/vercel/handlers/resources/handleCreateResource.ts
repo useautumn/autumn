@@ -11,6 +11,7 @@ import { DrizzleError } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import type Stripe from "stripe";
 import { z } from "zod/v4";
+import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { sendCustomSvixEvent } from "@/external/svix/svixHelpers.js";
 import { provisionVercelCusProduct } from "@/external/vercel/misc/vercelProvisioning.js";
@@ -185,18 +186,39 @@ export const handleCreateResource = createRoute({
 			}
 
 			const resourceId = generateId("vre");
-			await VercelResourceService.create({
-				db,
-				resource: {
-					id: resourceId,
-					org_id: orgId,
-					env: appEnv,
-					installation_id: integrationConfigurationId,
-					name,
-					status: "ready",
-					metadata: metadata ?? {},
-				},
-			});
+			try {
+				await VercelResourceService.create({
+					db,
+					resource: {
+						id: resourceId,
+						org_id: orgId,
+						env: appEnv,
+						installation_id: integrationConfigurationId,
+						name,
+						status: "ready",
+						metadata: metadata ?? {},
+					},
+				});
+			} catch (error) {
+				// Lost the create race against a concurrent request for the same
+				// (installation_id, name). Re-read and return the winner idempotently.
+				if (!isUniqueConstraintError(error)) throw error;
+				const winner =
+					await VercelResourceService.getByInstallationAndName({
+						db,
+						installationId: integrationConfigurationId,
+						name,
+						orgId,
+						env: appEnv,
+					});
+				if (!winner) throw error;
+				const product = installationCusProduct
+					? await loadProduct(installationCusProduct.product_id)
+					: await loadProduct(billingPlanId);
+				return c.json(
+					buildResourceResponse({ resourceId: winner.id, product }),
+				);
+			}
 
 			const product = installationCusProduct
 				? await loadProduct(installationCusProduct.product_id)
