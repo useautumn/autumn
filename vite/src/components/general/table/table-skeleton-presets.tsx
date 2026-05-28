@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import type { ColumnSkeletonMeta } from "./table-row-cells";
 
-const LABEL_WIDTHS = ["w-12", "w-16", "w-14", "w-10", "w-18", "w-14"];
+const LABEL_WIDTHS = ["w-12", "w-16", "w-14", "w-10", "w-20", "w-14"];
 const DATE_WIDTHS = ["w-28", "w-32", "w-30", "w-26", "w-34", "w-28"];
 const ID_WIDTHS = ["w-28", "w-36", "w-32", "w-24", "w-40", "w-30"];
 

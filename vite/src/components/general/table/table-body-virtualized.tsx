@@ -169,7 +169,7 @@ export function TableBodyVirtualized() {
 
 	const containerPx = scrollContainer?.clientHeight ?? 0;
 	const skeletonRowCount = containerPx > 0
-		? Math.floor(containerPx / rowHeight)
+		? Math.max(1, Math.floor(containerPx / rowHeight))
 		: lastRowCountRef.current;
 
 	if (showSkeleton) {

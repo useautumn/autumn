@@ -5,7 +5,7 @@ import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
-import { useOrg } from "@/hooks/common/useOrg";
+import { getLastSwitchedOrgId, useOrg } from "@/hooks/common/useOrg";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
@@ -90,7 +90,10 @@ export function CustomerListTable({
 		});
 	}, [customers, fullCustomersMap, isFullDataLoading]);
 
-	const columnStorageKey = "customer-list";
+	const orgId = org?.id ?? getLastSwitchedOrgId();
+	const columnStorageKey = orgId
+		? `customer-list:${orgId}`
+		: "customer-list";
 
 	const { columns, defaultVisibleColumnIds, columnGroups } =
 		useCustomerListColumns({
