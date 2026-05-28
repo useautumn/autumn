@@ -1,0 +1,385 @@
+---
+title: "Building an AI agent to automatically investigate support tickets"
+description: "How we automated customer support investigations by structuring our logs and giving Claude Code the right primitives."
+date: "2026-05-27"
+author: "John, Autumn Co-Founder"
+slug: "building-an-ai-agent-to-investigate-support-tickets"
+image: "/images/blog/building-an-ai-agent-to-investigate-support-tickets.png"
+---
+
+Billing is inherently stateful. The outcome of an API call depends on a customer's billing state and history. For instance, if a customer schedules a cancellation, then later upgrades their plan, the cancellation may need to be automatically undone. This means that simple operations sometimes have confusing results, leading to more support tickets and bug reports.
+
+Investigating these issues usually means digging through logs to reconstruct a customer's billing timeline: what actions they took leading up to the request, what state the customer was in at the time, and what happened after the request. So for a single ticket, we'd have to write a bunch of queries on Axiom (where we store all of our logs), sift through hundreds of logs and analyse the request / response payloads to piece together what happened.
+
+You can imagine how tedious this would be if done manually. We'd sometimes spend entire days on investigations.
+
+### Structuring our logs
+
+To understand how we automate investigations, it's worth first understanding how we structure our logs. We spent a lot of time making them structured, queryable, and easy to reason about for ourselves, and incidentally, this also made them extremely effective for AI agents.
+
+Firstly, logs are request centric — every log in our codebase adds context to the originating request by enriching a JSON payload which is outputted once at the end of the request. It adopts the principles of wide logging explained in this [article](https://loggingsucks.com/). At the minimum, each request will have the following properties:
+
+- Tenant context (which org and customer made the request)
+- Request / response body
+- Miscellaneous info like timestamp, API version, etc.
+
+This is implemented via middlewares, and an example of the one which adds tenant context is shown below:
+
+```tsx
+export const analyticsMiddleware = async (c: Context<HonoEnv>, next: Next) => {
+	const ctx = c.get("ctx");
+	const skipUrls = ["/v1/customers/all/search"];
+
+	ctx.logger = addAppContextToLogs({
+		logger: ctx.logger,
+		appContext: {
+			org_id: ctx.org?.id,
+			org_slug: ctx.org?.slug,
+			env: ctx.env,
+			auth_type: ctx.authType,
+			customer_id: ctx.customerId,
+			api_version: ctx.apiVersion?.semver,
+			scopes: ctx.scopes
+		},
+	});
+
+	await next();
+
+	const finalCtx = c.get("ctx");
+	logRequestResult({ ctx: finalCtx, skipUrls });
+};
+```
+
+(ps. perhaps obvious, but if there's one thing to add to logs, it's tenant context. It's by far the most effective filter and often the starting point of most investigations)
+
+Secondly, we treat logs as a first class citizen when shipping features. The way we do this is that we have a field in our request context object `extras` which is append only and a flexible schema.
+
+For each endpoint, as we walk through the request, we intentionally write functions to add to this `extras` object — capturing the information necessary to understand the customer state at that point. For instance, during upgrades we log which plan is outgoing, which plan is incoming, if there was a previous cancelation and so on. Here's an example of the information we log for an upgrade request:
+
+```tsx
+{
+    "checkoutMode": "stripe_checkout",
+    "invoiceMode": "default",
+    "planTiming": "immediate",
+    "product": "premium (v1) standard",
+    "currentProduct": "free",
+    "scheduledCustomerProduct": "none",
+    "stripe": "no sub | no schedule",
+    "timestamps": "Current: 25 May 2026 09:33:34 | Billing Anchor: now | Reset: now",
+    "transition": "free -> premium (immediate)",
+    "trialContext": "none"
+}
+```
+
+### Teaching our AI agent how to investigate
+
+With our logs structure in place, investigations became much more definable. It's simply a process of iterating over queries until you have the right set of logs to make an accurate assumption on what happened.
+
+To pass this information to an agent, all we did was:
+
+- Hook Claude Code up to Axiom's MCP and skills
+- Write a couple of custom skills detailing how we structure our logs, the different "domains" of investigations (billing, stripe webhooks, entitlements, etc.)
+- For each domain, add core pieces of information on how it roughly works under the hood (for instance, with entitlements, how our caching structure works)
+
+Here's an example of the top level skill and one of the domain specific reference files:
+
+<Expand id="axiom-investigate" title="/axiom-investigate">
+
+````mdx
+---
+name: axiom-investigate
+description: "Investigate support tickets and debug customer issues using Axiom logs via the user-axiom MCP. Use when asked to investigate, debug, check logs, diagnose billing (attach, upgrade, cancel), entitlements (check, track, balance, rollover), or any customer issue."
+---
+
+# Axiom Investigation
+
+## MCP tools
+
+Use the `user-axiom` MCP server:
+- `queryDataset` -- run APL queries. Accepts `apl`, `startTime` (default "now-30m"), `endTime` (default "now").
+- `getDatasetFields` -- list all fields in a dataset. Use to discover schema before querying.
+
+Always restrict `startTime`/`endTime` to the smallest range that covers the incident.
+
+When confirmation requires live DB state, use the `planetscale` MCP to query directly — but ALWAYS ask the user for permission first.
+
+## Query precision rule
+
+Never use `search` unless absolutely necessary. Broad search scans every field across many rows, which is slow, expensive, and usually less precise.
+
+Prefer structured filters on fields like `context.customer_id`, `context.org_slug`, `req.url`, `stripe_event.*`, and `workflow.*`. When listing requests, add `isnotnull(statusCode)` so you fetch the one result log per request instead of every internal log line for that request.
+
+## Dataset
+
+All server logs go to the **`express`** dataset via `@axiomhq/pino`.
+
+## Field reference
+
+Every log line has standard Pino fields plus structured bindings:
+
+| Path | Fields | Description |
+|------|--------|-------------|
+| `context.*` | `org_id`, `org_slug`, `env`, `customer_id`, `auth_type`, `user_id`, `user_email`, `api_version` | App context -- org, customer, auth |
+| `req.*` | `id`, `name`, `url`, `method`, `body`, `query`, `user_agent`, `ip_address`, `timestamp` | Request metadata. `req.id` is the trace ID for correlating logs within one request. |
+| `stripe_event.*` | `id`, `type`, `object_id` | Stripe webhook event context |
+| `workflow.*` | `id`, `name`, `payload` | Background worker/job context |
+| (top-level) | `msg`, `level`, `statusCode`, `durationMs`, `res`, `extras`, `error`, `done` | Per-log-line fields |
+
+**`level`** values are uppercase strings: `DEBUG`, `INFO`, `WARN`, `ERROR`.
+
+**`extras`** is a JSON object with domain-specific data (billing plans, webhook changes, etc.). Parse with `parse_json(tostring(extras))`.
+
+**`auth_type`** values: `PublicKey`, `SecretKey`, `Stripe`, `Worker`, `Vercel`, `Revenuecat`.
+
+## Investigation workflow
+
+### 1. Scope
+
+Filter by `context.customer_id` or `context.org_slug` plus a time range. Always start narrow.
+
+### 2. Find the incident window FIRST
+
+Heavy queries over wide ranges time out. Run a cheap aggregate first to locate WHEN, then a focused query in a tight window.
+
+**Pass A — cheap, wide.** `summarize` over `bin(_time, ...)`, ≤3 columns:
+
+```
+['express']
+| where ['context.customer_id'] == 'CUSTOMER_ID'
+| summarize errors = countif(level == 'ERROR'), total = count() by bin(_time, 5m)
+| sort by _time desc
+```
+
+**Pass B — heavy, narrow.** Use MCP `startTime`/`endTime` to bound to ≤1h around the bucket Pass A surfaced. Use `parse_json`, joins on `req.id`, etc. Skip `project` — pulling the full row keeps debugging interactive (you don't have to re-run when you realize you need another field). Skip `sort by _time asc` too — Axiom's natural order suffices. Only add an explicit `sort by` when you genuinely want the OPPOSITE direction (`desc` for newest-first browsing).
+
+If Pass A is empty, widen Pass A or change the predicate — don't run Pass B. If Pass A finds multiple buckets, run Pass B once per bucket.
+
+### 3. Triage
+
+Inside the narrowed window, look at errors and warnings first (`level == "ERROR" or level == "WARN"`), then broaden to INFO if needed.
+
+### 4. Trace
+
+Use `req.id` to follow a single request across all its log lines. Use `stripe_event.id` to trace a webhook through its handlers.
+
+## Query templates
+
+**All logs for a customer in a time window:**
+```
+['express']
+| where ['context.customer_id'] == 'CUSTOMER_ID'
+| where ['context.org_slug'] == 'ORG_SLUG'
+```
+
+**Errors/warnings for a customer:**
+```
+['express']
+| where ['context.customer_id'] == 'CUSTOMER_ID'
+| where level in ('ERROR', 'WARN')
+| sort by _time desc
+```
+
+**Stripe webhook events for a customer/org:**
+```
+['express']
+| where ['context.org_slug'] == 'ORG_SLUG'
+| where isnotempty(['stripe_event.type'])
+| sort by _time desc
+```
+
+**Worker job failures:**
+```
+['express']
+| where isnotempty(['workflow.name'])
+| where level in ('ERROR', 'WARN')
+| sort by _time desc
+```
+
+The omitted `project` is intentional — pull the whole row so you can pivot mid-investigation without re-running. The omitted `sort by _time asc` is intentional — Axiom's natural order is fine; only add `sort by _time desc` when you specifically want newest-first.
+
+## Never use `search` unless absolutely necessary
+
+Only fall back to `search` if (1) the identifier has no obvious structured field, AND (2) the time window is ≤1h. Otherwise: query a structured field, or use Pass A to find the time bucket first, then narrow.
+
+## Domain-specific guides
+
+Read these when the investigation falls into a specific domain:
+
+- **Billing** (attach, upgrade, downgrade, cancel, payment, checkout, auto top-up): read [billing-investigation.md](billing-investigation.md)
+- **Entitlements** (check, track, balances, rollovers, `allowed`): read [entitlement-investigation.md](entitlement-investigation.md)
+- **Stripe Webhooks** (subscription lifecycle, invoice payment/failure, checkout, schedule changes, customer timeline): read [stripe-webhook-investigation.md](stripe-webhook-investigation.md)
+- **Redis slow commands** (latency, cache perf, SLO breaches, V2 FullSubject cache): read [redis-slow-command-investigation.md](redis-slow-command-investigation.md)
+- **Infrastructure** (worker queues, rate limiting): _coming soon_
+````
+
+</Expand>
+
+<Expand id="entitlement-investigation" title="/entitlement-investigation">
+
+````mdx
+# Entitlement Investigation
+
+Read this when investigating: wrong `allowed` on check, balance or rollover discrepancies, usage over time, track deductions, auto top-up, balance resets, or rate limits on check/track.
+
+**Prerequisite:** Read [SKILL.md](SKILL.md) first for dataset, field paths, and general Axiom workflow.
+
+## Confirm routes (do not rely only on the list below)
+
+Routes change. Confirm current paths in:
+
+| Router | Path |
+|--------|------|
+| Check, track, balance CRUD | `autumn/server/src/internal/balances/balancesRouter.ts` |
+| Customer get/create/update | `autumn/server/src/internal/customers/cusRouter.ts` |
+| Entity get/create/delete | `autumn/server/src/internal/entities/entityRouter.ts` |
+
+**Preliminary paths** (all under `/v1` when mounted from `apiRouter`): check `/entitled`, `/check`, `/track`, `/events`, `/balances/*`, `GET /customers/:id`, `POST /customers.get_or_create`, entity GET/RPC equivalents.
+
+## Investigation approach: parse `req.body` and `res`
+
+Unlike billing (heavy `extras`), entitlement work is usually **timeline analysis** from request/response bodies:
+
+```
+| extend bodyJson = parse_json(tostring(['req.body']))
+| extend resJson = parse_json(tostring(res))
+```
+
+Use `coalesce(tostring(bodyJson.customer_id), tostring(['context.customer_id']))` when customer id is only in context.
+
+## Check / entitled response (`res`)
+
+Typical feature-check shape (newer API versions; older clients get transformed shapes -- see `autumn/shared/api/balances/check/changes/`):
+
+| Field | Notes |
+|-------|--------|
+| `allowed` | Main signal |
+| `customer_id`, `entity_id` | |
+| `balance.granted`, `balance.remaining`, `balance.usage` | Metered / credits |
+| `balance.unlimited`, `balance.overage_allowed`, `balance.next_reset_at` | |
+| `balance.breakdown[]` | Per slice: `included_grant`, `prepaid_grant`, `remaining`, `usage`, `reset`, `expires_at` |
+| `balance.rollovers[]` | Rollover lines -- good for "where did rollovers drop off?" |
+| `flag` | Boolean-feature path when not using balance object |
+
+**Response filter:** public API responses may strip some internal fields (e.g. certain `object` keys, `overage` on breakdown). Dashboard / internal paths may show more. See `autumn/server/src/honoMiddlewares/responseFilter/responseFilterMiddleware.ts`.
+
+## Track response (`res`)
+
+| Field | Notes |
+|-------|--------|
+| `customer_id`, `entity_id`, `event_name`, `value` | Deduction amount |
+| `balance` | Updated `ApiBalanceV1` after track |
+| `balances` | Map of feature_id -> balance when multiple features |
+
+## Get customer / get entity (`res`)
+
+Both expose **`balances`** (record keyed by feature id) and **`flags`**. Best snapshot of "all balances at a point in time" for correlating with check/track.
+
+## Other signals in logs
+
+| Source | What to use |
+|--------|-------------|
+| `statusCode` | `402` insufficient balance; `429` rate limited |
+| `msg` + object | `[QUEUE SYNC]`, `[SYNC V3]`, Postgres track fallback, `Deduction updates` with `data2` (cusEntId, featureId, balance, adjustment) |
+| `extras.setCache` | Full-customer cache write (large; includes `fullCustomer`) |
+| `extras.autoTopupContext` | On `auto-top-up` worker: threshold, quantity, feature, cusEnt balance |
+
+## Background `workflow.name` values
+
+| Name | Role |
+|------|------|
+| `sync-balance-batch-v3` | Redis -> Postgres after track |
+| `insert-event-batch` | Batched event inserts |
+| `auto-top-up` | Low balance top-up |
+| `expire-lock-receipt` | Lock expiry |
+| `batch-reset-cus-ents` | Interval resets |
+
+## APL patterns
+
+**Balance timeline (check, track, customer GET):**
+
+```
+['express']
+| where ['context.customer_id'] == 'CUSTOMER_ID'
+| where (
+    ['req.url'] contains 'check' or ['req.url'] contains 'entitled'
+    or ['req.url'] contains 'track' or ['req.url'] contains 'events'
+    or ['req.url'] contains 'customers'
+)
+| where isnotnull(statusCode)
+| extend resJson = parse_json(tostring(res))
+| extend bodyJson = parse_json(tostring(['req.body']))
+| extend featureId = coalesce(tostring(bodyJson.feature_id), tostring(bodyJson.event_name))
+| extend allowed = tostring(resJson.allowed)
+| extend remaining = toint(resJson.balance.remaining)
+| extend usage = toint(resJson.balance.usage)
+| extend granted = toint(resJson.balance.granted)
+| project _time, ['req.url'], statusCode, featureId, allowed, remaining, usage, granted
+| sort by _time asc
+```
+
+**Check returned `allowed: false`:**
+
+```
+['express']
+| where ['context.customer_id'] == 'CUSTOMER_ID'
+| where (['req.url'] contains 'check' or ['req.url'] contains 'entitled')
+| where statusCode == 200
+| extend resJson = parse_json(tostring(res))
+| where tostring(resJson.allowed) == 'false'
+| project _time, ['req.url'], resJson, ['req.body']
+| sort by _time desc
+```
+
+**Rollovers dropped off:** compare `resJson.balance.rollovers` and `breakdown` across time; cross-reference plan changes with [billing-investigation.md](billing-investigation.md).
+
+**Auto top-up errors:**
+
+```
+['express']
+| where ['workflow.name'] == 'auto-top-up'
+| where level in ('ERROR', 'WARN')
+| project _time, msg, error, extras, ['context.customer_id']
+| sort by _time desc
+```
+
+## Codebase pointers
+
+| Area | Path |
+|------|------|
+| Check | `autumn/server/src/internal/api/check/handleCheck.ts` |
+| Track | `autumn/server/src/internal/balances/handlers/handleTrack.ts` |
+| Balance shape | `autumn/shared/api/customers/cusFeatures/apiBalanceV1.ts` |
+| Deduction logging | `autumn/server/src/internal/balances/utils/deduction/logDeductionUpdates.ts` |
+| Auto top-up | `autumn/server/src/internal/balances/autoTopUp/` |
+````
+
+</Expand>
+
+With these skills, Claude would be able to run freely on its own and figure out the root cause of tickets. Sometimes, it even discovered things that a human never would! Not only did investigations get completed more quickly, but they also became more of a background task, so our engineers could handle several of these while building new features.
+
+The agent was also accurate because it ran over our codebase. It could link log results to the actual code paths producing them, which made debugging much sharper.
+
+It really felt like a step change for our team.
+
+### Taking it one step further
+
+/axiom-investigate alone has been a lifesaver, but ultimately, the end goal would be to have these tickets handled fully autonomously. The first step we've taken towards that is having investigations triggered automatically when tickets come in. To do this, we needed infrastructure to:
+
+- host an AI agent in the cloud with access to our codebase, MCPs and skills
+- connect the AI agent to slack and have it be able to ingest support tickets and the necessary context to make an investigation
+
+While we could've used the Slack API directly, if there's anything we've learnt so far, it's that the right foundations matter. So we decided to use [Plain](https://plain.com/) as our support infrastructure since it would handle a lot of the "support" primitives that we didn't want to build ourselves. For instance, thread infrastructure, integration with channels, and webhook triggers.
+
+As for hosting the AI agent, we decided to go with [Mastra](https://mastra.ai/) because it abstracted away a lot of the lower level tools like memory, loading skills, MCP support, file system support, etc. It was actually fairly straightforward spinning up an agent with all the tools our local Claude Code would normally have. So our set up looks something like this today:
+
+![Autonomous support agent architecture](/images/blog/building-an-ai-agent-to-investigate-support-tickets-architecture.png)
+
+To be honest though, this version of the agent has mostly been useful for straightforward investigations. Once an issue requires deeper iteration, we usually fall back to running investigations locally in Claude Code instead.
+
+### Where agents could improve
+
+It's surprisingly difficult to fully replicate the local Claude Code environment in the cloud. Locally, we've already gotten to the point where even fairly involved bug fixes can be handled autonomously through a test-driven workflow. Recreating that reliably in a hosted agent has been much harder than expected though — MCP auth is flaky, skills don't seem to trigger correctly, and the overall understanding of our codebase feels noticeably worse. It's hard to pinpoint exactly where things break down, but the quality gap between local and hosted agents is still very real.
+
+The interaction model also changes. With our autonomous support agent, we interact with it over Slack — agent investigates a ticket, posts results to Slack, and we then converse in a thread to dig deeper. However, in comparison to Claude Code or Codex, the slack interface just feels kinda clunky. There are a lot of "features" which aren't quite optimised, like agent thinking, tool calling, etc. At some point, the overhead of continuing an investigation over Slack becomes higher than just opening a new Claude Code session locally.
+
+I suspect that the future would be about exposing functionality to existing harnesses like Claude Code or Codex, rather than rebuilding those interaction patterns from scratch. I haven't been able to quite visualise what this looks like yet, but I imagine in our case, it would be something along the lines of a Plain webhook triggering a cloud Claude Code session, which we can then continue on locally, etc. What I do know though, is that there's something really powerful about having a single harness with access to all the relevant tools and context.

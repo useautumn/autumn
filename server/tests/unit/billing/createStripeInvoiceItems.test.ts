@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
 const mockState = {
 	calls: [] as unknown[],
@@ -68,4 +68,8 @@ describe("createStripeInvoiceItems", () => {
 			"ii_3",
 		]);
 	});
+});
+
+afterAll(() => {
+	mock.restore();
 });

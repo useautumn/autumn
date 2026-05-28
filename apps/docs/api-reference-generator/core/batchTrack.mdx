@@ -1,0 +1,50 @@
+---
+title: "Batch Track Usage"
+openapi: "openapi POST /v1/balances.batchTrack"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+<Note>
+  Batch track enqueues up to **1000 usage events** in a single request. Items are validated synchronously, then enqueued for asynchronous processing. The response returns **202 immediately** without balance information — balances are deducted by background workers.
+
+  Use this when you're sending high volumes of tracking events and don't need an immediate balance read for each one.
+</Note>
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript Batch many customers
+await autumn.balances.batchTrack([
+  { customerId: "cus_alice", featureId: "ai_messages", value: 1 },
+  { customerId: "cus_bob",   featureId: "ai_messages", value: 1 },
+  { customerId: "cus_carol", featureId: "ai_messages", value: 3 },
+]);
+```
+
+```typescript Mixed features and entities
+await autumn.balances.batchTrack([
+  { customerId: "cus_123", featureId: "ai_messages", value: 5 },
+  { customerId: "cus_123", featureId: "api_calls",   value: 12 },
+  { customerId: "cus_123", featureId: "seats",       entityId: "team_a", value: 1 },
+]);
+```
+
+</CodeGroup>
+
+### Partial-Failure Semantics
+
+Batch track is designed for fire-and-forget metering. On partial failure, **the endpoint still returns 202** and logs the failed items server-side. Clients should NOT retry the batch — retrying re-enqueues the already-succeeded items, which causes double-deduction. The trade-off is silent loss of the small subset that didn't enqueue vs. duplicate processing of the much larger subset that did. For event-logging workloads, gaps are preferable to duplicates.
+
+A 503 is returned only when **zero items were successfully enqueued** (the queue is entirely unavailable). In that case the whole request is safe to retry.
+
+If your workload requires per-item delivery guarantees, use the [single-event track endpoint](/api-reference/core/track) with client-side retry semantics instead.
+
+### Limits
+
+- **Maximum batch size:** 1000 items per request
+- **Minimum batch size:** 1 item
+- **Rate limit:** 10 requests/second per organization (separate bucket from the single `/v1/balances.track` limiter)

@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import {
+	afterAll,
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	test,
+} from "bun:test";
 
 const mockState = {
 	shouldUseRedis: true,
@@ -191,4 +199,8 @@ describe("runCheckWithRollout", () => {
 			}),
 		).rejects.toBe(error);
 	});
+});
+
+afterAll(() => {
+	mock.restore();
 });

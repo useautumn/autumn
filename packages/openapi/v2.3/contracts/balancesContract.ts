@@ -1,6 +1,7 @@
 import { SuccessResponseSchema } from "@api/common/commonResponses.js";
 import {
 	API_BALANCE_V1_EXAMPLE,
+	BatchTrackParamsSchema,
 	CheckResponseV3Schema,
 	CreateBalanceParamsV0Schema,
 	DeleteBalanceParamsV0Schema,
@@ -11,6 +12,7 @@ import {
 	UpdateBalanceParamsV0Schema,
 } from "@autumn/shared";
 import { oc } from "@orpc/contract";
+import { z } from "zod/v4";
 import {
 	balancesCheckJsDoc,
 	balancesTrackJsDoc,
@@ -34,6 +36,32 @@ const withAcceptedResponse = <TSpec extends SpecWithResponses>(
 			description,
 		},
 	},
+});
+
+const withOnlyAcceptedResponse = <TSpec extends SpecWithResponses>(
+	spec: TSpec,
+	nameOverride: string,
+	description: string,
+) => {
+	const responses = { ...spec.responses };
+	const successResponse = responses["200"];
+	delete responses["200"];
+
+	return {
+		...spec,
+		"x-speakeasy-name-override": nameOverride,
+		responses: {
+			...responses,
+			202: {
+				...successResponse,
+				description,
+			},
+		},
+	};
+};
+
+const BatchTrackResponseSchema = z.object({
+	success: z.literal(true),
 });
 
 export const balancesCheckContract = oc
@@ -126,6 +154,44 @@ export const balancesTrackContract = oc
 					],
 				},
 			],
+		}),
+	);
+
+export const balancesBatchTrackContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/balances.batchTrack",
+		operationId: "batchTrack",
+		description: "Track multiple usage events asynchronously.",
+		spec: (spec) =>
+			withOnlyAcceptedResponse(
+				spec,
+				"batchTrack",
+				"Batch accepted. All items were validated and enqueued for asynchronous processing.",
+			),
+	})
+	.input(
+		BatchTrackParamsSchema.meta({
+			title: "BatchTrackParams",
+			examples: [
+				[
+					{
+						customer_id: "cus_123",
+						feature_id: "messages",
+						value: 1,
+					},
+					{
+						customer_id: "cus_123",
+						event_name: "message.sent",
+						value: 1,
+					},
+				],
+			],
+		}),
+	)
+	.output(
+		BatchTrackResponseSchema.meta({
+			examples: [{ success: true }],
 		}),
 	);
 
