@@ -6,7 +6,7 @@ import {
 	RewardTriggerEvent,
 } from "@autumn/shared";
 import { Check, ChevronsUpDown, X } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import {
 	Command,
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/v2/buttons/Button";
+import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import { Input } from "@/components/v2/inputs/Input";
 import {
 	Select,
@@ -45,6 +46,7 @@ export const RewardProgramConfig = ({
 	isUpdate?: boolean;
 }) => {
 	const { rewards } = useRewardsQuery();
+	const excludeTrialId = useId();
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -154,13 +156,33 @@ export const RewardProgramConfig = ({
 				</Select>
 			</div>
 			{rewardProgram.when === RewardTriggerEvent.Checkout && (
-				<div className="w-full">
-					<FieldLabel>Products</FieldLabel>
-					<ProductSelector
-						rewardProgram={rewardProgram}
-						setRewardProgram={setRewardProgram}
-					/>
-				</div>
+				<>
+					<div className="w-full">
+						<FieldLabel>Products</FieldLabel>
+						<ProductSelector
+							rewardProgram={rewardProgram}
+							setRewardProgram={setRewardProgram}
+						/>
+					</div>
+					<div className="flex items-center gap-2">
+						<Checkbox
+							id={excludeTrialId}
+							checked={rewardProgram.exclude_trial ?? false}
+							onCheckedChange={(checked) =>
+								setRewardProgram({
+									...rewardProgram,
+									exclude_trial: checked === true,
+								})
+							}
+						/>
+						<label
+							htmlFor={excludeTrialId}
+							className="text-sm text-tertiary-foreground cursor-pointer"
+						>
+							Exclude trials
+						</label>
+					</div>
+				</>
 			)}
 		</div>
 	);
