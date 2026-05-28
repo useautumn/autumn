@@ -30,6 +30,7 @@ export const insertMigration = async ({
 		operations: insert.operations ?? null,
 		no_billing_changes: insert.no_billing_changes ?? null,
 		retry_failed: false,
+		archived: false,
 		created_at: Date.now(),
 		updated_at: null,
 	};
