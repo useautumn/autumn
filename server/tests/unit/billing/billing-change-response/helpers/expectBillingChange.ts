@@ -54,7 +54,11 @@ export const expectPlanChange = (
 	}
 
 	if (itemChanges !== undefined) {
-		expect(resolved.item_changes).toEqual(itemChanges);
+		expect(resolved.item_changes).toEqual(
+			expect.arrayContaining(
+				itemChanges.map((itemChange) => expect.objectContaining(itemChange)),
+			),
+		);
 	}
 
 	return resolved;

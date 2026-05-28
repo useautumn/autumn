@@ -65,8 +65,43 @@ const collapseSamePlanIdPairs = (
 			subscription: activatedChange.subscription,
 			purchase: activatedChange.purchase,
 			previous_attributes: expiredChange.previous_attributes,
-			item_changes: activatedChange.item_changes,
+			item_changes: [],
 		});
+	}
+
+	return result;
+};
+
+const mergeUpdatedPlanChanges = (
+	changes: CustomerPlanChange[],
+): CustomerPlanChange[] => {
+	const merged = new Map<string, CustomerPlanChange>();
+	const result: CustomerPlanChange[] = [];
+
+	for (const change of changes) {
+		const planId = getChangePlanId(change);
+		if (change.action !== "updated" || !planId) {
+			result.push(change);
+			continue;
+		}
+
+		const existing = merged.get(planId);
+		if (!existing) {
+			merged.set(planId, change);
+			result.push(change);
+			continue;
+		}
+
+		existing.subscription = existing.subscription ?? change.subscription;
+		existing.purchase = existing.purchase ?? change.purchase;
+		existing.previous_attributes = {
+			...(existing.previous_attributes ?? {}),
+			...(change.previous_attributes ?? {}),
+		};
+		existing.item_changes = [
+			...(existing.item_changes ?? []),
+			...(change.item_changes ?? []),
+		];
 	}
 
 	return result;
@@ -148,11 +183,14 @@ export const buildPlanChanges = ({
 			...toCustomerPlanSnapshot({ cusProduct: patch.customerProduct }),
 			previous_attributes: {},
 			item_changes: buildPlanItemChanges({
+				customerProduct: patch.customerProduct,
 				insertCustomerEntitlements: patch.insertCustomerEntitlements,
 				deleteCustomerEntitlements: patch.deleteCustomerEntitlements,
+				insertCustomerPrices: patch.insertCustomerPrices,
+				deleteCustomerPrices: patch.deleteCustomerPrices,
 			}),
 		});
 	}
 
-	return collapseSamePlanIdPairs(changes);
+	return mergeUpdatedPlanChanges(collapseSamePlanIdPairs(changes));
 };
