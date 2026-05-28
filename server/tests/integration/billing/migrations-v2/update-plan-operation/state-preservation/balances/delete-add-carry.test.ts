@@ -6,7 +6,9 @@
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
 import {
+	BillingInterval,
 	BillingMethod,
+	customerEntitlements,
 	ResetInterval,
 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -18,6 +20,7 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { and, eq } from "drizzle-orm";
 import { runUpdatePlanMigration } from "../../../utils/runUpdatePlanMigration";
 
 const TEN_MINUTES_MS = 10 * 60 * 1000;
@@ -110,6 +113,97 @@ test.concurrent(`${chalk.yellowBright("migrations complex delete/add: lifetime i
 		actual: monthlyBucket.reset?.resets_at,
 		expected: currentPeriodEnd!,
 	});
+	await expectCustomerInvoiceCorrect({
+		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
+		count: invoiceCountBefore,
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("migrations complex delete/add: monthly to one-off clears reset timestamp")}`, async () => {
+	const suffix = Date.now();
+	const customerId = `migration-complex-monthly-to-one-off-${suffix}`;
+	const pro = products.pro({
+		id: `${customerId}-plan`,
+		items: [items.monthlyCredits({ includedUsage: 100 })],
+	});
+
+	const { autumnV1, autumnV2_2, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+	const invoiceCountBefore =
+		(await autumnV1.customers.get<ApiCustomerV3>(customerId)).invoices?.length ??
+		0;
+
+	await runUpdatePlanMigration({
+		ctx,
+		migrationClient: autumnV2_2,
+		migrationId: `${customerId}-mig`,
+		customerId,
+		filter: { customer: { plan: { plan_id: pro.id } } },
+		operations: {
+			customer: [
+				{
+					type: "update_plan",
+					plan_filter: { plan_id: pro.id },
+					customize: {
+						remove_items: [{ feature_id: TestFeature.Credits }],
+						add_items: [
+							{
+								feature_id: TestFeature.Credits,
+								included: 150,
+								price: {
+									amount: 10,
+									interval: BillingInterval.OneOff,
+									billing_method: BillingMethod.Prepaid,
+									billing_units: 100,
+								},
+							},
+						],
+					},
+				},
+			],
+		},
+		runOnServer: false,
+		noBillingChanges: true,
+	});
+
+	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+	expectBalanceCorrect({
+		customer,
+		featureId: TestFeature.Credits,
+		remaining: 150,
+		usage: 0,
+		nextResetAt: null,
+		planId: pro.id,
+		breakdown: {
+			[ResetInterval.OneOff]: {
+				included_grant: 150,
+				remaining: 150,
+				usage: 0,
+			},
+		},
+	});
+	const oneOffBucket = getBalanceBucket({
+		subject: customer,
+		featureId: TestFeature.Credits,
+		resetInterval: ResetInterval.OneOff,
+	});
+	expect(oneOffBucket.reset?.resets_at).toBeNull();
+	const [oneOffCustomerEntitlement] = await ctx.db
+		.select()
+		.from(customerEntitlements)
+		.where(
+			and(
+				eq(customerEntitlements.customer_id, customerId),
+				eq(customerEntitlements.feature_id, TestFeature.Credits),
+			),
+		);
+	expect(oneOffCustomerEntitlement?.next_reset_at).toBeNull();
 	await expectCustomerInvoiceCorrect({
 		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
 		count: invoiceCountBefore,
