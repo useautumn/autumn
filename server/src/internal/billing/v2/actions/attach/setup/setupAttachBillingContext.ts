@@ -126,7 +126,11 @@ export const setupAttachBillingContext = async ({
 	// no_billing_changes blocks WRITES but should still allow reading the
 	// existing Stripe sub when one is linked — needed so the new cusProduct
 	// inherits subscription_ids and the paid-product guard doesn't misfire.
-	const skipBillingFetching = orgDisableStripeWrites({ ctx });
+	// External-PSP origin callers (e.g. RevenueCat) opt out of fetching
+	// entirely via `contextOverride.skipBillingFetching`.
+	const skipBillingFetching =
+		orgDisableStripeWrites({ ctx }) ||
+		contextOverride.skipBillingFetching === true;
 
 	const skipBillingChangesBase =
 		skipBillingFetching ||
@@ -298,6 +302,8 @@ export const setupAttachBillingContext = async ({
 		paymentBehaviorIntent,
 		shouldFinalizeFirstInvoice,
 		skipCustomPaymentMethodGuard: contextOverride.skipCustomPaymentMethodGuard,
+		skipExternalPSPGuard: contextOverride.skipExternalPSPGuard,
+		processorTypeOverride: contextOverride.processorTypeOverride,
 		enablePlanImmediately: params.enable_plan_immediately ?? false,
 		accessStartsAt,
 
