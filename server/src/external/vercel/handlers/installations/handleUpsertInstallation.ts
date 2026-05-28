@@ -1,7 +1,6 @@
 import { AppEnv, type Customer, cusProductToProduct, ProcessorType, Scopes } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createStripeCustomer } from "@/external/stripe/customers";
-import { createCustomStripeCard } from "@/external/stripe/stripeCardUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { customerActions } from "@/internal/customers/actions/index.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -21,14 +20,19 @@ export const handleUpsertInstallation = createRoute({
 		const body = await c.req.json<VercelUpsertInstallation>();
 		const ctx = c.get("ctx");
 		const { integrationConfigurationId } = c.req.param();
-		const { logger } = ctx;
+		const { logger, testOptions } = ctx;
 		let createdCustomer: Customer | null = null;
 
 		try {
 			const token = getAuthorizationToken(
 				c.req.header("Authorization") as string,
 			);
-			const claims = await verifyToken({ token, org: ctx.org, env: ctx.env });
+			const claims = await verifyToken({
+				token,
+				org: ctx.org,
+				env: ctx.env,
+				testOptions,
+			});
 
 			if (
 				!verifyClaims({
@@ -81,25 +85,10 @@ export const handleUpsertInstallation = createRoute({
 			});
 
 			if (stripeCustomer) {
-				// Create custom payment method for Vercel marketplace
-				const customPaymentMethod = await createCustomStripeCard({
-					org: ctx.org,
-					env: ctx.env,
-					customer: {
-						...createdCustomer,
-						processor: {
-							id: stripeCustomer.id,
-							type: ProcessorType.Stripe,
-						},
-					},
-					processor: "vercel",
-					processorData: {
-						name: body.account.contact.name,
-						email: body.account.contact.email,
-					},
-					defaultPaymentMethod: true,
-				});
-
+				// Vercel customers settle through `marketplace.invoice.paid` +
+				// `invoices.pay({ paid_out_of_band: true })`. Attaching a Custom
+				// Payment Method here would make Stripe reject the out-of-band
+				// call, so we leave the Stripe customer without a default PM.
 				await CusService.update({
 					ctx,
 					idOrInternalId: createdCustomer.id || createdCustomer.internal_id,
@@ -113,22 +102,13 @@ export const handleUpsertInstallation = createRoute({
 								installation_id: integrationConfigurationId,
 								access_token: body.credentials.access_token,
 								account_id: claims.account_id,
-								custom_payment_method_id: customPaymentMethod?.id,
 							},
 						},
 					},
 				});
 
 				logger.info(
-					`Successfully created vercel customer, installation ID: ${integrationConfigurationId}`,
-					{
-						data: {
-							customPaymentMethodId: customPaymentMethod?.id,
-							customPaymentMethodType: customPaymentMethod?.type,
-							customPaymentMethodBillingDetails:
-								customPaymentMethod?.billing_details,
-						},
-					},
+					`Successfully created vercel customer (invoice mode), installation ID: ${integrationConfigurationId}`,
 				);
 			}
 		} catch (error) {

@@ -94,21 +94,27 @@ export const sendCustomSvixEvent = safeSvix({
 		eventType,
 		data,
 		appId,
+		idempotencyKey,
 	}: {
 		org: Organization;
 		env: AppEnv;
 		eventType: string;
 		data: unknown;
 		appId: string;
+		idempotencyKey?: string;
 	}) => {
 		const svix = createSvixCli();
-		return await svix.message.create(appId, {
-			eventType,
-			payload: {
-				type: eventType,
-				data,
+		return await svix.message.create(
+			appId,
+			{
+				eventType,
+				payload: {
+					type: eventType,
+					data,
+				},
 			},
-		});
+			idempotencyKey ? { idempotencyKey } : undefined,
+		);
 	},
 	action: "sendSvixEvent",
 });
