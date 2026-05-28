@@ -1,7 +1,9 @@
 import { InternalError } from "@api/errors/base/InternalError";
+import { BillingMethod } from "@api/products/components/billingMethod";
 import type { Feature } from "@models/featureModels/featureModels";
 import type { EntitlementWithFeature } from "@models/productModels/entModels/entModels";
 import type { UsagePriceConfig } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
+import { BillingType } from "@models/productModels/priceModels/priceEnums";
 import type { Price } from "@models/productModels/priceModels/priceModels";
 import {
 	OnDecrease,
@@ -13,6 +15,7 @@ import {
 	shouldProrate,
 	shouldSkipLineItems,
 } from "@utils/billingUtils";
+import { getBillingType } from "@utils/productUtils/priceUtils";
 import { priceToEnt } from "@utils/productUtils/convertProductUtils";
 
 // Overload: errorOnNotFound = true → guaranteed Feature
@@ -93,4 +96,22 @@ export const priceToProrationConfig = ({
 		skipLineItems: shouldSkipLineItems(prorationBehaviorConfig),
 		shouldCreateReplaceables: shouldCreateReplaceables(prorationBehaviorConfig),
 	};
+};
+
+export const priceToBillingMethod = ({
+	price,
+}: {
+	price?: Price;
+}): BillingMethod | undefined => {
+	if (!price) return undefined;
+
+	const billingType = getBillingType(price.config);
+	if (billingType === BillingType.UsageInAdvance) return BillingMethod.Prepaid;
+	if (
+		billingType === BillingType.UsageInArrear ||
+		billingType === BillingType.InArrearProrated
+	)
+		return BillingMethod.UsageBased;
+
+	return undefined;
 };

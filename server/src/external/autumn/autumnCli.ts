@@ -985,6 +985,7 @@ export class AutumnInt {
 			id: string;
 			filter?: MigrationFilter | null;
 			operations?: Operations | null;
+			no_billing_changes?: boolean;
 		}): Promise<Migration> => {
 			const data = await this.post(`/migrations.create`, params);
 			return data as Migration;
@@ -1000,6 +1001,7 @@ export class AutumnInt {
 				filter?: MigrationFilter | null;
 				operations?: Operations | null;
 				retry_failed?: boolean;
+				no_billing_changes?: boolean;
 			};
 		}): Promise<Migration> => {
 			const data = await this.post(`/migrations.update`, params);
@@ -1013,6 +1015,7 @@ export class AutumnInt {
 			id: string;
 			filter?: MigrationFilter | null;
 			operations?: Operations | null;
+			no_billing_changes?: boolean;
 		}): Promise<Migration> => {
 			try {
 				await this.post(`/migrations.delete`, { id: params.id });

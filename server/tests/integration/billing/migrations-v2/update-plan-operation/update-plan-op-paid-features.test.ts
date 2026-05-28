@@ -8,13 +8,14 @@
  *   - Existing customer products are patched, not replaced or expired.
  */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
 import { BillingMethod } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectNoExpiredCustomerProducts } from "@tests/integration/billing/utils/expectNoExpiredCustomerProducts";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
+import { expectStripeSubscriptionUnchanged } from "@tests/integration/billing/utils/stripe/expectStripeSubscriptionUnchanged";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { expectFlagCorrect } from "@tests/integration/utils/expectFlagCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -105,4 +106,65 @@ test.concurrent(`${chalk.yellowBright("migrations update_plan: consumable paid f
 	});
 	await expectNoExpiredCustomerProducts({ ctx, customerId, productId: pro.id });
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
+});
+
+test.concurrent(`${chalk.yellowBright("migrations update_plan: no_billing_changes remove paid feature stays DB-only")}`, async () => {
+	const customerId = "migration-update-paid-remove-no-billing";
+	const pro = products.pro({
+		id: "migration-update-paid-remove-no-billing-plan",
+		items: [items.consumableMessages({ includedUsage: 100, price: 0.1 })],
+	});
+
+	const { autumnV1, autumnV2_2, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+
+	const customerBefore = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	const invoiceCountBefore = customerBefore.invoices?.length ?? 0;
+	const subsBefore = await ctx.stripeCli.subscriptions.list({
+		customer: customerBefore.stripe_id as string,
+		status: "all",
+	});
+	const subBefore = subsBefore.data.find(
+		(sub) => sub.status === "active" || sub.status === "trialing",
+	);
+	expect(subBefore).toBeDefined();
+
+	await runUpdatePlanMigration({
+		ctx,
+		migrationClient: autumnV2_2,
+		migrationId: `${customerId}-mig`,
+		customerId,
+		filter: { customer: { plan: { plan_id: pro.id } } },
+		operations: {
+			customer: [
+				{
+					type: "update_plan",
+					plan_filter: { plan_id: pro.id },
+					customize: {
+						remove_items: [{ feature_id: TestFeature.Messages }],
+					},
+				},
+			],
+		},
+		noBillingChanges: true,
+		runOnServer: false,
+	});
+
+	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+	await expectCustomerProducts({ customer, active: [pro.id] });
+	expect(customer.balances[TestFeature.Messages]).toBeUndefined();
+	await expectNoExpiredCustomerProducts({ ctx, customerId, productId: pro.id });
+
+	const subAfter = await ctx.stripeCli.subscriptions.retrieve(subBefore!.id);
+	expectStripeSubscriptionUnchanged({ before: subBefore!, after: subAfter });
+	await expectCustomerInvoiceCorrect({
+		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
+		count: invoiceCountBefore,
+	});
 });

@@ -22,7 +22,12 @@ export const updateMigration = async ({
 	updates: Partial<
 		Pick<
 			MigrationInsert,
-			"id" | "filter" | "operations" | "prepared_state" | "retry_failed"
+			| "id"
+			| "filter"
+			| "operations"
+			| "prepared_state"
+			| "retry_failed"
+			| "no_billing_changes"
 		>
 	>;
 }): Promise<Migration | null> => {
