@@ -41,6 +41,8 @@ const proxyMcp = async (c: Context<HonoEnv>) => {
 	for (const header of hopByHopHeaders) headers.delete(header);
 
 	headers.delete("host");
+	headers.set("x-autumn-forwarded-host", forwardedHost);
+	headers.set("x-autumn-forwarded-proto", forwardedProto);
 	headers.set("x-forwarded-host", forwardedHost);
 	headers.set("x-forwarded-proto", forwardedProto);
 
