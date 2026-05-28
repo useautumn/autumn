@@ -71,10 +71,21 @@ const defaultMcpResourceUrl = process.env.BETTER_AUTH_URL
 const defaultInternalMcpResourceUrl = process.env.BETTER_AUTH_URL
 	? new URL("/internal/mcp", process.env.BETTER_AUTH_URL).href
 	: null;
+const parseMcpResourceUrl = (rawUrl: string) => {
+	const resourceUrl = rawUrl.trim();
+	if (!resourceUrl) return null;
+
+	try {
+		return new URL(resourceUrl).href;
+	} catch {
+		console.warn(`Ignoring invalid MCP_RESOURCE_URLS entry: ${resourceUrl}`);
+		return null;
+	}
+};
 const mcpResourceUrls =
 	process.env.MCP_RESOURCE_URLS?.split(",")
-		.map((url) => url.trim())
-		.filter(Boolean) ?? [];
+		.map(parseMcpResourceUrl)
+		.filter((url): url is string => Boolean(url)) ?? [];
 const internalMcpResourceUrls = mcpResourceUrls.map((resourceUrl) => {
 	const url = new URL(resourceUrl);
 	url.pathname = "/internal/mcp";
