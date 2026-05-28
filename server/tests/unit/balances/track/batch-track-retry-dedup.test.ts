@@ -37,7 +37,7 @@
  *
  * If this test starts failing:
  *   DO NOT "fix" it by undoing the pin. The fix is to add idempotency
- *   keys to the /v1/balances.batchTrack API contract — at which point
+ *   keys to the /v1/balances.batch_track API contract — at which point
  *   this file should be rotated to assert the NEW dedup contract
  *   (client-supplied keys produce stable MessageDeduplicationId across
  *   client-driven retries). Until then, this behavior is intentional.

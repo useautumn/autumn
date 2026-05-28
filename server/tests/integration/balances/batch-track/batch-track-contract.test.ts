@@ -1,5 +1,5 @@
 /**
- * Retrospective contract coverage for POST /v1/balances.batchTrack.
+ * Retrospective contract coverage for POST /v1/balances.batch_track.
  *
  * This file is the HTTP-layer contract of record for the batch async-track
  * endpoint. It exercises everything the customer can observe by talking to
@@ -8,7 +8,7 @@
  * Contract (full surface, verbatim from the spec):
  *
  *   New endpoint:
- *     - POST /v1/balances.batchTrack
+ *     - POST /v1/balances.batch_track
  *         request body:  BatchTrackParams = TrackParams[] where 1 <= len <= 1000
  *         response:      202, body { success: true }
  *         auth:          requires Scopes.Balances.Write
@@ -139,7 +139,7 @@ const postBatchTrack = async ({
 		headers.Authorization = authorization;
 	}
 
-	const response = await fetch(`${autumn.baseUrl}/balances.batchTrack`, {
+	const response = await fetch(`${autumn.baseUrl}/balances.batch_track`, {
 		method: "POST",
 		headers,
 		body: JSON.stringify(body),

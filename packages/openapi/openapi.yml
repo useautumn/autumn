@@ -8184,8 +8184,8 @@ paths:
                         description: Configuration for a feature item in a plan, including usage limits,
                           pricing, and rollover settings.
                       description: Override the items in the plan (PUT-style — replaces all existing
-                        items). Mutually exclusive with add_items /
-                        remove_items.
+                        items). Mutually exclusive with add_items / remove_items
+                        / update_items.
                     add_items:
                       type: array
                       items:
@@ -8678,7 +8678,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779471392768,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780680992768,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779977746466,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781187346466,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -10297,8 +10297,8 @@ paths:
                         description: Configuration for a feature item in a plan, including usage limits,
                           pricing, and rollover settings.
                       description: Override the items in the plan (PUT-style — replaces all existing
-                        items). Mutually exclusive with add_items /
-                        remove_items.
+                        items). Mutually exclusive with add_items / remove_items
+                        / update_items.
                     add_items:
                       type: array
                       items:
@@ -12323,8 +12323,8 @@ paths:
                         description: Configuration for a feature item in a plan, including usage limits,
                           pricing, and rollover settings.
                       description: Override the items in the plan (PUT-style — replaces all existing
-                        items). Mutually exclusive with add_items /
-                        remove_items.
+                        items). Mutually exclusive with add_items / remove_items
+                        / update_items.
                     add_items:
                       type: array
                       items:
@@ -13038,8 +13038,8 @@ paths:
                         description: Configuration for a feature item in a plan, including usage limits,
                           pricing, and rollover settings.
                       description: Override the items in the plan (PUT-style — replaces all existing
-                        items). Mutually exclusive with add_items /
-                        remove_items.
+                        items). Mutually exclusive with add_items / remove_items
+                        / update_items.
                     add_items:
                       type: array
                       items:
@@ -14053,8 +14053,8 @@ paths:
                         description: Configuration for a feature item in a plan, including usage limits,
                           pricing, and rollover settings.
                       description: Override the items in the plan (PUT-style — replaces all existing
-                        items). Mutually exclusive with add_items /
-                        remove_items.
+                        items). Mutually exclusive with add_items / remove_items
+                        / update_items.
                     add_items:
                       type: array
                       items:
@@ -16062,6 +16062,10 @@ paths:
         @param properties - Additional properties to attach to this usage event.
         (optional)
 
+        @param async - If true, enqueue the event for asynchronous processing
+        and return 202 immediately. The response will not include balance
+        information. (optional)
+
 
         @returns The usage value recorded, with either a single updated balance
         or a map of updated balances. If Autumn is experiencing degraded service
@@ -16101,6 +16105,11 @@ paths:
                     type: string
                   additionalProperties: {}
                   description: Additional properties to attach to this usage event.
+                async:
+                  type: boolean
+                  description: If true, enqueue the event for asynchronous processing and return
+                    202 immediately. The response will not include balance
+                    information.
                 lock:
                   type: object
                   properties:
@@ -16414,6 +16423,109 @@ paths:
                           resets_at: 1781288736881
                         value: 1
       x-speakeasy-name-override: track
+      parameters:
+        - *a1
+  /v1/balances.batch_track:
+    post:
+      operationId: batchTrack
+      description: Enqueue up to 1000 usage events for asynchronous processing. Items
+        are validated synchronously up front; validated items are then enqueued
+        via SQS for background deduction by workers. The response returns 202
+        immediately and does not include balance information. On partial enqueue
+        failure (some items fail to enqueue, others succeed), the endpoint still
+        returns 202 and logs the failures server-side; clients should NOT retry,
+        because retrying re-enqueues the already-succeeded items. A 503 is
+        returned only when zero items were successfully enqueued (queue entirely
+        unavailable) — that case is safe to retry.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              minItems: 1
+              maxItems: 1000
+              items:
+                type: object
+                properties:
+                  customer_id:
+                    type: string
+                    description: The ID of the customer.
+                  feature_id:
+                    type: string
+                    description: The ID of the feature to track usage for. Required if event_name is
+                      not provided.
+                  entity_id:
+                    type: string
+                    description: The ID of the entity for entity-scoped balances (e.g., per-seat
+                      limits).
+                  event_name:
+                    type: string
+                    minLength: 1
+                    description: Event name to track usage for. Use instead of feature_id when
+                      multiple features should be tracked from a single event.
+                  value:
+                    type: number
+                    description: The amount of usage to record. Defaults to 1. Use negative values
+                      to credit balance (e.g., when removing a seat).
+                  properties:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties: {}
+                    description: Additional properties to attach to this usage event.
+                  async:
+                    type: boolean
+                    description: If true, enqueue the event for asynchronous processing and return
+                      202 immediately. The response will not include balance
+                      information.
+                  lock:
+                    type: object
+                    properties:
+                      lock_id:
+                        type: string
+                        maxLength: 256
+                        description: A unique identifier for this lock. Used to finalize the lock later
+                          via balances.finalize.
+                      enabled:
+                        const: true
+                        description: Must be true to enable locking.
+                      expires_at:
+                        type: number
+                        description: Unix timestamp (ms) when the lock automatically expires and
+                          releases the held balance.
+                    required:
+                      - lock_id
+                      - enabled
+                required:
+                  - customer_id
+              title: BatchTrackParams
+              examples:
+                - - customer_id: cus_123
+                    feature_id: messages
+                    value: 1
+                  - customer_id: cus_123
+                    event_name: message.sent
+                    value: 1
+      responses:
+        "202":
+          description: "Batch accepted. All items passed synchronous validation. Enqueue
+            is best-effort: partial failures (some items enqueued, some not) are
+            logged server-side and are NOT surfaced in the response body;
+            clients must not retry on 202. See the endpoint description for full
+            partial-failure semantics."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                required:
+                  - success
+                examples:
+                  - success: true
+      x-speakeasy-name-override: batchTrack
       parameters:
         - *a1
   /v1/events.list:

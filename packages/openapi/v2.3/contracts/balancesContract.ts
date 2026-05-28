@@ -160,14 +160,15 @@ export const balancesTrackContract = oc
 export const balancesBatchTrackContract = oc
 	.route({
 		method: "POST",
-		path: "/v1/balances.batchTrack",
+		path: "/v1/balances.batch_track",
 		operationId: "batchTrack",
-		description: "Track multiple usage events asynchronously.",
+		description:
+			"Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.",
 		spec: (spec) =>
 			withOnlyAcceptedResponse(
 				spec,
 				"batchTrack",
-				"Batch accepted. All items were validated and enqueued for asynchronous processing.",
+				"Batch accepted. All items passed synchronous validation. Enqueue is best-effort: partial failures (some items enqueued, some not) are logged server-side and are NOT surfaced in the response body; clients must not retry on 202. See the endpoint description for full partial-failure semantics.",
 			),
 	})
 	.input(

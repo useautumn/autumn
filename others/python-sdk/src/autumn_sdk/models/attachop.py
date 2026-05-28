@@ -926,7 +926,7 @@ class AttachCustomizeTypedDict(TypedDict):
     price: NotRequired[Nullable[AttachBasePriceTypedDict]]
     r"""Override the base price of the plan. Pass null to remove the base price."""
     items: NotRequired[List[AttachItemPlanItemTypedDict]]
-    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items."""
+    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / update_items."""
     add_items: NotRequired[List[AttachAddItemPlanItemTypedDict]]
     r"""Items to add to the plan."""
     remove_items: NotRequired[List[AttachPlanItemFilterTypedDict]]
@@ -942,7 +942,7 @@ class AttachCustomize(BaseModel):
     r"""Override the base price of the plan. Pass null to remove the base price."""
 
     items: Optional[List[AttachItemPlanItem]] = None
-    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items."""
+    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / update_items."""
 
     add_items: Optional[List[AttachAddItemPlanItem]] = None
     r"""Items to add to the plan."""

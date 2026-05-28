@@ -88,7 +88,7 @@ const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 	},
 	{
 		type: RateLimitType.BatchTrack,
-		patterns: [route({ method: "POST", url: "/v1/balances.batchTrack" })],
+		patterns: [route({ method: "POST", url: "/v1/balances.batch_track" })],
 	},
 	{
 		type: RateLimitType.Check,
