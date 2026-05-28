@@ -347,11 +347,14 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: upgrade (monthly → yearly) 
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Downgrade → scenario: downgrade
-// Uses Pro Yearly ($1000/yr) → Pro Monthly ($10/mo) to match RC setup.
+// TEST 4: Downgrade (yearly → monthly) applies immediately for RevenueCat.
+// RC is the payment source-of-truth, so the transition is forced immediate
+// (plan_schedule: "immediate"): yearly is expired now and monthly is inserted
+// active. The inserted product is cheaper than the expired one, so the insert
+// scenario is "new" (not "upgrade"), and updated_product is the new monthly.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("rc-webhook: downgrade (yearly → monthly) → scenario: downgrade")}`, async () => {
+test.concurrent(`${chalk.yellowBright("rc-webhook: downgrade (yearly → monthly) applies immediately → scenario: new")}`, async () => {
 	const customerId = "rc-webhook-downgrade";
 	const RC_PRO_MONTHLY_ID = "com.app.rcwh4_pro_monthly";
 	const RC_PRO_YEARLY_ID = "com.app.rcwh4_pro_yearly";
@@ -411,7 +414,8 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: downgrade (yearly → monthly
 		timeoutMs: 15000,
 	});
 
-	// Then: renewal to monthly ($10/mo) — genuine downgrade
+	// Then: switch to monthly ($10/mo). For RC this applies immediately rather
+	// than scheduling a downgrade, so the inserted monthly product is active.
 	await rcClient.renewal({
 		productId: RC_PRO_MONTHLY_ID,
 		appUserId: customerId,
@@ -423,14 +427,15 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: downgrade (yearly → monthly
 		predicate: (payload) =>
 			payload.type === "customer.products.updated" &&
 			payload.data?.customer?.id === customerId &&
-			payload.data?.scenario === "downgrade",
+			payload.data?.scenario === "new" &&
+			payload.data?.updated_product?.id === proMonthly.id,
 		timeoutMs: 15000,
 	});
 
 	expect(result).not.toBeNull();
 	const { data } = result!.payload;
-	expect(data.scenario).toBe("downgrade");
-	expect(data.updated_product.id).toBe(proYearly.id);
+	expect(data.scenario).toBe("new");
+	expect(data.updated_product.id).toBe(proMonthly.id);
 	expect(data.customer.id).toBe(customerId);
 });
 

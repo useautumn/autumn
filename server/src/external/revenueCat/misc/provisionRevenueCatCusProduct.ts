@@ -23,7 +23,9 @@ import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
  *
  * Handles new / upgrade / downgrade scenarios via `computeAttachPlan`'s
  * transition logic — the caller does not need to expire the outgoing
- * cus_product manually.
+ * cus_product manually. Transitions are forced immediate (`plan_schedule`)
+ * since RC is the payment source-of-truth; we don't schedule downgrades
+ * end-of-cycle the way a Stripe-billed attach would.
  */
 export const provisionRevenueCatCusProduct = async ({
 	ctx,
@@ -57,6 +59,9 @@ export const provisionRevenueCatCusProduct = async ({
 			redirect_mode: "if_required",
 			no_billing_changes: true,
 			enable_plan_immediately: true,
+			// RC payments are source-of-truth: apply product changes now rather
+			// than scheduling downgrades end-of-cycle like Stripe-style attaches.
+			plan_schedule: "immediate",
 			...(revenuecatMetadata ? { metadata: revenuecatMetadata } : {}),
 		},
 		contextOverride,
