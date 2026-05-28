@@ -44,6 +44,24 @@ import { TestFeature } from "@tests/setup/v2Features";
 
 const RC_WEBHOOK_SECRET = "test_rc_webhook_secret_12345";
 
+const rcProMonthly = ({ id = "pro-monthly" }: { id?: string } = {}) =>
+	products.base({
+		id,
+		items: [
+			items.monthlyMessages({ includedUsage: 100 }),
+			items.monthlyPrice({ price: 10 }),
+		],
+	});
+
+const rcProYearly = ({ id = "pro-yearly" }: { id?: string } = {}) =>
+	products.base({
+		id,
+		items: [
+			items.monthlyMessages({ includedUsage: 1000 }),
+			items.annualPrice({ price: 1000 }),
+		],
+	});
+
 const setupRevenueCatOrg = async () => {
 	if (
 		ctx.org.processor_configs?.revenuecat?.sandbox_webhook_secret !==
@@ -87,9 +105,8 @@ test.concurrent(`${chalk.yellowBright("revenuecat 1: webhook lifecycle")}`, asyn
 	const RC_ADD_ON_ID = "com.app.rc1_add_on_pack";
 
 	// Autumn products
-	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
-	const proMonthly = products.pro({ id: "pro-monthly", items: [messagesItem] });
-	const proYearly = products.proAnnual({ id: "pro-yearly", items: [items.monthlyMessages({ includedUsage: 1000 })] });
+	const proMonthly = rcProMonthly();
+	const proYearly = rcProYearly();
 	const addOnPack = products.base({
 		id: "add-on",
 		items: [items.lifetimeMessages({ includedUsage: 100 })],
