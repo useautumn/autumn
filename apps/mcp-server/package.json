@@ -1,0 +1,20 @@
+{
+  "name": "@autumn/mcp-server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/index.ts",
+    "start": "bun src/index.ts",
+    "ts": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@autumn/mcp": "workspace:*",
+    "@hono/node-server": "^1.19.5",
+    "hono": "4.12.7"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.2.13",
+    "@types/node": "^18.19.3",
+    "typescript": "~5.8.3"
+  }
+}

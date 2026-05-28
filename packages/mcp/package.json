@@ -4,19 +4,15 @@
   "author": "Autumn",
   "type": "module",
   "sideEffects": false,
-  "files": [
-    "bin",
-    "manifest.json",
-    "README.md"
-  ],
-  "bin": {
-    "@autumn/mcp": "bin/mcp-server.js",
-    "mcp": "bin/mcp-server.js"
+  "exports": {
+    ".": "./src/index.ts"
   },
+  "files": [
+    "README.md",
+    "src"
+  ],
   "scripts": {
-    "build": "bun src/mcp-server/build.mts && tsc",
-    "mcpb:build": "bun src/mcp-server/build.mts --pack && tsc",
-    "start": "node bin/mcp-server.js start",
+    "build": "tsc",
     "ts": "tsc --noEmit",
     "test": "bun test src",
     "prepack": "bun run build",
@@ -25,17 +21,13 @@
   "dependencies": {
     "@autumn/shared": "workspace:*",
 		"@axiomhq/js": "^1.6.1",
-		"@hono/node-server": "^1.19.5",
 		"@mastra/core": "^1.36.0",
 		"@mastra/mcp": "^1.8.0",
-		"@stricli/core": "^1.1.2",
 		"date-fns": "^4.1.0",
-		"hono": "4.12.7",
 		"ioredis": "^5.5.0",
 		"zod": "^3.25.76"
 	},
   "devDependencies": {
-		"@anthropic-ai/mcpb": "^1.2.0",
 		"@types/bun": "^1.2.13",
 		"@types/node": "^18.19.3",
 		"typescript": "~5.8.3"
