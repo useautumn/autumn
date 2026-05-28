@@ -1,0 +1,35 @@
+{
+  "name": "@autumn/mcp",
+  "version": "0.0.1",
+  "author": "Autumn",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": [
+    "README.md",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "ts": "tsc --noEmit",
+    "test": "bun test src",
+    "prepack": "bun run build",
+    "prepublishOnly": "bun run build"
+  },
+  "dependencies": {
+    "@autumn/shared": "workspace:*",
+		"@axiomhq/js": "^1.6.1",
+		"@mastra/core": "^1.36.0",
+		"@mastra/mcp": "^1.8.0",
+		"date-fns": "^4.1.0",
+		"ioredis": "^5.5.0",
+		"zod": "^3.25.76"
+	},
+  "devDependencies": {
+		"@types/bun": "^1.2.13",
+		"@types/node": "^18.19.3",
+		"typescript": "~5.8.3"
+	}
+}
