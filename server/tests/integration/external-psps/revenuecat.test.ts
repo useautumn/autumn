@@ -508,7 +508,10 @@ test.concurrent(
 		// ─── Assertion 1: INITIAL_PURCHASE writes an invoice row ────────────────
 		const initialTxId = "rc3_tx_initial_001";
 		const initialPrice = 9.99;
-		const initialCurrency = "usd";
+		// RevenueCat's `price` is normalized to USD; `currency` describes the
+		// purchase currency only. A non-USD purchase must still record total in
+		// USD with currency "usd" (regression: INR-labeled USD amounts).
+		const initialCurrency = "inr";
 		const initialPurchasedAt = Date.now();
 
 		expectWebhookSuccess(
@@ -530,7 +533,7 @@ test.concurrent(
 		const initialInvoiceV1 = v1Customer.invoices![0]!;
 		expect(initialInvoiceV1.stripe_id).toBe(initialTxId);
 		expect(initialInvoiceV1.total).toBe(initialPrice);
-		expect(initialInvoiceV1.currency).toBe(initialCurrency);
+		expect(initialInvoiceV1.currency).toBe("usd");
 		expect(initialInvoiceV1.status).toBe("paid");
 
 		// V5 fetch exposes processor_type
@@ -546,7 +549,7 @@ test.concurrent(
 		expect(initialInvoiceV5.processor_type).toBe(ProcessorType.RevenueCat);
 		expect(initialInvoiceV5.stripe_id).toBe(initialTxId);
 		expect(initialInvoiceV5.total).toBe(initialPrice);
-		expect(initialInvoiceV5.currency).toBe(initialCurrency);
+		expect(initialInvoiceV5.currency).toBe("usd");
 		expect(initialInvoiceV5.status).toBe("paid");
 
 		// ─── Assertion 2: RENEWAL with new transaction_id writes a second row ──
