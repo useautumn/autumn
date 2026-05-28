@@ -137,6 +137,7 @@ export const setupAttachBillingContext = async ({
 		stripeSubscriptionSchedule,
 		stripeCustomer,
 		stripeDiscounts,
+		stripeTaxRate,
 		paymentMethod,
 		testClockFrozenTime,
 	} = await setupStripeBillingContext({
@@ -150,6 +151,7 @@ export const setupAttachBillingContext = async ({
 		skipBillingFetching,
 		createStripeCustomerIfMissing:
 			!preview && params.no_billing_changes !== true,
+		fetchTaxRate: preview,
 	});
 
 	const featureQuantities = setupFeatureQuantitiesContext({
@@ -267,6 +269,7 @@ export const setupAttachBillingContext = async ({
 		stripeSubscription,
 		stripeSubscriptionSchedule,
 		stripeDiscounts,
+		stripeTaxRate,
 		paymentMethod,
 
 		currentEpochMs,

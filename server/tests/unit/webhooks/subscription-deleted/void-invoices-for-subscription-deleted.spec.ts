@@ -106,7 +106,7 @@ describe(chalk.yellowBright("voidInvoicesForSubscriptionDeleted"), () => {
 	});
 
 	describe(chalk.cyan("Voiding invoices"), () => {
-		test("voids only open invoices, skipping paid/draft/void statuses", async () => {
+		test("voids open and uncollectible invoices, skipping paid/draft/void statuses", async () => {
 			const mockCli = stripeClients.createMockStripeClient({
 				invoices: {
 					listResult: {
@@ -114,6 +114,10 @@ describe(chalk.yellowBright("voidInvoicesForSubscriptionDeleted"), () => {
 							stripeClients.createMockInvoice({
 								id: "inv_open",
 								status: "open",
+							}),
+							stripeClients.createMockInvoice({
+								id: "inv_uncollectible",
+								status: "uncollectible",
 							}),
 							stripeClients.createMockInvoice({
 								id: "inv_paid",
@@ -143,8 +147,9 @@ describe(chalk.yellowBright("voidInvoicesForSubscriptionDeleted"), () => {
 			});
 
 			expect(mockCli._calls.invoices.list).toHaveLength(1);
-			expect(mockCli._calls.invoices.voidInvoice).toHaveLength(1);
-			expect(mockCli._calls.invoices.voidInvoice[0]).toBe("inv_open");
+			expect(mockCli._calls.invoices.voidInvoice).toHaveLength(2);
+			expect(mockCli._calls.invoices.voidInvoice).toContain("inv_open");
+			expect(mockCli._calls.invoices.voidInvoice).toContain("inv_uncollectible");
 		});
 
 		test("voids multiple open invoices", async () => {

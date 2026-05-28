@@ -6,6 +6,7 @@ import type {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeAttachInvoiceCreditPreview } from "./invoiceCredits/computeAttachInvoiceCreditPreview";
 import { computeAttachTaxPreview } from "./tax/computeAttachTaxPreview";
+import { computeAttachTaxRateIdPreview } from "./tax/computeAttachTaxRateIdPreview";
 
 /**
  * Build-stage orchestrator for preview-only enrichments. Originally
@@ -32,10 +33,16 @@ export const computeAttachPreviewBillingPlan = async ({
 	billingContext: BillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
 }): Promise<PreviewBillingPlan> => {
-	// Tax involves a Stripe round-trip; invoice-credits is local. Run in
-	// parallel so the credits read doesn't add to the wall-clock latency.
+	// tax_rate_id overrides automatic_tax on the real Stripe subscription,
+	// so we mirror that precedence here. The tax-rate-id branch is pure
+	// math (rate was fetched at setup); the automatic_tax branch hits
+	// Stripe Tax. Both produce the same `PreviewTax` shape.
+	const taxPromise = billingContext.taxRateId
+		? computeAttachTaxRateIdPreview({ ctx, billingContext, autumnBillingPlan })
+		: computeAttachTaxPreview({ ctx, billingContext, autumnBillingPlan });
+
 	const [tax, invoiceCredits] = await Promise.all([
-		computeAttachTaxPreview({ ctx, billingContext, autumnBillingPlan }),
+		taxPromise,
 		Promise.resolve(
 			computeAttachInvoiceCreditPreview({ ctx, billingContext }),
 		),
