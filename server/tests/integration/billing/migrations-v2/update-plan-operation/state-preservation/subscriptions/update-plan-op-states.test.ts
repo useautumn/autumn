@@ -31,7 +31,7 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { and, eq, isNull } from "drizzle-orm";
-import { runUpdatePlanMigration } from "../utils/runUpdatePlanMigration";
+import { runUpdatePlanMigration } from "../../../utils/runUpdatePlanMigration";
 
 const getScheduledIds = async ({
 	ctx,

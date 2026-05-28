@@ -9,25 +9,30 @@
  */
 
 import { test } from "bun:test";
-import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
-import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
+import type { ApiCustomerV5 } from "@autumn/shared";
+import { BillingInterval, ResetInterval } from "@autumn/shared";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectNoExpiredCustomerProducts } from "@tests/integration/billing/utils/expectNoExpiredCustomerProducts";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
-import { expectFlagCorrect } from "@tests/integration/utils/expectFlagCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { runUpdatePlanMigration } from "../utils/runUpdatePlanMigration";
+import { runUpdatePlanMigration } from "../../../utils/runUpdatePlanMigration";
 
-test.concurrent(`${chalk.yellowBright("migrations update_plan: add boolean and metered entitlements")}`, async () => {
-	const customerId = "migration-update-add-items";
-	const pro = products.pro({ items: [] });
+test.concurrent(`${chalk.yellowBright("migrations update_plan: same-feature replacement carries only matching usage")}`, async () => {
+	const customerId = "migration-update-carry-usage-same-feature";
+	const pro = products.pro({
+		items: [
+			items.monthlyMessages({ includedUsage: 100 }),
+			items.lifetimeMessages({ includedUsage: 500 }),
+		],
+	});
 
-	const { autumnV1, autumnV2_2, ctx } = await initScenario({
+	const { autumnV2, autumnV2_2, ctx } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -36,23 +41,18 @@ test.concurrent(`${chalk.yellowBright("migrations update_plan: add boolean and m
 		actions: [s.billing.attach({ productId: pro.id })],
 	});
 
-	const expectMigrationApplied = async () => {
-		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-		await expectCustomerProducts({ customer, active: [pro.id] });
-		expectFlagCorrect({
-			customer,
-			featureId: TestFeature.Dashboard,
-			planId: pro.id,
-		});
-		expectBalanceCorrect({
-			customer,
-			featureId: TestFeature.Words,
-			remaining: 150,
-			usage: 0,
-			planId: pro.id,
-		});
-		return customer;
-	};
+	await autumnV2.balances.update({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		current_balance: 50,
+		interval: ResetInterval.Month,
+	});
+	await autumnV2.balances.update({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		current_balance: 200,
+		interval: ResetInterval.OneOff,
+	});
 
 	await runUpdatePlanMigration({
 		ctx,
@@ -66,26 +66,39 @@ test.concurrent(`${chalk.yellowBright("migrations update_plan: add boolean and m
 					type: "update_plan",
 					plan_filter: { plan_id: pro.id },
 					customize: {
-						add_items: [
-							itemsV2.dashboard(),
-							itemsV2.monthlyWords({ included: 150 }),
+						remove_items: [
+							{
+								feature_id: TestFeature.Messages,
+								interval: BillingInterval.Month,
+							},
 						],
+						add_items: [itemsV2.monthlyMessages({ included: 200 })],
 					},
 				},
 			],
 		},
-		runOnServer: true,
-		waitFor: async () => {
-			await expectMigrationApplied();
-		},
-		timeoutMs: 60_000,
 	});
 
-	await expectMigrationApplied();
-	await expectCustomerInvoiceCorrect({
-		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
-		count: 1,
-		latestTotal: 20,
+	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+	await expectCustomerProducts({ customer, active: [pro.id] });
+	expectBalanceCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		remaining: 350,
+		usage: 350,
+		planId: pro.id,
+		breakdown: {
+			[ResetInterval.Month]: {
+				included_grant: 200,
+				remaining: 150,
+				usage: 50,
+			},
+			[ResetInterval.OneOff]: {
+				included_grant: 500,
+				remaining: 200,
+				usage: 300,
+			},
+		},
 	});
 	await expectNoExpiredCustomerProducts({ ctx, customerId, productId: pro.id });
 	await expectStripeSubscriptionCorrect({ ctx, customerId });

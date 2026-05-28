@@ -24,7 +24,7 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { runUpdatePlanMigration } from "../utils/runUpdatePlanMigration";
+import { runUpdatePlanMigration } from "../../utils/runUpdatePlanMigration";
 
 test.concurrent(`${chalk.yellowBright("update_plan custom: customer with is_custom plan is skipped")}`, async () => {
 	const customerId = "migration-v2-custom-skip";
