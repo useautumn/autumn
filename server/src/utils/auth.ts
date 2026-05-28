@@ -65,12 +65,13 @@ const emulateGoogleUrl =
 // OAuth flow leaves and returns via a third-party host (emulate.dev), so the
 // state cookie must be SameSite=None+Secure to survive the round trip.
 const isHttpsBaseUrl = process.env.BETTER_AUTH_URL?.startsWith("https://");
-const defaultMcpResourceUrl = process.env.BETTER_AUTH_URL
-	? new URL("/mcp", process.env.BETTER_AUTH_URL).href
-	: null;
-const defaultInternalMcpResourceUrl = process.env.BETTER_AUTH_URL
-	? new URL("/internal/mcp", process.env.BETTER_AUTH_URL).href
-	: null;
+const hostedMcpResourceUrls =
+	process.env.MCP_UPSTREAM_URL && process.env.BETTER_AUTH_URL
+		? [
+				new URL("/mcp", process.env.BETTER_AUTH_URL).href,
+				new URL("/internal/mcp", process.env.BETTER_AUTH_URL).href,
+			]
+		: [];
 const parseMcpResourceUrl = (rawUrl: string) => {
 	const resourceUrl = rawUrl.trim();
 	if (!resourceUrl) return null;
@@ -256,8 +257,7 @@ const options = {
 			scopes: [...ALL_SCOPES],
 			validAudiences: [
 				process.env.BETTER_AUTH_URL,
-				defaultMcpResourceUrl,
-				defaultInternalMcpResourceUrl,
+				...hostedMcpResourceUrls,
 				...mcpResourceUrls,
 				...internalMcpResourceUrls,
 			].filter(Boolean) as string[],
