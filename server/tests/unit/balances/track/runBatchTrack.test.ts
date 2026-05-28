@@ -178,8 +178,39 @@ describe("runBatchTrack", () => {
 		expect(ctx.logger.error).toHaveBeenCalled();
 	});
 
-	test("throws 503 RecaseError when SQS reports batch failure", async () => {
+	test("returns success on partial failure: logs the failed indices but does not throw (avoids client retry of an already-partially-enqueued batch)", async () => {
 		mockState.queueFailure = { batchIndex: 0, entryId: "1" };
+		const ctx = buildCtx();
+
+		await expect(runBatchTrack({ ctx, body })).resolves.toBeUndefined();
+
+		expect(mockState.queueCommands).toHaveLength(1);
+		expect(ctx.logger.error).toHaveBeenCalledWith(
+			"[track] batch track enqueue had partial failures",
+			expect.objectContaining({
+				failure_count: 1,
+				failures: [{ index: 1, reason: "SQS unavailable" }],
+				success_count: 2,
+				total_count: 3,
+			}),
+		);
+	});
+
+	test("throws 503 RecaseError only when ALL batch entries fail (no client-visible silent loss; safe to retry whole request)", async () => {
+		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
+		sqsClient.send = (async (command: SendMessageBatchCommand) => {
+			const input = command.input as BatchCommandInput;
+			const entries = input.Entries ?? [];
+			mockState.queueCommands.push(input);
+			return {
+				Failed: entries.map((entry) => ({
+					Id: entry.Id,
+					Code: "InternalError",
+					Message: "SQS unavailable",
+					SenderFault: false,
+				})),
+			};
+		}) as typeof sqsClient.send;
 		const ctx = buildCtx();
 
 		await expect(runBatchTrack({ ctx, body })).rejects.toMatchObject({
@@ -188,14 +219,44 @@ describe("runBatchTrack", () => {
 			message: "Async track is not available right now",
 		});
 
-		expect(mockState.queueCommands).toHaveLength(1);
+		expect(ctx.logger.error).toHaveBeenCalled();
+	});
+
+	test("chunk-level send error becomes per-entry failures, not a thrown rejection (earlier chunks already in SQS must not trigger a retry)", async () => {
+		const ctx = buildCtx();
+		const largeBody: BatchTrackParams = Array.from({ length: 20 }, (_, i) => ({
+			customer_id: `cus_${i}`,
+			feature_id: "messages",
+			value: 1,
+		}));
+
+		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
+		let chunkCounter = 0;
+		sqsClient.send = (async (command: SendMessageBatchCommand) => {
+			const thisChunk = chunkCounter;
+			chunkCounter += 1;
+			const input = command.input as BatchCommandInput;
+			const entries = input.Entries ?? [];
+			mockState.queueCommands.push(input);
+			if (thisChunk === 1) {
+				throw new Error("network reset on chunk 2");
+			}
+			return {
+				Successful: entries.map((entry) => ({ Id: entry.Id })),
+			};
+		}) as typeof sqsClient.send;
+
+		await expect(
+			runBatchTrack({ ctx, body: largeBody }),
+		).resolves.toBeUndefined();
+
+		expect(mockState.queueCommands).toHaveLength(2);
 		expect(ctx.logger.error).toHaveBeenCalledWith(
-			"[track] batch track enqueue had failures",
+			"[track] batch track enqueue had partial failures",
 			expect.objectContaining({
-				failure_count: 1,
-				failures: [{ index: 1, reason: "SQS unavailable" }],
-				success_count: 2,
-				total_count: 3,
+				failure_count: 10,
+				success_count: 10,
+				total_count: 20,
 			}),
 		);
 	});

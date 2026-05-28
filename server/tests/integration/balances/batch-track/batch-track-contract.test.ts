@@ -19,7 +19,13 @@
  *       getTrackFeatureDeductionsForBody. If ANY item fails validation,
  *       the handler throws and NOTHING is enqueued.
  *     - Items are enqueued via SQS SendMessageBatch (chunks of 10).
- *     - On partial SQS failure (Failed[] non-empty in any chunk), the
+ *     - On partial SQS failure (some entries fail, others succeed),
+ *       the handler returns 202 success and logs the failed entries.
+ *       Clients are NOT asked to retry, because retrying re-enqueues
+ *       the already-succeeded items (no client-supplied idempotency key
+ *       exists yet — see batch-track-retry-dedup.test.ts for the pin).
+ *     - On TOTAL failure (zero items successfully enqueued — entire SQS
+ *       unavailable, or chunk-level send threw for every chunk), the
  *       handler throws a 503 RecaseError with the customer-friendly
  *       message "Async track is not available right now".
  *     - On unset TRACK_ASYNC_SQS_QUEUE_URL env var, the handler throws
