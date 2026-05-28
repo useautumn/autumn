@@ -45,16 +45,22 @@ export const runBatchTrack = async ({
 		messageDeduplicationId: `${ctx.id}-${index}`,
 	}));
 
-	try {
-		const { successCount, failures } = await addTasksToQueueBatch({
-			jobName: JobName.Track,
-			queueUrl,
-			entries,
-		});
+	const { successCount, failures } = await addTasksToQueueBatch({
+		jobName: JobName.Track,
+		queueUrl,
+		entries,
+	});
 
-		if (failures.length > 0) {
-			ctx.logger.error("[track] batch track enqueue had failures", {
-				type: "batch_track_enqueue_partial_failure",
+	if (failures.length > 0) {
+		const isTotalFailure = successCount === 0;
+		ctx.logger.error(
+			isTotalFailure
+				? "[track] batch track enqueue failed"
+				: "[track] batch track enqueue had partial failures",
+			{
+				type: isTotalFailure
+					? "batch_track_enqueue_failure"
+					: "batch_track_enqueue_partial_failure",
 				success_count: successCount,
 				failure_count: failures.length,
 				total_count: entries.length,
@@ -64,27 +70,15 @@ export const runBatchTrack = async ({
 					0,
 				),
 				queue_name: queueUrl.split("/").pop(),
-			});
+			},
+		);
+
+		if (isTotalFailure) {
 			throw new RecaseError({
 				message: ASYNC_TRACK_UNAVAILABLE_MESSAGE,
 				code: ErrCode.InternalError,
 				statusCode: 503,
 			});
 		}
-	} catch (error) {
-		if (error instanceof RecaseError) throw error;
-
-		ctx.logger.error("[track] batch track enqueue failed", {
-			type: "batch_track_enqueue_failure",
-			error,
-			total_count: entries.length,
-			queue_name: queueUrl.split("/").pop(),
-		});
-
-		throw new RecaseError({
-			message: ASYNC_TRACK_UNAVAILABLE_MESSAGE,
-			code: ErrCode.InternalError,
-			statusCode: 503,
-		});
 	}
 };

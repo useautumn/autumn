@@ -7,6 +7,7 @@ import type {
 } from "@autumn/shared";
 import {
 	SendMessageBatchCommand,
+	type SendMessageBatchCommandOutput,
 	SendMessageCommand,
 } from "@aws-sdk/client-sqs";
 import { generateId } from "@server/utils/genUtils";
@@ -215,18 +216,38 @@ export const addTasksToQueueBatch = async <T extends keyof Payloads>({
 			chunk.map((entry) => [entry.sqsEntry.Id, entry.originalIndex]),
 		);
 
-		const response = await sqsClient.send(
-			new SendMessageBatchCommand({
-				QueueUrl: queueUrl,
-				Entries: chunk.map((entry) => entry.sqsEntry),
-			}),
-		);
+		const resolveOriginalIndex = (id: string | undefined) => {
+			if (id !== undefined) {
+				const mapped = originalIndexById.get(id);
+				if (mapped !== undefined) return mapped;
+				const parsed = Number.parseInt(id, 10);
+				if (Number.isFinite(parsed)) return chunkStartIndex + parsed;
+			}
+			return chunkStartIndex;
+		};
+
+		let response: SendMessageBatchCommandOutput;
+		try {
+			response = (await sqsClient.send(
+				new SendMessageBatchCommand({
+					QueueUrl: queueUrl,
+					Entries: chunk.map((entry) => entry.sqsEntry),
+				}),
+			)) as SendMessageBatchCommandOutput;
+		} catch (error) {
+			const reason =
+				error instanceof Error ? error.message : "Unknown SQS send error";
+			for (const entry of chunk) {
+				failures.push({ index: entry.originalIndex, reason });
+			}
+			continue;
+		}
 
 		successCount += response.Successful?.length ?? 0;
 
 		for (const failedEntry of response.Failed ?? []) {
 			failures.push({
-				index: originalIndexById.get(failedEntry.Id ?? "") ?? chunkStartIndex,
+				index: resolveOriginalIndex(failedEntry.Id),
 				reason:
 					failedEntry.Message ??
 					failedEntry.Code ??
