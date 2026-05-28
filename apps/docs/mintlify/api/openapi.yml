@@ -16399,7 +16399,7 @@ paths:
                 feature_id="messages",
                 value=1,
             )
-  /v1/balances.batchTrack:
+  /v1/balances.batch_track:
     post:
       operationId: batchTrack
       description: >-
@@ -16492,7 +16492,7 @@ paths:
             ]);
         - lang: curl
           source: |-
-            curl -X POST https://api.useautumn.com/v1/balances.batchTrack \
+            curl -X POST https://api.useautumn.com/v1/balances.batch_track \
               -H 'Authorization: Bearer <token>' \
               -H 'Content-Type: application/json' \
               -d '[

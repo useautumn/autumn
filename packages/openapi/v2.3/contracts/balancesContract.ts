@@ -160,7 +160,7 @@ export const balancesTrackContract = oc
 export const balancesBatchTrackContract = oc
 	.route({
 		method: "POST",
-		path: "/v1/balances.batchTrack",
+		path: "/v1/balances.batch_track",
 		operationId: "batchTrack",
 		description: "Track multiple usage events asynchronously.",
 		spec: (spec) =>
