@@ -7,6 +7,7 @@ export type MigrationRunControls = {
 	only?: string[] | null;
 	checkpoint?: boolean;
 	checkpointDryRun?: boolean;
+	retryFailed?: boolean;
 };
 
 export type MigrationBatchResult<Row extends Record<string, unknown>> = {
