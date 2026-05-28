@@ -96,14 +96,34 @@ export function PlanItemsSection({
 			.map((i) => getItemMatchKey(i)) ?? [],
 	);
 
+	// When showing diffs, split changed items into red (deleted old) +
+	// green (created new) pairs instead of a single amber row. We remove
+	// the original from the map so PlanItemRow sees the new version as
+	// "created", and push the original into changedOriginals for the
+	// deleted-items list.
+	const changedOriginals: ProductItem[] = [];
+	if (showDiff) {
+		for (const item of product?.items ?? []) {
+			if (!item.feature_id) continue;
+			const key = getItemMatchKey(item);
+			const originalItem = originalItemsMap.get(key);
+			if (originalItem && hasItemChanged({ originalItem, updatedItem: item })) {
+				changedOriginals.push(originalItem);
+				originalItemsMap.delete(key);
+			}
+		}
+	}
+
 	const isItemDeleted = (i: ProductItem) =>
 		!!i.feature_id && !currentItemKeys.has(getItemMatchKey(i));
 
-	const deletedItems = gateDeletedItemsByDiff
+	const purelyDeletedItems = gateDeletedItemsByDiff
 		? showDiff && originalItems
 			? originalItems.filter(isItemDeleted)
 			: []
 		: (originalItems?.filter(isItemDeleted) ?? []);
+
+	const deletedItems = [...changedOriginals, ...purelyDeletedItems];
 
 	const sortedItems = useMemo(
 		() => sortPlanItems({ items: product?.items ?? [] }),
@@ -114,17 +134,14 @@ export function PlanItemsSection({
 		[sortedItems],
 	);
 
-	const isItemChanged = (item: ProductItem) => {
-		const originalItem = originalItemsMap.get(getItemMatchKey(item));
-		if (!originalItem) return true;
-		return hasItemChanged({ originalItem, updatedItem: item });
-	};
+	const isItemNew = (item: ProductItem) =>
+		!originalItemsMap.has(getItemMatchKey(item));
 
 	const visibleItems = changesOnly
-		? allVisibleItems.filter(isItemChanged)
+		? allVisibleItems.filter(isItemNew)
 		: allVisibleItems;
 	const collapsedBooleanItems = changesOnly
-		? allCollapsedBooleanItems.filter(isItemChanged)
+		? allCollapsedBooleanItems.filter(isItemNew)
 		: allCollapsedBooleanItems;
 
 	const hasItems = (product?.items?.length ?? 0) > 0 || deletedItems.length > 0;

@@ -2,7 +2,6 @@ import type {
 	BillingInterval,
 	FrontendProduct,
 	ProductItem,
-	UpdatePlanItemParamsV1,
 	UpdatePlanOp,
 } from "@autumn/shared";
 import { productV2ToBasePrice } from "@autumn/shared";
@@ -41,7 +40,6 @@ import {
 	type OperationSheetMode,
 } from "./MigrationOperationSheet";
 import { RemoveItemRows } from "./RemoveItemRows";
-import { UpdateItemRows } from "./UpdateItemRows";
 
 function useVersionOptions(planFilter: UpdatePlanOp["plan_filter"]) {
 	const { products } = useProductsQuery({ allVersions: true });
@@ -304,29 +302,6 @@ export function UpdatePlanOpForm({
 				/>
 			))}
 
-			{(customize?.update_items ?? []).map((item, index) => (
-				<UpdateItemRows
-					key={`update-${index}`}
-					item={item}
-					onChange={(updated) => {
-						const items = [...(customize?.update_items ?? [])];
-						items[index] = updated;
-						update({ customize: { ...customize, update_items: items } });
-					}}
-					onRemove={() => {
-						const items = (customize?.update_items ?? []).filter(
-							(_, i) => i !== index,
-						);
-						update({
-							customize: {
-								...customize,
-								update_items: items.length > 0 ? items : undefined,
-							},
-						});
-					}}
-				/>
-			))}
-
 			<DropdownMenu>
 				<DropdownMenuTrigger className={DASHED_BUTTON_CLASS}>
 					<PlusIcon size={10} />
@@ -370,22 +345,6 @@ export function UpdatePlanOpForm({
 						}
 					>
 						Remove Item
-					</DropdownMenuItem>
-					<DropdownMenuItem
-						closeOnClick
-						onClick={() =>
-							update({
-								customize: {
-									...customize,
-									update_items: [
-										...(customize?.update_items ?? []),
-										{ filter: {} } as unknown as UpdatePlanItemParamsV1,
-									],
-								},
-							})
-						}
-					>
-						Update Item
 					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>

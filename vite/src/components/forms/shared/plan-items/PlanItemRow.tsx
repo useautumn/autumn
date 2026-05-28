@@ -112,11 +112,6 @@ export function PlanItemRow({
 	const isCreated =
 		showDiff && !originalItem && !!originalItems && originalItems.length > 0;
 
-	const hasChanges =
-		showDiff && !!originalItem
-			? hasItemChanged({ originalItem, updatedItem: item })
-			: false;
-
 	return (
 		<motion.div
 			key={featureId || item.price_id || index}
@@ -125,7 +120,6 @@ export function PlanItemRow({
 		>
 			<SubscriptionItemRow
 				item={item}
-				hasChanges={hasChanges}
 				prepaidQuantity={currentPrepaidQuantity}
 				form={form}
 				featureId={featureId}

@@ -5,6 +5,7 @@ import {
 	buildCustomerCount,
 	buildCustomerSelect,
 	type CustomerCheckpointExclusion,
+	type IncludeProcessed,
 } from "./buildCustomerSelect.js";
 
 export type CustomerRow = {
@@ -22,11 +23,15 @@ export const filterCustomers = ({
 	ctx,
 	filter,
 	checkpoint,
+	search,
+	includeProcessed,
 	batchSize,
 }: {
 	ctx: AutumnContext;
 	filter: CustomerFilter;
 	checkpoint?: CustomerCheckpointExclusion;
+	search?: string;
+	includeProcessed?: IncludeProcessed;
 	batchSize?: number;
 }): AsyncGenerator<CustomerRow[]> => {
 	const args = {
@@ -34,6 +39,8 @@ export const filterCustomers = ({
 		env: ctx.env,
 		filter,
 		checkpoint,
+		search,
+		includeProcessed,
 		ctx: { features: ctx.features },
 	};
 	return iterateOverFilterResults<CustomerRow>({
@@ -49,10 +56,14 @@ export const countCustomers = async ({
 	ctx,
 	filter,
 	checkpoint,
+	search,
+	includeProcessed,
 }: {
 	ctx: AutumnContext;
 	filter: CustomerFilter;
 	checkpoint?: CustomerCheckpointExclusion;
+	search?: string;
+	includeProcessed?: IncludeProcessed;
 }): Promise<number> => {
 	const [{ count }] = (await ctx.db.execute(
 		buildCustomerCount({
@@ -60,6 +71,8 @@ export const countCustomers = async ({
 			env: ctx.env,
 			filter,
 			checkpoint,
+			search,
+			includeProcessed,
 			ctx: { features: ctx.features },
 		}),
 	)) as Array<{ count: bigint | number }>;

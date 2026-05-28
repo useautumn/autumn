@@ -13,6 +13,8 @@ import {
 	countCustomers,
 	filterCustomers,
 } from "@/internal/migrations/v2/filters/customers/filterCustomers.js";
+import { migrationRepo } from "../repos/index.js";
+import type { IncludeProcessed } from "../filters/customers/buildCustomerSelect.js";
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -21,6 +23,7 @@ const PreviewFilterBody = z.object({
 	search: z.string().optional().default(""),
 	page: z.number().int().min(0).optional().default(0),
 	pageSize: z.number().int().min(1).max(500).optional().default(DEFAULT_PAGE_SIZE),
+	migrationId: z.string().optional(),
 });
 
 /** POST /migrations.filter.preview — count + enriched paginated customers. */
@@ -29,12 +32,20 @@ export const handlePreviewMigrationFilter = createRoute({
 	body: PreviewFilterBody,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { filter, search, page, pageSize } = c.req.valid("json");
+		const { filter, search, page, pageSize, migrationId } = c.req.valid("json");
+
+		const searchTerm = search || undefined;
+
+		let includeProcessed: IncludeProcessed | undefined;
+		if (migrationId) {
+			const migration = await migrationRepo.find({ ctx, id: migrationId });
+			includeProcessed = { migrationInternalId: migration.internal_id };
+		}
 
 		const [count, pageRows] = await Promise.all([
-			countCustomers({ ctx, filter }),
+			countCustomers({ ctx, filter, search: searchTerm, includeProcessed }),
 			collectPage(
-				filterCustomers({ ctx, filter, batchSize: pageSize }),
+				filterCustomers({ ctx, filter, search: searchTerm, includeProcessed, batchSize: pageSize }),
 				page * pageSize,
 				pageSize,
 			),
@@ -49,17 +60,7 @@ export const handlePreviewMigrationFilter = createRoute({
 			pageRows.map((r) => r.internal_id),
 		);
 
-		let grouped = groupByCustomer(enriched);
-
-		if (search) {
-			const q = search.toLowerCase();
-			grouped = grouped.filter((row) => {
-				const name = (row.name as string | null)?.toLowerCase() ?? "";
-				const email = (row.email as string | null)?.toLowerCase() ?? "";
-				const id = (row.id as string | null)?.toLowerCase() ?? "";
-				return name.includes(q) || email.includes(q) || id.includes(q);
-			});
-		}
+		const grouped = groupByCustomer(enriched);
 
 		return c.json({ count, customers: grouped, page, pageSize });
 	},

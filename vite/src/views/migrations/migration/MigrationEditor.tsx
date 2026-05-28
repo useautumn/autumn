@@ -74,8 +74,7 @@ export function MigrationEditor({ migration }: { migration: Migration }) {
 					operations={operations}
 					noBillingChanges={noBillingChanges}
 					step={step}
-					onStepChange={guardedSetStep}
-					onPrevious={() => setStep("operations")}
+				onStepChange={guardedSetStep}
 				/>
 			)}
 		</div>

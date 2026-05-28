@@ -26,7 +26,6 @@ import type { UseUpdateSubscriptionForm } from "../hooks/useUpdateSubscriptionFo
 
 interface SubscriptionItemRowProps {
 	item: ProductItem;
-	hasChanges?: boolean;
 	form?: UseUpdateSubscriptionForm | UseAttachForm;
 	featureId?: string;
 	prepaidQuantity?: number | null;
@@ -184,7 +183,6 @@ function PrepaidQuantityControl({
 
 const ITEM_STATE_CONFIG = {
 	new: { color: "bg-green-500", label: "New feature" },
-	changed: { color: "bg-amber-500", label: "Changed" },
 	removed: { color: "bg-red-500", label: "Removed" },
 } as const;
 
@@ -202,7 +200,6 @@ function ItemStatusDot({ state }: { state: keyof typeof ITEM_STATE_CONFIG }) {
 
 export function SubscriptionItemRow({
 	item,
-	hasChanges = false,
 	form,
 	featureId,
 	prepaidQuantity,
@@ -242,7 +239,6 @@ export function SubscriptionItemRow({
 	const renderRowIndicator = () => {
 		if (isDeleted) return <ItemStatusDot state="removed" />;
 		if (isCreated) return <ItemStatusDot state="new" />;
-		if (hasChanges) return <ItemStatusDot state="changed" />;
 
 		if (!isPrepaid && prepaidQuantity) {
 			return (
