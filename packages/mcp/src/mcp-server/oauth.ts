@@ -15,7 +15,22 @@ export const MCP_OAUTH_SCOPES = [
 	Scopes.Analytics.Read,
 ] as const satisfies readonly ScopeString[];
 
-export type OAuthEnvironment = "sandbox" | "live";
+const environmentSchema = z.enum(["sandbox", "live"]);
+const xApiVersionSchema = z.string().default("2.3.0");
+const failOpenSchema = z
+	.union([z.boolean(), z.enum(["true", "false"]).transform((v) => v === "true")])
+	.default(true);
+const secretKeySchema = z.string().min(1).optional();
+const tokenExchangeSchema = z.object({
+	sandbox_key: z.string().optional(),
+	prod_key: z.string().optional(),
+	org_id: z.string().optional(),
+	user_id: z.string().optional(),
+	client_id: z.string().optional(),
+	scopes: z.array(z.string()).optional(),
+});
+
+export type OAuthEnvironment = z.infer<typeof environmentSchema>;
 
 export interface MCPOAuthFlags extends MCPServerFlags {
 	readonly "oauth-enabled"?: boolean | undefined;
@@ -132,12 +147,25 @@ function getEnvironment(
 		headers.get("x-autumn-environment") ??
 		flags["oauth-environment"] ??
 		"sandbox";
-	if (value === "sandbox" || value === "live") return value;
+	const parsed = environmentSchema.safeParse(value);
+	if (parsed.success) return parsed.data;
+
 	throw new OAuthHttpError(
 		400,
 		"Invalid x-autumn-environment",
 		"invalid_request",
 	);
+}
+
+function parseRequestOption<T>(
+	value: unknown,
+	schema: z.ZodType<T>,
+	message: string,
+): T {
+	const parsed = schema.safeParse(value);
+	if (parsed.success) return parsed.data;
+
+	throw new OAuthHttpError(400, message, "invalid_request");
 }
 
 async function exchangeOAuthToken(
@@ -177,14 +205,7 @@ async function exchangeOAuthToken(
 		);
 	}
 
-	const data = (await response.json()) as {
-		sandbox_key?: string;
-		prod_key?: string;
-		org_id?: string;
-		user_id?: string;
-		client_id?: string;
-		scopes?: string[];
-	};
+	const data = tokenExchangeSchema.parse(await response.json());
 	const key = env === "live" ? data.prod_key : data.sandbox_key;
 	if (!key) {
 		throw new OAuthHttpError(
@@ -219,17 +240,6 @@ function getOAuthPrincipalId(
 	].join(":");
 }
 
-function resolveStaticHeader<T>(
-	headers: Headers,
-	headerName: string,
-	schema: z.ZodType<T>,
-	cliFlagValue: T | undefined,
-): T | undefined {
-	const value = headers.get(headerName);
-	if (value != null) return schema.parse(value);
-	return cliFlagValue === undefined ? schema.parse(undefined) : cliFlagValue;
-}
-
 export async function buildAuthForRequest(
 	headers: Headers,
 	flags: MCPOAuthFlags,
@@ -238,17 +248,15 @@ export async function buildAuthForRequest(
 ): Promise<AutumnMcpAuth> {
 	const env = getEnvironment(headers, flags);
 	const resource = getResourceUrl(headers, flags, resourcePath);
-	const xApiVersion = resolveStaticHeader(
-		headers,
-		"x-api-version",
-		z.string().default("2.3.0"),
-		flags["x-api-version"],
+	const xApiVersion = parseRequestOption(
+		headers.get("x-api-version") ?? flags["x-api-version"],
+		xApiVersionSchema,
+		"Invalid x-api-version",
 	);
-	const failOpen = resolveStaticHeader(
-		headers,
-		"fail-open",
-		z.enum(["true", "false"]).default("true").transform((v) => v === "true"),
-		flags["fail-open"],
+	const failOpen = parseRequestOption(
+		headers.get("fail-open") ?? flags["fail-open"],
+		failOpenSchema,
+		"Invalid fail-open",
 	);
 
 	if (flags["oauth-enabled"]) {
@@ -277,11 +285,10 @@ export async function buildAuthForRequest(
 		};
 	}
 
-	const apiKey = resolveStaticHeader(
-		headers,
-		"secret-key",
-		z.string().optional(),
-		flags["secret-key"],
+	const apiKey = parseRequestOption(
+		headers.get("secret-key") ?? flags["secret-key"],
+		secretKeySchema,
+		"Invalid secret-key",
 	);
 	if (!apiKey) {
 		logger.warning("Missing secret-key for MCP request");
