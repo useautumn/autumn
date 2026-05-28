@@ -1,4 +1,4 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterAll, describe, expect, mock, test } from "bun:test";
 
 const mockState = {
 	getCheckDataCalls: [] as unknown[],
@@ -32,4 +32,8 @@ describe("runCheckV2", () => {
 			response: { allowed: true, source: "v2" },
 		});
 	});
+});
+
+afterAll(() => {
+	mock.restore();
 });
