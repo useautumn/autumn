@@ -21,7 +21,7 @@
 			"packages/stripe-sync"
 		],
 		"catalog": {
-			"stripe": "19.3.0-beta.1",
+			"stripe": "22.1.0",
 			"drizzle-orm": "0.43.1",
 			"drizzle-kit": "^0.31.1",
 			"@typescript/native-preview": "7.0.0-dev.20260220.1",

@@ -609,7 +609,7 @@
     "drizzle-kit": "^0.31.1",
     "drizzle-orm": "0.43.1",
     "postgres": "3.4.7",
-    "stripe": "19.3.0-beta.1",
+    "stripe": "22.1.0",
     "vite": "7.3.2",
     "vite-tsconfig-paths": "6.1.1",
   },
@@ -5412,7 +5412,7 @@
 
     "strip-json-comments": ["strip-json-comments@5.0.3", "", {}, "sha512-1tB5mhVo7U+ETBKNf92xT4hrQa3pm0MZ0PQvuDnWgAAGHDsfp4lPSpiS6psrSiet87wyGPh9ft6wmhOMQ0hDiw=="],
 
-    "stripe": ["stripe@19.3.0-beta.1", "", { "dependencies": { "qs": "^6.11.0" }, "peerDependencies": { "@types/node": ">=16" }, "optionalPeers": ["@types/node"] }, "sha512-tZLZYj2LPBt+FvYKQYRcop9IAvkDxIsqealtgG2kJ9zVK0DAy8yqC5aXJZxJ+81I5mRWXXpyLKGu298/owkX8Q=="],
+    "stripe": ["stripe@22.1.0", "", { "peerDependencies": { "@types/node": ">=18" }, "optionalPeers": ["@types/node"] }, "sha512-w/xHyJGxXWnLPbNHG13sz/fae0MrFGC80Oz7YbICQymbfpqfEcsoG+6yG+9BWb81PWc4rrkeSO4wmTcmefmbLw=="],
 
     "strnum": ["strnum@2.3.0", "", {}, "sha512-ums3KNd42PGyx5xaoVTO1mjU1bH3NpY4vsrVlnv9PNGqQj8wd7rJ6nEypLrJ7z5vxK5RP0yMLo6J/Gsm62DI5Q=="],
 
