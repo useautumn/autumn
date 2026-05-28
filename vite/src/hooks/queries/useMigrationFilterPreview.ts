@@ -18,23 +18,25 @@ export const useMigrationFilterPreview = ({
 	search = "",
 	page = 0,
 	pageSize = DEFAULT_PAGE_SIZE,
+	migrationId,
 }: {
 	filter: CustomerFilter;
 	search?: string;
 	page?: number;
 	pageSize?: number;
+	migrationId?: string;
 }) => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 	const filterKey = useMemo(() => JSON.stringify(filter), [filter]);
-	const queryKey = buildKey(["migration-filter-preview", filterKey, search, page, pageSize]);
+	const queryKey = buildKey(["migration-filter-preview", filterKey, search, page, pageSize, migrationId]);
 
 	const query = useQuery<FilterPreviewResponse>({
 		queryKey,
 		queryFn: async () => {
 			const { data } = await axiosInstance.post<FilterPreviewResponse>(
 				"/migrations.filter.preview",
-				{ filter, search, page, pageSize },
+				{ filter, search, page, pageSize, migrationId },
 			);
 			return data;
 		},

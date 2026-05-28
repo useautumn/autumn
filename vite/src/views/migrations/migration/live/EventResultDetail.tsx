@@ -311,10 +311,10 @@ export function EventResultDetail({ event }: { event: MigrationItemEvent }) {
 		const error = response.error as { message?: string } | undefined;
 		if (!error?.message) return null;
 		return (
-			<div className="flex items-center gap-2 h-8 px-3 rounded-xl border border-red-500/20 bg-red-500/5 text-sm text-red-500">
-				<span className="size-2 rounded-full bg-red-500 shrink-0" />
-				<span className="truncate">{error.message}</span>
-			</div>
+		<div className="flex items-start gap-2 min-h-8 px-3 py-2 rounded-xl border border-red-500/20 bg-red-500/5 text-sm text-red-500">
+			<span className="size-2 rounded-full bg-red-500 shrink-0 mt-1" />
+			<span className="break-words min-w-0">{error.message}</span>
+		</div>
 		);
 	}
 

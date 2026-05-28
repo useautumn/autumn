@@ -4,7 +4,6 @@ import type {
 	Operations,
 } from "@autumn/shared";
 import {
-	ArrowLeftIcon,
 	ArrowSquareOutIcon,
 	CaretDownIcon,
 	CaretLeftIcon,
@@ -179,7 +178,6 @@ export function MigrationLiveView({
 	noBillingChanges,
 	step,
 	onStepChange,
-	onPrevious,
 }: {
 	migrationId: string;
 	filter: MigrationFilter;
@@ -187,7 +185,6 @@ export function MigrationLiveView({
 	noBillingChanges: boolean;
 	step: StepId;
 	onStepChange: (step: StepId) => void;
-	onPrevious?: () => void;
 }) {
 	const { queryStates: customerFilters } = useCustomerFilters();
 	const [executionStatuses, setExecutionStatuses] = useState<ExecutionStatus[]>(
@@ -235,6 +232,7 @@ export function MigrationLiveView({
 		search: debouncedSearch,
 		page: pagination.pageIndex,
 		pageSize: pagination.pageSize,
+		migrationId,
 	});
 
 	const {
@@ -402,12 +400,6 @@ export function MigrationLiveView({
 			)}
 
 			<StepIndicator step={step} onStepChange={onStepChange}>
-				{onPrevious && (
-					<Button variant="secondary" size="default" onClick={onPrevious}>
-						<ArrowLeftIcon size={14} />
-						Previous
-					</Button>
-				)}
 				{activeRun && (
 					<Button
 						variant="secondary"

@@ -1,7 +1,6 @@
 import { TriangleIcon, UserIcon } from "@phosphor-icons/react";
 import { parseAsString, useQueryStates } from "nuqs";
-import { useState } from "react";
-import { toast } from "sonner";
+import { useNavigate } from "react-router";
 import { AdminHover } from "@/components/general/AdminHover";
 import { IconBadge } from "@/components/v2/badges/IconBadge";
 import V2Breadcrumb from "@/components/v2/breadcrumb";
@@ -27,19 +26,15 @@ import {
 	useIsCusPlanEditor,
 	useProductStore,
 } from "@/hooks/stores/useProductStore.ts";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
-import { getBackendErr } from "@/utils/genUtils";
-import { isOneOffProduct } from "@/utils/product/priceUtils";
+import { pushPage } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery.tsx";
 import { useCusProductQuery } from "@/views/customers/customer/product/hooks/useCusProductQuery.tsx";
-import { useMigrationsQuery } from "../../product/hooks/queries/useMigrationsQuery.tsx.tsx";
 import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
 import {
 	useProductQuery,
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
-import { ConfirmMigrationDialog } from "./ConfirmMigrationDialog";
 import { PlanToolbar } from "./PlanToolbar.tsx";
 
 export const EditPlanHeader = () => {
@@ -48,11 +43,9 @@ export const EditPlanHeader = () => {
 	const { counts } = useProductCountsQuery(
 		product.version ? { version: product.version } : {},
 	);
-	const { refetch: refetchMigrations } = useMigrationsQuery();
 	const { queryStates, setQueryStates } = useProductQueryState();
-	const axiosInstance = useAxiosInstance();
+	const navigate = useNavigate();
 	const isCusPlanEditor = useIsCusPlanEditor();
-	const [confirmMigrateOpen, setConfirmMigrateOpen] = useState(false);
 	const flags = useAutumnFlags();
 	const { mappings } = useRCMappings();
 	const { org } = useOrg();
@@ -92,23 +85,6 @@ export const EditPlanHeader = () => {
 		}
 	};
 
-	const migrateCustomers = async () => {
-		try {
-			const { data } = await axiosInstance.post("/v1/migrations", {
-				from_product_id: product.id,
-				from_version: product.version,
-				to_product_id: product.id,
-				to_version: numVersions,
-			});
-
-			await refetchMigrations();
-
-			toast.success(`Migration started. ID: ${data.id}`);
-		} catch (error) {
-			toast.error(getBackendErr(error, "Something went wrong with migration"));
-		}
-	};
-
 	const getProductAdminHover = () => {
 		return [
 			{
@@ -126,28 +102,21 @@ export const EditPlanHeader = () => {
 		];
 	};
 
-	// Determine if migration button should be shown
-	const fromIsOneOff = isOneOffProduct(product.items);
-	const migrateCount =
-		(counts?.active || 0) - (counts?.canceled || 0) - (counts?.custom || 0);
-	const version = product.version;
+	const handleCustomerCountClick = () => {
+		const activeCount = counts?.active || 0;
+		if (activeCount === 0) return;
 
-	const canMigrate =
-		counts &&
-		migrateCount > 0 &&
-		!fromIsOneOff &&
-		version &&
-		version < numVersions &&
-		!isCusPlanEditor;
+		const versionKey = `${product.id}:${product.version}`;
+		const path = pushPage({
+			path: `/customers`,
+			queryParams: { version: versionKey },
+			preserveParams: false,
+		});
+		navigate(path, { state: { preAppliedFilters: true } });
+	};
 
 	return (
 		<>
-			<ConfirmMigrationDialog
-				open={confirmMigrateOpen}
-				setOpen={setConfirmMigrateOpen}
-				startMigration={migrateCustomers}
-				version={version}
-			/>
 			<div className="flex flex-col gap-2 p-4 pb-3  border-none shadow-none w-full max-w-5xl mx-auto pt-4 sm:pt-8 px-4 sm:px-12">
 				{isCusPlanEditor ? (
 					<CustomerBreadcrumbs />
@@ -195,9 +164,15 @@ export const EditPlanHeader = () => {
 								{ key: "custom", value: counts?.custom?.toString() || "0" },
 							]}
 						>
-							<IconBadge variant="muted" icon={<UserIcon />}>
-								{counts?.active || 0}
-							</IconBadge>
+							<Button
+								variant="skeleton"
+								size="icon"
+								onClick={handleCustomerCountClick}
+							>
+								<IconBadge variant="muted" icon={<UserIcon />}>
+									{counts?.active || 0}
+								</IconBadge>
+							</Button>
 						</AdminHover>
 						{hasRCMapping && (
 							<Tooltip>
@@ -230,16 +205,6 @@ export const EditPlanHeader = () => {
 					</div>
 
 					<div className="flex flex-row gap-2 items-center">
-						{canMigrate && (
-							<Button
-								variant="secondary"
-								size="default"
-								onClick={() => setConfirmMigrateOpen(true)}
-							>
-								Migrate customers
-							</Button>
-						)}
-
 						{numVersions && numVersions > 1 && (
 						<Select
 							value={currentVersion.toString()}

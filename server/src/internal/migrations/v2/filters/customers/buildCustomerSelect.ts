@@ -4,12 +4,18 @@ import type { ResolutionContext } from "@autumn/shared/api/migrations/compiler/f
 import { type SQL, sql } from "drizzle-orm";
 import { rawWithParamsToDrizzle } from "../rawWithParamsToDrizzle.js";
 
+export type IncludeProcessed = {
+	migrationInternalId: string;
+};
+
 export type CustomerQueryArgs = {
 	orgId: string;
 	env: string;
 	filter: CustomerFilter;
 	ctx: ResolutionContext;
 	checkpoint?: CustomerCheckpointExclusion;
+	search?: string;
+	includeProcessed?: IncludeProcessed;
 };
 
 const compileWhere = ({ orgId, env, filter, ctx }: CustomerQueryArgs): SQL =>
@@ -56,6 +62,24 @@ const buildCheckpointWhere = (
 	`;
 };
 
+const buildSearchWhere = (search: string | undefined): SQL => {
+	if (!search) return sql``;
+	const pattern = `%${search}%`;
+	return sql`AND (c.name ILIKE ${pattern} OR c.email ILIKE ${pattern} OR c.id ILIKE ${pattern})`;
+};
+
+const buildIncludeProcessedOr = (
+	includeProcessed: IncludeProcessed | undefined,
+): SQL => {
+	if (!includeProcessed) return sql``;
+	return sql`OR c.internal_id IN (
+		SELECT mir.item_id FROM migration_item_runs mir
+		WHERE mir.migration_internal_id = ${includeProcessed.migrationInternalId}
+			AND mir.item_kind = 'customer'
+			AND mir.dry_run = false
+	)`;
+};
+
 /**
  * Full SELECT. Returns `{ internal_id, id }` rows newest-first via keyset
  * pagination on `c.internal_id DESC`, so successive iterations over an
@@ -67,6 +91,8 @@ export const buildCustomerSelect = ({
 	filter,
 	ctx,
 	checkpoint,
+	search,
+	includeProcessed,
 	limit,
 	afterInternalId,
 }: CustomerQueryArgs & {
@@ -75,6 +101,8 @@ export const buildCustomerSelect = ({
 }): SQL => {
 	const where = compileWhere({ orgId, env, filter, ctx });
 	const checkpointWhere = buildCheckpointWhere(checkpoint);
+	const searchWhere = buildSearchWhere(search);
+	const processedOr = buildIncludeProcessedOr(includeProcessed);
 	const cursor = afterInternalId
 		? sql`AND c.internal_id < ${afterInternalId}`
 		: sql``;
@@ -82,7 +110,7 @@ export const buildCustomerSelect = ({
 	return sql`
 		SELECT c.internal_id, c.id, c.name, c.email
 		FROM customers c
-		WHERE (${where}) ${checkpointWhere} ${cursor}
+		WHERE ((${where}) ${processedOr}) ${checkpointWhere} ${searchWhere} ${cursor}
 		ORDER BY c.internal_id DESC
 		${limitClause}
 	`;
@@ -95,12 +123,16 @@ export const buildCustomerCount = ({
 	filter,
 	ctx,
 	checkpoint,
+	search,
+	includeProcessed,
 }: CustomerQueryArgs): SQL => {
 	const where = compileWhere({ orgId, env, filter, ctx });
 	const checkpointWhere = buildCheckpointWhere(checkpoint);
+	const searchWhere = buildSearchWhere(search);
+	const processedOr = buildIncludeProcessedOr(includeProcessed);
 	return sql`
 		SELECT COUNT(*)::bigint AS count
 		FROM customers c
-		WHERE (${where}) ${checkpointWhere}
+		WHERE ((${where}) ${processedOr}) ${checkpointWhere} ${searchWhere}
 	`;
 };

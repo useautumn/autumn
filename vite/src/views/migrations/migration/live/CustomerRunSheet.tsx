@@ -1,5 +1,6 @@
 import type { CustomerWithProducts, Operations } from "@autumn/shared";
 import {
+	ArrowSquareOutIcon,
 	CalendarBlankIcon,
 	EyeIcon,
 	LightningIcon,
@@ -8,6 +9,7 @@ import {
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
 import {
@@ -131,7 +133,13 @@ export function CustomerRunSheet({
 			<SheetHeader
 				title={
 					<span className="flex items-center gap-2">
-						{customer.name || customerId}
+						<Link
+							to={`/customers/${customerId}`}
+							className="inline-flex items-center gap-1.5 hover:text-primary transition-colors"
+						>
+							{customer.name || customerId}
+							<ArrowSquareOutIcon size={14} weight="bold" className="opacity-50" />
+						</Link>
 						{isActive && <ActiveRunDot />}
 					</span>
 				}

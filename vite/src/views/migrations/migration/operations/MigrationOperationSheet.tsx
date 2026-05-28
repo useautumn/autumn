@@ -1,5 +1,5 @@
 import type { FrontendProduct, ProductItem } from "@autumn/shared";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
 import {
 	ProductProvider,
@@ -120,9 +120,14 @@ function MigrationOperationSheetContent({
 	};
 
 	const [sheetType, setSheetType] = useState<string>(MODE_TO_SHEET[mode]);
-	const [itemId, setItemId] = useState<string | null>(
-		mode === "edit-feature" && editItem ? "item-0" : null,
+	const editItemId = useMemo(
+		() =>
+			mode === "edit-feature" && editItem
+				? getItemId({ item: editItem, itemIndex: 0 })
+				: null,
+		[mode, editItem],
 	);
+	const [itemId, setItemId] = useState<string | null>(editItemId);
 	const [initialItem, setInitialItem] = useState<ProductItem | null>(
 		editItem ? structuredClone(editItem) : null,
 	);
