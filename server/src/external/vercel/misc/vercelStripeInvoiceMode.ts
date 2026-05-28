@@ -120,6 +120,68 @@ export const ensureVercelInvoiceModeSubscription = async ({
 };
 
 /**
+ * Strip a Vercel-owned Stripe customer's default payment method when it
+ * points at a Custom Payment Method. Required before `invoices.pay` —
+ * Stripe rejects the call with "Custom payment methods are not supported
+ * on invoices.pay" if the customer's default is a CPM.
+ *
+ * Clears `invoice_settings.default_payment_method` only; the CPM stays
+ * attached so historical invoices/payment records that reference it keep
+ * resolving. Idempotent + best-effort: a real card stays untouched, a
+ * non-CPM default is left alone, and Stripe failures log a warning
+ * without throwing.
+ */
+export const ensureVercelInvoiceModeCustomer = async ({
+	ctx,
+	stripeCli,
+	stripeCustomerId,
+}: {
+	ctx: AutumnContext;
+	stripeCli: Stripe;
+	stripeCustomerId: string;
+}): Promise<void> => {
+	const { logger } = ctx;
+
+	try {
+		const customer = await stripeCli.customers.retrieve(stripeCustomerId, {
+			expand: ["invoice_settings.default_payment_method"],
+		});
+
+		if (customer.deleted) return;
+
+		const defaultPm = customer.invoice_settings?.default_payment_method;
+		if (!defaultPm || typeof defaultPm === "string") return;
+
+		if (defaultPm.type !== "custom") return;
+
+		await stripeCli.customers.update(stripeCustomerId, {
+			invoice_settings: {
+				default_payment_method: "" as unknown as string,
+			},
+		});
+
+		logger.info(
+			"[vercelInvoiceMode] cleared CPM as customer default payment method",
+			{
+				data: {
+					stripeCustomerId,
+					paymentMethodId: defaultPm.id,
+				},
+			},
+		);
+	} catch (error: any) {
+		logCaughtError({
+			logger,
+			message:
+				"[vercelInvoiceMode] failed to clear customer-level CPM default",
+			error,
+			data: { stripeCustomerId },
+			level: "warn",
+		});
+	}
+};
+
+/**
  * Mark a Stripe invoice paid out of band (Vercel handled the money movement).
  *
  * Idempotent:
