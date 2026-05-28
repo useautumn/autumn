@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import {
+	afterAll,
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	test,
+} from "bun:test";
 
 const mockState = {
 	shouldUseRedis: true,
@@ -135,4 +143,8 @@ describe("runFinalizeLock", () => {
 			error,
 		);
 	});
+});
+
+afterAll(() => {
+	mock.restore();
 });

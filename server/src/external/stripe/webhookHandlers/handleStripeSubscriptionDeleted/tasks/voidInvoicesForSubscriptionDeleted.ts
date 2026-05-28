@@ -1,12 +1,6 @@
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import type { StripeSubscriptionDeletedContext } from "../setupStripeSubscriptionDeletedContext";
 
-/**
- * Voids invoices for a subscription that was deleted.
- *
- * When a subscription is deleted, it leaves unpaid invoices in an 'open' state.
- * We need to void these invoices to prevent customers from being charged for usage they won't receive.
- */
 export const voidInvoicesForSubscriptionDeleted = async ({
 	ctx,
 	eventContext,
@@ -28,14 +22,15 @@ export const voidInvoicesForSubscriptionDeleted = async ({
 			subscription: stripeSubscription.id,
 		});
 
-		const openInvoices = invoices.data.filter(
-			(invoice) => invoice.status === "open",
+		const voidableInvoices = invoices.data.filter(
+			(invoice) =>
+				invoice.status === "open" || invoice.status === "uncollectible",
 		);
 
 		await Promise.allSettled(
-			openInvoices.map(async (invoice) => {
+			voidableInvoices.map(async (invoice) => {
 				await stripeCli.invoices.voidInvoice(invoice.id);
-				logger.info(`[sub.deleted] Voided open invoice ${invoice.id}`);
+				logger.info(`[sub.deleted] Voided invoice ${invoice.id}`);
 			}),
 		);
 	} catch (error) {

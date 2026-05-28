@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { CustomerNotFoundError, type FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
@@ -177,4 +177,8 @@ describe("full customer cache Redis gating", () => {
 		expect(mockState.dbCalls).toBe(1);
 		expect(mockState.createCalls).toBe(0);
 	});
+});
+
+afterAll(() => {
+	mock.restore();
 });

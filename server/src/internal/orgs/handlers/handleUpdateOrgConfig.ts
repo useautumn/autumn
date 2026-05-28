@@ -1,11 +1,10 @@
-import { OrgConfigSchema, type OrgConfig, Scopes } from "@autumn/shared";
+import { type OrgConfig, OrgConfigSchema, Scopes } from "@autumn/shared";
+import { sql } from "drizzle-orm";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { clearOrgCache } from "../orgUtils/clearOrgCache.js";
-import { sql } from "drizzle-orm";
-import { z } from "zod/v4";
 
 const validKeys = new Set(Object.keys(OrgConfigSchema.shape));
-const bodySchema = z.record(z.string(), z.boolean());
+const bodySchema = OrgConfigSchema.partial();
 
 export const handleUpdateOrgConfig = createRoute({
 	scopes: [Scopes.Organisation.Write],
@@ -15,11 +14,16 @@ export const handleUpdateOrgConfig = createRoute({
 		const raw = c.req.valid("json");
 
 		const updates = Object.fromEntries(
-			Object.entries(raw).filter(([k]) => validKeys.has(k)),
+			Object.entries(raw).filter(
+				([k, v]) => validKeys.has(k) && v !== undefined,
+			),
 		) as Partial<OrgConfig>;
 
 		if (Object.keys(updates).length === 0) {
-			return c.json({ success: true, config: OrgConfigSchema.parse(org.config) });
+			return c.json({
+				success: true,
+				config: OrgConfigSchema.parse(org.config),
+			});
 		}
 
 		const rows = await db.execute<{ config: OrgConfig }>(

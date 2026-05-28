@@ -1,8 +1,9 @@
-import type { PlanFilter, StringMatcher } from "@autumn/shared";
+import type { NumberMatcher, PlanFilter, StringMatcher } from "@autumn/shared";
 
 export type FilterField =
 	| "customer_id"
 	| "plan_id"
+	| "version"
 	| "paid"
 	| "recurring"
 	| "price"
@@ -20,7 +21,11 @@ export type FilterOperator =
 	| "regex"
 	| "starts_with"
 	| "exists"
-	| "not_exists";
+	| "not_exists"
+	| "gt"
+	| "gte"
+	| "lt"
+	| "lte";
 
 export type FilterRule = {
 	field: FilterField;
@@ -38,6 +43,7 @@ export const FILTER_FIELD_OPTIONS: {
 }[] = [
 	{ value: "customer_id", label: "Customer" },
 	{ value: "plan_id", label: "Plan" },
+	{ value: "version", label: "Version" },
 	{ value: "paid", label: "Paid" },
 	{ value: "recurring", label: "Recurring" },
 	{ value: "price", label: "Base Price" },
@@ -51,7 +57,7 @@ export const FILTER_FIELD_OPTIONS: {
 type OperatorOption = { value: FilterOperator; label: string };
 export type FieldConfig = {
 	operators: OperatorOption[];
-	valueType: "string" | "boolean" | "none";
+	valueType: "string" | "boolean" | "number" | "none";
 };
 
 const STRING_OPERATORS: OperatorOption[] = [
@@ -66,6 +72,17 @@ const STRING_OPERATORS: OperatorOption[] = [
 const STRING_MATCH_OPERATORS: OperatorOption[] = [
 	{ value: "is", label: "is" },
 	{ value: "is_not", label: "is not" },
+	{ value: "in", label: "in" },
+	{ value: "not_in", label: "not in" },
+];
+
+const NUMBER_OPERATORS: OperatorOption[] = [
+	{ value: "is", label: "is" },
+	{ value: "is_not", label: "is not" },
+	{ value: "gt", label: ">" },
+	{ value: "gte", label: "≥" },
+	{ value: "lt", label: "<" },
+	{ value: "lte", label: "≤" },
 	{ value: "in", label: "in" },
 	{ value: "not_in", label: "not in" },
 ];
@@ -86,6 +103,7 @@ const NULLABLE_ONLY: FieldConfig = {
 export const FIELD_CONFIGS: Record<FilterField, FieldConfig> = {
 	customer_id: { operators: STRING_MATCH_OPERATORS, valueType: "string" },
 	plan_id: { operators: STRING_OPERATORS, valueType: "string" },
+	version: { operators: NUMBER_OPERATORS, valueType: "number" },
 	paid: BOOLEAN_ONLY,
 	recurring: BOOLEAN_ONLY,
 	price: NULLABLE_ONLY,
@@ -135,6 +153,99 @@ function stringMatcherToRule(
 			values: [matcher.$startsWith],
 		};
 	return { field, operator: "is", values: [] };
+}
+
+/**
+ * Convert a NumberMatcher to one OR MORE FilterRules. A combined matcher like
+ * `{ $gte: 2, $lte: 4 }` emits two rules (a "≥ 2" rule and a "≤ 4" rule) so
+ * neither constraint is silently dropped. `groupsToPlanFilter` re-merges them
+ * by field on save.
+ */
+export function numberMatcherToRules(
+	field: FilterField,
+	matcher: NumberMatcher | undefined,
+): FilterRule[] {
+	if (matcher === undefined) return [];
+	if (matcher === null) return [{ field, operator: "is", values: [] }];
+	if (typeof matcher === "number")
+		return [{ field, operator: "is", values: [String(matcher)] }];
+
+	const rules: FilterRule[] = [];
+	if (matcher.$eq !== undefined) {
+		if (matcher.$eq === null) rules.push({ field, operator: "is", values: [] });
+		else rules.push({ field, operator: "is", values: [String(matcher.$eq)] });
+	}
+	if (matcher.$ne !== undefined && matcher.$ne !== null)
+		rules.push({ field, operator: "is_not", values: [String(matcher.$ne)] });
+	if (matcher.$in !== undefined)
+		rules.push({ field, operator: "in", values: matcher.$in.map(String) });
+	if (matcher.$nin !== undefined)
+		rules.push({ field, operator: "not_in", values: matcher.$nin.map(String) });
+	if (matcher.$gt !== undefined)
+		rules.push({ field, operator: "gt", values: [String(matcher.$gt)] });
+	if (matcher.$gte !== undefined)
+		rules.push({ field, operator: "gte", values: [String(matcher.$gte)] });
+	if (matcher.$lt !== undefined)
+		rules.push({ field, operator: "lt", values: [String(matcher.$lt)] });
+	if (matcher.$lte !== undefined)
+		rules.push({ field, operator: "lte", values: [String(matcher.$lte)] });
+	return rules;
+}
+
+/**
+ * Convert a single FilterRule into a NumberMatcher fragment that can be
+ * merged with other fragments for the same field. An empty `"is"` rule round-
+ * trips from `version: null` and must preserve the explicit null match.
+ */
+function ruleToNumberMatcherFragment(
+	rule: FilterRule,
+): Record<string, unknown> | null {
+	const nums = rule.values
+		.map((v) => Number.parseFloat(v))
+		.filter((n) => !Number.isNaN(n));
+	if (nums.length === 0) {
+		if (rule.operator === "is") return { $eq: null };
+		return null;
+	}
+	const first = nums[0];
+	switch (rule.operator) {
+		case "is":
+			return nums.length > 1 ? { $in: nums } : { $eq: first };
+		case "is_not":
+			return { $ne: first };
+		case "in":
+			return { $in: nums };
+		case "not_in":
+			return { $nin: nums };
+		case "gt":
+			return { $gt: first };
+		case "gte":
+			return { $gte: first };
+		case "lt":
+			return { $lt: first };
+		case "lte":
+			return { $lte: first };
+		default:
+			return { $eq: first };
+	}
+}
+
+export function mergeNumberFragments(
+	fragments: Record<string, unknown>[],
+): NumberMatcher | undefined {
+	if (fragments.length === 0) return undefined;
+	if (fragments.length === 1) {
+		const fragment = fragments[0];
+		const keys = Object.keys(fragment);
+		if (keys.length === 1 && "$eq" in fragment) {
+			// Simplify single-eq fragments back to bare value (matches the
+			// canonical "bare = $eq" convention) — handles version: 1 → 1
+			// and version: null → null.
+			return fragment.$eq as NumberMatcher;
+		}
+		return fragment as NumberMatcher;
+	}
+	return Object.assign({}, ...fragments) as NumberMatcher;
 }
 
 function ruleToStringMatcher(rule: FilterRule): StringMatcher {
@@ -191,6 +302,8 @@ export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
 
 	const planIdRule = stringMatcherToRule("plan_id", filter.plan_id);
 	if (planIdRule) mainRules.push(planIdRule);
+
+	mainRules.push(...numberMatcherToRules("version", filter.version));
 
 	if (filter.paid !== undefined)
 		mainRules.push(booleanRule("paid", filter.paid));
@@ -266,12 +379,18 @@ export function groupsToPlanFilter(groups: FilterGroupData[]): PlanFilter {
 	let hasItemFields = false;
 	const itemInner: Record<string, unknown> = {};
 	let itemMode: ArrayFilterMode = "$some";
+	const versionFragments: Record<string, unknown>[] = [];
 
 	for (const rule of main.rules) {
 		switch (rule.field) {
 			case "plan_id":
 				filter.plan_id = ruleToStringMatcher(rule);
 				break;
+			case "version": {
+				const fragment = ruleToNumberMatcherFragment(rule);
+				if (fragment) versionFragments.push(fragment);
+				break;
+			}
 			case "paid":
 				filter.paid = rule.values[0] === "true";
 				break;
@@ -317,6 +436,9 @@ export function groupsToPlanFilter(groups: FilterGroupData[]): PlanFilter {
 				? (itemInner as PlanFilter["item"])
 				: ({ [itemMode]: itemInner } as PlanFilter["item"]);
 	}
+
+	const versionMatcher = mergeNumberFragments(versionFragments);
+	if (versionMatcher !== undefined) filter.version = versionMatcher;
 
 	if (groups.length > 1) {
 		filter.$or = groups.slice(1).map((group) => groupsToPlanFilter([group]));

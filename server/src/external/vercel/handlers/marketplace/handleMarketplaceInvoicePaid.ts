@@ -7,6 +7,7 @@ import { sendUsageAndReset } from "@/external/stripe/webhookHandlers/handleInvoi
 import { getInvoiceSubscriptionId } from "@/external/vercel/misc/vercelInvoiceUtils.js";
 import { provisionVercelCusProduct } from "@/external/vercel/misc/vercelProvisioning.js";
 import {
+	ensureVercelInvoiceModeCustomer,
 	ensureVercelInvoiceModeSubscription,
 	markVercelInvoicePaidOutOfBand,
 } from "@/external/vercel/misc/vercelStripeInvoiceMode.js";
@@ -50,6 +51,15 @@ export const handleMarketplaceInvoicePaid = async ({
 		try {
 			const subscription =
 				await stripeCli.subscriptions.retrieve(subscriptionId);
+
+			// Lazy migration: legacy onboarders left a CPM as the Stripe
+			// customer's default payment method, which makes `invoices.pay`
+			// throw. Clear it before touching the invoice.
+			await ensureVercelInvoiceModeCustomer({
+				ctx,
+				stripeCli,
+				stripeCustomerId: invoice.customer as string,
+			});
 
 			// Lazy migration: bring legacy `charge_automatically` Vercel subs
 			// onto invoice mode the first time they're touched.

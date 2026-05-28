@@ -15,6 +15,7 @@ import { fetchStripeCustomerForBilling } from "./fetchStripeCustomerForBilling";
 import { fetchStripeDiscountsForBilling } from "./fetchStripeDiscountsForBilling";
 import { fetchStripeSubscriptionForBilling } from "./fetchStripeSubscriptionForBilling";
 import { fetchStripeSubscriptionScheduleForBilling } from "./fetchStripeSubscriptionScheduleForBilling";
+import { fetchStripeTaxRateForBilling } from "./fetchStripeTaxRateForBilling";
 
 export const setupStripeBillingContext = async ({
 	ctx,
@@ -27,6 +28,7 @@ export const setupStripeBillingContext = async ({
 	skipBillingFetching,
 	skipSubscriptionFetching,
 	createStripeCustomerIfMissing = true,
+	fetchTaxRate = false,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
@@ -38,6 +40,7 @@ export const setupStripeBillingContext = async ({
 	skipBillingFetching?: boolean;
 	skipSubscriptionFetching?: boolean;
 	createStripeCustomerIfMissing?: boolean;
+	fetchTaxRate?: boolean;
 }) => {
 	const { stripeBillingContext } = contextOverride;
 
@@ -49,6 +52,7 @@ export const setupStripeBillingContext = async ({
 			stripeSubscriptionSchedule: undefined,
 			stripeCustomer: undefined,
 			stripeDiscounts: undefined,
+			stripeTaxRate: undefined,
 			paymentMethod: undefined,
 			testClockFrozenTime: undefined,
 		};
@@ -63,6 +67,7 @@ export const setupStripeBillingContext = async ({
 		stripeSubscription,
 		stripeSubscriptionSchedule,
 		stripeDiscounts,
+		stripeTaxRate,
 	} = await all({
 		async stripeContext() {
 			return fetchStripeCustomerForBilling({
@@ -117,6 +122,12 @@ export const setupStripeBillingContext = async ({
 					params && "discounts" in params ? params.discounts : undefined,
 			});
 		},
+		async stripeTaxRate() {
+			if (!fetchTaxRate) return undefined;
+			const taxRateId =
+				params && "tax_rate_id" in params ? params.tax_rate_id : undefined;
+			return fetchStripeTaxRateForBilling({ ctx, taxRateId });
+		},
 	});
 
 	return {
@@ -124,6 +135,7 @@ export const setupStripeBillingContext = async ({
 		stripeSubscriptionSchedule,
 		stripeCustomer,
 		stripeDiscounts,
+		stripeTaxRate,
 		paymentMethod,
 		testClockFrozenTime,
 	};

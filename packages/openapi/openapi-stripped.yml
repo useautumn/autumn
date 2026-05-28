@@ -17069,6 +17069,12 @@ paths:
                     type: string
                   description: Filter by parent customer processor type (stripe, revenuecat,
                     vercel).
+                customer_id:
+                  type: string
+                  minLength: 1
+                  description: Restrict the response to entities owned by this customer id. Use to
+                    bulk-fetch all entities for one customer in a single
+                    paginated call instead of iterating entities.get.
               title: ListEntitiesParams
               examples:
                 - &a65

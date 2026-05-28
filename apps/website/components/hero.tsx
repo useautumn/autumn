@@ -142,17 +142,17 @@ export default function Hero() {
 						<div className="flex flex-col gap-6 w-full px-0 lg:px-0">
 							<h1 className="hero-reveal lg:opacity-0 text-[44px] md:text-[56px] w-full max-w-sm sm:max-w-[480px] md:max-w-xl leading-[44px] tracking-[-5%] md:leading-14 font-sans">
 								<span className="text-[#FFFFFF99] font-normal">
-									The revenue runtime for
+									One API for
 								</span>{" "}
-								<span className="text-white block md:inline"> AI companies</span>
+								<span className="text-white block md:inline">plans, usage and AI credits</span>
 							</h1>
 							<p className="hero-reveal lg:opacity-0 tracking-[-2%] w-full max-w-xs sm:max-w-[480px] md:max-w-xl text-[#FFFFFF99] md:text-[16px] text-[14px] font-light leading-5 font-sans">
-								Your {" "}
+								Replace your in-house usage tracking, gating and asynchronous billing logic.
+								Autumn gives you a{" "}
 								<span className="text-white font-light">
-									 real-time source of truth
+									flexible source of truth
 								</span>{" "}
-								for usage-based, PLG and sales-led monetization. Replace your usage limits, credit ledger and Stripe billing logic
-								with a flexible control plane.
+								across self-serve payments and enterprise deals.
 							</p>
 							
 						</div>

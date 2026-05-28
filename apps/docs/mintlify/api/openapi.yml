@@ -16065,6 +16065,12 @@ paths:
                   required:
                     - lock_id
                     - enabled
+                async:
+                  type: boolean
+                  description: If true, enqueue the event for asynchronous processing and return
+                    202 immediately. The response will not include balance
+                    information. Use for high-volume tracking where you
+                    don't need an immediate balance read.
               required:
                 - customer_id
               title: TrackParams
@@ -16393,6 +16399,106 @@ paths:
                 feature_id="messages",
                 value=1,
             )
+  /v1/balances.batchTrack:
+    post:
+      operationId: batchTrack
+      description: >-
+        Enqueue up to 1000 usage events in a single request. Items are validated
+        synchronously, then all enqueued via SQS for asynchronous processing.
+
+
+        Returns 202 immediately. The response body does not include balances —
+        balances are deducted by workers off the queue.
+
+
+        On partial failure (some items fail to enqueue, others succeed), the
+        endpoint still returns 202; failures are logged server-side. Clients
+        should NOT retry, because retrying re-enqueues the already-succeeded
+        items. A 503 is returned only when zero items were successfully
+        enqueued (queue entirely unavailable).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              minItems: 1
+              maxItems: 1000
+              items:
+                type: object
+                properties:
+                  customer_id:
+                    type: string
+                    description: The ID of the customer.
+                  feature_id:
+                    type: string
+                    description: The ID of the feature to track usage for. Required if event_name is
+                      not provided.
+                  entity_id:
+                    type: string
+                    description: The ID of the entity for entity-scoped balances.
+                  event_name:
+                    type: string
+                    minLength: 1
+                    description: Event name to track usage for. Use instead of feature_id when
+                      multiple features should be tracked from a single event.
+                  value:
+                    type: number
+                    description: The amount of usage to record. Defaults to 1.
+                  properties:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties: {}
+                    description: Additional properties to attach to this usage event.
+                required:
+                  - customer_id
+              title: BatchTrackParams
+              examples:
+                - &a55
+                  - customer_id: cus_123
+                    feature_id: messages
+                    value: 1
+                  - customer_id: cus_456
+                    feature_id: messages
+                    value: 5
+            example: *a55
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    description: Always true. Indicates the batch was accepted (fully or partially
+                      enqueued).
+                required:
+                  - success
+                title: BatchTrackResponse
+        "503":
+          description: Service Unavailable — zero items were successfully enqueued. Safe
+            to retry the whole request.
+      tags:
+        - Balances
+      x-codeSamples:
+        - lang: typescript
+          source: |-
+            await autumn.balances.batchTrack([
+              { customerId: "cus_123", featureId: "messages", value: 1 },
+              { customerId: "cus_456", featureId: "messages", value: 5 },
+            ]);
+        - lang: curl
+          source: |-
+            curl -X POST https://api.useautumn.com/v1/balances.batchTrack \
+              -H 'Authorization: Bearer <token>' \
+              -H 'Content-Type: application/json' \
+              -d '[
+                { "customer_id": "cus_123", "feature_id": "messages", "value": 1 },
+                { "customer_id": "cus_456", "feature_id": "messages", "value": 5 }
+              ]'
   /v1/events.list:
     post:
       operationId: listEvents
@@ -17999,6 +18105,12 @@ paths:
                     type: string
                   description: Filter by parent customer processor type (stripe, revenuecat,
                     vercel).
+                customer_id:
+                  type: string
+                  minLength: 1
+                  description: Restrict the response to entities owned by this customer id. Use to
+                    bulk-fetch all entities for one customer in a single
+                    paginated call instead of iterating entities.get.
               title: ListEntitiesParams
               examples:
                 - &a65

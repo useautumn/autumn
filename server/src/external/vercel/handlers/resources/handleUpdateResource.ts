@@ -1,6 +1,7 @@
 import { type AppEnv, RecaseError, Scopes } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
+import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 
@@ -65,14 +66,26 @@ export const handleUpdateResource = createRoute({
 
 		console.log(`Vercel, updating resource: `, body);
 
-		const resource = await VercelResourceService.update({
-			db,
-			resourceId,
-			installationId: integrationConfigurationId,
-			orgId,
-			env: env as AppEnv,
-			updates,
-		});
+		let resource: Awaited<ReturnType<typeof VercelResourceService.update>>;
+		try {
+			resource = await VercelResourceService.update({
+				db,
+				resourceId,
+				installationId: integrationConfigurationId,
+				orgId,
+				env: env as AppEnv,
+				updates,
+			});
+		} catch (error) {
+			if (isUniqueConstraintError(error) && body.name) {
+				throw new RecaseError({
+					message: `A resource named "${body.name}" already exists for this installation`,
+					code: "vercel_resource_name_taken",
+					statusCode: StatusCodes.CONFLICT,
+				});
+			}
+			throw error;
+		}
 
 		return c.json({
 			id: resource.id,

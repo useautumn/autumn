@@ -126,11 +126,12 @@ const processRedemption = async ({
 	}
 
 	if (
-		await isSubscriptionTrialing({
+		reward_program.exclude_trial &&
+		(await isSubscriptionTrialing({
 			stripeSubscriptionId,
 			stripeCli,
 			logger,
-		})
+		}))
 	) {
 		return;
 	}
