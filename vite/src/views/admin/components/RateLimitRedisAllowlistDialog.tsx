@@ -14,30 +14,13 @@ import {
 import { Input } from "@/components/v2/inputs/Input";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-
-type RateLimitRedisAllowlistConfig = {
-	customerIds: string[];
-	configHealthy: boolean;
-	configConfigured: boolean;
-	lastSuccessAt: string | null;
-	error: string | null;
-};
-
-const DEFAULT_CONFIG: RateLimitRedisAllowlistConfig = {
-	customerIds: [],
-	configHealthy: false,
-	configConfigured: false,
-	lastSuccessAt: null,
-	error: null,
-};
-
-const getEditableConfig = ({
-	config,
-}: {
-	config: RateLimitRedisAllowlistConfig;
-}) => ({
-	customerIds: config.customerIds,
-});
+import {
+	buildEditableJsonText,
+	DEFAULT_CONFIG,
+	isSaveDisabled,
+	loadAllowlistConfig,
+	type RateLimitRedisAllowlistConfig,
+} from "./rateLimitRedisAllowlistDialogState";
 
 export function RateLimitRedisAllowlistDialog({
 	open,
@@ -55,40 +38,43 @@ export function RateLimitRedisAllowlistDialog({
 	const [jsonError, setJsonError] = useState<string | null>(null);
 	const [syncSource, setSyncSource] = useState<"form" | "json">("form");
 	const [newCustomerId, setNewCustomerId] = useState("");
+	const [loadFailed, setLoadFailed] = useState(false);
 
 	useEffect(() => {
 		if (!open) return;
 
 		let cancelled = false;
-		setLoading(true);
 
-		void axiosInstance
-			.get<RateLimitRedisAllowlistConfig>(
-				"/admin/rate-limit-redis-allowlist-config",
-			)
-			.then(({ data }) => {
-				if (cancelled) return;
-				const mergedConfig: RateLimitRedisAllowlistConfig = {
-					...DEFAULT_CONFIG,
-					...data,
-				};
-				setConfig(mergedConfig);
-				setJsonText(
-					JSON.stringify(getEditableConfig({ config: mergedConfig }), null, 2),
-				);
-				setJsonError(null);
-				setSyncSource("form");
-			})
-			.catch((error) => {
-				if (!cancelled) {
-					toast.error(
-						getBackendErr(error, "Failed to load rate limit redis allowlist"),
-					);
-				}
-			})
-			.finally(() => {
-				if (!cancelled) setLoading(false);
-			});
+		void loadAllowlistConfig({
+			axiosGet: () =>
+				axiosInstance.get<RateLimitRedisAllowlistConfig>(
+					"/admin/rate-limit-redis-allowlist-config",
+				),
+			isCancelled: () => cancelled,
+			applyInitialReset: (update) => {
+				setLoading(update.loading);
+				setLoadFailed(update.loadFailed);
+				setConfig(update.config);
+				setJsonText(update.jsonText);
+				setJsonError(update.jsonError);
+				setSyncSource(update.syncSource);
+			},
+			applySuccess: (update) => {
+				setConfig(update.config);
+				setJsonText(update.jsonText);
+				setJsonError(update.jsonError);
+				setSyncSource(update.syncSource);
+				setLoading(update.loading);
+			},
+			applyFailure: (update) => {
+				setLoadFailed(update.loadFailed);
+				setLoading(update.loading);
+			},
+			onError: (error) =>
+				toast.error(
+					getBackendErr(error, "Failed to load rate limit redis allowlist"),
+				),
+		});
 
 		return () => {
 			cancelled = true;
@@ -97,7 +83,7 @@ export function RateLimitRedisAllowlistDialog({
 
 	useEffect(() => {
 		if (syncSource !== "form") return;
-		setJsonText(JSON.stringify(getEditableConfig({ config }), null, 2));
+		setJsonText(buildEditableJsonText({ config }));
 		setJsonError(null);
 	}, [config, syncSource]);
 
@@ -332,7 +318,7 @@ export function RateLimitRedisAllowlistDialog({
 						variant="primary"
 						onClick={handleSave}
 						isLoading={saving}
-						disabled={loading || !!jsonError}
+						disabled={isSaveDisabled({ loading, loadFailed, jsonError })}
 					>
 						Save
 					</Button>
