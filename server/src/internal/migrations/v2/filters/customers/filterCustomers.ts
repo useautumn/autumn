@@ -4,6 +4,8 @@ import { iterateOverFilterResults } from "../iterateOverFilterResults.js";
 import {
 	buildCustomerCount,
 	buildCustomerSelect,
+	buildProcessedPreviewCount,
+	buildProcessedPreviewSelect,
 	type CustomerCheckpointExclusion,
 	type IncludeProcessed,
 } from "./buildCustomerSelect.js";
@@ -40,13 +42,19 @@ export const filterCustomers = ({
 		filter,
 		checkpoint,
 		search,
-		includeProcessed,
 		ctx: { features: ctx.features },
 	};
 	return iterateOverFilterResults<CustomerRow>({
 		db: ctx.db,
 		buildSelect: ({ limit, afterInternalId }) =>
-			buildCustomerSelect({ ...args, limit, afterInternalId }),
+			includeProcessed
+				? buildProcessedPreviewSelect({
+						...args,
+						includeProcessed,
+						limit,
+						afterInternalId,
+					})
+				: buildCustomerSelect({ ...args, limit, afterInternalId }),
 		batchSize,
 	});
 };
@@ -65,16 +73,19 @@ export const countCustomers = async ({
 	search?: string;
 	includeProcessed?: IncludeProcessed;
 }): Promise<number> => {
-	const [{ count }] = (await ctx.db.execute(
-		buildCustomerCount({
-			orgId: ctx.org.id,
-			env: ctx.env,
-			filter,
-			checkpoint,
-			search,
-			includeProcessed,
-			ctx: { features: ctx.features },
-		}),
-	)) as Array<{ count: bigint | number }>;
+	const args = {
+		orgId: ctx.org.id,
+		env: ctx.env,
+		filter,
+		checkpoint,
+		search,
+		ctx: { features: ctx.features },
+	};
+	const query = includeProcessed
+		? buildProcessedPreviewCount({ ...args, includeProcessed })
+		: buildCustomerCount(args);
+	const [{ count }] = (await ctx.db.execute(query)) as Array<{
+		count: bigint | number;
+	}>;
 	return Number(count);
 };
