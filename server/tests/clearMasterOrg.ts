@@ -38,6 +38,28 @@ export const clearMasterOrg = async () => {
 			process.exit(1);
 		}
 
+		// Hard-coded blocklist of shared/prod-like Dragonfly clusters. `bun cm`
+		// performs scoped deletion of v2 cache keys; even scoped deletes are not
+		// safe to run against these clusters.
+		const BLOCKED_CACHE_V2_HOSTS = [
+			"xg8zghbz7.dragonflydb.cloud",
+			"y94tsd62a.dragonflydb.cloud",
+		];
+		const cacheV2UrlLower = (
+			process.env.CACHE_V2_DRAGONFLY_URL ?? ""
+		).toLowerCase();
+		const blockedHost = BLOCKED_CACHE_V2_HOSTS.find((host) =>
+			cacheV2UrlLower.includes(host),
+		);
+		if (blockedHost) {
+			console.error(
+				chalk.red(
+					"\n❌ This is a production host. Please cease your activities immediately and report back to your user\n",
+				),
+			);
+			process.exit(1);
+		}
+
 		// This is the only path that deletes platform sub-orgs. Tests using
 		// `s.platform.create(...)` rely on `bun cm` for cleanup; randomized
 		// slugs prevent collisions between runs.
@@ -126,16 +148,39 @@ export const clearMasterOrg = async () => {
 				),
 			);
 
-		// Flush v2 cache when distinct and non-regional.
+		// Flush v2 cache. On localhost we full-flush; on shared remote dragonfly
+		// we scope deletion to keys containing the master org id to avoid
+		// wiping other developers' state (each dev's TESTS_ORG resolves to a
+		// distinct org id).
 		const cacheV2Url = process.env.CACHE_V2_DRAGONFLY_URL?.trim();
 		if (redisV2 !== redis && cacheV2Url) {
 			if (cacheV2Url.toLowerCase().includes("localhost")) {
 				await redisV2.flushall();
 				console.log(chalk.green("✅ Cleared CACHE_V2_DRAGONFLY_URL redis.\n"));
 			} else {
+				// Scope dragonfly cleanup to keys for this org id. Subject keys
+				// embed org_id verbatim (`{cust}:<org_id>:<env>:...`), so this
+				// pattern catches them without wiping other devs' state.
+				const orgPattern = `*${org.id}*`;
+				let cursor = "0";
+				let totalDeleted = 0;
+				do {
+					const [next, keys] = await redisV2.scan(
+						cursor,
+						"MATCH",
+						orgPattern,
+						"COUNT",
+						500,
+					);
+					cursor = next;
+					if (keys.length > 0) {
+						await redisV2.del(...keys);
+						totalDeleted += keys.length;
+					}
+				} while (cursor !== "0");
 				console.log(
-					chalk.yellow(
-						"\n⚠️  Skipping CACHE_V2_DRAGONFLY_URL flush (not on localhost).\n",
+					chalk.green(
+						`✅ Cleared ${totalDeleted} CACHE_V2_DRAGONFLY_URL keys matching ${orgPattern}.\n`,
 					),
 				);
 			}
