@@ -147,13 +147,13 @@ class RequestBody(BaseModel):
 
 
 class BatchTrackResponseTypedDict(TypedDict):
-    r"""Batch accepted. All items were validated and enqueued for asynchronous processing."""
+    r"""Batch accepted. All items passed synchronous validation. Enqueue is best-effort: partial failures (some items enqueued, some not) are logged server-side and are NOT surfaced in the response body; clients must not retry on 202. See the endpoint description for full partial-failure semantics."""
 
     success: Literal[True]
 
 
 class BatchTrackResponse(BaseModel):
-    r"""Batch accepted. All items were validated and enqueued for asynchronous processing."""
+    r"""Batch accepted. All items passed synchronous validation. Enqueue is best-effort: partial failures (some items enqueued, some not) are logged server-side and are NOT surfaced in the response body; clients must not retry on 202. See the endpoint description for full partial-failure semantics."""
 
     success: Annotated[
         Annotated[Literal[True], AfterValidator(validate_const(True))],

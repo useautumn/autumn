@@ -8017,7 +8017,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779976938401,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781186538401,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779977746466,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781187346466,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -15026,7 +15026,7 @@ paths:
   /v1/balances.batch_track:
     post:
       operationId: batchTrack
-      description: Track multiple usage events asynchronously.
+      description: Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
       requestBody:
         required: true
         content:
@@ -15091,7 +15091,7 @@ paths:
                     value: 1
       responses:
         "202":
-          description: Batch accepted. All items were validated and enqueued for asynchronous processing.
+          description: "Batch accepted. All items passed synchronous validation. Enqueue is best-effort: partial failures (some items enqueued, some not) are logged server-side and are NOT surfaced in the response body; clients must not retry on 202. See the endpoint description for full partial-failure semantics."
           content:
             application/json:
               schema:

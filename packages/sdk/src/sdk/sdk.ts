@@ -148,7 +148,7 @@ export class Autumn extends ClientSDK {
   }
 
   /**
-   * Track multiple usage events asynchronously.
+   * Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
    */
   async batchTrack(
     request: Array<models.RequestBody>,
