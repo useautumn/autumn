@@ -11,6 +11,7 @@ const ControlsSchema = z.object({
 	limit: z.number().int().min(1).optional(),
 	only: z.array(z.string()).optional(),
 	concurrency: z.number().int().min(1).optional(),
+	retryFailed: z.boolean().optional(),
 }).optional();
 
 const PayloadSchema = z.object({

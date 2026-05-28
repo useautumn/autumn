@@ -13,6 +13,7 @@ const RunMigrationBody = z.object({
 	limit: z.number().int().min(1).optional(),
 	only: z.array(z.string()).optional(),
 	concurrency: z.number().int().min(1).optional(),
+	retry_failed: z.boolean().optional(),
 	/** When true, claim a lazy run alongside the background sweeper. Customers
 	 *  hit on the request path get migrated lazily via `runMigrationCustomerTask`
 	 *  before the sweeper reaches them. Background and lazy run on the same
@@ -42,6 +43,7 @@ export const handleRunMigration = createRoute({
 			limit,
 			only,
 			concurrency,
+			retry_failed: retryFailed,
 			lazy_run: lazyRun,
 		} = c.req.valid("json");
 
@@ -82,7 +84,7 @@ export const handleRunMigration = createRoute({
 						migrationId: id,
 						migrationRunId,
 						dryRun,
-						controls: { limit, only, concurrency },
+						controls: { limit, only, concurrency, retryFailed },
 					},
 					getRunMigrationTriggerOptions({
 						orgId: ctx.org.id,

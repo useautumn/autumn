@@ -1037,6 +1037,7 @@ export class AutumnInt {
 			only?: string[];
 			limit?: number;
 			lazy_run?: boolean;
+			retry_failed?: boolean;
 		}): Promise<{
 			migration_id: string;
 			dry_run: boolean;
