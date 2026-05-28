@@ -1,20 +1,32 @@
 import type { Feature } from "@autumn/shared";
+import type {
+	CustomerPlanChange,
+	CustomerPlanItemChange,
+} from "@autumn/shared/api/billing/common/customerPlanChange";
 import { PackageIcon } from "@phosphor-icons/react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import type { MigrationItemEvent } from "@/hooks/queries/useMigrationRunsQuery";
 import { cn } from "@/lib/utils";
 import { getFeatureIconConfig } from "@/views/products/features/utils/getFeatureIcon";
 
-type ItemChange = { action?: string; feature_id?: string };
-type PlanChange = {
-	action?: string;
+type ItemChange = Partial<CustomerPlanItemChange>;
+type PlanChange = Partial<CustomerPlanChange> & {
 	plan_id?: string;
 	entity_id?: string | null;
 	item_changes?: ItemChange[];
 };
+type BalanceSnapshot = {
+	granted?: number;
+	remaining?: number;
+	usage?: number;
+	unlimited?: boolean;
+	next_reset_at?: number | null;
+};
 type BalanceChange = {
 	feature_id?: string;
-	before?: { granted?: number; remaining?: number; usage?: number };
+	balance?: BalanceSnapshot;
+	previous_attributes?: BalanceSnapshot;
+	before?: BalanceSnapshot;
 	granted?: number;
 };
 type FlagChange = { action?: string; feature_id?: string };
@@ -40,15 +52,21 @@ function parseList<T>(raw: (string | T)[] | undefined): T[] {
 }
 
 const DOT_COLORS: Record<string, string> = {
+	activated: "bg-green-500",
+	scheduled: "bg-blue-500",
 	updated: "bg-amber-500",
 	created: "bg-green-500",
+	expired: "bg-red-500",
 	removed: "bg-red-500",
 	deleted: "bg-red-500",
 };
 
 const ACTION_LABELS: Record<string, string> = {
+	activated: "New",
+	scheduled: "Scheduled",
 	updated: "Changed",
 	created: "New",
+	expired: "Removed",
 	removed: "Removed",
 	deleted: "Removed",
 };
@@ -81,11 +99,37 @@ function FeatureIcon({
 }
 
 const ROW_TINTS: Record<string, string> = {
+	activated: "border-green-500/20 bg-green-500/5",
+	scheduled: "border-blue-500/20 bg-blue-500/5",
 	created: "border-green-500/20 bg-green-500/5",
 	updated: "border-amber-500/20 bg-amber-500/5",
+	expired: "border-red-500/20 bg-red-500/5",
 	removed: "border-red-500/20 bg-red-500/5",
 	deleted: "border-red-500/20 bg-red-500/5",
 };
+
+function getPlanId(change: PlanChange): string | undefined {
+	return change.subscription?.plan_id ?? change.purchase?.plan_id ?? change.plan_id;
+}
+
+function getPlanStatus(change: PlanChange): string | undefined {
+	return change.subscription?.status ?? change.purchase?.status;
+}
+
+const BALANCE_FIELDS = [
+	"granted",
+	"remaining",
+	"usage",
+	"unlimited",
+	"next_reset_at",
+] as const;
+
+function formatBalanceValue(value: BalanceSnapshot[keyof BalanceSnapshot]) {
+	if (value === null) return "None";
+	if (typeof value === "boolean") return value ? "Yes" : "No";
+	if (typeof value === "number") return value.toLocaleString();
+	return "Unknown";
+}
 
 function ChangeRow({
 	action,
@@ -118,6 +162,8 @@ function PlanChangeRows({
 }) {
 	const action = change.action ?? "unknown";
 	const items = change.item_changes ?? [];
+	const planId = getPlanId(change);
+	const status = getPlanStatus(change);
 
 	return (
 		<>
@@ -128,8 +174,11 @@ function PlanChangeRows({
 				</span>
 				<PackageIcon size={14} weight="duotone" className="text-tertiary-foreground shrink-0" />
 				<span className="text-body flex-1 min-w-0 truncate">
-					{change.plan_id ?? "Unknown plan"}
+					{planId ?? "Unknown plan"}
 				</span>
+				{status && (
+					<span className="text-body-secondary shrink-0 capitalize">{status}</span>
+				)}
 			</ChangeRow>
 			{items.map((item, i) => (
 				<ChangeRow
@@ -167,6 +216,12 @@ function BalanceChangeRow({
 	features: Feature[];
 }) {
 	const feature = features.find((f) => f.id === change.feature_id);
+	const balance = change.balance ?? {};
+	const previous = change.previous_attributes ?? change.before ?? {};
+	const field = BALANCE_FIELDS.find((key) => previous[key] !== undefined);
+	const currentValue =
+		field === undefined ? (change.granted ?? balance.granted) : balance[field];
+	const previousValue = field === undefined ? undefined : previous[field];
 
 	return (
 		<ChangeRow action="updated">
@@ -177,14 +232,19 @@ function BalanceChangeRow({
 				{feature?.name ?? change.feature_id}
 			</span>
 			<span className="text-body-secondary shrink-0 tabular-nums">
-				{change.before ? (
+				{field && <span className="mr-1 capitalize">{field.replaceAll("_", " ")}</span>}
+				{previousValue !== undefined ? (
 					<>
-						{change.before.granted ?? 0}
+						{formatBalanceValue(previousValue)}
 						<span className="text-tertiary-foreground/50 mx-1">→</span>
-						<span className="text-foreground font-semibold">{change.granted ?? 0}</span>
+						<span className="text-foreground font-semibold">
+							{formatBalanceValue(currentValue)}
+						</span>
 					</>
 				) : (
-					<span className="text-foreground font-semibold">{change.granted ?? 0}</span>
+					<span className="text-foreground font-semibold">
+						{formatBalanceValue(currentValue)}
+					</span>
 				)}
 			</span>
 		</ChangeRow>
@@ -227,7 +287,7 @@ function PreviewSummary({ preview }: { preview: MigrationPreview }) {
 	return (
 		<div className="flex flex-col gap-1.5">
 			{planChanges.map((c, i) => (
-				<PlanChangeRows key={c.plan_id ?? i} change={c} features={features} />
+				<PlanChangeRows key={getPlanId(c) ?? i} change={c} features={features} />
 			))}
 			{balanceChanges.map((c, i) => (
 				<BalanceChangeRow

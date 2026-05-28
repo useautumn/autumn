@@ -37,12 +37,13 @@ export function useRealtimeSubscriptions({
 		only?: string[];
 	}) => {
 		try {
+			const isTargetedRun = only !== undefined && only.length > 0;
 			const result = await runMigration({
 				id: migrationId,
 				dry_run: dryRun,
 				limit,
 				only,
-				lazy_run: true,
+				lazy_run: !isTargetedRun,
 			});
 			if (result.trigger_run_id && result.public_access_token) {
 				setSubscriptions((prev) => [
