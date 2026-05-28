@@ -647,7 +647,7 @@ export type SetupPaymentCustomize = {
    */
   price?: SetupPaymentBasePrice | null | undefined;
   /**
-   * Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items.
+   * Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / update_items.
    */
   items?: Array<SetupPaymentItemPlanItem> | undefined;
   /**

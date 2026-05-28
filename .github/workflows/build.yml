@@ -18,7 +18,7 @@ env:
   AWS_REGION: us-west-2
   # Branches allowed to deploy to staging via workflow_dispatch with tag=deploy-staging.
   # Add short-lived PR branches here when you need staging without merging to dev.
-  STAGING_DEPLOY_BRANCH_ALLOWLIST: fix-health-check-redis-disabled-detection
+  STAGING_DEPLOY_BRANCH_ALLOWLIST: fix-health-check-redis-disabled-detection feat/track-rate-limit-redis
 
 jobs:
   checks:

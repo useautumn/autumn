@@ -3,10 +3,9 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { warmFullSubjectCacheTask } from "@/trigger/cache/warmFullSubjectCacheTask.js";
 
 const meter = metrics.getMeter("autumn-server");
-const warmEnqueuedCounter = meter.createCounter(
-	"autumn.cache.warm.enqueued",
-	{ description: "FullSubject cache warm enqueues" },
-);
+const warmEnqueuedCounter = meter.createCounter("autumn.cache.warm.enqueued", {
+	description: "FullSubject cache warm enqueues",
+});
 const warmEnqueueFailedCounter = meter.createCounter(
 	"autumn.cache.warm.enqueue_failed",
 	{ description: "FullSubject cache warm enqueue failures" },
@@ -14,6 +13,7 @@ const warmEnqueueFailedCounter = meter.createCounter(
 
 const WARM_CACHE_CUSTOMER_IDS = new Set<string>([
 	"64138004cce3c9e82a7083d9",
+	"698fb72e4c5fa12c1cd11ddc",
 	"cache-warmer-feature-test-cus",
 ]);
 

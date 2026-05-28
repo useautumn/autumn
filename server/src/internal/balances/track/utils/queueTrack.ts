@@ -8,13 +8,17 @@ import { getQueuedTrackResponse } from "./getQueuedTrackResponse.js";
 export const queueTrack = async ({
 	ctx,
 	body,
+	queueUrl,
+	messageDeduplicationId,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
+	queueUrl?: string;
+	messageDeduplicationId?: string;
 }) => {
 	try {
-		const queueUrl = process.env.TRACK_SQS_QUEUE_URL;
-		if (!queueUrl) {
+		const resolvedQueueUrl = queueUrl ?? process.env.TRACK_SQS_QUEUE_URL;
+		if (!resolvedQueueUrl) {
 			ctx.logger.warn(
 				"[track] Redis unavailable and TRACK_SQS_QUEUE_URL is unset; falling back to synchronous track",
 			);
@@ -23,9 +27,9 @@ export const queueTrack = async ({
 
 		await addTaskToQueue({
 			jobName: JobName.Track,
-			queueUrl,
+			queueUrl: resolvedQueueUrl,
 			messageGroupId: `${ctx.org.id}:${ctx.env}:${body.customer_id}:${body.entity_id ?? "none"}`,
-			messageDeduplicationId: ctx.id,
+			messageDeduplicationId: messageDeduplicationId ?? ctx.id,
 			payload: {
 				orgId: ctx.org.id,
 				env: ctx.env,
@@ -42,7 +46,7 @@ export const queueTrack = async ({
 			feature_id: body.feature_id,
 			event_name: body.event_name,
 			env: ctx.env,
-			queue_name: queueUrl.split("/").pop(),
+			queue_name: resolvedQueueUrl.split("/").pop(),
 		});
 		addToExtraLogs({
 			ctx,

@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "isolatedModules": true,
+    "lib": ["es2024"],
+    "module": "Preserve",
+    "moduleResolution": "bundler",
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "skipLibCheck": true,
+    "strict": true,
+    "target": "es2022",
+    "types": ["bun"],
+    "paths": {
+      "@api/*": ["../../shared/api/*"],
+      "@models/*": ["../../shared/models/*"],
+      "@utils/*": ["../../shared/utils/*"],
+      "@autumn/ksuid": ["../../packages/ksuid/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

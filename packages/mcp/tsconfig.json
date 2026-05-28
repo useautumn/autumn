@@ -1,0 +1,41 @@
+
+
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
+    "checkJs": true,
+    "declaration": true,
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "exactOptionalPropertyTypes": false,
+    "forceConsistentCasingInFileNames": true,
+    "incremental": true,
+    "isolatedModules": true,
+    "lib": ["dom", "dom.iterable", "es2024"],
+    "module": "Preserve",
+    "moduleResolution": "bundler",
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitOverride": false,
+    "noImplicitReturns": false,
+    "noPropertyAccessFromIndexSignature": false,
+    "noUncheckedIndexedAccess": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "outDir": "esm",
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "target": "es2022",
+    "paths": {
+      "@api/*": ["../../shared/api/*"],
+      "@models/*": ["../../shared/models/*"],
+      "@utils/*": ["../../shared/utils/*"],
+      "@autumn/ksuid": ["../ksuid/src/index.ts"]
+    },
+    "useUnknownInCatchVariables": true,
+  },
+  "exclude": ["node_modules"],
+  "include": ["src/**/*.ts"]
+}

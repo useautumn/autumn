@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
 	type AutumnBillingPlan,
 	type BillingContext,
@@ -361,4 +361,8 @@ describe("initStripeResourcesForBillingPlan", () => {
 		expect(mockState.priceIds).toContain("price_kept");
 		expect(mockState.priceIds).not.toContain("price_removed");
 	});
+});
+
+afterAll(() => {
+	mock.restore();
 });

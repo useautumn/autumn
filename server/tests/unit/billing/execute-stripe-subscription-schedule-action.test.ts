@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { BillingContext } from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -90,4 +90,8 @@ describe("executeStripeSubscriptionScheduleAction", () => {
 		expect(mockState.createCalls).toEqual([]);
 		expect(result?.id).toBe("sched_standalone");
 	});
+});
+
+afterAll(() => {
+	mock.restore();
 });

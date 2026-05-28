@@ -68,6 +68,7 @@ export interface BillingContext {
 	stripeSubscription?: Stripe.Subscription;
 	stripeSubscriptionSchedule?: Stripe.SubscriptionSchedule;
 	stripeDiscounts?: StripeDiscountWithCoupon[];
+	stripeTaxRate?: Stripe.TaxRate;
 	paymentMethod?: Stripe.PaymentMethod;
 
 	// Unforunately, need to add custom prices, custom entitlements and free trial here, because it's determined in the setup step.

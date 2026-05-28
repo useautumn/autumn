@@ -931,7 +931,7 @@ class PreviewAttachCustomizeTypedDict(TypedDict):
     price: NotRequired[Nullable[PreviewAttachBasePriceTypedDict]]
     r"""Override the base price of the plan. Pass null to remove the base price."""
     items: NotRequired[List[PreviewAttachItemPlanItemTypedDict]]
-    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items."""
+    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / update_items."""
     add_items: NotRequired[List[PreviewAttachAddItemPlanItemTypedDict]]
     r"""Items to add to the plan."""
     remove_items: NotRequired[List[PreviewAttachPlanItemFilterTypedDict]]
@@ -947,7 +947,7 @@ class PreviewAttachCustomize(BaseModel):
     r"""Override the base price of the plan. Pass null to remove the base price."""
 
     items: Optional[List[PreviewAttachItemPlanItem]] = None
-    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items."""
+    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / update_items."""
 
     add_items: Optional[List[PreviewAttachAddItemPlanItem]] = None
     r"""Items to add to the plan."""

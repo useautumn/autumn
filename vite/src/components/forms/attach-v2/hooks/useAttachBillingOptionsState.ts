@@ -35,8 +35,7 @@ export function useAttachBillingOptionsState() {
 		() =>
 			((customer?.customer_products ?? []) as CusProduct[]).some(
 				(cp) =>
-					(ACTIVE_STATUSES.includes(cp.status) ||
-						cp.status === CusProductStatus.Trialing) &&
+					cp.status === CusProductStatus.Trialing &&
 					cp.subscription_ids &&
 					cp.subscription_ids.length > 0 &&
 					!!cp.free_trial_id,

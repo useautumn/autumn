@@ -39,7 +39,10 @@ const getRewards = async ({
 
 	for (const reward of rewardArray) {
 		const corresponding = rewards.find(
-			(r) => r.id === reward || r.promo_codes.some((c) => c.code === reward),
+			(r) =>
+				r.id === reward ||
+				r.internal_id === reward ||
+				r.promo_codes.some((c) => c.code === reward),
 		);
 
 		if (!corresponding) {
