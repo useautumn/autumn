@@ -24,20 +24,20 @@
   },
   "dependencies": {
     "@autumn/shared": "workspace:*",
-    "@axiomhq/js": "^1.6.1",
-    "@mastra/core": "^1.36.0",
-    "@mastra/mcp": "^1.8.0",
-    "@stricli/core": "^1.1.2",
-    "date-fns": "^4.1.0",
-    "express": "^5.1.0",
-    "ioredis": "^5.5.0",
-    "zod": "^3.25.76"
-  },
+		"@axiomhq/js": "^1.6.1",
+		"@hono/node-server": "^1.19.5",
+		"@mastra/core": "^1.36.0",
+		"@mastra/mcp": "^1.8.0",
+		"@stricli/core": "^1.1.2",
+		"date-fns": "^4.1.0",
+		"hono": "4.12.7",
+		"ioredis": "^5.5.0",
+		"zod": "^3.25.76"
+	},
   "devDependencies": {
-    "@anthropic-ai/mcpb": "^1.2.0",
-    "@types/bun": "^1.2.13",
-    "@types/express": "^5.0.1",
-    "@types/node": "^18.19.3",
-    "typescript": "~5.8.3"
-  }
+		"@anthropic-ai/mcpb": "^1.2.0",
+		"@types/bun": "^1.2.13",
+		"@types/node": "^18.19.3",
+		"typescript": "~5.8.3"
+	}
 }

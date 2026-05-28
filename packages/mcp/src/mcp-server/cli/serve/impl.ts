@@ -1,4 +1,7 @@
-import express from "express";
+import { serve } from "@hono/node-server";
+import type { HttpBindings } from "@hono/node-server";
+import { RESPONSE_ALREADY_SENT } from "@hono/node-server/utils/response";
+import { Hono } from "hono";
 import { createAutumnMastraMCPServer } from "../../agent/server.js";
 import { LocalContext } from "../../cli.js";
 import {
@@ -13,8 +16,6 @@ import {
   OAuthEnvironment,
   OAuthHttpError,
 } from "../../oauth.js";
-
-import { landingPageExpress } from "../../../landing-page.js";
 
 interface ServeCommandFlags extends MCPServerFlags {
   readonly port: number;
@@ -38,76 +39,57 @@ export async function main(this: LocalContext, flags: ServeCommandFlags) {
 
 async function startStreamableHTTP(cliFlags: ServeCommandFlags) {
   const logger = createConsoleLogger(cliFlags["log-level"]);
-  const app = express();
+  const app = new Hono<{ Bindings: HttpBindings }>();
 
-  app.use((req, res, next) => {
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-    res.header("Access-Control-Allow-Headers", "*");
-    if (req.method === "OPTIONS") {
-      res.sendStatus(204);
-      return;
-    }
-    next();
+  app.use("*", async (c, next) => {
+    c.header("Access-Control-Allow-Origin", "*");
+    c.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+    c.header("Access-Control-Allow-Headers", "*");
+    return c.req.method === "OPTIONS" ? c.body(null, 204) : next();
   });
 
-  app.use(express.json());
-
-  const getHeaders = (req: express.Request) => {
-    const headers = new Headers();
-    for (const [key, value] of Object.entries(req.headers)) {
-      if (Array.isArray(value)) {
-        for (const v of value) headers.append(key, v);
-      } else if (value !== undefined) {
-        headers.set(key, value);
-      }
-    }
-    return headers;
-  };
-
-  app.get("/.well-known/oauth-protected-resource/mcp", (req, res) => {
-    res.json(getProtectedResourceMetadata(getHeaders(req), cliFlags));
+  app.get("/.well-known/oauth-protected-resource/mcp", (c) => {
+    return c.json(getProtectedResourceMetadata(c.req.raw.headers, cliFlags));
   });
 
-  app.get("/.well-known/oauth-authorization-server", (_req, res) => {
-    res.json(getAuthorizationServerMetadata(cliFlags));
+  app.get("/.well-known/oauth-authorization-server", (c) => {
+    return c.json(getAuthorizationServerMetadata(cliFlags));
   });
 
-  app.all("/mcp", async (req, res) => {
-    const headers = getHeaders(req);
+  app.all("/mcp", async (c) => {
     let auth;
     try {
-      auth = await buildAuthForRequest(headers, cliFlags, logger);
+      auth = await buildAuthForRequest(c.req.raw.headers, cliFlags, logger);
     } catch (error) {
       if (error instanceof OAuthHttpError) {
         if (error.wwwAuthenticate) {
-          res.header("WWW-Authenticate", error.wwwAuthenticate);
+          c.header("WWW-Authenticate", error.wwwAuthenticate);
         }
-        res.status(error.status).json({
+        return c.json({
           error: error.error,
           error_description: error.message,
-        });
-        return;
+        }, { status: error.status as 401 | 403 });
       }
       throw error;
     }
 
-    (req as express.Request & { auth?: typeof auth }).auth = auth;
-    const url = new URL(req.originalUrl || req.url, `http://${req.headers.host}`);
+    (c.env.incoming as typeof c.env.incoming & { auth?: typeof auth }).auth = auth;
     await createAutumnMastraMCPServer().startHTTP({
-      url,
+      url: new URL(c.req.url),
       httpPath: "/mcp",
-      req,
-      res,
+      req: c.env.incoming,
+      res: c.env.outgoing,
       options: { serverless: true },
     });
+    return RESPONSE_ALREADY_SENT;
   });
 
-  app.get("/", landingPageExpress);
-
-  const httpServer = app.listen(cliFlags.port, "0.0.0.0", () => {
-    const ha = httpServer.address();
-    const host = typeof ha === "string" ? ha : `${ha?.address}:${ha?.port}`;
+  const httpServer = serve({
+    fetch: app.fetch,
+    port: cliFlags.port,
+    hostname: "0.0.0.0",
+  }, ({ address, port }) => {
+    const host = `${address}:${port}`;
     logger.info("MCP Streamable HTTP server started", { host });
   });
 

@@ -1,40 +1,37 @@
-const redisStore = new Map<string, string>();
+import type {
+	PendingActionRedis,
+	PendingActionRedisMulti,
+} from "./pending-actions.js";
 
-class FakeMulti {
-	private readonly ops: (() => void)[] = [];
+export const createTestRedis = (): PendingActionRedis => {
+	const store = new Map<string, string>();
 
-	set(key: string, value: string) {
-		this.ops.push(() => redisStore.set(key, value));
-		return this;
-	}
-
-	async exec() {
-		this.ops.forEach((op) => op());
-		return [];
-	}
-}
-
-class FakeRedis {
-	on() {
-		return this;
-	}
-
-	multi() {
-		return new FakeMulti();
-	}
-
-	async get(key: string) {
-		return redisStore.get(key) ?? null;
-	}
-
-	async del(...keys: string[]) {
-		keys.forEach((key) => redisStore.delete(key));
-	}
-
-	async keys(pattern: string) {
-		const prefix = pattern.replace(/\*$/, "");
-		return [...redisStore.keys()].filter((key) => key.startsWith(prefix));
-	}
-}
-
-export const createTestRedis = () => new FakeRedis();
+	return {
+		multi: () => {
+			const ops: (() => void)[] = [];
+			const multi: PendingActionRedisMulti = {
+				set: (key, value) => {
+					ops.push(() => store.set(key, value));
+					return multi;
+				},
+				exec: async () => {
+					ops.forEach((op) => op());
+				},
+			};
+			return multi;
+		},
+		get: async (key) => store.get(key) ?? null,
+		getdel: async (key) => {
+			const value = store.get(key) ?? null;
+			store.delete(key);
+			return value;
+		},
+		del: async (...keys) => {
+			keys.forEach((key) => store.delete(key));
+		},
+		keys: async (pattern) => {
+			const prefix = pattern.replace(/\*$/, "");
+			return [...store.keys()].filter((key) => key.startsWith(prefix));
+		},
+	};
+};

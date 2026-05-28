@@ -1,19 +1,3 @@
-/**
- * TDD regression for ask_autumn billing confirmations.
- *
- * Contract under test:
- *   New behaviors:
- *     - first ask_autumn call previews a billing attach and stores the exact pending action in Redis.
- *     - second ask_autumn call with the same auth context can confirm from a fresh agent instance.
- *     - confirmation executes the stored attach payload exactly once.
- *   Side effects:
- *     - Redis stores the pending action between calls.
- *     - billing.attach is not called before confirmation.
- *
- * Pre-fix red: the confirm call reports no pending action across separate ask_autumn invocations.
- * Post-fix green: Redis-backed pending actions survive fresh agent invocations and confirmation succeeds.
- */
-
 import { describe, expect, mock, test } from "bun:test";
 import type { AutumnMcpAuth } from "./auth.js";
 import { createTestRedis } from "./test-redis.js";
@@ -41,6 +25,14 @@ mock.module("@mastra/core/agent", () => ({
 			const systemPrompt = options.context[0]?.content ?? "";
 			systemPrompts.push(systemPrompt);
 			const context = { requestContext: options.requestContext };
+			if (message.toLowerCase().includes("customers")) {
+				const result = await this.tools.listCustomers.execute?.(
+					{ request: {} },
+					context,
+				);
+				return { text: JSON.stringify(result) };
+			}
+
 			if (agentConfirms && systemPrompt.includes("Pending billing action")) {
 				const result = await this.tools.confirmBillingAction.execute?.(
 					{},
@@ -63,7 +55,6 @@ mock.module("@mastra/core/agent", () => ({
 
 const { createAskAutumnTool } = await import("./ask-autumn.js");
 const { setPendingActionsRedis } = await import("./pending-actions.js");
-setPendingActionsRedis(createTestRedis());
 
 const auth: AutumnMcpAuth = {
 	apiKey: "sk_test",
@@ -74,27 +65,39 @@ const auth: AutumnMcpAuth = {
 	serverURL: "http://localhost:8080",
 };
 
+const mockFetch = (calls: { url: string; body: unknown }[]) => {
+	const originalFetch = globalThis.fetch;
+	globalThis.fetch = (async (url, init) => {
+		const body = JSON.parse(init?.body as string);
+		calls.push({ url: String(url), body });
+
+		if (String(url).endsWith("/v1/billing.preview_attach")) {
+			return Response.json({ total: 50 });
+		}
+
+		if (String(url).endsWith("/v1/billing.attach")) {
+			return Response.json({ applied: true });
+		}
+
+		if (String(url).endsWith("/v1/customers.list")) {
+			return Response.json({ customers: [] });
+		}
+
+		return Response.json({ error: "unexpected" }, { status: 500 });
+	}) as typeof fetch;
+	return () => {
+		globalThis.fetch = originalFetch;
+	};
+};
+
 describe("ask_autumn billing confirmation flow", () => {
 	test("confirms a pending attach across separate ask_autumn calls", async () => {
+		setPendingActionsRedis(createTestRedis());
 		systemPrompts.length = 0;
 		agentConfirms = true;
 		agentCalls = 0;
 		const calls: { url: string; body: unknown }[] = [];
-		const originalFetch = globalThis.fetch;
-		globalThis.fetch = (async (url, init) => {
-			const body = JSON.parse(init?.body as string);
-			calls.push({ url: String(url), body });
-
-			if (String(url).endsWith("/v1/billing.preview_attach")) {
-				return Response.json({ total: 50 });
-			}
-
-			if (String(url).endsWith("/v1/billing.attach")) {
-				return Response.json({ applied: true });
-			}
-
-			return Response.json({ error: "unexpected" }, { status: 500 });
-		}) as typeof fetch;
+		const restoreFetch = mockFetch(calls);
 
 		try {
 			const tool = createAskAutumnTool();
@@ -132,30 +135,17 @@ describe("ask_autumn billing confirmation flow", () => {
 				},
 			]);
 		} finally {
-			globalThis.fetch = originalFetch;
+			restoreFetch();
 		}
 	});
 
 	test("semantic confirmation gets the pending preview context", async () => {
+		setPendingActionsRedis(createTestRedis());
 		systemPrompts.length = 0;
 		agentConfirms = true;
 		agentCalls = 0;
 		const calls: { url: string; body: unknown }[] = [];
-		const originalFetch = globalThis.fetch;
-		globalThis.fetch = (async (url, init) => {
-			const body = JSON.parse(init?.body as string);
-			calls.push({ url: String(url), body });
-
-			if (String(url).endsWith("/v1/billing.preview_attach")) {
-				return Response.json({ total: 50 });
-			}
-
-			if (String(url).endsWith("/v1/billing.attach")) {
-				return Response.json({ applied: true });
-			}
-
-			return Response.json({ error: "unexpected" }, { status: 500 });
-		}) as typeof fetch;
+		const restoreFetch = mockFetch(calls);
 
 		try {
 			const tool = createAskAutumnTool();
@@ -179,30 +169,17 @@ describe("ask_autumn billing confirmation flow", () => {
 				"http://localhost:8080/v1/billing.attach",
 			]);
 		} finally {
-			globalThis.fetch = originalFetch;
+			restoreFetch();
 		}
 	});
 
 	test("question-like confirmation text does not bypass the agent", async () => {
+		setPendingActionsRedis(createTestRedis());
 		systemPrompts.length = 0;
 		agentConfirms = false;
 		agentCalls = 0;
 		const calls: { url: string; body: unknown }[] = [];
-		const originalFetch = globalThis.fetch;
-		globalThis.fetch = (async (url, init) => {
-			const body = JSON.parse(init?.body as string);
-			calls.push({ url: String(url), body });
-
-			if (String(url).endsWith("/v1/billing.preview_attach")) {
-				return Response.json({ total: 50 });
-			}
-
-			if (String(url).endsWith("/v1/billing.attach")) {
-				return Response.json({ applied: true });
-			}
-
-			return Response.json({ error: "unexpected" }, { status: 500 });
-		}) as typeof fetch;
+		const restoreFetch = mockFetch(calls);
 
 		try {
 			const tool = createAskAutumnTool();
@@ -222,7 +199,44 @@ describe("ask_autumn billing confirmation flow", () => {
 				"http://localhost:8080/v1/billing.preview_attach",
 			]);
 		} finally {
-			globalThis.fetch = originalFetch;
+			restoreFetch();
+		}
+	});
+
+	test("read requests continue when pending lookup fails", async () => {
+		setPendingActionsRedis({
+			multi: () => {
+				throw new Error("unavailable");
+			},
+			get: async () => {
+				throw new Error("unavailable");
+			},
+			getdel: async () => {
+				throw new Error("unavailable");
+			},
+			del: async () => undefined,
+			keys: async () => [],
+		});
+		systemPrompts.length = 0;
+		agentConfirms = true;
+		agentCalls = 0;
+		const calls: { url: string; body: unknown }[] = [];
+		const restoreFetch = mockFetch(calls);
+
+		try {
+			const tool = createAskAutumnTool();
+			if (!tool.execute) throw new Error("ask_autumn is not executable");
+			const context = { mcp: { extra: { authInfo: auth } } } as never;
+
+			const response = await tool.execute({ message: "list customers" }, context);
+
+			expect(String(response)).toContain("customers");
+			expect(agentCalls).toBe(1);
+			expect(calls.map((call) => call.url)).toEqual([
+				"http://localhost:8080/v1/customers.list",
+			]);
+		} finally {
+			restoreFetch();
 		}
 	});
 });

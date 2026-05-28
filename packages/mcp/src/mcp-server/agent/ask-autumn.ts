@@ -58,6 +58,14 @@ const getAuth = (
 	}
 };
 
+const getPendingAction = async (auth: AutumnMcpAuth) => {
+	try {
+		return await getLatestPendingAction(auth);
+	} catch {
+		return null;
+	}
+};
+
 export const createAskAutumnTool = (defaultAuth?: AutumnMcpAuth) =>
 	createTool({
 		id: "ask_autumn",
@@ -78,7 +86,7 @@ export const createAskAutumnTool = (defaultAuth?: AutumnMcpAuth) =>
 		},
 		execute: async ({ message, context }, toolContext) => {
 			const auth = getAuth(toolContext, defaultAuth);
-			const pendingAction = await getLatestPendingAction(auth);
+			const pendingAction = await getPendingAction(auth);
 			const contextText = context
 				? `\n\nCaller context:\n${JSON.stringify(context, null, 2)}`
 				: "";

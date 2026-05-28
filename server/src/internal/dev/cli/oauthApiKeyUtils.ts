@@ -14,6 +14,12 @@ export type ResourceAccessTokenRecord = {
 };
 
 const RequestedScopesSchema = z.array(z.string()).optional();
+export const OAuthApiKeyRequestBodySchema = z
+	.object({
+		resource: z.unknown().optional(),
+		scopes: z.unknown().optional(),
+	})
+	.strict();
 
 export const parseRequestedScopes = (scopes: unknown) => {
 	const parsed = RequestedScopesSchema.safeParse(scopes);

@@ -21,22 +21,24 @@ export type PendingBillingAction = {
 const ttlMs = ms.minutes(15);
 const namespace = "autumn:mcp:pending-action";
 let redis: Redis | undefined;
-type PendingActionRedis = {
-	multi: () => {
-		set: (
-			key: string,
-			value: string,
-			expiryMode: "EX",
-			ttlSeconds: number,
-		) => PendingActionRedis["multi"] extends () => infer Multi ? Multi : never;
-		exec: () => Promise<unknown>;
-	};
+export type PendingActionRedisMulti = {
+	set: (
+		key: string,
+		value: string,
+		expiryMode: "EX",
+		ttlSeconds: number,
+	) => PendingActionRedisMulti;
+	exec: () => Promise<unknown>;
+};
+export type PendingActionRedis = {
+	multi: () => PendingActionRedisMulti;
 	get: (key: string) => Promise<string | null>;
+	getdel: (key: string) => Promise<string | null>;
 	del: (...keys: string[]) => Promise<unknown>;
 	keys: (pattern: string) => Promise<string[]>;
 };
 
-const createToken = () => `act_${crypto.randomUUID().slice(0, 8)}`;
+const createToken = () => `act_${crypto.randomUUID()}`;
 const isExpired = (action: PendingBillingAction) =>
 	isPast(new Date(action.expiresAt));
 const hash = (value: string) =>
@@ -48,7 +50,8 @@ const actionScope = (auth: AutumnMcpAuth) =>
 	hash([auth.principalId, auth.resource, auth.env].join(":"));
 const latestKey = (auth: AutumnMcpAuth) =>
 	`${namespace}:${actionScope(auth)}:latest`;
-const actionKey = (token: string) => `${namespace}:action:${token}`;
+const actionKey = (auth: AutumnMcpAuth, token: string) =>
+	`${namespace}:${actionScope(auth)}:action:${token}`;
 const actionDebug = (auth: AutumnMcpAuth) => ({
 	env: auth.env,
 	principal: shortHash(auth.principalId),
@@ -117,7 +120,12 @@ export const createPendingAction = async (input: {
 	const ttlSeconds = Math.ceil(ttlMs / 1000);
 	await client
 		.multi()
-		.set(actionKey(action.token), JSON.stringify(action), "EX", ttlSeconds)
+		.set(
+			actionKey(input.auth, action.token),
+			JSON.stringify(action),
+			"EX",
+			ttlSeconds,
+		)
 		.set(latestKey(input.auth), action.token, "EX", ttlSeconds)
 		.exec();
 	logPendingAction("created", {
@@ -131,8 +139,9 @@ export const createPendingAction = async (input: {
 
 export const claimLatestPendingAction = async (auth: AutumnMcpAuth) => {
 	const client = getRedis();
-	const token = await client.get(latestKey(auth));
-	const action = token ? parseStoredAction(await client.get(actionKey(token))) : null;
+	const token = await client.getdel(latestKey(auth));
+	const key = token ? actionKey(auth, token) : null;
+	const action = key ? parseStoredAction(await client.get(key)) : null;
 	if (!token || !action || isExpired(action)) {
 		logPendingAction("claim-miss", {
 			backend: "redis",
@@ -142,7 +151,7 @@ export const claimLatestPendingAction = async (auth: AutumnMcpAuth) => {
 		});
 		throw new Error("No pending billing action to confirm.");
 	}
-	await client.del(latestKey(auth), actionKey(token));
+	await client.del(actionKey(auth, token));
 	logPendingAction("claimed", {
 		backend: "redis",
 		toolName: action.toolName,
@@ -155,7 +164,9 @@ export const claimLatestPendingAction = async (auth: AutumnMcpAuth) => {
 export const getLatestPendingAction = async (auth: AutumnMcpAuth) => {
 	const client = getRedis();
 	const token = await client.get(latestKey(auth));
-	const action = token ? parseStoredAction(await client.get(actionKey(token))) : null;
+	const action = token
+		? parseStoredAction(await client.get(actionKey(auth, token)))
+		: null;
 	if (!action || isExpired(action)) return null;
 	return action;
 };

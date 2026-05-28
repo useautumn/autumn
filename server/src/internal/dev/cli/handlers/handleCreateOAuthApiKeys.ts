@@ -15,12 +15,37 @@ import { hashOAuthToken } from "@/utils/oauthUtils.js";
 import { ApiKeyPrefix, createKey } from "../../api-keys/apiKeyUtils.js";
 import {
 	type OAuthApiKeyRequestBody,
+	OAuthApiKeyRequestBodySchema,
 	parseRequestedScopes,
 	tokenRecordFromResourceToken,
 } from "../oauthApiKeyUtils.js";
 
 const getOAuthIssuer = () =>
 	`${process.env.BETTER_AUTH_URL?.replace(/\/$/, "") ?? ""}/api/auth`;
+
+const parseBody = (rawBody: string): OAuthApiKeyRequestBody => {
+	let body: unknown = {};
+	if (rawBody) {
+		try {
+			body = JSON.parse(rawBody);
+		} catch {
+			throw new RecaseError({
+				message: "Invalid request body",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+	}
+
+	const parsed = OAuthApiKeyRequestBodySchema.safeParse(body);
+	if (parsed.success) return parsed.data;
+
+	throw new RecaseError({
+		message: "Invalid request body",
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
+	});
+};
 
 const verifyResourceAccessToken = async ({
 	accessToken,
@@ -64,7 +89,7 @@ export const handleCreateOAuthApiKeys = createRoute({
 	handler: async (c) => {
 		const db = c.get("ctx").db;
 		const rawBody = await c.req.text();
-		const body = rawBody ? (JSON.parse(rawBody) as OAuthApiKeyRequestBody) : {};
+		const body = parseBody(rawBody);
 		const requestedScopes = parseRequestedScopes(body.scopes);
 		const resource = typeof body.resource === "string" ? body.resource : null;
 

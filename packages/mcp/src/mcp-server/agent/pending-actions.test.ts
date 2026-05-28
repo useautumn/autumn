@@ -61,4 +61,26 @@ describe("pending billing actions", () => {
 			request: latest.request,
 		});
 	});
+
+	test("only one concurrent confirmation can claim an action", async () => {
+		await clearPendingActions();
+		await createPendingAction({
+			auth: auth(),
+			toolName: "attach",
+			request: { customer_id: "cus_1", plan_id: "pro" },
+			preview: "Attach pro",
+		});
+
+		const results = await Promise.allSettled([
+			claimLatestPendingAction(auth()),
+			claimLatestPendingAction(auth()),
+		]);
+
+		expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(
+			1,
+		);
+		expect(results.filter((result) => result.status === "rejected")).toHaveLength(
+			1,
+		);
+	});
 });
