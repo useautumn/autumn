@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { AppEnv } from "@autumn/shared";
 import type { Redis } from "ioredis";
 
@@ -156,4 +156,8 @@ describe("batchInvalidateCachedFullSubjects", () => {
 			primary.calls.writeOps.some((op) => op.includes("cus_primary")),
 		).toBe(true);
 	});
+});
+
+afterAll(() => {
+	mock.restore();
 });

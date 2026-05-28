@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import {
+	afterAll,
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	test,
+} from "bun:test";
 import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
 import type { SQSClient } from "@aws-sdk/client-sqs";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -182,4 +190,8 @@ describe("queueTrack", () => {
 		}
 		process.env.TRACK_SQS_QUEUE_URL = originalTrackQueueUrl;
 	});
+});
+
+afterAll(() => {
+	mock.restore();
 });
