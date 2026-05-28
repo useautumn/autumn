@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, describe, expect, mock, test } from "bun:test";
 
 mock.module("@/internal/misc/edgeConfig/edgeConfigRegistry.js", () => ({
 	registerEdgeConfig: () => undefined,
@@ -66,4 +66,8 @@ describe("isCustomerInRedisAllowlist", () => {
 		);
 		expect(isCustomerInRedisAllowlist({ customerId: "customer_b" })).toBe(true);
 	});
+});
+
+afterAll(() => {
+	mock.restore();
 });
