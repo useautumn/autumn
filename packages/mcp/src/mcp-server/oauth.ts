@@ -69,12 +69,18 @@ export function getResourceUrl(
 	_flags: MCPOAuthFlags,
 	resourcePath = "/mcp",
 ): string {
-	const host = headers.get("x-forwarded-host") ?? headers.get("host");
+	const host =
+		headers.get("x-autumn-forwarded-host") ??
+		headers.get("x-forwarded-host") ??
+		headers.get("host");
 	if (!host) {
 		throw new OAuthHttpError(400, "Missing Host header", "invalid_request");
 	}
 
-	const proto = headers.get("x-forwarded-proto") ?? "http";
+	const proto =
+		headers.get("x-autumn-forwarded-proto") ??
+		headers.get("x-forwarded-proto") ??
+		"http";
 	return new URL(resourcePath, `${proto}://${host}`).href;
 }
 
