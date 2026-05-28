@@ -20,11 +20,6 @@ mock.module(
 	}),
 );
 
-mock.module("@/utils/cacheUtils/cacheUtils.js", () => ({
-	tryRedisRead: async <T>(operation: () => Promise<T>) => operation(),
-	tryRedisWrite: async <T>(operation: () => Promise<T>) => operation(),
-}));
-
 import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects.js";
 
 type RedisCalls = {
