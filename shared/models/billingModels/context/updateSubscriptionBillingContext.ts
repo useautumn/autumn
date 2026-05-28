@@ -30,6 +30,11 @@ export type PatchContext = {
 	deleteCustomerEntitlements: FullCustomerEntitlement[];
 	customPrices: Price[];
 	customEntitlements: Entitlement[];
+	/** Explicit source-to-replacement entitlement carries for items whose identity changes. */
+	updateItemCarryLinks: {
+		fromCustomerEntitlementId: string;
+		toEntitlementId: string;
+	}[];
 };
 
 export interface UpdateSubscriptionBillingContext extends BillingContext {

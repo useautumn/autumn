@@ -87,10 +87,33 @@ export const initPatchedCustomerEntitlementsAndPrices = ({
 		customer_prices: customerPrices,
 		customer_entitlements: customerEntitlements,
 	};
+	const deletedEntitlementsById = new Map(
+		patchContext.deleteCustomerEntitlements.map((customerEntitlement) => [
+			customerEntitlement.id,
+			customerEntitlement,
+		]),
+	);
+	const customerEntitlementsByEntitlementId = new Map(
+		customerEntitlements.map((customerEntitlement) => [
+			customerEntitlement.entitlement.id,
+			customerEntitlement,
+		]),
+	);
 	const carryGroups = getCustomerProductCarryGroups({
 		fromCustomerProduct: patchContext.originalCustomerProduct,
 		toCustomerProduct: customerProductWithNewItemsOnly,
 		fromCustomerEntitlements: patchContext.deleteCustomerEntitlements,
+		links: patchContext.updateItemCarryLinks.flatMap((link) => {
+			const fromCustomerEntitlement = deletedEntitlementsById.get(
+				link.fromCustomerEntitlementId,
+			);
+			const toCustomerEntitlement = customerEntitlementsByEntitlementId.get(
+				link.toEntitlementId,
+			);
+
+			if (!fromCustomerEntitlement || !toCustomerEntitlement) return [];
+			return { fromCustomerEntitlement, toCustomerEntitlement };
+		}),
 	});
 
 	for (const carryGroup of carryGroups) {

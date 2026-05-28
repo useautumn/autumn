@@ -2,6 +2,7 @@ import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice";
 import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPlanItemParamsV1";
 import { PlanItemFilterSchema } from "@api/products/items/filter/planItemFilter";
+import { ResetInterval } from "@models/productModels/intervals/resetInterval";
 import { z } from "zod/v4";
 
 export const UpdatePlanItemParamsV1Schema = z
@@ -14,11 +15,15 @@ export const UpdatePlanItemParamsV1Schema = z
 			description:
 				"Override the matched item's included usage / allowance. Existing usage carries forward.",
 		}),
+		interval: z.enum(ResetInterval).optional().meta({
+			description:
+				"Override the matched item's reset interval. Use 'one_off' for non-resetting balances.",
+		}),
 	})
 	.meta({
 		title: "UpdatePlanItem",
 		description:
-			"Patch an existing plan item in place. Phase 1 supports only `included`.",
+			"Patch an existing plan item in place. Supports included and interval changes.",
 	});
 
 export type UpdatePlanItemParamsV1 = z.infer<typeof UpdatePlanItemParamsV1Schema>;

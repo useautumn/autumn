@@ -5,6 +5,7 @@ import type {
 } from "@autumn/shared";
 import {
 	ArrowLeftIcon,
+	ArrowSquareOutIcon,
 	CaretDownIcon,
 	CaretLeftIcon,
 	CaretRightIcon,
@@ -20,6 +21,7 @@ import {
 import type { ColumnDef, PaginationState, Row } from "@tanstack/react-table";
 import { debounce } from "lodash";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router";
 import { Table } from "@/components/general/table";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
@@ -59,6 +61,7 @@ import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { createCustomerListColumns } from "@/views/customers2/components/table/customer-list/CustomerListColumns";
 import { CustomerListFilterButton } from "@/views/customers2/components/table/customer-list/CustomerListFilterButton";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
+import { pushPage } from "@/utils/genUtils";
 import { useRealtimeSubscriptions } from "../hooks/useRealtimeSubscriptions";
 import { ItemEventStatusBadge } from "../runs/RunStatusBadge";
 import { type StepId, StepIndicator } from "../StepIndicator";
@@ -132,8 +135,40 @@ const baseColumns = createCustomerListColumns().filter(
 	(col) => col.id !== "actions",
 ) as ColumnDef<CustomerRow, unknown>[];
 
+const executionCustomerColumns = baseColumns.map((column) => {
+	if (column.id !== "name") return column;
+
+	return {
+		...column,
+		cell: ({ row }: { row: Row<CustomerRow> }) => {
+			const customer = row.original;
+			const customerId = customer.id || customer.internal_id;
+
+			return (
+				<Link
+					to={pushPage({
+						path: `/customers/${customerId}`,
+						preserveParams: false,
+					})}
+					onClick={(event) => event.stopPropagation()}
+					className="group/link inline-flex max-w-full items-center gap-1.5 text-foreground hover:text-primary"
+				>
+					<span className="truncate font-medium">
+						{customer.name || customerId}
+					</span>
+					<ArrowSquareOutIcon
+						size={12}
+						weight="bold"
+						className="shrink-0 opacity-0 transition-opacity group-hover/link:opacity-70"
+					/>
+				</Link>
+			);
+		},
+	} satisfies ColumnDef<CustomerRow, unknown>;
+});
+
 const columns: ColumnDef<CustomerRow, unknown>[] = [
-	...baseColumns,
+	...executionCustomerColumns,
 	statusColumn,
 ];
 
