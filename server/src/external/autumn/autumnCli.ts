@@ -169,19 +169,27 @@ export class AutumnInt {
 				});
 			}
 
-			let error: any;
+			// Read the raw body once. Some upstream failures (timeouts, 5xx from
+			// infra) return non-JSON or empty bodies — surface the snippet so the
+			// caller's log isn't a bare "Failed to parse JSON".
+			const rawBody = await response.text();
+			let parsed: any;
 			try {
-				error = await response.json();
-			} catch (error) {
+				parsed = rawBody ? JSON.parse(rawBody) : null;
+			} catch {
+				parsed = null;
+			}
+
+			if (parsed && typeof parsed === "object") {
 				throw new AutumnError({
-					message: `request failed, error: ${error}`,
-					code: ErrCode.InternalError,
+					message: parsed.message ?? `request failed (status ${response.status})`,
+					code: parsed.code ?? ErrCode.InternalError,
 				});
 			}
 
 			throw new AutumnError({
-				message: error.message,
-				code: error.code,
+				message: `request failed (status ${response.status}, ${path}): ${rawBody.slice(0, 200) || "<empty body>"}`,
+				code: ErrCode.InternalError,
 			});
 		}
 
