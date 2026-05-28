@@ -24,7 +24,11 @@ export const computePatchCustomerProductPlan = ({
 		throw new Error("Patch context is required to compute patch customer plan");
 	}
 
-	const { finalCustomerProduct, customerProductUpdates } =
+	const {
+		finalCustomerProduct,
+		customerProductUpdates,
+		oneOffPrepaidCarryOverCustomerEntitlements,
+	} =
 		initPatchCustomerProduct({
 			ctx,
 			billingContext: updateSubscriptionContext,
@@ -46,6 +50,7 @@ export const computePatchCustomerProductPlan = ({
 		customEntitlements: patchContext.customEntitlements,
 		customFreeTrial: trialContext?.customFreeTrial,
 		lineItems: allLineItems,
+		insertCustomerEntitlements: oneOffPrepaidCarryOverCustomerEntitlements,
 		updateCustomerEntitlements: computeAnchorResetEntitlementUpdates({
 			updateSubscriptionContext,
 			finalCustomerProduct,

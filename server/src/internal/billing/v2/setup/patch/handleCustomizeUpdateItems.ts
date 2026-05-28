@@ -18,7 +18,6 @@ import type {
 import { planItemFilterMatchesCustomerPair } from "@shared/api/products/items/utils/match";
 import { cusEntToCusPrice } from "@shared/utils/cusEntUtils/convertCusEntUtils/cusEntToCusPrice";
 import { customerPriceToCustomerEntitlement } from "@shared/utils/cusPriceUtils/convertCustomerPrice/customerPriceToCustomerEntitlement";
-import { isOneOffPrice } from "@shared/utils/productUtils/priceUtils/classifyPriceUtils";
 import { StatusCodes } from "http-status-codes";
 import { generateId } from "@/utils/genUtils";
 
@@ -64,13 +63,11 @@ const assertAllowedIntervalUpdate = ({
 	customerPrice?: FullCustomerPrice;
 	overrides: UpdatePlanItemParamsV1;
 }) => {
-	if (overrides.interval === undefined || overrides.interval === ResetInterval.OneOff)
-		return;
-	if (!customerPrice || !isOneOffPrice(customerPrice.price)) return;
+	if (overrides.interval === undefined || !customerPrice) return;
 
 	throw new RecaseError({
 		message:
-			"update_items cannot change intervals for one-off paid items. Use remove_items and add_items instead.",
+			"update_items cannot change intervals for paid items. Use remove_items and add_items instead.",
 		code: ErrCode.InvalidProductItem,
 		statusCode: StatusCodes.BAD_REQUEST,
 	});

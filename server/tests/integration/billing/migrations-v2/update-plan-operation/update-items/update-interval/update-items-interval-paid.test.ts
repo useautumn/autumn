@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
+import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
@@ -83,6 +84,77 @@ test.concurrent(`${chalk.yellowBright("migrations update_items interval: subscri
 	});
 });
 
+test.concurrent(`${chalk.yellowBright("migrations update_items interval: monthly paid item interval changes are rejected")}`, async () => {
+	const customerId = "migration-update-items-monthly-paid-rejected";
+	const base = products.base({
+		id: "migration-update-items-monthly-paid-rejected-plan",
+		items: [
+			items.prepaid({
+				featureId: TestFeature.Credits,
+				includedUsage: 100,
+				billingUnits: 100,
+				price: 10,
+			}),
+			items.consumableMessages({ includedUsage: 50, price: 0.1 }),
+		],
+	});
+
+	const { autumnV2_2, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [base] }),
+		],
+		actions: [s.billing.attach({ productId: base.id })],
+	});
+
+	const cases = [
+		{
+			name: "prepaid",
+			filter: {
+				feature_id: TestFeature.Credits,
+				billing_method: BillingMethod.Prepaid,
+			},
+		},
+		{
+			name: "usage-based",
+			filter: {
+				feature_id: TestFeature.Messages,
+				billing_method: BillingMethod.UsageBased,
+			},
+		},
+	];
+
+	for (const testCase of cases) {
+		await expect(
+			runUpdatePlanMigration({
+				ctx,
+				migrationClient: autumnV2_2,
+				migrationId: `${customerId}-${testCase.name}-mig`,
+				customerId,
+				filter: { customer: { plan: { plan_id: base.id } } },
+				operations: {
+					customer: [
+						{
+							type: "update_plan",
+							plan_filter: { plan_id: base.id },
+							customize: {
+								update_items: [
+									{
+										filter: testCase.filter,
+										interval: ResetInterval.OneOff,
+									},
+								],
+							},
+						},
+					],
+				},
+				runOnServer: false,
+			}),
+		).rejects.toThrow(/paid items/i);
+	}
+});
+
 test.concurrent(`${chalk.yellowBright("migrations update_items interval: one-off prepaid interval changes are rejected")}`, async () => {
 	const customerId = "migration-update-items-one-off-prepaid-rejected";
 	const oneOffPrepaid = constructPrepaidItem({
@@ -134,5 +206,5 @@ test.concurrent(`${chalk.yellowBright("migrations update_items interval: one-off
 			},
 			runOnServer: false,
 		}),
-	).rejects.toThrow(/one-off paid/i);
+	).rejects.toThrow(/paid items/i);
 });
