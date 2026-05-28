@@ -42,9 +42,9 @@ export function createConsoleLogger(level: ConsoleLoggerLevel): ConsoleLogger {
 }
 
 function log(
-  level: ConsoleLoggerLevel,
-  message: string,
-  data?: Record<string, unknown>,
+	level: ConsoleLoggerLevel,
+	message: string,
+	data?: Record<string, unknown>,
 ) {
 	let line = "";
 	const allData = [{ msg: message, l: level }, data];
@@ -68,5 +68,6 @@ function log(
 		}
 	}
 
-	console.error(line);
+	const write = level === "error" || level === "warning" ? console.error : console.log;
+	write(line);
 }

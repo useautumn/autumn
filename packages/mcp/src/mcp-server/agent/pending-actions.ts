@@ -1,3 +1,7 @@
+import { createHash } from "node:crypto";
+import { ms } from "@autumn/shared/unixUtils";
+import { addMilliseconds, isPast } from "date-fns";
+import { Redis } from "ioredis";
 import type { AutumnMcpAuth } from "./auth.js";
 
 export type BillingToolName = "attach" | "updateSubscription";
@@ -11,45 +15,75 @@ export type PendingBillingAction = {
 	request: unknown;
 	preview: string;
 	createdAt: number;
-	expiresAt: number;
+	expiresAt: string;
 };
 
-const ttlMs = 15 * 60 * 1000;
-const pending = new Map<string, PendingBillingAction>();
-let sequence = 0;
+const ttlMs = ms.minutes(15);
+const namespace = "autumn:mcp:pending-action";
+let redis: Redis | undefined;
+type PendingActionRedis = {
+	multi: () => {
+		set: (
+			key: string,
+			value: string,
+			expiryMode: "EX",
+			ttlSeconds: number,
+		) => PendingActionRedis["multi"] extends () => infer Multi ? Multi : never;
+		exec: () => Promise<unknown>;
+	};
+	get: (key: string) => Promise<string | null>;
+	del: (...keys: string[]) => Promise<unknown>;
+	keys: (pattern: string) => Promise<string[]>;
+};
 
 const createToken = () => `act_${crypto.randomUUID().slice(0, 8)}`;
+const isExpired = (action: PendingBillingAction) =>
+	isPast(new Date(action.expiresAt));
+const hash = (value: string) =>
+	createHash("sha256").update(value).digest("hex").slice(0, 32);
+const shortHash = (value: string) => hash(value).slice(0, 8);
+const redisUrl = () => process.env.REDIS_URL || "";
 
-const isExpired = (action: PendingBillingAction) => action.expiresAt <= Date.now();
+const actionScope = (auth: AutumnMcpAuth) =>
+	hash([auth.principalId, auth.resource, auth.env].join(":"));
+const latestKey = (auth: AutumnMcpAuth) =>
+	`${namespace}:${actionScope(auth)}:latest`;
+const actionKey = (token: string) => `${namespace}:action:${token}`;
+const actionDebug = (auth: AutumnMcpAuth) => ({
+	env: auth.env,
+	principal: shortHash(auth.principalId),
+	resource: shortHash(auth.resource),
+	scope: actionScope(auth),
+});
+const logPendingAction = (event: string, data: Record<string, unknown>) => {
+	if (process.env.MCP_DEBUG_PENDING_ACTIONS !== "1") return;
+	console.log(`[mcp:pending-actions] ${event} ${JSON.stringify(data)}`);
+};
 
-const matchesAuth = (action: PendingBillingAction, auth: AutumnMcpAuth) =>
-	action.principalId === auth.principalId &&
-	action.resource === auth.resource &&
-	action.env === auth.env;
+export const setPendingActionsRedis = (client: PendingActionRedis) => {
+	redis = client as unknown as Redis;
+};
 
-const cleanupExpiredPendingActions = () => {
-	for (const action of pending.values()) {
-		if (isExpired(action)) pending.delete(action.token);
+const getRedis = (): PendingActionRedis => {
+	if (redis) return redis;
+	const url = redisUrl().trim();
+	if (!url) {
+		throw new Error("REDIS_URL is required for MCP pending billing actions.");
 	}
+
+	redis = new Redis(url, {
+		maxRetriesPerRequest: 1,
+		commandTimeout: 5_000,
+	});
+	redis.on("error", () => undefined);
+	logPendingAction("store", { backend: "redis", redisUrl: true });
+	return redis;
 };
 
-const getLatestPendingAction = (auth: AutumnMcpAuth) => {
-	let latest: PendingBillingAction | null = null;
-	cleanupExpiredPendingActions();
-	for (const action of pending.values()) {
-		if (!matchesAuth(action, auth)) continue;
-		if (!latest || action.createdAt > latest.createdAt) latest = action;
-	}
-	return latest;
-};
+const parseStoredAction = (value: string | null) =>
+	(value ? (JSON.parse(value) as PendingBillingAction) : null);
 
-const getPendingAction = (token: string) => {
-	cleanupExpiredPendingActions();
-	const action = pending.get(token);
-	return action ?? null;
-};
-
-export const createPendingAction = ({
+const createAction = ({
 	auth,
 	toolName,
 	request,
@@ -59,9 +93,8 @@ export const createPendingAction = ({
 	toolName: BillingToolName;
 	request: unknown;
 	preview: string;
-}) => {
-	cleanupExpiredPendingActions();
-	const action = {
+}) =>
+	({
 		token: createToken(),
 		principalId: auth.principalId,
 		resource: auth.resource,
@@ -69,50 +102,66 @@ export const createPendingAction = ({
 		toolName,
 		request,
 		preview,
-		createdAt: ++sequence,
-		expiresAt: Date.now() + ttlMs,
-	} satisfies PendingBillingAction;
-	pending.set(action.token, action);
+		createdAt: Date.now(),
+		expiresAt: addMilliseconds(new Date(), ttlMs).toISOString(),
+	}) satisfies PendingBillingAction;
+
+export const createPendingAction = async (input: {
+	auth: AutumnMcpAuth;
+	toolName: BillingToolName;
+	request: unknown;
+	preview: string;
+}) => {
+	const action = createAction(input);
+	const client = getRedis();
+	const ttlSeconds = Math.ceil(ttlMs / 1000);
+	await client
+		.multi()
+		.set(actionKey(action.token), JSON.stringify(action), "EX", ttlSeconds)
+		.set(latestKey(input.auth), action.token, "EX", ttlSeconds)
+		.exec();
+	logPendingAction("created", {
+		backend: "redis",
+		toolName: action.toolName,
+		token: shortHash(action.token),
+		...actionDebug(input.auth),
+	});
 	return action;
 };
 
-export const claimPendingAction = (auth: AutumnMcpAuth, token: string) => {
-	const action = getPendingAction(token);
-	if (!action) {
-		throw new Error("Confirmation token is invalid or expired.");
+export const claimLatestPendingAction = async (auth: AutumnMcpAuth) => {
+	const client = getRedis();
+	const token = await client.get(latestKey(auth));
+	const action = token ? parseStoredAction(await client.get(actionKey(token))) : null;
+	if (!token || !action || isExpired(action)) {
+		logPendingAction("claim-miss", {
+			backend: "redis",
+			reason: !token ? "missing_latest" : !action ? "missing_action" : "expired",
+			token: token ? shortHash(token) : null,
+			...actionDebug(auth),
+		});
+		throw new Error("No pending billing action to confirm.");
 	}
-	if (!matchesAuth(action, auth)) {
-		throw new Error("Confirmation token does not belong to this session.");
-	}
-	pending.delete(token);
+	await client.del(latestKey(auth), actionKey(token));
+	logPendingAction("claimed", {
+		backend: "redis",
+		toolName: action.toolName,
+		token: shortHash(token),
+		...actionDebug(auth),
+	});
 	return action;
 };
 
-export const claimLatestPendingAction = (auth: AutumnMcpAuth) => {
-	const action = getLatestPendingAction(auth);
-	if (!action) throw new Error("No pending billing action to confirm.");
-	pending.delete(action.token);
+export const getLatestPendingAction = async (auth: AutumnMcpAuth) => {
+	const client = getRedis();
+	const token = await client.get(latestKey(auth));
+	const action = token ? parseStoredAction(await client.get(actionKey(token))) : null;
+	if (!action || isExpired(action)) return null;
 	return action;
 };
 
-export const cancelPendingAction = (auth: AutumnMcpAuth, token: string) => {
-	const action = getPendingAction(token);
-	if (!action) {
-		throw new Error("Confirmation token is invalid or expired.");
-	}
-	if (!matchesAuth(action, auth)) {
-		throw new Error("Confirmation token does not belong to this session.");
-	}
-	pending.delete(token);
-};
-
-export const cancelLatestPendingAction = (auth: AutumnMcpAuth) => {
-	const action = getLatestPendingAction(auth);
-	if (!action) throw new Error("No pending billing action to cancel.");
-	pending.delete(action.token);
-};
-
-export const clearPendingActions = () => {
-	pending.clear();
-	sequence = 0;
+export const clearPendingActions = async () => {
+	const client = getRedis();
+	const keys = await client.keys(`${namespace}:*`);
+	if (keys.length) await client.del(...keys);
 };

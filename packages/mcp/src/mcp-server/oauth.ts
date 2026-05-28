@@ -42,6 +42,8 @@ const apiKeyCache = new Map<
 	{
 		key: string;
 		orgId?: string | undefined;
+		userId?: string | undefined;
+		clientId?: string | undefined;
 		scopes?: string[] | undefined;
 		expiresAt: Date;
 	}
@@ -153,7 +155,13 @@ async function exchangeOAuthToken(
 	flags: MCPOAuthFlags,
 	resource: string,
 	token: string,
-): Promise<{ key: string; orgId?: string | undefined; scopes?: string[] }> {
+): Promise<{
+	key: string;
+	orgId?: string | undefined;
+	userId?: string | undefined;
+	clientId?: string | undefined;
+	scopes?: string[];
+}> {
 	const env = getEnvironment(headers, flags);
 	const cacheKey = `${token}:${resource}:${env}`;
 	const cached = apiKeyCache.get(cacheKey);
@@ -183,6 +191,8 @@ async function exchangeOAuthToken(
 		sandbox_key?: string;
 		prod_key?: string;
 		org_id?: string;
+		user_id?: string;
+		client_id?: string;
 		scopes?: string[];
 	};
 	const key = env === "live" ? data.prod_key : data.sandbox_key;
@@ -196,11 +206,27 @@ async function exchangeOAuthToken(
 	const exchanged = {
 		key,
 		orgId: data.org_id,
+		userId: data.user_id,
+		clientId: data.client_id,
 		scopes: data.scopes,
 		expiresAt: addMilliseconds(new Date(), ms.minutes(1)),
 	};
 	apiKeyCache.set(cacheKey, exchanged);
 	return exchanged;
+}
+
+function getOAuthPrincipalId(
+	token: string,
+	exchanged: Awaited<ReturnType<typeof exchangeOAuthToken>>,
+) {
+	if (!exchanged.orgId) return principalFromSecret("oauth", token);
+
+	return [
+		"oauth",
+		exchanged.orgId,
+		exchanged.userId ?? "unknown-user",
+		exchanged.clientId ?? "unknown-client",
+	].join(":");
 }
 
 function resolveStaticHeader<T>(
@@ -255,7 +281,7 @@ export async function buildAuthForRequest(
 			apiKey: exchanged.key,
 			env,
 			resource,
-			principalId: principalFromSecret("oauth", token),
+			principalId: getOAuthPrincipalId(token, exchanged),
 			scopes: exchanged.scopes ?? [...MCP_OAUTH_SCOPES],
 			orgId: exchanged.orgId,
 			serverURL: flags["server-url"],

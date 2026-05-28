@@ -6,6 +6,7 @@ import {
 	createRequestContext,
 	getAutumnAuth,
 } from "./auth.js";
+import { getLatestPendingAction } from "./pending-actions.js";
 import { createAutumnOperationTools } from "./tools.js";
 
 const model = "anthropic/claude-sonnet-4-6";
@@ -18,11 +19,10 @@ Rules:
 - Read requests can be answered directly.
 - For customer lookup, use listCustomers first when the id/email/name is ambiguous.
 - For plan lookup, use listPlans first when the plan is ambiguous.
-- For billing changes, call previewAttach or previewUpdateSubscription first.
-- After a billing preview, call createBillingConfirmation with the exact write request and a concise preview summary.
+- For billing changes, call previewAttach or previewUpdateSubscription first. These preview tools automatically create the pending billing action.
 - Never expose internal ids or server bookkeeping details.
 - After a billing preview, tell the user to explicitly apply or approve the exact previewed change.
-- If the user semantically confirms a pending billing preview, call confirmBillingAction.
+- If the user semantically confirms, applies, or approves a billing preview, call confirmBillingAction even if the preview is not visible in the current message. The tool validates whether a pending action exists.
 - Never claim a billing write has been applied unless confirmBillingAction succeeds.
 - If customer, plan, entity, subscription, or environment is ambiguous, ask a short clarifying question.
 - Keep responses concise. Use JSON only when it materially helps debugging.`;
@@ -78,8 +78,12 @@ export const createAskAutumnTool = (defaultAuth?: AutumnMcpAuth) =>
 		},
 		execute: async ({ message, context }, toolContext) => {
 			const auth = getAuth(toolContext, defaultAuth);
+			const pendingAction = await getLatestPendingAction(auth);
 			const contextText = context
 				? `\n\nCaller context:\n${JSON.stringify(context, null, 2)}`
+				: "";
+			const pendingText = pendingAction
+				? `\n\nPending billing action:\nTool: ${pendingAction.toolName}\nPreview: ${pendingAction.preview}\nIf the user confirms this preview, call confirmBillingAction.`
 				: "";
 			const output = await createAgent().generate(message, {
 				maxSteps: 8,
@@ -87,7 +91,7 @@ export const createAskAutumnTool = (defaultAuth?: AutumnMcpAuth) =>
 				context: [
 					{
 						role: "system",
-						content: `Current Autumn environment: ${auth.env}.${contextText}`,
+						content: `Current Autumn environment: ${auth.env}.${pendingText}${contextText}`,
 					},
 				],
 			});

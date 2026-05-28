@@ -30,6 +30,7 @@
     "@stricli/core": "^1.1.2",
     "date-fns": "^4.1.0",
     "express": "^5.1.0",
+    "ioredis": "^5.5.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {

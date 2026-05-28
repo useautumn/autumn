@@ -14,7 +14,11 @@ const apiKeyUrl =
 function run(command: string, args: string[]) {
 	const child = spawn(command, args, {
 		cwd: rootDir,
-		env: process.env,
+		env: {
+			...process.env,
+			MCP_DEBUG_PENDING_ACTIONS:
+				process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
+		},
 		stdio: "inherit",
 	});
 
@@ -28,9 +32,9 @@ function run(command: string, args: string[]) {
 	});
 }
 
-await run("bun", ["-F", "@autumn/mcp", "build"]);
-await run("node", [
-	"packages/mcp/bin/mcp-server.js",
+await run("bun", [
+	"--watch",
+	"packages/mcp/src/mcp-server/mcp-server.ts",
 	"serve",
 	"--port",
 	port,

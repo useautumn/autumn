@@ -1,11 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import type { AutumnMcpAuth } from "./auth.js";
-import {
+import { createTestRedis } from "./test-redis.js";
+
+const {
 	clearPendingActions,
 	claimLatestPendingAction,
 	createPendingAction,
-} from "./pending-actions.js";
-import { createAutumnOperationTools } from "./tools.js";
+	setPendingActionsRedis,
+} = await import("./pending-actions.js");
+const { createAutumnOperationTools } = await import("./tools.js");
+
+setPendingActionsRedis(createTestRedis());
 
 const auth: AutumnMcpAuth = {
 	apiKey: "sk_test",
@@ -17,31 +22,52 @@ const auth: AutumnMcpAuth = {
 };
 
 describe("Autumn operation tools", () => {
-	test("rejects billing confirmations when toolName and request schema do not match", async () => {
-		clearPendingActions();
-		const tool = createAutumnOperationTools().createBillingConfirmation;
-		if (!tool.execute) throw new Error("createBillingConfirmation is not executable");
+	test("previewAttach stores the exact pending attach action", async () => {
+		await clearPendingActions();
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (url, init) => {
+			expect(String(url)).toBe("http://localhost:8080/v1/billing.preview_attach");
+			expect(JSON.parse(init?.body as string)).toEqual({
+				customer_id: "cus_1",
+				plan_id: "pro",
+				redirect_mode: "if_required",
+			});
+			return Response.json({ total: 50 });
+		}) as typeof fetch;
 
-		await expect(
-			tool.execute(
-				{
-					toolName: "attach",
-					request: {
-						customer_id: "cus_1",
-						cancel_action: "cancel_immediately",
-					},
-					preview: "Cancel subscription",
+		try {
+			const tool = (
+				createAutumnOperationTools() as unknown as {
+					previewAttach: {
+						execute?: (input: unknown, context: unknown) => Promise<unknown>;
+					};
+				}
+			).previewAttach;
+			if (!tool.execute) throw new Error("previewAttach is not executable");
+
+			await expect(
+				tool.execute(
+					{ request: { customer_id: "cus_1", plan_id: "pro" } },
+					{ mcp: { extra: { authInfo: auth } } } as never,
+				),
+			).resolves.toMatchObject({ pending: true, preview: { total: 50 } });
+
+			await expect(claimLatestPendingAction(auth)).resolves.toMatchObject({
+				toolName: "attach",
+				request: {
+					customer_id: "cus_1",
+					plan_id: "pro",
+					redirect_mode: "if_required",
 				},
-				{ mcp: { extra: { authInfo: auth } } } as never,
-			),
-		).rejects.toThrow("plan_id");
-
-		expect(() => claimLatestPendingAction(auth)).toThrow("No pending");
+			});
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
 	});
 
 	test("confirmBillingAction executes only the stored pending billing action", async () => {
-		clearPendingActions();
-		createPendingAction({
+		await clearPendingActions();
+		await createPendingAction({
 			auth,
 			toolName: "attach",
 			request: { customer_id: "cus_1", plan_id: "pro" },
@@ -68,7 +94,7 @@ describe("Autumn operation tools", () => {
 				message: "Confirmed and applied attach.",
 				result: { ok: true },
 			});
-			expect(() => claimLatestPendingAction(auth)).toThrow("No pending");
+			await expect(claimLatestPendingAction(auth)).rejects.toThrow("No pending");
 		} finally {
 			globalThis.fetch = originalFetch;
 		}

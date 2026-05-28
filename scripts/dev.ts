@@ -237,7 +237,7 @@ async function startDev() {
 			names.push("mcp");
 			colors.push("white");
 			const mcpServeCmd = [
-				"node packages/mcp/bin/mcp-server.js serve",
+				"bun --watch packages/mcp/src/mcp-server/mcp-server.ts serve",
 				`--port ${MCP_PORT}`,
 				"--oauth-enabled",
 				"--disable-static-auth",
@@ -246,8 +246,7 @@ async function startDev() {
 				`--oauth-api-key-url http://localhost:${SERVER_PORT}/cli/api-keys`,
 				`--server-url http://localhost:${SERVER_PORT}`,
 			].join(" ");
-			const mcpCmd = ["bun -F @autumn/mcp build", mcpServeCmd].join(" && ");
-			cmds.push(isWindows ? `"${mcpCmd}"` : `"${mcpCmd}"`);
+			cmds.push(isWindows ? `"${mcpServeCmd}"` : `"${mcpServeCmd}"`);
 
 			// Stripe CLI webhook tunnel — silently skip if CLI absent.
 			// Forwards to the direct localhost port (not portless) so we avoid CA trust issues.
@@ -292,6 +291,8 @@ async function startDev() {
 				SERVER_PORT: SERVER_PORT.toString(),
 				CHECKOUT_PORT: CHECKOUT_PORT.toString(),
 				MCP_PORT: MCP_PORT.toString(),
+				MCP_DEBUG_PENDING_ACTIONS:
+					process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
 				MCP_RESOURCE_URLS:
 					process.env.MCP_RESOURCE_URLS ?? `http://localhost:${MCP_PORT}/mcp`,
 				VITE_APP_ENV: viteAppEnv,

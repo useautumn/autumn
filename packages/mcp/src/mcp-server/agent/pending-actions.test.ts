@@ -1,13 +1,15 @@
 import { describe, expect, test } from "bun:test";
 import type { AutumnMcpAuth } from "./auth.js";
-import {
-	cancelLatestPendingAction,
-	cancelPendingAction,
+import { createTestRedis } from "./test-redis.js";
+
+const {
 	claimLatestPendingAction,
-	claimPendingAction,
 	clearPendingActions,
 	createPendingAction,
-} from "./pending-actions.js";
+	setPendingActionsRedis,
+} = await import("./pending-actions.js");
+
+setPendingActionsRedis(createTestRedis());
 
 const auth = (overrides: Partial<AutumnMcpAuth> = {}): AutumnMcpAuth => ({
 	apiKey: "sk_test",
@@ -19,63 +21,44 @@ const auth = (overrides: Partial<AutumnMcpAuth> = {}): AutumnMcpAuth => ({
 });
 
 describe("pending billing actions", () => {
-	test("claims an action only for the matching auth context", () => {
-		clearPendingActions();
-		const action = createPendingAction({
+	test("claims the latest action only for the matching auth context", async () => {
+		await clearPendingActions();
+		await createPendingAction({
 			auth: auth(),
 			toolName: "attach",
 			request: { customer_id: "cus_1", plan_id: "pro" },
 			preview: "Attach pro to cus_1",
 		});
 
-		expect(() =>
-			claimPendingAction(auth({ principalId: "user_2" }), action.token),
-		).toThrow("does not belong");
-		expect(claimPendingAction(auth(), action.token).request).toEqual({
-			customer_id: "cus_1",
-			plan_id: "pro",
+		await expect(
+			claimLatestPendingAction(auth({ principalId: "user_2" })),
+		).rejects.toThrow("No pending");
+		await expect(claimLatestPendingAction(auth())).resolves.toMatchObject({
+			request: {
+				customer_id: "cus_1",
+				plan_id: "pro",
+			},
 		});
-		expect(() => claimPendingAction(auth(), action.token)).toThrow("expired");
+		await expect(claimLatestPendingAction(auth())).rejects.toThrow("No pending");
 	});
 
-	test("cancels a matching action", () => {
-		clearPendingActions();
-		const action = createPendingAction({
-			auth: auth(),
-			toolName: "updateSubscription",
-			request: { customer_id: "cus_1" },
-			preview: "Update subscription",
-		});
-
-		cancelPendingAction(auth(), action.token);
-		expect(() => claimPendingAction(auth(), action.token)).toThrow("expired");
-	});
-
-	test("claims and cancels the latest matching action without exposing tokens", () => {
-		clearPendingActions();
-		createPendingAction({
+	test("claims the latest matching action without exposing tokens", async () => {
+		await clearPendingActions();
+		await createPendingAction({
 			auth: auth(),
 			toolName: "attach",
 			request: { customer_id: "cus_1", plan_id: "starter" },
 			preview: "Attach starter",
 		});
-		const latest = createPendingAction({
+		const latest = await createPendingAction({
 			auth: auth(),
 			toolName: "attach",
 			request: { customer_id: "cus_1", plan_id: "pro" },
 			preview: "Attach pro",
 		});
 
-		expect(claimLatestPendingAction(auth()).request).toEqual(latest.request);
-
-		clearPendingActions();
-		createPendingAction({
-			auth: auth(),
-			toolName: "updateSubscription",
-			request: { customer_id: "cus_1" },
-			preview: "Update subscription",
+		await expect(claimLatestPendingAction(auth())).resolves.toMatchObject({
+			request: latest.request,
 		});
-		cancelLatestPendingAction(auth());
-		expect(() => claimLatestPendingAction(auth())).toThrow("No pending");
 	});
 });

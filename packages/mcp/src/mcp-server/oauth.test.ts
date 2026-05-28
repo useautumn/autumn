@@ -46,6 +46,8 @@ describe("MCP OAuth auth resolution", () => {
 				sandbox_key: "sk_sandbox",
 				prod_key: "sk_live",
 				org_id: "org_123",
+				user_id: "user_123",
+				client_id: "client_123",
 				scopes: MCP_OAUTH_SCOPES,
 			});
 		}) as typeof fetch;
@@ -60,6 +62,7 @@ describe("MCP OAuth auth resolution", () => {
 			expect(auth.apiKey).toBe("sk_sandbox");
 			expect(auth.env).toBe("sandbox");
 			expect(auth.resource).toBe("http://localhost:2718/mcp");
+			expect(auth.principalId).toBe("oauth:org_123:user_123:client_123");
 			expect(auth.scopes).toEqual([...MCP_OAUTH_SCOPES]);
 			expect(auth.orgId).toBe("org_123");
 		} finally {

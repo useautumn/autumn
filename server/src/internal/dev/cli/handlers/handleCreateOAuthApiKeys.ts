@@ -196,6 +196,8 @@ export const handleCreateOAuthApiKeys = createRoute({
 			sandbox_key: sandboxKey,
 			prod_key: prodKey,
 			org_id: orgId,
+			user_id: userId,
+			client_id: clientId,
 			scopes: requestedScopes,
 		});
 	},

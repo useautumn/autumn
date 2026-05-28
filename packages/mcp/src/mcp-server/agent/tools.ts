@@ -25,6 +25,13 @@ type OperationToolConfig = {
 	schema: z.ZodType;
 	endpoint: string;
 };
+type BillingPreviewToolConfig = {
+	id: string;
+	description: string;
+	schema: z.ZodType;
+	previewEndpoint: string;
+	writeToolName: BillingWriteToolName;
+};
 
 const endpointByTool = {
 	listCustomers: "/v1/customers.list",
@@ -68,19 +75,24 @@ const toolConfigs: OperationToolConfig[] = [
 		schema: GetPlanParamsV0Schema,
 		endpoint: endpointByTool.getPlan,
 	},
+];
+
+const billingPreviewConfigs: BillingPreviewToolConfig[] = [
 	{
 		id: "previewAttach",
 		description:
-			"Preview attaching a plan to a customer. Does not modify billing state.",
+			"Preview attaching a plan to a customer and store the exact pending attach action for later confirmation.",
 		schema: AttachParamsV1Schema,
-		endpoint: endpointByTool.previewAttach,
+		previewEndpoint: endpointByTool.previewAttach,
+		writeToolName: "attach",
 	},
 	{
 		id: "previewUpdateSubscription",
 		description:
-			"Preview updating a subscription. Does not modify billing state.",
+			"Preview updating a subscription and store the exact pending update action for later confirmation.",
 		schema: UpdateSubscriptionV1ParamsSchema,
-		endpoint: endpointByTool.previewUpdateSubscription,
+		previewEndpoint: endpointByTool.previewUpdateSubscription,
+		writeToolName: "updateSubscription",
 	},
 ];
 
@@ -119,6 +131,10 @@ const parseBody = (text: string): unknown => {
 		return text;
 	}
 };
+const logTool = (event: string, data: Record<string, unknown>) => {
+	if (process.env.MCP_DEBUG_PENDING_ACTIONS !== "1") return;
+	console.log(`[mcp:agent-tools] ${event} ${JSON.stringify(data)}`);
+};
 
 const operationTool = <Schema extends z.ZodType>({
 	id,
@@ -143,41 +159,59 @@ const operationTool = <Schema extends z.ZodType>({
 			}),
 	});
 
+const billingPreviewTool = ({
+	id,
+	description,
+	schema,
+	previewEndpoint,
+	writeToolName,
+}: {
+	id: string;
+	description: string;
+	schema: z.ZodType;
+	previewEndpoint: string;
+	writeToolName: BillingWriteToolName;
+}) =>
+	createTool({
+		id,
+		description,
+		inputSchema: z.object({ request: schema }).strict(),
+		execute: async (input, context) => {
+			const request = (input as { request: unknown }).request;
+			const auth = getAutumnAuth(context);
+			logTool("preview-start", { previewTool: id, writeToolName });
+			const preview = await callAutumn({
+				context,
+				endpoint: previewEndpoint,
+				request,
+			});
+			await createPendingAction({
+				auth,
+				toolName: writeToolName,
+				request,
+				preview: JSON.stringify(preview),
+			});
+			logTool("preview-stored", { previewTool: id, writeToolName });
+			return {
+				preview,
+				pending: true,
+				message:
+					"Preview ready. Ask the user to explicitly apply or approve this exact change.",
+			};
+		},
+	});
+
 export const createAutumnOperationTools = () => ({
 	...Object.fromEntries(
 		toolConfigs.map((config) => [config.id, operationTool(config)]),
 	),
+	...Object.fromEntries(
+		billingPreviewConfigs.map((config) => [
+			config.id,
+			billingPreviewTool(config),
+		]),
+	),
 	// ...createAxiomTools(), leave out axiom investigate tool for now
-	createBillingConfirmation: createTool({
-		id: "createBillingConfirmation",
-		description:
-			"Create an internal pending billing action after previewing a billing write.",
-		inputSchema: z
-			.object({
-				toolName: z.enum(["attach", "updateSubscription"]),
-				request: z.union([
-					AttachParamsV1Schema,
-					UpdateSubscriptionV1ParamsSchema,
-				]),
-				preview: z.string(),
-			})
-			.strict(),
-		execute: async ({ toolName, request, preview }, context) => {
-			const parsedRequest = billingWriteSchemaByTool[toolName].parse(request);
-			const pending = createPendingAction({
-				auth: getAutumnAuth(context),
-				toolName,
-				request: parsedRequest,
-				preview,
-			});
-			return {
-				pending: true,
-				expires_at: new Date(pending.expiresAt).toISOString(),
-				message:
-					"Preview ready. Ask the user to explicitly apply or approve this exact change. Do not mention internal ids or server bookkeeping details.",
-			};
-		},
-	}),
 	confirmBillingAction: createTool({
 		id: "confirmBillingAction",
 		description:
@@ -185,7 +219,9 @@ export const createAutumnOperationTools = () => ({
 		inputSchema: z.object({}).strict(),
 		execute: async (_input, context) => {
 			const auth = getAutumnAuth(context);
-			const action = claimLatestPendingAction(auth);
+			logTool("confirm-start", { env: auth.env });
+			const action = await claimLatestPendingAction(auth);
+			logTool("confirm-claimed", { toolName: action.toolName });
 			const result = await executeConfirmedBillingAction({
 				auth,
 				toolName: action.toolName,
