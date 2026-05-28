@@ -1,6 +1,8 @@
 import type {
+	Entitlement,
 	FullCustomerEntitlement,
 	FullCustomerPrice,
+	InsertCustomerEntitlement,
 	PatchContext,
 	UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
@@ -33,6 +35,8 @@ export const initPatchedCustomerEntitlementsAndPrices = ({
 }): {
 	customerPrices: FullCustomerPrice[];
 	customerEntitlements: FullCustomerEntitlement[];
+	oneOffPrepaidCarryOverEntitlements: Entitlement[];
+	oneOffPrepaidCarryOverCustomerEntitlements: InsertCustomerEntitlement[];
 } => {
 	const {
 		fullCustomer,
@@ -115,6 +119,9 @@ export const initPatchedCustomerEntitlementsAndPrices = ({
 			return { fromCustomerEntitlement, toCustomerEntitlement };
 		}),
 	});
+	const oneOffPrepaidCarryOverEntitlements: Entitlement[] = [];
+	const oneOffPrepaidCarryOverCustomerEntitlements: InsertCustomerEntitlement[] =
+		[];
 
 	for (const carryGroup of carryGroups) {
 		applyExistingStatesToCustomerProduct({
@@ -132,15 +139,23 @@ export const initPatchedCustomerEntitlementsAndPrices = ({
 			},
 		});
 
-		applyOneOffPrepaidCarryOvers({
+		const oneOffPrepaidCarryOvers = applyOneOffPrepaidCarryOvers({
 			oldCustomerProduct: carryGroup.fromCustomerProduct,
 			newCustomerProduct: carryGroup.toCustomerProduct,
 			fullCustomer,
 		});
+		oneOffPrepaidCarryOverEntitlements.push(
+			...oneOffPrepaidCarryOvers.entitlements,
+		);
+		oneOffPrepaidCarryOverCustomerEntitlements.push(
+			...oneOffPrepaidCarryOvers.customerEntitlements,
+		);
 	}
 
 	return {
 		customerPrices: customerProductWithNewItemsOnly.customer_prices,
 		customerEntitlements: customerProductWithNewItemsOnly.customer_entitlements,
+		oneOffPrepaidCarryOverEntitlements,
+		oneOffPrepaidCarryOverCustomerEntitlements,
 	};
 };

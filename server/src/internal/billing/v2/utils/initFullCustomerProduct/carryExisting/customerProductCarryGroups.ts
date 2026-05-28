@@ -30,10 +30,8 @@ const addToGroup = <T>(groups: Map<string, T[]>, key: string, value: T) => {
 };
 
 const groupCustomerEntitlementsByCarryIdentity = ({
-	customerProduct,
 	customerEntitlements,
 }: {
-	customerProduct: FullCusProduct;
 	customerEntitlements: FullCustomerEntitlement[];
 }) => {
 	const customerEntitlementsByKey = new Map<
@@ -45,7 +43,6 @@ const groupCustomerEntitlementsByCarryIdentity = ({
 		const key = carryIdentityToKey(
 			customerEntitlementToCarryIdentity({
 				customerEntitlement,
-				customerProduct,
 			}),
 		);
 		addToGroup(customerEntitlementsByKey, key, customerEntitlement);
@@ -84,11 +81,9 @@ const getIdentityCustomerProductCarryGroups = ({
 	fromCustomerEntitlements: FullCustomerEntitlement[];
 }): CustomerProductCarryGroup[] => {
 	const toEntitlementsByKey = groupCustomerEntitlementsByCarryIdentity({
-		customerProduct: toCustomerProduct,
 		customerEntitlements: toCustomerProduct.customer_entitlements,
 	});
 	const fromEntitlementsByKey = groupCustomerEntitlementsByCarryIdentity({
-		customerProduct: fromCustomerProduct,
 		customerEntitlements: fromCustomerEntitlements,
 	});
 
