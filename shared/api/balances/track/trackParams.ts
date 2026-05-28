@@ -52,6 +52,11 @@ export const TrackParamsSchema = BalanceParamsBaseSchema.extend({
 		internal: true,
 	}),
 
+	async: z.boolean().optional().meta({
+		description:
+			"If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information.",
+	}),
+
 	lock: LockParamsSchema.optional(),
 }).refine(
 	(data) => {
@@ -72,3 +77,9 @@ export const TrackParamsSchema = BalanceParamsBaseSchema.extend({
 
 export type TrackParams = z.infer<typeof TrackParamsSchema>;
 export type TrackQuery = z.infer<typeof TrackQuerySchema>;
+
+export const BatchTrackParamsSchema = z
+	.array(TrackParamsSchema)
+	.min(1)
+	.max(1000);
+export type BatchTrackParams = z.infer<typeof BatchTrackParamsSchema>;

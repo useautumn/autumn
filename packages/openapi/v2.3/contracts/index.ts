@@ -1,5 +1,6 @@
 import { oc } from "@orpc/contract";
 import {
+	balancesBatchTrackContract,
 	balancesCheckContract,
 	balancesCreateContract,
 	balancesDeleteContract,
@@ -96,6 +97,7 @@ export const v2_3ContractRouter = oc.router({
 	balancesFinalize: balancesFinalizeContract,
 	balancesCheck: balancesCheckContract,
 	balancesTrack: balancesTrackContract,
+	balancesBatchTrack: balancesBatchTrackContract,
 
 	// Events
 	eventsList: eventsListContract,

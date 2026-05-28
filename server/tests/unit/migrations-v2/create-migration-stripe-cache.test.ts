@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
@@ -63,4 +63,8 @@ describe("createMigrationStripeCache", () => {
 			createIfMissing: true,
 		});
 	});
+});
+
+afterAll(() => {
+	mock.restore();
 });

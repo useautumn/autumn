@@ -1,5 +1,11 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { ApiVersion, ApiVersionClass, AppEnv, ErrCode, RecaseError } from "@autumn/shared";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
+import {
+	ApiVersion,
+	ApiVersionClass,
+	AppEnv,
+	ErrCode,
+	RecaseError,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 const mockState = {
@@ -102,4 +108,8 @@ describe("runQueuedTrack", () => {
 			}),
 		).rejects.toBe(error);
 	});
+});
+
+afterAll(() => {
+	mock.restore();
 });

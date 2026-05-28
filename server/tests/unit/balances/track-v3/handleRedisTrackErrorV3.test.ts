@@ -1,6 +1,6 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
-import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
+import type { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	RedisDeductionError,
@@ -11,15 +11,12 @@ const mockState = {
 	postgresCalls: [] as Record<string, unknown>[],
 };
 
-mock.module(
-	"@/internal/balances/track/v3/runPostgresTrackV3.js",
-	() => ({
-		runPostgresTrackV3: async (args: Record<string, unknown>) => {
-			mockState.postgresCalls.push(args);
-			return { customer_id: "cus_123", balance: 1 };
-		},
-	}),
-);
+mock.module("@/internal/balances/track/v3/runPostgresTrackV3.js", () => ({
+	runPostgresTrackV3: async (args: Record<string, unknown>) => {
+		mockState.postgresCalls.push(args);
+		return { customer_id: "cus_123", balance: 1 };
+	},
+}));
 
 import { handleRedisTrackErrorV3 } from "@/internal/balances/track/v3/handleRedisTrackErrorV3.js";
 
@@ -63,4 +60,8 @@ describe("handleRedisTrackErrorV3", () => {
 
 		expect(mockState.postgresCalls).toHaveLength(0);
 	});
+});
+
+afterAll(() => {
+	mock.restore();
 });

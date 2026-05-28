@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
 const mockState = {
 	shouldUseRedis: false,
@@ -26,11 +26,11 @@ mock.module("@/external/logtail/logtailUtils.js", () => ({
 	logger: mockLogger,
 }));
 
-import { rateLimitFactory } from "@/internal/misc/rateLimiter/rateLimitFactory.js";
 import {
 	RateLimitScope,
 	RateLimitType,
 } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
+import { rateLimitFactory } from "@/internal/misc/rateLimiter/rateLimitFactory.js";
 
 describe("rateLimitFactory", () => {
 	beforeEach(() => {
@@ -60,4 +60,8 @@ describe("rateLimitFactory", () => {
 			"[rate-limit] Redis unavailable; bypassing distributed rate limiting",
 		]);
 	});
+});
+
+afterAll(() => {
+	mock.restore();
 });
