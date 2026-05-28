@@ -4,12 +4,12 @@ import { build } from "bun";
 import { chmod, cp, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { packExtension } from "@anthropic-ai/mcpb";
 import { join } from "node:path";
-import { createAutumnMastraMCPServer } from "./agent/server.ts";
+import { createMCPServer } from "./agent/server.ts";
 
 const shouldPack = process.argv.includes("--pack");
 
 async function buildMcpServer() {
-  const { tools } = await createAutumnMastraMCPServer().getToolListInfo();
+  const { tools } = await createMCPServer().getToolListInfo();
   const manifest = await readFile("manifest.json", "utf8");
   const manifestJson = JSON.parse(manifest);
 

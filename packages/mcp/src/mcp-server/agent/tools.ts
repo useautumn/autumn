@@ -152,55 +152,38 @@ const logTool = (event: string, data: Record<string, unknown>) => {
 	console.log(`[mcp:agent-tools] ${event} ${JSON.stringify(data)}`);
 };
 
-const operationTool = <Schema extends z.ZodType>({
+const mcpAnnotations = (destructive = false) => ({
+	readOnlyHint: !destructive,
+	destructiveHint: destructive,
+	idempotentHint: false,
+	openWorldHint: false,
+});
+
+const toTools = <Config extends { id: string }>(
+	configs: Config[],
+	create: (config: Config) => ReturnType<typeof createTool>,
+) => Object.fromEntries(configs.map((config) => [config.id, create(config)]));
+
+const operationTool = ({
 	id,
 	description,
 	schema,
 	endpoint,
 	destructive = false,
-}: {
-	id: string;
-	description: string;
-	schema: Schema;
-	endpoint: string;
-	destructive?: boolean;
-}) =>
+}: OperationToolConfig) =>
 	createTool({
 		id,
 		description,
 		inputSchema: z.object({ request: schema }).strict(),
 		mcp: {
-			annotations: {
-				readOnlyHint: !destructive,
-				destructiveHint: destructive,
-				idempotentHint: false,
-				openWorldHint: false,
-			},
+			annotations: mcpAnnotations(destructive),
 		},
 		execute: (input, context) =>
 			callAutumn({
 				context,
 				endpoint,
-				request: (input as { request: z.infer<Schema> }).request,
+				request: (input as { request: unknown }).request,
 			}),
-	});
-
-const rawBillingPreviewTool = ({
-	id,
-	description,
-	schema,
-	previewEndpoint,
-}: {
-	id: string;
-	description: string;
-	schema: z.ZodType;
-	previewEndpoint: string;
-}) =>
-	operationTool({
-		id,
-		description,
-		schema,
-		endpoint: previewEndpoint,
 	});
 
 const agentBillingPreviewTool = ({
@@ -221,12 +204,7 @@ const agentBillingPreviewTool = ({
 		description: `${description} Store the exact pending billing action for later confirmation.`,
 		inputSchema: z.object({ request: schema }).strict(),
 		mcp: {
-			annotations: {
-				readOnlyHint: true,
-				destructiveHint: false,
-				idempotentHint: false,
-				openWorldHint: false,
-			},
+			annotations: mcpAnnotations(),
 		},
 		execute: async (input, context) => {
 			const request = (input as { request: unknown }).request;
@@ -254,30 +232,16 @@ const agentBillingPreviewTool = ({
 	});
 
 export const createRawAutumnOperationTools = () => ({
-	...Object.fromEntries(
-		toolConfigs.map((config) => [config.id, operationTool(config)]),
+	...toTools(toolConfigs, operationTool),
+	...toTools(billingPreviewConfigs, (config) =>
+		operationTool({ ...config, endpoint: config.previewEndpoint }),
 	),
-	...Object.fromEntries(
-		billingPreviewConfigs.map((config) => [
-			config.id,
-			rawBillingPreviewTool(config),
-		]),
-	),
-	...Object.fromEntries(
-		billingWriteConfigs.map((config) => [config.id, operationTool(config)]),
-	),
+	...toTools(billingWriteConfigs, operationTool),
 });
 
 export const createAgentAutumnOperationTools = () => ({
-	...Object.fromEntries(
-		toolConfigs.map((config) => [config.id, operationTool(config)]),
-	),
-	...Object.fromEntries(
-		billingPreviewConfigs.map((config) => [
-			config.id,
-			agentBillingPreviewTool(config),
-		]),
-	),
+	...toTools(toolConfigs, operationTool),
+	...toTools(billingPreviewConfigs, agentBillingPreviewTool),
 	confirmBillingAction: createTool({
 		id: "confirmBillingAction",
 		description:

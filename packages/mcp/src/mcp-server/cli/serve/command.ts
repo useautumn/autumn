@@ -24,33 +24,10 @@ export const serveCommand = buildCommand({
 				default: "2718",
 				parse: (value) => z.coerce.number().int().gte(0).lt(65536).parse(value),
 			},
-			"disable-static-auth": {
-				kind: "boolean",
-				brief: "Require auth from request headers instead of CLI flags",
-				default: false,
-			},
 			"oauth-enabled": {
 				kind: "boolean",
 				brief: "Require OAuth bearer auth for Streamable HTTP",
 				default: false,
-			},
-			"oauth-issuer-url": {
-				kind: "parsed",
-				brief: "Autumn OAuth issuer URL",
-				optional: true,
-				parse: (value) => new URL(value).toString().replace(/\/$/, ""),
-			},
-			"oauth-resource-url": {
-				kind: "parsed",
-				brief: "Canonical MCP resource URL",
-				optional: true,
-				parse: (value) => new URL(value).toString().replace(/\/$/, ""),
-			},
-			"oauth-api-key-url": {
-				kind: "parsed",
-				brief: "Autumn OAuth API key exchange URL",
-				optional: true,
-				parse: (value) => new URL(value).toString(),
 			},
 			"oauth-environment": {
 				kind: "enum",

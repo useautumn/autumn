@@ -3,7 +3,7 @@ import type { Context } from "hono";
 import { Hono } from "hono";
 import type { AutumnMcpAuth } from "../../agent/auth.js";
 import { principalFromSecret } from "../../agent/auth.js";
-import { createAutumnMastraMCPServer } from "../../agent/server.js";
+import { createMCPServer } from "../../agent/server.js";
 import { LocalContext } from "../../cli.js";
 import {
 	ConsoleLoggerLevel,
@@ -53,14 +53,14 @@ const staticAuth = (flags: StartCommandFlags): AutumnMcpAuth => {
 };
 
 async function startStdio(flags: StartCommandFlags) {
-	const server = createAutumnMastraMCPServer({ defaultAuth: staticAuth(flags) });
+	const server = createMCPServer({ defaultAuth: staticAuth(flags) });
 	await server.startStdio();
 }
 
 async function startSSE(flags: StartCommandFlags) {
 	const logger = createConsoleLogger(flags["log-level"]);
 	const app = new Hono();
-	const server = createAutumnMastraMCPServer({ defaultAuth: staticAuth(flags) });
+	const server = createMCPServer({ defaultAuth: staticAuth(flags) });
 
 	const handleSSE = (c: AppContext) => {
 		return server.startHonoSSE({

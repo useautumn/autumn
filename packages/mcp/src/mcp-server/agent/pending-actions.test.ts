@@ -1,13 +1,12 @@
 import { describe, expect, test } from "bun:test";
 import type { AutumnMcpAuth } from "./auth.js";
-import { createTestRedis } from "./test-redis.js";
-
-const {
+import {
 	claimLatestPendingAction,
 	clearPendingActions,
 	createPendingAction,
 	setPendingActionsRedis,
-} = await import("./pending-actions.js");
+} from "./pending-actions.js";
+import { createTestRedis } from "./test-redis.js";
 
 setPendingActionsRedis(createTestRedis());
 

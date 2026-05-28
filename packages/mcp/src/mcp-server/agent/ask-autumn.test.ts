@@ -1,5 +1,6 @@
 import { describe, expect, mock, test } from "bun:test";
 import type { AutumnMcpAuth } from "./auth.js";
+import { setPendingActionsRedis } from "./pending-actions.js";
 import { createTestRedis } from "./test-redis.js";
 
 const systemPrompts: string[] = [];
@@ -54,7 +55,6 @@ mock.module("@mastra/core/agent", () => ({
 }));
 
 const { createAskAutumnTool } = await import("./ask-autumn.js");
-const { setPendingActionsRedis } = await import("./pending-actions.js");
 
 const auth: AutumnMcpAuth = {
 	apiKey: "sk_test",

@@ -1,6 +1,14 @@
+import { createHash } from "node:crypto";
 import { Axiom } from "@axiomhq/js";
 import { createTool } from "@mastra/core/tools";
-import { add, differenceInMilliseconds, isValid, parseISO } from "date-fns";
+import {
+	add,
+	addMilliseconds,
+	differenceInMilliseconds,
+	isFuture,
+	isValid,
+	parseISO,
+} from "date-fns";
 import {
 	makeScopeChecker,
 	Scopes,
@@ -9,8 +17,8 @@ import {
 import { ms } from "@autumn/shared/unixUtils";
 import * as z from "zod/v4";
 import {
+	createAutumnClient,
 	getAutumnAuth,
-	resolveAutumnOrgId,
 	type AutumnMcpAuth,
 } from "./auth.js";
 
@@ -21,6 +29,7 @@ const maxRangeMs = ms.days(7);
 const searchMaxRangeMs = ms.hours(1);
 
 let axiomClient: Axiom | null = null;
+const orgCache = new Map<string, { orgId: string; expiresAt: Date }>();
 
 const getAxiomClient = () => {
 	if (!process.env.AXIOM_ADMIN_TOKEN) {
@@ -37,6 +46,8 @@ const getAxiomClient = () => {
 
 const escapeAplString = (value: string) =>
 	value.replaceAll("\\", "\\\\").replaceAll("'", "\\'");
+const hash = (value: string) =>
+	createHash("sha256").update(value).digest("hex").slice(0, 32);
 
 const parseAxiomTime = (value: string, now = new Date()) => {
 	if (value === "now") return now;
@@ -70,6 +81,41 @@ const assertCanUseAxiom = (auth: AutumnMcpAuth) => {
 	if (!makeScopeChecker(auth.scopes).has(Scopes.Analytics.Read as ScopeString)) {
 		throw new Error("analytics:read scope is required to query Axiom logs.");
 	}
+};
+
+export const resolveAutumnOrgId = async (auth: AutumnMcpAuth) => {
+	if (auth.orgId) return auth.orgId;
+
+	const cacheKey = [
+		auth.serverURL ?? "https://api.useautumn.com",
+		auth.env,
+		hash(auth.apiKey),
+		auth.xApiVersion ?? "2.3.0",
+		String(auth.failOpen),
+	].join(":");
+	const cached = orgCache.get(cacheKey);
+	if (cached && isFuture(cached.expiresAt)) return cached.orgId;
+
+	const client = createAutumnClient(auth);
+	const response = await fetch(new URL("/v1/organization", client.baseUrl), {
+		method: "GET",
+		headers: client.headers,
+	});
+	if (!response.ok) {
+		throw new Error("Could not resolve Autumn organization for MCP request.");
+	}
+
+	const body = (await response.json()) as { id?: unknown };
+	if (typeof body.id !== "string" || !body.id) {
+		throw new Error("Autumn organization response did not include an id.");
+	}
+
+	orgCache.set(cacheKey, {
+		orgId: body.id,
+		expiresAt: addMilliseconds(new Date(), ms.minutes(5)),
+	});
+
+	return body.id;
 };
 
 export const prepareAxiomQuery = ({

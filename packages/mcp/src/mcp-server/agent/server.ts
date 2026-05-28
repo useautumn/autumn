@@ -29,4 +29,4 @@ export const createAutumnOperationsMCPServer = () =>
 		tools: createRawAutumnOperationTools(),
 	});
 
-export const createAutumnMastraMCPServer = createAskAutumnMCPServer;
+export const createMCPServer = createAskAutumnMCPServer;

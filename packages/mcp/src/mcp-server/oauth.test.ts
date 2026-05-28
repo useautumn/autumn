@@ -8,11 +8,8 @@ import {
 } from "./oauth.js";
 
 const flags = {
-	"disable-static-auth": true,
 	"oauth-enabled": true,
 	"oauth-environment": "sandbox",
-	"oauth-issuer-url": "http://localhost:8080/api/auth",
-	"oauth-resource-url": "http://localhost:2718/mcp",
 	"server-url": "http://localhost:8080",
 } satisfies Partial<MCPOAuthFlags>;
 
@@ -23,7 +20,11 @@ const logger = {
 describe("MCP OAuth auth resolution", () => {
 	test("returns a WWW-Authenticate challenge without a bearer token", async () => {
 		await expect(
-			buildAuthForRequest(new Headers(), flags as MCPOAuthFlags, logger),
+			buildAuthForRequest(
+				new Headers({ host: "localhost:2718" }),
+				flags as MCPOAuthFlags,
+				logger,
+			),
 		).rejects.toMatchObject({
 			status: 401,
 			error: "invalid_token",
@@ -35,7 +36,7 @@ describe("MCP OAuth auth resolution", () => {
 	test("returns an internal MCP resource challenge", async () => {
 		await expect(
 			buildAuthForRequest(
-				new Headers(),
+				new Headers({ host: "localhost:2718" }),
 				flags as MCPOAuthFlags,
 				logger,
 				"/internal/mcp",
@@ -71,7 +72,10 @@ describe("MCP OAuth auth resolution", () => {
 
 		try {
 			const auth = await buildAuthForRequest(
-				new Headers({ authorization: "Bearer oauth_token" }),
+				new Headers({
+					authorization: "Bearer oauth_token",
+					host: "localhost:2718",
+				}),
 				flags as MCPOAuthFlags,
 				logger,
 			);
@@ -102,7 +106,10 @@ describe("MCP OAuth auth resolution", () => {
 
 		try {
 			const auth = await buildAuthForRequest(
-				new Headers({ authorization: "Bearer internal_oauth_token" }),
+				new Headers({
+					authorization: "Bearer internal_oauth_token",
+					host: "localhost:2718",
+				}),
 				flags as MCPOAuthFlags,
 				logger,
 				"/internal/mcp",
@@ -111,7 +118,7 @@ describe("MCP OAuth auth resolution", () => {
 			expect(auth.resource).toBe("http://localhost:2718/internal/mcp");
 			expect(
 				getProtectedResourceMetadata(
-					new Headers(),
+					new Headers({ host: "localhost:2718" }),
 					flags as MCPOAuthFlags,
 					"/internal/mcp",
 				).resource,
@@ -124,10 +131,9 @@ describe("MCP OAuth auth resolution", () => {
 	test("missing static secret-key returns the auth error path", async () => {
 		await expect(
 			buildAuthForRequest(
-				new Headers(),
+				new Headers({ host: "localhost:2718" }),
 				{
 					...flags,
-					"disable-static-auth": false,
 					"oauth-enabled": false,
 				} as MCPOAuthFlags,
 				logger,

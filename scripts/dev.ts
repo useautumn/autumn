@@ -240,10 +240,6 @@ async function startDev() {
 				"bun --watch packages/mcp/src/mcp-server/mcp-server.ts serve",
 				`--port ${MCP_PORT}`,
 				"--oauth-enabled",
-				"--disable-static-auth",
-				`--oauth-resource-url http://localhost:${MCP_PORT}/mcp`,
-				`--oauth-issuer-url http://localhost:${SERVER_PORT}/api/auth`,
-				`--oauth-api-key-url http://localhost:${SERVER_PORT}/cli/api-keys`,
 				`--server-url http://localhost:${SERVER_PORT}`,
 			].join(" ");
 			cmds.push(isWindows ? `"${mcpServeCmd}"` : `"${mcpServeCmd}"`);

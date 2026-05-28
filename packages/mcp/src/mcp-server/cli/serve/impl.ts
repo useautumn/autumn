@@ -23,11 +23,7 @@ import {
 
 interface ServeCommandFlags extends MCPServerFlags {
   readonly port: number;
-  readonly "disable-static-auth": boolean;
   readonly "oauth-enabled": boolean;
-  readonly "oauth-issuer-url"?: string | undefined;
-  readonly "oauth-resource-url"?: string | undefined;
-  readonly "oauth-api-key-url"?: string | undefined;
   readonly "oauth-environment": OAuthEnvironment;
   readonly "log-level": ConsoleLoggerLevel;
   readonly env?: [string, string][];

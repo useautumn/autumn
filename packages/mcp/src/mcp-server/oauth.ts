@@ -18,11 +18,7 @@ export const MCP_OAUTH_SCOPES = [
 export type OAuthEnvironment = "sandbox" | "live";
 
 export interface MCPOAuthFlags extends MCPServerFlags {
-	readonly "disable-static-auth": boolean;
 	readonly "oauth-enabled"?: boolean | undefined;
-	readonly "oauth-issuer-url"?: string | undefined;
-	readonly "oauth-resource-url"?: string | undefined;
-	readonly "oauth-api-key-url"?: string | undefined;
 	readonly "oauth-environment"?: OAuthEnvironment | undefined;
 }
 
@@ -55,19 +51,9 @@ function trimTrailingSlash(url: string): string {
 
 export function getResourceUrl(
 	headers: Headers,
-	flags: MCPOAuthFlags,
+	_flags: MCPOAuthFlags,
 	resourcePath = "/mcp",
 ): string {
-	if (flags["oauth-resource-url"]) {
-		const resourceUrl = trimTrailingSlash(flags["oauth-resource-url"]);
-		if (resourcePath === "/mcp") return resourceUrl;
-		const url = new URL(resourceUrl);
-		url.pathname = resourcePath;
-		url.search = "";
-		url.hash = "";
-		return trimTrailingSlash(url.href);
-	}
-
 	const host = headers.get("x-forwarded-host") ?? headers.get("host");
 	if (!host) {
 		throw new OAuthHttpError(400, "Missing Host header", "invalid_request");
@@ -84,10 +70,6 @@ export function getProtectedResourceMetadataUrl(resourceUrl: string): string {
 }
 
 function getIssuerUrl(flags: MCPOAuthFlags): string {
-	if (flags["oauth-issuer-url"]) {
-		return trimTrailingSlash(flags["oauth-issuer-url"]);
-	}
-
 	return trimTrailingSlash(
 		new URL("/api/auth", flags["server-url"] ?? "https://api.useautumn.com")
 			.href,
@@ -95,10 +77,7 @@ function getIssuerUrl(flags: MCPOAuthFlags): string {
 }
 
 function getApiKeyUrl(flags: MCPOAuthFlags): string {
-	return (
-		flags["oauth-api-key-url"] ??
-		new URL("/cli/api-keys", getIssuerUrl(flags)).href
-	);
+	return new URL("/cli/api-keys", getIssuerUrl(flags)).href;
 }
 
 function getWWWAuthenticate(resourceUrl: string, error?: string): string {
@@ -245,11 +224,9 @@ function resolveStaticHeader<T>(
 	headerName: string,
 	schema: z.ZodType<T>,
 	cliFlagValue: T | undefined,
-	disableStaticAuth: boolean,
 ): T | undefined {
 	const value = headers.get(headerName);
 	if (value != null) return schema.parse(value);
-	if (disableStaticAuth) return undefined;
 	return cliFlagValue === undefined ? schema.parse(undefined) : cliFlagValue;
 }
 
@@ -266,14 +243,12 @@ export async function buildAuthForRequest(
 		"x-api-version",
 		z.string().default("2.3.0"),
 		flags["x-api-version"],
-		flags["disable-static-auth"],
 	);
 	const failOpen = resolveStaticHeader(
 		headers,
 		"fail-open",
 		z.enum(["true", "false"]).default("true").transform((v) => v === "true"),
 		flags["fail-open"],
-		flags["disable-static-auth"],
 	);
 
 	if (flags["oauth-enabled"]) {
@@ -307,7 +282,6 @@ export async function buildAuthForRequest(
 		"secret-key",
 		z.string().optional(),
 		flags["secret-key"],
-		flags["disable-static-auth"],
 	);
 	if (!apiKey) {
 		logger.warning("Missing secret-key for MCP request");
