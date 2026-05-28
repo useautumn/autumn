@@ -7,38 +7,15 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 export type VercelResourceRow = typeof vercelResources.$inferSelect;
 export type InsertVercelResource = typeof vercelResources.$inferInsert;
 
-/**
- * Service for managing Vercel integration resources
- * Enforces 1 resource per installation limit
- */
+/** Service for managing Vercel integration resources. */
 export class VercelResourceService {
-	/**
-	 * Create a new Vercel resource
-	 * @throws RecaseError if installation already has a resource
-	 */
-	static async createOrBlockIfOthersExist({
+	static async create({
 		db,
 		resource,
 	}: {
 		db: DrizzleCli;
 		resource: InsertVercelResource;
 	}): Promise<VercelResourceRow> {
-		// Check if installation already has a resource
-		const existing = await VercelResourceService.getByInstallation({
-			db,
-			installationId: resource.installation_id,
-			orgId: resource.org_id,
-			env: resource.env as AppEnv,
-		});
-
-		if (existing) {
-			throw new RecaseError({
-				message: `Installation ${resource.installation_id} already has a resource (${existing.id}). Only 1 resource per installation is allowed.`,
-				code: ErrCode.InvalidRequest,
-				statusCode: StatusCodes.CONFLICT,
-			});
-		}
-
 		const [created] = await db
 			.insert(vercelResources)
 			.values(resource)
@@ -96,6 +73,35 @@ export class VercelResourceService {
 			.where(
 				and(
 					eq(vercelResources.installation_id, installationId),
+					eq(vercelResources.org_id, orgId),
+					eq(vercelResources.env, env),
+					ne(vercelResources.status, "uninstalled"),
+				),
+			);
+
+		return resource;
+	}
+
+	static async getByInstallationAndName({
+		db,
+		installationId,
+		name,
+		orgId,
+		env,
+	}: {
+		db: DrizzleCli;
+		installationId: string;
+		name: string;
+		orgId: string;
+		env: AppEnv;
+	}): Promise<VercelResourceRow | undefined> {
+		const [resource] = await db
+			.select()
+			.from(vercelResources)
+			.where(
+				and(
+					eq(vercelResources.installation_id, installationId),
+					eq(vercelResources.name, name),
 					eq(vercelResources.org_id, orgId),
 					eq(vercelResources.env, env),
 					ne(vercelResources.status, "uninstalled"),
