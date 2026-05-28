@@ -1002,6 +1002,7 @@ export class AutumnInt {
 				operations?: Operations | null;
 				retry_failed?: boolean;
 				no_billing_changes?: boolean;
+				archived?: boolean;
 			};
 		}): Promise<Migration> => {
 			const data = await this.post(`/migrations.update`, params);

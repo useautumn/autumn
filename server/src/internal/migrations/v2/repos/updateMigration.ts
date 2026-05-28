@@ -28,6 +28,7 @@ export const updateMigration = async ({
 			| "prepared_state"
 			| "retry_failed"
 			| "no_billing_changes"
+			| "archived"
 		>
 	>;
 }): Promise<Migration | null> => {
@@ -39,6 +40,7 @@ export const updateMigration = async ({
 				eq(migrations.id, id),
 				eq(migrations.org_id, ctx.org.id),
 				eq(migrations.env, ctx.env),
+				eq(migrations.archived, false),
 			),
 		)
 		.returning();

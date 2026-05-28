@@ -8,6 +8,13 @@
       "when": 1779096275848,
       "tag": "0000_bumpy_tinkerer",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1779978545637,
+      "tag": "0001_talented_thor",
+      "breakpoints": true
     }
   ]
 }
