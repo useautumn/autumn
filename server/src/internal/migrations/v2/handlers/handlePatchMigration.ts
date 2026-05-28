@@ -12,6 +12,7 @@ const PatchMigrationBody = z.object({
 		filter: MigrationFilterSchema.nullable().optional(),
 		operations: OperationsSchema.nullable().optional(),
 		retry_failed: z.boolean().optional(),
+		no_billing_changes: z.boolean().nullable().optional(),
 	}),
 });
 

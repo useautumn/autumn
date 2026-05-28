@@ -6,10 +6,11 @@ import type {
 } from "@autumn/shared";
 import { enrichEntitlementsWithFeatures } from "@shared/utils/productUtils/entUtils/enrichEntitlement";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { getCustomerProductCarryGroups } from "@/internal/billing/v2/utils/initFullCustomerProduct/carryExisting";
 import { applyExistingStatesToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/applyExisting/applyExistingStatesToCustomerProduct";
 import { initCustomerEntitlement } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerEntitlement/initCustomerEntitlement";
 import { initCustomerPrice } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerPrice";
-import { getPatchCarryCustomerProduct } from "./getPatchCarryCustomerProduct";
+import { applyOneOffPrepaidCarryOvers } from "../../handleOneOffPrepaidCarryOvers/applyOneOffPrepaidCarryOvers";
 
 type PatchInitBillingContext = Pick<
 	UpdateSubscriptionBillingContext,
@@ -86,22 +87,34 @@ export const initPatchedCustomerEntitlementsAndPrices = ({
 		customer_prices: customerPrices,
 		customer_entitlements: customerEntitlements,
 	};
-	const carryCustomerProduct = getPatchCarryCustomerProduct({ patchContext });
-
-	applyExistingStatesToCustomerProduct({
-		ctx,
-		fullCustomer,
-		customerProduct: customerProductWithNewItemsOnly,
-		existingUsagesConfig: skipExistingUsageCarry
-			? undefined
-			: {
-					fromCustomerProduct: carryCustomerProduct,
-					carryAllConsumableFeatures: true,
-				},
-		existingRolloversConfig: {
-			fromCustomerProduct: carryCustomerProduct,
-		},
+	const carryGroups = getCustomerProductCarryGroups({
+		fromCustomerProduct: patchContext.originalCustomerProduct,
+		toCustomerProduct: customerProductWithNewItemsOnly,
+		fromCustomerEntitlements: patchContext.deleteCustomerEntitlements,
 	});
+
+	for (const carryGroup of carryGroups) {
+		applyExistingStatesToCustomerProduct({
+			ctx,
+			fullCustomer,
+			customerProduct: carryGroup.toCustomerProduct,
+			existingUsagesConfig: skipExistingUsageCarry
+				? undefined
+				: {
+						fromCustomerProduct: carryGroup.fromCustomerProduct,
+						carryAllConsumableFeatures: true,
+					},
+			existingRolloversConfig: {
+				fromCustomerProduct: carryGroup.fromCustomerProduct,
+			},
+		});
+
+		applyOneOffPrepaidCarryOvers({
+			oldCustomerProduct: carryGroup.fromCustomerProduct,
+			newCustomerProduct: carryGroup.toCustomerProduct,
+			fullCustomer,
+		});
+	}
 
 	return {
 		customerPrices: customerProductWithNewItemsOnly.customer_prices,

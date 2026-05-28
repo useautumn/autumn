@@ -1,20 +1,4 @@
-/**
- * TDD coverage for update_items targeting one of several customer entitlements
- * for the same feature (monthly + lifetime case).
- *
- * Contract under test:
- *   New behaviors:
- *     - A `PlanItemFilter` that includes `interval` only matches entitlements
- *       with that interval. Untouched entitlements (different interval) keep
- *       their balance and reset state exactly as-is.
- *     - Usage carried via update_items only applies to the entitlement(s) it
- *       replaced — sibling entitlements for the same feature with usage of
- *       their own do not get double-deducted.
- *     - When a single update_items[i].filter matches multiple customer
- *       entitlements (e.g. feature_id only), all matches are updated.
- */
-
-import { expect, test } from "bun:test";
+import { test } from "bun:test";
 import {
 	type ApiCustomerV3,
 	type ApiCustomerV5,
