@@ -62,6 +62,24 @@ type CustomerProductsUpdatedPayload = {
 
 const RC_WEBHOOK_SECRET = "test_rc_webhook_secret_12345";
 
+const rcProMonthly = ({ id = "pro-monthly" }: { id?: string } = {}) =>
+	products.base({
+		id,
+		items: [
+			items.monthlyMessages({ includedUsage: 100 }),
+			items.monthlyPrice({ price: 10 }),
+		],
+	});
+
+const rcProYearly = ({ id = "pro-yearly" }: { id?: string } = {}) =>
+	products.base({
+		id,
+		items: [
+			items.monthlyMessages({ includedUsage: 1000 }),
+			items.annualPrice({ price: 1000 }),
+		],
+	});
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const setupRevenueCatOrg = async () => {
@@ -117,11 +135,7 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: initial purchase → scenario
 	const customerId = "rc-webhook-initial-purchase";
 	const RC_PRO_MONTHLY_ID = "com.app.rcwh1_pro_monthly";
 
-	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
-	const proMonthly = products.pro({
-		id: "pro-monthly",
-		items: [messagesItem],
-	});
+	const proMonthly = rcProMonthly();
 
 	await initScenario({
 		customerId,
@@ -178,11 +192,7 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: renewal → scenario: renew")
 	const customerId = "rc-webhook-renewal";
 	const RC_PRO_MONTHLY_ID = "com.app.rcwh2_pro_monthly";
 
-	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
-	const proMonthly = products.pro({
-		id: "pro-monthly",
-		items: [messagesItem],
-	});
+	const proMonthly = rcProMonthly();
 
 	await initScenario({
 		customerId,
@@ -258,15 +268,8 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: upgrade (monthly → yearly) 
 	const RC_PRO_MONTHLY_ID = "com.app.rcwh3_pro_monthly";
 	const RC_PRO_YEARLY_ID = "com.app.rcwh3_pro_yearly";
 
-	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
-	const proMonthly = products.pro({
-		id: "pro-monthly",
-		items: [messagesItem],
-	});
-	const proYearly = products.proAnnual({
-		id: "pro-yearly",
-		items: [items.monthlyMessages({ includedUsage: 1000 })],
-	});
+	const proMonthly = rcProMonthly();
+	const proYearly = rcProYearly();
 
 	await initScenario({
 		customerId,
@@ -345,29 +348,22 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: upgrade (monthly → yearly) 
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 4: Downgrade → scenario: downgrade
-// Uses premium ($50/mo) → pro ($20/mo) so the price decrease is a genuine downgrade
+// Uses Pro Yearly ($1000/yr) → Pro Monthly ($10/mo) to match RC setup.
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("rc-webhook: downgrade (premium → pro) → scenario: downgrade")}`, async () => {
+test.concurrent(`${chalk.yellowBright("rc-webhook: downgrade (yearly → monthly) → scenario: downgrade")}`, async () => {
 	const customerId = "rc-webhook-downgrade";
-	const RC_PRO_ID = "com.app.rcwh4_pro";
-	const RC_PREMIUM_ID = "com.app.rcwh4_premium";
+	const RC_PRO_MONTHLY_ID = "com.app.rcwh4_pro_monthly";
+	const RC_PRO_YEARLY_ID = "com.app.rcwh4_pro_yearly";
 
-	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
-	const pro = products.pro({
-		id: "pro",
-		items: [messagesItem],
-	});
-	const premium = products.premium({
-		id: "premium",
-		items: [messagesItem],
-	});
+	const proMonthly = rcProMonthly();
+	const proYearly = rcProYearly();
 
 	await initScenario({
 		customerId,
 		setup: [
 			s.customer({ testClock: false, skipWebhooks: true }),
-			s.products({ list: [pro, premium] }),
+			s.products({ list: [proMonthly, proYearly] }),
 		],
 		actions: [],
 	});
@@ -378,8 +374,8 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: downgrade (premium → pro) �
 			data: {
 				org_id: ctx.org.id,
 				env: AppEnv.Sandbox,
-				autumn_product_id: pro.id,
-				revenuecat_product_ids: [RC_PRO_ID],
+				autumn_product_id: proMonthly.id,
+				revenuecat_product_ids: [RC_PRO_MONTHLY_ID],
 			},
 		}),
 		RCMappingService.upsert({
@@ -387,8 +383,8 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: downgrade (premium → pro) �
 			data: {
 				org_id: ctx.org.id,
 				env: AppEnv.Sandbox,
-				autumn_product_id: premium.id,
-				revenuecat_product_ids: [RC_PREMIUM_ID],
+				autumn_product_id: proYearly.id,
+				revenuecat_product_ids: [RC_PRO_YEARLY_ID],
 			},
 		}),
 	]);
@@ -399,9 +395,9 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: downgrade (premium → pro) �
 		webhookSecret: RC_WEBHOOK_SECRET,
 	});
 
-	// First: initial purchase on premium ($50/mo)
+	// First: initial purchase on yearly ($1000/yr)
 	await rcClient.initialPurchase({
-		productId: RC_PREMIUM_ID,
+		productId: RC_PRO_YEARLY_ID,
 		appUserId: customerId,
 		originalTransactionId: "rcwh4_tx_001",
 	});
@@ -415,9 +411,9 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: downgrade (premium → pro) �
 		timeoutMs: 15000,
 	});
 
-	// Then: renewal to pro ($20/mo) — genuine downgrade
+	// Then: renewal to monthly ($10/mo) — genuine downgrade
 	await rcClient.renewal({
-		productId: RC_PRO_ID,
+		productId: RC_PRO_MONTHLY_ID,
 		appUserId: customerId,
 		originalTransactionId: "rcwh4_tx_001",
 	});
@@ -434,7 +430,7 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: downgrade (premium → pro) �
 	expect(result).not.toBeNull();
 	const { data } = result!.payload;
 	expect(data.scenario).toBe("downgrade");
-	expect(data.updated_product.id).toBe(pro.id);
+	expect(data.updated_product.id).toBe(proYearly.id);
 	expect(data.customer.id).toBe(customerId);
 });
 
@@ -446,11 +442,7 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: cancellation → scenario: ca
 	const customerId = "rc-webhook-cancel";
 	const RC_PRO_MONTHLY_ID = "com.app.rcwh5_pro_monthly";
 
-	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
-	const proMonthly = products.pro({
-		id: "pro-monthly",
-		items: [messagesItem],
-	});
+	const proMonthly = rcProMonthly();
 
 	await initScenario({
 		customerId,
@@ -525,11 +517,7 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: uncancellation → scenario: 
 	const customerId = "rc-webhook-uncancel";
 	const RC_PRO_MONTHLY_ID = "com.app.rcwh6_pro_monthly";
 
-	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
-	const proMonthly = products.pro({
-		id: "pro-monthly",
-		items: [messagesItem],
-	});
+	const proMonthly = rcProMonthly();
 
 	await initScenario({
 		customerId,
@@ -619,11 +607,7 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: billing issue → scenario: p
 	const customerId = "rc-webhook-billing-issue";
 	const RC_PRO_MONTHLY_ID = "com.app.rcwh7_pro_monthly";
 
-	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
-	const proMonthly = products.pro({
-		id: "pro-monthly",
-		items: [messagesItem],
-	});
+	const proMonthly = rcProMonthly();
 
 	await initScenario({
 		customerId,
@@ -697,11 +681,7 @@ test.concurrent(`${chalk.yellowBright("rc-webhook: expiration → scenario: expi
 	const customerId = "rc-webhook-expire";
 	const RC_PRO_MONTHLY_ID = "com.app.rcwh8_pro_monthly";
 
-	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
-	const proMonthly = products.pro({
-		id: "pro-monthly",
-		items: [messagesItem],
-	});
+	const proMonthly = rcProMonthly();
 
 	await initScenario({
 		customerId,
