@@ -5,6 +5,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
+export type MigrationWithRunInfo = Migration & { has_live_runs: boolean };
+
 interface PrepareModuleResult {
 	key: string;
 	kind: string;
@@ -24,12 +26,14 @@ export const useMigrationsQuery = () => {
 	const queryClient = useQueryClient();
 	const queryKey = buildKey(["migrations"]);
 
-	const { data, isLoading, error, refetch } = useQuery<{ list: Migration[] }>({
+	const { data, isLoading, error, refetch } = useQuery<{
+		list: MigrationWithRunInfo[];
+	}>({
 		queryKey,
 		queryFn: async () => {
-			const { data } = await axiosInstance.post<{ list: Migration[] }>(
-				"/migrations.list",
-			);
+			const { data } = await axiosInstance.post<{
+				list: MigrationWithRunInfo[];
+			}>("/migrations.list");
 			return data;
 		},
 	});
@@ -61,6 +65,7 @@ export const useMigrationsQuery = () => {
 				operations?: Operations | null;
 				retry_failed?: boolean;
 				no_billing_changes?: boolean;
+				archived?: boolean;
 			};
 		}) => {
 			const { data } = await axiosInstance.post<Migration>(
@@ -128,7 +133,7 @@ export const useMigrationsQuery = () => {
 	});
 
 	return {
-		migrations: (data?.list ?? []) as Migration[],
+		migrations: (data?.list ?? []) as MigrationWithRunInfo[],
 		isLoading,
 		error,
 		refetch,
