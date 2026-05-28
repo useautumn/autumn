@@ -11,17 +11,31 @@ import {
 } from "@autumn/shared";
 import { Vercel } from "@vercel/sdk";
 import type Stripe from "stripe";
+import type { Logger } from "@/external/logtail/logtailUtils.js";
 import { buildInvoiceMemo } from "@/internal/invoices/invoiceMemoUtils.js";
 import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
+import { logCaughtError } from "@/utils/logging/logCaughtError.js";
+import {
+	getVercelSdkServerURL,
+	type VercelSdkTestOptions,
+} from "./vercelSdkOptions.js";
 
 /**
  * Vercel Marketplace Payment Flow:
  *
- * 1. Subscription created with collection_method: "charge_automatically" and custom payment method
- * 2. invoice.finalized → handleInvoiceFinalized calls submitBillingDataToVercel() then submitInvoiceToVercel()
- * 3. Vercel processes payment asynchronously
- * 4. marketplace.invoice.paid → handleMarketplaceInvoicePaid creates cus_product and reports payment to Stripe
- * 5. Invoice marked as paid → Subscription becomes active
+ * 1. Resource creation provisions a Stripe subscription in invoice mode
+ *    (`collection_method: "send_invoice"`, `days_until_due: 30`). The
+ *    subscription auto-activates regardless of first-invoice status.
+ * 2. `invoice.finalized` → `processVercelInvoice` submits the finalized
+ *    invoice to Vercel via `submitBillingDataToVercel` +
+ *    `submitInvoiceToVercel`.
+ * 3. Vercel marketplace collects payment from the end customer out of band.
+ * 4. `marketplace.invoice.paid` → `handleMarketplaceInvoicePaid` marks the
+ *    Stripe invoice paid via `invoices.pay(id, { paid_out_of_band: true })`.
+ *    Stripe Payment Records / `attachPayment` are intentionally NOT used.
+ * 5. `marketplace.invoice.notpaid` → `handleMarketplaceInvoiceNotPaid`
+ *    suspends the Vercel resource, expires the Autumn cus_product (activating
+ *    the default fallback), and cancels the Stripe subscription.
  */
 
 /**
@@ -33,14 +47,17 @@ export const submitBillingDataToVercel = async ({
 	invoice,
 	customer,
 	product,
+	testOptions,
 }: {
 	installationId: string;
 	invoice: Stripe.Invoice;
 	customer: Customer;
 	product: FullProduct;
+	testOptions?: VercelSdkTestOptions;
 }) => {
 	const vercel = new Vercel({
 		bearerToken: customer.processors?.vercel?.access_token,
+		serverURL: getVercelSdkServerURL(testOptions),
 	});
 
 	const firstLineItem = invoice.lines.data[0];
@@ -102,6 +119,8 @@ export const submitInvoiceToVercel = async ({
 	product,
 	org,
 	features,
+	logger,
+	testOptions,
 }: {
 	installationId: string;
 	invoice: Stripe.Invoice;
@@ -109,9 +128,12 @@ export const submitInvoiceToVercel = async ({
 	product: FullProduct;
 	org: Organization;
 	features: Feature[];
+	logger?: Logger;
+	testOptions?: VercelSdkTestOptions;
 }) => {
 	const vercel = new Vercel({
 		bearerToken: customer.processors?.vercel?.access_token,
+		serverURL: getVercelSdkServerURL(testOptions),
 	});
 
 	const price = productV2ToBasePrice({ product: mapToProductV2({ product }) });
@@ -128,6 +150,14 @@ export const submitInvoiceToVercel = async ({
 	const periodEnd =
 		rawPeriodEnd > rawPeriodStart ? rawPeriodEnd : rawPeriodStart + 1;
 
+	// Vercel requires period.start <= invoiceDate <= period.end. For manual InvoiceItem
+	// charges (top-ups) the InvoiceItem is created after the Invoice, so invoice.created
+	// can fall before the line item's period.start — clamp into range.
+	const invoiceDateSec = Math.max(
+		periodStart,
+		Math.min(invoice.created, periodEnd),
+	);
+
 	// Calculate total amount from invoice (includes subscription + usage charges)
 	const totalAmount = invoice.amount_due / 100;
 
@@ -136,14 +166,22 @@ export const submitInvoiceToVercel = async ({
 	if (org.config.invoice_memos) {
 		try {
 			memo = await buildInvoiceMemo({ org, product, features });
-		} catch (_) {}
+		} catch (error) {
+			logCaughtError({
+				logger,
+				message: "[vercel/invoice] Failed to build invoice memo",
+				error,
+				data: { invoiceId: invoice.id, productId: product.id },
+				level: "warn",
+			});
+		}
 	}
 
 	return await vercel.marketplace.submitInvoice({
 		integrationConfigurationId: installationId,
 		requestBody: {
 			externalId: invoice.id,
-			invoiceDate: new Date(invoice.created * 1000),
+			invoiceDate: new Date(invoiceDateSec * 1000),
 			items: [
 				{
 					resourceId: installationId,

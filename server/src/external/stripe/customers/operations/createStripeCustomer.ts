@@ -14,6 +14,7 @@ export const createStripeCustomer = async ({
 	customer: Customer;
 	options?: {
 		testClockId?: string;
+		expandTax?: boolean;
 	};
 }): Promise<ExpandedStripeCustomer> => {
 	const { org, env } = ctx;
@@ -43,6 +44,7 @@ export const createStripeCustomer = async ({
 				"test_clock",
 				"invoice_settings.default_payment_method",
 				"discount.source.coupon.applies_to",
+				...(options.expandTax ? ["tax"] : []),
 			],
 		},
 		idempotencyKey

@@ -10,7 +10,16 @@
  * one form per concept.
  */
 
-export type LeafOp = "eq" | "ne" | "in" | "exists";
+export type LeafOp =
+	| "eq"
+	| "ne"
+	| "in"
+	| "nin"
+	| "exists"
+	| "gt"
+	| "gte"
+	| "lt"
+	| "lte";
 
 export type LeafValue =
 	| string

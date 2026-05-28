@@ -195,11 +195,17 @@ export function CustomerListTable({
 						<CustomerListCreateButton />
 					</Table.Actions>
 				</Table.Toolbar>
-				<div className="flex items-center gap-2 pb-4">
-					<CustomerListFilterButton />
-					<Table.ColumnVisibility />
-					<CustomerListSearchBar />
-					<div className="flex items-center gap-2 shrink-0">
+				<div className="flex flex-wrap items-center gap-2 pb-4">
+					<div className="order-2 md:order-1">
+						<CustomerListFilterButton />
+					</div>
+					<div className="order-3 md:order-2">
+						<Table.ColumnVisibility />
+					</div>
+					<div className="order-1 w-full md:order-3 md:w-auto md:flex-1 md:min-w-0">
+						<CustomerListSearchBar />
+					</div>
+					<div className="order-4 ml-auto flex items-center gap-2 shrink-0">
 						<CustomerListPagination />
 						<CustomerListPageSizeSelector />
 					</div>

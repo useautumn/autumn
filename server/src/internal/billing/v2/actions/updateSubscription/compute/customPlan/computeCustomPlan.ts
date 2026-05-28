@@ -9,6 +9,7 @@ import { computeDeleteCustomerProduct } from "@/internal/billing/v2/actions/upda
 import { computeCustomPlanNewCustomerProduct } from "@/internal/billing/v2/actions/updateSubscription/compute/customPlan/computeCustomPlanNewCustomerProduct";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computePatchCustomerProductPlan } from "@/internal/billing/v2/compute/computePatchPlan";
+import { applyOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/applyOneOffPrepaidCarryOvers";
 
 export const computeCustomPlan = async ({
 	ctx,
@@ -36,13 +37,25 @@ export const computeCustomPlan = async ({
 
 	const customFullProduct = updateSubscriptionContext.fullProducts[0];
 
-	// Compute the new customer product
+	// Compute the new customer product. One-off prepaid cusEnts are auto-skipped
+	// from existingUsage carry inside cusProductToExistingUsages (per-cusEnt
+	// defense), so callers don't need to plumb anything for the one-off case.
 	const newFullCustomerProduct = computeCustomPlanNewCustomerProduct({
 		ctx,
 		params,
 		updateSubscriptionContext,
 		fullProduct: customFullProduct,
 		currentCustomerProduct: customerProduct,
+	});
+
+	// Merges any preserved one-off balance into the matching slot on the new
+	// cusProduct (mutating its cusEnt) when one exists; otherwise emits a
+	// lifetime carryover row. Keeps customers from accumulating orphan
+	// lifetime cusEnts on item-list updates that retain the same one-off item.
+	const oneOffPrepaidCarryOvers = applyOneOffPrepaidCarryOvers({
+		oldCustomerProduct: customerProduct,
+		newCustomerProduct: newFullCustomerProduct,
+		fullCustomer,
 	});
 
 	const { allLineItems } = buildAutumnLineItems({
@@ -72,8 +85,12 @@ export const computeCustomPlan = async ({
 		},
 		deleteCustomerProduct,
 		customPrices,
-		customEntitlements: customEnts,
+		customEntitlements: [
+			...(customEnts ?? []),
+			...oneOffPrepaidCarryOvers.entitlements,
+		],
 		customFreeTrial: trialContext?.customFreeTrial,
 		lineItems: allLineItems,
+		insertCustomerEntitlements: oneOffPrepaidCarryOvers.customerEntitlements,
 	} satisfies AutumnBillingPlan;
 };

@@ -19,6 +19,10 @@ export function parsePlanFilter({
 		children.push(
 			parseLeaf({ field: "plan_id", rawValue: filter.plan_id, ctx }),
 		);
+	if (filter.version !== undefined)
+		children.push(
+			parseLeaf({ field: "version", rawValue: filter.version, ctx }),
+		);
 	if (filter.price !== undefined)
 		children.push(parsePriceExistence(filter.price));
 	if (filter.addon !== undefined)
