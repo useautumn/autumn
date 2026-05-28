@@ -19,7 +19,7 @@ import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 const PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
 
 export function CustomerListPagination() {
-	const { isLoading, totalCount, nextCursor } = useCusSearchQuery();
+	const { totalCount, nextCursor, isFetchingUncached } = useCusSearchQuery();
 	const {
 		queryStates,
 		currentPage,
@@ -29,8 +29,10 @@ export function CustomerListPagination() {
 
 	const pageSize = queryStates.pageSize || 50;
 	const totalPages = Math.ceil((totalCount || 0) / pageSize);
+	const hasPaginationData = totalCount > 0;
 	const canGoPrev = currentPage > 1;
 	const canGoNext = Boolean(nextCursor);
+	const isDisabled = isFetchingUncached;
 
 	useHotkeys(
 		"left",
@@ -66,14 +68,14 @@ export function CustomerListPagination() {
 								if (!canGoPrev) return;
 								popCursor();
 							}}
-							disabled={isLoading || !canGoPrev}
-							className={isLoading || !canGoPrev ? "pointer-events-none opacity-50" : ""}
+							disabled={isDisabled || !canGoPrev}
+							className={isDisabled || !canGoPrev ? "pointer-events-none opacity-50" : ""}
 						/>
 					</PaginationItem>
-					<PaginationItem className="text-muted-foreground font-medium">
-						{isLoading
-							? "..."
-							: `${currentPage} / ${Math.max(totalPages, 1)}`}
+					<PaginationItem className="text-muted-foreground font-medium text-center tabular-nums">
+						{hasPaginationData
+							? `${currentPage} / ${totalPages}`
+							: "..."}
 					</PaginationItem>
 					<PaginationItem>
 						<IconButton
@@ -85,8 +87,8 @@ export function CustomerListPagination() {
 								if (!canGoNext || !nextCursor) return;
 								pushCursor(nextCursor);
 							}}
-							disabled={isLoading || !canGoNext}
-							className={isLoading || !canGoNext ? "pointer-events-none opacity-50" : ""}
+							disabled={isDisabled || !canGoNext}
+							className={isDisabled || !canGoNext ? "pointer-events-none opacity-50" : ""}
 						/>
 					</PaginationItem>
 				</PaginationContent>

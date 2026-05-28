@@ -25,16 +25,14 @@ export function TableBody() {
 	} = useTableContext();
 	const rows = table.getRowModel().rows;
 	const lastRowCountRef = useRef(DEFAULT_SKELETON_ROWS);
-	const hasEverHadDataRef = useRef(false);
+	const hasLoadedRef = useRef(false);
 
-	if (rows.length > 0) {
-		lastRowCountRef.current = rows.length;
-		hasEverHadDataRef.current = true;
-	}
+	if (rows.length > 0) lastRowCountRef.current = rows.length;
+	if (!isLoading) hasLoadedRef.current = true;
 
 	const hasRows = rows.length > 0;
 	const showSkeleton =
-		isLoading || !!isTransitioning || (!hasRows && !hasEverHadDataRef.current);
+		isLoading || !!isTransitioning || (!hasRows && !hasLoadedRef.current);
 
 	const columns = table.getVisibleLeafColumns().map((col) => ({
 		id: col.id,

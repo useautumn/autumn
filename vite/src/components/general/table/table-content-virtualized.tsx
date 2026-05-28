@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { Table } from "@/components/ui/table";
-import { useScrollbarWidth } from "@/hooks/useScrollbarWidth";
 import { cn } from "@/lib/utils";
 import { TableColumnVisibility } from "./table-column-visibility";
 import { TableContext, useTableContext } from "./table-context";
@@ -71,12 +70,6 @@ export function TableContentVirtualized({
 	// Using full column IDs ensures any visibility change is detected
 	const visibleColumnKey = visibleColumns.map((col) => col.id).join(",");
 
-	// Track scrollbar width to compensate header alignment
-	const { scrollbarWidth } = useScrollbarWidth({
-		scrollContainer,
-		deps: [rows.length],
-	});
-
 	// Provide updated context with scroll container to children
 	const contextWithRef = {
 		...context,
@@ -105,12 +98,9 @@ export function TableContentVirtualized({
 					className="overflow-x-auto overflow-y-hidden scrollbar-none shrink-0"
 					style={{ scrollbarWidth: "none" }}
 				>
-					<div
-						className="relative bg-card border-b"
-						style={{
-							minWidth: `${totalWidth}px`,
-							paddingRight: scrollbarWidth,
-						}}
+				<div
+					className="relative bg-card border-b"
+						style={{ minWidth: `${totalWidth}px` }}
 					>
 						{enableColumnVisibility && !columnVisibilityInToolbar && (
 							<div
@@ -146,6 +136,7 @@ export function TableContentVirtualized({
 								? `calc(${virtualization.containerHeight} - ${headerHeight}px)`
 								: undefined,
 						willChange: "scroll-position",
+						scrollbarGutter: "stable",
 					}}
 				>
 					<Table

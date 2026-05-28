@@ -26,26 +26,22 @@ export function useCustomerListColumns({
 				f.type === FeatureType.Metered || f.type === FeatureType.CreditSystem,
 		);
 
-		const storedUsageColumns = getVisibleUsageColumnsFromStorage({
-			storageKey,
-		});
+		const usageColumnsFromFeatures = meteredFeatures.map((feature) =>
+			createUsageColumn({
+				featureId: feature.id,
+				featureName: feature.name,
+			}),
+		);
 
-		const knownFeatureIds = new Set(meteredFeatures.map((f) => f.id));
-		const storedOnlyColumns = storedUsageColumns
-			.filter(({ featureId }) => !knownFeatureIds.has(featureId))
-			.map(({ featureId, featureName }) =>
+		let usageColumns = usageColumnsFromFeatures;
+		if (meteredFeatures.length === 0) {
+			const storedUsageColumns = getVisibleUsageColumnsFromStorage({
+				storageKey,
+			});
+			usageColumns = storedUsageColumns.map(({ featureId, featureName }) =>
 				createUsageColumn({ featureId, featureName }),
 			);
-
-		const usageColumns = [
-			...meteredFeatures.map((feature) =>
-				createUsageColumn({
-					featureId: feature.id,
-					featureName: feature.name,
-				}),
-			),
-			...storedOnlyColumns,
-		];
+		}
 
 		// Build column groups for UI organization
 		const columnGroups: ColumnGroup[] = [];

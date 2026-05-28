@@ -109,17 +109,14 @@ export function TableBodyVirtualized() {
 	const rowHeight = virtualization?.rowHeight ?? DEFAULT_ROW_HEIGHT;
 	const overscan = virtualization?.overscan ?? DEFAULT_OVERSCAN;
 	const lastRowCountRef = useRef(20);
+	const hasLoadedRef = useRef(false);
 
-	const hasEverHadDataRef = useRef(false);
-
-	if (rows.length > 0) {
-		lastRowCountRef.current = rows.length;
-		hasEverHadDataRef.current = true;
-	}
+	if (rows.length > 0) lastRowCountRef.current = rows.length;
+	if (!isLoading) hasLoadedRef.current = true;
 
 	const hasRows = rows.length > 0;
 	const showSkeleton =
-		isLoading || !!isTransitioning || (!hasRows && !hasEverHadDataRef.current);
+		isLoading || !!isTransitioning || (!hasRows && !hasLoadedRef.current);
 
 	// Don't initialize virtualizer until scroll container is ready
 	// This prevents incorrect virtual item calculations on initial render
@@ -172,7 +169,7 @@ export function TableBodyVirtualized() {
 
 	const containerPx = scrollContainer?.clientHeight ?? 0;
 	const skeletonRowCount = containerPx > 0
-		? Math.floor(containerPx / rowHeight) + 1
+		? Math.floor(containerPx / rowHeight)
 		: lastRowCountRef.current;
 
 	if (showSkeleton) {
