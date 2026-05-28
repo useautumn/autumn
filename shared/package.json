@@ -9,6 +9,21 @@
 			"types": "./index.ts",
 			"import": "./index.ts",
 			"default": "./index.ts"
+		},
+		"./scopeDefinitions": {
+			"types": "./utils/scopeDefinitions.ts",
+			"import": "./utils/scopeDefinitions.ts",
+			"default": "./utils/scopeDefinitions.ts"
+		},
+		"./unixUtils": {
+			"types": "./utils/common/unixUtils.ts",
+			"import": "./utils/common/unixUtils.ts",
+			"default": "./utils/common/unixUtils.ts"
+		},
+		"./publicApiSchemas": {
+			"types": "./api/publicApiSchemas.ts",
+			"import": "./api/publicApiSchemas.ts",
+			"default": "./api/publicApiSchemas.ts"
 		}
 	},
 	"author": "Recase Inc.",

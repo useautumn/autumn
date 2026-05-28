@@ -34,6 +34,6 @@ balancesRpcRouter.post("/balances.update", ...handleUpdateBalance);
 balancesRpcRouter.post("/balances.delete", ...handleDeleteBalance);
 
 balancesRpcRouter.post("/balances.track", ...handleTrack);
-balancesRpcRouter.post("/balances.batchTrack", ...handleBatchTrack);
+balancesRpcRouter.post("/balances.batch_track", ...handleBatchTrack);
 balancesRpcRouter.post("/balances.check", ...handleCheck);
 balancesRpcRouter.post("/balances.finalize", ...handleFinalizeLock);

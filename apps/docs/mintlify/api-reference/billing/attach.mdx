@@ -132,7 +132,7 @@ This is useful for attaching custom metadata to the Stripe subscription created 
     </DynamicParamField>
 
     <DynamicParamField body="items" type="object[]">
-      Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items.
+      Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / update_items.
       <Expandable title="properties">
         <DynamicParamField body="feature_id" type="string" required>
           The ID of the feature to configure.
