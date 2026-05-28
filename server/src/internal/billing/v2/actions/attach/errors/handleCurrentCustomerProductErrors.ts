@@ -10,8 +10,12 @@ export const handleCurrentCustomerProductErrors = ({
 }: {
 	billingContext: AttachBillingContext;
 }) => {
-	const { currentCustomerProduct, attachProduct, stripeSubscription } =
-		billingContext;
+	const {
+		currentCustomerProduct,
+		attachProduct,
+		stripeSubscription,
+		skipExternalPSPGuard,
+	} = billingContext;
 
 	if (currentCustomerProduct?.product.id === attachProduct.id) {
 		throw new RecaseError({
@@ -21,7 +25,17 @@ export const handleCurrentCustomerProductErrors = ({
 		});
 	}
 
-	if (isCustomerProductPaid(currentCustomerProduct) && !stripeSubscription) {
+	// The "paid but no Stripe sub" guard catches broken Stripe linkage.
+	// External-PSP origin callers (e.g. RevenueCat) legitimately have paid
+	// current products with no Stripe subscription — they opt out via
+	// `skipExternalPSPGuard`. Stripe-origin cus_products with `processor: null`
+	// must still be checked, so this is gated on the explicit flag rather than
+	// on `cusProductToProcessorType`.
+	if (
+		!skipExternalPSPGuard &&
+		isCustomerProductPaid(currentCustomerProduct) &&
+		!stripeSubscription
+	) {
 		throw new RecaseError({
 			message: `Cannot attach because the customer's current product '${currentCustomerProduct?.product.name}' is paid but no stripe subscription is linked to it`,
 		});
