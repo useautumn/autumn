@@ -15,7 +15,6 @@ export type CustomerQueryArgs = {
 	ctx: ResolutionContext;
 	checkpoint?: CustomerCheckpointExclusion;
 	search?: string;
-	includeProcessed?: IncludeProcessed;
 };
 
 const compileWhere = ({ orgId, env, filter, ctx }: CustomerQueryArgs): SQL =>
@@ -68,22 +67,38 @@ const buildSearchWhere = (search: string | undefined): SQL => {
 	return sql`AND (c.name ILIKE ${pattern} OR c.email ILIKE ${pattern} OR c.id ILIKE ${pattern})`;
 };
 
-const buildIncludeProcessedOr = (
-	includeProcessed: IncludeProcessed | undefined,
-): SQL => {
-	if (!includeProcessed) return sql``;
-	return sql`OR c.internal_id IN (
+const buildProcessedIn = (includeProcessed: IncludeProcessed): SQL => sql`
+	c.internal_id IN (
 		SELECT mir.item_id FROM migration_item_runs mir
 		WHERE mir.migration_internal_id = ${includeProcessed.migrationInternalId}
 			AND mir.item_kind = 'customer'
 			AND mir.dry_run = false
 	)`;
+
+// Predicates shared by both UNION branches (and the single-branch query).
+// Rebuilt per call so a branch never reuses another's SQL chunk instance.
+const buildCommonWhere = ({
+	checkpoint,
+	search,
+	afterInternalId,
+}: {
+	checkpoint?: CustomerCheckpointExclusion;
+	search?: string;
+	afterInternalId?: string;
+}): SQL => {
+	const cursor = afterInternalId
+		? sql`AND c.internal_id < ${afterInternalId}`
+		: sql``;
+	return sql`${buildCheckpointWhere(checkpoint)} ${buildSearchWhere(search)} ${cursor}`;
 };
 
 /**
  * Full SELECT. Returns `{ internal_id, id }` rows newest-first via keyset
  * pagination on `c.internal_id DESC`, so successive iterations over an
  * unchanged customer set yield rows in the same order.
+ *
+ * Pure filter set only — the run path. To also surface already-processed
+ * customers (preview live view), use `buildProcessedPreviewSelect`.
  */
 export const buildCustomerSelect = ({
 	orgId,
@@ -92,7 +107,6 @@ export const buildCustomerSelect = ({
 	ctx,
 	checkpoint,
 	search,
-	includeProcessed,
 	limit,
 	afterInternalId,
 }: CustomerQueryArgs & {
@@ -100,17 +114,11 @@ export const buildCustomerSelect = ({
 	afterInternalId?: string;
 }): SQL => {
 	const where = compileWhere({ orgId, env, filter, ctx });
-	const checkpointWhere = buildCheckpointWhere(checkpoint);
-	const searchWhere = buildSearchWhere(search);
-	const processedOr = buildIncludeProcessedOr(includeProcessed);
-	const cursor = afterInternalId
-		? sql`AND c.internal_id < ${afterInternalId}`
-		: sql``;
 	const limitClause = limit !== undefined ? sql`LIMIT ${limit}` : sql``;
 	return sql`
 		SELECT c.internal_id, c.id, c.name, c.email
 		FROM customers c
-		WHERE ((${where}) ${processedOr}) ${checkpointWhere} ${searchWhere} ${cursor}
+		WHERE (${where}) ${buildCommonWhere({ checkpoint, search, afterInternalId })}
 		ORDER BY c.internal_id DESC
 		${limitClause}
 	`;
@@ -124,15 +132,81 @@ export const buildCustomerCount = ({
 	ctx,
 	checkpoint,
 	search,
-	includeProcessed,
 }: CustomerQueryArgs): SQL => {
 	const where = compileWhere({ orgId, env, filter, ctx });
-	const checkpointWhere = buildCheckpointWhere(checkpoint);
-	const searchWhere = buildSearchWhere(search);
-	const processedOr = buildIncludeProcessedOr(includeProcessed);
 	return sql`
 		SELECT COUNT(*)::bigint AS count
 		FROM customers c
-		WHERE ((${where}) ${processedOr}) ${checkpointWhere} ${searchWhere}
+		WHERE (${where}) ${buildCommonWhere({ checkpoint, search })}
+	`;
+};
+
+// ─── Preview-only: filter set ∪ already-processed set ────────────────
+// The live view surfaces customers an in-flight migration already ran for,
+// which the live filter no longer matches. We UNION the two scoped sets
+// rather than OR them: an `OR ... IN (...)` strips org/env scoping from the
+// customers scan and forces a full-table seq scan, whereas each UNION branch
+// keeps its own index. Equivalent to `(filter OR processed) AND <common>`
+// because `<common>` (checkpoint/search/cursor) is applied per branch.
+
+type ProcessedPreviewArgs = CustomerQueryArgs & {
+	includeProcessed: IncludeProcessed;
+};
+
+export const buildProcessedPreviewSelect = ({
+	orgId,
+	env,
+	filter,
+	ctx,
+	checkpoint,
+	search,
+	includeProcessed,
+	limit,
+	afterInternalId,
+}: ProcessedPreviewArgs & {
+	limit?: number;
+	afterInternalId?: string;
+}): SQL => {
+	const where = compileWhere({ orgId, env, filter, ctx });
+	const processed = buildProcessedIn(includeProcessed);
+	const limitClause = limit !== undefined ? sql`LIMIT ${limit}` : sql``;
+	return sql`
+		SELECT u.internal_id, u.id, u.name, u.email
+		FROM (
+			SELECT c.internal_id, c.id, c.name, c.email
+			FROM customers c
+			WHERE (${where}) ${buildCommonWhere({ checkpoint, search, afterInternalId })}
+			UNION
+			SELECT c.internal_id, c.id, c.name, c.email
+			FROM customers c
+			WHERE (${processed}) ${buildCommonWhere({ checkpoint, search, afterInternalId })}
+		) u
+		ORDER BY u.internal_id DESC
+		${limitClause}
+	`;
+};
+
+export const buildProcessedPreviewCount = ({
+	orgId,
+	env,
+	filter,
+	ctx,
+	checkpoint,
+	search,
+	includeProcessed,
+}: ProcessedPreviewArgs): SQL => {
+	const where = compileWhere({ orgId, env, filter, ctx });
+	const processed = buildProcessedIn(includeProcessed);
+	return sql`
+		SELECT COUNT(*)::bigint AS count
+		FROM (
+			SELECT c.internal_id
+			FROM customers c
+			WHERE (${where}) ${buildCommonWhere({ checkpoint, search })}
+			UNION
+			SELECT c.internal_id
+			FROM customers c
+			WHERE (${processed}) ${buildCommonWhere({ checkpoint, search })}
+		) u
 	`;
 };
