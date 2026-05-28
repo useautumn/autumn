@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { MigrationItemRunStatus } from "@autumn/shared";
+import { MigrationItemKind, MigrationItemRunStatus } from "@autumn/shared";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
@@ -8,6 +8,7 @@ import { CusService } from "@/internal/customers/CusService.js";
 import {
 	migrationRunRepo,
 	migrationItemRunRepo,
+	migrationRepo,
 } from "@/internal/migrations/v2/repos/index.js";
 import { waitForMigrationResult } from "../utils/runUpdatePlanMigration.js";
 
@@ -135,6 +136,69 @@ test(`${chalk.yellowBright("migration run scoping: only persists target_customer
 		migrationRunId: runResponse.run_id,
 	});
 	expect(secondItemRun).toBeNull();
+});
+
+test(`${chalk.yellowBright("migration run scoping: retry_failed request overrides migration default")}`, async () => {
+	const suffix = Date.now();
+	const customerId = `run-scope-retry-only-${suffix}`;
+	const plan = products.base({
+		id: `run-scope-retry-only-plan-${suffix}`,
+		items: [],
+	});
+
+	const { autumnV2_2, ctx } = await initScenario({
+		customerId,
+		setup: [s.customer(), s.products({ list: [plan] })],
+		actions: [s.billing.attach({ productId: plan.id })],
+	});
+	const internalCustomerId = await getInternalCustomerId({ customerId, ctx });
+
+	const migration = await autumnV2_2.migrationsV2.deleteAndCreate({
+		id: `run-scope-retry-only-mig-${suffix}`,
+		filter: { customer: { plan: { plan_id: plan.id } } },
+		operations: {
+			customer: [
+				{
+					type: "update_plan",
+					plan_filter: { plan_id: plan.id },
+					customize: { add_items: [itemsV2.dashboard()] },
+				},
+			],
+		},
+	});
+	expect(migration.retry_failed).toBe(false);
+
+	await migrationItemRunRepo.claim({
+		ctx,
+		migrationInternalId: migration.internal_id,
+		itemKind: MigrationItemKind.Customer,
+		itemId: internalCustomerId,
+		claimBehavior: "claim_new",
+	});
+	await migrationItemRunRepo.markFailed({
+		ctx,
+		migrationInternalId: migration.internal_id,
+		itemKind: MigrationItemKind.Customer,
+		itemId: internalCustomerId,
+	});
+
+	const runResponse = await autumnV2_2.migrationsV2.run({
+		id: migration.id,
+		dry_run: false,
+		only: [customerId],
+		retry_failed: true,
+	});
+
+	await waitForRunCompleted({ ctx, runId: runResponse.run_id });
+	const itemRun = await migrationItemRunRepo.getCustomer({
+		ctx,
+		migrationInternalId: migration.internal_id,
+		internalCustomerId,
+	});
+	expect(itemRun).toMatchObject({ status: MigrationItemRunStatus.Succeeded });
+
+	const unchangedMigration = await migrationRepo.find({ ctx, id: migration.id });
+	expect(unchangedMigration.retry_failed).toBe(false);
 });
 
 test(`${chalk.yellowBright("migration run scoping: limit persists target_limit on run record")}`, async () => {

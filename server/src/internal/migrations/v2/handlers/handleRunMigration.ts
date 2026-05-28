@@ -3,6 +3,7 @@ import { auth } from "@trigger.dev/sdk/v3";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { withMigrationRunClaim } from "@/internal/migrations/v2/actions/migrationRun/index.js";
+import { prepare } from "@/internal/migrations/v2/prepare/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { runMigrationTask } from "@/trigger/migrations/runMigrationTask.js";
 
@@ -12,6 +13,7 @@ const RunMigrationBody = z.object({
 	limit: z.number().int().min(1).optional(),
 	only: z.array(z.string()).optional(),
 	concurrency: z.number().int().min(1).optional(),
+	retry_failed: z.boolean().optional(),
 	/** When true, claim a lazy run alongside the background sweeper. Customers
 	 *  hit on the request path get migrated lazily via `runMigrationCustomerTask`
 	 *  before the sweeper reaches them. Background and lazy run on the same
@@ -41,6 +43,7 @@ export const handleRunMigration = createRoute({
 			limit,
 			only,
 			concurrency,
+			retry_failed: retryFailed,
 			lazy_run: lazyRun,
 		} = c.req.valid("json");
 
@@ -53,6 +56,15 @@ export const handleRunMigration = createRoute({
 				statusCode: 400,
 			});
 
+		if (lazyRun && only && only.length > 0) {
+			throw new RecaseError({
+				message:
+					"Migration lazy_run cannot be combined with only. Run targeted customers without lazy_run.",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
 		const isDev = process.env.NODE_ENV === "development";
 		const { migrationRunId, triggerRunId } = await withMigrationRunClaim({
 			ctx,
@@ -62,6 +74,9 @@ export const handleRunMigration = createRoute({
 			onlyIds: only,
 			targetLimit: limit,
 			claimed: async (migrationRunId) => {
+				if (lazyRun && !dryRun) {
+					await prepare({ ctx, migration, dryRun: false });
+				}
 				const handle = await runMigrationTask.trigger(
 					{
 						orgId: ctx.org.id,
@@ -69,7 +84,7 @@ export const handleRunMigration = createRoute({
 						migrationId: id,
 						migrationRunId,
 						dryRun,
-						controls: { limit, only, concurrency },
+						controls: { limit, only, concurrency, retryFailed },
 					},
 					getRunMigrationTriggerOptions({
 						orgId: ctx.org.id,

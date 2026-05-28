@@ -5,6 +5,35 @@ import {
 } from "@/external/tinybird/migrations/migrationItemEventsDataSource.js";
 import { findMigration } from "../findMigration.js";
 
+const parseJsonish = (value: unknown): unknown => {
+	if (typeof value !== "string") {
+		if (Array.isArray(value)) return value.map(parseJsonish);
+		if (value && typeof value === "object") {
+			return Object.fromEntries(
+				Object.entries(value).map(([key, entry]) => [key, parseJsonish(entry)]),
+			);
+		}
+		return value;
+	}
+
+	const trimmed = value.trim();
+	if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return value;
+
+	try {
+		return parseJsonish(JSON.parse(value));
+	} catch {
+		return value;
+	}
+};
+
+export const normalizeMigrationItemEventJson = (
+	event: TinybirdMigrationItemEvent,
+): TinybirdMigrationItemEvent => ({
+	...event,
+	item_preview: parseJsonish(event.item_preview) as TinybirdMigrationItemEvent["item_preview"],
+	response: parseJsonish(event.response) as TinybirdMigrationItemEvent["response"],
+});
+
 export const listMigrationItemEvents = async ({
 	ctx,
 	migrationId,
@@ -37,5 +66,7 @@ export const listMigrationItemEvents = async ({
 		`listMigrationItemEvents: got ${result.data.length} results`,
 	);
 
-	return result.data as TinybirdMigrationItemEvent[];
+	return (result.data as TinybirdMigrationItemEvent[]).map(
+		normalizeMigrationItemEventJson,
+	);
 };
