@@ -4,6 +4,18 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="May 28th 2026">
+  ## Batch track and async track
+
+  Two new ways to record usage when you don't need an immediate balance read:
+
+  - [`POST /v1/balances.batchTrack`](/api-reference/core/batchTrack) — enqueue up to **1000 usage events** in one request. Returns 202 immediately; balances are deducted by background workers.
+  - **`async: true`** on the existing [`POST /v1/balances.track`](/api-reference/core/track) — same fire-and-forget shape for single-event callers that want the speed without switching to the batch endpoint.
+
+  Both paths are intended for high-volume metering (event logging, per-action usage counters) where you'd previously be limited by the synchronous deduction's HTTP round-trip. Partial enqueue failures are logged server-side and do NOT surface as errors to the client — see the [batch track reference](/api-reference/core/batchTrack#partial-failure-semantics) for the trade-off.
+
+</Update>
+
 <Update label="May 20th 2026">
   ## `billing.updated` webhook
 

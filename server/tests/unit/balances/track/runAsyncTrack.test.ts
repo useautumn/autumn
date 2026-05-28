@@ -1,21 +1,17 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { ApiVersion, ApiVersionClass, AppEnv, ErrCode } from "@autumn/shared";
+import type { SQSClient } from "@aws-sdk/client-sqs";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getSqsClient } from "@/queue/initSqs.js";
 
 const mockState = {
-	queueTrackCalls: [] as Record<string, unknown>[],
-	queueTrackResult: null as unknown,
+	queueCommands: [] as Record<string, unknown>[],
+	queueFailureIndex: null as number | null,
+	originalSend: null as null | SQSClient["send"],
 };
 
 const trackAsyncQueueUrl =
 	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-async-dev.fifo";
-
-mock.module("@/internal/balances/track/utils/queueTrack.js", () => ({
-	queueTrack: async (args: Record<string, unknown>) => {
-		mockState.queueTrackCalls.push(args);
-		return mockState.queueTrackResult;
-	},
-}));
 
 import { runAsyncTrack } from "@/internal/balances/track/runAsyncTrack.js";
 
@@ -25,6 +21,7 @@ const buildCtx = () =>
 		org: { id: "org_123" },
 		env: AppEnv.Sandbox,
 		apiVersion: new ApiVersionClass(ApiVersion.V2_1),
+		extraLogs: {},
 		logger: {
 			warn: mock(() => {}),
 			error: mock(() => {}),
@@ -42,29 +39,51 @@ describe("runAsyncTrack", () => {
 	const originalEnv = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
 
 	beforeEach(() => {
-		mockState.queueTrackCalls = [];
-		mockState.queueTrackResult = {
-			customer_id: "cus_123",
-			value: 1,
-			balance: null,
-		};
+		mockState.queueCommands = [];
+		mockState.queueFailureIndex = null;
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackAsyncQueueUrl;
+
+		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
+		mockState.originalSend = sqsClient.send.bind(sqsClient);
+		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
+			const callIndex = mockState.queueCommands.length;
+			mockState.queueCommands.push(command.input);
+
+			if (mockState.queueFailureIndex === callIndex) {
+				throw new Error("SQS unavailable");
+			}
+
+			return {};
+		}) as typeof sqsClient.send;
 	});
 
 	afterEach(() => {
+		if (mockState.originalSend) {
+			const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
+			sqsClient.send = mockState.originalSend as typeof sqsClient.send;
+		}
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalEnv;
 	});
 
-	test("calls queueTrack with TRACK_ASYNC_SQS_QUEUE_URL and resolves without throwing", async () => {
+	test("queues track with TRACK_ASYNC_SQS_QUEUE_URL and resolves without throwing", async () => {
 		const ctx = buildCtx();
 
 		await runAsyncTrack({ ctx, body });
 
-		expect(mockState.queueTrackCalls).toHaveLength(1);
-		expect(mockState.queueTrackCalls[0]).toMatchObject({
-			ctx,
-			body,
-			queueUrl: trackAsyncQueueUrl,
+		expect(mockState.queueCommands).toHaveLength(1);
+		expect(mockState.queueCommands[0]).toMatchObject({
+			QueueUrl: trackAsyncQueueUrl,
+			MessageGroupId: "org_123:sandbox:cus_123:none",
+			MessageDeduplicationId: "req_async_1",
+		});
+		expect(
+			JSON.parse(mockState.queueCommands[0]?.MessageBody as string),
+		).toMatchObject({
+			name: "track",
+			data: {
+				customerId: "cus_123",
+				body,
+			},
 		});
 	});
 
@@ -78,12 +97,12 @@ describe("runAsyncTrack", () => {
 			message: "Async track is not available right now",
 		});
 
-		expect(mockState.queueTrackCalls).toHaveLength(0);
+		expect(mockState.queueCommands).toHaveLength(0);
 		expect(ctx.logger.error).toHaveBeenCalled();
 	});
 
 	test("throws 503 RecaseError when queueTrack returns null", async () => {
-		mockState.queueTrackResult = null;
+		mockState.queueFailureIndex = 0;
 		const ctx = buildCtx();
 
 		await expect(runAsyncTrack({ ctx, body })).rejects.toMatchObject({
@@ -92,6 +111,6 @@ describe("runAsyncTrack", () => {
 			message: "Async track is not available right now",
 		});
 
-		expect(mockState.queueTrackCalls).toHaveLength(1);
+		expect(mockState.queueCommands).toHaveLength(1);
 	});
 });

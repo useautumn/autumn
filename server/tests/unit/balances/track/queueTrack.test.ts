@@ -1,4 +1,12 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import {
+	afterAll,
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	test,
+} from "bun:test";
 import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
 import type { SQSClient } from "@aws-sdk/client-sqs";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -108,11 +116,13 @@ describe("queueTrack", () => {
 				value: 1,
 			},
 			queueUrl: trackAsyncQueueUrl,
+			messageDeduplicationId: "req_async_1-0",
 		});
 
 		expect(mockState.queueCommands).toHaveLength(1);
 		expect(mockState.queueCommands[0]).toMatchObject({
 			QueueUrl: trackAsyncQueueUrl,
+			MessageDeduplicationId: "req_async_1-0",
 		});
 
 		sqsClient.send = originalAsyncSend;
@@ -180,4 +190,8 @@ describe("queueTrack", () => {
 		}
 		process.env.TRACK_SQS_QUEUE_URL = originalTrackQueueUrl;
 	});
+});
+
+afterAll(() => {
+	mock.restore();
 });
