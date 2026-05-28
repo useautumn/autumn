@@ -12,7 +12,7 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { runUpdatePlanMigration } from "../utils/runUpdatePlanMigration";
+import { runUpdatePlanMigration } from "../../utils/runUpdatePlanMigration";
 
 test.concurrent(`${chalk.yellowBright("migrations update_plan: update price and add boolean entitlement")}`, async () => {
 	const customerId = "migration-update-price";
