@@ -32,17 +32,21 @@ export const updateMigration = async ({
 		>
 	>;
 }): Promise<Migration | null> => {
+	const where = [
+		eq(migrations.id, id),
+		eq(migrations.org_id, ctx.org.id),
+		eq(migrations.env, ctx.env),
+	];
+
+	// Only restrict to non-archived rows when we're NOT toggling the archive flag
+	if (updates.archived === undefined) {
+		where.push(eq(migrations.archived, false));
+	}
+
 	const [row] = await ctx.db
 		.update(migrations)
 		.set({ ...updates, updated_at: Date.now() })
-		.where(
-			and(
-				eq(migrations.id, id),
-				eq(migrations.org_id, ctx.org.id),
-				eq(migrations.env, ctx.env),
-				eq(migrations.archived, false),
-			),
-		)
+		.where(and(...where))
 		.returning();
 
 	return row ?? null;
