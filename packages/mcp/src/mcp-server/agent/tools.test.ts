@@ -8,7 +8,8 @@ const {
 	createPendingAction,
 	setPendingActionsRedis,
 } = await import("./pending-actions.js");
-const { createAutumnOperationTools } = await import("./tools.js");
+const { createAgentAutumnOperationTools, createRawAutumnOperationTools } =
+	await import("./tools.js");
 
 setPendingActionsRedis(createTestRedis());
 
@@ -22,6 +23,87 @@ const auth: AutumnMcpAuth = {
 };
 
 describe("Autumn operation tools", () => {
+	test("raw listCustomers calls the list endpoint", async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (url, init) => {
+			expect(String(url)).toBe("http://localhost:8080/v1/customers.list");
+			expect(JSON.parse(init?.body as string)).toMatchObject({
+				search: "charlie",
+			});
+			return Response.json({ customers: [] });
+		}) as typeof fetch;
+
+		try {
+			const tool = createRawAutumnOperationTools().listCustomers;
+			if (!tool.execute) throw new Error("listCustomers is not executable");
+
+			await expect(
+				tool.execute(
+					{ request: { search: "charlie" } },
+					{ mcp: { extra: { authInfo: auth } } } as never,
+				),
+			).resolves.toEqual({ customers: [] });
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	test("raw previewAttach does not create a pending action", async () => {
+		await clearPendingActions();
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (url, init) => {
+			expect(String(url)).toBe("http://localhost:8080/v1/billing.preview_attach");
+			expect(JSON.parse(init?.body as string)).toEqual({
+				customer_id: "cus_1",
+				plan_id: "pro",
+				redirect_mode: "if_required",
+			});
+			return Response.json({ total: 50 });
+		}) as typeof fetch;
+
+		try {
+			const tool = createRawAutumnOperationTools().previewAttach;
+			if (!tool.execute) throw new Error("previewAttach is not executable");
+
+			await expect(
+				tool.execute(
+					{ request: { customer_id: "cus_1", plan_id: "pro" } },
+					{ mcp: { extra: { authInfo: auth } } } as never,
+				),
+			).resolves.toEqual({ total: 50 });
+			await expect(claimLatestPendingAction(auth)).rejects.toThrow("No pending");
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	test("raw attach calls the write endpoint directly", async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (url, init) => {
+			expect(String(url)).toBe("http://localhost:8080/v1/billing.attach");
+			expect(JSON.parse(init?.body as string)).toEqual({
+				customer_id: "cus_1",
+				plan_id: "pro",
+				redirect_mode: "if_required",
+			});
+			return Response.json({ ok: true });
+		}) as typeof fetch;
+
+		try {
+			const tool = createRawAutumnOperationTools().attach;
+			if (!tool.execute) throw new Error("attach is not executable");
+
+			await expect(
+				tool.execute(
+					{ request: { customer_id: "cus_1", plan_id: "pro" } },
+					{ mcp: { extra: { authInfo: auth } } } as never,
+				),
+			).resolves.toEqual({ ok: true });
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
 	test("previewAttach stores the exact pending attach action", async () => {
 		await clearPendingActions();
 		const originalFetch = globalThis.fetch;
@@ -37,7 +119,7 @@ describe("Autumn operation tools", () => {
 
 		try {
 			const tool = (
-				createAutumnOperationTools() as unknown as {
+				createAgentAutumnOperationTools() as unknown as {
 					previewAttach: {
 						execute?: (input: unknown, context: unknown) => Promise<unknown>;
 					};
@@ -85,7 +167,7 @@ describe("Autumn operation tools", () => {
 		}) as typeof fetch;
 
 		try {
-			const tool = createAutumnOperationTools().confirmBillingAction;
+			const tool = createAgentAutumnOperationTools().confirmBillingAction;
 			if (!tool.execute) throw new Error("confirmBillingAction is not executable");
 
 			await expect(

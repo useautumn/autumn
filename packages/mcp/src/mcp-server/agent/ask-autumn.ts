@@ -7,7 +7,7 @@ import {
 	getAutumnAuth,
 } from "./auth.js";
 import { getLatestPendingAction } from "./pending-actions.js";
-import { createAutumnOperationTools } from "./tools.js";
+import { createAgentAutumnOperationTools } from "./tools.js";
 
 const model = "anthropic/claude-sonnet-4-6";
 
@@ -41,7 +41,7 @@ const createAgent = () =>
 			"Answers Autumn customer, plan, and billing questions using controlled Autumn operations.",
 		instructions,
 		model,
-		tools: createAutumnOperationTools(),
+		tools: createAgentAutumnOperationTools(),
 	});
 
 const getAuth = (

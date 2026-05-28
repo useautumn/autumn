@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
 	buildAuthForRequest,
+	getProtectedResourceMetadata,
 	MCP_OAUTH_SCOPES,
 	OAuthHttpError,
 	type MCPOAuthFlags,
@@ -28,6 +29,22 @@ describe("MCP OAuth auth resolution", () => {
 			error: "invalid_token",
 			wwwAuthenticate:
 				'Bearer resource_metadata="http://localhost:2718/.well-known/oauth-protected-resource/mcp"',
+		} satisfies Partial<OAuthHttpError>);
+	});
+
+	test("returns an internal MCP resource challenge", async () => {
+		await expect(
+			buildAuthForRequest(
+				new Headers(),
+				flags as MCPOAuthFlags,
+				logger,
+				"/internal/mcp",
+			),
+		).rejects.toMatchObject({
+			status: 401,
+			error: "invalid_token",
+			wwwAuthenticate:
+				'Bearer resource_metadata="http://localhost:2718/.well-known/oauth-protected-resource/internal/mcp"',
 		} satisfies Partial<OAuthHttpError>);
 	});
 
@@ -65,6 +82,40 @@ describe("MCP OAuth auth resolution", () => {
 			expect(auth.principalId).toBe("oauth:org_123:user_123:client_123");
 			expect(auth.scopes).toEqual([...MCP_OAUTH_SCOPES]);
 			expect(auth.orgId).toBe("org_123");
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	test("uses route-specific resource URLs", async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (_url, init) => {
+			expect(JSON.parse(init?.body as string)).toMatchObject({
+				resource: "http://localhost:2718/internal/mcp",
+			});
+			return Response.json({
+				sandbox_key: "sk_sandbox",
+				org_id: "org_123",
+				scopes: MCP_OAUTH_SCOPES,
+			});
+		}) as typeof fetch;
+
+		try {
+			const auth = await buildAuthForRequest(
+				new Headers({ authorization: "Bearer internal_oauth_token" }),
+				flags as MCPOAuthFlags,
+				logger,
+				"/internal/mcp",
+			);
+
+			expect(auth.resource).toBe("http://localhost:2718/internal/mcp");
+			expect(
+				getProtectedResourceMetadata(
+					new Headers(),
+					flags as MCPOAuthFlags,
+					"/internal/mcp",
+				).resource,
+			).toBe("http://localhost:2718/internal/mcp");
 		} finally {
 			globalThis.fetch = originalFetch;
 		}

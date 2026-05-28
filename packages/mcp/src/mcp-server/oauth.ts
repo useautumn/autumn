@@ -53,9 +53,19 @@ function trimTrailingSlash(url: string): string {
 	return url.endsWith("/") ? url.slice(0, -1) : url;
 }
 
-export function getResourceUrl(headers: Headers, flags: MCPOAuthFlags): string {
+export function getResourceUrl(
+	headers: Headers,
+	flags: MCPOAuthFlags,
+	resourcePath = "/mcp",
+): string {
 	if (flags["oauth-resource-url"]) {
-		return trimTrailingSlash(flags["oauth-resource-url"]);
+		const resourceUrl = trimTrailingSlash(flags["oauth-resource-url"]);
+		if (resourcePath === "/mcp") return resourceUrl;
+		const url = new URL(resourceUrl);
+		url.pathname = resourcePath;
+		url.search = "";
+		url.hash = "";
+		return trimTrailingSlash(url.href);
 	}
 
 	const host = headers.get("x-forwarded-host") ?? headers.get("host");
@@ -64,7 +74,7 @@ export function getResourceUrl(headers: Headers, flags: MCPOAuthFlags): string {
 	}
 
 	const proto = headers.get("x-forwarded-proto") ?? "http";
-	return new URL("/mcp", `${proto}://${host}`).href;
+	return new URL(resourcePath, `${proto}://${host}`).href;
 }
 
 export function getProtectedResourceMetadataUrl(resourceUrl: string): string {
@@ -102,8 +112,9 @@ function getWWWAuthenticate(resourceUrl: string, error?: string): string {
 export function getProtectedResourceMetadata(
 	headers: Headers,
 	flags: MCPOAuthFlags,
+	resourcePath = "/mcp",
 ) {
-	const resource = getResourceUrl(headers, flags);
+	const resource = getResourceUrl(headers, flags, resourcePath);
 	return {
 		resource,
 		authorization_servers: [getIssuerUrl(flags)],
@@ -246,9 +257,10 @@ export async function buildAuthForRequest(
 	headers: Headers,
 	flags: MCPOAuthFlags,
 	logger: ConsoleLogger,
+	resourcePath = "/mcp",
 ): Promise<AutumnMcpAuth> {
 	const env = getEnvironment(headers, flags);
-	const resource = getResourceUrl(headers, flags);
+	const resource = getResourceUrl(headers, flags, resourcePath);
 	const xApiVersion = resolveStaticHeader(
 		headers,
 		"x-api-version",

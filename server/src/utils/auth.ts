@@ -68,8 +68,18 @@ const isHttpsBaseUrl = process.env.BETTER_AUTH_URL?.startsWith("https://");
 const defaultMcpResourceUrl = process.env.BETTER_AUTH_URL
 	? new URL("/mcp", process.env.BETTER_AUTH_URL).href
 	: null;
+const defaultInternalMcpResourceUrl = process.env.BETTER_AUTH_URL
+	? new URL("/internal/mcp", process.env.BETTER_AUTH_URL).href
+	: null;
 const mcpResourceUrls =
-	process.env.MCP_RESOURCE_URLS?.split(",").map((url) => url.trim()) ?? [];
+	process.env.MCP_RESOURCE_URLS?.split(",")
+		.map((url) => url.trim())
+		.filter(Boolean) ?? [];
+const internalMcpResourceUrls = mcpResourceUrls.map((resourceUrl) => {
+	const url = new URL(resourceUrl);
+	url.pathname = "/internal/mcp";
+	return url.href;
+});
 
 /**
  * Passkey (WebAuthn) is bound to the FRONTEND origin where the browser calls
@@ -236,7 +246,9 @@ const options = {
 			validAudiences: [
 				process.env.BETTER_AUTH_URL,
 				defaultMcpResourceUrl,
+				defaultInternalMcpResourceUrl,
 				...mcpResourceUrls,
+				...internalMcpResourceUrls,
 			].filter(Boolean) as string[],
 			allowDynamicClientRegistration: true,
 			allowUnauthenticatedClientRegistration: true,

@@ -1,8 +1,12 @@
 import { serve } from "@hono/node-server";
 import type { HttpBindings } from "@hono/node-server";
 import { RESPONSE_ALREADY_SENT } from "@hono/node-server/utils/response";
+import type { Context } from "hono";
 import { Hono } from "hono";
-import { createAutumnMastraMCPServer } from "../../agent/server.js";
+import {
+  createAskAutumnMCPServer,
+  createAutumnOperationsMCPServer,
+} from "../../agent/server.js";
 import { LocalContext } from "../../cli.js";
 import {
   ConsoleLoggerLevel,
@@ -29,6 +33,8 @@ interface ServeCommandFlags extends MCPServerFlags {
   readonly env?: [string, string][];
 }
 
+type AppContext = Context<{ Bindings: HttpBindings }>;
+
 export async function main(this: LocalContext, flags: ServeCommandFlags) {
   flags.env?.forEach(([key, value]) => {
     process.env[key] = value;
@@ -49,17 +55,27 @@ async function startStreamableHTTP(cliFlags: ServeCommandFlags) {
   });
 
   app.get("/.well-known/oauth-protected-resource/mcp", (c) => {
-    return c.json(getProtectedResourceMetadata(c.req.raw.headers, cliFlags));
+    return c.json(getProtectedResourceMetadata(c.req.raw.headers, cliFlags, "/mcp"));
+  });
+
+  app.get("/.well-known/oauth-protected-resource/internal/mcp", (c) => {
+    return c.json(
+      getProtectedResourceMetadata(c.req.raw.headers, cliFlags, "/internal/mcp"),
+    );
   });
 
   app.get("/.well-known/oauth-authorization-server", (c) => {
     return c.json(getAuthorizationServerMetadata(cliFlags));
   });
 
-  app.all("/mcp", async (c) => {
+  const handleMcp = async (
+    c: AppContext,
+    path: "/mcp" | "/internal/mcp",
+    server: ReturnType<typeof createAskAutumnMCPServer>,
+  ) => {
     let auth;
     try {
-      auth = await buildAuthForRequest(c.req.raw.headers, cliFlags, logger);
+      auth = await buildAuthForRequest(c.req.raw.headers, cliFlags, logger, path);
     } catch (error) {
       if (error instanceof OAuthHttpError) {
         if (error.wwwAuthenticate) {
@@ -74,15 +90,22 @@ async function startStreamableHTTP(cliFlags: ServeCommandFlags) {
     }
 
     (c.env.incoming as typeof c.env.incoming & { auth?: typeof auth }).auth = auth;
-    await createAutumnMastraMCPServer().startHTTP({
+    await server.startHTTP({
       url: new URL(c.req.url),
-      httpPath: "/mcp",
+      httpPath: path,
       req: c.env.incoming,
       res: c.env.outgoing,
       options: { serverless: true },
     });
     return RESPONSE_ALREADY_SENT;
-  });
+  };
+
+  app.all("/mcp", (c) =>
+    handleMcp(c, "/mcp", createAutumnOperationsMCPServer()),
+  );
+  app.all("/internal/mcp", (c) =>
+    handleMcp(c, "/internal/mcp", createAskAutumnMCPServer()),
+  );
 
   const httpServer = serve({
     fetch: app.fetch,

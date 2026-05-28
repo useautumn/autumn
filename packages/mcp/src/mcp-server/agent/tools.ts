@@ -9,7 +9,6 @@ import {
 import { createTool } from "@mastra/core/tools";
 import * as z from "zod/v4";
 import { createAutumnClient, getAutumnAuth } from "./auth.js";
-import { createAxiomTools } from "./axiom.js";
 import {
 	claimLatestPendingAction,
 	createPendingAction,
@@ -24,6 +23,7 @@ type OperationToolConfig = {
 	description: string;
 	schema: z.ZodType;
 	endpoint: string;
+	destructive?: boolean;
 };
 type BillingPreviewToolConfig = {
 	id: string;
@@ -81,18 +81,34 @@ const billingPreviewConfigs: BillingPreviewToolConfig[] = [
 	{
 		id: "previewAttach",
 		description:
-			"Preview attaching a plan to a customer and store the exact pending attach action for later confirmation.",
+			"Preview attaching a plan to a customer.",
 		schema: AttachParamsV1Schema,
 		previewEndpoint: endpointByTool.previewAttach,
 		writeToolName: "attach",
 	},
 	{
 		id: "previewUpdateSubscription",
-		description:
-			"Preview updating a subscription and store the exact pending update action for later confirmation.",
+		description: "Preview updating a subscription.",
 		schema: UpdateSubscriptionV1ParamsSchema,
 		previewEndpoint: endpointByTool.previewUpdateSubscription,
 		writeToolName: "updateSubscription",
+	},
+];
+
+const billingWriteConfigs: OperationToolConfig[] = [
+	{
+		id: "attach",
+		description: "Attach a plan to a customer.",
+		schema: AttachParamsV1Schema,
+		endpoint: endpointByTool.attach,
+		destructive: true,
+	},
+	{
+		id: "updateSubscription",
+		description: "Update a customer subscription.",
+		schema: UpdateSubscriptionV1ParamsSchema,
+		endpoint: endpointByTool.updateSubscription,
+		destructive: true,
 	},
 ];
 
@@ -141,16 +157,26 @@ const operationTool = <Schema extends z.ZodType>({
 	description,
 	schema,
 	endpoint,
+	destructive = false,
 }: {
 	id: string;
 	description: string;
 	schema: Schema;
 	endpoint: string;
+	destructive?: boolean;
 }) =>
 	createTool({
 		id,
 		description,
 		inputSchema: z.object({ request: schema }).strict(),
+		mcp: {
+			annotations: {
+				readOnlyHint: !destructive,
+				destructiveHint: destructive,
+				idempotentHint: false,
+				openWorldHint: false,
+			},
+		},
 		execute: (input, context) =>
 			callAutumn({
 				context,
@@ -159,7 +185,25 @@ const operationTool = <Schema extends z.ZodType>({
 			}),
 	});
 
-const billingPreviewTool = ({
+const rawBillingPreviewTool = ({
+	id,
+	description,
+	schema,
+	previewEndpoint,
+}: {
+	id: string;
+	description: string;
+	schema: z.ZodType;
+	previewEndpoint: string;
+}) =>
+	operationTool({
+		id,
+		description,
+		schema,
+		endpoint: previewEndpoint,
+	});
+
+const agentBillingPreviewTool = ({
 	id,
 	description,
 	schema,
@@ -174,8 +218,16 @@ const billingPreviewTool = ({
 }) =>
 	createTool({
 		id,
-		description,
+		description: `${description} Store the exact pending billing action for later confirmation.`,
 		inputSchema: z.object({ request: schema }).strict(),
+		mcp: {
+			annotations: {
+				readOnlyHint: true,
+				destructiveHint: false,
+				idempotentHint: false,
+				openWorldHint: false,
+			},
+		},
 		execute: async (input, context) => {
 			const request = (input as { request: unknown }).request;
 			const auth = getAutumnAuth(context);
@@ -201,17 +253,31 @@ const billingPreviewTool = ({
 		},
 	});
 
-export const createAutumnOperationTools = () => ({
+export const createRawAutumnOperationTools = () => ({
 	...Object.fromEntries(
 		toolConfigs.map((config) => [config.id, operationTool(config)]),
 	),
 	...Object.fromEntries(
 		billingPreviewConfigs.map((config) => [
 			config.id,
-			billingPreviewTool(config),
+			rawBillingPreviewTool(config),
 		]),
 	),
-	// ...createAxiomTools(), leave out axiom investigate tool for now
+	...Object.fromEntries(
+		billingWriteConfigs.map((config) => [config.id, operationTool(config)]),
+	),
+});
+
+export const createAgentAutumnOperationTools = () => ({
+	...Object.fromEntries(
+		toolConfigs.map((config) => [config.id, operationTool(config)]),
+	),
+	...Object.fromEntries(
+		billingPreviewConfigs.map((config) => [
+			config.id,
+			agentBillingPreviewTool(config),
+		]),
+	),
 	confirmBillingAction: createTool({
 		id: "confirmBillingAction",
 		description:
