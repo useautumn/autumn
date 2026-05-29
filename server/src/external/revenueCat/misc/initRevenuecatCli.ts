@@ -1,20 +1,37 @@
 import { decryptData } from "@server/utils/encryptUtils.js";
-import type { RevenueCatProductsResponse } from "../revenuecatTypes";
+import type {
+	RevenueCatProductsResponse,
+	RevenueCatProjectsResponse,
+} from "../revenuecatTypes";
 
 type ListRevenuecatProductsResponse = {
 	products: { id: string; name: string }[];
 };
 
+type ListRevenuecatProjectsResponse = {
+	projects: { id: string; name: string }[];
+};
+
 export const initRevenuecatCli = ({
 	projectId,
 	apiKey,
+	accessToken,
 }: {
-	projectId: string;
-	apiKey: string;
+	projectId?: string;
+	apiKey?: string;
+	accessToken?: string;
 }) => {
-	let resolvedApiKey = apiKey;
+	const resolvedAccessToken =
+		accessToken ?? (apiKey ? decryptData(apiKey) : undefined);
 
-	resolvedApiKey = decryptData(apiKey);
+	if (!resolvedAccessToken) {
+		throw new Error("RevenueCat access token or API key is required");
+	}
+
+	const authHeaders = {
+		Authorization: `Bearer ${resolvedAccessToken}`,
+		"Content-Type": "application/json",
+	};
 
 	return {
 		listProducts: async () => {
@@ -23,12 +40,7 @@ export const initRevenuecatCli = ({
 			);
 			url.searchParams.set("limit", "20");
 
-			const response = await fetch(url, {
-				headers: {
-					Authorization: `Bearer ${resolvedApiKey}`,
-					"Content-Type": "application/json",
-				},
-			});
+			const response = await fetch(url, { headers: authHeaders });
 
 			const data = (await response.json()) as RevenueCatProductsResponse;
 
@@ -49,6 +61,22 @@ export const initRevenuecatCli = ({
 					name: names.join(", "),
 				})),
 			} satisfies ListRevenuecatProductsResponse;
+		},
+
+		listProjects: async () => {
+			const url = new URL("https://api.revenuecat.com/v2/projects");
+			url.searchParams.set("limit", "100");
+
+			const response = await fetch(url, { headers: authHeaders });
+
+			const data = (await response.json()) as RevenueCatProjectsResponse;
+
+			return {
+				projects: (data.items ?? []).map((project) => ({
+					id: project.id,
+					name: project.name,
+				})),
+			} satisfies ListRevenuecatProjectsResponse;
 		},
 	};
 };
