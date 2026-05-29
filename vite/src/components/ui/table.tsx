@@ -15,10 +15,10 @@ function Table({
 			<table
 				data-slot="table"
 				// className="w-full caption-bottom text-sm table-fixed"
-				className={cn(
-					"w-full caption-bottom text-sm",
-					flexibleTableColumns ? "" : "table-fixed",
-				)}
+			className={cn(
+				"w-full caption-bottom text-sm",
+				flexibleTableColumns ? "" : "table-fixed",
+			)}
 				{...props}
 			/>
 		</div>
