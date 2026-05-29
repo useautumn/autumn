@@ -1,7 +1,10 @@
 import {
 	AppEnv,
+	findActiveCustomerProductById,
 	type FullCusProduct,
+	type FullCustomer,
 	type FullProduct,
+	isFreeProduct,
 	RecaseError,
 	Scopes,
 } from "@autumn/shared";
@@ -30,13 +33,24 @@ import { productToBillingPlan } from "../handleListBillingPlans.js";
 
 const findInstallationCusProduct = async ({
 	ctx,
+	fullCustomer,
 	stripeCustomer,
 	integrationConfigurationId,
+	freeProduct,
 }: {
 	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
 	stripeCustomer: Stripe.Customer;
 	integrationConfigurationId: string;
+	freeProduct?: FullProduct;
 }): Promise<FullCusProduct | undefined> => {
+	if (freeProduct) {
+		return findActiveCustomerProductById({
+			fullCus: fullCustomer,
+			productId: freeProduct.id,
+		});
+	}
+
 	const { db, org, env } = ctx;
 
 	const existingSub = stripeCustomer.subscriptions?.data.find(
@@ -162,6 +176,11 @@ export const handleCreateResource = createRoute({
 		});
 
 		try {
+			const requestedProduct = await loadProduct(billingPlanId);
+			const freeProduct = isFreeProduct({ prices: requestedProduct.prices })
+				? requestedProduct
+				: undefined;
+
 			const existing = await VercelResourceService.getByInstallationAndName({
 				db,
 				installationId: integrationConfigurationId,
@@ -172,14 +191,16 @@ export const handleCreateResource = createRoute({
 
 			const installationCusProduct = await findInstallationCusProduct({
 				ctx,
+				fullCustomer: customer,
 				stripeCustomer,
 				integrationConfigurationId,
+				freeProduct,
 			});
 
 			if (existing) {
 				const product = installationCusProduct
 					? await loadProduct(installationCusProduct.product_id)
-					: await loadProduct(billingPlanId);
+					: requestedProduct;
 				return c.json(
 					buildResourceResponse({ resourceId: existing.id, product }),
 				);
@@ -214,14 +235,16 @@ export const handleCreateResource = createRoute({
 				if (!winner) throw error;
 				const product = installationCusProduct
 					? await loadProduct(installationCusProduct.product_id)
-					: await loadProduct(billingPlanId);
+					: requestedProduct;
 				return c.json(
 					buildResourceResponse({ resourceId: winner.id, product }),
 				);
 			}
 
 			const product = installationCusProduct
-				? await loadProduct(installationCusProduct.product_id)
+				? installationCusProduct.product_id === billingPlanId
+					? requestedProduct
+					: await loadProduct(installationCusProduct.product_id)
 				: (
 						await provisionVercelCusProduct({
 							ctx,
