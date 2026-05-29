@@ -14,11 +14,15 @@ interface RevenueCatConnectionCardProps {
 	statusDescription: string;
 	dashboardUrl: string;
 	currentApiKey?: string;
+	connection?: "oauth" | "api_key" | "none";
+	oauthConnected?: boolean;
 	env: string;
+	onOAuthClick: () => void;
 	onApiKeyClick: () => void;
 	onProjectIdClick: () => void;
 	onMapProductsClick: () => void;
 	currentProjectId?: string;
+	hasMappings?: boolean;
 }
 
 export const RevenueCatConnectionCard = ({
@@ -26,12 +30,20 @@ export const RevenueCatConnectionCard = ({
 	statusDescription,
 	dashboardUrl,
 	currentApiKey,
+	connection,
+	oauthConnected,
 	env,
+	onOAuthClick,
 	onApiKeyClick,
 	onProjectIdClick,
 	onMapProductsClick,
 	currentProjectId,
+	hasMappings,
 }: RevenueCatConnectionCardProps) => {
+	const showOAuthConnect = connection !== "oauth";
+	// API-key auth is legacy: only surface it for orgs that already have a key.
+	const showApiKeyActions = connection !== "oauth" && !!currentApiKey;
+
 	return (
 		<Card className="shadow-none bg-interactive-secondary">
 			<CardHeader>
@@ -64,6 +76,13 @@ export const RevenueCatConnectionCard = ({
 				)}
 			</CardHeader>
 			<CardContent className="flex flex-col gap-2">
+				{oauthConnected && (
+					<div className="mb-0">
+						<FormLabel className="mb-0 text-body">
+							Connected via OAuth ({env})
+						</FormLabel>
+					</div>
+				)}
 				{currentApiKey && (
 					<div className="mb-0">
 						<FormLabel className="mb-0 text-body">
@@ -84,15 +103,25 @@ export const RevenueCatConnectionCard = ({
 						</FormLabel>
 					</div>
 				)}
-				<div className="flex gap-2">
-					<Button variant="secondary" onClick={onApiKeyClick}>
-						{currentApiKey ? "Update API Key" : "Add API Key"}
-					</Button>
+				<div className="flex gap-2 flex-wrap">
+					{showOAuthConnect && (
+						<Button variant="primary" onClick={onOAuthClick}>
+							Connect via OAuth
+						</Button>
+					)}
+					{showApiKeyActions && (
+						<Button variant="secondary" onClick={onApiKeyClick}>
+							Update API Key
+						</Button>
+					)}
 					<Button variant="secondary" onClick={onProjectIdClick}>
-						{currentProjectId ? "Update Project ID" : "Add Project ID"}
+						{currentProjectId ? "Update Project ID" : "Select Project ID"}
 					</Button>
-					<Button variant="primary" onClick={onMapProductsClick}>
-						Map Products
+					<Button
+						variant={showOAuthConnect ? "secondary" : "primary"}
+						onClick={onMapProductsClick}
+					>
+						{hasMappings ? "Update Mappings" : "Map Products"}
 					</Button>
 				</div>
 			</CardContent>

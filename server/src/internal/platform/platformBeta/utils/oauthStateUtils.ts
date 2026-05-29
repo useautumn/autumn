@@ -10,6 +10,8 @@ type OAuthState = {
 	env: "test" | "live";
 	redirect_uri: string;
 	master_org_id: string | null; // null for standard flow, string for platform flow
+	code_verifier?: string;
+	provider?: "stripe" | "revenuecat";
 };
 
 /**
@@ -21,11 +23,15 @@ export const generateOAuthState = async ({
 	env,
 	redirectUri,
 	masterOrgId,
+	codeVerifier,
+	provider,
 }: {
 	organizationSlug: string;
 	env: "test" | "live";
 	redirectUri: string;
 	masterOrgId: string | null;
+	codeVerifier?: string;
+	provider?: "stripe" | "revenuecat";
 }): Promise<string> => {
 	const maxAttempts = 3;
 
@@ -40,6 +46,8 @@ export const generateOAuthState = async ({
 			env,
 			redirect_uri: redirectUri,
 			master_org_id: masterOrgId,
+			...(codeVerifier ? { code_verifier: codeVerifier } : {}),
+			...(provider ? { provider } : {}),
 		};
 
 		// Check if key exists first

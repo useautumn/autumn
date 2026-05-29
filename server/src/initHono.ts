@@ -20,6 +20,7 @@ import { handleReadyCheck } from "./honoUtils/handleReadyCheck.js";
 import { handleListAuthOrganizations } from "./internal/auth/handleListAuthOrganizations.js";
 import { cliRouter } from "./internal/dev/cli/cliRouter.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
+import { handleRevenueCatOAuthCallback } from "./internal/orgs/handlers/revenueCatHandlers/handleRevenueCatOAuthCallback.js";
 import { apiRouter } from "./routers/apiRouter.js";
 import { internalRouter } from "./routers/internalRouter.js";
 import { publicRouter } from "./routers/publicRouter.js";
@@ -85,6 +86,7 @@ export const createHonoApp = () => {
 	// Health check endpoint for AWS/ECS load balancer
 
 	app.get("/stripe/oauth_callback", handleOAuthCallback);
+	app.get("/revenuecat/oauth_callback", handleRevenueCatOAuthCallback);
 	app.get("/ready/:token", handleReadyCheck);
 	app.get("/", handleHealthCheck);
 
