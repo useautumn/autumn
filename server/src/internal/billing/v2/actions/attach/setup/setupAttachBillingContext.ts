@@ -10,6 +10,7 @@ import {
 	isFreeProduct,
 	isFutureStartDate,
 	isOneOffProduct,
+	isPastStartDate,
 	notNullish,
 	orgDisableStripeWrites,
 	orgToReturnUrl,
@@ -224,6 +225,11 @@ export const setupAttachBillingContext = async ({
 		params.starts_at,
 		currentEpochMs,
 	);
+	const subscriptionBackdateStartMs =
+		params.starts_at !== undefined &&
+		isPastStartDate(params.starts_at, currentEpochMs)
+			? params.starts_at
+			: undefined;
 	const accessStartsAt = getAttachAccessStartsAt({
 		params,
 		currentEpochMs,
@@ -275,6 +281,8 @@ export const setupAttachBillingContext = async ({
 		currentEpochMs,
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,
+		billingStartsAt,
+		subscriptionBackdateStartMs,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
 		requestedProrationBehavior: setupIgnoreProrationBehavior({
 			isOneOffAttach: isOneOffProduct({ prices: attachProduct.prices }),

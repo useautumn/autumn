@@ -44,139 +44,142 @@ const parseCheckoutSessionId = (url: string): string | null => {
 // TEST 1: Happy path
 // ═══════════════════════════════════════════════════════════════════════════════
 
-test.concurrent(`${chalk.yellowBright("create-schedule enable_plan_immediately: pre-inserts both phases, webhook persists schedule")}`, async () => {
-	const customerId = "create-schedule-eppi-happy";
+test.concurrent(
+	`${chalk.yellowBright("create-schedule enable_plan_immediately: pre-inserts both phases, webhook persists schedule")}`,
+	async () => {
+		const customerId = "create-schedule-eppi-happy";
 
-	const pro = products.pro({
-		id: "pro-eppi-cs",
-		items: [items.monthlyMessages({ includedUsage: 100 })],
-	});
-	const growth = products.pro({
-		id: "growth-eppi-cs",
-		items: [items.monthlyMessages({ includedUsage: 500 })],
-	});
+		const pro = products.pro({
+			id: "pro-eppi-cs",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const growth = products.pro({
+			id: "growth-eppi-cs",
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
 
-	const { autumnV1, ctx } = await initScenario({
-		customerId,
-		setup: [
-			s.customer({ testClock: true }), // No payment method → stripe_checkout
-			s.products({ list: [pro, growth] }),
-		],
-		actions: [],
-	});
+		const { autumnV1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: true }), // No payment method → stripe_checkout
+				s.products({ list: [pro, growth] }),
+			],
+			actions: [],
+		});
 
-	const dbCustomer = await ctx.db.query.customers.findFirst({
-		where: eq(customers.id, customerId),
-	});
-	expect(dbCustomer).toBeDefined();
-	const internalCustomerId = dbCustomer!.internal_id;
+		const dbCustomer = await ctx.db.query.customers.findFirst({
+			where: eq(customers.id, customerId),
+		});
+		expect(dbCustomer).toBeDefined();
+		const internalCustomerId = dbCustomer!.internal_id;
 
-	const now = Date.now();
-	const params: CreateScheduleParamsV0Input = {
-		customer_id: customerId,
-		enable_plan_immediately: true,
-		phases: [
-			{
-				starts_at: now,
-				plans: [{ plan_id: pro.id }],
-			},
-			{
-				starts_at: now + ms.days(30),
-				plans: [{ plan_id: growth.id }],
-			},
-		],
-	};
+		const now = Date.now();
+		const params: CreateScheduleParamsV0Input = {
+			customer_id: customerId,
+			enable_plan_immediately: true,
+			phases: [
+				{
+					starts_at: now,
+					plans: [{ plan_id: pro.id }],
+				},
+				{
+					starts_at: now + ms.days(30),
+					plans: [{ plan_id: growth.id }],
+				},
+			],
+		};
 
-	const response = await autumnV1.billing.createSchedule(params);
+		const response = await autumnV1.billing.createSchedule(params);
 
-	expect(response.status).toBe("pending_payment");
-	expect(response.schedule_id).toBeNull();
-	expect(response.payment_url).toBeDefined();
-	expect(response.payment_url).toContain("checkout.stripe.com");
+		expect(response.status).toBe("pending_payment");
+		expect(response.schedule_id).toBeNull();
+		expect(response.payment_url).toBeDefined();
+		expect(response.payment_url).toContain("checkout.stripe.com");
 
-	const checkoutSessionId = parseCheckoutSessionId(response.payment_url!);
-	expect(checkoutSessionId).toBeTruthy();
+		const checkoutSessionId = parseCheckoutSessionId(response.payment_url!);
+		expect(checkoutSessionId).toBeTruthy();
 
-	// Pre-completion: both cusProducts exist, linked to the same checkout session.
-	const cusProductsBefore = await CusProductService.list({
-		db: ctx.db,
-		internalCustomerId,
-		inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
-	});
+		// Pre-completion: both cusProducts exist, linked to the same checkout session.
+		const cusProductsBefore = await CusProductService.list({
+			db: ctx.db,
+			internalCustomerId,
+			inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
+		});
 
-	const proBefore = cusProductsBefore.find((cp) => cp.product.id === pro.id);
-	const growthBefore = cusProductsBefore.find(
-		(cp) => cp.product.id === growth.id,
-	);
-	expect(proBefore).toBeDefined();
-	expect(growthBefore).toBeDefined();
+		const proBefore = cusProductsBefore.find((cp) => cp.product.id === pro.id);
+		const growthBefore = cusProductsBefore.find(
+			(cp) => cp.product.id === growth.id,
+		);
+		expect(proBefore).toBeDefined();
+		expect(growthBefore).toBeDefined();
 
-	expect(proBefore!.status).toBe(CusProductStatus.Active);
-	expect(growthBefore!.status).toBe(CusProductStatus.Scheduled);
+		expect(proBefore!.status).toBe(CusProductStatus.Active);
+		expect(growthBefore!.status).toBe(CusProductStatus.Scheduled);
 
-	expect(proBefore!.stripe_checkout_session_id).toBe(checkoutSessionId);
-	expect(growthBefore!.stripe_checkout_session_id).toBe(checkoutSessionId);
+		expect(proBefore!.stripe_checkout_session_id).toBe(checkoutSessionId);
+		expect(growthBefore!.stripe_checkout_session_id).toBe(checkoutSessionId);
 
-	expect(proBefore!.subscription_ids ?? []).toHaveLength(0);
-	expect(growthBefore!.subscription_ids ?? []).toHaveLength(0);
+		expect(proBefore!.subscription_ids ?? []).toHaveLength(0);
+		expect(growthBefore!.subscription_ids ?? []).toHaveLength(0);
 
-	// Pre-completion: no schedule rows yet.
-	const schedulesBefore = await ctx.db
-		.select()
-		.from(schedules)
-		.where(eq(schedules.internal_customer_id, internalCustomerId));
-	expect(schedulesBefore).toHaveLength(0);
+		// Pre-completion: no schedule rows yet.
+		const schedulesBefore = await ctx.db
+			.select()
+			.from(schedules)
+			.where(eq(schedules.internal_customer_id, internalCustomerId));
+		expect(schedulesBefore).toHaveLength(0);
 
-	// API view: pro is already active immediately.
-	const customerBefore =
-		await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	await expectProductActive({ customer: customerBefore, productId: pro.id });
+		// API view: pro is already active immediately.
+		const customerBefore =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectProductActive({ customer: customerBefore, productId: pro.id });
 
-	// Customer completes checkout.
-	await completeStripeCheckoutForm({ url: response.payment_url! });
+		// Customer completes checkout.
+		await completeStripeCheckoutForm({ url: response.payment_url! });
 
-	// Post-completion: subscription_ids patched on the immediate row,
-	// schedule + phases rows now exist.
-	const cusProductsAfter = await CusProductService.list({
-		db: ctx.db,
-		internalCustomerId,
-		inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
-	});
-	const proAfter = cusProductsAfter.find((cp) => cp.product.id === pro.id);
-	const growthAfter = cusProductsAfter.find(
-		(cp) => cp.product.id === growth.id,
-	);
-	expect(proAfter!.id).toBe(proBefore!.id);
-	expect(proAfter!.subscription_ids ?? []).toHaveLength(1);
-	expect(growthAfter!.status).toBe(CusProductStatus.Scheduled);
+		// Post-completion: subscription_ids patched on the immediate row,
+		// schedule + phases rows now exist.
+		const cusProductsAfter = await CusProductService.list({
+			db: ctx.db,
+			internalCustomerId,
+			inStatuses: [CusProductStatus.Active, CusProductStatus.Scheduled],
+		});
+		const proAfter = cusProductsAfter.find((cp) => cp.product.id === pro.id);
+		const growthAfter = cusProductsAfter.find(
+			(cp) => cp.product.id === growth.id,
+		);
+		expect(proAfter!.id).toBe(proBefore!.id);
+		expect(proAfter!.subscription_ids ?? []).toHaveLength(1);
+		expect(growthAfter!.status).toBe(CusProductStatus.Scheduled);
 
-	const schedulesAfter = await ctx.db
-		.select()
-		.from(schedules)
-		.where(eq(schedules.internal_customer_id, internalCustomerId));
-	expect(schedulesAfter).toHaveLength(1);
+		const schedulesAfter = await ctx.db
+			.select()
+			.from(schedules)
+			.where(eq(schedules.internal_customer_id, internalCustomerId));
+		expect(schedulesAfter).toHaveLength(1);
 
-	const phasesAfter = await ctx.db
-		.select()
-		.from(schedulePhases)
-		.where(eq(schedulePhases.schedule_id, schedulesAfter[0]!.id));
-	expect(phasesAfter).toHaveLength(2);
+		const phasesAfter = await ctx.db
+			.select()
+			.from(schedulePhases)
+			.where(eq(schedulePhases.schedule_id, schedulesAfter[0]!.id));
+		expect(phasesAfter).toHaveLength(2);
 
-	// scheduled_ids should be populated on paid+recurring rows once the Stripe
-	// subscription_schedule is created in the webhook.
-	expect(proAfter!.scheduled_ids ?? []).toHaveLength(1);
-	expect(growthAfter!.scheduled_ids ?? []).toHaveLength(1);
-	expect(proAfter!.scheduled_ids![0]).toBe(growthAfter!.scheduled_ids![0]);
+		// scheduled_ids should be populated on paid+recurring rows once the Stripe
+		// subscription_schedule is created in the webhook.
+		expect(proAfter!.scheduled_ids ?? []).toHaveLength(1);
+		expect(growthAfter!.scheduled_ids ?? []).toHaveLength(1);
+		expect(proAfter!.scheduled_ids![0]).toBe(growthAfter!.scheduled_ids![0]);
 
-	// Cross-checks the Stripe subscription_schedule phases against the Autumn
-	// cusProduct timeline.
-	await expectSubToBeCorrect({
-		db: ctx.db,
-		customerId,
-		org: ctx.org,
-		env: ctx.env,
-	});
-});
+		// Cross-checks the Stripe subscription_schedule phases against the Autumn
+		// cusProduct timeline.
+		await expectSubToBeCorrect({
+			db: ctx.db,
+			customerId,
+			org: ctx.org,
+			env: ctx.env,
+		});
+	},
+);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: Abandoned session — both phases cleaned up; no schedule rows ever exist
