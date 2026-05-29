@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { handleGetRCMappings } from "@/external/revenueCat/handlers/handleGetRevenuecatMappings.js";
 import { handleGetRevenueCatProducts } from "@/external/revenueCat/handlers/handleGetRevenuecatProducts.js";
+import { handleGetRevenueCatProjects } from "@/external/revenueCat/handlers/handleGetRevenuecatProjects.js";
 import { handleSaveRCMappings } from "@/external/revenueCat/handlers/handleSaveRevenuecatMappings.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleDeleteOrg } from "./handlers/crudHandlers/handleDeleteOrg.js";
@@ -30,6 +31,7 @@ import { handleConnectStripe } from "./handlers/stripeHandlers/handleConnectStri
 import { handleDeleteStripe } from "./handlers/stripeHandlers/handleDeleteStripe.js";
 import { handleGetOAuthUrl } from "./handlers/stripeHandlers/handleGetOAuthUrl.js";
 import { handleGetStripeAccount } from "./handlers/stripeHandlers/handleGetStripeAccount.js";
+import { handleGetRevenueCatOAuthUrl } from "./handlers/revenueCatHandlers/handleGetRevenueCatOAuthUrl.js";
 
 export const internalOrgRouter = new Hono<HonoEnv>();
 
@@ -69,6 +71,8 @@ honoOrgRouter.get("/vercel_sink", ...handleGetVercelSink);
 
 honoOrgRouter.get("/revenuecat", ...handleGetRevenueCatConfig);
 honoOrgRouter.patch("/revenuecat", ...handleUpsertRevenueCatConfig);
+honoOrgRouter.get("/revenuecat/oauth_url", ...handleGetRevenueCatOAuthUrl);
 honoOrgRouter.post("/revenuecat/products", ...handleGetRevenueCatProducts);
+honoOrgRouter.get("/revenuecat/projects", ...handleGetRevenueCatProjects);
 honoOrgRouter.get("/revenuecat/mappings", ...handleGetRCMappings);
 honoOrgRouter.post("/revenuecat/mappings", ...handleSaveRCMappings);

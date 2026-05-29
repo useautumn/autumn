@@ -37,6 +37,8 @@ export const getRevenueCatConfigDisplay = ({
 	if (!revenueCatConfig) {
 		return {
 			connected: false,
+			connection: "none" as const,
+			oauth_connected: false,
 			api_key: undefined,
 			sandbox_api_key: undefined,
 			project_id: undefined,
@@ -61,12 +63,28 @@ export const getRevenueCatConfigDisplay = ({
 	const apiKeyForEnv =
 		env === AppEnv.Live ? liveApiKeyDecrypted : sandboxApiKeyDecrypted;
 
+	const oauthForEnv =
+		env === AppEnv.Live
+			? revenueCatConfig.oauth
+			: revenueCatConfig.sandbox_oauth;
+
+	const oauthConnected = !!oauthForEnv;
+	const connection = oauthConnected
+		? ("oauth" as const)
+		: apiKeyForEnv
+			? ("api_key" as const)
+			: ("none" as const);
+
 	return {
-		connected: !!apiKeyForEnv && !!webhookSecret,
+		connected: (!!apiKeyForEnv || oauthConnected) && !!webhookSecret,
+		connection,
+		oauth_connected: oauthConnected,
 		api_key: mask(liveApiKeyDecrypted, 3, 2),
 		sandbox_api_key: mask(sandboxApiKeyDecrypted, 5, 5),
-		project_id: revenueCatConfig.project_id,
-		sandbox_project_id: revenueCatConfig.sandbox_project_id,
+		project_id: revenueCatConfig.project_id ?? oauthForEnv?.project_id,
+		sandbox_project_id:
+			revenueCatConfig.sandbox_project_id ??
+			revenueCatConfig.sandbox_oauth?.project_id,
 		webhook_secret: revenueCatConfig.webhook_secret,
 		sandbox_webhook_secret: revenueCatConfig.sandbox_webhook_secret,
 	};
@@ -108,6 +126,8 @@ export const handleGetRevenueCatConfig = createRoute({
 			// Return fresh config after update
 			return c.json({
 				connected: false,
+				connection: "none" as const,
+				oauth_connected: false,
 				api_key: undefined,
 				sandbox_api_key: undefined,
 				project_id: undefined,

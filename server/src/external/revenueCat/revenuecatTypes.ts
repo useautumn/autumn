@@ -154,3 +154,17 @@ export type RevenueCatProductsResponse = {
 	next_page: string | null;
 	url: string;
 };
+
+export type RevenueCatProject = {
+	object: "project";
+	id: string;
+	name: string;
+	created_at: number;
+};
+
+export type RevenueCatProjectsResponse = {
+	object: "list";
+	items: RevenueCatProject[];
+	next_page: string | null;
+	url: string;
+};
