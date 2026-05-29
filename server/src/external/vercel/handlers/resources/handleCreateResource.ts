@@ -44,13 +44,6 @@ const findInstallationCusProduct = async ({
 	integrationConfigurationId: string;
 	freeProduct?: FullProduct;
 }): Promise<FullCusProduct | undefined> => {
-	if (freeProduct) {
-		return findActiveCustomerProductById({
-			fullCus: fullCustomer,
-			productId: freeProduct.id,
-		});
-	}
-
 	const { db, org, env } = ctx;
 
 	const existingSub = stripeCustomer.subscriptions?.data.find(
@@ -60,26 +53,33 @@ const findInstallationCusProduct = async ({
 			s.status !== "canceled",
 	);
 
-	if (!existingSub) {
-		return undefined;
+	if (existingSub) {
+		const existingCusProducts = await customerProductRepo.getByStripeSubId({
+			db,
+			stripeSubId: existingSub.id,
+			orgId: org.id,
+			env,
+		});
+
+		if (existingCusProducts.length > 0) {
+			return existingCusProducts[0];
+		}
+
+		throw new RecaseError({
+			message: "Vercel subscription is still being provisioned. Retry shortly.",
+			code: "vercel_provisioning_in_flight",
+			statusCode: StatusCodes.CONFLICT,
+		});
 	}
 
-	const existingCusProducts = await customerProductRepo.getByStripeSubId({
-		db,
-		stripeSubId: existingSub.id,
-		orgId: org.id,
-		env,
-	});
-
-	if (existingCusProducts.length > 0) {
-		return existingCusProducts[0];
+	if (freeProduct) {
+		return findActiveCustomerProductById({
+			fullCus: fullCustomer,
+			productId: freeProduct.id,
+		});
 	}
 
-	throw new RecaseError({
-		message: "Vercel subscription is still being provisioned. Retry shortly.",
-		code: "vercel_provisioning_in_flight",
-		statusCode: StatusCodes.CONFLICT,
-	});
+	return undefined;
 };
 
 export const handleCreateResource = createRoute({
