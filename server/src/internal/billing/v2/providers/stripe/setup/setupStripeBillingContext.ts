@@ -10,12 +10,21 @@ import {
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import { all } from "better-all";
+import type Stripe from "stripe";
+import { stripeSubscriptionToScheduleId } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fetchStripeCustomerForBilling } from "./fetchStripeCustomerForBilling";
 import { fetchStripeDiscountsForBilling } from "./fetchStripeDiscountsForBilling";
 import { fetchStripeSubscriptionForBilling } from "./fetchStripeSubscriptionForBilling";
 import { fetchStripeSubscriptionScheduleForBilling } from "./fetchStripeSubscriptionScheduleForBilling";
 import { fetchStripeTaxRateForBilling } from "./fetchStripeTaxRateForBilling";
+
+const getScheduleSubscriptionId = (
+	stripeSubscriptionSchedule: Stripe.SubscriptionSchedule | undefined,
+) => {
+	const subscription = stripeSubscriptionSchedule?.subscription;
+	return typeof subscription === "string" ? subscription : subscription?.id;
+};
 
 export const setupStripeBillingContext = async ({
 	ctx,
@@ -101,10 +110,9 @@ export const setupStripeBillingContext = async ({
 				? fetchStripeSubscriptionScheduleForBilling({
 						ctx,
 						fullCus: fullCustomer,
-						subscriptionScheduleId:
-							typeof localStripeSubscription?.schedule === "string"
-								? localStripeSubscription.schedule
-								: undefined,
+						subscriptionScheduleId: stripeSubscriptionToScheduleId({
+							stripeSubscription: localStripeSubscription,
+						}),
 						products: [],
 						targetCusProductId: targetCustomerProduct?.id,
 					})
@@ -130,9 +138,17 @@ export const setupStripeBillingContext = async ({
 		},
 	});
 
+	const stripeSubscriptionScheduleForContext =
+		stripeSubscription && stripeSubscriptionSchedule
+			? getScheduleSubscriptionId(stripeSubscriptionSchedule) ===
+				stripeSubscription.id
+				? stripeSubscriptionSchedule
+				: undefined
+			: stripeSubscriptionSchedule;
+
 	return {
 		stripeSubscription,
-		stripeSubscriptionSchedule,
+		stripeSubscriptionSchedule: stripeSubscriptionScheduleForContext,
 		stripeCustomer,
 		stripeDiscounts,
 		stripeTaxRate,
