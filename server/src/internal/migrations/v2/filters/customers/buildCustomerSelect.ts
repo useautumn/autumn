@@ -6,6 +6,15 @@ import { rawWithParamsToDrizzle } from "../rawWithParamsToDrizzle.js";
 
 export type IncludeProcessed = {
 	migrationInternalId: string;
+	executionFilter?: CustomerExecutionStatusFilter;
+};
+
+export type CustomerExecutionStatus = MigrationItemRunStatus | "not_run";
+
+export type CustomerExecutionStatusFilter = {
+	statuses: CustomerExecutionStatus[];
+	migrationRunId?: string;
+	dryRun?: boolean;
 };
 
 export type CustomerQueryArgs = {
@@ -75,21 +84,103 @@ const buildProcessedIn = (includeProcessed: IncludeProcessed): SQL => sql`
 			AND mir.dry_run = false
 	)`;
 
+const buildExecutionScope = (
+	migrationInternalId: string,
+	filter: CustomerExecutionStatusFilter | undefined,
+): SQL => {
+	const dryRunScope =
+		filter?.dryRun !== undefined
+			? sql`AND mir.dry_run = ${filter.dryRun}`
+			: sql`AND mir.dry_run = false`;
+	const runScope = filter?.migrationRunId
+		? sql`AND mir.migration_run_id = ${filter.migrationRunId}`
+		: sql``;
+
+	return sql`
+		mir.migration_internal_id = ${migrationInternalId}
+			AND mir.item_kind = 'customer'
+			${dryRunScope}
+			${runScope}
+	`;
+};
+
+const buildExecutionStatusWhere = (
+	includeProcessed: IncludeProcessed | undefined,
+	{ includeNotRun = true }: { includeNotRun?: boolean } = {},
+): SQL => {
+	const filter = includeProcessed?.executionFilter;
+	if (!includeProcessed || !filter || filter.statuses.length === 0) return sql``;
+
+	const explicitStatuses = filter.statuses.filter(
+		(status): status is MigrationItemRunStatus => status !== "not_run",
+	);
+	const clauses: SQL[] = [];
+
+	if (explicitStatuses.length > 0) {
+		const statuses = sql.join(
+			explicitStatuses.map((status) => sql`${status}`),
+			sql`, `,
+		);
+		clauses.push(sql`
+			EXISTS (
+				SELECT 1
+				FROM migration_item_runs mir
+				WHERE ${buildExecutionScope(includeProcessed.migrationInternalId, filter)}
+					AND mir.item_id = c.internal_id
+					AND mir.status IN (${statuses})
+			)
+		`);
+	}
+
+	if (includeNotRun && filter.statuses.includes("not_run")) {
+		clauses.push(sql`
+			NOT EXISTS (
+				SELECT 1
+				FROM migration_item_runs mir
+				WHERE ${buildExecutionScope(includeProcessed.migrationInternalId, filter)}
+					AND mir.item_id = c.internal_id
+			)
+		`);
+	}
+
+	if (clauses.length === 0) return sql`AND false`;
+	return clauses.length === 1
+		? sql`AND ${clauses[0]}`
+		: sql`AND (${sql.join(clauses, sql` OR `)})`;
+};
+
+const getExecutionFilterMode = (
+	includeProcessed: IncludeProcessed,
+): "all" | "explicit_only" | "not_run_only" | "mixed" => {
+	const statuses = includeProcessed.executionFilter?.statuses;
+	if (!statuses || statuses.length === 0) return "all";
+
+	const hasNotRun = statuses.includes("not_run");
+	const hasExplicit = statuses.some((status) => status !== "not_run");
+	if (hasExplicit && hasNotRun) return "mixed";
+	if (hasExplicit) return "explicit_only";
+	return "not_run_only";
+};
+
 // Predicates shared by both UNION branches (and the single-branch query).
 // Rebuilt per call so a branch never reuses another's SQL chunk instance.
 const buildCommonWhere = ({
 	checkpoint,
 	search,
 	afterInternalId,
+	includeProcessed,
+	includeNotRun,
 }: {
 	checkpoint?: CustomerCheckpointExclusion;
 	search?: string;
 	afterInternalId?: string;
+	includeProcessed?: IncludeProcessed;
+	includeNotRun?: boolean;
 }): SQL => {
 	const cursor = afterInternalId
 		? sql`AND c.internal_id < ${afterInternalId}`
 		: sql``;
-	return sql`${buildCheckpointWhere(checkpoint)} ${buildSearchWhere(search)} ${cursor}`;
+	return sql`${buildCheckpointWhere(checkpoint)} ${buildSearchWhere(search)} ${buildExecutionStatusWhere(includeProcessed, { includeNotRun })} ${cursor}`;
 };
 
 /**
@@ -170,16 +261,38 @@ export const buildProcessedPreviewSelect = ({
 	const where = compileWhere({ orgId, env, filter, ctx });
 	const processed = buildProcessedIn(includeProcessed);
 	const limitClause = limit !== undefined ? sql`LIMIT ${limit}` : sql``;
+	const mode = getExecutionFilterMode(includeProcessed);
+
+	if (mode === "explicit_only") {
+		return sql`
+			SELECT c.internal_id, c.id, c.name, c.email
+			FROM customers c
+			WHERE (${processed}) ${buildCommonWhere({ checkpoint, search, afterInternalId, includeProcessed, includeNotRun: false })}
+			ORDER BY c.internal_id DESC
+			${limitClause}
+		`;
+	}
+
+	if (mode === "not_run_only") {
+		return sql`
+			SELECT c.internal_id, c.id, c.name, c.email
+			FROM customers c
+			WHERE (${where}) ${buildCommonWhere({ checkpoint, search, afterInternalId, includeProcessed })}
+			ORDER BY c.internal_id DESC
+			${limitClause}
+		`;
+	}
+
 	return sql`
 		SELECT u.internal_id, u.id, u.name, u.email
 		FROM (
 			SELECT c.internal_id, c.id, c.name, c.email
 			FROM customers c
-			WHERE (${where}) ${buildCommonWhere({ checkpoint, search, afterInternalId })}
+			WHERE (${where}) ${buildCommonWhere({ checkpoint, search, afterInternalId, includeProcessed })}
 			UNION
 			SELECT c.internal_id, c.id, c.name, c.email
 			FROM customers c
-			WHERE (${processed}) ${buildCommonWhere({ checkpoint, search, afterInternalId })}
+			WHERE (${processed}) ${buildCommonWhere({ checkpoint, search, afterInternalId, includeProcessed, includeNotRun: false })}
 		) u
 		ORDER BY u.internal_id DESC
 		${limitClause}
@@ -197,16 +310,34 @@ export const buildProcessedPreviewCount = ({
 }: ProcessedPreviewArgs): SQL => {
 	const where = compileWhere({ orgId, env, filter, ctx });
 	const processed = buildProcessedIn(includeProcessed);
+	const mode = getExecutionFilterMode(includeProcessed);
+
+	if (mode === "explicit_only") {
+		return sql`
+			SELECT COUNT(*)::bigint AS count
+			FROM customers c
+			WHERE (${processed}) ${buildCommonWhere({ checkpoint, search, includeProcessed, includeNotRun: false })}
+		`;
+	}
+
+	if (mode === "not_run_only") {
+		return sql`
+			SELECT COUNT(*)::bigint AS count
+			FROM customers c
+			WHERE (${where}) ${buildCommonWhere({ checkpoint, search, includeProcessed })}
+		`;
+	}
+
 	return sql`
 		SELECT COUNT(*)::bigint AS count
 		FROM (
 			SELECT c.internal_id
 			FROM customers c
-			WHERE (${where}) ${buildCommonWhere({ checkpoint, search })}
+			WHERE (${where}) ${buildCommonWhere({ checkpoint, search, includeProcessed })}
 			UNION
 			SELECT c.internal_id
 			FROM customers c
-			WHERE (${processed}) ${buildCommonWhere({ checkpoint, search })}
+			WHERE (${processed}) ${buildCommonWhere({ checkpoint, search, includeProcessed, includeNotRun: false })}
 		) u
 	`;
 };

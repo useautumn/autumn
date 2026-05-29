@@ -120,7 +120,7 @@ export class CusService {
 		axios: AxiosInstance;
 		customer_id: string;
 	}): Promise<{ success: boolean }> {
-		const { data } = await axios.post(`/customers/clear_cache`, {
+		const { data } = await axios.post(`/v1/customers/clear_cache`, {
 			customer_id,
 		});
 		return data;

@@ -84,6 +84,7 @@ export const handleRunMigration = createRoute({
 						migrationId: id,
 						migrationRunId,
 						dryRun,
+						lazyRun,
 						controls: { limit, only, concurrency, retryFailed },
 					},
 					getRunMigrationTriggerOptions({

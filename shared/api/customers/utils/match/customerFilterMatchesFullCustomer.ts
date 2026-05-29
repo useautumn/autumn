@@ -1,5 +1,5 @@
 import type { FullCustomer } from "../../../../models/cusModels/fullCusModel.js";
-import { customerProductHasActiveStatus } from "../../../../utils/index.js";
+import { customerProductHasRelevantStatus } from "../../../../utils/index.js";
 import type { CustomerFilter } from "../../../migrations/filters/customerFilter.js";
 import {
 	arrayFilterMatches,
@@ -12,8 +12,8 @@ import { planFilterMatchesCustomerProduct } from "../../../products/utils/match/
  *
  * JS-side mirror of the SQL compiler's `customerRegistry`. Used by the lazy
  * migration helper to skip non-matching customers without queueing work.
- * Mirrors the `cp.status IN ACTIVE_STATUSES` ambient predicate baked into
- * the SQL plan scope — non-active cusProducts are ignored.
+ * Mirrors the `cp.status IN RELEVANT_STATUSES` ambient predicate baked into
+ * the SQL plan scope — expired/paused cusProducts are ignored.
  *
  * Supports `customer_id` and `plan` (`$some` / `$every` / `$none` and the
  * implicit-`$some` bare form). `item` sugar throws to make the gap explicit,
@@ -37,14 +37,14 @@ export const customerFilterMatchesFullCustomer = ({
 	}
 
 	if (filter.plan !== undefined) {
-		const activeProducts = fullCustomer.customer_products.filter(
-			customerProductHasActiveStatus,
+		const relevantProducts = fullCustomer.customer_products.filter(
+			customerProductHasRelevantStatus,
 		);
 		const planFilter = filter.plan === "$none" ? { $none: {} } : filter.plan;
 		if (
 			!arrayFilterMatches({
 				filter: planFilter,
-				items: activeProducts,
+				items: relevantProducts,
 				matchesElement: ({ filter: planFilter, item: customerProduct }) =>
 					planFilterMatchesCustomerProduct({
 						filter: planFilter,

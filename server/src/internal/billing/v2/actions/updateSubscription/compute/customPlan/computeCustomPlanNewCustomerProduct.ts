@@ -81,7 +81,8 @@ export const computeCustomPlanNewCustomerProduct = ({
 		initOptions: {
 			isCustom: updateSubscriptionContext.isCustom,
 			subscriptionId: stripeSubscription?.id, // don't populate if it's starting in the future.
-			subscriptionScheduleId: stripeSubscriptionSchedule?.id,
+			subscriptionScheduleId:
+				stripeSubscriptionSchedule?.id ?? currentCustomerProduct.scheduled_ids?.[0],
 			externalId: currentCustomerProduct.external_id ?? undefined,
 			startsAt: currentCustomerProduct.starts_at ?? undefined,
 			...cancelFields,
