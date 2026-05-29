@@ -2,7 +2,7 @@ import { describe, expect, test } from "bun:test";
 import {
 	evaluateStartupGate,
 	STARTUP_GATE_MAX_WAIT_MS,
-} from "@/honoUtils/handleHealthCheck.js";
+} from "@/honoUtils/startupGate.js";
 
 describe("evaluateStartupGate", () => {
 	test("not ready while Redis is down and max-wait has not elapsed", () => {
