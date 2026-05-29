@@ -123,6 +123,7 @@ const statusColumn: ColumnDef<CustomerRow, unknown> = {
 					status={event.status}
 					dryRun={event.dry_run}
 					response={event.response}
+					timestamp={event.timestamp}
 				/>
 			);
 
@@ -223,6 +224,22 @@ export function MigrationLiveView({
 		[debouncedSetSearch],
 	);
 
+	const handleExecutionStatusesChange = useCallback(
+		(statuses: ExecutionStatus[]) => {
+			setExecutionStatuses(statuses);
+			setPagination((p) => ({ ...p, pageIndex: 0 }));
+		},
+		[],
+	);
+
+	const {
+		itemEvents,
+		runs,
+		invalidate: invalidateRuns,
+	} = useMigrationRunsQuery({ migrationId });
+
+	const latestRun = runs[0];
+
 	const {
 		customers,
 		count,
@@ -233,13 +250,8 @@ export function MigrationLiveView({
 		page: pagination.pageIndex,
 		pageSize: pagination.pageSize,
 		migrationId,
+		executionStatuses,
 	});
-
-	const {
-		itemEvents,
-		runs,
-		invalidate: invalidateRuns,
-	} = useMigrationRunsQuery({ migrationId });
 
 	const {
 		subscriptions: realtimeSubscriptions,
@@ -254,7 +266,7 @@ export function MigrationLiveView({
 	);
 
 	const eventsByCustomer = useMemo(
-		() => buildEventsByCustomer(itemEvents),
+		() => buildEventsByCustomer(itemEvents.filter((event) => !event.dry_run)),
 		[itemEvents],
 	);
 
@@ -305,20 +317,13 @@ export function MigrationLiveView({
 	);
 
 	const filteredCustomers = useMemo(() => {
-		const hasExecution = executionStatuses.length > 0;
 		const hasStatus = customerFilters.status.length > 0;
 		const hasVersion = customerFilters.version.length > 0;
 		const hasProcessor = customerFilters.processor.length > 0;
 		const hasNone = customerFilters.none;
-		if (!hasExecution && !hasStatus && !hasVersion && !hasProcessor && !hasNone)
+		if (!hasStatus && !hasVersion && !hasProcessor && !hasNone)
 			return enrichedCustomers;
 		return enrichedCustomers.filter((c) => {
-			if (hasExecution) {
-				const status = c._event?.status;
-				if (!status && !executionStatuses.includes("not_run")) return false;
-				if (status && !executionStatuses.includes(status as ExecutionStatus))
-					return false;
-			}
 			const cusProducts = c.customer_products ?? [];
 			if (hasNone && cusProducts.length === 0) return true;
 			if (hasStatus) {
@@ -348,7 +353,7 @@ export function MigrationLiveView({
 			}
 			return true;
 		});
-	}, [enrichedCustomers, executionStatuses, customerFilters]);
+	}, [enrichedCustomers, customerFilters]);
 
 	const pageCount =
 		count !== null ? Math.max(Math.ceil(count / pagination.pageSize), 1) : 1;
@@ -368,7 +373,6 @@ export function MigrationLiveView({
 	const canPrev = pagination.pageIndex > 0;
 	const canNext = count !== null && currentPage < pageCount;
 
-	const latestRun = runs[0];
 	const latestFailedRun =
 		latestRun?.status === "failed" && latestRun.error_message
 			? latestRun
@@ -701,11 +705,11 @@ export function MigrationLiveView({
 					extraMenuItems={
 						<ExecutionStatusSubMenu
 							selected={executionStatuses}
-							onChange={setExecutionStatuses}
+							onChange={handleExecutionStatusesChange}
 						/>
 					}
 					hasActiveExtraFilters={hasActiveExecutionFilters(executionStatuses)}
-					onClearExtra={() => setExecutionStatuses([])}
+					onClearExtra={() => handleExecutionStatusesChange([])}
 					hideSavedViews
 				/>
 				<div className="relative flex items-center flex-1 min-w-0">
@@ -846,23 +850,56 @@ function SampleCustomerPicker({
 				c.email?.toLowerCase().includes(q),
 		);
 	}, [customers, search]);
+	const selectedIdSet = new Set(selectedIds);
+	const filteredIds = filtered.map((c) => c.id ?? c.internal_id);
+	const allFilteredSelected =
+		filteredIds.length > 0 && filteredIds.every((id) => selectedIdSet.has(id));
 
 	const toggle = (id: string) => {
-		onChange(
-			selectedIds.includes(id)
-				? selectedIds.filter((v) => v !== id)
-				: [...selectedIds, id],
-		);
+		const nextIds = new Set(selectedIds);
+		if (nextIds.has(id)) {
+			nextIds.delete(id);
+		} else {
+			nextIds.add(id);
+		}
+		onChange(Array.from(nextIds));
+	};
+
+	const toggleFiltered = () => {
+		const filteredIdSet = new Set(filteredIds);
+		if (allFilteredSelected) {
+			onChange(selectedIds.filter((id) => !filteredIdSet.has(id)));
+			return;
+		}
+
+		const nextIds = new Set(selectedIds);
+		for (const id of filteredIds) nextIds.add(id);
+		onChange(Array.from(nextIds));
 	};
 
 	return (
 		<div className="flex flex-col gap-2">
-			<Input
-				value={search}
-				onChange={(e) => setSearch(e.target.value)}
-				placeholder="Search customers..."
-				className="text-sm"
-			/>
+			<div className="flex items-center gap-2">
+				<Input
+					value={search}
+					onChange={(e) => setSearch(e.target.value)}
+					placeholder="Search customers..."
+					className="text-sm"
+				/>
+				<Button
+					type="button"
+					variant="secondary"
+					size="sm"
+					disabled={filteredIds.length === 0}
+					onClick={toggleFiltered}
+					className={cn(
+						"h-input",
+						allFilteredSelected && "bg-primary/10 text-primary",
+					)}
+				>
+					{allFilteredSelected ? "Clear all" : "Select all"}
+				</Button>
+			</div>
 			<div className="h-48 overflow-y-auto rounded-xl border border-border">
 				{filtered.length === 0 ? (
 					<div className="px-3 py-4 text-center text-xs text-subtle">
@@ -870,7 +907,7 @@ function SampleCustomerPicker({
 					</div>
 				) : (
 					filtered.map((c) => {
-						const isSelected = selectedIds.includes(c.id ?? c.internal_id);
+						const isSelected = selectedIdSet.has(c.id ?? c.internal_id);
 						return (
 							<button
 								key={c.internal_id}

@@ -11,6 +11,7 @@ import {
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
+import { replaceScheduledPhaseCustomerProductIds } from "@/internal/customers/schedules/repos/replaceScheduledPhaseCustomerProductIds";
 import { invoiceActions } from "@/internal/invoices/actions";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 import { FreeTrialService } from "@/internal/products/free-trials/FreeTrialService";
@@ -90,6 +91,11 @@ export const executeAutumnBillingPlan = async ({
 	await insertNewCusProducts({
 		ctx,
 		newCusProducts: insertCustomerProducts,
+	});
+
+	await replaceScheduledPhaseCustomerProductIds({
+		ctx,
+		replacements: autumnBillingPlan.schedulePhaseCustomerProductReplacements,
 	});
 
 	// 3. Update customer product (DB only)

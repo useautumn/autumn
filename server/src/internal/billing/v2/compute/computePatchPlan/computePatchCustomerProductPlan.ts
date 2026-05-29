@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import { computeSchedulePhaseReplacements } from "@/internal/billing/v2/compute/computeSchedulePhaseReplacements";
 import { initPatchCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initPatchedCustomerProduct";
 
 export const computePatchCustomerProductPlan = ({
@@ -58,18 +59,31 @@ export const computePatchCustomerProductPlan = ({
 	} satisfies Partial<AutumnBillingPlan>;
 
 	if (patchContext.mode === "new") {
+		const isUpdatingScheduledProduct =
+			patchContext.originalCustomerProduct.status === CusProductStatus.Scheduled;
+
 		return {
 			...basePlan,
 			insertCustomerProducts: [finalCustomerProduct],
-			updateCustomerProduct: {
-				customerProduct: patchContext.originalCustomerProduct,
-				updates: {
-					status: CusProductStatus.Expired,
-					ended_at: Date.now(),
-					canceled: true,
-					canceled_at: Date.now(),
-				},
-			},
+			updateCustomerProduct: isUpdatingScheduledProduct
+				? undefined
+				: {
+						customerProduct: patchContext.originalCustomerProduct,
+						updates: {
+							status: CusProductStatus.Expired,
+							ended_at: Date.now(),
+							canceled: true,
+							canceled_at: Date.now(),
+						},
+					},
+			deleteCustomerProduct: isUpdatingScheduledProduct
+				? patchContext.originalCustomerProduct
+				: undefined,
+			schedulePhaseCustomerProductReplacements:
+				computeSchedulePhaseReplacements({
+					oldCustomerProduct: patchContext.originalCustomerProduct,
+					newCustomerProduct: finalCustomerProduct,
+				}),
 		} satisfies AutumnBillingPlan;
 	}
 

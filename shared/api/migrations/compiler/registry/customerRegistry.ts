@@ -1,4 +1,4 @@
-import { ACTIVE_STATUSES } from "../../../../utils/cusProductUtils/cusProductConstants.js";
+import { RELEVANT_STATUSES } from "../../../../utils/cusProductUtils/cusProductConstants.js";
 import type { NavScope, RootScope } from "./registryTypes.js";
 
 /**
@@ -27,8 +27,8 @@ import type { NavScope, RootScope } from "./registryTypes.js";
  * Ambient predicates push `org_id` / `env` down into every scope whose
  * table has those columns. Without this, multi-tenant scans bloat 10x+.
  *
- * `cp.status IN ACTIVE_STATUSES` is also baked in — customer-rooted
- * filters always operate on active plan instances.
+ * `cp.status IN RELEVANT_STATUSES` is also baked in — customer-rooted
+ * filters operate on active and scheduled plan instances.
  */
 
 /**
@@ -81,7 +81,7 @@ const planScope: NavScope = {
 	ambient: [
 		{
 			column: "cp.status",
-			source: { kind: "values", values: ACTIVE_STATUSES },
+			source: { kind: "values", values: RELEVANT_STATUSES },
 		},
 	],
 	fields: {

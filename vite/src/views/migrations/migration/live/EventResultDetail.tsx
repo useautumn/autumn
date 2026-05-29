@@ -35,6 +35,12 @@ type MigrationPreview = {
 	balance_changes?: (string | BalanceChange)[];
 	flag_changes?: (string | FlagChange)[];
 };
+type ErrorPayload = {
+	message?: unknown;
+	error?: unknown;
+	code?: unknown;
+	path?: unknown;
+};
 
 function parseJson<T>(raw: string | T): T | null {
 	if (typeof raw !== "string") return raw;
@@ -49,6 +55,30 @@ function parseList<T>(raw: (string | T)[] | undefined): T[] {
 	return (raw ?? [])
 		.map((r) => parseJson<T>(r))
 		.filter((c): c is T => c !== null);
+}
+
+function formatUnknownError(value: unknown): string | null {
+	if (value === null || value === undefined) return null;
+	if (typeof value === "string") return value;
+	if (typeof value === "number" || typeof value === "boolean")
+		return String(value);
+	if (Array.isArray(value))
+		return value.map(formatUnknownError).filter(Boolean).join("\n");
+
+	if (typeof value === "object") {
+		const payload = value as ErrorPayload;
+		const message = formatUnknownError(payload.message ?? payload.error);
+		const prefix = [payload.code, payload.path].filter(Boolean).join(" ");
+		if (message) return prefix ? `${prefix}: ${message}` : message;
+
+		try {
+			return JSON.stringify(value, null, 2);
+		} catch {
+			return "Unknown error";
+		}
+	}
+
+	return "Unknown error";
 }
 
 const DOT_COLORS: Record<string, string> = {
@@ -308,13 +338,16 @@ export function EventResultDetail({ event }: { event: MigrationItemEvent }) {
 	if (!response) return null;
 
 	if (event.status === "failed") {
-		const error = response.error as { message?: string } | undefined;
-		if (!error?.message) return null;
+		const error = response.error as ErrorPayload | undefined;
+		const message = formatUnknownError(error?.message ?? error);
+		if (!message) return null;
 		return (
-		<div className="flex items-start gap-2 min-h-8 px-3 py-2 rounded-xl border border-red-500/20 bg-red-500/5 text-sm text-red-500">
-			<span className="size-2 rounded-full bg-red-500 shrink-0 mt-1" />
-			<span className="break-words min-w-0">{error.message}</span>
-		</div>
+			<div className="flex items-start gap-2 min-h-8 px-3 py-2 rounded-xl border border-red-500/20 bg-red-500/5 text-sm text-red-500">
+				<span className="size-2 rounded-full bg-red-500 shrink-0 mt-1" />
+				<span className="break-words min-w-0 whitespace-pre-wrap">
+					{message}
+				</span>
+			</div>
 		);
 	}
 
@@ -322,9 +355,9 @@ export function EventResultDetail({ event }: { event: MigrationItemEvent }) {
 	if (preview) return <PreviewSummary preview={preview} />;
 
 	if (event.status === "skipped") {
-		const skipped = response.skipped as { reason?: string } | undefined;
-		const guard = response.guard as { reason?: string } | undefined;
-		const reason = skipped?.reason ?? guard?.reason;
+		const skipped = response.skipped as { reason?: unknown } | undefined;
+		const guard = response.guard as { reason?: unknown } | undefined;
+		const reason = formatUnknownError(skipped?.reason ?? guard?.reason);
 		if (reason) return <span className="text-sm text-tertiary-foreground">{reason}</span>;
 	}
 
