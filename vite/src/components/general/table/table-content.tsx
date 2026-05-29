@@ -10,7 +10,7 @@ export function TableContent({
 	children: React.ReactNode;
 	className?: string;
 }) {
-	const { flexibleTableColumns, enableColumnVisibility, isLoading, table } =
+	const { flexibleTableColumns, enableColumnVisibility, isLoading, isTransitioning, table } =
 		useTableContext();
 	const rows = table.getRowModel().rows;
 
@@ -22,8 +22,8 @@ export function TableContent({
 				className,
 			)}
 		>
-			{isLoading && (
-				<div className="bg-white/60 dark:bg-black/60 absolute pointer-events-none rounded-lg -inset-[1px] z-70" />
+			{(isLoading || isTransitioning) && (
+				<div className="bg-white/40 dark:bg-black/40 absolute pointer-events-none rounded-lg -inset-[1px] z-70" />
 			)}
 			{enableColumnVisibility && (
 				<div className="absolute right-2 top-1 z-45 h-fit">

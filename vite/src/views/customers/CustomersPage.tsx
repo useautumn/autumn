@@ -6,7 +6,6 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetCleanup } from "@/hooks/stores/useSheetStore";
 import { CustomerListTable } from "../customers2/components/table/customer-list/CustomerListTable";
-import LoadingScreen from "../general/LoadingScreen";
 import { OnboardingGuide } from "../onboarding4/OnboardingGuide";
 import { CustomersContext } from "./CustomersContext";
 import { useCusSearchQuery } from "./hooks/useCusSearchQuery";
@@ -34,22 +33,18 @@ function CustomersPageContent() {
 	useSavedViewsQuery();
 	useFullCusSearchQuery();
 
-	if (!isInitialized || productsLoading || customersLoading) {
-		return <LoadingScreen />;
-	}
+	const hasData = customers && customers.length > 0;
+	const isPageLoading =
+		!hasData && (!isInitialized || productsLoading || customersLoading);
 
 	return (
-		<CustomersContext.Provider
-			value={{
-				customers,
-			}}
-		>
+		<CustomersContext.Provider value={{ customers: customers ?? [] }}>
 			<PageContainer>
 				<OnboardingGuide />
 				<CustomerListTable
 					key={org?.id}
-					customers={customers}
-					isFetchingUncached={isFetchingUncached}
+					customers={customers ?? []}
+					isFetchingUncached={isPageLoading || isFetchingUncached}
 				/>
 			</PageContainer>
 		</CustomersContext.Provider>

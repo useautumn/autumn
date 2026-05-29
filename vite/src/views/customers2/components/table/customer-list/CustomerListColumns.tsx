@@ -7,6 +7,12 @@ import {
 } from "@autumn/shared";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import type { z } from "zod/v4";
+import {
+	dateSkeleton,
+	hiddenSkeleton,
+	idSkeleton,
+	statusSkeleton,
+} from "@/components/general/table/table-skeleton-presets";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import {
 	Tooltip,
@@ -150,6 +156,7 @@ export const createCustomerListColumns = (): ColumnDef<
 		header: "ID",
 		accessorKey: "id",
 		size: 150,
+		meta: { skeleton: idSkeleton },
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			const customer = row.original;
 			return (
@@ -183,6 +190,7 @@ export const createCustomerListColumns = (): ColumnDef<
 		header: "Products",
 		accessorKey: "customer_products",
 		size: 120,
+		meta: { skeleton: statusSkeleton },
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			return getCusProductsInfo({
 				customer: row.original,
@@ -194,6 +202,7 @@ export const createCustomerListColumns = (): ColumnDef<
 		header: "Created At",
 		accessorKey: "created_at",
 		size: 100,
+		meta: { skeleton: dateSkeleton },
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			const { date, time } = formatUnixToDateTime(row.original.created_at);
 			return (
@@ -210,6 +219,7 @@ export const createCustomerListColumns = (): ColumnDef<
 		size: 40,
 		enableSorting: false,
 		enableHiding: false,
+		meta: { skeleton: hiddenSkeleton },
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			return (
 				<div

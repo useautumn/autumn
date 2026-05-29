@@ -49,7 +49,7 @@ export function CustomerListSearchBar() {
 				debouncedSearch(raw.trim());
 			}}
 				className="pl-8! text-sm w-full"
-				placeholder={`Search ${Intl.NumberFormat("en-US").format(totalCount)} customers`}
+				placeholder={totalCount > 0 ? `Search ${Intl.NumberFormat("en-US").format(totalCount)} customers` : "Search customers"}
 			/>
 		</div>
 	);
