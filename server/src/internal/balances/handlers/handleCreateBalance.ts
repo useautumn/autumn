@@ -6,6 +6,7 @@ import { validateCreateBalanceParams } from "@/internal/balances/createBalance/v
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import { CusService } from "@/internal/customers/CusService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 
@@ -59,6 +60,12 @@ export const handleCreateBalance = createRoute({
 		await CusEntService.insert({
 			ctx,
 			data: [newCustomerEntitlement],
+		});
+
+		await deleteCachedFullCustomer({
+			ctx,
+			customerId: fullCustomer.id ?? customer_id,
+			source: "handleCreateBalance",
 		});
 
 		return c.json({ success: true });
