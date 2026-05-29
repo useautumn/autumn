@@ -133,7 +133,8 @@ TAKEHOME.md
 # .context/
 
 # ai-sync: generated files (source of truth is ai/)
-.cursor/
+.cursor/*
+!.cursor/worktrees.json
 .claude/
 .codex/
 .agents/
