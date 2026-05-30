@@ -19,8 +19,8 @@ import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import CommandBar from "@/views/command-bar/CommandBar";
-import { useEventNames } from "@/views/customers/customer/analytics/hooks/useEventNames";
 import LoadingScreen from "@/views/general/LoadingScreen";
+import { useEventNames } from "@/views/customers/customer/analytics/hooks/useEventNames";
 import { InviteNotifications } from "@/views/general/notifications/InviteNotifications";
 import { DeployToProdDialog } from "@/views/main-sidebar/components/deploy-button/DeployToProdDialog";
 import { MainSidebar } from "@/views/main-sidebar/MainSidebar";
@@ -68,7 +68,7 @@ export function MainLayout() {
 		}
 	}, [orgLoading, org, env, navigate]);
 
-	if (isPending || orgLoading) {
+	if (isPending) {
 		return (
 			<AutumnProvider
 				backendUrl={import.meta.env.VITE_BACKEND_URL}

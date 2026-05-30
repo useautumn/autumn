@@ -3,6 +3,7 @@ import {
 	type BillingAutoTopupSucceededInvoice,
 	type BillingResult,
 	fullCustomerToCustomerEntitlements,
+	fullCustomerToTags,
 	getApiBalance,
 	WebhookEventType,
 } from "@autumn/shared";
@@ -101,6 +102,9 @@ export const sendAutoTopupSucceededWebhook = async ({
 				invoice_mode: Boolean(autoTopupContext.invoiceMode),
 				invoice,
 			},
+			tags: fullCustomerToTags({
+				fullCustomer: autoTopupContext.fullCustomer,
+			}),
 		});
 	} catch (error) {
 		ctx.logger.error(
