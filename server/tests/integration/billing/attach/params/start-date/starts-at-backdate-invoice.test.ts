@@ -15,7 +15,7 @@ import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { expectAttachBackdateCorrect } from "./expectAttachBackdateCorrect";
+import { expectAttachBackdateCorrect } from "./utils/expectAttachBackdateCorrect";
 
 test.concurrent(
 	`${chalk.yellowBright("starts_at backdate invoice mode: new subscription sends catch-up invoice")}`,

@@ -201,6 +201,7 @@ export const setupAttachBillingContext = async ({
 		trialContext,
 		currentEpochMs,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
+		billingStartsAt: params.starts_at,
 	});
 
 	// Trial ends at overrides billing cycle anchor
@@ -221,15 +222,18 @@ export const setupAttachBillingContext = async ({
 	const billingStartsAt =
 		params.starts_at ??
 		(planTiming === "end_of_cycle" ? endOfCycleMs : undefined);
+
 	const hasFutureStartDate = isFutureStartDate(
 		params.starts_at,
 		currentEpochMs,
 	);
+
 	const subscriptionBackdateStartMs =
 		params.starts_at !== undefined &&
 		isPastStartDate(params.starts_at, currentEpochMs)
 			? params.starts_at
 			: undefined;
+
 	const accessStartsAt = getAttachAccessStartsAt({
 		params,
 		currentEpochMs,

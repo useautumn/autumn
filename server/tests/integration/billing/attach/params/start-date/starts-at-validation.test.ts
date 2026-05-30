@@ -269,6 +269,72 @@ test.concurrent(
 );
 
 test.concurrent(
+	`${chalk.yellowBright("starts_at: past date rejects free trials")}`,
+	async () => {
+		const customerId = "attach-start-date-past-trial";
+		const proTrial = products.proWithTrial({
+			id: "pro-trial",
+			trialDays: 7,
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { autumnV2_2, advancedTo } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [proTrial] }),
+			],
+			actions: [],
+		});
+
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage: "Past starts_at cannot be used together with a free trial",
+			func: () =>
+				autumnV2_2.billing.attach<AttachParamsV1Input>({
+					customer_id: customerId,
+					plan_id: proTrial.id,
+					starts_at: subDays(advancedTo, 1).getTime(),
+				}),
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("starts_at: past date rejects free trials at preview time")}`,
+	async () => {
+		const customerId = "attach-start-date-past-trial-preview";
+		const proTrial = products.proWithTrial({
+			id: "pro-trial",
+			trialDays: 7,
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { autumnV2_2, advancedTo } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [proTrial] }),
+			],
+			actions: [],
+		});
+
+		// The trial check is intentionally not preview-gated, so the form surfaces
+		// the error before the user clicks confirm.
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage: "Past starts_at cannot be used together with a free trial",
+			func: () =>
+				autumnV2_2.billing.previewAttach<AttachParamsV1Input>({
+					customer_id: customerId,
+					plan_id: proTrial.id,
+					starts_at: subDays(advancedTo, 1).getTime(),
+				}),
+		});
+	},
+);
+
+test.concurrent(
 	`${chalk.yellowBright("starts_at: beta future date rejects custom free trial")}`,
 	async () => {
 		const customerId = "attach-start-date-beta-trial";

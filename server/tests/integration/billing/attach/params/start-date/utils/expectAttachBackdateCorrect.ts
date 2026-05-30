@@ -7,7 +7,7 @@ import {
 import { expectBackdatedStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectBackdatedStripeSubscriptionCorrect";
 import type { TestContext } from "@tests/utils/testInitUtils/createTestContext";
 import type { AutumnInt } from "@/external/autumn/autumnCli";
-import { getCustomerProduct } from "./utils";
+import { getCustomerProduct } from ".";
 
 export const expectAttachBackdateCorrect = async ({
 	autumn,

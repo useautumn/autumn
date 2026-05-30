@@ -7,7 +7,7 @@ import chalk from "chalk";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle";
 import { handleCreateScheduleErrors } from "@/internal/billing/v2/actions/createSchedule/errors/handleCreateScheduleErrors";
-import { STRIPE_BACKDATE_INVOICE_LINE_ITEM_LIMIT } from "@/internal/billing/v2/utils/stripeBackdateStartDateUtils";
+import { STRIPE_BACKDATE_INVOICE_LINE_ITEM_LIMIT } from "@/internal/billing/v2/utils/backdate/countBackdatedPeriods";
 
 const db = undefined as unknown as DrizzleCli;
 

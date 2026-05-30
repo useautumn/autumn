@@ -20,6 +20,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getBillingCycleAnchorForDirection } from "@/internal/billing/v2/utils/billingContext/getBillingCycleAnchorForDirection";
 import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingContextForAnchorResetRefund";
+import { getBackdatedLineItemContext } from "./getBackdatedLineItemContext";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 
 type LineItemDirection = "charge" | "refund";
@@ -95,6 +96,15 @@ export const customerProductToLineItems = ({
 			if (action.type === "use_snapped_now") effectiveNow = action.snappedNow;
 		}
 
+		const backdatedLineItemContext = getBackdatedLineItemContext({
+			price,
+			billingContext: billingContextForPeriod,
+			billingPeriod,
+			direction,
+			billingTiming: "in_advance",
+		});
+		if (backdatedLineItemContext) effectiveNow = backdatedLineItemContext.now;
+
 		// Build line item context
 		const context: LineItemContext = {
 			price,
@@ -109,6 +119,8 @@ export const customerProductToLineItems = ({
 			entity,
 			customerProduct,
 			customerPrice: cusPrice,
+			effectivePeriod: backdatedLineItemContext?.effectivePeriod,
+			backdate: backdatedLineItemContext?.backdate,
 		};
 
 		if (isFixedPrice(price)) {

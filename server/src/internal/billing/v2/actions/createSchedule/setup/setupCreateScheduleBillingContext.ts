@@ -93,6 +93,7 @@ export const setupCreateScheduleBillingContext = async ({
 			subscription_id: plan.subscription_id,
 		})),
 		invoice_mode: params.invoice_mode,
+		discounts: params.discounts,
 		success_url: params.success_url,
 		checkout_session_params: params.checkout_session_params,
 		redirect_mode: params.redirect_mode ?? "if_required",
@@ -103,6 +104,7 @@ export const setupCreateScheduleBillingContext = async ({
 		ctx,
 		params: immediateParams,
 		preview,
+		billingStartsAt: immediatePhase.starts_at,
 	});
 
 	validateCreateSchedulePhasePlans({

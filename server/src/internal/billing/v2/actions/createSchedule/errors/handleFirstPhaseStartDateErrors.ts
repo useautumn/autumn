@@ -5,7 +5,8 @@ import {
 	ms,
 	RecaseError,
 } from "@autumn/shared";
-import { assertStripeBackdateInvoiceLineItemLimit } from "@/internal/billing/v2/utils/stripeBackdateStartDateUtils";
+import { assertNoBackdateWithExistingSubscription } from "@/internal/billing/v2/utils/backdate/assertNoBackdateWithExistingSubscription";
+import { assertStripeBackdateInvoiceLineItemLimit } from "@/internal/billing/v2/utils/backdate/stripeBackdateInvoiceLimit";
 
 const FIRST_PHASE_TOLERANCE_MS = ms.minutes(15);
 
@@ -49,14 +50,10 @@ export const handleFirstPhaseStartDateErrors = ({
 			});
 		}
 
-		if (billingContext.stripeSubscription) {
-			throw new RecaseError({
-				message:
-					"Past first phase starts_at is only supported when creating a new Stripe subscription.",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
+		assertNoBackdateWithExistingSubscription({
+			billingContext,
+			subject: "Past first phase starts_at",
+		});
 
 		// Previews don't yet know whether the caller will settle via invoice
 		// (which supports backdating) or Stripe Checkout (which doesn't), so only

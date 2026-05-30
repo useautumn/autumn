@@ -9,7 +9,8 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { assertStripeBackdateInvoiceLineItemLimit } from "@/internal/billing/v2/utils/stripeBackdateStartDateUtils";
+import { assertNoBackdateWithExistingSubscription } from "@/internal/billing/v2/utils/backdate/assertNoBackdateWithExistingSubscription";
+import { assertStripeBackdateInvoiceLineItemLimit } from "@/internal/billing/v2/utils/backdate/stripeBackdateInvoiceLimit";
 
 export const handleStartDateErrors = ({
 	billingContext,
@@ -44,18 +45,7 @@ export const handleStartDateErrors = ({
 			});
 		}
 
-		if (
-			billingContext.stripeSubscription ||
-			billingContext.stripeSubscriptionSchedule ||
-			billingContext.scheduledCustomerProduct
-		) {
-			throw new RecaseError({
-				message:
-					"Past starts_at is only supported when creating a new Stripe subscription.",
-				code: ErrCode.InvalidRequest,
-				statusCode: StatusCodes.BAD_REQUEST,
-			});
-		}
+		assertNoBackdateWithExistingSubscription({ billingContext });
 
 		// Previews don't know whether the caller will settle via invoice (supports
 		// backdating) or Stripe Checkout (doesn't), so only block checkout on execute.
