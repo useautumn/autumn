@@ -18,6 +18,7 @@ import {
 	handleUpsertRevenueCatConfig,
 } from "./handlers/handleRevenueCatConfig.js";
 import { handleUpdateOrg } from "./handlers/handleUpdateOrg.js";
+import { handleUpdateOrgConfig } from "./handlers/handleUpdateOrgConfig.js";
 import {
 	handleGetVercelSink,
 	handleUpsertVercelConfig,
@@ -34,6 +35,7 @@ export const internalOrgRouter = new Hono<HonoEnv>();
 
 internalOrgRouter.get("", ...handleGetOrg);
 internalOrgRouter.delete("", ...handleDeleteOrg);
+internalOrgRouter.patch("/config", ...handleUpdateOrgConfig);
 internalOrgRouter.get("/members", ...handleGetOrgMembers);
 internalOrgRouter.post("/remove-member", ...handleRemoveMember);
 internalOrgRouter.get("/upload_url", ...handleGetUploadUrl);
@@ -51,6 +53,7 @@ honoOrgRouter.get("/me", (c) => {
 	});
 });
 honoOrgRouter.patch("", ...handleUpdateOrg);
+honoOrgRouter.patch("/config", ...handleUpdateOrgConfig);
 honoOrgRouter.get("/stripe", ...handleGetStripeAccount);
 honoOrgRouter.delete("/stripe", ...handleDeleteStripe);
 honoOrgRouter.post("/stripe", ...handleConnectStripe);

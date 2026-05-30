@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleCheck } from "../api/check/handleCheck.js";
+import { handleBatchTrack } from "./handlers/handleBatchTrack.js";
 import { handleCreateBalance } from "./handlers/handleCreateBalance.js";
 import { handleDeleteBalance } from "./handlers/handleDeleteBalance.js";
 import { handleFinalizeLock } from "./handlers/handleFinalizeLock.js";
@@ -36,5 +37,6 @@ balancesRpcRouter.post("/balances.delete", ...handleDeleteBalance);
 
 balancesRpcRouter.post("/balances.track", ...handleTrack);
 balancesRpcRouter.post("/balances.track_tokens", ...handleTrackTokens);
+balancesRpcRouter.post("/balances.batch_track", ...handleBatchTrack);
 balancesRpcRouter.post("/balances.check", ...handleCheck);
 balancesRpcRouter.post("/balances.finalize", ...handleFinalizeLock);

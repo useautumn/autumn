@@ -4,6 +4,25 @@ import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPla
 import { PlanItemFilterSchema } from "@api/products/items/filter/planItemFilter";
 import { z } from "zod/v4";
 
+export const UpdatePlanItemParamsV1Schema = z
+	.object({
+		filter: PlanItemFilterSchema.meta({
+			description:
+				"Filter selecting which existing plan item(s) to update. Same shape as remove_items filters.",
+		}),
+		included: z.number().nonnegative().optional().meta({
+			description:
+				"Override the matched item's included usage / allowance. Existing usage carries forward.",
+		}),
+	})
+	.meta({
+		title: "UpdatePlanItem",
+		description:
+			"Patch an existing plan item in place. Phase 1 supports only `included`.",
+	});
+
+export type UpdatePlanItemParamsV1 = z.infer<typeof UpdatePlanItemParamsV1Schema>;
+
 export const CustomizePlanV1Schema = z
 	.object({
 		price: BasePriceParamsSchema.nullable().optional().meta({
@@ -12,13 +31,18 @@ export const CustomizePlanV1Schema = z
 		}),
 		items: z.array(CreatePlanItemParamsV1Schema).optional().meta({
 			description:
-				"Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items.",
+				"Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / update_items.",
 		}),
 		add_items: z.array(CreatePlanItemParamsV1Schema).optional().meta({
 			description: "Items to add to the plan.",
 		}),
 		remove_items: z.array(PlanItemFilterSchema).optional().meta({
 			description: "Filters selecting items to remove from the plan.",
+		}),
+		update_items: z.array(UpdatePlanItemParamsV1Schema).optional().meta({
+			description:
+				"Patch existing matched plan items. Runs before add_items, after remove_items.",
+			internal: true,
 		}),
 		free_trial: FreeTrialParamsV1Schema.nullable().optional().meta({
 			description:
@@ -31,21 +55,24 @@ export const CustomizePlanV1Schema = z
 			data.price !== undefined ||
 			data.free_trial !== undefined ||
 			data.add_items !== undefined ||
-			data.remove_items !== undefined,
+			data.remove_items !== undefined ||
+			data.update_items !== undefined,
 		{
 			message:
-				"When using customize, at least one of price, items, add_items, remove_items, or free_trial must be provided",
+				"When using customize, at least one of price, items, add_items, remove_items, update_items, or free_trial must be provided",
 		},
 	)
 	.refine(
 		(data) =>
 			!(
 				data.items !== undefined &&
-				(data.add_items !== undefined || data.remove_items !== undefined)
+				(data.add_items !== undefined ||
+					data.remove_items !== undefined ||
+					data.update_items !== undefined)
 			),
 		{
 			message:
-				"customize.items (PUT-style) cannot be combined with add_items/remove_items (PATCH-style); pick one approach",
+				"customize.items (PUT-style) cannot be combined with add_items / remove_items / update_items (PATCH-style); pick one approach",
 		},
 	)
 	.meta({
@@ -65,7 +92,8 @@ export const hasCustomItems = (
 		customize.price !== undefined ||
 		customize.items !== undefined ||
 		customize.add_items !== undefined ||
-		customize.remove_items !== undefined
+		customize.remove_items !== undefined ||
+		customize.update_items !== undefined
 	);
 };
 
@@ -75,4 +103,5 @@ export const isCustomizePlanPatchStyle = (
 	customize?.items === undefined &&
 	(customize?.price !== undefined ||
 		customize?.add_items !== undefined ||
-		customize?.remove_items !== undefined);
+		customize?.remove_items !== undefined ||
+		customize?.update_items !== undefined);

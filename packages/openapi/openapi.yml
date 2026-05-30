@@ -7946,6 +7946,10 @@ paths:
         (Stripe checkout). For Stripe checkout, the customer_product is inserted
         before the customer completes the hosted form. (optional)
 
+        @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default
+        tax rate on the created subscription, invoice, or checkout session line
+        items. (optional)
+
 
         @returns A billing response with customer ID, invoice details, and
         payment URL (if checkout required).
@@ -8180,8 +8184,8 @@ paths:
                         description: Configuration for a feature item in a plan, including usage limits,
                           pricing, and rollover settings.
                       description: Override the items in the plan (PUT-style — replaces all existing
-                        items). Mutually exclusive with add_items /
-                        remove_items.
+                        items). Mutually exclusive with add_items / remove_items
+                        / update_items.
                     add_items:
                       type: array
                       items:
@@ -8573,6 +8577,11 @@ paths:
                     payment is deferred (invoice mode) or pending (Stripe
                     checkout). For Stripe checkout, the customer_product is
                     inserted before the customer completes the hosted form.
+                tax_rate_id:
+                  type: string
+                  description: Stripe tax rate ID (txr_...) to apply as the default tax rate on
+                    the created subscription, invoice, or checkout session line
+                    items.
               required:
                 - customer_id
                 - plan_id
@@ -8669,7 +8678,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779274895233,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780484495233,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779977746466,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781187346466,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -10050,6 +10059,10 @@ paths:
         (Stripe checkout). For Stripe checkout, the customer_product is inserted
         before the customer completes the hosted form. (optional)
 
+        @param taxRateId - Stripe tax rate ID (txr_...) to apply as the default
+        tax rate on the created subscription, invoice, or checkout session line
+        items. (optional)
+
 
         @returns A preview response with line items, totals, and effective dates
         for the proposed changes.
@@ -10284,8 +10297,8 @@ paths:
                         description: Configuration for a feature item in a plan, including usage limits,
                           pricing, and rollover settings.
                       description: Override the items in the plan (PUT-style — replaces all existing
-                        items). Mutually exclusive with add_items /
-                        remove_items.
+                        items). Mutually exclusive with add_items / remove_items
+                        / update_items.
                     add_items:
                       type: array
                       items:
@@ -10677,6 +10690,11 @@ paths:
                     payment is deferred (invoice mode) or pending (Stripe
                     checkout). For Stripe checkout, the customer_product is
                     inserted before the customer completes the hosted form.
+                tax_rate_id:
+                  type: string
+                  description: Stripe tax rate ID (txr_...) to apply as the default tax rate on
+                    the created subscription, invoice, or checkout session line
+                    items.
               required:
                 - customer_id
                 - plan_id
@@ -12305,8 +12323,8 @@ paths:
                         description: Configuration for a feature item in a plan, including usage limits,
                           pricing, and rollover settings.
                       description: Override the items in the plan (PUT-style — replaces all existing
-                        items). Mutually exclusive with add_items /
-                        remove_items.
+                        items). Mutually exclusive with add_items / remove_items
+                        / update_items.
                     add_items:
                       type: array
                       items:
@@ -13020,8 +13038,8 @@ paths:
                         description: Configuration for a feature item in a plan, including usage limits,
                           pricing, and rollover settings.
                       description: Override the items in the plan (PUT-style — replaces all existing
-                        items). Mutually exclusive with add_items /
-                        remove_items.
+                        items). Mutually exclusive with add_items / remove_items
+                        / update_items.
                     add_items:
                       type: array
                       items:
@@ -14035,8 +14053,8 @@ paths:
                         description: Configuration for a feature item in a plan, including usage limits,
                           pricing, and rollover settings.
                       description: Override the items in the plan (PUT-style — replaces all existing
-                        items). Mutually exclusive with add_items /
-                        remove_items.
+                        items). Mutually exclusive with add_items / remove_items
+                        / update_items.
                     add_items:
                       type: array
                       items:
@@ -14381,6 +14399,11 @@ paths:
                     payment is deferred (invoice mode) or pending (Stripe
                     checkout). For Stripe checkout, the customer_product is
                     inserted before the customer completes the hosted form.
+                tax_rate_id:
+                  type: string
+                  description: Stripe tax rate ID (txr_...) to apply as the default tax rate on
+                    the created subscription, invoice, or checkout session line
+                    items.
               required:
                 - customer_id
               title: SetupPaymentParams
@@ -16039,6 +16062,10 @@ paths:
         @param properties - Additional properties to attach to this usage event.
         (optional)
 
+        @param async - If true, enqueue the event for asynchronous processing
+        and return 202 immediately. The response will not include balance
+        information. (optional)
+
 
         @returns The usage value recorded, with either a single updated balance
         or a map of updated balances. If Autumn is experiencing degraded service
@@ -16078,6 +16105,11 @@ paths:
                     type: string
                   additionalProperties: {}
                   description: Additional properties to attach to this usage event.
+                async:
+                  type: boolean
+                  description: If true, enqueue the event for asynchronous processing and return
+                    202 immediately. The response will not include balance
+                    information.
                 lock:
                   type: object
                   properties:
@@ -16391,6 +16423,109 @@ paths:
                           resets_at: 1781288736881
                         value: 1
       x-speakeasy-name-override: track
+      parameters:
+        - *a1
+  /v1/balances.batch_track:
+    post:
+      operationId: batchTrack
+      description: Enqueue up to 1000 usage events for asynchronous processing. Items
+        are validated synchronously up front; validated items are then enqueued
+        via SQS for background deduction by workers. The response returns 202
+        immediately and does not include balance information. On partial enqueue
+        failure (some items fail to enqueue, others succeed), the endpoint still
+        returns 202 and logs the failures server-side; clients should NOT retry,
+        because retrying re-enqueues the already-succeeded items. A 503 is
+        returned only when zero items were successfully enqueued (queue entirely
+        unavailable) — that case is safe to retry.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              minItems: 1
+              maxItems: 1000
+              items:
+                type: object
+                properties:
+                  customer_id:
+                    type: string
+                    description: The ID of the customer.
+                  feature_id:
+                    type: string
+                    description: The ID of the feature to track usage for. Required if event_name is
+                      not provided.
+                  entity_id:
+                    type: string
+                    description: The ID of the entity for entity-scoped balances (e.g., per-seat
+                      limits).
+                  event_name:
+                    type: string
+                    minLength: 1
+                    description: Event name to track usage for. Use instead of feature_id when
+                      multiple features should be tracked from a single event.
+                  value:
+                    type: number
+                    description: The amount of usage to record. Defaults to 1. Use negative values
+                      to credit balance (e.g., when removing a seat).
+                  properties:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties: {}
+                    description: Additional properties to attach to this usage event.
+                  async:
+                    type: boolean
+                    description: If true, enqueue the event for asynchronous processing and return
+                      202 immediately. The response will not include balance
+                      information.
+                  lock:
+                    type: object
+                    properties:
+                      lock_id:
+                        type: string
+                        maxLength: 256
+                        description: A unique identifier for this lock. Used to finalize the lock later
+                          via balances.finalize.
+                      enabled:
+                        const: true
+                        description: Must be true to enable locking.
+                      expires_at:
+                        type: number
+                        description: Unix timestamp (ms) when the lock automatically expires and
+                          releases the held balance.
+                    required:
+                      - lock_id
+                      - enabled
+                required:
+                  - customer_id
+              title: BatchTrackParams
+              examples:
+                - - customer_id: cus_123
+                    feature_id: messages
+                    value: 1
+                  - customer_id: cus_123
+                    event_name: message.sent
+                    value: 1
+      responses:
+        "202":
+          description: "Batch accepted. All items passed synchronous validation. Enqueue
+            is best-effort: partial failures (some items enqueued, some not) are
+            logged server-side and are NOT surfaced in the response body;
+            clients must not retry on 202. See the endpoint description for full
+            partial-failure semantics."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    const: true
+                required:
+                  - success
+                examples:
+                  - success: true
+      x-speakeasy-name-override: batchTrack
       parameters:
         - *a1
   /v1/events.list:
@@ -17941,6 +18076,10 @@ paths:
         @param processors - Filter by parent customer processor type (stripe,
         revenuecat, vercel). (optional)
 
+        @param customerId - Restrict the response to entities owned by this
+        customer id. Use to bulk-fetch all entities for one customer in a single
+        paginated call instead of iterating entities.get. (optional)
+
 
         @returns A paginated list of entity objects including their current
         subscriptions, purchases, balances, and flags.
@@ -18001,6 +18140,12 @@ paths:
                     type: string
                   description: Filter by parent customer processor type (stripe, revenuecat,
                     vercel).
+                customer_id:
+                  type: string
+                  minLength: 1
+                  description: Restrict the response to entities owned by this customer id. Use to
+                    bulk-fetch all entities for one customer in a single
+                    paginated call instead of iterating entities.get.
               title: ListEntitiesParams
               examples:
                 - start_cursor: ""
@@ -19169,6 +19314,69 @@ paths:
                   - id: <string>
                     customer_id: <string>
                     reward_id: <string>
+      x-speakeasy-name-override: redeemCode
+      parameters:
+        - *a1
+  /v1/rewards.redeem:
+    post:
+      operationId: redeemRewardCode
+      description: Redeem a reward promo code for a customer.
+      tags:
+        - rewards
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                code:
+                  type: string
+                  description: The reward promo code to redeem
+                customer_id:
+                  type: string
+                  description: The unique identifier of the customer redeeming the code
+              required:
+                - code
+                - customer_id
+              title: RedeemRewardCodeParams
+              examples:
+                - code: REWARD10
+                  customer_id: cus_456
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reward_id:
+                    type: string
+                    description: The ID of the redeemed reward
+                  entitlements_granted:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        feature_id:
+                          type: string
+                          description: The ID of the feature granted by the reward
+                        balance:
+                          type: number
+                          description: The balance granted for the feature
+                      required:
+                        - feature_id
+                        - balance
+                    description: The feature balances granted to the customer
+                required:
+                  - reward_id
+                  - entitlements_granted
+                examples:
+                  - reward_id: reward_789
+                    entitlements_granted:
+                      - feature_id: messages
+                        balance: 100
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a1

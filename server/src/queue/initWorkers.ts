@@ -10,6 +10,7 @@ import {
 } from "@aws-sdk/client-sqs";
 import * as Sentry from "@sentry/bun";
 import { type DrizzleCli, initDrizzle } from "@/db/initDrizzle.js";
+import { startPgPoolMonitor, stopPgPoolMonitor } from "@/db/pgPoolMonitor.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { verifyCacheConsistency } from "@/internal/billing/v2/workflows/verifyCacheConsistency/verifyCacheConsistency.js";
 import {
@@ -421,7 +422,8 @@ export const initWorkers = async ({
 	startupStartedAt: number;
 	queueImplementation: string;
 }) => {
-	const { db } = initDrizzle({ maxConnections: 10 });
+	const { db } = initDrizzle({ name: "worker", maxConnections: 40 });
+	startPgPoolMonitor();
 	const { warmupRegionalRedis } = await import("@/external/redis/initRedis.js");
 	await warmupRegionalRedis();
 
@@ -430,6 +432,7 @@ export const initWorkers = async ({
 	const shutdown = async () => {
 		console.log(`[SQS Worker ${process.pid}] Shutting down...`);
 		isRunning = false;
+		stopPgPoolMonitor();
 		shutdownBlueGreen();
 		for (const controller of abortControllers) {
 			controller.abort();
@@ -463,6 +466,10 @@ export const initWorkers = async ({
 		{
 			queueId: JOB_QUEUE_IDS.track,
 			queueUrl: process.env.TRACK_SQS_QUEUE_URL,
+		},
+		{
+			queueId: JOB_QUEUE_IDS.trackAsync,
+			queueUrl: process.env.TRACK_ASYNC_SQS_QUEUE_URL,
 		},
 	]) {
 		if (!queueUrl) continue;

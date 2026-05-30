@@ -1,6 +1,7 @@
 import "../sentry.ts";
 import { CronJob } from "cron";
 import { initDrizzle } from "../db/initDrizzle.js";
+import { startPgPoolMonitor, stopPgPoolMonitor } from "../db/pgPoolMonitor.js";
 import { logger } from "../external/logtail/logtailUtils.js";
 import {
 	describeSlotGate,
@@ -18,7 +19,8 @@ import { runProductCron } from "./productCron/runProductCron.js";
 import { runResetCron } from "./resetCron/runResetCron.js";
 import type { CronContext } from "./utils/CronContext.js";
 
-const { db, client } = initDrizzle();
+const { db, client } = initDrizzle({ name: "cron", maxConnections: 40 });
+startPgPoolMonitor();
 startBlueGreenHeartbeat({ db, logger, serviceName: "cron" });
 
 const logCronHeartbeat = () => {
@@ -78,6 +80,7 @@ main();
 
 process.on("SIGTERM", async () => {
 	console.log("Received SIGTERM signal, closing database connection...");
+	stopPgPoolMonitor();
 	stopBlueGreenHeartbeat({ serviceName: "cron" });
 	stopBlueGreenSlotStorePolling({ serviceName: "cron" });
 	await client.end();
@@ -86,6 +89,7 @@ process.on("SIGTERM", async () => {
 
 process.on("SIGINT", async () => {
 	console.log("Received SIGINT signal, closing database connection...");
+	stopPgPoolMonitor();
 	stopBlueGreenHeartbeat({ serviceName: "cron" });
 	stopBlueGreenSlotStorePolling({ serviceName: "cron" });
 	await client.end();

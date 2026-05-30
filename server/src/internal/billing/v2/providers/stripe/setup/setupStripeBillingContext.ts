@@ -10,11 +10,21 @@ import {
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import { all } from "better-all";
+import type Stripe from "stripe";
+import { stripeSubscriptionToScheduleId } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { fetchStripeCustomerForBilling } from "./fetchStripeCustomerForBilling";
 import { fetchStripeDiscountsForBilling } from "./fetchStripeDiscountsForBilling";
 import { fetchStripeSubscriptionForBilling } from "./fetchStripeSubscriptionForBilling";
 import { fetchStripeSubscriptionScheduleForBilling } from "./fetchStripeSubscriptionScheduleForBilling";
+import { fetchStripeTaxRateForBilling } from "./fetchStripeTaxRateForBilling";
+
+const getScheduleSubscriptionId = (
+	stripeSubscriptionSchedule: Stripe.SubscriptionSchedule | undefined,
+) => {
+	const subscription = stripeSubscriptionSchedule?.subscription;
+	return typeof subscription === "string" ? subscription : subscription?.id;
+};
 
 export const setupStripeBillingContext = async ({
 	ctx,
@@ -27,6 +37,7 @@ export const setupStripeBillingContext = async ({
 	skipBillingFetching,
 	skipSubscriptionFetching,
 	createStripeCustomerIfMissing = true,
+	fetchTaxRate = false,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
@@ -38,6 +49,7 @@ export const setupStripeBillingContext = async ({
 	skipBillingFetching?: boolean;
 	skipSubscriptionFetching?: boolean;
 	createStripeCustomerIfMissing?: boolean;
+	fetchTaxRate?: boolean;
 }) => {
 	const { stripeBillingContext } = contextOverride;
 
@@ -49,6 +61,7 @@ export const setupStripeBillingContext = async ({
 			stripeSubscriptionSchedule: undefined,
 			stripeCustomer: undefined,
 			stripeDiscounts: undefined,
+			stripeTaxRate: undefined,
 			paymentMethod: undefined,
 			testClockFrozenTime: undefined,
 		};
@@ -63,6 +76,7 @@ export const setupStripeBillingContext = async ({
 		stripeSubscription,
 		stripeSubscriptionSchedule,
 		stripeDiscounts,
+		stripeTaxRate,
 	} = await all({
 		async stripeContext() {
 			return fetchStripeCustomerForBilling({
@@ -96,10 +110,9 @@ export const setupStripeBillingContext = async ({
 				? fetchStripeSubscriptionScheduleForBilling({
 						ctx,
 						fullCus: fullCustomer,
-						subscriptionScheduleId:
-							typeof localStripeSubscription?.schedule === "string"
-								? localStripeSubscription.schedule
-								: undefined,
+						subscriptionScheduleId: stripeSubscriptionToScheduleId({
+							stripeSubscription: localStripeSubscription,
+						}),
 						products: [],
 						targetCusProductId: targetCustomerProduct?.id,
 					})
@@ -117,13 +130,28 @@ export const setupStripeBillingContext = async ({
 					params && "discounts" in params ? params.discounts : undefined,
 			});
 		},
+		async stripeTaxRate() {
+			if (!fetchTaxRate) return undefined;
+			const taxRateId =
+				params && "tax_rate_id" in params ? params.tax_rate_id : undefined;
+			return fetchStripeTaxRateForBilling({ ctx, taxRateId });
+		},
 	});
+
+	const stripeSubscriptionScheduleForContext =
+		stripeSubscription && stripeSubscriptionSchedule
+			? getScheduleSubscriptionId(stripeSubscriptionSchedule) ===
+				stripeSubscription.id
+				? stripeSubscriptionSchedule
+				: undefined
+			: stripeSubscriptionSchedule;
 
 	return {
 		stripeSubscription,
-		stripeSubscriptionSchedule,
+		stripeSubscriptionSchedule: stripeSubscriptionScheduleForContext,
 		stripeCustomer,
 		stripeDiscounts,
+		stripeTaxRate,
 		paymentMethod,
 		testClockFrozenTime,
 	};

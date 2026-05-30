@@ -9,6 +9,7 @@ import type { SQLWrapper } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg, { type PoolConfig } from "pg";
 import { otelConfig } from "../utils/otel/otelConfig.js";
+import { attachPoolErrorHandlers, registerPool } from "./pgPoolMonitor.js";
 
 type AutumnDb = Omit<ReturnType<typeof drizzle<typeof schema>>, "execute"> & {
 	execute: <TRow = Record<string, unknown>>(
@@ -39,11 +40,12 @@ const normalizeDbExecute = <
 
 /** Creates a Drizzle pool with the given configuration. */
 export const initDrizzle = ({
-	maxConnections = 20,
+	maxConnections = isProd ? 70 : 10,
 	replica = false,
 	connectTimeout = 5,
 	databaseUrl,
 	poolConfig,
+	name,
 }: {
 	maxConnections?: number;
 	replica?: boolean;
@@ -51,6 +53,8 @@ export const initDrizzle = ({
 	connectTimeout?: number | null;
 	databaseUrl?: string;
 	poolConfig?: PoolConfig;
+	/** Pool name for monitor/error logs. Omit to skip registration. */
+	name?: string;
 } = {}) => {
 	const envDbUrl = replica
 		? process.env.DATABASE_REPLICA_URL
@@ -60,11 +64,18 @@ export const initDrizzle = ({
 
 	const client = new pg.Pool({
 		connectionString: dbUrl,
+		keepAlive: true,
+		idleTimeoutMillis: 30_000,
 		...poolConfig,
 		max: maxConnections,
 		connectionTimeoutMillis:
 			connectTimeout === null ? undefined : connectTimeout * 1000,
 	});
+
+	if (name) {
+		attachPoolErrorHandlers({ pool: client, name });
+		registerPool({ pool: client, name, max: maxConnections });
+	}
 
 	const drizzleDb = drizzle(client, { schema });
 	const transaction = drizzleDb.transaction.bind(drizzleDb);
@@ -87,24 +98,33 @@ export const initDrizzle = ({
 const isProd = process.env.NODE_ENV === "production";
 
 export const { db: dbCritical, client: clientCritical } = initDrizzle({
-	maxConnections: 5,
+	name: "critical",
+	maxConnections: isProd ? 100 : 10,
 	connectTimeout: isProd ? 2 : 30,
 	databaseUrl: process.env.DATABASE_CRITICAL_URL,
 	poolConfig: {
 		application_name: "autumn-critical",
 		query_timeout: isProd ? 2_000 : 30_000,
+		// Keep 10 warm conns to avoid TLS-handshake stampedes on bursty traffic.
+		min: 10,
 	},
 });
 
 // -- General pool: used by all other endpoints --
 export const { db: dbGeneral, client: clientGeneral } = initDrizzle({
+	name: "general",
 	connectTimeout: isProd ? 5 : 30,
 });
 
 // -- Replica pool: used as fallback when primary is degraded --
 // Only created if DATABASE_REPLICA_URL is configured.
 const replicaResult = process.env.DATABASE_REPLICA_URL
-	? initDrizzle({ replica: true, maxConnections: 5, connectTimeout: null })
+	? initDrizzle({
+			name: "replica",
+			replica: true,
+			maxConnections: 15,
+			connectTimeout: null,
+		})
 	: null;
 export const dbReplica = replicaResult?.db ?? null;
 export const clientReplica = replicaResult?.client ?? null;

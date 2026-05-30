@@ -10,6 +10,7 @@ import { cors } from "hono/cors";
 import { autumnWebhookRouter } from "./external/autumn/autumnWebhookRouter.js";
 import { revenuecatWebhookRouter } from "./external/revenueCat/revenuecatWebhookRouter.js";
 import { stripeWebhookRouter } from "./external/stripe/stripeWebhookRouter.js";
+import { vercelTestApiRouter } from "./external/vercel/vercelTestApiRouter.js";
 import { vercelWebhookRouter } from "./external/vercel/vercelWebhookRouter.js";
 import { baseMiddleware } from "./honoMiddlewares/baseMiddleware.js";
 import { errorMiddleware } from "./honoMiddlewares/errorMiddleware.js";
@@ -22,6 +23,7 @@ import { cliRouter } from "./internal/dev/cli/cliRouter.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
 import { apiRouter } from "./routers/apiRouter.js";
 import { internalRouter } from "./routers/internalRouter.js";
+import { mcpProxyRouter } from "./routers/mcpProxyRouter.js";
 import { publicRouter } from "./routers/publicRouter.js";
 import { auth } from "./utils/auth.js";
 import { isAllowedOrigin } from "./utils/corsOrigins.js";
@@ -88,6 +90,8 @@ export const createHonoApp = () => {
 	app.get("/ready/:token", handleReadyCheck);
 	app.get("/", handleHealthCheck);
 
+	app.route("", mcpProxyRouter);
+
 	// Step 1: OTel HTTP span + base middleware + span enrichment
 	app.use(
 		"*",
@@ -140,6 +144,12 @@ export const createHonoApp = () => {
 	app.route("/webhooks/autumn", autumnWebhookRouter);
 	app.route("/webhooks/vercel", vercelWebhookRouter);
 	app.route("/webhooks/revenuecat", revenuecatWebhookRouter);
+
+	// Vercel SDK test mock — mounted in dev/test, used only when
+	// `ctx.testOptions.mockVercelApi` points the SDK at this route.
+	if (process.env.NODE_ENV !== "production") {
+		app.route("/__test/vercel/api", vercelTestApiRouter);
+	}
 
 	// Public routes (no auth required)
 	app.route("", publicRouter);

@@ -1,6 +1,5 @@
 import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
 import { useHotkeys } from "react-hotkeys-hook";
-import SmallSpinner from "@/components/general/SmallSpinner";
 import {
 	Pagination,
 	PaginationContent,
@@ -20,7 +19,7 @@ import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 const PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
 
 export function CustomerListPagination() {
-	const { isLoading, totalCount, nextCursor } = useCusSearchQuery();
+	const { totalCount, nextCursor, isFetchingUncached } = useCusSearchQuery();
 	const {
 		queryStates,
 		currentPage,
@@ -30,8 +29,10 @@ export function CustomerListPagination() {
 
 	const pageSize = queryStates.pageSize || 50;
 	const totalPages = Math.ceil((totalCount || 0) / pageSize);
+	const hasPaginationData = totalCount > 0;
 	const canGoPrev = currentPage > 1;
 	const canGoNext = Boolean(nextCursor);
+	const isDisabled = isFetchingUncached;
 
 	useHotkeys(
 		"left",
@@ -55,47 +56,43 @@ export function CustomerListPagination() {
 
 	return (
 		<div className="flex justify-center items-center gap-2 text-xs text-tertiary-foreground shrink-0 select-none">
-			{isLoading ? (
-				<div className="h-7 flex items-center justify-center">
-					<SmallSpinner />
-				</div>
-			) : (
-				<Pagination className="w-fit h-7 text-xs">
-					<PaginationContent className="w-full flex justify-between items-center gap-2">
-						<PaginationItem>
-							<IconButton
-								variant="secondary"
-								size="default"
-								icon={<CaretLeftIcon size={12} weight="bold" />}
-								onClick={(e) => {
-									e.preventDefault();
-									if (!canGoPrev) return;
-									popCursor();
-								}}
-								disabled={!canGoPrev}
-								className={!canGoPrev ? "pointer-events-none opacity-50" : ""}
-							/>
-						</PaginationItem>
-						<PaginationItem className="text-muted-foreground font-medium">
-							{currentPage} / {Math.max(totalPages, 1)}
-						</PaginationItem>
-						<PaginationItem>
-							<IconButton
-								variant="secondary"
-								size="default"
-								icon={<CaretRightIcon size={12} weight="bold" />}
-								onClick={(e) => {
-									e.preventDefault();
-									if (!canGoNext || !nextCursor) return;
-									pushCursor(nextCursor);
-								}}
-								disabled={!canGoNext}
-								className={!canGoNext ? "pointer-events-none opacity-50" : ""}
-							/>
-						</PaginationItem>
-					</PaginationContent>
-				</Pagination>
-			)}
+			<Pagination className="w-fit h-7 text-xs">
+				<PaginationContent className="w-full flex justify-between items-center gap-2">
+					<PaginationItem>
+						<IconButton
+							variant="secondary"
+							size="default"
+							icon={<CaretLeftIcon size={12} weight="bold" />}
+							onClick={(e) => {
+								e.preventDefault();
+								if (!canGoPrev) return;
+								popCursor();
+							}}
+							disabled={isDisabled || !canGoPrev}
+							className={isDisabled || !canGoPrev ? "pointer-events-none opacity-50" : ""}
+						/>
+					</PaginationItem>
+					<PaginationItem className="text-muted-foreground font-medium text-center tabular-nums">
+						{hasPaginationData
+							? `${currentPage} / ${totalPages}`
+							: "..."}
+					</PaginationItem>
+					<PaginationItem>
+						<IconButton
+							variant="secondary"
+							size="default"
+							icon={<CaretRightIcon size={12} weight="bold" />}
+							onClick={(e) => {
+								e.preventDefault();
+								if (!canGoNext || !nextCursor) return;
+								pushCursor(nextCursor);
+							}}
+							disabled={isDisabled || !canGoNext}
+							className={isDisabled || !canGoNext ? "pointer-events-none opacity-50" : ""}
+						/>
+					</PaginationItem>
+				</PaginationContent>
+			</Pagination>
 		</div>
 	);
 }

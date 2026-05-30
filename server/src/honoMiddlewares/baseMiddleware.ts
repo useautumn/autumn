@@ -1,10 +1,10 @@
 import {
-    ApiVersionClass,
-    AppEnv,
-    AuthType,
-    LATEST_VERSION,
-    type Organization,
-    tryCatch,
+	ApiVersionClass,
+	AppEnv,
+	AuthType,
+	LATEST_VERSION,
+	type Organization,
+	tryCatch,
 } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import { db, dbGeneral } from "@/db/initDrizzle.js";
@@ -93,7 +93,7 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		db,
 		dbGeneral,
 		logger: childLogger,
-		redisV2: resolveRedisV2(),
+		redisV2: resolveRedisV2({ customerId }),
 
 		// Request info
 		id,
@@ -114,7 +114,9 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 		// Query params
 		expand: [],
-		skipCache: c.req.header("x-skip-cache") === "true" || c.req.query("skip_cache") === "true",
+		skipCache:
+			c.req.header("x-skip-cache") === "true" ||
+			c.req.query("skip_cache") === "true",
 
 		// Test params:
 		extraLogs: {},
@@ -125,6 +127,10 @@ export const baseMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 			skipWebhooks: c.req.header("x-skip-webhooks") === "true",
 			keepInternalFields: c.req.header("x-strip-internal") === "false",
 			useReplica: c.req.header("x-use-replica") === "true",
+			mockVercelApi: c.req.header("x-mock-vercel-api") === "true",
+			allowVercelTestOidc:
+				process.env.NODE_ENV !== "production" &&
+				c.req.header("x-allow-vercel-test-oidc") === "true",
 		},
 	});
 

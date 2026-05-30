@@ -1,6 +1,12 @@
 import { z } from "zod/v4";
+import { DbUsageAlertSchema } from "../cusModels/billingControls/usageAlert.js";
 
 export const OrgConfigSchema = z.object({
+	usage_alerts: z.array(DbUsageAlertSchema).optional().default([]),
+	/** Sandbox-env-only usage alerts. `checkUsageAlerts` reads this list when
+	 *  `ctx.env === AppEnv.Sandbox` and `usage_alerts` when env is live. */
+	sandbox_usage_alerts: z.array(DbUsageAlertSchema).optional().default([]),
+
 	bill_upgrade_immediately: z.boolean().default(true),
 	convert_to_charge_automatically: z.boolean().default(true),
 	anchor_start_of_month: z.boolean().default(false), // If true, the billing cycle will start on the first day of the month

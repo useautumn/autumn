@@ -3,28 +3,28 @@
  */
 
 import * as z from "zod/v4-mini";
-import type { AutumnCore } from "../core.js";
+import { AutumnCore } from "../core.js";
 import { encodeJSON, encodeSimple } from "../lib/encodings.js";
 import { matchStatusCode } from "../lib/http.js";
 import * as M from "../lib/matchers.js";
 import { compactMap } from "../lib/primitives.js";
 import { safeParse } from "../lib/schemas.js";
-import type { RequestOptions } from "../lib/sdks.js";
+import { RequestOptions } from "../lib/sdks.js";
 import { extractSecurity, resolveGlobalSecurity } from "../lib/security.js";
 import { pathToFunc } from "../lib/url.js";
-import type { AutumnError } from "../models/autumn-error.js";
-import type {
-	ConnectionError,
-	InvalidRequestError,
-	RequestAbortedError,
-	RequestTimeoutError,
-	UnexpectedClientError,
+import { AutumnError } from "../models/autumn-error.js";
+import {
+  ConnectionError,
+  InvalidRequestError,
+  RequestAbortedError,
+  RequestTimeoutError,
+  UnexpectedClientError,
 } from "../models/http-client-errors.js";
 import * as models from "../models/index.js";
-import type { ResponseValidationError } from "../models/response-validation-error.js";
-import type { SDKValidationError } from "../models/sdk-validation-error.js";
-import { type APICall, APIPromise } from "../types/async.js";
-import type { Result } from "../types/fp.js";
+import { ResponseValidationError } from "../models/response-validation-error.js";
+import { SDKValidationError } from "../models/sdk-validation-error.js";
+import { APICall, APIPromise } from "../types/async.js";
+import { Result } from "../types/fp.js";
 
 /**
  * Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
@@ -34,7 +34,7 @@ import type { Result } from "../types/fp.js";
  * @example
  * ```typescript
  * // Schedule a transition from a trial plan to a paid plan
- * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779274895233,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780484495233,"plans":[{"planId":"pro_plan"}]}] });
+ * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779977746466,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781187346466,"plans":[{"planId":"pro_plan"}]}] });
  * ```
  *
  * @param customerId - The ID of the customer to create the schedule for.
@@ -51,137 +51,136 @@ import type { Result } from "../types/fp.js";
  * @returns A create-schedule response with the schedule ID, persisted phases, and any required payment or checkout URL.
  */
 export function billingCreateSchedule(
-	client: AutumnCore,
-	request: models.CreateScheduleParams,
-	options?: RequestOptions,
+  client: AutumnCore,
+  request: models.CreateScheduleParams,
+  options?: RequestOptions,
 ): APIPromise<
-	Result<
-		models.CreateScheduleResponse,
-		| AutumnError
-		| ResponseValidationError
-		| ConnectionError
-		| RequestAbortedError
-		| RequestTimeoutError
-		| InvalidRequestError
-		| UnexpectedClientError
-		| SDKValidationError
-	>
+  Result<
+    models.CreateScheduleResponse,
+    | AutumnError
+    | ResponseValidationError
+    | ConnectionError
+    | RequestAbortedError
+    | RequestTimeoutError
+    | InvalidRequestError
+    | UnexpectedClientError
+    | SDKValidationError
+  >
 > {
-	return new APIPromise($do(client, request, options));
+  return new APIPromise($do(
+    client,
+    request,
+    options,
+  ));
 }
 
 async function $do(
-	client: AutumnCore,
-	request: models.CreateScheduleParams,
-	options?: RequestOptions,
+  client: AutumnCore,
+  request: models.CreateScheduleParams,
+  options?: RequestOptions,
 ): Promise<
-	[
-		Result<
-			models.CreateScheduleResponse,
-			| AutumnError
-			| ResponseValidationError
-			| ConnectionError
-			| RequestAbortedError
-			| RequestTimeoutError
-			| InvalidRequestError
-			| UnexpectedClientError
-			| SDKValidationError
-		>,
-		APICall,
-	]
+  [
+    Result<
+      models.CreateScheduleResponse,
+      | AutumnError
+      | ResponseValidationError
+      | ConnectionError
+      | RequestAbortedError
+      | RequestTimeoutError
+      | InvalidRequestError
+      | UnexpectedClientError
+      | SDKValidationError
+    >,
+    APICall,
+  ]
 > {
-	const parsed = safeParse(
-		request,
-		(value) => z.parse(models.CreateScheduleParams$outboundSchema, value),
-		"Input validation failed",
-	);
-	if (!parsed.ok) {
-		return [parsed, { status: "invalid" }];
-	}
-	const payload = parsed.value;
-	const body = encodeJSON("body", payload, { explode: true });
+  const parsed = safeParse(
+    request,
+    (value) => z.parse(models.CreateScheduleParams$outboundSchema, value),
+    "Input validation failed",
+  );
+  if (!parsed.ok) {
+    return [parsed, { status: "invalid" }];
+  }
+  const payload = parsed.value;
+  const body = encodeJSON("body", payload, { explode: true });
 
-	const path = pathToFunc("/v1/billing.create_schedule")();
+  const path = pathToFunc("/v1/billing.create_schedule")();
 
-	const headers = new Headers(
-		compactMap({
-			"Content-Type": "application/json",
-			Accept: "application/json",
-			"x-api-version": encodeSimple(
-				"x-api-version",
-				client._options.xApiVersion,
-				{ explode: false, charEncoding: "none" },
-			),
-		}),
-	);
+  const headers = new Headers(compactMap({
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    "x-api-version": encodeSimple(
+      "x-api-version",
+      client._options.xApiVersion,
+      { explode: false, charEncoding: "none" },
+    ),
+  }));
 
-	const secConfig = await extractSecurity(client._options.secretKey);
-	const securityInput = secConfig == null ? {} : { secretKey: secConfig };
-	const requestSecurity = resolveGlobalSecurity(securityInput);
+  const secConfig = await extractSecurity(client._options.secretKey);
+  const securityInput = secConfig == null ? {} : { secretKey: secConfig };
+  const requestSecurity = resolveGlobalSecurity(securityInput);
 
-	const context = {
-		options: client._options,
-		baseURL: options?.serverURL ?? client._baseURL ?? "",
-		operationID: "createSchedule",
-		oAuth2Scopes: null,
+  const context = {
+    options: client._options,
+    baseURL: options?.serverURL ?? client._baseURL ?? "",
+    operationID: "createSchedule",
+    oAuth2Scopes: null,
 
-		resolvedSecurity: requestSecurity,
+    resolvedSecurity: requestSecurity,
 
-		securitySource: client._options.secretKey,
-		retryConfig: options?.retries ||
-			client._options.retryConfig || { strategy: "none" },
-		retryCodes: options?.retryCodes || ["429", "500", "502", "503", "504"],
-	};
+    securitySource: client._options.secretKey,
+    retryConfig: options?.retries
+      || client._options.retryConfig
+      || { strategy: "none" },
+    retryCodes: options?.retryCodes || ["429", "500", "502", "503", "504"],
+  };
 
-	const requestRes = client._createRequest(
-		context,
-		{
-			security: requestSecurity,
-			method: "POST",
-			baseURL: options?.serverURL,
-			path: path,
-			headers: headers,
-			body: body,
-			userAgent: client._options.userAgent,
-			timeoutMs: options?.timeoutMs || client._options.timeoutMs || -1,
-		},
-		options,
-	);
-	if (!requestRes.ok) {
-		return [requestRes, { status: "invalid" }];
-	}
-	const req = requestRes.value;
+  const requestRes = client._createRequest(context, {
+    security: requestSecurity,
+    method: "POST",
+    baseURL: options?.serverURL,
+    path: path,
+    headers: headers,
+    body: body,
+    userAgent: client._options.userAgent,
+    timeoutMs: options?.timeoutMs || client._options.timeoutMs || -1,
+  }, options);
+  if (!requestRes.ok) {
+    return [requestRes, { status: "invalid" }];
+  }
+  const req = requestRes.value;
 
-	const doResult = await client._do(req, {
-		context,
-		isErrorStatusCode: (statusCode: number) =>
-			matchStatusCode({ status: statusCode } as Response, ["4XX", "5XX"]),
-		retryConfig: context.retryConfig,
-		retryCodes: context.retryCodes,
-	});
-	if (!doResult.ok) {
-		return [doResult, { status: "request-error", request: req }];
-	}
-	const response = doResult.value;
+  const doResult = await client._do(req, {
+    context,
+    isErrorStatusCode: (statusCode: number) =>
+      matchStatusCode({ status: statusCode } as Response, ["4XX", "5XX"]),
+    retryConfig: context.retryConfig,
+    retryCodes: context.retryCodes,
+  });
+  if (!doResult.ok) {
+    return [doResult, { status: "request-error", request: req }];
+  }
+  const response = doResult.value;
 
-	const [result] = await M.match<
-		models.CreateScheduleResponse,
-		| AutumnError
-		| ResponseValidationError
-		| ConnectionError
-		| RequestAbortedError
-		| RequestTimeoutError
-		| InvalidRequestError
-		| UnexpectedClientError
-		| SDKValidationError
-	>(
-		M.json(200, models.CreateScheduleResponse$inboundSchema),
-		M.fail("4XX"),
-		M.fail("5XX"),
-	)(response, req);
-	if (!result.ok) {
-		return [result, { status: "complete", request: req, response }];
-	}
+  const [result] = await M.match<
+    models.CreateScheduleResponse,
+    | AutumnError
+    | ResponseValidationError
+    | ConnectionError
+    | RequestAbortedError
+    | RequestTimeoutError
+    | InvalidRequestError
+    | UnexpectedClientError
+    | SDKValidationError
+  >(
+    M.json(200, models.CreateScheduleResponse$inboundSchema),
+    M.fail("4XX"),
+    M.fail("5XX"),
+  )(response, req);
+  if (!result.ok) {
+    return [result, { status: "complete", request: req, response }];
+  }
 
-	return [result, { status: "complete", request: req, response }];
+  return [result, { status: "complete", request: req, response }];
 }

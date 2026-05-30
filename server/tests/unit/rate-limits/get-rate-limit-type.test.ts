@@ -102,6 +102,14 @@ describe("getRateLimitType", () => {
 		).toBe(RateLimitType.Attach);
 	});
 
+	test("classifies entities.get into its dedicated per-customer bucket", () => {
+		expect(
+			getRateLimitType(
+				createContext({ method: "POST", path: "/v1/entities.get" }),
+			),
+		).toBe(RateLimitType.CustomerEntitiesGet);
+	});
+
 	test("falls back to the general bucket for uncategorized routes", () => {
 		expect(
 			getRateLimitType(createContext({ method: "GET", path: "/v1/products" })),

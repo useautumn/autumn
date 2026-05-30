@@ -5,13 +5,11 @@ import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
-import { useOrg } from "@/hooks/common/useOrg";
+import { getLastSwitchedOrgId, useOrg } from "@/hooks/common/useOrg";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useColumnVisibility } from "@/hooks/useColumnVisibility";
 import { useEnv } from "@/utils/envUtils";
-import { getVersionCounts } from "@/utils/productUtils";
 import { pushPage } from "@/utils/genUtils";
 import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { FULL_CUSTOMERS_QUERY_KEY } from "@/views/customers/hooks/useFullCusSearchQuery";
@@ -40,13 +38,6 @@ export function CustomerListTable({
 		env === AppEnv.Sandbox ? "calc(100vh - 230px)" : "calc(100vh - 190px)";
 
 	const { features } = useFeaturesQuery();
-	const { products } = useProductsQuery();
-	const showProductVersions = useMemo(() => {
-		const versionCounts = getVersionCounts(products);
-		return Object.values(versionCounts).some(
-			(v) => typeof v === "number" && v > 1,
-		);
-	}, [products]);
 	const { queryStates, currentCursor } = useCustomerFilters();
 	const buildKey = useQueryKeyFactory();
 
@@ -99,15 +90,15 @@ export function CustomerListTable({
 		});
 	}, [customers, fullCustomersMap, isFullDataLoading]);
 
-	const columnStorageKey = org?.id
-		? `customer-list:${org.id}`
+	const orgId = org?.id ?? getLastSwitchedOrgId();
+	const columnStorageKey = orgId
+		? `customer-list:${orgId}`
 		: "customer-list";
 
 	const { columns, defaultVisibleColumnIds, columnGroups } =
 		useCustomerListColumns({
 			features,
 			storageKey: columnStorageKey,
-			showProductVersions,
 		});
 
 	const {
@@ -148,7 +139,7 @@ export function CustomerListTable({
 		queryStates.processor.length > 0;
 	const hasActiveFiltersOrSearch = hasSearchQuery || hasFilters;
 
-	if (!hasRows && !hasActiveFiltersOrSearch) {
+	if (!hasRows && !hasActiveFiltersOrSearch && !isFetchingUncached) {
 		return (
 			<EmptyState
 				type="customers"
@@ -180,7 +171,8 @@ export function CustomerListTable({
 				table,
 				numberOfColumns: columns.length,
 				enableSorting: false,
-				isLoading: isFetchingUncached,
+				isLoading: isFetchingUncached && customers.length === 0,
+				isTransitioning: isFetchingUncached && customers.length > 0,
 				getRowHref,
 				emptyStateText: "No matching results found.",
 				rowClassName: "h-10",
@@ -206,16 +198,22 @@ export function CustomerListTable({
 						<CustomerListCreateButton />
 					</Table.Actions>
 				</Table.Toolbar>
-				<div className="flex items-center gap-2 pb-4">
-					<CustomerListFilterButton />
-					<Table.ColumnVisibility />
-					<CustomerListSearchBar />
-					<div className="flex items-center gap-2 shrink-0">
+				<div className="flex flex-wrap items-center gap-2 pb-4">
+					<div className="order-2 md:order-1">
+						<CustomerListFilterButton />
+					</div>
+					<div className="order-3 md:order-2">
+						<Table.ColumnVisibility />
+					</div>
+					<div className="order-1 w-full md:order-3 md:w-auto md:flex-1 md:min-w-0">
+						<CustomerListSearchBar />
+					</div>
+					<div className="order-4 ml-auto flex items-center gap-2 shrink-0">
 						<CustomerListPagination />
 						<CustomerListPageSizeSelector />
 					</div>
 				</div>
-				{!hasRows && hasActiveFiltersOrSearch ? (
+				{!hasRows && hasActiveFiltersOrSearch && !isFetchingUncached ? (
 					<EmptyState
 						type="no-customers-found"
 						actionButton={<CustomerListCreateButton />}

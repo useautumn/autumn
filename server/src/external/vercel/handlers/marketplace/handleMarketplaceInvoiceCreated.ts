@@ -5,6 +5,7 @@ import { VercelResourceService } from "@/external/vercel/services/VercelResource
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { CusService } from "@/internal/customers/CusService.js";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
+import { logCaughtError } from "@/utils/logging/logCaughtError.js";
 
 export const handleMarketplaceInvoiceCreated = async ({
 	ctx,
@@ -117,8 +118,13 @@ export const handleMarketplaceInvoiceCreated = async ({
 				resourceMetadata = resource.metadata as Record<string, any>;
 			}
 		} catch (error) {
-			logger.warn(`Could not fetch resource metadata: ${error}`, {
+			logCaughtError({
+				logger,
+				message:
+					"[vercel/marketplace.invoice.created] could not fetch resource metadata",
+				error,
 				data: { resourceId: vercelResourceId },
+				level: "warn",
 			});
 		}
 	}

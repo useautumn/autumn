@@ -160,9 +160,9 @@ export class CusService {
 				});
 				const sqlMs = performance.now() - tSqlStart;
 
-				ctx.logger.info(
-					`[CusService.getFull] path=${useFlatModel ? "flat" : "legacy"} orgId=${orgId} customer=${idOrInternalId} sqlMs=${sqlMs.toFixed(0)}`,
-				);
+				// ctx.logger.info(
+				// 	`[CusService.getFull] path=${useFlatModel ? "flat" : "legacy"} orgId=${orgId} customer=${idOrInternalId} sqlMs=${sqlMs.toFixed(0)}`,
+				// );
 
 				let fullCus: FullCustomer;
 				if (useFlatModel) {

@@ -1,6 +1,6 @@
 import type { AppEnv, AuthType } from "@autumn/shared";
 
-/** Request-level metadata - goes under context.req */
+/** Request-level metadata - emits as req.* fields. */
 export type LogRequestContext = {
 	id: string;
 	method: string;
@@ -21,7 +21,7 @@ export type LogRequestContext = {
 	name: string;
 };
 
-/** App context - org, customer, auth - goes under context.context */
+/** App context - emits as context.* fields. */
 export type LogAppContext = {
 	org_id: string;
 	org_slug: string;
@@ -43,6 +43,16 @@ export type LogStripeEventContext = {
 	id: string;
 	type: string;
 	object_id: string;
+};
+
+/** Vercel webhook event context */
+export type LogVercelEventContext = {
+	id?: string;
+	type?: string;
+	installation_id?: string;
+	invoice_id?: string;
+	external_invoice_id?: string;
+	resource_id?: string;
 };
 
 /** Background worker context */

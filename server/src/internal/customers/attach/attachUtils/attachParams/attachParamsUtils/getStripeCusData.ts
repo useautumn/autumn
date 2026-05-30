@@ -24,6 +24,9 @@ export const getStripeCusData = async ({
 	const stripeCus = await getOrCreateStripeCustomer({
 		ctx,
 		customer,
+		options: {
+			expandTax: !!ctx.org.config.automatic_tax,
+		},
 	});
 
 	if (!stripeCus) {

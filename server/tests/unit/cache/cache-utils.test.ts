@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
 const mockState = {
 	warnings: [] as Array<{ message: string; data?: Record<string, unknown> }>,
@@ -146,4 +146,8 @@ describe("cache utils", () => {
 
 		expect(mockState.warnings).toHaveLength(1);
 	});
+});
+
+afterAll(() => {
+	mock.restore();
 });

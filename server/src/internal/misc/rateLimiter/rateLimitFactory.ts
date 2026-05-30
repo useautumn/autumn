@@ -1,4 +1,4 @@
-import { ApiVersion } from "@autumn/shared";
+import type { ApiVersion } from "@autumn/shared";
 import { RedisStore } from "@hono-rate-limiter/redis";
 import type { Context } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
@@ -12,6 +12,8 @@ import {
 	type RateLimitType,
 	resolveRateLimit,
 } from "./rateLimitConfigs";
+import { getOrgRateLimitOverride } from "./rateLimitOverridesStore";
+import { isCustomerInRedisAllowlist } from "./rateLimitRedisAllowlistStore";
 
 // Helper to get rate limit key from context
 const getRateLimitKeyFromContext = (c: Context): string => {
@@ -37,14 +39,24 @@ const warnRateLimitBypass = () => {
 	);
 };
 
-export const rateLimitFactory = (
-	config: RateLimitConfig,
-): ReturnType<typeof rateLimiter> => {
+export const rateLimitFactory = ({
+	type,
+	config,
+}: {
+	type: RateLimitType;
+	config: RateLimitConfig;
+}): ReturnType<typeof rateLimiter> => {
 	const { windowMs, notInRedis } = config;
 
 	const dynamicLimit = (c: Context): number => {
 		const ctx = (c as Context<HonoEnv>).get("ctx");
 		const apiVersion = ctx?.apiVersion?.value as ApiVersion | undefined;
+		const orgId = ctx?.org?.id;
+		const orgSlug = ctx?.org?.slug;
+
+		const override = getOrgRateLimitOverride({ orgId, orgSlug, type });
+		if (override !== undefined) return override;
+
 		return resolveRateLimit({ config, apiVersion }).limit;
 	};
 
@@ -55,18 +67,15 @@ export const rateLimitFactory = (
 		keyGenerator: getRateLimitKeyFromContext,
 	};
 
-	if (notInRedis) {
-		return rateLimiter(options);
-	}
-
+	let inMemoryLimiter: ReturnType<typeof rateLimiter> | null = null;
 	let redisLimiter: ReturnType<typeof rateLimiter> | null = null;
 
-	return async (c, next) => {
-		if (!shouldUseRedis()) {
-			warnRateLimitBypass();
-			return next();
-		}
+	const getInMemoryLimiter = () => {
+		inMemoryLimiter ??= rateLimiter(options);
+		return inMemoryLimiter;
+	};
 
+	const getRedisLimiter = () => {
 		redisLimiter ??= rateLimiter({
 			...options,
 			store: new RedisStore({
@@ -91,7 +100,26 @@ export const rateLimitFactory = (
 			}),
 		});
 
-		return redisLimiter(c, next);
+		return redisLimiter;
+	};
+
+	return async (c, next) => {
+		if (notInRedis) {
+			const ctx = (c as Context<HonoEnv>).get("ctx");
+			const customerId = ctx?.customerId;
+			const isAllowlisted = isCustomerInRedisAllowlist({ customerId });
+
+			if (!isAllowlisted) {
+				return getInMemoryLimiter()(c, next);
+			}
+		}
+
+		if (!shouldUseRedis()) {
+			warnRateLimitBypass();
+			return notInRedis ? getInMemoryLimiter()(c, next) : next();
+		}
+
+		return getRedisLimiter()(c, next);
 	};
 };
 
@@ -99,7 +127,7 @@ export const rateLimitFactory = (
 const limiters = Object.fromEntries(
 	Object.entries(RATE_LIMIT_CONFIGS).map(([type, config]) => [
 		type,
-		rateLimitFactory(config),
+		rateLimitFactory({ type: type as RateLimitType, config }),
 	]),
 ) as Record<RateLimitType, ReturnType<typeof rateLimiter>>;
 

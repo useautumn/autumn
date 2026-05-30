@@ -20,6 +20,7 @@ export const getRewardsByIdOrCode = async ({
 			eq(rewards.env, env),
 			or(
 				inArray(rewards.id, codes),
+				inArray(rewards.internal_id, codes),
 				...codes.map(
 					(code) => sql`EXISTS (
             SELECT 1 FROM unnest("promo_codes") AS elem

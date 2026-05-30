@@ -4,6 +4,7 @@ import {
 	type FrontendOrg,
 	type Organization,
 	type OrgConfig,
+	OrgConfigSchema,
 	organizations,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
@@ -265,6 +266,7 @@ export const createOrgResponse = ({
 		live_pkey: org.live_pkey,
 		onboarded: org.onboarded ?? true,
 		deployed: org.deployed ?? true,
+		config: OrgConfigSchema.parse(org.config || {}),
 		redis_config: org.redis_config
 			? {
 					host: org.redis_config.url,
@@ -283,7 +285,7 @@ const getOrgAndFeatures = async ({ req }: { req: any }) => {
 	return { org, features };
 };
 
-const updateOrgConfig = async ({
+export const updateOrgConfig = async ({
 	db,
 	org,
 	config,

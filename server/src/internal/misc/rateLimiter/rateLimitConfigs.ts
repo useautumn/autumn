@@ -6,10 +6,12 @@ import type { HonoEnv } from "../../../honoUtils/HonoEnv";
 export enum RateLimitType {
 	General = "general",
 	Track = "track",
+	BatchTrack = "batch_track",
 	Check = "check",
 	Events = "events",
 	Attach = "attach",
 	ListCustomers = "list_customers",
+	CustomerEntitiesGet = "customer_entities_get",
 }
 
 type RoutePattern = {
@@ -85,6 +87,10 @@ const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 		],
 	},
 	{
+		type: RateLimitType.BatchTrack,
+		patterns: [route({ method: "POST", url: "/v1/balances.batch_track" })],
+	},
+	{
 		type: RateLimitType.Check,
 		patterns: [
 			route({ method: "POST", url: "/v1/check" }),
@@ -98,8 +104,11 @@ const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 			route({ method: "POST", url: "/v1/customers" }),
 			route({ method: "POST", url: "/v1/customers.get" }),
 			route({ method: "POST", url: "/v1/customers.get_or_create" }),
-			route({ method: "POST", url: "/v1/entities.get" }),
 		],
+	},
+	{
+		type: RateLimitType.CustomerEntitiesGet,
+		patterns: [route({ method: "POST", url: "/v1/entities.get" })],
 	},
 ];
 
@@ -185,6 +194,13 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		notInRedis: true,
 		scope: RateLimitScope.Customer,
 	},
+	[RateLimitType.BatchTrack]: {
+		name: "batch_track",
+		limit: 10,
+		windowMs: 1000,
+		notInRedis: false,
+		scope: RateLimitScope.Org,
+	},
 	[RateLimitType.Check]: {
 		name: "check",
 		limit: 10000,
@@ -216,5 +232,12 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		windowMs: 1000,
 		notInRedis: false,
 		scope: RateLimitScope.Org,
+	},
+	[RateLimitType.CustomerEntitiesGet]: {
+		name: "customer_entities_get",
+		limit: 50,
+		windowMs: 1000,
+		notInRedis: false,
+		scope: RateLimitScope.Customer,
 	},
 };
