@@ -22,6 +22,27 @@ import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import type { RolloverUpdate } from "../../utils/types/rolloverUpdate.js";
 import { handleRedisTrackErrorV3 } from "./handleRedisTrackErrorV3.js";
 
+const buildAiCreditCostProperty = ({
+	featureDeductions,
+	deductions,
+}: {
+	featureDeductions: FeatureDeduction[];
+	deductions: TrackDeduction[];
+}): Record<string, number> | undefined => {
+	const aiDeduction = featureDeductions.find((d) => d.tokenUsage);
+	if (!aiDeduction) return;
+
+	const creditCost: Record<string, number> = {};
+	for (const deduction of deductions) {
+		if (deduction.feature_id === aiDeduction.feature.id) continue;
+		if (!deduction.value) continue;
+		creditCost[deduction.feature_id] =
+			(creditCost[deduction.feature_id] ?? 0) + deduction.value;
+	}
+
+	return Object.keys(creditCost).length > 0 ? creditCost : undefined;
+};
+
 const queueSyncItem = ({
 	ctx,
 	body,
@@ -147,6 +168,14 @@ export const runRedisTrackV3 = async ({
 		fullSubject: updatedFullSubject,
 		mutationLogs,
 	});
+
+	const aiCreditCost = buildAiCreditCostProperty({
+		featureDeductions,
+		deductions,
+	});
+	if (aiCreditCost) {
+		body.properties = { ...(body.properties ?? {}), credit_cost: aiCreditCost };
+	}
 
 	queueEvent({ ctx, body, fullSubject, deductions, internalProductId });
 

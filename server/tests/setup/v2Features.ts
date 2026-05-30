@@ -29,6 +29,8 @@ export enum TestFeature {
 
 	AiCredits = "ai_credits", // AI credit system (models.dev pricing)
 	AiCredits2 = "ai_credits_2", // second AI credit system (for disambiguation tests)
+
+	Orbs = "orbs", // credit system that wraps an AI credit system (1000 orbs per $1)
 }
 
 export const getFeatures = ({ orgId }: { orgId: string }) => ({
@@ -157,5 +159,16 @@ export const getFeatures = ({ orgId }: { orgId: string }) => ({
 				markup: 10,
 			},
 		},
+	}),
+	[TestFeature.Orbs]: constructCreditSystem({
+		featureId: TestFeature.Orbs,
+		orgId,
+		env: AppEnv.Sandbox,
+		schema: [
+			{
+				metered_feature_id: TestFeature.AiCredits,
+				credit_cost: 1000, // 1000 orbs per $1 of AI usage
+			},
+		],
 	}),
 });

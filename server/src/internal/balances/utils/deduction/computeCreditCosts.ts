@@ -20,20 +20,31 @@ export const computeCreditCosts = async ({
 }): Promise<CreditCostLookup> => {
 	const costMap = new Map<string, number>();
 
-	if (deduction.precomputedCreditCost != null) {
-		const cost = deduction.precomputedCreditCost;
-		return () => cost;
-	}
-
 	const tokens = deduction.tokenUsage
-		? { input: deduction.tokenUsage.inputTokens, output: deduction.tokenUsage.outputTokens }
+		? {
+				input: deduction.tokenUsage.inputTokens,
+				output: deduction.tokenUsage.outputTokens,
+			}
 		: undefined;
 
 	await Promise.all(
 		cusEnts.map(async (ce) => {
+			// Precomputed cost (from /track/tokens) is in the AI credit feature's
+			// native unit (USD). It applies 1:1 to that feature's own entitlement,
+			// but parent credit systems still need their schema ratio applied —
+			// fall through to getCreditCost with amount = precomputed cost.
+			if (
+				deduction.precomputedCreditCost != null &&
+				ce.entitlement.feature.id === deduction.feature.id
+			) {
+				costMap.set(ce.id, deduction.precomputedCreditCost);
+				return;
+			}
+
 			const creditCost = await getCreditCost({
 				featureId: deduction.feature.id,
 				creditSystem: ce.entitlement.feature,
+				amount: deduction.precomputedCreditCost,
 				modelName: deduction.tokenUsage?.modelName,
 				tokens,
 			});

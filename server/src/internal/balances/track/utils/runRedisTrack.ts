@@ -17,6 +17,36 @@ import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import type { RolloverUpdate } from "../../utils/types/rolloverUpdate.js";
 import { handleRedisTrackError } from "./handleRedisTrackError.js";
 
+const buildAiCreditCostProperty = ({
+	featureDeductions,
+	updates,
+	fullCustomer,
+}: {
+	featureDeductions: FeatureDeduction[];
+	updates: Record<string, DeductionUpdate>;
+	fullCustomer: FullCustomer;
+}): Record<string, number> | undefined => {
+	const aiDeduction = featureDeductions.find((d) => d.tokenUsage);
+	if (!aiDeduction) return;
+
+	const cusEntIdToFeatureId = new Map<string, string>();
+	for (const cp of fullCustomer.customer_products) {
+		for (const ce of cp.customer_entitlements ?? []) {
+			cusEntIdToFeatureId.set(ce.id, ce.entitlement.feature.id);
+		}
+	}
+
+	const creditCost: Record<string, number> = {};
+	for (const [cusEntId, update] of Object.entries(updates)) {
+		const featureId = cusEntIdToFeatureId.get(cusEntId);
+		if (!featureId || featureId === aiDeduction.feature.id) continue;
+		if (update.deducted === 0) continue;
+		creditCost[featureId] = (creditCost[featureId] ?? 0) + update.deducted;
+	}
+
+	return Object.keys(creditCost).length > 0 ? creditCost : undefined;
+};
+
 const queueSyncItem = ({
 	ctx,
 	body,
@@ -110,6 +140,15 @@ export const runRedisTrack = async ({
 	}
 
 	const { updates, fullCus, rolloverUpdates } = result;
+
+	const aiCreditCost = buildAiCreditCostProperty({
+		featureDeductions,
+		updates,
+		fullCustomer,
+	});
+	if (aiCreditCost) {
+		body.properties = { ...(body.properties ?? {}), credit_cost: aiCreditCost };
+	}
 
 	// Queue sync and event
 	queueSyncItem({
