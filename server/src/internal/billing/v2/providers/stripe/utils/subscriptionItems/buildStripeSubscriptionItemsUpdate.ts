@@ -15,6 +15,7 @@ import type Stripe from "stripe";
 import { stripeSubscriptionItemToStripePriceId } from "@/external/stripe/subscriptions/subscriptionItems/utils/convertStripeSubscriptionItemUtils";
 import { findStripeSubscriptionItemByStripePriceId } from "@/external/stripe/subscriptions/subscriptionItems/utils/findStripeSubscriptionItemUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { findMatchingInlineSubscriptionItem } from "@/internal/billing/v2/providers/stripe/utils/matchUtils/matchStripeInlinePrice";
 import { customerProductsToRecurringStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/customerProductsToRecurringStripeItemSpecs";
 import { stripeItemSpecToSubscriptionItem } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/stripeItemSpecToStripeParam";
 import { findStripeItemSpecByStripePriceId } from "./findStripeItemSpec";
@@ -34,11 +35,30 @@ const stripeItemSpecsToSubItemsUpdate = ({
 	const currentSubscriptionItems = stripeSubscription?.items.data ?? [];
 
 	const subItemsUpdate: Stripe.SubscriptionUpdateParams.Item[] = [];
+	const matchedSubscriptionItemIds = new Set<string>();
 
 	for (const spec of stripeItemSpecs) {
-		// Inline prices are always new items (no existing sub item to match)
 		if (spec.stripeInlinePrice) {
-			subItemsUpdate.push(stripeItemSpecToSubscriptionItem({ spec }));
+			/** Reuse unchanged inline items; replacing them can reset Stripe's item period state. */
+			const existingItem = findMatchingInlineSubscriptionItem({
+				inlinePrice: spec.stripeInlinePrice,
+				metadata: spec.metadata,
+				subscriptionItems: currentSubscriptionItems,
+				usedSubscriptionItemIds: matchedSubscriptionItemIds,
+			});
+
+			if (existingItem) {
+				matchedSubscriptionItemIds.add(existingItem.id);
+				if (existingItem.quantity !== spec.quantity) {
+					subItemsUpdate.push({
+						id: existingItem.id,
+						...(spec.quantity !== undefined && { quantity: spec.quantity }),
+						...(spec.metadata && { metadata: spec.metadata }),
+					});
+				}
+			} else {
+				subItemsUpdate.push(stripeItemSpecToSubscriptionItem({ spec }));
+			}
 			continue;
 		}
 
@@ -73,6 +93,10 @@ const stripeItemSpecsToSubItemsUpdate = ({
 
 	// Remove subscription items that are no longer in the desired specs
 	for (const subItem of currentSubscriptionItems) {
+		if (matchedSubscriptionItemIds.has(subItem.id)) {
+			continue;
+		}
+
 		const matchingSpec = findStripeItemSpecByStripePriceId({
 			stripePriceId: stripeSubscriptionItemToStripePriceId(subItem),
 			stripeItemSpecs,
