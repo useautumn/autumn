@@ -1,5 +1,7 @@
 import type { Feature, ModelMarkups } from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
+import { useStore } from "@tanstack/react-form";
+import { useEffect, useRef } from "react";
 import { useAppForm } from "@/hooks/form/form";
 
 export interface CreditSystemFormValues {
@@ -21,7 +23,7 @@ export function useCreditSystemForm({
 	onSubmit?: (values: CreditSystemFormValues) => Promise<void>;
 	onChange?: (values: CreditSystemFormValues) => void;
 }) {
-	return useAppForm({
+	const form = useAppForm({
 		defaultValues: {
 			name: feature?.name ?? "",
 			id: feature?.id ?? "",
@@ -32,10 +34,20 @@ export function useCreditSystemForm({
 			defaultMarkup: 0,
 		} satisfies CreditSystemFormValues,
 		onSubmit: onSubmit ? ({ value }) => onSubmit(value) : undefined,
-		listeners: onChange
-			? { onChange: ({ formApi }) => onChange(formApi.state.values) }
-			: undefined,
 	});
+
+	// Form-level `listeners.onChange` only fires when a FieldApi instance is
+	// registered for the changed field (see form-core FormApi.setFieldValue).
+	// None of these fields are mounted via <form.Field>, so we subscribe to the
+	// store directly and push value changes out to the caller.
+	const values = useStore(form.store, (s) => s.values);
+	const onChangeRef = useRef(onChange);
+	onChangeRef.current = onChange;
+	useEffect(() => {
+		onChangeRef.current?.(values);
+	}, [values]);
+
+	return form;
 }
 
 export type CreditSystemFormInstance = ReturnType<typeof useCreditSystemForm>;

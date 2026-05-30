@@ -30,13 +30,26 @@ function NewFeatureCreditSchema({
 			event_names: feature.event_names ?? [],
 			model_markups: feature.model_markups ?? null,
 		},
-		onChange: (values) =>
+		onChange: (values) => {
+			const isAi = values.type === FeatureType.AiCreditSystem;
+			const materializedMarkups = isAi
+				? Object.fromEntries(
+						Object.entries(values.model_markups ?? {}).map(([key, entry]) => [
+							key,
+							entry?.markup == null
+								? { ...entry, markup: values.defaultMarkup }
+								: entry,
+						]),
+					)
+				: values.model_markups;
+
 			setFeature({
 				...feature,
 				type: values.type,
 				config: values.config,
-				model_markups: values.model_markups,
-			}),
+				model_markups: materializedMarkups,
+			});
+		},
 	});
 
 	return <CreditSystemSchema form={form} />;
