@@ -9,22 +9,110 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { CusProductStatus } from "@autumn/shared";
+import { BillingVersion, CusProductStatus } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { stripeSubscriptions } from "@tests/utils/fixtures/stripe/subscriptions";
 import chalk from "chalk";
+import type Stripe from "stripe";
 import { buildStripeSubscriptionItemsUpdate } from "@/internal/billing/v2/providers/stripe/utils/subscriptionItems/buildStripeSubscriptionItemsUpdate";
 import {
 	createCustomerPricesForProduct,
+	createCustomerPricesWithSuffix,
 	createProductWithAllPriceTypes,
 	createStripeItemsFromProduct,
 	expectSubscriptionItemsUpdate,
 	getExpectedNewProductItems,
+	setPrepaidStripeProductId,
 } from "../stripeSubscriptionTestHelpers";
 
 // ============ TESTS ============
+
+const stripeSubscriptionItemFromUpdate = (
+	item: Stripe.SubscriptionCreateParams.Item,
+	index: number,
+): Stripe.SubscriptionItem =>
+	({
+		id: `si_existing_${index}`,
+		object: "subscription_item",
+		quantity: item.quantity,
+		metadata: item.metadata ?? {},
+		price: item.price_data
+			? {
+					id: `price_inline_${index}`,
+					object: "price",
+					active: true,
+					currency: item.price_data.currency,
+					product: item.price_data.product,
+					recurring: item.price_data.recurring,
+					unit_amount_decimal: item.price_data.unit_amount_decimal,
+				}
+			: {
+					id: item.price,
+					object: "price",
+					active: true,
+					currency: "usd",
+				},
+	}) as Stripe.SubscriptionItem;
+
+const createDuplicatePrepaidCustomerProducts = ({
+	subscriptionIds = [],
+}: {
+	subscriptionIds?: string[];
+}) => {
+	const productA = setPrepaidStripeProductId(
+		createProductWithAllPriceTypes({
+			productId: "duplicate_prepaid",
+			productName: "Duplicate Prepaid",
+			customerProductId: "cus_prod_dup_a",
+			prepaidQuantity: 100,
+			allocatedUsage: 5,
+		}),
+		"stripe_prod_duplicate_prepaid",
+	);
+	const productB = setPrepaidStripeProductId(
+		createProductWithAllPriceTypes({
+			productId: "duplicate_prepaid",
+			productName: "Duplicate Prepaid",
+			customerProductId: "cus_prod_dup_b",
+			prepaidQuantity: 150,
+			allocatedUsage: 7,
+		}),
+		"stripe_prod_duplicate_prepaid",
+	);
+
+	const customerProductA = customerProducts.create({
+		id: "cus_prod_dup_a",
+		productId: "duplicate_prepaid",
+		product: productA.product,
+		customerPrices: createCustomerPricesWithSuffix({
+			product: productA,
+			customerProductId: "cus_prod_dup_a",
+			suffix: "a",
+		}),
+		customerEntitlements: productA.allEntitlements,
+		options: productA.allOptions,
+		status: CusProductStatus.Active,
+		subscriptionIds,
+	});
+	const customerProductB = customerProducts.create({
+		id: "cus_prod_dup_b",
+		productId: "duplicate_prepaid",
+		product: productB.product,
+		customerPrices: createCustomerPricesWithSuffix({
+			product: productB,
+			customerProductId: "cus_prod_dup_b",
+			suffix: "b",
+		}),
+		customerEntitlements: productB.allEntitlements,
+		options: productB.allOptions,
+		status: CusProductStatus.Active,
+		subscriptionIds,
+	});
+
+	return [customerProductA, customerProductB];
+};
 
 describe(
 	chalk.yellowBright("buildStripeSubscriptionItemsUpdate - Single Product"),
@@ -61,7 +149,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [customerProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [customerProduct],
+					} as never,
 					finalCustomerProducts: [customerProduct],
 				});
 
@@ -106,7 +197,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [entityCustomerProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [entityCustomerProduct],
+					} as never,
 					finalCustomerProducts: [entityCustomerProduct],
 				});
 
@@ -149,7 +243,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [customerProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [customerProduct],
+					} as never,
 					finalCustomerProducts: [customerProduct],
 				});
 
@@ -221,7 +318,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [customerProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [customerProduct],
+					} as never,
 					finalCustomerProducts: [customerProduct],
 				});
 
@@ -294,7 +394,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [customerProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [customerProduct],
+					} as never,
 					finalCustomerProducts: [customerProduct],
 				});
 
@@ -361,7 +464,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [customerProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [customerProduct],
+					} as never,
 					finalCustomerProducts: [customerProduct],
 				});
 
@@ -428,7 +534,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [customerProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [customerProduct],
+					} as never,
 					finalCustomerProducts: [customerProduct],
 				});
 
@@ -488,7 +597,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [customerProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [customerProduct],
+					} as never,
 					finalCustomerProducts: [customerProduct],
 				});
 
@@ -538,7 +650,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [entityCustomerProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [entityCustomerProduct],
+					} as never,
 					finalCustomerProducts: [entityCustomerProduct],
 				});
 
@@ -573,7 +688,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [],
+					} as never,
 					finalCustomerProducts: [],
 				});
 
@@ -608,7 +726,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [],
+					} as never,
 					finalCustomerProducts: [],
 				});
 
@@ -668,7 +789,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [proCustomerProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [proCustomerProduct],
+					} as never,
 					finalCustomerProducts: [proCustomerProduct],
 				});
 
@@ -741,7 +865,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [customerProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [customerProduct],
+					} as never,
 					finalCustomerProducts: [customerProduct],
 				});
 
@@ -756,6 +883,125 @@ describe(
 			});
 		});
 
+		describe(chalk.cyan("Inline Price Reuse"), () => {
+			const buildInitialItems = () => {
+				const customerProductsWithoutSub =
+					createDuplicatePrepaidCustomerProducts({});
+				const ctx = contexts.create({ features: [] });
+				const billingContext = contexts.createBilling({
+					customerProducts: [],
+					stripeSubscription: undefined,
+					billingVersion: BillingVersion.V2,
+				});
+
+				return buildStripeSubscriptionItemsUpdate({
+					ctx,
+					billingContext,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: customerProductsWithoutSub,
+					} as never,
+					finalCustomerProducts: customerProductsWithoutSub,
+				});
+			};
+
+			const buildUpdateWithItems = ({
+				currentItems,
+			}: {
+				currentItems: Stripe.SubscriptionItem[];
+			}) => {
+				const customerProductsOnSub = createDuplicatePrepaidCustomerProducts({
+					subscriptionIds: ["sub_123"],
+				});
+				const ctx = contexts.create({ features: [] });
+				const stripeSubscription = {
+					id: "sub_123",
+					object: "subscription",
+					status: "active",
+					items: {
+						object: "list",
+						data: currentItems,
+						has_more: false,
+						url: "/v1/subscription_items?subscription=sub_123",
+					},
+				} as Stripe.Subscription;
+				const billingContext = contexts.createBilling({
+					customerProducts: customerProductsOnSub,
+					stripeSubscription,
+					billingVersion: BillingVersion.V2,
+				});
+
+				return buildStripeSubscriptionItemsUpdate({
+					ctx,
+					billingContext,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: customerProductsOnSub,
+					} as never,
+					finalCustomerProducts: customerProductsOnSub,
+				});
+			};
+
+			test("reuses unchanged duplicate prepaid inline items", () => {
+				const initialItems = buildInitialItems();
+				const currentItems = initialItems.map((item, index) =>
+					stripeSubscriptionItemFromUpdate(
+						item as Stripe.SubscriptionCreateParams.Item,
+						index,
+					),
+				);
+
+				const result = buildUpdateWithItems({ currentItems });
+
+				expect(initialItems.filter((item) => item.price_data)).toHaveLength(2);
+				expect(result).toEqual([]);
+			});
+
+			test("recreates an inline item when the Stripe price shape changed", () => {
+				const initialItems = buildInitialItems();
+				const currentItems = initialItems.map((item, index) =>
+					stripeSubscriptionItemFromUpdate(
+						item as Stripe.SubscriptionCreateParams.Item,
+						index,
+					),
+				);
+				const changedItem = currentItems.find(
+					(item) => item.metadata.inline_price === "true",
+				)!;
+				changedItem.price.unit_amount_decimal = "999999";
+
+				const result = buildUpdateWithItems({ currentItems });
+
+				expect(result.filter((item) => item.price_data)).toHaveLength(1);
+				expect(result).toContainEqual({
+					id: changedItem.id,
+					deleted: true,
+				});
+			});
+
+			test("does not match inline items without Autumn customer price metadata", () => {
+				const initialItems = buildInitialItems();
+				const currentItems = initialItems.map((item, index) =>
+					stripeSubscriptionItemFromUpdate(
+						item as Stripe.SubscriptionCreateParams.Item,
+						index,
+					),
+				);
+				const itemWithoutMetadata = currentItems.find(
+					(item) => item.metadata.inline_price === "true",
+				)!;
+				itemWithoutMetadata.metadata = { inline_price: "true" };
+
+				const result = buildUpdateWithItems({ currentItems });
+
+				expect(result.filter((item) => item.price_data)).toHaveLength(1);
+				expect(result).toContainEqual({
+					id: itemWithoutMetadata.id,
+					deleted: true,
+				});
+			});
+		});
+
 		describe(chalk.cyan("Edge Cases"), () => {
 			test("No stripe subscription and no products returns empty array", () => {
 				const ctx = contexts.create({ features: [] });
@@ -767,7 +1013,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [],
+					} as never,
 					finalCustomerProducts: [],
 				});
 
@@ -805,7 +1054,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [entityCustomerProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [entityCustomerProduct],
+					} as never,
 					finalCustomerProducts: [entityCustomerProduct],
 				});
 
@@ -848,7 +1100,10 @@ describe(
 				const result = buildStripeSubscriptionItemsUpdate({
 					ctx,
 					billingContext,
-					autumnBillingPlan: { customerId: "test", insertCustomerProducts: [customerProduct] } as never,
+					autumnBillingPlan: {
+						customerId: "test",
+						insertCustomerProducts: [customerProduct],
+					} as never,
 					finalCustomerProducts: [customerProduct],
 				});
 
