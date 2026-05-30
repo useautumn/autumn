@@ -1,11 +1,15 @@
-import type { CreditSchemaItem, Feature } from "@autumn/shared";
+import {
+	type CreditSchemaItem,
+	type Feature,
+	FeatureType,
+} from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import { X } from "lucide-react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
-import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
 import { useCreditSchema } from "../hooks/useCreditSchema";
+import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
 import { FeatureSelectDropdown } from "./FeatureSelectDropdown";
 
 interface ClassicCreditSchemaProps {
@@ -16,7 +20,7 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 	const {
 		schema,
 		schemaKeys,
-		allMeteredFeatures,
+		allSchemaCandidateFeatures,
 		handleSchemaChange,
 		addSchemaItem,
 		removeSchemaItem,
@@ -25,13 +29,13 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 	return (
 		<div className="flex flex-col gap-0">
 			<div className="grid grid-cols-2 gap-2">
-				<FormLabel>Metered Feature</FormLabel>
+				<FormLabel>Feature</FormLabel>
 				<FormLabel>Credit Cost</FormLabel>
 			</div>
 
 			<div className="flex flex-col gap-2">
 				{schema.map((item: CreditSchemaItem, index: number) => {
-					const availableFeatures = allMeteredFeatures.filter(
+					const availableFeatures = allSchemaCandidateFeatures.filter(
 						(feature: Feature) =>
 							!schema.some(
 								(schemaItem: CreditSchemaItem) =>
@@ -39,6 +43,12 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 									schemaItem.metered_feature_id === feature.id,
 							),
 					);
+
+					const selectedFeature = allSchemaCandidateFeatures.find(
+						(f: Feature) => f.id === item.metered_feature_id,
+					);
+					const isAiChild =
+						selectedFeature?.type === FeatureType.AiCreditSystem;
 
 					return (
 						<div
@@ -51,32 +61,39 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 									handleSchemaChange(index, "metered_feature_id", featureId)
 								}
 								availableFeatures={availableFeatures}
-								allFeatures={allMeteredFeatures}
+								allFeatures={allSchemaCandidateFeatures}
 							/>
 
-							<div className="flex gap-1">
-								<Input
-									type="number"
-									lang="en"
-									value={item.credit_amount ?? ""}
-									onChange={(e) =>
-										handleSchemaChange(index, "credit_amount", e.target.value)
-									}
-									onBlur={(e) =>
-										handleSchemaChange(
-											index,
-											"credit_amount",
-											Number(e.target.value) || 0,
-										)
-									}
-									placeholder="eg. 10"
-								/>
-								<IconButton
-									variant="skeleton"
-									iconOrientation="center"
-									icon={<X />}
-									onClick={() => removeSchemaItem(index)}
-								/>
+							<div className="flex flex-col gap-1">
+								<div className="flex gap-1">
+									<Input
+										type="number"
+										lang="en"
+										value={item.credit_amount ?? ""}
+										onChange={(e) =>
+											handleSchemaChange(index, "credit_amount", e.target.value)
+										}
+										onBlur={(e) =>
+											handleSchemaChange(
+												index,
+												"credit_amount",
+												Number(e.target.value) || 0,
+											)
+										}
+										placeholder="eg. 10"
+									/>
+									<IconButton
+										variant="skeleton"
+										iconOrientation="center"
+										icon={<X />}
+										onClick={() => removeSchemaItem(index)}
+									/>
+								</div>
+								{isAiChild && (
+									<span className="text-xs text-muted-foreground">
+										credits per $1 of AI usage
+									</span>
+								)}
 							</div>
 						</div>
 					);
@@ -86,7 +103,7 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 			<IconButton
 				variant="muted"
 				onClick={addSchemaItem}
-				disabled={schema.length >= allMeteredFeatures.length}
+				disabled={schema.length >= allSchemaCandidateFeatures.length}
 				className="w-fit mt-4"
 				icon={<PlusIcon />}
 			>

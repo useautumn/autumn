@@ -14,6 +14,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { FeatureService } from "../FeatureService.js";
 import {
 	validateCreditSystem,
+	validateCreditSystemSchemaReferences,
 	validateMeteredConfig,
 } from "../featureUtils.js";
 import { getObjectsUsingFeature } from "../utils/updateFeatureUtils/getObjectsUsingFeature.js";
@@ -181,8 +182,20 @@ export const updateFeature = async ({
 		if (updates.config === undefined) return feature.config;
 		switch (effectiveType) {
 			case FeatureType.AiCreditSystem:
-			case FeatureType.CreditSystem:
-				return validateCreditSystem(updates.config, effectiveType);
+			case FeatureType.CreditSystem: {
+				const validatedConfig = validateCreditSystem(
+					updates.config,
+					effectiveType,
+				);
+				if (effectiveType === FeatureType.CreditSystem) {
+					validateCreditSystemSchemaReferences({
+						config: validatedConfig,
+						allFeatures,
+						selfFeatureId: updates.id ?? feature.id,
+					});
+				}
+				return validatedConfig;
+			}
 			case FeatureType.Metered:
 				return validateMeteredConfig(updates.config);
 			default:
@@ -217,7 +230,9 @@ export const updateFeature = async ({
 	}
 
 	// Queue cache clear for credit system if schema or model markups changed
-	const isCreditSystem = feature.type === FeatureType.CreditSystem || feature.type === FeatureType.AiCreditSystem;
+	const isCreditSystem =
+		feature.type === FeatureType.CreditSystem ||
+		feature.type === FeatureType.AiCreditSystem;
 	if (isCreditSystem && updatedFeature) {
 		const schemaChanged =
 			updates.config != null &&

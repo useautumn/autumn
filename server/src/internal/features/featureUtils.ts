@@ -56,6 +56,14 @@ export const validateCreditSystem = (
 		});
 	}
 
+	if (isAiCreditSystem && schema.length > 0) {
+		throw new RecaseError({
+			message: `AI credit systems are leaf features and cannot define a schema. Model rates live in model_markups.`,
+			code: ErrCode.InvalidFeature,
+			statusCode: 400,
+		});
+	}
+
 	const meteredFeatureIds = schema.map(
 		(schemaItem) => schemaItem.metered_feature_id,
 	);
@@ -88,6 +96,42 @@ export const validateCreditSystem = (
 	return newConfig;
 };
 
+/**
+ * Validates that every feature referenced by a credit system's schema is a
+ * Metered or AiCreditSystem feature. Rejects nesting one CreditSystem inside
+ * another — composition is capped at two levels (parent credit system → leaf).
+ *
+ * Self-references are tolerated (the create flow doesn't yet have the new id
+ * in the features list, and updates simply read back as the feature itself).
+ */
+export const validateCreditSystemSchemaReferences = ({
+	config,
+	allFeatures,
+	selfFeatureId,
+}: {
+	config: CreditSystemConfig;
+	allFeatures: Feature[];
+	selfFeatureId?: string;
+}) => {
+	const schema = Array.isArray(config?.schema) ? config.schema : [];
+	if (schema.length === 0) return;
+
+	for (const item of schema) {
+		const referencedId = item.metered_feature_id;
+		if (!referencedId || referencedId === selfFeatureId) continue;
+
+		const referenced = allFeatures.find((f) => f.id === referencedId);
+		if (!referenced) continue;
+
+		if (referenced.type === FeatureType.CreditSystem) {
+			throw new RecaseError({
+				message: `Credit system schema cannot reference another credit system (${referencedId}). Only metered or AI credit features are allowed.`,
+				code: ErrCode.InvalidFeature,
+				statusCode: 400,
+			});
+		}
+	}
+};
 
 const getCusFeatureType = ({ feature }: { feature: Feature }) => {
 	if (feature.type === FeatureType.Boolean) {

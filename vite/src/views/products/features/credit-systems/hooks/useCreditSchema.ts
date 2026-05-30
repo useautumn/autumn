@@ -20,8 +20,9 @@ export function useCreditSchema(form: CreditSystemFormInstance) {
 		return nextKeys;
 	}, [schema.length]);
 
-	const allMeteredFeatures = features.filter(
-		(f: Feature) => f.type === FeatureType.Metered,
+	const allSchemaCandidateFeatures = features.filter(
+		(f: Feature) =>
+			f.type === FeatureType.Metered || f.type === FeatureType.AiCreditSystem,
 	);
 
 	const handleSchemaChange = (
@@ -38,7 +39,10 @@ export function useCreditSchema(form: CreditSystemFormInstance) {
 		schemaKeysRef.current = [...schemaKeysRef.current, crypto.randomUUID()];
 		form.setFieldValue("config", {
 			...config,
-			schema: [...schema, { metered_feature_id: "", feature_amount: 1, credit_amount: 0 }],
+			schema: [
+				...schema,
+				{ metered_feature_id: "", feature_amount: 1, credit_amount: 0 },
+			],
 		});
 	};
 
@@ -58,7 +62,7 @@ export function useCreditSchema(form: CreditSystemFormInstance) {
 	return {
 		schema,
 		schemaKeys,
-		allMeteredFeatures,
+		allSchemaCandidateFeatures,
 		handleSchemaChange,
 		addSchemaItem,
 		removeSchemaItem,
