@@ -1,6 +1,7 @@
 import {
 	type Feature,
 	FeatureType,
+	type FullCustomer,
 	isContUseFeature,
 	ResetInterval,
 	type RolloverConfig,
@@ -35,6 +36,7 @@ import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { RolloverConfigForm } from "@/views/products/plan/components/edit-plan-feature/advanced-settings/RolloverConfigForm";
 import { useCustomerContext } from "../../customer/CustomerContext";
+import { EntityScopeSelector } from "./EntityScopeSelector";
 
 const RESET_INTERVAL_LABELS: Record<string, string> = {
 	[ResetInterval.Minute]: "Minute",
@@ -54,7 +56,12 @@ export function BalanceCreateSheet() {
 	const { features } = useFeaturesQuery();
 	const axiosInstance = useAxiosInstance();
 
+	const entities = (customer as FullCustomer | null)?.entities ?? [];
+
 	const [isCreating, setIsCreating] = useState(false);
+	const [scopeEntityId, setScopeEntityId] = useState<string | undefined>(
+		() => entityId ?? undefined,
+	);
 	const [featureId, setFeatureId] = useState<string>("");
 	const [balanceId, setBalanceId] = useState("");
 	const [includedGrant, setIncludedGrant] = useState("");
@@ -115,7 +122,7 @@ export function BalanceCreateSheet() {
 			feature_id: featureId,
 		};
 
-		if (entityId) params.entity_id = entityId;
+		if (scopeEntityId) params.entity_id = scopeEntityId;
 		if (balanceId.trim()) params.balance_id = balanceId.trim();
 
 		if (isMetered) {
@@ -166,6 +173,14 @@ export function BalanceCreateSheet() {
 					title="Create Balance"
 					description="Create a separate balance for this customer that is not associated with any plan."
 				/>
+
+				{entities.length > 0 && (
+					<EntityScopeSelector
+						entities={entities}
+						scopeEntityId={scopeEntityId}
+						onScopeChange={setScopeEntityId}
+					/>
+				)}
 
 				<SheetSection withSeparator>
 					<FormLabel>Feature</FormLabel>

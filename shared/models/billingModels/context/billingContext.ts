@@ -60,6 +60,8 @@ export interface BillingContext {
 	currentEpochMs: number;
 	billingCycleAnchorMs: number | "now";
 	resetCycleAnchorMs: number | "now";
+	billingStartsAt?: number;
+	subscriptionBackdateStartMs?: number;
 	requestedBillingCycleAnchor?: number | "now";
 	requestedProrationBehavior?: BillingBehavior;
 

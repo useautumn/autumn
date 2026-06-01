@@ -113,12 +113,11 @@ export const isConnectionDropError = ({
 	return CONNECTION_DROP_CODES.has(code);
 };
 
-/** Throws if DATABASE_URL looks like a production database. Single source of truth for this check. */
-export const assertNotProductionDb = () => {
-	const url = process.env.DATABASE_URL || "";
+/** Throws if the connection string looks like a production database. Single source of truth for this check. */
+export const assertNotProductionDb = (url = process.env.DATABASE_URL || "") => {
 	if (url.includes("us-east-2")) {
 		throw new Error(
-			"Refusing to run against production database (DATABASE_URL contains us-east-2)",
+			"Refusing to run against production database (connection string contains us-east-2)",
 		);
 	}
 };

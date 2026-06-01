@@ -5,7 +5,6 @@ import { getReachableDragonflyUrl } from "./getReachableDragonflyUrl.js";
 import {
 	createRedisConnection,
 	currentRegion,
-	redis,
 	waitForRedisReady,
 } from "./initRedis.js";
 import {
@@ -17,6 +16,8 @@ const rawDragonflyUrl = process.env.CACHE_V2_DRAGONFLY_URL?.trim();
 const dragonflyUrl = rawDragonflyUrl
 	? getReachableDragonflyUrl(rawDragonflyUrl)
 	: undefined;
+
+export const hasRedisV2Config = Boolean(dragonflyUrl);
 
 export const redisV2: Redis = createRedisConnection({
 	cacheUrl: dragonflyUrl || "",
@@ -62,7 +63,7 @@ export const getAlternateRedisV2Instance = (
 };
 
 export const warmupRedisV2 = async (): Promise<void> => {
-	if (redisV2 === redis) return;
+	if (!hasRedisV2Config) return;
 
 	await waitForRedisReady(redisV2, "v2");
 };

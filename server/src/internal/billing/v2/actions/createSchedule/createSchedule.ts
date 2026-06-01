@@ -56,7 +56,11 @@ export const createSchedule = async ({
 		params,
 	});
 
-	await handleCreateScheduleErrors({ db: ctx.db, billingContext });
+	await handleCreateScheduleErrors({
+		db: ctx.db,
+		billingContext,
+		preview: false,
+	});
 
 	const { autumnBillingPlan, phases } = computeCreateSchedulePlan({
 		ctx,

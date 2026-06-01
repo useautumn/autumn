@@ -84,7 +84,7 @@ test.concurrent(`${chalk.yellowBright("trial-merge 1: add-on to trialing subscri
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: advancedTo + ms.days(7),
-		total: 20, // Add-on ($20) after trial
+		total: 40,
 	});
 
 	// 2. Attach add-on
@@ -296,7 +296,7 @@ test.concurrent(`${chalk.yellowBright("trial-merge 3: entity attach to trialing 
 	expectPreviewNextCycleCorrect({
 		preview,
 		startsAt: advancedTo + ms.days(7), // Trial end
-		total: 20, // 2 entities x $20 = $40 after trial
+		total: 40, // 2 entities x $20 after trial
 	});
 
 	// 2. Attach to entity-2

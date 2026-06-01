@@ -7,6 +7,7 @@ import {
 	LineItemSchema,
 } from "../../../../models/billingModels/lineItem/lineItem";
 import type { LineItemContext } from "../../../../models/billingModels/lineItem/lineItemContext";
+import { applyBackdatedLineItemAmount } from "../backdateUtils/applyBackdatedLineItemAmount";
 import { applyProration } from "../prorationUtils/applyProration";
 import { getEffectivePeriod } from "../prorationUtils/getEffectivePeriod";
 
@@ -64,6 +65,13 @@ export const buildLineItem = ({
 	// 3. Handle refund direction
 	if (context.direction === "refund") {
 		amount = -amount;
+	}
+
+	if (chargeImmediately) {
+		amount = applyBackdatedLineItemAmount({
+			amount,
+			context: updatedContext,
+		});
 	}
 
 	const entityLabel = context.entity?.name || context.entity?.id;

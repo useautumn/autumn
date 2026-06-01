@@ -6,6 +6,7 @@ type StripeEventType = Stripe.WebhookEndpointCreateParams.EnabledEvent;
 export const MAIN_STRIPE_EVENT_TYPES: StripeEventType[] = [
 	"checkout.session.completed",
 	"checkout.session.expired",
+	"customer.updated",
 	"customer.subscription.created",
 	"customer.subscription.updated",
 	"customer.subscription.deleted",
@@ -23,7 +24,6 @@ export const MAIN_STRIPE_EVENT_TYPES: StripeEventType[] = [
 export const SYNC_STRIPE_EVENT_TYPES: StripeEventType[] = [
 	// customers
 	"customer.created",
-	"customer.updated",
 	"customer.deleted",
 
 	// subscriptions (extras beyond main)
