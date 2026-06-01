@@ -2,6 +2,7 @@ import {
 	type FullCusEntWithFullCusProduct,
 	type FullSubject,
 	fullSubjectToFullCustomer,
+	notNullish,
 } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { currentRegion } from "@/external/redis/initRedis.js";
@@ -104,6 +105,10 @@ export const executeRedisDeductionV2 = async ({
 		entityId: fullSubject.entityId,
 	});
 
+	// One timestamp for the whole operation: the resolver keys windows from it
+	// and Lua receives the same value, so they never disagree on the window.
+	const usageWindowNow = Date.now();
+
 	for (const deduction of deductions) {
 		const {
 			feature,
@@ -117,6 +122,7 @@ export const executeRedisDeductionV2 = async ({
 			customerEntitlementDeductions,
 			spendLimitByFeatureId,
 			usageBasedCusEntIdsByFeatureId,
+			usageWindowLimits,
 			rollovers,
 			customerEntitlements,
 			unlimitedFeatureIds,
@@ -127,6 +133,7 @@ export const executeRedisDeductionV2 = async ({
 			fullSubject,
 			deduction,
 			options,
+			now: usageWindowNow,
 		});
 
 		if (unlimitedFeatureIds.length > 0) {
@@ -171,6 +178,16 @@ export const executeRedisDeductionV2 = async ({
 				}).redisKey
 			: null;
 
+		// Anchor features own usage-window counters and may not be in the
+		// deduction set, so their balance hash keys must be declared too.
+		const anchorFeatureIds = [
+			...new Set(
+				(usageWindowLimits ?? [])
+					.map((limit) => limit.anchor_feature_id)
+					.filter((featureId): featureId is string => featureId !== null),
+			),
+		];
+
 		const { keys, balanceKeyIndexByFeatureId } =
 			buildDeductFromSubjectBalancesKeys({
 				orgId: org.id,
@@ -181,7 +198,16 @@ export const executeRedisDeductionV2 = async ({
 				idempotencyKey: idempotencyRedisKey,
 				customerEntitlementDeductions,
 				fallbackFeatureId: feature.id,
+				anchorFeatureIds,
 			});
+
+		// Usage windows are enforced/incremented only for real positive
+		// consumption, never for target_balance set-downs or granted-balance edits.
+		const isConsumption =
+			notNullish(toDeduct) &&
+			(toDeduct as number) > 0 &&
+			!notNullish(targetBalance) &&
+			!options.alterGrantedBalance;
 
 		const luaParams = {
 			org_id: org.id,
@@ -192,6 +218,9 @@ export const executeRedisDeductionV2 = async ({
 			spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
 			usage_based_cus_ent_ids_by_feature_id:
 				usageBasedCusEntIdsByFeatureId ?? null,
+			usage_window_limits: usageWindowLimits ?? null,
+			usage_window_now: usageWindowNow,
+			is_consumption: isConsumption,
 			amount_to_deduct: toDeduct ?? null,
 			target_balance: targetBalance ?? null,
 			target_entity_id: entityId || null,

@@ -1,34 +1,27 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "idx": 0,
-      "version": "7",
-      "when": 1779096275848,
-      "tag": "0000_bumpy_tinkerer",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1779971507895,
-      "tag": "0001_concerned_ravenous",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1780302718193,
-      "tag": "0002_jittery_dexter_bennett",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1780310835175,
-      "tag": "0003_polite_shatterstar",
-      "breakpoints": true
-    }
-  ]
+	"version": "7",
+	"dialect": "postgresql",
+	"entries": [
+		{
+			"idx": 0,
+			"version": "7",
+			"when": 1779096275848,
+			"tag": "0000_bumpy_tinkerer",
+			"breakpoints": true
+		},
+		{
+			"idx": 1,
+			"version": "7",
+			"when": 1779971507895,
+			"tag": "0001_concerned_ravenous",
+			"breakpoints": true
+		},
+		{
+			"idx": 2,
+			"version": "7",
+			"when": 1780302718193,
+			"tag": "0002_jittery_dexter_bennett",
+			"breakpoints": true
+		}
+	]
 }

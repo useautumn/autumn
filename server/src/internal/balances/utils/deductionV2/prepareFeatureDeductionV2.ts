@@ -1,18 +1,21 @@
 import {
 	AllowanceType,
 	cusEntToStartingBalance,
+	ErrCode,
 	type FullCusEntWithFullCusProduct,
 	type FullSubject,
 	fullSubjectToCustomerEntitlements,
 	fullSubjectToOverageAllowedByFeatureId,
 	fullSubjectToSpendLimitByFeatureId,
 	fullSubjectToUsageBasedCusEntsByFeatureId,
+	fullSubjectToUsageWindowLimits,
 	getMaxOverage,
 	getRelevantFeatures,
 	isAllocatedCustomerEntitlement,
 	isFreeCustomerEntitlement,
 	notNullish,
 	orgToInStatuses,
+	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
@@ -34,11 +37,15 @@ export const prepareFeatureDeductionV2 = ({
 	fullSubject,
 	deduction,
 	options = {},
+	now,
 }: {
 	ctx: AutumnContext;
 	fullSubject: FullSubject;
 	deduction: FeatureDeduction;
 	options?: DeductionOptions;
+	// Single timestamp shared with the Lua param so the resolved window key and
+	// the script agree on which window a boundary-crossing request lands in.
+	now: number;
 }): PreparedFeatureDeduction => {
 	const { org, env } = ctx;
 	const { feature, lock, targetBalance } = deduction;
@@ -108,6 +115,43 @@ export const prepareFeatureDeductionV2 = ({
 		fullSubject,
 		featureIds: effectiveFeatureIds,
 	});
+	// Resolve windows against the full relevant set (incl credit-system parents)
+	// even under set_usage, so a parent-feature cap can't be bypassed by set_usage
+	// on a member feature.
+	const windowFeatureIds = notNullish(targetBalance)
+		? getRelevantFeatures({
+				features: ctx.features,
+				featureId: feature.id,
+			}).map((candidate) => candidate.id)
+		: effectiveFeatureIds;
+	const usageWindowLimits = fullSubjectToUsageWindowLimits({
+		fullSubject,
+		featureIds: windowFeatureIds,
+		features: ctx.features,
+		now,
+	});
+
+	for (const windowLimit of usageWindowLimits) {
+		if (windowLimit.anchor_customer_entitlement_id === null) {
+			ctx.logger.warn(
+				`usage window for feature ${windowLimit.feature_id} has no eligible anchor entitlement; failing closed (rejecting). Likely a misconfigured cap with no in-status, non-entity-scoped owning entitlement.`,
+			);
+		}
+	}
+	if (fullSubject.entity?.spend_limits?.some((s) => s.usage_window?.enabled)) {
+		ctx.logger.warn(
+			`entity-scoped usage windows are not enforced in v1; ignored for entity ${fullSubject.entity.id}`,
+		);
+	}
+
+	// set_usage carries no window provenance, so it would silently bypass the hard
+	// cap; reject it when the feature has an enforced usage window.
+	if (notNullish(targetBalance) && usageWindowLimits.length > 0) {
+		throw new RecaseError({
+			message: `Cannot set usage for feature ${feature.id}: it has an active usage limit. Remove or adjust the limit, or record usage normally instead of using set_usage.`,
+			code: ErrCode.SetUsageNotAllowedWithUsageLimit,
+		});
+	}
 
 	const nativeUsageAllowedFeatureIds = new Set(
 		customerEntitlements
@@ -213,6 +257,8 @@ export const prepareFeatureDeductionV2 = ({
 			Object.keys(usageBasedCusEntIdsByFeatureId).length > 0
 				? usageBasedCusEntIdsByFeatureId
 				: undefined,
+		usageWindowLimits:
+			usageWindowLimits.length > 0 ? usageWindowLimits : undefined,
 		rollovers: sortedRollovers.map((rollover) => ({
 			id: rollover.id,
 			credit_cost: rollover.credit_cost,

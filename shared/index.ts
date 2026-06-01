@@ -211,6 +211,8 @@ export * from "./utils/cusEntUtils/balanceUtils/cusEntToUsageAllowed";
 export * from "./utils/cusEntUtils/index";
 // Utils
 export * from "./utils/usageWindowUtils/buildUsageWindowKey";
+export * from "./utils/usageWindowUtils/getUsageWindowBounds";
+export * from "./utils/usageWindowUtils/pickAnchorCustomerEntitlementId";
 export * from "./utils/displayUtils";
 export * from "./utils/fullSubjectUtils";
 export * from "./utils/index";

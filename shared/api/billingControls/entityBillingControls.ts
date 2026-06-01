@@ -5,7 +5,8 @@ import { ApiUsageAlertSchema } from "./usageAlert.js";
 
 export const ApiEntityBillingControlsSchema = z.object({
 	spend_limits: z.array(ApiSpendLimitSchema).optional().meta({
-		description: "List of overage spend limits per feature.",
+		description:
+			"List of spend limits per feature. Each entry caps overage (overage_limit) and/or windowed usage (usage_window).",
 	}),
 	usage_alerts: z.array(ApiUsageAlertSchema).optional().meta({
 		description: "List of usage alert configurations per feature.",

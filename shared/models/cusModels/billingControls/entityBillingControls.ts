@@ -5,7 +5,8 @@ import { DbUsageAlertSchema } from "./usageAlert.js";
 
 export const EntityBillingControlsSchema = z.object({
 	spend_limits: z.array(DbSpendLimitSchema).optional().meta({
-		description: "List of overage spend limits per feature.",
+		description:
+			"List of spend limits per feature. Each entry caps overage (overage_limit) and/or windowed usage (usage_window).",
 	}),
 	usage_alerts: z.array(DbUsageAlertSchema).optional().meta({
 		description: "List of usage alert configurations per feature.",

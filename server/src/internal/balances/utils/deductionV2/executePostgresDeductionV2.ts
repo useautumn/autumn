@@ -116,6 +116,7 @@ export const executePostgresDeductionV2 = async ({
 				fullSubject,
 				deduction,
 				options: resolvedOptions,
+				now: Date.now(),
 			});
 
 			if (customerEntitlements.length === 0 || unlimitedFeatureIds.length > 0) {
