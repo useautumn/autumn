@@ -116,6 +116,7 @@ export function buildCreateScheduleRequestBody({
 	nowMs,
 	billingBehavior,
 	resetBillingCycle,
+	allowFirstPhaseBackdate,
 }: {
 	customerId: string | undefined;
 	entityId: string | undefined;
@@ -125,13 +126,22 @@ export function buildCreateScheduleRequestBody({
 	nowMs?: number;
 	billingBehavior?: BillingBehavior | null;
 	resetBillingCycle?: boolean;
+	allowFirstPhaseBackdate?: boolean;
 }): CreateScheduleParamsV0 | null {
 	const now = nowMs ?? Date.now();
 	if (!customerId || phases.length === 0) return null;
 	if (getCreateSchedulePhaseTimingError({ phases, nowMs: now })) return null;
 
 	const apiPhases = phases.map((phase, index) => {
-		const startsAt = index === 0 ? now : phase.startsAt;
+		// The first phase starts immediately (now) unless backdating is allowed —
+		// only when a brand-new Stripe subscription will be created — in which case
+		// a past starts_at flows through to backdate that subscription.
+		const startsAt =
+			index === 0
+				? allowFirstPhaseBackdate
+					? (phase.startsAt ?? now)
+					: now
+				: phase.startsAt;
 		if (startsAt === null) return null;
 
 		const plans = phase.plans
@@ -193,6 +203,7 @@ export function useCreateScheduleRequestBody({
 	nowMs,
 	billingBehavior,
 	resetBillingCycle,
+	allowFirstPhaseBackdate,
 }: {
 	customerId: string | undefined;
 	entityId: string | undefined;
@@ -202,6 +213,7 @@ export function useCreateScheduleRequestBody({
 	nowMs?: number;
 	billingBehavior?: BillingBehavior | null;
 	resetBillingCycle?: boolean;
+	allowFirstPhaseBackdate?: boolean;
 }) {
 	return useMemo(
 		() =>
@@ -214,6 +226,7 @@ export function useCreateScheduleRequestBody({
 				nowMs,
 				billingBehavior,
 				resetBillingCycle,
+				allowFirstPhaseBackdate,
 			}),
 		[
 			customerId,
@@ -224,6 +237,7 @@ export function useCreateScheduleRequestBody({
 			nowMs,
 			billingBehavior,
 			resetBillingCycle,
+			allowFirstPhaseBackdate,
 		],
 	);
 }
@@ -238,6 +252,7 @@ export function useBuildCreateScheduleRequestBody({
 	getBillingBehavior,
 	getResetBillingCycle,
 	getEnablePlanImmediately,
+	getAllowFirstPhaseBackdate,
 }: {
 	customerId: string | undefined;
 	entityId: string | undefined;
@@ -248,6 +263,7 @@ export function useBuildCreateScheduleRequestBody({
 	getBillingBehavior?: () => BillingBehavior | null;
 	getResetBillingCycle?: () => boolean;
 	getEnablePlanImmediately?: () => boolean;
+	getAllowFirstPhaseBackdate?: () => boolean;
 }) {
 	return useMemo(
 		() =>
@@ -269,6 +285,7 @@ export function useBuildCreateScheduleRequestBody({
 					nowMs,
 					billingBehavior: getBillingBehavior?.() ?? null,
 					resetBillingCycle: getResetBillingCycle?.() ?? false,
+					allowFirstPhaseBackdate: getAllowFirstPhaseBackdate?.() ?? false,
 				});
 
 				if (!requestBody) return null;
@@ -307,6 +324,7 @@ export function useBuildCreateScheduleRequestBody({
 			getBillingBehavior,
 			getResetBillingCycle,
 			getEnablePlanImmediately,
+			getAllowFirstPhaseBackdate,
 		],
 	);
 }

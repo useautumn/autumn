@@ -92,7 +92,10 @@ export const expectBalanceCorrect = ({
 								(candidateBucket) => candidateBucket.reset?.interval === key,
 							);
 
-			expect(bucket).toBeDefined();
+			expect(
+				bucket,
+				`Missing balance bucket ${key}: ${JSON.stringify(buckets)}`,
+			).toBeDefined();
 			expect(bucket).toMatchObject(expectation as BucketExpectation);
 		}
 	}
