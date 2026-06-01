@@ -5,6 +5,7 @@ import {
 	RecaseError,
 	type TrackParams,
 	type TrackResponseV3,
+	UsageLimitExceededError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
@@ -37,6 +38,10 @@ export const handleRedisTrackErrorV3 = async ({
 			featureId: body.feature_id,
 			eventName: body.event_name,
 		});
+	}
+
+	if (error.code === RedisDeductionErrorCode.UsageLimitExceeded) {
+		throw new UsageLimitExceededError({ featureId: body.feature_id });
 	}
 
 	if (error.code === RedisDeductionErrorCode.LockAlreadyExists) {

@@ -111,6 +111,30 @@ local idempotency_ttl_ms = params.idempotency_ttl_ms
 local lock = params.lock
 local unwind_value = params.unwind_value
 local lock_receipt_key = lock_receipt_key_from_keys
+local usage_window_limits = params.usage_window_limits
+local usage_window_now = params.usage_window_now
+local is_consumption = params.is_consumption
+
+-- Distinct usage-window anchor cus_ents to force-load into context (they own
+-- the counters and may not be in the deduction set).
+local anchor_entitlements = {}
+if not is_nil(usage_window_limits) then
+  local seen_anchor_ids = {}
+  for _, usage_window_limit in ipairs(usage_window_limits) do
+    local anchor_id = usage_window_limit.anchor_customer_entitlement_id
+    local anchor_feature_id = usage_window_limit.anchor_feature_id
+    if not is_nil(anchor_id)
+        and not is_nil(anchor_feature_id)
+        and not seen_anchor_ids[anchor_id]
+    then
+      seen_anchor_ids[anchor_id] = true
+      table.insert(anchor_entitlements, {
+        customer_entitlement_id = anchor_id,
+        feature_id = anchor_feature_id,
+      })
+    end
+  end
+end
 
 if not is_nil(idempotency_key) then
   if redis.call('EXISTS', idempotency_key) == 1 then
@@ -144,6 +168,7 @@ local context = init_context({
   env = env,
   customer_id = customer_id,
   customer_entitlement_deductions = customer_entitlement_deductions,
+  anchor_entitlements = anchor_entitlements,
   balance_keys_by_feature_id = params.balance_keys_by_feature_id,
   debug = params.debug,
 })
@@ -235,11 +260,6 @@ for _, cus_ent_id in ipairs(unwind_modified_cus_ent_ids) do
   end
 end
 
-local modified_customer_entitlement_ids = collect_modified_customer_entitlement_ids({
-  context = context,
-  extra_customer_entitlement_ids = unwind_modified_cus_ent_ids,
-})
-
 logger.log("  remaining_amount: %s", tostring(remaining_amount or "nil"))
 logger.log("  is_refund: %s", tostring(remaining_amount < 0 or false))
 local mutation_logs = context.mutation_logs
@@ -258,6 +278,54 @@ if remaining_amount > 0 and overage_behaviour == 'reject' then
     logs = context.logs
   })
 end
+
+-- Hard windowed usage-limit enforcement, on ACTUAL consumed amounts, before any
+-- writes. Only for positive consumption (refunds / target_balance / granted
+-- balance edits never trip or move counters). v1 also excludes lock-based and
+-- unwind flows: counter reversal on partial unwind is not implemented yet, so
+-- enforcing there could drift the counter.
+local enforce_usage_windows = is_consumption
+    and is_nil(unwind_value)
+    and (is_nil(lock) or not lock.enabled)
+    and not is_nil(usage_window_limits)
+    and #usage_window_limits > 0
+
+if enforce_usage_windows then
+  local exceeded_feature_id = check_usage_window_limits({
+    context = context,
+    usage_window_limits = usage_window_limits,
+    updates = updates,
+    amount_to_deduct = amount_to_deduct,
+    remaining_amount = remaining_amount,
+  })
+
+  if not is_nil(exceeded_feature_id) then
+    return cjson.encode({
+      error = 'USAGE_LIMIT_EXCEEDED',
+      feature_id = exceeded_feature_id,
+      remaining = remaining_amount,
+      updates = {},
+      rollover_updates = {},
+      modified_customer_entitlement_ids = new_empty_array(),
+      mutation_logs = mutation_logs,
+      logs = context.logs,
+    })
+  end
+
+  increment_usage_window_counters({
+    context = context,
+    usage_window_limits = usage_window_limits,
+    updates = updates,
+    amount_to_deduct = amount_to_deduct,
+    remaining_amount = remaining_amount,
+    now = usage_window_now,
+  })
+end
+
+local modified_customer_entitlement_ids = collect_modified_customer_entitlement_ids({
+  context = context,
+  extra_customer_entitlement_ids = unwind_modified_cus_ent_ids,
+})
 
 if not is_nil(lock)
     and not is_nil(lock.enabled)

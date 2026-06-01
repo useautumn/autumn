@@ -274,6 +274,11 @@ local function run_deduction_on_context(params)
 
       update.adjustment = ent_data.adjustment or 0
       update.additional_balance = 0
+
+      if ent_data.subject_balance
+          and type(ent_data.subject_balance.usage_windows) == 'table' then
+        update.usage_windows = ent_data.subject_balance.usage_windows
+      end
     end
   end
 
