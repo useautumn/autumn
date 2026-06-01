@@ -15,20 +15,16 @@ import { globalSyncBatchingManagerV2 } from "../../utils/sync/SyncBatchingManage
 import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import type { RolloverUpdate } from "../../utils/types/rolloverUpdate.js";
+import { buildAiCreditCostProperty } from "./buildAiCreditCostProperty.js";
 import { handleRedisTrackError } from "./handleRedisTrackError.js";
 
-const buildAiCreditCostProperty = ({
-	featureDeductions,
+const aiCreditCostEntries = ({
 	updates,
 	fullCustomer,
 }: {
-	featureDeductions: FeatureDeduction[];
 	updates: Record<string, DeductionUpdate>;
 	fullCustomer: FullCustomer;
-}): Record<string, number> | undefined => {
-	const aiDeduction = featureDeductions.find((d) => d.tokenUsage);
-	if (!aiDeduction) return;
-
+}): Array<{ featureId: string; amount: number }> => {
 	const cusEntIdToFeatureId = new Map<string, string>();
 	for (const cp of fullCustomer.customer_products) {
 		for (const ce of cp.customer_entitlements ?? []) {
@@ -36,15 +32,13 @@ const buildAiCreditCostProperty = ({
 		}
 	}
 
-	const creditCost: Record<string, number> = {};
+	const entries: Array<{ featureId: string; amount: number }> = [];
 	for (const [cusEntId, update] of Object.entries(updates)) {
 		const featureId = cusEntIdToFeatureId.get(cusEntId);
-		if (!featureId || featureId === aiDeduction.feature.id) continue;
-		if (update.deducted === 0) continue;
-		creditCost[featureId] = (creditCost[featureId] ?? 0) + update.deducted;
+		if (!featureId) continue;
+		entries.push({ featureId, amount: update.deducted });
 	}
-
-	return Object.keys(creditCost).length > 0 ? creditCost : undefined;
+	return entries;
 };
 
 const queueSyncItem = ({
@@ -143,8 +137,7 @@ export const runRedisTrack = async ({
 
 	const aiCreditCost = buildAiCreditCostProperty({
 		featureDeductions,
-		updates,
-		fullCustomer,
+		entries: aiCreditCostEntries({ updates, fullCustomer }),
 	});
 	if (aiCreditCost) {
 		body.properties = { ...(body.properties ?? {}), credit_cost: aiCreditCost };
