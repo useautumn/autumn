@@ -11,7 +11,7 @@ export const TrackTokensParamsSchema = z.object({
 	}),
 	feature_id: z.string().optional().meta({
 		description:
-			"The ID of the AI credit system feature. Auto-detected if omitted.",
+			"The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted — only required when a customer has multiple AI credit systems.",
 	}),
 	model_id: z.string().meta({
 		description: "The AI model name with provider prefix (e.g., 'anthropic/claude-opus-4-6').",

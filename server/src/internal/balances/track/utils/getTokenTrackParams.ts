@@ -6,53 +6,100 @@ import {
 	type TrackParams,
 	type TrackTokensParams,
 } from "@autumn/shared";
+import { fullCustomerToCustomerEntitlements } from "@autumn/shared";
+import { fullSubjectToFullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
+import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
 import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
+import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 
-const resolveAiCreditFeature = ({
+const resolveAiCreditFeatureById = ({
 	features,
 	featureId,
 }: {
 	features: Feature[];
-	featureId?: string;
+	featureId: string;
 }): Feature => {
-	if (featureId) {
-		const candidate = features.find((f) => f.id === featureId);
-		if (!candidate) {
-			throw new RecaseError({
-				message: `Feature ${featureId} not found`,
-				code: ErrCode.FeatureNotFound,
-				statusCode: 404,
-			});
-		}
-		if (candidate.type !== FeatureType.AiCreditSystem) {
-			throw new RecaseError({
-				message: `Feature ${featureId} is not an AI credit system feature`,
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
-		return candidate;
-	}
-
-	const matches = features.filter((f) => f.type === FeatureType.AiCreditSystem);
-	if (matches.length === 0) {
+	const candidate = features.find((f) => f.id === featureId);
+	if (!candidate) {
 		throw new RecaseError({
-			message: "No AI credit system feature found for this organization",
+			message: `Feature ${featureId} not found`,
 			code: ErrCode.FeatureNotFound,
 			statusCode: 404,
 		});
 	}
-	if (matches.length > 1) {
+	if (candidate.type !== FeatureType.AiCreditSystem) {
 		throw new RecaseError({
-			message:
-				"Multiple AI credit system features found. Please specify a feature_id to disambiguate.",
+			message: `Feature ${featureId} is not an AI credit system feature`,
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
 	}
-	return matches[0];
+	return candidate;
+};
+
+const resolveAiCreditFeatureFromEntitlements = async ({
+	ctx,
+	customerId,
+	entityId,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	entityId?: string;
+}): Promise<Feature> => {
+	const fullCustomer = isFullSubjectRolloutEnabled({ ctx })
+		? fullSubjectToFullCustomer({
+				fullSubject: await getOrSetCachedFullSubject({
+					ctx,
+					customerId,
+					entityId,
+					source: "resolveAiCreditFeature",
+				}),
+			})
+		: await getOrSetCachedFullCustomer({
+				ctx,
+				customerId,
+				entityId,
+				source: "resolveAiCreditFeature",
+			});
+
+	const entity = entityId
+		? fullCustomer.entities?.find((e) => e.id === entityId)
+		: undefined;
+
+	const cusEnts = fullCustomerToCustomerEntitlements({
+		fullCustomer,
+		entity,
+	});
+
+	const aiCreditFeatures = [
+		...new Map(
+			cusEnts
+				.filter(
+					(ce) => ce.entitlement.feature.type === FeatureType.AiCreditSystem,
+				)
+				.map((ce) => [ce.entitlement.feature.id, ce.entitlement.feature]),
+		).values(),
+	];
+
+	if (aiCreditFeatures.length === 0) {
+		throw new RecaseError({
+			message: "No AI credit system feature found for this customer",
+			code: ErrCode.FeatureNotFound,
+			statusCode: 404,
+		});
+	}
+	if (aiCreditFeatures.length > 1) {
+		throw new RecaseError({
+			message:
+				"Multiple AI credit system features found for this customer. Please specify a feature_id to disambiguate.",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+	return aiCreditFeatures[0];
 };
 
 export const getTokenTrackParams = async ({
@@ -62,10 +109,16 @@ export const getTokenTrackParams = async ({
 	ctx: AutumnContext;
 	input: TrackTokensParams;
 }): Promise<{ body: TrackParams; featureDeductions: FeatureDeduction[] }> => {
-	const aiCreditFeature = resolveAiCreditFeature({
-		features: ctx.features,
-		featureId: input.feature_id,
-	});
+	const aiCreditFeature = input.feature_id
+		? resolveAiCreditFeatureById({
+				features: ctx.features,
+				featureId: input.feature_id,
+			})
+		: await resolveAiCreditFeatureFromEntitlements({
+				ctx,
+				customerId: input.customer_id,
+				entityId: input.entity_id,
+			});
 
 	const cost = await getCreditCost({
 		featureId: aiCreditFeature.id,
