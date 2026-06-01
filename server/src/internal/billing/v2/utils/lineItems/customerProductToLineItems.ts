@@ -23,8 +23,6 @@ import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingConte
 import { getBackdatedLineItemContext } from "./getBackdatedLineItemContext";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 
-type LineItemDirection = "charge" | "refund";
-
 /**
  * Generates line items for a customer product.
  * - "charge" direction: positive amounts (for NEW product)
@@ -39,6 +37,7 @@ export const customerProductToLineItems = ({
 	billingContext,
 	direction,
 	priceFilters,
+	billingCycleAnchorMsOverride,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
@@ -47,13 +46,16 @@ export const customerProductToLineItems = ({
 	priceFilters?: {
 		excludeOneOffPrices?: boolean;
 	};
+	billingCycleAnchorMsOverride?: BillingContext["billingCycleAnchorMs"];
 }): LineItem[] => {
 	const { currentEpochMs } = billingContext;
 
-	const anchorMs = getBillingCycleAnchorForDirection({
-		billingContext,
-		direction,
-	});
+	const anchorMs =
+		billingCycleAnchorMsOverride ??
+		getBillingCycleAnchorForDirection({
+			billingContext,
+			direction,
+		});
 
 	const lineItems: LineItem[] = [];
 	const entity = customerProductToEntity({

@@ -24,8 +24,8 @@ import {
 	schedulePhases,
 	schedules,
 } from "@autumn/shared";
-import { expectProductActive } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
-import { expectSubToBeCorrect } from "@tests/merged/mergeUtils/expectSubCorrect";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { completeStripeCheckoutFormV2 as completeStripeCheckoutForm } from "@tests/utils/browserPool/completeStripeCheckoutFormV2";
 import { items } from "@tests/utils/fixtures/items";
@@ -113,8 +113,13 @@ test.concurrent(
 		expect(proBefore).toBeDefined();
 		expect(growthBefore).toBeDefined();
 
-		expect(proBefore!.status).toBe(CusProductStatus.Active);
-		expect(growthBefore!.status).toBe(CusProductStatus.Scheduled);
+		const customerBefore =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerProducts({
+			customer: customerBefore,
+			active: [pro.id],
+			scheduled: [growth.id],
+		});
 
 		expect(proBefore!.stripe_checkout_session_id).toBe(checkoutSessionId);
 		expect(growthBefore!.stripe_checkout_session_id).toBe(checkoutSessionId);
@@ -128,11 +133,6 @@ test.concurrent(
 			.from(schedules)
 			.where(eq(schedules.internal_customer_id, internalCustomerId));
 		expect(schedulesBefore).toHaveLength(0);
-
-		// API view: pro is already active immediately.
-		const customerBefore =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
-		await expectProductActive({ customer: customerBefore, productId: pro.id });
 
 		// Customer completes checkout.
 		await completeStripeCheckoutForm({ url: response.payment_url! });
@@ -150,7 +150,14 @@ test.concurrent(
 		);
 		expect(proAfter!.id).toBe(proBefore!.id);
 		expect(proAfter!.subscription_ids ?? []).toHaveLength(1);
-		expect(growthAfter!.status).toBe(CusProductStatus.Scheduled);
+
+		const customerAfter =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerProducts({
+			customer: customerAfter,
+			active: [pro.id],
+			scheduled: [growth.id],
+		});
 
 		const schedulesAfter = await ctx.db
 			.select()
@@ -172,12 +179,7 @@ test.concurrent(
 
 		// Cross-checks the Stripe subscription_schedule phases against the Autumn
 		// cusProduct timeline.
-		await expectSubToBeCorrect({
-			db: ctx.db,
-			customerId,
-			org: ctx.org,
-			env: ctx.env,
-		});
+		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},
 );
 

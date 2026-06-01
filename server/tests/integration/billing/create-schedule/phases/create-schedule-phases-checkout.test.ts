@@ -13,6 +13,8 @@ import {
 	fetchAutumnCheckout,
 } from "@tests/integration/billing/utils/checkout/autumnCheckoutUtils";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
+import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { isAutumnCheckoutUrl } from "@tests/integration/billing/utils/isAutumnCheckoutUrl";
 import { TestFeature } from "@tests/setup/v2Features";
 import { completeInvoiceCheckoutV2 as completeInvoiceCheckout } from "@tests/utils/browserPool/completeInvoiceCheckoutV2";
@@ -139,7 +141,7 @@ test.concurrent(
 );
 
 test.concurrent(
-	`${chalk.yellowBright("create-schedule: no payment method returns Stripe checkout and activates after completion")}`,
+	`${chalk.yellowBright("create-schedule: no payment method returns Stripe checkout and creates Stripe schedule")}`,
 	async () => {
 		const pro = products.base({
 			id: "create-schedule-checkout-pro",
@@ -148,19 +150,31 @@ test.concurrent(
 				items.monthlyPrice({ price: 20 }),
 			],
 		});
+		const premium = products.base({
+			id: "create-schedule-checkout-premium",
+			items: [
+				items.monthlyMessages({ includedUsage: 500 }),
+				items.monthlyPrice({ price: 50 }),
+			],
+		});
 
 		const { customerId, autumnV1, ctx } = await initScenario({
 			customerId: "create-schedule-no-pm-checkout",
-			setup: [s.customer({}), s.products({ list: [pro] })],
+			setup: [s.customer({}), s.products({ list: [pro, premium] })],
 			actions: [],
 		});
 
+		const now = Date.now();
 		const response = await autumnV1.billing.createSchedule({
 			customer_id: customerId,
 			phases: [
 				{
-					starts_at: Date.now(),
+					starts_at: now,
 					plans: [{ plan_id: pro.id }],
+				},
+				{
+					starts_at: now + ms.days(30),
+					plans: [{ plan_id: premium.id }],
 				},
 			],
 		});
@@ -182,6 +196,11 @@ test.concurrent(
 			latestStatus: "paid",
 			latestTotal: 20,
 		});
+		await expectCustomerProducts({
+			customer,
+			active: [pro.id],
+			scheduled: [premium.id],
+		});
 
 		const dbSchedules = await ctx.db
 			.select({ id: schedules.id })
@@ -195,7 +214,7 @@ test.concurrent(
 			.from(schedulePhases)
 			.where(eq(schedulePhases.schedule_id, dbSchedules[0]!.id));
 
-		expect(phaseRows).toHaveLength(1);
+		expect(phaseRows).toHaveLength(2);
 
 		const persistedProducts = await ctx.db
 			.select({
@@ -203,14 +222,26 @@ test.concurrent(
 				status: customerProducts.status,
 			})
 			.from(customerProducts)
-			.where(inArray(customerProducts.id, phaseRows[0]!.customer_product_ids));
+			.where(
+				inArray(
+					customerProducts.id,
+					phaseRows.flatMap((phase) => phase.customer_product_ids),
+				),
+			);
 
-		expect(persistedProducts).toEqual([
-			{
-				productId: pro.id,
-				status: CusProductStatus.Active,
-			},
-		]);
+		expect(persistedProducts).toEqual(
+			expect.arrayContaining([
+				{
+					productId: pro.id,
+					status: CusProductStatus.Active,
+				},
+				{
+					productId: premium.id,
+					status: CusProductStatus.Scheduled,
+				},
+			]),
+		);
+		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},
 );
 
