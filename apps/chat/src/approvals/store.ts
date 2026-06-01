@@ -68,7 +68,7 @@ export const cancelApproval = async (id: string, providerUserId: string) => {
 			decided_at: Date.now(),
 			decided_by_provider_user_id: providerUserId,
 		})
-		.where(eq(chatApprovals.id, id));
+		.where(and(eq(chatApprovals.id, id), eq(chatApprovals.status, "pending")));
 };
 
 export const getApproval = async (id: string) =>
@@ -99,21 +99,21 @@ export const approveAndRun = async (id: string, providerUserId: string) => {
 		.returning();
 	if (!claimed) throw new Error("Approval is no longer pending");
 
-	const installation = await db.query.chatInstallations.findFirst({
-		where: and(
-			eq(chatInstallations.provider, claimed.provider),
-			eq(chatInstallations.workspace_id, claimed.workspace_id),
-		),
-	});
-	if (!installation) throw new Error("Chat installation not found");
-
-	const encryptedKey =
-		claimed.env === AppEnv.Live
-			? installation.live_api_key
-			: installation.sandbox_api_key;
-	if (!encryptedKey) throw new Error(`Missing ${claimed.env} API key`);
-
 	try {
+		const installation = await db.query.chatInstallations.findFirst({
+			where: and(
+				eq(chatInstallations.provider, claimed.provider),
+				eq(chatInstallations.workspace_id, claimed.workspace_id),
+			),
+		});
+		if (!installation) throw new Error("Chat installation not found");
+
+		const encryptedKey =
+			claimed.env === AppEnv.Live
+				? installation.live_api_key
+				: installation.sandbox_api_key;
+		if (!encryptedKey) throw new Error(`Missing ${claimed.env} API key`);
+
 		const result = await executeAutumnMcpTool({
 			apiKey: decrypt(encryptedKey),
 			toolName: claimed.tool_name,
@@ -131,7 +131,11 @@ export const approveAndRun = async (id: string, providerUserId: string) => {
 	} catch (error) {
 		await db
 			.update(chatApprovals)
-			.set({ status: "failed" })
+			.set({
+				status: "failed",
+				decided_at: Date.now(),
+				decided_by_provider_user_id: providerUserId,
+			})
 			.where(eq(chatApprovals.id, id));
 		throw error;
 	}

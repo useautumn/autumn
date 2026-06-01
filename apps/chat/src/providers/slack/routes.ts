@@ -45,11 +45,7 @@ slackRoutes.get("/oauth/callback", async (c) => {
 		return c.redirect(slackSuccessUrl());
 	} catch (error) {
 		console.error("[chat:slack] OAuth callback failed", error);
-		return c.redirect(
-			slackErrorUrl(
-				error instanceof Error ? error.message : "Slack install failed",
-			),
-		);
+		return c.redirect(slackErrorUrl("Slack install failed"));
 	}
 });
 

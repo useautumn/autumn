@@ -13,6 +13,8 @@ import { decrypt, encrypt } from "../../lib/crypto.js";
 import { db } from "../../lib/db.js";
 import { env } from "../../lib/env.js";
 
+type ChatTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
 const apiKeyScopes = [
 	Scopes.Customers.Read,
 	Scopes.Customers.Write,
@@ -48,7 +50,7 @@ export const getInstallationKey = (
 	return decrypt(key);
 };
 
-const createApiKey = async ({
+const buildApiKey = ({
 	orgId,
 	userId,
 	env,
@@ -72,17 +74,19 @@ const createApiKey = async ({
 		meta: { created_via: "chat", provider },
 		scopes: apiKeyScopes,
 	};
-	await db.insert(apiKeys).values(key);
-	return { id: key.id, secret };
+	return { key, secret };
 };
 
-const deleteInstallationApiKeys = async (installation: ChatInstallation) => {
+const deleteInstallationApiKeys = async (
+	tx: ChatTransaction,
+	installation: ChatInstallation,
+) => {
 	for (const id of [
 		installation.sandbox_api_key_id,
 		installation.live_api_key_id,
 	]) {
 		if (!id) continue;
-		await db
+		await tx
 			.delete(apiKeys)
 			.where(and(eq(apiKeys.id, id), eq(apiKeys.org_id, installation.org_id)));
 	}
@@ -107,13 +111,13 @@ export const replaceInstallation = async ({
 	scopes: string[];
 	installedByProviderUserId?: string;
 }) => {
-	const sandbox = await createApiKey({
+	const sandbox = buildApiKey({
 		orgId: state.orgId,
 		userId: state.userId,
 		env: AppEnv.Sandbox,
 		provider,
 	});
-	const live = await createApiKey({
+	const live = buildApiKey({
 		orgId: state.orgId,
 		userId: state.userId,
 		env: AppEnv.Live,
@@ -128,31 +132,36 @@ export const replaceInstallation = async ({
 		eq(chatInstallations.provider, provider),
 		eq(chatInstallations.workspace_id, workspaceId),
 	);
-	const existingInstallations = await db.query.chatInstallations.findMany({
-		where: or(sameOrg, sameWorkspace),
-	});
-	for (const installation of existingInstallations) {
-		await deleteInstallationApiKeys(installation);
-	}
 
-	await db.delete(chatInstallations).where(or(sameOrg, sameWorkspace));
-	await db.insert(chatInstallations).values({
-		id: `chat_inst_${crypto.randomUUID().replace(/-/g, "")}`,
-		org_id: state.orgId,
-		provider,
-		workspace_id: workspaceId,
-		workspace_name: workspaceName,
-		bot_user_id: botUserId,
-		bot_access_token: encrypt(botAccessToken),
-		scopes,
-		default_env: state.env,
-		sandbox_api_key_id: sandbox.id,
-		sandbox_api_key: encrypt(sandbox.secret),
-		live_api_key_id: live.id,
-		live_api_key: encrypt(live.secret),
-		installed_by_user_id: state.userId,
-		installed_by_provider_user_id: installedByProviderUserId,
-		created_at: Date.now(),
-		updated_at: Date.now(),
+	await db.transaction(async (tx) => {
+		await tx.insert(apiKeys).values([sandbox.key, live.key]);
+
+		const existingInstallations = await tx.query.chatInstallations.findMany({
+			where: or(sameOrg, sameWorkspace),
+		});
+		for (const installation of existingInstallations) {
+			await deleteInstallationApiKeys(tx, installation);
+		}
+
+		await tx.delete(chatInstallations).where(or(sameOrg, sameWorkspace));
+		await tx.insert(chatInstallations).values({
+			id: `chat_inst_${crypto.randomUUID().replace(/-/g, "")}`,
+			org_id: state.orgId,
+			provider,
+			workspace_id: workspaceId,
+			workspace_name: workspaceName,
+			bot_user_id: botUserId,
+			bot_access_token: encrypt(botAccessToken),
+			scopes,
+			default_env: state.env,
+			sandbox_api_key_id: sandbox.key.id,
+			sandbox_api_key: encrypt(sandbox.secret),
+			live_api_key_id: live.key.id,
+			live_api_key: encrypt(live.secret),
+			installed_by_user_id: state.userId,
+			installed_by_provider_user_id: installedByProviderUserId,
+			created_at: Date.now(),
+			updated_at: Date.now(),
+		});
 	});
 };
