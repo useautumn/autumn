@@ -32,6 +32,9 @@ test.concurrent(`${chalk.yellowBright("track-tokens-1: basic trackTokens with mo
 	const aiCreditFeature = ctx.features.find(
 		(f) => f.id === TestFeature.AiCredits,
 	);
+	if (!aiCreditFeature) {
+		throw new Error(`${TestFeature.AiCredits} feature not found`);
+	}
 
 	const customerBefore =
 		await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -42,8 +45,8 @@ test.concurrent(`${chalk.yellowBright("track-tokens-1: basic trackTokens with mo
 	const modelId = "anthropic/claude-sonnet-4-20250514";
 
 	const expectedCost = await getCreditCost({
-		featureId: aiCreditFeature!.id,
-		creditSystem: aiCreditFeature!,
+		featureId: aiCreditFeature.id,
+		creditSystem: aiCreditFeature,
 		modelName: modelId,
 		tokens: { input: inputTokens, output: outputTokens },
 	});
@@ -109,14 +112,17 @@ test.concurrent(`${chalk.yellowBright("track-tokens-2: disambiguation error and 
 	const aiCreditFeature = ctx.features.find(
 		(f) => f.id === TestFeature.AiCredits,
 	);
+	if (!aiCreditFeature) {
+		throw new Error(`${TestFeature.AiCredits} feature not found`);
+	}
 
 	const inputTokens = 2000;
 	const outputTokens = 1000;
 	const modelId = "anthropic/claude-sonnet-4-20250514";
 
 	const expectedCost = await getCreditCost({
-		featureId: aiCreditFeature!.id,
-		creditSystem: aiCreditFeature!,
+		featureId: aiCreditFeature.id,
+		creditSystem: aiCreditFeature,
 		modelName: modelId,
 		tokens: { input: inputTokens, output: outputTokens },
 	});
@@ -237,6 +243,9 @@ test.concurrent(`${chalk.yellowBright("track-tokens-4: models.dev markup and non
 	const aiCreditFeature = ctx.features.find(
 		(f) => f.id === TestFeature.AiCredits,
 	);
+	if (!aiCreditFeature) {
+		throw new Error(`${TestFeature.AiCredits} feature not found`);
+	}
 
 	// anthropic/claude-haiku-3.5 has 20% markup in test config
 	const inputTokens = 50000;
@@ -244,8 +253,8 @@ test.concurrent(`${chalk.yellowBright("track-tokens-4: models.dev markup and non
 	const modelId = "anthropic/claude-3-5-haiku-20241022";
 
 	const expectedCost = await getCreditCost({
-		featureId: aiCreditFeature!.id,
-		creditSystem: aiCreditFeature!,
+		featureId: aiCreditFeature.id,
+		creditSystem: aiCreditFeature,
 		modelName: modelId,
 		tokens: { input: inputTokens, output: outputTokens },
 	});
@@ -306,11 +315,14 @@ test.concurrent(`${chalk.yellowBright("track-tokens-5: multiple tracks accumulat
 	const aiCreditFeature = ctx.features.find(
 		(f) => f.id === TestFeature.AiCredits,
 	);
+	if (!aiCreditFeature) {
+		throw new Error(`${TestFeature.AiCredits} feature not found`);
+	}
 
 	// First track: custom/internal-model (input_cost=5, output_cost=15, markup=0%)
 	const cost1 = await getCreditCost({
-		featureId: aiCreditFeature!.id,
-		creditSystem: aiCreditFeature!,
+		featureId: aiCreditFeature.id,
+		creditSystem: aiCreditFeature,
 		modelName: "custom/internal-model",
 		tokens: { input: 5000, output: 2000 },
 	});
@@ -325,8 +337,8 @@ test.concurrent(`${chalk.yellowBright("track-tokens-5: multiple tracks accumulat
 
 	// Second track: custom/marked-up-model (input_cost=10, output_cost=30, markup=50%)
 	const cost2 = await getCreditCost({
-		featureId: aiCreditFeature!.id,
-		creditSystem: aiCreditFeature!,
+		featureId: aiCreditFeature.id,
+		creditSystem: aiCreditFeature,
 		modelName: "custom/marked-up-model",
 		tokens: { input: 3000, output: 1000 },
 	});

@@ -288,7 +288,9 @@ test.concurrent(
 		const creditFeature = ctx.features.find(
 			(f) => f.id === TestFeature.Credits,
 		);
-		expect(creditFeature).toBeDefined();
+		if (!creditFeature) {
+			throw new Error(`${TestFeature.Credits} feature not found`);
+		}
 
 		const customerBefore =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
@@ -306,7 +308,7 @@ test.concurrent(
 		const overflowAmount = 50;
 		const expectedCreditCost = await getCreditCost({
 			featureId: TestFeature.Action1,
-			creditSystem: creditFeature!,
+			creditSystem: creditFeature,
 			amount: overflowAmount,
 		});
 
