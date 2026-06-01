@@ -1,7 +1,8 @@
 import { Decimal as DecimalJS } from "decimal.js";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 
-type StripeDecimal = ReturnType<typeof Stripe.Decimal.from>;
+type DecimalLike = { toString(): string };
+type StripeDecimal = string & ReturnType<typeof Stripe.Decimal.from>;
 /**
  * Zero-decimal currencies that Stripe handles without decimal places.
  * These currencies don't require multiplying/dividing by 100.
@@ -61,13 +62,12 @@ export const atmnToStripeAmountDecimal = ({
 	const decimal = amount instanceof DecimalJS ? amount : new DecimalJS(amount);
 
 	if (ZERO_DECIMAL_CURRENCIES.includes(currency.toUpperCase())) {
-		return Stripe.Decimal.from(
-			decimal.toDecimalPlaces(decimalPlaces).toString(),
-		);
+		return decimal.toDecimalPlaces(decimalPlaces).toString() as StripeDecimal;
 	}
-	return Stripe.Decimal.from(
-		decimal.mul(100).toDecimalPlaces(decimalPlaces).toString(),
-	);
+	return decimal
+		.mul(100)
+		.toDecimalPlaces(decimalPlaces)
+		.toString() as StripeDecimal;
 };
 
 /**
@@ -81,24 +81,26 @@ export const stripeToAtmnAmount = ({
 	decimalPlaces = 10,
 	round = true,
 }: {
-	amount: number | StripeDecimal;
+	amount: number | string | DecimalLike;
 	currency?: string;
 	decimalPlaces?: number;
 	round?: boolean;
 }): number => {
-	let finalAmount = typeof amount === "number" ? amount : amount.toNumber();
+	let finalAmount = new DecimalJS(
+		typeof amount === "number" ? amount : amount.toString(),
+	);
 
 	if (!ZERO_DECIMAL_CURRENCIES.includes(currency.toUpperCase())) {
-		finalAmount = new DecimalJS(finalAmount).div(100).toNumber();
+		finalAmount = finalAmount.div(100);
 	}
 
 	if (round) {
-		return new DecimalJS(finalAmount).toDecimalPlaces(decimalPlaces).toNumber();
+		return finalAmount.toDecimalPlaces(decimalPlaces).toNumber();
 	}
 
 	if (decimalPlaces) {
-		return new DecimalJS(finalAmount).toDecimalPlaces(decimalPlaces).toNumber();
+		return finalAmount.toDecimalPlaces(decimalPlaces).toNumber();
 	}
 
-	return finalAmount;
+	return finalAmount.toNumber();
 };
