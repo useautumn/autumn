@@ -174,8 +174,11 @@ export const autumnMcpResources: MCPServerResources = {
 			},
 		})),
 	getResourceContent: async ({ uri }) => {
+		if (!Object.hasOwn(docs, uri)) {
+			throw new Error(`Unknown Autumn MCP resource: ${uri}`);
+		}
+
 		const doc = docs[uri as keyof typeof docs];
-		if (!doc) throw new Error(`Unknown Autumn MCP resource: ${uri}`);
 		return { text: doc.text };
 	},
 };

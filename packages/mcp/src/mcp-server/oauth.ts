@@ -9,7 +9,9 @@ import type { MCPServerFlags } from "./flags.js";
 
 export const MCP_OAUTH_SCOPES = [
 	Scopes.Customers.Read,
+	Scopes.Customers.Write,
 	Scopes.Plans.Read,
+	Scopes.Plans.Write,
 	Scopes.Billing.Read,
 	Scopes.Billing.Write,
 	Scopes.Balances.Write,

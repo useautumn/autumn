@@ -57,8 +57,13 @@ describe("Autumn MCP server", () => {
 	});
 
 	test("unknown resources are rejected", async () => {
-		await expect(
-			createAutumnOperationsMCPServer().readResource("autumn://docs/missing"),
-		).rejects.toThrow("Unknown Autumn MCP resource");
+		const server = createAutumnOperationsMCPServer();
+
+		await expect(server.readResource("autumn://docs/missing")).rejects.toThrow(
+			"Unknown Autumn MCP resource",
+		);
+		await expect(server.readResource("__proto__")).rejects.toThrow(
+			"Unknown Autumn MCP resource",
+		);
 	});
 });
