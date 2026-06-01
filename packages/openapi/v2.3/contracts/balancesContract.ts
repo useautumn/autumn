@@ -163,12 +163,12 @@ export const balancesTrackTokensContract = oc
 	.route({
 		method: "POST",
 		path: "/v1/balances.track_tokens",
-		operationId: "trackTokens",
+		operationId: "track_tokens",
 		description: balancesTrackTokensJsDoc,
 		spec: (spec) =>
 			withAcceptedResponse(
 				spec,
-				"trackTokens",
+				"track_tokens",
 				"Accepted. Autumn is experiencing degraded service from a downstream provider, so the token usage event was accepted for replay and will be tracked as soon as the service is restored.",
 			),
 	})
