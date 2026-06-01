@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import type { AutumnMcpAuth } from "./auth.js";
+import type { AutumnMcpAuth } from "../../../../src/mcp-server/agent/auth.js";
 import {
 	claimLatestPendingAction,
 	clearPendingActions,
 	createPendingAction,
 	setPendingActionsRedis,
-} from "./pending-actions.js";
-import { createTestRedis } from "./test-redis.js";
+} from "../../../../src/mcp-server/agent/pending-actions.js";
+import { createTestRedis } from "../../../utils/test-redis.js";
 
 setPendingActionsRedis(createTestRedis());
 

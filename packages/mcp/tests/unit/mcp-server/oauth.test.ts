@@ -1,3 +1,4 @@
+import { Scopes } from "@autumn/shared/scopeDefinitions";
 import { describe, expect, test } from "bun:test";
 import {
 	buildAuthForRequest,
@@ -5,7 +6,7 @@ import {
 	MCP_OAUTH_SCOPES,
 	OAuthHttpError,
 	type MCPOAuthFlags,
-} from "./oauth.js";
+} from "../../../src/mcp-server/oauth.js";
 
 const flags = {
 	"oauth-enabled": true,
@@ -18,6 +19,17 @@ const logger = {
 } as never;
 
 describe("MCP OAuth auth resolution", () => {
+	test("requests scopes required by public write tools", () => {
+		expect(MCP_OAUTH_SCOPES).toEqual(
+			expect.arrayContaining([
+				Scopes.Customers.Write,
+				Scopes.Plans.Write,
+				Scopes.Billing.Write,
+				Scopes.Balances.Write,
+			]),
+		);
+	});
+
 	test("returns a WWW-Authenticate challenge without a bearer token", async () => {
 		await expect(
 			buildAuthForRequest(
