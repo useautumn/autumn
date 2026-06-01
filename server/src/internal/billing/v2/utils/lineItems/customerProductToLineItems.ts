@@ -20,9 +20,8 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getBillingCycleAnchorForDirection } from "@/internal/billing/v2/utils/billingContext/getBillingCycleAnchorForDirection";
 import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingContextForAnchorResetRefund";
+import { getBackdatedLineItemContext } from "./getBackdatedLineItemContext";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
-
-type LineItemDirection = "charge" | "refund";
 
 /**
  * Generates line items for a customer product.
@@ -38,6 +37,7 @@ export const customerProductToLineItems = ({
 	billingContext,
 	direction,
 	priceFilters,
+	billingCycleAnchorMsOverride,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
@@ -46,13 +46,16 @@ export const customerProductToLineItems = ({
 	priceFilters?: {
 		excludeOneOffPrices?: boolean;
 	};
+	billingCycleAnchorMsOverride?: BillingContext["billingCycleAnchorMs"];
 }): LineItem[] => {
 	const { currentEpochMs } = billingContext;
 
-	const anchorMs = getBillingCycleAnchorForDirection({
-		billingContext,
-		direction,
-	});
+	const anchorMs =
+		billingCycleAnchorMsOverride ??
+		getBillingCycleAnchorForDirection({
+			billingContext,
+			direction,
+		});
 
 	const lineItems: LineItem[] = [];
 	const entity = customerProductToEntity({
@@ -95,6 +98,15 @@ export const customerProductToLineItems = ({
 			if (action.type === "use_snapped_now") effectiveNow = action.snappedNow;
 		}
 
+		const backdatedLineItemContext = getBackdatedLineItemContext({
+			price,
+			billingContext: billingContextForPeriod,
+			billingPeriod,
+			direction,
+			billingTiming: "in_advance",
+		});
+		if (backdatedLineItemContext) effectiveNow = backdatedLineItemContext.now;
+
 		// Build line item context
 		const context: LineItemContext = {
 			price,
@@ -109,6 +121,8 @@ export const customerProductToLineItems = ({
 			entity,
 			customerProduct,
 			customerPrice: cusPrice,
+			effectivePeriod: backdatedLineItemContext?.effectivePeriod,
+			backdate: backdatedLineItemContext?.backdate,
 		};
 
 		if (isFixedPrice(price)) {

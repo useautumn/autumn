@@ -3,6 +3,7 @@ import type {
 	ApiCustomerV3,
 	ApiCustomerV5,
 	ApiEntityV0,
+	ApiEntityV2,
 	CustomerBillingControls,
 } from "@autumn/shared";
 import { BillingMethod } from "@autumn/shared";
@@ -334,6 +335,10 @@ test.concurrent(`${chalk.yellowBright("attach: stripe checkout monthly volume pr
 		customerId,
 	});
 
+	if (!entityAfter.id) {
+		throw new Error("Expected checkout entity to have an id");
+	}
+
 	await autumnV1.subscriptions.update({
 		customer_id: customerId,
 		entity_id: entityAfter.id,
@@ -350,8 +355,10 @@ test.concurrent(`${chalk.yellowBright("attach: stripe checkout monthly volume pr
 	});
 
 	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
-	const customerAfterV2_2 =
-		await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+	const entityAfterV2_2 = await autumnV2_2.entities.get<ApiEntityV2>(
+		customerId,
+		entityAfter.id,
+	);
 
 	expectCustomerFeatureCorrect({
 		customerId,
@@ -363,7 +370,7 @@ test.concurrent(`${chalk.yellowBright("attach: stripe checkout monthly volume pr
 	});
 
 	expectBalanceCorrect({
-		customer: customerAfterV2_2,
+		customer: entityAfterV2_2,
 		featureId: TestFeature.Messages,
 		remaining: checkoutPrepaidQuantity + consumableIncludedUsage,
 		usage: 0,

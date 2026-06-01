@@ -350,10 +350,7 @@ export function AttachFormProvider({
 					"trialCardRequired",
 					Boolean(product.free_trial.card_required),
 				);
-				form.setFieldValue(
-					"trialOnEnd",
-					product.free_trial.on_end ?? "bill",
-				);
+				form.setFieldValue("trialOnEnd", product.free_trial.on_end ?? "bill");
 			}
 		}
 	}, [productId, product, form, resetGrantFree]);
@@ -419,7 +416,6 @@ export function AttachFormProvider({
 		customLineItems,
 		disableProration,
 	});
-
 	const previewQuery = useAttachPreview({
 		requestBody,
 		enabled: disablePreview ? false : undefined,

@@ -3,6 +3,7 @@ import {
 	type CreateScheduleBillingContext,
 	type CreateScheduleParamsV0,
 	isOneOffProduct,
+	isPastStartDate,
 	isProductPaidAndRecurring,
 	type MultiAttachParamsV0,
 } from "@autumn/shared";
@@ -92,6 +93,7 @@ export const setupCreateScheduleBillingContext = async ({
 			subscription_id: plan.subscription_id,
 		})),
 		invoice_mode: params.invoice_mode,
+		discounts: params.discounts,
 		success_url: params.success_url,
 		checkout_session_params: params.checkout_session_params,
 		redirect_mode: params.redirect_mode ?? "if_required",
@@ -102,6 +104,7 @@ export const setupCreateScheduleBillingContext = async ({
 		ctx,
 		params: immediateParams,
 		preview,
+		billingStartsAt: immediatePhase.starts_at,
 	});
 
 	validateCreateSchedulePhasePlans({
@@ -144,6 +147,13 @@ export const setupCreateScheduleBillingContext = async ({
 			scheduledCustomEntitlements.length > 0,
 		requestedProrationBehavior: params.billing_behavior,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
+		billingStartsAt: immediatePhase.starts_at,
+		subscriptionBackdateStartMs: isPastStartDate(
+			immediatePhase.starts_at,
+			billingContext.currentEpochMs,
+		)
+			? immediatePhase.starts_at
+			: undefined,
 		immediatePhase,
 		futurePhases,
 		scheduledPhaseContexts,
