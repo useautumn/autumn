@@ -66,7 +66,8 @@ export const getInvoiceProductNames = ({
 				}),
 				featureNames: new Set<string>(),
 			} satisfies ProductGroup);
-		if (item.feature_id) {
+		const chargedAmount = item.amount_after_discounts ?? item.amount;
+		if (item.feature_id && chargedAmount > 0) {
 			const featureName = features.find((f) => f.id === item.feature_id)?.name;
 			if (featureName) group.featureNames.add(featureName);
 		}

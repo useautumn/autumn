@@ -494,7 +494,7 @@ function LineItemGroupRow({
 	return (
 		<AdminHover
 			texts={getLineItemHoverTexts(firstItem)}
-			triggerClassName="flex w-full"
+			triggerClassName="flex flex-col w-full"
 		>
 			<div className="flex flex-col py-1">
 				<div className="flex items-start justify-between gap-2">
@@ -576,7 +576,7 @@ function TierRow({
 	const isRefund = item.direction === "refund";
 
 	return (
-		<AdminHover texts={hoverTexts} triggerClassName="flex w-full">
+		<AdminHover texts={hoverTexts} triggerClassName="flex flex-col w-full">
 			<div className="flex items-center justify-between text-xs text-tertiary-foreground">
 				<span>{item.description}</span>
 				<span
