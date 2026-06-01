@@ -81,7 +81,7 @@ export const balancesTrackTokensJsDoc = createJSDocDescription({
 			},
 		}),
 	],
-	methodName: "track_tokens",
+	methodName: "trackTokens",
 	returns:
 		"The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.",
 });
