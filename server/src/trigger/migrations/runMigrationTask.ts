@@ -5,6 +5,7 @@ import { warmupRegionalRedis } from "@/external/redis/initUtils/redisWarmup.js";
 import { withMigrationRunTracking } from "@/internal/migrations/v2/actions/migrationRun/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { runMigration } from "@/internal/migrations/v2/run/runMigration.js";
+import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";
 
 const ControlsSchema = z.object({
@@ -20,6 +21,7 @@ const PayloadSchema = z.object({
 	migrationId: z.string(),
 	migrationRunId: z.string(),
 	dryRun: z.boolean().default(false),
+	lazyRun: z.boolean().default(false),
 	controls: ControlsSchema,
 });
 
@@ -35,7 +37,7 @@ export const runMigrationTask = task({
 	machine: "medium-1x",
 	maxDuration: 3600,
 	run: async (rawPayload: unknown, { ctx: triggerCtx }) => {
-		const { orgId, env, migrationId, migrationRunId, dryRun, controls } =
+		const { orgId, env, migrationId, migrationRunId, dryRun, lazyRun, controls } =
 			PayloadSchema.parse(rawPayload);
 
 		const { ctx, logger } = await createTriggerContext({
@@ -69,40 +71,51 @@ export const runMigrationTask = task({
 			},
 		});
 
-		await withMigrationRunTracking({
-			ctx,
-			migrationRunId,
-			run: async () => {
-				const migration = await migrationRepo.find({ ctx, id: migrationId });
+		try {
+			await withMigrationRunTracking({
+				ctx,
+				migrationRunId,
+				run: async () => {
+					const migration = await migrationRepo.find({ ctx, id: migrationId });
 
-				// Default concurrency: 10 normally, 25 when no_billing_changes
-				// because we're not hitting Stripe per customer. Caller can still
-				// override via controls.concurrency.
-				const defaultConcurrency =
-					migration.no_billing_changes === true ? 25 : 10;
-				const effectiveControls = {
-					...(controls ?? {}),
-					concurrency: controls?.concurrency ?? defaultConcurrency,
-				};
+					// Default concurrency: 10 normally, 25 when no_billing_changes
+					// because we're not hitting Stripe per customer. Caller can still
+					// override via controls.concurrency.
+					const defaultConcurrency =
+						migration.no_billing_changes === true ? 25 : 10;
+					const effectiveControls = {
+						...(controls ?? {}),
+						concurrency: controls?.concurrency ?? defaultConcurrency,
+					};
 
-				logger.info("run-migration: resolved controls", {
-					data: {
+					logger.info("run-migration: resolved controls", {
+						data: {
+							migrationRunId,
+							noBillingChanges: migration.no_billing_changes === true,
+							concurrency: effectiveControls.concurrency,
+							concurrencyExplicit: controls?.concurrency !== undefined,
+						},
+					});
+
+					await runMigration({
+						ctx,
+						migration,
+						dryRun,
 						migrationRunId,
-						noBillingChanges: migration.no_billing_changes === true,
-						concurrency: effectiveControls.concurrency,
-						concurrencyExplicit: controls?.concurrency !== undefined,
-					},
+						controls: effectiveControls,
+					});
+				},
+			});
+		} finally {
+			if (lazyRun && !dryRun) {
+				await clearOrgCache({
+					db: ctx.db,
+					orgId,
+					env,
+					logger,
 				});
-
-				await runMigration({
-					ctx,
-					migration,
-					dryRun,
-					migrationRunId,
-					controls: effectiveControls,
-				});
-			},
-		});
+			}
+		}
 
 		logger.info("run-migration: done", {
 			data: {

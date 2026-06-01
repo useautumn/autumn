@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import { Badge } from "@/components/v2/badges/Badge";
 import type { MigrationItemEventStatus } from "@/hooks/queries/useMigrationRunsQuery";
 import { cn } from "@/lib/utils";
@@ -50,10 +51,12 @@ export function ItemEventStatusBadge({
 	status,
 	dryRun = false,
 	response = null,
+	timestamp,
 }: {
 	status: MigrationItemEventStatus;
 	dryRun?: boolean;
 	response?: Record<string, unknown> | null;
+	timestamp?: string;
 }) {
 	if (status === "skipped" && isNoOpResponse(response))
 		return (
@@ -68,12 +71,17 @@ export function ItemEventStatusBadge({
 			</Badge>
 		);
 
+	const label =
+		status === "succeeded" && timestamp
+			? `${STATUS_LABELS[status]} (${format(new Date(timestamp), "d MMM yyyy")})`
+			: STATUS_LABELS[status];
+
 	return (
 		<Badge
 			variant="muted"
 			className={(dryRun ? DRY_STYLES : LIVE_STYLES)[status]}
 		>
-			{STATUS_LABELS[status]}
+			{label}
 		</Badge>
 	);
 }

@@ -11,6 +11,33 @@ import { toCustomerPlanSnapshot } from "./toCustomerPlanSnapshot";
 const getChangePlanId = (change: CustomerPlanChange): string | undefined =>
 	change.subscription?.plan_id ?? change.purchase?.plan_id;
 
+const getUpdatedChangeMergeKey = (
+	change: CustomerPlanChange,
+): string | undefined => {
+	if (change.subscription) {
+		const subscription = change.subscription;
+		return [
+			"subscription",
+			subscription.plan_id,
+			subscription.status,
+			subscription.started_at,
+			subscription.expires_at,
+			subscription.canceled_at,
+			subscription.trial_ends_at,
+		].join(":");
+	}
+
+	if (change.purchase) {
+		const purchase = change.purchase;
+		return [
+			"purchase",
+			purchase.plan_id,
+			purchase.status,
+			purchase.expires_at,
+		].join(":");
+	}
+};
+
 /**
  * When a billing action updates a plan in-place, Autumn often creates a new
  * customer product (insertCustomerProducts) and expires the old one
@@ -79,15 +106,15 @@ const mergeUpdatedPlanChanges = (
 	const result: CustomerPlanChange[] = [];
 
 	for (const change of changes) {
-		const planId = getChangePlanId(change);
-		if (change.action !== "updated" || !planId) {
+		const mergeKey = getUpdatedChangeMergeKey(change);
+		if (change.action !== "updated" || !mergeKey) {
 			result.push(change);
 			continue;
 		}
 
-		const existing = merged.get(planId);
+		const existing = merged.get(mergeKey);
 		if (!existing) {
-			merged.set(planId, change);
+			merged.set(mergeKey, change);
 			result.push(change);
 			continue;
 		}

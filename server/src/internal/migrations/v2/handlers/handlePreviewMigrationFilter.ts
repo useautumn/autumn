@@ -24,6 +24,12 @@ const PreviewFilterBody = z.object({
 	page: z.number().int().min(0).optional().default(0),
 	pageSize: z.number().int().min(1).max(500).optional().default(DEFAULT_PAGE_SIZE),
 	migrationId: z.string().optional(),
+	executionStatuses: z
+		.array(z.enum(["succeeded", "skipped", "failed", "not_run"]))
+		.optional()
+		.default([]),
+	migrationRunId: z.string().optional(),
+	migrationRunDryRun: z.boolean().optional(),
 });
 
 /** POST /migrations.filter.preview — count + enriched paginated customers. */
@@ -32,14 +38,33 @@ export const handlePreviewMigrationFilter = createRoute({
 	body: PreviewFilterBody,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { filter, search, page, pageSize, migrationId } = c.req.valid("json");
+		const {
+			filter,
+			search,
+			page,
+			pageSize,
+			migrationId,
+			executionStatuses,
+			migrationRunId,
+			migrationRunDryRun,
+		} = c.req.valid("json");
 
 		const searchTerm = search || undefined;
 
 		let includeProcessed: IncludeProcessed | undefined;
 		if (migrationId) {
 			const migration = await migrationRepo.find({ ctx, id: migrationId });
-			includeProcessed = { migrationInternalId: migration.internal_id };
+			includeProcessed = {
+				migrationInternalId: migration.internal_id,
+				executionFilter:
+					executionStatuses.length > 0
+						? {
+								statuses: executionStatuses,
+								migrationRunId,
+								dryRun: migrationRunDryRun,
+							}
+						: undefined,
+			};
 		}
 
 		const [count, pageRows] = await Promise.all([

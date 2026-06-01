@@ -1,6 +1,7 @@
 import type { CustomerFilter, CustomerWithProducts } from "@autumn/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
+import type { ExecutionStatus } from "@/views/migrations/migration/live/ExecutionStatusSubMenu";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
@@ -19,24 +20,53 @@ export const useMigrationFilterPreview = ({
 	page = 0,
 	pageSize = DEFAULT_PAGE_SIZE,
 	migrationId,
+	executionStatuses = [],
+	migrationRunId,
+	migrationRunDryRun,
 }: {
 	filter: CustomerFilter;
 	search?: string;
 	page?: number;
 	pageSize?: number;
 	migrationId?: string;
+	executionStatuses?: ExecutionStatus[];
+	migrationRunId?: string;
+	migrationRunDryRun?: boolean;
 }) => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 	const filterKey = useMemo(() => JSON.stringify(filter), [filter]);
-	const queryKey = buildKey(["migration-filter-preview", filterKey, search, page, pageSize, migrationId]);
+	const executionKey = useMemo(
+		() => executionStatuses.slice().sort().join(","),
+		[executionStatuses],
+	);
+	const queryKey = buildKey([
+		"migration-filter-preview",
+		filterKey,
+		search,
+		page,
+		pageSize,
+		migrationId,
+		executionKey,
+		migrationRunId,
+		migrationRunDryRun,
+	]);
 
 	const query = useQuery<FilterPreviewResponse>({
 		queryKey,
 		queryFn: async () => {
 			const { data } = await axiosInstance.post<FilterPreviewResponse>(
 				"/migrations.filter.preview",
-				{ filter, search, page, pageSize, migrationId },
+				{
+					filter,
+					search,
+					page,
+					pageSize,
+					migrationId,
+					executionStatuses,
+					migrationRunId,
+					migrationRunDryRun,
+				},
 			);
 			return data;
 		},

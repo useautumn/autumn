@@ -72,12 +72,17 @@ test.concurrent(
 		const response = await autumnV2_2.migrationsV2.run({
 			id: migration.id,
 			lazy_run: true,
+			concurrency: 7,
 		});
 
 		expect(response.migration_id).toBe(migration.id);
 		expect(response.lazy_run).toBe(true);
+		expect(response.concurrency).toBe(7);
 
-		const updatedMigration = await migrationRepo.find({ ctx, id: migration.id });
+		const updatedMigration = await migrationRepo.find({
+			ctx,
+			id: migration.id,
+		});
 		expect(updatedMigration.prepared_state).toHaveProperty(
 			"ensure_prices_and_entitlements:update_plan",
 		);

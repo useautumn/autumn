@@ -23,13 +23,15 @@ const RunMigrationBody = z.object({
 
 const getRunMigrationTriggerOptions = ({
 	orgId,
+	migrationId,
 	isDev,
 }: {
 	orgId: string;
+	migrationId: string;
 	isDev: boolean;
 }) => ({
 	...(isDev ? { region: "eu-central-1" } : {}),
-	concurrencyKey: orgId,
+	concurrencyKey: `${orgId}:${migrationId}`,
 });
 
 export const handleRunMigration = createRoute({
@@ -84,10 +86,12 @@ export const handleRunMigration = createRoute({
 						migrationId: id,
 						migrationRunId,
 						dryRun,
+						lazyRun,
 						controls: { limit, only, concurrency, retryFailed },
 					},
 					getRunMigrationTriggerOptions({
 						orgId: ctx.org.id,
+						migrationId: id,
 						isDev,
 					}),
 				);
@@ -111,6 +115,7 @@ export const handleRunMigration = createRoute({
 			migration_id: id,
 			dry_run: dryRun,
 			lazy_run: lazyRun,
+			concurrency,
 			run_id: migrationRunId,
 			trigger_run_id: triggerRunId,
 			public_access_token: publicAccessToken,

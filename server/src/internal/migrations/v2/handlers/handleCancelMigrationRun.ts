@@ -11,6 +11,7 @@ import {
 	migrationRepo,
 	migrationRunRepo,
 } from "@/internal/migrations/v2/repos/index.js";
+import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 
 const CancelMigrationRunBody = z.object({
 	id: z.string(),
@@ -69,6 +70,15 @@ export const handleCancelMigrationRun = createRoute({
 				finished_at: Date.now(),
 			},
 		});
+
+		if (activeRun.lazy_run) {
+			await clearOrgCache({
+				db: ctx.db,
+				orgId: ctx.org.id,
+				env: ctx.env,
+				logger: ctx.logger,
+			});
+		}
 
 		return c.json({
 			migration_id: id,

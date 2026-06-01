@@ -31,10 +31,14 @@ export function useRealtimeSubscriptions({
 		dryRun,
 		limit,
 		only,
+		lazyRun,
+		concurrency,
 	}: {
 		dryRun: boolean;
 		limit?: number;
 		only?: string[];
+		lazyRun?: boolean;
+		concurrency?: number;
 	}) => {
 		try {
 			const isTargetedRun = only !== undefined && only.length > 0;
@@ -43,7 +47,8 @@ export function useRealtimeSubscriptions({
 				dry_run: dryRun,
 				limit,
 				only,
-				lazy_run: !isTargetedRun,
+				lazy_run: isTargetedRun ? false : (lazyRun ?? true),
+				concurrency,
 				retry_failed: isTargetedRun ? true : undefined,
 			});
 			if (result.trigger_run_id && result.public_access_token) {
