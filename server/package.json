@@ -86,7 +86,7 @@
 		"@trigger.dev/sdk": "4.4.6",
 		"@types/qs": "^6.14.0",
 		"@types/semver": "^7.7.1",
-		"@typescript/native-preview": "^7.0.0-dev.20251114.1",
+		"@typescript/native-preview": "^7.0.0-dev.20260527.2",
 		"@upstash/ratelimit": "^2.0.7",
 		"@upstash/redis": "^1.35.6",
 		"@vercel/sdk": "^1.17.0",
