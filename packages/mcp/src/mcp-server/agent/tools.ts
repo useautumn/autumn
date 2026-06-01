@@ -142,7 +142,7 @@ const toolConfigs: OperationToolConfig[] = [
 	{
 		id: "listCustomers",
 		description:
-			"List Autumn customers. Use search, plans, subscription_status, and processors filters for customer-heavy queries; 'live', 'paying', and active subscribers usually mean subscription_status active. When a plan is named, include the plans filter instead of listing broad customer sets. If listPlans returned matching versions, pass only those versions in plans[].versions, never invent versions. For every/all/complete requests, paginate by calling again with start_cursor set to the previous response's next_cursor until next_cursor is empty.",
+			"List Autumn customers. Use search, plans, subscription_status, and processors filters for customer-heavy queries. For queued/upcoming plan version queries, use subscription_status scheduled and omit the earliest matching version unless the user asks for all historical versions (versions 1,2,3 -> filter 2,3). 'live', 'paying', and active subscribers usually mean subscription_status active. When a plan is named, include the plans filter instead of listing broad customer sets. If listPlans returned matching versions, pass only relevant versions in plans[].versions, never guessed versions. For every/all/complete requests, paginate by calling again with start_cursor set to the previous response's next_cursor until next_cursor is empty.",
 		schema: ListCustomersV2_3ParamsSchema,
 		endpoint: endpointByTool.listCustomers,
 	},

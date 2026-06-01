@@ -38,7 +38,7 @@ Use listPlans for questions about:
 - plan versions
 - plan features and included quantities
 
-Filter the returned plans locally. If the user asks for customers on matching plans, first resolve the matching plans, then call listCustomers with those plan ids.`,
+Filter the returned plans locally. If the user asks for customers on matching plans, first resolve the matching plans, then call listCustomers with those plan ids. For upcoming, queued, or scheduled version queries, pass only the relevant target versions to listCustomers; with numeric versions, exclude the earliest historical version unless the user asks for all historical versions.`,
 	},
 	"autumn://docs/creating-plans": {
 		name: "creating-plans",

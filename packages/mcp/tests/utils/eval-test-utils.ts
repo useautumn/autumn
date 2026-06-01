@@ -1,13 +1,17 @@
+import { createServer, type IncomingMessage, type Server } from "node:http";
 import { afterEach, expect } from "bun:test";
 import { Agent } from "@mastra/core/agent";
 import type { MessageListItem } from "@mastra/core/agent/message-list";
+import { Mastra } from "@mastra/core/mastra";
+import { InMemoryStore } from "@mastra/core/storage";
+import { MCPClient } from "@mastra/mcp";
 import type * as z from "zod/v4";
 import {
 	type AutumnMcpAuth,
 	createRequestContext,
 } from "../../src/mcp-server/agent/auth.js";
+import { createAutumnOperationsMCPServer } from "../../src/mcp-server/agent/server.js";
 import {
-	createRawAutumnOperationTools,
 	endpointByTool,
 	schemaByTool,
 } from "../../src/mcp-server/agent/tools.js";
@@ -21,6 +25,10 @@ export type ToolRequestInput<Tool extends ToolName> = z.input<
 	(typeof schemaByTool)[Tool]
 >;
 type ToolCall = { name: string; args: Record<string, unknown> };
+type PendingApproval = {
+	runId: string;
+	toolCallId?: string;
+};
 type AutumnApiFixture = {
 	[Tool in EndpointToolName]?: unknown | ((body: ToolRequest<Tool>) => unknown);
 };
@@ -38,15 +46,15 @@ type UnknownAutumnApiCall = {
 };
 
 const serverURL = "http://localhost:8080";
-const cleanupFns: (() => void)[] = [];
+const cleanupFns: (() => void | Promise<void>)[] = [];
 const toolEntries = Object.entries(endpointByTool) as [
 	EndpointToolName,
 	string,
 ][];
 const summarize = (value: unknown) => JSON.stringify(value, null, 2);
 
-afterEach(() => {
-	for (const cleanup of cleanupFns.splice(0).reverse()) cleanup();
+afterEach(async () => {
+	for (const cleanup of cleanupFns.splice(0).reverse()) await cleanup();
 });
 
 const defaultAuth: AutumnMcpAuth = {
@@ -62,17 +70,90 @@ const defaultAuth: AutumnMcpAuth = {
 		"balances:write",
 	],
 	serverURL,
-};
+} satisfies AutumnMcpAuth;
 
-export const createMcpConsumerAgent = () =>
-	new Agent({
+const closeServer = (server: Server) =>
+	new Promise<void>((resolve, reject) => {
+		server.close((error) => (error ? reject(error) : resolve()));
+	});
+
+const startMcpServer = (auth: AutumnMcpAuth) =>
+	new Promise<{ url: URL; close: () => Promise<void> }>((resolve) => {
+		const server = createServer(async (req, res) => {
+			const url = new URL(req.url ?? "/mcp", `http://${req.headers.host}`);
+			if (url.pathname !== "/mcp") {
+				res.writeHead(404).end();
+				return;
+			}
+
+			(req as IncomingMessage & { auth?: AutumnMcpAuth }).auth = auth;
+			await createAutumnOperationsMCPServer().startHTTP({
+				url,
+				httpPath: "/mcp",
+				req,
+				res,
+				options: { serverless: true },
+			});
+		});
+		server.listen(0, "127.0.0.1", () => {
+			const address = server.address();
+			if (!address || typeof address === "string") {
+				throw new Error("MCP eval server did not bind to a TCP port.");
+			}
+			resolve({
+				url: new URL(`http://127.0.0.1:${address.port}/mcp`),
+				close: () => closeServer(server),
+			});
+		});
+	});
+
+const createMcpConsumerAgent = async (auth: AutumnMcpAuth) => {
+	const server = await startMcpServer(auth);
+	const mcpClient = new MCPClient({
+		id: `mcp-eval-${crypto.randomUUID()}`,
+		servers: {
+			autumn: {
+				url: server.url,
+				requireToolApproval: ({ annotations }) =>
+					annotations?.destructiveHint === true,
+			},
+		},
+	});
+	cleanupFns.push(async () => {
+		await mcpClient.disconnect();
+		await server.close();
+	});
+
+	const { toolsets, errors } = await mcpClient.listToolsetsWithErrors();
+	if (Object.keys(errors).length) {
+		throw new Error(`MCP tool discovery failed: ${summarize(errors)}`);
+	}
+	const tools = toolsets.autumn ?? {};
+	for (const tool of Object.values(tools)) {
+		const requiresApproval = tool.mcp?.annotations?.destructiveHint === true;
+		tool.requireApproval = requiresApproval;
+		if (!requiresApproval) {
+			(tool as typeof tool & { needsApprovalFn?: unknown }).needsApprovalFn =
+				undefined;
+		}
+	}
+
+	const agent = new Agent({
 		id: "mcp-consumer-eval",
 		name: "MCP Consumer Eval",
 		description: "A generic agent using MCP tools.",
 		instructions: "You are a helpful assistant.",
 		model: "anthropic/claude-sonnet-4-6",
-		tools: createRawAutumnOperationTools(),
+		tools,
 	});
+	const mastra = new Mastra({
+		agents: { eval: agent },
+		storage: new InMemoryStore({ id: `mcp-eval-${crypto.randomUUID()}` }),
+		logger: false,
+	});
+
+	return mastra.getAgent("eval");
+};
 
 const mockAutumnApi = ({
 	serverURL,
@@ -148,36 +229,76 @@ export const initMcpEval = ({
 		serverURL: resolvedAuth.serverURL ?? serverURL,
 		fixtures,
 	});
-	const agent = createMcpConsumerAgent();
+	let agent: Agent | null = null;
 	let messages: MessageListItem[] = [];
+	let pendingApproval: PendingApproval | null = null;
 	const toolCalls: { name: string; args: Record<string, unknown> }[] = [];
 	cleanupFns.push(api.restore);
+
+	const getAgent = async () => {
+		agent ??= await createMcpConsumerAgent(resolvedAuth);
+		return agent;
+	};
+	const options = (maxSteps: number) => ({
+		maxSteps,
+		requestContext: createRequestContext(resolvedAuth),
+		context: today
+			? [
+					{
+						role: "system" as const,
+						content: `Current date: ${today.toISOString()}. Resolve relative dates using calendar time.`,
+					},
+				]
+			: undefined,
+		onIterationComplete: ({ toolCalls: calls }: { toolCalls: ToolCall[] }) => {
+			toolCalls.push(...calls);
+		},
+	});
+	const rememberApproval = (output: {
+		finishReason?: string;
+		runId?: string;
+		suspendPayload?: { toolCallId?: string };
+	}) => {
+		pendingApproval =
+			output.finishReason === "suspended" && output.runId
+				? {
+						runId: output.runId,
+						toolCallId: output.suspendPayload?.toolCallId,
+					}
+				: null;
+	};
+	const generate = async (message: string | string[], maxSteps = 4) => {
+		messages.push({
+			role: "user",
+			content: Array.isArray(message) ? message.join("\n") : message,
+		});
+		const output = await (await getAgent()).generate(
+			messages,
+			options(maxSteps),
+		);
+		messages = output.messages;
+		rememberApproval(output);
+		return output;
+	};
 
 	return {
 		api,
 		auth: resolvedAuth,
 		toolCalls,
-		generate: async (message: string | string[], maxSteps = 4) => {
-			messages.push({
-				role: "user",
-				content: Array.isArray(message) ? message.join("\n") : message,
-			});
-			const output = await agent.generate(messages, {
-				maxSteps,
-				requestContext: createRequestContext(resolvedAuth),
-				context: today
-					? [
-							{
-								role: "system",
-								content: `Current date: ${today.toISOString()}. Resolve relative dates using calendar time.`,
-							},
-						]
-					: undefined,
-				onIterationComplete: ({ toolCalls: calls }) => {
-					toolCalls.push(...calls);
-				},
+		generate,
+		approve: async (message: string, maxSteps = 4) => {
+			if (!pendingApproval) await generate(message, maxSteps);
+			if (!pendingApproval) {
+				throw new Error("No pending MCP tool approval to approve.");
+			}
+
+			const output = await (await getAgent()).approveToolCallGenerate({
+				...options(maxSteps),
+				runId: pendingApproval.runId,
+				toolCallId: pendingApproval.toolCallId,
 			});
 			messages = output.messages;
+			rememberApproval(output);
 			return output;
 		},
 	};

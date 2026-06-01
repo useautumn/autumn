@@ -235,6 +235,7 @@ test("infers upcoming plan filters from vague scheduled language", async () => {
 			listPlans: {
 				list: [
 					{ id: "starter", name: "Starter", version: 1 },
+					{ id: "growth", name: "Growth", version: 1 },
 					{ id: "growth", name: "Growth", version: 2 },
 					{ id: "growth", name: "Growth", version: 3 },
 				],
@@ -245,8 +246,9 @@ test("infers upcoming plan filters from vague scheduled language", async () => {
 					.flatMap((plan) => plan.versions ?? []);
 				const hasGrowthVersions =
 					body.subscription_status === "scheduled" &&
-					JSON.stringify(Array.from(new Set(growthVersions ?? [])).sort()) ===
-						JSON.stringify([2, 3]);
+					JSON.stringify(
+						Array.from(new Set(growthVersions ?? [])).sort((a, b) => a - b),
+					) === JSON.stringify([2, 3]);
 
 				return {
 					list: hasGrowthVersions
@@ -287,7 +289,9 @@ test("infers upcoming plan filters from vague scheduled language", async () => {
 			.flatMap((plan) => plan.versions ?? []);
 		return (
 			call.body.subscription_status === "scheduled" &&
-			Array.from(new Set(versions ?? [])).sort().join(",") === "2,3"
+			Array.from(new Set(versions ?? []))
+				.sort((a, b) => a - b)
+				.join(",") === "2,3"
 		);
 	});
 	expect(

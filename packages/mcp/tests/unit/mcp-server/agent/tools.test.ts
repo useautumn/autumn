@@ -43,6 +43,33 @@ describe("Autumn operation tools", () => {
 		expect(tools.previewCreateSchedule.description).toContain("billing impact");
 	});
 
+	test("write tools are annotated as destructive", () => {
+		const tools = createRawAutumnOperationTools();
+
+		for (const name of [
+			"createPlan",
+			"createBalance",
+			"attach",
+			"updateSubscription",
+			"createSchedule",
+		] as const) {
+			expect(tools[name].mcp?.annotations?.destructiveHint).toBe(true);
+		}
+
+		for (const name of [
+			"listCustomers",
+			"getCustomer",
+			"listPlans",
+			"getPlan",
+			"previewAttach",
+			"previewUpdateSubscription",
+			"previewCreateSchedule",
+			"previewCreateBalance",
+		] as const) {
+			expect(tools[name].mcp?.annotations?.destructiveHint).toBe(false);
+		}
+	});
+
 	test("dateToEpochMilliseconds converts UTC dates and offsets", async () => {
 		const tool = dateToEpochMillisecondsTool as ExecutableTool;
 		if (!tool.execute) throw new Error("dateToEpochMilliseconds is not executable");

@@ -9,6 +9,7 @@ import {
 	expectNoToolCall,
 	expectToolCall,
 	initMcpEval,
+	type ToolRequest,
 	type ToolRequestInput,
 } from "../utils/eval-test-utils.js";
 
@@ -28,12 +29,13 @@ const expectCustomFeatures = (
 };
 
 test("previews and confirms a plain-English create schedule request", async () => {
-	const { api, generate, toolCalls } = initMcpEval({
+	const { api, approve, generate, toolCalls } = initMcpEval({
 		today: parseISO("2026-06-01T00:00:00.000Z"),
 		fixtures: {
 			listCustomers: {
 				list: [{ id: "cus_contract", name: "Contract Customer" }],
 			},
+			getCustomer: { id: "cus_contract", name: "Contract Customer" },
 			listPlans: {
 				list: [
 					{ id: "pro", name: "Pro" },
@@ -41,6 +43,10 @@ test("previews and confirms a plain-English create schedule request", async () =
 					{ id: "enterprise", name: "Enterprise" },
 				],
 			},
+			getPlan: (body: ToolRequest<"getPlan">) => ({
+				id: body.plan_id,
+				name: body.plan_id,
+			}),
 			previewCreateSchedule: {
 				total: 40,
 				subtotal: 40,
@@ -59,7 +65,6 @@ test("previews and confirms a plain-English create schedule request", async () =
 	expectToolCall(toolCalls, "previewCreateSchedule", {
 		customer_id: "cus_contract",
 	});
-	expectNoToolCall(toolCalls, "createSchedule");
 
 	expectApiCall(api, "previewCreateSchedule", {
 		customer_id: "cus_contract",
@@ -77,7 +82,7 @@ test("previews and confirms a plain-English create schedule request", async () =
 	});
 	expectNoApiCall(api, "createSchedule");
 
-	await generate("Looks good, go ahead.");
+	await approve("Looks good, go ahead.");
 
 	expectToolCall(toolCalls, "createSchedule", {
 		customer_id: "cus_contract",
@@ -127,7 +132,7 @@ test("asks for customer id before previewing future contract price changes", asy
 			},
 		],
 	} satisfies ToolRequestInput<"createSchedule">;
-	const { api, generate, toolCalls } = initMcpEval({
+	const { api, approve, generate, toolCalls } = initMcpEval({
 		today: parseISO("2026-06-01T00:00:00.000Z"),
 		fixtures: {
 			getCustomer: {
@@ -145,6 +150,10 @@ test("asks for customer id before previewing future contract price changes", asy
 			listPlans: {
 				list: [{ id: "enterprise", name: "Enterprise" }],
 			},
+			getPlan: (body: ToolRequest<"getPlan">) => ({
+				id: body.plan_id,
+				name: body.plan_id,
+			}),
 			previewCreateSchedule: {
 				total: 0,
 				subtotal: 0,
@@ -181,11 +190,10 @@ test("asks for customer id before previewing future contract price changes", asy
 	expectToolCall(toolCalls, "previewCreateSchedule", {
 		customer_id: "cus_fee_schedule",
 	});
-	expectNoToolCall(toolCalls, "createSchedule");
 	expectExactApiCall(api, "previewCreateSchedule", expectedSchedule);
 	expectNoApiCall(api, "createSchedule");
 
-	await generate("Looks good, go ahead.");
+	await approve("Looks good, go ahead.");
 
 	expectToolCall(toolCalls, "createSchedule", {
 		customer_id: "cus_fee_schedule",
@@ -289,7 +297,7 @@ test("turns extracted contract text into the expected schedule preview and creat
 			},
 		],
 	} satisfies ToolRequestInput<"createSchedule">;
-	const { api, generate, toolCalls } = initMcpEval({
+	const { api, approve, generate, toolCalls } = initMcpEval({
 		today: parseISO("2026-06-01T00:00:00.000Z"),
 		fixtures: {
 			listCustomers: {
@@ -301,6 +309,11 @@ test("turns extracted contract text into the expected schedule preview and creat
 					},
 				],
 			},
+			getCustomer: {
+				id: "cus_northstar_contract",
+				name: "Northstar Labs",
+				email: "billing@northstar.example",
+			},
 			listPlans: {
 				list: [
 					{ id: "growth", name: "Growth" },
@@ -309,6 +322,10 @@ test("turns extracted contract text into the expected schedule preview and creat
 					{ id: "enterprise", name: "Enterprise" },
 				],
 			},
+			getPlan: (body: ToolRequest<"getPlan">) => ({
+				id: body.plan_id,
+				name: body.plan_id,
+			}),
 			previewCreateSchedule: {
 				total: 1500,
 				subtotal: 1500,
@@ -345,7 +362,6 @@ test("turns extracted contract text into the expected schedule preview and creat
 	expectToolCall(toolCalls, "previewCreateSchedule", {
 		customer_id: "cus_northstar_contract",
 	});
-	expectNoToolCall(toolCalls, "createSchedule");
 	const previewCall = expectExactApiCall(
 		api,
 		"previewCreateSchedule",
@@ -354,7 +370,7 @@ test("turns extracted contract text into the expected schedule preview and creat
 	expectCustomFeatures(previewCall?.rawBody, customFeatureIds);
 	expectNoApiCall(api, "createSchedule");
 
-	await generate("Looks good, go ahead.");
+	await approve("Looks good, go ahead.");
 
 	expectToolCall(toolCalls, "createSchedule", {
 		customer_id: "cus_northstar_contract",

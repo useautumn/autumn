@@ -19,7 +19,7 @@ const expectedGrant = {
 } satisfies ToolRequestInput<"createBalance">;
 
 test("previews and creates an entity-scoped expiring credit grant", async () => {
-	const { api, generate, toolCalls } = initMcpEval({
+	const { api, approve, generate, toolCalls } = initMcpEval({
 		today,
 		fixtures: {
 			getCustomer: {
@@ -51,10 +51,9 @@ test("previews and creates an entity-scoped expiring credit grant", async () => 
 	], 6);
 
 	expectToolCall(toolCalls, "previewCreateBalance", expectedGrant);
-	expectNoToolCall(toolCalls, "createBalance");
 	expectNoApiCall(api, "createBalance");
 
-	await generate("Looks good, apply that exact credit grant.");
+	await approve("Looks good, apply that exact credit grant.");
 
 	expectToolCall(toolCalls, "createBalance", expectedGrant);
 	expectExactApiCall(api, "createBalance", expectedGrant);
