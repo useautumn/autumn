@@ -1,6 +1,6 @@
 import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { BillingContext } from "@autumn/shared";
-import type Stripe from "stripe";
+import Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
 const mockState = {
@@ -112,7 +112,7 @@ describe("executeStripeSubscriptionScheduleAction", () => {
 			product: "stripe_prod_inline",
 			currency: "usd",
 			recurring: { interval: "month" as const, interval_count: 1 },
-			unit_amount_decimal: "1000",
+			unit_amount_decimal: Stripe.Decimal.from("1000"),
 		};
 		const params = {
 			phases: [
@@ -152,7 +152,7 @@ describe("executeStripeSubscriptionScheduleAction", () => {
 							product: "stripe_prod_inline",
 							currency: "usd",
 							recurring: { interval: "month", interval_count: 1 },
-							unit_amount_decimal: "1000",
+							unit_amount_decimal: Stripe.Decimal.from("1000"),
 						},
 					},
 				],
@@ -189,7 +189,7 @@ describe("executeStripeSubscriptionScheduleAction", () => {
 			product: "stripe_prod_inline",
 			currency: "usd",
 			recurring: { interval: "month" as const, interval_count: 1 },
-			unit_amount_decimal: "1000",
+			unit_amount_decimal: Stripe.Decimal.from("1000"),
 		};
 		const params = {
 			phases: [
@@ -242,7 +242,7 @@ describe("executeStripeSubscriptionScheduleAction", () => {
 							product: "stripe_prod_inline",
 							currency: "usd",
 							recurring: { interval: "month", interval_count: 1 },
-							unit_amount_decimal: "1000",
+							unit_amount_decimal: Stripe.Decimal.from("1000"),
 						},
 					},
 				],
