@@ -77,7 +77,7 @@ export const storeInvoiceLineItems = async ({
 			if (info?.isMetered) return false;
 
 			// Filter $0 empty price placeholders (e.g. stripe_empty_price_id)
-			if (li.pricing?.unit_amount_decimal === "0") return false;
+			if (li.pricing?.unit_amount_decimal?.toNumber() === 0) return false;
 
 			return true;
 		});

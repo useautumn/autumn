@@ -258,7 +258,7 @@ export const handleErrorSkip = (err: Error, c: Context<HonoEnv>) => {
 	// 4. Check Stripe-specific rules
 	for (const rule of STRIPE_RULES) {
 		if (rule.match(err, c)) {
-			const stripeErr = err as Stripe.errors.StripeError;
+			const stripeErr = err as Stripe.ErrorType.StripeError;
 			logger.warn(`${rule.name}, org: ${ctx.org?.slug || "unknown"}`);
 			return createErrorResponse({
 				c,

@@ -13,7 +13,11 @@ type InlinePriceLike = {
 		divide_by?: number;
 		round?: string;
 	} | null;
-	unit_amount_decimal?: string | number | null;
+	unit_amount_decimal?:
+		| string
+		| number
+		| ReturnType<typeof Stripe.Decimal.from>
+		| null;
 };
 
 export type StripePriceShape = {
@@ -65,7 +69,7 @@ export const stripePriceToShape = ({
 	intervalCount: price.recurring?.interval_count,
 	tiersMode: price.tiers_mode ?? undefined,
 	transformQuantity: transformQuantityKey(price.transform_quantity),
-	unitAmountDecimal: decimalAmount(price.unit_amount_decimal),
+	unitAmountDecimal: decimalAmount(price.unit_amount_decimal?.toNumber()),
 });
 
 export const inlinePriceToShape = ({
@@ -80,7 +84,7 @@ export const inlinePriceToShape = ({
 	interval: price.recurring?.interval,
 	intervalCount: price.recurring?.interval_count,
 	transformQuantity: transformQuantityKey(price.transform_quantity),
-	unitAmountDecimal: decimalAmount(price.unit_amount_decimal),
+	unitAmountDecimal: decimalAmount(price.unit_amount_decimal?.toString()),
 });
 
 export const stripePriceShapesEqual = (

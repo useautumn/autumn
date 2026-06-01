@@ -18,6 +18,7 @@ import { notNullish } from "@/utils/genUtils.js";
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { attachParamsToMetadata } from "../../billing/attach/utils/attachParamsToMetadata.js";
 import type { AttachParams } from "../cusProducts/AttachParams.js";
+import type { Checkout as CheckoutSessions } from "stripe/resources/Checkout/Sessions.js";
 
 export const handleCreateCheckout = async ({
 	ctx,
@@ -85,10 +86,10 @@ export const handleCreateCheckout = async ({
 	}
 
 	const checkoutParams = attachParams.checkoutSessionParams as
-		| Partial<Stripe.Checkout.SessionCreateParams>
+		| Partial<CheckoutSessions.SessionCreateParams>
 		| undefined;
 	const checkoutSubscriptionData = checkoutParams?.subscription_data as
-		| Stripe.Checkout.SessionCreateParams.SubscriptionData
+		| CheckoutSessions.SessionCreateParams.SubscriptionData
 		| undefined;
 	const trialEnd =
 		freeTrial && !attachParams.disableFreeTrial
@@ -104,7 +105,7 @@ export const handleCreateCheckout = async ({
 			: undefined;
 
 	const subscriptionData:
-		| Stripe.Checkout.SessionCreateParams.SubscriptionData
+		| CheckoutSessions.SessionCreateParams.SubscriptionData
 		| undefined = isRecurring
 		? {
 				...(checkoutSubscriptionData ?? {}),
@@ -139,7 +140,7 @@ export const handleCreateCheckout = async ({
 		notNullish(checkoutParams?.payment_method_types) ||
 		notNullish(checkoutParams?.payment_method_configuration);
 
-	let sessionParams: Stripe.Checkout.SessionCreateParams = {
+	let sessionParams: CheckoutSessions.SessionCreateParams = {
 		customer: customer.processor.id,
 		line_items: items,
 		mode: isRecurring ? "subscription" : "payment",

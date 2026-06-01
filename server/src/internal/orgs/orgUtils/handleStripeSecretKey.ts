@@ -19,7 +19,7 @@ export const handleStripeSecretKey = async ({
 	// 1. Check if key is valid
 	await checkKeyValid(secretKey);
 	const stripe = new Stripe(secretKey);
-	const account = await stripe.accounts.retrieve();
+	const account = await stripe.accounts.retrieve(null);
 
 	// 2. Disconnect existing webhook endpoints
 	const curWebhooks = await stripe.webhookEndpoints.list();

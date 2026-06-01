@@ -252,7 +252,10 @@ const mergeStripeAndBillingLineItems = ({
 			stripeLineItem.parent?.invoice_item_details?.invoice_item ?? null,
 		stripe_subscription_item_id: stripeSubscriptionItemId,
 		stripe_product_id: (priceDetails?.product as string) ?? null,
-		stripe_price_id: priceDetails?.price ?? null,
+		stripe_price_id:
+			typeof priceDetails?.price === "string"
+				? priceDetails?.price
+				: (priceDetails?.price?.id ?? null),
 		stripe_discountable: stripeLineItem.discountable,
 
 		// Amounts (from Stripe or Autumn depending on discountable flag)
@@ -336,7 +339,10 @@ const createDbLineItemFromStripeOnly = ({
 			stripeLineItem.parent?.invoice_item_details?.invoice_item ?? null,
 		stripe_subscription_item_id: stripeSubscriptionItemId,
 		stripe_product_id: (priceDetails?.product as string) ?? null,
-		stripe_price_id: priceDetails?.price ?? null,
+		stripe_price_id:
+			typeof priceDetails?.price === "string"
+				? priceDetails?.price
+				: (priceDetails?.price?.id ?? null),
 		stripe_discountable: stripeLineItem.discountable,
 
 		amount,

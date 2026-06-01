@@ -40,7 +40,9 @@
 
 			// Explicitly set drizzle-orm path to avoid monorepo issues
 			"drizzle-orm": ["../node_modules/drizzle-orm"],
-			"drizzle-orm/*": ["../node_modules/drizzle-orm/*"]
+			"drizzle-orm/*": ["../node_modules/drizzle-orm/*"],
+			"stripe": ["../node_modules/.bun/node_modules/stripe/esm/stripe.esm.node"],
+			"stripe/*": ["../node_modules/.bun/node_modules/stripe/esm/*"]
 		}
 	},
 	"include": ["src", "tests", "scripts", "experiments", "perf"],

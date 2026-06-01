@@ -10,6 +10,7 @@ import {
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { stripeItemSpecToCheckoutLineItem } from "../stripeItemSpec/stripeItemSpecToStripeParam";
+import type { Checkout as CheckoutSessions } from "stripe/resources/Checkout/Sessions.js";
 
 /**
  * Update one-off items to use inline price_data if they're tiered.
@@ -22,7 +23,7 @@ export const updateOneOffTieredItems = ({
 }: {
 	oneOffItemSpecs: StripeItemSpec[];
 	org: Organization;
-}): Stripe.Checkout.SessionCreateParams.LineItem[] => {
+}): CheckoutSessions.SessionCreateParams.LineItem[] => {
 	const currency = orgToCurrency({ org });
 
 	return oneOffItemSpecs.map((item) => {
