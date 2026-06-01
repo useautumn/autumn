@@ -5,16 +5,11 @@ import type {
 import { createStripeCli } from "@server/external/connect/createStripeCli";
 import type { AutumnContext } from "@server/honoUtils/HonoEnv";
 import type Stripe from "stripe";
+import { findMatchingInlinePriceIdForPhaseItem } from "@/internal/billing/v2/providers/stripe/utils/matchUtils/matchStripeInlinePrice";
 import { logSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/logSubscriptionScheduleAction";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 
-/**
- * Maps update phase format to create phase format (strips start_date).
- *
- * Phase metadata carries `autumn_managed: "true"` because Stripe's
- * `default_settings` has no metadata field — phase metadata is the only
- * vehicle to propagate the flag onto the spawned sub.
- */
+/** Maps update phase format to create phase format and propagates Autumn metadata. */
 const toCreatePhase = (
 	phase: Stripe.SubscriptionScheduleUpdateParams.Phase,
 ): Stripe.SubscriptionScheduleCreateParams.Phase => ({
@@ -32,14 +27,7 @@ const toCreatePhase = (
 	metadata: { ...(phase.metadata ?? {}), autumn_managed: "true" },
 });
 
-/**
- * Builds phases for updating a schedule that was created from a subscription.
- * The first phase must use the schedule's actual current phase start_date AND items.
- * Stripe doesn't allow modifying items in an active phase, so we preserve them exactly.
- *
- * Stripe's `from_subscription` doesn't copy item-level metadata onto schedule phase items,
- * so we re-apply metadata from the subscription items (which DO have it) by matching price ID.
- */
+/** Builds phases for updating a schedule created from a subscription. */
 const buildAnchoredPhases = ({
 	params,
 	existingSchedule,
@@ -57,7 +45,6 @@ const buildAnchoredPhases = ({
 		throw new Error("Cannot update schedule: missing current phase start_date");
 	}
 
-	// Build a lookup of price ID → metadata from the subscription items
 	const subItemMetadataByPriceId = new Map<string, Record<string, string>>();
 	if (stripeSubscription) {
 		for (const subItem of stripeSubscription.items.data) {
@@ -67,14 +54,12 @@ const buildAnchoredPhases = ({
 		}
 	}
 
-	// Map existing items to update format (response type -> request type)
-	// Re-apply metadata from subscription items since Stripe's from_subscription strips it
+	// Stripe's from_subscription strips item metadata, but subscription items keep it.
 	const existingFirstPhaseItems: Stripe.SubscriptionScheduleUpdateParams.Phase["items"] =
 		existingSchedule.phases[0]?.items.map((item) => {
 			const priceId =
 				typeof item.price === "string" ? item.price : item.price?.id;
 
-			// Prefer metadata from the subscription item (reliable source)
 			const subMetadata = priceId
 				? subItemMetadataByPriceId.get(priceId)
 				: undefined;
@@ -91,18 +76,54 @@ const buildAnchoredPhases = ({
 			};
 		});
 
-	// First phase: preserve start_date AND items from existing schedule
-	// Stripe doesn't allow modifying items in an active/in-progress phase
-	// The actual current state is managed by the subscription, not the schedule
-	// Future phases: keep as-is (these define what happens at phase transitions)
+	const futurePhases = reuseCurrentInlinePricesInFuturePhases({
+		phases: inputPhases.slice(1),
+		stripeSubscription,
+	});
+
+	// Stripe rejects active phase item edits, so the first phase must mirror it.
 	return [
 		{
 			...inputPhases[0],
 			start_date: currentPhaseStart,
 			items: existingFirstPhaseItems ?? inputPhases[0].items,
 		},
-		...inputPhases.slice(1),
+		...futurePhases,
 	];
+};
+
+type SchedulePhase = Stripe.SubscriptionScheduleUpdateParams.Phase;
+
+const reuseCurrentInlinePricesInFuturePhases = ({
+	phases,
+	stripeSubscription,
+}: {
+	phases: SchedulePhase[];
+	stripeSubscription?: Stripe.Subscription;
+}): SchedulePhase[] => {
+	return phases.map((phase) => {
+		const usedSubscriptionItemIds = new Set<string>();
+
+		return {
+			...phase,
+			items: phase.items?.map((item) => {
+				/** Preserve current inline prices across phases so Stripe keeps item period anchors. */
+				const priceId = findMatchingInlinePriceIdForPhaseItem({
+					phaseItem: item,
+					stripeSubscription,
+					usedSubscriptionItemIds,
+				});
+
+				if (!priceId) return item;
+
+				return {
+					price: priceId,
+					quantity: item.quantity,
+					...(item.metadata && { metadata: item.metadata }),
+				};
+			}),
+		};
+	});
 };
 
 /**

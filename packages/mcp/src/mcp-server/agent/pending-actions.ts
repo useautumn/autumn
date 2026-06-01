@@ -4,7 +4,12 @@ import { addMilliseconds, isPast } from "date-fns";
 import { Redis } from "ioredis";
 import type { AutumnMcpAuth } from "./auth.js";
 
-export type BillingToolName = "attach" | "updateSubscription";
+export type BillingToolName =
+	| "attach"
+	| "updateSubscription"
+	| "createPlan"
+	| "createSchedule"
+	| "createBalance";
 
 export type PendingBillingAction = {
 	token: string;

@@ -1,30 +1,26 @@
 import {
 	type BillingContext,
-	type BillingInterval,
 	type BillingPlan,
 	type BillingPreviewResponse,
 	cp,
-	cusProductsToPrices,
 	type FullCusProduct,
-	getCycleEnd,
-	getSmallestInterval,
 	hasCustomerProductEnded,
 } from "@autumn/shared";
 import type { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import {
-	applyCustomerProductPatch,
-	applyCustomerProductUpdate,
-	getPatchCustomerProducts,
-	getUpdateCustomerProducts,
-} from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
+import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
 import { billingPlanToNextCycleLineItems } from "./billingPlanToNextCycleLineItems";
 import { computeScheduledAnchorResetPreview } from "./computeScheduledAnchorResetPreview";
+import {
+	getActiveCustomerProductsAt,
+	getNextCycleEvent,
+	type SmallestInterval,
+} from "./getNextCycleEvent";
 
 export type NextCyclePreviewDebug = {
 	allCustomerProducts: FullCusProduct[];
 	currentCustomerProducts: FullCusProduct[];
-	smallestInterval: { interval: string; intervalCount: number } | null;
+	smallestInterval: SmallestInterval | null;
 	anchorMs: number;
 	nextCycleStart: number | null;
 	filteredCustomerProducts: FullCusProduct[];
@@ -35,81 +31,52 @@ export type NextCyclePreviewResult = {
 	debug: NextCyclePreviewDebug;
 };
 
-const applyPatchCustomerProducts = ({
-	allCustomerProducts,
-	billingPlan,
-}: {
-	allCustomerProducts: FullCusProduct[];
-	billingPlan: BillingPlan;
-}): FullCusProduct[] => {
-	const patchCustomerProducts = getPatchCustomerProducts({
-		autumnBillingPlan: billingPlan.autumn,
-	});
-	if (patchCustomerProducts.length === 0) return allCustomerProducts;
+const MS_PER_SECOND = 1000;
 
-	const patchedCustomerProducts = patchCustomerProducts.map((patch) =>
-		applyCustomerProductPatch({
-			customerProduct:
-				allCustomerProducts.find(
-					(customerProduct) => customerProduct.id === patch.customerProduct.id,
-				) ?? patch.customerProduct,
-			patch,
-		}),
-	);
-	const patchedCustomerProductIds = new Set(
-		patchedCustomerProducts.map((customerProduct) => customerProduct.id),
-	);
-
-	return [
-		...allCustomerProducts.filter(
-			(customerProduct) => !patchedCustomerProductIds.has(customerProduct.id),
-		),
-		...patchedCustomerProducts,
-	];
-};
-const getScheduledStartPreviewContext = ({
+const filterCustomerProductsForEventStart = ({
 	customerProducts,
-	currentCustomerProducts,
-	currentEpochMs,
+	nextCycleStart,
 }: {
 	customerProducts: FullCusProduct[];
-	currentCustomerProducts: FullCusProduct[];
-	currentEpochMs: number;
+	nextCycleStart: number;
+}) =>
+	customerProducts.filter(
+		(customerProduct) =>
+			customerProduct.starts_at <= nextCycleStart &&
+			!hasCustomerProductEnded(customerProduct, { nowMs: nextCycleStart }),
+	);
+
+const scaleNextCycleAmounts = ({
+	lineItemsResult,
+	prorationRatio,
+}: {
+	lineItemsResult: ReturnType<typeof billingPlanToNextCycleLineItems>;
+	prorationRatio: Decimal;
 }) => {
-	let scheduledStartMs: number | null = null;
-
-	for (const customerProduct of customerProducts) {
-		if (!cp(customerProduct).scheduled().valid) continue;
-		if (customerProduct.starts_at <= currentEpochMs) continue;
-
-		scheduledStartMs =
-			scheduledStartMs === null
-				? customerProduct.starts_at
-				: Math.min(scheduledStartMs, customerProduct.starts_at);
-	}
-
-	const scheduledStartCustomerProducts =
-		scheduledStartMs === null
-			? []
-			: customerProducts.filter(
-					(customerProduct) => customerProduct.starts_at === scheduledStartMs,
-				);
-
-	const currentPrices = cusProductsToPrices({
-		cusProducts: currentCustomerProducts,
-		filters: { excludeOneOffPrices: true },
-	});
-	const scheduledStartPrices = cusProductsToPrices({
-		cusProducts: scheduledStartCustomerProducts,
-		filters: { excludeOneOffPrices: true },
-	});
+	const previewLineItems = lineItemsResult.previewLineItems.map((item) => ({
+		...item,
+		subtotal: prorationRatio.mul(item.subtotal).toDecimalPlaces(2).toNumber(),
+		total: prorationRatio.mul(item.total).toDecimalPlaces(2).toNumber(),
+		discounts: item.discounts?.map((discount) => ({
+			...discount,
+			amount_off: prorationRatio
+				.mul(discount.amount_off)
+				.toDecimalPlaces(2)
+				.toNumber(),
+		})),
+	}));
 
 	return {
-		scheduledStartMs,
-		scheduledStartCustomerProducts,
-		smallestInterval: getSmallestInterval({
-			prices: currentPrices.length > 0 ? currentPrices : scheduledStartPrices,
-		}),
+		...lineItemsResult,
+		previewLineItems,
+		subtotal: prorationRatio
+			.mul(lineItemsResult.subtotal)
+			.toDecimalPlaces(2)
+			.toNumber(),
+		total: prorationRatio
+			.mul(lineItemsResult.total)
+			.toDecimalPlaces(2)
+			.toNumber(),
 	};
 };
 
@@ -124,18 +91,11 @@ export const billingPlanToNextCyclePreview = ({
 }): NextCyclePreviewResult => {
 	const { billingCycleAnchorMs } = billingContext;
 
-	const { insertCustomerProducts } = billingPlan.autumn;
-	const updateCustomerProducts = getUpdateCustomerProducts({
+	const finalFullCustomer = autumnBillingPlanToFinalFullCustomer({
+		billingContext,
 		autumnBillingPlan: billingPlan.autumn,
-	}).map(({ customerProduct, updates }) =>
-		applyCustomerProductUpdate({ customerProduct, updates }),
-	);
-
-	// Get all customer products
-	const allCustomerProducts = applyPatchCustomerProducts({
-		allCustomerProducts: [...insertCustomerProducts, ...updateCustomerProducts],
-		billingPlan,
 	});
+	const allCustomerProducts = finalFullCustomer.customer_products;
 
 	const customerProducts = allCustomerProducts.filter(
 		(customerProduct) =>
@@ -147,27 +107,25 @@ export const billingPlanToNextCyclePreview = ({
 			cp(customerProduct).paid().recurring().hasActiveStatus().valid,
 	);
 
-	const { scheduledStartMs, scheduledStartCustomerProducts, smallestInterval } =
-		getScheduledStartPreviewContext({
-			customerProducts,
-			currentCustomerProducts,
-			currentEpochMs: billingContext.currentEpochMs,
-		});
-
-	// Calculate anchor
 	const anchorMs =
 		billingCycleAnchorMs === "now"
 			? billingContext.currentEpochMs
 			: billingCycleAnchorMs;
 
+	const event = getNextCycleEvent({
+		billingContext,
+		customerProducts,
+		anchorMs,
+	});
+
 	const baseDebug = {
 		allCustomerProducts,
 		currentCustomerProducts,
-		smallestInterval,
+		smallestInterval: event.kind === "none" ? null : event.smallestInterval,
 		anchorMs,
 	};
 
-	if (billingCycleAnchorMs === "now" && scheduledStartMs === null) {
+	if (event.kind === "none") {
 		return {
 			nextCycle: undefined,
 			debug: {
@@ -178,56 +136,120 @@ export const billingPlanToNextCyclePreview = ({
 		};
 	}
 
-	if (!smallestInterval) {
+	if (event.kind === "scheduled_change") {
+		const productsForUsageLineItems = getActiveCustomerProductsAt({
+			customerProducts,
+			startsAtMs: event.startsAtMs - MS_PER_SECOND,
+		});
+		const lineItemsResult = billingPlanToNextCycleLineItems({
+			ctx,
+			customerProducts: [
+				...event.incomingCustomerProducts,
+				...event.outgoingCustomerProducts,
+			],
+			productsForUsageLineItems,
+			lineItemSpecs: [
+				{
+					customerProducts: event.incomingCustomerProducts,
+					direction: "charge",
+					billingCycleAnchorMs: anchorMs,
+					filterBillingPeriodStart: false,
+					priceFilters: { excludeOneOffPrices: true },
+				},
+				{
+					customerProducts: event.outgoingCustomerProducts,
+					direction: "refund",
+					billingCycleAnchorMs: anchorMs,
+					filterBillingPeriodStart: false,
+					priceFilters: { excludeOneOffPrices: true },
+				},
+			],
+			autumnBillingPlan: billingPlan.autumn,
+			billingContext,
+			nextCycleStart: event.startsAtMs,
+		});
+
 		return {
-			nextCycle: undefined,
+			nextCycle: {
+				starts_at: event.startsAtMs,
+				subtotal: lineItemsResult.subtotal,
+				total: lineItemsResult.total,
+				line_items: lineItemsResult.previewLineItems,
+				usage_line_items: lineItemsResult.previewUsageLineItems,
+			},
 			debug: {
 				...baseDebug,
-				nextCycleStart: null,
-				filteredCustomerProducts: [],
+				nextCycleStart: event.startsAtMs,
+				filteredCustomerProducts: event.incomingCustomerProducts,
 			},
 		};
 	}
 
-	const isScheduledAnchorReset =
-		typeof billingContext.requestedBillingCycleAnchor === "number";
+	if (event.kind === "scheduled_start") {
+		const productsForUsageLineItems = getActiveCustomerProductsAt({
+			customerProducts,
+			startsAtMs: event.startsAtMs - MS_PER_SECOND,
+		});
+		const billingCycleAnchorMs =
+			productsForUsageLineItems.length === 0 ? event.startsAtMs : anchorMs;
+		const lineItemsResult = billingPlanToNextCycleLineItems({
+			ctx,
+			customerProducts: event.customerProducts,
+			productsForUsageLineItems,
+			lineItemSpecs: [
+				{
+					customerProducts: event.customerProducts,
+					direction: "charge",
+					billingCycleAnchorMs,
+					filterBillingPeriodStart: false,
+					priceFilters: { excludeOneOffPrices: true },
+				},
+			],
+			autumnBillingPlan: billingPlan.autumn,
+			billingContext,
+			nextCycleStart: event.startsAtMs,
+		});
+
+		return {
+			nextCycle: {
+				starts_at: event.startsAtMs,
+				subtotal: lineItemsResult.subtotal,
+				total: lineItemsResult.total,
+				line_items: lineItemsResult.previewLineItems,
+				usage_line_items: lineItemsResult.previewUsageLineItems,
+			},
+			debug: {
+				...baseDebug,
+				nextCycleStart: event.startsAtMs,
+				filteredCustomerProducts: event.customerProducts,
+			},
+		};
+	}
 
 	let nextCycleStart: number;
 	let lineItemsBillingContext: BillingContext = billingContext;
 	let prorationRatio: Decimal | undefined;
+	let nextCycleCustomerProducts: FullCusProduct[];
 
-	if (isScheduledAnchorReset) {
+	if (event.kind === "anchor_reset") {
 		const result = computeScheduledAnchorResetPreview({
 			billingContext,
-			interval: smallestInterval.interval as BillingInterval,
-			intervalCount: smallestInterval.intervalCount,
+			interval: event.smallestInterval.interval,
+			intervalCount: event.smallestInterval.intervalCount,
 		});
 		nextCycleStart = result.nextCycleStart;
 		prorationRatio = result.prorationRatio;
 		lineItemsBillingContext = result.lineItemsBillingContext;
-	} else if (billingCycleAnchorMs === "now" && scheduledStartMs !== null) {
-		nextCycleStart = scheduledStartMs;
+		nextCycleCustomerProducts = customerProducts;
 	} else {
-		nextCycleStart = getCycleEnd({
-			anchor: anchorMs,
-			interval: smallestInterval.interval,
-			intervalCount: smallestInterval.intervalCount,
-			now: billingContext.currentEpochMs,
-			floor: anchorMs,
-		});
+		nextCycleStart = event.startsAtMs;
+		nextCycleCustomerProducts = event.customerProducts;
 	}
 
-	const nextCycleCustomerProducts =
-		billingCycleAnchorMs === "now" && scheduledStartMs !== null
-			? scheduledStartCustomerProducts
-			: customerProducts;
-	const filteredCustomerProducts = nextCycleCustomerProducts.filter(
-		(customerProduct) => {
-			return !hasCustomerProductEnded(customerProduct, {
-				nowMs: nextCycleStart,
-			});
-		},
-	);
+	const filteredCustomerProducts = filterCustomerProductsForEventStart({
+		customerProducts: nextCycleCustomerProducts,
+		nextCycleStart,
+	});
 
 	if (filteredCustomerProducts.length === 0) {
 		return {
@@ -236,39 +258,39 @@ export const billingPlanToNextCyclePreview = ({
 		};
 	}
 
-	let { previewLineItems, previewUsageLineItems, subtotal, total } =
-		billingPlanToNextCycleLineItems({
-			ctx,
-			customerProducts: filteredCustomerProducts,
-			autumnBillingPlan: billingPlan.autumn,
-			billingContext: lineItemsBillingContext,
-			nextCycleStart,
-		});
+	const productsForUsageLineItems = getActiveCustomerProductsAt({
+		customerProducts,
+		startsAtMs: nextCycleStart - MS_PER_SECOND,
+	});
+	let lineItemsResult = billingPlanToNextCycleLineItems({
+		ctx,
+		customerProducts: filteredCustomerProducts,
+		productsForUsageLineItems,
+		autumnBillingPlan: billingPlan.autumn,
+		billingContext: {
+			...lineItemsBillingContext,
+			billingCycleAnchorMs:
+				lineItemsBillingContext.billingCycleAnchorMs === "now"
+					? anchorMs
+					: lineItemsBillingContext.billingCycleAnchorMs,
+		},
+		nextCycleStart,
+	});
 
 	if (prorationRatio) {
-		previewLineItems = previewLineItems.map((item) => ({
-			...item,
-			subtotal: prorationRatio.mul(item.subtotal).toDecimalPlaces(2).toNumber(),
-			total: prorationRatio.mul(item.total).toDecimalPlaces(2).toNumber(),
-			discounts: item.discounts?.map((discount) => ({
-				...discount,
-				amount_off: prorationRatio
-					.mul(discount.amount_off)
-					.toDecimalPlaces(2)
-					.toNumber(),
-			})),
-		}));
-		subtotal = prorationRatio.mul(subtotal).toDecimalPlaces(2).toNumber();
-		total = prorationRatio.mul(total).toDecimalPlaces(2).toNumber();
+		lineItemsResult = scaleNextCycleAmounts({
+			lineItemsResult,
+			prorationRatio,
+		});
 	}
 
 	return {
 		nextCycle: {
 			starts_at: nextCycleStart,
-			subtotal,
-			total,
-			line_items: previewLineItems,
-			usage_line_items: previewUsageLineItems,
+			subtotal: lineItemsResult.subtotal,
+			total: lineItemsResult.total,
+			line_items: lineItemsResult.previewLineItems,
+			usage_line_items: lineItemsResult.previewUsageLineItems,
 		},
 		debug: { ...baseDebug, nextCycleStart, filteredCustomerProducts },
 	};

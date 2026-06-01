@@ -97,10 +97,7 @@ export function AttachFooterV3() {
 						</span>
 					</TooltipTrigger>
 					{invoiceDisabledReason && (
-						<TooltipContent
-							side="top"
-							className="max-w-(--anchor-width)"
-						>
+						<TooltipContent side="top" className="max-w-(--anchor-width)">
 							{invoiceDisabledReason}
 						</TooltipContent>
 					)}

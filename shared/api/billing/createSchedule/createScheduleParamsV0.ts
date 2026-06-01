@@ -6,6 +6,7 @@ import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPla
 import { z } from "zod/v4";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
+import { AttachDiscountSchema } from "../attachV2/attachDiscount";
 
 const CreateScheduleCustomizePlanSchema = z
 	.object({
@@ -67,6 +68,10 @@ export const CreateScheduleParamsV0Schema = z
 		invoice_mode: InvoiceModeParamsSchema.optional().meta({
 			description:
 				"Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.",
+		}),
+		discounts: z.array(AttachDiscountSchema).optional().meta({
+			description:
+				"List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.",
 		}),
 		success_url: z.string().optional().meta({
 			description: "URL to redirect to after successful checkout.",

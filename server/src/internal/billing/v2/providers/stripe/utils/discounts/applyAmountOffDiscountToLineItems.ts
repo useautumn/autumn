@@ -8,6 +8,7 @@ import {
 import { Decimal } from "decimal.js";
 import { addDiscountTagToDescription } from "./addDiscountTagToDescription";
 import { discountAppliesToLineItem } from "./discountAppliesToLineItem";
+import { getBackdatedDiscountCycleCount } from "./getBackdatedDiscountCycleCount";
 
 /**
  * Applies an amount_off discount to line items.
@@ -32,7 +33,7 @@ export const applyAmountOffDiscountToLineItems = ({
 	}
 
 	// Convert from Stripe cents to Autumn dollars
-	const discountAmountOff = stripeToAtmnAmount({
+	const baseDiscountAmountOff = stripeToAtmnAmount({
 		amount: amountOffCents,
 		currency: coupon.currency ?? "usd",
 	});
@@ -44,6 +45,15 @@ export const applyAmountOffDiscountToLineItems = ({
 	);
 
 	if (applicableChargeItems.length === 0) return lineItems;
+
+	const eligibleCycleCount = Math.max(
+		...applicableChargeItems.map((item) =>
+			getBackdatedDiscountCycleCount({ lineItem: item, coupon }),
+		),
+	);
+	if (eligibleCycleCount <= 0) return lineItems;
+
+	const discountAmountOff = baseDiscountAmountOff;
 
 	// Build a map of line item -> discount amount
 	const discountMap = new Map<LineItem, number>();

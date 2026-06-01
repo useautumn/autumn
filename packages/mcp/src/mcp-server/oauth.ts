@@ -9,16 +9,22 @@ import type { MCPServerFlags } from "./flags.js";
 
 export const MCP_OAUTH_SCOPES = [
 	Scopes.Customers.Read,
+	Scopes.Customers.Write,
 	Scopes.Plans.Read,
+	Scopes.Plans.Write,
 	Scopes.Billing.Read,
 	Scopes.Billing.Write,
+	Scopes.Balances.Write,
 	Scopes.Analytics.Read,
 ] as const satisfies readonly ScopeString[];
 
 const environmentSchema = z.enum(["sandbox", "live"]);
 const xApiVersionSchema = z.string().default("2.3.0");
 const failOpenSchema = z
-	.union([z.boolean(), z.enum(["true", "false"]).transform((v) => v === "true")])
+	.union([
+		z.boolean(),
+		z.enum(["true", "false"]).transform((v) => v === "true"),
+	])
 	.default(true);
 const secretKeySchema = z.string().min(1).optional();
 const tokenExchangeSchema = z.object({

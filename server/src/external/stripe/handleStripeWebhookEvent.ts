@@ -8,6 +8,7 @@ import { unsetOrgStripeKeys } from "@/internal/orgs/orgUtils.js";
 import { handleWebhookErrorSkip } from "@/utils/routerUtils/webhookErrorSkip.js";
 import { getSentryTags } from "../sentry/sentryUtils.js";
 import { handleCusDiscountDeleted } from "./webhookHandlers/handleCusDiscountDeleted.js";
+import { handleStripeCustomerUpdated } from "./webhookHandlers/handleStripeCustomerUpdated.js";
 import { handleInvoiceUpdated } from "./webhookHandlers/handleInvoiceUpdated.js";
 import { handleStripeCheckoutSessionCompleted } from "./webhookHandlers/handleStripeCheckoutSessionCompleted/handleStripeCheckoutSessionCompleted.js";
 import { handleStripeCheckoutSessionExpired } from "./webhookHandlers/handleStripeCheckoutSessionExpired/handleStripeCheckoutSessionExpired.js";
@@ -34,6 +35,10 @@ export const handleStripeWebhookEvent = async (
 
 	try {
 		switch (event.type) {
+			case "customer.updated":
+				await handleStripeCustomerUpdated({ ctx, event });
+				break;
+
 			case "customer.subscription.created":
 				await handleStripeSubscriptionCreated({ ctx });
 				break;

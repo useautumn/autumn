@@ -2,6 +2,7 @@ import {
 	type AutumnBillingPlan,
 	type BillingContext,
 	type FullCusProduct,
+	type LineItem,
 	ms,
 	sumValues,
 	timestampsMatch,
@@ -14,20 +15,87 @@ import { customerProductToLineItems } from "../../lineItems/customerProductToLin
 import { lineItemToPreviewLineItem } from "../../lineItems/lineItemToPreviewLineItem";
 import { lineItemToPreviewUsageLineItem } from "../../lineItems/lineItemToPreviewUsageLineItem";
 
+type NextCycleLineItemSpec = {
+	customerProducts: FullCusProduct[];
+	direction: "charge" | "refund";
+	billingContext?: BillingContext;
+	billingCycleAnchorMs?: BillingContext["billingCycleAnchorMs"];
+	filterBillingPeriodStart?: boolean;
+	priceFilters?: {
+		excludeOneOffPrices?: boolean;
+	};
+};
+
+const buildLineItemsForSpec = ({
+	ctx,
+	spec,
+	billingContext,
+	nextCycleStart,
+}: {
+	ctx: AutumnContext;
+	spec: NextCycleLineItemSpec;
+	billingContext: BillingContext;
+	nextCycleStart: number;
+}) => {
+	const lineItems = spec.customerProducts.flatMap((customerProduct) =>
+		customerProductToLineItems({
+			ctx,
+			customerProduct,
+			billingContext: {
+				...billingContext,
+				...spec.billingContext,
+				currentEpochMs: nextCycleStart,
+				subscriptionBackdateStartMs: undefined,
+			},
+			direction: spec.direction,
+			priceFilters: spec.priceFilters,
+			billingCycleAnchorMsOverride: spec.billingCycleAnchorMs,
+		}),
+	);
+
+	if (spec.filterBillingPeriodStart === false) return lineItems;
+
+	return lineItems.filter(
+		(lineItem) =>
+			lineItem.context.billingPeriod?.start !== undefined &&
+			timestampsMatch(lineItem.context.billingPeriod.start, nextCycleStart),
+	);
+};
+
+const prefixRefundDescriptions = ({ lineItems }: { lineItems: LineItem[] }) =>
+	lineItems.map((lineItem) => {
+		if (lineItem.context.direction !== "refund") return lineItem;
+		if (lineItem.description.startsWith("Unused ")) return lineItem;
+
+		return {
+			...lineItem,
+			description: `Unused ${lineItem.description}`,
+		};
+	});
+
 export const billingPlanToNextCycleLineItems = ({
 	ctx,
 	customerProducts,
+	productsForUsageLineItems = customerProducts,
+	lineItemSpecs = [
+		{
+			customerProducts,
+			direction: "charge",
+		},
+	],
 	autumnBillingPlan,
 	billingContext,
 	nextCycleStart,
 }: {
 	ctx: AutumnContext;
 	customerProducts: FullCusProduct[];
+	productsForUsageLineItems?: FullCusProduct[];
+	lineItemSpecs?: NextCycleLineItemSpec[];
 	autumnBillingPlan: AutumnBillingPlan;
 	billingContext: BillingContext;
 	nextCycleStart: number;
 }) => {
-	const arrearLineItems = customerProducts.flatMap(
+	const arrearLineItems = productsForUsageLineItems.flatMap(
 		(customerProduct) =>
 			customerProductToArrearLineItems({
 				ctx,
@@ -44,24 +112,17 @@ export const billingPlanToNextCycleLineItems = ({
 		lineItemToPreviewUsageLineItem,
 	);
 
-	const autumnLineItems = customerProducts.flatMap((customerProduct) =>
-		customerProductToLineItems({
+	let nextCycleAutumnLineItems = lineItemSpecs.flatMap((spec) =>
+		buildLineItemsForSpec({
 			ctx,
-			customerProduct,
-			billingContext: {
-				...billingContext,
-				currentEpochMs: nextCycleStart,
-			},
-			direction: "charge",
+			spec,
+			billingContext,
+			nextCycleStart,
 		}),
 	);
-
-	// Only keep line items whose billing period starts at the next cycle.
-	let nextCycleAutumnLineItems = autumnLineItems.filter(
-		(lineItem) =>
-			lineItem.context.billingPeriod?.start !== undefined &&
-			timestampsMatch(lineItem.context.billingPeriod.start, nextCycleStart),
-	);
+	nextCycleAutumnLineItems = prefixRefundDescriptions({
+		lineItems: nextCycleAutumnLineItems,
+	});
 
 	const deferredLineItems = (autumnBillingPlan.lineItems ?? []).filter(
 		(lineItem) => lineItem.chargeImmediately === false,
@@ -72,6 +133,7 @@ export const billingPlanToNextCycleLineItems = ({
 			stripeDiscounts: billingContext.stripeDiscounts,
 			currentEpochMs: billingContext.currentEpochMs,
 			nextCycleStart,
+			discountStartMs: billingContext.subscriptionBackdateStartMs,
 		});
 
 		nextCycleAutumnLineItems = applyStripeDiscountsToLineItems({

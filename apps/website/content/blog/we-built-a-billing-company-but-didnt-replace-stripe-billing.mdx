@@ -1,0 +1,54 @@
+---
+title: "We built a billing company but didn't replace Stripe Billing"
+description: "Why Autumn builds around Stripe Billing instead of replacing subscriptions and invoices, and where the real complexity has moved for credit-based pricing."
+date: "2026-06-01"
+author: "John, Autumn Co-Founder"
+slug: "we-built-a-billing-company-but-didnt-replace-stripe-billing"
+image: "/images/blog/we-built-a-billing-company-but-didnt-replace-stripe-billing.png"
+---
+
+Autumn isn't a replacement for [Stripe Billing](https://stripe.com/gb/newsroom/news/stripe-launches-billing). Your subscriptions and invoices stay exactly as they are. People often get confused when we tell them this, perhaps it's because most of the other players in the space have built their own billing engines and invoicing systems from the ground up. So when people learn that we haven't done the same, it naturally leads to the question: **what benefit do you offer over Stripe?**
+
+I figured I'd write an article answering this. The short answer is pretty simple - we're solving a different problem, or rather, a different layer.
+
+### Subscriptions and invoices
+
+Stripe Billing launched when the recurring payment model (aka subscriptions) started to take off. About a decade ago, people used to build this in house. Companies would run cron jobs which queried over their customers table daily, identified who was due for a payment, generated an invoice for each one, and charged their card.
+
+As with any in-house solution, there's always more than meets the eye. Things like managing different payment methods, plan switches, retrying failed payments, etc. That's just on the subscription management side, invoicing was a whole different beast with things like taxes, schedules and more coming into play. These were the primitives that Stripe Billing was built around.
+
+### Credit based pricing
+
+Subscriptions and invoices haven't gone anywhere. They still sit at the center of every company's billing, and Stripe's core abstractions around them have stood the test of time. What's grown complex, however, is everything companies now build on top - especially as AI brings new ways to price and package.
+
+This is the layer that we're solving, and it's particularly relevant for companies with credit-based pricing. To understand why, let's walk through an example by thinking about how one might build this in-house. Imagine your pro plan grants users some number of credits every month.
+
+You might begin by building a simple credit ledger in Postgres. Here's how it works:
+
+- You run a cron job every month to top users up with a number of credits
+- Every time a user performs an action in your app, you insert an event into this table
+- To get the number of credits used per user, you run an aggregation over this table
+
+This works when credit usage is infrequent, maybe a couple of times per day. But if you have to run these aggregations a couple of times per second, it gets expensive. Take Cursor for example, every time you send a message, they check whether you have enough credits and block you if you don't. So how do you solve this? You add a caching layer in front of this events table and store users' credit balances in real time. Every time a credit is used, you update this cache and add an event to the initial table.
+
+Next, you decide you want to start giving out credit coupons, but these are slightly different to the ones users get each month: they don't reset. So now you need to figure out a way to distinguish between these balances in your events table and cache. The list of features that you can build around this goes on and on - rollovers, usage analytics, alerts, auto top ups. Before you know it, you're maintaining an entire system alongside your core product!
+
+![Credit balance cache and events table architecture](/images/blog/we-built-a-billing-company-but-didnt-replace-stripe-billing-cache.png)
+
+*OpenAI published a good blog [here](https://openai.com/index/beyond-rate-limits/) on building a similar system in house.*
+
+Just as Stripe Billing abstracted away the complexity of subscription management and invoicing, this is the layer we're focused on simplifying - the application state that companies manage around billing! And hopefully we've demonstrated by now how they're two fairly different problems.
+
+### Where we overlap
+
+All that being said, Stripe Billing has expanded since its inception and solves way more than just subscription management. So we're really more of an overlap - sometimes we don't fully agree with the primitives it has built, and choose to build our own version in house. Usage-based billing is a good example.
+
+Usage-based billing has evolved quite a bit since 2020. Early on, it was very "write-heavy." Infrastructure providers like Supabase charged per compute hour: they'd record how many you accrued over the billing period, then charge you at the end. There was no checking whether you'd hit a limit. You might occasionally visit your billing page to view how much usage you've accumulated, but for the most part, reads weren't critical - writes were.
+
+Compare that to today where pricing models look more like "X credits per month". Some people might call this as "consumption-based" billing. This type of model warrants a different architecture because you would perform a read to check that the user has enough credits before each action, and a write afterwards to record it.
+
+While there's a ton to say about this, the point here is that Stripe's usage-based billing was largely built for the first model, whereas these days we're seeing a lot more of the second, and therefore it's not entirely feasible to use Stripe's primitives here.
+
+### Conclusion
+
+Hopefully this gives you a better idea of how Autumn compares to Stripe - putting it into words has definitely given me a bit of clarity! If you're wondering whether we'd be a fit for your company, you can always email me [here](mailto:john@useautumn.com) - happy to advise either way :)
