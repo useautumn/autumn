@@ -10,6 +10,7 @@ import { createTestRedis } from "../../../utils/test-redis.js";
 import {
 	createAgentAutumnOperationTools,
 	createRawAutumnOperationTools,
+	dateToEpochMillisecondsTool,
 } from "../../../../src/mcp-server/agent/tools.js";
 
 setPendingActionsRedis(createTestRedis());
@@ -23,7 +24,7 @@ const auth: AutumnMcpAuth = {
 	env: "sandbox",
 	principalId: "user_1",
 	resource: "http://localhost:2718/mcp",
-	scopes: ["billing:read", "billing:write"],
+	scopes: ["billing:read", "billing:write", "balances:write"],
 	serverURL: "http://localhost:8080",
 };
 
@@ -36,8 +37,22 @@ describe("Autumn operation tools", () => {
 		expect(tools.listCustomers.description).toContain("plans");
 		expect(tools.listCustomers.description).toContain("paginate");
 		expect(tools.createPlan.description).toContain("confirmation");
-		expect(tools.createSchedule.description).toContain("phase start times");
+		expect(tools.createBalance.description).toContain("entity-scoped credits");
+		expect(tools.previewCreateBalance.description).toContain("Does not mutate");
+		expect(tools.createSchedule.description).toContain("starts_at");
 		expect(tools.previewCreateSchedule.description).toContain("billing impact");
+	});
+
+	test("dateToEpochMilliseconds converts UTC dates and offsets", async () => {
+		const tool = dateToEpochMillisecondsTool as ExecutableTool;
+		if (!tool.execute) throw new Error("dateToEpochMilliseconds is not executable");
+
+		await expect(tool.execute({ date: "2027-01-01" }, {})).resolves.toBe(
+			Date.UTC(2027, 0, 1),
+		);
+		await expect(
+			tool.execute({ date: "2027-01-01T00:00:00-08:00" }, {}),
+		).resolves.toBe(Date.UTC(2027, 0, 1, 8));
 	});
 
 	test("raw createCustomer calls the get-or-create endpoint", async () => {
@@ -119,6 +134,74 @@ describe("Autumn operation tools", () => {
 					{ mcp: { extra: { authInfo: auth } } } as never,
 				),
 			).resolves.toEqual({ schedule_id: "sch_1" });
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	test("raw previewCreateBalance returns a local non-mutating preview", async () => {
+		const request = {
+			customer_id: "cus_1",
+			entity_id: "workspace_1",
+			feature_id: "credits",
+			included_grant: 50000,
+			expires_at: 1785542400000,
+		};
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (() => {
+			throw new Error("previewCreateBalance should not call Autumn");
+		}) as unknown as typeof fetch;
+
+		try {
+			const tool = createRawAutumnOperationTools().previewCreateBalance;
+			if (!tool.execute) throw new Error("previewCreateBalance is not executable");
+
+			await expect(
+				tool.execute(
+					{ request },
+					{ mcp: { extra: { authInfo: auth } } } as never,
+				),
+			).resolves.toMatchObject({
+				action: "createBalance",
+				request,
+			});
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	test("raw createBalance calls the create balance endpoint", async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (url, init) => {
+			expect(String(url)).toBe("http://localhost:8080/v1/balances.create");
+			expect(JSON.parse(init?.body as string)).toEqual({
+				customer_id: "cus_1",
+				entity_id: "workspace_1",
+				feature_id: "credits",
+				included_grant: 50000,
+				expires_at: 1785542400000,
+			});
+			return Response.json({ success: true });
+		}) as typeof fetch;
+
+		try {
+			const tool = createRawAutumnOperationTools().createBalance;
+			if (!tool.execute) throw new Error("createBalance is not executable");
+
+			await expect(
+				tool.execute(
+					{
+						request: {
+							customer_id: "cus_1",
+							entity_id: "workspace_1",
+							feature_id: "credits",
+							included_grant: 50000,
+							expires_at: 1785542400000,
+						},
+					},
+					{ mcp: { extra: { authInfo: auth } } } as never,
+				),
+			).resolves.toEqual({ success: true });
 		} finally {
 			globalThis.fetch = originalFetch;
 		}
@@ -355,6 +438,46 @@ describe("Autumn operation tools", () => {
 		}
 	});
 
+	test("agent previewCreateBalance stores a pending write without calling Autumn", async () => {
+		await clearPendingActions();
+		const request = {
+			customer_id: "cus_1",
+			entity_id: "workspace_1",
+			feature_id: "credits",
+			included_grant: 50000,
+			expires_at: 1785542400000,
+		};
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (() => {
+			throw new Error("previewCreateBalance should not call Autumn");
+		}) as unknown as typeof fetch;
+
+		try {
+			const tool = (
+				createAgentAutumnOperationTools() as unknown as {
+					previewCreateBalance: ExecutableTool;
+				}
+			).previewCreateBalance;
+			if (!tool.execute) {
+				throw new Error("previewCreateBalance is not executable");
+			}
+
+			await expect(
+				tool.execute(
+					{ request },
+					{ mcp: { extra: { authInfo: auth } } } as never,
+				),
+			).resolves.toMatchObject({ pending: true });
+
+			await expect(claimLatestPendingAction(auth)).resolves.toMatchObject({
+				toolName: "createBalance",
+				request,
+			});
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
 	test("confirmBillingAction executes only the stored pending billing action", async () => {
 		await clearPendingActions();
 		await createPendingAction({
@@ -385,6 +508,43 @@ describe("Autumn operation tools", () => {
 				result: { ok: true },
 			});
 			await expect(claimLatestPendingAction(auth)).rejects.toThrow("No pending");
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	test("confirmBillingAction can execute a stored createBalance request", async () => {
+		await clearPendingActions();
+		const request = {
+			customer_id: "cus_1",
+			entity_id: "workspace_1",
+			feature_id: "credits",
+			included_grant: 50000,
+			expires_at: 1785542400000,
+		};
+		await createPendingAction({
+			auth,
+			toolName: "createBalance",
+			request,
+			preview: "Create balance",
+		});
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (url, init) => {
+			expect(String(url)).toBe("http://localhost:8080/v1/balances.create");
+			expect(JSON.parse(init?.body as string)).toEqual(request);
+			return Response.json({ success: true });
+		}) as typeof fetch;
+
+		try {
+			const tool = createAgentAutumnOperationTools().confirmBillingAction;
+			if (!tool.execute) throw new Error("confirmBillingAction is not executable");
+
+			await expect(
+				tool.execute({}, { mcp: { extra: { authInfo: auth } } } as never),
+			).resolves.toMatchObject({
+				message: "Confirmed and applied createBalance.",
+				result: { success: true },
+			});
 		} finally {
 			globalThis.fetch = originalFetch;
 		}

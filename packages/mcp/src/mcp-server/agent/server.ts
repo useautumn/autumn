@@ -11,7 +11,8 @@ export const createAskAutumnMCPServer = (_opts?: {
 		id: "autumn-internal-mcp",
 		name: "Autumn Internal MCP",
 		version: "0.0.1",
-		description: "Ask Autumn to safely operate on customers, plans, and billing.",
+		description:
+			"Ask Autumn to safely operate on customers, plans, and billing.",
 		instructions:
 			"Use ask_autumn for all Autumn work. Billing writes require preview and explicit user confirmation.",
 		tools: {

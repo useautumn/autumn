@@ -8,7 +8,8 @@ export type BillingToolName =
 	| "attach"
 	| "updateSubscription"
 	| "createPlan"
-	| "createSchedule";
+	| "createSchedule"
+	| "createBalance";
 
 export type PendingBillingAction = {
 	token: string;

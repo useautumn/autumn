@@ -1,18 +1,19 @@
+import { afterEach, expect } from "bun:test";
 import { Agent } from "@mastra/core/agent";
 import type { MessageListItem } from "@mastra/core/agent/message-list";
-import { afterEach, expect } from "bun:test";
 import type * as z from "zod/v4";
 import {
 	type AutumnMcpAuth,
 	createRequestContext,
 } from "../../src/mcp-server/agent/auth.js";
 import {
-	endpointByTool,
 	createRawAutumnOperationTools,
+	endpointByTool,
 	schemaByTool,
 } from "../../src/mcp-server/agent/tools.js";
 
-type ToolName = keyof typeof endpointByTool;
+type ToolName = keyof typeof schemaByTool;
+type EndpointToolName = keyof typeof endpointByTool;
 export type ToolRequest<Tool extends ToolName> = z.output<
 	(typeof schemaByTool)[Tool]
 >;
@@ -21,9 +22,9 @@ export type ToolRequestInput<Tool extends ToolName> = z.input<
 >;
 type ToolCall = { name: string; args: Record<string, unknown> };
 type AutumnApiFixture = {
-	[Tool in ToolName]?: unknown | ((body: ToolRequest<Tool>) => unknown);
+	[Tool in EndpointToolName]?: unknown | ((body: ToolRequest<Tool>) => unknown);
 };
-type AutumnApiCall<Tool extends ToolName = ToolName> = {
+type AutumnApiCall<Tool extends EndpointToolName = EndpointToolName> = {
 	toolName: Tool;
 	endpoint: string;
 	body: ToolRequest<Tool>;
@@ -38,7 +39,10 @@ type UnknownAutumnApiCall = {
 
 const serverURL = "http://localhost:8080";
 const cleanupFns: (() => void)[] = [];
-const toolEntries = Object.entries(endpointByTool) as [ToolName, string][];
+const toolEntries = Object.entries(endpointByTool) as [
+	EndpointToolName,
+	string,
+][];
 const summarize = (value: unknown) => JSON.stringify(value, null, 2);
 
 afterEach(() => {
@@ -50,7 +54,13 @@ const defaultAuth: AutumnMcpAuth = {
 	env: "sandbox",
 	principalId: "eval-user",
 	resource: "http://localhost:2718/mcp",
-	scopes: ["customers:read", "plans:read", "billing:read", "billing:write"],
+	scopes: [
+		"customers:read",
+		"plans:read",
+		"billing:read",
+		"billing:write",
+		"balances:write",
+	],
 	serverURL,
 };
 
@@ -59,7 +69,7 @@ export const createMcpConsumerAgent = () =>
 		id: "mcp-consumer-eval",
 		name: "MCP Consumer Eval",
 		description: "A generic agent using MCP tools.",
-		instructions: "You are a helpful assistant. Use available tools when useful.",
+		instructions: "You are a helpful assistant.",
 		model: "anthropic/claude-sonnet-4-6",
 		tools: createRawAutumnOperationTools(),
 	});
@@ -109,11 +119,11 @@ const mockAutumnApi = ({
 
 	return {
 		calls,
-		call: <Tool extends ToolName>(toolName: Tool) =>
+		call: <Tool extends EndpointToolName>(toolName: Tool) =>
 			calls.find(
 				(call): call is AutumnApiCall<Tool> => call.toolName === toolName,
 			),
-		callsFor: <Tool extends ToolName>(toolName: Tool) =>
+		callsFor: <Tool extends EndpointToolName>(toolName: Tool) =>
 			calls.filter(
 				(call): call is AutumnApiCall<Tool> => call.toolName === toolName,
 			),
@@ -127,9 +137,11 @@ type MockAutumnApi = ReturnType<typeof mockAutumnApi>;
 export const initMcpEval = ({
 	auth = {},
 	fixtures,
+	today,
 }: {
 	auth?: Partial<AutumnMcpAuth>;
 	fixtures: AutumnApiFixture;
+	today?: Date;
 }) => {
 	const resolvedAuth = { ...defaultAuth, ...auth };
 	const api = mockAutumnApi({
@@ -153,6 +165,14 @@ export const initMcpEval = ({
 			const output = await agent.generate(messages, {
 				maxSteps,
 				requestContext: createRequestContext(resolvedAuth),
+				context: today
+					? [
+							{
+								role: "system",
+								content: `Current date: ${today.toISOString()}. Resolve relative dates using calendar time.`,
+							},
+						]
+					: undefined,
 				onIterationComplete: ({ toolCalls: calls }) => {
 					toolCalls.push(...calls);
 				},
@@ -174,9 +194,10 @@ export const expectToolCall = <Tool extends ToolName>(
 		`${toolName} was not called. Called tools:\n${summarize(toolCalls)}`,
 	).toBeDefined();
 	if (request) {
-		expect(call?.args, `${toolName} args did not match`).toMatchObject({
+		const parsedRequest = schemaByTool[toolName].parse(call?.args.request);
+		expect(parsedRequest, `${toolName} args did not match`).toMatchObject(
 			request,
-		});
+		);
 	}
 	return call;
 };
@@ -189,7 +210,7 @@ export const expectNoToolCall = (toolCalls: ToolCall[], toolName: ToolName) => {
 	).toBeUndefined();
 };
 
-export const expectApiCall = <Tool extends ToolName>(
+export const expectApiCall = <Tool extends EndpointToolName>(
 	api: MockAutumnApi,
 	toolName: Tool,
 	body?: Partial<ToolRequestInput<Tool>>,
@@ -207,7 +228,7 @@ export const expectApiCall = <Tool extends ToolName>(
 	return call;
 };
 
-export const expectExactApiCall = <Tool extends ToolName>(
+export const expectExactApiCall = <Tool extends EndpointToolName>(
 	api: MockAutumnApi,
 	toolName: Tool,
 	body: ToolRequestInput<Tool>,
@@ -221,7 +242,10 @@ export const expectExactApiCall = <Tool extends ToolName>(
 	return calls[0];
 };
 
-export const expectNoApiCall = (api: MockAutumnApi, toolName: ToolName) => {
+export const expectNoApiCall = (
+	api: MockAutumnApi,
+	toolName: EndpointToolName,
+) => {
 	const call = api.call(toolName);
 	expect(
 		call,
