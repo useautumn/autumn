@@ -33,7 +33,22 @@ export interface MigrationItemEvent {
 	response: Record<string, unknown> | null;
 }
 
-function findActiveRun(runs: MigrationRun[]): MigrationRun | undefined {
+export type MigrationRunItemCounts = {
+	total: number;
+	running: number;
+	succeeded: number;
+	skipped: number;
+	failed: number;
+	completed: number;
+};
+
+export type MigrationRunWithItemCounts = MigrationRun & {
+	item_run_counts?: MigrationRunItemCounts;
+};
+
+function findActiveRun(
+	runs: MigrationRunWithItemCounts[],
+): MigrationRunWithItemCounts | undefined {
 	return runs.find((r) => ACTIVE_STATUSES.includes(r.status));
 }
 
@@ -56,13 +71,12 @@ export const useMigrationRunsQuery = ({
 		migrationRunId ?? "all",
 	]);
 
-	const runsQuery = useQuery<{ list: MigrationRun[] }>({
+	const runsQuery = useQuery<{ list: MigrationRunWithItemCounts[] }>({
 		queryKey: runsQueryKey,
 		queryFn: async () => {
-			const { data } = await axiosInstance.post<{ list: MigrationRun[] }>(
-				"/migrations.runs.list",
-				{ migrationId },
-			);
+			const { data } = await axiosInstance.post<{
+				list: MigrationRunWithItemCounts[];
+			}>("/migrations.runs.list", { migrationId });
 			return data;
 		},
 		enabled,
@@ -94,7 +108,7 @@ export const useMigrationRunsQuery = ({
 	}, [queryClient, runsQueryKey, eventsQueryKey]);
 
 	return {
-		runs: (runsQuery.data?.list ?? []) as MigrationRun[],
+		runs: (runsQuery.data?.list ?? []) as MigrationRunWithItemCounts[],
 		isLoadingRuns: runsQuery.isLoading,
 		isActive,
 		activeRunDryRun: activeRun?.dry_run ?? null,
