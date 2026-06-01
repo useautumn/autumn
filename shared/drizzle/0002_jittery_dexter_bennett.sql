@@ -1,0 +1,1 @@
+ALTER TABLE "customer_entitlements" ADD COLUMN "usage_windows" jsonb;
