@@ -10,6 +10,7 @@ import {
 	type ParsedCheckParams,
 	RecaseError,
 	type TrackParams,
+	UsageLimitExceededError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackFeatureDeductions } from "@/internal/balances/track/utils/getFeatureDeductions.js";
@@ -94,7 +95,10 @@ export const runCheckWithTrackV2 = async ({
 		checkData.evaluationApiBalance = trackedBalance ?? undefined;
 		trackBalances = response.balances;
 	} catch (error) {
-		if (error instanceof InsufficientBalanceError) {
+		if (
+			error instanceof InsufficientBalanceError ||
+			error instanceof UsageLimitExceededError
+		) {
 			allowed = false;
 		} else {
 			throw error;
