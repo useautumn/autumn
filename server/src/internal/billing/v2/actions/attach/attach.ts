@@ -77,6 +77,7 @@ export async function attach({
 		billingContext,
 		billingPlan,
 		params,
+		preview,
 	});
 
 	if (preview) {

@@ -13,26 +13,7 @@ import { customerProductToStripeItemSpecs } from "@/internal/billing/v2/provider
 import { isCustomerProductActiveDuringPeriod } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/isCustomerProductActiveAtEpochMs";
 import { buildTransitionPoints } from "./buildTransitionPoints";
 import { logTransitionPoints } from "./logBuildPhaseHelpers";
-
-/**
- * Normalizes customer product timestamps to second-level precision.
- * This ensures consistency with Stripe's second-based timestamps.
- */
-const normalizeCustomerProductTimestamps = (
-	customerProduct: FullCusProduct,
-): FullCusProduct => ({
-	...customerProduct,
-	starts_at: truncateMsToSecondPrecision(customerProduct.starts_at),
-	ended_at: customerProduct.ended_at
-		? truncateMsToSecondPrecision(customerProduct.ended_at)
-		: undefined,
-	billing_cycle_anchor_resets_at:
-		customerProduct.billing_cycle_anchor_resets_at
-			? truncateMsToSecondPrecision(
-					customerProduct.billing_cycle_anchor_resets_at,
-				)
-			: customerProduct.billing_cycle_anchor_resets_at,
-});
+import { normalizeCustomerProductTimestamps } from "./normalizeCustomerProductTimestamps";
 
 /**
  * Converts customer products to Stripe schedule phase items.

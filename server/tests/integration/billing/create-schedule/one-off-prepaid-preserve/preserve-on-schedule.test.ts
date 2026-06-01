@@ -16,7 +16,11 @@
  */
 
 import { test } from "bun:test";
-import { ms, type ApiCustomerV3, type CreateScheduleParamsV0Input } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	type CreateScheduleParamsV0Input,
+	ms,
+} from "@autumn/shared";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { TestFeature } from "@tests/setup/v2Features";

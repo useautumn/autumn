@@ -46,6 +46,10 @@ export const buildStripeSubscriptionCreateAction = ({
 
 		billing_mode: { type: "flexible" },
 
+		backdate_start_date: billingContext.subscriptionBackdateStartMs
+			? msToSeconds(billingContext.subscriptionBackdateStartMs)
+			: undefined,
+
 		collection_method: "charge_automatically",
 
 		payment_behavior: billingContext.paymentBehaviorIntent ??

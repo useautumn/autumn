@@ -12,6 +12,11 @@ export const BillingPeriodSchema = z.object({
 	end: z.number(),
 });
 
+export const LineItemBackdateSchema = z.object({
+	startsAt: z.number(),
+	cycleCount: z.number(),
+});
+
 export const LineItemContextSchema = z.object({
 	price: PriceSchema,
 	product: ProductSchema,
@@ -24,6 +29,7 @@ export const LineItemContextSchema = z.object({
 	now: z.number(),
 	billingTiming: z.enum(["in_arrear", "in_advance"]),
 	discountable: z.boolean().optional(), // If true, let Stripe auto-apply discounts to this line item
+	backdate: LineItemBackdateSchema.optional(),
 
 	// Entity references (optional - not all line items have these)
 	entity: EntitySchema.optional(),

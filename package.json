@@ -91,6 +91,7 @@
 		"dw:run": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts run",
 		"dw:enable": "bun scripts/dw/index.ts enable",
 		"dw:disable": "bun scripts/dw/index.ts disable",
+		"dw:make-admin": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts make-admin",
 		"d": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dev.ts",
 		"d:prod": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dev.ts --production",
 		"dx": "bun scripts/dx.ts",

@@ -36,11 +36,12 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import type { FormCustomLineItem } from "../attachFormSchema";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import { useAttachBillingOptionsState } from "../hooks/useAttachBillingOptionsState";
-import { addDiscount } from "../utils/discountUtils";
 import { getAttachScheduledStartDate } from "../utils/buildAttachPreviewTotals";
+import { addDiscount } from "../utils/discountUtils";
 import { AttachDiscountRow } from "./AttachDiscountRow";
 
 let customLineItemCounter = 0;
+const BACKDATE_START_YEAR_LOOKBACK = 25;
 
 function createCustomLineItem(): FormCustomLineItem {
 	return {
@@ -171,6 +172,9 @@ export function AttachAdvancedSection() {
 		isPaidRecurringProduct &&
 		!trialEnabled &&
 		effectivePlanSchedule !== "end_of_cycle";
+	const createsNewStripeSubscription =
+		!hasActiveSubscription || newBillingSubscription;
+	const allowBackdatedStartDate = showStartDate && createsNewStripeSubscription;
 	const showEndDate = !!product && !isFreeProductV2({ items: product.items });
 	const attachStartsAt =
 		effectivePlanSchedule === "end_of_cycle"
@@ -222,7 +226,11 @@ export function AttachAdvancedSection() {
 			{showStartDate && (
 				<ConfigRow
 					title="Start Date"
-					description="Schedule the plan to start on a future date"
+					description={
+						allowBackdatedStartDate
+							? "Start the new subscription on a past or future date"
+							: "Schedule the plan to start on a future date"
+					}
 					expanded={startDate !== null}
 					action={
 						<Switch
@@ -239,8 +247,13 @@ export function AttachAdvancedSection() {
 					<DateInputUnix
 						unixDate={startDate}
 						setUnixDate={(value) => form.setFieldValue("startDate", value)}
-						disablePastDates
-						minUnixDate={Date.now()}
+						disablePastDates={!allowBackdatedStartDate}
+						minUnixDate={allowBackdatedStartDate ? undefined : Date.now()}
+						fromYear={
+							allowBackdatedStartDate
+								? new Date().getFullYear() - BACKDATE_START_YEAR_LOOKBACK
+								: undefined
+						}
 						withTime
 					/>
 				</ConfigRow>
