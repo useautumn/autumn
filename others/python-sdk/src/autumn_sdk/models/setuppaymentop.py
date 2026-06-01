@@ -929,7 +929,7 @@ class SetupPaymentCustomizeTypedDict(TypedDict):
     price: NotRequired[Nullable[SetupPaymentBasePriceTypedDict]]
     r"""Override the base price of the plan. Pass null to remove the base price."""
     items: NotRequired[List[SetupPaymentItemPlanItemTypedDict]]
-    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items."""
+    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / update_items."""
     add_items: NotRequired[List[SetupPaymentAddItemPlanItemTypedDict]]
     r"""Items to add to the plan."""
     remove_items: NotRequired[List[SetupPaymentPlanItemFilterTypedDict]]
@@ -945,7 +945,7 @@ class SetupPaymentCustomize(BaseModel):
     r"""Override the base price of the plan. Pass null to remove the base price."""
 
     items: Optional[List[SetupPaymentItemPlanItem]] = None
-    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items."""
+    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / update_items."""
 
     add_items: Optional[List[SetupPaymentAddItemPlanItem]] = None
     r"""Items to add to the plan."""
@@ -1154,6 +1154,8 @@ class SetupPaymentParamsTypedDict(TypedDict):
     r"""If true, skips any billing changes for the attach operation."""
     enable_plan_immediately: NotRequired[bool]
     r"""If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form."""
+    tax_rate_id: NotRequired[str]
+    r"""Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items."""
 
 
 class SetupPaymentParams(BaseModel):
@@ -1223,6 +1225,9 @@ class SetupPaymentParams(BaseModel):
     enable_plan_immediately: Optional[bool] = None
     r"""If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form."""
 
+    tax_rate_id: Optional[str] = None
+    r"""Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -1247,6 +1252,7 @@ class SetupPaymentParams(BaseModel):
                 "metadata",
                 "no_billing_changes",
                 "enable_plan_immediately",
+                "tax_rate_id",
             ]
         )
         serialized = handler(self)

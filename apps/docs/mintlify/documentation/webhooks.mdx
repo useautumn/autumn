@@ -7,10 +7,6 @@ With Autumn, you don't need webhooks for managing billing — subscription state
 
 However, webhooks can still be useful for specific use cases where you want to trigger actions in your own systems.
 
-<Note>
-Webhooks are currently in beta. Please reach out to us on [Discord](https://discord.gg/STqxY92zuS) or email us at support@useautumn.com to enable webhooks for your account.
-</Note>
-
 ## Use Cases
 
 While Autumn handles billing complexity for you, webhooks are helpful for:
@@ -22,43 +18,116 @@ While Autumn handles billing complexity for you, webhooks are helpful for:
 
 ## Available Events
 
-### customer.products.updated
+### billing.updated
 
-Fired when a customer's product or plan changes. The `scenario` field indicates what type of change occurred.
+Fired whenever a customer's plans change — new subscriptions, upgrades, downgrades, etc. Each event carries a `plan_changes` array describing exactly what happened to each affected plan.
 
-| Scenario | Description |
-|----------|-------------|
-| `new` | Customer subscribed to a new product |
-| `upgrade` | Customer upgraded to a higher-tier plan |
-| `downgrade` | Customer downgraded to a lower-tier plan |
-| `renew` | Subscription renewed for another billing period |
-| `cancel` | Subscription was canceled |
-| `expired` | Subscription has expired |
-| `past_due` | Payment is past due |
-| `scheduled` | A plan change has been scheduled |
+| Action | Description |
+|--------|-------------|
+| `activated` | A plan is now active on the customer (newly attached, or a previously scheduled plan reached its start date) |
+| `scheduled` | A plan has been queued to start at a future date |
+| `updated` | A plan's state changed in place (cancellation set or cleared, `past_due` flipped, items added or removed) |
+| `expired` | A plan ended and is no longer in effect |
 
-**Example payload:**
+Each entry also includes the `subscription` (or `purchase` for one-off products) after the change, and `previous_attributes` holding the prior values of any fields that were updated. For instance, if a plan was canceled at period end:
 
 ```json expandable
 {
-  "type": "customer.products.updated",
+  "action": "updated",
+  "subscription": {
+    "plan_id": "pro",
+    "status": "active",
+    "past_due": false,
+    "started_at": 1759248000000,
+    "canceled_at": 1761840000000,
+    "expires_at": 1764432000000,
+    "trial_ends_at": null,
+    "current_period_start": 1761840000000,
+    "current_period_end": 1764432000000
+  },
+  "previous_attributes": {
+    "canceled_at": null,
+    "expires_at": null
+  },
+  "item_changes": []
+}
+```
+
+The top-level `tags` array surfaces optional reason tags describing why the event fired:
+
+| Tag | When |
+|-----|------|
+| `trial_ended` | A trial just ended (Stripe subscription transition or the trial-expiry cron) |
+| `phase_changed` | A Stripe subscription schedule phase advanced |
+
+**Example payload (upgrade from `free` to `pro`):**
+
+```json expandable
+{
+  "type": "billing.updated",
   "data": {
-    "scenario": "new",
-    "customer": {
-      "id": "user_123",
-      "name": "John Doe",
-      "email": "john@example.com",
-      "balances": { ... },
-      "subscriptions": [ ... ]
-    },
-    "updated_product": {
-      "id": "pro_plan",
-      "name": "Pro Plan",
-      "features": [ ... ]
-    }
+    "object": "billing.updated",
+    "customer_id": "user_123",
+    "plan_changes": [
+      {
+        "action": "activated",
+        "subscription": {
+          "plan_id": "pro",
+          "status": "active",
+          "past_due": false,
+          "started_at": 1761840000000,
+          "canceled_at": null,
+          "expires_at": null,
+          "trial_ends_at": null,
+          "current_period_start": 1761840000000,
+          "current_period_end": 1764432000000
+        },
+        "previous_attributes": null,
+        "item_changes": []
+      },
+      {
+        "action": "expired",
+        "subscription": {
+          "plan_id": "free",
+          "status": "expired",
+          "past_due": false,
+          "started_at": 1759248000000,
+          "canceled_at": 1761840000000,
+          "expires_at": 1761840000000,
+          "trial_ends_at": null,
+          "current_period_start": null,
+          "current_period_end": null
+        },
+        "previous_attributes": { "status": "active" },
+        "item_changes": []
+      }
+    ],
+    "tags": []
   }
 }
 ```
+
+For entity-scoped events, the payload will also include an `entity_id`:
+
+```json expandable
+{
+  "type": "billing.updated",
+  "data": {
+    "object": "billing.updated",
+    "customer_id": "user_123",
+    "entity_id": "team_456",
+    "plan_changes": [ ... ],
+    "tags": []
+  }
+}
+```
+
+**Common patterns:**
+
+- **Sync Autumn state back to your DB** — listen for every `billing.updated` and persist each `plan_changes` entry's `subscription` snapshot keyed by `customer_id` (+ `entity_id` if set).
+- **Notify on upgrades** — filter for entries with `action: "activated"`. For "upgrade from previous plan" specifically, pair it with an `action: "expired"` entry on the same event.
+- **Detect cancellations** — filter for entries where `previous_attributes.canceled_at === null` (a cancellation was just set) or `previous_attributes.canceled_at` is a number (an uncancel).
+- **Trial-end emails** — filter for `tags.includes("trial_ended")`.
 
 ### balances.limit_reached
 
@@ -183,7 +252,7 @@ Fired when a customer crosses a configured usage alert threshold. Usage alerts l
 
 ## Setup
 
-Once webhooks are enabled for your account, you can configure your webhook endpoints in the Autumn dashboard:
+Configure your webhook endpoints in the Autumn dashboard:
 
 <Steps>
   <Step title="Navigate to Developer Settings">

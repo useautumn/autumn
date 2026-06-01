@@ -203,8 +203,10 @@ const response = await client.track({ customerId: "cus_123", eventName: "ai_chat
 @param eventName - Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event. (optional)
 @param value - The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat). (optional)
 @param properties - Additional properties to attach to this usage event. (optional)
+@param async - If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information. (optional)
 
 @returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.
+* [batchTrack](docs/sdks/autumn/README.md#batchtrack) - Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
 
 ### [Balances](docs/sdks/balances/README.md)
 
@@ -262,6 +264,7 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
 @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
+@param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 * [createSchedule](docs/sdks/billing/README.md#createschedule) - Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
@@ -271,7 +274,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779274895233,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780484495233,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779977746466,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781187346466,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -356,6 +359,7 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
 @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
+@param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed changes.
 * [previewMultiAttach](docs/sdks/billing/README.md#previewmultiattach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.
@@ -564,6 +568,7 @@ const response = await client.entities.list({ search: "workspace" });
 @param subscriptionStatus - Filter customer products used for entity hydration and plan matching. Defaults to active and scheduled. (optional)
 @param search - Search entities by id or name. (optional)
 @param processors - Filter by parent customer processor type (stripe, revenuecat, vercel). (optional)
+@param customerId - Restrict the response to entities owned by this customer id. Use to bulk-fetch all entities for one customer in a single paginated call instead of iterating entities.get. (optional)
 
 @returns A paginated list of entity objects including their current subscriptions, purchases, balances, and flags.
 * [update](docs/sdks/entities/README.md#update) - Updates an existing entity and returns the refreshed entity object.
@@ -704,6 +709,10 @@ const response = await client.features.delete({ featureId: "old-feature" });
 * [createCode](docs/sdks/referrals/README.md#createcode) - Create or fetch a referral code for a customer in a referral program.
 * [redeemCode](docs/sdks/referrals/README.md#redeemcode) - Redeem a referral code for a customer.
 
+### [Rewards](docs/sdks/rewards/README.md)
+
+* [redeemCode](docs/sdks/rewards/README.md#redeemcode) - Redeem a reward promo code for a customer.
+
 </details>
 <!-- End Available Resources and Operations [operations] -->
 
@@ -726,6 +735,7 @@ To read more about standalone functions, check [FUNCTIONS.md](./FUNCTIONS.md).
 - [`balancesDelete`](docs/sdks/balances/README.md#delete) - Delete a balance for a customer feature. Can only delete a balance that is not attached to a price (eg. you cannot delete messages that have an overage price).
 - [`balancesFinalize`](docs/sdks/balances/README.md#finalize) - Finalize a previously locked balance. Use 'confirm' to commit the deduction, or 'release' to return the held balance.
 - [`balancesUpdate`](docs/sdks/balances/README.md#update) - Update a customer balance.
+- [`batchTrack`](docs/sdks/autumn/README.md#batchtrack) - Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
 - [`billingAttach`](docs/sdks/billing/README.md#attach) - Attaches a plan to a customer. Handles new subscriptions, upgrades and downgrades.
 
 Use this endpoint to subscribe a customer to a plan, upgrade/downgrade between plans, or add an add-on product.
@@ -773,6 +783,7 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
 @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
+@param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if checkout required).
 - [`billingCreateSchedule`](docs/sdks/billing/README.md#createschedule) - Creates a multi-phase subscription schedule for a customer. The first phase starts immediately and subsequent phases automatically transition at their scheduled start times.
@@ -782,7 +793,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779274895233,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780484495233,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779977746466,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781187346466,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -868,6 +879,7 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param metadata - Key-value metadata to attach to the Stripe subscription, invoice, and checkout session created during this attach flow. Keys prefixed with 'autumn_' are reserved and will be stripped. (optional)
 @param noBillingChanges - If true, skips any billing changes for the attach operation. (optional)
 @param enablePlanImmediately - If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form. (optional)
+@param taxRateId - Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items. (optional)
 
 @returns A preview response with line items, totals, and effective dates for the proposed changes.
 - [`billingPreviewMultiAttach`](docs/sdks/billing/README.md#previewmultiattach) - Previews the billing changes that would occur when attaching multiple plans, without actually making any changes.
@@ -1115,6 +1127,7 @@ const response = await client.entities.list({ search: "workspace" });
 @param subscriptionStatus - Filter customer products used for entity hydration and plan matching. Defaults to active and scheduled. (optional)
 @param search - Search entities by id or name. (optional)
 @param processors - Filter by parent customer processor type (stripe, revenuecat, vercel). (optional)
+@param customerId - Restrict the response to entities owned by this customer id. Use to bulk-fetch all entities for one customer in a single paginated call instead of iterating entities.get. (optional)
 
 @returns A paginated list of entity objects including their current subscriptions, purchases, balances, and flags.
 - [`entitiesUpdate`](docs/sdks/entities/README.md#update) - Updates an existing entity and returns the refreshed entity object.
@@ -1228,6 +1241,7 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 - [`plansUpdate`](docs/sdks/plans/README.md#update) - Update a plan
 - [`referralsCreateCode`](docs/sdks/referrals/README.md#createcode) - Create or fetch a referral code for a customer in a referral program.
 - [`referralsRedeemCode`](docs/sdks/referrals/README.md#redeemcode) - Redeem a referral code for a customer.
+- [`rewardsRedeemCode`](docs/sdks/rewards/README.md#redeemcode) - Redeem a reward promo code for a customer.
 - [`track`](docs/sdks/autumn/README.md#track) - Records usage for a customer feature and returns updated balances.
 
 Use this after an action happens to decrement usage, or send a negative value to credit balance back.
@@ -1250,6 +1264,7 @@ const response = await client.track({ customerId: "cus_123", eventName: "ai_chat
 @param eventName - Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event. (optional)
 @param value - The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat). (optional)
 @param properties - Additional properties to attach to this usage event. (optional)
+@param async - If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information. (optional)
 
 @returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.
 

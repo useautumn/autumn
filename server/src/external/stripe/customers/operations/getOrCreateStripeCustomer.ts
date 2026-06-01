@@ -14,21 +14,25 @@ import { CusService } from "@/internal/customers/CusService";
 export const getOrCreateStripeCustomer = async ({
 	ctx,
 	customer,
-	options = {
-		updateDb: true,
-	},
+	options,
 }: {
 	ctx: AutumnContext;
 	customer: Customer;
 	options?: {
 		updateDb?: boolean;
+		expandTax?: boolean;
 	};
 }): Promise<ExpandedStripeCustomer | undefined> => {
 	const { logger } = ctx;
+	const resolvedOptions = {
+		updateDb: true,
+		...options,
+	};
 
 	const currentStripeCustomer = await getExpandedStripeCustomer({
 		ctx,
 		stripeCustomerId: customer.processor?.id,
+		expandTax: resolvedOptions.expandTax,
 	});
 
 	if (currentStripeCustomer) return currentStripeCustomer;
@@ -40,9 +44,12 @@ export const getOrCreateStripeCustomer = async ({
 	const stripeCustomer = await createStripeCustomer({
 		ctx,
 		customer,
+		options: {
+			expandTax: resolvedOptions.expandTax,
+		},
 	});
 
-	if (options.updateDb) {
+	if (resolvedOptions.updateDb) {
 		await CusService.update({
 			ctx,
 			idOrInternalId: customer.id || customer.internal_id,

@@ -48,7 +48,17 @@ export const logCustomerProductUpdates = ({
 		status: customerProduct.status,
 	}));
 
-	if (updates.length === 0 && deletions.length === 0 && insertions.length === 0)
+	const oneOffPrepaidCarryOvers =
+		"oneOffPrepaidCarryOvers" in eventContext
+			? eventContext.oneOffPrepaidCarryOvers
+			: [];
+
+	if (
+		updates.length === 0 &&
+		deletions.length === 0 &&
+		insertions.length === 0 &&
+		oneOffPrepaidCarryOvers.length === 0
+	)
 		return;
 
 	addToExtraLogs({
@@ -57,6 +67,9 @@ export const logCustomerProductUpdates = ({
 			updates,
 			deletions,
 			insertions,
+			...(oneOffPrepaidCarryOvers.length > 0
+				? { oneOffPrepaidCarryOvers }
+				: {}),
 		},
 	});
 };

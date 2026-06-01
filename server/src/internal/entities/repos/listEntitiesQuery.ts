@@ -7,15 +7,24 @@ import { type SQL, sql } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectRowsQuery } from "@/internal/customers/repos/getFullSubject/getFullSubjectRowsQuery.js";
 
+type EntityListFilters = Pick<
+	ListEntitiesParams,
+	"plans" | "processors" | "search"
+> & {
+	customerId?: string;
+};
+
 export const hasEntityListFilters = ({
 	plans,
 	processors,
 	search,
-}: Pick<ListEntitiesParams, "plans" | "processors" | "search">) => {
+	customerId,
+}: EntityListFilters) => {
 	return Boolean(
 		(plans && plans.length > 0) ||
 			(processors && processors.length > 0) ||
-			search?.trim(),
+			search?.trim() ||
+			customerId?.trim(),
 	);
 };
 
@@ -23,11 +32,17 @@ const getEntityListFilterSql = ({
 	plans,
 	processors,
 	search,
+	customerId,
 	inStatuses,
-}: Pick<ListEntitiesParams, "plans" | "processors" | "search"> & {
+}: EntityListFilters & {
 	inStatuses: CusProductStatus[];
 }) => {
 	const filters: SQL[] = [];
+
+	const trimmedCustomerId = customerId?.trim();
+	if (trimmedCustomerId) {
+		filters.push(sql`AND c.id = ${trimmedCustomerId}`);
+	}
 
 	if (plans && plans.length > 0) {
 		const planConditions = plans.map((plan) => {
@@ -127,6 +142,7 @@ export const getPaginatedEntitySubjectsQuery = ({
 		plans: query.plans,
 		processors: query.processors,
 		search: query.search,
+		customerId: query.customer_id,
 		inStatuses,
 	});
 
@@ -196,7 +212,7 @@ export const countFilteredEntitiesByOrgIdAndEnv = async ({
 	inStatuses,
 }: {
 	ctx: AutumnContext;
-	query: Pick<ListEntitiesParams, "plans" | "processors" | "search">;
+	query: EntityListFilters;
 	inStatuses: CusProductStatus[];
 }) => {
 	if (!hasEntityListFilters(query)) {
@@ -209,6 +225,7 @@ export const countFilteredEntitiesByOrgIdAndEnv = async ({
 			plans: query.plans,
 			processors: query.processors,
 			search: query.search,
+			customerId: query.customerId,
 			inStatuses,
 		}),
 	});

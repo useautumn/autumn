@@ -16,6 +16,7 @@ import type { Stripe } from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { mergeStripeMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/mergeStripeMetadata";
+import { shouldEnableStripeAutomaticTax } from "@/internal/billing/v2/providers/stripe/utils/tax/shouldEnableStripeAutomaticTax";
 
 const stripeDiscountsToInvoiceParams = ({
 	stripeDiscounts,
@@ -70,9 +71,7 @@ export const createInvoiceForBilling = async ({
 		: "charge_automatically";
 
 	const vercelInstallationId =
-		billingContext.paymentMethod?.type === "custom"
-			? billingContext.fullCustomer?.processors?.vercel?.installation_id
-			: undefined;
+		billingContext.fullCustomer?.processors?.vercel?.installation_id;
 
 	const invoiceMetadata = mergeStripeMetadata({
 		userMetadata: billingContext.userMetadata,
@@ -93,10 +92,7 @@ export const createInvoiceForBilling = async ({
 		stripeDiscounts: billingContext.stripeDiscounts ?? [],
 	});
 
-	// Skip auto_tax in invoice mode: send_invoice has no address-collection
-	// UI so Stripe Tax rejects. charge_automatically relies on Stripe's
-	// address waterfall.
-	const wantsAutoTax = !!ctx.org.config.automatic_tax && !isInvoiceMode;
+	const wantsAutoTax = shouldEnableStripeAutomaticTax({ ctx, billingContext });
 	const draftInvoice = await createStripeInvoice({
 		stripeCli,
 		stripeCusId: billingContext.stripeCustomer?.id ?? "none",

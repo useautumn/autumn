@@ -649,7 +649,7 @@ export type PreviewAttachCustomize = {
    */
   price?: PreviewAttachBasePrice | null | undefined;
   /**
-   * Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items.
+   * Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / update_items.
    */
   items?: Array<PreviewAttachItemPlanItem> | undefined;
   /**
@@ -881,6 +881,10 @@ export type PreviewAttachParams = {
    * If true, the customer's plan is activated immediately even when payment is deferred (invoice mode) or pending (Stripe checkout). For Stripe checkout, the customer_product is inserted before the customer completes the hosted form.
    */
   enablePlanImmediately?: boolean | undefined;
+  /**
+   * Stripe tax rate ID (txr_...) to apply as the default tax rate on the created subscription, invoice, or checkout session line items.
+   */
+  taxRateId?: string | undefined;
 };
 
 export type PreviewAttachDiscount = {
@@ -2213,6 +2217,7 @@ export type PreviewAttachParams$Outbound = {
   metadata?: { [k: string]: string } | undefined;
   no_billing_changes?: boolean | undefined;
   enable_plan_immediately?: boolean | undefined;
+  tax_rate_id?: string | undefined;
 };
 
 /** @internal */
@@ -2263,6 +2268,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
     metadata: z.optional(z.record(z.string(), z.string())),
     noBillingChanges: z.optional(z.boolean()),
     enablePlanImmediately: z.optional(z.boolean()),
+    taxRateId: z.optional(z.string()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2287,6 +2293,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
       carryOverUsages: "carry_over_usages",
       noBillingChanges: "no_billing_changes",
       enablePlanImmediately: "enable_plan_immediately",
+      taxRateId: "tax_rate_id",
     });
   }),
 );

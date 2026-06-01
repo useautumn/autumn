@@ -39,5 +39,6 @@
 		".cursor": true,
 		".mcp.json": true,
 		".zed": true
-	}
+	},
+	"typescript.native-preview.tsdk": "/Users/johnyeocx/autumn/main/node_modules/@typescript/native-preview"
 }

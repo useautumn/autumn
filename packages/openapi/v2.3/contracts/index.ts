@@ -1,5 +1,6 @@
 import { oc } from "@orpc/contract";
 import {
+	balancesBatchTrackContract,
 	balancesCheckContract,
 	balancesCreateContract,
 	balancesDeleteContract,
@@ -53,6 +54,7 @@ import {
 import {
 	referralsCreateCodeContract,
 	referralsRedeemCodeContract,
+	rewardsRedeemCodeContract,
 } from "./referralsContract.js";
 
 export const v2_3ContractRouter = oc.router({
@@ -95,6 +97,7 @@ export const v2_3ContractRouter = oc.router({
 	balancesFinalize: balancesFinalizeContract,
 	balancesCheck: balancesCheckContract,
 	balancesTrack: balancesTrackContract,
+	balancesBatchTrack: balancesBatchTrackContract,
 
 	// Events
 	eventsList: eventsListContract,
@@ -107,7 +110,8 @@ export const v2_3ContractRouter = oc.router({
 	entitiesUpdate: updateEntityContract,
 	entitiesDelete: deleteEntityContract,
 
-	// Referrals
+	// Rewards & Referrals
 	referralsCreateCode: referralsCreateCodeContract,
 	referralsRedeemCode: referralsRedeemCodeContract,
+	rewardsRedeemCode: rewardsRedeemCodeContract,
 });

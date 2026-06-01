@@ -1,93 +1,100 @@
 /**
- * Regression guard: when `automatic_tax: true` but the customer has no
- * address, attach must surface an actionable tax/address error (Stripe's
- * `customer_tax_location_invalid` or a typed RecaseError) instead of a
- * generic 500. Covers both v1 `/v1/attach` and v2 `/v1/billing.attach`.
+ * Regression guard for orgs that enable `automatic_tax` after customers
+ * already have paid subscriptions but no Stripe tax location on file.
+ *
+ * Red-failure mode (current behavior):
+ *  - Pro -> Premium upgrade sends `automatic_tax.enabled=true` to Stripe.
+ *  - Stripe rejects with `customer_tax_location_invalid`.
+ *
+ * Green-success criteria (after fix):
+ *  - Upgrade succeeds by falling back to no automatic tax for this mutation.
+ *  - Resulting subscription and upgrade invoice have automatic tax disabled.
  */
 
 import { expect, test } from "bun:test";
+import type { AttachParamsV1Input } from "@autumn/shared";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 
-function hasActionableTaxSignal(err: unknown): boolean {
-	const errorString = JSON.stringify(err, [
-		"message",
-		"code",
-		"name",
-		"type",
-	]).toLowerCase();
-	return (
-		errorString.includes("tax") ||
-		errorString.includes("address") ||
-		errorString.includes("location")
-	);
-}
+test.concurrent(
+	`${chalk.yellowBright("automatic-tax-no-address (v2 pre-flip upgrade): succeeds without tax when Stripe customer has no location")}`,
+	async () => {
+		const customerId = "tax-no-address-preflip-upgrade";
+		const pro = products.pro({ id: "pro", items: [] });
+		const premium = products.premium({ id: "premium", items: [] });
 
-test.concurrent(`${chalk.yellowBright("automatic-tax-no-address-error (v1 legacy /v1/attach): customer without address surfaces actionable error")}`, async () => {
-	const customerId = "tax-no-address-v1";
-	const proProd = products.pro({ id: "pro", items: [] });
-
-	const { autumnV1 } = await initScenario({
-		customerId,
-		setup: [
-			s.platform.create({
-				configOverrides: { automatic_tax: true },
-				taxRegistrations: ["AU"],
-			}),
-			s.customer({
-				testClock: false,
-				paymentMethod: "success",
-			}),
-			s.products({ list: [proProd] }),
-		],
-		actions: [],
-	});
-
-	let caughtError: unknown;
-	try {
-		await autumnV1.attach({
-			customer_id: customerId,
-			product_id: `pro_${customerId}`,
+		const { ctx, customer, autumnV2_2 } = await initScenario({
+			customerId,
+			setup: [
+				s.platform.create({
+					taxRegistrations: ["AU"],
+				}),
+				s.customer({
+					testClock: false,
+					paymentMethod: "success",
+				}),
+				s.products({ list: [pro, premium] }),
+			],
+			actions: [],
 		});
-	} catch (err) {
-		caughtError = err;
-	}
 
-	expect(caughtError).toBeDefined();
-	expect(hasActionableTaxSignal(caughtError)).toBe(true);
-}, 240_000);
+		const stripeCustomerId = customer!.processor!.id!;
+		const stripeCustomerBefore =
+			await ctx.stripeCli.customers.retrieve(stripeCustomerId);
+		if ("deleted" in stripeCustomerBefore && stripeCustomerBefore.deleted) {
+			throw new Error("Stripe customer was unexpectedly deleted");
+		}
+		expect(stripeCustomerBefore.address).toBeNull();
 
-test.concurrent(`${chalk.yellowBright("automatic-tax-no-address-error (v2 /v1/billing.attach): customer without address surfaces actionable error")}`, async () => {
-	const customerId = "tax-no-address-v2";
-	const proProd = products.pro({ id: "pro", items: [] });
-
-	const { autumnV2_2 } = await initScenario({
-		customerId,
-		setup: [
-			s.platform.create({
-				configOverrides: { automatic_tax: true },
-				taxRegistrations: ["AU"],
-			}),
-			s.customer({
-				testClock: false,
-				paymentMethod: "success",
-			}),
-			s.products({ list: [proProd] }),
-		],
-		actions: [],
-	});
-
-	let caughtError: unknown;
-	try {
-		await autumnV2_2.billing.attach({
-			customer_id: customerId,
-			plan_id: `pro_${customerId}`,
+		await OrgService.update({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			updates: {
+				config: { ...ctx.org.config, automatic_tax: false },
+			},
 		});
-	} catch (err) {
-		caughtError = err;
-	}
 
-	expect(caughtError).toBeDefined();
-	expect(hasActionableTaxSignal(caughtError)).toBe(true);
-}, 240_000);
+		await autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: pro.id,
+		});
+
+		const initialSubscriptions = await ctx.stripeCli.subscriptions.list({
+			customer: stripeCustomerId,
+			limit: 1,
+		});
+		expect(initialSubscriptions.data[0].automatic_tax.enabled).toBe(false);
+
+		await OrgService.update({
+			db: ctx.db,
+			orgId: ctx.org.id,
+			updates: {
+				config: { ...ctx.org.config, automatic_tax: true },
+			},
+		});
+
+		await autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: premium.id,
+		});
+
+		const upgradedSubscriptions = await ctx.stripeCli.subscriptions.list({
+			customer: stripeCustomerId,
+			limit: 1,
+		});
+		const upgradedSubscription = upgradedSubscriptions.data[0];
+		expect(upgradedSubscription).toBeDefined();
+		expect(upgradedSubscription.automatic_tax.enabled).toBe(false);
+
+		const invoices = await ctx.stripeCli.invoices.list({
+			customer: stripeCustomerId,
+			limit: 5,
+		});
+		const upgradeInvoice = invoices.data[0];
+		expect(upgradeInvoice).toBeDefined();
+		expect(upgradeInvoice.automatic_tax.enabled).toBe(false);
+	},
+	300_000,
+);

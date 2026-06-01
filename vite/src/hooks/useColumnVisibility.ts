@@ -53,11 +53,21 @@ export function getVisibleUsageColumnsFromStorage({
 	}
 }
 
-function saveToStorage(storageKey: string, state: VisibilityState): void {
+function saveToStorage(
+	storageKey: string,
+	state: VisibilityState,
+	columns: { id?: string; header?: unknown }[],
+): void {
 	try {
+		const out: Record<string, StoredColumnValue> = {};
+		for (const [id, visible] of Object.entries(state)) {
+			const col = columns.find((c) => c.id === id);
+			const header = typeof col?.header === "string" ? col.header : null;
+			out[id] = header ? { visible, name: header } : visible;
+		}
 		localStorage.setItem(
 			`${STORAGE_PREFIX}${storageKey}`,
-			JSON.stringify(state),
+			JSON.stringify(out),
 		);
 	} catch {}
 }
@@ -126,9 +136,9 @@ export function useColumnVisibility<T>({
 
 	const saveColumnVisibility = useCallback(() => {
 		if (!storageKey) return;
-		saveToStorage(storageKey, columnVisibilityRef.current);
+		saveToStorage(storageKey, columnVisibilityRef.current, columns);
 		setIsDirty(false);
-	}, [storageKey]);
+	}, [storageKey, columns]);
 
 	return {
 		columnVisibility,

@@ -1,11 +1,12 @@
 import {
 	AffectedResource,
 	ApiVersion,
+	Scopes,
 	TrackParamsSchema,
 	TrackQuerySchema,
-	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { runAsyncTrack } from "@/internal/balances/track/runAsyncTrack.js";
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
 import { getTrackFeatureDeductionsForBody } from "@/internal/balances/track/utils/getFeatureDeductions.js";
 
@@ -21,6 +22,12 @@ export const handleTrack = createRoute({
 		const body = c.req.valid("json");
 		const ctx = c.get("ctx");
 		const featureDeductions = getTrackFeatureDeductionsForBody({ ctx, body });
+
+		if (body.async === true) {
+			await runAsyncTrack({ ctx, body });
+			return c.json({ success: true }, 202);
+		}
+
 		const response = await runTrackWithRollout({
 			ctx,
 			body,

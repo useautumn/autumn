@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { AppEnv } from "@autumn/shared";
 import type { Redis } from "ioredis";
 
@@ -19,11 +19,6 @@ mock.module(
 		},
 	}),
 );
-
-mock.module("@/utils/cacheUtils/cacheUtils.js", () => ({
-	tryRedisRead: async <T>(operation: () => Promise<T>) => operation(),
-	tryRedisWrite: async <T>(operation: () => Promise<T>) => operation(),
-}));
 
 import { batchInvalidateCachedFullSubjects } from "@/internal/customers/cache/fullSubject/actions/invalidate/batchInvalidateCachedFullSubjects.js";
 
@@ -156,4 +151,8 @@ describe("batchInvalidateCachedFullSubjects", () => {
 			primary.calls.writeOps.some((op) => op.includes("cus_primary")),
 		).toBe(true);
 	});
+});
+
+afterAll(() => {
+	mock.restore();
 });

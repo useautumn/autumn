@@ -200,6 +200,7 @@ Use this to gate access before a feature action. Enable sendEvent when you want 
 * [track](docs/sdks/autumn/README.md#track) - Records usage for a customer feature and returns updated balances.
 
 Use this after an action happens to decrement usage, or send a negative value to credit balance back.
+* [batch_track](docs/sdks/autumn/README.md#batch_track) - Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
 
 ### [Balances](docs/sdks/balances/README.md)
 
@@ -299,6 +300,10 @@ Use this to permanently remove a feature. Note: features that are used in produc
 
 * [create_code](docs/sdks/referrals/README.md#create_code) - Create or fetch a referral code for a customer in a referral program.
 * [redeem_code](docs/sdks/referrals/README.md#redeem_code) - Redeem a referral code for a customer.
+
+### [Rewards](docs/sdks/rewardssdk/README.md)
+
+* [redeem_code](docs/sdks/rewardssdk/README.md#redeem_code) - Redeem a reward promo code for a customer.
 
 </details>
 <!-- End Available Resources and Operations [operations] -->

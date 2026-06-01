@@ -40,12 +40,19 @@ export const CustomerBreadcrumbs = () => {
 									key: "Stripe ID",
 									value: customer.processor?.id,
 								},
-								{
-									key: "Entities",
-									value: (customer.entities || [])
-										.map((e: Entity) => e.id)
-										.join(", "),
-								},
+								...(() => {
+									const ents = (customer.entities || []) as Entity[];
+									if (ents.length === 0) return [];
+									const shown = ents.slice(0, 3);
+									const remaining = ents.length - shown.length;
+									return [
+										{ key: `Entities (${ents.length})`, value: shown[0].id },
+										...shown.slice(1).map((e) => ({ key: "", value: e.id })),
+										...(remaining > 0
+											? [{ key: "", value: `+${remaining} more` }]
+											: []),
+									];
+								})(),
 							]}
 						>
 							Customers

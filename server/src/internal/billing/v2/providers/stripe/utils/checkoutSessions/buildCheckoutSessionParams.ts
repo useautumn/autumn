@@ -77,14 +77,18 @@ export const buildCheckoutSessionParams = ({
 			checkoutSessionMetadata: checkoutSessionParams?.metadata,
 			autumnMetadataId,
 		}),
-		subscription_data: mergeSubscriptionData({
-			userMetadata,
-			paramsSubscriptionData: params.subscription_data as
-				| Stripe.Checkout.SessionCreateParams.SubscriptionData
-				| undefined,
-			userSubscriptionData: checkoutSessionParams?.subscription_data as
-				| Stripe.Checkout.SessionCreateParams.SubscriptionData
-				| undefined,
-		}),
+		subscription_data:
+			mergedParams.mode === "payment"
+				? undefined
+				: mergeSubscriptionData({
+						userMetadata,
+						paramsSubscriptionData: params.subscription_data as
+							| Stripe.Checkout.SessionCreateParams.SubscriptionData
+							| undefined,
+						userSubscriptionData:
+							checkoutSessionParams?.subscription_data as
+								| Stripe.Checkout.SessionCreateParams.SubscriptionData
+								| undefined,
+					}),
 	};
 };

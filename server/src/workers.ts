@@ -10,6 +10,7 @@ import {
 import "./internal/misc/requestBlocks/requestBlockStore.js";
 import "./internal/misc/rollouts/rolloutConfigStore.js";
 import "./internal/misc/redisV2Cache/redisV2CacheStore.js";
+import "./internal/misc/cacheV2Ramp/cacheV2RampStore.js";
 import "./internal/misc/jobQueues/jobQueueStore.js";
 
 // Number of worker processes (defaults to CPU cores)
@@ -104,11 +105,8 @@ if (cluster.isPrimary) {
 	const { primeRedisMonitor } = await import(
 		"./external/redis/initUtils/redisAvailability.js"
 	);
-	const {
-		primeRedisV2Monitor,
-		startRedisV2Monitor,
-		stopRedisV2Monitor,
-	} = await import("./external/redis/initUtils/redisV2Availability.js");
+	const { primeRedisV2Monitor, startRedisV2Monitor, stopRedisV2Monitor } =
+		await import("./external/redis/initUtils/redisV2Availability.js");
 	const { startRedisMonitor, stopRedisMonitor } = await import(
 		"./external/redis/initRedis.js"
 	);

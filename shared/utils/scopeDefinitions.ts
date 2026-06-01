@@ -616,8 +616,9 @@ export function expandScopes(scopes: readonly string[]): Set<ScopeString> {
 		let scope: string = raw;
 
 		// Legacy → modern
-		if (LEGACY_SCOPE_ALIASES[scope]) {
-			scope = LEGACY_SCOPE_ALIASES[scope];
+		const modernScope = LEGACY_SCOPE_ALIASES[scope];
+		if (modernScope) {
+			scope = modernScope;
 		}
 
 		// Meta-scope hierarchy: superuser > owner > admin.
@@ -855,7 +856,10 @@ export function groupScopesByResource(
  */
 export function formatActions(actions: ScopeActionType[]): string {
 	if (actions.length === 0) return "";
-	if (actions.length === 1) return ACTION_METADATA[actions[0]].verb;
+	const firstAction = actions[0];
+	if (actions.length === 1 && firstAction) {
+		return ACTION_METADATA[firstAction].verb;
+	}
 
 	const sorted = [...actions].sort(
 		(a, b) => ACTION_METADATA[a].order - ACTION_METADATA[b].order,

@@ -1,5 +1,6 @@
 import {
 	type ApiBalanceV1,
+	AppEnv,
 	type DbUsageAlert,
 	type Feature,
 	type FullCustomer,
@@ -12,6 +13,8 @@ import { Decimal } from "decimal.js";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
+type AlertScope = "customer" | "entity" | "org";
+
 const wasThresholdCrossed = ({
 	alert,
 	oldApiBalance,
@@ -23,8 +26,8 @@ const wasThresholdCrossed = ({
 }) => {
 	if (alert.threshold_type === "usage") {
 		const shldAlert =
-			oldApiBalance.usage < alert.threshold &&
-			newApiBalance.usage >= alert.threshold;
+			oldApiBalance.usage <= alert.threshold &&
+			newApiBalance.usage > alert.threshold;
 
 		return shldAlert;
 	}
@@ -43,8 +46,8 @@ const wasThresholdCrossed = ({
 			.toNumber();
 
 		return (
-			currentRemainingPercentage < alert.threshold &&
-			oldRemainingPercentage >= alert.threshold
+			currentRemainingPercentage <= alert.threshold &&
+			oldRemainingPercentage > alert.threshold
 		);
 	}
 
@@ -53,7 +56,7 @@ const wasThresholdCrossed = ({
 		const oldRemaining = oldApiBalance.remaining;
 
 		return (
-			currentRemaining < alert.threshold && oldRemaining >= alert.threshold
+			currentRemaining <= alert.threshold && oldRemaining > alert.threshold
 		);
 	}
 
@@ -70,7 +73,7 @@ const wasThresholdCrossed = ({
 			.mul(100)
 			.toNumber();
 
-		return oldPercentage < alert.threshold && newPercentage >= alert.threshold;
+		return oldPercentage <= alert.threshold && newPercentage > alert.threshold;
 	}
 
 	return false;
@@ -82,18 +85,17 @@ const processAlerts = async ({
 	newFullCus,
 	feature,
 	entityId,
+	alerts,
+	scope,
 }: {
 	ctx: AutumnContext;
 	oldFullCus: FullCustomer;
 	newFullCus: FullCustomer;
 	feature: Feature;
 	entityId?: string;
+	alerts: DbUsageAlert[];
+	scope: AlertScope;
 }) => {
-	const entity = entityId
-		? newFullCus.entities?.find((e) => e.id === entityId)
-		: undefined;
-
-	const alerts = entity ? entity.usage_alerts : newFullCus.usage_alerts;
 	if (!alerts || alerts.length === 0) return;
 
 	const matchingAlerts = alerts.filter(
@@ -102,6 +104,10 @@ const processAlerts = async ({
 	);
 
 	if (matchingAlerts.length === 0) return;
+
+	const entity = entityId
+		? newFullCus.entities?.find((e) => e.id === entityId)
+		: undefined;
 
 	const oldCustomerEntitlements = fullCustomerToCustomerEntitlements({
 		fullCustomer: oldFullCus,
@@ -146,6 +152,7 @@ const processAlerts = async ({
 			ctx.env,
 			customerId,
 			entityId ?? "_",
+			scope,
 			feature.id,
 			alert.threshold_type,
 			alert.threshold,
@@ -172,7 +179,7 @@ const processAlerts = async ({
 		});
 
 		ctx.logger.info(
-			`Usage alert triggered for customer ${customerId}, feature ${feature.id}, threshold ${alert.threshold} (${alert.threshold_type})${entityId ? `, entity ${entityId}` : ""}`,
+			`Usage alert triggered (scope=${scope}) for customer ${customerId}, feature ${feature.id}, threshold ${alert.threshold} (${alert.threshold_type})${entityId ? `, entity ${entityId}` : ""}`,
 		);
 	}
 };
@@ -191,9 +198,42 @@ export const checkUsageAlerts = async ({
 	entityId?: string;
 }) => {
 	// 1. Customer-level alerts (always checked, no entity scoping)
-	await processAlerts({ ctx, oldFullCus, newFullCus, feature });
+	await processAlerts({
+		ctx,
+		oldFullCus,
+		newFullCus,
+		feature,
+		alerts: newFullCus.usage_alerts ?? [],
+		scope: "customer",
+	});
 
-	// 2. Entity-level alerts (only when entityId is provided)
+	// 2. Org-level alerts (apply to all customers; evaluated against customer-level balance).
+	// Env-scoped: sandbox reads sandbox_usage_alerts, live reads usage_alerts.
+	const orgAlerts =
+		ctx.env === AppEnv.Sandbox
+			? (ctx.org.config?.sandbox_usage_alerts ?? [])
+			: (ctx.org.config?.usage_alerts ?? []);
+	if (orgAlerts.length > 0) {
+		await processAlerts({
+			ctx,
+			oldFullCus,
+			newFullCus,
+			feature,
+			alerts: orgAlerts,
+			scope: "org",
+		});
+	}
+
+	// 3. Entity-level alerts (only when entityId is provided)
 	if (!entityId) return;
-	await processAlerts({ ctx, oldFullCus, newFullCus, feature, entityId });
+	const entity = newFullCus.entities?.find((e) => e.id === entityId);
+	await processAlerts({
+		ctx,
+		oldFullCus,
+		newFullCus,
+		feature,
+		entityId,
+		alerts: entity?.usage_alerts ?? [],
+		scope: "entity",
+	});
 };

@@ -19,6 +19,7 @@ export interface StripeBillingContextOverride {
 	paymentMethod?: Stripe.PaymentMethod;
 	testClockFrozenTime?: number;
 	stripeDiscounts: StripeDiscountWithCoupon[];
+	stripeTaxRate?: Stripe.TaxRate;
 }
 
 export interface BillingContextOverride {

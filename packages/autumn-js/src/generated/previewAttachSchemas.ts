@@ -382,6 +382,7 @@ export const previewAttachParamsOutboundSchema = z.object({
 		.optional(),
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
 	enable_plan_immediately: z.union([z.boolean(), z.undefined()]).optional(),
+	tax_rate_id: z.union([z.string(), z.undefined()]).optional(),
 });
 
 const closedEnumSchema = z.any();
@@ -619,6 +620,7 @@ export const previewAttachParamsSchema = z.object({
 		.optional(),
 	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
 	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
+	taxRateId: z.union([z.string(), z.undefined()]).optional(),
 });
 
 export const previewAttachIncomingSchema = z.object({

@@ -205,6 +205,7 @@
 						"pages": [
 							"api-reference/core/check",
 							"api-reference/core/track",
+							"api-reference/core/batchTrack",
 							"api-reference/balances/createBalance",
 							"api-reference/balances/updateBalance",
 							"api-reference/balances/deleteBalance",
@@ -259,10 +260,11 @@
 						]
 					},
 					{
-						"group": "Referrals",
+						"group": "Rewards & Referrals",
 						"pages": [
 							"api-reference/referrals/createReferralCode",
-							"api-reference/referrals/redeemReferralCode"
+							"api-reference/referrals/redeemReferralCode",
+							"api-reference/rewards/redeemRewardCode"
 						]
 					},
 					{

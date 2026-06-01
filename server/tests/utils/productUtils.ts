@@ -1,5 +1,6 @@
 import {
 	type AppEnv,
+	customerProducts,
 	type CreateReward,
 	type CreateRewardProgram,
 	isUsagePrice,
@@ -8,6 +9,7 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+import { eq } from "drizzle-orm";
 
 export const createProduct = async ({
 	db,
@@ -34,6 +36,14 @@ export const createProduct = async ({
 			returnAll: true,
 			inIds: [product.id],
 		});
+
+		// customer_products_internal_product_id_fkey has no ON DELETE CASCADE.
+		// Wipe referencing rows first so the product delete succeeds.
+		for (const prod of products) {
+			await db
+				.delete(customerProducts)
+				.where(eq(customerProducts.internal_product_id, prod.internal_id));
+		}
 
 		const batchDelete = [];
 		for (const prod of products) {

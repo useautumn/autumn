@@ -40,6 +40,15 @@ await autumn.track({
 });
 ```
 
+```typescript Async (fire-and-forget)
+await autumn.track({
+  customerId: "cus_123",
+  featureId: "ai_messages",
+  value: 1,
+  async: true // Returns 202 immediately; usage processed in the background
+});
+```
+
 </CodeGroup>
 
 ### Body Parameters
@@ -66,6 +75,10 @@ await autumn.track({
 
 <DynamicParamField body="properties" type="object">
   Additional properties to attach to this usage event.
+</DynamicParamField>
+
+<DynamicParamField body="async" type="boolean">
+  If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information.
 </DynamicParamField>
 
 <DynamicParamField body="lock" type="object">
