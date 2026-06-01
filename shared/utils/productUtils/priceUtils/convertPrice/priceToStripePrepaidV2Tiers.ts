@@ -91,7 +91,7 @@ export const priceToStripePrepaidV2Tiers = ({
 						.toNumber(),
 
 		unit_amount_decimal: Stripe.Decimal.from(
-			new Decimal(tier.unit_amount_decimal?.toNumber() ?? 0)
+			new Decimal(tier.unit_amount_decimal?.toString() ?? "0")
 				.mul(config.billing_units ?? 1)
 				.toString(),
 		),

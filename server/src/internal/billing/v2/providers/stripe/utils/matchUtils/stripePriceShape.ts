@@ -69,7 +69,7 @@ export const stripePriceToShape = ({
 	intervalCount: price.recurring?.interval_count,
 	tiersMode: price.tiers_mode ?? undefined,
 	transformQuantity: transformQuantityKey(price.transform_quantity),
-	unitAmountDecimal: decimalAmount(price.unit_amount_decimal?.toNumber()),
+	unitAmountDecimal: decimalAmount(price.unit_amount_decimal?.toString()),
 });
 
 export const inlinePriceToShape = ({
