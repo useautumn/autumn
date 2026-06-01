@@ -7,6 +7,7 @@ import {
 	fullSubjectToOverageAllowedByFeatureId,
 	fullSubjectToSpendLimitByFeatureId,
 	fullSubjectToUsageBasedCusEntsByFeatureId,
+	fullSubjectToUsageWindowLimits,
 	getMaxOverage,
 	getRelevantFeatures,
 	isAllocatedCustomerEntitlement,
@@ -34,11 +35,15 @@ export const prepareFeatureDeductionV2 = ({
 	fullSubject,
 	deduction,
 	options = {},
+	now,
 }: {
 	ctx: AutumnContext;
 	fullSubject: FullSubject;
 	deduction: FeatureDeduction;
 	options?: DeductionOptions;
+	// Single timestamp shared with the Lua param so the resolved window key and
+	// the script agree on which window a boundary-crossing request lands in.
+	now: number;
 }): PreparedFeatureDeduction => {
 	const { org, env } = ctx;
 	const { feature, lock, targetBalance } = deduction;
@@ -107,6 +112,12 @@ export const prepareFeatureDeductionV2 = ({
 	const overageAllowedByFeatureId = fullSubjectToOverageAllowedByFeatureId({
 		fullSubject,
 		featureIds: effectiveFeatureIds,
+	});
+	const usageWindowLimits = fullSubjectToUsageWindowLimits({
+		fullSubject,
+		featureIds: effectiveFeatureIds,
+		features: ctx.features,
+		now,
 	});
 
 	const nativeUsageAllowedFeatureIds = new Set(
@@ -213,6 +224,8 @@ export const prepareFeatureDeductionV2 = ({
 			Object.keys(usageBasedCusEntIdsByFeatureId).length > 0
 				? usageBasedCusEntIdsByFeatureId
 				: undefined,
+		usageWindowLimits:
+			usageWindowLimits.length > 0 ? usageWindowLimits : undefined,
 		rollovers: sortedRollovers.map((rollover) => ({
 			id: rollover.id,
 			credit_cost: rollover.credit_cost,

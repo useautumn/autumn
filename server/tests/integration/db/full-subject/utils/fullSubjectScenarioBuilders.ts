@@ -93,6 +93,7 @@ const buildCustomer = ({
 	send_email_receipts: false,
 	auto_topups: null,
 	spend_limits: null,
+	usage_limits: null,
 	usage_alerts: null,
 	overage_allowed: null,
 });
@@ -337,6 +338,7 @@ const buildCustomerEntitlement = ({
 	adjustment: 0,
 	additional_balance: 0,
 	entities: null,
+	usage_windows: null,
 	expires_at: expiresAt,
 	cache_version: 0,
 	customer_id: customer.id ?? null,

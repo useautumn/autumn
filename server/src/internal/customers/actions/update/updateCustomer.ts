@@ -139,6 +139,8 @@ export const updateCustomer = async ({
 			billingControlUpdates.auto_topups = billing_controls.auto_topups;
 		if (billing_controls.spend_limits !== undefined)
 			billingControlUpdates.spend_limits = billing_controls.spend_limits;
+		if (billing_controls.usage_limits !== undefined)
+			billingControlUpdates.usage_limits = billing_controls.usage_limits;
 		if (billing_controls.usage_alerts !== undefined)
 			billingControlUpdates.usage_alerts = billing_controls.usage_alerts;
 		if (billing_controls.overage_allowed !== undefined)

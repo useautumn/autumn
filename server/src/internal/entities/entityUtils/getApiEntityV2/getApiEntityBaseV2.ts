@@ -59,6 +59,7 @@ export const getApiEntityBaseV2 = async ({
 			flags,
 			billing_controls: {
 				spend_limits: entity.spend_limits ?? undefined,
+				usage_limits: entity.usage_limits ?? undefined,
 				usage_alerts: entity.usage_alerts ?? undefined,
 				overage_allowed: entity.overage_allowed ?? undefined,
 			},

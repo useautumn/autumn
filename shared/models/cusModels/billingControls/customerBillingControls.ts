@@ -11,6 +11,7 @@ import {
 import { PurchaseLimitIntervalEnum } from "./purchaseLimitInterval.js";
 import { type DbSpendLimit, DbSpendLimitSchema } from "./spendLimit.js";
 import { type DbUsageAlert, DbUsageAlertSchema } from "./usageAlert.js";
+import { type DbUsageLimit, DbUsageLimitSchema } from "./usageLimit.js";
 
 export const AutoTopupPurchaseLimitSchema = z.object({
 	interval: PurchaseLimitIntervalEnum.meta({
@@ -102,6 +103,9 @@ export const CustomerBillingControlsSchema = z.object({
 	spend_limits: z.array(DbSpendLimitSchema).optional().meta({
 		description: "List of overage spend limits per feature.",
 	}),
+	usage_limits: z.array(DbUsageLimitSchema).optional().meta({
+		description: "List of windowed usage-limit caps per feature.",
+	}),
 	usage_alerts: z.array(DbUsageAlertSchema).optional().meta({
 		description: "List of usage alert configurations per feature.",
 	}),
@@ -126,6 +130,9 @@ export const CustomerBillingControlsResponseSchema = z.object({
 	}),
 	spend_limits: z.array(DbSpendLimitSchema).optional().meta({
 		description: "List of overage spend limits per feature.",
+	}),
+	usage_limits: z.array(DbUsageLimitSchema).optional().meta({
+		description: "List of windowed usage-limit caps per feature.",
 	}),
 	usage_alerts: z.array(DbUsageAlertSchema).optional().meta({
 		description: "List of usage alert configurations per feature.",
@@ -159,6 +166,24 @@ export const CustomerBillingControlsParamsSchema =
 			}
 
 			spendLimitFeatureIds.add(spendLimit.feature_id);
+		}
+
+		const usageLimitFeatureIds = new Set<string>();
+
+		for (const [index, usageLimit] of (
+			billingControls.usage_limits ?? []
+		).entries()) {
+			if (usageLimitFeatureIds.has(usageLimit.feature_id)) {
+				ctx.issues.push({
+					code: "custom",
+					message: "Only one usage_limit entry is allowed per feature_id",
+					input: usageLimit.feature_id,
+					path: ["usage_limits", index, "feature_id"],
+				});
+				return;
+			}
+
+			usageLimitFeatureIds.add(usageLimit.feature_id);
 		}
 
 		const overageAllowedFeatureIds = new Set<string>();
@@ -201,6 +226,7 @@ export type {
 	DbOverageAllowed,
 	DbSpendLimit,
 	DbUsageAlert,
+	DbUsageLimit,
 	EntityBillingControls,
 	EntityBillingControlsParams,
 };
@@ -208,5 +234,6 @@ export {
 	DbOverageAllowedSchema,
 	DbSpendLimitSchema,
 	DbUsageAlertSchema,
+	DbUsageLimitSchema,
 	EntityBillingControlsSchema,
 };
