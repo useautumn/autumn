@@ -22,6 +22,8 @@ default it uses the same `DATABASE_URL` host with the database name changed to
 
 3. Create a Slack app at https://api.slack.com/apps using `slack-manifest.example.json`.
 
+For production, use `slack-manifest.prod.json`. It points Slack at `https://api.useautumn.com/slack/*`, which the API proxies to the chat service.
+
 4. Copy the Slack app credentials into the local environment:
 
 ```sh
