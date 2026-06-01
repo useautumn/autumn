@@ -5,6 +5,12 @@ DESCRIPTION >
     to a single customer's parts. Same MergeTree + insert-time GROUP BY + query-time sum()
     pattern as events_hourly_mv. Only rows with a non-empty apiKeyId are materialized.
 
+    Sort key leads with customer_id (not hour, unlike the sibling hourly MVs) on purpose:
+    the hot path is per-customer + per-entity apiKeyId breakdowns, which always filter
+    customer_id, so leading with it prunes straight to one customer. Org-wide (aggregateAll,
+    no customer_id) apiKeyId queries scan more here — an accepted trade-off, as they are not
+    the bottleneck this MV exists to fix.
+
 SCHEMA >
     `org_id` String,
     `env` String,

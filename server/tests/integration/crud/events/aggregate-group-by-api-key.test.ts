@@ -25,7 +25,10 @@ const TINYBIRD_INGEST_WAIT_MS = 4000;
 /** Sum every numeric value tied to each target apiKeyId, robust to the
  *  version-transformed response shape: matches both {"<key>": n} (grouped_values)
  *  and [{group:"<key>", messages:n}] layouts. Keys are unique long strings, so
- *  collisions are not a concern. */
+ *  collisions are not a concern. In the sibling-object layout, only the metric
+ *  value should count — skip `period` (an epoch) and any `_`-prefixed field
+ *  (e.g. `_truncated`, a UInt8 Tinybird serializes as 0/1) so they don't inflate
+ *  the per-key total. */
 const sumByApiKey = (
 	node: unknown,
 	keys: string[],
@@ -41,7 +44,12 @@ const sumByApiKey = (
 	for (const [k, v] of Object.entries(obj)) {
 		if (keys.includes(k) && typeof v === "number") {
 			acc[k] = (acc[k] ?? 0) + v;
-		} else if (siblingKey && typeof v === "number") {
+		} else if (
+			siblingKey &&
+			typeof v === "number" &&
+			k !== "period" &&
+			!k.startsWith("_")
+		) {
 			acc[siblingKey] = (acc[siblingKey] ?? 0) + v;
 		} else {
 			sumByApiKey(v, keys, acc);

@@ -1,12 +1,17 @@
 DESCRIPTION >
-    One-off chunked backfill of events_hourly_apikey_mv from the existing events datasource.
-    SQL mirrors events_hourly_apikey_mv_pipe exactly so backfilled rows are identical to
-    forward-materialized ones. Reads from `events` (already in Tinybird) — NOT from Postgres —
-    so it writes ONLY this MV, never the other six.
+    MANUAL FALLBACK — you usually do NOT need this. `tb deploy` (Tinybird Forward) already
+    backfills events_hourly_apikey_mv from the live events datasource at deploy time, so a
+    normal deploy populates full history on its own. Keep this pipe only to re-fill a specific
+    window (e.g. if a deploy backfill is ever incomplete).
 
-    Seam safety: MergeTree does not dedup. Run this ONLY for [start_date, end_date) windows
-    whose hours are strictly older than the month the forward trigger went live, and let the
-    trigger own the current partial month. Half-open window so day/month chunks never overlap.
+    Chunked backfill from the existing events datasource. SQL mirrors events_hourly_apikey_mv_pipe
+    exactly so backfilled rows are identical to forward-materialized ones. Reads from `events`
+    (already in Tinybird) — NOT from Postgres — so it writes ONLY this MV, never the other six.
+
+    Seam safety: MergeTree does not dedup. The default window is half-open [start, end) and ends
+    at the start of the current month, so a default run excludes the live-materializing month.
+    If you run it manually, set end_date strictly before the MV's deploy time — overlapping the
+    forward trigger's rows double-counts. Chunk by day/week (dev plan ~30s/copy limit).
 
 NODE migrate
 SQL >
