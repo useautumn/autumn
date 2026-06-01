@@ -11,26 +11,11 @@ import {
 	getCustomerInvoicesColumns,
 	hasNonStripeInvoice,
 } from "./CustomerInvoicesColumns";
+import { getInvoiceProductNames } from "./getInvoiceProductNames";
 
 export function CustomerInvoicesTable() {
-	const { customer, products, isLoading } = useCusQuery();
+	const { customer, products, features, isLoading } = useCusQuery();
 	const setSheet = useSheetStore((s) => s.setSheet);
-
-	const invoices = useMemo(
-		() =>
-			customer?.invoices.map((invoice: Invoice) => ({
-				...invoice,
-				productNames: invoice.product_ids
-					.map(
-						(id: string) =>
-							products?.find((p: { id: string; name: string }) => p.id === id)
-								?.name,
-					)
-					.filter(Boolean)
-					.join(", "),
-			})) ?? [],
-		[customer?.invoices, products],
-	);
 
 	const invoiceIds = useMemo(
 		() => customer?.invoices?.map((inv: Invoice) => inv.id) ?? [],
@@ -42,6 +27,20 @@ export function CustomerInvoicesTable() {
 		invoiceIds,
 		enabled: invoiceIds.length > 0,
 	});
+
+	const invoices = useMemo(
+		() =>
+			customer?.invoices.map((invoice: Invoice) => ({
+				...invoice,
+				productNames: getInvoiceProductNames({
+					invoice,
+					lineItems: lineItemsByInvoiceId[invoice.id] ?? [],
+					products,
+					features,
+				}),
+			})) ?? [],
+		[customer?.invoices, products, features, lineItemsByInvoiceId],
+	);
 
 	const handleRowClick = (invoice: Invoice) => {
 		const lineItems = lineItemsByInvoiceId[invoice.id] ?? [];
