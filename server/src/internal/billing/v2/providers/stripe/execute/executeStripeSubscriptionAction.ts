@@ -147,9 +147,7 @@ export const executeStripeSubscriptionAction = async ({
 			billingPlan,
 			billingContext: deferredBillingContext,
 			stripeInvoice: latestStripeInvoice,
-			expiresAt: deferredInvoiceMode
-				? Date.now() + ms.days(10)
-				: Date.now() + ms.minutes(10),
+			expiresAt: deferredInvoiceMode ? null : Date.now() + ms.minutes(10),
 			resumeAfter: StripeBillingStage.SubscriptionAction,
 		});
 

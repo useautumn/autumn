@@ -4,13 +4,14 @@ import type {
 	Invoice,
 	StripeBillingPlanResult,
 } from "@autumn/shared";
-import { ms, StripeBillingStage } from "@autumn/shared";
+import { StripeBillingStage } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { shouldDeferBillingPlan } from "@/internal/billing/v2/providers/stripe/utils/common/shouldDeferBillingPlan";
 import { createInvoiceForBilling } from "@/internal/billing/v2/providers/stripe/utils/invoices/createInvoiceForBilling";
 import { isDeferredInvoiceMode } from "@/internal/billing/v2/utils/billingContext/isDeferredInvoiceMode";
 import { invoiceActions } from "@/internal/invoices/actions";
 import { insertMetadataFromBillingPlan } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";
+import { getDeferredBillingMetadataExpiresAt } from "./getDeferredBillingMetadataExpiresAt";
 
 export const executeStripeInvoiceAction = async ({
 	ctx,
@@ -59,10 +60,10 @@ export const executeStripeInvoiceAction = async ({
 			billingPlan,
 			billingContext,
 			stripeInvoice: invoice,
-			expiresAt:
-				deferredInvoiceMode || billingContext.paymentMethod?.type === "custom"
-					? Date.now() + ms.days(10)
-					: Date.now() + ms.minutes(10),
+			expiresAt: getDeferredBillingMetadataExpiresAt({
+				deferredInvoiceMode,
+				paymentMethod: billingContext.paymentMethod,
+			}),
 			resumeAfter: StripeBillingStage.InvoiceAction,
 		});
 
