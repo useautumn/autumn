@@ -10,6 +10,7 @@ import type {
 	TrialOnEnd,
 } from "@autumn/shared";
 import { useMemo } from "react";
+import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
 import { getFreeTrial } from "@/components/forms/update-subscription-v2/utils/getFreeTrial";
 import { convertPrepaidOptionsToFeatureOptions } from "@/utils/billing/prepaidQuantityUtils";
 import type { FormCustomLineItem } from "../attachFormSchema";
@@ -103,10 +104,13 @@ export function buildAttachRequestBody({
 	}
 
 	if (items !== null) {
-		body.items = items.map((item) => ({
-			...item,
-			interval: (item.interval ?? null) as ProductItemInterval | null,
-		}));
+		const normalizedItems = normalizeBillingRequestItems({ items });
+		if (normalizedItems) {
+			body.items = normalizedItems.map((item) => ({
+				...item,
+				interval: (item.interval ?? null) as ProductItemInterval | null,
+			}));
+		}
 	}
 
 	if (version !== undefined) {
