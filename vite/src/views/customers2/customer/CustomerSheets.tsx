@@ -20,6 +20,7 @@ import { BillingAutoTopupSheet } from "../components/sheets/BillingAutoTopupShee
 import { BillingOverageAllowedSheet } from "../components/sheets/BillingOverageAllowedSheet";
 import { BillingSpendLimitSheet } from "../components/sheets/BillingSpendLimitSheet";
 import { BillingUsageAlertSheet } from "../components/sheets/BillingUsageAlertSheet";
+import { BillingUsageLimitSheet } from "../components/sheets/BillingUsageLimitSheet";
 import { CheckBalanceSheet } from "../components/sheets/CheckBalanceSheet";
 import { CreateScheduleSheet } from "../components/sheets/CreateScheduleSheet";
 import { InvoiceDetailSheet } from "../components/sheets/InvoiceDetailSheet";
@@ -83,6 +84,9 @@ export function CustomerSheets() {
 			case "billing-spend-limit-add":
 			case "billing-spend-limit-edit":
 				return <BillingSpendLimitSheet />;
+			case "billing-usage-limit-add":
+			case "billing-usage-limit-edit":
+				return <BillingUsageLimitSheet />;
 			case "billing-usage-alert-add":
 			case "billing-usage-alert-edit":
 				return <BillingUsageAlertSheet />;

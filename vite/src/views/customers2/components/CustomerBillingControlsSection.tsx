@@ -3,6 +3,7 @@ import type {
 	DbOverageAllowed,
 	DbSpendLimit,
 	DbUsageAlert,
+	DbUsageLimit,
 	Entity,
 	Feature,
 	FullCustomer,
@@ -150,6 +151,31 @@ const SpendLimitRow = ({
 	</button>
 );
 
+const UsageLimitRow = ({
+	usageLimit,
+	featureNameById,
+	onClick,
+}: {
+	usageLimit: DbUsageLimit;
+	featureNameById: Map<string, string>;
+	onClick: () => void;
+}) => (
+	<button type="button" className={rowClassName} onClick={onClick}>
+		<StatusPill enabled={usageLimit.enabled} />
+		<span className="truncate text-sm text-foreground font-medium">
+			{getFeatureLabel({
+				featureId: usageLimit.feature_id,
+				featureNameById,
+			})}
+		</span>
+		<div className="ml-auto flex items-center gap-1.5 shrink-0">
+			<Pill>
+				Limit: {usageLimit.limit.toLocaleString()} per {usageLimit.interval}
+			</Pill>
+		</div>
+	</button>
+);
+
 const UsageAlertRow = ({
 	usageAlert,
 	featureNameById,
@@ -246,6 +272,9 @@ export function CustomerBillingControlsSection() {
 	const spendLimits = selectedEntity
 		? (selectedEntity.spend_limits ?? [])
 		: (fullCustomer?.spend_limits ?? []);
+	const usageLimits = selectedEntity
+		? (selectedEntity.usage_limits ?? [])
+		: (fullCustomer?.usage_limits ?? []);
 	const usageAlerts = selectedEntity
 		? (selectedEntity.usage_alerts ?? [])
 		: (fullCustomer?.usage_alerts ?? []);
@@ -256,6 +285,7 @@ export function CustomerBillingControlsSection() {
 	const hasAnyControls =
 		autoTopups.length > 0 ||
 		spendLimits.length > 0 ||
+		usageLimits.length > 0 ||
 		usageAlerts.length > 0 ||
 		overageAllowed.length > 0;
 
@@ -263,6 +293,7 @@ export function CustomerBillingControlsSection() {
 		fullCustomer?.entities?.filter(
 			(entity: Entity) =>
 				(entity.spend_limits?.length ?? 0) > 0 ||
+				(entity.usage_limits?.length ?? 0) > 0 ||
 				(entity.usage_alerts?.length ?? 0) > 0 ||
 				(entity.overage_allowed?.length ?? 0) > 0,
 		).length ?? 0;
@@ -359,6 +390,11 @@ export function CustomerBillingControlsSection() {
 								Spend limit
 							</DropdownMenuItem>
 							<DropdownMenuItem
+								onClick={() => setSheet({ type: "billing-usage-limit-add" })}
+							>
+								Usage limit
+							</DropdownMenuItem>
+							<DropdownMenuItem
 								onClick={() => setSheet({ type: "billing-usage-alert-add" })}
 							>
 								Usage alert
@@ -419,6 +455,26 @@ export function CustomerBillingControlsSection() {
 											setSheet({
 												type: "billing-spend-limit-edit",
 												data: { index, item: spendLimit },
+											})
+										}
+									/>
+								))}
+							</div>
+						</BillingControlsGroup>
+					)}
+
+					{usageLimits.length > 0 && (
+						<BillingControlsGroup title="Usage limits" emptyText="" hasItems>
+							<div className="flex flex-col gap-1.5 rounded-lg">
+								{usageLimits.map((usageLimit, index) => (
+									<UsageLimitRow
+										key={`usage-limit-${usageLimit.feature_id ?? "global"}-${index}`}
+										usageLimit={usageLimit}
+										featureNameById={featureNameById}
+										onClick={() =>
+											setSheet({
+												type: "billing-usage-limit-edit",
+												data: { index, item: usageLimit },
 											})
 										}
 									/>

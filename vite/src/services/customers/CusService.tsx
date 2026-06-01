@@ -2,6 +2,7 @@ import type {
 	DbOverageAllowed,
 	DbSpendLimit,
 	DbUsageAlert,
+	DbUsageLimit,
 } from "@autumn/shared";
 import type { AxiosInstance } from "axios";
 
@@ -43,6 +44,7 @@ export class CusService {
 		entityId: string;
 		billingControls: {
 			spend_limits?: DbSpendLimit[];
+			usage_limits?: DbUsageLimit[];
 			usage_alerts?: DbUsageAlert[];
 			overage_allowed?: DbOverageAllowed[];
 		};
