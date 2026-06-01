@@ -28,6 +28,7 @@
     "sourceMap": true,
     "strict": true,
     "target": "es2022",
+    "types": ["bun", "node"],
     "paths": {
       "@api/*": ["../../shared/api/*"],
       "@models/*": ["../../shared/models/*"],
@@ -37,5 +38,5 @@
     "useUnknownInCatchVariables": true,
   },
   "exclude": ["node_modules"],
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
 }

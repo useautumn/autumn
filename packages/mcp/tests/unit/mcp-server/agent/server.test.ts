@@ -2,7 +2,8 @@ import { describe, expect, test } from "bun:test";
 import {
 	createAskAutumnMCPServer,
 	createAutumnOperationsMCPServer,
-} from "./server.js";
+} from "../../../../src/mcp-server/agent/server.js";
+import { autumnMcpResourceUris } from "../../../../src/mcp-server/agent/resources.js";
 
 describe("Autumn MCP server", () => {
 	test("public server advertises raw operation tools", async () => {
@@ -10,13 +11,17 @@ describe("Autumn MCP server", () => {
 
 		expect(tools.tools.map((tool) => tool.name)).toEqual([
 			"listCustomers",
+			"createCustomer",
 			"getCustomer",
 			"listPlans",
+			"createPlan",
 			"getPlan",
 			"previewAttach",
 			"previewUpdateSubscription",
+			"previewCreateSchedule",
 			"attach",
 			"updateSubscription",
+			"createSchedule",
 		]);
 		expect(tools.tools.map((tool) => tool.name)).not.toContain("ask_autumn");
 		expect(tools.tools.map((tool) => tool.name)).not.toContain(
@@ -30,5 +35,28 @@ describe("Autumn MCP server", () => {
 		expect(tools.tools.map((tool) => tool.name)).toEqual(["ask_autumn"]);
 		expect(tools.tools.map((tool) => tool.name)).not.toContain("attach");
 		expect(tools.tools.map((tool) => tool.name)).not.toContain("listCustomers");
+	});
+
+	test.each([
+		["public", createAutumnOperationsMCPServer],
+		["internal", createAskAutumnMCPServer],
+	])("%s server exposes Autumn composition docs", async (_name, createServer) => {
+		const server = createServer();
+		const resources = await server.listResources();
+
+		expect(resources.resources.map((resource) => resource.uri)).toEqual(
+			autumnMcpResourceUris,
+		);
+
+		for (const uri of autumnMcpResourceUris) {
+			const resource = await server.readResource(uri);
+			expect(resource.contents[0]?.text).toContain("# ");
+		}
+	});
+
+	test("unknown resources are rejected", async () => {
+		await expect(
+			createAutumnOperationsMCPServer().readResource("autumn://docs/missing"),
+		).rejects.toThrow("Unknown Autumn MCP resource");
 	});
 });

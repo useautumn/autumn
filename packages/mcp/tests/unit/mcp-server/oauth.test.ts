@@ -5,7 +5,7 @@ import {
 	MCP_OAUTH_SCOPES,
 	OAuthHttpError,
 	type MCPOAuthFlags,
-} from "./oauth.js";
+} from "../../../src/mcp-server/oauth.js";
 
 const flags = {
 	"oauth-enabled": true,

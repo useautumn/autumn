@@ -1,5 +1,8 @@
 import {
 	AttachParamsV1Schema,
+	CreateCustomerParamsV1Schema,
+	CreatePlanParamsV2Schema,
+	CreateScheduleParamsV0Schema,
 	GetCustomerParamsV1Schema,
 	GetPlanParamsV0Schema,
 	ListCustomersV2_3ParamsSchema,
@@ -17,45 +20,79 @@ import {
 type ToolContext = Parameters<
 	NonNullable<ReturnType<typeof createTool>["execute"]>
 >[1];
-type BillingWriteToolName = "attach" | "updateSubscription";
+type ConfirmedWriteToolName =
+	| "attach"
+	| "updateSubscription"
+	| "createPlan"
+	| "createSchedule";
 type OperationToolConfig = {
 	id: string;
 	description: string;
 	schema: z.ZodType;
 	endpoint: string;
 	destructive?: boolean;
+	idempotent?: boolean;
 };
 type BillingPreviewToolConfig = {
 	id: string;
 	description: string;
 	schema: z.ZodType;
 	previewEndpoint: string;
-	writeToolName: BillingWriteToolName;
+	writeToolName: ConfirmedWriteToolName;
 };
 
-const endpointByTool = {
+export const endpointByTool = {
 	listCustomers: "/v1/customers.list",
+	createCustomer: "/v1/customers.get_or_create",
 	getCustomer: "/v1/customers.get",
 	listPlans: "/v1/plans.list",
+	createPlan: "/v1/plans.create",
 	getPlan: "/v1/plans.get",
 	previewAttach: "/v1/billing.preview_attach",
 	attach: "/v1/billing.attach",
 	previewUpdateSubscription: "/v1/billing.preview_update",
 	updateSubscription: "/v1/billing.update",
+	previewCreateSchedule: "/v1/billing.preview_create_schedule",
+	createSchedule: "/v1/billing.create_schedule",
 } as const;
 
-const billingWriteSchemaByTool = {
+const writeSchemaByTool = {
 	attach: AttachParamsV1Schema,
 	updateSubscription: UpdateSubscriptionV1ParamsSchema,
-} as const satisfies Record<BillingWriteToolName, z.ZodType>;
+	createPlan: CreatePlanParamsV2Schema,
+	createSchedule: CreateScheduleParamsV0Schema,
+} as const satisfies Record<ConfirmedWriteToolName, z.ZodType>;
+
+export const schemaByTool = {
+	listCustomers: ListCustomersV2_3ParamsSchema,
+	createCustomer: CreateCustomerParamsV1Schema,
+	getCustomer: GetCustomerParamsV1Schema,
+	listPlans: ListPlanParamsSchema,
+	createPlan: CreatePlanParamsV2Schema,
+	getPlan: GetPlanParamsV0Schema,
+	previewAttach: AttachParamsV1Schema,
+	attach: AttachParamsV1Schema,
+	previewUpdateSubscription: UpdateSubscriptionV1ParamsSchema,
+	updateSubscription: UpdateSubscriptionV1ParamsSchema,
+	previewCreateSchedule: CreateScheduleParamsV0Schema,
+	createSchedule: CreateScheduleParamsV0Schema,
+} as const satisfies Record<keyof typeof endpointByTool, z.ZodType>;
 
 const toolConfigs: OperationToolConfig[] = [
 	{
 		id: "listCustomers",
 		description:
-			"List Autumn customers. Use search to find a customer by id, name, or email.",
+			"List Autumn customers. Use search, plans, subscription_status, and processors filters for customer-heavy queries, and paginate for complete results.",
 		schema: ListCustomersV2_3ParamsSchema,
 		endpoint: endpointByTool.listCustomers,
+	},
+	{
+		id: "createCustomer",
+		description:
+			"Create an Autumn customer, or return the existing customer with the same id. Use when the user explicitly wants a customer record created.",
+		schema: CreateCustomerParamsV1Schema,
+		endpoint: endpointByTool.createCustomer,
+		idempotent: true,
 	},
 	{
 		id: "getCustomer",
@@ -65,9 +102,18 @@ const toolConfigs: OperationToolConfig[] = [
 	},
 	{
 		id: "listPlans",
-		description: "List Autumn plans.",
+		description:
+			"List Autumn plans. This is usually a cheap full scan; filter returned plans locally and use before customer queries based on plan attributes.",
 		schema: ListPlanParamsSchema,
 		endpoint: endpointByTool.listPlans,
+	},
+	{
+		id: "createPlan",
+		description:
+			"Create an Autumn plan. Destructive configuration write: gather plan_id, name, price, features/items, trials, and confirmation before running.",
+		schema: CreatePlanParamsV2Schema,
+		endpoint: endpointByTool.createPlan,
+		destructive: true,
 	},
 	{
 		id: "getPlan",
@@ -81,33 +127,51 @@ const billingPreviewConfigs: BillingPreviewToolConfig[] = [
 	{
 		id: "previewAttach",
 		description:
-			"Preview attaching a plan to a customer.",
+			"Preview attaching a plan to a customer before any attach write.",
 		schema: AttachParamsV1Schema,
 		previewEndpoint: endpointByTool.previewAttach,
 		writeToolName: "attach",
 	},
 	{
 		id: "previewUpdateSubscription",
-		description: "Preview updating a subscription.",
+		description: "Preview updating a subscription before any update write.",
 		schema: UpdateSubscriptionV1ParamsSchema,
 		previewEndpoint: endpointByTool.previewUpdateSubscription,
 		writeToolName: "updateSubscription",
 	},
+	{
+		id: "previewCreateSchedule",
+		description:
+			"Preview the immediate billing impact of a multi-phase billing schedule before any createSchedule write.",
+		schema: CreateScheduleParamsV0Schema,
+		previewEndpoint: endpointByTool.previewCreateSchedule,
+		writeToolName: "createSchedule",
+	},
 ];
 
-const billingWriteConfigs: OperationToolConfig[] = [
+const confirmedWriteConfigs: OperationToolConfig[] = [
 	{
 		id: "attach",
-		description: "Attach a plan to a customer.",
+		description:
+			"Attach a plan to a customer. Destructive: call previewAttach first and only run after explicit user confirmation.",
 		schema: AttachParamsV1Schema,
 		endpoint: endpointByTool.attach,
 		destructive: true,
 	},
 	{
 		id: "updateSubscription",
-		description: "Update a customer subscription.",
+		description:
+			"Update a customer subscription. Destructive: call previewUpdateSubscription first and only run after explicit user confirmation.",
 		schema: UpdateSubscriptionV1ParamsSchema,
 		endpoint: endpointByTool.updateSubscription,
+		destructive: true,
+	},
+	{
+		id: "createSchedule",
+		description:
+			"Create a multi-phase billing schedule. Destructive billing write: resolve customer, plans, phase start times, and confirmation before running.",
+		schema: CreateScheduleParamsV0Schema,
+		endpoint: endpointByTool.createSchedule,
 		destructive: true,
 	},
 ];
@@ -152,10 +216,10 @@ const logTool = (event: string, data: Record<string, unknown>) => {
 	console.log(`[mcp:agent-tools] ${event} ${JSON.stringify(data)}`);
 };
 
-const mcpAnnotations = (destructive = false) => ({
-	readOnlyHint: !destructive,
+const mcpAnnotations = (destructive = false, idempotent = false) => ({
+	readOnlyHint: !destructive && !idempotent,
 	destructiveHint: destructive,
-	idempotentHint: false,
+	idempotentHint: idempotent,
 	openWorldHint: false,
 });
 
@@ -170,13 +234,14 @@ const operationTool = ({
 	schema,
 	endpoint,
 	destructive = false,
+	idempotent = false,
 }: OperationToolConfig) =>
 	createTool({
 		id,
 		description,
 		inputSchema: z.object({ request: schema }).strict(),
 		mcp: {
-			annotations: mcpAnnotations(destructive),
+			annotations: mcpAnnotations(destructive, idempotent),
 		},
 		execute: (input, context) =>
 			callAutumn({
@@ -197,7 +262,7 @@ const agentBillingPreviewTool = ({
 	description: string;
 	schema: z.ZodType;
 	previewEndpoint: string;
-	writeToolName: BillingWriteToolName;
+	writeToolName: ConfirmedWriteToolName;
 }) =>
 	createTool({
 		id,
@@ -231,16 +296,52 @@ const agentBillingPreviewTool = ({
 		},
 	});
 
+const agentPendingWriteTool = ({
+	id,
+	description,
+	schema,
+}: OperationToolConfig) =>
+	createTool({
+		id,
+		description: `${description} This internal agent tool stores the exact request for later confirmation instead of applying it immediately.`,
+		inputSchema: z.object({ request: schema }).strict(),
+		mcp: {
+			annotations: mcpAnnotations(),
+		},
+		execute: async (input, context) => {
+			const request = (input as { request: unknown }).request;
+			await createPendingAction({
+				auth: getAutumnAuth(context),
+				toolName: id as ConfirmedWriteToolName,
+				request,
+				preview: JSON.stringify(request),
+			});
+			return {
+				pending: true,
+				request,
+				message:
+					"Request ready. Ask the user to explicitly apply or approve this exact change.",
+			};
+		},
+	});
+
 export const createRawAutumnOperationTools = () => ({
 	...toTools(toolConfigs, operationTool),
 	...toTools(billingPreviewConfigs, (config) =>
 		operationTool({ ...config, endpoint: config.previewEndpoint }),
 	),
-	...toTools(billingWriteConfigs, operationTool),
+	...toTools(confirmedWriteConfigs, operationTool),
 });
 
 export const createAgentAutumnOperationTools = () => ({
-	...toTools(toolConfigs, operationTool),
+	...toTools(
+		toolConfigs.filter(({ destructive }) => !destructive),
+		operationTool,
+	),
+	...toTools(
+		toolConfigs.filter(({ destructive }) => destructive),
+		agentPendingWriteTool,
+	),
 	...toTools(billingPreviewConfigs, agentBillingPreviewTool),
 	confirmBillingAction: createTool({
 		id: "confirmBillingAction",
@@ -271,11 +372,11 @@ export const executeConfirmedBillingAction = async ({
 	request,
 }: {
 	auth: ReturnType<typeof getAutumnAuth>;
-	toolName: BillingWriteToolName;
+	toolName: ConfirmedWriteToolName;
 	request: unknown;
 }) =>
 	callAutumn({
 		context: { mcp: { extra: { authInfo: auth } } } as never,
 		endpoint: endpointByTool[toolName],
-		request: billingWriteSchemaByTool[toolName].parse(request),
+		request: writeSchemaByTool[toolName].parse(request),
 	});

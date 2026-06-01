@@ -21,5 +21,10 @@ if [[ "$resolved" == "$repo_root/server/"* ]]; then
 	exec "$repo_root/server/run.sh" "$resolved" "${@:2}"
 fi
 
+if [[ "$resolved" == "$repo_root/packages/mcp/tests/evals/"* && "$resolved" == *".test.ts" ]]; then
+	cd "$repo_root/packages/mcp"
+	exec env ENV_FILE=.env infisical run --env=dev --recursive -- bun test "$resolved" "${@:2}"
+fi
+
 echo "no router for: $resolved" >&2
 exit 1
