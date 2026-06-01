@@ -3,6 +3,7 @@ import {
 	type CreditSchemaItem,
 	FeatureType,
 	FeatureUsageType,
+	isAnyCreditSystem,
 } from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
@@ -52,10 +53,7 @@ function CreateFeatureSheet({
 
 	const handleCreateFeature = async () => {
 		// Validate credit system specific fields first
-		if (
-			feature.type === FeatureType.CreditSystem ||
-			feature.type === FeatureType.AiCreditSystem
-		) {
+		if (isAnyCreditSystem(feature.type)) {
 			const validationError = validateCreditSystem(feature);
 			if (validationError) {
 				toast.error(validationError);

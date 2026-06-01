@@ -4,6 +4,7 @@ import {
 	type Feature,
 	FeatureType,
 	InternalError,
+	isAnyCreditSystem,
 	RecaseError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -170,7 +171,7 @@ export const getCreditCost = async ({
 	modelName?: string;
 	tokens?: TokenInput;
 }) => {
-	if (creditSystem.type !== FeatureType.CreditSystem && creditSystem.type !== FeatureType.AiCreditSystem) {
+	if (!isAnyCreditSystem(creditSystem.type)) {
 		return amount;
 	}
 	if (creditSystem.type === FeatureType.AiCreditSystem) {

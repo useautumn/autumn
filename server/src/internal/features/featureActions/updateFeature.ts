@@ -3,6 +3,7 @@ import {
 	ErrCode,
 	type Feature,
 	FeatureType,
+	isAnyCreditSystem,
 	type ModelMarkups,
 	notNullish,
 } from "@autumn/shared";
@@ -230,9 +231,7 @@ export const updateFeature = async ({
 	}
 
 	// Queue cache clear for credit system if schema or model markups changed
-	const isCreditSystem =
-		feature.type === FeatureType.CreditSystem ||
-		feature.type === FeatureType.AiCreditSystem;
+	const isCreditSystem = isAnyCreditSystem(feature.type);
 	if (isCreditSystem && updatedFeature) {
 		const schemaChanged =
 			updates.config != null &&
