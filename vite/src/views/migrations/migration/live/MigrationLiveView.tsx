@@ -19,13 +19,15 @@ import {
 } from "@phosphor-icons/react";
 import type { ColumnDef, PaginationState, Row } from "@tanstack/react-table";
 import { debounce } from "lodash";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useMemo, useState } from "react";
 import { Link } from "react-router";
+import { toast } from "sonner";
 import { Table } from "@/components/general/table";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
+import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
 	Dialog,
 	DialogContent,
@@ -49,18 +51,18 @@ import {
 	SelectValue,
 } from "@/components/v2/selects/Select";
 import { useMigrationFilterPreview } from "@/hooks/queries/useMigrationFilterPreview";
-import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
-import { toast } from "sonner";
 import {
 	type MigrationItemEvent,
 	useMigrationRunsQuery,
 } from "@/hooks/queries/useMigrationRunsQuery";
+import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
 import { cn } from "@/lib/utils";
+import { pushPage } from "@/utils/genUtils";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { createCustomerListColumns } from "@/views/customers2/components/table/customer-list/CustomerListColumns";
 import { CustomerListFilterButton } from "@/views/customers2/components/table/customer-list/CustomerListFilterButton";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
-import { pushPage } from "@/utils/genUtils";
 import { useRealtimeSubscriptions } from "../hooks/useRealtimeSubscriptions";
 import { ItemEventStatusBadge } from "../runs/RunStatusBadge";
 import { type StepId, StepIndicator } from "../StepIndicator";
@@ -77,6 +79,10 @@ import { useMigrationSheetStore } from "./useMigrationSheetStore";
 const PAGE_SIZE_OPTIONS = [10, 50, 100, 250];
 
 type ActiveRunStatus = "queued" | "running" | null;
+type AdminRunControls = {
+	lazyRun: boolean;
+	concurrency: string;
+};
 
 type CustomerRow = CustomerWithProducts & {
 	_event?: MigrationItemEvent;
@@ -93,6 +99,13 @@ function buildEventsByCustomer(itemEvents: MigrationItemEvent[]) {
 			map.set(event.item_id, event);
 	}
 	return map;
+}
+
+function parseConcurrency(value: string) {
+	const trimmed = value.trim();
+	if (!trimmed) return undefined;
+	const parsed = Number(trimmed);
+	return Number.isInteger(parsed) && parsed >= 1 ? parsed : undefined;
 }
 
 const statusColumn: ColumnDef<CustomerRow, unknown> = {
@@ -200,6 +213,10 @@ export function MigrationLiveView({
 	const [dismissedError, setDismissedError] = useState<string | null>(null);
 	const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
 	const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+	const [runControls, setRunControls] = useState({
+		lazyRun: true,
+		concurrency: "",
+	});
 	const [sample, setSample] = useState({
 		open: false,
 		mode: "limit" as "limit" | "select",
@@ -208,6 +225,17 @@ export function MigrationLiveView({
 		running: null as "dry" | "live" | null,
 	});
 	const { cancelRun, isCanceling } = useMigrationsQuery();
+	const { isAdmin } = useAdmin();
+	const hasInvalidConcurrency =
+		runControls.concurrency.trim() !== "" &&
+		parseConcurrency(runControls.concurrency) === undefined;
+
+	const adminRunControls = isAdmin
+		? {
+				lazyRun: runControls.lazyRun,
+				concurrency: parseConcurrency(runControls.concurrency),
+			}
+		: undefined;
 
 	const debouncedSetSearch = useMemo(
 		() => debounce((q: string) => setDebouncedSearch(q), 350),
@@ -273,6 +301,13 @@ export function MigrationLiveView({
 	const activeRun = runs.find(
 		(r) => r.status === "queued" || r.status === "running",
 	);
+	const progressRun = activeRun ?? latestRun;
+	const progressCounts = progressRun?.item_run_counts;
+	const progressTarget =
+		progressRun?.only_ids?.length ??
+		(progressRun?.target_limit as number | null) ??
+		count ??
+		undefined;
 	const activeRunStatus: ActiveRunStatus = hasRealtimeActive
 		? "running"
 		: ((activeRun?.status as ActiveRunStatus) ?? null);
@@ -403,7 +438,19 @@ export function MigrationLiveView({
 				</div>
 			)}
 
-			<StepIndicator step={step} onStepChange={onStepChange}>
+			<StepIndicator
+				step={step}
+				onStepChange={onStepChange}
+				stepMeta={{
+					live: progressCounts ? (
+						<ExecutionProgressBadge
+							completed={progressCounts.completed}
+							running={progressCounts.running}
+							target={progressTarget}
+						/>
+					) : null,
+				}}
+			>
 				{activeRun && (
 					<Button
 						variant="secondary"
@@ -451,10 +498,7 @@ export function MigrationLiveView({
 					</DropdownMenu>
 				</div>
 
-				<Dialog
-					open={isCancelDialogOpen}
-					onOpenChange={setIsCancelDialogOpen}
-				>
+				<Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
 					<DialogContent showCloseButton={false}>
 						<DialogHeader>
 							<DialogTitle>Cancel running migration?</DialogTitle>
@@ -517,6 +561,13 @@ export function MigrationLiveView({
 							operations={operations}
 							noBillingChanges={noBillingChanges}
 						/>
+						{isAdmin && (
+							<AdminMigrationRunControls
+								value={runControls}
+								onChange={setRunControls}
+								invalidConcurrency={hasInvalidConcurrency}
+							/>
+						)}
 						<DialogFooter>
 							<Button
 								variant="secondary"
@@ -526,9 +577,10 @@ export function MigrationLiveView({
 							</Button>
 							<Button
 								variant="primary"
+								disabled={hasInvalidConcurrency}
 								onClick={() => {
 									setIsRunDialogOpen(false);
-									triggerRun({ dryRun: false });
+									triggerRun({ dryRun: false, ...adminRunControls });
 								}}
 							>
 								<PlayIcon size={14} weight="fill" />
@@ -553,9 +605,7 @@ export function MigrationLiveView({
 							<div className="flex border-b border-border">
 								<button
 									type="button"
-									onClick={() =>
-										setSample((s) => ({ ...s, mode: "limit" }))
-									}
+									onClick={() => setSample((s) => ({ ...s, mode: "limit" }))}
 									className={cn(
 										"flex-1 pb-2 text-sm font-medium transition-colors border-b-2 -mb-px",
 										sample.mode === "limit"
@@ -567,9 +617,7 @@ export function MigrationLiveView({
 								</button>
 								<button
 									type="button"
-									onClick={() =>
-										setSample((s) => ({ ...s, mode: "select" }))
-									}
+									onClick={() => setSample((s) => ({ ...s, mode: "select" }))}
 									className={cn(
 										"flex-1 pb-2 text-sm font-medium transition-colors border-b-2 -mb-px",
 										sample.mode === "select"
@@ -583,9 +631,9 @@ export function MigrationLiveView({
 							<div className="min-h-[220px]">
 								{sample.mode === "limit" ? (
 									<div className="flex flex-col gap-1.5">
-										<label className="text-xs text-tertiary-foreground">
+										<div className="text-xs text-tertiary-foreground">
 											Number of customers
-										</label>
+										</div>
 										<Input
 											type="number"
 											min={1}
@@ -612,9 +660,9 @@ export function MigrationLiveView({
 									</div>
 								) : (
 									<div className="flex flex-col gap-1.5">
-										<label className="text-xs text-tertiary-foreground">
+										<div className="text-xs text-tertiary-foreground">
 											Select customers to run
-										</label>
+										</div>
 										<SampleCustomerPicker
 											customers={enrichedCustomers}
 											selectedIds={sample.customerIds}
@@ -625,6 +673,14 @@ export function MigrationLiveView({
 									</div>
 								)}
 							</div>
+							{isAdmin && (
+								<AdminMigrationRunControls
+									value={runControls}
+									onChange={setRunControls}
+									invalidConcurrency={hasInvalidConcurrency}
+									lazyDisabled={sample.mode === "select"}
+								/>
+							)}
 						</div>
 						<DialogFooter className="sm:flex-col gap-2">
 							<ShortcutButton
@@ -633,6 +689,7 @@ export function MigrationLiveView({
 								isLoading={sample.running === "dry"}
 								disabled={
 									sample.running !== null ||
+									hasInvalidConcurrency ||
 									(sample.mode === "limit"
 										? !sample.limit || Number(sample.limit) < 1
 										: sample.customerIds.length === 0)
@@ -647,11 +704,13 @@ export function MigrationLiveView({
 										await triggerRun({
 											dryRun: true,
 											only: topIds,
+											...adminRunControls,
 										});
 									} else {
 										await triggerRun({
 											dryRun: true,
 											only: sample.customerIds,
+											...adminRunControls,
 										});
 									}
 									setSample((s) => ({ ...s, running: null, open: false }));
@@ -669,6 +728,7 @@ export function MigrationLiveView({
 								isLoading={sample.running === "live"}
 								disabled={
 									sample.running !== null ||
+									hasInvalidConcurrency ||
 									(sample.mode === "limit"
 										? !sample.limit || Number(sample.limit) < 1
 										: sample.customerIds.length === 0)
@@ -679,11 +739,13 @@ export function MigrationLiveView({
 										await triggerRun({
 											dryRun: false,
 											limit: Number(sample.limit),
+											...adminRunControls,
 										});
 									} else {
 										await triggerRun({
 											dryRun: false,
 											only: sample.customerIds,
+											...adminRunControls,
 										});
 									}
 									setSample((s) => ({ ...s, running: null, open: false }));
@@ -789,6 +851,99 @@ export function MigrationLiveView({
 					</Table.Content>
 				</Table.Container>
 			</Table.Provider>
+		</div>
+	);
+}
+
+function ExecutionProgressBadge({
+	completed,
+	running,
+	target,
+}: {
+	completed: number;
+	running: number;
+	target?: number;
+}) {
+	if (completed === 0 && running === 0) return null;
+
+	const completedLabel = target
+		? `${completed.toLocaleString()} / ${target.toLocaleString()}`
+		: completed.toLocaleString();
+
+	return (
+		<Badge variant="muted" className="ml-1 text-[11px]">
+			{completedLabel} done
+			{running > 0 && `, ${running.toLocaleString()} running`}
+		</Badge>
+	);
+}
+
+function AdminMigrationRunControls({
+	value,
+	onChange,
+	invalidConcurrency,
+	lazyDisabled = false,
+}: {
+	value: AdminRunControls;
+	onChange: (value: AdminRunControls) => void;
+	invalidConcurrency: boolean;
+	lazyDisabled?: boolean;
+}) {
+	const concurrencyInputId = useId();
+
+	return (
+		<div className="rounded-lg border border-border bg-muted/20 p-3">
+			<div className="mb-3 text-xs font-medium text-muted-foreground">
+				Admin run controls
+			</div>
+			<div className="grid gap-3 sm:grid-cols-[1fr_140px]">
+				<div
+					className={cn(
+						"flex items-start gap-2 text-sm",
+						lazyDisabled && "opacity-50",
+					)}
+				>
+					<Checkbox
+						checked={value.lazyRun && !lazyDisabled}
+						disabled={lazyDisabled}
+						onCheckedChange={(checked) =>
+							onChange({ ...value, lazyRun: checked === true })
+						}
+						className="mt-0.5"
+					/>
+					<span className="flex flex-col gap-0.5">
+						<span className="font-medium text-foreground">Lazy run</span>
+						<span className="text-xs text-tertiary-foreground">
+							Background run also migrates customers on request.
+						</span>
+					</span>
+				</div>
+				<div className="flex flex-col gap-1.5">
+					<label
+						htmlFor={concurrencyInputId}
+						className="text-xs text-tertiary-foreground"
+					>
+						Concurrency
+					</label>
+					<Input
+						id={concurrencyInputId}
+						type="number"
+						min={1}
+						step={1}
+						value={value.concurrency}
+						onChange={(event) =>
+							onChange({ ...value, concurrency: event.target.value })
+						}
+						placeholder="Default"
+						className={cn(invalidConcurrency && "border-red-500")}
+					/>
+					{invalidConcurrency && (
+						<span className="text-xs text-red-500">
+							Use a whole number &gt;= 1
+						</span>
+					)}
+				</div>
+			</div>
 		</div>
 	);
 }
@@ -921,14 +1076,10 @@ function SampleCustomerPicker({
 								<div
 									className={cn(
 										"size-4 rounded border flex items-center justify-center shrink-0",
-										isSelected
-											? "border-primary bg-primary"
-											: "border-border",
+										isSelected ? "border-primary bg-primary" : "border-border",
 									)}
 								>
-									{isSelected && (
-										<CheckIcon size={10} className="text-white" />
-									)}
+									{isSelected && <CheckIcon size={10} className="text-white" />}
 								</div>
 								<span className="flex-1 truncate text-foreground">
 									{c.name || c.id || c.internal_id}

@@ -1039,12 +1039,14 @@ export class AutumnInt {
 			dry_run?: boolean;
 			only?: string[];
 			limit?: number;
+			concurrency?: number;
 			lazy_run?: boolean;
 			retry_failed?: boolean;
 		}): Promise<{
 			migration_id: string;
 			dry_run: boolean;
 			lazy_run: boolean;
+			concurrency?: number;
 			run_id: string;
 		}> => {
 			const data = await this.post(`/migrations.run`, params);
@@ -1052,6 +1054,7 @@ export class AutumnInt {
 				migration_id: string;
 				dry_run: boolean;
 				lazy_run: boolean;
+				concurrency?: number;
 				run_id: string;
 			};
 		},
