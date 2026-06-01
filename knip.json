@@ -77,6 +77,10 @@
 			"project": ["src/**/*.{ts,tsx}"],
 			"ignoreDependencies": ["shadcn", "tailwindcss", "tw-animate-css"]
 		},
+		"apps/chat": {
+			"entry": ["src/**/*.test.ts"],
+			"project": ["src/**/*.ts"]
+		},
 		"packages/ksuid": {
 			"project": ["src/**/*.ts"]
 		},

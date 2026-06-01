@@ -103,6 +103,21 @@ describe("MCP OAuth auth resolution", () => {
 		}
 	});
 
+	test("accepts a static secret-key when OAuth is enabled", async () => {
+		const auth = await buildAuthForRequest(
+			new Headers({
+				host: "localhost:2718",
+				"secret-key": "am_sk_test_chat",
+			}),
+			flags as MCPOAuthFlags,
+			logger,
+		);
+
+		expect(auth.apiKey).toBe("am_sk_test_chat");
+		expect(auth.principalId).toStartWith("secret-key:");
+		expect(auth.resource).toBe("http://localhost:2718/mcp");
+	});
+
 	test("uses route-specific resource URLs", async () => {
 		const originalFetch = globalThis.fetch;
 		globalThis.fetch = (async (_url, init) => {

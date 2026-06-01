@@ -24,6 +24,11 @@
 			"types": "./api/publicApiSchemas.ts",
 			"import": "./api/publicApiSchemas.ts",
 			"default": "./api/publicApiSchemas.ts"
+		},
+		"./utils/chatState": {
+			"types": "./utils/chatState.ts",
+			"import": "./utils/chatState.ts",
+			"default": "./utils/chatState.ts"
 		}
 	},
 	"author": "Recase Inc.",

@@ -1,0 +1,94 @@
+import { randomUUID } from "node:crypto";
+import { AppEnv, apiKeys, chatInstallations } from "@autumn/shared";
+import { createChatInstallState } from "@autumn/shared/utils/chatState";
+import { addMinutes } from "date-fns";
+import { and, eq } from "drizzle-orm";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import {
+	createSlackInstallUrl,
+	getChatStateSecret,
+	getMissingSlackScopes,
+	slackProvider,
+} from "./chatUtils.js";
+
+export class ChatService {
+	static async listInstallations(ctx: AutumnContext) {
+		const installations = await ctx.db.query.chatInstallations.findMany({
+			where: and(
+				eq(chatInstallations.org_id, ctx.org.id),
+				eq(chatInstallations.provider, slackProvider),
+			),
+		});
+
+		return installations.map((installation) => {
+			const missingScopes = getMissingSlackScopes(installation.scopes);
+			return {
+				connected: true,
+				provider: installation.provider,
+				workspace_id: installation.workspace_id,
+				workspace_name: installation.workspace_name,
+				bot_user_id: installation.bot_user_id,
+				default_env: installation.default_env,
+				scopes: installation.scopes,
+				missing_scopes: missingScopes,
+				needs_reconnect: missingScopes.length > 0,
+				created_at: installation.created_at,
+				updated_at: installation.updated_at,
+			};
+		});
+	}
+
+	static createInstallUrl(ctx: AutumnContext, env = AppEnv.Live) {
+		const state = createChatInstallState({
+			secret: getChatStateSecret(),
+			provider: slackProvider,
+			orgId: ctx.org.id,
+			userId: ctx.userId ?? "",
+			env,
+			expiresAt: addMinutes(Date.now(), 10).getTime(),
+			nonce: randomUUID(),
+		});
+		const url = createSlackInstallUrl(state);
+
+		console.info("[chat] Created install URL", {
+			provider: slackProvider,
+			orgId: ctx.org.id,
+			env,
+			redirectUri:
+				new URL(url).searchParams.get("redirect_uri") ?? "Slack app default",
+		});
+
+		return url;
+	}
+
+	static async disconnect(ctx: AutumnContext) {
+		const installation = await ctx.db.query.chatInstallations.findFirst({
+			where: and(
+				eq(chatInstallations.org_id, ctx.org.id),
+				eq(chatInstallations.provider, slackProvider),
+			),
+		});
+
+		if (!installation) return;
+
+		const keyIds = [
+			installation.sandbox_api_key_id,
+			installation.live_api_key_id,
+		].filter((id): id is string => !!id);
+
+		for (const id of keyIds) {
+			await ctx.db
+				.delete(apiKeys)
+				.where(and(eq(apiKeys.id, id), eq(apiKeys.org_id, ctx.org.id)));
+		}
+
+		await ctx.db
+			.delete(chatInstallations)
+			.where(
+				and(
+					eq(chatInstallations.org_id, ctx.org.id),
+					eq(chatInstallations.provider, slackProvider),
+				),
+			);
+	}
+}

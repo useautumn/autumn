@@ -3,6 +3,10 @@
 // Analytics Tables
 import { actions } from "../models/analyticsModels/actionTable.js";
 import { chatResults } from "../models/chatResultModels/chatResultTable.js";
+import {
+	chatApprovals,
+	chatInstallations,
+} from "../models/chatModels/chatTable.js";
 import { checkoutsRelations } from "../models/checkouts/checkoutRelations.js";
 import { checkouts } from "../models/checkouts/checkoutTable.js";
 import { autoTopupLimitStates } from "../models/cusModels/billingControls/autoTopupLimitTable.js";
@@ -100,6 +104,8 @@ export {
 	apiKeyRelations,
 	apiKeys,
 	autoTopupLimitStates as autoTopupLimits,
+	chatApprovals,
+	chatInstallations,
 	chatResults,
 	checkouts,
 	checkoutsRelations,
