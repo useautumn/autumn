@@ -1,0 +1,21 @@
+DESCRIPTION >
+    Hourly aggregates keyed by apiKeyId, which is pre-extracted from properties into a
+    sorted String column. The apiKeyId-grouped events.aggregate path reads this column
+    instead of parsing properties JSON per row, and the customer_id-leading sort key prunes
+    to a single customer's parts. Same MergeTree + insert-time GROUP BY + query-time sum()
+    pattern as events_hourly_mv. Only rows with a non-empty apiKeyId are materialized.
+
+SCHEMA >
+    `org_id` String,
+    `env` String,
+    `customer_id` String,
+    `entity_id` String DEFAULT '',
+    `event_name` String,
+    `api_key_id` String,
+    `hour` DateTime,
+    `total_value` Float64,
+    `event_count` UInt64
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(hour)"
+ENGINE_SORTING_KEY "org_id, env, customer_id, entity_id, event_name, hour, api_key_id"

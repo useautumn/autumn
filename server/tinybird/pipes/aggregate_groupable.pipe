@@ -2,6 +2,7 @@ DESCRIPTION >
     Aggregate queries with grouping by a property key, customer_id, or entity_id.
     Routes to the smallest viable MV for the query shape:
       - events_hourly_no_properties_two_mv: customer_id/entity_id grouping with no property filters
+      - events_hourly_apikey_mv:             group by properties.apiKeyId with no property filters (apiKeyId pre-extracted to a column)
       - events_hourly_mv:                    arbitrary properties or filtered queries
     Uses PER-BIN TOP N groups + "AUTUMN_RESERVED" bucket ((N+1) max total per bin).
     N is controlled by the max_groups parameter (default 9).
@@ -16,6 +17,7 @@ SQL >
     %
     {% set no_property_filters = (not defined(filter_key_0) or String(filter_key_0, '') == '') and (not defined(filter_key_1) or String(filter_key_1, '') == '') and (not defined(filter_key_2) or String(filter_key_2, '') == '') and (not defined(filter_key_3) or String(filter_key_3, '') == '') and (not defined(filter_key_4) or String(filter_key_4, '') == '') %}
     {% set use_no_props = (String(group_column, 'property') in ['customer_id', 'entity_id', 'plan_id']) and no_property_filters %}
+    {% set use_apikey = (String(group_column, 'property') == 'property') and (String(property_key, '') == 'apiKeyId') and no_property_filters %}
 
     SELECT
         {% if String(bin_size, 'day') == 'hour' %}
@@ -32,6 +34,8 @@ SQL >
         entity_id as group_value,
         {% elif String(group_column, 'property') == 'plan_id' %}
         coalesce(internal_product_id, '') as group_value,
+        {% elif use_apikey %}
+        api_key_id as group_value,
         {% else %}
         {{ column('properties.' + String(property_key, '')) }}::String as group_value,
         {% end %}
@@ -39,6 +43,8 @@ SQL >
     FROM
         {% if use_no_props %}
         events_hourly_no_properties_two_mv
+        {% elif use_apikey %}
+        events_hourly_apikey_mv
         {% else %}
         events_hourly_mv
         {% end %}
@@ -73,6 +79,8 @@ SQL >
         {# Filter out null/empty grouping values #}
         {% if String(group_column, 'property') == 'entity_id' %}
         AND entity_id IS NOT NULL AND entity_id != ''
+        {% elif use_apikey %}
+        AND api_key_id != ''
         {% elif String(group_column, 'property') == 'property' %}
         AND {{ column('properties.' + String(property_key, '')) }}::String IS NOT NULL
         AND {{ column('properties.' + String(property_key, '')) }}::String != ''
@@ -83,7 +91,7 @@ NODE ranked
 SQL >
     SELECT
         *,
-        row_number() OVER (PARTITION BY period, event_name ORDER BY total_value DESC) as rn
+        row_number() OVER (PARTITION BY period, event_name ORDER BY total_value DESC, group_value ASC) as rn
     FROM base
 
 NODE endpoint

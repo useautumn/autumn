@@ -1,0 +1,23 @@
+DESCRIPTION >
+    Materializes events into hourly aggregates with apiKeyId extracted from properties.
+    Feeds events_hourly_apikey_mv so apiKeyId-grouped queries avoid per-row JSON parsing.
+    Only events carrying a non-empty properties.apiKeyId are kept.
+
+NODE materialize
+SQL >
+    SELECT
+        org_id,
+        env,
+        customer_id,
+        coalesce(entity_id, '') as entity_id,
+        event_name,
+        properties.apiKeyId::String as api_key_id,
+        toStartOfHour(timestamp) as hour,
+        sum(toFloat64(coalesce(value, 1))) as total_value,
+        count() as event_count
+    FROM events
+    WHERE properties.apiKeyId::String != ''
+    GROUP BY org_id, env, customer_id, entity_id, event_name, api_key_id, hour
+
+TYPE materialized
+DATASOURCE events_hourly_apikey_mv

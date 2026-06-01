@@ -1,0 +1,31 @@
+DESCRIPTION >
+    One-off chunked backfill of events_hourly_apikey_mv from the existing events datasource.
+    SQL mirrors events_hourly_apikey_mv_pipe exactly so backfilled rows are identical to
+    forward-materialized ones. Reads from `events` (already in Tinybird) — NOT from Postgres —
+    so it writes ONLY this MV, never the other six.
+
+    Seam safety: MergeTree does not dedup. Run this ONLY for [start_date, end_date) windows
+    whose hours are strictly older than the month the forward trigger went live, and let the
+    trigger own the current partial month. Half-open window so day/month chunks never overlap.
+
+NODE migrate
+SQL >
+    %
+    SELECT
+        org_id,
+        env,
+        customer_id,
+        coalesce(entity_id, '') as entity_id,
+        event_name,
+        properties.apiKeyId::String as api_key_id,
+        toStartOfHour(timestamp) as hour,
+        sum(toFloat64(coalesce(value, 1))) as total_value,
+        count() as event_count
+    FROM events
+    WHERE properties.apiKeyId::String != ''
+      AND timestamp >= {{DateTime(start_date, '2026-03-01 00:00:00')}}
+      AND timestamp < {{DateTime(end_date, '2026-06-01 00:00:00')}}
+    GROUP BY org_id, env, customer_id, entity_id, event_name, api_key_id, hour
+
+TYPE COPY
+TARGET_DATASOURCE events_hourly_apikey_mv
