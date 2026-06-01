@@ -299,7 +299,9 @@ export function InvoiceDetailSheet({
 					{invoice.amount_paid != null &&
 						invoice.amount_paid !== invoice.total && (
 							<div className="flex items-center justify-between">
-								<span className="text-sm text-muted-foreground">Amount Paid</span>
+								<span className="text-sm text-muted-foreground">
+									Amount Paid
+								</span>
 								<span className="text-sm tabular-nums text-muted-foreground">
 									{formatSignedAmount(invoice.amount_paid, invoice.currency)}
 								</span>
@@ -308,7 +310,9 @@ export function InvoiceDetailSheet({
 					{invoice.refunded_amount > 0 && (
 						<>
 							<div className="flex items-center justify-between">
-								<span className="text-sm text-tertiary-foreground">Refunded</span>
+								<span className="text-sm text-tertiary-foreground">
+									Refunded
+								</span>
 								<span className="text-sm text-amber-500 tabular-nums">
 									-{formatAmount(invoice.refunded_amount, invoice.currency)}
 								</span>
@@ -342,7 +346,9 @@ export function InvoiceDetailSheet({
 					<InfoRow
 						icon={<ProcessorIcon processor={invoiceProcessor} size={16} />}
 						label="Processor"
-						value={<span className="text-sm text-foreground">{processorLabel}</span>}
+						value={
+							<span className="text-sm text-foreground">{processorLabel}</span>
+						}
 					/>
 					<InfoRow
 						icon={<CreditCardIcon size={16} weight="duotone" />}
@@ -389,14 +395,14 @@ export function InvoiceDetailSheet({
 					</Button>
 				)}
 			</div>
-		{canRefund && (
-			<RefundInvoiceDialog
-				open={refundDialogOpen}
-				onOpenChange={setRefundDialogOpen}
-				invoice={invoice}
-			/>
-		)}
-	</div>
+			{canRefund && (
+				<RefundInvoiceDialog
+					open={refundDialogOpen}
+					onOpenChange={setRefundDialogOpen}
+					invoice={invoice}
+				/>
+			)}
+		</div>
 	);
 }
 
@@ -456,7 +462,9 @@ function LineItemGroupRow({
 							)}
 						</div>
 						{firstItem.description && (
-							<span className="text-xs text-tertiary-foreground">{firstItem.description}</span>
+							<span className="text-xs text-tertiary-foreground">
+								{firstItem.description}
+							</span>
 						)}
 						{period && <span className="text-xs text-subtle">{period}</span>}
 					</div>
@@ -484,7 +492,10 @@ function LineItemGroupRow({
 	const paidAmount = firstItem.amount_after_discounts ?? firstItem.amount;
 
 	return (
-		<AdminHover texts={getLineItemHoverTexts(firstItem)}>
+		<AdminHover
+			texts={getLineItemHoverTexts(firstItem)}
+			triggerClassName="flex flex-col w-full"
+		>
 			<div className="flex flex-col py-1">
 				<div className="flex items-start justify-between gap-2">
 					<div className="flex flex-col min-w-0 flex-1 gap-0.5">
@@ -506,7 +517,9 @@ function LineItemGroupRow({
 							) : null}
 						</div>
 						{firstItem.description && (
-							<span className="text-xs text-tertiary-foreground">{firstItem.description}</span>
+							<span className="text-xs text-tertiary-foreground">
+								{firstItem.description}
+							</span>
 						)}
 						{period && <span className="text-xs text-subtle">{period}</span>}
 					</div>
@@ -563,7 +576,7 @@ function TierRow({
 	const isRefund = item.direction === "refund";
 
 	return (
-		<AdminHover texts={hoverTexts}>
+		<AdminHover texts={hoverTexts} triggerClassName="flex flex-col w-full">
 			<div className="flex items-center justify-between text-xs text-tertiary-foreground">
 				<span>{item.description}</span>
 				<span
