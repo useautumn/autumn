@@ -7,6 +7,12 @@ import { eventActions } from "../actions/eventActions.js";
 
 const InternalListRawEventsSchema = z.object({
 	interval: z.string().nullish(),
+	custom_range: z
+		.object({ start: z.number(), end: z.number() })
+		.refine((range) => range.start < range.end, {
+			message: "custom_range.start must be before custom_range.end",
+		})
+		.optional(),
 	customer_id: z.string().nullish(),
 	entity_id: z.string().optional(),
 });
@@ -20,7 +26,8 @@ export const handleInternalListRawEvents = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org, env } = ctx;
-		const { interval, customer_id, entity_id } = c.req.valid("json");
+		const { interval, custom_range, customer_id, entity_id } =
+			c.req.valid("json");
 
 		let aggregateAll = false;
 		let customer: FullCustomer | undefined;
@@ -52,6 +59,7 @@ export const handleInternalListRawEvents = createRoute({
 				customer_id: customer?.id ?? undefined,
 				entity_id: entity_id,
 				interval: interval ?? undefined,
+				custom_range: custom_range ?? undefined,
 				customer,
 				aggregateAll,
 			},
