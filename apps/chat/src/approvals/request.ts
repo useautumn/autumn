@@ -8,7 +8,10 @@ export const approvalRequestFromOutput = (output: AgentOutput) => {
 			toolCallId: output.suspendPayload.toolCallId,
 			toolName: output.suspendPayload.toolName,
 			toolArgs: output.suspendPayload.args ?? {},
-			preview: output.text || output.suspendPayload.args,
+			preview:
+				output.text ||
+				output.previewApproval?.preview ||
+				output.suspendPayload.args,
 		};
 	}
 

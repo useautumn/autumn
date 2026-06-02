@@ -1,4 +1,4 @@
-import type { ChatInstallation } from "@autumn/shared";
+import type { ChatApproval, ChatInstallation } from "@autumn/shared";
 import type { ActionEvent } from "chat";
 import {
 	approveAndRun,
@@ -60,18 +60,18 @@ export const postApprovalRequest = async ({
 	return true;
 };
 
-const approvalDetails = async (id: string) => {
-	const approval = await getApproval(id);
-	return {
-		toolName: approval?.tool_name ?? "billing action",
-		toolArgs:
-			approval?.tool_args && typeof approval.tool_args === "object"
-				? (approval.tool_args as Record<string, unknown>)
-				: undefined,
-		preview: approval?.preview,
-		env: approval?.env,
-	};
-};
+const detailsFromApproval = (approval?: ChatApproval) => ({
+	toolName: approval?.tool_name ?? "billing action",
+	toolArgs:
+		approval?.tool_args && typeof approval.tool_args === "object"
+			? (approval.tool_args as Record<string, unknown>)
+			: undefined,
+	preview: approval?.preview,
+	env: approval?.env,
+});
+
+const approvalDetails = async (id: string) =>
+	detailsFromApproval(await getApproval(id));
 
 const editActionMessage = async (
 	event: ActionEvent,
@@ -128,11 +128,12 @@ export const handleApprovalAction = async (event: ActionEvent) => {
 		);
 	} catch (error) {
 		console.error("[chat] Approval action failed", error);
+		const current = await getApproval(event.value);
 		await editActionMessage(
 			event,
 			approvalStatusCard({
-				status: "failed",
-				toolName: "billing action",
+				status: cardStatusForApproval(current?.status),
+				...detailsFromApproval(current),
 			}),
 		);
 	}

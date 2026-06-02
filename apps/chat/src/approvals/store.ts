@@ -6,7 +6,7 @@ import {
 	chatInstallations,
 } from "@autumn/shared";
 import { addMinutes, isPast } from "date-fns";
-import { and, eq } from "drizzle-orm";
+import { and, eq, gt } from "drizzle-orm";
 import { decrypt } from "../lib/crypto.js";
 import { db } from "../lib/db.js";
 import { executeAutumnMcpTool } from "../agent/mcp.js";
@@ -100,7 +100,13 @@ export const approveAndRun = async (id: string, providerUserId: string) => {
 			decided_at: Date.now(),
 			decided_by_provider_user_id: providerUserId,
 		})
-		.where(and(eq(chatApprovals.id, id), eq(chatApprovals.status, "pending")))
+		.where(
+			and(
+				eq(chatApprovals.id, id),
+				eq(chatApprovals.status, "pending"),
+				gt(chatApprovals.expires_at, Date.now()),
+			),
+		)
 		.returning();
 	if (!claimed) throw new Error("Approval is no longer pending");
 
