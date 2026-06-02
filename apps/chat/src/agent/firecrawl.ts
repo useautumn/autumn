@@ -74,7 +74,7 @@ export const createFirecrawlTools = ({
 			id: "scrapeUrl",
 			description:
 				"Read one public web page as markdown after searchWeb identifies a relevant URL.",
-			inputSchema: z.object({ url: z.url() }).strict(),
+			inputSchema: z.object({ url: z.string().url() }).strict(),
 			execute: async ({ url }) => {
 				await onAction?.("Reading page");
 				const page = await firecrawl.scrape(url, { formats: ["markdown"] });
