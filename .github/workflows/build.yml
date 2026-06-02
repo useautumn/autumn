@@ -15,7 +15,9 @@ on:
         default: 'manual'
 
 env:
-  AWS_REGION: us-west-2
+  # ECR region is selected per-branch in the "Extract metadata" step:
+  #   prod repo (autumn)         -> us-east-2
+  #   staging repo (autumn-staging) -> us-east-1
   # Branches allowed to deploy to staging via workflow_dispatch with tag=deploy-staging.
   # Add short-lived PR branches here when you need staging without merging to dev.
   STAGING_DEPLOY_BRANCH_ALLOWLIST: fix-health-check-redis-disabled-detection feat/track-rate-limit-redis
@@ -55,17 +57,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-      
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
-      
       - name: Extract metadata for Docker
         id: meta
         env:
@@ -103,17 +94,30 @@ jobs:
           echo "sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
           echo "deploy_staging_override=$DEPLOY_STAGING_OVERRIDE" >> $GITHUB_OUTPUT
           
-          # Select ECR repository based on branch
+          # Select ECR repository + region based on branch
           if [ "$BRANCH_NAME" = "dev" ] || [ "$DEPLOY_STAGING_OVERRIDE" = "true" ]; then
             echo "ecr_repo=autumn-staging" >> $GITHUB_OUTPUT
+            echo "region=us-east-1" >> $GITHUB_OUTPUT
           else
             echo "ecr_repo=autumn" >> $GITHUB_OUTPUT
+            echo "region=us-east-2" >> $GITHUB_OUTPUT
           fi
           
           # Set custom tag if provided
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ -n "${{ github.event.inputs.tag }}" ]; then
             echo "custom_tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
           fi
+      
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ steps.meta.outputs.region }}
+      
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
       
       - name: Set up Blacksmith Docker builder
         uses: useblacksmith/setup-docker-builder@v1
