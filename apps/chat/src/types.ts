@@ -32,7 +32,7 @@ export const agentOutputSchema = z.preprocess(
 	},
 	z.strictObject({
 		text: z.string().optional(),
-		env: z.enum(AppEnv),
+		env: z.nativeEnum(AppEnv),
 		finishReason: z.string().optional(),
 		runId: z.string().optional(),
 		suspendPayload: z

@@ -23,7 +23,7 @@ Preview billing-impacting changes first, summarize the preview in short Slack-fr
 The runtime pauses destructive tools for approval before execution, so do not ask for confirmation in plain text.`;
 
 const envSelectionSchema = z.strictObject({
-	env: z.enum(AppEnv),
+	env: z.nativeEnum(AppEnv),
 });
 
 const recentMessageContext = (messages: ChatContextMessage[] = []) =>
