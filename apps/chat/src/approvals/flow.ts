@@ -5,6 +5,7 @@ import {
 	cancelApproval,
 	createApproval,
 	getApproval,
+	isErrorResult,
 } from "./store.js";
 import { approvalRequestFromOutput } from "./request.js";
 import { approvalCard, approvalStatusCard } from "../ui/blocks.js";
@@ -79,13 +80,32 @@ const editActionMessage = async (
 	await event.adapter.editMessage?.(event.threadId, event.messageId, content);
 };
 
+const cardStatusForApproval = (
+	status?: string,
+): "approved" | "cancelled" | "failed" | "running" => {
+	if (status === "approved" || status === "cancelled" || status === "running")
+		return status;
+	return "failed";
+};
+
 export const handleApprovalAction = async (event: ActionEvent) => {
 	if (!event.value) return;
 
 	try {
 		const details = await approvalDetails(event.value);
 		if (event.actionId === "cancel_billing_action") {
-			await cancelApproval(event.value, event.user.userId);
+			const cancelled = await cancelApproval(event.value, event.user.userId);
+			if (!cancelled) {
+				const current = await getApproval(event.value);
+				await editActionMessage(
+					event,
+					approvalStatusCard({
+						status: cardStatusForApproval(current?.status),
+						...details,
+					}),
+				);
+				return;
+			}
 			await editActionMessage(
 				event,
 				approvalStatusCard({ status: "cancelled", ...details }),
@@ -101,21 +121,18 @@ export const handleApprovalAction = async (event: ActionEvent) => {
 		await editActionMessage(
 			event,
 			approvalStatusCard({
-				status:
-					result && typeof result === "object" && "error" in result
-						? "failed"
-						: "approved",
+				status: isErrorResult(result) ? "failed" : "approved",
 				...details,
 				result,
 			}),
 		);
 	} catch (error) {
+		console.error("[chat] Approval action failed", error);
 		await editActionMessage(
 			event,
 			approvalStatusCard({
 				status: "failed",
 				toolName: "billing action",
-				result: error instanceof Error ? error.message : "Approval failed.",
 			}),
 		);
 	}

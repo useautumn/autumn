@@ -96,9 +96,7 @@ const runAndReply = async ({
 		console.error("[chat] Message failed", error);
 		await finishLoading(target, loading, "Request failed.");
 		await target.post({
-			markdown: `I could not complete that request: ${
-				error instanceof Error ? error.message : "unknown error"
-			}`,
+			markdown: "I could not complete that request. Please try again.",
 		});
 	}
 };

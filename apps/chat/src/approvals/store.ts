@@ -14,6 +14,9 @@ import { executeAutumnMcpTool } from "../agent/mcp.js";
 export const normalizeToolName = (toolName: string) =>
 	toolName.replace(/^autumn_/, "");
 
+export const isErrorResult = (result: unknown): boolean =>
+	typeof result === "object" && result !== null && "error" in result;
+
 export const createApproval = async ({
 	orgId,
 	provider,
@@ -61,14 +64,16 @@ export const createApproval = async ({
 };
 
 export const cancelApproval = async (id: string, providerUserId: string) => {
-	await db
+	const [claimed] = await db
 		.update(chatApprovals)
 		.set({
 			status: "cancelled",
 			decided_at: Date.now(),
 			decided_by_provider_user_id: providerUserId,
 		})
-		.where(and(eq(chatApprovals.id, id), eq(chatApprovals.status, "pending")));
+		.where(and(eq(chatApprovals.id, id), eq(chatApprovals.status, "pending")))
+		.returning();
+	return claimed;
 };
 
 export const getApproval = async (id: string) =>
@@ -102,6 +107,7 @@ export const approveAndRun = async (id: string, providerUserId: string) => {
 	try {
 		const installation = await db.query.chatInstallations.findFirst({
 			where: and(
+				eq(chatInstallations.org_id, claimed.org_id),
 				eq(chatInstallations.provider, claimed.provider),
 				eq(chatInstallations.workspace_id, claimed.workspace_id),
 			),
@@ -122,7 +128,7 @@ export const approveAndRun = async (id: string, providerUserId: string) => {
 		await db
 			.update(chatApprovals)
 			.set({
-				status: "approved",
+				status: isErrorResult(result) ? "failed" : "approved",
 				decided_at: Date.now(),
 				decided_by_provider_user_id: providerUserId,
 			})
