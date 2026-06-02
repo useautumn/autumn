@@ -6,9 +6,12 @@ const bodylessMethods = new Set(["GET", "HEAD"]);
 const proxyChatRequest =
 	(chatInternalUrl: string) => async (c: Context<HonoEnv>) => {
 		const url = new URL(c.req.url);
+		const headers = new Headers(c.req.raw.headers);
+		headers.delete("host");
+
 		return fetch(`${chatInternalUrl}${url.pathname}${url.search}`, {
 			body: bodylessMethods.has(c.req.raw.method) ? undefined : c.req.raw.body,
-			headers: c.req.raw.headers,
+			headers,
 			method: c.req.raw.method,
 			redirect: "manual",
 		} as RequestInit & { duplex: "half" });
