@@ -2,6 +2,7 @@ import {
 	CustomerFilterSchema,
 	customerProducts,
 	customers,
+	MigrationItemKind,
 	products,
 	Scopes,
 } from "@autumn/shared";
@@ -13,8 +14,8 @@ import {
 	countCustomers,
 	filterCustomers,
 } from "@/internal/migrations/v2/filters/customers/filterCustomers.js";
-import { migrationRepo } from "../repos/index.js";
 import type { IncludeProcessed } from "../filters/customers/buildCustomerSelect.js";
+import { migrationItemRunRepo, migrationRepo } from "../repos/index.js";
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -22,7 +23,13 @@ const PreviewFilterBody = z.object({
 	filter: CustomerFilterSchema.optional().default({}),
 	search: z.string().optional().default(""),
 	page: z.number().int().min(0).optional().default(0),
-	pageSize: z.number().int().min(1).max(500).optional().default(DEFAULT_PAGE_SIZE),
+	pageSize: z
+		.number()
+		.int()
+		.min(1)
+		.max(500)
+		.optional()
+		.default(DEFAULT_PAGE_SIZE),
 	migrationId: z.string().optional(),
 	executionStatuses: z
 		.array(z.enum(["succeeded", "skipped", "failed", "not_run"]))
@@ -52,8 +59,10 @@ export const handlePreviewMigrationFilter = createRoute({
 		const searchTerm = search || undefined;
 
 		let includeProcessed: IncludeProcessed | undefined;
+		let migrationInternalId: string | undefined;
 		if (migrationId) {
 			const migration = await migrationRepo.find({ ctx, id: migrationId });
+			migrationInternalId = migration.internal_id;
 			includeProcessed = {
 				migrationInternalId: migration.internal_id,
 				executionFilter:
@@ -70,7 +79,13 @@ export const handlePreviewMigrationFilter = createRoute({
 		const [count, pageRows] = await Promise.all([
 			countCustomers({ ctx, filter, search: searchTerm, includeProcessed }),
 			collectPage(
-				filterCustomers({ ctx, filter, search: searchTerm, includeProcessed, batchSize: pageSize }),
+				filterCustomers({
+					ctx,
+					filter,
+					search: searchTerm,
+					includeProcessed,
+					batchSize: pageSize,
+				}),
 				page * pageSize,
 				pageSize,
 			),
@@ -84,8 +99,24 @@ export const handlePreviewMigrationFilter = createRoute({
 			ctx.db,
 			pageRows.map((r) => r.internal_id),
 		);
+		const itemRuns = migrationInternalId
+			? await migrationItemRunRepo.listForItems({
+					ctx,
+					migrationInternalId,
+					itemKind: MigrationItemKind.Customer,
+					itemIds: pageRows.map((r) => r.internal_id),
+					dryRun: false,
+				})
+			: [];
+		const itemRunsByCustomer = new Map(
+			itemRuns.map((run) => [run.item_id, run]),
+		);
 
-		const grouped = groupByCustomer(enriched);
+		const grouped = groupByCustomer(enriched).map((customer) => ({
+			...customer,
+			migration_item_run:
+				itemRunsByCustomer.get(customer.internal_id as string) ?? null,
+		}));
 
 		return c.json({ count, customers: grouped, page, pageSize });
 	},
@@ -129,8 +160,14 @@ async function enrichCustomers(db: DrizzleCli, ids: string[]) {
 			},
 		})
 		.from(customers)
-		.leftJoin(customerProducts, eq(customers.internal_id, customerProducts.internal_customer_id))
-		.leftJoin(products, eq(customerProducts.internal_product_id, products.internal_id))
+		.leftJoin(
+			customerProducts,
+			eq(customers.internal_id, customerProducts.internal_customer_id),
+		)
+		.leftJoin(
+			products,
+			eq(customerProducts.internal_product_id, products.internal_id),
+		)
 		.where(inArray(customers.internal_id, ids));
 }
 
@@ -139,10 +176,17 @@ function groupByCustomer(rows: Array<Record<string, unknown>>) {
 	for (const row of rows) {
 		const id = row.internal_id as string;
 		if (!map.has(id)) {
-			const { customer_product, product, ...customer } = row;
+			const {
+				customer_product: _customerProduct,
+				product: _product,
+				...customer
+			} = row;
 			map.set(id, { ...customer, customer_products: [] });
 		}
-		if (row.customer_product && (row.customer_product as Record<string, unknown>).id) {
+		if (
+			row.customer_product &&
+			(row.customer_product as Record<string, unknown>).id
+		) {
 			const entry = map.get(id)!;
 			(entry.customer_products as unknown[]).push({
 				...(row.customer_product as Record<string, unknown>),

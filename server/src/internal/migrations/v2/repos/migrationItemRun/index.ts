@@ -7,6 +7,7 @@ import {
 	getMigrationItemRunCounts,
 	listMigrationItemRunCountsByRun,
 } from "./listMigrationItemRunCountsByRun.js";
+import { listMigrationItemRunsForItems } from "./listMigrationItemRunsForItems.js";
 import {
 	markMigrationItemRunFailed,
 	markMigrationItemRunSkipped,
@@ -19,6 +20,7 @@ export const migrationItemRunRepo = {
 	getCustomer: getCustomerMigrationItemRun,
 	getCounts: getMigrationItemRunCounts,
 	listCountsByRun: listMigrationItemRunCountsByRun,
+	listForItems: listMigrationItemRunsForItems,
 	markSucceeded: markMigrationItemRunSucceeded,
 	markSkipped: markMigrationItemRunSkipped,
 	markFailed: markMigrationItemRunFailed,

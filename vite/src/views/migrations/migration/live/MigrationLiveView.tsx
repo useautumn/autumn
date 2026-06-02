@@ -1,8 +1,4 @@
-import type {
-	CustomerWithProducts,
-	MigrationFilter,
-	Operations,
-} from "@autumn/shared";
+import type { MigrationFilter, Operations } from "@autumn/shared";
 import {
 	ArrowSquareOutIcon,
 	CaretDownIcon,
@@ -50,7 +46,10 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/v2/selects/Select";
-import { useMigrationFilterPreview } from "@/hooks/queries/useMigrationFilterPreview";
+import {
+	type MigrationPreviewCustomer,
+	useMigrationFilterPreview,
+} from "@/hooks/queries/useMigrationFilterPreview";
 import {
 	type MigrationItemEvent,
 	useMigrationRunsQuery,
@@ -84,7 +83,7 @@ type AdminRunControls = {
 	concurrency: string;
 };
 
-type CustomerRow = CustomerWithProducts & {
+type CustomerRow = MigrationPreviewCustomer & {
 	_event?: MigrationItemEvent;
 	_activeStatus?: ActiveRunStatus;
 	_activeRunId?: string;
@@ -114,12 +113,32 @@ const statusColumn: ColumnDef<CustomerRow, unknown> = {
 	size: 140,
 	cell: ({ row }: { row: Row<CustomerRow> }) => {
 		const event = row.original._event;
+		const itemRun = row.original.migration_item_run;
 		const activeStatus = row.original._activeStatus;
-		const activeRunId = row.original._activeRunId;
-		const processedInCurrentRun =
-			event && activeRunId && event.migration_run_id === activeRunId;
 
-		if (activeStatus && !processedInCurrentRun) {
+		if (itemRun?.status === "running") {
+			return (
+				<Badge variant="muted" className="gap-1.5">
+					<ActiveDot color="green" />
+					Running
+				</Badge>
+			);
+		}
+
+		if (itemRun?.status && itemRun.status !== "running") {
+			return (
+				<ItemEventStatusBadge
+					status={itemRun.status}
+					dryRun={false}
+					response={event?.status === itemRun.status ? event.response : null}
+					timestamp={
+						event?.status === itemRun.status ? event.timestamp : undefined
+					}
+				/>
+			);
+		}
+
+		if (activeStatus) {
 			const color = activeStatus === "running" ? "green" : "orange";
 			const label = activeStatus === "running" ? "Running" : "Queued";
 			return (
@@ -303,11 +322,14 @@ export function MigrationLiveView({
 	);
 	const progressRun = activeRun ?? latestRun;
 	const progressCounts = progressRun?.item_run_counts;
-	const progressTarget =
+	const runScopedTarget =
 		progressRun?.only_ids?.length ??
 		(progressRun?.target_limit as number | null) ??
-		count ??
 		undefined;
+	const progressTarget =
+		progressCounts && runScopedTarget && progressCounts.total > runScopedTarget
+			? (count ?? progressCounts.total)
+			: (runScopedTarget ?? count ?? undefined);
 	const activeRunStatus: ActiveRunStatus = hasRealtimeActive
 		? "running"
 		: ((activeRun?.status as ActiveRunStatus) ?? null);
@@ -653,7 +675,8 @@ export function MigrationLiveView({
 										<span className="text-xs text-tertiary-foreground">
 											{Math.min(
 												Number(sample.limit) || 0,
-												enrichedCustomers.filter((c) => !c._event).length,
+												enrichedCustomers.filter((c) => !c.migration_item_run)
+													.length,
 											)}{" "}
 											customers
 										</span>
@@ -698,7 +721,7 @@ export function MigrationLiveView({
 									setSample((s) => ({ ...s, running: "dry" }));
 									if (sample.mode === "limit") {
 										const topIds = enrichedCustomers
-											.filter((c) => !c._event)
+											.filter((c) => !c.migration_item_run)
 											.slice(0, Number(sample.limit))
 											.map((c) => c.id ?? c.internal_id);
 										await triggerRun({
@@ -955,7 +978,7 @@ function SampleCustomerPreview({
 	customers: CustomerRow[];
 	limit: number;
 }) {
-	const unrun = customers.filter((c) => !c._event);
+	const unrun = customers.filter((c) => !c.migration_item_run);
 	const previewed = unrun.slice(0, limit);
 	if (limit === 0) return null;
 	return (
