@@ -3,6 +3,7 @@ import { useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useNavigate, useParams } from "react-router";
+import { AdminHover } from "@/components/general/AdminHover";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
@@ -74,7 +75,16 @@ export function MigrationView() {
 									</BreadcrumbItem>
 									<BreadcrumbSeparator />
 									<BreadcrumbItem className="text-muted-foreground">
-										{migration.id}
+										<AdminHover
+											texts={[
+												{
+													key: "Migration internal ID",
+													value: migration.internal_id,
+												},
+											]}
+										>
+											<span>{migration.id}</span>
+										</AdminHover>
 									</BreadcrumbItem>
 								</BreadcrumbList>
 							</Breadcrumb>

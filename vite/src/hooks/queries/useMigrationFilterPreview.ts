@@ -1,18 +1,26 @@
-import type { CustomerFilter, CustomerWithProducts } from "@autumn/shared";
+import type {
+	CustomerFilter,
+	CustomerWithProducts,
+	MigrationItemRun,
+} from "@autumn/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
-import type { ExecutionStatus } from "@/views/migrations/migration/live/ExecutionStatusSubMenu";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
+import type { ExecutionStatus } from "@/views/migrations/migration/live/ExecutionStatusSubMenu";
 
 const DEFAULT_PAGE_SIZE = 10;
 
 interface FilterPreviewResponse {
 	count: number;
-	customers: CustomerWithProducts[];
+	customers: MigrationPreviewCustomer[];
 	page: number;
 	pageSize: number;
 }
+
+export type MigrationPreviewCustomer = CustomerWithProducts & {
+	migration_item_run?: MigrationItemRun | null;
+};
 
 export const useMigrationFilterPreview = ({
 	filter,
