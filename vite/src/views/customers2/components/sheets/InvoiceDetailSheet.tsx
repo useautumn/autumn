@@ -142,7 +142,19 @@ export function InvoiceDetailSheet({
 
 			const productId = productKey === "__unknown__" ? null : productKey;
 			const product = products?.find((p) => p.id === productId);
-			const productName = product?.name ?? productId ?? "Unknown Product";
+			const invoiceProductId =
+				!productId && invoice?.product_ids?.length === 1
+					? invoice.product_ids[0]
+					: null;
+			const invoiceProduct = invoiceProductId
+				? products?.find((p) => p.id === invoiceProductId)
+				: undefined;
+			const productName =
+				product?.name ??
+				invoiceProduct?.name ??
+				productId ??
+				invoiceProductId ??
+				"Custom Item";
 
 			result.push({
 				productId,
@@ -152,7 +164,7 @@ export function InvoiceDetailSheet({
 		}
 
 		return result;
-	}, [lineItems, features, products]);
+	}, [lineItems, features, products, invoice?.product_ids]);
 
 	if (!invoice) return null;
 

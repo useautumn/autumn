@@ -5,7 +5,7 @@ import type {
 	ProductV2,
 } from "@autumn/shared";
 
-const UNKNOWN_PRODUCT_LABEL = "Unknown Product";
+const UNKNOWN_PRODUCT_LABEL = "Custom Item";
 
 type ProductGroup = {
 	productName: string;
@@ -29,11 +29,13 @@ const getFallbackNames = ({
 const resolveProductName = ({
 	productId,
 	products,
+	invoiceFallback,
 }: {
 	productId: string | null;
 	products: ProductV2[];
+	invoiceFallback?: string;
 }): string => {
-	if (!productId) return UNKNOWN_PRODUCT_LABEL;
+	if (!productId) return invoiceFallback ?? UNKNOWN_PRODUCT_LABEL;
 	return products.find((p) => p.id === productId)?.name ?? productId;
 };
 
@@ -54,6 +56,11 @@ export const getInvoiceProductNames = ({
 	features: Feature[];
 }): string => {
 	if (lineItems.length === 0) return getFallbackNames({ invoice, products });
+	const invoiceFallback =
+		invoice.product_ids.length === 1
+			? (products.find((p) => p.id === invoice.product_ids[0])?.name ??
+				invoice.product_ids[0])
+			: undefined;
 	const groups = new Map<string, ProductGroup>();
 	for (const item of lineItems) {
 		const key = item.product_id ?? "__unknown__";
@@ -63,6 +70,7 @@ export const getInvoiceProductNames = ({
 				productName: resolveProductName({
 					productId: item.product_id,
 					products,
+					invoiceFallback,
 				}),
 				featureNames: new Set<string>(),
 			} satisfies ProductGroup);
