@@ -15,7 +15,7 @@ import {
 	migrationItemRunRepo,
 	migrationRunRepo,
 } from "@/internal/migrations/v2/repos/index.js";
-import { waitForMigrationResult } from "../utils/runUpdatePlanMigration.js";
+import { waitForMigrationResult } from "../../utils/runUpdatePlanMigration.js";
 
 const timeout = (ms: number) =>
 	new Promise((resolve) => setTimeout(resolve, ms));

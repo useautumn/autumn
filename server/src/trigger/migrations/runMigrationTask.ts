@@ -91,11 +91,11 @@ export const runMigrationTask = task({
 				run: async () => {
 					const migration = await migrationRepo.find({ ctx, id: migrationId });
 
-					// Default concurrency: 10 normally, 25 when no_billing_changes
+					// Default concurrency: 10 normally, 15 when no_billing_changes
 					// because we're not hitting Stripe per customer. Caller can still
 					// override via controls.concurrency.
 					const defaultConcurrency =
-						migration.no_billing_changes === true ? 25 : 10;
+						migration.no_billing_changes === true ? 15 : 10;
 					const effectiveControls = {
 						...(controls ?? {}),
 						concurrency: controls?.concurrency ?? defaultConcurrency,

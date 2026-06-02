@@ -1066,6 +1066,20 @@ export class AutumnInt {
 			const data = await this.post(`/migrations.lazy_run`, params);
 			return data as { migration_id: string; run_id: string };
 		},
+		cancelRun: async (params: {
+			id: string;
+		}): Promise<{
+			migration_id: string;
+			run_id: string;
+			canceled: boolean;
+		}> => {
+			const data = await this.post(`/migrations.cancel_run`, params);
+			return data as {
+				migration_id: string;
+				run_id: string;
+				canceled: boolean;
+			};
+		},
 		listRuns: async (params: {
 			migrationId: string;
 		}): Promise<{ list: MigrationRun[] }> => {
