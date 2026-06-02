@@ -4,6 +4,7 @@ import { iterateOverFilterResults } from "../iterateOverFilterResults.js";
 import {
 	buildCustomerCount,
 	buildCustomerSelect,
+	buildLimitedCustomerCount,
 	buildProcessedPreviewCount,
 	buildProcessedPreviewSelect,
 	type CustomerCheckpointExclusion,
@@ -28,6 +29,7 @@ export const filterCustomers = ({
 	search,
 	includeProcessed,
 	batchSize,
+	limit,
 }: {
 	ctx: AutumnContext;
 	filter: CustomerFilter;
@@ -35,6 +37,7 @@ export const filterCustomers = ({
 	search?: string;
 	includeProcessed?: IncludeProcessed;
 	batchSize?: number;
+	limit?: number;
 }): AsyncGenerator<CustomerRow[]> => {
 	const args = {
 		orgId: ctx.org.id,
@@ -44,7 +47,7 @@ export const filterCustomers = ({
 		search,
 		ctx: { features: ctx.features },
 	};
-	return iterateOverFilterResults<CustomerRow>({
+	const source = iterateOverFilterResults<CustomerRow>({
 		db: ctx.db,
 		buildSelect: ({ limit, afterInternalId }) =>
 			includeProcessed
@@ -55,8 +58,10 @@ export const filterCustomers = ({
 						afterInternalId,
 					})
 				: buildCustomerSelect({ ...args, limit, afterInternalId }),
-		batchSize,
+		batchSize:
+			limit === undefined ? batchSize : Math.min(batchSize ?? limit, limit),
 	});
+	return limit === undefined ? source : takeRows(source, limit);
 };
 
 /** Count of customers matching `filter`. */
@@ -66,12 +71,14 @@ export const countCustomers = async ({
 	checkpoint,
 	search,
 	includeProcessed,
+	limit,
 }: {
 	ctx: AutumnContext;
 	filter: CustomerFilter;
 	checkpoint?: CustomerCheckpointExclusion;
 	search?: string;
 	includeProcessed?: IncludeProcessed;
+	limit?: number;
 }): Promise<number> => {
 	const args = {
 		orgId: ctx.org.id,
@@ -83,9 +90,26 @@ export const countCustomers = async ({
 	};
 	const query = includeProcessed
 		? buildProcessedPreviewCount({ ...args, includeProcessed })
-		: buildCustomerCount(args);
+		: limit === undefined
+			? buildCustomerCount(args)
+			: buildLimitedCustomerCount({ ...args, limit });
 	const [{ count }] = (await ctx.db.execute(query)) as Array<{
 		count: bigint | number;
 	}>;
 	return Number(count);
 };
+
+async function* takeRows<TRow>(
+	source: AsyncGenerator<TRow[]>,
+	limit: number,
+): AsyncGenerator<TRow[]> {
+	let remaining = limit;
+	if (remaining <= 0) return;
+
+	for await (const batch of source) {
+		const next = batch.slice(0, remaining);
+		if (next.length > 0) yield next;
+		remaining -= next.length;
+		if (remaining <= 0) return;
+	}
+}

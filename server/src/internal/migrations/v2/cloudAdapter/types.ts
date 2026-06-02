@@ -1,5 +1,6 @@
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { RunScopeItem } from "../run/types/runScope.js";
+import type { RetryableMigrationItemRunStatus } from "../run/utils/retryItemStatuses.js";
 
 export type MigrationRunControls = {
 	concurrency?: number;
@@ -7,7 +8,7 @@ export type MigrationRunControls = {
 	only?: string[] | null;
 	checkpoint?: boolean;
 	checkpointDryRun?: boolean;
-	retryFailed?: boolean;
+	retryItemStatuses?: RetryableMigrationItemRunStatus[];
 };
 
 export type MigrationBatchResult<Row extends Record<string, unknown>> = {

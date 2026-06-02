@@ -40,14 +40,10 @@ export const runMigration = async ({
 }): Promise<void> => {
 	const eventMigrationRunId = migrationRunId ?? generateId("mrun");
 	const migrationHooks = composeMigrationHooks({ hooks, plugins });
-	const runtimeMigration =
-		controls?.retryFailed === undefined
-			? migration
-			: { ...migration, retry_failed: controls.retryFailed };
 	const migrationWithEventId = withMigrationEventId({
 		orgId: ctx.org.id,
 		env: ctx.env,
-		migration: runtimeMigration,
+		migration,
 	});
 
 	// Inject default guards (e.g. `custom: false` on version-bumping

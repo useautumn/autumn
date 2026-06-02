@@ -5,15 +5,20 @@ import { warmupRegionalRedis } from "@/external/redis/initUtils/redisWarmup.js";
 import { withMigrationRunTracking } from "@/internal/migrations/v2/actions/migrationRun/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { runMigration } from "@/internal/migrations/v2/run/runMigration.js";
+import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/run/utils/retryItemStatuses.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";
 
-const ControlsSchema = z.object({
-	limit: z.number().int().min(1).optional(),
-	only: z.array(z.string()).optional(),
-	concurrency: z.number().int().min(1).optional(),
-	retryFailed: z.boolean().optional(),
-}).optional();
+const ControlsSchema = z
+	.object({
+		limit: z.number().int().min(1).optional(),
+		only: z.array(z.string()).optional(),
+		concurrency: z.number().int().min(1).optional(),
+		retryItemStatuses: z
+			.array(z.enum(RETRYABLE_MIGRATION_ITEM_RUN_STATUSES))
+			.optional(),
+	})
+	.optional();
 
 const PayloadSchema = z.object({
 	orgId: z.string(),
@@ -37,8 +42,15 @@ export const runMigrationTask = task({
 	machine: "medium-1x",
 	maxDuration: 3600,
 	run: async (rawPayload: unknown, { ctx: triggerCtx }) => {
-		const { orgId, env, migrationId, migrationRunId, dryRun, lazyRun, controls } =
-			PayloadSchema.parse(rawPayload);
+		const {
+			orgId,
+			env,
+			migrationId,
+			migrationRunId,
+			dryRun,
+			lazyRun,
+			controls,
+		} = PayloadSchema.parse(rawPayload);
 
 		const { ctx, logger } = await createTriggerContext({
 			orgId,
@@ -68,6 +80,7 @@ export const runMigrationTask = task({
 				onlyCount: controls?.only?.length,
 				limit: controls?.limit,
 				concurrency: controls?.concurrency,
+				retryItemStatuses: controls?.retryItemStatuses,
 			},
 		});
 
