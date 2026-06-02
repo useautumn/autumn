@@ -45,6 +45,7 @@ const applyUpdate = ({
 	additional_balance: update.additional_balance,
 	adjustment: update.adjustment,
 	entities: update.entities,
+	usage_windows: update.usage_windows ?? customerEntitlement.usage_windows,
 	replaceables: getUpdatedReplaceables({
 		replaceables: customerEntitlement.replaceables,
 		update,

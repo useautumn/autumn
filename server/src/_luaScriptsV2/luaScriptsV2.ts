@@ -44,6 +44,7 @@ import READ_SUBJECT_BALANCES from "./fullSubjectDeduction/readSubjectBalances.lu
 import RUN_DEDUCTION_ON_CONTEXT_V2 from "./fullSubjectDeduction/runDeductionOnContextV2.lua";
 import SPEND_LIMIT_UTILS_V2 from "./fullSubjectDeduction/spendLimitUtilsV2.lua";
 import UPDATE_AGGREGATED_BALANCES from "./fullSubjectDeduction/updateAggregatedBalances.lua";
+import USAGE_WINDOW_UTILS_V2 from "./fullSubjectDeduction/usageWindowUtilsV2.lua";
 
 // ============================================================================
 // UPDATE SUBJECT BALANCES HELPERS (V2 cache — per-feature hash updates)
@@ -205,6 +206,7 @@ ${GET_TOTAL_BALANCE}
 ${DEDUCT_FROM_ROLLOVERS_V2}
 ${DEDUCT_FROM_MAIN_BALANCE_V2}
 ${SPEND_LIMIT_UTILS_V2}
+${USAGE_WINDOW_UTILS_V2}
 ${RUN_DEDUCTION_ON_CONTEXT_V2}
 ${MUTATION_ITEM_UTILS}
 ${LOCK_RECEIPT_UTILS_V2}

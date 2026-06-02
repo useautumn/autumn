@@ -9,6 +9,7 @@ export enum RedisDeductionErrorCode {
 	SkipCache = "SKIP_CACHE",
 	LockAlreadyExists = "LOCK_ALREADY_EXISTS",
 	DuplicateIdempotencyKey = "DUPLICATE_IDEMPOTENCY_KEY",
+	UsageLimitExceeded = "USAGE_LIMIT_EXCEEDED",
 }
 
 /** Errors that should trigger a fallback to Postgres */
@@ -23,17 +24,21 @@ export const FALLBACK_ERROR_CODES = [
 /** Error thrown by Redis deduction operations */
 export class RedisDeductionError extends Error {
 	code: RedisDeductionErrorCode;
+	featureId?: string;
 
 	constructor({
 		message,
 		code,
+		featureId,
 	}: {
 		message: string;
 		code: RedisDeductionErrorCode;
+		featureId?: string;
 	}) {
 		super(message);
 		this.name = "RedisDeductionError";
 		this.code = code;
+		this.featureId = featureId;
 	}
 
 	isRedisUnavailable(): boolean {

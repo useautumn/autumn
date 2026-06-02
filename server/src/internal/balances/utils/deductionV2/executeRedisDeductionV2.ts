@@ -272,6 +272,7 @@ export const executeRedisDeductionV2 = async ({
 			throw new RedisDeductionError({
 				message: `Redis deduction failed: ${resultJson.error}`,
 				code: resultJson.error as RedisDeductionErrorCode,
+				featureId: resultJson.feature_id,
 			});
 		}
 
