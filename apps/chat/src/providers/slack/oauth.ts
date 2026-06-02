@@ -8,7 +8,7 @@ const slackOAuthBaseSchema = z
 		ok: z.boolean(),
 		error: z.string().optional(),
 	})
-	.loose();
+	.passthrough();
 
 const slackOAuthSuccessSchema = z.object({
 	access_token: z.string(),
