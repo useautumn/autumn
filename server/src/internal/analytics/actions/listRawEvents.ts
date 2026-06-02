@@ -4,6 +4,7 @@ import type {
 	FullCustomer,
 	RawEventFromClickHouse,
 } from "@autumn/shared";
+import { UTCDate } from "@date-fns/utc";
 import {
 	getTinybirdPipes,
 	type ListEventsPaginatedPipeRow,
@@ -66,6 +67,7 @@ export type ListRawEventsParams = {
 	customer_id?: string;
 	entity_id?: string;
 	interval?: string;
+	custom_range?: { start: number; end: number };
 	customer?: FullCustomer;
 	aggregateAll?: boolean;
 	event_name?: string;
@@ -100,13 +102,15 @@ export const listRawEvents = async ({
 	// Calculate date range
 	const startDate = calculateStartDateFromInterval(intervalType);
 
-	const finalStartDate =
-		isBillingCycle && billingCycleResult?.startDate
+	const finalStartDate = params.custom_range
+		? formatJsDateToClickHouseDateTime(new UTCDate(params.custom_range.start))
+		: isBillingCycle && billingCycleResult?.startDate
 			? billingCycleResult.startDate
 			: formatJsDateToClickHouseDateTime(startDate);
 
-	const finalEndDate =
-		isBillingCycle && billingCycleResult?.endDate
+	const finalEndDate = params.custom_range
+		? formatJsDateToClickHouseDateTime(new UTCDate(params.custom_range.end))
+		: isBillingCycle && billingCycleResult?.endDate
 			? billingCycleResult.endDate
 			: formatJsDateToClickHouseDateTime(new Date());
 

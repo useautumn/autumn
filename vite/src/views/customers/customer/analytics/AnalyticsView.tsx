@@ -1,7 +1,7 @@
 import { ErrCode } from "@autumn/shared";
 import { ChartBarIcon } from "@phosphor-icons/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { PageContainer } from "@/components/general/PageContainer";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
@@ -11,6 +11,14 @@ import { AnalyticsContext } from "./AnalyticsContext";
 import { EventsBarChart } from "./AnalyticsGraph";
 import { colors } from "./components/analytics-types";
 import { ChartLegend, type ChartLegendEntry } from "./components/ChartLegend";
+import { ChartSkeleton } from "./components/ChartSkeleton";
+import {
+	DEFAULT_PLOT_INSETS,
+	getCachedPlotInsets,
+	type PlotInsets,
+	plotInsetsEqual,
+	setCachedPlotInsets,
+} from "./utils/chartGeometry";
 import { EventsTable } from "./components/EventsTable";
 import { QueryTopbar } from "./components/QueryTopbar";
 import {
@@ -26,17 +34,23 @@ import {
 } from "./utils/transformGroupedChartData";
 
 export const AnalyticsView = () => {
-	const [searchParams] = useSearchParams();
 	const [eventNames, setEventNames] = useState<string[]>([]);
 	const [featureIds, setFeatureIds] = useState<string[]>([]);
 	const [clickHouseDisabled, setClickHouseDisabled] = useState(false);
 	const [hasCleared, setHasCleared] = useState(false);
 	const [groupFilter, setGroupFilter] = useState<string | null>(null);
 	const [planDeselected, setPlanDeselected] = useState<Set<string>>(new Set());
-	const navigate = useNavigate();
 
 	const env = useEnv();
 	const { flags, isLoading: isFeatureFlagsLoading } = useFeatureFlags();
+	const reduceMotion = useReducedMotion();
+	const [plotInsets, setPlotInsets] = useState<PlotInsets>(
+		() => getCachedPlotInsets() ?? DEFAULT_PLOT_INSETS,
+	);
+	const handlePlotGeometry = useCallback((insets: PlotInsets) => {
+		setCachedPlotInsets(insets);
+		setPlotInsets((prev) => (plotInsetsEqual(prev, insets) ? prev : insets));
+	}, []);
 
 	const {
 		customer,
@@ -183,6 +197,22 @@ export const AnalyticsView = () => {
 		return { chartData: trimmed, chartConfig: config };
 	}, [events, features, groupBy, groupFilter, planDeselected, entityNames, customerNames, planNames]);
 
+	const barFractions = useMemo(() => {
+		const rows = chartData?.data;
+		if (!rows || rows.length === 0 || !chartConfig) {
+			return null;
+		}
+		const totals = rows.map((row) =>
+			chartConfig.reduce(
+				(sum, series) =>
+					sum + Number((row as Record<string, unknown>)[series.yKey] ?? 0),
+				0,
+			),
+		);
+		const max = Math.max(...totals, 1);
+		return totals.map((total) => total / max);
+	}, [chartData, chartConfig]);
+
 	// Build legend entries (sorted desc, zero-values filtered). The
 	// width-aware overflow logic lives in ChartLegend.
 	const legendEntries: ChartLegendEntry[] = useMemo(() => {
@@ -248,35 +278,10 @@ export const AnalyticsView = () => {
 		}
 	}, [error]);
 
-	const selectedInterval = searchParams.get("interval") || "30d";
-	const selectedBinSize = searchParams.get("bin_size") || "day";
-
-	const setSelectedInterval = useCallback(
-		(interval: string) => {
-			const newParams = new URLSearchParams(searchParams);
-			newParams.set("interval", interval);
-			navigate(`${location.pathname}?${newParams.toString()}`);
-		},
-		[searchParams, navigate],
-	);
-
-	const setSelectedBinSize = useCallback(
-		(binSize: string) => {
-			const newParams = new URLSearchParams(searchParams);
-			newParams.set("bin_size", binSize);
-			navigate(`${location.pathname}?${newParams.toString()}`);
-		},
-		[searchParams, navigate],
-	);
-
 	const contextValue = useMemo(
 		() => ({
 			customer,
 			eventNames,
-			selectedInterval,
-			setSelectedInterval,
-			selectedBinSize,
-			setSelectedBinSize,
 			setEventNames,
 			featureIds,
 			setFeatureIds,
@@ -297,10 +302,6 @@ export const AnalyticsView = () => {
 		[
 			customer,
 			eventNames,
-			selectedInterval,
-			setSelectedInterval,
-			selectedBinSize,
-			setSelectedBinSize,
 			featureIds,
 			features,
 			bcExclusionFlag,
@@ -328,6 +329,11 @@ export const AnalyticsView = () => {
 		!isFeatureFlagsLoading &&
 		!flags.maintenanceModes.analytics.disableRevenueMetrics;
 
+	const hasChart =
+		!queryLoading && !!chartData && chartData.data.length > 0;
+	const isEmpty = !queryLoading && !hasChart;
+	const chartRevealDelay = reduceMotion ? 0 : 0.55;
+
 	return (
 		<AnalyticsContext.Provider value={contextValue}>
 			<PageContainer className="text-sm h-full overflow-hidden">
@@ -341,27 +347,57 @@ export const AnalyticsView = () => {
 						</div>
 						<QueryTopbar />
 					</div>
-				<div className="flex flex-col bg-interactive-secondary border rounded-lg aspect-[3/1] overflow-hidden">
-					{queryLoading && (
-						<div className="flex-1 animate-pulse" />
-					)}
-					{!queryLoading && chartData && chartData.data.length > 0 && (
-						<>
-							<ChartLegend
-								entries={legendEntries}
-								showLabels={!!groupBy || legendEntries.length <= 3}
+				<div className="relative flex flex-col bg-interactive-secondary border rounded-lg aspect-[3/1] overflow-hidden">
+					{(queryLoading || hasChart) && (
+						<div className="absolute inset-0 flex flex-col">
+							<ChartSkeleton
+								targets={hasChart ? barFractions : null}
+								geometry={plotInsets}
 							/>
-							<div className="flex-1 min-h-0">
-								<EventsBarChart
-									data={chartData as Parameters<typeof EventsBarChart>[0]["data"]}
-									chartConfig={chartConfig}
-								/>
-							</div>
-						</>
+						</div>
 					)}
-					{!queryLoading && (!chartData || chartData.data.length === 0) && (
-						<div className="flex-1 flex flex-col items-center justify-center gap-2">
-							<ChartBarIcon size={28} weight="duotone" className="text-muted-foreground/50" />
+					<AnimatePresence>
+						{hasChart && (
+							<motion.div
+								key="chart"
+								className="absolute inset-0 flex flex-col bg-interactive-secondary"
+								initial={{ opacity: 0 }}
+								animate={{
+									opacity: 1,
+									transition: {
+										duration: 0.25,
+										delay: chartRevealDelay,
+										ease: [0.23, 1, 0.32, 1],
+									},
+								}}
+								exit={{
+									opacity: 0,
+									transition: { duration: 0.2, ease: [0.23, 1, 0.32, 1] },
+								}}
+							>
+								<ChartLegend
+									entries={legendEntries}
+									showLabels={!!groupBy || legendEntries.length <= 3}
+								/>
+								<div className="flex-1 min-h-0">
+									<EventsBarChart
+										data={
+											chartData as Parameters<typeof EventsBarChart>[0]["data"]
+										}
+										chartConfig={chartConfig}
+										onGeometry={handlePlotGeometry}
+									/>
+								</div>
+							</motion.div>
+						)}
+					</AnimatePresence>
+					{isEmpty && (
+						<div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
+							<ChartBarIcon
+								size={28}
+								weight="duotone"
+								className="text-muted-foreground/50"
+							/>
 							<p className="text-muted-foreground text-sm">
 								{eventNames.length === 0
 									? "Start sending events to view usage data."
