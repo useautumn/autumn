@@ -29,6 +29,11 @@
 			"types": "./utils/chatState.ts",
 			"import": "./utils/chatState.ts",
 			"default": "./utils/chatState.ts"
+		},
+		"./utils/infisical": {
+			"types": "./utils/infisical.ts",
+			"import": "./utils/infisical.ts",
+			"default": "./utils/infisical.ts"
 		}
 	},
 	"author": "Recase Inc.",
