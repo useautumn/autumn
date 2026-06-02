@@ -115,8 +115,8 @@ jobs:
             echo "custom_tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
           fi
       
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Set up Blacksmith Docker builder
+        uses: useblacksmith/setup-docker-builder@v1
       
       - name: Build and push Docker image
         env:
@@ -129,14 +129,13 @@ jobs:
           COMBINED_TAG="${IMAGE_TAG_BRANCH}-${IMAGE_TAG_SHA}"
           TAGS="${ECR_REGISTRY}/${ECR_REPOSITORY}:${COMBINED_TAG}"
           
-          # Build and push
+          # Layer + cache-mount persistence is handled by the Blacksmith sticky
+          # disk mounted at /var/lib/buildkit, so no registry cache-from/to.
           docker buildx build \
             --platform linux/amd64 \
             --push \
             --provenance=false \
             --sbom=false \
-            --cache-from type=registry,ref=${ECR_REGISTRY}/${ECR_REPOSITORY}:buildcache-${IMAGE_TAG_BRANCH} \
-            --cache-to type=registry,ref=${ECR_REGISTRY}/${ECR_REPOSITORY}:buildcache-${IMAGE_TAG_BRANCH},mode=max \
             --tag ${TAGS//,/ --tag } \
             -f docker/Dockerfile \
             .
