@@ -52,6 +52,7 @@ export * from "./models/chatResultModels/chatResultFeature";
 export * from "./models/chatResultModels/chatResultFeature";
 // 4. Chat Result Models
 export * from "./models/chatResultModels/chatResultTable";
+export * from "./models/chatModels/chatTable";
 export * from "./models/checkModels/checkPreviewModels";
 export * from "./models/cusModels/billingControls/autoTopupLimitTable";
 // 8. Customer Models

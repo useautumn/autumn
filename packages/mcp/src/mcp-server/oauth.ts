@@ -270,6 +270,25 @@ export async function buildAuthForRequest(
 		failOpenSchema,
 		"Invalid fail-open",
 	);
+	const apiKey = parseRequestOption(
+		headers.get("secret-key") ??
+			(flags["oauth-enabled"] ? undefined : flags["secret-key"]),
+		secretKeySchema,
+		"Invalid secret-key",
+	);
+
+	if (apiKey) {
+		return {
+			apiKey,
+			env,
+			resource,
+			principalId: principalFromSecret("secret-key", apiKey),
+			scopes: [...MCP_OAUTH_SCOPES],
+			serverURL: flags["server-url"],
+			xApiVersion,
+			failOpen,
+		};
+	}
 
 	if (flags["oauth-enabled"]) {
 		const authHeader = headers.get("authorization");
@@ -297,24 +316,6 @@ export async function buildAuthForRequest(
 		};
 	}
 
-	const apiKey = parseRequestOption(
-		headers.get("secret-key") ?? flags["secret-key"],
-		secretKeySchema,
-		"Invalid secret-key",
-	);
-	if (!apiKey) {
-		logger.warning("Missing secret-key for MCP request");
-		throw new OAuthHttpError(401, "Missing secret-key", "invalid_token");
-	}
-
-	return {
-		apiKey,
-		env,
-		resource,
-		principalId: principalFromSecret("secret-key", apiKey),
-		scopes: [...MCP_OAUTH_SCOPES],
-		serverURL: flags["server-url"],
-		xApiVersion,
-		failOpen,
-	};
+	logger.warning("Missing secret-key for MCP request");
+	throw new OAuthHttpError(401, "Missing secret-key", "invalid_token");
 }

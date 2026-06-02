@@ -39,6 +39,20 @@ describe("Autumn MCP server", () => {
 		expect(tools.tools.map((tool) => tool.name)).not.toContain("listCustomers");
 	});
 
+	test("billing tool schemas avoid legacy JSON Schema ids", async () => {
+		const tools = await createAutumnOperationsMCPServer().getToolListInfo();
+
+		for (const name of [
+			"previewAttach",
+			"attach",
+			"previewUpdateSubscription",
+			"updateSubscription",
+		]) {
+			const tool = tools.tools.find((tool) => tool.name === name);
+			expect(JSON.stringify(tool?.inputSchema)).not.toContain('"id":');
+		}
+	});
+
 	test.each([
 		["public", createAutumnOperationsMCPServer],
 		["internal", createAskAutumnMCPServer],

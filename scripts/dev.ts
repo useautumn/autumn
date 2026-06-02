@@ -21,8 +21,12 @@ const CHECKOUT_PORT = process.env.CHECKOUT_PORT
 const MCP_PORT = process.env.MCP_PORT
 	? Number.parseInt(process.env.MCP_PORT, 10)
 	: 2718 + portOffset;
+const CHAT_PORT = process.env.CHAT_PORT
+	? Number.parseInt(process.env.CHAT_PORT, 10)
+	: 3099 + portOffset;
 const LOCAL_CLIENT_URL = `http://localhost:${VITE_PORT}`;
 const LOCAL_SERVER_URL = `http://localhost:${SERVER_PORT}`;
+const LOCAL_CHAT_URL = `http://localhost:${CHAT_PORT}`;
 const skipWorkers = false;
 const isProductionMode = process.argv.includes("--production");
 
@@ -130,7 +134,7 @@ async function startDev() {
 			} else {
 				console.log("Cleaning up local dev ports...\n");
 				killPorts({
-					ports: [VITE_PORT, SERVER_PORT, CHECKOUT_PORT, MCP_PORT],
+					ports: [VITE_PORT, SERVER_PORT, CHECKOUT_PORT, MCP_PORT, CHAT_PORT],
 				});
 			}
 
@@ -165,7 +169,8 @@ async function startDev() {
 		console.log(`  vite:     http://localhost:${VITE_PORT}`);
 		console.log(`  server:   http://localhost:${SERVER_PORT}`);
 		console.log(`  checkout: http://localhost:${CHECKOUT_PORT}`);
-		console.log(`  mcp:      http://localhost:${MCP_PORT}/mcp\n`);
+		console.log(`  mcp:      http://localhost:${MCP_PORT}/mcp`);
+		console.log(`  chat:     http://localhost:${CHAT_PORT}/health\n`);
 
 		// Use cmd on Windows, sh on Unix
 		const isWindows = process.platform === "win32";
@@ -239,6 +244,14 @@ async function startDev() {
 			const mcpServeCmd = "bun --watch apps/mcp-server/src/index.ts";
 			cmds.push(isWindows ? `"${mcpServeCmd}"` : `"${mcpServeCmd}"`);
 
+			names.push("chat");
+			colors.push("gray");
+			cmds.push(
+				isWindows
+					? `"cd apps/chat && set PORT=${CHAT_PORT} && bun dev"`
+					: `"cd apps/chat && PORT=${CHAT_PORT} bun dev"`,
+			);
+
 			// Stripe CLI webhook tunnel — silently skip if CLI absent.
 			// Forwards to the direct localhost port (not portless) so we avoid CA trust issues.
 			const stripeAvailable = Bun.spawnSync(["which", "stripe"]).exitCode === 0;
@@ -282,12 +295,20 @@ async function startDev() {
 				SERVER_PORT: SERVER_PORT.toString(),
 				CHECKOUT_PORT: CHECKOUT_PORT.toString(),
 				MCP_PORT: MCP_PORT.toString(),
+				CHAT_PORT: CHAT_PORT.toString(),
 				MCP_DEBUG_PENDING_ACTIONS:
 					process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
 				MCP_SERVER_URL:
 					process.env.MCP_SERVER_URL ?? `http://localhost:${SERVER_PORT}`,
 				MCP_RESOURCE_URLS:
 					process.env.MCP_RESOURCE_URLS ?? `http://localhost:${MCP_PORT}/mcp`,
+				AUTUMN_MCP_URL:
+					process.env.AUTUMN_MCP_URL ?? `http://localhost:${MCP_PORT}/mcp`,
+				AUTUMN_API_URL: process.env.AUTUMN_API_URL ?? LOCAL_SERVER_URL,
+				CHAT_URL: process.env.CHAT_URL ?? LOCAL_CHAT_URL,
+				CHAT_INTERNAL_URL: process.env.CHAT_INTERNAL_URL ?? LOCAL_CHAT_URL,
+				SLACK_BOT_URL: process.env.SLACK_BOT_URL ?? LOCAL_CHAT_URL,
+				DISCORD_BOT_URL: process.env.DISCORD_BOT_URL ?? LOCAL_CHAT_URL,
 				VITE_APP_ENV: viteAppEnv,
 				...(useLocalAuthUrls && {
 					CLIENT_URL: localUrl(process.env.CLIENT_URL, LOCAL_CLIENT_URL),
