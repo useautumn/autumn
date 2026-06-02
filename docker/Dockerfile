@@ -9,7 +9,7 @@
 FROM oven/bun:1.3.10 AS pruner
 WORKDIR /app
 COPY . .
-RUN bunx turbo@2.9.14 prune @autumn/server @autumn/mcp-server autumn-js @useautumn/sdk --docker
+RUN bunx turbo@2.9.14 prune @autumn/server @autumn/mcp-server --docker
 
 FROM oven/bun:1.3.10
 WORKDIR /app
@@ -18,7 +18,7 @@ WORKDIR /app
 # until a runtime workspace's deps change (not on every source edit).
 COPY --from=pruner /app/out/json/ .
 RUN mkdir -p scripts && touch scripts/preload-env.ts
-RUN bun -e 'const fs = require("fs"); const pkg = JSON.parse(fs.readFileSync("package.json", "utf8")); pkg.workspaces.packages = ["server", "shared", "apps/mcp-server", "packages/ksuid", "packages/mcp", "packages/stripe-sync", "packages/autumn-js", "packages/sdk"]; delete pkg.dependencies; delete pkg.devDependencies; delete pkg.scripts; fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));'
+RUN bun -e 'const fs = require("fs"); const pkg = JSON.parse(fs.readFileSync("package.json", "utf8")); pkg.workspaces.packages = ["server", "shared", "apps/mcp-server", "packages/ksuid", "packages/mcp", "packages/stripe-sync"]; delete pkg.dependencies; delete pkg.devDependencies; delete pkg.scripts; fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));'
 RUN --mount=type=cache,target=/root/.bun/install/cache \
 	rm -f bun.lock && bun install --ignore-scripts
 
