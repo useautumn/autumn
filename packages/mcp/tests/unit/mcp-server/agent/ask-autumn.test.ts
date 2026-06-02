@@ -1,7 +1,7 @@
 import { describe, expect, mock, test } from "bun:test";
-import type { AutumnMcpAuth } from "./auth.js";
-import { setPendingActionsRedis } from "./pending-actions.js";
-import { createTestRedis } from "./test-redis.js";
+import type { AutumnMcpAuth } from "../../../../src/mcp-server/agent/auth.js";
+import { setPendingActionsRedis } from "../../../../src/mcp-server/agent/pending-actions.js";
+import { createTestRedis } from "../../../utils/test-redis.js";
 
 const systemPrompts: string[] = [];
 let agentConfirms = true;
@@ -54,7 +54,9 @@ mock.module("@mastra/core/agent", () => ({
 	},
 }));
 
-const { createAskAutumnTool } = await import("./ask-autumn.js");
+const { createAskAutumnTool } = await import(
+	"../../../../src/mcp-server/agent/ask-autumn.js"
+);
 
 const auth: AutumnMcpAuth = {
 	apiKey: "sk_test",

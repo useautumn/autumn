@@ -1,7 +1,7 @@
 import type {
 	PendingActionRedis,
 	PendingActionRedisMulti,
-} from "./pending-actions.js";
+} from "../../src/mcp-server/agent/pending-actions.js";
 
 export const createTestRedis = (): PendingActionRedis => {
 	const store = new Map<string, string>();

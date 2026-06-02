@@ -12,6 +12,7 @@ import { traceEnrichMiddleware } from "../honoMiddlewares/traceMiddleware";
 import type { HonoEnv } from "../honoUtils/HonoEnv";
 import { honoAdminRouter } from "../internal/admin/adminRouter";
 import { internalAnalyticsRouter } from "../internal/analytics/internalAnalyticsRouter";
+import { chatRouter } from "../internal/chat/chatRouter";
 import { internalCusRouter } from "../internal/customers/internalCusRouter";
 import { internalDevRouter } from "../internal/dev/devRouter";
 import { migrationRpcRouter } from "../internal/migrations/v2/migrationRouter";
@@ -38,6 +39,7 @@ internalRouter.use("/admin/*", adminAuthMiddleware);
 internalRouter.route("admin", honoAdminRouter);
 
 internalRouter.route("organization", internalOrgRouter);
+internalRouter.route("organization/chat", chatRouter);
 internalRouter.route("/products", internalProductRouter);
 internalRouter.route("/customers", internalCusRouter);
 internalRouter.route("/dev", internalDevRouter);

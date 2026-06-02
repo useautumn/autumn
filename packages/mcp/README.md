@@ -15,16 +15,21 @@ Use this for external MCP clients that should call Autumn operations directly.
 Tools:
 
 - `listCustomers`
+- `createCustomer`
 - `getCustomer`
 - `listPlans`
+- `createPlan`
 - `getPlan`
 - `previewAttach`
 - `attach`
 - `previewUpdateSubscription`
 - `updateSubscription`
+- `previewCreateSchedule`
+- `createSchedule`
 
 The write tools are marked destructive. Clients should call the matching preview
-tool first and only call a write tool after explicit user confirmation.
+tool first where one exists and only call a write tool after explicit user
+confirmation.
 
 ## `/internal/mcp`
 

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Scopes } from "@autumn/shared/scopeDefinitions";
-import type { AutumnMcpAuth } from "./auth.js";
-import { prepareAxiomQuery, resolveAutumnOrgId } from "./axiom.js";
+import type { AutumnMcpAuth } from "../../../../src/mcp-server/agent/auth.js";
+import { prepareAxiomQuery, resolveAutumnOrgId } from "../../../../src/mcp-server/agent/axiom.js";
 
 const auth: AutumnMcpAuth & { orgId: string } = {
 	apiKey: "sk_test",
