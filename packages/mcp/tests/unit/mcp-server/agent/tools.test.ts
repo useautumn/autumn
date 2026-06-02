@@ -275,6 +275,7 @@ describe("Autumn operation tools", () => {
 		globalThis.fetch = (async (url, init) => {
 			expect(String(url)).toBe("http://localhost:8080/v1/customers.list");
 			expect(JSON.parse(init?.body as string)).toMatchObject({
+				limit: 1000,
 				search: "charlie",
 			});
 			return Response.json({ customers: [] });
@@ -286,7 +287,7 @@ describe("Autumn operation tools", () => {
 
 			await expect(
 				tool.execute(
-					{ request: { search: "charlie" } },
+					{ request: { limit: 5000, search: "charlie" } },
 					{ mcp: { extra: { authInfo: auth } } } as never,
 				),
 			).resolves.toEqual({ customers: [] });

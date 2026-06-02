@@ -5,6 +5,7 @@ import {
 	createAutumnMcpClient,
 	getAutumnMcpTools,
 } from "./mcp.js";
+import { createFirecrawlTools } from "./firecrawl.js";
 import { env as chatEnv } from "../lib/env.js";
 import type { ChatContextMessage } from "../types.js";
 
@@ -19,6 +20,9 @@ const docs = [
 
 const instructions = `You are Autumn Chat.
 Use Autumn MCP tools for customer, plan, balance, schedule, and billing work.
+Use web search only for current or external web context. Never use web search for Autumn customer, plan, billing, balance, or schedule state.
+When web content influences the answer, cite the source URLs.
+Prefer searchWeb first, then scrapeUrl only for the most relevant result.
 Preview billing-impacting changes first, summarize the preview in short Slack-friendly bullets, then call the matching write tool with the same request args.
 The runtime pauses destructive tools for approval before execution, so do not ask for confirmation in plain text.`;
 
@@ -118,13 +122,17 @@ export const runChatAgent = async ({
 			}),
 			readDocs(mcp),
 		]);
+		const firecrawlTools = createFirecrawlTools({
+			apiKey: chatEnv.FIRECRAWL_API_KEY,
+			onAction,
+		});
 		await onAction?.("Reasoning over the request");
 		const agent = new Agent({
 			id: "autumn-chat",
 			name: "Autumn Chat",
 			instructions: `${instructions}\n\nCurrent Autumn environment: ${env}.\n\n${docsText}`,
 			model: chatEnv.CHAT_MODEL,
-			tools,
+			tools: { ...tools, ...firecrawlTools },
 		});
 
 		const output = await agent.generate(message, {
