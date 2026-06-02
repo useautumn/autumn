@@ -23,21 +23,25 @@ export const recalculateBalance = async ({
 		params,
 	});
 	const afterById = new Map(after.map((cusEnt) => [cusEnt.id, cusEnt]));
-	for (const cusEnt of before) {
-		const updated = afterById.get(cusEnt.id);
-		if (!updated) {
-			continue;
+	await ctx.db.transaction(async (tx) => {
+		const txCtx = { ...ctx, db: tx as unknown as typeof ctx.db };
+		for (const cusEnt of before) {
+			const updated = afterById.get(cusEnt.id);
+			if (!updated) {
+				continue;
+			}
+			await CusEntService.update({
+				ctx: txCtx,
+				id: cusEnt.id,
+				updates: {
+					balance: updated.balance ?? 0,
+					additional_balance: updated.additional_balance ?? 0,
+					entities: updated.entities,
+					adjustment: updated.adjustment ?? 0,
+				},
+			});
 		}
-		await CusEntService.update({
-			ctx,
-			id: cusEnt.id,
-			updates: {
-				balance: updated.balance ?? 0,
-				entities: updated.entities,
-				adjustment: updated.adjustment ?? 0,
-			},
-		});
-	}
+	});
 	await deleteCachedFullCustomer({
 		ctx,
 		customerId: fullCustomer.id ?? "",

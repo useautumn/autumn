@@ -137,11 +137,19 @@ export function BalanceRecalculateDialog({
 					</div>
 				)}
 
-				{!preview.isFetching && changedRows.length === 0 && (
-					<p className="text-sm text-tertiary-foreground">
-						These balances are already up to date.
+				{!preview.isFetching && preview.isError && (
+					<p className="text-sm text-red-600 dark:text-red-400">
+						Couldn't load the preview. Please try again.
 					</p>
 				)}
+
+				{!preview.isFetching &&
+					!preview.isError &&
+					changedRows.length === 0 && (
+						<p className="text-sm text-tertiary-foreground">
+							These balances are already up to date.
+						</p>
+					)}
 
 				<DialogFooter>
 					<ShortcutButton
