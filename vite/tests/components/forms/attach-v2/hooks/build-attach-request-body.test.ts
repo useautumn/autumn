@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { type ProductV2, UsageModel } from "@autumn/shared";
+import {
+	type ProductItem,
+	ProductItemInterval,
+	type ProductV2,
+	UsageModel,
+} from "@autumn/shared";
 import { addDays } from "date-fns";
 import { buildAttachRequestBody } from "@/components/forms/attach-v2/hooks/useAttachRequestBody";
 
@@ -220,5 +225,46 @@ describe("buildAttachRequestBody — starts_at handling", () => {
 		});
 
 		expect(result?.starts_at).toBeUndefined();
+	});
+});
+
+describe("buildAttachRequestBody — items serialization", () => {
+	test("drops empty fixed-price draft rows before serialization", () => {
+		const product = makeProduct({
+			items: [{ price: 20, interval: ProductItemInterval.Month }],
+		});
+		const items = [
+			{
+				feature_id: "AI_CREDITS",
+				price: null,
+				tiers: [{ amount: 0.01, to: "inf" }],
+			},
+			{
+				price: "" as unknown as number,
+				feature_id: null,
+				price_id: null,
+				entitlement_id: null,
+				interval: ProductItemInterval.Month,
+				interval_count: 1,
+				tiers: null,
+				price_config: null,
+			},
+		] satisfies ProductItem[];
+
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+			items,
+		});
+
+		expect(result?.items).toEqual([
+			{
+				feature_id: "AI_CREDITS",
+				price: null,
+				tiers: [{ amount: 0.01, to: "inf" }],
+				interval: null,
+			},
+		]);
 	});
 });
