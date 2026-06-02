@@ -56,7 +56,7 @@ const ALLOWED_HEADERS = [
 export const createHonoApp = () => {
 	const app = new Hono<HonoEnv>();
 
-	if (process.env.NODE_ENV === "development") {
+	if (process.env.CHAT_INTERNAL_URL) {
 		app.route("", createChatProxyRouter());
 	}
 
