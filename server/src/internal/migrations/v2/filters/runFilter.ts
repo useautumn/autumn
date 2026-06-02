@@ -1,7 +1,11 @@
-import { MigrationItemRunStatus } from "@autumn/shared";
+import {
+	MigrationItemRunStatus,
+	type MigrationItemRunStatus as MigrationItemRunStatusType,
+} from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { MigrationRunControls } from "../cloudAdapter/types.js";
 import type { RunScopeItem, RunScopeKind } from "../run/types/runScope.js";
+import { normalizeRetryItemStatuses } from "../run/utils/retryItemStatuses.js";
 import type {
 	MigrationRuntime,
 	MigrationRuntimeWithEventId,
@@ -51,14 +55,20 @@ export const runFilter = async ({
 		dryRun,
 		controls,
 	});
-	const count = await countCustomers({ ctx, filter, checkpoint });
+	const limit = controls?.limit ?? undefined;
+	const count = await countCustomers({
+		ctx,
+		filter,
+		checkpoint,
+		limit,
+	});
 
 	ctx.logger.info("runFilter: customer scope resolved", {
 		data: {
 			migrationRunId,
 			matchedCount: count,
 			only: controls?.only,
-			retryFailed: migration.retry_failed === true,
+			retryItemStatuses: controls?.retryItemStatuses,
 			effectiveFilter: filter,
 			checkpointExcludedStatuses: checkpoint?.excludedStatuses,
 		},
@@ -67,7 +77,7 @@ export const runFilter = async ({
 		ctx.logger.warn(
 			"runFilter: no customers matched — nothing to migrate. " +
 				"Common causes: customer is excluded by a previous item_run " +
-				"(set retry_failed=true to re-run failed items), or the customer " +
+				"(set retry_item_statuses to re-run checkpointed items), or the customer " +
 				"does not match other filter clauses (plan, addon, etc.)",
 			{
 				data: {
@@ -79,7 +89,12 @@ export const runFilter = async ({
 	}
 
 	const iterate = async function* () {
-		for await (const batch of filterCustomers({ ctx, filter, checkpoint })) {
+		for await (const batch of filterCustomers({
+			ctx,
+			filter,
+			checkpoint,
+			limit,
+		})) {
 			yield batch.map(
 				(row): RunScopeItem => ({
 					kind: "customer",
@@ -109,11 +124,19 @@ const getCustomerCheckpointExclusion = ({
 		(!dryRun || controls?.checkpointDryRun === true);
 	if (!enabled) return undefined;
 
-	const excludedStatuses = [
+	const retryItemStatuses = normalizeRetryItemStatuses({
+		retryItemStatuses: controls?.retryItemStatuses,
+	});
+	const retryItemStatusSet = new Set(retryItemStatuses);
+	const excludedStatuses: MigrationItemRunStatusType[] = [
 		MigrationItemRunStatus.Running,
 		MigrationItemRunStatus.Succeeded,
-		MigrationItemRunStatus.Skipped,
-		...(migration.retry_failed ? [] : [MigrationItemRunStatus.Failed]),
+		...(retryItemStatusSet.has(MigrationItemRunStatus.Skipped)
+			? []
+			: [MigrationItemRunStatus.Skipped]),
+		...(retryItemStatusSet.has(MigrationItemRunStatus.Failed)
+			? []
+			: [MigrationItemRunStatus.Failed]),
 	];
 
 	return {

@@ -1003,7 +1003,6 @@ export class AutumnInt {
 				id?: string;
 				filter?: MigrationFilter | null;
 				operations?: Operations | null;
-				retry_failed?: boolean;
 				no_billing_changes?: boolean;
 				archived?: boolean;
 			};
@@ -1041,7 +1040,7 @@ export class AutumnInt {
 			limit?: number;
 			concurrency?: number;
 			lazy_run?: boolean;
-			retry_failed?: boolean;
+			retry_item_statuses?: ("failed" | "skipped")[];
 		}): Promise<{
 			migration_id: string;
 			dry_run: boolean;

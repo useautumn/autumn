@@ -6,6 +6,7 @@ import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export type MigrationWithRunInfo = Migration & { has_live_runs: boolean };
+export type RetryableMigrationItemRunStatus = "failed" | "skipped";
 
 interface PrepareModuleResult {
 	key: string;
@@ -63,7 +64,6 @@ export const useMigrationsQuery = () => {
 				id?: string;
 				filter?: MigrationFilter | null;
 				operations?: Operations | null;
-				retry_failed?: boolean;
 				no_billing_changes?: boolean;
 				archived?: boolean;
 			};
@@ -107,7 +107,7 @@ export const useMigrationsQuery = () => {
 			only?: string[];
 			concurrency?: number;
 			lazy_run?: boolean;
-			retry_failed?: boolean;
+			retry_item_statuses?: RetryableMigrationItemRunStatus[];
 		}) => {
 			const { data } = await axiosInstance.post<{
 				migration_id: string;

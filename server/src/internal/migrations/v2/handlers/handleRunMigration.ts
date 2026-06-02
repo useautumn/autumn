@@ -5,6 +5,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { withMigrationRunClaim } from "@/internal/migrations/v2/actions/migrationRun/index.js";
 import { prepare } from "@/internal/migrations/v2/prepare/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
+import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/run/utils/retryItemStatuses.js";
 import { runMigrationTask } from "@/trigger/migrations/runMigrationTask.js";
 
 const RunMigrationBody = z.object({
@@ -13,7 +14,9 @@ const RunMigrationBody = z.object({
 	limit: z.number().int().min(1).optional(),
 	only: z.array(z.string()).optional(),
 	concurrency: z.number().int().min(1).optional(),
-	retry_failed: z.boolean().optional(),
+	retry_item_statuses: z
+		.array(z.enum(RETRYABLE_MIGRATION_ITEM_RUN_STATUSES))
+		.optional(),
 	/** When true, claim a lazy run alongside the background sweeper. Customers
 	 *  hit on the request path get migrated lazily via `runMigrationCustomerTask`
 	 *  before the sweeper reaches them. Background and lazy run on the same
@@ -45,7 +48,7 @@ export const handleRunMigration = createRoute({
 			limit,
 			only,
 			concurrency,
-			retry_failed: retryFailed,
+			retry_item_statuses: retryItemStatuses,
 			lazy_run: lazyRun,
 		} = c.req.valid("json");
 
@@ -87,7 +90,12 @@ export const handleRunMigration = createRoute({
 						migrationRunId,
 						dryRun,
 						lazyRun,
-						controls: { limit, only, concurrency, retryFailed },
+						controls: {
+							limit,
+							only,
+							concurrency,
+							retryItemStatuses,
+						},
 					},
 					getRunMigrationTriggerOptions({
 						orgId: ctx.org.id,

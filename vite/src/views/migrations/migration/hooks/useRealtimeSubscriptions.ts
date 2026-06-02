@@ -1,7 +1,10 @@
 import type { AxiosError } from "axios";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
+import {
+	type RetryableMigrationItemRunStatus,
+	useMigrationsQuery,
+} from "@/hooks/queries/useMigrationsQuery";
 import { getBackendErr } from "@/utils/genUtils";
 import type { RealtimeRunSubscription } from "./useMigrationRunRealtime";
 
@@ -33,15 +36,21 @@ export function useRealtimeSubscriptions({
 		only,
 		lazyRun,
 		concurrency,
+		retryItemStatuses,
 	}: {
 		dryRun: boolean;
 		limit?: number;
 		only?: string[];
 		lazyRun?: boolean;
 		concurrency?: number;
+		retryItemStatuses?: RetryableMigrationItemRunStatus[];
 	}) => {
 		try {
 			const isTargetedRun = only !== undefined && only.length > 0;
+			const retryStatuses =
+				retryItemStatuses && retryItemStatuses.length > 0
+					? retryItemStatuses
+					: undefined;
 			const result = await runMigration({
 				id: migrationId,
 				dry_run: dryRun,
@@ -49,7 +58,8 @@ export function useRealtimeSubscriptions({
 				only,
 				lazy_run: isTargetedRun ? false : (lazyRun ?? true),
 				concurrency,
-				retry_failed: isTargetedRun ? true : undefined,
+				retry_item_statuses:
+					retryStatuses ?? (isTargetedRun ? ["failed"] : undefined),
 			});
 			if (result.trigger_run_id && result.public_access_token) {
 				setSubscriptions((prev) => [

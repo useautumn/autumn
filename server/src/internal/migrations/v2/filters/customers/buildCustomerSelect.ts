@@ -121,7 +121,8 @@ const buildExecutionStatusWhere = (
 	{ includeNotRun = true }: { includeNotRun?: boolean } = {},
 ): SQL => {
 	const filter = includeProcessed?.executionFilter;
-	if (!includeProcessed || !filter || filter.statuses.length === 0) return sql``;
+	if (!includeProcessed || !filter || filter.statuses.length === 0)
+		return sql``;
 
 	const explicitStatuses = filter.statuses.filter(
 		(status): status is MigrationItemRunStatus => status !== "not_run",
@@ -241,6 +242,25 @@ export const buildCustomerCount = ({
 		SELECT COUNT(*)::bigint AS count
 		FROM ${candidate.source}
 		WHERE (${candidate.where}) ${buildCommonWhere({ checkpoint, search })}
+	`;
+};
+
+export const buildLimitedCustomerCount = ({
+	limit,
+	...args
+}: CustomerQueryArgs & { limit: number }): SQL => {
+	const candidate = compileCustomerCandidate(args);
+	return sql`
+		SELECT COUNT(*)::bigint AS count
+		FROM (
+			SELECT 1
+			FROM ${candidate.source}
+			WHERE (${candidate.where}) ${buildCommonWhere({
+				checkpoint: args.checkpoint,
+				search: args.search,
+			})}
+			LIMIT ${limit}
+		) limited
 	`;
 };
 
