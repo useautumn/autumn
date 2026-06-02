@@ -105,10 +105,12 @@ const waitForMigrationRunAccepted = async ({
 	autumnV2_2,
 	id,
 	dryRun = false,
+	retryItemStatuses,
 }: {
 	autumnV2_2: Awaited<ReturnType<typeof initScenario>>["autumnV2_2"];
 	id: string;
 	dryRun?: boolean;
+	retryItemStatuses?: ("failed" | "skipped")[];
 }) =>
 	waitForMigrationResult({
 		timeoutMs: 60_000,
@@ -117,6 +119,7 @@ const waitForMigrationRunAccepted = async ({
 			autumnV2_2.migrationsV2.run({
 				id,
 				dry_run: dryRun,
+				retry_item_statuses: retryItemStatuses,
 			}),
 	});
 
@@ -255,7 +258,7 @@ test(`${chalk.yellowBright("migrations idempotency: run API skips running and fa
 	});
 });
 
-test(`${chalk.yellowBright("migrations idempotency: retry_failed and dry_run are honored through run API")}`, async () => {
+test(`${chalk.yellowBright("migrations idempotency: retry_item_statuses and dry_run are honored through run API")}`, async () => {
 	const retryCustomerId = "migration-idem-retry";
 	const dryRunCustomerId = "migration-idem-dry-run";
 	const retryPlan = products.pro({ id: "retry-pro", items: [] });
@@ -290,34 +293,34 @@ test(`${chalk.yellowBright("migrations idempotency: retry_failed and dry_run are
 			planId: retryPlan.id,
 		}),
 	);
-	const retryableMigration = await autumnV2_2.migrationsV2.update({
-		id: retryMigration.id,
-		updates: { retry_failed: true },
-	});
 	await migrationItemRunRepo.claim({
 		ctx,
-		migrationInternalId: retryableMigration.internal_id,
+		migrationInternalId: retryMigration.internal_id,
 		itemKind: MigrationItemKind.Customer,
 		itemId: retryInternalCustomerId,
 		claimBehavior: "claim_new",
 	});
 	await migrationItemRunRepo.markFailed({
 		ctx,
-		migrationInternalId: retryableMigration.internal_id,
+		migrationInternalId: retryMigration.internal_id,
 		itemKind: MigrationItemKind.Customer,
 		itemId: retryInternalCustomerId,
 	});
-	await waitForMigrationRunAccepted({ autumnV2_2, id: retryableMigration.id });
+	await waitForMigrationRunAccepted({
+		autumnV2_2,
+		id: retryMigration.id,
+		retryItemStatuses: [MigrationItemRunStatus.Failed],
+	});
 	await waitForCustomerItemRunStatus({
 		ctx,
-		migration: retryableMigration,
+		migration: retryMigration,
 		internalCustomerId: retryInternalCustomerId,
 		status: MigrationItemRunStatus.Succeeded,
 	});
 	expect(
 		await getCustomerItemRun({
 			ctx,
-			migration: retryableMigration,
+			migration: retryMigration,
 			internalCustomerId: retryInternalCustomerId,
 		}),
 	).toMatchObject({ status: MigrationItemRunStatus.Succeeded });

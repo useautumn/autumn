@@ -89,7 +89,7 @@ export const runScopeIteration = async ({
 			item,
 			dryRun,
 			claimItemRun: checkpointReadEnabled,
-			retryFailed: migration.retry_failed === true,
+			retryItemStatuses: controls?.retryItemStatuses,
 			run,
 		});
 	};

@@ -54,7 +54,10 @@ import {
 	type MigrationItemEvent,
 	useMigrationRunsQuery,
 } from "@/hooks/queries/useMigrationRunsQuery";
-import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
+import {
+	type RetryableMigrationItemRunStatus,
+	useMigrationsQuery,
+} from "@/hooks/queries/useMigrationsQuery";
 import { cn } from "@/lib/utils";
 import { pushPage } from "@/utils/genUtils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
@@ -81,6 +84,8 @@ type ActiveRunStatus = "queued" | "running" | null;
 type AdminRunControls = {
 	lazyRun: boolean;
 	concurrency: string;
+	retryErrored: boolean;
+	retrySkipped: boolean;
 };
 
 type CustomerRow = MigrationPreviewCustomer & {
@@ -105,6 +110,16 @@ function parseConcurrency(value: string) {
 	if (!trimmed) return undefined;
 	const parsed = Number(trimmed);
 	return Number.isInteger(parsed) && parsed >= 1 ? parsed : undefined;
+}
+
+function buildRetryItemStatuses({
+	retryErrored,
+	retrySkipped,
+}: Pick<AdminRunControls, "retryErrored" | "retrySkipped">) {
+	const statuses: RetryableMigrationItemRunStatus[] = [];
+	if (retryErrored) statuses.push("failed");
+	if (retrySkipped) statuses.push("skipped");
+	return statuses.length > 0 ? statuses : undefined;
 }
 
 const statusColumn: ColumnDef<CustomerRow, unknown> = {
@@ -235,6 +250,8 @@ export function MigrationLiveView({
 	const [runControls, setRunControls] = useState({
 		lazyRun: true,
 		concurrency: "",
+		retryErrored: false,
+		retrySkipped: false,
 	});
 	const [sample, setSample] = useState({
 		open: false,
@@ -253,6 +270,7 @@ export function MigrationLiveView({
 		? {
 				lazyRun: runControls.lazyRun,
 				concurrency: parseConcurrency(runControls.concurrency),
+				retryItemStatuses: buildRetryItemStatuses(runControls),
 			}
 		: undefined;
 
@@ -913,6 +931,8 @@ function AdminMigrationRunControls({
 	lazyDisabled?: boolean;
 }) {
 	const concurrencyInputId = useId();
+	const retryErroredInputId = useId();
+	const retrySkippedInputId = useId();
 
 	return (
 		<div className="rounded-lg border border-border bg-muted/20 p-3">
@@ -966,6 +986,34 @@ function AdminMigrationRunControls({
 						</span>
 					)}
 				</div>
+			</div>
+			<div className="mt-3 grid gap-2 border-t border-border pt-3 sm:grid-cols-2">
+				<label
+					htmlFor={retryErroredInputId}
+					className="flex items-center gap-2 text-sm"
+				>
+					<Checkbox
+						id={retryErroredInputId}
+						checked={value.retryErrored}
+						onCheckedChange={(checked) =>
+							onChange({ ...value, retryErrored: checked === true })
+						}
+					/>
+					<span className="font-medium text-foreground">Retry failed</span>
+				</label>
+				<label
+					htmlFor={retrySkippedInputId}
+					className="flex items-center gap-2 text-sm"
+				>
+					<Checkbox
+						id={retrySkippedInputId}
+						checked={value.retrySkipped}
+						onCheckedChange={(checked) =>
+							onChange({ ...value, retrySkipped: checked === true })
+						}
+					/>
+					<span className="font-medium text-foreground">Retry skipped</span>
+				</label>
 			</div>
 		</div>
 	);

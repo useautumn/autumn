@@ -9,6 +9,10 @@ import {
 	migrationItemRunRepo,
 } from "../../repos/index.js";
 import type { RunScopeItem } from "../../run/types/runScope.js";
+import {
+	normalizeRetryItemStatuses,
+	type RetryableMigrationItemRunStatus,
+} from "../../run/utils/retryItemStatuses.js";
 
 export type MigrationItemTrackingResult = {
 	itemPreview: MigrationItemPreview | null;
@@ -169,7 +173,7 @@ export const withMigrationItemTracking = async <
 	item,
 	dryRun,
 	claimItemRun = false,
-	retryFailed = false,
+	retryItemStatuses,
 	run,
 }: {
 	ctx: AutumnContext;
@@ -178,10 +182,13 @@ export const withMigrationItemTracking = async <
 	item: RunScopeItem;
 	dryRun: boolean;
 	claimItemRun?: boolean;
-	retryFailed?: boolean;
+	retryItemStatuses?: RetryableMigrationItemRunStatus[];
 	run: () => Promise<T>;
 }): Promise<T | undefined> => {
 	if (claimItemRun) {
+		const retryStatuses = normalizeRetryItemStatuses({
+			retryItemStatuses,
+		});
 		const claim = await migrationItemRunRepo.claim({
 			ctx,
 			migrationInternalId,
@@ -189,7 +196,8 @@ export const withMigrationItemTracking = async <
 			dryRun,
 			itemKind: item.kind,
 			itemId: item.internal_id,
-			claimBehavior: retryFailed ? "retry_failed" : "claim_new",
+			claimBehavior: retryStatuses.length > 0 ? "retry_statuses" : "claim_new",
+			retryStatuses,
 		});
 
 		if (!claim.claimed) {
