@@ -9,6 +9,7 @@ export {
 	fullSubjectToSpendLimitByFeatureId,
 	fullSubjectToUsageBasedCusEntsByFeatureId,
 } from "./fullSubjectToSpendLimit.js";
+export { fullSubjectToUsageWindowLimits } from "./fullSubjectToUsageWindowLimits.js";
 export { logFullSubject } from "./logFullSubject.js";
 export { mergeCustomerBillingControlsForCheck } from "./mergeCustomerBillingControlsForCheck.js";
 export { normalizedToFullSubject } from "./normalizedToFullSubject.js";
