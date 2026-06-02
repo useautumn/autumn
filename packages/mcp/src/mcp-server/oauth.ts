@@ -252,6 +252,19 @@ function getOAuthPrincipalId(
 	].join(":");
 }
 
+function getStaticApiKey(headers: Headers, flags: MCPOAuthFlags) {
+	const secretKey = headers.get("secret-key");
+	if (secretKey) return secretKey;
+
+	const authorization = headers.get("authorization");
+	const bearer = authorization?.startsWith("Bearer ")
+		? authorization.slice("Bearer ".length)
+		: undefined;
+	if (bearer?.startsWith("am_")) return bearer;
+
+	return flags["oauth-enabled"] ? undefined : flags["secret-key"];
+}
+
 export async function buildAuthForRequest(
 	headers: Headers,
 	flags: MCPOAuthFlags,
@@ -271,8 +284,7 @@ export async function buildAuthForRequest(
 		"Invalid fail-open",
 	);
 	const apiKey = parseRequestOption(
-		headers.get("secret-key") ??
-			(flags["oauth-enabled"] ? undefined : flags["secret-key"]),
+		getStaticApiKey(headers, flags),
 		secretKeySchema,
 		"Invalid secret-key",
 	);

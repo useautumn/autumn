@@ -25,6 +25,7 @@ type ToolOptions = {
 const withAuthFetch =
 	(apiKey: string) => (input: RequestInfo | URL, init?: RequestInit) => {
 		const headers = new Headers(init?.headers);
+		headers.set("Authorization", `Bearer ${apiKey}`);
 		headers.set("secret-key", apiKey);
 		return fetch(input, { ...init, headers });
 	};
@@ -39,7 +40,12 @@ export const createAutumnMcpClient = (
 		servers: {
 			autumn: {
 				url: new URL(env.AUTUMN_MCP_URL),
-				requestInit: { headers: { "secret-key": apiKey } },
+				requestInit: {
+					headers: {
+						Authorization: `Bearer ${apiKey}`,
+						"secret-key": apiKey,
+					},
+				},
 				eventSourceInit: { fetch: fetchWithAuth },
 				fetch: fetchWithAuth,
 				requireToolApproval: options.requireApproval

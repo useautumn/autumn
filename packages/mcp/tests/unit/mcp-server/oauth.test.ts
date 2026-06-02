@@ -118,6 +118,20 @@ describe("MCP OAuth auth resolution", () => {
 		expect(auth.resource).toBe("http://localhost:2718/mcp");
 	});
 
+	test("accepts an Autumn API key bearer token when OAuth is enabled", async () => {
+		const auth = await buildAuthForRequest(
+			new Headers({
+				authorization: "Bearer am_sk_test_chat",
+				host: "localhost:2718",
+			}),
+			flags as MCPOAuthFlags,
+			logger,
+		);
+
+		expect(auth.apiKey).toBe("am_sk_test_chat");
+		expect(auth.principalId).toStartWith("secret-key:");
+	});
+
 	test("uses route-specific resource URLs", async () => {
 		const originalFetch = globalThis.fetch;
 		globalThis.fetch = (async (_url, init) => {
