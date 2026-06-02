@@ -1,3 +1,4 @@
+import { Scopes } from "@autumn/shared/scopeDefinitions";
 import { describe, expect, test } from "bun:test";
 import {
 	buildAuthForRequest,
@@ -5,7 +6,7 @@ import {
 	MCP_OAUTH_SCOPES,
 	OAuthHttpError,
 	type MCPOAuthFlags,
-} from "./oauth.js";
+} from "../../../src/mcp-server/oauth.js";
 
 const flags = {
 	"oauth-enabled": true,
@@ -18,6 +19,17 @@ const logger = {
 } as never;
 
 describe("MCP OAuth auth resolution", () => {
+	test("requests scopes required by public write tools", () => {
+		expect(MCP_OAUTH_SCOPES).toEqual(
+			expect.arrayContaining([
+				Scopes.Customers.Write,
+				Scopes.Plans.Write,
+				Scopes.Billing.Write,
+				Scopes.Balances.Write,
+			]),
+		);
+	});
+
 	test("returns a WWW-Authenticate challenge without a bearer token", async () => {
 		await expect(
 			buildAuthForRequest(
@@ -89,6 +101,35 @@ describe("MCP OAuth auth resolution", () => {
 		} finally {
 			globalThis.fetch = originalFetch;
 		}
+	});
+
+	test("accepts a static secret-key when OAuth is enabled", async () => {
+		const auth = await buildAuthForRequest(
+			new Headers({
+				host: "localhost:2718",
+				"secret-key": "am_sk_test_chat",
+			}),
+			flags as MCPOAuthFlags,
+			logger,
+		);
+
+		expect(auth.apiKey).toBe("am_sk_test_chat");
+		expect(auth.principalId).toStartWith("secret-key:");
+		expect(auth.resource).toBe("http://localhost:2718/mcp");
+	});
+
+	test("accepts an Autumn API key bearer token when OAuth is enabled", async () => {
+		const auth = await buildAuthForRequest(
+			new Headers({
+				authorization: "Bearer am_sk_test_chat",
+				host: "localhost:2718",
+			}),
+			flags as MCPOAuthFlags,
+			logger,
+		);
+
+		expect(auth.apiKey).toBe("am_sk_test_chat");
+		expect(auth.principalId).toStartWith("secret-key:");
 	});
 
 	test("uses route-specific resource URLs", async () => {

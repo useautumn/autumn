@@ -12,6 +12,7 @@ COPY vite/package.json ./vite/package.json
 COPY scripts/package.json ./scripts/package.json
 COPY apps/checkout/package.json ./apps/checkout/package.json
 COPY apps/mcp-server/package.json ./apps/mcp-server/package.json
+COPY apps/chat/package.json ./apps/chat/package.json
 COPY packages/autumn-js/package.json ./packages/autumn-js/package.json
 COPY packages/atmn/package.json ./packages/atmn/package.json
 COPY packages/atmn-tests/package.json ./packages/atmn-tests/package.json

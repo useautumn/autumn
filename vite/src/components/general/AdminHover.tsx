@@ -1,7 +1,8 @@
+import { PreviewCard } from "@base-ui/react/preview-card";
 import { Check, Copy } from "lucide-react";
 import type React from "react";
 import { forwardRef, useState } from "react";
-import { PreviewCard } from "@base-ui/react/preview-card";
+import { cn } from "@/lib/utils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 
 export const AdminHover = forwardRef<
@@ -12,53 +13,59 @@ export const AdminHover = forwardRef<
 		hide?: boolean;
 		asChild?: boolean;
 		side?: "top" | "bottom" | "left" | "right";
+		triggerClassName?: string;
 	}
->(({ children, texts, hide = false, side = "bottom" }, _ref) => {
-	const { isAdmin, skipHover } = useAdmin();
+>(
+	(
+		{ children, texts, hide = false, side = "bottom", triggerClassName },
+		_ref,
+	) => {
+		const { isAdmin, skipHover } = useAdmin();
 
-	if (!isAdmin || hide || skipHover) return <>{children}</>;
+		if (!isAdmin || hide || skipHover) return <>{children}</>;
 
-	return (
-		<PreviewCard.Root>
-			<PreviewCard.Trigger
-				render={<div className="inline-flex" />}
-				delay={0}
-			>
-				{children}
-			</PreviewCard.Trigger>
-			<PreviewCard.Portal>
-				<PreviewCard.Positioner
-					side={side}
-					sideOffset={4}
-					align="start"
-					positionMethod="fixed"
-					className="isolate z-[9999]"
+		return (
+			<PreviewCard.Root>
+				<PreviewCard.Trigger
+					render={<div className={cn("inline-flex", triggerClassName)} />}
+					delay={0}
 				>
-					<PreviewCard.Popup className="bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm shadow-sm border rounded-md px-2 pr-6 py-2 max-w-none origin-(--transform-origin) transition-[opacity,scale] duration-150 data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95">
-						<div className="text-xs text-gray-500 dark:text-gray-400 flex flex-col gap-2 whitespace-nowrap">
-							{texts.map((text, i) => {
-								if (!text) return null;
-								if (typeof text === "object") {
-									return (
-										<div key={`${text.key || i}-${text.value}`}>
-											{text.key && (
-												<p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
-													{text.key}
-												</p>
-											)}
-											<CopyText text={text.value} />
-										</div>
-									);
-								}
-								return <CopyText key={text} text={text} />;
-							})}
-						</div>
-					</PreviewCard.Popup>
-				</PreviewCard.Positioner>
-			</PreviewCard.Portal>
-		</PreviewCard.Root>
-	);
-});
+					{children}
+				</PreviewCard.Trigger>
+				<PreviewCard.Portal>
+					<PreviewCard.Positioner
+						side={side}
+						sideOffset={4}
+						align="start"
+						positionMethod="fixed"
+						className="isolate z-[9999]"
+					>
+						<PreviewCard.Popup className="bg-white/50 dark:bg-zinc-900/50 backdrop-blur-sm shadow-sm border rounded-md px-2 pr-6 py-2 max-w-none origin-(--transform-origin) transition-[opacity,scale] duration-150 data-[starting-style]:opacity-0 data-[starting-style]:scale-95 data-[ending-style]:opacity-0 data-[ending-style]:scale-95">
+							<div className="text-xs text-gray-500 dark:text-gray-400 flex flex-col gap-2 whitespace-nowrap">
+								{texts.map((text, i) => {
+									if (!text) return null;
+									if (typeof text === "object") {
+										return (
+											<div key={`${text.key || i}-${text.value}`}>
+												{text.key && (
+													<p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+														{text.key}
+													</p>
+												)}
+												<CopyText text={text.value} />
+											</div>
+										);
+									}
+									return <CopyText key={text} text={text} />;
+								})}
+							</div>
+						</PreviewCard.Popup>
+					</PreviewCard.Positioner>
+				</PreviewCard.Portal>
+			</PreviewCard.Root>
+		);
+	},
+);
 
 const CopyText = ({ text }: { text: string }) => {
 	const [isHover, setIsHover] = useState(false);

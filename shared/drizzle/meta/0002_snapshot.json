@@ -1,5 +1,5 @@
 {
-  "id": "19f12b2f-f6f9-40d2-9649-91aaca867422",
+  "id": "b5a8ee16-450e-44e1-8494-a73b87ac3c90",
   "prevId": "3d398bca-e922-45ac-bdc7-52f121289654",
   "version": "7",
   "dialect": "postgresql",
@@ -556,6 +556,290 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.chat_approvals": {
+      "name": "chat_approvals",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "channel_id": {
+          "name": "channel_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "message_ts": {
+          "name": "message_ts",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "provider_user_id": {
+          "name": "provider_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "env": {
+          "name": "env",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "run_id": {
+          "name": "run_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tool_call_id": {
+          "name": "tool_call_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tool_name": {
+          "name": "tool_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "tool_args": {
+          "name": "tool_args",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "preview": {
+          "name": "preview",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
+        },
+        "expires_at": {
+          "name": "expires_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "decided_at": {
+          "name": "decided_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "decided_by_provider_user_id": {
+          "name": "decided_by_provider_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "chat_approvals_org_id_fkey": {
+          "name": "chat_approvals_org_id_fkey",
+          "tableFrom": "chat_approvals",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.chat_installations": {
+      "name": "chat_installations",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "workspace_name": {
+          "name": "workspace_name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "bot_user_id": {
+          "name": "bot_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bot_access_token": {
+          "name": "bot_access_token",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "scopes": {
+          "name": "scopes",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "default_env": {
+          "name": "default_env",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "sandbox_api_key_id": {
+          "name": "sandbox_api_key_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "sandbox_api_key": {
+          "name": "sandbox_api_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "live_api_key_id": {
+          "name": "live_api_key_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "live_api_key": {
+          "name": "live_api_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "installed_by_user_id": {
+          "name": "installed_by_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "installed_by_provider_user_id": {
+          "name": "installed_by_provider_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "chat_installations_org_id_fkey": {
+          "name": "chat_installations_org_id_fkey",
+          "tableFrom": "chat_installations",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "chat_installations_org_provider_key": {
+          "name": "chat_installations_org_provider_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "org_id",
+            "provider"
+          ]
+        },
+        "chat_installations_provider_workspace_key": {
+          "name": "chat_installations_provider_workspace_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "provider",
+            "workspace_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.chat_results": {
       "name": "chat_results",
       "schema": "",
@@ -1070,22 +1354,6 @@
           ],
           "isUnique": false,
           "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_customer_prices_internal_customer_id": {
-          "name": "idx_customer_prices_internal_customer_id",
-          "columns": [
-            {
-              "expression": "\"internal_customer_id\" COLLATE \"C\"",
-              "asc": true,
-              "isExpression": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"customer_prices\".\"internal_customer_id\" IS NOT NULL",
-          "concurrently": true,
           "method": "btree",
           "with": {}
         }
@@ -3298,22 +3566,6 @@
           ],
           "isUnique": false,
           "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_invoices_internal_entity_id": {
-          "name": "idx_invoices_internal_entity_id",
-          "columns": [
-            {
-              "expression": "internal_entity_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"invoices\".\"internal_entity_id\" IS NOT NULL",
-          "concurrently": true,
           "method": "btree",
           "with": {}
         }

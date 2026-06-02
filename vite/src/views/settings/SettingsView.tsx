@@ -2,6 +2,7 @@ import {
 	BellIcon,
 	BuildingIcon,
 	CreditCardIcon,
+	PlugIcon,
 	PaletteIcon,
 	ShieldCheckIcon,
 	UserIcon,
@@ -17,6 +18,7 @@ import { AuthorizedAppsSection } from "./sections/AuthorizedAppsSection";
 import { AppearanceSection } from "./sections/AppearanceSection";
 import { BillingSettingsSection } from "./sections/BillingSettingsSection";
 import { UsageAlertsSection } from "./sections/UsageAlertsSection";
+import { IntegrationsSection } from "./sections/IntegrationsSection";
 
 type SettingsTab =
 	| "account"
@@ -24,6 +26,7 @@ type SettingsTab =
 	| "members"
 	| "billing"
 	| "usage-alerts"
+	| "integrations"
 	| "appearance"
 	| "apps";
 
@@ -56,6 +59,11 @@ const SETTINGS_TABS: readonly SettingsNavItem[] = [
 		icon: <BellIcon className="size-4" />,
 	},
 	{
+		id: "integrations",
+		label: "Integrations",
+		icon: <PlugIcon className="size-4" />,
+	},
+	{
 		id: "appearance",
 		label: "Appearance",
 		icon: <PaletteIcon className="size-4" />,
@@ -73,6 +81,7 @@ const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
 	members: MembersSection,
 	billing: BillingSettingsSection,
 	"usage-alerts": UsageAlertsSection,
+	integrations: IntegrationsSection,
 	appearance: AppearanceSection,
 	apps: AuthorizedAppsSection,
 };
