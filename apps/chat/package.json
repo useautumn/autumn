@@ -16,6 +16,7 @@
 		"@chat-adapter/state-pg": "^4.29.0",
 		"@mastra/core": "^1.36.0",
 		"@mastra/mcp": "^1.8.0",
+		"@mendable/firecrawl-js": "^4.25.1",
 		"chat": "^4.29.0",
 		"date-fns": "^4.1.0",
 		"drizzle-orm": "catalog:",

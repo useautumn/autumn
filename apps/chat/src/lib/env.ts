@@ -16,6 +16,7 @@ const envSchema = z
 		CLIENT_URL: z.string().min(1).default("http://localhost:3000"),
 		DATABASE_URL: z.string().min(1),
 		ENCRYPTION_PASSWORD: z.string().min(1),
+		FIRECRAWL_API_KEY: z.string().min(1),
 		PORT: z.coerce.number().int().positive().default(3099),
 		SLACK_CLIENT_ID: z.string().min(1),
 		SLACK_CLIENT_SECRET: z.string().min(1),

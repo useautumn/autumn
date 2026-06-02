@@ -22,6 +22,7 @@ supabase.sh
 tests/
 !server/tests
 !packages/mcp/tests
+!apps/chat/tests
 !vite/tests
 .secrets
 
