@@ -78,8 +78,8 @@
 			"ignoreDependencies": ["shadcn", "tailwindcss", "tw-animate-css"]
 		},
 		"apps/chat": {
-			"entry": ["src/**/*.test.ts"],
-			"project": ["src/**/*.ts"]
+			"entry": ["tests/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"]
 		},
 		"packages/ksuid": {
 			"project": ["src/**/*.ts"]

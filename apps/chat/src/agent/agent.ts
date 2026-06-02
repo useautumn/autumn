@@ -26,15 +26,11 @@ const envSelectionSchema = z.strictObject({
 	env: z.enum(AppEnv),
 });
 
-const formatRecentMessages = (messages: ChatContextMessage[] = []) =>
-	messages.length
-		? `Recent thread messages, oldest to newest:\n${messages
-				.map(
-					(message) =>
-						`- ${message.author}${message.isBot === true ? " (bot)" : ""}: ${message.text}`,
-				)
-				.join("\n")}`
-		: "";
+const recentMessageContext = (messages: ChatContextMessage[] = []) =>
+	messages.map((message) => ({
+		role: message.isBot === true ? ("assistant" as const) : ("user" as const),
+		content: `${message.author}${message.isBot === true ? " (bot)" : ""}: ${message.text}`,
+	}));
 
 export const selectChatEnv = async ({
 	message,
@@ -62,10 +58,7 @@ export const selectChatEnv = async ({
 				"Return live unless the latest user request clearly asks to use sandbox or test mode.",
 		},
 		context: [
-			{
-				role: "system",
-				content: formatRecentMessages(recentMessages),
-			},
+			...recentMessageContext(recentMessages),
 		],
 	});
 	return output.object.env;
@@ -142,11 +135,11 @@ export const runChatAgent = async ({
 					content: [
 						`${provider} thread: ${threadId}. Autumn resource: ${resourceId}.`,
 						"Answer the latest user message. Use prior thread messages only as context.",
-						formatRecentMessages(recentMessages),
 					]
 						.filter(Boolean)
 						.join("\n\n"),
 				},
+				...recentMessageContext(recentMessages),
 			],
 		});
 		return { ...output, env, previewApproval };

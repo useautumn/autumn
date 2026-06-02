@@ -76,19 +76,21 @@ export class ChatService {
 			installation.live_api_key_id,
 		].filter((id): id is string => !!id);
 
-		for (const id of keyIds) {
-			await ctx.db
-				.delete(apiKeys)
-				.where(and(eq(apiKeys.id, id), eq(apiKeys.org_id, ctx.org.id)));
-		}
+		await ctx.db.transaction(async (tx) => {
+			for (const id of keyIds) {
+				await tx
+					.delete(apiKeys)
+					.where(and(eq(apiKeys.id, id), eq(apiKeys.org_id, ctx.org.id)));
+			}
 
-		await ctx.db
-			.delete(chatInstallations)
-			.where(
-				and(
-					eq(chatInstallations.org_id, ctx.org.id),
-					eq(chatInstallations.provider, slackProvider),
-				),
-			);
+			await tx
+				.delete(chatInstallations)
+				.where(
+					and(
+						eq(chatInstallations.org_id, ctx.org.id),
+						eq(chatInstallations.provider, slackProvider),
+					),
+				);
+		});
 	}
 }
