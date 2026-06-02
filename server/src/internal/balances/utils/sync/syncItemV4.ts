@@ -4,6 +4,7 @@ import {
 	type EntityRolloverBalance,
 	type SubjectBalance,
 	tryCatch,
+	type UsageWindows,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -76,6 +77,7 @@ export interface SyncEntry {
 	balance: number;
 	adjustment: number;
 	entities: Record<string, EntityBalance> | null;
+	usage_windows: UsageWindows | null;
 	next_reset_at: number | null;
 	entity_count: number;
 	cache_version: number | null;
@@ -98,6 +100,7 @@ const subjectBalanceToSyncEntry = ({
 	balance: subjectBalance.balance ?? 0,
 	adjustment: subjectBalance.adjustment ?? 0,
 	entities: subjectBalance.entities ?? null,
+	usage_windows: subjectBalance.usage_windows ?? null,
 	next_reset_at: subjectBalance.next_reset_at ?? null,
 	entity_count: subjectBalance.entities
 		? Object.keys(subjectBalance.entities).length

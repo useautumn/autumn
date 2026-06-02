@@ -6,6 +6,7 @@
 --     - balance: number
 --     - adjustment: number
 --     - entities: jsonb (the full entities object)
+--     - usage_windows: jsonb (the full usage-window counters object)
 --     - next_reset_at: bigint/number (unix timestamp, for conflict detection)
 --     - entity_count: number (for conflict detection)
 --     - cache_version: number (if defined, skip write if DB cache_version differs)
@@ -38,6 +39,7 @@ DECLARE
   ent_balance numeric;
   ent_adjustment numeric;
   ent_entities jsonb;
+  ent_usage_windows jsonb;
   ent_next_reset_at bigint;
   ent_entity_count int;
   ent_cache_version int;
@@ -99,6 +101,7 @@ BEGIN
       ent_balance := (ent_obj->>'balance')::numeric;
       ent_adjustment := (ent_obj->>'adjustment')::numeric;
       ent_entities := ent_obj->'entities';
+      ent_usage_windows := ent_obj->'usage_windows';
       ent_next_reset_at := (ent_obj->>'next_reset_at')::bigint;
       ent_entity_count := COALESCE((ent_obj->>'entity_count')::int, 0);
       ent_cache_version := COALESCE((ent_obj->>'cache_version')::int, 0);
@@ -134,14 +137,21 @@ BEGIN
           ent_id, ent_cache_version, db_cache_version;
       END IF;
       
-      -- Update the customer_entitlement row directly
+      -- Update the customer_entitlement row directly.
+      -- usage_windows is written from the synced object, which carries the FRESH
+      -- Redis value (re-read at sync time), so this is a full replace, not a
+      -- lost-update risk: concurrent counter increments are serialized atomically
+      -- in Redis and the latest cumulative map is what reaches here. The COALESCE
+      -- only avoids wiping the column when a balance-only sync carries no
+      -- usage_windows (null). Postgres is a mirror; Redis is authoritative.
       UPDATE customer_entitlements ce
       SET
         balance = COALESCE(ent_balance, ce.balance),
         adjustment = COALESCE(ent_adjustment, ce.adjustment),
-        entities = COALESCE(ent_entities, ce.entities)
+        entities = COALESCE(ent_entities, ce.entities),
+        usage_windows = COALESCE(NULLIF(ent_usage_windows, 'null'::jsonb), ce.usage_windows)
       WHERE ce.id = ent_id;
-      
+
       -- Track update
       IF FOUND THEN
         updates_json := jsonb_set(
@@ -150,7 +160,8 @@ BEGIN
           jsonb_build_object(
             'balance', ent_balance,
             'adjustment', ent_adjustment,
-            'entities', ent_entities
+            'entities', ent_entities,
+            'usage_windows', ent_usage_windows
           )
         );
       END IF;
