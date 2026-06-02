@@ -12,9 +12,11 @@ import { type Context, Hono } from "hono";
 import { traceEnrichMiddleware } from "@/honoMiddlewares/traceMiddleware.js";
 import { getRevenuecatWebhookSecret } from "./misc/getRevenuecatWebhookSecret";
 import {
+	revenuecatIdentifyMiddleware,
 	revenuecatLogMiddleware,
 	revenuecatSeederMiddleware,
 } from "./misc/revenueCatMiddleware";
+import { logRevenueCatWebhookMiddlewareError } from "./misc/revenueCatWebhookLogging";
 import { handleRenewal } from "./webhookHandlers/handleRevenucatRenewal";
 import { handleBillingIssue } from "./webhookHandlers/handleRevenuecatBillingIssue";
 import { handleCancellation } from "./webhookHandlers/handleRevenuecatCancellation";
@@ -29,6 +31,8 @@ export const revenuecatWebhookRouter = new Hono<RevenueCatWebhookHonoEnv>();
 
 revenuecatWebhookRouter.post(
 	"/:orgId/:env",
+	revenuecatIdentifyMiddleware,
+	traceEnrichMiddleware,
 	revenuecatSeederMiddleware,
 	revenuecatLogMiddleware,
 	revenuecatWebhookRefreshMiddleware,
@@ -37,21 +41,27 @@ revenuecatWebhookRouter.post(
 		const ctx = c.get("ctx");
 		const { logger, org, env } = ctx;
 		const Authorization = c.req.header("Authorization");
-		const body = (await c.req.json()) as Webhook;
 
 		try {
+			const body = (await c.req.json()) as Webhook;
+			ctx.revenuecatEventType = body.event.type;
+			ctx.revenuecatEventId = "id" in body.event ? body.event.id : undefined;
 			const webhookSecret = getRevenuecatWebhookSecret({ org, env });
 
 			if (Authorization !== webhookSecret) {
 				logger.error("Invalid authorization for RevenueCat webhook", {
-					Authorization,
-					webhookSecret,
+					revenuecat_webhook: {
+						orgId: c.req.param("orgId"),
+						env: c.req.param("env"),
+						resolvedOrgId: org?.id,
+						resolvedOrgSlug: org?.slug,
+						eventType: ctx.revenuecatEventType,
+						eventId: ctx.revenuecatEventId,
+					},
+					hasAuthorizationHeader: Boolean(Authorization),
 				});
 				return c.json({ error: "Unauthorized" }, 401);
 			}
-
-			// Set event type in context for logging in refresh middleware
-			ctx.revenuecatEventType = body.event.type;
 
 			switch (body.event.type) {
 				case "INITIAL_PURCHASE":
@@ -100,7 +110,7 @@ revenuecatWebhookRouter.post(
 
 			return c.json({ success: true }, 200);
 		} catch (error) {
-			logger.error(`error handling revenuecat webhook ${error}`);
+			logRevenueCatWebhookMiddlewareError({ c, stage: "handler", error });
 			return c.json({ error: `Internal server error: ${error}` }, 500);
 		}
 	},

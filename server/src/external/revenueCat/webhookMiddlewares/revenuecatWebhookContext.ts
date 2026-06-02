@@ -5,6 +5,8 @@ export type RevenueCatWebhookContext = AutumnContext & {
 	customerId?: string;
 	/** Event type for logging purposes */
 	revenuecatEventType?: string;
+	/** RevenueCat event ID for logging purposes */
+	revenuecatEventId?: string;
 };
 
 export type RevenueCatWebhookHonoEnv = Omit<HonoEnv, "Variables"> & {
