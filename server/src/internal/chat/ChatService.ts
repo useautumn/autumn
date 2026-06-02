@@ -62,21 +62,20 @@ export class ChatService {
 	}
 
 	static async disconnect(ctx: AutumnContext) {
-		const installation = await ctx.db.query.chatInstallations.findFirst({
-			where: and(
-				eq(chatInstallations.org_id, ctx.org.id),
-				eq(chatInstallations.provider, slackProvider),
-			),
-		});
-
-		if (!installation) return;
-
-		const keyIds = [
-			installation.sandbox_api_key_id,
-			installation.live_api_key_id,
-		].filter((id): id is string => !!id);
-
 		await ctx.db.transaction(async (tx) => {
+			const installations = await tx.query.chatInstallations.findMany({
+				where: and(
+					eq(chatInstallations.org_id, ctx.org.id),
+					eq(chatInstallations.provider, slackProvider),
+				),
+			});
+
+			const keyIds = installations
+				.flatMap((installation) => [
+					installation.sandbox_api_key_id,
+					installation.live_api_key_id,
+				])
+				.filter((id): id is string => !!id);
 			for (const id of keyIds) {
 				await tx
 					.delete(apiKeys)

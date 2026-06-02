@@ -11,6 +11,7 @@ import { runMessage } from "./agent/messages.js";
 import {
 	createActionLogger,
 	finishLoading,
+	type LoadingState,
 	type ReplyTarget,
 	startLoading,
 } from "./ui/progress.js";
@@ -64,13 +65,14 @@ const runAndReply = async ({
 	text: string;
 	threadId: string;
 }) => {
-	const workspaceId = getSlackWorkspaceId(raw);
-	const installation = await findInstallation("slack", workspaceId);
-	if (!installation || !text.trim()) return;
-
-	const loading = await startLoading(target);
-	const logAction = createActionLogger(loading);
+	let loading: LoadingState = null;
 	try {
+		const workspaceId = getSlackWorkspaceId(raw);
+		const installation = await findInstallation("slack", workspaceId);
+		if (!installation || !text.trim()) return;
+
+		loading = await startLoading(target);
+		const logAction = createActionLogger(loading);
 		const output = await runMessage({
 			installation,
 			onAction: logAction,
