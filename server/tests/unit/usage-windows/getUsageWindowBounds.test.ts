@@ -85,4 +85,47 @@ describe("getUsageWindowBounds", () => {
 			getUsageWindowBounds({ interval: EntInterval.Month, now: NOW + 1000 }),
 		);
 	});
+
+	test("aligns a day window to the anchor's time-of-day, not UTC midnight", () => {
+		const anchor = Date.UTC(2026, 0, 9, 15, 30, 0); // 15:30, not midnight
+		const { windowStartAt, windowEndAt } = getUsageWindowBounds({
+			interval: EntInterval.Day,
+			now: NOW,
+			anchor,
+		});
+		const calendar = getUsageWindowBounds({
+			interval: EntInterval.Day,
+			now: NOW,
+		});
+
+		// Spans one day, contains now, and rolls at the anchor's 15:30.
+		expect(windowEndAt - windowStartAt).toBe(24 * 60 * 60 * 1000);
+		expect(windowStartAt).toBeLessThanOrEqual(NOW);
+		expect(NOW).toBeLessThan(windowEndAt);
+		expect(new Date(windowStartAt).getUTCHours()).toBe(15);
+		expect(new Date(windowStartAt).getUTCMinutes()).toBe(30);
+		expect(windowStartAt).not.toBe(calendar.windowStartAt);
+	});
+
+	test("aligns a month window to the anchor's day-of-month, not the 1st", () => {
+		const anchor = Date.UTC(2026, 0, 9); // the 9th
+		const { windowStartAt } = getUsageWindowBounds({
+			interval: EntInterval.Month,
+			now: NOW, // June 15
+			anchor,
+		});
+
+		expect(new Date(windowStartAt).getUTCDate()).toBe(9);
+		expect(windowStartAt).toBeLessThanOrEqual(NOW);
+	});
+
+	test("lifetime ignores the anchor", () => {
+		expect(
+			getUsageWindowBounds({
+				interval: EntInterval.Lifetime,
+				now: NOW,
+				anchor: Date.UTC(2026, 0, 9),
+			}),
+		).toEqual({ windowStartAt: 0, windowEndAt: Number.MAX_SAFE_INTEGER });
+	});
 });

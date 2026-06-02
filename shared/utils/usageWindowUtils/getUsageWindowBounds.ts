@@ -9,13 +9,15 @@ import {
 	startOfYear,
 } from "date-fns";
 import { EntInterval } from "../../models/productModels/intervals/entitlementInterval.js";
+import { getCycleEnd } from "../billingUtils/cycleUtils/getCycleEnd.js";
+import { getCycleStart } from "../billingUtils/cycleUtils/getCycleStart.js";
 import { addInterval } from "../billingUtils/intervalUtils/intervalArithmetic.js";
 
 const LIFETIME_WINDOW_END = Number.MAX_SAFE_INTEGER;
 
-// UTC-calendar-aligned start of the interval containing `now`. Alignment keeps
-// the window (and therefore its key) deterministic from `now` alone, so the TS
-// and Lua sides never disagree on which window a track lands in.
+// UTC-calendar-aligned start of the interval containing `now`. Used only as the
+// fallback when no billing-cycle anchor is available; alignment keeps the window
+// (and its key) deterministic from `now` alone so TS and Lua never disagree.
 const startOfWindow = ({
 	interval,
 	now,
@@ -56,19 +58,37 @@ const startOfWindow = ({
 };
 
 /**
- * Current usage-window bounds for an interval, aligned to the UTC calendar.
- * `lifetime` never resets. Each window spans exactly one interval (sub-interval
- * counts are intentionally not supported yet; they need non-overlapping tiling).
+ * Current usage-window bounds for an interval. When a billing-cycle `anchor` is
+ * given, bounds align to the customer's cycle (so a "daily" cap rolls on their
+ * billing time-of-day, not UTC midnight). Without an anchor, falls back to UTC
+ * calendar alignment. `lifetime` never resets. Each window spans one interval.
  */
 export const getUsageWindowBounds = ({
 	interval,
 	now,
+	anchor,
 }: {
 	interval: EntInterval;
 	now: number;
+	anchor?: number | null;
 }): { windowStartAt: number; windowEndAt: number } => {
 	if (interval === EntInterval.Lifetime) {
 		return { windowStartAt: 0, windowEndAt: LIFETIME_WINDOW_END };
+	}
+
+	if (anchor != null && Number.isFinite(anchor)) {
+		const cycleStartAt = getCycleStart({ anchor, interval, now });
+		const cycleEndAt = getCycleEnd({ anchor, interval, now });
+		// Only trust cycle bounds that are finite and actually bracket `now`; a bad
+		// billing anchor must fall back to calendar, never poison the deduction.
+		if (
+			Number.isFinite(cycleStartAt) &&
+			Number.isFinite(cycleEndAt) &&
+			cycleStartAt <= now &&
+			now < cycleEndAt
+		) {
+			return { windowStartAt: cycleStartAt, windowEndAt: cycleEndAt };
+		}
 	}
 
 	const windowStartAt = startOfWindow({ interval, now });

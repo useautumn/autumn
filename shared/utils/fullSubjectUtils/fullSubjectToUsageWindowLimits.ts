@@ -52,43 +52,66 @@ const toAnchorCandidate = (
 
 /**
  * Resolves the enforceable usage-window limits for the requested features from a
- * FullSubject. The windowed cap is configured as the optional `usage_window`
- * sub-object on a `spend_limit` entry (same JSON as the overage cap; the two
- * caps are independent). v1 reads ONLY customer-scoped spend_limits; entity
- * usage windows are out of scope. Only `usage_window.enabled` entries are
- * enforced (independent of the entry-level `enabled`, which gates the overage cap).
+ * FullSubject. A windowed cap is armed by setting `usage_limit_interval` on a
+ * customer `spend_limit` entry (flat config; the interval's presence is the
+ * switch, independent of the entry-level `enabled` which gates the overage cap).
+ * v1 reads ONLY customer-scoped spend_limits; entity usage windows are out of scope.
  *
- * A cap on a credit-system feature targets the credit pool (`balance`
- * dimension); a cap on any other feature targets that feature's usage
- * (`metered_feature` dimension). Window bounds + key are computed from `now`.
+ * The cap value is the entry's `usage_limit` if set, else inherited from the
+ * capped feature's OWN entitlement (`entitlement.usage_limit`) - so you usually
+ * set only the interval. No resolvable limit (e.g. an unlimited entitlement and no
+ * override) means no enforceable cap, so the feature is skipped.
  *
- * Each limit also gets a single owning `anchor_customer_entitlement_id`,
- * resolved deduction-order-independently so one counter never splits across
- * pools. Null anchor means no eligible owner; the enforcement layer fails closed.
+ * A cap on a credit-system feature targets the credit pool (`balance` dimension);
+ * a cap on any other feature targets that feature's usage (`metered_feature`).
+ * Window bounds align to the customer's billing cycle (the anchor entitlement's
+ * `billing_cycle_anchor_resets_at`), falling back to UTC calendar when absent.
+ *
+ * Each limit gets a single owning `anchor_customer_entitlement_id`, resolved
+ * deduction-order-independently so one counter never splits across pools. Null
+ * anchor means no eligible owner; the enforcement layer fails closed.
  */
 export const fullSubjectToUsageWindowLimits = ({
 	fullSubject,
 	featureIds,
 	features,
 	now,
+	inStatuses,
 }: {
 	fullSubject: FullSubject;
 	featureIds: string[];
 	features: Feature[];
 	now: number;
+	// Status filter for entitlement lookups; pass the caller's orgToInStatuses so
+	// the cap's value/anchor resolution matches what the deduction can act on.
+	inStatuses?: CusProductStatus[];
 }): UsageWindowLimit[] => {
 	// v1: customer-scoped caps only; entity-scoped usage windows are out of scope.
 	const customerSpendLimits = fullSubject.customer.spend_limits ?? [];
 	const limits: UsageWindowLimit[] = [];
 
 	for (const featureId of [...new Set(featureIds)]) {
+		// Presence of usage_limit_interval arms the cap; there is no separate enabled.
 		const spendLimit = customerSpendLimits.find(
 			(candidate) =>
 				candidate.feature_id === featureId &&
-				candidate.usage_window?.enabled === true,
+				candidate.usage_limit_interval != null,
 		);
-		const usageWindow = spendLimit?.usage_window;
-		if (!usageWindow) continue;
+		const interval = spendLimit?.usage_limit_interval;
+		if (spendLimit == null || interval == null) continue;
+
+		// Cap value: explicit override, else inherited from the capped feature's OWN
+		// entitlement (NOT the anchor, which may be a containing credit system in a
+		// different unit). No resolvable limit => no enforceable cap, skip.
+		const featureCustomerEntitlement = fullSubjectToCustomerEntitlements({
+			fullSubject,
+			featureIds: [featureId],
+			inStatuses,
+		})[0];
+		const limit =
+			spendLimit.usage_limit ??
+			featureCustomerEntitlement?.entitlement.usage_limit;
+		if (limit == null) continue;
 
 		const scopeType = "customer" as const;
 		const entityId = null;
@@ -117,28 +140,36 @@ export const fullSubjectToUsageWindowLimits = ({
 
 		let anchorId: string | null = null;
 		let anchorFeatureId: string | null = null;
+		let anchorCustomerEntitlement: FullCusEntWithFullCusProduct | undefined;
 		for (const ownerFeatureIds of ownerFeatureIdsByPreference) {
 			if (ownerFeatureIds.length === 0) continue;
 			const candidateEntitlements = fullSubjectToCustomerEntitlements({
 				fullSubject,
 				featureIds: ownerFeatureIds,
+				inStatuses,
 			});
 			anchorId = pickAnchorCustomerEntitlementId({
 				candidates: candidateEntitlements.map(toAnchorCandidate),
 				scopeType,
 			});
 			if (anchorId) {
-				anchorFeatureId =
-					candidateEntitlements.find(
-						(customerEntitlement) => customerEntitlement.id === anchorId,
-					)?.feature_id ?? null;
+				anchorCustomerEntitlement = candidateEntitlements.find(
+					(customerEntitlement) => customerEntitlement.id === anchorId,
+				);
+				anchorFeatureId = anchorCustomerEntitlement?.feature_id ?? null;
 				break;
 			}
 		}
 
+		// Align window bounds to the customer's billing cycle when the anchor has a
+		// cycle anchor; otherwise getUsageWindowBounds falls back to UTC calendar.
+		const cycleAnchor =
+			anchorCustomerEntitlement?.customer_product
+				?.billing_cycle_anchor_resets_at ?? null;
 		const { windowStartAt, windowEndAt } = getUsageWindowBounds({
-			interval: usageWindow.interval,
+			interval,
 			now,
+			anchor: cycleAnchor,
 		});
 
 		limits.push({
@@ -148,7 +179,7 @@ export const fullSubjectToUsageWindowLimits = ({
 				internalEntityId,
 				dimensionType,
 				dimensionFeatureId,
-				interval: usageWindow.interval,
+				interval,
 				windowStartAt,
 			}),
 			dimension_type: dimensionType,
@@ -156,10 +187,10 @@ export const fullSubjectToUsageWindowLimits = ({
 			scope_type: scopeType,
 			entity_id: entityId,
 			internal_entity_id: internalEntityId,
-			interval: usageWindow.interval,
+			interval,
 			window_start_at: windowStartAt,
 			window_end_at: windowEndAt,
-			limit: usageWindow.limit,
+			limit,
 			anchor_customer_entitlement_id: anchorId,
 			anchor_feature_id: anchorFeatureId,
 		});

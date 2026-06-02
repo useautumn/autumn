@@ -10,7 +10,8 @@ import { expectCustomerFeatureCachedAndDb } from "../../utils/spend-limit-utils/
 
 type AutumnV2_1Client = Awaited<ReturnType<typeof initScenario>>["autumnV2_1"];
 
-// Arms a windowed usage cap via spend_limits[].usage_window (overage cap left off).
+// Arms a windowed usage cap via spend_limits[].usage_limit_interval (overage off).
+// `limit` is passed as the explicit usage_limit override.
 const setCustomerUsageLimit = async ({
 	autumn,
 	customerId,
@@ -29,7 +30,8 @@ const setCustomerUsageLimit = async ({
 			{
 				feature_id: featureId,
 				enabled: false,
-				usage_window: { interval, limit, enabled: true },
+				usage_limit: limit,
+				usage_limit_interval: interval,
 			},
 		],
 	};
@@ -225,10 +227,10 @@ test.concurrent(
 	},
 );
 
-// A single spend_limit entry carrying BOTH an overage_limit and a usage_window
-// must still enforce the window (the two caps are independent).
+// A single spend_limit entry carrying BOTH an overage_limit and a windowed usage
+// cap must still enforce the window (the two caps are independent).
 test.concurrent(
-	`${chalk.yellowBright("track-customer-usage-limit4: a spend_limit with both overage_limit and usage_window still enforces the window")}`,
+	`${chalk.yellowBright("track-customer-usage-limit4: a spend_limit with both overage_limit and a usage window still enforces the window")}`,
 	async () => {
 		const customerProduct = products.base({
 			id: "track-customer-compound-cap",
@@ -250,11 +252,8 @@ test.concurrent(
 					feature_id: TestFeature.Action1,
 					enabled: true,
 					overage_limit: 20,
-					usage_window: {
-						interval: EntInterval.Month,
-						limit: 5,
-						enabled: true,
-					},
+					usage_limit: 5,
+					usage_limit_interval: EntInterval.Month,
 				},
 			],
 		};

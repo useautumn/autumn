@@ -129,6 +129,7 @@ export const prepareFeatureDeductionV2 = ({
 		featureIds: windowFeatureIds,
 		features: ctx.features,
 		now,
+		inStatuses: orgToInStatuses({ org }),
 	});
 
 	for (const windowLimit of usageWindowLimits) {
@@ -138,7 +139,11 @@ export const prepareFeatureDeductionV2 = ({
 			);
 		}
 	}
-	if (fullSubject.entity?.spend_limits?.some((s) => s.usage_window?.enabled)) {
+	if (
+		fullSubject.entity?.spend_limits?.some(
+			(s) => s.usage_limit_interval != null,
+		)
+	) {
 		ctx.logger.warn(
 			`entity-scoped usage windows are not enforced in v1; ignored for entity ${fullSubject.entity.id}`,
 		);

@@ -51,8 +51,9 @@ export type UsageWindows = z.infer<typeof UsageWindowsSchema>;
 
 /**
  * A resolved, enforceable usage-window limit: the runtime input handed to the
- * deduction script. Built each deduction from the `usage_window` sub-object on a
- * `spend_limit` billing control plus the current window bounds (NOT stored).
+ * deduction script. Built each deduction from the windowed usage cap
+ * (`usage_limit_interval` + inherited/override limit) on a `spend_limit` billing
+ * control plus the current window bounds (NOT stored).
  * Carries the resolved `limit` and `key`/window so Lua can find-or-create the
  * matching counter.
  */
