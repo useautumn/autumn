@@ -12,7 +12,7 @@ permissions:
 jobs:
   changes:
     name: Check changed files
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     outputs:
       server: ${{ steps.filter.outputs.server }}
     steps:
@@ -32,7 +32,7 @@ jobs:
     name: Unit Tests
     needs: changes
     if: needs.changes.outputs.server == 'true'
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
 
     steps:
       - name: Checkout code

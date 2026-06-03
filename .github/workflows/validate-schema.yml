@@ -11,7 +11,7 @@ on:
 jobs:
   changes:
     name: Detect schema-relevant changes
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     outputs:
       schema: ${{ steps.filter.outputs.schema }}
     steps:
@@ -32,7 +32,7 @@ jobs:
   validate-schema:
     name: Validate Schema
     needs: changes
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-4vcpu-ubuntu-2404
 
     steps:
       - name: Skip (no schema-relevant changes)

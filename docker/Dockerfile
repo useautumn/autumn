@@ -19,8 +19,11 @@ WORKDIR /app
 COPY --from=pruner /app/out/json/ .
 RUN mkdir -p scripts && touch scripts/preload-env.ts
 RUN bun -e 'const fs = require("fs"); const pkg = JSON.parse(fs.readFileSync("package.json", "utf8")); pkg.workspaces.packages = ["server", "shared", "apps/mcp-server", "packages/ksuid", "packages/mcp", "packages/stripe-sync", "packages/autumn-js", "packages/sdk"]; delete pkg.dependencies; delete pkg.devDependencies; delete pkg.scripts; fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));'
+# Keep turbo's pruned bun.lock (derived from the committed lockfile) so versions
+# stay pinned and bun only reconciles the workspace-list delta. Deleting it forces
+# a full from-scratch registry resolve, which is slow and can hang.
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-	rm -f bun.lock && bun install --ignore-scripts
+	bun install --ignore-scripts
 
 COPY --from=pruner /app/out/full/ .
 
