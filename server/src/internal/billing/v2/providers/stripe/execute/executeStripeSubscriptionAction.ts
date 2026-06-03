@@ -5,7 +5,6 @@ import type {
 	StripeBillingPlanResult,
 } from "@autumn/shared";
 import { StripeBillingStage, tryCatch } from "@autumn/shared";
-import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import { setStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
@@ -13,10 +12,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { removeStripeSubscriptionIdFromBillingPlan } from "@/internal/billing/v2/execute/removeStripeSubscriptionIdFromBillingPlan";
 import { shouldDeferBillingPlan } from "@/internal/billing/v2/providers/stripe/utils/common/shouldDeferBillingPlan";
-import {
-	finalizeStripeInvoice,
-	updateStripeInvoice,
-} from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
+import { applyTemplateToDraft } from "@/internal/billing/v2/providers/stripe/utils/invoices/applyTemplateToDraft";
+import { finalizeStripeInvoice } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { executeStripeSubscriptionOperation } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/executeStripeSubscriptionOperation";
 import { getLatestInvoiceFromSubscriptionAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/getLatestInvoiceFromSubscriptionAction";
 import { getRequiredActionFromSubscriptionInvoice } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/getRequiredActionFromSubscriptionInvoice";
@@ -25,33 +22,6 @@ import { invoiceActions } from "@/internal/invoices/actions";
 import { insertMetadataFromBillingPlan } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";
 import { isDeferredInvoiceMode } from "../../../utils/billingContext/isDeferredInvoiceMode";
 import { getDeferredBillingMetadataExpiresAt } from "./getDeferredBillingMetadataExpiresAt";
-
-const applyTemplateToDraft = async ({
-	ctx,
-	stripeCli,
-	invoice,
-	footer,
-	memo,
-}: {
-	ctx: AutumnContext;
-	stripeCli: Stripe;
-	invoice: Stripe.Invoice | undefined;
-	footer: string | undefined;
-	memo: string | undefined;
-}): Promise<Stripe.Invoice | undefined> => {
-	if (!invoice || invoice.status !== "draft" || (!footer && !memo)) {
-		return invoice;
-	}
-	ctx.logger.debug(`[execSubAction] Applying invoice template fields`);
-	return updateStripeInvoice({
-		stripeCli,
-		invoiceId: invoice.id,
-		params: {
-			...(footer ? { footer } : {}),
-			...(memo ? { description: memo } : {}),
-		},
-	});
-};
 
 export const executeStripeSubscriptionAction = async ({
 	ctx,

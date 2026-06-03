@@ -14,7 +14,6 @@ export const invoiceTemplates = pgTable(
 		internal_id: text("internal_id").primaryKey().notNull(),
 		id: text().unique(),
 		org_id: text("org_id").notNull(),
-		env: text().notNull(),
 		created_at: numeric({ mode: "number" }),
 		name: text().notNull(),
 		footer: text(),

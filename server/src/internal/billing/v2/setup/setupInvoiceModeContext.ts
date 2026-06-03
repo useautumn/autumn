@@ -22,7 +22,6 @@ export const setupInvoiceModeContext = async ({
 		? await InvoiceTemplateService.getById({
 				db: ctx.db,
 				orgId: ctx.org.id,
-				env: ctx.env,
 				id: invoice_template_id,
 			})
 		: undefined;

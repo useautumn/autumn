@@ -1,5 +1,5 @@
 {
-  "id": "f658a16f-1c2b-474b-a31f-4c11a882323e",
+  "id": "149eec0b-0a2b-4a55-b5e8-81f92b9839d8",
   "prevId": "525b9068-d426-4a6e-8457-56db4367d0d1",
   "version": "7",
   "dialect": "postgresql",
@@ -3465,12 +3465,6 @@
         },
         "org_id": {
           "name": "org_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "env": {
-          "name": "env",
           "type": "text",
           "primaryKey": false,
           "notNull": true

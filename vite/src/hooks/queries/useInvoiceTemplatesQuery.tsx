@@ -1,13 +1,13 @@
 import type { InvoiceTemplate } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
-import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 export const useInvoiceTemplatesQuery = () => {
 	const axiosInstance = useAxiosInstance();
-	const buildKey = useQueryKeyFactory();
+	const { org } = useOrg();
 	const { data, isLoading, error, refetch } = useQuery({
-		queryKey: buildKey(["invoice-templates"]),
+		queryKey: ["invoice-templates", org?.id],
 		queryFn: async () => {
 			const { data } = await axiosInstance.get<{
 				templates: InvoiceTemplate[];

@@ -1,5 +1,4 @@
 import {
-	type AppEnv,
 	type InvoiceTemplate,
 	type InvoiceTemplateRow,
 	invoiceTemplates,
@@ -27,18 +26,14 @@ export class InvoiceTemplateService {
 	static async list({
 		db,
 		orgId,
-		env,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
-		env: AppEnv;
 	}): Promise<InvoiceTemplate[]> {
 		const rows = await db
 			.select()
 			.from(invoiceTemplates)
-			.where(
-				and(eq(invoiceTemplates.org_id, orgId), eq(invoiceTemplates.env, env)),
-			)
+			.where(eq(invoiceTemplates.org_id, orgId))
 			.orderBy(desc(invoiceTemplates.created_at));
 		return rows.map(toApi);
 	}
@@ -46,23 +41,17 @@ export class InvoiceTemplateService {
 	static async getById({
 		db,
 		orgId,
-		env,
 		id,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
-		env: AppEnv;
 		id: string;
 	}): Promise<InvoiceTemplate | undefined> {
 		const rows = await db
 			.select()
 			.from(invoiceTemplates)
 			.where(
-				and(
-					eq(invoiceTemplates.org_id, orgId),
-					eq(invoiceTemplates.env, env),
-					eq(invoiceTemplates.id, id),
-				),
+				and(eq(invoiceTemplates.org_id, orgId), eq(invoiceTemplates.id, id)),
 			)
 			.limit(1);
 		const row = rows[0];
@@ -72,14 +61,12 @@ export class InvoiceTemplateService {
 	static async create({
 		db,
 		orgId,
-		env,
 		internalId,
 		id,
 		values,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
-		env: AppEnv;
 		internalId: string;
 		id: string;
 		values: InvoiceTemplateValues;
@@ -90,7 +77,6 @@ export class InvoiceTemplateService {
 				internal_id: internalId,
 				id,
 				org_id: orgId,
-				env,
 				created_at: Date.now(),
 				...values,
 			})
@@ -101,13 +87,11 @@ export class InvoiceTemplateService {
 	static async update({
 		db,
 		orgId,
-		env,
 		id,
 		update,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
-		env: AppEnv;
 		id: string;
 		update: InvoiceTemplateValues;
 	}): Promise<InvoiceTemplate | undefined> {
@@ -115,11 +99,7 @@ export class InvoiceTemplateService {
 			.update(invoiceTemplates)
 			.set(update)
 			.where(
-				and(
-					eq(invoiceTemplates.org_id, orgId),
-					eq(invoiceTemplates.env, env),
-					eq(invoiceTemplates.id, id),
-				),
+				and(eq(invoiceTemplates.org_id, orgId), eq(invoiceTemplates.id, id)),
 			)
 			.returning();
 		const row = rows[0];
@@ -129,22 +109,16 @@ export class InvoiceTemplateService {
 	static async delete({
 		db,
 		orgId,
-		env,
 		id,
 	}: {
 		db: DrizzleCli;
 		orgId: string;
-		env: AppEnv;
 		id: string;
 	}): Promise<void> {
 		await db
 			.delete(invoiceTemplates)
 			.where(
-				and(
-					eq(invoiceTemplates.org_id, orgId),
-					eq(invoiceTemplates.env, env),
-					eq(invoiceTemplates.id, id),
-				),
+				and(eq(invoiceTemplates.org_id, orgId), eq(invoiceTemplates.id, id)),
 			);
 	}
 }

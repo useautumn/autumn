@@ -7,13 +7,12 @@ export const handleUpdateInvoiceTemplate = createRoute({
 	scopes: [Scopes.Organisation.Write],
 	body: invoiceTemplateBodySchema,
 	handler: async (c) => {
-		const { db, org, env } = c.get("ctx");
+		const { db, org } = c.get("ctx");
 		const { id } = c.req.param();
 		const values = c.req.valid("json");
 		const template = await InvoiceTemplateService.update({
 			db,
 			orgId: org.id,
-			env,
 			id,
 			update: values,
 		});

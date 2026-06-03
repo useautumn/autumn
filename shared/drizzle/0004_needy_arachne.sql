@@ -2,7 +2,6 @@ CREATE TABLE "invoice_templates" (
 	"internal_id" text PRIMARY KEY NOT NULL,
 	"id" text,
 	"org_id" text NOT NULL,
-	"env" text NOT NULL,
 	"created_at" numeric,
 	"name" text NOT NULL,
 	"footer" text,
