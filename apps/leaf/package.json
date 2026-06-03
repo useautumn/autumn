@@ -21,7 +21,7 @@
 		"chat": "^4.29.0",
 		"date-fns": "^4.1.0",
 		"drizzle-orm": "catalog:",
-		"hono": "4.12.7",
+		"hono": "4.12.18",
 		"postgres": "catalog:",
 		"zod": "^3.25.23"
 	},
