@@ -16,7 +16,8 @@ export type ConsoleLogger = Record<ConsoleLoggerLevel, LogMethod> & {
 export function createConsoleLogger(level: ConsoleLoggerLevel): ConsoleLogger {
 	const min = consoleLoggerLevels.indexOf(level);
 	const noop = () => {};
-	const log = (method: "debug" | "info" | "warn" | "error"): LogMethod =>
+	const log =
+		(method: "debug" | "info" | "warn" | "error"): LogMethod =>
 		(message, data) => {
 			if (data) console[method](message, data);
 			else console[method](message);

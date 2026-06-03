@@ -1,7 +1,6 @@
 import {
 	buildAuthForRequest,
 	type ConsoleLogger,
-	createAskAutumnMCPServer,
 	createAutumnOperationsMCPServer,
 	getAuthorizationServerMetadata,
 	getProtectedResourceMetadata,
@@ -20,18 +19,12 @@ export interface McpRouteOptions extends MCPServerFlags {
 }
 
 type AppContext = Context<{ Bindings: HttpBindings }>;
-type McpPath = "/mcp" | "/internal/mcp";
+type McpPath = "/mcp";
 type McpApp = Hono<{ Bindings: HttpBindings }>;
 
 export function registerMcpRoutes(app: McpApp, options: McpRouteOptions) {
 	app.get("/.well-known/oauth-protected-resource/mcp", (c) =>
 		c.json(getProtectedResourceMetadata(c.req.raw.headers, options, "/mcp")),
-	);
-
-	app.get("/.well-known/oauth-protected-resource/internal/mcp", (c) =>
-		c.json(
-			getProtectedResourceMetadata(c.req.raw.headers, options, "/internal/mcp"),
-		),
 	);
 
 	app.get("/.well-known/oauth-authorization-server", (c) =>
@@ -41,7 +34,7 @@ export function registerMcpRoutes(app: McpApp, options: McpRouteOptions) {
 	const handleMcp = async (
 		c: AppContext,
 		path: McpPath,
-		server: ReturnType<typeof createAskAutumnMCPServer>,
+		server: ReturnType<typeof createAutumnOperationsMCPServer>,
 	) => {
 		let auth: Awaited<ReturnType<typeof buildAuthForRequest>>;
 		try {
@@ -78,9 +71,6 @@ export function registerMcpRoutes(app: McpApp, options: McpRouteOptions) {
 
 	app.all("/mcp", (c) =>
 		handleMcp(c, "/mcp", createAutumnOperationsMCPServer()),
-	);
-	app.all("/internal/mcp", (c) =>
-		handleMcp(c, "/internal/mcp", createAskAutumnMCPServer()),
 	);
 
 	return app;

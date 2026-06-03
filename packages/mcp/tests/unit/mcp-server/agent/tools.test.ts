@@ -1,17 +1,17 @@
 import { describe, expect, test } from "bun:test";
-import type { AutumnMcpAuth } from "../../../../src/mcp-server/agent/auth.js";
 import {
-	clearPendingActions,
 	claimLatestPendingAction,
+	clearPendingActions,
 	createPendingAction,
 	setPendingActionsRedis,
-} from "../../../../src/mcp-server/agent/pending-actions.js";
-import { createTestRedis } from "../../../utils/test-redis.js";
+} from "../../../../src/agent/pending-actions.js";
+import type { AutumnMcpAuth } from "../../../../src/server/auth/auth.js";
 import {
 	createAgentAutumnOperationTools,
 	createRawAutumnOperationTools,
 	dateToEpochMillisecondsTool,
-} from "../../../../src/mcp-server/agent/tools.js";
+} from "../../../../src/tools/index.js";
+import { createTestRedis } from "../../../utils/test-redis.js";
 
 setPendingActionsRedis(createTestRedis());
 
@@ -33,7 +33,9 @@ describe("Autumn operation tools", () => {
 		const tools = createRawAutumnOperationTools();
 
 		expect(tools.listPlans.description).toContain("cheap full scan");
-		expect(tools.listPlans.description).toContain("filter returned plans locally");
+		expect(tools.listPlans.description).toContain(
+			"filter returned plans locally",
+		);
 		expect(tools.listCustomers.description).toContain("plans");
 		expect(tools.listCustomers.description).toContain("paginate");
 		expect(tools.createPlan.description).toContain("confirmation");
@@ -72,7 +74,8 @@ describe("Autumn operation tools", () => {
 
 	test("dateToEpochMilliseconds converts UTC dates and offsets", async () => {
 		const tool = dateToEpochMillisecondsTool as ExecutableTool;
-		if (!tool.execute) throw new Error("dateToEpochMilliseconds is not executable");
+		if (!tool.execute)
+			throw new Error("dateToEpochMilliseconds is not executable");
 
 		await expect(tool.execute({ date: "2027-01-01" }, {})).resolves.toBe(
 			Date.UTC(2027, 0, 1),
@@ -85,7 +88,9 @@ describe("Autumn operation tools", () => {
 	test("raw createCustomer calls the get-or-create endpoint", async () => {
 		const originalFetch = globalThis.fetch;
 		globalThis.fetch = (async (url, init) => {
-			expect(String(url)).toBe("http://localhost:8080/v1/customers.get_or_create");
+			expect(String(url)).toBe(
+				"http://localhost:8080/v1/customers.get_or_create",
+			);
 			expect(JSON.parse(init?.body as string)).toMatchObject({
 				customer_id: "cus_1",
 				email: "charlie@example.com",
@@ -124,10 +129,9 @@ describe("Autumn operation tools", () => {
 			if (!tool.execute) throw new Error("createPlan is not executable");
 
 			await expect(
-				tool.execute(
-					{ request: { plan_id: "pro", name: "Pro" } },
-					{ mcp: { extra: { authInfo: auth } } } as never,
-				),
+				tool.execute({ request: { plan_id: "pro", name: "Pro" } }, {
+					mcp: { extra: { authInfo: auth } },
+				} as never),
 			).resolves.toEqual({ id: "pro" });
 		} finally {
 			globalThis.fetch = originalFetch;
@@ -137,7 +141,9 @@ describe("Autumn operation tools", () => {
 	test("raw createSchedule calls the create schedule endpoint", async () => {
 		const originalFetch = globalThis.fetch;
 		globalThis.fetch = (async (url, init) => {
-			expect(String(url)).toBe("http://localhost:8080/v1/billing.create_schedule");
+			expect(String(url)).toBe(
+				"http://localhost:8080/v1/billing.create_schedule",
+			);
 			expect(JSON.parse(init?.body as string)).toMatchObject({
 				customer_id: "cus_1",
 			});
@@ -153,9 +159,7 @@ describe("Autumn operation tools", () => {
 					{
 						request: {
 							customer_id: "cus_1",
-							phases: [
-								{ starts_at: Date.now(), plans: [{ plan_id: "pro" }] },
-							],
+							phases: [{ starts_at: Date.now(), plans: [{ plan_id: "pro" }] }],
 						},
 					},
 					{ mcp: { extra: { authInfo: auth } } } as never,
@@ -181,13 +185,13 @@ describe("Autumn operation tools", () => {
 
 		try {
 			const tool = createRawAutumnOperationTools().previewCreateBalance;
-			if (!tool.execute) throw new Error("previewCreateBalance is not executable");
+			if (!tool.execute)
+				throw new Error("previewCreateBalance is not executable");
 
 			await expect(
-				tool.execute(
-					{ request },
-					{ mcp: { extra: { authInfo: auth } } } as never,
-				),
+				tool.execute({ request }, {
+					mcp: { extra: { authInfo: auth } },
+				} as never),
 			).resolves.toMatchObject({
 				action: "createBalance",
 				request,
@@ -257,9 +261,7 @@ describe("Autumn operation tools", () => {
 					{
 						request: {
 							customer_id: "cus_1",
-							phases: [
-								{ starts_at: Date.now(), plans: [{ plan_id: "pro" }] },
-							],
+							phases: [{ starts_at: Date.now(), plans: [{ plan_id: "pro" }] }],
 						},
 					},
 					{ mcp: { extra: { authInfo: auth } } } as never,
@@ -286,10 +288,9 @@ describe("Autumn operation tools", () => {
 			if (!tool.execute) throw new Error("listCustomers is not executable");
 
 			await expect(
-				tool.execute(
-					{ request: { limit: 5000, search: "charlie" } },
-					{ mcp: { extra: { authInfo: auth } } } as never,
-				),
+				tool.execute({ request: { limit: 5000, search: "charlie" } }, {
+					mcp: { extra: { authInfo: auth } },
+				} as never),
 			).resolves.toEqual({ customers: [] });
 		} finally {
 			globalThis.fetch = originalFetch;
@@ -300,7 +301,9 @@ describe("Autumn operation tools", () => {
 		await clearPendingActions();
 		const originalFetch = globalThis.fetch;
 		globalThis.fetch = (async (url, init) => {
-			expect(String(url)).toBe("http://localhost:8080/v1/billing.preview_attach");
+			expect(String(url)).toBe(
+				"http://localhost:8080/v1/billing.preview_attach",
+			);
 			expect(JSON.parse(init?.body as string)).toEqual({
 				customer_id: "cus_1",
 				plan_id: "pro",
@@ -314,12 +317,13 @@ describe("Autumn operation tools", () => {
 			if (!tool.execute) throw new Error("previewAttach is not executable");
 
 			await expect(
-				tool.execute(
-					{ request: { customer_id: "cus_1", plan_id: "pro" } },
-					{ mcp: { extra: { authInfo: auth } } } as never,
-				),
+				tool.execute({ request: { customer_id: "cus_1", plan_id: "pro" } }, {
+					mcp: { extra: { authInfo: auth } },
+				} as never),
 			).resolves.toEqual({ total: 50 });
-			await expect(claimLatestPendingAction(auth)).rejects.toThrow("No pending");
+			await expect(claimLatestPendingAction(auth)).rejects.toThrow(
+				"No pending",
+			);
 		} finally {
 			globalThis.fetch = originalFetch;
 		}
@@ -342,10 +346,9 @@ describe("Autumn operation tools", () => {
 			if (!tool.execute) throw new Error("attach is not executable");
 
 			await expect(
-				tool.execute(
-					{ request: { customer_id: "cus_1", plan_id: "pro" } },
-					{ mcp: { extra: { authInfo: auth } } } as never,
-				),
+				tool.execute({ request: { customer_id: "cus_1", plan_id: "pro" } }, {
+					mcp: { extra: { authInfo: auth } },
+				} as never),
 			).resolves.toEqual({ ok: true });
 		} finally {
 			globalThis.fetch = originalFetch;
@@ -356,7 +359,9 @@ describe("Autumn operation tools", () => {
 		await clearPendingActions();
 		const originalFetch = globalThis.fetch;
 		globalThis.fetch = (async (url, init) => {
-			expect(String(url)).toBe("http://localhost:8080/v1/billing.preview_attach");
+			expect(String(url)).toBe(
+				"http://localhost:8080/v1/billing.preview_attach",
+			);
 			expect(JSON.parse(init?.body as string)).toEqual({
 				customer_id: "cus_1",
 				plan_id: "pro",
@@ -376,10 +381,9 @@ describe("Autumn operation tools", () => {
 			if (!tool.execute) throw new Error("previewAttach is not executable");
 
 			await expect(
-				tool.execute(
-					{ request: { customer_id: "cus_1", plan_id: "pro" } },
-					{ mcp: { extra: { authInfo: auth } } } as never,
-				),
+				tool.execute({ request: { customer_id: "cus_1", plan_id: "pro" } }, {
+					mcp: { extra: { authInfo: auth } },
+				} as never),
 			).resolves.toMatchObject({ pending: true, preview: { total: 50 } });
 
 			await expect(claimLatestPendingAction(auth)).resolves.toMatchObject({
@@ -411,10 +415,9 @@ describe("Autumn operation tools", () => {
 			if (!tool.execute) throw new Error("createPlan is not executable");
 
 			await expect(
-				tool.execute(
-					{ request: { plan_id: "pro", name: "Pro" } },
-					{ mcp: { extra: { authInfo: auth } } } as never,
-				),
+				tool.execute({ request: { plan_id: "pro", name: "Pro" } }, {
+					mcp: { extra: { authInfo: auth } },
+				} as never),
 			).resolves.toMatchObject({ pending: true });
 
 			await expect(claimLatestPendingAction(auth)).resolves.toMatchObject({
@@ -451,10 +454,9 @@ describe("Autumn operation tools", () => {
 			}
 
 			await expect(
-				tool.execute(
-					{ request },
-					{ mcp: { extra: { authInfo: auth } } } as never,
-				),
+				tool.execute({ request }, {
+					mcp: { extra: { authInfo: auth } },
+				} as never),
 			).resolves.toMatchObject({ pending: true });
 
 			await expect(claimLatestPendingAction(auth)).resolves.toMatchObject({
@@ -491,10 +493,9 @@ describe("Autumn operation tools", () => {
 			}
 
 			await expect(
-				tool.execute(
-					{ request },
-					{ mcp: { extra: { authInfo: auth } } } as never,
-				),
+				tool.execute({ request }, {
+					mcp: { extra: { authInfo: auth } },
+				} as never),
 			).resolves.toMatchObject({ pending: true });
 
 			await expect(claimLatestPendingAction(auth)).resolves.toMatchObject({
@@ -527,7 +528,8 @@ describe("Autumn operation tools", () => {
 
 		try {
 			const tool = createAgentAutumnOperationTools().confirmBillingAction;
-			if (!tool.execute) throw new Error("confirmBillingAction is not executable");
+			if (!tool.execute)
+				throw new Error("confirmBillingAction is not executable");
 
 			await expect(
 				tool.execute({}, { mcp: { extra: { authInfo: auth } } } as never),
@@ -535,7 +537,9 @@ describe("Autumn operation tools", () => {
 				message: "Confirmed and applied attach.",
 				result: { ok: true },
 			});
-			await expect(claimLatestPendingAction(auth)).rejects.toThrow("No pending");
+			await expect(claimLatestPendingAction(auth)).rejects.toThrow(
+				"No pending",
+			);
 		} finally {
 			globalThis.fetch = originalFetch;
 		}
@@ -565,7 +569,8 @@ describe("Autumn operation tools", () => {
 
 		try {
 			const tool = createAgentAutumnOperationTools().confirmBillingAction;
-			if (!tool.execute) throw new Error("confirmBillingAction is not executable");
+			if (!tool.execute)
+				throw new Error("confirmBillingAction is not executable");
 
 			await expect(
 				tool.execute({}, { mcp: { extra: { authInfo: auth } } } as never),

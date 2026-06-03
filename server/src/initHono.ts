@@ -24,7 +24,6 @@ import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/han
 import { apiRouter } from "./routers/apiRouter.js";
 import { createChatProxyRouter } from "./routers/chatProxyRouter.js";
 import { internalRouter } from "./routers/internalRouter.js";
-import { mcpProxyRouter } from "./routers/mcpProxyRouter.js";
 import { publicRouter } from "./routers/publicRouter.js";
 import { auth } from "./utils/auth.js";
 import { isAllowedOrigin } from "./utils/corsOrigins.js";
@@ -100,8 +99,6 @@ export const createHonoApp = () => {
 	app.get("/stripe/oauth_callback", handleOAuthCallback);
 	app.get("/ready/:token", handleReadyCheck);
 	app.get("/", handleHealthCheck);
-
-	app.route("", mcpProxyRouter);
 
 	// Step 1: OTel HTTP span + base middleware + span enrichment
 	app.use(

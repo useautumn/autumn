@@ -1,4 +1,10 @@
 import { createHash } from "node:crypto";
+import {
+	makeScopeChecker,
+	type ScopeString,
+	Scopes,
+} from "@autumn/shared/scopeDefinitions";
+import { ms } from "@autumn/shared/unixUtils";
 import { Axiom } from "@axiomhq/js";
 import { createTool } from "@mastra/core/tools";
 import {
@@ -9,18 +15,12 @@ import {
 	isValid,
 	parseISO,
 } from "date-fns";
-import {
-	makeScopeChecker,
-	Scopes,
-	type ScopeString,
-} from "@autumn/shared/scopeDefinitions";
-import { ms } from "@autumn/shared/unixUtils";
 import * as z from "zod/v4";
 import {
+	type AutumnMcpAuth,
 	createAutumnClient,
 	getAutumnAuth,
-	type AutumnMcpAuth,
-} from "./auth.js";
+} from "../server/auth/auth.js";
 
 const axiomDataset = "express";
 const defaultStartTime = "now-30m";
@@ -78,7 +78,9 @@ const getRangeMs = (startTime: string, endTime: string) => {
 };
 
 const assertCanUseAxiom = (auth: AutumnMcpAuth) => {
-	if (!makeScopeChecker(auth.scopes).has(Scopes.Analytics.Read as ScopeString)) {
+	if (
+		!makeScopeChecker(auth.scopes).has(Scopes.Analytics.Read as ScopeString)
+	) {
 		throw new Error("analytics:read scope is required to query Axiom logs.");
 	}
 };
@@ -133,7 +135,9 @@ export const prepareAxiomQuery = ({
 
 	const rangeMs = getRangeMs(startTime, endTime);
 	if (rangeMs === null || rangeMs <= 0 || rangeMs > maxRangeMs) {
-		throw new Error("Axiom queries must use a bounded time range of at most 7 days.");
+		throw new Error(
+			"Axiom queries must use a bounded time range of at most 7 days.",
+		);
 	}
 
 	const trimmed = apl.trim();
@@ -152,7 +156,9 @@ export const prepareAxiomQuery = ({
 	}
 
 	if (/\|\s*\[\s*['"][^'"]+['"]\s*\](?=\s*(?:\||$))/i.test(rest)) {
-		throw new Error("Axiom queries may only use the express dataset source once.");
+		throw new Error(
+			"Axiom queries may only use the express dataset source once.",
+		);
 	}
 
 	if (/\bsearch\b/i.test(rest) && rangeMs > searchMaxRangeMs) {
@@ -165,7 +171,9 @@ export const prepareAxiomQuery = ({
 			`| where ['context.org_id'] == '${escapeAplString(auth.orgId)}'`,
 			`| where ['context.env'] == '${escapeAplString(auth.env)}'`,
 			rest,
-		].filter(Boolean).join("\n"),
+		]
+			.filter(Boolean)
+			.join("\n"),
 		startTime,
 		endTime,
 	};
@@ -180,11 +188,13 @@ export const createAxiomTools = () => ({
 		id: "queryAxiomLogs",
 		description:
 			"Run a read-only Axiom APL query against Autumn logs. The query is always constrained to the authenticated Autumn org and environment.",
-		inputSchema: z.object({
-			apl: z.string().min(1),
-			startTime: z.string().optional(),
-			endTime: z.string().optional(),
-		}).strict(),
+		inputSchema: z
+			.object({
+				apl: z.string().min(1),
+				startTime: z.string().optional(),
+				endTime: z.string().optional(),
+			})
+			.strict(),
 		execute: async ({ apl, startTime, endTime }, context) => {
 			const auth = await withAxiomOrg(getAutumnAuth(context));
 			const query = prepareAxiomQuery({ auth, apl, startTime, endTime });
@@ -198,9 +208,11 @@ export const createAxiomTools = () => ({
 		id: "getAxiomDatasetFields",
 		description:
 			"List available Axiom field metadata for the express dataset, scoped to the authenticated Autumn org and environment.",
-		inputSchema: z.object({
-			dataset: z.literal(axiomDataset),
-		}).strict(),
+		inputSchema: z
+			.object({
+				dataset: z.literal(axiomDataset),
+			})
+			.strict(),
 		execute: async ({ dataset }, context) => {
 			const auth = await withAxiomOrg(getAutumnAuth(context));
 			const query = prepareAxiomQuery({

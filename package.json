@@ -113,6 +113,8 @@
 		"tb": "bun scripts/tinybird/index.ts",
 		"tb:prod": "bun scripts/tinybird/index.ts prod",
 		"tb:prod-legacy": "bun scripts/tinybird/index.ts prod-legacy",
+		"axiom": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/axiom/cli.ts",
+		"axiom:prod": "ENV_FILE=.env.prod infisical run --env=prod --recursive -- bun scripts/axiom/cli.ts",
 		"trigger:deploy": "bunx trigger.dev deploy",
 		"setupci": "node scripts/setup/setupci.js",
 		"replicate": "bun scripts/db/replicate.ts",

@@ -1,12 +1,12 @@
-import { Scopes } from "@autumn/shared/scopeDefinitions";
 import { describe, expect, test } from "bun:test";
+import { Scopes } from "@autumn/shared/scopeDefinitions";
 import {
 	buildAuthForRequest,
 	getProtectedResourceMetadata,
 	MCP_OAUTH_SCOPES,
-	OAuthHttpError,
 	type MCPOAuthFlags,
-} from "../../../src/mcp-server/oauth.js";
+	type OAuthHttpError,
+} from "../../../src/server/auth/oauth.js";
 
 const flags = {
 	"oauth-enabled": true,

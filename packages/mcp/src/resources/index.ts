@@ -1,7 +1,28 @@
 import type { MCPServerResources } from "@mastra/mcp";
 
-const docs = {
-	"autumn://docs/tool-composition": {
+type DocInput = {
+	name: string;
+	title: string;
+	description: string;
+	text: string;
+};
+
+/**
+ * Builds a single Autumn docs resource. The `autumn://docs/<name>` URI is
+ * derived from `name` so each doc is declared once, with no duplicated key.
+ */
+const defineDoc = ({ name, title, description, text }: DocInput) => ({
+	uri: `autumn://docs/${name}`,
+	name,
+	title,
+	description,
+	text,
+});
+
+type Doc = ReturnType<typeof defineDoc>;
+
+const docs: Doc[] = [
+	defineDoc({
 		name: "tool-composition",
 		title: "Tool Composition",
 		description: "How to compose Autumn MCP tools for operational questions.",
@@ -21,8 +42,8 @@ Use Autumn tools as composable primitives.
 - For billing writes, always preview first and wait for explicit user confirmation before applying.
 
 Docs index: https://docs.useautumn.com/llms.txt`,
-	},
-	"autumn://docs/querying-plans": {
+	}),
+	defineDoc({
 		name: "querying-plans",
 		title: "Querying Plans",
 		description: "How to answer plan-filtering questions with listPlans.",
@@ -39,8 +60,8 @@ Use listPlans for questions about:
 - plan features and included quantities
 
 Filter the returned plans locally. If the user asks for customers on matching plans, first resolve the matching plans, then call listCustomers with those plan ids. For upcoming, queued, or scheduled version queries, pass only the relevant target versions to listCustomers; with numeric versions, exclude the earliest historical version unless the user asks for all historical versions.`,
-	},
-	"autumn://docs/creating-plans": {
+	}),
+	defineDoc({
 		name: "creating-plans",
 		title: "Creating Plans",
 		description: "How to gather plan details before using createPlan.",
@@ -59,8 +80,8 @@ Before creating a plan, resolve:
 For consumable features, recurring grants need reset intervals. "500 credits per month" means included 500 with reset.interval "month"; one-time grants use "one_off".
 
 If any required pricing or feature detail is ambiguous, ask a concise clarification question before creating the plan.`,
-	},
-	"autumn://docs/querying-customers": {
+	}),
+	defineDoc({
 		name: "querying-customers",
 		title: "Querying Customers",
 		description: "How to answer customer-heavy questions with listCustomers.",
@@ -76,8 +97,8 @@ Prefer server-side filters before local filtering:
 
 Use limit 1000 for broad scans; that is the maximum page size.
 Always paginate until next_cursor is empty when the user asks for complete results. Use getCustomer only for details not returned by listCustomers.`,
-	},
-	"autumn://docs/schedules": {
+	}),
+	defineDoc({
 		name: "schedules",
 		title: "Billing Schedules",
 		description: "How to create multi-phase billing schedules safely.",
@@ -101,8 +122,8 @@ Custom feature mapping:
 - Omit reset only for non-consumable, unlimited, or clearly one-time grants.
 
 There is no separate public update-schedule tool. For existing subscription changes, use previewUpdateSubscription and updateSubscription when the requested change fits that endpoint. For a new multi-phase transition, call previewCreateSchedule first, show the immediate billing impact and ordered phases, then call createSchedule only after explicit confirmation.`,
-	},
-	"autumn://docs/balances": {
+	}),
+	defineDoc({
 		name: "balances",
 		title: "Standalone Balances",
 		description:
@@ -133,8 +154,8 @@ Useful docs:
 - https://docs.useautumn.com/documentation/customers/balances
 - https://docs.useautumn.com/documentation/modelling-pricing/sub-entity-balances
 - https://docs.useautumn.com/api-reference/balances/createBalance`,
-	},
-	"autumn://docs/billing-safety": {
+	}),
+	defineDoc({
 		name: "billing-safety",
 		title: "Billing Safety",
 		description: "Preview-first rules for Autumn billing changes.",
@@ -157,13 +178,15 @@ Useful docs:
 - https://docs.useautumn.com/api-reference/billing/attach
 - https://docs.useautumn.com/documentation/concepts/plan-items
 - https://docs.useautumn.com/documentation/customers/balances`,
-	},
-} as const;
+	}),
+];
+
+const docByUri = new Map(docs.map((doc) => [doc.uri, doc]));
 
 export const autumnMcpResources: MCPServerResources = {
 	listResources: async () =>
-		Object.entries(docs).map(([uri, doc]) => ({
-			uri,
+		docs.map((doc) => ({
+			uri: doc.uri,
 			name: doc.name,
 			title: doc.title,
 			description: doc.description,
@@ -175,13 +198,12 @@ export const autumnMcpResources: MCPServerResources = {
 			},
 		})),
 	getResourceContent: async ({ uri }) => {
-		if (!Object.hasOwn(docs, uri)) {
+		const doc = docByUri.get(uri);
+		if (!doc) {
 			throw new Error(`Unknown Autumn MCP resource: ${uri}`);
 		}
-
-		const doc = docs[uri as keyof typeof docs];
 		return { text: doc.text };
 	},
 };
 
-export const autumnMcpResourceUris = Object.keys(docs);
+export const autumnMcpResourceUris = docs.map((doc) => doc.uri);

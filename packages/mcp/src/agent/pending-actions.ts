@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { ms } from "@autumn/shared/unixUtils";
 import { addMilliseconds, isPast } from "date-fns";
 import { Redis } from "ioredis";
-import type { AutumnMcpAuth } from "./auth.js";
+import type { AutumnMcpAuth } from "../server/auth/auth.js";
 
 export type BillingToolName =
 	| "attach"
@@ -89,7 +89,7 @@ const getRedis = (): PendingActionRedis => {
 };
 
 const parseStoredAction = (value: string | null) =>
-	(value ? (JSON.parse(value) as PendingBillingAction) : null);
+	value ? (JSON.parse(value) as PendingBillingAction) : null;
 
 const createAction = ({
 	auth,
@@ -150,7 +150,11 @@ export const claimLatestPendingAction = async (auth: AutumnMcpAuth) => {
 	if (!token || !action || isExpired(action)) {
 		logPendingAction("claim-miss", {
 			backend: "redis",
-			reason: !token ? "missing_latest" : !action ? "missing_action" : "expired",
+			reason: !token
+				? "missing_latest"
+				: !action
+					? "missing_action"
+					: "expired",
 			token: token ? shortHash(token) : null,
 			...actionDebug(auth),
 		});
