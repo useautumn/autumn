@@ -2,8 +2,6 @@ name: Vite Unit Tests
 
 on:
   pull_request:
-    paths:
-      - "vite/**"
 
 permissions:
   contents: read
