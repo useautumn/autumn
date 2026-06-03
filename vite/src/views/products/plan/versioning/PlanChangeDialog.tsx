@@ -1,14 +1,13 @@
 import type { FrontendProduct } from "@autumn/shared";
 import { isPriceItem, productsAreSame } from "@autumn/shared";
 import { CheckCircleIcon } from "@phosphor-icons/react";
-import { LucideLoaderCircle } from "lucide-react";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { PlanItemsSection } from "@/components/forms/shared";
 import { getProductPriceDisplay } from "@/components/forms/update-subscription-v2/components/PriceDisplay";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/v2/buttons/Button";
-import { cn } from "@/lib/utils";
 import {
 	Dialog,
 	DialogContent,
@@ -18,6 +17,8 @@ import {
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
 import { Input } from "@/components/v2/inputs/Input";
+import { RadioGroup } from "@/components/v2/radio-groups/RadioGroup";
+import { AreaRadioGroupItem } from "@/components/v2/radio-groups/AreaRadioGroupItem";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
@@ -25,9 +26,17 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
-import { useProductQuery } from "../../product/hooks/useProductQuery";
+import {
+	useProductQuery,
+	useProductQueryState,
+} from "../../product/hooks/useProductQuery";
 import { updateProduct } from "../../product/utils/updateProduct";
-import { buildMigrationDraft, type MigrationDraft } from "./buildMigrationDraft";
+import {
+	buildMigrationDraft,
+	type MigrationScope,
+} from "./buildMigrationDraft";
+
+type MigrationChoice = "keep" | MigrationScope;
 
 function usePriceChange(
 	baseProduct: FrontendProduct | null,
@@ -37,13 +46,20 @@ function usePriceChange(
 	return useMemo(() => {
 		if (!baseProduct) return null;
 
-		const oldDisplay = getProductPriceDisplay({ product: baseProduct, currency });
+		const oldDisplay = getProductPriceDisplay({
+			product: baseProduct,
+			currency,
+		});
 		const newDisplay = getProductPriceDisplay({ product, currency });
 
-		const oldPrice = oldDisplay.type === "price" ? oldDisplay.formattedPrice : "Free";
-		const newPrice = newDisplay.type === "price" ? newDisplay.formattedPrice : "Free";
-		const oldInterval = oldDisplay.type === "price" ? oldDisplay.intervalText : null;
-		const newInterval = newDisplay.type === "price" ? newDisplay.intervalText : null;
+		const oldPrice =
+			oldDisplay.type === "price" ? oldDisplay.formattedPrice : "Free";
+		const newPrice =
+			newDisplay.type === "price" ? newDisplay.formattedPrice : "Free";
+		const oldInterval =
+			oldDisplay.type === "price" ? oldDisplay.intervalText : null;
+		const newInterval =
+			newDisplay.type === "price" ? newDisplay.intervalText : null;
 
 		if (oldPrice === newPrice && oldInterval === newInterval) return null;
 
@@ -55,7 +71,8 @@ function usePriceChange(
 			newPrice,
 			oldIntervalText: oldInterval !== newInterval ? oldInterval : null,
 			newIntervalText: newInterval,
-			isUpgrade: (currentPriceItem?.price ?? 0) > (originalPriceItem?.price ?? 0),
+			isUpgrade:
+				(currentPriceItem?.price ?? 0) > (originalPriceItem?.price ?? 0),
 		};
 	}, [baseProduct, product.items, currency]);
 }
@@ -71,22 +88,30 @@ export default function PlanChangeDialog({
 	const navigate = useNavigate();
 	const product = useProductStore((s) => s.product);
 	const baseProduct = useProductStore((s) => s.baseProduct);
+	const setBaseProduct = useProductStore((s) => s.setBaseProduct);
 	const { features = [] } = useFeaturesQuery();
 	const { refetch } = useProductQuery();
+	const { setQueryStates } = useProductQueryState();
 	const { invalidate: invalidateProducts } = useProductsQuery();
-	const { createMigration, invalidate: invalidateMigrations } = useMigrationsQuery();
+	const { createMigration, invalidate: invalidateMigrations } =
+		useMigrationsQuery();
 	const { org } = useOrg();
 
 	const [confirmText, setConfirmText] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
-	const [loadingAction, setLoadingAction] = useState<
-		"new-version" | "update" | "migrate" | null
+	const [createVersion, setCreateVersion] = useState(true);
+	const [migrationChoice, setMigrationChoice] =
+		useState<MigrationChoice>("keep");
+	const [step, setStep] = useState<"confirm" | "done">("confirm");
+	const [createdMigrationId, setCreatedMigrationId] = useState<
+		string | null
 	>(null);
-	const [step, setStep] = useState<"confirm" | "plan-updated">("confirm");
-	const migrationDraftRef = useRef<MigrationDraft | null>(null);
 
 	const currency = org?.default_currency ?? "USD";
 	const priceChange = usePriceChange(baseProduct, product, currency);
+	const { products } = useProductsQuery();
+	const latestVersion = products.find((p) => p.id === product.id)?.version;
+	const hasMultipleVersions = (latestVersion ?? 1) > 1;
 
 	const hasChanges = useMemo(() => {
 		if (!baseProduct || features.length === 0) return false;
@@ -100,32 +125,38 @@ export default function PlanChangeDialog({
 
 	const confirmed = confirmText === product.id;
 
-	const handleNewVersion = async () => {
-		if (!confirmed) {
-			toast.error("Confirmation text is incorrect");
-			return;
-		}
+	let effectiveMigrationScope: MigrationScope | null;
+	if (migrationChoice !== "keep") {
+		effectiveMigrationScope = migrationChoice;
+	} else {
+		effectiveMigrationScope = createVersion ? null : "this_version";
+	}
 
-		setIsLoading(true);
-		setLoadingAction("new-version");
-		await updateProduct({
-			axiosInstance,
-			productId: product.id,
-			product,
-			version: baseProduct?.version,
-			onSuccess: async () => {
-				await refetch();
-				invalidateProducts();
-			},
-		});
-		toast.success("New version created");
-		setIsLoading(false);
-		setLoadingAction(null);
-		setOpen(false);
+	const resetState = () => {
 		setConfirmText("");
+		setCreateVersion(true);
+		setMigrationChoice("keep");
+		setStep("confirm");
+		setCreatedMigrationId(null);
 	};
 
-	const handleUpdatePlan = async () => {
+	const syncToLatestVersion = async () => {
+		await setQueryStates({ version: null });
+		await refetch();
+		invalidateProducts();
+	};
+
+	const setProduct = useProductStore((s) => s.setProduct);
+
+	const markSaved = () => {
+		setBaseProduct(product as FrontendProduct);
+	};
+
+	const discardEdits = () => {
+		if (baseProduct) setProduct(baseProduct);
+	};
+
+	const handleSave = async () => {
 		if (!confirmed) {
 			toast.error("Confirmation text is incorrect");
 			return;
@@ -133,50 +164,39 @@ export default function PlanChangeDialog({
 		if (!baseProduct) return;
 
 		setIsLoading(true);
-		setLoadingAction("update");
 
 		try {
-			migrationDraftRef.current = buildMigrationDraft({
-				baseProduct,
-				editedProduct: product,
-				features,
-			});
+			if (createVersion) {
+				const result = await updateProduct({
+					axiosInstance,
+					productId: product.id,
+					product,
+					onSuccess: async () => {
+						invalidateProducts();
+					},
+				});
 
-			const result = await updateProduct({
-				axiosInstance,
-				productId: product.id,
-				product,
-				version: baseProduct.version,
-				disableVersion: true,
-				onSuccess: async () => {
-					await refetch();
-					invalidateProducts();
-				},
-			});
+				if (!result) return;
+				markSaved();
+			} else {
+				discardEdits();
+			}
 
-			if (!result) {
-				migrationDraftRef.current = null;
+			if (!effectiveMigrationScope) {
+				toast.success("New version created");
+				setOpen(false);
+				resetState();
+				syncToLatestVersion();
 				return;
 			}
 
-			setStep("plan-updated");
-		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to update plan"));
-			migrationDraftRef.current = null;
-		} finally {
-			setIsLoading(false);
-			setLoadingAction(null);
-		}
-	};
+			const draft = buildMigrationDraft({
+				baseProduct,
+				editedProduct: product,
+				features,
+				scope: effectiveMigrationScope,
+			});
 
-	const handleCreateMigration = async () => {
-		const draft = migrationDraftRef.current;
-		if (!draft) return;
-
-		setIsLoading(true);
-		setLoadingAction("migrate");
-
-		try {
 			const migration = await createMigration({
 				id: draft.id,
 				filter: draft.filter,
@@ -186,45 +206,58 @@ export default function PlanChangeDialog({
 
 			await invalidateMigrations();
 
-			setOpen(false);
-			setConfirmText("");
-			setStep("confirm");
-			migrationDraftRef.current = null;
-			toast.success("Migration created from plan changes");
-			navigateTo(`/migrations/${migration.id}?step=operations`, navigate);
+			setCreatedMigrationId(migration.id);
+			setStep("done");
+			toast.success(
+				createVersion
+					? "New version created with migration"
+					: "Migration created",
+			);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to create migration"));
+			toast.error(getBackendErr(error, "Failed to save plan"));
 		} finally {
 			setIsLoading(false);
-			setLoadingAction(null);
 		}
+	};
+
+	const handleClose = () => {
+		setOpen(false);
+		resetState();
+		if (createVersion) syncToLatestVersion();
+	};
+
+	const handleGoToMigration = () => {
+		if (!createdMigrationId) return;
+		setOpen(false);
+		resetState();
+		navigateTo(
+			`/migrations/${createdMigrationId}?step=operations`,
+			navigate,
+		);
 	};
 
 	const handleOpenChange = (nextOpen: boolean) => {
 		if (!isLoading) {
 			setOpen(nextOpen);
 			if (!nextOpen) {
-				setConfirmText("");
-				setStep("confirm");
-				migrationDraftRef.current = null;
+				resetState();
+				if (createVersion) syncToLatestVersion();
 			}
 		}
 	};
 
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
-			<DialogContent className="max-w-md">
+			<DialogContent className="max-w-md max-h-[85vh] flex flex-col">
 				{step === "confirm" ? (
 					<>
 						<DialogHeader>
 							<DialogTitle>Save plan changes</DialogTitle>
+						</DialogHeader>
+
+						<div className="overflow-y-auto min-h-0 flex-1">
 							<DialogDescription asChild>
 								<div className="text-sm flex flex-col gap-6">
-									<p>
-										This plan has existing customers. Choose how to
-										apply your changes.
-									</p>
-
 									{hasChanges && (
 										<PlanItemsSection
 											product={product}
@@ -241,10 +274,63 @@ export default function PlanChangeDialog({
 										/>
 									)}
 
+									<div className="flex items-center justify-between gap-4">
+										<div className="flex flex-col gap-0.5">
+											<span className="text-sm font-medium text-foreground">
+												Create a new plan version
+											</span>
+											<span className="text-xs text-muted-foreground">
+												New customers will get this
+												version. Disable to update
+												existing customers only.
+											</span>
+										</div>
+										<Switch
+											checked={createVersion}
+											onCheckedChange={setCreateVersion}
+										/>
+									</div>
+
+									<div className="flex flex-col gap-3">
+										<p className="text-sm font-medium text-foreground">
+											Existing customers
+										</p>
+										<RadioGroup
+											value={migrationChoice}
+											onValueChange={(val) =>
+												setMigrationChoice(
+													val as MigrationChoice,
+												)
+											}
+										>
+											{createVersion && (
+												<AreaRadioGroupItem
+													value="keep"
+													label="Keep as they are"
+													description="Existing customers stay on their current version."
+												/>
+											)}
+											<AreaRadioGroupItem
+												value="this_version"
+												label={`Apply changes to customers on v${baseProduct?.version ?? 1}`}
+												description="Create a migration to apply these changes to customers on this version."
+											/>
+											{hasMultipleVersions && (
+												<AreaRadioGroupItem
+													value="all_customers"
+													label="Apply changes to all customers"
+													description="Create a migration to apply these changes to all customers on this plan."
+												/>
+											)}
+										</RadioGroup>
+									</div>
+
 									<div className="flex flex-col gap-2">
 										<p>
 											Type{" "}
-											<code className="font-bold">{product.id}</code>{" "}
+											<code className="font-bold">
+												{product.id}
+											</code>{" "}
 											to continue.
 										</p>
 
@@ -260,23 +346,20 @@ export default function PlanChangeDialog({
 									</div>
 								</div>
 							</DialogDescription>
-						</DialogHeader>
+						</div>
 
-						<DialogFooter className="flex flex-col gap-3 sm:flex-col">
-							<ActionCard
-								title="Update existing plan"
-								description="Update the plan and create a migration to move existing customers to the new configuration."
-								onClick={handleUpdatePlan}
-								isLoading={loadingAction === "update"}
+						<DialogFooter>
+							<Button
+								variant="primary"
+								onClick={handleSave}
+								isLoading={isLoading}
 								disabled={isLoading || !confirmed}
-							/>
-							<ActionCard
-								title="Create new version"
-								description="Publish a new version for future customers. Existing customers stay on their current plan."
-								onClick={handleNewVersion}
-								isLoading={loadingAction === "new-version"}
-								disabled={isLoading || !confirmed}
-							/>
+								className="w-full"
+							>
+								{createVersion
+									? "Save changes"
+									: "Create migration"}
+							</Button>
 						</DialogFooter>
 					</>
 				) : (
@@ -288,63 +371,36 @@ export default function PlanChangeDialog({
 									weight="fill"
 									className="text-green-500"
 								/>
-								<DialogTitle>Plan updated</DialogTitle>
+								<DialogTitle>
+									{createVersion
+										? "Version created with migration"
+										: "Migration created"}
+								</DialogTitle>
 							</div>
 							<DialogDescription>
-								Create a migration to move existing customers to
-								the new plan configuration.
+								Your migration is ready to review and run.
 							</DialogDescription>
 						</DialogHeader>
 
-						<DialogFooter>
+						<DialogFooter className="flex gap-2 sm:flex-row">
+							<Button
+								variant="secondary"
+								onClick={handleClose}
+								className="flex-1"
+							>
+								Close
+							</Button>
 							<Button
 								variant="primary"
-								onClick={handleCreateMigration}
-								isLoading={loadingAction === "migrate"}
-								disabled={isLoading}
-								className="w-full"
+								onClick={handleGoToMigration}
+								className="flex-1"
 							>
-								Create migration
+								Go to migration
 							</Button>
 						</DialogFooter>
 					</>
 				)}
 			</DialogContent>
 		</Dialog>
-	);
-}
-
-function ActionCard({
-	title,
-	description,
-	onClick,
-	isLoading,
-	disabled,
-}: {
-	title: string;
-	description: string;
-	onClick: () => void;
-	isLoading: boolean;
-	disabled: boolean;
-}) {
-	return (
-		<button
-			type="button"
-			onClick={onClick}
-			disabled={disabled}
-			className={cn(
-				"w-full text-left rounded-lg border p-3 transition-colors cursor-pointer",
-				"hover:border-primary/50 hover:bg-interactive-secondary",
-				"disabled:opacity-50 disabled:pointer-events-none",
-			)}
-		>
-			<div className="flex items-center justify-between">
-				<span className="text-sm font-medium text-foreground">{title}</span>
-				{isLoading && (
-					<LucideLoaderCircle className="animate-spin size-4 text-muted-foreground" />
-				)}
-			</div>
-			<p className="text-xs text-tertiary-foreground mt-0.5">{description}</p>
-		</button>
 	);
 }

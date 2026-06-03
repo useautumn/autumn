@@ -4,8 +4,13 @@ import type {
 	ProductItemInterval,
 	UsageModel,
 } from "@autumn/shared";
-import { Infinite } from "@autumn/shared";
+import { Infinite, ProductItemFeatureType } from "@autumn/shared";
 import { getDefaultItem } from "@/views/products/plan/utils/getDefaultItem";
+
+const BOOLEAN_TYPES = new Set<string>([
+	ProductItemFeatureType.Static,
+	ProductItemFeatureType.Boolean,
+]);
 
 export function migrationItemToProductItem(
 	migItem: Record<string, unknown>,
@@ -17,15 +22,22 @@ export function migrationItemToProductItem(
 		? (getDefaultItem({ feature }) as ProductItem)
 		: ({ feature_id: featureId } as ProductItem);
 
-	if (migItem.unlimited === true) {
-		base.included_usage = Infinite;
-	} else if (migItem.included !== undefined) {
-		base.included_usage = migItem.included as number;
-	}
+	const isBooleanItem = BOOLEAN_TYPES.has(base.feature_type as string);
+
 	const price = migItem.price as Record<string, unknown> | undefined;
-	if (price) {
+	const hasPrice = !!price;
+
+	if (!isBooleanItem) {
+		if (migItem.unlimited === true) {
+			base.included_usage = Infinite;
+			base.interval = null;
+		} else if (migItem.included !== undefined) {
+			base.included_usage = migItem.included as number;
+		}
+	}
+
+	if (hasPrice) {
 		base.tiers = [{ to: "inf", amount: Number(price.amount ?? 0) }];
-		// null interval in ProductItem means one-off; the API uses "one_off"
 		base.interval =
 			price.interval && price.interval !== "one_off"
 				? (price.interval as ProductItemInterval)
@@ -37,9 +49,6 @@ export function migrationItemToProductItem(
 		const reset = migItem.reset as Record<string, unknown> | undefined;
 		if (reset?.interval) {
 			base.interval = reset.interval as ProductItemInterval;
-		} else if (!price) {
-			// No price and no reset means one-off entitlement
-			base.interval = null;
 		}
 	}
 	return base;

@@ -55,20 +55,24 @@ function findActiveRun(
 export const useMigrationRunsQuery = ({
 	migrationId,
 	migrationRunId,
+	itemIds,
 	enabled = true,
 }: {
 	migrationId: string;
 	migrationRunId?: string;
+	itemIds?: string[];
 	enabled?: boolean;
 }) => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
 	const buildKey = useQueryKeyFactory();
 	const runsQueryKey = buildKey(["migration-runs", migrationId]);
+	const stableItemIds = itemIds ? [...itemIds].sort().join(",") : "all";
 	const eventsQueryKey = buildKey([
 		"migration-item-events",
 		migrationId,
 		migrationRunId ?? "all",
+		stableItemIds,
 	]);
 
 	const runsQuery = useQuery<{ list: MigrationRunWithItemCounts[] }>({
@@ -93,7 +97,11 @@ export const useMigrationRunsQuery = ({
 		queryFn: async () => {
 			const { data } = await axiosInstance.post<{
 				list: MigrationItemEvent[];
-			}>("/migrations.item_events.list", { migrationId, migrationRunId });
+			}>("/migrations.item_events.list", {
+				migrationId,
+				migrationRunId,
+				itemIds,
+			});
 			return data;
 		},
 		enabled,

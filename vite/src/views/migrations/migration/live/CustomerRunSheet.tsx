@@ -9,7 +9,7 @@ import {
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router";
+import { useNavigate } from "react-router";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
 import {
@@ -24,6 +24,7 @@ import { InfoRow } from "@/components/v2/InfoRow";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import type { MigrationPreviewCustomer } from "@/hooks/queries/useMigrationFilterPreview";
 import type { MigrationItemEvent } from "@/hooks/queries/useMigrationRunsQuery";
+import { navigateTo } from "@/utils/genUtils";
 import { ActiveRunDot, ItemEventStatusBadge } from "../runs/RunStatusBadge";
 import { RunSummaryRows } from "../shared/RunSummaryRows";
 import { EventResultDetail } from "./EventResultDetail";
@@ -116,6 +117,7 @@ export function CustomerRunSheet({
 	operations: Operations;
 	noBillingChanges: boolean;
 }) {
+	const navigate = useNavigate();
 	const customerId = customer.id ?? customer.internal_id;
 	const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
 	const lastActionRef = useRef<"dry" | "live" | null>(null);
@@ -158,17 +160,14 @@ export function CustomerRunSheet({
 			<SheetHeader
 				title={
 					<span className="flex items-center gap-2">
-						<Link
-							to={`/customers/${customerId}`}
-							className="inline-flex items-center gap-1.5 hover:text-primary transition-colors"
+						<button
+							type="button"
+							onClick={() => navigateTo(`/customers/${customerId}`, navigate)}
+							className="inline-flex items-center gap-1.5 hover:text-primary transition-colors cursor-pointer"
 						>
 							{customer.name || customerId}
-							<ArrowSquareOutIcon
-								size={14}
-								weight="bold"
-								className="opacity-50"
-							/>
-						</Link>
+							<ArrowSquareOutIcon size={14} weight="bold" className="opacity-50" />
+						</button>
 						{isActive && <ActiveRunDot />}
 					</span>
 				}

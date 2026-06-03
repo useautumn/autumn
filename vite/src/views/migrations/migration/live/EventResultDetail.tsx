@@ -4,10 +4,17 @@ import type {
 	CustomerPlanItemChange,
 } from "@autumn/shared/api/billing/common/customerPlanChange";
 import { PackageIcon } from "@phosphor-icons/react";
+import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/components/SubscriptionItemRow";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/v2/tooltips/Tooltip";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import type { MigrationItemEvent } from "@/hooks/queries/useMigrationRunsQuery";
 import { cn } from "@/lib/utils";
 import { getFeatureIconConfig } from "@/views/products/features/utils/getFeatureIcon";
+import { migrationItemToProductItem } from "../shared/migrationItemUtils";
 
 type ItemChange = Partial<CustomerPlanItemChange>;
 type PlanChange = Partial<CustomerPlanChange> & {
@@ -108,35 +115,10 @@ function StatusDot({ action }: { action: string }) {
 				"size-2 rounded-full shrink-0",
 				DOT_COLORS[action] ?? "bg-tertiary-foreground",
 			)}
-			title={ACTION_LABELS[action] ?? action}
 		/>
 	);
 }
 
-function FeatureIcon({
-	featureId,
-	features,
-}: {
-	featureId: string | undefined;
-	features: Feature[];
-}) {
-	const feature = features.find((f) => f.id === featureId);
-	const config = feature
-		? getFeatureIconConfig(feature.type, feature.config?.usage_type, 14)
-		: getFeatureIconConfig(null, null, 14);
-
-	return <span className={cn("shrink-0", config.color)}>{config.icon}</span>;
-}
-
-const ROW_TINTS: Record<string, string> = {
-	activated: "border-green-500/20 bg-green-500/5",
-	scheduled: "border-blue-500/20 bg-blue-500/5",
-	created: "border-green-500/20 bg-green-500/5",
-	updated: "border-amber-500/20 bg-amber-500/5",
-	expired: "border-red-500/20 bg-red-500/5",
-	removed: "border-red-500/20 bg-red-500/5",
-	deleted: "border-red-500/20 bg-red-500/5",
-};
 
 function getPlanId(change: PlanChange): string | undefined {
 	return change.subscription?.plan_id ?? change.purchase?.plan_id ?? change.plan_id;
@@ -146,20 +128,6 @@ function getPlanStatus(change: PlanChange): string | undefined {
 	return change.subscription?.status ?? change.purchase?.status;
 }
 
-const BALANCE_FIELDS = [
-	"granted",
-	"remaining",
-	"usage",
-	"unlimited",
-	"next_reset_at",
-] as const;
-
-function formatBalanceValue(value: BalanceSnapshot[keyof BalanceSnapshot]) {
-	if (value === null) return "None";
-	if (typeof value === "boolean") return value ? "Yes" : "No";
-	if (typeof value === "number") return value.toLocaleString();
-	return "Unknown";
-}
 
 function ChangeRow({
 	action,
@@ -173,8 +141,7 @@ function ChangeRow({
 	return (
 		<div
 			className={cn(
-				"flex items-center gap-2 h-8 px-3 rounded-xl border",
-				action ? (ROW_TINTS[action] ?? "input-base") : "input-base",
+				"flex items-center gap-2 h-10 px-3 rounded-xl input-base",
 				className,
 			)}
 		>
@@ -183,17 +150,118 @@ function ChangeRow({
 	);
 }
 
-function PlanChangeRows({
-	change,
-	features,
+function buildItemTooltipLines(
+	apiItem: Record<string, unknown>,
+	feature: Feature | undefined,
+): string[] {
+	const lines: string[] = [];
+	if (feature?.name) lines.push(feature.name);
+	if (apiItem.unlimited === true) lines.push("Unlimited");
+	else if (typeof apiItem.included === "number")
+		lines.push(`Included: ${(apiItem.included as number).toLocaleString()}`);
+
+	const reset = apiItem.reset as { interval?: string } | undefined;
+	if (reset?.interval) lines.push(`Resets: ${reset.interval}`);
+
+	const price = apiItem.price as {
+		amount?: number;
+		interval?: string;
+		billing_method?: string;
+	} | null;
+	if (price) {
+		const parts: string[] = [];
+		if (price.billing_method) parts.push(price.billing_method.replaceAll("_", " "));
+		if (typeof price.amount === "number") parts.push(`$${price.amount}`);
+		if (price.interval) parts.push(`per ${price.interval}`);
+		if (parts.length > 0) lines.push(parts.join(" · "));
+	}
+	return lines;
+}
+
+function ItemChangeRow({
+	item,
 }: {
-	change: PlanChange;
-	features: Feature[];
+	item: ItemChange;
 }) {
+	const { features } = useFeaturesQuery();
+	const action = item.action ?? "unknown";
+
+	const apiItem = item.item as Record<string, unknown> | undefined;
+	const productItem = apiItem
+		? migrationItemToProductItem(apiItem, features)
+		: null;
+
+	const feature = features.find((f) => f.id === item.feature_id);
+	const isDeleted = action === "deleted";
+	const isCreated = action === "created";
+
+	const tooltipLines = apiItem
+		? buildItemTooltipLines(apiItem, feature)
+		: [];
+
+	const row = productItem ? (
+		<div className="ml-4">
+		<SubscriptionItemRow
+			item={productItem}
+			featureId={item.feature_id}
+			isDeleted={isDeleted}
+			isCreated={isCreated}
+			readOnly={!isDeleted}
+		/>
+		</div>
+	) : (
+		<ChangeRow className="ml-4">
+			<StatusDot action={action} />
+			<FeatureIconByFeatureId featureId={item.feature_id} />
+			<span className="text-body flex-1 min-w-0 truncate">
+				{feature?.name ?? item.feature_id}
+			</span>
+		</ChangeRow>
+	);
+
+	if (tooltipLines.length === 0) return row;
+
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>{row}</TooltipTrigger>
+			<TooltipContent side="top" className="text-xs">
+				{tooltipLines.map((line) => (
+					<div key={line}>{line}</div>
+				))}
+			</TooltipContent>
+		</Tooltip>
+	);
+}
+
+function FeatureIconByFeatureId({ featureId }: { featureId: string | undefined }) {
+	const { features } = useFeaturesQuery();
+	const feature = features.find((f) => f.id === featureId);
+	const config = feature
+		? getFeatureIconConfig(feature.type, feature.config?.usage_type, 14)
+		: getFeatureIconConfig(null, null, 14);
+	return <span className={cn("shrink-0", config.color)}>{config.icon}</span>;
+}
+
+
+function balanceToItemChange(bc: BalanceChange, action = "updated"): ItemChange {
+	const balance = bc.balance ?? {};
+	const item: Record<string, unknown> = { feature_id: bc.feature_id };
+	if (balance.unlimited) item.unlimited = true;
+	else if (balance.granted !== undefined) item.included = balance.granted;
+	else if (bc.granted !== undefined) item.included = bc.granted;
+	return { action, feature_id: bc.feature_id, item };
+}
+
+function flagToItemChange(fc: FlagChange, action?: string): ItemChange {
+	return { action: action ?? fc.action ?? "updated", feature_id: fc.feature_id, item: { feature_id: fc.feature_id } };
+}
+
+function PlanChangeRows({ change, absorbedBalances, absorbedFlags }: { change: PlanChange; absorbedBalances?: BalanceChange[]; absorbedFlags?: FlagChange[] }) {
 	const action = change.action ?? "unknown";
 	const items = change.item_changes ?? [];
 	const planId = getPlanId(change);
 	const status = getPlanStatus(change);
+	const hasAbsorbed = (absorbedBalances?.length ?? 0) > 0 || (absorbedFlags?.length ?? 0) > 0;
 
 	return (
 		<>
@@ -211,23 +279,19 @@ function PlanChangeRows({
 				)}
 			</ChangeRow>
 			{items.map((item, i) => (
-				<ChangeRow
-					key={item.feature_id ?? i}
-					action={item.action ?? "unknown"}
-					className="ml-4"
-				>
-					<StatusDot action={item.action ?? "unknown"} />
-					<span className="text-xs text-tertiary-foreground w-14 shrink-0">
-						{ACTION_LABELS[item.action ?? "unknown"] ?? item.action}
-					</span>
-					<FeatureIcon featureId={item.feature_id} features={features} />
-					<span className="text-body flex-1 min-w-0 truncate">
-						{features.find((f) => f.id === item.feature_id)?.name ??
-							item.feature_id}
-					</span>
-				</ChangeRow>
+				<ItemChangeRow key={item.feature_id ?? i} item={item} />
 			))}
-			{items.length === 0 && action === "updated" && (
+			{items.length === 0 && hasAbsorbed && (
+				<>
+					{absorbedFlags?.map((fc, i) => (
+						<ItemChangeRow key={fc.feature_id ?? i} item={flagToItemChange(fc, "created")} />
+					))}
+					{absorbedBalances?.map((bc) => (
+						<ItemChangeRow key={bc.feature_id} item={balanceToItemChange(bc, "created")} />
+					))}
+				</>
+			)}
+			{items.length === 0 && !hasAbsorbed && action === "updated" && (
 				<div className="ml-4 px-3 py-1">
 					<span className="text-body-secondary">
 						Price, version, or settings changed
@@ -238,96 +302,58 @@ function PlanChangeRows({
 	);
 }
 
-function BalanceChangeRow({
-	change,
-	features,
-}: {
-	change: BalanceChange;
-	features: Feature[];
-}) {
-	const feature = features.find((f) => f.id === change.feature_id);
-	const balance = change.balance ?? {};
-	const previous = change.previous_attributes ?? change.before ?? {};
-	const field = BALANCE_FIELDS.find((key) => previous[key] !== undefined);
-	const currentValue =
-		field === undefined ? (change.granted ?? balance.granted) : balance[field];
-	const previousValue = field === undefined ? undefined : previous[field];
-
-	return (
-		<ChangeRow action="updated">
-			<StatusDot action="updated" />
-			<span className="text-xs text-tertiary-foreground w-14 shrink-0">Updated</span>
-			<FeatureIcon featureId={change.feature_id} features={features} />
-			<span className="text-body flex-1 min-w-0 truncate">
-				{feature?.name ?? change.feature_id}
-			</span>
-			<span className="text-body-secondary shrink-0 tabular-nums">
-				{field && <span className="mr-1 capitalize">{field.replaceAll("_", " ")}</span>}
-				{previousValue !== undefined ? (
-					<>
-						{formatBalanceValue(previousValue)}
-						<span className="text-tertiary-foreground/50 mx-1">→</span>
-						<span className="text-foreground font-semibold">
-							{formatBalanceValue(currentValue)}
-						</span>
-					</>
-				) : (
-					<span className="text-foreground font-semibold">
-						{formatBalanceValue(currentValue)}
-					</span>
-				)}
-			</span>
-		</ChangeRow>
-	);
-}
-
-function FlagChangeRow({
-	change,
-	features,
-}: {
-	change: FlagChange;
-	features: Feature[];
-}) {
-	const feature = features.find((f) => f.id === change.feature_id);
-
-	const action = change.action ?? "unknown";
-	return (
-		<ChangeRow action={action}>
-			<StatusDot action={action} />
-			<span className="text-xs text-tertiary-foreground w-14 shrink-0">
-				{ACTION_LABELS[action] ?? action}
-			</span>
-			<FeatureIcon featureId={change.feature_id} features={features} />
-			<span className="text-body flex-1 min-w-0 truncate">
-				{feature?.name ?? change.feature_id}
-			</span>
-		</ChangeRow>
-	);
-}
-
 function PreviewSummary({ preview }: { preview: MigrationPreview }) {
-	const { features } = useFeaturesQuery();
 	const planChanges = parseList<PlanChange>(preview.plan_changes);
-	const balanceChanges = parseList<BalanceChange>(preview.balance_changes);
-	const flagChanges = parseList<FlagChange>(preview.flag_changes);
+	const allBalanceChanges = parseList<BalanceChange>(preview.balance_changes);
+	const allFlagChanges = parseList<FlagChange>(preview.flag_changes);
 
-	if (planChanges.length + balanceChanges.length + flagChanges.length === 0)
+	const itemChangeFeatureIds = new Set<string>();
+	for (const pc of planChanges) {
+		for (const ic of pc.item_changes ?? []) {
+			if (ic.feature_id) itemChangeFeatureIds.add(ic.feature_id);
+		}
+	}
+
+	const standaloneBalanceChanges = allBalanceChanges.filter(
+		(bc) => bc.feature_id && !itemChangeFeatureIds.has(bc.feature_id),
+	);
+	const standaloneFlagChanges = allFlagChanges.filter(
+		(fc) => fc.feature_id && !itemChangeFeatureIds.has(fc.feature_id),
+	);
+
+	// New plans without item_changes absorb standalone balance/flag changes as children
+	const newPlanIndex = planChanges.findIndex(
+		(pc) =>
+			(pc.action === "activated" || pc.action === "created") &&
+			!(pc.item_changes?.length),
+	);
+	const absorbed =
+		newPlanIndex >= 0 &&
+		(standaloneBalanceChanges.length > 0 || standaloneFlagChanges.length > 0);
+
+	const total =
+		planChanges.length +
+		standaloneBalanceChanges.length +
+		standaloneFlagChanges.length;
+
+	if (total === 0)
 		return <span className="text-sm text-tertiary-foreground">No changes</span>;
 
 	return (
 		<div className="flex flex-col gap-1.5">
 			{planChanges.map((c, i) => (
-				<PlanChangeRows key={getPlanId(c) ?? i} change={c} features={features} />
-			))}
-			{balanceChanges.map((c, i) => (
-				<BalanceChangeRow
-					key={c.feature_id ?? i}
+				<PlanChangeRows
+					key={getPlanId(c) ?? i}
 					change={c}
-					features={features}
+					absorbedBalances={i === newPlanIndex ? standaloneBalanceChanges : undefined}
+					absorbedFlags={i === newPlanIndex ? standaloneFlagChanges : undefined}
 				/>
 			))}
-			{flagChanges.map((c, i) => (
-				<FlagChangeRow key={c.feature_id ?? i} change={c} features={features} />
+			{!absorbed && standaloneBalanceChanges.map((c) => (
+				<ItemChangeRow key={c.feature_id} item={balanceToItemChange(c)} />
+			))}
+			{!absorbed && standaloneFlagChanges.map((c, i) => (
+				<ItemChangeRow key={c.feature_id ?? i} item={flagToItemChange(c)} />
 			))}
 		</div>
 	);
