@@ -4,9 +4,10 @@ import {
 	customers,
 	MigrationItemKind,
 	products,
+	RELEVANT_STATUSES,
 	Scopes,
 } from "@autumn/shared";
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -57,6 +58,15 @@ export const handlePreviewMigrationFilter = createRoute({
 		} = c.req.valid("json");
 
 		const searchTerm = search || undefined;
+
+		// An empty customer scope compiles to nothing (wrapAnd throws). Treat "no
+		// active filter" as selecting nobody rather than 500ing the preview.
+		const hasAnyField = Object.values(filter ?? {}).some(
+			(v) => v !== undefined,
+		);
+		if (!hasAnyField) {
+			return c.json({ count: 0, customers: [], page, pageSize });
+		}
 
 		let includeProcessed: IncludeProcessed | undefined;
 		let migrationInternalId: string | undefined;
@@ -162,7 +172,10 @@ async function enrichCustomers(db: DrizzleCli, ids: string[]) {
 		.from(customers)
 		.leftJoin(
 			customerProducts,
-			eq(customers.internal_id, customerProducts.internal_customer_id),
+			and(
+				eq(customers.internal_id, customerProducts.internal_customer_id),
+				inArray(customerProducts.status, RELEVANT_STATUSES),
+			),
 		)
 		.leftJoin(
 			products,

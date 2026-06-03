@@ -15,6 +15,6 @@ interface MigrationSheetState {
 export const useMigrationSheetStore = create<MigrationSheetState>((set) => ({
 	selectedCustomer: null,
 	setSelectedCustomer: (customer) => set({ selectedCustomer: customer }),
-	liveFormState: { operations: {}, noBillingChanges: false },
+	liveFormState: { operations: {}, noBillingChanges: true },
 	setLiveFormState: (liveFormState) => set({ liveFormState }),
 }));

@@ -40,10 +40,9 @@ export const customerFilterMatchesFullCustomer = ({
 		const relevantProducts = fullCustomer.customer_products.filter(
 			customerProductHasRelevantStatus,
 		);
-		const planFilter = filter.plan === "$none" ? { $none: {} } : filter.plan;
 		if (
 			!arrayFilterMatches({
-				filter: planFilter,
+				filter: filter.plan,
 				items: relevantProducts,
 				matchesElement: ({ filter: planFilter, item: customerProduct }) =>
 					planFilterMatchesCustomerProduct({
