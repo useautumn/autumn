@@ -15,6 +15,7 @@ import { ChartSkeleton } from "./components/ChartSkeleton";
 import {
 	DEFAULT_PLOT_INSETS,
 	getCachedPlotInsets,
+	niceCeil,
 	type PlotInsets,
 	plotInsetsEqual,
 	setCachedPlotInsets,
@@ -197,10 +198,10 @@ export const AnalyticsView = () => {
 		return { chartData: trimmed, chartConfig: config };
 	}, [events, features, groupBy, groupFilter, planDeselected, entityNames, customerNames, planNames]);
 
-	const barFractions = useMemo(() => {
+	const { barFractions, chartDomainMax } = useMemo(() => {
 		const rows = chartData?.data;
 		if (!rows || rows.length === 0 || !chartConfig) {
-			return null;
+			return { barFractions: null, chartDomainMax: undefined };
 		}
 		const totals = rows.map((row) =>
 			chartConfig.reduce(
@@ -209,8 +210,11 @@ export const AnalyticsView = () => {
 				0,
 			),
 		);
-		const max = Math.max(...totals, 1);
-		return totals.map((total) => total / max);
+		const domainMax = niceCeil(Math.max(...totals, 1));
+		return {
+			barFractions: totals.map((total) => total / domainMax),
+			chartDomainMax: domainMax,
+		};
 	}, [chartData, chartConfig]);
 
 	// Build legend entries (sorted desc, zero-values filtered). The
@@ -332,7 +336,7 @@ export const AnalyticsView = () => {
 	const hasChart =
 		!queryLoading && !!chartData && chartData.data.length > 0;
 	const isEmpty = !queryLoading && !hasChart;
-	const chartRevealDelay = reduceMotion ? 0 : 0.55;
+	const chartRevealDelay = reduceMotion ? 0 : 0.85;
 
 	return (
 		<AnalyticsContext.Provider value={contextValue}>
@@ -365,7 +369,7 @@ export const AnalyticsView = () => {
 								animate={{
 									opacity: 1,
 									transition: {
-										duration: 0.25,
+										duration: 0.85,
 										delay: chartRevealDelay,
 										ease: [0.23, 1, 0.32, 1],
 									},
@@ -385,6 +389,7 @@ export const AnalyticsView = () => {
 											chartData as Parameters<typeof EventsBarChart>[0]["data"]
 										}
 										chartConfig={chartConfig}
+										domainMax={chartDomainMax}
 										onGeometry={handlePlotGeometry}
 									/>
 								</div>

@@ -1,5 +1,5 @@
 import { CalendarBlankIcon, CaretDownIcon } from "@phosphor-icons/react";
-import { endOfDay, format } from "date-fns";
+import { endOfDay, format, subMonths } from "date-fns";
 import { Check } from "lucide-react";
 import { useState } from "react";
 import type { DateRange } from "react-day-picker";
@@ -119,7 +119,7 @@ export const QueryTopbar = () => {
 			<DropdownMenu
 				onOpenChange={(open) => {
 					if (open) {
-						setDraftRange(undefined);
+						setDraftRange(customRange);
 					}
 				}}
 			>
@@ -215,7 +215,11 @@ export const QueryTopbar = () => {
 								numberOfMonths={2}
 								selected={draftRange}
 								onSelect={handleCustomRangeSelect}
-								defaultMonth={draftRange?.from ?? customRange?.from}
+								defaultMonth={
+									draftRange?.from ??
+									customRange?.from ??
+									subMonths(new Date(), 1)
+								}
 								disabled={{ after: new Date() }}
 							/>
 						</DropdownMenuSubContent>
