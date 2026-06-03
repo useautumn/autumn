@@ -2,8 +2,6 @@ name: Server Unit Tests
 
 on:
   pull_request:
-    paths:
-      - "server/**"
 
 permissions:
   contents: read
