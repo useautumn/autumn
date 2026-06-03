@@ -7,7 +7,7 @@ const optionalString = z.preprocess(
 
 const envSchema = z
 	.object({
-		AUTUMN_MCP_URL: z.string().min(1).default("http://localhost:2718/mcp"),
+		AUTUMN_MCP_URL: z.string().min(1).default("http://localhost:3099/mcp"),
 		BETTER_AUTH_SECRET: optionalString,
 		CHAT_MODEL: z.string().min(1).default("anthropic/claude-sonnet-4-6"),
 		CHAT_NAME: z.string().min(1).default("Autumn"),

@@ -18,9 +18,6 @@ const SERVER_PORT = process.env.SERVER_PORT
 const CHECKOUT_PORT = process.env.CHECKOUT_PORT
 	? Number.parseInt(process.env.CHECKOUT_PORT, 10)
 	: 3001 + portOffset;
-const MCP_PORT = process.env.MCP_PORT
-	? Number.parseInt(process.env.MCP_PORT, 10)
-	: 2718 + portOffset;
 const CHAT_PORT = process.env.CHAT_PORT
 	? Number.parseInt(process.env.CHAT_PORT, 10)
 	: 3099 + portOffset;
@@ -134,7 +131,7 @@ async function startDev() {
 			} else {
 				console.log("Cleaning up local dev ports...\n");
 				killPorts({
-					ports: [VITE_PORT, SERVER_PORT, CHECKOUT_PORT, MCP_PORT, CHAT_PORT],
+					ports: [VITE_PORT, SERVER_PORT, CHECKOUT_PORT, CHAT_PORT],
 				});
 			}
 
@@ -289,7 +286,6 @@ async function startDev() {
 				VITE_PORT: VITE_PORT.toString(),
 				SERVER_PORT: SERVER_PORT.toString(),
 				CHECKOUT_PORT: CHECKOUT_PORT.toString(),
-				MCP_PORT: MCP_PORT.toString(),
 				CHAT_PORT: CHAT_PORT.toString(),
 				MCP_DEBUG_PENDING_ACTIONS: process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
 				MCP_SERVER_URL:

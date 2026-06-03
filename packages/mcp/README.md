@@ -46,21 +46,21 @@ executes it only after a follow-up confirmation.
 
 ## Local
 
-From the repo root:
+The routes are served by the `@autumn/leaf` app. From the repo root:
 
 ```sh
-bun run mcp
+bun run leaf
 ```
 
-This starts both MCP routes:
+This starts both MCP routes (on the leaf port, `3099` by default):
 
-- `http://localhost:2718/mcp`
-- `http://localhost:2718/internal/mcp`
+- `http://localhost:3099/mcp`
+- `http://localhost:3099/internal/mcp`
 
 OAuth metadata is route-aware:
 
-- `http://localhost:2718/.well-known/oauth-protected-resource/mcp`
-- `http://localhost:2718/.well-known/oauth-protected-resource/internal/mcp`
+- `http://localhost:3099/.well-known/oauth-protected-resource/mcp`
+- `http://localhost:3099/.well-known/oauth-protected-resource/internal/mcp`
 
 OAuth uses the Autumn Better Auth issuer from `--server-url`:
 OAuth uses the Autumn Better Auth issuer from `MCP_SERVER_URL`:
