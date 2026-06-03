@@ -118,7 +118,7 @@ export const getCountAndSum = async ({
 	// Property filters → fall back to raw events, where the properties columns live.
 	const query = hasFilters
 		? `
-			SELECT event_name, COUNT(*) as count, SUM(value) as sum
+			SELECT event_name, COUNT(*) as count, SUM(coalesce(value, 1)) as sum
 			FROM events
 			WHERE org_id = {org_id:String} AND env = {env:String}
 				${params.aggregateAll ? "" : "AND customer_id = {customer_id:String}"}

@@ -8,8 +8,6 @@ NODE endpoint
 TYPE endpoint
 SQL >
     %
-    {% set no_property_filters = (not defined(filter_key_0) or String(filter_key_0, '') == '') and (not defined(filter_key_1) or String(filter_key_1, '') == '') and (not defined(filter_key_2) or String(filter_key_2, '') == '') and (not defined(filter_key_3) or String(filter_key_3, '') == '') and (not defined(filter_key_4) or String(filter_key_4, '') == '') %}
-    {% set use_org_rollup = no_property_filters and (not defined(customer_id) or String(customer_id, '') == '') and (not defined(entity_id) or String(entity_id, '') == '') %}
     SELECT
         {% if String(bin_size, 'day') == 'hour' %}
         formatDateTime(hour, '%F %T') as period,
@@ -20,17 +18,17 @@ SQL >
         {% end %}
         event_name,
         sum(total_value) as total_value
-    FROM {% if not no_property_filters %}events_hourly_mv{% elif use_org_rollup %}events_org_hourly_mv{% else %}events_hourly_no_properties_two_mv{% end %}
+    FROM {% if defined(filter_key_0) and String(filter_key_0, '') != '' %}events_hourly_mv{% elif defined(filter_key_1) and String(filter_key_1, '') != '' %}events_hourly_mv{% elif defined(filter_key_2) and String(filter_key_2, '') != '' %}events_hourly_mv{% elif defined(filter_key_3) and String(filter_key_3, '') != '' %}events_hourly_mv{% elif defined(filter_key_4) and String(filter_key_4, '') != '' %}events_hourly_mv{% else %}events_hourly_no_properties_two_mv{% end %}
     WHERE
         org_id = {{ String(org_id, '') }}
         AND env = {{ String(env, 'test') }}
         AND event_name IN {{ Array(event_names, 'String', default='[]') }}
         AND hour >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
         AND hour <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
-        {% if not use_org_rollup and defined(customer_id) and String(customer_id, '') != '' %}
+        {% if defined(customer_id) and String(customer_id, '') != '' %}
         AND customer_id = {{ String(customer_id) }}
         {% end %}
-        {% if not use_org_rollup and defined(entity_id) and String(entity_id, '') != '' %}
+        {% if defined(entity_id) and String(entity_id, '') != '' %}
         AND entity_id = {{ String(entity_id) }}
         {% end %}
         {% if defined(filter_key_0) and String(filter_key_0, '') != '' %}
