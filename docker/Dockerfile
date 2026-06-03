@@ -1,33 +1,63 @@
 # syntax=docker/dockerfile:1
 
-# Shared runtime image for server + workers + cron + mcp.
+# Shared runtime image for server + workers + cron + mcp + chat.
 # Each FlightControl service runs the same image with a different command:
 #   server  -> bun start            (cwd /app/server)
 #   workers -> bun src/workers.ts   (cwd /app/server)
 #   cron    -> bun src/cron.ts      (cwd /app/server)
 #   mcp     -> cd /app/apps/mcp-server && bun start
-FROM oven/bun:1.3.10 AS pruner
+#   chat    -> cd /app/apps/chat && bun start
+FROM oven/bun:1.3.10 AS deps
 WORKDIR /app
-COPY . .
-RUN bunx turbo@2.9.14 prune @autumn/server @autumn/mcp-server autumn-js @useautumn/sdk --docker
+
+# Copy the committed lockfile + every workspace manifest. Installing against the
+# real bun.lock (not a turbo-pruned one) keeps resolution byte-for-byte identical
+# to local/CI: zod v3 stays hoisted for the server, autumn-js keeps its nested
+# zod v4. --frozen-lockfile needs every workspace manifest present, so list them
+# all (add a line here when a workspace is added). Source is copied later, so this
+# layer caches until a package.json or the lockfile changes.
+COPY package.json bun.lock bunfig.toml ./
+COPY server/package.json server/
+COPY shared/package.json shared/
+COPY vite/package.json vite/
+COPY scripts/package.json scripts/
+COPY apps/chat/package.json apps/chat/
+COPY apps/checkout/package.json apps/checkout/
+COPY apps/docs/package.json apps/docs/
+COPY apps/mcp-server/package.json apps/mcp-server/
+COPY apps/sdk-test/package.json apps/sdk-test/
+COPY apps/website/package.json apps/website/
+COPY packages/atmn/package.json packages/atmn/
+COPY packages/atmn-tests/package.json packages/atmn-tests/
+COPY packages/autumn-js/package.json packages/autumn-js/
+COPY packages/ksuid/package.json packages/ksuid/
+COPY packages/mcp/package.json packages/mcp/
+COPY packages/openapi/package.json packages/openapi/
+COPY packages/sdk/package.json packages/sdk/
+COPY packages/stripe-sync/package.json packages/stripe-sync/
+
+# bunfig.toml preloads ./scripts/preload-env.ts on every bun run; stub it so the
+# install step doesn't fail before the real source is copied.
+RUN mkdir -p scripts && touch scripts/preload-env.ts
+
+# Install only the workspaces the runtime services need (server hosts workers +
+# cron), plus their transitive workspace deps. --frozen-lockfile guarantees no
+# re-resolution; --filter skips the frontend-heavy workspaces.
+RUN --mount=type=cache,target=/root/.bun/install/cache \
+	bun install --frozen-lockfile --ignore-scripts \
+		--filter @autumn/server \
+		--filter @autumn/mcp-server \
+		--filter @autumn/chat
 
 FROM oven/bun:1.3.10
 WORKDIR /app
-
-# Install from the pruned package.json set only, so this layer stays cached
-# until a runtime workspace's deps change (not on every source edit).
-COPY --from=pruner /app/out/json/ .
-RUN mkdir -p scripts && touch scripts/preload-env.ts
-RUN bun -e 'const fs = require("fs"); const pkg = JSON.parse(fs.readFileSync("package.json", "utf8")); pkg.workspaces.packages = ["server", "shared", "apps/mcp-server", "packages/ksuid", "packages/mcp", "packages/stripe-sync", "packages/autumn-js", "packages/sdk"]; delete pkg.dependencies; delete pkg.devDependencies; delete pkg.scripts; fs.writeFileSync("package.json", JSON.stringify(pkg, null, 2));'
-# Keep turbo's pruned bun.lock (derived from the committed lockfile) so versions
-# stay pinned and bun only reconciles the workspace-list delta. Deleting it forces
-# a full from-scratch registry resolve, which is slow and can hang.
-RUN --mount=type=cache,target=/root/.bun/install/cache \
-	bun install --ignore-scripts
-
-COPY --from=pruner /app/out/full/ .
-
 ENV NODE_ENV=production
+
+# node_modules (+ manifests) from the cached deps layer, then the source on top.
+# node_modules is .dockerignore'd, so COPY . . never clobbers the install.
+COPY --from=deps /app ./
+COPY . .
+
 EXPOSE 8080
 
 WORKDIR /app/server
