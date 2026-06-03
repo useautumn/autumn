@@ -2,8 +2,8 @@
 
 Mastra-backed MCP library for Autumn operations.
 
-The hosted runtime lives in `apps/mcp-server` and exposes two Streamable HTTP
-MCP routes:
+The hosted runtime lives in `apps/leaf` (see `src/mcp/http.ts`) and exposes two
+Streamable HTTP MCP routes:
 
 - `/mcp` - public, API-shaped operational tools.
 - `/internal/mcp` - internal Autumn agent tool.
@@ -71,5 +71,5 @@ OAuth uses the Autumn Better Auth issuer from `MCP_SERVER_URL`:
 For production-like local testing:
 
 ```sh
-MCP_SERVER_URL=https://api.useautumn.com bun -F @autumn/mcp-server start
+MCP_SERVER_URL=https://api.useautumn.com bun -F @autumn/leaf start
 ```
