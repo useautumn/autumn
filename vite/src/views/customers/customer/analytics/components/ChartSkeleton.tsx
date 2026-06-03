@@ -36,7 +36,7 @@ export const ChartSkeleton = ({
 	const bars = useMemo(() => buildSkeletonBars(barCount), [barCount]);
 
 	return (
-		<div className="flex flex-1 flex-col">
+		<div className="relative flex flex-1 flex-col">
 			<div className="flex h-7 shrink-0 items-center gap-4 border-b bg-card px-2">
 				{[72, 56, 64].map((width, i) => (
 					<div key={i} className="flex items-center gap-1.5">
@@ -92,6 +92,8 @@ export const ChartSkeleton = ({
 					))}
 				</div>
 			</div>
+
+			<div className="bg-white/40 dark:bg-black/40 pointer-events-none absolute inset-0" />
 		</div>
 	);
 };
