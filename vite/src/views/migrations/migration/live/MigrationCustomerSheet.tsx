@@ -22,7 +22,10 @@ export function MigrationCustomerSheet({
 		isActive,
 		activeRunDryRun,
 		invalidate: invalidateRuns,
-	} = useMigrationRunsQuery({ migrationId });
+	} = useMigrationRunsQuery({
+		migrationId,
+		itemIds: [customer.internal_id],
+	});
 
 	const {
 		subscriptions: realtimeSubscriptions,

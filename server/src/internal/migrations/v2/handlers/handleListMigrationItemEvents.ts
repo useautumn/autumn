@@ -6,6 +6,7 @@ import { migrationItemEventRepo } from "../repos/index.js";
 const ListMigrationItemEventsBody = z.object({
 	migrationId: z.string(),
 	migrationRunId: z.string().optional(),
+	itemIds: z.array(z.string()).optional(),
 });
 
 export const handleListMigrationItemEvents = createRoute({
@@ -13,11 +14,12 @@ export const handleListMigrationItemEvents = createRoute({
 	body: ListMigrationItemEventsBody,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { migrationId, migrationRunId } = c.req.valid("json");
+		const { migrationId, migrationRunId, itemIds } = c.req.valid("json");
 		const events = await migrationItemEventRepo.list({
 			ctx,
 			migrationId,
 			migrationRunId,
+			itemIds,
 		});
 
 		return c.json({ list: events });

@@ -1,10 +1,17 @@
-import type { Feature, FrontendProduct, ProductItem } from "@autumn/shared";
-import {
-	findSimilarItem,
-	Infinite,
-	isPriceItem,
-	productsAreSame,
+import type {
+	ApiPlanV1,
+	Feature,
+	FrontendProduct,
 } from "@autumn/shared";
+import {
+	diffPlanV1,
+	itemToBillingInterval,
+	productItemsToPlanItemsV1,
+	productV2ToBasePrice,
+	productV2ToFeatureItems,
+	sortProductItems,
+} from "@autumn/shared";
+import type { DiffedCustomizePlanV1 } from "@autumn/shared/utils/planV1Utils/diff/diffPlanV1.js";
 import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
 import type { Operations } from "@autumn/shared/api/migrations/operations/operations.js";
 
@@ -15,124 +22,111 @@ export interface MigrationDraft {
 	no_billing_changes: boolean;
 }
 
-function productItemToAddItem(item: ProductItem): Record<string, unknown> {
-	const result: Record<string, unknown> = { feature_id: item.feature_id };
+function frontendProductToApiPlanV1(
+	product: FrontendProduct,
+	features: Feature[],
+): ApiPlanV1 {
+	const sorted = sortProductItems(product.items, features);
+	const basePriceItem = productV2ToBasePrice({ product: product as any });
+	const featureItems = productV2ToFeatureItems({
+		items: sorted,
+		withBasePrice: false,
+	});
+	const planItems = productItemsToPlanItemsV1({
+		items: featureItems,
+		features,
+	});
 
-	if (item.included_usage != null) {
-		if (item.included_usage === Infinite) {
-			result.unlimited = true;
-		} else {
-			result.included = Number(item.included_usage);
-		}
-	}
+	const basePrice: ApiPlanV1["price"] = basePriceItem
+		? {
+				amount: basePriceItem.price,
+				interval: itemToBillingInterval({ item: basePriceItem }),
+				...(basePriceItem.interval_count !== 1 &&
+				typeof basePriceItem.interval_count === "number"
+					? { interval_count: basePriceItem.interval_count }
+					: {}),
+			}
+		: null;
 
-	if (item.tiers && item.tiers.length > 0) {
-		const priceObj: Record<string, unknown> = {
-			amount: item.tiers[0].amount ?? 0,
-			interval: item.interval ?? "one_off",
-		};
-		if (item.usage_model) priceObj.billing_method = item.usage_model;
-		result.price = priceObj;
-	} else if (item.interval) {
-		result.reset = { interval: item.interval };
-	}
+	const freeTrial: ApiPlanV1["free_trial"] = product.free_trial
+		? {
+				duration_type: product.free_trial.duration,
+				duration_length: product.free_trial.length,
+				card_required: product.free_trial.card_required ?? false,
+				...(product.free_trial.on_end
+					? { on_end: product.free_trial.on_end }
+					: {}),
+			}
+		: undefined;
 
-	return result;
+	return {
+		id: product.id,
+		name: product.name || "",
+		description: product.description || null,
+		group: product.group || null,
+		version: product.version,
+		add_on: product.is_add_on,
+		auto_enable: product.is_default,
+		price: basePrice,
+		items: planItems,
+		free_trial: freeTrial,
+		created_at: product.created_at,
+		env: product.env,
+		archived: product.archived ?? false,
+		base_variant_id: null,
+		config: product.config ?? { ignore_past_due: false },
+	} satisfies ApiPlanV1;
 }
 
-function getIntervalFilter(item: ProductItem): string | undefined {
-	return (item.interval as string) ?? undefined;
+function diffHasBillingChanges(diff: DiffedCustomizePlanV1): boolean {
+	if (diff.price !== undefined) return true;
+	if (diff.add_items?.some((i) => i.price != null)) return true;
+	return false;
 }
 
-function buildItemFilter(item: ProductItem): Record<string, unknown> {
-	const filter: Record<string, unknown> = { feature_id: item.feature_id };
-	const interval = getIntervalFilter(item);
-	if (interval) filter.interval = interval;
-	return filter;
-}
+export type MigrationScope = "this_version" | "all_customers";
 
-/**
- * Diffs baseProduct vs editedProduct and returns a migration draft
- * with a single `update_plan` operation containing `remove_items`
- * and `add_items` to bring existing customers to the new shape.
- */
 export function buildMigrationDraft({
 	baseProduct,
 	editedProduct,
 	features,
+	scope,
 }: {
 	baseProduct: FrontendProduct;
 	editedProduct: FrontendProduct;
 	features: Feature[];
+	scope: MigrationScope;
 }): MigrationDraft {
-	const { newItems, removedItems, onlyEntsChanged } = productsAreSame({
-		curProductV2: baseProduct,
-		newProductV2: editedProduct,
-		features,
-	});
+	const from = frontendProductToApiPlanV1(baseProduct, features);
+	const to = frontendProductToApiPlanV1(editedProduct, features);
+	const diff = diffPlanV1({ from, to });
 
-	const addItems: Record<string, unknown>[] = [];
-	const removeItems: Record<string, unknown>[] = [];
-
-	// New or replaced items. If the new item replaces an existing one
-	// (same feature+interval+usage_model), emit a remove for the old
-	// shape first so the add doesn't conflict.
-	for (const item of newItems) {
-		if (!item.feature_id) continue;
-
-		const replacedItem = findSimilarItem({ item, items: removedItems });
-		if (replacedItem) {
-			removeItems.push(buildItemFilter(replacedItem));
-		}
-		addItems.push(productItemToAddItem(item));
-	}
-
-	// Purely removed items (no replacement in the new product).
-	for (const item of removedItems) {
-		if (!item.feature_id) continue;
-		if (findSimilarItem({ item, items: newItems })) continue;
-		removeItems.push(buildItemFilter(item));
-	}
-
-	// Base price change (the plan's flat recurring/one-off charge).
-	const oldBase = baseProduct.items?.find((i) => isPriceItem(i));
-	const newBase = editedProduct.items?.find((i) => isPriceItem(i));
-	const basePriceChanged =
-		JSON.stringify(oldBase) !== JSON.stringify(newBase);
-
-	const customize: Record<string, unknown> = {};
-	if (addItems.length > 0) customize.add_items = addItems;
-	if (removeItems.length > 0) customize.remove_items = removeItems;
-	if (basePriceChanged && newBase) {
-		customize.price = {
-			amount:
-				(newBase as Record<string, unknown>).price ??
-				newBase.tiers?.[0]?.amount ??
-				0,
-			interval: newBase.interval ?? "month",
-		};
-	}
-
-	const hasCustomize = Object.keys(customize).length > 0;
+	const hasCustomize = Object.keys(diff).length > 0;
+	const customize = hasCustomize ? diff : undefined;
 
 	const updatePlanOp = {
 		type: "update_plan" as const,
 		plan_filter: { plan_id: baseProduct.id },
-		...(hasCustomize ? { customize } : {}),
+		...(customize ? { customize } : {}),
 	};
+
+	const planFilter =
+		scope === "this_version"
+			? { plan_id: baseProduct.id, version: baseProduct.version }
+			: { plan_id: baseProduct.id };
 
 	const filter: MigrationFilter = {
-		customer: {
-			plan: { plan_id: baseProduct.id, version: baseProduct.version },
-		},
+		customer: { plan: planFilter },
 	};
 
+	const suffix =
+		scope === "all_customers" ? "update-all" : "update";
 	const timestamp = Math.floor(Date.now() / 1000);
 
 	return {
-		id: `${baseProduct.id}-update-${timestamp}`,
+		id: `${baseProduct.id}-${suffix}-${timestamp}`,
 		filter,
 		operations: { customer: [updatePlanOp] } as unknown as Operations,
-		no_billing_changes: onlyEntsChanged,
+		no_billing_changes: !diffHasBillingChanges(diff),
 	};
 }

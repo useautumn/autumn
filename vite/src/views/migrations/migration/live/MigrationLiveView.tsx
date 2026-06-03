@@ -15,7 +15,7 @@ import {
 } from "@phosphor-icons/react";
 import type { ColumnDef, PaginationState, Row } from "@tanstack/react-table";
 import { debounce } from "lodash";
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { Table } from "@/components/general/table";
@@ -23,7 +23,7 @@ import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
+import { Separator } from "@/components/v2/separator";
 import {
 	Dialog,
 	DialogContent,
@@ -39,6 +39,7 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
 import { Input } from "@/components/v2/inputs/Input";
+import { Switch } from "@/components/ui/switch";
 import {
 	Select,
 	SelectContent,
@@ -60,7 +61,6 @@ import {
 } from "@/hooks/queries/useMigrationsQuery";
 import { cn } from "@/lib/utils";
 import { pushPage } from "@/utils/genUtils";
-import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { createCustomerListColumns } from "@/views/customers2/components/table/customer-list/CustomerListColumns";
 import { CustomerListFilterButton } from "@/views/customers2/components/table/customer-list/CustomerListFilterButton";
@@ -83,7 +83,6 @@ const PAGE_SIZE_OPTIONS = [10, 50, 100, 250];
 type ActiveRunStatus = "queued" | "running" | null;
 type AdminRunControls = {
 	lazyRun: boolean;
-	concurrency: string;
 	retryErrored: boolean;
 	retrySkipped: boolean;
 };
@@ -103,13 +102,6 @@ function buildEventsByCustomer(itemEvents: MigrationItemEvent[]) {
 			map.set(event.item_id, event);
 	}
 	return map;
-}
-
-function parseConcurrency(value: string) {
-	const trimmed = value.trim();
-	if (!trimmed) return undefined;
-	const parsed = Number(trimmed);
-	return Number.isInteger(parsed) && parsed >= 1 ? parsed : undefined;
 }
 
 function buildRetryItemStatuses({
@@ -249,7 +241,6 @@ export function MigrationLiveView({
 	const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
 	const [runControls, setRunControls] = useState({
 		lazyRun: true,
-		concurrency: "",
 		retryErrored: false,
 		retrySkipped: false,
 	});
@@ -261,18 +252,11 @@ export function MigrationLiveView({
 		running: null as "dry" | "live" | null,
 	});
 	const { cancelRun, isCanceling } = useMigrationsQuery();
-	const { isAdmin } = useAdmin();
-	const hasInvalidConcurrency =
-		runControls.concurrency.trim() !== "" &&
-		parseConcurrency(runControls.concurrency) === undefined;
 
-	const adminRunControls = isAdmin
-		? {
-				lazyRun: runControls.lazyRun,
-				concurrency: parseConcurrency(runControls.concurrency),
-				retryItemStatuses: buildRetryItemStatuses(runControls),
-			}
-		: undefined;
+	const resolvedRunControls = {
+		lazyRun: runControls.lazyRun,
+		retryItemStatuses: buildRetryItemStatuses(runControls),
+	};
 
 	const debouncedSetSearch = useMemo(
 		() => debounce((q: string) => setDebouncedSearch(q), 350),
@@ -340,14 +324,6 @@ export function MigrationLiveView({
 	);
 	const progressRun = activeRun ?? latestRun;
 	const progressCounts = progressRun?.item_run_counts;
-	const runScopedTarget =
-		progressRun?.only_ids?.length ??
-		(progressRun?.target_limit as number | null) ??
-		undefined;
-	const progressTarget =
-		progressCounts && runScopedTarget && progressCounts.total > runScopedTarget
-			? (count ?? progressCounts.total)
-			: (runScopedTarget ?? count ?? undefined);
 	const activeRunStatus: ActiveRunStatus = hasRealtimeActive
 		? "running"
 		: ((activeRun?.status as ActiveRunStatus) ?? null);
@@ -478,19 +454,7 @@ export function MigrationLiveView({
 				</div>
 			)}
 
-			<StepIndicator
-				step={step}
-				onStepChange={onStepChange}
-				stepMeta={{
-					live: progressCounts ? (
-						<ExecutionProgressBadge
-							completed={progressCounts.completed}
-							running={progressCounts.running}
-							target={progressTarget}
-						/>
-					) : null,
-				}}
-			>
+			<StepIndicator step={step} onStepChange={onStepChange}>
 				{activeRun && (
 					<Button
 						variant="secondary"
@@ -601,13 +565,12 @@ export function MigrationLiveView({
 							operations={operations}
 							noBillingChanges={noBillingChanges}
 						/>
-						{isAdmin && (
-							<AdminMigrationRunControls
-								value={runControls}
-								onChange={setRunControls}
-								invalidConcurrency={hasInvalidConcurrency}
-							/>
-						)}
+						<MigrationRunControls
+							value={runControls}
+							onChange={setRunControls}
+							hasFailedItems={(progressCounts?.failed ?? 0) > 0}
+							hasSkippedItems={(progressCounts?.skipped ?? 0) > 0}
+						/>
 						<DialogFooter>
 							<Button
 								variant="secondary"
@@ -617,10 +580,9 @@ export function MigrationLiveView({
 							</Button>
 							<Button
 								variant="primary"
-								disabled={hasInvalidConcurrency}
 								onClick={() => {
 									setIsRunDialogOpen(false);
-									triggerRun({ dryRun: false, ...adminRunControls });
+									triggerRun({ dryRun: false, ...resolvedRunControls });
 								}}
 							>
 								<PlayIcon size={14} weight="fill" />
@@ -714,14 +676,13 @@ export function MigrationLiveView({
 									</div>
 								)}
 							</div>
-							{isAdmin && (
-								<AdminMigrationRunControls
-									value={runControls}
-									onChange={setRunControls}
-									invalidConcurrency={hasInvalidConcurrency}
-									lazyDisabled={sample.mode === "select"}
-								/>
-							)}
+						<MigrationRunControls
+							value={runControls}
+							onChange={setRunControls}
+							lazyDisabled={sample.mode === "select"}
+							hasFailedItems={(progressCounts?.failed ?? 0) > 0}
+							hasSkippedItems={(progressCounts?.skipped ?? 0) > 0}
+						/>
 						</div>
 						<DialogFooter className="sm:flex-col gap-2">
 							<ShortcutButton
@@ -730,7 +691,6 @@ export function MigrationLiveView({
 								isLoading={sample.running === "dry"}
 								disabled={
 									sample.running !== null ||
-									hasInvalidConcurrency ||
 									(sample.mode === "limit"
 										? !sample.limit || Number(sample.limit) < 1
 										: sample.customerIds.length === 0)
@@ -745,13 +705,13 @@ export function MigrationLiveView({
 										await triggerRun({
 											dryRun: true,
 											only: topIds,
-											...adminRunControls,
+											...resolvedRunControls,
 										});
 									} else {
 										await triggerRun({
 											dryRun: true,
 											only: sample.customerIds,
-											...adminRunControls,
+											...resolvedRunControls,
 										});
 									}
 									setSample((s) => ({ ...s, running: null, open: false }));
@@ -769,7 +729,6 @@ export function MigrationLiveView({
 								isLoading={sample.running === "live"}
 								disabled={
 									sample.running !== null ||
-									hasInvalidConcurrency ||
 									(sample.mode === "limit"
 										? !sample.limit || Number(sample.limit) < 1
 										: sample.customerIds.length === 0)
@@ -780,13 +739,13 @@ export function MigrationLiveView({
 										await triggerRun({
 											dryRun: false,
 											limit: Number(sample.limit),
-											...adminRunControls,
+											...resolvedRunControls,
 										});
 									} else {
 										await triggerRun({
 											dryRun: false,
 											only: sample.customerIds,
-											...adminRunControls,
+											...resolvedRunControls,
 										});
 									}
 									setSample((s) => ({ ...s, running: null, open: false }));
@@ -871,6 +830,12 @@ export function MigrationLiveView({
 							))}
 						</SelectContent>
 					</Select>
+					{progressCounts && (
+						<ExecutionProgressBadge
+							completed={progressCounts.completed}
+							running={progressCounts.running}
+						/>
+					)}
 				</div>
 			</div>
 
@@ -899,122 +864,93 @@ export function MigrationLiveView({
 function ExecutionProgressBadge({
 	completed,
 	running,
-	target,
 }: {
 	completed: number;
 	running: number;
-	target?: number;
 }) {
 	if (completed === 0 && running === 0) return null;
 
-	const completedLabel = target
-		? `${completed.toLocaleString()} / ${target.toLocaleString()}`
-		: completed.toLocaleString();
-
 	return (
-		<Badge variant="muted" className="ml-1 text-[11px]">
-			{completedLabel} done
+		<span className="flex items-center h-7 px-2 text-[11px] text-tertiary-foreground">
+			{completed.toLocaleString()} run
 			{running > 0 && `, ${running.toLocaleString()} running`}
-		</Badge>
+		</span>
 	);
 }
 
-function AdminMigrationRunControls({
+function MigrationRunControls({
 	value,
 	onChange,
-	invalidConcurrency,
 	lazyDisabled = false,
+	hasFailedItems = false,
+	hasSkippedItems = false,
 }: {
 	value: AdminRunControls;
 	onChange: (value: AdminRunControls) => void;
-	invalidConcurrency: boolean;
+	invalidConcurrency?: boolean;
 	lazyDisabled?: boolean;
+	hasFailedItems?: boolean;
+	hasSkippedItems?: boolean;
 }) {
-	const concurrencyInputId = useId();
-	const retryErroredInputId = useId();
-	const retrySkippedInputId = useId();
-
 	return (
-		<div className="rounded-lg border border-border bg-muted/20 p-3">
-			<div className="mb-3 text-xs font-medium text-muted-foreground">
-				Admin run controls
-			</div>
-			<div className="grid gap-3 sm:grid-cols-[1fr_140px]">
-				<div
-					className={cn(
-						"flex items-start gap-2 text-sm",
-						lazyDisabled && "opacity-50",
-					)}
-				>
-					<Checkbox
-						checked={value.lazyRun && !lazyDisabled}
-						disabled={lazyDisabled}
-						onCheckedChange={(checked) =>
-							onChange({ ...value, lazyRun: checked === true })
-						}
-						className="mt-0.5"
-					/>
-					<span className="flex flex-col gap-0.5">
-						<span className="font-medium text-foreground">Lazy run</span>
-						<span className="text-xs text-tertiary-foreground">
-							Background run also migrates customers on request.
-						</span>
+		<div className="flex flex-col gap-3">
+			<Separator />
+			<div
+				className={cn(
+					"flex items-center justify-between gap-4",
+					lazyDisabled && "opacity-50",
+				)}
+			>
+				<div className="flex flex-col gap-0.5">
+					<span className="text-sm font-medium text-foreground">Lazy run</span>
+					<span className="text-xs text-tertiary-foreground">
+						Also migrates customers on request.
 					</span>
 				</div>
-				<div className="flex flex-col gap-1.5">
-					<label
-						htmlFor={concurrencyInputId}
-						className="text-xs text-tertiary-foreground"
-					>
-						Concurrency
-					</label>
-					<Input
-						id={concurrencyInputId}
-						type="number"
-						min={1}
-						step={1}
-						value={value.concurrency}
-						onChange={(event) =>
-							onChange({ ...value, concurrency: event.target.value })
-						}
-						placeholder="Default"
-						className={cn(invalidConcurrency && "border-red-500")}
-					/>
-					{invalidConcurrency && (
-						<span className="text-xs text-red-500">
-							Use a whole number &gt;= 1
-						</span>
-					)}
-				</div>
+				<Switch
+					checked={value.lazyRun && !lazyDisabled}
+					disabled={lazyDisabled}
+					onCheckedChange={(checked) =>
+						onChange({ ...value, lazyRun: checked === true })
+					}
+				/>
 			</div>
-			<div className="mt-3 grid gap-2 border-t border-border pt-3 sm:grid-cols-2">
-				<label
-					htmlFor={retryErroredInputId}
-					className="flex items-center gap-2 text-sm"
-				>
-					<Checkbox
-						id={retryErroredInputId}
+			{hasFailedItems && (
+				<div className="flex items-center justify-between gap-4">
+					<div className="flex flex-col gap-0.5">
+						<span className="text-sm font-medium text-foreground">
+							Retry failed
+						</span>
+						<span className="text-xs text-tertiary-foreground">
+							Re-run customers that previously errored.
+						</span>
+					</div>
+					<Switch
 						checked={value.retryErrored}
 						onCheckedChange={(checked) =>
 							onChange({ ...value, retryErrored: checked === true })
 						}
 					/>
-					<span className="font-medium text-foreground">Retry failed</span>
-				</label>
-				<label
-					htmlFor={retrySkippedInputId}
-					className="flex items-center gap-2 text-sm"
-				>
-					<Checkbox
-						id={retrySkippedInputId}
+				</div>
+			)}
+			{hasSkippedItems && (
+				<div className="flex items-center justify-between gap-4">
+					<div className="flex flex-col gap-0.5">
+						<span className="text-sm font-medium text-foreground">
+							Retry skipped
+						</span>
+						<span className="text-xs text-tertiary-foreground">
+							Re-run customers that were skipped.
+						</span>
+					</div>
+					<Switch
 						checked={value.retrySkipped}
 						onCheckedChange={(checked) =>
 							onChange({ ...value, retrySkipped: checked === true })
 						}
 					/>
-					<span className="font-medium text-foreground">Retry skipped</span>
-				</label>
-			</div>
+				</div>
+			)}
 		</div>
 	);
 }
