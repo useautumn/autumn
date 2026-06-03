@@ -1356,6 +1356,21 @@ const ROUTES = [
 		isWebhookExempt: false,
 	},
 	{
+		handlerName: "handleLinkRevenueCat",
+		handlerFile:
+			"src/internal/platform/platformBeta/handlers/handleLinkRevenueCat.ts",
+		method: "POST",
+		path: "/v1/platform.link_revenuecat",
+		style: "RPC",
+		group: "v1/platform",
+		mountChain: ["/v1", "", "", "/platform.link_revenuecat"],
+		sourceRouterFile:
+			"src/internal/platform/platformBeta/platformRpcRouter.ts",
+		routeKind: "createRoute",
+		needsScopes: true,
+		isWebhookExempt: false,
+	},
+	{
 		handlerName: "handleCreateSchedule",
 		handlerFile: "src/internal/billing/v2/handlers/handleCreateSchedule.ts",
 		method: "POST",
@@ -4246,6 +4261,13 @@ const SCOPE_DECISIONS: Record<
 		scopes: ["billing:write"],
 		shape: "array",
 		decidedAt: "2026-04-24T15:32:37.301Z",
+	},
+	"POST|/v1/platform.link_revenuecat|handleLinkRevenueCat": {
+		decision: "decided",
+		scopes: ["platform:write"],
+		shape: "array",
+		note: "platform RPC route — write",
+		decidedAt: "2026-06-01T00:00:00.000Z",
 	},
 	"POST|/v1/billing.create_schedule|handleCreateSchedule": {
 		decision: "decided",

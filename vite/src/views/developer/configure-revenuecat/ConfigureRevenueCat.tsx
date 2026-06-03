@@ -7,11 +7,13 @@ import { useRevenueCatQuery } from "@/hooks/queries/revcat/useRevenueCatQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { ApiKeyDialog } from "./components/ApiKeyDialog";
 import { RevenueCatConnectionCard } from "./components/RevenueCatConnectionCard";
 import { RevenueCatMappingSheet } from "./components/RevenueCatMappingSheet";
 import { RevenueCatProjectSheet } from "./components/RevenueCatProjectSheet";
+import { RevenueCatSyncSheet } from "./components/RevenueCatSyncSheet";
 import { RevenueCatWebhookSecret } from "./components/RevenueCatWebhookSecret";
 import { RevenueCatWebhookUrl } from "./components/RevenueCatWebhookUrl";
 
@@ -19,11 +21,13 @@ export const ConfigureRevenueCat = () => {
 	const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
 	const [showProjectSheet, setShowProjectSheet] = useState(false);
 	const [showMappingSheet, setShowMappingSheet] = useState(false);
+	const [showSyncSheet, setShowSyncSheet] = useState(false);
 	const [connecting, setConnecting] = useState(false);
 	const [apiKeyInput, setApiKeyInput] = useState("");
 	const [projectIdInput, setProjectIdInput] = useState("");
 
 	const { org } = useOrg();
+	const { isAdmin } = useAdmin();
 	const { mappings } = useRCMappings();
 	const {
 		revenueCatConfig,
@@ -55,6 +59,16 @@ export const ConfigureRevenueCat = () => {
 				toast.error(
 					"RevenueCat connection needs Read & Write access. Please re-authorize and grant all requested permissions.",
 				);
+			} else if (error === "project_not_in_account") {
+				toast.error(
+					"That RevenueCat account doesn't contain your current project. Sign in with the account that owns it.",
+				);
+			} else if (error === "products_mismatch") {
+				toast.error(
+					"Your mapped RevenueCat products weren't all found in that project. Connect the account/project you currently use.",
+				);
+			} else if (error === "no_project_to_migrate") {
+				toast.error("No existing project ID to migrate. Set one first.");
 			} else {
 				toast.error(
 					`Failed to connect RevenueCat: ${error.replace(/_/g, " ")}`,
@@ -74,6 +88,18 @@ export const ConfigureRevenueCat = () => {
 			window.open(data.oauth_url, "_blank");
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to redirect to OAuth"));
+		}
+	};
+
+	const handleMigrateToOAuth = async () => {
+		try {
+			const { data } = await axiosInstance.get(
+				"/v1/organization/revenuecat/oauth_url",
+				{ params: { migrate: "true" } },
+			);
+			window.open(data.oauth_url, "_blank");
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to start migration"));
 		}
 	};
 
@@ -183,10 +209,13 @@ export const ConfigureRevenueCat = () => {
 					connection={connection}
 					oauthConnected={oauthConnected}
 					env={env}
+					isAdmin={isAdmin}
 					onOAuthClick={handleRedirectToOAuth}
+					onMigrateClick={handleMigrateToOAuth}
 					onApiKeyClick={handleApiKeyClick}
 					onProjectIdClick={handleProjectIdClick}
 					onMapProductsClick={handleMapProductsClick}
+					onSyncClick={() => setShowSyncSheet(true)}
 					currentProjectId={currentProjectId}
 					hasMappings={hasMappings}
 				/>
@@ -224,6 +253,11 @@ export const ConfigureRevenueCat = () => {
 			<RevenueCatMappingSheet
 				open={showMappingSheet}
 				onOpenChange={setShowMappingSheet}
+			/>
+
+			<RevenueCatSyncSheet
+				open={showSyncSheet}
+				onOpenChange={setShowSyncSheet}
 			/>
 		</div>
 	);

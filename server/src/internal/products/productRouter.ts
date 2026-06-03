@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { handleListRevenueCatMappings } from "@/external/revenueCat/handlers/handleListRevenueCatMappings.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handlePlanHasCustomersV2 } from "@/internal/products/handlers/handlePlanHasCustomersV2.js";
 import { handleCopyProductV2 } from "./handlers/handleCopyProduct/handleCopyProductV2.js";
@@ -54,3 +55,7 @@ plansRpcRouter.post("/plans.create", ...handleCreatePlanV2);
 plansRpcRouter.post("/plans.update", ...handleUpdatePlanV2);
 plansRpcRouter.post("/plans.delete", ...handleDeletePlanV2);
 plansRpcRouter.post("/plans.get", ...handleGetPlanV2);
+plansRpcRouter.post(
+	"/plans.revenuecat_mappings",
+	...handleListRevenueCatMappings,
+);

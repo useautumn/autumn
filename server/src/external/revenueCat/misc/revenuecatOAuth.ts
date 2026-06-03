@@ -100,7 +100,9 @@ export const exchangeRcCode = async ({
 
 export const refreshRcTokens = async ({
 	refreshToken,
-	scopes = RC_OAUTH_SCOPES,
+	// Omit scopes on refresh — re-requesting the full set triggers RC `invalid_scope`.
+	// An empty list reuses the originally-granted scopes (OAuth2 §6).
+	scopes = [],
 }: {
 	refreshToken: string;
 	scopes?: string[];

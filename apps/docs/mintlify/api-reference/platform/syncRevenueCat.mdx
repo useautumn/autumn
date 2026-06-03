@@ -1,0 +1,77 @@
+---
+title: "Sync Revenue Cat"
+openapi: "openapi POST /v1/platform.sync_revenuecat"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="organization_slug" type="string" required />
+
+<DynamicParamField body="env" type="'test' | 'sandbox' | 'live'" required>
+  "test" and "sandbox" both target the sandbox environment
+</DynamicParamField>
+
+<DynamicParamField body="product_ids" type="string[]">
+  Plans to push. Omit to sync every plan in the org/env.
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="results" type="object[]">
+  <Expandable title="properties">
+    <DynamicResponseField name="plan_id" type="string" />
+
+    <DynamicResponseField name="status" type="'synced' | 'skipped' | 'error'" />
+
+    <DynamicResponseField name="store_identifier" type="string" />
+
+    <DynamicResponseField name="apps" type="object[]">
+      <Expandable title="properties">
+        <DynamicResponseField name="app_id" type="string" />
+
+        <DynamicResponseField name="app_type" type="string" />
+
+        <DynamicResponseField name="product" type="'created' | 'updated' | 'exists'" />
+
+        <DynamicResponseField name="store_push" type="'pushed' | 'failed' | 'skipped'" />
+
+        <DynamicResponseField name="price" type="'set' | 'skipped' | 'failed'" />
+
+        <DynamicResponseField name="message" type="string" />
+
+      </Expandable>
+    </DynamicResponseField>
+
+    <DynamicResponseField name="message" type="string" />
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "results": [
+    {
+      "plan_id": "pro",
+      "status": "synced",
+      "store_identifier": "autumn.sandbox.org_123.pro",
+      "apps": [
+        {
+          "app_id": "app_test",
+          "app_type": "test_store",
+          "product": "created",
+          "store_push": "skipped",
+          "price": "set"
+        }
+      ]
+    }
+  ]
+}
+```
+</ResponseExample>

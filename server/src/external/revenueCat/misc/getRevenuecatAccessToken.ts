@@ -53,6 +53,56 @@ const persistOAuthTokens = async ({
 const isOAuthAccessTokenValid = (oauthConfig: RevenueCatOAuthConfig) =>
 	oauthConfig.expires_at - TOKEN_EXPIRY_SKEW_MS > Date.now();
 
+/** Rotate the OAuth tokens, persist the new pair, and return the fresh access token. */
+const refreshAndPersistTokens = async ({
+	db,
+	org,
+	env,
+	oauthConfig,
+}: {
+	db: DrizzleCli;
+	org: Organization;
+	env: AppEnv;
+	oauthConfig: RevenueCatOAuthConfig;
+}): Promise<string> => {
+	const refreshToken = decryptData(oauthConfig.refresh_token);
+	const tokens = await refreshRcTokens({ refreshToken });
+
+	const refreshedOAuthConfig: RevenueCatOAuthConfig = {
+		...oauthConfig,
+		access_token: encryptData(tokens.accessToken()),
+		refresh_token: encryptData(tokens.refreshToken()),
+		expires_at: tokens.accessTokenExpiresAt().getTime(),
+		...(tokens.hasScopes() ? { scope: tokens.scopes().join(" ") } : {}),
+	};
+
+	await persistOAuthTokens({ db, org, env, oauthConfig: refreshedOAuthConfig });
+	return tokens.accessToken();
+};
+
+/**
+ * Force-refresh the env's OAuth access token, persisting the rotated refresh token for us.
+ * Returns the fresh access token, or null if the org isn't OAuth-connected for this env.
+ * Used to hand a platform master a usable access token WITHOUT exposing the refresh token —
+ * so they can't rotate it and lock Autumn out.
+ */
+export const refreshRevenuecatOAuthAccessToken = async ({
+	db,
+	org,
+	env,
+}: {
+	db: DrizzleCli;
+	org: Organization;
+	env: AppEnv;
+}): Promise<string | null> => {
+	const oauthConfig = getOAuthConfigForEnv({
+		revenueCatConfig: org.processor_configs?.revenuecat ?? {},
+		env,
+	});
+	if (!oauthConfig) return null;
+	return refreshAndPersistTokens({ db, org, env, oauthConfig });
+};
+
 export const getRevenuecatAccessToken = async ({
 	db,
 	org,
@@ -72,25 +122,7 @@ export const getRevenuecatAccessToken = async ({
 			return decryptData(oauthConfig.access_token);
 		}
 
-		const refreshToken = decryptData(oauthConfig.refresh_token);
-		const tokens = await refreshRcTokens({ refreshToken });
-
-		const refreshedOAuthConfig: RevenueCatOAuthConfig = {
-			...oauthConfig,
-			access_token: encryptData(tokens.accessToken()),
-			refresh_token: encryptData(tokens.refreshToken()),
-			expires_at: tokens.accessTokenExpiresAt().getTime(),
-			...(tokens.hasScopes() ? { scope: tokens.scopes().join(" ") } : {}),
-		};
-
-		await persistOAuthTokens({
-			db,
-			org,
-			env,
-			oauthConfig: refreshedOAuthConfig,
-		});
-
-		return tokens.accessToken();
+		return refreshAndPersistTokens({ db, org, env, oauthConfig });
 	}
 
 	const apiKey =
