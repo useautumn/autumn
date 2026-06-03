@@ -2,6 +2,7 @@ import {
 	type CreateFeature,
 	FeatureType,
 	FeatureUsageType,
+	isAnyCreditSystem,
 } from "@autumn/shared";
 import { AreaRadioGroupItem } from "@/components/v2/radio-groups/AreaRadioGroupItem";
 import { RadioGroup } from "@/components/v2/radio-groups/RadioGroup";
@@ -58,10 +59,7 @@ export function NewFeatureBehaviour({
 	feature: CreateFeature;
 	setFeature: (feature: CreateFeature) => void;
 }) {
-	if (
-		feature.type === FeatureType.CreditSystem ||
-		feature.type === FeatureType.AiCreditSystem
-	) {
+	if (isAnyCreditSystem(feature.type)) {
 		return <NewFeatureCreditSchema feature={feature} setFeature={setFeature} />;
 	}
 

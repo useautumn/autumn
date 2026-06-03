@@ -8,6 +8,7 @@ import {
 	FeatureUsageType,
 } from "@models/featureModels/featureEnums.js";
 import type { Feature } from "@models/featureModels/featureModels.js";
+import { isAnyCreditSystem } from "./classifyFeature/isAnyCreditSystem.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import type { ApiFeatureV1 } from "../../api/features/apiFeatureV1.js";
 import type {
@@ -223,8 +224,7 @@ export const dbToApiFeatureV1 = ({
 		name: dbFeature.name,
 		type: dbFeature.type,
 		consumable:
-			dbFeature.type === FeatureType.CreditSystem ||
-			dbFeature.type === FeatureType.AiCreditSystem ||
+			isAnyCreditSystem(dbFeature.type) ||
 			dbFeature.config?.usage_type === FeatureUsageType.Single,
 
 		credit_schema: Array.isArray(dbFeature.config?.schema)

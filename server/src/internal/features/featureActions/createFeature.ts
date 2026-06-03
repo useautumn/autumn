@@ -2,6 +2,7 @@ import {
 	CreateFeatureSchema,
 	type Feature,
 	FeatureType,
+	isAnyCreditSystem,
 	type ModelMarkups,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -20,10 +21,7 @@ const validateFeature = (data: any, allFeatures: Feature[]) => {
 	let config = data.config;
 	if (featureType === FeatureType.Metered) {
 		config = validateMeteredConfig(config);
-	} else if (
-		featureType === FeatureType.CreditSystem ||
-		featureType === FeatureType.AiCreditSystem
-	) {
+	} else if (isAnyCreditSystem(featureType)) {
 		config = validateCreditSystem(config, featureType);
 		if (featureType === FeatureType.CreditSystem) {
 			validateCreditSystemSchemaReferences({

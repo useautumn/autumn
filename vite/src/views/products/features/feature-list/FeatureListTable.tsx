@@ -1,4 +1,4 @@
-import { AppEnv, type Feature, FeatureType } from "@autumn/shared";
+import { AppEnv, type Feature, isAnyCreditSystem } from "@autumn/shared";
 import { ArrowSquareOutIcon, CoinsIcon, LegoIcon } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
@@ -29,19 +29,15 @@ export function FeatureListTable() {
 
 	// Filter features and credit systems based on archived state
 	const { regularFeatures, creditSystems, hasEventNames } = useMemo(() => {
-		const isCreditType = (type: string) =>
-			type === FeatureType.CreditSystem ||
-			type === FeatureType.AiCreditSystem;
-
 		const regularFeatures = features?.filter((feature) => {
-			if (isCreditType(feature.type)) return false;
+			if (isAnyCreditSystem(feature.type)) return false;
 			return queryStates.showArchivedFeatures
 				? feature.archived
 				: !feature.archived;
 		});
 
 		const creditSystems = features?.filter((feature) => {
-			if (!isCreditType(feature.type)) return false;
+			if (!isAnyCreditSystem(feature.type)) return false;
 			return queryStates.showArchivedFeatures
 				? feature.archived
 				: !feature.archived;
