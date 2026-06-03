@@ -7,7 +7,7 @@ const optionalString = z.preprocess(
 
 const envSchema = z
 	.object({
-		AUTUMN_MCP_URL: z.string().min(1).default("http://localhost:3099/mcp"),
+		MCP_SERVER_URL: optionalString,
 		BETTER_AUTH_SECRET: optionalString,
 		BETTER_AUTH_URL: optionalString,
 		CHAT_MODEL: z.string().min(1).default("anthropic/claude-sonnet-4-6"),
@@ -32,6 +32,8 @@ const envSchema = z
 
 		return {
 			...values,
+			MCP_SERVER_URL:
+				values.MCP_SERVER_URL ?? `http://localhost:${values.PORT}`,
 			BETTER_AUTH_URL:
 				values.BETTER_AUTH_URL ??
 				(process.env.NODE_ENV === "production"

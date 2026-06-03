@@ -39,7 +39,7 @@ export const createAutumnMcpClient = (
 		id: `autumn-${apiKey.slice(0, 14)}`,
 		servers: {
 			autumn: {
-				url: new URL(env.AUTUMN_MCP_URL),
+				url: new URL("/mcp", env.MCP_SERVER_URL),
 				requestInit: {
 					headers: {
 						Authorization: `Bearer ${apiKey}`,
