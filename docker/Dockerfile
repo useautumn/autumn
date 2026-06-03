@@ -5,7 +5,7 @@
 #   server  -> bun start            (cwd /app/server)
 #   workers -> bun src/workers.ts   (cwd /app/server)
 #   cron    -> bun src/cron.ts      (cwd /app/server)
-#   leaf    -> cd /app/apps/leaf && bun start  (also serves the MCP routes)
+#   leaf    -> bun leaf             (cwd /app/server; serves chat + MCP routes)
 FROM oven/bun:1.3.10 AS deps
 WORKDIR /app
 
