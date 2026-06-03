@@ -1,0 +1,27 @@
+DESCRIPTION >
+    Coarse org-grain hourly rollup of `events`, keyed by ONLY (org_id, env, event_name, hour) —
+    no customer_id / entity_id / properties. Serves the all-customers (aggregateAll) ungrouped
+    total + time-series in ms: a huge org over 90d collapses from millions of customer-grained
+    rows in events_hourly_no_properties_two_mv to a few thousand org-grained rows.
+
+    Reads `events` directly (one row per event, no ARRAY JOIN), so totals reconcile exactly with
+    events_hourly_no_properties_two_mv and there is no property double-count. Only queries with no
+    customer_id, no entity_id and no property filter may read it — everything else keeps its table.
+
+    Sort key leads org_id, env, event_name so the dominant scan (one org/env, few event_names, a
+    date range) hits one contiguous slice. BACKFILL skip: deploy empty + forward trigger only;
+    history filled in bounded chunks via events_org_hourly_mv_backfill.
+
+SCHEMA >
+    `org_id` String,
+    `env` String,
+    `event_name` String,
+    `hour` DateTime,
+    `total_value` Float64,
+    `event_count` UInt64
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(hour)"
+ENGINE_SORTING_KEY "org_id, env, event_name, hour"
+
+BACKFILL skip
