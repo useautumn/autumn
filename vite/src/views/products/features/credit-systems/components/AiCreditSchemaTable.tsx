@@ -1,12 +1,12 @@
 import type { ModelsDevProvider } from "@autumn/shared";
-import type { ColumnDef, Row } from "@tanstack/react-table";
 import { useStore } from "@tanstack/react-form";
+import type { ColumnDef, Row } from "@tanstack/react-table";
 import { InfoIcon, PlusIcon, X } from "lucide-react";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { IconButton } from "@/components/v2/buttons/IconButton";
+import { Input } from "@/components/v2/inputs/Input";
 import {
-
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
@@ -22,6 +22,34 @@ interface ModelRow {
 	modelKey: string;
 }
 
+function MarkupCell({
+	form,
+	fullId,
+	providerKey,
+}: {
+	form: CreditSystemFormInstance;
+	fullId: string;
+	providerKey: string;
+}) {
+	const defaultMarkup = useStore(form.store, (s) => s.values.defaultMarkup);
+	const providerMarkup = useStore(
+		form.store,
+		(s) => s.values.provider_markups[providerKey]?.markup,
+	);
+	const inheritedMarkup = providerMarkup ?? defaultMarkup;
+
+	return (
+		<EditableNumberCell
+			form={form}
+			fullId={fullId}
+			field="markup"
+			useDefaultAsPlaceholder
+			inheritedPlaceholder={inheritedMarkup}
+			allowUndefined
+		/>
+	);
+}
+
 interface AiCreditSchemaTableProps {
 	form: CreditSystemFormInstance;
 	providerKey: string;
@@ -30,6 +58,8 @@ interface AiCreditSchemaTableProps {
 	provider: ModelsDevProvider;
 	isLoading: boolean;
 	removeKeys: (keys: string[]) => void;
+	removeProvider: (providerKey: string) => void;
+	setProviderMarkup: (providerKey: string, value: number | undefined) => void;
 	renameKey: (oldKey: string, newKey: string) => void;
 }
 
@@ -46,9 +76,17 @@ export function AiCreditSchemaTable({
 	provider,
 	isLoading,
 	removeKeys,
+	removeProvider,
+	setProviderMarkup,
 	renameKey,
 }: AiCreditSchemaTableProps) {
 	const isCustom = providerKey === "custom";
+
+	const defaultMarkup = useStore(form.store, (s) => s.values.defaultMarkup);
+	const providerMarkup = useStore(
+		form.store,
+		(s) => s.values.provider_markups[providerKey]?.markup,
+	);
 
 	const data: ModelRow[] = useMemo(
 		() =>
@@ -72,7 +110,10 @@ export function AiCreditSchemaTable({
 							<CustomModelInput
 								modelKey={modelKey}
 								onRename={(newKey) =>
-									renameKey(`${providerKey}/${modelKey}`, `${providerKey}/${newKey}`)
+									renameKey(
+										`${providerKey}/${modelKey}`,
+										`${providerKey}/${newKey}`,
+									)
 								}
 							/>
 						);
@@ -81,7 +122,10 @@ export function AiCreditSchemaTable({
 						<AiModelSelectDropdown
 							value={modelKey}
 							onValueChange={(newKey) =>
-								renameKey(`${providerKey}/${modelKey}`, `${providerKey}/${newKey}`)
+								renameKey(
+									`${providerKey}/${modelKey}`,
+									`${providerKey}/${newKey}`,
+								)
 							}
 							provider={provider}
 							isLoading={isLoading}
@@ -140,12 +184,10 @@ export function AiCreditSchemaTable({
 				id: "markup",
 				size: 80,
 				cell: ({ row }: { row: Row<ModelRow> }) => (
-					<EditableNumberCell
+					<MarkupCell
 						form={form}
 						fullId={row.original.fullId}
-						field="markup"
-						useDefaultAsPlaceholder
-						allowUndefined
+						providerKey={providerKey}
 					/>
 				),
 			},
@@ -155,7 +197,10 @@ export function AiCreditSchemaTable({
 				size: 40,
 				enableSorting: false,
 				cell: ({ row }: { row: Row<ModelRow> }) => (
-					<div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
+					<div
+						className="flex justify-end"
+						onClick={(e) => e.stopPropagation()}
+					>
 						<IconButton
 							variant="skeleton"
 							iconOrientation="center"
@@ -197,18 +242,50 @@ export function AiCreditSchemaTable({
 								<InfoIcon className="h-3.5 w-3.5 text-muted-foreground opacity-40" />
 							</TooltipTrigger>
 							<TooltipContent>
-								Use format <code className="text-[11px] bg-muted px-1 py-0.5 rounded">custom/modelId</code> in API tracking
+								Use format{" "}
+								<code className="text-[11px] bg-muted px-1 py-0.5 rounded">
+									custom/modelId
+								</code>{" "}
+								in API tracking
 							</TooltipContent>
 						</Tooltip>
 					)}
 				</span>
-				<IconButton
-					variant="skeleton"
-					iconOrientation="center"
-					icon={<X className="h-3.5 w-3.5" />}
-					onClick={() => removeKeys(modelFullIds)}
-					className="!text-subtle hover:!text-foreground"
-				/>
+				<div className="flex items-center gap-2">
+					{!isCustom && (
+						<div className="flex items-center gap-1.5">
+							<span className="text-xs text-subtle">Markup %</span>
+							<Input
+								variant="headless"
+								type="text"
+								inputMode="numeric"
+								value={providerMarkup == null ? "" : String(providerMarkup)}
+								onChange={(e) => {
+									const raw = e.target.value;
+									if (raw === "" || /^-?\d*\.?\d*$/.test(raw)) {
+										if (raw === "") {
+											setProviderMarkup(providerKey, undefined);
+										} else {
+											const parsed = Number(raw);
+											if (!Number.isNaN(parsed)) {
+												setProviderMarkup(providerKey, parsed);
+											}
+										}
+									}
+								}}
+								placeholder={String(defaultMarkup)}
+								className="w-16 text-sm text-right"
+							/>
+						</div>
+					)}
+					<IconButton
+						variant="skeleton"
+						iconOrientation="center"
+						icon={<X className="h-3.5 w-3.5" />}
+						onClick={() => removeProvider(providerKey)}
+						className="!text-subtle hover:!text-foreground"
+					/>
+				</div>
 			</div>
 
 			<div className="rounded-lg border shadow-card overflow-hidden">
@@ -236,17 +313,24 @@ export function AiCreditSchemaTable({
 						onClick={() =>
 							form.setFieldValue("model_markups", (prev) => {
 								if (isCustom) {
-									const existing = Object.keys(prev).filter((k) => k.startsWith("custom/"));
+									const existing = Object.keys(prev).filter((k) =>
+										k.startsWith("custom/"),
+									);
 									let i = 1;
 									while (existing.includes(`custom/model-${i}`)) i++;
-									return { ...prev, [`custom/model-${i}`]: { input_cost: 0, output_cost: 0 } };
+									return {
+										...prev,
+										[`custom/model-${i}`]: { input_cost: 0, output_cost: 0 },
+									};
 								}
 								const usedKeys = new Set(
 									Object.keys(prev)
 										.filter((k) => k.startsWith(`${providerKey}/`))
 										.map((k) => k.slice(`${providerKey}/`.length)),
 								);
-								const nextKey = Object.keys(provider.models).find((k) => !usedKeys.has(k));
+								const nextKey = Object.keys(provider.models).find(
+									(k) => !usedKeys.has(k),
+								);
 								if (!nextKey) return prev;
 								return { ...prev, [`${providerKey}/${nextKey}`]: {} };
 							})
