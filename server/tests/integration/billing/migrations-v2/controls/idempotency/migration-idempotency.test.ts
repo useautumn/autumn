@@ -17,7 +17,7 @@ import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { CusService } from "@/internal/customers/CusService.js";
 import { migrationItemRunRepo } from "@/internal/migrations/v2/repos/index.js";
-import { waitForMigrationResult } from "../utils/runUpdatePlanMigration.js";
+import { waitForMigrationResult } from "../../utils/runUpdatePlanMigration.js";
 
 const timeout = (ms: number) =>
 	new Promise((resolve) => setTimeout(resolve, ms));

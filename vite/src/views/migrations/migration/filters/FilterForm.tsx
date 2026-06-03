@@ -33,20 +33,82 @@ function inferCustomerIdOperator(
 	return count > 1 ? "in" : "is";
 }
 
-function buildGroups(value: MigrationFilter): FilterGroupData[] {
-	const planFilter =
-		(value.customer?.plan as PlanFilter) ?? DEFAULT_PLAN_FILTER;
-	const planGroups = planFilterToGroups(planFilter);
+/** `customer.plan` is `{ $none: {} }` — "has no active plans at all". */
+function planRawIsNone(plan: unknown): boolean {
+	const inner = planNoneInner(plan);
+	return inner !== null && Object.keys(inner).length === 0;
+}
+
+/**
+ * Inner filter of a `{ $none: ... }` plan quantifier, or null if `plan` isn't
+ * a `$none`. An empty inner means "has no plans"; a non-empty inner (e.g.
+ * `{ plan_id: { $in: [...] } }`) is the empty-inclusive "not on plan X".
+ */
+function planNoneInner(plan: unknown): PlanFilter | null {
+	if (plan && typeof plan === "object" && "$none" in plan) {
+		const inner = (plan as { $none?: unknown }).$none;
+		if (inner == null) return {};
+		if (typeof inner === "object") return inner as PlanFilter;
+	}
+	return null;
+}
+
+/** Flip a `plan_id` rule between the `in` (positive) and `not_in` forms. */
+function flipPlanIdInToNotIn(groups: FilterGroupData[]): FilterGroupData[] {
+	return groups.map((g) => ({
+		rules: g.rules.map((r) =>
+			r.field === "plan_id" && r.operator === "in"
+				? { ...r, operator: "not_in" as FilterOperator }
+				: r,
+		),
+	}));
+}
+
+function customerIdRuleFromValue(value: MigrationFilter): FilterRule | null {
 	const matcher = value.customer?.customer_id as StringMatcher | undefined;
 	const ids = customerIdToStrings(matcher);
-	if (ids.length === 0) return planGroups;
-	const rule: FilterRule = {
+	if (ids.length === 0) return null;
+	return {
 		field: "customer_id",
 		operator: inferCustomerIdOperator(matcher, ids.length),
 		values: ids,
 	};
-	const [first, ...rest] = planGroups;
-	return [{ rules: [rule, ...(first?.rules ?? [])] }, ...rest];
+}
+
+function prependCustomerId(
+	groups: FilterGroupData[],
+	customerIdRule: FilterRule | null,
+): FilterGroupData[] {
+	if (!customerIdRule) return groups;
+	const [first, ...rest] = groups;
+	return [{ rules: [customerIdRule, ...(first?.rules ?? [])] }, ...rest];
+}
+
+function buildGroups(value: MigrationFilter): FilterGroupData[] {
+	const customerIdRule = customerIdRuleFromValue(value);
+	const plan = value.customer?.plan;
+
+	// "has no plans at all" → single `none` rule.
+	if (planRawIsNone(plan)) {
+		const noneRule: FilterRule = {
+			field: "plan_id",
+			operator: "none",
+			values: [],
+		};
+		const rules = customerIdRule ? [customerIdRule, noneRule] : [noneRule];
+		return [{ rules }];
+	}
+
+	// `{ $none: <inner> }` is the empty-inclusive "not on plan X" — decode the
+	// inner filter and flip its `plan_id` rule back to `not_in`.
+	const noneInner = planNoneInner(plan);
+	if (noneInner) {
+		const groups = flipPlanIdInToNotIn(planFilterToGroups(noneInner));
+		return prependCustomerId(groups, customerIdRule);
+	}
+
+	const planFilter = (plan as PlanFilter) ?? DEFAULT_PLAN_FILTER;
+	return prependCustomerId(planFilterToGroups(planFilter), customerIdRule);
 }
 
 function ruleToCustomerIdMatcher(rule: FilterRule): StringMatcher | undefined {
@@ -65,6 +127,34 @@ function ruleToCustomerIdMatcher(rule: FilterRule): StringMatcher | undefined {
 	}
 }
 
+/**
+ * Inner filter for a customer-level `$none` quantifier, or null when the groups
+ * carry no plan negation. "has none" → `{}`; a `plan_id` "not in [X]" rule →
+ * the group's plan filter with `plan_id` flipped to `$in` (negated by `$none`).
+ */
+function groupsToPlanNone(groups: FilterGroupData[]): PlanFilter | null {
+	if (groups.some((g) => g.rules.some((r) => r.operator === "none"))) return {};
+
+	const hasPlanNotIn = groups.some((g) =>
+		g.rules.some(
+			(r) =>
+				r.field === "plan_id" &&
+				r.operator === "not_in" &&
+				r.values.length > 0,
+		),
+	);
+	if (!hasPlanNotIn) return null;
+
+	const flipped = groups.map((g) => ({
+		rules: g.rules.map((r) =>
+			r.field === "plan_id" && r.operator === "not_in"
+				? { ...r, operator: "in" as FilterOperator }
+				: r,
+		),
+	}));
+	return groupsToPlanFilter(flipped);
+}
+
 function groupsToMigrationFilter(
 	groups: FilterGroupData[],
 	base: MigrationFilter,
@@ -79,6 +169,21 @@ function groupsToMigrationFilter(
 			return true;
 		}),
 	}));
+	// Plan negation is a customer-level quantifier ($none), not a per-plan
+	// matcher: "has none" → $none: {}, and "plan_id not in [X]" →
+	// $none: { plan_id: { $in: [X] } } so zero-plan customers are included.
+	const noneInner = groupsToPlanNone(cleaned);
+	if (noneInner) {
+		return {
+			...base,
+			customer: {
+				...base.customer,
+				customer_id: customerIdMatcher,
+				plan: { $none: noneInner },
+			},
+		};
+	}
+
 	const planFilter = groupsToPlanFilter(cleaned);
 	const hasPlanFilter = Object.keys(planFilter).length > 0;
 	return {
@@ -99,7 +204,10 @@ function isEmptyFilter(groups: FilterGroupData[]): boolean {
 	if (groups.length !== 1) return false;
 	const rules = groups[0].rules;
 	if (rules.length === 0) return true;
-	return rules.length === 1 && rules[0].values.length === 0;
+	if (rules.length !== 1) return false;
+	// A `none` rule is fully specified without any values.
+	if (rules[0].operator === "none") return false;
+	return rules[0].values.length === 0;
 }
 
 export function FilterForm({

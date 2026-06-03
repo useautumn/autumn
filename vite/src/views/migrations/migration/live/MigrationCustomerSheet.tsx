@@ -1,5 +1,6 @@
-import type { CustomerWithProducts, Operations } from "@autumn/shared";
+import type { Operations } from "@autumn/shared";
 import { useMemo } from "react";
+import type { MigrationPreviewCustomer } from "@/hooks/queries/useMigrationFilterPreview";
 import { useMigrationRunsQuery } from "@/hooks/queries/useMigrationRunsQuery";
 import { useRealtimeSubscriptions } from "../hooks/useRealtimeSubscriptions";
 import { CustomerRunSheet } from "./CustomerRunSheet";
@@ -12,7 +13,7 @@ export function MigrationCustomerSheet({
 	noBillingChanges,
 }: {
 	migrationId: string;
-	customer: CustomerWithProducts;
+	customer: MigrationPreviewCustomer;
 	operations: Operations;
 	noBillingChanges: boolean;
 }) {

@@ -4,22 +4,25 @@ import {
 	RecaseError,
 	Scopes,
 } from "@autumn/shared";
-import { runs } from "@trigger.dev/sdk/v3";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import {
 	migrationRepo,
 	migrationRunRepo,
 } from "@/internal/migrations/v2/repos/index.js";
+import { setMigrationCancelRequested } from "@/internal/migrations/v2/run/utils/migrationCancelToken.js";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 
 const CancelMigrationRunBody = z.object({
 	id: z.string(),
 });
 
-/** POST /migrations.cancel_run — cancel the active migration_run for a
- *  migration, if any. Marks the run as `canceled` and best-effort
- *  cancels the trigger.dev task. Errors if no active run exists. */
+/** POST /migrations.cancel_run — request cancellation of the active
+ *  migration_run for a migration, if any. Sets a cache token so in-flight
+ *  items finish but no new items start. Lazy runs are marked `canceled`
+ *  immediately (and the org cache cleared) so no further per-customer tasks
+ *  are enqueued; batch runs settle to `canceled` once their runner drains.
+ *  Errors if no active run exists. */
 export const handleCancelMigrationRun = createRoute({
 	scopes: [Scopes.Migrations.Write],
 	body: CancelMigrationRunBody,
@@ -44,34 +47,24 @@ export const handleCancelMigrationRun = createRoute({
 			});
 		}
 
-		if (activeRun.trigger_run_id) {
-			try {
-				await runs.cancel(activeRun.trigger_run_id);
-			} catch (error) {
-				ctx.logger.warn(
-					"cancel-migration-run: trigger.dev cancel failed (continuing to mark canceled)",
-					{
-						data: {
-							runId: activeRun.internal_id,
-							triggerRunId: activeRun.trigger_run_id,
-							error: error instanceof Error ? error.message : String(error),
-						},
-					},
-				);
-			}
-		}
+		await setMigrationCancelRequested({ migrationRunId: activeRun.internal_id });
 
-		await migrationRunRepo.update({
-			ctx,
-			internalId: activeRun.internal_id,
-			updates: {
-				status: MigrationRunStatus.Canceled,
-				error_message: "Canceled by user",
-				finished_at: Date.now(),
-			},
-		});
-
+		// Lazy runs have no batch loop to drain. Mark them canceled now and clear
+		// the org cache so `pendingMigrations` drops this run and the customer
+		// hot path stops enqueuing per-customer tasks. Batch runs are settled to
+		// `canceled` by their own runner (withMigrationRunTracking) after the
+		// in-flight items finish.
 		if (activeRun.lazy_run) {
+			await migrationRunRepo.update({
+				ctx,
+				internalId: activeRun.internal_id,
+				updates: {
+					status: MigrationRunStatus.Canceled,
+					error_message: "Canceled by user",
+					finished_at: Date.now(),
+				},
+			});
+
 			await clearOrgCache({
 				db: ctx.db,
 				orgId: ctx.org.id,

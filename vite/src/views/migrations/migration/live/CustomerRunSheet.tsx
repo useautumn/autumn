@@ -1,4 +1,4 @@
-import type { CustomerWithProducts, Operations } from "@autumn/shared";
+import type { Operations } from "@autumn/shared";
 import {
 	ArrowSquareOutIcon,
 	CalendarBlankIcon,
@@ -22,6 +22,7 @@ import {
 } from "@/components/v2/dialogs/Dialog";
 import { InfoRow } from "@/components/v2/InfoRow";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
+import type { MigrationPreviewCustomer } from "@/hooks/queries/useMigrationFilterPreview";
 import type { MigrationItemEvent } from "@/hooks/queries/useMigrationRunsQuery";
 import { ActiveRunDot, ItemEventStatusBadge } from "../runs/RunStatusBadge";
 import { RunSummaryRows } from "../shared/RunSummaryRows";
@@ -32,11 +33,13 @@ function formatEventTimestamp(timestamp: string): string {
 }
 
 function StatusValue({
+	itemRun,
 	latestDryEvent,
 	latestLiveEvent,
 	isActive,
 	activeRunDryRun,
 }: {
+	itemRun: MigrationPreviewCustomer["migration_item_run"];
 	latestDryEvent: MigrationItemEvent | undefined;
 	latestLiveEvent: MigrationItemEvent | undefined;
 	isActive: boolean;
@@ -51,12 +54,34 @@ function StatusValue({
 				</span>
 			</div>
 		);
+	if (itemRun?.status === "running") {
+		return (
+			<div className="flex items-center gap-2">
+				<ActiveRunDot />
+				<span className="text-xs text-muted-foreground">Running</span>
+			</div>
+		);
+	}
+	if (itemRun?.status) {
+		const event =
+			latestLiveEvent?.status === itemRun.status ? latestLiveEvent : undefined;
+		return (
+			<ItemEventStatusBadge
+				status={itemRun.status}
+				dryRun={false}
+				response={event?.response ?? null}
+				timestamp={event?.timestamp}
+			/>
+		);
+	}
 	const event = latestLiveEvent ?? latestDryEvent;
 	if (event)
 		return (
 			<div className="flex items-center gap-1.5">
 				{event.dry_run && (
-					<span className="text-[10px] font-medium text-tertiary-foreground">Dry Run:</span>
+					<span className="text-[10px] font-medium text-tertiary-foreground">
+						Dry Run:
+					</span>
 				)}
 				<ItemEventStatusBadge
 					status={event.status}
@@ -80,7 +105,7 @@ export function CustomerRunSheet({
 	operations,
 	noBillingChanges,
 }: {
-	customer: CustomerWithProducts;
+	customer: MigrationPreviewCustomer;
 	latestDryEvent: MigrationItemEvent | undefined;
 	latestLiveEvent: MigrationItemEvent | undefined;
 	allEvents: MigrationItemEvent[];
@@ -138,7 +163,11 @@ export function CustomerRunSheet({
 							className="inline-flex items-center gap-1.5 hover:text-primary transition-colors"
 						>
 							{customer.name || customerId}
-							<ArrowSquareOutIcon size={14} weight="bold" className="opacity-50" />
+							<ArrowSquareOutIcon
+								size={14}
+								weight="bold"
+								className="opacity-50"
+							/>
 						</Link>
 						{isActive && <ActiveRunDot />}
 					</span>
@@ -153,6 +182,7 @@ export function CustomerRunSheet({
 						label="Status"
 						value={
 							<StatusValue
+								itemRun={customer.migration_item_run}
 								latestDryEvent={latestDryEvent}
 								latestLiveEvent={latestLiveEvent}
 								isActive={isActive}
@@ -175,7 +205,11 @@ export function CustomerRunSheet({
 					title={
 						<div className="flex items-center justify-between w-full">
 							<span className="flex items-center gap-1.5">
-								<LightningIcon size={14} weight="fill" className="text-tertiary-foreground" />
+								<LightningIcon
+									size={14}
+									weight="fill"
+									className="text-tertiary-foreground"
+								/>
 								Live Run
 							</span>
 							<span className="text-xs text-tertiary-foreground font-normal">
@@ -193,7 +227,11 @@ export function CustomerRunSheet({
 					title={
 						<div className="flex items-center justify-between w-full">
 							<span className="flex items-center gap-1.5">
-								<EyeIcon size={14} weight="duotone" className="text-tertiary-foreground" />
+								<EyeIcon
+									size={14}
+									weight="duotone"
+									className="text-tertiary-foreground"
+								/>
 								Preview
 							</span>
 							<span className="text-xs text-tertiary-foreground font-normal">
