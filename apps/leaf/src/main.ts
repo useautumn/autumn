@@ -21,7 +21,7 @@ app.get("/health", (c) => c.json({ ok: true }));
 registerMcpRoutes(app, {
 	"oauth-enabled": true,
 	"oauth-environment": env.MCP_OAUTH_ENVIRONMENT,
-	"server-url": env.MCP_SERVER_URL,
+	"server-url": env.BETTER_AUTH_URL,
 	logger: createConsoleLogger("info"),
 });
 

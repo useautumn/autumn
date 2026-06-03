@@ -289,7 +289,9 @@ async function startDev() {
 				CHAT_PORT: CHAT_PORT.toString(),
 				MCP_DEBUG_PENDING_ACTIONS: process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
 				MCP_SERVER_URL:
-					process.env.MCP_SERVER_URL ?? `http://localhost:${SERVER_PORT}`,
+					process.env.MCP_SERVER_URL ?? `http://localhost:${CHAT_PORT}`,
+				CHAT_SERVER_URL:
+					process.env.CHAT_SERVER_URL ?? `http://localhost:${CHAT_PORT}`,
 				MCP_RESOURCE_URLS:
 					process.env.MCP_RESOURCE_URLS ?? `http://localhost:${CHAT_PORT}/mcp`,
 				AUTUMN_MCP_URL:
