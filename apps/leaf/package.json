@@ -1,5 +1,5 @@
 {
-	"name": "@autumn/chat",
+	"name": "@autumn/leaf",
 	"version": "0.0.1",
 	"private": true,
 	"type": "module",
@@ -14,6 +14,7 @@
 		"@autumn/shared": "workspace:*",
 		"@chat-adapter/slack": "^4.29.0",
 		"@chat-adapter/state-pg": "^4.29.0",
+		"@hono/node-server": "^1.19.5",
 		"@mastra/core": "^1.36.0",
 		"@mastra/mcp": "^1.8.0",
 		"@mendable/firecrawl-js": "^4.25.1",

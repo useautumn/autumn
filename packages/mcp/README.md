@@ -2,8 +2,8 @@
 
 Mastra-backed MCP library for Autumn operations.
 
-The hosted runtime lives in `apps/mcp-server` and exposes two Streamable HTTP
-MCP routes:
+The hosted runtime lives in `apps/leaf` (see `src/mcp/http.ts`) and exposes two
+Streamable HTTP MCP routes:
 
 - `/mcp` - public, API-shaped operational tools.
 - `/internal/mcp` - internal Autumn agent tool.
@@ -46,21 +46,21 @@ executes it only after a follow-up confirmation.
 
 ## Local
 
-From the repo root:
+The routes are served by the `@autumn/leaf` app. From the repo root:
 
 ```sh
-bun run mcp
+bun run leaf
 ```
 
-This starts both MCP routes:
+This starts both MCP routes (on the leaf port, `3099` by default):
 
-- `http://localhost:2718/mcp`
-- `http://localhost:2718/internal/mcp`
+- `http://localhost:3099/mcp`
+- `http://localhost:3099/internal/mcp`
 
 OAuth metadata is route-aware:
 
-- `http://localhost:2718/.well-known/oauth-protected-resource/mcp`
-- `http://localhost:2718/.well-known/oauth-protected-resource/internal/mcp`
+- `http://localhost:3099/.well-known/oauth-protected-resource/mcp`
+- `http://localhost:3099/.well-known/oauth-protected-resource/internal/mcp`
 
 OAuth uses the Autumn Better Auth issuer from `--server-url`:
 OAuth uses the Autumn Better Auth issuer from `MCP_SERVER_URL`:
@@ -71,5 +71,5 @@ OAuth uses the Autumn Better Auth issuer from `MCP_SERVER_URL`:
 For production-like local testing:
 
 ```sh
-MCP_SERVER_URL=https://api.useautumn.com bun -F @autumn/mcp-server start
+MCP_SERVER_URL=https://api.useautumn.com bun -F @autumn/leaf start
 ```

@@ -1,20 +1,19 @@
-import type { HttpBindings } from "@hono/node-server";
-import { RESPONSE_ALREADY_SENT } from "@hono/node-server/utils/response";
 import {
 	buildAuthForRequest,
+	type ConsoleLogger,
 	createAskAutumnMCPServer,
 	createAutumnOperationsMCPServer,
 	getAuthorizationServerMetadata,
 	getProtectedResourceMetadata,
-	type ConsoleLogger,
 	type MCPServerFlags,
 	type OAuthEnvironment,
 	OAuthHttpError,
 } from "@autumn/mcp";
-import type { Context } from "hono";
-import { Hono } from "hono";
+import type { HttpBindings } from "@hono/node-server";
+import { RESPONSE_ALREADY_SENT } from "@hono/node-server/utils/response";
+import type { Context, Hono } from "hono";
 
-export interface CreateMcpHttpAppOptions extends MCPServerFlags {
+export interface McpRouteOptions extends MCPServerFlags {
 	readonly "oauth-enabled": boolean;
 	readonly "oauth-environment": OAuthEnvironment;
 	readonly logger: ConsoleLogger;
@@ -22,30 +21,16 @@ export interface CreateMcpHttpAppOptions extends MCPServerFlags {
 
 type AppContext = Context<{ Bindings: HttpBindings }>;
 type McpPath = "/mcp" | "/internal/mcp";
+type McpApp = Hono<{ Bindings: HttpBindings }>;
 
-export function createMcpHttpApp(options: CreateMcpHttpAppOptions) {
-	const app = new Hono<{ Bindings: HttpBindings }>();
-
-	app.use("*", async (c, next) => {
-		c.header("Access-Control-Allow-Origin", "*");
-		c.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-		c.header("Access-Control-Allow-Headers", "*");
-		return c.req.method === "OPTIONS" ? c.body(null, 204) : next();
-	});
-
-	app.get("/health", (c) => c.json({ ok: true }));
-
+export function registerMcpRoutes(app: McpApp, options: McpRouteOptions) {
 	app.get("/.well-known/oauth-protected-resource/mcp", (c) =>
 		c.json(getProtectedResourceMetadata(c.req.raw.headers, options, "/mcp")),
 	);
 
 	app.get("/.well-known/oauth-protected-resource/internal/mcp", (c) =>
 		c.json(
-			getProtectedResourceMetadata(
-				c.req.raw.headers,
-				options,
-				"/internal/mcp",
-			),
+			getProtectedResourceMetadata(c.req.raw.headers, options, "/internal/mcp"),
 		),
 	);
 
