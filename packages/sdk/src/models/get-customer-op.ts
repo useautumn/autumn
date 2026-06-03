@@ -241,6 +241,20 @@ export const GetCustomerStatus = {
  */
 export type GetCustomerStatus = OpenEnum<typeof GetCustomerStatus>;
 
+/**
+ * Whether this subscription is attached at the customer level or entity level.
+ */
+export const GetCustomerSubscriptionScope = {
+  Customer: "customer",
+  Entity: "entity",
+} as const;
+/**
+ * Whether this subscription is attached at the customer level or entity level.
+ */
+export type GetCustomerSubscriptionScope = OpenEnum<
+  typeof GetCustomerSubscriptionScope
+>;
+
 export type GetCustomerSubscription = {
   /**
    * The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID.
@@ -295,7 +309,25 @@ export type GetCustomerSubscription = {
    * Number of units of this subscription (for per-seat plans).
    */
   quantity: number;
+  /**
+   * Whether this subscription is attached at the customer level or entity level.
+   */
+  scope?: GetCustomerSubscriptionScope | undefined;
 };
+
+/**
+ * Whether this purchase is attached at the customer level or entity level.
+ */
+export const GetCustomerPurchaseScope = {
+  Customer: "customer",
+  Entity: "entity",
+} as const;
+/**
+ * Whether this purchase is attached at the customer level or entity level.
+ */
+export type GetCustomerPurchaseScope = OpenEnum<
+  typeof GetCustomerPurchaseScope
+>;
 
 export type GetCustomerPurchase = {
   plan?: Plan | undefined;
@@ -315,6 +347,10 @@ export type GetCustomerPurchase = {
    * Number of units purchased.
    */
   quantity: number;
+  /**
+   * Whether this purchase is attached at the customer level or entity level.
+   */
+  scope?: GetCustomerPurchaseScope | undefined;
 };
 
 /**
@@ -1056,6 +1092,12 @@ export const GetCustomerStatus$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(GetCustomerStatus);
 
 /** @internal */
+export const GetCustomerSubscriptionScope$inboundSchema: z.ZodMiniType<
+  GetCustomerSubscriptionScope,
+  unknown
+> = openEnums.inboundSchema(GetCustomerSubscriptionScope);
+
+/** @internal */
 export const GetCustomerSubscription$inboundSchema: z.ZodMiniType<
   GetCustomerSubscription,
   unknown
@@ -1075,6 +1117,7 @@ export const GetCustomerSubscription$inboundSchema: z.ZodMiniType<
     current_period_start: types.nullable(types.number()),
     current_period_end: types.nullable(types.number()),
     quantity: types.number(),
+    scope: types.optional(GetCustomerSubscriptionScope$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1103,6 +1146,12 @@ export function getCustomerSubscriptionFromJSON(
 }
 
 /** @internal */
+export const GetCustomerPurchaseScope$inboundSchema: z.ZodMiniType<
+  GetCustomerPurchaseScope,
+  unknown
+> = openEnums.inboundSchema(GetCustomerPurchaseScope);
+
+/** @internal */
 export const GetCustomerPurchase$inboundSchema: z.ZodMiniType<
   GetCustomerPurchase,
   unknown
@@ -1113,6 +1162,7 @@ export const GetCustomerPurchase$inboundSchema: z.ZodMiniType<
     expires_at: types.nullable(types.number()),
     started_at: types.number(),
     quantity: types.number(),
+    scope: types.optional(GetCustomerPurchaseScope$inboundSchema),
   }),
   z.transform((v) => {
     return remap$(v, {

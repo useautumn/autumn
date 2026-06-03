@@ -427,6 +427,12 @@ class Billing(BaseSDK):
                 models.CreateScheduleInvoiceModeTypedDict,
             ]
         ] = None,
+        discounts: Optional[
+            Union[
+                List[models.CreateScheduleAttachDiscount],
+                List[models.CreateScheduleAttachDiscountTypedDict],
+            ]
+        ] = None,
         success_url: Optional[str] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.CreateScheduleRedirectMode] = "if_required",
@@ -445,6 +451,7 @@ class Billing(BaseSDK):
         :param phases: Ordered phase definitions for the schedule.
         :param entity_id: Optional entity ID for an entity-scoped schedule.
         :param invoice_mode: Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.
+        :param discounts: List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param redirect_mode: Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.
@@ -470,6 +477,9 @@ class Billing(BaseSDK):
             entity_id=entity_id,
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.CreateScheduleInvoiceMode]
+            ),
+            discounts=utils.get_pydantic_model(
+                discounts, Optional[List[models.CreateScheduleAttachDiscount]]
             ),
             success_url=success_url,
             checkout_session_params=checkout_session_params,
@@ -550,6 +560,12 @@ class Billing(BaseSDK):
                 models.CreateScheduleInvoiceModeTypedDict,
             ]
         ] = None,
+        discounts: Optional[
+            Union[
+                List[models.CreateScheduleAttachDiscount],
+                List[models.CreateScheduleAttachDiscountTypedDict],
+            ]
+        ] = None,
         success_url: Optional[str] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
         redirect_mode: Optional[models.CreateScheduleRedirectMode] = "if_required",
@@ -568,6 +584,7 @@ class Billing(BaseSDK):
         :param phases: Ordered phase definitions for the schedule.
         :param entity_id: Optional entity ID for an entity-scoped schedule.
         :param invoice_mode: Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.
+        :param discounts: List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
         :param success_url: URL to redirect to after successful checkout.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
         :param redirect_mode: Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects.
@@ -593,6 +610,9 @@ class Billing(BaseSDK):
             entity_id=entity_id,
             invoice_mode=utils.get_pydantic_model(
                 invoice_mode, Optional[models.CreateScheduleInvoiceMode]
+            ),
+            discounts=utils.get_pydantic_model(
+                discounts, Optional[List[models.CreateScheduleAttachDiscount]]
             ),
             success_url=success_url,
             checkout_session_params=checkout_session_params,

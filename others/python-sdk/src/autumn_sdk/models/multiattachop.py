@@ -630,6 +630,10 @@ class MultiAttachInvoiceModeTypedDict(TypedDict):
     r"""If true, enables the plan immediately even though the invoice is not paid yet."""
     finalize: NotRequired[bool]
     r"""If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review."""
+    invoice_template_id: NotRequired[str]
+    r"""ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice."""
+    net_terms_days: NotRequired[int]
+    r"""Number of days the customer has to pay the invoice before it is due (Stripe days_until_due)."""
 
 
 class MultiAttachInvoiceMode(BaseModel):
@@ -644,9 +648,22 @@ class MultiAttachInvoiceMode(BaseModel):
     finalize: Optional[bool] = True
     r"""If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review."""
 
+    invoice_template_id: Optional[str] = None
+    r"""ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice."""
+
+    net_terms_days: Optional[int] = None
+    r"""Number of days the customer has to pay the invoice before it is due (Stripe days_until_due)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enable_plan_immediately", "finalize"])
+        optional_fields = set(
+            [
+                "enable_plan_immediately",
+                "finalize",
+                "invoice_template_id",
+                "net_terms_days",
+            ]
+        )
         serialized = handler(self)
         m = {}
 

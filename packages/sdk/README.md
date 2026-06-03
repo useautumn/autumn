@@ -274,12 +274,13 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779977746466,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781187346466,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1780512803523,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781722403523,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
 @param entityId - Optional entity ID for an entity-scoped schedule. (optional)
 @param invoiceMode - Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase. (optional)
+@param discounts - List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param successUrl - URL to redirect to after successful checkout. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param redirectMode - Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects. (optional)
@@ -793,12 +794,13 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779977746466,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781187346466,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1780512803523,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781722403523,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
 @param entityId - Optional entity ID for an entity-scoped schedule. (optional)
 @param invoiceMode - Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase. (optional)
+@param discounts - List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param successUrl - URL to redirect to after successful checkout. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param redirectMode - Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects. (optional)
