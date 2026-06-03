@@ -20,6 +20,8 @@
 		"start": "bun src/index.ts",
 		"workers": "bun src/workers.ts",
 		"cron": "bun src/cron.ts",
+		"mcp": "bun ../apps/mcp-server/src/index.ts",
+		"chat": "bun ../apps/chat/src/index.ts",
 		"check": "bun src/check.ts",
 		"t": "cd ../ && bun t $* && cd ./server",
 		"parallel-tests": "ENV_FILE=.env infisical run --env=dev --recursive -- bun tests/testRunner/runParallelGroupsV3.ts",
