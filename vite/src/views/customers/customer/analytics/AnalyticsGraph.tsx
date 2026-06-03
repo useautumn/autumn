@@ -64,6 +64,7 @@ function TooltipItem({ item, label }: { item: any; label: string }) {
 export const EventsBarChart = memo(function EventsBarChart({
 	data,
 	chartConfig,
+	domainMax,
 	onGeometry,
 }: {
 	data: {
@@ -72,6 +73,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 		data: Row[];
 	};
 	chartConfig: ChartSeriesConfig[];
+	domainMax?: number;
 	onGeometry?: (insets: PlotInsets) => void;
 }) {
 	const { queryStates } = useAnalyticsQueryState();
@@ -214,6 +216,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 						width={Y_AXIS_WIDTH}
 						tickMargin={0}
 						tickCount={5}
+						domain={domainMax != null ? [0, domainMax] : undefined}
 						tick={Y_TICK}
 						tickFormatter={formatCompactNumber}
 					/>
