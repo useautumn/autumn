@@ -30,8 +30,9 @@ import { timeout } from "@tests/utils/genUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { OrgService } from "@/internal/orgs/OrgService";
@@ -84,6 +85,32 @@ const setupRevenueCatOrg = async () => {
 				},
 			},
 		});
+	}
+};
+
+// This test reuses fixed customer + transaction ids. RC invoices upsert by stripe_id
+// WITHOUT repointing internal_customer_id, so a prior run leaves orphaned invoice rows
+// that make the freshly-created customer read 0 invoices. Clear those by stripe_id, and
+// bust the customers' cached full-customer entries so the re-created customers are clean
+// (s.deleteCustomer + s.customer in setup handle the DB rows).
+const INVOICE_TEST_CUSTOMER_IDS = ["rc-invoices-1", "rc-invoices-nonrenewing-1"];
+const INVOICE_TEST_TX_IDS = [
+	"rc3_tx_initial_001",
+	"rc3_tx_renewal_002",
+	"rc3_tx_nonrenewing_001",
+];
+
+const clearInvoiceTestData = async () => {
+	await ctx.db
+		.delete(invoices)
+		.where(inArray(invoices.stripe_id, INVOICE_TEST_TX_IDS));
+
+	for (const customerId of INVOICE_TEST_CUSTOMER_IDS) {
+		await deleteCachedFullCustomer({
+			ctx,
+			customerId,
+			source: "revenuecat-test-cleanup",
+		}).catch(() => {});
 	}
 };
 
@@ -444,6 +471,10 @@ test.concurrent(`${chalk.yellowBright("revenuecat 2: customer migration v1 to v2
 test.concurrent(
 	`${chalk.yellowBright("revenuecat 3: writes invoice rows for INITIAL_PURCHASE / RENEWAL / NON_RENEWING_PURCHASE, refunds existing invoice for CANCELLATION-as-refund")}`,
 	async () => {
+		// Clear stale invoices/customers from prior runs (fixed ids + invoice
+		// upsert-by-stripe_id leave orphans that otherwise make this read 0 invoices).
+		await clearInvoiceTestData();
+
 		const customerId = "rc-invoices-1";
 		const nonRenewingCustomerId = "rc-invoices-nonrenewing-1";
 
@@ -465,6 +496,7 @@ test.concurrent(
 		const { autumnV1, autumnV2_1 } = await initScenario({
 			customerId,
 			setup: [
+				s.deleteCustomer({ customerId }),
 				s.customer({ testClock: false }),
 				s.products({ list: [proMonthly, addOnPack] }),
 			],
@@ -474,7 +506,10 @@ test.concurrent(
 		// Initialize the second (non-renewing) customer in the same scenario context
 		await initScenario({
 			customerId: nonRenewingCustomerId,
-			setup: [s.customer({ testClock: false })],
+			setup: [
+				s.deleteCustomer({ customerId: nonRenewingCustomerId }),
+				s.customer({ testClock: false }),
+			],
 			actions: [],
 		});
 
@@ -674,5 +709,7 @@ test.concurrent(
 				expect(inv.processor_type).toBe(ProcessorType.RevenueCat);
 			}
 		}
+
+		await clearInvoiceTestData();
 	},
 );
