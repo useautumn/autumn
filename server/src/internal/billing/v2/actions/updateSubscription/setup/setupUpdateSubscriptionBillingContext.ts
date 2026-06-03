@@ -144,7 +144,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		newFullProduct: fullProduct,
 	});
 
-	const invoiceMode = setupInvoiceModeContext({ params });
+	const invoiceMode = await setupInvoiceModeContext({ ctx, params });
 	const isCustom =
 		contextOverride.forceIsCustom !== undefined
 			? contextOverride.forceIsCustom

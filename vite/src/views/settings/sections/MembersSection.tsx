@@ -14,7 +14,9 @@ export const MembersSection = () => {
 			<OrgMembersList />
 			<Separator />
 			<div>
-				<h3 className="text-sm font-medium text-muted-foreground mb-4">Pending Invites</h3>
+				<h3 className="text-sm font-medium text-muted-foreground mb-4">
+					Pending Invites
+				</h3>
 				<OrgInvitesList />
 			</div>
 		</SettingsSection>

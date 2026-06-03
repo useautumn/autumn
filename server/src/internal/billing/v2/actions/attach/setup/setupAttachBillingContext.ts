@@ -164,7 +164,7 @@ export const setupAttachBillingContext = async ({
 		contextOverride,
 	});
 
-	const invoiceMode = setupInvoiceModeContext({ params });
+	const invoiceMode = await setupInvoiceModeContext({ ctx, params });
 	const paymentBehaviorIntent = setupPaymentBehaviorIntent({
 		contextOverride,
 		paymentMethod,
