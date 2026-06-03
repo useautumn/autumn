@@ -3,22 +3,21 @@ import {
 	BalloonIcon,
 	BasketIcon,
 	ChartBarIcon,
-	CoinVerticalIcon,
 	CubeIcon,
 	DatabaseIcon,
 	GearIcon,
-	UsersIcon,
+	KeyIcon,
 	LegoIcon,
-	OptionIcon,
 	TerminalWindowIcon,
 	TriangleIcon,
 	UserCircleIcon,
+	UsersIcon,
 	WebhooksLogoIcon,
 } from "@phosphor-icons/react";
 import { PanelLeft } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { Button } from "@/components/v2/buttons/Button";
-import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
+import { RevenueCatIcon, StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useScopes } from "@/hooks/useScopes";
@@ -48,12 +47,12 @@ const buildDevSubTabs = ({
 		{
 			title: "API Keys",
 			value: "api_keys",
-			icon: <OptionIcon size={16} />,
+			icon: <KeyIcon size={16} weight="fill" />,
 		},
 		{
 			title: "Stripe",
 			value: "stripe",
-			icon: <CoinVerticalIcon size={16} weight="fill" />,
+			icon: <StripeIcon size={16} />,
 		},
 		...(flags.vercel
 			? [
@@ -231,23 +230,23 @@ export const MainSidebar = ({
 							title="Analytics"
 							env={env}
 						/>
-					{canSeeDev && (
-						<CollapsibleNavGroup
-							value="dev"
-							icon={<TerminalWindowIcon size={16} weight="fill" />}
-							title="Developer"
+						{canSeeDev && (
+							<CollapsibleNavGroup
+								value="dev"
+								icon={<TerminalWindowIcon size={16} weight="fill" />}
+								title="Developer"
+								env={env}
+								isOpen={devGroupOpen}
+								onToggle={() => setDevGroupOpen((prev) => !prev)}
+								subTabs={buildDevSubTabs({ flags, isAdmin })}
+							/>
+						)}
+						<NavButton
+							value="settings"
+							icon={<GearIcon size={16} weight="fill" />}
+							title="Settings"
 							env={env}
-							isOpen={devGroupOpen}
-							onToggle={() => setDevGroupOpen((prev) => !prev)}
-							subTabs={buildDevSubTabs({ flags, isAdmin })}
 						/>
-					)}
-					<NavButton
-						value="settings"
-						icon={<GearIcon size={16} weight="fill" />}
-						title="Settings"
-						env={env}
-					/>
 					</div>
 				</div>
 

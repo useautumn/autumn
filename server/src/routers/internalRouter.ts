@@ -20,6 +20,7 @@ import { consentRouter } from "../internal/misc/consent/consentRouter";
 import { feedbackRouter } from "../internal/misc/feedback/feedbackRouter";
 import { pricingAgentRouter } from "../internal/misc/pricingAgent/pricingAgentRouter";
 import { savedViewsRouter } from "../internal/misc/savedViews/savedViewsRouter";
+import { invoiceTemplateRouter } from "../internal/orgs/invoiceTemplates/invoiceTemplateRouter";
 import { internalOrgRouter } from "../internal/orgs/orgRouter";
 import { internalProductRouter } from "../internal/products/internalProductRouter";
 import { workbenchRouter } from "../internal/workbench/workbenchRouter";
@@ -40,6 +41,7 @@ internalRouter.route("admin", honoAdminRouter);
 
 internalRouter.route("organization", internalOrgRouter);
 internalRouter.route("organization/chat", chatRouter);
+internalRouter.route("/invoice_templates", invoiceTemplateRouter);
 internalRouter.route("/products", internalProductRouter);
 internalRouter.route("/customers", internalCusRouter);
 internalRouter.route("/dev", internalDevRouter);

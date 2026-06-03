@@ -6,7 +6,10 @@ export const OrganizationSection = () => {
 		<SettingsSection
 			title="Organization"
 			description="Manage your organization name, logo, and settings"
-			card={{ title: "General", description: "Update your organization details and branding" }}
+			card={{
+				title: "General",
+				description: "Update your organization details and branding",
+			}}
 		>
 			<OrgDetails />
 		</SettingsSection>

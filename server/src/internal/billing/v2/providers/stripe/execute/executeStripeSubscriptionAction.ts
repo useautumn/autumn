@@ -12,6 +12,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { removeStripeSubscriptionIdFromBillingPlan } from "@/internal/billing/v2/execute/removeStripeSubscriptionIdFromBillingPlan";
 import { shouldDeferBillingPlan } from "@/internal/billing/v2/providers/stripe/utils/common/shouldDeferBillingPlan";
+import { applyTemplateToDraft } from "@/internal/billing/v2/providers/stripe/utils/invoices/applyTemplateToDraft";
 import { finalizeStripeInvoice } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { executeStripeSubscriptionOperation } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/executeStripeSubscriptionOperation";
 import { getLatestInvoiceFromSubscriptionAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/getLatestInvoiceFromSubscriptionAction";
@@ -65,6 +66,14 @@ export const executeStripeSubscriptionAction = async ({
 		stripeSubscription,
 		subscriptionAction,
 		billingContext,
+	});
+
+	latestStripeInvoice = await applyTemplateToDraft({
+		ctx,
+		stripeCli,
+		invoice: latestStripeInvoice,
+		footer: billingContext.invoiceMode?.footer,
+		memo: billingContext.invoiceMode?.memo,
 	});
 
 	// Honor either the new internal flag (set by attach via setupFinalizeFirstInvoice)

@@ -28,8 +28,12 @@ export const SettingsSection = ({
 		<div className="flex flex-col gap-6">
 			<div className="flex items-start justify-between">
 				<div>
-					<h2 className="font-semibold text-foreground leading-none">{title}</h2>
-					<p className="text-sm text-tertiary-foreground mt-1.5">{description}</p>
+					<h2 className="font-semibold text-foreground leading-none">
+						{title}
+					</h2>
+					<p className="text-sm text-tertiary-foreground mt-1.5">
+						{description}
+					</p>
 				</div>
 				{actions}
 			</div>
