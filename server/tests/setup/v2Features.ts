@@ -29,6 +29,7 @@ export enum TestFeature {
 
 	AiCredits = "ai_credits", // AI credit system (models.dev pricing)
 	AiCredits2 = "ai_credits_2", // second AI credit system (for disambiguation tests)
+	AiCreditsTiered = "ai_credits_tiered", // AI credit system with global + provider markup tiers
 
 	Orbs = "orbs", // credit system that wraps an AI credit system (1000 orbs per $1)
 }
@@ -157,6 +158,28 @@ export const getFeatures = ({ orgId }: { orgId: string }) => ({
 		modelMarkups: {
 			"anthropic/claude-sonnet-4-20250514": {
 				markup: 10,
+			},
+		},
+	}),
+	[TestFeature.AiCreditsTiered]: constructAiCreditSystem({
+		featureId: TestFeature.AiCreditsTiered,
+		orgId,
+		env: AppEnv.Sandbox,
+		defaultMarkup: 10,
+		providerMarkups: {
+			custom: { markup: 30 },
+		},
+		modelMarkups: {
+			// Per-model override wins over provider/global.
+			"custom/override-model": {
+				markup: 5,
+				input_cost: 10,
+				output_cost: 20,
+			},
+			// No markup -> inherits the "custom" provider markup (30%).
+			"custom/provider-fallback-model": {
+				input_cost: 10,
+				output_cost: 20,
 			},
 		},
 	}),

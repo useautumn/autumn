@@ -5,6 +5,7 @@ import {
 	FeatureType,
 	FeatureUsageType,
 	type ModelMarkups,
+	type ProviderMarkups,
 } from "@autumn/shared";
 import { generateId, keyToTitle } from "@server/utils/genUtils";
 
@@ -167,16 +168,22 @@ export const constructAiCreditSystem = ({
 	orgId,
 	env,
 	modelMarkups,
+	defaultMarkup,
+	providerMarkups,
 }: {
 	featureId: string;
 	name?: string;
 	orgId: string;
 	env: AppEnv;
 	modelMarkups: ModelMarkups;
+	defaultMarkup?: number;
+	providerMarkups?: ProviderMarkups;
 }) => {
 	const config = {
 		schema: [],
 		usage_type: FeatureUsageType.Single,
+		default_markup: defaultMarkup,
+		provider_markups: providerMarkups,
 	};
 
 	const newFeature: Feature = {

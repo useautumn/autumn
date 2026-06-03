@@ -84,11 +84,24 @@ export const featureV1ToDbFeatureConfig = ({
 	originalFeature: Feature;
 }) => {
 	const type = apiFeature.type || originalFeature.type;
+	const hasProviderMarkups = "provider_markups" in apiFeature;
+	const hasDefaultMarkup = "default_markup" in apiFeature;
 
-	if (apiFeature.type === FeatureType.AiCreditSystem) {
+	if (
+		type === FeatureType.AiCreditSystem &&
+		(apiFeature.type === FeatureType.AiCreditSystem ||
+			hasDefaultMarkup ||
+			hasProviderMarkups)
+	) {
 		return {
 			schema: [],
 			usage_type: FeatureUsageType.Single,
+			default_markup: hasDefaultMarkup
+				? apiFeature.default_markup
+				: originalFeature.config?.default_markup,
+			provider_markups: hasProviderMarkups
+				? apiFeature.provider_markups
+				: originalFeature.config?.provider_markups,
 		};
 	}
 
@@ -151,6 +164,8 @@ export const featureV1ToDbFeature = ({
 	if (apiFeature.type === FeatureType.AiCreditSystem) {
 		newConfig.usage_type = FeatureUsageType.Single;
 		newConfig.schema = [];
+		newConfig.default_markup = apiFeature.default_markup;
+		newConfig.provider_markups = apiFeature.provider_markups;
 	}
 
 	if (apiFeature.credit_schema) {
@@ -219,6 +234,8 @@ export const dbToApiFeatureV1 = ({
 				}))
 			: undefined,
 		model_markups: dbFeature.model_markups ?? undefined,
+		default_markup: dbFeature.config?.default_markup ?? undefined,
+		provider_markups: dbFeature.config?.provider_markups ?? undefined,
 		event_names: Array.isArray(dbFeature.event_names)
 			? dbFeature.event_names
 			: [],

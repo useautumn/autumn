@@ -32,22 +32,18 @@ function NewFeatureCreditSchema({
 		},
 		onChange: (values) => {
 			const isAi = values.type === FeatureType.AiCreditSystem;
-			const materializedMarkups = isAi
-				? Object.fromEntries(
-						Object.entries(values.model_markups ?? {}).map(([key, entry]) => [
-							key,
-							entry?.markup == null
-								? { ...entry, markup: values.defaultMarkup }
-								: entry,
-						]),
-					)
-				: values.model_markups;
 
 			setFeature({
 				...feature,
 				type: values.type,
-				config: values.config,
-				model_markups: materializedMarkups,
+				config: isAi
+					? {
+							...values.config,
+							default_markup: values.defaultMarkup,
+							provider_markups: values.provider_markups,
+						}
+					: values.config,
+				model_markups: values.model_markups,
 			});
 		},
 	});

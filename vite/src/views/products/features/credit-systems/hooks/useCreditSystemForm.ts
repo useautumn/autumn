@@ -11,7 +11,10 @@ export interface CreditSystemFormValues {
 	config: Record<string, unknown>;
 	event_names: string[];
 	model_markups: NonNullable<ModelMarkups>;
+	/** Global default markup for the AI credit system (persisted to config.default_markup). */
 	defaultMarkup: number;
+	/** Per-provider default markups (persisted to config.provider_markups). */
+	provider_markups: Record<string, { markup: number }>;
 }
 
 export function useCreditSystemForm({
@@ -28,10 +31,21 @@ export function useCreditSystemForm({
 			name: feature?.name ?? "",
 			id: feature?.id ?? "",
 			type: feature?.type ?? FeatureType.CreditSystem,
-			config: feature?.config ?? { schema: [{ metered_feature_id: "", feature_amount: 1, credit_amount: 0 }] },
+			config: feature?.config ?? {
+				schema: [
+					{ metered_feature_id: "", feature_amount: 1, credit_amount: 0 },
+				],
+			},
 			event_names: feature?.event_names ?? [],
-			model_markups: (feature?.model_markups as CreditSystemFormValues["model_markups"]) ?? {},
-			defaultMarkup: 0,
+			model_markups:
+				(feature?.model_markups as CreditSystemFormValues["model_markups"]) ??
+				{},
+			defaultMarkup:
+				(feature?.config?.default_markup as number | undefined) ?? 0,
+			provider_markups:
+				(feature?.config
+					?.provider_markups as CreditSystemFormValues["provider_markups"]) ??
+				{},
 		} satisfies CreditSystemFormValues,
 		onSubmit: onSubmit ? ({ value }) => onSubmit(value) : undefined,
 	});

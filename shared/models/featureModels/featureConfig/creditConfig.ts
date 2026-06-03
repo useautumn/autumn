@@ -7,6 +7,17 @@ export const CreditSchemaItemSchema = z.object({
 	credit_amount: z.number(),
 });
 
+const MarkupEntrySchema = z.object({
+	markup: z.number().min(0), // percentage markup, e.g. 20 for 20%
+});
+
+export const ProviderMarkupsSchema = z
+	.record(
+		z.string(), // Provider key from the model name, e.g. "openrouter" in "openrouter/anthropic/claude"
+		MarkupEntrySchema,
+	)
+	.nullish();
+
 export const CreditSystemConfigSchema = z.object({
 	schema: z.array(
 		z.object({
@@ -15,13 +26,15 @@ export const CreditSystemConfigSchema = z.object({
 		}),
 	),
 	usage_type: z.nativeEnum(FeatureUsageType),
+	default_markup: z.number().min(0).optional(),
+	provider_markups: ProviderMarkupsSchema,
 });
 
 export const ModelMarkupsSchema = z
 	.record(
 		z.string(), // Represents the model name in "provider/model" format, e.g. "anthropic/claude-2"
-		z.object({
-			markup: z.number().min(0), // percentage markup, e.g. 20 for 20%
+		MarkupEntrySchema.extend({
+			markup: z.number().min(0).optional(), // Omit to inherit provider/global markup
 			input_cost: z.number().min(0).optional(), // $/M tokens, required for custom/ models
 			output_cost: z.number().min(0).optional(), // $/M tokens, required for custom/ models
 		}),
@@ -31,3 +44,4 @@ export const ModelMarkupsSchema = z
 export type CreditSystemConfig = z.infer<typeof CreditSystemConfigSchema>;
 export type CreditSchemaItem = z.infer<typeof CreditSchemaItemSchema>;
 export type ModelMarkups = z.infer<typeof ModelMarkupsSchema>;
+export type ProviderMarkups = z.infer<typeof ProviderMarkupsSchema>;

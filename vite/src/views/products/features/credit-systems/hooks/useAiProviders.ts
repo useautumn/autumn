@@ -17,16 +17,37 @@ export function useAiProviders(form: CreditSystemFormInstance) {
 	const { providers, isLoading } = useModelsDevPricing();
 	const modelMarkups = useStore(form.store, (s) => s.values.model_markups);
 	const defaultMarkup = useStore(form.store, (s) => s.values.defaultMarkup);
+	const providerMarkups = useStore(
+		form.store,
+		(s) => s.values.provider_markups,
+	);
 
-	const providerGroups = useMemo(() => groupByProvider(modelMarkups), [modelMarkups]);
-	const activeProviderKeys = Object.keys(providerGroups);
+	const providerGroups = useMemo(
+		() => groupByProvider(modelMarkups),
+		[modelMarkups],
+	);
+	// A provider is "active" if it has model overrides OR a provider-level markup.
+	const activeProviderKeys = useMemo(
+		() =>
+			Array.from(
+				new Set([
+					...Object.keys(providerGroups),
+					...Object.keys(providerMarkups),
+				]),
+			),
+		[providerGroups, providerMarkups],
+	);
 
 	const availableProviders = useMemo(() => {
 		const filtered = Object.values(providers).filter(
 			(p) => !activeProviderKeys.includes(p.id),
 		);
 		if (!activeProviderKeys.includes("custom")) {
-			filtered.push({ id: "custom", name: "Custom", models: {} } as ModelsDevProvider);
+			filtered.push({
+				id: "custom",
+				name: "Custom",
+				models: {},
+			} as ModelsDevProvider);
 		}
 		return filtered;
 	}, [providers, activeProviderKeys]);
@@ -34,10 +55,15 @@ export function useAiProviders(form: CreditSystemFormInstance) {
 	const addProvider = (providerKey: string) => {
 		form.setFieldValue("model_markups", (prev) => {
 			if (providerKey === "custom") {
-				const existing = Object.keys(prev).filter((k) => k.startsWith("custom/"));
+				const existing = Object.keys(prev).filter((k) =>
+					k.startsWith("custom/"),
+				);
 				let i = 1;
 				while (existing.includes(`custom/model-${i}`)) i++;
-				return { ...prev, [`custom/model-${i}`]: { input_cost: 0, output_cost: 0 } };
+				return {
+					...prev,
+					[`custom/model-${i}`]: { input_cost: 0, output_cost: 0 },
+				};
 			}
 			const provider = providers[providerKey];
 			if (!provider) return prev;
@@ -54,6 +80,29 @@ export function useAiProviders(form: CreditSystemFormInstance) {
 			return updated;
 		});
 
+	const setProviderMarkup = (providerKey: string, value: number | undefined) =>
+		form.setFieldValue("provider_markups", (prev) => {
+			const updated = { ...prev };
+			if (value == null) {
+				delete updated[providerKey];
+			} else {
+				updated[providerKey] = { markup: value };
+			}
+			return updated;
+		});
+
+	// Removes the whole provider section: all its model overrides and its markup.
+	const removeProvider = (providerKey: string) => {
+		form.setFieldValue("model_markups", (prev) => {
+			const updated = { ...prev };
+			for (const k of Object.keys(updated)) {
+				if (k.split("/")[0] === providerKey) delete updated[k];
+			}
+			return updated;
+		});
+		setProviderMarkup(providerKey, undefined);
+	};
+
 	const renameKey = (oldKey: string, newKey: string) =>
 		form.setFieldValue("model_markups", (prev) => {
 			if (newKey in prev) return prev;
@@ -68,11 +117,14 @@ export function useAiProviders(form: CreditSystemFormInstance) {
 		providers,
 		isLoading,
 		defaultMarkup,
+		providerMarkups,
 		providerGroups,
 		activeProviderKeys,
 		availableProviders,
 		addProvider,
 		removeKeys,
+		removeProvider,
+		setProviderMarkup,
 		renameKey,
 	};
 }

@@ -97,6 +97,29 @@ const computeMarkedUpCost = ({
 		.mul(new Decimal(1).add(new Decimal(markup).div(100)))
 		.toNumber();
 
+const resolveAiMarkup = ({
+	modelName,
+	creditSystem,
+	modelMarkup,
+}: {
+	modelName: string;
+	creditSystem: Feature;
+	modelMarkup?: { markup?: number | null } | null;
+}) => {
+	if (modelMarkup?.markup != null) {
+		return modelMarkup.markup;
+	}
+
+	const [providerKey] = modelName.split("/");
+	const providerMarkup =
+		creditSystem.config?.provider_markups?.[providerKey]?.markup;
+	if (providerMarkup != null) {
+		return providerMarkup;
+	}
+
+	return creditSystem.config?.default_markup ?? 0;
+};
+
 const getModelCreditCost = async ({
 	modelName,
 	creditSystem,
@@ -108,7 +131,11 @@ const getModelCreditCost = async ({
 } & TokenInput) => {
 	const markups = creditSystem.model_markups || {};
 	const markupEntry = markups[modelName];
-	const { markup } = markupEntry ?? { markup: 0 };
+	const markup = resolveAiMarkup({
+		modelName,
+		creditSystem,
+		modelMarkup: markupEntry,
+	});
 
 	if (modelName.startsWith("custom/")) {
 		if (markupEntry?.input_cost == null || markupEntry?.output_cost == null) {
@@ -170,7 +197,10 @@ export const getCreditCost = async ({
 	modelName?: string;
 	tokens?: TokenInput;
 }) => {
-	if (creditSystem.type !== FeatureType.CreditSystem && creditSystem.type !== FeatureType.AiCreditSystem) {
+	if (
+		creditSystem.type !== FeatureType.CreditSystem &&
+		creditSystem.type !== FeatureType.AiCreditSystem
+	) {
 		return amount;
 	}
 	if (creditSystem.type === FeatureType.AiCreditSystem) {

@@ -1,5 +1,6 @@
 import {
 	type CreditSchemaItem,
+	type CreditSystemConfig,
 	ErrCode,
 	type Feature,
 	FeatureType,
@@ -29,10 +30,6 @@ interface UpdateFeatureParams {
 	updates: Partial<Feature>;
 }
 
-/**
- * Checks if the credit schema has changed between old and new config.
- * Returns true if schema changed (different items or different credit amounts).
- */
 const areModelMarkupsEqual = ({
 	a,
 	b,
@@ -61,6 +58,36 @@ const areModelMarkupsEqual = ({
 	return true;
 };
 
+const areProviderMarkupsEqual = ({
+	a,
+	b,
+}: {
+	a: CreditSystemConfig["provider_markups"];
+	b: CreditSystemConfig["provider_markups"];
+}): boolean => {
+	const aIsAbsent = a == null;
+	const bIsAbsent = b == null;
+	if (aIsAbsent && bIsAbsent) return true;
+	if (aIsAbsent || bIsAbsent) return false;
+
+	const aKeys = Object.keys(a);
+	const bKeys = Object.keys(b);
+	if (aKeys.length !== bKeys.length) return false;
+
+	for (const key of aKeys) {
+		const aEntry = a[key];
+		const bEntry = b[key];
+		if (!bEntry) return false;
+		if (aEntry.markup !== bEntry.markup) return false;
+	}
+
+	return true;
+};
+
+/**
+ * Checks if the credit schema has changed between old and new config.
+ * Returns true if schema changed (different items or different credit amounts).
+ */
 const hasCreditSchemaChanged = ({
 	oldSchema,
 	newSchema,
@@ -86,6 +113,26 @@ const hasCreditSchemaChanged = ({
 	}
 
 	return false;
+};
+
+const hasAiMarkupConfigChanged = ({
+	oldConfig,
+	newConfig,
+}: {
+	oldConfig: CreditSystemConfig | undefined;
+	newConfig: CreditSystemConfig | undefined;
+}): boolean => {
+	if (
+		(oldConfig?.default_markup ?? undefined) !==
+		(newConfig?.default_markup ?? undefined)
+	) {
+		return true;
+	}
+
+	return !areProviderMarkupsEqual({
+		a: oldConfig?.provider_markups,
+		b: newConfig?.provider_markups,
+	});
 };
 
 /**
@@ -229,7 +276,6 @@ export const updateFeature = async ({
 		});
 	}
 
-	// Queue cache clear for credit system if schema or model markups changed
 	const isCreditSystem =
 		feature.type === FeatureType.CreditSystem ||
 		feature.type === FeatureType.AiCreditSystem;
@@ -248,7 +294,15 @@ export const updateFeature = async ({
 				b: feature.model_markups,
 			});
 
-		if (schemaChanged || markupsChanged) {
+		const aiMarkupConfigChanged =
+			feature.type === FeatureType.AiCreditSystem &&
+			updates.config != null &&
+			hasAiMarkupConfigChanged({
+				oldConfig: feature.config,
+				newConfig,
+			});
+
+		if (schemaChanged || markupsChanged || aiMarkupConfigChanged) {
 			await addTaskToQueue({
 				jobName: JobName.ClearCreditSystemCustomerCache,
 				payload: {

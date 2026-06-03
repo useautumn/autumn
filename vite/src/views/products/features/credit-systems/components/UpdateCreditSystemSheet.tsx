@@ -56,15 +56,6 @@ function UpdateCreditSystemSheet({
 
 			const isAiCreditSystem = values.type === FeatureType.AiCreditSystem;
 
-			const finalMarkups = { ...values.model_markups };
-			if (isAiCreditSystem) {
-				for (const [key, entry] of Object.entries(finalMarkups)) {
-					if (entry.markup == null) {
-						finalMarkups[key] = { ...entry, markup: values.defaultMarkup };
-					}
-				}
-			}
-
 			await FeatureService.updateFeature(
 				axiosInstance,
 				selectedCreditSystem.id,
@@ -72,12 +63,17 @@ function UpdateCreditSystemSheet({
 					id: values.id,
 					name: values.name,
 					type: values.type,
-					model_markups: isAiCreditSystem ? finalMarkups : undefined,
+					model_markups: isAiCreditSystem ? values.model_markups : undefined,
+					default_markup: isAiCreditSystem ? values.defaultMarkup : undefined,
+					provider_markups: isAiCreditSystem
+						? values.provider_markups
+						: undefined,
 					credit_schema: isAiCreditSystem
 						? undefined
 						: values.config?.schema?.map((x: CreditSchemaItem) => ({
 								metered_feature_id: x.metered_feature_id,
-								credit_cost: x.credit_amount != null ? Number(x.credit_amount) : 0,
+								credit_cost:
+									x.credit_amount != null ? Number(x.credit_amount) : 0,
 							})),
 					event_names: values.event_names,
 					display: undefined,
@@ -86,7 +82,10 @@ function UpdateCreditSystemSheet({
 
 			await refetch();
 			toast.success("Credit system updated successfully");
-			onSuccess?.(selectedCreditSystem.id, values.id || selectedCreditSystem.id);
+			onSuccess?.(
+				selectedCreditSystem.id,
+				values.id || selectedCreditSystem.id,
+			);
 			setOpen(false);
 		},
 	});
@@ -122,7 +121,9 @@ function UpdateCreditSystemSheet({
 						className="w-full"
 						onClick={() =>
 							form.handleSubmit().catch((err: AxiosError) => {
-								toast.error(getBackendErr(err, "Failed to update credit system"));
+								toast.error(
+									getBackendErr(err, "Failed to update credit system"),
+								);
 							})
 						}
 						metaShortcut="enter"

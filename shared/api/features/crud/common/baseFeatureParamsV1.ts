@@ -1,5 +1,8 @@
 import { z } from "zod/v4";
-import { ModelMarkupsSchema } from "../../../../models/featureModels/featureConfig/creditConfig";
+import {
+	ModelMarkupsSchema,
+	ProviderMarkupsSchema,
+} from "../../../../models/featureModels/featureConfig/creditConfig";
 import { FeatureType } from "../../../../models/featureModels/featureEnums";
 import { idRegex } from "../../../../utils/utils";
 
@@ -49,7 +52,17 @@ export const BaseFeatureV1ParamsSchema = z.object({
 
 	model_markups: ModelMarkupsSchema.optional().meta({
 		description:
-			"Per-model markup percentages for AI credit systems. Maps model IDs to their markup configuration.",
+			"Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.",
+	}),
+
+	default_markup: z.number().min(0).optional().meta({
+		description:
+			"Default percentage markup for this AI credit system. Used when no model or provider markup applies.",
+	}),
+
+	provider_markups: ProviderMarkupsSchema.optional().meta({
+		description:
+			"Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id.",
 	}),
 
 	event_names: z.array(z.string()).optional(),

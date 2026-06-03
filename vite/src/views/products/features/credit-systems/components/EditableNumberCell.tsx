@@ -8,6 +8,8 @@ interface EditableNumberCellProps {
 	fullId: string;
 	field: "markup" | "input_cost" | "output_cost";
 	useDefaultAsPlaceholder?: boolean;
+	/** Effective inherited markup (provider default, else global default) shown as the placeholder. */
+	inheritedPlaceholder?: number;
 	allowUndefined?: boolean;
 }
 
@@ -16,19 +18,22 @@ export function EditableNumberCell({
 	fullId,
 	field,
 	useDefaultAsPlaceholder = false,
+	inheritedPlaceholder = 0,
 	allowUndefined = false,
 }: EditableNumberCellProps) {
 	const currentValue = useStore(
 		form.store,
 		(s) => s.values.model_markups[fullId]?.[field],
 	);
-	const placeholder = useStore(form.store, (s) =>
-		useDefaultAsPlaceholder ? String(s.values.defaultMarkup) : "0",
-	);
+	const placeholder = useDefaultAsPlaceholder
+		? String(inheritedPlaceholder)
+		: "0";
 	const [local, setLocal] = useState("");
 	const [focused, setFocused] = useState(false);
 
-	const hasValue = allowUndefined ? currentValue != null && currentValue !== 0 : currentValue != null;
+	const hasValue = allowUndefined
+		? currentValue != null && currentValue !== 0
+		: currentValue != null;
 	const displayed = focused ? local : hasValue ? String(currentValue) : "";
 
 	return (

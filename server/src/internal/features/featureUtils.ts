@@ -77,6 +77,34 @@ export const validateCreditSystem = (
 	}
 
 	const newConfig = { ...config, schema, usage_type: FeatureUsageType.Single };
+	const defaultMarkup = newConfig.default_markup;
+	if (defaultMarkup != null) {
+		const parsedDefaultMarkup = Number(defaultMarkup);
+		if (Number.isNaN(parsedDefaultMarkup) || parsedDefaultMarkup < 0) {
+			throw new RecaseError({
+				message: "Default markup should be a non-negative number",
+				code: ErrCode.InvalidFeature,
+				statusCode: 400,
+			});
+		}
+		newConfig.default_markup = parsedDefaultMarkup;
+	}
+
+	const providerMarkups = newConfig.provider_markups;
+	if (providerMarkups != null) {
+		for (const [provider, entry] of Object.entries(providerMarkups)) {
+			const markup = Number(entry?.markup);
+			if (!provider || Number.isNaN(markup) || markup < 0) {
+				throw new RecaseError({
+					message: "Provider markups must be non-negative numbers",
+					code: ErrCode.InvalidFeature,
+					statusCode: 400,
+				});
+			}
+			entry.markup = markup;
+		}
+	}
+
 	for (let i = 0; i < newConfig.schema.length; i++) {
 		const creditAmount = parseFloat(
 			newConfig.schema[i].credit_amount.toString(),

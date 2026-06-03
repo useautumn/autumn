@@ -10,13 +10,11 @@ export const validateCreditSystem = (
 	const isAiCreditSystem = creditSystem.type === FeatureType.AiCreditSystem;
 
 	if (isAiCreditSystem) {
-		if (
-			!creditSystem.model_markups ||
-			Object.keys(creditSystem.model_markups).length === 0
-		)
-			return "Add at least one model markup";
-
-		for (const [modelId, entry] of Object.entries(creditSystem.model_markups)) {
+		// No per-model rows is valid: such systems bill at the base cost,
+		// adjusted by any provider-level or global default markup.
+		for (const [modelId, entry] of Object.entries(
+			creditSystem.model_markups ?? {},
+		)) {
 			if (!modelId) return "Select a model for each row";
 			if (modelId.startsWith("custom/")) {
 				const customModelKey = modelId.slice("custom/".length);

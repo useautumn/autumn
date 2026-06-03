@@ -83,6 +83,12 @@ function CreateFeatureSheet({
 						type: feature.type,
 						consumable: feature.config?.usage_type === FeatureUsageType.Single,
 						model_markups: feature.model_markups ?? undefined,
+						default_markup: isAiCreditSystem
+							? feature.config?.default_markup
+							: undefined,
+						provider_markups: isAiCreditSystem
+							? feature.config?.provider_markups
+							: undefined,
 						credit_schema: isAiCreditSystem
 							? undefined
 							: feature.config?.schema?.map((x: CreditSchemaItem) => ({
