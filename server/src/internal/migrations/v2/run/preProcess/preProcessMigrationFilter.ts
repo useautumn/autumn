@@ -40,7 +40,7 @@ export const preProcessMigrationFilter = ({
 	if (!filter.customer) return filter;
 
 	const planRule = filter.customer.plan;
-	if (planRule === undefined || planRule === "$none") return filter;
+	if (planRule === undefined) return filter;
 
 	const nextPlan: PlanFilter | PlanQuantifier = isQuantifierObject(planRule)
 		? {

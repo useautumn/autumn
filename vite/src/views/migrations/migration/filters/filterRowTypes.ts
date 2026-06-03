@@ -22,6 +22,7 @@ export type FilterOperator =
 	| "starts_with"
 	| "exists"
 	| "not_exists"
+	| "none"
 	| "gt"
 	| "gte"
 	| "lt"
@@ -69,6 +70,13 @@ const STRING_OPERATORS: OperatorOption[] = [
 	{ value: "starts_with", label: "starts with" },
 ];
 
+// Plan adds "has none" — selects customers with no active plans at all
+// (compiles to the `$none` quantifier, not a per-plan matcher).
+const PLAN_OPERATORS: OperatorOption[] = [
+	...STRING_OPERATORS,
+	{ value: "none", label: "has none" },
+];
+
 const STRING_MATCH_OPERATORS: OperatorOption[] = [
 	{ value: "is", label: "is" },
 	{ value: "is_not", label: "is not" },
@@ -102,7 +110,7 @@ const NULLABLE_ONLY: FieldConfig = {
 
 export const FIELD_CONFIGS: Record<FilterField, FieldConfig> = {
 	customer_id: { operators: STRING_MATCH_OPERATORS, valueType: "string" },
-	plan_id: { operators: STRING_OPERATORS, valueType: "string" },
+	plan_id: { operators: PLAN_OPERATORS, valueType: "string" },
 	version: { operators: NUMBER_OPERATORS, valueType: "number" },
 	paid: BOOLEAN_ONLY,
 	recurring: BOOLEAN_ONLY,
