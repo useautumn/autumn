@@ -77,7 +77,7 @@
 			"project": ["src/**/*.{ts,tsx}"],
 			"ignoreDependencies": ["shadcn", "tailwindcss", "tw-animate-css"]
 		},
-		"apps/chat": {
+		"apps/leaf": {
 			"entry": ["tests/**/*.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"]
 		},

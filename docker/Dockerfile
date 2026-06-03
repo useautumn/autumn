@@ -1,12 +1,11 @@
 # syntax=docker/dockerfile:1
 
-# Shared runtime image for server + workers + cron + mcp + chat.
+# Shared runtime image for server + workers + cron + leaf.
 # Each FlightControl service runs the same image with a different command:
 #   server  -> bun start            (cwd /app/server)
 #   workers -> bun src/workers.ts   (cwd /app/server)
 #   cron    -> bun src/cron.ts      (cwd /app/server)
-#   mcp     -> cd /app/apps/mcp-server && bun start
-#   chat    -> cd /app/apps/chat && bun start
+#   leaf    -> cd /app/apps/leaf && bun start  (also serves the MCP routes)
 FROM oven/bun:1.3.10 AS deps
 WORKDIR /app
 
@@ -21,10 +20,9 @@ COPY server/package.json server/
 COPY shared/package.json shared/
 COPY vite/package.json vite/
 COPY scripts/package.json scripts/
-COPY apps/chat/package.json apps/chat/
+COPY apps/leaf/package.json apps/leaf/
 COPY apps/checkout/package.json apps/checkout/
 COPY apps/docs/package.json apps/docs/
-COPY apps/mcp-server/package.json apps/mcp-server/
 COPY apps/sdk-test/package.json apps/sdk-test/
 COPY apps/website/package.json apps/website/
 COPY packages/atmn/package.json packages/atmn/
@@ -46,8 +44,7 @@ RUN mkdir -p scripts && touch scripts/preload-env.ts
 RUN --mount=type=cache,target=/root/.bun/install/cache \
 	bun install --frozen-lockfile --ignore-scripts \
 		--filter @autumn/server \
-		--filter @autumn/mcp-server \
-		--filter @autumn/chat
+		--filter @autumn/leaf
 
 FROM oven/bun:1.3.10
 WORKDIR /app

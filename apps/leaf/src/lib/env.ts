@@ -7,7 +7,7 @@ const optionalString = z.preprocess(
 
 const envSchema = z
 	.object({
-		AUTUMN_MCP_URL: z.string().min(1).default("http://localhost:2718/mcp"),
+		AUTUMN_MCP_URL: z.string().min(1).default("http://localhost:3099/mcp"),
 		BETTER_AUTH_SECRET: optionalString,
 		CHAT_MODEL: z.string().min(1).default("anthropic/claude-sonnet-4-6"),
 		CHAT_NAME: z.string().min(1).default("Autumn"),
@@ -17,6 +17,8 @@ const envSchema = z
 		DATABASE_URL: z.string().min(1),
 		ENCRYPTION_PASSWORD: z.string().min(1),
 		FIRECRAWL_API_KEY: z.string().min(1),
+		MCP_OAUTH_ENVIRONMENT: z.enum(["live", "sandbox"]).default("sandbox"),
+		MCP_SERVER_URL: optionalString,
 		PORT: z.coerce.number().int().positive().default(3099),
 		SLACK_CLIENT_ID: z.string().min(1),
 		SLACK_CLIENT_SECRET: z.string().min(1),
@@ -30,6 +32,11 @@ const envSchema = z
 
 		return {
 			...values,
+			MCP_SERVER_URL:
+				values.MCP_SERVER_URL ??
+				(process.env.NODE_ENV === "production"
+					? "https://api.useautumn.com"
+					: "http://localhost:8080"),
 			CHAT_STATE_DATABASE_URL:
 				values.CHAT_STATE_DATABASE_URL ?? databaseUrl.toString(),
 			CHAT_STATE_SECRET:
