@@ -1,16 +1,16 @@
-import { fatal } from "./helpers/shell.ts";
-import { cmdDefault } from "./commands/default.ts";
-import { cmdSetup } from "./commands/setup.ts";
-import { cmdRun } from "./commands/run.ts";
-import { cmdTeardown } from "./commands/teardown.ts";
-import { cmdList } from "./commands/list.ts";
-import { cmdReset } from "./commands/reset.ts";
-import { cmdLogs } from "./commands/logs.ts";
+import { cmdAdmin } from "./commands/admin.ts";
 import { cmdAttach } from "./commands/attach.ts";
-import { cmdIdentify } from "./commands/identify.ts";
-import { cmdEnable } from "./commands/enable.ts";
+import { cmdDefault } from "./commands/default.ts";
 import { cmdDisable } from "./commands/disable.ts";
-import { cmdMakeAdmin } from "./commands/make-admin.ts";
+import { cmdEnable } from "./commands/enable.ts";
+import { cmdIdentify } from "./commands/identify.ts";
+import { cmdList } from "./commands/list.ts";
+import { cmdLogs } from "./commands/logs.ts";
+import { cmdReset } from "./commands/reset.ts";
+import { cmdRun } from "./commands/run.ts";
+import { cmdSetup } from "./commands/setup.ts";
+import { cmdTeardown } from "./commands/teardown.ts";
+import { fatal } from "./helpers/shell.ts";
 
 async function main(): Promise<void> {
 	const sub = process.argv[2];
@@ -49,12 +49,12 @@ async function main(): Promise<void> {
 		case "disable":
 			cmdDisable();
 			break;
-		case "make-admin":
-			cmdMakeAdmin();
+		case "admin":
+			cmdAdmin();
 			break;
 		default:
 			fatal(
-				`unknown subcommand: ${sub} (use: setup | run | teardown | list | reset | logs | attach | identify | enable | disable | make-admin)`,
+				`unknown subcommand: ${sub} (use: setup | run | teardown | list | reset | logs | attach | identify | enable | disable | admin)`,
 			);
 	}
 }
