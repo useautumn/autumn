@@ -131,8 +131,8 @@ export const getCountAndSum = async ({
 			SELECT event_name, sum(event_count) as count, sum(total_value) as sum
 			FROM ${useOrgRollup ? "events_org_hourly_mv" : "events_hourly_no_properties_two_mv"}
 			WHERE org_id = {org_id:String} AND env = {env:String}
-				${params.aggregateAll ? "" : "AND customer_id = {customer_id:String}"}
-				${params.entity_id ? "AND entity_id = {entity_id:String}" : ""}
+				${!useOrgRollup && !params.aggregateAll ? "AND customer_id = {customer_id:String}" : ""}
+				${!useOrgRollup && params.entity_id ? "AND entity_id = {entity_id:String}" : ""}
 				AND hour >= {start_date:DateTime} AND hour <= {end_date:DateTime}
 				AND event_name IN {event_names:Array(String)}
 			GROUP BY event_name
