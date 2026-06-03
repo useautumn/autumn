@@ -298,7 +298,6 @@ async function startDev() {
 					process.env.AUTUMN_MCP_URL ?? `http://localhost:${CHAT_PORT}/mcp`,
 				AUTUMN_API_URL: process.env.AUTUMN_API_URL ?? LOCAL_SERVER_URL,
 				CHAT_URL: process.env.CHAT_URL ?? LOCAL_CHAT_URL,
-				CHAT_INTERNAL_URL: process.env.CHAT_INTERNAL_URL ?? LOCAL_CHAT_URL,
 				SLACK_BOT_URL: process.env.SLACK_BOT_URL ?? LOCAL_CHAT_URL,
 				DISCORD_BOT_URL: process.env.DISCORD_BOT_URL ?? LOCAL_CHAT_URL,
 				VITE_APP_ENV: viteAppEnv,
