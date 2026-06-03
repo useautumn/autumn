@@ -33,6 +33,8 @@ export function createMcpHttpApp(options: CreateMcpHttpAppOptions) {
 		return c.req.method === "OPTIONS" ? c.body(null, 204) : next();
 	});
 
+	app.get("/health", (c) => c.json({ ok: true }));
+
 	app.get("/.well-known/oauth-protected-resource/mcp", (c) =>
 		c.json(getProtectedResourceMetadata(c.req.raw.headers, options, "/mcp")),
 	);
