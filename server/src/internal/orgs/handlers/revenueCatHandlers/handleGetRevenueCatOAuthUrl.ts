@@ -13,7 +13,9 @@ export const handleGetRevenueCatOAuthUrl = createRoute({
 		redirect_url: z.string().optional(),
 	}),
 	handler: async (c) => {
-		const { redirect_url } = c.req.query();
+		// Read `migrate` from the raw query — the validated query layer coerces
+		// "true"/"false" to booleans, which a z.string() field would reject.
+		const { redirect_url, migrate } = c.req.query();
 		const ctx = c.get("ctx");
 		const { org, env } = ctx;
 
@@ -34,11 +36,12 @@ export const handleGetRevenueCatOAuthUrl = createRoute({
 
 		const stateKey = await generateOAuthState({
 			organizationSlug: org.slug,
-			env: env === AppEnv.Live ? "live" : "test",
+			env,
 			redirectUri,
 			masterOrgId: null,
 			codeVerifier,
 			provider: "revenuecat",
+			migration: migrate === "true",
 		});
 
 		const authUrl = createRcAuthorizationUrl({

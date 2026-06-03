@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
@@ -13,7 +13,10 @@ interface RevenueCatProjectsResponse {
 
 export const useRCProjects = ({ enabled = true }: { enabled?: boolean } = {}) => {
 	const axiosInstance = useAxiosInstance();
+	const queryClient = useQueryClient();
 	const buildKey = useQueryKeyFactory();
+
+	const queryKey = buildKey(["revenuecat-projects"]);
 
 	const fetcher = async () => {
 		try {
@@ -31,9 +34,22 @@ export const useRCProjects = ({ enabled = true }: { enabled?: boolean } = {}) =>
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: buildKey(["revenuecat-projects"]),
+		queryKey,
 		queryFn: fetcher,
 		enabled,
+	});
+
+	const createMutation = useMutation({
+		mutationFn: async (name: string) => {
+			const { data } = await axiosInstance.post<RevenueCatProject>(
+				"/v1/organization/revenuecat/projects",
+				{ name },
+			);
+			return data;
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey });
+		},
 	});
 
 	return {
@@ -41,5 +57,7 @@ export const useRCProjects = ({ enabled = true }: { enabled?: boolean } = {}) =>
 		isLoading,
 		error,
 		refetch,
+		createProject: createMutation.mutateAsync,
+		isCreating: createMutation.isPending,
 	};
 };

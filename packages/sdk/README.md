@@ -272,7 +272,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779292757190,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780502357190,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1780495495111,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781705095111,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -566,6 +566,7 @@ const response = await client.entities.list({ search: "workspace" });
 @param subscriptionStatus - Filter customer products used for entity hydration and plan matching. Defaults to active and scheduled. (optional)
 @param search - Search entities by id or name. (optional)
 @param processors - Filter by parent customer processor type (stripe, revenuecat, vercel). (optional)
+@param customerId - Restrict the response to entities owned by this customer id. Use to bulk-fetch all entities for one customer in a single paginated call instead of iterating entities.get. (optional)
 
 @returns A paginated list of entity objects including their current subscriptions, purchases, balances, and flags.
 * [update](docs/sdks/entities/README.md#update) - Updates an existing entity and returns the refreshed entity object.
@@ -701,6 +702,12 @@ const response = await client.features.delete({ featureId: "old-feature" });
 * [update](docs/sdks/plans/README.md#update) - Update a plan
 * [delete](docs/sdks/plans/README.md#delete) - Delete a plan
 
+### [Platform](docs/sdks/platform/README.md)
+
+* [linkRevenueCat](docs/sdks/platform/README.md#linkrevenuecat) - Generate a RevenueCat OAuth URL for linking a project to an organization.
+* [syncRevenueCat](docs/sdks/platform/README.md#syncrevenuecat) - Push an organization's plans into RevenueCat as products (creating or renaming them across the project's apps) and set test-store prices from each plan's price. Requires the org to have linked RevenueCat via OAuth.
+* [getRevenueCatKeys](docs/sdks/platform/README.md#getrevenuecatkeys) - Retrieve a managed organization's RevenueCat public (SDK) API keys, grouped by app — for the test store, App Store, and Google Play Store. Use these to configure the RevenueCat SDK in the org's mobile app.
+
 ### [Referrals](docs/sdks/referrals/README.md)
 
 * [createCode](docs/sdks/referrals/README.md#createcode) - Create or fetch a referral code for a customer in a referral program.
@@ -789,7 +796,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779292757190,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780502357190,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1780495495111,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781705095111,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -1123,6 +1130,7 @@ const response = await client.entities.list({ search: "workspace" });
 @param subscriptionStatus - Filter customer products used for entity hydration and plan matching. Defaults to active and scheduled. (optional)
 @param search - Search entities by id or name. (optional)
 @param processors - Filter by parent customer processor type (stripe, revenuecat, vercel). (optional)
+@param customerId - Restrict the response to entities owned by this customer id. Use to bulk-fetch all entities for one customer in a single paginated call instead of iterating entities.get. (optional)
 
 @returns A paginated list of entity objects including their current subscriptions, purchases, balances, and flags.
 - [`entitiesUpdate`](docs/sdks/entities/README.md#update) - Updates an existing entity and returns the refreshed entity object.
@@ -1234,6 +1242,9 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 - [`plansGet`](docs/sdks/plans/README.md#get) - Get a plan
 - [`plansList`](docs/sdks/plans/README.md#list) - List all plans
 - [`plansUpdate`](docs/sdks/plans/README.md#update) - Update a plan
+- [`platformGetRevenueCatKeys`](docs/sdks/platform/README.md#getrevenuecatkeys) - Retrieve a managed organization's RevenueCat public (SDK) API keys, grouped by app — for the test store, App Store, and Google Play Store. Use these to configure the RevenueCat SDK in the org's mobile app.
+- [`platformLinkRevenueCat`](docs/sdks/platform/README.md#linkrevenuecat) - Generate a RevenueCat OAuth URL for linking a project to an organization.
+- [`platformSyncRevenueCat`](docs/sdks/platform/README.md#syncrevenuecat) - Push an organization's plans into RevenueCat as products (creating or renaming them across the project's apps) and set test-store prices from each plan's price. Requires the org to have linked RevenueCat via OAuth.
 - [`referralsCreateCode`](docs/sdks/referrals/README.md#createcode) - Create or fetch a referral code for a customer in a referral program.
 - [`referralsRedeemCode`](docs/sdks/referrals/README.md#redeemcode) - Redeem a referral code for a customer.
 - [`rewardsRedeemCode`](docs/sdks/rewards/README.md#redeemcode) - Redeem a reward promo code for a customer.

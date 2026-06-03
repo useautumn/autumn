@@ -6,6 +6,13 @@ import {
 	UpsertRevenueCatProcessorConfigSchema,
 	Scopes,
 } from "@autumn/shared";
+import { getRevenuecatAccessToken } from "@server/external/revenueCat/misc/getRevenuecatAccessToken.js";
+import {
+	generateRevenuecatWebhookSecret,
+	getRevenuecatWebhookSecret,
+} from "@server/external/revenueCat/misc/getRevenuecatWebhookSecret.js";
+import { initRevenuecatCli } from "@server/external/revenueCat/misc/initRevenuecatCli.js";
+import { registerRevenuecatWebhook } from "@server/external/revenueCat/misc/registerRevenuecatWebhook.js";
 import { createSvixApp } from "@server/external/svix/svixHelpers.js";
 import { createSvixCli } from "@server/external/svix/svixUtils.js";
 import { createRoute } from "@server/honoMiddlewares/routeHandler.js";
@@ -14,17 +21,7 @@ import { mask } from "@server/utils/genUtils.js";
 import type { ApplicationOut } from "svix";
 import { OrgService } from "../OrgService.js";
 
-// Generate a random 64-character alphanumeric string
-const generateWebhookSecret = (): string => {
-	const chars =
-		"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-	let result = "";
-	const randomBytes = crypto.getRandomValues(new Uint8Array(64));
-	for (let i = 0; i < 64; i++) {
-		result += chars[randomBytes[i] % chars.length];
-	}
-	return result;
-};
+const generateWebhookSecret = generateRevenuecatWebhookSecret;
 
 export const getRevenueCatConfigDisplay = ({
 	org,
@@ -147,7 +144,7 @@ export const handleUpsertRevenueCatConfig = createRoute({
 	scopes: [Scopes.Organisation.Write],
 	body: UpsertRevenueCatProcessorConfigSchema,
 	handler: async (c) => {
-		const { db, org } = c.get("ctx");
+		const { db, org, logger } = c.get("ctx");
 
 		const body = c.req.valid("json");
 
@@ -176,6 +173,37 @@ export const handleUpsertRevenueCatConfig = createRoute({
 				},
 			},
 		});
+
+		// Best-effort: register the inbound RC webhook for any env whose project was just set
+		// (covers an org that connected OAuth, then selected its project here). Idempotent.
+		const targets: Array<{ env: AppEnv; projectId: string }> = [];
+		if (body.project_id) {
+			targets.push({ env: AppEnv.Live, projectId: body.project_id });
+		}
+		if (body.sandbox_project_id) {
+			targets.push({
+				env: AppEnv.Sandbox,
+				projectId: body.sandbox_project_id,
+			});
+		}
+		for (const { env, projectId } of targets) {
+			try {
+				const accessToken = await getRevenuecatAccessToken({ db, org, env });
+				const secret = getRevenuecatWebhookSecret({ org, env });
+				if (!accessToken || !secret) continue;
+				const rcCli = initRevenuecatCli({ accessToken, projectId });
+				await registerRevenuecatWebhook({
+					rcCli,
+					orgId: org.id,
+					env,
+					secret,
+				});
+			} catch (webhookError) {
+				logger.warn(
+					`[RC] webhook registration failed for org ${org.id} (${env}): ${webhookError}`,
+				);
+			}
+		}
 
 		return c.json({
 			success: true,

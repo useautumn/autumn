@@ -14,6 +14,7 @@ import { Entities } from "./entities.js";
 import { Events } from "./events.js";
 import { Features } from "./features.js";
 import { Plans } from "./plans.js";
+import { Platform } from "./platform.js";
 import { Referrals } from "./referrals.js";
 import { Rewards } from "./rewards.js";
 
@@ -61,6 +62,11 @@ export class Autumn extends ClientSDK {
   private _rewards?: Rewards;
   get rewards(): Rewards {
     return (this._rewards ??= new Rewards(this._options));
+  }
+
+  private _platform?: Platform;
+  get platform(): Platform {
+    return (this._platform ??= new Platform(this._options));
   }
 
   /**

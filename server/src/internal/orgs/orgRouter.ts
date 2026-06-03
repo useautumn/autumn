@@ -1,8 +1,13 @@
 import { Hono } from "hono";
 import { handleGetRCMappings } from "@/external/revenueCat/handlers/handleGetRevenuecatMappings.js";
 import { handleGetRevenueCatProducts } from "@/external/revenueCat/handlers/handleGetRevenuecatProducts.js";
-import { handleGetRevenueCatProjects } from "@/external/revenueCat/handlers/handleGetRevenuecatProjects.js";
+import {
+	handleCreateRevenueCatProject,
+	handleGetRevenueCatProjects,
+} from "@/external/revenueCat/handlers/handleGetRevenuecatProjects.js";
+import { handlePreflightRevenueCatSync } from "@/external/revenueCat/handlers/handlePreflightRevenueCatSync.js";
 import { handleSaveRCMappings } from "@/external/revenueCat/handlers/handleSaveRevenuecatMappings.js";
+import { handleSyncRevenueCatProducts } from "@/external/revenueCat/handlers/handleSyncRevenueCatProducts.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleDeleteOrg } from "./handlers/crudHandlers/handleDeleteOrg.js";
 import { handleGetOrg } from "./handlers/crudHandlers/handleGetOrg.js";
@@ -74,5 +79,8 @@ honoOrgRouter.patch("/revenuecat", ...handleUpsertRevenueCatConfig);
 honoOrgRouter.get("/revenuecat/oauth_url", ...handleGetRevenueCatOAuthUrl);
 honoOrgRouter.post("/revenuecat/products", ...handleGetRevenueCatProducts);
 honoOrgRouter.get("/revenuecat/projects", ...handleGetRevenueCatProjects);
+honoOrgRouter.post("/revenuecat/projects", ...handleCreateRevenueCatProject);
+honoOrgRouter.post("/revenuecat/sync", ...handleSyncRevenueCatProducts);
+honoOrgRouter.post("/revenuecat/preflight", ...handlePreflightRevenueCatSync);
 honoOrgRouter.get("/revenuecat/mappings", ...handleGetRCMappings);
 honoOrgRouter.post("/revenuecat/mappings", ...handleSaveRCMappings);

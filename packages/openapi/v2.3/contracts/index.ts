@@ -51,6 +51,11 @@ import {
 	updatePlanContract,
 } from "./plansContract.js";
 import {
+	platformGetRevenueCatKeysContract,
+	platformLinkRevenueCatContract,
+	platformSyncRevenueCatContract,
+} from "./platformContract.js";
+import {
 	referralsCreateCodeContract,
 	referralsRedeemCodeContract,
 	rewardsRedeemCodeContract,
@@ -112,4 +117,9 @@ export const v2_3ContractRouter = oc.router({
 	referralsCreateCode: referralsCreateCodeContract,
 	referralsRedeemCode: referralsRedeemCodeContract,
 	rewardsRedeemCode: rewardsRedeemCodeContract,
+
+	// Platform
+	platformLinkRevenueCat: platformLinkRevenueCatContract,
+	platformSyncRevenueCat: platformSyncRevenueCatContract,
+	platformGetRevenueCatKeys: platformGetRevenueCatKeysContract,
 });

@@ -87,7 +87,7 @@ export class Billing extends ClientSDK {
    * @example
    * ```typescript
    * // Schedule a transition from a trial plan to a paid plan
-   * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779292757190,"plans":[{"planId":"trial_plan"}]},{"startsAt":1780502357190,"plans":[{"planId":"pro_plan"}]}] });
+   * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1780495495111,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781705095111,"plans":[{"planId":"pro_plan"}]}] });
    * ```
    *
    * @param customerId - The ID of the customer to create the schedule for.

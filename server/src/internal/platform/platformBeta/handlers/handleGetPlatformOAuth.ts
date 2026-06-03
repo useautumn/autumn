@@ -1,4 +1,4 @@
-import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
+import { AppEnv, ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { generateOAuthState } from "../utils/oauthStateUtils.js";
@@ -36,7 +36,7 @@ export const handleGetPlatformOAuth = createRoute({
 		// Generate OAuth state and store in Redis
 		const stateKey = await generateOAuthState({
 			organizationSlug: org.slug,
-			env,
+			env: env === "live" ? AppEnv.Live : AppEnv.Sandbox,
 			redirectUri: redirect_url,
 			masterOrgId: masterOrg.id,
 		});
