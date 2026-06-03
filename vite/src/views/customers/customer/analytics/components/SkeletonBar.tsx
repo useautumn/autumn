@@ -60,7 +60,7 @@ const getTransition = ({
 	}
 	return reducedMotion
 		? { duration: 0.2 }
-		: { type: "spring", bounce: 0.1, duration: 0.55 };
+		: { type: "spring", bounce: 0, duration: 0.85 };
 };
 
 export const SkeletonBar = ({
@@ -80,7 +80,13 @@ export const SkeletonBar = ({
 			animate={{ scaleY: getScaleY({ mode, bar, targetHeight }) }}
 			transition={getTransition({ mode, bar, reducedMotion })}
 		>
-			<Skeleton className="h-full w-full rounded-t-[2px] rounded-b-none" />
+			<Skeleton
+				className="h-full w-full rounded-t-[2px] rounded-b-none"
+				style={{
+					animationDelay: `${bar.shimmerDelay}s`,
+					animationDuration: `${bar.shimmerDuration}s`,
+				}}
+			/>
 		</motion.div>
 	);
 };

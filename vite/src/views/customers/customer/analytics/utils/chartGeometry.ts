@@ -46,6 +46,8 @@ export interface SkeletonBarConfig {
 	low: number;
 	duration: number;
 	delay: number;
+	shimmerDelay: number;
+	shimmerDuration: number;
 }
 
 /** Randomised, stable bar configs for the loading wave. */
@@ -57,6 +59,8 @@ export const buildSkeletonBars = (count: number): SkeletonBarConfig[] =>
 			low: peak * (0.35 + Math.random() * 0.2),
 			duration: 2.6 + Math.random() * 1.8,
 			delay: Math.random() * 1.4,
+			shimmerDelay: -Math.random() * 3,
+			shimmerDuration: 2.6 + Math.random() * 1.6,
 		};
 	});
 
@@ -105,6 +109,29 @@ const STANDARD_INTERVAL_DAYS: Record<string, number> = {
 	"90d": 90,
 	"1bc": 30,
 	"3bc": 90,
+};
+
+/** Rounds a value up to a nice axis maximum (1/2/2.5/5/10 × 10^n), matching
+ * the headroom recharts leaves above the data so bar heights line up. */
+export const niceCeil = (value: number): number => {
+	if (!Number.isFinite(value) || value <= 0) {
+		return 1;
+	}
+	const magnitude = 10 ** Math.floor(Math.log10(value));
+	const fraction = value / magnitude;
+	const niceFraction = (() => {
+		if (fraction <= 1) {
+			return 1;
+		}
+		if (fraction <= 2) {
+			return 2;
+		}
+		if (fraction <= 5) {
+			return 5;
+		}
+		return 10;
+	})();
+	return niceFraction * magnitude;
 };
 
 type BinSize = "hour" | "day" | "month";

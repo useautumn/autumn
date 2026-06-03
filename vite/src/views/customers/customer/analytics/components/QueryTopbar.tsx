@@ -119,7 +119,7 @@ export const QueryTopbar = () => {
 			<DropdownMenu
 				onOpenChange={(open) => {
 					if (open) {
-						setDraftRange(undefined);
+						setDraftRange(customRange);
 					}
 				}}
 			>
