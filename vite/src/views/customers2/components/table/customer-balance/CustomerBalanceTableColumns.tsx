@@ -14,6 +14,7 @@ import {
 	nullish,
 } from "@autumn/shared";
 import {
+	ArrowsClockwiseIcon,
 	BoxArrowDownIcon,
 	BracketsSquareIcon,
 	CaretRightIcon,
@@ -45,6 +46,7 @@ import { FeatureBalanceDisplay } from "../customer-feature-usage/FeatureBalanceD
 import type { CustomerBalanceRowData } from "./CustomerBalanceTable";
 import {
 	canDeleteCustomerBalance,
+	canRecalculateCustomerBalances,
 	getCustomerBalanceSourceParts,
 } from "./customerBalanceUtils";
 
@@ -360,22 +362,37 @@ function BarCell({
 
 function BalanceActionsCell({
 	row,
+	fullCustomer,
+	entityId,
 	onDeleteClick,
 	onRecordUsageClick,
 	onCheckBalanceClick,
+	onRecalculateClick,
 }: {
 	row: Row<CustomerBalanceRowData>;
+	fullCustomer: FullCustomer | null | undefined;
+	entityId: string | null;
 	onDeleteClick?: (balance: FullCusEntWithFullCusProduct) => void;
 	onRecordUsageClick?: (balance: FullCusEntWithFullCusProduct) => void;
 	onCheckBalanceClick?: (balance: FullCusEntWithFullCusProduct) => void;
+	onRecalculateClick?: (balance: FullCusEntWithFullCusProduct) => void;
 }) {
 	const isParentRow = row.depth === 0;
 	const canDelete =
 		!row.getCanExpand() && canDeleteCustomerBalance({ balance: row.original });
 	const canRecordUsage = isParentRow && !!onRecordUsageClick;
 	const canCheckBalance = isParentRow && !!onCheckBalanceClick;
+	const canRecalculate =
+		isParentRow &&
+		!!onRecalculateClick &&
+		canRecalculateCustomerBalances({
+			fullCustomer,
+			featureId: row.original.entitlement.feature.id,
+			entityId,
+		});
 
-	if (!canDelete && !canRecordUsage && !canCheckBalance) return null;
+	if (!canDelete && !canRecordUsage && !canCheckBalance && !canRecalculate)
+		return null;
 
 	return (
 		<div className="flex justify-end">
@@ -410,7 +427,26 @@ function BalanceActionsCell({
 						>
 							<div className="flex w-full items-center justify-between gap-2 text-sm">
 								Check balance
-								<BracketsSquareIcon size={12} className="text-tertiary-foreground" />
+								<BracketsSquareIcon
+									size={12}
+									className="text-tertiary-foreground"
+								/>
+							</div>
+						</DropdownMenuItem>
+					)}
+					{canRecalculate && (
+						<DropdownMenuItem
+							onClick={(event) => {
+								event.stopPropagation();
+								onRecalculateClick(row.original);
+							}}
+						>
+							<div className="flex w-full items-center justify-between gap-2 text-sm">
+								Recalculate balances
+								<ArrowsClockwiseIcon
+									size={12}
+									className="text-tertiary-foreground"
+								/>
 							</div>
 						</DropdownMenuItem>
 					)}
@@ -442,6 +478,7 @@ export const CustomerBalanceTableColumns = ({
 	onDeleteClick,
 	onRecordUsageClick,
 	onCheckBalanceClick,
+	onRecalculateClick,
 }: {
 	fullCustomer: FullCustomer | null | undefined;
 	entityId: string | null;
@@ -449,6 +486,7 @@ export const CustomerBalanceTableColumns = ({
 	onDeleteClick?: (balance: FullCusEntWithFullCusProduct) => void;
 	onRecordUsageClick?: (balance: FullCusEntWithFullCusProduct) => void;
 	onCheckBalanceClick?: (balance: FullCusEntWithFullCusProduct) => void;
+	onRecalculateClick?: (balance: FullCusEntWithFullCusProduct) => void;
 }) => [
 	{
 		header: "Feature",
@@ -477,7 +515,9 @@ export const CustomerBalanceTableColumns = ({
 									entities,
 								})}
 							>
-								<span className="text-tertiary-foreground truncate text-xs">{metaParts}</span>
+								<span className="text-tertiary-foreground truncate text-xs">
+									{metaParts}
+								</span>
 							</AdminHover>
 						</div>
 					);
@@ -498,7 +538,9 @@ export const CustomerBalanceTableColumns = ({
 								</span>
 							</AdminHover>
 						</div>
-						<span className="text-tertiary-foreground text-xs truncate pl-5.5">{metaParts}</span>
+						<span className="text-tertiary-foreground text-xs truncate pl-5.5">
+							{metaParts}
+						</span>
 					</div>
 				);
 			}
@@ -568,9 +610,12 @@ export const CustomerBalanceTableColumns = ({
 		cell: ({ row }: { row: Row<CustomerBalanceRowData> }) => (
 			<BalanceActionsCell
 				row={row}
+				fullCustomer={fullCustomer}
+				entityId={entityId}
 				onDeleteClick={onDeleteClick}
 				onRecordUsageClick={onRecordUsageClick}
 				onCheckBalanceClick={onCheckBalanceClick}
+				onRecalculateClick={onRecalculateClick}
 			/>
 		),
 	},

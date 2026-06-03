@@ -110,6 +110,15 @@ const createBalanceMcpSchema = CreateBalanceParamsV0Schema.extend({
 	}),
 });
 
+const listCustomersMcpSchema = ListCustomersV2_3ParamsSchema.extend({
+	limit: z
+		.preprocess(
+			(value) => (typeof value === "number" && value > 1000 ? 1000 : value),
+			z.number().int().positive().max(1000).optional(),
+		)
+		.meta({ description: "Maximum customers per page. Max 1000." }),
+});
+
 const writeSchemaByTool = {
 	attach: AttachParamsV1Schema,
 	updateSubscription: UpdateSubscriptionV1ParamsSchema,
@@ -119,7 +128,7 @@ const writeSchemaByTool = {
 } as const satisfies Record<ConfirmedWriteToolName, z.ZodType>;
 
 export const schemaByTool = {
-	listCustomers: ListCustomersV2_3ParamsSchema,
+	listCustomers: listCustomersMcpSchema,
 	createCustomer: CreateCustomerParamsV1Schema,
 	getCustomer: GetCustomerParamsV1Schema,
 	listPlans: ListPlanParamsSchema,
@@ -142,8 +151,8 @@ const toolConfigs: OperationToolConfig[] = [
 	{
 		id: "listCustomers",
 		description:
-			"List Autumn customers. Use search, plans, subscription_status, and processors filters for customer-heavy queries. For queued/upcoming plan version queries, use subscription_status scheduled and omit the earliest matching version unless the user asks for all historical versions (versions 1,2,3 -> filter 2,3). 'live', 'paying', and active subscribers usually mean subscription_status active. When a plan is named, include the plans filter instead of listing broad customer sets. If listPlans returned matching versions, pass only relevant versions in plans[].versions, never guessed versions. For every/all/complete requests, paginate by calling again with start_cursor set to the previous response's next_cursor until next_cursor is empty.",
-		schema: ListCustomersV2_3ParamsSchema,
+			"List Autumn customers. Use search, plans, subscription_status, and processors filters for customer-heavy queries. limit max is 1000. For queued/upcoming plan version queries, use subscription_status scheduled and omit the earliest matching version unless the user asks for all historical versions (versions 1,2,3 -> filter 2,3). 'live', 'paying', and active subscribers usually mean subscription_status active. When a plan is named, include the plans filter instead of listing broad customer sets. If listPlans returned matching versions, pass only relevant versions in plans[].versions, never guessed versions. For every/all/complete requests, paginate by calling again with start_cursor set to the previous response's next_cursor until next_cursor is empty.",
+		schema: listCustomersMcpSchema,
 		endpoint: endpointByTool.listCustomers,
 	},
 	{
