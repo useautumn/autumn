@@ -1,5 +1,5 @@
 {
-  "id": "ab0814aa-1b4c-45f3-9195-cdd78a44df12",
+  "id": "f658a16f-1c2b-474b-a31f-4c11a882323e",
   "prevId": "525b9068-d426-4a6e-8457-56db4367d0d1",
   "version": "7",
   "dialect": "postgresql",
@@ -3467,13 +3467,13 @@
           "name": "org_id",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "env": {
           "name": "env",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "created_at": {
           "name": "created_at",
@@ -3485,7 +3485,7 @@
           "name": "name",
           "type": "text",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
         "footer": {
           "name": "footer",
@@ -3523,7 +3523,15 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "invoice_templates_id_unique": {
+          "name": "invoice_templates_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

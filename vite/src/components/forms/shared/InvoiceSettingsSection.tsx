@@ -29,6 +29,7 @@ export function InvoiceSettingsSection({
 	disabled?: boolean;
 }) {
 	const { templates } = useInvoiceTemplatesQuery();
+	if (templates.length === 0) return null;
 	const options: Pick<InvoiceTemplate, "id" | "name">[] = [
 		{ id: NO_TEMPLATE_VALUE, name: "None" },
 		...templates,

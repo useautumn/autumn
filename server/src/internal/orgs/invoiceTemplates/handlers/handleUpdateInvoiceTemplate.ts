@@ -18,7 +18,11 @@ export const handleUpdateInvoiceTemplate = createRoute({
 			update: values,
 		});
 		if (!template) {
-			throw new RecaseError({ message: "Invoice template not found" });
+			throw new RecaseError({
+				message: "Invoice template not found",
+				code: "invoice_template_not_found",
+				statusCode: 404,
+			});
 		}
 		return c.json({ template });
 	},
