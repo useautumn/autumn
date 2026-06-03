@@ -81,8 +81,7 @@ export const createInvoiceForBilling = async ({
 			...(vercelInstallationId
 				? {
 						vercel_installation_id: vercelInstallationId,
-						vercel_billing_plan_id:
-							billingContext.fullProducts?.[0]?.id ?? "",
+						vercel_billing_plan_id: billingContext.fullProducts?.[0]?.id ?? "",
 					}
 				: {}),
 		},
@@ -100,6 +99,8 @@ export const createInvoiceForBilling = async ({
 			? undefined
 			: billingContext.stripeSubscription?.id,
 		collectionMethod,
+		daysUntilDue: invoiceMode?.daysUntilDue,
+		footer: invoiceMode?.footer,
 		metadata: invoiceMetadata,
 		discounts: stripeDiscountsToInvoiceParams({
 			stripeDiscounts: invoiceEligibleStripeDiscounts,

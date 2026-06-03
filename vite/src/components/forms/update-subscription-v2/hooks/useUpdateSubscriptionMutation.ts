@@ -24,10 +24,14 @@ export function useUpdateSubscriptionMutation({
 			useInvoice,
 			enableProductImmediately,
 			finalizeInvoice,
+			invoiceTemplateId,
+			netTermsDays,
 		}: {
 			useInvoice?: boolean;
 			enableProductImmediately?: boolean;
 			finalizeInvoice?: boolean;
+			invoiceTemplateId?: string;
+			netTermsDays?: number;
 		}) => {
 			if (!customerId) {
 				throw new Error("Customer ID is required");
@@ -39,6 +43,12 @@ export function useUpdateSubscriptionMutation({
 				requestBody.invoice = true;
 				requestBody.enable_product_immediately = enableProductImmediately;
 				requestBody.finalize_invoice = finalizeInvoice ?? false;
+				if (invoiceTemplateId !== undefined) {
+					requestBody.invoice_template_id = invoiceTemplateId;
+				}
+				if (netTermsDays !== undefined) {
+					requestBody.net_terms_days = netTermsDays;
+				}
 				if (enableProductImmediately === false) {
 					requestBody.force_checkout = true;
 				}
@@ -85,14 +95,20 @@ export function useUpdateSubscriptionMutation({
 	const handleInvoiceUpdate = async ({
 		enableProductImmediately,
 		finalizeInvoice,
+		invoiceTemplateId,
+		netTermsDays,
 	}: {
 		enableProductImmediately: boolean;
 		finalizeInvoice: boolean;
+		invoiceTemplateId?: string;
+		netTermsDays?: number;
 	}) => {
 		const result = await mutation.mutateAsync({
 			useInvoice: true,
 			enableProductImmediately,
 			finalizeInvoice,
+			invoiceTemplateId,
+			netTermsDays,
 		});
 		return {
 			stripeId: result.data?.invoice?.stripe_id,

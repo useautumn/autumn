@@ -48,11 +48,11 @@ export * from "./models/attachModels/attachEnums/AttachConfig";
 export * from "./models/attachModels/attachEnums/AttachFunction";
 export * from "./models/attachModels/attachPreviewModels";
 export * from "./models/authModels/membership";
+export * from "./models/chatModels/chatTable";
 export * from "./models/chatResultModels/chatResultFeature";
 export * from "./models/chatResultModels/chatResultFeature";
 // 4. Chat Result Models
 export * from "./models/chatResultModels/chatResultTable";
-export * from "./models/chatModels/chatTable";
 export * from "./models/checkModels/checkPreviewModels";
 export * from "./models/cusModels/billingControls/autoTopupLimitTable";
 // 8. Customer Models
@@ -131,7 +131,8 @@ export * from "./models/orgModels/frontendOrg";
 // 1. Org Models
 export * from "./models/orgModels/frontendOrg";
 export * from "./models/orgModels/fullOrgModel";
-export * from "./models/orgModels/orgConfig";
+export * from "./models/orgModels/invoiceTemplate";
+export * from "./models/orgModels/invoiceTemplateTable";
 export * from "./models/orgModels/orgConfig";
 export * from "./models/orgModels/orgTable";
 export * from "./models/otherModels/metadataTable";

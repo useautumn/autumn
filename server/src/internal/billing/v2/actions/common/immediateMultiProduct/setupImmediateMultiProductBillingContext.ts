@@ -187,7 +187,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		createStripeCustomerIfMissing: !preview,
 	});
 
-	const invoiceMode = setupInvoiceModeContext({ params });
+	const invoiceMode = await setupInvoiceModeContext({ ctx, params });
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
 	const trialContext = await setupImmediateMultiProductTrialContext({
 		ctx,

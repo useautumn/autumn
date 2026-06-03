@@ -12,15 +12,39 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { removeStripeSubscriptionIdFromBillingPlan } from "@/internal/billing/v2/execute/removeStripeSubscriptionIdFromBillingPlan";
 import { shouldDeferBillingPlan } from "@/internal/billing/v2/providers/stripe/utils/common/shouldDeferBillingPlan";
-import { finalizeStripeInvoice } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
+import {
+	finalizeStripeInvoice,
+	updateStripeInvoice,
+} from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { executeStripeSubscriptionOperation } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/executeStripeSubscriptionOperation";
 import { getLatestInvoiceFromSubscriptionAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/getLatestInvoiceFromSubscriptionAction";
 import { getRequiredActionFromSubscriptionInvoice } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/getRequiredActionFromSubscriptionInvoice";
 import { upsertSubscriptionFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertSubscriptionFromBilling";
 import { invoiceActions } from "@/internal/invoices/actions";
 import { insertMetadataFromBillingPlan } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";
+import type Stripe from "stripe";
 import { isDeferredInvoiceMode } from "../../../utils/billingContext/isDeferredInvoiceMode";
 import { getDeferredBillingMetadataExpiresAt } from "./getDeferredBillingMetadataExpiresAt";
+
+const applyInvoiceFooterToDraft = async ({
+	ctx,
+	stripeCli,
+	invoice,
+	footer,
+}: {
+	ctx: AutumnContext;
+	stripeCli: Stripe;
+	invoice: Stripe.Invoice | undefined;
+	footer: string | undefined;
+}): Promise<Stripe.Invoice | undefined> => {
+	if (!invoice || !footer || invoice.status !== "draft") return invoice;
+	ctx.logger.debug(`[execSubAction] Applying invoice footer`);
+	return updateStripeInvoice({
+		stripeCli,
+		invoiceId: invoice.id,
+		params: { footer },
+	});
+};
 
 export const executeStripeSubscriptionAction = async ({
 	ctx,
@@ -65,6 +89,13 @@ export const executeStripeSubscriptionAction = async ({
 		stripeSubscription,
 		subscriptionAction,
 		billingContext,
+	});
+
+	latestStripeInvoice = await applyInvoiceFooterToDraft({
+		ctx,
+		stripeCli,
+		invoice: latestStripeInvoice,
+		footer: billingContext.invoiceMode?.footer,
 	});
 
 	// Honor either the new internal flag (set by attach via setupFinalizeFirstInvoice)

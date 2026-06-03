@@ -298,10 +298,14 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				useInvoice,
 				enableProductImmediately,
 				finalizeInvoice,
+				invoiceTemplateId,
+				netTermsDays,
 			}: {
 				useInvoice?: boolean;
 				enableProductImmediately?: boolean;
 				finalizeInvoice?: boolean;
+				invoiceTemplateId?: string;
+				netTermsDays?: number;
 			} = {}): AttachParamsV0 | null => {
 				if (!requestBody) return null;
 
@@ -310,6 +314,12 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				if (useInvoice) {
 					body.invoice = true;
 					body.finalize_invoice = finalizeInvoice ?? false;
+					if (invoiceTemplateId !== undefined) {
+						body.invoice_template_id = invoiceTemplateId;
+					}
+					if (netTermsDays !== undefined) {
+						body.net_terms_days = netTermsDays;
+					}
 				}
 
 				// `enable_product_immediately` applies to both invoice mode and the

@@ -15,6 +15,8 @@ export const ExtAttachParamsV0Schema = BillingParamsBaseV0Schema.extend({
 	invoice: z.boolean().optional(),
 	enable_product_immediately: z.boolean().optional(),
 	finalize_invoice: z.boolean().optional(),
+	invoice_template_id: z.string().optional(),
+	net_terms_days: z.number().int().positive().optional(),
 
 	success_url: z.string().optional(),
 

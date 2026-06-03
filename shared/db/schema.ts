@@ -2,11 +2,11 @@
 
 // Analytics Tables
 import { actions } from "../models/analyticsModels/actionTable.js";
-import { chatResults } from "../models/chatResultModels/chatResultTable.js";
 import {
 	chatApprovals,
 	chatInstallations,
 } from "../models/chatModels/chatTable.js";
+import { chatResults } from "../models/chatResultModels/chatResultTable.js";
 import { checkoutsRelations } from "../models/checkouts/checkoutRelations.js";
 import { checkouts } from "../models/checkouts/checkoutTable.js";
 import { autoTopupLimitStates } from "../models/cusModels/billingControls/autoTopupLimitTable.js";
@@ -47,6 +47,7 @@ import { migrationItemRuns } from "../models/migrationV2Models/migrationItemRunT
 import { migrationRunsRelations } from "../models/migrationV2Models/migrationRunRelations.js";
 import { migrationRuns } from "../models/migrationV2Models/migrationRunTable.js";
 import { migrations } from "../models/migrationV2Models/migrationTable.js";
+import { invoiceTemplates } from "../models/orgModels/invoiceTemplateTable.js";
 /* RELATIONS */
 import { organizationsRelations } from "../models/orgModels/orgRelations.js";
 import { organizations } from "../models/orgModels/orgTable.js";
@@ -67,10 +68,10 @@ import { referralCodeRelations } from "../models/rewardModels/referralModels/ref
 import { referralCodes } from "../models/rewardModels/referralModels/referralCodeTable.js";
 import { rewardRedemptionRelations } from "../models/rewardModels/referralModels/rewardRedemptionRelations.js";
 import { rewardRedemptions } from "../models/rewardModels/referralModels/rewardRedemptionTable.js";
-// Reward Tables
-import { rewards } from "../models/rewardModels/rewardModels/rewardTable.js";
 // Reward Relations
 import { rewardRelations } from "../models/rewardModels/rewardModels/rewardRelations.js";
+// Reward Tables
+import { rewards } from "../models/rewardModels/rewardModels/rewardTable.js";
 import { rewardProgramRelations } from "../models/rewardModels/rewardProgramModels/rewardProgramRelations.js";
 import { rewardPrograms } from "../models/rewardModels/rewardProgramModels/rewardProgramTable.js";
 import {
@@ -130,6 +131,7 @@ export {
 	inviteRelations,
 	invoiceLineItems,
 	invoiceRelations,
+	invoiceTemplates,
 	invoices,
 	// OAuth Provider
 	jwks,
