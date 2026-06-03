@@ -1,5 +1,5 @@
 {
-  "id": "149eec0b-0a2b-4a55-b5e8-81f92b9839d8",
+  "id": "20fbfba1-ef02-4637-b7f8-4ae1ee5983d7",
   "prevId": "525b9068-d426-4a6e-8457-56db4367d0d1",
   "version": "7",
   "dialect": "postgresql",
@@ -3500,7 +3500,23 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_invoice_templates_org_id": {
+          "name": "idx_invoice_templates_org_id",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "invoice_templates_org_id_fkey": {
           "name": "invoice_templates_org_id_fkey",

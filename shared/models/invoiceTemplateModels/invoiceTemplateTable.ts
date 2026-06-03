@@ -1,6 +1,7 @@
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
 	foreignKey,
+	index,
 	integer,
 	numeric,
 	pgTable,
@@ -26,6 +27,7 @@ export const invoiceTemplates = pgTable(
 			foreignColumns: [organizations.id],
 			name: "invoice_templates_org_id_fkey",
 		}).onDelete("cascade"),
+		index("idx_invoice_templates_org_id").on(table.org_id),
 	],
 );
 
