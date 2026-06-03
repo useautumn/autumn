@@ -110,7 +110,11 @@ export const getCountAndSum = async ({
 
 	const hasFilters = filterBySql !== "";
 
-	// No property filters → read the lean hourly rollup (avoids a full raw events scan).
+	// Org-grain rollup only carries org/env/event/hour, so it can serve only all-customers,
+	// no-entity, no-property totals. Mirrors aggregate_simple's gate (absence of customer_id).
+	const useOrgRollup = !params.customer_id && !params.entity_id && !hasFilters;
+
+	// No property filters → read a pre-aggregated rollup (avoids a full raw events scan).
 	// Property filters → fall back to raw events, where the properties columns live.
 	const query = hasFilters
 		? `
@@ -125,7 +129,7 @@ export const getCountAndSum = async ({
 		`
 		: `
 			SELECT event_name, sum(event_count) as count, sum(total_value) as sum
-			FROM events_hourly_no_properties_two_mv
+			FROM ${useOrgRollup ? "events_org_hourly_mv" : "events_hourly_no_properties_two_mv"}
 			WHERE org_id = {org_id:String} AND env = {env:String}
 				${params.aggregateAll ? "" : "AND customer_id = {customer_id:String}"}
 				${params.entity_id ? "AND entity_id = {entity_id:String}" : ""}

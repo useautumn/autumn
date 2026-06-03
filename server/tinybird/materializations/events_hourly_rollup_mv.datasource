@@ -1,0 +1,34 @@
+DESCRIPTION >
+    Consolidated hourly rollup of events for the analytics aggregate endpoint. ONE rollup serves
+    every group-by over a subset of its sort key (customer_id, entity_id, plan_id via
+    internal_product_id, api_key_id) because total_value/event_count are summable and re-summed at
+    read time. Intended to supersede the events_hourly_*_mv family; added additively so reads can be
+    shadow-validated and migrated before the older MVs are retired.
+
+    Sort key leads with customer_id (not hour) because the hot path always filters customer_id, so
+    it prunes straight to one customer's parts. Materializes ALL rows (api_key_id coalesced to ''
+    when absent) so it can also answer customer/entity/plan group-bys. properties is NOT in the
+    GROUP BY, so high-cardinality values (e.g. unique jobIds) never blow up row count — arbitrary
+    properties.* group-bys stay on the full-JSON fallback, not here.
+
+    BACKFILL skip: deploy creates this empty + attaches the forward materialization trigger only.
+    History is backfilled separately in bounded chunks via events_hourly_rollup_mv_backfill, so the
+    deploy never re-runs the unbounded GROUP BY over all events (which OOMs the workspace).
+
+SCHEMA >
+    `org_id` String,
+    `env` String,
+    `customer_id` String,
+    `entity_id` String DEFAULT '',
+    `event_name` String,
+    `internal_product_id` String DEFAULT '',
+    `api_key_id` String DEFAULT '',
+    `hour` DateTime,
+    `total_value` Float64,
+    `event_count` UInt64
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(hour)"
+ENGINE_SORTING_KEY "org_id, env, customer_id, entity_id, event_name, hour, api_key_id"
+
+BACKFILL skip

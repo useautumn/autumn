@@ -1,0 +1,31 @@
+DESCRIPTION >
+	List audit result rows for a migration run.
+
+
+NODE endpoint
+SQL >
+
+%
+    SELECT
+    						timestamp,
+    						org_id,
+    						env,
+    						migration_internal_id,
+    						migration_run_id,
+    						dry_run,
+    						item_kind,
+    						item_id,
+    						item_preview,
+    						status,
+    						response
+    					FROM migration_item_events
+    					WHERE org_id = {{String(org_id)}}
+    						AND env = {{String(env)}}
+    						AND migration_internal_id = {{String(migration_internal_id)}}
+    						{% if defined(migration_run_id) and String(migration_run_id, '') != '' %}
+    							AND migration_run_id = {{ String(migration_run_id, '', required=False) }}
+    						{% end %}
+    					ORDER BY timestamp DESC, item_kind ASC, item_id ASC
+    					LIMIT {{ Int32(limit, 1000, required=False) }}
+
+
