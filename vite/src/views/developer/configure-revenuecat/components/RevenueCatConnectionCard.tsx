@@ -21,6 +21,7 @@ interface RevenueCatConnectionCardProps {
 	onOAuthClick: () => void;
 	onMigrateClick: () => void;
 	onApiKeyClick: () => void;
+	onDisconnectClick: () => void;
 	onProjectIdClick: () => void;
 	onMapProductsClick: () => void;
 	onSyncClick: () => void;
@@ -40,6 +41,7 @@ export const RevenueCatConnectionCard = ({
 	onOAuthClick,
 	onMigrateClick,
 	onApiKeyClick,
+	onDisconnectClick,
 	onProjectIdClick,
 	onMapProductsClick,
 	onSyncClick,
@@ -50,8 +52,9 @@ export const RevenueCatConnectionCard = ({
 	const showOAuthConnect = connection !== "oauth" && !currentApiKey;
 	// API-key auth is legacy: surface it for orgs that already have a key.
 	const hasLegacyApiKey = connection !== "oauth" && !!currentApiKey;
-	// Admins can always connect via secret key (escape hatch), even on a fresh org.
-	const showApiKeyActions = isAdmin || hasLegacyApiKey;
+	// Admins can always connect via secret key (escape hatch) — but never for OAuth orgs,
+	// which disconnect instead.
+	const showApiKeyActions = (isAdmin || hasLegacyApiKey) && !oauthConnected;
 
 	return (
 		<Card className="shadow-none bg-interactive-secondary">
@@ -122,6 +125,11 @@ export const RevenueCatConnectionCard = ({
 					{showApiKeyActions && (
 						<Button variant="secondary" onClick={onApiKeyClick}>
 							{currentApiKey ? "Update API Key" : "Connect via API Key"}
+						</Button>
+					)}
+					{oauthConnected && (
+						<Button variant="destructive" onClick={onDisconnectClick}>
+							Disconnect
 						</Button>
 					)}
 					{/* Legacy api-key orgs can migrate to OAuth by signing in. */}

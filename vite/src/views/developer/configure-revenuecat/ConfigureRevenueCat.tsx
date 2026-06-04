@@ -11,14 +11,16 @@ import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import LoadingScreen from "@/views/general/LoadingScreen";
 import { ApiKeyDialog } from "./components/ApiKeyDialog";
 import { RevenueCatConnectionCard } from "./components/RevenueCatConnectionCard";
+import { RevenueCatDisconnectDialog } from "./components/RevenueCatDisconnectDialog";
 import { RevenueCatMappingSheet } from "./components/RevenueCatMappingSheet";
 import { RevenueCatProjectSheet } from "./components/RevenueCatProjectSheet";
 import { RevenueCatSyncSheet } from "./components/RevenueCatSyncSheet";
-import { RevenueCatWebhookSecret } from "./components/RevenueCatWebhookSecret";
-import { RevenueCatWebhookUrl } from "./components/RevenueCatWebhookUrl";
+import { RevenueCatWebhookCard } from "./components/RevenueCatWebhookCard";
 
 export const ConfigureRevenueCat = () => {
 	const [showApiKeyDialog, setShowApiKeyDialog] = useState(false);
+	const [showDisconnectDialog, setShowDisconnectDialog] = useState(false);
+	const [disconnecting, setDisconnecting] = useState(false);
 	const [showProjectSheet, setShowProjectSheet] = useState(false);
 	const [showMappingSheet, setShowMappingSheet] = useState(false);
 	const [showSyncSheet, setShowSyncSheet] = useState(false);
@@ -126,6 +128,20 @@ export const ConfigureRevenueCat = () => {
 		}
 	};
 
+	const handleDisconnect = async () => {
+		setDisconnecting(true);
+		try {
+			await axiosInstance.post("/v1/organization/revenuecat/disconnect");
+			await refetch();
+			setShowDisconnectDialog(false);
+			toast.success("RevenueCat disconnected");
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to disconnect RevenueCat"));
+		} finally {
+			setDisconnecting(false);
+		}
+	};
+
 	const handleUpdateProjectId = async () => {
 		if (!projectIdInput.trim()) return;
 
@@ -148,11 +164,6 @@ export const ConfigureRevenueCat = () => {
 			setConnecting(false);
 		}
 	};
-
-	const currentWebhookSecret =
-		env === "live"
-			? revenueCatConfig?.webhook_secret
-			: revenueCatConfig?.sandbox_webhook_secret;
 
 	const currentApiKey =
 		env === "live"
@@ -213,6 +224,7 @@ export const ConfigureRevenueCat = () => {
 					onOAuthClick={handleRedirectToOAuth}
 					onMigrateClick={handleMigrateToOAuth}
 					onApiKeyClick={handleApiKeyClick}
+					onDisconnectClick={() => setShowDisconnectDialog(true)}
 					onProjectIdClick={handleProjectIdClick}
 					onMapProductsClick={handleMapProductsClick}
 					onSyncClick={() => setShowSyncSheet(true)}
@@ -220,12 +232,7 @@ export const ConfigureRevenueCat = () => {
 					hasMappings={hasMappings}
 				/>
 
-				<RevenueCatWebhookSecret
-					env={env}
-					webhookSecret={currentWebhookSecret}
-				/>
-
-				<RevenueCatWebhookUrl env={env} orgId={org?.id} />
+				<RevenueCatWebhookCard />
 			</div>
 
 			<ApiKeyDialog
@@ -237,6 +244,14 @@ export const ConfigureRevenueCat = () => {
 				onApiKeyInputChange={setApiKeyInput}
 				onSave={handleUpdateApiKey}
 				isLoading={connecting}
+			/>
+
+			<RevenueCatDisconnectDialog
+				open={showDisconnectDialog}
+				onOpenChange={setShowDisconnectDialog}
+				env={env}
+				onConfirm={handleDisconnect}
+				isLoading={disconnecting}
 			/>
 
 			<RevenueCatProjectSheet
