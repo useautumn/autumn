@@ -39,19 +39,33 @@ export const callRcMcpTool = async ({
 		throw new Error(`RevenueCat MCP error (${response.status})`);
 	}
 
-	// Streamable-HTTP MCP replies as SSE: pull the JSON out of the `data:` line.
+	// Streamable-HTTP MCP replies as SSE and may emit preamble frames (ping,
+	// progress) before the result — pick the frame that carries result/error.
 	const text = await response.text();
-	const dataLine = text
+	const candidates = text
 		.split("\n")
 		.map((line) => line.trim())
-		.find((line) => line.startsWith("data:") || line.startsWith("{"));
-	const payload = dataLine?.replace(/^data:\s*/, "") ?? text.trim();
+		.filter((line) => line.startsWith("data:") || line.startsWith("{"))
+		.map((line) => line.replace(/^data:\s*/, ""));
 
-	let parsed: JsonRpcResult;
-	try {
-		parsed = JSON.parse(payload) as JsonRpcResult;
-	} catch {
-		throw new Error(`RevenueCat MCP returned unparseable response: ${payload.slice(0, 200)}`);
+	let parsed: JsonRpcResult | undefined;
+	for (const candidate of candidates) {
+		let frame: JsonRpcResult;
+		try {
+			frame = JSON.parse(candidate) as JsonRpcResult;
+		} catch {
+			continue;
+		}
+		if (frame.result !== undefined || frame.error !== undefined) {
+			parsed = frame;
+			break;
+		}
+	}
+
+	if (!parsed) {
+		throw new Error(
+			`RevenueCat MCP returned no result frame: ${text.slice(0, 200)}`,
+		);
 	}
 
 	if (parsed.error) {
