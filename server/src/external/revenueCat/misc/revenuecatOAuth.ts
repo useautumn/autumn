@@ -65,7 +65,7 @@ export const getRcOAuthRedirectUri = () => {
 		serverUrl = process.env.NGROK_URL;
 	}
 
-	return `${serverUrl}/revenuecat/oauth_callback`;
+	return `${(serverUrl ?? "").replace(/\/+$/, "")}/revenuecat/oauth_callback`;
 };
 
 export const createRcAuthorizationUrl = ({
