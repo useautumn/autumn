@@ -1,31 +1,109 @@
-import { apiKeys } from "@autumn/shared";
-import { eq, or, sql } from "drizzle-orm";
+import { type AppEnv, apiKeys } from "@autumn/shared";
+import { eq, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
-import { hashApiKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { clearSecretKeyCache } from "@/internal/dev/api-keys/cacheApiKeyUtils.js";
 
-export const deleteOAuthLinkedApiKey = async ({
+type OAuthApiKeyRecord = {
+	id: string;
+	orgId: string | null;
+	userId: string | null;
+	env: string | null;
+	hashedKey: string | null;
+	meta: unknown;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+	typeof value === "object" && value !== null && !Array.isArray(value);
+
+export const isOAuthConsentLinkedApiKey = ({
+	apiKey,
+	consentId,
+	clientId,
+	redirectUri,
+	orgId,
+	userId,
+	env,
+}: {
+	apiKey: OAuthApiKeyRecord;
+	consentId: string;
+	clientId: string;
+	redirectUri: string | null;
+	orgId: string;
+	userId: string;
+	env: AppEnv;
+}) => {
+	if (
+		apiKey.orgId !== orgId ||
+		apiKey.userId !== userId ||
+		apiKey.env !== env ||
+		!isRecord(apiKey.meta)
+	) {
+		return false;
+	}
+
+	return (
+		apiKey.meta.created_via === "oauth" &&
+		apiKey.meta.oauth_consent_id === consentId &&
+		apiKey.meta.oauth_client_id === clientId &&
+		apiKey.meta.oauth_redirect_uri === redirectUri &&
+		apiKey.meta.env === env
+	);
+};
+
+export const deleteOAuthConsentLinkedApiKey = async ({
 	db,
 	apiKeyId,
-	apiKey,
+	consentId,
+	clientId,
+	redirectUri,
+	orgId,
+	userId,
+	env,
 }: {
 	db: DrizzleCli;
-	apiKeyId: string | null;
-	apiKey: string | null;
+	apiKeyId: string;
+	consentId: string;
+	clientId: string;
+	redirectUri: string | null;
+	orgId: string;
+	userId: string;
+	env: AppEnv;
 }) => {
-	const hashedKey = apiKey ? hashApiKey(apiKey) : null;
-	const conditions = [
-		apiKeyId ? eq(apiKeys.id, apiKeyId) : null,
-		hashedKey ? eq(apiKeys.hashed_key, hashedKey) : null,
-	].filter((condition) => condition !== null);
+	const [apiKey] = await db
+		.select({
+			id: apiKeys.id,
+			orgId: apiKeys.org_id,
+			userId: apiKeys.user_id,
+			env: apiKeys.env,
+			hashedKey: apiKeys.hashed_key,
+			meta: apiKeys.meta,
+		})
+		.from(apiKeys)
+		.where(eq(apiKeys.id, apiKeyId))
+		.limit(1);
 
-	if (conditions.length > 0) {
-		await db.delete(apiKeys).where(or(...conditions));
+	if (!apiKey) return { deleted: false, reason: "not_found" as const };
+
+	if (
+		!isOAuthConsentLinkedApiKey({
+			apiKey,
+			consentId,
+			clientId,
+			redirectUri,
+			orgId,
+			userId,
+			env,
+		})
+	) {
+		return { deleted: false, reason: "guard_failed" as const };
 	}
 
-	if (hashedKey) {
-		await clearSecretKeyCache({ hashedKey });
-	}
+	await db.delete(apiKeys).where(eq(apiKeys.id, apiKeyId));
+
+	if (apiKey.hashedKey)
+		await clearSecretKeyCache({ hashedKey: apiKey.hashedKey });
+
+	return { deleted: true, reason: null };
 };
 
 export const listOAuthApiKeysByConsentId = async ({
@@ -54,34 +132,6 @@ export const deleteOAuthApiKeyById = async ({
 	apiKeyId: string;
 }) => db.delete(apiKeys).where(eq(apiKeys.id, apiKeyId));
 
-export const updateOAuthLinkedApiKeyScopes = async ({
-	db,
-	apiKeyId,
-	apiKey,
-	scopes,
-	name,
-}: {
-	db: DrizzleCli;
-	apiKeyId: string | null;
-	apiKey: string;
-	scopes: string[];
-	name: string;
-}) => {
-	const hashedKey = hashApiKey(apiKey);
-	const conditions = [
-		apiKeyId ? eq(apiKeys.id, apiKeyId) : null,
-		eq(apiKeys.hashed_key, hashedKey),
-	].filter((condition) => condition !== null);
-
-	const [updatedKey] = await db
-		.update(apiKeys)
-		.set({ name, scopes })
-		.where(or(...conditions))
-		.returning({ id: apiKeys.id });
-
-	return updatedKey?.id ?? null;
-};
-
 export const getApiKeyIdByHashedKey = async ({
 	db,
 	hashedKey,
@@ -101,7 +151,6 @@ export const getApiKeyIdByHashedKey = async ({
 export const oauthApiKeyRepo = {
 	listByConsentId: listOAuthApiKeysByConsentId,
 	deleteById: deleteOAuthApiKeyById,
-	deleteLinked: deleteOAuthLinkedApiKey,
-	updateLinkedScopes: updateOAuthLinkedApiKeyScopes,
+	deleteConsentLinked: deleteOAuthConsentLinkedApiKey,
 	getIdByHashedKey: getApiKeyIdByHashedKey,
 };

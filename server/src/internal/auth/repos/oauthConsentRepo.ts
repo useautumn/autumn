@@ -6,7 +6,6 @@ export type OAuthConsentApiKeyRecord = {
 	id: string;
 	env: AppEnv | null;
 	oauthApiKeyId: string | null;
-	oauthApiKey: string | null;
 	redirectUri: string | null;
 };
 
@@ -92,7 +91,6 @@ export const getOAuthConsentForClientUserOrg = async ({
 			id: oauthConsent.id,
 			env: oauthConsent.env,
 			oauthApiKeyId: oauthConsent.oauthApiKeyId,
-			oauthApiKey: oauthConsent.oauthApiKey,
 			redirectUri: oauthConsent.redirectUri,
 		})
 		.from(oauthConsent)
@@ -113,36 +111,19 @@ export const updateOAuthConsentApiKey = async ({
 	consentId,
 	env,
 	oauthApiKeyId,
-	oauthApiKey,
 }: {
 	db: DrizzleCli;
 	consentId: string;
 	env: AppEnv;
 	oauthApiKeyId: string | null;
-	oauthApiKey: string;
 }) =>
 	db
 		.update(oauthConsent)
 		.set({
 			env,
 			oauthApiKeyId,
-			oauthApiKey,
 			updatedAt: new Date(),
 		})
-		.where(eq(oauthConsent.id, consentId));
-
-export const updateOAuthConsentApiKeyId = async ({
-	db,
-	consentId,
-	oauthApiKeyId,
-}: {
-	db: DrizzleCli;
-	consentId: string;
-	oauthApiKeyId: string;
-}) =>
-	db
-		.update(oauthConsent)
-		.set({ oauthApiKeyId, updatedAt: new Date() })
 		.where(eq(oauthConsent.id, consentId));
 
 export const deleteOAuthConsentById = async ({
@@ -159,6 +140,5 @@ export const oauthConsentRepo = {
 	updateEnv: updateOAuthConsentEnv,
 	getForClientUserOrg: getOAuthConsentForClientUserOrg,
 	updateApiKey: updateOAuthConsentApiKey,
-	updateApiKeyId: updateOAuthConsentApiKeyId,
 	deleteById: deleteOAuthConsentById,
 };

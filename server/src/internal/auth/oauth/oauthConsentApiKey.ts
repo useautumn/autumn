@@ -6,7 +6,6 @@ import {
 	hashApiKey,
 } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import type { ResourceAccessTokenRecord } from "@/internal/dev/cli/oauthApiKeyUtils.js";
-import { decryptData, encryptData } from "@/utils/encryptUtils.js";
 import {
 	type OAuthConsentApiKeyRecord,
 	oauthApiKeyRepo,
@@ -14,9 +13,9 @@ import {
 	oauthConsentRepo,
 } from "../repos/index.js";
 
-const isKeyForEnv = (apiKey: string, env: AppEnv) => {
-	const prefix = env === AppEnv.Live ? ApiKeyPrefix.Live : ApiKeyPrefix.Sandbox;
-	return apiKey.startsWith(`${prefix}_`);
+type OAuthApiKeyTokenRecord = ResourceAccessTokenRecord & {
+	userId: string;
+	referenceId: string;
 };
 
 const getOAuthClientApiKeyName = async ({
@@ -40,7 +39,7 @@ const createConsentApiKey = async ({
 }: {
 	db: DrizzleCli;
 	consent: OAuthConsentApiKeyRecord;
-	tokenRecord: ResourceAccessTokenRecord;
+	tokenRecord: OAuthApiKeyTokenRecord;
 	env: AppEnv;
 	scopes: ScopeString[];
 }) => {
@@ -53,7 +52,7 @@ const createConsentApiKey = async ({
 		db,
 		env,
 		name: keyName,
-		orgId: tokenRecord.referenceId!,
+		orgId: tokenRecord.referenceId,
 		userId: tokenRecord.userId ?? undefined,
 		prefix,
 		meta: {
@@ -69,18 +68,21 @@ const createConsentApiKey = async ({
 
 	const hashedKey = hashApiKey(apiKey);
 	const apiKeyId = await oauthApiKeyRepo.getIdByHashedKey({ db, hashedKey });
+	if (!apiKeyId) {
+		throw new Error("OAuth API key was not persisted");
+	}
+
 	await oauthConsentRepo.updateApiKey({
 		db,
 		consentId: consent.id,
 		env,
 		oauthApiKeyId: apiKeyId,
-		oauthApiKey: encryptData(apiKey),
 	});
 
-	return apiKey;
+	return { apiKey, apiKeyId };
 };
 
-export const getOrCreateOAuthConsentApiKey = async ({
+export const rotateOAuthConsentApiKey = async ({
 	db,
 	consent,
 	tokenRecord,
@@ -89,48 +91,31 @@ export const getOrCreateOAuthConsentApiKey = async ({
 }: {
 	db: DrizzleCli;
 	consent: OAuthConsentApiKeyRecord;
-	tokenRecord: ResourceAccessTokenRecord;
+	tokenRecord: OAuthApiKeyTokenRecord;
 	env: AppEnv;
 	scopes: ScopeString[];
 }) => {
-	let existingApiKey: string | null = null;
-
-	if (consent.oauthApiKey) {
-		try {
-			existingApiKey = decryptData(consent.oauthApiKey);
-		} catch {
-			existingApiKey = null;
-		}
-	}
-
-	if (existingApiKey && isKeyForEnv(existingApiKey, env)) {
-		const keyName = await getOAuthClientApiKeyName({
-			db,
-			clientId: tokenRecord.clientId,
-		});
-		const apiKeyId = await oauthApiKeyRepo.updateLinkedScopes({
-			db,
-			apiKeyId: consent.oauthApiKeyId,
-			apiKey: existingApiKey,
-			scopes,
-			name: keyName,
-		});
-
-		if (apiKeyId) {
-			await oauthConsentRepo.updateApiKeyId({
-				db,
-				consentId: consent.id,
-				oauthApiKeyId: apiKeyId,
-			});
-			return existingApiKey;
-		}
-	}
-
-	await oauthApiKeyRepo.deleteLinked({
+	const previousApiKeyId = consent.oauthApiKeyId;
+	const { apiKey, apiKeyId } = await createConsentApiKey({
 		db,
-		apiKeyId: consent.oauthApiKeyId,
-		apiKey: existingApiKey,
+		consent,
+		tokenRecord,
+		env,
+		scopes,
 	});
 
-	return createConsentApiKey({ db, consent, tokenRecord, env, scopes });
+	if (previousApiKeyId && previousApiKeyId !== apiKeyId) {
+		await oauthApiKeyRepo.deleteConsentLinked({
+			db,
+			apiKeyId: previousApiKeyId,
+			consentId: consent.id,
+			clientId: tokenRecord.clientId,
+			redirectUri: consent.redirectUri,
+			orgId: tokenRecord.referenceId,
+			userId: tokenRecord.userId,
+			env,
+		});
+	}
+
+	return apiKey;
 };

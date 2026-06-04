@@ -15,7 +15,7 @@ import {
 import { hashOAuthToken } from "@/utils/oauthUtils.js";
 import { oauthAccessTokenRepo, oauthConsentRepo } from "../repos/index.js";
 import { isAtmnOAuthClientId } from "./atmnOAuthClients.js";
-import { getOrCreateOAuthConsentApiKey } from "./oauthConsentApiKey.js";
+import { rotateOAuthConsentApiKey } from "./oauthConsentApiKey.js";
 
 const getOAuthIssuer = () =>
 	`${process.env.BETTER_AUTH_URL?.replace(/\/$/, "") ?? ""}/api/auth`;
@@ -150,7 +150,7 @@ export const getExternalOAuthApiKeyForToken = async ({
 
 	const env = consent.env ?? AppEnv.Sandbox;
 	const scopes = requestedScopes ?? (tokenRecord.scopes as ScopeString[]);
-	const apiKey = await getOrCreateOAuthConsentApiKey({
+	const apiKey = await rotateOAuthConsentApiKey({
 		db,
 		consent,
 		tokenRecord,
