@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
+	applyProration,
 	type CreateScheduleParamsV0Input,
 	CusProductStatus,
 	customerProducts,
@@ -15,11 +16,132 @@ import { products } from "@tests/utils/fixtures/products";
 import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { Decimal } from "decimal.js";
 import { eq, inArray } from "drizzle-orm";
+import type Stripe from "stripe";
 import {
 	getCustomerProductRows,
 	getRequiredScheduleId,
 } from "../utils/createScheduleTestHelpers";
+
+const latestStripeInvoice = async ({
+	ctx,
+	customer,
+}: {
+	ctx: Awaited<ReturnType<typeof initScenario>>["ctx"];
+	customer: ApiCustomerV3;
+}) => {
+	const stripeId = customer.invoices?.[0]?.stripe_id;
+	if (!stripeId) throw new Error("Expected latest invoice to have stripe_id");
+
+	return await ctx.stripeCli.invoices.retrieve(stripeId, {
+		expand: ["lines.data.price"],
+	});
+};
+
+const pendingStripeInvoiceItems = async ({
+	ctx,
+	customer,
+}: {
+	ctx: Awaited<ReturnType<typeof initScenario>>["ctx"];
+	customer: ApiCustomerV3;
+}) => {
+	if (!customer.stripe_id)
+		throw new Error("Expected customer to have stripe_id");
+
+	return await ctx.stripeCli.invoiceItems.list({
+		customer: customer.stripe_id,
+		pending: true,
+		limit: 100,
+	});
+};
+
+const stripeInvoicesForCustomer = async ({
+	ctx,
+	customer,
+}: {
+	ctx: Awaited<ReturnType<typeof initScenario>>["ctx"];
+	customer: ApiCustomerV3;
+}) => {
+	if (!customer.stripe_id)
+		throw new Error("Expected customer to have stripe_id");
+
+	const invoices = await ctx.stripeCli.invoices.list({
+		customer: customer.stripe_id,
+		limit: 100,
+	});
+
+	return await Promise.all(
+		invoices.data.map((invoice) =>
+			ctx.stripeCli.invoices.retrieve(invoice.id!, {
+				expand: ["lines.data.price"],
+			}),
+		),
+	);
+};
+
+const lineAmountDollars = (line: Stripe.InvoiceLineItem) =>
+	new Decimal(line.amount).div(100);
+
+const invoiceLineTotal = (invoice: Stripe.Invoice) =>
+	invoice.lines.data.reduce(
+		(total, line) => total.plus(lineAmountDollars(line)),
+		new Decimal(0),
+	);
+
+const initialMonthlyPeriod = (invoice: Stripe.Invoice) => {
+	const monthlyLine = invoice.lines.data.find((line) => line.amount > 0);
+	if (!monthlyLine) throw new Error("Expected a positive monthly invoice line");
+
+	return {
+		start: monthlyLine.period.start * 1000,
+		end: monthlyLine.period.end * 1000,
+	};
+};
+
+const expectedMonthlyProrationDiff = ({
+	oldAmount,
+	newAmount,
+	transitionAt,
+	billingPeriod,
+}: {
+	oldAmount: number;
+	newAmount: number;
+	transitionAt: number;
+	billingPeriod: { start: number; end: number };
+}) =>
+	new Decimal(
+		applyProration({
+			now: transitionAt,
+			billingPeriod,
+			amount: newAmount,
+		}),
+	)
+		.minus(
+			applyProration({
+				now: transitionAt,
+				billingPeriod,
+				amount: oldAmount,
+			}),
+		)
+		.toDecimalPlaces(2)
+		.toNumber();
+
+const expectStripeInvoiceWithTotal = ({
+	invoices,
+	total,
+}: {
+	invoices: Stripe.Invoice[];
+	total: number;
+}) => {
+	const invoice = invoices.find((candidate) => {
+		const candidateTotal = new Decimal(candidate.total).div(100);
+		return candidateTotal.minus(total).abs().lte(0.01);
+	});
+
+	expect(invoice, `Expected Stripe invoice total $${total}`).toBeDefined();
+	return invoice!;
+};
 
 test.concurrent(
 	`${chalk.yellowBright("create-schedule: bills the first phase immediately and stores later phases as scheduled")}`,
@@ -400,6 +522,123 @@ test.concurrent(
 			customer,
 			active: [nextAddon.id, nextBase.id],
 			notPresent: [nowAddon.id, nowBase.id],
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("create-schedule: phase transition invoices monthly upgrade proration immediately")}`,
+	async () => {
+		const pro = products.pro({
+			id: "create-schedule-transition-invoice-pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const premium = products.premium({
+			id: "create-schedule-transition-invoice-premium",
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+
+		const { customerId, autumnV1, ctx, testClockId, advancedTo } =
+			await initScenario({
+				customerId: "create-schedule-transition-invoice",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [pro, premium] }),
+				],
+				actions: [],
+			});
+
+		const now = advancedTo;
+		const transitionAt = now + ms.days(15);
+		await autumnV1.billing.createSchedule({
+			customer_id: customerId,
+			phases: [
+				{
+					starts_at: now,
+					plans: [{ plan_id: pro.id }],
+				},
+				{
+					starts_at: transitionAt,
+					plans: [{ plan_id: premium.id }],
+				},
+			],
+		});
+
+		const initialCustomer =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerInvoiceCorrect({
+			customer: initialCustomer,
+			count: 1,
+			latestTotal: 20,
+		});
+
+		const initialInvoice = await latestStripeInvoice({
+			ctx,
+			customer: initialCustomer,
+		});
+		const billingPeriod = initialMonthlyPeriod(initialInvoice);
+		const expectedProration = expectedMonthlyProrationDiff({
+			oldAmount: 20,
+			newAmount: 50,
+			transitionAt,
+			billingPeriod,
+		});
+
+		await advanceTestClock({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+			advanceTo: transitionAt,
+			waitForSeconds: 30,
+		});
+
+		const customerAfterTransition =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerProducts({
+			customer: customerAfterTransition,
+			active: [premium.id],
+			notPresent: [pro.id],
+		});
+		await expectCustomerInvoiceCorrect({
+			customer: customerAfterTransition,
+			count: 2,
+			latestTotal: expectedProration,
+		});
+		const stripeInvoices = await stripeInvoicesForCustomer({
+			ctx,
+			customer: customerAfterTransition,
+		});
+		const transitionInvoice = expectStripeInvoiceWithTotal({
+			invoices: stripeInvoices,
+			total: expectedProration,
+		});
+		expect(
+			invoiceLineTotal(transitionInvoice).toDecimalPlaces(2).toNumber(),
+		).toBe(expectedProration);
+
+		const pendingItems = await pendingStripeInvoiceItems({
+			ctx,
+			customer: customerAfterTransition,
+		});
+		expect(pendingItems.data).toHaveLength(0);
+
+		await advanceTestClock({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+			advanceTo: billingPeriod.end,
+			waitForSeconds: 30,
+		});
+
+		const customerAfterRenewal =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerProducts({
+			customer: customerAfterRenewal,
+			active: [premium.id],
+			notPresent: [pro.id],
+		});
+		await expectCustomerInvoiceCorrect({
+			customer: customerAfterRenewal,
+			count: 3,
+			latestTotal: 50,
 		});
 	},
 );
