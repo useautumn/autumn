@@ -71,6 +71,7 @@ export type ListRawEventsParams = {
 	customer?: FullCustomer;
 	aggregateAll?: boolean;
 	event_name?: string;
+	event_names?: string[];
 	limit?: number;
 };
 
@@ -114,6 +115,16 @@ export const listRawEvents = async ({
 			? billingCycleResult.endDate
 			: formatJsDateToClickHouseDateTime(new Date());
 
+	const eventNameFilter = (() => {
+		if (params.event_names && params.event_names.length > 0) {
+			return params.event_names;
+		}
+		if (params.event_name) {
+			return [params.event_name];
+		}
+		return undefined;
+	})();
+
 	const pipeParams = {
 		org_id: org.id,
 		env,
@@ -121,7 +132,7 @@ export const listRawEvents = async ({
 		end_date: finalEndDate,
 		customer_id: params.aggregateAll ? undefined : params.customer_id,
 		entity_id: params.entity_id,
-		event_names: params.event_name ? [params.event_name] : undefined,
+		event_names: eventNameFilter,
 		limit: params.limit ?? DEFAULT_LIMIT,
 		offset: 0,
 	};

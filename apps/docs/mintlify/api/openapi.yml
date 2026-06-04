@@ -482,6 +482,13 @@ components:
               quantity:
                 type: number
                 description: Number of units of this subscription (for per-seat plans).
+              scope:
+                enum:
+                  - customer
+                  - entity
+                type: string
+                description: Whether this subscription is attached at the customer level or
+                  entity level.
             required:
               - id
               - plan_id
@@ -519,6 +526,13 @@ components:
               quantity:
                 type: number
                 description: Number of units purchased.
+              scope:
+                enum:
+                  - customer
+                  - entity
+                type: string
+                description: Whether this purchase is attached at the customer level or entity
+                  level.
             required:
               - plan_id
               - expires_at
@@ -2234,6 +2248,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units of this subscription (for per-seat plans).
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this subscription is attached at the customer level or
+                            entity level.
                       required:
                         - id
                         - plan_id
@@ -2272,6 +2293,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units purchased.
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this purchase is attached at the customer level or entity
+                            level.
                       required:
                         - plan_id
                         - expires_at
@@ -3114,6 +3142,13 @@ paths:
                               quantity:
                                 type: number
                                 description: Number of units of this subscription (for per-seat plans).
+                              scope:
+                                enum:
+                                  - customer
+                                  - entity
+                                type: string
+                                description: Whether this subscription is attached at the customer level or
+                                  entity level.
                             required:
                               - id
                               - plan_id
@@ -3152,6 +3187,13 @@ paths:
                               quantity:
                                 type: number
                                 description: Number of units purchased.
+                              scope:
+                                enum:
+                                  - customer
+                                  - entity
+                                type: string
+                                description: Whether this purchase is attached at the customer level or entity
+                                  level.
                             required:
                               - plan_id
                               - expires_at
@@ -3972,6 +4014,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units of this subscription (for per-seat plans).
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this subscription is attached at the customer level or
+                            entity level.
                       required:
                         - id
                         - plan_id
@@ -4010,6 +4059,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units purchased.
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this purchase is attached at the customer level or entity
+                            level.
                       required:
                         - plan_id
                         - expires_at
@@ -8313,6 +8369,17 @@ paths:
                       default: true
                       description: If true, finalizes the invoice so it can be sent to the customer.
                         If false, keeps it as a draft for manual review.
+                    invoice_template_id:
+                      type: string
+                      description: ID of an invoice template (configured in billing settings) whose
+                        footer (e.g. bank details) is applied to the invoice.
+                    net_terms_days:
+                      type: integer
+                      minimum: -9007199254740991
+                      maximum: 9007199254740991
+                      exclusiveMinimum: 0
+                      description: Number of days the customer has to pay the invoice before it is due
+                        (Stripe days_until_due).
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the
@@ -8628,10 +8695,37 @@ paths:
                       default: true
                       description: If true, finalizes the invoice so it can be sent to the customer.
                         If false, keeps it as a draft for manual review.
+                    invoice_template_id:
+                      type: string
+                      description: ID of an invoice template (configured in billing settings) whose
+                        footer (e.g. bank details) is applied to the invoice.
+                    net_terms_days:
+                      type: integer
+                      minimum: -9007199254740991
+                      maximum: 9007199254740991
+                      exclusiveMinimum: 0
+                      description: Number of days the customer has to pay the invoice before it is due
+                        (Stripe days_until_due).
                   required:
                     - enabled
                   description: Invoice mode creates and sends an invoice instead of charging the
                     customer's payment method immediately for the first phase.
+                discounts:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      reward_id:
+                        type: string
+                        description: The ID of the reward to apply as a discount.
+                      promotion_code:
+                        type: string
+                        description: The promotion code to apply as a discount.
+                    title: AttachDiscount
+                    description: A discount to apply. Can be either a reward ID or a promotion code.
+                  description: List of discounts to apply to the immediate phase. Each discount
+                    can be an Autumn reward ID, Stripe coupon ID, or Stripe
+                    promotion code.
                 success_url:
                   type: string
                   description: URL to redirect to after successful checkout.
@@ -9654,6 +9748,17 @@ paths:
                       default: true
                       description: If true, finalizes the invoice so it can be sent to the customer.
                         If false, keeps it as a draft for manual review.
+                    invoice_template_id:
+                      type: string
+                      description: ID of an invoice template (configured in billing settings) whose
+                        footer (e.g. bank details) is applied to the invoice.
+                    net_terms_days:
+                      type: integer
+                      minimum: -9007199254740991
+                      maximum: 9007199254740991
+                      exclusiveMinimum: 0
+                      description: Number of days the customer has to pay the invoice before it is due
+                        (Stripe days_until_due).
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the
@@ -10420,6 +10525,17 @@ paths:
                       default: true
                       description: If true, finalizes the invoice so it can be sent to the customer.
                         If false, keeps it as a draft for manual review.
+                    invoice_template_id:
+                      type: string
+                      description: ID of an invoice template (configured in billing settings) whose
+                        footer (e.g. bank details) is applied to the invoice.
+                    net_terms_days:
+                      type: integer
+                      minimum: -9007199254740991
+                      maximum: 9007199254740991
+                      exclusiveMinimum: 0
+                      description: Number of days the customer has to pay the invoice before it is due
+                        (Stripe days_until_due).
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the
@@ -11327,6 +11443,17 @@ paths:
                       default: true
                       description: If true, finalizes the invoice so it can be sent to the customer.
                         If false, keeps it as a draft for manual review.
+                    invoice_template_id:
+                      type: string
+                      description: ID of an invoice template (configured in billing settings) whose
+                        footer (e.g. bank details) is applied to the invoice.
+                    net_terms_days:
+                      type: integer
+                      minimum: -9007199254740991
+                      maximum: 9007199254740991
+                      exclusiveMinimum: 0
+                      description: Number of days the customer has to pay the invoice before it is due
+                        (Stripe days_until_due).
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the
@@ -12418,6 +12545,17 @@ paths:
                       default: true
                       description: If true, finalizes the invoice so it can be sent to the customer.
                         If false, keeps it as a draft for manual review.
+                    invoice_template_id:
+                      type: string
+                      description: ID of an invoice template (configured in billing settings) whose
+                        footer (e.g. bank details) is applied to the invoice.
+                    net_terms_days:
+                      type: integer
+                      minimum: -9007199254740991
+                      maximum: 9007199254740991
+                      exclusiveMinimum: 0
+                      description: Number of days the customer has to pay the invoice before it is due
+                        (Stripe days_until_due).
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the
@@ -13104,6 +13242,17 @@ paths:
                       default: true
                       description: If true, finalizes the invoice so it can be sent to the customer.
                         If false, keeps it as a draft for manual review.
+                    invoice_template_id:
+                      type: string
+                      description: ID of an invoice template (configured in billing settings) whose
+                        footer (e.g. bank details) is applied to the invoice.
+                    net_terms_days:
+                      type: integer
+                      minimum: -9007199254740991
+                      maximum: 9007199254740991
+                      exclusiveMinimum: 0
+                      description: Number of days the customer has to pay the invoice before it is due
+                        (Stripe days_until_due).
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the
@@ -17247,6 +17396,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units of this subscription (for per-seat plans).
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this subscription is attached at the customer level or
+                            entity level.
                       required:
                         - id
                         - plan_id
@@ -17283,6 +17439,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units purchased.
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this purchase is attached at the customer level or entity
+                            level.
                       required:
                         - plan_id
                         - expires_at
@@ -17737,6 +17900,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units of this subscription (for per-seat plans).
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this subscription is attached at the customer level or
+                            entity level.
                       required:
                         - id
                         - plan_id
@@ -17773,6 +17943,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units purchased.
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this purchase is attached at the customer level or entity
+                            level.
                       required:
                         - plan_id
                         - expires_at
@@ -18272,6 +18449,13 @@ paths:
                               quantity:
                                 type: number
                                 description: Number of units of this subscription (for per-seat plans).
+                              scope:
+                                enum:
+                                  - customer
+                                  - entity
+                                type: string
+                                description: Whether this subscription is attached at the customer level or
+                                  entity level.
                             required:
                               - id
                               - plan_id
@@ -18308,6 +18492,13 @@ paths:
                               quantity:
                                 type: number
                                 description: Number of units purchased.
+                              scope:
+                                enum:
+                                  - customer
+                                  - entity
+                                type: string
+                                description: Whether this purchase is attached at the customer level or entity
+                                  level.
                             required:
                               - plan_id
                               - expires_at
@@ -18843,6 +19034,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units of this subscription (for per-seat plans).
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this subscription is attached at the customer level or
+                            entity level.
                       required:
                         - id
                         - plan_id
@@ -18879,6 +19077,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units purchased.
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this purchase is attached at the customer level or entity
+                            level.
                       required:
                         - plan_id
                         - expires_at

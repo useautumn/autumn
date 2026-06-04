@@ -36,13 +36,17 @@ export const handleStripeInvoiceCreated = async ({
 	await processPrepaidPricesForInvoiceCreated({ ctx, eventContext });
 	await processAllocatedPricesForInvoiceCreated({ ctx, eventContext });
 
+	const shouldStoreScheduleProrationInvoice =
+		eventContext.stripeInvoice.billing_reason === "subscription_update" &&
+		!!eventContext.stripeSubscription.schedule;
+
 	// Upsert Autumn invoice record
 	const autumnInvoice = await upsertAutumnInvoice({
 		ctx,
 		stripeInvoice: eventContext.stripeInvoice,
 		stripeSubscription: eventContext.stripeSubscription,
 		customerProducts: eventContext.customerProducts,
-		options: { skipNonCycleInvoices: true },
+		options: { skipNonCycleInvoices: !shouldStoreScheduleProrationInvoice },
 	});
 
 	// Store invoice line items (async via SQS workflow)

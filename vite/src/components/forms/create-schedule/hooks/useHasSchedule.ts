@@ -1,6 +1,14 @@
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 
-export function useHasSchedule() {
+export function useHasSchedule({
+	entityId,
+}: { entityId?: string | null } = {}) {
 	const { schedule, customer } = useCusQuery({ schedule: true });
-	return !!schedule || !!customer?.entities?.some((entity) => entity.schedule);
+	if (entityId) {
+		const entity = customer?.entities?.find(
+			(e) => e.id === entityId || e.internal_id === entityId,
+		);
+		return !!entity?.schedule;
+	}
+	return !!schedule;
 }

@@ -173,6 +173,16 @@ ListEntitiesStatus = Union[
 r"""Current status of the subscription."""
 
 
+ListEntitiesSubscriptionScope = Union[
+    Literal[
+        "customer",
+        "entity",
+    ],
+    UnrecognizedStr,
+]
+r"""Whether this subscription is attached at the customer level or entity level."""
+
+
 class ListEntitiesSubscriptionTypedDict(TypedDict):
     id: str
     r"""The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID."""
@@ -201,6 +211,8 @@ class ListEntitiesSubscriptionTypedDict(TypedDict):
     quantity: float
     r"""Number of units of this subscription (for per-seat plans)."""
     plan: NotRequired[PlanTypedDict]
+    scope: NotRequired[ListEntitiesSubscriptionScope]
+    r"""Whether this subscription is attached at the customer level or entity level."""
 
 
 class ListEntitiesSubscription(BaseModel):
@@ -245,9 +257,12 @@ class ListEntitiesSubscription(BaseModel):
 
     plan: Optional[Plan] = None
 
+    scope: Optional[ListEntitiesSubscriptionScope] = None
+    r"""Whether this subscription is attached at the customer level or entity level."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["plan"])
+        optional_fields = set(["plan", "scope"])
         nullable_fields = set(
             [
                 "canceled_at",
@@ -279,6 +294,16 @@ class ListEntitiesSubscription(BaseModel):
         return m
 
 
+ListEntitiesPurchaseScope = Union[
+    Literal[
+        "customer",
+        "entity",
+    ],
+    UnrecognizedStr,
+]
+r"""Whether this purchase is attached at the customer level or entity level."""
+
+
 class ListEntitiesPurchaseTypedDict(TypedDict):
     plan_id: str
     r"""The unique identifier of the purchased plan."""
@@ -289,6 +314,8 @@ class ListEntitiesPurchaseTypedDict(TypedDict):
     quantity: float
     r"""Number of units purchased."""
     plan: NotRequired[PlanTypedDict]
+    scope: NotRequired[ListEntitiesPurchaseScope]
+    r"""Whether this purchase is attached at the customer level or entity level."""
 
 
 class ListEntitiesPurchase(BaseModel):
@@ -306,9 +333,12 @@ class ListEntitiesPurchase(BaseModel):
 
     plan: Optional[Plan] = None
 
+    scope: Optional[ListEntitiesPurchaseScope] = None
+    r"""Whether this purchase is attached at the customer level or entity level."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["plan"])
+        optional_fields = set(["plan", "scope"])
         nullable_fields = set(["expires_at"])
         serialized = handler(self)
         m = {}

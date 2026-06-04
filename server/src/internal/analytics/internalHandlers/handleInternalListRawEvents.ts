@@ -13,6 +13,7 @@ const InternalListRawEventsSchema = z.object({
 			message: "custom_range.start must be before custom_range.end",
 		})
 		.optional(),
+	event_names: z.array(z.string()).optional(),
 	customer_id: z.string().nullish(),
 	entity_id: z.string().optional(),
 });
@@ -26,7 +27,7 @@ export const handleInternalListRawEvents = createRoute({
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { db, org, env } = ctx;
-		const { interval, custom_range, customer_id, entity_id } =
+		const { interval, custom_range, event_names, customer_id, entity_id } =
 			c.req.valid("json");
 
 		let aggregateAll = false;
@@ -60,6 +61,7 @@ export const handleInternalListRawEvents = createRoute({
 				entity_id: entity_id,
 				interval: interval ?? undefined,
 				custom_range: custom_range ?? undefined,
+				event_names: event_names?.filter((name) => name !== ""),
 				customer,
 				aggregateAll,
 			},
