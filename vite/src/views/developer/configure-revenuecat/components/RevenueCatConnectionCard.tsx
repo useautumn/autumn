@@ -26,6 +26,7 @@ interface RevenueCatConnectionCardProps {
 	onMapProductsClick: () => void;
 	onSyncClick: () => void;
 	currentProjectId?: string;
+	currentProjectName?: string;
 	hasMappings?: boolean;
 }
 
@@ -46,6 +47,7 @@ export const RevenueCatConnectionCard = ({
 	onMapProductsClick,
 	onSyncClick,
 	currentProjectId,
+	currentProjectName,
 	hasMappings,
 }: RevenueCatConnectionCardProps) => {
 	// Don't offer OAuth to legacy API-key orgs — they can't run both flows.
@@ -109,7 +111,8 @@ export const RevenueCatConnectionCard = ({
 				{currentProjectId && (
 					<div className="mb-2">
 						<FormLabel className="mb-0 text-body">
-							Current project ID:{" "}
+							Current project:{" "}
+							{currentProjectName && <span>{currentProjectName} </span>}
 							<code className="bg-interactive-secondary px-2 py-1 rounded">
 								{currentProjectId}
 							</code>
