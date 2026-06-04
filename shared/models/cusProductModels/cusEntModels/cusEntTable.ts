@@ -15,7 +15,6 @@ import { features } from "../../featureModels/featureTable.js";
 import { entitlements } from "../../productModels/entModels/entTable.js";
 import { customerProducts } from "../cusProductTable.js";
 import type { EntityBalance } from "./cusEntModels.js";
-import type { UsageWindows } from "./usageWindowModels.js";
 
 export const customerEntitlements = pgTable(
 	"customer_entitlements",
@@ -41,11 +40,6 @@ export const customerEntitlements = pgTable(
 
 		// Need to work on free balance...
 		entities: jsonb("entities").$type<Record<string, EntityBalance>>(),
-
-		// Windowed usage-limit counters (windowKey -> UsageWindow). Embedded
-		// here so they live in the same SubjectBalance hot object as the balance
-		// and are mutated atomically by the deduction script.
-		usage_windows: jsonb("usage_windows").$type<UsageWindows>(),
 
 		// Expiry for loose entitlements (entitlements without reset intervals)
 		expires_at: numeric({ mode: "number" }),

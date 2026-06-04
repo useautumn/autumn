@@ -201,6 +201,12 @@ export const getFullSubjectRowsQuery = ({
 				AND (ro.expires_at IS NULL OR ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 		),
 
+		cus_usage_windows AS (
+			SELECT uw.*
+			FROM usage_windows uw
+			WHERE uw.customer_entitlement_id IN (SELECT id FROM all_cus_ent_ids)
+		),
+
 		cus_replaceables AS (
 			SELECT rep.*
 			FROM replaceables rep
@@ -392,6 +398,22 @@ export const getFullSubjectRowsQuery = ({
 				),
 				'[]'::json
 			) AS rollovers,
+
+			COALESCE(
+				(
+					SELECT json_agg(
+						row_to_json(uw)
+						ORDER BY uw.window_start_at ASC, uw.id ASC
+					)
+					FROM cus_usage_windows uw
+					WHERE uw.customer_entitlement_id IN (
+						SELECT ace.id
+						FROM all_cus_ent_ids ace
+						WHERE ace.subject_key = sr.subject_key
+					)
+				),
+				'[]'::json
+			) AS usage_windows,
 
 			COALESCE(
 				(

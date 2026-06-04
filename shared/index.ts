@@ -84,6 +84,7 @@ export * from "./models/cusProductModels/cusEntModels/replaceableTable";
 export * from "./models/cusProductModels/cusEntModels/resetCusEnt";
 export * from "./models/cusProductModels/cusEntModels/rolloverModels/rolloverTable";
 export * from "./models/cusProductModels/cusEntModels/usageWindowModels";
+export * from "./models/cusProductModels/cusEntModels/usageWindowTable";
 export * from "./models/cusProductModels/cusPriceModels/cusPriceModels";
 export * from "./models/cusProductModels/cusPriceModels/cusPriceTable";
 export * from "./models/cusProductModels/cusProductEnums";

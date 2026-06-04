@@ -1,6 +1,6 @@
 {
-  "id": "b5a8ee16-450e-44e1-8494-a73b87ac3c90",
-  "prevId": "3d398bca-e922-45ac-bdc7-52f121289654",
+  "id": "0aaa5367-a797-49fa-b0d1-ddb5677edeb7",
+  "prevId": "20fbfba1-ef02-4637-b7f8-4ae1ee5983d7",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1354,6 +1354,22 @@
           ],
           "isUnique": false,
           "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_customer_prices_internal_customer_id": {
+          "name": "idx_customer_prices_internal_customer_id",
+          "columns": [
+            {
+              "expression": "\"internal_customer_id\" COLLATE \"C\"",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"customer_prices\".\"internal_customer_id\" IS NOT NULL",
+          "concurrently": true,
           "method": "btree",
           "with": {}
         }
@@ -3431,6 +3447,105 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.invoice_templates": {
+      "name": "invoice_templates",
+      "schema": "",
+      "columns": {
+        "internal_id": {
+          "name": "internal_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "footer": {
+          "name": "footer",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "memo": {
+          "name": "memo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "net_terms_days": {
+          "name": "net_terms_days",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_invoice_templates_org_id": {
+          "name": "idx_invoice_templates_org_id",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "invoice_templates_org_id_fkey": {
+          "name": "invoice_templates_org_id_fkey",
+          "tableFrom": "invoice_templates",
+          "tableTo": "organizations",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "invoice_templates_id_unique": {
+          "name": "invoice_templates_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.invoices": {
       "name": "invoices",
       "schema": "",
@@ -3566,6 +3681,22 @@
           ],
           "isUnique": false,
           "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_invoices_internal_entity_id": {
+          "name": "idx_invoices_internal_entity_id",
+          "columns": [
+            {
+              "expression": "internal_entity_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"invoices\".\"internal_entity_id\" IS NOT NULL",
+          "concurrently": true,
           "method": "btree",
           "with": {}
         }
@@ -6869,6 +7000,138 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
+    },
+    "public.usage_windows": {
+      "name": "usage_windows",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "customer_entitlement_id": {
+          "name": "customer_entitlement_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "feature_id": {
+          "name": "feature_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "internal_feature_id": {
+          "name": "internal_feature_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "window_start_at": {
+          "name": "window_start_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "window_end_at": {
+          "name": "window_end_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "usage": {
+          "name": "usage",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "idx_usage_windows_customer_entitlement_id": {
+          "name": "idx_usage_windows_customer_entitlement_id",
+          "columns": [
+            {
+              "expression": "customer_entitlement_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_usage_windows_cus_ent_feature_window": {
+          "name": "idx_usage_windows_cus_ent_feature_window",
+          "columns": [
+            {
+              "expression": "customer_entitlement_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "feature_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "window_start_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "usage_windows_customer_entitlement_id_fkey": {
+          "name": "usage_windows_customer_entitlement_id_fkey",
+          "tableFrom": "usage_windows",
+          "tableTo": "customer_entitlements",
+          "columnsFrom": [
+            "customer_entitlement_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "cascade"
+        },
+        "usage_windows_internal_feature_id_fkey": {
+          "name": "usage_windows_internal_feature_id_fkey",
+          "tableFrom": "usage_windows",
+          "tableTo": "features",
+          "columnsFrom": [
+            "internal_feature_id"
+          ],
+          "columnsTo": [
+            "internal_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
     },
     "public.user": {
       "name": "user",

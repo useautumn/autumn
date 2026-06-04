@@ -337,7 +337,6 @@ const buildCustomerEntitlement = ({
 	adjustment: 0,
 	additional_balance: 0,
 	entities: null,
-	usage_windows: null,
 	expires_at: expiresAt,
 	cache_version: 0,
 	customer_id: customer.id ?? null,

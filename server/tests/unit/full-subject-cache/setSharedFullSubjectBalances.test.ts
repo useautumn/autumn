@@ -84,6 +84,7 @@ const buildNormalized = (): NormalizedFullSubject =>
 					},
 				},
 				rollovers: [],
+				usage_windows: [],
 				replaceables: [],
 				customerPrice: null,
 				customerProductOptions: null,

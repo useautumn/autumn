@@ -10,6 +10,7 @@ import {
 	type DbPrice,
 	type DbProduct,
 	type DbRollover,
+	type DbUsageWindow,
 	type EntitlementWithFeature,
 	type Entity,
 	type EntityAggregations,
@@ -70,6 +71,14 @@ export const subjectQueryRowToNormalized = ({
 		const existing = replaceablesByCusEntId.get(replaceable.cus_ent_id) ?? [];
 		existing.push(replaceable);
 		replaceablesByCusEntId.set(replaceable.cus_ent_id, existing);
+	}
+
+	const usageWindowsByCusEntId = new Map<string, DbUsageWindow[]>();
+	for (const usageWindow of row.usage_windows) {
+		const existing =
+			usageWindowsByCusEntId.get(usageWindow.customer_entitlement_id) ?? [];
+		existing.push(usageWindow);
+		usageWindowsByCusEntId.set(usageWindow.customer_entitlement_id, existing);
 	}
 
 	const customerProductsById = new Map(
@@ -208,6 +217,7 @@ export const subjectQueryRowToNormalized = ({
 				entitlement: catalogEntitlement as EntitlementWithFeature,
 				replaceables: replaceablesByCusEntId.get(customerEntitlement.id) ?? [],
 				rollovers: rolloversByCusEntId.get(customerEntitlement.id) ?? [],
+				usage_windows: usageWindowsByCusEntId.get(customerEntitlement.id) ?? [],
 				customerPrice: resolveCustomerPrice({
 					customerEntitlement,
 					entitlement: catalogEntitlement as EntitlementWithFeature,

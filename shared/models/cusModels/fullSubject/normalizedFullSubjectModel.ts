@@ -7,7 +7,7 @@ import {
 	type EntityBalance,
 	FullCustomerEntitlementSchema,
 } from "../../cusProductModels/cusEntModels/cusEntModels.js";
-import type { UsageWindows } from "../../cusProductModels/cusEntModels/usageWindowModels.js";
+import type { UsageWindow } from "../../cusProductModels/cusEntModels/usageWindowTable.js";
 import type { Replaceable } from "../../cusProductModels/cusEntModels/replaceableTable.js";
 import type { DbRollover } from "../../cusProductModels/cusEntModels/rolloverModels/rolloverTable.js";
 import type { FullCustomerPrice } from "../../cusProductModels/cusPriceModels/cusPriceModels.js";
@@ -90,7 +90,7 @@ export type SubjectBalance = {
 	expires_at: number | null;
 	external_id: string | null;
 	entities: Record<string, EntityBalance> | null;
-	usage_windows?: UsageWindows | null;
+	usage_windows: UsageWindow[];
 	cache_version: number | null;
 	created_at: number;
 	customer_id?: string | null;

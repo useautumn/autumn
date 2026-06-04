@@ -18,38 +18,6 @@ export const UsageWindowScopeSchema = z.enum(["customer", "entity"]);
 export type UsageWindowScope = z.infer<typeof UsageWindowScopeSchema>;
 
 /**
- * A single windowed usage counter scoped beneath a customer entitlement.
- *
- * This is the embedded counter state. The enforced limit is resolved at
- * deduction time (mirroring spend limits), so `limit_snapshot` is audit-only,
- * never the enforcement source. `key` is built by `buildUsageWindowKey`.
- *
- * `usage_amount` is in the dimension's native units (e.g. workflow count);
- * `balance_amount` records the pool/credit units consumed, for attribution.
- */
-export const UsageWindowSchema = z.object({
-	key: z.string(),
-	dimension_type: UsageWindowDimensionSchema,
-	dimension_feature_id: z.string().nullable(),
-	scope_type: UsageWindowScopeSchema,
-	entity_id: z.string().nullable(),
-	internal_entity_id: z.string().nullable(),
-	interval: z.enum(EntInterval),
-	window_start_at: z.number(),
-	window_end_at: z.number(),
-	usage_amount: z.number(),
-	balance_amount: z.number(),
-	limit_snapshot: z.number().nullish(),
-	updated_at: z.number(),
-});
-
-export type UsageWindow = z.infer<typeof UsageWindowSchema>;
-
-/** Map of windowKey -> UsageWindow, embedded on a customer entitlement. */
-export const UsageWindowsSchema = z.record(z.string(), UsageWindowSchema);
-export type UsageWindows = z.infer<typeof UsageWindowsSchema>;
-
-/**
  * A resolved, enforceable usage-window limit: the runtime input handed to the
  * deduction script. Built each deduction from the windowed usage cap
  * (`usage_limit` + optional `usage_limit_interval` override) on a `spend_limit` billing

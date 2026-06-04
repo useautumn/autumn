@@ -48,6 +48,11 @@ const subjectBalanceToFullCustomerEntitlement = ({
 	const rollovers = getArrayEntries<SubjectBalance["rollovers"][number]>({
 		value: subjectBalance.rollovers,
 	});
+	const usageWindows = getArrayEntries<
+		SubjectBalance["usage_windows"][number]
+	>({
+		value: subjectBalance.usage_windows,
+	});
 
 	return {
 		id: subjectBalance.id,
@@ -76,6 +81,7 @@ const subjectBalanceToFullCustomerEntitlement = ({
 				getRolloverSortValue({ rollover: left }) -
 				getRolloverSortValue({ rollover: right }),
 		),
+		usage_windows: usageWindows,
 	} as FullCustomerEntitlement;
 };
 

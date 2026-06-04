@@ -3,7 +3,7 @@ import { EntitlementWithFeatureSchema } from "../../productModels/entModels/entM
 import { EntInterval } from "../../productModels/intervals/entitlementInterval.js";
 import { ReplaceableSchema } from "./replaceableSchema.js";
 import { RolloverSchema } from "./rolloverModels/rolloverTable.js";
-import { UsageWindowsSchema } from "./usageWindowModels.js";
+import { UsageWindowSchema } from "./usageWindowTable.js";
 
 export const CustomerEntitlementFiltersSchema = z.object({
 	cusEntIds: z.array(z.string()).optional(),
@@ -49,10 +49,6 @@ export const CustomerEntitlementSchema = z.object({
 	// Group by fields
 	entities: z.record(z.string(), EntityBalanceSchema).nullish(),
 
-	// Windowed usage-limit counters scoped beneath this entitlement (second
-	// limit dimension on top of balance). Keyed by buildUsageWindowKey.
-	usage_windows: UsageWindowsSchema.nullish(),
-
 	external_id: z.string().nullable(),
 });
 
@@ -60,6 +56,10 @@ export const FullCustomerEntitlementSchema = CustomerEntitlementSchema.extend({
 	entitlement: EntitlementWithFeatureSchema,
 	replaceables: z.array(ReplaceableSchema),
 	rollovers: z.array(RolloverSchema),
+
+	// Windowed usage-limit counters, persisted as their own rows (second limit
+	// dimension on top of balance).
+	usage_windows: z.array(UsageWindowSchema).nullish(),
 });
 
 export type CustomerEntitlementFilters = z.infer<
