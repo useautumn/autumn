@@ -3,10 +3,14 @@
 -- Hard windowed usage-limit enforcement, evaluated at the orchestration layer
 -- against ACTUAL consumed amounts (post-deduction, pre-write).
 --
--- Counters live inline on the anchor cus_ent's subject_balance.usage_windows,
--- keyed by the deterministic window key built in TS. The window key includes
--- window_start_at, so the current window's counter is found-or-created at
--- limit.key and a rolled window is simply a different (absent) key.
+-- Counters live inline on the anchor cus_ent's subject_balance.usage_windows as
+-- a lean ARRAY of rows mirroring the usage_windows table (DbUsageWindow):
+--   { id, customer_entitlement_id, feature_id, internal_feature_id,
+--     window_start_at, window_end_at, usage, updated_at }
+-- A window is identified by (customer_entitlement_id, feature_id,
+-- window_start_at) -- the table's unique key. The current window is
+-- found-or-created; a rolled window has a different window_start_at, so its
+-- counter starts fresh at 0 and old windows are pruned.
 -- ============================================================================
 
 -- Tolerance for float drift (credit-ratio conversions leave sub-nano noise).
@@ -22,11 +26,37 @@ local function get_anchor_usage_windows(context, anchor_customer_entitlement_id)
     return nil
   end
 
-  if type(ent_data.subject_balance.usage_windows) ~= 'table' then
-    ent_data.subject_balance.usage_windows = {}
+  -- Reset a non-array blob to []: a legacy keyed-map blob (pre-array deploy) whose
+  -- string keys ipairs would skip and table.insert would corrupt into a
+  -- sync-breaking JSON object. The current window restarts at 0 (one-time cost).
+  local windows = ent_data.subject_balance.usage_windows
+  if type(windows) ~= 'table'
+      or (next(windows) ~= nil and windows[1] == nil) then
+    windows = new_empty_array()
+    ent_data.subject_balance.usage_windows = windows
   end
 
-  return ent_data.subject_balance.usage_windows
+  return windows
+end
+
+-- The array is one anchor cus_ent's rows, so customer_entitlement_id is implied;
+-- a window is the row matching (feature_id, window_start_at).
+local function find_usage_window(windows, feature_id, window_start_at)
+  for _, window in ipairs(windows) do
+    if window.feature_id == feature_id
+        and safe_number(window.window_start_at) == window_start_at then
+      return window
+    end
+  end
+  return nil
+end
+
+-- Stable id matching the table's unique key, so the async sync upserts the same
+-- row each window rather than inserting duplicates.
+local function build_usage_window_id(limit)
+  return limit.anchor_customer_entitlement_id
+    .. ':' .. limit.feature_id
+    .. ':' .. string.format('%.0f', limit.window_start_at)
 end
 
 -- Actually-consumed amount for a limit, in its native unit. metered_feature
@@ -68,8 +98,12 @@ local function check_usage_window_limits(params)
     })
 
     if consumed > USAGE_WINDOW_EPSILON then
-      local existing = windows[limit.key]
-      local current_usage = existing and safe_number(existing.usage_amount) or 0
+      local existing = find_usage_window(
+        windows,
+        limit.feature_id,
+        limit.window_start_at
+      )
+      local current_usage = existing and safe_number(existing.usage) or 0
       if current_usage + consumed
           > safe_number(limit.limit) + USAGE_WINDOW_EPSILON then
         return limit.feature_id
@@ -80,32 +114,38 @@ local function check_usage_window_limits(params)
   return nil
 end
 
--- Applies the consumed amount to each anchor counter (find-or-create at the
--- current window key), prunes closed sibling windows, and marks the anchor dirty
--- so apply_pending_writes persists it (even when the anchor's balance did not
--- change, or when only a prune happened).
+-- Applies the consumed amount to each anchor counter (find-or-create the current
+-- window row), prunes closed windows, and marks the anchor dirty so
+-- apply_pending_writes persists it.
 local function increment_usage_window_counters(params)
   local context = params.context
   local limits = params.usage_window_limits or {}
   local now = params.now
 
   for _, limit in ipairs(limits) do
+    local ent_data =
+      context.customer_entitlements[limit.anchor_customer_entitlement_id]
     local windows = get_anchor_usage_windows(
       context,
       limit.anchor_customer_entitlement_id
     )
     if not is_nil(windows) then
-      -- Prune closed windows every pass (not only when consuming) so the map
-      -- does not grow for sporadically-active features (lifetime never closes).
+      -- Rebuild (rather than nil-out) so the array stays hole-free and cjson
+      -- re-encodes it as [] not {}; prune every pass so it never grows for
+      -- sporadically-active features.
+      local kept = new_empty_array()
       local pruned = false
-      for window_key, window in pairs(windows) do
-        if window_key ~= limit.key
-            and type(window) == 'table'
-            and safe_number(window.window_end_at) < now
-        then
-          windows[window_key] = nil
+      for _, window in ipairs(windows) do
+        if type(window) == 'table'
+            and safe_number(window.window_end_at) < now then
           pruned = true
+        else
+          table.insert(kept, window)
         end
+      end
+      if pruned then
+        ent_data.subject_balance.usage_windows = kept
+        windows = kept
       end
 
       local consumed = usage_window_consumed({
@@ -116,36 +156,26 @@ local function increment_usage_window_counters(params)
       })
 
       if consumed > USAGE_WINDOW_EPSILON then
-        -- balance_amount is audit-only; for metered caps it captures just the
-        -- anchor pool's credits, not every pool the track touched.
-        local consumed_credits = 0
-        local anchor_update = params.updates[limit.anchor_customer_entitlement_id]
-        if anchor_update then
-          consumed_credits = safe_number(anchor_update.deducted)
-        end
-
-        local existing = windows[limit.key]
+        local existing = find_usage_window(
+          windows,
+          limit.feature_id,
+          limit.window_start_at
+        )
         if is_nil(existing) then
           existing = {
-            key = limit.key,
-            dimension_type = limit.dimension_type,
-            dimension_feature_id = limit.dimension_feature_id or cjson.null,
-            scope_type = limit.scope_type,
-            entity_id = limit.entity_id or cjson.null,
-            internal_entity_id = limit.internal_entity_id or cjson.null,
-            interval = limit.interval,
+            id = build_usage_window_id(limit),
+            customer_entitlement_id = limit.anchor_customer_entitlement_id,
+            feature_id = limit.feature_id,
+            internal_feature_id = limit.internal_feature_id,
             window_start_at = limit.window_start_at,
             window_end_at = limit.window_end_at,
-            usage_amount = 0,
-            balance_amount = 0,
+            usage = 0,
+            updated_at = now,
           }
-          windows[limit.key] = existing
+          table.insert(windows, existing)
         end
 
-        existing.usage_amount = safe_number(existing.usage_amount) + consumed
-        existing.balance_amount =
-          safe_number(existing.balance_amount) + consumed_credits
-        existing.limit_snapshot = safe_number(limit.limit)
+        existing.usage = safe_number(existing.usage) + consumed
         existing.updated_at = now
 
         mark_customer_entitlement_for_update(

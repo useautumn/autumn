@@ -328,11 +328,11 @@ export const executePostgresDeductionV2 = async ({
 
 	const deductionResult = resolvedOptions.paidAllocated
 		? await withLock({
-				lockKey: `lock:deduction:${org.id}:${env}:${customerId}`,
-				ttlMs: 60000,
-				errorMessage: `Deduction for paid feature ${deductions[0]?.feature?.name} already in progress for customer ${customerId}.`,
-				fn: executeDeduction,
-			})
+			lockKey: `lock:deduction:${org.id}:${env}:${customerId}`,
+			ttlMs: 60000,
+			errorMessage: `Deduction for paid feature ${deductions[0]?.feature?.name} already in progress for customer ${customerId}.`,
+			fn: executeDeduction,
+		})
 		: await executeDeduction();
 
 	return {

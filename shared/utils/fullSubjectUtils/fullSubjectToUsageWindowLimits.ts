@@ -103,9 +103,11 @@ export const fullSubjectToUsageWindowLimits = ({
 		const entityId = null;
 		const internalEntityId = null;
 
-		const isCreditSystem =
-			features.find((feature) => feature.id === featureId)?.type ===
-			FeatureType.CreditSystem;
+		const featureObject = features.find((feature) => feature.id === featureId);
+		// No catalog feature => no internal_feature_id (a NOT NULL FK on the windows
+		// table); the cap is unenforceable and unstorable, so skip it.
+		if (featureObject?.internal_id == null) continue;
+		const isCreditSystem = featureObject.type === FeatureType.CreditSystem;
 		const dimensionType: UsageWindowDimension = isCreditSystem
 			? "balance"
 			: "metered_feature";
@@ -165,6 +167,7 @@ export const fullSubjectToUsageWindowLimits = ({
 
 		limits.push({
 			feature_id: featureId,
+			internal_feature_id: featureObject.internal_id,
 			key: buildUsageWindowKey({
 				scopeType,
 				internalEntityId,

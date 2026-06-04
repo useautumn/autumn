@@ -6,7 +6,7 @@
 --     - balance: number
 --     - adjustment: number
 --     - entities: jsonb (the full entities object)
---     - usage_windows: jsonb (the full usage-window counters object)
+--     - usage_windows: jsonb array of DbUsageWindow rows, mirrored to the usage_windows table (null = skip)
 --     - next_reset_at: bigint/number (unix timestamp, for conflict detection)
 --     - entity_count: number (for conflict detection)
 --     - cache_version: number (if defined, skip write if DB cache_version differs)
@@ -137,23 +137,48 @@ BEGIN
           ent_id, ent_cache_version, db_cache_version;
       END IF;
       
-      -- Update the customer_entitlement row directly.
-      -- usage_windows is written from the synced object, which carries the FRESH
-      -- Redis value (re-read at sync time), so this is a full replace, not a
-      -- lost-update risk: concurrent counter increments are serialized atomically
-      -- in Redis and the latest cumulative map is what reaches here. The COALESCE
-      -- only avoids wiping the column when a balance-only sync carries no
-      -- usage_windows (null). Postgres is a mirror; Redis is authoritative.
       UPDATE customer_entitlements ce
       SET
         balance = COALESCE(ent_balance, ce.balance),
         adjustment = COALESCE(ent_adjustment, ce.adjustment),
-        entities = COALESCE(ent_entities, ce.entities),
-        usage_windows = COALESCE(NULLIF(ent_usage_windows, 'null'::jsonb), ce.usage_windows)
+        entities = COALESCE(ent_entities, ce.entities)
       WHERE ce.id = ent_id;
 
-      -- Track update
       IF FOUND THEN
+        -- Mirror the windowed-usage counters into the usage_windows table (Redis is
+        -- authoritative and already prunes closed windows): full-replace the cus_ent's
+        -- rows. Clear on ANY present blob -- an emptied window array re-encodes as {}
+        -- (lua-cjson encodes an empty table as an object), so guarding the DELETE on
+        -- 'array' would leave stale closed rows. Only a real array has rows to INSERT;
+        -- a null/object blob simply clears, so the shared sync never reaches
+        -- jsonb_array_elements on a non-array. null = balance-only sync (untouched).
+        -- The internal_feature_id filters keep a stray null/orphan row from aborting
+        -- the whole batch on the NOT NULL + FK column.
+        IF ent_usage_windows IS NOT NULL AND ent_usage_windows != 'null'::jsonb THEN
+          DELETE FROM usage_windows WHERE customer_entitlement_id = ent_id;
+          IF jsonb_typeof(ent_usage_windows) = 'array' THEN
+            INSERT INTO usage_windows (
+              id, customer_entitlement_id, feature_id, internal_feature_id,
+              window_start_at, window_end_at, usage, updated_at
+            )
+            SELECT
+              w->>'id',
+              ent_id,
+              w->>'feature_id',
+              w->>'internal_feature_id',
+              (w->>'window_start_at')::numeric,
+              (w->>'window_end_at')::numeric,
+              (w->>'usage')::numeric,
+              (w->>'updated_at')::numeric
+            FROM jsonb_array_elements(ent_usage_windows) AS w
+            WHERE w->>'internal_feature_id' IS NOT NULL
+              AND EXISTS (
+                SELECT 1 FROM features f
+                WHERE f.internal_id = w->>'internal_feature_id'
+              );
+          END IF;
+        END IF;
+
         updates_json := jsonb_set(
           updates_json,
           ARRAY[ent_id],

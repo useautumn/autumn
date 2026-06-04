@@ -27,6 +27,7 @@ export type UsageWindowScope = z.infer<typeof UsageWindowScopeSchema>;
  */
 export const UsageWindowLimitSchema = z.object({
 	feature_id: z.string(),
+	internal_feature_id: z.string(),
 	key: z.string(),
 	dimension_type: UsageWindowDimensionSchema,
 	dimension_feature_id: z.string().nullable(),

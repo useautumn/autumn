@@ -13,19 +13,26 @@ import {
 
 const NOW = Date.UTC(2026, 5, 15, 12, 0, 0);
 
-const meteredAction1 = { id: "action1", type: FeatureType.Metered } as Feature;
+const meteredAction1 = {
+	id: "action1",
+	internal_id: "iaction1",
+	type: FeatureType.Metered,
+} as Feature;
 const creditsFeature = {
 	id: "credits",
+	internal_id: "icredits",
 	type: FeatureType.CreditSystem,
 } as Feature;
 // Credit system whose schema contains action1, for the membership-anchor path.
 const creditsContainingAction1 = {
 	id: "credits",
+	internal_id: "icredits",
 	type: FeatureType.CreditSystem,
 	config: { schema: [{ metered_feature_id: "action1", credit_amount: 5 }] },
 } as unknown as Feature;
 const credits2ContainingAction1 = {
 	id: "credits2",
+	internal_id: "icredits2",
 	type: FeatureType.CreditSystem,
 	config: { schema: [{ metered_feature_id: "action1", credit_amount: 3 }] },
 } as unknown as Feature;
@@ -178,6 +185,7 @@ describe("fullSubjectToUsageWindowLimits", () => {
 		expect(limits).toHaveLength(1);
 		expect(limits[0]).toMatchObject({
 			feature_id: "action1",
+			internal_feature_id: "iaction1",
 			dimension_type: "metered_feature",
 			dimension_feature_id: "action1",
 			scope_type: "customer",
@@ -195,6 +203,21 @@ describe("fullSubjectToUsageWindowLimits", () => {
 				windowStartAt,
 			}),
 		});
+	});
+
+	test("skips a cap whose feature is absent from the catalog (unresolvable internal_feature_id)", () => {
+		const limits = fullSubjectToUsageWindowLimits({
+			fullSubject: buildSubject({
+				customerLimits: [
+					{ feature_id: "action1", limit: 5, interval: EntInterval.Month },
+				],
+			}),
+			featureIds: ["action1"],
+			features: [],
+			now: NOW,
+		});
+
+		expect(limits).toHaveLength(0);
 	});
 
 	test("a credit-system feature resolves to the balance dimension", () => {
@@ -441,6 +464,7 @@ describe("fullSubjectToUsageWindowLimits", () => {
 	test("returns one limit per feature when caps exist on multiple features", () => {
 		const meteredAction2 = {
 			id: "action2",
+			internal_id: "iaction2",
 			type: FeatureType.Metered,
 		} as Feature;
 		const limits = fullSubjectToUsageWindowLimits({

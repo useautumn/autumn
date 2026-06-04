@@ -6,6 +6,14 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { sql } from "drizzle-orm";
+import { syncItemV4 } from "@/internal/balances/utils/sync/syncItemV4.js";
+import { buildSharedFullSubjectBalanceKey } from "@/internal/customers/cache/fullSubject/builders/buildSharedFullSubjectBalanceKey.js";
+
+// biome-ignore lint/suspicious/noExplicitAny: raw SQL rows are untyped
+const queryRows = (result: unknown): any[] =>
+	// biome-ignore lint/suspicious/noExplicitAny: raw SQL rows are untyped
+	Array.isArray(result) ? result : ((result as { rows?: any[] })?.rows ?? []);
 
 type AutumnV2_1Client = Awaited<ReturnType<typeof initScenario>>["autumnV2_1"];
 
@@ -315,5 +323,165 @@ test.concurrent(
 		expect((rejected[0].reason as { code?: string }).code).toBe(
 			"usage_limit_exceeded",
 		);
+	},
+);
+
+// Write-through: the Redis counter must reach the usage_windows table via the
+// shared sync (the other tests assert only the synchronous Redis response).
+test.concurrent(
+	`${chalk.yellowBright("track-customer-usage-limit-sync: window counter writes through to the usage_windows table")}`,
+	async () => {
+		const customerProduct = products.base({
+			id: "track-customer-uw-sync",
+			items: [items.monthlyCredits({ includedUsage: 100 })],
+		});
+
+		const customerId = `track-customer-uw-sync-1-${Date.now()}`;
+		const { autumnV2_1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: false }),
+				s.products({ list: [customerProduct] }),
+			],
+			actions: [s.billing.attach({ productId: customerProduct.id })],
+		});
+
+		await setCustomerUsageLimit({
+			autumn: autumnV2_1,
+			customerId,
+			featureId: TestFeature.Credits,
+			limit: 5,
+			interval: EntInterval.Day,
+		});
+
+		// 5 action1 = 1 credit; under the 5-credit/day cap. The counter lives on the
+		// credits cus-ent (balance dimension).
+		await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Action1,
+			value: 5,
+		});
+
+		const creditsEnt = queryRows(
+			await ctx.db.execute(sql`
+				SELECT id, internal_feature_id FROM customer_entitlements
+				WHERE customer_id = ${customerId} AND feature_id = ${TestFeature.Credits}
+				LIMIT 1
+			`),
+		)[0];
+		expect(creditsEnt?.id).toBeTruthy();
+
+		// Drive the async write-through synchronously, then assert the mirrored row.
+		await syncItemV4({
+			ctx,
+			payload: {
+				customerId,
+				orgId: ctx.org.id,
+				env: ctx.env,
+				timestamp: Date.now(),
+				modifiedCusEntIdsByFeatureId: {
+					[TestFeature.Credits]: [creditsEnt.id],
+				},
+			},
+		});
+
+		const windowRows = queryRows(
+			await ctx.db.execute(sql`
+				SELECT feature_id, internal_feature_id, usage
+				FROM usage_windows WHERE customer_entitlement_id = ${creditsEnt.id}
+			`),
+		);
+		expect(windowRows).toHaveLength(1);
+		expect(windowRows[0].feature_id).toBe(TestFeature.Credits);
+		expect(windowRows[0].internal_feature_id).toBe(
+			creditsEnt.internal_feature_id,
+		);
+		expect(Number(windowRows[0].usage)).toBeCloseTo(1, 5);
+	},
+);
+
+// Deploy-migration safety: a leftover pre-array keyed-map blob must be reset to a
+// clean array, never iterated-then-corrupted into a JSON object that wedges sync.
+test.concurrent(
+	`${chalk.yellowBright("track-customer-usage-limit-legacy: a pre-array keyed-map blob is reset, not corrupted into an object")}`,
+	async () => {
+		const customerProduct = products.base({
+			id: "track-customer-uw-legacy",
+			items: [items.monthlyCredits({ includedUsage: 100 })],
+		});
+
+		const customerId = `track-customer-uw-legacy-1-${Date.now()}`;
+		const { autumnV2_1, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: false }),
+				s.products({ list: [customerProduct] }),
+			],
+			actions: [s.billing.attach({ productId: customerProduct.id })],
+		});
+
+		await setCustomerUsageLimit({
+			autumn: autumnV2_1,
+			customerId,
+			featureId: TestFeature.Credits,
+			limit: 5,
+			interval: EntInterval.Day,
+		});
+
+		// One track creates a proper array blob on the credits cus-ent.
+		await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Action1,
+			value: 1,
+		});
+
+		const creditsEnt = queryRows(
+			await ctx.db.execute(sql`
+				SELECT id FROM customer_entitlements
+				WHERE customer_id = ${customerId} AND feature_id = ${TestFeature.Credits}
+				LIMIT 1
+			`),
+		)[0];
+		expect(creditsEnt?.id).toBeTruthy();
+
+		const balanceKey = buildSharedFullSubjectBalanceKey({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			customerId,
+			featureId: TestFeature.Credits,
+		});
+
+		// Overwrite usage_windows with a LEGACY keyed-map shape (the pre-array format
+		// ipairs would skip and table.insert would corrupt into a JSON object).
+		const blobJson = await ctx.redisV2.hget(balanceKey, creditsEnt.id);
+		expect(blobJson).toBeTruthy();
+		const blob = JSON.parse(blobJson as string);
+		blob.usage_windows = {
+			"customer:balance:credits:day:legacy": {
+				key: "customer:balance:credits:day:legacy",
+				usage_amount: 0.2,
+				window_start_at: 1_700_000_000_000,
+				window_end_at: 9_999_999_999_999,
+				dimension_type: "balance",
+				interval: "day",
+			},
+		};
+		await ctx.redisV2.hset(balanceKey, creditsEnt.id, JSON.stringify(blob));
+
+		// The next track must RESET the map blob to a clean array, not corrupt it.
+		await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Action1,
+			value: 1,
+		});
+
+		const after = JSON.parse(
+			(await ctx.redisV2.hget(balanceKey, creditsEnt.id)) as string,
+		);
+		// The poison case is a JSON OBJECT (string keys); it must be a clean array.
+		expect(Array.isArray(after.usage_windows)).toBe(true);
+		expect(after.usage_windows).toHaveLength(1);
+		expect(after.usage_windows[0].feature_id).toBe(TestFeature.Credits);
+		expect(typeof after.usage_windows[0].id).toBe("string");
 	},
 );
