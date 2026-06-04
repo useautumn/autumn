@@ -134,12 +134,16 @@ export function EditPlanFeatureSheet({
 					<SheetHeader
 						title={`Configure ${feature?.name}`}
 						description={
-							<p>
+							<>
 								Define how customers on plan{" "}
-								<span className="font-medium text-foreground">{product.name}</span> can
-								use feature{" "}
-								<span className="font-medium text-foreground">{feature?.name}</span>
-							</p>
+								<span className="font-medium text-foreground">
+									{product.name}
+								</span>{" "}
+								can use feature{" "}
+								<span className="font-medium text-foreground">
+									{feature?.name}
+								</span>
+							</>
 						}
 						action={
 							<IconButton

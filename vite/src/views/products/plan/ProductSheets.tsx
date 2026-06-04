@@ -39,13 +39,35 @@ export const ProductSheets = () => {
 
 	const featureItems = productV2ToFeatureItems({ items: product.items });
 
-	const isCurrentItem = (item: ProductItem) => {
-		const actualIndex = product.items?.indexOf(item) ?? -1;
-		const currentItemId = getItemId({ item, itemIndex: actualIndex });
-		return itemId === currentItemId;
-	};
+	const matchedItemIndex = product.items
+		? product.items.findIndex(
+				(item, index) =>
+					!!item &&
+					featureItems.includes(item) &&
+					getItemId({ item, itemIndex: index }) === itemId,
+			)
+		: -1;
 
-	const currentItem = featureItems.find(isCurrentItem);
+	const editingIndexRef = useRef<number | null>(null);
+
+	useEffect(() => {
+		if (matchedItemIndex !== -1) {
+			editingIndexRef.current = matchedItemIndex;
+		} else if (itemId === null) {
+			editingIndexRef.current = null;
+		}
+	}, [matchedItemIndex, itemId]);
+
+	const resolvedItemIndex =
+		matchedItemIndex !== -1
+			? matchedItemIndex
+			: editingIndexRef.current !== null &&
+					editingIndexRef.current < (product.items?.length ?? 0)
+				? editingIndexRef.current
+				: -1;
+
+	const currentItem =
+		resolvedItemIndex !== -1 ? product.items?.[resolvedItemIndex] : undefined;
 
 	const lastItemIdRef = useRef<string | null>(null);
 
@@ -97,14 +119,10 @@ export const ProductSheets = () => {
 			return;
 		}
 
-		if (!product || !product.items) return;
-
-		const currentItemIndex = product.items.findIndex(isCurrentItem);
-
-		if (currentItemIndex === -1) return;
+		if (!product || !product.items || resolvedItemIndex === -1) return;
 
 		const updatedItems = [...product.items];
-		updatedItems[currentItemIndex] = updatedItem;
+		updatedItems[resolvedItemIndex] = updatedItem;
 		setProduct({ ...product, items: updatedItems });
 	};
 
