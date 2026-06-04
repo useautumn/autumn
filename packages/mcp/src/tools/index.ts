@@ -6,6 +6,7 @@ import { type AutumnMcpAuth, getAutumnAuth } from "../server/auth/auth.js";
 import { balances } from "./balances.js";
 import { billing } from "./billing.js";
 import { customers } from "./customers.js";
+import { orgTools } from "./org.js";
 import { plans } from "./plans.js";
 import { callAutumn } from "./utils/client.js";
 import { dateToEpochMillisecondsTool } from "./utils/dates.js";
@@ -72,7 +73,8 @@ export const createRawAutumnOperationTools = () =>
 			),
 			...toTools(localPreviews, rawLocalPreviewTool),
 			...toTools(confirmedWrites, operationTool),
-		}),
+			...orgTools,
+		} as Record<string, ReturnType<typeof createTool>>),
 		surface: "mcp",
 	});
 

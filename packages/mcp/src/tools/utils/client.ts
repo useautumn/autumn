@@ -43,3 +43,32 @@ export const callAutumn = async ({
 	}
 	return body;
 };
+
+export const callAutumnGet = async ({
+	auth,
+	endpoint,
+	signal,
+}: {
+	auth: AutumnMcpAuth;
+	endpoint: string;
+	signal?: AbortSignal | undefined;
+}) => {
+	const client = createAutumnClient(auth);
+	const init: RequestInit = {
+		method: "GET",
+		headers: client.headers,
+	};
+	if (signal) init.signal = signal;
+
+	const response = await fetch(new URL(endpoint, client.baseUrl), init);
+	const text = await response.text();
+	const body = text ? parseBody(text) : null;
+	if (!response.ok) {
+		throw new Error(
+			`Autumn API request failed (${response.status}): ${
+				typeof body === "string" ? body : JSON.stringify(body)
+			}`,
+		);
+	}
+	return body;
+};
