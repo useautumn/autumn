@@ -43,6 +43,7 @@ describe("Autumn operation tools", () => {
 		expect(tools.previewCreateBalance.description).toContain("Does not mutate");
 		expect(tools.createSchedule.description).toContain("starts_at");
 		expect(tools.previewCreateSchedule.description).toContain("billing impact");
+		expect(tools.getCurrentOrganization.description).toContain("organization");
 	});
 
 	test("write tools are annotated as destructive", () => {
@@ -67,6 +68,7 @@ describe("Autumn operation tools", () => {
 			"previewUpdateSubscription",
 			"previewCreateSchedule",
 			"previewCreateBalance",
+			"getCurrentOrganization",
 		] as const) {
 			expect(tools[name].mcp?.annotations?.destructiveHint).toBe(false);
 		}
@@ -307,6 +309,40 @@ describe("Autumn operation tools", () => {
 					} as never,
 				),
 			).resolves.toEqual({ customers: [] });
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	test("raw getCurrentOrganization calls the organization me endpoint", async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (url, init) => {
+			expect(String(url)).toBe("http://localhost:8080/v1/organization/me");
+			expect(init?.method).toBe("GET");
+			expect(init?.body).toBeUndefined();
+			return Response.json({
+				name: "Unit Tests",
+				slug: "unit-tests",
+				env: "sandbox",
+			});
+		}) as typeof fetch;
+
+		try {
+			const tool = createRawAutumnOperationTools().getCurrentOrganization;
+			if (!tool.execute) {
+				throw new Error("getCurrentOrganization is not executable");
+			}
+
+			await expect(
+				tool.execute(
+					{ intent: "check which Autumn organization is connected" },
+					{ mcp: { extra: { authInfo: auth } } } as never,
+				),
+			).resolves.toEqual({
+				name: "Unit Tests",
+				slug: "unit-tests",
+				env: "sandbox",
+			});
 		} finally {
 			globalThis.fetch = originalFetch;
 		}
