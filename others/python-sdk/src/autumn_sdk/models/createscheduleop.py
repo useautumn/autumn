@@ -54,6 +54,10 @@ class CreateScheduleInvoiceModeTypedDict(TypedDict):
     r"""If true, enables the plan immediately even though the invoice is not paid yet."""
     finalize: NotRequired[bool]
     r"""If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review."""
+    invoice_template_id: NotRequired[str]
+    r"""ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice."""
+    net_terms_days: NotRequired[int]
+    r"""Number of days the customer has to pay the invoice before it is due (Stripe days_until_due)."""
 
 
 class CreateScheduleInvoiceMode(BaseModel):
@@ -68,9 +72,57 @@ class CreateScheduleInvoiceMode(BaseModel):
     finalize: Optional[bool] = True
     r"""If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review."""
 
+    invoice_template_id: Optional[str] = None
+    r"""ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice."""
+
+    net_terms_days: Optional[int] = None
+    r"""Number of days the customer has to pay the invoice before it is due (Stripe days_until_due)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enable_plan_immediately", "finalize"])
+        optional_fields = set(
+            [
+                "enable_plan_immediately",
+                "finalize",
+                "invoice_template_id",
+                "net_terms_days",
+            ]
+        )
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreateScheduleAttachDiscountTypedDict(TypedDict):
+    r"""A discount to apply. Can be either a reward ID or a promotion code."""
+
+    reward_id: NotRequired[str]
+    r"""The ID of the reward to apply as a discount."""
+    promotion_code: NotRequired[str]
+    r"""The promotion code to apply as a discount."""
+
+
+class CreateScheduleAttachDiscount(BaseModel):
+    r"""A discount to apply. Can be either a reward ID or a promotion code."""
+
+    reward_id: Optional[str] = None
+    r"""The ID of the reward to apply as a discount."""
+
+    promotion_code: Optional[str] = None
+    r"""The promotion code to apply as a discount."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["reward_id", "promotion_code"])
         serialized = handler(self)
         m = {}
 
@@ -640,6 +692,8 @@ class CreateScheduleParamsTypedDict(TypedDict):
     r"""Optional entity ID for an entity-scoped schedule."""
     invoice_mode: NotRequired[CreateScheduleInvoiceModeTypedDict]
     r"""Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase."""
+    discounts: NotRequired[List[CreateScheduleAttachDiscountTypedDict]]
+    r"""List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
     success_url: NotRequired[str]
     r"""URL to redirect to after successful checkout."""
     checkout_session_params: NotRequired[Dict[str, Any]]
@@ -666,6 +720,9 @@ class CreateScheduleParams(BaseModel):
 
     invoice_mode: Optional[CreateScheduleInvoiceMode] = None
     r"""Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase."""
+
+    discounts: Optional[List[CreateScheduleAttachDiscount]] = None
+    r"""List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code."""
 
     success_url: Optional[str] = None
     r"""URL to redirect to after successful checkout."""
@@ -694,6 +751,7 @@ class CreateScheduleParams(BaseModel):
             [
                 "entity_id",
                 "invoice_mode",
+                "discounts",
                 "success_url",
                 "checkout_session_params",
                 "redirect_mode",

@@ -1,13 +1,13 @@
 import type { FrontendProduct } from "@autumn/shared";
 import { isPriceItem, productsAreSame } from "@autumn/shared";
-import { CheckCircleIcon } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { PlanItemsSection } from "@/components/forms/shared";
 import { getProductPriceDisplay } from "@/components/forms/update-subscription-v2/components/PriceDisplay";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/v2/buttons/Button";
+import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
+import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import {
 	Dialog,
 	DialogContent,
@@ -89,6 +89,7 @@ export default function PlanChangeDialog({
 	const product = useProductStore((s) => s.product);
 	const baseProduct = useProductStore((s) => s.baseProduct);
 	const setBaseProduct = useProductStore((s) => s.setBaseProduct);
+	const setProduct = useProductStore((s) => s.setProduct);
 	const { features = [] } = useFeaturesQuery();
 	const { refetch } = useProductQuery();
 	const { setQueryStates } = useProductQueryState();
@@ -102,10 +103,6 @@ export default function PlanChangeDialog({
 	const [createVersion, setCreateVersion] = useState(true);
 	const [migrationChoice, setMigrationChoice] =
 		useState<MigrationChoice>("keep");
-	const [step, setStep] = useState<"confirm" | "done">("confirm");
-	const [createdMigrationId, setCreatedMigrationId] = useState<
-		string | null
-	>(null);
 
 	const currency = org?.default_currency ?? "USD";
 	const priceChange = usePriceChange(baseProduct, product, currency);
@@ -132,12 +129,12 @@ export default function PlanChangeDialog({
 		effectiveMigrationScope = createVersion ? null : "this_version";
 	}
 
+	const willCreateMigration = effectiveMigrationScope !== null;
+
 	const resetState = () => {
 		setConfirmText("");
 		setCreateVersion(true);
 		setMigrationChoice("keep");
-		setStep("confirm");
-		setCreatedMigrationId(null);
 	};
 
 	const syncToLatestVersion = async () => {
@@ -145,8 +142,6 @@ export default function PlanChangeDialog({
 		await refetch();
 		invalidateProducts();
 	};
-
-	const setProduct = useProductStore((s) => s.setProduct);
 
 	const markSaved = () => {
 		setBaseProduct(product as FrontendProduct);
@@ -171,6 +166,7 @@ export default function PlanChangeDialog({
 					axiosInstance,
 					productId: product.id,
 					product,
+					version: product.version,
 					onSuccess: async () => {
 						invalidateProducts();
 					},
@@ -206,34 +202,22 @@ export default function PlanChangeDialog({
 
 			await invalidateMigrations();
 
-			setCreatedMigrationId(migration.id);
-			setStep("done");
 			toast.success(
 				createVersion
 					? "New version created with migration"
 					: "Migration created",
+			);
+			setOpen(false);
+			resetState();
+			navigateTo(
+				`/migrations/${migration.id}?step=live&run=true`,
+				navigate,
 			);
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to save plan"));
 		} finally {
 			setIsLoading(false);
 		}
-	};
-
-	const handleClose = () => {
-		setOpen(false);
-		resetState();
-		if (createVersion) syncToLatestVersion();
-	};
-
-	const handleGoToMigration = () => {
-		if (!createdMigrationId) return;
-		setOpen(false);
-		resetState();
-		navigateTo(
-			`/migrations/${createdMigrationId}?step=operations`,
-			navigate,
-		);
 	};
 
 	const handleOpenChange = (nextOpen: boolean) => {
@@ -249,157 +233,113 @@ export default function PlanChangeDialog({
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
 			<DialogContent className="max-w-md max-h-[85vh] flex flex-col">
-				{step === "confirm" ? (
-					<>
-						<DialogHeader>
-							<DialogTitle>Save plan changes</DialogTitle>
-						</DialogHeader>
+				<DialogHeader>
+					<DialogTitle>Save plan changes</DialogTitle>
+				</DialogHeader>
 
-						<div className="overflow-y-auto min-h-0 flex-1">
-							<DialogDescription asChild>
-								<div className="text-sm flex flex-col gap-6">
-									{hasChanges && (
-										<PlanItemsSection
-											product={product}
-											originalItems={baseProduct?.items}
-											features={features}
-											prepaidOptions={{}}
-											initialPrepaidOptions={{}}
-											showDiff
-											changesOnly
-											currency={currency}
-											onEditPlan={() => {}}
-											priceChange={priceChange}
-											readOnly
+				<div className="overflow-y-auto min-h-0 flex-1">
+					<DialogDescription asChild>
+						<div className="text-sm flex flex-col gap-6">
+							{hasChanges && (
+								<PlanItemsSection
+									product={product}
+									originalItems={baseProduct?.items}
+									features={features}
+									prepaidOptions={{}}
+									initialPrepaidOptions={{}}
+									showDiff
+									changesOnly
+									currency={currency}
+									onEditPlan={() => {}}
+									priceChange={priceChange}
+									readOnly
+								/>
+							)}
+
+							<div className="flex items-center justify-between gap-4">
+								<div className="flex flex-col gap-0.5">
+									<span className="text-sm font-medium text-foreground">
+										Create a new plan version
+									</span>
+									<span className="text-xs text-muted-foreground">
+										New customers will get this version.
+										Disable to update existing customers
+										only.
+									</span>
+								</div>
+								<Switch
+									checked={createVersion}
+									onCheckedChange={setCreateVersion}
+								/>
+							</div>
+
+							<div className="flex flex-col gap-3">
+								<p className="text-sm font-medium text-foreground">
+									Existing customers
+								</p>
+								<RadioGroup
+									value={migrationChoice}
+									onValueChange={(val) =>
+										setMigrationChoice(val as MigrationChoice)
+									}
+								>
+									{createVersion && (
+										<AreaRadioGroupItem
+											value="keep"
+											label="Keep as they are"
+											description="Existing customers stay on their current version."
 										/>
 									)}
-
-									<div className="flex items-center justify-between gap-4">
-										<div className="flex flex-col gap-0.5">
-											<span className="text-sm font-medium text-foreground">
-												Create a new plan version
-											</span>
-											<span className="text-xs text-muted-foreground">
-												New customers will get this
-												version. Disable to update
-												existing customers only.
-											</span>
-										</div>
-										<Switch
-											checked={createVersion}
-											onCheckedChange={setCreateVersion}
+									<AreaRadioGroupItem
+										value="this_version"
+										label={`Apply changes to customers on v${baseProduct?.version ?? 1}`}
+										description="Create a migration to apply these changes to customers on this version."
+									/>
+									{hasMultipleVersions && (
+										<AreaRadioGroupItem
+											value="all_customers"
+											label="Apply changes to all customers"
+											description="Create a migration to apply these changes to all customers on this plan."
 										/>
-									</div>
-
-									<div className="flex flex-col gap-3">
-										<p className="text-sm font-medium text-foreground">
-											Existing customers
-										</p>
-										<RadioGroup
-											value={migrationChoice}
-											onValueChange={(val) =>
-												setMigrationChoice(
-													val as MigrationChoice,
-												)
-											}
-										>
-											{createVersion && (
-												<AreaRadioGroupItem
-													value="keep"
-													label="Keep as they are"
-													description="Existing customers stay on their current version."
-												/>
-											)}
-											<AreaRadioGroupItem
-												value="this_version"
-												label={`Apply changes to customers on v${baseProduct?.version ?? 1}`}
-												description="Create a migration to apply these changes to customers on this version."
-											/>
-											{hasMultipleVersions && (
-												<AreaRadioGroupItem
-													value="all_customers"
-													label="Apply changes to all customers"
-													description="Create a migration to apply these changes to all customers on this plan."
-												/>
-											)}
-										</RadioGroup>
-									</div>
-
-									<div className="flex flex-col gap-2">
-										<p>
-											Type{" "}
-											<code className="font-bold">
-												{product.id}
-											</code>{" "}
-											to continue.
-										</p>
-
-										<Input
-											value={confirmText}
-											onChange={(e) =>
-												setConfirmText(e.target.value)
-											}
-											type="text"
-											placeholder={product.id}
-											className="w-full"
-										/>
-									</div>
-								</div>
-							</DialogDescription>
-						</div>
-
-						<DialogFooter>
-							<Button
-								variant="primary"
-								onClick={handleSave}
-								isLoading={isLoading}
-								disabled={isLoading || !confirmed}
-								className="w-full"
-							>
-								{createVersion
-									? "Save changes"
-									: "Create migration"}
-							</Button>
-						</DialogFooter>
-					</>
-				) : (
-					<>
-						<DialogHeader>
-							<div className="flex items-center gap-2">
-								<CheckCircleIcon
-									size={20}
-									weight="fill"
-									className="text-green-500"
-								/>
-								<DialogTitle>
-									{createVersion
-										? "Version created with migration"
-										: "Migration created"}
-								</DialogTitle>
+									)}
+								</RadioGroup>
 							</div>
-							<DialogDescription>
-								Your migration is ready to review and run.
-							</DialogDescription>
-						</DialogHeader>
 
-						<DialogFooter className="flex gap-2 sm:flex-row">
-							<Button
-								variant="secondary"
-								onClick={handleClose}
-								className="flex-1"
-							>
-								Close
-							</Button>
-							<Button
-								variant="primary"
-								onClick={handleGoToMigration}
-								className="flex-1"
-							>
-								Go to migration
-							</Button>
-						</DialogFooter>
-					</>
-				)}
+							<div className="flex flex-col gap-2">
+								<div className="flex items-center gap-1 flex-wrap">
+									<span>Type</span>
+									<MiniCopyButton
+										text={product.id}
+										innerClassName="font-mono font-bold text-foreground"
+										iconClassName="opacity-100 text-muted-foreground hover:text-foreground transition-colors"
+									/>
+									<span>to continue.</span>
+								</div>
+
+								<Input
+									value={confirmText}
+									onChange={(e) => setConfirmText(e.target.value)}
+									type="text"
+									placeholder={product.id}
+									className="w-full"
+								/>
+							</div>
+						</div>
+					</DialogDescription>
+				</div>
+
+				<DialogFooter>
+					<ShortcutButton
+						variant="primary"
+						metaShortcut="enter"
+						onClick={handleSave}
+						isLoading={isLoading}
+						disabled={isLoading || !confirmed}
+						className="w-full"
+					>
+						{willCreateMigration ? "Preview Migration" : "Save changes"}
+					</ShortcutButton>
+				</DialogFooter>
 			</DialogContent>
 		</Dialog>
 	);

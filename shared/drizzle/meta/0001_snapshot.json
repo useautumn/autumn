@@ -1,5 +1,5 @@
 {
-  "id": "913d60e8-e12b-4799-b1d3-27e4bcb5fe4c",
+  "id": "3d398bca-e922-45ac-bdc7-52f121289654",
   "prevId": "834b3759-eb80-411f-ba45-99c67cdc72db",
   "version": "7",
   "dialect": "postgresql",
@@ -4093,13 +4093,6 @@
           "notNull": true,
           "default": false
         },
-        "archived": {
-          "name": "archived",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "numeric",
@@ -6808,7 +6801,42 @@
           "default": "'{}'::jsonb"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "vercel_resources_installation_name_unique_idx": {
+          "name": "vercel_resources_installation_name_unique_idx",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "env",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "installation_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "name",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "status <> 'uninstalled'",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "vercel_resources_org_id_fkey": {
           "name": "vercel_resources_org_id_fkey",

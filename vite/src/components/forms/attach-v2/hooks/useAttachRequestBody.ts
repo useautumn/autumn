@@ -10,6 +10,7 @@ import type {
 	TrialOnEnd,
 } from "@autumn/shared";
 import { useMemo } from "react";
+import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
 import { getFreeTrial } from "@/components/forms/update-subscription-v2/utils/getFreeTrial";
 import { convertPrepaidOptionsToFeatureOptions } from "@/utils/billing/prepaidQuantityUtils";
 import type { FormCustomLineItem } from "../attachFormSchema";
@@ -103,10 +104,13 @@ export function buildAttachRequestBody({
 	}
 
 	if (items !== null) {
-		body.items = items.map((item) => ({
-			...item,
-			interval: (item.interval ?? null) as ProductItemInterval | null,
-		}));
+		const normalizedItems = normalizeBillingRequestItems({ items });
+		if (normalizedItems) {
+			body.items = normalizedItems.map((item) => ({
+				...item,
+				interval: (item.interval ?? null) as ProductItemInterval | null,
+			}));
+		}
 	}
 
 	if (version !== undefined) {
@@ -294,10 +298,14 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				useInvoice,
 				enableProductImmediately,
 				finalizeInvoice,
+				invoiceTemplateId,
+				netTermsDays,
 			}: {
 				useInvoice?: boolean;
 				enableProductImmediately?: boolean;
 				finalizeInvoice?: boolean;
+				invoiceTemplateId?: string;
+				netTermsDays?: number;
 			} = {}): AttachParamsV0 | null => {
 				if (!requestBody) return null;
 
@@ -306,6 +314,8 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				if (useInvoice) {
 					body.invoice = true;
 					body.finalize_invoice = finalizeInvoice ?? false;
+					body.invoice_template_id = invoiceTemplateId;
+					body.net_terms_days = netTermsDays;
 				}
 
 				// `enable_product_immediately` applies to both invoice mode and the

@@ -52,6 +52,11 @@ export const invoices = pgTable(
 			sql`${table.created_at} DESC`,
 			sql`${table.id} DESC`,
 		),
+		// Serves the entities.internal_id delete cascade (both default collation).
+		index("idx_invoices_internal_entity_id")
+			.on(table.internal_entity_id)
+			.where(sql`${table.internal_entity_id} IS NOT NULL`)
+			.concurrently(),
 	],
 );
 

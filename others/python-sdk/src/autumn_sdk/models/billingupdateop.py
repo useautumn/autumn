@@ -930,7 +930,7 @@ class BillingUpdateCustomizeTypedDict(TypedDict):
     price: NotRequired[Nullable[BillingUpdateBasePriceTypedDict]]
     r"""Override the base price of the plan. Pass null to remove the base price."""
     items: NotRequired[List[BillingUpdateItemPlanItemTypedDict]]
-    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items."""
+    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / update_items."""
     add_items: NotRequired[List[BillingUpdateAddItemPlanItemTypedDict]]
     r"""Items to add to the plan."""
     remove_items: NotRequired[List[BillingUpdatePlanItemFilterTypedDict]]
@@ -946,7 +946,7 @@ class BillingUpdateCustomize(BaseModel):
     r"""Override the base price of the plan. Pass null to remove the base price."""
 
     items: Optional[List[BillingUpdateItemPlanItem]] = None
-    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items."""
+    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / update_items."""
 
     add_items: Optional[List[BillingUpdateAddItemPlanItem]] = None
     r"""Items to add to the plan."""
@@ -994,6 +994,10 @@ class BillingUpdateInvoiceModeTypedDict(TypedDict):
     r"""If true, enables the plan immediately even though the invoice is not paid yet."""
     finalize: NotRequired[bool]
     r"""If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review."""
+    invoice_template_id: NotRequired[str]
+    r"""ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice."""
+    net_terms_days: NotRequired[int]
+    r"""Number of days the customer has to pay the invoice before it is due (Stripe days_until_due)."""
 
 
 class BillingUpdateInvoiceMode(BaseModel):
@@ -1008,9 +1012,22 @@ class BillingUpdateInvoiceMode(BaseModel):
     finalize: Optional[bool] = True
     r"""If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review."""
 
+    invoice_template_id: Optional[str] = None
+    r"""ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice."""
+
+    net_terms_days: Optional[int] = None
+    r"""Number of days the customer has to pay the invoice before it is due (Stripe days_until_due)."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["enable_plan_immediately", "finalize"])
+        optional_fields = set(
+            [
+                "enable_plan_immediately",
+                "finalize",
+                "invoice_template_id",
+                "net_terms_days",
+            ]
+        )
         serialized = handler(self)
         m = {}
 

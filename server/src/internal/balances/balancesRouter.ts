@@ -1,10 +1,13 @@
 import { Hono } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleCheck } from "../api/check/handleCheck.js";
+import { handleBatchTrack } from "./handlers/handleBatchTrack.js";
 import { handleCreateBalance } from "./handlers/handleCreateBalance.js";
 import { handleDeleteBalance } from "./handlers/handleDeleteBalance.js";
 import { handleFinalizeLock } from "./handlers/handleFinalizeLock.js";
 import { handleListBalances } from "./handlers/handleListBalances.js";
+import { handleRecalculateBalance } from "./handlers/handleRecalculateBalance.js";
+import { handleRecalculateBalancePreview } from "./handlers/handleRecalculateBalancePreview.js";
 import { handleSetUsage } from "./handlers/handleSetUsage.js";
 import { handleTrack } from "./handlers/handleTrack.js";
 import { handleUpdateBalance } from "./handlers/handleUpdateBalance.js";
@@ -15,6 +18,11 @@ export const balancesRouter = new Hono<HonoEnv>();
 balancesRouter.post("/balances/create", ...handleCreateBalance);
 balancesRouter.get("/balances/list", ...handleListBalances);
 balancesRouter.post("/balances/update", ...handleUpdateBalance);
+balancesRouter.post("/balances/recalculate", ...handleRecalculateBalance);
+balancesRouter.post(
+	"/balances/preview_recalculate",
+	...handleRecalculateBalancePreview,
+);
 
 // Track
 balancesRouter.post("/events", ...handleTrack);
@@ -31,7 +39,13 @@ export const balancesRpcRouter = new Hono<HonoEnv>();
 balancesRpcRouter.post("/balances.create", ...handleCreateBalance);
 balancesRpcRouter.post("/balances.update", ...handleUpdateBalance);
 balancesRpcRouter.post("/balances.delete", ...handleDeleteBalance);
+balancesRpcRouter.post("/balances.recalculate", ...handleRecalculateBalance);
+balancesRpcRouter.post(
+	"/balances.preview_recalculate",
+	...handleRecalculateBalancePreview,
+);
 
 balancesRpcRouter.post("/balances.track", ...handleTrack);
+balancesRpcRouter.post("/balances.batch_track", ...handleBatchTrack);
 balancesRpcRouter.post("/balances.check", ...handleCheck);
 balancesRpcRouter.post("/balances.finalize", ...handleFinalizeLock);

@@ -4,6 +4,7 @@ import type {
 	UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import { useCallback } from "react";
+import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
 import type { UpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
 import { getFreeTrial } from "../utils/getFreeTrial";
 import type { UseUpdateSubscriptionForm } from "./useUpdateSubscriptionForm";
@@ -181,7 +182,7 @@ export function useUpdateSubscriptionRequestBody({
 			...base,
 			options: options.length > 0 ? options : undefined,
 			free_trial: freeTrial,
-			items: items && items.length > 0 ? items : undefined,
+			items: normalizeBillingRequestItems({ items }),
 			version: version !== initialVersion ? version : undefined,
 			billing_behavior: billingBehavior || undefined,
 			billing_cycle_anchor: resetBillingCycle ? "now" : undefined,

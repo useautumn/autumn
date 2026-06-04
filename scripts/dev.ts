@@ -18,6 +18,12 @@ const SERVER_PORT = process.env.SERVER_PORT
 const CHECKOUT_PORT = process.env.CHECKOUT_PORT
 	? Number.parseInt(process.env.CHECKOUT_PORT, 10)
 	: 3001 + portOffset;
+const CHAT_PORT = process.env.CHAT_PORT
+	? Number.parseInt(process.env.CHAT_PORT, 10)
+	: 3099 + portOffset;
+const LOCAL_CLIENT_URL = `http://localhost:${VITE_PORT}`;
+const LOCAL_SERVER_URL = `http://localhost:${SERVER_PORT}`;
+const LOCAL_CHAT_URL = `http://localhost:${CHAT_PORT}`;
 const skipWorkers = false;
 const isProductionMode = process.argv.includes("--production");
 
@@ -27,6 +33,9 @@ const viteAppEnv = envFile.includes(".env.prod")
 	: envFile.includes(".env.staging")
 		? "staging"
 		: "dev";
+const useLocalAuthUrls = viteAppEnv === "dev" && !isProductionMode;
+const localUrl = (value: string | undefined, fallback: string) =>
+	value && !value.includes(".useautumn.com") ? value : fallback;
 
 /**
  * Read environment variable from .env file
@@ -98,7 +107,7 @@ async function startDev() {
 			} else {
 				console.log("Cleaning up local dev ports...\n");
 				killPorts({
-					ports: [VITE_PORT, SERVER_PORT, CHECKOUT_PORT],
+					ports: [VITE_PORT, SERVER_PORT, CHECKOUT_PORT, CHAT_PORT],
 				});
 			}
 
@@ -132,11 +141,12 @@ async function startDev() {
 
 		console.log(`  vite:     http://localhost:${VITE_PORT}`);
 		console.log(`  server:   http://localhost:${SERVER_PORT}`);
-		console.log(`  checkout: http://localhost:${CHECKOUT_PORT}\n`);
+		console.log(`  checkout: http://localhost:${CHECKOUT_PORT}`);
+		console.log(`  leaf:     http://localhost:${CHAT_PORT}/health`);
+		console.log(`  mcp:      http://localhost:${CHAT_PORT}/mcp\n`);
 
 		// Use cmd on Windows, sh on Unix
 		const isWindows = process.platform === "win32";
-		const bunInstallBin = dirname(process.execPath);
 
 		let shellArgs: string[];
 		if (serverOnly) {
@@ -197,10 +207,17 @@ async function startDev() {
 					: `"cd apps/checkout && VITE_PORT=${CHECKOUT_PORT} bun dev"`,
 			);
 
+			names.push("leaf");
+			colors.push("gray");
+			cmds.push(
+				isWindows
+					? `"cd apps/leaf && set PORT=${CHAT_PORT} && bun dev"`
+					: `"cd apps/leaf && PORT=${CHAT_PORT} bun dev"`,
+			);
+
 			// Stripe CLI webhook tunnel — silently skip if CLI absent.
 			// Forwards to the direct localhost port (not portless) so we avoid CA trust issues.
-			const stripeAvailable =
-				Bun.spawnSync(["which", "stripe"]).exitCode === 0;
+			const stripeAvailable = Bun.spawnSync(["which", "stripe"]).exitCode === 0;
 			if (stripeAvailable) {
 				const auth = Bun.spawnSync(
 					["stripe", "customers", "list", "--limit", "1"],
@@ -211,7 +228,9 @@ async function startDev() {
 					console.error(
 						"\nStripe CLI is installed but not authenticated (or key expired).",
 					);
-					console.error(`  ${stderr.trim().split("\n").slice(-3).join("\n  ")}`);
+					console.error(
+						`  ${stderr.trim().split("\n").slice(-3).join("\n  ")}`,
+					);
 					console.error("\nRun `stripe login` and try again.\n");
 					process.exit(1);
 				}
@@ -221,9 +240,7 @@ async function startDev() {
 				// --forward-connect-to forwards events from connected accounts;
 				// the /webhooks/connect/* endpoint expects Connect-mode events.
 				const stripeCmd = `stripe listen --forward-connect-to ${forwardUrl} --skip-verify`;
-				cmds.push(
-					isWindows ? `"${stripeCmd}"` : `"${stripeCmd}"`,
-				);
+				cmds.push(isWindows ? `"${stripeCmd}"` : `"${stripeCmd}"`);
 			}
 
 			shellArgs = [
@@ -240,20 +257,49 @@ async function startDev() {
 				VITE_PORT: VITE_PORT.toString(),
 				SERVER_PORT: SERVER_PORT.toString(),
 				CHECKOUT_PORT: CHECKOUT_PORT.toString(),
+				CHAT_PORT: CHAT_PORT.toString(),
+				MCP_DEBUG_PENDING_ACTIONS: process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
+				MCP_SERVER_URL:
+					process.env.MCP_SERVER_URL ?? `http://localhost:${CHAT_PORT}`,
+				CHAT_SERVER_URL:
+					process.env.CHAT_SERVER_URL ?? `http://localhost:${CHAT_PORT}`,
+				MCP_RESOURCE_URLS:
+					process.env.MCP_RESOURCE_URLS ?? `http://localhost:${CHAT_PORT}/mcp`,
+				AUTUMN_API_URL: process.env.AUTUMN_API_URL ?? LOCAL_SERVER_URL,
+				CHAT_URL: process.env.CHAT_URL ?? LOCAL_CHAT_URL,
+				SLACK_BOT_URL: process.env.SLACK_BOT_URL ?? LOCAL_CHAT_URL,
+				DISCORD_BOT_URL: process.env.DISCORD_BOT_URL ?? LOCAL_CHAT_URL,
 				VITE_APP_ENV: viteAppEnv,
+				...(useLocalAuthUrls && {
+					CLIENT_URL: localUrl(process.env.CLIENT_URL, LOCAL_CLIENT_URL),
+					BETTER_AUTH_URL: localUrl(
+						process.env.BETTER_AUTH_URL,
+						LOCAL_SERVER_URL,
+					),
+					VITE_BACKEND_URL: localUrl(
+						process.env.VITE_BACKEND_URL,
+						LOCAL_SERVER_URL,
+					),
+					VITE_FRONTEND_URL: localUrl(
+						process.env.VITE_FRONTEND_URL,
+						LOCAL_CLIENT_URL,
+					),
+				}),
 				...(process.env.DB_SCHEMA && { DB_SCHEMA: process.env.DB_SCHEMA }),
 				...(worktreeNum > 1 && {
-					CLIENT_URL:
-						process.env.CLIENT_URL ?? `http://localhost:${VITE_PORT}`,
-					BETTER_AUTH_URL:
-						process.env.BETTER_AUTH_URL ??
-						`http://localhost:${SERVER_PORT}`,
-					VITE_BACKEND_URL:
-						process.env.VITE_BACKEND_URL ??
-						`http://localhost:${SERVER_PORT}`,
-					VITE_FRONTEND_URL:
-						process.env.VITE_FRONTEND_URL ??
-						`http://localhost:${VITE_PORT}`,
+					CLIENT_URL: localUrl(process.env.CLIENT_URL, LOCAL_CLIENT_URL),
+					BETTER_AUTH_URL: localUrl(
+						process.env.BETTER_AUTH_URL,
+						LOCAL_SERVER_URL,
+					),
+					VITE_BACKEND_URL: localUrl(
+						process.env.VITE_BACKEND_URL,
+						LOCAL_SERVER_URL,
+					),
+					VITE_FRONTEND_URL: localUrl(
+						process.env.VITE_FRONTEND_URL,
+						LOCAL_CLIENT_URL,
+					),
 					EMULATE_GOOGLE_URL:
 						process.env.EMULATE_GOOGLE_URL ??
 						"https://google.emulate.localhost",

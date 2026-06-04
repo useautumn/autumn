@@ -21,6 +21,8 @@ supabase.sh
 **/.env*
 tests/
 !server/tests
+!packages/mcp/tests
+!apps/leaf/tests
 !vite/tests
 .secrets
 

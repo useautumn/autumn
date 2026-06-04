@@ -176,6 +176,31 @@ export const createCustomerPricesForProduct = ({
 	);
 };
 
+export const setPrepaidStripeProductId = (
+	product: ReturnType<typeof createProductWithAllPriceTypes>,
+	stripeProductId: string,
+) => {
+	product.prepaidPrice.config.stripe_product_id = stripeProductId;
+	return product;
+};
+
+export const createCustomerPricesWithSuffix = ({
+	product,
+	customerProductId,
+	suffix,
+}: {
+	product: ReturnType<typeof createProductWithAllPriceTypes>;
+	customerProductId: string;
+	suffix: string;
+}) =>
+	createCustomerPricesForProduct({
+		prices: product.allPrices,
+		customerProductId,
+	}).map((customerPrice) => ({
+		...customerPrice,
+		id: `${customerPrice.id}_${suffix}`,
+	}));
+
 // ============ STRIPE PRICE ID HELPERS ============
 
 /**

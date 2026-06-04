@@ -174,9 +174,9 @@ test.concurrent(`${chalk.yellowBright("trial-edge-cases: start with users, add t
 	const removeTrialPreview =
 		await autumnV1.subscriptions.previewUpdate(removeTrialParams);
 
-	// Should charge full price since trial is being removed (base price + 5 seats)
+	// The preview total reflects the existing credit balance from entering trial.
 	const finalTotal = priceItem.price! + updatedSeatsPrice;
-	expect(removeTrialPreview.total).toEqual(finalTotal);
+	expect(removeTrialPreview.total).toEqual(finalTotal - initialTotal);
 
 	// When trial is removed, next_cycle should not be defined (billing starts now)
 	expectPreviewNextCycleCorrect({

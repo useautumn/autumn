@@ -97,6 +97,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		stripeSubscriptionSchedule,
 		stripeCustomer,
 		stripeDiscounts,
+		stripeTaxRate,
 		paymentMethod,
 		testClockFrozenTime,
 	} = await setupStripeBillingContext({
@@ -143,7 +144,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		newFullProduct: fullProduct,
 	});
 
-	const invoiceMode = setupInvoiceModeContext({ params });
+	const invoiceMode = await setupInvoiceModeContext({ ctx, params });
 	const isCustom =
 		contextOverride.forceIsCustom !== undefined
 			? contextOverride.forceIsCustom
@@ -189,6 +190,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		stripeSubscriptionSchedule,
 		stripeDiscounts,
 		stripeCustomer,
+		stripeTaxRate,
 		paymentMethod,
 
 		currentEpochMs,

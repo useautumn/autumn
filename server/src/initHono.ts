@@ -22,7 +22,9 @@ import { handleListAuthOrganizations } from "./internal/auth/handleListAuthOrgan
 import { cliRouter } from "./internal/dev/cli/cliRouter.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
 import { apiRouter } from "./routers/apiRouter.js";
+import { createChatProxyRouter } from "./routers/chatProxyRouter.js";
 import { internalRouter } from "./routers/internalRouter.js";
+import { mcpProxyRouter } from "./routers/mcpProxyRouter.js";
 import { publicRouter } from "./routers/publicRouter.js";
 import { auth } from "./utils/auth.js";
 import { isAllowedOrigin } from "./utils/corsOrigins.js";
@@ -54,6 +56,8 @@ const ALLOWED_HEADERS = [
 export const createHonoApp = () => {
 	const app = new Hono<HonoEnv>();
 
+	app.route("", createChatProxyRouter());
+
 	// CORS configuration (must be before routes)
 	app.use(
 		"*",
@@ -69,6 +73,14 @@ export const createHonoApp = () => {
 
 	app.get("/api/auth/.well-known/openid-configuration", (c) => {
 		return oauthProviderOpenIdConfigMetadata(auth)(c.req.raw);
+	});
+
+	app.get("/.well-known/oauth-authorization-server", (c) => {
+		return oauthProviderAuthServerMetadata(auth)(c.req.raw);
+	});
+
+	app.get("/api/auth/.well-known/oauth-authorization-server", (c) => {
+		return oauthProviderAuthServerMetadata(auth)(c.req.raw);
 	});
 
 	app.get("/.well-known/oauth-authorization-server/api/auth", (c) => {
@@ -88,6 +100,8 @@ export const createHonoApp = () => {
 	app.get("/stripe/oauth_callback", handleOAuthCallback);
 	app.get("/ready/:token", handleReadyCheck);
 	app.get("/", handleHealthCheck);
+
+	app.route("", mcpProxyRouter);
 
 	// Step 1: OTel HTTP span + base middleware + span enrichment
 	app.use(

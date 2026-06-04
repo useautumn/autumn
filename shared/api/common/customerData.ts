@@ -19,9 +19,15 @@ export const CustomerDataSchema = z
 		name: z.string().nullish().meta({
 			description: "Customer's name",
 		}),
-		email: z.email({ message: "not a valid email address" }).nullish().meta({
-			description: "Customer's email address",
-		}),
+		email: z
+			.email({
+				pattern: z.regexes.unicodeEmail,
+				message: "not a valid email address",
+			})
+			.nullish()
+			.meta({
+				description: "Customer's email address",
+			}),
 
 		fingerprint: z.string().nullish().meta({
 			description:
@@ -71,7 +77,7 @@ export const CustomerDataSchema = z
 		}),
 	})
 	.meta({
-		id: "CustomerData",
+		$id: "CustomerData",
 		title: "CustomerData",
 		description: "Customer details to set when creating a customer",
 	});

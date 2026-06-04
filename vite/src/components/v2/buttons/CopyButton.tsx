@@ -74,6 +74,8 @@ interface CopyButtonProps extends IconButtonProps {
 	text: string;
 	iconOrientation?: "left" | "right";
 	innerClassName?: string;
+	/** Classes applied to the copy icon button (MiniCopyButton only). Overrides the default hover-reveal. */
+	iconClassName?: string;
 }
 
 export const CopyButton = ({
@@ -123,6 +125,7 @@ export const MiniCopyButton = ({
 	side = "right",
 	innerClassName = "",
 	iconOrientation = "right",
+	iconClassName,
 	children,
 	...props
 }: CopyButtonProps) => {
@@ -141,6 +144,7 @@ export const MiniCopyButton = ({
 						className={cn(
 							"opacity-0 group-hover:opacity-100 cursor-pointer px-0!",
 							copied && "opacity-100",
+							iconClassName,
 						)}
 					/>
 				</TooltipTrigger>

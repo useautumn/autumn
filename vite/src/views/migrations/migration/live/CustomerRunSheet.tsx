@@ -26,6 +26,7 @@ import type { MigrationPreviewCustomer } from "@/hooks/queries/useMigrationFilte
 import type { MigrationItemEvent } from "@/hooks/queries/useMigrationRunsQuery";
 import { navigateTo } from "@/utils/genUtils";
 import { ActiveRunDot, ItemEventStatusBadge } from "../runs/RunStatusBadge";
+import { OperationsPreview } from "../shared/OperationsPreview";
 import { RunSummaryRows } from "../shared/RunSummaryRows";
 import { EventResultDetail } from "./EventResultDetail";
 
@@ -306,6 +307,7 @@ export function CustomerRunSheet({
 						operations={operations}
 						noBillingChanges={noBillingChanges}
 					/>
+					<OperationsPreview operations={operations} />
 					<DialogFooter>
 						<Button
 							variant="secondary"

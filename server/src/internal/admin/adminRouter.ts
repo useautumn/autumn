@@ -19,8 +19,9 @@ import { handleGetAdminFullSubjectGateConfig } from "./handleGetAdminFullSubject
 import { handleGetAdminJobQueueConfig } from "./handleGetAdminJobQueueConfig";
 import { handleGetAdminMiscellaneousEdgeConfig } from "./handleGetAdminMiscellaneousEdgeConfig";
 import { handleGetAdminOrgLimitsConfig } from "./handleGetAdminOrgLimitsConfig";
-import { handleGetAdminRateLimitOverridesConfig } from "./handleGetAdminRateLimitOverridesConfig";
 import { handleGetAdminOrgRequestBlock } from "./handleGetAdminOrgRequestBlock";
+import { handleGetAdminRateLimitOverridesConfig } from "./handleGetAdminRateLimitOverridesConfig";
+import { handleGetAdminRateLimitRedisAllowlistConfig } from "./handleGetAdminRateLimitRedisAllowlistConfig";
 import { handleGetAdminRedisV2CacheConfig } from "./handleGetAdminRedisV2CacheConfig";
 import { handleGetAdminRequestBlockConfig } from "./handleGetAdminRequestBlockConfig";
 import { handleGetAdminStripeSyncConfig } from "./handleGetAdminStripeSyncConfig";
@@ -38,8 +39,9 @@ import { handleUpsertAdminFullSubjectGateConfig } from "./handleUpsertAdminFullS
 import { handleUpsertAdminJobQueueConfig } from "./handleUpsertAdminJobQueueConfig";
 import { handleUpsertAdminMiscellaneousEdgeConfig } from "./handleUpsertAdminMiscellaneousEdgeConfig";
 import { handleUpsertAdminOrgLimitsConfig } from "./handleUpsertAdminOrgLimitsConfig";
-import { handleUpsertAdminRateLimitOverridesConfig } from "./handleUpsertAdminRateLimitOverridesConfig";
 import { handleUpsertAdminOrgRequestBlock } from "./handleUpsertAdminOrgRequestBlock";
+import { handleUpsertAdminRateLimitOverridesConfig } from "./handleUpsertAdminRateLimitOverridesConfig";
+import { handleUpsertAdminRateLimitRedisAllowlistConfig } from "./handleUpsertAdminRateLimitRedisAllowlistConfig";
 import { handleUpsertAdminRedisV2CacheConfig } from "./handleUpsertAdminRedisV2CacheConfig";
 import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
 import { handleUpsertAdminStripeSyncConfig } from "./handleUpsertAdminStripeSyncConfig";
@@ -124,6 +126,14 @@ honoAdminRouter.get(
 honoAdminRouter.put(
 	"/rate-limit-overrides-config",
 	...handleUpsertAdminRateLimitOverridesConfig,
+);
+honoAdminRouter.get(
+	"/rate-limit-redis-allowlist-config",
+	...handleGetAdminRateLimitRedisAllowlistConfig,
+);
+honoAdminRouter.put(
+	"/rate-limit-redis-allowlist-config",
+	...handleUpsertAdminRateLimitRedisAllowlistConfig,
 );
 honoAdminRouter.get("/job-queue-config", ...handleGetAdminJobQueueConfig);
 honoAdminRouter.put("/job-queue-config", ...handleUpsertAdminJobQueueConfig);

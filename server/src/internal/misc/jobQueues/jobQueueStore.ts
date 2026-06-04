@@ -9,6 +9,7 @@ import {
 export const JOB_QUEUE_IDS = {
 	primary: "primary",
 	track: "track",
+	trackAsync: "trackAsync",
 } as const;
 
 export const KNOWN_JOB_QUEUES = [
@@ -21,7 +22,14 @@ export const KNOWN_JOB_QUEUES = [
 	{
 		id: JOB_QUEUE_IDS.track,
 		label: "Track Replay Queue",
-		description: "Dedicated async track replay queue used during fail-open recovery.",
+		description:
+			"Dedicated async track replay queue used during fail-open recovery.",
+		defaultEnabled: true,
+	},
+	{
+		id: JOB_QUEUE_IDS.trackAsync,
+		label: "Track Async Queue",
+		description: "Customer-driven async / batch track ingest.",
 		defaultEnabled: true,
 	},
 ] as const;

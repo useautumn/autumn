@@ -1,37 +1,33 @@
-import { describe, test, expect } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
-	Scopes,
-	ROLE_SCOPES,
-	RESOURCES,
-	MODERN_SCOPES,
-	LEGACY_SCOPES,
-	OPENID_SCOPES,
-	META_SCOPES,
-	ALL_SCOPES,
-	LEGACY_SCOPE_ALIASES,
-	RESOURCE_METADATA,
 	ACTION_METADATA,
-	isOpenIdScope,
-	isModernScope,
-	isLegacyScope,
-	isMetaScope,
-	isValidScope,
-	parseScope,
-	expandScopes,
+	ALL_SCOPES,
 	checkScopes,
-	isScopeSubset,
-	makeScopeChecker,
-	groupScopesByResource,
+	expandScopes,
 	formatActions,
 	formatResourcePermission,
-	groupAndFormatScopes,
-	validateScopes,
 	getResourceDescription,
-	type Role,
+	groupAndFormatScopes,
+	groupScopesByResource,
+	isLegacyScope,
+	isMetaScope,
+	isModernScope,
+	isOpenIdScope,
+	isScopeSubset,
+	isValidScope,
+	LEGACY_SCOPE_ALIASES,
+	LEGACY_SCOPES,
+	META_SCOPES,
+	MODERN_SCOPES,
+	makeScopeChecker,
+	OPENID_SCOPES,
+	parseScope,
+	RESOURCE_METADATA,
+	RESOURCES,
+	ROLE_SCOPES,
 	type ScopeString,
-	type RouteScopeRequirement,
-	type ResourceType,
-	type ScopeActionType,
+	Scopes,
+	validateScopes,
 } from "./scopeDefinitions";
 
 // ---------------------------------------------------------------------------
@@ -39,8 +35,8 @@ import {
 // ---------------------------------------------------------------------------
 
 describe("constants & invariants", () => {
-	test("RESOURCES has 10 entries in canonical order", () => {
-		expect(RESOURCES.length).toBe(10);
+	test("RESOURCES has 11 entries in canonical order", () => {
+		expect(RESOURCES.length).toBe(11);
 		expect([...RESOURCES]).toEqual([
 			"organisation",
 			"customers",
@@ -49,6 +45,7 @@ describe("constants & invariants", () => {
 			"rewards",
 			"balances",
 			"billing",
+			"migrations",
 			"analytics",
 			"apiKeys",
 			"platform",
@@ -58,7 +55,7 @@ describe("constants & invariants", () => {
 	test("MODERN_SCOPES count equals 2*len(resources) - 1 (analytics read-only)", () => {
 		const expectedCount = RESOURCES.length * 2 - 1;
 		expect(MODERN_SCOPES.length).toBe(expectedCount);
-		expect(MODERN_SCOPES.length).toBe(19);
+		expect(MODERN_SCOPES.length).toBe(21);
 	});
 
 	test("MODERN_SCOPES contains every Scopes.X.Read/Write entry", () => {
@@ -77,6 +74,8 @@ describe("constants & invariants", () => {
 			Scopes.Balances.Write,
 			Scopes.Billing.Read,
 			Scopes.Billing.Write,
+			Scopes.Migrations.Read,
+			Scopes.Migrations.Write,
 			Scopes.Analytics.Read,
 			Scopes.ApiKeys.Read,
 			Scopes.ApiKeys.Write,
@@ -87,7 +86,9 @@ describe("constants & invariants", () => {
 	});
 
 	test("MODERN_SCOPES does NOT include analytics:write", () => {
-		expect((MODERN_SCOPES as readonly string[]).includes("analytics:write")).toBe(false);
+		expect(
+			(MODERN_SCOPES as readonly string[]).includes("analytics:write"),
+		).toBe(false);
 	});
 
 	test("ALL_SCOPES contains OPENID_SCOPES + MODERN_SCOPES + META_SCOPES + LEGACY_SCOPES", () => {
@@ -112,7 +113,7 @@ describe("constants & invariants", () => {
 
 	test("Scopes.Analytics has only Read (no Write property)", () => {
 		expect(Scopes.Analytics.Read).toBe("analytics:read");
-		expect((Scopes.Analytics as any).Write).toBeUndefined();
+		expect((Scopes.Analytics as Record<string, unknown>).Write).toBeUndefined();
 	});
 
 	test("Scopes.Platform.Read === 'platform:read'", () => {
@@ -128,15 +129,21 @@ describe("constants & invariants", () => {
 	});
 
 	test("META_SCOPES contains exactly the 4 meta-scopes", () => {
-		expect([...META_SCOPES].sort()).toEqual(
-			["admin", "owner", "public", "superuser"],
-		);
+		expect([...META_SCOPES].sort()).toEqual([
+			"admin",
+			"owner",
+			"public",
+			"superuser",
+		]);
 	});
 
 	test("OPENID_SCOPES contains exactly the 4 OIDC scopes", () => {
-		expect([...OPENID_SCOPES].sort()).toEqual(
-			["email", "offline_access", "openid", "profile"],
-		);
+		expect([...OPENID_SCOPES].sort()).toEqual([
+			"email",
+			"offline_access",
+			"openid",
+			"profile",
+		]);
 	});
 
 	test("RESOURCE_METADATA has an entry for every resource", () => {
@@ -403,15 +410,16 @@ describe("expandScopes", () => {
 	});
 
 	test("customers:read → just customers:read", () => {
-		expect([...expandScopes(["customers:read"])].sort()).toEqual(
-			["customers:read"],
-		);
+		expect([...expandScopes(["customers:read"])].sort()).toEqual([
+			"customers:read",
+		]);
 	});
 
 	test("customers:write → customers:write + customers:read", () => {
-		expect([...expandScopes(["customers:write"])].sort()).toEqual(
-			["customers:read", "customers:write"],
-		);
+		expect([...expandScopes(["customers:write"])].sort()).toEqual([
+			"customers:read",
+			"customers:write",
+		]);
 	});
 
 	test("customers:write + customers:read → same (no duplication)", () => {
@@ -421,33 +429,37 @@ describe("expandScopes", () => {
 	});
 
 	test("legacy customers:list → customers:read", () => {
-		expect([...expandScopes(["customers:list"])].sort()).toEqual(
-			["customers:read"],
-		);
+		expect([...expandScopes(["customers:list"])].sort()).toEqual([
+			"customers:read",
+		]);
 	});
 
 	test("legacy customers:create → customers:write + customers:read", () => {
-		expect([...expandScopes(["customers:create"])].sort()).toEqual(
-			["customers:read", "customers:write"],
-		);
+		expect([...expandScopes(["customers:create"])].sort()).toEqual([
+			"customers:read",
+			"customers:write",
+		]);
 	});
 
 	test("legacy customers:update → customers:write + customers:read", () => {
-		expect([...expandScopes(["customers:update"])].sort()).toEqual(
-			["customers:read", "customers:write"],
-		);
+		expect([...expandScopes(["customers:update"])].sort()).toEqual([
+			"customers:read",
+			"customers:write",
+		]);
 	});
 
 	test("legacy customers:delete → customers:write + customers:read", () => {
-		expect([...expandScopes(["customers:delete"])].sort()).toEqual(
-			["customers:read", "customers:write"],
-		);
+		expect([...expandScopes(["customers:delete"])].sort()).toEqual([
+			"customers:read",
+			"customers:write",
+		]);
 	});
 
 	test("bare 'apiKeys' → apiKeys:write + apiKeys:read", () => {
-		expect([...expandScopes(["apiKeys"])].sort()).toEqual(
-			["apiKeys:read", "apiKeys:write"],
-		);
+		expect([...expandScopes(["apiKeys"])].sort()).toEqual([
+			"apiKeys:read",
+			"apiKeys:write",
+		]);
 	});
 
 	test("meta 'admin' expands to admin + every modern scope", () => {
@@ -525,9 +537,10 @@ describe("expandScopes", () => {
 	});
 
 	test("organisation:create → organisation:write + organisation:read", () => {
-		expect([...expandScopes(["organisation:create"])].sort()).toEqual(
-			["organisation:read", "organisation:write"],
-		);
+		expect([...expandScopes(["organisation:create"])].sort()).toEqual([
+			"organisation:read",
+			"organisation:write",
+		]);
 	});
 });
 
@@ -552,21 +565,23 @@ describe("ROLE_SCOPES", () => {
 		expect(ROLE_SCOPES.admin).not.toContain("owner");
 	});
 
-	test("developer has the exact 9 expected scopes", () => {
+	test("developer has the exact 11 expected scopes", () => {
 		expect([...ROLE_SCOPES.developer].sort()).toEqual(
 			[
 				"organisation:read",
 				"customers:write",
 				"features:write",
 				"plans:write",
+				"rewards:write",
 				"balances:write",
 				"billing:write",
+				"migrations:write",
 				"analytics:read",
 				"apiKeys:write",
 				"platform:write",
 			].sort(),
 		);
-		expect(ROLE_SCOPES.developer.length).toBe(9);
+		expect(ROLE_SCOPES.developer.length).toBe(11);
 	});
 
 	test("sales has the exact 7 expected scopes", () => {
@@ -584,8 +599,8 @@ describe("ROLE_SCOPES", () => {
 		expect(ROLE_SCOPES.sales.length).toBe(7);
 	});
 
-	test("member contains all :read scopes (count 10), no :write", () => {
-		expect(ROLE_SCOPES.member.length).toBe(10);
+	test("member contains all :read scopes, no :write", () => {
+		expect(ROLE_SCOPES.member.length).toBe(RESOURCES.length);
 		for (const s of ROLE_SCOPES.member) {
 			expect(s.endsWith(":read")).toBe(true);
 			expect(s.endsWith(":write")).toBe(false);
@@ -628,10 +643,7 @@ describe("checkScopes — shorthand array (ALL semantics)", () => {
 
 	test("partial miss → blocked, missing contains only the missing one", () => {
 		expect(
-			checkScopes(
-				["customers:read", "plans:read"],
-				["customers:read"],
-			),
+			checkScopes(["customers:read", "plans:read"], ["customers:read"]),
 		).toEqual({ allowed: false, missing: ["plans:read"] });
 	});
 });
@@ -646,19 +658,18 @@ describe("checkScopes — { ALL } semantics", () => {
 
 	test("ALL satisfied → allowed", () => {
 		expect(
-			checkScopes(
-				{ ALL: ["customers:read", "plans:read"] },
-				["customers:read", "plans:read"],
-			),
+			checkScopes({ ALL: ["customers:read", "plans:read"] }, [
+				"customers:read",
+				"plans:read",
+			]),
 		).toEqual({ allowed: true, missing: [] });
 	});
 
 	test("ALL with one missing → blocked", () => {
 		expect(
-			checkScopes(
-				{ ALL: ["customers:read", "plans:read"] },
-				["customers:read"],
-			),
+			checkScopes({ ALL: ["customers:read", "plans:read"] }, [
+				"customers:read",
+			]),
 		).toEqual({ allowed: false, missing: ["plans:read"] });
 	});
 });
@@ -666,19 +677,15 @@ describe("checkScopes — { ALL } semantics", () => {
 describe("checkScopes — { ANY } semantics", () => {
 	test("one of the ANY matches → allowed", () => {
 		expect(
-			checkScopes(
-				{ ANY: ["customers:read", "plans:read"] },
-				["customers:read"],
-			),
+			checkScopes({ ANY: ["customers:read", "plans:read"] }, [
+				"customers:read",
+			]),
 		).toEqual({ allowed: true, missing: [] });
 	});
 
 	test("none match → blocked, missing = full ANY list", () => {
 		expect(
-			checkScopes(
-				{ ANY: ["customers:read", "plans:read"] },
-				["rewards:read"],
-			),
+			checkScopes({ ANY: ["customers:read", "plans:read"] }, ["rewards:read"]),
 		).toEqual({
 			allowed: false,
 			missing: ["customers:read", "plans:read"],
@@ -787,9 +794,10 @@ describe("checkScopes — public bypass", () => {
 	});
 
 	test("public short-circuits even when other scopes also required", () => {
-		expect(
-			checkScopes(["customers:write", "public"], []),
-		).toEqual({ allowed: true, missing: [] });
+		expect(checkScopes(["customers:write", "public"], [])).toEqual({
+			allowed: true,
+			missing: [],
+		});
 	});
 });
 
@@ -977,9 +985,7 @@ describe("isScopeSubset", () => {
 	});
 
 	test("customers:write NOT ⊆ customers:read", () => {
-		expect(isScopeSubset(["customers:write"], ["customers:read"])).toBe(
-			false,
-		);
+		expect(isScopeSubset(["customers:write"], ["customers:read"])).toBe(false);
 	});
 
 	test("multi-scope requested vs multi-scope write grant", () => {
@@ -1017,9 +1023,7 @@ describe("isScopeSubset", () => {
 	});
 
 	test("legacy granted covers modern requested", () => {
-		expect(isScopeSubset(["customers:write"], ["customers:create"])).toBe(
-			true,
-		);
+		expect(isScopeSubset(["customers:write"], ["customers:create"])).toBe(true);
 	});
 
 	test("requested contains unknown scope → dropped via expansion", () => {
@@ -1219,14 +1223,10 @@ describe("groupScopesByResource", () => {
 		// admin in input now expands to every modern product scope
 		// (superuser > owner > admin > products). Grouping reflects that:
 		// every resource has read+write except analytics (read-only).
-		const result = groupScopesByResource([
-			"openid",
-			"admin",
-			"customers:read",
-		]);
-		// 10 resources: organisation, customers, features, plans, rewards,
-		// balances, billing, analytics, apiKeys, platform
-		expect(result.size).toBe(10);
+		const result = groupScopesByResource(["openid", "admin", "customers:read"]);
+		// 11 resources: organisation, customers, features, plans, rewards,
+		// balances, billing, migrations, analytics, apiKeys, platform
+		expect(result.size).toBe(11);
 		// customers ends up with both read and write (from admin expansion).
 		expect(result.get("customers")).toEqual(["read", "write"]);
 		// analytics is read-only.
@@ -1287,33 +1287,28 @@ describe("formatResourcePermission", () => {
 	});
 
 	test("apiKeys is pluralised via metadata ('API Keys')", () => {
-		expect(formatResourcePermission("apiKeys", ["read"])).toBe(
-			"Read api keys",
-		);
+		expect(formatResourcePermission("apiKeys", ["read"])).toBe("Read api keys");
 	});
 });
 
 describe("groupAndFormatScopes", () => {
 	test("produces one entry per resource with correct shape", () => {
-		const result = groupAndFormatScopes([
-			"customers:read",
-			"plans:write",
-		]);
+		const result = groupAndFormatScopes(["customers:read", "plans:write"]);
 		expect(result.length).toBe(2);
 
 		const customers = result.find((e) => e.resource === "customers");
 		expect(customers).toBeDefined();
-		expect(customers!.resourceName).toBe("Customers");
-		expect(customers!.actions).toEqual(["read"]);
-		expect(customers!.formattedPermission).toBe("Read customers");
-		expect(customers!.description).toBe(
+		expect(customers?.resourceName).toBe("Customers");
+		expect(customers?.actions).toEqual(["read"]);
+		expect(customers?.formattedPermission).toBe("Read customers");
+		expect(customers?.description).toBe(
 			RESOURCE_METADATA.customers.description,
 		);
 
 		const plans = result.find((e) => e.resource === "plans");
 		expect(plans).toBeDefined();
-		expect(plans!.actions).toEqual(["read", "write"]); // write expands to read
-		expect(plans!.formattedPermission).toBe("Read and write plans");
+		expect(plans?.actions).toEqual(["read", "write"]); // write expands to read
+		expect(plans?.formattedPermission).toBe("Read and write plans");
 	});
 
 	test("empty input → empty array", () => {

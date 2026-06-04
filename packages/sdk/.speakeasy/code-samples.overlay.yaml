@@ -3,6 +3,37 @@ info:
   title: CodeSamples overlay for typescript target
   version: 0.0.0
 actions:
+  - target: $["paths"]["/v1/balances.batch_track"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.batchTrack([
+                {
+                  customerId: "cus_123",
+                  featureId: "messages",
+                  value: 1,
+                },
+                {
+                  customerId: "cus_123",
+                  eventName: "message.sent",
+                  value: 1,
+                },
+              ]);
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/balances.check"]["post"]
     update:
       x-codeSamples:

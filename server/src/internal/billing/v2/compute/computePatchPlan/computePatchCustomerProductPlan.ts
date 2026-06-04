@@ -1,6 +1,9 @@
 import {
 	type AutumnBillingPlan,
 	CusProductStatus,
+	EntInterval,
+	getCycleEnd,
+	isBooleanEntitlement,
 	type UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -49,6 +52,10 @@ export const computePatchCustomerProductPlan = ({
 		customFreeTrial: trialContext?.customFreeTrial,
 		lineItems: allLineItems,
 		insertCustomerEntitlements: oneOffPrepaidCarryOverCustomerEntitlements,
+		updateCustomerEntitlements: computeAnchorResetEntitlementUpdates({
+			updateSubscriptionContext,
+			finalCustomerProduct,
+		}),
 	} satisfies Partial<AutumnBillingPlan>;
 
 	if (patchContext.mode === "new") {
@@ -102,4 +109,35 @@ export const computePatchCustomerProductPlan = ({
 			},
 		],
 	} satisfies AutumnBillingPlan;
+};
+
+const computeAnchorResetEntitlementUpdates = ({
+	updateSubscriptionContext,
+	finalCustomerProduct,
+}: {
+	updateSubscriptionContext: UpdateSubscriptionBillingContext;
+	finalCustomerProduct: UpdateSubscriptionBillingContext["customerProduct"];
+}): AutumnBillingPlan["updateCustomerEntitlements"] => {
+	if (updateSubscriptionContext.requestedBillingCycleAnchor !== "now") return [];
+
+	return finalCustomerProduct.customer_entitlements
+		.filter((customerEntitlement) => {
+			const { entitlement } = customerEntitlement;
+			return (
+				!isBooleanEntitlement({ entitlement }) &&
+				entitlement.allowance !== null
+			);
+		})
+		.map((customerEntitlement) => ({
+			customerEntitlement,
+			updates: {
+				next_reset_at: getCycleEnd({
+					anchor: updateSubscriptionContext.resetCycleAnchorMs,
+					interval:
+						customerEntitlement.entitlement.interval ?? EntInterval.Month,
+					intervalCount: customerEntitlement.entitlement.interval_count,
+					now: updateSubscriptionContext.currentEpochMs,
+				}),
+			},
+		}));
 };

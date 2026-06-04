@@ -14,6 +14,7 @@
 	"ignoreWorkspaces": [
 		"packages/atmn",
 		"packages/autumn-js",
+		"packages/mcp",
 		"packages/openapi",
 		"packages/sdk"
 	],
@@ -43,7 +44,7 @@
 		"vite": {
 			"entry": ["tests/**/*.{ts,tsx}"],
 			"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
-			"ignore": ["src/components/ai-elements/**", "src/hooks/useControllableState.ts"],
+			"ignore": ["src/components/ai-elements/**", "src/hooks/useControllableState.ts", "src/types/**/*.d.ts"],
 			"ignoreDependencies": [
 				"tailwindcss",
 				"tailwind-scrollbar-hide",
@@ -75,6 +76,10 @@
 		"apps/checkout": {
 			"project": ["src/**/*.{ts,tsx}"],
 			"ignoreDependencies": ["shadcn", "tailwindcss", "tw-animate-css"]
+		},
+		"apps/leaf": {
+			"entry": ["tests/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"]
 		},
 		"packages/ksuid": {
 			"project": ["src/**/*.ts"]

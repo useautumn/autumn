@@ -1,9 +1,13 @@
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import {
-	ApiVersion,
-	ApiVersionClass,
-	AppEnv,
-} from "@autumn/shared";
+	afterAll,
+	afterEach,
+	beforeEach,
+	describe,
+	expect,
+	mock,
+	test,
+} from "bun:test";
+import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getSqsClient } from "@/queue/initSqs.js";
@@ -154,4 +158,8 @@ describe("track queue fallback", () => {
 			sqsClient.send = mockState.originalSend;
 		}
 	});
+});
+
+afterAll(() => {
+	mock.restore();
 });

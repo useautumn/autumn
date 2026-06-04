@@ -1,13 +1,26 @@
-import { AppEnv, CusProductStatus, RecaseError, Scopes } from "@autumn/shared";
+import {
+	AppEnv,
+	findActiveCustomerProductById,
+	type FullCusProduct,
+	type FullCustomer,
+	type FullProduct,
+	isFreeProduct,
+	RecaseError,
+	Scopes,
+} from "@autumn/shared";
 import { ErrCode } from "@shared/enums/ErrCode.js";
+import { format } from "date-fns";
 import { DrizzleError } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
+import type Stripe from "stripe";
 import { z } from "zod/v4";
+import { isUniqueConstraintError } from "@/db/dbUtils.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { sendCustomSvixEvent } from "@/external/svix/svixHelpers.js";
 import { provisionVercelCusProduct } from "@/external/vercel/misc/vercelProvisioning.js";
 import { VercelResourceService } from "@/external/vercel/services/VercelResourceService.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { customerProductRepo } from "@/internal/customers/cusProducts/repos";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { generateId } from "@/utils/genUtils.js";
@@ -17,6 +30,57 @@ import {
 	VercelWebhooks,
 } from "../../misc/vercelWebhookTypes.js";
 import { productToBillingPlan } from "../handleListBillingPlans.js";
+
+const findInstallationCusProduct = async ({
+	ctx,
+	fullCustomer,
+	stripeCustomer,
+	integrationConfigurationId,
+	freeProduct,
+}: {
+	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
+	stripeCustomer: Stripe.Customer;
+	integrationConfigurationId: string;
+	freeProduct?: FullProduct;
+}): Promise<FullCusProduct | undefined> => {
+	const { db, org, env } = ctx;
+
+	const existingSub = stripeCustomer.subscriptions?.data.find(
+		(s) =>
+			s.metadata.vercel_installation_id === integrationConfigurationId &&
+			s.status !== "incomplete_expired" &&
+			s.status !== "canceled",
+	);
+
+	if (existingSub) {
+		const existingCusProducts = await customerProductRepo.getByStripeSubId({
+			db,
+			stripeSubId: existingSub.id,
+			orgId: org.id,
+			env,
+		});
+
+		if (existingCusProducts.length > 0) {
+			return existingCusProducts[0];
+		}
+
+		throw new RecaseError({
+			message: "Vercel subscription is still being provisioned. Retry shortly.",
+			code: "vercel_provisioning_in_flight",
+			statusCode: StatusCodes.CONFLICT,
+		});
+	}
+
+	if (freeProduct) {
+		return findActiveCustomerProductById({
+			fullCus: fullCustomer,
+			productId: freeProduct.id,
+		});
+	}
+
+	return undefined;
+};
 
 export const handleCreateResource = createRoute({
 	scopes: [Scopes.Public],
@@ -41,6 +105,7 @@ export const handleCreateResource = createRoute({
 		const ctx = c.get("ctx");
 		const { db, org, logger, fullCustomer: customer } = ctx;
 		const { productId, name, metadata, billingPlanId } = c.req.valid("json");
+		const appEnv = env as AppEnv;
 
 		if (!customer) {
 			throw new RecaseError({
@@ -50,7 +115,7 @@ export const handleCreateResource = createRoute({
 			});
 		}
 
-		const stripeCli = createStripeCli({ org, env: env as AppEnv });
+		const stripeCli = createStripeCli({ org, env: appEnv });
 		const stripeCustomer = await stripeCli.customers.retrieve(
 			customer.processor.id,
 			{
@@ -66,164 +131,147 @@ export const handleCreateResource = createRoute({
 			});
 		}
 
+		const loadProduct = async (planId: string): Promise<FullProduct> => {
+			const product = await ProductService.getFull({
+				db,
+				orgId,
+				env: appEnv,
+				idOrInternalId: planId,
+			});
+			if (!product) {
+				throw new RecaseError({
+					message: `Product not found for billing plan ${planId}`,
+					code: ErrCode.ProductNotFound,
+					statusCode: StatusCodes.NOT_FOUND,
+				});
+			}
+			return product;
+		};
+
+		const buildResourceResponse = ({
+			resourceId,
+			product,
+		}: {
+			resourceId: string;
+			product: FullProduct;
+		}) => ({
+			id: resourceId,
+			productId,
+			name,
+			metadata,
+			status: "ready",
+			billingPlan: {
+				...productToBillingPlan({
+					product,
+					orgCurrency: org?.default_currency ?? "usd",
+				}),
+				scope: "installation",
+			},
+			secrets: [],
+			notification: {
+				level: "info",
+				title: "Resource provisioning",
+				message: `Setting up ${name}...`,
+			},
+		});
+
 		try {
-			// Idempotency: check if a resource already exists for this installation
-			const existingResource = await VercelResourceService.getByInstallation({
+			const requestedProduct = await loadProduct(billingPlanId);
+			const freeProduct = isFreeProduct({ prices: requestedProduct.prices })
+				? requestedProduct
+				: undefined;
+
+			const existing = await VercelResourceService.getByInstallationAndName({
 				db,
 				installationId: integrationConfigurationId,
-				orgId,
-				env: env as AppEnv,
-			});
-
-			let resourceId: string;
-
-			const buildResourceResponse = (
-				product: Awaited<ReturnType<typeof ProductService.getFull>>,
-			) => ({
-				id: resourceId,
-				productId,
 				name,
-				metadata,
-				status: "ready",
-				billingPlan: {
-					...productToBillingPlan({
-						product,
-						orgCurrency: org?.default_currency ?? "usd",
-					}),
-					scope: "installation",
-				},
-				secrets: [],
-				notification: {
-					level: "info",
-					title: "Resource provisioning",
-					message: `Setting up ${name}...`,
-				},
+				orgId,
+				env: appEnv,
 			});
 
-			if (existingResource) {
-				resourceId = existingResource.id;
+			const installationCusProduct = await findInstallationCusProduct({
+				ctx,
+				fullCustomer: customer,
+				stripeCustomer,
+				integrationConfigurationId,
+				freeProduct,
+			});
 
-				const existingSub = stripeCustomer.subscriptions?.data.find(
-					(s) =>
-						s.metadata.vercel_resource_id === existingResource.id &&
-						s.status !== "incomplete_expired" &&
-						s.status !== "canceled",
+			if (existing) {
+				const product = installationCusProduct
+					? await loadProduct(installationCusProduct.product_id)
+					: requestedProduct;
+				return c.json(
+					buildResourceResponse({ resourceId: existing.id, product }),
 				);
+			}
 
-				if (existingSub) {
-					const existingCusProducts =
-						await customerProductRepo.getByStripeSubId({
-							db,
-							stripeSubId: existingSub.id,
-							orgId,
-							env: env as AppEnv,
-						});
-
-					if (existingCusProducts.length > 0) {
-						const product = await ProductService.getFull({
-							db,
-							orgId,
-							env: env as AppEnv,
-							idOrInternalId: billingPlanId,
-						});
-						if (!product) {
-							throw new RecaseError({
-								message: `Product not found for billing plan ${billingPlanId}`,
-								code: ErrCode.ProductNotFound,
-								statusCode: StatusCodes.NOT_FOUND,
-							});
-						}
-						return c.json(buildResourceResponse(product));
-					}
-				}
-				// Resource exists but no cus_product (or no sub) -> fall through to provision
-			} else {
-				// No resource -> create it
-				resourceId = generateId("vre");
-				await VercelResourceService.createOrBlockIfOthersExist({
+			const resourceId = generateId("vre");
+			try {
+				await VercelResourceService.create({
 					db,
 					resource: {
 						id: resourceId,
 						org_id: orgId,
-						env: env as AppEnv,
+						env: appEnv,
 						installation_id: integrationConfigurationId,
 						name,
 						status: "ready",
 						metadata: metadata ?? {},
 					},
 				});
+			} catch (error) {
+				// Lost the create race against a concurrent request for the same
+				// (installation_id, name). Re-read and return the winner idempotently.
+				if (!isUniqueConstraintError(error)) throw error;
+				const winner =
+					await VercelResourceService.getByInstallationAndName({
+						db,
+						installationId: integrationConfigurationId,
+						name,
+						orgId,
+						env: appEnv,
+					});
+				if (!winner) throw error;
+				const product = installationCusProduct
+					? await loadProduct(installationCusProduct.product_id)
+					: requestedProduct;
+				return c.json(
+					buildResourceResponse({ resourceId: winner.id, product }),
+				);
 			}
 
-			// Customer-already-on-this-plan short-circuit. Installations auto-attach
-			// the org's default free plan, so picking that same plan in the Vercel UI
-			// would otherwise hit V2 attach's same-product guard. Skip Stripe sub
-			// creation + Autumn insertion entirely — only the resource link is needed.
-			const sameProductCusProduct = customer.customer_products.find(
-				(cp) =>
-					cp.product_id === billingPlanId &&
-					(cp.status === CusProductStatus.Active ||
-						cp.status === CusProductStatus.Trialing ||
-						cp.status === CusProductStatus.PastDue),
-			);
+			const product = installationCusProduct
+				? installationCusProduct.product_id === billingPlanId
+					? requestedProduct
+					: await loadProduct(installationCusProduct.product_id)
+				: (
+						await provisionVercelCusProduct({
+							ctx,
+							customer,
+							stripeCustomer,
+							stripeCli,
+							integrationConfigurationId,
+							billingPlanId,
+							resourceId,
+							metadata,
+						})
+					).product;
 
-			if (sameProductCusProduct) {
-				const product = await ProductService.getFull({
-					db,
-					orgId,
-					env: env as AppEnv,
-					idOrInternalId: billingPlanId,
-				});
-				if (!product) {
-					throw new RecaseError({
-						message: `Product not found for billing plan ${billingPlanId}`,
-						code: ErrCode.ProductNotFound,
-						statusCode: StatusCodes.NOT_FOUND,
-					});
-				}
-
-				ctx.logger.info(
-					"[handleCreateResource] Customer already on plan, creating resource without provisioning",
+			if (installationCusProduct) {
+				logger.info(
+					"[handleCreateResource] Reusing installation-level cus_product",
 					{
 						data: {
-							billingPlanId,
-							cusProductId: sameProductCusProduct.id,
 							resourceId,
+							installationCusProductId: installationCusProduct.id,
+							requestedBillingPlanId: billingPlanId,
+							actualProductId: installationCusProduct.product_id,
 							installationId: integrationConfigurationId,
 						},
 					},
 				);
-
-				await sendCustomSvixEvent({
-					appId:
-						org.processor_configs?.vercel?.svix?.[
-							env === AppEnv.Live ? "live_id" : "sandbox_id"
-						] ?? "",
-					org,
-					env: env as AppEnv,
-					eventType: VercelWebhooks.ResourceProvisioned,
-					data: {
-						resource: {
-							id: resourceId,
-							name,
-						},
-						installation_id: integrationConfigurationId,
-						access_token: customer.processors?.vercel?.access_token ?? "",
-					} satisfies VercelResourceCreatedEvent,
-				});
-
-				return c.json(buildResourceResponse(product));
 			}
-
-			const { product } = await provisionVercelCusProduct({
-				ctx,
-				customer,
-				stripeCustomer,
-				stripeCli,
-				integrationConfigurationId,
-				billingPlanId,
-				resourceId,
-				metadata,
-			});
 
 			await sendCustomSvixEvent({
 				appId:
@@ -231,7 +279,7 @@ export const handleCreateResource = createRoute({
 						env === AppEnv.Live ? "live_id" : "sandbox_id"
 					] ?? "",
 				org,
-				env: env as AppEnv,
+				env: appEnv,
 				eventType: VercelWebhooks.ResourceProvisioned,
 				data: {
 					resource: {
@@ -241,9 +289,10 @@ export const handleCreateResource = createRoute({
 					installation_id: integrationConfigurationId,
 					access_token: customer.processors?.vercel?.access_token ?? "",
 				} satisfies VercelResourceCreatedEvent,
+				idempotencyKey: `${format(new Date(), "ddMMyyyy")}:${integrationConfigurationId}:${name}:resource-provisioned`,
 			});
 
-			return c.json(buildResourceResponse(product));
+			return c.json(buildResourceResponse({ resourceId, product }));
 		} catch (error) {
 			logCaughtError({
 				logger,

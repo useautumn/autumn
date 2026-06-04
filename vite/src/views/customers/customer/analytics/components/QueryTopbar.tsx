@@ -1,6 +1,8 @@
-import { CaretDownIcon } from "@phosphor-icons/react";
+import { CalendarBlankIcon, CaretDownIcon } from "@phosphor-icons/react";
+import { endOfDay, format, subMonths } from "date-fns";
 import { Check } from "lucide-react";
-import { useLocation, useNavigate } from "react-router";
+import { useState } from "react";
+import type { DateRange } from "react-day-picker";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	DropdownMenu,
@@ -11,8 +13,10 @@ import {
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
+import { Calendar } from "@/components/ui/calendar";
 
 import { useAnalyticsContext } from "../AnalyticsContext";
+import { useAnalyticsQueryState } from "../hooks/useAnalyticsQueryState";
 import { CustomerComboBox } from "./CustomerComboBox";
 import { SelectEntityDropdown } from "./SelectEntityDropdown";
 import { SelectFeatureDropdown } from "./SelectFeatureDropdown";
@@ -42,13 +46,23 @@ const BIN_SIZE_LABELS: Record<string, string> = {
 	month: "by month",
 };
 
+const CUSTOM_INTERVAL = "custom";
+
 const getDisplayLabel = ({
 	interval,
 	binSize,
+	customRange,
 }: {
 	interval: string;
 	binSize: string;
+	customRange?: DateRange;
 }) => {
+	if (interval === CUSTOM_INTERVAL) {
+		if (customRange?.from && customRange?.to) {
+			return `${format(customRange.from, "MMM d")} - ${format(customRange.to, "MMM d")}`;
+		}
+		return "Custom range";
+	}
 	if (BIN_SIZE_INTERVALS[interval] && binSize === "month") {
 		return `${ALL_INTERVALS[interval]} (by month)`;
 	}
@@ -56,39 +70,21 @@ const getDisplayLabel = ({
 };
 
 export const QueryTopbar = () => {
-	const {
-		customer,
-		selectedInterval,
-		setSelectedInterval,
-		selectedBinSize,
-		setSelectedBinSize,
-		bcExclusionFlag,
-		propertyKeys,
-	} = useAnalyticsContext();
-	const navigate = useNavigate();
-	const location = useLocation();
+	const { customer, bcExclusionFlag, propertyKeys } = useAnalyticsContext();
+	const { queryStates, setQueryStates } = useAnalyticsQueryState();
+	const [draftRange, setDraftRange] = useState<DateRange | undefined>(
+		undefined,
+	);
 
-	const updateQueryParams = ({
-		interval,
-		binSize,
-	}: {
-		interval?: string;
-		binSize?: string;
-	}) => {
-		const params = new URLSearchParams(location.search);
-		if (interval !== undefined) {
-			params.set("interval", interval);
-		}
-		if (binSize !== undefined) {
-			params.set("bin_size", binSize);
-		}
-		navigate(`${location.pathname}?${params.toString()}`);
-	};
+	const { interval: selectedInterval, start, end } = queryStates;
+	const selectedBinSize = queryStates.bin_size ?? "day";
+	const customRange =
+		selectedInterval === CUSTOM_INTERVAL && start && end
+			? { from: new Date(start), to: new Date(end) }
+			: undefined;
 
 	const handleSimpleIntervalSelect = (interval: string) => {
-		setSelectedInterval(interval);
-		setSelectedBinSize("day");
-		updateQueryParams({ interval, binSize: "day" });
+		setQueryStates({ interval, bin_size: "day", start: null, end: null });
 	};
 
 	const handleBinSizeIntervalSelect = ({
@@ -98,9 +94,20 @@ export const QueryTopbar = () => {
 		interval: string;
 		binSize: string;
 	}) => {
-		setSelectedInterval(interval);
-		setSelectedBinSize(binSize);
-		updateQueryParams({ interval, binSize });
+		setQueryStates({ interval, bin_size: binSize, start: null, end: null });
+	};
+
+	const handleCustomRangeSelect = (range: DateRange | undefined) => {
+		setDraftRange(range);
+		if (!range?.from || !range?.to) {
+			return;
+		}
+		setQueryStates({
+			interval: CUSTOM_INTERVAL,
+			bin_size: "day",
+			start: range.from.getTime(),
+			end: endOfDay(range.to).getTime(),
+		});
 	};
 
 	const shouldShowBillingCycleOptions = !bcExclusionFlag && customer;
@@ -109,7 +116,13 @@ export const QueryTopbar = () => {
 		<div className="flex items-center py-0 h-full gap-2">
 			<CustomerComboBox />
 			{customer?.entities?.length > 0 && <SelectEntityDropdown />}
-			<DropdownMenu>
+			<DropdownMenu
+				onOpenChange={(open) => {
+					if (open) {
+						setDraftRange(customRange);
+					}
+				}}
+			>
 				<DropdownMenuTrigger asChild>
 					<IconButton
 						variant="secondary"
@@ -120,6 +133,7 @@ export const QueryTopbar = () => {
 						{getDisplayLabel({
 							interval: selectedInterval,
 							binSize: selectedBinSize,
+							customRange,
 						})}
 					</IconButton>
 				</DropdownMenuTrigger>
@@ -180,6 +194,36 @@ export const QueryTopbar = () => {
 								</DropdownMenuSubContent>
 							</DropdownMenuSub>
 						))}
+
+					<DropdownMenuSub>
+						<DropdownMenuSubTrigger className="flex items-center justify-between">
+							<span className="flex items-center gap-1.5">
+								<CalendarBlankIcon
+									size={14}
+									weight="bold"
+									className="text-tertiary-foreground"
+								/>
+								Custom range
+							</span>
+							{selectedInterval === CUSTOM_INTERVAL && (
+								<Check className="mr-1 h-3 w-3 text-tertiary-foreground" />
+							)}
+						</DropdownMenuSubTrigger>
+						<DropdownMenuSubContent className="p-0">
+							<Calendar
+								mode="range"
+								numberOfMonths={2}
+								selected={draftRange}
+								onSelect={handleCustomRangeSelect}
+								defaultMonth={
+									draftRange?.from ??
+									customRange?.from ??
+									subMonths(new Date(), 1)
+								}
+								disabled={{ after: new Date() }}
+							/>
+						</DropdownMenuSubContent>
+					</DropdownMenuSub>
 				</DropdownMenuContent>
 			</DropdownMenu>
 			<SelectFeatureDropdown />

@@ -13,11 +13,11 @@ import chalk from "chalk";
 import { addDays, subDays } from "date-fns";
 
 test.concurrent(
-	`${chalk.yellowBright("starts_at: past dates are rejected")}`,
+	`${chalk.yellowBright("starts_at: past date rejects free plans")}`,
 	async () => {
-		const customerId = "attach-start-date-past";
-		const pro = products.pro({
-			id: "pro",
+		const customerId = "attach-start-date-past-free";
+		const free = products.base({
+			id: "free",
 			items: [items.monthlyMessages({ includedUsage: 100 })],
 		});
 
@@ -25,18 +25,18 @@ test.concurrent(
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success" }),
-				s.products({ list: [pro] }),
+				s.products({ list: [free] }),
 			],
 			actions: [],
 		});
 
 		await expectAutumnError({
 			errCode: ErrCode.InvalidRequest,
-			errMessage: "starts_at cannot be set to a past timestamp",
+			errMessage: "Past starts_at is only supported for paid recurring plans",
 			func: () =>
 				autumnV2_2.billing.attach<AttachParamsV1Input>({
 					customer_id: customerId,
-					plan_id: pro.id,
+					plan_id: free.id,
 					starts_at: subDays(advancedTo, 1).getTime(),
 				}),
 		});
@@ -263,6 +263,72 @@ test.concurrent(
 					customer_id: customerId,
 					plan_id: proTrial.id,
 					starts_at: addDays(advancedTo, 1).getTime(),
+				}),
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("starts_at: past date rejects free trials")}`,
+	async () => {
+		const customerId = "attach-start-date-past-trial";
+		const proTrial = products.proWithTrial({
+			id: "pro-trial",
+			trialDays: 7,
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { autumnV2_2, advancedTo } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [proTrial] }),
+			],
+			actions: [],
+		});
+
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage: "Past starts_at cannot be used together with a free trial",
+			func: () =>
+				autumnV2_2.billing.attach<AttachParamsV1Input>({
+					customer_id: customerId,
+					plan_id: proTrial.id,
+					starts_at: subDays(advancedTo, 1).getTime(),
+				}),
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("starts_at: past date rejects free trials at preview time")}`,
+	async () => {
+		const customerId = "attach-start-date-past-trial-preview";
+		const proTrial = products.proWithTrial({
+			id: "pro-trial",
+			trialDays: 7,
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const { autumnV2_2, advancedTo } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [proTrial] }),
+			],
+			actions: [],
+		});
+
+		// The trial check is intentionally not preview-gated, so the form surfaces
+		// the error before the user clicks confirm.
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage: "Past starts_at cannot be used together with a free trial",
+			func: () =>
+				autumnV2_2.billing.previewAttach<AttachParamsV1Input>({
+					customer_id: customerId,
+					plan_id: proTrial.id,
+					starts_at: subDays(advancedTo, 1).getTime(),
 				}),
 		});
 	},

@@ -1,8 +1,4 @@
-import type {
-	Entity,
-	FullCusProduct,
-	FullCustomer,
-} from "@autumn/shared";
+import type { Entity, FullCusProduct, FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { nullish } from "@/utils/genUtils.js";
 import { CusProductService } from "../../cusProducts/CusProductService.js";
@@ -45,13 +41,16 @@ export const findTransferCustomerProduct = ({
 	fullCustomer,
 	fromEntity,
 	productId,
+	customerProductId,
 }: {
 	fullCustomer: FullCustomer;
 	fromEntity: Entity | null;
 	productId: string;
+	customerProductId?: string | null;
 }) =>
 	fullCustomer.customer_products.find(
 		(cusProduct) =>
+			(!customerProductId || cusProduct.id === customerProductId) &&
 			matchesTransferSource({ cusProduct, fromEntity }) &&
 			cusProduct.product.id === productId,
 	);
@@ -73,18 +72,40 @@ export const findExistingTransferTargetProduct = ({
 				: nullish(cusProduct.internal_entity_id)),
 	);
 
+export const getTransferCustomerProducts = ({
+	fullCustomer,
+	fromEntity,
+	product,
+	customerProductId,
+}: {
+	fullCustomer: FullCustomer;
+	fromEntity: Entity | null;
+	product: TransferProduct;
+	customerProductId?: string | null;
+}) =>
+	fullCustomer.customer_products.filter(
+		(cusProduct) =>
+			(customerProductId
+				? cusProduct.id === customerProductId &&
+					cusProduct.product.id === product.id
+				: matchesTransferProduct({ cusProduct, product })) &&
+			matchesTransferSource({ cusProduct, fromEntity }),
+	);
+
 export const transferRelatedCustomerProducts = async ({
 	ctx,
 	fullCustomer,
 	fromEntity,
 	toEntity,
 	product,
+	customerProductId,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	fromEntity: Entity | null;
 	toEntity: Entity | null;
 	product: TransferProduct;
+	customerProductId?: string | null;
 }): Promise<TransferEntityUpdates> => {
 	const updates = {
 		entity_id: toEntity?.id ?? null,
@@ -92,19 +113,18 @@ export const transferRelatedCustomerProducts = async ({
 	};
 
 	await Promise.all(
-		fullCustomer.customer_products
-			.filter(
-				(cusProduct) =>
-					matchesTransferProduct({ cusProduct, product }) &&
-					matchesTransferSource({ cusProduct, fromEntity }),
-			)
-			.map((cusProduct) =>
-				CusProductService.update({
-					ctx,
-					cusProductId: cusProduct.id,
-					updates,
-				}),
-			),
+		getTransferCustomerProducts({
+			fullCustomer,
+			fromEntity,
+			product,
+			customerProductId,
+		}).map((cusProduct) =>
+			CusProductService.update({
+				ctx,
+				cusProductId: cusProduct.id,
+				updates,
+			}),
+		),
 	);
 
 	return updates;

@@ -15,6 +15,7 @@ import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
 import { useProductChangedAlert } from "../hooks/useProductChangedAlert";
+import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
 import { PlanEditorBar } from "./PlanEditorBar";
 
 interface SaveChangesBarProps {
@@ -37,6 +38,9 @@ export const SaveChangesBar = ({
 
 	const { invalidate: invalidateProducts } = useProductsQuery();
 	const { refetch: queryRefetch } = useProductQuery();
+	const { counts, isLoading: isCountsLoading } = useProductCountsQuery(
+		product.version ? { version: product.version } : {},
+	);
 
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const saveButtonText = isCusPlanEditor ? "Save and Return" : "Save";
@@ -58,8 +62,14 @@ export const SaveChangesBar = ({
 		// }
 
 		if (!isOnboarding) {
-			setShowNewVersionDialog(true);
-			return;
+			if (isCountsLoading) {
+				toast.error("Plan counts are loading");
+				return;
+			}
+			if ((counts?.all ?? 0) > 0) {
+				setShowNewVersionDialog(true);
+				return;
+			}
 		}
 
 		setSaving(true);
@@ -76,6 +86,7 @@ export const SaveChangesBar = ({
 			axiosInstance,
 			productId: product.id,
 			product,
+			version: product.version,
 			onSuccess: async () => {
 				await queryRefetch();
 				invalidateProducts();

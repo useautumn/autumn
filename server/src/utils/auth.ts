@@ -57,14 +57,57 @@ if (process.env.EMULATE_GOOGLE_URL && process.env.NODE_ENV !== "production") {
 }
 
 const emulateGoogleUrl =
-  process.env.NODE_ENV !== "production"
-    ? process.env.EMULATE_GOOGLE_URL?.replace(/\/$/, "")
-    : undefined;
+	process.env.NODE_ENV !== "production"
+		? process.env.EMULATE_GOOGLE_URL?.replace(/\/$/, "")
+		: undefined;
 
 // HTTPS agent worktrees go through portless (e.g. wtN-api.localhost). The
 // OAuth flow leaves and returns via a third-party host (emulate.dev), so the
 // state cookie must be SameSite=None+Secure to survive the round trip.
 const isHttpsBaseUrl = process.env.BETTER_AUTH_URL?.startsWith("https://");
+const isProductionAuth = process.env.NODE_ENV === "production";
+
+const parseMcpResourceUrl = (rawUrl: string) => {
+	const resourceUrl = rawUrl.trim();
+	if (!resourceUrl) return null;
+
+	try {
+		return new URL(resourceUrl).href;
+	} catch {
+		console.warn(`Ignoring invalid MCP_RESOURCE_URLS entry: ${resourceUrl}`);
+		return null;
+	}
+};
+
+// Public hosts that serve OAuth-protected MCP endpoints. leaf serves both the
+// MCP server (MCP_SERVER_URL) and the chat/slackbot (CHAT_SERVER_URL); the
+// autumn server can also proxy /mcp under its own origin (BETTER_AUTH_URL).
+// The OAuth `resource` indicator is host-based, so every public host + path
+// must be a registered audience. MCP_RESOURCE_URLS is an explicit override.
+const mcpServerUrl =
+	process.env.MCP_SERVER_URL ??
+	(isProductionAuth ? "https://mcp.useautumn.com" : "http://localhost:3099");
+const chatServerUrl =
+	process.env.CHAT_SERVER_URL ??
+	(isProductionAuth ? "https://chat.useautumn.com" : "http://localhost:3099");
+
+const mcpResourcePaths = ["/mcp", "/internal/mcp"];
+const mcpResourceBases = [
+	process.env.BETTER_AUTH_URL,
+	mcpServerUrl,
+	chatServerUrl,
+].filter((base): base is string => Boolean(base));
+
+const mcpResourceUrls = [
+	...new Set([
+		...mcpResourceBases.flatMap((base) =>
+			mcpResourcePaths.map((path) => new URL(path, base).href),
+		),
+		...(process.env.MCP_RESOURCE_URLS?.split(",")
+			.map(parseMcpResourceUrl)
+			.filter((url): url is string => Boolean(url)) ?? []),
+	]),
+];
 
 /**
  * Passkey (WebAuthn) is bound to the FRONTEND origin where the browser calls
@@ -77,8 +120,7 @@ const isHttpsBaseUrl = process.env.BETTER_AUTH_URL?.startsWith("https://");
  * - origin: full URL with scheme. Multiple origins may be supplied for envs
  *   that need to accept both Portless and direct localhost.
  */
-const passkeyFrontendUrl =
-	process.env.CLIENT_URL ?? "http://localhost:3000";
+const passkeyFrontendUrl = process.env.CLIENT_URL ?? "http://localhost:3000";
 const passkeyOrigins: string[] = [passkeyFrontendUrl];
 const passkeyRpID = (() => {
 	try {
@@ -88,7 +130,10 @@ const passkeyRpID = (() => {
 	}
 })();
 
-if (process.env.VITE_FRONTEND_URL && process.env.VITE_FRONTEND_URL !== passkeyFrontendUrl) {
+if (
+	process.env.VITE_FRONTEND_URL &&
+	process.env.VITE_FRONTEND_URL !== passkeyFrontendUrl
+) {
 	try {
 		const viteOrigin = new URL(process.env.VITE_FRONTEND_URL);
 		if (viteOrigin.hostname === passkeyRpID) {
@@ -226,6 +271,14 @@ const options = {
 			// Resource-based scopes with R/W actions (plus legacy CRUDL +
 			// meta scopes — see shared/utils/scopeDefinitions.ts).
 			scopes: [...ALL_SCOPES],
+			validAudiences: [process.env.BETTER_AUTH_URL, ...mcpResourceUrls].filter(
+				Boolean,
+			) as string[],
+			allowDynamicClientRegistration: true,
+			allowUnauthenticatedClientRegistration: true,
+			customAccessTokenClaims: ({ referenceId }) => ({
+				reference_id: referenceId,
+			}),
 			clientReference: ({ session }) => {
 				return (
 					(session?.activeOrganizationId as string | undefined) ?? undefined

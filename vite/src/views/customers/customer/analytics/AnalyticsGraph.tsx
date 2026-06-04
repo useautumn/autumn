@@ -1,9 +1,22 @@
-import { memo, startTransition, useCallback, useMemo, useRef, useState } from "react";
+import {
+	memo,
+	startTransition,
+	useCallback,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
-import { useAnalyticsContext } from "./AnalyticsContext";
 import type { Row } from "./components/analytics-types";
+import { useAnalyticsQueryState } from "./hooks/useAnalyticsQueryState";
+import {
+	CHART_MARGIN,
+	type PlotInsets,
+	Y_AXIS_WIDTH,
+} from "./utils/chartGeometry";
 import {
 	formatCompactNumber,
 	formatDateShort,
@@ -51,6 +64,8 @@ function TooltipItem({ item, label }: { item: any; label: string }) {
 export const EventsBarChart = memo(function EventsBarChart({
 	data,
 	chartConfig,
+	domainMax,
+	onGeometry,
 }: {
 	data: {
 		meta: any[];
@@ -58,12 +73,43 @@ export const EventsBarChart = memo(function EventsBarChart({
 		data: Row[];
 	};
 	chartConfig: ChartSeriesConfig[];
+	domainMax?: number;
+	onGeometry?: (insets: PlotInsets) => void;
 }) {
-	const { selectedInterval } = useAnalyticsContext();
+	const { queryStates } = useAnalyticsQueryState();
+	const selectedInterval = queryStates.interval;
 	const [hoveredKey, setHoveredKey] = useState<string | null>(null);
 	const [activeRow, setActiveRow] = useState<Row | null>(null);
 	const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
+
+	useLayoutEffect(() => {
+		const container = containerRef.current;
+		if (!container || !onGeometry) {
+			return;
+		}
+		const measure = () => {
+			const grid = container.querySelector(".recharts-cartesian-grid");
+			if (!grid) {
+				return;
+			}
+			const c = container.getBoundingClientRect();
+			const g = grid.getBoundingClientRect();
+			if (g.width === 0 || g.height === 0) {
+				return;
+			}
+			onGeometry({
+				left: Math.round(g.left - c.left),
+				right: Math.round(c.right - g.right),
+				top: Math.round(g.top - c.top),
+				bottom: Math.round(c.bottom - g.bottom),
+			});
+		};
+		measure();
+		const observer = new ResizeObserver(measure);
+		observer.observe(container);
+		return () => observer.disconnect();
+	}, [onGeometry, data]);
 
 	const handleBarMouseEnter = useCallback(
 		(dataKey: string) => (entry: any) =>
@@ -144,6 +190,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 				<BarChart
 					data={data.data}
 					className="pt-3 pr-2"
+					margin={CHART_MARGIN}
 					barCategoryGap="10%"
 					style={CHART_STYLE}
 					throttleDelay="raf"
@@ -166,9 +213,10 @@ export const EventsBarChart = memo(function EventsBarChart({
 					<YAxis
 						tickLine={false}
 						axisLine={false}
-						width={40}
+						width={Y_AXIS_WIDTH}
 						tickMargin={0}
 						tickCount={5}
+						domain={domainMax != null ? [0, domainMax] : undefined}
 						tick={Y_TICK}
 						tickFormatter={formatCompactNumber}
 					/>
@@ -181,6 +229,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 							activeBar={false}
 							style={CHART_STYLE}
 							onMouseEnter={barHandlers[si]}
+							isAnimationActive={false}
 						/>
 					))}
 				</BarChart>

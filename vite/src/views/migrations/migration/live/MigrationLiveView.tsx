@@ -15,6 +15,7 @@ import {
 } from "@phosphor-icons/react";
 import type { ColumnDef, PaginationState, Row } from "@tanstack/react-table";
 import { debounce } from "lodash";
+import { parseAsBoolean, useQueryState } from "nuqs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
@@ -68,6 +69,7 @@ import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { useRealtimeSubscriptions } from "../hooks/useRealtimeSubscriptions";
 import { ItemEventStatusBadge } from "../runs/RunStatusBadge";
 import { type StepId, StepIndicator } from "../StepIndicator";
+import { OperationsPreview } from "../shared/OperationsPreview";
 import { RunSummaryRows } from "../shared/RunSummaryRows";
 import { ActiveDot } from "./ActiveDot";
 import {
@@ -237,7 +239,10 @@ export function MigrationLiveView({
 		pageSize: 50,
 	});
 	const [dismissedError, setDismissedError] = useState<string | null>(null);
-	const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
+	const [isRunDialogOpen, setIsRunDialogOpen] = useQueryState(
+		"run",
+		parseAsBoolean.withDefault(false),
+	);
 	const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
 	const [runControls, setRunControls] = useState({
 		lazyRun: true,
@@ -541,7 +546,10 @@ export function MigrationLiveView({
 					</DialogContent>
 				</Dialog>
 
-				<Dialog open={isRunDialogOpen} onOpenChange={setIsRunDialogOpen}>
+				<Dialog
+					open={isRunDialogOpen}
+					onOpenChange={(open) => setIsRunDialogOpen(open)}
+				>
 					<DialogContent showCloseButton={false}>
 						<DialogHeader>
 							<DialogTitle>Run Migration</DialogTitle>
@@ -565,6 +573,7 @@ export function MigrationLiveView({
 							operations={operations}
 							noBillingChanges={noBillingChanges}
 						/>
+						<OperationsPreview operations={operations} />
 						<MigrationRunControls
 							value={runControls}
 							onChange={setRunControls}
@@ -572,14 +581,10 @@ export function MigrationLiveView({
 							hasSkippedItems={(progressCounts?.skipped ?? 0) > 0}
 						/>
 						<DialogFooter>
-							<Button
-								variant="secondary"
-								onClick={() => setIsRunDialogOpen(false)}
-							>
-								Cancel
-							</Button>
-							<Button
+							<ShortcutButton
 								variant="primary"
+								metaShortcut="enter"
+								className="w-full"
 								onClick={() => {
 									setIsRunDialogOpen(false);
 									triggerRun({ dryRun: false, ...resolvedRunControls });
@@ -587,7 +592,7 @@ export function MigrationLiveView({
 							>
 								<PlayIcon size={14} weight="fill" />
 								Run
-							</Button>
+							</ShortcutButton>
 						</DialogFooter>
 					</DialogContent>
 				</Dialog>
@@ -904,7 +909,7 @@ function MigrationRunControls({
 				<div className="flex flex-col gap-0.5">
 					<span className="text-sm font-medium text-foreground">Lazy run</span>
 					<span className="text-xs text-tertiary-foreground">
-						Also migrates customers on request.
+						Remaining customers migrate when queried.
 					</span>
 				</div>
 				<Switch

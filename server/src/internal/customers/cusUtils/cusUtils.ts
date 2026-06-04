@@ -10,7 +10,7 @@ import {
 	sortCusEntsForDeduction,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
-import { z } from "zod";
+import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import {
@@ -41,8 +41,11 @@ export const updateCustomerDetails = async ({
 		updates.name = customerData.name;
 	}
 	if (!fullCustomer.email && customerData?.email) {
-		// Check that email is valid, if not skip...
-		if (z.string().email().safeParse(customerData.email).error) {
+		if (
+			z
+				.email({ pattern: z.regexes.unicodeEmail })
+				.safeParse(customerData.email).error
+		) {
 			logger.info(`Invalid email ${customerData.email}, skipping update`);
 		} else {
 			updates.email = customerData.email;

@@ -638,7 +638,7 @@ export type AttachCustomize = {
    */
   price?: AttachBasePrice | null | undefined;
   /**
-   * Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items.
+   * Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / update_items.
    */
   items?: Array<AttachItemPlanItem> | undefined;
   /**
@@ -671,6 +671,14 @@ export type AttachInvoiceMode = {
    * If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.
    */
   finalize?: boolean | undefined;
+  /**
+   * ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice.
+   */
+  invoiceTemplateId?: string | undefined;
+  /**
+   * Number of days the customer has to pay the invoice before it is due (Stripe days_until_due).
+   */
+  netTermsDays?: number | undefined;
 };
 
 /**
@@ -1674,6 +1682,8 @@ export type AttachInvoiceMode$Outbound = {
   enabled: boolean;
   enable_plan_immediately: boolean;
   finalize: boolean;
+  invoice_template_id?: string | undefined;
+  net_terms_days?: number | undefined;
 };
 
 /** @internal */
@@ -1685,10 +1695,14 @@ export const AttachInvoiceMode$outboundSchema: z.ZodMiniType<
     enabled: z.boolean(),
     enablePlanImmediately: z._default(z.boolean(), false),
     finalize: z._default(z.boolean(), true),
+    invoiceTemplateId: z.optional(z.string()),
+    netTermsDays: z.optional(z.int()),
   }),
   z.transform((v) => {
     return remap$(v, {
       enablePlanImmediately: "enable_plan_immediately",
+      invoiceTemplateId: "invoice_template_id",
+      netTermsDays: "net_terms_days",
     });
   }),
 );

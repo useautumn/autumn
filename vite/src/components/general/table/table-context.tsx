@@ -15,6 +15,7 @@ export interface TableProps<T> {
 	table: TanstackTable<T>;
 	numberOfColumns: number;
 	isLoading: boolean;
+	isTransitioning?: boolean;
 	enableSelection?: boolean;
 	enableSorting?: boolean;
 	enableColumnVisibility?: boolean;
