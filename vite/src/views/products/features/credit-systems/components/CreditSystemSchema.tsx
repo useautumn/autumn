@@ -1,4 +1,8 @@
-import { FeatureType, type ModelsDevProvider } from "@autumn/shared";
+import {
+	FeatureType,
+	joinModelId,
+	type ModelsDevProvider,
+} from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import { useMemo } from "react";
 import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
@@ -44,7 +48,7 @@ function getDefaultModelMarkups(
 		if (!latestModel) continue;
 
 		const [modelKey] = latestModel;
-		result[`${providerKey}/${modelKey}`] = {};
+		result[joinModelId(providerKey, modelKey)] = {};
 	}
 	return result;
 }
@@ -77,7 +81,9 @@ export function CreditSystemSchema({
 			form.setFieldValue("type", FeatureType.CreditSystem);
 			form.setFieldValue("config", {
 				...form.state.values.config,
-				schema: [{ metered_feature_id: "", feature_amount: 1, credit_amount: 0 }],
+				schema: [
+					{ metered_feature_id: "", feature_amount: 1, credit_amount: 0 },
+				],
 			});
 			form.setFieldValue("model_markups", {});
 		}

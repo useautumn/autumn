@@ -2,12 +2,12 @@ import {
 	ErrCode,
 	type Feature,
 	FeatureType,
+	fullCustomerToCustomerEntitlements,
+	fullSubjectToFullCustomer,
 	RecaseError,
 	type TrackParams,
 	type TrackTokensParams,
 } from "@autumn/shared";
-import { fullCustomerToCustomerEntitlements } from "@autumn/shared";
-import { fullSubjectToFullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
@@ -127,6 +127,11 @@ export const getTokenTrackParams = async ({
 		tokens: {
 			input: input.input_tokens,
 			output: input.output_tokens,
+			cacheRead: input.cache_read_tokens,
+			cacheWrite: input.cache_write_tokens,
+			audioInput: input.audio_input_tokens,
+			audioOutput: input.audio_output_tokens,
+			reasoning: input.reasoning_tokens,
 		},
 	});
 
@@ -153,6 +158,11 @@ export const getTokenTrackParams = async ({
 			model: input.model_id,
 			input_tokens: input.input_tokens,
 			output_tokens: input.output_tokens,
+			cache_read_tokens: input.cache_read_tokens,
+			cache_write_tokens: input.cache_write_tokens,
+			audio_input_tokens: input.audio_input_tokens,
+			audio_output_tokens: input.audio_output_tokens,
+			reasoning_tokens: input.reasoning_tokens,
 			cost,
 		},
 		idempotency_key: input.idempotency_key,

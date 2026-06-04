@@ -1,4 +1,9 @@
-import { type CreateFeature, FeatureType } from "@autumn/shared";
+import {
+	type CreateFeature,
+	FeatureType,
+	isCustomModel,
+	splitModelId,
+} from "@autumn/shared";
 
 export const validateCreditSystem = (
 	creditSystem: CreateFeature,
@@ -16,9 +21,9 @@ export const validateCreditSystem = (
 			creditSystem.model_markups ?? {},
 		)) {
 			if (!modelId) return "Select a model for each row";
-			if (modelId.startsWith("custom/")) {
-				const customModelKey = modelId.slice("custom/".length);
-				if (!customModelKey) return "Custom model ID cannot be empty";
+			if (isCustomModel(modelId)) {
+				const { modelKey } = splitModelId(modelId);
+				if (!modelKey) return "Custom model ID cannot be empty";
 				if (entry.input_cost == null || entry.output_cost == null)
 					return "Custom models require input and output costs";
 			}

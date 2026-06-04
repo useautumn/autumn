@@ -6,20 +6,48 @@ import {
 } from "ai";
 import type { Autumn } from "autumn-js";
 
-type TokenCount =
-	| number
-	| {
-			total?: number | null;
-	  }
-	| null
-	| undefined;
+// Standalone published package: must not import from the internal @autumn/shared workspace.
+const PROVIDER_SEPARATOR = "/";
 
-type TokenUsage = (LanguageModelV3Usage | LanguageModelUsage) & {
-	promptTokens?: TokenCount;
-	completionTokens?: TokenCount;
+type NestedCount = { total?: number | null } | null;
+
+/**
+ * Lenient view over the AI SDK usage shapes we accept: the nested
+ * `LanguageModelV3Usage`, the flat `ai` `LanguageModelUsage` (with token details), and
+ * legacy `promptTokens`/`completionTokens` objects.
+ */
+type AnyUsage = (LanguageModelV3Usage | LanguageModelUsage) & {
+	promptTokens?: number | NestedCount;
+	completionTokens?: number | NestedCount;
+	inputTokenDetails?: {
+		noCacheTokens?: number | null;
+		cacheReadTokens?: number | null;
+		cacheWriteTokens?: number | null;
+	} | null;
+	outputTokenDetails?: {
+		textTokens?: number | null;
+		reasoningTokens?: number | null;
+	} | null;
+	cachedInputTokens?: number | null;
+	reasoningTokens?: number | null;
 };
 
-export const withTokenTracking = ({
+type ExclusivePools = {
+	inputTokens: number;
+	outputTokens: number;
+	cacheReadTokens: number;
+	cacheWriteTokens: number;
+	reasoningTokens: number;
+};
+
+const flatCount = (
+	value: number | NestedCount | undefined,
+): number | undefined => {
+	if (typeof value === "number") return value;
+	return value?.total ?? undefined;
+};
+
+export const withAutumn = ({
 	autumn,
 	model,
 	customerId,
@@ -44,31 +72,86 @@ export const withTokenTracking = ({
 	properties?: Record<string, unknown>;
 }) => {
 	const provider = providerId ?? model.provider;
-	const modelName = `${provider}/${model.modelId}`;
+	const modelName = `${provider}${PROVIDER_SEPARATOR}${model.modelId}`;
 
-	const resolveTokens = (tokens: TokenCount, label: string): number => {
-		const value = typeof tokens === "number" ? tokens : tokens?.total;
-		if (value == null)
+	const required = (value: number | undefined, label: string): number => {
+		if (value == null) {
 			throw new Error(
 				`[Autumn] ${label} token usage was not returned by the model provider (${modelName}). This provider may not support usage tracking.`,
 			);
+		}
 		return value;
 	};
 
-	const trackUsage = async (usage: TokenUsage) => {
+	const normalizeUsage = (usage: AnyUsage): ExclusivePools => {
+		const input = usage.inputTokens;
+		const output = usage.outputTokens;
+
+		if (input != null && typeof input === "object") {
+			const cacheReadTokens = input.cacheRead ?? 0;
+			const cacheWriteTokens = input.cacheWrite ?? 0;
+			const textInput =
+				input.noCache ??
+				(input.total != null
+					? input.total - cacheReadTokens - cacheWriteTokens
+					: undefined);
+			const out = typeof output === "object" ? output : null;
+			const reasoningTokens = out?.reasoning ?? 0;
+			const textOutput =
+				out?.text ??
+				(out?.total != null ? out.total - reasoningTokens : undefined);
+			return {
+				inputTokens: required(textInput, "Input"),
+				outputTokens: required(textOutput, "Output"),
+				cacheReadTokens: Math.max(0, cacheReadTokens),
+				cacheWriteTokens: Math.max(0, cacheWriteTokens),
+				reasoningTokens: Math.max(0, reasoningTokens),
+			};
+		}
+
+		const inputDetails = usage.inputTokenDetails;
+		const outputDetails = usage.outputTokenDetails;
+		const cacheReadTokens =
+			inputDetails?.cacheReadTokens ?? usage.cachedInputTokens ?? 0;
+		const cacheWriteTokens = inputDetails?.cacheWriteTokens ?? 0;
+		const reasoningTokens =
+			outputDetails?.reasoningTokens ?? usage.reasoningTokens ?? 0;
+
+		const rawInput =
+			typeof input === "number" ? input : flatCount(usage.promptTokens);
+		const textInput =
+			inputDetails?.noCacheTokens ??
+			(rawInput != null
+				? rawInput - cacheReadTokens - cacheWriteTokens
+				: undefined);
+
+		const rawOutput =
+			typeof output === "number" ? output : flatCount(usage.completionTokens);
+		const textOutput =
+			outputDetails?.textTokens ??
+			(rawOutput != null ? rawOutput - reasoningTokens : undefined);
+
+		return {
+			inputTokens: Math.max(0, required(textInput, "Input")),
+			outputTokens: Math.max(0, required(textOutput, "Output")),
+			cacheReadTokens: Math.max(0, cacheReadTokens),
+			cacheWriteTokens: Math.max(0, cacheWriteTokens),
+			reasoningTokens: Math.max(0, reasoningTokens),
+		};
+	};
+
+	const trackUsage = async (usage: AnyUsage) => {
 		try {
-			// @ts-ignore trackTokens is generated from OpenAPI; local autumn-js types may not include it yet.
+			const pools = normalizeUsage(usage);
+			// @ts-expect-error trackTokens is generated from OpenAPI; local autumn-js types may not include it yet.
 			await autumn.balances.trackTokens({
 				customerId,
 				modelId: modelName,
-				inputTokens: resolveTokens(
-					usage.inputTokens ?? usage.promptTokens,
-					"Input",
-				),
-				outputTokens: resolveTokens(
-					usage.outputTokens ?? usage.completionTokens,
-					"Output",
-				),
+				inputTokens: pools.inputTokens,
+				outputTokens: pools.outputTokens,
+				cacheReadTokens: pools.cacheReadTokens,
+				cacheWriteTokens: pools.cacheWriteTokens,
+				reasoningTokens: pools.reasoningTokens,
 				featureId,
 				entityId,
 				properties,
@@ -82,7 +165,7 @@ export const withTokenTracking = ({
 		specificationVersion: "v3",
 		wrapGenerate: async ({ doGenerate }) => {
 			const result = await doGenerate();
-			await trackUsage(result.usage);
+			await trackUsage(result.usage as AnyUsage);
 			return result;
 		},
 		wrapStream: async ({ doStream }) => {
@@ -90,13 +173,14 @@ export const withTokenTracking = ({
 
 			let trackingPromise: Promise<void> | undefined;
 
-			type StreamChunk =
-				typeof stream extends ReadableStream<infer T> ? T : never;
+			type StreamChunk = typeof stream extends ReadableStream<infer T>
+				? T
+				: never;
 
 			const transformStream = new TransformStream<StreamChunk, StreamChunk>({
 				transform(chunk, controller) {
 					if (chunk.type === "finish" && chunk.usage) {
-						trackingPromise = trackUsage(chunk.usage);
+						trackingPromise = trackUsage(chunk.usage as AnyUsage);
 					}
 					controller.enqueue(chunk);
 				},

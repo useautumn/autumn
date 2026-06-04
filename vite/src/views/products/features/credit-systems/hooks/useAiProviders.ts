@@ -1,14 +1,22 @@
-import type { ModelsDevProvider } from "@autumn/shared";
+import {
+	joinModelId,
+	type ModelsDevProvider,
+	splitModelId,
+} from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import { useMemo } from "react";
 import { useModelsDevPricing } from "@/hooks/queries/useAiModelsQuery";
+import { addCustomModelMarkup } from "../utils/modelMarkupUtils";
 import type { CreditSystemFormInstance } from "./useCreditSystemForm";
 
 function groupByProvider(markups: Record<string, unknown>) {
 	const groups: Record<string, string[]> = {};
 	for (const fullId of Object.keys(markups)) {
-		const [provider] = fullId.split("/");
-		(groups[provider] ??= []).push(fullId);
+		const { provider } = splitModelId(fullId);
+		if (!provider) continue;
+		const group = groups[provider] ?? [];
+		group.push(fullId);
+		groups[provider] = group;
 	}
 	return groups;
 }
@@ -55,21 +63,13 @@ export function useAiProviders(form: CreditSystemFormInstance) {
 	const addProvider = (providerKey: string) => {
 		form.setFieldValue("model_markups", (prev) => {
 			if (providerKey === "custom") {
-				const existing = Object.keys(prev).filter((k) =>
-					k.startsWith("custom/"),
-				);
-				let i = 1;
-				while (existing.includes(`custom/model-${i}`)) i++;
-				return {
-					...prev,
-					[`custom/model-${i}`]: { input_cost: 0, output_cost: 0 },
-				};
+				return addCustomModelMarkup(prev);
 			}
 			const provider = providers[providerKey];
 			if (!provider) return prev;
 			const firstKey = Object.keys(provider.models)[0];
 			if (!firstKey) return prev;
-			return { ...prev, [`${providerKey}/${firstKey}`]: {} };
+			return { ...prev, [joinModelId(providerKey, firstKey)]: {} };
 		});
 	};
 
@@ -96,7 +96,7 @@ export function useAiProviders(form: CreditSystemFormInstance) {
 		form.setFieldValue("model_markups", (prev) => {
 			const updated = { ...prev };
 			for (const k of Object.keys(updated)) {
-				if (k.split("/")[0] === providerKey) delete updated[k];
+				if (splitModelId(k).provider === providerKey) delete updated[k];
 			}
 			return updated;
 		});

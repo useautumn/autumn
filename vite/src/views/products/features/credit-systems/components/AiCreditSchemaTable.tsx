@@ -1,4 +1,8 @@
-import type { ModelsDevProvider } from "@autumn/shared";
+import {
+	joinModelId,
+	type ModelsDevProvider,
+	splitModelId,
+} from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { InfoIcon, PlusIcon, X } from "lucide-react";
@@ -13,6 +17,7 @@ import {
 } from "@/components/v2/tooltips/Tooltip";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
+import { addCustomModelMarkup } from "../utils/modelMarkupUtils";
 import { AiModelSelectDropdown } from "./AiModelSelectDropdown";
 import { CustomModelInput } from "./CustomModelInput";
 import { EditableNumberCell } from "./EditableNumberCell";
@@ -90,10 +95,10 @@ export function AiCreditSchemaTable({
 
 	const data: ModelRow[] = useMemo(
 		() =>
-			modelFullIds.map((fullId) => {
-				const [, ...parts] = fullId.split("/");
-				return { fullId, modelKey: parts.join("/") };
-			}),
+			modelFullIds.map((fullId) => ({
+				fullId,
+				modelKey: splitModelId(fullId).modelKey,
+			})),
 		[modelFullIds.join(",")],
 	);
 
@@ -111,8 +116,8 @@ export function AiCreditSchemaTable({
 								modelKey={modelKey}
 								onRename={(newKey) =>
 									renameKey(
-										`${providerKey}/${modelKey}`,
-										`${providerKey}/${newKey}`,
+										joinModelId(providerKey, modelKey),
+										joinModelId(providerKey, newKey),
 									)
 								}
 							/>
@@ -123,8 +128,8 @@ export function AiCreditSchemaTable({
 							value={modelKey}
 							onValueChange={(newKey) =>
 								renameKey(
-									`${providerKey}/${modelKey}`,
-									`${providerKey}/${newKey}`,
+									joinModelId(providerKey, modelKey),
+									joinModelId(providerKey, newKey),
 								)
 							}
 							provider={provider}
@@ -313,26 +318,18 @@ export function AiCreditSchemaTable({
 						onClick={() =>
 							form.setFieldValue("model_markups", (prev) => {
 								if (isCustom) {
-									const existing = Object.keys(prev).filter((k) =>
-										k.startsWith("custom/"),
-									);
-									let i = 1;
-									while (existing.includes(`custom/model-${i}`)) i++;
-									return {
-										...prev,
-										[`custom/model-${i}`]: { input_cost: 0, output_cost: 0 },
-									};
+									return addCustomModelMarkup(prev);
 								}
 								const usedKeys = new Set(
 									Object.keys(prev)
-										.filter((k) => k.startsWith(`${providerKey}/`))
-										.map((k) => k.slice(`${providerKey}/`.length)),
+										.filter((k) => splitModelId(k).provider === providerKey)
+										.map((k) => splitModelId(k).modelKey),
 								);
 								const nextKey = Object.keys(provider.models).find(
 									(k) => !usedKeys.has(k),
 								);
 								if (!nextKey) return prev;
-								return { ...prev, [`${providerKey}/${nextKey}`]: {} };
+								return { ...prev, [joinModelId(providerKey, nextKey)]: {} };
 							})
 						}
 						className="flex items-center gap-1 w-full px-4 py-1.5 text-xs text-muted-foreground hover:text-foreground bg-interactive-secondary border-t border-border transition-colors"

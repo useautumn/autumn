@@ -1,4 +1,9 @@
-import { type Feature, FeatureType, type ModelsDevProvider } from "@autumn/shared";
+import {
+	type Feature,
+	FeatureType,
+	type ModelsDevProvider,
+	splitModelId,
+} from "@autumn/shared";
 import { CoinsIcon, CpuIcon } from "@phosphor-icons/react";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { AdminHover } from "@/components/general/AdminHover";
@@ -10,9 +15,9 @@ function resolveModelName(
 	fullId: string,
 	providers: Record<string, ModelsDevProvider>,
 ): string {
-	const [providerKey, ...modelParts] = fullId.split("/");
-	const modelKey = modelParts.join("/");
-	return providers[providerKey]?.models[modelKey]?.name ?? fullId;
+	const { provider, modelKey } = splitModelId(fullId);
+	if (!provider) return fullId;
+	return providers[provider]?.models[modelKey]?.name ?? fullId;
 }
 
 export const createCreditListColumns = (
@@ -93,7 +98,9 @@ export const createCreditListColumns = (
 							)
 							.join(", ") || "—";
 			return (
-				<div className="text-muted-foreground truncate font-mono text-xs">{featureIds}</div>
+				<div className="text-muted-foreground truncate font-mono text-xs">
+					{featureIds}
+				</div>
 			);
 		},
 	},
