@@ -1,5 +1,6 @@
 import type { BillingContext } from "@autumn/shared";
 import {
+	BILLING_AMOUNT_EPSILON,
 	type BillingPeriod,
 	cloneEntitlementWithUpdatedQuantity,
 	cusEntToCusPrice,
@@ -8,6 +9,7 @@ import {
 	type FullCusProduct,
 	findPrepaidCustomerEntitlement,
 	InternalError,
+	type LineItem,
 	type LineItemContext,
 	orgToCurrency,
 	priceToProrationConfig,
@@ -15,6 +17,7 @@ import {
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { getRefundLineItemForPrice } from "@/internal/billing/v2/utils/lineItems/getRefundLineItemForPrice";
 
 export const computeUpdateQuantityLineItems = ({
 	ctx,
@@ -88,7 +91,7 @@ export const computeUpdateQuantityLineItems = ({
 		customerProduct,
 	};
 
-	const refundLineItem = usagePriceToLineItem({
+	const catalogRefundLineItem = usagePriceToLineItem({
 		cusEnt: prepaidCustomerEntitlement,
 		context: {
 			...lineItemContext,
@@ -100,6 +103,14 @@ export const computeUpdateQuantityLineItems = ({
 		},
 	});
 
+	const refundLineItem = getRefundLineItemForPrice({
+		ctx,
+		customerProduct,
+		billingContext,
+		priceId: customerPrice.price.id,
+		catalogFallback: catalogRefundLineItem,
+	});
+
 	const chargeLineItem = usagePriceToLineItem({
 		cusEnt: newCustomerEntitlement,
 		context: lineItemContext,
@@ -109,15 +120,16 @@ export const computeUpdateQuantityLineItems = ({
 		},
 	});
 
-	// Don't return line items if they sum to 0
-	if (
+	const netAmount = Math.abs(
 		sumValues([
 			refundLineItem?.amountAfterDiscounts ?? 0,
 			chargeLineItem?.amountAfterDiscounts ?? 0,
-		]) === 0
-	) {
-		return [];
-	}
+		]),
+	);
 
-	return [refundLineItem, chargeLineItem];
+	if (netAmount < BILLING_AMOUNT_EPSILON) return [];
+
+	return [refundLineItem, chargeLineItem].filter(
+		(li): li is LineItem => li !== undefined,
+	);
 };

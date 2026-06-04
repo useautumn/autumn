@@ -1,5 +1,6 @@
 import { deleteByInvoiceId } from "./deleteByInvoiceId";
 import { deleteStaleByStripeInvoiceId } from "./deleteStaleByStripeInvoiceId";
+import { getByCustomerProductAndPeriod } from "./getByCustomerProductAndPeriod";
 import { getByInvoiceId } from "./getByInvoiceId";
 import { getByInvoiceIds } from "./getByInvoiceIds";
 import { getByStripeInvoiceId } from "./getByStripeInvoiceId";
@@ -18,6 +19,7 @@ export const invoiceLineItemRepo = {
 	getByInvoiceId,
 	getByInvoiceIds,
 	getByStripeInvoiceId,
+	getByCustomerProductAndPeriod,
 	deleteByInvoiceId,
 	deleteStaleByStripeInvoiceId,
 	getDeferredByInvoiceItemIds,
