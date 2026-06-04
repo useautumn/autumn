@@ -1,15 +1,12 @@
-import {
-	apiKeys,
-	ErrCode,
-	oauthAccessToken,
-	oauthConsent,
-	oauthRefreshToken,
-	RecaseError,
-	Scopes,
-} from "@autumn/shared";
-import { and, eq, sql } from "drizzle-orm";
+import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import {
+	oauthAccessTokenRepo,
+	oauthApiKeyRepo,
+	oauthConsentRepo,
+	oauthRefreshTokenRepo,
+} from "@/internal/auth/repos/index.js";
 import { clearSecretKeyCache } from "../../../dev/api-keys/cacheApiKeyUtils.js";
 
 /**
@@ -42,26 +39,17 @@ export const handleRevokeConsent = createRoute({
 			});
 		}
 
-		// 1. Get the consent and verify it belongs to this org
-		const consentRecords = await db
-			.select({
-				id: oauthConsent.id,
-				clientId: oauthConsent.clientId,
-				referenceId: oauthConsent.referenceId,
-			})
-			.from(oauthConsent)
-			.where(eq(oauthConsent.id, consent_id))
-			.limit(1);
-
-		if (consentRecords.length === 0) {
+		const consent = await oauthConsentRepo.getOwner({
+			db,
+			consentId: consent_id,
+		});
+		if (!consent) {
 			throw new RecaseError({
 				message: "Consent not found",
 				code: "not_found",
 				statusCode: 404,
 			});
 		}
-
-		const consent = consentRecords[0];
 
 		if (consent.referenceId !== org.id) {
 			throw new RecaseError({
@@ -73,51 +61,38 @@ export const handleRevokeConsent = createRoute({
 
 		const { clientId, referenceId } = consent;
 
-		// 2. Get API keys linked to this consent (for cache invalidation and response)
-		const linkedKeys = await db
-			.select({
-				id: apiKeys.id,
-				prefix: apiKeys.prefix,
-				hashed_key: apiKeys.hashed_key,
-			})
-			.from(apiKeys)
-			.where(sql`${apiKeys.meta}->>'oauth_consent_id' = ${consent_id}`);
+		const linkedKeys = await oauthApiKeyRepo.listByConsentId({
+			db,
+			consentId: consent_id,
+		});
 
 		const deletedKeyPrefixes = linkedKeys.map((k) => k.prefix).filter(Boolean);
 
 		// 3. Delete API keys and invalidate their cache
 		for (const key of linkedKeys) {
-			// Delete from database
-			await db.delete(apiKeys).where(eq(apiKeys.id, key.id));
+			await oauthApiKeyRepo.deleteById({ db, apiKeyId: key.id });
 
-			// Invalidate cache
 			if (key.hashed_key) {
 				await clearSecretKeyCache({ hashedKey: key.hashed_key });
 			}
 		}
 
 		// 4. Delete access tokens for this client + org
-		await db
-			.delete(oauthAccessToken)
-			.where(
-				and(
-					eq(oauthAccessToken.clientId, clientId),
-					eq(oauthAccessToken.referenceId, referenceId),
-				),
-			);
+		await oauthAccessTokenRepo.deleteByClientAndReference({
+			db,
+			clientId,
+			referenceId,
+		});
 
 		// 5. Delete refresh tokens for this client + org
-		await db
-			.delete(oauthRefreshToken)
-			.where(
-				and(
-					eq(oauthRefreshToken.clientId, clientId),
-					eq(oauthRefreshToken.referenceId, referenceId),
-				),
-			);
+		await oauthRefreshTokenRepo.deleteByClientAndReference({
+			db,
+			clientId,
+			referenceId,
+		});
 
 		// 6. Delete the consent
-		await db.delete(oauthConsent).where(eq(oauthConsent.id, consent_id));
+		await oauthConsentRepo.deleteById({ db, consentId: consent_id });
 
 		return c.json({
 			success: true,

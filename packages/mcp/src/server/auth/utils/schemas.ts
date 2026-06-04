@@ -16,15 +16,6 @@ export const failOpenSchema = z
 
 export const secretKeySchema = z.string().min(1).optional();
 
-export const tokenExchangeSchema = z.object({
-	sandbox_key: z.string().optional(),
-	prod_key: z.string().optional(),
-	org_id: z.string().optional(),
-	user_id: z.string().optional(),
-	client_id: z.string().optional(),
-	scopes: z.array(z.string()).optional(),
-});
-
 export interface MCPOAuthFlags extends MCPServerFlags {
 	readonly "oauth-enabled"?: boolean | undefined;
 	readonly "oauth-environment"?: OAuthEnvironment | undefined;

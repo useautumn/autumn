@@ -1,5 +1,5 @@
-import { oauthClient, Scopes } from "@autumn/shared";
-import { desc } from "drizzle-orm";
+import { Scopes } from "@autumn/shared";
+import { oauthClientRepo } from "@/internal/auth/repos/index.js";
 import { createRoute } from "../../honoMiddlewares/routeHandler";
 
 export const handleListOAuthClients = createRoute({
@@ -8,24 +8,7 @@ export const handleListOAuthClients = createRoute({
 		const ctx = c.get("ctx");
 		const { db } = ctx;
 
-		const clients = await db
-			.select({
-				id: oauthClient.id,
-				clientId: oauthClient.clientId,
-				name: oauthClient.name,
-				redirectUris: oauthClient.redirectUris,
-				public: oauthClient.public,
-				disabled: oauthClient.disabled,
-				skipConsent: oauthClient.skipConsent,
-				scopes: oauthClient.scopes,
-				tokenEndpointAuthMethod: oauthClient.tokenEndpointAuthMethod,
-				grantTypes: oauthClient.grantTypes,
-				responseTypes: oauthClient.responseTypes,
-				createdAt: oauthClient.createdAt,
-				updatedAt: oauthClient.updatedAt,
-			})
-			.from(oauthClient)
-			.orderBy(desc(oauthClient.createdAt));
+		const clients = await oauthClientRepo.listForAdmin({ db });
 
 		return c.json({
 			clients: clients.map((client) => ({

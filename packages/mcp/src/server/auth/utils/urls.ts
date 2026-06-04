@@ -45,9 +45,6 @@ export const getIssuerUrl = (flags: MCPOAuthFlags): string =>
 		new URL("/api/auth", flags["server-url"] ?? DEFAULT_AUTUMN_API_URL).href,
 	);
 
-export const getApiKeyUrl = (flags: MCPOAuthFlags): string =>
-	new URL("/cli/api-keys", getIssuerUrl(flags)).href;
-
 export const getWWWAuthenticate = ({
 	resourceUrl,
 	error,
