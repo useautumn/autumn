@@ -1,13 +1,10 @@
 import type { Invoice, InvoiceLineItem } from "@autumn/shared";
-import { AnimatePresence, motion } from "motion/react";
-import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
-import { SheetCloseButton } from "@/components/v2/sheets/SheetCloseButton";
+import { InlineSheetPanel } from "@/components/v2/sheets/InlineSheetPanel";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import {
 	useSheetEscapeHandler,
 	useSheetStore,
 } from "@/hooks/stores/useSheetStore";
-import { useIsMobile } from "@/hooks/useIsMobile";
 import { SubscriptionCancelSheet } from "@/views/customers2/components/sheets/SubscriptionCancelSheet";
 import { SubscriptionUncancelSheet } from "@/views/customers2/components/sheets/SubscriptionUncancelSheet";
 import { SubscriptionUpdateSheet } from "@/views/customers2/components/sheets/SubscriptionUpdateSheet";
@@ -27,10 +24,8 @@ import { RecordUsageSheet } from "../components/sheets/RecordUsageSheet";
 import { SubscriptionDetailSheet } from "../components/sheets/SubscriptionDetailSheet";
 import { SyncStripeSheet } from "../components/sync-stripe/SyncStripeSheet";
 import { SyncStripeSheetV2 } from "../components/sync-stripe-v2/SyncStripeSheetV2";
-import { SHEET_ANIMATION } from "./customerAnimations";
 
 export function CustomerSheets() {
-	const isMobile = useIsMobile();
 	const sheetType = useSheetStore((s) => s.type);
 	const sheetData = useSheetStore((s) => s.data);
 	const closeSheet = useSheetStore((s) => s.closeSheet);
@@ -103,22 +98,8 @@ export function CustomerSheets() {
 	};
 
 	return (
-		<AnimatePresence mode="wait">
-			{sheetType && (
-				<motion.div
-					initial={{ x: "100%" }}
-					animate={{ x: 0 }}
-					exit={{ x: "100%" }}
-					transition={SHEET_ANIMATION}
-					className="absolute right-0 top-0 bottom-0"
-					style={{ width: isMobile ? "100%" : "28rem", zIndex: 45 }}
-				>
-					<SheetContainer className="w-full bg-card z-40 sm:border-l border-border/40 h-full relative">
-						<SheetCloseButton onClose={handleClose} />
-						{renderSheet()}
-					</SheetContainer>
-				</motion.div>
-			)}
-		</AnimatePresence>
+		<InlineSheetPanel isOpen={!!sheetType} onClose={handleClose}>
+			{renderSheet()}
+		</InlineSheetPanel>
 	);
 }
