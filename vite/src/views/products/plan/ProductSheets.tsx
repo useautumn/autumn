@@ -1,14 +1,11 @@
 import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef } from "react";
 import {
 	useDiscardItemAndClose,
 	useProduct,
 	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
-import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
-import { SheetCloseButton } from "@/components/v2/sheets/SheetCloseButton";
-import { useIsMobile } from "@/hooks/useIsMobile";
+import { InlineSheetPanel } from "@/components/v2/sheets/InlineSheetPanel";
 import { getItemId } from "@/utils/product/productItemUtils";
 
 import { ProductItemContext } from "../product/product-item/ProductItemContext";
@@ -20,7 +17,6 @@ import { SelectFeatureSheet } from "./components/SelectFeatureSheet";
 import { SHEET_ANIMATION } from "./planAnimations";
 
 export const ProductSheets = () => {
-	const isMobile = useIsMobile();
 	const { product, setProduct } = useProduct();
 	const {
 		sheetType,
@@ -162,22 +158,12 @@ export const ProductSheets = () => {
 	};
 
 	return (
-		<AnimatePresence mode="wait">
-			{sheetType && (
-				<motion.div
-					initial={{ x: "100%" }}
-					animate={{ x: 0 }}
-					exit={{ x: "100%" }}
-					transition={SHEET_ANIMATION}
-					className="absolute right-0 top-0 bottom-0"
-					style={{ width: isMobile ? "100%" : "28rem", zIndex: 100 }}
-				>
-					<SheetContainer className="w-full bg-background z-50 md:border-l border-border/40 h-full relative">
-						<SheetCloseButton onClose={discardAndClose} />
-						{renderSheet()}
-					</SheetContainer>
-				</motion.div>
-			)}
-		</AnimatePresence>
+		<InlineSheetPanel
+			isOpen={!!sheetType}
+			onClose={discardAndClose}
+			transition={SHEET_ANIMATION}
+		>
+			{renderSheet()}
+		</InlineSheetPanel>
 	);
 };
