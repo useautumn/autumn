@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import type {
 	Webhook,
 	WebhookBillingIssue,
@@ -42,11 +43,26 @@ revenuecatWebhookRouter.post(
 		try {
 			const webhookSecret = getRevenuecatWebhookSecret({ org, env });
 
-			if (Authorization !== webhookSecret) {
-				logger.error("Invalid authorization for RevenueCat webhook", {
-					Authorization,
-					webhookSecret,
-				});
+			// Fail closed: reject when no signing secret is configured for this
+			// org/env. Otherwise an unset (undefined) secret combined with a
+			// missing Authorization header compares `undefined !== undefined` and
+			// authenticates the request. Mirrors vercelSignatureMiddleware.
+			if (!webhookSecret) {
+				logger.error("RevenueCat webhook secret not configured", { env });
+				return c.json({ error: "Webhook secret not configured" }, 500);
+			}
+
+			// Constant-time comparison of the shared secret to avoid timing
+			// attacks (timingSafeEqual throws on length mismatch, so guard first).
+			const authBuf = Buffer.from(Authorization ?? "", "utf-8");
+			const secretBuf = Buffer.from(webhookSecret, "utf-8");
+			const authorized =
+				!!Authorization &&
+				authBuf.length === secretBuf.length &&
+				crypto.timingSafeEqual(authBuf, secretBuf);
+
+			if (!authorized) {
+				logger.error("Invalid authorization for RevenueCat webhook", { env });
 				return c.json({ error: "Unauthorized" }, 401);
 			}
 
