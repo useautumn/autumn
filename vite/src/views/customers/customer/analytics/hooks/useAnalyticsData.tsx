@@ -1,11 +1,11 @@
-import { ErrCode, FeatureType } from "@autumn/shared";
+import { ErrCode } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useEventNames } from "./useEventNames";
+import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
+import { useSelectedEventNames } from "./useSelectedEventNames";
 
 /** Gets the user's IANA timezone (e.g., "America/New_York") */
 const getUserTimezone = (): string => {
@@ -27,19 +27,18 @@ export const useAnalyticsData = ({
 	const [searchParams] = useSearchParams();
 	const customerId = searchParams.get("customer_id");
 	const entityId = searchParams.get("entity_id");
-	const featureIds = searchParams.get("feature_ids")?.split(",");
-	const eventNames = searchParams.get("event_names")?.split(",");
-	const interval = searchParams.get("interval");
 	const groupBy = searchParams.get("group_by");
-	const binSize = searchParams.get("bin_size");
 	const maxGroups = Number(searchParams.get("max_groups")) || 10;
 
-	const { eventNames: cachedEventNames } = useEventNames();
+	const { queryStates } = useAnalyticsQueryState();
+	const { interval, bin_size: binSize, start, end } = queryStates;
+	const customRange =
+		interval === "custom" && start && end ? { start, end } : undefined;
+
+	const { selectedEventNames, featuresData, featuresLoading, eventNamesLoading } =
+		useSelectedEventNames();
 
 	const timezone = useMemo(() => getUserTimezone(), []);
-
-	const { features: featuresData, isLoading: featuresLoading } =
-		useFeaturesQuery();
 
 	const formattedGroupBy = groupBy
 		? groupBy === "customer_id" || groupBy === "entity_id" || groupBy === "plan_id"
@@ -47,26 +46,11 @@ export const useAnalyticsData = ({
 			: `properties.${groupBy}`
 		: undefined;
 
-	const featureLinkedEventNames = useMemo(() => {
-		if (!featuresData?.length) return cachedEventNames;
-		return cachedEventNames.filter((e) =>
-			featuresData.some(
-				(f) =>
-					(f.type === FeatureType.Metered || f.type === FeatureType.CreditSystem) &&
-					(f.event_names?.includes(e.event_name) || f.id === e.event_name),
-			),
-		);
-	}, [cachedEventNames, featuresData]);
-
-	const selectedEventNames =
-		eventNames || featureIds
-			? [...(eventNames || []), ...(featureIds || [])]
-			: featureLinkedEventNames.slice(0, 3).map((e) => e.event_name);
-
 	const postBody = {
 		customer_id: customerId || undefined,
 		entity_id: entityId || undefined,
-		interval: interval || "30d",
+		interval: customRange ? undefined : interval,
+		custom_range: customRange,
 		event_names: selectedEventNames,
 		group_by: formattedGroupBy,
 		bin_size: binSize || undefined,
@@ -74,17 +58,18 @@ export const useAnalyticsData = ({
 		max_groups: formattedGroupBy ? maxGroups : undefined,
 	};
 
-	const {
-		data,
-		isLoading: queryLoading,
-		error,
-	} = useQuery({
+	const isReady = !eventNamesLoading && !featuresLoading;
+
+	const { data, isLoading, error } = useQuery({
+		enabled: isReady,
 		queryKey: buildKey([
 			"query-events",
 			customerId,
 			entityId,
-			interval || "30d",
+			interval,
 			binSize || "day",
+			String(start ?? ""),
+			String(end ?? ""),
 			...selectedEventNames.sort(),
 			groupBy,
 			timezone,
@@ -95,6 +80,8 @@ export const useAnalyticsData = ({
 			return data;
 		},
 	});
+
+	const queryLoading = !isReady || isLoading;
 
 	return {
 		customer: data?.customer,
@@ -127,33 +114,43 @@ export const useRawAnalyticsData = () => {
 	const [searchParams] = useSearchParams();
 	const customerId = searchParams.get("customer_id");
 	const entityId = searchParams.get("entity_id");
-	const interval = searchParams.get("interval");
 
-	const { features: featuresData, isLoading: featuresLoading } =
-		useFeaturesQuery();
+	const { queryStates } = useAnalyticsQueryState();
+	const { interval, start, end } = queryStates;
+	const customRange =
+		interval === "custom" && start && end ? { start, end } : undefined;
+
+	const { selectedEventNames, featuresData, featuresLoading, eventNamesLoading } =
+		useSelectedEventNames();
+
+	const isReady = !eventNamesLoading && !featuresLoading;
 
 	const postBody = {
 		customer_id: customerId || undefined,
 		entity_id: entityId || undefined,
-		interval: interval || "30d",
+		interval: customRange ? undefined : interval,
+		custom_range: customRange,
+		event_names: selectedEventNames,
 	};
 
-	const {
-		data,
-		isLoading: queryLoading,
-		error,
-	} = useQuery({
+	const { data, isLoading, error } = useQuery({
+		enabled: isReady,
 		queryKey: buildKey([
 			"query-raw-events",
 			customerId,
 			entityId,
-			interval || "30d",
+			interval,
+			String(start ?? ""),
+			String(end ?? ""),
+			...selectedEventNames.sort(),
 		]),
 		queryFn: async () => {
 			const { data } = await axiosInstance.post("/query/raw", postBody);
 			return data;
 		},
 	});
+
+	const queryLoading = !isReady || isLoading;
 
 	return {
 		customer: data?.customer,

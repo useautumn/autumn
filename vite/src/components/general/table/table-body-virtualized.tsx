@@ -50,7 +50,7 @@ const VirtualRowInner = <T,>({
 			data-state={row.getIsSelected() && "selected"}
 			data-index={virtualRow.index}
 			className={cn(
-				"text-tertiary-foreground transition-none h-10 relative border-b",
+				"text-tertiary-foreground transition-none h-10 relative border-b last:border-b-0",
 				rowClassName,
 				isSelected ? "z-100" : "hover:bg-interactive-secondary-hover",
 				(onRowClick || rowHref) && "cursor-pointer",

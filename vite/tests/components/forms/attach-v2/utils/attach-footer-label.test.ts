@@ -43,4 +43,27 @@ describe("getConfirmLabel", () => {
 			}),
 		).toBe("Charge Customer");
 	});
+
+	test("backdated startDate with a card charges the customer", () => {
+		expect(
+			getConfirmLabel({
+				previewData,
+				startDate: addDays(NOW, -30).getTime(),
+				now: NOW,
+			}),
+		).toBe("Charge Customer");
+	});
+
+	test("backdated startDate without a card generates a checkout URL", () => {
+		expect(
+			getConfirmLabel({
+				previewData: {
+					...previewData,
+					redirect_to_checkout: true,
+				},
+				startDate: addDays(NOW, -30).getTime(),
+				now: NOW,
+			}),
+		).toBe("Generate Checkout URL");
+	});
 });

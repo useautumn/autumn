@@ -2,6 +2,10 @@
 
 // Analytics Tables
 import { actions } from "../models/analyticsModels/actionTable.js";
+import {
+	chatApprovals,
+	chatInstallations,
+} from "../models/chatModels/chatTable.js";
 import { chatResults } from "../models/chatResultModels/chatResultTable.js";
 import { checkoutsRelations } from "../models/checkouts/checkoutRelations.js";
 import { checkouts } from "../models/checkouts/checkoutTable.js";
@@ -33,6 +37,7 @@ import { apiKeys } from "../models/devModels/apiKeyTable.js";
 import { events } from "../models/eventModels/eventTable.js";
 import { featureRelations } from "../models/featureModels/featureRelations.js";
 import { features } from "../models/featureModels/featureTable.js";
+import { invoiceTemplates } from "../models/invoiceTemplateModels/invoiceTemplateTable.js";
 // Migration Relations
 import { migrationErrorRelations } from "../models/migrationModels/migrationErrorRelations.js";
 import { migrationErrors } from "../models/migrationModels/migrationErrorTable.js";
@@ -63,10 +68,10 @@ import { referralCodeRelations } from "../models/rewardModels/referralModels/ref
 import { referralCodes } from "../models/rewardModels/referralModels/referralCodeTable.js";
 import { rewardRedemptionRelations } from "../models/rewardModels/referralModels/rewardRedemptionRelations.js";
 import { rewardRedemptions } from "../models/rewardModels/referralModels/rewardRedemptionTable.js";
-// Reward Tables
-import { rewards } from "../models/rewardModels/rewardModels/rewardTable.js";
 // Reward Relations
 import { rewardRelations } from "../models/rewardModels/rewardModels/rewardRelations.js";
+// Reward Tables
+import { rewards } from "../models/rewardModels/rewardModels/rewardTable.js";
 import { rewardProgramRelations } from "../models/rewardModels/rewardProgramModels/rewardProgramRelations.js";
 import { rewardPrograms } from "../models/rewardModels/rewardProgramModels/rewardProgramTable.js";
 import {
@@ -100,6 +105,8 @@ export {
 	apiKeyRelations,
 	apiKeys,
 	autoTopupLimitStates as autoTopupLimits,
+	chatApprovals,
+	chatInstallations,
 	chatResults,
 	checkouts,
 	checkoutsRelations,
@@ -124,6 +131,7 @@ export {
 	inviteRelations,
 	invoiceLineItems,
 	invoiceRelations,
+	invoiceTemplates,
 	invoices,
 	// OAuth Provider
 	jwks,

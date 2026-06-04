@@ -4,6 +4,7 @@ import type {
 	FullCustomer,
 	RawEventFromClickHouse,
 } from "@autumn/shared";
+import { UTCDate } from "@date-fns/utc";
 import {
 	getTinybirdPipes,
 	type ListEventsPaginatedPipeRow,
@@ -66,9 +67,11 @@ export type ListRawEventsParams = {
 	customer_id?: string;
 	entity_id?: string;
 	interval?: string;
+	custom_range?: { start: number; end: number };
 	customer?: FullCustomer;
 	aggregateAll?: boolean;
 	event_name?: string;
+	event_names?: string[];
 	limit?: number;
 };
 
@@ -100,15 +103,27 @@ export const listRawEvents = async ({
 	// Calculate date range
 	const startDate = calculateStartDateFromInterval(intervalType);
 
-	const finalStartDate =
-		isBillingCycle && billingCycleResult?.startDate
+	const finalStartDate = params.custom_range
+		? formatJsDateToClickHouseDateTime(new UTCDate(params.custom_range.start))
+		: isBillingCycle && billingCycleResult?.startDate
 			? billingCycleResult.startDate
 			: formatJsDateToClickHouseDateTime(startDate);
 
-	const finalEndDate =
-		isBillingCycle && billingCycleResult?.endDate
+	const finalEndDate = params.custom_range
+		? formatJsDateToClickHouseDateTime(new UTCDate(params.custom_range.end))
+		: isBillingCycle && billingCycleResult?.endDate
 			? billingCycleResult.endDate
 			: formatJsDateToClickHouseDateTime(new Date());
+
+	const eventNameFilter = (() => {
+		if (params.event_names && params.event_names.length > 0) {
+			return params.event_names;
+		}
+		if (params.event_name) {
+			return [params.event_name];
+		}
+		return undefined;
+	})();
 
 	const pipeParams = {
 		org_id: org.id,
@@ -117,7 +132,7 @@ export const listRawEvents = async ({
 		end_date: finalEndDate,
 		customer_id: params.aggregateAll ? undefined : params.customer_id,
 		entity_id: params.entity_id,
-		event_names: params.event_name ? [params.event_name] : undefined,
+		event_names: eventNameFilter,
 		limit: params.limit ?? DEFAULT_LIMIT,
 		offset: 0,
 	};

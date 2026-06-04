@@ -23,7 +23,7 @@ export const executeStripeSubscriptionOperation = async ({
 	const invoiceModeParams = billingContext.invoiceMode
 		? {
 				collection_method: "send_invoice" as const,
-				days_until_due: 30,
+				days_until_due: billingContext.invoiceMode.daysUntilDue ?? 30,
 			}
 		: {};
 

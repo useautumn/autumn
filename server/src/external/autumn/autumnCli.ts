@@ -40,6 +40,8 @@ import {
 	type Operations,
 	type OrgConfig,
 	type ProductItem,
+	type RecalculateBalanceParamsV0,
+	type RecalculateBalancePreview,
 	type RestoreParamsV1,
 	type RestoreResponse,
 	type RewardRedemption,
@@ -182,7 +184,8 @@ export class AutumnInt {
 
 			if (parsed && typeof parsed === "object") {
 				throw new AutumnError({
-					message: parsed.message ?? `request failed (status ${response.status})`,
+					message:
+						parsed.message ?? `request failed (status ${response.status})`,
 					code: parsed.code ?? ErrCode.InternalError,
 				});
 			}
@@ -1089,6 +1092,16 @@ export class AutumnInt {
 		delete: async (params: DeleteBalanceParamsV0) => {
 			const data = await this.post(`/balances.delete`, params);
 			return data;
+		},
+		recalculate: async (params: RecalculateBalanceParamsV0) => {
+			const data = await this.post(`/balances.recalculate`, params);
+			return data;
+		},
+		previewRecalculate: async (
+			params: RecalculateBalanceParamsV0,
+		): Promise<RecalculateBalancePreview> => {
+			const data = await this.post(`/balances.preview_recalculate`, params);
+			return data as RecalculateBalancePreview;
 		},
 		finalize: async (
 			params: FinalizeLockParamsV0,

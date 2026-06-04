@@ -86,19 +86,28 @@ export const DateInputUnix = ({
 	setUnixDate,
 	disabled,
 	disablePastDates,
+	disableFutureDates,
 	minUnixDate,
+	maxUnixDate,
+	fromYear,
 	withTime,
 	use24Hour,
+	placeholder,
 	className,
 }: {
 	unixDate: number | null;
 	setUnixDate: (unixDate: number | null) => void;
 	disabled?: boolean;
 	disablePastDates?: boolean;
+	disableFutureDates?: boolean;
 	minUnixDate?: number;
+	maxUnixDate?: number;
+	fromYear?: number;
 	withTime?: boolean;
 	/** Show 24-hour clock (00–23) instead of 12-hour with AM/PM. */
 	use24Hour?: boolean;
+	/** Override the empty-state label (e.g. "Now" when null means immediate). */
+	placeholder?: string;
 	className?: string;
 }) => {
 	const [popoverOpen, setPopoverOpen] = useState(false);
@@ -107,6 +116,13 @@ export const DateInputUnix = ({
 
 	if (minDay) {
 		minDay.setHours(0, 0, 0, 0);
+	}
+
+	const maxDate = maxUnixDate != null ? new Date(maxUnixDate) : null;
+	const maxDay = maxDate ? new Date(maxDate) : null;
+
+	if (maxDay) {
+		maxDay.setHours(0, 0, 0, 0);
 	}
 
 	const displayFormat = !withTime
@@ -119,6 +135,10 @@ export const DateInputUnix = ({
 	const clampUnixDate = (nextUnixDate: number) => {
 		if (minUnixDate != null && nextUnixDate < minUnixDate) {
 			return minUnixDate;
+		}
+
+		if (maxUnixDate != null && nextUnixDate > maxUnixDate) {
+			return maxUnixDate;
 		}
 
 		return nextUnixDate;
@@ -174,7 +194,9 @@ export const DateInputUnix = ({
 					{unixDate ? (
 						format(new Date(unixDate), displayFormat)
 					) : (
-						<span>Pick a date{withTime ? " and time" : ""}</span>
+						<span>
+							{placeholder ?? `Pick a date${withTime ? " and time" : ""}`}
+						</span>
 					)}
 				</button>
 			</PopoverTrigger>
@@ -183,9 +205,12 @@ export const DateInputUnix = ({
 					mode="single"
 					selected={dateObj}
 					onSelect={handleDaySelect}
-					disabled={disablePastDates && minDay ? { before: minDay } : undefined}
+					disabled={[
+						...(disablePastDates && minDay ? [{ before: minDay }] : []),
+						...(disableFutureDates && maxDay ? [{ after: maxDay }] : []),
+					]}
 					captionLayout="dropdown-buttons"
-					fromYear={new Date().getFullYear()}
+					fromYear={fromYear ?? new Date().getFullYear()}
 					toYear={new Date().getFullYear() + 10}
 				/>
 				{withTime && (

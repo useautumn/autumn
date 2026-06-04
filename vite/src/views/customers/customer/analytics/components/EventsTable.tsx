@@ -2,7 +2,6 @@ import { CaretLeftIcon, CaretRightIcon, DatabaseIcon } from "@phosphor-icons/rea
 import { memo, useState } from "react";
 import { Table } from "@/components/general/table";
 import { IconButton } from "@/components/v2/buttons/IconButton";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
 	Select,
 	SelectContent,
@@ -11,31 +10,14 @@ import {
 	SelectValue,
 } from "@/components/v2/selects/Select";
 import { cn } from "@/lib/utils";
-import type { ColumnDef } from "@tanstack/react-table";
 import type { IRow } from "./analytics-types";
 import { createEventsColumns } from "./EventsColumns";
 import { RowClickDialog } from "./RowClickDialog";
 import { useEventsTable } from "../hooks/useEventsTable";
 
 const PAGE_SIZE_OPTIONS = [100, 500, 1000] as const;
+
 const columns = createEventsColumns();
-
-const SKELETON_CELL_WIDTHS = ["w-28", "w-20", "w-8", "w-40"] as const;
-
-const skeletonColumns: ColumnDef<IRow, unknown>[] = columns.map((col, i) => ({
-	...col,
-	cell: () => <Skeleton className={cn("h-3 rounded-sm", SKELETON_CELL_WIDTHS[i])} />,
-}));
-
-const PLACEHOLDER_ROWS: IRow[] = Array.from({ length: 15 }, (_, i) => ({
-	timestamp: "",
-	event_name: "",
-	value: 0,
-	properties: "",
-	idempotency_key: String(i),
-	entity_id: "",
-	customer_id: "",
-}));
 
 export const EventsTable = memo(function EventsTable({
 	data,
@@ -51,9 +33,7 @@ export const EventsTable = memo(function EventsTable({
 	const [selectedEvent, setSelectedEvent] = useState<IRow | null>(null);
 	const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-	const tableData = isLoading ? PLACEHOLDER_ROWS : data;
-	const activeColumns = isLoading ? skeletonColumns : columns;
-	const table = useEventsTable({ data: tableData, columns: activeColumns });
+	const table = useEventsTable({ data, columns });
 
 	const { pageIndex, pageSize } = table.getState().pagination;
 	const totalPages = table.getPageCount();
@@ -130,8 +110,8 @@ export const EventsTable = memo(function EventsTable({
 				<Table.Provider
 					config={{
 						table,
-						numberOfColumns: activeColumns.length,
-						isLoading: false,
+						numberOfColumns: columns.length,
+						isLoading,
 						enableSorting: !isLoading,
 						onRowClick: handleRowClick,
 						rowClassName: "h-8",

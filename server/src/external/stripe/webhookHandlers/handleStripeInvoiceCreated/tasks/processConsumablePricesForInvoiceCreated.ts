@@ -9,6 +9,7 @@ import { eventContextToArrearLineItems } from "@/external/stripe/webhookHandlers
 import { lineItemsToCreateInvoiceItemsParams } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToCreateInvoiceItemsParams";
 import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
 import { parseSkipOverageSubmissionFlag } from "@/internal/misc/featureFlags/parseSkipOverageSubmission";
@@ -84,7 +85,6 @@ export const processConsumablePricesForInvoiceCreated = async ({
 					invoicePeriodEndMs,
 				}),
 		});
-
 	const skipOverageSubmission = parseSkipOverageSubmissionFlag({
 		org: ctx.org,
 		customerId: eventContext.fullCustomer.id,
@@ -103,6 +103,13 @@ export const processConsumablePricesForInvoiceCreated = async ({
 	await CusEntService.batchUpdate({
 		ctx,
 		data: updateCustomerEntitlements,
+	});
+
+	await deleteCachedFullCustomer({
+		ctx,
+		customerId:
+			eventContext.fullCustomer.id ?? eventContext.fullCustomer.internal_id,
+		source: "invoice-created-consumable-reset",
 	});
 
 	// Handle rollovers

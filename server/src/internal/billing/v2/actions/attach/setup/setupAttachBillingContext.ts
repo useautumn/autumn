@@ -10,6 +10,7 @@ import {
 	isFreeProduct,
 	isFutureStartDate,
 	isOneOffProduct,
+	isPastStartDate,
 	notNullish,
 	orgDisableStripeWrites,
 	orgToReturnUrl,
@@ -163,7 +164,7 @@ export const setupAttachBillingContext = async ({
 		contextOverride,
 	});
 
-	const invoiceMode = setupInvoiceModeContext({ params });
+	const invoiceMode = await setupInvoiceModeContext({ ctx, params });
 	const paymentBehaviorIntent = setupPaymentBehaviorIntent({
 		contextOverride,
 		paymentMethod,
@@ -200,6 +201,7 @@ export const setupAttachBillingContext = async ({
 		trialContext,
 		currentEpochMs,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
+		billingStartsAt: params.starts_at,
 	});
 
 	// Trial ends at overrides billing cycle anchor
@@ -220,10 +222,18 @@ export const setupAttachBillingContext = async ({
 	const billingStartsAt =
 		params.starts_at ??
 		(planTiming === "end_of_cycle" ? endOfCycleMs : undefined);
+
 	const hasFutureStartDate = isFutureStartDate(
 		params.starts_at,
 		currentEpochMs,
 	);
+
+	const subscriptionBackdateStartMs =
+		params.starts_at !== undefined &&
+		isPastStartDate(params.starts_at, currentEpochMs)
+			? params.starts_at
+			: undefined;
+
 	const accessStartsAt = getAttachAccessStartsAt({
 		params,
 		currentEpochMs,
@@ -275,6 +285,8 @@ export const setupAttachBillingContext = async ({
 		currentEpochMs,
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,
+		billingStartsAt,
+		subscriptionBackdateStartMs,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
 		requestedProrationBehavior: setupIgnoreProrationBehavior({
 			isOneOffAttach: isOneOffProduct({ prices: attachProduct.prices }),

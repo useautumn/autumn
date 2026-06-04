@@ -14,16 +14,24 @@ on:
         required: false
         default: 'manual'
 
+# Cancel an older in-progress build on the same branch when a newer commit
+# lands, so the latest commit is the one that builds + deploys.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
 env:
-  AWS_REGION: us-west-2
+  # ECR region is selected per-branch in the "Extract metadata" step:
+  #   prod repo (autumn)         -> us-east-2
+  #   staging repo (autumn-staging) -> us-east-1
   # Branches allowed to deploy to staging via workflow_dispatch with tag=deploy-staging.
   # Add short-lived PR branches here when you need staging without merging to dev.
-  STAGING_DEPLOY_BRANCH_ALLOWLIST: fix-health-check-redis-disabled-detection feat/track-rate-limit-redis
+  STAGING_DEPLOY_BRANCH_ALLOWLIST: fix-health-check-redis-disabled-detection feat/track-rate-limit-redis feat/events-hourly-rollup
 
 jobs:
   checks:
     name: Type Check
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-8vcpu-ubuntu-2404
     
     steps:
       - name: Checkout code
@@ -54,17 +62,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-      
-      - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
       
       - name: Extract metadata for Docker
         id: meta
@@ -103,11 +100,13 @@ jobs:
           echo "sha=$COMMIT_SHA" >> $GITHUB_OUTPUT
           echo "deploy_staging_override=$DEPLOY_STAGING_OVERRIDE" >> $GITHUB_OUTPUT
           
-          # Select ECR repository based on branch
+          # Select ECR repository + region based on branch
           if [ "$BRANCH_NAME" = "dev" ] || [ "$DEPLOY_STAGING_OVERRIDE" = "true" ]; then
             echo "ecr_repo=autumn-staging" >> $GITHUB_OUTPUT
+            echo "region=us-east-1" >> $GITHUB_OUTPUT
           else
             echo "ecr_repo=autumn" >> $GITHUB_OUTPUT
+            echo "region=us-east-2" >> $GITHUB_OUTPUT
           fi
           
           # Set custom tag if provided
@@ -115,8 +114,19 @@ jobs:
             echo "custom_tag=${{ github.event.inputs.tag }}" >> $GITHUB_OUTPUT
           fi
       
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ steps.meta.outputs.region }}
+      
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      
+      - name: Set up Blacksmith Docker builder
+        uses: useblacksmith/setup-docker-builder@v1
       
       - name: Build and push Docker image
         env:
@@ -129,14 +139,13 @@ jobs:
           COMBINED_TAG="${IMAGE_TAG_BRANCH}-${IMAGE_TAG_SHA}"
           TAGS="${ECR_REGISTRY}/${ECR_REPOSITORY}:${COMBINED_TAG}"
           
-          # Build and push
+          # Layer + cache-mount persistence is handled by the Blacksmith sticky
+          # disk mounted at /var/lib/buildkit, so no registry cache-from/to.
           docker buildx build \
             --platform linux/amd64 \
             --push \
             --provenance=false \
             --sbom=false \
-            --cache-from type=registry,ref=${ECR_REGISTRY}/${ECR_REPOSITORY}:buildcache-${IMAGE_TAG_BRANCH} \
-            --cache-to type=registry,ref=${ECR_REGISTRY}/${ECR_REPOSITORY}:buildcache-${IMAGE_TAG_BRANCH},mode=max \
             --tag ${TAGS//,/ --tag } \
             -f docker/Dockerfile \
             .
@@ -153,31 +162,19 @@ jobs:
           echo "Repository: ${ECR_REGISTRY}/${ECR_REPOSITORY}"
           echo "Tag: ${COMBINED_TAG}"
 
-      - name: Auto-deploy fix branches
+      - name: Auto-deploy production
         if: github.ref == 'refs/heads/main'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEPLOY_URL: ${{ secrets.DEPLOY_URL }}
           DEPLOY_SECRET: ${{ secrets.DEPLOY_SECRET }}
           COMMIT_SHA: ${{ github.sha }}
         run: |
-          # Get the PR that was merged (if any)
-          PR_DATA=$(gh pr list --state merged --search "$COMMIT_SHA" --json headRefName --limit 1)
-          BRANCH_NAME=$(echo "$PR_DATA" | jq -r '.[0].headRefName // empty')
-          
-          if [[ "$BRANCH_NAME" == fix/* ]]; then
-            echo "Detected merged fix/ branch: $BRANCH_NAME"
-            echo "Triggering auto-deploy..."
-            
-            curl --fail-with-body -X POST "$DEPLOY_URL/api/deploy/github" \
-              -H "Content-Type: application/json" \
-              -H "x-deploy-secret: $DEPLOY_SECRET" \
-              -d "{\"commitSha\": \"$COMMIT_SHA\", \"deploymentType\": \"server\"}"
-            
-            echo "Auto-deploy triggered!"
-          else
-            echo "Not a fix/ branch (branch: ${BRANCH_NAME:-direct push}), skipping auto-deploy"
-          fi
+          echo "Triggering production auto-deploy for $COMMIT_SHA..."
+          curl --fail-with-body -X POST "$DEPLOY_URL/api/deploy/github" \
+            -H "Content-Type: application/json" \
+            -H "x-deploy-secret: $DEPLOY_SECRET" \
+            -d "{\"commitSha\": \"$COMMIT_SHA\"}"
+          echo "Auto-deploy triggered!"
 
       - name: Auto-deploy staging
         if: github.ref == 'refs/heads/dev' || steps.meta.outputs.deploy_staging_override == 'true'

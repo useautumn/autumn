@@ -6,13 +6,64 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import type { LineItem, StripeDiscountWithCoupon } from "@autumn/shared";
+import {
+	BillingInterval,
+	type LineItem,
+	type StripeDiscountWithCoupon,
+} from "@autumn/shared";
 import { lineItems as lineItemFixtures } from "@tests/utils/fixtures/billing/lineItems";
 import { discounts } from "@tests/utils/fixtures/db/discounts";
 import chalk from "chalk";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
 
 // ============ TESTS ============
+
+const startsAt = Date.UTC(2026, 0, 1);
+
+const backdatedCharge = ({
+	amount,
+	cycleCount,
+}: {
+	amount: number;
+	cycleCount: number;
+}): LineItem => {
+	const lineItem = lineItemFixtures.charge({ amount });
+	return {
+		...lineItem,
+		context: {
+			...lineItem.context,
+			backdate: { startsAt, cycleCount },
+			price: {
+				...lineItem.context.price,
+				config: {
+					...(lineItem.context.price.config ?? {}),
+					interval: BillingInterval.Month,
+					interval_count: 1,
+				},
+			},
+		},
+	};
+};
+
+const withDuration = ({
+	discount,
+	duration,
+	durationInMonths,
+}: {
+	discount: StripeDiscountWithCoupon;
+	duration: "forever" | "once" | "repeating";
+	durationInMonths?: number;
+}): StripeDiscountWithCoupon => ({
+	...discount,
+	source: {
+		...discount.source,
+		coupon: {
+			...discount.source.coupon,
+			duration,
+			duration_in_months: durationInMonths ?? null,
+		},
+	},
+});
 
 describe(chalk.yellowBright("applyStripeDiscountsToLineItems"), () => {
 	describe(chalk.cyan("Empty inputs"), () => {
@@ -73,6 +124,63 @@ describe(chalk.yellowBright("applyStripeDiscountsToLineItems"), () => {
 			expect(result[0].amountAfterDiscounts).toBe(85); // 100 - 15
 			expect(result[0].discounts).toHaveLength(1);
 			expect(result[0].discounts[0].amountOff).toBe(15);
+		});
+
+		test("amount_off discount applies once to a backdated invoice", () => {
+			const lineItems = [backdatedCharge({ amount: 40, cycleCount: 2 })];
+			const discountList = [
+				withDuration({
+					discount: discounts.amountOff({ amountOffCents: 500 }),
+					duration: "repeating",
+					durationInMonths: 12,
+				}),
+			];
+
+			const result = applyStripeDiscountsToLineItems({
+				lineItems,
+				discounts: discountList,
+			});
+
+			expect(result[0].amountAfterDiscounts).toBe(35);
+			expect(result[0].discounts[0].amountOff).toBe(5);
+		});
+
+		test("one-month amount_off discount only applies to one backdated cycle", () => {
+			const lineItems = [backdatedCharge({ amount: 40, cycleCount: 2 })];
+			const discountList = [
+				withDuration({
+					discount: discounts.amountOff({ amountOffCents: 500 }),
+					duration: "repeating",
+					durationInMonths: 1,
+				}),
+			];
+
+			const result = applyStripeDiscountsToLineItems({
+				lineItems,
+				discounts: discountList,
+			});
+
+			expect(result[0].amountAfterDiscounts).toBe(35);
+			expect(result[0].discounts[0].amountOff).toBe(5);
+		});
+
+		test("duration-limited percent_off only discounts eligible backdated cycles", () => {
+			const lineItems = [backdatedCharge({ amount: 40, cycleCount: 2 })];
+			const discountList = [
+				withDuration({
+					discount: discounts.percentOff({ percentOff: 50 }),
+					duration: "repeating",
+					durationInMonths: 1,
+				}),
+			];
+
+			const result = applyStripeDiscountsToLineItems({
+				lineItems,
+				discounts: discountList,
+			});
+
+			expect(result[0].amountAfterDiscounts).toBe(30);
+			expect(result[0].discounts[0].amountOff).toBe(10);
 		});
 	});
 

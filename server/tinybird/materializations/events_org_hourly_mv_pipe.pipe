@@ -1,0 +1,21 @@
+DESCRIPTION >
+    Materializes events into the coarse org-grain hourly rollup. Drops customer_id, entity_id,
+    internal_product_id and properties so rows collapse to one per (org, env, event, hour). No
+    ARRAY JOIN (reads events directly), so there is no property fan-out. total_value uses
+    sum(toFloat64(coalesce(value, 1))) — byte-identical to events_hourly_no_properties_two_mv —
+    so summing this rollup equals summing that one.
+
+NODE materialize
+SQL >
+    SELECT
+        org_id,
+        env,
+        event_name,
+        toStartOfHour(timestamp) as hour,
+        sum(toFloat64(coalesce(value, 1))) as total_value,
+        count() as event_count
+    FROM events
+    GROUP BY org_id, env, event_name, hour
+
+TYPE materialized
+DATASOURCE events_org_hourly_mv

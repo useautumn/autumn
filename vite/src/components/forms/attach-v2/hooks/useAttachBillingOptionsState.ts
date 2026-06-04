@@ -1,5 +1,4 @@
 import {
-	ACTIVE_STATUSES,
 	type BillingBehavior,
 	BillingInterval,
 	type CusProduct,
@@ -8,7 +7,7 @@ import {
 	hasActivePaidSubscription,
 	type PlanTiming,
 } from "@autumn/shared";
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 import {
@@ -121,12 +120,23 @@ export function useAttachBillingOptionsState() {
 
 	const isImmediateSelected = effectivePlanSchedule === "immediate";
 	const isEndOfCycleSelected = effectivePlanSchedule === "end_of_cycle";
+	const movePastStartDateToNow = useCallback(() => {
+		if (startDate !== null && startDate < Date.now()) {
+			form.setFieldValue("startDate", Date.now());
+		}
+	}, [form, startDate]);
 
 	useEffect(() => {
 		if (canChooseBillingCycle) return;
 		if (!newBillingSubscription) return;
 		form.setFieldValue("newBillingSubscription", false);
-	}, [canChooseBillingCycle, form, newBillingSubscription]);
+		movePastStartDateToNow();
+	}, [
+		canChooseBillingCycle,
+		form,
+		movePastStartDateToNow,
+		newBillingSubscription,
+	]);
 
 	useEffect(() => {
 		if (showProrationBehavior) return;
@@ -163,6 +173,7 @@ export function useAttachBillingOptionsState() {
 		createNewCycle: boolean;
 	}) => {
 		form.setFieldValue("newBillingSubscription", createNewCycle);
+		if (!createNewCycle) movePastStartDateToNow();
 		form.setFieldValue(
 			"prorationBehavior",
 			normalizeAttachProrationBehavior({

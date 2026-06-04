@@ -9,6 +9,7 @@ import { lineItemsToInvoiceAddLinesParams } from "@/internal/billing/v2/provider
 import { createInvoiceForBilling } from "@/internal/billing/v2/providers/stripe/utils/invoices/createInvoiceForBilling";
 import { upsertInvoiceFromBilling } from "@/internal/billing/v2/utils/upsertFromStripe/upsertInvoiceFromBilling";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { parseSkipOverageSubmissionFlag } from "@/internal/misc/featureFlags/parseSkipOverageSubmission";
 import type { StripeSubscriptionDeletedContext } from "../setupStripeSubscriptionDeletedContext";
 
@@ -116,5 +117,12 @@ export const processConsumablePricesForSubscriptionDeleted = async ({
 	await CusEntService.batchUpdate({
 		ctx,
 		data: updateCustomerEntitlements,
+	});
+
+	await deleteCachedFullCustomer({
+		ctx,
+		customerId:
+			eventContext.fullCustomer.id ?? eventContext.fullCustomer.internal_id,
+		source: "subscription-deleted-consumable-reset",
 	});
 };

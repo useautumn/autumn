@@ -444,4 +444,49 @@ describe("buildCreateScheduleRequestBody", () => {
 		expect(result).not.toBeNull();
 		expect((result as any).entity_id).toBe("entity_1");
 	});
+
+	test("sends a past first-phase starts_at when allowFirstPhaseBackdate is true", () => {
+		const now = Date.now();
+		const past = now - 1000 * 60 * 60 * 24 * 35;
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			entityId: undefined,
+			phases: [
+				{
+					startsAt: past,
+					persistedStartsAt: undefined,
+					plans: [{ ...EMPTY_SCHEDULE_PLAN, productId: "prod_1" }],
+				},
+			],
+			products: defaultProducts,
+			features,
+			nowMs: now,
+			allowFirstPhaseBackdate: true,
+		});
+
+		expect(result).not.toBeNull();
+		expect(result!.phases[0].starts_at).toBe(past);
+	});
+
+	test("forces the first phase to now when backdating is not allowed", () => {
+		const now = Date.now();
+		const past = now - 1000 * 60 * 60 * 24 * 35;
+		const result = buildCreateScheduleRequestBody({
+			customerId: "cus_1",
+			entityId: undefined,
+			phases: [
+				{
+					startsAt: past,
+					persistedStartsAt: undefined,
+					plans: [{ ...EMPTY_SCHEDULE_PLAN, productId: "prod_1" }],
+				},
+			],
+			products: defaultProducts,
+			features,
+			nowMs: now,
+		});
+
+		expect(result).not.toBeNull();
+		expect(result!.phases[0].starts_at).toBe(now);
+	});
 });

@@ -48,6 +48,7 @@ export * from "./models/attachModels/attachEnums/AttachConfig";
 export * from "./models/attachModels/attachEnums/AttachFunction";
 export * from "./models/attachModels/attachPreviewModels";
 export * from "./models/authModels/membership";
+export * from "./models/chatModels/chatTable";
 export * from "./models/chatResultModels/chatResultFeature";
 export * from "./models/chatResultModels/chatResultFeature";
 // 4. Chat Result Models
@@ -119,6 +120,8 @@ export * from "./models/featureModels/featureTable";
 // Gen Models
 export * from "./models/genModels/genEnums";
 export * from "./models/genModels/processorSchemas";
+export * from "./models/invoiceTemplateModels/invoiceTemplate";
+export * from "./models/invoiceTemplateModels/invoiceTemplateTable";
 export * from "./models/migrationModels/migrationErrorTable";
 export * from "./models/migrationModels/migrationJobTable";
 export * from "./models/migrationModels/migrationModels";
@@ -131,7 +134,6 @@ export * from "./models/orgModels/frontendOrg";
 // 1. Org Models
 export * from "./models/orgModels/frontendOrg";
 export * from "./models/orgModels/fullOrgModel";
-export * from "./models/orgModels/orgConfig";
 export * from "./models/orgModels/orgConfig";
 export * from "./models/orgModels/orgTable";
 export * from "./models/otherModels/metadataTable";

@@ -95,6 +95,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created multi-interval: monthly +
 	let currentEpochMs = await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
+		withPause: true,
 	});
 
 	const customerMonth1 =
@@ -140,6 +141,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created multi-interval: monthly +
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		currentEpochMs,
+		withPause: true,
 	});
 
 	const customerMonth2 =
@@ -190,6 +192,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created multi-interval: monthly +
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
 		currentEpochMs,
+		withPause: true,
 	});
 
 	const customerMonth3 =

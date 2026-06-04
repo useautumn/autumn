@@ -1,17 +1,12 @@
 import type { AppEnv, AttachPreviewResponse } from "@autumn/shared";
-import {
-	ArrowLeft,
-	CheckCircleIcon,
-	HourglassIcon,
-	LightningIcon,
-} from "@phosphor-icons/react";
+import { ArrowLeft, HourglassIcon, LightningIcon } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { buildAttachPreviewTotals } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
 import { Button } from "@/components/v2/buttons/Button";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { Input } from "@/components/v2/inputs/Input";
-import { buildAttachPreviewTotals } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
 import type { BillingLineItem } from "@/components/v2/LineItemsPreview";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
 import {
@@ -22,11 +17,18 @@ import {
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getStripeInvoiceLink } from "@/utils/linkUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import {
+	DEFAULT_NET_TERMS_DAYS,
+	type InvoiceSettings,
+	InvoiceSettingsSection,
+} from "./InvoiceSettingsSection";
 import { UrlSuccessView } from "./UrlSuccessView";
 
 export interface SendInvoiceSubmitParams {
 	enableProductImmediately: boolean;
 	finalizeInvoice: boolean;
+	invoiceTemplateId?: string;
+	netTermsDays?: number;
 }
 
 const IMMEDIATE_ACTIVATION_DESCRIPTION =
@@ -150,6 +152,10 @@ export function SendInvoiceStage({
 	const [emailSaving, setEmailSaving] = useState(false);
 	const [emailSaved, setEmailSaved] = useState(!!customer?.email);
 	const [enableImmediately, setEnableImmediately] = useState(true);
+	const [invoiceSettings, setInvoiceSettings] = useState<InvoiceSettings>({
+		templateId: null,
+		netTermsDays: DEFAULT_NET_TERMS_DAYS,
+	});
 	const [completedInvoiceUrl, setCompletedInvoiceUrl] = useState<string | null>(
 		null,
 	);
@@ -180,13 +186,22 @@ export function SendInvoiceStage({
 		}
 	}, [axiosInstance, customerId, emailValue, refetch]);
 
+	const buildSubmitParams = (
+		finalizeInvoice: boolean,
+	): SendInvoiceSubmitParams => ({
+		enableProductImmediately: enableImmediately,
+		finalizeInvoice,
+		invoiceTemplateId: invoiceSettings.templateId ?? undefined,
+		netTermsDays:
+			invoiceSettings.netTermsDays > 0
+				? invoiceSettings.netTermsDays
+				: undefined,
+	});
+
 	const handleDraft = async () => {
 		setActiveAction("draft");
 		try {
-			const { stripeId } = await onSubmit({
-				enableProductImmediately: enableImmediately,
-				finalizeInvoice: false,
-			});
+			const { stripeId } = await onSubmit(buildSubmitParams(false));
 			if (stripeId) {
 				const invoiceUrl = getInvoiceUrl(stripeId);
 				window.open(invoiceUrl, "_blank");
@@ -200,10 +215,9 @@ export function SendInvoiceStage({
 	const handleFinalize = async () => {
 		setActiveAction("finalize");
 		try {
-			const { hostedInvoiceUrl, stripeId } = await onSubmit({
-				enableProductImmediately: enableImmediately,
-				finalizeInvoice: true,
-			});
+			const { hostedInvoiceUrl, stripeId } = await onSubmit(
+				buildSubmitParams(true),
+			);
 			if (hostedInvoiceUrl) {
 				setCompletedInvoiceUrl(hostedInvoiceUrl);
 			} else if (stripeId) {
@@ -302,6 +316,12 @@ export function SendInvoiceStage({
 				setEnableImmediately={setEnableImmediately}
 				disabled={needsEmail}
 				scheduledStartDate={scheduledStartDate}
+			/>
+
+			<InvoiceSettingsSection
+				value={invoiceSettings}
+				onChange={setInvoiceSettings}
+				disabled={needsEmail}
 			/>
 
 			<LineItemsPreview

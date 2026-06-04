@@ -28,6 +28,12 @@ const STANDARD_INTERVAL_DAYS: Record<string, number> = {
 
 const InternalAggregateEventsSchema = z.object({
 	interval: z.string().nullish(),
+	custom_range: z
+		.object({ start: z.number(), end: z.number() })
+		.refine((range) => range.start < range.end, {
+			message: "custom_range.start must be before custom_range.end",
+		})
+		.optional(),
 	event_names: z.array(z.string()),
 	customer_id: z.string().optional(),
 	entity_id: z.string().optional(),
@@ -49,6 +55,7 @@ export const handleInternalAggregateEvents = createRoute({
 		const { db, org, env, features } = ctx;
 		const {
 			interval,
+			custom_range,
 			customer_id,
 			entity_id,
 			group_by,
@@ -113,6 +120,7 @@ export const handleInternalAggregateEvents = createRoute({
 			: undefined;
 		const now = new UTCDate();
 		const customRange = (() => {
+			if (custom_range) return custom_range;
 			if (standardIntervalDays === undefined) return undefined;
 			const unaligned = sub(now, { days: standardIntervalDays });
 			const aligned =

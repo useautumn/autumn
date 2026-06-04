@@ -20,6 +20,7 @@ import { SchedulePlanRow } from "./SchedulePlanRow";
 const LOCKED_PHASE_MESSAGE = "This phase has passed and can't be edited.";
 const CURRENT_PHASE_TIME_LOCKED_MESSAGE =
 	"You can't edit the time of the current phase.";
+const BACKDATE_START_YEAR_LOOKBACK = 25;
 
 interface SchedulePhaseCardProps {
 	phaseIndex: number;
@@ -36,6 +37,7 @@ export function SchedulePhaseCard({
 		nowMs,
 		products,
 		isExistingSchedule,
+		allowFirstPhaseBackdate,
 		isPhaseLocked,
 		handleAddPlan,
 		handleInsertPhase,
@@ -69,22 +71,44 @@ export function SchedulePhaseCard({
 		nowMs,
 	});
 
+	const isNewFirstPhase = !isExistingSchedule && isFirstPhase;
+	const nowChip = (
+		<div className="flex h-input items-center gap-3 rounded-lg input-base input-shadow-default px-3 text-sm text-foreground">
+			<CalendarIcon className="size-3.5 shrink-0 text-tertiary-foreground ml-1" />
+			<span className="flex-1">Now</span>
+			<Tooltip>
+				<TooltipTrigger asChild>
+					<InfoIcon
+						size={13}
+						className="shrink-0 text-subtle hover:text-muted-foreground transition-colors cursor-default"
+					/>
+				</TooltipTrigger>
+				<TooltipContent>
+					The first phase of a schedule starts immediately
+				</TooltipContent>
+			</Tooltip>
+		</div>
+	);
+
 	const phaseHeader =
-		!isExistingSchedule && isFirstPhase ? (
-			<div className="flex h-input items-center gap-3 rounded-lg input-base input-shadow-default px-3 text-sm text-foreground">
-				<CalendarIcon className="size-3.5 shrink-0 text-tertiary-foreground ml-1" />
-				<span className="flex-1">Now</span>
-				<Tooltip>
-					<TooltipTrigger asChild>
-						<InfoIcon
-							size={13}
-							className="shrink-0 text-subtle hover:text-muted-foreground transition-colors cursor-default"
-						/>
-					</TooltipTrigger>
-					<TooltipContent>
-						The first phase of a schedule starts immediately
-					</TooltipContent>
-				</Tooltip>
+		isNewFirstPhase && !allowFirstPhaseBackdate ? (
+			nowChip
+		) : isNewFirstPhase ? (
+			<div className="group/phase-date relative">
+				<DateInputUnix
+					unixDate={phase.startsAt}
+					setUnixDate={(value) => {
+						form.setFieldValue(`phases[${phaseIndex}].startsAt`, value);
+					}}
+					disableFutureDates
+					maxUnixDate={nowMs}
+					fromYear={
+						new Date(nowMs).getFullYear() - BACKDATE_START_YEAR_LOOKBACK
+					}
+					placeholder="Now"
+					withTime
+					className="group-hover/phase-date:border-primary"
+				/>
 			</div>
 		) : (
 			<>

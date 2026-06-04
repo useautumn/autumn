@@ -22,6 +22,7 @@ import { handleListAuthOrganizations } from "./internal/auth/handleListAuthOrgan
 import { cliRouter } from "./internal/dev/cli/cliRouter.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
 import { apiRouter } from "./routers/apiRouter.js";
+import { createChatProxyRouter } from "./routers/chatProxyRouter.js";
 import { internalRouter } from "./routers/internalRouter.js";
 import { mcpProxyRouter } from "./routers/mcpProxyRouter.js";
 import { publicRouter } from "./routers/publicRouter.js";
@@ -55,6 +56,8 @@ const ALLOWED_HEADERS = [
 export const createHonoApp = () => {
 	const app = new Hono<HonoEnv>();
 
+	app.route("", createChatProxyRouter());
+
 	// CORS configuration (must be before routes)
 	app.use(
 		"*",
@@ -70,6 +73,14 @@ export const createHonoApp = () => {
 
 	app.get("/api/auth/.well-known/openid-configuration", (c) => {
 		return oauthProviderOpenIdConfigMetadata(auth)(c.req.raw);
+	});
+
+	app.get("/.well-known/oauth-authorization-server", (c) => {
+		return oauthProviderAuthServerMetadata(auth)(c.req.raw);
+	});
+
+	app.get("/api/auth/.well-known/oauth-authorization-server", (c) => {
+		return oauthProviderAuthServerMetadata(auth)(c.req.raw);
 	});
 
 	app.get("/.well-known/oauth-authorization-server/api/auth", (c) => {
