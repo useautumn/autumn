@@ -104,6 +104,7 @@ export const syncProductToRevenueCat = async ({
 	});
 	const displayName = product.name || product.id;
 	const appResults: AppResult[] = [];
+	let syncedAnyApp = false;
 
 	for (const app of apps) {
 		try {
@@ -197,6 +198,7 @@ export const syncProductToRevenueCat = async ({
 				}
 			}
 
+			syncedAnyApp = true;
 			appResults.push(appResult);
 		} catch (error) {
 			appResults.push({
@@ -211,6 +213,18 @@ export const syncProductToRevenueCat = async ({
 				{ error },
 			);
 		}
+	}
+
+	// Every app failed: don't persist a mapping or report "synced", else the plan
+	// is marked connected to an RC product that was never created.
+	if (!syncedAnyApp) {
+		return {
+			plan_id: product.id,
+			status: "error",
+			store_identifier: storeIdentifier,
+			apps: appResults,
+			message: "RevenueCat product sync failed for every app",
+		};
 	}
 
 	// Union the minted id into the mapping — never clobber existing manual ids.
