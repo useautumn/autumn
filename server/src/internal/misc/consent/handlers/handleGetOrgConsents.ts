@@ -1,6 +1,6 @@
-import { ErrCode, oauthConsent, RecaseError, Scopes } from "@autumn/shared";
-import { eq } from "drizzle-orm";
+import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { oauthConsentRepo } from "@/internal/auth/repos/index.js";
 
 /**
  * Get OAuth consents for the current organization.
@@ -26,19 +26,10 @@ export const handleGetOrgConsents = createRoute({
 			});
 		}
 
-		// Query consents where referenceId matches the current org
-		const consents = await db
-			.select({
-				id: oauthConsent.id,
-				clientId: oauthConsent.clientId,
-				userId: oauthConsent.userId,
-				referenceId: oauthConsent.referenceId,
-				scopes: oauthConsent.scopes,
-				createdAt: oauthConsent.createdAt,
-				updatedAt: oauthConsent.updatedAt,
-			})
-			.from(oauthConsent)
-			.where(eq(oauthConsent.referenceId, org.id));
+		const consents = await oauthConsentRepo.listByReferenceId({
+			db,
+			referenceId: org.id,
+		});
 
 		return c.json({ consents });
 	},

@@ -79,7 +79,7 @@ export const handlePrepaidPrices = async ({
 
 	const rolloverUpdate = getRolloverUpdates({
 		cusEnt,
-		nextResetAt: end * 1000,
+		nextResetAt: start * 1000,
 	});
 
 	if (notNullish(options?.upcoming_quantity)) {

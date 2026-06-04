@@ -1,13 +1,12 @@
+import type { AutumnLogger } from "@autumn/logging";
 import { AppEnv } from "@autumn/shared";
 import { Agent } from "@mastra/core/agent";
 import { z } from "zod";
-import {
-	createAutumnMcpClient,
-	getAutumnMcpTools,
-} from "./mcp.js";
-import { createFirecrawlTools } from "./firecrawl.js";
 import { env as chatEnv } from "../lib/env.js";
+import { logger as rootLogger } from "../lib/logger.js";
 import type { ChatContextMessage } from "../types.js";
+import { createFirecrawlTools } from "./firecrawl.js";
+import { createAutumnMcpClient, getAutumnMcpTools } from "./mcp.js";
 
 const docs = [
 	"autumn://docs/tool-composition",
@@ -37,15 +36,25 @@ const recentMessageContext = (messages: ChatContextMessage[] = []) =>
 	}));
 
 export const selectChatEnv = async ({
+	logger = rootLogger,
 	message,
 	recentMessages,
 	select,
 }: {
+	logger?: AutumnLogger;
 	message: string;
 	recentMessages?: ChatContextMessage[];
 	select?: () => Promise<unknown> | unknown;
 }) => {
-	if (select) return envSelectionSchema.parse(await select()).env;
+	if (select) {
+		const env = envSelectionSchema.parse(await select()).env;
+		logger.debug("Selected chat environment from override", {
+			event: "leaf.chat_env_selected",
+			context: { env },
+			data: { source: "override" },
+		});
+		return env;
+	}
 
 	const agent = new Agent({
 		id: "autumn-chat-env",
@@ -61,9 +70,12 @@ export const selectChatEnv = async ({
 			instructions:
 				"Return live unless the latest user request clearly asks to use sandbox or test mode.",
 		},
-		context: [
-			...recentMessageContext(recentMessages),
-		],
+		context: [...recentMessageContext(recentMessages)],
+	});
+	logger.debug("Selected chat environment from model", {
+		event: "leaf.chat_env_selected",
+		context: { env: output.object.env },
+		data: { source: "model" },
 	});
 	return output.object.env;
 };
@@ -86,6 +98,7 @@ const readDocs = async (mcp: ReturnType<typeof createAutumnMcpClient>) => {
 export const runChatAgent = async ({
 	apiKey,
 	env,
+	logger = rootLogger,
 	message,
 	threadId,
 	resourceId,
@@ -95,6 +108,7 @@ export const runChatAgent = async ({
 }: {
 	apiKey: string;
 	env: AppEnv;
+	logger?: AutumnLogger;
 	message: string;
 	onAction?: (message: string) => Promise<void> | void;
 	threadId: string;
@@ -111,10 +125,22 @@ export const runChatAgent = async ({
 		  }
 		| undefined;
 	try {
+		logger.info("Starting chat agent", {
+			event: "leaf.agent_started",
+			context: {
+				env,
+				org_id: resourceId,
+				provider,
+			},
+			data: {
+				thread_id: threadId,
+			},
+		});
 		await onAction?.("Loading Autumn tools and guidance");
 		const [tools, docsText] = await Promise.all([
 			getAutumnMcpTools(mcp, {
 				applyApprovalPolicy: true,
+				logger,
 				onToolCall: onAction,
 				onPreview: (approval) => {
 					previewApproval = approval;
@@ -150,8 +176,19 @@ export const runChatAgent = async ({
 				...recentMessageContext(recentMessages),
 			],
 		});
+		logger.info("Completed chat agent", {
+			event: "leaf.agent_completed",
+			context: { env },
+			data: {
+				finish_reason: output.finishReason,
+				run_id: output.runId,
+			},
+		});
 		return { ...output, env, previewApproval };
 	} finally {
 		await mcp.disconnect();
+		logger.debug("Disconnected Autumn MCP client", {
+			event: "leaf.mcp_client_disconnected",
+		});
 	}
 };

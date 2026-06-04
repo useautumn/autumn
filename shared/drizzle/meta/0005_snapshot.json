@@ -1,5 +1,5 @@
 {
-  "id": "83b3cae5-f907-4e1c-bf3a-6e6aa8aed2e0",
+  "id": "3ee43a45-bd02-43e2-a2d1-2080d51b5674",
   "prevId": "20fbfba1-ef02-4637-b7f8-4ae1ee5983d7",
   "version": "7",
   "dialect": "postgresql",
@@ -4508,13 +4508,6 @@
           "notNull": true,
           "default": false
         },
-        "archived": {
-          "name": "archived",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "numeric",
@@ -5052,6 +5045,12 @@
         },
         "revoked": {
           "name": "revoked",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "auth_time": {
+          "name": "auth_time",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false

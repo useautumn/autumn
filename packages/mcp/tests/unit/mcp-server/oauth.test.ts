@@ -1,12 +1,12 @@
-import { Scopes } from "@autumn/shared/scopeDefinitions";
 import { describe, expect, test } from "bun:test";
+import { Scopes } from "@autumn/shared/scopeDefinitions";
 import {
 	buildAuthForRequest,
 	getProtectedResourceMetadata,
 	MCP_OAUTH_SCOPES,
-	OAuthHttpError,
 	type MCPOAuthFlags,
-} from "../../../src/mcp-server/oauth.js";
+	type OAuthHttpError,
+} from "../../../src/server/auth/oauth.js";
 
 const flags = {
 	"oauth-enabled": true,
@@ -41,7 +41,7 @@ describe("MCP OAuth auth resolution", () => {
 			status: 401,
 			error: "invalid_token",
 			wwwAuthenticate:
-				'Bearer resource_metadata="http://localhost:2718/.well-known/oauth-protected-resource/mcp"',
+				'Bearer resource_metadata="http://localhost:2718/.well-known/oauth-protected-resource/mcp", error="invalid_token"',
 		} satisfies Partial<OAuthHttpError>);
 	});
 
@@ -57,47 +57,34 @@ describe("MCP OAuth auth resolution", () => {
 			status: 401,
 			error: "invalid_token",
 			wwwAuthenticate:
-				'Bearer resource_metadata="http://localhost:2718/.well-known/oauth-protected-resource/internal/mcp"',
+				'Bearer resource_metadata="http://localhost:2718/.well-known/oauth-protected-resource/internal/mcp", error="invalid_token"',
 		} satisfies Partial<OAuthHttpError>);
 	});
 
-	test("exchanges a bearer token for Autumn API credentials", async () => {
+	test("rejects opaque bearer tokens without exchanging them", async () => {
 		const originalFetch = globalThis.fetch;
-		globalThis.fetch = (async (_url, init) => {
-			expect(init?.headers).toEqual({
-				Authorization: "Bearer oauth_token",
-				"Content-Type": "application/json",
-			});
-			expect(JSON.parse(init?.body as string)).toEqual({
-				resource: "http://localhost:2718/mcp",
-				scopes: MCP_OAUTH_SCOPES,
-			});
-			return Response.json({
-				sandbox_key: "sk_sandbox",
-				prod_key: "sk_live",
-				org_id: "org_123",
-				user_id: "user_123",
-				client_id: "client_123",
-				scopes: MCP_OAUTH_SCOPES,
-			});
-		}) as typeof fetch;
+		let fetchCalled = false;
+		const mockFetch = (async () => {
+			fetchCalled = true;
+			return Response.json({});
+		}) as unknown as typeof fetch;
+		globalThis.fetch = mockFetch;
 
 		try {
-			const auth = await buildAuthForRequest(
-				new Headers({
-					authorization: "Bearer oauth_token",
-					host: "localhost:2718",
-				}),
-				flags as MCPOAuthFlags,
-				logger,
-			);
-
-			expect(auth.apiKey).toBe("sk_sandbox");
-			expect(auth.env).toBe("sandbox");
-			expect(auth.resource).toBe("http://localhost:2718/mcp");
-			expect(auth.principalId).toBe("oauth:org_123:user_123:client_123");
-			expect(auth.scopes).toEqual([...MCP_OAUTH_SCOPES]);
-			expect(auth.orgId).toBe("org_123");
+			await expect(
+				buildAuthForRequest(
+					new Headers({
+						authorization: "Bearer oauth_token",
+						host: "localhost:2718",
+					}),
+					flags as MCPOAuthFlags,
+					logger,
+				),
+			).rejects.toMatchObject({
+				status: 401,
+				error: "invalid_token",
+			} satisfies Partial<OAuthHttpError>);
+			expect(fetchCalled).toBe(false);
 		} finally {
 			globalThis.fetch = originalFetch;
 		}
@@ -133,40 +120,24 @@ describe("MCP OAuth auth resolution", () => {
 	});
 
 	test("uses route-specific resource URLs", async () => {
-		const originalFetch = globalThis.fetch;
-		globalThis.fetch = (async (_url, init) => {
-			expect(JSON.parse(init?.body as string)).toMatchObject({
-				resource: "http://localhost:2718/internal/mcp",
-			});
-			return Response.json({
-				sandbox_key: "sk_sandbox",
-				org_id: "org_123",
-				scopes: MCP_OAUTH_SCOPES,
-			});
-		}) as typeof fetch;
+		const auth = await buildAuthForRequest(
+			new Headers({
+				authorization: "Bearer am_sk_test_chat",
+				host: "localhost:2718",
+			}),
+			flags as MCPOAuthFlags,
+			logger,
+			"/internal/mcp",
+		);
 
-		try {
-			const auth = await buildAuthForRequest(
-				new Headers({
-					authorization: "Bearer internal_oauth_token",
-					host: "localhost:2718",
-				}),
+		expect(auth.resource).toBe("http://localhost:2718/internal/mcp");
+		expect(
+			getProtectedResourceMetadata(
+				new Headers({ host: "localhost:2718" }),
 				flags as MCPOAuthFlags,
-				logger,
 				"/internal/mcp",
-			);
-
-			expect(auth.resource).toBe("http://localhost:2718/internal/mcp");
-			expect(
-				getProtectedResourceMetadata(
-					new Headers({ host: "localhost:2718" }),
-					flags as MCPOAuthFlags,
-					"/internal/mcp",
-				).resource,
-			).toBe("http://localhost:2718/internal/mcp");
-		} finally {
-			globalThis.fetch = originalFetch;
-		}
+			).resource,
+		).toBe("http://localhost:2718/internal/mcp");
 	});
 
 	test("missing static secret-key returns the auth error path", async () => {

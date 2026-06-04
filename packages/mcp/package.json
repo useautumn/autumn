@@ -20,6 +20,7 @@
     "prepublishOnly": "bun run build"
   },
   "dependencies": {
+    "@autumn/logging": "workspace:*",
     "@autumn/shared": "workspace:*",
 		"@axiomhq/js": "^1.6.1",
 		"@mastra/core": "^1.36.0",

@@ -35,14 +35,18 @@ test("lists all matching customers with compound filters and cursor pagination",
 								name: "Acme US",
 								email: "billing@acme.example",
 								processors: { stripe: { id: "cus_stripe_us" } },
-								subscriptions: [{ planId: "pro", version: 3, status: "active" }],
+								subscriptions: [
+									{ planId: "pro", version: 3, status: "active" },
+								],
 							},
 							{
 								id: "cus_acme_eu",
 								name: "Acme EU",
 								email: "finance@acme.example",
 								processors: { stripe: { id: "cus_stripe_eu" } },
-								subscriptions: [{ planId: "pro", version: 2, status: "active" }],
+								subscriptions: [
+									{ planId: "pro", version: 2, status: "active" },
+								],
 							},
 						],
 						next_cursor: "cursor_acme_2",
@@ -175,7 +179,9 @@ test("resolves plan attributes before listing scheduled Vercel customers", async
 		return (
 			call.body.subscription_status === "scheduled" &&
 			call.body.processors?.includes("vercel") &&
-			Array.from(new Set(versions ?? [])).sort().join(",") === "4,5"
+			Array.from(new Set(versions ?? []))
+				.sort()
+				.join(",") === "4,5"
 		);
 	});
 	expect(

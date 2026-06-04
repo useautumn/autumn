@@ -1,7 +1,7 @@
+import { randomUUID } from "node:crypto";
+import type { AutumnLogger } from "@autumn/logging";
 import {
 	buildAuthForRequest,
-	type ConsoleLogger,
-	createAskAutumnMCPServer,
 	createAutumnOperationsMCPServer,
 	getAuthorizationServerMetadata,
 	getProtectedResourceMetadata,
@@ -16,22 +16,18 @@ import type { Context, Hono } from "hono";
 export interface McpRouteOptions extends MCPServerFlags {
 	readonly "oauth-enabled": boolean;
 	readonly "oauth-environment": OAuthEnvironment;
-	readonly logger: ConsoleLogger;
+	readonly logger: AutumnLogger;
 }
 
 type AppContext = Context<{ Bindings: HttpBindings }>;
-type McpPath = "/mcp" | "/internal/mcp";
+type McpPath = "/mcp";
 type McpApp = Hono<{ Bindings: HttpBindings }>;
 
 export function registerMcpRoutes(app: McpApp, options: McpRouteOptions) {
+	const mcpServer = createAutumnOperationsMCPServer();
+
 	app.get("/.well-known/oauth-protected-resource/mcp", (c) =>
 		c.json(getProtectedResourceMetadata(c.req.raw.headers, options, "/mcp")),
-	);
-
-	app.get("/.well-known/oauth-protected-resource/internal/mcp", (c) =>
-		c.json(
-			getProtectedResourceMetadata(c.req.raw.headers, options, "/internal/mcp"),
-		),
 	);
 
 	app.get("/.well-known/oauth-authorization-server", (c) =>
@@ -41,7 +37,7 @@ export function registerMcpRoutes(app: McpApp, options: McpRouteOptions) {
 	const handleMcp = async (
 		c: AppContext,
 		path: McpPath,
-		server: ReturnType<typeof createAskAutumnMCPServer>,
+		server: ReturnType<typeof createAutumnOperationsMCPServer>,
 	) => {
 		let auth: Awaited<ReturnType<typeof buildAuthForRequest>>;
 		try {
@@ -71,17 +67,12 @@ export function registerMcpRoutes(app: McpApp, options: McpRouteOptions) {
 			httpPath: path,
 			req: c.env.incoming,
 			res: c.env.outgoing,
-			options: { serverless: true },
+			options: { sessionIdGenerator: randomUUID },
 		});
 		return RESPONSE_ALREADY_SENT;
 	};
 
-	app.all("/mcp", (c) =>
-		handleMcp(c, "/mcp", createAutumnOperationsMCPServer()),
-	);
-	app.all("/internal/mcp", (c) =>
-		handleMcp(c, "/internal/mcp", createAskAutumnMCPServer()),
-	);
+	app.all("/mcp", (c) => handleMcp(c, "/mcp", mcpServer));
 
 	return app;
 }

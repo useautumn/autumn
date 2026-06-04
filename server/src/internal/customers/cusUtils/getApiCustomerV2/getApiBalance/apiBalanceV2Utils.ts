@@ -37,12 +37,18 @@ export const mergeAggregatedBalanceIntoApiBalanceV2 = ({
 	const aggregatedRolloverBalance =
 		aggregatedFeatureBalance.rollover_balance ?? 0;
 	const aggregatedRolloverUsage = aggregatedFeatureBalance.rollover_usage ?? 0;
+	const aggregatedRolloverGrant = new Decimal(aggregatedRolloverBalance)
+		.add(aggregatedRolloverUsage)
+		.toNumber();
 
 	// Aggregate rows do not retain the full per-entity/per-product breakdown, so
 	// the top-level summary is merged from the coarse aggregate values only.
-	const granted = new Decimal(aggregatedAllowance)
+	const baseGranted = new Decimal(aggregatedAllowance)
 		.add(aggregatedPrepaidGrantFromOptions)
 		.add(aggregatedAdjustment)
+		.toNumber();
+	const granted = new Decimal(baseGranted)
+		.add(aggregatedRolloverGrant)
 		.toNumber();
 
 	// Main remaining is floored at 0 (matches legacy behaviour). Rollover
@@ -57,7 +63,7 @@ export const mergeAggregatedBalanceIntoApiBalanceV2 = ({
 		.toNumber();
 
 	// Usage mirrors the entity-view formula: (granted - main balance) + rollover usage.
-	const usage = new Decimal(granted)
+	const usage = new Decimal(baseGranted)
 		.sub(aggregatedBalance)
 		.add(aggregatedRolloverUsage);
 
