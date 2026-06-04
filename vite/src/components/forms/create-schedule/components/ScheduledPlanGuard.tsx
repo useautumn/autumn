@@ -5,8 +5,14 @@ import { Button } from "@/components/v2/buttons/Button";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useHasSchedule } from "../hooks/useHasSchedule";
 
-export function ScheduledPlanGuard({ children }: { children: ReactNode }) {
-	const hasSchedule = useHasSchedule();
+export function ScheduledPlanGuard({
+	children,
+	entityId,
+}: {
+	children: ReactNode;
+	entityId?: string | null;
+}) {
+	const hasSchedule = useHasSchedule({ entityId });
 	const { setSheet } = useSheetStore();
 
 	if (!hasSchedule) return <>{children}</>;
