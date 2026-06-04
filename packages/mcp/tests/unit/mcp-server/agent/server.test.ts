@@ -21,6 +21,7 @@ describe("Autumn MCP server", () => {
 			"attach",
 			"updateSubscription",
 			"createSchedule",
+			"getCurrentOrganization",
 		]);
 		expect(tools.tools.map((tool) => tool.name)).not.toContain("ask_autumn");
 		expect(tools.tools.map((tool) => tool.name)).not.toContain(

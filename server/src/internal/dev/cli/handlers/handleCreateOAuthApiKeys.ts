@@ -1,27 +1,16 @@
-import {
-	AppEnv,
-	checkScopes,
-	ErrCode,
-	oauthAccessToken,
-	oauthConsent,
-	RecaseError,
-	type ScopeString,
-	Scopes,
-} from "@autumn/shared";
-import { verifyAccessToken } from "better-auth/oauth2";
-import { and, eq, gt } from "drizzle-orm";
+import { AppEnv, ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { hashOAuthToken } from "@/utils/oauthUtils.js";
+import {
+	getExternalOAuthApiKeyForToken,
+	getOAuthAccessTokenRecord,
+} from "@/internal/auth/oauth/oauthAccessTokenApiKey.js";
+import { oauthConsentRepo } from "@/internal/auth/repos/index.js";
 import { ApiKeyPrefix, createKey } from "../../api-keys/apiKeyUtils.js";
 import {
 	type OAuthApiKeyRequestBody,
 	OAuthApiKeyRequestBodySchema,
 	parseRequestedScopes,
-	tokenRecordFromResourceToken,
 } from "../oauthApiKeyUtils.js";
-
-const getOAuthIssuer = () =>
-	`${process.env.BETTER_AUTH_URL?.replace(/\/$/, "") ?? ""}/api/auth`;
 
 const parseBody = (rawBody: string): OAuthApiKeyRequestBody => {
 	let body: unknown = {};
@@ -45,34 +34,6 @@ const parseBody = (rawBody: string): OAuthApiKeyRequestBody => {
 		code: ErrCode.InvalidRequest,
 		statusCode: 400,
 	});
-};
-
-const verifyResourceAccessToken = async ({
-	accessToken,
-	resource,
-	requestedScopes,
-}: {
-	accessToken: string;
-	resource: string | null;
-	requestedScopes: ScopeString[] | null;
-}) => {
-	if (!resource) return null;
-
-	const issuer = getOAuthIssuer();
-	try {
-		const payload = await verifyAccessToken(accessToken, {
-			jwksUrl: `${issuer}/jwks`,
-			verifyOptions: {
-				audience: resource,
-				issuer,
-			},
-			scopes: requestedScopes ?? undefined,
-		});
-
-		return tokenRecordFromResourceToken(payload as Record<string, unknown>);
-	} catch {
-		return null;
-	}
 };
 
 /**
@@ -105,90 +66,49 @@ export const handleCreateOAuthApiKeys = createRoute({
 
 		const accessToken = authHeader.substring(7);
 
-		// Better-auth stores opaque tokens as SHA-256 hashes in base64url format
-		const hashedToken = await hashOAuthToken(accessToken);
-
-		// Look up the token in the oauth_access_token table
-		const tokenRecords = await db
-			.select()
-			.from(oauthAccessToken)
-			.where(
-				and(
-					eq(oauthAccessToken.token, hashedToken),
-					gt(oauthAccessToken.expiresAt, new Date()),
-				),
-			)
-			.limit(1);
-
-		const tokenRecord =
-			tokenRecords[0] ??
-			(await verifyResourceAccessToken({
-				accessToken,
-				resource,
-				requestedScopes,
-			}));
-
-		if (!tokenRecord) {
-			throw new RecaseError({
-				message: "Invalid or expired access token",
-				code: ErrCode.InvalidRequest,
-				statusCode: 401,
-			});
-		}
-
-		if (requestedScopes) {
-			const { allowed, missing } = checkScopes(
-				requestedScopes,
-				tokenRecord.scopes,
-			);
-			if (!allowed) {
-				throw new RecaseError({
-					message: `Insufficient scopes. Missing: ${missing.join(", ")}`,
-					code: ErrCode.InsufficientScopes,
-					statusCode: 403,
-				});
-			}
-		}
-
+		const tokenRecord = await getOAuthAccessTokenRecord({
+			db,
+			accessToken,
+			resource,
+			requestedScopes,
+		});
 		const userId = tokenRecord.userId;
-		if (!userId) {
-			throw new RecaseError({
-				message: "Token missing user information",
-				code: ErrCode.InvalidRequest,
-				statusCode: 401,
-			});
-		}
-
-		// Get the org ID from the referenceId field (set by consentReferenceId)
 		const orgId = tokenRecord.referenceId;
-		if (!orgId) {
-			throw new RecaseError({
-				message: "No organization found. Please select an organization.",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
-
 		const clientId = tokenRecord.clientId;
 
-		// Look up the OAuth consent to get its ID for linking API keys
-		const consentRecords = await db
-			.select({ id: oauthConsent.id })
-			.from(oauthConsent)
-			.where(
-				and(
-					eq(oauthConsent.clientId, clientId),
-					eq(oauthConsent.userId, userId),
-					eq(oauthConsent.referenceId, orgId),
-				),
-			)
-			.limit(1);
+		const externalApiKey = await getExternalOAuthApiKeyForToken({
+			db,
+			tokenRecord,
+			requestedScopes,
+		});
+		if (externalApiKey) {
+			return c.json({
+				sandbox_key:
+					externalApiKey.env === AppEnv.Sandbox
+						? externalApiKey.apiKey
+						: undefined,
+				prod_key:
+					externalApiKey.env === AppEnv.Live
+						? externalApiKey.apiKey
+						: undefined,
+				org_id: orgId,
+				user_id: userId,
+				client_id: clientId,
+				scopes: externalApiKey.scopes,
+			});
+		}
 
-		const consentId = consentRecords[0]?.id || null;
+		const consent = await oauthConsentRepo.getForClientUserOrg({
+			db,
+			clientId,
+			userId,
+			referenceId: orgId,
+		});
 
-		// Build meta with consent linkage
 		const meta = {
-			oauth_consent_id: consentId,
+			oauth_consent_id: consent?.id ?? null,
+			oauth_client_id: clientId,
+			oauth_redirect_uri: consent?.redirectUri ?? null,
 			created_via: "oauth",
 			generatedAt: new Date().toISOString(),
 		};

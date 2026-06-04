@@ -1,9 +1,10 @@
 // OAuth constants for CLI authentication
 
-/** The OAuth client ID for the CLI (public client) */
-// export const CLI_CLIENT_ID = "khicXGthBbGMIWmpgodOTDcCCJHJMDpN"; (local i think)
-// export const CLI_CLIENT_ID = "NiKwaSyAfaeEEKEvFaUYihTXdTPtIRCk" (dev i think)
-export const CLI_CLIENT_ID = "hAWUopQqLnsSwuRgeRzIBzKslwXmQUSr"; // (prod i think)
+// Historical Better Auth OAuth clients for atmn CLI environments.
+// Server auth should identify atmn from oauth_client metadata/name instead.
+export const LOCAL_CLI_CLIENT_ID = "khicXGthBbGMIWmpgodOTDcCCJHJMDpN";
+export const DEV_CLI_CLIENT_ID = "NiKwaSyAfaeEEKEvFaUYihTXdTPtIRCk";
+export const CLI_CLIENT_ID = "hAWUopQqLnsSwuRgeRzIBzKslwXmQUSr";
 
 /** Base port for the local OAuth callback server */
 export const OAUTH_PORT_BASE = 31448;
