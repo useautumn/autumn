@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useRCMappings } from "@/hooks/queries/revcat/useRCMappings";
+import { useRCProjects } from "@/hooks/queries/revcat/useRCProjects";
 import { useRevenueCatQuery } from "@/hooks/queries/revcat/useRevenueCatQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
@@ -175,6 +176,13 @@ export const ConfigureRevenueCat = () => {
 			? revenueCatConfig?.project_id
 			: revenueCatConfig?.sandbox_project_id;
 
+	const { projects: rcProjects } = useRCProjects({
+		enabled: !!currentProjectId,
+	});
+	const currentProjectName = currentProjectId
+		? rcProjects.find((project) => project.id === currentProjectId)?.name
+		: undefined;
+
 	const oauthConnected = revenueCatConfig?.oauth_connected ?? false;
 	const connection = revenueCatConfig?.connection ?? "none";
 
@@ -229,6 +237,7 @@ export const ConfigureRevenueCat = () => {
 					onMapProductsClick={handleMapProductsClick}
 					onSyncClick={() => setShowSyncSheet(true)}
 					currentProjectId={currentProjectId}
+					currentProjectName={currentProjectName}
 					hasMappings={hasMappings}
 				/>
 
