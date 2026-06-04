@@ -361,7 +361,7 @@ export function UpdatePlanOpForm({
 	);
 }
 
-function extractPlanIds(
+export function extractPlanIds(
 	planId: UpdatePlanOp["plan_filter"]["plan_id"],
 ): string[] {
 	if (!planId) return [];
