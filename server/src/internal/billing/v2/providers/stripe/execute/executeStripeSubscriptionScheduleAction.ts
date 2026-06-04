@@ -21,6 +21,7 @@ const toCreatePhase = (
 		...(item.metadata && { metadata: item.metadata }),
 	})),
 	end_date: typeof phase.end_date === "number" ? phase.end_date : undefined,
+	proration_behavior: phase.proration_behavior,
 	discounts: phase.discounts as
 		| Stripe.SubscriptionScheduleCreateParams.Phase.Discount[]
 		| undefined,
