@@ -1,9 +1,9 @@
-import { createConsoleLogger } from "@autumn/mcp";
 import type { HttpBindings } from "@hono/node-server";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { chatAdapterNames } from "./bot.js";
 import { env } from "./lib/env.js";
+import { logger } from "./lib/logger.js";
 import { registerMcpRoutes } from "./mcp/http.js";
 import { slackRoutes } from "./providers/slack/routes.js";
 
@@ -22,7 +22,7 @@ registerMcpRoutes(app, {
 	"oauth-enabled": true,
 	"oauth-environment": env.MCP_OAUTH_ENVIRONMENT,
 	"server-url": env.BETTER_AUTH_URL,
-	logger: createConsoleLogger("info"),
+	logger,
 });
 
 app.route("/slack", slackRoutes);
@@ -34,9 +34,12 @@ serve(
 		port: env.PORT,
 	},
 	({ address, port }) => {
-		console.log("Chat listening", {
-			host: `${address}:${port}`,
-			adapters: chatAdapterNames,
+		logger.info("Chat listening", {
+			event: "leaf.server_started",
+			data: {
+				host: `${address}:${port}`,
+				adapters: chatAdapterNames,
+			},
 		});
 	},
 );
