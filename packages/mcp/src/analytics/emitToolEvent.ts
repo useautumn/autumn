@@ -1,4 +1,4 @@
-import { resolveAutumnOrgId } from "../agent/axiom.js";
+import { resolveAutumnOrg } from "../agent/axiom.js";
 import type { AutumnMcpAuth } from "../server/auth/auth.js";
 import { getAnalyticsSink } from "./analyticsSink.js";
 import type { McpAnalyticsSurface } from "./analyticsTypes.js";
@@ -14,6 +14,8 @@ export const emitMcpToolEvent = ({
 	toolId,
 	auth,
 	client,
+	transportSessionId,
+	intent,
 	status,
 	durationMs,
 	input,
@@ -24,6 +26,8 @@ export const emitMcpToolEvent = ({
 	toolId: string;
 	auth: AutumnMcpAuth;
 	client: string | undefined;
+	transportSessionId?: string | undefined;
+	intent?: string | undefined;
 	status: "ok" | "error";
 	durationMs: number;
 	input?: unknown;
@@ -32,33 +36,40 @@ export const emitMcpToolEvent = ({
 }) => {
 	const sink = getAnalyticsSink();
 
-	// Resolve org off the hot path; resolveAutumnOrgId is cached (~5min).
+	// Resolve org off the hot path; resolveAutumnOrg is cached (~5min).
 	void (async () => {
 		let orgId = auth.orgId;
-		if (!orgId) {
-			try {
-				orgId = await resolveAutumnOrgId(auth);
-			} catch {
-				// Best-effort: emit without org_id rather than dropping the event.
-			}
+		let orgSlug: string | undefined;
+		try {
+			const org = await resolveAutumnOrg(auth);
+			orgId = org.id;
+			orgSlug = org.slug;
+		} catch {
+			// Best-effort: emit without org context rather than dropping the event.
 		}
 		const now = Date.now();
 		sink.emit({
 			event: "mcp.tool_call",
 			surface,
 			tool: toolId,
+			intent,
 			status,
 			durationMs,
-			orgId,
 			principalId: auth.principalId,
-			env: auth.env,
 			client,
-			sessionId: deriveSessionId({
-				principalId: auth.principalId,
-				client,
-				now,
-			}),
-			scopes: auth.scopes,
+			sessionId:
+				transportSessionId ??
+				deriveSessionId({
+					principalId: auth.principalId,
+					client,
+					now,
+				}),
+			context: {
+				orgId,
+				orgSlug,
+				env: auth.env,
+				scopes: auth.scopes,
+			},
 			input,
 			output,
 			error,

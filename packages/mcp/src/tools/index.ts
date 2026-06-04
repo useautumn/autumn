@@ -18,6 +18,7 @@ import {
 	rawLocalPreviewTool,
 	toTools,
 } from "./utils/factories.js";
+import { requireIntentOnTools } from "./utils/intent.js";
 import type { ConfirmedWriteToolName, ToolDomain } from "./utils/types.js";
 
 export { dateToEpochMillisecondsTool } from "./utils/dates.js";
@@ -62,14 +63,16 @@ const confirmedWrites = domains.flatMap(
  */
 export const createRawAutumnOperationTools = () =>
 	instrumentToolsWithAnalytics({
-		tools: {
+		// Require a one-sentence `intent` on every external tool call so we can
+		// see what clients are actually trying to do (captured in analytics).
+		tools: requireIntentOnTools({
 			...toTools(operations, operationTool),
 			...toTools(billingPreviews, (config) =>
 				operationTool({ ...config, endpoint: config.previewEndpoint }),
 			),
 			...toTools(localPreviews, rawLocalPreviewTool),
 			...toTools(confirmedWrites, operationTool),
-		},
+		}),
 		surface: "mcp",
 	});
 

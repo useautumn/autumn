@@ -104,7 +104,10 @@ describe("Autumn operation tools", () => {
 
 			await expect(
 				tool.execute(
-					{ request: { customer_id: "cus_1", email: "charlie@example.com" } },
+					{
+						intent: "create a customer",
+						request: { customer_id: "cus_1", email: "charlie@example.com" },
+					},
 					{ mcp: { extra: { authInfo: auth } } } as never,
 				),
 			).resolves.toEqual({ id: "cus_1" });
@@ -129,9 +132,12 @@ describe("Autumn operation tools", () => {
 			if (!tool.execute) throw new Error("createPlan is not executable");
 
 			await expect(
-				tool.execute({ request: { plan_id: "pro", name: "Pro" } }, {
-					mcp: { extra: { authInfo: auth } },
-				} as never),
+				tool.execute(
+					{ intent: "create a plan", request: { plan_id: "pro", name: "Pro" } },
+					{
+						mcp: { extra: { authInfo: auth } },
+					} as never,
+				),
 			).resolves.toEqual({ id: "pro" });
 		} finally {
 			globalThis.fetch = originalFetch;
@@ -157,6 +163,7 @@ describe("Autumn operation tools", () => {
 			await expect(
 				tool.execute(
 					{
+						intent: "create a schedule",
 						request: {
 							customer_id: "cus_1",
 							phases: [{ starts_at: Date.now(), plans: [{ plan_id: "pro" }] }],
@@ -189,7 +196,7 @@ describe("Autumn operation tools", () => {
 				throw new Error("previewCreateBalance is not executable");
 
 			await expect(
-				tool.execute({ request }, {
+				tool.execute({ intent: "preview a balance grant", request }, {
 					mcp: { extra: { authInfo: auth } },
 				} as never),
 			).resolves.toMatchObject({
@@ -222,6 +229,7 @@ describe("Autumn operation tools", () => {
 			await expect(
 				tool.execute(
 					{
+						intent: "grant a balance",
 						request: {
 							customer_id: "cus_1",
 							entity_id: "workspace_1",
@@ -259,6 +267,7 @@ describe("Autumn operation tools", () => {
 			await expect(
 				tool.execute(
 					{
+						intent: "preview a schedule",
 						request: {
 							customer_id: "cus_1",
 							phases: [{ starts_at: Date.now(), plans: [{ plan_id: "pro" }] }],
@@ -288,9 +297,15 @@ describe("Autumn operation tools", () => {
 			if (!tool.execute) throw new Error("listCustomers is not executable");
 
 			await expect(
-				tool.execute({ request: { limit: 5000, search: "charlie" } }, {
-					mcp: { extra: { authInfo: auth } },
-				} as never),
+				tool.execute(
+					{
+						intent: "list customers",
+						request: { limit: 5000, search: "charlie" },
+					},
+					{
+						mcp: { extra: { authInfo: auth } },
+					} as never,
+				),
 			).resolves.toEqual({ customers: [] });
 		} finally {
 			globalThis.fetch = originalFetch;
@@ -317,9 +332,15 @@ describe("Autumn operation tools", () => {
 			if (!tool.execute) throw new Error("previewAttach is not executable");
 
 			await expect(
-				tool.execute({ request: { customer_id: "cus_1", plan_id: "pro" } }, {
-					mcp: { extra: { authInfo: auth } },
-				} as never),
+				tool.execute(
+					{
+						intent: "preview an attach",
+						request: { customer_id: "cus_1", plan_id: "pro" },
+					},
+					{
+						mcp: { extra: { authInfo: auth } },
+					} as never,
+				),
 			).resolves.toEqual({ total: 50 });
 			await expect(claimLatestPendingAction(auth)).rejects.toThrow(
 				"No pending",
@@ -346,9 +367,15 @@ describe("Autumn operation tools", () => {
 			if (!tool.execute) throw new Error("attach is not executable");
 
 			await expect(
-				tool.execute({ request: { customer_id: "cus_1", plan_id: "pro" } }, {
-					mcp: { extra: { authInfo: auth } },
-				} as never),
+				tool.execute(
+					{
+						intent: "attach a plan",
+						request: { customer_id: "cus_1", plan_id: "pro" },
+					},
+					{
+						mcp: { extra: { authInfo: auth } },
+					} as never,
+				),
 			).resolves.toEqual({ ok: true });
 		} finally {
 			globalThis.fetch = originalFetch;

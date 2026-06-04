@@ -8,5 +8,8 @@ export type {
 	McpAnalyticsEvent,
 	McpAnalyticsSurface,
 } from "./analyticsTypes.js";
-export { createAxiomAnalyticsSink } from "./axiomSink.js";
 export { instrumentToolsWithAnalytics } from "./instrumentTools.js";
+export {
+	createAxiomAnalyticsSink,
+	createLoggerAnalyticsSink,
+} from "./loggerSink.js";

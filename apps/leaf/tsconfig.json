@@ -12,6 +12,7 @@
 		"paths": {
 			"@autumn/shared": ["../../shared/index.ts"],
 			"@autumn/shared/*": ["../../shared/*"],
+			"@autumn/logging": ["../../packages/logging/src/index.ts"],
 			"@autumn/mcp/*": ["../../packages/mcp/*"],
 			"@api/*": ["../../shared/api/*"],
 			"@models/*": ["../../shared/models/*"],

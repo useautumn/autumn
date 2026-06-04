@@ -1,6 +1,7 @@
+import { randomUUID } from "node:crypto";
+import type { AutumnLogger } from "@autumn/logging";
 import {
 	buildAuthForRequest,
-	type ConsoleLogger,
 	createAutumnOperationsMCPServer,
 	getAuthorizationServerMetadata,
 	getProtectedResourceMetadata,
@@ -15,7 +16,7 @@ import type { Context, Hono } from "hono";
 export interface McpRouteOptions extends MCPServerFlags {
 	readonly "oauth-enabled": boolean;
 	readonly "oauth-environment": OAuthEnvironment;
-	readonly logger: ConsoleLogger;
+	readonly logger: AutumnLogger;
 }
 
 type AppContext = Context<{ Bindings: HttpBindings }>;
@@ -23,6 +24,8 @@ type McpPath = "/mcp";
 type McpApp = Hono<{ Bindings: HttpBindings }>;
 
 export function registerMcpRoutes(app: McpApp, options: McpRouteOptions) {
+	const mcpServer = createAutumnOperationsMCPServer();
+
 	app.get("/.well-known/oauth-protected-resource/mcp", (c) =>
 		c.json(getProtectedResourceMetadata(c.req.raw.headers, options, "/mcp")),
 	);
@@ -64,14 +67,12 @@ export function registerMcpRoutes(app: McpApp, options: McpRouteOptions) {
 			httpPath: path,
 			req: c.env.incoming,
 			res: c.env.outgoing,
-			options: { serverless: true },
+			options: { sessionIdGenerator: randomUUID },
 		});
 		return RESPONSE_ALREADY_SENT;
 	};
 
-	app.all("/mcp", (c) =>
-		handleMcp(c, "/mcp", createAutumnOperationsMCPServer()),
-	);
+	app.all("/mcp", (c) => handleMcp(c, "/mcp", mcpServer));
 
 	return app;
 }

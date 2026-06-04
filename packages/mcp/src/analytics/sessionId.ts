@@ -7,10 +7,9 @@ const hash = (value: string) =>
 	createHash("sha256").update(value).digest("hex").slice(0, 32);
 
 /**
- * Stateless session grouping. The serverless MCP transport issues no
- * Mcp-Session-Id, so we synthesize one from the principal + client + a coarse
- * time bucket — calls from the same client within the window collapse into one
- * session.
+ * Fallback session grouping. Stateful MCP clients send Mcp-Session-Id; when it
+ * is absent, synthesize a coarse principal/client bucket so calls from the same
+ * client within the window still collapse into one session.
  */
 export const deriveSessionId = ({
 	principalId,

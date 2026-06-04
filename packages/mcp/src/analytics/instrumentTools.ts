@@ -1,5 +1,6 @@
 import type { createTool } from "@mastra/core/tools";
 import { type AutumnMcpAuth, getAutumnAuth } from "../server/auth/auth.js";
+import { getIntent } from "../tools/utils/intent.js";
 import { isAnalyticsEnabled } from "./analyticsSink.js";
 import type { McpAnalyticsSurface } from "./analyticsTypes.js";
 import { emitMcpToolEvent } from "./emitToolEvent.js";
@@ -7,7 +8,9 @@ import { emitMcpToolEvent } from "./emitToolEvent.js";
 type AnyTool = ReturnType<typeof createTool>;
 type ToolContext = Parameters<NonNullable<AnyTool["execute"]>>[1];
 
-const getClientFromContext = (context: ToolContext): string | undefined => {
+const getHeadersFromContext = (
+	context: ToolContext,
+): Record<string, string | undefined> | undefined => {
 	const extra = (
 		context as {
 			mcp?: {
@@ -17,7 +20,19 @@ const getClientFromContext = (context: ToolContext): string | undefined => {
 			};
 		}
 	)?.mcp?.extra;
-	return extra?.requestInfo?.headers?.["user-agent"];
+	return extra?.requestInfo?.headers;
+};
+
+const getHeader = (
+	headers: Record<string, string | undefined> | undefined,
+	name: string,
+): string | undefined => {
+	const direct = headers?.[name] ?? headers?.[name.toLowerCase()];
+	if (direct) return direct;
+	const entry = Object.entries(headers ?? {}).find(
+		([key]) => key.toLowerCase() === name.toLowerCase(),
+	);
+	return entry?.[1];
 };
 
 const extractRequest = (input: unknown): unknown =>
@@ -30,8 +45,9 @@ const extractRequest = (input: unknown): unknown =>
  * read from the same MCP context the tools already use, so an unauthenticated
  * call simply skips analytics (it would have failed in the tool anyway).
  *
- * Tools are created fresh per request (see `createAutumnOperationsMCPServer`),
- * so mutating `execute` here carries no shared-state risk.
+ * Tools are wrapped once when the MCP server is created. The wrapper keeps no
+ * per-request mutable state; auth/session data is read from the execution
+ * context for each tool call.
  *
  * @param tools    The toolset to instrument (mutated in place and returned).
  * @param surface  Origin of the calls — `mcp` (external clients) or `agent`
@@ -59,7 +75,10 @@ export const instrumentToolsWithAnalytics = <
 			} catch {
 				return original(input as never, context as never);
 			}
-			const client = getClientFromContext(context);
+			const headers = getHeadersFromContext(context);
+			const client = getHeader(headers, "user-agent");
+			const transportSessionId = getHeader(headers, "mcp-session-id");
+			const intent = getIntent(input);
 			try {
 				const output = await original(input as never, context as never);
 				emitMcpToolEvent({
@@ -67,6 +86,8 @@ export const instrumentToolsWithAnalytics = <
 					toolId,
 					auth,
 					client,
+					transportSessionId,
+					intent,
 					status: "ok",
 					durationMs: Date.now() - started,
 					input: extractRequest(input),
@@ -79,6 +100,8 @@ export const instrumentToolsWithAnalytics = <
 					toolId,
 					auth,
 					client,
+					transportSessionId,
+					intent,
 					status: "error",
 					durationMs: Date.now() - started,
 					input: extractRequest(input),

@@ -1,6 +1,5 @@
 import { ms } from "@autumn/shared/unixUtils";
 import { addMilliseconds, isFuture } from "date-fns";
-import type { ConsoleLogger } from "../../console-logger.js";
 import { MCP_OAUTH_SCOPES } from "../../constants.js";
 import type { AutumnMcpAuth } from "./auth.js";
 import { OAuthHttpError } from "./utils/errors.js";
@@ -35,6 +34,10 @@ type ExchangedToken = {
 	userId?: string | undefined;
 	clientId?: string | undefined;
 	scopes?: string[] | undefined;
+};
+
+type AuthLogger = {
+	warning: (message: string, data?: Record<string, unknown>) => void;
 };
 
 const apiKeyCache = new Map<string, ExchangedToken & { expiresAt: Date }>();
@@ -132,7 +135,7 @@ export const getAuthorizationServerMetadata = (flags: MCPOAuthFlags) => {
 export const buildAuthForRequest = async (
 	headers: Headers,
 	flags: MCPOAuthFlags,
-	logger: ConsoleLogger,
+	logger: AuthLogger,
 	resourcePath = "/mcp",
 ): Promise<AutumnMcpAuth> => {
 	const env = getEnvironment({ headers, flags });

@@ -1,5 +1,5 @@
 import type { AnalyticsSink } from "./analyticsTypes.js";
-import { createAxiomAnalyticsSink } from "./axiomSink.js";
+import { createLoggerAnalyticsSink } from "./loggerSink.js";
 
 const DEFAULT_DATASET = "leaf";
 
@@ -23,7 +23,7 @@ export const setAnalyticsSink = (sink: AnalyticsSink | null | undefined) => {
 export const getAnalyticsSink = (): AnalyticsSink => {
 	if (overrideSink !== undefined) return overrideSink ?? noopSink;
 	if (cachedSink === undefined) {
-		cachedSink = createAxiomAnalyticsSink({
+		cachedSink = createLoggerAnalyticsSink({
 			token: process.env.AXIOM_TOKEN,
 			orgId: process.env.AXIOM_ORG_ID,
 			dataset: process.env.MCP_ANALYTICS_DATASET ?? DEFAULT_DATASET,

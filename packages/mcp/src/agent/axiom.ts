@@ -28,8 +28,10 @@ const defaultEndTime = "now";
 const maxRangeMs = ms.days(7);
 const searchMaxRangeMs = ms.hours(1);
 
+type AutumnOrg = { id: string; slug?: string | undefined };
+
 let axiomClient: Axiom | null = null;
-const orgCache = new Map<string, { orgId: string; expiresAt: Date }>();
+const orgCache = new Map<string, { org: AutumnOrg; expiresAt: Date }>();
 
 const getAxiomClient = () => {
 	if (!process.env.AXIOM_ADMIN_TOKEN) {
@@ -85,9 +87,15 @@ const assertCanUseAxiom = (auth: AutumnMcpAuth) => {
 	}
 };
 
-export const resolveAutumnOrgId = async (auth: AutumnMcpAuth) => {
-	if (auth.orgId) return auth.orgId;
-
+/**
+ * Resolves the Autumn org (id + slug) for an authenticated request. Cached
+ * (~5min) per credential. Unlike `resolveAutumnOrgId`, this always hits
+ * `/v1/organization` when uncached so the slug is available — the id alone may
+ * already be on `auth`, but the slug never is.
+ */
+export const resolveAutumnOrg = async (
+	auth: AutumnMcpAuth,
+): Promise<AutumnOrg> => {
 	const cacheKey = [
 		auth.serverURL ?? "https://api.useautumn.com",
 		auth.env,
@@ -96,7 +104,7 @@ export const resolveAutumnOrgId = async (auth: AutumnMcpAuth) => {
 		String(auth.failOpen),
 	].join(":");
 	const cached = orgCache.get(cacheKey);
-	if (cached && isFuture(cached.expiresAt)) return cached.orgId;
+	if (cached && isFuture(cached.expiresAt)) return cached.org;
 
 	const client = createAutumnClient(auth);
 	const response = await fetch(new URL("/v1/organization", client.baseUrl), {
@@ -107,17 +115,26 @@ export const resolveAutumnOrgId = async (auth: AutumnMcpAuth) => {
 		throw new Error("Could not resolve Autumn organization for MCP request.");
 	}
 
-	const body = (await response.json()) as { id?: unknown };
+	const body = (await response.json()) as { id?: unknown; slug?: unknown };
 	if (typeof body.id !== "string" || !body.id) {
 		throw new Error("Autumn organization response did not include an id.");
 	}
 
+	const org: AutumnOrg = {
+		id: body.id,
+		slug: typeof body.slug === "string" ? body.slug : undefined,
+	};
 	orgCache.set(cacheKey, {
-		orgId: body.id,
+		org,
 		expiresAt: addMilliseconds(new Date(), ms.minutes(5)),
 	});
 
-	return body.id;
+	return org;
+};
+
+export const resolveAutumnOrgId = async (auth: AutumnMcpAuth) => {
+	if (auth.orgId) return auth.orgId;
+	return (await resolveAutumnOrg(auth)).id;
 };
 
 export const prepareAxiomQuery = ({
