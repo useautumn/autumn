@@ -41,8 +41,7 @@ const processPrepaidPrice = async ({
 
 	const customerProduct = customerEntitlement.customer_product;
 
-	const { stripeSubscription, fullCustomer } = eventContext;
-	const { db } = ctx;
+	const { stripeSubscription } = eventContext;
 
 	if (!options) return;
 	const previousQuantity = options?.quantity ?? 0;
@@ -60,11 +59,11 @@ const processPrepaidPrice = async ({
 
 	const ent = customerEntitlement.entitlement;
 
-	const { end } = subToPeriodStartEnd({ sub: stripeSubscription });
+	const { start, end } = subToPeriodStartEnd({ sub: stripeSubscription });
 
 	const rolloverUpdate = getRolloverUpdates({
 		cusEnt: customerEntitlement,
-		nextResetAt: end * 1000,
+		nextResetAt: start * 1000,
 	});
 
 	if (notNullish(options?.upcoming_quantity) && customerProduct) {

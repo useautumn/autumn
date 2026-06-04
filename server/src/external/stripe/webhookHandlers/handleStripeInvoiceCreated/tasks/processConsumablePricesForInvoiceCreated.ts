@@ -9,9 +9,9 @@ import { eventContextToArrearLineItems } from "@/external/stripe/webhookHandlers
 import { lineItemsToCreateInvoiceItemsParams } from "@/internal/billing/v2/providers/stripe/utils/invoiceLines/lineItemsToCreateInvoiceItemsParams";
 import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { parseSkipOverageSubmissionFlag } from "@/internal/misc/featureFlags/parseSkipOverageSubmission";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import type { InvoiceCreatedContext } from "../setupInvoiceCreatedContext";
@@ -116,7 +116,7 @@ export const processConsumablePricesForInvoiceCreated = async ({
 	updateCustomerEntitlements.forEach(async (update) => {
 		const rolloverUpdates = getRolloverUpdates({
 			cusEnt: update.customerEntitlement,
-			nextResetAt: Date.now(),
+			nextResetAt: invoicePeriodEndMs,
 		});
 
 		const fullCusEnt: FullCusEntWithProduct = {
