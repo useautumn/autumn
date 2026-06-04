@@ -1371,6 +1371,36 @@ const ROUTES = [
 		isWebhookExempt: false,
 	},
 	{
+		handlerName: "handleSyncRevenueCat",
+		handlerFile:
+			"src/internal/platform/platformBeta/handlers/handleSyncRevenueCat.ts",
+		method: "POST",
+		path: "/v1/platform.sync_revenuecat",
+		style: "RPC",
+		group: "v1/platform",
+		mountChain: ["/v1", "", "", "/platform.sync_revenuecat"],
+		sourceRouterFile:
+			"src/internal/platform/platformBeta/platformRpcRouter.ts",
+		routeKind: "createRoute",
+		needsScopes: true,
+		isWebhookExempt: false,
+	},
+	{
+		handlerName: "handleGetRevenueCatKeys",
+		handlerFile:
+			"src/internal/platform/platformBeta/handlers/handleGetRevenueCatKeys.ts",
+		method: "POST",
+		path: "/v1/platform.get_revenuecat_keys",
+		style: "RPC",
+		group: "v1/platform",
+		mountChain: ["/v1", "", "", "/platform.get_revenuecat_keys"],
+		sourceRouterFile:
+			"src/internal/platform/platformBeta/platformRpcRouter.ts",
+		routeKind: "createRoute",
+		needsScopes: true,
+		isWebhookExempt: false,
+	},
+	{
 		handlerName: "handleCreateSchedule",
 		handlerFile: "src/internal/billing/v2/handlers/handleCreateSchedule.ts",
 		method: "POST",
@@ -4263,6 +4293,20 @@ const SCOPE_DECISIONS: Record<
 		decidedAt: "2026-04-24T15:32:37.301Z",
 	},
 	"POST|/v1/platform.link_revenuecat|handleLinkRevenueCat": {
+		decision: "decided",
+		scopes: ["platform:write"],
+		shape: "array",
+		note: "platform RPC route — write",
+		decidedAt: "2026-06-01T00:00:00.000Z",
+	},
+	"POST|/v1/platform.sync_revenuecat|handleSyncRevenueCat": {
+		decision: "decided",
+		scopes: ["platform:write"],
+		shape: "array",
+		note: "platform RPC route — write",
+		decidedAt: "2026-06-01T00:00:00.000Z",
+	},
+	"POST|/v1/platform.get_revenuecat_keys|handleGetRevenueCatKeys": {
 		decision: "decided",
 		scopes: ["platform:write"],
 		shape: "array",
