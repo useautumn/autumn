@@ -1,4 +1,5 @@
 import { AppEnv, type ChatInstallation } from "@autumn/shared";
+import type { AutumnLogger } from "@autumn/logging";
 import { z } from "zod";
 
 export const agentOutputSchema = z.preprocess(
@@ -62,6 +63,7 @@ export type SignatureArgs = {
 
 export type BotMessage = {
 	installation: ChatInstallation;
+	logger?: AutumnLogger;
 	onAction?: (message: string) => Promise<void> | void;
 	recentMessages?: ChatContextMessage[];
 	text: string;

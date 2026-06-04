@@ -2,12 +2,19 @@ import { createSlackAdapter } from "@chat-adapter/slack";
 import { createPostgresState } from "@chat-adapter/state-pg";
 import type { Message, Thread } from "chat";
 import { Chat } from "chat";
+import { runMessage } from "./agent/messages.js";
 import { handleApprovalAction, postApprovalRequest } from "./approvals/flow.js";
-import { getSlackWorkspaceId } from "./providers/slack/context.js";
 import { decrypt } from "./lib/crypto.js";
 import { env } from "./lib/env.js";
+import {
+	addLeafContext,
+	createLeafSessionContext,
+	logger as rootLogger,
+} from "./lib/logger.js";
+import { getSlackWorkspaceId } from "./providers/slack/context.js";
 import { findInstallation } from "./providers/slack/installations.js";
-import { runMessage } from "./agent/messages.js";
+import { getRecentMessages } from "./providers/slack/threadContext.js";
+import type { ChatContextMessage } from "./types.js";
 import {
 	createActionLogger,
 	finishLoading,
@@ -15,8 +22,6 @@ import {
 	type ReplyTarget,
 	startLoading,
 } from "./ui/progress.js";
-import { getRecentMessages } from "./providers/slack/threadContext.js";
-import type { ChatContextMessage } from "./types.js";
 
 export const chatAdapterNames = ["slack"];
 
@@ -66,15 +71,46 @@ const runAndReply = async ({
 	threadId: string;
 }) => {
 	let loading: LoadingState = null;
+	let logger = rootLogger;
 	try {
 		const workspaceId = getSlackWorkspaceId(raw);
+		const session = createLeafSessionContext({
+			channelId,
+			provider: "slack",
+			providerUserId,
+			threadId,
+			workspaceId,
+		});
+		logger = addLeafContext(rootLogger, {
+			...session.context,
+			agent_run_id: session.agentRunId,
+		});
+		logger.info("Received Slack message", {
+			event: "leaf.slack_message_received",
+			data: {
+				text_length: text.length,
+			},
+		});
 		const installation = await findInstallation("slack", workspaceId);
-		if (!installation || !text.trim()) return;
+		if (!installation) {
+			logger.warn("Slack installation not found", {
+				event: "leaf.slack_installation_missing",
+			});
+			return;
+		}
+		if (!text.trim()) {
+			logger.info("Skipping empty Slack message", {
+				event: "leaf.slack_message_skipped",
+				data: { reason: "empty" },
+			});
+			return;
+		}
 
 		loading = await startLoading(target);
 		const logAction = createActionLogger(loading);
 		const output = await runMessage({
 			installation,
+			logger,
 			onAction: logAction,
 			recentMessages,
 			text,
@@ -86,6 +122,7 @@ const runAndReply = async ({
 			installation,
 			loading,
 			logAction,
+			logger,
 			output,
 			providerUserId,
 			target,
@@ -94,8 +131,16 @@ const runAndReply = async ({
 
 		await finishLoading(target, loading, "Done.");
 		await target.post({ markdown: output.text || "Done." });
+		logger.info("Posted Slack response", {
+			event: "leaf.slack_response_posted",
+			data: {
+				has_text: Boolean(output.text),
+			},
+		});
 	} catch (error) {
-		console.error("[chat] Message failed", error);
+		logger.error("[chat] Message failed", error, {
+			event: "leaf.slack_message_failed",
+		});
 		await finishLoading(target, loading, "Request failed.");
 		await target.post({
 			markdown: "I could not complete that request. Please try again.",
