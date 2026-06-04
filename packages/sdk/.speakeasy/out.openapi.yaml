@@ -8074,7 +8074,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1780512803523,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781722403523,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1780584084429,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781793684429,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -17985,6 +17985,282 @@ paths:
                       - feature_id: messages
                         balance: 100
       x-speakeasy-name-override: redeemCode
+      parameters:
+        - *a1
+  /v1/platform.link_revenuecat:
+    post:
+      operationId: linkRevenueCat
+      description: Generate a RevenueCat OAuth URL for linking a project to an organization.
+      tags:
+        - platform
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organization_slug:
+                  type: string
+                  minLength: 1
+                env:
+                  enum:
+                    - test
+                    - live
+                  type: string
+                project_name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                redirect_url:
+                  type: string
+                  format: uri
+              required:
+                - organization_slug
+                - env
+                - project_name
+                - redirect_url
+              title: LinkRevenueCatParams
+              examples:
+                - organization_slug: acme
+                  env: test
+                  project_name: acme-mobile
+                  redirect_url: https://dashboard.useautumn.com/dev?tab=revenuecat
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  oauth_url:
+                    type: string
+                required:
+                  - oauth_url
+                title: LinkRevenueCatResponse
+                examples:
+                  - oauth_url: https://api.revenuecat.com/oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&scope=project.read+project.write
+      x-speakeasy-name-override: linkRevenueCat
+      parameters:
+        - *a1
+  /v1/platform.sync_revenuecat:
+    post:
+      operationId: syncRevenueCat
+      description: Push an organization's plans into RevenueCat as products (creating or renaming them across the project's apps) and set test-store prices from each plan's price. Requires the org to have linked RevenueCat via OAuth.
+      tags:
+        - platform
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organization_slug:
+                  type: string
+                  minLength: 1
+                env:
+                  enum:
+                    - test
+                    - sandbox
+                    - live
+                  type: string
+                  description: '"test" and "sandbox" both target the sandbox environment'
+                product_ids:
+                  type: array
+                  items:
+                    type: string
+                  description: Plans to push. Omit to sync every plan in the org/env.
+              required:
+                - organization_slug
+                - env
+              title: SyncRevenueCatParams
+              examples:
+                - organization_slug: acme
+                  env: test
+                  product_ids:
+                    - pro
+                    - premium
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan_id:
+                          type: string
+                        status:
+                          enum:
+                            - synced
+                            - skipped
+                            - error
+                          type: string
+                        store_identifier:
+                          type: string
+                        apps:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              app_id:
+                                type: string
+                              app_type:
+                                type: string
+                              product:
+                                enum:
+                                  - created
+                                  - updated
+                                  - exists
+                                type: string
+                              store_push:
+                                enum:
+                                  - pushed
+                                  - failed
+                                  - skipped
+                                type: string
+                              price:
+                                enum:
+                                  - set
+                                  - skipped
+                                  - failed
+                                type: string
+                              message:
+                                type: string
+                            required:
+                              - app_id
+                              - app_type
+                              - product
+                        message:
+                          type: string
+                      required:
+                        - plan_id
+                        - status
+                required:
+                  - results
+                title: SyncRevenueCatResponse
+                examples:
+                  - results:
+                      - plan_id: pro
+                        status: synced
+                        store_identifier: autumn.sandbox.org_123.pro
+                        apps:
+                          - app_id: app_test
+                            app_type: test_store
+                            product: created
+                            store_push: skipped
+                            price: set
+      x-speakeasy-name-override: syncRevenueCat
+      parameters:
+        - *a1
+  /v1/platform.get_revenuecat_keys:
+    post:
+      operationId: getRevenueCatKeys
+      description: Retrieve a managed organization's RevenueCat public (SDK) API keys, grouped by app — for the test store, App Store, and Google Play Store. Use these to configure the RevenueCat SDK in the org's mobile app.
+      tags:
+        - platform
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organization_slug:
+                  type: string
+                  minLength: 1
+                env:
+                  enum:
+                    - test
+                    - sandbox
+                    - live
+                  type: string
+                  description: '"test" and "sandbox" both target the sandbox environment'
+              required:
+                - organization_slug
+                - env
+              title: GetRevenueCatKeysParams
+              examples:
+                - organization_slug: acme
+                  env: test
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  apps:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        app_id:
+                          type: string
+                        app_type:
+                          type: string
+                          description: RevenueCat store type, e.g. test_store / app_store / play_store
+                        name:
+                          type: string
+                        api_keys:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                              key:
+                                type: string
+                                description: The public SDK API key value
+                              environment:
+                                anyOf:
+                                  - type: string
+                                  - type: "null"
+                                description: e.g. "production" / "sandbox"
+                              app_id:
+                                anyOf:
+                                  - type: string
+                                  - type: "null"
+                              created_at:
+                                type: number
+                            required:
+                              - id
+                              - key
+                            additionalProperties: {}
+                      required:
+                        - app_id
+                        - app_type
+                        - name
+                        - api_keys
+                  oauth_access_token:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: Freshly-refreshed RevenueCat OAuth access token for the org (null for api-key orgs). The refresh token is never exposed — call this endpoint again for a new access token.
+                required:
+                  - apps
+                  - oauth_access_token
+                title: GetRevenueCatKeysResponse
+                examples:
+                  - apps:
+                      - app_id: app1a2b3c4d
+                        app_type: test_store
+                        name: Acme (Test Store)
+                        api_keys:
+                          - id: apikey12345
+                            key: test_aBcDeFgHiJkLmNoPqRsTuVwXyZ
+                            environment: production
+                            app_id: app1a2b3c4
+                    oauth_access_token: atk_aBcDeFgHiJkLmNoPqRsTuVwXyZ
+      x-speakeasy-name-override: getRevenueCatKeys
       parameters:
         - *a1
 security:
