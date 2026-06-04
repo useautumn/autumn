@@ -31,7 +31,9 @@ export const handleGetRevenueCatOAuthUrl = createRoute({
 		}
 
 		const frontendUrl = process.env.CLIENT_URL || "http://localhost:5173";
-		const redirectUri = redirect_url || `${frontendUrl}/dev?tab=revenuecat`;
+		const envPrefix = env === AppEnv.Sandbox ? "/sandbox" : "";
+		const redirectUri =
+			redirect_url || `${frontendUrl}${envPrefix}/dev?tab=revenuecat`;
 		const codeVerifier = generateCodeVerifier();
 
 		const stateKey = await generateOAuthState({

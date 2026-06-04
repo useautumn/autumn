@@ -16,7 +16,7 @@ const KEY_APP_TYPES = new Set(["test_store", "app_store", "play_store"]);
  * (SDK) API keys per app, for the test store / App Store / Play Store.
  */
 export const handleGetRevenueCatKeys = createRoute({
-	scopes: [Scopes.Platform.Read],
+	scopes: [Scopes.Platform.Write],
 	body: GetRevenueCatKeysSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
