@@ -12,7 +12,7 @@ import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { createPercentCoupon } from "../utils/discounts/discountTestUtils.js";
 
 test.concurrent(
-	`${chalk.yellowBright("invoice-matched-credits create-schedule: pro + addon credits reflect stored discounted charges")}`,
+	`${chalk.yellowBright("invoice-matched-credits create-schedule: immediate phase pro + addon — credits from stored discounted charges")}`,
 	async () => {
 		const customerId = "imc-sched-disc-addon";
 
@@ -44,20 +44,23 @@ test.concurrent(
 		const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 		const coupon = await createPercentCoupon({ stripeCli, percentOff: 20 });
 
-		await autumnV1.billing.attach({
-			customer_id: customerId,
-			product_id: `pro_${customerId}`,
-			discounts: [{ reward_id: coupon.id }],
-		});
+		const scheduleResponse = await autumnV1.billing.createSchedule(
+			{
+				customer_id: customerId,
+				discounts: [{ reward_id: coupon.id }],
+				phases: [
+					{
+						starts_at: advancedTo,
+						plans: [{ plan_id: pro.id }, { plan_id: addon.id }],
+					},
+				],
+			},
+			{ timeout: 8000 },
+		);
 
-		await new Promise((resolve) => setTimeout(resolve, 5000));
-
-		await autumnV1.billing.attach({
-			customer_id: customerId,
-			product_id: `addon_${customerId}`,
-		});
-
-		await new Promise((resolve) => setTimeout(resolve, 5000));
+		expect(scheduleResponse.status).toBe("created");
+		expect(scheduleResponse.phases[0]!.customer_product_ids).toHaveLength(2);
+		expect(scheduleResponse.invoice?.total).toBeLessThan(40);
 
 		const renewalTime = await advanceTestClock({
 			stripeCli: ctx.stripeCli,
@@ -78,7 +81,7 @@ test.concurrent(
 
 		const preview = (await autumnV2_2.billing.previewAttach({
 			customer_id: customerId,
-			plan_id: `premium_${customerId}`,
+			plan_id: premium.id,
 		})) as AttachPreviewResponse;
 
 		const creditLines = preview.line_items.filter((li) => li.total < 0);
@@ -86,11 +89,103 @@ test.concurrent(
 
 		const creditTotal = creditLines.reduce((sum, li) => sum + li.total, 0);
 		expect(creditTotal).toBeLessThan(0);
-		expect(Math.abs(creditTotal)).toBeLessThan(20 + 10);
+		expect(Math.abs(creditTotal)).toBeLessThan(40);
+
+		for (const creditLine of creditLines) {
+			expect(creditLine.discounts ?? []).toHaveLength(0);
+		}
 
 		const result = await autumnV2_2.billing.attach({
 			customer_id: customerId,
-			plan_id: `premium_${customerId}`,
+			plan_id: premium.id,
+		});
+
+		expect(result.invoice?.total).toBeCloseTo(preview.total, 0);
+	},
+	300_000,
+);
+
+test.concurrent(
+	`${chalk.yellowBright("invoice-matched-credits create-schedule: multi-phase setup then mid-cycle upgrade — preview matches invoice")}`,
+	async () => {
+		const customerId = "imc-sched-multiphase";
+
+		const pro = products.pro({
+			id: "pro",
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+
+		const addon = products.recurringAddOn({
+			id: "addon",
+			items: [items.monthlyWords({ includedUsage: 200 })],
+		});
+
+		const premium = products.premium({
+			id: "premium",
+			items: [items.monthlyMessages({ includedUsage: 1000 })],
+		});
+
+		const { autumnV1, autumnV2_2, testClockId, advancedTo } =
+			await initScenario({
+				customerId,
+				setup: [
+					s.customer({ testClock: true, paymentMethod: "success" }),
+					s.products({ list: [pro, addon, premium] }),
+				],
+				actions: [],
+			});
+
+		const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
+		const coupon = await createPercentCoupon({ stripeCli, percentOff: 20 });
+		const phase2StartsAt = addMonths(advancedTo, 2).getTime();
+
+		await autumnV1.billing.createSchedule(
+			{
+				customer_id: customerId,
+				discounts: [{ reward_id: coupon.id }],
+				phases: [
+					{
+						starts_at: advancedTo,
+						plans: [{ plan_id: pro.id }, { plan_id: addon.id }],
+					},
+					{
+						starts_at: phase2StartsAt,
+						plans: [{ plan_id: pro.id }],
+					},
+				],
+			},
+			{ timeout: 8000 },
+		);
+
+		const renewalTime = await advanceTestClock({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+			advanceTo: addHours(
+				addMonths(new Date(advancedTo), 1),
+				hoursToFinalizeInvoice,
+			).getTime(),
+			waitForSeconds: 30,
+		});
+
+		await advanceTestClock({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+			startingFrom: new Date(renewalTime),
+			numberOfDays: 15,
+		});
+
+		const preview = (await autumnV2_2.billing.previewAttach({
+			customer_id: customerId,
+			plan_id: premium.id,
+		})) as AttachPreviewResponse;
+
+		expect(preview.total).toBeDefined();
+		const creditLines = preview.line_items.filter((li) => li.total < 0);
+		expect(creditLines.length).toBeGreaterThan(0);
+
+		const result = await autumnV2_2.billing.attach({
+			customer_id: customerId,
+			plan_id: premium.id,
 		});
 
 		expect(result.invoice?.total).toBeCloseTo(preview.total, 0);
