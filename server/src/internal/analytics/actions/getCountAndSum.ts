@@ -108,24 +108,35 @@ export const getCountAndSum = async ({
 		}
 	}
 
-	const query = `
-		WITH customer_events AS (
-			SELECT *
+	const hasFilters = filterBySql !== "";
+
+	// Org-grain rollup only carries org/env/event/hour, so it can serve only all-customers,
+	// no-entity, no-property totals. Mirrors aggregate_simple's gate (absence of customer_id).
+	const useOrgRollup = !params.customer_id && !params.entity_id && !hasFilters;
+
+	// No property filters → read a pre-aggregated rollup (avoids a full raw events scan).
+	// Property filters → fall back to raw events, where the properties columns live.
+	const query = hasFilters
+		? `
+			SELECT event_name, COUNT(*) as count, SUM(coalesce(value, 1)) as sum
 			FROM events
 			WHERE org_id = {org_id:String} AND env = {env:String}
-			${params.aggregateAll ? "" : "AND customer_id = {customer_id:String}"}
-			${params.entity_id ? "AND entity_id = {entity_id:String}" : ""}${filterBySql}
-		)
-		SELECT
-			e.event_name,
-			COUNT(*) as count,
-			SUM(e.value) as sum
-		FROM customer_events e
-		WHERE e.timestamp >= {start_date:DateTime}
-			AND e.timestamp <= {end_date:DateTime}
-			AND e.event_name IN {event_names:Array(String)}
-		GROUP BY e.event_name
-	`;
+				${params.aggregateAll ? "" : "AND customer_id = {customer_id:String}"}
+				${params.entity_id ? "AND entity_id = {entity_id:String}" : ""}${filterBySql}
+				AND timestamp >= {start_date:DateTime} AND timestamp <= {end_date:DateTime}
+				AND event_name IN {event_names:Array(String)}
+			GROUP BY event_name
+		`
+		: `
+			SELECT event_name, sum(event_count) as count, sum(total_value) as sum
+			FROM ${useOrgRollup ? "events_org_hourly_mv" : "events_hourly_no_properties_two_mv"}
+			WHERE org_id = {org_id:String} AND env = {env:String}
+				${!useOrgRollup && !params.aggregateAll ? "AND customer_id = {customer_id:String}" : ""}
+				${!useOrgRollup && params.entity_id ? "AND entity_id = {entity_id:String}" : ""}
+				AND hour >= {start_date:DateTime} AND hour <= {end_date:DateTime}
+				AND event_name IN {event_names:Array(String)}
+			GROUP BY event_name
+		`;
 
 	ctx.logger.debug("Getting count and sum", {
 		eventNames: params.event_names,

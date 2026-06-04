@@ -1,0 +1,29 @@
+DESCRIPTION >
+    History backfill for events_org_hourly_mv (deployed with BACKFILL skip). Fills the window
+    before the MV's forward-materialization seam, in bounded half-open [start_date, end_date)
+    chunks on on-demand compute
+    (tb copy run events_org_hourly_mv_backfill --on-demand-compute --param start_date=... --param end_date=...).
+    SQL mirrors events_org_hourly_mv_pipe EXACTLY (same projection + GROUP BY, no ARRAY JOIN) so
+    backfilled rows are identical to forward-materialized ones. No fan-out, so chunks can be wide.
+
+    Seam safety: MergeTree does NOT dedup — keep every end_date <= the MV's actual promote time
+    (capture it empirically: min(hour) once forward events land), else overlapping hours double-count.
+
+NODE migrate
+SQL >
+    %
+    SELECT
+        org_id,
+        env,
+        event_name,
+        toStartOfHour(timestamp) as hour,
+        sum(toFloat64(coalesce(value, 1))) as total_value,
+        count() as event_count
+    FROM events
+    WHERE timestamp >= {{DateTime(start_date, '2026-06-01 00:00:00')}}
+        AND timestamp < {{DateTime(end_date, '2026-06-02 00:00:00')}}
+    GROUP BY org_id, env, event_name, hour
+
+TYPE COPY
+TARGET_DATASOURCE events_org_hourly_mv
+COPY_MODE append

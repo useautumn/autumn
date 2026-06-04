@@ -18,9 +18,6 @@ const SERVER_PORT = process.env.SERVER_PORT
 const CHECKOUT_PORT = process.env.CHECKOUT_PORT
 	? Number.parseInt(process.env.CHECKOUT_PORT, 10)
 	: 3001 + portOffset;
-const MCP_PORT = process.env.MCP_PORT
-	? Number.parseInt(process.env.MCP_PORT, 10)
-	: 2718 + portOffset;
 const CHAT_PORT = process.env.CHAT_PORT
 	? Number.parseInt(process.env.CHAT_PORT, 10)
 	: 3099 + portOffset;
@@ -134,7 +131,7 @@ async function startDev() {
 			} else {
 				console.log("Cleaning up local dev ports...\n");
 				killPorts({
-					ports: [VITE_PORT, SERVER_PORT, CHECKOUT_PORT, MCP_PORT, CHAT_PORT],
+					ports: [VITE_PORT, SERVER_PORT, CHECKOUT_PORT, CHAT_PORT],
 				});
 			}
 
@@ -169,8 +166,8 @@ async function startDev() {
 		console.log(`  vite:     http://localhost:${VITE_PORT}`);
 		console.log(`  server:   http://localhost:${SERVER_PORT}`);
 		console.log(`  checkout: http://localhost:${CHECKOUT_PORT}`);
-		console.log(`  mcp:      http://localhost:${MCP_PORT}/mcp`);
-		console.log(`  chat:     http://localhost:${CHAT_PORT}/health\n`);
+		console.log(`  leaf:     http://localhost:${CHAT_PORT}/health`);
+		console.log(`  mcp:      http://localhost:${CHAT_PORT}/mcp\n`);
 
 		// Use cmd on Windows, sh on Unix
 		const isWindows = process.platform === "win32";
@@ -239,17 +236,12 @@ async function startDev() {
 					: `"cd apps/checkout && VITE_PORT=${CHECKOUT_PORT} bun dev"`,
 			);
 
-			names.push("mcp");
-			colors.push("white");
-			const mcpServeCmd = "bun --watch apps/mcp-server/src/index.ts";
-			cmds.push(isWindows ? `"${mcpServeCmd}"` : `"${mcpServeCmd}"`);
-
-			names.push("chat");
+			names.push("leaf");
 			colors.push("gray");
 			cmds.push(
 				isWindows
-					? `"cd apps/chat && set PORT=${CHAT_PORT} && bun dev"`
-					: `"cd apps/chat && PORT=${CHAT_PORT} bun dev"`,
+					? `"cd apps/leaf && set PORT=${CHAT_PORT} && bun dev"`
+					: `"cd apps/leaf && PORT=${CHAT_PORT} bun dev"`,
 			);
 
 			// Stripe CLI webhook tunnel — silently skip if CLI absent.
@@ -294,19 +286,16 @@ async function startDev() {
 				VITE_PORT: VITE_PORT.toString(),
 				SERVER_PORT: SERVER_PORT.toString(),
 				CHECKOUT_PORT: CHECKOUT_PORT.toString(),
-				MCP_PORT: MCP_PORT.toString(),
 				CHAT_PORT: CHAT_PORT.toString(),
-				MCP_DEBUG_PENDING_ACTIONS:
-					process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
+				MCP_DEBUG_PENDING_ACTIONS: process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
 				MCP_SERVER_URL:
-					process.env.MCP_SERVER_URL ?? `http://localhost:${SERVER_PORT}`,
+					process.env.MCP_SERVER_URL ?? `http://localhost:${CHAT_PORT}`,
+				CHAT_SERVER_URL:
+					process.env.CHAT_SERVER_URL ?? `http://localhost:${CHAT_PORT}`,
 				MCP_RESOURCE_URLS:
-					process.env.MCP_RESOURCE_URLS ?? `http://localhost:${MCP_PORT}/mcp`,
-				AUTUMN_MCP_URL:
-					process.env.AUTUMN_MCP_URL ?? `http://localhost:${MCP_PORT}/mcp`,
+					process.env.MCP_RESOURCE_URLS ?? `http://localhost:${CHAT_PORT}/mcp`,
 				AUTUMN_API_URL: process.env.AUTUMN_API_URL ?? LOCAL_SERVER_URL,
 				CHAT_URL: process.env.CHAT_URL ?? LOCAL_CHAT_URL,
-				CHAT_INTERNAL_URL: process.env.CHAT_INTERNAL_URL ?? LOCAL_CHAT_URL,
 				SLACK_BOT_URL: process.env.SLACK_BOT_URL ?? LOCAL_CHAT_URL,
 				DISCORD_BOT_URL: process.env.DISCORD_BOT_URL ?? LOCAL_CHAT_URL,
 				VITE_APP_ENV: viteAppEnv,

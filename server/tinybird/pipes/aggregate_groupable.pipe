@@ -16,6 +16,7 @@ SQL >
     %
     {% set no_property_filters = (not defined(filter_key_0) or String(filter_key_0, '') == '') and (not defined(filter_key_1) or String(filter_key_1, '') == '') and (not defined(filter_key_2) or String(filter_key_2, '') == '') and (not defined(filter_key_3) or String(filter_key_3, '') == '') and (not defined(filter_key_4) or String(filter_key_4, '') == '') %}
     {% set use_no_props = (String(group_column, 'property') in ['customer_id', 'entity_id', 'plan_id']) and no_property_filters %}
+    {% set use_property_rollup = (String(group_column, 'property') == 'property') and no_property_filters %}
 
     SELECT
         {% if String(bin_size, 'day') == 'hour' %}
@@ -32,6 +33,8 @@ SQL >
         entity_id as group_value,
         {% elif String(group_column, 'property') == 'plan_id' %}
         coalesce(internal_product_id, '') as group_value,
+        {% elif use_property_rollup %}
+        property_value as group_value,
         {% else %}
         {{ column('properties.' + String(property_key, '')) }}::String as group_value,
         {% end %}
@@ -39,6 +42,8 @@ SQL >
     FROM
         {% if use_no_props %}
         events_hourly_no_properties_two_mv
+        {% elif use_property_rollup %}
+        events_property_mv
         {% else %}
         events_hourly_mv
         {% end %}
@@ -48,6 +53,9 @@ SQL >
         AND event_name IN {{ Array(event_names, 'String', default='[]') }}
         AND hour >= toDateTime({{ String(start_date, '2024-01-01 00:00:00') }})
         AND hour <= toDateTime({{ String(end_date, '2024-12-31 23:59:59') }})
+        {% if use_property_rollup %}
+        AND property_key = {{ String(property_key, '') }}
+        {% end %}
         {% if defined(customer_id) and String(customer_id, '') != '' %}
         AND customer_id = {{ String(customer_id) }}
         {% end %}
@@ -73,6 +81,8 @@ SQL >
         {# Filter out null/empty grouping values #}
         {% if String(group_column, 'property') == 'entity_id' %}
         AND entity_id IS NOT NULL AND entity_id != ''
+        {% elif use_property_rollup %}
+        AND property_value != ''
         {% elif String(group_column, 'property') == 'property' %}
         AND {{ column('properties.' + String(property_key, '')) }}::String IS NOT NULL
         AND {{ column('properties.' + String(property_key, '')) }}::String != ''

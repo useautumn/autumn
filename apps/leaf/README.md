@@ -1,4 +1,6 @@
-# Autumn Chat
+# Autumn Leaf
+
+Autumn's AI service: the Slack chat bot plus the hosted MCP routes (`src/mcp/http.ts`).
 
 Local Slack testing uses a normal Slack app in a development workspace. Keep the app undistributed while testing.
 

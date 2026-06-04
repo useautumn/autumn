@@ -1,12 +1,11 @@
-import { ErrCode, FeatureType } from "@autumn/shared";
+import { ErrCode } from "@autumn/shared";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
-import { useEventNames } from "./useEventNames";
+import { useSelectedEventNames } from "./useSelectedEventNames";
 
 /** Gets the user's IANA timezone (e.g., "America/New_York") */
 const getUserTimezone = (): string => {
@@ -28,8 +27,6 @@ export const useAnalyticsData = ({
 	const [searchParams] = useSearchParams();
 	const customerId = searchParams.get("customer_id");
 	const entityId = searchParams.get("entity_id");
-	const featureIds = searchParams.get("feature_ids")?.split(",");
-	const eventNames = searchParams.get("event_names")?.split(",");
 	const groupBy = searchParams.get("group_by");
 	const maxGroups = Number(searchParams.get("max_groups")) || 10;
 
@@ -38,35 +35,16 @@ export const useAnalyticsData = ({
 	const customRange =
 		interval === "custom" && start && end ? { start, end } : undefined;
 
-	const { eventNames: cachedEventNames, isLoading: eventNamesLoading } =
-		useEventNames();
+	const { selectedEventNames, featuresData, featuresLoading, eventNamesLoading } =
+		useSelectedEventNames();
 
 	const timezone = useMemo(() => getUserTimezone(), []);
-
-	const { features: featuresData, isLoading: featuresLoading } =
-		useFeaturesQuery();
 
 	const formattedGroupBy = groupBy
 		? groupBy === "customer_id" || groupBy === "entity_id" || groupBy === "plan_id"
 			? groupBy
 			: `properties.${groupBy}`
 		: undefined;
-
-	const featureLinkedEventNames = useMemo(() => {
-		if (!featuresData?.length) return cachedEventNames;
-		return cachedEventNames.filter((e) =>
-			featuresData.some(
-				(f) =>
-					(f.type === FeatureType.Metered || f.type === FeatureType.CreditSystem) &&
-					(f.event_names?.includes(e.event_name) || f.id === e.event_name),
-			),
-		);
-	}, [cachedEventNames, featuresData]);
-
-	const selectedEventNames =
-		eventNames || featureIds
-			? [...(eventNames || []), ...(featureIds || [])]
-			: featureLinkedEventNames.slice(0, 3).map((e) => e.event_name);
 
 	const postBody = {
 		customer_id: customerId || undefined,
@@ -142,21 +120,21 @@ export const useRawAnalyticsData = () => {
 	const customRange =
 		interval === "custom" && start && end ? { start, end } : undefined;
 
-	const { features: featuresData, isLoading: featuresLoading } =
-		useFeaturesQuery();
+	const { selectedEventNames, featuresData, featuresLoading, eventNamesLoading } =
+		useSelectedEventNames();
+
+	const isReady = !eventNamesLoading && !featuresLoading;
 
 	const postBody = {
 		customer_id: customerId || undefined,
 		entity_id: entityId || undefined,
 		interval: customRange ? undefined : interval,
 		custom_range: customRange,
+		event_names: selectedEventNames,
 	};
 
-	const {
-		data,
-		isLoading: queryLoading,
-		error,
-	} = useQuery({
+	const { data, isLoading, error } = useQuery({
+		enabled: isReady,
 		queryKey: buildKey([
 			"query-raw-events",
 			customerId,
@@ -164,12 +142,15 @@ export const useRawAnalyticsData = () => {
 			interval,
 			String(start ?? ""),
 			String(end ?? ""),
+			...selectedEventNames.sort(),
 		]),
 		queryFn: async () => {
 			const { data } = await axiosInstance.post("/query/raw", postBody);
 			return data;
 		},
 	});
+
+	const queryLoading = !isReady || isLoading;
 
 	return {
 		customer: data?.customer,
