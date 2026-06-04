@@ -29,7 +29,7 @@ export function CreateScheduleSheetContent() {
 	const { form, formValues, entityId, handleAddPhase, error, onScopeChange } =
 		useCreateScheduleFormContext();
 	const { closeSheet, setSheet } = useSheetStore();
-	const hasSchedule = useHasSchedule();
+	const hasSchedule = useHasSchedule({ entityId });
 	const { customer } = useCusQuery();
 	const entities = (customer as FullCustomer | null)?.entities ?? [];
 
@@ -136,10 +136,10 @@ function getConfirmLabel({
 }
 
 export function CreateScheduleReviewContent() {
-	const { handleSubmit, isPending, isPreviewLoading, preview, error } =
+	const { handleSubmit, isPending, isPreviewLoading, preview, error, entityId } =
 		useCreateScheduleFormContext();
 	const { setSheet } = useSheetStore();
-	const hasSchedule = useHasSchedule();
+	const hasSchedule = useHasSchedule({ entityId });
 
 	const confirmLabel = getConfirmLabel({ preview });
 	const isZeroAmount = preview && preview.total <= 0;
