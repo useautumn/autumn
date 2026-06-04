@@ -17,7 +17,7 @@ import {
 	usagePriceToLineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { getRefundLineItemForPrice } from "@/internal/billing/v2/utils/lineItems/getRefundLineItemForPrice";
+import { getRefundLineItemsForPrice } from "@/internal/billing/v2/utils/lineItems/getRefundLineItemsForPrice";
 
 export const computeUpdateQuantityLineItems = ({
 	ctx,
@@ -103,7 +103,7 @@ export const computeUpdateQuantityLineItems = ({
 		},
 	});
 
-	const refundLineItem = getRefundLineItemForPrice({
+	const refundLineItems = getRefundLineItemsForPrice({
 		ctx,
 		customerProduct,
 		billingContext,
@@ -122,14 +122,14 @@ export const computeUpdateQuantityLineItems = ({
 
 	const netAmount = Math.abs(
 		sumValues([
-			refundLineItem?.amountAfterDiscounts ?? 0,
+			...refundLineItems.map((li) => li.amountAfterDiscounts ?? 0),
 			chargeLineItem?.amountAfterDiscounts ?? 0,
 		]),
 	);
 
 	if (netAmount < BILLING_AMOUNT_EPSILON) return [];
 
-	return [refundLineItem, chargeLineItem].filter(
+	return [...refundLineItems, chargeLineItem].filter(
 		(li): li is LineItem => li !== undefined,
 	);
 };

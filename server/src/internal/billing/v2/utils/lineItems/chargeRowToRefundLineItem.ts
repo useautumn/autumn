@@ -41,6 +41,13 @@ export const chargeRowToRefundLineItem = ({
 			(chargeRow.stripe_price_id != null &&
 				cp.price.config?.stripe_price_id === chargeRow.stripe_price_id),
 	);
+
+	const couponNameById = new Map(
+		(billingContext.stripeDiscounts ?? []).map((discount) => [
+			discount.source.coupon.id,
+			discount.source.coupon.name ?? discount.source.coupon.id,
+		]),
+	);
 	const price =
 		matchingCusPrice?.price ?? customerProduct.customer_prices[0]?.price;
 
@@ -85,7 +92,9 @@ export const chargeRowToRefundLineItem = ({
 				amountOff: d.amount_off,
 				percentOff: d.percent_off,
 				stripeCouponId: d.stripe_coupon_id,
-				couponName: d.stripe_coupon_id,
+				couponName: d.stripe_coupon_id
+					? (couponNameById.get(d.stripe_coupon_id) ?? d.stripe_coupon_id)
+					: undefined,
 			})) ?? [],
 	};
 

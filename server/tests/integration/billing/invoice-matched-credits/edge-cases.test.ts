@@ -209,13 +209,13 @@ test.concurrent(
 );
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// TEST 4: Non-USD currency rounding (EUR)
+// TEST 4: Preview/execute rounding parity on upgrade
 // ═══════════════════════════════════════════════════════════════════════════════
 
 test.concurrent(
-	`${chalk.yellowBright("invoice-matched edge 4: non-USD currency — EUR upgrade rounding")}`,
+	`${chalk.yellowBright("invoice-matched edge 4: preview/execute rounding parity on mid-cycle upgrade")}`,
 	async () => {
-		const customerId = "inv-match-edge-eur";
+		const customerId = "inv-match-edge-rounding";
 
 		const pro = products.pro({
 			id: "pro",

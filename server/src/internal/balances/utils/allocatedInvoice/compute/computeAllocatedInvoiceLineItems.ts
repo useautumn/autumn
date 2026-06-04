@@ -12,7 +12,7 @@ import {
 import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getLineItemBillingPeriod } from "@/internal/billing/v2/utils/lineItems/getLineItemBillingPeriod";
-import { getRefundLineItemForPrice } from "@/internal/billing/v2/utils/lineItems/getRefundLineItemForPrice";
+import { getRefundLineItemsForPrice } from "@/internal/billing/v2/utils/lineItems/getRefundLineItemsForPrice";
 import type { AllocatedInvoiceContext } from "../allocatedInvoiceContext";
 import { allocatedInvoiceIsUpgrade } from "./allocatedInvoiceIsUpgrade";
 
@@ -81,7 +81,7 @@ export const computeAllocatedInvoiceLineItems = ({
 		},
 	});
 
-	const previousLineItem = getRefundLineItemForPrice({
+	const previousLineItems = getRefundLineItemsForPrice({
 		ctx,
 		customerProduct,
 		billingContext,
@@ -100,14 +100,14 @@ export const computeAllocatedInvoiceLineItems = ({
 
 	const netAmount = Math.abs(
 		sumValues([
-			previousLineItem?.amountAfterDiscounts ?? 0,
+			...previousLineItems.map((li) => li.amountAfterDiscounts ?? 0),
 			newLineItem?.amountAfterDiscounts ?? 0,
 		]),
 	);
 
 	if (netAmount < BILLING_AMOUNT_EPSILON) return [];
 
-	return [previousLineItem, newLineItem].filter(
+	return [...previousLineItems, newLineItem].filter(
 		(li): li is LineItem => li !== undefined,
 	);
 };

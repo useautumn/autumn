@@ -4,6 +4,7 @@ import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import chalk from "chalk";
+import { getRefundLineItemsForPrice } from "@/internal/billing/v2/utils/lineItems/getRefundLineItemsForPrice";
 import { invoiceCreditFromStoredLineItems } from "@/internal/billing/v2/utils/lineItems/invoiceCreditFromStoredLineItems";
 import {
 	computeAlreadyRefundedForCharge,
@@ -264,5 +265,53 @@ describe(chalk.yellowBright("invoiceCreditFromStoredLineItems"), () => {
 		expect(result.allPricesResolved).toBe(true);
 		expect(result.resolvedPriceIds).toEqual(["price_pro", "price_addon"]);
 		expect(result.lineItems).toHaveLength(2);
+	});
+});
+
+describe(chalk.yellowBright("getRefundLineItemsForPrice"), () => {
+	const buildSinglePriceContext = ({
+		storedChargeLineItems,
+	}: {
+		storedChargeLineItems: DbInvoiceLineItem[];
+	}) => {
+		const proPrice = prices.createFixed({ id: "price_pro" });
+		const customerProduct = customerProducts.create({
+			id: "cp_1",
+			customerPrices: [
+				prices.createCustomer({ price: proPrice, customerProductId: "cp_1" }),
+			],
+		});
+		const billingContext: BillingContext = {
+			...contexts.createBilling({
+				customerProducts: [customerProduct],
+				currentEpochMs: MID_CYCLE,
+			}),
+			storedChargeLineItems,
+			storedRefundLineItems: [],
+		};
+		return { ctx: contexts.create({}), customerProduct, billingContext };
+	};
+
+	test("returns every matched credit when a price has multiple stored charge rows", () => {
+		const { ctx, customerProduct, billingContext } = buildSinglePriceContext({
+			storedChargeLineItems: [
+				makeChargeRow({ id: "li_charge_initial", price_id: "price_pro" }),
+				makeChargeRow({ id: "li_charge_topup", price_id: "price_pro" }),
+			],
+		});
+
+		const result = getRefundLineItemsForPrice({
+			ctx,
+			customerProduct,
+			billingContext,
+			priceId: "price_pro",
+			catalogFallback: undefined,
+		});
+
+		expect(result).toHaveLength(2);
+		for (const lineItem of result) {
+			expect(lineItem.context.price.id).toBe("price_pro");
+			expect(lineItem.amount).toBeLessThan(0);
+		}
 	});
 });

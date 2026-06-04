@@ -2,7 +2,7 @@ import type { BillingContext, FullCusProduct, LineItem } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getRefundLineItems } from "./getRefundLineItems";
 
-export const getRefundLineItemForPrice = ({
+export const getRefundLineItemsForPrice = ({
 	ctx,
 	customerProduct,
 	billingContext,
@@ -14,16 +14,18 @@ export const getRefundLineItemForPrice = ({
 	billingContext: BillingContext;
 	priceId: string;
 	catalogFallback: LineItem | undefined;
-}): LineItem | undefined => {
+}): LineItem[] => {
 	const matchedRefundLineItems = getRefundLineItems({
 		ctx,
 		customerProduct,
 		billingContext,
 	});
 
-	const matchedRefundForPrice = matchedRefundLineItems.find(
+	const matchedRefundsForPrice = matchedRefundLineItems.filter(
 		(li) => li.context.price.id === priceId,
 	);
 
-	return matchedRefundForPrice ?? catalogFallback;
+	if (matchedRefundsForPrice.length > 0) return matchedRefundsForPrice;
+
+	return catalogFallback ? [catalogFallback] : [];
 };
