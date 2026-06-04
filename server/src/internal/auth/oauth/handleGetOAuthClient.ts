@@ -20,15 +20,18 @@ export const handleGetOAuthClient = async (c: Context) => {
 		return c.json({ error: "Client not found" }, 404);
 	}
 
-	const internalMcpName = getInternalMcpDisplayName({
-		metadata: client.metadata,
-		redirectUri,
-	});
+	const isInternalMcp = isInternalMcpOAuthClientRecord(client);
+	const internalMcpName = isInternalMcp
+		? getInternalMcpDisplayName({
+				metadata: client.metadata,
+				redirectUri,
+			})
+		: null;
 
 	return c.json({
 		client_id: client.clientId,
 		name: internalMcpName || client.name || "Unknown Application",
 		is_atmn: isAtmnOAuthClientRecord(client),
-		is_internal_mcp: isInternalMcpOAuthClientRecord(client),
+		is_internal_mcp: isInternalMcp,
 	});
 };

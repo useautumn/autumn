@@ -236,12 +236,13 @@ export const registerMcpOAuthClient = async ({
 		return { error: "unsupported_mcp_client", status: 400 };
 	}
 
-	const cacheKey = `${info.type}:${[...redirectUris].sort().join("|")}`;
+	const requestedScopes = getRequestedScopes(scope);
+	const scopeKey = [...requestedScopes].sort().join(" ");
+	const cacheKey = `${info.type}:${[...redirectUris].sort().join("|")}:${scopeKey}`;
 	const cached = getCachedRegistration(cacheKey);
 	if (cached)
 		return { body: cached as RegistrationResponse["body"], status: 200 };
 
-	const requestedScopes = getRequestedScopes(scope);
 	const clients = await oauthClientRepo.list({ db });
 	const existingClient =
 		clients.find((client) => clientMatches({ client, info, redirectUris })) ??

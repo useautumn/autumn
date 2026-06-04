@@ -24,10 +24,13 @@ const metadataMarksAtmn = (metadata: unknown) => {
 
 	if (!metadataObject || typeof metadataObject !== "object") return false;
 
-	const values = Object.values(metadataObject as Record<string, unknown>);
-	return values.some(
-		(value) =>
-			typeof value === "string" && ["atmn", "autumn-cli"].includes(value),
+	const metadataRecord = metadataObject as Record<string, unknown>;
+	return (
+		metadataRecord.kind === "atmn" ||
+		metadataRecord.client === "atmn" ||
+		metadataRecord.clientType === "atmn" ||
+		metadataRecord.client_type === "atmn" ||
+		metadataRecord.source === "autumn-cli"
 	);
 };
 

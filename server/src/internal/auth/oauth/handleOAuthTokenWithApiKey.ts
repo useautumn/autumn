@@ -11,6 +11,66 @@ import {
 const getString = (value: unknown) =>
 	typeof value === "string" && value.length > 0 ? value : null;
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+	typeof value === "object" && value !== null && !Array.isArray(value);
+
+const getTokenPayload = (body: Record<string, unknown>) => {
+	const response = body.response;
+	if (isRecord(response)) return response;
+	return body;
+};
+
+const rewriteTokenBody = ({
+	apiKey,
+	body,
+	scopes,
+}: {
+	apiKey: string;
+	body: Record<string, unknown>;
+	scopes: string[];
+}) => {
+	const response = body.response;
+	if (isRecord(response)) {
+		return {
+			...body,
+			response: {
+				...response,
+				access_token: apiKey,
+				scope: scopes.join(" "),
+			},
+		};
+	}
+
+	return {
+		...body,
+		access_token: apiKey,
+		scope: scopes.join(" "),
+	};
+};
+
+const tokenResponseHeaders = (response?: Response) => {
+	const headers = new Headers(response?.headers);
+	headers.set("Content-Type", "application/json");
+	headers.set("Cache-Control", "no-store");
+	headers.set("Pragma", "no-cache");
+	headers.delete("Content-Length");
+	return headers;
+};
+
+const jsonTokenResponse = ({
+	body,
+	response,
+	status,
+}: {
+	body: unknown;
+	response?: Response;
+	status: number;
+}) =>
+	new Response(JSON.stringify(body), {
+		status,
+		headers: tokenResponseHeaders(response),
+	});
+
 const getResourceFromTokenRequest = async (request: Request) => {
 	const contentType = request.headers.get("content-type") ?? "";
 	const rawBody = await request.text();
@@ -43,10 +103,11 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		return response;
 	}
 
-	const accessToken = getString(body.access_token);
+	const tokenPayload = getTokenPayload(body);
+	const accessToken = getString(tokenPayload.access_token);
 	if (!accessToken) return response;
 
-	const requestedScopes = scopesFromOAuthScopeString(body.scope);
+	const requestedScopes = scopesFromOAuthScopeString(tokenPayload.scope);
 	let apiKeyResult: Awaited<ReturnType<typeof getExternalOAuthApiKeyForToken>>;
 	try {
 		const tokenRecord = await getOAuthAccessTokenRecord({
@@ -62,21 +123,25 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		});
 	} catch (error) {
 		if (error instanceof RecaseError) {
-			return c.json(
-				{
+			return jsonTokenResponse({
+				body: {
 					error: "invalid_grant",
 					error_description: error.message,
 				},
-				error.statusCode as 400 | 401 | 403,
-			);
+				status: error.statusCode,
+			});
 		}
 		throw error;
 	}
 	if (!apiKeyResult) return response;
 
-	return c.json({
-		...body,
-		access_token: apiKeyResult.apiKey,
-		scope: apiKeyResult.scopes.join(" "),
+	return jsonTokenResponse({
+		body: rewriteTokenBody({
+			apiKey: apiKeyResult.apiKey,
+			body,
+			scopes: apiKeyResult.scopes,
+		}),
+		response,
+		status: response.status,
 	});
 };

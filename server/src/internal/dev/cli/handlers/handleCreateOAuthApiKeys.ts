@@ -4,6 +4,7 @@ import {
 	getExternalOAuthApiKeyForToken,
 	getOAuthAccessTokenRecord,
 } from "@/internal/auth/oauth/oauthAccessTokenApiKey.js";
+import { oauthConsentRepo } from "@/internal/auth/repos/index.js";
 import { ApiKeyPrefix, createKey } from "../../api-keys/apiKeyUtils.js";
 import {
 	type OAuthApiKeyRequestBody,
@@ -97,9 +98,17 @@ export const handleCreateOAuthApiKeys = createRoute({
 			});
 		}
 
-		// Build meta with consent linkage
+		const consent = await oauthConsentRepo.getForClientUserOrg({
+			db,
+			clientId,
+			userId,
+			referenceId: orgId,
+		});
+
 		const meta = {
-			oauth_consent_id: null,
+			oauth_consent_id: consent?.id ?? null,
+			oauth_client_id: clientId,
+			oauth_redirect_uri: consent?.redirectUri ?? null,
 			created_via: "oauth",
 			generatedAt: new Date().toISOString(),
 		};
