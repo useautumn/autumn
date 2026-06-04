@@ -149,7 +149,7 @@ export const handleUsagePrices = async ({
 		allowance: ent.interval === EntInterval.Lifetime ? 0 : ent.allowance!,
 	});
 
-	const { end } = subToPeriodStartEnd({ sub: usageSub });
+	const { start, end } = subToPeriodStartEnd({ sub: usageSub });
 	await CusEntService.update({
 		ctx,
 		id: relatedCusEnt.id,
@@ -162,7 +162,7 @@ export const handleUsagePrices = async ({
 
 	const rolloverUpdate = getRolloverUpdates({
 		cusEnt: relatedCusEnt,
-		nextResetAt: end * 1000,
+		nextResetAt: start * 1000,
 	});
 
 	if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
