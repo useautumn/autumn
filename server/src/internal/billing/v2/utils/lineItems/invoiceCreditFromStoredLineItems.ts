@@ -15,6 +15,7 @@ import {
 type InvoiceMatchedCreditResult = {
 	lineItems: LineItem[];
 	allPricesResolved: boolean;
+	resolvedPriceIds: string[];
 };
 
 export const invoiceCreditFromStoredLineItems = ({
@@ -36,10 +37,11 @@ export const invoiceCreditFromStoredLineItems = ({
 	);
 
 	if (pricesToCredit.length === 0) {
-		return { lineItems: [], allPricesResolved: true };
+		return { lineItems: [], allPricesResolved: true, resolvedPriceIds: [] };
 	}
 
 	const allLineItems: LineItem[] = [];
+	const resolvedPriceIds: string[] = [];
 	let anyMissed = false;
 
 	for (const cusPrice of pricesToCredit) {
@@ -66,6 +68,8 @@ export const invoiceCreditFromStoredLineItems = ({
 			);
 			continue;
 		}
+
+		resolvedPriceIds.push(cusPrice.price.id);
 
 		const currentPeriodRefunds = refundRows.filter(
 			(r) =>
@@ -110,11 +114,12 @@ export const invoiceCreditFromStoredLineItems = ({
 	}
 
 	if (anyMissed && allLineItems.length === 0) {
-		return { lineItems: [], allPricesResolved: false };
+		return { lineItems: [], allPricesResolved: false, resolvedPriceIds };
 	}
 
 	return {
 		lineItems: allLineItems,
 		allPricesResolved: !anyMissed,
+		resolvedPriceIds,
 	};
 };

@@ -36,7 +36,10 @@ export const chargeRowToRefundLineItem = ({
 	});
 
 	const matchingCusPrice = customerProduct.customer_prices.find(
-		(cp) => cp.price.id === chargeRow.price_id,
+		(cp) =>
+			cp.price.id === chargeRow.price_id ||
+			(chargeRow.stripe_price_id != null &&
+				cp.price.config?.stripe_price_id === chargeRow.stripe_price_id),
 	);
 	const price =
 		matchingCusPrice?.price ?? customerProduct.customer_prices[0]?.price;

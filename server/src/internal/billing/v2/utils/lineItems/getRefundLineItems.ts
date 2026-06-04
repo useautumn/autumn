@@ -16,12 +16,15 @@ export const getRefundLineItems = ({
 	priceFilters?: { excludeOneOffPrices?: boolean };
 	billingCycleAnchorMsOverride?: BillingContext["billingCycleAnchorMs"];
 }): LineItem[] => {
-	const { lineItems: matchedCredits, allPricesResolved } =
-		invoiceCreditFromStoredLineItems({
-			ctx,
-			customerProduct,
-			billingContext,
-		});
+	const {
+		lineItems: matchedCredits,
+		allPricesResolved,
+		resolvedPriceIds,
+	} = invoiceCreditFromStoredLineItems({
+		ctx,
+		customerProduct,
+		billingContext,
+	});
 
 	if (allPricesResolved) return matchedCredits;
 
@@ -34,5 +37,9 @@ export const getRefundLineItems = ({
 		billingCycleAnchorMsOverride,
 	});
 
-	return [...matchedCredits, ...catalogCredits];
+	const fallbackCredits = catalogCredits.filter(
+		(li) => !resolvedPriceIds.includes(li.context.price.id),
+	);
+
+	return [...matchedCredits, ...fallbackCredits];
 };

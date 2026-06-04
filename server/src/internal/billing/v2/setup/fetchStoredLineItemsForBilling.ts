@@ -25,29 +25,31 @@ export const fetchStoredLineItemsForBilling = async ({
 		return { storedChargeLineItems: [], storedRefundLineItems: [] };
 	}
 
-	const [chargeResults, refundResults] = await Promise.all([
-		Promise.all(
-			customerProductIds.map((cusProductId) =>
-				invoiceLineItemRepo.getByCustomerProductAndPeriod({
-					db,
-					customerProductId: cusProductId,
-					direction: "charge",
-				}),
-			),
+	const queries = customerProductIds.flatMap((customerProductId) =>
+		(["charge", "refund"] as const).map((direction) => ({
+			customerProductId,
+			direction,
+		})),
+	);
+
+	const results = await Promise.all(
+		queries.map(({ customerProductId, direction }) =>
+			invoiceLineItemRepo.getByCustomerProductAndPeriod({
+				db,
+				customerProductId,
+				direction,
+			}),
 		),
-		Promise.all(
-			customerProductIds.map((cusProductId) =>
-				invoiceLineItemRepo.getByCustomerProductAndPeriod({
-					db,
-					customerProductId: cusProductId,
-					direction: "refund",
-				}),
-			),
-		),
-	]);
+	);
+
+	const allRows = results.flat();
 
 	return {
-		storedChargeLineItems: deduplicateById(chargeResults.flat()),
-		storedRefundLineItems: deduplicateById(refundResults.flat()),
+		storedChargeLineItems: deduplicateById(
+			allRows.filter((row) => row.direction === "charge"),
+		),
+		storedRefundLineItems: deduplicateById(
+			allRows.filter((row) => row.direction === "refund"),
+		),
 	};
 };

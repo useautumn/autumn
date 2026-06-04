@@ -1,6 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import type { DbInvoiceLineItem } from "@autumn/shared";
+import type { BillingContext, DbInvoiceLineItem } from "@autumn/shared";
+import { contexts } from "@tests/utils/fixtures/db/contexts";
+import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
+import { prices } from "@tests/utils/fixtures/db/prices";
 import chalk from "chalk";
+import { invoiceCreditFromStoredLineItems } from "@/internal/billing/v2/utils/lineItems/invoiceCreditFromStoredLineItems";
 import {
 	computeAlreadyRefundedForCharge,
 	computeProratedCredit,
@@ -197,5 +201,68 @@ describe(chalk.yellowBright("splitMultiEntityAmount"), () => {
 		);
 
 		expect(result).toBe(30);
+	});
+});
+
+describe(chalk.yellowBright("invoiceCreditFromStoredLineItems"), () => {
+	const buildMultiPriceContext = ({
+		storedChargeLineItems,
+	}: {
+		storedChargeLineItems: DbInvoiceLineItem[];
+	}) => {
+		const proPrice = prices.createFixed({ id: "price_pro" });
+		const addonPrice = prices.createFixed({ id: "price_addon" });
+		const customerProduct = customerProducts.create({
+			id: "cp_1",
+			customerPrices: [
+				prices.createCustomer({ price: proPrice, customerProductId: "cp_1" }),
+				prices.createCustomer({ price: addonPrice, customerProductId: "cp_1" }),
+			],
+		});
+		const billingContext: BillingContext = {
+			...contexts.createBilling({
+				customerProducts: [customerProduct],
+				currentEpochMs: MID_CYCLE,
+			}),
+			storedChargeLineItems,
+			storedRefundLineItems: [],
+		};
+		return { ctx: contexts.create({}), customerProduct, billingContext };
+	};
+
+	test("does not duplicate credits when only some prices have stored rows", () => {
+		const { ctx, customerProduct, billingContext } = buildMultiPriceContext({
+			storedChargeLineItems: [makeChargeRow({ price_id: "price_pro" })],
+		});
+
+		const result = invoiceCreditFromStoredLineItems({
+			ctx,
+			customerProduct,
+			billingContext,
+		});
+
+		expect(result.allPricesResolved).toBe(false);
+		expect(result.resolvedPriceIds).toEqual(["price_pro"]);
+		expect(result.lineItems).toHaveLength(1);
+		expect(result.lineItems[0].amount).toBeLessThan(0);
+	});
+
+	test("resolves all prices when every price has a stored row", () => {
+		const { ctx, customerProduct, billingContext } = buildMultiPriceContext({
+			storedChargeLineItems: [
+				makeChargeRow({ id: "li_charge_pro", price_id: "price_pro" }),
+				makeChargeRow({ id: "li_charge_addon", price_id: "price_addon" }),
+			],
+		});
+
+		const result = invoiceCreditFromStoredLineItems({
+			ctx,
+			customerProduct,
+			billingContext,
+		});
+
+		expect(result.allPricesResolved).toBe(true);
+		expect(result.resolvedPriceIds).toEqual(["price_pro", "price_addon"]);
+		expect(result.lineItems).toHaveLength(2);
 	});
 });
