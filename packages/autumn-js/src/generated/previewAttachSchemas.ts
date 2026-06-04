@@ -31,6 +31,8 @@ export const previewAttachInvoiceModeSchema = z.object({
 	enabled: z.boolean(),
 	enablePlanImmediately: z.union([z.boolean(), z.undefined()]).optional(),
 	finalize: z.union([z.boolean(), z.undefined()]).optional(),
+	invoiceTemplateId: z.union([z.string(), z.undefined()]).optional(),
+	netTermsDays: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const previewAttachAttachDiscountSchema = z.object({
@@ -313,6 +315,8 @@ export const previewAttachInvoiceModeOutboundSchema = z.object({
 	enabled: z.boolean(),
 	enable_plan_immediately: z.boolean(),
 	finalize: z.boolean(),
+	invoice_template_id: z.union([z.string(), z.undefined()]).optional(),
+	net_terms_days: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const previewAttachAttachDiscountOutboundSchema = z.object({

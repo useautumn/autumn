@@ -1,7 +1,7 @@
-import { log, fatal, sh } from "../helpers/shell.ts";
+import { assertNotProductionDb } from "../../../server/src/db/dbUtils.ts";
 import { getCurrentWorktree } from "../helpers/git.ts";
 import { loadRegistry } from "../helpers/registry.ts";
-import { assertNotProductionDb } from "../../../server/src/db/dbUtils.ts";
+import { fatal, log, sh } from "../helpers/shell.ts";
 
 const UPDATE_SQL = `UPDATE "user" SET role = 'admin';`;
 
@@ -16,7 +16,7 @@ function describeTarget(url: string): string {
 // Sets the better-auth global role to 'admin' for every user in the current
 // worktree's DB, which grants the superuser scope locally. Org membership
 // roles (the `member` table) are intentionally left untouched.
-export function cmdMakeAdmin(): void {
+export function cmdAdmin(): void {
 	const cwd = getCurrentWorktree();
 	const entry = loadRegistry()[cwd];
 	const url = entry?.databaseUrl || process.env.DATABASE_URL || "";
