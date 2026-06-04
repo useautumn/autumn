@@ -15,12 +15,14 @@ import {
 	useIsAttachingProduct,
 	useSheetStore,
 } from "@/hooks/stores/useSheetStore";
+import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { cn } from "@/lib/utils";
 
 export function AttachProductSheetTrigger() {
 	const { setSheet } = useSheetStore();
 	const isAttachingProduct = useIsAttachingProduct();
-	const hasSchedule = useHasSchedule();
+	const { entityId } = useEntity();
+	const hasSchedule = useHasSchedule({ entityId });
 
 	const handleAttachClick = () => {
 		setSheet({ type: "attach-product" });

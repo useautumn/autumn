@@ -45,10 +45,13 @@ test("previews and creates an entity-scoped expiring credit grant", async () => 
 		},
 	});
 
-	await generate([
-		"Looking to give entity ent_689d243e2c03da31e0ac90d0 on customer cus_687672c4c0d36fa5679f8c7a 50k credits on the credits feature that expire in 2 months. Can you set that up in Autumn?",
-		"These should not be permanent credits.",
-	], 6);
+	await generate(
+		[
+			"Looking to give entity ent_689d243e2c03da31e0ac90d0 on customer cus_687672c4c0d36fa5679f8c7a 50k credits on the credits feature that expire in 2 months. Can you set that up in Autumn?",
+			"These should not be permanent credits.",
+		],
+		6,
+	);
 
 	expectToolCall(toolCalls, "previewCreateBalance", expectedGrant);
 	expectNoApiCall(api, "createBalance");

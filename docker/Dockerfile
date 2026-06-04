@@ -29,6 +29,7 @@ COPY packages/atmn/package.json packages/atmn/
 COPY packages/atmn-tests/package.json packages/atmn-tests/
 COPY packages/autumn-js/package.json packages/autumn-js/
 COPY packages/ksuid/package.json packages/ksuid/
+COPY packages/logging/package.json packages/logging/
 COPY packages/mcp/package.json packages/mcp/
 COPY packages/openapi/package.json packages/openapi/
 COPY packages/sdk/package.json packages/sdk/

@@ -69,10 +69,7 @@ function SheetPortal({
 	);
 }
 
-function SheetOverlay({
-	className,
-	...props
-}: SheetPrimitive.Backdrop.Props) {
+function SheetOverlay({ className, ...props }: SheetPrimitive.Backdrop.Props) {
 	return (
 		<SheetPrimitive.Backdrop
 			data-slot="sheet-overlay"
@@ -86,10 +83,12 @@ function SheetOverlay({
 }
 
 const SIDE_STYLES = {
-	right: "top-0 bottom-0 right-0 w-full md:min-w-xs md:max-w-md md:border-l border-border/40 translate-x-0 data-[starting-style]:translate-x-full data-[ending-style]:translate-x-full",
+	right:
+		"top-0 bottom-0 right-0 w-full md:top-2 md:bottom-2 md:right-3 md:min-w-xs md:max-w-md md:rounded-2xl md:border md:border-border/40 translate-x-0 data-[starting-style]:translate-x-full data-[ending-style]:translate-x-full",
 	left: "top-0 bottom-0 left-0 w-3/4 border-r border-border/40 sm:max-w-sm translate-x-0 data-[starting-style]:-translate-x-full data-[ending-style]:-translate-x-full",
 	top: "left-0 right-0 top-0 h-auto border-b border-border/40 translate-y-0 data-[starting-style]:-translate-y-full data-[ending-style]:-translate-y-full",
-	bottom: "left-0 right-0 bottom-0 h-auto border-t border-border/40 translate-y-0 data-[starting-style]:translate-y-full data-[ending-style]:translate-y-full",
+	bottom:
+		"left-0 right-0 bottom-0 h-auto border-t border-border/40 translate-y-0 data-[starting-style]:translate-y-full data-[ending-style]:translate-y-full",
 } as const;
 
 function SheetContent({
@@ -110,7 +109,7 @@ function SheetContent({
 			<SheetPrimitive.Popup
 				data-slot="sheet-content"
 				className={cn(
-					"bg-card fixed z-[150] flex flex-col gap-0 shadow-sm overflow-hidden transition-transform duration-300 ease-in-out",
+					"bg-card fixed z-[150] flex flex-col gap-0 overflow-hidden transition-transform duration-300 ease-in-out",
 					SIDE_STYLES[side],
 					className,
 				)}
@@ -148,10 +147,7 @@ function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
 	);
 }
 
-function SheetTitle({
-	className,
-	...props
-}: SheetPrimitive.Title.Props) {
+function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
 	return (
 		<SheetPrimitive.Title
 			data-slot="sheet-title"

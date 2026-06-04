@@ -1,11 +1,11 @@
 import { describe, expect, test } from "bun:test";
-import type { AutumnMcpAuth } from "../../../../src/mcp-server/agent/auth.js";
 import {
 	claimLatestPendingAction,
 	clearPendingActions,
 	createPendingAction,
 	setPendingActionsRedis,
-} from "../../../../src/mcp-server/agent/pending-actions.js";
+} from "../../../../src/agent/pending-actions.js";
+import type { AutumnMcpAuth } from "../../../../src/server/auth/auth.js";
 import { createTestRedis } from "../../../utils/test-redis.js";
 
 setPendingActionsRedis(createTestRedis());
@@ -38,7 +38,9 @@ describe("pending billing actions", () => {
 				plan_id: "pro",
 			},
 		});
-		await expect(claimLatestPendingAction(auth())).rejects.toThrow("No pending");
+		await expect(claimLatestPendingAction(auth())).rejects.toThrow(
+			"No pending",
+		);
 	});
 
 	test("claims the latest matching action without exposing tokens", async () => {
@@ -75,11 +77,11 @@ describe("pending billing actions", () => {
 			claimLatestPendingAction(auth()),
 		]);
 
-		expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(
-			1,
-		);
-		expect(results.filter((result) => result.status === "rejected")).toHaveLength(
-			1,
-		);
+		expect(
+			results.filter((result) => result.status === "fulfilled"),
+		).toHaveLength(1);
+		expect(
+			results.filter((result) => result.status === "rejected"),
+		).toHaveLength(1);
 	});
 });

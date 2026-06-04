@@ -20,7 +20,7 @@ export function AuthBackground({ children }: AuthBackgroundProps) {
 					aria-hidden="true"
 					className="absolute inset-0 w-full h-full object-cover"
 				/>
-				<div className="absolute inset-0 bg-black/50" aria-hidden="true" />
+				<div className="absolute inset-0 dark:bg-black/50" aria-hidden="true" />
 				<div className="absolute inset-0 flex items-end p-8">
 					<AutumnWordmark className="h-7 w-auto text-white/80" />
 				</div>

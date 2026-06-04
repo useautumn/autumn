@@ -1,19 +1,24 @@
 export {
-	createAskAutumnMCPServer,
-	createAutumnOperationsMCPServer,
-	createMCPServer,
-} from "./mcp-server/agent/server.js";
+	type AnalyticsSink,
+	createAxiomAnalyticsSink,
+	getAnalyticsSink,
+	isAnalyticsEnabled,
+	type McpAnalyticsEvent,
+	type McpAnalyticsSurface,
+	setAnalyticsSink,
+} from "./analytics/index.js";
 export {
 	type ConsoleLogger,
 	type ConsoleLoggerLevel,
 	consoleLoggerLevels,
 	createConsoleLogger,
-} from "./mcp-server/console-logger.js";
-export type { MCPServerFlags } from "./mcp-server/flags.js";
+} from "./console-logger.js";
 export {
 	buildAuthForRequest,
 	getAuthorizationServerMetadata,
 	getProtectedResourceMetadata,
 	type OAuthEnvironment,
 	OAuthHttpError,
-} from "./mcp-server/oauth.js";
+} from "./server/auth/oauth.js";
+export type { MCPServerFlags } from "./server/flags.js";
+export { createAutumnOperationsMCPServer } from "./server/server.js";

@@ -2,11 +2,11 @@
 
 import { AppEnv, ProcessorType } from "@autumn/shared";
 import { ClockIcon } from "@phosphor-icons/react";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { Link } from "react-router";
 import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
+import { SheetBackdrop } from "@/components/v2/sheets/SheetBackdrop";
 import {
 	Tooltip,
 	TooltipContent,
@@ -206,24 +206,12 @@ export default function CustomerView2() {
 							</div>
 						</div>
 					</div>
-					{!isMobile &&
-						createPortal(
-							<AnimatePresence>
-								{sheetType && !isInlineEditorOpen && (
-									<motion.div
-										initial={{ opacity: 0 }}
-										animate={{ opacity: 1 }}
-										exit={{ opacity: 0 }}
-										className="fixed inset-0 bg-white/60 dark:bg-black/60"
-										style={{ zIndex: 40 }}
-										onMouseDown={() => {
-											closeProductSheet();
-										}}
-									/>
-								)}
-							</AnimatePresence>,
-							document.body,
-						)}
+					{!isMobile && (
+						<SheetBackdrop
+							isOpen={!!sheetType && !isInlineEditorOpen}
+							onClose={closeProductSheet}
+						/>
+					)}
 				</motion.div>
 
 				<CustomerSheets />
