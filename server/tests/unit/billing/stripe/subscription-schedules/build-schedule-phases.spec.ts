@@ -144,7 +144,7 @@ describe(
 				// Phase 2: Pro
 				expect(phases[1].start_date).toBe(msToSeconds(proStartMs));
 				expect(phases[1].end_date).toBeUndefined();
-				expect(phases[1].proration_behavior).toBeUndefined();
+				expect(phases[1].proration_behavior).toBe("always_invoice");
 				expectPhaseItems(phases[1].items!, getStripePriceIds(pro));
 			});
 
