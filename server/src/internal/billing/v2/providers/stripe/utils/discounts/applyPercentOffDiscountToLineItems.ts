@@ -70,12 +70,10 @@ export const applyPercentOffDiscountToLineItems = ({
 
 		const existingDiscounts = item.discounts ?? [];
 
-		// Discounts only apply to charges (refunds filtered by discountAppliesToLineItem)
-		// Cap at 0 to prevent negative charges
-		const amountAfterDiscounts = Math.max(
-			new Decimal(currentAmount).minus(itemDiscount).toNumber(),
-			0,
-		);
+		const isProrationCredit = item.context.direction === "refund";
+		const amountAfterDiscounts = isProrationCredit
+			? Math.min(new Decimal(currentAmount).plus(itemDiscount).toNumber(), 0)
+			: Math.max(new Decimal(currentAmount).minus(itemDiscount).toNumber(), 0);
 
 		const description = item.context.discountable
 			? item.description // if discountable, stripe applies discount, don't need our own tag
