@@ -39,11 +39,15 @@ export const handleAttachV2Errors = async ({
 	const { autumn: autumnBillingPlan } = billingPlan;
 
 	// 1.1. External PSP errors (RevenueCat)
-	handleExternalPSPErrors({
-		customerProducts: billingContext.fullCustomer.customer_products,
-		attachProduct: billingContext.attachProduct,
-		action: "attach",
-	});
+	// Skipped when the caller IS the external PSP origin (e.g. the RevenueCat
+	// webhook handler attaching onto its own RC-managed customer).
+	if (!billingContext.skipExternalPSPGuard) {
+		handleExternalPSPErrors({
+			customerProducts: billingContext.fullCustomer.customer_products,
+			attachProduct: billingContext.attachProduct,
+			action: "attach",
+		});
+	}
 
 	// 1.2. Custom Payment Method errors (Vercel)
 	handleCustomPaymentMethodErrorsV2({ billingContext });

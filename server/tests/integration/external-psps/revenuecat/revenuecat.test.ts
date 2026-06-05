@@ -30,8 +30,9 @@ import { timeout } from "@tests/utils/genUtils";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { RCMappingService } from "@/external/revenueCat/misc/RCMappingService";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { OrgService } from "@/internal/orgs/OrgService";
@@ -43,6 +44,24 @@ import {
 import { TestFeature } from "@tests/setup/v2Features";
 
 const RC_WEBHOOK_SECRET = "test_rc_webhook_secret_12345";
+
+const rcProMonthly = ({ id = "pro-monthly" }: { id?: string } = {}) =>
+	products.base({
+		id,
+		items: [
+			items.monthlyMessages({ includedUsage: 100 }),
+			items.monthlyPrice({ price: 10 }),
+		],
+	});
+
+const rcProYearly = ({ id = "pro-yearly" }: { id?: string } = {}) =>
+	products.base({
+		id,
+		items: [
+			items.monthlyMessages({ includedUsage: 1000 }),
+			items.annualPrice({ price: 1000 }),
+		],
+	});
 
 const setupRevenueCatOrg = async () => {
 	if (
@@ -69,6 +88,32 @@ const setupRevenueCatOrg = async () => {
 	}
 };
 
+// This test reuses fixed customer + transaction ids. RC invoices upsert by stripe_id
+// WITHOUT repointing internal_customer_id, so a prior run leaves orphaned invoice rows
+// that make the freshly-created customer read 0 invoices. Clear those by stripe_id, and
+// bust the customers' cached full-customer entries so the re-created customers are clean
+// (s.deleteCustomer + s.customer in setup handle the DB rows).
+const INVOICE_TEST_CUSTOMER_IDS = ["rc-invoices-1", "rc-invoices-nonrenewing-1"];
+const INVOICE_TEST_TX_IDS = [
+	"rc3_tx_initial_001",
+	"rc3_tx_renewal_002",
+	"rc3_tx_nonrenewing_001",
+];
+
+const clearInvoiceTestData = async () => {
+	await ctx.db
+		.delete(invoices)
+		.where(inArray(invoices.stripe_id, INVOICE_TEST_TX_IDS));
+
+	for (const customerId of INVOICE_TEST_CUSTOMER_IDS) {
+		await deleteCachedFullCustomer({
+			ctx,
+			customerId,
+			source: "revenuecat-test-cleanup",
+		}).catch(() => {});
+	}
+};
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: RevenueCat webhook lifecycle (purchase, upgrade, cancel, expire, add-on)
 // (from revenuecat-webhooks.test.ts)
@@ -87,9 +132,8 @@ test.concurrent(`${chalk.yellowBright("revenuecat 1: webhook lifecycle")}`, asyn
 	const RC_ADD_ON_ID = "com.app.rc1_add_on_pack";
 
 	// Autumn products
-	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
-	const proMonthly = products.pro({ id: "pro-monthly", items: [messagesItem] });
-	const proYearly = products.proAnnual({ id: "pro-yearly", items: [items.monthlyMessages({ includedUsage: 1000 })] });
+	const proMonthly = rcProMonthly();
+	const proYearly = rcProYearly();
 	const addOnPack = products.base({
 		id: "add-on",
 		items: [items.lifetimeMessages({ includedUsage: 100 })],
@@ -427,6 +471,10 @@ test.concurrent(`${chalk.yellowBright("revenuecat 2: customer migration v1 to v2
 test.concurrent(
 	`${chalk.yellowBright("revenuecat 3: writes invoice rows for INITIAL_PURCHASE / RENEWAL / NON_RENEWING_PURCHASE, refunds existing invoice for CANCELLATION-as-refund")}`,
 	async () => {
+		// Clear stale invoices/customers from prior runs (fixed ids + invoice
+		// upsert-by-stripe_id leave orphans that otherwise make this read 0 invoices).
+		await clearInvoiceTestData();
+
 		const customerId = "rc-invoices-1";
 		const nonRenewingCustomerId = "rc-invoices-nonrenewing-1";
 
@@ -448,6 +496,7 @@ test.concurrent(
 		const { autumnV1, autumnV2_1 } = await initScenario({
 			customerId,
 			setup: [
+				s.deleteCustomer({ customerId }),
 				s.customer({ testClock: false }),
 				s.products({ list: [proMonthly, addOnPack] }),
 			],
@@ -457,7 +506,10 @@ test.concurrent(
 		// Initialize the second (non-renewing) customer in the same scenario context
 		await initScenario({
 			customerId: nonRenewingCustomerId,
-			setup: [s.customer({ testClock: false })],
+			setup: [
+				s.deleteCustomer({ customerId: nonRenewingCustomerId }),
+				s.customer({ testClock: false }),
+			],
 			actions: [],
 		});
 
@@ -491,7 +543,10 @@ test.concurrent(
 		// ─── Assertion 1: INITIAL_PURCHASE writes an invoice row ────────────────
 		const initialTxId = "rc3_tx_initial_001";
 		const initialPrice = 9.99;
-		const initialCurrency = "usd";
+		// RevenueCat's `price` is normalized to USD; `currency` describes the
+		// purchase currency only. A non-USD purchase must still record total in
+		// USD with currency "usd" (regression: INR-labeled USD amounts).
+		const initialCurrency = "inr";
 		const initialPurchasedAt = Date.now();
 
 		expectWebhookSuccess(
@@ -513,7 +568,7 @@ test.concurrent(
 		const initialInvoiceV1 = v1Customer.invoices![0]!;
 		expect(initialInvoiceV1.stripe_id).toBe(initialTxId);
 		expect(initialInvoiceV1.total).toBe(initialPrice);
-		expect(initialInvoiceV1.currency).toBe(initialCurrency);
+		expect(initialInvoiceV1.currency).toBe("usd");
 		expect(initialInvoiceV1.status).toBe("paid");
 
 		// V5 fetch exposes processor_type
@@ -529,7 +584,7 @@ test.concurrent(
 		expect(initialInvoiceV5.processor_type).toBe(ProcessorType.RevenueCat);
 		expect(initialInvoiceV5.stripe_id).toBe(initialTxId);
 		expect(initialInvoiceV5.total).toBe(initialPrice);
-		expect(initialInvoiceV5.currency).toBe(initialCurrency);
+		expect(initialInvoiceV5.currency).toBe("usd");
 		expect(initialInvoiceV5.status).toBe("paid");
 
 		// ─── Assertion 2: RENEWAL with new transaction_id writes a second row ──
@@ -654,5 +709,7 @@ test.concurrent(
 				expect(inv.processor_type).toBe(ProcessorType.RevenueCat);
 			}
 		}
+
+		await clearInvoiceTestData();
 	},
 );

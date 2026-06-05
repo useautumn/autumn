@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { InternalError } from "@autumn/shared";
+import { AppEnv, InternalError } from "@autumn/shared";
 import { CacheManager } from "../../../../utils/cacheUtils/CacheManager";
 
 const STATE_KEY_PREFIX = "oauth_state:";
@@ -7,9 +7,14 @@ const STATE_EXPIRY_SECONDS = 10 * 60; // 10 minutes
 
 type OAuthState = {
 	organization_slug: string;
-	env: "test" | "live";
+	env: AppEnv;
 	redirect_uri: string;
 	master_org_id: string | null; // null for standard flow, string for platform flow
+	code_verifier?: string;
+	provider?: "stripe" | "revenuecat";
+	revenuecat_project_name?: string;
+	// true for the API-key → OAuth migration flow
+	migration?: boolean;
 };
 
 /**
@@ -21,11 +26,19 @@ export const generateOAuthState = async ({
 	env,
 	redirectUri,
 	masterOrgId,
+	codeVerifier,
+	provider,
+	revenuecatProjectName,
+	migration,
 }: {
 	organizationSlug: string;
-	env: "test" | "live";
+	env: AppEnv;
 	redirectUri: string;
 	masterOrgId: string | null;
+	codeVerifier?: string;
+	provider?: "stripe" | "revenuecat";
+	revenuecatProjectName?: string;
+	migration?: boolean;
 }): Promise<string> => {
 	const maxAttempts = 3;
 
@@ -40,6 +53,12 @@ export const generateOAuthState = async ({
 			env,
 			redirect_uri: redirectUri,
 			master_org_id: masterOrgId,
+			...(codeVerifier ? { code_verifier: codeVerifier } : {}),
+			...(provider ? { provider } : {}),
+			...(revenuecatProjectName
+				? { revenuecat_project_name: revenuecatProjectName }
+				: {}),
+			...(migration ? { migration: true } : {}),
 		};
 
 		// Check if key exists first

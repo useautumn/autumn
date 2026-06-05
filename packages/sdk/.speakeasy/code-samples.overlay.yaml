@@ -963,6 +963,81 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/platform.get_revenuecat_keys"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.platform.getRevenueCatKeys({
+                organizationSlug: "acme",
+                env: "test",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/platform.link_revenuecat"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.platform.linkRevenueCat({
+                organizationSlug: "acme",
+                env: "test",
+                projectName: "acme-mobile",
+                redirectUrl: "https://dashboard.useautumn.com/dev?tab=revenuecat",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/platform.sync_revenuecat"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.platform.syncRevenueCat({
+                organizationSlug: "acme",
+                env: "test",
+                productIds: [
+                  "pro",
+                  "premium",
+                ],
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/referrals.create_code"]["post"]
     update:
       x-codeSamples:

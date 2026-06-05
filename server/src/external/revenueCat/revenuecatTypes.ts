@@ -146,11 +146,144 @@ export type RevenueCatProduct = {
 	created_at: number;
 	app_id: string;
 	display_name: string;
+	state?: string;
 };
 
 export type RevenueCatProductsResponse = {
 	object: "list";
 	items: RevenueCatProduct[];
+	next_page: string | null;
+	url: string;
+};
+
+export type RevenueCatPrice = {
+	id: string;
+	amount_micros: number;
+	currency: string;
+};
+
+export type RevenueCatPublicApiKey = {
+	object?: string;
+	id: string;
+	key: string;
+	environment?: string;
+	app_id?: string;
+	created_at?: number;
+};
+
+export type RevenueCatPublicApiKeysResponse = {
+	object: "list";
+	items: RevenueCatPublicApiKey[];
+	next_page: string | null;
+	url: string;
+};
+
+export type RevenueCatWebhookEnvironment = "production" | "sandbox";
+
+export type RevenueCatWebhookIntegration = {
+	object?: string;
+	id: string;
+	project_id?: string;
+	name: string;
+	url: string;
+	environment?: RevenueCatWebhookEnvironment | null;
+	event_types?: string[] | null;
+	app_id?: string | null;
+	created_at?: number;
+};
+
+export type RevenueCatCreateWebhookBody = {
+	name: string;
+	url: string;
+	authorization_header?: string;
+	environment?: RevenueCatWebhookEnvironment | null;
+	event_types?: string[] | null;
+	app_id?: string | null;
+};
+
+export type RevenueCatWebhooksResponse = {
+	object: "list";
+	items: RevenueCatWebhookIntegration[];
+	next_page: string | null;
+	url: string;
+};
+
+export type RevenueCatProductType = "subscription" | "one_time";
+
+export type RevenueCatCreateProductBody = {
+	store_identifier: string;
+	app_id: string;
+	type: RevenueCatProductType;
+	display_name: string;
+	// Required by Test Store apps ("user-facing title"); harmless for store apps.
+	title?: string;
+	// ISO-8601 duration (e.g. "P1M", "P1Y"). Required when type is "subscription".
+	subscription?: { duration: string };
+	one_time?: { is_consumable?: boolean };
+};
+
+export type RevenueCatUpdateProductBody = {
+	display_name?: string;
+};
+
+// create_in_store uses an enum duration (NOT the ISO-8601 one createProduct uses).
+export type RevenueCatStoreDuration =
+	| "ONE_WEEK"
+	| "ONE_MONTH"
+	| "TWO_MONTHS"
+	| "THREE_MONTHS"
+	| "SIX_MONTHS"
+	| "ONE_YEAR";
+
+export type RevenueCatCreateInStoreBody = {
+	store_information?: {
+		duration: RevenueCatStoreDuration;
+		subscription_group_name: string;
+		subscription_group_id?: string;
+	};
+};
+
+export type RevenueCatAppStoreType =
+	| "app_store"
+	| "mac_app_store"
+	| "play_store"
+	| "amazon"
+	| "roku"
+	| "stripe"
+	| "paddle"
+	| "rc_billing"
+	| "test_store";
+
+export type RevenueCatApp = {
+	object: "app";
+	id: string;
+	name: string;
+	type: RevenueCatAppStoreType;
+	project_id: string;
+	created_at: number;
+};
+
+export type RevenueCatAppsResponse = {
+	object: "list";
+	items: RevenueCatApp[];
+	next_page: string | null;
+	url: string;
+};
+
+export type RevenueCatProject = {
+	object: "project";
+	id: string;
+	name: string;
+	created_at: number;
+};
+
+export type RevenueCatCreateProjectBody = {
+	name: string;
+};
+
+export type RevenueCatProjectsResponse = {
+	object: "list";
+	items: RevenueCatProject[];
 	next_page: string | null;
 	url: string;
 };

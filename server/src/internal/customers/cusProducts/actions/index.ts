@@ -8,6 +8,7 @@ import {
 	getExpiredCustomerProductsCache,
 	setExpiredCustomerProductsCache,
 } from "./expiredCache";
+import { markCustomerProductActive } from "./markCustomerProductActive";
 import { markCustomerProductPastDue } from "./markCustomerProductPastDue";
 import { preserveOneOffPrepaidCarryOvers } from "./preserveOneOffPrepaidCarryOvers";
 import { uncancelCustomerProduct } from "./uncancelCustomerProduct";
@@ -31,6 +32,9 @@ export const customerProductActions = {
 
 	/** Marks a customer product as past due and sends a PastDue webhook */
 	markPastDue: markCustomerProductPastDue,
+
+	/** Marks a customer product as active (e.g. recovery from past-due); webhook gated by sendWebhook flag */
+	markActive: markCustomerProductActive,
 
 	/**
 	 * Persists remaining one-off prepaid balances as lifetime cusEnts before
