@@ -1,0 +1,79 @@
+---
+title: "Get Revenue Cat Keys"
+openapi: "openapi POST /v1/platform.get_revenuecat_keys"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="organization_slug" type="string" required />
+
+<DynamicParamField body="env" type="'test' | 'sandbox' | 'live'" required>
+  "test" and "sandbox" both target the sandbox environment
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="apps" type="object[]">
+  <Expandable title="properties">
+    <DynamicResponseField name="app_id" type="string" />
+
+    <DynamicResponseField name="app_type" type="string">
+      RevenueCat store type, e.g. test_store / app_store / play_store
+    </DynamicResponseField>
+
+    <DynamicResponseField name="name" type="string" />
+
+    <DynamicResponseField name="api_keys" type="object[]">
+      <Expandable title="properties">
+        <DynamicResponseField name="id" type="string" />
+
+        <DynamicResponseField name="key" type="string">
+          The public SDK API key value
+        </DynamicResponseField>
+
+        <DynamicResponseField name="environment" type="string | null">
+          e.g. "production" / "sandbox"
+        </DynamicResponseField>
+
+        <DynamicResponseField name="app_id" type="string | null" />
+
+        <DynamicResponseField name="created_at" type="number" />
+
+      </Expandable>
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="oauth_access_token" type="string | null">
+  Freshly-refreshed RevenueCat OAuth access token for the org (null for api-key orgs). The refresh token is never exposed — call this endpoint again for a new access token.
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "apps": [
+    {
+      "app_id": "app1a2b3c4d",
+      "app_type": "test_store",
+      "name": "Acme (Test Store)",
+      "api_keys": [
+        {
+          "id": "apikey12345",
+          "key": "test_aBcDeFgHiJkLmNoPqRsTuVwXyZ",
+          "environment": "production",
+          "app_id": "app1a2b3c4"
+        }
+      ]
+    }
+  ],
+  "oauth_access_token": "atk_aBcDeFgHiJkLmNoPqRsTuVwXyZ"
+}
+```
+</ResponseExample>

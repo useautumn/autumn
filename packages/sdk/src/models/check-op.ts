@@ -438,7 +438,7 @@ export type Properties2 = {
   updateable?: boolean | null | undefined;
 };
 
-export type Product2 = {
+export type CheckProduct2 = {
   /**
    * The ID of the product you set when creating the product
    */
@@ -521,7 +521,7 @@ export type Preview2 = {
   /**
    * Products that would grant access to this feature. Use to display upgrade options.
    */
-  products: Array<Product2>;
+  products: Array<CheckProduct2>;
 };
 
 /**
@@ -930,7 +930,7 @@ export type Properties1 = {
   updateable?: boolean | null | undefined;
 };
 
-export type Product1 = {
+export type CheckProduct1 = {
   /**
    * The ID of the product you set when creating the product
    */
@@ -1013,7 +1013,7 @@ export type Preview1 = {
   /**
    * Products that would grant access to this feature. Use to display upgrade options.
    */
-  products: Array<Product1>;
+  products: Array<CheckProduct1>;
 };
 
 /**
@@ -1520,7 +1520,10 @@ export function properties2FromJSON(
 }
 
 /** @internal */
-export const Product2$inboundSchema: z.ZodMiniType<Product2, unknown> = z.pipe(
+export const CheckProduct2$inboundSchema: z.ZodMiniType<
+  CheckProduct2,
+  unknown
+> = z.pipe(
   z.object({
     id: types.string(),
     name: types.string(),
@@ -1548,13 +1551,13 @@ export const Product2$inboundSchema: z.ZodMiniType<Product2, unknown> = z.pipe(
   }),
 );
 
-export function product2FromJSON(
+export function checkProduct2FromJSON(
   jsonString: string,
-): SafeParseResult<Product2, SDKValidationError> {
+): SafeParseResult<CheckProduct2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Product2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Product2' from JSON`,
+    (x) => CheckProduct2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckProduct2' from JSON`,
   );
 }
 
@@ -1566,7 +1569,7 @@ export const Preview2$inboundSchema: z.ZodMiniType<Preview2, unknown> = z.pipe(
     message: types.string(),
     feature_id: types.string(),
     feature_name: types.string(),
-    products: z.array(z.lazy(() => Product2$inboundSchema)),
+    products: z.array(z.lazy(() => CheckProduct2$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -2014,7 +2017,10 @@ export function properties1FromJSON(
 }
 
 /** @internal */
-export const Product1$inboundSchema: z.ZodMiniType<Product1, unknown> = z.pipe(
+export const CheckProduct1$inboundSchema: z.ZodMiniType<
+  CheckProduct1,
+  unknown
+> = z.pipe(
   z.object({
     id: types.string(),
     name: types.string(),
@@ -2042,13 +2048,13 @@ export const Product1$inboundSchema: z.ZodMiniType<Product1, unknown> = z.pipe(
   }),
 );
 
-export function product1FromJSON(
+export function checkProduct1FromJSON(
   jsonString: string,
-): SafeParseResult<Product1, SDKValidationError> {
+): SafeParseResult<CheckProduct1, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Product1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Product1' from JSON`,
+    (x) => CheckProduct1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckProduct1' from JSON`,
   );
 }
 
@@ -2060,7 +2066,7 @@ export const Preview1$inboundSchema: z.ZodMiniType<Preview1, unknown> = z.pipe(
     message: types.string(),
     feature_id: types.string(),
     feature_name: types.string(),
-    products: z.array(z.lazy(() => Product1$inboundSchema)),
+    products: z.array(z.lazy(() => CheckProduct1$inboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
