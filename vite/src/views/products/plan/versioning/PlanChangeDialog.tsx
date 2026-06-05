@@ -6,8 +6,10 @@ import { toast } from "sonner";
 import { PlanItemsSection } from "@/components/forms/shared";
 import { getProductPriceDisplay } from "@/components/forms/update-subscription-v2/components/PriceDisplay";
 import { Switch } from "@/components/ui/switch";
+import { Button } from "@/components/v2/buttons/Button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
+import { Input } from "@/components/v2/inputs/Input";
 import {
 	Dialog,
 	DialogContent,
@@ -16,7 +18,6 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
-import { Input } from "@/components/v2/inputs/Input";
 import { RadioGroup } from "@/components/v2/radio-groups/RadioGroup";
 import { AreaRadioGroupItem } from "@/components/v2/radio-groups/AreaRadioGroupItem";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -36,7 +37,38 @@ import {
 	type MigrationScope,
 } from "./buildMigrationDraft";
 
-type MigrationChoice = "keep" | MigrationScope;
+type VersionChoice = "new" | "update";
+
+function ConfirmInput({
+	productId,
+	value,
+	onChange,
+}: {
+	productId: string;
+	value: string;
+	onChange: (value: string) => void;
+}) {
+	return (
+		<div className="flex flex-col gap-2">
+			<div className="flex items-center gap-1 flex-wrap">
+				<span>Type</span>
+				<MiniCopyButton
+					text={productId}
+					innerClassName="font-mono font-bold text-foreground"
+					iconClassName="opacity-100 text-muted-foreground hover:text-foreground transition-colors"
+				/>
+				<span>to continue.</span>
+			</div>
+			<Input
+				value={value}
+				onChange={(e) => onChange(e.target.value)}
+				type="text"
+				placeholder={productId}
+				className="w-full"
+			/>
+		</div>
+	);
+}
 
 function usePriceChange(
 	baseProduct: FrontendProduct | null,
@@ -91,24 +123,33 @@ export default function PlanChangeDialog({
 	const setBaseProduct = useProductStore((s) => s.setBaseProduct);
 	const setProduct = useProductStore((s) => s.setProduct);
 	const { features = [] } = useFeaturesQuery();
-	const { refetch } = useProductQuery();
+	const { refetch, numVersions, versionCounts } = useProductQuery();
 	const { setQueryStates } = useProductQueryState();
 	const { invalidate: invalidateProducts } = useProductsQuery();
 	const { createMigration, invalidate: invalidateMigrations } =
 		useMigrationsQuery();
 	const { org } = useOrg();
 
+	const [step, setStep] = useState<1 | 2>(1);
+	const [versionChoice, setVersionChoice] = useState<VersionChoice>("new");
+	const [migrationScope, setMigrationScope] =
+		useState<MigrationScope>("all_customers");
+	const [includeCustom, setIncludeCustom] = useState(false);
 	const [confirmText, setConfirmText] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
-	const [createVersion, setCreateVersion] = useState(true);
-	const [migrationChoice, setMigrationChoice] =
-		useState<MigrationChoice>("keep");
+
+	const confirmed = confirmText === product.id;
 
 	const currency = org?.default_currency ?? "USD";
 	const priceChange = usePriceChange(baseProduct, product, currency);
-	const { products } = useProductsQuery();
-	const latestVersion = products.find((p) => p.id === product.id)?.version;
-	const hasMultipleVersions = (latestVersion ?? 1) > 1;
+	const hasMultipleVersions = (numVersions ?? 1) > 1;
+
+	const customCount = useMemo(() => {
+		return Object.values(versionCounts).reduce(
+			(sum, vc) => sum + (vc.custom ?? 0),
+			0,
+		);
+	}, [versionCounts]);
 
 	const hasChanges = useMemo(() => {
 		if (!baseProduct || features.length === 0) return false;
@@ -120,21 +161,12 @@ export default function PlanChangeDialog({
 		return !same;
 	}, [baseProduct, product, features]);
 
-	const confirmed = confirmText === product.id;
-
-	let effectiveMigrationScope: MigrationScope | null;
-	if (migrationChoice !== "keep") {
-		effectiveMigrationScope = migrationChoice;
-	} else {
-		effectiveMigrationScope = createVersion ? null : "this_version";
-	}
-
-	const willCreateMigration = effectiveMigrationScope !== null;
-
 	const resetState = () => {
+		setStep(1);
+		setVersionChoice("new");
+		setMigrationScope("all_customers");
+		setIncludeCustom(false);
 		setConfirmText("");
-		setCreateVersion(true);
-		setMigrationChoice("keep");
 	};
 
 	const syncToLatestVersion = async () => {
@@ -151,47 +183,60 @@ export default function PlanChangeDialog({
 		if (baseProduct) setProduct(baseProduct);
 	};
 
-	const handleSave = async () => {
+	const handleStep1Action = async () => {
 		if (!confirmed) {
 			toast.error("Confirmation text is incorrect");
 			return;
 		}
+
+		if (versionChoice === "update") {
+			setStep(2);
+			return;
+		}
+
+		setIsLoading(true);
+		try {
+			const result = await updateProduct({
+				axiosInstance,
+				productId: product.id,
+				product,
+				version: product.version,
+				onSuccess: async () => {
+					invalidateProducts();
+				},
+			});
+
+			if (!result) return;
+			markSaved();
+			toast.success("New version created");
+			setOpen(false);
+			resetState();
+			syncToLatestVersion();
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to save plan"));
+		} finally {
+			setIsLoading(false);
+		}
+	};
+
+	const handleStep2Action = async () => {
 		if (!baseProduct) return;
 
 		setIsLoading(true);
-
 		try {
-			if (createVersion) {
-				const result = await updateProduct({
-					axiosInstance,
-					productId: product.id,
-					product,
-					version: product.version,
-					onSuccess: async () => {
-						invalidateProducts();
-					},
-				});
-
-				if (!result) return;
-				markSaved();
-			} else {
-				discardEdits();
-			}
-
-			if (!effectiveMigrationScope) {
-				toast.success("New version created");
-				setOpen(false);
-				resetState();
-				syncToLatestVersion();
-				return;
-			}
+			const scope = hasMultipleVersions
+				? migrationScope
+				: "this_version";
 
 			const draft = buildMigrationDraft({
 				baseProduct,
 				editedProduct: product,
 				features,
-				scope: effectiveMigrationScope,
+				scope,
+				includeCustom,
 			});
+
+			discardEdits();
 
 			const migration = await createMigration({
 				id: draft.id,
@@ -201,12 +246,7 @@ export default function PlanChangeDialog({
 			});
 
 			await invalidateMigrations();
-
-			toast.success(
-				createVersion
-					? "New version created with migration"
-					: "Migration created",
-			);
+			toast.success("Migration created");
 			setOpen(false);
 			resetState();
 			navigateTo(
@@ -214,7 +254,7 @@ export default function PlanChangeDialog({
 				navigate,
 			);
 		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to save plan"));
+			toast.error(getBackendErr(error, "Failed to create migration"));
 		} finally {
 			setIsLoading(false);
 		}
@@ -223,121 +263,173 @@ export default function PlanChangeDialog({
 	const handleOpenChange = (nextOpen: boolean) => {
 		if (!isLoading) {
 			setOpen(nextOpen);
-			if (!nextOpen) {
-				resetState();
-				if (createVersion) syncToLatestVersion();
-			}
+			if (!nextOpen) resetState();
 		}
 	};
+
+	const buttonText =
+		step === 1
+			? versionChoice === "new"
+				? "Create new version"
+				: "Update existing version"
+			: "Create migration";
 
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
 			<DialogContent className="max-w-md max-h-[85vh] flex flex-col">
 				<DialogHeader>
-					<DialogTitle>Save plan changes</DialogTitle>
+					<DialogTitle>
+						{step === 1
+							? "Save plan changes"
+							: "Create migration"}
+					</DialogTitle>
 				</DialogHeader>
 
 				<div className="overflow-y-auto min-h-0 flex-1">
 					<DialogDescription asChild>
 						<div className="text-sm flex flex-col gap-6">
-							{hasChanges && (
-								<PlanItemsSection
-									product={product}
-									originalItems={baseProduct?.items}
-									features={features}
-									prepaidOptions={{}}
-									initialPrepaidOptions={{}}
-									showDiff
-									changesOnly
-									currency={currency}
-									onEditPlan={() => {}}
-									priceChange={priceChange}
-									readOnly
-								/>
-							)}
+							{step === 1 && (
+								<>
+									{hasChanges && (
+										<PlanItemsSection
+											product={product}
+											originalItems={
+												baseProduct?.items
+											}
+											features={features}
+											prepaidOptions={{}}
+											initialPrepaidOptions={{}}
+											showDiff
+											changesOnly
+											currency={currency}
+											onEditPlan={() => {}}
+											priceChange={priceChange}
+											readOnly
+										/>
+									)}
 
-							<div className="flex items-center justify-between gap-4">
-								<div className="flex flex-col gap-0.5">
-									<span className="text-sm font-medium text-foreground">
-										Create a new plan version
-									</span>
-									<span className="text-xs text-muted-foreground">
-										New customers will get this version.
-										Disable to update existing customers
-										only.
-									</span>
-								</div>
-								<Switch
-									checked={createVersion}
-									onCheckedChange={setCreateVersion}
-								/>
-							</div>
-
-							<div className="flex flex-col gap-3">
-								<p className="text-sm font-medium text-foreground">
-									Existing customers
-								</p>
 								<RadioGroup
-									value={migrationChoice}
+									className="pt-1 pb-3"
+									value={versionChoice}
 									onValueChange={(val) =>
-										setMigrationChoice(val as MigrationChoice)
+										setVersionChoice(
+											val as VersionChoice,
+										)
 									}
 								>
-									{createVersion && (
 										<AreaRadioGroupItem
-											value="keep"
-											label="Keep as they are"
+											value="new"
+											label="Create new version"
 											description="Existing customers stay on their current version."
 										/>
-									)}
-									<AreaRadioGroupItem
-										value="this_version"
-										label={`Apply changes to customers on v${baseProduct?.version ?? 1}`}
-										description="Create a migration to apply these changes to customers on this version."
-									/>
-									{hasMultipleVersions && (
 										<AreaRadioGroupItem
-											value="all_customers"
-											label="Apply changes to all customers"
-											description="Create a migration to apply these changes to all customers on this plan."
+											value="update"
+											label="Update existing version"
+											description="Apply these changes to existing customers via a migration."
 										/>
-									)}
-								</RadioGroup>
-							</div>
+									</RadioGroup>
 
-							<div className="flex flex-col gap-2">
-								<div className="flex items-center gap-1 flex-wrap">
-									<span>Type</span>
-									<MiniCopyButton
-										text={product.id}
-										innerClassName="font-mono font-bold text-foreground"
-										iconClassName="opacity-100 text-muted-foreground hover:text-foreground transition-colors"
+									<ConfirmInput
+										productId={product.id}
+										value={confirmText}
+										onChange={setConfirmText}
 									/>
-									<span>to continue.</span>
-								</div>
+								</>
+							)}
 
-								<Input
-									value={confirmText}
-									onChange={(e) => setConfirmText(e.target.value)}
-									type="text"
-									placeholder={product.id}
-									className="w-full"
-								/>
-							</div>
+							{step === 2 && (
+								<>
+									{hasMultipleVersions && (
+									<RadioGroup
+										className="pt-1 pb-3"
+										value={migrationScope}
+										onValueChange={(val) =>
+											setMigrationScope(
+												val as MigrationScope,
+											)
+										}
+									>
+											<AreaRadioGroupItem
+												value="all_customers"
+												label="Update all customers"
+												description="Apply changes to customers on any version of this plan."
+											/>
+											<AreaRadioGroupItem
+												value="this_version"
+												label={`Update customers on v${baseProduct?.version ?? 1} only`}
+												description="Only apply changes to customers on this specific version."
+											/>
+										</RadioGroup>
+									)}
+
+									{customCount > 0 && (
+										<div className="flex items-center justify-between gap-4">
+											<div className="flex flex-col gap-0.5">
+												<span className="text-sm font-medium text-foreground">
+													Apply to custom plans
+												</span>
+												<span className="text-xs text-muted-foreground">
+													There{" "}
+													{customCount === 1
+														? "is"
+														: "are"}{" "}
+													{customCount} user
+													{customCount !== 1
+														? "s"
+														: ""}{" "}
+													on custom versions of
+													this plan
+												</span>
+											</div>
+											<Switch
+												checked={includeCustom}
+												onCheckedChange={
+													setIncludeCustom
+												}
+											/>
+										</div>
+									)}
+
+									{!hasMultipleVersions &&
+										customCount === 0 && (
+											<p className="text-sm text-muted-foreground">
+												This will create a migration
+												to apply your changes to all
+												customers on this plan.
+											</p>
+										)}
+								</>
+							)}
 						</div>
 					</DialogDescription>
 				</div>
 
 				<DialogFooter>
+					{step === 2 && (
+						<Button
+							variant="secondary"
+							onClick={() => setStep(1)}
+							disabled={isLoading}
+						>
+							Back
+						</Button>
+					)}
 					<ShortcutButton
 						variant="primary"
 						metaShortcut="enter"
-						onClick={handleSave}
+						onClick={
+							step === 1
+								? handleStep1Action
+								: handleStep2Action
+						}
 						isLoading={isLoading}
-						disabled={isLoading || !confirmed}
+						disabled={
+							isLoading ||
+							(step === 1 && !confirmed)
+						}
 						className="w-full"
 					>
-						{willCreateMigration ? "Preview Migration" : "Save changes"}
+						{buttonText}
 					</ShortcutButton>
 				</DialogFooter>
 			</DialogContent>
