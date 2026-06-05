@@ -25,6 +25,7 @@ import { initProductInStripe } from "@/internal/products/productUtils.js";
 import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { resolveInPlaceEdit } from "./inPlaceUpdateUtils.js";
 import { validateDefaultFlag } from "./validateDefaultFlag.js";
 
 interface UpdateProductParams {
@@ -121,7 +122,11 @@ export const updateProduct = async ({
 
 	// Check if versioning is needed (customers exist AND items or free trial changed)
 	const freeTrialProvided = "free_trial" in updates;
-	if (cusProductExists && !disable_version && (itemsExist || freeTrialProvided)) {
+	if (
+		cusProductExists &&
+		!disable_version &&
+		(itemsExist || freeTrialProvided)
+	) {
 		const { itemsSame, freeTrialsSame } = productsAreSame({
 			newProductV2: newProductV2,
 			curProductV1: fullProduct,
@@ -148,11 +153,25 @@ export const updateProduct = async ({
 	const { free_trial } = updates;
 
 	if (updates.items) {
+		const inPlace =
+			cusProductExists && disable_version
+				? await resolveInPlaceEdit({
+						db,
+						items: updates.items,
+						currentFullProduct: fullProduct,
+						features,
+					})
+				: {
+						items: updates.items,
+						curPrices: fullProduct.prices,
+						curEnts: fullProduct.entitlements,
+					};
+
 		await handleNewProductItems({
 			db,
-			curPrices: fullProduct.prices,
-			curEnts: fullProduct.entitlements,
-			newItems: updates.items,
+			curPrices: inPlace.curPrices,
+			curEnts: inPlace.curEnts,
+			newItems: inPlace.items,
 			features,
 			product: fullProduct,
 			logger: ctx.logger,
