@@ -1,7 +1,10 @@
-import { TriangleIcon, UserIcon } from "@phosphor-icons/react";
+import { ArrowsClockwiseIcon, TriangleIcon, UserIcon } from "@phosphor-icons/react";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import { parseAsString, useQueryStates } from "nuqs";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { AdminHover } from "@/components/general/AdminHover";
+import SmallSpinner from "@/components/general/SmallSpinner";
 import { IconBadge } from "@/components/v2/badges/IconBadge";
 import V2Breadcrumb from "@/components/v2/breadcrumb";
 import { Button } from "@/components/v2/buttons/Button";
@@ -35,10 +38,11 @@ import {
 	useProductQuery,
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
+import { MigrateCustomersDialog } from "../versioning/MigrateCustomersDialog";
 import { PlanToolbar } from "./PlanToolbar.tsx";
 
 export const EditPlanHeader = () => {
-	const { numVersions } = useProductQuery();
+	const { numVersions, versionCounts, isLoading } = useProductQuery();
 	const product = useProductStore((s) => s.product);
 	const { counts } = useProductCountsQuery(
 		product.version ? { version: product.version } : {},
@@ -50,6 +54,19 @@ export const EditPlanHeader = () => {
 	const { mappings } = useRCMappings();
 	const { org } = useOrg();
 	const env = useEnv();
+	const [migrateDialogOpen, setMigrateDialogOpen] = useState(false);
+
+	const pastVersionsWithCustomers = useMemo(() => {
+		if (!numVersions || numVersions <= 1) return [];
+		return Object.entries(versionCounts)
+			.filter(([version, counts]) => {
+				const v = Number(version);
+				if (v >= numVersions) return false;
+				const nonCustomActive = (counts.active ?? 0) - (counts.custom ?? 0);
+				return nonCustomActive > 0;
+			})
+			.map(([version]) => Number(version));
+	}, [numVersions, versionCounts]);
 
 	const hasRCMapping =
 		flags.revenuecat &&
@@ -117,6 +134,14 @@ export const EditPlanHeader = () => {
 
 	return (
 		<>
+			<MigrateCustomersDialog
+				open={migrateDialogOpen}
+				onOpenChange={setMigrateDialogOpen}
+				productId={product.id}
+				latestVersion={numVersions}
+				pastVersionsWithCustomers={pastVersionsWithCustomers}
+				versionCounts={versionCounts}
+			/>
 			<div className="flex flex-col gap-2 p-4 pb-3  border-none shadow-none w-full max-w-5xl mx-auto pt-4 sm:pt-8 px-4 sm:px-12">
 				{isCusPlanEditor ? (
 					<CustomerBreadcrumbs />
@@ -205,24 +230,48 @@ export const EditPlanHeader = () => {
 					</div>
 
 					<div className="flex flex-row gap-2 items-center">
-						{numVersions && numVersions > 1 && (
-						<Select
-							value={currentVersion.toString()}
-							onValueChange={handleVersionChange}
-							items={Object.fromEntries(versionOptions.map((version) => [version.toString(), `Version ${version}`]))}
+					{pastVersionsWithCustomers.length > 0 && !isCusPlanEditor && (
+						<IconButton
+							variant="secondary"
+							size="mini"
+							icon={<ArrowsClockwiseIcon />}
+							iconOrientation="left"
+							onClick={() => setMigrateDialogOpen(true)}
 						>
-								<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
-									<SelectValue placeholder="Version" />
-								</SelectTrigger>
-								<SelectContent>
-									{versionOptions.map((version) => (
+							Migrate customers
+						</IconButton>
+					)}
+					{numVersions && numVersions > 1 && (
+					<Select
+						value={currentVersion.toString()}
+						onValueChange={handleVersionChange}
+						items={Object.fromEntries(versionOptions.map((version) => [version.toString(), `Version ${version}`]))}
+					>
+							<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
+								<SelectValue placeholder="Version" />
+							</SelectTrigger>
+							<SelectContent>
+								{versionOptions.map((version) => {
+									const count = versionCounts[version]?.active || 0;
+									const hasLoaded = Object.keys(versionCounts).length > 0;
+									return (
 										<SelectItem key={version} value={version.toString()}>
-											Version {version}
+											<div className="flex items-center justify-between w-full gap-3">
+												<span>Version {version}</span>
+												{hasLoaded ? (
+													<IconBadge variant="muted" icon={<UserIcon />}>
+														{count}
+													</IconBadge>
+												) : (
+													<SmallSpinner size={10} className="text-tertiary-foreground" />
+												)}
+											</div>
 										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						)}
+									);
+								})}
+							</SelectContent>
+						</Select>
+					)}
 						{!isCusPlanEditor && <PlanToolbar />}
 					</div>
 				</div>

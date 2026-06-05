@@ -1,5 +1,5 @@
 {
-  "id": "c8beb970-f345-4b45-aa77-ade79eeedbed",
+  "id": "9e1bb4b2-1869-4ca9-ba67-8fbcea263c37",
   "prevId": "eadc8c95-3f6f-4643-abc3-e90cd56d5ed1",
   "version": "7",
   "dialect": "postgresql",
@@ -3417,7 +3417,23 @@
           "default": "'{}'"
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_invoice_line_items_customer_product_ids": {
+          "name": "idx_invoice_line_items_customer_product_ids",
+          "columns": [
+            {
+              "expression": "customer_product_ids",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "invoice_line_items_invoice_id_fkey": {
           "name": "invoice_line_items_invoice_id_fkey",
@@ -4503,13 +4519,6 @@
         },
         "retry_failed": {
           "name": "retry_failed",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "archived": {
-          "name": "archived",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,

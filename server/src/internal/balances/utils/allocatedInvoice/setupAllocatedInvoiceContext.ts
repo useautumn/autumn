@@ -10,6 +10,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext.js";
+import { fetchStoredLineItemsForBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForBilling.js";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext.js";
 import { applyDeductionUpdateToCustomerEntitlement } from "../deduction/applyDeductionUpdateToCustomerEntitlement.js";
 import { applyDeductionUpdateToFullCustomer } from "../deduction/applyDeductionUpdateToFullCustomer.js";
@@ -108,6 +109,12 @@ export const setupAllocatedInvoiceContext = async ({
 		cusEnt: newCustomerEntitlement,
 	});
 
+	const { storedChargeLineItems, storedRefundLineItems } =
+		await fetchStoredLineItemsForBilling({
+			db: ctx.db,
+			customerProductIds: [cusProduct.id],
+		});
+
 	return {
 		// BillingContext fields
 		fullCustomer,
@@ -120,6 +127,8 @@ export const setupAllocatedInvoiceContext = async ({
 		stripeSubscription,
 		stripeSubscriptionSchedule,
 		stripeDiscounts,
+		storedChargeLineItems,
+		storedRefundLineItems,
 		paymentMethod,
 		billingVersion: BillingVersion.V2,
 

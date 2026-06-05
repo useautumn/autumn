@@ -10,6 +10,7 @@ import {
 import type Stripe from "stripe";
 import type { StripeSubscriptionWithDiscounts } from "@/external/stripe/subscriptions/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { setupUpdateSubscriptionTrialContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionTrialContext.js";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor.js";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor.js";
 import type { MigrateCustomerContext } from "@/internal/migrations/v2/operations/types/index.js";
@@ -71,12 +72,26 @@ export const setupMigrationOperationBillingContext = async ({
 		stripeCustomerContext.testClockFrozenTime ?? Date.now();
 	const resolvedFullProduct =
 		fullProduct ?? cusProductToProduct({ cusProduct: customerProduct });
-	const billingCycleAnchorMs = setupBillingCycleAnchor({
+	const trialContext = setupUpdateSubscriptionTrialContext({
+		stripeSubscription,
+		customerProduct,
+		currentEpochMs,
+		params: {},
+		fullProduct: resolvedFullProduct,
+	});
+
+	let billingCycleAnchorMs = setupBillingCycleAnchor({
 		stripeSubscription,
 		customerProduct,
 		newFullProduct: resolvedFullProduct,
+		trialContext,
 		currentEpochMs,
 	});
+
+	if (trialContext?.trialEndsAt) {
+		billingCycleAnchorMs = trialContext.trialEndsAt;
+	}
+
 	const resetCycleAnchorMs = setupResetCycleAnchor({
 		billingCycleAnchorMs,
 		customerProduct,
@@ -92,6 +107,7 @@ export const setupMigrationOperationBillingContext = async ({
 		currentEpochMs,
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,
+		trialContext,
 		stripeCustomer: stripeCustomerContext.stripeCustomer,
 		stripeSubscription,
 		stripeSubscriptionSchedule,

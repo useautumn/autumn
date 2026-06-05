@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
 	Select,
 	SelectContent,
@@ -180,23 +181,7 @@ function FilterValueInput({
 
 	if (config.valueType === "number") {
 		const isMulti = rule.operator === "in" || rule.operator === "not_in";
-		if (isMulti)
-			return (
-				<input
-					className="h-8 text-sm rounded-xl px-3 input-base flex-1 min-w-0 text-foreground placeholder:text-tertiary-foreground"
-					placeholder="1, 2, 3"
-					value={rule.values.join(", ")}
-					onChange={(e) =>
-						onChange({
-							...rule,
-							values: e.target.value
-								.split(",")
-								.map((s) => s.trim())
-								.filter(Boolean),
-						})
-					}
-				/>
-			);
+		if (isMulti) return <CommaSeparatedInput rule={rule} onChange={onChange} />;
 		return (
 			<input
 				type="number"
@@ -231,6 +216,41 @@ function FilterValueInput({
 			placeholder="Value"
 			value={rule.values[0] ?? ""}
 			onChange={(e) => onChange({ ...rule, values: [e.target.value] })}
+		/>
+	);
+}
+
+function CommaSeparatedInput({
+	rule,
+	onChange,
+}: {
+	rule: FilterRule;
+	onChange: (rule: FilterRule) => void;
+}) {
+	const [text, setText] = useState(() => rule.values.join(", "));
+
+	useEffect(() => {
+		setText(rule.values.join(", "));
+	}, [rule.values.join(",")]);
+
+	const commit = (raw: string) => {
+		const values = raw
+			.split(",")
+			.map((s) => s.trim())
+			.filter(Boolean);
+		onChange({ ...rule, values });
+	};
+
+	return (
+		<input
+			className="h-8 text-sm rounded-xl px-3 input-base flex-1 min-w-0 text-foreground placeholder:text-tertiary-foreground"
+			placeholder="1, 2, 3"
+			value={text}
+			onChange={(e) => setText(e.target.value)}
+			onBlur={(e) => commit(e.target.value)}
+			onKeyDown={(e) => {
+				if (e.key === "Enter") commit(e.currentTarget.value);
+			}}
 		/>
 	);
 }

@@ -10,6 +10,7 @@ import { useMigrationSheetStore } from "./live/useMigrationSheetStore";
 import { OperationsStep } from "./OperationsStep";
 import { STEPS, type StepId } from "./StepIndicator";
 import { useMigrationEditorForm } from "./useMigrationEditorForm";
+import { useMigrationRunsQuery } from "@/hooks/queries/useMigrationRunsQuery";
 
 const STEP_IDS = STEPS.map((s) => s.id);
 
@@ -29,6 +30,8 @@ export function MigrationEditor({ migration }: { migration: Migration }) {
 	);
 	const customerCount = useCustomerCount(filter.customer ?? {});
 	const hasCustomers = customerCount !== null && customerCount > 0;
+	const { runs } = useMigrationRunsQuery({ migrationId: migration.id });
+	const hasRuns = runs.length > 0;
 
 	const setLiveFormState = useMigrationSheetStore((s) => s.setLiveFormState);
 	useEffect(() => {
@@ -38,6 +41,7 @@ export function MigrationEditor({ migration }: { migration: Migration }) {
 	const guardedSetStep = useGuardedStepNavigation({
 		step,
 		hasCustomers,
+		hasRuns,
 		operations,
 		saveError,
 		enableErrorDisplay,
