@@ -150,6 +150,34 @@ const SpendLimitRow = ({
 	</button>
 );
 
+const UsageLimitRow = ({
+	usageLimit,
+	featureNameById,
+	onClick,
+}: {
+	usageLimit: DbSpendLimit;
+	featureNameById: Map<string, string>;
+	onClick: () => void;
+}) => (
+	<button type="button" className={rowClassName} onClick={onClick}>
+		<StatusPill enabled={usageLimit.usage_limit != null} />
+		<span className="truncate text-sm text-foreground font-medium">
+			{getFeatureLabel({
+				featureId: usageLimit.feature_id,
+				featureNameById,
+			})}
+		</span>
+		<div className="ml-auto flex items-center gap-1.5 shrink-0">
+			<Pill>
+				Usage limit:{" "}
+				{usageLimit.usage_limit == null
+					? "none"
+					: `${usageLimit.usage_limit.toLocaleString()} / ${usageLimit.usage_limit_interval ?? "cycle"}`}
+			</Pill>
+		</div>
+	</button>
+);
+
 const UsageAlertRow = ({
 	usageAlert,
 	featureNameById,
@@ -243,9 +271,22 @@ export function CustomerBillingControlsSection() {
 	}, [features]);
 
 	const autoTopups = selectedEntity ? [] : (fullCustomer?.auto_topups ?? []);
-	const spendLimits = selectedEntity
+	const allSpendLimits = selectedEntity
 		? (selectedEntity.spend_limits ?? [])
 		: (fullCustomer?.spend_limits ?? []);
+	// Usage caps are folded into spend_limits (usage_limit set); surface them as a
+	// separate "Usage limits" control. Keep each entry's original index so edit/delete
+	// target the right slot in the full spend_limits array.
+	const indexedSpendLimits = allSpendLimits.map((item, index) => ({
+		item,
+		index,
+	}));
+	const spendLimits = indexedSpendLimits.filter(
+		({ item }) => item.usage_limit == null,
+	);
+	const usageLimits = indexedSpendLimits.filter(
+		({ item }) => item.usage_limit != null,
+	);
 	const usageAlerts = selectedEntity
 		? (selectedEntity.usage_alerts ?? [])
 		: (fullCustomer?.usage_alerts ?? []);
@@ -256,6 +297,7 @@ export function CustomerBillingControlsSection() {
 	const hasAnyControls =
 		autoTopups.length > 0 ||
 		spendLimits.length > 0 ||
+		usageLimits.length > 0 ||
 		usageAlerts.length > 0 ||
 		overageAllowed.length > 0;
 
@@ -304,6 +346,11 @@ export function CustomerBillingControlsSection() {
 									onClick={() => setSheet({ type: "billing-spend-limit-add" })}
 								>
 									Spend limit
+								</DropdownMenuItem>
+								<DropdownMenuItem
+									onClick={() => setSheet({ type: "billing-usage-limit-add" })}
+								>
+									Usage limit
 								</DropdownMenuItem>
 								<DropdownMenuItem
 									onClick={() => setSheet({ type: "billing-usage-alert-add" })}
@@ -359,6 +406,11 @@ export function CustomerBillingControlsSection() {
 								Spend limit
 							</DropdownMenuItem>
 							<DropdownMenuItem
+								onClick={() => setSheet({ type: "billing-usage-limit-add" })}
+							>
+								Usage limit
+							</DropdownMenuItem>
+							<DropdownMenuItem
 								onClick={() => setSheet({ type: "billing-usage-alert-add" })}
 							>
 								Usage alert
@@ -410,7 +462,7 @@ export function CustomerBillingControlsSection() {
 					{spendLimits.length > 0 && (
 						<BillingControlsGroup title="Spend limits" emptyText="" hasItems>
 							<div className="flex flex-col gap-1.5 rounded-lg">
-								{spendLimits.map((spendLimit, index) => (
+								{spendLimits.map(({ item: spendLimit, index }) => (
 									<SpendLimitRow
 										key={`spend-limit-${spendLimit.feature_id ?? "global"}-${index}`}
 										spendLimit={spendLimit}
@@ -419,6 +471,26 @@ export function CustomerBillingControlsSection() {
 											setSheet({
 												type: "billing-spend-limit-edit",
 												data: { index, item: spendLimit },
+											})
+										}
+									/>
+								))}
+							</div>
+						</BillingControlsGroup>
+					)}
+
+					{usageLimits.length > 0 && (
+						<BillingControlsGroup title="Usage limits" emptyText="" hasItems>
+							<div className="flex flex-col gap-1.5 rounded-lg">
+								{usageLimits.map(({ item: usageLimit, index }) => (
+									<UsageLimitRow
+										key={`usage-limit-${usageLimit.feature_id ?? "global"}-${index}`}
+										usageLimit={usageLimit}
+										featureNameById={featureNameById}
+										onClick={() =>
+											setSheet({
+												type: "billing-usage-limit-edit",
+												data: { index, item: usageLimit },
 											})
 										}
 									/>

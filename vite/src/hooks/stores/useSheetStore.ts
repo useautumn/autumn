@@ -29,6 +29,8 @@ export type SheetType =
 	| "billing-auto-topup-edit"
 	| "billing-spend-limit-add"
 	| "billing-spend-limit-edit"
+	| "billing-usage-limit-add"
+	| "billing-usage-limit-edit"
 	| "billing-usage-alert-add"
 	| "billing-usage-alert-edit"
 	| "billing-overage-allowed-add"
