@@ -25,24 +25,10 @@ export const fetchStoredLineItemsForBilling = async ({
 		return { storedChargeLineItems: [], storedRefundLineItems: [] };
 	}
 
-	const queries = customerProductIds.flatMap((customerProductId) =>
-		(["charge", "refund"] as const).map((direction) => ({
-			customerProductId,
-			direction,
-		})),
-	);
-
-	const results = await Promise.all(
-		queries.map(({ customerProductId, direction }) =>
-			invoiceLineItemRepo.getByCustomerProductAndPeriod({
-				db,
-				customerProductId,
-				direction,
-			}),
-		),
-	);
-
-	const allRows = results.flat();
+	const allRows = await invoiceLineItemRepo.getByCustomerProductIds({
+		db,
+		customerProductIds,
+	});
 
 	return {
 		storedChargeLineItems: deduplicateById(
