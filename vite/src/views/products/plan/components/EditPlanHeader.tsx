@@ -2,6 +2,7 @@ import { TriangleIcon, UserIcon } from "@phosphor-icons/react";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useNavigate } from "react-router";
 import { AdminHover } from "@/components/general/AdminHover";
+import SmallSpinner from "@/components/general/SmallSpinner";
 import { IconBadge } from "@/components/v2/badges/IconBadge";
 import V2Breadcrumb from "@/components/v2/breadcrumb";
 import { Button } from "@/components/v2/buttons/Button";
@@ -38,7 +39,7 @@ import {
 import { PlanToolbar } from "./PlanToolbar.tsx";
 
 export const EditPlanHeader = () => {
-	const { numVersions } = useProductQuery();
+	const { numVersions, versionCounts, isLoading } = useProductQuery();
 	const product = useProductStore((s) => s.product);
 	const { counts } = useProductCountsQuery(
 		product.version ? { version: product.version } : {},
@@ -205,24 +206,37 @@ export const EditPlanHeader = () => {
 					</div>
 
 					<div className="flex flex-row gap-2 items-center">
-						{numVersions && numVersions > 1 && (
-						<Select
-							value={currentVersion.toString()}
-							onValueChange={handleVersionChange}
-							items={Object.fromEntries(versionOptions.map((version) => [version.toString(), `Version ${version}`]))}
-						>
-								<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
-									<SelectValue placeholder="Version" />
-								</SelectTrigger>
-								<SelectContent>
-									{versionOptions.map((version) => (
+					{numVersions && numVersions > 1 && (
+					<Select
+						value={currentVersion.toString()}
+						onValueChange={handleVersionChange}
+						items={Object.fromEntries(versionOptions.map((version) => [version.toString(), `Version ${version}`]))}
+					>
+							<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
+								<SelectValue placeholder="Version" />
+							</SelectTrigger>
+							<SelectContent>
+								{versionOptions.map((version) => {
+									const count = versionCounts[version]?.active || 0;
+									const hasLoaded = Object.keys(versionCounts).length > 0;
+									return (
 										<SelectItem key={version} value={version.toString()}>
-											Version {version}
+											<div className="flex items-center justify-between w-full gap-3">
+												<span>Version {version}</span>
+												{hasLoaded ? (
+													<IconBadge variant="muted" icon={<UserIcon />}>
+														{count}
+													</IconBadge>
+												) : (
+													<SmallSpinner size={10} className="text-tertiary-foreground" />
+												)}
+											</div>
 										</SelectItem>
-									))}
-								</SelectContent>
-							</Select>
-						)}
+									);
+								})}
+							</SelectContent>
+						</Select>
+					)}
 						{!isCusPlanEditor && <PlanToolbar />}
 					</div>
 				</div>

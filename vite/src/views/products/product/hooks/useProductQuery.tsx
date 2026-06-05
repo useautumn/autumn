@@ -88,6 +88,10 @@ export const useProductQuery = () => {
 	return {
 		product,
 		numVersions: data?.numVersions || cachedProduct?.version || 1,
+		versionCounts: (data?.versionCounts || {}) as Record<
+			number,
+			{ active: number; canceled: number; custom: number; trialing: number }
+		>,
 		isLoading: isLoadingWithCache,
 		refetch: async () => {
 			await refetch();
