@@ -1,7 +1,6 @@
 import type { Feature, FullProduct, ProductItem } from "@autumn/shared";
 import {
 	findSimilarItem,
-	isPriceItem,
 	itemsAreSame,
 	mapToProductItems,
 } from "@autumn/shared";
@@ -11,8 +10,9 @@ import { CusPriceService } from "@/internal/customers/cusProducts/cusPrices/CusP
 import { EntitlementService } from "@/internal/products/entitlements/EntitlementService.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 
-/** Feature / feature-price items only — base price is handled by the price diff. */
-const featureItemsOf = ({
+// Includes the base price: a base-price edit must retire the old shared row too,
+// not mutate it in place under existing customers.
+const currentItemsOf = ({
 	currentFullProduct,
 	features,
 }: {
@@ -23,7 +23,7 @@ const featureItemsOf = ({
 		prices: currentFullProduct.prices,
 		entitlements: currentFullProduct.entitlements,
 		features,
-	}).filter((item) => !isPriceItem(item));
+	});
 
 /**
  * Callers rarely echo back entitlement_id / price_id, so without this match the
@@ -40,11 +40,7 @@ const backfillExistingItemIds = ({
 	currentFullProduct: FullProduct;
 	features: Feature[];
 }): ProductItem[] => {
-	const currentItems = mapToProductItems({
-		prices: currentFullProduct.prices,
-		entitlements: currentFullProduct.entitlements,
-		features,
-	});
+	const currentItems = currentItemsOf({ currentFullProduct, features });
 
 	return items.map((item) => {
 		if (item.entitlement_id || item.price_id) return item;
@@ -134,13 +130,16 @@ export const resolveInPlaceEdit = async ({
 		currentFullProduct,
 		features,
 	});
-	const currentItems = featureItemsOf({ currentFullProduct, features });
+	const currentItems = currentItemsOf({ currentFullProduct, features });
 
 	const retiredEntitlementIds: string[] = [];
 	const retiredPriceIds: string[] = [];
 
 	for (const currentItem of currentItems) {
-		const match = findSimilarItem({ item: currentItem, items: backfilledItems });
+		const match = findSimilarItem({
+			item: currentItem,
+			items: backfilledItems,
+		});
 		const isDeleted = !match;
 		const isUpdated =
 			match &&

@@ -72,11 +72,13 @@ const snapshotCustomerItems = async ({
 		entitlementIds: cusProduct.customer_entitlements
 			.map((entry) => entry.entitlement_id)
 			.sort(),
-		balances: cusProduct.customer_entitlements.map((entry) => ({
-			entitlement_id: entry.entitlement_id,
-			balance: entry.balance,
-			next_reset_at: entry.next_reset_at,
-		})),
+		balances: cusProduct.customer_entitlements
+			.map((entry) => ({
+				entitlement_id: entry.entitlement_id,
+				balance: entry.balance,
+				next_reset_at: entry.next_reset_at,
+			}))
+			.sort((a, b) => a.entitlement_id.localeCompare(b.entitlement_id)),
 		priceIds: cusProduct.customer_prices.map((entry) => entry.price_id).sort(),
 	};
 };
