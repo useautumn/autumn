@@ -8,6 +8,8 @@ import {
 import { getBackendErr } from "@/utils/genUtils";
 import type { RealtimeRunSubscription } from "./useMigrationRunRealtime";
 
+const SETTLE_WINDOW_MS = 15000;
+
 export function useRealtimeSubscriptions({
 	migrationId,
 	invalidateRuns,
@@ -19,12 +21,15 @@ export function useRealtimeSubscriptions({
 	const [subscriptions, setSubscriptions] = useState<RealtimeRunSubscription[]>(
 		[],
 	);
+	const [isSettling, setIsSettling] = useState(false);
 
 	const handleComplete = useCallback(
 		(triggerRunId: string) => {
 			setSubscriptions((prev) =>
 				prev.filter((s) => s.triggerRunId !== triggerRunId),
 			);
+			setIsSettling(true);
+			window.setTimeout(() => setIsSettling(false), SETTLE_WINDOW_MS);
 			invalidateRuns();
 		},
 		[invalidateRuns],
@@ -84,6 +89,7 @@ export function useRealtimeSubscriptions({
 	return {
 		subscriptions,
 		hasActive: subscriptions.length > 0,
+		isSettling,
 		handleComplete,
 		triggerRun,
 		isRunning,

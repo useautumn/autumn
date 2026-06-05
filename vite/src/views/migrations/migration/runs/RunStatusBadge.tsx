@@ -1,4 +1,9 @@
-import { format } from "date-fns";
+import {
+	CheckCircleIcon,
+	type Icon,
+	MinusCircleIcon,
+	XCircleIcon,
+} from "@phosphor-icons/react";
 import { Badge } from "@/components/v2/badges/Badge";
 import type { MigrationItemEventStatus } from "@/hooks/queries/useMigrationRunsQuery";
 import { cn } from "@/lib/utils";
@@ -30,6 +35,12 @@ const STATUS_LABELS: Record<MigrationItemEventStatus, string> = {
 	failed: "Failed",
 };
 
+const STATUS_ICONS: Record<MigrationItemEventStatus, Icon> = {
+	succeeded: CheckCircleIcon,
+	skipped: MinusCircleIcon,
+	failed: XCircleIcon,
+};
+
 function isNoOpResponse(response: Record<string, unknown> | null): boolean {
 	if (!response) return false;
 	const preview = response.preview as
@@ -51,37 +62,34 @@ export function ItemEventStatusBadge({
 	status,
 	dryRun = false,
 	response = null,
-	timestamp,
 }: {
 	status: MigrationItemEventStatus;
 	dryRun?: boolean;
 	response?: Record<string, unknown> | null;
-	timestamp?: string;
 }) {
 	if (status === "skipped" && isNoOpResponse(response))
 		return (
 			<Badge
 				variant="muted"
 				className={cn(
-					"bg-muted text-tertiary-foreground",
+					"gap-1 bg-muted text-tertiary-foreground",
 					dryRun ? "border-border border-dashed" : "border-transparent",
 				)}
 			>
+				<MinusCircleIcon size={12} weight="fill" />
 				No Changes
 			</Badge>
 		);
 
-	const label =
-		status === "succeeded" && timestamp
-			? `${STATUS_LABELS[status]} (${format(new Date(timestamp), "d MMM yyyy")})`
-			: STATUS_LABELS[status];
+	const StatusIcon = STATUS_ICONS[status];
 
 	return (
 		<Badge
 			variant="muted"
-			className={(dryRun ? DRY_STYLES : LIVE_STYLES)[status]}
+			className={cn("gap-1", (dryRun ? DRY_STYLES : LIVE_STYLES)[status])}
 		>
-			{label}
+			<StatusIcon size={12} weight="fill" />
+			{STATUS_LABELS[status]}
 		</Badge>
 	);
 }

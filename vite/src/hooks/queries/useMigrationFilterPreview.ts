@@ -6,6 +6,7 @@ import type {
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { ACTIVE_POLL_MS } from "@/hooks/queries/useMigrationRunsQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import type { ExecutionStatus } from "@/views/migrations/migration/live/ExecutionStatusSubMenu";
 
@@ -31,6 +32,7 @@ export const useMigrationFilterPreview = ({
 	executionStatuses = [],
 	migrationRunId,
 	migrationRunDryRun,
+	isActive = false,
 }: {
 	filter: CustomerFilter;
 	search?: string;
@@ -40,6 +42,7 @@ export const useMigrationFilterPreview = ({
 	executionStatuses?: ExecutionStatus[];
 	migrationRunId?: string;
 	migrationRunDryRun?: boolean;
+	isActive?: boolean;
 }) => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
@@ -80,6 +83,7 @@ export const useMigrationFilterPreview = ({
 		},
 		staleTime: 500,
 		placeholderData: keepPreviousData,
+		refetchInterval: isActive ? ACTIVE_POLL_MS : false,
 	});
 
 	return {

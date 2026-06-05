@@ -4,12 +4,14 @@ import type {
 	MigrationRunStatus,
 } from "@autumn/shared";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 const ACTIVE_STATUSES: MigrationRunStatus[] = ["queued", "running"];
-const POLL_MS = 30000;
+const IDLE_POLL_MS = 30000;
+export const ACTIVE_POLL_MS = 2000;
+const EVENT_SETTLE_DELAYS_MS = [0, 1500, 4000];
 
 export type MigrationItemEventStatus = "succeeded" | "skipped" | "failed";
 
@@ -67,10 +69,13 @@ export const useMigrationRunsQuery = ({
 	const queryClient = useQueryClient();
 	const buildKey = useQueryKeyFactory();
 	const runsQueryKey = buildKey(["migration-runs", migrationId]);
+	const eventsKeyPrefix = useMemo(
+		() => ["migration-item-events", migrationId],
+		[migrationId],
+	);
 	const stableItemIds = itemIds ? [...itemIds].sort().join(",") : "all";
 	const eventsQueryKey = buildKey([
-		"migration-item-events",
-		migrationId,
+		...eventsKeyPrefix,
 		migrationRunId ?? "all",
 		stableItemIds,
 	]);
@@ -86,7 +91,10 @@ export const useMigrationRunsQuery = ({
 		enabled,
 		refetchOnWindowFocus: true,
 		staleTime: 0,
-		refetchInterval: POLL_MS,
+		refetchInterval: (query) =>
+			findActiveRun(query.state.data?.list ?? [])
+				? ACTIVE_POLL_MS
+				: IDLE_POLL_MS,
 	});
 
 	const activeRun = findActiveRun(runsQuery.data?.list ?? []);
@@ -107,13 +115,17 @@ export const useMigrationRunsQuery = ({
 		enabled,
 		refetchOnWindowFocus: true,
 		staleTime: 0,
-		refetchInterval: POLL_MS,
+		refetchInterval: isActive ? ACTIVE_POLL_MS : IDLE_POLL_MS,
 	});
 
 	const invalidate = useCallback(() => {
 		queryClient.invalidateQueries({ queryKey: runsQueryKey });
-		queryClient.invalidateQueries({ queryKey: eventsQueryKey });
-	}, [queryClient, runsQueryKey, eventsQueryKey]);
+		for (const delay of EVENT_SETTLE_DELAYS_MS)
+			window.setTimeout(
+				() => queryClient.invalidateQueries({ queryKey: eventsKeyPrefix }),
+				delay,
+			);
+	}, [queryClient, runsQueryKey, eventsKeyPrefix]);
 
 	return {
 		runs: (runsQuery.data?.list ?? []) as MigrationRunWithItemCounts[],

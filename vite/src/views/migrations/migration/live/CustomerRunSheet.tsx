@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
+import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Dialog,
 	DialogContent,
@@ -29,6 +30,7 @@ import { ActiveRunDot, ItemEventStatusBadge } from "../runs/RunStatusBadge";
 import { OperationsPreview } from "../shared/OperationsPreview";
 import { RunSummaryRows } from "../shared/RunSummaryRows";
 import { EventResultDetail } from "./EventResultDetail";
+import { resolveMigrationItemStatus } from "./migrationItemStatus";
 
 function formatEventTimestamp(timestamp: string): string {
 	return format(new Date(timestamp), "MMM d, HH:mm:ss");
@@ -47,51 +49,42 @@ function StatusValue({
 	isActive: boolean;
 	activeRunDryRun: boolean | null;
 }) {
-	if (isActive)
+	const status = resolveMigrationItemStatus({
+		event: latestLiveEvent ?? latestDryEvent,
+		itemRun,
+		activeStatus: isActive ? "running" : null,
+	});
+
+	if (status.kind === "running" || status.kind === "queued")
 		return (
 			<div className="flex items-center gap-2">
 				<ActiveRunDot />
 				<span className="text-xs text-muted-foreground">
-					{activeRunDryRun ? "Dry run in progress" : "Running"}
+					{status.kind === "running" && activeRunDryRun
+						? "Dry run in progress"
+						: status.kind === "queued"
+							? "Queued"
+							: "Running"}
 				</span>
 			</div>
 		);
-	if (itemRun?.status === "running") {
-		return (
-			<div className="flex items-center gap-2">
-				<ActiveRunDot />
-				<span className="text-xs text-muted-foreground">Running</span>
-			</div>
-		);
-	}
-	if (itemRun?.status) {
-		const event =
-			latestLiveEvent?.status === itemRun.status ? latestLiveEvent : undefined;
-		return (
-			<ItemEventStatusBadge
-				status={itemRun.status}
-				dryRun={false}
-				response={event?.response ?? null}
-				timestamp={event?.timestamp}
-			/>
-		);
-	}
-	const event = latestLiveEvent ?? latestDryEvent;
-	if (event)
+
+	if (status.kind === "result")
 		return (
 			<div className="flex items-center gap-1.5">
-				{event.dry_run && (
+				{status.dryRun && (
 					<span className="text-[10px] font-medium text-tertiary-foreground">
 						Dry Run:
 					</span>
 				)}
 				<ItemEventStatusBadge
-					status={event.status}
-					dryRun={event.dry_run}
-					response={event.response}
+					status={status.status}
+					dryRun={status.dryRun}
+					response={status.response}
 				/>
 			</div>
 		);
+
 	return <Badge variant="muted">Not Run</Badge>;
 }
 
@@ -167,7 +160,11 @@ export function CustomerRunSheet({
 							className="inline-flex items-center gap-1.5 hover:text-primary transition-colors cursor-pointer"
 						>
 							{customer.name || customerId}
-							<ArrowSquareOutIcon size={14} weight="bold" className="opacity-50" />
+							<ArrowSquareOutIcon
+								size={14}
+								weight="bold"
+								className="opacity-50"
+							/>
 						</button>
 						{isActive && <ActiveRunDot />}
 					</span>
@@ -266,10 +263,10 @@ export function CustomerRunSheet({
 				</SheetSection>
 			)}
 
-			<div className="sticky bottom-0 p-4 flex gap-2 bg-card mt-auto">
+			<div className="sticky bottom-0 p-4 flex flex-col gap-2 bg-card mt-auto">
 				<Button
 					variant="secondary"
-					className="flex-1"
+					className="w-full"
 					onClick={handleDryRun}
 					isLoading={isRunning && lastActionRef.current === "dry"}
 					disabled={
@@ -280,15 +277,16 @@ export function CustomerRunSheet({
 					<EyeIcon size={14} />
 					Dry Run
 				</Button>
-				<Button
+				<ShortcutButton
 					variant="primary"
-					className="flex-1"
+					metaShortcut="enter"
+					className="w-full"
 					onClick={() => setIsRunDialogOpen(true)}
-					disabled={hasSuccessfulLiveRun || isRunning}
+					disabled={hasSuccessfulLiveRun || isRunning || isRunDialogOpen}
 				>
 					<PlayIcon size={14} weight="fill" />
 					Run
-				</Button>
+				</ShortcutButton>
 			</div>
 
 			<Dialog open={isRunDialogOpen} onOpenChange={setIsRunDialogOpen}>
@@ -315,14 +313,16 @@ export function CustomerRunSheet({
 						>
 							Cancel
 						</Button>
-						<Button
+						<ShortcutButton
 							variant="primary"
+							metaShortcut="enter"
 							onClick={handleLiveRun}
 							isLoading={isRunning && lastActionRef.current === "live"}
+							disabled={!isRunDialogOpen}
 						>
 							<PlayIcon size={14} weight="fill" />
 							Run
-						</Button>
+						</ShortcutButton>
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
