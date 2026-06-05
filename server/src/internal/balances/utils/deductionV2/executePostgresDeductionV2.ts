@@ -157,6 +157,9 @@ export const executePostgresDeductionV2 = async ({
 				sql`SELECT * FROM deduct_from_cus_ents(
 				${JSON.stringify({
 					sorted_entitlements: customerEntitlementDeductions,
+					// No usage_window_limits here: the hard usage cap is enforced only on the
+					// Redis/Lua path, so this Postgres fallback intentionally fails open
+					// (availability over strict cap enforcement during a Redis outage).
 					spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
 					usage_based_cus_ent_ids_by_feature_id:
 						usageBasedCusEntIdsByFeatureId ?? null,

@@ -128,4 +128,23 @@ describe("getUsageWindowBounds", () => {
 			}),
 		).toEqual({ windowStartAt: 0, windowEndAt: Number.MAX_SAFE_INTEGER });
 	});
+
+	// Day-31 anchor on the 30th of a 30-day month must stay cycle-aligned, not drop to
+	// the UTC-calendar fallback (which would key a fresh counter mid-cycle).
+	test("day-31 anchor stays cycle-aligned on the 30th of a 30-day month (no calendar fallback)", () => {
+		const anchor = Date.UTC(2026, 0, 31, 8, 30, 0); // Jan 31 08:30 UTC
+		const now = Date.UTC(2026, 3, 30, 9, 0, 0); // Apr 30 09:00 UTC (after the anchor time)
+
+		const { windowStartAt, windowEndAt } = getUsageWindowBounds({
+			interval: EntInterval.Month,
+			now,
+			anchor,
+		});
+
+		expect(windowStartAt).toBe(Date.UTC(2026, 3, 30, 8, 30, 0)); // Apr 30 08:30
+		expect(windowEndAt).toBe(Date.UTC(2026, 4, 31, 8, 30, 0)); // May 31 08:30
+		expect(windowStartAt).toBeLessThanOrEqual(now);
+		expect(now).toBeLessThan(windowEndAt);
+		expect(windowStartAt).not.toBe(Date.UTC(2026, 3, 1)); // not the calendar fallback
+	});
 });

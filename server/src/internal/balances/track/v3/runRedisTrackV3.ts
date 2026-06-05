@@ -18,6 +18,7 @@ import {
     projectMutationLogsToTrackDeductionsV2,
 } from "@/internal/balances/utils/deductionV2/index.js";
 import { globalSyncBatchingManagerV3 } from "@/internal/balances/utils/sync/SyncBatchingManagerV3.js";
+import { syncItemV4 } from "@/internal/balances/utils/sync/syncItemV4.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import type { RolloverUpdate } from "../../utils/types/rolloverUpdate.js";
 import { handleRedisTrackErrorV3 } from "./handleRedisTrackErrorV3.js";
@@ -130,13 +131,34 @@ export const runRedisTrackV3 = async ({
 		mutationLogs,
 	} = result;
 
-	queueSyncItem({
-		ctx,
-		body,
-		fullSubject: updatedFullSubject,
-		rolloverUpdates,
-		modifiedCusEntIdsByFeatureId,
-	});
+	// Write the cap counter through to PG now; a later mutation rebuilds the cache from it.
+	const hasUsageCap = (fullSubject.customer.spend_limits ?? []).some(
+		(limit) => limit.usage_limit != null,
+	);
+	if (hasUsageCap) {
+		await tryCatch(
+			syncItemV4({
+				ctx,
+				payload: {
+					customerId: body.customer_id,
+					orgId: ctx.org.id,
+					env: ctx.env,
+					timestamp: Date.now(),
+					entityId: updatedFullSubject.entityId,
+					rolloverIds: Object.keys(rolloverUpdates),
+					modifiedCusEntIdsByFeatureId,
+				},
+			}),
+		);
+	} else {
+		queueSyncItem({
+			ctx,
+			body,
+			fullSubject: updatedFullSubject,
+			rolloverUpdates,
+			modifiedCusEntIdsByFeatureId,
+		});
+	}
 
 	const deductions = projectMutationLogsToTrackDeductionsV2({
 		fullSubject: updatedFullSubject,

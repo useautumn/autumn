@@ -485,3 +485,139 @@ test.concurrent(
 		expect(typeof after.usage_windows[0].id).toBe("string");
 	},
 );
+
+// No manual sync flush: the counter must survive the mutation's cache invalidation on
+// its own, else the cap silently resets and hands out fresh headroom.
+test(
+	`${chalk.yellowBright("track-customer-usage-limit-lowercap: lowering the cap below current usage keeps blocking (no counter reset)")}`,
+	async () => {
+		const customerProduct = products.base({
+			id: "track-customer-uw-lowercap",
+			items: [items.monthlyMessages({ includedUsage: 1000 })],
+		});
+
+		const customerId = `track-customer-uw-lowercap-1-${Date.now()}`;
+		const { autumnV2_1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: false }),
+				s.products({ list: [customerProduct] }),
+			],
+			actions: [s.billing.attach({ productId: customerProduct.id })],
+		});
+
+		await setCustomerUsageLimit({
+			autumn: autumnV2_1,
+			customerId,
+			featureId: TestFeature.Messages,
+			limit: 10,
+		});
+
+		await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 8,
+		});
+
+		await autumnV2_1.customers.update(customerId, {
+			billing_controls: {
+				spend_limits: [
+					{
+						feature_id: TestFeature.Messages,
+						enabled: false,
+						usage_limit: 3,
+						usage_limit_interval: EntInterval.Month,
+					},
+				],
+			},
+		});
+
+		let blocked = false;
+		let blockedCode: string | undefined;
+		try {
+			await autumnV2_1.track({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: 1,
+			});
+		} catch (error) {
+			blocked = true;
+			blockedCode = (error as { code?: string }).code;
+		}
+
+		expect(blocked).toBe(true);
+		expect(blockedCode).toBe("usage_limit_exceeded");
+	},
+);
+
+// Bug 1: a second balance grant (balances.create) is a cache-invalidating mutation;
+// the cap counter must survive it. It used to reset to 0, opening fresh headroom.
+test(
+	`${chalk.yellowBright("track-customer-usage-limit-regrant: re-granting a balance does not reset the cap")}`,
+	async () => {
+		const customerProduct = products.base({
+			id: "track-customer-uw-regrant",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const customerId = `track-customer-uw-regrant-1-${Date.now()}`;
+		const { autumnV2_1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: false }),
+				s.products({ list: [customerProduct] }),
+			],
+			actions: [s.billing.attach({ productId: customerProduct.id })],
+		});
+
+		await setCustomerUsageLimit({
+			autumn: autumnV2_1,
+			customerId,
+			featureId: TestFeature.Messages,
+			limit: 5,
+		});
+
+		await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 5,
+		});
+
+		let blockedBefore = false;
+		try {
+			await autumnV2_1.track({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: 1,
+			});
+		} catch (error) {
+			blockedBefore =
+				(error as { code?: string }).code === "usage_limit_exceeded";
+		}
+		expect(blockedBefore).toBe(true);
+
+		// Re-grant a second balance for the same feature while at the cap.
+		await autumnV2_1.post("/balances.create", {
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			included_grant: 100,
+			reset: { interval: EntInterval.Month },
+		});
+
+		let blockedAfter = false;
+		let blockedCode: string | undefined;
+		try {
+			await autumnV2_1.track({
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				value: 1,
+			});
+		} catch (error) {
+			blockedAfter = true;
+			blockedCode = (error as { code?: string }).code;
+		}
+
+		expect(blockedAfter).toBe(true);
+		expect(blockedCode).toBe("usage_limit_exceeded");
+	},
+);
