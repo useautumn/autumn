@@ -20,11 +20,11 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { Table } from "@/components/general/table";
+import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
-import { Separator } from "@/components/v2/separator";
 import {
 	Dialog,
 	DialogContent,
@@ -40,7 +40,6 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
 import { Input } from "@/components/v2/inputs/Input";
-import { Switch } from "@/components/ui/switch";
 import {
 	Select,
 	SelectContent,
@@ -48,6 +47,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/v2/selects/Select";
+import { Separator } from "@/components/v2/separator";
 import {
 	type MigrationPreviewCustomer,
 	useMigrationFilterPreview,
@@ -77,12 +77,16 @@ import {
 	ExecutionStatusSubMenu,
 	hasActiveExecutionFilters,
 } from "./ExecutionStatusSubMenu";
+import {
+	type ActiveRunStatus,
+	buildEventsByCustomer,
+	resolveMigrationItemStatus,
+} from "./migrationItemStatus";
 import { RealtimeRunWatcher } from "./RealtimeRunWatcher";
 import { useMigrationSheetStore } from "./useMigrationSheetStore";
 
 const PAGE_SIZE_OPTIONS = [10, 50, 100, 250];
 
-type ActiveRunStatus = "queued" | "running" | null;
 type AdminRunControls = {
 	lazyRun: boolean;
 	retryErrored: boolean;
@@ -94,17 +98,6 @@ type CustomerRow = MigrationPreviewCustomer & {
 	_activeStatus?: ActiveRunStatus;
 	_activeRunId?: string;
 };
-
-function buildEventsByCustomer(itemEvents: MigrationItemEvent[]) {
-	const map = new Map<string, MigrationItemEvent>();
-	for (const event of itemEvents) {
-		if (event.item_kind !== "customer") continue;
-		const existing = map.get(event.item_id);
-		if (!existing || event.timestamp > existing.timestamp)
-			map.set(event.item_id, event);
-	}
-	return map;
-}
 
 function buildRetryItemStatuses({
 	retryErrored,
@@ -121,50 +114,28 @@ const statusColumn: ColumnDef<CustomerRow, unknown> = {
 	header: "Status",
 	size: 140,
 	cell: ({ row }: { row: Row<CustomerRow> }) => {
-		const event = row.original._event;
-		const itemRun = row.original.migration_item_run;
-		const activeStatus = row.original._activeStatus;
+		const status = resolveMigrationItemStatus({
+			event: row.original._event,
+			itemRun: row.original.migration_item_run,
+			activeStatus: row.original._activeStatus ?? null,
+		});
 
-		if (itemRun?.status === "running") {
+		if (status.kind === "running" || status.kind === "queued") {
+			const isQueued = status.kind === "queued";
 			return (
 				<Badge variant="muted" className="gap-1.5">
-					<ActiveDot color="green" />
-					Running
+					<ActiveDot color={isQueued ? "orange" : "green"} />
+					{isQueued ? "Queued" : "Running"}
 				</Badge>
 			);
 		}
 
-		if (itemRun?.status && itemRun.status !== "running") {
+		if (status.kind === "result")
 			return (
 				<ItemEventStatusBadge
-					status={itemRun.status}
-					dryRun={false}
-					response={event?.status === itemRun.status ? event.response : null}
-					timestamp={
-						event?.status === itemRun.status ? event.timestamp : undefined
-					}
-				/>
-			);
-		}
-
-		if (activeStatus) {
-			const color = activeStatus === "running" ? "green" : "orange";
-			const label = activeStatus === "running" ? "Running" : "Queued";
-			return (
-				<Badge variant="muted" className="gap-1.5">
-					<ActiveDot color={color} />
-					{label}
-				</Badge>
-			);
-		}
-
-		if (event)
-			return (
-				<ItemEventStatusBadge
-					status={event.status}
-					dryRun={event.dry_run}
-					response={event.response}
-					timestamp={event.timestamp}
+					status={status.status}
+					dryRun={status.dryRun}
+					response={status.response}
 				/>
 			);
 
@@ -289,10 +260,20 @@ export function MigrationLiveView({
 	const {
 		itemEvents,
 		runs,
+		isActive: hasActiveRun,
 		invalidate: invalidateRuns,
 	} = useMigrationRunsQuery({ migrationId });
 
 	const latestRun = runs[0];
+
+	const {
+		subscriptions: realtimeSubscriptions,
+		hasActive: hasRealtimeActive,
+		handleComplete: handleRealtimeComplete,
+		isSettling,
+		triggerRun,
+		isRunning,
+	} = useRealtimeSubscriptions({ migrationId, invalidateRuns });
 
 	const {
 		customers,
@@ -305,43 +286,37 @@ export function MigrationLiveView({
 		pageSize: pagination.pageSize,
 		migrationId,
 		executionStatuses,
+		isActive: hasActiveRun || hasRealtimeActive,
 	});
-
-	const {
-		subscriptions: realtimeSubscriptions,
-		hasActive: hasRealtimeActive,
-		handleComplete: handleRealtimeComplete,
-		triggerRun,
-		isRunning,
-	} = useRealtimeSubscriptions({ migrationId, invalidateRuns });
 
 	const setSelectedCustomer = useMigrationSheetStore(
 		(s) => s.setSelectedCustomer,
 	);
 
 	const eventsByCustomer = useMemo(
-		() => buildEventsByCustomer(itemEvents.filter((event) => !event.dry_run)),
+		() => buildEventsByCustomer(itemEvents),
 		[itemEvents],
 	);
 
 	const activeRun = runs.find(
 		(r) => r.status === "queued" || r.status === "running",
 	);
-	const progressRun = activeRun ?? latestRun;
-	const progressCounts = progressRun?.item_run_counts;
-	const activeRunStatus: ActiveRunStatus = hasRealtimeActive
-		? "running"
-		: ((activeRun?.status as ActiveRunStatus) ?? null);
-	const activeRunId = activeRun?.internal_id ?? null;
+	const progressRun = activeRun ?? (isSettling ? latestRun : undefined);
+	const progressCounts = (progressRun ?? latestRun)?.item_run_counts;
+	const activeRunStatus: ActiveRunStatus =
+		hasRealtimeActive || isSettling
+			? "running"
+			: ((activeRun?.status as ActiveRunStatus) ?? null);
+	const activeRunId = progressRun?.internal_id ?? null;
 	const activeRunOnlyIds = useMemo(
 		() =>
-			activeRun?.only_ids && activeRun.only_ids.length > 0
-				? new Set(activeRun.only_ids)
+			progressRun?.only_ids && progressRun.only_ids.length > 0
+				? new Set(progressRun.only_ids)
 				: null,
-		[activeRun?.only_ids],
+		[progressRun?.only_ids],
 	);
 	const isActiveRunScoped =
-		!!activeRunOnlyIds || !!(activeRun?.target_limit as number | null);
+		!!activeRunOnlyIds || !!(progressRun?.target_limit as number | null);
 
 	const enrichedCustomers = useMemo(
 		(): CustomerRow[] =>
@@ -355,10 +330,16 @@ export function MigrationLiveView({
 					: isActiveRunScoped
 						? !!hasEventInActiveRun
 						: true;
+				const hasResultForRun =
+					!!hasEventInActiveRun ||
+					(!!activeRunId &&
+						c.migration_item_run?.migration_run_id === activeRunId &&
+						c.migration_item_run?.status !== "running");
+				const showRunning = isTargeted && (!isSettling || !hasResultForRun);
 				return {
 					...c,
 					_event: event,
-					_activeStatus: isTargeted ? activeRunStatus : null,
+					_activeStatus: showRunning ? activeRunStatus : null,
 					_activeRunId: activeRunId ?? undefined,
 				};
 			}),
@@ -369,6 +350,7 @@ export function MigrationLiveView({
 			activeRunId,
 			activeRunOnlyIds,
 			isActiveRunScoped,
+			isSettling,
 		],
 	);
 
@@ -681,13 +663,13 @@ export function MigrationLiveView({
 									</div>
 								)}
 							</div>
-						<MigrationRunControls
-							value={runControls}
-							onChange={setRunControls}
-							lazyDisabled={sample.mode === "select"}
-							hasFailedItems={(progressCounts?.failed ?? 0) > 0}
-							hasSkippedItems={(progressCounts?.skipped ?? 0) > 0}
-						/>
+							<MigrationRunControls
+								value={runControls}
+								onChange={setRunControls}
+								lazyDisabled={sample.mode === "select"}
+								hasFailedItems={(progressCounts?.failed ?? 0) > 0}
+								hasSkippedItems={(progressCounts?.skipped ?? 0) > 0}
+							/>
 						</div>
 						<DialogFooter className="sm:flex-col gap-2">
 							<ShortcutButton

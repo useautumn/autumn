@@ -1,0 +1,1 @@
+export const BILLING_AMOUNT_EPSILON = 0.01;

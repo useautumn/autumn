@@ -5,6 +5,7 @@ import type {
 	UpdateCustomerEntitlement,
 } from "@autumn/shared";
 import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToArrearLineItems";
+import { getRefundLineItems } from "@/internal/billing/v2/utils/lineItems/getRefundLineItems";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
 import { customerProductToLineItems } from "../../utils/lineItems/customerProductToLineItems";
 import { logBuildAutumnLineItems } from "./logBuildAutumnLineItems";
@@ -55,11 +56,10 @@ export const buildAutumnLineItems = ({
 
 	// Get line items for ongoing cus product
 	const deletedLineItems = customerProductsToDelete.flatMap((customerProduct) =>
-		customerProductToLineItems({
+		getRefundLineItems({
 			ctx,
 			customerProduct,
 			billingContext,
-			direction: "refund",
 			priceFilters: { excludeOneOffPrices: true },
 		}),
 	);

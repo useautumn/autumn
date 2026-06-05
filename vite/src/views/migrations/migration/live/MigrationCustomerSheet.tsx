@@ -22,14 +22,12 @@ export function MigrationCustomerSheet({
 		isActive,
 		activeRunDryRun,
 		invalidate: invalidateRuns,
-	} = useMigrationRunsQuery({
-		migrationId,
-		itemIds: [customer.internal_id],
-	});
+	} = useMigrationRunsQuery({ migrationId });
 
 	const {
 		subscriptions: realtimeSubscriptions,
 		hasActive: hasRealtimeActive,
+		isSettling,
 		handleComplete: handleRealtimeComplete,
 		triggerRun,
 		isRunning,
@@ -73,7 +71,7 @@ export function MigrationCustomerSheet({
 				latestDryEvent={latestDryEvent}
 				latestLiveEvent={latestLiveEvent}
 				allEvents={customerEvents}
-				isActive={isActive || hasRealtimeActive}
+				isActive={isActive || hasRealtimeActive || isSettling}
 				activeRunDryRun={activeRunDryRun}
 				isRunning={isRunning}
 				onTriggerRun={triggerRun}
