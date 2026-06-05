@@ -47,6 +47,7 @@
 	"dependencies": {
 		"@ai-sdk/anthropic": "^3.0.9",
 		"@anthropic-ai/sdk": "^0.32.1",
+		"@autumn/auth": "workspace:*",
 		"@autumn/ksuid": "workspace:*",
 		"@autumn/shared": "workspace:*",
 		"@autumn/stripe-sync": "workspace:*",

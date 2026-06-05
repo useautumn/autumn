@@ -1,3 +1,4 @@
+import { getBearerToken } from "@autumn/auth";
 import { AuthType, ErrCode, type Feature, RecaseError } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
@@ -29,21 +30,17 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		return betterAuthMiddleware(c, next);
 	}
 
-	const authHeader =
-		c.req.header("authorization") || c.req.header("Authorization");
+	const apiKey = getBearerToken({ headers: c.req.raw.headers });
 
 	// Step 1 & 2: Check if Authorization header exists
 	// If from dashboard and no Bearer token, use Better Auth session instead
-	if (!authHeader || !authHeader.startsWith("Bearer ")) {
+	if (!apiKey) {
 		throw new RecaseError({
 			message: "Secret key not found in Authorization header",
 			code: ErrCode.NoSecretKey,
 			statusCode: 401,
 		});
 	}
-
-	// Step 2: Extract and validate API key format
-	const apiKey = authHeader.split(" ")[1];
 
 	if (!apiKey.startsWith("am_")) {
 		throw new RecaseError({

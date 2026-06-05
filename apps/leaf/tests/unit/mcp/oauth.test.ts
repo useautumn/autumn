@@ -1,12 +1,14 @@
 import { describe, expect, test } from "bun:test";
+import { MCP_OAUTH_SCOPES } from "@autumn/mcp";
 import { Scopes } from "@autumn/shared/scopeDefinitions";
 import {
 	buildAuthForRequest,
-	getProtectedResourceMetadata,
-	MCP_OAUTH_SCOPES,
 	type MCPOAuthFlags,
+} from "../../../src/mcp/auth/resolveRequestAuth.js";
+import {
+	getProtectedResourceMetadata,
 	type OAuthHttpError,
-} from "../../../src/server/auth/oauth.js";
+} from "../../../src/mcp/auth/protectedResourceMetadata.js";
 
 const flags = {
 	"oauth-enabled": true,
@@ -17,6 +19,9 @@ const flags = {
 const logger = {
 	warning: () => {},
 } as never;
+
+const resourceUrl = "http://localhost:2718/mcp";
+const internalResourceUrl = "http://localhost:2718/internal/mcp";
 
 describe("MCP OAuth auth resolution", () => {
 	test("requests scopes required by public write tools", () => {
@@ -32,11 +37,12 @@ describe("MCP OAuth auth resolution", () => {
 
 	test("returns a WWW-Authenticate challenge without a bearer token", async () => {
 		await expect(
-			buildAuthForRequest(
-				new Headers({ host: "localhost:2718" }),
-				flags as MCPOAuthFlags,
+			buildAuthForRequest({
+				headers: new Headers(),
+				flags: flags as MCPOAuthFlags,
 				logger,
-			),
+				resourceUrl,
+			}),
 		).rejects.toMatchObject({
 			status: 401,
 			error: "invalid_token",
@@ -47,12 +53,12 @@ describe("MCP OAuth auth resolution", () => {
 
 	test("returns an internal MCP resource challenge", async () => {
 		await expect(
-			buildAuthForRequest(
-				new Headers({ host: "localhost:2718" }),
-				flags as MCPOAuthFlags,
+			buildAuthForRequest({
+				headers: new Headers(),
+				flags: flags as MCPOAuthFlags,
 				logger,
-				"/internal/mcp",
-			),
+				resourceUrl: internalResourceUrl,
+			}),
 		).rejects.toMatchObject({
 			status: 401,
 			error: "invalid_token",
@@ -61,7 +67,7 @@ describe("MCP OAuth auth resolution", () => {
 		} satisfies Partial<OAuthHttpError>);
 	});
 
-	test("rejects opaque bearer tokens without exchanging them", async () => {
+	test("passes OAuth bearer tokens through without local verification", async () => {
 		const originalFetch = globalThis.fetch;
 		let fetchCalled = false;
 		const mockFetch = (async () => {
@@ -71,19 +77,23 @@ describe("MCP OAuth auth resolution", () => {
 		globalThis.fetch = mockFetch;
 
 		try {
-			await expect(
-				buildAuthForRequest(
-					new Headers({
-						authorization: "Bearer oauth_token",
-						host: "localhost:2718",
-					}),
-					flags as MCPOAuthFlags,
-					logger,
-				),
-			).rejects.toMatchObject({
-				status: 401,
-				error: "invalid_token",
-			} satisfies Partial<OAuthHttpError>);
+			const auth = await buildAuthForRequest({
+				headers: new Headers({
+					authorization: "Bearer oauth_token",
+				}),
+				flags: flags as MCPOAuthFlags,
+				logger,
+				resourceUrl,
+			});
+
+			expect(auth).toMatchObject({
+				apiKey: "oauth_token",
+				authMethod: "oauth",
+				env: "sandbox",
+				principalId: "oauth:unverified",
+				resource: "http://localhost:2718/mcp",
+				serverURL: "http://localhost:8080",
+			});
 			expect(fetchCalled).toBe(false);
 		} finally {
 			globalThis.fetch = originalFetch;
@@ -91,14 +101,14 @@ describe("MCP OAuth auth resolution", () => {
 	});
 
 	test("accepts a static secret-key when OAuth is enabled", async () => {
-		const auth = await buildAuthForRequest(
-			new Headers({
-				host: "localhost:2718",
+		const auth = await buildAuthForRequest({
+			headers: new Headers({
 				"secret-key": "am_sk_test_chat",
 			}),
-			flags as MCPOAuthFlags,
+			flags: flags as MCPOAuthFlags,
 			logger,
-		);
+			resourceUrl,
+		});
 
 		expect(auth.apiKey).toBe("am_sk_test_chat");
 		expect(auth.principalId).toStartWith("secret-key:");
@@ -106,50 +116,49 @@ describe("MCP OAuth auth resolution", () => {
 	});
 
 	test("accepts an Autumn API key bearer token when OAuth is enabled", async () => {
-		const auth = await buildAuthForRequest(
-			new Headers({
+		const auth = await buildAuthForRequest({
+			headers: new Headers({
 				authorization: "Bearer am_sk_test_chat",
-				host: "localhost:2718",
 			}),
-			flags as MCPOAuthFlags,
+			flags: flags as MCPOAuthFlags,
 			logger,
-		);
+			resourceUrl,
+		});
 
 		expect(auth.apiKey).toBe("am_sk_test_chat");
 		expect(auth.principalId).toStartWith("secret-key:");
 	});
 
 	test("uses route-specific resource URLs", async () => {
-		const auth = await buildAuthForRequest(
-			new Headers({
+		const auth = await buildAuthForRequest({
+			headers: new Headers({
 				authorization: "Bearer am_sk_test_chat",
-				host: "localhost:2718",
 			}),
-			flags as MCPOAuthFlags,
+			flags: flags as MCPOAuthFlags,
 			logger,
-			"/internal/mcp",
-		);
+			resourceUrl: internalResourceUrl,
+		});
 
 		expect(auth.resource).toBe("http://localhost:2718/internal/mcp");
 		expect(
-			getProtectedResourceMetadata(
-				new Headers({ host: "localhost:2718" }),
-				flags as MCPOAuthFlags,
-				"/internal/mcp",
-			).resource,
+			getProtectedResourceMetadata({
+				resourceUrl: internalResourceUrl,
+				serverURL: flags["server-url"],
+			}).resource,
 		).toBe("http://localhost:2718/internal/mcp");
 	});
 
 	test("missing static secret-key returns the auth error path", async () => {
 		await expect(
-			buildAuthForRequest(
-				new Headers({ host: "localhost:2718" }),
-				{
+			buildAuthForRequest({
+				headers: new Headers(),
+				flags: {
 					...flags,
 					"oauth-enabled": false,
 				} as MCPOAuthFlags,
 				logger,
-			),
+				resourceUrl,
+			}),
 		).rejects.toMatchObject({
 			status: 401,
 			error: "invalid_token",
