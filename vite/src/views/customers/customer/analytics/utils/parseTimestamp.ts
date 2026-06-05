@@ -11,6 +11,19 @@ export function parseUTCTimestamp(timestamp: string): Date {
 	return parseISO(timestamp);
 }
 
+// Day/month buckets are already in the viewer's local zone (the pipe uses
+// toStartOfDay(hour, tz)), so parse a bare string as local, not UTC.
+export function parseLocalTimestamp(timestamp: string): Date {
+	if (
+		!timestamp.includes("Z") &&
+		!timestamp.includes("+") &&
+		!timestamp.includes("-", 10)
+	) {
+		return new Date(timestamp.replace(" ", "T"));
+	}
+	return parseISO(timestamp);
+}
+
 export function formatDateShort(date: Date): string {
 	return format(date, "d MMM");
 }
@@ -21,6 +34,22 @@ export function formatHourMinute(date: Date): string {
 
 export function formatFullTimestamp(date: Date): string {
 	return format(date, "d MMM 'at' HH:mm:ss");
+}
+
+// Hour buckets are UTC, day/month buckets are local — parse each in its own zone.
+export function formatPeriodLabel({
+	period,
+	interval,
+}: {
+	period: string;
+	interval: string | null;
+}): string {
+	const date =
+		interval === "24h"
+			? parseUTCTimestamp(period)
+			: parseLocalTimestamp(period);
+	if (!Number.isFinite(date.getTime())) return period;
+	return interval === "24h" ? formatHourMinute(date) : formatDateShort(date);
 }
 
 export function formatCompactNumber(value: number): string {
