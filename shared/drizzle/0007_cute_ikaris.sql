@@ -1,1 +1,1 @@
-CREATE INDEX "idx_invoice_line_items_customer_product_ids" ON "invoice_line_items" USING gin ("customer_product_ids");
+CREATE INDEX CONCURRENTLY "idx_invoice_line_items_customer_product_ids" ON "invoice_line_items" USING gin ("customer_product_ids");

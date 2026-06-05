@@ -13,6 +13,7 @@ const FORMATTED_LOG_EXCLUDE_FIELDS = new Set([
 	"query",
 	"durationMs",
 	"duration_ms",
+	"event",
 	"context",
 	"workflow",
 	"trigger",

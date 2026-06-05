@@ -49,23 +49,23 @@ export const attachPoolErrorHandlers = ({
 };
 
 const emitSnapshot = (): void => {
-	const role = getRole();
-	for (const { pool, name, max } of registry.values()) {
-		const totalCount = pool.totalCount;
-		const idleCount = pool.idleCount;
-		const waitingCount = pool.waitingCount;
-		logger.debug("pg_pool_stats", {
-			type: "pg_pool_stats",
-			pool: name,
-			pid: process.pid,
-			role,
-			totalCount,
-			idleCount,
-			waitingCount,
-			max,
-			utilization: max > 0 ? totalCount / max : 0,
-		});
-	}
+	// const role = getRole();
+	// for (const { pool, name, max } of registry.values()) {
+	// 	const totalCount = pool.totalCount;
+	// 	const idleCount = pool.idleCount;
+	// 	const waitingCount = pool.waitingCount;
+	// 	logger.debug("pg_pool_stats", {
+	// 		type: "pg_pool_stats",
+	// 		pool: name,
+	// 		pid: process.pid,
+	// 		role,
+	// 		totalCount,
+	// 		idleCount,
+	// 		waitingCount,
+	// 		max,
+	// 		utilization: max > 0 ? totalCount / max : 0,
+	// 	});
+	// }
 };
 
 export const startPgPoolMonitor = (intervalMs = 30_000): void => {

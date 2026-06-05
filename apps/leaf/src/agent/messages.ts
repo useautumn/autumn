@@ -1,5 +1,5 @@
+import { getInstallationOAuthAccessToken } from "../internal/installations/actions/getInstallationOAuthAccessToken.js";
 import { logger as rootLogger } from "../lib/logger.js";
-import { getInstallationKey } from "../providers/slack/installations.js";
 import { agentOutputSchema, type BotMessage } from "../types.js";
 import { runChatAgent, selectChatEnv } from "./agent.js";
 
@@ -35,9 +35,13 @@ export const runMessage = async ({
 					provider: installation.provider,
 				},
 			});
+			const token = await getInstallationOAuthAccessToken({
+				installation,
+				env,
+			});
 			return agentOutputSchema.parse(
 				await runChatAgent({
-					apiKey: getInstallationKey(installation, env),
+					token,
 					env,
 					logger,
 					message: text,
