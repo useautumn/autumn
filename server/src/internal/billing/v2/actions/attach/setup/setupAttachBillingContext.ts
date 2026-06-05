@@ -26,6 +26,7 @@ import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoic
 import { setupPaymentBehaviorIntent } from "@/internal/billing/v2/setup/setupPaymentBehaviorIntent";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupTransitionConfigs } from "@/internal/billing/v2/setup/setupTransitionConfigs";
+import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
 import { setupAdjustableQuantities } from "../../../setup/setupAdjustableQuantities";
 import { setupAnchorResetRefund } from "../../../setup/setupAnchorResetRefund";
 import { setupIgnoreProrationBehavior } from "../../../setup/setupIgnoreProrationBehavior";
@@ -261,6 +262,17 @@ export const setupAttachBillingContext = async ({
 		contextOverride,
 	});
 
+	const outgoingCusProductIds = currentCustomerProduct
+		? [currentCustomerProduct.id]
+		: [];
+	const { storedChargeLineItems, storedRefundLineItems } =
+		await fetchStoredLineItemsForSubscriptionBilling({
+			db: ctx.db,
+			fullCustomer,
+			stripeSubscription,
+			outgoingCusProductIds,
+		});
+
 	return {
 		fullCustomer,
 		fullProducts: [attachProduct],
@@ -320,6 +332,9 @@ export const setupAttachBillingContext = async ({
 
 		skipBillingChanges,
 		dryRunStripe: preview,
+
+		storedChargeLineItems,
+		storedRefundLineItems,
 
 		anchorResetRefund: setupAnchorResetRefund({
 			billingCycleAnchor: params.billing_cycle_anchor,

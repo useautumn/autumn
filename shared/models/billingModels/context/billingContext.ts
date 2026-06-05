@@ -10,6 +10,7 @@ import type {
 } from "@autumn/shared";
 import type { PaymentBehaviorIntent } from "@models/billingModels/context/paymentBehaviorIntent";
 import type { TransitionConfig } from "@models/billingModels/context/transitionConfig";
+import type { DbInvoiceLineItem } from "@models/cusModels/invoiceModels/invoiceLineItemTable";
 import type { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import type Stripe from "stripe";
 import { z } from "zod/v4";
@@ -111,6 +112,9 @@ export interface BillingContext {
 	actionSource?: string;
 
 	anchorResetRefund?: AnchorResetRefund;
+
+	storedChargeLineItems?: DbInvoiceLineItem[];
+	storedRefundLineItems?: DbInvoiceLineItem[];
 
 	refundLastPayment?: "prorated" | "full";
 
