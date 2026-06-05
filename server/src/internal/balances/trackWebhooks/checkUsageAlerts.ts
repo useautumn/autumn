@@ -15,7 +15,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 type AlertScope = "customer" | "entity" | "org";
 
-const wasThresholdCrossed = ({
+export const wasThresholdCrossed = ({
 	alert,
 	oldApiBalance,
 	newApiBalance,
