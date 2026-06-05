@@ -1,6 +1,8 @@
 import {
+	BILLING_AMOUNT_EPSILON,
 	cusEntToCusPrice,
 	InternalError,
+	type LineItem,
 	type LineItemContext,
 	orgToCurrency,
 	priceToProrationConfig,
@@ -10,6 +12,7 @@ import {
 import { isStripeSubscriptionTrialing } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { getLineItemBillingPeriod } from "@/internal/billing/v2/utils/lineItems/getLineItemBillingPeriod";
+import { getRefundLineItemsForPrice } from "@/internal/billing/v2/utils/lineItems/getRefundLineItemsForPrice";
 import type { AllocatedInvoiceContext } from "../allocatedInvoiceContext";
 import { allocatedInvoiceIsUpgrade } from "./allocatedInvoiceIsUpgrade";
 
@@ -66,7 +69,7 @@ export const computeAllocatedInvoiceLineItems = ({
 		customerProduct,
 	};
 
-	const previousLIneItem = usagePriceToLineItem({
+	const catalogRefundLineItem = usagePriceToLineItem({
 		cusEnt: previousCustomerEntitlement,
 		context: {
 			...lineItemContext,
@@ -78,6 +81,14 @@ export const computeAllocatedInvoiceLineItems = ({
 		},
 	});
 
+	const previousLineItems = getRefundLineItemsForPrice({
+		ctx,
+		customerProduct,
+		billingContext,
+		priceId: customerPrice.price.id,
+		catalogFallback: catalogRefundLineItem,
+	});
+
 	const newLineItem = usagePriceToLineItem({
 		cusEnt: billingContext.updatedCustomerEntitlement,
 		context: lineItemContext,
@@ -87,15 +98,16 @@ export const computeAllocatedInvoiceLineItems = ({
 		},
 	});
 
-	// Don't return line items if they sum to 0
-	if (
+	const netAmount = Math.abs(
 		sumValues([
-			previousLIneItem?.amountAfterDiscounts ?? 0,
+			...previousLineItems.map((li) => li.amountAfterDiscounts ?? 0),
 			newLineItem?.amountAfterDiscounts ?? 0,
-		]) === 0
-	) {
-		return [];
-	}
+		]),
+	);
 
-	return [previousLIneItem, newLineItem];
+	if (netAmount < BILLING_AMOUNT_EPSILON) return [];
+
+	return [...previousLineItems, newLineItem].filter(
+		(li): li is LineItem => li !== undefined,
+	);
 };

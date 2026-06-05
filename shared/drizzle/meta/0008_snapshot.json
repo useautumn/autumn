@@ -1,6 +1,6 @@
 {
-  "id": "9e1bb4b2-1869-4ca9-ba67-8fbcea263c37",
-  "prevId": "eadc8c95-3f6f-4643-abc3-e90cd56d5ed1",
+  "id": "b9eaa778-a288-48ca-8e0f-42b17e0dc873",
+  "prevId": "9e1bb4b2-1869-4ca9-ba67-8fbcea263c37",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4519,6 +4519,13 @@
         },
         "retry_failed": {
           "name": "retry_failed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived": {
+          "name": "archived",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
