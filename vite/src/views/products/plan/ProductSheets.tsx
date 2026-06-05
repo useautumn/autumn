@@ -124,10 +124,11 @@ export const ProductSheets = () => {
 
 		const newItemId = getItemId({
 			item: updatedItem,
-			itemIndex: currentItemIndex,
+			itemIndex: resolvedItemIndex,
 		});
 		if (newItemId !== itemId) {
 			updateItemId(newItemId);
+			lastItemIdRef.current = newItemId;
 		}
 
 		const updatedItems = [...product.items];

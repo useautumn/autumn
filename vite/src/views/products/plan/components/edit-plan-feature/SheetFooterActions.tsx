@@ -1,6 +1,9 @@
 import { Button } from "@/components/v2/buttons/Button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
-import { useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
+import {
+	useSetCurrentItem,
+	useSheet,
+} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { cn } from "@/lib/utils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
@@ -11,12 +14,17 @@ export function SheetFooterActions({
 	hasChanges: boolean;
 	onBeforeCommit?: () => void;
 }) {
-	const { setItem, handleUpdateProductItem } = useProductItemContext();
-	const { initialItem } = useSheet();
+	const { handleUpdateProductItem } = useProductItemContext();
+	const { initialItem, itemDraft } = useSheet();
+	const setCurrentItem = useSetCurrentItem();
 
 	const handleDiscard = () => {
+		if (itemDraft.session) {
+			itemDraft.discardItem();
+			return;
+		}
 		if (initialItem) {
-			setItem(initialItem);
+			setCurrentItem(initialItem);
 		}
 	};
 
