@@ -66,6 +66,7 @@ export const computeAttachNewCustomerProduct = ({
 		accessStartsAt,
 		billingStartsAt,
 		paymentMethod,
+		processorTypeOverride,
 	} = attachBillingContext;
 
 	const currentCustomerEntitlements =
@@ -142,6 +143,7 @@ export const computeAttachNewCustomerProduct = ({
 			accessStartsAt,
 			collectionMethod,
 			externalId,
+			processorType: processorTypeOverride,
 			billingCycleAnchorResetsAt: getScheduledBillingCycleAnchorResetAt({
 				requestedBillingCycleAnchor,
 				currentEpochMs,

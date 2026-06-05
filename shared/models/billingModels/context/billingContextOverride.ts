@@ -7,6 +7,7 @@ import type {
 	FeatureOptions,
 	FullCusProduct,
 } from "@models/cusProductModels/cusProductModels";
+import type { ProcessorType } from "@models/genModels/genEnums";
 import type { Entitlement } from "@models/productModels/entModels/entModels";
 import type { Price } from "@models/productModels/priceModels/priceModels";
 import type { FullProduct } from "@models/productModels/productModels";
@@ -50,6 +51,31 @@ export interface BillingContextOverride {
 	 * public API schema.
 	 */
 	skipCustomPaymentMethodGuard?: boolean;
+
+	/**
+	 * Skips fetching Stripe state (customer/subscription/schedule/discounts/PM)
+	 * during attach setup. Used by external-PSP origin callers (e.g. RevenueCat
+	 * webhook handlers) whose customers don't have a meaningful Stripe presence.
+	 * Independent from `params.no_billing_changes`, which only blocks writes.
+	 */
+	skipBillingFetching?: boolean;
+
+	/**
+	 * Skips the external-PSP guard (`handleExternalPSPErrors`) and the
+	 * "paid current product but no Stripe sub linked" guard. Used by callers
+	 * that ARE the external origin platform (e.g. RevenueCat webhook handlers)
+	 * and so must be allowed to attach onto their own existing non-Stripe
+	 * cus_products. Not exposed via any public API schema.
+	 */
+	skipExternalPSPGuard?: boolean;
+
+	/**
+	 * Tags the newly-inserted customer_product's `processor.type` field. Used
+	 * by external-PSP origin callers to mark the cus_product as managed by a
+	 * non-Stripe processor (e.g. RevenueCat). Defaults to leaving `processor`
+	 * unset, which `cusProductToProcessorType` resolves to Stripe.
+	 */
+	processorTypeOverride?: ProcessorType;
 }
 
 export interface UpdateSubscriptionBillingContextOverride

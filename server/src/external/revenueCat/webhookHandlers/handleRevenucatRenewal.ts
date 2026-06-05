@@ -3,22 +3,14 @@ import {
 	ACTIVE_STATUSES,
 	AttachScenario,
 	CusProductStatus,
-	cusProductToPrices,
-	ProcessorType,
 } from "@shared/index";
-import { createStripeCli } from "@/external/connect/createStripeCli";
+import { provisionRevenueCatCusProduct } from "@/external/revenueCat/misc/provisionRevenueCatCusProduct";
 import { resolveRevenuecatResources } from "@/external/revenueCat/misc/resolveRevenuecatResources";
 import { recordRevenueCatInvoice } from "@/external/revenueCat/utils/recordRevenueCatInvoice";
 import type { RevenueCatWebhookContext } from "@/external/revenueCat/webhookMiddlewares/revenuecatWebhookContext";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
-import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct";
-import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
+import { customerProductActions } from "@/internal/customers/cusProducts/actions";
 import { getExistingCusProducts } from "@/internal/customers/cusProducts/cusProductUtils/getExistingCusProducts";
-import {
-	attachToInsertParams,
-	isProductUpgrade,
-} from "@/internal/products/productUtils";
-import { isMainProduct } from "@/internal/products/productUtils/classifyProduct";
 
 export const handleRenewal = async ({
 	event,
@@ -27,7 +19,7 @@ export const handleRenewal = async ({
 	event: WebhookRenewal;
 	ctx: RevenueCatWebhookContext;
 }) => {
-	const { db, org, env, logger, features } = ctx;
+	const { org, env, logger } = ctx;
 	const { product_id, app_user_id } = event;
 
 	const {
@@ -41,20 +33,18 @@ export const handleRenewal = async ({
 		customerId: app_user_id,
 	});
 
-	const { curSameProduct, curMainProduct } = getExistingCusProducts({
+	const { curSameProduct } = getExistingCusProducts({
 		product,
 		cusProducts,
 	});
 
-	const now = Date.now();
-
-	// If same product exists and is active, this is just a renewal - send webhook only
+	// Same active product: pure side-effect (webhook + invoice record). No DB
+	// mutation on the cusProduct; the cycle anchor is owned by the app store.
 	if (curSameProduct && ACTIVE_STATUSES.includes(curSameProduct.status)) {
 		logger.info(
 			`Renewal for existing active product ${product.id}, sending webhook`,
 		);
 
-		// Send webhook for simple renewal (no state change)
 		await addProductsUpdatedWebhookTask({
 			ctx: customerCtx,
 			internalCustomerId: curSameProduct.internal_customer_id,
@@ -73,30 +63,19 @@ export const handleRenewal = async ({
 		});
 
 		return { success: true };
-	} else if (
-		curSameProduct &&
-		curSameProduct.status === CusProductStatus.PastDue
-	) {
+	}
+
+	// Past-due → active recovery.
+	if (curSameProduct && curSameProduct.status === CusProductStatus.PastDue) {
 		logger.info(
 			`Renewal for existing past due product ${product.id}, marking as active`,
 		);
-		await CusProductService.update({
-			ctx: customerCtx,
-			cusProductId: curSameProduct.id,
-			updates: {
-				status: CusProductStatus.Active,
-			},
-		});
 
-		// Send webhook for past_due → active recovery
-		await addProductsUpdatedWebhookTask({
+		await customerProductActions.markActive({
 			ctx: customerCtx,
-			internalCustomerId: curSameProduct.internal_customer_id,
-			org,
-			env,
-			customerId: customer.id || "",
-			scenario: AttachScenario.Renew,
-			cusProduct: curSameProduct,
+			customerProduct: curSameProduct,
+			fullCustomer: customer,
+			sendWebhook: true,
 		});
 
 		logger.info(`Marked past due product as active: ${curSameProduct.id}`);
@@ -111,69 +90,12 @@ export const handleRenewal = async ({
 		return { success: true };
 	}
 
-	// Check if this is an upgrade (renewing to a different/better product)
-	const isNewProductMain = isMainProduct({ product, prices: product.prices });
-	let scenario = AttachScenario.New;
-
-	if (curMainProduct && isNewProductMain) {
-		const curPrices = cusProductToPrices({ cusProduct: curMainProduct });
-		const newPrices = product.prices;
-
-		const isUpgrade = isProductUpgrade({
-			prices1: curPrices,
-			prices2: newPrices,
-		});
-
-		scenario = isUpgrade ? AttachScenario.Upgrade : AttachScenario.Downgrade;
-
-		logger.info(
-			`Renewal with ${isUpgrade ? "upgrade" : "downgrade"}: ${curMainProduct.product.id} -> ${product.id}`,
-		);
-
-		// Expire old cus_product
-		await CusProductService.update({
+	// Reactivate same product (expired/canceled → active).
+	if (curSameProduct) {
+		await customerProductActions.uncancel({
 			ctx: customerCtx,
-			cusProductId: curMainProduct.id,
-			updates: {
-				status: CusProductStatus.Expired,
-				ended_at: now,
-			},
-		});
-
-		// Send webhook for the expired product
-		await addProductsUpdatedWebhookTask({
-			ctx: customerCtx,
-			internalCustomerId: curMainProduct.internal_customer_id,
-			org,
-			env,
-			customerId: customer.id || "",
-			scenario: AttachScenario.Expired,
-			cusProduct: curMainProduct,
-		});
-
-		logger.info(`Expired old cus_product: ${curMainProduct.id}`);
-	} else if (curSameProduct) {
-		// Reactivate the same product if it was expired/cancelled
-		await CusProductService.update({
-			ctx: customerCtx,
-			cusProductId: curSameProduct.id,
-			updates: {
-				status: CusProductStatus.Active,
-				canceled_at: null,
-				ended_at: null,
-				canceled: false,
-			},
-		});
-
-		// Send webhook for reactivation
-		await addProductsUpdatedWebhookTask({
-			ctx: customerCtx,
-			internalCustomerId: curSameProduct.internal_customer_id,
-			org,
-			env,
-			customerId: customer.id || "",
-			scenario: AttachScenario.Renew,
-			cusProduct: curSameProduct,
+			customerProduct: curSameProduct,
+			fullCustomer: customer,
 		});
 
 		logger.info(`Reactivated cus_product: ${curSameProduct.id}`);
@@ -188,37 +110,15 @@ export const handleRenewal = async ({
 		return { success: true };
 	}
 
-	// Create new cus_product for upgrade or new product
-	await createFullCusProduct({
-		db,
-		logger,
-		scenario,
-		processorType: ProcessorType.RevenueCat,
-		attachParams: attachToInsertParams(
-			{
-				customer,
-				products: [product],
-				prices: product.prices,
-				entitlements: product.entitlements,
-				entities: customer.entities || [],
-				org,
-				stripeCli: createStripeCli({ org, env }),
-				now,
-				paymentMethod: null,
-				freeTrial: null,
-				optionsList: [],
-				cusProducts,
-				replaceables: [],
-				features,
-			},
-			product,
-		),
-		sendWebhook: true,
+	// Different product (upgrade or downgrade). V2 attach handles expiring the
+	// outgoing cusProduct via computeAttachPlan's transition logic.
+	await provisionRevenueCatCusProduct({
+		ctx: customerCtx,
+		customer,
+		product,
 	});
 
-	logger.info(
-		`Created cus_product for ${product.id} with scenario: ${scenario} (renewal)`,
-	);
+	logger.info(`Created RC cus_product for ${product.id} (renewal transition)`);
 
 	await recordRevenueCatInvoice({ ctx: customerCtx, event, customer, product });
 

@@ -163,6 +163,7 @@ export const handleCreatePlatformOrg = createRoute({
 		}
 
 		return c.json({
+			org_id: org.id,
 			test_secret_key,
 			live_secret_key,
 			org_slug: org.slug,
