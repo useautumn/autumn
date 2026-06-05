@@ -6,6 +6,7 @@ import type {
 	FeatureOptions,
 	FreeTrial,
 	Price,
+	ProcessorType,
 	TrialOnEnd,
 } from "@autumn/shared";
 import type { PaymentBehaviorIntent } from "@models/billingModels/context/paymentBehaviorIntent";
@@ -121,4 +122,10 @@ export interface BillingContext {
 	paymentBehaviorIntent?: PaymentBehaviorIntent;
 	shouldFinalizeFirstInvoice?: boolean;
 	skipCustomPaymentMethodGuard?: boolean;
+
+	/** See `BillingContextOverride.skipExternalPSPGuard`. */
+	skipExternalPSPGuard?: boolean;
+
+	/** See `BillingContextOverride.processorTypeOverride`. */
+	processorTypeOverride?: ProcessorType;
 }

@@ -42,10 +42,12 @@ revenuecatWebhookRouter.post(
 		try {
 			const webhookSecret = getRevenuecatWebhookSecret({ org, env });
 
-			if (Authorization !== webhookSecret) {
+			// Missing secret must fail closed — otherwise an unauthenticated
+			// request (no header) matches an unconfigured secret (both undefined).
+			if (!webhookSecret || Authorization !== webhookSecret) {
 				logger.error("Invalid authorization for RevenueCat webhook", {
-					Authorization,
-					webhookSecret,
+					secretConfigured: Boolean(webhookSecret),
+					authorizationProvided: Boolean(Authorization),
 				});
 				return c.json({ error: "Unauthorized" }, 401);
 			}
