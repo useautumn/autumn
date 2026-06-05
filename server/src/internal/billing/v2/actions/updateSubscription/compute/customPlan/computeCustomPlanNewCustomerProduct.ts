@@ -91,7 +91,7 @@ export const computeCustomPlanNewCustomerProduct = ({
 				? { subscriptionId: params.processor_subscription_id }
 				: {}),
 
-			...(params.status ? { status: params.status } : {}),
+			status: params.status ?? currentCustomerProduct.status,
 
 			onTrialEnd:
 				trialContext?.onEnd ??
