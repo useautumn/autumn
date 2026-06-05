@@ -42,7 +42,7 @@
 			"includeEntryExports": false
 		},
 		"vite": {
-			"entry": ["tests/**/*.{ts,tsx}"],
+			"entry": ["tests/**/*.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
 			"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
 			"ignore": ["src/components/ai-elements/**", "src/hooks/useControllableState.ts", "src/types/**/*.d.ts"],
 			"ignoreDependencies": [
