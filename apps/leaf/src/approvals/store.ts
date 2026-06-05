@@ -1,15 +1,15 @@
 import crypto from "node:crypto";
 import {
-	AppEnv,
+	type AppEnv,
 	type ChatProvider,
 	chatApprovals,
 	chatInstallations,
 } from "@autumn/shared";
 import { addMinutes, isPast } from "date-fns";
 import { and, eq, gt } from "drizzle-orm";
-import { decrypt } from "../lib/crypto.js";
-import { db } from "../lib/db.js";
 import { executeAutumnMcpTool } from "../agent/mcp.js";
+import { getInstallationOAuthAccessToken } from "../internal/installations/actions/getInstallationOAuthAccessToken.js";
+import { db } from "../lib/db.js";
 
 export const normalizeToolName = (toolName: string) =>
 	toolName.replace(/^autumn_/, "");
@@ -120,14 +120,14 @@ export const approveAndRun = async (id: string, providerUserId: string) => {
 		});
 		if (!installation) throw new Error("Chat installation not found");
 
-		const encryptedKey =
-			claimed.env === AppEnv.Live
-				? installation.live_api_key
-				: installation.sandbox_api_key;
-		if (!encryptedKey) throw new Error(`Missing ${claimed.env} API key`);
+		const token = await getInstallationOAuthAccessToken({
+			installation,
+			env: claimed.env,
+		});
 
 		const result = await executeAutumnMcpTool({
-			apiKey: decrypt(encryptedKey),
+			token,
+			env: claimed.env,
 			toolName: claimed.tool_name,
 			args: claimed.tool_args,
 		});

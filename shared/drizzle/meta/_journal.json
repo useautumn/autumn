@@ -57,6 +57,13 @@
       "when": 1780655063264,
       "tag": "0007_cute_ikaris",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780679328640,
+      "tag": "0008_premium_pet_avengers",
+      "breakpoints": true
     }
   ]
 }

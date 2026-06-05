@@ -1,4 +1,6 @@
+import { isSecretKeyPrefix } from "@autumn/auth";
 import type { AutumnLogger } from "@autumn/logging";
+import type { AppEnv } from "@autumn/shared";
 import { MCPClient } from "@mastra/mcp";
 import { env } from "../lib/env.js";
 import { logger as rootLogger } from "../lib/logger.js";
@@ -26,29 +28,41 @@ type ToolOptions = {
 };
 
 const withAuthFetch =
-	(apiKey: string) => (input: RequestInfo | URL, init?: RequestInit) => {
+	({ appEnv, token }: { appEnv: AppEnv; token: string }) =>
+	(input: RequestInfo | URL, init?: RequestInit) => {
 		const headers = new Headers(init?.headers);
-		headers.set("Authorization", `Bearer ${apiKey}`);
-		headers.set("secret-key", apiKey);
+		headers.set("Authorization", `Bearer ${token}`);
+		headers.set("x-autumn-environment", appEnv);
+		if (isSecretKeyPrefix({ token })) {
+			headers.set("secret-key", token);
+		}
 		return fetch(input, { ...init, headers });
 	};
 
-export const createAutumnMcpClient = (
-	apiKey: string,
-	options: { requireApproval?: boolean } = {},
-) => {
-	const fetchWithAuth = withAuthFetch(apiKey);
+export const createAutumnMcpClient = ({
+	token,
+	appEnv,
+	options = {},
+}: {
+	token: string;
+	appEnv: AppEnv;
+	options?: { requireApproval?: boolean };
+}) => {
+	const fetchWithAuth = withAuthFetch({ appEnv, token });
+	const headers: Record<string, string> = {
+		Authorization: `Bearer ${token}`,
+		"x-autumn-environment": appEnv,
+	};
+	if (isSecretKeyPrefix({ token })) {
+		headers["secret-key"] = token;
+	}
+
 	return new MCPClient({
-		id: `autumn-${apiKey.slice(0, 14)}`,
+		id: `autumn-${token.slice(0, 14)}`,
 		servers: {
 			autumn: {
 				url: new URL("/mcp", env.MCP_SERVER_URL),
-				requestInit: {
-					headers: {
-						Authorization: `Bearer ${apiKey}`,
-						"secret-key": apiKey,
-					},
-				},
+				requestInit: { headers },
 				eventSourceInit: { fetch: fetchWithAuth },
 				fetch: fetchWithAuth,
 				requireToolApproval: options.requireApproval
@@ -59,7 +73,13 @@ export const createAutumnMcpClient = (
 	});
 };
 
-const formatToolAction = (toolName: string, args: Record<string, unknown>) => {
+const formatToolAction = ({
+	toolName,
+	args,
+}: {
+	toolName: string;
+	args: Record<string, unknown>;
+}) => {
 	const request =
 		args.request && typeof args.request === "object"
 			? (args.request as Record<string, unknown>)
@@ -76,10 +96,13 @@ const formatToolAction = (toolName: string, args: Record<string, unknown>) => {
 	return `${toolLabel(toolName)}${details.length ? ` (${details.join(", ")})` : ""}`;
 };
 
-export const getAutumnMcpTools = async (
-	mcp: MCPClient,
-	options: ToolOptions = {},
-) => {
+export const getAutumnMcpTools = async ({
+	mcp,
+	options = {},
+}: {
+	mcp: MCPClient;
+	options?: ToolOptions;
+}) => {
 	const logger = options.logger ?? rootLogger;
 	const { toolsets, errors } = await mcp.listToolsetsWithErrors();
 	if (Object.keys(errors).length) {
@@ -111,7 +134,7 @@ export const getAutumnMcpTools = async (
 					event: "leaf.mcp_tool_called",
 					tool: toolName,
 				});
-				await options.onToolCall?.(formatToolAction(toolName, args));
+				await options.onToolCall?.(formatToolAction({ toolName, args }));
 				const result = await execute(args, ...rest);
 				const writeTool = getWriteToolForPreview(toolName);
 				if (writeTool) {
@@ -136,17 +159,19 @@ export const getAutumnMcpTools = async (
 };
 
 export const executeAutumnMcpTool = async ({
-	apiKey,
+	env,
+	token,
 	toolName,
 	args,
 }: {
-	apiKey: string;
+	env: AppEnv;
+	token: string;
 	toolName: string;
 	args: Record<string, unknown>;
 }) => {
-	const mcp = createAutumnMcpClient(apiKey);
+	const mcp = createAutumnMcpClient({ token, appEnv: env });
 	try {
-		const tools = await getAutumnMcpTools(mcp);
+		const tools = await getAutumnMcpTools({ mcp });
 		const tool = tools[toolName.replace(/^autumn_/, "")];
 		if (!tool?.execute) throw new Error(`Unknown Autumn MCP tool: ${toolName}`);
 		return await tool.execute(args);

@@ -1,7 +1,14 @@
-import { AuthType, ErrCode, type Feature, RecaseError } from "@autumn/shared";
+import {
+	getBearerToken,
+	isOAuthToken,
+	isPublishableKeyPrefix,
+	isSecretKeyPrefix,
+} from "@autumn/auth";
+import { AuthType, ErrCode, RecaseError, sortFeatures } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
+import { handleOAuthMiddleware } from "./authMiddlewares/handleOAuthMiddleware.js";
 import { betterAuthMiddleware } from "./betterAuthMiddleware.js";
 import { publicKeyMiddleware } from "./publicKeyMiddleware.js";
 
@@ -29,12 +36,11 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		return betterAuthMiddleware(c, next);
 	}
 
-	const authHeader =
-		c.req.header("authorization") || c.req.header("Authorization");
+	const bearerToken = getBearerToken({ headers: c.req.raw.headers });
 
 	// Step 1 & 2: Check if Authorization header exists
 	// If from dashboard and no Bearer token, use Better Auth session instead
-	if (!authHeader || !authHeader.startsWith("Bearer ")) {
+	if (!bearerToken) {
 		throw new RecaseError({
 			message: "Secret key not found in Authorization header",
 			code: ErrCode.NoSecretKey,
@@ -42,30 +48,31 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		});
 	}
 
-	// Step 2: Extract and validate API key format
-	const apiKey = authHeader.split(" ")[1];
-
-	if (!apiKey.startsWith("am_")) {
-		throw new RecaseError({
-			message: `Invalid secret key: ${maskApiKey(apiKey)}`,
-			code: ErrCode.InvalidSecretKey,
-			statusCode: 401,
-		});
+	if (isOAuthToken({ token: bearerToken })) {
+		return handleOAuthMiddleware({ c, token: bearerToken, next });
 	}
 
 	// Step 3: Handle publishable key verification
-	if (apiKey.startsWith("am_pk")) {
-		return publicKeyMiddleware(c, apiKey, next);
+	if (isPublishableKeyPrefix({ token: bearerToken })) {
+		return publicKeyMiddleware(c, bearerToken, next);
+	}
+
+	if (!isSecretKeyPrefix({ token: bearerToken })) {
+		throw new RecaseError({
+			message: "Invalid authorization token prefix",
+			code: ErrCode.InvalidRequest,
+			statusCode: 401,
+		});
 	}
 
 	// Step 4: Verify the API key
 	const { valid, data } = await verifyKey({
 		db: ctx.db,
-		key: apiKey,
+		key: bearerToken,
 	});
 
 	if (!valid || !data) {
-		const maskedKey = maskApiKey(apiKey);
+		const maskedKey = maskApiKey(bearerToken);
 		throw new RecaseError({
 			message: `Invalid secret key: ${maskedKey}`,
 			code: ErrCode.InvalidSecretKey,
@@ -77,13 +84,7 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const { org, features, env, userId } = data;
 	const scopes = (data as { scopes?: string[] | null }).scopes ?? [];
 
-	if (features) {
-		features.sort((a: Feature, b: Feature) => {
-			if (a.archived && !b.archived) return 1;
-			if (!a.archived && b.archived) return -1;
-			return 0;
-		});
-	}
+	sortFeatures({ features });
 
 	ctx.org = org;
 	ctx.features = features;

@@ -27,6 +27,7 @@ COPY apps/sdk-test/package.json apps/sdk-test/
 COPY apps/website/package.json apps/website/
 COPY packages/atmn/package.json packages/atmn/
 COPY packages/atmn-tests/package.json packages/atmn-tests/
+COPY packages/auth/package.json packages/auth/
 COPY packages/autumn-js/package.json packages/autumn-js/
 COPY packages/ksuid/package.json packages/ksuid/
 COPY packages/logging/package.json packages/logging/

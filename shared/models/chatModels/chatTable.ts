@@ -81,5 +81,42 @@ export const chatApprovals = pgTable(
 	],
 );
 
+export const chatOAuthCredentials = pgTable(
+	"chat_oauth_credentials",
+	{
+		id: text().primaryKey().notNull(),
+		chat_installation_id: text("chat_installation_id").notNull(),
+		org_id: text("org_id").notNull(),
+		env: text("env").$type<AppEnv>().notNull(),
+		oauth_client_id: text("oauth_client_id").notNull(),
+		oauth_consent_id: text("oauth_consent_id"),
+		access_token: text("access_token").notNull(),
+		refresh_token: text("refresh_token").notNull(),
+		access_token_expires_at: numeric("access_token_expires_at", {
+			mode: "number",
+		}).notNull(),
+		scopes: jsonb().$type<string[]>().notNull(),
+		created_at: numeric({ mode: "number" }).notNull().default(sqlNow),
+		updated_at: numeric({ mode: "number" }).notNull().default(sqlNow),
+	},
+	(table) => [
+		foreignKey({
+			columns: [table.chat_installation_id],
+			foreignColumns: [chatInstallations.id],
+			name: "chat_oauth_credentials_installation_id_fkey",
+		}).onDelete("cascade"),
+		foreignKey({
+			columns: [table.org_id],
+			foreignColumns: [organizations.id],
+			name: "chat_oauth_credentials_org_id_fkey",
+		}).onDelete("cascade"),
+		unique("chat_oauth_credentials_installation_env_key").on(
+			table.chat_installation_id,
+			table.env,
+		),
+	],
+);
+
 export type ChatInstallation = typeof chatInstallations.$inferSelect;
 export type ChatApproval = typeof chatApprovals.$inferSelect;
+export type ChatOAuthCredential = typeof chatOAuthCredentials.$inferSelect;
