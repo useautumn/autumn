@@ -1,5 +1,9 @@
 import type { Operations, UpdatePlanOp } from "@autumn/shared";
 
+export function migrationUid(): string {
+	return Date.now().toString(36).slice(-3);
+}
+
 export function hasValidOperations(operations: Operations): boolean {
 	const ops = operations.customer ?? [];
 	if (ops.length === 0) return false;

@@ -119,7 +119,7 @@ export function UpdatePlanOpForm({
 	};
 
 	const editItem: ProductItem | undefined =
-		editingItemIndex !== null
+		editingItemIndex !== null && addItems[editingItemIndex]
 			? migrationItemToProductItem(addItems[editingItemIndex], features)
 			: undefined;
 

@@ -14,6 +14,7 @@ import {
 import type { DiffedCustomizePlanV1 } from "@autumn/shared/utils/planV1Utils/diff/diffPlanV1.js";
 import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
 import type { Operations } from "@autumn/shared/api/migrations/operations/operations.js";
+import { migrationUid } from "@/views/migrations/migration/shared/operationUtils";
 
 export interface MigrationDraft {
 	id: string;
@@ -126,7 +127,7 @@ export function buildVersionMigrationDraft({
 	const suffix = scope === "all" ? "migrate-all" : `migrate-v${scope}`;
 
 	return {
-		id: `${productId}-${suffix}-to-v${latestVersion}`,
+		id: `${productId}-${suffix}-to-v${latestVersion}-${migrationUid()}`,
 		filter,
 		operations,
 		no_billing_changes: true,
@@ -138,11 +139,13 @@ export function buildMigrationDraft({
 	editedProduct,
 	features,
 	scope,
+	includeCustom = false,
 }: {
 	baseProduct: FrontendProduct;
 	editedProduct: FrontendProduct;
 	features: Feature[];
 	scope: MigrationScope;
+	includeCustom?: boolean;
 }): MigrationDraft {
 	const from = frontendProductToApiPlanV1(baseProduct, features);
 	const to = frontendProductToApiPlanV1(editedProduct, features);
@@ -157,10 +160,13 @@ export function buildMigrationDraft({
 		...(customize ? { customize } : {}),
 	};
 
-	const planFilter =
-		scope === "this_version"
-			? { plan_id: baseProduct.id, version: baseProduct.version }
-			: { plan_id: baseProduct.id };
+	const planFilter = {
+		plan_id: baseProduct.id,
+		...(scope === "this_version"
+			? { version: baseProduct.version }
+			: {}),
+		...(!includeCustom ? { custom: false } : {}),
+	};
 
 	const filter: MigrationFilter = {
 		customer: { plan: planFilter },
@@ -170,7 +176,7 @@ export function buildMigrationDraft({
 		scope === "all_customers" ? "update-all" : "update";
 
 	return {
-		id: `${baseProduct.id}-${suffix}`,
+		id: `${baseProduct.id}-${suffix}-${migrationUid()}`,
 		filter,
 		operations: { customer: [updatePlanOp] } as unknown as Operations,
 		no_billing_changes: !diffHasBillingChanges(diff),

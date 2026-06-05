@@ -16,6 +16,7 @@ import { Separator } from "@/components/v2/separator";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { filterToProductItem, type ItemFilter } from "../operations/operationItemUtils";
 import { extractPlanIds } from "../operations/UpdatePlanOpForm";
 import { migrationItemToProductItem } from "./migrationItemUtils";
 
@@ -47,7 +48,7 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 		products.find((p) => p.id === id)?.name ?? id;
 
 	return (
-		<div className="flex flex-col gap-3">
+		<div className="flex flex-col gap-3 min-w-0">
 			<Separator />
 			{ops.map((op, index) => {
 				if (op.type === "add_plan") {
@@ -71,7 +72,7 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 				const removeItems = customize?.remove_items ?? [];
 
 				return (
-					<div key={`op-${index}`} className="flex flex-col gap-2">
+					<div key={`op-${index}`} className="flex flex-col gap-2 min-w-0">
 						<div className="flex items-center gap-2">
 							<span className="text-sm font-medium text-foreground">
 								{planIds.length > 1 ? "Update plans" : "Update plan"}
@@ -130,7 +131,7 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 						{removeItems.map((item, idx) => (
 							<DeletedItemRow
 								key={`remove-${idx}`}
-								item={migrationItemToProductItem(item, features)}
+								item={filterToProductItem(item as ItemFilter)}
 								index={idx}
 							/>
 						))}
