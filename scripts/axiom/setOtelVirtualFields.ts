@@ -4,10 +4,10 @@
  * (`req.url`, `context.org_slug`, `statusCode`, etc.).
  *
  * Usage:
- *   AXIOM_API_TOKEN=<personal-token> bun scripts/axiom/setOtelVirtualFields.ts
+ *   AXIOM_ADMIN_TOKEN=<personal-token> bun scripts/axiom/setOtelVirtualFields.ts
  *
  * Notes:
- * - AXIOM_API_TOKEN must be a personal API token with dataset-write scope,
+ * - AXIOM_ADMIN_TOKEN must be a personal API token with dataset-write scope,
  *   NOT the `xaat-` ingest token used by the server.
  * - Safe to re-run; existing fields with matching names are updated in place.
  */
@@ -149,10 +149,10 @@ type ExistingVField = {
 	dataset: string;
 };
 
-const token = process.env.AXIOM_API_TOKEN;
+const token = process.env.AXIOM_ADMIN_TOKEN;
 if (!token) {
 	console.error(
-		"AXIOM_API_TOKEN env var is required (personal API token, not xaat-* ingest token)",
+		"AXIOM_ADMIN_TOKEN env var is required (personal API token, not xaat-* ingest token)",
 	);
 	process.exit(1);
 }

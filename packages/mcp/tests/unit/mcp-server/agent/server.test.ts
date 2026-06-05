@@ -1,9 +1,6 @@
 import { describe, expect, test } from "bun:test";
-import {
-	createAskAutumnMCPServer,
-	createAutumnOperationsMCPServer,
-} from "../../../../src/mcp-server/agent/server.js";
-import { autumnMcpResourceUris } from "../../../../src/mcp-server/agent/resources.js";
+import { autumnMcpResourceUris } from "../../../../src/resources/index.js";
+import { createAutumnOperationsMCPServer } from "../../../../src/server/server.js";
 
 describe("Autumn MCP server", () => {
 	test("public server advertises raw operation tools", async () => {
@@ -15,8 +12,8 @@ describe("Autumn MCP server", () => {
 			"getCustomer",
 			"listPlans",
 			"createPlan",
-			"createBalance",
 			"getPlan",
+			"createBalance",
 			"previewAttach",
 			"previewUpdateSubscription",
 			"previewCreateSchedule",
@@ -24,19 +21,12 @@ describe("Autumn MCP server", () => {
 			"attach",
 			"updateSubscription",
 			"createSchedule",
+			"getCurrentOrganization",
 		]);
 		expect(tools.tools.map((tool) => tool.name)).not.toContain("ask_autumn");
 		expect(tools.tools.map((tool) => tool.name)).not.toContain(
 			"confirmBillingAction",
 		);
-	});
-
-	test("internal server advertises only ask_autumn", async () => {
-		const tools = await createAskAutumnMCPServer().getToolListInfo();
-
-		expect(tools.tools.map((tool) => tool.name)).toEqual(["ask_autumn"]);
-		expect(tools.tools.map((tool) => tool.name)).not.toContain("attach");
-		expect(tools.tools.map((tool) => tool.name)).not.toContain("listCustomers");
 	});
 
 	test("billing tool schemas avoid legacy JSON Schema ids", async () => {
@@ -53,11 +43,8 @@ describe("Autumn MCP server", () => {
 		}
 	});
 
-	test.each([
-		["public", createAutumnOperationsMCPServer],
-		["internal", createAskAutumnMCPServer],
-	])("%s server exposes Autumn composition docs", async (_name, createServer) => {
-		const server = createServer();
+	test("public server exposes Autumn composition docs", async () => {
+		const server = createAutumnOperationsMCPServer();
 		const resources = await server.listResources();
 
 		expect(resources.resources.map((resource) => resource.uri)).toEqual(

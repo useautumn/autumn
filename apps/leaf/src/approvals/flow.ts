@@ -1,5 +1,16 @@
+import type { AutumnLogger } from "@autumn/logging";
 import type { ChatApproval, ChatInstallation } from "@autumn/shared";
 import type { ActionEvent } from "chat";
+import { toolLabel } from "../agent/toolPolicy.js";
+import { logger as rootLogger } from "../lib/logger.js";
+import type { AgentOutput } from "../types.js";
+import { approvalCard, approvalStatusCard } from "../ui/blocks.js";
+import {
+	finishLoading,
+	type LoadingState,
+	type ReplyTarget,
+} from "../ui/progress.js";
+import { approvalRequestFromOutput } from "./request.js";
 import {
 	approveAndRun,
 	cancelApproval,
@@ -7,21 +18,13 @@ import {
 	getApproval,
 	isErrorResult,
 } from "./store.js";
-import { approvalRequestFromOutput } from "./request.js";
-import { approvalCard, approvalStatusCard } from "../ui/blocks.js";
-import {
-	finishLoading,
-	type LoadingState,
-	type ReplyTarget,
-} from "../ui/progress.js";
-import { toolLabel } from "../agent/toolPolicy.js";
-import type { AgentOutput } from "../types.js";
 
 export const postApprovalRequest = async ({
 	channelId,
 	installation,
 	loading,
 	logAction,
+	logger = rootLogger,
 	output,
 	providerUserId,
 	target,
@@ -30,6 +33,7 @@ export const postApprovalRequest = async ({
 	installation: ChatInstallation;
 	loading: LoadingState;
 	logAction: (message: string) => Promise<void> | void;
+	logger?: AutumnLogger;
 	output: AgentOutput;
 	providerUserId: string;
 	target: ReplyTarget;
@@ -47,6 +51,15 @@ export const postApprovalRequest = async ({
 	});
 
 	await logAction(`Waiting for approval: ${toolLabel(approval.toolName)}`);
+	logger.info("Created approval request", {
+		event: "leaf.approval_created",
+		context: {
+			env: approval.env,
+			org_id: installation.org_id,
+		},
+		approval_id: approvalId,
+		tool: approval.toolName,
+	});
 	await finishLoading(target, loading, "Preview ready.");
 	await target.post(
 		approvalCard({
@@ -92,10 +105,22 @@ export const handleApprovalAction = async (event: ActionEvent) => {
 	if (!event.value) return;
 
 	try {
+		rootLogger.info("Received approval action", {
+			event: "leaf.approval_action_received",
+			approval_id: event.value,
+			action: event.actionId,
+			data: {
+				provider_user_id: event.user.userId,
+			},
+		});
 		const details = await approvalDetails(event.value);
 		if (event.actionId === "cancel_billing_action") {
 			const cancelled = await cancelApproval(event.value, event.user.userId);
 			if (!cancelled) {
+				rootLogger.warn("Approval cancellation ignored", {
+					event: "leaf.approval_cancel_ignored",
+					approval_id: event.value,
+				});
 				const current = await getApproval(event.value);
 				await editActionMessage(
 					event,
@@ -110,6 +135,11 @@ export const handleApprovalAction = async (event: ActionEvent) => {
 				event,
 				approvalStatusCard({ status: "cancelled", ...details }),
 			);
+			rootLogger.info("Cancelled approval", {
+				event: "leaf.approval_cancelled",
+				approval_id: event.value,
+				tool: details.toolName,
+			});
 			return;
 		}
 
@@ -118,6 +148,12 @@ export const handleApprovalAction = async (event: ActionEvent) => {
 			approvalStatusCard({ status: "running", ...details }),
 		);
 		const result = await approveAndRun(event.value, event.user.userId);
+		rootLogger.info("Completed approval action", {
+			event: "leaf.approval_completed",
+			approval_id: event.value,
+			status: isErrorResult(result) ? "failed" : "approved",
+			tool: details.toolName,
+		});
 		await editActionMessage(
 			event,
 			approvalStatusCard({
@@ -127,7 +163,11 @@ export const handleApprovalAction = async (event: ActionEvent) => {
 			}),
 		);
 	} catch (error) {
-		console.error("[chat] Approval action failed", error);
+		rootLogger.error("[chat] Approval action failed", error, {
+			event: "leaf.approval_failed",
+			approval_id: event.value,
+			action: event.actionId,
+		});
 		const current = await getApproval(event.value);
 		await editActionMessage(
 			event,
