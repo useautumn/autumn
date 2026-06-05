@@ -15,8 +15,6 @@ export const ensureStripeCustomerFromCustomerData = async ({
 }) => {
 	if (!customerData?.create_in_stripe || customer.processor?.id) return false;
 
-	if (customer.processor?.id) return true;
-
 	await getOrCreateStripeCustomer({
 		ctx,
 		customer,
