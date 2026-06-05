@@ -14,6 +14,7 @@ import {
 	isFeaturePriceItem,
 	isPriceItem,
 } from "./productV2Utils/productItemUtils/getItemType.js";
+import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
 import { notNullish, nullish } from "./utils.js";
 
 // ============================================================================
@@ -54,7 +55,7 @@ const getIncludedUsageText = (item: ProductItem, feature: Feature): string => {
 	if (item.included_usage === Infinite) {
 		return `Unlimited ${featureName}`;
 	}
-	if (feature.type === FeatureType.AiCreditSystem) {
+	if (isAiCreditSystem(feature.type)) {
 		return `$${numberWithCommas(item.included_usage ?? 0)} of ${featureName}`;
 	}
 	if (nullish(item.included_usage) || item.included_usage === 0) {
@@ -221,7 +222,6 @@ export const getFeaturePriceItemDisplay = ({
 	// Build included usage string (e.g., "100 credits")
 	const includedUsage = item.included_usage as number | null;
 	const hasIncludedUsage = notNullish(includedUsage) && includedUsage > 0;
-	const isAiCreditSystem = feature.type === FeatureType.AiCreditSystem;
 
 	const includedFeatureName = getFeatureName({
 		feature,
@@ -229,7 +229,7 @@ export const getFeaturePriceItemDisplay = ({
 	});
 	let includedUsageStr = "";
 	if (hasIncludedUsage) {
-		if (isAiCreditSystem) {
+		if (isAiCreditSystem(feature.type)) {
 			includedUsageStr = `$${numberWithCommas(includedUsage)} of ${includedFeatureName}`;
 		} else {
 			includedUsageStr = `${numberWithCommas(includedUsage)} ${includedFeatureName}`;
@@ -258,7 +258,7 @@ export const getFeaturePriceItemDisplay = ({
 		units: billingUnits,
 	});
 	let perUnitStr: string;
-	if (isAiCreditSystem) {
+	if (isAiCreditSystem(feature.type)) {
 		perUnitStr =
 			billingUnits > 1
 				? `$${numberWithCommas(billingUnits)} of ${billingFeatureName}`
@@ -283,7 +283,7 @@ export const getFeaturePriceItemDisplay = ({
 	}
 
 	// Format output based on what we have
-	if (isAiCreditSystem) {
+	if (isAiCreditSystem(feature.type)) {
 		return {
 			primary_text: includedUsageStr || "$0 included",
 			secondary_text: "then charged based on model usage",

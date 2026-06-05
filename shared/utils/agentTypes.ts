@@ -23,6 +23,8 @@ import { AppEnv } from "../models/genModels/genEnums.js";
 import { Infinite } from "../models/productModels/productEnums.js";
 import type { ProductItem } from "../models/productV2Models/productItemModels/productItemModels.js";
 import type { ProductV2 } from "../models/productV2Models/productV2Models.js";
+import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
+import { buildAiCreditSystemConfig } from "./featureUtils/buildAiCreditSystemConfig.js";
 
 // ============ INTERFACES ============
 
@@ -127,14 +129,13 @@ export function agentFeatureToFeature(agentFeature: AgentFeature): Feature {
 		}));
 	}
 	if (agentFeature.type === "ai_credit_system") {
-		config.schema = [];
-		config.usage_type = FeatureUsageType.Single;
-		if (agentFeature.default_markup != null) {
-			config.default_markup = agentFeature.default_markup;
-		}
-		if (agentFeature.provider_markups != null) {
-			config.provider_markups = agentFeature.provider_markups;
-		}
+		Object.assign(
+			config,
+			buildAiCreditSystemConfig({
+				defaultMarkup: agentFeature.default_markup,
+				providerMarkups: agentFeature.provider_markups,
+			}),
+		);
 	}
 
 	return {
@@ -193,7 +194,7 @@ export function agentProductToProductV2(product: AgentProduct): ProductV2 {
 // ============ SHARED → AGENT CONVERTERS ============
 
 function mapFeatureTypeToAgentType(feature: Feature): AgentFeatureType {
-	if (feature.type === FeatureType.AiCreditSystem) {
+	if (isAiCreditSystem(feature.type)) {
 		return "ai_credit_system";
 	}
 
@@ -242,7 +243,7 @@ export function featureToAgentFeature(feature: Feature): AgentFeature {
 			}),
 		);
 	}
-	if (feature.type === FeatureType.AiCreditSystem) {
+	if (isAiCreditSystem(feature.type)) {
 		agentFeature.model_markups = feature.model_markups;
 		agentFeature.default_markup = feature.config?.default_markup;
 		agentFeature.provider_markups = feature.config?.provider_markups;

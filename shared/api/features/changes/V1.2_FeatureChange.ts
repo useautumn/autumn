@@ -4,6 +4,7 @@ import {
 	defineVersionChange,
 } from "@api/versionUtils/versionChangeUtils/VersionChange.js";
 import { FeatureType } from "@models/featureModels/featureEnums.js";
+import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
 import type { z } from "zod/v4";
 import { ApiFeatureV1Schema } from "../apiFeatureV1.js";
 import {
@@ -63,7 +64,7 @@ export const V1_2_FeatureChange = defineVersionChange({
 			v0Type = ApiFeatureType.Boolean;
 		} else if (input.type === FeatureType.CreditSystem) {
 			v0Type = ApiFeatureType.CreditSystem;
-		} else if (input.type === FeatureType.AiCreditSystem) {
+		} else if (isAiCreditSystem(input.type)) {
 			v0Type = ApiFeatureType.AiCreditSystem;
 		} else if (input.type === FeatureType.Metered) {
 			v0Type = input.consumable

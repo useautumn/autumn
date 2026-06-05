@@ -8,6 +8,7 @@ import {
 	FeatureUsageType,
 } from "@models/featureModels/featureEnums.js";
 import type { Feature } from "@models/featureModels/featureModels.js";
+import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
 import { isAnyCreditSystem } from "./classifyFeature/isAnyCreditSystem.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import type { ApiFeatureV1 } from "../../api/features/apiFeatureV1.js";
@@ -24,6 +25,7 @@ import {
 import type { CreditSchemaItem } from "../../models/featureModels/featureConfig/creditConfig.js";
 import type { SharedContext } from "../../types/sharedContext.js";
 import { notNullish, nullish } from "../utils.js";
+import { buildAiCreditSystemConfig } from "./buildAiCreditSystemConfig.js";
 
 export const apiFeatureToDbFeature = ({
 	apiFeature,
@@ -89,21 +91,19 @@ export const featureV1ToDbFeatureConfig = ({
 	const hasDefaultMarkup = "default_markup" in apiFeature;
 
 	if (
-		type === FeatureType.AiCreditSystem &&
-		(apiFeature.type === FeatureType.AiCreditSystem ||
+		isAiCreditSystem(type) &&
+		(isAiCreditSystem(apiFeature.type) ||
 			hasDefaultMarkup ||
 			hasProviderMarkups)
 	) {
-		return {
-			schema: [],
-			usage_type: FeatureUsageType.Single,
-			default_markup: hasDefaultMarkup
+		return buildAiCreditSystemConfig({
+			defaultMarkup: hasDefaultMarkup
 				? apiFeature.default_markup
 				: originalFeature.config?.default_markup,
-			provider_markups: hasProviderMarkups
+			providerMarkups: hasProviderMarkups
 				? apiFeature.provider_markups
 				: originalFeature.config?.provider_markups,
-		};
+		});
 	}
 
 	if (nullish(apiFeature.consumable) && nullish(apiFeature.credit_schema))
@@ -162,11 +162,14 @@ export const featureV1ToDbFeature = ({
 			: FeatureUsageType.Continuous;
 	}
 
-	if (apiFeature.type === FeatureType.AiCreditSystem) {
-		newConfig.usage_type = FeatureUsageType.Single;
-		newConfig.schema = [];
-		newConfig.default_markup = apiFeature.default_markup;
-		newConfig.provider_markups = apiFeature.provider_markups;
+	if (isAiCreditSystem(apiFeature.type)) {
+		Object.assign(
+			newConfig,
+			buildAiCreditSystemConfig({
+				defaultMarkup: apiFeature.default_markup,
+				providerMarkups: apiFeature.provider_markups,
+			}),
+		);
 	}
 
 	if (apiFeature.credit_schema) {

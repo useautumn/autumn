@@ -7,6 +7,7 @@ import {
 	FeatureType,
 	FeatureUsageType,
 	type FullCustomer,
+	isAiCreditSystem,
 	isAllocatedPrice,
 	type MeteredConfig,
 	type UsagePriceConfig,
@@ -45,10 +46,9 @@ export const validateCreditSystem = (
 	config: CreditSystemConfig,
 	featureType: FeatureType = FeatureType.CreditSystem,
 ) => {
-	const isAiCreditSystem = featureType === FeatureType.AiCreditSystem;
 	const schema = Array.isArray(config?.schema) ? config.schema : [];
 
-	if (!isAiCreditSystem && schema.length === 0) {
+	if (!isAiCreditSystem(featureType) && schema.length === 0) {
 		throw new RecaseError({
 			message: `At least one metered feature is required for credit system`,
 			code: ErrCode.InvalidFeature,
@@ -56,7 +56,7 @@ export const validateCreditSystem = (
 		});
 	}
 
-	if (isAiCreditSystem && schema.length > 0) {
+	if (isAiCreditSystem(featureType) && schema.length > 0) {
 		throw new RecaseError({
 			message: `AI credit systems are leaf features and cannot define a schema. Model rates live in model_markups.`,
 			code: ErrCode.InvalidFeature,

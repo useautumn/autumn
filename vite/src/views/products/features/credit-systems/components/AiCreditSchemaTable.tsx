@@ -3,7 +3,6 @@ import {
 	type ModelsDevProvider,
 	splitModelId,
 } from "@autumn/shared";
-import { useStore } from "@tanstack/react-form";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { InfoIcon, PlusIcon, X } from "lucide-react";
 import { useMemo } from "react";
@@ -17,6 +16,7 @@ import {
 } from "@/components/v2/tooltips/Tooltip";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
+import { useProviderMarkup } from "../hooks/useProviderMarkup";
 import { addCustomModelMarkup } from "../utils/modelMarkupUtils";
 import { AiModelSelectDropdown } from "./AiModelSelectDropdown";
 import { CustomModelInput } from "./CustomModelInput";
@@ -36,12 +36,7 @@ function MarkupCell({
 	fullId: string;
 	providerKey: string;
 }) {
-	const defaultMarkup = useStore(form.store, (s) => s.values.defaultMarkup);
-	const providerMarkup = useStore(
-		form.store,
-		(s) => s.values.provider_markups[providerKey]?.markup,
-	);
-	const inheritedMarkup = providerMarkup ?? defaultMarkup;
+	const { inheritedMarkup } = useProviderMarkup(form, providerKey);
 
 	return (
 		<EditableNumberCell
@@ -87,10 +82,9 @@ export function AiCreditSchemaTable({
 }: AiCreditSchemaTableProps) {
 	const isCustom = providerKey === "custom";
 
-	const defaultMarkup = useStore(form.store, (s) => s.values.defaultMarkup);
-	const providerMarkup = useStore(
-		form.store,
-		(s) => s.values.provider_markups[providerKey]?.markup,
+	const { defaultMarkup, providerMarkup } = useProviderMarkup(
+		form,
+		providerKey,
 	);
 
 	const data: ModelRow[] = useMemo(

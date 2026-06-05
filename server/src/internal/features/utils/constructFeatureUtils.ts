@@ -1,6 +1,7 @@
 import {
 	AggregateType,
 	type AppEnv,
+	buildAiCreditSystemConfig,
 	type Feature,
 	FeatureType,
 	FeatureUsageType,
@@ -179,12 +180,7 @@ export const constructAiCreditSystem = ({
 	defaultMarkup?: number;
 	providerMarkups?: ProviderMarkups;
 }) => {
-	const config = {
-		schema: [],
-		usage_type: FeatureUsageType.Single,
-		default_markup: defaultMarkup,
-		provider_markups: providerMarkups,
-	};
+	const config = buildAiCreditSystemConfig({ defaultMarkup, providerMarkups });
 
 	const newFeature: Feature = {
 		internal_id: generateId("fe"),

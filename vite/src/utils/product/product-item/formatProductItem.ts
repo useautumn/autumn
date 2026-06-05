@@ -5,6 +5,7 @@ import {
 	formatAmount,
 	formatInterval,
 	Infinite,
+	isAiCreditSystem,
 	type ProductItem,
 	ProductItemType,
 	TierBehavior,
@@ -155,8 +156,7 @@ const getFeatureString = ({
 		intervalCount: item.interval_count ?? undefined,
 	});
 
-	const isAiCreditSystem = feature?.type === FeatureType.AiCreditSystem;
-	if (isAiCreditSystem) {
+	if (isAiCreditSystem(feature?.type)) {
 		const amount = item.included_usage ?? 0;
 		const formattedAmount =
 			amount === 0 ? "$0.00" : `$${Number(amount).toFixed(2)}`;

@@ -1,5 +1,6 @@
 import {
 	FeatureType,
+	isAiCreditSystem,
 	joinModelId,
 	type ModelsDevProvider,
 } from "@autumn/shared";
@@ -65,8 +66,7 @@ export function CreditSystemSchema({
 	const { providers } = useModelsDevPricing();
 	const type = useStore(form.store, (s) => s.values.type);
 
-	const mode: CreditSchemaMode =
-		type === FeatureType.AiCreditSystem ? "ai" : "classic";
+	const mode: CreditSchemaMode = isAiCreditSystem(type) ? "ai" : "classic";
 
 	const handleModeChange = (newMode: string) => {
 		if (newMode === "ai") {

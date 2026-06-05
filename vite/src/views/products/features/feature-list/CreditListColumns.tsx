@@ -1,6 +1,6 @@
 import {
 	type Feature,
-	FeatureType,
+	isAiCreditSystem,
 	type ModelsDevProvider,
 	splitModelId,
 } from "@autumn/shared";
@@ -59,7 +59,7 @@ export const createCreditListColumns = (
 		size: 120,
 		accessorKey: "type",
 		cell: ({ row }: { row: Row<Feature> }) => {
-			const isAi = row.original.type === FeatureType.AiCreditSystem;
+			const isAi = isAiCreditSystem(row.original.type);
 			return (
 				<div className="flex items-center gap-1.5 text-muted-foreground text-sm">
 					{isAi ? (

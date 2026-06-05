@@ -1,6 +1,6 @@
 import {
 	type CreateFeature,
-	FeatureType,
+	isAiCreditSystem,
 	isCustomModel,
 	splitModelId,
 } from "@autumn/shared";
@@ -12,9 +12,7 @@ export const validateCreditSystem = (
 		return "Please fill in all fields";
 	}
 
-	const isAiCreditSystem = creditSystem.type === FeatureType.AiCreditSystem;
-
-	if (isAiCreditSystem) {
+	if (isAiCreditSystem(creditSystem.type)) {
 		// No per-model rows is valid: such systems bill at the base cost,
 		// adjusted by any provider-level or global default markup.
 		for (const [modelId, entry] of Object.entries(

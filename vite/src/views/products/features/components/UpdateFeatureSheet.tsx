@@ -1,9 +1,4 @@
-import {
-	type CreditSchemaItem,
-	type Feature,
-	FeatureType,
-	FeatureUsageType,
-} from "@autumn/shared";
+import { type Feature, FeatureUsageType } from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -22,6 +17,7 @@ import { NewFeatureAdvanced } from "../../plan/components/new-feature/NewFeature
 import { NewFeatureBehaviour } from "../../plan/components/new-feature/NewFeatureBehaviour";
 import { NewFeatureDetails } from "../../plan/components/new-feature/NewFeatureDetails";
 import { NewFeatureType } from "../../plan/components/new-feature/NewFeatureType";
+import { buildFeatureMarkupParams } from "../utils/buildFeatureMutationParams";
 
 interface UpdateFeatureSheetProps {
 	open: boolean;
@@ -58,29 +54,21 @@ function UpdateFeatureSheet({
 
 		setLoading(true);
 		try {
-			const isAiCreditSystem = feature.type === FeatureType.AiCreditSystem;
-
 			await FeatureService.updateFeature(axiosInstance, selectedFeature.id, {
 				...feature,
 				id: feature.id || undefined,
 				name: feature.name || undefined,
 				type: feature.type,
 				consumable: feature.config?.usage_type === FeatureUsageType.Single,
-				model_markups: feature.model_markups ?? undefined,
-				default_markup: isAiCreditSystem
-					? feature.config?.default_markup
-					: undefined,
-				provider_markups: isAiCreditSystem
-					? feature.config?.provider_markups
-					: undefined,
 				event_names: feature.event_names,
 				display: undefined,
-				credit_schema: isAiCreditSystem
-					? undefined
-					: feature.config?.schema?.map((item: CreditSchemaItem) => ({
-							metered_feature_id: item.metered_feature_id,
-							credit_cost: item.credit_amount,
-						})),
+				...buildFeatureMarkupParams({
+					type: feature.type,
+					modelMarkups: feature.model_markups ?? undefined,
+					defaultMarkup: feature.config?.default_markup,
+					providerMarkups: feature.config?.provider_markups,
+					schema: feature.config?.schema,
+				}),
 			});
 
 			await refetch();

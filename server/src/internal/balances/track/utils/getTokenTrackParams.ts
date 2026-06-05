@@ -1,9 +1,9 @@
 import {
 	ErrCode,
 	type Feature,
-	FeatureType,
 	fullCustomerToCustomerEntitlements,
 	fullSubjectToFullCustomer,
+	isAiCreditSystem,
 	RecaseError,
 	type TrackParams,
 	type TrackTokensParams,
@@ -30,7 +30,7 @@ const resolveAiCreditFeatureById = ({
 			statusCode: 404,
 		});
 	}
-	if (candidate.type !== FeatureType.AiCreditSystem) {
+	if (!isAiCreditSystem(candidate.type)) {
 		throw new RecaseError({
 			message: `Feature ${featureId} is not an AI credit system feature`,
 			code: ErrCode.InvalidRequest,
@@ -78,7 +78,7 @@ const resolveAiCreditFeatureFromEntitlements = async ({
 		...new Map(
 			cusEnts
 				.filter(
-					(ce) => ce.entitlement.feature.type === FeatureType.AiCreditSystem,
+					(ce) => isAiCreditSystem(ce.entitlement.feature.type),
 				)
 				.map((ce) => [ce.entitlement.feature.id, ce.entitlement.feature]),
 		).values(),

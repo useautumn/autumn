@@ -7,6 +7,7 @@ import {
 	type ModelsDevModel,
 	type ModelsDevProvider,
 	RecaseError,
+	resolveInheritedMarkup,
 	splitModelId,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -168,11 +169,13 @@ const resolveAiMarkup = ({
 	const providerMarkup = provider
 		? creditSystem.config?.provider_markups?.[provider]?.markup
 		: undefined;
-	if (providerMarkup != null) {
-		return providerMarkup;
-	}
 
-	return creditSystem.config?.default_markup ?? 0;
+	return (
+		resolveInheritedMarkup({
+			providerMarkup,
+			defaultMarkup: creditSystem.config?.default_markup,
+		}) ?? 0
+	);
 };
 
 export const getModelCreditCost = async ({

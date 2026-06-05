@@ -1,5 +1,5 @@
 import type { CreditSchemaItem, Feature } from "@autumn/shared";
-import { FeatureType } from "@autumn/shared";
+import { FeatureType, isAiCreditSystem } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import { useMemo, useRef } from "react";
 import { toast } from "sonner";
@@ -22,7 +22,7 @@ export function useCreditSchema(form: CreditSystemFormInstance) {
 
 	const allSchemaCandidateFeatures = features.filter(
 		(f: Feature) =>
-			f.type === FeatureType.Metered || f.type === FeatureType.AiCreditSystem,
+			f.type === FeatureType.Metered || isAiCreditSystem(f.type),
 	);
 
 	const handleSchemaChange = (

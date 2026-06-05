@@ -1,7 +1,7 @@
 import {
 	type CreditSchemaItem,
 	type Feature,
-	FeatureType,
+	isAiCreditSystem,
 } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import { X } from "lucide-react";
@@ -47,8 +47,7 @@ export function ClassicCreditSchema({ form }: ClassicCreditSchemaProps) {
 					const selectedFeature = allSchemaCandidateFeatures.find(
 						(f: Feature) => f.id === item.metered_feature_id,
 					);
-					const isAiChild =
-						selectedFeature?.type === FeatureType.AiCreditSystem;
+					const isAiChild = isAiCreditSystem(selectedFeature?.type);
 
 					return (
 						<div

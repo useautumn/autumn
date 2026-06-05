@@ -212,6 +212,8 @@ export * from "./utils/cusEntUtils/balanceUtils/cusEntToUsageAllowed";
 export * from "./utils/cusEntUtils/index";
 // Utils
 export * from "./utils/displayUtils";
+export * from "./utils/featureUtils/buildAiCreditSystemConfig";
+export * from "./utils/featureUtils/resolveInheritedMarkup";
 export * from "./utils/fullSubjectUtils";
 export * from "./utils/index";
 export * from "./utils/intervalUtils";

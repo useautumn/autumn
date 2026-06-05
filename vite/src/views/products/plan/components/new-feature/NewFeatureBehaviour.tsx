@@ -2,6 +2,7 @@ import {
 	type CreateFeature,
 	FeatureType,
 	FeatureUsageType,
+	isAiCreditSystem,
 	isAnyCreditSystem,
 } from "@autumn/shared";
 import { AreaRadioGroupItem } from "@/components/v2/radio-groups/AreaRadioGroupItem";
@@ -32,7 +33,7 @@ function NewFeatureCreditSchema({
 			model_markups: feature.model_markups ?? null,
 		},
 		onChange: (values) => {
-			const isAi = values.type === FeatureType.AiCreditSystem;
+			const isAi = isAiCreditSystem(values.type);
 
 			setFeature({
 				...feature,

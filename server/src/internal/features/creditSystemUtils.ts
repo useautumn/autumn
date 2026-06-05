@@ -3,6 +3,7 @@ import {
 	ErrCode,
 	type Feature,
 	FeatureType,
+	isAiCreditSystem,
 	isAnyCreditSystem,
 	RecaseError,
 } from "@autumn/shared";
@@ -94,7 +95,7 @@ export const getCreditCost = async ({
 	if (!isAnyCreditSystem(creditSystem.type)) {
 		return amount;
 	}
-	if (creditSystem.type === FeatureType.AiCreditSystem) {
+	if (isAiCreditSystem(creditSystem.type)) {
 		if (!tokens || !modelName) {
 			throw new RecaseError({
 				message: "modelName and tokens must be provided for AI credit systems",

@@ -1,7 +1,5 @@
 import {
 	CreateFeatureSchema,
-	type CreditSchemaItem,
-	FeatureType,
 	FeatureUsageType,
 	isAnyCreditSystem,
 } from "@autumn/shared";
@@ -24,6 +22,7 @@ import { NewFeatureBehaviour } from "../../plan/components/new-feature/NewFeatur
 import { NewFeatureDetails } from "../../plan/components/new-feature/NewFeatureDetails";
 import { NewFeatureType } from "../../plan/components/new-feature/NewFeatureType";
 import { validateCreditSystem } from "../credit-systems/utils/validateCreditSystem";
+import { buildFeatureMarkupParams } from "../utils/buildFeatureMutationParams";
 import { getDefaultFeature } from "../utils/defaultFeature";
 
 function CreateFeatureSheet({
@@ -71,8 +70,6 @@ function CreateFeatureSheet({
 			setLoading(false);
 		} else {
 			try {
-				const isAiCreditSystem = feature.type === FeatureType.AiCreditSystem;
-
 				const { data: createdFeature } = await FeatureService.createFeature(
 					axiosInstance,
 					{
@@ -80,19 +77,13 @@ function CreateFeatureSheet({
 						id: feature.id,
 						type: feature.type,
 						consumable: feature.config?.usage_type === FeatureUsageType.Single,
-						model_markups: feature.model_markups ?? undefined,
-						default_markup: isAiCreditSystem
-							? feature.config?.default_markup
-							: undefined,
-						provider_markups: isAiCreditSystem
-							? feature.config?.provider_markups
-							: undefined,
-						credit_schema: isAiCreditSystem
-							? undefined
-							: feature.config?.schema?.map((x: CreditSchemaItem) => ({
-									metered_feature_id: x.metered_feature_id,
-									credit_cost: x.credit_amount,
-								})),
+						...buildFeatureMarkupParams({
+							type: feature.type,
+							modelMarkups: feature.model_markups ?? undefined,
+							defaultMarkup: feature.config?.default_markup,
+							providerMarkups: feature.config?.provider_markups,
+							schema: feature.config?.schema,
+						}),
 						event_names: feature.event_names,
 					},
 				);

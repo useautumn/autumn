@@ -1,4 +1,4 @@
-import { FeatureType, TierBehavior } from "@autumn/shared";
+import { FeatureType, isAiCreditSystem, TierBehavior } from "@autumn/shared";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
@@ -116,7 +116,6 @@ export function EditPlanFeatureSheet({
 
 	const feature = getFeature(item?.feature_id ?? "", features);
 	const isFeaturePrice = isFeaturePriceItem(item);
-	const isAiCreditSystem = feature?.type === FeatureType.AiCreditSystem;
 
 	// Allow confirming a priced feature that has a $0 tier (valid zero-price config)
 	const isZeroPriceItem =
@@ -167,7 +166,7 @@ export function EditPlanFeatureSheet({
 							<IncludedUsage />
 						</SheetSection>
 
-						{isFeaturePrice && !isAiCreditSystem && (
+						{isFeaturePrice && !isAiCreditSystem(feature?.type) && (
 							<SheetSection
 								title={
 									item.tiers && item.tiers.length > 1 ? (

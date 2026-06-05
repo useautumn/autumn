@@ -1,5 +1,4 @@
 import type { CreditSchemaItem, Feature } from "@autumn/shared";
-import { FeatureType } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import type { AxiosError } from "axios";
 import { toast } from "sonner";
@@ -13,6 +12,7 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { buildFeatureMarkupParams } from "../../utils/buildFeatureMutationParams";
 import { useCreditSystemForm } from "../hooks/useCreditSystemForm";
 import { validateCreditSystem } from "../utils/validateCreditSystem";
 import { CreditSystemDetails } from "./CreditSystemDetails";
@@ -54,8 +54,6 @@ function UpdateCreditSystemSheet({
 				return;
 			}
 
-			const isAiCreditSystem = values.type === FeatureType.AiCreditSystem;
-
 			await FeatureService.updateFeature(
 				axiosInstance,
 				selectedCreditSystem.id,
@@ -63,18 +61,13 @@ function UpdateCreditSystemSheet({
 					id: values.id,
 					name: values.name,
 					type: values.type,
-					model_markups: isAiCreditSystem ? values.model_markups : undefined,
-					default_markup: isAiCreditSystem ? values.defaultMarkup : undefined,
-					provider_markups: isAiCreditSystem
-						? values.provider_markups
-						: undefined,
-					credit_schema: isAiCreditSystem
-						? undefined
-						: values.config?.schema?.map((x: CreditSchemaItem) => ({
-								metered_feature_id: x.metered_feature_id,
-								credit_cost:
-									x.credit_amount != null ? Number(x.credit_amount) : 0,
-							})),
+					...buildFeatureMarkupParams({
+						type: values.type,
+						modelMarkups: values.model_markups,
+						defaultMarkup: values.defaultMarkup,
+						providerMarkups: values.provider_markups,
+						schema: values.config?.schema as CreditSchemaItem[] | undefined,
+					}),
 					event_names: values.event_names,
 					display: undefined,
 				},

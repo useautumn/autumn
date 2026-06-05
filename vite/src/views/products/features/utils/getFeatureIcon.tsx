@@ -2,6 +2,7 @@ import type { Feature, ProductItem } from "@autumn/shared";
 import {
 	FeatureType,
 	FeatureUsageType,
+	isAiCreditSystem,
 	ProductItemFeatureType,
 } from "@autumn/shared";
 import {
@@ -70,10 +71,7 @@ export const getFeatureIconConfig = (
 	}
 
 	// Handle AI credit system
-	if (
-		typeStr === FeatureType.AiCreditSystem ||
-		typeStr === "ai_credit_system"
-	) {
+	if (isAiCreditSystem(typeStr) || typeStr === "ai_credit_system") {
 		return {
 			icon: <CpuIcon size={size} weight={weight} />,
 			color: "text-yellow-500",

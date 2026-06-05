@@ -4,6 +4,7 @@ import {
 	ErrCode,
 	type Feature,
 	FeatureType,
+	isAiCreditSystem,
 	isAnyCreditSystem,
 	type ModelMarkups,
 	notNullish,
@@ -31,13 +32,12 @@ interface UpdateFeatureParams {
 	updates: Partial<Feature>;
 }
 
-const areModelMarkupsEqual = ({
-	a,
-	b,
-}: {
-	a: ModelMarkups;
-	b: ModelMarkups;
-}): boolean => {
+/** Generic keyed-record equality check with a caller-supplied per-entry comparison. */
+const areMarkupRecordsEqual = <T>(
+	a: Record<string, T> | null | undefined,
+	b: Record<string, T> | null | undefined,
+	entriesEqual: (aEntry: T, bEntry: T) => boolean,
+): boolean => {
 	const aIsAbsent = a == null;
 	const bIsAbsent = b == null;
 	if (aIsAbsent && bIsAbsent) return true;
@@ -51,13 +51,27 @@ const areModelMarkupsEqual = ({
 		const aEntry = a[key];
 		const bEntry = b[key];
 		if (!bEntry) return false;
-		if (aEntry.markup !== bEntry.markup) return false;
-		if (aEntry.input_cost !== bEntry.input_cost) return false;
-		if (aEntry.output_cost !== bEntry.output_cost) return false;
+		if (!entriesEqual(aEntry, bEntry)) return false;
 	}
 
 	return true;
 };
+
+const areModelMarkupsEqual = ({
+	a,
+	b,
+}: {
+	a: ModelMarkups;
+	b: ModelMarkups;
+}): boolean =>
+	areMarkupRecordsEqual<NonNullable<ModelMarkups>[string]>(
+		a,
+		b,
+		(aEntry, bEntry) =>
+			aEntry.markup === bEntry.markup &&
+			aEntry.input_cost === bEntry.input_cost &&
+			aEntry.output_cost === bEntry.output_cost,
+	);
 
 const areProviderMarkupsEqual = ({
 	a,
@@ -65,25 +79,10 @@ const areProviderMarkupsEqual = ({
 }: {
 	a: CreditSystemConfig["provider_markups"];
 	b: CreditSystemConfig["provider_markups"];
-}): boolean => {
-	const aIsAbsent = a == null;
-	const bIsAbsent = b == null;
-	if (aIsAbsent && bIsAbsent) return true;
-	if (aIsAbsent || bIsAbsent) return false;
-
-	const aKeys = Object.keys(a);
-	const bKeys = Object.keys(b);
-	if (aKeys.length !== bKeys.length) return false;
-
-	for (const key of aKeys) {
-		const aEntry = a[key];
-		const bEntry = b[key];
-		if (!bEntry) return false;
-		if (aEntry.markup !== bEntry.markup) return false;
-	}
-
-	return true;
-};
+}): boolean =>
+	areMarkupRecordsEqual<
+		NonNullable<CreditSystemConfig["provider_markups"]>[string]
+	>(a, b, (aEntry, bEntry) => aEntry.markup === bEntry.markup);
 
 /**
  * Checks if the credit schema has changed between old and new config.
@@ -295,7 +294,7 @@ export const updateFeature = async ({
 			});
 
 		const aiMarkupConfigChanged =
-			feature.type === FeatureType.AiCreditSystem &&
+			isAiCreditSystem(feature.type) &&
 			updates.config != null &&
 			hasAiMarkupConfigChanged({
 				oldConfig: feature.config,
