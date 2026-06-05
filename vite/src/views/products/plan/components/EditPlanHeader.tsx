@@ -1,5 +1,7 @@
-import { TriangleIcon, UserIcon } from "@phosphor-icons/react";
+import { ArrowsClockwiseIcon, TriangleIcon, UserIcon } from "@phosphor-icons/react";
+import { IconButton } from "@/components/v2/buttons/IconButton";
 import { parseAsString, useQueryStates } from "nuqs";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { AdminHover } from "@/components/general/AdminHover";
 import SmallSpinner from "@/components/general/SmallSpinner";
@@ -36,6 +38,7 @@ import {
 	useProductQuery,
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
+import { MigrateCustomersDialog } from "../versioning/MigrateCustomersDialog";
 import { PlanToolbar } from "./PlanToolbar.tsx";
 
 export const EditPlanHeader = () => {
@@ -51,6 +54,19 @@ export const EditPlanHeader = () => {
 	const { mappings } = useRCMappings();
 	const { org } = useOrg();
 	const env = useEnv();
+	const [migrateDialogOpen, setMigrateDialogOpen] = useState(false);
+
+	const pastVersionsWithCustomers = useMemo(() => {
+		if (!numVersions || numVersions <= 1) return [];
+		return Object.entries(versionCounts)
+			.filter(([version, counts]) => {
+				const v = Number(version);
+				if (v >= numVersions) return false;
+				const nonCustomActive = (counts.active ?? 0) - (counts.custom ?? 0);
+				return nonCustomActive > 0;
+			})
+			.map(([version]) => Number(version));
+	}, [numVersions, versionCounts]);
 
 	const hasRCMapping =
 		flags.revenuecat &&
@@ -118,6 +134,14 @@ export const EditPlanHeader = () => {
 
 	return (
 		<>
+			<MigrateCustomersDialog
+				open={migrateDialogOpen}
+				onOpenChange={setMigrateDialogOpen}
+				productId={product.id}
+				latestVersion={numVersions}
+				pastVersionsWithCustomers={pastVersionsWithCustomers}
+				versionCounts={versionCounts}
+			/>
 			<div className="flex flex-col gap-2 p-4 pb-3  border-none shadow-none w-full max-w-5xl mx-auto pt-4 sm:pt-8 px-4 sm:px-12">
 				{isCusPlanEditor ? (
 					<CustomerBreadcrumbs />
@@ -206,6 +230,17 @@ export const EditPlanHeader = () => {
 					</div>
 
 					<div className="flex flex-row gap-2 items-center">
+					{pastVersionsWithCustomers.length > 0 && !isCusPlanEditor && (
+						<IconButton
+							variant="secondary"
+							size="mini"
+							icon={<ArrowsClockwiseIcon />}
+							iconOrientation="left"
+							onClick={() => setMigrateDialogOpen(true)}
+						>
+							Migrate customers
+						</IconButton>
+					)}
 					{numVersions && numVersions > 1 && (
 					<Select
 						value={currentVersion.toString()}

@@ -86,6 +86,53 @@ function diffHasBillingChanges(diff: DiffedCustomizePlanV1): boolean {
 
 export type MigrationScope = "this_version" | "all_customers";
 
+export type VersionMigrateScope = "all" | number;
+
+export function buildVersionMigrationDraft({
+	productId,
+	latestVersion,
+	scope,
+	pastVersions,
+}: {
+	productId: string;
+	latestVersion: number;
+	scope: VersionMigrateScope;
+	pastVersions: number[];
+}): MigrationDraft {
+	const versions = scope === "all" ? pastVersions : [scope];
+	const versionMatcher =
+		versions.length === 1 ? versions[0] : { $in: versions };
+
+	const filter: MigrationFilter = {
+		customer: {
+			plan: {
+				plan_id: productId,
+				version: versionMatcher,
+				custom: false,
+			},
+		},
+	};
+
+	const operations: Operations = {
+		customer: [
+			{
+				type: "update_plan",
+				plan_filter: { plan_id: productId },
+				version: latestVersion,
+			},
+		],
+	} as unknown as Operations;
+
+	const suffix = scope === "all" ? "migrate-all" : `migrate-v${scope}`;
+
+	return {
+		id: `${productId}-${suffix}-to-v${latestVersion}`,
+		filter,
+		operations,
+		no_billing_changes: true,
+	};
+}
+
 export function buildMigrationDraft({
 	baseProduct,
 	editedProduct,
@@ -121,10 +168,9 @@ export function buildMigrationDraft({
 
 	const suffix =
 		scope === "all_customers" ? "update-all" : "update";
-	const timestamp = Math.floor(Date.now() / 1000);
 
 	return {
-		id: `${baseProduct.id}-${suffix}-${timestamp}`,
+		id: `${baseProduct.id}-${suffix}`,
 		filter,
 		operations: { customer: [updatePlanOp] } as unknown as Operations,
 		no_billing_changes: !diffHasBillingChanges(diff),
