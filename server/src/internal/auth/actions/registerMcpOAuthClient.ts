@@ -4,6 +4,7 @@ import { generateId } from "@/utils/genUtils.js";
 import { type OAuthClientRecord, oauthClientRepo } from "../repos/index.js";
 
 const MCP_CLIENT_KIND = "mcp_client";
+export const SLACK_MCP_OAUTH_CLIENT_ID = "autumn_mcp_slack";
 const REGISTER_CACHE_TTL_MS = 5 * 60 * 1000;
 const DANGEROUS_REDIRECT_SCHEMES = new Set([
 	"javascript:",
@@ -107,7 +108,11 @@ const classifyMcpClient = ({
 		return { type: "codex", name: "Codex", clientId: "autumn_mcp_codex" };
 	}
 	if (haystack.includes("slack")) {
-		return { type: "slack", name: "Slack", clientId: "autumn_mcp_slack" };
+		return {
+			type: "slack",
+			name: "Slack",
+			clientId: SLACK_MCP_OAUTH_CLIENT_ID,
+		};
 	}
 
 	return null;

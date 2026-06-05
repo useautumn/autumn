@@ -5,28 +5,15 @@ import {
 	type ChatInstallation,
 	type ChatProvider,
 	chatInstallations,
-	Scopes,
 } from "@autumn/shared";
 import type { ChatInstallState } from "@autumn/shared/utils/chatState";
 import { and, eq, or } from "drizzle-orm";
+import { replaceInstallationOAuthCredentials } from "../../internal/installations/actions/replaceInstallationOAuthCredentials.js";
 import { decrypt, encrypt } from "../../lib/crypto.js";
 import { db } from "../../lib/db.js";
 import { env } from "../../lib/env.js";
 
 type ChatTransaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
-
-const apiKeyScopes = [
-	Scopes.Customers.Read,
-	Scopes.Customers.Write,
-	Scopes.Plans.Read,
-	Scopes.Plans.Write,
-	Scopes.Billing.Read,
-	Scopes.Billing.Write,
-	Scopes.Balances.Write,
-];
-
-const apiKeyPrefix = (env: AppEnv) =>
-	env === AppEnv.Live ? "am_sk_live" : "am_sk_test";
 
 export const getStateSecret = () => env.CHAT_STATE_SECRET;
 
@@ -48,33 +35,6 @@ export const getInstallationKey = (
 			: installation.sandbox_api_key;
 	if (!key) throw new Error(`Missing ${env} API key`);
 	return decrypt(key);
-};
-
-const buildApiKey = ({
-	orgId,
-	userId,
-	env,
-	provider,
-}: {
-	orgId: string;
-	userId: string;
-	env: AppEnv;
-	provider: ChatProvider;
-}) => {
-	const secret = `${apiKeyPrefix(env)}_${crypto.randomBytes(32).toString("base64url")}`;
-	const key = {
-		id: `key_${crypto.randomUUID().replace(/-/g, "")}`,
-		org_id: orgId,
-		user_id: userId,
-		name: `Chat MCP (${provider})`,
-		prefix: secret.substring(0, 14),
-		created_at: Date.now(),
-		env,
-		hashed_key: crypto.createHash("sha256").update(secret).digest("hex"),
-		meta: { created_via: "chat", provider },
-		scopes: apiKeyScopes,
-	};
-	return { key, secret };
 };
 
 const deleteInstallationApiKeys = async (
@@ -111,19 +71,6 @@ export const replaceInstallation = async ({
 	scopes: string[];
 	installedByProviderUserId?: string;
 }) => {
-	const sandbox = buildApiKey({
-		orgId: state.orgId,
-		userId: state.userId,
-		env: AppEnv.Sandbox,
-		provider,
-	});
-	const live = buildApiKey({
-		orgId: state.orgId,
-		userId: state.userId,
-		env: AppEnv.Live,
-		provider,
-	});
-
 	const sameOrg = and(
 		eq(chatInstallations.org_id, state.orgId),
 		eq(chatInstallations.provider, provider),
@@ -134,8 +81,6 @@ export const replaceInstallation = async ({
 	);
 
 	await db.transaction(async (tx) => {
-		await tx.insert(apiKeys).values([sandbox.key, live.key]);
-
 		const existingInstallations = await tx.query.chatInstallations.findMany({
 			where: or(sameOrg, sameWorkspace),
 		});
@@ -144,24 +89,29 @@ export const replaceInstallation = async ({
 		}
 
 		await tx.delete(chatInstallations).where(or(sameOrg, sameWorkspace));
-		await tx.insert(chatInstallations).values({
-			id: `chat_inst_${crypto.randomUUID().replace(/-/g, "")}`,
-			org_id: state.orgId,
-			provider,
-			workspace_id: workspaceId,
-			workspace_name: workspaceName,
-			bot_user_id: botUserId,
-			bot_access_token: encrypt(botAccessToken),
-			scopes,
-			default_env: state.env,
-			sandbox_api_key_id: sandbox.key.id,
-			sandbox_api_key: encrypt(sandbox.secret),
-			live_api_key_id: live.key.id,
-			live_api_key: encrypt(live.secret),
-			installed_by_user_id: state.userId,
-			installed_by_provider_user_id: installedByProviderUserId,
-			created_at: Date.now(),
-			updated_at: Date.now(),
+		const [installation] = await tx
+			.insert(chatInstallations)
+			.values({
+				id: `chat_inst_${crypto.randomUUID().replace(/-/g, "")}`,
+				org_id: state.orgId,
+				provider,
+				workspace_id: workspaceId,
+				workspace_name: workspaceName,
+				bot_user_id: botUserId,
+				bot_access_token: encrypt(botAccessToken),
+				scopes,
+				default_env: state.env,
+				installed_by_user_id: state.userId,
+				installed_by_provider_user_id: installedByProviderUserId,
+				created_at: Date.now(),
+				updated_at: Date.now(),
+			})
+			.returning();
+
+		await replaceInstallationOAuthCredentials({
+			tx,
+			installation,
+			userId: state.userId,
 		});
 	});
 };

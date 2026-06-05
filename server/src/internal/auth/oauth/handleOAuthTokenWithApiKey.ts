@@ -1,7 +1,9 @@
+import { prefixOAuthToken } from "@autumn/auth";
 import { RecaseError } from "@autumn/shared";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
+import { SLACK_MCP_OAUTH_CLIENT_ID } from "../actions/registerMcpOAuthClient.js";
 import {
 	getExternalOAuthApiKeyForToken,
 	getOAuthAccessTokenRecord,
@@ -45,6 +47,30 @@ const rewriteTokenBody = ({
 		...body,
 		access_token: apiKey,
 		scope: scopes.join(" "),
+	};
+};
+
+const rewriteOAuthAccessTokenBody = ({
+	accessToken,
+	body,
+}: {
+	accessToken: string;
+	body: Record<string, unknown>;
+}) => {
+	const response = body.response;
+	if (isRecord(response)) {
+		return {
+			...body,
+			response: {
+				...response,
+				access_token: accessToken,
+			},
+		};
+	}
+
+	return {
+		...body,
+		access_token: accessToken,
 	};
 };
 
@@ -116,6 +142,16 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			resource,
 			requestedScopes,
 		});
+		if (tokenRecord.clientId === SLACK_MCP_OAUTH_CLIENT_ID) {
+			return jsonTokenResponse({
+				body: rewriteOAuthAccessTokenBody({
+					accessToken: prefixOAuthToken({ token: accessToken }),
+					body,
+				}),
+				response,
+				status: response.status,
+			});
+		}
 		apiKeyResult = await getExternalOAuthApiKeyForToken({
 			db,
 			tokenRecord,

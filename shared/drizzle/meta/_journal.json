@@ -61,6 +61,13 @@
     {
       "idx": 8,
       "version": "7",
+      "when": 1780679328640,
+      "tag": "0008_premium_pet_avengers",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
       "when": 1780665982843,
       "tag": "0008_slippery_william_stryker",
       "breakpoints": true

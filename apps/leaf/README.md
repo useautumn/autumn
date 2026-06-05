@@ -15,12 +15,20 @@ bun run chat:tunnel
 2. Start Autumn with the same public URL:
 
 ```sh
-CHAT_URL=https://c.autumn.ngrok.app SLACK_BOT_URL=https://c.autumn.ngrok.app bun d
+NGROK_URL=https://c.autumn.ngrok.app bun d
 ```
+
+`bun d` derives `CHAT_URL`, `SLACK_BOT_URL`, and `SLACK_REDIRECT_URI` from
+`NGROK_URL`, so the Slack OAuth redirect becomes
+`https://c.autumn.ngrok.app/slack/oauth/callback`. This exact URL must be in
+the Slack app's OAuth redirect URLs.
 
 The chat SDK stores its own subscriptions, locks, and queues in Postgres. By
 default it uses the same `DATABASE_URL` host with the database name changed to
-`chat`; set `CHAT_STATE_DATABASE_URL` to override this.
+`chat`; set `CHAT_STATE_DATABASE_URL` to override this. `bun dev:services up`
+creates the local `chat` database. The `@chat-adapter/state-pg` package creates
+its state tables automatically on connect, so there is no separate migration
+command for the chat state database.
 
 3. Create a Slack app at https://api.slack.com/apps using `slack-manifest.example.json`.
 

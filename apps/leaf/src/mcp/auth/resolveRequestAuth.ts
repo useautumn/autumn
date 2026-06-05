@@ -1,14 +1,14 @@
 import { createHash } from "node:crypto";
-import { getBearerToken } from "@autumn/auth";
+import { getBearerToken, isOAuthToken, isSecretKeyPrefix } from "@autumn/auth";
 import {
 	getProtectedResourceMetadataUrl,
 	getWwwAuthenticateHeader,
 } from "@autumn/auth/oauth";
 import {
-	DEFAULT_API_VERSION,
-	MCP_OAUTH_SCOPES,
 	type AutumnMcpAuth,
+	DEFAULT_API_VERSION,
 	environmentSchema,
+	MCP_OAUTH_SCOPES,
 	type MCPServerFlags,
 	type OAuthEnvironment,
 } from "@autumn/mcp";
@@ -72,12 +72,21 @@ const getStaticApiKey = ({
 	flags: MCPOAuthFlags;
 }): string | undefined => {
 	const secretKey = headers.get("secret-key");
-	if (secretKey) return secretKey;
+	if (secretKey && isSecretKeyPrefix({ token: secretKey })) return secretKey;
 
 	const bearer = getBearerToken({ headers });
-	if (bearer?.startsWith("am_")) return bearer;
+	if (bearer && isSecretKeyPrefix({ token: bearer })) return bearer;
 
-	return flags["oauth-enabled"] ? undefined : flags["secret-key"];
+	const fallbackSecretKey = flags["secret-key"];
+	if (
+		!flags["oauth-enabled"] &&
+		fallbackSecretKey &&
+		isSecretKeyPrefix({ token: fallbackSecretKey })
+	) {
+		return fallbackSecretKey;
+	}
+
+	return undefined;
 };
 
 const principalFromSecret = ({
@@ -134,7 +143,7 @@ export const buildAuthForRequest = async ({
 	}
 
 	const bearer = getBearerToken({ headers });
-	if (bearer) {
+	if (bearer && isOAuthToken({ token: bearer })) {
 		return {
 			apiKey: bearer,
 			authMethod: "oauth",
@@ -146,6 +155,14 @@ export const buildAuthForRequest = async ({
 			xApiVersion,
 			failOpen,
 		};
+	}
+
+	if (bearer) {
+		throw new OAuthHttpError(
+			401,
+			"Invalid OAuth token prefix",
+			"invalid_token",
+		);
 	}
 
 	if (flags["oauth-enabled"]) {

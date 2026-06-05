@@ -1,3 +1,4 @@
+import { stripOAuthTokenPrefix } from "@autumn/auth";
 import {
 	AppEnv,
 	checkScopes,
@@ -59,12 +60,13 @@ export const getOAuthAccessTokenRecord = async ({
 	resource: string | null;
 	requestedScopes: ScopeString[] | null;
 }) => {
-	const hashedToken = await hashOAuthToken(accessToken);
-	const tokenValues = [...new Set([hashedToken, accessToken])];
+	const rawAccessToken = stripOAuthTokenPrefix({ token: accessToken });
+	const hashedToken = await hashOAuthToken(rawAccessToken);
+	const tokenValues = [...new Set([hashedToken, rawAccessToken])];
 	const tokenRecord =
 		(await oauthAccessTokenRepo.getValidByTokenValues({ db, tokenValues })) ??
 		(await verifyResourceAccessToken({
-			accessToken,
+			accessToken: rawAccessToken,
 			resource,
 			requestedScopes,
 		}));

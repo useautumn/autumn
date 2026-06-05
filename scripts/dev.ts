@@ -24,6 +24,9 @@ const CHAT_PORT = process.env.CHAT_PORT
 const LOCAL_CLIENT_URL = `http://localhost:${VITE_PORT}`;
 const LOCAL_SERVER_URL = `http://localhost:${SERVER_PORT}`;
 const LOCAL_CHAT_URL = `http://localhost:${CHAT_PORT}`;
+const publicTunnelUrl = process.env.NGROK_URL?.replace(/\/$/, "");
+const CHAT_URL = process.env.CHAT_URL ?? publicTunnelUrl ?? LOCAL_CHAT_URL;
+const SLACK_BOT_URL = process.env.SLACK_BOT_URL ?? publicTunnelUrl ?? CHAT_URL;
 const skipWorkers = false;
 const isProductionMode = process.argv.includes("--production");
 
@@ -36,6 +39,12 @@ const viteAppEnv = envFile.includes(".env.prod")
 const useLocalAuthUrls = viteAppEnv === "dev" && !isProductionMode;
 const localUrl = (value: string | undefined, fallback: string) =>
 	value && !value.includes(".useautumn.com") ? value : fallback;
+const SLACK_REDIRECT_URI = useLocalAuthUrls
+	? localUrl(
+			process.env.SLACK_REDIRECT_URI,
+			`${SLACK_BOT_URL}/slack/oauth/callback`,
+		)
+	: (process.env.SLACK_REDIRECT_URI ?? `${SLACK_BOT_URL}/slack/oauth/callback`);
 
 /**
  * Read environment variable from .env file
@@ -266,8 +275,9 @@ async function startDev() {
 				MCP_RESOURCE_URLS:
 					process.env.MCP_RESOURCE_URLS ?? `http://localhost:${CHAT_PORT}/mcp`,
 				AUTUMN_API_URL: process.env.AUTUMN_API_URL ?? LOCAL_SERVER_URL,
-				CHAT_URL: process.env.CHAT_URL ?? LOCAL_CHAT_URL,
-				SLACK_BOT_URL: process.env.SLACK_BOT_URL ?? LOCAL_CHAT_URL,
+				CHAT_URL,
+				SLACK_BOT_URL,
+				SLACK_REDIRECT_URI,
 				DISCORD_BOT_URL: process.env.DISCORD_BOT_URL ?? LOCAL_CHAT_URL,
 				VITE_APP_ENV: viteAppEnv,
 				...(useLocalAuthUrls && {
