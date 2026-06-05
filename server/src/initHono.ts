@@ -1,10 +1,4 @@
-import { oauthClient } from "@autumn/shared";
-import {
-	oauthProviderAuthServerMetadata,
-	oauthProviderOpenIdConfigMetadata,
-} from "@better-auth/oauth-provider";
 import { httpInstrumentationMiddleware } from "@hono/otel";
-import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { autumnWebhookRouter } from "./external/autumn/autumnWebhookRouter.js";
@@ -19,11 +13,12 @@ import type { HonoEnv } from "./honoUtils/HonoEnv.js";
 import { handleHealthCheck } from "./honoUtils/handleHealthCheck.js";
 import { handleReadyCheck } from "./honoUtils/handleReadyCheck.js";
 import { handleListAuthOrganizations } from "./internal/auth/handleListAuthOrganizations.js";
+import { oauthRouter } from "./internal/auth/oauth/oauthRouter.js";
 import { cliRouter } from "./internal/dev/cli/cliRouter.js";
 import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
 import { apiRouter } from "./routers/apiRouter.js";
+import { createChatProxyRouter } from "./routers/chatProxyRouter.js";
 import { internalRouter } from "./routers/internalRouter.js";
-import { mcpProxyRouter } from "./routers/mcpProxyRouter.js";
 import { publicRouter } from "./routers/publicRouter.js";
 import { auth } from "./utils/auth.js";
 import { isAllowedOrigin } from "./utils/corsOrigins.js";
@@ -55,6 +50,8 @@ const ALLOWED_HEADERS = [
 export const createHonoApp = () => {
 	const app = new Hono<HonoEnv>();
 
+	app.route("", createChatProxyRouter());
+
 	// CORS configuration (must be before routes)
 	app.use(
 		"*",
@@ -68,13 +65,7 @@ export const createHonoApp = () => {
 		}),
 	);
 
-	app.get("/api/auth/.well-known/openid-configuration", (c) => {
-		return oauthProviderOpenIdConfigMetadata(auth)(c.req.raw);
-	});
-
-	app.get("/.well-known/oauth-authorization-server/api/auth", (c) => {
-		return oauthProviderAuthServerMetadata(auth)(c.req.raw);
-	});
+	app.route("", oauthRouter);
 
 	// Better Auth's joined Drizzle query defaults to 100 memberships.
 	app.get("/api/auth/organization/list", handleListAuthOrganizations);
@@ -90,8 +81,6 @@ export const createHonoApp = () => {
 	app.get("/ready/:token", handleReadyCheck);
 	app.get("/", handleHealthCheck);
 
-	app.route("", mcpProxyRouter);
-
 	// Step 1: OTel HTTP span + base middleware + span enrichment
 	app.use(
 		"*",
@@ -102,33 +91,6 @@ export const createHonoApp = () => {
 	);
 	app.use("*", baseMiddleware);
 	app.use("*", replicaDbMiddleware);
-
-	// Public endpoint to get OAuth client name (for consent page)
-	app.get("/oauth/client/:client_id", async (c) => {
-		const clientId = c.req.param("client_id");
-		if (!clientId) {
-			return c.json({ error: "client_id is required" }, 400);
-		}
-
-		const db = c.get("ctx").db;
-		const client = await db
-			.select({
-				name: oauthClient.name,
-				clientId: oauthClient.clientId,
-			})
-			.from(oauthClient)
-			.where(eq(oauthClient.clientId, clientId))
-			.limit(1);
-
-		if (!client.length) {
-			return c.json({ error: "Client not found" }, 404);
-		}
-
-		return c.json({
-			client_id: client[0].clientId,
-			name: client[0].name || "Unknown Application",
-		});
-	});
 
 	// CLI routes (uses Bearer token auth, not session auth)
 	app.route("/cli", cliRouter);

@@ -5,18 +5,20 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { CusProductStatus, msToSeconds } from "@autumn/shared";
+import { BillingVersion, CusProductStatus, msToSeconds } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import chalk from "chalk";
 import { buildStripePhasesUpdate } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/buildStripePhasesUpdate";
 import {
 	createCustomerPricesForProduct,
+	createCustomerPricesWithSuffix,
 	createProductWithAllPriceTypes,
 	expectPhaseItems,
 	getStripePriceIds,
 	HALF_MONTH_MS,
 	ONE_MONTH_MS,
+	setPrepaidStripeProductId,
 } from "../stripeSubscriptionTestHelpers";
 
 // ============ TESTS ============
@@ -136,11 +138,13 @@ describe(
 				// Phase 1: Premium
 				expect(phases[0].start_date).toBe(msToSeconds(nowMs));
 				expect(phases[0].end_date).toBe(msToSeconds(proStartMs));
+				expect(phases[0].proration_behavior).toBeUndefined();
 				expectPhaseItems(phases[0].items!, getStripePriceIds(premium));
 
 				// Phase 2: Pro
 				expect(phases[1].start_date).toBe(msToSeconds(proStartMs));
 				expect(phases[1].end_date).toBeUndefined();
+				expect(phases[1].proration_behavior).toBe("always_invoice");
 				expectPhaseItems(phases[1].items!, getStripePriceIds(pro));
 			});
 
@@ -571,6 +575,132 @@ describe(
 				expect(phases[1].start_date).toBe(msToSeconds(addOnEndMs));
 				expect(phases[1].end_date).toBeUndefined();
 				expectPhaseItems(phases[1].items!, getStripePriceIds(premium));
+			});
+		});
+
+		describe(chalk.cyan("Duplicate Inline Prices"), () => {
+			test("keeps duplicate prepaid inline items separate across phases", () => {
+				const nowMs = Date.now();
+				const transientEndsAt = nowMs + ONE_MONTH_MS;
+				const productA = setPrepaidStripeProductId(
+					createProductWithAllPriceTypes({
+						productId: "duplicate_prepaid",
+						productName: "Duplicate Prepaid",
+						customerProductId: "cus_prod_dup_a",
+						prepaidQuantity: 100,
+					}),
+					"stripe_prod_duplicate_prepaid",
+				);
+				const productB = setPrepaidStripeProductId(
+					createProductWithAllPriceTypes({
+						productId: "duplicate_prepaid",
+						productName: "Duplicate Prepaid",
+						customerProductId: "cus_prod_dup_b",
+						prepaidQuantity: 150,
+					}),
+					"stripe_prod_duplicate_prepaid",
+				);
+
+				const customerProductA = customerProducts.create({
+					id: "cus_prod_dup_a",
+					productId: "duplicate_prepaid",
+					product: productA.product,
+					customerPrices: createCustomerPricesWithSuffix({
+						product: productA,
+						customerProductId: "cus_prod_dup_a",
+						suffix: "a",
+					}),
+					customerEntitlements: productA.allEntitlements,
+					options: productA.allOptions,
+					status: CusProductStatus.Active,
+					startsAt: nowMs,
+				});
+				const customerProductB = customerProducts.create({
+					id: "cus_prod_dup_b",
+					productId: "duplicate_prepaid",
+					product: productB.product,
+					customerPrices: createCustomerPricesWithSuffix({
+						product: productB,
+						customerProductId: "cus_prod_dup_b",
+						suffix: "b",
+					}),
+					customerEntitlements: productB.allEntitlements,
+					options: productB.allOptions,
+					status: CusProductStatus.Active,
+					startsAt: nowMs,
+				});
+				const transient = createProductWithAllPriceTypes({
+					productId: "transient",
+					productName: "Transient",
+					customerProductId: "cus_prod_transient",
+				});
+				const transientCustomerProduct = customerProducts.create({
+					id: "cus_prod_transient",
+					productId: "transient",
+					product: transient.product,
+					customerPrices: createCustomerPricesForProduct({
+						prices: transient.allPrices,
+						customerProductId: "cus_prod_transient",
+					}),
+					customerEntitlements: transient.allEntitlements,
+					options: transient.allOptions,
+					status: CusProductStatus.Active,
+					startsAt: nowMs,
+					endedAt: transientEndsAt,
+				});
+
+				const ctx = contexts.create({ features: [] });
+				const billingContext = contexts.createBilling({
+					customerProducts: [
+						customerProductA,
+						customerProductB,
+						transientCustomerProduct,
+					],
+					fullProducts: [productA.product, transient.product],
+					currentEpochMs: nowMs,
+					billingVersion: BillingVersion.V2,
+				});
+
+				const phases = buildStripePhasesUpdate({
+					ctx,
+					billingContext,
+					customerProducts: [
+						customerProductA,
+						customerProductB,
+						transientCustomerProduct,
+					],
+				});
+
+				const phase0InlineItems = phases[0].items!.filter(
+					(item) => item.price_data,
+				);
+				const phase1InlineItems = phases[1].items!.filter(
+					(item) => item.price_data,
+				);
+
+				expect(phases).toHaveLength(2);
+				expect(phase0InlineItems).toHaveLength(2);
+				expect(phase1InlineItems).toHaveLength(2);
+				expect(
+					phase0InlineItems.map(
+						(item) => item.metadata?.autumn_customer_price_id,
+					),
+				).toEqual(
+					expect.arrayContaining([
+						"cus_price_duplicate_prepaid_prepaid_a",
+						"cus_price_duplicate_prepaid_prepaid_b",
+					]),
+				);
+				expect(
+					phase1InlineItems.map(
+						(item) => item.metadata?.autumn_customer_price_id,
+					),
+				).toEqual(
+					expect.arrayContaining([
+						"cus_price_duplicate_prepaid_prepaid_a",
+						"cus_price_duplicate_prepaid_prepaid_b",
+					]),
+				);
 			});
 		});
 

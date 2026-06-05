@@ -9,19 +9,23 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3, ApiEntityV0 } from "@autumn/shared";
 import {
 	CusProductStatus,
+	findActiveCustomerProductById,
 	customerPrices,
 	customerProducts,
 	customers,
 	prices,
+	type ApiCustomerV3,
+	type ApiEntityV0,
 } from "@autumn/shared";
 import {
+	expectCustomerProducts,
 	expectProductCanceling,
 	expectProductNotPresent,
 	expectProductScheduled,
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectCustomerProductStatuses } from "@tests/integration/billing/utils/expectCustomerProductStatuses";
 import { expectNoExpiredCustomerProducts } from "@tests/integration/billing/utils/expectNoExpiredCustomerProducts";
 import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
@@ -31,6 +35,8 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { and, eq, isNull } from "drizzle-orm";
+import { CusService } from "@/internal/customers/CusService";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { runUpdatePlanMigration } from "../utils/runUpdatePlanMigration";
 
 const getScheduledIds = async ({
@@ -110,6 +116,90 @@ const getCustomerProductPriceAmounts = async ({
 		)
 		.filter((amount): amount is number => typeof amount === "number")
 		.sort((a, b) => a - b);
+
+// Red: version update_plan replacement reset a past_due cusProduct to active.
+// Green: the replacement inherits past_due while the old row expires.
+test.concurrent(`${chalk.yellowBright("migrations update_plan states: past_due survives version update")}`, async () => {
+	const customerId = "migration-update-state-past-due";
+	const pro = products.pro({
+		id: "pro",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
+	});
+
+	const { autumnV1, autumnV2_2, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+
+	const fullCustomerBefore = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+	});
+	const cusProductBefore = findActiveCustomerProductById({
+		fullCus: fullCustomerBefore,
+		productId: pro.id,
+	});
+	expect(cusProductBefore).toBeDefined();
+
+	await CusProductService.update({
+		ctx,
+		cusProductId: cusProductBefore!.id,
+		updates: { status: CusProductStatus.PastDue },
+	});
+
+	const invoiceCountBefore =
+		(await autumnV1.customers.get<ApiCustomerV3>(customerId)).invoices
+			?.length ?? 0;
+
+	await autumnV1.products.update(pro.id, {
+		items: [
+			items.monthlyPrice({ price: 20 }),
+			items.monthlyMessages({ includedUsage: 600 }),
+		],
+	});
+
+	await runUpdatePlanMigration({
+		ctx,
+		migrationClient: autumnV2_2,
+		migrationId: `${customerId}-mig`,
+		customerId,
+		runOnServer: false,
+		filter: { customer: { plan: { plan_id: pro.id } } },
+		operations: {
+			customer: [
+				{
+					type: "update_plan",
+					plan_filter: { plan_id: pro.id },
+					version: 2,
+				},
+			],
+		},
+	});
+
+	const customerAfter = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+	await expectCustomerProducts({
+		customer: customerAfter,
+		pastDue: [pro.id],
+	});
+
+	const { byStatus } = await expectCustomerProductStatuses({
+		ctx,
+		customerId,
+		productId: pro.id,
+		expected: {
+			[CusProductStatus.PastDue]: 1,
+			[CusProductStatus.Expired]: 1,
+		},
+	});
+
+	expect(byStatus[CusProductStatus.PastDue]?.[0]?.product.version).toBe(2);
+	expect(customerAfter.invoices?.length ?? 0).toBe(invoiceCountBefore);
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
+});
 
 test.concurrent(`${chalk.yellowBright("migrations update_plan states: scheduled downgrade survives active plan price update")}`, async () => {
 	const customerId = "migration-update-state-downgrade";

@@ -133,8 +133,11 @@ const mergeStripeAndBillingLineItems = ({
 	// amount to Stripe. So stripeLineItem.amount is already discounted and discount_amounts is empty.
 	// In this case, use Autumn's original pre-discount amount and discount breakdown.
 	const autumnDiscountable = context.discountable ?? true;
+	const isBackdatedAggregate = context.backdate !== undefined;
 	const hasAutumnDiscounts =
-		!autumnDiscountable && primaryLineItem.discounts.length > 0;
+		!isBackdatedAggregate &&
+		!autumnDiscountable &&
+		primaryLineItem.discounts.length > 0;
 
 	let amount: number;
 	let amountAfterDiscounts: number;
@@ -222,7 +225,8 @@ const mergeStripeAndBillingLineItems = ({
 
 	// For multi-item groups, use Stripe description (has tier info); otherwise use Autumn
 	const useStripeDescription =
-		isMultiItemGroup && stripeLineItem.description !== null;
+		(isMultiItemGroup || isBackdatedAggregate) &&
+		stripeLineItem.description !== null;
 	const description = useStripeDescription
 		? (stripeLineItem.description as string)
 		: (primaryLineItem.description ?? "");

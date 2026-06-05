@@ -1,31 +1,39 @@
+import { GearIcon } from "@phosphor-icons/react";
 import {
 	BellIcon,
 	BuildingIcon,
-	CreditCardIcon,
 	PaletteIcon,
+	PlugIcon,
+	ReceiptIcon,
 	ShieldCheckIcon,
+	SlidersHorizontalIcon,
 	UserIcon,
 	UsersIcon,
 } from "lucide-react";
 import { useSearchParams } from "react-router";
 import { PageContainer } from "@/components/general/PageContainer";
+import { PageHeader } from "@/components/general/PageHeader";
 import { cn } from "@/lib/utils";
 import { AccountSection } from "./sections/AccountSection";
-import { OrganizationSection } from "./sections/OrganizationSection";
-import { MembersSection } from "./sections/MembersSection";
-import { AuthorizedAppsSection } from "./sections/AuthorizedAppsSection";
 import { AppearanceSection } from "./sections/AppearanceSection";
+import { AuthorizedAppsSection } from "./sections/AuthorizedAppsSection";
 import { BillingSettingsSection } from "./sections/BillingSettingsSection";
+import { IntegrationsSection } from "./sections/IntegrationsSection";
+import { InvoicesSection } from "./sections/InvoicesSection";
+import { MembersSection } from "./sections/MembersSection";
+import { OrganizationSection } from "./sections/OrganizationSection";
 import { UsageAlertsSection } from "./sections/UsageAlertsSection";
 
 type SettingsTab =
 	| "account"
 	| "organization"
 	| "members"
-	| "billing"
-	| "usage-alerts"
+	| "integrations"
 	| "appearance"
-	| "apps";
+	| "apps"
+	| "billing"
+	| "invoices"
+	| "usage-alerts";
 
 interface SettingsNavItem {
 	readonly id: SettingsTab;
@@ -33,48 +41,79 @@ interface SettingsNavItem {
 	readonly icon: React.ReactNode;
 }
 
-const SETTINGS_TABS: readonly SettingsNavItem[] = [
-	{ id: "account", label: "Account", icon: <UserIcon className="size-4" /> },
+interface SettingsNavGroup {
+	readonly label: string;
+	readonly items: readonly SettingsNavItem[];
+}
+
+const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 	{
-		id: "organization",
 		label: "Organization",
-		icon: <BuildingIcon className="size-4" />,
+		items: [
+			{
+				id: "account",
+				label: "Account",
+				icon: <UserIcon className="size-4" />,
+			},
+			{
+				id: "organization",
+				label: "Organization",
+				icon: <BuildingIcon className="size-4" />,
+			},
+			{
+				id: "members",
+				label: "Members",
+				icon: <UsersIcon className="size-4" />,
+			},
+			{
+				id: "integrations",
+				label: "Integrations",
+				icon: <PlugIcon className="size-4" />,
+			},
+			{
+				id: "appearance",
+				label: "Appearance",
+				icon: <PaletteIcon className="size-4" />,
+			},
+			{
+				id: "apps",
+				label: "Authorized Apps",
+				icon: <ShieldCheckIcon className="size-4" />,
+			},
+		],
 	},
 	{
-		id: "members",
-		label: "Members",
-		icon: <UsersIcon className="size-4" />,
-	},
-	{
-		id: "billing",
 		label: "Billing",
-		icon: <CreditCardIcon className="size-4" />,
+		items: [
+			{
+				id: "billing",
+				label: "Configuration",
+				icon: <SlidersHorizontalIcon className="size-4" />,
+			},
+			{
+				id: "invoices",
+				label: "Invoices",
+				icon: <ReceiptIcon className="size-4" />,
+			},
+			{
+				id: "usage-alerts",
+				label: "Usage Alerts",
+				icon: <BellIcon className="size-4" />,
+			},
+		],
 	},
-	{
-		id: "usage-alerts",
-		label: "Usage Alerts",
-		icon: <BellIcon className="size-4" />,
-	},
-	{
-		id: "appearance",
-		label: "Appearance",
-		icon: <PaletteIcon className="size-4" />,
-	},
-	{
-		id: "apps",
-		label: "Authorized Apps",
-		icon: <ShieldCheckIcon className="size-4" />,
-	},
-] as const;
+];
 
 const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
 	account: AccountSection,
 	organization: OrganizationSection,
 	members: MembersSection,
-	billing: BillingSettingsSection,
-	"usage-alerts": UsageAlertsSection,
+	integrations: IntegrationsSection,
 	appearance: AppearanceSection,
 	apps: AuthorizedAppsSection,
+	billing: BillingSettingsSection,
+	invoices: InvoicesSection,
+	"usage-alerts": UsageAlertsSection,
 };
 
 export const SettingsView = () => {
@@ -88,24 +127,34 @@ export const SettingsView = () => {
 
 	return (
 		<PageContainer className="flex-row gap-10 h-full">
-			<nav className="hidden sm:flex flex-col w-44 shrink-0 pt-1">
-				<h1 className="text-sm font-semibold text-foreground mb-4">Settings</h1>
-				<div className="flex flex-col gap-0.5">
-					{SETTINGS_TABS.map((tab) => (
-						<button
-							key={tab.id}
-							type="button"
-							onClick={() => handleTabChange(tab.id)}
-							className={cn(
-								"flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors cursor-pointer text-left",
-								activeTab === tab.id
-									? "bg-interactive-secondary text-foreground font-medium"
-									: "text-tertiary-foreground hover:text-muted-foreground hover:bg-interactive-secondary/50",
-							)}
-						>
-							{tab.icon}
-							<span>{tab.label}</span>
-						</button>
+			<nav className="hidden sm:flex flex-col w-44 shrink-0">
+				<PageHeader
+					icon={<GearIcon size={16} weight="fill" className="text-subtle" />}
+					title="Settings"
+				/>
+				<div className="flex flex-col gap-5">
+					{SETTINGS_GROUPS.map((group) => (
+						<div key={group.label} className="flex flex-col gap-0.5">
+							<span className="px-2 mb-1 text-xs font-medium text-subtle">
+								{group.label}
+							</span>
+							{group.items.map((tab) => (
+								<button
+									key={tab.id}
+									type="button"
+									onClick={() => handleTabChange(tab.id)}
+									className={cn(
+										"flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors cursor-pointer text-left",
+										activeTab === tab.id
+											? "bg-interactive-secondary text-foreground font-medium"
+											: "text-tertiary-foreground hover:text-muted-foreground hover:bg-interactive-secondary/50",
+									)}
+								>
+									{tab.icon}
+									<span>{tab.label}</span>
+								</button>
+							))}
+						</div>
 					))}
 				</div>
 			</nav>

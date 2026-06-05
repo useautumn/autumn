@@ -1,5 +1,4 @@
 import {
-	type AttachParamsV1,
 	deduplicateArray,
 	type ExistingUsagesConfig,
 	type Feature,
@@ -16,7 +15,12 @@ export const carryOverUsagesToExistingUsagesConfig = ({
 	currentCustomerProduct,
 }: {
 	ctx: AutumnContext;
-	params: AttachParamsV1;
+	params: {
+		carry_over_usages?: {
+			enabled: boolean;
+			feature_ids?: string[];
+		};
+	};
 	currentCustomerProduct: FullCusProduct;
 }): ExistingUsagesConfig | undefined => {
 	const carryOverUsages = params.carry_over_usages;

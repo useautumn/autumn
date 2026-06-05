@@ -1,18 +1,17 @@
 import {
 	cusEntsToUsage,
 	type DeleteBalanceParamsV0,
-	findFeatureById,
 	fullCustomerToCustomerEntitlements,
 	isPaidCustomerEntitlement,
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { executePostgresDeduction } from "@/internal/balances/utils/deduction/executePostgresDeduction";
 import { CusService } from "@/internal/customers/CusService";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { buildCustomerEntitlementFilters } from "../utils/buildCustomerEntitlementFilters";
+import { reapplyFeatureUsageDeduction } from "../utils/reapplyFeatureUsageDeduction";
 
 export const deleteBalance = async ({
 	ctx,
@@ -93,39 +92,16 @@ export const deleteBalance = async ({
 		return;
 	}
 
-	const survivingFullCustomer = await CusService.getFull({
-		ctx,
-		idOrInternalId: customer_id,
-		entityId: entity_id,
-		withEntities: true,
-		withSubs: true,
-	});
-
 	const targetFeatureId = feature_id ?? customerEntitlements[0]?.feature_id;
 	if (!targetFeatureId) {
 		return;
 	}
 
-	const feature = findFeatureById({
-		features: ctx.features,
-		featureId: targetFeatureId,
-		errorOnNotFound: true,
-	});
-
-	await executePostgresDeduction({
+	await reapplyFeatureUsageDeduction({
 		ctx,
-		fullCustomer: survivingFullCustomer,
-		customerId: survivingFullCustomer.id ?? customer_id,
+		customerId: customer_id,
 		entityId: entity_id,
-		deductions: [
-			{
-				feature,
-				deduction: usageToRecalculate,
-			},
-		],
-		options: {
-			alterGrantedBalance: false,
-			overageBehaviour: "allow",
-		},
+		featureId: targetFeatureId,
+		usage: usageToRecalculate,
 	});
 };

@@ -28,11 +28,13 @@ export const handleAttachV2Errors = async ({
 	billingContext,
 	billingPlan,
 	params,
+	preview = false,
 }: {
 	ctx: AutumnContext;
 	billingContext: AttachBillingContext;
 	billingPlan: BillingPlan;
 	params: AttachParamsV1;
+	preview?: boolean;
 }) => {
 	const { autumn: autumnBillingPlan } = billingPlan;
 
@@ -61,7 +63,7 @@ export const handleAttachV2Errors = async ({
 	// 6. Scheduled switch with one-off prepaid quantities
 	handleScheduledSwitchOneOffErrors({ ctx, billingContext });
 	handleBillingCycleAnchorErrors({ billingContext });
-	handleStartDateErrors({ billingContext, params });
+	handleStartDateErrors({ billingContext, params, preview });
 	handleEndDateErrors({ billingContext, params });
 
 	// 7. Transition config errors (reset_after_trial_end on allocated features)

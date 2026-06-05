@@ -33,6 +33,7 @@ export const previewCreateScheduleWithContext = async ({
 	await handleCreateScheduleErrors({
 		db: ctx.db,
 		billingContext,
+		preview: true,
 	});
 
 	const { autumnBillingPlan } = computeCreateSchedulePlan({

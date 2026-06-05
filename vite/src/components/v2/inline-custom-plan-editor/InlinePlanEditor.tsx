@@ -111,8 +111,9 @@ function InlinePlanEditorContent({
 							</PlanEditorBar>
 						)}
 					</div>
-					<SheetOverlay inline />
 				</motion.div>
+
+				<SheetOverlay inline />
 
 				<ProductSheets />
 			</div>

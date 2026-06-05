@@ -4,7 +4,7 @@ import type {
 	Invoice,
 	StripeBillingPlanResult,
 } from "@autumn/shared";
-import { ms, StripeBillingStage, tryCatch } from "@autumn/shared";
+import { StripeBillingStage, tryCatch } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { isStripeSubscriptionCanceled } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import { setStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
@@ -12,6 +12,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { addStripeSubscriptionIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionIdToBillingPlan";
 import { removeStripeSubscriptionIdFromBillingPlan } from "@/internal/billing/v2/execute/removeStripeSubscriptionIdFromBillingPlan";
 import { shouldDeferBillingPlan } from "@/internal/billing/v2/providers/stripe/utils/common/shouldDeferBillingPlan";
+import { applyTemplateToDraft } from "@/internal/billing/v2/providers/stripe/utils/invoices/applyTemplateToDraft";
 import { finalizeStripeInvoice } from "@/internal/billing/v2/providers/stripe/utils/invoices/stripeInvoiceOps";
 import { executeStripeSubscriptionOperation } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/executeStripeSubscriptionOperation";
 import { getLatestInvoiceFromSubscriptionAction } from "@/internal/billing/v2/providers/stripe/utils/subscriptions/getLatestInvoiceFromSubscriptionAction";
@@ -20,6 +21,7 @@ import { upsertSubscriptionFromBilling } from "@/internal/billing/v2/utils/upser
 import { invoiceActions } from "@/internal/invoices/actions";
 import { insertMetadataFromBillingPlan } from "@/internal/metadata/utils/insertMetadataFromBillingPlan";
 import { isDeferredInvoiceMode } from "../../../utils/billingContext/isDeferredInvoiceMode";
+import { getDeferredBillingMetadataExpiresAt } from "./getDeferredBillingMetadataExpiresAt";
 
 export const executeStripeSubscriptionAction = async ({
 	ctx,
@@ -64,6 +66,14 @@ export const executeStripeSubscriptionAction = async ({
 		stripeSubscription,
 		subscriptionAction,
 		billingContext,
+	});
+
+	latestStripeInvoice = await applyTemplateToDraft({
+		ctx,
+		stripeCli,
+		invoice: latestStripeInvoice,
+		footer: billingContext.invoiceMode?.footer,
+		memo: billingContext.invoiceMode?.memo,
 	});
 
 	// Honor either the new internal flag (set by attach via setupFinalizeFirstInvoice)
@@ -147,9 +157,10 @@ export const executeStripeSubscriptionAction = async ({
 			billingPlan,
 			billingContext: deferredBillingContext,
 			stripeInvoice: latestStripeInvoice,
-			expiresAt: deferredInvoiceMode
-				? Date.now() + ms.days(10)
-				: Date.now() + ms.minutes(10),
+			expiresAt: getDeferredBillingMetadataExpiresAt({
+				deferredInvoiceMode,
+				paymentMethod: billingContext.paymentMethod,
+			}),
 			resumeAfter: StripeBillingStage.SubscriptionAction,
 		});
 

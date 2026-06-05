@@ -1,9 +1,4 @@
-import {
-	formatMs,
-	formatSeconds,
-	type StripeDiscountWithCoupon,
-	secondsToMs,
-} from "@autumn/shared";
+import { type StripeDiscountWithCoupon, secondsToMs } from "@autumn/shared";
 import { addMonths } from "date-fns";
 
 /**
@@ -13,16 +8,19 @@ export const filterStripeDiscountsForNextCycle = ({
 	stripeDiscounts,
 	currentEpochMs,
 	nextCycleStart,
+	discountStartMs,
 }: {
 	stripeDiscounts: StripeDiscountWithCoupon[];
 	currentEpochMs: number;
 	nextCycleStart: number;
+	discountStartMs?: number;
 }) => {
 	return stripeDiscounts.filter((discount) =>
 		stripeDiscountAppliesToNextCycle({
 			discount,
 			currentEpochMs,
 			nextCycleStart,
+			discountStartMs,
 		}),
 	);
 };
@@ -34,16 +32,13 @@ const stripeDiscountAppliesToNextCycle = ({
 	discount,
 	currentEpochMs,
 	nextCycleStart,
+	discountStartMs,
 }: {
 	discount: StripeDiscountWithCoupon;
 	currentEpochMs: number;
 	nextCycleStart: number;
+	discountStartMs?: number;
 }) => {
-	console.log("Discount:", {
-		id: discount.id,
-		end: formatSeconds(discount.end),
-	});
-	console.log("Next cycle start:", formatMs(nextCycleStart));
 	if (discount.id) {
 		if (discount.end == null) return true;
 		return secondsToMs(discount.end) > nextCycleStart;
@@ -64,7 +59,7 @@ const stripeDiscountAppliesToNextCycle = ({
 		if (durationInMonths <= 0) return false;
 
 		const freshDiscountEndsAt = addMonths(
-			new Date(currentEpochMs),
+			new Date(discountStartMs ?? currentEpochMs),
 			durationInMonths,
 		).getTime();
 

@@ -14,11 +14,13 @@
   "scripts": {
     "build": "tsc",
     "ts": "tsc --noEmit",
-    "test": "bun test src",
+    "test": "bun test tests/unit",
+    "test:eval": "ENV_FILE=.env infisical run --env=dev --recursive -- bun test tests/evals",
     "prepack": "bun run build",
     "prepublishOnly": "bun run build"
   },
   "dependencies": {
+    "@autumn/logging": "workspace:*",
     "@autumn/shared": "workspace:*",
 		"@axiomhq/js": "^1.6.1",
 		"@mastra/core": "^1.36.0",

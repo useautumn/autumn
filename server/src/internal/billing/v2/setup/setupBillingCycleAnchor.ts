@@ -6,6 +6,8 @@ import {
 	isCustomerProductOneOff,
 	isFreeProduct,
 	isOneOffProduct,
+	isPastStartDate,
+	isProductPaidAndRecurring,
 	secondsToMs,
 } from "@autumn/shared";
 import type Stripe from "stripe";
@@ -21,6 +23,7 @@ export const setupBillingCycleAnchor = ({
 	trialContext,
 	currentEpochMs,
 	requestedBillingCycleAnchor,
+	billingStartsAt,
 }: {
 	stripeSubscription?: Stripe.Subscription;
 	customerProduct?: FullCusProduct;
@@ -28,9 +31,23 @@ export const setupBillingCycleAnchor = ({
 	trialContext?: TrialContext;
 	currentEpochMs: number;
 	requestedBillingCycleAnchor?: number | "now";
+	billingStartsAt?: number;
 }): number | "now" => {
 	if (requestedBillingCycleAnchor !== undefined) {
 		return requestedBillingCycleAnchor;
+	}
+
+	// A new backdated subscription anchors its cycle to the past starts_at
+	// (Stripe's backdate_start_date anchors there too). Only for a new paid
+	// recurring line — backdating an existing line is rejected upstream, and
+	// free/one-off products have no recurring cycle to anchor.
+	if (
+		billingStartsAt !== undefined &&
+		isPastStartDate(billingStartsAt, currentEpochMs) &&
+		!customerProduct &&
+		isProductPaidAndRecurring(newFullProduct)
+	) {
+		return billingStartsAt;
 	}
 
 	const currentIsFree = isCustomerProductFree(customerProduct);

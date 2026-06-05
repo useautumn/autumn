@@ -34,11 +34,11 @@ function createScopeColumn(
 				return <span className="text-muted-foreground">Customer</span>;
 			}
 
-			const entity = entities.find(
-				(e: Entity) =>
-					e.internal_id === product.internal_entity_id ||
-					e.id === product.entity_id,
-			);
+			const entity = product.internal_entity_id
+				? entities.find(
+						(e: Entity) => e.internal_id === product.internal_entity_id,
+					)
+				: entities.find((e: Entity) => e.id === product.entity_id);
 
 			if (!entity) return <span className="text-tertiary-foreground">—</span>;
 
@@ -47,12 +47,12 @@ function createScopeColumn(
 					variant="skeleton"
 					onClick={(e) => {
 						e.stopPropagation();
-						setEntityId(entity.id || entity.internal_id);
+						setEntityId(entity.internal_id);
 					}}
 					className="font-medium hover:text-purple-600 cursor-pointer max-w-full px-0! hover:bg-transparent active:bg-transparent active:border-none"
 				>
 					<span className="truncate w-full">
-						{entity.name || entity.id || "PENDING"}
+						{entity.name || entity.internal_id || "PENDING"}
 					</span>
 				</Button>
 			);
@@ -202,7 +202,8 @@ export function CustomerProductsTable() {
 					table: subscriptionTable,
 					numberOfColumns: columns.length,
 					enableSorting: false,
-					isLoading: isLoading || isEntityTransitioning,
+					isLoading,
+					isTransitioning: isEntityTransitioning,
 					onRowClick: handleRowClick,
 					emptyStateChildren,
 					flexibleTableColumns: true,
@@ -238,7 +239,8 @@ export function CustomerProductsTable() {
 						table: purchaseTable,
 						numberOfColumns: columns.length,
 						enableSorting: false,
-						isLoading: isLoading || isEntityTransitioning,
+						isLoading,
+						isTransitioning: isEntityTransitioning,
 						onRowClick: handleRowClick,
 						emptyStateText: "No purchases found",
 						flexibleTableColumns: true,

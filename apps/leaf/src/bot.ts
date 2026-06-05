@@ -1,0 +1,188 @@
+import { createSlackAdapter } from "@chat-adapter/slack";
+import { createPostgresState } from "@chat-adapter/state-pg";
+import type { Message, Thread } from "chat";
+import { Chat } from "chat";
+import { runMessage } from "./agent/messages.js";
+import { handleApprovalAction, postApprovalRequest } from "./approvals/flow.js";
+import { decrypt } from "./lib/crypto.js";
+import { env } from "./lib/env.js";
+import {
+	addLeafContext,
+	createLeafSessionContext,
+	logger as rootLogger,
+} from "./lib/logger.js";
+import { getSlackWorkspaceId } from "./providers/slack/context.js";
+import { findInstallation } from "./providers/slack/installations.js";
+import { getRecentMessages } from "./providers/slack/threadContext.js";
+import type { ChatContextMessage } from "./types.js";
+import {
+	createActionLogger,
+	finishLoading,
+	type LoadingState,
+	type ReplyTarget,
+	startLoading,
+} from "./ui/progress.js";
+
+export const chatAdapterNames = ["slack"];
+
+export const bot = new Chat({
+	userName: env.CHAT_NAME,
+	adapters: {
+		slack: createSlackAdapter({
+			clientId: env.SLACK_CLIENT_ID,
+			clientSecret: env.SLACK_CLIENT_SECRET,
+			installationProvider: {
+				getInstallation: async (workspaceId) => {
+					const installation = await findInstallation("slack", workspaceId);
+					if (!installation) return null;
+					return {
+						botToken: decrypt(installation.bot_access_token),
+						botUserId: installation.bot_user_id ?? undefined,
+						teamName: installation.workspace_name,
+					};
+				},
+			},
+			signingSecret: env.SLACK_SIGNING_SECRET,
+			userName: env.CHAT_NAME,
+		}),
+	},
+	state: createPostgresState({
+		keyPrefix: "chat",
+		url: env.CHAT_STATE_DATABASE_URL,
+	}),
+	concurrency: "queue",
+});
+
+const runAndReply = async ({
+	channelId,
+	providerUserId,
+	raw,
+	recentMessages,
+	target,
+	text,
+	threadId,
+}: {
+	channelId: string;
+	providerUserId: string;
+	raw: unknown;
+	recentMessages?: ChatContextMessage[];
+	target: ReplyTarget;
+	text: string;
+	threadId: string;
+}) => {
+	let loading: LoadingState = null;
+	let logger = rootLogger;
+	try {
+		const workspaceId = getSlackWorkspaceId(raw);
+		const session = createLeafSessionContext({
+			channelId,
+			provider: "slack",
+			providerUserId,
+			threadId,
+			workspaceId,
+		});
+		logger = addLeafContext(rootLogger, {
+			...session.context,
+			agent_run_id: session.agentRunId,
+		});
+		logger.info("Received Slack message", {
+			event: "leaf.slack_message_received",
+			data: {
+				text_length: text.length,
+			},
+		});
+		const installation = await findInstallation("slack", workspaceId);
+		if (!installation) {
+			logger.warn("Slack installation not found", {
+				event: "leaf.slack_installation_missing",
+			});
+			return;
+		}
+		if (!text.trim()) {
+			logger.info("Skipping empty Slack message", {
+				event: "leaf.slack_message_skipped",
+				data: { reason: "empty" },
+			});
+			return;
+		}
+
+		loading = await startLoading(target);
+		const logAction = createActionLogger(loading);
+		const output = await runMessage({
+			installation,
+			logger,
+			onAction: logAction,
+			recentMessages,
+			text,
+			threadId,
+		});
+
+		const postedApproval = await postApprovalRequest({
+			channelId,
+			installation,
+			loading,
+			logAction,
+			logger,
+			output,
+			providerUserId,
+			target,
+		});
+		if (postedApproval) return;
+
+		await finishLoading(target, loading, "Done.");
+		await target.post({ markdown: output.text || "Done." });
+		logger.info("Posted Slack response", {
+			event: "leaf.slack_response_posted",
+			data: {
+				has_text: Boolean(output.text),
+			},
+		});
+	} catch (error) {
+		logger.error("[chat] Message failed", error, {
+			event: "leaf.slack_message_failed",
+		});
+		await finishLoading(target, loading, "Request failed.");
+		await target.post({
+			markdown: "I could not complete that request. Please try again.",
+		});
+	}
+};
+
+const handleMessage = async (thread: Thread, message: Message) => {
+	await runAndReply({
+		target: thread,
+		raw: message.raw,
+		text: message.text,
+		channelId: thread.channelId,
+		providerUserId: message.author.userId,
+		threadId: thread.id,
+		recentMessages: await getRecentMessages(thread, message),
+	});
+};
+
+bot.onDirectMessage(handleMessage);
+
+bot.onNewMention(async (thread, message) => {
+	await thread.subscribe();
+	await handleMessage(thread, message);
+});
+
+bot.onSubscribedMessage(handleMessage);
+
+bot.onSlashCommand(async (event) => {
+	await runAndReply({
+		target: event.channel,
+		raw: event.raw,
+		text: event.text || event.command,
+		channelId: event.channel.id,
+		providerUserId: event.user.userId,
+		threadId: event.channel.id,
+	});
+});
+
+bot.onAction(
+	["approve_billing_action", "cancel_billing_action"],
+	handleApprovalAction,
+);
+
+bot.registerSingleton();

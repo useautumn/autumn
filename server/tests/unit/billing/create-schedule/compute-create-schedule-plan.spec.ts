@@ -3,6 +3,7 @@ import {
 	BillingVersion,
 	type CreateScheduleBillingContext,
 	CusProductStatus,
+	ms,
 } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
@@ -46,6 +47,7 @@ const createBillingContext = ({
 		customEnts: [],
 		isCustom: false,
 		billingVersion: BillingVersion.V2,
+		billingStartsAt: immediatePhase.starts_at,
 		immediatePhase,
 		futurePhases,
 		scheduledPhaseContexts: [],
@@ -104,6 +106,45 @@ describe(chalk.yellowBright("computeCreateSchedulePlan"), () => {
 		).toBe(true);
 		expect(result.autumnBillingPlan.updateCustomerProduct).toBeUndefined();
 		expect(result.autumnBillingPlan.deleteCustomerProduct).toBeUndefined();
+	});
+
+	test("uses the immediate phase starts_at for first-phase customer products", () => {
+		const ctx = contexts.create({});
+		const currentEpochMs = 1_800_000_000_000;
+		const startsAt = currentEpochMs - ms.days(35);
+		const proProduct = products.createFull({
+			id: "pro",
+			prices: [prices.createFixed({ id: "price_pro" })],
+		});
+
+		const billingContext = createBillingContext({
+			currentEpochMs,
+			productContexts: [
+				{
+					fullProduct: proProduct,
+					customPrices: [],
+					customEnts: [],
+					featureQuantities: [],
+				},
+			],
+			immediatePhase: {
+				starts_at: startsAt,
+				plans: [{ plan_id: proProduct.id }],
+			},
+		});
+
+		const result = computeCreateSchedulePlan({
+			ctx,
+			billingContext,
+		});
+
+		expect(result.autumnBillingPlan.insertCustomerProducts).toHaveLength(1);
+		expect(result.autumnBillingPlan.insertCustomerProducts[0]!.status).toBe(
+			CusProductStatus.Active,
+		);
+		expect(result.autumnBillingPlan.insertCustomerProducts[0]!.starts_at).toBe(
+			startsAt,
+		);
 	});
 
 	test("expires the current product and removes a scheduled replacement during a transition", () => {

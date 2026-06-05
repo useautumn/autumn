@@ -36,8 +36,10 @@ export const TransferProductDialog = ({
 	const [loading, setLoading] = useState(false);
 	const [selectedValue, setSelectedValue] = useState<string>("");
 
-	const filteredEntities = customer.entities.filter(
-		(entity: Entity) => entity.internal_id !== cusProduct.internal_entity_id,
+	const filteredEntities = customer.entities.filter((entity: Entity) =>
+		cusProduct.internal_entity_id
+			? entity.internal_id !== cusProduct.internal_entity_id
+			: entity.id !== cusProduct.entity_id,
 	);
 
 	// Check if product is currently on an entity
@@ -58,20 +60,25 @@ export const TransferProductDialog = ({
 		setLoading(true);
 
 		try {
-			const fromEntity = customer.entities.find(
-				(e: Entity) => e.internal_id === cusProduct.internal_entity_id,
+			const fromEntity = customer.entities.find((e: Entity) =>
+				cusProduct.internal_entity_id
+					? e.internal_id === cusProduct.internal_entity_id
+					: e.id === cusProduct.entity_id,
 			);
 
 			const isMovingToCustomer = selectedValue === CUSTOMER_LEVEL_VALUE;
 			const toEntity = isMovingToCustomer
 				? null
-				: customer.entities.find((e: Entity) => e.id === selectedValue);
+				: customer.entities.find(
+						(e: Entity) => e.internal_id === selectedValue,
+					);
 
 			await axiosInstance.post(
 				`/v1/customers/${cusProduct.customer_id}/transfer`,
 				{
-					from_entity_id: fromEntity?.id,
-					to_entity_id: isMovingToCustomer ? null : toEntity?.id,
+					customer_product_id: cusProduct.id,
+					from_entity_id: fromEntity?.internal_id,
+					to_entity_id: isMovingToCustomer ? null : toEntity?.internal_id,
 					product_id: cusProduct.product_id,
 				},
 			);
@@ -105,13 +112,20 @@ export const TransferProductDialog = ({
 					</p>
 
 					<Select
-					value={selectedValue}
-					onValueChange={setSelectedValue}
-					items={{
-						...(isOnEntity ? { [CUSTOMER_LEVEL_VALUE]: "Move to Customer" } : {}),
-						...Object.fromEntries(filteredEntities.map((entity: Entity) => [entity.id, entity.name || entity.id || entity.internal_id])),
-					}}
-				>
+						value={selectedValue}
+						onValueChange={setSelectedValue}
+						items={{
+							...(isOnEntity
+								? { [CUSTOMER_LEVEL_VALUE]: "Move to Customer" }
+								: {}),
+							...Object.fromEntries(
+								filteredEntities.map((entity: Entity) => [
+									entity.internal_id,
+									entity.name || entity.internal_id,
+								]),
+							),
+						}}
+					>
 						<SelectTrigger>
 							<SelectValue placeholder="Select destination" />
 						</SelectTrigger>
@@ -127,7 +141,7 @@ export const TransferProductDialog = ({
 							{filteredEntities.map((entity: Entity) => (
 								<SelectItem
 									key={entity.id || entity.internal_id}
-									value={entity.id}
+									value={entity.internal_id}
 								>
 									<div className="flex gap-2 items-center min-w-0">
 										{entity.name && (
@@ -136,7 +150,7 @@ export const TransferProductDialog = ({
 											</span>
 										)}
 										<span className="truncate text-tertiary-foreground font-mono text-xs">
-											{entity.id || entity.internal_id}
+											{entity.internal_id}
 										</span>
 									</div>
 								</SelectItem>

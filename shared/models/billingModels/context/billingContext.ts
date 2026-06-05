@@ -20,6 +20,9 @@ import type { StripeDiscountWithCoupon } from "../stripe/stripeDiscountWithCoupo
 const InvoiceModeSchema = z.object({
 	finalizeInvoice: z.boolean().default(false),
 	enableProductImmediately: z.boolean().default(true),
+	footer: z.string().optional(),
+	memo: z.string().optional(),
+	daysUntilDue: z.number().optional(),
 });
 
 export type InvoiceMode = z.infer<typeof InvoiceModeSchema>;
@@ -60,6 +63,8 @@ export interface BillingContext {
 	currentEpochMs: number;
 	billingCycleAnchorMs: number | "now";
 	resetCycleAnchorMs: number | "now";
+	billingStartsAt?: number;
+	subscriptionBackdateStartMs?: number;
 	requestedBillingCycleAnchor?: number | "now";
 	requestedProrationBehavior?: BillingBehavior;
 

@@ -107,10 +107,12 @@ export const setupImmediateMultiProductBillingContext = async ({
 	ctx,
 	params,
 	preview = false,
+	billingStartsAt,
 }: {
 	ctx: AutumnContext;
 	params: MultiAttachParamsV0;
 	preview?: boolean;
+	billingStartsAt?: number;
 }): Promise<MultiAttachBillingContext> => {
 	const fullCustomer = await setupFullCustomerContext({
 		ctx,
@@ -185,7 +187,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		createStripeCustomerIfMissing: !preview,
 	});
 
-	const invoiceMode = setupInvoiceModeContext({ params });
+	const invoiceMode = await setupInvoiceModeContext({ ctx, params });
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
 	const trialContext = await setupImmediateMultiProductTrialContext({
 		ctx,
@@ -202,12 +204,15 @@ export const setupImmediateMultiProductBillingContext = async ({
 		newFullProduct: firstProduct,
 		trialContext,
 		currentEpochMs,
+		billingStartsAt,
 	});
 
 	if (trialContext?.trialEndsAt) {
 		billingCycleAnchorMs = trialContext.trialEndsAt;
 	}
 
+	// Reset anchor derives from billingCycleAnchorMs, which setupBillingCycleAnchor
+	// already aligns to a backdated start.
 	const resetCycleAnchorMs = setupResetCycleAnchor({
 		billingCycleAnchorMs,
 		customerProduct: undefined,
