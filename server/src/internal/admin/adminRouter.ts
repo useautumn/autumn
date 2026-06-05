@@ -44,6 +44,7 @@ import { handleUpsertAdminRateLimitRedisAllowlistConfig } from "./handleUpsertAd
 import { handleUpsertAdminRedisV2CacheConfig } from "./handleUpsertAdminRedisV2CacheConfig";
 import { handleUpsertAdminRequestBlockConfig } from "./handleUpsertAdminRequestBlockConfig";
 import { handleUpsertAdminStripeSyncConfig } from "./handleUpsertAdminStripeSyncConfig";
+import { handleUpsertSlackMcpOAuthClient } from "./handleUpsertSlackMcpOAuthClient";
 import { handleDeleteRollout } from "./rollouts/handleDeleteRollout";
 import { handleDeleteRolloutOrg } from "./rollouts/handleDeleteRolloutOrg";
 import { handleGetRollouts } from "./rollouts/handleGetRollouts";
@@ -159,6 +160,10 @@ honoAdminRouter.delete("/cache-v2-ramp", ...handleDeleteAdminCacheV2Ramp);
 honoAdminRouter.get("/org-member", ...handleGetOrgMember);
 honoAdminRouter.get("/master-stripe-account", ...handleGetMasterStripeAccount);
 honoAdminRouter.get("/oauth-clients", ...handleListOAuthClients);
+honoAdminRouter.post(
+	"/oauth-clients/slack-mcp",
+	...handleUpsertSlackMcpOAuthClient,
+);
 honoAdminRouter.post("/invoice-line-items", ...handleGetInvoiceLineItems);
 
 honoAdminRouter.get("/rollouts", ...handleGetRollouts);

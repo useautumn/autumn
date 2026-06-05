@@ -96,7 +96,7 @@ const readDocs = async (mcp: ReturnType<typeof createAutumnMcpClient>) => {
 };
 
 export const runChatAgent = async ({
-	apiKey,
+	token,
 	env,
 	logger = rootLogger,
 	message,
@@ -106,7 +106,7 @@ export const runChatAgent = async ({
 	provider,
 	recentMessages,
 }: {
-	apiKey: string;
+	token: string;
 	env: AppEnv;
 	logger?: AutumnLogger;
 	message: string;
@@ -116,7 +116,11 @@ export const runChatAgent = async ({
 	provider: string;
 	recentMessages?: ChatContextMessage[];
 }) => {
-	const mcp = createAutumnMcpClient(apiKey, { requireApproval: true });
+	const mcp = createAutumnMcpClient({
+		token,
+		appEnv: env,
+		options: { requireApproval: true },
+	});
 	let previewApproval:
 		| {
 				toolName: string;
@@ -138,12 +142,15 @@ export const runChatAgent = async ({
 		});
 		await onAction?.("Loading Autumn tools and guidance");
 		const [tools, docsText] = await Promise.all([
-			getAutumnMcpTools(mcp, {
-				applyApprovalPolicy: true,
-				logger,
-				onToolCall: onAction,
-				onPreview: (approval) => {
-					previewApproval = approval;
+			getAutumnMcpTools({
+				mcp,
+				options: {
+					applyApprovalPolicy: true,
+					logger,
+					onToolCall: onAction,
+					onPreview: (approval) => {
+						previewApproval = approval;
+					},
 				},
 			}),
 			readDocs(mcp),

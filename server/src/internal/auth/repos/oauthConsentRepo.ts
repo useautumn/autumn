@@ -80,11 +80,13 @@ export const getOAuthConsentForClientUserOrg = async ({
 	clientId,
 	userId,
 	referenceId,
+	env,
 }: {
 	db: DrizzleCli;
 	clientId: string;
 	userId: string;
 	referenceId: string;
+	env?: AppEnv;
 }) => {
 	const [consent] = await db
 		.select({
@@ -99,6 +101,7 @@ export const getOAuthConsentForClientUserOrg = async ({
 				eq(oauthConsent.clientId, clientId),
 				eq(oauthConsent.userId, userId),
 				eq(oauthConsent.referenceId, referenceId),
+				...(env ? [eq(oauthConsent.env, env)] : []),
 			),
 		)
 		.limit(1);
