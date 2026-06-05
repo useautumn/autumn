@@ -2,7 +2,7 @@
 
 Mastra-backed MCP library for Autumn operations.
 
-The hosted runtime lives in `apps/leaf` (see `src/mcp/http.ts`) and exposes a
+The hosted runtime lives in `apps/leaf` (see `src/mcp/mcpRouter.ts`) and exposes a
 Streamable HTTP MCP route:
 
 - `/mcp` - public, API-shaped operational tools.

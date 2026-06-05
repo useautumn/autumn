@@ -14,11 +14,14 @@ export {
 	createConsoleLogger,
 } from "./console-logger.js";
 export {
-	buildAuthForRequest,
-	getAuthorizationServerMetadata,
-	getProtectedResourceMetadata,
+	DEFAULT_API_VERSION,
+	DEFAULT_AUTUMN_API_URL,
+	MCP_OAUTH_SCOPES,
+} from "./constants.js";
+export {
+	type AutumnMcpAuth,
+	environmentSchema,
 	type OAuthEnvironment,
-	OAuthHttpError,
-} from "./server/auth/oauth.js";
+} from "./server/auth/auth.js";
 export type { MCPServerFlags } from "./server/flags.js";
 export { createAutumnOperationsMCPServer } from "./server/server.js";

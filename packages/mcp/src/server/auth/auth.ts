@@ -4,7 +4,9 @@ import {
 	DEFAULT_API_VERSION,
 	DEFAULT_AUTUMN_API_URL,
 } from "../../constants.js";
-import { environmentSchema } from "./utils/schemas.js";
+
+export const environmentSchema = z.enum(["sandbox", "live"]);
+export type OAuthEnvironment = z.infer<typeof environmentSchema>;
 
 /**
  * Authenticated Autumn identity attached to every MCP request. Defined as a zod
@@ -13,6 +15,7 @@ import { environmentSchema } from "./utils/schemas.js";
  */
 export const autumnMcpAuthSchema = z.object({
 	apiKey: z.string().min(1),
+	authMethod: z.enum(["secret-key", "oauth"]).optional(),
 	env: environmentSchema,
 	principalId: z.string(),
 	resource: z.string(),
