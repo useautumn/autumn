@@ -10,6 +10,7 @@ import {
 	UpdateProductSchema,
 	type UpdateProductV2Params,
 } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
@@ -153,30 +154,42 @@ export const updateProduct = async ({
 	const { free_trial } = updates;
 
 	if (updates.items) {
-		const inPlace =
-			cusProductExists && disable_version
-				? await resolveInPlaceEdit({
-						db,
-						items: updates.items,
-						currentFullProduct: fullProduct,
-						features,
-					})
-				: {
-						items: updates.items,
-						curPrices: fullProduct.prices,
-						curEnts: fullProduct.entitlements,
-					};
-
-		await handleNewProductItems({
-			db,
-			curPrices: inPlace.curPrices,
-			curEnts: inPlace.curEnts,
-			newItems: inPlace.items,
-			features,
-			product: fullProduct,
-			logger: ctx.logger,
-			isCustom: false,
-		});
+		const newItems = updates.items;
+		if (cusProductExists && disable_version) {
+			// Retire the shared catalog rows + insert their replacements atomically:
+			// a failure between the two must not leave the plan with retired rows
+			// and no replacement.
+			await db.transaction(async (transaction) => {
+				const tx = transaction as unknown as DrizzleCli;
+				const inPlace = await resolveInPlaceEdit({
+					db: tx,
+					items: newItems,
+					currentFullProduct: fullProduct,
+					features,
+				});
+				await handleNewProductItems({
+					db: tx,
+					curPrices: inPlace.curPrices,
+					curEnts: inPlace.curEnts,
+					newItems: inPlace.items,
+					features,
+					product: fullProduct,
+					logger: ctx.logger,
+					isCustom: false,
+				});
+			});
+		} else {
+			await handleNewProductItems({
+				db,
+				curPrices: fullProduct.prices,
+				curEnts: fullProduct.entitlements,
+				newItems,
+				features,
+				product: fullProduct,
+				logger: ctx.logger,
+				isCustom: false,
+			});
+		}
 	}
 
 	const latestProductId = updates.id || fullProduct.id;
