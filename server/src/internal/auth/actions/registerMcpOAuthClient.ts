@@ -5,6 +5,14 @@ import { type OAuthClientRecord, oauthClientRepo } from "../repos/index.js";
 
 const MCP_CLIENT_KIND = "mcp_client";
 export const SLACK_MCP_OAUTH_CLIENT_ID = "autumn_mcp_slack";
+export const AUTUMN_ADMIN_OAUTH_CLIENT_ID = "autumn_admin";
+export const returnsOAuthAccessTokenForClientId = ({
+	clientId,
+}: {
+	clientId: string;
+}) =>
+	clientId === SLACK_MCP_OAUTH_CLIENT_ID ||
+	clientId === AUTUMN_ADMIN_OAUTH_CLIENT_ID;
 const REGISTER_CACHE_TTL_MS = 5 * 60 * 1000;
 const DANGEROUS_REDIRECT_SCHEMES = new Set([
 	"javascript:",

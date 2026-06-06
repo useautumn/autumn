@@ -3,10 +3,10 @@ import {
 	AppEnv,
 	apiKeys,
 	type ChatInstallation,
+	type ChatInstallState,
 	type ChatProvider,
 	chatInstallations,
 } from "@autumn/shared";
-import type { ChatInstallState } from "@autumn/shared/utils/chatState";
 import { and, eq, or } from "drizzle-orm";
 import { replaceInstallationOAuthCredentials } from "../../internal/installations/actions/replaceInstallationOAuthCredentials.js";
 import { decrypt, encrypt } from "../../lib/crypto.js";
