@@ -10,6 +10,58 @@ const hashIdempotencyKey = (key: string): string => {
 	return hasher.digest("base64url");
 };
 
+const buildIdempotencyRedisKey = ({
+	orgId,
+	env,
+	idempotencyKey,
+}: {
+	orgId: string;
+	env: string;
+	idempotencyKey: string;
+}): string => {
+	const hashedKey = hashIdempotencyKey(idempotencyKey);
+	return `${orgId}:${env}:idempotency:${hashedKey}`;
+};
+
+/**
+ * Releases (deletes) a previously-claimed idempotency key.
+ *
+ * Use this when the side-effecting operation guarded by the key FAILS, so the
+ * caller can safely retry without hitting a 24-hour 409 wall on a deduction
+ * that never actually committed. See bug #1138.
+ *
+ * Mirrors `checkIdempotencyKey`'s fail-open Redis-not-ready behavior — if the
+ * delete itself fails or Redis is down, we don't surface that to the caller
+ * (the original deduction error is what they care about).
+ */
+export const releaseIdempotencyKey = async ({
+	orgId,
+	env,
+	idempotencyKey,
+	logger,
+}: {
+	orgId: string;
+	env: string;
+	idempotencyKey: string;
+	logger: Logger;
+}): Promise<void> => {
+	if (redis.status !== "ready") return;
+	const redisKey = buildIdempotencyRedisKey({ orgId, env, idempotencyKey });
+	try {
+		await redis.del(redisKey);
+		logger.info(
+			`[releaseIdempotencyKey] released idempotency key ${idempotencyKey}`,
+		);
+	} catch (error) {
+		// Best-effort release. The caller already has a real error to report;
+		// the worst case of a release failure is a 24h TTL on a key that's
+		// safe to leave (won't double-charge anyone).
+		logger.warn(
+			`[releaseIdempotencyKey] failed to release ${idempotencyKey}: ${error instanceof Error ? error.message : String(error)}`,
+		);
+	}
+};
+
 /**
  * Checks and sets an idempotency key in Redis using atomic SET NX operation.
  * If Redis is not ready, allows the request to proceed (fail-open).
@@ -31,13 +83,12 @@ export const checkIdempotencyKey = async ({
 		return;
 	}
 
-	const hashedKey = hashIdempotencyKey(idempotencyKey);
-	const redisKey = `${orgId}:${env}:idempotency:${hashedKey}`;
+	const redisKey = buildIdempotencyRedisKey({ orgId, env, idempotencyKey });
 
 	try {
 		// Use SET NX (set if not exists) for atomic check-and-set to prevent race conditions
 		logger.info(
-			`[checkIdempotencyKey] setting idempotency key ${idempotencyKey}, hash: ${hashedKey}`,
+			`[checkIdempotencyKey] setting idempotency key ${idempotencyKey}`,
 		);
 
 		const wasSet = await redis.set(
