@@ -10,6 +10,9 @@ import {
 	createAgentAutumnOperationTools,
 	createRawAutumnOperationTools,
 	dateToEpochMillisecondsTool,
+	endpointByTool,
+	epochMillisecondsToDateTool,
+	schemaByTool,
 } from "../../../../src/tools/index.js";
 import { createTestRedis } from "../../../utils/test-redis.js";
 
@@ -36,13 +39,40 @@ describe("Autumn operation tools", () => {
 		expect(tools.listPlans.description).toContain(
 			"filter returned plans locally",
 		);
+		expect(tools.listFeatures.description).toContain("List Autumn features");
 		expect(tools.listCustomers.description).toContain("plans");
 		expect(tools.listCustomers.description).toContain("paginate");
+		expect(tools.updateCustomer.description).toContain("invoice_mode");
+		expect(tools.updateCustomer.description).toContain("Stripe");
 		expect(tools.createPlan.description).toContain("confirmation");
 		expect(tools.createBalance.description).toContain("entity-scoped credits");
+		expect(tools.searchRequestLogs.description).toContain("request logs");
+		expect(tools.queryRequestLogs.description).toContain("aggregate");
 		expect(tools.previewCreateBalance.description).toContain("Does not mutate");
 		expect(tools.createSchedule.description).toContain("starts_at");
 		expect(tools.previewCreateSchedule.description).toContain("billing impact");
+		expect(tools.previewAttach.description).toContain(
+			"enable_plan_immediately",
+		);
+		expect(tools.previewAttach.description).toContain(
+			"invoice_mode requires customer email",
+		);
+		expect(tools.attach.description).toContain("enable_plan_immediately");
+		expect(tools.attach.description).toContain(
+			"invoice_mode requires customer email",
+		);
+		expect(tools.previewCreateSchedule.description).toContain(
+			"enable_plan_immediately",
+		);
+		expect(tools.previewCreateSchedule.description).toContain(
+			"invoice_mode requires customer email",
+		);
+		expect(tools.createSchedule.description).toContain(
+			"enable_plan_immediately",
+		);
+		expect(tools.createSchedule.description).toContain(
+			"invoice_mode requires customer email",
+		);
 		expect(tools.getCurrentOrganization.description).toContain("organization");
 	});
 
@@ -61,9 +91,13 @@ describe("Autumn operation tools", () => {
 
 		for (const name of [
 			"listCustomers",
+			"updateCustomer",
 			"getCustomer",
+			"listFeatures",
 			"listPlans",
 			"getPlan",
+			"searchRequestLogs",
+			"queryRequestLogs",
 			"previewAttach",
 			"previewUpdateSubscription",
 			"previewCreateSchedule",
@@ -72,6 +106,16 @@ describe("Autumn operation tools", () => {
 		] as const) {
 			expect(tools[name].mcp?.annotations?.destructiveHint).toBe(false);
 		}
+	});
+
+	test("listFeatures uses a strict empty request schema", () => {
+		expect(endpointByTool.listFeatures).toBe("/v1/features.list");
+		expect(schemaByTool.listFeatures.parse({})).toEqual({});
+		expect(() =>
+			schemaByTool.listFeatures.parse({ archived: false }),
+		).toThrow();
+
+		expect(createAgentAutumnOperationTools().listFeatures).toBeDefined();
 	});
 
 	test("dateToEpochMilliseconds converts UTC dates and offsets", async () => {
@@ -87,7 +131,36 @@ describe("Autumn operation tools", () => {
 		).resolves.toBe(Date.UTC(2027, 0, 1, 8));
 	});
 
-	test("raw createCustomer calls the get-or-create endpoint", async () => {
+	test("epochMillisecondsToDate converts keyed epoch milliseconds", async () => {
+		const tool = epochMillisecondsToDateTool as ExecutableTool;
+		if (!tool.execute)
+			throw new Error("epochMillisecondsToDate is not executable");
+
+		await expect(
+			tool.execute(
+				{
+					timestamps: {
+						starts_at: Date.UTC(2026, 0, 1),
+						expires_at: String(Date.UTC(2026, 5, 6, 12, 30, 45)),
+					},
+				},
+				{},
+			),
+		).resolves.toEqual({
+			starts_at: {
+				epoch_ms: Date.UTC(2026, 0, 1),
+				iso: "2026-01-01T00:00:00.000Z",
+				utc: "January 1, 2026, 00:00:00 UTC",
+			},
+			expires_at: {
+				epoch_ms: Date.UTC(2026, 5, 6, 12, 30, 45),
+				iso: "2026-06-06T12:30:45.000Z",
+				utc: "June 6, 2026, 12:30:45 UTC",
+			},
+		});
+	});
+
+	test("raw getOrCreateCustomer calls the get-or-create endpoint", async () => {
 		const originalFetch = globalThis.fetch;
 		globalThis.fetch = (async (url, init) => {
 			expect(String(url)).toBe(
@@ -101,8 +174,9 @@ describe("Autumn operation tools", () => {
 		}) as typeof fetch;
 
 		try {
-			const tool = createRawAutumnOperationTools().createCustomer;
-			if (!tool.execute) throw new Error("createCustomer is not executable");
+			const tool = createRawAutumnOperationTools().getOrCreateCustomer;
+			if (!tool.execute)
+				throw new Error("getOrCreateCustomer is not executable");
 
 			await expect(
 				tool.execute(
@@ -113,6 +187,44 @@ describe("Autumn operation tools", () => {
 					{ mcp: { extra: { authInfo: auth } } } as never,
 				),
 			).resolves.toEqual({ id: "cus_1" });
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	test("raw updateCustomer calls the update endpoint", async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (url, init) => {
+			expect(String(url)).toBe("http://localhost:8080/v1/customers.update");
+			expect(JSON.parse(init?.body as string)).toMatchObject({
+				customer_id: "mintlify",
+				email: "johnyeocx@gmail.com",
+			});
+			return Response.json({
+				id: "mintlify",
+				email: "johnyeocx@gmail.com",
+			});
+		}) as typeof fetch;
+
+		try {
+			const tool = createRawAutumnOperationTools().updateCustomer;
+			if (!tool.execute) throw new Error("updateCustomer is not executable");
+
+			await expect(
+				tool.execute(
+					{
+						intent: "set customer email",
+						request: {
+							customer_id: "mintlify",
+							email: "johnyeocx@gmail.com",
+						},
+					},
+					{ mcp: { extra: { authInfo: auth } } } as never,
+				),
+			).resolves.toEqual({
+				id: "mintlify",
+				email: "johnyeocx@gmail.com",
+			});
 		} finally {
 			globalThis.fetch = originalFetch;
 		}
@@ -343,6 +455,99 @@ describe("Autumn operation tools", () => {
 				slug: "unit-tests",
 				env: "sandbox",
 			});
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	test("raw listFeatures calls the feature list endpoint", async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (url, init) => {
+			expect(String(url)).toBe("http://localhost:8080/v1/features.list");
+			expect(JSON.parse(init?.body as string)).toEqual({});
+			return Response.json({ list: [] });
+		}) as typeof fetch;
+
+		try {
+			const tool = createRawAutumnOperationTools().listFeatures;
+			if (!tool.execute) throw new Error("listFeatures is not executable");
+
+			await expect(
+				tool.execute(
+					{
+						intent: "find available product features",
+						request: {},
+					},
+					{ mcp: { extra: { authInfo: auth } } } as never,
+				),
+			).resolves.toEqual({ list: [] });
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	test("raw request-log tools call the logs endpoints", async () => {
+		const originalFetch = globalThis.fetch;
+		const calls: Array<{ url: string; body: unknown }> = [];
+		globalThis.fetch = (async (url, init) => {
+			calls.push({
+				url: String(url),
+				body: JSON.parse(init?.body as string),
+			});
+			return Response.json({ list: [] });
+		}) as typeof fetch;
+
+		try {
+			const tools = createRawAutumnOperationTools();
+			if (!tools.searchRequestLogs.execute) {
+				throw new Error("searchRequestLogs is not executable");
+			}
+			if (!tools.queryRequestLogs.execute) {
+				throw new Error("queryRequestLogs is not executable");
+			}
+
+			await expect(
+				tools.searchRequestLogs.execute(
+					{
+						intent: "find recent failed requests",
+						request: {
+							query: "where status_code >= 400 | limit 10",
+							limit: 10,
+						},
+					},
+					{ mcp: { extra: { authInfo: auth } } } as never,
+				),
+			).resolves.toEqual({ list: [] });
+
+			await expect(
+				tools.queryRequestLogs.execute(
+					{
+						intent: "count errors by path",
+						request: {
+							query:
+								"where status_code >= 400 | summarize errors = count() by request_path",
+						},
+					},
+					{ mcp: { extra: { authInfo: auth } } } as never,
+				),
+			).resolves.toEqual({ list: [] });
+
+			expect(calls).toEqual([
+				{
+					url: "http://localhost:8080/v1/logs.search",
+					body: {
+						query: "where status_code >= 400 | limit 10",
+						limit: 10,
+					},
+				},
+				{
+					url: "http://localhost:8080/v1/logs.query",
+					body: {
+						query:
+							"where status_code >= 400 | summarize errors = count() by request_path",
+					},
+				},
+			]);
 		} finally {
 			globalThis.fetch = originalFetch;
 		}

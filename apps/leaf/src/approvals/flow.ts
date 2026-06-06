@@ -10,6 +10,7 @@ import {
 	type LoadingState,
 	type ReplyTarget,
 } from "../ui/progress.js";
+import { approvalErrorResult } from "./errors.js";
 import { approvalRequestFromOutput } from "./request.js";
 import {
 	approveAndRun,
@@ -83,15 +84,28 @@ const detailsFromApproval = (approval?: ChatApproval) => ({
 	env: approval?.env,
 });
 
-const approvalDetails = async (id: string) =>
-	detailsFromApproval(await getApproval(id));
-
 const editActionMessage = async (
 	event: ActionEvent,
 	content: Parameters<NonNullable<ActionEvent["adapter"]["editMessage"]>>[2],
 ) => {
 	await event.adapter.editMessage?.(event.threadId, event.messageId, content);
 };
+
+type ApprovalActionDeps = {
+	approveAndRun: typeof approveAndRun;
+	cancelApproval: typeof cancelApproval;
+	editActionMessage: typeof editActionMessage;
+	getApproval: typeof getApproval;
+	logger: Pick<AutumnLogger, "error" | "info" | "warn">;
+};
+
+const defaultApprovalActionDeps = {
+	approveAndRun,
+	cancelApproval,
+	editActionMessage,
+	getApproval,
+	logger: rootLogger,
+} satisfies ApprovalActionDeps;
 
 const cardStatusForApproval = (
 	status?: string,
@@ -101,11 +115,14 @@ const cardStatusForApproval = (
 	return "failed";
 };
 
-export const handleApprovalAction = async (event: ActionEvent) => {
+export const handleApprovalActionWithDeps = async (
+	event: ActionEvent,
+	deps: ApprovalActionDeps = defaultApprovalActionDeps,
+) => {
 	if (!event.value) return;
 
 	try {
-		rootLogger.info("Received approval action", {
+		deps.logger.info("Received approval action", {
 			event: "leaf.approval_action_received",
 			approval_id: event.value,
 			action: event.actionId,
@@ -113,16 +130,19 @@ export const handleApprovalAction = async (event: ActionEvent) => {
 				provider_user_id: event.user.userId,
 			},
 		});
-		const details = await approvalDetails(event.value);
+		const details = detailsFromApproval(await deps.getApproval(event.value));
 		if (event.actionId === "cancel_billing_action") {
-			const cancelled = await cancelApproval(event.value, event.user.userId);
+			const cancelled = await deps.cancelApproval(
+				event.value,
+				event.user.userId,
+			);
 			if (!cancelled) {
-				rootLogger.warn("Approval cancellation ignored", {
+				deps.logger.warn("Approval cancellation ignored", {
 					event: "leaf.approval_cancel_ignored",
 					approval_id: event.value,
 				});
-				const current = await getApproval(event.value);
-				await editActionMessage(
+				const current = await deps.getApproval(event.value);
+				await deps.editActionMessage(
 					event,
 					approvalStatusCard({
 						status: cardStatusForApproval(current?.status),
@@ -131,11 +151,11 @@ export const handleApprovalAction = async (event: ActionEvent) => {
 				);
 				return;
 			}
-			await editActionMessage(
+			await deps.editActionMessage(
 				event,
 				approvalStatusCard({ status: "cancelled", ...details }),
 			);
-			rootLogger.info("Cancelled approval", {
+			deps.logger.info("Cancelled approval", {
 				event: "leaf.approval_cancelled",
 				approval_id: event.value,
 				tool: details.toolName,
@@ -143,18 +163,18 @@ export const handleApprovalAction = async (event: ActionEvent) => {
 			return;
 		}
 
-		await editActionMessage(
+		await deps.editActionMessage(
 			event,
 			approvalStatusCard({ status: "running", ...details }),
 		);
-		const result = await approveAndRun(event.value, event.user.userId);
-		rootLogger.info("Completed approval action", {
+		const result = await deps.approveAndRun(event.value, event.user.userId);
+		deps.logger.info("Completed approval action", {
 			event: "leaf.approval_completed",
 			approval_id: event.value,
 			status: isErrorResult(result) ? "failed" : "approved",
 			tool: details.toolName,
 		});
-		await editActionMessage(
+		await deps.editActionMessage(
 			event,
 			approvalStatusCard({
 				status: isErrorResult(result) ? "failed" : "approved",
@@ -163,18 +183,22 @@ export const handleApprovalAction = async (event: ActionEvent) => {
 			}),
 		);
 	} catch (error) {
-		rootLogger.error("[chat] Approval action failed", error, {
+		deps.logger.error("[chat] Approval action failed", error, {
 			event: "leaf.approval_failed",
 			approval_id: event.value,
 			action: event.actionId,
 		});
-		const current = await getApproval(event.value);
-		await editActionMessage(
+		const current = await deps.getApproval(event.value);
+		await deps.editActionMessage(
 			event,
 			approvalStatusCard({
 				status: cardStatusForApproval(current?.status),
 				...detailsFromApproval(current),
+				result: approvalErrorResult(error),
 			}),
 		);
 	}
 };
+
+export const handleApprovalAction = async (event: ActionEvent) =>
+	handleApprovalActionWithDeps(event);

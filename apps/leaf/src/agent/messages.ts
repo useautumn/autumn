@@ -2,6 +2,7 @@ import { getInstallationOAuthAccessToken } from "../internal/installations/actio
 import { logger as rootLogger } from "../lib/logger.js";
 import { agentOutputSchema, type BotMessage } from "../types.js";
 import { runChatAgent, selectChatEnv } from "./agent.js";
+import { prepareAttachmentMessage } from "./attachments.js";
 
 const withTimeout = <T>(promise: Promise<T>, ms: number) =>
 	new Promise<T>((resolve, reject) => {
@@ -13,6 +14,8 @@ const withTimeout = <T>(promise: Promise<T>, ms: number) =>
 	});
 
 export const runMessage = async ({
+	attachmentFetchFallback,
+	attachments,
 	installation,
 	logger = rootLogger,
 	onAction,
@@ -22,8 +25,14 @@ export const runMessage = async ({
 }: BotMessage) =>
 	withTimeout(
 		(async () => {
+			const preparedMessage = await prepareAttachmentMessage({
+				attachments,
+				fetchFallback: attachmentFetchFallback,
+				logger,
+				text,
+			});
 			const env = await selectChatEnv({
-				message: text,
+				message: preparedMessage.envSelectionText,
 				recentMessages,
 				logger,
 			});
@@ -44,7 +53,7 @@ export const runMessage = async ({
 					token,
 					env,
 					logger,
-					message: text,
+					message: preparedMessage.message,
 					onAction,
 					threadId,
 					resourceId: installation.org_id,

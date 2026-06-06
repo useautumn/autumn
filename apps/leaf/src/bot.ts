@@ -1,6 +1,6 @@
 import { createSlackAdapter } from "@chat-adapter/slack";
 import { createPostgresState } from "@chat-adapter/state-pg";
-import type { Message, Thread } from "chat";
+import type { Attachment, Message, Thread } from "chat";
 import { Chat } from "chat";
 import { runMessage } from "./agent/messages.js";
 import { handleApprovalAction, postApprovalRequest } from "./approvals/flow.js";
@@ -12,6 +12,10 @@ import {
 	logger as rootLogger,
 } from "./lib/logger.js";
 import { getSlackWorkspaceId } from "./providers/slack/context.js";
+import {
+	fetchSlackAttachmentFallback,
+	getSlackFilesFromRaw,
+} from "./providers/slack/files.js";
 import { findInstallation } from "./providers/slack/installations.js";
 import { getRecentMessages } from "./providers/slack/threadContext.js";
 import type { ChatContextMessage } from "./types.js";
@@ -71,6 +75,7 @@ export const bot = new Chat({
 
 const runAndReply = async ({
 	channelId,
+	attachments,
 	providerUserId,
 	raw,
 	recentMessages,
@@ -78,6 +83,7 @@ const runAndReply = async ({
 	text,
 	threadId,
 }: {
+	attachments?: Attachment[];
 	channelId: string;
 	providerUserId: string;
 	raw: unknown;
@@ -114,10 +120,11 @@ const runAndReply = async ({
 		logger.info("Received Slack message", {
 			event: "leaf.slack_message_received",
 			data: {
+				attachment_count: attachments?.length ?? 0,
 				text_length: text.length,
 			},
 		});
-		if (!text.trim()) {
+		if (!text.trim() && !attachments?.length) {
 			logger.info("Skipping empty Slack message", {
 				event: "leaf.slack_message_skipped",
 				data: { reason: "empty" },
@@ -127,7 +134,16 @@ const runAndReply = async ({
 
 		loading = await startLoading(target);
 		const logAction = createActionLogger(loading);
+		const rawFiles = getSlackFilesFromRaw({ raw });
+		const botToken = decrypt(installation.bot_access_token);
 		const output = await runMessage({
+			attachmentFetchFallback: ({ attachment }) =>
+				fetchSlackAttachmentFallback({
+					attachment,
+					botToken,
+					rawFiles,
+				}),
+			attachments,
 			installation,
 			logger,
 			onAction: logAction,
@@ -170,6 +186,7 @@ const runAndReply = async ({
 const handleMessage = async (thread: Thread, message: Message) => {
 	await runAndReply({
 		target: thread,
+		attachments: message.attachments,
 		raw: message.raw,
 		text: message.text,
 		channelId: thread.channelId,

@@ -10,6 +10,7 @@ const defaultSlackScopes = [
 	"channels:history",
 	"channels:read",
 	"chat:write",
+	"files:read",
 	"groups:history",
 	"groups:read",
 	"im:history",
@@ -22,6 +23,8 @@ const defaultSlackScopes = [
 
 const defaultBotEvents = [
 	"app_mention",
+	"assistant_thread_started",
+	"assistant_thread_context_changed",
 	"message.channels",
 	"message.groups",
 	"message.im",
@@ -30,6 +33,7 @@ const defaultBotEvents = [
 
 type Args = {
 	action?: string;
+	appId?: string;
 	appName?: string;
 	baseUrl?: string;
 	dryRun: boolean;
@@ -38,10 +42,12 @@ type Args = {
 	printManifest: boolean;
 	provider?: SlackInstallProvider;
 	scopes: string[];
+	target?: SlackManifestTarget;
 	teamId?: string;
 };
 
 type SlackInstallProvider = "slack" | "slack_admin";
+type SlackManifestTarget = "local" | "prod" | "admin" | "all";
 
 type SlackManifest = {
 	display_information: {
@@ -94,6 +100,10 @@ type SlackManifestCreateResponse = {
 	[key: string]: unknown;
 };
 
+type SlackManifestUpdateResponse = SlackApiResponse & {
+	app_id?: string;
+};
+
 type SlackApiResponse = {
 	ok: boolean;
 	error?: string;
@@ -104,13 +114,16 @@ const usage = () =>
 	[
 		"Usage:",
 		"  bun slack [setup-bot] [options]",
+		"  bun slack update-manifest --target <local|prod|admin|all> [options]",
 		"",
 		"Options:",
+		"  --app-id <id>             Existing Slack app id for manifest updates.",
 		"  --base-url <url>           Public Leaf URL. Defaults to NGROK_URL, SLACK_BOT_URL, or CHAT_URL.",
 		"  --name <name>              Slack app name. Defaults to Autumn Chat Local.",
 		"  --env-file <path>          Write Slack env vars to this file.",
 		"  --provider <provider>      slack or slack_admin. Defaults to prompt for setup-bot.",
 		"  --scopes <csv>             Override bot scopes.",
+		"  --target <target>          Manifest update target: local, prod, admin, or all.",
 		"  --team-id <id>             Workspace team id for org-scoped Slack CLI auth.",
 		"  --print-manifest           Print generated Slack app manifest.",
 		"  --dry-run                  Print manifest/env without calling Slack.",
@@ -119,6 +132,7 @@ const usage = () =>
 		"Example:",
 		"  bun slack",
 		"  bun slack --provider slack_admin",
+		"  bun slack update-manifest --target all --base-url https://j.dev.useautumn.com",
 		"  bun slack --base-url https://j.dev.useautumn.com --env-file .env.slack-local",
 	].join("\n");
 
@@ -143,6 +157,7 @@ const parseArgs = ({ argv }: { argv: string[] }): Args => {
 		: (argv[0] ?? "setup-bot");
 	const scopes = readOption({ args: argv, name: "--scopes" });
 	const providerArg = readOption({ args: argv, name: "--provider" });
+	const targetArg = readOption({ args: argv, name: "--target" });
 	const provider =
 		providerArg === "slack" || providerArg === "slack_admin"
 			? providerArg
@@ -158,6 +173,7 @@ const parseArgs = ({ argv }: { argv: string[] }): Args => {
 
 	return {
 		action,
+		appId: readOption({ args: argv, name: "--app-id" }),
 		appName: readOption({ args: argv, name: "--name" }) ?? defaultAppName,
 		baseUrl:
 			readOption({ args: argv, name: "--base-url" }) ??
@@ -172,6 +188,21 @@ const parseArgs = ({ argv }: { argv: string[] }): Args => {
 		scopes: scopes
 			? scopes.split(",").map((scope) => scope.trim())
 			: defaultSlackScopes,
+		target:
+			targetArg === "local" ||
+			targetArg === "prod" ||
+			targetArg === "admin" ||
+			targetArg === "all"
+				? targetArg
+				: action === "update-local-manifest"
+					? "local"
+					: action === "update-prod-manifest"
+						? "prod"
+						: action === "update-admin-manifest"
+							? "admin"
+							: action === "update-all-manifests"
+								? "all"
+								: undefined,
 		teamId: readOption({ args: argv, name: "--team-id" }),
 	};
 };
@@ -512,6 +543,41 @@ const createSlackApp = async ({
 	return json;
 };
 
+const updateSlackAppManifest = async ({
+	appId,
+	manifest,
+	serviceToken,
+	teamId,
+}: {
+	appId: string;
+	manifest: SlackManifest;
+	serviceToken?: string;
+	teamId?: string;
+}): Promise<SlackManifestUpdateResponse> => {
+	const output = runSlackCli({
+		args: [
+			"api",
+			"apps.manifest.update",
+			...(serviceToken ? ["--token", serviceToken] : []),
+			"--json",
+			JSON.stringify({
+				app_id: appId,
+				manifest: JSON.stringify(manifest),
+				...(teamId ? { team_id: teamId } : {}),
+			}),
+		],
+		quiet: true,
+	});
+	const json = parseSlackJson<SlackManifestUpdateResponse>({
+		output,
+		label: "apps.manifest.update",
+	});
+	if (!json.ok)
+		throw new Error(`Slack app manifest update failed: ${json.error}`);
+
+	return json;
+};
+
 const escapeEnvValue = ({ value }: { value: string }) => {
 	if (/^[A-Za-z0-9_./:@-]+$/.test(value)) return value;
 	return JSON.stringify(value);
@@ -559,6 +625,8 @@ const printEnvExports = ({ vars }: { vars: Record<string, string> }) => {
 const setupSlackBot = async ({ args }: { args: Args }) => {
 	const resolvedArgs = await resolveInteractiveArgs({ args });
 	const provider = resolvedArgs.provider;
+	const baseUrl = resolvedArgs.baseUrl;
+	if (!baseUrl) throw new Error("Missing public Leaf URL");
 	const readyLabel =
 		provider === "slack_admin"
 			? "Slack admin app ready"
@@ -570,7 +638,7 @@ const setupSlackBot = async ({ args }: { args: Args }) => {
 
 	const manifest = buildSlackManifest({
 		appName: resolvedArgs.appName ?? defaultAppNameForProvider({ provider }),
-		baseUrl: resolvedArgs.baseUrl,
+		baseUrl,
 		scopes: resolvedArgs.scopes,
 	});
 
@@ -641,11 +709,160 @@ const setupAdminBot = async ({ args }: { args: Args }) =>
 const setupLocalBot = async ({ args }: { args: Args }) =>
 	setupSlackBot({ args: { ...args, provider: "slack" } });
 
+const prodBaseUrl = "https://api.useautumn.com";
+
+const targetDefaults = ({
+	target,
+}: {
+	target: Exclude<SlackManifestTarget, "all">;
+}) => {
+	if (target === "prod") {
+		return {
+			appId: process.env.SLACK_PROD_APP_ID,
+			appName: process.env.SLACK_PROD_APP_NAME ?? "Autumn",
+			baseUrl: prodBaseUrl,
+			provider: "slack" as const,
+		};
+	}
+	if (target === "admin") {
+		return {
+			appId: process.env.SLACK_ADMIN_APP_IDS ?? process.env.SLACK_ADMIN_APP_ID,
+			appName: process.env.SLACK_ADMIN_APP_NAME ?? "Autumn Chat Admin Local",
+			baseUrl:
+				process.env.NGROK_URL ??
+				process.env.SLACK_BOT_URL ??
+				process.env.CHAT_URL,
+			provider: "slack_admin" as const,
+		};
+	}
+	return {
+		appId: process.env.SLACK_APP_ID ?? process.env.SLACK_LOCAL_APP_ID,
+		appName: process.env.SLACK_APP_NAME ?? "Autumn Chat Local",
+		baseUrl:
+			process.env.NGROK_URL ??
+			process.env.SLACK_BOT_URL ??
+			process.env.CHAT_URL,
+		provider: "slack" as const,
+	};
+};
+
+const resolveManifestUpdateTarget = async ({
+	args,
+	target,
+}: {
+	args: Args;
+	target: Exclude<SlackManifestTarget, "all">;
+}) => {
+	const defaults = targetDefaults({ target });
+	const answers = await inquirer.prompt<{
+		appIds?: string;
+		appName?: string;
+		baseUrl?: string;
+	}>([
+		...(!args.dryRun && !args.appId && !defaults.appId
+			? [
+					{
+						type: "input" as const,
+						name: "appIds" as const,
+						message: `Slack app id(s) for ${target}`,
+						validate: (value: string) =>
+							Boolean(value.trim()) || "At least one Slack app id is required",
+					},
+				]
+			: []),
+		...(!args.baseUrl && !defaults.baseUrl
+			? [
+					{
+						type: "input" as const,
+						name: "baseUrl" as const,
+						message: `Public Leaf URL for ${target}`,
+						filter: (value: string) => trimTrailingSlash({ url: value.trim() }),
+						validate: (value: string) =>
+							isUrl({ value }) || "Enter a valid http(s) URL",
+					},
+				]
+			: []),
+	]);
+	const baseUrl = args.baseUrl ?? answers.baseUrl ?? defaults.baseUrl;
+	if (!baseUrl) throw new Error(`Missing base URL for ${target} manifest`);
+
+	return {
+		appIds: (args.appId ?? answers.appIds ?? defaults.appId)
+			?.split(",")
+			.map((appId) => appId.trim())
+			.filter(Boolean),
+		appName: args.appName ?? defaults.appName,
+		baseUrl,
+		provider: defaults.provider,
+	};
+};
+
+const updateManifestTargets = async ({ args }: { args: Args }) => {
+	const target = args.target ?? "local";
+	const targets =
+		target === "all"
+			? (["local", "prod", "admin"] as const)
+			: ([target] as Exclude<SlackManifestTarget, "all">[]);
+
+	if (!args.dryRun) {
+		ensureSlackCli();
+		maybeShowSlackCliAuthInstructions();
+	}
+	const serviceToken = args.dryRun ? undefined : await ensureSlackApiAuth();
+
+	for (const updateTarget of targets) {
+		const targetArgs =
+			target === "all"
+				? {
+						...args,
+						appId: undefined,
+						appName: undefined,
+						baseUrl: updateTarget === "prod" ? undefined : args.baseUrl,
+					}
+				: args;
+		const resolved = await resolveManifestUpdateTarget({
+			args: targetArgs,
+			target: updateTarget,
+		});
+		const manifest = buildSlackManifest({
+			appName: resolved.appName,
+			baseUrl: resolved.baseUrl,
+			scopes: args.scopes,
+		});
+
+		if (args.printManifest || args.dryRun) {
+			console.log(chalk.cyan(`\n${updateTarget} Slack app manifest:`));
+			console.log(JSON.stringify(manifest, null, 2));
+		}
+
+		if (args.dryRun) continue;
+		if (!resolved.appIds?.length) {
+			throw new Error(`Missing Slack app id for ${updateTarget} manifest`);
+		}
+		for (const appId of resolved.appIds) {
+			await updateSlackAppManifest({
+				appId,
+				manifest,
+				serviceToken,
+				teamId: args.teamId,
+			});
+			console.log(
+				chalk.green(`Updated ${updateTarget} Slack app manifest (${appId})`),
+			);
+		}
+	}
+};
+
 const actions = {
 	"setup-bot": setupSlackBot,
 	"setup-admin-bot": setupAdminBot,
 	"setup-local-bot": setupLocalBot,
 	"setup-regular-bot": setupLocalBot,
+	"update-admin-manifest": updateManifestTargets,
+	"update-all-manifests": updateManifestTargets,
+	"update-local-manifest": updateManifestTargets,
+	"update-manifest": updateManifestTargets,
+	"update-prod-manifest": updateManifestTargets,
 } satisfies Record<string, (params: { args: Args }) => Promise<void>>;
 
 type Action = keyof typeof actions;

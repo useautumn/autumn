@@ -1,5 +1,6 @@
-import { AppEnv, type ChatInstallation } from "@autumn/shared";
 import type { AutumnLogger } from "@autumn/logging";
+import { AppEnv, type ChatInstallation } from "@autumn/shared";
+import type { Attachment } from "chat";
 import { z } from "zod";
 
 export const agentOutputSchema = z.preprocess(
@@ -62,6 +63,10 @@ export type SignatureArgs = {
 };
 
 export type BotMessage = {
+	attachmentFetchFallback?: (params: {
+		attachment: Attachment;
+	}) => Promise<Buffer | null>;
+	attachments?: Attachment[];
 	installation: ChatInstallation;
 	logger?: AutumnLogger;
 	onAction?: (message: string) => Promise<void> | void;
