@@ -60,6 +60,9 @@ test.concurrent(
 			limit: 1,
 		});
 
+		const originalClientId = process.env.STRIPE_SANDBOX_CLIENT_ID;
+		process.env.STRIPE_SANDBOX_CLIENT_ID = "ca_autumn_app";
+
 		let thrown: unknown;
 		try {
 			await billingActions.updateSubscription({
@@ -88,6 +91,8 @@ test.concurrent(
 			});
 		} catch (error) {
 			thrown = error;
+		} finally {
+			process.env.STRIPE_SANDBOX_CLIENT_ID = originalClientId;
 		}
 
 		expect(thrown).toBeDefined();

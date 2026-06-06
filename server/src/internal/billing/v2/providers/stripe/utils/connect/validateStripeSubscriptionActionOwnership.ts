@@ -49,6 +49,7 @@ export const validateStripeSubscriptionActionOwnership = ({
 	if (!applicationId) return;
 
 	const expectedApplicationId = expectedStripeApplicationId({ ctx });
+	if (!expectedApplicationId) return;
 
 	if (applicationId === expectedApplicationId) {
 		return;
