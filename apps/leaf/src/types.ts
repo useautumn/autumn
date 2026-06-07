@@ -72,6 +72,7 @@ export type BotMessage = {
 	onAction?: (message: string) => Promise<void> | void;
 	recentMessages?: ChatContextMessage[];
 	text: string;
+	channelId: string;
 	threadId: string;
 };
 

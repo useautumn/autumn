@@ -149,6 +149,7 @@ const runAndReply = async ({
 			onAction: logAction,
 			recentMessages,
 			text,
+			channelId,
 			threadId,
 		});
 

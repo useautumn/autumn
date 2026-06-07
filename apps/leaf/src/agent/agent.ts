@@ -5,9 +5,12 @@ import type { MessageListInput } from "@mastra/core/agent/message-list";
 import { z } from "zod";
 import { env as chatEnv } from "../lib/env.js";
 import { logger as rootLogger } from "../lib/logger.js";
+import { createE2bSandboxProvider } from "../providers/e2b/e2bSandboxProvider.js";
 import type { ChatContextMessage } from "../types.js";
 import { createFirecrawlTools } from "./firecrawl.js";
 import { createAutumnMcpClient, getAutumnMcpTools } from "./mcp.js";
+import { sandboxConfig } from "./sandbox/config.js";
+import { createSandboxTools } from "./sandbox/createSandboxTools.js";
 
 export const agentDocUris = [
 	"autumn://docs/tool-composition",
@@ -31,6 +34,7 @@ Use web search only for current or external web context. Never use web search fo
 When web content influences the answer, cite the source URLs.
 Prefer searchWeb first, then scrapeUrl only for the most relevant result.
 Use listFeatures only when creating/customizing plan items or setting non-zero prepaid feature quantities and feature ids/types are not already known; never invent feature ids.
+Use the sandbox only for short parsing, calculation, transformation, and file-analysis tasks. Never send secrets to the sandbox, never use it for Autumn writes, and treat sandbox output as advisory.
 Preview billing-impacting changes first, summarize the preview in short Slack-friendly bullets, then call the matching write tool with the same request args.
 When Autumn responses include epoch millisecond timestamps, use epochMillisecondsToDate before explaining those timestamps to a user.
 Treat Slack PDFs and images attached to the latest message as part of the user's request. If an attachment was skipped or unavailable, say so briefly instead of pretending to have read it.
@@ -112,20 +116,24 @@ export const runChatAgent = async ({
 	env,
 	logger = rootLogger,
 	message,
+	channelId,
 	threadId,
 	resourceId,
 	onAction,
 	provider,
+	workspaceId,
 	recentMessages,
 }: {
 	token: string;
 	env: AppEnv;
 	logger?: AutumnLogger;
 	message: MessageListInput;
+	channelId: string;
 	onAction?: (message: string) => Promise<void> | void;
 	threadId: string;
 	resourceId: string;
 	provider: string;
+	workspaceId: string;
 	recentMessages?: ChatContextMessage[];
 }) => {
 	const mcp = createAutumnMcpClient({
@@ -171,13 +179,37 @@ export const runChatAgent = async ({
 			apiKey: chatEnv.FIRECRAWL_API_KEY,
 			onAction,
 		});
+		const sandboxTools =
+			sandboxConfig.enabled && chatEnv.E2B_API_KEY
+				? createSandboxTools({
+						logger,
+						onAction,
+						provider: createE2bSandboxProvider({
+							apiKey: chatEnv.E2B_API_KEY,
+							context: {
+								channelId,
+								env,
+								orgId: resourceId,
+								provider,
+								threadId,
+								workspaceId,
+							},
+							sessionTimeoutMs: sandboxConfig.sessionTimeoutMs,
+						}),
+					})
+				: {};
+		if (sandboxConfig.enabled && !chatEnv.E2B_API_KEY) {
+			logger.warn("Sandbox is enabled without an E2B API key", {
+				event: "leaf.sandbox_disabled",
+			});
+		}
 		await onAction?.("Reasoning over the request");
 		const agent = new Agent({
 			id: "autumn-chat",
 			name: "Autumn Chat",
 			instructions: `${instructions}\n\nCurrent Autumn environment: ${env}.\n\n${docsText}`,
 			model: chatEnv.CHAT_MODEL,
-			tools: { ...tools, ...firecrawlTools },
+			tools: { ...tools, ...firecrawlTools, ...sandboxTools },
 		});
 
 		const output = await agent.generate(message, {

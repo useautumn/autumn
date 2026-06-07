@@ -21,6 +21,7 @@ export const runMessage = async ({
 	onAction,
 	recentMessages,
 	text,
+	channelId,
 	threadId,
 }: BotMessage) =>
 	withTimeout(
@@ -55,9 +56,11 @@ export const runMessage = async ({
 					logger,
 					message: preparedMessage.message,
 					onAction,
+					channelId,
 					threadId,
 					resourceId: installation.org_id,
 					provider: installation.provider,
+					workspaceId: installation.workspace_id,
 					recentMessages,
 				}),
 			);

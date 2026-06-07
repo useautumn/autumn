@@ -16,6 +16,7 @@ const envSchema = z
 		CHAT_STATE_SECRET: optionalString,
 		CLIENT_URL: z.string().min(1).default("http://localhost:3000"),
 		DATABASE_URL: z.string().min(1),
+		E2B_API_KEY: optionalString,
 		ENCRYPTION_PASSWORD: z.string().min(1),
 		FIRECRAWL_API_KEY: z.string().min(1),
 		MCP_OAUTH_ENVIRONMENT: z.enum(["live", "sandbox"]).default("sandbox"),
