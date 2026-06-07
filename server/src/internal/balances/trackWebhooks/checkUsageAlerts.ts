@@ -207,7 +207,7 @@ export const checkUsageAlerts = async ({
 		scope: "customer",
 	});
 
-	// 2. Org-level alerts (apply to all customers; evaluated against customer-level balance).
+	// 2. Org-level alerts apply to all customers and use the tracked subject.
 	// Env-scoped: sandbox reads sandbox_usage_alerts, live reads usage_alerts.
 	const orgAlerts =
 		ctx.env === AppEnv.Sandbox
@@ -219,6 +219,7 @@ export const checkUsageAlerts = async ({
 			oldFullCus,
 			newFullCus,
 			feature,
+			entityId,
 			alerts: orgAlerts,
 			scope: "org",
 		});
