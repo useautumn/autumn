@@ -9,8 +9,8 @@
  *       customer-level and entity-level alerts.
  *     - Org alerts fire INDEPENDENTLY of customer alerts (idempotency key
  *       takes a scope segment so Svix does not dedup them).
- *     - Org alerts evaluate against the customer-level balance only — they do
- *       not iterate per entity.
+ *     - Org alerts evaluate against the tracked subject balance, including
+ *       the entity balance when the track call is entity-scoped.
  *     - Disabled org alerts (enabled: false) do not fire.
  *     - Org alert with no feature_id fires on usage of any feature (global).
  *   Side effects:
@@ -156,6 +156,62 @@ test(`${chalk.yellowBright("org-alert1: org-level alert fires when customer cros
 	expect(data.usage_alert.threshold).toBe(750);
 	expect(data.usage_alert.threshold_type).toBe("usage");
 	expect(data.usage_alert.name).toBe("org-threshold-750");
+});
+
+// Red: org/global alerts used the customer balance and missed entity usage.
+// Green: a 100% org alert fires when an entity-scoped balance lands exactly at 100%.
+test(`${chalk.yellowBright("org-alert1b: org usage_percentage alert fires for entity balance at 100%")}`, async () => {
+	const perEntityMessages = items.monthlyMessages({
+		includedUsage: 100,
+		entityFeatureId: TestFeature.Users,
+	});
+	const prod = products.base({
+		id: "org-ua-entity-100pct",
+		items: [perEntityMessages],
+	});
+
+	await setOrgUsageAlerts([
+		{
+			feature_id: TestFeature.Messages,
+			threshold: 100,
+			threshold_type: "usage_percentage",
+			enabled: true,
+			name: "org-entity-100pct",
+		},
+	]);
+
+	const { customerId, autumnV2_1, entities } = await initScenario({
+		customerId: "org-usage-alert-entity-100pct",
+		setup: [
+			s.customer({ testClock: false }),
+			s.products({ list: [prod] }),
+			s.entities({ count: 1, featureId: TestFeature.Users }),
+		],
+		actions: [s.attach({ productId: prod.id })],
+	});
+
+	await autumnV2_1.track({
+		customer_id: customerId,
+		entity_id: entities[0].id,
+		feature_id: TestFeature.Messages,
+		value: 100,
+	});
+
+	const result = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === "balances.usage_alert_triggered" &&
+			payload.data?.customer_id === customerId &&
+			payload.data?.entity_id === entities[0].id &&
+			payload.data?.usage_alert?.name === "org-entity-100pct",
+		timeoutMs: 15000,
+	});
+
+	expect(result).not.toBeNull();
+	expect(result!.payload.data.usage_alert.threshold).toBe(100);
+	expect(result!.payload.data.usage_alert.threshold_type).toBe(
+		"usage_percentage",
+	);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
