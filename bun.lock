@@ -251,6 +251,9 @@
     "packages/auth": {
       "name": "@autumn/auth",
       "version": "0.0.1",
+      "dependencies": {
+        "@autumn/shared": "workspace:*",
+      },
       "devDependencies": {
         "@types/bun": "^1.2.13",
         "@types/node": "^18.19.3",

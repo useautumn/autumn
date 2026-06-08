@@ -8,7 +8,9 @@ const serverURL = "http://localhost:8080";
 const endpointToTool = {
 	"/v1/balances.create": "createBalance",
 	"/v1/billing.attach": "attach",
+	"/v1/billing.create_schedule": "createSchedule",
 	"/v1/billing.preview_attach": "previewAttach",
+	"/v1/billing.preview_create_schedule": "previewCreateSchedule",
 	"/v1/customers.get": "getCustomer",
 	"/v1/customers.get_or_create": "getOrCreateCustomer",
 	"/v1/customers.list": "listCustomers",
@@ -51,6 +53,18 @@ const defaultHandlers = {
 		return responses.attachSuccess({ customer, plan });
 	},
 	createBalance: () => ({ status: "created" }),
+	createSchedule: ({ body, setup }) => {
+		const customerId = getString(body, "customer_id");
+		const customer = setup.customers.find(
+			(customer) => customer.id === customerId,
+		);
+		if (!customer) return { error: "customer not found" };
+		return responses.createScheduleSuccess({
+			customerId,
+			entityId: getString(body, "entity_id") || null,
+			phases: body.phases,
+		});
+	},
 	getCustomer: ({ body, setup }) => {
 		const customer = setup.customers.find(
 			(customer) => customer.id === getString(body, "customer_id"),
@@ -107,6 +121,17 @@ const defaultHandlers = {
 		);
 		if (!customer || !plan) return { error: "missing customer or plan" };
 		return responses.attachPreview({ customer, plan });
+	},
+	previewCreateSchedule: ({ body, setup }) => {
+		const customerId = getString(body, "customer_id");
+		const customer = setup.customers.find(
+			(customer) => customer.id === customerId,
+		);
+		if (!customer) return { error: "customer not found" };
+		return responses.createSchedulePreview({
+			customerId,
+			phases: body.phases,
+		});
 	},
 	updateCustomer: ({ body, setup }) => {
 		const customer = setup.customers.find(

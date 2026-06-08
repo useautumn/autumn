@@ -54,22 +54,26 @@ describe("Autumn operation tools", () => {
 		expect(tools.previewAttach.description).toContain(
 			"enable_plan_immediately",
 		);
+		expect(tools.previewAttach.description).toContain("finalize false");
 		expect(tools.previewAttach.description).toContain(
 			"invoice_mode requires customer email",
 		);
 		expect(tools.attach.description).toContain("enable_plan_immediately");
+		expect(tools.attach.description).toContain("finalize false");
 		expect(tools.attach.description).toContain(
 			"invoice_mode requires customer email",
 		);
 		expect(tools.previewCreateSchedule.description).toContain(
 			"enable_plan_immediately",
 		);
+		expect(tools.previewCreateSchedule.description).toContain("finalize false");
 		expect(tools.previewCreateSchedule.description).toContain(
 			"invoice_mode requires customer email",
 		);
 		expect(tools.createSchedule.description).toContain(
 			"enable_plan_immediately",
 		);
+		expect(tools.createSchedule.description).toContain("finalize false");
 		expect(tools.createSchedule.description).toContain(
 			"invoice_mode requires customer email",
 		);

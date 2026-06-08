@@ -1,21 +1,27 @@
-import { Agent } from "@mastra/core/agent";
+import { AppEnv } from "@autumn/shared";
 import type { MessageListItem } from "@mastra/core/agent/message-list";
+import type { ToolsInput } from "@mastra/core/agent";
 import { Mastra } from "@mastra/core/mastra";
 import { InMemoryStore } from "@mastra/core/storage";
 import { MCPClient } from "@mastra/mcp";
 import { createRequestContext } from "../../../../../../packages/mcp/src/server/auth/auth.js";
+import {
+	agentDocUris,
+	createAutumnChatAgent,
+} from "../../../../src/agent/chatAgent.js";
 import { createLeafTracingOptions } from "../../../../src/internal/observability/leafTracingOptions.js";
 import { createMastraBraintrustObservability } from "../../../../src/providers/braintrust/index.js";
-import {
-	defaultGenericMcpAgentConfig,
-	type GenericMcpAgentDriverConfig,
-	genericMcpAgentInstructions,
-} from "../configs/genericMcpAgentConfig.js";
+import { defaultGenericMcpAgentConfig } from "../configs/genericMcpAgentConfig.js";
 import type {
 	EvalAgentDriver,
 	EvalDriverStartInput,
 	EvalToolCall,
 } from "./types.js";
+
+type LeafAgentDriverConfig = {
+	maxSteps?: number;
+	model?: string;
+};
 
 type ToolWithApproval = {
 	execute?: unknown;
@@ -31,14 +37,6 @@ const applyToolApprovalPolicy = (tools: Record<string, ToolWithApproval>) => {
 		if (!requiresApproval) tool.needsApprovalFn = undefined;
 	}
 };
-
-const toEvalToolCall = (call: {
-	args?: Record<string, unknown>;
-	name: string;
-}): EvalToolCall => ({
-	args: call.args ?? {},
-	name: call.name,
-});
 
 const instrumentToolCalls = ({
 	tools,
@@ -59,7 +57,7 @@ const instrumentToolCalls = ({
 			args: Record<string, unknown>,
 			...rest: unknown[]
 		) => {
-			const call = toEvalToolCall({ args, name });
+			const call = { args, name };
 			toolCalls.push(call);
 			trace.event({ call, type: "tool_call" });
 			return execute(args, ...rest);
@@ -67,14 +65,29 @@ const instrumentToolCalls = ({
 	}
 };
 
-export const createGenericMcpAgentDriver = ({
+const readDocs = async (mcpClient: MCPClient) => {
+	const resources = await Promise.allSettled(
+		agentDocUris.map((uri) => mcpClient.resources.read("autumn", uri)),
+	);
+	return resources
+		.flatMap((result) =>
+			result.status === "fulfilled"
+				? result.value.contents.flatMap((content) =>
+						"text" in content ? [content.text] : [],
+					)
+				: [],
+		)
+		.join("\n\n");
+};
+
+export const createLeafAgentDriver = ({
 	maxSteps = defaultGenericMcpAgentConfig.maxSteps,
 	model = defaultGenericMcpAgentConfig.model,
-}: GenericMcpAgentDriverConfig = {}): EvalAgentDriver => ({
-	name: "generic-mcp-agent",
+}: LeafAgentDriverConfig = {}): EvalAgentDriver => ({
+	name: "leaf-agent",
 	start: async ({ context, setup, today, trace }: EvalDriverStartInput) => {
 		const mcpClient = new MCPClient({
-			id: `leaf-eval-${crypto.randomUUID()}`,
+			id: `leaf-agent-eval-${crypto.randomUUID()}`,
 			servers: {
 				autumn: {
 					requireToolApproval: ({ annotations }) =>
@@ -83,31 +96,36 @@ export const createGenericMcpAgentDriver = ({
 				},
 			},
 		});
-		const { toolsets, errors } = await mcpClient.listToolsetsWithErrors();
+		const [{ toolsets, errors }, docsText] = await Promise.all([
+			mcpClient.listToolsetsWithErrors(),
+			readDocs(mcpClient),
+		]);
 		if (Object.keys(errors).length) {
 			throw new Error(`MCP tool discovery failed: ${JSON.stringify(errors)}`);
 		}
 
-		const tools = toolsets.autumn ?? {};
+		const env =
+			context.auth.env === AppEnv.Live ? AppEnv.Live : AppEnv.Sandbox;
+		const tools = (toolsets.autumn ?? {}) as Record<string, ToolWithApproval>;
 		applyToolApprovalPolicy(tools);
 		const toolCalls: EvalToolCall[] = [];
 		instrumentToolCalls({ toolCalls, tools, trace });
 
-		const agent = new Agent({
-			id: "leaf-mcp-eval-agent",
-			name: "Leaf MCP Eval Agent",
-			description: "A generic agent using Autumn MCP tools.",
-			instructions: genericMcpAgentInstructions,
+		const agent = createAutumnChatAgent({
+			docsText,
+			env,
 			model,
-			tools,
+			tools: tools as ToolsInput,
 		});
 		const mastra = new Mastra({
-			agents: { eval: agent },
+			agents: { chat: agent },
 			logger: false,
 			observability: createMastraBraintrustObservability(),
-			storage: new InMemoryStore({ id: `leaf-eval-${crypto.randomUUID()}` }),
+			storage: new InMemoryStore({
+				id: `leaf-agent-eval-${crypto.randomUUID()}`,
+			}),
 		});
-		const evalAgent = mastra.getAgent("eval");
+		const evalAgent = mastra.getAgent("chat");
 		let messages: MessageListItem[] = [];
 		let pendingApproval: { runId: string; toolCallId?: string } | null = null;
 
@@ -123,7 +141,7 @@ export const createGenericMcpAgentDriver = ({
 			maxSteps: stepLimit ?? maxSteps,
 			requestContext: createRequestContext(context.auth),
 			tracingOptions: createLeafTracingOptions({
-				env: context.auth.env,
+				env,
 				orgId: context.auth.orgId,
 				setup: setup.tag,
 				source: "eval",
@@ -178,3 +196,5 @@ export const createGenericMcpAgentDriver = ({
 		};
 	},
 });
+
+export type { LeafAgentDriverConfig };

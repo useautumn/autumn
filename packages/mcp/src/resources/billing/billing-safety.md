@@ -16,7 +16,7 @@ Billing mutations must be preview-first.
 - Use previewCreateSchedule before createSchedule.
 - Use previewCreateBalance before createBalance.
 - Use createSchedule only after the user confirms the ordered phases, timing, and preview.
-- When using invoice_mode, usually set enable_plan_immediately true unless the user explicitly mentions otherwise.
+- Default paid billing changes should use a draft invoice: set enable_plan_immediately true and invoice_mode enabled true, enable_plan_immediately true, finalize false. Only change if the user specifies otherwise.
 - invoice_mode requires customer email; if missing, ask for it and call updateCustomer with customer_id and email before billing.
 - Use listFeatures only when customizing plan items or passing non-zero prepaid feature_quantities and the required feature ids/types are not already known.
 - Use previewAttach before attach, including feature_quantities, custom prices/items, reset intervals, discounts, and checkout behavior.

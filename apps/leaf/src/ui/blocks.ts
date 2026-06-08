@@ -13,7 +13,13 @@ const getRequest = (args?: Record<string, unknown>) =>
 		: args) as Record<string, unknown> | undefined;
 
 const getFieldValue = (value: unknown) =>
-	typeof value === "string" || typeof value === "number" ? String(value) : null;
+	typeof value === "string" || typeof value === "number"
+		? String(value)
+		: typeof value === "boolean"
+			? value
+				? "Yes"
+				: "No"
+			: null;
 
 const getRecord = (value: unknown) =>
 	value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -24,6 +30,32 @@ const formatPrice = (request: Record<string, unknown>) => {
 	const amount = getFieldValue(price.amount);
 	const interval = getFieldValue(price.interval);
 	return amount ? `$${amount}${interval ? `/${interval}` : ""}` : null;
+};
+
+const formatInvoiceMode = (value: unknown) => {
+	if (typeof value === "boolean") return value ? "enabled" : "disabled";
+	const invoiceMode = getRecord(value);
+	if (!Object.keys(invoiceMode).length) return null;
+
+	return [
+		invoiceMode.enabled === true
+			? "enabled"
+			: invoiceMode.enabled === false
+				? "disabled"
+				: null,
+		invoiceMode.finalize === false
+			? "draft invoice"
+			: invoiceMode.finalize === true
+				? "finalize invoice"
+				: null,
+		invoiceMode.enable_plan_immediately === true
+			? "enable immediately"
+			: invoiceMode.enable_plan_immediately === false
+				? "access waits"
+				: null,
+	]
+		.filter((part): part is string => Boolean(part))
+		.join(", ");
 };
 
 const envLabel = (env?: AppEnv) =>
@@ -59,7 +91,8 @@ const requestFields = ({
 			["Entity", request.entity_id],
 			["Subscription", request.subscription_id],
 			["Price", formatPrice(request)],
-			["Invoice mode", request.invoice_mode],
+			["Enable immediately", request.enable_plan_immediately],
+			["Invoice mode", formatInvoiceMode(request.invoice_mode)],
 			["Proration", request.proration_behavior],
 			["Redirect", request.redirect_mode],
 		].flatMap(([label, value]) => {
