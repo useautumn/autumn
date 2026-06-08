@@ -1,4 +1,4 @@
-import { AppEnv, type ScopeString } from "@autumn/shared";
+import { AppEnv } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import {
 	ApiKeyPrefix,
@@ -41,7 +41,7 @@ const createConsentApiKey = async ({
 	consent: OAuthConsentApiKeyRecord;
 	tokenRecord: OAuthApiKeyTokenRecord;
 	env: AppEnv;
-	scopes: ScopeString[];
+	scopes: string[];
 }) => {
 	const prefix = env === AppEnv.Live ? ApiKeyPrefix.Live : ApiKeyPrefix.Sandbox;
 	const keyName = await getOAuthClientApiKeyName({
@@ -93,7 +93,7 @@ export const rotateOAuthConsentApiKey = async ({
 	consent: OAuthConsentApiKeyRecord;
 	tokenRecord: OAuthApiKeyTokenRecord;
 	env: AppEnv;
-	scopes: ScopeString[];
+	scopes: string[];
 }) => {
 	const previousApiKeyId = consent.oauthApiKeyId;
 	const { apiKey, apiKeyId } = await createConsentApiKey({

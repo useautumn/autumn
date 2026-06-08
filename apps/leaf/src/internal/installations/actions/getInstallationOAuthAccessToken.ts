@@ -10,6 +10,7 @@ import {
 	parseOAuthScopeString,
 	parseOAuthTokenResponse,
 } from "../utils/oauthTokenResponse.js";
+import { replaceInstallationOAuthCredentials } from "./replaceInstallationOAuthCredentials.js";
 
 const TOKEN_EXPIRY_SKEW_MS = 60_000;
 
@@ -25,11 +26,30 @@ export const getInstallationOAuthAccessToken = async ({
 	installation: ChatInstallation;
 	env: AppEnv;
 }) => {
-	const credential = await getChatOAuthCredentialByInstallationEnv({
+	let credential = await getChatOAuthCredentialByInstallationEnv({
 		db,
 		chatInstallationId: installation.id,
 		env,
 	});
+
+	if (
+		installation.provider.startsWith("slack_admin") &&
+		(!credential || credential.org_id !== installation.org_id)
+	) {
+		await db.transaction(async (tx) => {
+			await replaceInstallationOAuthCredentials({
+				tx,
+				installation,
+				userId: installation.installed_by_user_id ?? "",
+			});
+		});
+
+		credential = await getChatOAuthCredentialByInstallationEnv({
+			db,
+			chatInstallationId: installation.id,
+			env,
+		});
+	}
 
 	if (!credential) {
 		throw new Error(

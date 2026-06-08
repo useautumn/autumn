@@ -16,7 +16,7 @@ export const handleGetOrgConsents = createRoute({
 	scopes: [Scopes.Organisation.Read],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { db, org } = ctx;
+		const { db, env, org } = ctx;
 
 		if (!org?.id) {
 			throw new RecaseError({
@@ -28,6 +28,7 @@ export const handleGetOrgConsents = createRoute({
 
 		const consents = await oauthConsentRepo.listByReferenceId({
 			db,
+			env,
 			referenceId: org.id,
 		});
 

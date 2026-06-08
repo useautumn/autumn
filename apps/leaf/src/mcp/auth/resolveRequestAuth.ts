@@ -8,10 +8,10 @@ import {
 	type AutumnMcpAuth,
 	DEFAULT_API_VERSION,
 	environmentSchema,
-	MCP_OAUTH_SCOPES,
 	type MCPServerFlags,
 	type OAuthEnvironment,
 } from "@autumn/mcp";
+import { LEAF_OAUTH_SCOPES } from "@autumn/shared";
 import * as z from "zod/v4";
 import { OAuthHttpError } from "./protectedResourceMetadata.js";
 
@@ -135,7 +135,7 @@ export const buildAuthForRequest = async ({
 			env,
 			resource: resourceUrl,
 			principalId: principalFromSecret({ kind: "secret-key", value: apiKey }),
-			scopes: [...MCP_OAUTH_SCOPES],
+			scopes: [...LEAF_OAUTH_SCOPES],
 			serverURL: flags["server-url"],
 			xApiVersion,
 			failOpen,
@@ -150,7 +150,7 @@ export const buildAuthForRequest = async ({
 			env,
 			resource: resourceUrl,
 			principalId: "oauth:unverified",
-			scopes: [...MCP_OAUTH_SCOPES],
+			scopes: [...LEAF_OAUTH_SCOPES],
 			serverURL: flags["server-url"],
 			xApiVersion,
 			failOpen,

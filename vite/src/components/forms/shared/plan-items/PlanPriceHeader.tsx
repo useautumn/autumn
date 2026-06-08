@@ -47,7 +47,7 @@ export function PlanPriceHeader({
 	);
 
 	return (
-		<div className="flex gap-2 justify-between items-center mb-3">
+		<div className="flex gap-2 justify-between items-center mb-1">
 			{wrapped}
 		</div>
 	);

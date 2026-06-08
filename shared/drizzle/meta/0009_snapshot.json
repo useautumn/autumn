@@ -1,5 +1,5 @@
 {
-  "id": "b9eaa778-a288-48ca-8e0f-42b17e0dc873",
+  "id": "39539832-23e8-42d6-84f4-402b99f7ba86",
   "prevId": "40c5361a-8cff-473f-93c1-4dfbc06b00d7",
   "version": "7",
   "dialect": "postgresql",
@@ -4647,13 +4647,6 @@
           "notNull": true,
           "default": false
         },
-        "archived": {
-          "name": "archived",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
         "created_at": {
           "name": "created_at",
           "type": "numeric",
@@ -5106,6 +5099,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'::jsonb"
         },
         "created_at": {
           "name": "created_at",

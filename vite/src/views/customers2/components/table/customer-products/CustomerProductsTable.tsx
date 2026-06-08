@@ -2,7 +2,6 @@ import { AppEnv, type Entity, type FullCusProduct } from "@autumn/shared";
 import { ArrowSquareOutIcon, PackageIcon } from "@phosphor-icons/react";
 import type { Row } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
-import { toast } from "sonner";
 
 import { Table } from "@/components/general/table";
 import { SectionTag } from "@/components/v2/badges/SectionTag";
@@ -10,10 +9,7 @@ import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
-import { getBackendErr } from "@/utils/genUtils";
-import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useFullCusSearchQuery } from "@/views/customers/hooks/useFullCusSearchQuery";
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
 import { useCustomerProductsData } from "@/views/customers2/hooks/useCustomerProductsData";
@@ -85,11 +81,6 @@ export function CustomerProductsTable() {
 	);
 	const selectedItemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
-	const axiosInstance = useAxiosInstance();
-	const { isAdmin } = useAdmin();
-	const [sendingWebhookProductId, setSendingWebhookProductId] = useState<
-		string | null
-	>(null);
 
 	useSavedViewsQuery();
 	useFullCusSearchQuery();
@@ -133,21 +124,6 @@ export function CustomerProductsTable() {
 		setSheet({ type: "subscription-update", itemId: product.id });
 	};
 
-	const handleSendWebhookClick = async (product: FullCusProduct) => {
-		if (!isAdmin) return;
-		setSendingWebhookProductId(product.id);
-		try {
-			await axiosInstance.post(
-				`/admin/customer-products/${product.id}/send-updated-webhook`,
-			);
-			toast.success("Customer product webhook sent");
-		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to send webhook"));
-		} finally {
-			setSendingWebhookProductId(null);
-		}
-	};
-
 	const handleRowClick = (cusProduct: FullCusProduct) => {
 		setSheet({
 			type: "subscription-detail",
@@ -160,9 +136,7 @@ export function CustomerProductsTable() {
 		onUncancelClick: handleUncancelClick,
 		onTransferClick: handleTransferClick,
 		onUpdateClick: handleUpdateClick,
-		onSendWebhookClick: handleSendWebhookClick,
 		hasEntities,
-		sendingWebhookProductId,
 		nowMs: testClockFrozenTimeMs,
 	};
 

@@ -1,14 +1,13 @@
 import { describe, expect, test } from "bun:test";
-import { MCP_OAUTH_SCOPES } from "@autumn/mcp";
-import { Scopes } from "@autumn/shared/scopeDefinitions";
-import {
-	buildAuthForRequest,
-	type MCPOAuthFlags,
-} from "../../../src/mcp/auth/resolveRequestAuth.js";
+import { LEAF_OAUTH_SCOPES } from "@autumn/shared";
 import {
 	getProtectedResourceMetadata,
 	type OAuthHttpError,
 } from "../../../src/mcp/auth/protectedResourceMetadata.js";
+import {
+	buildAuthForRequest,
+	type MCPOAuthFlags,
+} from "../../../src/mcp/auth/resolveRequestAuth.js";
 
 const flags = {
 	"oauth-enabled": true,
@@ -24,15 +23,10 @@ const resourceUrl = "http://localhost:2718/mcp";
 const internalResourceUrl = "http://localhost:2718/internal/mcp";
 
 describe("MCP OAuth auth resolution", () => {
-	test("requests scopes required by public write tools", () => {
-		expect(MCP_OAUTH_SCOPES).toEqual(
-			expect.arrayContaining([
-				Scopes.Customers.Write,
-				Scopes.Plans.Write,
-				Scopes.Billing.Write,
-				Scopes.Balances.Write,
-			]),
-		);
+	test("advertises the Leaf OAuth scope allowlist", () => {
+		expect(
+			getProtectedResourceMetadata({ resourceUrl }).scopes_supported,
+		).toEqual([...LEAF_OAUTH_SCOPES]);
 	});
 
 	test("returns a WWW-Authenticate challenge without a bearer token", async () => {
@@ -79,7 +73,7 @@ describe("MCP OAuth auth resolution", () => {
 		try {
 			const auth = await buildAuthForRequest({
 				headers: new Headers({
-					authorization: "Bearer oauth_token",
+					authorization: "Bearer am_oauth_token",
 				}),
 				flags: flags as MCPOAuthFlags,
 				logger,
@@ -87,11 +81,12 @@ describe("MCP OAuth auth resolution", () => {
 			});
 
 			expect(auth).toMatchObject({
-				apiKey: "oauth_token",
+				apiKey: "am_oauth_token",
 				authMethod: "oauth",
 				env: "sandbox",
 				principalId: "oauth:unverified",
 				resource: "http://localhost:2718/mcp",
+				scopes: [...LEAF_OAUTH_SCOPES],
 				serverURL: "http://localhost:8080",
 			});
 			expect(fetchCalled).toBe(false);
@@ -113,6 +108,7 @@ describe("MCP OAuth auth resolution", () => {
 		expect(auth.apiKey).toBe("am_sk_test_chat");
 		expect(auth.principalId).toStartWith("secret-key:");
 		expect(auth.resource).toBe("http://localhost:2718/mcp");
+		expect(auth.scopes).toEqual([...LEAF_OAUTH_SCOPES]);
 	});
 
 	test("accepts an Autumn API key bearer token when OAuth is enabled", async () => {

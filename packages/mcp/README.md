@@ -14,7 +14,8 @@ Use this for external MCP clients that should call Autumn operations directly.
 Tools:
 
 - `listCustomers`
-- `createCustomer`
+- `getOrCreateCustomer`
+- `updateCustomer`
 - `getCustomer`
 - `listPlans`
 - `createPlan`

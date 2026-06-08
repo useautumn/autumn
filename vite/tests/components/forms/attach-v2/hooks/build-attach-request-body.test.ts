@@ -29,6 +29,7 @@ const baseParams: Omit<
 	customerId: "cus_123",
 	entityId: undefined,
 	items: null,
+	grantFree: false,
 	version: undefined,
 	trialLength: null,
 	trialDuration: "day" as const,
@@ -266,5 +267,38 @@ describe("buildAttachRequestBody — items serialization", () => {
 				interval: null,
 			},
 		]);
+	});
+});
+
+describe("buildAttachRequestBody — grant free", () => {
+	const product = makeProduct({
+		items: [{ price: 50, interval: ProductItemInterval.Month }],
+	});
+
+	test("sends explicit empty items when granting free strips all items", () => {
+		// Granting free on a purely priced product leaves an empty items array.
+		// It must be sent as `items: []` so the backend overrides the product's
+		// default (paid) items instead of falling back to them ($50 leak).
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+			items: [],
+			grantFree: true,
+		});
+
+		expect(result?.items).toEqual([]);
+	});
+
+	test("omits items for an empty array when not granting free", () => {
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+			items: [],
+			grantFree: false,
+		});
+
+		expect(result?.items).toBeUndefined();
 	});
 });

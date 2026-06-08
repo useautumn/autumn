@@ -78,7 +78,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "bun scripts/dev.ts",
-		"dev:services": "bun scripts/devServices/index.ts",
+		"dev:services": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/devServices/index.ts",
 		"vite:build": "bun -F @autumn/vite build:bun",
 		"t": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/testScripts/testDispatcher.ts",
 		"cm": "cd server && bun cm",
@@ -115,6 +115,7 @@
 		"tb:prod-legacy": "bun scripts/tinybird/index.ts prod-legacy",
 		"axiom": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/axiom/cli.ts",
 		"axiom:prod": "ENV_FILE=.env.prod infisical run --env=prod --recursive -- bun scripts/axiom/cli.ts",
+		"slack": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/slack/index.ts",
 		"add-mcp": "bun scripts/mcp/addMcp.ts",
 		"trigger:deploy": "bunx trigger.dev deploy",
 		"setupci": "node scripts/setup/setupci.js",

@@ -250,6 +250,9 @@ export const oauthConsent = pgTable("oauth_consent", {
 	env: text("env").$type<AppEnv>(),
 	redirectUri: text("redirect_uri"),
 	oauthApiKeyId: text("oauth_api_key_id"),
+	metadata: jsonb("metadata")
+		.$type<Record<string, unknown> | null>()
+		.default({}),
 	createdAt: timestamp("created_at", { withTimezone: true }),
 	updatedAt: timestamp("updated_at", { withTimezone: true }),
 }).enableRLS();

@@ -13,11 +13,13 @@ import { resolveIdentity } from "./resolveIdentity";
 const buildSdkArgs = ({
 	body,
 	identity,
+	route,
 }: {
 	body: unknown;
 	identity: ResolvedIdentity;
+	route: RouteDefinition;
 }): Record<string, unknown> => {
-	const args = sanitizeBody(body);
+	const args = sanitizeBody(body, route.protectedBodyFields);
 
 	if (identity.customerId) {
 		args.customerId = identity.customerId;
@@ -71,7 +73,7 @@ export const executeRoute = async ({
 	}
 
 	// 3. Build args and call SDK
-	const sdkArgs = buildSdkArgs({ body, identity });
+	const sdkArgs = buildSdkArgs({ body, identity, route });
 
 	try {
 		const result = await route.sdkMethod(autumn, sdkArgs);

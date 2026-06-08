@@ -1,24 +1,20 @@
-import { ALL_SCOPES } from "@autumn/shared";
+import {
+	getDefaultOAuthScopes,
+	MCP_CLIENT_KIND,
+	MCP_OAUTH_CLIENTS,
+	type MpcClientInfo,
+	type MpcClientType,
+} from "@autumn/auth/oauth";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 import { type OAuthClientRecord, oauthClientRepo } from "../repos/index.js";
 
-const MCP_CLIENT_KIND = "mcp_client";
-export const SLACK_MCP_OAUTH_CLIENT_ID = "autumn_mcp_slack";
 const REGISTER_CACHE_TTL_MS = 5 * 60 * 1000;
 const DANGEROUS_REDIRECT_SCHEMES = new Set([
 	"javascript:",
 	"data:",
 	"vbscript:",
 ]);
-
-type MpcClientType = "claude" | "codex" | "cursor" | "opencode" | "slack";
-
-type MpcClientInfo = {
-	type: MpcClientType;
-	name: string;
-	clientId: string;
-};
 
 type McpMetadata = {
 	kind?: string;
@@ -73,6 +69,12 @@ export const isSafeOAuthRedirectUri = (redirectUri: string) => {
 
 const normalize = (value: string) => value.trim().toLowerCase();
 
+const getMcpClientName = (clientName: unknown) => {
+	if (typeof clientName !== "string") return "MCP client";
+	const trimmed = clientName.trim();
+	return trimmed || "MCP client";
+};
+
 const classifyMcpClient = ({
 	clientName,
 	redirectUris,
@@ -88,40 +90,45 @@ const classifyMcpClient = ({
 		.toLowerCase();
 
 	if (haystack.includes("cursor")) {
-		return { type: "cursor", name: "Cursor", clientId: "autumn_mcp_cursor" };
+		return MCP_OAUTH_CLIENTS.find((client) => client.type === "cursor") ?? null;
 	}
 	if (haystack.includes("claude")) {
-		return { type: "claude", name: "Claude", clientId: "autumn_mcp_claude" };
+		return MCP_OAUTH_CLIENTS.find((client) => client.type === "claude") ?? null;
 	}
 	if (
 		haystack.includes("opencode") ||
 		haystack.includes("open-code") ||
 		haystack.includes("open code")
 	) {
-		return {
-			type: "opencode",
-			name: "OpenCode",
-			clientId: "autumn_mcp_opencode",
-		};
+		return (
+			MCP_OAUTH_CLIENTS.find((client) => client.type === "opencode") ?? null
+		);
 	}
 	if (haystack.includes("codex")) {
-		return { type: "codex", name: "Codex", clientId: "autumn_mcp_codex" };
+		return MCP_OAUTH_CLIENTS.find((client) => client.type === "codex") ?? null;
 	}
 	if (haystack.includes("slack")) {
-		return {
-			type: "slack",
-			name: "Slack",
-			clientId: SLACK_MCP_OAUTH_CLIENT_ID,
-		};
+		return MCP_OAUTH_CLIENTS.find((client) => client.type === "slack") ?? null;
 	}
 
-	return null;
+	return {
+		type: "dynamic",
+		name: getMcpClientName(clientName),
+		clientId: generateId("oauth_client"),
+	};
 };
 
-const getRequestedScopes = (scope: unknown) => {
-	if (typeof scope !== "string" || !scope.trim()) return [...ALL_SCOPES];
-	const allowed = new Set(ALL_SCOPES);
-	return scope.split(" ").filter((scope) => allowed.has(scope as never));
+export const getRequestedScopesForMcpClient = ({
+	clientType: _clientType,
+	scope,
+}: {
+	clientType: MpcClientType;
+	scope: unknown;
+}) => {
+	if (typeof scope !== "string" || !scope.trim()) {
+		return getDefaultOAuthScopes();
+	}
+	return getDefaultOAuthScopes(scope.split(" "));
 };
 
 const mergeMetadata = ({
@@ -158,6 +165,7 @@ const clientMatches = ({
 }) => {
 	const metadata = parseMetadata(client.metadata);
 	if (
+		info.type !== "dynamic" &&
 		metadata.kind === MCP_CLIENT_KIND &&
 		metadata.mcpClientType === info.type
 	) {
@@ -241,7 +249,10 @@ export const registerMcpOAuthClient = async ({
 		return { error: "unsupported_mcp_client", status: 400 };
 	}
 
-	const requestedScopes = getRequestedScopes(scope);
+	const requestedScopes = getRequestedScopesForMcpClient({
+		clientType: info.type,
+		scope,
+	});
 	const scopeKey = [...requestedScopes].sort().join(" ");
 	const cacheKey = `${info.type}:${[...redirectUris].sort().join("|")}:${scopeKey}`;
 	const cached = getCachedRegistration(cacheKey);
@@ -258,9 +269,6 @@ export const registerMcpOAuthClient = async ({
 		const mergedRedirectUris = [
 			...new Set([...existingClient.redirectUris, ...redirectUris]),
 		];
-		const mergedScopes = [
-			...new Set([...(existingClient.scopes ?? []), ...requestedScopes]),
-		];
 
 		const updatedClient = await oauthClientRepo.updateById({
 			db,
@@ -268,7 +276,7 @@ export const registerMcpOAuthClient = async ({
 			updates: {
 				name: info.name,
 				redirectUris: mergedRedirectUris,
-				scopes: mergedScopes,
+				scopes: requestedScopes,
 				tokenEndpointAuthMethod: "none",
 				grantTypes: ["authorization_code", "refresh_token"],
 				responseTypes: ["code"],
