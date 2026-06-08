@@ -5,6 +5,7 @@ import { db } from "../../../lib/db.js";
 import { upsertChatOAuthCredential } from "../repos/chatOAuthCredentialsRepo.js";
 
 export const AUTUMN_SLACK_OAUTH_CLIENT_ID = "autumn_mcp_slack";
+export const AUTUMN_ADMIN_OAUTH_CLIENT_ID = "autumn_admin";
 
 export const upsertInstallationOAuthCredential = async ({
 	installation,

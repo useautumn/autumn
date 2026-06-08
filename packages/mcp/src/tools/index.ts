@@ -6,10 +6,15 @@ import { type AutumnMcpAuth, getAutumnAuth } from "../server/auth/auth.js";
 import { balances } from "./balances.js";
 import { billing } from "./billing.js";
 import { customers } from "./customers.js";
+import { features } from "./features.js";
+import { logs } from "./logs.js";
 import { orgTools } from "./org.js";
 import { plans } from "./plans.js";
 import { callAutumn } from "./utils/client.js";
-import { dateToEpochMillisecondsTool } from "./utils/dates.js";
+import {
+	dateToEpochMillisecondsTool,
+	epochMillisecondsToDateTool,
+} from "./utils/dates.js";
 import { logTool } from "./utils/debug.js";
 import {
 	agentBillingPreviewTool,
@@ -22,22 +27,29 @@ import {
 import { requireIntentOnTools } from "./utils/intent.js";
 import type { ConfirmedWriteToolName, ToolDomain } from "./utils/types.js";
 
-export { dateToEpochMillisecondsTool } from "./utils/dates.js";
+export {
+	dateToEpochMillisecondsTool,
+	epochMillisecondsToDateTool,
+} from "./utils/dates.js";
 
 /** Endpoint each tool calls, keyed by tool id (preview tools use their preview path). */
 export const endpointByTool = {
 	...customers.endpoints,
+	...features.endpoints,
 	...plans.endpoints,
 	...billing.endpoints,
 	...balances.endpoints,
+	...logs.endpoints,
 } as const;
 
 /** Request schema each tool validates against, keyed by tool id. */
 export const schemaByTool = {
 	...customers.schemas,
+	...features.schemas,
 	...plans.schemas,
 	...billing.schemas,
 	...balances.schemas,
+	...logs.schemas,
 } as const satisfies Record<
 	keyof typeof endpointByTool | "previewCreateBalance",
 	z.ZodType
@@ -45,9 +57,11 @@ export const schemaByTool = {
 
 const domains: ToolDomain[] = [
 	customers.domain,
+	features.domain,
 	plans.domain,
 	billing.domain,
 	balances.domain,
+	logs.domain,
 ];
 const operations = domains.flatMap((domain) => domain.operations ?? []);
 const billingPreviews = domains.flatMap(
@@ -58,23 +72,31 @@ const confirmedWrites = domains.flatMap(
 	(domain) => domain.confirmedWrites ?? [],
 );
 
+type ToolRecord = Record<string, ReturnType<typeof createTool>>;
+
 /**
  * Public MCP toolset: previews call Autumn's preview endpoints directly and
  * writes apply immediately (external clients gate destructive calls themselves).
  */
+const createRawAutumnOperationToolset = (): ToolRecord => ({
+	...requireIntentOnTools({
+		...toTools(operations, operationTool),
+		...toTools(billingPreviews, (config) =>
+			operationTool({ ...config, endpoint: config.previewEndpoint }),
+		),
+		...toTools(localPreviews, rawLocalPreviewTool),
+		...toTools(confirmedWrites, operationTool),
+		...orgTools,
+	} as ToolRecord),
+	dateToEpochMilliseconds: dateToEpochMillisecondsTool,
+	epochMillisecondsToDate: epochMillisecondsToDateTool,
+});
+
 export const createRawAutumnOperationTools = () =>
 	instrumentToolsWithAnalytics({
 		// Require a one-sentence `intent` on every external tool call so we can
 		// see what clients are actually trying to do (captured in analytics).
-		tools: requireIntentOnTools({
-			...toTools(operations, operationTool),
-			...toTools(billingPreviews, (config) =>
-				operationTool({ ...config, endpoint: config.previewEndpoint }),
-			),
-			...toTools(localPreviews, rawLocalPreviewTool),
-			...toTools(confirmedWrites, operationTool),
-			...orgTools,
-		} as Record<string, ReturnType<typeof createTool>>),
+		tools: createRawAutumnOperationToolset(),
 		surface: "mcp",
 	});
 
@@ -98,7 +120,7 @@ export const executeConfirmedBillingAction = ({
  * Agent toolset: destructive operations and billing writes are staged as pending
  * actions (preview-first), then applied via `confirmBillingAction` once approved.
  */
-const createAgentAutumnOperationToolset = () => ({
+const createAgentAutumnOperationToolset = (): ToolRecord => ({
 	...toTools(
 		operations.filter(({ destructive }) => !destructive),
 		operationTool,
@@ -110,6 +132,7 @@ const createAgentAutumnOperationToolset = () => ({
 	...toTools(billingPreviews, agentBillingPreviewTool),
 	...toTools(localPreviews, agentLocalPreviewTool),
 	dateToEpochMilliseconds: dateToEpochMillisecondsTool,
+	epochMillisecondsToDate: epochMillisecondsToDateTool,
 	confirmBillingAction: createTool({
 		id: "confirmBillingAction",
 		description:

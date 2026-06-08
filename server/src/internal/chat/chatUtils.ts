@@ -1,6 +1,13 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 
 export const slackProvider = "slack" as const;
+export const slackAdminProviderPrefix = "slack_admin" as const;
+
+export const getSlackAdminProvider = ({
+	clientId = getRequiredChatEnv("SLACK_CLIENT_ID"),
+}: {
+	clientId?: string;
+} = {}) => `${slackAdminProviderPrefix}:${clientId}` as const;
 
 export const defaultSlackScopes = [
 	"app_mentions:read",

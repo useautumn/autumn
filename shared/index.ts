@@ -61,6 +61,7 @@ export * from "./models/cusModels/billingControls/purchaseLimitInterval";
 export * from "./models/cusModels/cusModels";
 // Processor Models
 export * from "./models/processorModels/processorModels";
+export * from "./utils/chatState";
 export { schemas };
 
 // Cus response

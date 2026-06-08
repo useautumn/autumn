@@ -1,6 +1,11 @@
-import { AppEnv, type ChatInstallation } from "@autumn/shared";
 import type { AutumnLogger } from "@autumn/logging";
+import { AppEnv, type ChatInstallation } from "@autumn/shared";
+import type { Attachment } from "chat";
 import { z } from "zod";
+
+export type LeafChatInstallation = ChatInstallation & {
+	org_slug?: string;
+};
 
 export const agentOutputSchema = z.preprocess(
 	(value) => {
@@ -62,11 +67,17 @@ export type SignatureArgs = {
 };
 
 export type BotMessage = {
-	installation: ChatInstallation;
+	agentRunId?: string;
+	attachmentFetchFallback?: (params: {
+		attachment: Attachment;
+	}) => Promise<Buffer | null>;
+	attachments?: Attachment[];
+	installation: LeafChatInstallation;
 	logger?: AutumnLogger;
 	onAction?: (message: string) => Promise<void> | void;
 	recentMessages?: ChatContextMessage[];
 	text: string;
+	channelId: string;
 	threadId: string;
 };
 
