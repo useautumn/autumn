@@ -105,6 +105,7 @@ export const setupUpdatePlanProductContext = async ({
 		fullCustomer: productFullCustomer,
 		params,
 		reusePricesAndEntitlements,
+		resetToCatalogVersion: typeof preparedOp.version === "number",
 	});
 
 	const operationBillingContext = await setupMigrationOperationBillingContext({

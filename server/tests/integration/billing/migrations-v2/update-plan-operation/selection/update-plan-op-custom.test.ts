@@ -14,9 +14,24 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
+import {
+	type ApiCustomerV3,
+	type ApiCustomerV5,
+	CusProductStatus,
+	customerEntitlements,
+	customerPrices,
+	customerProducts,
+	customers,
+	entitlements,
+	features,
+	prices,
+	ResetInterval,
+} from "@autumn/shared";
+import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerFeatureCorrect } from "@tests/integration/billing/utils/expectCustomerFeatureCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
 import { expectFlagCorrect } from "@tests/integration/utils/expectFlagCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
@@ -24,7 +39,154 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { and, eq, isNull } from "drizzle-orm";
 import { runUpdatePlanMigration } from "../../utils/runUpdatePlanMigration";
+
+const getActiveCustomerProductIsCustom = async ({
+	ctx,
+	customerId,
+	productId,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	productId: string;
+}): Promise<boolean | undefined> => {
+	const [row] = await ctx.db
+		.select({ isCustom: customerProducts.is_custom })
+		.from(customerProducts)
+		.innerJoin(
+			customers,
+			eq(customerProducts.internal_customer_id, customers.internal_id),
+		)
+		.where(
+			and(
+				eq(customers.org_id, ctx.org.id),
+				eq(customers.env, ctx.env),
+				eq(customers.id, customerId),
+				eq(customerProducts.product_id, productId),
+				eq(customerProducts.status, CusProductStatus.Active),
+			),
+		);
+
+	return row?.isCustom;
+};
+
+const getActiveCustomerProductFeatureIds = async ({
+	ctx,
+	customerId,
+	productId,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	productId: string;
+}): Promise<string[]> => {
+	const rows = await ctx.db
+		.select({ featureId: features.id })
+		.from(customerProducts)
+		.innerJoin(
+			customers,
+			eq(customerProducts.internal_customer_id, customers.internal_id),
+		)
+		.innerJoin(
+			customerEntitlements,
+			eq(customerEntitlements.customer_product_id, customerProducts.id),
+		)
+		.innerJoin(
+			entitlements,
+			eq(customerEntitlements.entitlement_id, entitlements.id),
+		)
+		.innerJoin(features, eq(entitlements.internal_feature_id, features.internal_id))
+		.where(
+			and(
+				eq(customers.org_id, ctx.org.id),
+				eq(customers.env, ctx.env),
+				eq(customers.id, customerId),
+				eq(customerProducts.product_id, productId),
+				eq(customerProducts.status, CusProductStatus.Active),
+			),
+		);
+
+	return rows.map((row) => row.featureId);
+};
+
+const getActiveBasePriceAmount = async ({
+	ctx,
+	customerId,
+	productId,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	productId: string;
+}): Promise<number | undefined> => {
+	const [row] = await ctx.db
+		.select({ config: prices.config })
+		.from(customerProducts)
+		.innerJoin(
+			customers,
+			eq(customerProducts.internal_customer_id, customers.internal_id),
+		)
+		.innerJoin(
+			customerPrices,
+			eq(customerPrices.customer_product_id, customerProducts.id),
+		)
+		.innerJoin(prices, eq(customerPrices.price_id, prices.id))
+		.where(
+			and(
+				eq(customers.org_id, ctx.org.id),
+				eq(customers.env, ctx.env),
+				eq(customers.id, customerId),
+				eq(customerProducts.product_id, productId),
+				eq(customerProducts.status, CusProductStatus.Active),
+				isNull(prices.entitlement_id),
+			),
+		);
+
+	const config = row?.config;
+	return config && "amount" in config && typeof config.amount === "number"
+		? config.amount
+		: undefined;
+};
+
+const getActiveFeatureResetInterval = async ({
+	ctx,
+	customerId,
+	productId,
+	featureId,
+}: {
+	ctx: AutumnContext;
+	customerId: string;
+	productId: string;
+	featureId: string;
+}): Promise<string | null | undefined> => {
+	const [row] = await ctx.db
+		.select({ interval: entitlements.interval })
+		.from(customerProducts)
+		.innerJoin(
+			customers,
+			eq(customerProducts.internal_customer_id, customers.internal_id),
+		)
+		.innerJoin(
+			customerEntitlements,
+			eq(customerEntitlements.customer_product_id, customerProducts.id),
+		)
+		.innerJoin(
+			entitlements,
+			eq(customerEntitlements.entitlement_id, entitlements.id),
+		)
+		.innerJoin(features, eq(entitlements.internal_feature_id, features.internal_id))
+		.where(
+			and(
+				eq(customers.org_id, ctx.org.id),
+				eq(customers.env, ctx.env),
+				eq(customers.id, customerId),
+				eq(customerProducts.product_id, productId),
+				eq(customerProducts.status, CusProductStatus.Active),
+				eq(features.id, featureId),
+			),
+		);
+
+	return row?.interval;
+};
 
 test.concurrent(`${chalk.yellowBright("update_plan custom: customer with is_custom plan is skipped")}`, async () => {
 	const customerId = "migration-v2-custom-skip";
@@ -401,5 +563,185 @@ test.concurrent(`${chalk.yellowBright("update_plan custom: explicit `custom: tru
 		includedUsage: 600,
 		balance: 600,
 		usage: 0,
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("update_plan reset: same-version custom plan resets to catalog")}`, async () => {
+	const customerId = "migration-v2-same-version-custom-reset";
+	const catalogBasePrice = 20;
+	const customBasePrice = 30;
+	const customMessages = {
+		...itemsV2.monthlyMessages({ included: 850 }),
+		reset: { interval: ResetInterval.Hour },
+	};
+
+	const pro = products.pro({
+		id: "v2-same-version-reset-pro",
+		items: [
+			items.monthlyMessages({ includedUsage: 500 }),
+			items.adminRights(),
+		],
+	});
+
+	const { autumnV1, autumnV2_2, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+
+	await autumnV2_2.subscriptions.update({
+		customer_id: customerId,
+		plan_id: pro.id,
+		customize: {
+			price: itemsV2.monthlyPrice({ amount: customBasePrice }),
+			items: [customMessages, itemsV2.dashboard()],
+		},
+	});
+	let customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+	expectFlagCorrect({
+		customer,
+		featureId: TestFeature.Dashboard,
+		present: true,
+	});
+	expectFlagCorrect({
+		customer,
+		featureId: TestFeature.AdminRights,
+		present: false,
+	});
+	expect(
+		await getActiveCustomerProductIsCustom({ ctx, customerId, productId: pro.id }),
+	).toBe(true);
+	expect(
+		await getActiveBasePriceAmount({ ctx, customerId, productId: pro.id }),
+	).toBe(customBasePrice);
+	expect(
+		await getActiveFeatureResetInterval({
+			ctx,
+			customerId,
+			productId: pro.id,
+			featureId: TestFeature.Messages,
+		}),
+	).toBe(ResetInterval.Hour);
+	expectBalanceCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		remaining: 850,
+		usage: 0,
+		planId: pro.id,
+	});
+	const invoiceCountBefore =
+		(await autumnV1.customers.get<ApiCustomerV3>(customerId)).invoices
+			?.length ?? 0;
+
+	await runUpdatePlanMigration({
+		ctx,
+		migrationClient: autumnV2_2,
+		migrationId: `${customerId}-mig`,
+		customerId,
+		filter: { customer: { customer_id: customerId } },
+		operations: {
+			customer: [
+				{
+					type: "update_plan",
+					plan_filter: { plan_id: pro.id, version: 1 },
+					version: 1,
+				},
+			],
+		},
+		runOnServer: false,
+		noBillingChanges: true,
+	});
+
+	customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+	const featureIds = await getActiveCustomerProductFeatureIds({
+		ctx,
+		customerId,
+		productId: pro.id,
+	});
+	expect(featureIds).not.toContain(TestFeature.Dashboard);
+	expect(featureIds).toContain(TestFeature.AdminRights);
+	expect(
+		await getActiveBasePriceAmount({ ctx, customerId, productId: pro.id }),
+	).toBe(catalogBasePrice);
+	expect(
+		await getActiveFeatureResetInterval({
+			ctx,
+			customerId,
+			productId: pro.id,
+			featureId: TestFeature.Messages,
+		}),
+	).toBe(ResetInterval.Month);
+	expectBalanceCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		remaining: 500,
+		usage: 0,
+		planId: pro.id,
+	});
+	await expectCustomerInvoiceCorrect({
+		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
+		count: invoiceCountBefore,
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("update_plan reset: same-version regular plan stays non-custom")}`, async () => {
+	const customerId = "migration-v2-same-version-regular-reset";
+
+	const pro = products.pro({
+		id: "v2-same-version-regular-pro",
+		items: [items.monthlyMessages({ includedUsage: 500 })],
+	});
+
+	const { autumnV1, autumnV2_2, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [
+			s.billing.attach({ productId: pro.id }),
+			s.track({ featureId: TestFeature.Messages, value: 100, timeout: 2000 }),
+		],
+	});
+	const invoiceCountBefore =
+		(await autumnV1.customers.get<ApiCustomerV3>(customerId)).invoices
+			?.length ?? 0;
+
+	await runUpdatePlanMigration({
+		ctx,
+		migrationClient: autumnV2_2,
+		migrationId: `${customerId}-mig`,
+		customerId,
+		filter: { customer: { plan: { plan_id: pro.id, version: 1 } } },
+		operations: {
+			customer: [
+				{
+					type: "update_plan",
+					plan_filter: { plan_id: pro.id, version: 1 },
+					version: 1,
+				},
+			],
+		},
+		runOnServer: false,
+		noBillingChanges: true,
+	});
+
+	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+	expectBalanceCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		remaining: 400,
+		usage: 100,
+		planId: pro.id,
+	});
+	expect(
+		await getActiveCustomerProductIsCustom({ ctx, customerId, productId: pro.id }),
+	).toBe(false);
+	await expectCustomerInvoiceCorrect({
+		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
+		count: invoiceCountBefore,
 	});
 });

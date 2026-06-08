@@ -2,6 +2,7 @@ import type {
 	ApiPlanV1,
 	Feature,
 	FrontendProduct,
+	UpdatePlanOp,
 	UpdatePlanParamsV2Input,
 } from "@autumn/shared";
 import {
@@ -156,25 +157,28 @@ export function buildVersionMigrationDraft({
 	const versions = scope === "all" ? pastVersions : [scope];
 	const versionMatcher =
 		versions.length === 1 ? versions[0] : { $in: versions };
-	const planFilter = {
+	const basePlanFilter = {
 		plan_id: productId,
 		version: versionMatcher,
-		...(!includeCustom ? { custom: false } : {}),
 	};
+	const planFilter = includeCustom
+		? basePlanFilter
+		: { ...basePlanFilter, custom: false };
+	const versionOp = (custom: boolean): UpdatePlanOp => ({
+		type: "update_plan",
+		plan_filter: { ...basePlanFilter, custom },
+		version: latestVersion,
+	});
 
 	const filter: MigrationFilter = {
 		customer: { plan: planFilter },
 	};
 
 	const operations: Operations = {
-		customer: [
-			{
-				type: "update_plan",
-				plan_filter: planFilter,
-				version: latestVersion,
-			},
-		],
-	} as unknown as Operations;
+		customer: includeCustom
+			? [versionOp(false), versionOp(true)]
+			: [versionOp(false)],
+	};
 
 	const suffix = scope === "all" ? "migrate-all" : `migrate-v${scope}`;
 
@@ -206,18 +210,20 @@ export function buildMigrationDraft({
 	const hasCustomize = Object.keys(diff).length > 0;
 	const customize = hasCustomize ? diff : undefined;
 
-	const planFilter = {
+	const basePlanFilter = {
 		plan_id: baseProduct.id,
 		...(scope === "this_version"
 			? { version: baseProduct.version }
 			: {}),
-		...(!includeCustom ? { custom: false } : {}),
 	};
-	const updatePlanOp = {
-		type: "update_plan" as const,
-		plan_filter: planFilter,
+	const planFilter = includeCustom
+		? basePlanFilter
+		: { ...basePlanFilter, custom: false };
+	const updatePlanOp = (custom: boolean): UpdatePlanOp => ({
+		type: "update_plan",
+		plan_filter: { ...basePlanFilter, custom },
 		...(customize ? { customize } : {}),
-	};
+	});
 
 	const filter: MigrationFilter = {
 		customer: { plan: planFilter },
@@ -229,7 +235,11 @@ export function buildMigrationDraft({
 	return {
 		id: `${baseProduct.id}-${suffix}-${migrationUid()}`,
 		filter,
-		operations: { customer: [updatePlanOp] } as unknown as Operations,
-		no_billing_changes: !diffHasBillingChanges(diff),
+		operations: {
+			customer: includeCustom
+				? [updatePlanOp(false), updatePlanOp(true)]
+				: [updatePlanOp(false)],
+		},
+		no_billing_changes: diffHasBillingChanges(diff) === false,
 	};
 }

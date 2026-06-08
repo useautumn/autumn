@@ -9,10 +9,12 @@ import {
 	UsageModel,
 	type Feature,
 	type FrontendProduct,
+	type UpdatePlanOp,
 } from "@autumn/shared";
 import {
 	buildMigrationDraft,
 	buildVersionMigrationDraft,
+	type MigrationDraft,
 } from "@/views/products/plan/versioning/buildMigrationDraft";
 
 const features: Feature[] = [
@@ -48,6 +50,17 @@ const baseProduct: FrontendProduct = {
 	basePriceType: "free",
 };
 
+const updatePlanFilters = (draft: MigrationDraft) =>
+	(draft.operations.customer ?? [])
+		.filter((op): op is UpdatePlanOp => op.type === "update_plan")
+		.map((op) => op.plan_filter);
+
+const firstUpdatePlan = (draft: MigrationDraft): UpdatePlanOp => {
+	const op = draft.operations.customer?.[0];
+	if (op?.type === "update_plan") return op;
+	throw new Error("Expected first migration operation to update a plan");
+};
+
 describe("buildMigrationDraft", () => {
 	test("excludes custom plans by default", () => {
 		const draft = buildMigrationDraft({
@@ -62,14 +75,14 @@ describe("buildMigrationDraft", () => {
 			version: 2,
 			custom: false,
 		});
-		expect(draft.operations.customer?.[0]?.plan_filter).toMatchObject({
+		expect(firstUpdatePlan(draft).plan_filter).toMatchObject({
 			plan_id: "pro",
 			version: 2,
 			custom: false,
 		});
 	});
 
-	test("includes custom plans when enabled", () => {
+	test("targets both regular and custom plans when custom plans are included", () => {
 		const draft = buildMigrationDraft({
 			baseProduct,
 			editedProduct: { ...baseProduct, name: "Pro updated" },
@@ -82,9 +95,56 @@ describe("buildMigrationDraft", () => {
 			plan_id: "pro",
 			version: 2,
 		});
-		expect(draft.operations.customer?.[0]?.plan_filter).toEqual({
+		expect(updatePlanFilters(draft)).toEqual([
+			{
+				plan_id: "pro",
+				version: 2,
+				custom: false,
+			},
+			{
+				plan_id: "pro",
+				version: 2,
+				custom: true,
+			},
+		]);
+	});
+
+	test("keeps custom targeting explicit for version reset migrations", () => {
+		const draft = buildMigrationDraft({
+			baseProduct,
+			editedProduct: baseProduct,
+			features,
+			scope: "this_version",
+			includeCustom: true,
+		});
+
+		expect(updatePlanFilters(draft)).toEqual([
+			{
+				plan_id: "pro",
+				version: 2,
+				custom: false,
+			},
+			{
+				plan_id: "pro",
+				version: 2,
+				custom: true,
+			},
+		]);
+	});
+
+	test("keeps a single operation when custom plans are excluded", () => {
+		const draft = buildMigrationDraft({
+			baseProduct,
+			editedProduct: baseProduct,
+			features,
+			scope: "this_version",
+		});
+
+		expect(draft.operations.customer).toHaveLength(1);
+		expect(firstUpdatePlan(draft).plan_filter).toEqual({
 			plan_id: "pro",
 			version: 2,
+			custom: false,
 		});
 	});
 
@@ -113,7 +173,7 @@ describe("buildMigrationDraft", () => {
 			scope: "this_version",
 		});
 
-		const updatePlan = draft.operations.customer?.[0];
+		const updatePlan = firstUpdatePlan(draft);
 		const addItem = updatePlan?.customize?.add_items?.[0];
 		const price = JSON.parse(JSON.stringify(addItem?.price));
 
@@ -143,14 +203,14 @@ describe("buildVersionMigrationDraft", () => {
 			version: { $in: [1, 2] },
 			custom: false,
 		});
-		expect(draft.operations.customer?.[0]?.plan_filter).toMatchObject({
+		expect(firstUpdatePlan(draft).plan_filter).toMatchObject({
 			plan_id: "pro",
 			version: { $in: [1, 2] },
 			custom: false,
 		});
 	});
 
-	test("omits custom filters when custom plans are included", () => {
+	test("targets both regular and custom versions when custom plans are included", () => {
 		const draft = buildVersionMigrationDraft({
 			productId: "pro",
 			latestVersion: 3,
@@ -163,9 +223,9 @@ describe("buildVersionMigrationDraft", () => {
 			plan_id: "pro",
 			version: 2,
 		});
-		expect(draft.operations.customer?.[0]?.plan_filter).toEqual({
-			plan_id: "pro",
-			version: 2,
-		});
+		expect(updatePlanFilters(draft)).toEqual([
+			{ plan_id: "pro", version: 2, custom: false },
+			{ plan_id: "pro", version: 2, custom: true },
+		]);
 	});
 });

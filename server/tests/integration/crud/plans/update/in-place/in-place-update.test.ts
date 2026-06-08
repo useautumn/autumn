@@ -19,6 +19,7 @@ import {
 	type ApiPlanV1,
 	ApiVersion,
 	BillingInterval,
+	BillingMethod,
 	ResetInterval,
 	type UpdatePlanParamsV2Input,
 } from "@autumn/shared";
@@ -32,6 +33,8 @@ import chalk from "chalk";
 import { AutumnRpcCli } from "@/external/autumn/autumnRpcCli.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { snapshotCustomerState } from "./utils/snapshotCustomerState";
+
+type RpcInput = Omit<UpdatePlanParamsV2Input, "plan_id">;
 
 const messagesEnt = async ({
 	ctx,
@@ -182,4 +185,45 @@ test(`${chalk.yellowBright("plans.update disable_version: respects requested ver
 	expect((await messagesEnt({ ctx, planId: pro.id, version: 2 }))?.allowance).toBe(
 		200,
 	);
+});
+
+test(`${chalk.yellowBright("plans.update disable_version: UPDATE price-linked item keeps FK order valid")}`, async () => {
+	const customerId = "plan-in-place-update-priced-item";
+	const pro = products.pro({
+		id: "pro_in_place_update_priced_item",
+		items: [items.consumableMessages({ includedUsage: 0, price: 10 })],
+	});
+
+	const { ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+
+	const autumnRpc = new AutumnRpcCli({
+		secretKey: ctx.orgSecretKey,
+		version: ApiVersion.V2_1,
+	});
+	const before = await snapshotCustomerState({ ctx, customerId });
+
+	await autumnRpc.plans.update<ApiPlanV1, RpcInput>(pro.id, {
+		disable_version: true,
+		price: { amount: 20, interval: BillingInterval.Month },
+		items: [
+			{
+				feature_id: TestFeature.Messages,
+				price: {
+					amount: 12,
+					interval: BillingInterval.Month,
+					billing_method: BillingMethod.UsageBased,
+					billing_units: 1,
+				},
+			},
+		],
+	});
+
+	expect(await snapshotCustomerState({ ctx, customerId })).toBe(before);
 });

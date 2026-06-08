@@ -76,18 +76,15 @@ const retireOrDeleteRows = async ({
 		db,
 		priceIds,
 	});
-
-	for (const entitlementId of entitlementIds) {
-		if (referencedEnts.has(entitlementId)) {
-			await EntitlementService.update({
-				db,
-				id: entitlementId,
-				updates: { is_custom: true },
-			});
-		} else {
-			await EntitlementService.deleteInIds({ db, ids: [entitlementId] });
-		}
-	}
+	const priceRows = await PriceService.getInIds({ db, ids: priceIds });
+	const entitlementsReferencedByRetainedPrices = new Set(
+		priceRows
+			.flatMap((price) =>
+				referencedPrices.has(price.id) && price.entitlement_id
+					? [price.entitlement_id]
+					: [],
+			),
+	);
 
 	for (const priceId of priceIds) {
 		if (referencedPrices.has(priceId)) {
@@ -98,6 +95,21 @@ const retireOrDeleteRows = async ({
 			});
 		} else {
 			await PriceService.deleteInIds({ db, ids: [priceId] });
+		}
+	}
+
+	for (const entitlementId of entitlementIds) {
+		if (
+			referencedEnts.has(entitlementId) ||
+			entitlementsReferencedByRetainedPrices.has(entitlementId)
+		) {
+			await EntitlementService.update({
+				db,
+				id: entitlementId,
+				updates: { is_custom: true },
+			});
+		} else {
+			await EntitlementService.deleteInIds({ db, ids: [entitlementId] });
 		}
 	}
 };

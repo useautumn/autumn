@@ -60,10 +60,10 @@ export function SidebarContact() {
 				<DropdownMenuTrigger render={<div />} nativeButton={false}>
 					<NavButton
 						env={env}
-						value="chat"
 						icon={<QuestionIcon size={16} weight="duotone" />}
 						title="Contact us"
 						onClick={() => {}}
+						isGroup
 					/>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent side="top" align="start">

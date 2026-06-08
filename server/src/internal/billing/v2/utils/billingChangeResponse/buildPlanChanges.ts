@@ -2,11 +2,18 @@ import {
 	type AutumnBillingPlan,
 	CusProductStatus,
 	type CustomerPlanChange,
+	customerEntitlementToFeatureId,
+	type FullCusProduct,
 } from "@autumn/shared";
 import { buildPlanItemChanges } from "./buildPlanItemChanges";
 import { buildPreviousAttributes } from "./buildPreviousAttributes";
 import { cusProductStatusToPublicStatus } from "./cusProductStatusMapping";
 import { toCustomerPlanSnapshot } from "./toCustomerPlanSnapshot";
+
+type PlanChangeEntry = {
+	change: CustomerPlanChange;
+	customerProduct?: FullCusProduct;
+};
 
 const getChangePlanId = (change: CustomerPlanChange): string | undefined =>
 	change.subscription?.plan_id ?? change.purchase?.plan_id;
@@ -38,6 +45,57 @@ const getUpdatedChangeMergeKey = (
 	}
 };
 
+const entitlementFeatureIds = (customerProduct: FullCusProduct) =>
+	new Set(
+		customerProduct.customer_entitlements.map((customerEntitlement) =>
+			customerEntitlementToFeatureId(customerEntitlement),
+		),
+	);
+
+const buildReplacementItemChanges = ({
+	activated,
+	expired,
+}: {
+	activated: PlanChangeEntry;
+	expired: PlanChangeEntry;
+}): CustomerPlanChange["item_changes"] => {
+	const activatedProduct = activated.customerProduct;
+	const expiredProduct = expired.customerProduct;
+	if (activatedProduct === undefined || expiredProduct === undefined) {
+		return [
+			...(activated.change.item_changes ?? []),
+			...(expired.change.item_changes ?? []),
+		];
+	}
+
+	const activatedFeatureIds = entitlementFeatureIds(activatedProduct);
+	const expiredFeatureIds = entitlementFeatureIds(expiredProduct);
+
+	return [
+		...buildPlanItemChanges({
+			customerProduct: activatedProduct,
+			insertCustomerEntitlements:
+				activatedProduct.customer_entitlements.filter(
+					(customerEntitlement) =>
+						expiredFeatureIds.has(
+							customerEntitlementToFeatureId(customerEntitlement),
+						) === false,
+				),
+			insertCustomerPrices: activatedProduct.customer_prices,
+		}),
+		...buildPlanItemChanges({
+			customerProduct: expiredProduct,
+			deleteCustomerEntitlements: expiredProduct.customer_entitlements.filter(
+				(customerEntitlement) =>
+					activatedFeatureIds.has(
+						customerEntitlementToFeatureId(customerEntitlement),
+					) === false,
+			),
+			deleteCustomerPrices: expiredProduct.customer_prices,
+		}),
+	];
+};
+
 /**
  * When a billing action updates a plan in-place, Autumn often creates a new
  * customer product (insertCustomerProducts) and expires the old one
@@ -47,17 +105,20 @@ const getUpdatedChangeMergeKey = (
  * reflects the logical operation.
  */
 const collapseSamePlanIdPairs = (
-	changes: CustomerPlanChange[],
-): CustomerPlanChange[] => {
+	entries: PlanChangeEntry[],
+): PlanChangeEntry[] => {
 	const consumed = new Set<number>();
-	const result: CustomerPlanChange[] = [];
+	const result: PlanChangeEntry[] = [];
 
-	for (let i = 0; i < changes.length; i++) {
+	for (let i = 0; i < entries.length; i++) {
 		if (consumed.has(i)) continue;
-		const change = changes[i];
+		const entry = entries[i];
+		const { change } = entry;
 
-		if (change.action !== "activated" && change.action !== "expired") {
-			result.push(change);
+		const canCollapse =
+			change.action === "activated" || change.action === "expired";
+		if (canCollapse === false) {
+			result.push(entry);
 			continue;
 		}
 
@@ -65,16 +126,17 @@ const collapseSamePlanIdPairs = (
 		const counterpartAction =
 			change.action === "activated" ? "expired" : "activated";
 
-		const pairIdx = changes.findIndex(
-			(other, j) =>
-				j !== i &&
-				!consumed.has(j) &&
-				other.action === counterpartAction &&
-				getChangePlanId(other) === planId,
-		);
+		const pairIdx = entries.findIndex((other, j) => {
+			if (j === i) return false;
+			if (consumed.has(j)) return false;
+			return (
+				other.change.action === counterpartAction &&
+				getChangePlanId(other.change) === planId
+			);
+		});
 
 		if (pairIdx < 0) {
-			result.push(change);
+			result.push(entry);
 			continue;
 		}
 
@@ -84,15 +146,22 @@ const collapseSamePlanIdPairs = (
 		// the iterator, not as a pairing candidate).
 		consumed.add(i);
 		consumed.add(pairIdx);
-		const activatedChange = change.action === "activated" ? change : changes[pairIdx];
-		const expiredChange = change.action === "expired" ? change : changes[pairIdx];
+		const pair = entries[pairIdx];
+		const activated = change.action === "activated" ? entry : pair;
+		const expired = change.action === "expired" ? entry : pair;
 
 		result.push({
-			action: "updated",
-			subscription: activatedChange.subscription,
-			purchase: activatedChange.purchase,
-			previous_attributes: expiredChange.previous_attributes,
-			item_changes: [],
+			customerProduct: activated.customerProduct,
+			change: {
+				action: "updated",
+				subscription: activated.change.subscription,
+				purchase: activated.change.purchase,
+				previous_attributes: expired.change.previous_attributes,
+				item_changes: buildReplacementItemChanges({
+					activated,
+					expired,
+				}),
+			},
 		});
 	}
 
@@ -100,35 +169,37 @@ const collapseSamePlanIdPairs = (
 };
 
 const mergeUpdatedPlanChanges = (
-	changes: CustomerPlanChange[],
-): CustomerPlanChange[] => {
-	const merged = new Map<string, CustomerPlanChange>();
-	const result: CustomerPlanChange[] = [];
+	entries: PlanChangeEntry[],
+): PlanChangeEntry[] => {
+	const merged = new Map<string, PlanChangeEntry>();
+	const result: PlanChangeEntry[] = [];
 
-	for (const change of changes) {
+	for (const entry of entries) {
+		const { change } = entry;
 		const mergeKey = getUpdatedChangeMergeKey(change);
-		if (change.action !== "updated" || !mergeKey) {
-			result.push(change);
+		if (change.action === "updated" && mergeKey) {
+			const existing = merged.get(mergeKey);
+			if (existing) {
+				existing.change.subscription =
+					existing.change.subscription ?? change.subscription;
+				existing.change.purchase = existing.change.purchase ?? change.purchase;
+				existing.change.previous_attributes = {
+					...(existing.change.previous_attributes ?? {}),
+					...(change.previous_attributes ?? {}),
+				};
+				existing.change.item_changes = [
+					...(existing.change.item_changes ?? []),
+					...(change.item_changes ?? []),
+				];
+				continue;
+			}
+
+			merged.set(mergeKey, entry);
+			result.push(entry);
 			continue;
 		}
 
-		const existing = merged.get(mergeKey);
-		if (!existing) {
-			merged.set(mergeKey, change);
-			result.push(change);
-			continue;
-		}
-
-		existing.subscription = existing.subscription ?? change.subscription;
-		existing.purchase = existing.purchase ?? change.purchase;
-		existing.previous_attributes = {
-			...(existing.previous_attributes ?? {}),
-			...(change.previous_attributes ?? {}),
-		};
-		existing.item_changes = [
-			...(existing.item_changes ?? []),
-			...(change.item_changes ?? []),
-		];
+		result.push(entry);
 	}
 
 	return result;
@@ -139,18 +210,21 @@ export const buildPlanChanges = ({
 }: {
 	autumnBillingPlan: AutumnBillingPlan;
 }): CustomerPlanChange[] => {
-	const changes: CustomerPlanChange[] = [];
+	const entries: PlanChangeEntry[] = [];
 
 	for (const cusProduct of autumnBillingPlan.insertCustomerProducts ?? []) {
 		const action =
 			cusProduct.status === CusProductStatus.Scheduled
 				? "scheduled"
 				: "activated";
-		changes.push({
-			action,
-			...toCustomerPlanSnapshot({ cusProduct }),
-			previous_attributes: null,
-			item_changes: [],
+		entries.push({
+			customerProduct: cusProduct,
+			change: {
+				action,
+				...toCustomerPlanSnapshot({ cusProduct }),
+				previous_attributes: null,
+				item_changes: [],
+			},
 		});
 	}
 
@@ -188,36 +262,44 @@ export const buildPlanChanges = ({
 			action = "updated";
 		}
 
-		changes.push({
-			action,
-			...toCustomerPlanSnapshot({
-				cusProduct: originalCusProduct,
-				overrides: {
-					status: update.updates.status,
-					canceled_at: update.updates.canceled_at,
-					ended_at: update.updates.ended_at,
-					trial_ends_at: update.updates.trial_ends_at,
-				},
-			}),
-			previous_attributes: previousAttributes,
-			item_changes: [],
+		entries.push({
+			customerProduct: originalCusProduct,
+			change: {
+				action,
+				...toCustomerPlanSnapshot({
+					cusProduct: originalCusProduct,
+					overrides: {
+						status: update.updates.status,
+						canceled_at: update.updates.canceled_at,
+						ended_at: update.updates.ended_at,
+						trial_ends_at: update.updates.trial_ends_at,
+					},
+				}),
+				previous_attributes: previousAttributes,
+				item_changes: [],
+			},
 		});
 	}
 
 	for (const patch of autumnBillingPlan.patchCustomerProducts ?? []) {
-		changes.push({
-			action: "updated",
-			...toCustomerPlanSnapshot({ cusProduct: patch.customerProduct }),
-			previous_attributes: {},
-			item_changes: buildPlanItemChanges({
-				customerProduct: patch.customerProduct,
-				insertCustomerEntitlements: patch.insertCustomerEntitlements,
-				deleteCustomerEntitlements: patch.deleteCustomerEntitlements,
-				insertCustomerPrices: patch.insertCustomerPrices,
-				deleteCustomerPrices: patch.deleteCustomerPrices,
-			}),
+		entries.push({
+			customerProduct: patch.customerProduct,
+			change: {
+				action: "updated",
+				...toCustomerPlanSnapshot({ cusProduct: patch.customerProduct }),
+				previous_attributes: {},
+				item_changes: buildPlanItemChanges({
+					customerProduct: patch.customerProduct,
+					insertCustomerEntitlements: patch.insertCustomerEntitlements,
+					deleteCustomerEntitlements: patch.deleteCustomerEntitlements,
+					insertCustomerPrices: patch.insertCustomerPrices,
+					deleteCustomerPrices: patch.deleteCustomerPrices,
+				}),
+			},
 		});
 	}
 
-	return mergeUpdatedPlanChanges(collapseSamePlanIdPairs(changes));
+	return mergeUpdatedPlanChanges(collapseSamePlanIdPairs(entries)).map(
+		(entry) => entry.change,
+	);
 };

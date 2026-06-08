@@ -111,6 +111,7 @@ export function UpdatePlanOpForm({
 
 	const customize = value.customize;
 	const addItems = customize?.add_items ?? [];
+	const planVersionActionLabel = getPlanVersionActionLabel(value);
 
 	const openSheet = (mode: OperationSheetMode, itemIndex?: number) => {
 		setSheetMode(mode);
@@ -312,9 +313,9 @@ export function UpdatePlanOpForm({
 						<DropdownMenuItem
 							closeOnClick
 							onClick={() => update({ version: 1 })}
-					>
-						Set Plan Version
-					</DropdownMenuItem>
+						>
+							{planVersionActionLabel}
+						</DropdownMenuItem>
 					)}
 					{(!customize || customize.price === undefined) && (
 						<DropdownMenuItem
@@ -370,6 +371,21 @@ export function extractPlanIds(
 		return planId.$in.filter((v): v is string => typeof v === "string");
 	if (planId.$eq) return typeof planId.$eq === "string" ? [planId.$eq] : [];
 	return [];
+}
+
+export function isSameVersionReset(value: UpdatePlanOp): boolean {
+	const filteredVersion = value.plan_filter.version;
+	const selectedVersion = value.version ?? 1;
+
+	return (
+		typeof filteredVersion === "number" && filteredVersion === selectedVersion
+	);
+}
+
+export function getPlanVersionActionLabel(value: UpdatePlanOp): string {
+	return isSameVersionReset(value)
+		? "Reset to Plan Version"
+		: "Set Plan Version";
 }
 
 function toPlanIdMatcher(
