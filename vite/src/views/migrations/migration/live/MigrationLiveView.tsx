@@ -91,7 +91,20 @@ type AdminRunControls = {
 	lazyRun: boolean;
 	retryErrored: boolean;
 	retrySkipped: boolean;
+	concurrency: string;
 };
+
+const MIN_CONCURRENCY = 1;
+const MAX_CONCURRENCY = 5;
+
+function parseConcurrency(value: string): number | undefined {
+	const trimmed = value.trim();
+	if (trimmed === "") return undefined;
+	const parsed = Number(trimmed);
+	if (!Number.isInteger(parsed)) return undefined;
+	if (parsed < MIN_CONCURRENCY || parsed > MAX_CONCURRENCY) return undefined;
+	return parsed;
+}
 
 type CustomerRow = MigrationPreviewCustomer & {
 	_event?: MigrationItemEvent;
@@ -215,10 +228,11 @@ export function MigrationLiveView({
 		parseAsBoolean.withDefault(false),
 	);
 	const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-	const [runControls, setRunControls] = useState({
+	const [runControls, setRunControls] = useState<AdminRunControls>({
 		lazyRun: true,
 		retryErrored: false,
 		retrySkipped: false,
+		concurrency: String(MAX_CONCURRENCY),
 	});
 	const [sample, setSample] = useState({
 		open: false,
@@ -232,7 +246,11 @@ export function MigrationLiveView({
 	const resolvedRunControls = {
 		lazyRun: runControls.lazyRun,
 		retryItemStatuses: buildRetryItemStatuses(runControls),
+		concurrency: parseConcurrency(runControls.concurrency),
 	};
+	const invalidConcurrency =
+		runControls.concurrency.trim() !== "" &&
+		parseConcurrency(runControls.concurrency) === undefined;
 
 	const debouncedSetSearch = useMemo(
 		() => debounce((q: string) => setDebouncedSearch(q), 350),
@@ -566,6 +584,7 @@ export function MigrationLiveView({
 						<MigrationRunControls
 							value={runControls}
 							onChange={setRunControls}
+							invalidConcurrency={invalidConcurrency}
 							hasFailedItems={(progressCounts?.failed ?? 0) > 0}
 							hasSkippedItems={(progressCounts?.skipped ?? 0) > 0}
 						/>
@@ -579,7 +598,7 @@ export function MigrationLiveView({
 									triggerRun({ dryRun: false, ...resolvedRunControls });
 								}}
 								isLoading={isRunning}
-								disabled={isRunInProgress}
+								disabled={isRunInProgress || invalidConcurrency}
 							>
 								<PlayIcon size={14} weight="fill" />
 								Run
@@ -675,6 +694,7 @@ export function MigrationLiveView({
 							<MigrationRunControls
 								value={runControls}
 								onChange={setRunControls}
+								invalidConcurrency={invalidConcurrency}
 								lazyDisabled={sample.mode === "select"}
 								hasFailedItems={(progressCounts?.failed ?? 0) > 0}
 								hasSkippedItems={(progressCounts?.skipped ?? 0) > 0}
@@ -687,6 +707,7 @@ export function MigrationLiveView({
 								isLoading={sample.running === "dry"}
 								disabled={
 									isRunInProgress ||
+									invalidConcurrency ||
 									sample.running !== null ||
 									(sample.mode === "limit"
 										? !sample.limit || Number(sample.limit) < 1
@@ -726,6 +747,7 @@ export function MigrationLiveView({
 								isLoading={sample.running === "live"}
 								disabled={
 									isRunInProgress ||
+									invalidConcurrency ||
 									sample.running !== null ||
 									(sample.mode === "limit"
 										? !sample.limit || Number(sample.limit) < 1
@@ -879,6 +901,7 @@ function ExecutionProgressBadge({
 function MigrationRunControls({
 	value,
 	onChange,
+	invalidConcurrency = false,
 	lazyDisabled = false,
 	hasFailedItems = false,
 	hasSkippedItems = false,
@@ -913,6 +936,33 @@ function MigrationRunControls({
 					}
 				/>
 			</div>
+			<div className="flex items-center justify-between gap-4">
+				<div className="flex flex-col gap-0.5">
+					<span className="text-sm font-medium text-foreground">
+						Concurrency
+					</span>
+					<span className="text-xs text-tertiary-foreground">
+						Customers processed in parallel. Max {MAX_CONCURRENCY}.
+					</span>
+				</div>
+				<Input
+					type="number"
+					min={MIN_CONCURRENCY}
+					max={MAX_CONCURRENCY}
+					value={value.concurrency}
+					onChange={(e) => onChange({ ...value, concurrency: e.target.value })}
+					placeholder="Auto"
+					className={cn(
+						"w-20 text-sm",
+						invalidConcurrency && "border-red-500 focus-visible:ring-red-500",
+					)}
+				/>
+			</div>
+			{invalidConcurrency && (
+				<span className="text-xs text-red-500">
+					Concurrency must be less than {MAX_CONCURRENCY}.
+				</span>
+			)}
 			{hasFailedItems && (
 				<div className="flex items-center justify-between gap-4">
 					<div className="flex flex-col gap-0.5">

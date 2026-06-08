@@ -9,11 +9,13 @@ import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";
 
+const MAX_CONCURRENCY = 5;
+
 const ControlsSchema = z
 	.object({
 		limit: z.number().int().min(1).optional(),
 		only: z.array(z.string()).optional(),
-		concurrency: z.number().int().min(1).optional(),
+		concurrency: z.number().int().min(1).max(MAX_CONCURRENCY).optional(),
 		retryItemStatuses: z
 			.array(z.enum(RETRYABLE_MIGRATION_ITEM_RUN_STATUSES))
 			.optional(),
@@ -92,14 +94,9 @@ export const runMigrationTask = task({
 				run: async () => {
 					const migration = await migrationRepo.find({ ctx, id: migrationId });
 
-					// Default concurrency: 10 normally, 15 when no_billing_changes
-					// because we're not hitting Stripe per customer. Caller can still
-					// override via controls.concurrency.
-					const defaultConcurrency =
-						migration.no_billing_changes === true ? 15 : 10;
 					const effectiveControls = {
 						...(controls ?? {}),
-						concurrency: controls?.concurrency ?? defaultConcurrency,
+						concurrency: controls?.concurrency ?? MAX_CONCURRENCY,
 					};
 
 					logger.info("run-migration: resolved controls", {

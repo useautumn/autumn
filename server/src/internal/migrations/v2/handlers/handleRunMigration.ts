@@ -8,12 +8,14 @@ import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/run/utils/retryItemStatuses.js";
 import { runMigrationTask } from "@/trigger/migrations/runMigrationTask.js";
 
+const MAX_CONCURRENCY = 5;
+
 const RunMigrationBody = z.object({
 	id: z.string(),
 	dry_run: z.boolean().default(false),
 	limit: z.number().int().min(1).optional(),
 	only: z.array(z.string()).optional(),
-	concurrency: z.number().int().min(1).optional(),
+	concurrency: z.number().int().min(1).max(MAX_CONCURRENCY).optional(),
 	retry_item_statuses: z
 		.array(z.enum(RETRYABLE_MIGRATION_ITEM_RUN_STATUSES))
 		.optional(),
