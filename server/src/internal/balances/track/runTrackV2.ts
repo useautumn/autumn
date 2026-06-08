@@ -12,6 +12,7 @@ import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCu
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { getOrCreateCachedFullCustomer } from "../../customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
 import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
+import { releaseIdempotencyKey } from "@/internal/misc/idempotency/checkIdempotencyKey.js";
 import { handleEventIdempotencyKey } from "./utils/handleEventIdempotencyKey.js";
 import { runRedisTrack } from "./utils/runRedisTrack.js";
 
@@ -51,7 +52,12 @@ export const runTrackV2 = async ({
 				source: "runTrackV2",
 			});
 
-	// If idempotency key is provided, insert event first and skip insertion later
+	// If idempotency key is provided, CLAIM it BEFORE the deduction so concurrent
+	// retries get a deterministic 409 instead of double-deducting. If the deduction
+	// then fails (insufficient balance, transient Redis fault, etc.), the catch
+	// block below RELEASES the claim so the caller can safely retry once the
+	// failure cause is resolved. Fixes #1138 — previously the claim was permanent
+	// on first failure and 409'd retries for the full 24h TTL.
 	if (body.idempotency_key) {
 		await handleEventIdempotencyKey({
 			ctx,
@@ -59,14 +65,27 @@ export const runTrackV2 = async ({
 		});
 	}
 
-	// Try Redis deduction - returns TrackResponseV3 (with ApiBalanceV1)
-	const response: TrackResponseV3 = await runRedisTrack({
-		ctx,
-		fullCustomer,
-		featureDeductions,
-		overageBehavior: body.overage_behavior || "cap",
-		body,
-	});
+	let response: TrackResponseV3;
+	try {
+		// Try Redis deduction - returns TrackResponseV3 (with ApiBalanceV1)
+		response = await runRedisTrack({
+			ctx,
+			fullCustomer,
+			featureDeductions,
+			overageBehavior: body.overage_behavior || "cap",
+			body,
+		});
+	} catch (error) {
+		if (body.idempotency_key) {
+			await releaseIdempotencyKey({
+				orgId: ctx.org.id,
+				env: ctx.env,
+				idempotencyKey: `track:${body.idempotency_key}`,
+				logger: ctx.logger,
+			});
+		}
+		throw error;
+	}
 
 	// Version changes will transform V3 -> V2 -> V1 -> V0 based on target API version
 	const transformedResponse = applyResponseVersionChanges<TrackResponseV3>({

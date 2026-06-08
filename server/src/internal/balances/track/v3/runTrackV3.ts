@@ -13,6 +13,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrCreateCachedFullSubject.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
+import { releaseIdempotencyKey } from "@/internal/misc/idempotency/checkIdempotencyKey.js";
 import { handleEventIdempotencyKey } from "../utils/handleEventIdempotencyKey.js";
 import { runRedisTrackV3 } from "./runRedisTrackV3.js";
 import { getTrackIdempotencyKey } from "./trackIdempotencyKey.js";
@@ -65,6 +66,10 @@ export const runTrackV3 = async ({
 		body,
 	});
 
+	// Claim the user-supplied idempotency key BEFORE the deduction so concurrent
+	// retries get a deterministic 409 instead of double-deducting. On failure,
+	// the catch below RELEASES the claim so retries can succeed once the cause
+	// (insufficient balance, transient Redis fault) is resolved. Fixes #1138.
 	if (body.idempotency_key) {
 		await handleEventIdempotencyKey({
 			ctx,
@@ -74,14 +79,27 @@ export const runTrackV3 = async ({
 
 	const redisIdempotencyKey = getTrackIdempotencyKey({ ctx });
 
-	const response: TrackResponseV3 = await runRedisTrackV3({
-		ctx,
-		fullSubject,
-		featureDeductions,
-		overageBehavior: body.overage_behavior || "cap",
-		body,
-		idempotencyKey: redisIdempotencyKey,
-	});
+	let response: TrackResponseV3;
+	try {
+		response = await runRedisTrackV3({
+			ctx,
+			fullSubject,
+			featureDeductions,
+			overageBehavior: body.overage_behavior || "cap",
+			body,
+			idempotencyKey: redisIdempotencyKey,
+		});
+	} catch (error) {
+		if (body.idempotency_key) {
+			await releaseIdempotencyKey({
+				orgId: ctx.org.id,
+				env: ctx.env,
+				idempotencyKey: `track:${body.idempotency_key}`,
+				logger: ctx.logger,
+			});
+		}
+		throw error;
+	}
 
 	return applyResponseVersionChanges<TrackResponseV3>({
 		input: response,
