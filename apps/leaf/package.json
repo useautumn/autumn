@@ -10,6 +10,8 @@
 		"ts": "tsc --noEmit"
 	},
 	"dependencies": {
+		"@autumn/auth": "workspace:*",
+		"@autumn/logging": "workspace:*",
 		"@autumn/mcp": "workspace:*",
 		"@autumn/shared": "workspace:*",
 		"@chat-adapter/slack": "^4.29.0",

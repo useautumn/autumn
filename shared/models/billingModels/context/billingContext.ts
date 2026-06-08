@@ -6,10 +6,12 @@ import type {
 	FeatureOptions,
 	FreeTrial,
 	Price,
+	ProcessorType,
 	TrialOnEnd,
 } from "@autumn/shared";
 import type { PaymentBehaviorIntent } from "@models/billingModels/context/paymentBehaviorIntent";
 import type { TransitionConfig } from "@models/billingModels/context/transitionConfig";
+import type { DbInvoiceLineItem } from "@models/cusModels/invoiceModels/invoiceLineItemTable";
 import type { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import type Stripe from "stripe";
 import { z } from "zod/v4";
@@ -112,9 +114,18 @@ export interface BillingContext {
 
 	anchorResetRefund?: AnchorResetRefund;
 
+	storedChargeLineItems?: DbInvoiceLineItem[];
+	storedRefundLineItems?: DbInvoiceLineItem[];
+
 	refundLastPayment?: "prorated" | "full";
 
 	paymentBehaviorIntent?: PaymentBehaviorIntent;
 	shouldFinalizeFirstInvoice?: boolean;
 	skipCustomPaymentMethodGuard?: boolean;
+
+	/** See `BillingContextOverride.skipExternalPSPGuard`. */
+	skipExternalPSPGuard?: boolean;
+
+	/** See `BillingContextOverride.processorTypeOverride`. */
+	processorTypeOverride?: ProcessorType;
 }

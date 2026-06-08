@@ -5,6 +5,7 @@ import { actions } from "../models/analyticsModels/actionTable.js";
 import {
 	chatApprovals,
 	chatInstallations,
+	chatOAuthCredentials,
 } from "../models/chatModels/chatTable.js";
 import { chatResults } from "../models/chatResultModels/chatResultTable.js";
 import { checkoutsRelations } from "../models/checkouts/checkoutRelations.js";
@@ -108,6 +109,7 @@ export {
 	autoTopupLimitStates as autoTopupLimits,
 	chatApprovals,
 	chatInstallations,
+	chatOAuthCredentials,
 	chatResults,
 	checkouts,
 	checkoutsRelations,

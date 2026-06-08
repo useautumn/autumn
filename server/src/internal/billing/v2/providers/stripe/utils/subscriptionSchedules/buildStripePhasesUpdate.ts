@@ -231,6 +231,10 @@ export const buildStripePhasesUpdate = ({
 		const phaseStartDateSeconds = msToSeconds(startMs);
 		const isBillingCycleAnchorResetPhase =
 			billingCycleAnchorResetAt === startMs;
+		const shouldInvoicePhaseTransition =
+			phaseIndex > 0 && phaseItems.length > 0;
+		const shouldAlwaysInvoice =
+			shouldInvoicePhaseTransition || isBillingCycleAnchorResetPhase;
 		const phase: Stripe.SubscriptionScheduleUpdateParams.Phase = {
 			items: phaseItems,
 			start_date: phaseStartDateSeconds,
@@ -239,9 +243,7 @@ export const buildStripePhasesUpdate = ({
 			billing_cycle_anchor: isBillingCycleAnchorResetPhase
 				? "phase_start"
 				: undefined,
-			proration_behavior: isBillingCycleAnchorResetPhase
-				? "always_invoice"
-				: undefined,
+			proration_behavior: shouldAlwaysInvoice ? "always_invoice" : undefined,
 			discounts: stripeDiscountsToPhaseDiscounts({
 				stripeDiscounts: billingContext.stripeDiscounts,
 				phaseStartDateSeconds,

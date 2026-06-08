@@ -40,8 +40,36 @@
     {
       "idx": 5,
       "version": "7",
-      "when": 1780570563830,
-      "tag": "0005_legal_logan",
+      "when": 1780582242747,
+      "tag": "0005_fresh_runaways",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1780584591419,
+      "tag": "0006_sad_madrox",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1780655063264,
+      "tag": "0007_cute_ikaris",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1780679328640,
+      "tag": "0008_premium_pet_avengers",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1780916308859,
+      "tag": "0009_usage_windows",
       "breakpoints": true
     }
   ]

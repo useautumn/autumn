@@ -1,6 +1,7 @@
-import { runChatAgent, selectChatEnv } from "./agent.js";
-import { getInstallationKey } from "../providers/slack/installations.js";
+import { getInstallationOAuthAccessToken } from "../internal/installations/actions/getInstallationOAuthAccessToken.js";
+import { logger as rootLogger } from "../lib/logger.js";
 import { agentOutputSchema, type BotMessage } from "../types.js";
+import { runChatAgent, selectChatEnv } from "./agent.js";
 
 const withTimeout = <T>(promise: Promise<T>, ms: number) =>
 	new Promise<T>((resolve, reject) => {
@@ -13,6 +14,7 @@ const withTimeout = <T>(promise: Promise<T>, ms: number) =>
 
 export const runMessage = async ({
 	installation,
+	logger = rootLogger,
 	onAction,
 	recentMessages,
 	text,
@@ -23,11 +25,25 @@ export const runMessage = async ({
 			const env = await selectChatEnv({
 				message: text,
 				recentMessages,
+				logger,
+			});
+			logger.info("Selected chat environment", {
+				event: "leaf.chat_env_selected",
+				context: {
+					env,
+					org_id: installation.org_id,
+					provider: installation.provider,
+				},
+			});
+			const token = await getInstallationOAuthAccessToken({
+				installation,
+				env,
 			});
 			return agentOutputSchema.parse(
 				await runChatAgent({
-					apiKey: getInstallationKey(installation, env),
+					token,
 					env,
+					logger,
 					message: text,
 					onAction,
 					threadId,

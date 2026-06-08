@@ -11,6 +11,7 @@ const localConfig = {
 	redisStackPort: 6379,
 	dragonflyPort: 6380,
 	databaseUrl: "postgresql://postgres:postgres@localhost:5432/autumn",
+	chatStateDatabaseUrl: "postgresql://postgres:postgres@localhost:5432/chat",
 	cacheUrl: "redis://localhost:6379",
 	dragonflyUrl: "redis://localhost:6380",
 };
@@ -166,6 +167,32 @@ const doctor = async () => {
 	if (results.some((result) => !result)) process.exit(1);
 };
 
+const psql = ({ args, quiet = false }: { args: string[]; quiet?: boolean }) =>
+	dockerCompose({
+		args: ["exec", "-T", "postgres", "psql", "-U", "postgres", ...args],
+		quiet,
+	});
+
+const ensureChatDatabase = () => {
+	const result = psql({
+		args: [
+			"-d",
+			"postgres",
+			"-tAc",
+			"SELECT 1 FROM pg_database WHERE datname = 'chat'",
+		],
+		quiet: true,
+	});
+	const exists = new TextDecoder().decode(result.stdout).trim() === "1";
+	if (exists) {
+		log("chat database already exists");
+		return;
+	}
+
+	log("creating chat database");
+	psql({ args: ["-d", "postgres", "-c", "CREATE DATABASE chat"] });
+};
+
 const up = async () => {
 	log("starting Docker services");
 	dockerCompose({ args: ["up", "-d", "--remove-orphans"] });
@@ -176,6 +203,7 @@ const up = async () => {
 		waitForTcp({ port: localConfig.dragonflyPort, label: "Dragonfly" }),
 	]);
 
+	ensureChatDatabase();
 	await doctor();
 };
 
@@ -219,6 +247,7 @@ Commands:
 
 Local service values:
   DATABASE_URL=${localConfig.databaseUrl}
+  CHAT_STATE_DATABASE_URL=${localConfig.chatStateDatabaseUrl}
   CACHE_URL=${localConfig.cacheUrl}
   CACHE_URL_US_EAST=${localConfig.cacheUrl}
   CACHE_V2_DRAGONFLY_URL=${localConfig.dragonflyUrl}

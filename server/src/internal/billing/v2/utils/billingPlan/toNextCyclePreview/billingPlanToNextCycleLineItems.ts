@@ -11,7 +11,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyStripeDiscountsToLineItems } from "@/internal/billing/v2/providers/stripe/utils/discounts/applyStripeDiscountsToLineItems";
 import { filterStripeDiscountsForNextCycle } from "@/internal/billing/v2/providers/stripe/utils/discounts/filterStripeDiscountsForNextCycle";
 import { customerProductToArrearLineItems } from "../../lineItems/customerProductToArrearLineItems";
-import { customerProductToLineItems } from "../../lineItems/customerProductToLineItems";
+import { getLineItemsForDirection } from "../../lineItems/getLineItemsForDirection";
 import { lineItemToPreviewLineItem } from "../../lineItems/lineItemToPreviewLineItem";
 import { lineItemToPreviewUsageLineItem } from "../../lineItems/lineItemToPreviewUsageLineItem";
 
@@ -38,7 +38,7 @@ const buildLineItemsForSpec = ({
 	nextCycleStart: number;
 }) => {
 	const lineItems = spec.customerProducts.flatMap((customerProduct) =>
-		customerProductToLineItems({
+		getLineItemsForDirection({
 			ctx,
 			customerProduct,
 			billingContext: {

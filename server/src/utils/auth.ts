@@ -91,7 +91,7 @@ const chatServerUrl =
 	process.env.CHAT_SERVER_URL ??
 	(isProductionAuth ? "https://chat.useautumn.com" : "http://localhost:3099");
 
-const mcpResourcePaths = ["/mcp", "/internal/mcp"];
+const mcpResourcePaths = ["/mcp"];
 const mcpResourceBases = [
 	process.env.BETTER_AUTH_URL,
 	mcpServerUrl,

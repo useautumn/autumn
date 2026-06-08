@@ -13,8 +13,10 @@ import { generateId } from "@/utils/genUtils";
 type RecordableEvent = {
 	transaction_id?: string | null;
 	original_transaction_id?: string | null;
+	// RevenueCat's `price` is always normalized to USD; `currency` describes
+	// `price_in_purchased_currency`, NOT `price`. We record `price`, so the
+	// invoice currency is always USD.
 	price?: number | null;
-	currency?: string | null;
 	purchased_at_ms?: number | null;
 	event_timestamp_ms?: number | null;
 };
@@ -51,7 +53,9 @@ export const recordRevenueCatInvoice = async ({
 	}
 
 	const total = event.price ?? 0;
-	const currency = event.currency ?? "usd";
+	// `event.price` is normalized to USD by RevenueCat regardless of the
+	// purchase currency, so the recorded invoice is always denominated in USD.
+	const currency = "usd";
 	const createdAt =
 		event.purchased_at_ms ?? event.event_timestamp_ms ?? Date.now();
 

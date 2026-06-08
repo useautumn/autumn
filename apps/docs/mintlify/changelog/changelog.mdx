@@ -4,6 +4,54 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="May 29th 2026">
+  ## Autumn MCP server
+
+  Autumn now ships an official **Model Context Protocol (MCP) server**, so AI assistants like Claude Desktop and Cursor can read and act on your Autumn data directly. The server is generated against the public API and respects your existing API key scopes (`customers:read`, `plans:read`, `billing:read`, `billing:write`) — no new permission model to learn.
+
+  Install it as a Claude Desktop extension or wire it into Cursor with a single deeplink. Use it to look up customers, inspect plans, preview attaches, and run billing updates from your assistant.
+
+  ## Org-level usage alerts
+
+  Usage alerts can now be configured **once at the org level** and applied across every customer, instead of being attached plan by plan. Set a threshold and channel from settings, and Autumn fires alerts whenever any customer crosses the bar. The [`balances.usage_alert.triggered` webhook](/api-reference/webhooks/balancesUsageAlertTriggered) fires for both per-plan and org-level alerts.
+
+  ## Vercel Marketplace: invoice mode and resource logs
+
+  The Vercel integration now supports **invoice-mode billing** end to end and surfaces **per-resource logs** in the dashboard, so you can debug a Vercel customer's provisioning, auto top-ups, and invoice flow without leaving Autumn. The frontend was rebuilt around the new resource model, with fallbacks for identity edge cases.
+
+  See the [Vercel Marketplace guide](/documentation/external-providers/vercel-marketplace).
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - Official Autumn MCP server for Claude Desktop, Cursor, and other MCP clients — [#1715](https://github.com/useautumn/autumn/pull/1715), [#1740](https://github.com/useautumn/autumn/pull/1740), [#1741](https://github.com/useautumn/autumn/pull/1741)
+      - Org-level usage alerts with shared thresholds across customers — [#1707](https://github.com/useautumn/autumn/pull/1707)
+      - Vercel Marketplace invoice mode, resource logs, and refreshed frontend — [#1711](https://github.com/useautumn/autumn/pull/1711)
+      - Preflight tax-address check before charging customers in taxable regions — [#1699](https://github.com/useautumn/autumn/pull/1699)
+      - Automatically void uncollectible Stripe invoices instead of leaving them open — [#1732](https://github.com/useautumn/autumn/pull/1732)
+      - New plan-version filters for [custom-plan migrations](/documentation/customers/custom-plans) — [#1718](https://github.com/useautumn/autumn/pull/1718)
+      - Faster customer detail loads and smoother large entity lists — [#1712](https://github.com/useautumn/autumn/pull/1712)
+      - Customer list filter by entity ID — [#1688](https://github.com/useautumn/autumn/pull/1688)
+      - Refreshed dashboard theme and appearance controls — [#1679](https://github.com/useautumn/autumn/pull/1679)
+      - Optimised product counts in the customer table — [#1690](https://github.com/useautumn/autumn/pull/1690)
+      - Mobile fixes for the customer list view — [#1689](https://github.com/useautumn/autumn/pull/1689)
+    </Accordion>
+    <Accordion title="Bug fixes">
+      - Stripe checkout no longer drops carry-over balances on plan changes — [#1708](https://github.com/useautumn/autumn/pull/1708)
+      - Trial grants are now excluded from reward eligibility — [#1730](https://github.com/useautumn/autumn/pull/1730)
+      - RevenueCat sync no longer fails with "entities not found" — [#1729](https://github.com/useautumn/autumn/pull/1729)
+      - Tax IDs now render correctly in the attach preview — [#1728](https://github.com/useautumn/autumn/pull/1728)
+      - Invalid email addresses are now rejected with a clearer error — [#1722](https://github.com/useautumn/autumn/pull/1722)
+      - Sandbox usage alerts now respect their configured threshold — [#1706](https://github.com/useautumn/autumn/pull/1706)
+      - Proration toggle now shows even when the customer has a past trial — [#1704](https://github.com/useautumn/autumn/pull/1704)
+      - One-off prepaid items upgrade correctly without double carry-over — [#1676](https://github.com/useautumn/autumn/pull/1676), [#1695](https://github.com/useautumn/autumn/pull/1695)
+      - Subscription metadata is preserved through checkout — [#1719](https://github.com/useautumn/autumn/pull/1719)
+      - Price dropdown no longer loses its selected value when reopened — [#1720](https://github.com/useautumn/autumn/pull/1720)
+      - Vercel auto top-ups no longer fail to process the resulting invoice — multiple fixes ([#1725](https://github.com/useautumn/autumn/pull/1725))
+    </Accordion>
+  </AccordionGroup>
+
+</Update>
+
 <Update label="May 28th 2026">
   ## Batch track and async track
 

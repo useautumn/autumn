@@ -1,5 +1,5 @@
-import { createServer, type IncomingMessage, type Server } from "node:http";
 import { afterEach, expect } from "bun:test";
+import { createServer, type IncomingMessage, type Server } from "node:http";
 import { Agent } from "@mastra/core/agent";
 import type { MessageListItem } from "@mastra/core/agent/message-list";
 import { Mastra } from "@mastra/core/mastra";
@@ -9,12 +9,9 @@ import type * as z from "zod/v4";
 import {
 	type AutumnMcpAuth,
 	createRequestContext,
-} from "../../src/mcp-server/agent/auth.js";
-import { createAutumnOperationsMCPServer } from "../../src/mcp-server/agent/server.js";
-import {
-	endpointByTool,
-	schemaByTool,
-} from "../../src/mcp-server/agent/tools.js";
+} from "../../src/server/auth/auth.js";
+import { createAutumnOperationsMCPServer } from "../../src/server/server.js";
+import { endpointByTool, schemaByTool } from "../../src/tools/index.js";
 
 type ToolName = keyof typeof schemaByTool;
 type EndpointToolName = keyof typeof endpointByTool;

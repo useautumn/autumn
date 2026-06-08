@@ -33,6 +33,7 @@
       "@api/*": ["../../shared/api/*"],
       "@models/*": ["../../shared/models/*"],
       "@utils/*": ["../../shared/utils/*"],
+      "@autumn/logging": ["../logging/src/index.ts"],
       "@autumn/ksuid": ["../ksuid/src/index.ts"]
     },
     "useUnknownInCatchVariables": true,

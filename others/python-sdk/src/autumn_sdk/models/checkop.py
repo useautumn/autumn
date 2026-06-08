@@ -890,7 +890,7 @@ class Properties2(BaseModel):
         return m
 
 
-class Product2TypedDict(TypedDict):
+class CheckProduct2TypedDict(TypedDict):
     id: str
     r"""The ID of the product you set when creating the product"""
     name: str
@@ -920,7 +920,7 @@ class Product2TypedDict(TypedDict):
     properties: NotRequired[Properties2TypedDict]
 
 
-class Product2(BaseModel):
+class CheckProduct2(BaseModel):
     id: str
     r"""The ID of the product you set when creating the product"""
 
@@ -1001,7 +1001,7 @@ class Preview2TypedDict(TypedDict):
     r"""The ID of the feature that was checked."""
     feature_name: str
     r"""The display name of the feature."""
-    products: List[Product2TypedDict]
+    products: List[CheckProduct2TypedDict]
     r"""Products that would grant access to this feature. Use to display upgrade options."""
 
 
@@ -1023,7 +1023,7 @@ class Preview2(BaseModel):
     feature_name: str
     r"""The display name of the feature."""
 
-    products: List[Product2]
+    products: List[CheckProduct2]
     r"""Products that would grant access to this feature. Use to display upgrade options."""
 
 
@@ -1832,7 +1832,7 @@ class Properties1(BaseModel):
         return m
 
 
-class Product1TypedDict(TypedDict):
+class CheckProduct1TypedDict(TypedDict):
     id: str
     r"""The ID of the product you set when creating the product"""
     name: str
@@ -1862,7 +1862,7 @@ class Product1TypedDict(TypedDict):
     properties: NotRequired[Properties1TypedDict]
 
 
-class Product1(BaseModel):
+class CheckProduct1(BaseModel):
     id: str
     r"""The ID of the product you set when creating the product"""
 
@@ -1943,7 +1943,7 @@ class Preview1TypedDict(TypedDict):
     r"""The ID of the feature that was checked."""
     feature_name: str
     r"""The display name of the feature."""
-    products: List[Product1TypedDict]
+    products: List[CheckProduct1TypedDict]
     r"""Products that would grant access to this feature. Use to display upgrade options."""
 
 
@@ -1965,7 +1965,7 @@ class Preview1(BaseModel):
     feature_name: str
     r"""The display name of the feature."""
 
-    products: List[Product1]
+    products: List[CheckProduct1]
     r"""Products that would grant access to this feature. Use to display upgrade options."""
 
 

@@ -167,6 +167,14 @@ export const getTargetSubscriptionScheduleCusProduct = ({
 		return hasSubscriptionSchedule;
 	});
 
+	if (cusProductId) {
+		const targetCusProduct = cusProducts.find((cp) => cp.id === cusProductId);
+		const targetExists = fullCus.customer_products.some(
+			(cp) => cp.id === cusProductId,
+		);
+		if (targetExists && !targetCusProduct) return undefined;
+	}
+
 	// Sort by merge order:
 	// 1. Entity match (highest priority)
 	// 2. Main product (add-ons lowest priority)
