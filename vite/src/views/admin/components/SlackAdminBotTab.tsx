@@ -23,6 +23,8 @@ type SlackAdminInstallation = {
 	workspace_name?: string | null;
 	bot_user_id?: string | null;
 	target_org_id: string;
+	target_org_name?: string | null;
+	target_org_slug?: string | null;
 	target_env: AppEnv;
 	updated_at?: number | null;
 	installed_by_user_id?: string | null;
@@ -75,6 +77,10 @@ export const SlackAdminBotTab = () => {
 
 	const installation = data?.installation ?? null;
 	const credentials = installation?.oauth_credentials ?? [];
+	const targetOrgName =
+		installation?.target_org_name ||
+		installation?.target_org_slug ||
+		installation?.target_org_id;
 
 	const { data: orgSearchData, isLoading: isSearchingOrgs } =
 		useQuery<OrgSearchResponse>({
@@ -215,6 +221,19 @@ export const SlackAdminBotTab = () => {
 				<div className="grid grid-cols-1 md:grid-cols-[1fr_160px_auto] gap-2 items-start">
 					<div className="space-y-1">
 						<span className="text-xs text-muted-foreground">Target org</span>
+						{installation ? (
+							<div className="rounded-md border border-border bg-background px-3 py-2">
+								<p className="truncate text-xs font-medium text-foreground">
+									{targetOrgName}
+								</p>
+								<p className="truncate font-mono text-[11px] text-tertiary-foreground">
+									{installation.target_org_id}
+									{installation.target_org_slug
+										? ` - ${installation.target_org_slug}`
+										: ""}
+								</p>
+							</div>
+						) : null}
 						<Input
 							value={targetOrgIdOrSlug}
 							onChange={(event) => setTargetOrgIdOrSlug(event.target.value)}

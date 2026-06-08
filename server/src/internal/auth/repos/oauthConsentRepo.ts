@@ -1,5 +1,6 @@
+import { AUTUMN_ADMIN_OAUTH_CLIENT_ID } from "@autumn/auth/oauth";
 import { type AppEnv, oauthConsent } from "@autumn/shared";
-import { and, eq, isNull, or } from "drizzle-orm";
+import { and, eq, isNull, ne, or, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export type OAuthConsentApiKeyRecord = {
@@ -13,10 +14,12 @@ export const listOAuthConsentsByReferenceId = async ({
 	db,
 	referenceId,
 	env,
+	includeInternal = false,
 }: {
 	db: DrizzleCli;
 	referenceId: string;
 	env?: AppEnv;
+	includeInternal?: boolean;
 }) =>
 	db
 		.select({
@@ -35,6 +38,12 @@ export const listOAuthConsentsByReferenceId = async ({
 				env
 					? or(isNull(oauthConsent.env), eq(oauthConsent.env, env))
 					: undefined,
+				includeInternal
+					? undefined
+					: and(
+							ne(oauthConsent.clientId, AUTUMN_ADMIN_OAUTH_CLIENT_ID),
+							sql`COALESCE(${oauthConsent.metadata}->>'kind', '') != 'slack_admin'`,
+						),
 			),
 		);
 
