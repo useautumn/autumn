@@ -10,12 +10,19 @@ import { and, eq, gt } from "drizzle-orm";
 import { executeAutumnMcpTool } from "../agent/mcp.js";
 import { getInstallationOAuthAccessToken } from "../internal/installations/actions/getInstallationOAuthAccessToken.js";
 import { db } from "../lib/db.js";
+import { approvalErrorResult } from "./errors.js";
 
 export const normalizeToolName = (toolName: string) =>
 	toolName.replace(/^autumn_/, "");
 
 export const isErrorResult = (result: unknown): boolean =>
-	typeof result === "object" && result !== null && "error" in result;
+	typeof result === "object" &&
+	result !== null &&
+	("error" in result ||
+		(result as { isError?: unknown }).isError === true ||
+		(result as { id?: unknown }).id === "TOOL_EXECUTION_FAILED" ||
+		(typeof (result as { code?: unknown }).code === "string" &&
+			typeof (result as { message?: unknown }).message === "string"));
 
 export const createApproval = async ({
 	orgId,
@@ -125,12 +132,15 @@ export const approveAndRun = async (id: string, providerUserId: string) => {
 			env: claimed.env,
 		});
 
-		const result = await executeAutumnMcpTool({
+		const rawResult = await executeAutumnMcpTool({
 			token,
 			env: claimed.env,
 			toolName: claimed.tool_name,
 			args: claimed.tool_args,
 		});
+		const result = isErrorResult(rawResult)
+			? approvalErrorResult(rawResult)
+			: rawResult;
 		await db
 			.update(chatApprovals)
 			.set({
@@ -141,6 +151,7 @@ export const approveAndRun = async (id: string, providerUserId: string) => {
 			.where(eq(chatApprovals.id, id));
 		return result;
 	} catch (error) {
+		const result = approvalErrorResult(error);
 		await db
 			.update(chatApprovals)
 			.set({
@@ -149,6 +160,6 @@ export const approveAndRun = async (id: string, providerUserId: string) => {
 				decided_by_provider_user_id: providerUserId,
 			})
 			.where(eq(chatApprovals.id, id));
-		throw error;
+		return result;
 	}
 };

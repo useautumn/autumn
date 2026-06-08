@@ -1,4 +1,4 @@
-import { verifyChatInstallState } from "@autumn/shared/utils/chatState";
+import { type ChatProvider, verifyChatInstallState } from "@autumn/shared";
 import { Hono } from "hono";
 import { z } from "zod";
 import { bot } from "../../bot.js";
@@ -11,6 +11,11 @@ const callbackQuery = z.strictObject({
 	state: z.string(),
 });
 
+const isSlackInstallProvider = (provider: string): provider is ChatProvider =>
+	provider === "slack" ||
+	provider === "slack_admin" ||
+	provider.startsWith("slack_admin:");
+
 export const slackRoutes = new Hono();
 
 slackRoutes.get("/oauth/callback", async (c) => {
@@ -21,13 +26,13 @@ slackRoutes.get("/oauth/callback", async (c) => {
 		});
 
 		const parsedState = verifyChatInstallState(state, getStateSecret());
-		if (!parsedState || parsedState.provider !== "slack")
+		if (!parsedState || !isSlackInstallProvider(parsedState.provider))
 			throw new Error("Invalid or expired Slack OAuth state");
 
 		const oauth = await exchangeSlackCode(code);
 		await replaceInstallation({
 			state: parsedState,
-			provider: "slack",
+			provider: parsedState.provider,
 			workspaceId: oauth.team.id,
 			workspaceName: oauth.team.name,
 			botUserId: oauth.bot_user_id,

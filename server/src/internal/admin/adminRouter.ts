@@ -32,6 +32,12 @@ import { handleGetOrgMember } from "./handleGetOrgMember";
 import { handleListAdminOrgs } from "./handleListAdminOrgs";
 import { handleListAdminUsers } from "./handleListAdminUsers";
 import { handleListOAuthClients } from "./handleListOAuthClients";
+import {
+	handleCreateSlackAdminInstall,
+	handleDeleteSlackAdminInstall,
+	handleGetSlackAdminInstall,
+	handleUpdateSlackAdminTarget,
+} from "./handleSlackAdminChat";
 import { handleUpsertAdminCustomerBlockConfig } from "./handleUpsertAdminCustomerBlockConfig";
 import { handleUpsertAdminFeatureFlagsConfig } from "./handleUpsertAdminFeatureFlagsConfig";
 import { handleUpsertAdminFullSubjectGateConfig } from "./handleUpsertAdminFullSubjectGateConfig";
@@ -164,6 +170,16 @@ honoAdminRouter.post(
 	"/oauth-clients/slack-mcp",
 	...handleUpsertSlackMcpOAuthClient,
 );
+honoAdminRouter.get("/chat/slack-admin", ...handleGetSlackAdminInstall);
+honoAdminRouter.post(
+	"/chat/slack-admin/install",
+	...handleCreateSlackAdminInstall,
+);
+honoAdminRouter.patch(
+	"/chat/slack-admin/target",
+	...handleUpdateSlackAdminTarget,
+);
+honoAdminRouter.delete("/chat/slack-admin", ...handleDeleteSlackAdminInstall);
 honoAdminRouter.post("/invoice-line-items", ...handleGetInvoiceLineItems);
 
 honoAdminRouter.get("/rollouts", ...handleGetRollouts);

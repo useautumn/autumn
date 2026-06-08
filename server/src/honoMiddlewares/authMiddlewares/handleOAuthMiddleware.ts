@@ -72,6 +72,7 @@ export const handleOAuthMiddleware = async ({
 	ctx.features = sortFeatures({ features: data.features }) ?? [];
 	ctx.env = env;
 	ctx.userId = tokenRecord.userId;
+	ctx.oauthResource = c.req.header("x-autumn-oauth-resource") ?? undefined;
 	ctx.authType = AuthType.SecretKey;
 	ctx.scopes = tokenRecord.scopes;
 

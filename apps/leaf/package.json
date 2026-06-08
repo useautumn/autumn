@@ -5,6 +5,8 @@
 	"type": "module",
 	"scripts": {
 		"dev": "bun --watch src/index.ts",
+		"eval": "zsh -lc 'braintrust eval tests/evals/**/*.eval.ts --external-packages @mastra/mcp @mastra/core @mastra/braintrust @mastra/observability \"$@\"' --",
+		"eval:mcp": "zsh -lc 'braintrust eval tests/evals/mcp/**/*.eval.ts --external-packages @mastra/mcp @mastra/core @mastra/braintrust @mastra/observability \"$@\"' --",
 		"start": "bun src/index.ts",
 		"test": "bun test tests/unit",
 		"ts": "tsc --noEmit"
@@ -17,12 +19,17 @@
 		"@chat-adapter/slack": "^4.29.0",
 		"@chat-adapter/state-pg": "^4.29.0",
 		"@hono/node-server": "^1.19.5",
+		"@mastra/braintrust": "^1.1.3",
 		"@mastra/core": "^1.36.0",
 		"@mastra/mcp": "^1.8.0",
+		"@mastra/observability": "^1.14.1",
 		"@mendable/firecrawl-js": "^4.25.1",
+		"autoevals": "^0.0.132",
+		"braintrust": "^3.14.0",
 		"chat": "^4.29.0",
 		"date-fns": "^4.1.0",
 		"drizzle-orm": "catalog:",
+		"e2b": "^2.8.4",
 		"hono": "4.12.7",
 		"postgres": "catalog:",
 		"zod": "^3.25.23"

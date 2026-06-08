@@ -40,6 +40,55 @@ const toEpochMilliseconds = (date: string): number => {
 	return epoch;
 };
 
+const MONTHS = [
+	"January",
+	"February",
+	"March",
+	"April",
+	"May",
+	"June",
+	"July",
+	"August",
+	"September",
+	"October",
+	"November",
+	"December",
+] as const;
+
+const pad = (value: number) => String(value).padStart(2, "0");
+
+const formatUtcDate = (date: Date) =>
+	`${MONTHS[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}, ${pad(date.getUTCHours())}:${pad(date.getUTCMinutes())}:${pad(date.getUTCSeconds())} UTC`;
+
+const parseEpochMilliseconds = (value: number | string): number => {
+	const epoch = typeof value === "number" ? value : Number(value);
+	if (!Number.isFinite(epoch)) {
+		throw new Error(`Invalid epoch milliseconds: ${value}`);
+	}
+	return epoch;
+};
+
+const epochMillisecondsToDate = (
+	epochMsByKey: Record<string, number | string>,
+) =>
+	Object.fromEntries(
+		Object.entries(epochMsByKey).map(([key, value]) => {
+			const epochMs = parseEpochMilliseconds(value);
+			const date = new Date(epochMs);
+			if (!Number.isFinite(date.getTime())) {
+				throw new Error(`Invalid epoch milliseconds: ${value}`);
+			}
+			return [
+				key,
+				{
+					epoch_ms: epochMs,
+					iso: date.toISOString(),
+					utc: formatUtcDate(date),
+				},
+			];
+		}),
+	);
+
 export const dateToEpochMillisecondsTool = createTool({
 	id: "dateToEpochMilliseconds",
 	description:
@@ -50,4 +99,19 @@ export const dateToEpochMillisecondsTool = createTool({
 		})
 		.strict(),
 	execute: async ({ date }) => toEpochMilliseconds(date),
+});
+
+export const epochMillisecondsToDateTool = createTool({
+	id: "epochMillisecondsToDate",
+	description:
+		"Convert one or more epoch millisecond timestamps from Autumn responses into UTC date formats. Use this before explaining starts_at, expires_at, next_reset_at, or other millisecond timestamp fields to users.",
+	inputSchema: z
+		.object({
+			timestamps: z.record(z.string(), z.union([z.number(), z.string()])).meta({
+				description:
+					"Object keyed by semantic timestamp names, with epoch millisecond values.",
+			}),
+		})
+		.strict(),
+	execute: async ({ timestamps }) => epochMillisecondsToDate(timestamps),
 });

@@ -3,6 +3,8 @@ import type { Context } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import {
 	getRateLimitType,
+	RATE_LIMIT_CONFIGS,
+	RateLimitScope,
 	RateLimitType,
 } from "@/internal/misc/rateLimiter/rateLimitConfigs.js";
 
@@ -108,6 +110,26 @@ describe("getRateLimitType", () => {
 				createContext({ method: "POST", path: "/v1/entities.get" }),
 			),
 		).toBe(RateLimitType.CustomerEntitiesGet);
+	});
+
+	test("classifies log endpoints into their org-scoped logs bucket", () => {
+		expect(
+			getRateLimitType(
+				createContext({ method: "POST", path: "/v1/logs.search" }),
+			),
+		).toBe(RateLimitType.Logs);
+		expect(
+			getRateLimitType(
+				createContext({ method: "POST", path: "/v1/logs.query" }),
+			),
+		).toBe(RateLimitType.Logs);
+
+		expect(RATE_LIMIT_CONFIGS[RateLimitType.Logs]).toMatchObject({
+			name: "logs",
+			limit: 10,
+			windowMs: 1000,
+			scope: RateLimitScope.Org,
+		});
 	});
 
 	test("falls back to the general bucket for uncategorized routes", () => {

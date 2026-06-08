@@ -61,6 +61,7 @@ export * from "./models/cusModels/billingControls/purchaseLimitInterval";
 export * from "./models/cusModels/cusModels";
 // Processor Models
 export * from "./models/processorModels/processorModels";
+export * from "./utils/chatState";
 export { schemas };
 
 // Cus response
@@ -216,6 +217,7 @@ export * from "./utils/fullSubjectUtils";
 export * from "./utils/index";
 export * from "./utils/intervalUtils";
 export * from "./utils/invoices/index";
+export * from "./utils/leafOAuthScopes";
 export * from "./utils/planFeatureUtils/planToDbFreeTrial";
 export * from "./utils/productDisplayUtils";
 export * from "./utils/productDisplayUtils/sortProductItems";
