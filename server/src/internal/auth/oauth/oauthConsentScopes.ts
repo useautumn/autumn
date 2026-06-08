@@ -14,14 +14,14 @@ export const getOAuthConsentScopeGrant = async ({
 	requestedScopes?: string[] | null;
 	userId: string;
 }) => {
-	const requestedLeafScopes = getDefaultOAuthScopes(requestedScopes);
+	const finalRequestedScopes = getDefaultOAuthScopes(requestedScopes);
 	const { scopes: userScopes } = await getScopesForUserInOrg({
 		db,
 		userId,
 		organizationId,
 	});
 
-	const grant = requestedLeafScopes.filter((scope) =>
+	const grant = finalRequestedScopes.filter((scope) =>
 		isScopeSubset([scope], userScopes),
 	);
 	if (grant.length > 0) return grant;
