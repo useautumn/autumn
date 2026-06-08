@@ -33,3 +33,12 @@ export const DbSpendLimitSchema = z
 	);
 
 export type DbSpendLimit = z.infer<typeof DbSpendLimitSchema>;
+
+export const SpendLimitResponseSchema = DbSpendLimitSchema.extend({
+	usage_limit_used: z.number().min(0).optional().meta({
+		description:
+			"Current usage already consumed in the active usage_limit window. Response-only; not stored on billing controls.",
+	}),
+});
+
+export type SpendLimitResponse = z.infer<typeof SpendLimitResponseSchema>;

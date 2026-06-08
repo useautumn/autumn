@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { DbSpendLimitSchema } from "../../models/cusModels/billingControls/spendLimit.js";
 import { ApiOverageAllowedSchema } from "./overageAllowed.js";
 import { ApiSpendLimitSchema } from "./spendLimit.js";
 import { ApiUsageAlertSchema } from "./usageAlert.js";
@@ -17,8 +18,22 @@ export const ApiEntityBillingControlsSchema = z.object({
 	}),
 });
 
+const ApiEntityBillingControlsParamsBaseSchema = z.object({
+	spend_limits: z.array(DbSpendLimitSchema).optional().meta({
+		description:
+			"List of spend limits per feature. Each entry caps overage (overage_limit) and/or windowed usage (usage_limit).",
+	}),
+	usage_alerts: z.array(ApiUsageAlertSchema).optional().meta({
+		description: "List of usage alert configurations per feature.",
+	}),
+	overage_allowed: z.array(ApiOverageAllowedSchema).optional().meta({
+		description:
+			"List of overage allowed controls per feature. When enabled, usage can exceed balance.",
+	}),
+});
+
 export const ApiEntityBillingControlsParamsSchema =
-	ApiEntityBillingControlsSchema.check((ctx) => {
+	ApiEntityBillingControlsParamsBaseSchema.check((ctx) => {
 		const billingControls = ctx.value;
 		const spendLimitFeatureIds = new Set<string>();
 

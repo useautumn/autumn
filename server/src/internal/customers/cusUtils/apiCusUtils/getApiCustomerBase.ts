@@ -5,6 +5,9 @@ import {
 	CustomerExpand,
 	type CustomerLegacyData,
 	type FullCustomer,
+	fullCustomerToFullSubject,
+	fullSubjectToApiSpendLimits,
+	orgToInStatuses,
 	scopeExpandForCtx,
 } from "@autumn/shared";
 import { z } from "zod/v4";
@@ -45,6 +48,11 @@ export const getApiCustomerBase = async ({
 		ctx: subscriptionsScopedCtx,
 		fullCus,
 	});
+	const spendLimits = fullSubjectToApiSpendLimits({
+		fullSubject: fullCustomerToFullSubject({ fullCustomer: fullCus }),
+		features: ctx.features,
+		inStatuses: orgToInStatuses({ org: ctx.org }),
+	});
 
 	const apiCustomer = ApiCustomerV5Schema.extend({
 		autumn_id: z.string().optional(),
@@ -68,7 +76,7 @@ export const getApiCustomerBase = async ({
 		send_email_receipts: fullCus.send_email_receipts ?? false,
 		billing_controls: {
 			auto_topups: fullCus.auto_topups ?? undefined,
-			spend_limits: fullCus.spend_limits ?? undefined,
+			spend_limits: spendLimits,
 			usage_alerts: fullCus.usage_alerts ?? undefined,
 			overage_allowed: fullCus.overage_allowed ?? undefined,
 		},

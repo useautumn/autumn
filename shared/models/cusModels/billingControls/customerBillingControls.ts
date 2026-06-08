@@ -9,7 +9,11 @@ import {
 	DbOverageAllowedSchema,
 } from "./overageAllowed.js";
 import { PurchaseLimitIntervalEnum } from "./purchaseLimitInterval.js";
-import { type DbSpendLimit, DbSpendLimitSchema } from "./spendLimit.js";
+import {
+	type DbSpendLimit,
+	DbSpendLimitSchema,
+	SpendLimitResponseSchema,
+} from "./spendLimit.js";
 import { type DbUsageAlert, DbUsageAlertSchema } from "./usageAlert.js";
 
 export const AutoTopupPurchaseLimitSchema = z.object({
@@ -125,7 +129,7 @@ export const CustomerBillingControlsResponseSchema = z.object({
 	auto_topups: z.array(AutoTopupResponseSchema).optional().meta({
 		description: "List of auto top-up configurations per feature.",
 	}),
-	spend_limits: z.array(DbSpendLimitSchema).optional().meta({
+	spend_limits: z.array(SpendLimitResponseSchema).optional().meta({
 		description:
 			"List of spend limits per feature. Each entry caps overage (overage_limit) and/or windowed usage (usage_limit).",
 	}),

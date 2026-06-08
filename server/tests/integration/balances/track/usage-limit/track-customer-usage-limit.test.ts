@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { type CustomerBillingControls, EntInterval } from "@autumn/shared";
+import {
+	type ApiCustomerV5,
+	type CustomerBillingControls,
+	EntInterval,
+} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -51,11 +55,11 @@ const setCustomerUsageLimit = async ({
 };
 
 // Credit system: 100 credits, 1 action1 = 0.2 credits (see v2Features.ts).
-// A cap of 5 action1 units consumes only 1 credit, so the cap must block the
+// A cap of 5 action1 units consumes only 1 credit, so the cap must clamp the
 // 6th unit while ~99 credits remain, proving it's a second, independent
 // dimension, not a balance check.
 test.concurrent(
-	`${chalk.yellowBright("track-customer-usage-limit1: per-feature cap blocks deduction while credits remain")}`,
+	`${chalk.yellowBright("track-customer-usage-limit1: per-feature cap clamps the over-cap unit while credits remain")}`,
 	async () => {
 		const customerProduct = products.base({
 			id: "track-customer-usage-limit",
@@ -93,24 +97,18 @@ test.concurrent(
 			usage: 1,
 		});
 
-		// The 6th unit exceeds the cap. It must be hard-blocked BEFORE any
-		// deduction, even though ~99 credits remain.
-		let blocked = false;
-		let blockedCode: string | undefined;
-		try {
-			await autumnV2_1.track({
-				customer_id: customerId,
-				feature_id: TestFeature.Action1,
-				value: 1,
-			});
-		} catch (error) {
-			blocked = true;
-			blockedCode = (error as { code?: string }).code;
-		}
-
-		expect(blocked).toBe(true);
-		// 400 not 429: clients flatten a 429 to a generic rate_limit_exceeded.
-		expect(blockedCode).toBe("usage_limit_exceeded");
+		// The 6th unit is over the cap, so it clamps to 0: the track succeeds but
+		// applies nothing, leaving credits unchanged.
+		const overCap = await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Action1,
+			value: 1,
+		});
+		expect(overCap.balances?.[TestFeature.Credits]).toMatchObject({
+			granted: 100,
+			remaining: 99,
+			usage: 1,
+		});
 	},
 );
 
@@ -214,9 +212,9 @@ test.concurrent(
 );
 
 // A single spend_limit entry carrying BOTH an overage_limit and a windowed usage
-// cap must still enforce the window (the two caps are independent).
+// cap must still clamp on the window (the two caps are independent).
 test.concurrent(
-	`${chalk.yellowBright("track-customer-usage-limit4: a spend_limit with both overage_limit and a usage window still enforces the window")}`,
+	`${chalk.yellowBright("track-customer-usage-limit4: a spend_limit with both overage_limit and a usage window clamps the window")}`,
 	async () => {
 		const customerProduct = products.base({
 			id: "track-customer-compound-cap",
@@ -256,26 +254,25 @@ test.concurrent(
 			value: 5,
 		});
 
-		let blockedCode: string | undefined;
-		try {
-			await autumnV2_1.track({
-				customer_id: customerId,
-				feature_id: TestFeature.Action1,
-				value: 1,
-			});
-		} catch (error) {
-			blockedCode = (error as { code?: string }).code;
-		}
-
-		expect(blockedCode).toBe("usage_limit_exceeded");
+		// The window cap clamps the over-cap unit to 0 (the overage path is separate),
+		// so the track succeeds and credits are unchanged.
+		const overCap = await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Action1,
+			value: 1,
+		});
+		expect(overCap.balances?.[TestFeature.Credits]).toMatchObject({
+			remaining: 99,
+			usage: 1,
+		});
 	},
 );
 
 // Two concurrent tracks on the SAME customer's SAME window must serialize (Redis
-// runs each deduction Lua atomically): combined value exceeds the cap, so exactly
-// one succeeds and one is rejected, and the counter reflects only the winner.
+// runs each deduction Lua atomically): combined value exceeds the cap, so the
+// second track clamps and the counter reflects exactly the capped usage.
 test.concurrent(
-	`${chalk.yellowBright("track-customer-usage-limit6: concurrent tracks on one window serialize, one rejected")}`,
+	`${chalk.yellowBright("track-customer-usage-limit6: concurrent tracks on one window serialize, total clamped to the cap")}`,
 	async () => {
 		const customerProduct = products.base({
 			id: "track-customer-concurrent-cap",
@@ -313,16 +310,17 @@ test.concurrent(
 			}),
 		]);
 
-		const fulfilled = results.filter((result) => result.status === "fulfilled");
-		const rejected = results.filter(
-			(result): result is PromiseRejectedResult => result.status === "rejected",
-		);
+		// Both succeed now (clamp, not reject), but the window clamps the combined
+		// applied usage to the cap: one applies 5, the other clamps to 0.
+		expect(results.every((result) => result.status === "fulfilled")).toBe(true);
 
-		expect(fulfilled).toHaveLength(1);
-		expect(rejected).toHaveLength(1);
-		expect((rejected[0].reason as { code?: string }).code).toBe(
-			"usage_limit_exceeded",
-		);
+		await timeout(2000);
+		const final = await autumnV2_1.customers.get<ApiCustomerV5>(customerId);
+		expect(final.balances?.[TestFeature.Credits]).toMatchObject({
+			feature_id: TestFeature.Credits,
+			remaining: 99,
+			usage: 1,
+		});
 	},
 );
 
@@ -489,7 +487,7 @@ test.concurrent(
 // No manual sync flush: the counter must survive the mutation's cache invalidation on
 // its own, else the cap silently resets and hands out fresh headroom.
 test(
-	`${chalk.yellowBright("track-customer-usage-limit-lowercap: lowering the cap below current usage keeps blocking (no counter reset)")}`,
+	`${chalk.yellowBright("track-customer-usage-limit-lowercap: lowering the cap below current usage keeps the counter (clamps, no reset)")}`,
 	async () => {
 		const customerProduct = products.base({
 			id: "track-customer-uw-lowercap",
@@ -532,28 +530,22 @@ test(
 			},
 		});
 
-		let blocked = false;
-		let blockedCode: string | undefined;
-		try {
-			await autumnV2_1.track({
-				customer_id: customerId,
-				feature_id: TestFeature.Messages,
-				value: 1,
-			});
-		} catch (error) {
-			blocked = true;
-			blockedCode = (error as { code?: string }).code;
-		}
-
-		expect(blocked).toBe(true);
-		expect(blockedCode).toBe("usage_limit_exceeded");
+		const clamped = await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 1,
+		});
+		expect(clamped.balance).toMatchObject({
+			remaining: 992,
+			usage: 8,
+		});
 	},
 );
 
 // Bug 1: a second balance grant (balances.create) is a cache-invalidating mutation;
 // the cap counter must survive it. It used to reset to 0, opening fresh headroom.
 test(
-	`${chalk.yellowBright("track-customer-usage-limit-regrant: re-granting a balance does not reset the cap")}`,
+	`${chalk.yellowBright("track-customer-usage-limit-regrant: the cap counter survives a re-grant (clamps)")}`,
 	async () => {
 		const customerProduct = products.base({
 			id: "track-customer-uw-regrant",
@@ -583,18 +575,12 @@ test(
 			value: 5,
 		});
 
-		let blockedBefore = false;
-		try {
-			await autumnV2_1.track({
-				customer_id: customerId,
-				feature_id: TestFeature.Messages,
-				value: 1,
-			});
-		} catch (error) {
-			blockedBefore =
-				(error as { code?: string }).code === "usage_limit_exceeded";
-		}
-		expect(blockedBefore).toBe(true);
+		const clampedBefore = await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 1,
+		});
+		expect(clampedBefore.balance).toMatchObject({ usage: 5 });
 
 		// Re-grant a second balance for the same feature while at the cap.
 		await autumnV2_1.post("/balances.create", {
@@ -604,20 +590,99 @@ test(
 			reset: { interval: EntInterval.Month },
 		});
 
-		let blockedAfter = false;
-		let blockedCode: string | undefined;
-		try {
-			await autumnV2_1.track({
-				customer_id: customerId,
-				feature_id: TestFeature.Messages,
-				value: 1,
-			});
-		} catch (error) {
-			blockedAfter = true;
-			blockedCode = (error as { code?: string }).code;
-		}
+		const clampedAfter = await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 1,
+		});
+		expect(clampedAfter.balance).toMatchObject({ usage: 5 });
+	},
+);
 
-		expect(blockedAfter).toBe(true);
-		expect(blockedCode).toBe("usage_limit_exceeded");
+// Q1 clamp: an over-cap track applies what fits (the remaining headroom) instead of
+// rejecting the whole track. cap 5, track 10 from 0 -> applies 5 (not 10, not a 400).
+test(
+	`${chalk.yellowBright("track-customer-usage-limit-clamp: over-cap track applies what fits (clamp, not reject)")}`,
+	async () => {
+		const customerProduct = products.base({
+			id: "track-customer-uw-clamp",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const customerId = `track-customer-uw-clamp-1-${Date.now()}`;
+		const { autumnV2_1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: false }),
+				s.products({ list: [customerProduct] }),
+			],
+			actions: [s.billing.attach({ productId: customerProduct.id })],
+		});
+
+		await setCustomerUsageLimit({
+			autumn: autumnV2_1,
+			customerId,
+			featureId: TestFeature.Messages,
+			limit: 5,
+		});
+
+		// Track 10 against a cap of 5 (from 0): clamps to 5, returns 200, not a reject.
+		const clamped = await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 10,
+		});
+		expect(clamped.value).toBe(10);
+		expect(clamped.balance).toMatchObject({ remaining: 95, usage: 5 });
+
+		// At the cap: a further track applies 0 (fully clamped), still 200.
+		const atCap = await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 3,
+		});
+		expect(atCap.balance).toMatchObject({ remaining: 95, usage: 5 });
+	},
+);
+
+// Q2: the spend_limit in the customer response exposes the current window usage.
+test(
+	`${chalk.yellowBright("track-customer-usage-limit-counter: spend_limit exposes the current window usage")}`,
+	async () => {
+		const customerProduct = products.base({
+			id: "track-customer-uw-counter",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const customerId = `track-customer-uw-counter-1-${Date.now()}`;
+		const { autumnV2_1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: false }),
+				s.products({ list: [customerProduct] }),
+			],
+			actions: [s.billing.attach({ productId: customerProduct.id })],
+		});
+
+		await setCustomerUsageLimit({
+			autumn: autumnV2_1,
+			customerId,
+			featureId: TestFeature.Messages,
+			limit: 5,
+		});
+
+		await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 3,
+		});
+
+		const customer = (await autumnV2_1.get(
+			`/customers/${customerId}`,
+		)) as ApiCustomerV5;
+		const limit = customer.billing_controls?.spend_limits?.find(
+			(entry) => entry.feature_id === TestFeature.Messages,
+		);
+		expect(limit?.usage_limit_used).toBe(3);
 	},
 );

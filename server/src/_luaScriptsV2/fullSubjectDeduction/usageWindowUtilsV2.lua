@@ -74,6 +74,50 @@ local function usage_window_consumed(params)
   return safe_number(params.amount_to_deduct) - safe_number(params.remaining_amount)
 end
 
+-- Clamps metered-feature usage caps before deduction so over-cap tracks apply
+-- only the remaining headroom. Balance caps are credit-denominated, so unit
+-- clamping would need credit conversion; they stay on the post-deduction check.
+local function clamp_amount_to_usage_windows(params)
+  local context = params.context
+  local limits = params.usage_window_limits or {}
+  local clamped_amount = safe_number(params.amount_to_deduct)
+
+  for _, limit in ipairs(limits) do
+    local windows = get_anchor_usage_windows(
+      context,
+      limit.anchor_customer_entitlement_id
+    )
+    if is_nil(windows) then
+      return {
+        amount_to_deduct = clamped_amount,
+        exceeded_feature_id = limit.feature_id,
+      }
+    end
+
+    if limit.dimension_type ~= 'balance' then
+      local existing = find_usage_window(
+        windows,
+        limit.feature_id,
+        limit.window_start_at
+      )
+      local current_usage = existing and safe_number(existing.usage) or 0
+      local headroom = safe_number(limit.limit) - current_usage
+      if headroom < 0 then
+        headroom = 0
+      end
+
+      if clamped_amount > headroom then
+        clamped_amount = headroom
+      end
+    end
+  end
+
+  return {
+    amount_to_deduct = clamped_amount,
+    exceeded_feature_id = nil,
+  }
+end
+
 -- Returns the feature_id of the first limit that would be exceeded (so the
 -- caller can hard-reject), or nil if every limit has room. Null/missing anchor
 -- fails closed: a cap that cannot resolve an owner must not silently allow.

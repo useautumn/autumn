@@ -219,6 +219,38 @@ if not is_nil(unwind_value) and safe_number(unwind_value) > 0 then
 end
 
 local logger = context.logger
+
+-- Usage windows are enforced only for positive consumption, never for refunds,
+-- target_balance, granted-balance edits, locks, or unwinds.
+local enforce_usage_windows = is_consumption
+    and is_nil(unwind_value)
+    and (is_nil(lock) or not lock.enabled)
+    and not is_nil(usage_window_limits)
+    and #usage_window_limits > 0
+
+if enforce_usage_windows then
+  local clamp_result = clamp_amount_to_usage_windows({
+    context = context,
+    usage_window_limits = usage_window_limits,
+    amount_to_deduct = amount_to_deduct,
+  })
+
+  if not is_nil(clamp_result.exceeded_feature_id) then
+    return cjson.encode({
+      error = 'USAGE_LIMIT_EXCEEDED',
+      feature_id = clamp_result.exceeded_feature_id,
+      remaining = safe_number(amount_to_deduct),
+      updates = {},
+      rollover_updates = {},
+      modified_customer_entitlement_ids = new_empty_array(),
+      mutation_logs = new_empty_array(),
+      logs = context.logs,
+    })
+  end
+
+  amount_to_deduct = clamp_result.amount_to_deduct
+end
+
 logger.log("=== LUA DEDUCTION START ===")
 logger.log("=== PARAMS ===")
 logger.log("  amount_to_deduct: %s", tostring(amount_to_deduct or "nil"))
@@ -278,17 +310,6 @@ if remaining_amount > 0 and overage_behaviour == 'reject' then
     logs = context.logs
   })
 end
-
--- Hard windowed usage-limit enforcement, on ACTUAL consumed amounts, before any
--- writes. Only for positive consumption (refunds / target_balance / granted
--- balance edits never trip or move counters). v1 also excludes lock-based and
--- unwind flows: counter reversal on partial unwind is not implemented yet, so
--- enforcing there could drift the counter.
-local enforce_usage_windows = is_consumption
-    and is_nil(unwind_value)
-    and (is_nil(lock) or not lock.enabled)
-    and not is_nil(usage_window_limits)
-    and #usage_window_limits > 0
 
 if enforce_usage_windows then
   local exceeded_feature_id = check_usage_window_limits({
