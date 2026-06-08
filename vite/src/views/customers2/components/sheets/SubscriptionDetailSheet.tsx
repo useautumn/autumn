@@ -94,7 +94,7 @@ function SubscriptionDetailItems({
 
 	return (
 		<SheetSection>
-			<div className="flex gap-2 justify-between items-center h-6 mb-3">
+			<div className="flex gap-2 justify-between items-center h-6 mb-1">
 				<BasePriceDisplay
 					product={product}
 					readOnly={true}
@@ -102,7 +102,7 @@ function SubscriptionDetailItems({
 				/>
 			</div>
 
-			<div className="space-y-2">
+			<div className="flex flex-col gap-0">
 				{visibleItems.map((item, index) => renderRow(item, index))}
 				{collapsedBooleanItems.length > 0 && (
 					<CollapsedBooleanItems

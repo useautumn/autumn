@@ -147,7 +147,7 @@ export function PlanItemsSection({
 			/>
 			<LayoutGroup>
 				<motion.div
-					className="flex flex-col gap-1.5"
+					className="flex flex-col gap-0"
 					layout="position"
 					transition={{ layout: LAYOUT_TRANSITION }}
 				>
