@@ -1,5 +1,5 @@
 ---
-title: "How we built a multi-region architecture and why we went back"
+title: "We went multi-region then undid it"
 description: "Why we moved Autumn to a multi-region architecture, the tradeoffs we hit with active-active Redis, and why we eventually returned to a simpler single-region setup."
 date: "2026-06-08"
 author: "John, Autumn Co-Founder"
@@ -81,7 +81,7 @@ Now trying to do this with Postgres sounded like a headache. Imagine trying to J
 
 The final approach, which we ended up going with, was using an Active-Active database from Redis Cloud. You spin up Redis caches in multiple regions, all fully synced, and you can write to any of them. When concurrent writes hit the same key in different regions, Redis Cloud resolves the conflict using CRDTs: Conflict-free Replicated Data Types.
 
-Using a counter as an example: two concurrent INCRs merge into their sum rather than overwriting each other. This fit our use case perfectly. Each server connects to its own Redis cache in the cluster, and since our writes are just increments, the conflicts get resolved for us.
+Using a counter as an example: two concurrent increment operations merge into their sum rather than overwriting each other. This fit our use case perfectly. Each server connects to its own Redis cache in the cluster, and since our writes are just increments, the conflicts get resolved for us.
 
 ## Why we went back
 
