@@ -25,7 +25,10 @@ export const getByCustomerProductIds = async ({
 		.where(
 			and(
 				inArray(invoiceLineItems.direction, [...directions]),
-				sql`${invoiceLineItems.customer_product_ids}::jsonb ?| ${customerProductIds}::text[]`,
+				sql`${invoiceLineItems.customer_product_ids} ?| ARRAY[${sql.join(
+					customerProductIds.map((id) => sql`${id}`),
+					sql`, `,
+				)}]::text[]`,
 			),
 		);
 };

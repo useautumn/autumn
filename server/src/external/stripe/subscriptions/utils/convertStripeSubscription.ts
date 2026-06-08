@@ -156,3 +156,15 @@ export const stripeSubscriptionToScheduleId = ({
 		? stripeSubscription.schedule
 		: (stripeSubscription.schedule?.id ?? undefined);
 };
+
+export const stripeSubscriptionToApplication = ({
+	stripeSubscription,
+}: {
+	stripeSubscription?: Stripe.Subscription;
+}): string | null => {
+	if (!stripeSubscription?.application) return null;
+
+	return typeof stripeSubscription.application === "string"
+		? stripeSubscription.application
+		: stripeSubscription.application.id;
+};
