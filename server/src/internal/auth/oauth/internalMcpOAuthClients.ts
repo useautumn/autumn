@@ -1,3 +1,4 @@
+import { MCP_CLIENT_KIND } from "@autumn/auth/oauth";
 import type { Context } from "hono";
 import { type DrizzleCli, db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
@@ -8,7 +9,6 @@ const INTERNAL_MCP_CLIENT_NAME = "Autumn internal-mcp";
 const INTERNAL_MCP_CLIENT_NAME_NORMALIZED =
 	INTERNAL_MCP_CLIENT_NAME.toLowerCase();
 const INTERNAL_MCP_KIND = "internal_mcp";
-const MCP_CLIENT_KIND = "mcp_client";
 
 type InternalMcpMetadata = {
 	kind?: string;
