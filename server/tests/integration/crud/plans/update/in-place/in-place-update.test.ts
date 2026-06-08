@@ -36,15 +36,18 @@ import { snapshotCustomerState } from "./utils/snapshotCustomerState";
 const messagesEnt = async ({
 	ctx,
 	planId,
+	version,
 }: {
 	ctx: Parameters<typeof snapshotCustomerState>[0]["ctx"];
 	planId: string;
+	version?: number;
 }) => {
 	const product = await ProductService.getFull({
 		db: ctx.db,
 		idOrInternalId: planId,
 		orgId: ctx.org.id,
 		env: ctx.env,
+		version,
 	});
 	return product.entitlements.find(
 		(ent) => ent.feature?.id === TestFeature.Messages,
@@ -122,4 +125,61 @@ test(`${chalk.yellowBright("plans.update disable_version: UPDATE retires old ent
 		usage: 0,
 		planId: pro.id,
 	});
+});
+
+test(`${chalk.yellowBright("plans.update disable_version: respects requested version")}`, async () => {
+	const customerId = "plan-in-place-update-version-v1";
+	const pro = products.pro({
+		id: "pro_in_place_update_version",
+		items: [items.monthlyMessages({ includedUsage: 100 })],
+	});
+
+	const { autumnV1, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+
+	const autumnRpc = new AutumnRpcCli({
+		secretKey: ctx.orgSecretKey,
+		version: ApiVersion.V2_1,
+	});
+
+	await autumnV1.products.update(pro.id, {
+		items: [items.monthlyMessages({ includedUsage: 200 })],
+	});
+
+	expect((await messagesEnt({ ctx, planId: pro.id, version: 1 }))?.allowance).toBe(
+		100,
+	);
+	expect((await messagesEnt({ ctx, planId: pro.id, version: 2 }))?.allowance).toBe(
+		200,
+	);
+
+	await autumnRpc.plans.update<
+		ApiPlanV1,
+		Omit<UpdatePlanParamsV2Input, "plan_id">
+	>(pro.id, {
+		version: 1,
+		disable_version: true,
+		name: pro.name,
+		price: { amount: 20, interval: BillingInterval.Month },
+		items: [
+			{
+				feature_id: TestFeature.Messages,
+				included: 150,
+				reset: { interval: ResetInterval.Month },
+			},
+		],
+	});
+
+	expect((await messagesEnt({ ctx, planId: pro.id, version: 1 }))?.allowance).toBe(
+		150,
+	);
+	expect((await messagesEnt({ ctx, planId: pro.id, version: 2 }))?.allowance).toBe(
+		200,
+	);
 });

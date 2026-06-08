@@ -274,6 +274,7 @@ export function MigrationLiveView({
 		triggerRun,
 		isRunning,
 	} = useRealtimeSubscriptions({ migrationId, invalidateRuns });
+	const isRunInProgress = isRunning || hasActiveRun || hasRealtimeActive;
 
 	const {
 		customers,
@@ -460,6 +461,7 @@ export function MigrationLiveView({
 						className="rounded-r-none border-r-0"
 						onClick={() => setIsRunDialogOpen(true)}
 						isLoading={isRunning}
+						disabled={isRunInProgress}
 					>
 						<PlayIcon size={14} weight="fill" />
 						Run All
@@ -470,16 +472,21 @@ export function MigrationLiveView({
 								variant="primary"
 								size="default"
 								className="rounded-l-none border-l border-l-white/20 px-2"
+								disabled={isRunInProgress}
 							>
 								<CaretDownIcon size={12} />
 							</Button>
 						</DropdownMenuTrigger>
 						<DropdownMenuContent align="end" sideOffset={4}>
-							<DropdownMenuItem onClick={() => triggerRun({ dryRun: true })}>
+							<DropdownMenuItem
+								disabled={isRunInProgress}
+								onClick={() => triggerRun({ dryRun: true })}
+							>
 								<EyeIcon size={14} />
 								Dry Run All
 							</DropdownMenuItem>
 							<DropdownMenuItem
+								disabled={isRunInProgress}
 								onClick={() => setSample((s) => ({ ...s, open: true }))}
 							>
 								<PlayIcon size={14} weight="fill" />
@@ -571,6 +578,8 @@ export function MigrationLiveView({
 									setIsRunDialogOpen(false);
 									triggerRun({ dryRun: false, ...resolvedRunControls });
 								}}
+								isLoading={isRunning}
+								disabled={isRunInProgress}
 							>
 								<PlayIcon size={14} weight="fill" />
 								Run
@@ -677,6 +686,7 @@ export function MigrationLiveView({
 								variant="secondary"
 								isLoading={sample.running === "dry"}
 								disabled={
+									isRunInProgress ||
 									sample.running !== null ||
 									(sample.mode === "limit"
 										? !sample.limit || Number(sample.limit) < 1
@@ -715,6 +725,7 @@ export function MigrationLiveView({
 								metaShortcut="enter"
 								isLoading={sample.running === "live"}
 								disabled={
+									isRunInProgress ||
 									sample.running !== null ||
 									(sample.mode === "limit"
 										? !sample.limit || Number(sample.limit) < 1

@@ -57,6 +57,7 @@ export const updateProduct = async ({
 			idOrInternalId: productId,
 			orgId: org.id,
 			env,
+			version,
 		});
 	};
 
@@ -200,6 +201,7 @@ export const updateProduct = async ({
 		idOrInternalId: latestProductId,
 		orgId: org.id,
 		env,
+		version: fullProduct.version,
 	});
 
 	if (free_trial !== undefined) {

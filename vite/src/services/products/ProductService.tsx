@@ -1,3 +1,4 @@
+import type { UpdatePlanParamsV2Input } from "@autumn/shared";
 import type { AxiosInstance } from "axios";
 import { notNullish } from "@/utils/genUtils";
 
@@ -21,6 +22,14 @@ export class ProductService {
 			? `/v1/products/${productId}?${qs}`
 			: `/v1/products/${productId}`;
 		const response = await axiosInstance.post(url, data);
+		return response.data;
+	}
+
+	static async updatePlan(
+		axiosInstance: AxiosInstance,
+		data: UpdatePlanParamsV2Input,
+	) {
+		const response = await axiosInstance.post("/v1/plans.update", data);
 		return response.data;
 	}
 

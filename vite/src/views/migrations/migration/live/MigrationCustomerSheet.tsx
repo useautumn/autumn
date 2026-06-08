@@ -74,6 +74,7 @@ export function MigrationCustomerSheet({
 				isActive={isActive || hasRealtimeActive || isSettling}
 				activeRunDryRun={activeRunDryRun}
 				isRunning={isRunning}
+				isRunInProgress={isRunning || isActive || hasRealtimeActive}
 				onTriggerRun={triggerRun}
 				operations={operations}
 				noBillingChanges={noBillingChanges}

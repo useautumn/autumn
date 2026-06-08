@@ -2,6 +2,7 @@ import type {
 	ApiPlanV1,
 	Feature,
 	FrontendProduct,
+	UpdatePlanParamsV2Input,
 } from "@autumn/shared";
 import {
 	diffPlanV1,
@@ -23,7 +24,7 @@ export interface MigrationDraft {
 	no_billing_changes: boolean;
 }
 
-function frontendProductToApiPlanV1(
+export function frontendProductToApiPlanV1(
 	product: FrontendProduct,
 	features: Feature[],
 ): ApiPlanV1 {
@@ -77,6 +78,56 @@ function frontendProductToApiPlanV1(
 		base_variant_id: null,
 		config: product.config ?? { ignore_past_due: false },
 	} satisfies ApiPlanV1;
+}
+
+function planItemsToUpdateParams(
+	items: ApiPlanV1["items"],
+): NonNullable<UpdatePlanParamsV2Input["items"]> {
+	return items.map(({ feature, display, reset, price, proration, rollover, ...item }) => ({
+		...item,
+		...(reset ? { reset } : {}),
+		...(price ? { price } : {}),
+		...(proration ? { proration } : {}),
+		...(rollover
+			? {
+					rollover: {
+						expiry_duration_type: rollover.expiry_duration_type,
+						expiry_duration_length: rollover.expiry_duration_length,
+						...(rollover.max != null ? { max: rollover.max } : {}),
+						...(rollover.max_percentage != null
+							? { max_percentage: rollover.max_percentage }
+							: {}),
+					},
+				}
+			: {}),
+	}));
+}
+
+export function buildInPlaceUpdatePlanParams({
+	baseProduct,
+	editedProduct,
+	features,
+}: {
+	baseProduct: FrontendProduct;
+	editedProduct: FrontendProduct;
+	features: Feature[];
+}): UpdatePlanParamsV2Input {
+	const plan = frontendProductToApiPlanV1(editedProduct, features);
+
+	return {
+		plan_id: baseProduct.id,
+		version: baseProduct.version,
+		name: plan.name,
+		description: plan.description ?? "",
+		group: plan.group ?? "",
+		add_on: plan.add_on,
+		auto_enable: plan.auto_enable,
+		price: plan.price,
+		items: planItemsToUpdateParams(plan.items),
+		free_trial: plan.free_trial ?? null,
+		config: plan.config,
+		disable_version: true,
+	} satisfies UpdatePlanParamsV2Input;
 }
 
 function diffHasBillingChanges(diff: DiffedCustomizePlanV1): boolean {

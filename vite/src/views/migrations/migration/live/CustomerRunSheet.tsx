@@ -96,6 +96,7 @@ export function CustomerRunSheet({
 	isActive,
 	activeRunDryRun,
 	isRunning,
+	isRunInProgress,
 	onTriggerRun,
 	operations,
 	noBillingChanges,
@@ -107,6 +108,7 @@ export function CustomerRunSheet({
 	isActive: boolean;
 	activeRunDryRun: boolean | null;
 	isRunning: boolean;
+	isRunInProgress: boolean;
 	onTriggerRun: (opts: { dryRun: boolean; only?: string[] }) => void;
 	operations: Operations;
 	noBillingChanges: boolean;
@@ -127,11 +129,13 @@ export function CustomerRunSheet({
 	);
 
 	const handleDryRun = () => {
+		if (isRunInProgress) return;
 		lastActionRef.current = "dry";
 		onTriggerRun({ dryRun: true, only: [customerId] });
 	};
 
 	const handleLiveRun = () => {
+		if (isRunInProgress) return;
 		setIsRunDialogOpen(false);
 		lastActionRef.current = "live";
 		onTriggerRun({ dryRun: false, only: [customerId] });
@@ -271,7 +275,7 @@ export function CustomerRunSheet({
 					isLoading={isRunning && lastActionRef.current === "dry"}
 					disabled={
 						hasSuccessfulLiveRun ||
-						(isRunning && lastActionRef.current !== "dry")
+						isRunInProgress
 					}
 				>
 					<EyeIcon size={14} />
@@ -282,7 +286,7 @@ export function CustomerRunSheet({
 					metaShortcut="enter"
 					className="w-full"
 					onClick={() => setIsRunDialogOpen(true)}
-					disabled={hasSuccessfulLiveRun || isRunning || isRunDialogOpen}
+					disabled={hasSuccessfulLiveRun || isRunInProgress || isRunDialogOpen}
 				>
 					<PlayIcon size={14} weight="fill" />
 					Run
@@ -318,7 +322,7 @@ export function CustomerRunSheet({
 							metaShortcut="enter"
 							onClick={handleLiveRun}
 							isLoading={isRunning && lastActionRef.current === "live"}
-							disabled={!isRunDialogOpen}
+							disabled={!isRunDialogOpen || isRunInProgress}
 						>
 							<PlayIcon size={14} weight="fill" />
 							Run
