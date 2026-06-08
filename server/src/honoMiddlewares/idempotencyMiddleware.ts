@@ -6,8 +6,7 @@ import {
 	releaseIdempotencyKey,
 } from "@/internal/misc/idempotency/checkIdempotencyKey.js";
 
-const shouldReleaseStatus = (status: number) =>
-	status >= 400 && status < 500 && status !== 409;
+const shouldReleaseStatus = (status: number) => status >= 400 && status !== 409;
 
 const shouldReleaseError = (error: unknown) => {
 	const statusCode =
