@@ -43,7 +43,22 @@ export const deleteOAuthAccessTokensByClientAndReference = async ({
 			),
 		);
 
+export const updateOAuthAccessTokenScopes = async ({
+	db,
+	id,
+	scopes,
+}: {
+	db: DrizzleCli;
+	id: string;
+	scopes: string[];
+}) =>
+	db
+		.update(oauthAccessToken)
+		.set({ scopes })
+		.where(eq(oauthAccessToken.id, id));
+
 export const oauthAccessTokenRepo = {
 	getValidByTokenValues: getValidOAuthAccessTokenByTokenValues,
 	deleteByClientAndReference: deleteOAuthAccessTokensByClientAndReference,
+	updateScopes: updateOAuthAccessTokenScopes,
 };

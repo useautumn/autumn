@@ -1,11 +1,10 @@
 import { AppEnv, RecaseError } from "@autumn/shared";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { auth } from "@/utils/auth.js";
 import { oauthConsentRepo } from "../repos/index.js";
 import { isAtmnOAuthClientId } from "./atmnOAuthClients.js";
-import { assertMcpOAuthScopeGrant } from "./mcpOAuthScopes.js";
+import { getOAuthConsentScopeGrant } from "./oauthConsentScopes.js";
 
 type RequestFields = Record<string, unknown>;
 
@@ -67,10 +66,6 @@ const getRedirectUriFromFields = (fields: RequestFields) =>
 	getString(fields.redirect_uri) ??
 	getString(fields.redirectUri) ??
 	getNestedOAuthField(fields.oauth_query, "redirect_uri");
-
-const getResourceFromFields = (fields: RequestFields) =>
-	getString(fields.resource) ??
-	getNestedOAuthField(fields.oauth_query, "resource");
 
 const getScopesFromFields = (fields: RequestFields) => {
 	const rawScope =
@@ -159,25 +154,19 @@ export const handleOAuthConsentWithEnv = async (c: Context) => {
 		const orgId = session?.session?.activeOrganizationId;
 		if (userId && orgId) {
 			try {
-				const scopeGrant = await assertMcpOAuthScopeGrant({
-					clientId,
-					ctx: {
-						db,
-						oauthResource: getResourceFromFields(fields) ?? undefined,
-						org: { id: orgId },
-						userId,
-					} as AutumnContext,
+				const scopeGrant = await getOAuthConsentScopeGrant({
+					db,
+					organizationId: orgId,
 					requestedScopes: getScopesFromFields(fields),
+					userId,
 				});
-				if (scopeGrant) {
-					grantedScopes = scopeGrant;
-					request = withScope({
-						contentType,
-						request,
-						fields,
-						scope: scopeGrant.join(" "),
-					});
-				}
+				grantedScopes = scopeGrant;
+				request = withScope({
+					contentType,
+					request,
+					fields,
+					scope: scopeGrant.join(" "),
+				});
 			} catch (error) {
 				if (error instanceof RecaseError) {
 					return jsonOAuthError({ error });

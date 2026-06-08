@@ -1,13 +1,32 @@
 import {
-	getLeafMcpOAuthScopes,
+	getDefaultOAuthScopes,
 	isKnownMcpOAuthClientId,
 	isMcpOAuthClientRecord,
 	isMcpOAuthResource,
 } from "@autumn/auth/oauth";
 import { ErrCode, isScopeSubset, RecaseError } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getScopesForUserInOrg } from "@/utils/authUtils/customSessionScopes.js";
 import { oauthClientRepo } from "../repos/index.js";
+
+export const isMcpOAuthClient = async ({
+	clientId,
+	db,
+	resource,
+}: {
+	clientId: string;
+	db: DrizzleCli;
+	resource?: string;
+}) => {
+	if (isMcpOAuthResource(resource)) return true;
+	if (isKnownMcpOAuthClientId({ clientId })) return true;
+
+	const client = await oauthClientRepo.getByClientId({ db, clientId });
+	if (!client) return false;
+
+	return isMcpOAuthClientRecord(client);
+};
 
 export const isMcpOAuthClientId = async ({
 	clientId,
@@ -15,15 +34,12 @@ export const isMcpOAuthClientId = async ({
 }: {
 	clientId: string;
 	ctx: AutumnContext;
-}) => {
-	if (isMcpOAuthResource(ctx.oauthResource)) return true;
-	if (isKnownMcpOAuthClientId({ clientId })) return true;
-
-	const client = await oauthClientRepo.getByClientId({ db: ctx.db, clientId });
-	if (!client) return false;
-
-	return isMcpOAuthClientRecord(client);
-};
+}) =>
+	isMcpOAuthClient({
+		clientId,
+		db: ctx.db,
+		resource: ctx.oauthResource,
+	});
 
 export const getMcpOAuthScopeGrant = async ({
 	clientId,
@@ -44,7 +60,7 @@ export const getMcpOAuthScopeGrant = async ({
 			statusCode: 400,
 		});
 	}
-	const leafScopes = getLeafMcpOAuthScopes(requestedScopes);
+	const leafScopes = getDefaultOAuthScopes(requestedScopes);
 	const { scopes: userScopes } = await getScopesForUserInOrg({
 		db: ctx.db,
 		userId: ctx.userId,

@@ -1,5 +1,5 @@
 import {
-	getLeafMcpOAuthScopes,
+	getDefaultOAuthScopes,
 	MCP_CLIENT_KIND,
 	MCP_OAUTH_CLIENTS,
 	type MpcClientInfo,
@@ -126,9 +126,9 @@ export const getRequestedScopesForMcpClient = ({
 	scope: unknown;
 }) => {
 	if (typeof scope !== "string" || !scope.trim()) {
-		return getLeafMcpOAuthScopes();
+		return getDefaultOAuthScopes();
 	}
-	return getLeafMcpOAuthScopes(scope.split(" "));
+	return getDefaultOAuthScopes(scope.split(" "));
 };
 
 const mergeMetadata = ({

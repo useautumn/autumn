@@ -1,6 +1,3 @@
-import { LEAF_OAUTH_SCOPES } from "@autumn/shared/leafOAuthScopes";
-import type { ScopeString } from "@autumn/shared/scopeDefinitions";
-
 export const MCP_CLIENT_KIND = "mcp_client";
 export const SLACK_MCP_OAUTH_CLIENT_ID = "autumn_mcp_slack";
 export const AUTUMN_ADMIN_OAUTH_CLIENT_ID = "autumn_admin";
@@ -69,19 +66,6 @@ export const returnsOAuthAccessTokenForClientId = ({
 export const isMcpOAuthResource = (resource: string | null | undefined) => {
 	if (!resource || !URL.canParse(resource)) return false;
 	return new URL(resource).pathname.replace(/\/+$/, "").endsWith("/mcp");
-};
-
-const leafScopeSet = new Set<string>(LEAF_OAUTH_SCOPES);
-
-export const getLeafMcpOAuthScopes = (requestedScopes?: string[] | null) => {
-	const requested =
-		requestedScopes && requestedScopes.length > 0
-			? requestedScopes
-			: [...LEAF_OAUTH_SCOPES];
-
-	return [...new Set(requested)].filter((scope): scope is ScopeString =>
-		leafScopeSet.has(scope),
-	);
 };
 
 export const getResourceFromOAuthTokenRequest = async (request: Request) => {

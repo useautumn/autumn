@@ -6,14 +6,15 @@ import {
 import { RecaseError } from "@autumn/shared";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { auth } from "@/utils/auth.js";
-import { assertMcpOAuthScopeGrant } from "./mcpOAuthScopes.js";
+import { oauthAccessTokenRepo, oauthRefreshTokenRepo } from "../repos/index.js";
+import { isMcpOAuthClient } from "./mcpOAuthScopes.js";
 import {
 	getExternalOAuthApiKeyForToken,
 	getOAuthAccessTokenRecord,
 	scopesFromOAuthScopeString,
 } from "./oauthAccessTokenApiKey.js";
+import { getOAuthConsentScopeGrant } from "./oauthConsentScopes.js";
 
 const getString = (value: unknown) =>
 	typeof value === "string" && value.length > 0 ? value : null;
@@ -131,25 +132,41 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			resource,
 			requestedScopes,
 		});
-		const mcpScopeGrant = await assertMcpOAuthScopeGrant({
-			clientId: tokenRecord.clientId,
-			ctx: {
-				db,
-				oauthResource: resource ?? undefined,
-				org: { id: tokenRecord.referenceId },
-				userId: tokenRecord.userId,
-			} as AutumnContext,
+		const issuedScopes = await getOAuthConsentScopeGrant({
+			db,
+			organizationId: tokenRecord.referenceId,
 			requestedScopes: tokenRecord.scopes,
+			userId: tokenRecord.userId,
+		});
+		tokenRecord.scopes = issuedScopes;
+		if (tokenRecord.id) {
+			await oauthAccessTokenRepo.updateScopes({
+				db,
+				id: tokenRecord.id,
+				scopes: issuedScopes,
+			});
+		}
+		if (tokenRecord.refreshId) {
+			await oauthRefreshTokenRepo.updateScopes({
+				db,
+				id: tokenRecord.refreshId,
+				scopes: issuedScopes,
+			});
+		}
+		const isMcpClient = await isMcpOAuthClient({
+			clientId: tokenRecord.clientId,
+			db,
+			resource: resource ?? undefined,
 		});
 		if (
-			mcpScopeGrant ||
+			isMcpClient ||
 			returnsOAuthAccessTokenForClientId({ clientId: tokenRecord.clientId })
 		) {
 			return jsonTokenResponse({
 				body: rewriteOAuthAccessTokenBody({
 					accessToken: prefixOAuthToken({ token: accessToken }),
 					body,
-					scopes: mcpScopeGrant ?? tokenRecord.scopes,
+					scopes: tokenRecord.scopes,
 				}),
 				response,
 				status: response.status,

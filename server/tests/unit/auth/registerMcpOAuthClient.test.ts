@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { getLeafMcpOAuthScopes } from "@autumn/auth/oauth";
+import { getDefaultOAuthScopes } from "@autumn/auth/oauth";
 import { LEAF_OAUTH_SCOPES } from "@autumn/shared";
 import { Scopes } from "@autumn/shared/scopeDefinitions";
 import { getRequestedScopesForMcpClient } from "@/internal/auth/actions/registerMcpOAuthClient.js";
@@ -37,7 +37,7 @@ describe("getRequestedScopesForMcpClient", () => {
 
 	test("caps OAuth grants to Leaf scopes", () => {
 		expect(
-			getLeafMcpOAuthScopes([
+			getDefaultOAuthScopes([
 				Scopes.Customers.Read,
 				Scopes.ApiKeys.Write,
 				Scopes.Analytics.Read,

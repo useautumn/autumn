@@ -12,6 +12,8 @@ export type OAuthApiKeyRequestBody = {
 };
 
 export type ResourceAccessTokenRecord = {
+	id?: string;
+	refreshId?: string | null;
 	userId: string | null;
 	referenceId: string | null;
 	clientId: string;
