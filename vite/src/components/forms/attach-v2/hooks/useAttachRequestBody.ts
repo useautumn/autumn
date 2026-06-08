@@ -113,11 +113,8 @@ export function buildAttachRequestBody({
 				interval: (item.interval ?? null) as ProductItemInterval | null,
 			}));
 		} else if (grantFree) {
-			// When granting for free, stripping prices can leave no items at all
-			// (e.g. a purely priced product). The backend treats an explicit empty
-			// `items` array as "free / no priced items", but omitting `items`
-			// entirely falls back to the product's default (paid) items. Send the
-			// empty array so the free intent isn't lost. See useGrantFree.
+			// Send explicit `[]` so the backend overrides the product's default
+			// (paid) items; omitting `items` falls back to them. See useGrantFree.
 			body.items = [];
 		}
 	}
