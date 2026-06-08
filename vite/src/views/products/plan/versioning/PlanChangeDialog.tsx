@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { PlanItemsSection } from "@/components/forms/shared";
 import { getProductPriceDisplay } from "@/components/forms/update-subscription-v2/components/PriceDisplay";
 import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/v2/buttons/Button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { Input } from "@/components/v2/inputs/Input";
@@ -135,6 +134,8 @@ export default function PlanChangeDialog({
 	const [versionChoice, setVersionChoice] = useState<VersionChoice>("new");
 	const [migrationScope, setMigrationScope] =
 		useState<MigrationScope>("all_customers");
+	const [migrationBaseProduct, setMigrationBaseProduct] =
+		useState<FrontendProduct | null>(null);
 	const [includeCustom, setIncludeCustom] = useState(false);
 	const [confirmText, setConfirmText] = useState("");
 	const [isLoading, setIsLoading] = useState(false);
@@ -166,6 +167,7 @@ export default function PlanChangeDialog({
 		setStep(1);
 		setVersionChoice("new");
 		setMigrationScope("all_customers");
+		setMigrationBaseProduct(null);
 		setIncludeCustom(false);
 		setConfirmText("");
 	};
@@ -187,7 +189,34 @@ export default function PlanChangeDialog({
 		}
 
 		if (versionChoice === "update") {
-			setStep(2);
+			if (!baseProduct) return;
+			if (product.id !== baseProduct.id) {
+				toast.error(
+					"Plan IDs cannot be changed when updating the current version",
+				);
+				return;
+			}
+
+			setIsLoading(true);
+			try {
+				await ProductService.updatePlan(
+					axiosInstance,
+					buildInPlaceUpdatePlanParams({
+						baseProduct,
+						editedProduct: product,
+						features,
+					}),
+				);
+				setMigrationBaseProduct(baseProduct);
+				markSaved();
+				toast.success("Plan updated");
+				setStep(2);
+				void invalidateProducts();
+			} catch (error) {
+				toast.error(getBackendErr(error, "Failed to update plan"));
+			} finally {
+				setIsLoading(false);
+			}
 			return;
 		}
 
@@ -217,38 +246,22 @@ export default function PlanChangeDialog({
 	};
 
 	const handleStep2Action = async () => {
-		if (!baseProduct) return;
-		if (product.id !== baseProduct.id) {
-			toast.error(
-				"Plan IDs cannot be changed when updating the current version",
-			);
-			return;
-		}
+		const draftBaseProduct = migrationBaseProduct ?? baseProduct;
+		if (!draftBaseProduct) return;
 
 		setIsLoading(true);
-		let planUpdated = false;
 		try {
 			const scope = hasMultipleVersions
 				? migrationScope
 				: "this_version";
 
 			const draft = buildMigrationDraft({
-				baseProduct,
+				baseProduct: draftBaseProduct,
 				editedProduct: product,
 				features,
 				scope,
 				includeCustom,
 			});
-
-			await ProductService.updatePlan(
-				axiosInstance,
-				buildInPlaceUpdatePlanParams({
-					baseProduct,
-					editedProduct: product,
-					features,
-				}),
-			);
-			planUpdated = true;
 
 			const migration = await createMigration({
 				id: draft.id,
@@ -257,23 +270,15 @@ export default function PlanChangeDialog({
 				no_billing_changes: draft.no_billing_changes,
 			});
 
-			markSaved();
 			await invalidateMigrations();
-			toast.success("Plan updated");
+			toast.success("Migration created");
 			setOpen(false);
 			resetState();
 			navigateTo(`/migrations/${migration.id}?step=live&run=true`, navigate);
 			void refetch();
 			void invalidateProducts();
 		} catch (error) {
-			toast.error(
-				getBackendErr(
-					error,
-					planUpdated
-						? "Plan updated, but failed to create migration"
-						: "Failed to update plan",
-				),
-			);
+			toast.error(getBackendErr(error, "Failed to create migration"));
 		} finally {
 			setIsLoading(false);
 		}
@@ -290,8 +295,8 @@ export default function PlanChangeDialog({
 		step === 1
 			? versionChoice === "new"
 				? "Create new version"
-				: "Update existing version"
-			: "Update plan and preview migration";
+				: "Update plan"
+			: "Preview migration";
 
 	return (
 		<Dialog open={open} onOpenChange={handleOpenChange}>
@@ -344,7 +349,7 @@ export default function PlanChangeDialog({
 										<AreaRadioGroupItem
 											value="update"
 											label="Update existing version"
-											description="Update the current plan version directly for new customers, then preview a migration for current users."
+											description="Update the current plan version now. After that, you can preview a migration for current users."
 										/>
 									</RadioGroup>
 
@@ -359,12 +364,12 @@ export default function PlanChangeDialog({
 							{step === 2 && (
 								<>
 									<p className="text-sm text-muted-foreground">
-										First, Autumn will update the current
-										version of this plan directly. New
-										customers will get these changes
-										immediately. Then we&apos;ll create a
-										migration so you can review and apply
-										the same changes to current users.
+										Autumn updated the current version of
+										this plan directly. New customers will
+										get these changes immediately. Now
+										create a migration so you can review
+										and apply the same changes to current
+										users.
 									</p>
 
 									{hasMultipleVersions && (
@@ -380,12 +385,12 @@ export default function PlanChangeDialog({
 											<AreaRadioGroupItem
 												value="all_customers"
 												label="Update all customers"
-												description="Create a migration for current users on any version of this plan."
+												description="Preview a migration for current users on any version of this plan."
 											/>
 											<AreaRadioGroupItem
 												value="this_version"
-												label={`Update customers on v${baseProduct?.version ?? 1} only`}
-												description="Create a migration only for current users on this specific version."
+												label={`Update customers on v${migrationBaseProduct?.version ?? baseProduct?.version ?? 1} only`}
+												description="Preview a migration only for current users on this specific version."
 											/>
 										</RadioGroup>
 									)}
@@ -421,11 +426,8 @@ export default function PlanChangeDialog({
 									{!hasMultipleVersions &&
 										customCount === 0 && (
 											<p className="text-sm text-muted-foreground">
-												This will create a migration
-												for current users on this
-												plan after updating the
-												current plan version
-												directly.
+												Preview a migration for
+												current users on this plan.
 											</p>
 										)}
 								</>
@@ -434,17 +436,7 @@ export default function PlanChangeDialog({
 					</DialogDescription>
 				</div>
 
-				<DialogFooter className={step === 2 ? "flex-col sm:flex-col" : undefined}>
-					{step === 2 && (
-						<Button
-							variant="secondary"
-							onClick={() => setStep(1)}
-							disabled={isLoading}
-							className="w-full"
-						>
-							Back
-						</Button>
-					)}
+				<DialogFooter>
 					<ShortcutButton
 						variant="primary"
 						metaShortcut="enter"

@@ -8,8 +8,9 @@
  *   - Existing customer products are patched, not replaced or expired.
  */
 
-import { test } from "bun:test";
+import { expect, test } from "bun:test";
 import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
+import { CusProductStatus, customerProducts, customers } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { expectNoExpiredCustomerProducts } from "@tests/integration/billing/utils/expectNoExpiredCustomerProducts";
@@ -21,7 +22,37 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { and, eq } from "drizzle-orm";
 import { runUpdatePlanMigration } from "../../utils/runUpdatePlanMigration";
+
+const getActiveCustomerProductIsCustom = async ({
+	ctx,
+	customerId,
+	productId,
+}: {
+	ctx: Awaited<ReturnType<typeof initScenario>>["ctx"];
+	customerId: string;
+	productId: string;
+}) => {
+	const [row] = await ctx.db
+		.select({ isCustom: customerProducts.is_custom })
+		.from(customerProducts)
+		.innerJoin(
+			customers,
+			eq(customerProducts.internal_customer_id, customers.internal_id),
+		)
+		.where(
+			and(
+				eq(customers.org_id, ctx.org.id),
+				eq(customers.env, ctx.env),
+				eq(customers.id, customerId),
+				eq(customerProducts.product_id, productId),
+				eq(customerProducts.status, CusProductStatus.Active),
+			),
+		);
+
+	return row?.isCustom;
+};
 
 test.concurrent(`${chalk.yellowBright("migrations update_plan: add boolean and metered entitlements")}`, async () => {
 	const customerId = "migration-update-add-items";
@@ -87,6 +118,9 @@ test.concurrent(`${chalk.yellowBright("migrations update_plan: add boolean and m
 		count: 1,
 		latestTotal: 20,
 	});
+	expect(
+		await getActiveCustomerProductIsCustom({ ctx, customerId, productId: pro.id }),
+	).toBe(false);
 	await expectNoExpiredCustomerProducts({ ctx, customerId, productId: pro.id });
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });

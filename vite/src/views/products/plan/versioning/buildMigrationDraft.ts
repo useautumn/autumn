@@ -145,31 +145,32 @@ export function buildVersionMigrationDraft({
 	latestVersion,
 	scope,
 	pastVersions,
+	includeCustom = false,
 }: {
 	productId: string;
 	latestVersion: number;
 	scope: VersionMigrateScope;
 	pastVersions: number[];
+	includeCustom?: boolean;
 }): MigrationDraft {
 	const versions = scope === "all" ? pastVersions : [scope];
 	const versionMatcher =
 		versions.length === 1 ? versions[0] : { $in: versions };
+	const planFilter = {
+		plan_id: productId,
+		version: versionMatcher,
+		...(!includeCustom ? { custom: false } : {}),
+	};
 
 	const filter: MigrationFilter = {
-		customer: {
-			plan: {
-				plan_id: productId,
-				version: versionMatcher,
-				custom: false,
-			},
-		},
+		customer: { plan: planFilter },
 	};
 
 	const operations: Operations = {
 		customer: [
 			{
 				type: "update_plan",
-				plan_filter: { plan_id: productId },
+				plan_filter: planFilter,
 				version: latestVersion,
 			},
 		],
@@ -205,18 +206,17 @@ export function buildMigrationDraft({
 	const hasCustomize = Object.keys(diff).length > 0;
 	const customize = hasCustomize ? diff : undefined;
 
-	const updatePlanOp = {
-		type: "update_plan" as const,
-		plan_filter: { plan_id: baseProduct.id },
-		...(customize ? { customize } : {}),
-	};
-
 	const planFilter = {
 		plan_id: baseProduct.id,
 		...(scope === "this_version"
 			? { version: baseProduct.version }
 			: {}),
 		...(!includeCustom ? { custom: false } : {}),
+	};
+	const updatePlanOp = {
+		type: "update_plan" as const,
+		plan_filter: planFilter,
+		...(customize ? { customize } : {}),
 	};
 
 	const filter: MigrationFilter = {

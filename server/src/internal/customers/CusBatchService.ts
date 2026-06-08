@@ -23,26 +23,10 @@ import { CusSearchService } from "./CusSearchService.js";
 import { getCursorPaginatedFullCusQuery } from "./cursorPaginatedFullCusQuery.js";
 import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
 import {
-	type DashboardProductVersionFilter,
 	type DashboardStatusFilter,
 	getPaginatedFullCusQuery,
+	parseDashboardVersionFilter,
 } from "./getFullCusQuery.js";
-
-const parseDashboardVersionFilter = (
-	raw: string[] | undefined,
-): DashboardProductVersionFilter[] => {
-	if (!raw?.length) return [];
-	return raw
-		.filter(Boolean)
-		.map((s) => {
-			const [productId, version] = s.split(":");
-			return { productId, version: parseInt(version, 10) };
-		})
-		.filter(
-			(v): v is DashboardProductVersionFilter =>
-				!!v.productId && !Number.isNaN(v.version),
-		);
-};
 import {
 	type FlattenedCustomerRow,
 	reassembleFlattenedCustomer,

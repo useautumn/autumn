@@ -10,7 +10,10 @@ import {
 	type Feature,
 	type FrontendProduct,
 } from "@autumn/shared";
-import { buildMigrationDraft } from "@/views/products/plan/versioning/buildMigrationDraft";
+import {
+	buildMigrationDraft,
+	buildVersionMigrationDraft,
+} from "@/views/products/plan/versioning/buildMigrationDraft";
 
 const features: Feature[] = [
 	{
@@ -46,6 +49,45 @@ const baseProduct: FrontendProduct = {
 };
 
 describe("buildMigrationDraft", () => {
+	test("excludes custom plans by default", () => {
+		const draft = buildMigrationDraft({
+			baseProduct,
+			editedProduct: { ...baseProduct, name: "Pro updated" },
+			features,
+			scope: "this_version",
+		});
+
+		expect(draft.filter.customer?.plan).toMatchObject({
+			plan_id: "pro",
+			version: 2,
+			custom: false,
+		});
+		expect(draft.operations.customer?.[0]?.plan_filter).toMatchObject({
+			plan_id: "pro",
+			version: 2,
+			custom: false,
+		});
+	});
+
+	test("includes custom plans when enabled", () => {
+		const draft = buildMigrationDraft({
+			baseProduct,
+			editedProduct: { ...baseProduct, name: "Pro updated" },
+			features,
+			scope: "this_version",
+			includeCustom: true,
+		});
+
+		expect(draft.filter.customer?.plan).toEqual({
+			plan_id: "pro",
+			version: 2,
+		});
+		expect(draft.operations.customer?.[0]?.plan_filter).toEqual({
+			plan_id: "pro",
+			version: 2,
+		});
+	});
+
 	test("preserves tiered add-item prices", () => {
 		const draft = buildMigrationDraft({
 			baseProduct,
@@ -84,5 +126,46 @@ describe("buildMigrationDraft", () => {
 			billing_method: BillingMethod.UsageBased,
 		});
 		expect(price).not.toHaveProperty("amount");
+	});
+});
+
+describe("buildVersionMigrationDraft", () => {
+	test("excludes custom plans by default", () => {
+		const draft = buildVersionMigrationDraft({
+			productId: "pro",
+			latestVersion: 3,
+			scope: "all",
+			pastVersions: [1, 2],
+		});
+
+		expect(draft.filter.customer?.plan).toMatchObject({
+			plan_id: "pro",
+			version: { $in: [1, 2] },
+			custom: false,
+		});
+		expect(draft.operations.customer?.[0]?.plan_filter).toMatchObject({
+			plan_id: "pro",
+			version: { $in: [1, 2] },
+			custom: false,
+		});
+	});
+
+	test("omits custom filters when custom plans are included", () => {
+		const draft = buildVersionMigrationDraft({
+			productId: "pro",
+			latestVersion: 3,
+			scope: 2,
+			pastVersions: [1, 2],
+			includeCustom: true,
+		});
+
+		expect(draft.filter.customer?.plan).toEqual({
+			plan_id: "pro",
+			version: 2,
+		});
+		expect(draft.operations.customer?.[0]?.plan_filter).toEqual({
+			plan_id: "pro",
+			version: 2,
+		});
 	});
 });

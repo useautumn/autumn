@@ -3,6 +3,7 @@ import {
 	CheckCircleIcon,
 	TrashIcon,
 } from "@phosphor-icons/react";
+import type { MouseEvent } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
@@ -16,6 +17,7 @@ import {
 	useMigrationsQuery,
 	type MigrationWithRunInfo,
 } from "@/hooks/queries/useMigrationsQuery";
+import { DeleteMigrationDialog } from "./DeleteMigrationDialog";
 
 export function MigrationListRowToolbar({
 	migration,
@@ -23,7 +25,8 @@ export function MigrationListRowToolbar({
 	migration: MigrationWithRunInfo;
 }) {
 	const [dropdownOpen, setDropdownOpen] = useState(false);
-	const { updateMigration, deleteMigration } = useMigrationsQuery();
+	const [deleteOpen, setDeleteOpen] = useState(false);
+	const { updateMigration } = useMigrationsQuery();
 
 	const handleArchiveToggle = async () => {
 		setDropdownOpen(false);
@@ -47,65 +50,70 @@ export function MigrationListRowToolbar({
 		}
 	};
 
-	const handleDelete = async () => {
+	const openDeleteDialog = () => {
 		setDropdownOpen(false);
-		try {
-			await deleteMigration({ id: migration.id });
-			toast.success(`Migration ${migration.id} deleted`);
-		} catch {
-			toast.error("Failed to delete migration");
+		setDeleteOpen(true);
+	};
+
+	const menuAction = (() => {
+		if (migration.archived) {
+			return {
+				icon: <ArrowCounterClockwiseIcon />,
+				label: "Unarchive",
+				onSelect: handleArchiveToggle,
+			};
 		}
+
+		if (migration.has_live_runs) {
+			return {
+				icon: <CheckCircleIcon />,
+				label: "Mark as complete",
+				onSelect: handleArchiveToggle,
+			};
+		}
+
+		return {
+			icon: <TrashIcon />,
+			label: "Delete",
+			onSelect: openDeleteDialog,
+		};
+	})();
+
+	const handleMenuSelect = (
+		e: MouseEvent<HTMLDivElement>,
+		action: () => void,
+	) => {
+		e.stopPropagation();
+		e.preventDefault();
+		action();
 	};
 
 	return (
-		<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-			<div
-				onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-				onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
-			>
-				<DropdownMenuTrigger asChild>
-					<ToolbarButton />
-				</DropdownMenuTrigger>
-			</div>
-			<DropdownMenuContent align="end">
-				{migration.archived ? (
+		<>
+			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+				<div
+					onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+					onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+				>
+					<DropdownMenuTrigger asChild>
+						<ToolbarButton />
+					</DropdownMenuTrigger>
+				</div>
+				<DropdownMenuContent align="end">
 					<DropdownMenuItem
 						className="flex gap-2"
-						onClick={(e) => {
-							e.stopPropagation();
-							e.preventDefault();
-							handleArchiveToggle();
-						}}
+						onClick={(e) => handleMenuSelect(e, menuAction.onSelect)}
 					>
-						<ArrowCounterClockwiseIcon />
-						Unarchive
+						{menuAction.icon}
+						{menuAction.label}
 					</DropdownMenuItem>
-				) : migration.has_live_runs ? (
-					<DropdownMenuItem
-						className="flex gap-2"
-						onClick={(e) => {
-							e.stopPropagation();
-							e.preventDefault();
-							handleArchiveToggle();
-						}}
-					>
-						<CheckCircleIcon />
-						Mark as complete
-					</DropdownMenuItem>
-				) : (
-					<DropdownMenuItem
-						className="flex gap-2"
-						onClick={(e) => {
-							e.stopPropagation();
-							e.preventDefault();
-							handleDelete();
-						}}
-					>
-						<TrashIcon />
-						Delete
-					</DropdownMenuItem>
-				)}
-			</DropdownMenuContent>
-		</DropdownMenu>
+				</DropdownMenuContent>
+			</DropdownMenu>
+			<DeleteMigrationDialog
+				migration={migration}
+				open={deleteOpen}
+				onOpenChange={setDeleteOpen}
+			/>
+		</>
 	);
 }
