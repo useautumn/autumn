@@ -1,10 +1,31 @@
+import { ErrCode } from "@autumn/shared";
 import type { Context, Next } from "hono";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { checkIdempotencyKey } from "@/internal/misc/idempotency/checkIdempotencyKey.js";
+import {
+	checkIdempotencyKey,
+	releaseIdempotencyKey,
+} from "@/internal/misc/idempotency/checkIdempotencyKey.js";
 
-/**
- * Middleware that checks for idempotence in a request
- */
+const shouldReleaseStatus = (status: number) =>
+	status >= 400 && status < 500 && status !== 409;
+
+const shouldReleaseError = (error: unknown) => {
+	const statusCode =
+		typeof error === "object" && error !== null && "statusCode" in error
+			? Number(error.statusCode)
+			: null;
+	const code =
+		typeof error === "object" && error !== null && "code" in error
+			? String(error.code)
+			: null;
+
+	return (
+		statusCode !== null &&
+		shouldReleaseStatus(statusCode) &&
+		code !== ErrCode.DuplicateIdempotencyKey
+	);
+};
+
 export const idempotencyMiddleware = async (
 	c: Context<HonoEnv>,
 	next: Next,
@@ -23,5 +44,25 @@ export const idempotencyMiddleware = async (
 		});
 	}
 
-	await next();
+	try {
+		await next();
+	} catch (error) {
+		if (idempotencyKey && shouldReleaseError(error)) {
+			await releaseIdempotencyKey({
+				orgId: ctx.org.id,
+				env: ctx.env,
+				idempotencyKey,
+			});
+		}
+
+		throw error;
+	}
+
+	if (idempotencyKey && shouldReleaseStatus(c.res.status)) {
+		await releaseIdempotencyKey({
+			orgId: ctx.org.id,
+			env: ctx.env,
+			idempotencyKey,
+		});
+	}
 };
