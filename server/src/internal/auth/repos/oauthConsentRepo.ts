@@ -1,5 +1,5 @@
 import { type AppEnv, oauthConsent } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull, or } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export type OAuthConsentApiKeyRecord = {
@@ -12,9 +12,11 @@ export type OAuthConsentApiKeyRecord = {
 export const listOAuthConsentsByReferenceId = async ({
 	db,
 	referenceId,
+	env,
 }: {
 	db: DrizzleCli;
 	referenceId: string;
+	env?: AppEnv;
 }) =>
 	db
 		.select({
@@ -27,7 +29,14 @@ export const listOAuthConsentsByReferenceId = async ({
 			updatedAt: oauthConsent.updatedAt,
 		})
 		.from(oauthConsent)
-		.where(eq(oauthConsent.referenceId, referenceId));
+		.where(
+			and(
+				eq(oauthConsent.referenceId, referenceId),
+				env
+					? or(isNull(oauthConsent.env), eq(oauthConsent.env, env))
+					: undefined,
+			),
+		);
 
 export const getOAuthConsentOwner = async ({
 	db,

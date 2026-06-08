@@ -43,7 +43,7 @@ export const postApprovalRequest = async ({
 
 	const approvalId = await createApproval({
 		orgId: installation.org_id,
-		provider: "slack",
+		provider: installation.provider,
 		workspaceId: installation.workspace_id,
 		channelId,
 		providerUserId,

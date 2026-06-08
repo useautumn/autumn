@@ -3,7 +3,7 @@ import { RecaseError } from "@autumn/shared";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
-import { SLACK_MCP_OAUTH_CLIENT_ID } from "../actions/registerMcpOAuthClient.js";
+import { returnsOAuthAccessTokenForClientId } from "../actions/registerMcpOAuthClient.js";
 import {
 	getExternalOAuthApiKeyForToken,
 	getOAuthAccessTokenRecord,
@@ -142,7 +142,9 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			resource,
 			requestedScopes,
 		});
-		if (tokenRecord.clientId === SLACK_MCP_OAUTH_CLIENT_ID) {
+		if (
+			returnsOAuthAccessTokenForClientId({ clientId: tokenRecord.clientId })
+		) {
 			return jsonTokenResponse({
 				body: rewriteOAuthAccessTokenBody({
 					accessToken: prefixOAuthToken({ token: accessToken }),

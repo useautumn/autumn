@@ -25,6 +25,20 @@ import {
 
 export const chatAdapterNames = ["slack"];
 
+const getSlackAdminProvider = () =>
+	`slack_admin:${env.SLACK_CLIENT_ID}` as const;
+
+const findSlackInstallationForWorkspace = async ({
+	workspaceId,
+}: {
+	workspaceId: string;
+}) => {
+	return (
+		(await findInstallation(getSlackAdminProvider(), workspaceId)) ??
+		(await findInstallation("slack", workspaceId))
+	);
+};
+
 export const bot = new Chat({
 	userName: env.CHAT_NAME,
 	adapters: {
@@ -33,7 +47,9 @@ export const bot = new Chat({
 			clientSecret: env.SLACK_CLIENT_SECRET,
 			installationProvider: {
 				getInstallation: async (workspaceId) => {
-					const installation = await findInstallation("slack", workspaceId);
+					const installation = await findSlackInstallationForWorkspace({
+						workspaceId,
+					});
 					if (!installation) return null;
 					return {
 						botToken: decrypt(installation.bot_access_token),
@@ -74,9 +90,19 @@ const runAndReply = async ({
 	let logger = rootLogger;
 	try {
 		const workspaceId = getSlackWorkspaceId(raw);
+		const installation = await findSlackInstallationForWorkspace({
+			workspaceId,
+		});
+		if (!installation) {
+			logger.warn("Slack installation not found", {
+				event: "leaf.slack_installation_missing",
+			});
+			return;
+		}
+
 		const session = createLeafSessionContext({
 			channelId,
-			provider: "slack",
+			provider: installation.provider,
 			providerUserId,
 			threadId,
 			workspaceId,
@@ -91,13 +117,6 @@ const runAndReply = async ({
 				text_length: text.length,
 			},
 		});
-		const installation = await findInstallation("slack", workspaceId);
-		if (!installation) {
-			logger.warn("Slack installation not found", {
-				event: "leaf.slack_installation_missing",
-			});
-			return;
-		}
 		if (!text.trim()) {
 			logger.info("Skipping empty Slack message", {
 				event: "leaf.slack_message_skipped",
