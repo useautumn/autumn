@@ -26,6 +26,7 @@ export interface BuildAttachRequestBodyParams {
 	product: ProductV2 | undefined;
 	prepaidOptions: Record<string, number | undefined>;
 	items: ProductItem[] | null;
+	grantFree: boolean;
 	version: number | undefined;
 	trialLength: number | null;
 	trialDuration: FreeTrialDuration;
@@ -57,6 +58,7 @@ export function buildAttachRequestBody({
 	product,
 	prepaidOptions,
 	items,
+	grantFree,
 	version,
 	trialLength,
 	trialDuration,
@@ -110,6 +112,10 @@ export function buildAttachRequestBody({
 				...item,
 				interval: (item.interval ?? null) as ProductItemInterval | null,
 			}));
+		} else if (grantFree) {
+			// Send explicit `[]` so the backend overrides the product's default
+			// (paid) items; omitting `items` falls back to them. See useGrantFree.
+			body.items = [];
 		}
 	}
 
@@ -206,6 +212,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		product,
 		prepaidOptions,
 		items,
+		grantFree,
 		version,
 		trialLength,
 		trialDuration,
@@ -238,6 +245,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				product,
 				prepaidOptions,
 				items,
+				grantFree,
 				version,
 				trialLength,
 				trialDuration,
@@ -267,6 +275,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			product,
 			prepaidOptions,
 			items,
+			grantFree,
 			version,
 			trialLength,
 			trialDuration,
