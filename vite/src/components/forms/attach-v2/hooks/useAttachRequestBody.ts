@@ -26,6 +26,7 @@ export interface BuildAttachRequestBodyParams {
 	product: ProductV2 | undefined;
 	prepaidOptions: Record<string, number | undefined>;
 	items: ProductItem[] | null;
+	grantFree: boolean;
 	version: number | undefined;
 	trialLength: number | null;
 	trialDuration: FreeTrialDuration;
@@ -57,6 +58,7 @@ export function buildAttachRequestBody({
 	product,
 	prepaidOptions,
 	items,
+	grantFree,
 	version,
 	trialLength,
 	trialDuration,
@@ -110,6 +112,13 @@ export function buildAttachRequestBody({
 				...item,
 				interval: (item.interval ?? null) as ProductItemInterval | null,
 			}));
+		} else if (grantFree) {
+			// When granting for free, stripping prices can leave no items at all
+			// (e.g. a purely priced product). The backend treats an explicit empty
+			// `items` array as "free / no priced items", but omitting `items`
+			// entirely falls back to the product's default (paid) items. Send the
+			// empty array so the free intent isn't lost. See useGrantFree.
+			body.items = [];
 		}
 	}
 
@@ -206,6 +215,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		product,
 		prepaidOptions,
 		items,
+		grantFree,
 		version,
 		trialLength,
 		trialDuration,
@@ -238,6 +248,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				product,
 				prepaidOptions,
 				items,
+				grantFree,
 				version,
 				trialLength,
 				trialDuration,
@@ -267,6 +278,7 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			product,
 			prepaidOptions,
 			items,
+			grantFree,
 			version,
 			trialLength,
 			trialDuration,
