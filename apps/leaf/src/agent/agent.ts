@@ -2,9 +2,13 @@ import type { AutumnLogger } from "@autumn/logging";
 import { AppEnv } from "@autumn/shared";
 import { Agent } from "@mastra/core/agent";
 import type { MessageListInput } from "@mastra/core/agent/message-list";
+import { Mastra } from "@mastra/core/mastra";
+import { InMemoryStore } from "@mastra/core/storage";
 import { z } from "zod";
+import { createLeafTracingOptions } from "../internal/observability/leafTracingOptions.js";
 import { env as chatEnv } from "../lib/env.js";
 import { logger as rootLogger } from "../lib/logger.js";
+import { createMastraBraintrustObservability } from "../providers/braintrust/index.js";
 import { createE2bSandboxProvider } from "../providers/e2b/e2bSandboxProvider.js";
 import type { ChatContextMessage } from "../types.js";
 import { createFirecrawlTools } from "./firecrawl.js";
@@ -123,6 +127,8 @@ export const runChatAgent = async ({
 	provider,
 	workspaceId,
 	recentMessages,
+	agentRunId,
+	orgSlug,
 }: {
 	token: string;
 	env: AppEnv;
@@ -134,6 +140,8 @@ export const runChatAgent = async ({
 	resourceId: string;
 	provider: string;
 	workspaceId: string;
+	agentRunId?: string;
+	orgSlug?: string | null;
 	recentMessages?: ChatContextMessage[];
 }) => {
 	const mcp = createAutumnMcpClient({
@@ -211,8 +219,16 @@ export const runChatAgent = async ({
 			model: chatEnv.CHAT_MODEL,
 			tools: { ...tools, ...firecrawlTools, ...sandboxTools },
 		});
+		const mastra = new Mastra({
+			agents: { chat: agent },
+			environment: process.env.NODE_ENV,
+			logger: false,
+			observability: createMastraBraintrustObservability(),
+			storage: new InMemoryStore({ id: `leaf-chat-${crypto.randomUUID()}` }),
+		});
+		const chatAgent = mastra.getAgent("chat");
 
-		const output = await agent.generate(message, {
+		const output = await chatAgent.generate(message, {
 			maxSteps: 8,
 			context: [
 				{
@@ -226,6 +242,17 @@ export const runChatAgent = async ({
 				},
 				...recentMessageContext(recentMessages),
 			],
+			tracingOptions: createLeafTracingOptions({
+				agentRunId,
+				channelId,
+				env,
+				orgId: resourceId,
+				orgSlug,
+				provider,
+				source: "prod",
+				threadId,
+				workspaceId,
+			}),
 		});
 		logger.info("Completed chat agent", {
 			event: "leaf.agent_completed",

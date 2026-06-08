@@ -14,6 +14,7 @@ const withTimeout = <T>(promise: Promise<T>, ms: number) =>
 	});
 
 export const runMessage = async ({
+	agentRunId,
 	attachmentFetchFallback,
 	attachments,
 	installation,
@@ -58,7 +59,9 @@ export const runMessage = async ({
 					onAction,
 					channelId,
 					threadId,
+					agentRunId,
 					resourceId: installation.org_id,
+					orgSlug: installation.org_slug,
 					provider: installation.provider,
 					workspaceId: installation.workspace_id,
 					recentMessages,

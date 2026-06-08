@@ -6,6 +6,7 @@ import {
 	type ChatInstallState,
 	type ChatProvider,
 	chatInstallations,
+	organizations,
 } from "@autumn/shared";
 import { and, eq, or } from "drizzle-orm";
 import { replaceInstallationOAuthCredentials } from "../../internal/installations/actions/replaceInstallationOAuthCredentials.js";
@@ -24,6 +25,37 @@ export const findInstallation = (provider: ChatProvider, workspaceId: string) =>
 			eq(chatInstallations.workspace_id, workspaceId),
 		),
 	});
+
+export type ChatInstallationWithOrg = ChatInstallation & {
+	org_slug?: string;
+};
+
+export const findInstallationWithOrg = async (
+	provider: ChatProvider,
+	workspaceId: string,
+): Promise<ChatInstallationWithOrg | undefined> => {
+	const [row] = await db
+		.select({
+			installation: chatInstallations,
+			orgSlug: organizations.slug,
+		})
+		.from(chatInstallations)
+		.innerJoin(organizations, eq(organizations.id, chatInstallations.org_id))
+		.where(
+			and(
+				eq(chatInstallations.provider, provider),
+				eq(chatInstallations.workspace_id, workspaceId),
+			),
+		)
+		.limit(1);
+
+	return row
+		? {
+				...row.installation,
+				org_slug: row.orgSlug,
+			}
+		: undefined;
+};
 
 export const getInstallationKey = (
 	installation: ChatInstallation,

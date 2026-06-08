@@ -16,7 +16,7 @@ import {
 	fetchSlackAttachmentFallback,
 	getSlackFilesFromRaw,
 } from "./providers/slack/files.js";
-import { findInstallation } from "./providers/slack/installations.js";
+import { findInstallationWithOrg } from "./providers/slack/installations.js";
 import { getRecentMessages } from "./providers/slack/threadContext.js";
 import type { ChatContextMessage } from "./types.js";
 import {
@@ -38,8 +38,8 @@ const findSlackInstallationForWorkspace = async ({
 	workspaceId: string;
 }) => {
 	return (
-		(await findInstallation(getSlackAdminProvider(), workspaceId)) ??
-		(await findInstallation("slack", workspaceId))
+		(await findInstallationWithOrg(getSlackAdminProvider(), workspaceId)) ??
+		(await findInstallationWithOrg("slack", workspaceId))
 	);
 };
 
@@ -116,6 +116,8 @@ const runAndReply = async ({
 		logger = addLeafContext(rootLogger, {
 			...session.context,
 			agent_run_id: session.agentRunId,
+			org_id: installation.org_id,
+			org_slug: installation.org_slug,
 		});
 		logger.info("Received Slack message", {
 			event: "leaf.slack_message_received",
@@ -137,6 +139,7 @@ const runAndReply = async ({
 		const rawFiles = getSlackFilesFromRaw({ raw });
 		const botToken = decrypt(installation.bot_access_token);
 		const output = await runMessage({
+			agentRunId: session.agentRunId,
 			attachmentFetchFallback: ({ attachment }) =>
 				fetchSlackAttachmentFallback({
 					attachment,
