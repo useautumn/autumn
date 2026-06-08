@@ -21,12 +21,17 @@
 			"default": "./src/oauth/index.ts"
 		}
 	},
-	"files": ["src"],
+	"files": [
+		"src"
+	],
 	"scripts": {
 		"build": "tsc",
 		"ts": "tsc --noEmit",
 		"prepack": "bun run build",
 		"prepublishOnly": "bun run build"
+	},
+	"dependencies": {
+		"@autumn/shared": "workspace:*"
 	},
 	"devDependencies": {
 		"@types/bun": "^1.2.13",

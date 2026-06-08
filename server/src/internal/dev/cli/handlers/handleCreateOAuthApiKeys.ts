@@ -1,5 +1,6 @@
 import { AppEnv, ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { isMcpOAuthClientId } from "@/internal/auth/oauth/mcpOAuthScopes.js";
 import {
 	getExternalOAuthApiKeyForToken,
 	getOAuthAccessTokenRecord,
@@ -48,7 +49,8 @@ const parseBody = (rawBody: string): OAuthApiKeyRequestBody => {
 export const handleCreateOAuthApiKeys = createRoute({
 	scopes: [Scopes.Public],
 	handler: async (c) => {
-		const db = c.get("ctx").db;
+		const ctx = c.get("ctx");
+		const db = ctx.db;
 		const rawBody = await c.req.text();
 		const body = parseBody(rawBody);
 		const requestedScopes = parseRequestedScopes(body.scopes);
@@ -75,6 +77,13 @@ export const handleCreateOAuthApiKeys = createRoute({
 		const userId = tokenRecord.userId;
 		const orgId = tokenRecord.referenceId;
 		const clientId = tokenRecord.clientId;
+		if (await isMcpOAuthClientId({ clientId, ctx })) {
+			throw new RecaseError({
+				message: "MCP OAuth clients must use OAuth access tokens directly",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
 
 		const externalApiKey = await getExternalOAuthApiKeyForToken({
 			db,

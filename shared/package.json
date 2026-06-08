@@ -15,6 +15,11 @@
 			"import": "./utils/scopeDefinitions.ts",
 			"default": "./utils/scopeDefinitions.ts"
 		},
+		"./leafOAuthScopes": {
+			"types": "./utils/leafOAuthScopes.ts",
+			"import": "./utils/leafOAuthScopes.ts",
+			"default": "./utils/leafOAuthScopes.ts"
+		},
 		"./unixUtils": {
 			"types": "./utils/common/unixUtils.ts",
 			"import": "./utils/common/unixUtils.ts",

@@ -65,6 +65,7 @@ export const updateOAuthConsentEnv = async ({
 	referenceId,
 	env,
 	redirectUri,
+	scopes,
 }: {
 	db: DrizzleCli;
 	clientId: string;
@@ -72,10 +73,16 @@ export const updateOAuthConsentEnv = async ({
 	referenceId: string;
 	env: AppEnv;
 	redirectUri: string | null;
+	scopes?: string[];
 }) =>
 	db
 		.update(oauthConsent)
-		.set({ env, redirectUri, updatedAt: new Date() })
+		.set({
+			env,
+			redirectUri,
+			...(scopes ? { scopes } : {}),
+			updatedAt: new Date(),
+		})
 		.where(
 			and(
 				eq(oauthConsent.clientId, clientId),
@@ -103,6 +110,7 @@ export const getOAuthConsentForClientUserOrg = async ({
 			env: oauthConsent.env,
 			oauthApiKeyId: oauthConsent.oauthApiKeyId,
 			redirectUri: oauthConsent.redirectUri,
+			scopes: oauthConsent.scopes,
 		})
 		.from(oauthConsent)
 		.where(

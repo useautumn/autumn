@@ -1,10 +1,10 @@
 import crypto from "node:crypto";
 import { prefixOAuthToken } from "@autumn/auth";
 import {
-	ALL_SCOPES,
 	AppEnv,
 	type ChatInstallation,
 	chatOAuthCredentials,
+	LEAF_OAUTH_SCOPES,
 	oauthAccessToken,
 	oauthClient,
 	oauthConsent,
@@ -109,7 +109,7 @@ const ensureSlackMcpOAuthClient = async ({
 			clientId,
 			name,
 			redirectUris: ["slack://autumn-chat"],
-			scopes: [...ALL_SCOPES],
+			scopes: [...LEAF_OAUTH_SCOPES],
 			tokenEndpointAuthMethod: "none",
 			grantTypes: ["authorization_code", "refresh_token"],
 			responseTypes: ["code"],
@@ -123,7 +123,7 @@ const ensureSlackMcpOAuthClient = async ({
 			target: oauthClient.clientId,
 			set: {
 				name,
-				scopes: [...ALL_SCOPES],
+				scopes: [...LEAF_OAUTH_SCOPES],
 				tokenEndpointAuthMethod: "none",
 				grantTypes: ["authorization_code", "refresh_token"],
 				responseTypes: ["code"],
@@ -171,7 +171,7 @@ const upsertOAuthConsent = async ({
 		await tx
 			.update(oauthConsent)
 			.set({
-				scopes: [...ALL_SCOPES],
+				scopes: [...LEAF_OAUTH_SCOPES],
 				metadata,
 				updatedAt: now,
 			})
@@ -185,7 +185,7 @@ const upsertOAuthConsent = async ({
 		clientId,
 		userId,
 		referenceId: orgId,
-		scopes: [...ALL_SCOPES],
+		scopes: [...LEAF_OAUTH_SCOPES],
 		env,
 		redirectUri: "slack://autumn-chat",
 		metadata,
@@ -235,7 +235,7 @@ const createCredentialForEnv = async ({
 		expiresAt: new Date(refreshTokenExpiresAt),
 		createdAt: nowDate,
 		authTime: nowDate,
-		scopes: [...ALL_SCOPES],
+		scopes: [...LEAF_OAUTH_SCOPES],
 	});
 	await tx.insert(oauthAccessToken).values({
 		id: accessTokenId,
@@ -246,7 +246,7 @@ const createCredentialForEnv = async ({
 		refreshId: refreshTokenId,
 		expiresAt: new Date(accessTokenExpiresAt),
 		createdAt: nowDate,
-		scopes: [...ALL_SCOPES],
+		scopes: [...LEAF_OAUTH_SCOPES],
 	});
 	const credential = {
 		id: `chat_oauth_${crypto.randomUUID().replace(/-/g, "")}`,
@@ -258,7 +258,7 @@ const createCredentialForEnv = async ({
 		access_token: encrypt(prefixOAuthToken({ token: rawAccessToken })),
 		refresh_token: encrypt(rawRefreshToken),
 		access_token_expires_at: accessTokenExpiresAt,
-		scopes: [...ALL_SCOPES],
+		scopes: [...LEAF_OAUTH_SCOPES],
 		created_at: now,
 		updated_at: now,
 	};
