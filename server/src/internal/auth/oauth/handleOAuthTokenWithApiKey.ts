@@ -3,7 +3,7 @@ import {
 	getResourceFromOAuthTokenRequest,
 	returnsOAuthAccessTokenForClientId,
 } from "@autumn/auth/oauth";
-import { RecaseError } from "@autumn/shared";
+import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
@@ -132,6 +132,13 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			resource,
 			requestedScopes,
 		});
+		if (tokenRecord.scopes.length === 0) {
+			throw new RecaseError({
+				message: "OAuth token has no scopes",
+				code: ErrCode.InvalidRequest,
+				statusCode: 401,
+			});
+		}
 		const issuedScopes = await getOAuthConsentScopeGrant({
 			db,
 			organizationId: tokenRecord.referenceId,

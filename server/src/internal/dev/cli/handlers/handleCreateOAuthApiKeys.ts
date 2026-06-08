@@ -77,6 +77,13 @@ export const handleCreateOAuthApiKeys = createRoute({
 		const userId = tokenRecord.userId;
 		const orgId = tokenRecord.referenceId;
 		const clientId = tokenRecord.clientId;
+		if (tokenRecord.scopes.length === 0) {
+			throw new RecaseError({
+				message: "OAuth token has no scopes",
+				code: ErrCode.InvalidRequest,
+				statusCode: 401,
+			});
+		}
 		const apiKeyScopes = requestedScopes ?? tokenRecord.scopes;
 		if (await isMcpOAuthClientId({ clientId, ctx })) {
 			throw new RecaseError({
