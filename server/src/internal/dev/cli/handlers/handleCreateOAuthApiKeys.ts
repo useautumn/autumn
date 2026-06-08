@@ -77,6 +77,7 @@ export const handleCreateOAuthApiKeys = createRoute({
 		const userId = tokenRecord.userId;
 		const orgId = tokenRecord.referenceId;
 		const clientId = tokenRecord.clientId;
+		const apiKeyScopes = requestedScopes ?? tokenRecord.scopes;
 		if (await isMcpOAuthClientId({ clientId, ctx })) {
 			throw new RecaseError({
 				message: "MCP OAuth clients must use OAuth access tokens directly",
@@ -88,7 +89,7 @@ export const handleCreateOAuthApiKeys = createRoute({
 		const externalApiKey = await getExternalOAuthApiKeyForToken({
 			db,
 			tokenRecord,
-			requestedScopes,
+			requestedScopes: apiKeyScopes,
 		});
 		if (externalApiKey) {
 			return c.json({
@@ -132,7 +133,7 @@ export const handleCreateOAuthApiKeys = createRoute({
 				userId,
 				prefix: ApiKeyPrefix.Sandbox,
 				meta,
-				scopes: requestedScopes,
+				scopes: apiKeyScopes,
 			}),
 			createKey({
 				db,
@@ -142,7 +143,7 @@ export const handleCreateOAuthApiKeys = createRoute({
 				userId,
 				prefix: ApiKeyPrefix.Live,
 				meta,
-				scopes: requestedScopes,
+				scopes: apiKeyScopes,
 			}),
 		]);
 
@@ -152,7 +153,7 @@ export const handleCreateOAuthApiKeys = createRoute({
 			org_id: orgId,
 			user_id: userId,
 			client_id: clientId,
-			scopes: requestedScopes,
+			scopes: apiKeyScopes,
 		});
 	},
 });

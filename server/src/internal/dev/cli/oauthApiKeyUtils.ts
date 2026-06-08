@@ -1,4 +1,9 @@
-import { ErrCode, RecaseError, type ScopeString } from "@autumn/shared";
+import {
+	ErrCode,
+	isValidScope,
+	RecaseError,
+	type ScopeString,
+} from "@autumn/shared";
 import { z } from "zod/v4";
 
 export type OAuthApiKeyRequestBody = {
@@ -13,7 +18,11 @@ export type ResourceAccessTokenRecord = {
 	scopes: string[];
 };
 
-const RequestedScopesSchema = z.array(z.string()).optional();
+const ScopeStringSchema = z.custom<ScopeString>(
+	(scope) => typeof scope === "string" && isValidScope(scope),
+	{ message: "Invalid scope" },
+);
+const RequestedScopesSchema = z.array(ScopeStringSchema).optional();
 export const OAuthApiKeyRequestBodySchema = z
 	.object({
 		resource: z.unknown().optional(),
@@ -23,7 +32,7 @@ export const OAuthApiKeyRequestBodySchema = z
 
 export const parseRequestedScopes = (scopes: unknown) => {
 	const parsed = RequestedScopesSchema.safeParse(scopes);
-	if (parsed.success) return (parsed.data ?? null) as ScopeString[] | null;
+	if (parsed.success) return parsed.data ?? null;
 
 	throw new RecaseError({
 		message: "Invalid scopes",
