@@ -3,13 +3,18 @@ import { SpanType } from "@mastra/core/observability";
 import { Observability, SamplingStrategyType } from "@mastra/observability";
 import { currentSpan } from "braintrust";
 import { braintrustConfig } from "./config.js";
+import { createBraintrustLogger } from "./createBraintrustLogger.js";
 
 export const createMastraBraintrustObservability = ({
 	apiKey = process.env.BRAINTRUST_API_KEY,
-	braintrustLogger,
 	enabled = braintrustConfig.enabled,
 	projectName = braintrustConfig.projectName,
 	serviceName = braintrustConfig.serviceName,
+	braintrustLogger = createBraintrustLogger({
+		apiKey,
+		enabled,
+		projectName,
+	}),
 }: {
 	apiKey?: string;
 	braintrustLogger?: unknown;

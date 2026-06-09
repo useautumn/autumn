@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { agentRulesRpcRouter } from "@/internal/agent/rules/agentRulesRouter";
 import { referralRpcRouter } from "@/internal/api/rewards/referralRouter";
 import { balancesRpcRouter } from "@/internal/balances/balancesRouter";
 import { billingRpcRouter } from "@/internal/billing/billingRouter";
@@ -26,6 +27,7 @@ export const rpcRouter = new Hono<HonoEnv>();
 // rpcRouter.use("*", idempotencyMiddleware);
 
 rpcRouter.route("", customerRpcRouter);
+rpcRouter.route("", agentRulesRpcRouter);
 rpcRouter.route("", plansRpcRouter);
 rpcRouter.route("", billingRpcRouter);
 rpcRouter.route("", balancesRpcRouter);

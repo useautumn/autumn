@@ -7,6 +7,7 @@ type CustomerArgs = Parameters<typeof baseCustomer>[0];
 
 /** Customer presets for common eval scenarios; compose subscriptions explicitly. */
 export const customers = {
+	base: (args?: CustomerArgs): BaseApiCustomerV5 => baseCustomer(args),
 	active: (args?: CustomerArgs): BaseApiCustomerV5 => baseCustomer(args),
 	withPlan: ({
 		plan,

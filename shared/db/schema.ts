@@ -50,6 +50,7 @@ import { migrationRunsRelations } from "../models/migrationV2Models/migrationRun
 import { migrationRuns } from "../models/migrationV2Models/migrationRunTable.js";
 import { migrations } from "../models/migrationV2Models/migrationTable.js";
 /* RELATIONS */
+import { agentRules } from "../models/orgModels/agent/agentRulesTable.js";
 import { organizationsRelations } from "../models/orgModels/orgRelations.js";
 import { organizations } from "../models/orgModels/orgTable.js";
 import { metadata } from "../models/otherModels/metadataTable.js";
@@ -151,6 +152,7 @@ export {
 	oauthClient,
 	oauthConsent,
 	oauthRefreshToken,
+	agentRules,
 	// Tables
 	organizations,
 	passkey,

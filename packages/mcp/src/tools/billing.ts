@@ -49,38 +49,80 @@ const domain = {
 	billingPreviews: [
 		billingPreview({
 			id: "previewAttach",
-			description:
-				"Preview attaching a plan before attach. Include feature_quantities and custom items/prices; map recurring custom grants like 'per month/year' to reset.interval. When using invoice_mode, usually set enable_plan_immediately true unless the user explicitly wants access to wait for payment. invoice_mode requires customer email; if missing, ask for it and call updateCustomer with customer_id and email before billing.",
+			description: `
+- Preview attaching a plan before attach.
+- Include feature_quantities and custom items/prices.
+- Map recurring custom grants like 'per month/year' to reset.interval.
+- Default paid attach billing: set enable_plan_immediately true and invoice_mode enabled true, enable_plan_immediately true, finalize false.
+- Only change the default invoice mode if the user asks for checkout, immediate finalization/payment, no invoice, or delayed access.
+- invoice_mode requires customer email; if missing, call updateCustomer first.
+`.trim(),
 			writeToolName: "attach",
 		}),
 		billingPreview({
 			id: "previewUpdateSubscription",
-			description:
-				"Preview updating a subscription before updateSubscription. Include quantity/custom item changes; recurring custom grants need reset.interval.",
+			description: `
+- Preview updating a subscription before updateSubscription.
+- Include quantity and custom item changes.
+- Recurring custom grants need reset.interval.
+`.trim(),
 			writeToolName: "updateSubscription",
 		}),
 		billingPreview({
 			id: "previewCreateSchedule",
-			description:
-				"Preview billing impact of a multi-phase schedule before createSchedule. starts_at accepts epoch milliseconds or ISO/date strings; preserve exact calendar dates from the user or contract. Use redirect_mode if_required unless the user explicitly asks to disable checkout/redirects. If using invoice_mode, usually set enable_plan_immediately true unless the user explicitly wants access to wait for payment. invoice_mode requires customer email; if missing, ask for it and call updateCustomer with customer_id and email before billing. If changing an existing/customer contract schedule, inspect the customer first. For schedules, put phase-specific feature quantities and contract feature limits/overrides in plan.customize.items, not feature_quantities; map 'per month/year' to reset.interval month/year. If the user says year 1 is already paid or should have no billing changes, do not add a year-1 phase; start phases at the first future billing change.",
+			description: `
+- Preview billing impact of a multi-phase schedule before createSchedule.
+- First phase starts_at must be explicit: now or a past/backdated date.
+- Do not infer first starts_at from 'year 1' or use a future first phase.
+- Ask before previewing if first phase start is unclear.
+- Preserve exact user/contract dates for later phases.
+- Use redirect_mode if_required unless user asks otherwise.
+- Default paid schedule billing: set enable_plan_immediately true and invoice_mode enabled true, enable_plan_immediately true, finalize false.
+- Only change the default invoice mode if the user asks for checkout, immediate finalization/payment, no invoice, or delayed access.
+- invoice_mode requires customer email; if missing, call updateCustomer first.
+- Inspect customer first when changing an existing/customer contract schedule.
+- Put schedule feature overrides in plan.customize.items, not feature_quantities.
+- Map recurring grants like 'per month/year' to reset.interval month/year.
+- If year 1 is already paid/no billing changes, omit it.
+`.trim(),
 			writeToolName: "createSchedule",
 		}),
 	],
 	confirmedWrites: [
 		confirmedWrite({
 			id: "attach",
-			description:
-				"Attach a plan to a customer. Destructive: preview first; preserve feature_quantities, custom prices/items, reset intervals, discounts, and checkout behavior. When using invoice_mode, usually set enable_plan_immediately true unless the user explicitly wants access to wait for payment. invoice_mode requires customer email; if missing, ask for it and call updateCustomer with customer_id and email before billing.",
+			description: `
+- Attach a plan to a customer.
+- Destructive: preview first.
+- Preserve feature_quantities, custom prices/items, reset intervals, discounts, and checkout behavior.
+- Preserve the previewed billing mode. Default paid attach billing uses enable_plan_immediately true and invoice_mode enabled true, enable_plan_immediately true, finalize false.
+- invoice_mode requires customer email; if missing, call updateCustomer first.
+`.trim(),
 		}),
 		confirmedWrite({
 			id: "updateSubscription",
-			description:
-				"Update a subscription. Destructive: preview first; preserve quantity/custom item changes and reset intervals from the previewed request.",
+			description: `
+- Update a subscription.
+- Destructive: preview first.
+- Preserve quantity/custom item changes and reset intervals from the previewed request.
+`.trim(),
 		}),
 		confirmedWrite({
 			id: "createSchedule",
-			description:
-				"Create a multi-phase billing schedule. Destructive: preview first; preserve phase starts_at and redirect_mode values from the previewed request. Use redirect_mode if_required unless the user explicitly asks to disable checkout/redirects. When using invoice_mode, usually set enable_plan_immediately true unless the user explicitly wants access to wait for payment. invoice_mode requires customer email; if missing, ask for it and call updateCustomer with customer_id and email before billing. If changing an existing/customer contract schedule, inspect the customer first. For schedules, put phase-specific feature quantities and contract feature limits/overrides in plan.customize.items, not feature_quantities. If year 1 is already paid/no billing changes, do not add a year-1 phase; start at the first future billing change.",
+			description: `
+- Create a multi-phase billing schedule.
+- Destructive: preview first.
+- Preserve phase starts_at and redirect_mode values from the previewed request.
+- First phase starts_at must be explicit: now or a past/backdated date.
+- Do not infer first starts_at from 'year 1' or use a future first phase.
+- Ask before creating if first phase start is unclear.
+- Use redirect_mode if_required unless user asks otherwise.
+- Preserve the previewed billing mode. Default paid schedule billing uses enable_plan_immediately true and invoice_mode enabled true, enable_plan_immediately true, finalize false.
+- invoice_mode requires customer email; if missing, call updateCustomer first.
+- Inspect customer first when changing an existing/customer contract schedule.
+- Put schedule feature overrides in plan.customize.items, not feature_quantities.
+- If year 1 is already paid/no billing changes, omit it.
+`.trim(),
 		}),
 	],
 } satisfies ToolDomain;

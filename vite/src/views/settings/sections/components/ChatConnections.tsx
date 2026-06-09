@@ -8,7 +8,6 @@ import { OrgService } from "@/services/OrgService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
-import { SettingsSection } from "../SettingsSection";
 
 type ChatStatus =
 	| { installations: [] }
@@ -34,7 +33,7 @@ const providers = [
 
 type ChatProvider = (typeof providers)[number]["id"];
 
-export const IntegrationsSection = () => {
+export const ChatConnections = () => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
 	const env = useEnv();
@@ -78,13 +77,11 @@ export const IntegrationsSection = () => {
 	});
 
 	return (
-		<SettingsSection
-			title="Integrations"
-			description="Connect workspace tools to Autumn"
-		>
+		<div className="flex flex-col gap-3">
+			<span className="text-sm font-medium text-foreground">Connections</span>
 			{providers.map((provider) => {
 				const installation = data?.installations.find(
-					(install) => install.provider === provider.id,
+					(item) => item.provider === provider.id,
 				);
 				const isInstalling =
 					install.isPending && install.variables === provider.id;
@@ -138,6 +135,6 @@ export const IntegrationsSection = () => {
 					</div>
 				);
 			})}
-		</SettingsSection>
+		</div>
 	);
 };

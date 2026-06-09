@@ -71,6 +71,13 @@
       "when": 1780687569277,
       "tag": "0009_perpetual_wonder_man",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1780990532501,
+      "tag": "0010_magenta_misty_knight",
+      "breakpoints": true
     }
   ]
 }

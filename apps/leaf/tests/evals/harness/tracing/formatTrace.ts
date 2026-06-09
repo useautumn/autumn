@@ -10,6 +10,76 @@ const bodyOf = (value: Record<string, unknown>) =>
 		? (value.request as Record<string, unknown>)
 		: value;
 
+const billingToolNames = new Set([
+	"attach",
+	"createSchedule",
+	"previewAttach",
+	"previewCreateSchedule",
+]);
+
+const monthNames = [
+	"January",
+	"February",
+	"March",
+	"April",
+	"May",
+	"June",
+	"July",
+	"August",
+	"September",
+	"October",
+	"November",
+	"December",
+];
+
+const looksLikeEpochMsField = (key: string, value: number) =>
+	(value >= 946_684_800_000 &&
+		value <= 4_102_444_800_000 &&
+		(key.endsWith("_at") ||
+			key.endsWith("_time") ||
+			key === "timestamp" ||
+			key === "date")) ||
+	false;
+
+const formatEpochMs = (value: number) => {
+	const date = new Date(value);
+	const day = date.getUTCDate();
+	const month = monthNames[date.getUTCMonth()];
+	const year = date.getUTCFullYear();
+	const hour = String(date.getUTCHours()).padStart(2, "0");
+	const minute = String(date.getUTCMinutes()).padStart(2, "0");
+	return `${day} ${month} ${year} ${hour}:${minute} UTC (${value})`;
+};
+
+const humanizeEpochMs = (value: unknown, key = ""): unknown => {
+	if (typeof value === "number" && looksLikeEpochMsField(key, value)) {
+		return formatEpochMs(value);
+	}
+	if (Array.isArray(value)) {
+		return value.map((item) => humanizeEpochMs(item));
+	}
+	if (value && typeof value === "object") {
+		return Object.fromEntries(
+			Object.entries(value).map(([entryKey, entryValue]) => [
+				entryKey,
+				humanizeEpochMs(entryValue, entryKey),
+			]),
+		);
+	}
+	return value;
+};
+
+const formatJsonBody = ({
+	body,
+	label,
+}: {
+	body: Record<string, unknown>;
+	label: string;
+}) => {
+	const json = JSON.stringify(humanizeEpochMs(body), null, 2);
+	return json ? `\n[${label}]\n${json}` : "";
+};
+
 const compactFields = (body: Record<string, unknown>) =>
 	[
 		["customer", body.customer_id],
@@ -31,13 +101,20 @@ const compactFields = (body: Record<string, unknown>) =>
 		.join(" ");
 
 const formatToolCall = (call: EvalToolCall) => {
-	const fields = compactFields(bodyOf(call.args));
-	return `[tool] ${call.name}${fields ? ` ${fields}` : ""}`;
+	const body = bodyOf(call.args);
+	const fields = compactFields(body);
+	const details = billingToolNames.has(call.name)
+		? formatJsonBody({ body, label: "tool:body" })
+		: "";
+	return `[tool] ${call.name}${fields ? ` ${fields}` : ""}${details}`;
 };
 
 const formatApiCall = (call: AutumnApiCall) => {
 	const fields = compactFields(call.body);
-	return `[api] POST ${call.endpoint}${fields ? ` ${fields}` : ""}`;
+	const details = call.endpoint.startsWith("/v1/billing.")
+		? formatJsonBody({ body: call.body, label: "api:body" })
+		: "";
+	return `[api] POST ${call.endpoint}${fields ? ` ${fields}` : ""}${details}`;
 };
 
 const summarizeRecord = (record: Record<string, unknown>) =>
