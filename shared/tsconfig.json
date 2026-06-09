@@ -15,7 +15,9 @@
 			"@api/*": ["./api/*"],
 			"@models/*": ["./models/*"],
 			"@utils/*": ["./utils/*"],
-			"@autumn/ksuid": ["../packages/ksuid/src/index.ts"]
+			"@autumn/ksuid": ["../packages/ksuid/src/index.ts"],
+			"stripe": ["../node_modules/.bun/node_modules/stripe/esm/stripe.esm.node"],
+			"stripe/*": ["../node_modules/.bun/node_modules/stripe/esm/*"]
 		}
 	},
 	"include": ["./**/*"],

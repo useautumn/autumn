@@ -13,7 +13,7 @@ export type StripeInlinePrice = {
 	product: string;
 	currency: string;
 	recurring?: Stripe.PriceCreateParams.Recurring;
-	unit_amount_decimal: string;
+	unit_amount_decimal: ReturnType<typeof Stripe.Decimal.from>;
 };
 
 /**

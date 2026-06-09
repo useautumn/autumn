@@ -7,6 +7,7 @@ import {
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { eq } from "drizzle-orm";
 
@@ -47,12 +48,20 @@ export const createProduct = async ({
 		const batchDelete = [];
 		for (const prod of products) {
 			batchDelete.push(
-				ProductService.deleteByInternalId({
-					db,
-					internalId: prod.internal_id,
-					orgId,
-					env,
-				}),
+				(async () => {
+					await CusProductService.deleteByProduct({
+						db,
+						internalProductId: prod.internal_id,
+						orgId,
+						env,
+					});
+					await ProductService.deleteByInternalId({
+						db,
+						internalId: prod.internal_id,
+						orgId,
+						env,
+					});
+				})(),
 			);
 		}
 
@@ -119,7 +128,15 @@ export const createProducts = async ({
 	const batchCreate = [];
 	for (const product of products) {
 		batchCreate.push(
-			createProduct({ db, orgId, env, autumn, product, prefix, createInStripe }),
+			createProduct({
+				db,
+				orgId,
+				env,
+				autumn,
+				product,
+				prefix,
+				createInStripe,
+			}),
 		);
 	}
 

@@ -12,7 +12,7 @@ import type { PayInvoiceResult } from "./payStripeInvoice";
 const getFailureCodeFromStripeError = ({
 	stripeError,
 }: {
-	stripeError: Stripe.errors.StripeError;
+	stripeError: Stripe.ErrorType.StripeError;
 }): "3ds_required" | "payment_failed" => {
 	const authCodes = ["authentication_required", "authentication_not_handled"];
 
@@ -61,7 +61,7 @@ export const handleInvoicePaymentFailure = ({
 	}
 
 	// 2. Check if it's a Stripe error
-	const stripeError = error as Stripe.errors.StripeError;
+	const stripeError = error as Stripe.ErrorType.StripeError;
 	const isStripeError = stripeError.type !== undefined;
 
 	if (!isStripeError) throw error;

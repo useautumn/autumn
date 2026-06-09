@@ -108,7 +108,7 @@
 		"@useautumn/sdk": "workspace:*",
 		"esbuild-plugin-path-alias": "^1.0.7",
 		"hono": "4.12.7",
-		"next": "^15.2.3",
+		"next": "^15.5.18",
 		"react-dom": "^19.1.0",
 		"tsup": "^8.4.0",
 		"typescript": "^5.8.3"

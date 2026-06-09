@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type Stripe from "stripe";
+import Stripe from "stripe";
 import {
 	findMatchingInlinePriceIdForPhaseItem,
 	findMatchingInlineSubscriptionItem,
@@ -10,7 +10,7 @@ const inlinePrice = {
 	product: "stripe_prod_inline",
 	currency: "usd",
 	recurring: { interval: "month" as const, interval_count: 1 },
-	unit_amount_decimal: "1000",
+	unit_amount_decimal: Stripe.Decimal.from("1000"),
 };
 
 const subscriptionItem = ({
