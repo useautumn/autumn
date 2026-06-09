@@ -14,8 +14,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupAttachProductContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachProductContext";
 import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachTransitionContext";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
-import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
+import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
@@ -131,6 +131,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 						customize: plan.customize,
 						version: plan.version,
 					},
+					fullCustomer,
 				});
 
 			const { currentCustomerProduct, scheduledCustomerProduct } =

@@ -1,31 +1,15 @@
 import { FeatureQuantityParamsV0Schema } from "@api/billing/common/featureQuantity/featureQuantityParamsV0";
 import { InvoiceModeParamsSchema } from "@api/billing/common/invoiceModeParams";
 import { RedirectModeSchema } from "@api/billing/common/redirectMode";
-import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice";
-import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPlanItemParamsV1";
 import { z } from "zod/v4";
 import { AttachDiscountSchema } from "../attachV2/attachDiscount";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
+import { CustomizePlanV1Schema } from "../common/customizePlan/customizePlanV1";
 
-const CreateScheduleCustomizePlanSchema = z
-	.object({
-		price: BasePriceParamsSchema.nullable().optional().meta({
-			description:
-				"Override the base price of the plan. Pass null to remove the base price.",
-		}),
-		items: z.array(CreatePlanItemParamsV1Schema).optional().meta({
-			description: "Override the items in the plan.",
-		}),
-	})
-	.strict()
-	.refine(
-		(customize) =>
-			customize.items !== undefined || customize.price !== undefined,
-		{
-			message: "When using customize, either items or price must be provided",
-		},
-	);
+const CreateScheduleCustomizePlanSchema = CustomizePlanV1Schema.omit({
+	free_trial: true,
+});
 
 export const CreateSchedulePlanSchema = z.object({
 	plan_id: z.string().meta({
@@ -39,7 +23,7 @@ export const CreateSchedulePlanSchema = z.object({
 	}),
 	customize: CreateScheduleCustomizePlanSchema.optional().meta({
 		description:
-			"Customize the plan to schedule. Can override the price, items, or both.",
+			"Customize the plan to schedule. Can override price, replace items, or patch items with add_items, remove_items, and update_items.",
 	}),
 	subscription_id: z.string().optional().meta({
 		description:
