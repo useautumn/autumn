@@ -13,6 +13,7 @@ import {
 	UsersIcon,
 	WebhooksLogoIcon,
 } from "@phosphor-icons/react";
+import { Scopes } from "@autumn/shared";
 import { PanelLeft } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { BetaBadge } from "@/components/v2/badges/BetaBadge";
@@ -23,7 +24,6 @@ import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useScopes } from "@/hooks/useScopes";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
-import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { CollapsibleNavGroup } from "./CollapsibleNavGroup";
 import { OrgDropdown } from "./components/OrgDropdown";
 import { EnvDropdown } from "./EnvDropdown";
@@ -92,8 +92,8 @@ export const MainSidebar = ({
 
 	const flags = useAutumnFlags();
 	const { has } = useScopes();
-	const { isAdmin } = useAdmin();
-	const canSeeDev = has("apiKeys:read");
+	const canSeeDev = has(Scopes.ApiKeys.Read);
+	const canSeeMigrations = has(Scopes.Migrations.Read);
 
 	const [storedExpanded, setExpanded] = useLocalStorage<boolean>(
 		"sidebar.expanded",
@@ -183,7 +183,7 @@ export const MainSidebar = ({
 								},
 							]}
 						/>
-						{isAdmin ? (
+						{canSeeMigrations ? (
 							<CollapsibleNavGroup
 								value="customers"
 								icon={<UserCircleIcon size={16} weight="fill" />}
