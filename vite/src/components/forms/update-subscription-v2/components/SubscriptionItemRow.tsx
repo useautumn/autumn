@@ -109,7 +109,7 @@ function PrepaidQuantityControl({
 
 	if (readOnly) {
 		return (
-			<div className="flex items-center h-10 px-3 rounded-xl input-base w-fit shrink-0">
+			<div className="flex items-center py-1 w-fit shrink-0">
 				<span className="text-sm tabular-nums text-tertiary-foreground">{displayText}</span>
 			</div>
 		);
@@ -120,7 +120,7 @@ function PrepaidQuantityControl({
 			layout
 			transition={FAST_TRANSITION}
 			className={cn(
-				"flex items-center h-10 px-3 rounded-xl input-base w-fit shrink-0 gap-2 overflow-hidden",
+				"flex items-center py-1 w-fit shrink-0 gap-2 overflow-hidden",
 				showRing && "ring-1 ring-inset ring-amber-500/50",
 			)}
 		>
@@ -170,9 +170,9 @@ function PrepaidQuantityControl({
 						)}
 						<IconButton
 							icon={<PencilSimpleIcon size={14} />}
-							variant="skeleton"
+							variant="secondary"
 							size="sm"
-							className="text-subtle hover:text-muted-foreground hover:bg-muted"
+							iconOrientation="center"
 							onClick={() => onEditingChange(true)}
 						/>
 					</motion.div>
@@ -259,7 +259,7 @@ export function SubscriptionItemRow({
 		<div className="flex items-center gap-2">
 			<div
 				className={cn(
-					"flex items-center flex-1 min-w-0 h-10 px-3 rounded-xl input-base gap-2",
+					"flex items-center flex-1 min-w-0 gap-2 py-1",
 					!readOnly && isDeleted && "opacity-50",
 				)}
 			>

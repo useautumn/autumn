@@ -13,5 +13,6 @@ export function apiSubscriptionV1ToPurchaseV0({
 		expires_at: input.expires_at,
 		started_at: input.started_at,
 		quantity: input.quantity,
+		scope: input.scope,
 	};
 }

@@ -90,6 +90,8 @@ interface AttachFormContextValue {
 	handleInvoiceAttach: (params: {
 		enableProductImmediately: boolean;
 		finalizeInvoice: boolean;
+		invoiceTemplateId?: string;
+		netTermsDays?: number;
 	}) => Promise<{
 		stripeId: string | undefined;
 		hostedInvoiceUrl: string | null | undefined;
@@ -393,6 +395,7 @@ export function AttachFormProvider({
 		product: effectiveProduct,
 		prepaidOptions,
 		items,
+		grantFree,
 		version,
 		trialLength,
 		trialDuration,

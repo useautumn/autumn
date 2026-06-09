@@ -12,6 +12,7 @@ function LoadingScreen() {
 		"Blasting competitors",
 		"Shipping faster",
 		"Stopping churn",
+		"Ayushhhing...",
 	];
 
 	const [loadingText, setLoadingText] = React.useState(texts[0]);

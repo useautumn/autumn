@@ -1,7 +1,8 @@
+import { readMigrationFiles } from "drizzle-orm/migrator";
 import pg from "pg";
-import { run } from "../helpers/spawn.ts";
-import { REPO_ROOT } from "../helpers/paths.ts";
+import { MIGRATIONS_DIR } from "../helpers/paths.ts";
 import { type Env, targetHost, wrapInInfisical } from "../helpers/env.ts";
+import { applyMigration } from "../helpers/applyMigrations.ts";
 import {
 	getPendingMigrations,
 	type PendingMigration,
@@ -82,10 +83,41 @@ export async function cmdMigrate(
 		process.exit(1);
 	}
 
-	const { code } = await run("bun", ["-F", "@autumn/shared", "db:migrate"], {
-		cwd: REPO_ROOT,
-	});
-	process.exit(code);
+	await applyPending(databaseUrl, pending);
+}
+
+/**
+ * Applies pending migrations using drizzle's own readMigrationFiles (so hashes
+ * match the tracking table drizzle/mark-applied write) but our own executor,
+ * which — unlike drizzle's migrate() — can run CONCURRENTLY outside a transaction.
+ */
+async function applyPending(
+	databaseUrl: string,
+	pending: PendingMigration[],
+): Promise<void> {
+	const pendingByMillis = new Map(pending.map((m) => [m.when, m.tag]));
+	const toApply = readMigrationFiles({ migrationsFolder: MIGRATIONS_DIR })
+		.filter((m) => pendingByMillis.has(m.folderMillis))
+		.sort((a, b) => a.folderMillis - b.folderMillis);
+
+	const client = new pg.Client({ connectionString: databaseUrl });
+	await client.connect();
+	try {
+		for (const migration of toApply) {
+			const tag = pendingByMillis.get(migration.folderMillis) ?? "migration";
+			const { transactional } = await applyMigration(client, migration);
+			console.log(`  applied ${tag}${transactional ? "" : " (concurrent)"}`);
+		}
+	} catch (err) {
+		const message = err instanceof Error ? err.message : String(err);
+		console.error(`\nmigration failed: ${message}`);
+		process.exitCode = 1;
+		return;
+	} finally {
+		await client.end();
+	}
+
+	console.log(`done — applied ${toApply.length} migration(s)`);
 }
 
 type FlaggedBlocker = {

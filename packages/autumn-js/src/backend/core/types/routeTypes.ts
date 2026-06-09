@@ -1,5 +1,6 @@
 import type { Autumn } from "@useautumn/sdk";
 import type { z } from "zod/v4";
+import type { ProtectedBodyField } from "../utils/sanitizeBody";
 import type { ResolvedIdentity } from "./authTypes";
 import type { BackendResult } from "./responseTypes";
 
@@ -48,6 +49,8 @@ export type RouteDefinition<T extends RouteName = RouteName> = {
 	customHandler?: CustomHandlerFn;
 	/** Whether customer ID is required (default: true) */
 	requireCustomer?: boolean;
+	/** Body fields that must come from identity, not frontend */
+	protectedBodyFields?: readonly ProtectedBodyField[];
 	/** Zod schema for request body validation (used by better-auth plugin) */
 	bodySchema?: z.ZodTypeAny;
 };

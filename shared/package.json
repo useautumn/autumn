@@ -15,6 +15,11 @@
 			"import": "./utils/scopeDefinitions.ts",
 			"default": "./utils/scopeDefinitions.ts"
 		},
+		"./leafOAuthScopes": {
+			"types": "./utils/leafOAuthScopes.ts",
+			"import": "./utils/leafOAuthScopes.ts",
+			"default": "./utils/leafOAuthScopes.ts"
+		},
 		"./unixUtils": {
 			"types": "./utils/common/unixUtils.ts",
 			"import": "./utils/common/unixUtils.ts",
@@ -24,6 +29,16 @@
 			"types": "./api/publicApiSchemas.ts",
 			"import": "./api/publicApiSchemas.ts",
 			"default": "./api/publicApiSchemas.ts"
+		},
+		"./utils/chatState": {
+			"types": "./utils/chatState.ts",
+			"import": "./utils/chatState.ts",
+			"default": "./utils/chatState.ts"
+		},
+		"./utils/infisical": {
+			"types": "./utils/infisical.ts",
+			"import": "./utils/infisical.ts",
+			"default": "./utils/infisical.ts"
 		}
 	},
 	"author": "Recase Inc.",
@@ -41,6 +56,7 @@
 		"@orpc/contract": "catalog:",
 		"@orpc/openapi": "^1.13.4",
 		"@orpc/zod": "^1.13.4",
+		"better-auth": "catalog:",
 		"date-fns": "^4.1.0",
 		"decimal.js": "^10.5.0",
 		"dotenv": "^16.5.0",

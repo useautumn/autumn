@@ -134,6 +134,7 @@ export const getApiSubscription = async ({
 		quantity: cusProduct.quantity,
 		current_period_start: stripeSubData?.current_period_start || null,
 		current_period_end: stripeSubData?.current_period_end || null,
+		scope: cusProduct.internal_entity_id ? "entity" : "customer",
 	} satisfies ApiSubscriptionV1);
 
 	return {

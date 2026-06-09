@@ -1,9 +1,10 @@
 import { AppEnv } from "@autumn/shared";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
 	ArrowLeft,
 	Globe,
 	Key,
+	MessageSquare,
 	Pencil,
 	Plus,
 	RefreshCw,
@@ -62,6 +63,25 @@ export const OAuthClientsView = () => {
 	});
 
 	const clients: OAuthClient[] = data?.clients || [];
+	const upsertSlackMcpMutation = useMutation({
+		mutationFn: async () => {
+			const { data } = await axiosInstance.post(
+				"/admin/oauth-clients/slack-mcp",
+			);
+			return data;
+		},
+		onSuccess: (client) => {
+			toast.success(
+				`Slack MCP OAuth client ready: ${client.client_id ?? "autumn_mcp_slack"}`,
+			);
+			refetch();
+		},
+		onError: (error) => {
+			toast.error(
+				getBackendErr(error, "Failed to create Slack MCP OAuth client"),
+			);
+		},
+	});
 
 	const handleDeleteClient = async (client_id: string) => {
 		if (!confirm("Are you sure you want to delete this OAuth client?")) {
@@ -156,6 +176,15 @@ export const OAuthClientsView = () => {
 						disabled={isLoading}
 					>
 						Refresh
+					</IconButton>
+					<IconButton
+						variant="secondary"
+						size="sm"
+						icon={<MessageSquare className="w-4 h-4" />}
+						onClick={() => upsertSlackMcpMutation.mutate()}
+						disabled={upsertSlackMcpMutation.isPending}
+					>
+						Add Slack MCP
 					</IconButton>
 					<IconButton
 						variant="primary"

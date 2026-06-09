@@ -5,6 +5,7 @@ import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjec
 import { getApiCustomer } from "../cusUtils/apiCusUtils/getApiCustomer.js";
 import { getOrCreateCachedFullCustomer } from "../cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
 import { getApiCustomerV2 } from "../cusUtils/getApiCustomerV2/index.js";
+import { ensureStripeCustomerFromCustomerData } from "./ensureStripeCustomerFromCustomerData.js";
 
 export const getOrCreateApiCustomerByRollout = async ({
 	ctx,
@@ -19,29 +20,34 @@ export const getOrCreateApiCustomerByRollout = async ({
 	source?: string;
 	withAutumnId?: boolean;
 }) => {
+	let fullSubject:
+		| Awaited<ReturnType<typeof getOrCreateCachedFullSubject>>
+		| undefined;
+	let fullCustomer:
+		| Awaited<ReturnType<typeof getOrCreateCachedFullCustomer>>
+		| undefined;
+
 	if (isFullSubjectRolloutEnabled({ ctx })) {
-		const fullSubject = await getOrCreateCachedFullSubject({
+		fullSubject = await getOrCreateCachedFullSubject({
 			ctx,
 			params,
 			source,
 		});
-
-		return getApiCustomerV2({
+	} else {
+		fullCustomer = await getOrCreateCachedFullCustomer({
 			ctx,
-			fullSubject,
-			withAutumnId,
+			params,
+			source,
 		});
 	}
 
-	const fullCustomer = await getOrCreateCachedFullCustomer({
+	await ensureStripeCustomerFromCustomerData({
 		ctx,
-		params,
-		source,
+		customer: fullSubject?.customer ?? fullCustomer!,
+		customerData: params.customer_data,
 	});
 
-	return getApiCustomer({
-		ctx,
-		fullCustomer,
-		withAutumnId,
-	});
+	if (fullSubject) return getApiCustomerV2({ ctx, fullSubject, withAutumnId });
+
+	return getApiCustomer({ ctx, fullCustomer: fullCustomer!, withAutumnId });
 };

@@ -1,4 +1,5 @@
 import type { LineItem } from "@models/billingModels/lineItem/lineItem";
+import { BILLING_AMOUNT_EPSILON } from "./billingConstants";
 
 /**
  * Filters out line item pairs where a refund and charge item have the same price ID
@@ -32,10 +33,9 @@ export const filterUnchangedPricesFromLineItems = ({
 
 		if (matchingChargeIndex !== -1) {
 			const matchingChargeItem = chargeItems[matchingChargeIndex];
-			const total = refundItem.amount + matchingChargeItem.amount;
+			const netAmount = Math.abs(refundItem.amount + matchingChargeItem.amount);
 
-			if (total === 0) {
-				// Amounts cancel out - mark charge item as matched (both will be removed)
+			if (netAmount < BILLING_AMOUNT_EPSILON) {
 				matchedChargeIndices.add(matchingChargeIndex);
 				continue;
 			}

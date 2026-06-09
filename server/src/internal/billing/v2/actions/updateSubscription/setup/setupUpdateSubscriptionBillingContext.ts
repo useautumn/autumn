@@ -19,6 +19,7 @@ import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullC
 import { setupIgnoreProrationBehavior } from "@/internal/billing/v2/setup/setupIgnoreProrationBehavior";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
+import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
 import { setupAttachCheckoutMode } from "../../attach/setup/setupAttachCheckoutMode";
 import { setupUpdateSubscriptionIntent } from "./setupUpdateSubscriptionIntent";
 import { setupUpdateSubscriptionTrialContext } from "./setupUpdateSubscriptionTrialContext";
@@ -144,7 +145,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		newFullProduct: fullProduct,
 	});
 
-	const invoiceMode = setupInvoiceModeContext({ params });
+	const invoiceMode = await setupInvoiceModeContext({ ctx, params });
 	const isCustom =
 		contextOverride.forceIsCustom !== undefined
 			? contextOverride.forceIsCustom
@@ -175,6 +176,14 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		checkoutMode,
 		customerProduct,
 	});
+
+	const { storedChargeLineItems, storedRefundLineItems } =
+		await fetchStoredLineItemsForSubscriptionBilling({
+			db: ctx.db,
+			fullCustomer,
+			stripeSubscription,
+			outgoingCusProductIds: [customerProduct.id],
+		});
 
 	return {
 		intent,
@@ -216,6 +225,9 @@ export const setupUpdateSubscriptionBillingContext = async ({
 
 		skipBillingChanges,
 		dryRunStripe: preview,
+
+		storedChargeLineItems,
+		storedRefundLineItems,
 
 		checkoutMode,
 

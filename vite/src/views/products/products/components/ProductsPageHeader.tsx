@@ -1,5 +1,6 @@
 import { CubeIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
+import { PageHeader } from "@/components/general/PageHeader";
 
 interface ProductsPageHeaderProps {
 	children?: ReactNode;
@@ -7,18 +8,14 @@ interface ProductsPageHeaderProps {
 
 /**
  * Shared header for the Products/Plans page.
- * Matches Table.Toolbar + Table.Heading styles.
  */
 export function ProductsPageHeader({ children }: ProductsPageHeaderProps) {
 	return (
-		<div className="flex flex-wrap items-center gap-2 h-10 pb-4">
-			<div className="flex w-full justify-between items-center">
-				<div className="text-muted-foreground text-md py-0 px-2 rounded-lg flex gap-2 items-center">
-					<CubeIcon size={16} weight="fill" className="text-subtle" />
-					Plans
-				</div>
-				<div className="flex items-center gap-2">{children}</div>
-			</div>
-		</div>
+		<PageHeader
+			icon={<CubeIcon size={16} weight="fill" className="text-subtle" />}
+			title="Plans"
+		>
+			{children}
+		</PageHeader>
 	);
 }

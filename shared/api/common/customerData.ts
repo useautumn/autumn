@@ -77,7 +77,7 @@ export const CustomerDataSchema = z
 		}),
 	})
 	.meta({
-		id: "CustomerData",
+		$id: "CustomerData",
 		title: "CustomerData",
 		description: "Customer details to set when creating a customer",
 	});

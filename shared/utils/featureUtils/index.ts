@@ -7,6 +7,7 @@ export * from "./apiFeatureToDbFeature";
 export * from "./convertFeatureUtils";
 export * from "./creditSystemUtils";
 export * from "./findFeatureUtils";
+export * from "./sortFeatures";
 
 export const featureUtils = {
 	isConsumable: isConsumableFeature,

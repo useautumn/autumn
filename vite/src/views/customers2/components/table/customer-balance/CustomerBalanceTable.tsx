@@ -6,6 +6,7 @@ import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceS
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
+import { BalanceRecalculateDialog } from "./BalanceRecalculateDialog";
 import { CustomerBalanceTableColumns } from "./CustomerBalanceTableColumns";
 
 export type CustomerBalanceRowData = FullCusEntWithFullCusProduct & {
@@ -34,6 +35,9 @@ export function CustomerBalanceTable({
 	const selectedFeatureId = useCustomerBalanceSheetStore((s) => s.featureId);
 
 	const [expanded, setExpanded] = useState<ExpandedState>({});
+	const [recalcBalance, setRecalcBalance] =
+		useState<FullCusEntWithFullCusProduct | null>(null);
+	const [recalcOpen, setRecalcOpen] = useState(false);
 
 	const rowData: CustomerBalanceRowData[] = useMemo(() => {
 		return allEnts.map((ent) => {
@@ -75,6 +79,10 @@ export function CustomerBalanceTable({
 							featureName: balance.entitlement.feature.name,
 						},
 					}),
+				onRecalculateClick: (balance) => {
+					setRecalcBalance(balance);
+					setRecalcOpen(true);
+				},
 			}),
 		[customer, entityId, setSheet],
 	);
@@ -134,22 +142,30 @@ export function CustomerBalanceTable({
 	};
 
 	return (
-		<Table.Provider
-			config={{
-				table,
-				numberOfColumns: columns.length,
-				enableSorting: false,
-				isLoading,
-				onRowClick: handleRowClick,
-				flexibleTableColumns: true,
-				selectedItemId: getSelectedRowId(),
-			}}
-		>
-			<Table.Container>
-				<Table.Content>
-					<Table.Body />
-				</Table.Content>
-			</Table.Container>
-		</Table.Provider>
+		<>
+			<Table.Provider
+				config={{
+					table,
+					numberOfColumns: columns.length,
+					enableSorting: false,
+					isLoading,
+					onRowClick: handleRowClick,
+					flexibleTableColumns: true,
+					selectedItemId: getSelectedRowId(),
+				}}
+			>
+				<Table.Container>
+					<Table.Content>
+						<Table.Body />
+					</Table.Content>
+				</Table.Container>
+			</Table.Provider>
+			<BalanceRecalculateDialog
+				balance={recalcBalance}
+				entityId={entityId}
+				open={recalcOpen}
+				onOpenChange={setRecalcOpen}
+			/>
+		</>
 	);
 }

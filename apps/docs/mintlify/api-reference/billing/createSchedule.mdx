@@ -32,6 +32,28 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.
     </DynamicParamField>
 
+    <DynamicParamField body="invoice_template_id" type="string">
+      ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice.
+    </DynamicParamField>
+
+    <DynamicParamField body="net_terms_days" type="integer">
+      Number of days the customer has to pay the invoice before it is due (Stripe days_until_due).
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="discounts" type="object[]">
+  List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+  <Expandable title="properties">
+    <DynamicParamField body="reward_id" type="string">
+      The ID of the reward to apply as a discount.
+    </DynamicParamField>
+
+    <DynamicParamField body="promotion_code" type="string">
+      The promotion code to apply as a discount.
+    </DynamicParamField>
+
   </Expandable>
 </DynamicParamField>
 
