@@ -16,7 +16,7 @@ import {
 } from "@phosphor-icons/react";
 import { PanelLeft } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { Badge } from "@/components/v2/badges/Badge";
+import { BetaBadge } from "@/components/v2/badges/BetaBadge";
 import { Button } from "@/components/v2/buttons/Button";
 import { RevenueCatIcon, StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
@@ -214,14 +214,7 @@ export const MainSidebar = ({
 										value: "migrations",
 										path: "/migrations",
 										icon: <ArrowsClockwiseIcon size={16} weight="fill" />,
-										badge: (
-											<Badge
-												variant="muted"
-												className="ml-auto font-mono text-[10px] px-1.5 py-0 text-muted-foreground"
-											>
-												Beta
-											</Badge>
-										),
+										badge: <BetaBadge className="ml-auto" />,
 									},
 								]}
 							/>

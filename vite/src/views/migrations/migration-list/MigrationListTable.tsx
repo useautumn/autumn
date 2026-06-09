@@ -1,7 +1,7 @@
 import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
-import { Badge } from "@/components/v2/badges/Badge";
+import { BetaBadge } from "@/components/v2/badges/BetaBadge";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import {
 	useMigrationsQuery,
@@ -73,12 +73,7 @@ export function MigrationListTable() {
 							className="text-subtle"
 						/>
 						Migrations
-						<Badge
-							variant="muted"
-							className="font-mono text-[10px] px-1.5 py-0 text-muted-foreground"
-						>
-							Beta
-						</Badge>
+						<BetaBadge />
 					</Table.Heading>
 					<Table.Actions>
 						<div className="flex items-center gap-2">
@@ -88,18 +83,16 @@ export function MigrationListTable() {
 					</Table.Actions>
 				</div>
 			</Table.Toolbar>
-			<InfoBox variant="info" classNames={{ infoBox: "-mt-2 mb-4" }}>
+			<InfoBox variant="info" classNames={{ infoBox: "-mt-4" }}>
 				Migrations are in beta. For complex operations, please reach out to us
 				at support@useautumn.com
 			</InfoBox>
-			<div>
-				<Table.Container>
-					<Table.Content>
-						<Table.Header />
-						<Table.Body />
-					</Table.Content>
-				</Table.Container>
-			</div>
+			<Table.Container>
+				<Table.Content>
+					<Table.Header />
+					<Table.Body />
+				</Table.Content>
+			</Table.Container>
 		</Table.Provider>
 	);
 }
