@@ -15,6 +15,7 @@ import {
 	useState,
 } from "react";
 import { useOrg } from "@/hooks/common/useOrg";
+import { DEFAULT_CUSTOMER_LIST_PAGE_SIZE } from "@/utils/constants/customerListPagination";
 import { useEnv } from "@/utils/envUtils";
 
 const FILTERS_KEY_PREFIX = "autumn:customer-filters";
@@ -67,7 +68,9 @@ function buildRestoredState({
 		none: filters?.none ? true : null,
 		processor: filters?.processor?.length ? filters.processor : null,
 		pageSize:
-			filters?.pageSize && filters.pageSize !== 50 ? filters.pageSize : null,
+			filters?.pageSize && filters.pageSize !== DEFAULT_CUSTOMER_LIST_PAGE_SIZE
+				? filters.pageSize
+				: null,
 	};
 }
 
@@ -77,7 +80,7 @@ const queryStatesConfig = {
 	version: parseAsArrayOf(parseAsString).withDefault([]),
 	none: parseAsBoolean.withDefault(false),
 	processor: parseAsArrayOf(parseAsString).withDefault([]),
-	pageSize: parseAsInteger.withDefault(50),
+	pageSize: parseAsInteger.withDefault(DEFAULT_CUSTOMER_LIST_PAGE_SIZE),
 };
 
 type QueryStates = ReturnType<typeof useQueryStates<typeof queryStatesConfig>>;

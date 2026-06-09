@@ -140,24 +140,7 @@ export class CusProdReadService {
 		orgId: string;
 		env: AppEnv;
 	}) {
-		const internalProductIds = await db
-			.select({
-				internal_id: products.internal_id,
-			})
-			.from(products)
-			.where(
-				and(
-					eq(products.id, productId),
-					eq(products.org_id, orgId),
-					eq(products.env, env),
-				),
-			);
-
-		const internalProductIdsArray = internalProductIds.map(
-			(item) => item.internal_id,
-		);
-
-		const result = await db
+		const rows = await db
 			.select({
 				active: countDistinct(customerProducts.internal_customer_id).as(
 					"active",
@@ -173,17 +156,82 @@ export class CusProdReadService {
 				).as("trialing"),
 				all: countDistinct(customerProducts.internal_customer_id).as("all"),
 			})
-			.from(customerProducts)
+			.from(products)
+			.leftJoin(
+				customerProducts,
+				and(
+					eq(customerProducts.internal_product_id, products.internal_id),
+					inArray(customerProducts.status, activeStatuses),
+				),
+			)
 			.where(
 				and(
-					inArray(
-						customerProducts.internal_product_id,
-						internalProductIdsArray,
-					),
-					inArray(customerProducts.status, activeStatuses),
+					eq(products.id, productId),
+					eq(products.org_id, orgId),
+					eq(products.env, env),
 				),
 			);
 
-		return result[0];
+		return rows[0];
+	}
+
+	static async getCountsPerVersion({
+		db,
+		productId,
+		orgId,
+		env,
+	}: {
+		db: DrizzleCli;
+		productId: string;
+		orgId: string;
+		env: AppEnv;
+	}) {
+		const rows = await db
+			.select({
+				version: products.version,
+				active: countDistinct(customerProducts.internal_customer_id).as(
+					"active",
+				),
+				canceled: countDistinct(
+					sql`CASE WHEN ${isNotNull(customerProducts.canceled_at)} THEN ${customerProducts.internal_customer_id} END`,
+				).as("canceled"),
+				custom: countDistinct(
+					sql`CASE WHEN ${eq(customerProducts.is_custom, true)} THEN ${customerProducts.internal_customer_id} END`,
+				).as("custom"),
+				trialing: countDistinct(
+					sql`CASE WHEN ${isNotNull(customerProducts.trial_ends_at)} AND ${sql`${customerProducts.trial_ends_at} > (EXTRACT(EPOCH FROM NOW()) * 1000)::bigint`} THEN ${customerProducts.internal_customer_id} END`,
+				).as("trialing"),
+				all: countDistinct(customerProducts.internal_customer_id).as("all"),
+			})
+			.from(products)
+			.leftJoin(
+				customerProducts,
+				and(
+					eq(customerProducts.internal_product_id, products.internal_id),
+					inArray(customerProducts.status, activeStatuses),
+				),
+			)
+			.where(
+				and(
+					eq(products.id, productId),
+					eq(products.org_id, orgId),
+					eq(products.env, env),
+				),
+			)
+			.groupBy(products.version);
+
+		const result: Record<
+			number,
+			{ active: number; canceled: number; custom: number; trialing: number }
+		> = {};
+		for (const row of rows) {
+			result[row.version] = {
+				active: row.active,
+				canceled: row.canceled,
+				custom: row.custom,
+				trialing: row.trialing,
+			};
+		}
+		return result;
 	}
 }

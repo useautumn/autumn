@@ -31,6 +31,26 @@ import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
 
 export class CusEntService {
+	/**
+	 * Which of these catalog entitlements are referenced by any
+	 * customer_entitlements row — across every status, including loose,
+	 * scheduled and canceled.
+	 */
+	static async getReferencedEntitlementIds({
+		db,
+		entitlementIds,
+	}: {
+		db: DrizzleCli;
+		entitlementIds: string[];
+	}): Promise<Set<string>> {
+		if (entitlementIds.length === 0) return new Set();
+		const rows = await db
+			.select({ entitlement_id: customerEntitlements.entitlement_id })
+			.from(customerEntitlements)
+			.where(inArray(customerEntitlements.entitlement_id, entitlementIds));
+		return new Set(rows.map((row) => row.entitlement_id));
+	}
+
 	static async get({
 		ctx,
 		externalId,

@@ -107,6 +107,7 @@ function SubscriptionDetailItems({
 				{collapsedBooleanItems.length > 0 && (
 					<CollapsedBooleanItems
 						items={collapsedBooleanItems}
+						triggerClassName="pl-0 pr-1"
 						renderItem={(item, index) =>
 							renderRow(item, visibleItems.length + index)
 						}

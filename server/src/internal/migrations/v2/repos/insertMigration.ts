@@ -16,7 +16,10 @@ export const insertMigration = async ({
 	insert,
 }: {
 	ctx: RepoContext;
-	insert: Pick<MigrationInsert, "id" | "filter" | "operations">;
+	insert: Pick<
+		MigrationInsert,
+		"id" | "filter" | "operations" | "no_billing_changes"
+	>;
 }): Promise<Migration> => {
 	const row: MigrationInsert = {
 		internal_id: generateId("mig"),
@@ -25,7 +28,9 @@ export const insertMigration = async ({
 		env: ctx.env,
 		filter: insert.filter ?? null,
 		operations: insert.operations ?? null,
+		no_billing_changes: insert.no_billing_changes ?? null,
 		retry_failed: false,
+		archived: false,
 		created_at: Date.now(),
 		updated_at: null,
 	};

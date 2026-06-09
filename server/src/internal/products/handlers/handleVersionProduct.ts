@@ -41,7 +41,13 @@ export const handleVersionProductV2 = async ({
 }) => {
 	const { db, features } = ctx;
 
-	const curVersion = latestProduct.version;
+	const latestForVersioning = await ProductService.getFull({
+		db,
+		idOrInternalId: latestProduct.id,
+		orgId: org.id,
+		env,
+	});
+	const curVersion = latestForVersioning.version;
 	const newVersion = curVersion + 1;
 
 	console.log(

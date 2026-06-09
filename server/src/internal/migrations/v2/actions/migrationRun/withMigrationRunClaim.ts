@@ -56,13 +56,6 @@ export const withMigrationRunClaim = async ({
 		});
 	}
 
-	// Lazy-mode runs need to land on `ctx.org.pendingMigrations` for every
-	// authed request, so bust the cached api-key payload here. Non-lazy runs
-	// have no effect on the hot path until the trigger task starts mutating.
-	if (lazyRun) {
-		await clearOrgCache({ db: ctx.db, orgId: ctx.org.id, env: ctx.env });
-	}
-
 	let result: { triggerRunId?: string } | undefined;
 	try {
 		result = await claimed(migrationRun.internal_id);
@@ -104,6 +97,12 @@ export const withMigrationRunClaim = async ({
 				},
 			});
 		}
+	}
+
+	// Publish lazy-mode runs only after claim setup succeeds, so customer
+	// request-path tasks cannot observe a migration before prepare completes.
+	if (lazyRun) {
+		await clearOrgCache({ db: ctx.db, orgId: ctx.org.id, env: ctx.env });
 	}
 
 	return {
