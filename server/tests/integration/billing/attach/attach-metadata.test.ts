@@ -215,13 +215,23 @@ test.concurrent(`${chalk.yellowBright("metadata: passthrough via Stripe checkout
 		customer_id: customerId,
 		plan_id: pro.id,
 		metadata: {
-			source: "web",
-			campaign_id: "camp-789",
+			datafast_visitor_id: "visitor-789",
+			datafast_session_id: "session-789",
 		},
 	});
 
 	expect(result.payment_url).toBeDefined();
 	expect(result.payment_url).toContain("checkout.stripe.com");
+
+	const checkoutPathParts = new URL(result.payment_url).pathname.split("/");
+	const checkoutSessionId = checkoutPathParts[checkoutPathParts.length - 1];
+	expect(checkoutSessionId).toBeDefined();
+
+	const checkoutSession = await ctx.stripeCli.checkout.sessions.retrieve(
+		checkoutSessionId!,
+	);
+	expect(checkoutSession.metadata?.datafast_visitor_id).toBe("visitor-789");
+	expect(checkoutSession.metadata?.datafast_session_id).toBe("session-789");
 
 	await completeStripeCheckoutForm({ url: result.payment_url });
 	await timeout(12000);
@@ -251,6 +261,6 @@ test.concurrent(`${chalk.yellowBright("metadata: passthrough via Stripe checkout
 		(sub) => sub.status === "active" || sub.status === "trialing",
 	);
 	expect(subscription).toBeDefined();
-	expect(subscription!.metadata.source).toBe("web");
-	expect(subscription!.metadata.campaign_id).toBe("camp-789");
+	expect(subscription!.metadata.datafast_visitor_id).toBe("visitor-789");
+	expect(subscription!.metadata.datafast_session_id).toBe("session-789");
 });
