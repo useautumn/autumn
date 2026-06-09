@@ -6,7 +6,7 @@ import {
 	priceUtils,
 	type StripeItemSpec,
 } from "@autumn/shared";
-import type { Checkout as CheckoutSessions } from "stripe/resources/Checkout/Sessions.js";
+import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { customerProductsToOneOffStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/customerProductsToOneOffStripeItemSpecs";
 import { customerProductsToRecurringStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/stripeItemSpec/customerProductsToRecurringStripeItemSpecs";
@@ -17,13 +17,13 @@ import { updateOneOffTieredItems } from "./updateOneOffTieredItems";
 const isZeroAmountInlineLineItem = ({
 	lineItem,
 }: {
-	lineItem: CheckoutSessions.SessionCreateParams.LineItem;
+	lineItem: Stripe.Checkout.SessionCreateParams.LineItem;
 }) => {
 	if (!("price_data" in lineItem) || !lineItem.price_data) return false;
 
 	return (
 		lineItem.price_data.unit_amount === 0 ||
-		lineItem.price_data.unit_amount_decimal?.toNumber() === 0
+		lineItem.price_data.unit_amount_decimal === "0"
 	);
 };
 
@@ -34,7 +34,7 @@ const isZeroAmountInlineRecurringStripeItemSpec = ({
 }) => {
 	if (!stripeItemSpec.stripeInlinePrice?.recurring) return false;
 
-	return stripeItemSpec.stripeInlinePrice.unit_amount_decimal.toNumber() === 0;
+	return stripeItemSpec.stripeInlinePrice.unit_amount_decimal === "0";
 };
 
 const getRecurringCadenceKey = ({
@@ -94,10 +94,10 @@ const applyAdjustableQuantityToPrepaidLineItem = ({
 	spec,
 	billingContext,
 }: {
-	lineItem: CheckoutSessions.SessionCreateParams.LineItem;
+	lineItem: Stripe.Checkout.SessionCreateParams.LineItem;
 	spec: StripeItemSpec;
 	billingContext: BillingContext;
-}): CheckoutSessions.SessionCreateParams.LineItem => {
+}): Stripe.Checkout.SessionCreateParams.LineItem => {
 	const { autumnPrice, autumnEntitlement, autumnProduct } = spec;
 
 	if (!autumnPrice || !autumnEntitlement || !isPrepaidPrice(autumnPrice)) {
@@ -132,7 +132,7 @@ const applyAdjustableQuantityToPrepaidLineItem = ({
 			}),
 			maximum: 999999,
 		},
-	} as CheckoutSessions.SessionCreateParams.LineItem;
+	} as Stripe.Checkout.SessionCreateParams.LineItem;
 };
 
 export const buildStripeCheckoutSessionItems = ({
@@ -144,8 +144,8 @@ export const buildStripeCheckoutSessionItems = ({
 	billingContext: BillingContext;
 	newCustomerProducts: FullCusProduct[];
 }): {
-	recurringLineItems: CheckoutSessions.SessionCreateParams.LineItem[];
-	oneOffLineItems: CheckoutSessions.SessionCreateParams.LineItem[];
+	recurringLineItems: Stripe.Checkout.SessionCreateParams.LineItem[];
+	oneOffLineItems: Stripe.Checkout.SessionCreateParams.LineItem[];
 } => {
 	// 1. Filter customer products by active statuses
 	const activeCustomerProducts = filterCustomerProductsByActiveStatuses({

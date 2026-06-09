@@ -15,7 +15,7 @@ import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { prices } from "@tests/utils/fixtures/db/prices";
 import { stripeSubscriptions } from "@tests/utils/fixtures/stripe/subscriptions";
 import chalk from "chalk";
-import Stripe from "stripe";
+import type Stripe from "stripe";
 import { buildStripeSubscriptionItemsUpdate } from "@/internal/billing/v2/providers/stripe/utils/subscriptionItems/buildStripeSubscriptionItemsUpdate";
 import {
 	createCustomerPricesForProduct,
@@ -968,7 +968,7 @@ describe(
 				const changedItem = currentItems.find(
 					(item) => item.metadata.inline_price === "true",
 				)!;
-				changedItem.price.unit_amount_decimal = Stripe.Decimal.from("999999");
+				changedItem.price.unit_amount_decimal = "999999";
 
 				const result = buildUpdateWithItems({ currentItems });
 

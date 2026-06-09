@@ -10,7 +10,6 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildStripeCheckoutSessionItems } from "@/internal/billing/v2/providers/stripe/utils/checkoutSessions/buildStripeCheckoutSessionItems";
 import { buildAutumnSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { stripeDiscountsToCheckoutParams } from "@/internal/billing/v2/providers/stripe/utils/discounts/stripeDiscountsToParams";
-import type { Checkout as CheckoutSessions } from "stripe/resources/Checkout/Sessions.js";
 
 export const buildStripeCheckoutSessionAction = ({
 	ctx,
@@ -46,11 +45,11 @@ export const buildStripeCheckoutSessionAction = ({
 	// Payment-mode checkout has no top-level default_tax_rates, so one-off items take per-line tax_rates.
 	const taxRateId = billingContext.taxRateId;
 	const applyTaxRateToLineItem = (
-		item: CheckoutSessions.SessionCreateParams.LineItem,
-	): CheckoutSessions.SessionCreateParams.LineItem =>
+		item: Stripe.Checkout.SessionCreateParams.LineItem,
+	): Stripe.Checkout.SessionCreateParams.LineItem =>
 		taxRateId ? { ...item, tax_rates: [taxRateId] } : item;
 
-	const lineItems: CheckoutSessions.SessionCreateParams.LineItem[] = [
+	const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
 		...recurringLineItems.filter((item) => item.quantity !== 0),
 		...oneOffLineItems
 			.filter((item) => item.quantity !== 0)
@@ -65,7 +64,7 @@ export const buildStripeCheckoutSessionAction = ({
 
 	// 5. Build subscription_data (only for subscription mode)
 	const subscriptionData:
-		| CheckoutSessions.SessionCreateParams.SubscriptionData
+		| Stripe.Checkout.SessionCreateParams.SubscriptionData
 		| undefined =
 		mode === "subscription"
 			? {
@@ -89,7 +88,7 @@ export const buildStripeCheckoutSessionAction = ({
 
 	// 7. Build params. Tax policy is baked in here (not at execute time) so
 	// the action object is self-describing in logs/EXTRA_LOGS.
-	const autumnAutoTax: Partial<CheckoutSessions.SessionCreateParams> = org.config
+	const autumnAutoTax: Partial<Stripe.Checkout.SessionCreateParams> = org.config
 		.automatic_tax
 		? {
 				automatic_tax: { enabled: true },
@@ -99,7 +98,7 @@ export const buildStripeCheckoutSessionAction = ({
 			}
 		: {};
 
-	const params: CheckoutSessions.SessionCreateParams = {
+	const params: Stripe.Checkout.SessionCreateParams = {
 		customer: stripeCustomer?.id ?? "none",
 		mode,
 		line_items: lineItems,
@@ -113,6 +112,6 @@ export const buildStripeCheckoutSessionAction = ({
 		type: "create",
 		params,
 		checkoutSessionParams:
-			checkoutSessionParams as Partial<CheckoutSessions.SessionCreateParams>,
+			checkoutSessionParams as Partial<Stripe.Checkout.SessionCreateParams>,
 	};
 };

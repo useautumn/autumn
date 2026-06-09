@@ -8,11 +8,12 @@
 		"target": "ES2020",
 		"moduleResolution": "bundler",
 		"module": "Preserve",
-		"rootDirs": [".", ".."],
+
 		"typeRoots": ["./node_modules/@types", "../node_modules/@types"],
     "types": ["bun", "node"],
 		// "declaration": true,
 		"jsx": "react-jsx",
+		"outDir": "./dist",
 		"strict": true,
 		"esModuleInterop": true,
 		"allowSyntheticDefaultImports": true,
@@ -40,9 +41,7 @@
 
 			// Explicitly set drizzle-orm path to avoid monorepo issues
 			"drizzle-orm": ["../node_modules/drizzle-orm"],
-			"drizzle-orm/*": ["../node_modules/drizzle-orm/*"],
-			"stripe": ["../node_modules/.bun/node_modules/stripe/esm/stripe.esm.node"],
-			"stripe/*": ["../node_modules/.bun/node_modules/stripe/esm/*"]
+			"drizzle-orm/*": ["../node_modules/drizzle-orm/*"]
 		}
 	},
 	"include": ["src", "tests", "scripts", "experiments", "perf"],

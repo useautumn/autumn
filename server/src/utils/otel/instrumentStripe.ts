@@ -6,14 +6,13 @@ import {
 	trace,
 } from "@opentelemetry/api";
 import type Stripe from "stripe";
-import type { StripeConfig } from "stripe/lib.js";
 import { otelConfig } from "./otelConfig.js";
 
 const TRACER_NAME = "autumn.stripe";
 const SPAN_NAME = "stripe.api";
 const INSTRUMENTED = new WeakSet<object>();
 
-type StripeHttpClient = NonNullable<StripeConfig["httpClient"]>;
+type StripeHttpClient = NonNullable<Stripe.StripeConfig["httpClient"]>;
 
 type StripeApiLike = {
 	httpClient?: StripeHttpClient;

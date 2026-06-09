@@ -11,8 +11,6 @@ import { expireAllCusEntsForReset } from "@tests/utils/cusProductUtils/resetTest
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { sql } from "drizzle-orm";
-import { syncItemV4 } from "@/internal/balances/utils/sync/syncItemV4.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 
 // ─────────────────────────────────────────────────────────────────
@@ -51,40 +49,6 @@ test.concurrent(`${chalk.yellowBright("customer aggregated balance: rollover bal
 			actions: [s.attach({ productId: base.id })],
 		});
 
-	const syncMessagesBalance = async () => {
-		const cusEntRows = await ctx.db.execute(
-			sql`SELECT ce.id
-				FROM customer_entitlements ce
-				JOIN customers c ON c.internal_id = ce.internal_customer_id
-				WHERE c.id = ${customerId}
-					AND ce.feature_id = ${TestFeature.Messages}`,
-		);
-		const cusEntIds = cusEntRows.map((row) => row.id as string);
-
-		const rolloverRows = cusEntIds.length
-			? await ctx.db.execute(
-					sql`SELECT id FROM rollovers WHERE cus_ent_id IN (${sql.join(
-						cusEntIds.map((id) => sql`${id}`),
-						sql`, `,
-					)})`,
-				)
-			: [];
-
-		await syncItemV4({
-			ctx,
-			payload: {
-				customerId,
-				orgId: ctx.org.id,
-				env: ctx.env,
-				timestamp: Date.now(),
-				rolloverIds: rolloverRows.map((row) => row.id as string),
-				modifiedCusEntIdsByFeatureId: {
-					[TestFeature.Messages]: cusEntIds,
-				},
-			},
-		});
-	};
-
 	// ── Step 1: Track 60 on ent-0, 30 on ent-1 ──
 	// Expected per-entity balance: ent-0 = 40, ent-1 = 70.
 	// Customer aggregated: remaining = 110, usage = 90.
@@ -94,14 +58,12 @@ test.concurrent(`${chalk.yellowBright("customer aggregated balance: rollover bal
 		feature_id: TestFeature.Messages,
 		value: 60,
 	});
-	await syncMessagesBalance();
 	await autumnV1.track({
 		customer_id: customerId,
 		entity_id: entities[1].id,
 		feature_id: TestFeature.Messages,
 		value: 30,
 	});
-	await syncMessagesBalance();
 
 	await new Promise((resolve) => setTimeout(resolve, 2000));
 
@@ -170,7 +132,6 @@ test.concurrent(`${chalk.yellowBright("customer aggregated balance: rollover bal
 		feature_id: TestFeature.Messages,
 		value: 50,
 	});
-	await syncMessagesBalance();
 
 	await new Promise((resolve) => setTimeout(resolve, 1500));
 
