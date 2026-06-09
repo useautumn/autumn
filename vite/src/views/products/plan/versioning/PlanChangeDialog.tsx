@@ -1,10 +1,9 @@
 import type { FrontendProduct } from "@autumn/shared";
-import { isPriceItem, productsAreSame } from "@autumn/shared";
+import { productsAreSame } from "@autumn/shared";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { PlanItemsSection } from "@/components/forms/shared";
-import { getProductPriceDisplay } from "@/components/forms/update-subscription-v2/components/PriceDisplay";
 import { Switch } from "@/components/ui/switch";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
@@ -37,6 +36,7 @@ import {
 	buildMigrationDraft,
 	type MigrationScope,
 } from "./buildMigrationDraft";
+import { getPlanPriceChange, hasPlanMigrationDiff } from "./planMigrationDiff";
 
 type VersionChoice = "new" | "update";
 
@@ -69,45 +69,6 @@ function ConfirmInput({
 			/>
 		</div>
 	);
-}
-
-function usePriceChange(
-	baseProduct: FrontendProduct | null,
-	product: FrontendProduct,
-	currency: string,
-) {
-	return useMemo(() => {
-		if (!baseProduct) return null;
-
-		const oldDisplay = getProductPriceDisplay({
-			product: baseProduct,
-			currency,
-		});
-		const newDisplay = getProductPriceDisplay({ product, currency });
-
-		const oldPrice =
-			oldDisplay.type === "price" ? oldDisplay.formattedPrice : "Free";
-		const newPrice =
-			newDisplay.type === "price" ? newDisplay.formattedPrice : "Free";
-		const oldInterval =
-			oldDisplay.type === "price" ? oldDisplay.intervalText : null;
-		const newInterval =
-			newDisplay.type === "price" ? newDisplay.intervalText : null;
-
-		if (oldPrice === newPrice && oldInterval === newInterval) return null;
-
-		const originalPriceItem = baseProduct.items?.find((i) => isPriceItem(i));
-		const currentPriceItem = product.items?.find((i) => isPriceItem(i));
-
-		return {
-			oldPrice,
-			newPrice,
-			oldIntervalText: oldInterval !== newInterval ? oldInterval : null,
-			newIntervalText: newInterval,
-			isUpgrade:
-				(currentPriceItem?.price ?? 0) > (originalPriceItem?.price ?? 0),
-		};
-	}, [baseProduct, product.items, currency]);
 }
 
 export default function PlanChangeDialog({
@@ -143,7 +104,10 @@ export default function PlanChangeDialog({
 	const confirmed = confirmText === product.id;
 
 	const currency = org?.default_currency ?? "USD";
-	const priceChange = usePriceChange(baseProduct, product, currency);
+	const priceChange = useMemo(
+		() => getPlanPriceChange({ baseProduct, product, currency }),
+		[baseProduct, product, currency],
+	);
 	const hasMultipleVersions = (numVersions ?? 1) > 1;
 
 	const customCount = useMemo(() => {
@@ -162,6 +126,9 @@ export default function PlanChangeDialog({
 		});
 		return !same;
 	}, [baseProduct, product, features]);
+	const hasMigrationDiff = useMemo(() => {
+		return hasPlanMigrationDiff({ baseProduct, product, currency });
+	}, [baseProduct, product, currency]);
 
 	const resetState = () => {
 		setStep(1);
@@ -207,10 +174,16 @@ export default function PlanChangeDialog({
 						features,
 					}),
 				);
-				setMigrationBaseProduct(baseProduct);
 				markSaved();
 				toast.success("Plan updated");
-				setStep(2);
+				if (hasMigrationDiff) {
+					setMigrationBaseProduct(baseProduct);
+					setStep(2);
+				} else {
+					setOpen(false);
+					resetState();
+					void refetch();
+				}
 				void invalidateProducts();
 			} catch (error) {
 				toast.error(getBackendErr(error, "Failed to update plan"));
@@ -248,12 +221,23 @@ export default function PlanChangeDialog({
 	const handleStep2Action = async () => {
 		const draftBaseProduct = migrationBaseProduct ?? baseProduct;
 		if (!draftBaseProduct) return;
+		if (
+			!hasPlanMigrationDiff({
+				baseProduct: draftBaseProduct,
+				product,
+				currency,
+			})
+		) {
+			setOpen(false);
+			resetState();
+			void refetch();
+			void invalidateProducts();
+			return;
+		}
 
 		setIsLoading(true);
 		try {
-			const scope = hasMultipleVersions
-				? migrationScope
-				: "this_version";
+			const scope = hasMultipleVersions ? migrationScope : "this_version";
 
 			const draft = buildMigrationDraft({
 				baseProduct: draftBaseProduct,
@@ -303,9 +287,7 @@ export default function PlanChangeDialog({
 			<DialogContent className="max-w-md max-h-[85vh] flex flex-col">
 				<DialogHeader>
 					<DialogTitle>
-						{step === 1
-							? "Save plan changes"
-							: "Create migration"}
+						{step === 1 ? "Save plan changes" : "Create migration"}
 					</DialogTitle>
 				</DialogHeader>
 
@@ -317,9 +299,7 @@ export default function PlanChangeDialog({
 									{hasChanges && (
 										<PlanItemsSection
 											product={product}
-											originalItems={
-												baseProduct?.items
-											}
+											originalItems={baseProduct?.items}
 											features={features}
 											prepaidOptions={{}}
 											initialPrepaidOptions={{}}
@@ -336,9 +316,7 @@ export default function PlanChangeDialog({
 										className="pt-1 pb-3"
 										value={versionChoice}
 										onValueChange={(val) =>
-											setVersionChoice(
-												val as VersionChoice,
-											)
+											setVersionChoice(val as VersionChoice)
 										}
 									>
 										<AreaRadioGroupItem
@@ -364,12 +342,10 @@ export default function PlanChangeDialog({
 							{step === 2 && (
 								<>
 									<p className="text-sm text-muted-foreground">
-										Autumn updated the current version of
-										this plan directly. New customers will
-										get these changes immediately. Now
-										create a migration so you can review
-										and apply the same changes to current
-										users.
+										Autumn updated the current version of this plan directly.
+										New customers will get these changes immediately. Now create
+										a migration so you can review and apply the same changes to
+										current users.
 									</p>
 
 									{hasMultipleVersions && (
@@ -377,9 +353,7 @@ export default function PlanChangeDialog({
 											className="pt-1 pb-3"
 											value={migrationScope}
 											onValueChange={(val) =>
-												setMigrationScope(
-													val as MigrationScope,
-												)
+												setMigrationScope(val as MigrationScope)
 											}
 										>
 											<AreaRadioGroupItem
@@ -402,34 +376,24 @@ export default function PlanChangeDialog({
 													Apply to custom plans
 												</span>
 												<span className="text-xs text-muted-foreground">
-													There{" "}
-													{customCount === 1
-														? "is"
-														: "are"}{" "}
-													{customCount} user
-													{customCount !== 1
-														? "s"
-														: ""}{" "}
-													on custom versions of
+													There {customCount === 1 ? "is" : "are"} {customCount}{" "}
+													user
+													{customCount !== 1 ? "s" : ""} on custom versions of
 													this plan
 												</span>
 											</div>
 											<Switch
 												checked={includeCustom}
-												onCheckedChange={
-													setIncludeCustom
-												}
+												onCheckedChange={setIncludeCustom}
 											/>
 										</div>
 									)}
 
-									{!hasMultipleVersions &&
-										customCount === 0 && (
-											<p className="text-sm text-muted-foreground">
-												Preview a migration for
-												current users on this plan.
-											</p>
-										)}
+									{!hasMultipleVersions && customCount === 0 && (
+										<p className="text-sm text-muted-foreground">
+											Preview a migration for current users on this plan.
+										</p>
+									)}
 								</>
 							)}
 						</div>
@@ -440,16 +404,9 @@ export default function PlanChangeDialog({
 					<ShortcutButton
 						variant="primary"
 						metaShortcut="enter"
-						onClick={
-							step === 1
-								? handleStep1Action
-								: handleStep2Action
-						}
+						onClick={step === 1 ? handleStep1Action : handleStep2Action}
 						isLoading={isLoading}
-						disabled={
-							isLoading ||
-							(step === 1 && !confirmed)
-						}
+						disabled={isLoading || (step === 1 && !confirmed)}
 						className="w-full"
 					>
 						{buttonText}

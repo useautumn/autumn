@@ -1,4 +1,8 @@
-import { ArrowsClockwiseIcon, TriangleIcon, UserIcon } from "@phosphor-icons/react";
+import {
+	ArrowsClockwiseIcon,
+	TriangleIcon,
+	UserIcon,
+} from "@phosphor-icons/react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useMemo, useState } from "react";
@@ -38,7 +42,10 @@ import {
 	useProductQuery,
 	useProductQueryState,
 } from "../../product/hooks/useProductQuery";
-import { MigrateCustomersDialog } from "../versioning/MigrateCustomersDialog";
+import {
+	MigrateCustomersDialog,
+	useMigratableVersions,
+} from "../versioning/MigrateCustomersDialog";
 import { PlanToolbar } from "./PlanToolbar.tsx";
 
 export const EditPlanHeader = () => {
@@ -54,6 +61,7 @@ export const EditPlanHeader = () => {
 	const { mappings } = useRCMappings();
 	const { org } = useOrg();
 	const env = useEnv();
+	const currency = org?.default_currency ?? "USD";
 	const [migrateDialogOpen, setMigrateDialogOpen] = useState(false);
 
 	const pastVersionsWithCustomers = useMemo(() => {
@@ -67,6 +75,12 @@ export const EditPlanHeader = () => {
 			})
 			.map(([version]) => Number(version));
 	}, [numVersions, versionCounts]);
+	const migratableVersions = useMigratableVersions({
+		productId: product.id,
+		latestVersion: numVersions,
+		pastVersions: pastVersionsWithCustomers,
+		currency,
+	});
 
 	const hasRCMapping =
 		flags.revenuecat &&
@@ -139,7 +153,7 @@ export const EditPlanHeader = () => {
 				onOpenChange={setMigrateDialogOpen}
 				productId={product.id}
 				latestVersion={numVersions}
-				pastVersionsWithCustomers={pastVersionsWithCustomers}
+				migratableVersions={migratableVersions}
 				versionCounts={versionCounts}
 			/>
 			<div className="flex flex-col gap-2 p-4 pb-3  border-none shadow-none w-full max-w-5xl mx-auto pt-4 sm:pt-8 px-4 sm:px-12">
@@ -168,7 +182,9 @@ export const EditPlanHeader = () => {
 								{product.name}
 							</span>
 						</AdminHover>
-						<span className="text-sm text-tertiary-foreground">v{product.version}</span>
+						<span className="text-sm text-tertiary-foreground">
+							v{product.version}
+						</span>
 					</div>
 				</div>
 				<div className="flex flex-row justify-between items-center">
@@ -230,48 +246,56 @@ export const EditPlanHeader = () => {
 					</div>
 
 					<div className="flex flex-row gap-2 items-center">
-					{pastVersionsWithCustomers.length > 0 && !isCusPlanEditor && (
-						<IconButton
-							variant="secondary"
-							size="mini"
-							icon={<ArrowsClockwiseIcon />}
-							iconOrientation="left"
-							onClick={() => setMigrateDialogOpen(true)}
-						>
-							Migrate customers
-						</IconButton>
-					)}
-					{numVersions && numVersions > 1 && (
-					<Select
-						value={currentVersion.toString()}
-						onValueChange={handleVersionChange}
-						items={Object.fromEntries(versionOptions.map((version) => [version.toString(), `Version ${version}`]))}
-					>
-							<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
-								<SelectValue placeholder="Version" />
-							</SelectTrigger>
-							<SelectContent>
-								{versionOptions.map((version) => {
-									const count = versionCounts[version]?.active || 0;
-									const hasLoaded = Object.keys(versionCounts).length > 0;
-									return (
-										<SelectItem key={version} value={version.toString()}>
-											<div className="flex items-center justify-between w-full gap-3">
-												<span>Version {version}</span>
-												{hasLoaded ? (
-													<IconBadge variant="muted" icon={<UserIcon />}>
-														{count}
-													</IconBadge>
-												) : (
-													<SmallSpinner size={10} className="text-tertiary-foreground" />
-												)}
-											</div>
-										</SelectItem>
-									);
-								})}
-							</SelectContent>
-						</Select>
-					)}
+						{migratableVersions.length > 0 && !isCusPlanEditor && (
+							<IconButton
+								variant="secondary"
+								size="mini"
+								icon={<ArrowsClockwiseIcon />}
+								iconOrientation="left"
+								onClick={() => setMigrateDialogOpen(true)}
+							>
+								Migrate customers
+							</IconButton>
+						)}
+						{numVersions && numVersions > 1 && (
+							<Select
+								value={currentVersion.toString()}
+								onValueChange={handleVersionChange}
+								items={Object.fromEntries(
+									versionOptions.map((version) => [
+										version.toString(),
+										`Version ${version}`,
+									]),
+								)}
+							>
+								<SelectTrigger className="w-fit min-w-28 !h-6" size="sm">
+									<SelectValue placeholder="Version" />
+								</SelectTrigger>
+								<SelectContent>
+									{versionOptions.map((version) => {
+										const count = versionCounts[version]?.active || 0;
+										const hasLoaded = Object.keys(versionCounts).length > 0;
+										return (
+											<SelectItem key={version} value={version.toString()}>
+												<div className="flex items-center justify-between w-full gap-3">
+													<span>Version {version}</span>
+													{hasLoaded ? (
+														<IconBadge variant="muted" icon={<UserIcon />}>
+															{count}
+														</IconBadge>
+													) : (
+														<SmallSpinner
+															size={10}
+															className="text-tertiary-foreground"
+														/>
+													)}
+												</div>
+											</SelectItem>
+										);
+									})}
+								</SelectContent>
+							</Select>
+						)}
 						{!isCusPlanEditor && <PlanToolbar />}
 					</div>
 				</div>

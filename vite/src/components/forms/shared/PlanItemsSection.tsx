@@ -9,13 +9,18 @@ import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { LayoutGroup, motion } from "motion/react";
 import { useMemo } from "react";
 import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
+import type { AdminPlanIds } from "@/components/forms/shared/admin/AdminPlanIdsTooltip";
 import type { UseUpdateSubscriptionForm } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionForm";
 import { Button } from "@/components/v2/buttons/Button";
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 import { CollapsedBooleanItems } from "./plan-items/CollapsedBooleanItems";
 import { DeletedItemRow } from "./plan-items/DeletedItemRow";
 import { PlanEditButton } from "./plan-items/PlanEditButton";
-import { getItemMatchKey, hasItemChanged, PlanItemRow } from "./plan-items/PlanItemRow";
+import {
+	getItemMatchKey,
+	hasItemChanged,
+	PlanItemRow,
+} from "./plan-items/PlanItemRow";
 import { PlanPriceHeader } from "./plan-items/PlanPriceHeader";
 import {
 	PlanTrialEditor,
@@ -60,30 +65,20 @@ export interface PlanItemsSectionProps {
 	changesOnly?: boolean;
 	readOnly?: boolean;
 
-	adminIds?: import(
-		"@/components/forms/shared/admin/AdminPlanIdsTooltip"
-	).AdminPlanIds;
+	adminIds?: AdminPlanIds;
 }
 
-export function PlanItemsSection({
+export function getPlanItemsDiff({
 	product,
 	originalItems,
-	features,
-	prepaidOptions,
-	initialPrepaidOptions,
-	existingOptions,
-	form,
 	showDiff,
-	currency,
-	onEditPlan,
-	priceChange,
-	versionChange,
-	trialConfig,
 	gateDeletedItemsByDiff = false,
-	changesOnly = false,
-	readOnly = false,
-	adminIds,
-}: PlanItemsSectionProps) {
+}: {
+	product: FrontendProduct | undefined;
+	originalItems: ProductItem[] | undefined;
+	showDiff: boolean;
+	gateDeletedItemsByDiff?: boolean;
+}) {
 	const originalItemsMap = new Map<string, ProductItem>(
 		originalItems
 			?.filter((i) => i.feature_id)
@@ -96,11 +91,6 @@ export function PlanItemsSection({
 			.map((i) => getItemMatchKey(i)) ?? [],
 	);
 
-	// When showing diffs, split changed items into red (deleted old) +
-	// green (created new) pairs instead of a single amber row. We remove
-	// the original from the map so PlanItemRow sees the new version as
-	// "created", and push the original into changedOriginals for the
-	// deleted-items list.
 	const changedOriginals: ProductItem[] = [];
 	if (showDiff) {
 		for (const item of product?.items ?? []) {
@@ -124,24 +114,68 @@ export function PlanItemsSection({
 		: (originalItems?.filter(isItemDeleted) ?? []);
 
 	const deletedItems = [...changedOriginals, ...purelyDeletedItems];
-
-	const sortedItems = useMemo(
-		() => sortPlanItems({ items: product?.items ?? [] }),
-		[product?.items],
-	);
-	const { visibleItems: allVisibleItems, collapsedBooleanItems: allCollapsedBooleanItems } = useMemo(
-		() => splitBooleanItems({ items: sortedItems }),
-		[sortedItems],
-	);
-
+	const sortedItems = sortPlanItems({ items: product?.items ?? [] });
+	const { visibleItems, collapsedBooleanItems } = splitBooleanItems({
+		items: sortedItems,
+	});
 	const isItemNew = (item: ProductItem) =>
 		!originalItemsMap.has(getItemMatchKey(item));
+	const diffVisibleItems = visibleItems.filter(isItemNew);
+	const diffCollapsedBooleanItems = collapsedBooleanItems.filter(isItemNew);
 
-	const visibleItems = changesOnly
-		? allVisibleItems.filter(isItemNew)
-		: allVisibleItems;
+	return {
+		originalItemsMap,
+		deletedItems,
+		visibleItems,
+		collapsedBooleanItems,
+		diffVisibleItems,
+		diffCollapsedBooleanItems,
+		hasDiffItems:
+			diffVisibleItems.length > 0 ||
+			diffCollapsedBooleanItems.length > 0 ||
+			deletedItems.length > 0,
+	};
+}
+
+export function PlanItemsSection({
+	product,
+	originalItems,
+	features,
+	prepaidOptions,
+	initialPrepaidOptions,
+	existingOptions,
+	form,
+	showDiff,
+	currency,
+	onEditPlan,
+	priceChange,
+	versionChange,
+	trialConfig,
+	gateDeletedItemsByDiff = false,
+	changesOnly = false,
+	readOnly = false,
+	adminIds,
+}: PlanItemsSectionProps) {
+	const {
+		originalItemsMap,
+		deletedItems,
+		visibleItems: allVisibleItems,
+		collapsedBooleanItems: allCollapsedBooleanItems,
+		diffVisibleItems,
+		diffCollapsedBooleanItems,
+	} = useMemo(
+		() =>
+			getPlanItemsDiff({
+				product,
+				originalItems,
+				showDiff,
+				gateDeletedItemsByDiff,
+			}),
+		[product, originalItems, showDiff, gateDeletedItemsByDiff],
+	);
+	const visibleItems = changesOnly ? diffVisibleItems : allVisibleItems;
 	const collapsedBooleanItems = changesOnly
-		? allCollapsedBooleanItems.filter(isItemNew)
+		? diffCollapsedBooleanItems
 		: allCollapsedBooleanItems;
 
 	const hasItems = (product?.items?.length ?? 0) > 0 || deletedItems.length > 0;
