@@ -1,3 +1,9 @@
+import {
+	CheckCircleIcon,
+	type Icon,
+	MinusCircleIcon,
+	XCircleIcon,
+} from "@phosphor-icons/react";
 import { Badge } from "@/components/v2/badges/Badge";
 import type { MigrationItemEventStatus } from "@/hooks/queries/useMigrationRunsQuery";
 import { cn } from "@/lib/utils";
@@ -27,6 +33,12 @@ const STATUS_LABELS: Record<MigrationItemEventStatus, string> = {
 	succeeded: "Passed",
 	skipped: "Skipped",
 	failed: "Failed",
+};
+
+const STATUS_ICONS: Record<MigrationItemEventStatus, Icon> = {
+	succeeded: CheckCircleIcon,
+	skipped: MinusCircleIcon,
+	failed: XCircleIcon,
 };
 
 function isNoOpResponse(response: Record<string, unknown> | null): boolean {
@@ -60,19 +72,23 @@ export function ItemEventStatusBadge({
 			<Badge
 				variant="muted"
 				className={cn(
-					"bg-muted text-tertiary-foreground",
+					"gap-1 bg-muted text-tertiary-foreground",
 					dryRun ? "border-border border-dashed" : "border-transparent",
 				)}
 			>
+				<MinusCircleIcon size={12} weight="fill" />
 				No Changes
 			</Badge>
 		);
 
+	const StatusIcon = STATUS_ICONS[status];
+
 	return (
 		<Badge
 			variant="muted"
-			className={(dryRun ? DRY_STYLES : LIVE_STYLES)[status]}
+			className={cn("gap-1", (dryRun ? DRY_STYLES : LIVE_STYLES)[status])}
 		>
+			<StatusIcon size={12} weight="fill" />
 			{STATUS_LABELS[status]}
 		</Badge>
 	);

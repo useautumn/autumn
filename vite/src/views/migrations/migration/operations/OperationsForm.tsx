@@ -190,7 +190,7 @@ export function OperationsForm({
 						<DropdownMenu>
 							<DropdownMenuTrigger className={DASHED_BUTTON_CLASS}>
 								<PlusIcon size={10} />
-								Add Operation
+								Update or add a different plan
 							</DropdownMenuTrigger>
 							<DropdownMenuContent
 								align="start"

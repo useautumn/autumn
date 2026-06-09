@@ -17,7 +17,10 @@ export const preProcessMigration = <M extends MigrationRuntime>(
 	migration: M,
 ): M => {
 	const operations = migration.operations
-		? preProcessMigrationOperations({ operations: migration.operations })
+		? preProcessMigrationOperations({
+				operations: migration.operations,
+				filter: migration.filter,
+			})
 		: migration.operations;
 	const filter = preProcessMigrationFilter({
 		operations: operations ?? undefined,

@@ -1,9 +1,9 @@
 import {
 	AffectedResource,
 	apiPlan,
+	Scopes,
 	UpdatePlanParamsV2Schema,
 	type UpdateProductV2Params,
-	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { updateProduct } from "../../../product/actions/updateProduct.js";
@@ -17,7 +17,8 @@ export const handleUpdatePlanV2 = createRoute({
 	handler: async (c) => {
 		const body = c.req.valid("json");
 
-		const { plan_id, new_plan_id, ...planParams } = body;
+		const { plan_id, new_plan_id, disable_version, version, ...planParams } =
+			body;
 		const ctx = c.get("ctx");
 
 		const initialFullProduct = await ProductService.getFull({
@@ -25,6 +26,7 @@ export const handleUpdatePlanV2 = createRoute({
 			idOrInternalId: plan_id,
 			orgId: ctx.org.id,
 			env: ctx.env,
+			version,
 		});
 
 		const updateProductV2Params = apiPlan.map.paramsV1ToProductV2({
@@ -39,7 +41,7 @@ export const handleUpdatePlanV2 = createRoute({
 		await updateProduct({
 			ctx,
 			productId: plan_id,
-			query: {},
+			query: { version, disable_version },
 			updates: updateProductV2Params,
 			initialFullProduct,
 		});
@@ -50,6 +52,7 @@ export const handleUpdatePlanV2 = createRoute({
 			idOrInternalId: latestPlanId,
 			orgId: ctx.org.id,
 			env: ctx.env,
+			version,
 		});
 
 		const latestPlan = await getPlanResponse({

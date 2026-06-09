@@ -1,6 +1,7 @@
 import {
 	type AutumnBillingPlan,
 	cusProductToProduct,
+	type InsertCustomerEntitlement,
 	type PatchContext,
 	type TrialContext,
 	type UpdateSubscriptionBillingContext,
@@ -68,8 +69,14 @@ export const initPatchCustomerProduct = ({
 }): {
 	finalCustomerProduct: PatchContext["finalCustomerProduct"];
 	customerProductUpdates: CustomerProductUpdates;
+	oneOffPrepaidCarryOverCustomerEntitlements: InsertCustomerEntitlement[];
 } => {
-	const { customerPrices, customerEntitlements } =
+	const {
+		customerPrices,
+		customerEntitlements,
+		oneOffPrepaidCarryOverEntitlements,
+		oneOffPrepaidCarryOverCustomerEntitlements,
+	} =
 		initPatchedCustomerEntitlementsAndPrices({
 			ctx,
 			billingContext,
@@ -95,6 +102,7 @@ export const initPatchCustomerProduct = ({
 	});
 	patchContext.insertCustomerPrices = customerPrices;
 	patchContext.insertCustomerEntitlements = customerEntitlements;
+	patchContext.customEntitlements.push(...oneOffPrepaidCarryOverEntitlements);
 	patchContext.fullProduct = cusProductToProduct({
 		cusProduct: patchContext.finalCustomerProduct,
 	});
@@ -116,5 +124,6 @@ export const initPatchCustomerProduct = ({
 			...trialUpdates,
 			...customUpdates,
 		},
+		oneOffPrepaidCarryOverCustomerEntitlements,
 	};
 };

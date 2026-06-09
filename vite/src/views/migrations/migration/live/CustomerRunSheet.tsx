@@ -1,5 +1,6 @@
-import type { CustomerWithProducts, Operations } from "@autumn/shared";
+import type { Operations } from "@autumn/shared";
 import {
+	ArrowSquareOutIcon,
 	CalendarBlankIcon,
 	EyeIcon,
 	LightningIcon,
@@ -8,8 +9,10 @@ import {
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
+import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Dialog,
 	DialogContent,
@@ -20,49 +23,68 @@ import {
 } from "@/components/v2/dialogs/Dialog";
 import { InfoRow } from "@/components/v2/InfoRow";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
+import type { MigrationPreviewCustomer } from "@/hooks/queries/useMigrationFilterPreview";
 import type { MigrationItemEvent } from "@/hooks/queries/useMigrationRunsQuery";
+import { navigateTo } from "@/utils/genUtils";
 import { ActiveRunDot, ItemEventStatusBadge } from "../runs/RunStatusBadge";
+import { OperationsPreview } from "../shared/OperationsPreview";
 import { RunSummaryRows } from "../shared/RunSummaryRows";
 import { EventResultDetail } from "./EventResultDetail";
+import { resolveMigrationItemStatus } from "./migrationItemStatus";
 
 function formatEventTimestamp(timestamp: string): string {
 	return format(new Date(timestamp), "MMM d, HH:mm:ss");
 }
 
 function StatusValue({
+	itemRun,
 	latestDryEvent,
 	latestLiveEvent,
 	isActive,
 	activeRunDryRun,
 }: {
+	itemRun: MigrationPreviewCustomer["migration_item_run"];
 	latestDryEvent: MigrationItemEvent | undefined;
 	latestLiveEvent: MigrationItemEvent | undefined;
 	isActive: boolean;
 	activeRunDryRun: boolean | null;
 }) {
-	if (isActive)
+	const status = resolveMigrationItemStatus({
+		event: latestLiveEvent ?? latestDryEvent,
+		itemRun,
+		activeStatus: isActive ? "running" : null,
+	});
+
+	if (status.kind === "running" || status.kind === "queued")
 		return (
 			<div className="flex items-center gap-2">
 				<ActiveRunDot />
 				<span className="text-xs text-muted-foreground">
-					{activeRunDryRun ? "Dry run in progress" : "Running"}
+					{status.kind === "running" && activeRunDryRun
+						? "Dry run in progress"
+						: status.kind === "queued"
+							? "Queued"
+							: "Running"}
 				</span>
 			</div>
 		);
-	const event = latestLiveEvent ?? latestDryEvent;
-	if (event)
+
+	if (status.kind === "result")
 		return (
 			<div className="flex items-center gap-1.5">
-				{event.dry_run && (
-					<span className="text-[10px] font-medium text-tertiary-foreground">Dry Run:</span>
+				{status.dryRun && (
+					<span className="text-[10px] font-medium text-tertiary-foreground">
+						Dry Run:
+					</span>
 				)}
 				<ItemEventStatusBadge
-					status={event.status}
-					dryRun={event.dry_run}
-					response={event.response}
+					status={status.status}
+					dryRun={status.dryRun}
+					response={status.response}
 				/>
 			</div>
 		);
+
 	return <Badge variant="muted">Not Run</Badge>;
 }
 
@@ -74,21 +96,24 @@ export function CustomerRunSheet({
 	isActive,
 	activeRunDryRun,
 	isRunning,
+	isRunInProgress,
 	onTriggerRun,
 	operations,
 	noBillingChanges,
 }: {
-	customer: CustomerWithProducts;
+	customer: MigrationPreviewCustomer;
 	latestDryEvent: MigrationItemEvent | undefined;
 	latestLiveEvent: MigrationItemEvent | undefined;
 	allEvents: MigrationItemEvent[];
 	isActive: boolean;
 	activeRunDryRun: boolean | null;
 	isRunning: boolean;
+	isRunInProgress: boolean;
 	onTriggerRun: (opts: { dryRun: boolean; only?: string[] }) => void;
 	operations: Operations;
 	noBillingChanges: boolean;
 }) {
+	const navigate = useNavigate();
 	const customerId = customer.id ?? customer.internal_id;
 	const [isRunDialogOpen, setIsRunDialogOpen] = useState(false);
 	const lastActionRef = useRef<"dry" | "live" | null>(null);
@@ -104,11 +129,13 @@ export function CustomerRunSheet({
 	);
 
 	const handleDryRun = () => {
+		if (isRunInProgress) return;
 		lastActionRef.current = "dry";
 		onTriggerRun({ dryRun: true, only: [customerId] });
 	};
 
 	const handleLiveRun = () => {
+		if (isRunInProgress) return;
 		setIsRunDialogOpen(false);
 		lastActionRef.current = "live";
 		onTriggerRun({ dryRun: false, only: [customerId] });
@@ -131,7 +158,18 @@ export function CustomerRunSheet({
 			<SheetHeader
 				title={
 					<span className="flex items-center gap-2">
-						{customer.name || customerId}
+						<button
+							type="button"
+							onClick={() => navigateTo(`/customers/${customerId}`, navigate)}
+							className="inline-flex items-center gap-1.5 hover:text-primary transition-colors cursor-pointer"
+						>
+							{customer.name || customerId}
+							<ArrowSquareOutIcon
+								size={14}
+								weight="bold"
+								className="opacity-50"
+							/>
+						</button>
 						{isActive && <ActiveRunDot />}
 					</span>
 				}
@@ -145,6 +183,7 @@ export function CustomerRunSheet({
 						label="Status"
 						value={
 							<StatusValue
+								itemRun={customer.migration_item_run}
 								latestDryEvent={latestDryEvent}
 								latestLiveEvent={latestLiveEvent}
 								isActive={isActive}
@@ -167,7 +206,11 @@ export function CustomerRunSheet({
 					title={
 						<div className="flex items-center justify-between w-full">
 							<span className="flex items-center gap-1.5">
-								<LightningIcon size={14} weight="fill" className="text-tertiary-foreground" />
+								<LightningIcon
+									size={14}
+									weight="fill"
+									className="text-tertiary-foreground"
+								/>
 								Live Run
 							</span>
 							<span className="text-xs text-tertiary-foreground font-normal">
@@ -185,7 +228,11 @@ export function CustomerRunSheet({
 					title={
 						<div className="flex items-center justify-between w-full">
 							<span className="flex items-center gap-1.5">
-								<EyeIcon size={14} weight="duotone" className="text-tertiary-foreground" />
+								<EyeIcon
+									size={14}
+									weight="duotone"
+									className="text-tertiary-foreground"
+								/>
 								Preview
 							</span>
 							<span className="text-xs text-tertiary-foreground font-normal">
@@ -220,29 +267,30 @@ export function CustomerRunSheet({
 				</SheetSection>
 			)}
 
-			<div className="sticky bottom-0 p-4 flex gap-2 bg-card mt-auto">
+			<div className="sticky bottom-0 p-4 flex flex-col gap-2 bg-card mt-auto">
 				<Button
 					variant="secondary"
-					className="flex-1"
+					className="w-full"
 					onClick={handleDryRun}
 					isLoading={isRunning && lastActionRef.current === "dry"}
 					disabled={
 						hasSuccessfulLiveRun ||
-						(isRunning && lastActionRef.current !== "dry")
+						isRunInProgress
 					}
 				>
 					<EyeIcon size={14} />
 					Dry Run
 				</Button>
-				<Button
+				<ShortcutButton
 					variant="primary"
-					className="flex-1"
+					metaShortcut="enter"
+					className="w-full"
 					onClick={() => setIsRunDialogOpen(true)}
-					disabled={hasSuccessfulLiveRun || isRunning}
+					disabled={hasSuccessfulLiveRun || isRunInProgress || isRunDialogOpen}
 				>
 					<PlayIcon size={14} weight="fill" />
 					Run
-				</Button>
+				</ShortcutButton>
 			</div>
 
 			<Dialog open={isRunDialogOpen} onOpenChange={setIsRunDialogOpen}>
@@ -261,6 +309,7 @@ export function CustomerRunSheet({
 						operations={operations}
 						noBillingChanges={noBillingChanges}
 					/>
+					<OperationsPreview operations={operations} />
 					<DialogFooter>
 						<Button
 							variant="secondary"
@@ -268,14 +317,16 @@ export function CustomerRunSheet({
 						>
 							Cancel
 						</Button>
-						<Button
+						<ShortcutButton
 							variant="primary"
+							metaShortcut="enter"
 							onClick={handleLiveRun}
 							isLoading={isRunning && lastActionRef.current === "live"}
+							disabled={!isRunDialogOpen || isRunInProgress}
 						>
 							<PlayIcon size={14} weight="fill" />
 							Run
-						</Button>
+						</ShortcutButton>
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>

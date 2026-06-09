@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { getVersionCounts } from "@/utils/productUtils";
 import { useCustomerFilters } from "../../hooks/useCustomerFilters";
 
-export const ProductsSubMenu = () => {
+export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 	const { products } = useProductsQuery();
 	const { queryStates, setFilters } = useCustomerFilters();
 	const versionCounts = getVersionCounts(products);
@@ -70,6 +70,7 @@ export const ProductsSubMenu = () => {
 				none: false,
 			});
 		}
+		onChange?.();
 	};
 
 	const toggleProduct = (product: any) => {
@@ -100,6 +101,7 @@ export const ProductsSubMenu = () => {
 		}
 
 		setFilters({ version: newSelectedVersions, none: newNone });
+		onChange?.();
 	};
 
 	const toggleVersion = (productId: string, version: string) => {
@@ -118,6 +120,20 @@ export const ProductsSubMenu = () => {
 		}
 
 		setFilters({ version: newSelectedVersions, none: newNone });
+		onChange?.();
+	};
+
+	const toggleCustom = (productId: string) => {
+		const customKey = `${productId}:custom`;
+		const isSelected = selectedVersions.includes(customKey);
+
+		setFilters({
+			version: isSelected
+				? selectedVersions.filter((key: string) => key !== customKey)
+				: [...selectedVersions, customKey],
+			none: isSelected ? queryStates.none : false,
+		});
+		onChange?.();
 	};
 
 	const handleSelectNone = (e: React.MouseEvent) => {
@@ -125,6 +141,7 @@ export const ProductsSubMenu = () => {
 		e.stopPropagation();
 
 		setFilters({ version: [], none: !queryStates.none });
+		onChange?.();
 	};
 
 	return (
@@ -186,6 +203,9 @@ export const ProductsSubMenu = () => {
 								const someProductVersionsSelected = productVersionKeys.some(
 									(key) => selectedVersions.includes(key),
 								);
+								const customSelected = selectedVersions.includes(
+									`${product.id}:custom`,
+								);
 
 								return (
 									<div key={product.id}>
@@ -221,7 +241,7 @@ export const ProductsSubMenu = () => {
 														ref={(ref: any) => {
 															if (
 																ref &&
-																someProductVersionsSelected &&
+																(someProductVersionsSelected || customSelected) &&
 																!allProductVersionsSelected
 															) {
 																ref.indeterminate = true;
@@ -272,6 +292,21 @@ export const ProductsSubMenu = () => {
 															</DropdownMenuItem>
 														);
 													})}
+													<DropdownMenuSeparator />
+													<DropdownMenuItem
+														closeOnClick={false}
+														onClick={(e) => {
+															e.preventDefault();
+															toggleCustom(product.id);
+														}}
+														className="flex items-center gap-2 cursor-pointer text-sm"
+													>
+														<Checkbox
+															checked={selectedVersions.includes(`${product.id}:custom`)}
+															className="border-border"
+														/>
+														Custom
+													</DropdownMenuItem>
 												</DropdownMenuSubContent>
 											</DropdownMenuSub>
 										)}

@@ -15,7 +15,7 @@ import { useProductQuery } from "../product/hooks/useProductQuery";
 import { ProductContext } from "../product/ProductContext";
 import { PlanEditor } from "./components/PlanEditor";
 import { useOpenAddFeatureSheet } from "./hooks/useOpenAddFeatureSheet";
-import ConfirmNewVersionDialog from "./versioning/ConfirmNewVersionDialog";
+import PlanChangeDialog from "./versioning/PlanChangeDialog";
 
 export default function PlanEditorView() {
 	const { product_id } = useParams();
@@ -80,7 +80,7 @@ export default function PlanEditorView() {
 				refetch,
 			}}
 		>
-			<ConfirmNewVersionDialog
+			<PlanChangeDialog
 				open={showNewVersionDialog}
 				setOpen={setShowNewVersionDialog}
 			/>

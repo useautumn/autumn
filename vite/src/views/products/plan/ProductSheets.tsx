@@ -23,6 +23,7 @@ export const ProductSheets = () => {
 		itemId,
 		initialItem,
 		setInitialItem,
+		updateItemId,
 		closeSheet,
 		itemDraft,
 	} = useSheet();
@@ -120,6 +121,15 @@ export const ProductSheets = () => {
 		}
 
 		if (!product || !product.items || resolvedItemIndex === -1) return;
+
+		const newItemId = getItemId({
+			item: updatedItem,
+			itemIndex: resolvedItemIndex,
+		});
+		if (newItemId !== itemId) {
+			updateItemId(newItemId);
+			lastItemIdRef.current = newItemId;
+		}
 
 		const updatedItems = [...product.items];
 		updatedItems[resolvedItemIndex] = updatedItem;

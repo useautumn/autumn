@@ -3,6 +3,7 @@ import {
 	migrationTinybird,
 	type TinybirdMigrationItemEvent,
 } from "@/external/tinybird/migrations/migrationItemEventsDataSource.js";
+import { normalizeMigrationItemEventJson } from "./listMigrationItemEvents.js";
 
 export const listLatestMigrationItemEvents = async ({
 	ctx,
@@ -33,7 +34,9 @@ export const listLatestMigrationItemEvents = async ({
 	});
 
 	const latestByItem = new Map<string, TinybirdMigrationItemEvent>();
-	for (const event of result.data as TinybirdMigrationItemEvent[]) {
+	for (const event of (result.data as TinybirdMigrationItemEvent[]).map(
+		normalizeMigrationItemEventJson,
+	)) {
 		if (event.dry_run !== dryRun) continue;
 		const key = `${event.item_kind}:${event.item_id}`;
 		if (!latestByItem.has(key)) latestByItem.set(key, event);

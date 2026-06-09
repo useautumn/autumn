@@ -9,7 +9,9 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupDefaultProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupDefaultProductContext";
 import { setupUpdateSubscriptionProductContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionProductContext";
+import { fetchStripeTaxRateForBilling } from "@/internal/billing/v2/providers/stripe/setup/fetchStripeTaxRateForBilling";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
+import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
 import { setupAdjustableQuantities } from "@/internal/billing/v2/setup/setupAdjustableQuantities";
 import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
@@ -19,7 +21,6 @@ import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullC
 import { setupIgnoreProrationBehavior } from "@/internal/billing/v2/setup/setupIgnoreProrationBehavior";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
-import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
 import { setupAttachCheckoutMode } from "../../attach/setup/setupAttachCheckoutMode";
 import { setupUpdateSubscriptionIntent } from "./setupUpdateSubscriptionIntent";
 import { setupUpdateSubscriptionTrialContext } from "./setupUpdateSubscriptionTrialContext";
@@ -113,6 +114,19 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		createStripeCustomerIfMissing: !preview,
 	});
 
+	const subscriptionTaxRate = stripeSubscription?.default_tax_rates?.[0];
+	const inheritedTaxRateId =
+		typeof subscriptionTaxRate === "string"
+			? subscriptionTaxRate
+			: subscriptionTaxRate?.id;
+	const inheritedStripeTaxRate =
+		typeof subscriptionTaxRate === "string"
+			? await fetchStripeTaxRateForBilling({
+					ctx,
+					taxRateId: subscriptionTaxRate,
+				})
+			: subscriptionTaxRate;
+
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
 
 	// 1. Setup trial context first
@@ -199,8 +213,9 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		stripeSubscriptionSchedule,
 		stripeDiscounts,
 		stripeCustomer,
-		stripeTaxRate,
+		stripeTaxRate: stripeTaxRate ?? inheritedStripeTaxRate,
 		paymentMethod,
+		taxRateId: inheritedTaxRateId,
 
 		currentEpochMs,
 		billingCycleAnchorMs,

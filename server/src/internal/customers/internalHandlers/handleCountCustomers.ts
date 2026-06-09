@@ -1,20 +1,14 @@
 import { Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { CustomerListFiltersSchema } from "../customerListFilters";
 import { CusSearchService } from "../CusSearchService";
 
 export const handleCountCustomers = createRoute({
 	scopes: [Scopes.Customers.Read],
 	body: z.object({
 		search: z.string().optional(),
-		filters: z
-			.object({
-				status: z.array(z.string()).optional(),
-				version: z.array(z.string()).optional(),
-				none: z.boolean().optional(),
-				processor: z.array(z.string()).optional(),
-			})
-			.optional(),
+		filters: CustomerListFiltersSchema.optional(),
 	}),
 	handler: async (c) => {
 		const { db, org, env } = c.get("ctx");

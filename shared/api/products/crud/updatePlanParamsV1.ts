@@ -35,13 +35,9 @@ export const UpdatePlanParamsV1Schema =
 
 export const UpdatePlanParamsV2Schema = z
 	.object({
-		plan_id: z
-			.string()
-			.nonempty()
-			.regex(idRegex)
-			.meta({
-				description: "The ID of the plan to update.",
-			}),
+		plan_id: z.string().nonempty().regex(idRegex).meta({
+			description: "The ID of the plan to update.",
+		}),
 	})
 	.extend(UpdatePlanParamsV1Schema.omit({ id: true }).shape)
 	.extend({
@@ -52,17 +48,18 @@ export const UpdatePlanParamsV2Schema = z
 			description: "Whether the plan is automatically enabled.",
 		}),
 
-		new_plan_id: z
-			.string()
-			.nonempty()
-			.regex(idRegex)
-			.optional()
-			.meta({
-				description:
-					"The new ID to use for the plan. Can only be updated if the plan has not been used by any customers.",
-			}),
+		new_plan_id: z.string().nonempty().regex(idRegex).optional().meta({
+			description:
+				"The new ID to use for the plan. Can only be updated if the plan has not been used by any customers.",
+		}),
 
 		description: z.string().optional().meta({
+			internal: true,
+		}),
+
+		// Edit the current version in place instead of creating a new one when
+		// customers exist. Existing customers keep their current rows.
+		disable_version: z.boolean().optional().meta({
 			internal: true,
 		}),
 	});

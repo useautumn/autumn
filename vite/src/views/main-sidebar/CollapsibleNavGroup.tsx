@@ -19,6 +19,7 @@ interface SubTab {
 	value: string;
 	icon?: ReactNode;
 	path?: string;
+	badge?: ReactNode;
 }
 
 interface CollapsibleNavGroupProps {
@@ -117,6 +118,7 @@ export const CollapsibleNavGroup = ({
 							subValue={subTab.path ? undefined : subTab.value}
 							icon={subTab.icon}
 							title={keyToTitle(subTab.title)}
+							badge={subTab.badge}
 							isSubNav
 						/>
 					))}

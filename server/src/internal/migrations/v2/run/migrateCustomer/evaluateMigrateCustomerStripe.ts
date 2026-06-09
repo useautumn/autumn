@@ -6,10 +6,7 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan.js";
-import {
-	assertStripePlanNoCharges,
-	hasStripePlanActions,
-} from "@/internal/billing/v2/providers/stripe/errors/assertStripePlanNoCharges.js";
+import { assertStripePlanNoCharges } from "@/internal/billing/v2/providers/stripe/errors/assertStripePlanNoCharges.js";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan.js";
 import { MigrationOperationError } from "@/internal/migrations/v2/operations/errors/index.js";
 import type { MigrateCustomerContext } from "@/internal/migrations/v2/operations/types/index.js";
@@ -61,20 +58,22 @@ export const evaluateMigrateCustomerStripe = async ({
 	billingContexts: UpdateSubscriptionBillingContext[];
 	autumnBillingPlan: AutumnBillingPlan;
 }): Promise<MigrateCustomerBillingPlan> => {
+	if (context.migration.no_billing_changes === true) {
+		return {
+			autumn: autumnBillingPlan,
+			stripe: {},
+			stripeBillingPlans: [],
+		};
+	}
+
 	const stripeBillingPlans: MigrateCustomerStripeBillingPlan[] = [];
 
 	for (const [subscriptionId, billingContext] of contextBySubscriptionId({
 		billingContexts,
 	})) {
-		const shouldValidateForcedNoBillingChanges =
-			context.migration.no_billing_changes === true;
-		const evaluationContext = shouldValidateForcedNoBillingChanges
-			? { ...billingContext, skipBillingChanges: false }
-			: billingContext;
-
 		const stripeBillingPlan = await evaluateStripeBillingPlan({
 			ctx,
-			billingContext: evaluationContext,
+			billingContext,
 			autumnBillingPlan,
 		});
 		appendMigrationBillingLog({
@@ -84,7 +83,7 @@ export const evaluateMigrateCustomerStripe = async ({
 				logStripeBillingPlan({
 					ctx: logCtx,
 					stripeBillingPlan,
-					billingContext: evaluationContext,
+					billingContext,
 				}),
 		});
 
@@ -100,20 +99,6 @@ export const evaluateMigrateCustomerStripe = async ({
 					details: violation.details,
 				}),
 		});
-
-		if (
-			shouldValidateForcedNoBillingChanges &&
-			hasStripePlanActions(stripeBillingPlan)
-		) {
-			throw new MigrationOperationError({
-				code: "unsupported_operation_input",
-				operationType: "update_plan",
-				field: "no_billing_changes",
-				message:
-					"Migration no_billing_changes=true was set, but update_plan produced Stripe mutations",
-				details: { subscriptionId },
-			});
-		}
 
 		stripeBillingPlans.push({
 			subscriptionId,

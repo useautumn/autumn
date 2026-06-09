@@ -8,7 +8,6 @@ type SecondaryTabType =
 	| "stripe"
 	| "vercel"
 	| "revenuecat"
-	| "redis"
 	| "products"
 	| "rewards"
 	| "features"
