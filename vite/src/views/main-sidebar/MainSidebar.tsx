@@ -9,7 +9,6 @@ import {
 	KeyIcon,
 	LegoIcon,
 	TerminalWindowIcon,
-	TestTubeIcon,
 	TriangleIcon,
 	UserCircleIcon,
 	UsersIcon,
@@ -17,13 +16,9 @@ import {
 } from "@phosphor-icons/react";
 import { PanelLeft } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
 import { RevenueCatIcon, StripeIcon } from "@/components/v2/icons/AutumnIcons";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useScopes } from "@/hooks/useScopes";
@@ -220,21 +215,12 @@ export const MainSidebar = ({
 										path: "/migrations",
 										icon: <ArrowsClockwiseIcon size={16} weight="fill" />,
 										badge: (
-											<Tooltip>
-												<TooltipTrigger
-													render={
-														<TestTubeIcon
-															size={14}
-															weight="fill"
-															className="ml-auto text-amber-500"
-														/>
-													}
-												/>
-												<TooltipContent side="right">
-													Migrations are in beta. Get in touch with the team for
-													more complex migrations.
-												</TooltipContent>
-											</Tooltip>
+											<Badge
+												variant="muted"
+												className="ml-auto font-mono text-[10px] px-1.5 py-0 text-muted-foreground"
+											>
+												Beta
+											</Badge>
 										),
 									},
 								]}

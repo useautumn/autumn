@@ -57,6 +57,12 @@ export function MigrationCustomerSheet({
 		);
 	}, [customerEvents]);
 
+	const runIsActive = isActive || hasRealtimeActive || isSettling;
+	const customerHasResult =
+		(customer.migration_item_run?.status != null &&
+			customer.migration_item_run.status !== "running") ||
+		latestLiveEvent !== undefined;
+
 	return (
 		<>
 			{realtimeSubscriptions.map((sub) => (
@@ -71,7 +77,7 @@ export function MigrationCustomerSheet({
 				latestDryEvent={latestDryEvent}
 				latestLiveEvent={latestLiveEvent}
 				allEvents={customerEvents}
-				isActive={isActive || hasRealtimeActive || isSettling}
+				isActive={runIsActive && !customerHasResult}
 				activeRunDryRun={activeRunDryRun}
 				isRunning={isRunning}
 				isRunInProgress={isRunning || isActive || hasRealtimeActive}

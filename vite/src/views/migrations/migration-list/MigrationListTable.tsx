@@ -1,13 +1,8 @@
-import { ArrowsClockwiseIcon, TestTubeIcon } from "@phosphor-icons/react";
+import { ArrowsClockwiseIcon } from "@phosphor-icons/react";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
 import { Badge } from "@/components/v2/badges/Badge";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 import {
 	useMigrationsQuery,
 	type MigrationWithRunInfo,
@@ -15,6 +10,7 @@ import {
 import { pushPage } from "@/utils/genUtils";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { useMigrationsQueryState } from "@/views/migrations/hooks/useMigrationsQueryState";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { createMigrationListColumns } from "./MigrationListColumns";
 import { MigrationListCreateButton } from "./MigrationListCreateButton";
 import { MigrationListMenuButton } from "./MigrationListMenuButton";
@@ -77,21 +73,12 @@ export function MigrationListTable() {
 							className="text-subtle"
 						/>
 						Migrations
-						<Tooltip>
-							<TooltipTrigger className="inline-flex cursor-default">
-								<Badge
-									variant="muted"
-									className="text-[10px] px-1.5 py-0 gap-1 cursor-default text-amber-600 dark:text-amber-400"
-								>
-									<TestTubeIcon size={12} weight="fill" />
-									Beta
-								</Badge>
-							</TooltipTrigger>
-							<TooltipContent side="right">
-								Migrations are in beta. Get in touch with the team for more
-								complex migrations.
-							</TooltipContent>
-						</Tooltip>
+						<Badge
+							variant="muted"
+							className="font-mono text-[10px] px-1.5 py-0 text-muted-foreground"
+						>
+							Beta
+						</Badge>
 					</Table.Heading>
 					<Table.Actions>
 						<div className="flex items-center gap-2">
@@ -101,6 +88,10 @@ export function MigrationListTable() {
 					</Table.Actions>
 				</div>
 			</Table.Toolbar>
+			<InfoBox variant="info" classNames={{ infoBox: "-mt-2 mb-4" }}>
+				Migrations are in beta. For complex operations, please reach out to us
+				at support@useautumn.com
+			</InfoBox>
 			<div>
 				<Table.Container>
 					<Table.Content>

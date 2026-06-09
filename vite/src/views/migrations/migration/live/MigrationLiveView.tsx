@@ -372,12 +372,15 @@ export function MigrationLiveView({
 					: isActiveRunScoped
 						? !!hasEventInActiveRun
 						: true;
+				const isClaimedInActiveRun =
+					!!activeRunId &&
+					c.migration_item_run?.migration_run_id === activeRunId;
 				const hasResultForRun =
 					!!hasEventInActiveRun ||
-					(!!activeRunId &&
-						c.migration_item_run?.migration_run_id === activeRunId &&
+					(isClaimedInActiveRun &&
 						c.migration_item_run?.status !== "running");
-				const showRunning = isTargeted && (!isSettling || !hasResultForRun);
+				const showRunning =
+					isTargeted && isClaimedInActiveRun && !hasResultForRun;
 				return {
 					...c,
 					_event: event,
