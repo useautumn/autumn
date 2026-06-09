@@ -160,6 +160,7 @@ const createErrorResponse = ({
 	code: string;
 	statusCode: ContentfulStatusCode;
 }) => {
+	if (statusCode === 503) c.header("Retry-After", "1");
 	return c.json(
 		{
 			message,
