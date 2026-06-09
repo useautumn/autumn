@@ -18,8 +18,11 @@ const domain = {
 	operations: [
 		operation({
 			id: "listFeatures",
-			description:
-				"List Autumn features. Use when creating/customizing plan items or setting non-zero prepaid feature quantities and feature ids, types, credit systems, or consumable behavior are not already known.",
+			description: `
+- List Autumn features for the current org.
+- Use before custom plan/schedule items from feature names, aliases, or typos.
+- Use when feature IDs, types, credit systems, or consumable behavior are unknown.
+`.trim(),
 		}),
 	],
 } satisfies ToolDomain;

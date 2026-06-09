@@ -102,6 +102,7 @@
 		"s": "ENV_FILE=.env.staging infisical run --env=staging --recursive -- bun scripts/dev.ts",
 		"l": "bash ./scripts/dev-local.sh",
 		"setup": "node scripts/setup/setup.js",
+		"contracts": "infisical run --env=dev --recursive -- bun scripts/s3/contracts.ts",
 		"setup:s3-admin": "bun scripts/setup/setupS3Admin.ts",
 		"setup:test": "infisical run --env=dev --recursive -- bun scripts/setup/setup-test.ts",
 		"stripe:link-test": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/setup/link-test-stripe-account.ts",

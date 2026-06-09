@@ -6,16 +6,17 @@ import { Mastra } from "@mastra/core/mastra";
 import { InMemoryStore } from "@mastra/core/storage";
 import { z } from "zod";
 import { createLeafTracingOptions } from "../internal/observability/leafTracingOptions.js";
+import { leafChatAgentDefaults } from "../lib/chatAgentConfig.js";
 import { env as chatEnv } from "../lib/env.js";
 import { logger as rootLogger } from "../lib/logger.js";
 import { createMastraBraintrustObservability } from "../providers/braintrust/index.js";
 import { createE2bSandboxProvider } from "../providers/e2b/e2bSandboxProvider.js";
 import type { ChatContextMessage } from "../types.js";
+import { agentDocUris, createAutumnChatAgent } from "./chatAgent.js";
 import { createFirecrawlTools } from "./firecrawl.js";
 import { createAutumnMcpClient, getAutumnMcpTools } from "./mcp.js";
 import { sandboxConfig } from "./sandbox/config.js";
 import { createSandboxTools } from "./sandbox/createSandboxTools.js";
-import { agentDocUris, createAutumnChatAgent } from "./chatAgent.js";
 
 export { agentDocUris, createAutumnChatAgent } from "./chatAgent.js";
 
@@ -203,7 +204,7 @@ export const runChatAgent = async ({
 		const chatAgent = mastra.getAgent("chat");
 
 		const output = await chatAgent.generate(message, {
-			maxSteps: 8,
+			maxSteps: leafChatAgentDefaults.maxSteps,
 			context: [
 				{
 					role: "system",

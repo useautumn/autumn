@@ -1,6 +1,6 @@
 import { AppEnv } from "@autumn/shared";
-import type { MessageListItem } from "@mastra/core/agent/message-list";
 import type { ToolsInput } from "@mastra/core/agent";
+import type { MessageListItem } from "@mastra/core/agent/message-list";
 import { Mastra } from "@mastra/core/mastra";
 import { InMemoryStore } from "@mastra/core/storage";
 import { MCPClient } from "@mastra/mcp";
@@ -14,6 +14,7 @@ import { createMastraBraintrustObservability } from "../../../../src/providers/b
 import { defaultGenericMcpAgentConfig } from "../configs/genericMcpAgentConfig.js";
 import type {
 	EvalAgentDriver,
+	EvalDriverMessage,
 	EvalDriverStartInput,
 	EvalToolCall,
 } from "./types.js";
@@ -80,6 +81,20 @@ const readDocs = async (mcpClient: MCPClient) => {
 		.join("\n\n");
 };
 
+const appendUserMessage = ({
+	input,
+	messages,
+}: {
+	input: EvalDriverMessage;
+	messages: MessageListItem[];
+}) => {
+	if (typeof input === "string") {
+		messages.push({ content: input, role: "user" });
+		return;
+	}
+	messages.push(...(input as MessageListItem[]));
+};
+
 export const createLeafAgentDriver = ({
 	maxSteps = defaultGenericMcpAgentConfig.maxSteps,
 	model = defaultGenericMcpAgentConfig.model,
@@ -104,8 +119,7 @@ export const createLeafAgentDriver = ({
 			throw new Error(`MCP tool discovery failed: ${JSON.stringify(errors)}`);
 		}
 
-		const env =
-			context.auth.env === AppEnv.Live ? AppEnv.Live : AppEnv.Sandbox;
+		const env = context.auth.env === AppEnv.Live ? AppEnv.Live : AppEnv.Sandbox;
 		const tools = (toolsets.autumn ?? {}) as Record<string, ToolWithApproval>;
 		applyToolApprovalPolicy(tools);
 		const toolCalls: EvalToolCall[] = [];
@@ -186,7 +200,7 @@ export const createLeafAgentDriver = ({
 			getToolCalls: () => [...toolCalls],
 			hasPendingApproval: () => pendingApproval !== null,
 			send: async (message, { maxSteps: stepLimit } = {}) => {
-				messages.push({ content: message, role: "user" });
+				appendUserMessage({ input: message, messages });
 				const output = await evalAgent.generate(messages, options(stepLimit));
 				messages = output.messages;
 				rememberApproval(output);

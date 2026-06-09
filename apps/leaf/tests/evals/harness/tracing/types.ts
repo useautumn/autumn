@@ -5,7 +5,16 @@ export type EvalTraceLevel = "off" | "steps";
 
 export type EvalTraceEvent =
 	| { type: "eval_started"; name?: string }
-	| { type: "user_turn"; message: string }
+	| {
+			attachments?: Array<{
+				mimeType: string;
+				name?: string;
+				path: string;
+				size?: number;
+			}>;
+			type: "user_turn";
+			message: string;
+	  }
 	| { type: "agent_text"; text: string }
 	| { type: "tool_call"; call: EvalToolCall }
 	| { type: "api_call"; call: AutumnApiCall }

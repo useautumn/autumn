@@ -2,16 +2,17 @@ import { Eval } from "braintrust";
 import type { AutumnMcpAuth } from "../../../../../packages/mcp/src/server/auth/auth.js";
 import type { EvalSetup } from "../fixtures/types.js";
 import {
-	standardEvalScores,
 	type EvalExpected,
 	type EvalScorer,
+	standardEvalScores,
 } from "../utils/scorers.js";
+import type { AutumnApiMockOverrides } from "./context/types.js";
 import {
 	createEvalContext,
+	type EvalAttachment,
 	type EvalRunResult,
 	type EvalTurn,
 } from "./createEvalContext.js";
-import type { AutumnApiMockOverrides } from "./context/types.js";
 import { createLeafAgentDriver } from "./drivers/leafAgent.js";
 import type { EvalAgentDriver } from "./drivers/types.js";
 import type { EvalTraceLevel } from "./tracing/types.js";
@@ -44,12 +45,15 @@ type InitEvalOptions<Metadata extends EvalCaseMetadata> = {
 };
 
 export const user = ({
+	attachments,
 	maxSteps,
 	message,
 }: {
+	attachments?: EvalAttachment[];
 	maxSteps?: number;
 	message: string;
 }): EvalTurn => ({
+	...(attachments === undefined ? {} : { attachments }),
 	...(maxSteps === undefined ? {} : { maxSteps }),
 	message,
 	type: "user",

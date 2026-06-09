@@ -14,39 +14,38 @@ type EvalMetadata = {
 	flow: "attach";
 };
 
-const experimentName = "attach-custom-price";
-const customPrice = 49;
+const experimentName = "attach-entity-rules";
 
 const setup = withCustomers({
 	setup: orgSetups.knowledgePlatform(),
 	customers: ({ customers }) => ({
 		account: customers.base({
-			email: "billing@northstar.example",
-			id: "cus_attach_custom_price",
-			name: "Northstar Labs",
+			email: "billing@alder.example",
+			id: "cus_attach_entity_rules",
+			name: "Alder Systems",
 		}),
 	}),
 	entities: ({ customers, entities, features }) => ({
-		workspace: entities.base({
+		workspaceAlpha: entities.base({
 			customer: customers.account,
 			feature: features.workspaces,
-			id: "workspace_northstar",
-			name: "Northstar Workspace",
+			id: "workspace_alpha",
+			name: "Workspace Alpha",
+		}),
+		workspaceBeta: entities.base({
+			customer: customers.account,
+			feature: features.workspaces,
+			id: "workspace_beta",
+			name: "Workspace Beta",
 		}),
 	}),
 });
 const customer = setup.refs.customers.account;
-const enterprisePlan = setup.refs.plans.enterprise;
-const workspace = setup.refs.entities.workspace;
+const scalePlan = setup.refs.plans.scale;
+const workspace = setup.refs.entities.workspaceAlpha;
 
 const expectedAttachRequest = {
 	customer_id: customer.id,
-	customize: {
-		price: {
-			amount: customPrice,
-			interval: "month",
-		},
-	},
 	enable_plan_immediately: true,
 	entity_id: workspace.id,
 	invoice_mode: {
@@ -54,7 +53,7 @@ const expectedAttachRequest = {
 		enabled: true,
 		finalize: false,
 	},
-	plan_id: enterprisePlan.id,
+	plan_id: scalePlan.id,
 };
 
 initEval<EvalMetadata>({
@@ -67,18 +66,25 @@ initEval<EvalMetadata>({
 	scores: billingAttachScores(),
 	cases: [
 		{
-			name: "custom monthly price with draft invoice",
+			name: "entity attach rules require entity selection before preview",
 			conversation: [
 				user({
-					message:
-						"Please attach the Enterprise plan to Northstar Labs for Northstar Workspace with a custom base price of $49/month.",
+					message: "Please attach the Scale plan to Alder Systems.",
 				}),
+				user({ message: "Use Workspace Alpha." }),
 				user({ message: "Looks good, attach it." }),
 				approve(),
 			],
 			expect: [
 				tools.called({
-					toolNames: ["listCustomers", "listPlans", "listEntities"],
+					toolNames: [
+						"getAgentRules",
+						"listCustomers",
+						"listPlans",
+						"listEntities",
+						"previewAttach",
+						"attach",
+					],
 				}),
 				api.calledInOrder({
 					calls: [
@@ -110,12 +116,10 @@ initEval<EvalMetadata>({
 				}),
 				response.mentions({
 					phrases: [
-						"Northstar Labs",
-						"Northstar Workspace",
-						"Enterprise",
-						"$49",
-						"invoice",
-						"immediately",
+						"Workspace Alpha",
+						"Workspace Beta",
+						"Alder Systems",
+						"Scale",
 					],
 				}),
 			],

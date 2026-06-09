@@ -42,8 +42,11 @@ const domain = {
 		}),
 		operation({
 			id: "getOrCreateCustomer",
-			description:
-				"Get an existing Autumn customer by id, or create it if missing. Use when the user explicitly wants a customer record created.",
+			description: `
+- Get an existing Autumn customer by id, or create it if missing.
+- Use only when the user explicitly wants a customer record created.
+- Include email when creating a customer for invoice-mode billing.
+			`.trim(),
 			idempotent: true,
 		}),
 		operation({

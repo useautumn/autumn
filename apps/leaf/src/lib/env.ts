@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { DEFAULT_CHAT_MODEL } from "./chatAgentConfig.js";
 
 const optionalString = z.preprocess(
 	(value) => (value === "" ? undefined : value),
@@ -10,7 +11,7 @@ const envSchema = z
 		MCP_SERVER_URL: optionalString,
 		BETTER_AUTH_SECRET: optionalString,
 		BETTER_AUTH_URL: optionalString,
-		CHAT_MODEL: z.string().min(1).default("anthropic/claude-sonnet-4-6"),
+		CHAT_MODEL: z.string().min(1).default(DEFAULT_CHAT_MODEL),
 		CHAT_NAME: z.string().min(1).default("Autumn"),
 		CHAT_STATE_DATABASE_URL: optionalString,
 		CHAT_STATE_SECRET: optionalString,

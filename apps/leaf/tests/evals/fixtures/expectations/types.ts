@@ -26,14 +26,49 @@ export type ApiCalledInOrderExpectation = {
 	type: "api.calledInOrder";
 };
 
+export type ApiCalledAfterApprovalExpectation = {
+	call: ExpectedApiCall;
+	type: "api.calledAfterApproval";
+};
+
+export type ApiBodyExcludesExpectation = {
+	fields: string[];
+	toolName: AutumnEvalToolName;
+	type: "api.bodyExcludes";
+};
+
+export type ApiBodyNumberFieldsExpectation = {
+	paths: string[];
+	toolName: AutumnEvalToolName;
+	type: "api.bodyNumberFields";
+};
+
 export type ResponseMentionsExpectation = {
 	phrases: string[];
 	type: "response.mentions";
 };
 
+export type ResponseAskedExpectation = {
+	notPhrases?: string[];
+	phrases: string[];
+	type: "response.asked";
+};
+
+export type ResponseAskedBeforeToolExpectation = {
+	notPhrases?: string[];
+	phrases: string[];
+	toolName: AutumnEvalToolName;
+	type: "response.askedBeforeTool";
+};
+
 export type EvalExpectation =
+	| ApiBodyExcludesExpectation
+	| ApiBodyNumberFieldsExpectation
+	| ApiCalledAfterApprovalExpectation
 	| ApiCalledExpectation
 	| ApiCalledInOrderExpectation
+	| ResponseAskedExpectation
+	| ResponseAskedBeforeToolExpectation
 	| ResponseMentionsExpectation
 	| ToolsCalledExpectation;
 

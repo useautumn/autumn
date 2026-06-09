@@ -15,6 +15,7 @@ export type {
 	EvalMcpServer,
 	EvalRuntimeContext,
 } from "./context/types.js";
+export { contractAttachment } from "./contracts.js";
 export type {
 	EvalRunResult,
 	EvalTurn,
