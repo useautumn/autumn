@@ -1,4 +1,4 @@
-import type { MigrationFilter, Operations } from "@autumn/shared";
+import { AppEnv, type MigrationFilter, type Operations } from "@autumn/shared";
 import {
 	ArrowSquareOutIcon,
 	CaretDownIcon,
@@ -61,6 +61,7 @@ import {
 	useMigrationsQuery,
 } from "@/hooks/queries/useMigrationsQuery";
 import { cn } from "@/lib/utils";
+import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 import { createCustomerListColumns } from "@/views/customers2/components/table/customer-list/CustomerListColumns";
@@ -213,6 +214,9 @@ export function MigrationLiveView({
 	onStepChange: (step: StepId) => void;
 }) {
 	const { queryStates: customerFilters } = useCustomerFilters();
+	const env = useEnv();
+	const tableContainerHeight =
+		env === AppEnv.Sandbox ? "calc(100vh - 260px)" : "calc(100vh - 220px)";
 	const [executionStatuses, setExecutionStatuses] = useState<ExecutionStatus[]>(
 		[],
 	);
@@ -554,7 +558,7 @@ export function MigrationLiveView({
 							}
 							customerLabel={
 								count !== null
-									? `${count} ${count === 1 ? "customer" : "customers"}`
+									? `${count.toLocaleString()} ${count === 1 ? "customer" : "customers"}`
 									: "All matched customers"
 							}
 							operations={operations}
@@ -784,7 +788,7 @@ export function MigrationLiveView({
 						value={search}
 						onChange={handleSearchChange}
 						className="pl-8! text-sm"
-						placeholder={`Search ${count ?? 0} customers`}
+						placeholder={`Search ${(count ?? 0).toLocaleString()} customers`}
 					/>
 				</div>
 				<div className="flex items-center gap-2 shrink-0">
@@ -855,13 +859,15 @@ export function MigrationLiveView({
 					onRowClick: setSelectedCustomer,
 					rowClassName: "h-10",
 					emptyStateText: "No customers match this filter",
+					virtualization: {
+						containerHeight: tableContainerHeight,
+					},
 				}}
 			>
 				<Table.Container>
-					<Table.Content>
-						<Table.Header />
-						<Table.Body />
-					</Table.Content>
+					<Table.VirtualizedContent>
+						<Table.VirtualizedBody />
+					</Table.VirtualizedContent>
 				</Table.Container>
 			</Table.Provider>
 		</div>
