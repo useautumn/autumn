@@ -13,10 +13,12 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/v2/selects/Select";
+import {
+	CUSTOMER_LIST_PAGE_SIZE_OPTIONS,
+	DEFAULT_CUSTOMER_LIST_PAGE_SIZE,
+} from "@/utils/constants/customerListPagination";
 import { useCusSearchQuery } from "@/views/customers/hooks/useCusSearchQuery";
 import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
-
-const PAGE_SIZE_OPTIONS = [50, 100, 250, 500];
 
 export function CustomerListPagination() {
 	const { totalCount, nextCursor, isFetchingUncached } = useCusSearchQuery();
@@ -27,7 +29,7 @@ export function CustomerListPagination() {
 		popCursor,
 	} = useCustomerFilters();
 
-	const pageSize = queryStates.pageSize || 50;
+	const pageSize = queryStates.pageSize || DEFAULT_CUSTOMER_LIST_PAGE_SIZE;
 	const totalPages = Math.ceil((totalCount || 0) / pageSize);
 	const hasPaginationData = totalCount > 0;
 	const canGoPrev = currentPage > 1;
@@ -99,7 +101,7 @@ export function CustomerListPagination() {
 
 export function CustomerListPageSizeSelector() {
 	const { queryStates, setFilters } = useCustomerFilters();
-	const pageSize = queryStates.pageSize || 50;
+	const pageSize = queryStates.pageSize || DEFAULT_CUSTOMER_LIST_PAGE_SIZE;
 
 	return (
 		<Select
@@ -109,13 +111,18 @@ export function CustomerListPageSizeSelector() {
 					pageSize: Number(value),
 				});
 			}}
-			items={Object.fromEntries(PAGE_SIZE_OPTIONS.map((size) => [size.toString(), size.toString()]))}
+			items={Object.fromEntries(
+				CUSTOMER_LIST_PAGE_SIZE_OPTIONS.map((size) => [
+					size.toString(),
+					size.toString(),
+				]),
+			)}
 		>
 			<SelectTrigger className="h-7 w-fit px-2 text-xs">
 				<SelectValue />
 			</SelectTrigger>
 			<SelectContent>
-				{PAGE_SIZE_OPTIONS.map((size) => (
+				{CUSTOMER_LIST_PAGE_SIZE_OPTIONS.map((size) => (
 					<SelectItem key={size} value={size.toString()}>
 						{size}
 					</SelectItem>

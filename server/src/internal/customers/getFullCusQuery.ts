@@ -13,10 +13,75 @@ export type DashboardStatusFilter =
 	| "free_trial"
 	| "expired";
 
-export type DashboardProductVersionFilter = {
-	productId: string;
-	version: number;
-};
+export const parseDashboardStatusFilter = (
+	raw: string[] | undefined,
+): DashboardStatusFilter[] =>
+	(raw ?? []).filter(
+		(s): s is DashboardStatusFilter =>
+			s === "active" ||
+			s === "past_due" ||
+			s === "canceled" ||
+			s === "free_trial" ||
+			s === "expired",
+	);
+
+type DashboardProcessorFilter = NonNullable<
+	ListCustomersV2Params["processors"]
+>[number];
+
+export const parseDashboardProcessorFilter = (
+	raw: string[] | undefined,
+): ListCustomersV2Params["processors"] =>
+	(raw ?? []).filter(
+		(p): p is DashboardProcessorFilter =>
+			p === "stripe" || p === "revenuecat" || p === "vercel",
+	);
+
+export type DashboardProductVersionFilter =
+	| { productId: string; version: number; custom?: never }
+	| { productId: string; custom: true; version?: never };
+
+export const isCustomDashboardProductFilter = (
+	filter: DashboardProductVersionFilter,
+): filter is Extract<DashboardProductVersionFilter, { custom: true }> =>
+	"custom" in filter;
+
+export const isVersionDashboardProductFilter = (
+	filter: DashboardProductVersionFilter,
+): filter is Extract<DashboardProductVersionFilter, { version: number }> =>
+	"version" in filter;
+
+export const parseDashboardVersionFilter = (
+	raw: string[] | undefined,
+): DashboardProductVersionFilter[] =>
+	(raw ?? []).flatMap((value): DashboardProductVersionFilter[] => {
+		if (!value) return [];
+
+		const [productId, version] = value.split(":");
+		if (!productId || !version) return [];
+		if (version === "custom") return [{ productId, custom: true }];
+
+		const parsedVersion = Number.parseInt(version, 10);
+		if (Number.isNaN(parsedVersion)) return [];
+		return [{ productId, version: parsedVersion }];
+	});
+
+const dashboardProductFilterToCustomerListSql = (
+	filter: DashboardProductVersionFilter,
+	{ orgId, env }: { orgId?: string; env?: string } = {},
+): SQL =>
+	isCustomDashboardProductFilter(filter)
+		? sql`(cp_dash.product_id = ${filter.productId} AND cp_dash.is_custom = true)`
+		: orgId && env
+			? sql`cp_dash.internal_product_id IN (
+					SELECT p_lookup.internal_id
+					FROM products p_lookup
+					WHERE p_lookup.org_id = ${orgId}
+						AND p_lookup.env = ${env}
+						AND p_lookup.id = ${filter.productId}
+						AND p_lookup.version = ${filter.version}
+				)`
+			: sql`(p_dash.id = ${filter.productId} AND p_dash.version = ${filter.version})`;
 
 const buildOptimizedCusProductsCTE = ({
 	inStatuses,
@@ -557,6 +622,8 @@ export const getPaginatedFullCusQuery = ({
 
 	const customerListFilterSql = getCustomerListFilterSql({
 		internalCustomerIds,
+		orgId,
+		env,
 		inStatuses,
 		plans,
 		processors,
@@ -865,6 +932,8 @@ export const hasCustomerListFilters = ({
 
 export const getCustomerListFilterSql = ({
 	internalCustomerIds,
+	orgId,
+	env,
 	inStatuses,
 	plans,
 	processors,
@@ -874,6 +943,8 @@ export const getCustomerListFilterSql = ({
 	productVersionFilters,
 }: {
 	internalCustomerIds?: string[];
+	orgId?: string;
+	env?: string;
 	inStatuses?: CusProductStatus[];
 	plans?: ListCustomersV2Params["plans"];
 	processors?: ListCustomersV2Params["processors"];
@@ -963,10 +1034,13 @@ export const getCustomerListFilterSql = ({
 		)`);
 	}
 
+	const productFilters = productVersionFilters ?? [];
 	const hasStatus = statusFilters && statusFilters.length > 0;
-	const hasVersion =
-		productVersionFilters && productVersionFilters.length > 0;
-	if (hasStatus || hasVersion) {
+	const hasProductFilter = productFilters.length > 0;
+	const hasVersion = productFilters.some(isVersionDashboardProductFilter);
+	const canUseProductCandidateSet =
+		orgId && env && productFilters.every(isVersionDashboardProductFilter);
+	if (hasStatus || hasProductFilter) {
 		const innerClauses: SQL[] = [];
 
 		// Mirrors CusSearchService.buildSearchPredicates productMode:
@@ -1006,15 +1080,24 @@ export const getCustomerListFilterSql = ({
 			innerClauses.push(sql`(${sql.join(statusClauses, sql` OR `)})`);
 		}
 
-		if (hasVersion) {
-			const versionClauses = productVersionFilters!.map(
-				(pv) =>
-					sql`(cp_dash.product_id = ${pv.productId} AND p_dash.version = ${pv.version})`,
+		if (hasProductFilter) {
+			const versionClauses = productFilters.map(
+				(filter) => dashboardProductFilterToCustomerListSql(filter, { orgId, env }),
 			);
 			innerClauses.push(sql`(${sql.join(versionClauses, sql` OR `)})`);
 		}
 
+		if (canUseProductCandidateSet) {
+			filters.push(sql`AND c.internal_id IN (
+				SELECT cp_dash.internal_customer_id
+				FROM customer_products cp_dash
+				WHERE ${sql.join(innerClauses, sql` AND `)}
+			)`);
+			return sql.join(filters, sql` `);
+		}
+
 		const joinProducts = hasVersion
+			&& !(orgId && env)
 			? sql`JOIN products p_dash ON cp_dash.internal_product_id = p_dash.internal_id`
 			: sql``;
 

@@ -17,9 +17,6 @@ export function parsePlanNav({
 	raw: NonNullable<CustomerFilter["plan"]>;
 	ctx: ResolutionContext;
 }): IRNav {
-	if (raw === "$none")
-		return buildNav({ quantifier: "none", filter: {} as PlanFilter, ctx });
-
 	if (!isQuantifierWrapper(raw))
 		return buildNav({ quantifier: "some", filter: raw as PlanFilter, ctx });
 

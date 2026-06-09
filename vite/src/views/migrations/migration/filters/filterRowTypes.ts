@@ -4,14 +4,12 @@ export type FilterField =
 	| "customer_id"
 	| "plan_id"
 	| "version"
+	| "custom"
 	| "paid"
 	| "recurring"
 	| "price"
 	| "item_feature_id"
-	| "item_unlimited"
-	| "item_price"
-	| "item_billing_method"
-	| "item_mode";
+	| "item_unlimited";
 
 export type FilterOperator =
 	| "is"
@@ -22,6 +20,7 @@ export type FilterOperator =
 	| "starts_with"
 	| "exists"
 	| "not_exists"
+	| "none"
 	| "gt"
 	| "gte"
 	| "lt"
@@ -44,14 +43,12 @@ export const FILTER_FIELD_OPTIONS: {
 	{ value: "customer_id", label: "Customer" },
 	{ value: "plan_id", label: "Plan" },
 	{ value: "version", label: "Version" },
+	{ value: "custom", label: "Custom" },
 	{ value: "paid", label: "Paid" },
 	{ value: "recurring", label: "Recurring" },
 	{ value: "price", label: "Base Price" },
 	{ value: "item_feature_id", label: "Feature" },
 	{ value: "item_unlimited", label: "Unlimited" },
-	{ value: "item_price", label: "Item Price" },
-	{ value: "item_billing_method", label: "Billing Method" },
-	{ value: "item_mode", label: "Match Mode" },
 ];
 
 type OperatorOption = { value: FilterOperator; label: string };
@@ -67,6 +64,13 @@ const STRING_OPERATORS: OperatorOption[] = [
 	{ value: "not_in", label: "not in" },
 	{ value: "regex", label: "regex" },
 	{ value: "starts_with", label: "starts with" },
+];
+
+// Plan adds "has none" — selects customers with no active plans at all
+// (compiles to the `$none` quantifier, not a per-plan matcher).
+const PLAN_OPERATORS: OperatorOption[] = [
+	...STRING_OPERATORS,
+	{ value: "none", label: "has none" },
 ];
 
 const STRING_MATCH_OPERATORS: OperatorOption[] = [
@@ -102,22 +106,14 @@ const NULLABLE_ONLY: FieldConfig = {
 
 export const FIELD_CONFIGS: Record<FilterField, FieldConfig> = {
 	customer_id: { operators: STRING_MATCH_OPERATORS, valueType: "string" },
-	plan_id: { operators: STRING_OPERATORS, valueType: "string" },
+	plan_id: { operators: PLAN_OPERATORS, valueType: "string" },
 	version: { operators: NUMBER_OPERATORS, valueType: "number" },
+	custom: BOOLEAN_ONLY,
 	paid: BOOLEAN_ONLY,
 	recurring: BOOLEAN_ONLY,
 	price: NULLABLE_ONLY,
 	item_feature_id: { operators: STRING_MATCH_OPERATORS, valueType: "string" },
 	item_unlimited: BOOLEAN_ONLY,
-	item_price: NULLABLE_ONLY,
-	item_billing_method: {
-		operators: STRING_MATCH_OPERATORS,
-		valueType: "string",
-	},
-	item_mode: {
-		operators: [{ value: "is", label: "is" }],
-		valueType: "string",
-	},
 };
 
 function stringMatcherToRule(
@@ -284,19 +280,6 @@ function nullableToRule(field: FilterField, value: unknown): FilterRule | null {
 	return { field, operator: "exists", values: [] };
 }
 
-type ArrayFilterMode = "$some" | "$every" | "$none";
-
-function detectArrayFilterMode(item: Record<string, unknown>): {
-	mode: ArrayFilterMode;
-	inner: Record<string, unknown>;
-} {
-	for (const key of ["$some", "$every", "$none"] as const) {
-		if (key in item && item[key] && typeof item[key] === "object")
-			return { mode: key, inner: item[key] as Record<string, unknown> };
-	}
-	return { mode: "$some", inner: item };
-}
-
 export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
 	const mainRules: FilterRule[] = [];
 
@@ -304,6 +287,9 @@ export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
 	if (planIdRule) mainRules.push(planIdRule);
 
 	mainRules.push(...numberMatcherToRules("version", filter.version));
+
+	if (filter.custom !== undefined)
+		mainRules.push(booleanRule("custom", filter.custom));
 
 	if (filter.paid !== undefined)
 		mainRules.push(booleanRule("paid", filter.paid));
@@ -315,21 +301,10 @@ export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
 	if (priceRule) mainRules.push(priceRule);
 
 	if (filter.item !== undefined) {
-		const item =
+		const inner =
 			typeof filter.item === "object" && filter.item !== null
 				? filter.item
 				: {};
-		const { mode, inner } = detectArrayFilterMode(
-			item as Record<string, unknown>,
-		);
-
-		if (mode !== "$some") {
-			mainRules.push({
-				field: "item_mode",
-				operator: "is",
-				values: [mode.slice(1)],
-			});
-		}
 
 		const featureRule = stringMatcherToRule(
 			"item_feature_id",
@@ -339,27 +314,10 @@ export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
 
 		if (inner.unlimited !== undefined)
 			mainRules.push(booleanRule("item_unlimited", Boolean(inner.unlimited)));
-
-		const itemPriceRule = nullableToRule("item_price", inner.price);
-		if (itemPriceRule) mainRules.push(itemPriceRule);
-
-		if (
-			inner.price &&
-			typeof inner.price === "object" &&
-			inner.price !== null
-		) {
-			const priceObj = inner.price as Record<string, unknown>;
-			if (priceObj.billing_method !== undefined) {
-				const bmRule = stringMatcherToRule(
-					"item_billing_method",
-					priceObj.billing_method as StringMatcher | undefined,
-				);
-				if (bmRule) mainRules.push(bmRule);
-			}
-		}
 	}
 
-	const groups: FilterGroupData[] = [{ rules: mainRules }];
+	const groups: FilterGroupData[] =
+		mainRules.length > 0 ? [{ rules: mainRules }] : [];
 
 	if (filter.$or) {
 		for (const orFilter of filter.$or) {
@@ -368,22 +326,21 @@ export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
 		}
 	}
 
-	return groups;
+	return groups.length > 0 ? groups : [{ rules: [] }];
 }
 
-export function groupsToPlanFilter(groups: FilterGroupData[]): PlanFilter {
-	const main = groups[0];
-	if (!main) return {};
-
+function groupToPlanFilter(group: FilterGroupData): PlanFilter {
 	const filter: PlanFilter = {};
 	let hasItemFields = false;
 	const itemInner: Record<string, unknown> = {};
-	let itemMode: ArrayFilterMode = "$some";
 	const versionFragments: Record<string, unknown>[] = [];
+	const hasStringValue = (rule: FilterRule) =>
+		rule.values.some((value) => value.trim().length > 0);
 
-	for (const rule of main.rules) {
+	for (const rule of group.rules) {
 		switch (rule.field) {
 			case "plan_id":
+				if (!hasStringValue(rule)) break;
 				filter.plan_id = ruleToStringMatcher(rule);
 				break;
 			case "version": {
@@ -391,6 +348,9 @@ export function groupsToPlanFilter(groups: FilterGroupData[]): PlanFilter {
 				if (fragment) versionFragments.push(fragment);
 				break;
 			}
+			case "custom":
+				filter.custom = rule.values[0] === "true";
+				break;
 			case "paid":
 				filter.paid = rule.values[0] === "true";
 				break;
@@ -401,6 +361,7 @@ export function groupsToPlanFilter(groups: FilterGroupData[]): PlanFilter {
 				filter.price = rule.operator === "exists" ? { $ne: null } : null;
 				break;
 			case "item_feature_id":
+				if (!hasStringValue(rule)) break;
 				hasItemFields = true;
 				itemInner.feature_id = ruleToStringMatcher(rule);
 				break;
@@ -408,43 +369,27 @@ export function groupsToPlanFilter(groups: FilterGroupData[]): PlanFilter {
 				hasItemFields = true;
 				itemInner.unlimited = rule.values[0] === "true";
 				break;
-			case "item_price":
-				hasItemFields = true;
-				itemInner.price = rule.operator === "exists" ? { $ne: null } : null;
-				break;
-			case "item_billing_method": {
-				hasItemFields = true;
-				const existingPrice =
-					itemInner.price && typeof itemInner.price === "object"
-						? (itemInner.price as Record<string, unknown>)
-						: {};
-				itemInner.price = {
-					...existingPrice,
-					billing_method: ruleToStringMatcher(rule),
-				};
-				break;
-			}
-			case "item_mode":
-				itemMode = `$${rule.values[0] ?? "some"}` as ArrayFilterMode;
-				break;
 		}
 	}
 
 	if (hasItemFields) {
-		filter.item =
-			itemMode === "$some"
-				? (itemInner as PlanFilter["item"])
-				: ({ [itemMode]: itemInner } as PlanFilter["item"]);
+		filter.item = itemInner as PlanFilter["item"];
 	}
 
 	const versionMatcher = mergeNumberFragments(versionFragments);
 	if (versionMatcher !== undefined) filter.version = versionMatcher;
 
-	if (groups.length > 1) {
-		filter.$or = groups.slice(1).map((group) => groupsToPlanFilter([group]));
-	}
-
 	return filter;
+}
+
+export function groupsToPlanFilter(groups: FilterGroupData[]): PlanFilter {
+	const branches = groups
+		.map(groupToPlanFilter)
+		.filter((filter) => Object.keys(filter).length > 0);
+
+	if (branches.length === 0) return {};
+	if (branches.length === 1) return branches[0];
+	return { $or: branches };
 }
 
 export function customerIdToStrings(

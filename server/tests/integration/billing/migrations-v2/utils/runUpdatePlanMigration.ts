@@ -12,6 +12,7 @@ type MigrationClient = {
 			id: string;
 			filter?: MigrationFilter | null;
 			operations?: Operations | null;
+			no_billing_changes?: boolean;
 		}) => Promise<Migration>;
 		run: (params: { id: string; dry_run?: boolean }) => Promise<{
 			migration_id: string;
@@ -60,6 +61,7 @@ export const runUpdatePlanMigration = async ({
 	customerId,
 	filter,
 	operations,
+	noBillingChanges,
 	runOnServer = true,
 	waitFor,
 	timeoutMs = 30_000,
@@ -71,6 +73,7 @@ export const runUpdatePlanMigration = async ({
 	customerId: string;
 	filter: MigrationFilter;
 	operations: Operations;
+	noBillingChanges?: boolean;
 	runOnServer?: boolean;
 	waitFor?: () => Promise<unknown>;
 	timeoutMs?: number;
@@ -80,6 +83,7 @@ export const runUpdatePlanMigration = async ({
 		id: migrationId,
 		filter,
 		operations,
+		no_billing_changes: noBillingChanges,
 	});
 
 	if (runOnServer) {

@@ -9,7 +9,6 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { throwBackendError } from "@/utils/genUtils";
 
 import { useCachedProduct } from "./getCachedProduct";
-import { useMigrationsQuery } from "./queries/useMigrationsQuery.tsx";
 import { useProductCountsQuery } from "./queries/useProductCountsQuery";
 
 // Product query state...
@@ -71,7 +70,6 @@ export const useProductQuery = () => {
 	});
 
 	const { refetch: refetchCounts } = useProductCountsQuery();
-	const { refetch: refetchMigrations } = useMigrationsQuery();
 
 	const product = data?.product || cachedProduct;
 	const isLoadingWithCache = cachedProduct ? false : isLoading;
@@ -90,10 +88,17 @@ export const useProductQuery = () => {
 	return {
 		product,
 		numVersions: data?.numVersions || cachedProduct?.version || 1,
+		versionCounts: (data?.versionCounts || {}) as Record<
+			number,
+			{ active: number; canceled: number; custom: number; trialing: number }
+		>,
 		isLoading: isLoadingWithCache,
 		refetch: async () => {
 			await refetch();
-			await Promise.all([refetchMigrations(), refetchCounts()]);
+			await Promise.all([
+				queryClient.invalidateQueries({ queryKey: ["migrations"] }),
+				refetchCounts(),
+			]);
 		},
 		invalidate,
 		error,

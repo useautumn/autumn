@@ -11,7 +11,7 @@ export function ItemSummaryRow({
 	onClick,
 }: {
 	item: Record<string, unknown>;
-	onClick: () => void;
+	onClick?: () => void;
 }) {
 	const { features } = useFeaturesQuery();
 	const { org } = useOrg();
@@ -28,15 +28,8 @@ export function ItemSummaryRow({
 	const feature = features.find((f) => f.id === productItem.feature_id);
 	const hasFeatureName = feature?.name && feature.name.trim() !== "";
 
-	return (
-		<button
-			type="button"
-			onClick={onClick}
-			className={cn(
-				"flex items-center gap-2 h-8 px-3 w-full select-none rounded-xl cursor-pointer text-left",
-				"input-base input-state-open-tiny",
-			)}
-		>
+	const content = (
+		<>
 			<div className="flex flex-row items-center gap-1 shrink-0">
 				<PlanFeatureIcon item={productItem} position="left" />
 				<CustomDotIcon />
@@ -48,6 +41,23 @@ export function ItemSummaryRow({
 				</span>
 				<span className="text-body-secondary"> {display.secondary_text}</span>
 			</p>
+		</>
+	);
+
+	const baseClass =
+		"flex items-center gap-2 h-8 px-3 w-full select-none rounded-xl text-left input-base";
+
+	if (!onClick) {
+		return <div className={baseClass}>{content}</div>;
+	}
+
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			className={cn(baseClass, "cursor-pointer input-state-open-tiny")}
+		>
+			{content}
 		</button>
 	);
 }

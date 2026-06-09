@@ -17,8 +17,8 @@ export function TableContent({
 	return (
 		<div
 			className={cn(
-				"rounded-lg shadow-card border relative z-50 min-w-0",
-				!rows.length && "border-dashed shadow-none",
+"rounded-lg border relative z-50 min-w-0",
+			!rows.length && "border-dashed",
 				className,
 			)}
 		>

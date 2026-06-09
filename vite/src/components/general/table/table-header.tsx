@@ -2,9 +2,9 @@ import { flexRender, type HeaderGroup } from "@tanstack/react-table";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
-	TableHeader as ShadcnTableHeader,
-	TableHead,
-	TableRow,
+    TableHeader as ShadcnTableHeader,
+    TableHead,
+    TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { useTableContext } from "./table-context";

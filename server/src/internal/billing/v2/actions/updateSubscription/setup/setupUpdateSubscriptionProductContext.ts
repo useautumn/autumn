@@ -3,7 +3,6 @@ import {
 	type FullCustomer,
 	isCustomerProductFree,
 	isFreeProduct,
-	notNullish,
 	type UpdateSubscriptionBillingContextOverride,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
@@ -22,12 +21,14 @@ export const setupUpdateSubscriptionProductContext = async ({
 	params,
 	contextOverride = {},
 	reusePricesAndEntitlements,
+	resetToCatalogVersion = false,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	params: UpdateSubscriptionV1Params;
 	contextOverride?: UpdateSubscriptionBillingContextOverride;
 	reusePricesAndEntitlements?: ReusePricesAndEntitlements;
+	resetToCatalogVersion?: boolean;
 }) => {
 	const { productContext } = contextOverride;
 
@@ -50,17 +51,22 @@ export const setupUpdateSubscriptionProductContext = async ({
 	});
 
 	let fullProduct = cusProductToProduct({ cusProduct: targetCustomerProduct });
+	const requestedVersion = params.version;
+	const targetVersion = targetCustomerProduct.product.version;
+	const hasRequestedVersion = typeof requestedVersion === "number";
+	const changesVersion =
+		hasRequestedVersion &&
+		(requestedVersion < targetVersion || requestedVersion > targetVersion);
+	const shouldLoadCatalogVersion =
+		hasRequestedVersion && (resetToCatalogVersion || changesVersion);
 
-	if (
-		notNullish(params.version) &&
-		params.version !== targetCustomerProduct.product.version
-	) {
+	if (shouldLoadCatalogVersion) {
 		fullProduct = await ProductService.getFull({
 			db: ctx.db,
 			idOrInternalId: targetCustomerProduct.product.id,
 			orgId: ctx.org.id,
 			env: ctx.env,
-			version: params.version,
+			version: requestedVersion,
 		});
 	}
 

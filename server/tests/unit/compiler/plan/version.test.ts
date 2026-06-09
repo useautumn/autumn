@@ -20,8 +20,8 @@ const ctx = contexts.create({ features: [] });
 const ambient = { orgId: "org_test", env: "live" };
 
 const ROOT_AMBIENT = "c.org_id = ? AND c.env = ?";
-const PLAN_AMBIENT = "cp.status IN (?, ?)";
-const PLAN_AMBIENT_PARAMS = ["active", "past_due"];
+const PLAN_AMBIENT = "cp.status IN (?, ?, ?)";
+const PLAN_AMBIENT_PARAMS = ["active", "past_due", "scheduled"];
 const PLAN_ROOT_AMBIENT = "p.org_id = ? AND p.env = ?";
 
 const normalize = (sql: string) =>
