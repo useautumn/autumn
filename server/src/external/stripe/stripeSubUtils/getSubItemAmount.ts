@@ -13,7 +13,7 @@ const calculateTieredAmount = ({
 	let quantityCursor = quantity;
 	for (const tier of tiers) {
 		const unitAmount = new Decimal(
-			tier.unit_amount_decimal?.toString() ?? tier.unit_amount ?? 0,
+			tier.unit_amount_decimal || tier.unit_amount!,
 		);
 
 		if (notNullish(tier.up_to)) {
@@ -54,9 +54,7 @@ export const getSubItemAmount = ({
 
 	if (price.billing_scheme === "per_unit") {
 		if (price.unit_amount_decimal) {
-			return new Decimal(price.unit_amount_decimal.toString())
-				.mul(quantity)
-				.toNumber();
+			return new Decimal(price.unit_amount_decimal).mul(quantity).toNumber();
 		} else {
 			return new Decimal(price.unit_amount || 0).mul(quantity).toNumber();
 		}

@@ -1,17 +1,13 @@
 import {
 	AppEnv,
-	customerEntitlements,
-	customerPrices,
-	customerProducts,
 	customers,
 	ErrCode,
 	member,
 	organizations,
 	type Organization,
-	products,
 	RecaseError,
 } from "@autumn/shared";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { DrizzleCli } from "@server/db/initDrizzle.js";
 import type { Logger } from "@/external/logtail/logtailUtils.js";
 import {
@@ -70,40 +66,6 @@ export const deletePlatformSubOrg = async ({
 	logger.info("5. Deleting org memberships");
 	await db.delete(member).where(eq(member.organizationId, org.id));
 
-	// products.org_id cascades on org delete, but customer_products RESTRICTs
-	// the product delete — so tear down the customer-side rows first, deepest
-	// FK child to shallowest: cusEnts/cusPrices → customer_products → products.
-	logger.info("6. Deleting customer products and products");
-	const orgProductIds = (
-		await db
-			.select({ internalId: products.internal_id })
-			.from(products)
-			.where(eq(products.org_id, org.id))
-	).map((p) => p.internalId);
-
-	if (orgProductIds.length > 0) {
-		const cusProductIds = (
-			await db
-				.select({ id: customerProducts.id })
-				.from(customerProducts)
-				.where(inArray(customerProducts.internal_product_id, orgProductIds))
-		).map((cp) => cp.id);
-
-		if (cusProductIds.length > 0) {
-			await db
-				.delete(customerEntitlements)
-				.where(inArray(customerEntitlements.customer_product_id, cusProductIds));
-			await db
-				.delete(customerPrices)
-				.where(inArray(customerPrices.customer_product_id, cusProductIds));
-			await db
-				.delete(customerProducts)
-				.where(inArray(customerProducts.id, cusProductIds));
-		}
-
-		await db.delete(products).where(eq(products.org_id, org.id));
-	}
-
-	logger.info("7. Deleting organization");
+	logger.info("6. Deleting organization");
 	await db.delete(organizations).where(eq(organizations.id, org.id));
 };

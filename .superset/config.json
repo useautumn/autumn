@@ -1,5 +1,5 @@
 {
-	"setup": ["bun i", "bun dw setup"],
+	"setup": ["bun dw setup"],
 	"run": ["bun dw run"],
 	"teardown": ["bun dw teardown"]
 }

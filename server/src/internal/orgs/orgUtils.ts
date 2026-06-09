@@ -46,8 +46,8 @@ export const shouldReconnectStripe = async ({
 		const stripeCli = createStripeCli({ org, env });
 		const newKey = new Stripe(stripeKey);
 
-		const oldAccount = await stripeCli.accounts.retrieve(null);
-		const newAccount = await newKey.accounts.retrieve(null);
+		const oldAccount = await stripeCli.accounts.retrieve();
+		const newAccount = await newKey.accounts.retrieve();
 
 		return oldAccount.id !== newAccount.id;
 	} catch (error) {

@@ -84,7 +84,7 @@ export const triggerSubscriptionCreated = async ({
 		created: getUnixTime(subscriptionCreatedAtMs ?? Date.now()),
 		schedule: scheduleId ?? null,
 	} as Stripe.Subscription;
-	const retrieveSubscription: Stripe.SubscriptionResource["retrieve"] =
+	const retrieveSubscription: Stripe.SubscriptionsResource["retrieve"] =
 		async () =>
 			stripeResponse({ object: subscription, requestId: `req_${stripeSubId}` });
 

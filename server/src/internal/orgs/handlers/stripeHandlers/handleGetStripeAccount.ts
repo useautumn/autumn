@@ -1,5 +1,5 @@
-import { Scopes } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { isStripeConnected } from "../../orgUtils.js";
 
@@ -15,7 +15,7 @@ export const handleGetStripeAccount = createRoute({
 
 		try {
 			const stripeCli = createStripeCli({ org, env });
-			const accountDetails = await stripeCli.accounts.retrieve(null);
+			const accountDetails = await stripeCli.accounts.retrieve();
 			return c.json(accountDetails);
 		} catch (error) {
 			logger.warn(
