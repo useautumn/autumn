@@ -34,31 +34,70 @@ import {
 	buildVersionMigrationDraft,
 	type VersionMigrateScope,
 } from "./buildMigrationDraft";
+import { getPlanPriceChange, hasPlanMigrationDiff } from "./planMigrationDiff";
 
 interface MigrateCustomersDialogProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
 	productId: string;
 	latestVersion: number;
-	pastVersionsWithCustomers: number[];
+	migratableVersions: number[];
 	versionCounts: Record<
 		number,
 		{ active: number; canceled: number; custom: number; trialing: number }
 	>;
 }
 
-function useVersionProducts(productId: string, pastVersions: number[]) {
+export function useMigratableVersions({
+	productId,
+	latestVersion,
+	pastVersions,
+	currency,
+}: {
+	productId: string;
+	latestVersion: number;
+	pastVersions: number[];
+	currency: string;
+}) {
+	const { products } = useProductsQuery({ allVersions: true });
+
+	return useMemo(() => {
+		const latest = products.find(
+			(p) => p.id === productId && p.version === latestVersion,
+		);
+		if (!latest) return [];
+
+		const latestProduct = productV2ToFrontendProduct({ product: latest });
+		const versions: number[] = [];
+		for (const p of products) {
+			if (p.id !== productId) continue;
+			if (!pastVersions.includes(p.version)) continue;
+			if (
+				hasPlanMigrationDiff({
+					baseProduct: productV2ToFrontendProduct({ product: p }),
+					product: latestProduct,
+					currency,
+				})
+			) {
+				versions.push(p.version);
+			}
+		}
+		return versions.sort((a, b) => b - a);
+	}, [products, productId, latestVersion, pastVersions, currency]);
+}
+
+function useVersionProducts(productId: string, versions: number[]) {
 	const { products } = useProductsQuery({ allVersions: true });
 
 	return useMemo(() => {
 		const map = new Map<number, FrontendProduct>();
 		for (const p of products) {
 			if (p.id !== productId) continue;
-			if (!pastVersions.includes(p.version)) continue;
+			if (!versions.includes(p.version)) continue;
 			map.set(p.version, productV2ToFrontendProduct({ product: p }));
 		}
 		return map;
-	}, [products, productId, pastVersions]);
+	}, [products, productId, versions]);
 }
 
 function useLatestProduct(productId: string, latestVersion: number) {
@@ -82,6 +121,11 @@ function VersionDiff({
 	currency: string;
 }) {
 	const { features = [] } = useFeaturesQuery();
+	const priceChange = getPlanPriceChange({
+		baseProduct: fromProduct,
+		product: toProduct,
+		currency,
+	});
 
 	return (
 		<PlanItemsSection
@@ -94,6 +138,7 @@ function VersionDiff({
 			changesOnly
 			currency={currency}
 			onEditPlan={() => {}}
+			priceChange={priceChange}
 			readOnly
 		/>
 	);
@@ -104,7 +149,7 @@ export function MigrateCustomersDialog({
 	onOpenChange,
 	productId,
 	latestVersion,
-	pastVersionsWithCustomers,
+	migratableVersions,
 	versionCounts,
 }: MigrateCustomersDialogProps) {
 	const navigate = useNavigate();
@@ -115,24 +160,31 @@ export function MigrateCustomersDialog({
 	const [scope, setScope] = useState<VersionMigrateScope>("all");
 	const [selectedVersion, setSelectedVersion] = useState<number | null>(null);
 
-	const effectiveVersion = selectedVersion ?? pastVersionsWithCustomers[0] ?? null;
+	const effectiveVersion =
+		selectedVersion && migratableVersions.includes(selectedVersion)
+			? selectedVersion
+			: (migratableVersions[0] ?? null);
 
-	const versionProducts = useVersionProducts(productId, pastVersionsWithCustomers);
+	const versionProducts = useVersionProducts(productId, migratableVersions);
 	const latestProduct = useLatestProduct(productId, latestVersion);
 
 	const selectedFromProduct =
-		effectiveVersion !== null ? versionProducts.get(effectiveVersion) ?? null : null;
+		effectiveVersion !== null
+			? (versionProducts.get(effectiveVersion) ?? null)
+			: null;
 
 	const versionSelectItems = Object.fromEntries(
-		pastVersionsWithCustomers.map((v) => [String(v), `Version ${v}`]),
+		migratableVersions.map((v) => [String(v), `Version ${v}`]),
 	);
 
 	const handleCreate = async () => {
+		if (migratableVersions.length === 0) return;
+
 		const draft = buildVersionMigrationDraft({
 			productId,
 			latestVersion,
 			scope,
-			pastVersions: pastVersionsWithCustomers,
+			pastVersions: migratableVersions,
 		});
 
 		try {
@@ -140,14 +192,13 @@ export function MigrateCustomersDialog({
 
 			toast.success("Migration created");
 			onOpenChange(false);
-			navigateTo(
-				`/migrations/${migration.id}?step=live&run=true`,
-				navigate,
-			);
+			navigateTo(`/migrations/${migration.id}?step=live&run=true`, navigate);
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to create migration"));
 		}
 	};
+
+	if (migratableVersions.length === 0) return null;
 
 	return (
 		<Dialog
@@ -162,7 +213,7 @@ export function MigrateCustomersDialog({
 				<div className="overflow-y-auto min-h-0 flex-1">
 					<DialogDescription asChild>
 						<div className="text-sm flex flex-col gap-4">
-							{pastVersionsWithCustomers.length > 1 && (
+							{migratableVersions.length > 1 && (
 								<RadioGroup
 									value={scope === "all" ? "all" : "specific"}
 									onValueChange={(val) => {
@@ -176,7 +227,7 @@ export function MigrateCustomersDialog({
 									<AreaRadioGroupItem
 										value="all"
 										label={`Migrate all past versions to v${latestVersion}`}
-										description={`Move all non-custom customers across ${pastVersionsWithCustomers.length} versions.`}
+										description={`Move all non-custom customers across ${migratableVersions.length} versions.`}
 									/>
 									<AreaRadioGroupItem
 										value="specific"
@@ -191,7 +242,11 @@ export function MigrateCustomersDialog({
 									Version
 								</span>
 								<Select
-									value={effectiveVersion !== null ? String(effectiveVersion) : undefined}
+									value={
+										effectiveVersion !== null
+											? String(effectiveVersion)
+											: undefined
+									}
 									onValueChange={(v) => {
 										const num = Number(v);
 										setSelectedVersion(num);
@@ -203,7 +258,7 @@ export function MigrateCustomersDialog({
 										<SelectValue placeholder="Select version" />
 									</SelectTrigger>
 									<SelectContent>
-										{pastVersionsWithCustomers.map((version) => {
+										{migratableVersions.map((version) => {
 											const count =
 												(versionCounts[version]?.active ?? 0) -
 												(versionCounts[version]?.custom ?? 0);
