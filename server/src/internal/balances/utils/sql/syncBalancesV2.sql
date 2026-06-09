@@ -145,18 +145,22 @@ BEGIN
       WHERE ce.id = ent_id;
 
       IF FOUND THEN
-        -- Mirror the windowed-usage counters into the usage_windows table (Redis is
-        -- authoritative and already prunes closed windows): full-replace the cus_ent's
-        -- rows. Clear on ANY present blob -- an emptied window array re-encodes as {}
-        -- (lua-cjson encodes an empty table as an object), so guarding the DELETE on
-        -- 'array' would leave stale closed rows. Only a real array has rows to INSERT;
-        -- a null/object blob simply clears, so the shared sync never reaches
-        -- jsonb_array_elements on a non-array. null = balance-only sync (untouched).
-        -- The internal_feature_id filters keep a stray null/orphan row from aborting
-        -- the whole batch on the NOT NULL + FK column.
+        -- Mirror the windowed-usage counters into the usage_windows table. Usage is
+        -- monotonic within a window, so stale cache snapshots must not lower the
+        -- persisted counter. A present non-array blob still means "no active windows"
+        -- because lua-cjson encodes an empty table as an object; null remains a
+        -- balance-only sync (untouched). The internal_feature_id filters keep a stray
+        -- null/orphan row from aborting the whole batch on the NOT NULL + FK column.
         IF ent_usage_windows IS NOT NULL AND ent_usage_windows != 'null'::jsonb THEN
-          DELETE FROM usage_windows WHERE customer_entitlement_id = ent_id;
           IF jsonb_typeof(ent_usage_windows) = 'array' THEN
+            DELETE FROM usage_windows uw
+            WHERE uw.customer_entitlement_id = ent_id
+              AND uw.window_start_at < (
+                SELECT MIN((w->>'window_start_at')::numeric)
+                FROM jsonb_array_elements(ent_usage_windows) AS w
+                WHERE w->>'window_start_at' IS NOT NULL
+              );
+
             INSERT INTO usage_windows (
               id, customer_entitlement_id, feature_id, internal_feature_id,
               window_start_at, window_end_at, usage, updated_at
@@ -175,7 +179,14 @@ BEGIN
               AND EXISTS (
                 SELECT 1 FROM features f
                 WHERE f.internal_id = w->>'internal_feature_id'
-              );
+              )
+            ON CONFLICT (customer_entitlement_id, feature_id, window_start_at)
+            DO UPDATE SET
+              usage = GREATEST(usage_windows.usage, EXCLUDED.usage),
+              window_end_at = EXCLUDED.window_end_at,
+              updated_at = EXCLUDED.updated_at;
+          ELSE
+            DELETE FROM usage_windows WHERE customer_entitlement_id = ent_id;
           END IF;
         END IF;
 

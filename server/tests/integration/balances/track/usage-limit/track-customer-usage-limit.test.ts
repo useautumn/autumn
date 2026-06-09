@@ -20,6 +20,111 @@ const queryRows = (result: unknown): any[] =>
 	Array.isArray(result) ? result : ((result as { rows?: any[] })?.rows ?? []);
 
 type AutumnV2_1Client = Awaited<ReturnType<typeof initScenario>>["autumnV2_1"];
+type TestContext = Awaited<ReturnType<typeof initScenario>>["ctx"];
+
+type UsageWindowSyncEntry = {
+	customer_entitlement_id: string;
+	feature_id: string;
+	balance: number;
+	adjustment: number;
+	entities: null;
+	usage_windows: {
+		id: string;
+		feature_id: string;
+		internal_feature_id: string;
+		window_start_at: number;
+		window_end_at: number;
+		usage: number;
+		updated_at: number;
+	}[];
+	next_reset_at: null;
+	entity_count: number;
+	cache_version: number;
+};
+
+const callSyncBalancesV2 = async ({
+	ctx,
+	entry,
+}: {
+	ctx: TestContext;
+	entry: UsageWindowSyncEntry;
+}) => {
+	await ctx.db.execute(sql`
+		SELECT * FROM sync_balances_v2(${JSON.stringify({
+			customer_entitlement_updates: [entry],
+			rollover_updates: [],
+		})}::jsonb)
+	`);
+};
+
+const buildUsageWindowSyncEntry = ({
+	customerEntitlementId,
+	featureId,
+	balance = 0,
+	adjustment = 0,
+	cacheVersion = 0,
+	windows,
+}: {
+	customerEntitlementId: string;
+	featureId: string;
+	balance?: number;
+	adjustment?: number;
+	cacheVersion?: number;
+	windows: UsageWindowSyncEntry["usage_windows"];
+}): UsageWindowSyncEntry => ({
+	customer_entitlement_id: customerEntitlementId,
+	feature_id: featureId,
+	balance,
+	adjustment,
+	entities: null,
+	usage_windows: windows,
+	next_reset_at: null,
+	entity_count: 0,
+	cache_version: cacheVersion,
+});
+
+const getUsageLimitCustomerEntitlement = async ({
+	ctx,
+	customerId,
+	featureId,
+}: {
+	ctx: TestContext;
+	customerId: string;
+	featureId: string;
+}) => {
+	const row = queryRows(
+		await ctx.db.execute(sql`
+			SELECT id, internal_feature_id, balance, adjustment, cache_version
+			FROM customer_entitlements
+			WHERE customer_id = ${customerId} AND feature_id = ${featureId}
+			LIMIT 1
+		`),
+	)[0];
+	expect(row?.id).toBeTruthy();
+	return row as {
+		id: string;
+		internal_feature_id: string;
+		balance: string | number | null;
+		adjustment: string | number | null;
+		cache_version: number | null;
+	};
+};
+
+const getUsageWindowRows = async ({
+	ctx,
+	customerEntitlementId,
+}: {
+	ctx: TestContext;
+	customerEntitlementId: string;
+}) =>
+	queryRows(
+		await ctx.db.execute(sql`
+			SELECT feature_id, internal_feature_id, window_start_at, window_end_at, usage
+			FROM usage_windows
+			WHERE customer_entitlement_id = ${customerEntitlementId}
+			ORDER BY window_start_at ASC
+		`),
+	);
 
 // Arms a windowed usage cap via spend_limits[].usage_limit (overage off);
 // `interval` sets the explicit window override.
@@ -398,6 +503,262 @@ test.concurrent(
 	},
 );
 
+test.concurrent(
+	`${chalk.yellowBright("track-customer-usage-limit-sync: stale sync cannot lower a usage_window counter")}`,
+	async () => {
+		const customerProduct = products.base({
+			id: "track-customer-uw-monotonic",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const customerId = `track-customer-uw-monotonic-1-${Date.now()}`;
+		const { ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: false }),
+				s.products({ list: [customerProduct] }),
+			],
+			actions: [s.billing.attach({ productId: customerProduct.id })],
+		});
+
+		const messagesEnt = await getUsageLimitCustomerEntitlement({
+			ctx,
+			customerId,
+			featureId: TestFeature.Messages,
+		});
+		const windowStart = 1_900_000_000_000;
+		const windowEnd = 1_902_592_000_000;
+		const baseEntry = {
+			customerEntitlementId: messagesEnt.id,
+			featureId: TestFeature.Messages,
+			balance: Number(messagesEnt.balance ?? 0),
+			adjustment: Number(messagesEnt.adjustment ?? 0),
+			cacheVersion: messagesEnt.cache_version ?? 0,
+		};
+
+		await callSyncBalancesV2({
+			ctx,
+			entry: buildUsageWindowSyncEntry({
+				...baseEntry,
+				windows: [
+					{
+						id: `${messagesEnt.id}:messages:${windowStart}`,
+						feature_id: TestFeature.Messages,
+						internal_feature_id: messagesEnt.internal_feature_id,
+						window_start_at: windowStart,
+						window_end_at: windowEnd,
+						usage: 10,
+						updated_at: windowStart + 10,
+					},
+				],
+			}),
+		});
+
+		await callSyncBalancesV2({
+			ctx,
+			entry: buildUsageWindowSyncEntry({
+				...baseEntry,
+				windows: [
+					{
+						id: `${messagesEnt.id}:messages:${windowStart}`,
+						feature_id: TestFeature.Messages,
+						internal_feature_id: messagesEnt.internal_feature_id,
+						window_start_at: windowStart,
+						window_end_at: windowEnd,
+						usage: 8,
+						updated_at: windowStart + 20,
+					},
+				],
+			}),
+		});
+
+		const windowRows = await getUsageWindowRows({
+			ctx,
+			customerEntitlementId: messagesEnt.id,
+		});
+		expect(windowRows).toHaveLength(1);
+		expect(Number(windowRows[0].usage)).toBe(10);
+		expect(Number(windowRows[0].window_end_at)).toBe(windowEnd);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("track-customer-usage-limit-sync: sync prunes windows older than the incoming window")}`,
+	async () => {
+		const customerProduct = products.base({
+			id: "track-customer-uw-prune",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const customerId = `track-customer-uw-prune-1-${Date.now()}`;
+		const { ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: false }),
+				s.products({ list: [customerProduct] }),
+			],
+			actions: [s.billing.attach({ productId: customerProduct.id })],
+		});
+
+		const messagesEnt = await getUsageLimitCustomerEntitlement({
+			ctx,
+			customerId,
+			featureId: TestFeature.Messages,
+		});
+		const closedWindowStart = 1_900_000_000_000;
+		const currentWindowStart = 1_902_592_000_000;
+		const baseEntry = {
+			customerEntitlementId: messagesEnt.id,
+			featureId: TestFeature.Messages,
+			balance: Number(messagesEnt.balance ?? 0),
+			adjustment: Number(messagesEnt.adjustment ?? 0),
+			cacheVersion: messagesEnt.cache_version ?? 0,
+		};
+
+		await callSyncBalancesV2({
+			ctx,
+			entry: buildUsageWindowSyncEntry({
+				...baseEntry,
+				windows: [
+					{
+						id: `${messagesEnt.id}:messages:${closedWindowStart}`,
+						feature_id: TestFeature.Messages,
+						internal_feature_id: messagesEnt.internal_feature_id,
+						window_start_at: closedWindowStart,
+						window_end_at: currentWindowStart,
+						usage: 4,
+						updated_at: closedWindowStart + 10,
+					},
+					{
+						id: `${messagesEnt.id}:messages:${currentWindowStart}`,
+						feature_id: TestFeature.Messages,
+						internal_feature_id: messagesEnt.internal_feature_id,
+						window_start_at: currentWindowStart,
+						window_end_at: currentWindowStart + 2_592_000_000,
+						usage: 6,
+						updated_at: currentWindowStart + 10,
+					},
+				],
+			}),
+		});
+
+		await callSyncBalancesV2({
+			ctx,
+			entry: buildUsageWindowSyncEntry({
+				...baseEntry,
+				windows: [
+					{
+						id: `${messagesEnt.id}:messages:${currentWindowStart}`,
+						feature_id: TestFeature.Messages,
+						internal_feature_id: messagesEnt.internal_feature_id,
+						window_start_at: currentWindowStart,
+						window_end_at: currentWindowStart + 2_592_000_000,
+						usage: 7,
+						updated_at: currentWindowStart + 20,
+					},
+				],
+			}),
+		});
+
+		const windowRows = await getUsageWindowRows({
+			ctx,
+			customerEntitlementId: messagesEnt.id,
+		});
+		expect(windowRows).toHaveLength(1);
+		expect(Number(windowRows[0].window_start_at)).toBe(currentWindowStart);
+		expect(Number(windowRows[0].usage)).toBe(7);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("track-customer-usage-limit-sync: stale closed-window sync cannot delete the current window")}`,
+	async () => {
+		const customerProduct = products.base({
+			id: "track-customer-uw-boundary",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+
+		const customerId = `track-customer-uw-boundary-1-${Date.now()}`;
+		const { ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: false }),
+				s.products({ list: [customerProduct] }),
+			],
+			actions: [s.billing.attach({ productId: customerProduct.id })],
+		});
+
+		const messagesEnt = await getUsageLimitCustomerEntitlement({
+			ctx,
+			customerId,
+			featureId: TestFeature.Messages,
+		});
+		const closedWindowStart = 1_900_000_000_000;
+		const currentWindowStart = 1_902_592_000_000;
+		const currentWindowEnd = currentWindowStart + 2_592_000_000;
+		const baseEntry = {
+			customerEntitlementId: messagesEnt.id,
+			featureId: TestFeature.Messages,
+			balance: Number(messagesEnt.balance ?? 0),
+			adjustment: Number(messagesEnt.adjustment ?? 0),
+			cacheVersion: messagesEnt.cache_version ?? 0,
+		};
+		const closedWindow = {
+			id: `${messagesEnt.id}:messages:${closedWindowStart}`,
+			feature_id: TestFeature.Messages,
+			internal_feature_id: messagesEnt.internal_feature_id,
+			window_start_at: closedWindowStart,
+			window_end_at: currentWindowStart,
+			usage: 4,
+			updated_at: closedWindowStart + 10,
+		};
+		const currentWindow = {
+			id: `${messagesEnt.id}:messages:${currentWindowStart}`,
+			feature_id: TestFeature.Messages,
+			internal_feature_id: messagesEnt.internal_feature_id,
+			window_start_at: currentWindowStart,
+			window_end_at: currentWindowEnd,
+			usage: 6,
+			updated_at: currentWindowStart + 10,
+		};
+
+		await callSyncBalancesV2({
+			ctx,
+			entry: buildUsageWindowSyncEntry({
+				...baseEntry,
+				windows: [closedWindow],
+			}),
+		});
+
+		await callSyncBalancesV2({
+			ctx,
+			entry: buildUsageWindowSyncEntry({
+				...baseEntry,
+				windows: [currentWindow],
+			}),
+		});
+
+		await callSyncBalancesV2({
+			ctx,
+			entry: buildUsageWindowSyncEntry({
+				...baseEntry,
+				windows: [closedWindow],
+			}),
+		});
+
+		const windowRows = await getUsageWindowRows({
+			ctx,
+			customerEntitlementId: messagesEnt.id,
+		});
+		const currentWindowRow = windowRows.find(
+			(row) => Number(row.window_start_at) === currentWindowStart,
+		);
+		expect(currentWindowRow).toBeTruthy();
+		expect(Number(currentWindowRow.usage)).toBe(6);
+		expect(Number(currentWindowRow.window_end_at)).toBe(currentWindowEnd);
+	},
+);
+
 // Deploy-migration safety: a leftover pre-array keyed-map blob must be reset to a
 // clean array, never iterated-then-corrupted into a JSON object that wedges sync.
 test.concurrent(
@@ -684,5 +1045,106 @@ test(
 			(entry) => entry.feature_id === TestFeature.Messages,
 		);
 		expect(limit?.usage_limit_used).toBe(3);
+	},
+);
+
+// Q1 clamp - partial fill: a track larger than the remaining headroom applies only
+// what fits (not the whole value, not 0), fractional remainders included.
+test(
+	`${chalk.yellowBright("track-customer-usage-limit-partial: an over-cap track fills the remaining headroom")}`,
+	async () => {
+		const customerProduct = products.base({
+			id: "track-customer-uw-partial",
+			items: [items.monthlyMessages({ includedUsage: 1000 })],
+		});
+
+		const customerId = `track-customer-uw-partial-1-${Date.now()}`;
+		const { autumnV2_1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: false }),
+				s.products({ list: [customerProduct] }),
+			],
+			actions: [s.billing.attach({ productId: customerProduct.id })],
+		});
+
+		await setCustomerUsageLimit({
+			autumn: autumnV2_1,
+			customerId,
+			featureId: TestFeature.Messages,
+			limit: 5,
+		});
+
+		await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 3,
+		});
+
+		// Only 2 headroom left; a fractional 2.5 fills exactly 2 (usage -> 5), not 2.5.
+		const partial = await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 2.5,
+		});
+		expect(partial.balance).toMatchObject({ usage: 5, remaining: 995 });
+
+		// At the cap, a huge over-cap track applies 0.
+		const large = await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 1000,
+		});
+		expect(large.balance).toMatchObject({ usage: 5, remaining: 995 });
+	},
+);
+
+// Q1 clamp under concurrency: many simultaneous over-cap tracks all succeed (clamp,
+// not reject), but the window applies at most the cap total - no over-count.
+test(
+	`${chalk.yellowBright("track-customer-usage-limit-clamp-race: concurrent over-cap tracks clamp to the cap total")}`,
+	async () => {
+		const customerProduct = products.base({
+			id: "track-customer-uw-clamp-race",
+			items: [items.monthlyMessages({ includedUsage: 100000 })],
+		});
+
+		const customerId = `track-customer-uw-clamp-race-1-${Date.now()}`;
+		const { autumnV2_1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success", testClock: false }),
+				s.products({ list: [customerProduct] }),
+			],
+			actions: [s.billing.attach({ productId: customerProduct.id })],
+		});
+
+		await setCustomerUsageLimit({
+			autumn: autumnV2_1,
+			customerId,
+			featureId: TestFeature.Messages,
+			limit: 10,
+		});
+
+		const results = await Promise.allSettled(
+			Array.from({ length: 40 }, () =>
+				autumnV2_1.track({
+					customer_id: customerId,
+					feature_id: TestFeature.Messages,
+					value: 1,
+				}),
+			),
+		);
+		// Every track succeeds (clamp, never a usage_limit_exceeded reject)...
+		expect(results.every((result) => result.status === "fulfilled")).toBe(true);
+
+		// ...but the window applied exactly the cap of 10 - no over-count from the race.
+		await timeout(2000);
+		const final = await autumnV2_1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 0,
+		});
+		expect(final.balance).toMatchObject({ usage: 10, remaining: 99990 });
 	},
 );
