@@ -17,6 +17,8 @@ describe("Autumn MCP server", () => {
 		const tools = await createAutumnOperationsMCPServer().getToolListInfo();
 
 		expect(tools.tools.map((tool) => tool.name)).toEqual([
+			"getAgentRules",
+			"updateAgentRules",
 			"listCustomers",
 			"getOrCreateCustomer",
 			"updateCustomer",
@@ -87,12 +89,14 @@ describe("Autumn MCP server", () => {
 		expect(billingSafety.contents[0]?.text).toContain(
 			"invoice_mode requires customer email",
 		);
+		expect(billingSafety.contents[0]?.text).toContain("finalize false");
 		expect(billingSafety.contents[0]?.text).toContain("updateCustomer");
 
 		const schedules = await server.readResource("autumn://docs/schedules");
 		expect(schedules.contents[0]?.text).toContain(
 			"invoice_mode requires customer email",
 		);
+		expect(schedules.contents[0]?.text).toContain("finalize false");
 		expect(schedules.contents[0]?.text).toContain("updateCustomer");
 
 		for (const uri of logResourceUris) {

@@ -3,6 +3,7 @@ import * as z from "zod/v4";
 import { claimLatestPendingAction } from "../agent/pending-actions.js";
 import { instrumentToolsWithAnalytics } from "../analytics/index.js";
 import { type AutumnMcpAuth, getAutumnAuth } from "../server/auth/auth.js";
+import { agent } from "./agent.js";
 import { balances } from "./balances.js";
 import { billing } from "./billing.js";
 import { customers } from "./customers.js";
@@ -34,6 +35,7 @@ export {
 
 /** Endpoint each tool calls, keyed by tool id (preview tools use their preview path). */
 export const endpointByTool = {
+	...agent.endpoints,
 	...customers.endpoints,
 	...features.endpoints,
 	...plans.endpoints,
@@ -44,6 +46,7 @@ export const endpointByTool = {
 
 /** Request schema each tool validates against, keyed by tool id. */
 export const schemaByTool = {
+	...agent.schemas,
 	...customers.schemas,
 	...features.schemas,
 	...plans.schemas,
@@ -56,6 +59,7 @@ export const schemaByTool = {
 >;
 
 const domains: ToolDomain[] = [
+	agent.domain,
 	customers.domain,
 	features.domain,
 	plans.domain,

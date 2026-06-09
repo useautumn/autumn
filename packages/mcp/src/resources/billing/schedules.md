@@ -17,7 +17,7 @@ Before creating a schedule, resolve:
 - plans in each phase, including versions, feature quantities, and customizations
 - redirect_mode, success_url, invoice_mode, and checkout behavior if payment may be required
 
-When using invoice_mode, usually set enable_plan_immediately true unless the user explicitly wants access to wait for payment.
+Default paid schedule billing should use a draft invoice: set enable_plan_immediately true and invoice_mode enabled true, enable_plan_immediately true, finalize false.
 invoice_mode requires customer email; if missing, ask for it and call updateCustomer with customer_id and email before billing.
 
 Use listFeatures only when a phase customizes plan items or sets non-zero prepaid feature_quantities and the exact feature ids or types are not already known. Scheduling an existing plan as-is does not need feature lookup.

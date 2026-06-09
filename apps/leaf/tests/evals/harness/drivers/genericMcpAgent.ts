@@ -162,6 +162,7 @@ export const createGenericMcpAgentDriver = ({
 				return { text: output.text };
 			},
 			cleanup: async () => {
+				await mastra.shutdown();
 				await mcpClient.disconnect();
 			},
 			getToolCalls: () => [...toolCalls],

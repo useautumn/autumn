@@ -1,9 +1,8 @@
 import type { ApiVersion } from "@autumn/shared";
-import { RedisStore } from "@hono-rate-limiter/redis";
 import type { Context } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
 import { logger } from "@/external/logtail/logtailUtils.js";
-import { redis, shouldUseRedis } from "@/external/redis/initRedis";
+import { shouldUseRedis } from "@/external/redis/initRedis";
 import type { HonoEnv } from "@/honoUtils/HonoEnv";
 import {
 	RATE_LIMIT_CONFIGS,
@@ -14,6 +13,7 @@ import {
 } from "./rateLimitConfigs";
 import { getOrgRateLimitOverride } from "./rateLimitOverridesStore";
 import { isCustomerInRedisAllowlist } from "./rateLimitRedisAllowlistStore";
+import { createRateLimitRedisStore } from "./rateLimitRedisStore";
 
 // Helper to get rate limit key from context
 const getRateLimitKeyFromContext = (c: Context): string => {
@@ -78,26 +78,7 @@ export const rateLimitFactory = ({
 	const getRedisLimiter = () => {
 		redisLimiter ??= rateLimiter({
 			...options,
-			store: new RedisStore({
-				client: {
-					scriptLoad: (script: string) =>
-						redis.script("LOAD", script) as Promise<string>,
-					evalsha: <TArgs extends unknown[], TData = unknown>(
-						sha: string,
-						keys: string[],
-						args: TArgs,
-					): Promise<TData> => {
-						return redis.evalsha(
-							sha,
-							keys.length,
-							...keys,
-							...(args as (string | number | Buffer)[]),
-						) as Promise<TData>;
-					},
-					decr: (key: string) => redis.decr(key),
-					del: (key: string) => redis.del(key),
-				},
-			}),
+			store: createRateLimitRedisStore(),
 		});
 
 		return redisLimiter;

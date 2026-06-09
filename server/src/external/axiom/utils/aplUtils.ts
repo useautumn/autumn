@@ -44,8 +44,8 @@ export const buildRequestLogsQuery = ({
 }): string => {
 	const filters: string[] = [
 		`_time > ago(${rangeDays}d)`,
-		`isnotnull(statusCode)`,
-		`isnotnull(['req.url'])`,
+		"isnotnull(statusCode)",
+		"isnotnull(['req.url'])",
 		`(['context.org_slug'] == '${escapeApl(orgSlug)}' or orgSlug == '${escapeApl(orgSlug)}')`,
 		`(['context.env'] == '${escapeApl(env)}' or env == '${escapeApl(env)}')`,
 		`(['req.customer_id'] == '${escapeApl(customerId)}' or customer_id == '${escapeApl(customerId)}')`,
@@ -65,7 +65,7 @@ export const buildRequestLogsQuery = ({
 		);
 	}
 
-	const wheres = filters.map((f) => `| where ${f}`).join("\n");
+	const wheres = filters.map((filter) => `| where ${filter}`).join("\n");
 
 	return `['express']
 ${wheres}
