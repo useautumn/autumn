@@ -34,6 +34,7 @@ import {
 	type CustomerQueryArgs,
 	type IncludeProcessed,
 } from "@/internal/migrations/v2/filters/customers/buildCustomerSelect.js";
+import { getCustomerPage } from "@/internal/migrations/v2/filters/customers/filterCustomers.js";
 import { rawWithParamsToDrizzle } from "@/internal/migrations/v2/filters/rawWithParamsToDrizzle.js";
 import { initScenario } from "@tests/utils/testInitUtils/initScenario.js";
 
@@ -782,5 +783,31 @@ test(`${chalk.yellowBright("migration filter planner: cursor pagination is stabl
 				query: buildCustomerCount(fixture.args),
 			}),
 		).toBe(4);
+	});
+});
+
+test(`${chalk.yellowBright("migration filter preview: cursor page helper returns non-overlapping pages")}`, async () => {
+	await withSeededFixture("planner-parity-preview-page", async (fixture) => {
+		const firstPage = await getCustomerPage({
+			ctx: fixture.ctx,
+			filter: fixture.args.filter,
+			pageSize: 2,
+		});
+		const secondPage = await getCustomerPage({
+			ctx: fixture.ctx,
+			filter: fixture.args.filter,
+			pageSize: 2,
+			cursor: firstPage.nextCursor ?? undefined,
+		});
+
+		expect(firstPage.rows.map((row) => row.id)).toEqual([
+			fixture.customerIds.scheduled,
+			fixture.customerIds.pastDue,
+		]);
+		expect(secondPage.rows.map((row) => row.id)).toEqual([
+			fixture.customerIds.duplicateProducts,
+			fixture.customerIds.active,
+		]);
+		expect(secondPage.nextCursor).toBeNull();
 	});
 });

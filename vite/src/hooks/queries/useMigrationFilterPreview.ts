@@ -13,10 +13,9 @@ import type { ExecutionStatus } from "@/views/migrations/migration/live/Executio
 const DEFAULT_PAGE_SIZE = 10;
 
 interface FilterPreviewResponse {
-	count: number;
+	count: number | null;
 	customers: MigrationPreviewCustomer[];
-	page: number;
-	pageSize: number;
+	next_cursor: string | null;
 }
 
 export type MigrationPreviewCustomer = CustomerWithProducts & {
@@ -34,24 +33,26 @@ export const useMigrationFilterPreview = ({
 	filter,
 	search = "",
 	customerFilters,
-	page = 0,
+	cursor = "",
 	pageSize = DEFAULT_PAGE_SIZE,
 	migrationId,
 	executionStatuses = [],
 	migrationRunId,
 	migrationRunDryRun,
 	isActive = false,
+	includeRows = true,
 }: {
 	filter: CustomerFilter;
 	search?: string;
 	customerFilters?: CustomerListFilters;
-	page?: number;
+	cursor?: string;
 	pageSize?: number;
 	migrationId?: string;
 	executionStatuses?: ExecutionStatus[];
 	migrationRunId?: string;
 	migrationRunDryRun?: boolean;
 	isActive?: boolean;
+	includeRows?: boolean;
 }) => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
@@ -64,18 +65,17 @@ export const useMigrationFilterPreview = ({
 		() => executionStatuses.slice().sort().join(","),
 		[executionStatuses],
 	);
-	const queryKey = buildKey([
+	const baseKey = [
 		"migration-filter-preview",
 		filterKey,
 		search,
 		customerFiltersKey,
-		page,
-		pageSize,
 		migrationId,
 		executionKey,
 		migrationRunId,
 		migrationRunDryRun,
-	]);
+	] as const;
+	const queryKey = buildKey([...baseKey, cursor, pageSize]);
 
 	const query = useQuery<FilterPreviewResponse>({
 		queryKey,
@@ -86,15 +86,41 @@ export const useMigrationFilterPreview = ({
 					filter,
 					search,
 					customerFilters,
-					page,
+					cursor,
 					pageSize,
 					migrationId,
 					executionStatuses,
 					migrationRunId,
 					migrationRunDryRun,
+					includeCount: false,
 				},
 			);
 			return data;
+		},
+		staleTime: 500,
+		placeholderData: keepPreviousData,
+		enabled: includeRows,
+		refetchInterval: isActive ? ACTIVE_POLL_MS : false,
+	});
+
+	const countQuery = useQuery<number | null>({
+		queryKey: buildKey(["migration-filter-preview-count", ...baseKey]),
+		queryFn: async () => {
+			const { data } = await axiosInstance.post<FilterPreviewResponse>(
+				"/migrations.filter.preview",
+				{
+					filter,
+					search,
+					customerFilters,
+					pageSize: 1,
+					migrationId,
+					executionStatuses,
+					migrationRunId,
+					migrationRunDryRun,
+					countOnly: true,
+				},
+			);
+			return data.count;
 		},
 		staleTime: 500,
 		placeholderData: keepPreviousData,
@@ -102,8 +128,12 @@ export const useMigrationFilterPreview = ({
 	});
 
 	return {
-		count: query.data?.count ?? null,
+		count: countQuery.data ?? null,
 		customers: query.data?.customers ?? [],
-		isLoading: query.isLoading || query.isPlaceholderData,
+		nextCursor: query.data?.next_cursor ?? null,
+		isLoading: includeRows
+			? query.isLoading || query.isPlaceholderData
+			: countQuery.isLoading || countQuery.isPlaceholderData,
+		isCountLoading: countQuery.isLoading || countQuery.isPlaceholderData,
 	};
 };

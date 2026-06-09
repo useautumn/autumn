@@ -5,9 +5,8 @@ import {
 	CaretRightIcon,
 	ListMagnifyingGlassIcon,
 } from "@phosphor-icons/react";
-import type { ColumnDef, PaginationState, Row } from "@tanstack/react-table";
-import { debounce } from "lodash";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ColumnDef, Row } from "@tanstack/react-table";
+import { useDeferredValue, useState } from "react";
 import { Link } from "react-router";
 import { Table } from "@/components/general/table";
 import { IconButton } from "@/components/v2/buttons/IconButton";
@@ -25,6 +24,7 @@ import { cn } from "@/lib/utils";
 import { pushPage } from "@/utils/genUtils";
 import { createCustomerListColumns } from "@/views/customers2/components/table/customer-list/CustomerListColumns";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
+import { useCursorPagination } from "../shared/useCursorPagination";
 
 const PAGE_SIZE_OPTIONS = [10, 50, 100, 250];
 
@@ -62,42 +62,29 @@ const previewColumns = createCustomerListColumns()
 
 export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 	const [search, setSearch] = useState("");
-	const [debouncedSearch, setDebouncedSearch] = useState("");
-	const [pagination, setPagination] = useState<PaginationState>({
-		pageIndex: 0,
-		pageSize: 10,
+	const deferredSearch = useDeferredValue(search.trim());
+	const [pageSize, setPageSize] = useState(10);
+	const {
+		currentCursor,
+		currentPage,
+		pagination,
+		canPrev,
+		pushCursor,
+		popCursor,
+	} = useCursorPagination({
+		pageSize,
+		resetKey: JSON.stringify({ filter, pageSize, search: search.trim() }),
 	});
 
-	const debouncedSetSearch = useMemo(
-		() => debounce((q: string) => setDebouncedSearch(q), 350),
-		[],
-	);
-
-	useEffect(() => () => debouncedSetSearch.cancel(), [debouncedSetSearch]);
-
-	const handleSearchChange = useCallback(
-		(e: React.ChangeEvent<HTMLInputElement>) => {
-			setSearch(e.target.value);
-			setPagination((p) => ({ ...p, pageIndex: 0 }));
-			debouncedSetSearch(e.target.value.trim());
-		},
-		[debouncedSetSearch],
-	);
-
-	const filterKey = useMemo(() => JSON.stringify(filter), [filter]);
-	useEffect(() => {
-		setPagination((p) => ({ ...p, pageIndex: 0 }));
-	}, [filterKey]);
-
-	const { count, customers, isLoading } = useMigrationFilterPreview({
+	const { count, customers, nextCursor, isLoading } = useMigrationFilterPreview({
 		filter,
-		search: debouncedSearch,
-		page: pagination.pageIndex,
-		pageSize: pagination.pageSize,
+		search: deferredSearch,
+		cursor: currentCursor,
+		pageSize,
 	});
 
 	const pageCount =
-		count !== null ? Math.max(Math.ceil(count / pagination.pageSize), 1) : 1;
+		count !== null ? Math.max(Math.ceil(count / pageSize), 1) : 1;
 
 	const table = useProductTable<CustomerWithProducts>({
 		data: customers,
@@ -106,13 +93,10 @@ export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 			manualPagination: true,
 			pageCount,
 			state: { pagination },
-			onPaginationChange: setPagination,
 		},
 	});
 
-	const currentPage = pagination.pageIndex + 1;
-	const canPrev = pagination.pageIndex > 0;
-	const canNext = count !== null && currentPage < pageCount;
+	const canNext = Boolean(nextCursor);
 
 	return (
 		<div className="flex flex-col gap-3">
@@ -125,7 +109,7 @@ export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 					/>
 					<Input
 						value={search}
-						onChange={handleSearchChange}
+						onChange={(e) => setSearch(e.target.value)}
 						className="pl-8! text-sm"
 						placeholder={`Search ${count ?? 0} customers`}
 					/>
@@ -135,9 +119,7 @@ export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 						variant="secondary"
 						size="default"
 						icon={<CaretLeftIcon size={12} weight="bold" />}
-						onClick={() =>
-							setPagination((p) => ({ ...p, pageIndex: p.pageIndex - 1 }))
-						}
+						onClick={popCursor}
 						disabled={!canPrev}
 						className={cn(!canPrev && "pointer-events-none opacity-50")}
 					/>
@@ -148,17 +130,15 @@ export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 						variant="secondary"
 						size="default"
 						icon={<CaretRightIcon size={12} weight="bold" />}
-						onClick={() =>
-							setPagination((p) => ({ ...p, pageIndex: p.pageIndex + 1 }))
-						}
+						onClick={() => nextCursor && pushCursor(nextCursor)}
 						disabled={!canNext}
 						className={cn(!canNext && "pointer-events-none opacity-50")}
 					/>
 					<Select
-						value={pagination.pageSize.toString()}
-						onValueChange={(v) =>
-							setPagination({ pageIndex: 0, pageSize: Number(v) })
-						}
+						value={pageSize.toString()}
+						onValueChange={(v) => {
+							setPageSize(Number(v));
+						}}
 						items={Object.fromEntries(
 							PAGE_SIZE_OPTIONS.map((s) => [s.toString(), s.toString()]),
 						)}
@@ -199,6 +179,6 @@ export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 }
 
 export function useCustomerCount(filter: CustomerFilter): number | null {
-	const { count } = useMigrationFilterPreview({ filter });
+	const { count } = useMigrationFilterPreview({ filter, includeRows: false });
 	return count;
 }

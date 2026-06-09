@@ -19,6 +19,50 @@ export type CustomerRow = {
 	email: string | null;
 };
 
+const buildArgs = ({
+	ctx,
+	filter,
+	checkpoint,
+	search,
+	customerFilters,
+}: {
+	ctx: AutumnContext;
+	filter: CustomerFilter;
+	checkpoint?: CustomerCheckpointExclusion;
+	search?: string;
+	customerFilters?: CustomerListFilters;
+}) => ({
+	orgId: ctx.org.id,
+	env: ctx.env,
+	filter,
+	checkpoint,
+	search,
+	customerFilters,
+	ctx: { features: ctx.features },
+});
+
+type CustomerSelectArgs = ReturnType<typeof buildArgs>;
+
+const buildRowsSelect = ({
+	args,
+	includeProcessed,
+	limit,
+	afterInternalId,
+}: {
+	args: CustomerSelectArgs;
+	includeProcessed?: IncludeProcessed;
+	limit?: number;
+	afterInternalId?: string;
+}) =>
+	includeProcessed
+		? buildProcessedPreviewSelect({
+				...args,
+				includeProcessed,
+				limit,
+				afterInternalId,
+			})
+		: buildCustomerSelect({ ...args, limit, afterInternalId });
+
 /**
  * Pure inner: takes a CustomerFilter directly. Used by `runFilter` shim
  * (Migration-fed) and reusable from scripts that don't have a Migration.
@@ -42,30 +86,53 @@ export const filterCustomers = ({
 	batchSize?: number;
 	limit?: number;
 }): AsyncGenerator<CustomerRow[]> => {
-	const args = {
-		orgId: ctx.org.id,
-		env: ctx.env,
-		filter,
-		checkpoint,
-		search,
-		customerFilters,
-		ctx: { features: ctx.features },
-	};
+	const args = buildArgs({ ctx, filter, checkpoint, search, customerFilters });
 	const source = iterateOverFilterResults<CustomerRow>({
 		db: ctx.db,
 		buildSelect: ({ limit, afterInternalId }) =>
-			includeProcessed
-				? buildProcessedPreviewSelect({
-						...args,
-						includeProcessed,
-						limit,
-						afterInternalId,
-					})
-				: buildCustomerSelect({ ...args, limit, afterInternalId }),
+			buildRowsSelect({ args, includeProcessed, limit, afterInternalId }),
 		batchSize:
 			limit === undefined ? batchSize : Math.min(batchSize ?? limit, limit),
 	});
 	return limit === undefined ? source : takeRows(source, limit);
+};
+
+export const getCustomerPage = async ({
+	ctx,
+	filter,
+	checkpoint,
+	search,
+	customerFilters,
+	includeProcessed,
+	pageSize,
+	cursor,
+}: {
+	ctx: AutumnContext;
+	filter: CustomerFilter;
+	checkpoint?: CustomerCheckpointExclusion;
+	search?: string;
+	customerFilters?: CustomerListFilters;
+	includeProcessed?: IncludeProcessed;
+	pageSize: number;
+	cursor?: string;
+}): Promise<{ rows: CustomerRow[]; nextCursor: string | null }> => {
+	const args = buildArgs({ ctx, filter, checkpoint, search, customerFilters });
+	const rows = (await ctx.db.execute(
+		buildRowsSelect({
+			args,
+			includeProcessed,
+			limit: pageSize + 1,
+			afterInternalId: cursor || undefined,
+		}),
+	)) as CustomerRow[];
+	const pageRows = rows.slice(0, pageSize);
+	return {
+		rows: pageRows,
+		nextCursor:
+			rows.length > pageSize
+				? (pageRows[pageRows.length - 1]?.internal_id ?? null)
+				: null,
+	};
 };
 
 /** Count of customers matching `filter`. */
@@ -86,15 +153,7 @@ export const countCustomers = async ({
 	includeProcessed?: IncludeProcessed;
 	limit?: number;
 }): Promise<number> => {
-	const args = {
-		orgId: ctx.org.id,
-		env: ctx.env,
-		filter,
-		checkpoint,
-		search,
-		customerFilters,
-		ctx: { features: ctx.features },
-	};
+	const args = buildArgs({ ctx, filter, checkpoint, search, customerFilters });
 	const query = includeProcessed
 		? buildProcessedPreviewCount({ ...args, includeProcessed })
 		: limit === undefined

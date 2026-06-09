@@ -13,12 +13,7 @@ import {
 	WarningIcon,
 	XIcon,
 } from "@phosphor-icons/react";
-import type {
-	ColumnDef,
-	PaginationState,
-	Row,
-	Updater,
-} from "@tanstack/react-table";
+import type { ColumnDef, Row } from "@tanstack/react-table";
 import {
 	parseAsArrayOf,
 	parseAsBoolean,
@@ -84,6 +79,7 @@ import { ItemEventStatusBadge } from "../runs/RunStatusBadge";
 import { type StepId, StepIndicator } from "../StepIndicator";
 import { OperationsPreview } from "../shared/OperationsPreview";
 import { RunSummaryRows } from "../shared/RunSummaryRows";
+import { useCursorPagination } from "../shared/useCursorPagination";
 import { ActiveDot } from "./ActiveDot";
 import {
 	EXECUTION_STATUS_VALUES,
@@ -236,22 +232,16 @@ export function MigrationLiveView({
 				parseAsStringLiteral(EXECUTION_STATUS_VALUES),
 			).withDefault([]),
 			q: parseAsString.withDefault(""),
-			page: parseAsInteger.withDefault(1),
 			pageSize: parseAsInteger.withDefault(50),
 		},
 		{ history: "replace" },
 	);
 	const executionStatuses = executionQuery.execution_status;
 	const search = executionQuery.q;
-	const debouncedSearch = useDeferredValue(search.trim());
-	const currentPage = Math.max(executionQuery.page, 1);
+	const deferredSearch = useDeferredValue(search.trim());
 	const pageSize = PAGE_SIZE_OPTIONS.includes(executionQuery.pageSize)
 		? executionQuery.pageSize
 		: 50;
-	const pagination = useMemo<PaginationState>(
-		() => ({ pageIndex: currentPage - 1, pageSize }),
-		[currentPage, pageSize],
-	);
 	const previewCustomerFilters = useMemo(
 		() => ({
 			status: customerFilters.status,
@@ -266,6 +256,22 @@ export function MigrationLiveView({
 			customerFilters.processor,
 		],
 	);
+	const {
+		currentCursor,
+		currentPage,
+		pagination,
+		canPrev,
+		pushCursor,
+		popCursor,
+	} = useCursorPagination({
+		pageSize,
+		resetKey: JSON.stringify({
+			executionStatuses,
+			pageSize,
+			search: search.trim(),
+			customerFilters: previewCustomerFilters,
+		}),
+	});
 	const [dismissedError, setDismissedError] = useState<string | null>(null);
 	const [isRunDialogOpen, setIsRunDialogOpen] = useQueryState(
 		"run",
@@ -296,34 +302,18 @@ export function MigrationLiveView({
 		runControls.concurrency.trim() !== "" &&
 		parseConcurrency(runControls.concurrency) === undefined;
 
-	const resetPagination = useCallback(() => {
-		setExecutionQuery({ page: 1 });
-	}, [setExecutionQuery]);
-
 	const handleSearchChange = useCallback(
 		(e: React.ChangeEvent<HTMLInputElement>) => {
-			setExecutionQuery({ q: e.target.value, page: 1 });
+			setExecutionQuery({ q: e.target.value });
 		},
 		[setExecutionQuery],
 	);
 
 	const handleExecutionStatusesChange = useCallback(
 		(statuses: ExecutionStatus[]) => {
-			setExecutionQuery({ execution_status: statuses, page: 1 });
+			setExecutionQuery({ execution_status: statuses });
 		},
 		[setExecutionQuery],
-	);
-
-	const handlePaginationChange = useCallback(
-		(updater: Updater<PaginationState>) => {
-			const next =
-				typeof updater === "function" ? updater(pagination) : updater;
-			setExecutionQuery({
-				page: next.pageIndex + 1,
-				pageSize: next.pageSize,
-			});
-		},
-		[pagination, setExecutionQuery],
 	);
 
 	const {
@@ -348,13 +338,14 @@ export function MigrationLiveView({
 	const {
 		customers,
 		count,
+		nextCursor,
 		isLoading: isLoadingCustomers,
 	} = useMigrationFilterPreview({
 		filter: filter.customer ?? {},
-		search: debouncedSearch,
+		search: deferredSearch,
 		customerFilters: previewCustomerFilters,
-		page: pagination.pageIndex,
-		pageSize: pagination.pageSize,
+		cursor: currentCursor,
+		pageSize,
 		migrationId,
 		executionStatuses,
 		isActive: hasActiveRun || hasRealtimeActive,
@@ -450,12 +441,10 @@ export function MigrationLiveView({
 			manualPagination: true,
 			pageCount,
 			state: { pagination },
-			onPaginationChange: handlePaginationChange,
 		},
 	});
 
-	const canPrev = pagination.pageIndex > 0;
-	const canNext = count !== null && currentPage < pageCount;
+	const canNext = Boolean(nextCursor);
 
 	const latestFailedRun =
 		latestRun?.status === "failed" && latestRun.error_message
@@ -819,7 +808,6 @@ export function MigrationLiveView({
 					}
 					hasActiveExtraFilters={hasActiveExecutionFilters(executionStatuses)}
 					onClearExtra={() => handleExecutionStatusesChange([])}
-					onFilterChange={resetPagination}
 					hideSavedViews
 				/>
 				<div className="relative flex items-center flex-1 min-w-0">
@@ -839,7 +827,7 @@ export function MigrationLiveView({
 						variant="secondary"
 						size="default"
 						icon={<CaretLeftIcon size={12} weight="bold" />}
-						onClick={() => setExecutionQuery({ page: currentPage - 1 })}
+						onClick={popCursor}
 						disabled={!canPrev}
 						className={cn(!canPrev && "pointer-events-none opacity-50")}
 					/>
@@ -850,15 +838,15 @@ export function MigrationLiveView({
 						variant="secondary"
 						size="default"
 						icon={<CaretRightIcon size={12} weight="bold" />}
-						onClick={() => setExecutionQuery({ page: currentPage + 1 })}
+						onClick={() => nextCursor && pushCursor(nextCursor)}
 						disabled={!canNext}
 						className={cn(!canNext && "pointer-events-none opacity-50")}
 					/>
 					<Select
-						value={pagination.pageSize.toString()}
-						onValueChange={(v) =>
-							setExecutionQuery({ page: 1, pageSize: Number(v) })
-						}
+						value={pageSize.toString()}
+						onValueChange={(v) => {
+							setExecutionQuery({ pageSize: Number(v) });
+						}}
 						items={Object.fromEntries(
 							PAGE_SIZE_OPTIONS.map((s) => [s.toString(), s.toString()]),
 						)}

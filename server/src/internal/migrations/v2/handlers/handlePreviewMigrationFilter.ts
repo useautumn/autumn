@@ -14,7 +14,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CustomerListFiltersSchema } from "@/internal/customers/customerListFilters.js";
 import {
 	countCustomers,
-	filterCustomers,
+	getCustomerPage,
 } from "@/internal/migrations/v2/filters/customers/filterCustomers.js";
 import type { IncludeProcessed } from "../filters/customers/buildCustomerSelect.js";
 import {
@@ -29,7 +29,9 @@ const PreviewFilterBody = z.object({
 	filter: CustomerFilterSchema.optional().default({}),
 	search: z.string().optional().default(""),
 	customerFilters: CustomerListFiltersSchema.optional(),
-	page: z.number().int().min(0).optional().default(0),
+	cursor: z.string().optional().default(""),
+	includeCount: z.boolean().optional().default(true),
+	countOnly: z.boolean().optional().default(false),
 	pageSize: z
 		.number()
 		.int()
@@ -58,7 +60,9 @@ export const handlePreviewMigrationFilter = createRoute({
 			filter,
 			search,
 			customerFilters,
-			page,
+			cursor,
+			includeCount,
+			countOnly,
 			pageSize,
 			migrationId,
 			executionStatuses,
@@ -74,7 +78,11 @@ export const handlePreviewMigrationFilter = createRoute({
 			(v) => v !== undefined,
 		);
 		if (!hasAnyField) {
-			return c.json({ count: 0, customers: [], page, pageSize });
+			return c.json({
+				count: includeCount ? 0 : null,
+				customers: [],
+				next_cursor: null,
+			});
 		}
 
 		let includeProcessed: IncludeProcessed | undefined;
@@ -113,30 +121,35 @@ export const handlePreviewMigrationFilter = createRoute({
 			};
 		}
 
-		const [count, pageRows] = await Promise.all([
-			countCustomers({
-				ctx,
-				filter,
-				search: searchTerm,
-				customerFilters,
-				includeProcessed,
-			}),
-			collectPage(
-				filterCustomers({
+		const countPromise = includeCount
+			? countCustomers({
 					ctx,
 					filter,
 					search: searchTerm,
 					customerFilters,
 					includeProcessed,
-					batchSize: pageSize,
-				}),
-				page * pageSize,
-				pageSize,
-			),
-		]);
+				})
+			: Promise.resolve(null);
+		const pagePromise = countOnly
+			? Promise.resolve({ rows: [], nextCursor: null })
+			: getCustomerPage({
+					ctx,
+					filter,
+					search: searchTerm,
+					customerFilters,
+					includeProcessed,
+					pageSize,
+					cursor,
+				});
+		const [count, pageResult] = await Promise.all([countPromise, pagePromise]);
+		const pageRows = pageResult.rows;
 
 		if (pageRows.length === 0) {
-			return c.json({ count, customers: [], page, pageSize });
+			return c.json({
+				count,
+				customers: [],
+				next_cursor: null,
+			});
 		}
 
 		const enriched = await enrichCustomers(
@@ -162,7 +175,11 @@ export const handlePreviewMigrationFilter = createRoute({
 				itemRunsByCustomer.get(customer.internal_id as string) ?? null,
 		}));
 
-		return c.json({ count, customers: grouped, page, pageSize });
+		return c.json({
+			count,
+			customers: grouped,
+			next_cursor: pageResult.nextCursor,
+		});
 	},
 });
 
@@ -242,24 +259,4 @@ function groupByCustomer(rows: Array<Record<string, unknown>>) {
 		}
 	}
 	return Array.from(map.values());
-}
-
-async function collectPage<T>(
-	gen: AsyncGenerator<T[]>,
-	skip: number,
-	take: number,
-): Promise<T[]> {
-	const rows: T[] = [];
-	let skipped = 0;
-	for await (const batch of gen) {
-		for (const row of batch) {
-			if (skipped < skip) {
-				skipped++;
-				continue;
-			}
-			rows.push(row);
-			if (rows.length >= take) return rows;
-		}
-	}
-	return rows;
 }
