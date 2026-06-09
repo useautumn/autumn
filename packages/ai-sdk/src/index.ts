@@ -4,6 +4,7 @@ import {
 	type LanguageModelUsage,
 	wrapLanguageModel,
 } from "ai";
+// @ts-expect-error autumn-js types resolve in consuming projects; this package only needs the peer type.
 import type { Autumn } from "autumn-js";
 
 // Standalone published package: must not import from the internal @autumn/shared workspace.
@@ -143,7 +144,7 @@ export const withAutumn = ({
 	const trackUsage = async (usage: AnyUsage) => {
 		try {
 			const pools = normalizeUsage(usage);
-			// @ts-expect-error trackTokens is generated from OpenAPI; local autumn-js types may not include it yet.
+			// @ts-ignore trackTokens is generated from OpenAPI; local autumn-js types may not include it yet.
 			await autumn.balances.trackTokens({
 				customerId,
 				modelId: modelName,

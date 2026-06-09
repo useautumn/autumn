@@ -12,7 +12,7 @@ export interface ApiFeatureParams {
 		credit_cost: number;
 	}>;
 	model_markups?: Record<string, {
-		markup: number;
+		markup?: number;
 		input_cost?: number;
 		output_cost?: number;
 	}>;
