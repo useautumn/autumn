@@ -1,6 +1,7 @@
 import { mapToProductV2, queryInteger, Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
 import { ProductService } from "../ProductService.js";
 
 const GetProductInternalQuerySchema = z.object({
@@ -15,7 +16,7 @@ export const handleGetProductInternal = createRoute({
 		const { version } = c.req.valid("query");
 		const { db, org, env, features } = c.get("ctx");
 
-		const [product, latestProduct] = await Promise.all([
+		const [product, latestProduct, versionCounts] = await Promise.all([
 			ProductService.getFull({
 				db,
 				idOrInternalId: productId,
@@ -29,6 +30,12 @@ export const handleGetProductInternal = createRoute({
 				orgId: org.id,
 				env,
 			}),
+			CusProdReadService.getCountsPerVersion({
+				db,
+				productId,
+				orgId: org.id,
+				env,
+			}),
 		]);
 
 		const productV2 = mapToProductV2({
@@ -36,6 +43,10 @@ export const handleGetProductInternal = createRoute({
 			features: features,
 		});
 
-		return c.json({ product: productV2, numVersions: latestProduct.version });
+		return c.json({
+			product: productV2,
+			numVersions: latestProduct.version,
+			versionCounts,
+		});
 	},
 });

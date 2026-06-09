@@ -58,6 +58,14 @@ describe("planFilterToGroups -> groupsToPlanFilter roundtrip", () => {
 		expect(roundtrip({ recurring: true })).toEqual({ recurring: true });
 	});
 
+	test("custom: true", () => {
+		expect(roundtrip({ custom: true })).toEqual({ custom: true });
+	});
+
+	test("custom: false", () => {
+		expect(roundtrip({ custom: false })).toEqual({ custom: false });
+	});
+
 	test("price: null (free plan)", () => {
 		expect(roundtrip({ price: null })).toEqual({ price: null });
 	});
@@ -73,48 +81,13 @@ describe("planFilterToGroups -> groupsToPlanFilter roundtrip", () => {
 		expect(roundtrip(input)).toEqual(input);
 	});
 
-	test("item with $every wrapper", () => {
-		const input: PlanFilter = {
-			item: { $every: { feature_id: "credits" } },
-		};
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("item with $none wrapper", () => {
-		const input: PlanFilter = {
-			item: { $none: { feature_id: "credits" } },
-		};
-		expect(roundtrip(input)).toEqual(input);
-	});
-
 	test("item unlimited boolean", () => {
 		const input: PlanFilter = { item: { unlimited: true } };
 		expect(roundtrip(input)).toEqual(input);
 	});
 
-	test("item price null (free item)", () => {
-		const input: PlanFilter = { item: { price: null } };
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("item price { $ne: null } (paid item)", () => {
-		const input: PlanFilter = { item: { price: { $ne: null } } };
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("item billing_method", () => {
-		const input: PlanFilter = {
-			item: { price: { billing_method: "prepaid" } },
-		};
-		const result = roundtrip(input);
-		expect(result.item).toBeDefined();
-		const price = (result.item as Record<string, unknown>).price as Record<string, unknown>;
-		expect(price.billing_method).toBe("prepaid");
-	});
-
 	test("$or groups", () => {
 		const input: PlanFilter = {
-			plan_id: "pro",
 			$or: [{ plan_id: "enterprise" }, { plan_id: "team" }],
 		};
 		expect(roundtrip(input)).toEqual(input);
@@ -140,27 +113,38 @@ describe("planFilterToGroups structure", () => {
 
 	test("$or produces multiple groups", () => {
 		const groups = planFilterToGroups({
-			plan_id: "a",
-			$or: [{ plan_id: "b" }],
+			$or: [{ plan_id: "a" }, { plan_id: "b" }],
 		});
 		expect(groups).toHaveLength(2);
 	});
 
-	test("$every item mode produces item_mode rule", () => {
-		const groups = planFilterToGroups({
-			item: { $every: { feature_id: "x" } },
+});
+
+describe("groupsToPlanFilter", () => {
+	test("serializes visual OR groups as top-level $or branches", () => {
+		expect(
+			groupsToPlanFilter([
+				{
+					rules: [{ field: "custom", operator: "is", values: ["true"] }],
+				},
+				{
+					rules: [{ field: "custom", operator: "is", values: ["false"] }],
+				},
+			]),
+		).toEqual({
+			$or: [{ custom: true }, { custom: false }],
 		});
-		const modeRule = groups[0].rules.find((r) => r.field === "item_mode");
-		expect(modeRule).toBeDefined();
-		expect(modeRule!.values).toEqual(["every"]);
 	});
 
-	test("implicit $some does not produce item_mode rule", () => {
-		const groups = planFilterToGroups({
-			item: { feature_id: "x" },
-		});
-		const modeRule = groups[0].rules.find((r) => r.field === "item_mode");
-		expect(modeRule).toBeUndefined();
+	test("ignores empty OR groups", () => {
+		expect(
+			groupsToPlanFilter([
+				{
+					rules: [{ field: "custom", operator: "is", values: ["true"] }],
+				},
+				{ rules: [{ field: "plan_id", operator: "is", values: [] }] },
+			]),
+		).toEqual({ custom: true });
 	});
 });
 

@@ -9,6 +9,7 @@ import { computeDeleteCustomerProduct } from "@/internal/billing/v2/actions/upda
 import { computeCustomPlanNewCustomerProduct } from "@/internal/billing/v2/actions/updateSubscription/compute/customPlan/computeCustomPlanNewCustomerProduct";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computePatchCustomerProductPlan } from "@/internal/billing/v2/compute/computePatchPlan";
+import { computeSchedulePhaseReplacements } from "@/internal/billing/v2/compute/computeSchedulePhaseReplacements";
 import { applyOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/applyOneOffPrepaidCarryOvers";
 
 export const computeCustomPlan = async ({
@@ -57,6 +58,8 @@ export const computeCustomPlan = async ({
 		newCustomerProduct: newFullCustomerProduct,
 		fullCustomer,
 	});
+	const isUpdatingScheduledProduct =
+		customerProduct.status === CusProductStatus.Scheduled;
 
 	const { allLineItems } = buildAutumnLineItems({
 		ctx,
@@ -77,13 +80,21 @@ export const computeCustomPlan = async ({
 	return {
 		customerId: fullCustomer?.id ?? "",
 		insertCustomerProducts: [newFullCustomerProduct],
-		updateCustomerProduct: {
-			customerProduct,
-			updates: {
-				status: CusProductStatus.Expired,
-			},
-		},
-		deleteCustomerProduct,
+		updateCustomerProduct: isUpdatingScheduledProduct
+			? undefined
+			: {
+					customerProduct,
+					updates: {
+						status: CusProductStatus.Expired,
+					},
+				},
+		deleteCustomerProduct: isUpdatingScheduledProduct
+			? customerProduct
+			: deleteCustomerProduct,
+		schedulePhaseCustomerProductReplacements: computeSchedulePhaseReplacements({
+			oldCustomerProduct: customerProduct,
+			newCustomerProduct: newFullCustomerProduct,
+		}),
 		customPrices,
 		customEntitlements: [
 			...(customEnts ?? []),

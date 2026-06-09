@@ -145,13 +145,7 @@ export const handleUpdatePlanV1 = createRoute({
 
 		// Check if versioning is needed (customers exist AND items or free trial changed)
 		const freeTrialProvided = "free_trial" in body;
-		if (cusProductExists && (itemsExist || freeTrialProvided)) {
-			if (disable_version) {
-				throw new RecaseError({
-					message: "Cannot auto save product as there are existing customers",
-				});
-			}
-
+		if (cusProductExists && !disable_version && (itemsExist || freeTrialProvided)) {
 			const { itemsSame, freeTrialsSame } = productsAreSame({
 				newProductV2: newProductV2,
 				curProductV1: fullProduct,

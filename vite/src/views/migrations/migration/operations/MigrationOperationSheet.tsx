@@ -1,7 +1,11 @@
 import type { FrontendProduct, ProductItem } from "@autumn/shared";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/v2/buttons/Button";
-import { ProductProvider } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
+import {
+	ProductProvider,
+	useCurrentItem,
+	useSetCurrentItem,
+} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
 import { disabledItemDraftController } from "@/hooks/inline-editor/useItemDraftController";
 import { getItemId } from "@/utils/product/productItemUtils";
@@ -116,9 +120,14 @@ function MigrationOperationSheetContent({
 	};
 
 	const [sheetType, setSheetType] = useState<string>(MODE_TO_SHEET[mode]);
-	const [itemId, setItemId] = useState<string | null>(
-		mode === "edit-feature" && editItem ? "item-0" : null,
+	const editItemId = useMemo(
+		() =>
+			mode === "edit-feature" && editItem
+				? getItemId({ item: editItem, itemIndex: 0 })
+				: null,
+		[mode, editItem],
 	);
+	const [itemId, setItemId] = useState<string | null>(editItemId);
 	const [initialItem, setInitialItem] = useState<ProductItem | null>(
 		editItem ? structuredClone(editItem) : null,
 	);
@@ -143,27 +152,6 @@ function MigrationOperationSheetContent({
 		onSave(latestProduct.current);
 	};
 
-	const handleFeatureCommit = async () => {
-		onSave(latestProduct.current);
-		return null;
-	};
-
-	const currentItem =
-		product.items?.find(
-			(item, i) => getItemId({ item, itemIndex: i }) === itemId,
-		) ?? null;
-
-	const setCurrentItem = (updatedItem: ProductItem) => {
-		if (!product.items || !itemId) return;
-		const index = product.items.findIndex(
-			(item, i) => getItemId({ item, itemIndex: i }) === itemId,
-		);
-		if (index === -1) return;
-		const updatedItems = [...product.items];
-		updatedItems[index] = updatedItem;
-		wrappedSetProduct((prev) => ({ ...prev, items: updatedItems }));
-	};
-
 	return (
 		<ProductProvider
 			product={product}
@@ -173,41 +161,70 @@ function MigrationOperationSheetContent({
 			initialItem={initialItem}
 			setSheet={handleSetSheet}
 			setInitialItem={setInitialItem}
+			updateItemId={setItemId}
 			closeSheet={handleApply}
 			itemDraft={disabledItemDraftController}
 		>
-			<div className="flex flex-col h-full">
-				<div className="flex-1 overflow-y-auto">
-					{sheetType === "select-feature" && <SelectFeatureSheet />}
-					{sheetType === "edit-plan-price" && <EditPlanPriceSheet />}
-					{sheetType === "edit-feature" && currentItem && (
-						<ProductItemContext.Provider
-							value={{
-								item: currentItem,
-								initialItem,
-								setItem: setCurrentItem,
-								selectedIndex: 0,
-								showCreateFeature: false,
-								setShowCreateFeature: () => {},
-								isUpdate: !!editItem,
-								handleUpdateProductItem: handleFeatureCommit,
-							}}
-						>
-							<EditPlanFeatureSheet />
-						</ProductItemContext.Provider>
-					)}
-				</div>
-				{sheetType === "edit-plan-price" && (
-					<div className="shrink-0 p-4 border-t border-border/40 flex gap-2">
-						<Button variant="secondary" onClick={onCancel} className="flex-1">
-							Cancel
-						</Button>
-						<Button variant="primary" onClick={handleApply} className="flex-1">
-							Apply
-						</Button>
-					</div>
+			<MigrationSheetInner
+				sheetType={sheetType}
+				isUpdate={!!editItem}
+				onApply={handleApply}
+				onCancel={onCancel}
+			/>
+		</ProductProvider>
+	);
+}
+
+function MigrationSheetInner({
+	sheetType,
+	isUpdate,
+	onApply,
+	onCancel,
+}: {
+	sheetType: string;
+	isUpdate: boolean;
+	onApply: () => void;
+	onCancel: () => void;
+}) {
+	const currentItem = useCurrentItem();
+	const setCurrentItem = useSetCurrentItem();
+
+	const handleFeatureCommit = async () => {
+		onApply();
+		return null;
+	};
+
+	return (
+		<div className="flex flex-col h-full">
+			<div className="flex-1 overflow-y-auto">
+				{sheetType === "select-feature" && <SelectFeatureSheet />}
+				{sheetType === "edit-plan-price" && <EditPlanPriceSheet />}
+				{sheetType === "edit-feature" && currentItem && (
+					<ProductItemContext.Provider
+						value={{
+							item: currentItem,
+							setItem: setCurrentItem,
+							selectedIndex: 0,
+							showCreateFeature: false,
+							setShowCreateFeature: () => {},
+							isUpdate,
+							handleUpdateProductItem: handleFeatureCommit,
+						}}
+					>
+						<EditPlanFeatureSheet />
+					</ProductItemContext.Provider>
 				)}
 			</div>
-		</ProductProvider>
+			{sheetType === "edit-plan-price" && (
+				<div className="shrink-0 p-4 border-t border-border/40 flex gap-2">
+					<Button variant="secondary" onClick={onCancel} className="flex-1">
+						Cancel
+					</Button>
+					<Button variant="primary" onClick={onApply} className="flex-1">
+						Apply
+					</Button>
+				</div>
+			)}
+		</div>
 	);
 }

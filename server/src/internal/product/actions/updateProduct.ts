@@ -10,6 +10,7 @@ import {
 	UpdateProductSchema,
 	type UpdateProductV2Params,
 } from "@autumn/shared";
+import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
 import {
@@ -25,6 +26,7 @@ import { initProductInStripe } from "@/internal/products/productUtils.js";
 import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
+import { resolveInPlaceEdit } from "./inPlaceUpdateUtils.js";
 import { validateDefaultFlag } from "./validateDefaultFlag.js";
 
 interface UpdateProductParams {
@@ -55,6 +57,7 @@ export const updateProduct = async ({
 			idOrInternalId: productId,
 			orgId: org.id,
 			env,
+			version,
 		});
 	};
 
@@ -121,13 +124,11 @@ export const updateProduct = async ({
 
 	// Check if versioning is needed (customers exist AND items or free trial changed)
 	const freeTrialProvided = "free_trial" in updates;
-	if (cusProductExists && (itemsExist || freeTrialProvided)) {
-		if (disable_version) {
-			throw new RecaseError({
-				message: "Cannot auto save product as there are existing customers",
-			});
-		}
-
+	if (
+		cusProductExists &&
+		!disable_version &&
+		(itemsExist || freeTrialProvided)
+	) {
 		const { itemsSame, freeTrialsSame } = productsAreSame({
 			newProductV2: newProductV2,
 			curProductV1: fullProduct,
@@ -154,16 +155,42 @@ export const updateProduct = async ({
 	const { free_trial } = updates;
 
 	if (updates.items) {
-		await handleNewProductItems({
-			db,
-			curPrices: fullProduct.prices,
-			curEnts: fullProduct.entitlements,
-			newItems: updates.items,
-			features,
-			product: fullProduct,
-			logger: ctx.logger,
-			isCustom: false,
-		});
+		const newItems = updates.items;
+		if (cusProductExists && disable_version) {
+			// Retire the shared catalog rows + insert their replacements atomically:
+			// a failure between the two must not leave the plan with retired rows
+			// and no replacement.
+			await db.transaction(async (transaction) => {
+				const tx = transaction as unknown as DrizzleCli;
+				const inPlace = await resolveInPlaceEdit({
+					db: tx,
+					items: newItems,
+					currentFullProduct: fullProduct,
+					features,
+				});
+				await handleNewProductItems({
+					db: tx,
+					curPrices: inPlace.curPrices,
+					curEnts: inPlace.curEnts,
+					newItems: inPlace.items,
+					features,
+					product: fullProduct,
+					logger: ctx.logger,
+					isCustom: false,
+				});
+			});
+		} else {
+			await handleNewProductItems({
+				db,
+				curPrices: fullProduct.prices,
+				curEnts: fullProduct.entitlements,
+				newItems,
+				features,
+				product: fullProduct,
+				logger: ctx.logger,
+				isCustom: false,
+			});
+		}
 	}
 
 	const latestProductId = updates.id || fullProduct.id;
@@ -174,6 +201,7 @@ export const updateProduct = async ({
 		idOrInternalId: latestProductId,
 		orgId: org.id,
 		env,
+		version: fullProduct.version,
 	});
 
 	if (free_trial !== undefined) {
