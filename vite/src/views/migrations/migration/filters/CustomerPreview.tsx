@@ -21,12 +21,14 @@ import {
 import { Separator } from "@/components/v2/separator";
 import { useMigrationFilterPreview } from "@/hooks/queries/useMigrationFilterPreview";
 import { cn } from "@/lib/utils";
+import {
+	CUSTOMER_LIST_PAGE_SIZE_OPTIONS,
+	DEFAULT_CUSTOMER_LIST_PAGE_SIZE,
+} from "@/utils/constants/customerListPagination";
 import { pushPage } from "@/utils/genUtils";
 import { createCustomerListColumns } from "@/views/customers2/components/table/customer-list/CustomerListColumns";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import { useCursorPagination } from "../shared/useCursorPagination";
-
-const PAGE_SIZE_OPTIONS = [10, 50, 100, 250];
 
 const previewColumns = createCustomerListColumns()
 	.filter((col) => col.id !== "actions")
@@ -63,7 +65,7 @@ const previewColumns = createCustomerListColumns()
 export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 	const [search, setSearch] = useState("");
 	const deferredSearch = useDeferredValue(search.trim());
-	const [pageSize, setPageSize] = useState(10);
+	const [pageSize, setPageSize] = useState(DEFAULT_CUSTOMER_LIST_PAGE_SIZE);
 	const {
 		currentCursor,
 		currentPage,
@@ -95,8 +97,8 @@ export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 			state: { pagination },
 		},
 	});
-
-	const canNext = Boolean(nextCursor);
+	const canGoNext = Boolean(nextCursor);
+	const isDisabled = isLoading;
 
 	return (
 		<div className="flex flex-col gap-3">
@@ -120,8 +122,10 @@ export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 						size="default"
 						icon={<CaretLeftIcon size={12} weight="bold" />}
 						onClick={popCursor}
-						disabled={!canPrev}
-						className={cn(!canPrev && "pointer-events-none opacity-50")}
+						disabled={isDisabled || !canPrev}
+						className={cn(
+							(isDisabled || !canPrev) && "pointer-events-none opacity-50",
+						)}
 					/>
 					<span className="text-xs text-muted-foreground font-medium">
 						{currentPage} / {pageCount}
@@ -131,8 +135,10 @@ export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 						size="default"
 						icon={<CaretRightIcon size={12} weight="bold" />}
 						onClick={() => nextCursor && pushCursor(nextCursor)}
-						disabled={!canNext}
-						className={cn(!canNext && "pointer-events-none opacity-50")}
+						disabled={isDisabled || !canGoNext}
+						className={cn(
+							(isDisabled || !canGoNext) && "pointer-events-none opacity-50",
+						)}
 					/>
 					<Select
 						value={pageSize.toString()}
@@ -140,14 +146,17 @@ export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 							setPageSize(Number(v));
 						}}
 						items={Object.fromEntries(
-							PAGE_SIZE_OPTIONS.map((s) => [s.toString(), s.toString()]),
+							CUSTOMER_LIST_PAGE_SIZE_OPTIONS.map((s) => [
+								s.toString(),
+								s.toString(),
+							]),
 						)}
 					>
 						<SelectTrigger className="h-7 w-fit px-2 text-xs">
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
-							{PAGE_SIZE_OPTIONS.map((s) => (
+							{CUSTOMER_LIST_PAGE_SIZE_OPTIONS.map((s) => (
 								<SelectItem key={s} value={s.toString()}>
 									{s}
 								</SelectItem>

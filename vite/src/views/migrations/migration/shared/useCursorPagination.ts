@@ -16,9 +16,9 @@ export function useCursorPagination({
 		resetKey,
 		stack: [""],
 	});
-	const cursorStack = state.resetKey === resetKey ? state.stack : [""];
-	const currentPage = cursorStack.length;
-	const currentCursor = cursorStack[cursorStack.length - 1] ?? "";
+	const stack = state.resetKey === resetKey ? state.stack : [""];
+	const currentPage = stack.length;
+	const currentCursor = stack[stack.length - 1] ?? "";
 	const pagination = useMemo(
 		() => ({ pageIndex: currentPage - 1, pageSize }),
 		[currentPage, pageSize],
@@ -33,10 +33,7 @@ export function useCursorPagination({
 			(cursor: string) =>
 				setState((prev) => ({
 					resetKey,
-					stack: [
-						...(prev.resetKey === resetKey ? prev.stack : [""]),
-						cursor,
-					],
+					stack: [...(prev.resetKey === resetKey ? prev.stack : [""]), cursor],
 				})),
 			[resetKey],
 		),

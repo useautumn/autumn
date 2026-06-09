@@ -68,6 +68,10 @@ import {
 	useMigrationsQuery,
 } from "@/hooks/queries/useMigrationsQuery";
 import { cn } from "@/lib/utils";
+import {
+	CUSTOMER_LIST_PAGE_SIZE_OPTIONS,
+	DEFAULT_CUSTOMER_LIST_PAGE_SIZE,
+} from "@/utils/constants/customerListPagination";
 import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
 import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
@@ -94,8 +98,6 @@ import {
 } from "./migrationItemStatus";
 import { RealtimeRunWatcher } from "./RealtimeRunWatcher";
 import { useMigrationSheetStore } from "./useMigrationSheetStore";
-
-const PAGE_SIZE_OPTIONS = [10, 50, 100, 250];
 
 type AdminRunControls = {
 	lazyRun: boolean;
@@ -232,16 +234,18 @@ export function MigrationLiveView({
 				parseAsStringLiteral(EXECUTION_STATUS_VALUES),
 			).withDefault([]),
 			q: parseAsString.withDefault(""),
-			pageSize: parseAsInteger.withDefault(50),
+			pageSize: parseAsInteger.withDefault(DEFAULT_CUSTOMER_LIST_PAGE_SIZE),
 		},
 		{ history: "replace" },
 	);
 	const executionStatuses = executionQuery.execution_status;
 	const search = executionQuery.q;
 	const deferredSearch = useDeferredValue(search.trim());
-	const pageSize = PAGE_SIZE_OPTIONS.includes(executionQuery.pageSize)
+	const pageSize = CUSTOMER_LIST_PAGE_SIZE_OPTIONS.includes(
+		executionQuery.pageSize,
+	)
 		? executionQuery.pageSize
-		: 50;
+		: DEFAULT_CUSTOMER_LIST_PAGE_SIZE;
 	const previewCustomerFilters = useMemo(
 		() => ({
 			status: customerFilters.status,
@@ -443,8 +447,8 @@ export function MigrationLiveView({
 			state: { pagination },
 		},
 	});
-
-	const canNext = Boolean(nextCursor);
+	const canGoNext = Boolean(nextCursor);
+	const isDisabled = isLoadingCustomers;
 
 	const latestFailedRun =
 		latestRun?.status === "failed" && latestRun.error_message
@@ -828,8 +832,10 @@ export function MigrationLiveView({
 						size="default"
 						icon={<CaretLeftIcon size={12} weight="bold" />}
 						onClick={popCursor}
-						disabled={!canPrev}
-						className={cn(!canPrev && "pointer-events-none opacity-50")}
+						disabled={isDisabled || !canPrev}
+						className={cn(
+							(isDisabled || !canPrev) && "pointer-events-none opacity-50",
+						)}
 					/>
 					<span className="text-xs text-muted-foreground font-medium">
 						{currentPage} / {pageCount}
@@ -839,8 +845,10 @@ export function MigrationLiveView({
 						size="default"
 						icon={<CaretRightIcon size={12} weight="bold" />}
 						onClick={() => nextCursor && pushCursor(nextCursor)}
-						disabled={!canNext}
-						className={cn(!canNext && "pointer-events-none opacity-50")}
+						disabled={isDisabled || !canGoNext}
+						className={cn(
+							(isDisabled || !canGoNext) && "pointer-events-none opacity-50",
+						)}
 					/>
 					<Select
 						value={pageSize.toString()}
@@ -848,14 +856,17 @@ export function MigrationLiveView({
 							setExecutionQuery({ pageSize: Number(v) });
 						}}
 						items={Object.fromEntries(
-							PAGE_SIZE_OPTIONS.map((s) => [s.toString(), s.toString()]),
+							CUSTOMER_LIST_PAGE_SIZE_OPTIONS.map((s) => [
+								s.toString(),
+								s.toString(),
+							]),
 						)}
 					>
 						<SelectTrigger className="h-7 w-fit px-2 text-xs">
 							<SelectValue />
 						</SelectTrigger>
 						<SelectContent>
-							{PAGE_SIZE_OPTIONS.map((s) => (
+							{CUSTOMER_LIST_PAGE_SIZE_OPTIONS.map((s) => (
 								<SelectItem key={s} value={s.toString()}>
 									{s}
 								</SelectItem>

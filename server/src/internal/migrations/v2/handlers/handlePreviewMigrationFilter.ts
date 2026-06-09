@@ -23,7 +23,7 @@ import {
 	migrationRunRepo,
 } from "../repos/index.js";
 
-const DEFAULT_PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 50;
 
 const PreviewFilterBody = z.object({
 	filter: CustomerFilterSchema.optional().default({}),
