@@ -68,6 +68,8 @@ export const getCursorPaginatedFullCusQuery = ({
 
 	const customerListFilterSql = getCustomerListFilterSql({
 		internalCustomerIds,
+		orgId,
+		env,
 		inStatuses,
 		plans,
 		processors,

@@ -4,7 +4,6 @@ import {
 	BasketIcon,
 	ChartBarIcon,
 	CubeIcon,
-	DatabaseIcon,
 	GearIcon,
 	KeyIcon,
 	LegoIcon,
@@ -16,6 +15,7 @@ import {
 } from "@phosphor-icons/react";
 import { PanelLeft } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { BetaBadge } from "@/components/v2/badges/BetaBadge";
 import { Button } from "@/components/v2/buttons/Button";
 import { RevenueCatIcon, StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
@@ -34,14 +34,12 @@ import { SidebarRail } from "./SidebarRail";
 
 const buildDevSubTabs = ({
 	flags,
-	isAdmin,
 }: {
 	flags: {
 		webhooks: boolean;
 		vercel: boolean;
 		revenuecat: boolean;
 	};
-	isAdmin: boolean;
 }) => {
 	return [
 		{
@@ -79,15 +77,6 @@ const buildDevSubTabs = ({
 						title: "Webhooks",
 						value: "webhooks",
 						icon: <WebhooksLogoIcon size={16} weight="fill" />,
-					},
-				]
-			: []),
-		...(isAdmin
-			? [
-					{
-						title: "Redis",
-						value: "redis",
-						icon: <DatabaseIcon size={16} weight="fill" />,
 					},
 				]
 			: []),
@@ -213,6 +202,7 @@ export const MainSidebar = ({
 										value: "migrations",
 										path: "/migrations",
 										icon: <ArrowsClockwiseIcon size={16} weight="fill" />,
+										badge: <BetaBadge className="ml-auto" />,
 									},
 								]}
 							/>
@@ -238,7 +228,7 @@ export const MainSidebar = ({
 								env={env}
 								isOpen={devGroupOpen}
 								onToggle={() => setDevGroupOpen((prev) => !prev)}
-								subTabs={buildDevSubTabs({ flags, isAdmin })}
+								subTabs={buildDevSubTabs({ flags })}
 							/>
 						)}
 						<NavButton

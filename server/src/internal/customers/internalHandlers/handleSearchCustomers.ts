@@ -1,6 +1,7 @@
 import { type FullCusProduct, Scopes, StandardCursor } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
+import { CustomerListFiltersSchema } from "../customerListFilters";
 import { CusBatchService } from "../CusBatchService";
 
 export const handleSearchCustomers = createRoute({
@@ -9,14 +10,7 @@ export const handleSearchCustomers = createRoute({
 		search: z.string().optional(),
 		limit: z.number().int().min(1).max(1000).optional().default(50),
 		cursor: z.string().optional().default(""),
-		filters: z
-			.object({
-				status: z.array(z.string()).optional(),
-				version: z.array(z.string()).optional(),
-				none: z.boolean().optional(),
-				processor: z.array(z.string()).optional(),
-			})
-			.optional(),
+		filters: CustomerListFiltersSchema.optional(),
 	}),
 	handler: async (c) => {
 		const ctx = c.get("ctx");

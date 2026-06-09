@@ -1,9 +1,14 @@
 import type { AxiosError } from "axios";
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
+import {
+	type RetryableMigrationItemRunStatus,
+	useMigrationsQuery,
+} from "@/hooks/queries/useMigrationsQuery";
 import { getBackendErr } from "@/utils/genUtils";
 import type { RealtimeRunSubscription } from "./useMigrationRunRealtime";
+
+const SETTLE_WINDOW_MS = 15000;
 
 export function useRealtimeSubscriptions({
 	migrationId,
@@ -16,12 +21,15 @@ export function useRealtimeSubscriptions({
 	const [subscriptions, setSubscriptions] = useState<RealtimeRunSubscription[]>(
 		[],
 	);
+	const [isSettling, setIsSettling] = useState(false);
 
 	const handleComplete = useCallback(
 		(triggerRunId: string) => {
 			setSubscriptions((prev) =>
 				prev.filter((s) => s.triggerRunId !== triggerRunId),
 			);
+			setIsSettling(true);
+			window.setTimeout(() => setIsSettling(false), SETTLE_WINDOW_MS);
 			invalidateRuns();
 		},
 		[invalidateRuns],
@@ -31,18 +39,32 @@ export function useRealtimeSubscriptions({
 		dryRun,
 		limit,
 		only,
+		lazyRun,
+		concurrency,
+		retryItemStatuses,
 	}: {
 		dryRun: boolean;
 		limit?: number;
 		only?: string[];
+		lazyRun?: boolean;
+		concurrency?: number;
+		retryItemStatuses?: RetryableMigrationItemRunStatus[];
 	}) => {
 		try {
+			const isTargetedRun = only !== undefined && only.length > 0;
+			const retryStatuses =
+				retryItemStatuses && retryItemStatuses.length > 0
+					? retryItemStatuses
+					: undefined;
 			const result = await runMigration({
 				id: migrationId,
 				dry_run: dryRun,
 				limit,
 				only,
-				lazy_run: true,
+				lazy_run: isTargetedRun ? false : (lazyRun ?? true),
+				concurrency,
+				retry_item_statuses:
+					retryStatuses ?? (isTargetedRun ? ["failed"] : undefined),
 			});
 			if (result.trigger_run_id && result.public_access_token) {
 				setSubscriptions((prev) => [
@@ -67,6 +89,7 @@ export function useRealtimeSubscriptions({
 	return {
 		subscriptions,
 		hasActive: subscriptions.length > 0,
+		isSettling,
 		handleComplete,
 		triggerRun,
 		isRunning,

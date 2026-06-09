@@ -28,7 +28,7 @@ export function IncludedUsage() {
 	// Helper function to get the display value for the input
 	const getInputValue = () => {
 		if (includedUsage === Infinite) {
-			return "Unlimited";
+			return "";
 		}
 		if (includedUsage === null || includedUsage === undefined) {
 			return "";
@@ -53,7 +53,7 @@ export function IncludedUsage() {
 					<div className="flex items-center gap-2">
 						<Input
 							key={`included-usage-${item.feature_id || item.price_id || "default"}`}
-							placeholder="eg, 100"
+							placeholder={includedUsage === Infinite ? "Unlimited" : "eg, 100"}
 							value={getInputValue()}
 							onChange={(e) => {
 								const value = e.target.value.trim();

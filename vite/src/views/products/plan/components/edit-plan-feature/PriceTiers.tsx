@@ -223,7 +223,7 @@ export function PriceTiers({
 				const amountValue = isFlatMode ? (tier.flat_amount ?? 0) : tier.amount;
 
 				return (
-					<div key={index} className="flex gap-2 w-full items-center">
+					<div key={`${index}-${tier.to}`} className="flex gap-2 w-full items-center">
 						<span className="text-tertiary-foreground text-xs min-w-0 w-18 shrink-0 h-full">
 							{Number(includedUsage) === 0 && index === 0
 								? "first"
