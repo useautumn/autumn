@@ -23,17 +23,17 @@ const ROLE_META: Record<Role, { label: string; description: string }> = {
 	owner: {
 		label: "Owner",
 		description:
-			"Write on everything (organisation, customers, features, plans, rewards, balances, billing, API keys, platform) + read analytics. Can delete the org and manage ownership.",
+			"Write on everything (organisation, customers, features, plans, rewards, balances, billing, migrations, API keys, platform) + read analytics. Can delete the org and manage ownership.",
 	},
 	admin: {
 		label: "Admin",
 		description:
-			"Write on everything (organisation, customers, features, plans, rewards, balances, billing, API keys, platform) + read analytics. Cannot delete the org or transfer ownership.",
+			"Write on everything (organisation, customers, features, plans, rewards, balances, billing, migrations, API keys, platform) + read analytics. Cannot delete the org or transfer ownership.",
 	},
 	developer: {
 		label: "Developer",
 		description:
-			"Write on customers, features, plans, rewards, balances, billing, API keys, and platform. Read organisation and analytics.",
+			"Write on customers, features, plans, rewards, balances, billing, migrations, API keys, and platform. Read organisation and analytics.",
 	},
 	sales: {
 		label: "Sales",
@@ -43,7 +43,7 @@ const ROLE_META: Record<Role, { label: string; description: string }> = {
 	member: {
 		label: "Member",
 		description:
-			"Read-only on everything: organisation, customers, features, plans, rewards, balances, billing, analytics, API keys, platform. No write access.",
+			"Read-only on organisation, customers, features, plans, rewards, balances, billing, analytics, API keys, and platform. No migrations access.",
 	},
 };
 
