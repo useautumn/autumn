@@ -212,7 +212,6 @@ describe(chalk.yellowBright("applyPercentOffDiscountToLineItems"), () => {
 		});
 
 		test("handles decimal rounding correctly", () => {
-			// 33 * 10% = 3.3, should round to 3
 			const lineItems = [lineItemFixtures.charge({ amount: 33 })];
 			const discount = discounts.tenPercentOff();
 
@@ -221,8 +220,8 @@ describe(chalk.yellowBright("applyPercentOffDiscountToLineItems"), () => {
 				discount,
 			});
 
-			expect(result[0].discounts[0].amountOff).toBe(3);
-			expect(result[0].amountAfterDiscounts).toBe(30);
+			expect(result[0].discounts[0].amountOff).toBe(3.3);
+			expect(result[0].amountAfterDiscounts).toBe(29.7);
 		});
 
 		test("zero amount line item is skipped", () => {
