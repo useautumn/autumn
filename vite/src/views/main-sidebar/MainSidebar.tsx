@@ -4,7 +4,6 @@ import {
 	BasketIcon,
 	ChartBarIcon,
 	CubeIcon,
-	DatabaseIcon,
 	GearIcon,
 	KeyIcon,
 	LegoIcon,
@@ -35,14 +34,12 @@ import { SidebarRail } from "./SidebarRail";
 
 const buildDevSubTabs = ({
 	flags,
-	isAdmin,
 }: {
 	flags: {
 		webhooks: boolean;
 		vercel: boolean;
 		revenuecat: boolean;
 	};
-	isAdmin: boolean;
 }) => {
 	return [
 		{
@@ -80,15 +77,6 @@ const buildDevSubTabs = ({
 						title: "Webhooks",
 						value: "webhooks",
 						icon: <WebhooksLogoIcon size={16} weight="fill" />,
-					},
-				]
-			: []),
-		...(isAdmin
-			? [
-					{
-						title: "Redis",
-						value: "redis",
-						icon: <DatabaseIcon size={16} weight="fill" />,
 					},
 				]
 			: []),
@@ -240,7 +228,7 @@ export const MainSidebar = ({
 								env={env}
 								isOpen={devGroupOpen}
 								onToggle={() => setDevGroupOpen((prev) => !prev)}
-								subTabs={buildDevSubTabs({ flags, isAdmin })}
+								subTabs={buildDevSubTabs({ flags })}
 							/>
 						)}
 						<NavButton
