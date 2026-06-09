@@ -7,6 +7,10 @@ import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
 import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
 import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
+<Note>
+  Under heavy load, this endpoint may return a `503` with error code `service_unavailable` and a `Retry-After` header. The condition is transient — retry after the indicated delay.
+</Note>
+
 ### Body Parameters
 
 <DynamicParamField body="customer_id" type="string" required>
