@@ -195,6 +195,7 @@ export function PlanItemsSection({
 					{collapsedBooleanItems.length > 0 && (
 						<CollapsedBooleanItems
 							items={collapsedBooleanItems}
+							triggerClassName="pl-0 pr-1"
 							renderItem={(item, index) => (
 								<PlanItemRow
 									key={itemKey(item)}
