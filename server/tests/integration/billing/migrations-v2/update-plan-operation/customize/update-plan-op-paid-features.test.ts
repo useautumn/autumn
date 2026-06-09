@@ -108,6 +108,83 @@ test.concurrent(`${chalk.yellowBright("migrations update_plan: consumable paid f
 	await expectStripeSubscriptionCorrect({ ctx, customerId });
 });
 
+// Red: migration update_plan creates the new prepaid users item with zero paid packs.
+// Green: carried usage synthesizes the same inclusive quantity an attach call would receive.
+test.concurrent(`${chalk.yellowBright("migrations update_plan: prepaid users replacement keeps carried usage quantity")}`, async () => {
+	const customerId = "migration-update-paid-prepaid-users";
+	const usersUsage = 9;
+	const pro = products.pro({
+		id: "migration-update-paid-prepaid-users-plan",
+		items: [items.monthlyUsers({ includedUsage: 10 })],
+	});
+
+	const { autumnV1, autumnV2_2, ctx } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [
+			s.billing.attach({ productId: pro.id }),
+			s.track({ featureId: TestFeature.Users, value: usersUsage, timeout: 2000 }),
+		],
+	});
+
+	const invoiceCountBefore =
+		(await autumnV1.customers.get<ApiCustomerV3>(customerId)).invoices
+			?.length ?? 0;
+
+	await runUpdatePlanMigration({
+		ctx,
+		migrationClient: autumnV2_2,
+		migrationId: `${customerId}-mig`,
+		customerId,
+		filter: { customer: { plan: { plan_id: pro.id } } },
+		operations: {
+			customer: [
+				{
+					type: "update_plan",
+					plan_filter: { plan_id: pro.id },
+					customize: {
+						remove_items: [{ feature_id: TestFeature.Users }],
+						add_items: [
+							itemsV2.prepaidUsers({
+								amount: 20,
+								included: 1,
+							}),
+						],
+					},
+				},
+			],
+		},
+		runOnServer: false,
+	});
+
+	const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+	await expectCustomerProducts({ customer, active: [pro.id] });
+	expectBalanceCorrect({
+		customer,
+		featureId: TestFeature.Users,
+		remaining: 0,
+		usage: usersUsage,
+		planId: pro.id,
+		breakdown: {
+			[BillingMethod.Prepaid]: {
+				included_grant: 1,
+				prepaid_grant: 8,
+				remaining: 0,
+				usage: usersUsage,
+			},
+		},
+	});
+	await expectCustomerInvoiceCorrect({
+		customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
+		count: invoiceCountBefore,
+	});
+	await expectNoExpiredCustomerProducts({ ctx, customerId, productId: pro.id });
+	await expectStripeSubscriptionCorrect({ ctx, customerId });
+});
+
 test.concurrent(`${chalk.yellowBright("migrations update_plan: no_billing_changes remove paid feature stays DB-only")}`, async () => {
 	const customerId = "migration-update-paid-remove-no-billing";
 	const pro = products.pro({
