@@ -59,4 +59,26 @@ describe("migration customer select planner wiring", () => {
 		expect(normalize(sql)).not.toContain("FROM (SELECT DISTINCT");
 		expect(params).toEqual(["org_test", "live", "cus_123", 10]);
 	});
+
+	test("customer list filters are applied in the select SQL", () => {
+		const query = buildCustomerSelect({
+			orgId: "org_test",
+			env: "live",
+			filter: { customer_id: "cus_123" },
+			ctx,
+			customerFilters: {
+				status: ["active"],
+				version: ["pro:1"],
+				processor: ["stripe"],
+			},
+		});
+		const { sql } = dialect.sqlToQuery(query);
+		const normalized = normalize(sql);
+
+		expect(normalized).toContain("c.processor->>'id' IS NOT NULL");
+		expect(normalized).toContain("FROM customer_products cp_dash");
+		expect(normalized).toContain("AND c.internal_id IN");
+		expect(normalized).toContain("cp_dash.internal_product_id IN");
+		expect(normalized).toContain("FROM products p_lookup");
+	});
 });

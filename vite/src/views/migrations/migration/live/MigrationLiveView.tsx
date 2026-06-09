@@ -218,6 +218,20 @@ export function MigrationLiveView({
 	);
 	const [search, setSearch] = useState("");
 	const [debouncedSearch, setDebouncedSearch] = useState("");
+	const previewCustomerFilters = useMemo(
+		() => ({
+			status: customerFilters.status,
+			version: customerFilters.version,
+			none: customerFilters.none,
+			processor: customerFilters.processor,
+		}),
+		[
+			customerFilters.status,
+			customerFilters.version,
+			customerFilters.none,
+			customerFilters.processor,
+		],
+	);
 	const [pagination, setPagination] = useState<PaginationState>({
 		pageIndex: 0,
 		pageSize: 50,
@@ -258,21 +272,25 @@ export function MigrationLiveView({
 	);
 	useEffect(() => () => debouncedSetSearch.cancel(), [debouncedSetSearch]);
 
+	const resetPagination = useCallback(() => {
+		setPagination((p) => ({ ...p, pageIndex: 0 }));
+	}, []);
+
 	const handleSearchChange = useCallback(
 		(e: React.ChangeEvent<HTMLInputElement>) => {
 			setSearch(e.target.value);
-			setPagination((p) => ({ ...p, pageIndex: 0 }));
+			resetPagination();
 			debouncedSetSearch(e.target.value.trim());
 		},
-		[debouncedSetSearch],
+		[debouncedSetSearch, resetPagination],
 	);
 
 	const handleExecutionStatusesChange = useCallback(
 		(statuses: ExecutionStatus[]) => {
 			setExecutionStatuses(statuses);
-			setPagination((p) => ({ ...p, pageIndex: 0 }));
+			resetPagination();
 		},
-		[],
+		[resetPagination],
 	);
 
 	const {
@@ -301,6 +319,7 @@ export function MigrationLiveView({
 	} = useMigrationFilterPreview({
 		filter: filter.customer ?? {},
 		search: debouncedSearch,
+		customerFilters: previewCustomerFilters,
 		page: pagination.pageIndex,
 		pageSize: pagination.pageSize,
 		migrationId,
@@ -373,50 +392,11 @@ export function MigrationLiveView({
 		],
 	);
 
-	const filteredCustomers = useMemo(() => {
-		const hasStatus = customerFilters.status.length > 0;
-		const hasVersion = customerFilters.version.length > 0;
-		const hasProcessor = customerFilters.processor.length > 0;
-		const hasNone = customerFilters.none;
-		if (!hasStatus && !hasVersion && !hasProcessor && !hasNone)
-			return enrichedCustomers;
-		return enrichedCustomers.filter((c) => {
-			const cusProducts = c.customer_products ?? [];
-			if (hasNone && cusProducts.length === 0) return true;
-			if (hasStatus) {
-				if (
-					!cusProducts.some((cp) => customerFilters.status.includes(cp.status))
-				)
-					return false;
-			}
-			if (hasVersion) {
-				if (
-					!cusProducts.some((cp) =>
-						customerFilters.version.includes(
-							`${cp.product?.id}:${cp.product?.version ?? 1}`,
-						),
-					)
-				)
-					return false;
-			}
-			if (hasProcessor) {
-				const processors = c.processors ?? {};
-				if (
-					!customerFilters.processor.some(
-						(p) => processors[p as keyof typeof processors] != null,
-					)
-				)
-					return false;
-			}
-			return true;
-		});
-	}, [enrichedCustomers, customerFilters]);
-
 	const pageCount =
 		count !== null ? Math.max(Math.ceil(count / pagination.pageSize), 1) : 1;
 
 	const table = useProductTable<CustomerRow>({
-		data: filteredCustomers,
+		data: enrichedCustomers,
 		columns,
 		options: {
 			manualPagination: true,
@@ -792,6 +772,7 @@ export function MigrationLiveView({
 					}
 					hasActiveExtraFilters={hasActiveExecutionFilters(executionStatuses)}
 					onClearExtra={() => handleExecutionStatusesChange([])}
+					onFilterChange={resetPagination}
 					hideSavedViews
 				/>
 				<div className="relative flex items-center flex-1 min-w-0">
@@ -812,7 +793,10 @@ export function MigrationLiveView({
 						size="default"
 						icon={<CaretLeftIcon size={12} weight="bold" />}
 						onClick={() =>
-							setPagination((p) => ({ ...p, pageIndex: p.pageIndex - 1 }))
+							setPagination((p) => ({
+								...p,
+								pageIndex: p.pageIndex - 1,
+							}))
 						}
 						disabled={!canPrev}
 						className={cn(!canPrev && "pointer-events-none opacity-50")}
@@ -825,7 +809,10 @@ export function MigrationLiveView({
 						size="default"
 						icon={<CaretRightIcon size={12} weight="bold" />}
 						onClick={() =>
-							setPagination((p) => ({ ...p, pageIndex: p.pageIndex + 1 }))
+							setPagination((p) => ({
+								...p,
+								pageIndex: p.pageIndex + 1,
+							}))
 						}
 						disabled={!canNext}
 						className={cn(!canNext && "pointer-events-none opacity-50")}

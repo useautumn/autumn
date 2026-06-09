@@ -23,9 +23,17 @@ export type MigrationPreviewCustomer = CustomerWithProducts & {
 	migration_item_run?: MigrationItemRun | null;
 };
 
+type CustomerListFilters = {
+	status?: string[];
+	version?: string[];
+	none?: boolean;
+	processor?: string[];
+};
+
 export const useMigrationFilterPreview = ({
 	filter,
 	search = "",
+	customerFilters,
 	page = 0,
 	pageSize = DEFAULT_PAGE_SIZE,
 	migrationId,
@@ -36,6 +44,7 @@ export const useMigrationFilterPreview = ({
 }: {
 	filter: CustomerFilter;
 	search?: string;
+	customerFilters?: CustomerListFilters;
 	page?: number;
 	pageSize?: number;
 	migrationId?: string;
@@ -47,6 +56,10 @@ export const useMigrationFilterPreview = ({
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 	const filterKey = useMemo(() => JSON.stringify(filter), [filter]);
+	const customerFiltersKey = useMemo(
+		() => JSON.stringify(customerFilters ?? {}),
+		[customerFilters],
+	);
 	const executionKey = useMemo(
 		() => executionStatuses.slice().sort().join(","),
 		[executionStatuses],
@@ -55,6 +68,7 @@ export const useMigrationFilterPreview = ({
 		"migration-filter-preview",
 		filterKey,
 		search,
+		customerFiltersKey,
 		page,
 		pageSize,
 		migrationId,
@@ -71,6 +85,7 @@ export const useMigrationFilterPreview = ({
 				{
 					filter,
 					search,
+					customerFilters,
 					page,
 					pageSize,
 					migrationId,
@@ -89,6 +104,6 @@ export const useMigrationFilterPreview = ({
 	return {
 		count: query.data?.count ?? null,
 		customers: query.data?.customers ?? [],
-		isLoading: query.isLoading,
+		isLoading: query.isLoading || query.isPlaceholderData,
 	};
 };

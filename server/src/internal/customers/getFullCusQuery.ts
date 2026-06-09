@@ -13,6 +13,30 @@ export type DashboardStatusFilter =
 	| "free_trial"
 	| "expired";
 
+export const parseDashboardStatusFilter = (
+	raw: string[] | undefined,
+): DashboardStatusFilter[] =>
+	(raw ?? []).filter(
+		(s): s is DashboardStatusFilter =>
+			s === "active" ||
+			s === "past_due" ||
+			s === "canceled" ||
+			s === "free_trial" ||
+			s === "expired",
+	);
+
+type DashboardProcessorFilter = NonNullable<
+	ListCustomersV2Params["processors"]
+>[number];
+
+export const parseDashboardProcessorFilter = (
+	raw: string[] | undefined,
+): ListCustomersV2Params["processors"] =>
+	(raw ?? []).filter(
+		(p): p is DashboardProcessorFilter =>
+			p === "stripe" || p === "revenuecat" || p === "vercel",
+	);
+
 export type DashboardProductVersionFilter =
 	| { productId: string; version: number; custom?: never }
 	| { productId: string; custom: true; version?: never };
@@ -44,10 +68,20 @@ export const parseDashboardVersionFilter = (
 
 const dashboardProductFilterToCustomerListSql = (
 	filter: DashboardProductVersionFilter,
+	{ orgId, env }: { orgId?: string; env?: string } = {},
 ): SQL =>
 	isCustomDashboardProductFilter(filter)
 		? sql`(cp_dash.product_id = ${filter.productId} AND cp_dash.is_custom = true)`
-		: sql`(cp_dash.product_id = ${filter.productId} AND p_dash.version = ${filter.version})`;
+		: orgId && env
+			? sql`cp_dash.internal_product_id IN (
+					SELECT p_lookup.internal_id
+					FROM products p_lookup
+					WHERE p_lookup.org_id = ${orgId}
+						AND p_lookup.env = ${env}
+						AND p_lookup.id = ${filter.productId}
+						AND p_lookup.version = ${filter.version}
+				)`
+			: sql`(p_dash.id = ${filter.productId} AND p_dash.version = ${filter.version})`;
 
 const buildOptimizedCusProductsCTE = ({
 	inStatuses,
@@ -588,6 +622,8 @@ export const getPaginatedFullCusQuery = ({
 
 	const customerListFilterSql = getCustomerListFilterSql({
 		internalCustomerIds,
+		orgId,
+		env,
 		inStatuses,
 		plans,
 		processors,
@@ -896,6 +932,8 @@ export const hasCustomerListFilters = ({
 
 export const getCustomerListFilterSql = ({
 	internalCustomerIds,
+	orgId,
+	env,
 	inStatuses,
 	plans,
 	processors,
@@ -905,6 +943,8 @@ export const getCustomerListFilterSql = ({
 	productVersionFilters,
 }: {
 	internalCustomerIds?: string[];
+	orgId?: string;
+	env?: string;
 	inStatuses?: CusProductStatus[];
 	plans?: ListCustomersV2Params["plans"];
 	processors?: ListCustomersV2Params["processors"];
@@ -998,6 +1038,8 @@ export const getCustomerListFilterSql = ({
 	const hasStatus = statusFilters && statusFilters.length > 0;
 	const hasProductFilter = productFilters.length > 0;
 	const hasVersion = productFilters.some(isVersionDashboardProductFilter);
+	const canUseProductCandidateSet =
+		orgId && env && productFilters.every(isVersionDashboardProductFilter);
 	if (hasStatus || hasProductFilter) {
 		const innerClauses: SQL[] = [];
 
@@ -1040,12 +1082,22 @@ export const getCustomerListFilterSql = ({
 
 		if (hasProductFilter) {
 			const versionClauses = productFilters.map(
-				dashboardProductFilterToCustomerListSql,
+				(filter) => dashboardProductFilterToCustomerListSql(filter, { orgId, env }),
 			);
 			innerClauses.push(sql`(${sql.join(versionClauses, sql` OR `)})`);
 		}
 
+		if (canUseProductCandidateSet) {
+			filters.push(sql`AND c.internal_id IN (
+				SELECT cp_dash.internal_customer_id
+				FROM customer_products cp_dash
+				WHERE ${sql.join(innerClauses, sql` AND `)}
+			)`);
+			return sql.join(filters, sql` `);
+		}
+
 		const joinProducts = hasVersion
+			&& !(orgId && env)
 			? sql`JOIN products p_dash ON cp_dash.internal_product_id = p_dash.internal_id`
 			: sql``;
 

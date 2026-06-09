@@ -11,6 +11,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { CustomerListFiltersSchema } from "@/internal/customers/customerListFilters.js";
 import {
 	countCustomers,
 	filterCustomers,
@@ -23,6 +24,7 @@ const DEFAULT_PAGE_SIZE = 10;
 const PreviewFilterBody = z.object({
 	filter: CustomerFilterSchema.optional().default({}),
 	search: z.string().optional().default(""),
+	customerFilters: CustomerListFiltersSchema.optional(),
 	page: z.number().int().min(0).optional().default(0),
 	pageSize: z
 		.number()
@@ -49,6 +51,7 @@ export const handlePreviewMigrationFilter = createRoute({
 		const {
 			filter,
 			search,
+			customerFilters,
 			page,
 			pageSize,
 			migrationId,
@@ -87,12 +90,19 @@ export const handlePreviewMigrationFilter = createRoute({
 		}
 
 		const [count, pageRows] = await Promise.all([
-			countCustomers({ ctx, filter, search: searchTerm, includeProcessed }),
+			countCustomers({
+				ctx,
+				filter,
+				search: searchTerm,
+				customerFilters,
+				includeProcessed,
+			}),
 			collectPage(
 				filterCustomers({
 					ctx,
 					filter,
 					search: searchTerm,
+					customerFilters,
 					includeProcessed,
 					batchSize: pageSize,
 				}),

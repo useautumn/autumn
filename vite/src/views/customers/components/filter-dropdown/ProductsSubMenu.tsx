@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { getVersionCounts } from "@/utils/productUtils";
 import { useCustomerFilters } from "../../hooks/useCustomerFilters";
 
-export const ProductsSubMenu = () => {
+export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 	const { products } = useProductsQuery();
 	const { queryStates, setFilters } = useCustomerFilters();
 	const versionCounts = getVersionCounts(products);
@@ -70,6 +70,7 @@ export const ProductsSubMenu = () => {
 				none: false,
 			});
 		}
+		onChange?.();
 	};
 
 	const toggleProduct = (product: any) => {
@@ -100,6 +101,7 @@ export const ProductsSubMenu = () => {
 		}
 
 		setFilters({ version: newSelectedVersions, none: newNone });
+		onChange?.();
 	};
 
 	const toggleVersion = (productId: string, version: string) => {
@@ -118,6 +120,7 @@ export const ProductsSubMenu = () => {
 		}
 
 		setFilters({ version: newSelectedVersions, none: newNone });
+		onChange?.();
 	};
 
 	const toggleCustom = (productId: string) => {
@@ -130,6 +133,7 @@ export const ProductsSubMenu = () => {
 				: [...selectedVersions, customKey],
 			none: isSelected ? queryStates.none : false,
 		});
+		onChange?.();
 	};
 
 	const handleSelectNone = (e: React.MouseEvent) => {
@@ -137,6 +141,7 @@ export const ProductsSubMenu = () => {
 		e.stopPropagation();
 
 		setFilters({ version: [], none: !queryStates.none });
+		onChange?.();
 	};
 
 	return (

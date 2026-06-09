@@ -1,5 +1,6 @@
 import type { CustomerFilter } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { CustomerListFilters } from "@/internal/customers/customerListFilters.js";
 import { iterateOverFilterResults } from "../iterateOverFilterResults.js";
 import {
 	buildCustomerCount,
@@ -27,6 +28,7 @@ export const filterCustomers = ({
 	filter,
 	checkpoint,
 	search,
+	customerFilters,
 	includeProcessed,
 	batchSize,
 	limit,
@@ -35,6 +37,7 @@ export const filterCustomers = ({
 	filter: CustomerFilter;
 	checkpoint?: CustomerCheckpointExclusion;
 	search?: string;
+	customerFilters?: CustomerListFilters;
 	includeProcessed?: IncludeProcessed;
 	batchSize?: number;
 	limit?: number;
@@ -45,6 +48,7 @@ export const filterCustomers = ({
 		filter,
 		checkpoint,
 		search,
+		customerFilters,
 		ctx: { features: ctx.features },
 	};
 	const source = iterateOverFilterResults<CustomerRow>({
@@ -70,6 +74,7 @@ export const countCustomers = async ({
 	filter,
 	checkpoint,
 	search,
+	customerFilters,
 	includeProcessed,
 	limit,
 }: {
@@ -77,6 +82,7 @@ export const countCustomers = async ({
 	filter: CustomerFilter;
 	checkpoint?: CustomerCheckpointExclusion;
 	search?: string;
+	customerFilters?: CustomerListFilters;
 	includeProcessed?: IncludeProcessed;
 	limit?: number;
 }): Promise<number> => {
@@ -86,6 +92,7 @@ export const countCustomers = async ({
 		filter,
 		checkpoint,
 		search,
+		customerFilters,
 		ctx: { features: ctx.features },
 	};
 	const query = includeProcessed

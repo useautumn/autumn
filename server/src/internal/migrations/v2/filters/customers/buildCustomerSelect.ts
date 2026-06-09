@@ -2,6 +2,13 @@ import type { CustomerFilter, MigrationItemRunStatus } from "@autumn/shared";
 import type { ResolutionContext } from "@autumn/shared/api/migrations/compiler/filterToIr/resolutionContext.js";
 import { buildCustomerCandidateQuery } from "@autumn/shared/api/migrations/filters/planner/buildCustomerCandidateQuery.js";
 import { type SQL, sql } from "drizzle-orm";
+import type { CustomerListFilters } from "@/internal/customers/customerListFilters.js";
+import {
+	getCustomerListFilterSql,
+	parseDashboardProcessorFilter,
+	parseDashboardStatusFilter,
+	parseDashboardVersionFilter,
+} from "@/internal/customers/getFullCusQuery.js";
 import { rawWithParamsToDrizzle } from "../rawWithParamsToDrizzle.js";
 
 export type IncludeProcessed = {
@@ -24,6 +31,7 @@ export type CustomerQueryArgs = {
 	ctx: ResolutionContext;
 	checkpoint?: CustomerCheckpointExclusion;
 	search?: string;
+	customerFilters?: CustomerListFilters;
 };
 
 const compileCustomerCandidate = ({
@@ -82,11 +90,26 @@ const buildCheckpointWhere = (
 	`;
 };
 
-const buildSearchWhere = (search: string | undefined): SQL => {
-	if (!search) return sql``;
-	const pattern = `%${search}%`;
-	return sql`AND (c.name ILIKE ${pattern} OR c.email ILIKE ${pattern} OR c.id ILIKE ${pattern})`;
-};
+const buildCustomerListWhere = ({
+	orgId,
+	env,
+	search,
+	customerFilters,
+}: {
+	orgId: string;
+	env: string;
+	search?: string;
+	customerFilters?: CustomerListFilters;
+}): SQL =>
+	getCustomerListFilterSql({
+		orgId,
+		env,
+		search,
+		statusFilters: parseDashboardStatusFilter(customerFilters?.status),
+		noneFilter: customerFilters?.none,
+		productVersionFilters: parseDashboardVersionFilter(customerFilters?.version),
+		processors: parseDashboardProcessorFilter(customerFilters?.processor),
+	});
 
 const buildProcessedIn = (includeProcessed: IncludeProcessed): SQL => sql`
 	c.internal_id IN (
@@ -179,13 +202,19 @@ const getExecutionFilterMode = (
 // Rebuilt per call so a branch never reuses another's SQL chunk instance.
 const buildCommonWhere = ({
 	checkpoint,
+	orgId,
+	env,
 	search,
+	customerFilters,
 	afterInternalId,
 	includeProcessed,
 	includeNotRun,
 }: {
 	checkpoint?: CustomerCheckpointExclusion;
+	orgId: string;
+	env: string;
 	search?: string;
+	customerFilters?: CustomerListFilters;
 	afterInternalId?: string;
 	includeProcessed?: IncludeProcessed;
 	includeNotRun?: boolean;
@@ -193,7 +222,7 @@ const buildCommonWhere = ({
 	const cursor = afterInternalId
 		? sql`AND c.internal_id < ${afterInternalId}`
 		: sql``;
-	return sql`${buildCheckpointWhere(checkpoint)} ${buildSearchWhere(search)} ${buildExecutionStatusWhere(includeProcessed, { includeNotRun })} ${cursor}`;
+	return sql`${buildCheckpointWhere(checkpoint)} ${buildCustomerListWhere({ orgId, env, search, customerFilters })} ${buildExecutionStatusWhere(includeProcessed, { includeNotRun })} ${cursor}`;
 };
 
 /**
@@ -211,6 +240,7 @@ export const buildCustomerSelect = ({
 	ctx,
 	checkpoint,
 	search,
+	customerFilters,
 	limit,
 	afterInternalId,
 }: CustomerQueryArgs & {
@@ -222,7 +252,7 @@ export const buildCustomerSelect = ({
 	return sql`
 		SELECT c.internal_id, c.id, c.name, c.email
 		FROM ${candidate.source}
-		WHERE (${candidate.where}) ${buildCommonWhere({ checkpoint, search, afterInternalId })}
+		WHERE (${candidate.where}) ${buildCommonWhere({ checkpoint, orgId, env, search, customerFilters, afterInternalId })}
 		ORDER BY c.internal_id DESC
 		${limitClause}
 	`;
@@ -236,12 +266,13 @@ export const buildCustomerCount = ({
 	ctx,
 	checkpoint,
 	search,
+	customerFilters,
 }: CustomerQueryArgs): SQL => {
 	const candidate = compileCustomerCandidate({ orgId, env, filter, ctx });
 	return sql`
 		SELECT COUNT(*)::bigint AS count
 		FROM ${candidate.source}
-		WHERE (${candidate.where}) ${buildCommonWhere({ checkpoint, search })}
+		WHERE (${candidate.where}) ${buildCommonWhere({ checkpoint, orgId, env, search, customerFilters })}
 	`;
 };
 
@@ -257,7 +288,10 @@ export const buildLimitedCustomerCount = ({
 			FROM ${candidate.source}
 			WHERE (${candidate.where}) ${buildCommonWhere({
 				checkpoint: args.checkpoint,
+				orgId: args.orgId,
+				env: args.env,
 				search: args.search,
+				customerFilters: args.customerFilters,
 			})}
 			LIMIT ${limit}
 		) limited
@@ -283,6 +317,7 @@ export const buildProcessedPreviewSelect = ({
 	ctx,
 	checkpoint,
 	search,
+	customerFilters,
 	includeProcessed,
 	limit,
 	afterInternalId,
@@ -299,7 +334,7 @@ export const buildProcessedPreviewSelect = ({
 		return sql`
 			SELECT c.internal_id, c.id, c.name, c.email
 			FROM customers c
-			WHERE (${processed}) ${buildCommonWhere({ checkpoint, search, afterInternalId, includeProcessed, includeNotRun: false })}
+			WHERE (${processed}) ${buildCommonWhere({ checkpoint, orgId, env, search, customerFilters, afterInternalId, includeProcessed, includeNotRun: false })}
 			ORDER BY c.internal_id DESC
 			${limitClause}
 		`;
@@ -309,7 +344,7 @@ export const buildProcessedPreviewSelect = ({
 		return sql`
 			SELECT c.internal_id, c.id, c.name, c.email
 			FROM ${candidate.source}
-			WHERE (${candidate.where}) ${buildCommonWhere({ checkpoint, search, afterInternalId, includeProcessed })}
+			WHERE (${candidate.where}) ${buildCommonWhere({ checkpoint, orgId, env, search, customerFilters, afterInternalId, includeProcessed })}
 			ORDER BY c.internal_id DESC
 			${limitClause}
 		`;
@@ -320,11 +355,11 @@ export const buildProcessedPreviewSelect = ({
 		FROM (
 			SELECT c.internal_id, c.id, c.name, c.email
 			FROM ${candidate.source}
-			WHERE (${candidate.where}) ${buildCommonWhere({ checkpoint, search, afterInternalId, includeProcessed })}
+			WHERE (${candidate.where}) ${buildCommonWhere({ checkpoint, orgId, env, search, customerFilters, afterInternalId, includeProcessed })}
 			UNION
 			SELECT c.internal_id, c.id, c.name, c.email
 			FROM customers c
-			WHERE (${processed}) ${buildCommonWhere({ checkpoint, search, afterInternalId, includeProcessed, includeNotRun: false })}
+			WHERE (${processed}) ${buildCommonWhere({ checkpoint, orgId, env, search, customerFilters, afterInternalId, includeProcessed, includeNotRun: false })}
 		) u
 		ORDER BY u.internal_id DESC
 		${limitClause}
@@ -338,6 +373,7 @@ export const buildProcessedPreviewCount = ({
 	ctx,
 	checkpoint,
 	search,
+	customerFilters,
 	includeProcessed,
 }: ProcessedPreviewArgs): SQL => {
 	const candidate = compileCustomerCandidate({ orgId, env, filter, ctx });
@@ -348,7 +384,7 @@ export const buildProcessedPreviewCount = ({
 		return sql`
 			SELECT COUNT(*)::bigint AS count
 			FROM customers c
-			WHERE (${processed}) ${buildCommonWhere({ checkpoint, search, includeProcessed, includeNotRun: false })}
+			WHERE (${processed}) ${buildCommonWhere({ checkpoint, orgId, env, search, customerFilters, includeProcessed, includeNotRun: false })}
 		`;
 	}
 
@@ -356,7 +392,7 @@ export const buildProcessedPreviewCount = ({
 		return sql`
 			SELECT COUNT(*)::bigint AS count
 			FROM ${candidate.source}
-			WHERE (${candidate.where}) ${buildCommonWhere({ checkpoint, search, includeProcessed })}
+			WHERE (${candidate.where}) ${buildCommonWhere({ checkpoint, orgId, env, search, customerFilters, includeProcessed })}
 		`;
 	}
 
@@ -365,11 +401,11 @@ export const buildProcessedPreviewCount = ({
 		FROM (
 			SELECT c.internal_id
 			FROM ${candidate.source}
-			WHERE (${candidate.where}) ${buildCommonWhere({ checkpoint, search, includeProcessed })}
+			WHERE (${candidate.where}) ${buildCommonWhere({ checkpoint, orgId, env, search, customerFilters, includeProcessed })}
 			UNION
 			SELECT c.internal_id
 			FROM customers c
-			WHERE (${processed}) ${buildCommonWhere({ checkpoint, search, includeProcessed, includeNotRun: false })}
+			WHERE (${processed}) ${buildCommonWhere({ checkpoint, orgId, env, search, customerFilters, includeProcessed, includeNotRun: false })}
 		) u
 	`;
 };

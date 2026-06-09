@@ -24,6 +24,7 @@ import {
 import { alias } from "drizzle-orm/pg-core";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getOrgCusProductLimit } from "../misc/edgeConfig/orgLimitsStore.js";
+import type { CustomerListFilters } from "./customerListFilters.js";
 import {
 	type DashboardProductVersionFilter,
 	isCustomDashboardProductFilter,
@@ -64,10 +65,12 @@ const dashboardProductFilterToDrizzleSql = (
 	filter: DashboardProductVersionFilter,
 ) =>
 	and(
-		eq(customerProducts.product_id, filter.productId),
 		isCustomDashboardProductFilter(filter)
-			? eq(customerProducts.is_custom, true)
-			: eq(products.version, filter.version),
+			? and(
+					eq(customerProducts.product_id, filter.productId),
+					eq(customerProducts.is_custom, true),
+				)
+			: and(eq(products.id, filter.productId), eq(products.version, filter.version)),
 	);
 
 const dashboardProductFilterToRawSql = (
@@ -75,14 +78,9 @@ const dashboardProductFilterToRawSql = (
 ) =>
 	isCustomDashboardProductFilter(filter)
 		? sql`(${customerProducts.product_id} = ${filter.productId} AND ${customerProducts.is_custom} = true)`
-		: sql`(${customerProducts.product_id} = ${filter.productId} AND ${products.version} = ${filter.version})`;
+		: sql`(${products.id} = ${filter.productId} AND ${products.version} = ${filter.version})`;
 
-interface SearchFilters {
-	status?: string[];
-	version?: string[];
-	none?: boolean;
-	processor?: string[];
-}
+type SearchFilters = CustomerListFilters;
 
 export class CusSearchService {
 	static getProcessorFilterSql({

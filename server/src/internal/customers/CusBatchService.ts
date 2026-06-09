@@ -23,14 +23,16 @@ import { CusSearchService } from "./CusSearchService.js";
 import { getCursorPaginatedFullCusQuery } from "./cursorPaginatedFullCusQuery.js";
 import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
 import {
-	type DashboardStatusFilter,
 	getPaginatedFullCusQuery,
+	parseDashboardProcessorFilter,
+	parseDashboardStatusFilter,
 	parseDashboardVersionFilter,
 } from "./getFullCusQuery.js";
 import {
 	type FlattenedCustomerRow,
 	reassembleFlattenedCustomer,
 } from "./reassembleFlattenedCustomer/index.js";
+import type { CustomerListFilters } from "./customerListFilters.js";
 
 export class CusBatchService {
 	static async getByInternalIds({
@@ -295,12 +297,7 @@ export class CusBatchService {
 	}: {
 		ctx: RequestContext;
 		search: string;
-		filters?: {
-			status?: string[];
-			version?: string[];
-			none?: boolean;
-			processor?: string[];
-		};
+		filters?: CustomerListFilters;
 		cursor: { t: number; id: string } | null;
 		limit: number;
 	}): Promise<{
@@ -316,14 +313,7 @@ export class CusBatchService {
 			orgSlug: ctx.org.slug,
 		});
 
-		const statusFilters = (filters?.status ?? []).filter(
-			(s): s is DashboardStatusFilter =>
-				s === "active" ||
-				s === "past_due" ||
-				s === "canceled" ||
-				s === "free_trial" ||
-				s === "expired",
-		);
+		const statusFilters = parseDashboardStatusFilter(filters?.status);
 
 		const productVersionFilters = parseDashboardVersionFilter(filters?.version);
 
@@ -376,7 +366,7 @@ export class CusBatchService {
 			search: requiresResolveStep ? undefined : search,
 			processors: requiresResolveStep
 				? undefined
-				: (filters?.processor as ListCustomersV2Params["processors"]),
+				: parseDashboardProcessorFilter(filters?.processor),
 			cusProductLimit,
 		});
 
