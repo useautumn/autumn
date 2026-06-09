@@ -68,8 +68,7 @@ const getRedirectUriFromFields = (fields: RequestFields) =>
 	getNestedOAuthField(fields.oauth_query, "redirect_uri");
 
 const getScopesFromFields = (fields: RequestFields) => {
-	const rawScope =
-		getString(fields.scope) ?? getNestedOAuthField(fields.oauth_query, "scope");
+	const rawScope = getNestedOAuthField(fields.oauth_query, "scope");
 	return rawScope?.split(/\s+/).filter(Boolean) ?? null;
 };
 
@@ -80,23 +79,7 @@ const getFieldsWithScope = ({
 	fields: RequestFields;
 	scope: string;
 }) => {
-	const next: RequestFields = { ...fields, scope };
-	const oauthQuery = fields.oauth_query;
-	if (typeof oauthQuery === "string") {
-		try {
-			next.oauth_query = JSON.stringify({ ...JSON.parse(oauthQuery), scope });
-		} catch {
-			const params = new URLSearchParams(oauthQuery);
-			params.set("scope", scope);
-			next.oauth_query = params.toString();
-		}
-	} else if (typeof oauthQuery === "object" && oauthQuery !== null) {
-		next.oauth_query = {
-			...(oauthQuery as Record<string, unknown>),
-			scope,
-		};
-	}
-	return next;
+	return { ...fields, scope };
 };
 
 const withScope = ({
