@@ -1,7 +1,8 @@
 import type { AxiosError } from "axios";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
+import { migrationUid } from "@/views/migrations/migration/shared/operationUtils";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Dialog,
@@ -27,8 +28,9 @@ export function CreateMigrationDialog({
 	const navigate = useNavigate();
 
 	const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
+	const generateId = useCallback(() => `migration-${migrationUid()}`, []);
 	const handleOpenChange = (nextOpen: boolean) => {
-		if (nextOpen) setId("");
+		if (nextOpen) setId(generateId());
 		(controlledOnOpenChange || setInternalOpen)(nextOpen);
 	};
 
@@ -66,12 +68,12 @@ export function CreateMigrationDialog({
 					<label htmlFor="migration-id" className="text-sm font-medium">
 						Migration ID
 					</label>
-					<Input
-						id="migration-id"
-						placeholder="add-credits-to-free"
-						value={id}
-						onChange={(e) => setId(e.target.value)}
-					/>
+				<Input
+					id="migration-id"
+					placeholder="migration-abc123"
+					value={id}
+					onChange={(e) => setId(e.target.value)}
+				/>
 				</div>
 
 				<DialogFooter>

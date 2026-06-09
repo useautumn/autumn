@@ -8,7 +8,7 @@ import {
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { useCustomerFilters } from "../../hooks/useCustomerFilters";
 
-export const FilterStatusSubMenu = () => {
+export const FilterStatusSubMenu = ({ onChange }: { onChange?: () => void }) => {
 	const { queryStates, setFilters } = useCustomerFilters();
 
 	const statuses: string[] = [
@@ -30,6 +30,7 @@ export const FilterStatusSubMenu = () => {
 			: [...selected, status];
 
 		setFilters({ status: updated });
+		onChange?.();
 	};
 
 	return (

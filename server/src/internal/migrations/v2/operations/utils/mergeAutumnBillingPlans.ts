@@ -39,6 +39,11 @@ export const mergeAutumnBillingPlans = ({
 			...(incoming.deleteCustomerProducts ?? []),
 		],
 	}),
+	schedulePhaseCustomerProductReplacements: mergeByKey({
+		base: base.schedulePhaseCustomerProductReplacements,
+		incoming: incoming.schedulePhaseCustomerProductReplacements,
+		getKey: (replacement) => replacement.oldCustomerProductId,
+	}),
 	customPrices: mergeById({
 		base: base.customPrices,
 		incoming: incoming.customPrices,

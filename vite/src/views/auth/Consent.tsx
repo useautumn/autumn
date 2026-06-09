@@ -1,32 +1,43 @@
-import { type GroupedPermission, groupAndFormatScopes } from "@autumn/shared";
 import {
-	Check,
-	ChevronDown,
-	Clock,
-	ExternalLink,
-	Shield,
-	X,
-} from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+	AppEnv,
+	type GroupedPermission,
+	groupAndFormatScopes,
+	isScopeSubset,
+	LEAF_OAUTH_SCOPES,
+} from "@autumn/shared";
+import { Check, Clock, ExternalLink, Shield, X } from "lucide-react";
+import { useEffect, useId, useState } from "react";
 import { useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { CustomToaster } from "@/components/general/CustomToaster";
 import { Button } from "@/components/v2/buttons/Button";
 import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/v2/selects/Select";
+import {
 	authClient,
 	useListOrganizations,
 	useSession,
 } from "@/lib/auth-client";
-import { cn } from "@/lib/utils";
 
 interface ClientInfo {
 	client_id: string;
 	client_name?: string;
+	is_atmn?: boolean;
 	client_uri?: string;
 	logo_uri?: string;
 	policy_uri?: string;
 	tos_uri?: string;
+	is_internal_mcp?: boolean;
 }
+
+type SessionWithScopes = {
+	scopes?: string[];
+};
 
 // Joke scopes - one is randomly selected to show at the end
 const JOKE_SCOPES = [
@@ -90,11 +101,11 @@ const OrgLogo = ({ org }: { org: { name: string; logo?: string | null } }) => {
 	const firstLetter = org?.name?.charAt(0).toUpperCase() || "A";
 
 	return (
-		<div className="rounded-md overflow-hidden flex items-center justify-center bg-zinc-200 dark:bg-zinc-700 w-6 h-6 min-w-6 min-h-6">
+		<div className="rounded-md overflow-hidden flex items-center justify-center bg-zinc-200 dark:bg-zinc-700 w-5 h-5 min-w-5 min-h-5">
 			{org.logo ? (
 				<img src={org.logo} alt={org.name} className="w-full h-full" />
 			) : (
-				<span className="w-6 h-6 flex items-center justify-center bg-linear-to-r from-purple-600 via-purple-500 to-purple-400 text-white text-xs font-medium">
+				<span className="w-5 h-5 flex items-center justify-center bg-linear-to-r from-purple-600 via-purple-500 to-purple-400 text-white text-[10px] font-medium">
 					{firstLetter}
 				</span>
 			)}
@@ -102,11 +113,60 @@ const OrgLogo = ({ org }: { org: { name: string; logo?: string | null } }) => {
 	);
 };
 
+const getConsentRedirectUrl = (data: unknown) => {
+	if (!data || typeof data !== "object") return null;
+	const response = data as Record<string, unknown>;
+
+	return [response.url, response.uri, response.redirectTo].find(
+		(value): value is string => typeof value === "string" && value.length > 0,
+	);
+};
+
+const isExternalAppRedirect = (redirectUrl: string) => {
+	if (!URL.canParse(redirectUrl)) return false;
+	const protocol = new URL(redirectUrl).protocol;
+	return protocol !== "http:" && protocol !== "https:";
+};
+
+const openConsentRedirect = ({
+	onExternalRedirectFallback,
+	redirectUrl,
+}: {
+	onExternalRedirectFallback: () => void;
+	redirectUrl: string;
+}) => {
+	const shouldShowFallback = isExternalAppRedirect(redirectUrl);
+	window.location.href = redirectUrl;
+
+	if (shouldShowFallback) {
+		window.setTimeout(onExternalRedirectFallback, 1200);
+	}
+};
+
+const leafScopeSet = new Set<string>(LEAF_OAUTH_SCOPES);
+
+const getGrantableMcpScopes = ({
+	requestedScopes,
+	sessionScopes,
+}: {
+	requestedScopes: string[];
+	sessionScopes: string[];
+}) => {
+	const requested =
+		requestedScopes.length > 0 ? requestedScopes : [...LEAF_OAUTH_SCOPES];
+
+	return [...new Set(requested)]
+		.filter((scope) => leafScopeSet.has(scope))
+		.filter((scope) => isScopeSubset([scope], sessionScopes));
+};
+
 export const Consent = () => {
 	const [searchParams] = useSearchParams();
 	const { data: session } = useSession();
 	const { data: orgs } = useListOrganizations();
 	const { data: activeOrganization } = authClient.useActiveOrganization();
+	const errorIconMaskId = useId();
+	const consentIconMaskId = useId();
 
 	const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
 	const [groupedPermissions, setGroupedPermissions] = useState<
@@ -115,30 +175,21 @@ export const Consent = () => {
 	const [jokeScope] = useState(() => getRandomJokeScope());
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const [orgDropdownOpen, setOrgDropdownOpen] = useState(false);
+	const [pendingRedirectUrl, setPendingRedirectUrl] = useState<string | null>(
+		null,
+	);
+	const [selectedEnv, setSelectedEnv] = useState<AppEnv>(AppEnv.Live);
 	const [switchingOrg, setSwitchingOrg] = useState(false);
-	const orgDropdownRef = useRef<HTMLDivElement>(null);
 
 	const clientId = searchParams.get("client_id");
-	const requestedScopes = searchParams.get("scope")?.split(" ") || [];
+	const redirectUri = searchParams.get("redirect_uri");
+	const requestedScopes =
+		searchParams.get("scope")?.split(/\s+/).filter(Boolean) || [];
+	const sessionScopes =
+		(session as SessionWithScopes | null | undefined)?.scopes ?? [];
 
 	// Get the current org (active or first available)
 	const currentOrg = activeOrganization || orgs?.[0];
-
-	// Close dropdown when clicking outside
-	useEffect(() => {
-		const handleClickOutside = (event: MouseEvent) => {
-			if (
-				orgDropdownRef.current &&
-				!orgDropdownRef.current.contains(event.target as Node)
-			) {
-				setOrgDropdownOpen(false);
-			}
-		};
-
-		document.addEventListener("mousedown", handleClickOutside);
-		return () => document.removeEventListener("mousedown", handleClickOutside);
-	}, []);
 
 	const handleSwitchOrg = async (orgId: string) => {
 		setSwitchingOrg(true);
@@ -161,17 +212,26 @@ export const Consent = () => {
 				return;
 			}
 
+			let isInternalMcp = false;
 			try {
 				// Fetch client name from our own endpoint
-				const response = await fetch(
+				const clientInfoUrl = new URL(
 					`${import.meta.env.VITE_BACKEND_URL}/oauth/client/${encodeURIComponent(clientId)}`,
 				);
+				if (redirectUri) {
+					clientInfoUrl.searchParams.set("redirect_uri", redirectUri);
+				}
+
+				const response = await fetch(clientInfoUrl.toString());
 
 				if (response.ok) {
 					const data = await response.json();
+					isInternalMcp = data.is_internal_mcp === true;
 					setClientInfo({
 						client_id: clientId,
 						client_name: data.name || "Unknown Application",
+						is_atmn: data.is_atmn === true,
+						is_internal_mcp: isInternalMcp,
 					});
 				} else {
 					console.error("Error fetching client info:", response.status);
@@ -179,6 +239,8 @@ export const Consent = () => {
 					setClientInfo({
 						client_id: clientId,
 						client_name: "External Application",
+						is_atmn: false,
+						is_internal_mcp: false,
 					});
 				}
 			} catch (error) {
@@ -187,27 +249,53 @@ export const Consent = () => {
 				setClientInfo({
 					client_id: clientId,
 					client_name: "External Application",
+					is_atmn: false,
+					is_internal_mcp: false,
 				});
 			}
 
 			// Parse and group scopes by resource
-			const grouped = groupAndFormatScopes(requestedScopes);
+			const displayScopes =
+				isInternalMcp === true
+					? getGrantableMcpScopes({ requestedScopes, sessionScopes })
+					: requestedScopes;
+			const grouped = groupAndFormatScopes(displayScopes);
 			setGroupedPermissions(grouped);
 			setIsLoading(false);
 		}
 
 		fetchClientInfo();
-	}, [clientId, requestedScopes.join(",")]);
+	}, [
+		clientId,
+		redirectUri,
+		requestedScopes.join(","),
+		sessionScopes.join(","),
+	]);
 
 	const handleAuthorize = async () => {
+		if (!clientInfo) {
+			toast.error("Authorization failed");
+			return;
+		}
+
 		setIsSubmitting(true);
+		setPendingRedirectUrl(null);
 		try {
-			// Use the original requested scopes
-			const grantedScopes = requestedScopes.join(" ");
+			const grantedScopes =
+				clientInfo.is_internal_mcp === true
+					? getGrantableMcpScopes({ requestedScopes, sessionScopes }).join(" ")
+					: requestedScopes.join(" ");
 
 			const { data, error } = await authClient.oauth2.consent({
 				accept: true,
 				scope: grantedScopes,
+				client_id: clientId,
+				redirect_uri: redirectUri,
+				env: clientInfo.is_atmn ? undefined : selectedEnv,
+			} as Parameters<typeof authClient.oauth2.consent>[0] & {
+				client_id: string | null;
+				redirect_uri: string | null;
+				env?: AppEnv;
 			});
 
 			if (error) {
@@ -216,12 +304,20 @@ export const Consent = () => {
 				return;
 			}
 
-			// Handle redirect - server returns { redirect: true, uri: "..." }
-			if (data?.uri) {
-				window.location.href = data.uri;
-			} else if (data?.redirectTo) {
-				window.location.href = data.redirectTo;
+			const redirectUrl = getConsentRedirectUrl(data);
+			if (redirectUrl) {
+				if (isExternalAppRedirect(redirectUrl)) {
+					setPendingRedirectUrl(redirectUrl);
+				}
+				openConsentRedirect({
+					redirectUrl,
+					onExternalRedirectFallback: () => setIsSubmitting(false),
+				});
+				return;
 			}
+
+			toast.error("Authorization failed");
+			setIsSubmitting(false);
 		} catch (error) {
 			console.error("Authorization error:", error);
 			toast.error("Authorization failed. Please try again.");
@@ -231,6 +327,7 @@ export const Consent = () => {
 
 	const handleCancel = async () => {
 		setIsSubmitting(true);
+		setPendingRedirectUrl(null);
 		try {
 			const { data, error } = await authClient.oauth2.consent({
 				accept: false,
@@ -242,16 +339,30 @@ export const Consent = () => {
 				return;
 			}
 
-			if (data?.uri) {
-				window.location.href = data.uri;
-			} else if (data?.redirectTo) {
-				window.location.href = data.redirectTo;
+			const redirectUrl = getConsentRedirectUrl(data);
+			if (redirectUrl) {
+				if (isExternalAppRedirect(redirectUrl)) {
+					setPendingRedirectUrl(redirectUrl);
+				}
+				openConsentRedirect({
+					redirectUrl,
+					onExternalRedirectFallback: () => setIsSubmitting(false),
+				});
+				return;
 			}
+
+			toast.error("Failed to cancel. Please close this window.");
+			setIsSubmitting(false);
 		} catch (error) {
 			console.error("Cancel error:", error);
 			toast.error("Failed to cancel. Please close this window.");
 			setIsSubmitting(false);
 		}
+	};
+
+	const handleOpenPendingRedirect = () => {
+		if (!pendingRedirectUrl) return;
+		window.location.href = pendingRedirectUrl;
 	};
 
 	if (isLoading) {
@@ -271,12 +382,27 @@ export const Consent = () => {
 				<CustomToaster />
 				<div className="text-center space-y-4">
 					<div className="flex justify-center">
-						<svg width="48" height="48" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-							<mask id="icon-cutout-err">
-								<rect width="28" height="28" fill="white"/>
-								<path d="M10.7139 9.06887C9.77726 11.211 8.84052 13.3532 7.90386 15.4953C8.63795 16.4465 9.37205 17.3984 10.1061 18.3496C12.2827 15.537 14.4599 12.7244 16.637 9.91183L9.27077 22.9514C12.9161 20.7518 16.5615 18.5529 20.2069 16.3534V4.85034L10.7139 9.06887Z" fill="black"/>
+						<svg
+							width="48"
+							height="48"
+							viewBox="0 0 28 28"
+							fill="none"
+							xmlns="http://www.w3.org/2000/svg"
+							aria-hidden="true"
+						>
+							<mask id={errorIconMaskId}>
+								<rect width="28" height="28" fill="white" />
+								<path
+									d="M10.7139 9.06887C9.77726 11.211 8.84052 13.3532 7.90386 15.4953C8.63795 16.4465 9.37205 17.3984 10.1061 18.3496C12.2827 15.537 14.4599 12.7244 16.637 9.91183L9.27077 22.9514C12.9161 20.7518 16.5615 18.5529 20.2069 16.3534V4.85034L10.7139 9.06887Z"
+									fill="black"
+								/>
 							</mask>
-							<rect width="28" height="28" fill="currentColor" mask="url(#icon-cutout-err)"/>
+							<rect
+								width="28"
+								height="28"
+								fill="currentColor"
+								mask={`url(#${errorIconMaskId})`}
+							/>
 						</svg>
 					</div>
 					<h1 className="text-lg font-semibold text-foreground">
@@ -296,12 +422,27 @@ export const Consent = () => {
 			<div className="w-full max-w-[420px] space-y-6 max-h-full overflow-y-auto">
 				{/* Logo */}
 				<div className="flex justify-center">
-					<svg width="48" height="48" viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-						<mask id="icon-cutout-consent">
-							<rect width="28" height="28" fill="white"/>
-							<path d="M10.7139 9.06887C9.77726 11.211 8.84052 13.3532 7.90386 15.4953C8.63795 16.4465 9.37205 17.3984 10.1061 18.3496C12.2827 15.537 14.4599 12.7244 16.637 9.91183L9.27077 22.9514C12.9161 20.7518 16.5615 18.5529 20.2069 16.3534V4.85034L10.7139 9.06887Z" fill="black"/>
+					<svg
+						width="48"
+						height="48"
+						viewBox="0 0 28 28"
+						fill="none"
+						xmlns="http://www.w3.org/2000/svg"
+						aria-hidden="true"
+					>
+						<mask id={consentIconMaskId}>
+							<rect width="28" height="28" fill="white" />
+							<path
+								d="M10.7139 9.06887C9.77726 11.211 8.84052 13.3532 7.90386 15.4953C8.63795 16.4465 9.37205 17.3984 10.1061 18.3496C12.2827 15.537 14.4599 12.7244 16.637 9.91183L9.27077 22.9514C12.9161 20.7518 16.5615 18.5529 20.2069 16.3534V4.85034L10.7139 9.06887Z"
+								fill="black"
+							/>
 						</mask>
-						<rect width="28" height="28" fill="currentColor" mask="url(#icon-cutout-consent)"/>
+						<rect
+							width="28"
+							height="28"
+							fill="currentColor"
+							mask={`url(#${consentIconMaskId})`}
+						/>
 					</svg>
 				</div>
 
@@ -323,70 +464,62 @@ export const Consent = () => {
 					)}
 				</div>
 
-				{/* Organization Selector */}
-				{currentOrg && (
-					<div
-						ref={orgDropdownRef}
-						className="border border-border rounded-xl bg-card"
-					>
-						<div className="px-4 py-2 border-b border-border bg-muted/30">
-							<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-								Organization
-							</p>
-						</div>
-						<div className="relative">
-							<button
-								type="button"
-								onClick={() => setOrgDropdownOpen(!orgDropdownOpen)}
-								disabled={switchingOrg || !orgs || orgs.length < 2}
-								className={cn(
-									"w-full flex items-center justify-between gap-3 px-4 py-3 text-left transition-colors",
-									orgs &&
-										orgs.length >= 2 &&
-										"hover:bg-muted/50 cursor-pointer",
-									switchingOrg && "opacity-50",
-								)}
-							>
-								<div className="flex items-center gap-3">
-									<OrgLogo org={currentOrg} />
-									<span className="text-sm font-medium text-foreground">
-										{currentOrg.name}
-									</span>
-								</div>
-								{orgs && orgs.length >= 2 && (
-									<ChevronDown
-										className={cn(
-											"w-4 h-4 text-muted-foreground transition-transform",
-											orgDropdownOpen && "rotate-180",
-										)}
-									/>
-								)}
-							</button>
-
-							{/* Dropdown */}
-							{orgDropdownOpen && orgs && orgs.length >= 2 && (
-								<div className="absolute top-full left-0 right-0 z-50 mt-1 border border-border rounded-lg bg-card shadow-lg max-h-64 overflow-y-auto">
-									{orgs
-										.filter((org) => org.id !== currentOrg.id)
-										.map((org) => (
-											<button
-												key={org.id}
-												type="button"
-												onClick={() => {
-													setOrgDropdownOpen(false);
-													handleSwitchOrg(org.id);
-												}}
-												className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-muted/50 transition-colors border-b border-border last:border-b-0"
-											>
+				{/* Account context: organization + environment */}
+				{(currentOrg || !clientInfo.is_atmn) && (
+					<div className="border border-border rounded-xl bg-card overflow-hidden divide-y divide-border">
+						{currentOrg && (
+							<div className="flex items-center justify-between gap-3 px-4 py-3">
+								<span className="text-sm text-muted-foreground shrink-0">
+									Organization
+								</span>
+								<Select
+									value={currentOrg.id}
+									onValueChange={handleSwitchOrg}
+									disabled={switchingOrg || !orgs || orgs.length < 2}
+								>
+									<SelectTrigger className="w-[200px]">
+										<SelectValue>
+											<span className="flex items-center gap-2 min-w-0">
+												<OrgLogo org={currentOrg} />
+												<span className="truncate">{currentOrg.name}</span>
+											</span>
+										</SelectValue>
+									</SelectTrigger>
+									<SelectContent>
+										{orgs?.map((org) => (
+											<SelectItem key={org.id} value={org.id}>
 												<OrgLogo org={org} />
-												<span className="text-sm text-foreground">
-													{org.name}
-												</span>
-											</button>
+												<span className="truncate">{org.name}</span>
+											</SelectItem>
 										))}
-								</div>
-							)}
-						</div>
+									</SelectContent>
+								</Select>
+							</div>
+						)}
+
+						{!clientInfo.is_atmn && (
+							<div className="flex items-center justify-between gap-3 px-4 py-3">
+								<span className="text-sm text-muted-foreground shrink-0">
+									Environment
+								</span>
+								<Select
+									value={selectedEnv}
+									onValueChange={(value) => setSelectedEnv(value as AppEnv)}
+									items={{
+										[AppEnv.Sandbox]: "Sandbox",
+										[AppEnv.Live]: "Production",
+									}}
+								>
+									<SelectTrigger className="w-[200px]">
+										<SelectValue />
+									</SelectTrigger>
+									<SelectContent>
+										<SelectItem value={AppEnv.Sandbox}>Sandbox</SelectItem>
+										<SelectItem value={AppEnv.Live}>Production</SelectItem>
+									</SelectContent>
+								</Select>
+							</div>
+						)}
 					</div>
 				)}
 
@@ -494,6 +627,11 @@ export const Consent = () => {
 				</div>
 
 				{/* Action Buttons */}
+				{pendingRedirectUrl && !isSubmitting && (
+					<p className="text-xs text-muted-foreground text-center">
+						If {clientInfo.client_name} did not open, use the button below.
+					</p>
+				)}
 				<div className="flex gap-3">
 					<Button
 						variant="secondary"
@@ -505,11 +643,15 @@ export const Consent = () => {
 					</Button>
 					<Button
 						variant="primary"
-						onClick={handleAuthorize}
+						onClick={
+							pendingRedirectUrl ? handleOpenPendingRedirect : handleAuthorize
+						}
 						isLoading={isSubmitting}
 						className="flex-1"
 					>
-						Authorize
+						{pendingRedirectUrl
+							? `Open ${clientInfo.client_name}`
+							: "Authorize"}
 					</Button>
 				</div>
 			</div>

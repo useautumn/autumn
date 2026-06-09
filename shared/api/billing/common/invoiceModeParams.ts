@@ -13,6 +13,14 @@ export const InvoiceModeParamsSchema = z
 			description:
 				"If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.",
 		}),
+		invoice_template_id: z.string().optional().meta({
+			description:
+				"ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice.",
+		}),
+		net_terms_days: z.number().int().positive().optional().meta({
+			description:
+				"Number of days the customer has to pay the invoice before it is due (Stripe days_until_due).",
+		}),
 	})
 	.meta({
 		title: "InvoiceMode",

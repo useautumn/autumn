@@ -12,6 +12,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildCustomerProductsForStripe } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildCustomerProductsForStripe";
 import { buildStripeRefundAction } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildStripeRefundAction.js";
 import { buildStripeSubscriptionScheduleAction } from "@/internal/billing/v2/providers/stripe/actionBuilders/buildStripeSubscriptionScheduleAction";
+import { validateStripeSubscriptionActionOwnership } from "@/internal/billing/v2/providers/stripe/utils/connect/validateStripeSubscriptionActionOwnership";
 import { shouldCreateManualStripeInvoice } from "@/internal/billing/v2/providers/stripe/utils/invoices/shouldCreateManualStripeInvoice";
 import { autumnBillingPlanToFinalFullCustomer } from "@/internal/billing/v2/utils/autumnBillingPlanToFinalFullCustomer";
 import { buildStripeCheckoutSessionAction } from "../../../providers/stripe/actionBuilders/buildStripeCheckoutSessionAction";
@@ -72,6 +73,12 @@ export const evaluateStripeBillingPlan = async ({
 		stripeSubscriptionScheduleAction,
 		subscriptionCancelAt,
 		subscriptionStartsAt,
+	});
+
+	validateStripeSubscriptionActionOwnership({
+		ctx,
+		billingContext,
+		stripeSubscriptionAction,
 	});
 
 	const stripeRefundAction = await buildStripeRefundAction({

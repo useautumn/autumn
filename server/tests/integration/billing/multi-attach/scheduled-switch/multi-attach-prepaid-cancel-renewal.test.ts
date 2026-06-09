@@ -179,7 +179,6 @@ test.concurrent(
 			cancel_action: "cancel_end_of_cycle" as const,
 		});
 
-		return;
 		const subscriptionAfterCancel =
 			await ctx.stripeCli.subscriptions.retrieve(stripeSubscriptionId);
 		const workflowSubscriptionItemIdsAfterCancel =

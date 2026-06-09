@@ -482,6 +482,13 @@ components:
               quantity:
                 type: number
                 description: Number of units of this subscription (for per-seat plans).
+              scope:
+                enum:
+                  - customer
+                  - entity
+                type: string
+                description: Whether this subscription is attached at the customer level or
+                  entity level.
             required:
               - id
               - plan_id
@@ -519,6 +526,13 @@ components:
               quantity:
                 type: number
                 description: Number of units purchased.
+              scope:
+                enum:
+                  - customer
+                  - entity
+                type: string
+                description: Whether this purchase is attached at the customer level or entity
+                  level.
             required:
               - plan_id
               - expires_at
@@ -2234,6 +2248,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units of this subscription (for per-seat plans).
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this subscription is attached at the customer level or
+                            entity level.
                       required:
                         - id
                         - plan_id
@@ -2272,6 +2293,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units purchased.
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this purchase is attached at the customer level or entity
+                            level.
                       required:
                         - plan_id
                         - expires_at
@@ -3114,6 +3142,13 @@ paths:
                               quantity:
                                 type: number
                                 description: Number of units of this subscription (for per-seat plans).
+                              scope:
+                                enum:
+                                  - customer
+                                  - entity
+                                type: string
+                                description: Whether this subscription is attached at the customer level or
+                                  entity level.
                             required:
                               - id
                               - plan_id
@@ -3152,6 +3187,13 @@ paths:
                               quantity:
                                 type: number
                                 description: Number of units purchased.
+                              scope:
+                                enum:
+                                  - customer
+                                  - entity
+                                type: string
+                                description: Whether this purchase is attached at the customer level or entity
+                                  level.
                             required:
                               - plan_id
                               - expires_at
@@ -3972,6 +4014,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units of this subscription (for per-seat plans).
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this subscription is attached at the customer level or
+                            entity level.
                       required:
                         - id
                         - plan_id
@@ -4010,6 +4059,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units purchased.
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this purchase is attached at the customer level or entity
+                            level.
                       required:
                         - plan_id
                         - expires_at
@@ -8313,6 +8369,17 @@ paths:
                       default: true
                       description: If true, finalizes the invoice so it can be sent to the customer.
                         If false, keeps it as a draft for manual review.
+                    invoice_template_id:
+                      type: string
+                      description: ID of an invoice template (configured in billing settings) whose
+                        footer (e.g. bank details) is applied to the invoice.
+                    net_terms_days:
+                      type: integer
+                      minimum: -9007199254740991
+                      maximum: 9007199254740991
+                      exclusiveMinimum: 0
+                      description: Number of days the customer has to pay the invoice before it is due
+                        (Stripe days_until_due).
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the
@@ -8628,10 +8695,37 @@ paths:
                       default: true
                       description: If true, finalizes the invoice so it can be sent to the customer.
                         If false, keeps it as a draft for manual review.
+                    invoice_template_id:
+                      type: string
+                      description: ID of an invoice template (configured in billing settings) whose
+                        footer (e.g. bank details) is applied to the invoice.
+                    net_terms_days:
+                      type: integer
+                      minimum: -9007199254740991
+                      maximum: 9007199254740991
+                      exclusiveMinimum: 0
+                      description: Number of days the customer has to pay the invoice before it is due
+                        (Stripe days_until_due).
                   required:
                     - enabled
                   description: Invoice mode creates and sends an invoice instead of charging the
                     customer's payment method immediately for the first phase.
+                discounts:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      reward_id:
+                        type: string
+                        description: The ID of the reward to apply as a discount.
+                      promotion_code:
+                        type: string
+                        description: The promotion code to apply as a discount.
+                    title: AttachDiscount
+                    description: A discount to apply. Can be either a reward ID or a promotion code.
+                  description: List of discounts to apply to the immediate phase. Each discount
+                    can be an Autumn reward ID, Stripe coupon ID, or Stripe
+                    promotion code.
                 success_url:
                   type: string
                   description: URL to redirect to after successful checkout.
@@ -9654,6 +9748,17 @@ paths:
                       default: true
                       description: If true, finalizes the invoice so it can be sent to the customer.
                         If false, keeps it as a draft for manual review.
+                    invoice_template_id:
+                      type: string
+                      description: ID of an invoice template (configured in billing settings) whose
+                        footer (e.g. bank details) is applied to the invoice.
+                    net_terms_days:
+                      type: integer
+                      minimum: -9007199254740991
+                      maximum: 9007199254740991
+                      exclusiveMinimum: 0
+                      description: Number of days the customer has to pay the invoice before it is due
+                        (Stripe days_until_due).
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the
@@ -10420,6 +10525,17 @@ paths:
                       default: true
                       description: If true, finalizes the invoice so it can be sent to the customer.
                         If false, keeps it as a draft for manual review.
+                    invoice_template_id:
+                      type: string
+                      description: ID of an invoice template (configured in billing settings) whose
+                        footer (e.g. bank details) is applied to the invoice.
+                    net_terms_days:
+                      type: integer
+                      minimum: -9007199254740991
+                      maximum: 9007199254740991
+                      exclusiveMinimum: 0
+                      description: Number of days the customer has to pay the invoice before it is due
+                        (Stripe days_until_due).
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the
@@ -11327,6 +11443,17 @@ paths:
                       default: true
                       description: If true, finalizes the invoice so it can be sent to the customer.
                         If false, keeps it as a draft for manual review.
+                    invoice_template_id:
+                      type: string
+                      description: ID of an invoice template (configured in billing settings) whose
+                        footer (e.g. bank details) is applied to the invoice.
+                    net_terms_days:
+                      type: integer
+                      minimum: -9007199254740991
+                      maximum: 9007199254740991
+                      exclusiveMinimum: 0
+                      description: Number of days the customer has to pay the invoice before it is due
+                        (Stripe days_until_due).
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the
@@ -12418,6 +12545,17 @@ paths:
                       default: true
                       description: If true, finalizes the invoice so it can be sent to the customer.
                         If false, keeps it as a draft for manual review.
+                    invoice_template_id:
+                      type: string
+                      description: ID of an invoice template (configured in billing settings) whose
+                        footer (e.g. bank details) is applied to the invoice.
+                    net_terms_days:
+                      type: integer
+                      minimum: -9007199254740991
+                      maximum: 9007199254740991
+                      exclusiveMinimum: 0
+                      description: Number of days the customer has to pay the invoice before it is due
+                        (Stripe days_until_due).
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the
@@ -13104,6 +13242,17 @@ paths:
                       default: true
                       description: If true, finalizes the invoice so it can be sent to the customer.
                         If false, keeps it as a draft for manual review.
+                    invoice_template_id:
+                      type: string
+                      description: ID of an invoice template (configured in billing settings) whose
+                        footer (e.g. bank details) is applied to the invoice.
+                    net_terms_days:
+                      type: integer
+                      minimum: -9007199254740991
+                      maximum: 9007199254740991
+                      exclusiveMinimum: 0
+                      description: Number of days the customer has to pay the invoice before it is due
+                        (Stripe days_until_due).
                   required:
                     - enabled
                   description: Invoice mode creates a draft or open invoice and sends it to the
@@ -17247,6 +17396,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units of this subscription (for per-seat plans).
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this subscription is attached at the customer level or
+                            entity level.
                       required:
                         - id
                         - plan_id
@@ -17283,6 +17439,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units purchased.
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this purchase is attached at the customer level or entity
+                            level.
                       required:
                         - plan_id
                         - expires_at
@@ -17737,6 +17900,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units of this subscription (for per-seat plans).
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this subscription is attached at the customer level or
+                            entity level.
                       required:
                         - id
                         - plan_id
@@ -17773,6 +17943,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units purchased.
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this purchase is attached at the customer level or entity
+                            level.
                       required:
                         - plan_id
                         - expires_at
@@ -18272,6 +18449,13 @@ paths:
                               quantity:
                                 type: number
                                 description: Number of units of this subscription (for per-seat plans).
+                              scope:
+                                enum:
+                                  - customer
+                                  - entity
+                                type: string
+                                description: Whether this subscription is attached at the customer level or
+                                  entity level.
                             required:
                               - id
                               - plan_id
@@ -18308,6 +18492,13 @@ paths:
                               quantity:
                                 type: number
                                 description: Number of units purchased.
+                              scope:
+                                enum:
+                                  - customer
+                                  - entity
+                                type: string
+                                description: Whether this purchase is attached at the customer level or entity
+                                  level.
                             required:
                               - plan_id
                               - expires_at
@@ -18843,6 +19034,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units of this subscription (for per-seat plans).
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this subscription is attached at the customer level or
+                            entity level.
                       required:
                         - id
                         - plan_id
@@ -18879,6 +19077,13 @@ paths:
                         quantity:
                           type: number
                           description: Number of units purchased.
+                        scope:
+                          enum:
+                            - customer
+                            - entity
+                          type: string
+                          description: Whether this purchase is attached at the customer level or entity
+                            level.
                       required:
                         - plan_id
                         - expires_at
@@ -19538,6 +19743,384 @@ paths:
             res = autumn.rewards.redeem_code(
                 code="REWARD10",
                 customer_id="cus_456",
+            )
+  /v1/platform.link_revenuecat:
+    post:
+      operationId: linkRevenueCat
+      description: Generate a RevenueCat OAuth URL for linking a project to an organization.
+      tags:
+        - platform
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organization_slug:
+                  type: string
+                  minLength: 1
+                env:
+                  enum:
+                    - test
+                    - live
+                  type: string
+                project_name:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                redirect_url:
+                  type: string
+                  format: uri
+              required:
+                - organization_slug
+                - env
+                - project_name
+                - redirect_url
+              title: LinkRevenueCatParams
+              examples:
+                - &a77
+                  organization_slug: acme
+                  env: test
+                  project_name: acme-mobile
+                  redirect_url: https://dashboard.useautumn.com/dev?tab=revenuecat
+            example: *a77
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  oauth_url:
+                    type: string
+                required:
+                  - oauth_url
+                title: LinkRevenueCatResponse
+                examples:
+                  - &a78
+                    oauth_url: https://api.revenuecat.com/oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&scope=project.read+project.write
+              example: *a78
+      x-speakeasy-name-override: linkRevenueCat
+      parameters:
+        - *a5
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.platform.linkRevenueCat({
+              organizationSlug: "acme",
+              env: "test",
+              projectName: "acme-mobile",
+              redirectUrl: "https://dashboard.useautumn.com/dev?tab=revenuecat",
+            });
+        - lang: python
+          label: Python (SDK)
+          source: >-
+            from autumn_sdk import Autumn
+
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+
+            res = autumn.platform.link_revenue_cat(
+                organization_slug="acme",
+                env="test",
+                project_name="acme-mobile",
+                redirect_url="https://dashboard.useautumn.com/dev?tab=revenuecat",
+            )
+  /v1/platform.sync_revenuecat:
+    post:
+      operationId: syncRevenueCat
+      description: Push an organization's plans into RevenueCat as products (creating
+        or renaming them across the project's apps) and set test-store prices
+        from each plan's price. Requires the org to have linked RevenueCat via
+        OAuth.
+      tags:
+        - platform
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organization_slug:
+                  type: string
+                  minLength: 1
+                env:
+                  enum:
+                    - test
+                    - sandbox
+                    - live
+                  type: string
+                  description: '"test" and "sandbox" both target the sandbox environment'
+                product_ids:
+                  type: array
+                  items:
+                    type: string
+                  description: Plans to push. Omit to sync every plan in the org/env.
+              required:
+                - organization_slug
+                - env
+              title: SyncRevenueCatParams
+              examples:
+                - &a79
+                  organization_slug: acme
+                  env: test
+                  product_ids:
+                    - pro
+                    - premium
+            example: *a79
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        plan_id:
+                          type: string
+                        status:
+                          enum:
+                            - synced
+                            - skipped
+                            - error
+                          type: string
+                        store_identifier:
+                          type: string
+                        apps:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              app_id:
+                                type: string
+                              app_type:
+                                type: string
+                              product:
+                                enum:
+                                  - created
+                                  - updated
+                                  - exists
+                                type: string
+                              store_push:
+                                enum:
+                                  - pushed
+                                  - failed
+                                  - skipped
+                                type: string
+                              price:
+                                enum:
+                                  - set
+                                  - skipped
+                                  - failed
+                                type: string
+                              message:
+                                type: string
+                            required:
+                              - app_id
+                              - app_type
+                              - product
+                        message:
+                          type: string
+                      required:
+                        - plan_id
+                        - status
+                required:
+                  - results
+                title: SyncRevenueCatResponse
+                examples:
+                  - &a80
+                    results:
+                      - plan_id: pro
+                        status: synced
+                        store_identifier: autumn.sandbox.org_123.pro
+                        apps:
+                          - app_id: app_test
+                            app_type: test_store
+                            product: created
+                            store_push: skipped
+                            price: set
+              example: *a80
+      x-speakeasy-name-override: syncRevenueCat
+      parameters:
+        - *a5
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.platform.syncRevenueCat({
+              organizationSlug: "acme",
+              env: "test",
+              productIds: [
+                "pro",
+                "premium",
+              ],
+            });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.platform.sync_revenue_cat(
+                organization_slug="acme",
+                env="test",
+                product_ids=[
+                    "pro",
+                    "premium",
+                ],
+            )
+  /v1/platform.get_revenuecat_keys:
+    post:
+      operationId: getRevenueCatKeys
+      description: Retrieve a managed organization's RevenueCat public (SDK) API keys,
+        grouped by app — for the test store, App Store, and Google Play Store.
+        Use these to configure the RevenueCat SDK in the org's mobile app.
+      tags:
+        - platform
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                organization_slug:
+                  type: string
+                  minLength: 1
+                env:
+                  enum:
+                    - test
+                    - sandbox
+                    - live
+                  type: string
+                  description: '"test" and "sandbox" both target the sandbox environment'
+              required:
+                - organization_slug
+                - env
+              title: GetRevenueCatKeysParams
+              examples:
+                - &a81
+                  organization_slug: acme
+                  env: test
+            example: *a81
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  apps:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        app_id:
+                          type: string
+                        app_type:
+                          type: string
+                          description: RevenueCat store type, e.g. test_store / app_store / play_store
+                        name:
+                          type: string
+                        api_keys:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                              key:
+                                type: string
+                                description: The public SDK API key value
+                              environment:
+                                anyOf:
+                                  - type: string
+                                  - type: "null"
+                                description: e.g. "production" / "sandbox"
+                              app_id:
+                                anyOf:
+                                  - type: string
+                                  - type: "null"
+                              created_at:
+                                type: number
+                            required:
+                              - id
+                              - key
+                            additionalProperties: {}
+                      required:
+                        - app_id
+                        - app_type
+                        - name
+                        - api_keys
+                  oauth_access_token:
+                    anyOf:
+                      - type: string
+                      - type: "null"
+                    description: Freshly-refreshed RevenueCat OAuth access token for the org (null
+                      for api-key orgs). The refresh token is never exposed —
+                      call this endpoint again for a new access token.
+                required:
+                  - apps
+                  - oauth_access_token
+                title: GetRevenueCatKeysResponse
+                examples:
+                  - &a82
+                    apps:
+                      - app_id: app1a2b3c4d
+                        app_type: test_store
+                        name: Acme (Test Store)
+                        api_keys:
+                          - id: apikey12345
+                            key: test_aBcDeFgHiJkLmNoPqRsTuVwXyZ
+                            environment: production
+                            app_id: app1a2b3c4
+                    oauth_access_token: atk_aBcDeFgHiJkLmNoPqRsTuVwXyZ
+              example: *a82
+      x-speakeasy-name-override: getRevenueCatKeys
+      parameters:
+        - *a5
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.platform.getRevenueCatKeys({
+              organizationSlug: "acme",
+              env: "test",
+            });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.platform.get_revenue_cat_keys(
+                organization_slug="acme",
+                env="test",
             )
 security:
   - secretKey: []

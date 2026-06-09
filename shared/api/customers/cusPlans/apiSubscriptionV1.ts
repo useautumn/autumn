@@ -52,6 +52,10 @@ export const ApiSubscriptionV1Schema = z.object({
 	quantity: z.number().meta({
 		description: "Number of units of this subscription (for per-seat plans).",
 	}),
+	scope: z.enum(["customer", "entity"]).optional().meta({
+		description:
+			"Whether this subscription is attached at the customer level or entity level.",
+	}),
 });
 
 export const ApiPurchaseV0Schema = z.object({
@@ -70,6 +74,10 @@ export const ApiPurchaseV0Schema = z.object({
 	}),
 	quantity: z.number().meta({
 		description: "Number of units purchased.",
+	}),
+	scope: z.enum(["customer", "entity"]).optional().meta({
+		description:
+			"Whether this purchase is attached at the customer level or entity level.",
 	}),
 });
 

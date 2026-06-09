@@ -5,7 +5,6 @@ import type {
 	StripeBillingStage,
 } from "@autumn/shared";
 import { InternalError, MetadataType } from "@autumn/shared";
-import { addDays } from "date-fns";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -31,7 +30,7 @@ export const insertMetadataFromBillingPlan = async ({
 	stripeInvoice?: Stripe.Invoice;
 	stripeCheckoutSession?: Stripe.Checkout.Session;
 	resumeAfter?: StripeBillingStage;
-	expiresAt: number;
+	expiresAt: number | null;
 	/** Override the auto-detected metadata type. Used by the enable_plan_immediately checkout flow. */
 	typeOverride?: MetadataType;
 }) => {
@@ -64,7 +63,7 @@ export const insertMetadataFromBillingPlan = async ({
 			stripe_checkout_session_id: stripeCheckoutSession?.id,
 			data,
 			created_at: Date.now(),
-			expires_at: expiresAt ?? addDays(Date.now(), 10).getTime(),
+			expires_at: expiresAt,
 		},
 	});
 

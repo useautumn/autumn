@@ -1,13 +1,3 @@
-import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
-import { Input } from "@/components/v2/inputs/Input";
-import {
-	InputGroup,
-	InputGroupInput,
-	InputGroupText,
-} from "@/components/v2/inputs/InputGroup";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { isFeaturePriceItem } from "@/utils/product/getItemType";
-import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import {
 	BillingInterval,
 	billingToItemInterval,
@@ -19,6 +9,16 @@ import {
 	isContUseItem,
 } from "@autumn/shared";
 import { InfinityIcon } from "@phosphor-icons/react";
+import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
+import { Input } from "@/components/v2/inputs/Input";
+import {
+	InputGroup,
+	InputGroupInput,
+	InputGroupText,
+} from "@/components/v2/inputs/InputGroup";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { isFeaturePriceItem } from "@/utils/product/getItemType";
+import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { UsageReset } from "./UsageReset";
 
 export function IncludedUsage() {
@@ -35,7 +35,7 @@ export function IncludedUsage() {
 	// Helper function to get the display value for the input
 	const getInputValue = () => {
 		if (includedUsage === Infinite) {
-			return "Unlimited";
+			return "";
 		}
 		if (includedUsage === null || includedUsage === undefined) {
 			return "";
@@ -48,18 +48,29 @@ export function IncludedUsage() {
 			<div className="w-full h-auto flex items-end gap-2">
 				<div className="flex-1">
 					<div className="text-tertiary-foreground text-sm block mb-2">
-						{isAiCreditSystem(feature?.type)
-							? `USD budget ${isFeaturePrice ? "granted before billing" : "allocated to this plan"}`
-							: <>Quantity of&nbsp;<span className="font-medium text-foreground">{getFeatureName({ feature, plural: true })}</span>{isFeaturePrice ? " granted before billing" : " that can be used"}</>
-						}
+						{isAiCreditSystem(feature?.type) ? (
+							`USD budget ${isFeaturePrice ? "granted before billing" : "allocated to this plan"}`
+						) : (
+							<>
+								Quantity of&nbsp;
+								<span className="font-medium text-foreground">
+									{getFeatureName({ feature, plural: true })}
+								</span>
+								{isFeaturePrice
+									? " granted before billing"
+									: " that can be used"}
+							</>
+						)}
 					</div>
 					<div className="flex items-center gap-2">
-					{isAiCreditSystem(feature?.type) ? (
-						<InputGroup data-disabled={includedUsage === Infinite}>
+						{isAiCreditSystem(feature?.type) ? (
+							<InputGroup data-disabled={includedUsage === Infinite}>
 								<InputGroupText>$</InputGroupText>
 								<InputGroupInput
 									key={`included-usage-${item.feature_id || item.price_id || "default"}`}
-									placeholder="eg. 10.00"
+									placeholder={
+										includedUsage === Infinite ? "Unlimited" : "eg. 10.00"
+									}
 									value={getInputValue()}
 									onChange={(e) => {
 										const value = e.target.value.trim();

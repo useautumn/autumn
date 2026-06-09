@@ -22,6 +22,7 @@ interface CustomerListFilterButtonProps {
 	extraMenuItems?: React.ReactNode;
 	hasActiveExtraFilters?: boolean;
 	onClearExtra?: () => void;
+	onFilterChange?: () => void;
 	hideSavedViews?: boolean;
 }
 
@@ -29,6 +30,7 @@ export function CustomerListFilterButton({
 	extraMenuItems,
 	hasActiveExtraFilters,
 	onClearExtra,
+	onFilterChange,
 	hideSavedViews,
 }: CustomerListFilterButtonProps = {}) {
 	const { queryStates, setFilters } = useCustomerFilters();
@@ -47,6 +49,7 @@ export function CustomerListFilterButton({
 
 	const clearFilters = () => {
 		setFilters({ status: [], version: [], none: false, processor: [] });
+		onFilterChange?.();
 		onClearExtra?.();
 	};
 
@@ -74,9 +77,9 @@ export function CustomerListFilterButton({
 			>
 				<DropdownMenuGroup className="p-1">
 					{extraMenuItems}
-					<FilterStatusSubMenu />
-					<ProductsSubMenu />
-					<ProcessorSubMenu />
+					<FilterStatusSubMenu onChange={onFilterChange} />
+					<ProductsSubMenu onChange={onFilterChange} />
+					<ProcessorSubMenu onChange={onFilterChange} />
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator className="m-0" />
 				{!hideSavedViews && views.length > 0 && (

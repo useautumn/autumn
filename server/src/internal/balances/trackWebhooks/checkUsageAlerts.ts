@@ -15,7 +15,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
 type AlertScope = "customer" | "entity" | "org";
 
-const wasThresholdCrossed = ({
+export const wasThresholdCrossed = ({
 	alert,
 	oldApiBalance,
 	newApiBalance,
@@ -26,8 +26,8 @@ const wasThresholdCrossed = ({
 }) => {
 	if (alert.threshold_type === "usage") {
 		const shldAlert =
-			oldApiBalance.usage <= alert.threshold &&
-			newApiBalance.usage > alert.threshold;
+			oldApiBalance.usage < alert.threshold &&
+			newApiBalance.usage >= alert.threshold;
 
 		return shldAlert;
 	}
@@ -73,7 +73,7 @@ const wasThresholdCrossed = ({
 			.mul(100)
 			.toNumber();
 
-		return oldPercentage <= alert.threshold && newPercentage > alert.threshold;
+		return oldPercentage < alert.threshold && newPercentage >= alert.threshold;
 	}
 
 	return false;
@@ -207,7 +207,7 @@ export const checkUsageAlerts = async ({
 		scope: "customer",
 	});
 
-	// 2. Org-level alerts (apply to all customers; evaluated against customer-level balance).
+	// 2. Org-level alerts apply to all customers and use the tracked subject.
 	// Env-scoped: sandbox reads sandbox_usage_alerts, live reads usage_alerts.
 	const orgAlerts =
 		ctx.env === AppEnv.Sandbox
@@ -219,6 +219,7 @@ export const checkUsageAlerts = async ({
 			oldFullCus,
 			newFullCus,
 			feature,
+			entityId,
 			alerts: orgAlerts,
 			scope: "org",
 		});

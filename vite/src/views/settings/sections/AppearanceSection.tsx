@@ -21,13 +21,21 @@ interface PreviewColors {
 }
 
 const LIGHT: PreviewColors = {
-	bg: "bg-white", sidebar: "bg-[#f5f5f4]", card: "bg-[#fafaf9]",
-	line: "bg-[#e5e5e5]", header: "bg-[#f5f5f4]", dot: "bg-[#d1d1d1]",
+	bg: "bg-white",
+	sidebar: "bg-[#f5f5f4]",
+	card: "bg-[#fafaf9]",
+	line: "bg-[#e5e5e5]",
+	header: "bg-[#f5f5f4]",
+	dot: "bg-[#d1d1d1]",
 };
 
 const DARK: PreviewColors = {
-	bg: "bg-[#0a0a0a]", sidebar: "bg-[#000000]", card: "bg-[#0f0f0f]",
-	line: "bg-[#1e1e1e]", header: "bg-[#111111]", dot: "bg-[#333333]",
+	bg: "bg-[#0a0a0a]",
+	sidebar: "bg-[#000000]",
+	card: "bg-[#0f0f0f]",
+	line: "bg-[#1e1e1e]",
+	header: "bg-[#111111]",
+	dot: "bg-[#333333]",
 };
 
 const MODE_OPTIONS = [
@@ -42,32 +50,82 @@ const PRESET_OPTIONS = [
 		label: "Classic",
 		description: "The original Autumn look",
 		icon: <Leaf className="size-5 text-muted-foreground" />,
-		light: { bg: "bg-[#fafaf9]", sidebar: "bg-[#F5F5F4]", card: "bg-[#f8f8f7]", line: "bg-[#e5e5e5]", header: "bg-[#F5F5F4]", dot: "bg-[#d1d1d1]" },
-		dark: { bg: "bg-[#161616]", sidebar: "bg-[#121212]", card: "bg-[#1a1a1a]", line: "bg-[#2c2c2c]", header: "bg-[#1a1a1a]", dot: "bg-[#3a3a3a]" },
+		light: {
+			bg: "bg-[#fafaf9]",
+			sidebar: "bg-[#F5F5F4]",
+			card: "bg-[#f8f8f7]",
+			line: "bg-[#e5e5e5]",
+			header: "bg-[#F5F5F4]",
+			dot: "bg-[#d1d1d1]",
+		},
+		dark: {
+			bg: "bg-[#161616]",
+			sidebar: "bg-[#121212]",
+			card: "bg-[#1a1a1a]",
+			line: "bg-[#2c2c2c]",
+			header: "bg-[#1a1a1a]",
+			dot: "bg-[#3a3a3a]",
+		},
 	},
 	{
 		id: "modern",
 		label: { light: "Noon", dark: "Midnight" },
 		description: "Deeper contrast, sharper feel",
 		icon: <Moon className="size-5 text-muted-foreground" />,
-		light: { bg: "bg-white", sidebar: "bg-[#fafaf9]", card: "bg-[#f7f7f7]", line: "bg-[#e5e5e5]", header: "bg-[#fafaf9]", dot: "bg-[#d1d1d1]" },
-		dark: { bg: "bg-[#0a0a0a]", sidebar: "bg-[#000000]", card: "bg-[#0f0f0f]", line: "bg-[#1a1a1a]", header: "bg-[#0f0f0f]", dot: "bg-[#2a2a2a]" },
+		light: {
+			bg: "bg-white",
+			sidebar: "bg-[#fafaf9]",
+			card: "bg-[#f7f7f7]",
+			line: "bg-[#e5e5e5]",
+			header: "bg-[#fafaf9]",
+			dot: "bg-[#d1d1d1]",
+		},
+		dark: {
+			bg: "bg-[#0a0a0a]",
+			sidebar: "bg-[#000000]",
+			card: "bg-[#0f0f0f]",
+			line: "bg-[#1a1a1a]",
+			header: "bg-[#0f0f0f]",
+			dot: "bg-[#2a2a2a]",
+		},
 	},
 	{
 		id: "cursed",
 		label: "Cursed",
 		description: "A̸ ̷g̶r̴e̵a̷t̸ ̶T̵a̴n̶v̷i̴r̸ ̵A̶h̷m̴e̸d̵ ̷s̶p̴e̵c̷i̸a̶l̴",
 		icon: <Skull className="size-5 text-muted-foreground" />,
-		light: { bg: "bg-[#ff00aa]", sidebar: "bg-[#00ff88]", card: "bg-[#00ddff]", line: "bg-[#ff0000]", header: "bg-[#ffff00]", dot: "bg-[#ff8800]" },
-		dark: { bg: "bg-[#2a0033]", sidebar: "bg-[#003322]", card: "bg-[#330044]", line: "bg-[#ff00ff]", header: "bg-[#441166]", dot: "bg-[#00ff88]" },
+		light: {
+			bg: "bg-[#ff00aa]",
+			sidebar: "bg-[#00ff88]",
+			card: "bg-[#00ddff]",
+			line: "bg-[#ff0000]",
+			header: "bg-[#ffff00]",
+			dot: "bg-[#ff8800]",
+		},
+		dark: {
+			bg: "bg-[#2a0033]",
+			sidebar: "bg-[#003322]",
+			card: "bg-[#330044]",
+			line: "bg-[#ff00ff]",
+			header: "bg-[#441166]",
+			dot: "bg-[#00ff88]",
+		},
 	},
 ] as const;
 
 const tc = "transition-colors duration-200";
 
-function ThemePreview({ colors, height = "h-[72px]" }: { colors: PreviewColors; height?: string }) {
+function ThemePreview({
+	colors,
+	height = "h-[72px]",
+}: {
+	colors: PreviewColors;
+	height?: string;
+}) {
 	return (
-		<div className={cn("rounded-md border overflow-hidden", tc, height, colors.bg)}>
+		<div
+			className={cn("rounded-md border overflow-hidden", tc, height, colors.bg)}
+		>
 			<div className="flex h-full">
 				<div className={cn("w-[22%] h-full flex flex-col", tc, colors.sidebar)}>
 					<div className="p-1.5 flex items-center gap-1">
@@ -80,7 +138,13 @@ function ThemePreview({ colors, height = "h-[72px]" }: { colors: PreviewColors; 
 					</div>
 				</div>
 				<div className={cn("flex-1 flex flex-col", tc)}>
-					<div className={cn("h-4 border-b border-transparent flex items-center px-2", tc, colors.header)}>
+					<div
+						className={cn(
+							"h-4 border-b border-transparent flex items-center px-2",
+							tc,
+							colors.header,
+						)}
+					>
 						<div className={cn("h-1 w-8 rounded-sm", tc, colors.line)} />
 					</div>
 					<div className="flex-1 p-2 flex flex-col gap-1.5">
@@ -94,7 +158,10 @@ function ThemePreview({ colors, height = "h-[72px]" }: { colors: PreviewColors; 
 	);
 }
 
-function resolvePresetLabel(label: string | { light: string; dark: string }, isDark: boolean): string {
+function resolvePresetLabel(
+	label: string | { light: string; dark: string },
+	isDark: boolean,
+): string {
 	return typeof label === "string" ? label : isDark ? label.dark : label.light;
 }
 
@@ -130,7 +197,15 @@ export const AppearanceSection = () => {
 							)}
 						>
 							<ThemePreview
-								colors={option.id === "light" ? LIGHT : option.id === "dark" ? DARK : systemPrefersDark() ? DARK : LIGHT}
+								colors={
+									option.id === "light"
+										? LIGHT
+										: option.id === "dark"
+											? DARK
+											: systemPrefersDark()
+												? DARK
+												: LIGHT
+								}
 							/>
 							<div className="flex items-center gap-1.5 px-0.5">
 								{option.icon}
@@ -144,7 +219,9 @@ export const AppearanceSection = () => {
 			<Card className="shadow-none bg-interactive-secondary">
 				<CardHeader>
 					<CardTitle>Theme</CardTitle>
-					<CardDescription>Select a visual style for the dashboard</CardDescription>
+					<CardDescription>
+						Select a visual style for the dashboard
+					</CardDescription>
 				</CardHeader>
 				<CardContent>
 					<div className="grid grid-cols-2 gap-3">
@@ -155,22 +232,27 @@ export const AppearanceSection = () => {
 									key={option.id}
 									type="button"
 									onClick={() => setPreset(option.id)}
-								className={cn(
-									"flex flex-col gap-2.5 rounded-lg border p-2.5 transition-all duration-200 cursor-pointer text-left",
-									option.id === "cursed" && "col-span-2",
-									isActive
-										? "border-primary ring-2 ring-primary/20 ring-offset-1 ring-offset-background"
-										: "border-border hover:border-muted-foreground/30",
-								)}
+									className={cn(
+										"flex flex-col gap-2.5 rounded-lg border p-2.5 transition-all duration-200 cursor-pointer text-left",
+										option.id === "cursed" && "col-span-2",
+										isActive
+											? "border-primary ring-2 ring-primary/20 ring-offset-1 ring-offset-background"
+											: "border-border hover:border-muted-foreground/30",
+									)}
 								>
-									<ThemePreview colors={isDark ? option.dark : option.light} height="h-[80px]" />
+									<ThemePreview
+										colors={isDark ? option.dark : option.light}
+										height="h-[80px]"
+									/>
 									<div className="flex items-center gap-2.5 px-0.5">
 										{option.icon}
 										<div className="flex flex-col gap-0.5">
 											<span className="text-sm font-medium">
 												{resolvePresetLabel(option.label, isDark)}
 											</span>
-											<span className="text-xs text-muted-foreground">{option.description}</span>
+											<span className="text-xs text-muted-foreground">
+												{option.description}
+											</span>
 										</div>
 									</div>
 								</button>

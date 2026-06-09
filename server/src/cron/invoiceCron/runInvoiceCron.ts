@@ -113,26 +113,34 @@ export const handleVoidInvoiceCron = async ({
 	}
 };
 
+export const getExpiredInvoiceMetadata = async ({
+	db,
+}: {
+	db: CronContext["db"];
+}) => {
+	return db
+		.select()
+		.from(metadata)
+		.where(
+			and(
+				or(
+					eq(metadata.type, MetadataType.InvoiceActionRequired),
+					eq(metadata.type, MetadataType.InvoiceCheckout),
+					eq(metadata.type, MetadataType.DeferredInvoice),
+				),
+				isNotNull(metadata.expires_at),
+				lt(metadata.expires_at, Date.now()),
+				isNotNull(metadata.stripe_invoice_id),
+			),
+		);
+};
+
 export const runInvoiceCron = async ({ ctx }: { ctx: CronContext }) => {
 	try {
 		console.log("Running invoice cron");
 		const { db } = ctx;
 
-		// 1. Fetch from metadata invoices
-		const invoices = await db
-			.select()
-			.from(metadata)
-			.where(
-				and(
-					or(
-						eq(metadata.type, MetadataType.InvoiceActionRequired),
-						eq(metadata.type, MetadataType.InvoiceCheckout),
-						eq(metadata.type, MetadataType.DeferredInvoice),
-					),
-					lt(metadata.expires_at, Date.now()),
-					isNotNull(metadata.stripe_invoice_id),
-				),
-			);
+		const invoices = await getExpiredInvoiceMetadata({ db });
 
 		const batchSize = 50;
 		for (let i = 0; i < invoices.length; i += batchSize) {

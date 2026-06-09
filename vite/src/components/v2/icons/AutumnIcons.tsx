@@ -365,6 +365,28 @@ const FreeTrialIcon = ({
 	);
 };
 
+export const StripeIcon = ({
+	size = 16,
+	className,
+}: {
+	size?: number;
+	className?: string;
+}) => {
+	return (
+		<svg
+			width={size}
+			height={size}
+			viewBox="2 3 20 18"
+			fill="currentColor"
+			xmlns="http://www.w3.org/2000/svg"
+			aria-label="Stripe"
+			className={className}
+		>
+			<path d="M5.5 8L20.5 5L18.5 16L3.5 19Z" />
+		</svg>
+	);
+};
+
 export const RevenueCatIcon = ({
 	size = 32,
 	color = "currentColor",

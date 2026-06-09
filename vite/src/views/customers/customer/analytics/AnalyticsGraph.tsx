@@ -1,15 +1,23 @@
-import { memo, startTransition, useCallback, useMemo, useRef, useState } from "react";
-import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { ChartContainer, type ChartConfig } from "@/components/ui/chart";
-import { cn } from "@/lib/utils";
-import { useAnalyticsContext } from "./AnalyticsContext";
-import type { Row } from "./components/analytics-types";
 import {
-	formatCompactNumber,
-	formatDateShort,
-	formatHourMinute,
-	parseUTCTimestamp,
-} from "./utils/parseTimestamp";
+	memo,
+	startTransition,
+	useCallback,
+	useLayoutEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
+import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
+import { cn } from "@/lib/utils";
+import type { Row } from "./components/analytics-types";
+import { useAnalyticsQueryState } from "./hooks/useAnalyticsQueryState";
+import {
+	CHART_MARGIN,
+	type PlotInsets,
+	Y_AXIS_WIDTH,
+} from "./utils/chartGeometry";
+import { formatCompactNumber, formatPeriodLabel } from "./utils/parseTimestamp";
 
 interface ChartSeriesConfig {
 	xKey: string;
@@ -38,9 +46,7 @@ function TooltipItem({ item, label }: { item: any; label: string }) {
 				className="h-2.5 w-2.5 shrink-0 rounded-sm"
 				style={{ background: item.color }}
 			/>
-			<span className="flex-1 truncate text-tertiary-foreground">
-				{label}
-			</span>
+			<span className="flex-1 truncate text-tertiary-foreground">{label}</span>
 			<span className="tabular-nums text-muted-foreground">
 				{Number(item.value).toLocaleString()}
 			</span>
@@ -51,6 +57,8 @@ function TooltipItem({ item, label }: { item: any; label: string }) {
 export const EventsBarChart = memo(function EventsBarChart({
 	data,
 	chartConfig,
+	domainMax,
+	onGeometry,
 }: {
 	data: {
 		meta: any[];
@@ -58,12 +66,45 @@ export const EventsBarChart = memo(function EventsBarChart({
 		data: Row[];
 	};
 	chartConfig: ChartSeriesConfig[];
+	domainMax?: number;
+	onGeometry?: (insets: PlotInsets) => void;
 }) {
-	const { selectedInterval } = useAnalyticsContext();
+	const { queryStates } = useAnalyticsQueryState();
+	const selectedInterval = queryStates.interval;
 	const [hoveredKey, setHoveredKey] = useState<string | null>(null);
 	const [activeRow, setActiveRow] = useState<Row | null>(null);
-	const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
+	const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(
+		null,
+	);
 	const containerRef = useRef<HTMLDivElement>(null);
+
+	useLayoutEffect(() => {
+		const container = containerRef.current;
+		if (!container || !onGeometry) {
+			return;
+		}
+		const measure = () => {
+			const grid = container.querySelector(".recharts-cartesian-grid");
+			if (!grid) {
+				return;
+			}
+			const c = container.getBoundingClientRect();
+			const g = grid.getBoundingClientRect();
+			if (g.width === 0 || g.height === 0) {
+				return;
+			}
+			onGeometry({
+				left: Math.round(g.left - c.left),
+				right: Math.round(c.right - g.right),
+				top: Math.round(g.top - c.top),
+				bottom: Math.round(c.bottom - g.bottom),
+			});
+		};
+		measure();
+		const observer = new ResizeObserver(measure);
+		observer.observe(container);
+		return () => observer.disconnect();
+	}, [onGeometry, data]);
 
 	const handleBarMouseEnter = useCallback(
 		(dataKey: string) => (entry: any) =>
@@ -75,7 +116,8 @@ export const EventsBarChart = memo(function EventsBarChart({
 	);
 	const handleMouseMove = useCallback((e: React.MouseEvent) => {
 		const rect = containerRef.current?.getBoundingClientRect();
-		if (rect) setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
+		if (rect)
+			setMousePos({ x: e.clientX - rect.left, y: e.clientY - rect.top });
 	}, []);
 	const handleChartMouseLeave = useCallback(() => {
 		setHoveredKey(null);
@@ -85,11 +127,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 
 	const formatXAxis = useCallback(
 		(value: string): string => {
-			const date = parseUTCTimestamp(value);
-			if (!Number.isFinite(date.getTime())) return value;
-			return selectedInterval === "24h"
-				? formatHourMinute(date)
-				: formatDateShort(date);
+			return formatPeriodLabel({ period: value, interval: selectedInterval });
 		},
 		[selectedInterval],
 	);
@@ -105,7 +143,11 @@ export const EventsBarChart = memo(function EventsBarChart({
 	const tooltipData = useMemo(() => {
 		if (!activeRow) return null;
 		const allItems = chartConfig
-			.map((s) => ({ dataKey: s.yKey, value: Number(activeRow[s.yKey] ?? 0), color: s.fill }))
+			.map((s) => ({
+				dataKey: s.yKey,
+				value: Number(activeRow[s.yKey] ?? 0),
+				color: s.fill,
+			}))
 			.filter((i) => i.value !== 0);
 		const items = hoveredKey
 			? allItems.filter((i) => i.dataKey === hoveredKey)
@@ -121,9 +163,12 @@ export const EventsBarChart = memo(function EventsBarChart({
 
 	const visible = tooltipData?.items.slice(0, MAX_TOOLTIP_ITEMS) ?? [];
 	const overflow = (tooltipData?.items.length ?? 0) - visible.length;
-	const overflowSum = overflow > 0
-		? tooltipData!.items.slice(MAX_TOOLTIP_ITEMS).reduce((s, i) => s + i.value, 0)
-		: 0;
+	const overflowSum =
+		overflow > 0
+			? tooltipData!.items
+					.slice(MAX_TOOLTIP_ITEMS)
+					.reduce((s, i) => s + i.value, 0)
+			: 0;
 
 	return (
 		<div
@@ -144,6 +189,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 				<BarChart
 					data={data.data}
 					className="pt-3 pr-2"
+					margin={CHART_MARGIN}
 					barCategoryGap="10%"
 					style={CHART_STYLE}
 					throttleDelay="raf"
@@ -166,9 +212,10 @@ export const EventsBarChart = memo(function EventsBarChart({
 					<YAxis
 						tickLine={false}
 						axisLine={false}
-						width={40}
+						width={Y_AXIS_WIDTH}
 						tickMargin={0}
 						tickCount={5}
+						domain={domainMax != null ? [0, domainMax] : undefined}
 						tick={Y_TICK}
 						tickFormatter={formatCompactNumber}
 					/>
@@ -181,6 +228,7 @@ export const EventsBarChart = memo(function EventsBarChart({
 							activeBar={false}
 							style={CHART_STYLE}
 							onMouseEnter={barHandlers[si]}
+							isAnimationActive={false}
 						/>
 					))}
 				</BarChart>
@@ -191,7 +239,10 @@ export const EventsBarChart = memo(function EventsBarChart({
 					style={{
 						top: mousePos.y - 12,
 						...((containerRef.current?.offsetWidth ?? 0) - mousePos.x < 200
-							? { right: (containerRef.current?.offsetWidth ?? 0) - mousePos.x + 12 }
+							? {
+									right:
+										(containerRef.current?.offsetWidth ?? 0) - mousePos.x + 12,
+								}
 							: { left: mousePos.x + 12 }),
 					}}
 				>
@@ -201,14 +252,19 @@ export const EventsBarChart = memo(function EventsBarChart({
 							<TooltipItem
 								key={item.dataKey}
 								item={item}
-								label={rechartsConfig[item.dataKey]?.label as string ?? item.dataKey}
+								label={
+									(rechartsConfig[item.dataKey]?.label as string) ??
+									item.dataKey
+								}
 							/>
 						))}
 						{overflow > 0 && (
 							<div className="flex items-center gap-2 text-muted-foreground">
 								<span className="h-2.5 w-2.5 shrink-0" />
 								<span className="flex-1">+{overflow} more</span>
-								<span className="tabular-nums">{overflowSum.toLocaleString()}</span>
+								<span className="tabular-nums">
+									{overflowSum.toLocaleString()}
+								</span>
 							</div>
 						)}
 					</div>

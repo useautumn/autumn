@@ -97,6 +97,16 @@ GetEntityStatus = Union[
 r"""Current status of the subscription."""
 
 
+GetEntitySubscriptionScope = Union[
+    Literal[
+        "customer",
+        "entity",
+    ],
+    UnrecognizedStr,
+]
+r"""Whether this subscription is attached at the customer level or entity level."""
+
+
 class GetEntitySubscriptionTypedDict(TypedDict):
     id: str
     r"""The unique identifier of this subscription. If a subscription_id was provided at attach time, it is used; otherwise, falls back to the internal ID."""
@@ -125,6 +135,8 @@ class GetEntitySubscriptionTypedDict(TypedDict):
     quantity: float
     r"""Number of units of this subscription (for per-seat plans)."""
     plan: NotRequired[PlanTypedDict]
+    scope: NotRequired[GetEntitySubscriptionScope]
+    r"""Whether this subscription is attached at the customer level or entity level."""
 
 
 class GetEntitySubscription(BaseModel):
@@ -169,9 +181,12 @@ class GetEntitySubscription(BaseModel):
 
     plan: Optional[Plan] = None
 
+    scope: Optional[GetEntitySubscriptionScope] = None
+    r"""Whether this subscription is attached at the customer level or entity level."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["plan"])
+        optional_fields = set(["plan", "scope"])
         nullable_fields = set(
             [
                 "canceled_at",
@@ -203,6 +218,16 @@ class GetEntitySubscription(BaseModel):
         return m
 
 
+GetEntityPurchaseScope = Union[
+    Literal[
+        "customer",
+        "entity",
+    ],
+    UnrecognizedStr,
+]
+r"""Whether this purchase is attached at the customer level or entity level."""
+
+
 class GetEntityPurchaseTypedDict(TypedDict):
     plan_id: str
     r"""The unique identifier of the purchased plan."""
@@ -213,6 +238,8 @@ class GetEntityPurchaseTypedDict(TypedDict):
     quantity: float
     r"""Number of units purchased."""
     plan: NotRequired[PlanTypedDict]
+    scope: NotRequired[GetEntityPurchaseScope]
+    r"""Whether this purchase is attached at the customer level or entity level."""
 
 
 class GetEntityPurchase(BaseModel):
@@ -230,9 +257,12 @@ class GetEntityPurchase(BaseModel):
 
     plan: Optional[Plan] = None
 
+    scope: Optional[GetEntityPurchaseScope] = None
+    r"""Whether this purchase is attached at the customer level or entity level."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["plan"])
+        optional_fields = set(["plan", "scope"])
         nullable_fields = set(["expires_at"])
         serialized = handler(self)
         m = {}

@@ -274,12 +274,13 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779977746466,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781187346466,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1780584084429,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781793684429,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
 @param entityId - Optional entity ID for an entity-scoped schedule. (optional)
 @param invoiceMode - Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase. (optional)
+@param discounts - List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param successUrl - URL to redirect to after successful checkout. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param redirectMode - Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects. (optional)
@@ -704,6 +705,12 @@ const response = await client.features.delete({ featureId: "old-feature" });
 * [update](docs/sdks/plans/README.md#update) - Update a plan
 * [delete](docs/sdks/plans/README.md#delete) - Delete a plan
 
+### [Platform](docs/sdks/platform/README.md)
+
+* [linkRevenueCat](docs/sdks/platform/README.md#linkrevenuecat) - Generate a RevenueCat OAuth URL for linking a project to an organization.
+* [syncRevenueCat](docs/sdks/platform/README.md#syncrevenuecat) - Push an organization's plans into RevenueCat as products (creating or renaming them across the project's apps) and set test-store prices from each plan's price. Requires the org to have linked RevenueCat via OAuth.
+* [getRevenueCatKeys](docs/sdks/platform/README.md#getrevenuecatkeys) - Retrieve a managed organization's RevenueCat public (SDK) API keys, grouped by app — for the test store, App Store, and Google Play Store. Use these to configure the RevenueCat SDK in the org's mobile app.
+
 ### [Referrals](docs/sdks/referrals/README.md)
 
 * [createCode](docs/sdks/referrals/README.md#createcode) - Create or fetch a referral code for a customer in a referral program.
@@ -793,12 +800,13 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1779977746466,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781187346466,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1780584084429,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781793684429,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
 @param entityId - Optional entity ID for an entity-scoped schedule. (optional)
 @param invoiceMode - Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase. (optional)
+@param discounts - List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
 @param successUrl - URL to redirect to after successful checkout. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 @param redirectMode - Controls when to return a checkout URL for the immediate phase. 'always' forces a confirmation or checkout flow, 'if_required' only redirects when needed, and 'never' disables redirects. (optional)
@@ -1239,6 +1247,9 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 - [`plansGet`](docs/sdks/plans/README.md#get) - Get a plan
 - [`plansList`](docs/sdks/plans/README.md#list) - List all plans
 - [`plansUpdate`](docs/sdks/plans/README.md#update) - Update a plan
+- [`platformGetRevenueCatKeys`](docs/sdks/platform/README.md#getrevenuecatkeys) - Retrieve a managed organization's RevenueCat public (SDK) API keys, grouped by app — for the test store, App Store, and Google Play Store. Use these to configure the RevenueCat SDK in the org's mobile app.
+- [`platformLinkRevenueCat`](docs/sdks/platform/README.md#linkrevenuecat) - Generate a RevenueCat OAuth URL for linking a project to an organization.
+- [`platformSyncRevenueCat`](docs/sdks/platform/README.md#syncrevenuecat) - Push an organization's plans into RevenueCat as products (creating or renaming them across the project's apps) and set test-store prices from each plan's price. Requires the org to have linked RevenueCat via OAuth.
 - [`referralsCreateCode`](docs/sdks/referrals/README.md#createcode) - Create or fetch a referral code for a customer in a referral program.
 - [`referralsRedeemCode`](docs/sdks/referrals/README.md#redeemcode) - Redeem a referral code for a customer.
 - [`rewardsRedeemCode`](docs/sdks/rewards/README.md#redeemcode) - Redeem a reward promo code for a customer.

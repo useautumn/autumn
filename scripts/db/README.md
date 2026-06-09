@@ -13,7 +13,9 @@ bun db mark-applied  [--env=dev|staging|prod] # seed drizzle.__drizzle_migration
 bun db rebase                                 # auto-resolve a local migration that collided with origin/dev
 ```
 
-`migrate` and `migrate:dry` also run a safety check that **refuses to apply any pending migration containing `CREATE INDEX`, `DROP INDEX`, or `REINDEX` without `CONCURRENTLY`**. Those DDL statements take an ACCESS EXCLUSIVE lock and can block reads/writes on busy tables. To get through the check: either rewrite the SQL with `CONCURRENTLY` and apply manually + `mark-applied`, or add `.concurrently()` to the index in your schema and regenerate.
+`migrate` applies pending migrations directly via `pg` (using drizzle's own `readMigrationFiles` for parsing + hashing), so the tracking table stays compatible with drizzle and `mark-applied`. Unlike drizzle's built-in `migrate()` — which wraps every migration in a single transaction — our executor runs any statement containing `CONCURRENTLY` in autocommit, so `CREATE INDEX CONCURRENTLY` migrations apply normally. Everything else still runs in a per-migration transaction.
+
+`migrate` and `migrate:dry` also run a safety check that **refuses to apply any pending migration containing `CREATE INDEX`, `DROP INDEX`, or `REINDEX` without `CONCURRENTLY`**. Those DDL statements take an ACCESS EXCLUSIVE lock and can block reads/writes on busy tables. To get through the check, make the index concurrent: rewrite the SQL with `CONCURRENTLY`, or add `.concurrently()` to the index in your schema and regenerate. Concurrent index migrations then apply through `bun db migrate` with no manual step.
 
 `--env` defaults to `dev`. `generate` and `rebase` never touch a DB and don't take `--env`.
 
@@ -133,17 +135,20 @@ scripts/db/
 ├── commands/
 │   ├── help.ts
 │   ├── generate.ts        # passthrough to `bun -F @autumn/shared db:generate`
-│   ├── migrate.ts         # passthrough to `bun -F @autumn/shared db:migrate`
+│   ├── migrate.ts         # applies pending migrations (CONCURRENTLY-aware executor)
 │   ├── markApplied.ts     # seeds drizzle.__drizzle_migrations
 │   └── rebase.ts          # auto-resolves duplicate-idx conflicts
 ├── helpers/
+│   ├── applyMigrations.ts # per-migration executor: autocommit for CONCURRENTLY, tx otherwise
 │   ├── env.ts             # --env parsing + infisical wrap + DATABASE_URL host extraction
+│   ├── pendingMigrations.ts # computes pending set from _journal.json vs tracking table
+│   ├── safetyCheck.ts     # flags non-CONCURRENTLY index DDL
 │   ├── paths.ts           # canonical paths to shared/drizzle/ and meta/
 │   └── spawn.ts           # thin child_process.spawn wrapper
 └── pull.ts                # unrelated — customer data pull (legacy)
 ```
 
-`shared/package.json` still owns the implementation of `db:generate` and `db:migrate` (which are what the CLI shells out to under the hood). The unified `bun db` interface lives at the repo root.
+`shared/package.json` still owns `db:generate` (which `generate` shells out to). `migrate` no longer delegates to drizzle-kit — it reads the committed migrations with drizzle's `readMigrationFiles` and applies them itself so `CONCURRENTLY` works. The unified `bun db` interface lives at the repo root.
 
 ---
 

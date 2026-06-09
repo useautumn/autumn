@@ -17,6 +17,8 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 		invoice: z.boolean().optional(),
 		enable_product_immediately: z.boolean().optional(),
 		finalize_invoice: z.boolean().optional(),
+		invoice_template_id: z.string().optional(),
+		net_terms_days: z.number().int().positive().optional(),
 
 		// New
 

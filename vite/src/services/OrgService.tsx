@@ -24,4 +24,19 @@ export class OrgService {
 	) {
 		return await axiosInstance.patch(`/v1/organization/vercel`, data);
 	}
+
+	static async getChat(axiosInstance: AxiosInstance) {
+		return await axiosInstance.get(`/organization/chat`);
+	}
+
+	static async createChatInstall(
+		axiosInstance: AxiosInstance,
+		data: { provider: "slack"; env: string },
+	) {
+		return await axiosInstance.post(`/organization/chat/install`, data);
+	}
+
+	static async disconnectChat(axiosInstance: AxiosInstance, provider: "slack") {
+		return await axiosInstance.delete(`/organization/chat/${provider}`);
+	}
 }

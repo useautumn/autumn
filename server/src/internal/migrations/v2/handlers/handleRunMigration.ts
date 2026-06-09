@@ -3,15 +3,22 @@ import { auth } from "@trigger.dev/sdk/v3";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { withMigrationRunClaim } from "@/internal/migrations/v2/actions/migrationRun/index.js";
+import { prepare } from "@/internal/migrations/v2/prepare/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
+import { RETRYABLE_MIGRATION_ITEM_RUN_STATUSES } from "@/internal/migrations/v2/run/utils/retryItemStatuses.js";
 import { runMigrationTask } from "@/trigger/migrations/runMigrationTask.js";
+
+const MAX_CONCURRENCY = 5;
 
 const RunMigrationBody = z.object({
 	id: z.string(),
 	dry_run: z.boolean().default(false),
 	limit: z.number().int().min(1).optional(),
 	only: z.array(z.string()).optional(),
-	concurrency: z.number().int().min(1).optional(),
+	concurrency: z.number().int().min(1).max(MAX_CONCURRENCY).optional(),
+	retry_item_statuses: z
+		.array(z.enum(RETRYABLE_MIGRATION_ITEM_RUN_STATUSES))
+		.optional(),
 	/** When true, claim a lazy run alongside the background sweeper. Customers
 	 *  hit on the request path get migrated lazily via `runMigrationCustomerTask`
 	 *  before the sweeper reaches them. Background and lazy run on the same
@@ -21,13 +28,15 @@ const RunMigrationBody = z.object({
 
 const getRunMigrationTriggerOptions = ({
 	orgId,
+	migrationId,
 	isDev,
 }: {
 	orgId: string;
+	migrationId: string;
 	isDev: boolean;
 }) => ({
 	...(isDev ? { region: "eu-central-1" } : {}),
-	concurrencyKey: orgId,
+	concurrencyKey: `${orgId}:${migrationId}`,
 });
 
 export const handleRunMigration = createRoute({
@@ -41,6 +50,7 @@ export const handleRunMigration = createRoute({
 			limit,
 			only,
 			concurrency,
+			retry_item_statuses: retryItemStatuses,
 			lazy_run: lazyRun,
 		} = c.req.valid("json");
 
@@ -53,6 +63,15 @@ export const handleRunMigration = createRoute({
 				statusCode: 400,
 			});
 
+		if (lazyRun && only && only.length > 0) {
+			throw new RecaseError({
+				message:
+					"Migration lazy_run cannot be combined with only. Run targeted customers without lazy_run.",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
 		const isDev = process.env.NODE_ENV === "development";
 		const { migrationRunId, triggerRunId } = await withMigrationRunClaim({
 			ctx,
@@ -62,6 +81,9 @@ export const handleRunMigration = createRoute({
 			onlyIds: only,
 			targetLimit: limit,
 			claimed: async (migrationRunId) => {
+				if (lazyRun && !dryRun) {
+					await prepare({ ctx, migration, dryRun: false });
+				}
 				const handle = await runMigrationTask.trigger(
 					{
 						orgId: ctx.org.id,
@@ -69,10 +91,17 @@ export const handleRunMigration = createRoute({
 						migrationId: id,
 						migrationRunId,
 						dryRun,
-						controls: { limit, only, concurrency },
+						lazyRun,
+						controls: {
+							limit,
+							only,
+							concurrency,
+							retryItemStatuses,
+						},
 					},
 					getRunMigrationTriggerOptions({
 						orgId: ctx.org.id,
+						migrationId: id,
 						isDev,
 					}),
 				);
@@ -96,6 +125,7 @@ export const handleRunMigration = createRoute({
 			migration_id: id,
 			dry_run: dryRun,
 			lazy_run: lazyRun,
+			concurrency,
 			run_id: migrationRunId,
 			trigger_run_id: triggerRunId,
 			public_access_token: publicAccessToken,

@@ -29,6 +29,23 @@ services:
     volumes:
       - autumn-dev-dragonfly:/data
 
+  ngrok:
+    image: ngrok/ngrok:latest
+    profiles:
+      - ngrok
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
+    command:
+      - http
+      - host.docker.internal:8080
+      - --url=${NGROK_DOMAIN}
+      - --pooling-enabled
+      - --log=stdout
+    ports:
+      - "4040:4040"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
 volumes:
   autumn-dev-postgres-18:
   autumn-dev-redis-stack:

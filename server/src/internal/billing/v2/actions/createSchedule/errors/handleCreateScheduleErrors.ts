@@ -2,23 +2,20 @@ import {
 	type CreateScheduleBillingContext,
 	ErrCode,
 	isFreeProduct,
-	ms,
 	RecaseError,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle";
-
-const FIRST_PHASE_TOLERANCE_MS = ms.minutes(15);
+import { handleFirstPhaseStartDateErrors } from "./handleFirstPhaseStartDateErrors";
 
 export const handleCreateScheduleErrors = async ({
 	db,
 	billingContext,
+	preview = false,
 }: {
 	db: DrizzleCli;
 	billingContext: CreateScheduleBillingContext;
+	preview?: boolean;
 }) => {
-	const { currentEpochMs, immediatePhase, stripeSubscriptionSchedule } =
-		billingContext;
-
 	if (
 		billingContext.checkoutMode === "stripe_checkout" &&
 		billingContext.enablePlanImmediately &&
@@ -32,20 +29,7 @@ export const handleCreateScheduleErrors = async ({
 		});
 	}
 
-	// Updates reuse the existing schedule's current-phase start_date downstream
-	// (see executeStripeSubscriptionScheduleAction.buildAnchoredPhases), so the
-	// caller-supplied starts_at for phase 0 is effectively ignored. The
-	// immediate-start guard only makes sense on creation.
-	if (
-		!stripeSubscriptionSchedule &&
-		(immediatePhase.starts_at < currentEpochMs - FIRST_PHASE_TOLERANCE_MS ||
-			immediatePhase.starts_at > currentEpochMs + FIRST_PHASE_TOLERANCE_MS)
-	) {
-		throw new RecaseError({
-			message: "The first phase must start immediately",
-			statusCode: 400,
-		});
-	}
+	handleFirstPhaseStartDateErrors({ billingContext, preview });
 
 	const allImmediateProductsFree = billingContext.fullProducts.every(
 		(product) => isFreeProduct({ prices: product.prices }),
@@ -54,10 +38,9 @@ export const handleCreateScheduleErrors = async ({
 	if (allImmediateProductsFree && billingContext.stripeSubscription) {
 		const subId = billingContext.stripeSubscription.id;
 
-		const productsOnSub =
-			billingContext.fullCustomer.customer_products.filter((cp) =>
-				cp.subscription_ids?.includes(subId),
-			);
+		const productsOnSub = billingContext.fullCustomer.customer_products.filter(
+			(cp) => cp.subscription_ids?.includes(subId),
+		);
 
 		const transitioningOutIds = new Set(
 			billingContext.productContexts

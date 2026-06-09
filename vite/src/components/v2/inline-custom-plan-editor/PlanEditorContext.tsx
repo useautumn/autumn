@@ -33,6 +33,7 @@ interface ProductContextValue {
 	initialItem: ProductItem | null;
 	setSheet: (params: { type: string | null; itemId?: string | null }) => void;
 	setInitialItem: (item: ProductItem | null) => void;
+	updateItemId: (itemId: string) => void;
 	closeSheet: () => void;
 	itemDraft: ItemDraftController;
 }
@@ -54,6 +55,7 @@ export function ProductProvider({
 	initialItem,
 	setSheet,
 	setInitialItem,
+	updateItemId,
 	closeSheet,
 	itemDraft,
 }: {
@@ -68,6 +70,7 @@ export function ProductProvider({
 	initialItem: ProductItem | null;
 	setSheet: (params: { type: string | null; itemId?: string | null }) => void;
 	setInitialItem: (item: ProductItem | null) => void;
+	updateItemId: (itemId: string) => void;
 	closeSheet: () => void;
 	itemDraft: ItemDraftController;
 }) {
@@ -82,6 +85,7 @@ export function ProductProvider({
 				initialItem,
 				setSheet,
 				setInitialItem,
+				updateItemId,
 				closeSheet,
 				itemDraft,
 			}}
@@ -122,6 +126,8 @@ export function useSheet() {
 	const storeSetInitialItem = useSheetStore((s) => s.setInitialItem);
 	const storeCloseSheet = useSheetStore((s) => s.closeSheet);
 
+	const storeUpdateItemId = useSheetStore((s) => s.updateItemId);
+
 	if (context) {
 		return {
 			sheetType: context.sheetType,
@@ -129,6 +135,7 @@ export function useSheet() {
 			initialItem: context.initialItem,
 			setSheet: context.setSheet,
 			setInitialItem: context.setInitialItem,
+			updateItemId: context.updateItemId,
 			closeSheet: context.closeSheet,
 			itemDraft: context.itemDraft,
 		};
@@ -140,6 +147,7 @@ export function useSheet() {
 		initialItem: storeInitialItem,
 		setSheet: storeSetSheet,
 		setInitialItem: storeSetInitialItem,
+		updateItemId: storeUpdateItemId,
 		closeSheet: storeCloseSheet,
 		itemDraft: disabledItemDraftController,
 	};
@@ -180,9 +188,9 @@ export function useCurrentItem() {
 }
 
 /** Hook to set the current item being edited. Uses context if available, otherwise Zustand. */
-function useSetCurrentItem() {
+export function useSetCurrentItem() {
 	const { product, setProduct } = useProduct();
-	const { itemId, itemDraft } = useSheet();
+	const { itemId, itemDraft, updateItemId } = useSheet();
 
 	return useCallback(
 		(updatedItem: ProductItem) => {
@@ -207,11 +215,19 @@ function useSetCurrentItem() {
 
 			if (originalIndex === -1) return;
 
+			const newItemId = getItemId({
+				item: updatedItem,
+				itemIndex: originalIndex,
+			});
+			if (newItemId !== itemId) {
+				updateItemId(newItemId);
+			}
+
 			const updatedItems = [...product.items];
 			updatedItems[originalIndex] = updatedItem;
 			setProduct({ ...product, items: updatedItems });
 		},
-		[itemDraft, itemId, product, setProduct],
+		[itemDraft, itemId, product, setProduct, updateItemId],
 	);
 }
 

@@ -18,6 +18,8 @@ export function useCreateScheduleMutation({
 		useInvoice?: boolean;
 		enableProductImmediately?: boolean;
 		finalizeInvoice?: boolean;
+		invoiceTemplateId?: string;
+		netTermsDays?: number;
 	}) => CreateScheduleParamsV0 | null;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
@@ -30,10 +32,14 @@ export function useCreateScheduleMutation({
 			useInvoice,
 			enableProductImmediately,
 			finalizeInvoice,
+			invoiceTemplateId,
+			netTermsDays,
 		}: {
 			useInvoice?: boolean;
 			enableProductImmediately?: boolean;
 			finalizeInvoice?: boolean;
+			invoiceTemplateId?: string;
+			netTermsDays?: number;
 		}) => {
 			if (!customerId) throw new Error("Customer ID is required");
 
@@ -41,6 +47,8 @@ export function useCreateScheduleMutation({
 				useInvoice,
 				enableProductImmediately,
 				finalizeInvoice,
+				invoiceTemplateId,
+				netTermsDays,
 			});
 			if (!requestBody) throw new Error("Failed to build request body");
 
@@ -88,14 +96,20 @@ export function useCreateScheduleMutation({
 	const handleInvoiceSubmit = async ({
 		enableProductImmediately,
 		finalizeInvoice,
+		invoiceTemplateId,
+		netTermsDays,
 	}: {
 		enableProductImmediately: boolean;
 		finalizeInvoice: boolean;
+		invoiceTemplateId?: string;
+		netTermsDays?: number;
 	}) => {
 		const result = await mutation.mutateAsync({
 			useInvoice: true,
 			enableProductImmediately,
 			finalizeInvoice,
+			invoiceTemplateId,
+			netTermsDays,
 		});
 		return {
 			stripeId: result.data?.invoice?.stripe_id,

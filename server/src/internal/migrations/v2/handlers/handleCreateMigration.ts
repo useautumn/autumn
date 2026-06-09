@@ -9,6 +9,7 @@ const CreateMigrationBody = z.object({
 	id: z.string().min(1).max(200),
 	filter: MigrationFilterSchema.nullable().optional(),
 	operations: OperationsSchema.nullable().optional(),
+	no_billing_changes: z.boolean().optional(),
 });
 
 /** POST /migrations.create — create a draft migration. */

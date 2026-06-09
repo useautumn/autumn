@@ -1,4 +1,5 @@
 import path from "node:path";
+import { createTinybirdApi } from "@tinybirdco/sdk";
 
 type ProfileName = "dev" | "prod" | "prod-legacy";
 type TinybirdTarget = "new" | "legacy";
@@ -35,6 +36,7 @@ const usage = `Usage:
   bun tb info
   bun tb deploy:check
   bun tb deploy
+  bun tb token:read <token_name>
   bun tb:prod <tinybird command...>
   bun tb:prod-legacy <tinybird command...>
 
@@ -70,13 +72,56 @@ const requireEnv = (name: string) => {
 	return value;
 };
 
+const requireEnvValue = (env: NodeJS.ProcessEnv, name: string) => {
+	const value = env[name];
+	if (!value) {
+		console.error(`${name} is not set`);
+		process.exit(1);
+	}
+	return value;
+};
+
 const resolveTinybirdArgs = (args: string[]) => {
 	if (args.length === 0 || args[0] === "--help" || args[0] === "-h") {
 		console.log(usage);
 		process.exit(args.length === 0 ? 1 : 0);
 	}
 
+	if (args[0] === "token:read") {
+		const tokenName = args[1];
+		if (!tokenName || args.length > 2) {
+			console.error("Usage: bun tb token:read <token_name>");
+			process.exit(1);
+		}
+
+		return args;
+	}
+
 	return commandAliases[args[0]] ?? args;
+};
+
+const createReadToken = async (tokenName: string, env: NodeJS.ProcessEnv) => {
+	const baseUrl = requireEnvValue(env, "TINYBIRD_API_URL");
+	const api = createTinybirdApi({
+		baseUrl,
+		token: requireEnvValue(env, "TINYBIRD_TOKEN"),
+	});
+
+	const url = new URL("/v0/tokens/", `${baseUrl}/`);
+	url.searchParams.set("name", tokenName);
+	url.searchParams.set("scope", "WORKSPACE:READ_ALL");
+
+	const response = await api.request(url.toString(), {
+		method: "POST",
+	});
+
+	if (!response.ok) {
+		const body = await response.text();
+		throw new Error(`Failed to create Tinybird read token: ${body}`);
+	}
+
+	const result = (await response.json()) as { token?: string };
+	console.log(result.token ?? JSON.stringify(result));
 };
 
 const executeTinybird = async () => {
@@ -92,6 +137,11 @@ const executeTinybird = async () => {
 	}
 
 	const args = resolveTinybirdArgs(Bun.argv.slice(2));
+	if (args[0] === "token:read") {
+		await createReadToken(args[1], env);
+		return;
+	}
+
 	const exitCode = await run(["bunx", "tinybird", ...args], {
 		cwd: serverDir,
 		env,

@@ -1,0 +1,41 @@
+DESCRIPTION >
+    History backfill for events_property_mv (deployed with BACKFILL skip). Fills the window before
+    the MV's promote seam, in bounded chunks on on-demand compute
+    (tb copy run events_property_mv_backfill --on-demand-compute --param start_date=... --param end_date=...).
+    SQL mirrors events_property_mv_pipe EXACTLY (same ARRAY JOIN + value-shape gate) so backfilled
+    rows are identical to forward-materialized ones. Reads from `events`, writes only this rollup.
+
+    Seam safety: MergeTree does not dedup; window is half-open [start_date, end_date). Keep every
+    end_date <= the MV's promote time, chunk by day/week, and watch memory + insert cost (the
+    ARRAY JOIN fans each event by its key count).
+
+NODE migrate
+SQL >
+    %
+    SELECT
+        org_id,
+        env,
+        customer_id,
+        coalesce(entity_id, '') as entity_id,
+        event_name,
+        coalesce(internal_product_id, '') as internal_product_id,
+        kv.1 as property_key,
+        kv.2 as property_value,
+        toStartOfHour(timestamp) as hour,
+        sum(toFloat64(coalesce(value, 1))) as total_value,
+        count() as event_count
+    FROM events
+    ARRAY JOIN JSONExtractKeysAndValues(properties::String, 'String') as kv
+    WHERE timestamp >= {{DateTime(start_date, '2026-06-01 00:00:00')}}
+        AND timestamp < {{DateTime(end_date, '2026-06-02 00:00:00')}}
+        AND kv.2 != ''
+        AND length(kv.2) <= 64
+        AND NOT match(kv.2, '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
+        AND NOT match(kv.2, '^[0-9a-fA-F]{24,}$')
+        AND NOT match(kv.2, '^[A-Za-z0-9_-]{32,}$')
+        AND (toFloat64OrNull(kv.2) IS NULL OR position(kv.2, '.') = 0)
+    GROUP BY org_id, env, customer_id, entity_id, event_name, internal_product_id, property_key, property_value, hour
+
+TYPE COPY
+TARGET_DATASOURCE events_property_mv
+COPY_MODE append

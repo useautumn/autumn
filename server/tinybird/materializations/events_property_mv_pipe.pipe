@@ -1,0 +1,34 @@
+DESCRIPTION >
+    Materializes events into the generic property rollup. ARRAY JOINs the properties JSON into
+    (property_key, property_value) pairs and aggregates per hour. The WHERE is the org-blind,
+    stateless value-shape gate: it DROPS high-entropy values (UUID / long-hex / long-opaque /
+    >64 chars) so jobId/requestId/traceId-class keys never write a row and cannot explode the
+    rollup. Low-card values (apiKeyId "68694", endpoint "scrape") pass and collapse to one row
+    per (dims, key, value, hour).
+
+NODE materialize
+SQL >
+    SELECT
+        org_id,
+        env,
+        customer_id,
+        coalesce(entity_id, '') as entity_id,
+        event_name,
+        coalesce(internal_product_id, '') as internal_product_id,
+        kv.1 as property_key,
+        kv.2 as property_value,
+        toStartOfHour(timestamp) as hour,
+        sum(toFloat64(coalesce(value, 1))) as total_value,
+        count() as event_count
+    FROM events
+    ARRAY JOIN JSONExtractKeysAndValues(properties::String, 'String') as kv
+    WHERE kv.2 != ''
+        AND length(kv.2) <= 64
+        AND NOT match(kv.2, '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$')
+        AND NOT match(kv.2, '^[0-9a-fA-F]{24,}$')
+        AND NOT match(kv.2, '^[A-Za-z0-9_-]{32,}$')
+        AND (toFloat64OrNull(kv.2) IS NULL OR position(kv.2, '.') = 0)
+    GROUP BY org_id, env, customer_id, entity_id, event_name, internal_product_id, property_key, property_value, hour
+
+TYPE materialized
+DATASOURCE events_property_mv

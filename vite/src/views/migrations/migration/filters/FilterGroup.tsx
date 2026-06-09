@@ -16,17 +16,6 @@ import {
 	type FilterRule,
 } from "./filterRowTypes";
 
-const BILLING_METHOD_SUGGESTIONS: ValuePickerOption[] = [
-	{ value: "prepaid", label: "Prepaid" },
-	{ value: "usage_based", label: "Usage Based" },
-];
-
-const ITEM_MODE_SUGGESTIONS: ValuePickerOption[] = [
-	{ value: "some", label: "Any match (some)" },
-	{ value: "every", label: "All match (every)" },
-	{ value: "none", label: "None match (none)" },
-];
-
 function useSuggestionsForField(
 	field: string,
 ): ValuePickerOption[] | undefined {
@@ -55,8 +44,6 @@ function useSuggestionsForField(
 	if (field === "item_feature_id") {
 		return buildFeatureSuggestions(features);
 	}
-	if (field === "item_billing_method") return BILLING_METHOD_SUGGESTIONS;
-	if (field === "item_mode") return ITEM_MODE_SUGGESTIONS;
 	return undefined;
 }
 
@@ -132,7 +119,7 @@ export function FilterGroup({
 				/>
 			))}
 			<AddButton
-				label={group.rules.length === 0 ? "Add condition" : "Add and condition"}
+				label={group.rules.length === 0 ? "Add condition" : "AND condition"}
 				onClick={addRule}
 				className="mt-1"
 			/>

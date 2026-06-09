@@ -78,6 +78,10 @@
 			"project": ["src/**/*.{ts,tsx}"],
 			"ignoreDependencies": ["shadcn", "tailwindcss", "tw-animate-css"]
 		},
+		"apps/leaf": {
+			"entry": ["tests/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"]
+		},
 		"packages/ksuid": {
 			"project": ["src/**/*.ts"]
 		},

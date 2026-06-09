@@ -4,6 +4,7 @@ import { RedirectModeSchema } from "@api/billing/common/redirectMode";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice";
 import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPlanItemParamsV1";
 import { z } from "zod/v4";
+import { AttachDiscountSchema } from "../attachV2/attachDiscount";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 
@@ -26,26 +27,25 @@ const CreateScheduleCustomizePlanSchema = z
 		},
 	);
 
-export const CreateSchedulePlanSchema = z
-	.object({
-		plan_id: z.string().meta({
-			description: "The ID of the plan to schedule in this phase.",
-		}),
-		feature_quantities: z.array(FeatureQuantityParamsV0Schema).optional().meta({
-			description: "Optional prepaid feature quantities for this phase's plan.",
-		}),
-		version: z.number().optional().meta({
-			description: "Optional explicit plan version to schedule.",
-		}),
-		customize: CreateScheduleCustomizePlanSchema.optional().meta({
-			description:
-				"Customize the plan to schedule. Can override the price, items, or both.",
-		}),
-		subscription_id: z.string().optional().meta({
-			description:
-				"A unique ID to identify this subscription. Useful when scheduling the same plan multiple times.",
-		}),
-	});
+export const CreateSchedulePlanSchema = z.object({
+	plan_id: z.string().meta({
+		description: "The ID of the plan to schedule in this phase.",
+	}),
+	feature_quantities: z.array(FeatureQuantityParamsV0Schema).optional().meta({
+		description: "Optional prepaid feature quantities for this phase's plan.",
+	}),
+	version: z.number().optional().meta({
+		description: "Optional explicit plan version to schedule.",
+	}),
+	customize: CreateScheduleCustomizePlanSchema.optional().meta({
+		description:
+			"Customize the plan to schedule. Can override the price, items, or both.",
+	}),
+	subscription_id: z.string().optional().meta({
+		description:
+			"A unique ID to identify this subscription. Useful when scheduling the same plan multiple times.",
+	}),
+});
 
 export const CreateSchedulePhaseSchema = z.object({
 	starts_at: z.number().meta({
@@ -67,6 +67,10 @@ export const CreateScheduleParamsV0Schema = z
 		invoice_mode: InvoiceModeParamsSchema.optional().meta({
 			description:
 				"Invoice mode creates and sends an invoice instead of charging the customer's payment method immediately for the first phase.",
+		}),
+		discounts: z.array(AttachDiscountSchema).optional().meta({
+			description:
+				"List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.",
 		}),
 		success_url: z.string().optional().meta({
 			description: "URL to redirect to after successful checkout.",

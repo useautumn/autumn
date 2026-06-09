@@ -17,7 +17,7 @@ import { PlanItemFilterSchema } from "./planItemFilter.js";
  */
 export const CustomerFilterSchema = z.object({
 	customer_id: StringMatcherSchema.optional(),
-	plan: z.union([arrayFilter(PlanFilterSchema), z.literal("$none")]).optional(),
+	plan: arrayFilter(PlanFilterSchema).optional(),
 	item: arrayFilter(PlanItemFilterSchema).optional(),
 });
 

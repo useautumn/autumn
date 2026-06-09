@@ -15,6 +15,8 @@ export function useAttachMutation({
 		useInvoice?: boolean;
 		enableProductImmediately?: boolean;
 		finalizeInvoice?: boolean;
+		invoiceTemplateId?: string;
+		netTermsDays?: number;
 	}) => AttachParamsV0 | null;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
@@ -27,11 +29,15 @@ export function useAttachMutation({
 			useInvoice,
 			enableProductImmediately,
 			finalizeInvoice,
+			invoiceTemplateId,
+			netTermsDays,
 			skipDefaultSuccess,
 		}: {
 			useInvoice?: boolean;
 			enableProductImmediately?: boolean;
 			finalizeInvoice?: boolean;
+			invoiceTemplateId?: string;
+			netTermsDays?: number;
 			skipDefaultSuccess?: boolean;
 		}) => {
 			if (!customerId) {
@@ -42,6 +48,8 @@ export function useAttachMutation({
 				useInvoice,
 				enableProductImmediately,
 				finalizeInvoice,
+				invoiceTemplateId,
+				netTermsDays,
 			});
 
 			if (!requestBody) {
@@ -102,14 +110,20 @@ export function useAttachMutation({
 	const handleInvoiceAttach = async ({
 		enableProductImmediately,
 		finalizeInvoice,
+		invoiceTemplateId,
+		netTermsDays,
 	}: {
 		enableProductImmediately: boolean;
 		finalizeInvoice: boolean;
+		invoiceTemplateId?: string;
+		netTermsDays?: number;
 	}) => {
 		const result = await mutation.mutateAsync({
 			useInvoice: true,
 			enableProductImmediately,
 			finalizeInvoice,
+			invoiceTemplateId,
+			netTermsDays,
 		});
 		return {
 			stripeId: result.data?.invoice?.stripe_id,

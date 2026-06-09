@@ -65,6 +65,7 @@ export const resolveRevenuecatResources = async ({
 			? getOrCreateCustomer({
 					ctx,
 					customerId,
+					withEntities: true,
 				})
 			: CusService.getFull({
 					ctx,

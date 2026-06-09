@@ -114,6 +114,51 @@ test(`${chalk.yellowBright("usage-alert1: usage threshold crossing triggers webh
 	expect(data.usage_alert.threshold_type).toBe("usage");
 });
 
+test(`${chalk.yellowBright("usage-alert1b: usage threshold fires when usage lands exactly on threshold")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
+	const freeProd = products.base({
+		id: "ua-threshold-exact-1",
+		items: [messagesItem],
+	});
+
+	const { customerId, autumnV2_1 } = await initScenario({
+		customerId: "usage-alert-threshold-exact-1",
+		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
+		actions: [s.attach({ productId: freeProd.id })],
+	});
+
+	await setCustomerUsageAlerts({
+		autumn: autumnV2_1,
+		customerId,
+		usageAlerts: [
+			{
+				feature_id: TestFeature.Messages,
+				threshold: 500,
+				threshold_type: "usage",
+				enabled: true,
+			},
+		],
+	});
+
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 500,
+	});
+
+	const result = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === "balances.usage_alert_triggered" &&
+			payload.data?.customer_id === customerId &&
+			payload.data?.usage_alert?.threshold === 500,
+		timeoutMs: 15000,
+	});
+
+	expect(result).not.toBeNull();
+	expect(result!.payload.data.usage_alert.threshold_type).toBe("usage");
+});
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: Usage percentage threshold crossing triggers webhook
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -168,6 +213,53 @@ test(`${chalk.yellowBright("usage-alert2: usage percentage threshold crossing tr
 	expect(data.feature_id).toBe(TestFeature.Messages);
 	expect(data.usage_alert.threshold).toBe(90);
 	expect(data.usage_alert.threshold_type).toBe("usage_percentage");
+});
+
+test(`${chalk.yellowBright("usage-alert2b: usage percentage threshold fires at exact percentage")}`, async () => {
+	const messagesItem = items.monthlyMessages({ includedUsage: 1000 });
+	const freeProd = products.base({
+		id: "ua-pct-exact-1",
+		items: [messagesItem],
+	});
+
+	const { customerId, autumnV2_1 } = await initScenario({
+		customerId: "usage-alert-pct-exact-1",
+		setup: [s.customer({ testClock: false }), s.products({ list: [freeProd] })],
+		actions: [s.attach({ productId: freeProd.id })],
+	});
+
+	await setCustomerUsageAlerts({
+		autumn: autumnV2_1,
+		customerId,
+		usageAlerts: [
+			{
+				feature_id: TestFeature.Messages,
+				threshold: 100,
+				threshold_type: "usage_percentage",
+				enabled: true,
+			},
+		],
+	});
+
+	await autumnV2_1.track({
+		customer_id: customerId,
+		feature_id: TestFeature.Messages,
+		value: 1000,
+	});
+
+	const result = await waitForWebhook<BalancesUsageAlertTriggeredPayload>({
+		token: playToken,
+		predicate: (payload) =>
+			payload.type === "balances.usage_alert_triggered" &&
+			payload.data?.customer_id === customerId &&
+			payload.data?.usage_alert?.threshold === 100,
+		timeoutMs: 15000,
+	});
+
+	expect(result).not.toBeNull();
+	expect(result!.payload.data.usage_alert.threshold_type).toBe(
+		"usage_percentage",
+	);
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

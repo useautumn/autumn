@@ -22,6 +22,7 @@ const TransferProductSchema = z.object({
 	from_entity_id: z.string().nullish(),
 	to_entity_id: z.string().nullish(),
 	product_id: z.string(),
+	customer_product_id: z.string().nullish(),
 });
 
 // Supports:
@@ -36,7 +37,8 @@ export const handleTransferProductV2 = createRoute({
 		const ctx = c.get("ctx");
 		const { db, org, env } = ctx;
 		const { customer_id } = c.req.param();
-		const { from_entity_id, to_entity_id, product_id } = c.req.valid("json");
+		const { from_entity_id, to_entity_id, product_id, customer_product_id } =
+			c.req.valid("json");
 
 		if (!from_entity_id && !to_entity_id) {
 			throw new RecaseError({
@@ -65,10 +67,16 @@ export const handleTransferProductV2 = createRoute({
 		}
 
 		const fromEntity =
-			customer.entities.find((entity) => entity.id === from_entity_id) ?? null;
+			customer.entities.find(
+				(entity) =>
+					entity.id === from_entity_id || entity.internal_id === from_entity_id,
+			) ?? null;
 
 		const toEntity = to_entity_id
-			? (customer.entities.find((entity) => entity.id === to_entity_id) ?? null)
+			? (customer.entities.find(
+					(entity) =>
+						entity.id === to_entity_id || entity.internal_id === to_entity_id,
+				) ?? null)
 			: null;
 
 		if (to_entity_id && !toEntity) {
@@ -81,6 +89,7 @@ export const handleTransferProductV2 = createRoute({
 			fullCustomer: customer,
 			fromEntity,
 			productId: product_id,
+			customerProductId: customer_product_id,
 		});
 
 		if (!cusProduct) {
@@ -120,6 +129,7 @@ export const handleTransferProductV2 = createRoute({
 				fromEntity,
 				toEntity,
 				product,
+				customerProductId: customer_product_id,
 			});
 
 			await addProductsUpdatedWebhookTask({

@@ -5,6 +5,7 @@ import {
 	BillingInterval,
 	BillWhen,
 	Infinite,
+	PriceSchema,
 } from "@autumn/shared";
 import { pricesAreSame } from "@shared/utils/productUtils/priceUtils/comparePrice/pricesAreSame";
 
@@ -17,15 +18,15 @@ const fixedPrice = {
 	is_custom: false,
 	entitlement_id: null,
 	proration_config: null,
-		config: {
-			type: PriceType.Fixed,
-			amount: 10,
-			interval: BillingInterval.Month,
-			stripe_product_id: null,
-			feature_id: null,
-			internal_feature_id: null,
-		},
-	} satisfies Price;
+	config: {
+		type: PriceType.Fixed,
+		amount: 10,
+		interval: BillingInterval.Month,
+		stripe_product_id: null,
+		feature_id: null,
+		internal_feature_id: null,
+	},
+} satisfies Price;
 
 const usagePrice = {
 	id: "price_usage",
@@ -48,6 +49,22 @@ const usagePrice = {
 } satisfies Price;
 
 describe("pricesAreSame", () => {
+	test("normalizes ignored fixed price metadata", () => {
+		const parsed = PriceSchema.parse({
+			...fixedPrice,
+			config: {
+				...fixedPrice.config,
+				stripe_product_id: "prod_fixed",
+				feature_id: "base",
+				internal_feature_id: "internal_base",
+			},
+		});
+
+		expect(parsed.config.stripe_product_id).toBeNull();
+		expect(parsed.config.feature_id).toBeNull();
+		expect(parsed.config.internal_feature_id).toBeNull();
+	});
+
 	test("returns false instead of throwing for fixed vs usage prices", () => {
 		expect(pricesAreSame(fixedPrice, usagePrice)).toBe(false);
 	});

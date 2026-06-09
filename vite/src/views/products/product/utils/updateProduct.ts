@@ -16,11 +16,13 @@ export const updateProduct = async ({
 	productId,
 	product,
 	onSuccess,
+	version,
 }: {
 	axiosInstance: AxiosInstance;
 	productId: string;
 	product: UpdateProductV2Params;
 	onSuccess: () => Promise<void>;
+	version?: number;
 }) => {
 	const validated = validateItemsBeforeSave(
 		product.items as FrontendProductItem[],
@@ -38,10 +40,13 @@ export const updateProduct = async ({
 			free_trial: product.free_trial,
 		});
 
+		const options = version ? { version } : undefined;
+
 		const updatedProduct = await ProductService.updateProduct(
 			axiosInstance,
 			productId,
 			updateData,
+			options,
 		);
 
 		await onSuccess();

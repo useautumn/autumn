@@ -79,6 +79,46 @@ const pendingStripeInvoiceItems = async ({
 	});
 };
 
+const stripeInvoicesForCustomer = async ({
+	ctx,
+	customer,
+}: {
+	ctx: Awaited<ReturnType<typeof initScenario>>["ctx"];
+	customer: ApiCustomerV3;
+}) => {
+	if (!customer.stripe_id)
+		throw new Error("Expected customer to have stripe_id");
+
+	const invoices = await ctx.stripeCli.invoices.list({
+		customer: customer.stripe_id,
+		limit: 100,
+	});
+
+	return await Promise.all(
+		invoices.data.map((invoice) =>
+			ctx.stripeCli.invoices.retrieve(invoice.id!, {
+				expand: ["lines.data.price"],
+			}),
+		),
+	);
+};
+
+const stripeSchedulesForCustomer = async ({
+	ctx,
+	customer,
+}: {
+	ctx: Awaited<ReturnType<typeof initScenario>>["ctx"];
+	customer: ApiCustomerV3;
+}) => {
+	if (!customer.stripe_id)
+		throw new Error("Expected customer to have stripe_id");
+
+	return await ctx.stripeCli.subscriptionSchedules.list({
+		customer: customer.stripe_id,
+		limit: 10,
+	});
+};
+
 const periodDuration = (period: { start: number; end: number }) =>
 	(period.end - period.start) * 1000;
 
@@ -178,6 +218,70 @@ const expectedAnnualProrationDiff = ({
 		.toDecimalPlaces(2)
 		.toNumber();
 
+const expectAmountCloseTo = ({
+	actual,
+	expected,
+}: {
+	actual: Decimal | number;
+	expected: Decimal | number;
+}) => {
+	const diff = new Decimal(actual).minus(expected).abs();
+	expect(
+		diff.lte(0.01),
+		`Expected $${new Decimal(actual).toFixed(2)} to be within $0.01 of $${new Decimal(expected).toFixed(2)}`,
+	).toBe(true);
+};
+
+const expectAutumnInvoiceWithTotal = ({
+	invoices,
+	total,
+}: {
+	invoices: NonNullable<ApiCustomerV3["invoices"]>;
+	total: Decimal | number;
+}) => {
+	const invoice = invoices.find((candidate) =>
+		new Decimal(candidate.total).minus(total).abs().lte(0.01),
+	);
+
+	expect(
+		invoice,
+		`Expected Autumn invoice total $${new Decimal(total).toFixed(2)}`,
+	).toBeDefined();
+	return invoice!;
+};
+
+const expectStripeInvoiceWithIntervalTotals = ({
+	invoices,
+	yearTotal,
+	monthTotal,
+}: {
+	invoices: Stripe.Invoice[];
+	yearTotal: number;
+	monthTotal: number;
+}) => {
+	const invoice = invoices.find((candidate) => {
+		const candidateYearTotal = intervalLineTotal({
+			invoice: candidate,
+			interval: "year",
+		});
+		const candidateMonthTotal = intervalLineTotal({
+			invoice: candidate,
+			interval: "month",
+		});
+
+		return (
+			candidateYearTotal.minus(yearTotal).abs().lte(0.01) &&
+			candidateMonthTotal.minus(monthTotal).abs().lte(0.01)
+		);
+	});
+
+	expect(
+		invoice,
+		`Expected Stripe invoice with yearly total $${yearTotal} and monthly total $${monthTotal}`,
+	).toBeDefined();
+	return invoice!;
+};
+
 test.concurrent(
 	`${chalk.yellowBright("create-schedule: customized annual prepaid proration ignores removed monthly prepaid")}`,
 	async () => {
@@ -261,6 +365,14 @@ test.concurrent(
 			ctx,
 			customer: initialCustomer,
 		});
+		const initialSchedules = await stripeSchedulesForCustomer({
+			ctx,
+			customer: initialCustomer,
+		});
+		expect(initialSchedules.data[0]?.phases[1]?.proration_behavior).toBe(
+			"always_invoice",
+		);
+		expect(initialSchedules.data[0]?.billing_mode?.type).toBe("flexible");
 		const annualPeriod = annualPeriodFromInitialInvoice({
 			invoice: initialInvoice,
 		});
@@ -273,11 +385,11 @@ test.concurrent(
 
 		const customerAfterTransition =
 			await autumnV1.customers.get<ApiCustomerV3>(id);
-		const transitionInvoice = await latestStripeInvoice({
+		const pendingItems = await pendingStripeInvoiceItems({
 			ctx,
 			customer: customerAfterTransition,
 		});
-		const pendingItems = await pendingStripeInvoiceItems({
+		const stripeInvoices = await stripeInvoicesForCustomer({
 			ctx,
 			customer: customerAfterTransition,
 		});
@@ -287,10 +399,37 @@ test.concurrent(
 			transitionAt,
 			billingPeriod: annualPeriod,
 		});
-		await expectCustomerInvoiceCorrect({
-			customer: customerAfterTransition,
-			count: 2,
-			latestTotal: 10,
+		expect(customerAfterTransition.invoices).toHaveLength(3);
+		expectAutumnInvoiceWithTotal({
+			invoices: customerAfterTransition.invoices!,
+			total: 10,
+		});
+		expectAutumnInvoiceWithTotal({
+			invoices: customerAfterTransition.invoices!,
+			total: new Decimal(expectedProration).minus(10),
+		});
+		const prorationInvoice = expectStripeInvoiceWithIntervalTotals({
+			invoices: stripeInvoices,
+			yearTotal: expectedProration,
+			monthTotal: -10,
+		});
+		expectAmountCloseTo({
+			actual: intervalLineTotal({
+				invoice: prorationInvoice,
+				interval: "year",
+			}),
+			expected: expectedProration,
+		});
+		expectAmountCloseTo({
+			actual: intervalLineTotal({
+				invoice: prorationInvoice,
+				interval: "month",
+			}),
+			expected: -10,
+		});
+		expectAmountCloseTo({
+			actual: new Decimal(prorationInvoice.total).div(100),
+			expected: new Decimal(expectedProration).minus(10),
 		});
 		expect(
 			pendingItemIntervalTotal({
@@ -299,42 +438,15 @@ test.concurrent(
 			})
 				.toDecimalPlaces(2)
 				.toNumber(),
-		).toBe(expectedProration);
+		).toBe(0);
 		expect(
-			intervalLineTotal({ invoice: transitionInvoice, interval: "month" })
-				.plus(
-					pendingItemIntervalTotal({
-						items: pendingItems.data,
-						interval: "month",
-					}),
-				)
+			pendingItemIntervalTotal({
+				items: pendingItems.data,
+				interval: "month",
+			})
 				.toDecimalPlaces(2)
 				.toNumber(),
 		).toBe(0);
-		expect(
-			new Decimal(transitionInvoice.total)
-				.div(100)
-				.plus(
-					pendingItemIntervalTotal({
-						items: pendingItems.data,
-						interval: "month",
-					}),
-				)
-				.plus(
-					pendingItemIntervalTotal({
-						items: pendingItems.data,
-						interval: "year",
-					}),
-				)
-				.toDecimalPlaces(2)
-				.toNumber(),
-		).toBe(expectedProration);
-		expect(
-			pendingItems.data.some(
-				(item) => item.amount < 0 && item.amount !== -1000,
-			),
-		).toBe(true);
-		expect(pendingItems.data.some((item) => item.amount > 0)).toBe(true);
 	},
 );
 
@@ -415,6 +527,14 @@ test.concurrent(
 			ctx,
 			customer: initialCustomer,
 		});
+		const initialSchedules = await stripeSchedulesForCustomer({
+			ctx,
+			customer: initialCustomer,
+		});
+		expect(initialSchedules.data[0]?.phases[1]?.proration_behavior).toBe(
+			"always_invoice",
+		);
+		expect(initialSchedules.data[0]?.billing_mode?.type).toBe("flexible");
 		const annualPeriod = annualPeriodFromInitialInvoice({
 			invoice: initialInvoice,
 		});
@@ -427,11 +547,11 @@ test.concurrent(
 
 		const customerAfterTransition =
 			await autumnV1.customers.get<ApiCustomerV3>(id);
-		const transitionInvoice = await latestStripeInvoice({
+		const pendingItems = await pendingStripeInvoiceItems({
 			ctx,
 			customer: customerAfterTransition,
 		});
-		const pendingItems = await pendingStripeInvoiceItems({
+		const stripeInvoices = await stripeInvoicesForCustomer({
 			ctx,
 			customer: customerAfterTransition,
 		});
@@ -441,10 +561,37 @@ test.concurrent(
 			transitionAt,
 			billingPeriod: annualPeriod,
 		});
-		await expectCustomerInvoiceCorrect({
-			customer: customerAfterTransition,
-			count: 2,
-			latestTotal: 10,
+		expect(customerAfterTransition.invoices).toHaveLength(3);
+		expectAutumnInvoiceWithTotal({
+			invoices: customerAfterTransition.invoices!,
+			total: 10,
+		});
+		expectAutumnInvoiceWithTotal({
+			invoices: customerAfterTransition.invoices!,
+			total: new Decimal(expectedProration).minus(10),
+		});
+		const prorationInvoice = expectStripeInvoiceWithIntervalTotals({
+			invoices: stripeInvoices,
+			yearTotal: expectedProration,
+			monthTotal: -10,
+		});
+		expectAmountCloseTo({
+			actual: intervalLineTotal({
+				invoice: prorationInvoice,
+				interval: "year",
+			}),
+			expected: expectedProration,
+		});
+		expectAmountCloseTo({
+			actual: intervalLineTotal({
+				invoice: prorationInvoice,
+				interval: "month",
+			}),
+			expected: -10,
+		});
+		expectAmountCloseTo({
+			actual: new Decimal(prorationInvoice.total).div(100),
+			expected: new Decimal(expectedProration).minus(10),
 		});
 		expect(
 			pendingItemIntervalTotal({
@@ -453,41 +600,14 @@ test.concurrent(
 			})
 				.toDecimalPlaces(2)
 				.toNumber(),
-		).toBe(expectedProration);
+		).toBe(0);
 		expect(
-			intervalLineTotal({ invoice: transitionInvoice, interval: "month" })
-				.plus(
-					pendingItemIntervalTotal({
-						items: pendingItems.data,
-						interval: "month",
-					}),
-				)
+			pendingItemIntervalTotal({
+				items: pendingItems.data,
+				interval: "month",
+			})
 				.toDecimalPlaces(2)
 				.toNumber(),
 		).toBe(0);
-		expect(
-			new Decimal(transitionInvoice.total)
-				.div(100)
-				.plus(
-					pendingItemIntervalTotal({
-						items: pendingItems.data,
-						interval: "month",
-					}),
-				)
-				.plus(
-					pendingItemIntervalTotal({
-						items: pendingItems.data,
-						interval: "year",
-					}),
-				)
-				.toDecimalPlaces(2)
-				.toNumber(),
-		).toBe(expectedProration);
-		expect(
-			pendingItems.data.some(
-				(item) => item.amount < 0 && item.amount !== -1000,
-			),
-		).toBe(true);
-		expect(pendingItems.data.some((item) => item.amount > 0)).toBe(true);
 	},
 );

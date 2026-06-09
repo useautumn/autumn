@@ -1,16 +1,16 @@
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import { useCallback, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useNavigate, useParams } from "react-router";
+import { AdminHover } from "@/components/general/AdminHover";
 import {
 	Breadcrumb,
 	BreadcrumbItem,
 	BreadcrumbList,
 	BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
-import { SheetCloseButton } from "@/components/v2/sheets/SheetCloseButton";
+import { InlineSheetPanel } from "@/components/v2/sheets/InlineSheetPanel";
+import { SheetBackdrop } from "@/components/v2/sheets/SheetBackdrop";
 import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
 import { navigateTo } from "@/utils/genUtils";
 import { SHEET_ANIMATION } from "@/views/customers2/customer/customerAnimations";
@@ -74,7 +74,16 @@ export function MigrationView() {
 									</BreadcrumbItem>
 									<BreadcrumbSeparator />
 									<BreadcrumbItem className="text-muted-foreground">
-										{migration.id}
+										<AdminHover
+											texts={[
+												{
+													key: "Migration internal ID",
+													value: migration.internal_id,
+												},
+											]}
+										>
+											<span>{migration.id}</span>
+										</AdminHover>
 									</BreadcrumbItem>
 								</BreadcrumbList>
 							</Breadcrumb>
@@ -84,44 +93,22 @@ export function MigrationView() {
 				</div>
 			</motion.div>
 
-			{createPortal(
-				<AnimatePresence>
-					{selectedCustomer && (
-						<motion.div
-							initial={{ opacity: 0 }}
-							animate={{ opacity: 1 }}
-							exit={{ opacity: 0 }}
-							className="fixed inset-0 bg-white/60 dark:bg-black/60"
-							style={{ zIndex: 40 }}
-							onMouseDown={closeSheet}
-						/>
-					)}
-				</AnimatePresence>,
-				document.body,
-			)}
+			<SheetBackdrop isOpen={!!selectedCustomer} onClose={closeSheet} />
 
-			<AnimatePresence mode="wait">
+			<InlineSheetPanel
+				isOpen={!!selectedCustomer}
+				onClose={closeSheet}
+				transition={SHEET_ANIMATION}
+			>
 				{selectedCustomer && (
-					<motion.div
-						initial={{ x: "100%" }}
-						animate={{ x: 0 }}
-						exit={{ x: "100%" }}
-						transition={SHEET_ANIMATION}
-						className="absolute right-0 top-0 bottom-0"
-						style={{ width: "28rem", zIndex: 45 }}
-					>
-						<SheetContainer className="w-full bg-card border-l border-border/40 h-full relative">
-							<SheetCloseButton onClose={closeSheet} />
-							<MigrationCustomerSheet
-								migrationId={migration.id}
-								customer={selectedCustomer}
-								operations={liveFormState.operations}
-								noBillingChanges={liveFormState.noBillingChanges}
-							/>
-						</SheetContainer>
-					</motion.div>
+					<MigrationCustomerSheet
+						migrationId={migration.id}
+						customer={selectedCustomer}
+						operations={liveFormState.operations}
+						noBillingChanges={liveFormState.noBillingChanges}
+					/>
 				)}
-			</AnimatePresence>
+			</InlineSheetPanel>
 		</div>
 	);
 }

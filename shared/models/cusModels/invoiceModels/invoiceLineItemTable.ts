@@ -2,6 +2,7 @@ import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 import {
 	boolean,
 	foreignKey,
+	index,
 	jsonb,
 	numeric,
 	pgTable,
@@ -82,6 +83,11 @@ export const invoiceLineItems = pgTable(
 		}).onDelete("cascade"),
 		// Unique partial index on stripe_id for upsert support
 		unique("invoice_line_items_stripe_id_unique").on(table.stripe_id),
+		// GIN index for jsonb containment / array-overlap lookups by customer product
+		index("idx_invoice_line_items_customer_product_ids").using(
+			"gin",
+			table.customer_product_ids,
+		),
 	],
 );
 

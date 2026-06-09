@@ -2,14 +2,14 @@ import { ErrCode, RecaseError, Scopes } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
 import { z } from "zod/v4";
 import {
-	buildRequestLogsQuery,
-	type HttpMethodFilter,
-	type StatusBucket,
-} from "@/external/axiom/aplUtils.js";
-import {
 	getAxiomClient,
 	isAxiomConfigured,
 } from "@/external/axiom/initAxiom.js";
+import {
+	buildRequestLogsQuery,
+	type HttpMethodFilter,
+	type StatusBucket,
+} from "@/external/axiom/utils/aplUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusService } from "@/internal/customers/CusService.js";
 

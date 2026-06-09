@@ -160,8 +160,9 @@ export const PlanFeatureRow = ({
 			{...(isDisabled && { "data-disabled": true })}
 			data-pressed={isPressed}
 			className={cn(
-				"flex items-center w-full group h-10! group/row select-none rounded-xl hover:relative hover:z-95",
-				"input-base input-state-open-tiny",
+				"flex items-center w-full group group/row select-none rounded-xl hover:relative hover:z-95",
+				!readOnly && "h-10! input-base input-state-open-tiny",
+				readOnly && "py-1",
 				isDisabled && "pointer-events-none cursor-default",
 				isSelected &&
 					"border-transparent z-95 relative bg-interative-secondary outline-4! outline-outer-background!",
@@ -240,7 +241,7 @@ export const PlanFeatureRow = ({
 					/>
 				</div>
 				{prepaidQuantity && (
-					<span className="bg-muted px-1 py-0.5 rounded-md">
+					<span className="bg-muted px-1.5 py-0.5 rounded-md text-xs">
 						x{parseFloat(Number(prepaidQuantity).toFixed(2))}
 					</span>
 				)}

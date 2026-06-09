@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
 	foreignKey,
 	index,
@@ -39,6 +40,12 @@ export const customerPrices = pgTable(
 		}),
 		index("idx_customer_prices_product_id").on(table.customer_product_id),
 		index("idx_customer_prices_price_id").on(table.price_id),
+		// Serves the customers.internal_id (collation C) delete cascade. A plain
+		// index can't be used when the comparison collation is C.
+		index("idx_customer_prices_internal_customer_id")
+			.on(sql`${table.internal_customer_id} COLLATE "C"`)
+			.where(sql`${table.internal_customer_id} IS NOT NULL`)
+			.concurrently(),
 	],
 );
 

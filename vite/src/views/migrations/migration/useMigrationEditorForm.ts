@@ -44,7 +44,7 @@ export function useMigrationEditorForm({
 		defaultValues: {
 			filter: (migration.filter ?? {}) as MigrationFilter,
 			operations: (migration.operations ?? {}) as Operations,
-			noBillingChanges: migration.no_billing_changes ?? false,
+			noBillingChanges: migration.no_billing_changes ?? true,
 		},
 		onSubmit: async ({ value }) => {
 			try {

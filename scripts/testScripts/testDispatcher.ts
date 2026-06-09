@@ -22,6 +22,9 @@ const PROJECT_ROOT = resolve(import.meta.dirname, "../..");
 const TESTS_DIR = join(PROJECT_ROOT, testRunConfig.testsBaseDir);
 const LEGACY_SCRIPTS_DIR = join(PROJECT_ROOT, testRunConfig.legacyScriptsDir);
 const RUNNER_SCRIPT = join(PROJECT_ROOT, "scripts/testScripts/runTestsV2.tsx");
+const LEAF_EVALS_DIR = join(PROJECT_ROOT, "apps/leaf/tests/evals");
+const BRAINTRUST_BIN = join(PROJECT_ROOT, "node_modules/.bin/braintrust");
+const BRAINTRUST_EXTERNAL_PACKAGES = ["@mastra/mcp", "@mastra/core"];
 
 // Worktree .env.local loading happens in scripts/preload-env.ts, which Bun
 // auto-runs via bunfig.toml `preload` for every `bun` and `bun test` invocation.
@@ -157,6 +160,52 @@ async function collectTestFilesFromDir({
 	return files;
 }
 
+async function collectEvalFilesFromDir({
+	dir,
+}: {
+	dir: string;
+}): Promise<string[]> {
+	const files: string[] = [];
+
+	const walk = async ({ d }: { d: string }) => {
+		const entries = await readdir(d);
+		for (const entry of entries) {
+			const fullPath = join(d, entry);
+			const entryStat = await stat(fullPath);
+
+			if (entryStat.isDirectory()) {
+				await walk({ d: fullPath });
+			} else if (entry.endsWith(".eval.ts")) {
+				files.push(fullPath);
+			}
+		}
+	};
+
+	await walk({ d: dir });
+	return files;
+}
+
+async function resolveLeafEvalTarget({
+	target,
+}: {
+	target: string;
+}): Promise<string[]> {
+	const candidates = [
+		resolve(process.cwd(), target),
+		join(PROJECT_ROOT, target),
+		join(LEAF_EVALS_DIR, target),
+	];
+
+	for (const candidate of candidates) {
+		if (!existsSync(candidate)) continue;
+		const s = await stat(candidate);
+		if (s.isDirectory()) return collectEvalFilesFromDir({ dir: candidate });
+		if (candidate.endsWith(".eval.ts")) return [candidate];
+	}
+
+	return [];
+}
+
 async function main() {
 	const args = process.argv.slice(2);
 
@@ -202,11 +251,18 @@ async function main() {
 	}
 
 	const resolvedFiles: string[] = [];
+	const evalTargets: string[] = [];
 	const fallbackArgs: string[] = [];
 	// Track the max concurrency from matched groups (use lowest if multiple)
 	let groupMaxConcurrency: number | null = null;
 
 	for (const arg of positionalArgs) {
+		const evalTarget = await resolveLeafEvalTarget({ target: arg });
+		if (evalTarget.length > 0) {
+			evalTargets.push(...evalTarget);
+			continue;
+		}
+
 		// Priority 1: Test group or suite from _groups/
 		const groupPaths = resolveTestPaths({ name: arg });
 		if (groupPaths) {
@@ -280,6 +336,17 @@ async function main() {
 			? options
 			: [...options, `--max=${concurrency}`];
 
+	if (evalTargets.length > 0) {
+		if (resolvedFiles.length > 0 || fallbackArgs.length > 0) {
+			console.error("Error: Cannot mix Braintrust evals with bun test targets");
+			process.exit(1);
+		}
+
+		const evalOptions = options.filter((option) => !option.startsWith("--max"));
+		await spawnBraintrustEval({ args: [...evalTargets, ...evalOptions] });
+		return;
+	}
+
 	if (resolvedFiles.length > 0 && fallbackArgs.length > 0) {
 		const runnerArgs = [...resolvedFiles, ...fallbackArgs, ...finalOptions];
 		await spawnRunner({ args: runnerArgs });
@@ -307,6 +374,28 @@ async function spawnRunner({ args }: { args: string[] }) {
 		stdin: "inherit",
 		env: { ...process.env },
 	});
+
+	const exitCode = await proc.exited;
+	process.exit(exitCode);
+}
+
+async function spawnBraintrustEval({ args }: { args: string[] }) {
+	const proc = spawn(
+		[
+			BRAINTRUST_BIN,
+			"eval",
+			...args,
+			"--external-packages",
+			...BRAINTRUST_EXTERNAL_PACKAGES,
+		],
+		{
+			cwd: join(PROJECT_ROOT, "apps/leaf"),
+			stdout: "inherit",
+			stderr: "inherit",
+			stdin: "inherit",
+			env: { ...process.env },
+		},
+	);
 
 	const exitCode = await proc.exited;
 	process.exit(exitCode);

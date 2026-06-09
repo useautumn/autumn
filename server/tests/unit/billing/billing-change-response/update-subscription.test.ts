@@ -326,4 +326,47 @@ describe("buildBillingChangeResponse — updateSubscription", () => {
 			expired: ["pro"],
 		});
 	});
+
+	test("collapse same-plan_id pairs preserves replacement item changes", () => {
+		const newPro = makeFullCusProduct({
+			planId: "pro",
+			status: CusProductStatus.Active,
+			startedAt: NOW,
+			id: "cp_pro_new",
+		});
+		newPro.customer_entitlements = [
+			makeCustomerEntitlement({ featureId: "api_calls" }),
+		];
+
+		const oldPro = makeFullCusProduct({
+			planId: "pro",
+			startedAt: NOW - 30_000,
+			id: "cp_pro_old",
+		});
+		oldPro.customer_entitlements = [
+			makeCustomerEntitlement({ featureId: "legacy_feature" }),
+		];
+
+		const response = buildBillingChangeResponse({
+			ctx,
+			originalFullCustomer: makeFullCustomer({ customerProducts: [oldPro] }),
+			autumnBillingPlan: makeAutumnBillingPlan({
+				inserts: [newPro],
+				update: makeUpdate({
+					customerProduct: oldPro,
+					updates: { status: CusProductStatus.Expired },
+				}),
+			}),
+		});
+
+		expectBillingChangeResponse(response, { updated: ["pro"] });
+		expectPlanChange(findPlanChange(response, { action: "updated", planId: "pro" }), {
+			action: "updated",
+			planId: "pro",
+			itemChanges: [
+				{ action: "created", feature_id: "api_calls" },
+				{ action: "deleted", feature_id: "legacy_feature" },
+			],
+		});
+	});
 });

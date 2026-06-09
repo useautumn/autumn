@@ -1,0 +1,2 @@
+CREATE INDEX CONCURRENTLY "idx_customer_prices_internal_customer_id" ON "customer_prices" USING btree ("internal_customer_id" COLLATE "C") WHERE "customer_prices"."internal_customer_id" IS NOT NULL;--> statement-breakpoint
+CREATE INDEX CONCURRENTLY "idx_invoices_internal_entity_id" ON "invoices" USING btree ("internal_entity_id") WHERE "invoices"."internal_entity_id" IS NOT NULL;

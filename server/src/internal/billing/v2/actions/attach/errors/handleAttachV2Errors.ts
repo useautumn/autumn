@@ -28,20 +28,26 @@ export const handleAttachV2Errors = async ({
 	billingContext,
 	billingPlan,
 	params,
+	preview = false,
 }: {
 	ctx: AutumnContext;
 	billingContext: AttachBillingContext;
 	billingPlan: BillingPlan;
 	params: AttachParamsV1;
+	preview?: boolean;
 }) => {
 	const { autumn: autumnBillingPlan } = billingPlan;
 
 	// 1.1. External PSP errors (RevenueCat)
-	handleExternalPSPErrors({
-		customerProducts: billingContext.fullCustomer.customer_products,
-		attachProduct: billingContext.attachProduct,
-		action: "attach",
-	});
+	// Skipped when the caller IS the external PSP origin (e.g. the RevenueCat
+	// webhook handler attaching onto its own RC-managed customer).
+	if (!billingContext.skipExternalPSPGuard) {
+		handleExternalPSPErrors({
+			customerProducts: billingContext.fullCustomer.customer_products,
+			attachProduct: billingContext.attachProduct,
+			action: "attach",
+		});
+	}
 
 	// 1.2. Custom Payment Method errors (Vercel)
 	handleCustomPaymentMethodErrorsV2({ billingContext });
@@ -61,7 +67,7 @@ export const handleAttachV2Errors = async ({
 	// 6. Scheduled switch with one-off prepaid quantities
 	handleScheduledSwitchOneOffErrors({ ctx, billingContext });
 	handleBillingCycleAnchorErrors({ billingContext });
-	handleStartDateErrors({ billingContext, params });
+	handleStartDateErrors({ billingContext, params, preview });
 	handleEndDateErrors({ billingContext, params });
 
 	// 7. Transition config errors (reset_after_trial_end on allocated features)

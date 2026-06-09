@@ -512,6 +512,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       Number of units of this subscription (for per-seat plans).
     </DynamicResponseField>
 
+    <DynamicResponseField name="scope" type="'customer' | 'entity'">
+      Whether this subscription is attached at the customer level or entity level.
+    </DynamicResponseField>
+
   </Expandable>
 </DynamicResponseField>
 
@@ -825,6 +829,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 
     <DynamicResponseField name="quantity" type="number">
       Number of units purchased.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="scope" type="'customer' | 'entity'">
+      Whether this purchase is attached at the customer level or entity level.
     </DynamicResponseField>
 
   </Expandable>

@@ -7,10 +7,14 @@ import { PlanFilterSchema } from "../../../filters/planFilter.js";
 
 export const MigrationUpdatePlanCustomizeSchema = z
 	.object({
-		price: BasePriceParamsSchema.nullable().optional(),
-		add_items: z.array(CreatePlanItemParamsV1Schema).optional(),
-		remove_items: z.array(PlanItemFilterSchema).optional(),
-		update_items: z.array(UpdatePlanItemParamsV1Schema).optional(),
+			price: BasePriceParamsSchema.nullable().optional(),
+			add_items: z.array(CreatePlanItemParamsV1Schema).optional(),
+			remove_items: z.array(PlanItemFilterSchema).optional(),
+			update_items: z.array(UpdatePlanItemParamsV1Schema).optional().meta({
+				description:
+					"Deprecated. Use remove_items and add_items to replace matched plan items.",
+				deprecated: true,
+			}),
 	})
 	.refine(
 		(data) =>
@@ -18,11 +22,11 @@ export const MigrationUpdatePlanCustomizeSchema = z
 			data.add_items !== undefined ||
 			data.remove_items !== undefined ||
 			data.update_items !== undefined,
-		{
-			message:
-				"update_plan.customize requires at least one of price, add_items, remove_items, or update_items",
-		},
-	);
+			{
+				message:
+					"update_plan.customize requires at least one of price, add_items, remove_items, or deprecated update_items",
+			},
+		);
 
 /**
  * Ordered customer operation: update every customer product matched by
