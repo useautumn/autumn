@@ -12,6 +12,9 @@ process.env.FIRECRAWL_API_KEY ??= "fc_test";
 const { agentDocUris, getDefaultChatEnv, selectChatEnv } = await import(
 	"../../../src/agent/agent.js"
 );
+const { autumnChatInstructions } = await import(
+	"../../../src/agent/chatAgent.js"
+);
 const { createFirecrawlTools } = await import(
 	"../../../src/agent/firecrawl.js"
 );
@@ -46,6 +49,11 @@ describe("chat environment selection", () => {
 		expect(agentDocUris).toContain("autumn://docs/request-log-billing");
 		expect(agentDocUris).toContain("autumn://docs/request-log-stripe-webhooks");
 		expect(agentDocUris).toContain("autumn://docs/request-log-analytics");
+	});
+
+	test("instructs the agent to read org rules before Autumn work", () => {
+		expect(autumnChatInstructions).toContain("getAgentRules");
+		expect(autumnChatInstructions).toContain("org-specific behavior");
 	});
 
 	test("defaults to sandbox outside production", () => {

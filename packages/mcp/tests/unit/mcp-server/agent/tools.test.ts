@@ -48,6 +48,9 @@ describe("Autumn operation tools", () => {
 		expect(tools.createBalance.description).toContain("entity-scoped credits");
 		expect(tools.searchRequestLogs.description).toContain("request logs");
 		expect(tools.queryRequestLogs.description).toContain("aggregate");
+		expect(tools.getAgentRules.description).toContain("agent rules");
+		expect(tools.getAgentRules.description).toContain("Use before customer");
+		expect(tools.updateAgentRules.description).toContain("agent rules");
 		expect(tools.previewCreateBalance.description).toContain("Does not mutate");
 		expect(tools.createSchedule.description).toContain("starts_at");
 		expect(tools.previewCreateSchedule.description).toContain("billing impact");
@@ -107,6 +110,8 @@ describe("Autumn operation tools", () => {
 			"previewCreateSchedule",
 			"previewCreateBalance",
 			"getCurrentOrganization",
+			"getAgentRules",
+			"updateAgentRules",
 		] as const) {
 			expect(tools[name].mcp?.annotations?.destructiveHint).toBe(false);
 		}
@@ -120,6 +125,42 @@ describe("Autumn operation tools", () => {
 		).toThrow();
 
 		expect(createAgentAutumnOperationTools().listFeatures).toBeDefined();
+	});
+
+	test("getAgentRules uses a strict empty request schema", () => {
+		expect(endpointByTool.getAgentRules).toBe("/v1/agent.get_rules");
+		expect(schemaByTool.getAgentRules.parse({})).toEqual({});
+		expect(() =>
+			schemaByTool.getAgentRules.parse({ include_metadata: true }),
+		).toThrow();
+
+		expect(createAgentAutumnOperationTools().getAgentRules).toBeDefined();
+	});
+
+	test("updateAgentRules accepts partial rules and rejects unknown fields", () => {
+		expect(endpointByTool.updateAgentRules).toBe("/v1/agent.update_rules");
+		expect(
+			schemaByTool.updateAgentRules.parse({
+				entity_rules: {
+					attach_to_entities: true,
+					entity_feature_id: "deployments",
+				},
+				credit_rules: { credit_feature_id: "credits" },
+				notes: "Attach add-ons at customer level.",
+			}),
+		).toEqual({
+			entity_rules: {
+				attach_to_entities: true,
+				entity_feature_id: "deployments",
+			},
+			credit_rules: { credit_feature_id: "credits" },
+			notes: "Attach add-ons at customer level.",
+		});
+		expect(() =>
+			schemaByTool.updateAgentRules.parse({ unexpected: true }),
+		).toThrow();
+
+		expect(createAgentAutumnOperationTools().updateAgentRules).toBeDefined();
 	});
 
 	test("dateToEpochMilliseconds converts UTC dates and offsets", async () => {
@@ -228,6 +269,56 @@ describe("Autumn operation tools", () => {
 			).resolves.toEqual({
 				id: "mintlify",
 				email: "johnyeocx@gmail.com",
+			});
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	test("raw updateAgentRules calls the update rules endpoint", async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (url, init) => {
+			expect(String(url)).toBe("http://localhost:8080/v1/agent.update_rules");
+			expect(JSON.parse(init?.body as string)).toEqual({
+				entity_rules: {
+					attach_to_entities: true,
+					entity_feature_id: "deployments",
+				},
+				notes: "Attach add-ons at the customer level.",
+			});
+			return Response.json({
+				entity_rules: {
+					attach_to_entities: true,
+					entity_feature_id: "deployments",
+				},
+				credit_rules: { credit_feature_id: "" },
+				notes: "Attach add-ons at the customer level.",
+			});
+		}) as typeof fetch;
+
+		try {
+			const tool = createRawAutumnOperationTools().updateAgentRules;
+			if (!tool.execute) throw new Error("updateAgentRules is not executable");
+
+			await expect(
+				tool.execute(
+					{
+						intent: "set org agent rules",
+						request: {
+							entity_rules: {
+								attach_to_entities: true,
+								entity_feature_id: "deployments",
+							},
+							notes: "Attach add-ons at the customer level.",
+						},
+					},
+					{ mcp: { extra: { authInfo: auth } } } as never,
+				),
+			).resolves.toMatchObject({
+				entity_rules: {
+					attach_to_entities: true,
+					entity_feature_id: "deployments",
+				},
 			});
 		} finally {
 			globalThis.fetch = originalFetch;

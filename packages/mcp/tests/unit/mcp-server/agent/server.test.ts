@@ -17,6 +17,8 @@ describe("Autumn MCP server", () => {
 		const tools = await createAutumnOperationsMCPServer().getToolListInfo();
 
 		expect(tools.tools.map((tool) => tool.name)).toEqual([
+			"getAgentRules",
+			"updateAgentRules",
 			"listCustomers",
 			"getOrCreateCustomer",
 			"updateCustomer",

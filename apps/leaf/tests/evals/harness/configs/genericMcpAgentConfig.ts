@@ -4,7 +4,7 @@ export type GenericMcpAgentDriverConfig = {
 };
 
 export const genericMcpAgentInstructions =
-	"Use Autumn MCP tools. Preview destructive writes before applying them.";
+	"Use Autumn MCP tools. Call getAgentRules before customer, billing, balance, entity, or plan work. Preview destructive writes before applying them.";
 
 export const defaultGenericMcpAgentConfig = {
 	maxSteps: 6,
