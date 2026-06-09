@@ -19,6 +19,7 @@ const workspacePackageJsonPaths = [
 	"apps/sdk-test/package.json",
 	"packages/atmn/package.json",
 	"packages/atmn-tests/package.json",
+	"packages/auth/package.json",
 	"packages/logging/package.json",
 	"packages/mcp/package.json",
 	"packages/sdk/package.json",
