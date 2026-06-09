@@ -14,8 +14,8 @@ export const FullSubjectGateEdgeConfigSchema = z.object({
 	per_customer_pending_max: z.number().int().min(1).max(100_000).default(500),
 	per_org_pending_max: z.number().int().min(1).max(100_000).default(1_000),
 
-	critical_db_admission_enabled: z.boolean().default(true),
-	critical_db_share: z.number().min(0.1).max(1).default(0.3),
+	critical_db_admission_enabled: z.boolean().default(false),
+	critical_db_share: z.number().min(0.1).max(1).default(0.7),
 	critical_db_reserve: z.number().int().min(0).max(1_000).default(2),
 });
 
