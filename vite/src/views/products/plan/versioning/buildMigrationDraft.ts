@@ -137,6 +137,21 @@ function diffHasBillingChanges(diff: DiffedCustomizePlanV1): boolean {
 	return false;
 }
 
+export function getMigratablePlanDiff(
+	diff: DiffedCustomizePlanV1,
+): DiffedCustomizePlanV1 {
+	return {
+		...(diff.price !== undefined ? { price: diff.price } : {}),
+		...(diff.add_items !== undefined ? { add_items: diff.add_items } : {}),
+		...(diff.remove_items !== undefined
+			? { remove_items: diff.remove_items }
+			: {}),
+		...(diff.update_items !== undefined
+			? { update_items: diff.update_items }
+			: {}),
+	};
+}
+
 export type MigrationScope = "this_version" | "all_customers";
 
 export type VersionMigrateScope = "all" | number;
@@ -206,9 +221,10 @@ export function buildMigrationDraft({
 	const from = frontendProductToApiPlanV1(baseProduct, features);
 	const to = frontendProductToApiPlanV1(editedProduct, features);
 	const diff = diffPlanV1({ from, to });
+	const migrationDiff = getMigratablePlanDiff(diff);
 
-	const hasCustomize = Object.keys(diff).length > 0;
-	const customize = hasCustomize ? diff : undefined;
+	const hasCustomize = Object.keys(migrationDiff).length > 0;
+	const customize = hasCustomize ? migrationDiff : undefined;
 
 	const basePlanFilter = {
 		plan_id: baseProduct.id,
@@ -240,6 +256,6 @@ export function buildMigrationDraft({
 				? [updatePlanOp(false), updatePlanOp(true)]
 				: [updatePlanOp(false)],
 		},
-		no_billing_changes: diffHasBillingChanges(diff) === false,
+		no_billing_changes: diffHasBillingChanges(migrationDiff) === false,
 	};
 }

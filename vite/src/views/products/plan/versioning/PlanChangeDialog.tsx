@@ -127,8 +127,8 @@ export default function PlanChangeDialog({
 		return !same;
 	}, [baseProduct, product, features]);
 	const hasMigrationDiff = useMemo(() => {
-		return hasPlanMigrationDiff({ baseProduct, product, currency });
-	}, [baseProduct, product, currency]);
+		return hasPlanMigrationDiff({ baseProduct, product, features });
+	}, [baseProduct, product, features]);
 
 	const resetState = () => {
 		setStep(1);
@@ -225,7 +225,7 @@ export default function PlanChangeDialog({
 			!hasPlanMigrationDiff({
 				baseProduct: draftBaseProduct,
 				product,
-				currency,
+				features,
 			})
 		) {
 			setOpen(false);

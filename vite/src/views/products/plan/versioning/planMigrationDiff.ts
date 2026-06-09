@@ -1,7 +1,10 @@
-import type { FrontendProduct } from "@autumn/shared";
-import { isPriceItem } from "@autumn/shared";
-import { getPlanItemsDiff } from "@/components/forms/shared";
+import type { Feature, FrontendProduct } from "@autumn/shared";
+import { diffPlanV1, isPriceItem } from "@autumn/shared";
 import { getProductPriceDisplay } from "@/components/forms/update-subscription-v2/components/PriceDisplay";
+import {
+	frontendProductToApiPlanV1,
+	getMigratablePlanDiff,
+} from "./buildMigrationDraft";
 
 export function getPlanPriceChange({
 	baseProduct,
@@ -42,19 +45,18 @@ export function getPlanPriceChange({
 export function hasPlanMigrationDiff({
 	baseProduct,
 	product,
-	currency,
+	features,
 }: {
 	baseProduct: FrontendProduct | null | undefined;
 	product: FrontendProduct;
-	currency: string;
+	features: Feature[];
 }) {
 	if (!baseProduct) return false;
-	return (
-		!!getPlanPriceChange({ baseProduct, product, currency }) ||
-		getPlanItemsDiff({
-			product,
-			originalItems: baseProduct.items,
-			showDiff: true,
-		}).hasDiffItems
-	);
+
+	const diff = diffPlanV1({
+		from: frontendProductToApiPlanV1(baseProduct, features),
+		to: frontendProductToApiPlanV1(product, features),
+	});
+
+	return Object.keys(getMigratablePlanDiff(diff)).length > 0;
 }
