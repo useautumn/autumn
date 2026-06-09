@@ -52,13 +52,14 @@ export function useMigratableVersions({
 	productId,
 	latestVersion,
 	pastVersions,
+	currency,
 }: {
 	productId: string;
 	latestVersion: number;
 	pastVersions: number[];
+	currency: string;
 }) {
 	const { products } = useProductsQuery({ allVersions: true });
-	const { features = [] } = useFeaturesQuery();
 
 	return useMemo(() => {
 		const latest = products.find(
@@ -75,14 +76,14 @@ export function useMigratableVersions({
 				hasPlanMigrationDiff({
 					baseProduct: productV2ToFrontendProduct({ product: p }),
 					product: latestProduct,
-					features,
+					currency,
 				})
 			) {
 				versions.push(p.version);
 			}
 		}
 		return versions.sort((a, b) => b - a);
-	}, [products, productId, latestVersion, pastVersions, features]);
+	}, [products, productId, latestVersion, pastVersions, currency]);
 }
 
 function useVersionProducts(productId: string, versions: number[]) {

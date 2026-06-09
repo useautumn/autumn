@@ -137,7 +137,7 @@ function diffHasBillingChanges(diff: DiffedCustomizePlanV1): boolean {
 	return false;
 }
 
-export function getMigratablePlanDiff(
+function getMigratablePlanDiff(
 	diff: DiffedCustomizePlanV1,
 ): DiffedCustomizePlanV1 {
 	return {

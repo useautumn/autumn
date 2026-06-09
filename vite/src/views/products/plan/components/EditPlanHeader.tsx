@@ -61,6 +61,7 @@ export const EditPlanHeader = () => {
 	const { mappings } = useRCMappings();
 	const { org } = useOrg();
 	const env = useEnv();
+	const currency = org?.default_currency ?? "USD";
 	const [migrateDialogOpen, setMigrateDialogOpen] = useState(false);
 
 	const pastVersionsWithCustomers = useMemo(() => {
@@ -78,6 +79,7 @@ export const EditPlanHeader = () => {
 		productId: product.id,
 		latestVersion: numVersions,
 		pastVersions: pastVersionsWithCustomers,
+		currency,
 	});
 
 	const hasRCMapping =
