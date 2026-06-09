@@ -16,12 +16,21 @@ export type IncludeProcessed = {
 	executionFilter?: CustomerExecutionStatusFilter;
 };
 
-export type CustomerExecutionStatus = MigrationItemRunStatus | "not_run";
+export type CustomerExecutionStatus =
+	| MigrationItemRunStatus
+	| "not_run"
+	| "queued";
 
 export type CustomerExecutionStatusFilter = {
 	statuses: CustomerExecutionStatus[];
 	migrationRunId?: string;
 	dryRun?: boolean;
+	queuedRun?: {
+		migrationRunId: string;
+		dryRun: boolean;
+		onlyIds?: string[];
+		targetLimit?: number;
+	};
 };
 
 export type CustomerQueryArgs = {
@@ -121,7 +130,10 @@ const buildProcessedIn = (includeProcessed: IncludeProcessed): SQL => sql`
 
 const buildExecutionScope = (
 	migrationInternalId: string,
-	filter: CustomerExecutionStatusFilter | undefined,
+	filter: Pick<
+		CustomerExecutionStatusFilter,
+		"migrationRunId" | "dryRun"
+	> | undefined,
 ): SQL => {
 	const dryRunScope =
 		filter?.dryRun !== undefined
@@ -139,6 +151,46 @@ const buildExecutionScope = (
 	`;
 };
 
+const buildQueuedTargetWhere = (
+	queuedRun: CustomerExecutionStatusFilter["queuedRun"],
+): SQL => {
+	if (!queuedRun) return sql`false`;
+	if (queuedRun.targetLimit !== undefined) return sql`false`;
+	if (queuedRun.onlyIds && queuedRun.onlyIds.length > 0) {
+		const ids = sql.join(
+			queuedRun.onlyIds.map((id) => sql`${id}`),
+			sql`, `,
+		);
+		return sql`(c.internal_id IN (${ids}) OR c.id IN (${ids}))`;
+	}
+	return sql`true`;
+};
+
+const buildQueuedWhere = (
+	includeProcessed: IncludeProcessed,
+	filter: CustomerExecutionStatusFilter,
+): SQL => {
+	const claimedScope = filter.queuedRun?.dryRun
+		? {
+				migrationRunId: filter.queuedRun.migrationRunId,
+				dryRun: true,
+			}
+		: { dryRun: false };
+
+	return sql`
+		${buildQueuedTargetWhere(filter.queuedRun)}
+		AND NOT EXISTS (
+			SELECT 1
+			FROM migration_item_runs mir
+			WHERE ${buildExecutionScope(
+				includeProcessed.migrationInternalId,
+				claimedScope,
+			)}
+				AND mir.item_id = c.internal_id
+		)
+	`;
+};
+
 const buildExecutionStatusWhere = (
 	includeProcessed: IncludeProcessed | undefined,
 	{ includeNotRun = true }: { includeNotRun?: boolean } = {},
@@ -148,7 +200,8 @@ const buildExecutionStatusWhere = (
 		return sql``;
 
 	const explicitStatuses = filter.statuses.filter(
-		(status): status is MigrationItemRunStatus => status !== "not_run",
+		(status): status is MigrationItemRunStatus =>
+			status !== "not_run" && status !== "queued",
 	);
 	const clauses: SQL[] = [];
 
@@ -176,7 +229,12 @@ const buildExecutionStatusWhere = (
 				WHERE ${buildExecutionScope(includeProcessed.migrationInternalId, filter)}
 					AND mir.item_id = c.internal_id
 			)
+			AND NOT (${buildQueuedTargetWhere(filter.queuedRun)})
 		`);
+	}
+
+	if (includeNotRun && filter.statuses.includes("queued")) {
+		clauses.push(buildQueuedWhere(includeProcessed, filter));
 	}
 
 	if (clauses.length === 0) return sql`AND false`;
@@ -192,8 +250,12 @@ const getExecutionFilterMode = (
 	if (!statuses || statuses.length === 0) return "all";
 
 	const hasNotRun = statuses.includes("not_run");
-	const hasExplicit = statuses.some((status) => status !== "not_run");
-	if (hasExplicit && hasNotRun) return "mixed";
+	const hasQueued = statuses.includes("queued");
+	const hasPending = hasNotRun || hasQueued;
+	const hasExplicit = statuses.some(
+		(status) => status !== "not_run" && status !== "queued",
+	);
+	if (hasExplicit && hasPending) return "mixed";
 	if (hasExplicit) return "explicit_only";
 	return "not_run_only";
 };

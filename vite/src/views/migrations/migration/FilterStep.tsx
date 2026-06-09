@@ -43,7 +43,7 @@ export function FilterStep({
 					onClick={onNext}
 					disabled={!hasCustomers}
 				>
-					{hasCustomers ? `Next (${customerCount})` : "Next"}
+					{hasCustomers ? `Next (${customerCount.toLocaleString()})` : "Next"}
 					<ArrowRightIcon size={14} />
 				</Button>
 			</StepIndicator>

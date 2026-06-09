@@ -13,10 +13,22 @@ import {
 	WarningIcon,
 	XIcon,
 } from "@phosphor-icons/react";
-import type { ColumnDef, PaginationState, Row } from "@tanstack/react-table";
-import { debounce } from "lodash";
-import { parseAsBoolean, useQueryState } from "nuqs";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import type {
+	ColumnDef,
+	PaginationState,
+	Row,
+	Updater,
+} from "@tanstack/react-table";
+import {
+	parseAsArrayOf,
+	parseAsBoolean,
+	parseAsInteger,
+	parseAsString,
+	parseAsStringLiteral,
+	useQueryState,
+	useQueryStates,
+} from "nuqs";
+import { useCallback, useDeferredValue, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { Table } from "@/components/general/table";
@@ -74,6 +86,7 @@ import { OperationsPreview } from "../shared/OperationsPreview";
 import { RunSummaryRows } from "../shared/RunSummaryRows";
 import { ActiveDot } from "./ActiveDot";
 import {
+	EXECUTION_STATUS_VALUES,
 	type ExecutionStatus,
 	ExecutionStatusSubMenu,
 	hasActiveExecutionFilters,
@@ -217,11 +230,28 @@ export function MigrationLiveView({
 	const env = useEnv();
 	const tableContainerHeight =
 		env === AppEnv.Sandbox ? "calc(100vh - 260px)" : "calc(100vh - 220px)";
-	const [executionStatuses, setExecutionStatuses] = useState<ExecutionStatus[]>(
-		[],
+	const [executionQuery, setExecutionQuery] = useQueryStates(
+		{
+			execution_status: parseAsArrayOf(
+				parseAsStringLiteral(EXECUTION_STATUS_VALUES),
+			).withDefault([]),
+			q: parseAsString.withDefault(""),
+			page: parseAsInteger.withDefault(1),
+			pageSize: parseAsInteger.withDefault(50),
+		},
+		{ history: "replace" },
 	);
-	const [search, setSearch] = useState("");
-	const [debouncedSearch, setDebouncedSearch] = useState("");
+	const executionStatuses = executionQuery.execution_status;
+	const search = executionQuery.q;
+	const debouncedSearch = useDeferredValue(search.trim());
+	const currentPage = Math.max(executionQuery.page, 1);
+	const pageSize = PAGE_SIZE_OPTIONS.includes(executionQuery.pageSize)
+		? executionQuery.pageSize
+		: 50;
+	const pagination = useMemo<PaginationState>(
+		() => ({ pageIndex: currentPage - 1, pageSize }),
+		[currentPage, pageSize],
+	);
 	const previewCustomerFilters = useMemo(
 		() => ({
 			status: customerFilters.status,
@@ -236,10 +266,6 @@ export function MigrationLiveView({
 			customerFilters.processor,
 		],
 	);
-	const [pagination, setPagination] = useState<PaginationState>({
-		pageIndex: 0,
-		pageSize: 50,
-	});
 	const [dismissedError, setDismissedError] = useState<string | null>(null);
 	const [isRunDialogOpen, setIsRunDialogOpen] = useQueryState(
 		"run",
@@ -270,31 +296,34 @@ export function MigrationLiveView({
 		runControls.concurrency.trim() !== "" &&
 		parseConcurrency(runControls.concurrency) === undefined;
 
-	const debouncedSetSearch = useMemo(
-		() => debounce((q: string) => setDebouncedSearch(q), 350),
-		[],
-	);
-	useEffect(() => () => debouncedSetSearch.cancel(), [debouncedSetSearch]);
-
 	const resetPagination = useCallback(() => {
-		setPagination((p) => ({ ...p, pageIndex: 0 }));
-	}, []);
+		setExecutionQuery({ page: 1 });
+	}, [setExecutionQuery]);
 
 	const handleSearchChange = useCallback(
 		(e: React.ChangeEvent<HTMLInputElement>) => {
-			setSearch(e.target.value);
-			resetPagination();
-			debouncedSetSearch(e.target.value.trim());
+			setExecutionQuery({ q: e.target.value, page: 1 });
 		},
-		[debouncedSetSearch, resetPagination],
+		[setExecutionQuery],
 	);
 
 	const handleExecutionStatusesChange = useCallback(
 		(statuses: ExecutionStatus[]) => {
-			setExecutionStatuses(statuses);
-			resetPagination();
+			setExecutionQuery({ execution_status: statuses, page: 1 });
 		},
-		[resetPagination],
+		[setExecutionQuery],
+	);
+
+	const handlePaginationChange = useCallback(
+		(updater: Updater<PaginationState>) => {
+			const next =
+				typeof updater === "function" ? updater(pagination) : updater;
+			setExecutionQuery({
+				page: next.pageIndex + 1,
+				pageSize: next.pageSize,
+			});
+		},
+		[pagination, setExecutionQuery],
 	);
 
 	const {
@@ -345,10 +374,12 @@ export function MigrationLiveView({
 	);
 	const progressRun = activeRun ?? (isSettling ? latestRun : undefined);
 	const progressCounts = (progressRun ?? latestRun)?.item_run_counts;
-	const activeRunStatus: ActiveRunStatus =
-		hasRealtimeActive || isSettling
-			? "running"
-			: ((activeRun?.status as ActiveRunStatus) ?? null);
+	const canShowPendingStatus =
+		executionStatuses.length === 0 || executionStatuses.includes("queued");
+	const pendingRunStatus: ActiveRunStatus =
+		canShowPendingStatus && (hasRealtimeActive || isSettling || activeRun)
+			? "queued"
+			: null;
 	const activeRunId = progressRun?.internal_id ?? null;
 	const activeRunOnlyIds = useMemo(
 		() =>
@@ -379,23 +410,33 @@ export function MigrationLiveView({
 					!!hasEventInActiveRun ||
 					(isClaimedInActiveRun &&
 						c.migration_item_run?.status !== "running");
-				const showRunning =
-					isTargeted && isClaimedInActiveRun && !hasResultForRun;
+				const hasPersistedResult =
+					!!event ||
+					(!!c.migration_item_run &&
+						c.migration_item_run.status !== "running");
+				const showPending =
+					!!pendingRunStatus &&
+					isTargeted &&
+					!hasResultForRun &&
+					!hasPersistedResult;
+				let activeStatus: ActiveRunStatus = null;
+				if (showPending) {
+					activeStatus = isClaimedInActiveRun ? "running" : pendingRunStatus;
+				}
 				return {
 					...c,
 					_event: event,
-					_activeStatus: showRunning ? activeRunStatus : null,
+					_activeStatus: activeStatus,
 					_activeRunId: activeRunId ?? undefined,
 				};
 			}),
 		[
 			customers,
 			eventsByCustomer,
-			activeRunStatus,
+			pendingRunStatus,
 			activeRunId,
 			activeRunOnlyIds,
 			isActiveRunScoped,
-			isSettling,
 		],
 	);
 
@@ -409,11 +450,10 @@ export function MigrationLiveView({
 			manualPagination: true,
 			pageCount,
 			state: { pagination },
-			onPaginationChange: setPagination,
+			onPaginationChange: handlePaginationChange,
 		},
 	});
 
-	const currentPage = pagination.pageIndex + 1;
 	const canPrev = pagination.pageIndex > 0;
 	const canNext = count !== null && currentPage < pageCount;
 
@@ -799,12 +839,7 @@ export function MigrationLiveView({
 						variant="secondary"
 						size="default"
 						icon={<CaretLeftIcon size={12} weight="bold" />}
-						onClick={() =>
-							setPagination((p) => ({
-								...p,
-								pageIndex: p.pageIndex - 1,
-							}))
-						}
+						onClick={() => setExecutionQuery({ page: currentPage - 1 })}
 						disabled={!canPrev}
 						className={cn(!canPrev && "pointer-events-none opacity-50")}
 					/>
@@ -815,19 +850,14 @@ export function MigrationLiveView({
 						variant="secondary"
 						size="default"
 						icon={<CaretRightIcon size={12} weight="bold" />}
-						onClick={() =>
-							setPagination((p) => ({
-								...p,
-								pageIndex: p.pageIndex + 1,
-							}))
-						}
+						onClick={() => setExecutionQuery({ page: currentPage + 1 })}
 						disabled={!canNext}
 						className={cn(!canNext && "pointer-events-none opacity-50")}
 					/>
 					<Select
 						value={pagination.pageSize.toString()}
 						onValueChange={(v) =>
-							setPagination({ pageIndex: 0, pageSize: Number(v) })
+							setExecutionQuery({ page: 1, pageSize: Number(v) })
 						}
 						items={Object.fromEntries(
 							PAGE_SIZE_OPTIONS.map((s) => [s.toString(), s.toString()]),
@@ -862,6 +892,7 @@ export function MigrationLiveView({
 					onRowClick: setSelectedCustomer,
 					rowClassName: "h-10",
 					emptyStateText: "No customers match this filter",
+					flexibleTableColumns: true,
 					virtualization: {
 						containerHeight: tableContainerHeight,
 					},

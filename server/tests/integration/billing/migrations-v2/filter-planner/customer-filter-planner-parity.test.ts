@@ -460,6 +460,13 @@ test(`${chalk.yellowBright("migration filter planner: explicit processed statuse
 			itemId: `${fixture.prefix}-cus-scheduled`,
 			status: MigrationItemRunStatus.Failed,
 		});
+		await insertItemRun({
+			db: fixture.ctx.db,
+			migrationInternalId: fixture.migrationInternalId,
+			migrationRunId: fixture.migrationRunId,
+			itemId: `${fixture.prefix}-cus-duplicate-products`,
+			status: MigrationItemRunStatus.Running,
+		});
 
 		const ids = await executeCustomerIds({
 			db: fixture.ctx.db,
@@ -474,6 +481,18 @@ test(`${chalk.yellowBright("migration filter planner: explicit processed statuse
 		expect(sorted(ids)).toEqual(
 			sorted([fixture.customerIds.active, fixture.customerIds.pro]),
 		);
+
+		const runningIds = await executeCustomerIds({
+			db: fixture.ctx.db,
+			query: buildProcessedPreviewSelect({
+				...fixture.args,
+				includeProcessed: includeProcessed(fixture, {
+					statuses: [MigrationItemRunStatus.Running],
+				}),
+			}),
+		});
+
+		expect(runningIds).toEqual([fixture.customerIds.duplicateProducts]);
 	});
 });
 
@@ -499,6 +518,46 @@ test(`${chalk.yellowBright("migration filter planner: not_run excludes any proce
 			query: buildProcessedPreviewSelect({
 				...fixture.args,
 				includeProcessed: includeProcessed(fixture, { statuses: ["not_run"] }),
+			}),
+		});
+
+		expect(sorted(ids)).toEqual(
+			sorted([
+				fixture.customerIds.pastDue,
+				fixture.customerIds.duplicateProducts,
+			]),
+		);
+	});
+});
+
+test(`${chalk.yellowBright("migration filter planner: queued excludes checkpointed live item runs")}`, async () => {
+	await withSeededFixture("planner-parity-queued", async (fixture) => {
+		await insertItemRun({
+			db: fixture.ctx.db,
+			migrationInternalId: fixture.migrationInternalId,
+			migrationRunId: fixture.migrationRunId,
+			itemId: `${fixture.prefix}-cus-active`,
+			status: MigrationItemRunStatus.Succeeded,
+		});
+		await insertItemRun({
+			db: fixture.ctx.db,
+			migrationInternalId: fixture.migrationInternalId,
+			migrationRunId: fixture.migrationRunId,
+			itemId: `${fixture.prefix}-cus-scheduled`,
+			status: MigrationItemRunStatus.Failed,
+		});
+
+		const ids = await executeCustomerIds({
+			db: fixture.ctx.db,
+			query: buildProcessedPreviewSelect({
+				...fixture.args,
+				includeProcessed: includeProcessed(fixture, {
+					statuses: ["queued"],
+					queuedRun: {
+						migrationRunId: fixture.migrationRunId,
+						dryRun: false,
+					},
+				}),
 			}),
 		});
 

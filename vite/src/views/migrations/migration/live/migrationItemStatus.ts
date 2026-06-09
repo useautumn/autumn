@@ -48,6 +48,8 @@ export function resolveMigrationItemStatus({
 	if (activeStatus === "running") return { kind: "running" };
 	if (activeStatus === "queued") return { kind: "queued" };
 
+	if (itemRun?.status === "running") return { kind: "running" };
+
 	if (event)
 		return {
 			kind: "result",

@@ -17,7 +17,11 @@ import {
 	filterCustomers,
 } from "@/internal/migrations/v2/filters/customers/filterCustomers.js";
 import type { IncludeProcessed } from "../filters/customers/buildCustomerSelect.js";
-import { migrationItemRunRepo, migrationRepo } from "../repos/index.js";
+import {
+	migrationItemRunRepo,
+	migrationRepo,
+	migrationRunRepo,
+} from "../repos/index.js";
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -35,7 +39,9 @@ const PreviewFilterBody = z.object({
 		.default(DEFAULT_PAGE_SIZE),
 	migrationId: z.string().optional(),
 	executionStatuses: z
-		.array(z.enum(["succeeded", "skipped", "failed", "not_run"]))
+		.array(
+			z.enum(["queued", "running", "succeeded", "skipped", "failed", "not_run"]),
+		)
 		.optional()
 		.default([]),
 	migrationRunId: z.string().optional(),
@@ -76,6 +82,16 @@ export const handlePreviewMigrationFilter = createRoute({
 		if (migrationId) {
 			const migration = await migrationRepo.find({ ctx, id: migrationId });
 			migrationInternalId = migration.internal_id;
+			const needsActiveRun = executionStatuses.some((status) =>
+				["queued", "not_run"].includes(status),
+			);
+			const [activeRun] = needsActiveRun
+				? await migrationRunRepo.list({
+						ctx,
+						migrationInternalId: migration.internal_id,
+						active: true,
+					})
+				: [];
 			includeProcessed = {
 				migrationInternalId: migration.internal_id,
 				executionFilter:
@@ -84,6 +100,14 @@ export const handlePreviewMigrationFilter = createRoute({
 								statuses: executionStatuses,
 								migrationRunId,
 								dryRun: migrationRunDryRun,
+								queuedRun: activeRun
+									? {
+											migrationRunId: activeRun.internal_id,
+											dryRun: activeRun.dry_run,
+											onlyIds: activeRun.only_ids ?? undefined,
+											targetLimit: activeRun.target_limit ?? undefined,
+										}
+									: undefined,
 							}
 						: undefined,
 			};

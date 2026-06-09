@@ -73,12 +73,12 @@ export function OperationsPreview({ operations }: { operations: Operations }) {
 
 				return (
 					<div key={`op-${index}`} className="flex flex-col gap-2 min-w-0">
-						<div className="flex items-center gap-2">
-							<span className="text-sm font-medium text-foreground">
+						<div className="flex items-center gap-2 min-w-0">
+							<span className="text-sm font-medium text-foreground whitespace-nowrap shrink-0">
 								{planIds.length > 1 ? "Update plans" : "Update plan"}
 							</span>
 							{planIds.length > 0 && (
-								<span className="text-xs text-tertiary-foreground">
+								<span className="text-xs text-tertiary-foreground truncate min-w-0">
 									{planIds.map(planName).join(", ")}
 								</span>
 							)}
