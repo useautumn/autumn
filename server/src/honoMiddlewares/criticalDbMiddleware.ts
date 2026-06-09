@@ -38,6 +38,8 @@ const ADMISSION_ROUTES = [
 	{ method: "POST", url: "/entities.get" },
 ];
 
+const SHED_RETRY_AFTER_SECONDS = "1";
+
 export const criticalDbMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const path = c.req.path.replace(/^\/v1/, "");
 	const method = c.req.method;
@@ -61,7 +63,14 @@ export const criticalDbMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		return;
 	}
 
-	const release = enterCriticalDb();
+	let release: () => void;
+	try {
+		release = enterCriticalDb();
+	} catch (err) {
+		c.header("Retry-After", SHED_RETRY_AFTER_SECONDS);
+		throw err;
+	}
+
 	try {
 		await next();
 	} finally {

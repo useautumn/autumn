@@ -11,7 +11,7 @@ let inFlight = 0;
 const meter = metrics.getMeter("autumn-server");
 const shedCounter = meter.createCounter("autumn.critical_db.admission.shed", {
 	description:
-		"Critical-route requests shed with 429 before acquiring a DB connection",
+		"Critical-route requests shed with 503 before acquiring a DB connection",
 });
 const activeCounter = meter.createUpDownCounter(
 	"autumn.critical_db.admission.active",
@@ -38,9 +38,9 @@ export const enterCriticalDb = (): (() => void) => {
 	if (inFlight >= limit) {
 		shedCounter.add(1);
 		throw new RecaseError({
-			message: "Service is at capacity, please retry shortly.",
-			code: "rate_limit_exceeded",
-			statusCode: 429,
+			message: "Service is temporarily unavailable, please retry shortly.",
+			code: "service_unavailable",
+			statusCode: 503,
 			data: { reason: "critical_db_saturated" },
 		});
 	}
