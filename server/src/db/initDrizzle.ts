@@ -97,9 +97,25 @@ export const initDrizzle = ({
 // Strict latency limits in prod; relaxed locally so dev pool warm-up doesn't kill tests.
 const isProd = process.env.NODE_ENV === "production";
 
+const poolMaxFromEnv = ({
+	envVar,
+	fallback,
+}: {
+	envVar: string;
+	fallback: number;
+}): number => {
+	const parsed = Number(process.env[envVar]);
+	return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+// Per-process maxes are budgeted so the fleet total stays under PgBouncer's
+// max_client_conn (2026-06-08 incident): procs × Σ(max) ≤ 0.8 × ceiling.
 export const { db: dbCritical, client: clientCritical } = initDrizzle({
 	name: "critical",
-	maxConnections: isProd ? 100 : 10,
+	maxConnections: poolMaxFromEnv({
+		envVar: "CRITICAL_DB_POOL_MAX",
+		fallback: isProd ? 22 : 10,
+	}),
 	connectTimeout: isProd ? 2 : 30,
 	databaseUrl: process.env.DATABASE_CRITICAL_URL,
 	poolConfig: {
@@ -113,6 +129,10 @@ export const { db: dbCritical, client: clientCritical } = initDrizzle({
 // -- General pool: used by all other endpoints --
 export const { db: dbGeneral, client: clientGeneral } = initDrizzle({
 	name: "general",
+	maxConnections: poolMaxFromEnv({
+		envVar: "GENERAL_DB_POOL_MAX",
+		fallback: isProd ? 14 : 10,
+	}),
 	connectTimeout: isProd ? 5 : 30,
 });
 
@@ -122,7 +142,10 @@ const replicaResult = process.env.DATABASE_REPLICA_URL
 	? initDrizzle({
 			name: "replica",
 			replica: true,
-			maxConnections: 15,
+			maxConnections: poolMaxFromEnv({
+				envVar: "REPLICA_DB_POOL_MAX",
+				fallback: 6,
+			}),
 			connectTimeout: null,
 		})
 	: null;
