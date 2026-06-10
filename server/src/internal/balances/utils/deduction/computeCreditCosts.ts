@@ -1,4 +1,5 @@
 import type { FullCusEntWithFullCusProduct } from "@autumn/shared";
+import { logger } from "@/external/logtail/logtailUtils.js";
 import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 
@@ -26,14 +27,26 @@ export const computeCreditCosts = ({
 			continue;
 		}
 
-		costMap.set(
-			ce.id,
-			getCreditCost({
-				featureId: deduction.feature.id,
-				creditSystem: ce.entitlement.feature,
-				amount: deduction.tokens?.cost,
-			}),
-		);
+		try {
+			costMap.set(
+				ce.id,
+				getCreditCost({
+					featureId: deduction.feature.id,
+					creditSystem: ce.entitlement.feature,
+					amount: deduction.tokens?.cost,
+				}),
+			);
+		} catch (error) {
+			// Cached cusEnt schemas can briefly trail a feature update; deduct at
+			// 1:1 rather than failing the track.
+			logger.warn("[computeCreditCosts] falling back to credit cost 1", {
+				feature_id: deduction.feature.id,
+				credit_system_id: ce.entitlement.feature.id,
+				customer_entitlement_id: ce.id,
+				error: String(error),
+			});
+			costMap.set(ce.id, DEFAULT_CREDIT_COST);
+		}
 	}
 
 	return (entitlementId) => costMap.get(entitlementId) ?? DEFAULT_CREDIT_COST;
