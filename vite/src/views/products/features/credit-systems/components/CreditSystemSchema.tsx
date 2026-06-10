@@ -74,7 +74,7 @@ export function CreditSystemSchema({
 						value={mode}
 						onValueChange={handleModeChange}
 						options={modeOptions}
-						className="w-fit"
+						className="w-full"
 					/>
 				)}
 
