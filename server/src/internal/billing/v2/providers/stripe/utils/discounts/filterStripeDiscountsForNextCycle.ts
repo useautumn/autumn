@@ -9,11 +9,13 @@ export const filterStripeDiscountsForNextCycle = ({
 	currentEpochMs,
 	nextCycleStart,
 	discountStartMs,
+	hasImmediateInvoice = true,
 }: {
 	stripeDiscounts: StripeDiscountWithCoupon[];
 	currentEpochMs: number;
 	nextCycleStart: number;
 	discountStartMs?: number;
+	hasImmediateInvoice?: boolean;
 }) => {
 	return stripeDiscounts.filter((discount) =>
 		stripeDiscountAppliesToNextCycle({
@@ -21,6 +23,7 @@ export const filterStripeDiscountsForNextCycle = ({
 			currentEpochMs,
 			nextCycleStart,
 			discountStartMs,
+			hasImmediateInvoice,
 		}),
 	);
 };
@@ -33,11 +36,13 @@ const stripeDiscountAppliesToNextCycle = ({
 	currentEpochMs,
 	nextCycleStart,
 	discountStartMs,
+	hasImmediateInvoice,
 }: {
 	discount: StripeDiscountWithCoupon;
 	currentEpochMs: number;
 	nextCycleStart: number;
 	discountStartMs?: number;
+	hasImmediateInvoice: boolean;
 }) => {
 	if (discount.id) {
 		if (discount.end == null) return true;
@@ -51,7 +56,9 @@ const stripeDiscountAppliesToNextCycle = ({
 	}
 
 	if (coupon.duration === "once") {
-		return false;
+		// A fresh once coupon hits the first invoice after it's applied — when
+		// nothing is invoiced immediately, that first invoice is the next cycle's.
+		return !hasImmediateInvoice;
 	}
 
 	if (coupon.duration === "repeating") {
