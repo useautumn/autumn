@@ -24,6 +24,11 @@ export const runTrackWithRollout = async ({
 	apiVersion?: ApiVersion;
 }): Promise<TrackResponseV3> => {
 	if (shouldUseTrackV3({ ctx })) {
+		if (ctx.orgRateLimitDegraded) {
+			const queuedResponse = await queueTrack({ ctx, body });
+			if (queuedResponse) return queuedResponse;
+		}
+
 		return withRedisFailOpen<TrackResponseV3>({
 			source: "runTrackWithRollout",
 			run: () =>
