@@ -1,3 +1,4 @@
+import type { FullCusEntWithFullCusProduct } from "@models/cusProductModels/cusEntModels/cusEntWithProduct";
 import type {
 	FeatureOptions,
 	FullCusProduct,
@@ -5,11 +6,54 @@ import type {
 import type { EntitlementWithFeature } from "@models/productModels/entModels/entModels";
 import type { Price } from "@models/productModels/priceModels/priceModels";
 import { roundUsageToNearestBillingUnit } from "@utils/billingUtils/usageUtils/roundUsageToNearestBillingUnit";
+import { cusEntsToUsage } from "@utils/cusEntUtils";
+import { findCustomerEntitlementByFeature } from "@utils/cusEntUtils/findCustomerEntitlement/findCustomerEntitlementByFeature";
 import { cusPriceToCusEnt } from "@utils/cusPriceUtils";
 import { findPrepaidCusPriceByFeature } from "@utils/cusPriceUtils/findCusPriceUtils/findPrepaidCusPriceByFeature";
 import { nullish } from "@utils/utils";
 import { Decimal } from "decimal.js";
 import { cusProductToFeatureOptions } from "./cusProductToFeatureOptions";
+
+const usageToConvertedFeatureOptions = ({
+	cusProduct,
+	entitlement,
+	newPrice,
+}: {
+	cusProduct: FullCusProduct;
+	entitlement: EntitlementWithFeature;
+	newPrice: Price;
+}): FeatureOptions | undefined => {
+	const customerEntitlement = findCustomerEntitlementByFeature({
+		cusEnts: cusProduct.customer_entitlements,
+		feature: entitlement.feature,
+	});
+	if (!customerEntitlement) return undefined;
+
+	const usage = cusEntsToUsage({
+		cusEnts: [
+			{
+				...customerEntitlement,
+				customer_product: cusProduct,
+			} satisfies FullCusEntWithFullCusProduct,
+		],
+	});
+	const newAllowance = entitlement.allowance ?? 0;
+	const newBillingUnits = newPrice.config.billing_units ?? 1;
+	const paidUsage = Math.max(
+		0,
+		new Decimal(usage).sub(newAllowance).toNumber(),
+	);
+	const roundedPaidUsage = roundUsageToNearestBillingUnit({
+		usage: paidUsage,
+		billingUnits: newBillingUnits,
+	});
+
+	return {
+		internal_feature_id: entitlement.feature.internal_id,
+		feature_id: entitlement.feature.id,
+		quantity: new Decimal(roundedPaidUsage).div(newBillingUnits).toNumber(),
+	};
+};
 
 /**
  * Converts purchased packs from an old customer product to packs in new billing units.
@@ -27,16 +71,22 @@ export const cusProductToConvertedFeatureOptions = ({
 	const feature = entitlement.feature;
 	const currentOption = cusProductToFeatureOptions({ cusProduct, feature });
 
-	if (nullish(currentOption?.quantity)) return undefined;
+	// if (nullish(currentOption?.quantity)) return undefined;
 
 	const oldCusPrice = findPrepaidCusPriceByFeature({
 		customerPrices: cusProduct.customer_prices,
 		feature,
 	});
 
-	if (!oldCusPrice)
-		// If no old price found, we can't interpret the stored quantity
-		return undefined;
+	// if (!oldCusPrice) return undefined;
+
+	if (nullish(currentOption?.quantity) || !oldCusPrice) {
+		return usageToConvertedFeatureOptions({
+			cusProduct,
+			entitlement,
+			newPrice,
+		});
+	}
 
 	const oldCustomerEntitlement = cusPriceToCusEnt({
 		cusPrice: oldCusPrice,

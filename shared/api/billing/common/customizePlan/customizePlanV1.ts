@@ -5,6 +5,7 @@ import { PlanItemFilterSchema } from "@api/products/items/filter/planItemFilter"
 import { ResetInterval } from "@models/productModels/intervals/resetInterval";
 import { z } from "zod/v4";
 
+/** Deprecated: use remove_items and add_items to replace plan items. */
 export const UpdatePlanItemParamsV1Schema = z
 	.object({
 		filter: PlanItemFilterSchema.meta({
@@ -19,74 +20,94 @@ export const UpdatePlanItemParamsV1Schema = z
 			description:
 				"Override the matched item's reset interval. Use 'one_off' for non-resetting balances.",
 		}),
-		})
-		.meta({
-			title: "UpdatePlanItem",
-			description:
-				"Deprecated. Use remove_items and add_items to replace plan items.",
-			deprecated: true,
-		});
+	})
+	.meta({
+		title: "UpdatePlanItem",
+		description:
+			"Deprecated. Use remove_items and add_items to replace plan items.",
+		deprecated: true,
+	});
 
-export type UpdatePlanItemParamsV1 = z.infer<typeof UpdatePlanItemParamsV1Schema>;
+export type UpdatePlanItemParamsV1 = z.infer<
+	typeof UpdatePlanItemParamsV1Schema
+>;
 
-export const CustomizePlanV1Schema = z
-	.object({
+type CustomizePlanRefinementData = {
+	price?: unknown;
+	items?: unknown;
+	add_items?: unknown;
+	remove_items?: unknown;
+	update_items?: unknown;
+	free_trial?: unknown;
+};
+
+export const refineCustomizePlanV1Schema = <
+	TSchema extends z.ZodType<CustomizePlanRefinementData>,
+>(
+	schema: TSchema,
+	{ includeFreeTrial = true }: { includeFreeTrial?: boolean } = {},
+) =>
+	schema
+		.refine(
+			(data) =>
+				data.items !== undefined ||
+				data.price !== undefined ||
+				(includeFreeTrial && data.free_trial !== undefined) ||
+				data.add_items !== undefined ||
+				data.remove_items !== undefined ||
+				data.update_items !== undefined,
+			{
+				message: includeFreeTrial
+					? "When using customize, at least one of price, items, add_items, remove_items, deprecated update_items, or free_trial must be provided"
+					: "When using customize, at least one of price, items, add_items, remove_items, or deprecated update_items must be provided",
+			},
+		)
+		.refine(
+			(data) =>
+				!(
+					data.items !== undefined &&
+					(data.add_items !== undefined ||
+						data.remove_items !== undefined ||
+						data.update_items !== undefined)
+				),
+			{
+				message:
+					"customize.items (PUT-style) cannot be combined with add_items / remove_items / deprecated update_items (PATCH-style); pick one approach",
+			},
+		);
+
+export const CustomizePlanV1Schema = refineCustomizePlanV1Schema(
+	z.object({
 		price: BasePriceParamsSchema.nullable().optional().meta({
 			description:
 				"Override the base price of the plan. Pass null to remove the base price.",
 		}),
-			items: z.array(CreatePlanItemParamsV1Schema).optional().meta({
-				description:
-					"Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items.",
-			}),
+		items: z.array(CreatePlanItemParamsV1Schema).optional().meta({
+			description:
+				"Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items.",
+		}),
 		add_items: z.array(CreatePlanItemParamsV1Schema).optional().meta({
 			description: "Items to add to the plan.",
 		}),
 		remove_items: z.array(PlanItemFilterSchema).optional().meta({
 			description: "Filters selecting items to remove from the plan.",
 		}),
-			update_items: z.array(UpdatePlanItemParamsV1Schema).optional().meta({
-				description:
-					"Deprecated. Use remove_items and add_items to replace matched plan items.",
-				internal: true,
-				deprecated: true,
-			}),
+		update_items: z.array(UpdatePlanItemParamsV1Schema).optional().meta({
+			description:
+				"Deprecated. Use remove_items and add_items to replace matched plan items.",
+			internal: true,
+			deprecated: true,
+		}),
 		free_trial: FreeTrialParamsV1Schema.nullable().optional().meta({
 			description:
 				"Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.",
 		}),
-	})
-	.refine(
-		(data) =>
-			data.items !== undefined ||
-			data.price !== undefined ||
-			data.free_trial !== undefined ||
-			data.add_items !== undefined ||
-			data.remove_items !== undefined ||
-			data.update_items !== undefined,
-			{
-				message:
-					"When using customize, at least one of price, items, add_items, remove_items, deprecated update_items, or free_trial must be provided",
-			},
-	)
-	.refine(
-		(data) =>
-			!(
-				data.items !== undefined &&
-				(data.add_items !== undefined ||
-					data.remove_items !== undefined ||
-					data.update_items !== undefined)
-			),
-			{
-				message:
-					"customize.items (PUT-style) cannot be combined with add_items / remove_items / deprecated update_items (PATCH-style); pick one approach",
-			},
-	)
-	.meta({
-		title: "CustomizePlan",
-		description:
-			"Customize a plan by overriding its price, items, free trial, or a combination.",
-	});
+	}),
+).meta({
+	title: "CustomizePlan",
+	description:
+		"Customize a plan by overriding its price, items, free trial, or a combination.",
+});
 
 export type CustomizePlanV1 = z.infer<typeof CustomizePlanV1Schema>;
 

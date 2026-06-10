@@ -1,11 +1,13 @@
 import { expect, test } from "bun:test";
 import {
+	BillingMethod,
 	CusProductStatus,
 	customerEntitlements,
 	customerProducts,
 	ms,
 	schedulePhases,
 } from "@autumn/shared";
+import { expectStripeSubscriptionCorrect } from "@tests/integration/billing/utils/expectStripeSubCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
@@ -16,9 +18,13 @@ import chalk from "chalk";
 import { eq } from "drizzle-orm";
 import {
 	getCustomerProductEntitlementBalances,
+	getCustomerProductFeaturePriceAmounts,
 	getCustomerProductPriceAmounts,
 	getRequiredScheduleId,
 } from "../utils/createScheduleTestHelpers";
+
+// Contract: V2.2 schedule customize accepts PATCH-style add_items/remove_items.
+// Contract: patched items/prices apply to immediate and future cusProducts, including Stripe.
 
 test.concurrent(
 	`${chalk.yellowBright("create-schedule: preserves feature quantity options on created customer products")}`,
@@ -73,6 +79,180 @@ test.concurrent(
 				quantity: 4,
 			}),
 		]);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("create-schedule: patch customize applies to immediate customer products and Stripe")}`,
+	async () => {
+		const base = products.base({
+			id: "create-schedule-patch-immediate",
+			items: [
+				items.monthlyPrice(),
+				items.monthlyMessages({ includedUsage: 100 }),
+				items.monthlyWords({ includedUsage: 50 }),
+			],
+		});
+
+		const { customerId, autumnV2_2, ctx } = await initScenario({
+			customerId: "create-schedule-patch-immediate",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [base] }),
+			],
+			actions: [],
+		});
+
+		const response = await autumnV2_2.billing.createSchedule({
+			customer_id: customerId,
+			phases: [
+				{
+					starts_at: Date.now(),
+					plans: [
+						{
+							plan_id: base.id,
+							customize: {
+								price: itemsV2.monthlyPrice({ amount: 42 }),
+								remove_items: [{ feature_id: TestFeature.Messages }],
+								add_items: [itemsV2.dashboard()],
+							},
+						},
+					],
+				},
+			],
+		});
+
+		const customerProductId = response.phases[0]!.customer_product_ids[0]!;
+		const customerProduct = await ctx.db.query.customerProducts.findFirst({
+			where: eq(customerProducts.id, customerProductId),
+		});
+
+		expect(customerProduct?.is_custom).toBe(true);
+		expect(
+			await getCustomerProductPriceAmounts({ ctx, customerProductId }),
+		).toEqual([42]);
+		expect(
+			await getCustomerProductEntitlementBalances({
+				ctx,
+				customerProductId,
+			}),
+		).toEqual(
+			expect.arrayContaining([
+				{ feature_id: TestFeature.Words, balance: 50 },
+				{ feature_id: TestFeature.Dashboard, balance: 0 },
+			]),
+		);
+		expect(
+			await getCustomerProductEntitlementBalances({
+				ctx,
+				customerProductId,
+			}),
+		).not.toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ feature_id: TestFeature.Messages }),
+			]),
+		);
+
+		await expectStripeSubscriptionCorrect({ ctx, customerId });
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("create-schedule: patch customize applies to future customer products and Stripe schedule")}`,
+	async () => {
+		const base = products.base({
+			id: "create-schedule-patch-future",
+			items: [
+				items.monthlyPrice(),
+				items.monthlyMessages({ includedUsage: 100 }),
+				items.prepaid({
+					featureId: TestFeature.Words,
+					price: 10,
+					billingUnits: 100,
+				}),
+			],
+		});
+
+		const { customerId, autumnV2_2, ctx } = await initScenario({
+			customerId: "create-schedule-patch-future",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [base] }),
+			],
+			actions: [],
+		});
+
+		const now = Date.now();
+		const response = await autumnV2_2.billing.createSchedule({
+			customer_id: customerId,
+			phases: [
+				{
+					starts_at: now,
+					plans: [{ plan_id: base.id }],
+				},
+				{
+					starts_at: now + ms.days(30),
+					plans: [
+						{
+							plan_id: base.id,
+							customize: {
+								remove_items: [
+									{
+										feature_id: TestFeature.Words,
+										billing_method: BillingMethod.Prepaid,
+									},
+								],
+								add_items: [
+									itemsV2.prepaidWords({ amount: 7, billingUnits: 100 }),
+								],
+							},
+							feature_quantities: [
+								{
+									feature_id: TestFeature.Words,
+									quantity: 300,
+								},
+							],
+						},
+					],
+				},
+			],
+		});
+
+		const futureCustomerProductId =
+			response.phases[1]!.customer_product_ids[0]!;
+		const futureCustomerProduct = await ctx.db.query.customerProducts.findFirst(
+			{
+				where: eq(customerProducts.id, futureCustomerProductId),
+			},
+		);
+
+		expect(futureCustomerProduct?.is_custom).toBe(true);
+		expect(
+			await getCustomerProductPriceAmounts({
+				ctx,
+				customerProductId: futureCustomerProductId,
+			}),
+		).toEqual([20]);
+		expect(
+			await getCustomerProductFeaturePriceAmounts({
+				ctx,
+				customerProductId: futureCustomerProductId,
+				featureId: TestFeature.Words,
+			}),
+		).toEqual([7]);
+		expect(
+			await getCustomerProductEntitlementBalances({
+				ctx,
+				customerProductId: futureCustomerProductId,
+			}),
+		).toEqual(
+			expect.arrayContaining([
+				{ feature_id: TestFeature.Messages, balance: 100 },
+				{ feature_id: TestFeature.Words, balance: 300 },
+			]),
+		);
+
+		await expectStripeSubscriptionCorrect({ ctx, customerId });
 	},
 );
 
