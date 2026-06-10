@@ -130,7 +130,9 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts-preview 2: fre
 	).toBe(true);
 });
 
-test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts-preview 3: fresh once coupon does not affect next_cycle")}`, async () => {
+// Nothing is billed today on a scheduled switch, so a fresh once coupon
+// survives to the first invoice after the switch — next_cycle is discounted.
+test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts-preview 3: fresh once coupon with no immediate invoice applies to next_cycle")}`, async () => {
 	const customerId = "sched-switch-disc-preview-once";
 
 	const pro = products.pro({
@@ -172,12 +174,12 @@ test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts-preview 3: fre
 
 	const nextCycle = expectPreviewNextCycleCorrect({
 		preview,
-		total: 20,
+		total: 16,
 	})!;
 
 	expect(
 		nextCycle.line_items.some((lineItem) => lineItem.discounts.length > 0),
-	).toBe(false);
+	).toBe(true);
 });
 
 test.concurrent(`${chalk.yellowBright("scheduled-switch-discounts-preview 4: fresh 1-month coupon does not affect annual next_cycle")}`, async () => {

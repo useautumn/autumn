@@ -1,5 +1,6 @@
 import type {
 	CreateScheduleParamsV0,
+	FullCustomer,
 	ScheduledPhaseContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -11,9 +12,13 @@ import { validateCreateSchedulePhasePlans } from "../errors/validateCreateSchedu
 export const setupScheduledProductsContext = async ({
 	ctx,
 	phases,
+	fullCustomer,
+	currentEpochMs,
 }: {
 	ctx: AutumnContext;
 	phases: CreateScheduleParamsV0["phases"][number][];
+	fullCustomer: FullCustomer;
+	currentEpochMs: number;
 }): Promise<ScheduledPhaseContext[]> =>
 	Promise.all(
 		phases.map(async (phase, index) => {
@@ -28,6 +33,8 @@ export const setupScheduledProductsContext = async ({
 					} = await setupAttachProductContext({
 						ctx,
 						params: plan,
+						fullCustomer,
+						currentEpochMs,
 					});
 
 					const featureQuantities = setupFeatureQuantitiesContext({
