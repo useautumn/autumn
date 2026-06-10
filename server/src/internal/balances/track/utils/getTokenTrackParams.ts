@@ -11,7 +11,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
-import { getModelCreditCost } from "@/internal/features/aiCreditSystemUtils.js";
+import { getModelCreditCostBreakdown } from "@/internal/features/aiCreditSystemUtils.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 
@@ -118,7 +118,7 @@ export const getTokenTrackParams = async ({
 				entityId: input.entity_id,
 			});
 
-	const cost = await getModelCreditCost({
+	const pricing = await getModelCreditCostBreakdown({
 		modelName: input.model_id,
 		creditSystem: aiCreditFeature,
 		input: input.input_tokens,
@@ -129,6 +129,7 @@ export const getTokenTrackParams = async ({
 		audioOutput: input.audio_output_tokens,
 		reasoning: input.reasoning_tokens,
 	});
+	const cost = pricing.cost;
 
 	const featureDeductions: FeatureDeduction[] = [
 		{
@@ -161,6 +162,19 @@ export const getTokenTrackParams = async ({
 			audio_output_tokens: input.audio_output_tokens,
 			reasoning_tokens: input.reasoning_tokens,
 			cost,
+			base_cost: pricing.baseCost,
+			markup: pricing.markup,
+			markup_source: pricing.markupSource,
+			tier_applied: pricing.tierApplied,
+			rates: {
+				input: pricing.rates.input,
+				output: pricing.rates.output,
+				cache_read: pricing.rates.cacheRead,
+				cache_write: pricing.rates.cacheWrite,
+				audio_input: pricing.rates.audioInput,
+				audio_output: pricing.rates.audioOutput,
+				reasoning: pricing.rates.reasoning,
+			},
 		},
 		idempotency_key: input.idempotency_key,
 		overage_behavior: input.overage_behavior,

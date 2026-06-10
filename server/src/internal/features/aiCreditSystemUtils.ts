@@ -7,7 +7,6 @@ import {
 	type ModelsDevModel,
 	type ModelsDevProvider,
 	RecaseError,
-	resolveInheritedMarkup,
 	splitModelId,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
@@ -78,7 +77,7 @@ const resolveModel = ({
 const getEffectiveCost = (
 	cost: ModelsDevCost,
 	totalInputTokens: number,
-): ModelsDevCost => {
+): { effective: ModelsDevCost; tierApplied: boolean } => {
 	if (cost.tiers?.length) {
 		let chosen: ModelsDevCostTier | undefined;
 		for (const tier of cost.tiers) {
@@ -91,25 +90,51 @@ const getEffectiveCost = (
 		}
 		if (chosen) {
 			return {
-				...cost,
-				input: chosen.input,
-				output: chosen.output,
-				cache_read: chosen.cache_read ?? cost.cache_read,
-				cache_write: chosen.cache_write ?? cost.cache_write,
+				effective: {
+					...cost,
+					input: chosen.input,
+					output: chosen.output,
+					cache_read: chosen.cache_read ?? cost.cache_read,
+					cache_write: chosen.cache_write ?? cost.cache_write,
+				},
+				tierApplied: true,
 			};
 		}
-		return cost;
+		return { effective: cost, tierApplied: false };
 	}
 	if (cost.context_over_200k && totalInputTokens > LARGE_CONTEXT_THRESHOLD) {
 		return {
-			...cost,
-			input: cost.context_over_200k.input,
-			output: cost.context_over_200k.output,
-			cache_read: cost.context_over_200k.cache_read ?? cost.cache_read,
-			cache_write: cost.context_over_200k.cache_write ?? cost.cache_write,
+			effective: {
+				...cost,
+				input: cost.context_over_200k.input,
+				output: cost.context_over_200k.output,
+				cache_read: cost.context_over_200k.cache_read ?? cost.cache_read,
+				cache_write: cost.context_over_200k.cache_write ?? cost.cache_write,
+			},
+			tierApplied: true,
 		};
 	}
-	return cost;
+	return { effective: cost, tierApplied: false };
+};
+
+/** Effective per-token rates ($/M) used for a charge, after tier overlays and fallbacks. */
+export type ModelCostRates = {
+	input: number;
+	output: number;
+	cacheRead: number;
+	cacheWrite: number;
+	audioInput: number;
+	audioOutput: number;
+	reasoning: number;
+};
+
+export type ModelCostBreakdown = {
+	cost: number;
+	baseCost: number;
+	markup: number;
+	markupSource: "model" | "provider" | "default" | "none";
+	tierApplied: boolean;
+	rates: ModelCostRates;
 };
 
 const computeCost = ({
@@ -120,7 +145,7 @@ const computeCost = ({
 	cost: ModelsDevCost;
 	tokens: TokenInput;
 	markup: number;
-}): number => {
+}): { cost: number; baseCost: number; tierApplied: boolean; rates: ModelCostRates } => {
 	const cacheRead = tokens.cacheRead ?? 0;
 	const cacheWrite = tokens.cacheWrite ?? 0;
 	const audioInput = tokens.audioInput ?? 0;
@@ -128,28 +153,37 @@ const computeCost = ({
 	const reasoning = tokens.reasoning ?? 0;
 
 	const totalInput = tokens.input + cacheRead + cacheWrite;
-	const effective = getEffectiveCost(cost, totalInput);
-	const inputRate = effective.input;
-	const outputRate = effective.output;
+	const { effective, tierApplied } = getEffectiveCost(cost, totalInput);
 
 	// Pools without a published rate fall back to the base text rate.
-	const cacheReadRate = effective.cache_read ?? inputRate;
-	const cacheWriteRate = effective.cache_write ?? inputRate;
-	const audioInputRate = effective.input_audio ?? inputRate;
-	const audioOutputRate = effective.output_audio ?? outputRate;
-	const reasoningRate = effective.reasoning ?? outputRate;
+	const rates: ModelCostRates = {
+		input: effective.input,
+		output: effective.output,
+		cacheRead: effective.cache_read ?? effective.input,
+		cacheWrite: effective.cache_write ?? effective.input,
+		audioInput: effective.input_audio ?? effective.input,
+		audioOutput: effective.output_audio ?? effective.output,
+		reasoning: effective.reasoning ?? effective.output,
+	};
 
-	return new Decimal(inputRate)
+	const baseCost = new Decimal(rates.input)
 		.mul(tokens.input)
-		.add(new Decimal(outputRate).mul(tokens.output))
-		.add(new Decimal(cacheReadRate).mul(cacheRead))
-		.add(new Decimal(cacheWriteRate).mul(cacheWrite))
-		.add(new Decimal(audioInputRate).mul(audioInput))
-		.add(new Decimal(audioOutputRate).mul(audioOutput))
-		.add(new Decimal(reasoningRate).mul(reasoning))
-		.div(1_000_000)
-		.mul(new Decimal(1).add(new Decimal(markup).div(100)))
-		.toNumber();
+		.add(new Decimal(rates.output).mul(tokens.output))
+		.add(new Decimal(rates.cacheRead).mul(cacheRead))
+		.add(new Decimal(rates.cacheWrite).mul(cacheWrite))
+		.add(new Decimal(rates.audioInput).mul(audioInput))
+		.add(new Decimal(rates.audioOutput).mul(audioOutput))
+		.add(new Decimal(rates.reasoning).mul(reasoning))
+		.div(1_000_000);
+
+	return {
+		cost: baseCost
+			.mul(new Decimal(1).add(new Decimal(markup).div(100)))
+			.toNumber(),
+		baseCost: baseCost.toNumber(),
+		tierApplied,
+		rates,
+	};
 };
 
 const resolveAiMarkup = ({
@@ -160,38 +194,41 @@ const resolveAiMarkup = ({
 	modelName: string;
 	creditSystem: Feature;
 	modelMarkup?: { markup?: number | null } | null;
-}) => {
+}): { markup: number; source: ModelCostBreakdown["markupSource"] } => {
 	if (modelMarkup?.markup != null) {
-		return modelMarkup.markup;
+		return { markup: modelMarkup.markup, source: "model" };
 	}
 
 	const { provider } = splitModelId(modelName);
 	const providerMarkup = provider
 		? creditSystem.config?.provider_markups?.[provider]?.markup
 		: undefined;
+	if (providerMarkup != null) {
+		return { markup: providerMarkup, source: "provider" };
+	}
 
-	return (
-		resolveInheritedMarkup({
-			providerMarkup,
-			defaultMarkup: creditSystem.config?.default_markup,
-		}) ?? 0
-	);
+	const defaultMarkup = creditSystem.config?.default_markup;
+	if (defaultMarkup != null) {
+		return { markup: defaultMarkup, source: "default" };
+	}
+
+	return { markup: 0, source: "none" };
 };
 
-export const getModelCreditCost = async ({
+export const getModelCreditCostBreakdown = async ({
 	modelName,
 	creditSystem,
 	...tokens
 }: {
 	modelName: string;
 	creditSystem: Feature;
-} & TokenInput): Promise<number> => {
+} & TokenInput): Promise<ModelCostBreakdown> => {
 	const markups = creditSystem.model_markups || {};
 	const pricingData = await getModelsDevPricing();
 	const resolved = resolveModel({ modelName, pricingData });
 
 	const markupEntry = markups[modelName];
-	const markup = resolveAiMarkup({
+	const { markup, source } = resolveAiMarkup({
 		modelName,
 		creditSystem,
 		modelMarkup: markupEntry,
@@ -207,16 +244,22 @@ export const getModelCreditCost = async ({
 				data: { modelName },
 			});
 		}
-		return computeCost({
+		const computed = computeCost({
 			cost: { input: markupEntry.input_cost, output: markupEntry.output_cost },
 			tokens: { input: tokens.input, output: tokens.output },
 			markup,
 		});
+		return { ...computed, markup, markupSource: source };
 	}
 
-	return computeCost({
+	const computed = computeCost({
 		cost: resolved.model.cost,
 		tokens,
 		markup,
 	});
+	return { ...computed, markup, markupSource: source };
 };
+
+export const getModelCreditCost = async (
+	args: { modelName: string; creditSystem: Feature } & TokenInput,
+): Promise<number> => (await getModelCreditCostBreakdown(args)).cost;

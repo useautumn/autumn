@@ -89,7 +89,7 @@ mock.module("@/internal/features/utils/getModelPricing.js", () => ({
 	getModelsDevPricing: async () => pricingData,
 }));
 
-const { getModelCreditCost } = await import(
+const { getModelCreditCost, getModelCreditCostBreakdown } = await import(
 	"@/internal/features/aiCreditSystemUtils.js"
 );
 
@@ -246,5 +246,31 @@ describe("computeCost — token pools", () => {
 			output: 500,
 		});
 		expect(cost).toBeCloseTo(((5 * 1000 + 25 * 500) / PER_MILLION) * 1.5, 10);
+	});
+
+	test("breakdown reports tier_applied and the tier rates actually used", async () => {
+		const above = await getModelCreditCostBreakdown({
+			modelName: "openai/gpt-5",
+			creditSystem: makeFeature(),
+			input: 300_000,
+			output: 1000,
+		});
+		expect(above.tierApplied).toBe(true);
+		expect(above.rates.input).toBe(2);
+		expect(above.rates.cacheRead).toBe(1);
+		expect(above.baseCost).toBeCloseTo(
+			(2 * 300_000 + 4 * 1000) / PER_MILLION,
+			10,
+		);
+		expect(above.cost).toBe(above.baseCost);
+
+		const below = await getModelCreditCostBreakdown({
+			modelName: "openai/gpt-5",
+			creditSystem: makeFeature(),
+			input: 1000,
+			output: 1000,
+		});
+		expect(below.tierApplied).toBe(false);
+		expect(below.rates.input).toBe(1);
 	});
 });

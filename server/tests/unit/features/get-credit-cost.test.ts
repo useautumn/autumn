@@ -5,7 +5,10 @@ import {
 	FeatureType,
 	FeatureUsageType,
 } from "@autumn/shared";
-import { getModelCreditCost } from "@/internal/features/aiCreditSystemUtils.js";
+import {
+	getModelCreditCost,
+	getModelCreditCostBreakdown,
+} from "@/internal/features/aiCreditSystemUtils.js";
 import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
 
 // Uses custom/* models so pricing resolves offline (no models.dev fetch).
@@ -79,5 +82,98 @@ describe("getModelCreditCost — token pricing", () => {
 		).rejects.toMatchObject({
 			code: ErrCode.InvalidRequest,
 		});
+	});
+});
+
+describe("getModelCreditCostBreakdown — pricing audit trail", () => {
+	test("records base cost, markup source, and effective rates", async () => {
+		const withMarkup: Feature = {
+			...aiCreditFeature,
+			model_markups: {
+				[CUSTOM_MODEL]: { markup: 50, input_cost: 1000, output_cost: 2000 },
+			},
+		};
+		const breakdown = await getModelCreditCostBreakdown({
+			modelName: CUSTOM_MODEL,
+			creditSystem: withMarkup,
+			input: 1000,
+			output: 500,
+		});
+
+		expect(breakdown.baseCost).toBeCloseTo(2.0, 10);
+		expect(breakdown.cost).toBeCloseTo(3.0, 10);
+		expect(breakdown.markup).toBe(50);
+		expect(breakdown.markupSource).toBe("model");
+		expect(breakdown.tierApplied).toBe(false);
+		expect(breakdown.rates.input).toBe(1000);
+		expect(breakdown.rates.output).toBe(2000);
+		// Unpublished pools fall back to the text rates.
+		expect(breakdown.rates.cacheRead).toBe(1000);
+		expect(breakdown.rates.reasoning).toBe(2000);
+	});
+
+	test("explicit markup 0 reports source model; no markup anywhere reports none", async () => {
+		const explicitZero = await getModelCreditCostBreakdown({
+			modelName: CUSTOM_MODEL,
+			creditSystem: aiCreditFeature,
+			input: 1000,
+			output: 500,
+		});
+		expect(explicitZero.markup).toBe(0);
+		expect(explicitZero.markupSource).toBe("model");
+
+		const unconfigured = await getModelCreditCostBreakdown({
+			modelName: CUSTOM_MODEL,
+			creditSystem: {
+				...aiCreditFeature,
+				model_markups: {
+					[CUSTOM_MODEL]: { input_cost: 1000, output_cost: 2000 },
+				},
+			},
+			input: 1000,
+			output: 500,
+		});
+		expect(unconfigured.markup).toBe(0);
+		expect(unconfigured.markupSource).toBe("none");
+	});
+
+	test("reports provider and default markup sources", async () => {
+		const noModelMarkup: Feature = {
+			...aiCreditFeature,
+			config: {
+				schema: [],
+				usage_type: FeatureUsageType.Single,
+				default_markup: 10,
+				provider_markups: { custom: { markup: 20 } },
+			},
+			model_markups: {
+				[CUSTOM_MODEL]: { input_cost: 1000, output_cost: 2000 },
+			},
+		};
+
+		const provider = await getModelCreditCostBreakdown({
+			modelName: CUSTOM_MODEL,
+			creditSystem: noModelMarkup,
+			input: 1000,
+			output: 500,
+		});
+		expect(provider.markup).toBe(20);
+		expect(provider.markupSource).toBe("provider");
+
+		const defaultOnly = await getModelCreditCostBreakdown({
+			modelName: CUSTOM_MODEL,
+			creditSystem: {
+				...noModelMarkup,
+				config: {
+					schema: [],
+					usage_type: FeatureUsageType.Single,
+					default_markup: 10,
+				},
+			},
+			input: 1000,
+			output: 500,
+		});
+		expect(defaultOnly.markup).toBe(10);
+		expect(defaultOnly.markupSource).toBe("default");
 	});
 });
