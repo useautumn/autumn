@@ -31,9 +31,7 @@ export function EditableNumberCell({
 	const [local, setLocal] = useState("");
 	const [focused, setFocused] = useState(false);
 
-	const hasValue = allowUndefined
-		? currentValue != null && currentValue !== 0
-		: currentValue != null;
+	const hasValue = currentValue != null;
 	const displayed = focused ? local : hasValue ? String(currentValue) : "";
 
 	return (
