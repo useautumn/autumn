@@ -1,6 +1,7 @@
 import { FeatureType, isAiCreditSystem } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
 import { useMemo } from "react";
+import { BetaBadge } from "@/components/v2/badges/BetaBadge";
 import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
@@ -44,7 +45,15 @@ export function CreditSystemSchema({
 	const modeOptions = useMemo(
 		() => [
 			{ value: "classic", label: "Classic" },
-			{ value: "ai", label: "AI" },
+			{
+				value: "ai",
+				label: (
+					<span className="flex items-center gap-1.5">
+						AI
+						<BetaBadge />
+					</span>
+				),
+			},
 		],
 		[],
 	);
