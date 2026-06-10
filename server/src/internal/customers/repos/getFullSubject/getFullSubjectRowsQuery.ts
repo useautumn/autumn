@@ -5,6 +5,37 @@ import { getEntityAggregateFragments } from "./getEntityAggregateFragments.js";
 export const CUSTOMER_PRODUCT_LIMIT = 200;
 export const EXTRA_CUSTOMER_ENTITLEMENT_LIMIT = 200;
 
+/** Aggregate CTE → SubjectQueryRow column. Each CTE must expose (subject_key, items). */
+const SUBJECT_AGGREGATES = [
+	{ cte: "cus_products_agg", column: "customer_products" },
+	{ cte: "cus_entitlements_agg", column: "customer_entitlements" },
+	{ cte: "cus_prices_agg", column: "customer_prices" },
+	{ cte: "extra_cus_entitlements_agg", column: "extra_customer_entitlements" },
+	{ cte: "replaceables_agg", column: "replaceables" },
+	{ cte: "rollovers_agg", column: "rollovers" },
+	{ cte: "products_agg", column: "products" },
+	{ cte: "entitlements_agg", column: "entitlements" },
+	{ cte: "prices_agg", column: "prices" },
+	{ cte: "free_trials_agg", column: "free_trials" },
+	{ cte: "subscriptions_agg", column: "subscriptions" },
+] as const;
+
+const aggregateSelects = sql.join(
+	SUBJECT_AGGREGATES.map(({ cte, column }) =>
+		sql.raw(`COALESCE(${cte}.items, '[]'::json) AS ${column}`),
+	),
+	sql`,
+			`,
+);
+
+const aggregateJoins = sql.join(
+	SUBJECT_AGGREGATES.map(({ cte }) =>
+		sql.raw(`LEFT JOIN ${cte} ON ${cte}.subject_key = sr.subject_key`),
+	),
+	sql`
+		`,
+);
+
 const emptyEntityFragments = {
 	ctes: sql``,
 	productRefsUnion: sql``,
@@ -451,17 +482,7 @@ export const getFullSubjectRowsQuery = ({
 
 		SELECT
 			row_to_json(scr) AS customer,
-			COALESCE(cus_products_agg.items, '[]'::json) AS customer_products,
-			COALESCE(cus_entitlements_agg.items, '[]'::json) AS customer_entitlements,
-			COALESCE(cus_prices_agg.items, '[]'::json) AS customer_prices,
-			COALESCE(extra_cus_entitlements_agg.items, '[]'::json) AS extra_customer_entitlements,
-			COALESCE(replaceables_agg.items, '[]'::json) AS replaceables,
-			COALESCE(rollovers_agg.items, '[]'::json) AS rollovers,
-			COALESCE(products_agg.items, '[]'::json) AS products,
-			COALESCE(entitlements_agg.items, '[]'::json) AS entitlements,
-			COALESCE(prices_agg.items, '[]'::json) AS prices,
-			COALESCE(free_trials_agg.items, '[]'::json) AS free_trials,
-			COALESCE(subscriptions_agg.items, '[]'::json) AS subscriptions
+			${aggregateSelects}
 
 			${invoicesSelect},
 
@@ -474,17 +495,7 @@ export const getFullSubjectRowsQuery = ({
 		FROM subject_records sr
 		JOIN subject_customer_records scr
 			ON scr.internal_id = sr.internal_customer_id
-		LEFT JOIN cus_products_agg ON cus_products_agg.subject_key = sr.subject_key
-		LEFT JOIN cus_entitlements_agg ON cus_entitlements_agg.subject_key = sr.subject_key
-		LEFT JOIN cus_prices_agg ON cus_prices_agg.subject_key = sr.subject_key
-		LEFT JOIN extra_cus_entitlements_agg ON extra_cus_entitlements_agg.subject_key = sr.subject_key
-		LEFT JOIN replaceables_agg ON replaceables_agg.subject_key = sr.subject_key
-		LEFT JOIN rollovers_agg ON rollovers_agg.subject_key = sr.subject_key
-		LEFT JOIN products_agg ON products_agg.subject_key = sr.subject_key
-		LEFT JOIN entitlements_agg ON entitlements_agg.subject_key = sr.subject_key
-		LEFT JOIN prices_agg ON prices_agg.subject_key = sr.subject_key
-		LEFT JOIN free_trials_agg ON free_trials_agg.subject_key = sr.subject_key
-		LEFT JOIN subscriptions_agg ON subscriptions_agg.subject_key = sr.subject_key
+		${aggregateJoins}
 		LEFT JOIN entities er
 			ON er.internal_id = sr.internal_entity_id
 		ORDER BY sr.subject_order

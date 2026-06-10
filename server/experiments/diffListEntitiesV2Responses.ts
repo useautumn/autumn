@@ -121,6 +121,24 @@ const main = async () => {
 	console.log(`combined: ${combinedRows.length} rows, merged: ${mergedRows.length} rows`);
 	if (combinedRows.length !== mergedRows.length) throw new Error("row count mismatch");
 
+	const classifiedFields = new Set([
+		...ORDERED_FIELDS,
+		...Object.keys(UNORDERED_FIELDS),
+	]);
+	const unclassifiedFields = [
+		...new Set(
+			[...combinedRows, ...mergedRows].flatMap((row) =>
+				Object.keys(row as Record<string, unknown>),
+			),
+		),
+	].filter((field) => !classifiedFields.has(field));
+	if (unclassifiedFields.length > 0) {
+		console.log(
+			`unclassified row fields (add to ORDERED_FIELDS or UNORDERED_FIELDS): ${unclassifiedFields.join(", ")}`,
+		);
+		process.exit(1);
+	}
+
 	let mismatches = 0;
 	for (let i = 0; i < combinedRows.length; i++) {
 		const combined = combinedRows[i] as unknown as Record<string, unknown>;

@@ -90,6 +90,8 @@ export const mergeEntityAndCustomerSubjectRows = ({
 		),
 	};
 
+	// Explicit keys only (no spreads): a new required SubjectQueryRow field must
+	// fail compilation here until this merge handles it.
 	return {
 		customer: entityRow.customer,
 		entity: entityRow.entity,
