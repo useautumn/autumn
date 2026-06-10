@@ -1,0 +1,31 @@
+DESCRIPTION >
+    Customer-leading hourly rollup of `events`, keyed (org_id, env, customer_id, entity_id, event_name, hour).
+    Same grain and projection as events_hourly_no_properties_two_mv, but with customer_id LEADING the sort key
+    so a per-customer (or per-customer+entity) query prunes straight to that customer's slice instead of
+    scanning the whole org's hourly partitions — events_hourly_no_properties_two_mv leads with `hour`, so a
+    per-customer query there cannot prune by customer and scans the entire org/env date window.
+
+    Serves the per-customer ungrouped timeseries + count/sum and the group-by customer_id/entity_id/plan_id
+    paths once the read pipes (aggregate_simple, aggregate_groupable, getCountAndSum) are repointed at it.
+    Totals reconcile exactly with events_hourly_no_properties_two_mv because both pre-aggregate one row per
+    event at insert and the read pipe re-sums by (period, event_name, group_value).
+
+    BACKFILL skip: deploy empty + forward-materialization trigger only (no deploy-time repopulate of the
+    existing events history); fill history in bounded chunks via events_customer_hourly_mv_backfill.
+
+SCHEMA >
+    `org_id` String,
+    `env` String,
+    `customer_id` String,
+    `event_name` String,
+    `entity_id` String DEFAULT '',
+    `internal_product_id` Nullable(String),
+    `hour` DateTime,
+    `total_value` Float64,
+    `event_count` UInt64
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(hour)"
+ENGINE_SORTING_KEY "org_id, env, customer_id, entity_id, event_name, hour"
+
+BACKFILL skip
