@@ -134,19 +134,21 @@ if (
 	);
 }
 
+const criticalPoolMax = poolMaxFromEnv({
+	envVar: "CRITICAL_DB_POOL_MAX",
+	fallback: isProd ? PROD_POOL_MAX.critical : 10,
+});
+
 export const { db: dbCritical, client: clientCritical } = initDrizzle({
 	name: "critical",
-	maxConnections: poolMaxFromEnv({
-		envVar: "CRITICAL_DB_POOL_MAX",
-		fallback: isProd ? PROD_POOL_MAX.critical : 10,
-	}),
+	maxConnections: criticalPoolMax,
 	connectTimeout: isProd ? 2 : 30,
 	databaseUrl: process.env.DATABASE_CRITICAL_URL,
 	poolConfig: {
 		application_name: "autumn-critical",
 		query_timeout: isProd ? 2_000 : 30_000,
-		// Keep 10 warm conns to avoid TLS-handshake stampedes on bursty traffic.
-		min: 10,
+		// Keep warm conns to avoid TLS-handshake stampedes on bursty traffic.
+		min: Math.min(10, criticalPoolMax),
 	},
 });
 
