@@ -52,6 +52,7 @@ export const errorMiddleware = (err: Error, c: Context<HonoEnv>) => {
 			},
 		);
 
+		if (err.statusCode === 503) c.header("Retry-After", "1");
 		return c.json(
 			{
 				message: err.message,

@@ -27,6 +27,7 @@ const TRANSIENT_DB_ERROR_MESSAGES = new Set([
 	"timeout exceeded when trying to connect",
 	"Query read timeout",
 	"Connection terminated due to connection timeout",
+	"Connection terminated unexpectedly",
 	"canceling statement due to lock timeout",
 	"canceling statement due to statement timeout",
 ]);
