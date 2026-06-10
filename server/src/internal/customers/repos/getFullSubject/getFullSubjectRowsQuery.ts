@@ -2,8 +2,8 @@ import { type CusProductStatus, RELEVANT_STATUSES } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
 import { getEntityAggregateFragments } from "./getEntityAggregateFragments.js";
 
-const CUSTOMER_PRODUCT_LIMIT = 200;
-const EXTRA_CUSTOMER_ENTITLEMENT_LIMIT = 200;
+export const CUSTOMER_PRODUCT_LIMIT = 200;
+export const EXTRA_CUSTOMER_ENTITLEMENT_LIMIT = 200;
 
 const emptyEntityFragments = {
 	ctes: sql``,
@@ -19,11 +19,14 @@ export const getFullSubjectRowsQuery = ({
 	inStatuses,
 	includeInvoices,
 	includeEntityAggregations,
+	entityScopedOnly = false,
 }: {
 	leadingCtes: SQL;
 	inStatuses: CusProductStatus[];
 	includeInvoices: boolean;
 	includeEntityAggregations: boolean;
+	/** Only hydrate rows scoped to the subject's entity (requires non-null internal_entity_id on every subject). Customer-level rows must be merged back in separately. */
+	entityScopedOnly?: boolean;
 }) => {
 	const statusFilter =
 		inStatuses.length > 0
@@ -49,6 +52,31 @@ export const getFullSubjectRowsQuery = ({
 				statusFilter,
 			})
 		: emptyEntityFragments;
+
+	// entityScopedOnly drops the customer-id predicate here: keeping it makes
+	// the planner BitmapAnd the customer index into every per-entity probe.
+	const customerProductSubjectPredicate = entityScopedOnly
+		? sql`cp.internal_entity_id = sr.internal_entity_id`
+		: sql`cp.internal_customer_id = sr.internal_customer_id
+					AND (
+						(sr.internal_entity_id IS NULL AND cp.internal_entity_id IS NULL)
+						OR
+						(sr.internal_entity_id IS NOT NULL AND (
+							cp.internal_entity_id IS NULL
+							OR cp.internal_entity_id = sr.internal_entity_id
+						))
+					)`;
+
+	const customerEntitlementSubjectPredicate = entityScopedOnly
+		? sql`AND ce.internal_entity_id = sr.internal_entity_id`
+		: sql`AND (
+						(sr.internal_entity_id IS NULL AND ce.internal_entity_id IS NULL)
+						OR
+						(sr.internal_entity_id IS NOT NULL AND (
+							ce.internal_entity_id IS NULL
+							OR ce.internal_entity_id = sr.internal_entity_id
+						))
+					)`;
 
 	const invoicesCte = includeInvoices
 		? sql`,
@@ -83,7 +111,7 @@ export const getFullSubjectRowsQuery = ({
 		${leadingCtes}
 		,
 
-		subject_customer_records AS (
+		subject_customer_records AS MATERIALIZED (
 			SELECT DISTINCT c.*
 			FROM customers c
 			JOIN subject_records sr
@@ -119,15 +147,7 @@ export const getFullSubjectRowsQuery = ({
 				FROM customer_products cp
 				JOIN products prod
 					ON prod.internal_id = cp.internal_product_id
-				WHERE cp.internal_customer_id = sr.internal_customer_id
-					AND (
-						(sr.internal_entity_id IS NULL AND cp.internal_entity_id IS NULL)
-						OR
-						(sr.internal_entity_id IS NOT NULL AND (
-							cp.internal_entity_id IS NULL
-							OR cp.internal_entity_id = sr.internal_entity_id
-						))
-					)
+				WHERE ${customerProductSubjectPredicate}
 					${statusFilter}
 			) cp_candidates ON true
 		),
@@ -175,14 +195,7 @@ export const getFullSubjectRowsQuery = ({
 								AND f.type = 'boolean'
 						)
 					)
-					AND (
-						(sr.internal_entity_id IS NULL AND ce.internal_entity_id IS NULL)
-						OR
-						(sr.internal_entity_id IS NOT NULL AND (
-							ce.internal_entity_id IS NULL
-							OR ce.internal_entity_id = sr.internal_entity_id
-						))
-					)
+					${customerEntitlementSubjectPredicate}
 				ORDER BY subject_entity_priority ASC, ce.id DESC
 				LIMIT ${EXTRA_CUSTOMER_ENTITLEMENT_LIMIT}
 			) ce_ordered ON true
