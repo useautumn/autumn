@@ -235,11 +235,11 @@ export function buildMigrationDraft({
 	const planFilter = includeCustom
 		? basePlanFilter
 		: { ...basePlanFilter, custom: false };
-	const updatePlanOp: UpdatePlanOp = {
+	const updatePlanOp = (custom: boolean): UpdatePlanOp => ({
 		type: "update_plan",
-		plan_filter: planFilter,
+		plan_filter: { ...basePlanFilter, custom },
 		...(customize ? { customize } : {}),
-	};
+	});
 
 	const filter: MigrationFilter = {
 		customer: { plan: planFilter },
@@ -252,7 +252,9 @@ export function buildMigrationDraft({
 		id: `${baseProduct.id}-${suffix}-${migrationUid()}`,
 		filter,
 		operations: {
-			customer: [updatePlanOp],
+			customer: includeCustom
+				? [updatePlanOp(false), updatePlanOp(true)]
+				: [updatePlanOp(false)],
 		},
 		no_billing_changes: diffHasBillingChanges(migrationDiff) === false,
 	};
