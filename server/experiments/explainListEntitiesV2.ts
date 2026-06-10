@@ -10,14 +10,11 @@ import {
 	prodTestOrgId,
 } from "./experimentEnv";
 
-// Run with `bun run experiments/explainListEntitiesV2.ts` (add --explain for plans).
-// Compares the old combined entities.list hydration against the split
-// hydration (entity-scoped page query + customer-level query per customer).
-// Seed a whale customer via `bun run scripts/seed/seedPaginationBenchmark.ts --count=10`.
+// Run with `bun run experiments/explainListEntitiesV2.ts` (flags: --explain, --skip-old)
 const ORG_ID = prodTestOrgId;
 const ENV = AppEnv.Live;
 const CUSTOMER_ID = prodTestCustomerId;
-const LIMIT = 1000;
+const LIMIT = Number(process.env.LIMIT || 1000);
 
 /** Pre-split combined hydration: same page CTE, hydrated without entityScopedOnly. */
 const getCombinedEntityPageQuery = ({
@@ -116,7 +113,6 @@ const main = async () => {
 	const { db } = initDrizzle();
 	const inStatuses = RELEVANT_STATUSES;
 	const withExplain = process.argv.includes("--explain");
-	// --skip-old: don't run the pre-split query (it can take minutes on whale customers)
 	const skipOld = process.argv.includes("--skip-old");
 
 	console.log("=== LIST ENTITIES V2 SPLIT HYDRATION EXPERIMENT ===\n");

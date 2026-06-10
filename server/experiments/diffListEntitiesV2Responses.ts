@@ -1,8 +1,4 @@
-// Differential check: old combined entities.list hydration vs new split
-// hydration + merge, deep-compared row by row.
-// Run with: CHECK_ORG_ID=... CHECK_CUSTOMER_ID=... CHECK_LIMIT=200 \
-//   infisical run --env=prod -- bun run experiments/diffListEntitiesV2Responses.ts
-// Leave CHECK_CUSTOMER_ID empty to compare an unfiltered multi-customer page.
+// Run with `CHECK_ORG_ID=... CHECK_CUSTOMER_ID=... CHECK_LIMIT=200 bun run experiments/diffListEntitiesV2Responses.ts`
 import { AppEnv, type CusProductStatus, type SubjectQueryRow } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { initDrizzle } from "../src/db/initDrizzle.js";

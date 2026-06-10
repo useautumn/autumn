@@ -150,7 +150,6 @@ describe("mergeEntityAndCustomerSubjectRows", () => {
 			{ length: CUSTOMER_PRODUCT_LIMIT - 1 },
 			(_, index) => createCustomerProduct({ id: `cp_entity_${index}` }),
 		);
-		// Two customer-level products: the first survives the cap, the second is truncated.
 		const keptProduct = createCustomerProduct({
 			id: "cp_customer_kept",
 			freeTrialId: "ft_kept",
