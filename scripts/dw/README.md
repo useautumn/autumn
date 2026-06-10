@@ -36,6 +36,7 @@ bun dw teardown     # full cleanup of this worktree
 bun dw teardown --all   # full cleanup of every agent worktree
 bun dw disable      # rename .env.local -> .env.local.disabled (fall back to canonical env)
 bun dw enable       # rename .env.local.disabled -> .env.local
+bun dw admin   # set the better-auth global role to 'admin' for every user in this worktree's DB
 ```
 
 ## Subcommands
@@ -128,6 +129,15 @@ Inverse of `disable` — restores each `.env.local.disabled` to `.env.local`.
 ```sh
 bun dw enable
 ```
+
+### `bun dw admin`
+Sets the better-auth **global** user role to `admin` for every row in the `user` table of this worktree's DB, granting the superuser scope locally (the `/admin` routes + impersonation). Org membership roles (`member` table) are left untouched.
+
+```sh
+bun dw admin
+```
+
+Targets `databaseUrl` from the registry entry for the current worktree, falling back to `DATABASE_URL`. **Refuses to run against production** via the shared `assertNotProductionDb` guard (connection strings containing `us-east-2`).
 
 ### `bun dw teardown`
 Full cleanup of the current worktree: deletes Neon branch, unregisters portless aliases, kills tmux session, removes Docker compose stack, removes `.env.local` files, and deletes the registry entry. If no other agent worktrees remain, also stops emulate + portless daemons.

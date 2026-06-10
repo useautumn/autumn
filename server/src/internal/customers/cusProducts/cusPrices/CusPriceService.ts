@@ -4,10 +4,28 @@ import {
 	type FullCustomerEntitlement,
 	type FullCustomerPrice,
 } from "@autumn/shared";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export class CusPriceService {
+	/** Which of these catalog prices are referenced by any customer_prices row. */
+	static async getReferencedPriceIds({
+		db,
+		priceIds,
+	}: {
+		db: DrizzleCli;
+		priceIds: string[];
+	}): Promise<Set<string>> {
+		if (priceIds.length === 0) return new Set();
+		const rows = await db
+			.select({ price_id: customerPrices.price_id })
+			.from(customerPrices)
+			.where(inArray(customerPrices.price_id, priceIds));
+		return new Set(
+			rows.map((row) => row.price_id).filter((id): id is string => id !== null),
+		);
+	}
+
 	static async getRelatedToCusEnt({
 		db,
 		cusEnt,

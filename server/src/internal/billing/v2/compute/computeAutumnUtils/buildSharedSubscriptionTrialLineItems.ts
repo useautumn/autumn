@@ -13,7 +13,7 @@ import {
 	getDeleteCustomerProducts,
 	getUpdateCustomerProducts,
 } from "@/internal/billing/v2/utils/billingPlan/customerProductPlanMutations";
-import { customerProductToLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToLineItems";
+import { getLineItemsForDirection } from "@/internal/billing/v2/utils/lineItems/getLineItemsForDirection";
 
 const formatLineItem = (item: LineItem) => ({
 	description: item.description,
@@ -141,9 +141,9 @@ export const buildSharedSubscriptionTrialLineItems = ({
 	const lineItems: LineItem[] = [];
 	for (const customerProduct of siblingCustomerProducts) {
 		lineItems.push(
-			...customerProductToLineItems({
+			...getLineItemsForDirection({
 				ctx,
-				customerProduct: customerProduct,
+				customerProduct,
 				billingContext,
 				direction,
 				priceFilters: { excludeOneOffPrices: true },

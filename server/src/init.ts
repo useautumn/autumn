@@ -45,7 +45,6 @@ import {
 import { preWarmOrgRedisConnections } from "./external/redis/orgRedisPool.js";
 import { createHonoApp } from "./initHono.js";
 import { otelSdk } from "./instrumentation.js";
-import { initializeDatabaseFunctions } from "./db/initializeDatabaseFunctions.js";
 import { checkEnvVars } from "./utils/initUtils.js";
 import { startMemoryMonitor } from "./utils/memoryMonitor.js";
 
@@ -67,7 +66,6 @@ const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 	void preWarmOrgRedisConnections({ db }).catch((error) => {
 		logger.warn("[OrgRedis] Warmup failed", { error });
 	});
-	await initializeDatabaseFunctions();
 
 	await startAllEdgeConfigPolling({ logger });
 	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);

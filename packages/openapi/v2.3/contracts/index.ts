@@ -53,6 +53,11 @@ import {
 	updatePlanContract,
 } from "./plansContract.js";
 import {
+	platformGetRevenueCatKeysContract,
+	platformLinkRevenueCatContract,
+	platformSyncRevenueCatContract,
+} from "./platformContract.js";
+import {
 	referralsCreateCodeContract,
 	referralsRedeemCodeContract,
 	rewardsRedeemCodeContract,
@@ -116,4 +121,9 @@ balancesTrackTokens: balancesTrackTokensContract,
 	referralsCreateCode: referralsCreateCodeContract,
 	referralsRedeemCode: referralsRedeemCodeContract,
 	rewardsRedeemCode: rewardsRedeemCodeContract,
+
+	// Platform
+	platformLinkRevenueCat: platformLinkRevenueCatContract,
+	platformSyncRevenueCat: platformSyncRevenueCatContract,
+	platformGetRevenueCatKeys: platformGetRevenueCatKeysContract,
 });

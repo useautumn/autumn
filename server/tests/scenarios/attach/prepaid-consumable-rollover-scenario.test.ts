@@ -1,13 +1,14 @@
 import { test } from "bun:test";
-import { RolloverExpiryDurationType } from "@autumn/shared";
+import { type ApiCustomerV5, RolloverExpiryDurationType } from "@autumn/shared";
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect";
+import { TestFeature } from "@tests/setup/v2Features";
+import { products } from "@tests/utils/fixtures/products";
+import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
+import chalk from "chalk";
 import {
 	constructArrearItem,
 	constructPrepaidItem,
 } from "@/utils/scriptUtils/constructItem";
-import { products } from "@tests/utils/fixtures/products";
-import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
-import chalk from "chalk";
-import { TestFeature } from "@tests/setup/v2Features";
 
 /**
  * Scenario: Prepaid + Consumable messages on the same plan, both with rollovers.
@@ -48,7 +49,7 @@ test(`${chalk.yellowBright("scenario: prepaid + consumable messages with rollove
 		items: [prepaidMessages, consumableMessages],
 	});
 
-	await initScenario({
+	const { autumnV2_2 } = await initScenario({
 		customerId: "combo-rollover",
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -62,5 +63,14 @@ test(`${chalk.yellowBright("scenario: prepaid + consumable messages with rollove
 			s.track({ featureId: TestFeature.Messages, value: 80, timeout: 2000 }),
 			s.advanceToNextInvoice(),
 		],
+	});
+
+	const customer =
+		await autumnV2_2.customers.get<ApiCustomerV5>("combo-rollover");
+
+	expectBalanceCorrect({
+		customer,
+		featureId: TestFeature.Messages,
+		positiveRolloverCount: 2,
 	});
 });

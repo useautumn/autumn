@@ -9,6 +9,7 @@ export * from "./apiFeatureToDbFeature";
 export * from "./convertFeatureUtils";
 export * from "./creditSystemUtils";
 export * from "./findFeatureUtils";
+export * from "./sortFeatures";
 
 export { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
 export { isAnyCreditSystem } from "@utils/featureUtils/classifyFeature/isAnyCreditSystem";

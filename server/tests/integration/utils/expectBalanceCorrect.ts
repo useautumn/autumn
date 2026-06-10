@@ -8,10 +8,10 @@ import {
 	type ResetInterval,
 } from "@autumn/shared";
 
-const roundTo8Dp = (value: number) =>
-	Math.round(value * 1e8) / 1e8;
+const roundTo8Dp = (value: number) => Math.round(value * 1e8) / 1e8;
 
 type BucketExpectation = {
+	granted?: number;
 	included_grant?: number;
 	prepaid_grant?: number;
 	remaining?: number;
@@ -28,6 +28,7 @@ type BreakdownExpectation = Partial<Record<BreakdownKey, BucketExpectation>>;
 export const expectBalanceCorrect = ({
 	customer,
 	featureId,
+	granted,
 	remaining,
 	planId,
 	usage,
@@ -35,10 +36,12 @@ export const expectBalanceCorrect = ({
 	toleranceMs = TEN_MINUTES_MS,
 	breakdown,
 	rollovers,
+	positiveRolloverCount,
 }: {
 	customer: ApiCustomerV5 | ApiEntityV2;
 	featureId: string;
-	remaining: number;
+	granted?: number;
+	remaining?: number;
 	planId?: string | null;
 	usage?: number;
 	nextResetAt?: number | null;
@@ -46,10 +49,18 @@ export const expectBalanceCorrect = ({
 	breakdown?: BreakdownExpectation;
 	/** Expected rollovers in order (oldest first). Only specified fields are checked. */
 	rollovers?: Partial<ApiBalanceRollover>[];
+	positiveRolloverCount?: number;
 }) => {
 	const balance = customer.balances[featureId];
 	expect(balance).toBeDefined();
-	expect(roundTo8Dp(balance.remaining)).toBe(roundTo8Dp(remaining));
+
+	if (typeof granted !== "undefined") {
+		expect(roundTo8Dp(balance.granted)).toBe(roundTo8Dp(granted));
+	}
+
+	if (typeof remaining !== "undefined") {
+		expect(roundTo8Dp(balance.remaining)).toBe(roundTo8Dp(remaining));
+	}
 
 	if (typeof planId !== "undefined") {
 		expect(balance.breakdown?.[0]?.plan_id ?? null).toBe(planId);
@@ -92,7 +103,10 @@ export const expectBalanceCorrect = ({
 								(candidateBucket) => candidateBucket.reset?.interval === key,
 							);
 
-			expect(bucket).toBeDefined();
+			expect(
+				bucket,
+				`Missing balance bucket ${key}: ${JSON.stringify(buckets)}`,
+			).toBeDefined();
 			expect(bucket).toMatchObject(expectation as BucketExpectation);
 		}
 	}
@@ -103,5 +117,12 @@ export const expectBalanceCorrect = ({
 		for (let i = 0; i < rollovers.length; i++) {
 			expect(actual![i]).toMatchObject(rollovers[i]);
 		}
+	}
+
+	if (typeof positiveRolloverCount !== "undefined") {
+		const actual = balance.rollovers ?? [];
+		expect(actual.filter((item) => item.balance > 0).length).toBe(
+			positiveRolloverCount,
+		);
 	}
 };

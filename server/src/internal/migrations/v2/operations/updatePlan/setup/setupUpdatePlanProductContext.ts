@@ -2,7 +2,6 @@ import {
 	BillingVersion,
 	type FullCusProduct,
 	type FullCustomer,
-	hasCustomItems,
 	orgDisableStripeWrites,
 	type UpdateSubscriptionBillingContext,
 	UpdateSubscriptionIntent,
@@ -106,6 +105,7 @@ export const setupUpdatePlanProductContext = async ({
 		fullCustomer: productFullCustomer,
 		params,
 		reusePricesAndEntitlements,
+		resetToCatalogVersion: typeof preparedOp.version === "number",
 	});
 
 	const operationBillingContext = await setupMigrationOperationBillingContext({
@@ -129,6 +129,7 @@ export const setupUpdatePlanProductContext = async ({
 		params.no_billing_changes === true ||
 		operationBillingContext.stripeSubscription === undefined;
 
+	const invoiceMode = await setupInvoiceModeContext({ ctx, params });
 	const billingContext: UpdateSubscriptionBillingContext = {
 		intent: UpdateSubscriptionIntent.UpdatePlan,
 		fullCustomer: productFullCustomer,
@@ -147,13 +148,13 @@ export const setupUpdatePlanProductContext = async ({
 		resetCycleAnchorMs: operationBillingContext.resetCycleAnchorMs,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
 		requestedProrationBehavior: params.proration_behavior,
-		invoiceMode: setupInvoiceModeContext({ params }),
+		invoiceMode,
 		featureQuantities,
 		adjustableFeatureQuantities: setupAdjustableQuantities({ params }),
 		customPrices,
 		customEnts,
 		trialContext: operationBillingContext.trialContext,
-		isCustom: hasCustomItems(params.customize),
+		isCustom: targetCustomerProduct.is_custom,
 		billingVersion: BillingVersion.V2,
 		actionSource: "migration",
 		skipBillingChanges,

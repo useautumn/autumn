@@ -6,6 +6,7 @@ import type {
 import { Decimal } from "decimal.js";
 import { addDiscountTagToDescription } from "./addDiscountTagToDescription";
 import { discountAppliesToLineItem } from "./discountAppliesToLineItem";
+import { getBackdatedDiscountCycleCount } from "./getBackdatedDiscountCycleCount";
 
 /**
  * Applies a percent_off discount to line items.
@@ -38,12 +39,23 @@ export const applyPercentOffDiscountToLineItems = ({
 		// Use current amountAfterDiscounts as base for multiplicative stacking
 		// If no previous discounts, amountAfterDiscounts equals amount
 		const currentAmount = item.amountAfterDiscounts ?? item.amount;
+		const eligibleCycles = getBackdatedDiscountCycleCount({
+			lineItem: item,
+			coupon,
+		});
+		if (eligibleCycles <= 0) return item;
+
+		const discountableAmount = item.context.backdate
+			? new Decimal(Math.abs(currentAmount))
+					.div(item.context.backdate.cycleCount)
+					.mul(eligibleCycles)
+					.toNumber()
+			: Math.abs(currentAmount);
 
 		// Calculate discount amount: |currentAmount| * (percentOff / 100)
-		const itemDiscount = new Decimal(Math.abs(currentAmount))
+		const itemDiscount = new Decimal(discountableAmount)
 			.times(percentOff)
 			.dividedBy(100)
-			.round()
 			.toNumber();
 
 		if (itemDiscount === 0) return item;
@@ -64,9 +76,10 @@ export const applyPercentOffDiscountToLineItems = ({
 			0,
 		);
 
-		const description = item.context.discountable
-			? item.description // if discountable, stripe applies discount, don't need our own tag
-			: addDiscountTagToDescription({ description: item.description });
+		const description =
+			item.context.discountable || options.skipDescriptionTag
+				? item.description
+				: addDiscountTagToDescription({ description: item.description });
 
 		return {
 			...item,

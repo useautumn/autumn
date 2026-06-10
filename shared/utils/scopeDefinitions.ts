@@ -402,7 +402,6 @@ export const ROLE_SCOPES: Record<Role, ScopeString[]> = {
 		Scopes.Rewards.Read,
 		Scopes.Balances.Read,
 		Scopes.Billing.Read,
-		Scopes.Migrations.Read,
 		Scopes.Analytics.Read,
 		Scopes.ApiKeys.Read,
 		Scopes.Platform.Read,
@@ -676,6 +675,17 @@ function requirementMentions(
 }
 
 /**
+ * Rewrite a legacy CRUDL requirement scope to its modern R/W equivalent so it
+ * can be matched against an expanded grant (which only ever holds modern + meta
+ * scopes). Modern and meta scopes pass through unchanged. Deliberately applies
+ * only LEGACY_SCOPE_ALIASES, not expandScopes, so a required `admin`/`owner`
+ * is never blown up into "every modern scope".
+ */
+function normaliseRequiredScope(scope: ScopeString): ScopeString {
+	return (LEGACY_SCOPE_ALIASES[scope] ?? scope) as ScopeString;
+}
+
+/**
  * Check whether a set of granted scopes satisfies a route's requirement.
  *
  * `granted` may contain legacy scopes; normalisation (and write→read
@@ -705,7 +715,9 @@ export function checkScopes(
 
 	// Shorthand: a plain array means ALL required.
 	if (Array.isArray(required)) {
-		const missing = required.filter((s) => !expanded.has(s));
+		const missing = required
+			.map(normaliseRequiredScope)
+			.filter((s) => !expanded.has(s));
 		return { allowed: missing.length === 0, missing };
 	}
 
@@ -714,8 +726,8 @@ export function checkScopes(
 		ANY?: readonly ScopeString[];
 	};
 
-	const allList = req.ALL ?? [];
-	const anyList = req.ANY ?? [];
+	const allList = (req.ALL ?? []).map(normaliseRequiredScope);
+	const anyList = (req.ANY ?? []).map(normaliseRequiredScope);
 
 	const missingAll = allList.filter((s) => !expanded.has(s));
 	const anySatisfied =

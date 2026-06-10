@@ -24,9 +24,11 @@ import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
 	PreviewUpdateSubscriptionResponse,
+	UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
+import { itemsV2 } from "@tests/utils/fixtures/itemsV2.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
@@ -86,8 +88,7 @@ test.concurrent(
 		// Set credit balance AFTER initial attach so Stripe doesn't consume
 		// it on the first invoice. We want the credit on file at the moment
 		// the previewUpdate runs.
-		const customer =
-			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		const stripeCustomerId = customer.stripe_id;
 		expect(stripeCustomerId).toBeDefined();
 		await ctx.stripeCli.customers.update(stripeCustomerId!, {
@@ -248,6 +249,64 @@ test.concurrent(
 		expect(preview.tax).toBeUndefined();
 		expect(preview.invoice_credits?.balance ?? 0).toBe(0);
 		expect(preview.total).toBe(preview.subtotal);
+	},
+	300_000,
+);
+
+test.concurrent(
+	`${chalk.yellowBright("preview-update-subscription-tax-rate-id (exclusive 10%): custom tax rate returns exact tax and total")}`,
+	async () => {
+		const customerId = "preview-update-tax-rate-id";
+		const proProd = products.base({
+			id: "pro",
+			items: [
+				items.monthlyMessages({ includedUsage: 100 }),
+				items.monthlyPrice({ price: 20 }),
+			],
+		});
+
+		const { ctx, autumnV2_2 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [proProd] }),
+			],
+			actions: [],
+		});
+
+		const taxRate = await ctx.stripeCli.taxRates.create({
+			display_name: "Preview Update Tax Rate",
+			percentage: 10,
+			inclusive: false,
+		});
+
+		await autumnV2_2.billing.attach({
+			customer_id: customerId,
+			plan_id: proProd.id,
+			tax_rate_id: taxRate.id,
+		});
+
+		const params: UpdateSubscriptionV1ParamsInput = {
+			customer_id: customerId,
+			plan_id: proProd.id,
+			customize: {
+				price: itemsV2.monthlyPrice({ amount: 40 }),
+			},
+		};
+
+		const preview =
+			(await autumnV2_2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>(
+				params,
+			)) as PreviewUpdateSubscriptionResponse;
+
+		expect(preview.subtotal).toBe(20);
+		expect(preview.tax).toBeDefined();
+		expect(preview.tax?.status).toBe("complete");
+		expect(preview.tax?.currency).toBe(preview.currency);
+		expect(preview.tax?.amount_exclusive).toBe(2);
+		expect(preview.tax?.amount_inclusive).toBe(0);
+		expect(preview.tax?.total).toBe(2);
+		expect(preview.total).toBe(22);
 	},
 	300_000,
 );

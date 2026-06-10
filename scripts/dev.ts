@@ -18,11 +18,15 @@ const SERVER_PORT = process.env.SERVER_PORT
 const CHECKOUT_PORT = process.env.CHECKOUT_PORT
 	? Number.parseInt(process.env.CHECKOUT_PORT, 10)
 	: 3001 + portOffset;
-const MCP_PORT = process.env.MCP_PORT
-	? Number.parseInt(process.env.MCP_PORT, 10)
-	: 2718 + portOffset;
+const CHAT_PORT = process.env.CHAT_PORT
+	? Number.parseInt(process.env.CHAT_PORT, 10)
+	: 3099 + portOffset;
 const LOCAL_CLIENT_URL = `http://localhost:${VITE_PORT}`;
 const LOCAL_SERVER_URL = `http://localhost:${SERVER_PORT}`;
+const LOCAL_CHAT_URL = `http://localhost:${CHAT_PORT}`;
+const publicTunnelUrl = process.env.NGROK_URL?.replace(/\/$/, "");
+const CHAT_URL = process.env.CHAT_URL ?? publicTunnelUrl ?? LOCAL_CHAT_URL;
+const SLACK_BOT_URL = process.env.SLACK_BOT_URL ?? publicTunnelUrl ?? CHAT_URL;
 const skipWorkers = false;
 const isProductionMode = process.argv.includes("--production");
 
@@ -35,6 +39,12 @@ const viteAppEnv = envFile.includes(".env.prod")
 const useLocalAuthUrls = viteAppEnv === "dev" && !isProductionMode;
 const localUrl = (value: string | undefined, fallback: string) =>
 	value && !value.includes(".useautumn.com") ? value : fallback;
+const SLACK_REDIRECT_URI = useLocalAuthUrls
+	? localUrl(
+			process.env.SLACK_REDIRECT_URI,
+			`${SLACK_BOT_URL}/slack/oauth/callback`,
+		)
+	: (process.env.SLACK_REDIRECT_URI ?? `${SLACK_BOT_URL}/slack/oauth/callback`);
 
 /**
  * Read environment variable from .env file
@@ -55,30 +65,6 @@ function getEnvVariable(filePath: string, key: string): string | null {
 		}
 	}
 	return null;
-}
-
-function getPackageDependencyVersion({
-	projectRoot,
-	packageName,
-}: {
-	projectRoot: string;
-	packageName: string;
-}): string {
-	const packageJson = JSON.parse(
-		readFileSync(join(projectRoot, "package.json"), "utf-8"),
-	) as {
-		dependencies?: Record<string, string>;
-		devDependencies?: Record<string, string>;
-	};
-	const version =
-		packageJson.dependencies?.[packageName] ??
-		packageJson.devDependencies?.[packageName];
-
-	if (!version) {
-		throw new Error(`Missing ${packageName} in package.json`);
-	}
-
-	return version;
 }
 
 function killPorts({ ports }: { ports: number[] }) {
@@ -130,7 +116,7 @@ async function startDev() {
 			} else {
 				console.log("Cleaning up local dev ports...\n");
 				killPorts({
-					ports: [VITE_PORT, SERVER_PORT, CHECKOUT_PORT, MCP_PORT],
+					ports: [VITE_PORT, SERVER_PORT, CHECKOUT_PORT, CHAT_PORT],
 				});
 			}
 
@@ -165,14 +151,11 @@ async function startDev() {
 		console.log(`  vite:     http://localhost:${VITE_PORT}`);
 		console.log(`  server:   http://localhost:${SERVER_PORT}`);
 		console.log(`  checkout: http://localhost:${CHECKOUT_PORT}`);
-		console.log(`  mcp:      http://localhost:${MCP_PORT}/mcp\n`);
+		console.log(`  leaf:     http://localhost:${CHAT_PORT}/health`);
+		console.log(`  mcp:      http://localhost:${CHAT_PORT}/mcp\n`);
 
 		// Use cmd on Windows, sh on Unix
 		const isWindows = process.platform === "win32";
-		const triggerDevVersion = getPackageDependencyVersion({
-			projectRoot,
-			packageName: "trigger.dev",
-		});
 
 		let shellArgs: string[];
 		if (serverOnly) {
@@ -216,11 +199,10 @@ async function startDev() {
 			if (worktreeNum === 1) {
 				names.push("trigger");
 				colors.push("cyan");
-				cmds.push(
-					isWindows
-						? `"bunx trigger.dev@${triggerDevVersion} dev"`
-						: `"bunx trigger.dev@${triggerDevVersion} dev"`,
-				);
+				// Use the locally-installed (pinned) trigger.dev CLI. Passing
+				// `@<version>` makes bunx fetch a fresh copy into a temp dir,
+				// which can be broken/incomplete (ERR_MODULE_NOT_FOUND).
+				cmds.push(isWindows ? `"bunx trigger.dev dev"` : `"bunx trigger.dev dev"`);
 			}
 
 			names.push("vite", "checkout");
@@ -234,10 +216,13 @@ async function startDev() {
 					: `"cd apps/checkout && VITE_PORT=${CHECKOUT_PORT} bun dev"`,
 			);
 
-			names.push("mcp");
-			colors.push("white");
-			const mcpServeCmd = "bun --watch apps/mcp-server/src/index.ts";
-			cmds.push(isWindows ? `"${mcpServeCmd}"` : `"${mcpServeCmd}"`);
+			names.push("leaf");
+			colors.push("gray");
+			cmds.push(
+				isWindows
+					? `"cd apps/leaf && set PORT=${CHAT_PORT} && bun dev"`
+					: `"cd apps/leaf && PORT=${CHAT_PORT} bun dev"`,
+			);
 
 			// Stripe CLI webhook tunnel — silently skip if CLI absent.
 			// Forwards to the direct localhost port (not portless) so we avoid CA trust issues.
@@ -281,13 +266,19 @@ async function startDev() {
 				VITE_PORT: VITE_PORT.toString(),
 				SERVER_PORT: SERVER_PORT.toString(),
 				CHECKOUT_PORT: CHECKOUT_PORT.toString(),
-				MCP_PORT: MCP_PORT.toString(),
-				MCP_DEBUG_PENDING_ACTIONS:
-					process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
+				CHAT_PORT: CHAT_PORT.toString(),
+				MCP_DEBUG_PENDING_ACTIONS: process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
 				MCP_SERVER_URL:
-					process.env.MCP_SERVER_URL ?? `http://localhost:${SERVER_PORT}`,
+					process.env.MCP_SERVER_URL ?? `http://localhost:${CHAT_PORT}`,
+				CHAT_SERVER_URL:
+					process.env.CHAT_SERVER_URL ?? `http://localhost:${CHAT_PORT}`,
 				MCP_RESOURCE_URLS:
-					process.env.MCP_RESOURCE_URLS ?? `http://localhost:${MCP_PORT}/mcp`,
+					process.env.MCP_RESOURCE_URLS ?? `http://localhost:${CHAT_PORT}/mcp`,
+				AUTUMN_API_URL: process.env.AUTUMN_API_URL ?? LOCAL_SERVER_URL,
+				CHAT_URL,
+				SLACK_BOT_URL,
+				SLACK_REDIRECT_URI,
+				DISCORD_BOT_URL: process.env.DISCORD_BOT_URL ?? LOCAL_CHAT_URL,
 				VITE_APP_ENV: viteAppEnv,
 				...(useLocalAuthUrls && {
 					CLIENT_URL: localUrl(process.env.CLIENT_URL, LOCAL_CLIENT_URL),

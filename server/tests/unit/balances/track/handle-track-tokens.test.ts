@@ -19,7 +19,14 @@ const featureDeductions = [
 	{
 		feature: { id: "ai_credits" },
 		deduction: 1,
-		precomputedCreditCost: 3.5,
+		tokens: {
+			usage: {
+				modelName: "openai/gpt-4.1",
+				inputTokens: 100,
+				outputTokens: 50,
+			},
+			cost: 3.5,
+		},
 	},
 ];
 

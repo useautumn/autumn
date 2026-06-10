@@ -1,4 +1,5 @@
 import type { FullCusEntWithFullCusProduct } from "@autumn/shared";
+import { logger } from "@/external/logtail/logtailUtils.js";
 import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 
@@ -6,51 +7,47 @@ const DEFAULT_CREDIT_COST = 1;
 
 export type CreditCostLookup = (entitlementId: string) => number;
 
-/**
- * Computes the credit cost for each customer entitlement and returns a lookup
- * function. Uses precomputedCreditCost when available (token tracking),
- * otherwise calls getCreditCost per entitlement (credit system schema lookups).
- */
-export const computeCreditCosts = async ({
+/** Per-entitlement credit cost lookup. Pure schema math — no I/O. */
+export const computeCreditCosts = ({
 	cusEnts,
 	deduction,
 }: {
 	cusEnts: FullCusEntWithFullCusProduct[];
 	deduction: FeatureDeduction;
-}): Promise<CreditCostLookup> => {
+}): CreditCostLookup => {
 	const costMap = new Map<string, number>();
 
-	const tokens = deduction.tokenUsage
-		? {
-				input: deduction.tokenUsage.inputTokens,
-				output: deduction.tokenUsage.outputTokens,
-			}
-		: undefined;
+	for (const ce of cusEnts) {
+		// Token cost is USD: 1:1 on its own ent; parents apply their ratio to it.
+		if (
+			deduction.tokens &&
+			ce.entitlement.feature.id === deduction.feature.id
+		) {
+			costMap.set(ce.id, deduction.tokens.cost);
+			continue;
+		}
 
-	await Promise.all(
-		cusEnts.map(async (ce) => {
-			// Precomputed cost (from /track/tokens) is in the AI credit feature's
-			// native unit (USD). It applies 1:1 to that feature's own entitlement,
-			// but parent credit systems still need their schema ratio applied —
-			// fall through to getCreditCost with amount = precomputed cost.
-			if (
-				deduction.precomputedCreditCost != null &&
-				ce.entitlement.feature.id === deduction.feature.id
-			) {
-				costMap.set(ce.id, deduction.precomputedCreditCost);
-				return;
-			}
-
-			const creditCost = await getCreditCost({
-				featureId: deduction.feature.id,
-				creditSystem: ce.entitlement.feature,
-				amount: deduction.precomputedCreditCost,
-				modelName: deduction.tokenUsage?.modelName,
-				tokens,
+		try {
+			costMap.set(
+				ce.id,
+				getCreditCost({
+					featureId: deduction.feature.id,
+					creditSystem: ce.entitlement.feature,
+					amount: deduction.tokens?.cost,
+				}),
+			);
+		} catch (error) {
+			// Cached cusEnt schemas can briefly trail a feature update; deduct at
+			// 1:1 rather than failing the track.
+			logger.warn("[computeCreditCosts] falling back to credit cost 1", {
+				feature_id: deduction.feature.id,
+				credit_system_id: ce.entitlement.feature.id,
+				customer_entitlement_id: ce.id,
+				error: String(error),
 			});
-			costMap.set(ce.id, creditCost);
-		}),
-	);
+			costMap.set(ce.id, DEFAULT_CREDIT_COST);
+		}
+	}
 
 	return (entitlementId) => costMap.get(entitlementId) ?? DEFAULT_CREDIT_COST;
 };

@@ -255,7 +255,6 @@ export function AiCreditSchemaTable({
 						<div className="flex items-center gap-1.5">
 							<span className="text-xs text-subtle">Markup %</span>
 							<Input
-								variant="headless"
 								type="text"
 								inputMode="numeric"
 								value={providerMarkup == null ? "" : String(providerMarkup)}
@@ -273,7 +272,7 @@ export function AiCreditSchemaTable({
 									}
 								}}
 								placeholder={String(defaultMarkup)}
-								className="w-16 text-sm text-right"
+								className="w-20"
 							/>
 						</div>
 					)}

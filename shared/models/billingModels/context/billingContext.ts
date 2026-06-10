@@ -6,10 +6,12 @@ import type {
 	FeatureOptions,
 	FreeTrial,
 	Price,
+	ProcessorType,
 	TrialOnEnd,
 } from "@autumn/shared";
 import type { PaymentBehaviorIntent } from "@models/billingModels/context/paymentBehaviorIntent";
 import type { TransitionConfig } from "@models/billingModels/context/transitionConfig";
+import type { DbInvoiceLineItem } from "@models/cusModels/invoiceModels/invoiceLineItemTable";
 import type { EntInterval } from "@models/productModels/intervals/entitlementInterval";
 import type Stripe from "stripe";
 import { z } from "zod/v4";
@@ -20,6 +22,9 @@ import type { StripeDiscountWithCoupon } from "../stripe/stripeDiscountWithCoupo
 const InvoiceModeSchema = z.object({
 	finalizeInvoice: z.boolean().default(false),
 	enableProductImmediately: z.boolean().default(true),
+	footer: z.string().optional(),
+	memo: z.string().optional(),
+	daysUntilDue: z.number().optional(),
 });
 
 export type InvoiceMode = z.infer<typeof InvoiceModeSchema>;
@@ -60,6 +65,8 @@ export interface BillingContext {
 	currentEpochMs: number;
 	billingCycleAnchorMs: number | "now";
 	resetCycleAnchorMs: number | "now";
+	billingStartsAt?: number;
+	subscriptionBackdateStartMs?: number;
 	requestedBillingCycleAnchor?: number | "now";
 	requestedProrationBehavior?: BillingBehavior;
 
@@ -107,9 +114,18 @@ export interface BillingContext {
 
 	anchorResetRefund?: AnchorResetRefund;
 
+	storedChargeLineItems?: DbInvoiceLineItem[];
+	storedRefundLineItems?: DbInvoiceLineItem[];
+
 	refundLastPayment?: "prorated" | "full";
 
 	paymentBehaviorIntent?: PaymentBehaviorIntent;
 	shouldFinalizeFirstInvoice?: boolean;
 	skipCustomPaymentMethodGuard?: boolean;
+
+	/** See `BillingContextOverride.skipExternalPSPGuard`. */
+	skipExternalPSPGuard?: boolean;
+
+	/** See `BillingContextOverride.processorTypeOverride`. */
+	processorTypeOverride?: ProcessorType;
 }

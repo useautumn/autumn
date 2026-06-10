@@ -4,16 +4,17 @@ import {
 	MigrationItemRunStatus,
 	migrationItemRuns,
 } from "@autumn/shared";
-import { eq, sql } from "drizzle-orm";
+import { inArray, sql } from "drizzle-orm";
 import type { RepoContext } from "@/db/repoContext.js";
 import { generateId } from "@/utils/genUtils.js";
+import type { RetryableMigrationItemRunStatus } from "../../run/utils/retryItemStatuses.js";
 import { getMigrationItemRun } from "./getMigrationItemRun.js";
 
 type MigrationItemRunRepoContext = RepoContext & {
 	dbGeneral?: RepoContext["db"];
 };
 
-export type MigrationItemRunClaimBehavior = "claim_new" | "retry_failed";
+export type MigrationItemRunClaimBehavior = "claim_new" | "retry_statuses";
 
 export type MigrationItemRunClaimResult =
 	| { claimed: true; itemRun: MigrationItemRun }
@@ -27,6 +28,7 @@ export const claimMigrationItemRun = async ({
 	itemKind,
 	itemId,
 	claimBehavior,
+	retryStatuses = [],
 }: {
 	ctx: MigrationItemRunRepoContext;
 	migrationInternalId: string;
@@ -35,6 +37,7 @@ export const claimMigrationItemRun = async ({
 	itemKind: MigrationItemKind;
 	itemId: string;
 	claimBehavior: MigrationItemRunClaimBehavior;
+	retryStatuses?: RetryableMigrationItemRunStatus[];
 }): Promise<MigrationItemRunClaimResult> => {
 	if (dryRun && !migrationRunId)
 		throw new Error(
@@ -70,29 +73,29 @@ export const claimMigrationItemRun = async ({
 		? sql`${migrationItemRuns.dry_run} = true`
 		: sql`${migrationItemRuns.dry_run} = false`;
 
-	const [claimed] =
-		claimBehavior === "retry_failed"
-			? await db
-					.insert(migrationItemRuns)
-					.values(values)
-					.onConflictDoUpdate({
-						target,
-						targetWhere,
-						set: {
-							status: MigrationItemRunStatus.Running,
-							updated_at: now,
-						},
-						setWhere: eq(
-							migrationItemRuns.status,
-							MigrationItemRunStatus.Failed,
-						),
-					})
-					.returning()
-			: await db
-					.insert(migrationItemRuns)
-					.values(values)
-					.onConflictDoNothing({ target, where: targetWhere })
-					.returning();
+	const shouldRetry =
+		claimBehavior === "retry_statuses" && retryStatuses.length > 0;
+
+	const [claimed] = shouldRetry
+		? await db
+				.insert(migrationItemRuns)
+				.values(values)
+				.onConflictDoUpdate({
+					target,
+					targetWhere,
+					set: {
+						migration_run_id: migrationRunId ?? null,
+						status: MigrationItemRunStatus.Running,
+						updated_at: now,
+					},
+					setWhere: inArray(migrationItemRuns.status, retryStatuses),
+				})
+				.returning()
+		: await db
+				.insert(migrationItemRuns)
+				.values(values)
+				.onConflictDoNothing({ target, where: targetWhere })
+				.returning();
 
 	if (claimed) return { claimed: true, itemRun: claimed };
 

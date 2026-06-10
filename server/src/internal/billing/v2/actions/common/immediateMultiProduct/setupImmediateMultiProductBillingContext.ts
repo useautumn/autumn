@@ -15,6 +15,7 @@ import { setupAttachProductContext } from "@/internal/billing/v2/actions/attach/
 import { setupAttachTransitionContext } from "@/internal/billing/v2/actions/attach/setup/setupAttachTransitionContext";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
+import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v2/setup/fetchStoredLineItemsForSubscriptionBilling";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { setupInvoiceModeContext } from "@/internal/billing/v2/setup/setupInvoiceModeContext";
@@ -107,10 +108,12 @@ export const setupImmediateMultiProductBillingContext = async ({
 	ctx,
 	params,
 	preview = false,
+	billingStartsAt,
 }: {
 	ctx: AutumnContext;
 	params: MultiAttachParamsV0;
 	preview?: boolean;
+	billingStartsAt?: number;
 }): Promise<MultiAttachBillingContext> => {
 	const fullCustomer = await setupFullCustomerContext({
 		ctx,
@@ -185,7 +188,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 		createStripeCustomerIfMissing: !preview,
 	});
 
-	const invoiceMode = setupInvoiceModeContext({ params });
+	const invoiceMode = await setupInvoiceModeContext({ ctx, params });
 	const currentEpochMs = testClockFrozenTime ?? Date.now();
 	const trialContext = await setupImmediateMultiProductTrialContext({
 		ctx,
@@ -202,12 +205,15 @@ export const setupImmediateMultiProductBillingContext = async ({
 		newFullProduct: firstProduct,
 		trialContext,
 		currentEpochMs,
+		billingStartsAt,
 	});
 
 	if (trialContext?.trialEndsAt) {
 		billingCycleAnchorMs = trialContext.trialEndsAt;
 	}
 
+	// Reset anchor derives from billingCycleAnchorMs, which setupBillingCycleAnchor
+	// already aligns to a backdated start.
 	const resetCycleAnchorMs = setupResetCycleAnchor({
 		billingCycleAnchorMs,
 		customerProduct: undefined,
@@ -220,6 +226,17 @@ export const setupImmediateMultiProductBillingContext = async ({
 	const customEnts = productContexts.flatMap(
 		(productContext) => productContext.customEnts,
 	);
+
+	const outgoingCusProductIds = productContexts
+		.map((pc) => pc.currentCustomerProduct?.id)
+		.filter((id): id is string => id != null);
+	const { storedChargeLineItems, storedRefundLineItems } =
+		await fetchStoredLineItemsForSubscriptionBilling({
+			db: ctx.db,
+			fullCustomer,
+			stripeSubscription,
+			outgoingCusProductIds,
+		});
 
 	return {
 		fullCustomer,
@@ -260,5 +277,7 @@ export const setupImmediateMultiProductBillingContext = async ({
 			params.success_url ?? orgToReturnUrl({ org: ctx.org, env: ctx.env }),
 		checkoutSessionParams: params.checkout_session_params,
 		dryRunStripe: preview,
+		storedChargeLineItems,
+		storedRefundLineItems,
 	};
 };

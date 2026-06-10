@@ -31,6 +31,28 @@ export type CreateScheduleInvoiceMode = {
    * If true, finalizes the invoice so it can be sent to the customer. If false, keeps it as a draft for manual review.
    */
   finalize?: boolean | undefined;
+  /**
+   * ID of an invoice template (configured in billing settings) whose footer (e.g. bank details) is applied to the invoice.
+   */
+  invoiceTemplateId?: string | undefined;
+  /**
+   * Number of days the customer has to pay the invoice before it is due (Stripe days_until_due).
+   */
+  netTermsDays?: number | undefined;
+};
+
+/**
+ * A discount to apply. Can be either a reward ID or a promotion code.
+ */
+export type CreateScheduleAttachDiscount = {
+  /**
+   * The ID of the reward to apply as a discount.
+   */
+  rewardId?: string | undefined;
+  /**
+   * The promotion code to apply as a discount.
+   */
+  promotionCode?: string | undefined;
 };
 
 /**
@@ -411,6 +433,10 @@ export type CreateScheduleParams = {
    */
   invoiceMode?: CreateScheduleInvoiceMode | undefined;
   /**
+   * List of discounts to apply to the immediate phase. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code.
+   */
+  discounts?: Array<CreateScheduleAttachDiscount> | undefined;
+  /**
    * URL to redirect to after successful checkout.
    */
   successUrl?: string | undefined;
@@ -557,6 +583,8 @@ export type CreateScheduleInvoiceMode$Outbound = {
   enabled: boolean;
   enable_plan_immediately: boolean;
   finalize: boolean;
+  invoice_template_id?: string | undefined;
+  net_terms_days?: number | undefined;
 };
 
 /** @internal */
@@ -568,10 +596,14 @@ export const CreateScheduleInvoiceMode$outboundSchema: z.ZodMiniType<
     enabled: z.boolean(),
     enablePlanImmediately: z._default(z.boolean(), false),
     finalize: z._default(z.boolean(), true),
+    invoiceTemplateId: z.optional(z.string()),
+    netTermsDays: z.optional(z.int()),
   }),
   z.transform((v) => {
     return remap$(v, {
       enablePlanImmediately: "enable_plan_immediately",
+      invoiceTemplateId: "invoice_template_id",
+      netTermsDays: "net_terms_days",
     });
   }),
 );
@@ -581,6 +613,39 @@ export function createScheduleInvoiceModeToJSON(
 ): string {
   return JSON.stringify(
     CreateScheduleInvoiceMode$outboundSchema.parse(createScheduleInvoiceMode),
+  );
+}
+
+/** @internal */
+export type CreateScheduleAttachDiscount$Outbound = {
+  reward_id?: string | undefined;
+  promotion_code?: string | undefined;
+};
+
+/** @internal */
+export const CreateScheduleAttachDiscount$outboundSchema: z.ZodMiniType<
+  CreateScheduleAttachDiscount$Outbound,
+  CreateScheduleAttachDiscount
+> = z.pipe(
+  z.object({
+    rewardId: z.optional(z.string()),
+    promotionCode: z.optional(z.string()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      rewardId: "reward_id",
+      promotionCode: "promotion_code",
+    });
+  }),
+);
+
+export function createScheduleAttachDiscountToJSON(
+  createScheduleAttachDiscount: CreateScheduleAttachDiscount,
+): string {
+  return JSON.stringify(
+    CreateScheduleAttachDiscount$outboundSchema.parse(
+      createScheduleAttachDiscount,
+    ),
   );
 }
 
@@ -1032,6 +1097,7 @@ export type CreateScheduleParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
   invoice_mode?: CreateScheduleInvoiceMode$Outbound | undefined;
+  discounts?: Array<CreateScheduleAttachDiscount$Outbound> | undefined;
   success_url?: string | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
   redirect_mode: string;
@@ -1051,6 +1117,9 @@ export const CreateScheduleParams$outboundSchema: z.ZodMiniType<
     entityId: z.optional(z.string()),
     invoiceMode: z.optional(
       z.lazy(() => CreateScheduleInvoiceMode$outboundSchema),
+    ),
+    discounts: z.optional(
+      z.array(z.lazy(() => CreateScheduleAttachDiscount$outboundSchema)),
     ),
     successUrl: z.optional(z.string()),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),

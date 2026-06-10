@@ -70,9 +70,9 @@ export const CreatePlanItemParamsV1Schema = z
 					description:
 						"'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.",
 				}),
-				max_purchase: z.number().optional().meta({
+				max_purchase: z.number().nullish().meta({
 					description:
-						"Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.",
+						"Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.",
 				}),
 			})
 			.optional()

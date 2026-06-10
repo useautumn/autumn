@@ -27,7 +27,7 @@ import type { FeatureDeduction } from "../types/featureDeduction.js";
  * Prepares all the inputs needed to execute a deduction for a single feature.
  * Shared by both Redis (Lua) and Postgres (SQL) deduction paths.
  */
-export const prepareFeatureDeduction = async ({
+export const prepareFeatureDeduction = ({
 	ctx,
 	fullCustomer,
 	deduction,
@@ -37,7 +37,7 @@ export const prepareFeatureDeduction = async ({
 	fullCustomer: FullCustomer;
 	deduction: FeatureDeduction;
 	options?: DeductionOptions;
-}): Promise<PreparedFeatureDeduction> => {
+}): PreparedFeatureDeduction => {
 	const { org } = ctx;
 	const { env } = ctx;
 	const { feature, lock, targetBalance } = deduction;
@@ -101,7 +101,7 @@ export const prepareFeatureDeduction = async ({
 			.map((ce) => ce.entitlement.feature.id),
 	);
 
-	const getCreditCostForEnt = await computeCreditCosts({ cusEnts, deduction });
+	const getCreditCostForEnt = computeCreditCosts({ cusEnts, deduction });
 
 	// Build input for each customer entitlement
 	const customerEntitlementDeductions: CustomerEntitlementDeduction[] =

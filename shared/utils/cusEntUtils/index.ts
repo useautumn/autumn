@@ -19,6 +19,7 @@ export * from "./balanceUtils/customerEntitlementToBalancePrice";
 export * from "./balanceUtils/grantedBalanceUtils/cusEntsToAdjustment";
 export * from "./balanceUtils/grantedBalanceUtils/cusEntsToAllowance";
 export * from "./balanceUtils/grantedBalanceUtils/cusEntsToGrantedBalance";
+export * from "./balanceUtils/recalculateScopeUtils";
 export * from "./balanceUtils/rollovers/cusEntsToRolloverBalance";
 export * from "./balanceUtils/rollovers/cusEntsToRolloverGranted";
 export * from "./balanceUtils/rollovers/cusEntsToRolloverUsage";
@@ -36,6 +37,7 @@ export * from "./convertCusEntUtils/cusEntToBillingObjects";
 export * from "./convertCusEntUtils/cusEntToCusPrice";
 export * from "./convertCusEntUtils/cusEntToKey";
 export * from "./convertCusEntUtils/cusEntToStripeIds";
+export * from "./convertCusEntUtils/customerEntitlementToPlanItemV1";
 // Convert utils barrel
 export * from "./convertCusEntUtils/customerEntitlementToOptions";
 // Core utils

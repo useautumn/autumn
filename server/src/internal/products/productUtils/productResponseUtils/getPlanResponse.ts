@@ -119,8 +119,8 @@ export const getPlanResponse = async ({
 		group: product.group || null,
 		version: product.version,
 
-		add_on: product.is_add_on,
-		auto_enable: product.is_default,
+		add_on: product.is_add_on ?? false,
+		auto_enable: product.is_default ?? false,
 
 		price: basePrice,
 		items: planItems ?? [],

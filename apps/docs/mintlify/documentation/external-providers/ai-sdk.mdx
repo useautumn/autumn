@@ -33,16 +33,16 @@ bun add @useautumn/ai-sdk
 
 #### 2. Wrap your model
 
-Use `withTokenTracking` to wrap any AI SDK language model. It intercepts generate and stream calls, reads the token usage from the response, and reports it to Autumn automatically.
+Use `withAutumn` to wrap any AI SDK language model. It intercepts generate and stream calls, reads the token usage from the response, and reports it to Autumn automatically.
 
 ```typescript
 import { Autumn } from "autumn-js";
 import { anthropic } from "@ai-sdk/anthropic";
-import { withTokenTracking } from "@useautumn/ai-sdk";
+import { withAutumn } from "@useautumn/ai-sdk";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
-const model = withTokenTracking({
+const model = withAutumn({
   autumn,
   model: anthropic("claude-sonnet-4-5-20250514"),
   customerId: "user_123",
@@ -89,7 +89,7 @@ import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 
 const openrouter = createOpenRouter();
 
-const model = withTokenTracking({
+const model = withAutumn({
   autumn,
   model: openrouter("anthropic/claude-opus-4-6"),
   customerId: "user_123",
@@ -116,12 +116,12 @@ const model = withTokenTracking({
 import { Autumn } from "autumn-js";
 import { openai } from "@ai-sdk/openai";
 import { generateText } from "ai";
-import { withTokenTracking } from "@useautumn/ai-sdk";
+import { withAutumn } from "@useautumn/ai-sdk";
 
 const autumn = new Autumn({ secretKey: process.env.AUTUMN_SECRET_KEY! });
 
 async function chat(customerId: string, message: string) {
-  const model = withTokenTracking({
+  const model = withAutumn({
     autumn,
     model: openai("gpt-4o"),
     customerId,

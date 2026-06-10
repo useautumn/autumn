@@ -20,8 +20,12 @@
 	},
 	"scripts": {
 		"ts": "tsgo --noEmit --skipLibCheck",
+		"test": "bun test tests/unit",
 		"build": "rm -rf dist && tsup",
 		"prepublishOnly": "bun run build"
+	},
+	"dependencies": {
+		"@ai-sdk/provider": "^3.0.0"
 	},
 	"peerDependencies": {
 		"ai": "^6.0.116",

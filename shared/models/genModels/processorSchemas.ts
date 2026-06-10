@@ -91,17 +91,28 @@ export const UpsertVercelProcessorConfigSchema = z.object({
 	marketplace_mode: z.enum(VercelMarketplaceMode).optional(),
 });
 
+export const RevenueCatOAuthConfigSchema = z.object({
+	access_token: z.string(),
+	refresh_token: z.string(),
+	expires_at: z.number(),
+	scope: z.string().optional(),
+	project_id: z.string().optional(),
+	connected_at: z.number().optional(),
+});
+
 /**
  * Organization-level RevenueCat processor configuration
  * Stores API key, project ID, and webhook secret
  */
 export const RevenueCatProcessorConfigSchema = z.object({
-	api_key: z.string(),
+	api_key: z.string().optional(),
 	sandbox_api_key: z.string().optional(),
 	project_id: z.string().optional(),
 	sandbox_project_id: z.string().optional(),
-	webhook_secret: z.string(),
+	webhook_secret: z.string().optional(),
 	sandbox_webhook_secret: z.string().optional(),
+	oauth: RevenueCatOAuthConfigSchema.optional(),
+	sandbox_oauth: RevenueCatOAuthConfigSchema.optional(),
 });
 
 export const UpsertRevenueCatProcessorConfigSchema = z.object({
@@ -132,6 +143,7 @@ export type VercelProcessorConfig = z.infer<typeof VercelProcessorConfigSchema>;
 export type UpsertVercelProcessorConfig = z.infer<
 	typeof UpsertVercelProcessorConfigSchema
 >;
+export type RevenueCatOAuthConfig = z.infer<typeof RevenueCatOAuthConfigSchema>;
 export type RevenueCatProcessorConfig = z.infer<
 	typeof RevenueCatProcessorConfigSchema
 >;

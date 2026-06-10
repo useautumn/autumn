@@ -40,6 +40,8 @@ import {
 	type Operations,
 	type OrgConfig,
 	type ProductItem,
+	type RecalculateBalanceParamsV0,
+	type RecalculateBalancePreview,
 	type RestoreParamsV1,
 	type RestoreResponse,
 	type RewardRedemption,
@@ -182,7 +184,8 @@ export class AutumnInt {
 
 			if (parsed && typeof parsed === "object") {
 				throw new AutumnError({
-					message: parsed.message ?? `request failed (status ${response.status})`,
+					message:
+						parsed.message ?? `request failed (status ${response.status})`,
 					code: parsed.code ?? ErrCode.InternalError,
 				});
 			}
@@ -985,6 +988,7 @@ export class AutumnInt {
 			id: string;
 			filter?: MigrationFilter | null;
 			operations?: Operations | null;
+			no_billing_changes?: boolean;
 		}): Promise<Migration> => {
 			const data = await this.post(`/migrations.create`, params);
 			return data as Migration;
@@ -999,7 +1003,8 @@ export class AutumnInt {
 				id?: string;
 				filter?: MigrationFilter | null;
 				operations?: Operations | null;
-				retry_failed?: boolean;
+				no_billing_changes?: boolean;
+				archived?: boolean;
 			};
 		}): Promise<Migration> => {
 			const data = await this.post(`/migrations.update`, params);
@@ -1013,6 +1018,7 @@ export class AutumnInt {
 			id: string;
 			filter?: MigrationFilter | null;
 			operations?: Operations | null;
+			no_billing_changes?: boolean;
 		}): Promise<Migration> => {
 			try {
 				await this.post(`/migrations.delete`, { id: params.id });
@@ -1032,11 +1038,14 @@ export class AutumnInt {
 			dry_run?: boolean;
 			only?: string[];
 			limit?: number;
+			concurrency?: number;
 			lazy_run?: boolean;
+			retry_item_statuses?: ("failed" | "skipped")[];
 		}): Promise<{
 			migration_id: string;
 			dry_run: boolean;
 			lazy_run: boolean;
+			concurrency?: number;
 			run_id: string;
 		}> => {
 			const data = await this.post(`/migrations.run`, params);
@@ -1044,6 +1053,7 @@ export class AutumnInt {
 				migration_id: string;
 				dry_run: boolean;
 				lazy_run: boolean;
+				concurrency?: number;
 				run_id: string;
 			};
 		},
@@ -1055,6 +1065,20 @@ export class AutumnInt {
 		}> => {
 			const data = await this.post(`/migrations.lazy_run`, params);
 			return data as { migration_id: string; run_id: string };
+		},
+		cancelRun: async (params: {
+			id: string;
+		}): Promise<{
+			migration_id: string;
+			run_id: string;
+			canceled: boolean;
+		}> => {
+			const data = await this.post(`/migrations.cancel_run`, params);
+			return data as {
+				migration_id: string;
+				run_id: string;
+				canceled: boolean;
+			};
 		},
 		listRuns: async (params: {
 			migrationId: string;
@@ -1089,6 +1113,16 @@ export class AutumnInt {
 		delete: async (params: DeleteBalanceParamsV0) => {
 			const data = await this.post(`/balances.delete`, params);
 			return data;
+		},
+		recalculate: async (params: RecalculateBalanceParamsV0) => {
+			const data = await this.post(`/balances.recalculate`, params);
+			return data;
+		},
+		previewRecalculate: async (
+			params: RecalculateBalanceParamsV0,
+		): Promise<RecalculateBalancePreview> => {
+			const data = await this.post(`/balances.preview_recalculate`, params);
+			return data as RecalculateBalancePreview;
 		},
 		finalize: async (
 			params: FinalizeLockParamsV0,

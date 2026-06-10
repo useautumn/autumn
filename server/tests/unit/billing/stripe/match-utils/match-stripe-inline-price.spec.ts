@@ -20,6 +20,10 @@ const subscriptionItem = ({
 	priceId = "price_inline",
 	interval = "month",
 	amount = "1000",
+	billingScheme = "per_unit",
+	taxBehavior = "unspecified",
+	tiersMode = null,
+	transformQuantity = null,
 }: {
 	id?: string;
 	customerPriceId?: string | null;
@@ -27,6 +31,10 @@ const subscriptionItem = ({
 	priceId?: string;
 	interval?: Stripe.Price.Recurring.Interval;
 	amount?: string;
+	billingScheme?: Stripe.Price.BillingScheme;
+	taxBehavior?: Stripe.Price.TaxBehavior | null;
+	tiersMode?: Stripe.Price.TiersMode | null;
+	transformQuantity?: Stripe.Price.TransformQuantity | null;
 } = {}) =>
 	({
 		id,
@@ -39,7 +47,11 @@ const subscriptionItem = ({
 			object: "price",
 			product: { id: "stripe_prod_inline" },
 			currency: "usd",
+			billing_scheme: billingScheme,
+			tax_behavior: taxBehavior,
 			recurring: { interval, interval_count: 1 },
+			tiers_mode: tiersMode,
+			transform_quantity: transformQuantity,
 			unit_amount_decimal: amount,
 		},
 	}) as unknown as Stripe.SubscriptionItem;
@@ -52,6 +64,25 @@ describe("matchStripeInlinePrice", () => {
 				stripePrice: subscriptionItem().price,
 			}),
 		).toBe(true);
+	});
+
+	test("does not match non-inline-compatible Stripe prices", () => {
+		const incompatiblePrices = [
+			subscriptionItem({ billingScheme: "tiered", tiersMode: "graduated" }),
+			subscriptionItem({
+				transformQuantity: { divide_by: 10, round: "up" },
+			}),
+			subscriptionItem({ taxBehavior: "exclusive" }),
+		];
+
+		for (const item of incompatiblePrices) {
+			expect(
+				stripeInlinePriceMatchesStripePrice({
+					inlinePrice,
+					stripePrice: item.price,
+				}),
+			).toBe(false);
+		}
 	});
 
 	test("requires Autumn customer price metadata and matching price shape", () => {

@@ -7,13 +7,18 @@ export type TokenUsage = {
 	outputTokens: number;
 };
 
+/** Token usage and its USD cost are priced together at the API layer — one cannot exist without the other. */
+export type TokenDeduction = {
+	usage: TokenUsage;
+	cost: number;
+};
+
 export type FeatureDeduction = {
 	feature: Feature;
 	deduction: number;
 	targetBalance?: number;
-	tokenUsage?: TokenUsage;
-	/** Pre-computed dollar cost; if set, the deduction layer skips its own getCreditCost call. */
-	precomputedCreditCost?: number;
+	/** Present only for track_tokens deductions; standard deductions omit it. */
+	tokens?: TokenDeduction;
 	lock?: LockParams;
 	lockReceipt?: LockReceipt;
 	lockReceiptKey?: string;

@@ -4,7 +4,11 @@ import {
 	EntInterval,
 	type Entity,
 	type FullCusEntWithFullCusProduct,
+	type FullCustomer,
+	fullCustomerToCustomerEntitlements,
+	hasRecalculableScope,
 	isPaidCustomerEntitlement,
+	type RecalculateBalanceParamsV0,
 } from "@autumn/shared";
 
 export const getCustomerBalanceId = ({
@@ -79,6 +83,44 @@ export const getCustomerBalanceRemaining = ({
 		entityId: entityId ?? undefined,
 		withRollovers: true,
 	});
+
+export const canRecalculateCustomerBalances = ({
+	fullCustomer,
+	featureId,
+	entityId,
+}: {
+	fullCustomer: FullCustomer | null | undefined;
+	featureId: string;
+	entityId: string | null;
+}) => {
+	if (!fullCustomer) return false;
+	const entity = entityId
+		? fullCustomer.entities?.find(
+				(candidate) =>
+					candidate.id === entityId || candidate.internal_id === entityId,
+			)
+		: undefined;
+	const cusEnts = fullCustomerToCustomerEntitlements({
+		fullCustomer,
+		featureId,
+		entity,
+	});
+	return hasRecalculableScope({ cusEnts, entityId: entity?.id ?? undefined });
+};
+
+export const getRecalculateBalanceParams = ({
+	balance,
+	customerId,
+	entityId,
+}: {
+	balance: FullCusEntWithFullCusProduct;
+	customerId: string;
+	entityId: string | null;
+}): RecalculateBalanceParamsV0 => ({
+	customer_id: customerId,
+	feature_id: balance.entitlement.feature.id,
+	entity_id: entityId ?? undefined,
+});
 
 export const getDeleteBalanceParams = ({
 	balance,

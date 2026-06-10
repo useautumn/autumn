@@ -306,7 +306,7 @@ test.concurrent(
 		});
 
 		const overflowAmount = 50;
-		const expectedCreditCost = await getCreditCost({
+		const expectedCreditCost = getCreditCost({
 			featureId: TestFeature.Action1,
 			creditSystem: creditFeature,
 			amount: overflowAmount,

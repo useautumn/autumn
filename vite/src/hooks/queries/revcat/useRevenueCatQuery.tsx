@@ -4,6 +4,8 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 interface RevenueCatConfig {
 	connected: boolean;
+	connection?: "oauth" | "api_key" | "none";
+	oauth_connected?: boolean;
 	api_key?: string;
 	sandbox_api_key?: string;
 	project_id?: string;

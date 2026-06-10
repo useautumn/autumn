@@ -24,6 +24,13 @@ import {
 import { alias } from "drizzle-orm/pg-core";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getOrgCusProductLimit } from "../misc/edgeConfig/orgLimitsStore.js";
+import type { CustomerListFilters } from "./customerListFilters.js";
+import {
+	type DashboardProductVersionFilter,
+	isCustomDashboardProductFilter,
+	isVersionDashboardProductFilter,
+	parseDashboardVersionFilter,
+} from "./getFullCusQuery.js";
 
 // Create alias for subquery
 const customerProductsAlias = alias(customerProducts, "cp_alias");
@@ -54,12 +61,26 @@ const productFields = {
 	is_add_on: products.is_add_on,
 };
 
-interface SearchFilters {
-	status?: string[];
-	version?: string[];
-	none?: boolean;
-	processor?: string[];
-}
+const dashboardProductFilterToDrizzleSql = (
+	filter: DashboardProductVersionFilter,
+) =>
+	and(
+		isCustomDashboardProductFilter(filter)
+			? and(
+					eq(customerProducts.product_id, filter.productId),
+					eq(customerProducts.is_custom, true),
+				)
+			: and(eq(products.id, filter.productId), eq(products.version, filter.version)),
+	);
+
+const dashboardProductFilterToRawSql = (
+	filter: DashboardProductVersionFilter,
+) =>
+	isCustomDashboardProductFilter(filter)
+		? sql`(${customerProducts.product_id} = ${filter.productId} AND ${customerProducts.is_custom} = true)`
+		: sql`(${products.id} = ${filter.productId} AND ${products.version} = ${filter.version})`;
+
+type SearchFilters = CustomerListFilters;
 
 export class CusSearchService {
 	static getProcessorFilterSql({
@@ -153,29 +174,13 @@ export class CusSearchService {
 			statuses = [];
 		}
 
-		// Handle product:version combinations
-		let productVersionFilters: Array<{ productId: string; version: number }> =
-			[];
-
-		// Parse version field which now contains "productId:version,productId2:version2"
-		if (filters.version && filters.version.length > 0) {
-			const versionSelections = filters.version.filter(Boolean);
-			productVersionFilters = versionSelections.map((selection) => {
-				const [productId, version] = selection.split(":");
-				return { productId, version: parseInt(version) };
-			});
-		}
+		const productVersionFilters = parseDashboardVersionFilter(filters.version);
 
 		const filtersDrizzle = and(
 			// New product:version filtering
 			productVersionFilters.length > 0
 				? or(
-						...productVersionFilters.map((pv) =>
-							and(
-								eq(customerProducts.product_id, pv.productId),
-								eq(products.version, pv.version),
-							),
-						),
+						...productVersionFilters.map(dashboardProductFilterToDrizzleSql),
 					)
 				: undefined,
 			// Legacy product filtering (fallback)
@@ -958,11 +963,10 @@ const buildSearchPredicates = ({
 		filters?.status && filters.status.length > 0 && !filters.status.includes("")
 			? filters.status
 			: [];
-	const versions = filters?.version?.filter(Boolean) ?? [];
-	const productVersionFilters = versions.map((selection) => {
-		const [productId, version] = selection.split(":");
-		return { productId, version: parseInt(version, 10) };
-	});
+	const productVersionFilters = parseDashboardVersionFilter(filters?.version);
+	const hasNumberedVersion = productVersionFilters.some(
+		isVersionDashboardProductFilter,
+	);
 
 	if (statuses.length === 0 && productVersionFilters.length === 0) {
 		return {
@@ -1005,10 +1009,7 @@ const buildSearchPredicates = ({
 	const versionRaw =
 		productVersionFilters.length > 0
 			? sql`(${sql.join(
-					productVersionFilters.map(
-						(pv) =>
-							sql`(${customerProducts.product_id} = ${pv.productId} AND ${products.version} = ${pv.version})`,
-					),
+					productVersionFilters.map(dashboardProductFilterToRawSql),
 					sql` OR `,
 				)})`
 			: null;
@@ -1038,12 +1039,7 @@ const buildSearchPredicates = ({
 	const filtersDrizzle = and(
 		productVersionFilters.length > 0
 			? or(
-					...productVersionFilters.map((pv) =>
-						and(
-							eq(customerProducts.product_id, pv.productId),
-							eq(products.version, pv.version),
-						),
-					),
+					...productVersionFilters.map(dashboardProductFilterToDrizzleSql),
 				)
 			: undefined,
 		statuses.length > 0
@@ -1093,7 +1089,7 @@ const buildSearchPredicates = ({
 
 	return {
 		kind: "productMode",
-		useInnerJoin: productVersionFilters.length > 0,
+		useInnerJoin: hasNumberedVersion,
 		where: and(
 			shouldApplyActiveFilter ? activeDrizzle : undefined,
 			filtersDrizzle,

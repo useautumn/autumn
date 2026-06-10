@@ -20,7 +20,7 @@ export const handleGetOAuthUrl = createRoute({
 
 		if (!clientId) {
 			throw new RecaseError({
-				message: `Stripe ${env === AppEnv.Live ? "live" : "test"} client ID not configured`,
+				message: `Stripe ${env} client ID not configured`,
 				code: ErrCode.InternalError,
 				statusCode: 500,
 			});
@@ -33,7 +33,7 @@ export const handleGetOAuthUrl = createRoute({
 
 		const stateKey = await generateOAuthState({
 			organizationSlug: org.slug,
-			env: env === AppEnv.Live ? "live" : "test",
+			env,
 			redirectUri,
 			masterOrgId: null, // null for standard flow
 		});

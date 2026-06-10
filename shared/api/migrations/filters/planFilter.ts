@@ -12,8 +12,8 @@ import { PlanItemFilterSchema } from "./planItemFilter.js";
  * Filter over a plan. Migration-scoped: stable contract decoupled from
  * `ApiPlanV1`.
  *
- * Customer-rooted filters automatically scope to active customer-product
- * status (`cp.status IN ACTIVE_STATUSES`).
+ * Customer-rooted filters automatically scope to relevant customer-product
+ * status (`cp.status IN RELEVANT_STATUSES`).
  *
  * `price` is the plan's BASE price (customer_price linked to a price with
  * `entitlement_id IS NULL`). Use `price: null` for free plans,

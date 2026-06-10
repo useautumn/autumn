@@ -10,13 +10,14 @@ import { Decimal } from "decimal.js";
 
 // ═══════════════════════════════════════════════════════════════════
 // TRACK-TOKENS-ORBS: AI credit system nested inside a parent credit system
-// Verifies that a single /track/tokens call deducts USD from the AI credit
-// feature AND deducts the ratio-mapped amount from any parent credit
-// system whose schema references it.
+//
+// Parent credit systems are overflow pools (same semantics as classic
+// metered → credits deduction order): a token track drains the AI credit
+// balance first, and only the overflow is ratio-mapped onto the parent.
 // ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
-	`${chalk.yellowBright("track-tokens-orbs: AI credit system inside parent credit system deducts both balances")}`,
+	`${chalk.yellowBright("track-tokens-orbs-1: AI balance covers the cost — parent orbs untouched")}`,
 	async () => {
 		const aiCreditsItem = items.free({
 			featureId: TestFeature.AiCredits,
@@ -24,7 +25,7 @@ test.concurrent(
 		});
 		const orbsItem = items.free({
 			featureId: TestFeature.Orbs,
-			includedUsage: 50_000, // 50,000 orbs
+			includedUsage: 50_000, // orbs schema: 1000 orbs per $1 of AI usage
 		});
 		const freeProd = products.base({
 			id: "free",
@@ -32,7 +33,7 @@ test.concurrent(
 		});
 
 		const { customerId, autumnV1, autumnV2 } = await initScenario({
-			customerId: "track-tokens-orbs",
+			customerId: "track-tokens-orbs-1",
 			setup: [
 				s.customer({ testClock: false }),
 				s.products({ list: [freeProd] }),
@@ -48,9 +49,6 @@ test.concurrent(
 			.add(new Decimal(15).mul(outputTokens))
 			.div(1_000_000)
 			.toNumber(); // 0.125
-
-		// Orbs schema: 1000 orbs per $1 of AI usage
-		const expectedOrbsCost = new Decimal(expectedUsdCost).mul(1000).toNumber(); // 125
 
 		const trackRes: TrackResponseV2 = await autumnV2.post("/track_tokens", {
 			customer_id: customerId,
@@ -71,10 +69,61 @@ test.concurrent(
 			usage: expectedUsdCost,
 		});
 
-		// Parent orbs balance dropped by USD cost × 1000
+		// AI balance covered the full cost, so the parent overflow pool is untouched
 		expect(customer.features[TestFeature.Orbs]).toMatchObject({
-			balance: new Decimal(50_000).minus(expectedOrbsCost).toNumber(),
-			usage: expectedOrbsCost,
+			balance: 50_000,
+			usage: 0,
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("track-tokens-orbs-2: cost exceeding AI balance overflows into parent orbs at the schema ratio")}`,
+	async () => {
+		const aiCreditsItem = items.free({
+			featureId: TestFeature.AiCredits,
+			includedUsage: 100, // $100 of AI usage
+		});
+		const orbsItem = items.free({
+			featureId: TestFeature.Orbs,
+			includedUsage: 50_000,
+		});
+		const freeProd = products.base({
+			id: "free",
+			items: [aiCreditsItem, orbsItem],
+		});
+
+		const { customerId, autumnV1, autumnV2 } = await initScenario({
+			customerId: "track-tokens-orbs-2",
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [freeProd] }),
+			],
+			actions: [s.attach({ productId: freeProd.id })],
+		});
+
+		// (5 * 24M) / 1M = $120 > the $100 AI balance
+		const trackRes: TrackResponseV2 = await autumnV2.post("/track_tokens", {
+			customer_id: customerId,
+			feature_id: TestFeature.AiCredits,
+			model_id: "custom/internal-model",
+			input_tokens: 24_000_000,
+			output_tokens: 0,
+		});
+		expect(trackRes.value).toBeCloseTo(120, 10);
+
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+		// AI pool fully drained
+		expect(customer.features[TestFeature.AiCredits]).toMatchObject({
+			balance: 0,
+			usage: 100,
+		});
+
+		// $20 overflow lands on orbs at 1000 orbs per $1
+		expect(customer.features[TestFeature.Orbs]).toMatchObject({
+			balance: new Decimal(50_000).minus(20_000).toNumber(),
+			usage: 20_000,
 		});
 	},
 );

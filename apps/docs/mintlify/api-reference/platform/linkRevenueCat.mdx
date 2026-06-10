@@ -1,0 +1,32 @@
+---
+title: "Link Revenue Cat"
+openapi: "openapi POST /v1/platform.link_revenuecat"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+### Body Parameters
+
+<DynamicParamField body="organization_slug" type="string" required />
+
+<DynamicParamField body="env" type="'test' | 'live'" required />
+
+<DynamicParamField body="project_name" type="string" required />
+
+<DynamicParamField body="redirect_url" type="string" required />
+
+
+### Response
+
+<DynamicResponseField name="oauth_url" type="string" />
+
+
+<ResponseExample>
+```json 200
+{
+  "oauth_url": "https://api.revenuecat.com/oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&scope=project.read+project.write"
+}
+```
+</ResponseExample>

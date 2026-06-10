@@ -101,6 +101,7 @@ export function InlineEditorProvider({
 			initialItem={initialItem}
 			setSheet={setSheet}
 			setInitialItem={setInitialItem}
+			updateItemId={setItemId}
 			closeSheet={closeSheet}
 			itemDraft={itemDraft}
 		>

@@ -10,6 +10,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { carryOverUsagesToExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/carryOverUtils";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 
+type NewCustomerProductParams = Partial<
+	Pick<AttachParamsV1, "carry_over_usages" | "ends_at">
+>;
+
 const getScheduledBillingCycleAnchorResetAt = ({
 	requestedBillingCycleAnchor,
 	currentEpochMs,
@@ -36,11 +40,11 @@ const getScheduledBillingCycleAnchorResetAt = ({
 export const computeAttachNewCustomerProduct = ({
 	ctx,
 	attachBillingContext,
-	params = {} as AttachParamsV1,
+	params = {},
 }: {
 	ctx: AutumnContext;
 	attachBillingContext: AttachBillingContext;
-	params?: AttachParamsV1;
+	params?: NewCustomerProductParams;
 }): FullCusProduct => {
 	const {
 		attachProduct,
@@ -60,7 +64,9 @@ export const computeAttachNewCustomerProduct = ({
 		requestedBillingCycleAnchor,
 		resetCycleAnchorMs,
 		accessStartsAt,
+		billingStartsAt,
 		paymentMethod,
+		processorTypeOverride,
 	} = attachBillingContext;
 
 	const currentCustomerEntitlements =
@@ -77,7 +83,7 @@ export const computeAttachNewCustomerProduct = ({
 	);
 
 	const isScheduled = planTiming === "end_of_cycle";
-	const startsAt = params.starts_at ?? (isScheduled ? endOfCycleMs : undefined);
+	const startsAt = billingStartsAt ?? (isScheduled ? endOfCycleMs : undefined);
 	const hasAutoChargePaymentMethod =
 		paymentMethod !== undefined && paymentMethod.type !== "custom";
 	const shouldSendInvoiceForFutureStart =
@@ -137,6 +143,7 @@ export const computeAttachNewCustomerProduct = ({
 			accessStartsAt,
 			collectionMethod,
 			externalId,
+			processorType: processorTypeOverride,
 			billingCycleAnchorResetsAt: getScheduledBillingCycleAnchorResetAt({
 				requestedBillingCycleAnchor,
 				currentEpochMs,

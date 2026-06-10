@@ -16,7 +16,12 @@ import {
 	updateSubscriptionParamsSchema,
 } from "../../../generated";
 import type { RouteDefinition, RouteName } from "../types";
-import { backendError, backendSuccess, sanitizeBody } from "../utils";
+import {
+	backendError,
+	backendSuccess,
+	CUSTOMER_PROTECTED_BODY_FIELDS,
+	sanitizeBody,
+} from "../utils";
 
 const getEntityBodySchema = z.object({
 	entityId: z.string(),
@@ -33,8 +38,9 @@ export const routeConfigs: RouteDefinition<RouteName>[] = [
 			// expand: z.array(z.enum(CustomerExpand)).optional(),
 			expand: z.array(z.string()).optional(),
 		}),
+		protectedBodyFields: CUSTOMER_PROTECTED_BODY_FIELDS,
 		customHandler: async ({ autumn, identity, body }) => {
-			const sanitizedBody = sanitizeBody(body);
+			const sanitizedBody = sanitizeBody(body, CUSTOMER_PROTECTED_BODY_FIELDS);
 
 			// Special case: if no customer and errorOnNotFound is false, return 204
 			if (!identity?.customerId && sanitizedBody.errorOnNotFound === false) {

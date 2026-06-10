@@ -11,6 +11,7 @@ import { createStripeInvoiceItems } from "@/internal/billing/v2/providers/stripe
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
 import { getRolloverUpdates } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/rolloverUtils";
+import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { parseSkipOverageSubmissionFlag } from "@/internal/misc/featureFlags/parseSkipOverageSubmission";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
 import type { InvoiceCreatedContext } from "../setupInvoiceCreatedContext";
@@ -84,7 +85,6 @@ export const processConsumablePricesForInvoiceCreated = async ({
 					invoicePeriodEndMs,
 				}),
 		});
-
 	const skipOverageSubmission = parseSkipOverageSubmissionFlag({
 		org: ctx.org,
 		customerId: eventContext.fullCustomer.id,
@@ -105,11 +105,18 @@ export const processConsumablePricesForInvoiceCreated = async ({
 		data: updateCustomerEntitlements,
 	});
 
+	await deleteCachedFullCustomer({
+		ctx,
+		customerId:
+			eventContext.fullCustomer.id ?? eventContext.fullCustomer.internal_id,
+		source: "invoice-created-consumable-reset",
+	});
+
 	// Handle rollovers
 	updateCustomerEntitlements.forEach(async (update) => {
 		const rolloverUpdates = getRolloverUpdates({
 			cusEnt: update.customerEntitlement,
-			nextResetAt: Date.now(),
+			nextResetAt: invoicePeriodEndMs,
 		});
 
 		const fullCusEnt: FullCusEntWithProduct = {

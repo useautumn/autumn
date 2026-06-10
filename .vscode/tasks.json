@@ -4,21 +4,21 @@
 		{
 			"label": "Run Test Pattern",
 			"type": "shell",
-			"command": "infisical run --env=dev --recursive -- bun test ${relativeFile} -t \"${input:testPattern}\"",
+			"command": "./run.sh \"${file}\" -t \"${input:testPattern}\"",
 			"options": { "env": { "NODE_ENV": "development" } },
 			"problemMatcher": []
 		},
 		{
 			"label": "Run Describe at Cursor",
 			"type": "shell",
-			"command": "infisical run --env=dev --recursive -- bun test ${relativeFile} --timeout 0 -t \"$(bun scripts/testScripts/getDescribeAtCursor.ts ${file} ${lineNumber})\"",
+			"command": "./run.sh \"${file}\" ${lineNumber}",
 			"options": { "env": { "NODE_ENV": "development" } },
 			"problemMatcher": []
 		},
 		{
 			"label": "Run Current Test File",
 			"type": "shell",
-			"command": "infisical run --env=dev --recursive -- bun test ${relativeFile}",
+			"command": "./run.sh \"${file}\"",
 			"options": { "env": { "NODE_ENV": "development" } },
 			"problemMatcher": []
 		}

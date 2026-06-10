@@ -7,9 +7,13 @@ const CACHE_KEY = "models_dev_pricing";
 const STALE_KEY = `${CACHE_KEY}_stale`;
 const TTL_PRIMARY = 60 * 60 * 3;
 const TTL_STALE = 60 * 60 * 24 * 3;
+// Runs inside the track request path — a hanging models.dev must not hang tracks.
+const FETCH_TIMEOUT_MS = 5000;
 
 const fetchFromSource = async (): Promise<ModelPricingData> => {
-	const response = await fetch("https://models.dev/api.json");
+	const response = await fetch("https://models.dev/api.json", {
+		signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+	});
 	if (!response.ok) {
 		throw new InternalError({
 			message: `models.dev returned ${response.status}`,

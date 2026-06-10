@@ -28,14 +28,16 @@
     "sourceMap": true,
     "strict": true,
     "target": "es2022",
+    "types": ["bun", "node"],
     "paths": {
       "@api/*": ["../../shared/api/*"],
       "@models/*": ["../../shared/models/*"],
       "@utils/*": ["../../shared/utils/*"],
+      "@autumn/logging": ["../logging/src/index.ts"],
       "@autumn/ksuid": ["../ksuid/src/index.ts"]
     },
     "useUnknownInCatchVariables": true,
   },
   "exclude": ["node_modules"],
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*.ts", "tests/**/*.ts"]
 }

@@ -9,6 +9,7 @@ import {
 	text,
 	timestamp,
 } from "drizzle-orm/pg-core";
+import type { AppEnv } from "../models/genModels/genEnums.js";
 import {
 	type Organization,
 	organizations,
@@ -215,6 +216,7 @@ export const oauthRefreshToken = pgTable("oauth_refresh_token", {
 	expiresAt: timestamp("expires_at", { withTimezone: true }),
 	createdAt: timestamp("created_at", { withTimezone: true }),
 	revoked: timestamp("revoked", { withTimezone: true }),
+	authTime: timestamp("auth_time", { withTimezone: true }),
 	scopes: text("scopes").array().notNull(),
 }).enableRLS();
 
@@ -245,6 +247,12 @@ export const oauthConsent = pgTable("oauth_consent", {
 	userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
 	referenceId: text("reference_id"),
 	scopes: text("scopes").array().notNull(),
+	env: text("env").$type<AppEnv>(),
+	redirectUri: text("redirect_uri"),
+	oauthApiKeyId: text("oauth_api_key_id"),
+	metadata: jsonb("metadata")
+		.$type<Record<string, unknown> | null>()
+		.default({}),
 	createdAt: timestamp("created_at", { withTimezone: true }),
 	updatedAt: timestamp("updated_at", { withTimezone: true }),
 }).enableRLS();

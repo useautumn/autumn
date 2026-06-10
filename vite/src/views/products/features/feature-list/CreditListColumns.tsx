@@ -56,7 +56,7 @@ export const createCreditListColumns = (
 	},
 	{
 		header: "Type",
-		size: 120,
+		size: 160,
 		accessorKey: "type",
 		cell: ({ row }: { row: Row<Feature> }) => {
 			const isAi = isAiCreditSystem(row.original.type);
@@ -65,12 +65,12 @@ export const createCreditListColumns = (
 					{isAi ? (
 						<>
 							<CpuIcon size={14} weight="fill" className="text-yellow-500" />
-							AI
+							AI Credit System
 						</>
 					) : (
 						<>
 							<CoinsIcon size={14} weight="fill" className="text-pink-500" />
-							Standard
+							Credit System
 						</>
 					)}
 				</div>

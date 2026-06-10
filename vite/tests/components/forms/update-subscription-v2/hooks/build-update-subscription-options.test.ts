@@ -1,5 +1,6 @@
-import { ProductItemInterval } from "@autumn/shared";
 import { describe, expect, test } from "bun:test";
+import { type ProductItem, ProductItemInterval } from "@autumn/shared";
+import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
 import { buildUpdateSubscriptionOptions } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionRequestBody";
 
 describe("buildUpdateSubscriptionOptions — included usage handling", () => {
@@ -219,5 +220,100 @@ describe("buildUpdateSubscriptionOptions — included usage handling", () => {
 		});
 
 		expect(result).toEqual([]);
+	});
+});
+
+describe("normalizeBillingRequestItems", () => {
+	test("drops empty fixed-price draft rows before serialization", () => {
+		const items = [
+			{
+				feature_id: "AI_CREDITS",
+				price: null,
+				tiers: [{ amount: 0.01, to: "inf" }],
+			},
+			{
+				price: "" as unknown as number,
+				feature_id: null,
+				price_id: null,
+				entitlement_id: null,
+				interval: ProductItemInterval.Month,
+				interval_count: 1,
+				tiers: null,
+				billing_units: null,
+				usage_model: null,
+				included_usage: null,
+				config: null,
+				feature_type: null,
+				entity_feature_id: null,
+				price_config: null,
+			},
+			{
+				price: "" as unknown as number,
+				feature_id: null,
+				price_id: null,
+				entitlement_id: null,
+				interval: ProductItemInterval.Month,
+				interval_count: 1,
+				tiers: null,
+				billing_units: null,
+				usage_model: null,
+				included_usage: null,
+				config: null,
+				feature_type: null,
+				entity_feature_id: null,
+				price_config: null,
+			},
+			{
+				feature_id: "SSO",
+				price: null,
+			},
+		] satisfies ProductItem[];
+
+		expect(normalizeBillingRequestItems({ items })).toEqual([
+			items[0],
+			items[3],
+		]);
+	});
+
+	test("omits draft string prices from non-empty items", () => {
+		const items = [
+			{
+				feature_id: "seats",
+				price: "" as unknown as number,
+				included_usage: 10,
+				interval: ProductItemInterval.Month,
+			},
+		] satisfies ProductItem[];
+
+		expect(normalizeBillingRequestItems({ items })).toEqual([
+			{
+				feature_id: "seats",
+				included_usage: 10,
+				interval: ProductItemInterval.Month,
+			},
+		]);
+	});
+
+	test("returns undefined when only empty draft rows are present", () => {
+		const items = [
+			{
+				price: "" as unknown as number,
+				feature_id: null,
+				price_id: null,
+				entitlement_id: null,
+				interval: ProductItemInterval.Month,
+				interval_count: 1,
+				tiers: null,
+				billing_units: null,
+				usage_model: null,
+				included_usage: null,
+				config: null,
+				feature_type: null,
+				entity_feature_id: null,
+				price_config: null,
+			},
+		] satisfies ProductItem[];
+
+		expect(normalizeBillingRequestItems({ items })).toBeUndefined();
 	});
 });

@@ -12,6 +12,7 @@ export enum RateLimitType {
 	Attach = "attach",
 	ListCustomers = "list_customers",
 	CustomerEntitiesGet = "customer_entities_get",
+	Logs = "logs",
 }
 
 type RoutePattern = {
@@ -109,6 +110,13 @@ const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 	{
 		type: RateLimitType.CustomerEntitiesGet,
 		patterns: [route({ method: "POST", url: "/v1/entities.get" })],
+	},
+	{
+		type: RateLimitType.Logs,
+		patterns: [
+			route({ method: "POST", url: "/v1/logs.search" }),
+			route({ method: "POST", url: "/v1/logs.query" }),
+		],
 	},
 ];
 
@@ -239,5 +247,12 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		windowMs: 1000,
 		notInRedis: false,
 		scope: RateLimitScope.Customer,
+	},
+	[RateLimitType.Logs]: {
+		name: "logs",
+		limit: 10,
+		windowMs: 1000,
+		notInRedis: false,
+		scope: RateLimitScope.Org,
 	},
 };

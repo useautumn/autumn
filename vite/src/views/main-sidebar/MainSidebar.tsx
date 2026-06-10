@@ -3,28 +3,27 @@ import {
 	BalloonIcon,
 	BasketIcon,
 	ChartBarIcon,
-	CoinVerticalIcon,
 	CubeIcon,
-	DatabaseIcon,
 	GearIcon,
-	UsersIcon,
+	KeyIcon,
 	LegoIcon,
-	OptionIcon,
 	TerminalWindowIcon,
 	TriangleIcon,
 	UserCircleIcon,
+	UsersIcon,
 	WebhooksLogoIcon,
 } from "@phosphor-icons/react";
+import { Scopes } from "@autumn/shared";
 import { PanelLeft } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { BetaBadge } from "@/components/v2/badges/BetaBadge";
 import { Button } from "@/components/v2/buttons/Button";
-import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
+import { RevenueCatIcon, StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";
 import { useScopes } from "@/hooks/useScopes";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
-import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { CollapsibleNavGroup } from "./CollapsibleNavGroup";
 import { OrgDropdown } from "./components/OrgDropdown";
 import { EnvDropdown } from "./EnvDropdown";
@@ -35,25 +34,23 @@ import { SidebarRail } from "./SidebarRail";
 
 const buildDevSubTabs = ({
 	flags,
-	isAdmin,
 }: {
 	flags: {
 		webhooks: boolean;
 		vercel: boolean;
 		revenuecat: boolean;
 	};
-	isAdmin: boolean;
 }) => {
 	return [
 		{
 			title: "API Keys",
 			value: "api_keys",
-			icon: <OptionIcon size={16} />,
+			icon: <KeyIcon size={16} weight="fill" />,
 		},
 		{
 			title: "Stripe",
 			value: "stripe",
-			icon: <CoinVerticalIcon size={16} weight="fill" />,
+			icon: <StripeIcon size={16} />,
 		},
 		...(flags.vercel
 			? [
@@ -83,15 +80,6 @@ const buildDevSubTabs = ({
 					},
 				]
 			: []),
-		...(isAdmin
-			? [
-					{
-						title: "Redis",
-						value: "redis",
-						icon: <DatabaseIcon size={16} weight="fill" />,
-					},
-				]
-			: []),
 	];
 };
 
@@ -104,8 +92,8 @@ export const MainSidebar = ({
 
 	const flags = useAutumnFlags();
 	const { has } = useScopes();
-	const { isAdmin } = useAdmin();
-	const canSeeDev = has("apiKeys:read");
+	const canSeeDev = has(Scopes.ApiKeys.Read);
+	const canSeeMigrations = has(Scopes.Migrations.Read);
 
 	const [storedExpanded, setExpanded] = useLocalStorage<boolean>(
 		"sidebar.expanded",
@@ -195,7 +183,7 @@ export const MainSidebar = ({
 								},
 							]}
 						/>
-						{isAdmin ? (
+						{canSeeMigrations ? (
 							<CollapsibleNavGroup
 								value="customers"
 								icon={<UserCircleIcon size={16} weight="fill" />}
@@ -214,6 +202,7 @@ export const MainSidebar = ({
 										value: "migrations",
 										path: "/migrations",
 										icon: <ArrowsClockwiseIcon size={16} weight="fill" />,
+										badge: <BetaBadge className="ml-auto" />,
 									},
 								]}
 							/>
@@ -231,23 +220,23 @@ export const MainSidebar = ({
 							title="Analytics"
 							env={env}
 						/>
-					{canSeeDev && (
-						<CollapsibleNavGroup
-							value="dev"
-							icon={<TerminalWindowIcon size={16} weight="fill" />}
-							title="Developer"
+						{canSeeDev && (
+							<CollapsibleNavGroup
+								value="dev"
+								icon={<TerminalWindowIcon size={16} weight="fill" />}
+								title="Developer"
+								env={env}
+								isOpen={devGroupOpen}
+								onToggle={() => setDevGroupOpen((prev) => !prev)}
+								subTabs={buildDevSubTabs({ flags })}
+							/>
+						)}
+						<NavButton
+							value="settings"
+							icon={<GearIcon size={16} weight="fill" />}
+							title="Settings"
 							env={env}
-							isOpen={devGroupOpen}
-							onToggle={() => setDevGroupOpen((prev) => !prev)}
-							subTabs={buildDevSubTabs({ flags, isAdmin })}
 						/>
-					)}
-					<NavButton
-						value="settings"
-						icon={<GearIcon size={16} weight="fill" />}
-						title="Settings"
-						env={env}
-					/>
 					</div>
 				</div>
 

@@ -12,10 +12,12 @@ export interface ApiFeatureParams {
 		credit_cost: number;
 	}>;
 	model_markups?: Record<string, {
-		markup: number;
+		markup?: number;
 		input_cost?: number;
 		output_cost?: number;
 	}>;
+	default_markup?: number;
+	provider_markups?: Record<string, { markup: number }>;
 }
 
 export function transformFeatureToApi(feature: Feature): ApiFeatureParams {
@@ -44,17 +46,25 @@ export function transformFeatureToApi(feature: Feature): ApiFeatureParams {
 		}));
 	}
 
-	if (feature.type === "ai_credit_system" && feature.modelMarkups) {
-		base.model_markups = Object.fromEntries(
-			Object.entries(feature.modelMarkups).map(([modelId, entry]) => [
-				modelId,
-				{
-					markup: entry.markup,
-					input_cost: entry.inputCost,
-					output_cost: entry.outputCost,
-				},
-			])
-		);
+	if (feature.type === "ai_credit_system") {
+		if (feature.modelMarkups) {
+			base.model_markups = Object.fromEntries(
+				Object.entries(feature.modelMarkups).map(([modelId, entry]) => [
+					modelId,
+					{
+						markup: entry.markup,
+						input_cost: entry.inputCost,
+						output_cost: entry.outputCost,
+					},
+				])
+			);
+		}
+		if (feature.defaultMarkup !== undefined) {
+			base.default_markup = feature.defaultMarkup;
+		}
+		if (feature.providerMarkups) {
+			base.provider_markups = feature.providerMarkups;
+		}
 	}
 
 	return base;

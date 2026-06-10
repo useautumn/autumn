@@ -15,6 +15,7 @@ type CreateInvoiceParams = {
 	collectionMethod?: "charge_automatically" | "send_invoice";
 	daysUntilDue?: number;
 	description?: string;
+	footer?: string;
 	metadata?: Stripe.InvoiceCreateParams["metadata"];
 	automaticTax?: boolean;
 };
@@ -27,6 +28,7 @@ export const createStripeInvoice = async ({
 	collectionMethod = "charge_automatically",
 	daysUntilDue,
 	description,
+	footer,
 	metadata,
 	discounts,
 	automaticTax,
@@ -37,6 +39,7 @@ export const createStripeInvoice = async ({
 		...(stripeSubId ? { subscription: stripeSubId } : {}),
 		...(currency ? { currency } : {}),
 		...(description ? { description } : {}),
+		...(footer ? { footer } : {}),
 		...(metadata ? { metadata } : {}),
 		collection_method: collectionMethod,
 		days_until_due:
@@ -66,6 +69,26 @@ export const addStripeInvoiceLines = async ({
 	const invoice = await stripeCli.invoices.addLines(invoiceId, {
 		lines,
 	});
+
+	return invoice;
+};
+
+// ============================================
+// Update Invoice
+// ============================================
+
+type UpdateInvoiceParams = {
+	stripeCli: Stripe;
+	invoiceId: string;
+	params: Stripe.InvoiceUpdateParams;
+};
+
+export const updateStripeInvoice = async ({
+	stripeCli,
+	invoiceId,
+	params,
+}: UpdateInvoiceParams): Promise<Stripe.Invoice> => {
+	const invoice = await stripeCli.invoices.update(invoiceId, params);
 
 	return invoice;
 };

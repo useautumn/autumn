@@ -1,13 +1,21 @@
 import { expect, test } from "bun:test";
 
-import type { ApiCustomerV3, TrackResponseV2 } from "@autumn/shared";
+import type {
+	ApiCustomerV3,
+	ApiCustomerV5,
+	TrackResponseV2,
+	TrackResponseV3,
+} from "@autumn/shared";
+import { ErrCode } from "@autumn/shared";
+import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
-import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
+import { getModelCreditCost } from "@/internal/features/aiCreditSystemUtils.js";
 
 // ═══════════════════════════════════════════════════════════════════
 // TRACK-TOKENS-1: Basic trackTokens with models.dev pricing
@@ -49,11 +57,11 @@ test.concurrent(
 		const outputTokens = 500;
 		const modelId = "anthropic/claude-sonnet-4-20250514";
 
-		const expectedCost = await getCreditCost({
-			featureId: aiCreditFeature.id,
-			creditSystem: aiCreditFeature,
+		const expectedCost = await getModelCreditCost({
 			modelName: modelId,
-			tokens: { input: inputTokens, output: outputTokens },
+			creditSystem: aiCreditFeature,
+			input: inputTokens,
+			output: outputTokens,
 		});
 
 		const trackRes: TrackResponseV2 = await autumnV2.post("/track_tokens", {
@@ -132,11 +140,11 @@ test.concurrent(
 		const outputTokens = 1000;
 		const modelId = "anthropic/claude-sonnet-4-20250514";
 
-		const expectedCost = await getCreditCost({
-			featureId: aiCreditFeature.id,
-			creditSystem: aiCreditFeature,
+		const expectedCost = await getModelCreditCost({
 			modelName: modelId,
-			tokens: { input: inputTokens, output: outputTokens },
+			creditSystem: aiCreditFeature,
+			input: inputTokens,
+			output: outputTokens,
 		});
 
 		const trackRes: TrackResponseV2 = await autumnV2.post("/track_tokens", {
@@ -276,11 +284,11 @@ test.concurrent(
 		const outputTokens = 10000;
 		const modelId = "anthropic/claude-3-5-haiku-20241022";
 
-		const expectedCost = await getCreditCost({
-			featureId: aiCreditFeature.id,
-			creditSystem: aiCreditFeature,
+		const expectedCost = await getModelCreditCost({
 			modelName: modelId,
-			tokens: { input: inputTokens, output: outputTokens },
+			creditSystem: aiCreditFeature,
+			input: inputTokens,
+			output: outputTokens,
 		});
 
 		const trackRes: TrackResponseV2 = await autumnV2.post("/track_tokens", {
@@ -350,11 +358,11 @@ test.concurrent(
 		}
 
 		// First track: custom/internal-model (input_cost=5, output_cost=15, markup=0%)
-		const cost1 = await getCreditCost({
-			featureId: aiCreditFeature.id,
-			creditSystem: aiCreditFeature,
+		const cost1 = await getModelCreditCost({
 			modelName: "custom/internal-model",
-			tokens: { input: 5000, output: 2000 },
+			creditSystem: aiCreditFeature,
+			input: 5000,
+			output: 2000,
 		});
 
 		await autumnV2.post("/track_tokens", {
@@ -366,11 +374,11 @@ test.concurrent(
 		});
 
 		// Second track: custom/marked-up-model (input_cost=10, output_cost=30, markup=50%)
-		const cost2 = await getCreditCost({
-			featureId: aiCreditFeature.id,
-			creditSystem: aiCreditFeature,
+		const cost2 = await getModelCreditCost({
 			modelName: "custom/marked-up-model",
-			tokens: { input: 3000, output: 1000 },
+			creditSystem: aiCreditFeature,
+			input: 3000,
+			output: 1000,
 		});
 
 		await autumnV2.post("/track_tokens", {
@@ -388,5 +396,188 @@ test.concurrent(
 			balance: new Decimal(1000).minus(totalCost).toNumber(),
 			usage: totalCost,
 		});
+	},
+);
+
+// ═══════════════════════════════════════════════════════════════════
+// TRACK-TOKENS-6: custom/* model without configured costs errors
+// ═══════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("track-tokens-6: custom model missing input_cost/output_cost errors")}`,
+	async () => {
+		const aiCreditsItem = items.free({
+			featureId: TestFeature.AiCredits,
+			includedUsage: 1000,
+		});
+		const freeProd = products.base({
+			id: "free",
+			items: [aiCreditsItem],
+		});
+
+		const { customerId, autumnV2_2 } = await initScenario({
+			customerId: "track-tokens-6",
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [freeProd] }),
+			],
+			actions: [s.attach({ productId: freeProd.id })],
+		});
+
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage: "missing input_cost or output_cost",
+			func: () =>
+				autumnV2_2.post("/track_tokens", {
+					customer_id: customerId,
+					feature_id: TestFeature.AiCredits,
+					model_id: "custom/unconfigured-model",
+					input_tokens: 100,
+					output_tokens: 50,
+				}),
+		});
+
+		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+		expectBalanceCorrect({
+			customer,
+			featureId: TestFeature.AiCredits,
+			remaining: 1000,
+			usage: 0,
+		});
+	},
+);
+
+// ═══════════════════════════════════════════════════════════════════
+// TRACK-TOKENS-7: cache/audio/reasoning pools forwarded end-to-end
+// ═══════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("track-tokens-7: cache/audio/reasoning token pools are billed end-to-end")}`,
+	async () => {
+		const aiCreditsItem = items.free({
+			featureId: TestFeature.AiCredits,
+			includedUsage: 1000,
+		});
+		const freeProd = products.base({
+			id: "free",
+			items: [aiCreditsItem],
+		});
+
+		const { customerId, autumnV2_2, ctx } = await initScenario({
+			customerId: "track-tokens-7",
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [freeProd] }),
+			],
+			actions: [s.attach({ productId: freeProd.id })],
+		});
+
+		const aiCreditFeature = ctx.features.find(
+			(f) => f.id === TestFeature.AiCredits,
+		);
+		if (!aiCreditFeature) {
+			throw new Error(`${TestFeature.AiCredits} feature not found`);
+		}
+
+		// Total input (input + cache pools) stays far below the 200k tier threshold
+		const modelId = "anthropic/claude-sonnet-4-20250514";
+		const pools = {
+			input: 10000,
+			output: 5000,
+			cacheRead: 20000,
+			cacheWrite: 8000,
+			audioInput: 1000,
+			audioOutput: 1000,
+			reasoning: 4000,
+		};
+
+		const expectedCost = await getModelCreditCost({
+			modelName: modelId,
+			creditSystem: aiCreditFeature,
+			...pools,
+		});
+
+		// Pools must increase the bill vs text-only — otherwise the assertion
+		// below couldn't tell whether the HTTP layer forwarded them at all.
+		const textOnlyCost = await getModelCreditCost({
+			modelName: modelId,
+			creditSystem: aiCreditFeature,
+			input: pools.input,
+			output: pools.output,
+		});
+		expect(expectedCost).toBeGreaterThan(textOnlyCost);
+
+		const trackRes: TrackResponseV3 = await autumnV2_2.post("/track_tokens", {
+			customer_id: customerId,
+			feature_id: TestFeature.AiCredits,
+			model_id: modelId,
+			input_tokens: pools.input,
+			output_tokens: pools.output,
+			cache_read_tokens: pools.cacheRead,
+			cache_write_tokens: pools.cacheWrite,
+			audio_input_tokens: pools.audioInput,
+			audio_output_tokens: pools.audioOutput,
+			reasoning_tokens: pools.reasoning,
+		});
+
+		expect(trackRes.value).toBeCloseTo(expectedCost, 10);
+
+		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+		expectBalanceCorrect({
+			customer,
+			featureId: TestFeature.AiCredits,
+			remaining: new Decimal(1000).minus(expectedCost).toNumber(),
+			usage: expectedCost,
+		});
+	},
+);
+
+// ═══════════════════════════════════════════════════════════════════
+// TRACK-TOKENS-8: custom models bill input/output only
+// ═══════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("track-tokens-8: custom models ignore cache/audio/reasoning pools")}`,
+	async () => {
+		const aiCreditsItem = items.free({
+			featureId: TestFeature.AiCredits,
+			includedUsage: 1000,
+		});
+		const freeProd = products.base({
+			id: "free",
+			items: [aiCreditsItem],
+		});
+
+		const { customerId, autumnV2_2 } = await initScenario({
+			customerId: "track-tokens-8",
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [freeProd] }),
+			],
+			actions: [s.attach({ productId: freeProd.id })],
+		});
+
+		// custom/internal-model: input_cost=5 $/M, output_cost=15 $/M, markup=0%
+		// Pool tokens are dropped for custom models, so cost is text-only.
+		const expectedCost = new Decimal(5)
+			.mul(10000)
+			.add(new Decimal(15).mul(5000))
+			.div(1_000_000)
+			.toNumber(); // 0.125
+
+		const trackRes: TrackResponseV3 = await autumnV2_2.post("/track_tokens", {
+			customer_id: customerId,
+			feature_id: TestFeature.AiCredits,
+			model_id: "custom/internal-model",
+			input_tokens: 10000,
+			output_tokens: 5000,
+			cache_read_tokens: 20000,
+			cache_write_tokens: 8000,
+			audio_input_tokens: 1000,
+			audio_output_tokens: 1000,
+			reasoning_tokens: 4000,
+		});
+
+		expect(trackRes.value).toBeCloseTo(expectedCost, 10);
 	},
 );

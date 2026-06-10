@@ -1,14 +1,11 @@
 import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
-import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef } from "react";
 import {
 	useDiscardItemAndClose,
 	useProduct,
 	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
-import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
-import { SheetCloseButton } from "@/components/v2/sheets/SheetCloseButton";
-import { useIsMobile } from "@/hooks/useIsMobile";
+import { InlineSheetPanel } from "@/components/v2/sheets/InlineSheetPanel";
 import { getItemId } from "@/utils/product/productItemUtils";
 
 import { ProductItemContext } from "../product/product-item/ProductItemContext";
@@ -20,13 +17,13 @@ import { SelectFeatureSheet } from "./components/SelectFeatureSheet";
 import { SHEET_ANIMATION } from "./planAnimations";
 
 export const ProductSheets = () => {
-	const isMobile = useIsMobile();
 	const { product, setProduct } = useProduct();
 	const {
 		sheetType,
 		itemId,
 		initialItem,
 		setInitialItem,
+		updateItemId,
 		closeSheet,
 		itemDraft,
 	} = useSheet();
@@ -43,13 +40,35 @@ export const ProductSheets = () => {
 
 	const featureItems = productV2ToFeatureItems({ items: product.items });
 
-	const isCurrentItem = (item: ProductItem) => {
-		const actualIndex = product.items?.indexOf(item) ?? -1;
-		const currentItemId = getItemId({ item, itemIndex: actualIndex });
-		return itemId === currentItemId;
-	};
+	const matchedItemIndex = product.items
+		? product.items.findIndex(
+				(item, index) =>
+					!!item &&
+					featureItems.includes(item) &&
+					getItemId({ item, itemIndex: index }) === itemId,
+			)
+		: -1;
 
-	const currentItem = featureItems.find(isCurrentItem);
+	const editingIndexRef = useRef<number | null>(null);
+
+	useEffect(() => {
+		if (matchedItemIndex !== -1) {
+			editingIndexRef.current = matchedItemIndex;
+		} else if (itemId === null) {
+			editingIndexRef.current = null;
+		}
+	}, [matchedItemIndex, itemId]);
+
+	const resolvedItemIndex =
+		matchedItemIndex !== -1
+			? matchedItemIndex
+			: editingIndexRef.current !== null &&
+					editingIndexRef.current < (product.items?.length ?? 0)
+				? editingIndexRef.current
+				: -1;
+
+	const currentItem =
+		resolvedItemIndex !== -1 ? product.items?.[resolvedItemIndex] : undefined;
 
 	const lastItemIdRef = useRef<string | null>(null);
 
@@ -101,14 +120,19 @@ export const ProductSheets = () => {
 			return;
 		}
 
-		if (!product || !product.items) return;
+		if (!product || !product.items || resolvedItemIndex === -1) return;
 
-		const currentItemIndex = product.items.findIndex(isCurrentItem);
-
-		if (currentItemIndex === -1) return;
+		const newItemId = getItemId({
+			item: updatedItem,
+			itemIndex: resolvedItemIndex,
+		});
+		if (newItemId !== itemId) {
+			updateItemId(newItemId);
+			lastItemIdRef.current = newItemId;
+		}
 
 		const updatedItems = [...product.items];
-		updatedItems[currentItemIndex] = updatedItem;
+		updatedItems[resolvedItemIndex] = updatedItem;
 		setProduct({ ...product, items: updatedItems });
 	};
 
@@ -162,22 +186,12 @@ export const ProductSheets = () => {
 	};
 
 	return (
-		<AnimatePresence mode="wait">
-			{sheetType && (
-				<motion.div
-					initial={{ x: "100%" }}
-					animate={{ x: 0 }}
-					exit={{ x: "100%" }}
-					transition={SHEET_ANIMATION}
-					className="absolute right-0 top-0 bottom-0"
-					style={{ width: isMobile ? "100%" : "28rem", zIndex: 100 }}
-				>
-					<SheetContainer className="w-full bg-background z-50 md:border-l border-border/40 h-full relative">
-						<SheetCloseButton onClose={discardAndClose} />
-						{renderSheet()}
-					</SheetContainer>
-				</motion.div>
-			)}
-		</AnimatePresence>
+		<InlineSheetPanel
+			isOpen={!!sheetType}
+			onClose={discardAndClose}
+			transition={SHEET_ANIMATION}
+		>
+			{renderSheet()}
+		</InlineSheetPanel>
 	);
 };

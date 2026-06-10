@@ -1,7 +1,10 @@
-import { apiKeys, oauthConsent, Scopes } from "@autumn/shared";
-import { eq, sql } from "drizzle-orm";
+import { Scopes } from "@autumn/shared";
 import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import {
+	oauthApiKeyRepo,
+	oauthConsentRepo,
+} from "@/internal/auth/repos/index.js";
 
 /**
  * Get API keys linked to a specific OAuth consent.
@@ -26,35 +29,28 @@ export const handleGetConsentApiKeys = createRoute({
 			return c.json({ error: "No organization found" }, 400);
 		}
 
-		// First verify the consent belongs to this org
-		const consentRecords = await db
-			.select({ id: oauthConsent.id, referenceId: oauthConsent.referenceId })
-			.from(oauthConsent)
-			.where(eq(oauthConsent.id, consent_id))
-			.limit(1);
+		const consent = await oauthConsentRepo.getOwner({
+			db,
+			consentId: consent_id,
+		});
 
-		if (consentRecords.length === 0) {
+		if (!consent) {
 			return c.json({ error: "Consent not found" }, 404);
 		}
 
-		if (consentRecords[0].referenceId !== org.id) {
+		if (consent.referenceId !== org.id) {
 			return c.json(
 				{ error: "Consent does not belong to this organization" },
 				403,
 			);
 		}
 
-		// Query API keys where meta->>'oauth_consent_id' = consent_id
-		// Only return prefix, env, name - NOT the hashed key
-		const keys = await db
-			.select({
-				id: apiKeys.id,
-				prefix: apiKeys.prefix,
-				env: apiKeys.env,
-				name: apiKeys.name,
+		const keys = (
+			await oauthApiKeyRepo.listByConsentId({
+				db,
+				consentId: consent_id,
 			})
-			.from(apiKeys)
-			.where(sql`${apiKeys.meta}->>'oauth_consent_id' = ${consent_id}`);
+		).map(({ hashed_key: _hashedKey, ...key }) => key);
 
 		return c.json({ apiKeys: keys });
 	},

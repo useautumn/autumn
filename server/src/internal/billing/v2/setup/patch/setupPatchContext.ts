@@ -129,6 +129,7 @@ export const setupPatchContext = ({
 		customerEntitlements: updateDeleteCustomerEntitlements,
 		prices: updateNewPrices,
 		entitlements: updateNewEntitlements,
+		carryLinks: updateItemCarryLinks,
 	} = handleCustomizeUpdateItems({
 		customize: params.customize ?? {},
 		targetCustomerProduct: finalCustomerProduct,
@@ -198,6 +199,7 @@ export const setupPatchContext = ({
 			...customItemPrices,
 		],
 		customEntitlements: [...updateNewEntitlements, ...customEntitlements],
+		updateItemCarryLinks,
 	};
 
 	return patchContext;

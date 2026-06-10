@@ -5,6 +5,7 @@ import {
 	type ClickHouseResult,
 	type TimeseriesEventsParams,
 } from "@autumn/shared";
+import { TZDate } from "@date-fns/tz";
 import { UTCDate } from "@date-fns/utc";
 import { addDays, addHours, addMonths, format, sub } from "date-fns";
 import { Decimal } from "decimal.js";
@@ -117,22 +118,25 @@ const calculateDateRange = async ({
 	};
 };
 
-/** Generates all periods between start and end dates based on bin size */
-const generateAllPeriods = ({
+// Grid must match the pipe's buckets for the string join: hour buckets are UTC,
+// day/month buckets are in the viewer's timezone. startDate/endDate are UTC.
+export const generateAllPeriods = ({
 	startDate,
 	endDate,
 	binSize,
+	timezone,
 }: {
 	startDate: string;
 	endDate: string;
 	binSize: string;
+	timezone?: string;
 }): string[] => {
 	const periods: string[] = [];
-	let current = new UTCDate(startDate);
-	const end = new UTCDate(endDate);
 
-	// Truncate to bin start
+	// Hour buckets stay on UTC to match the pipe's raw `hour` column.
 	if (binSize === "hour") {
+		const end = new UTCDate(endDate);
+		let current = new UTCDate(startDate);
 		current = new UTCDate(
 			current.getFullYear(),
 			current.getMonth(),
@@ -142,26 +146,36 @@ const generateAllPeriods = ({
 			0,
 			0,
 		);
-	} else if (binSize === "month") {
-		current = new UTCDate(current.getFullYear(), current.getMonth(), 1);
-	} else {
-		// day
-		current = new UTCDate(
-			current.getFullYear(),
-			current.getMonth(),
-			current.getDate(),
-		);
+		while (current <= end) {
+			periods.push(format(current, "yyyy-MM-dd HH:mm:ss"));
+			current = addHours(current, 1);
+		}
+		return periods;
 	}
 
-	while (current <= end) {
+	// Day/month: build the grid in the viewer's zone ("UTC" = old behavior).
+	const tz = timezone ?? "UTC";
+	const startInViewerTz = new TZDate(new UTCDate(startDate).getTime(), tz);
+	const end = new TZDate(new UTCDate(endDate).getTime(), tz);
+
+	let current =
+		binSize === "month"
+			? new TZDate(
+					startInViewerTz.getFullYear(),
+					startInViewerTz.getMonth(),
+					1,
+					tz,
+				)
+			: new TZDate(
+					startInViewerTz.getFullYear(),
+					startInViewerTz.getMonth(),
+					startInViewerTz.getDate(),
+					tz,
+				);
+
+	while (current.getTime() <= end.getTime()) {
 		periods.push(format(current, "yyyy-MM-dd HH:mm:ss"));
-		if (binSize === "hour") {
-			current = addHours(current, 1);
-		} else if (binSize === "month") {
-			current = addMonths(current, 1);
-		} else {
-			current = addDays(current, 1);
-		}
+		current = binSize === "month" ? addMonths(current, 1) : addDays(current, 1);
 	}
 
 	return periods;
@@ -186,6 +200,7 @@ const formatSimpleResults = ({
 	startDate,
 	endDate,
 	binSize,
+	timezone,
 }: {
 	rows: AggregateSimplePipeRow[];
 	eventNames: string[];
@@ -193,8 +208,14 @@ const formatSimpleResults = ({
 	startDate: string;
 	endDate: string;
 	binSize: string;
+	timezone?: string;
 }): ClickHouseResult => {
-	const allPeriods = generateAllPeriods({ startDate, endDate, binSize });
+	const allPeriods = generateAllPeriods({
+		startDate,
+		endDate,
+		binSize,
+		timezone,
+	});
 
 	// Initialize with all periods and all event columns set to 0
 	const periodMap = new Map<string, Record<string, number>>();
@@ -245,6 +266,7 @@ const formatGroupableResults = ({
 	startDate,
 	endDate,
 	binSize,
+	timezone,
 }: {
 	rows: AggregateGroupablePipeRow[];
 	eventNames: string[];
@@ -253,9 +275,15 @@ const formatGroupableResults = ({
 	startDate: string;
 	endDate: string;
 	binSize: string;
+	timezone?: string;
 	maxGroups?: number;
 }): ClickHouseResult => {
-	const allPeriods = generateAllPeriods({ startDate, endDate, binSize });
+	const allPeriods = generateAllPeriods({
+		startDate,
+		endDate,
+		binSize,
+		timezone,
+	});
 	const groupByColumn = groupBy;
 
 	// Collect all unique group values across all bins (for backfilling zeros).
@@ -428,6 +456,7 @@ export const aggregate = async ({
 			startDate,
 			endDate,
 			binSize,
+			timezone,
 			maxGroups: params.max_groups,
 		});
 	} else {
@@ -454,6 +483,7 @@ export const aggregate = async ({
 			startDate,
 			endDate,
 			binSize,
+			timezone,
 		});
 	}
 
