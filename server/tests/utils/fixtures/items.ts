@@ -51,13 +51,16 @@ const adminRights = () =>
 const free = ({
 	featureId,
 	includedUsage = 100,
+	entityFeatureId,
 }: {
 	featureId: string;
 	includedUsage?: number;
+	entityFeatureId?: string;
 }): LimitedItem =>
 	constructFeatureItem({
 		featureId,
 		includedUsage,
+		entityFeatureId,
 	}) as LimitedItem;
 
 /**
@@ -162,6 +165,16 @@ const monthlyCredits = ({
 		includedUsage,
 		rolloverConfig,
 	}) as LimitedItem;
+
+/**
+ * Generic unlimited feature - no usage cap
+ * @param featureId - Feature ID
+ */
+const unlimited = ({ featureId }: { featureId: string }) =>
+	constructFeatureItem({
+		featureId,
+		unlimited: true,
+	});
 
 /**
  * Unlimited messages - no usage cap
@@ -783,6 +796,7 @@ export const items = {
 	freeUsers,
 	freeAllocatedUsers,
 	freeAllocatedWorkflows,
+	unlimited,
 	unlimitedMessages,
 	weeklyMessages,
 	lifetimeMessages,
