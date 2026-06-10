@@ -1,17 +1,23 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
 import {
 	ErrCode,
 	type Feature,
 	FeatureType,
 	FeatureUsageType,
 } from "@autumn/shared";
-import {
-	getModelCreditCost,
-	getModelCreditCostBreakdown,
-} from "@/internal/features/aiCreditSystemUtils.js";
-import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
 
-// Uses custom/* models so pricing resolves offline (no models.dev fetch).
+mock.module("@/internal/features/utils/getModelPricing.js", () => ({
+	getModelsDevPricing: async () => ({}),
+}));
+
+const { getModelCreditCost, getModelCreditCostBreakdown } = await import(
+	"@/internal/features/aiCreditSystemUtils.js"
+);
+const { getCreditCost } = await import(
+	"@/internal/features/creditSystemUtils.js"
+);
+
+// custom/* models price from model_markups; pricing data is mocked empty.
 const CUSTOM_MODEL = "custom/foo";
 
 const aiCreditFeature: Feature = {

@@ -30,6 +30,7 @@ import { resultToFullSubject } from "@/internal/customers/repos/getFullSubject/i
 import { getOrgPaginationMaxLimit } from "../../misc/edgeConfig/orgLimitsStore.js";
 import { getApiEntityBaseV2 } from "../entityUtils/getApiEntityV2/getApiEntityBaseV2.js";
 import { getCursorPaginatedEntitySubjectsQuery } from "../repos/cursorListEntitiesQuery.js";
+import { hydrateEntityRowsWithCustomerData } from "../repos/hydrateEntityRowsWithCustomerData.js";
 import {
 	countEntitiesByOrgIdAndEnv,
 	countFilteredEntitiesByOrgIdAndEnv,
@@ -50,13 +51,21 @@ const getListEntitiesStatuses = ({
 const buildApiEntitiesFromRows = async ({
 	ctx,
 	rows,
+	inStatuses,
 }: {
 	ctx: RequestContext;
 	rows: unknown[];
+	inStatuses: CusProductStatus[];
 }) => {
-	const fullSubjects = rows.map((row) =>
+	const mergedRows = await hydrateEntityRowsWithCustomerData({
+		ctx,
+		entityRows: rows as unknown as SubjectQueryRow[],
+		inStatuses,
+	});
+
+	const fullSubjects = mergedRows.map((row) =>
 		resultToFullSubject({
-			row: row as unknown as SubjectQueryRow,
+			row,
 			entityIdRequested: true,
 		}),
 	);
@@ -141,7 +150,11 @@ const runOffsetListEntities = async ({
 			})
 		: totalCount;
 
-	const entities = await buildApiEntitiesFromRows({ ctx, rows: subjectRows });
+	const entities = await buildApiEntitiesFromRows({
+		ctx,
+		rows: subjectRows,
+		inStatuses,
+	});
 
 	const hasMore = body.offset + entities.length < totalFilteredCount;
 
@@ -207,7 +220,11 @@ export const handleListEntitiesV2 = createRoute({
 			const hasMore = rows.length > body.limit;
 			const pageRows = hasMore ? rows.slice(0, body.limit) : rows;
 
-			const entities = await buildApiEntitiesFromRows({ ctx, rows: pageRows });
+			const entities = await buildApiEntitiesFromRows({
+				ctx,
+				rows: pageRows,
+				inStatuses,
+			});
 
 			const lastRow = pageRows[pageRows.length - 1] as
 				| { entity?: { id?: string; created_at?: number | string } }
