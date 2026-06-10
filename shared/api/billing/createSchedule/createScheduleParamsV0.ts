@@ -5,11 +5,17 @@ import { z } from "zod/v4";
 import { AttachDiscountSchema } from "../attachV2/attachDiscount";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
-import { CustomizePlanV1Schema } from "../common/customizePlan/customizePlanV1";
+import {
+	CustomizePlanV1Schema,
+	refineCustomizePlanV1Schema,
+} from "../common/customizePlan/customizePlanV1";
 
-const CreateScheduleCustomizePlanSchema = CustomizePlanV1Schema.omit({
-	free_trial: true,
-});
+const CreateScheduleCustomizePlanSchema = refineCustomizePlanV1Schema(
+	CustomizePlanV1Schema.omit({
+		free_trial: true,
+	}),
+	{ includeFreeTrial: false },
+);
 
 export const CreateSchedulePlanSchema = z.object({
 	plan_id: z.string().meta({

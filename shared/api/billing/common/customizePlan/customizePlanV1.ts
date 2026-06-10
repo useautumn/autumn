@@ -32,8 +32,52 @@ export type UpdatePlanItemParamsV1 = z.infer<
 	typeof UpdatePlanItemParamsV1Schema
 >;
 
-export const CustomizePlanV1Schema = z
-	.object({
+type CustomizePlanRefinementData = {
+	price?: unknown;
+	items?: unknown;
+	add_items?: unknown;
+	remove_items?: unknown;
+	update_items?: unknown;
+	free_trial?: unknown;
+};
+
+export const refineCustomizePlanV1Schema = <
+	TSchema extends z.ZodType<CustomizePlanRefinementData>,
+>(
+	schema: TSchema,
+	{ includeFreeTrial = true }: { includeFreeTrial?: boolean } = {},
+) =>
+	schema
+		.refine(
+			(data) =>
+				data.items !== undefined ||
+				data.price !== undefined ||
+				(includeFreeTrial && data.free_trial !== undefined) ||
+				data.add_items !== undefined ||
+				data.remove_items !== undefined ||
+				data.update_items !== undefined,
+			{
+				message: includeFreeTrial
+					? "When using customize, at least one of price, items, add_items, remove_items, deprecated update_items, or free_trial must be provided"
+					: "When using customize, at least one of price, items, add_items, remove_items, or deprecated update_items must be provided",
+			},
+		)
+		.refine(
+			(data) =>
+				!(
+					data.items !== undefined &&
+					(data.add_items !== undefined ||
+						data.remove_items !== undefined ||
+						data.update_items !== undefined)
+				),
+			{
+				message:
+					"customize.items (PUT-style) cannot be combined with add_items / remove_items / deprecated update_items (PATCH-style); pick one approach",
+			},
+		);
+
+export const CustomizePlanV1Schema = refineCustomizePlanV1Schema(
+	z.object({
 		price: BasePriceParamsSchema.nullable().optional().meta({
 			description:
 				"Override the base price of the plan. Pass null to remove the base price.",
@@ -58,38 +102,12 @@ export const CustomizePlanV1Schema = z
 			description:
 				"Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.",
 		}),
-	})
-	.refine(
-		(data) =>
-			data.items !== undefined ||
-			data.price !== undefined ||
-			data.free_trial !== undefined ||
-			data.add_items !== undefined ||
-			data.remove_items !== undefined ||
-			data.update_items !== undefined,
-		{
-			message:
-				"When using customize, at least one of price, items, add_items, remove_items, deprecated update_items, or free_trial must be provided",
-		},
-	)
-	.refine(
-		(data) =>
-			!(
-				data.items !== undefined &&
-				(data.add_items !== undefined ||
-					data.remove_items !== undefined ||
-					data.update_items !== undefined)
-			),
-		{
-			message:
-				"customize.items (PUT-style) cannot be combined with add_items / remove_items / deprecated update_items (PATCH-style); pick one approach",
-		},
-	)
-	.meta({
-		title: "CustomizePlan",
-		description:
-			"Customize a plan by overriding its price, items, free trial, or a combination.",
-	});
+	}),
+).meta({
+	title: "CustomizePlan",
+	description:
+		"Customize a plan by overriding its price, items, free trial, or a combination.",
+});
 
 export type CustomizePlanV1 = z.infer<typeof CustomizePlanV1Schema>;
 
