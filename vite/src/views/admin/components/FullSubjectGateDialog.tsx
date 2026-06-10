@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/v2/badges/Badge";
 import { Button } from "@/components/v2/buttons/Button";
 import {
@@ -22,9 +21,6 @@ type FullSubjectGateConfig = {
 	max_wait_ms: number;
 	per_customer_pending_max: number;
 	per_org_pending_max: number;
-	critical_db_admission_enabled: boolean;
-	critical_db_share: number;
-	critical_db_reserve: number;
 	configHealthy?: boolean;
 	configConfigured?: boolean;
 	lastSuccessAt?: string | null;
@@ -37,9 +33,6 @@ const DEFAULT_CONFIG: FullSubjectGateConfig = {
 	max_wait_ms: 2_000,
 	per_customer_pending_max: 500,
 	per_org_pending_max: 1_000,
-	critical_db_admission_enabled: false,
-	critical_db_share: 0.7,
-	critical_db_reserve: 2,
 };
 
 const FIELDS: Array<{
@@ -98,11 +91,6 @@ const FIELDS: Array<{
 	},
 ];
 
-const RESERVE_MIN = 0;
-const RESERVE_MAX = 1_000;
-const SHARE_MIN = 0.1;
-const SHARE_MAX = 1;
-
 export function FullSubjectGateDialog({
 	open,
 	onOpenChange,
@@ -132,8 +120,6 @@ export function FullSubjectGateDialog({
 				for (const field of FIELDS) {
 					initialDrafts[field.key] = String(merged[field.key]);
 				}
-				initialDrafts.critical_db_share = String(merged.critical_db_share);
-				initialDrafts.critical_db_reserve = String(merged.critical_db_reserve);
 				setDrafts(initialDrafts);
 			})
 			.catch((error) => {
@@ -152,7 +138,7 @@ export function FullSubjectGateDialog({
 	}, [axiosInstance, open]);
 
 	const handleSave = async () => {
-		const next: Record<string, number | boolean> = {};
+		const next: Record<string, number> = {};
 		for (const field of FIELDS) {
 			const parsed = Number(drafts[field.key]);
 			if (
@@ -167,30 +153,6 @@ export function FullSubjectGateDialog({
 			}
 			next[field.key] = parsed;
 		}
-
-		const share = Number(drafts.critical_db_share);
-		if (Number.isNaN(share) || share < SHARE_MIN || share > SHARE_MAX) {
-			toast.error(
-				`Critical DB share must be a number between ${SHARE_MIN} and ${SHARE_MAX}`,
-			);
-			return;
-		}
-
-		const reserve = Number(drafts.critical_db_reserve);
-		if (
-			!Number.isInteger(reserve) ||
-			reserve < RESERVE_MIN ||
-			reserve > RESERVE_MAX
-		) {
-			toast.error(
-				`Critical DB reserve must be an integer between ${RESERVE_MIN} and ${RESERVE_MAX}`,
-			);
-			return;
-		}
-
-		next.critical_db_share = share;
-		next.critical_db_reserve = reserve;
-		next.critical_db_admission_enabled = config.critical_db_admission_enabled;
 
 		setSaving(true);
 		try {
@@ -261,82 +223,6 @@ export function FullSubjectGateDialog({
 								</div>
 							</div>
 						))}
-
-						<div className="mt-1 flex flex-col gap-3 border-t border-border pt-4">
-							<div className="flex flex-col gap-1">
-								<FormLabel>Critical DB admission</FormLabel>
-								<span className="text-xs text-tertiary-foreground">
-									Separate from the hydration caps above: connection-aware
-									shedding on the critical pg pool for read/establish routes
-									(get_or_create, entities.get, GET customer). Sheds 503 with
-									Retry-After before max_client_conn exhausts (08P01 5xx).
-								</span>
-							</div>
-
-							<div className="flex items-center gap-3">
-								<Switch
-									checked={config.critical_db_admission_enabled}
-									onCheckedChange={(checked) =>
-										setConfig((prev) => ({
-											...prev,
-											critical_db_admission_enabled: checked,
-										}))
-									}
-								/>
-								<span className="text-xs text-tertiary-foreground">
-									{config.critical_db_admission_enabled
-										? "Enabled — read/establish routes shed 503 when the critical pool is saturated."
-										: "Disabled — no admission control (read/establish routes 5xx on pool exhaustion)."}
-								</span>
-							</div>
-
-							<div className="flex flex-col gap-1">
-								<FormLabel>Critical DB share</FormLabel>
-								<div className="flex items-center gap-3">
-									<Input
-										type="number"
-										min={SHARE_MIN}
-										max={SHARE_MAX}
-										step={0.1}
-										value={drafts.critical_db_share ?? ""}
-										onChange={(e) =>
-											setDrafts((prev) => ({
-												...prev,
-												critical_db_share: e.target.value,
-											}))
-										}
-										className="w-32 font-mono text-xs"
-									/>
-									<span className="text-xs text-tertiary-foreground">
-										Fraction (0.1–1) of the critical pool admitted requests may
-										use. Per-process limit = floor(poolMax × share) − reserve.
-									</span>
-								</div>
-							</div>
-
-							<div className="flex flex-col gap-1">
-								<FormLabel>Critical DB reserve</FormLabel>
-								<div className="flex items-center gap-3">
-									<Input
-										type="number"
-										min={RESERVE_MIN}
-										max={RESERVE_MAX}
-										value={drafts.critical_db_reserve ?? ""}
-										onChange={(e) =>
-											setDrafts((prev) => ({
-												...prev,
-												critical_db_reserve: e.target.value,
-											}))
-										}
-										className="w-32 font-mono text-xs"
-									/>
-									<span className="text-xs text-tertiary-foreground">
-										Connections held back below the share as headroom. Higher =
-										sheds sooner.
-									</span>
-								</div>
-							</div>
-						</div>
 					</div>
 				)}
 
