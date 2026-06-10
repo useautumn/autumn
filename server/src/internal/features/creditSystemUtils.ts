@@ -96,17 +96,22 @@ export const getCreditCost = async ({
 		return amount;
 	}
 	if (isAiCreditSystem(creditSystem.type)) {
-		if (!tokens || !modelName) {
-			throw new RecaseError({
-				message: "modelName and tokens must be provided for AI credit systems",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
+		if (tokens && modelName) {
+			return await getModelCreditCost({
+				modelName,
+				creditSystem,
+				...tokens,
 			});
 		}
-		return await getModelCreditCost({
-			modelName,
-			creditSystem,
-			...tokens,
+		// No token context (plain /track values, balance updates, queued replays):
+		// the feature's own balance is already in USD, so the value maps 1:1.
+		if (featureId === creditSystem.id) {
+			return amount;
+		}
+		throw new RecaseError({
+			message: "modelName and tokens must be provided for AI credit systems",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
 		});
 	}
 	// If tracking the credit system feature itself, 1:1 mapping

@@ -349,6 +349,32 @@ function normalizeFeatureForCompare(f: Feature): Record<string, unknown> {
 			}));
 	}
 
+	if (f.type === "ai_credit_system") {
+		const ai = f as Extract<Feature, { type: "ai_credit_system" }>;
+		if (ai.modelMarkups && Object.keys(ai.modelMarkups).length > 0) {
+			result.modelMarkups = Object.fromEntries(
+				Object.entries(ai.modelMarkups)
+					.sort(([a], [b]) => a.localeCompare(b))
+					.map(([modelId, entry]) => [
+						modelId,
+						{
+							markup: entry.markup,
+							inputCost: entry.inputCost,
+							outputCost: entry.outputCost,
+						},
+					]),
+			);
+		}
+		if (ai.defaultMarkup != null) result.defaultMarkup = ai.defaultMarkup;
+		if (ai.providerMarkups && Object.keys(ai.providerMarkups).length > 0) {
+			result.providerMarkups = Object.fromEntries(
+				Object.entries(ai.providerMarkups).sort(([a], [b]) =>
+					a.localeCompare(b),
+				),
+			);
+		}
+	}
+
 	return result;
 }
 

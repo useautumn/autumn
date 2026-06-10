@@ -139,12 +139,14 @@ export const getTokenTrackParams = async ({
 		{
 			feature: aiCreditFeature,
 			deduction: 1,
-			tokenUsage: {
-				modelName: input.model_id,
-				inputTokens: input.input_tokens,
-				outputTokens: input.output_tokens,
+			tokens: {
+				usage: {
+					modelName: input.model_id,
+					inputTokens: input.input_tokens,
+					outputTokens: input.output_tokens,
+				},
+				cost,
 			},
-			precomputedCreditCost: cost,
 		},
 	];
 

@@ -11,13 +11,17 @@ export const generateAndUpdateAgentRules = async ({
 	endTime?: string;
 	startTime?: string;
 }) => {
-	const generated = await generateAgentRules({ ctx, endTime, startTime });
+	const [generated, existing] = await Promise.all([
+		generateAgentRules({ ctx, endTime, startTime }),
+		agentRulesRepo.get({ db: ctx.db, orgId: ctx.org.id }),
+	]);
+	// Generation only derives entity/credit rules; never overwrite user-written notes.
 	const rules = await agentRulesRepo.upsert({
 		db: ctx.db,
 		metadata: generated.metadata,
 		orgId: ctx.org.id,
 		orgSlug: ctx.org.slug,
-		rules: generated.rules,
+		rules: { ...generated.rules, notes: existing.notes },
 	});
 
 	return {

@@ -14,7 +14,7 @@ export const buildAiCreditCostProperty = ({
 	featureDeductions: FeatureDeduction[];
 	entries: Array<{ featureId: string; amount: number }>;
 }): Record<string, number> | undefined => {
-	const aiDeduction = featureDeductions.find((d) => d.tokenUsage);
+	const aiDeduction = featureDeductions.find((d) => d.tokens);
 	if (!aiDeduction) return;
 
 	const creditCost: Record<string, number> = {};

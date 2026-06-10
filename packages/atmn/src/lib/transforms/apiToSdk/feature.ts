@@ -60,6 +60,8 @@ export const featureTransformer = createTransformer<RawApiFeature, Feature>({
 				...BASE_COMPUTE,
 				type: () => "ai_credit_system" as const,
 				modelMarkups: (api) => mapModelMarkups(api),
+				defaultMarkup: (api) => api.default_markup ?? undefined,
+				providerMarkups: (api) => api.provider_markups ?? undefined,
 			},
 		},
 

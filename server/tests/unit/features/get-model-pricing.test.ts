@@ -113,3 +113,20 @@ test("fetch failure with no stale cache throws InternalError", async () => {
 		message: "Failed to fetch models.dev pricing and no cache available",
 	});
 });
+
+test("fetch carries an abort timeout so a hanging models.dev cannot hang tracks", async () => {
+	let capturedSignal: AbortSignal | undefined;
+	globalThis.fetch = Object.assign(
+		async (_input: unknown, init?: RequestInit) => {
+			fetchCalls++;
+			capturedSignal = init?.signal ?? undefined;
+			return Response.json(pricingData);
+		},
+		{ preconnect: realFetch.preconnect },
+	) as typeof fetch;
+
+	await getModelsDevPricing();
+
+	expect(capturedSignal).toBeInstanceOf(AbortSignal);
+	expect(capturedSignal?.aborted).toBe(false);
+});
