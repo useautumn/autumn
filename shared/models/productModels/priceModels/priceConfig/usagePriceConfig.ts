@@ -29,7 +29,16 @@ export const UsageTierSchema = z
 	.transform((val) => ({
 		...val,
 		amount: val.amount ?? 0,
-	}));
+	}))
+	// Explicit output schema so zod-openapi can serialize this in response/webhook
+	// schemas (it rejects bare transforms) while keeping `amount` a required number.
+	.pipe(
+		z.object({
+			to: z.number().or(z.literal(Infinite)),
+			amount: z.number(),
+			flat_amount: z.number().optional(),
+		}),
+	);
 
 export type UsageTier = z.infer<typeof UsageTierSchema>;
 
