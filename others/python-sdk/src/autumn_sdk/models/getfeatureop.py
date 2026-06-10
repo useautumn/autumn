@@ -12,7 +12,7 @@ from autumn_sdk.types import (
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypedDict
 
 
@@ -59,10 +59,11 @@ GetFeatureType = Union[
         "boolean",
         "metered",
         "credit_system",
+        "ai_credit_system",
     ],
     UnrecognizedStr,
 ]
-r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
 
 class GetFeatureCreditSchemaTypedDict(TypedDict):
@@ -78,6 +79,44 @@ class GetFeatureCreditSchema(BaseModel):
 
     credit_cost: float
     r"""Credits consumed per unit of the metered feature."""
+
+
+class GetFeatureModelMarkupsTypedDict(TypedDict):
+    markup: NotRequired[float]
+    input_cost: NotRequired[float]
+    output_cost: NotRequired[float]
+
+
+class GetFeatureModelMarkups(BaseModel):
+    markup: Optional[float] = None
+
+    input_cost: Optional[float] = None
+
+    output_cost: Optional[float] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["markup", "input_cost", "output_cost"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class GetFeatureProviderMarkupsTypedDict(TypedDict):
+    markup: float
+
+
+class GetFeatureProviderMarkups(BaseModel):
+    markup: float
 
 
 class GetFeatureDisplayTypedDict(TypedDict):
@@ -132,7 +171,7 @@ class GetFeatureResponseTypedDict(TypedDict):
     name: str
     r"""Human-readable name displayed in the dashboard and billing UI."""
     type: GetFeatureType
-    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
     consumable: bool
     r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
     archived: bool
@@ -141,6 +180,14 @@ class GetFeatureResponseTypedDict(TypedDict):
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
     credit_schema: NotRequired[List[GetFeatureCreditSchemaTypedDict]]
     r"""For credit_system features: maps metered features to their credit costs."""
+    model_markups: NotRequired[Nullable[Dict[str, GetFeatureModelMarkupsTypedDict]]]
+    r"""Per-model markup overrides for AI credit systems."""
+    default_markup: NotRequired[float]
+    r"""Default percentage markup for AI credit systems. Use -100 to make usage free."""
+    provider_markups: NotRequired[
+        Nullable[Dict[str, GetFeatureProviderMarkupsTypedDict]]
+    ]
+    r"""Per-provider default markup percentages for AI credit systems."""
     display: NotRequired[GetFeatureDisplayTypedDict]
     r"""Display names for the feature in billing UI and customer-facing components."""
 
@@ -155,7 +202,7 @@ class GetFeatureResponse(BaseModel):
     r"""Human-readable name displayed in the dashboard and billing UI."""
 
     type: GetFeatureType
-    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
     consumable: bool
     r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
@@ -169,21 +216,48 @@ class GetFeatureResponse(BaseModel):
     credit_schema: Optional[List[GetFeatureCreditSchema]] = None
     r"""For credit_system features: maps metered features to their credit costs."""
 
+    model_markups: OptionalNullable[Dict[str, GetFeatureModelMarkups]] = UNSET
+    r"""Per-model markup overrides for AI credit systems."""
+
+    default_markup: Optional[float] = None
+    r"""Default percentage markup for AI credit systems. Use -100 to make usage free."""
+
+    provider_markups: OptionalNullable[Dict[str, GetFeatureProviderMarkups]] = UNSET
+    r"""Per-provider default markup percentages for AI credit systems."""
+
     display: Optional[GetFeatureDisplay] = None
     r"""Display names for the feature in billing UI and customer-facing components."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["event_names", "credit_schema", "display"])
+        optional_fields = set(
+            [
+                "event_names",
+                "credit_schema",
+                "model_markups",
+                "default_markup",
+                "provider_markups",
+                "display",
+            ]
+        )
+        nullable_fields = set(["model_markups", "provider_markups"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m

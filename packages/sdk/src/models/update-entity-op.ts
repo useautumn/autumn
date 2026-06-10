@@ -252,15 +252,16 @@ export type UpdateEntityPurchase = {
 };
 
 /**
- * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
 export const UpdateEntityType = {
   Boolean: "boolean",
   Metered: "metered",
   CreditSystem: "credit_system",
+  AiCreditSystem: "ai_credit_system",
 } as const;
 /**
- * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
 export type UpdateEntityType = OpenEnum<typeof UpdateEntityType>;
 
@@ -273,6 +274,16 @@ export type UpdateEntityCreditSchema = {
    * Credits consumed per unit of the metered feature.
    */
   creditCost: number;
+};
+
+export type UpdateEntityModelMarkups = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+export type UpdateEntityProviderMarkups = {
+  markup: number;
 };
 
 /**
@@ -302,7 +313,7 @@ export type UpdateEntityFeature = {
    */
   name: string;
   /**
-   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
    */
   type: UpdateEntityType;
   /**
@@ -317,6 +328,21 @@ export type UpdateEntityFeature = {
    * For credit_system features: maps metered features to their credit costs.
    */
   creditSchema?: Array<UpdateEntityCreditSchema> | undefined;
+  /**
+   * Per-model markup overrides for AI credit systems.
+   */
+  modelMarkups?: { [k: string]: UpdateEntityModelMarkups } | null | undefined;
+  /**
+   * Default percentage markup for AI credit systems. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider default markup percentages for AI credit systems.
+   */
+  providerMarkups?:
+    | { [k: string]: UpdateEntityProviderMarkups }
+    | null
+    | undefined;
   /**
    * Display names for the feature in billing UI and customer-facing components.
    */
@@ -853,6 +879,52 @@ export function updateEntityCreditSchemaFromJSON(
 }
 
 /** @internal */
+export const UpdateEntityModelMarkups$inboundSchema: z.ZodMiniType<
+  UpdateEntityModelMarkups,
+  unknown
+> = z.pipe(
+  z.object({
+    markup: types.optional(types.number()),
+    input_cost: types.optional(types.number()),
+    output_cost: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "input_cost": "inputCost",
+      "output_cost": "outputCost",
+    });
+  }),
+);
+
+export function updateEntityModelMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityModelMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityModelMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityModelMarkups' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateEntityProviderMarkups$inboundSchema: z.ZodMiniType<
+  UpdateEntityProviderMarkups,
+  unknown
+> = z.object({
+  markup: types.number(),
+});
+
+export function updateEntityProviderMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityProviderMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityProviderMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityProviderMarkups' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateEntityDisplay$inboundSchema: z.ZodMiniType<
   UpdateEntityDisplay,
   unknown
@@ -885,13 +957,27 @@ export const UpdateEntityFeature$inboundSchema: z.ZodMiniType<
     credit_schema: types.optional(
       z.array(z.lazy(() => UpdateEntityCreditSchema$inboundSchema)),
     ),
-    display: types.optional(z.lazy(() => UpdateEntityDisplay$inboundSchema)),
+    model_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => UpdateEntityModelMarkups$inboundSchema),
+    ))),
+    default_markup: types.optional(types.number()),
+    provider_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => UpdateEntityProviderMarkups$inboundSchema),
+    ))),
+    display: types.optional(z.lazy(() =>
+      UpdateEntityDisplay$inboundSchema
+    )),
     archived: types.boolean(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
+      "model_markups": "modelMarkups",
+      "default_markup": "defaultMarkup",
+      "provider_markups": "providerMarkups",
     });
   }),
 );

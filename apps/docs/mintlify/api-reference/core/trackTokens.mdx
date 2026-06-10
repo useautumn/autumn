@@ -1,55 +1,11 @@
 ---
-title: "Track Usage"
-openapi: "openapi POST /v1/balances.track"
+title: "Track Tokens"
+openapi: "openapi POST /v1/balances.track_tokens"
 ---
 
 import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
 import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
 import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
-
-<Note>
-  Track records usage events to decrement a customer's balance. Use this to meter feature consumption like API calls, messages sent, or credits used.
-</Note>
-
-### Common Use Cases
-
-<CodeGroup>
-
-```typescript Track single usage
-await autumn.track({
-  customerId: "cus_123",
-  featureId: "ai_messages",
-  value: 1
-});
-```
-
-```typescript Track with idempotency
-await autumn.track({
-  customerId: "cus_123",
-  featureId: "api_calls",
-  value: 1,
-  idempotencyKey: "request_abc123" // Prevents duplicate tracking on retry
-});
-```
-
-```typescript Credit balance (negative value)
-await autumn.track({
-  customerId: "cus_123",
-  featureId: "seats",
-  value: -1 // Increases balance when removing a seat
-});
-```
-
-```typescript Async (fire-and-forget)
-await autumn.track({
-  customerId: "cus_123",
-  featureId: "ai_messages",
-  value: 1,
-  async: true // Returns 202 immediately; usage processed in the background
-});
-```
-
-</CodeGroup>
 
 ### Body Parameters
 
@@ -57,45 +13,48 @@ await autumn.track({
   The ID of the customer.
 </DynamicParamField>
 
-<DynamicParamField body="feature_id" type="string">
-  The ID of the feature to track usage for. Required if event_name is not provided.
-</DynamicParamField>
-
 <DynamicParamField body="entity_id" type="string">
-  The ID of the entity for entity-scoped balances (e.g., per-seat limits).
+  The ID of the entity for entity-scoped balances.
 </DynamicParamField>
 
-<DynamicParamField body="event_name" type="string">
-  Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event.
+<DynamicParamField body="feature_id" type="string">
+  The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted — only required when a customer has multiple AI credit systems.
 </DynamicParamField>
 
-<DynamicParamField body="value" type="number">
-  The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat).
+<DynamicParamField body="model_id" type="string" required>
+  The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+</DynamicParamField>
+
+<DynamicParamField body="input_tokens" type="integer" required>
+  Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools.
+</DynamicParamField>
+
+<DynamicParamField body="output_tokens" type="integer" required>
+  Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
+</DynamicParamField>
+
+<DynamicParamField body="cache_read_tokens" type="integer">
+  Number of cached input tokens read.
+</DynamicParamField>
+
+<DynamicParamField body="cache_write_tokens" type="integer">
+  Number of input tokens written to the cache.
+</DynamicParamField>
+
+<DynamicParamField body="audio_input_tokens" type="integer">
+  Number of audio input tokens consumed.
+</DynamicParamField>
+
+<DynamicParamField body="audio_output_tokens" type="integer">
+  Number of audio output tokens generated.
+</DynamicParamField>
+
+<DynamicParamField body="reasoning_tokens" type="integer">
+  Number of reasoning tokens generated.
 </DynamicParamField>
 
 <DynamicParamField body="properties" type="object">
   Additional properties to attach to this usage event.
-</DynamicParamField>
-
-<DynamicParamField body="async" type="boolean">
-  If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information.
-</DynamicParamField>
-
-<DynamicParamField body="lock" type="object">
-  <Expandable title="properties">
-    <DynamicParamField body="lock_id" type="string" required>
-      A unique identifier for this lock. Used to finalize the lock later via balances.finalize.
-    </DynamicParamField>
-
-    <DynamicParamField body="enabled" type="any" required>
-      Must be true to enable locking.
-    </DynamicParamField>
-
-    <DynamicParamField body="expires_at" type="number">
-      Unix timestamp (ms) when the lock automatically expires and releases the held balance.
-    </DynamicParamField>
-
-  </Expandable>
 </DynamicParamField>
 
 
@@ -618,12 +577,12 @@ await autumn.track({
 ```json 200
 {
   "customer_id": "cus_123",
-  "value": 1,
+  "value": 0.006,
   "balance": {
-    "feature_id": "messages",
-    "granted": 100,
-    "remaining": 72,
-    "usage": 28,
+    "feature_id": "ai_credits",
+    "granted": 10,
+    "remaining": 9.994,
+    "usage": 0.006,
     "unlimited": false,
     "overage_allowed": false,
     "max_purchase": null,
@@ -649,13 +608,13 @@ await autumn.track({
   "deductions": [
     {
       "balance_id": "cus_ent_3DdSDoyFmoA9Neecl2a2Gc507X2",
-      "feature_id": "messages",
+      "feature_id": "ai_credits",
       "plan_id": "pro",
       "reset": {
         "interval": "month",
         "resets_at": 1781288736881
       },
-      "value": 1
+      "value": 0.006
     }
   ]
 }
