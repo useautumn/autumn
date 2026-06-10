@@ -8,6 +8,7 @@ import { instrumentDrizzleClient } from "@kubiks/otel-drizzle";
 import type { SQLWrapper } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg, { type PoolConfig } from "pg";
+import { logger } from "../external/logtail/logtailUtils.js";
 import { otelConfig } from "../utils/otel/otelConfig.js";
 import { attachPoolErrorHandlers, registerPool } from "./pgPoolMonitor.js";
 
@@ -108,13 +109,36 @@ const poolMaxFromEnv = ({
 	return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
 };
 
-// Per-process maxes are budgeted so the fleet total stays under PgBouncer's
-// max_client_conn (2026-06-08 incident): procs × Σ(max) ≤ 0.8 × ceiling.
+const PGBOUNCER_MAX_CLIENT_CONN = 7_600;
+const BUDGETED_FLEET_PROCESSES = 150;
+const BUDGETED_NON_SERVER_CONNECTIONS = 80;
+const POOL_BUDGET_HEADROOM = 0.85;
+
+const PROD_POOL_MAX = {
+	critical: 22,
+	general: 14,
+	replica: 6,
+};
+
+const budgetedFleetConnections =
+	BUDGETED_FLEET_PROCESSES *
+		(PROD_POOL_MAX.critical + PROD_POOL_MAX.general + PROD_POOL_MAX.replica) +
+	BUDGETED_NON_SERVER_CONNECTIONS;
+
+if (
+	budgetedFleetConnections >
+	PGBOUNCER_MAX_CLIENT_CONN * POOL_BUDGET_HEADROOM
+) {
+	logger.warn(
+		`[initDrizzle] pool budget (${budgetedFleetConnections}) exceeds ${POOL_BUDGET_HEADROOM} of max_client_conn (${PGBOUNCER_MAX_CLIENT_CONN}) — resize PROD_POOL_MAX`,
+	);
+}
+
 export const { db: dbCritical, client: clientCritical } = initDrizzle({
 	name: "critical",
 	maxConnections: poolMaxFromEnv({
 		envVar: "CRITICAL_DB_POOL_MAX",
-		fallback: isProd ? 22 : 10,
+		fallback: isProd ? PROD_POOL_MAX.critical : 10,
 	}),
 	connectTimeout: isProd ? 2 : 30,
 	databaseUrl: process.env.DATABASE_CRITICAL_URL,
@@ -131,7 +155,7 @@ export const { db: dbGeneral, client: clientGeneral } = initDrizzle({
 	name: "general",
 	maxConnections: poolMaxFromEnv({
 		envVar: "GENERAL_DB_POOL_MAX",
-		fallback: isProd ? 14 : 10,
+		fallback: isProd ? PROD_POOL_MAX.general : 10,
 	}),
 	connectTimeout: isProd ? 5 : 30,
 });
@@ -144,7 +168,7 @@ const replicaResult = process.env.DATABASE_REPLICA_URL
 			replica: true,
 			maxConnections: poolMaxFromEnv({
 				envVar: "REPLICA_DB_POOL_MAX",
-				fallback: 6,
+				fallback: PROD_POOL_MAX.replica,
 			}),
 			connectTimeout: null,
 		})
