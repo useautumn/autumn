@@ -181,6 +181,9 @@
     "packages/ai-sdk": {
       "name": "@useautumn/ai-sdk",
       "version": "0.0.1",
+      "dependencies": {
+        "@ai-sdk/provider": "^3.0.0",
+      },
       "devDependencies": {
         "@types/node": "^24.9.1",
         "tsup": "^8.4.0",

@@ -24,6 +24,9 @@
 		"build": "rm -rf dist && tsup",
 		"prepublishOnly": "bun run build"
 	},
+	"dependencies": {
+		"@ai-sdk/provider": "^3.0.0"
+	},
 	"peerDependencies": {
 		"ai": "^6.0.116",
 		"autumn-js": "*"
