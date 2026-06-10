@@ -39,8 +39,14 @@ export const mergeEntityAndCustomerSubjectRows = ({
 }): SubjectQueryRow => {
 	if (!customerRow) return entityRow;
 
+	// The entityScopedOnly query matches on internal_entity_id alone (adding the
+	// customer predicate degrades its plan), so enforce the customer match here.
+	// Dependent rows of any dropped product are filtered transitively below.
 	const customerProducts = [
-		...entityRow.customer_products,
+		...entityRow.customer_products.filter(
+			(product) =>
+				product.internal_customer_id === entityRow.customer.internal_id,
+		),
 		...customerRow.customer_products,
 	].slice(0, CUSTOMER_PRODUCT_LIMIT);
 

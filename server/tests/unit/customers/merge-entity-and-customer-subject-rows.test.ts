@@ -14,17 +14,20 @@ import { mergeEntityAndCustomerSubjectRows } from "@/internal/customers/repos/ge
 const createCustomerProduct = ({
 	id,
 	internalProductId = `prod_internal_${id}`,
+	internalCustomerId = "cus_internal_1",
 	freeTrialId = null,
 	subscriptionIds = [],
 }: {
 	id: string;
 	internalProductId?: string;
+	internalCustomerId?: string;
 	freeTrialId?: string | null;
 	subscriptionIds?: string[];
 }) =>
 	({
 		id,
 		internal_product_id: internalProductId,
+		internal_customer_id: internalCustomerId,
 		free_trial_id: freeTrialId,
 		subscription_ids: subscriptionIds,
 	}) as DbCustomerProduct;
@@ -88,6 +91,28 @@ describe("mergeEntityAndCustomerSubjectRows", () => {
 		});
 
 		expect(merged).toBe(entityRow);
+	});
+
+	test("drops entity-scoped products belonging to a different customer", () => {
+		const entityRow = createRow({
+			customer_products: [
+				createCustomerProduct({ id: "cp_ours" }),
+				createCustomerProduct({
+					id: "cp_other_customer",
+					internalCustomerId: "cus_internal_other",
+				}),
+			],
+		});
+		const customerRow = createRow();
+
+		const merged = mergeEntityAndCustomerSubjectRows({
+			entityRow,
+			customerRow,
+		});
+
+		expect(merged.customer_products.map((product) => product.id)).toEqual([
+			"cp_ours",
+		]);
 	});
 
 	test("orders entity-scoped rows before customer-level rows", () => {
