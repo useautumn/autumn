@@ -11,7 +11,6 @@ import {
 	UsageModel,
 } from "@autumn/shared";
 import {
-	ArrowSquareOutIcon,
 	CalendarBlankIcon,
 	CreditCardIcon,
 	CubeIcon,
@@ -29,24 +28,23 @@ import { format } from "date-fns";
 import { useMemo } from "react";
 import { CollapsedBooleanItems } from "@/components/forms/shared/plan-items/CollapsedBooleanItems";
 import { Button } from "@/components/v2/buttons/Button";
-import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
-import { IconButton } from "@/components/v2/buttons/IconButton";
+import { CopyButton } from "@/components/v2/buttons/CopyButton";
+import { OpenInStripeButton } from "@/components/v2/buttons/OpenInStripeButton";
 import { InfoRow } from "@/components/v2/InfoRow";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
-import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
 import { usePrepaidItems } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 
 import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
-import { useEnv } from "@/utils/envUtils";
-import { getStripeSubLink } from "@/utils/linkUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/BasePriceDisplay";
 import { PlanFeatureRow } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
 import { CustomerProductsStatus } from "../table/customer-products/CustomerProductsStatus";
+
+const ID_CHIP_INNER_CLASS = "max-w-40 text-tiny-id truncate !font-normal";
 
 function formatDiscountLabel({ discount }: { discount: ApiDiscount }): string {
 	const value =
@@ -120,8 +118,6 @@ function SubscriptionDetailItems({
 
 export function SubscriptionDetailSheet() {
 	const { customer, testClockFrozenTimeMs } = useCusQuery();
-	const { stripeAccount } = useOrgStripeQuery();
-	const env = useEnv();
 	const itemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
 	// Get customer product and productV2 by itemId
@@ -178,6 +174,14 @@ export function SubscriptionDetailSheet() {
 		internal_product_id: cusProduct.product?.internal_id ?? null,
 	};
 
+	const planEndsInFuture =
+		!!cusProduct.ended_at && cusProduct.ended_at > nowMs && !isExpired;
+	const endLabel = isOneOff
+		? "Access Ends"
+		: planEndsInFuture
+			? "Plan Ends"
+			: "Ended";
+
 	const formatDate = (timestamp: number | null | undefined) => {
 		if (!timestamp) return "—";
 		return format(new Date(timestamp), "MMM d, yyyy, HH:mm");
@@ -185,30 +189,6 @@ export function SubscriptionDetailSheet() {
 
 	const handleUpdateSubscription = () => {
 		setSheet({ type: "subscription-update", itemId });
-	};
-
-	const handleViewStripe = () => {
-		if (!cusProduct?.subscription_ids?.[0]) return;
-
-		const subscriptionId = cusProduct.subscription_ids[0];
-		if (stripeAccount) {
-			window.open(
-				getStripeSubLink({
-					subscriptionId,
-					env,
-					accountId: stripeAccount.id,
-				}),
-				"_blank",
-			);
-		} else {
-			window.open(
-				getStripeSubLink({
-					subscriptionId,
-					env,
-				}),
-				"_blank",
-			);
-		}
 	};
 
 	return (
@@ -238,8 +218,14 @@ export function SubscriptionDetailSheet() {
 						<InfoRow
 							icon={<HashIcon size={16} />}
 							label="ID"
-							value={cusProduct.product_id}
-							mono
+							value={
+								<CopyButton
+									text={cusProduct.product_id}
+									size="mini"
+									className="text-tertiary-foreground"
+									innerClassName={ID_CHIP_INNER_CLASS}
+								/>
+							}
 						/>
 						<InfoRow
 							icon={<GitBranchIcon size={16} />}
@@ -257,35 +243,35 @@ export function SubscriptionDetailSheet() {
 							<InfoRow
 								icon={<TagIcon size={16} weight="duotone" />}
 								label="Sub ID"
-								value={cusProduct.external_id}
-								mono
+								value={
+									<CopyButton
+										text={cusProduct.external_id}
+										size="mini"
+										className="text-tertiary-foreground"
+										innerClassName={ID_CHIP_INNER_CLASS}
+									/>
+								}
 							/>
 						)}
 						{cusProduct.subscription_ids?.length > 0 && (
-							<div className="flex items-center gap-2 min-w-0 overflow-hidden">
-								<div className="text-subtle/60 shrink-0">
-									<CreditCardIcon size={16} />
-								</div>
-								<div className="flex min-w-0 items-center overflow-hidden">
-									<div className="text-tertiary-foreground text-sm font-medium w-20 shrink-0 whitespace-nowrap">
-										Stripe ID
-									</div>
-									<div className="min-w-0 overflow-hidden">
-										<MiniCopyButton
+							<InfoRow
+								icon={<CreditCardIcon size={16} />}
+								label="Stripe ID"
+								className="flex-1 min-w-0"
+								value={
+									<div className="flex items-center gap-2 min-w-0 w-full">
+										<CopyButton
 											text={cusProduct.subscription_ids[0]}
-											innerClassName="text-sm text-foreground font-mono truncate"
+											size="mini"
+											className="text-tertiary-foreground min-w-0 shrink"
+											innerClassName="text-tiny-id truncate !font-normal min-w-0"
+										/>
+										<OpenInStripeButton
+											subscriptionId={cusProduct.subscription_ids[0]}
 										/>
 									</div>
-								</div>
-								<IconButton
-									variant="secondary"
-									onClick={handleViewStripe}
-									icon={<ArrowSquareOutIcon size={16} weight="duotone" />}
-									className="shrink-0"
-								>
-									View Stripe
-								</IconButton>
-							</div>
+								}
+							/>
 						)}
 					</div>
 				</div>
@@ -363,8 +349,14 @@ export function SubscriptionDetailSheet() {
 
 					{cusProduct.ended_at && (
 						<InfoRow
-							icon={<XCircle size={16} weight="duotone" />}
-							label={isOneOff ? "Access Ends" : "Ended"}
+							icon={
+								planEndsInFuture ? (
+									<CalendarBlankIcon size={16} weight="duotone" />
+								) : (
+									<XCircle size={16} weight="duotone" />
+								)
+							}
+							label={endLabel}
 							value={formatDate(cusProduct.ended_at)}
 						/>
 					)}
