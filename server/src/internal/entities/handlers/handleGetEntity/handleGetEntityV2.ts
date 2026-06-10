@@ -4,6 +4,7 @@ import {
 	InternalError,
 	Scopes,
 } from "@autumn/shared";
+import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { findCustomerForEntity } from "../../actions/findCustomer.js";
 import { getApiEntityByRollout } from "../../actions/getApiEntityByRollout.js";
@@ -19,9 +20,10 @@ export const handleGetEntityV2 = createRoute({
 
 		// 1. Entity -> Customer ID
 		if (!customerId) {
-			const customer = await findCustomerForEntity({
+			const customer = await shed503OnTransientError({
 				ctx,
-				entityId: entityId,
+				source: "entities.get.find_customer",
+				run: () => findCustomerForEntity({ ctx, entityId }),
 			});
 
 			if (!customer?.id) {

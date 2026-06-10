@@ -1,11 +1,10 @@
 import type { Organization } from "@models/orgModels/orgTable";
 import type { Entitlement } from "@models/productModels/entModels/entModels";
-import type { UsagePriceConfig } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
 import type { Price } from "@models/productModels/priceModels/priceModels";
 import { orgToCurrency } from "@utils/orgUtils/convertOrgUtils";
 import {
-	isFinalTier,
 	isNotFinalTier,
+	isPrepaidPrice,
 } from "@utils/productUtils/priceUtils/classifyPriceUtils";
 import { atmnToStripeAmountDecimal } from "@utils/productUtils/priceUtils/convertAmountUtils";
 import { Decimal } from "decimal.js";
@@ -33,8 +32,13 @@ export const priceToStripePrepaidV2Tiers = ({
 	price: Price;
 	entitlement: Entitlement;
 	org: Organization;
-}) => {
-	const config = price.config as UsagePriceConfig;
+}): Stripe.PriceCreateParams.Tier[] => {
+	if (!isPrepaidPrice(price)) {
+		throw new Error(
+			`priceToStripePrepaidV2Tiers requires a prepaid price, got price ${price.id}`,
+		);
+	}
+	const config = price.config;
 
 	const tiers: Stripe.PriceCreateParams.Tier[] = [];
 
@@ -47,9 +51,8 @@ export const priceToStripePrepaidV2Tiers = ({
 		});
 	}
 
-	for (let i = 0; i < config.usage_tiers.length; i++) {
-		const tier = config.usage_tiers[i];
-		const atmnUnitAmount = new Decimal(tier.amount).div(
+	for (const tier of config.usage_tiers) {
+		const atmnUnitAmount = new Decimal(tier.amount ?? 0).div(
 			config.billing_units ?? 1,
 		);
 
@@ -58,14 +61,14 @@ export const priceToStripePrepaidV2Tiers = ({
 			currency: orgToCurrency({ org }),
 		});
 
-		let upTo = tier.to;
-		if (isNotFinalTier(tier) && entitlement.allowance) {
-			upTo = tier.to + entitlement.allowance;
+		let upTo: Stripe.PriceCreateParams.Tier["up_to"] = "inf";
+		if (isNotFinalTier(tier)) {
+			upTo = entitlement.allowance ? tier.to + entitlement.allowance : tier.to;
 		}
 
 		const stripeTier: Stripe.PriceCreateParams.Tier = {
 			unit_amount_decimal: stripeUnitAmountDecimal,
-			up_to: isFinalTier(tier) ? "inf" : upTo,
+			up_to: upTo,
 		};
 
 		if (tier.flat_amount) {
@@ -79,13 +82,13 @@ export const priceToStripePrepaidV2Tiers = ({
 	}
 
 	// Divide all tiers by billing units
-	const dividedTiers = tiers.map((tier, index: number) => ({
+	return tiers.map((tier, index) => ({
 		...tier,
 
 		up_to:
-			index === tiers.length - 1
+			index === tiers.length - 1 || tier.up_to === "inf"
 				? "inf"
-				: new Decimal(tier.up_to ?? 0)
+				: new Decimal(tier.up_to)
 						.div(config.billing_units ?? 1)
 						.ceil()
 						.toNumber(),
@@ -94,6 +97,4 @@ export const priceToStripePrepaidV2Tiers = ({
 			.mul(config.billing_units ?? 1)
 			.toString(),
 	}));
-
-	return dividedTiers;
 };

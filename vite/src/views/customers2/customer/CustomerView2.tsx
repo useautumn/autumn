@@ -35,6 +35,7 @@ import { CustomerBreadcrumbs } from "./CustomerBreadcrumbs2";
 import { CustomerContext } from "./CustomerContext";
 import { CustomerPageDetails } from "./CustomerPageDetails";
 import { CustomerSheets } from "./CustomerSheets";
+import { CustomerHeaderActions } from "./components/CustomerHeaderActions";
 import { SelectedEntityDetails } from "./components/SelectedEntityDetails";
 import { SHEET_ANIMATION } from "./customerAnimations";
 import { Workbench } from "./workbench/Workbench";
@@ -114,6 +115,7 @@ export default function CustomerView2() {
 								<div className="flex flex-col w-full">
 									<div className="flex items-center justify-between w-full gap-4">
 										<CustomerBreadcrumbs />
+										<CustomerHeaderActions />
 									</div>
 									<div className="flex items-center justify-between w-full pt-2 gap-2">
 										<div className="flex items-center gap-2 min-w-0">

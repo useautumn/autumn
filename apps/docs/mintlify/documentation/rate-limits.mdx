@@ -25,6 +25,10 @@ Autumn enforces rate limits to ensure reliable performance for all users. Limits
 
 When a rate limit is exceeded, the API returns a `429 Too Many Requests` response. Your application should back off and retry after the rate limit window resets.
 
+## Service overload (503)
+
+Under heavy load, customer-state endpoints (`/customers.get_or_create`, `/customers.get`, `/entities.get`) may briefly return a `503` with code `service_unavailable` and a `Retry-After` header (seconds). This is transient and unrelated to your request volume -- retry after the indicated delay. `check` and `track` are never shed this way (see [Fail-Open Defaults](/documentation/fail-open)).
+
 ## Preview endpoints are not rate limited
 
 Preview endpoints like `/v1/attach/preview`, `/v1/billing.preview_attach`, and `/v1/billing.preview_update` are **not** subject to rate limits. You can call these freely to display pricing previews to your users.

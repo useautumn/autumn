@@ -1,4 +1,4 @@
-import { FeatureType, FeatureUsageType } from "@autumn/shared";
+import { FeatureType, FeatureUsageType, isAiCreditSystem } from "@autumn/shared";
 import { BoxArrowDownIcon } from "@phosphor-icons/react";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { cn } from "@/lib/utils";
@@ -47,6 +47,10 @@ export const DummyPlanFeatureRow = () => {
 	// Build display text based on feature type
 	const getDisplayText = () => {
 		const name = hasName ? featureName : getPlaceholderName();
+
+		if (isAiCreditSystem(feature.type)) {
+			return { primary: `$10.00 of ${name}`, secondary: "" };
+		}
 
 		if (featureType === FeatureType.CreditSystem) {
 			return { primary: `100 ${name}`, secondary: "" };

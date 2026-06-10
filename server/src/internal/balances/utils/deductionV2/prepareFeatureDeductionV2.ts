@@ -17,7 +17,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
+import { computeCreditCosts } from "../deduction/computeCreditCosts.js";
 import type {
 	CustomerEntitlementDeduction,
 	DeductionOptions,
@@ -115,12 +115,14 @@ export const prepareFeatureDeductionV2 = ({
 			.map((customerEntitlement) => customerEntitlement.entitlement.feature.id),
 	);
 
+	const getCreditCostForEnt = computeCreditCosts({
+		cusEnts: customerEntitlements,
+		deduction,
+	});
+
 	const customerEntitlementDeductions: CustomerEntitlementDeduction[] =
 		customerEntitlements.map((customerEntitlement) => {
-			const creditCost = getCreditCost({
-				featureId: feature.id,
-				creditSystem: customerEntitlement.entitlement.feature,
-			});
+			const creditCost = getCreditCostForEnt(customerEntitlement.id);
 
 			const maxOverage = getMaxOverage({
 				cusEnt: customerEntitlement,
@@ -162,26 +164,22 @@ export const prepareFeatureDeductionV2 = ({
 			};
 		});
 
-	const sortedRollovers = customerEntitlements
-		.flatMap((customerEntitlement) => {
-			const creditCost = getCreditCost({
-				featureId: feature.id,
-				creditSystem: customerEntitlement.entitlement.feature,
-			});
+	const rolloverArrays = customerEntitlements.map((customerEntitlement) => {
+		const creditCost = getCreditCostForEnt(customerEntitlement.id);
+		return (customerEntitlement.rollovers || []).map((rollover) => ({
+			...rollover,
+			credit_cost: creditCost,
+		}));
+	});
 
-			return (customerEntitlement.rollovers || []).map((rollover) => ({
-				...rollover,
-				credit_cost: creditCost,
-			}));
-		})
-		.sort((left, right) => {
-			if (left.expires_at && right.expires_at) {
-				return left.expires_at - right.expires_at;
-			}
-			if (left.expires_at && !right.expires_at) return -1;
-			if (!left.expires_at && right.expires_at) return 1;
-			return 0;
-		});
+	const sortedRollovers = rolloverArrays.flat().sort((left, right) => {
+		if (left.expires_at && right.expires_at) {
+			return left.expires_at - right.expires_at;
+		}
+		if (left.expires_at && !right.expires_at) return -1;
+		if (!left.expires_at && right.expires_at) return 1;
+		return 0;
+	});
 
 	const oneDaySeconds = 24 * 60 * 60;
 	const oneHourSeconds = 60 * 60;

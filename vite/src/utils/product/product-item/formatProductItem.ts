@@ -5,6 +5,7 @@ import {
 	formatAmount,
 	formatInterval,
 	Infinite,
+	isAiCreditSystem,
 	type ProductItem,
 	ProductItemType,
 	TierBehavior,
@@ -140,13 +141,13 @@ const getFeatureString = ({
 	item: ProductItem;
 	features: Feature[];
 }) => {
-	const feature = features.find((f: Feature) => f.id == item.feature_id);
+	const feature = features.find((f: Feature) => f.id === item.feature_id);
 
 	if (feature?.type === FeatureType.Boolean) {
 		return `${feature.name}`;
 	}
 
-	if (item.included_usage == Infinite) {
+	if (item.included_usage === Infinite) {
 		return `Unlimited ${feature?.name}`;
 	}
 
@@ -154,6 +155,13 @@ const getFeatureString = ({
 		interval: item.interval ?? undefined,
 		intervalCount: item.interval_count ?? undefined,
 	});
+
+	if (isAiCreditSystem(feature?.type)) {
+		const amount = item.included_usage ?? 0;
+		const formattedAmount =
+			amount === 0 ? "$0.00" : `$${Number(amount).toFixed(2)}`;
+		return `${formattedAmount} of ${feature?.name}${notNullish(item.interval) ? ` ${intervalStr}` : ""}`;
+	}
 
 	return `${item.included_usage ?? 0} ${feature?.name}${item.entity_feature_id ? ` per ${getFeature(item.entity_feature_id, features)?.name}` : ""}${notNullish(item.interval) ? ` ${intervalStr}` : ""}`;
 };
@@ -171,13 +179,13 @@ export const formatProductItemText = ({
 
 	const itemType = getItemType(item);
 
-	if (itemType == ProductItemType.FeaturePrice) {
+	if (itemType === ProductItemType.FeaturePrice) {
 		return getPaidFeatureString({
 			item,
 			currency: org?.default_currency,
 			features,
 		});
-	} else if (itemType == ProductItemType.Price) {
+	} else if (itemType === ProductItemType.Price) {
 		return getFixedPriceString({ item, currency: org?.default_currency });
 	}
 };

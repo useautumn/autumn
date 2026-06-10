@@ -1,4 +1,5 @@
 import type { CheckParams, TrackParams } from "@autumn/shared";
+import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrCreateCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
@@ -28,10 +29,10 @@ export const getOrCreateApiCustomerByRollout = async ({
 		| undefined;
 
 	if (isFullSubjectRolloutEnabled({ ctx })) {
-		fullSubject = await getOrCreateCachedFullSubject({
+		fullSubject = await shed503OnTransientError({
 			ctx,
-			params,
-			source,
+			source: "get_or_create",
+			run: () => getOrCreateCachedFullSubject({ ctx, params, source }),
 		});
 	} else {
 		fullCustomer = await getOrCreateCachedFullCustomer({

@@ -66,6 +66,7 @@ const init = async ({ startupStartedAt }: { startupStartedAt: number }) => {
 	void preWarmOrgRedisConnections({ db }).catch((error) => {
 		logger.warn("[OrgRedis] Warmup failed", { error });
 	});
+
 	await startAllEdgeConfigPolling({ logger });
 	await Promise.all([primeRedisMonitor(), primeRedisV2Monitor()]);
 	startRedisMonitor();

@@ -36,9 +36,13 @@ const DEFAULT_CONFIG: FullSubjectGateConfig = {
 };
 
 const FIELDS: Array<{
-	key: keyof Omit<
+	key: keyof Pick<
 		FullSubjectGateConfig,
-		"configHealthy" | "configConfigured" | "lastSuccessAt" | "error"
+		| "per_customer_limit"
+		| "per_org_limit"
+		| "max_wait_ms"
+		| "per_customer_pending_max"
+		| "per_org_pending_max"
 	>;
 	label: string;
 	description: string;
@@ -136,9 +140,12 @@ export function FullSubjectGateDialog({
 	const handleSave = async () => {
 		const next: Record<string, number> = {};
 		for (const field of FIELDS) {
-			const raw = drafts[field.key];
-			const parsed = Number(raw);
-			if (!Number.isInteger(parsed) || parsed < field.min || parsed > field.max) {
+			const parsed = Number(drafts[field.key]);
+			if (
+				!Number.isInteger(parsed) ||
+				parsed < field.min ||
+				parsed > field.max
+			) {
 				toast.error(
 					`${field.label} must be an integer between ${field.min} and ${field.max}`,
 				);

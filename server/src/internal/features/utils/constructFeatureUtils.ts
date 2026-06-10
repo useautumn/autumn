@@ -1,9 +1,12 @@
 import {
 	AggregateType,
 	type AppEnv,
+	buildAiCreditSystemConfig,
 	type Feature,
 	FeatureType,
 	FeatureUsageType,
+	type ModelMarkups,
+	type ProviderMarkups,
 } from "@autumn/shared";
 import { generateId, keyToTitle } from "@server/utils/genUtils";
 
@@ -36,8 +39,9 @@ const constructFeature = ({
 		display,
 		archived: false,
 		event_names: [],
+		model_markups: null,
 	};
-
+	// This function isn't used anywhere, maybe delete it?
 	return newFeature;
 };
 
@@ -64,6 +68,7 @@ export const constructBooleanFeature = ({
 		config: null,
 		archived: false,
 		event_names: [],
+		model_markups: null,
 	};
 
 	return newFeature;
@@ -109,6 +114,7 @@ export const constructMeteredFeature = ({
 		},
 		archived: false,
 		event_names: eventNames,
+		model_markups: null,
 	};
 
 	return newFeature;
@@ -151,6 +157,44 @@ export const constructCreditSystem = ({
 		config,
 		archived: false,
 		event_names: [],
+		model_markups: null,
+	};
+
+	return newFeature;
+};
+
+export const constructAiCreditSystem = ({
+	featureId,
+	name,
+	orgId,
+	env,
+	modelMarkups,
+	defaultMarkup,
+	providerMarkups,
+}: {
+	featureId: string;
+	name?: string;
+	orgId: string;
+	env: AppEnv;
+	modelMarkups: ModelMarkups;
+	defaultMarkup?: number;
+	providerMarkups?: ProviderMarkups;
+}) => {
+	const config = buildAiCreditSystemConfig({ defaultMarkup, providerMarkups });
+
+	const newFeature: Feature = {
+		internal_id: generateId("fe"),
+		org_id: orgId,
+		env,
+		created_at: Date.now(),
+
+		id: featureId,
+		name: name || keyToTitle(featureId),
+		type: FeatureType.AiCreditSystem,
+		config,
+		archived: false,
+		event_names: [],
+		model_markups: modelMarkups,
 	};
 
 	return newFeature;
