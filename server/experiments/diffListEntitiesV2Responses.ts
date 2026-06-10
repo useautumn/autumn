@@ -100,14 +100,17 @@ const main = async () => {
 	const internalCustomerIds = [
 		...new Set(entityRows.map((row) => row.customer.internal_id)),
 	];
-	const customerRows = (await db.execute(
-		getCustomerLevelSubjectRowsQuery({
-			orgId: ORG_ID,
-			env: ENV,
-			internalCustomerIds,
-			inStatuses,
-		}),
-	)) as unknown as SubjectQueryRow[];
+	const customerRows =
+		internalCustomerIds.length > 0
+			? ((await db.execute(
+					getCustomerLevelSubjectRowsQuery({
+						orgId: ORG_ID,
+						env: ENV,
+						internalCustomerIds,
+						inStatuses,
+					}),
+				)) as unknown as SubjectQueryRow[])
+			: [];
 	const customerRowsByInternalId = new Map(
 		customerRows.map((row) => [row.customer.internal_id, row]),
 	);
