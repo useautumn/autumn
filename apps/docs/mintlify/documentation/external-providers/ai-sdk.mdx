@@ -73,6 +73,10 @@ for await (const chunk of result.textStream) {
 }
 ```
 
+## Token pools
+
+The wrapper normalizes the AI SDK's usage object into the exclusive token pools that [trackTokens](/api-reference/balances/trackTokens) expects: text input (excluding cached tokens), text output (excluding reasoning tokens), cache reads, cache writes, and reasoning tokens. Each pool is billed at the model's published rate, so cached and reasoning-heavy requests are priced correctly without any extra work.
+
 ## Model ID format
 
 The wrapped model constructs the `modelId` sent to Autumn using `provider/model` format, derived from the AI SDK model's `provider` and `modelId` fields. This must match a valid provider and model key from [Models.dev](https://models.dev).

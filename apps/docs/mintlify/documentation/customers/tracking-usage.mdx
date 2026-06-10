@@ -142,6 +142,14 @@ The `modelId` must be in `provider/model` format, matching the provider and mode
 
 For providers with nested model paths (like OpenRouter), include the full path after the provider: `openrouter/anthropic/claude-opus-4.6`.
 
+Token counts are **exclusive pools**: `inputTokens` should exclude cached tokens (pass those as `cacheReadTokens` / `cacheWriteTokens`) and `outputTokens` should exclude reasoning tokens (pass those as `reasoningTokens`). Audio tokens go in `audioInputTokens` / `audioOutputTokens`. See the [API reference](/api-reference/balances/trackTokens) for the full parameter list.
+
+<Note>
+  `autumn.balances.trackTokens` requires an autumn-js release that includes
+  the method. On older versions, call the REST endpoint directly — see the
+  cURL tab below.
+</Note>
+
 <CodeGroup>
 
 ```typescript TypeScript
@@ -185,7 +193,10 @@ curl -X POST "https://api.useautumn.com/v1/balances.track_tokens" \
 </CodeGroup>
 
 <Tip>
-  If your organization has only one AI credit system feature, you can omit the `featureId` parameter — it will be auto-detected.
+  If the customer has exactly one AI credit system feature, you can omit the
+  `featureId` parameter — it will be auto-detected. The request fails with an
+  error if the customer has no AI credit system, or has more than one and no
+  `featureId` is provided.
 </Tip>
 
 ### Vercel AI SDK integration
