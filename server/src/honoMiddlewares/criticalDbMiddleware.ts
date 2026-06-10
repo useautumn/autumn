@@ -1,4 +1,5 @@
 import type { Context, Next } from "hono";
+import { enterCriticalDb } from "@/db/criticalDbAdmission.js";
 import { dbCritical } from "@/db/initDrizzle.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { matchRoute } from "./middlewareUtils.js";
@@ -29,7 +30,16 @@ const CRITICAL_ROUTES = [
 	{ method: "POST", url: "/entities.get" },
 ];
 
-/** Swaps ctx.db to the critical pool for latency-sensitive endpoints. */
+const ADMISSION_ROUTES = [
+	{ method: "POST", url: "/customers" },
+	{ method: "GET", url: "/customers/:customer_id" },
+	{ method: "GET", url: "/customers/:customer_id/entities/:entity_id" },
+	{ method: "POST", url: "/customers.get_or_create" },
+	{ method: "POST", url: "/entities.get" },
+];
+
+const SHED_RETRY_AFTER_SECONDS = "1";
+
 export const criticalDbMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const path = c.req.path.replace(/^\/v1/, "");
 	const method = c.req.method;
@@ -37,11 +47,33 @@ export const criticalDbMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 	const isCritical = CRITICAL_ROUTES.some((pattern) =>
 		matchRoute({ url: path, method, pattern }),
 	);
-
-	if (isCritical) {
-		const ctx = c.get("ctx");
-		ctx.db = dbCritical;
+	if (!isCritical) {
+		await next();
+		return;
 	}
 
-	await next();
+	const ctx = c.get("ctx");
+	ctx.db = dbCritical;
+
+	const gated = ADMISSION_ROUTES.some((pattern) =>
+		matchRoute({ url: path, method, pattern }),
+	);
+	if (!gated) {
+		await next();
+		return;
+	}
+
+	let release: () => void;
+	try {
+		release = enterCriticalDb();
+	} catch (err) {
+		c.header("Retry-After", SHED_RETRY_AFTER_SECONDS);
+		throw err;
+	}
+
+	try {
+		await next();
+	} finally {
+		release();
+	}
 };

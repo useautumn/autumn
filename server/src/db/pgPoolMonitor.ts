@@ -88,3 +88,6 @@ export const stopPgPoolMonitor = (): void => {
 
 export const getRegisteredPoolsForTesting = (): string[] =>
 	Array.from(registry.keys());
+
+export const getRegisteredPoolMax = (name: string): number | undefined =>
+	registry.get(name)?.max;

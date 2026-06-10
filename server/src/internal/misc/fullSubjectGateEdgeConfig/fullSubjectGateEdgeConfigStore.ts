@@ -33,7 +33,10 @@ export const updateFullSubjectGateConfig = async ({
 export const _setFullSubjectGateConfigForTesting = ({
 	config,
 }: {
-	config: FullSubjectGateEdgeConfig;
+	config: Partial<FullSubjectGateEdgeConfig>;
 }): void => {
-	store._setRuntimeConfigForTesting(config);
+	store._setRuntimeConfigForTesting({
+		...FullSubjectGateEdgeConfigSchema.parse({}),
+		...config,
+	});
 };
