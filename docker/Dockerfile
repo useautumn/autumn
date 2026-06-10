@@ -25,6 +25,7 @@ COPY apps/checkout/package.json apps/checkout/
 COPY apps/docs/package.json apps/docs/
 COPY apps/sdk-test/package.json apps/sdk-test/
 COPY apps/website/package.json apps/website/
+COPY packages/ai-sdk/package.json packages/ai-sdk/
 COPY packages/atmn/package.json packages/atmn/
 COPY packages/atmn-tests/package.json packages/atmn-tests/
 COPY packages/auth/package.json packages/auth/
