@@ -13,58 +13,62 @@ import { smartUnion } from "../types/smart-union.js";
 import { Balance, Balance$inboundSchema } from "./balance.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
-export type TrackGlobals = {
+export type TrackTokensGlobals = {
   xApiVersion?: string | undefined;
 };
 
-export type TrackLock = {
-  /**
-   * A unique identifier for this lock. Used to finalize the lock later via balances.finalize.
-   */
-  lockId: string;
-  /**
-   * Must be true to enable locking.
-   */
-  enabled: true;
-  /**
-   * Unix timestamp (ms) when the lock automatically expires and releases the held balance.
-   */
-  expiresAt?: number | undefined;
-};
-
-export type TrackParams = {
+export type TrackTokensParams = {
   /**
    * The ID of the customer.
    */
   customerId: string;
   /**
-   * The ID of the feature to track usage for. Required if event_name is not provided.
-   */
-  featureId?: string | undefined;
-  /**
-   * The ID of the entity for entity-scoped balances (e.g., per-seat limits).
+   * The ID of the entity for entity-scoped balances.
    */
   entityId?: string | undefined;
   /**
-   * Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event.
+   * The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted — only required when a customer has multiple AI credit systems.
    */
-  eventName?: string | undefined;
+  featureId?: string | undefined;
   /**
-   * The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat).
+   * The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
    */
-  value?: number | undefined;
+  modelId: string;
+  /**
+   * Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools.
+   */
+  inputTokens: number;
+  /**
+   * Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
+   */
+  outputTokens: number;
+  /**
+   * Number of cached input tokens read.
+   */
+  cacheReadTokens?: number | undefined;
+  /**
+   * Number of input tokens written to the cache.
+   */
+  cacheWriteTokens?: number | undefined;
+  /**
+   * Number of audio input tokens consumed.
+   */
+  audioInputTokens?: number | undefined;
+  /**
+   * Number of audio output tokens generated.
+   */
+  audioOutputTokens?: number | undefined;
+  /**
+   * Number of reasoning tokens generated.
+   */
+  reasoningTokens?: number | undefined;
   /**
    * Additional properties to attach to this usage event.
    */
   properties?: { [k: string]: any } | undefined;
-  /**
-   * If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information.
-   */
-  async?: boolean | undefined;
-  lock?: TrackLock | undefined;
 };
 
-export const TrackIntervalEnum2 = {
+export const TrackTokensIntervalEnum2 = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -75,18 +79,20 @@ export const TrackIntervalEnum2 = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type TrackIntervalEnum2 = OpenEnum<typeof TrackIntervalEnum2>;
+export type TrackTokensIntervalEnum2 = OpenEnum<
+  typeof TrackTokensIntervalEnum2
+>;
 
 /**
  * The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
  */
-export type TrackIntervalUnion2 = TrackIntervalEnum2 | string;
+export type TrackTokensIntervalUnion2 = TrackTokensIntervalEnum2 | string;
 
-export type TrackReset2 = {
+export type TrackTokensReset2 = {
   /**
    * The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
    */
-  interval: TrackIntervalEnum2 | string;
+  interval: TrackTokensIntervalEnum2 | string;
   /**
    * Number of intervals between resets (eg. 2 for bi-monthly).
    */
@@ -97,7 +103,7 @@ export type TrackReset2 = {
   resetsAt: number | null;
 };
 
-export type TrackDeduction2 = {
+export type TrackTokensDeduction2 = {
   /**
    * ID of the underlying balance row that was deducted from (customer_entitlement or rollover).
    */
@@ -113,7 +119,7 @@ export type TrackDeduction2 = {
   /**
    * Reset configuration for the balance this deduction came from, or null if the balance doesn't reset.
    */
-  reset: TrackReset2 | null;
+  reset: TrackTokensReset2 | null;
   /**
    * Amount deducted from this balance. Positive when usage was consumed, negative when credit was restored (e.g. a refund via negative track value).
    */
@@ -121,9 +127,9 @@ export type TrackDeduction2 = {
 };
 
 /**
- * Accepted. Autumn is experiencing degraded service from a downstream provider, so the event was accepted for replay and will be tracked as soon as the service is restored.
+ * Accepted. Autumn is experiencing degraded service from a downstream provider, so the token usage event was accepted for replay and will be tracked as soon as the service is restored.
  */
-export type TrackResponseBody2 = {
+export type TrackTokensResponseBody2 = {
   /**
    * The ID of the customer whose usage was tracked.
    */
@@ -151,10 +157,10 @@ export type TrackResponseBody2 = {
   /**
    * Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling.
    */
-  deductions?: Array<TrackDeduction2> | undefined;
+  deductions?: Array<TrackTokensDeduction2> | undefined;
 };
 
-export const TrackIntervalEnum1 = {
+export const TrackTokensIntervalEnum1 = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -165,18 +171,20 @@ export const TrackIntervalEnum1 = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-export type TrackIntervalEnum1 = OpenEnum<typeof TrackIntervalEnum1>;
+export type TrackTokensIntervalEnum1 = OpenEnum<
+  typeof TrackTokensIntervalEnum1
+>;
 
 /**
  * The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
  */
-export type TrackIntervalUnion1 = TrackIntervalEnum1 | string;
+export type TrackTokensIntervalUnion1 = TrackTokensIntervalEnum1 | string;
 
-export type TrackReset1 = {
+export type TrackTokensReset1 = {
   /**
    * The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals.
    */
-  interval: TrackIntervalEnum1 | string;
+  interval: TrackTokensIntervalEnum1 | string;
   /**
    * Number of intervals between resets (eg. 2 for bi-monthly).
    */
@@ -187,7 +195,7 @@ export type TrackReset1 = {
   resetsAt: number | null;
 };
 
-export type TrackDeduction1 = {
+export type TrackTokensDeduction1 = {
   /**
    * ID of the underlying balance row that was deducted from (customer_entitlement or rollover).
    */
@@ -203,7 +211,7 @@ export type TrackDeduction1 = {
   /**
    * Reset configuration for the balance this deduction came from, or null if the balance doesn't reset.
    */
-  reset: TrackReset1 | null;
+  reset: TrackTokensReset1 | null;
   /**
    * Amount deducted from this balance. Positive when usage was consumed, negative when credit was restored (e.g. a refund via negative track value).
    */
@@ -213,7 +221,7 @@ export type TrackDeduction1 = {
 /**
  * OK
  */
-export type TrackResponseBody1 = {
+export type TrackTokensResponseBody1 = {
   /**
    * The ID of the customer whose usage was tracked.
    */
@@ -241,139 +249,136 @@ export type TrackResponseBody1 = {
   /**
    * Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling.
    */
-  deductions?: Array<TrackDeduction1> | undefined;
+  deductions?: Array<TrackTokensDeduction1> | undefined;
 };
 
-export type TrackResponse = TrackResponseBody1 | TrackResponseBody2;
+export type TrackTokensResponse =
+  | TrackTokensResponseBody1
+  | TrackTokensResponseBody2;
 
 /** @internal */
-export type TrackLock$Outbound = {
-  lock_id: string;
-  enabled: true;
-  expires_at?: number | undefined;
-};
-
-/** @internal */
-export const TrackLock$outboundSchema: z.ZodMiniType<
-  TrackLock$Outbound,
-  TrackLock
-> = z.pipe(
-  z.object({
-    lockId: z.string(),
-    enabled: z.literal(true),
-    expiresAt: z.optional(z.number()),
-  }),
-  z.transform((v) => {
-    return remap$(v, {
-      lockId: "lock_id",
-      expiresAt: "expires_at",
-    });
-  }),
-);
-
-export function trackLockToJSON(trackLock: TrackLock): string {
-  return JSON.stringify(TrackLock$outboundSchema.parse(trackLock));
-}
-
-/** @internal */
-export type TrackParams$Outbound = {
+export type TrackTokensParams$Outbound = {
   customer_id: string;
-  feature_id?: string | undefined;
   entity_id?: string | undefined;
-  event_name?: string | undefined;
-  value?: number | undefined;
+  feature_id?: string | undefined;
+  model_id: string;
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_tokens?: number | undefined;
+  cache_write_tokens?: number | undefined;
+  audio_input_tokens?: number | undefined;
+  audio_output_tokens?: number | undefined;
+  reasoning_tokens?: number | undefined;
   properties?: { [k: string]: any } | undefined;
-  async?: boolean | undefined;
-  lock?: TrackLock$Outbound | undefined;
 };
 
 /** @internal */
-export const TrackParams$outboundSchema: z.ZodMiniType<
-  TrackParams$Outbound,
-  TrackParams
+export const TrackTokensParams$outboundSchema: z.ZodMiniType<
+  TrackTokensParams$Outbound,
+  TrackTokensParams
 > = z.pipe(
   z.object({
     customerId: z.string(),
-    featureId: z.optional(z.string()),
     entityId: z.optional(z.string()),
-    eventName: z.optional(z.string()),
-    value: z.optional(z.number()),
+    featureId: z.optional(z.string()),
+    modelId: z.string(),
+    inputTokens: z.int(),
+    outputTokens: z.int(),
+    cacheReadTokens: z.optional(z.int()),
+    cacheWriteTokens: z.optional(z.int()),
+    audioInputTokens: z.optional(z.int()),
+    audioOutputTokens: z.optional(z.int()),
+    reasoningTokens: z.optional(z.int()),
     properties: z.optional(z.record(z.string(), z.any())),
-    async: z.optional(z.boolean()),
-    lock: z.optional(z.lazy(() => TrackLock$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
       customerId: "customer_id",
-      featureId: "feature_id",
       entityId: "entity_id",
-      eventName: "event_name",
+      featureId: "feature_id",
+      modelId: "model_id",
+      inputTokens: "input_tokens",
+      outputTokens: "output_tokens",
+      cacheReadTokens: "cache_read_tokens",
+      cacheWriteTokens: "cache_write_tokens",
+      audioInputTokens: "audio_input_tokens",
+      audioOutputTokens: "audio_output_tokens",
+      reasoningTokens: "reasoning_tokens",
     });
   }),
 );
 
-export function trackParamsToJSON(trackParams: TrackParams): string {
-  return JSON.stringify(TrackParams$outboundSchema.parse(trackParams));
+export function trackTokensParamsToJSON(
+  trackTokensParams: TrackTokensParams,
+): string {
+  return JSON.stringify(
+    TrackTokensParams$outboundSchema.parse(trackTokensParams),
+  );
 }
 
 /** @internal */
-export const TrackIntervalEnum2$inboundSchema: z.ZodMiniType<
-  TrackIntervalEnum2,
+export const TrackTokensIntervalEnum2$inboundSchema: z.ZodMiniType<
+  TrackTokensIntervalEnum2,
   unknown
-> = openEnums.inboundSchema(TrackIntervalEnum2);
+> = openEnums.inboundSchema(TrackTokensIntervalEnum2);
 
 /** @internal */
-export const TrackIntervalUnion2$inboundSchema: z.ZodMiniType<
-  TrackIntervalUnion2,
+export const TrackTokensIntervalUnion2$inboundSchema: z.ZodMiniType<
+  TrackTokensIntervalUnion2,
   unknown
-> = smartUnion([TrackIntervalEnum2$inboundSchema, types.string()]);
+> = smartUnion([TrackTokensIntervalEnum2$inboundSchema, types.string()]);
 
-export function trackIntervalUnion2FromJSON(
+export function trackTokensIntervalUnion2FromJSON(
   jsonString: string,
-): SafeParseResult<TrackIntervalUnion2, SDKValidationError> {
+): SafeParseResult<TrackTokensIntervalUnion2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => TrackIntervalUnion2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'TrackIntervalUnion2' from JSON`,
+    (x) => TrackTokensIntervalUnion2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'TrackTokensIntervalUnion2' from JSON`,
   );
 }
 
 /** @internal */
-export const TrackReset2$inboundSchema: z.ZodMiniType<TrackReset2, unknown> = z
-  .pipe(
-    z.object({
-      interval: smartUnion([TrackIntervalEnum2$inboundSchema, types.string()]),
-      interval_count: types.optional(types.number()),
-      resets_at: types.nullable(types.number()),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "interval_count": "intervalCount",
-        "resets_at": "resetsAt",
-      });
-    }),
-  );
+export const TrackTokensReset2$inboundSchema: z.ZodMiniType<
+  TrackTokensReset2,
+  unknown
+> = z.pipe(
+  z.object({
+    interval: smartUnion([
+      TrackTokensIntervalEnum2$inboundSchema,
+      types.string(),
+    ]),
+    interval_count: types.optional(types.number()),
+    resets_at: types.nullable(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "interval_count": "intervalCount",
+      "resets_at": "resetsAt",
+    });
+  }),
+);
 
-export function trackReset2FromJSON(
+export function trackTokensReset2FromJSON(
   jsonString: string,
-): SafeParseResult<TrackReset2, SDKValidationError> {
+): SafeParseResult<TrackTokensReset2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => TrackReset2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'TrackReset2' from JSON`,
+    (x) => TrackTokensReset2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'TrackTokensReset2' from JSON`,
   );
 }
 
 /** @internal */
-export const TrackDeduction2$inboundSchema: z.ZodMiniType<
-  TrackDeduction2,
+export const TrackTokensDeduction2$inboundSchema: z.ZodMiniType<
+  TrackTokensDeduction2,
   unknown
 > = z.pipe(
   z.object({
     balance_id: types.string(),
     feature_id: types.string(),
     plan_id: types.nullable(types.string()),
-    reset: types.nullable(z.lazy(() => TrackReset2$inboundSchema)),
+    reset: types.nullable(z.lazy(() => TrackTokensReset2$inboundSchema)),
     value: types.number(),
   }),
   z.transform((v) => {
@@ -385,19 +390,19 @@ export const TrackDeduction2$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function trackDeduction2FromJSON(
+export function trackTokensDeduction2FromJSON(
   jsonString: string,
-): SafeParseResult<TrackDeduction2, SDKValidationError> {
+): SafeParseResult<TrackTokensDeduction2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => TrackDeduction2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'TrackDeduction2' from JSON`,
+    (x) => TrackTokensDeduction2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'TrackTokensDeduction2' from JSON`,
   );
 }
 
 /** @internal */
-export const TrackResponseBody2$inboundSchema: z.ZodMiniType<
-  TrackResponseBody2,
+export const TrackTokensResponseBody2$inboundSchema: z.ZodMiniType<
+  TrackTokensResponseBody2,
   unknown
 > = z.pipe(
   z.object({
@@ -410,7 +415,7 @@ export const TrackResponseBody2$inboundSchema: z.ZodMiniType<
       z.record(z.string(), types.nullable(Balance$inboundSchema)),
     ),
     deductions: types.optional(
-      z.array(z.lazy(() => TrackDeduction2$inboundSchema)),
+      z.array(z.lazy(() => TrackTokensDeduction2$inboundSchema)),
     ),
   }),
   z.transform((v) => {
@@ -422,74 +427,79 @@ export const TrackResponseBody2$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function trackResponseBody2FromJSON(
+export function trackTokensResponseBody2FromJSON(
   jsonString: string,
-): SafeParseResult<TrackResponseBody2, SDKValidationError> {
+): SafeParseResult<TrackTokensResponseBody2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => TrackResponseBody2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'TrackResponseBody2' from JSON`,
+    (x) => TrackTokensResponseBody2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'TrackTokensResponseBody2' from JSON`,
   );
 }
 
 /** @internal */
-export const TrackIntervalEnum1$inboundSchema: z.ZodMiniType<
-  TrackIntervalEnum1,
+export const TrackTokensIntervalEnum1$inboundSchema: z.ZodMiniType<
+  TrackTokensIntervalEnum1,
   unknown
-> = openEnums.inboundSchema(TrackIntervalEnum1);
+> = openEnums.inboundSchema(TrackTokensIntervalEnum1);
 
 /** @internal */
-export const TrackIntervalUnion1$inboundSchema: z.ZodMiniType<
-  TrackIntervalUnion1,
+export const TrackTokensIntervalUnion1$inboundSchema: z.ZodMiniType<
+  TrackTokensIntervalUnion1,
   unknown
-> = smartUnion([TrackIntervalEnum1$inboundSchema, types.string()]);
+> = smartUnion([TrackTokensIntervalEnum1$inboundSchema, types.string()]);
 
-export function trackIntervalUnion1FromJSON(
+export function trackTokensIntervalUnion1FromJSON(
   jsonString: string,
-): SafeParseResult<TrackIntervalUnion1, SDKValidationError> {
+): SafeParseResult<TrackTokensIntervalUnion1, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => TrackIntervalUnion1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'TrackIntervalUnion1' from JSON`,
+    (x) => TrackTokensIntervalUnion1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'TrackTokensIntervalUnion1' from JSON`,
   );
 }
 
 /** @internal */
-export const TrackReset1$inboundSchema: z.ZodMiniType<TrackReset1, unknown> = z
-  .pipe(
-    z.object({
-      interval: smartUnion([TrackIntervalEnum1$inboundSchema, types.string()]),
-      interval_count: types.optional(types.number()),
-      resets_at: types.nullable(types.number()),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "interval_count": "intervalCount",
-        "resets_at": "resetsAt",
-      });
-    }),
-  );
+export const TrackTokensReset1$inboundSchema: z.ZodMiniType<
+  TrackTokensReset1,
+  unknown
+> = z.pipe(
+  z.object({
+    interval: smartUnion([
+      TrackTokensIntervalEnum1$inboundSchema,
+      types.string(),
+    ]),
+    interval_count: types.optional(types.number()),
+    resets_at: types.nullable(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "interval_count": "intervalCount",
+      "resets_at": "resetsAt",
+    });
+  }),
+);
 
-export function trackReset1FromJSON(
+export function trackTokensReset1FromJSON(
   jsonString: string,
-): SafeParseResult<TrackReset1, SDKValidationError> {
+): SafeParseResult<TrackTokensReset1, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => TrackReset1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'TrackReset1' from JSON`,
+    (x) => TrackTokensReset1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'TrackTokensReset1' from JSON`,
   );
 }
 
 /** @internal */
-export const TrackDeduction1$inboundSchema: z.ZodMiniType<
-  TrackDeduction1,
+export const TrackTokensDeduction1$inboundSchema: z.ZodMiniType<
+  TrackTokensDeduction1,
   unknown
 > = z.pipe(
   z.object({
     balance_id: types.string(),
     feature_id: types.string(),
     plan_id: types.nullable(types.string()),
-    reset: types.nullable(z.lazy(() => TrackReset1$inboundSchema)),
+    reset: types.nullable(z.lazy(() => TrackTokensReset1$inboundSchema)),
     value: types.number(),
   }),
   z.transform((v) => {
@@ -501,19 +511,19 @@ export const TrackDeduction1$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function trackDeduction1FromJSON(
+export function trackTokensDeduction1FromJSON(
   jsonString: string,
-): SafeParseResult<TrackDeduction1, SDKValidationError> {
+): SafeParseResult<TrackTokensDeduction1, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => TrackDeduction1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'TrackDeduction1' from JSON`,
+    (x) => TrackTokensDeduction1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'TrackTokensDeduction1' from JSON`,
   );
 }
 
 /** @internal */
-export const TrackResponseBody1$inboundSchema: z.ZodMiniType<
-  TrackResponseBody1,
+export const TrackTokensResponseBody1$inboundSchema: z.ZodMiniType<
+  TrackTokensResponseBody1,
   unknown
 > = z.pipe(
   z.object({
@@ -526,7 +536,7 @@ export const TrackResponseBody1$inboundSchema: z.ZodMiniType<
       z.record(z.string(), types.nullable(Balance$inboundSchema)),
     ),
     deductions: types.optional(
-      z.array(z.lazy(() => TrackDeduction1$inboundSchema)),
+      z.array(z.lazy(() => TrackTokensDeduction1$inboundSchema)),
     ),
   }),
   z.transform((v) => {
@@ -538,31 +548,31 @@ export const TrackResponseBody1$inboundSchema: z.ZodMiniType<
   }),
 );
 
-export function trackResponseBody1FromJSON(
+export function trackTokensResponseBody1FromJSON(
   jsonString: string,
-): SafeParseResult<TrackResponseBody1, SDKValidationError> {
+): SafeParseResult<TrackTokensResponseBody1, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => TrackResponseBody1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'TrackResponseBody1' from JSON`,
+    (x) => TrackTokensResponseBody1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'TrackTokensResponseBody1' from JSON`,
   );
 }
 
 /** @internal */
-export const TrackResponse$inboundSchema: z.ZodMiniType<
-  TrackResponse,
+export const TrackTokensResponse$inboundSchema: z.ZodMiniType<
+  TrackTokensResponse,
   unknown
 > = smartUnion([
-  z.lazy(() => TrackResponseBody1$inboundSchema),
-  z.lazy(() => TrackResponseBody2$inboundSchema),
+  z.lazy(() => TrackTokensResponseBody1$inboundSchema),
+  z.lazy(() => TrackTokensResponseBody2$inboundSchema),
 ]);
 
-export function trackResponseFromJSON(
+export function trackTokensResponseFromJSON(
   jsonString: string,
-): SafeParseResult<TrackResponse, SDKValidationError> {
+): SafeParseResult<TrackTokensResponse, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => TrackResponse$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'TrackResponse' from JSON`,
+    (x) => TrackTokensResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'TrackTokensResponse' from JSON`,
   );
 }

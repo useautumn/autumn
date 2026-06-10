@@ -354,15 +354,16 @@ export type GetCustomerPurchase = {
 };
 
 /**
- * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
 export const GetCustomerFlagsType = {
   Boolean: "boolean",
   Metered: "metered",
   CreditSystem: "credit_system",
+  AiCreditSystem: "ai_credit_system",
 } as const;
 /**
- * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
 export type GetCustomerFlagsType = OpenEnum<typeof GetCustomerFlagsType>;
 
@@ -375,6 +376,16 @@ export type GetCustomerCreditSchema = {
    * Credits consumed per unit of the metered feature.
    */
   creditCost: number;
+};
+
+export type GetCustomerModelMarkups = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+export type GetCustomerProviderMarkups = {
+  markup: number;
 };
 
 /**
@@ -404,7 +415,7 @@ export type GetCustomerFeature = {
    */
   name: string;
   /**
-   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
    */
   type: GetCustomerFlagsType;
   /**
@@ -419,6 +430,21 @@ export type GetCustomerFeature = {
    * For credit_system features: maps metered features to their credit costs.
    */
   creditSchema?: Array<GetCustomerCreditSchema> | undefined;
+  /**
+   * Per-model markup overrides for AI credit systems.
+   */
+  modelMarkups?: { [k: string]: GetCustomerModelMarkups } | null | undefined;
+  /**
+   * Default percentage markup for AI credit systems. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider default markup percentages for AI credit systems.
+   */
+  providerMarkups?:
+    | { [k: string]: GetCustomerProviderMarkups }
+    | null
+    | undefined;
   /**
    * Display names for the feature in billing UI and customer-facing components.
    */
@@ -1217,6 +1243,52 @@ export function getCustomerCreditSchemaFromJSON(
 }
 
 /** @internal */
+export const GetCustomerModelMarkups$inboundSchema: z.ZodMiniType<
+  GetCustomerModelMarkups,
+  unknown
+> = z.pipe(
+  z.object({
+    markup: types.optional(types.number()),
+    input_cost: types.optional(types.number()),
+    output_cost: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "input_cost": "inputCost",
+      "output_cost": "outputCost",
+    });
+  }),
+);
+
+export function getCustomerModelMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerModelMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerModelMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerModelMarkups' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetCustomerProviderMarkups$inboundSchema: z.ZodMiniType<
+  GetCustomerProviderMarkups,
+  unknown
+> = z.object({
+  markup: types.number(),
+});
+
+export function getCustomerProviderMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerProviderMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerProviderMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerProviderMarkups' from JSON`,
+  );
+}
+
+/** @internal */
 export const GetCustomerDisplay$inboundSchema: z.ZodMiniType<
   GetCustomerDisplay,
   unknown
@@ -1249,13 +1321,27 @@ export const GetCustomerFeature$inboundSchema: z.ZodMiniType<
     credit_schema: types.optional(
       z.array(z.lazy(() => GetCustomerCreditSchema$inboundSchema)),
     ),
-    display: types.optional(z.lazy(() => GetCustomerDisplay$inboundSchema)),
+    model_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => GetCustomerModelMarkups$inboundSchema),
+    ))),
+    default_markup: types.optional(types.number()),
+    provider_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => GetCustomerProviderMarkups$inboundSchema),
+    ))),
+    display: types.optional(z.lazy(() =>
+      GetCustomerDisplay$inboundSchema
+    )),
     archived: types.boolean(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
+      "model_markups": "modelMarkups",
+      "default_markup": "defaultMarkup",
+      "provider_markups": "providerMarkups",
     });
   }),
 );

@@ -13,7 +13,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   The name of the feature.
 </DynamicParamField>
 
-<DynamicParamField body="type" type="'boolean' | 'metered' | 'credit_system'" required>
+<DynamicParamField body="type" type="'boolean' | 'metered' | 'credit_system' | 'ai_credit_system'" required>
   The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system.
 </DynamicParamField>
 
@@ -32,11 +32,35 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 </DynamicParamField>
 
 <DynamicParamField body="credit_schema" type="object[]">
-  A schema that maps 'single_use' feature IDs to credit costs. Applicable only for 'credit_system' features.
+  A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead.
   <Expandable title="properties">
     <DynamicParamField body="metered_feature_id" type="string" required />
 
     <DynamicParamField body="credit_cost" type="number" required />
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="model_markups.{key}" type="object | null">
+  Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.
+  <Expandable title="properties">
+    <DynamicParamField body="markup" type="number" />
+
+    <DynamicParamField body="input_cost" type="number" />
+
+    <DynamicParamField body="output_cost" type="number" />
+
+  </Expandable>
+</DynamicParamField>
+
+<DynamicParamField body="default_markup" type="number">
+  Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free.
+</DynamicParamField>
+
+<DynamicParamField body="provider_markups.{key}" type="object | null">
+  Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id.
+  <Expandable title="properties">
+    <DynamicParamField body="markup" type="number" required />
 
   </Expandable>
 </DynamicParamField>
@@ -58,8 +82,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   Human-readable name displayed in the dashboard and billing UI.
 </DynamicResponseField>
 
-<DynamicResponseField name="type" type="'boolean' | 'metered' | 'credit_system'">
-  Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+<DynamicResponseField name="type" type="'boolean' | 'metered' | 'credit_system' | 'ai_credit_system'">
+  Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
 </DynamicResponseField>
 
 <DynamicResponseField name="consumable" type="boolean">
@@ -80,6 +104,30 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     <DynamicResponseField name="credit_cost" type="number">
       Credits consumed per unit of the metered feature.
     </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="model_markups.{key}" type="object | null">
+  Per-model markup overrides for AI credit systems.
+  <Expandable title="properties">
+    <DynamicResponseField name="markup" type="number" />
+
+    <DynamicResponseField name="input_cost" type="number" />
+
+    <DynamicResponseField name="output_cost" type="number" />
+
+  </Expandable>
+</DynamicResponseField>
+
+<DynamicResponseField name="default_markup" type="number">
+  Default percentage markup for AI credit systems. Use -100 to make usage free.
+</DynamicResponseField>
+
+<DynamicResponseField name="provider_markups.{key}" type="object | null">
+  Per-provider default markup percentages for AI credit systems.
+  <Expandable title="properties">
+    <DynamicResponseField name="markup" type="number" />
 
   </Expandable>
 </DynamicResponseField>

@@ -12,7 +12,7 @@ from autumn_sdk.types import (
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypedDict
 
 
@@ -44,22 +44,23 @@ class CreateFeatureGlobals(BaseModel):
         return m
 
 
-CreateFeatureTypeRequest = Literal[
+CreateFeatureTypeRequestBody = Literal[
     "boolean",
     "metered",
     "credit_system",
+    "ai_credit_system",
 ]
 r"""The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system."""
 
 
-class CreateFeatureDisplayRequestTypedDict(TypedDict):
+class CreateFeatureDisplayRequestBodyTypedDict(TypedDict):
     r"""Singular and plural display names for the feature in your user interface."""
 
     singular: str
     plural: str
 
 
-class CreateFeatureDisplayRequest(BaseModel):
+class CreateFeatureDisplayRequestBody(BaseModel):
     r"""Singular and plural display names for the feature in your user interface."""
 
     singular: str
@@ -67,57 +68,33 @@ class CreateFeatureDisplayRequest(BaseModel):
     plural: str
 
 
-class CreateFeatureCreditSchemaRequestTypedDict(TypedDict):
+class CreateFeatureCreditSchemaRequestBodyTypedDict(TypedDict):
     metered_feature_id: str
     credit_cost: float
 
 
-class CreateFeatureCreditSchemaRequest(BaseModel):
+class CreateFeatureCreditSchemaRequestBody(BaseModel):
     metered_feature_id: str
 
     credit_cost: float
 
 
-class CreateFeatureParamsTypedDict(TypedDict):
-    name: str
-    r"""The name of the feature."""
-    type: CreateFeatureTypeRequest
-    r"""The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system."""
-    feature_id: str
-    r"""The ID of the feature to create."""
-    consumable: NotRequired[bool]
-    r"""Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features."""
-    display: NotRequired[CreateFeatureDisplayRequestTypedDict]
-    r"""Singular and plural display names for the feature in your user interface."""
-    credit_schema: NotRequired[List[CreateFeatureCreditSchemaRequestTypedDict]]
-    r"""A schema that maps 'single_use' feature IDs to credit costs. Applicable only for 'credit_system' features."""
-    event_names: NotRequired[List[str]]
+class CreateFeatureModelMarkupsRequestTypedDict(TypedDict):
+    markup: NotRequired[float]
+    input_cost: NotRequired[float]
+    output_cost: NotRequired[float]
 
 
-class CreateFeatureParams(BaseModel):
-    name: str
-    r"""The name of the feature."""
+class CreateFeatureModelMarkupsRequest(BaseModel):
+    markup: Optional[float] = None
 
-    type: CreateFeatureTypeRequest
-    r"""The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system."""
+    input_cost: Optional[float] = None
 
-    feature_id: str
-    r"""The ID of the feature to create."""
-
-    consumable: Optional[bool] = None
-    r"""Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features."""
-
-    display: Optional[CreateFeatureDisplayRequest] = None
-    r"""Singular and plural display names for the feature in your user interface."""
-
-    credit_schema: Optional[List[CreateFeatureCreditSchemaRequest]] = None
-    r"""A schema that maps 'single_use' feature IDs to credit costs. Applicable only for 'credit_system' features."""
-
-    event_names: Optional[List[str]] = None
+    output_cost: Optional[float] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["consumable", "display", "credit_schema", "event_names"])
+        optional_fields = set(["markup", "input_cost", "output_cost"])
         serialized = handler(self)
         m = {}
 
@@ -132,15 +109,118 @@ class CreateFeatureParams(BaseModel):
         return m
 
 
+class CreateFeatureProviderMarkupsRequestTypedDict(TypedDict):
+    markup: float
+
+
+class CreateFeatureProviderMarkupsRequest(BaseModel):
+    markup: float
+
+
+class CreateFeatureParamsTypedDict(TypedDict):
+    name: str
+    r"""The name of the feature."""
+    type: CreateFeatureTypeRequestBody
+    r"""The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system."""
+    feature_id: str
+    r"""The ID of the feature to create."""
+    consumable: NotRequired[bool]
+    r"""Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features."""
+    display: NotRequired[CreateFeatureDisplayRequestBodyTypedDict]
+    r"""Singular and plural display names for the feature in your user interface."""
+    credit_schema: NotRequired[List[CreateFeatureCreditSchemaRequestBodyTypedDict]]
+    r"""A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead."""
+    model_markups: NotRequired[
+        Nullable[Dict[str, CreateFeatureModelMarkupsRequestTypedDict]]
+    ]
+    r"""Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration."""
+    default_markup: NotRequired[float]
+    r"""Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free."""
+    provider_markups: NotRequired[
+        Nullable[Dict[str, CreateFeatureProviderMarkupsRequestTypedDict]]
+    ]
+    r"""Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id."""
+    event_names: NotRequired[List[str]]
+
+
+class CreateFeatureParams(BaseModel):
+    name: str
+    r"""The name of the feature."""
+
+    type: CreateFeatureTypeRequestBody
+    r"""The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system."""
+
+    feature_id: str
+    r"""The ID of the feature to create."""
+
+    consumable: Optional[bool] = None
+    r"""Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features."""
+
+    display: Optional[CreateFeatureDisplayRequestBody] = None
+    r"""Singular and plural display names for the feature in your user interface."""
+
+    credit_schema: Optional[List[CreateFeatureCreditSchemaRequestBody]] = None
+    r"""A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead."""
+
+    model_markups: OptionalNullable[Dict[str, CreateFeatureModelMarkupsRequest]] = UNSET
+    r"""Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration."""
+
+    default_markup: Optional[float] = None
+    r"""Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free."""
+
+    provider_markups: OptionalNullable[
+        Dict[str, CreateFeatureProviderMarkupsRequest]
+    ] = UNSET
+    r"""Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id."""
+
+    event_names: Optional[List[str]] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(
+            [
+                "consumable",
+                "display",
+                "credit_schema",
+                "model_markups",
+                "default_markup",
+                "provider_markups",
+                "event_names",
+            ]
+        )
+        nullable_fields = set(["model_markups", "provider_markups"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
+
+            if val != UNSET_SENTINEL:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
+                    m[k] = val
+
+        return m
+
+
 CreateFeatureTypeResponse = Union[
     Literal[
         "boolean",
         "metered",
         "credit_system",
+        "ai_credit_system",
     ],
     UnrecognizedStr,
 ]
-r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
 
 class CreateFeatureCreditSchemaResponseTypedDict(TypedDict):
@@ -156,6 +236,44 @@ class CreateFeatureCreditSchemaResponse(BaseModel):
 
     credit_cost: float
     r"""Credits consumed per unit of the metered feature."""
+
+
+class CreateFeatureModelMarkupsResponseTypedDict(TypedDict):
+    markup: NotRequired[float]
+    input_cost: NotRequired[float]
+    output_cost: NotRequired[float]
+
+
+class CreateFeatureModelMarkupsResponse(BaseModel):
+    markup: Optional[float] = None
+
+    input_cost: Optional[float] = None
+
+    output_cost: Optional[float] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["markup", "input_cost", "output_cost"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreateFeatureProviderMarkupsResponseTypedDict(TypedDict):
+    markup: float
+
+
+class CreateFeatureProviderMarkupsResponse(BaseModel):
+    markup: float
 
 
 class CreateFeatureDisplayResponseTypedDict(TypedDict):
@@ -210,7 +328,7 @@ class CreateFeatureResponseTypedDict(TypedDict):
     name: str
     r"""Human-readable name displayed in the dashboard and billing UI."""
     type: CreateFeatureTypeResponse
-    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
     consumable: bool
     r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
     archived: bool
@@ -219,6 +337,16 @@ class CreateFeatureResponseTypedDict(TypedDict):
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
     credit_schema: NotRequired[List[CreateFeatureCreditSchemaResponseTypedDict]]
     r"""For credit_system features: maps metered features to their credit costs."""
+    model_markups: NotRequired[
+        Nullable[Dict[str, CreateFeatureModelMarkupsResponseTypedDict]]
+    ]
+    r"""Per-model markup overrides for AI credit systems."""
+    default_markup: NotRequired[float]
+    r"""Default percentage markup for AI credit systems. Use -100 to make usage free."""
+    provider_markups: NotRequired[
+        Nullable[Dict[str, CreateFeatureProviderMarkupsResponseTypedDict]]
+    ]
+    r"""Per-provider default markup percentages for AI credit systems."""
     display: NotRequired[CreateFeatureDisplayResponseTypedDict]
     r"""Display names for the feature in billing UI and customer-facing components."""
 
@@ -233,7 +361,7 @@ class CreateFeatureResponse(BaseModel):
     r"""Human-readable name displayed in the dashboard and billing UI."""
 
     type: CreateFeatureTypeResponse
-    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
     consumable: bool
     r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
@@ -247,21 +375,52 @@ class CreateFeatureResponse(BaseModel):
     credit_schema: Optional[List[CreateFeatureCreditSchemaResponse]] = None
     r"""For credit_system features: maps metered features to their credit costs."""
 
+    model_markups: OptionalNullable[Dict[str, CreateFeatureModelMarkupsResponse]] = (
+        UNSET
+    )
+    r"""Per-model markup overrides for AI credit systems."""
+
+    default_markup: Optional[float] = None
+    r"""Default percentage markup for AI credit systems. Use -100 to make usage free."""
+
+    provider_markups: OptionalNullable[
+        Dict[str, CreateFeatureProviderMarkupsResponse]
+    ] = UNSET
+    r"""Per-provider default markup percentages for AI credit systems."""
+
     display: Optional[CreateFeatureDisplayResponse] = None
     r"""Display names for the feature in billing UI and customer-facing components."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["event_names", "credit_schema", "display"])
+        optional_fields = set(
+            [
+                "event_names",
+                "credit_schema",
+                "model_markups",
+                "default_markup",
+                "provider_markups",
+                "display",
+            ]
+        )
+        nullable_fields = set(["model_markups", "provider_markups"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m

@@ -248,8 +248,8 @@ await autumn.plans.create({
           'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
         </DynamicParamField>
 
-        <DynamicParamField body="max_purchase" type="number">
-          Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+        <DynamicParamField body="max_purchase" type="number | null">
+          Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
         </DynamicParamField>
 
       </Expandable>
@@ -409,7 +409,7 @@ await autumn.plans.create({
           The name of the feature.
         </DynamicResponseField>
 
-        <DynamicResponseField name="type" type="'static' | 'boolean' | 'single_use' | 'continuous_use' | 'credit_system'">
+        <DynamicResponseField name="type" type="'static' | 'boolean' | 'single_use' | 'continuous_use' | 'credit_system' | 'ai_credit_system'">
           The type of the feature
         </DynamicResponseField>
 
@@ -477,8 +477,16 @@ await autumn.plans.create({
           Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
         </DynamicResponseField>
 
-        <DynamicResponseField name="tiers" type="any[]">
+        <DynamicResponseField name="tiers" type="object[]">
           Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
+          <Expandable title="properties">
+            <DynamicResponseField name="to" type="number" />
+
+            <DynamicResponseField name="amount" type="number" />
+
+            <DynamicResponseField name="flat_amount" type="number" />
+
+          </Expandable>
         </DynamicResponseField>
 
         <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'" />

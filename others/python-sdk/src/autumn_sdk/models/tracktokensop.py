@@ -3,19 +3,18 @@
 from __future__ import annotations
 from .balance import Balance, BalanceTypedDict
 from autumn_sdk.types import BaseModel, Nullable, UNSET_SENTINEL, UnrecognizedStr
-from autumn_sdk.utils import FieldMetadata, HeaderMetadata, validate_const
+from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from pydantic.functional_validators import AfterValidator
 from typing import Any, Dict, List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
-class TrackGlobalsTypedDict(TypedDict):
+class TrackTokensGlobalsTypedDict(TypedDict):
     x_api_version: NotRequired[str]
 
 
-class TrackGlobals(BaseModel):
+class TrackTokensGlobals(BaseModel):
     x_api_version: Annotated[
         Optional[str],
         pydantic.Field(alias="x-api-version"),
@@ -39,98 +38,82 @@ class TrackGlobals(BaseModel):
         return m
 
 
-class TrackLockTypedDict(TypedDict):
-    lock_id: str
-    r"""A unique identifier for this lock. Used to finalize the lock later via balances.finalize."""
-    enabled: Literal[True]
-    r"""Must be true to enable locking."""
-    expires_at: NotRequired[float]
-    r"""Unix timestamp (ms) when the lock automatically expires and releases the held balance."""
-
-
-class TrackLock(BaseModel):
-    lock_id: str
-    r"""A unique identifier for this lock. Used to finalize the lock later via balances.finalize."""
-
-    enabled: Annotated[
-        Annotated[Literal[True], AfterValidator(validate_const(True))],
-        pydantic.Field(alias="enabled"),
-    ] = True
-    r"""Must be true to enable locking."""
-
-    expires_at: Optional[float] = None
-    r"""Unix timestamp (ms) when the lock automatically expires and releases the held balance."""
-
-    @model_serializer(mode="wrap")
-    def serialize_model(self, handler):
-        optional_fields = set(["expires_at"])
-        serialized = handler(self)
-        m = {}
-
-        for n, f in type(self).model_fields.items():
-            k = f.alias or n
-            val = serialized.get(k, serialized.get(n))
-
-            if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
-                    m[k] = val
-
-        return m
-
-
-class TrackParamsTypedDict(TypedDict):
+class TrackTokensParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer."""
-    feature_id: NotRequired[str]
-    r"""The ID of the feature to track usage for. Required if event_name is not provided."""
+    model_id: str
+    r"""The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev."""
+    input_tokens: int
+    r"""Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools."""
+    output_tokens: int
+    r"""Number of text output tokens consumed. Exclusive of the reasoning and audio output pools."""
     entity_id: NotRequired[str]
-    r"""The ID of the entity for entity-scoped balances (e.g., per-seat limits)."""
-    event_name: NotRequired[str]
-    r"""Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event."""
-    value: NotRequired[float]
-    r"""The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat)."""
+    r"""The ID of the entity for entity-scoped balances."""
+    feature_id: NotRequired[str]
+    r"""The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted — only required when a customer has multiple AI credit systems."""
+    cache_read_tokens: NotRequired[int]
+    r"""Number of cached input tokens read."""
+    cache_write_tokens: NotRequired[int]
+    r"""Number of input tokens written to the cache."""
+    audio_input_tokens: NotRequired[int]
+    r"""Number of audio input tokens consumed."""
+    audio_output_tokens: NotRequired[int]
+    r"""Number of audio output tokens generated."""
+    reasoning_tokens: NotRequired[int]
+    r"""Number of reasoning tokens generated."""
     properties: NotRequired[Dict[str, Any]]
     r"""Additional properties to attach to this usage event."""
-    async_: NotRequired[bool]
-    r"""If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information."""
-    lock: NotRequired[TrackLockTypedDict]
 
 
-class TrackParams(BaseModel):
+class TrackTokensParams(BaseModel):
     customer_id: str
     r"""The ID of the customer."""
 
-    feature_id: Optional[str] = None
-    r"""The ID of the feature to track usage for. Required if event_name is not provided."""
+    model_id: str
+    r"""The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev."""
+
+    input_tokens: int
+    r"""Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools."""
+
+    output_tokens: int
+    r"""Number of text output tokens consumed. Exclusive of the reasoning and audio output pools."""
 
     entity_id: Optional[str] = None
-    r"""The ID of the entity for entity-scoped balances (e.g., per-seat limits)."""
+    r"""The ID of the entity for entity-scoped balances."""
 
-    event_name: Optional[str] = None
-    r"""Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event."""
+    feature_id: Optional[str] = None
+    r"""The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted — only required when a customer has multiple AI credit systems."""
 
-    value: Optional[float] = None
-    r"""The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat)."""
+    cache_read_tokens: Optional[int] = None
+    r"""Number of cached input tokens read."""
+
+    cache_write_tokens: Optional[int] = None
+    r"""Number of input tokens written to the cache."""
+
+    audio_input_tokens: Optional[int] = None
+    r"""Number of audio input tokens consumed."""
+
+    audio_output_tokens: Optional[int] = None
+    r"""Number of audio output tokens generated."""
+
+    reasoning_tokens: Optional[int] = None
+    r"""Number of reasoning tokens generated."""
 
     properties: Optional[Dict[str, Any]] = None
     r"""Additional properties to attach to this usage event."""
-
-    async_: Annotated[Optional[bool], pydantic.Field(alias="async")] = None
-    r"""If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information."""
-
-    lock: Optional[TrackLock] = None
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
             [
-                "feature_id",
                 "entity_id",
-                "event_name",
-                "value",
+                "feature_id",
+                "cache_read_tokens",
+                "cache_write_tokens",
+                "audio_input_tokens",
+                "audio_output_tokens",
+                "reasoning_tokens",
                 "properties",
-                "async",
-                "lock",
             ]
         )
         serialized = handler(self)
@@ -147,7 +130,7 @@ class TrackParams(BaseModel):
         return m
 
 
-TrackIntervalEnum2 = Union[
+TrackTokensIntervalEnum2 = Union[
     Literal[
         "one_off",
         "minute",
@@ -163,20 +146,20 @@ TrackIntervalEnum2 = Union[
 ]
 
 
-TrackIntervalUnion2TypedDict = TypeAliasType(
-    "TrackIntervalUnion2TypedDict", Union[TrackIntervalEnum2, str]
+TrackTokensIntervalUnion2TypedDict = TypeAliasType(
+    "TrackTokensIntervalUnion2TypedDict", Union[TrackTokensIntervalEnum2, str]
 )
 r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
 
 
-TrackIntervalUnion2 = TypeAliasType(
-    "TrackIntervalUnion2", Union[TrackIntervalEnum2, str]
+TrackTokensIntervalUnion2 = TypeAliasType(
+    "TrackTokensIntervalUnion2", Union[TrackTokensIntervalEnum2, str]
 )
 r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
 
 
-class TrackReset2TypedDict(TypedDict):
-    interval: TrackIntervalUnion2TypedDict
+class TrackTokensReset2TypedDict(TypedDict):
+    interval: TrackTokensIntervalUnion2TypedDict
     r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
     resets_at: Nullable[float]
     r"""Timestamp when the balance will next reset."""
@@ -184,8 +167,8 @@ class TrackReset2TypedDict(TypedDict):
     r"""Number of intervals between resets (eg. 2 for bi-monthly)."""
 
 
-class TrackReset2(BaseModel):
-    interval: TrackIntervalUnion2
+class TrackTokensReset2(BaseModel):
+    interval: TrackTokensIntervalUnion2
     r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
 
     resets_at: Nullable[float]
@@ -220,20 +203,20 @@ class TrackReset2(BaseModel):
         return m
 
 
-class TrackDeduction2TypedDict(TypedDict):
+class TrackTokensDeduction2TypedDict(TypedDict):
     balance_id: str
     r"""ID of the underlying balance row that was deducted from (customer_entitlement or rollover)."""
     feature_id: str
     r"""The feature this balance belongs to."""
     plan_id: Nullable[str]
     r"""ID of the plan/product this balance belongs to. Null when the balance can't be attributed to a single plan (e.g. it spans multiple)."""
-    reset: Nullable[TrackReset2TypedDict]
+    reset: Nullable[TrackTokensReset2TypedDict]
     r"""Reset configuration for the balance this deduction came from, or null if the balance doesn't reset."""
     value: float
     r"""Amount deducted from this balance. Positive when usage was consumed, negative when credit was restored (e.g. a refund via negative track value)."""
 
 
-class TrackDeduction2(BaseModel):
+class TrackTokensDeduction2(BaseModel):
     balance_id: str
     r"""ID of the underlying balance row that was deducted from (customer_entitlement or rollover)."""
 
@@ -243,7 +226,7 @@ class TrackDeduction2(BaseModel):
     plan_id: Nullable[str]
     r"""ID of the plan/product this balance belongs to. Null when the balance can't be attributed to a single plan (e.g. it spans multiple)."""
 
-    reset: Nullable[TrackReset2]
+    reset: Nullable[TrackTokensReset2]
     r"""Reset configuration for the balance this deduction came from, or null if the balance doesn't reset."""
 
     value: float
@@ -264,8 +247,8 @@ class TrackDeduction2(BaseModel):
         return m
 
 
-class TrackResponseBody2TypedDict(TypedDict):
-    r"""Accepted. Autumn is experiencing degraded service from a downstream provider, so the event was accepted for replay and will be tracked as soon as the service is restored."""
+class TrackTokensResponseBody2TypedDict(TypedDict):
+    r"""Accepted. Autumn is experiencing degraded service from a downstream provider, so the token usage event was accepted for replay and will be tracked as soon as the service is restored."""
 
     customer_id: str
     r"""The ID of the customer whose usage was tracked."""
@@ -279,12 +262,12 @@ class TrackResponseBody2TypedDict(TypedDict):
     r"""The event name that was tracked, if event_name was used instead of feature_id."""
     balances: NotRequired[Dict[str, Nullable[BalanceTypedDict]]]
     r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
-    deductions: NotRequired[List[TrackDeduction2TypedDict]]
+    deductions: NotRequired[List[TrackTokensDeduction2TypedDict]]
     r"""Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling."""
 
 
-class TrackResponseBody2(BaseModel):
-    r"""Accepted. Autumn is experiencing degraded service from a downstream provider, so the event was accepted for replay and will be tracked as soon as the service is restored."""
+class TrackTokensResponseBody2(BaseModel):
+    r"""Accepted. Autumn is experiencing degraded service from a downstream provider, so the token usage event was accepted for replay and will be tracked as soon as the service is restored."""
 
     customer_id: str
     r"""The ID of the customer whose usage was tracked."""
@@ -304,7 +287,7 @@ class TrackResponseBody2(BaseModel):
     balances: Optional[Dict[str, Nullable[Balance]]] = None
     r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
 
-    deductions: Optional[List[TrackDeduction2]] = None
+    deductions: Optional[List[TrackTokensDeduction2]] = None
     r"""Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling."""
 
     @model_serializer(mode="wrap")
@@ -333,7 +316,7 @@ class TrackResponseBody2(BaseModel):
         return m
 
 
-TrackIntervalEnum1 = Union[
+TrackTokensIntervalEnum1 = Union[
     Literal[
         "one_off",
         "minute",
@@ -349,20 +332,20 @@ TrackIntervalEnum1 = Union[
 ]
 
 
-TrackIntervalUnion1TypedDict = TypeAliasType(
-    "TrackIntervalUnion1TypedDict", Union[TrackIntervalEnum1, str]
+TrackTokensIntervalUnion1TypedDict = TypeAliasType(
+    "TrackTokensIntervalUnion1TypedDict", Union[TrackTokensIntervalEnum1, str]
 )
 r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
 
 
-TrackIntervalUnion1 = TypeAliasType(
-    "TrackIntervalUnion1", Union[TrackIntervalEnum1, str]
+TrackTokensIntervalUnion1 = TypeAliasType(
+    "TrackTokensIntervalUnion1", Union[TrackTokensIntervalEnum1, str]
 )
 r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
 
 
-class TrackReset1TypedDict(TypedDict):
-    interval: TrackIntervalUnion1TypedDict
+class TrackTokensReset1TypedDict(TypedDict):
+    interval: TrackTokensIntervalUnion1TypedDict
     r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
     resets_at: Nullable[float]
     r"""Timestamp when the balance will next reset."""
@@ -370,8 +353,8 @@ class TrackReset1TypedDict(TypedDict):
     r"""Number of intervals between resets (eg. 2 for bi-monthly)."""
 
 
-class TrackReset1(BaseModel):
-    interval: TrackIntervalUnion1
+class TrackTokensReset1(BaseModel):
+    interval: TrackTokensIntervalUnion1
     r"""The reset interval (hour, day, week, month, etc.) or 'multiple' if combined from different intervals."""
 
     resets_at: Nullable[float]
@@ -406,20 +389,20 @@ class TrackReset1(BaseModel):
         return m
 
 
-class TrackDeduction1TypedDict(TypedDict):
+class TrackTokensDeduction1TypedDict(TypedDict):
     balance_id: str
     r"""ID of the underlying balance row that was deducted from (customer_entitlement or rollover)."""
     feature_id: str
     r"""The feature this balance belongs to."""
     plan_id: Nullable[str]
     r"""ID of the plan/product this balance belongs to. Null when the balance can't be attributed to a single plan (e.g. it spans multiple)."""
-    reset: Nullable[TrackReset1TypedDict]
+    reset: Nullable[TrackTokensReset1TypedDict]
     r"""Reset configuration for the balance this deduction came from, or null if the balance doesn't reset."""
     value: float
     r"""Amount deducted from this balance. Positive when usage was consumed, negative when credit was restored (e.g. a refund via negative track value)."""
 
 
-class TrackDeduction1(BaseModel):
+class TrackTokensDeduction1(BaseModel):
     balance_id: str
     r"""ID of the underlying balance row that was deducted from (customer_entitlement or rollover)."""
 
@@ -429,7 +412,7 @@ class TrackDeduction1(BaseModel):
     plan_id: Nullable[str]
     r"""ID of the plan/product this balance belongs to. Null when the balance can't be attributed to a single plan (e.g. it spans multiple)."""
 
-    reset: Nullable[TrackReset1]
+    reset: Nullable[TrackTokensReset1]
     r"""Reset configuration for the balance this deduction came from, or null if the balance doesn't reset."""
 
     value: float
@@ -450,7 +433,7 @@ class TrackDeduction1(BaseModel):
         return m
 
 
-class TrackResponseBody1TypedDict(TypedDict):
+class TrackTokensResponseBody1TypedDict(TypedDict):
     r"""OK"""
 
     customer_id: str
@@ -465,11 +448,11 @@ class TrackResponseBody1TypedDict(TypedDict):
     r"""The event name that was tracked, if event_name was used instead of feature_id."""
     balances: NotRequired[Dict[str, Nullable[BalanceTypedDict]]]
     r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
-    deductions: NotRequired[List[TrackDeduction1TypedDict]]
+    deductions: NotRequired[List[TrackTokensDeduction1TypedDict]]
     r"""Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling."""
 
 
-class TrackResponseBody1(BaseModel):
+class TrackTokensResponseBody1(BaseModel):
     r"""OK"""
 
     customer_id: str
@@ -490,7 +473,7 @@ class TrackResponseBody1(BaseModel):
     balances: Optional[Dict[str, Nullable[Balance]]] = None
     r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
 
-    deductions: Optional[List[TrackDeduction1]] = None
+    deductions: Optional[List[TrackTokensDeduction1]] = None
     r"""Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling."""
 
     @model_serializer(mode="wrap")
@@ -519,22 +502,12 @@ class TrackResponseBody1(BaseModel):
         return m
 
 
-TrackResponseTypedDict = TypeAliasType(
-    "TrackResponseTypedDict",
-    Union[TrackResponseBody1TypedDict, TrackResponseBody2TypedDict],
+TrackTokensResponseTypedDict = TypeAliasType(
+    "TrackTokensResponseTypedDict",
+    Union[TrackTokensResponseBody1TypedDict, TrackTokensResponseBody2TypedDict],
 )
 
 
-TrackResponse = TypeAliasType(
-    "TrackResponse", Union[TrackResponseBody1, TrackResponseBody2]
+TrackTokensResponse = TypeAliasType(
+    "TrackTokensResponse", Union[TrackTokensResponseBody1, TrackTokensResponseBody2]
 )
-
-
-try:
-    TrackLock.model_rebuild()
-except NameError:
-    pass
-try:
-    TrackParams.model_rebuild()
-except NameError:
-    pass

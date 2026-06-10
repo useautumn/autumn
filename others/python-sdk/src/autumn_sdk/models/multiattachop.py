@@ -221,8 +221,8 @@ class MultiAttachPriceTypedDict(TypedDict):
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
     r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
-    max_purchase: NotRequired[float]
-    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
+    max_purchase: NotRequired[Nullable[float]]
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
 
 class MultiAttachPrice(BaseModel):
@@ -248,8 +248,8 @@ class MultiAttachPrice(BaseModel):
     billing_units: Optional[float] = 1
     r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
 
-    max_purchase: Optional[float] = None
-    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
+    max_purchase: OptionalNullable[float] = UNSET
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -263,15 +263,24 @@ class MultiAttachPrice(BaseModel):
                 "max_purchase",
             ]
         )
+        nullable_fields = set(["max_purchase"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m

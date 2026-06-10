@@ -10,7 +10,7 @@ from autumn_sdk.types import (
     UnrecognizedStr,
 )
 from pydantic import model_serializer
-from typing import Any, List, Literal, Optional, Union
+from typing import Dict, List, Literal, Optional, Union
 from typing_extensions import NotRequired, TypeAliasType, TypedDict
 
 
@@ -19,10 +19,11 @@ BalanceType = Union[
         "boolean",
         "metered",
         "credit_system",
+        "ai_credit_system",
     ],
     UnrecognizedStr,
 ]
-r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
 
 class BalanceCreditSchemaTypedDict(TypedDict):
@@ -38,6 +39,44 @@ class BalanceCreditSchema(BaseModel):
 
     credit_cost: float
     r"""Credits consumed per unit of the metered feature."""
+
+
+class BalanceModelMarkupsTypedDict(TypedDict):
+    markup: NotRequired[float]
+    input_cost: NotRequired[float]
+    output_cost: NotRequired[float]
+
+
+class BalanceModelMarkups(BaseModel):
+    markup: Optional[float] = None
+
+    input_cost: Optional[float] = None
+
+    output_cost: Optional[float] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["markup", "input_cost", "output_cost"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class BalanceProviderMarkupsTypedDict(TypedDict):
+    markup: float
+
+
+class BalanceProviderMarkups(BaseModel):
+    markup: float
 
 
 class BalanceDisplayTypedDict(TypedDict):
@@ -92,7 +131,7 @@ class BalanceFeatureTypedDict(TypedDict):
     name: str
     r"""Human-readable name displayed in the dashboard and billing UI."""
     type: BalanceType
-    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
     consumable: bool
     r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
     archived: bool
@@ -101,6 +140,12 @@ class BalanceFeatureTypedDict(TypedDict):
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
     credit_schema: NotRequired[List[BalanceCreditSchemaTypedDict]]
     r"""For credit_system features: maps metered features to their credit costs."""
+    model_markups: NotRequired[Nullable[Dict[str, BalanceModelMarkupsTypedDict]]]
+    r"""Per-model markup overrides for AI credit systems."""
+    default_markup: NotRequired[float]
+    r"""Default percentage markup for AI credit systems. Use -100 to make usage free."""
+    provider_markups: NotRequired[Nullable[Dict[str, BalanceProviderMarkupsTypedDict]]]
+    r"""Per-provider default markup percentages for AI credit systems."""
     display: NotRequired[BalanceDisplayTypedDict]
     r"""Display names for the feature in billing UI and customer-facing components."""
 
@@ -115,7 +160,7 @@ class BalanceFeature(BaseModel):
     r"""Human-readable name displayed in the dashboard and billing UI."""
 
     type: BalanceType
-    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
     consumable: bool
     r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
@@ -129,21 +174,48 @@ class BalanceFeature(BaseModel):
     credit_schema: Optional[List[BalanceCreditSchema]] = None
     r"""For credit_system features: maps metered features to their credit costs."""
 
+    model_markups: OptionalNullable[Dict[str, BalanceModelMarkups]] = UNSET
+    r"""Per-model markup overrides for AI credit systems."""
+
+    default_markup: Optional[float] = None
+    r"""Default percentage markup for AI credit systems. Use -100 to make usage free."""
+
+    provider_markups: OptionalNullable[Dict[str, BalanceProviderMarkups]] = UNSET
+    r"""Per-provider default markup percentages for AI credit systems."""
+
     display: Optional[BalanceDisplay] = None
     r"""Display names for the feature in billing UI and customer-facing components."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["event_names", "credit_schema", "display"])
+        optional_fields = set(
+            [
+                "event_names",
+                "credit_schema",
+                "model_markups",
+                "default_markup",
+                "provider_markups",
+                "display",
+            ]
+        )
+        nullable_fields = set(["model_markups", "provider_markups"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m
@@ -222,6 +294,42 @@ class BalanceReset(BaseModel):
         return m
 
 
+BalanceToTypedDict = TypeAliasType("BalanceToTypedDict", Union[float, str])
+
+
+BalanceTo = TypeAliasType("BalanceTo", Union[float, str])
+
+
+class BalanceTierTypedDict(TypedDict):
+    to: BalanceToTypedDict
+    amount: float
+    flat_amount: NotRequired[float]
+
+
+class BalanceTier(BaseModel):
+    to: BalanceTo
+
+    amount: float
+
+    flat_amount: Optional[float] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 BalanceTierBehavior = Union[
     Literal[
         "graduated",
@@ -251,7 +359,7 @@ class BalancePriceTypedDict(TypedDict):
     r"""Maximum quantity that can be purchased, or null for unlimited."""
     amount: NotRequired[float]
     r"""The per-unit price amount."""
-    tiers: NotRequired[List[Nullable[Any]]]
+    tiers: NotRequired[List[BalanceTierTypedDict]]
     r"""Tiered pricing configuration if applicable."""
     tier_behavior: NotRequired[BalanceTierBehavior]
     r"""How tiers are applied: graduated (split across bands) or volume (flat rate for the matched tier)."""
@@ -270,7 +378,7 @@ class BalancePrice(BaseModel):
     amount: Optional[float] = None
     r"""The per-unit price amount."""
 
-    tiers: Optional[List[Nullable[Any]]] = None
+    tiers: Optional[List[BalanceTier]] = None
     r"""Tiered pricing configuration if applicable."""
 
     tier_behavior: Optional[BalanceTierBehavior] = None
