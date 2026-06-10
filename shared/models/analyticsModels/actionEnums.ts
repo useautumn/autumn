@@ -2,6 +2,7 @@ export enum AuthType {
 	Admin = "admin",
 	SecretKey = "secret_key",
 	PublicKey = "public_key",
+	CustomerJwt = "customer_jwt",
 	Dashboard = "dashboard",
 
 	// Internal

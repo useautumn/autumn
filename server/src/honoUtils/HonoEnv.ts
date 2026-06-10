@@ -46,6 +46,17 @@ export type RequestContext = {
 	isPublic: boolean;
 	useReplicaDb?: boolean;
 	authType: AuthType;
+	/** True when this request authenticated via a per-customer JWT. Set by
+	 *  customerJwtMiddleware; read by customerJwtVersionMiddleware to enforce
+	 *  the v2.3+ floor. */
+	isCustomerJwt?: boolean;
+	/** Verified per-customer JWT claims. Set by customerJwtMiddleware; read by
+	 *  keys.refresh to rotate the family. */
+	customerJwt?: {
+		customerId: string;
+		epoch: number;
+		refreshKid: number;
+	};
 	apiVersion: ApiVersionClass;
 	timestamp: number;
 

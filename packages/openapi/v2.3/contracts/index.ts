@@ -45,6 +45,11 @@ import {
 	updateFeatureContract,
 } from "./featuresContract.js";
 import {
+	keysMintContract,
+	keysRefreshContract,
+	keysRevokeContract,
+} from "./keysContract.js";
+import {
 	createPlanContract,
 	deletePlanContract,
 	getPlanContract,
@@ -124,4 +129,9 @@ export const v2_3ContractRouter = oc.router({
 	platformLinkRevenueCat: platformLinkRevenueCatContract,
 	platformSyncRevenueCat: platformSyncRevenueCatContract,
 	platformGetRevenueCatKeys: platformGetRevenueCatKeysContract,
+
+	// Customer Keys (per-customer JWTs)
+	keysMint: keysMintContract,
+	keysRefresh: keysRefreshContract,
+	keysRevoke: keysRevokeContract,
 });
