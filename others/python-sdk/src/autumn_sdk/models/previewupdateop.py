@@ -264,8 +264,8 @@ class PreviewUpdateItemPriceTypedDict(TypedDict):
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
     r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
-    max_purchase: NotRequired[float]
-    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
+    max_purchase: NotRequired[Nullable[float]]
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
 
 class PreviewUpdateItemPrice(BaseModel):
@@ -291,8 +291,8 @@ class PreviewUpdateItemPrice(BaseModel):
     billing_units: Optional[float] = 1
     r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
 
-    max_purchase: Optional[float] = None
-    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
+    max_purchase: OptionalNullable[float] = UNSET
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -306,15 +306,24 @@ class PreviewUpdateItemPrice(BaseModel):
                 "max_purchase",
             ]
         )
+        nullable_fields = set(["max_purchase"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m
@@ -599,8 +608,8 @@ class PreviewUpdateAddItemPriceTypedDict(TypedDict):
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
     r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
-    max_purchase: NotRequired[float]
-    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
+    max_purchase: NotRequired[Nullable[float]]
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
 
 class PreviewUpdateAddItemPrice(BaseModel):
@@ -626,8 +635,8 @@ class PreviewUpdateAddItemPrice(BaseModel):
     billing_units: Optional[float] = 1
     r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
 
-    max_purchase: Optional[float] = None
-    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
+    max_purchase: OptionalNullable[float] = UNSET
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -641,15 +650,24 @@ class PreviewUpdateAddItemPrice(BaseModel):
                 "max_purchase",
             ]
         )
+        nullable_fields = set(["max_purchase"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m
@@ -814,7 +832,20 @@ PreviewUpdateRemoveItemBillingMethod = Literal[
 r"""Match items with this billing method (prepaid or usage_based)."""
 
 
-PreviewUpdateRemoveItemInterval = Literal[
+PreviewUpdateIntervalRemoveItemEnum2 = Literal[
+    "one_off",
+    "minute",
+    "hour",
+    "day",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+
+
+PreviewUpdateIntervalRemoveItemEnum1 = Literal[
     "one_off",
     "week",
     "month",
@@ -822,7 +853,20 @@ PreviewUpdateRemoveItemInterval = Literal[
     "semi_annual",
     "year",
 ]
-r"""Match items with this interval."""
+
+
+PreviewUpdateIntervalUnionTypedDict = TypeAliasType(
+    "PreviewUpdateIntervalUnionTypedDict",
+    Union[PreviewUpdateIntervalRemoveItemEnum1, PreviewUpdateIntervalRemoveItemEnum2],
+)
+r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
+
+
+PreviewUpdateIntervalUnion = TypeAliasType(
+    "PreviewUpdateIntervalUnion",
+    Union[PreviewUpdateIntervalRemoveItemEnum1, PreviewUpdateIntervalRemoveItemEnum2],
+)
+r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
 
 
 class PreviewUpdatePlanItemFilterTypedDict(TypedDict):
@@ -832,8 +876,10 @@ class PreviewUpdatePlanItemFilterTypedDict(TypedDict):
     r"""Match items linked to this feature."""
     billing_method: NotRequired[PreviewUpdateRemoveItemBillingMethod]
     r"""Match items with this billing method (prepaid or usage_based)."""
-    interval: NotRequired[PreviewUpdateRemoveItemInterval]
-    r"""Match items with this interval."""
+    interval: NotRequired[PreviewUpdateIntervalUnionTypedDict]
+    r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
+    interval_count: NotRequired[int]
+    r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
 
 
 class PreviewUpdatePlanItemFilter(BaseModel):
@@ -845,12 +891,17 @@ class PreviewUpdatePlanItemFilter(BaseModel):
     billing_method: Optional[PreviewUpdateRemoveItemBillingMethod] = None
     r"""Match items with this billing method (prepaid or usage_based)."""
 
-    interval: Optional[PreviewUpdateRemoveItemInterval] = None
-    r"""Match items with this interval."""
+    interval: Optional[PreviewUpdateIntervalUnion] = None
+    r"""Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated."""
+
+    interval_count: Optional[int] = None
+    r"""Match items with this interval_count. Disambiguates between items that share an interval but differ in count."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["feature_id", "billing_method", "interval"])
+        optional_fields = set(
+            ["feature_id", "billing_method", "interval", "interval_count"]
+        )
         serialized = handler(self)
         m = {}
 
@@ -931,7 +982,7 @@ class PreviewUpdateCustomizeTypedDict(TypedDict):
     price: NotRequired[Nullable[PreviewUpdateBasePriceTypedDict]]
     r"""Override the base price of the plan. Pass null to remove the base price."""
     items: NotRequired[List[PreviewUpdateItemPlanItemTypedDict]]
-    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / update_items."""
+    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items."""
     add_items: NotRequired[List[PreviewUpdateAddItemPlanItemTypedDict]]
     r"""Items to add to the plan."""
     remove_items: NotRequired[List[PreviewUpdatePlanItemFilterTypedDict]]
@@ -947,7 +998,7 @@ class PreviewUpdateCustomize(BaseModel):
     r"""Override the base price of the plan. Pass null to remove the base price."""
 
     items: Optional[List[PreviewUpdateItemPlanItem]] = None
-    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / update_items."""
+    r"""Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items."""
 
     add_items: Optional[List[PreviewUpdateAddItemPlanItem]] = None
     r"""Items to add to the plan."""

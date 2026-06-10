@@ -18,29 +18,40 @@ export type UpdateFeatureGlobals = {
 /**
  * The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system.
  */
-export const UpdateFeatureTypeRequest = {
+export const UpdateFeatureTypeRequestBody = {
   Boolean: "boolean",
   Metered: "metered",
   CreditSystem: "credit_system",
+  AiCreditSystem: "ai_credit_system",
 } as const;
 /**
  * The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system.
  */
-export type UpdateFeatureTypeRequest = ClosedEnum<
-  typeof UpdateFeatureTypeRequest
+export type UpdateFeatureTypeRequestBody = ClosedEnum<
+  typeof UpdateFeatureTypeRequestBody
 >;
 
 /**
  * Singular and plural display names for the feature in your user interface.
  */
-export type UpdateFeatureDisplayRequest = {
+export type UpdateFeatureDisplayRequestBody = {
   singular: string;
   plural: string;
 };
 
-export type UpdateFeatureCreditSchemaRequest = {
+export type UpdateFeatureCreditSchemaRequestBody = {
   meteredFeatureId: string;
   creditCost: number;
+};
+
+export type UpdateFeatureModelMarkupsRequest = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+export type UpdateFeatureProviderMarkupsRequest = {
+  markup: number;
 };
 
 export type UpdateFeatureParams = {
@@ -51,7 +62,7 @@ export type UpdateFeatureParams = {
   /**
    * The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system.
    */
-  type?: UpdateFeatureTypeRequest | undefined;
+  type?: UpdateFeatureTypeRequestBody | undefined;
   /**
    * Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.
    */
@@ -59,11 +70,29 @@ export type UpdateFeatureParams = {
   /**
    * Singular and plural display names for the feature in your user interface.
    */
-  display?: UpdateFeatureDisplayRequest | undefined;
+  display?: UpdateFeatureDisplayRequestBody | undefined;
   /**
-   * A schema that maps 'single_use' feature IDs to credit costs. Applicable only for 'credit_system' features.
+   * A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead.
    */
-  creditSchema?: Array<UpdateFeatureCreditSchemaRequest> | undefined;
+  creditSchema?: Array<UpdateFeatureCreditSchemaRequestBody> | undefined;
+  /**
+   * Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.
+   */
+  modelMarkups?:
+    | { [k: string]: UpdateFeatureModelMarkupsRequest }
+    | null
+    | undefined;
+  /**
+   * Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id.
+   */
+  providerMarkups?:
+    | { [k: string]: UpdateFeatureProviderMarkupsRequest }
+    | null
+    | undefined;
   eventNames?: Array<string> | undefined;
   /**
    * Whether the feature is archived. Archived features are hidden from the dashboard.
@@ -80,15 +109,16 @@ export type UpdateFeatureParams = {
 };
 
 /**
- * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
 export const UpdateFeatureTypeResponse = {
   Boolean: "boolean",
   Metered: "metered",
   CreditSystem: "credit_system",
+  AiCreditSystem: "ai_credit_system",
 } as const;
 /**
- * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
 export type UpdateFeatureTypeResponse = OpenEnum<
   typeof UpdateFeatureTypeResponse
@@ -103,6 +133,16 @@ export type UpdateFeatureCreditSchemaResponse = {
    * Credits consumed per unit of the metered feature.
    */
   creditCost: number;
+};
+
+export type UpdateFeatureModelMarkupsResponse = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+export type UpdateFeatureProviderMarkupsResponse = {
+  markup: number;
 };
 
 /**
@@ -132,7 +172,7 @@ export type UpdateFeatureResponse = {
    */
   name: string;
   /**
-   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
    */
   type: UpdateFeatureTypeResponse;
   /**
@@ -148,6 +188,24 @@ export type UpdateFeatureResponse = {
    */
   creditSchema?: Array<UpdateFeatureCreditSchemaResponse> | undefined;
   /**
+   * Per-model markup overrides for AI credit systems.
+   */
+  modelMarkups?:
+    | { [k: string]: UpdateFeatureModelMarkupsResponse }
+    | null
+    | undefined;
+  /**
+   * Default percentage markup for AI credit systems. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider default markup percentages for AI credit systems.
+   */
+  providerMarkups?:
+    | { [k: string]: UpdateFeatureProviderMarkupsResponse }
+    | null
+    | undefined;
+  /**
    * Display names for the feature in billing UI and customer-facing components.
    */
   display?: UpdateFeatureDisplayResponse | undefined;
@@ -158,45 +216,45 @@ export type UpdateFeatureResponse = {
 };
 
 /** @internal */
-export const UpdateFeatureTypeRequest$outboundSchema: z.ZodMiniEnum<
-  typeof UpdateFeatureTypeRequest
-> = z.enum(UpdateFeatureTypeRequest);
+export const UpdateFeatureTypeRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof UpdateFeatureTypeRequestBody
+> = z.enum(UpdateFeatureTypeRequestBody);
 
 /** @internal */
-export type UpdateFeatureDisplayRequest$Outbound = {
+export type UpdateFeatureDisplayRequestBody$Outbound = {
   singular: string;
   plural: string;
 };
 
 /** @internal */
-export const UpdateFeatureDisplayRequest$outboundSchema: z.ZodMiniType<
-  UpdateFeatureDisplayRequest$Outbound,
-  UpdateFeatureDisplayRequest
+export const UpdateFeatureDisplayRequestBody$outboundSchema: z.ZodMiniType<
+  UpdateFeatureDisplayRequestBody$Outbound,
+  UpdateFeatureDisplayRequestBody
 > = z.object({
   singular: z.string(),
   plural: z.string(),
 });
 
-export function updateFeatureDisplayRequestToJSON(
-  updateFeatureDisplayRequest: UpdateFeatureDisplayRequest,
+export function updateFeatureDisplayRequestBodyToJSON(
+  updateFeatureDisplayRequestBody: UpdateFeatureDisplayRequestBody,
 ): string {
   return JSON.stringify(
-    UpdateFeatureDisplayRequest$outboundSchema.parse(
-      updateFeatureDisplayRequest,
+    UpdateFeatureDisplayRequestBody$outboundSchema.parse(
+      updateFeatureDisplayRequestBody,
     ),
   );
 }
 
 /** @internal */
-export type UpdateFeatureCreditSchemaRequest$Outbound = {
+export type UpdateFeatureCreditSchemaRequestBody$Outbound = {
   metered_feature_id: string;
   credit_cost: number;
 };
 
 /** @internal */
-export const UpdateFeatureCreditSchemaRequest$outboundSchema: z.ZodMiniType<
-  UpdateFeatureCreditSchemaRequest$Outbound,
-  UpdateFeatureCreditSchemaRequest
+export const UpdateFeatureCreditSchemaRequestBody$outboundSchema: z.ZodMiniType<
+  UpdateFeatureCreditSchemaRequestBody$Outbound,
+  UpdateFeatureCreditSchemaRequestBody
 > = z.pipe(
   z.object({
     meteredFeatureId: z.string(),
@@ -210,12 +268,70 @@ export const UpdateFeatureCreditSchemaRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updateFeatureCreditSchemaRequestToJSON(
-  updateFeatureCreditSchemaRequest: UpdateFeatureCreditSchemaRequest,
+export function updateFeatureCreditSchemaRequestBodyToJSON(
+  updateFeatureCreditSchemaRequestBody: UpdateFeatureCreditSchemaRequestBody,
 ): string {
   return JSON.stringify(
-    UpdateFeatureCreditSchemaRequest$outboundSchema.parse(
-      updateFeatureCreditSchemaRequest,
+    UpdateFeatureCreditSchemaRequestBody$outboundSchema.parse(
+      updateFeatureCreditSchemaRequestBody,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateFeatureModelMarkupsRequest$Outbound = {
+  markup?: number | undefined;
+  input_cost?: number | undefined;
+  output_cost?: number | undefined;
+};
+
+/** @internal */
+export const UpdateFeatureModelMarkupsRequest$outboundSchema: z.ZodMiniType<
+  UpdateFeatureModelMarkupsRequest$Outbound,
+  UpdateFeatureModelMarkupsRequest
+> = z.pipe(
+  z.object({
+    markup: z.optional(z.number()),
+    inputCost: z.optional(z.number()),
+    outputCost: z.optional(z.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      inputCost: "input_cost",
+      outputCost: "output_cost",
+    });
+  }),
+);
+
+export function updateFeatureModelMarkupsRequestToJSON(
+  updateFeatureModelMarkupsRequest: UpdateFeatureModelMarkupsRequest,
+): string {
+  return JSON.stringify(
+    UpdateFeatureModelMarkupsRequest$outboundSchema.parse(
+      updateFeatureModelMarkupsRequest,
+    ),
+  );
+}
+
+/** @internal */
+export type UpdateFeatureProviderMarkupsRequest$Outbound = {
+  markup: number;
+};
+
+/** @internal */
+export const UpdateFeatureProviderMarkupsRequest$outboundSchema: z.ZodMiniType<
+  UpdateFeatureProviderMarkupsRequest$Outbound,
+  UpdateFeatureProviderMarkupsRequest
+> = z.object({
+  markup: z.number(),
+});
+
+export function updateFeatureProviderMarkupsRequestToJSON(
+  updateFeatureProviderMarkupsRequest: UpdateFeatureProviderMarkupsRequest,
+): string {
+  return JSON.stringify(
+    UpdateFeatureProviderMarkupsRequest$outboundSchema.parse(
+      updateFeatureProviderMarkupsRequest,
     ),
   );
 }
@@ -225,8 +341,19 @@ export type UpdateFeatureParams$Outbound = {
   name?: string | undefined;
   type?: string | undefined;
   consumable?: boolean | undefined;
-  display?: UpdateFeatureDisplayRequest$Outbound | undefined;
-  credit_schema?: Array<UpdateFeatureCreditSchemaRequest$Outbound> | undefined;
+  display?: UpdateFeatureDisplayRequestBody$Outbound | undefined;
+  credit_schema?:
+    | Array<UpdateFeatureCreditSchemaRequestBody$Outbound>
+    | undefined;
+  model_markups?:
+    | { [k: string]: UpdateFeatureModelMarkupsRequest$Outbound }
+    | null
+    | undefined;
+  default_markup?: number | undefined;
+  provider_markups?:
+    | { [k: string]: UpdateFeatureProviderMarkupsRequest$Outbound }
+    | null
+    | undefined;
   event_names?: Array<string> | undefined;
   archived?: boolean | undefined;
   feature_id: string;
@@ -240,13 +367,28 @@ export const UpdateFeatureParams$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     name: z.optional(z.string()),
-    type: z.optional(UpdateFeatureTypeRequest$outboundSchema),
+    type: z.optional(UpdateFeatureTypeRequestBody$outboundSchema),
     consumable: z.optional(z.boolean()),
     display: z.optional(
-      z.lazy(() => UpdateFeatureDisplayRequest$outboundSchema),
+      z.lazy(() => UpdateFeatureDisplayRequestBody$outboundSchema),
     ),
     creditSchema: z.optional(
-      z.array(z.lazy(() => UpdateFeatureCreditSchemaRequest$outboundSchema)),
+      z.array(
+        z.lazy(() => UpdateFeatureCreditSchemaRequestBody$outboundSchema),
+      ),
+    ),
+    modelMarkups: z.optional(
+      z.nullable(z.record(
+        z.string(),
+        z.lazy(() => UpdateFeatureModelMarkupsRequest$outboundSchema),
+      )),
+    ),
+    defaultMarkup: z.optional(z.number()),
+    providerMarkups: z.optional(
+      z.nullable(z.record(
+        z.string(),
+        z.lazy(() => UpdateFeatureProviderMarkupsRequest$outboundSchema),
+      )),
     ),
     eventNames: z.optional(z.array(z.string())),
     archived: z.optional(z.boolean()),
@@ -256,6 +398,9 @@ export const UpdateFeatureParams$outboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       creditSchema: "credit_schema",
+      modelMarkups: "model_markups",
+      defaultMarkup: "default_markup",
+      providerMarkups: "provider_markups",
       eventNames: "event_names",
       featureId: "feature_id",
       newFeatureId: "new_feature_id",
@@ -305,6 +450,53 @@ export function updateFeatureCreditSchemaResponseFromJSON(
 }
 
 /** @internal */
+export const UpdateFeatureModelMarkupsResponse$inboundSchema: z.ZodMiniType<
+  UpdateFeatureModelMarkupsResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    markup: types.optional(types.number()),
+    input_cost: types.optional(types.number()),
+    output_cost: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "input_cost": "inputCost",
+      "output_cost": "outputCost",
+    });
+  }),
+);
+
+export function updateFeatureModelMarkupsResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateFeatureModelMarkupsResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateFeatureModelMarkupsResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateFeatureModelMarkupsResponse' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateFeatureProviderMarkupsResponse$inboundSchema: z.ZodMiniType<
+  UpdateFeatureProviderMarkupsResponse,
+  unknown
+> = z.object({
+  markup: types.number(),
+});
+
+export function updateFeatureProviderMarkupsResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateFeatureProviderMarkupsResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) =>
+      UpdateFeatureProviderMarkupsResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateFeatureProviderMarkupsResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateFeatureDisplayResponse$inboundSchema: z.ZodMiniType<
   UpdateFeatureDisplayResponse,
   unknown
@@ -337,15 +529,27 @@ export const UpdateFeatureResponse$inboundSchema: z.ZodMiniType<
     credit_schema: types.optional(
       z.array(z.lazy(() => UpdateFeatureCreditSchemaResponse$inboundSchema)),
     ),
-    display: types.optional(
-      z.lazy(() => UpdateFeatureDisplayResponse$inboundSchema),
-    ),
+    model_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => UpdateFeatureModelMarkupsResponse$inboundSchema),
+    ))),
+    default_markup: types.optional(types.number()),
+    provider_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => UpdateFeatureProviderMarkupsResponse$inboundSchema),
+    ))),
+    display: types.optional(z.lazy(() =>
+      UpdateFeatureDisplayResponse$inboundSchema
+    )),
     archived: types.boolean(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
+      "model_markups": "modelMarkups",
+      "default_markup": "defaultMarkup",
+      "provider_markups": "providerMarkups",
     });
   }),
 );

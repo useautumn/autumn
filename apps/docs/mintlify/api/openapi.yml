@@ -586,10 +586,11 @@ components:
                       - boolean
                       - metered
                       - credit_system
+                      - ai_credit_system
                     type: string
                     description: "Feature type: 'boolean' for on/off access, 'metered' for
                       usage-tracked features, 'credit_system' for unified credit
-                      pools."
+                      pools, 'ai_credit_system' for model-based token pricing."
                   consumable:
                     type: boolean
                     description: "For metered features: true if usage resets periodically (API
@@ -617,6 +618,45 @@ components:
                         - credit_cost
                     description: "For credit_system features: maps metered features to their credit
                       costs."
+                  model_markups:
+                    anyOf:
+                      - type: object
+                        propertyNames:
+                          type: string
+                        additionalProperties:
+                          type: object
+                          properties:
+                            markup:
+                              type: number
+                              minimum: -100
+                            input_cost:
+                              type: number
+                              minimum: 0
+                            output_cost:
+                              type: number
+                              minimum: 0
+                      - type: "null"
+                    description: Per-model markup overrides for AI credit systems.
+                  default_markup:
+                    type: number
+                    minimum: -100
+                    description: Default percentage markup for AI credit systems. Use -100 to make
+                      usage free.
+                  provider_markups:
+                    anyOf:
+                      - type: object
+                        propertyNames:
+                          type: string
+                        additionalProperties:
+                          type: object
+                          properties:
+                            markup:
+                              type: number
+                              minimum: -100
+                          required:
+                            - markup
+                      - type: "null"
+                    description: Per-provider default markup percentages for AI credit systems.
                   display:
                     type: object
                     properties:
@@ -1089,6 +1129,7 @@ components:
                       - single_use
                       - continuous_use
                       - credit_system
+                      - ai_credit_system
                     type: string
                     description: The type of the feature
                   display:
@@ -1178,9 +1219,19 @@ components:
                       tiers:
                         type: array
                         items:
-                          anyOf:
-                            - {}
-                            - type: "null"
+                          type: object
+                          properties:
+                            to:
+                              anyOf:
+                                - type: number
+                                - const: inf
+                            amount:
+                              type: number
+                            flat_amount:
+                              type: number
+                          required:
+                            - to
+                            - amount
                         description: Tiered pricing configuration. Each tier's 'to' INCLUDES the
                           included amount. Either 'tiers' or 'amount' is
                           required.
@@ -1410,10 +1461,11 @@ components:
                 - boolean
                 - metered
                 - credit_system
+                - ai_credit_system
               type: string
               description: "Feature type: 'boolean' for on/off access, 'metered' for
                 usage-tracked features, 'credit_system' for unified credit
-                pools."
+                pools, 'ai_credit_system' for model-based token pricing."
             consumable:
               type: boolean
               description: "For metered features: true if usage resets periodically (API
@@ -1441,6 +1493,45 @@ components:
                   - credit_cost
               description: "For credit_system features: maps metered features to their credit
                 costs."
+            model_markups:
+              anyOf:
+                - type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties:
+                    type: object
+                    properties:
+                      markup:
+                        type: number
+                        minimum: -100
+                      input_cost:
+                        type: number
+                        minimum: 0
+                      output_cost:
+                        type: number
+                        minimum: 0
+                - type: "null"
+              description: Per-model markup overrides for AI credit systems.
+            default_markup:
+              type: number
+              minimum: -100
+              description: Default percentage markup for AI credit systems. Use -100 to make
+                usage free.
+            provider_markups:
+              anyOf:
+                - type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties:
+                    type: object
+                    properties:
+                      markup:
+                        type: number
+                        minimum: -100
+                    required:
+                      - markup
+                - type: "null"
+              description: Per-provider default markup percentages for AI credit systems.
             display:
               type: object
               properties:
@@ -1567,9 +1658,19 @@ components:
                       tiers:
                         type: array
                         items:
-                          anyOf:
-                            - {}
-                            - type: "null"
+                          type: object
+                          properties:
+                            to:
+                              anyOf:
+                                - type: number
+                                - const: inf
+                            amount:
+                              type: number
+                            flat_amount:
+                              type: number
+                          required:
+                            - to
+                            - amount
                         description: Tiered pricing configuration if applicable.
                       tier_behavior:
                         enum:
@@ -2353,10 +2454,12 @@ paths:
                                 - boolean
                                 - metered
                                 - credit_system
+                                - ai_credit_system
                               type: string
                               description: "Feature type: 'boolean' for on/off access, 'metered' for
                                 usage-tracked features, 'credit_system' for
-                                unified credit pools."
+                                unified credit pools, 'ai_credit_system' for
+                                model-based token pricing."
                             consumable:
                               type: boolean
                               description: "For metered features: true if usage resets periodically (API
@@ -2384,6 +2487,45 @@ paths:
                                   - credit_cost
                               description: "For credit_system features: maps metered features to their credit
                                 costs."
+                            model_markups:
+                              anyOf:
+                                - type: object
+                                  propertyNames:
+                                    type: string
+                                  additionalProperties:
+                                    type: object
+                                    properties:
+                                      markup:
+                                        type: number
+                                        minimum: -100
+                                      input_cost:
+                                        type: number
+                                        minimum: 0
+                                      output_cost:
+                                        type: number
+                                        minimum: 0
+                                - type: "null"
+                              description: Per-model markup overrides for AI credit systems.
+                            default_markup:
+                              type: number
+                              minimum: -100
+                              description: Default percentage markup for AI credit systems. Use -100 to make
+                                usage free.
+                            provider_markups:
+                              anyOf:
+                                - type: object
+                                  propertyNames:
+                                    type: string
+                                  additionalProperties:
+                                    type: object
+                                    properties:
+                                      markup:
+                                        type: number
+                                        minimum: -100
+                                    required:
+                                      - markup
+                                - type: "null"
+                              description: Per-provider default markup percentages for AI credit systems.
                             display:
                               type: object
                               properties:
@@ -3247,10 +3389,13 @@ paths:
                                       - boolean
                                       - metered
                                       - credit_system
+                                      - ai_credit_system
                                     type: string
                                     description: "Feature type: 'boolean' for on/off access, 'metered' for
                                       usage-tracked features, 'credit_system'
-                                      for unified credit pools."
+                                      for unified credit pools,
+                                      'ai_credit_system' for model-based token
+                                      pricing."
                                   consumable:
                                     type: boolean
                                     description: "For metered features: true if usage resets periodically (API
@@ -3278,6 +3423,45 @@ paths:
                                         - credit_cost
                                     description: "For credit_system features: maps metered features to their credit
                                       costs."
+                                  model_markups:
+                                    anyOf:
+                                      - type: object
+                                        propertyNames:
+                                          type: string
+                                        additionalProperties:
+                                          type: object
+                                          properties:
+                                            markup:
+                                              type: number
+                                              minimum: -100
+                                            input_cost:
+                                              type: number
+                                              minimum: 0
+                                            output_cost:
+                                              type: number
+                                              minimum: 0
+                                      - type: "null"
+                                    description: Per-model markup overrides for AI credit systems.
+                                  default_markup:
+                                    type: number
+                                    minimum: -100
+                                    description: Default percentage markup for AI credit systems. Use -100 to make
+                                      usage free.
+                                  provider_markups:
+                                    anyOf:
+                                      - type: object
+                                        propertyNames:
+                                          type: string
+                                        additionalProperties:
+                                          type: object
+                                          properties:
+                                            markup:
+                                              type: number
+                                              minimum: -100
+                                          required:
+                                            - markup
+                                      - type: "null"
+                                    description: Per-provider default markup percentages for AI credit systems.
                                   display:
                                     type: object
                                     properties:
@@ -4119,10 +4303,12 @@ paths:
                                 - boolean
                                 - metered
                                 - credit_system
+                                - ai_credit_system
                               type: string
                               description: "Feature type: 'boolean' for on/off access, 'metered' for
                                 usage-tracked features, 'credit_system' for
-                                unified credit pools."
+                                unified credit pools, 'ai_credit_system' for
+                                model-based token pricing."
                             consumable:
                               type: boolean
                               description: "For metered features: true if usage resets periodically (API
@@ -4150,6 +4336,45 @@ paths:
                                   - credit_cost
                               description: "For credit_system features: maps metered features to their credit
                                 costs."
+                            model_markups:
+                              anyOf:
+                                - type: object
+                                  propertyNames:
+                                    type: string
+                                  additionalProperties:
+                                    type: object
+                                    properties:
+                                      markup:
+                                        type: number
+                                        minimum: -100
+                                      input_cost:
+                                        type: number
+                                        minimum: 0
+                                      output_cost:
+                                        type: number
+                                        minimum: 0
+                                - type: "null"
+                              description: Per-model markup overrides for AI credit systems.
+                            default_markup:
+                              type: number
+                              minimum: -100
+                              description: Default percentage markup for AI credit systems. Use -100 to make
+                                usage free.
+                            provider_markups:
+                              anyOf:
+                                - type: object
+                                  propertyNames:
+                                    type: string
+                                  additionalProperties:
+                                    type: object
+                                    properties:
+                                      markup:
+                                        type: number
+                                        minimum: -100
+                                    required:
+                                      - markup
+                                - type: "null"
+                              description: Per-provider default markup percentages for AI credit systems.
                             display:
                               type: object
                               properties:
@@ -4574,9 +4799,12 @@ paths:
                             description: "'prepaid' for upfront payment (seats), 'usage_based' for
                               pay-as-you-go."
                           max_purchase:
-                            type: number
+                            anyOf:
+                              - type: number
+                              - type: "null"
                             description: Max units purchasable beyond included. E.g. included=100,
-                              max_purchase=300 allows 400 total.
+                              max_purchase=300 allows 400 total. Null for no
+                              limit.
                         required:
                           - interval
                           - billing_method
@@ -4825,6 +5053,7 @@ paths:
                                 - single_use
                                 - continuous_use
                                 - credit_system
+                                - ai_credit_system
                               type: string
                               description: The type of the feature
                             display:
@@ -4914,9 +5143,19 @@ paths:
                                 tiers:
                                   type: array
                                   items:
-                                    anyOf:
-                                      - {}
-                                      - type: "null"
+                                    type: object
+                                    properties:
+                                      to:
+                                        anyOf:
+                                          - type: number
+                                          - const: inf
+                                      amount:
+                                        type: number
+                                      flat_amount:
+                                        type: number
+                                    required:
+                                      - to
+                                      - amount
                                   description: Tiered pricing configuration. Each tier's 'to' INCLUDES the
                                     included amount. Either 'tiers' or 'amount'
                                     is required.
@@ -5364,6 +5603,7 @@ paths:
                                 - single_use
                                 - continuous_use
                                 - credit_system
+                                - ai_credit_system
                               type: string
                               description: The type of the feature
                             display:
@@ -5453,9 +5693,19 @@ paths:
                                 tiers:
                                   type: array
                                   items:
-                                    anyOf:
-                                      - {}
-                                      - type: "null"
+                                    type: object
+                                    properties:
+                                      to:
+                                        anyOf:
+                                          - type: number
+                                          - const: inf
+                                      amount:
+                                        type: number
+                                      flat_amount:
+                                        type: number
+                                    required:
+                                      - to
+                                      - amount
                                   description: Tiered pricing configuration. Each tier's 'to' INCLUDES the
                                     included amount. Either 'tiers' or 'amount'
                                     is required.
@@ -5881,6 +6131,7 @@ paths:
                                       - single_use
                                       - continuous_use
                                       - credit_system
+                                      - ai_credit_system
                                     type: string
                                     description: The type of the feature
                                   display:
@@ -5971,9 +6222,19 @@ paths:
                                       tiers:
                                         type: array
                                         items:
-                                          anyOf:
-                                            - {}
-                                            - type: "null"
+                                          type: object
+                                          properties:
+                                            to:
+                                              anyOf:
+                                                - type: number
+                                                - const: inf
+                                            amount:
+                                              type: number
+                                            flat_amount:
+                                              type: number
+                                          required:
+                                            - to
+                                            - amount
                                         description: Tiered pricing configuration. Each tier's 'to' INCLUDES the
                                           included amount. Either 'tiers' or
                                           'amount' is required.
@@ -6427,9 +6688,12 @@ paths:
                             description: "'prepaid' for upfront payment (seats), 'usage_based' for
                               pay-as-you-go."
                           max_purchase:
-                            type: number
+                            anyOf:
+                              - type: number
+                              - type: "null"
                             description: Max units purchasable beyond included. E.g. included=100,
-                              max_purchase=300 allows 400 total.
+                              max_purchase=300 allows 400 total. Null for no
+                              limit.
                         required:
                           - interval
                           - billing_method
@@ -6547,6 +6811,8 @@ paths:
                   pattern: ^[a-zA-Z0-9_-]+$
                   description: The new ID to use for the plan. Can only be updated if the plan has
                     not been used by any customers.
+                disable_version:
+                  type: boolean
               required:
                 - plan_id
               title: UpdatePlanParams
@@ -6664,6 +6930,7 @@ paths:
                                 - single_use
                                 - continuous_use
                                 - credit_system
+                                - ai_credit_system
                               type: string
                               description: The type of the feature
                             display:
@@ -6753,9 +7020,19 @@ paths:
                                 tiers:
                                   type: array
                                   items:
-                                    anyOf:
-                                      - {}
-                                      - type: "null"
+                                    type: object
+                                    properties:
+                                      to:
+                                        anyOf:
+                                          - type: number
+                                          - const: inf
+                                      amount:
+                                        type: number
+                                      flat_amount:
+                                        type: number
+                                    required:
+                                      - to
+                                      - amount
                                   description: Tiered pricing configuration. Each tier's 'to' INCLUDES the
                                     included amount. Either 'tiers' or 'amount'
                                     is required.
@@ -7154,6 +7431,7 @@ paths:
                     - boolean
                     - metered
                     - credit_system
+                    - ai_credit_system
                   type: string
                   description: The type of the feature. 'single_use' features are consumed, like
                     API calls, tokens, or messages. 'continuous_use' features
@@ -7190,8 +7468,51 @@ paths:
                     required:
                       - metered_feature_id
                       - credit_cost
-                  description: A schema that maps 'single_use' feature IDs to credit costs.
-                    Applicable only for 'credit_system' features.
+                  description: A schema that maps 'single_use' feature IDs to credit costs. For
+                    classic credit systems only — AI credit systems use
+                    model_markups instead.
+                model_markups:
+                  anyOf:
+                    - type: object
+                      propertyNames:
+                        type: string
+                      additionalProperties:
+                        type: object
+                        properties:
+                          markup:
+                            type: number
+                            minimum: -100
+                          input_cost:
+                            type: number
+                            minimum: 0
+                          output_cost:
+                            type: number
+                            minimum: 0
+                    - type: "null"
+                  description: Per-model markup overrides for AI credit systems. Maps model IDs to
+                    their markup configuration.
+                default_markup:
+                  type: number
+                  minimum: -100
+                  description: Default percentage markup for this AI credit system. Used when no
+                    model or provider markup applies. Use -100 to make usage
+                    free.
+                provider_markups:
+                  anyOf:
+                    - type: object
+                      propertyNames:
+                        type: string
+                      additionalProperties:
+                        type: object
+                        properties:
+                          markup:
+                            type: number
+                            minimum: -100
+                        required:
+                          - markup
+                    - type: "null"
+                  description: Per-provider default markup percentages for AI credit systems.
+                    Provider keys match the first segment of model_id.
                 event_names:
                   type: array
                   items:
@@ -7240,10 +7561,11 @@ paths:
                       - boolean
                       - metered
                       - credit_system
+                      - ai_credit_system
                     type: string
                     description: "Feature type: 'boolean' for on/off access, 'metered' for
                       usage-tracked features, 'credit_system' for unified credit
-                      pools."
+                      pools, 'ai_credit_system' for model-based token pricing."
                   consumable:
                     type: boolean
                     description: "For metered features: true if usage resets periodically (API
@@ -7271,6 +7593,45 @@ paths:
                         - credit_cost
                     description: "For credit_system features: maps metered features to their credit
                       costs."
+                  model_markups:
+                    anyOf:
+                      - type: object
+                        propertyNames:
+                          type: string
+                        additionalProperties:
+                          type: object
+                          properties:
+                            markup:
+                              type: number
+                              minimum: -100
+                            input_cost:
+                              type: number
+                              minimum: 0
+                            output_cost:
+                              type: number
+                              minimum: 0
+                      - type: "null"
+                    description: Per-model markup overrides for AI credit systems.
+                  default_markup:
+                    type: number
+                    minimum: -100
+                    description: Default percentage markup for AI credit systems. Use -100 to make
+                      usage free.
+                  provider_markups:
+                    anyOf:
+                      - type: object
+                        propertyNames:
+                          type: string
+                        additionalProperties:
+                          type: object
+                          properties:
+                            markup:
+                              type: number
+                              minimum: -100
+                          required:
+                            - markup
+                      - type: "null"
+                    description: Per-provider default markup percentages for AI credit systems.
                   display:
                     type: object
                     properties:
@@ -7382,10 +7743,11 @@ paths:
                       - boolean
                       - metered
                       - credit_system
+                      - ai_credit_system
                     type: string
                     description: "Feature type: 'boolean' for on/off access, 'metered' for
                       usage-tracked features, 'credit_system' for unified credit
-                      pools."
+                      pools, 'ai_credit_system' for model-based token pricing."
                   consumable:
                     type: boolean
                     description: "For metered features: true if usage resets periodically (API
@@ -7413,6 +7775,45 @@ paths:
                         - credit_cost
                     description: "For credit_system features: maps metered features to their credit
                       costs."
+                  model_markups:
+                    anyOf:
+                      - type: object
+                        propertyNames:
+                          type: string
+                        additionalProperties:
+                          type: object
+                          properties:
+                            markup:
+                              type: number
+                              minimum: -100
+                            input_cost:
+                              type: number
+                              minimum: 0
+                            output_cost:
+                              type: number
+                              minimum: 0
+                      - type: "null"
+                    description: Per-model markup overrides for AI credit systems.
+                  default_markup:
+                    type: number
+                    minimum: -100
+                    description: Default percentage markup for AI credit systems. Use -100 to make
+                      usage free.
+                  provider_markups:
+                    anyOf:
+                      - type: object
+                        propertyNames:
+                          type: string
+                        additionalProperties:
+                          type: object
+                          properties:
+                            markup:
+                              type: number
+                              minimum: -100
+                          required:
+                            - markup
+                      - type: "null"
+                    description: Per-provider default markup percentages for AI credit systems.
                   display:
                     type: object
                     properties:
@@ -7506,10 +7907,12 @@ paths:
                             - boolean
                             - metered
                             - credit_system
+                            - ai_credit_system
                           type: string
                           description: "Feature type: 'boolean' for on/off access, 'metered' for
                             usage-tracked features, 'credit_system' for unified
-                            credit pools."
+                            credit pools, 'ai_credit_system' for model-based
+                            token pricing."
                         consumable:
                           type: boolean
                           description: "For metered features: true if usage resets periodically (API
@@ -7537,6 +7940,45 @@ paths:
                               - credit_cost
                           description: "For credit_system features: maps metered features to their credit
                             costs."
+                        model_markups:
+                          anyOf:
+                            - type: object
+                              propertyNames:
+                                type: string
+                              additionalProperties:
+                                type: object
+                                properties:
+                                  markup:
+                                    type: number
+                                    minimum: -100
+                                  input_cost:
+                                    type: number
+                                    minimum: 0
+                                  output_cost:
+                                    type: number
+                                    minimum: 0
+                            - type: "null"
+                          description: Per-model markup overrides for AI credit systems.
+                        default_markup:
+                          type: number
+                          minimum: -100
+                          description: Default percentage markup for AI credit systems. Use -100 to make
+                            usage free.
+                        provider_markups:
+                          anyOf:
+                            - type: object
+                              propertyNames:
+                                type: string
+                              additionalProperties:
+                                type: object
+                                properties:
+                                  markup:
+                                    type: number
+                                    minimum: -100
+                                required:
+                                  - markup
+                            - type: "null"
+                          description: Per-provider default markup percentages for AI credit systems.
                         display:
                           type: object
                           properties:
@@ -7635,6 +8077,7 @@ paths:
                     - boolean
                     - metered
                     - credit_system
+                    - ai_credit_system
                   type: string
                   description: The type of the feature. 'single_use' features are consumed, like
                     API calls, tokens, or messages. 'continuous_use' features
@@ -7671,8 +8114,51 @@ paths:
                     required:
                       - metered_feature_id
                       - credit_cost
-                  description: A schema that maps 'single_use' feature IDs to credit costs.
-                    Applicable only for 'credit_system' features.
+                  description: A schema that maps 'single_use' feature IDs to credit costs. For
+                    classic credit systems only — AI credit systems use
+                    model_markups instead.
+                model_markups:
+                  anyOf:
+                    - type: object
+                      propertyNames:
+                        type: string
+                      additionalProperties:
+                        type: object
+                        properties:
+                          markup:
+                            type: number
+                            minimum: -100
+                          input_cost:
+                            type: number
+                            minimum: 0
+                          output_cost:
+                            type: number
+                            minimum: 0
+                    - type: "null"
+                  description: Per-model markup overrides for AI credit systems. Maps model IDs to
+                    their markup configuration.
+                default_markup:
+                  type: number
+                  minimum: -100
+                  description: Default percentage markup for this AI credit system. Used when no
+                    model or provider markup applies. Use -100 to make usage
+                    free.
+                provider_markups:
+                  anyOf:
+                    - type: object
+                      propertyNames:
+                        type: string
+                      additionalProperties:
+                        type: object
+                        properties:
+                          markup:
+                            type: number
+                            minimum: -100
+                        required:
+                          - markup
+                    - type: "null"
+                  description: Per-provider default markup percentages for AI credit systems.
+                    Provider keys match the first segment of model_id.
                 event_names:
                   type: array
                   items:
@@ -7721,10 +8207,11 @@ paths:
                       - boolean
                       - metered
                       - credit_system
+                      - ai_credit_system
                     type: string
                     description: "Feature type: 'boolean' for on/off access, 'metered' for
                       usage-tracked features, 'credit_system' for unified credit
-                      pools."
+                      pools, 'ai_credit_system' for model-based token pricing."
                   consumable:
                     type: boolean
                     description: "For metered features: true if usage resets periodically (API
@@ -7752,6 +8239,45 @@ paths:
                         - credit_cost
                     description: "For credit_system features: maps metered features to their credit
                       costs."
+                  model_markups:
+                    anyOf:
+                      - type: object
+                        propertyNames:
+                          type: string
+                        additionalProperties:
+                          type: object
+                          properties:
+                            markup:
+                              type: number
+                              minimum: -100
+                            input_cost:
+                              type: number
+                              minimum: 0
+                            output_cost:
+                              type: number
+                              minimum: 0
+                      - type: "null"
+                    description: Per-model markup overrides for AI credit systems.
+                  default_markup:
+                    type: number
+                    minimum: -100
+                    description: Default percentage markup for AI credit systems. Use -100 to make
+                      usage free.
+                  provider_markups:
+                    anyOf:
+                      - type: object
+                        propertyNames:
+                          type: string
+                        additionalProperties:
+                          type: object
+                          properties:
+                            markup:
+                              type: number
+                              minimum: -100
+                          required:
+                            - markup
+                      - type: "null"
+                    description: Per-provider default markup percentages for AI credit systems.
                   display:
                     type: object
                     properties:
@@ -8067,9 +8593,12 @@ paths:
                                 description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                   pay-as-you-go."
                               max_purchase:
-                                type: number
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                                 description: Max units purchasable beyond included. E.g. included=100,
-                                  max_purchase=300 allows 400 total.
+                                  max_purchase=300 allows 400 total. Null for no
+                                  limit.
                             required:
                               - interval
                               - billing_method
@@ -8129,7 +8658,7 @@ paths:
                           pricing, and rollover settings.
                       description: Override the items in the plan (PUT-style — replaces all existing
                         items). Mutually exclusive with add_items / remove_items
-                        / update_items.
+                        / deprecated update_items.
                     add_items:
                       type: array
                       items:
@@ -8225,9 +8754,12 @@ paths:
                                 description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                   pay-as-you-go."
                               max_purchase:
-                                type: number
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                                 description: Max units purchasable beyond included. E.g. included=100,
-                                  max_purchase=300 allows 400 total.
+                                  max_purchase=300 allows 400 total. Null for no
+                                  limit.
                             required:
                               - interval
                               - billing_method
@@ -8301,15 +8833,37 @@ paths:
                             type: string
                             description: Match items with this billing method (prepaid or usage_based).
                           interval:
-                            enum:
-                              - one_off
-                              - week
-                              - month
-                              - quarter
-                              - semi_annual
-                              - year
-                            type: string
-                            description: Match items with this interval.
+                            anyOf:
+                              - enum:
+                                  - one_off
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                              - enum:
+                                  - one_off
+                                  - minute
+                                  - hour
+                                  - day
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                            description: Match items with this interval. Accepts either a BillingInterval
+                              (price-side) or a ResetInterval (reset-side,
+                              includes day/hour/minute) so price-less items
+                              keyed by reset.interval can be disambiguated.
+                          interval_count:
+                            type: integer
+                            minimum: -9007199254740991
+                            maximum: 9007199254740991
+                            exclusiveMinimum: 0
+                            description: Match items with this interval_count. Disambiguates between items
+                              that share an interval but differ in count.
                         title: PlanItemFilter
                         description: Filter for matching plan items. All provided fields must match
                           (AND).
@@ -8924,10 +9478,12 @@ paths:
                                               description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                                 pay-as-you-go."
                                             max_purchase:
-                                              type: number
+                                              anyOf:
+                                                - type: number
+                                                - type: "null"
                                               description: Max units purchasable beyond included. E.g. included=100,
                                                 max_purchase=300 allows 400
-                                                total.
+                                                total. Null for no limit.
                                           required:
                                             - interval
                                             - billing_method
@@ -8986,10 +9542,219 @@ paths:
                                       title: PlanItem
                                       description: Configuration for a feature item in a plan, including usage limits,
                                         pricing, and rollover settings.
-                                    description: Override the items in the plan.
-                                additionalProperties: false
-                                description: Customize the plan to schedule. Can override the price, items, or
-                                  both.
+                                    description: Override the items in the plan (PUT-style — replaces all existing
+                                      items). Mutually exclusive with add_items
+                                      / remove_items / deprecated update_items.
+                                  add_items:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        feature_id:
+                                          type: string
+                                          description: The ID of the feature to configure.
+                                        included:
+                                          type: number
+                                          description: Number of free units included. Balance resets to this each interval
+                                            for consumable features.
+                                        unlimited:
+                                          type: boolean
+                                          description: If true, customer has unlimited access to this feature.
+                                        reset:
+                                          type: object
+                                          properties:
+                                            interval:
+                                              enum:
+                                                - one_off
+                                                - minute
+                                                - hour
+                                                - day
+                                                - week
+                                                - month
+                                                - quarter
+                                                - semi_annual
+                                                - year
+                                              type: string
+                                              description: Interval at which balance resets (e.g. 'month', 'year'). For
+                                                consumable features only.
+                                            interval_count:
+                                              type: number
+                                              description: Number of intervals between resets. Defaults to 1.
+                                          required:
+                                            - interval
+                                          description: Reset configuration for consumable features. Omit for
+                                            non-consumable features like seats.
+                                        price:
+                                          type: object
+                                          properties:
+                                            amount:
+                                              type: number
+                                              description: Price per billing_units after included usage. Either 'amount' or
+                                                'tiers' is required.
+                                            tiers:
+                                              type: array
+                                              items:
+                                                type: object
+                                                properties:
+                                                  to: {}
+                                                  amount: {}
+                                                  flat_amount: {}
+                                              description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                                            tier_behavior:
+                                              enum:
+                                                - graduated
+                                                - volume
+                                              type: string
+                                            interval:
+                                              enum:
+                                                - one_off
+                                                - week
+                                                - month
+                                                - quarter
+                                                - semi_annual
+                                                - year
+                                              type: string
+                                              description: Billing interval. For consumable features, should match
+                                                reset.interval.
+                                            interval_count:
+                                              type: number
+                                              default: 1
+                                              description: Number of intervals per billing cycle. Defaults to 1.
+                                            billing_units:
+                                              type: number
+                                              default: 1
+                                              description: Units per price increment. Usage is rounded UP when billed (e.g.
+                                                billing_units=100 means 101
+                                                rounds to 200).
+                                            billing_method:
+                                              enum:
+                                                - prepaid
+                                                - usage_based
+                                              type: string
+                                              description: "'prepaid' for upfront payment (seats), 'usage_based' for
+                                                pay-as-you-go."
+                                            max_purchase:
+                                              anyOf:
+                                                - type: number
+                                                - type: "null"
+                                              description: Max units purchasable beyond included. E.g. included=100,
+                                                max_purchase=300 allows 400
+                                                total. Null for no limit.
+                                          required:
+                                            - interval
+                                            - billing_method
+                                          description: Pricing for usage beyond included units. Omit for free features.
+                                        proration:
+                                          type: object
+                                          properties:
+                                            on_increase:
+                                              enum:
+                                                - bill_immediately
+                                                - prorate_immediately
+                                                - prorate_next_cycle
+                                                - bill_next_cycle
+                                              type: string
+                                              description: Billing behavior when quantity increases mid-cycle.
+                                            on_decrease:
+                                              enum:
+                                                - prorate
+                                                - prorate_immediately
+                                                - prorate_next_cycle
+                                                - none
+                                                - no_prorations
+                                              type: string
+                                              description: Credit behavior when quantity decreases mid-cycle.
+                                          required:
+                                            - on_increase
+                                            - on_decrease
+                                          description: Proration settings for prepaid features. Controls mid-cycle
+                                            quantity change billing.
+                                        rollover:
+                                          type: object
+                                          properties:
+                                            max:
+                                              type: number
+                                              description: Max rollover units. Omit for unlimited rollover.
+                                            max_percentage:
+                                              type: number
+                                              description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                                grant. Mutually exclusive with
+                                                max.
+                                            expiry_duration_type:
+                                              enum:
+                                                - month
+                                                - forever
+                                              type: string
+                                              description: When rolled over units expire.
+                                            expiry_duration_length:
+                                              type: number
+                                              description: Number of periods before expiry.
+                                          required:
+                                            - expiry_duration_type
+                                          description: Rollover config for unused units. If set, unused included units
+                                            carry over.
+                                      required:
+                                        - feature_id
+                                      title: PlanItem
+                                      description: Configuration for a feature item in a plan, including usage limits,
+                                        pricing, and rollover settings.
+                                    description: Items to add to the plan.
+                                  remove_items:
+                                    type: array
+                                    items:
+                                      type: object
+                                      properties:
+                                        feature_id:
+                                          type: string
+                                          description: Match items linked to this feature.
+                                        billing_method:
+                                          enum:
+                                            - prepaid
+                                            - usage_based
+                                          type: string
+                                          description: Match items with this billing method (prepaid or usage_based).
+                                        interval:
+                                          anyOf:
+                                            - enum:
+                                                - one_off
+                                                - week
+                                                - month
+                                                - quarter
+                                                - semi_annual
+                                                - year
+                                              type: string
+                                            - enum:
+                                                - one_off
+                                                - minute
+                                                - hour
+                                                - day
+                                                - week
+                                                - month
+                                                - quarter
+                                                - semi_annual
+                                                - year
+                                              type: string
+                                          description: Match items with this interval. Accepts either a BillingInterval
+                                            (price-side) or a ResetInterval
+                                            (reset-side, includes
+                                            day/hour/minute) so price-less items
+                                            keyed by reset.interval can be
+                                            disambiguated.
+                                        interval_count:
+                                          type: integer
+                                          minimum: -9007199254740991
+                                          maximum: 9007199254740991
+                                          exclusiveMinimum: 0
+                                          description: Match items with this interval_count. Disambiguates between items
+                                            that share an interval but differ in
+                                            count.
+                                      title: PlanItemFilter
+                                      description: Filter for matching plan items. All provided fields must match
+                                        (AND).
+                                    description: Filters selecting items to remove from the plan.
+                                description: Customize the plan to schedule. Can override price, replace items,
+                                  or patch items with add_items, remove_items,
+                                  and update_items.
                               subscription_id:
                                 type: string
                                 description: A unique ID to identify this subscription. Useful when scheduling
@@ -9158,9 +9923,12 @@ paths:
                                             description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                               pay-as-you-go."
                                           max_purchase:
-                                            type: number
+                                            anyOf:
+                                              - type: number
+                                              - type: "null"
                                             description: Max units purchasable beyond included. E.g. included=100,
                                               max_purchase=300 allows 400 total.
+                                              Null for no limit.
                                         required:
                                           - interval
                                           - billing_method
@@ -9219,10 +9987,218 @@ paths:
                                     title: PlanItem
                                     description: Configuration for a feature item in a plan, including usage limits,
                                       pricing, and rollover settings.
-                                  description: Override the items in the plan.
-                              additionalProperties: false
-                              description: Customize the plan to schedule. Can override the price, items, or
-                                both.
+                                  description: Override the items in the plan (PUT-style — replaces all existing
+                                    items). Mutually exclusive with add_items /
+                                    remove_items / deprecated update_items.
+                                add_items:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      feature_id:
+                                        type: string
+                                        description: The ID of the feature to configure.
+                                      included:
+                                        type: number
+                                        description: Number of free units included. Balance resets to this each interval
+                                          for consumable features.
+                                      unlimited:
+                                        type: boolean
+                                        description: If true, customer has unlimited access to this feature.
+                                      reset:
+                                        type: object
+                                        properties:
+                                          interval:
+                                            enum:
+                                              - one_off
+                                              - minute
+                                              - hour
+                                              - day
+                                              - week
+                                              - month
+                                              - quarter
+                                              - semi_annual
+                                              - year
+                                            type: string
+                                            description: Interval at which balance resets (e.g. 'month', 'year'). For
+                                              consumable features only.
+                                          interval_count:
+                                            type: number
+                                            description: Number of intervals between resets. Defaults to 1.
+                                        required:
+                                          - interval
+                                        description: Reset configuration for consumable features. Omit for
+                                          non-consumable features like seats.
+                                      price:
+                                        type: object
+                                        properties:
+                                          amount:
+                                            type: number
+                                            description: Price per billing_units after included usage. Either 'amount' or
+                                              'tiers' is required.
+                                          tiers:
+                                            type: array
+                                            items:
+                                              type: object
+                                              properties:
+                                                to: {}
+                                                amount: {}
+                                                flat_amount: {}
+                                            description: Tiered pricing.  Either 'amount' or 'tiers' is required.
+                                          tier_behavior:
+                                            enum:
+                                              - graduated
+                                              - volume
+                                            type: string
+                                          interval:
+                                            enum:
+                                              - one_off
+                                              - week
+                                              - month
+                                              - quarter
+                                              - semi_annual
+                                              - year
+                                            type: string
+                                            description: Billing interval. For consumable features, should match
+                                              reset.interval.
+                                          interval_count:
+                                            type: number
+                                            default: 1
+                                            description: Number of intervals per billing cycle. Defaults to 1.
+                                          billing_units:
+                                            type: number
+                                            default: 1
+                                            description: Units per price increment. Usage is rounded UP when billed (e.g.
+                                              billing_units=100 means 101 rounds
+                                              to 200).
+                                          billing_method:
+                                            enum:
+                                              - prepaid
+                                              - usage_based
+                                            type: string
+                                            description: "'prepaid' for upfront payment (seats), 'usage_based' for
+                                              pay-as-you-go."
+                                          max_purchase:
+                                            anyOf:
+                                              - type: number
+                                              - type: "null"
+                                            description: Max units purchasable beyond included. E.g. included=100,
+                                              max_purchase=300 allows 400 total.
+                                              Null for no limit.
+                                        required:
+                                          - interval
+                                          - billing_method
+                                        description: Pricing for usage beyond included units. Omit for free features.
+                                      proration:
+                                        type: object
+                                        properties:
+                                          on_increase:
+                                            enum:
+                                              - bill_immediately
+                                              - prorate_immediately
+                                              - prorate_next_cycle
+                                              - bill_next_cycle
+                                            type: string
+                                            description: Billing behavior when quantity increases mid-cycle.
+                                          on_decrease:
+                                            enum:
+                                              - prorate
+                                              - prorate_immediately
+                                              - prorate_next_cycle
+                                              - none
+                                              - no_prorations
+                                            type: string
+                                            description: Credit behavior when quantity decreases mid-cycle.
+                                        required:
+                                          - on_increase
+                                          - on_decrease
+                                        description: Proration settings for prepaid features. Controls mid-cycle
+                                          quantity change billing.
+                                      rollover:
+                                        type: object
+                                        properties:
+                                          max:
+                                            type: number
+                                            description: Max rollover units. Omit for unlimited rollover.
+                                          max_percentage:
+                                            type: number
+                                            description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                              grant. Mutually exclusive with
+                                              max.
+                                          expiry_duration_type:
+                                            enum:
+                                              - month
+                                              - forever
+                                            type: string
+                                            description: When rolled over units expire.
+                                          expiry_duration_length:
+                                            type: number
+                                            description: Number of periods before expiry.
+                                        required:
+                                          - expiry_duration_type
+                                        description: Rollover config for unused units. If set, unused included units
+                                          carry over.
+                                    required:
+                                      - feature_id
+                                    title: PlanItem
+                                    description: Configuration for a feature item in a plan, including usage limits,
+                                      pricing, and rollover settings.
+                                  description: Items to add to the plan.
+                                remove_items:
+                                  type: array
+                                  items:
+                                    type: object
+                                    properties:
+                                      feature_id:
+                                        type: string
+                                        description: Match items linked to this feature.
+                                      billing_method:
+                                        enum:
+                                          - prepaid
+                                          - usage_based
+                                        type: string
+                                        description: Match items with this billing method (prepaid or usage_based).
+                                      interval:
+                                        anyOf:
+                                          - enum:
+                                              - one_off
+                                              - week
+                                              - month
+                                              - quarter
+                                              - semi_annual
+                                              - year
+                                            type: string
+                                          - enum:
+                                              - one_off
+                                              - minute
+                                              - hour
+                                              - day
+                                              - week
+                                              - month
+                                              - quarter
+                                              - semi_annual
+                                              - year
+                                            type: string
+                                        description: Match items with this interval. Accepts either a BillingInterval
+                                          (price-side) or a ResetInterval
+                                          (reset-side, includes day/hour/minute)
+                                          so price-less items keyed by
+                                          reset.interval can be disambiguated.
+                                      interval_count:
+                                        type: integer
+                                        minimum: -9007199254740991
+                                        maximum: 9007199254740991
+                                        exclusiveMinimum: 0
+                                        description: Match items with this interval_count. Disambiguates between items
+                                          that share an interval but differ in
+                                          count.
+                                    title: PlanItemFilter
+                                    description: Filter for matching plan items. All provided fields must match
+                                      (AND).
+                                  description: Filters selecting items to remove from the plan.
+                              description: Customize the plan to schedule. Can override price, replace items,
+                                or patch items with add_items, remove_items, and
+                                update_items.
                             subscription_id:
                               type: string
                               description: A unique ID to identify this subscription. Useful when scheduling
@@ -9602,9 +10578,12 @@ paths:
                                       description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                         pay-as-you-go."
                                     max_purchase:
-                                      type: number
+                                      anyOf:
+                                        - type: number
+                                        - type: "null"
                                       description: Max units purchasable beyond included. E.g. included=100,
-                                        max_purchase=300 allows 400 total.
+                                        max_purchase=300 allows 400 total. Null
+                                        for no limit.
                                   required:
                                     - interval
                                     - billing_method
@@ -10223,9 +11202,12 @@ paths:
                                 description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                   pay-as-you-go."
                               max_purchase:
-                                type: number
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                                 description: Max units purchasable beyond included. E.g. included=100,
-                                  max_purchase=300 allows 400 total.
+                                  max_purchase=300 allows 400 total. Null for no
+                                  limit.
                             required:
                               - interval
                               - billing_method
@@ -10285,7 +11267,7 @@ paths:
                           pricing, and rollover settings.
                       description: Override the items in the plan (PUT-style — replaces all existing
                         items). Mutually exclusive with add_items / remove_items
-                        / update_items.
+                        / deprecated update_items.
                     add_items:
                       type: array
                       items:
@@ -10381,9 +11363,12 @@ paths:
                                 description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                   pay-as-you-go."
                               max_purchase:
-                                type: number
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                                 description: Max units purchasable beyond included. E.g. included=100,
-                                  max_purchase=300 allows 400 total.
+                                  max_purchase=300 allows 400 total. Null for no
+                                  limit.
                             required:
                               - interval
                               - billing_method
@@ -10457,15 +11442,37 @@ paths:
                             type: string
                             description: Match items with this billing method (prepaid or usage_based).
                           interval:
-                            enum:
-                              - one_off
-                              - week
-                              - month
-                              - quarter
-                              - semi_annual
-                              - year
-                            type: string
-                            description: Match items with this interval.
+                            anyOf:
+                              - enum:
+                                  - one_off
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                              - enum:
+                                  - one_off
+                                  - minute
+                                  - hour
+                                  - day
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                            description: Match items with this interval. Accepts either a BillingInterval
+                              (price-side) or a ResetInterval (reset-side,
+                              includes day/hour/minute) so price-less items
+                              keyed by reset.interval can be disambiguated.
+                          interval_count:
+                            type: integer
+                            minimum: -9007199254740991
+                            maximum: 9007199254740991
+                            exclusiveMinimum: 0
+                            description: Match items with this interval_count. Disambiguates between items
+                              that share an interval but differ in count.
                         title: PlanItemFilter
                         description: Filter for matching plan items. All provided fields must match
                           (AND).
@@ -11297,9 +12304,12 @@ paths:
                                       description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                         pay-as-you-go."
                                     max_purchase:
-                                      type: number
+                                      anyOf:
+                                        - type: number
+                                        - type: "null"
                                       description: Max units purchasable beyond included. E.g. included=100,
-                                        max_purchase=300 allows 400 total.
+                                        max_purchase=300 allows 400 total. Null
+                                        for no limit.
                                   required:
                                     - interval
                                     - billing_method
@@ -12243,9 +13253,12 @@ paths:
                                 description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                   pay-as-you-go."
                               max_purchase:
-                                type: number
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                                 description: Max units purchasable beyond included. E.g. included=100,
-                                  max_purchase=300 allows 400 total.
+                                  max_purchase=300 allows 400 total. Null for no
+                                  limit.
                             required:
                               - interval
                               - billing_method
@@ -12305,7 +13318,7 @@ paths:
                           pricing, and rollover settings.
                       description: Override the items in the plan (PUT-style — replaces all existing
                         items). Mutually exclusive with add_items / remove_items
-                        / update_items.
+                        / deprecated update_items.
                     add_items:
                       type: array
                       items:
@@ -12401,9 +13414,12 @@ paths:
                                 description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                   pay-as-you-go."
                               max_purchase:
-                                type: number
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                                 description: Max units purchasable beyond included. E.g. included=100,
-                                  max_purchase=300 allows 400 total.
+                                  max_purchase=300 allows 400 total. Null for no
+                                  limit.
                             required:
                               - interval
                               - billing_method
@@ -12477,15 +13493,37 @@ paths:
                             type: string
                             description: Match items with this billing method (prepaid or usage_based).
                           interval:
-                            enum:
-                              - one_off
-                              - week
-                              - month
-                              - quarter
-                              - semi_annual
-                              - year
-                            type: string
-                            description: Match items with this interval.
+                            anyOf:
+                              - enum:
+                                  - one_off
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                              - enum:
+                                  - one_off
+                                  - minute
+                                  - hour
+                                  - day
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                            description: Match items with this interval. Accepts either a BillingInterval
+                              (price-side) or a ResetInterval (reset-side,
+                              includes day/hour/minute) so price-less items
+                              keyed by reset.interval can be disambiguated.
+                          interval_count:
+                            type: integer
+                            minimum: -9007199254740991
+                            maximum: 9007199254740991
+                            exclusiveMinimum: 0
+                            description: Match items with this interval_count. Disambiguates between items
+                              that share an interval but differ in count.
                         title: PlanItemFilter
                         description: Filter for matching plan items. All provided fields must match
                           (AND).
@@ -12940,9 +13978,12 @@ paths:
                                 description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                   pay-as-you-go."
                               max_purchase:
-                                type: number
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                                 description: Max units purchasable beyond included. E.g. included=100,
-                                  max_purchase=300 allows 400 total.
+                                  max_purchase=300 allows 400 total. Null for no
+                                  limit.
                             required:
                               - interval
                               - billing_method
@@ -13002,7 +14043,7 @@ paths:
                           pricing, and rollover settings.
                       description: Override the items in the plan (PUT-style — replaces all existing
                         items). Mutually exclusive with add_items / remove_items
-                        / update_items.
+                        / deprecated update_items.
                     add_items:
                       type: array
                       items:
@@ -13098,9 +14139,12 @@ paths:
                                 description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                   pay-as-you-go."
                               max_purchase:
-                                type: number
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                                 description: Max units purchasable beyond included. E.g. included=100,
-                                  max_purchase=300 allows 400 total.
+                                  max_purchase=300 allows 400 total. Null for no
+                                  limit.
                             required:
                               - interval
                               - billing_method
@@ -13174,15 +14218,37 @@ paths:
                             type: string
                             description: Match items with this billing method (prepaid or usage_based).
                           interval:
-                            enum:
-                              - one_off
-                              - week
-                              - month
-                              - quarter
-                              - semi_annual
-                              - year
-                            type: string
-                            description: Match items with this interval.
+                            anyOf:
+                              - enum:
+                                  - one_off
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                              - enum:
+                                  - one_off
+                                  - minute
+                                  - hour
+                                  - day
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                            description: Match items with this interval. Accepts either a BillingInterval
+                              (price-side) or a ResetInterval (reset-side,
+                              includes day/hour/minute) so price-less items
+                              keyed by reset.interval can be disambiguated.
+                          interval_count:
+                            type: integer
+                            minimum: -9007199254740991
+                            maximum: 9007199254740991
+                            exclusiveMinimum: 0
+                            description: Match items with this interval_count. Disambiguates between items
+                              that share an interval but differ in count.
                         title: PlanItemFilter
                         description: Filter for matching plan items. All provided fields must match
                           (AND).
@@ -14033,9 +15099,12 @@ paths:
                                 description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                   pay-as-you-go."
                               max_purchase:
-                                type: number
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                                 description: Max units purchasable beyond included. E.g. included=100,
-                                  max_purchase=300 allows 400 total.
+                                  max_purchase=300 allows 400 total. Null for no
+                                  limit.
                             required:
                               - interval
                               - billing_method
@@ -14095,7 +15164,7 @@ paths:
                           pricing, and rollover settings.
                       description: Override the items in the plan (PUT-style — replaces all existing
                         items). Mutually exclusive with add_items / remove_items
-                        / update_items.
+                        / deprecated update_items.
                     add_items:
                       type: array
                       items:
@@ -14191,9 +15260,12 @@ paths:
                                 description: "'prepaid' for upfront payment (seats), 'usage_based' for
                                   pay-as-you-go."
                               max_purchase:
-                                type: number
+                                anyOf:
+                                  - type: number
+                                  - type: "null"
                                 description: Max units purchasable beyond included. E.g. included=100,
-                                  max_purchase=300 allows 400 total.
+                                  max_purchase=300 allows 400 total. Null for no
+                                  limit.
                             required:
                               - interval
                               - billing_method
@@ -14267,15 +15339,37 @@ paths:
                             type: string
                             description: Match items with this billing method (prepaid or usage_based).
                           interval:
-                            enum:
-                              - one_off
-                              - week
-                              - month
-                              - quarter
-                              - semi_annual
-                              - year
-                            type: string
-                            description: Match items with this interval.
+                            anyOf:
+                              - enum:
+                                  - one_off
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                              - enum:
+                                  - one_off
+                                  - minute
+                                  - hour
+                                  - day
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                            description: Match items with this interval. Accepts either a BillingInterval
+                              (price-side) or a ResetInterval (reset-side,
+                              includes day/hour/minute) so price-less items
+                              keyed by reset.interval can be disambiguated.
+                          interval_count:
+                            type: integer
+                            minimum: -9007199254740991
+                            maximum: 9007199254740991
+                            exclusiveMinimum: 0
+                            description: Match items with this interval_count. Disambiguates between items
+                              that share an interval but differ in count.
                         title: PlanItemFilter
                         description: Filter for matching plan items. All provided fields must match
                           (AND).
@@ -15106,10 +16200,12 @@ paths:
                                   - boolean
                                   - metered
                                   - credit_system
+                                  - ai_credit_system
                                 type: string
                                 description: "Feature type: 'boolean' for on/off access, 'metered' for
                                   usage-tracked features, 'credit_system' for
-                                  unified credit pools."
+                                  unified credit pools, 'ai_credit_system' for
+                                  model-based token pricing."
                               consumable:
                                 type: boolean
                                 description: "For metered features: true if usage resets periodically (API
@@ -15137,6 +16233,45 @@ paths:
                                     - credit_cost
                                 description: "For credit_system features: maps metered features to their credit
                                   costs."
+                              model_markups:
+                                anyOf:
+                                  - type: object
+                                    propertyNames:
+                                      type: string
+                                    additionalProperties:
+                                      type: object
+                                      properties:
+                                        markup:
+                                          type: number
+                                          minimum: -100
+                                        input_cost:
+                                          type: number
+                                          minimum: 0
+                                        output_cost:
+                                          type: number
+                                          minimum: 0
+                                  - type: "null"
+                                description: Per-model markup overrides for AI credit systems.
+                              default_markup:
+                                type: number
+                                minimum: -100
+                                description: Default percentage markup for AI credit systems. Use -100 to make
+                                  usage free.
+                              provider_markups:
+                                anyOf:
+                                  - type: object
+                                    propertyNames:
+                                      type: string
+                                    additionalProperties:
+                                      type: object
+                                      properties:
+                                        markup:
+                                          type: number
+                                          minimum: -100
+                                      required:
+                                        - markup
+                                  - type: "null"
+                                description: Per-provider default markup percentages for AI credit systems.
                               display:
                                 type: object
                                 properties:
@@ -15655,10 +16790,12 @@ paths:
                                   - boolean
                                   - metered
                                   - credit_system
+                                  - ai_credit_system
                                 type: string
                                 description: "Feature type: 'boolean' for on/off access, 'metered' for
                                   usage-tracked features, 'credit_system' for
-                                  unified credit pools."
+                                  unified credit pools, 'ai_credit_system' for
+                                  model-based token pricing."
                               consumable:
                                 type: boolean
                                 description: "For metered features: true if usage resets periodically (API
@@ -15686,6 +16823,45 @@ paths:
                                     - credit_cost
                                 description: "For credit_system features: maps metered features to their credit
                                   costs."
+                              model_markups:
+                                anyOf:
+                                  - type: object
+                                    propertyNames:
+                                      type: string
+                                    additionalProperties:
+                                      type: object
+                                      properties:
+                                        markup:
+                                          type: number
+                                          minimum: -100
+                                        input_cost:
+                                          type: number
+                                          minimum: 0
+                                        output_cost:
+                                          type: number
+                                          minimum: 0
+                                  - type: "null"
+                                description: Per-model markup overrides for AI credit systems.
+                              default_markup:
+                                type: number
+                                minimum: -100
+                                description: Default percentage markup for AI credit systems. Use -100 to make
+                                  usage free.
+                              provider_markups:
+                                anyOf:
+                                  - type: object
+                                    propertyNames:
+                                      type: string
+                                    additionalProperties:
+                                      type: object
+                                      properties:
+                                        markup:
+                                          type: number
+                                          minimum: -100
+                                      required:
+                                        - markup
+                                  - type: "null"
+                                description: Per-provider default markup percentages for AI credit systems.
                               display:
                                 type: object
                                 properties:
@@ -16547,6 +17723,422 @@ paths:
                 feature_id="messages",
                 value=1,
             )
+  /v1/balances.track_tokens:
+    post:
+      operationId: trackTokens
+      description: >-
+        Records AI token usage for a customer and returns the updated AI credit
+        balance.
+
+
+        Use this after an LLM request when you have input and output token
+        counts. Autumn converts token usage to a dollar amount using the
+        configured model pricing and markup, then tracks that value against the
+        customer's AI credit system.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: The ID of the customer.
+                entity_id:
+                  type: string
+                  description: The ID of the entity for entity-scoped balances.
+                feature_id:
+                  type: string
+                  description: The ID of the AI credit system feature. Auto-detected from the
+                    customer's entitlements if omitted — only required when a
+                    customer has multiple AI credit systems.
+                model_id:
+                  type: string
+                  description: The AI model as '<provider>/<model>' (e.g.
+                    'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o').
+                    The provider is the first path segment and must match a
+                    provider + model key in models.dev.
+                input_tokens:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                  description: Number of non-cached text input tokens consumed. Exclusive of cache
+                    and audio token pools.
+                output_tokens:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                  description: Number of text output tokens consumed. Exclusive of the reasoning
+                    and audio output pools.
+                cache_read_tokens:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                  description: Number of cached input tokens read.
+                cache_write_tokens:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                  description: Number of input tokens written to the cache.
+                audio_input_tokens:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                  description: Number of audio input tokens consumed.
+                audio_output_tokens:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                  description: Number of audio output tokens generated.
+                reasoning_tokens:
+                  type: integer
+                  minimum: 0
+                  maximum: 9007199254740991
+                  description: Number of reasoning tokens generated.
+                properties:
+                  type: object
+                  propertyNames:
+                    type: string
+                  additionalProperties: {}
+                  description: Additional properties to attach to this usage event.
+              required:
+                - customer_id
+                - model_id
+                - input_tokens
+                - output_tokens
+              title: TrackTokensParams
+              examples:
+                - &a57
+                  customer_id: cus_123
+                  feature_id: ai_credits
+                  model_id: anthropic/claude-sonnet-4-20250514
+                  input_tokens: 1000
+                  output_tokens: 500
+            example: *a57
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer_id:
+                    type: string
+                    description: The ID of the customer whose usage was tracked.
+                  entity_id:
+                    type: string
+                    description: The ID of the entity, if entity-scoped tracking was performed.
+                  event_name:
+                    type: string
+                    description: The event name that was tracked, if event_name was used instead of
+                      feature_id.
+                  value:
+                    type: number
+                    description: The amount of usage that was recorded.
+                  balance:
+                    anyOf:
+                      - $ref: "#/components/schemas/Balance"
+                      - type: "null"
+                    description: The updated balance for the tracked feature. Null if tracking by
+                      event_name that affects multiple features.
+                  balances:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      anyOf:
+                        - $ref: "#/components/schemas/Balance"
+                        - type: "null"
+                    description: Map of feature_id to updated balance for the tracked feature and
+                      any related features (e.g. linked credit systems). Value
+                      is null when the customer has no balance for that feature.
+                  deductions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        balance_id:
+                          type: string
+                          description: ID of the underlying balance row that was deducted from
+                            (customer_entitlement or rollover).
+                        feature_id:
+                          type: string
+                          description: The feature this balance belongs to.
+                        plan_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: ID of the plan/product this balance belongs to. Null when the
+                            balance can't be attributed to a single plan (e.g.
+                            it spans multiple).
+                        reset:
+                          anyOf:
+                            - type: object
+                              properties:
+                                interval:
+                                  anyOf:
+                                    - enum:
+                                        - one_off
+                                        - minute
+                                        - hour
+                                        - day
+                                        - week
+                                        - month
+                                        - quarter
+                                        - semi_annual
+                                        - year
+                                      type: string
+                                    - const: multiple
+                                  description: The reset interval (hour, day, week, month, etc.) or 'multiple' if
+                                    combined from different intervals.
+                                interval_count:
+                                  type: number
+                                  description: Number of intervals between resets (eg. 2 for bi-monthly).
+                                resets_at:
+                                  anyOf:
+                                    - type: number
+                                    - type: "null"
+                                  description: Timestamp when the balance will next reset.
+                              required:
+                                - interval
+                                - resets_at
+                            - type: "null"
+                          description: Reset configuration for the balance this deduction came from, or
+                            null if the balance doesn't reset.
+                        value:
+                          type: number
+                          description: Amount deducted from this balance. Positive when usage was
+                            consumed, negative when credit was restored (e.g. a
+                            refund via negative track value).
+                      required:
+                        - balance_id
+                        - feature_id
+                        - plan_id
+                        - reset
+                        - value
+                    description: Per-balance breakdown of what this event deducted. A single event
+                      can consume from multiple balance rows when credit systems
+                      or rollovers are involved; this surfaces each one so
+                      callers can build per-feature usage views without polling.
+                required:
+                  - customer_id
+                  - value
+                  - balance
+                examples:
+                  - &a58
+                    customer_id: cus_123
+                    value: 0.006
+                    balance:
+                      feature_id: ai_credits
+                      granted: 10
+                      remaining: 9.994
+                      usage: 0.006
+                      unlimited: false
+                      overage_allowed: false
+                      max_purchase: null
+                      next_reset_at: 1773851121437
+                      breakdown:
+                        - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                          plan_id: pro_plan
+                          included_grant: 100
+                          prepaid_grant: 0
+                          remaining: 72
+                          usage: 28
+                          unlimited: false
+                          reset:
+                            interval: month
+                            resets_at: 1773851121437
+                          price: null
+                          expires_at: null
+                    deductions:
+                      - balance_id: cus_ent_3DdSDoyFmoA9Neecl2a2Gc507X2
+                        feature_id: ai_credits
+                        plan_id: pro
+                        reset:
+                          interval: month
+                          resets_at: 1781288736881
+                        value: 0.006
+              example: *a58
+        "202":
+          description: Accepted. Autumn is experiencing degraded service from a downstream
+            provider, so the token usage event was accepted for replay and will
+            be tracked as soon as the service is restored.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  customer_id:
+                    type: string
+                    description: The ID of the customer whose usage was tracked.
+                  entity_id:
+                    type: string
+                    description: The ID of the entity, if entity-scoped tracking was performed.
+                  event_name:
+                    type: string
+                    description: The event name that was tracked, if event_name was used instead of
+                      feature_id.
+                  value:
+                    type: number
+                    description: The amount of usage that was recorded.
+                  balance:
+                    anyOf:
+                      - $ref: "#/components/schemas/Balance"
+                      - type: "null"
+                    description: The updated balance for the tracked feature. Null if tracking by
+                      event_name that affects multiple features.
+                  balances:
+                    type: object
+                    propertyNames:
+                      type: string
+                    additionalProperties:
+                      anyOf:
+                        - $ref: "#/components/schemas/Balance"
+                        - type: "null"
+                    description: Map of feature_id to updated balance for the tracked feature and
+                      any related features (e.g. linked credit systems). Value
+                      is null when the customer has no balance for that feature.
+                  deductions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        balance_id:
+                          type: string
+                          description: ID of the underlying balance row that was deducted from
+                            (customer_entitlement or rollover).
+                        feature_id:
+                          type: string
+                          description: The feature this balance belongs to.
+                        plan_id:
+                          anyOf:
+                            - type: string
+                            - type: "null"
+                          description: ID of the plan/product this balance belongs to. Null when the
+                            balance can't be attributed to a single plan (e.g.
+                            it spans multiple).
+                        reset:
+                          anyOf:
+                            - type: object
+                              properties:
+                                interval:
+                                  anyOf:
+                                    - enum:
+                                        - one_off
+                                        - minute
+                                        - hour
+                                        - day
+                                        - week
+                                        - month
+                                        - quarter
+                                        - semi_annual
+                                        - year
+                                      type: string
+                                    - const: multiple
+                                  description: The reset interval (hour, day, week, month, etc.) or 'multiple' if
+                                    combined from different intervals.
+                                interval_count:
+                                  type: number
+                                  description: Number of intervals between resets (eg. 2 for bi-monthly).
+                                resets_at:
+                                  anyOf:
+                                    - type: number
+                                    - type: "null"
+                                  description: Timestamp when the balance will next reset.
+                              required:
+                                - interval
+                                - resets_at
+                            - type: "null"
+                          description: Reset configuration for the balance this deduction came from, or
+                            null if the balance doesn't reset.
+                        value:
+                          type: number
+                          description: Amount deducted from this balance. Positive when usage was
+                            consumed, negative when credit was restored (e.g. a
+                            refund via negative track value).
+                      required:
+                        - balance_id
+                        - feature_id
+                        - plan_id
+                        - reset
+                        - value
+                    description: Per-balance breakdown of what this event deducted. A single event
+                      can consume from multiple balance rows when credit systems
+                      or rollovers are involved; this surfaces each one so
+                      callers can build per-feature usage views without polling.
+                required:
+                  - customer_id
+                  - value
+                  - balance
+                examples:
+                  - &a59
+                    customer_id: cus_123
+                    value: 0.006
+                    balance:
+                      feature_id: ai_credits
+                      granted: 10
+                      remaining: 9.994
+                      usage: 0.006
+                      unlimited: false
+                      overage_allowed: false
+                      max_purchase: null
+                      next_reset_at: 1773851121437
+                      breakdown:
+                        - id: cus_ent_39qmLooixXLAqMywgXywjAz96rV
+                          plan_id: pro_plan
+                          included_grant: 100
+                          prepaid_grant: 0
+                          remaining: 72
+                          usage: 28
+                          unlimited: false
+                          reset:
+                            interval: month
+                            resets_at: 1773851121437
+                          price: null
+                          expires_at: null
+                    deductions:
+                      - balance_id: cus_ent_3DdSDoyFmoA9Neecl2a2Gc507X2
+                        feature_id: ai_credits
+                        plan_id: pro
+                        reset:
+                          interval: month
+                          resets_at: 1781288736881
+                        value: 0.006
+              example: *a59
+      x-speakeasy-name-override: trackTokens
+      parameters:
+        - *a5
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.trackTokens({
+              customerId: "cus_123",
+              featureId: "ai_credits",
+              modelId: "anthropic/claude-sonnet-4-20250514",
+              inputTokens: 1000,
+              outputTokens: 500,
+            });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.track_tokens(
+                customer_id="cus_123",
+                model_id="anthropic/claude-sonnet-4-20250514",
+                input_tokens=1000,
+                output_tokens=500,
+                feature_id="ai_credits",
+            )
   /v1/balances.batch_track:
     post:
       operationId: batchTrack
@@ -16623,14 +18215,14 @@ paths:
                   - customer_id
               title: BatchTrackParams
               examples:
-                - &a57
+                - &a60
                   - customer_id: cus_123
                     feature_id: messages
                     value: 1
                   - customer_id: cus_123
                     event_name: message.sent
                     value: 1
-            example: *a57
+            example: *a60
       responses:
         "202":
           description: "Batch accepted. All items passed synchronous validation. Enqueue
@@ -16648,9 +18240,9 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a58
+                  - &a61
                     success: true
-              example: *a58
+              example: *a61
       x-speakeasy-name-override: batchTrack
       parameters:
         - *a5
@@ -16749,7 +18341,7 @@ paths:
                   description: Filter events by time range
               title: EventsListParams
               examples:
-                - &a59
+                - &a62
                   start_cursor: ""
                   customer_id: cus_123
                   limit: 50
@@ -16758,7 +18350,7 @@ paths:
                   custom_range:
                     start: 1704067200000
                     end: 1706745600000
-            example: *a59
+            example: *a62
       responses:
         "200":
           description: OK
@@ -16883,7 +18475,7 @@ paths:
                   - list
                   - next_cursor
                 examples:
-                  - &a60
+                  - &a63
                     list:
                       - id: evt_36xpk2TmuQX5zVPPQ8tCtnR5Weg
                         timestamp: 1765958215459
@@ -16907,7 +18499,7 @@ paths:
                         properties: {}
                         deductions: null
                     next_cursor: eyJ2IjowLCJpZCI6ImV2dF8zNnhtSHh4akFrcXh1ZkRmOXlIQVBOZlJyTE0iLCJ0IjoxNzY1OTU2NTEyMDU3fQ
-              example: *a60
+              example: *a63
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -17023,7 +18615,7 @@ paths:
                 - feature_id
               title: EventsAggregateParams
               examples:
-                - &a61
+                - &a64
                   customer_id: cus_123
                   feature_id: api_calls
                   range: 30d
@@ -17034,7 +18626,7 @@ paths:
                     - messages
                   range: 7d
                   group_by: properties.model
-            example: *a61
+            example: *a64
       responses:
         "200":
           description: OK
@@ -17096,7 +18688,7 @@ paths:
                   - list
                   - total
                 examples:
-                  - &a62
+                  - &a65
                     list:
                       - period: 1762905600000
                         values:
@@ -17143,7 +18735,7 @@ paths:
                       sessions:
                         count: 2
                         sum: 15
-              example: *a62
+              example: *a65
       x-speakeasy-name-override: aggregate
       parameters:
         - *a5
@@ -17289,12 +18881,12 @@ paths:
                 - entity_id
               title: CreateEntityParams
               examples:
-                - &a63
+                - &a66
                   customer_id: cus_123
                   entity_id: seat_42
                   feature_id: seats
                   name: Seat 42
-            example: *a63
+            example: *a66
       responses:
         "200":
           description: OK
@@ -17496,10 +19088,12 @@ paths:
                                 - boolean
                                 - metered
                                 - credit_system
+                                - ai_credit_system
                               type: string
                               description: "Feature type: 'boolean' for on/off access, 'metered' for
                                 usage-tracked features, 'credit_system' for
-                                unified credit pools."
+                                unified credit pools, 'ai_credit_system' for
+                                model-based token pricing."
                             consumable:
                               type: boolean
                               description: "For metered features: true if usage resets periodically (API
@@ -17527,6 +19121,45 @@ paths:
                                   - credit_cost
                               description: "For credit_system features: maps metered features to their credit
                                 costs."
+                            model_markups:
+                              anyOf:
+                                - type: object
+                                  propertyNames:
+                                    type: string
+                                  additionalProperties:
+                                    type: object
+                                    properties:
+                                      markup:
+                                        type: number
+                                        minimum: -100
+                                      input_cost:
+                                        type: number
+                                        minimum: 0
+                                      output_cost:
+                                        type: number
+                                        minimum: 0
+                                - type: "null"
+                              description: Per-model markup overrides for AI credit systems.
+                            default_markup:
+                              type: number
+                              minimum: -100
+                              description: Default percentage markup for AI credit systems. Use -100 to make
+                                usage free.
+                            provider_markups:
+                              anyOf:
+                                - type: object
+                                  propertyNames:
+                                    type: string
+                                  additionalProperties:
+                                    type: object
+                                    properties:
+                                      markup:
+                                        type: number
+                                        minimum: -100
+                                    required:
+                                      - markup
+                                - type: "null"
+                              description: Per-provider default markup percentages for AI credit systems.
                             display:
                               type: object
                               properties:
@@ -17690,7 +19323,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a64
+                  - &a67
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -17735,7 +19368,7 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a64
+              example: *a67
       x-speakeasy-name-override: create
       parameters:
         - *a5
@@ -17794,11 +19427,11 @@ paths:
                 - entity_id
               title: GetEntityParams
               examples:
-                - &a65
+                - &a68
                   entity_id: seat_42
                 - customer_id: cus_123
                   entity_id: seat_42
-            example: *a65
+            example: *a68
       responses:
         "200":
           description: OK
@@ -18000,10 +19633,12 @@ paths:
                                 - boolean
                                 - metered
                                 - credit_system
+                                - ai_credit_system
                               type: string
                               description: "Feature type: 'boolean' for on/off access, 'metered' for
                                 usage-tracked features, 'credit_system' for
-                                unified credit pools."
+                                unified credit pools, 'ai_credit_system' for
+                                model-based token pricing."
                             consumable:
                               type: boolean
                               description: "For metered features: true if usage resets periodically (API
@@ -18031,6 +19666,45 @@ paths:
                                   - credit_cost
                               description: "For credit_system features: maps metered features to their credit
                                 costs."
+                            model_markups:
+                              anyOf:
+                                - type: object
+                                  propertyNames:
+                                    type: string
+                                  additionalProperties:
+                                    type: object
+                                    properties:
+                                      markup:
+                                        type: number
+                                        minimum: -100
+                                      input_cost:
+                                        type: number
+                                        minimum: 0
+                                      output_cost:
+                                        type: number
+                                        minimum: 0
+                                - type: "null"
+                              description: Per-model markup overrides for AI credit systems.
+                            default_markup:
+                              type: number
+                              minimum: -100
+                              description: Default percentage markup for AI credit systems. Use -100 to make
+                                usage free.
+                            provider_markups:
+                              anyOf:
+                                - type: object
+                                  propertyNames:
+                                    type: string
+                                  additionalProperties:
+                                    type: object
+                                    properties:
+                                      markup:
+                                        type: number
+                                        minimum: -100
+                                    required:
+                                      - markup
+                                - type: "null"
+                              description: Per-provider default markup percentages for AI credit systems.
                             display:
                               type: object
                               properties:
@@ -18194,7 +19868,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a66
+                  - &a69
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -18239,7 +19913,7 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a66
+              example: *a69
       x-speakeasy-name-override: get
       parameters:
         - *a5
@@ -18337,12 +20011,12 @@ paths:
                     paginated call instead of iterating entities.get.
               title: ListEntitiesParams
               examples:
-                - &a67
+                - &a70
                   start_cursor: ""
                   limit: 10
                 - plans:
                     - id: pro_plan
-            example: *a67
+            example: *a70
       responses:
         "200":
           description: OK
@@ -18549,10 +20223,13 @@ paths:
                                       - boolean
                                       - metered
                                       - credit_system
+                                      - ai_credit_system
                                     type: string
                                     description: "Feature type: 'boolean' for on/off access, 'metered' for
                                       usage-tracked features, 'credit_system'
-                                      for unified credit pools."
+                                      for unified credit pools,
+                                      'ai_credit_system' for model-based token
+                                      pricing."
                                   consumable:
                                     type: boolean
                                     description: "For metered features: true if usage resets periodically (API
@@ -18580,6 +20257,45 @@ paths:
                                         - credit_cost
                                     description: "For credit_system features: maps metered features to their credit
                                       costs."
+                                  model_markups:
+                                    anyOf:
+                                      - type: object
+                                        propertyNames:
+                                          type: string
+                                        additionalProperties:
+                                          type: object
+                                          properties:
+                                            markup:
+                                              type: number
+                                              minimum: -100
+                                            input_cost:
+                                              type: number
+                                              minimum: 0
+                                            output_cost:
+                                              type: number
+                                              minimum: 0
+                                      - type: "null"
+                                    description: Per-model markup overrides for AI credit systems.
+                                  default_markup:
+                                    type: number
+                                    minimum: -100
+                                    description: Default percentage markup for AI credit systems. Use -100 to make
+                                      usage free.
+                                  provider_markups:
+                                    anyOf:
+                                      - type: object
+                                        propertyNames:
+                                          type: string
+                                        additionalProperties:
+                                          type: object
+                                          properties:
+                                            markup:
+                                              type: number
+                                              minimum: -100
+                                          required:
+                                            - markup
+                                      - type: "null"
+                                    description: Per-provider default markup percentages for AI credit systems.
                                   display:
                                     type: object
                                     properties:
@@ -18753,7 +20469,7 @@ paths:
                   - list
                   - next_cursor
                 examples:
-                  - &a68
+                  - &a71
                     list:
                       - id: seat_42
                         name: Seat 42
@@ -18800,7 +20516,7 @@ paths:
                                 expires_at: null
                         invoices: []
                     next_cursor: null
-              example: *a68
+              example: *a71
       x-speakeasy-name-override: list
       parameters:
         - *a5
@@ -18924,7 +20640,7 @@ paths:
                 - entity_id
               title: UpdateEntityParams
               examples:
-                - &a69
+                - &a72
                   customer_id: cus_123
                   entity_id: seat_42
                   billing_controls:
@@ -18932,7 +20648,7 @@ paths:
                       - feature_id: messages
                         enabled: true
                         overage_limit: 25
-            example: *a69
+            example: *a72
       responses:
         "200":
           description: OK
@@ -19134,10 +20850,12 @@ paths:
                                 - boolean
                                 - metered
                                 - credit_system
+                                - ai_credit_system
                               type: string
                               description: "Feature type: 'boolean' for on/off access, 'metered' for
                                 usage-tracked features, 'credit_system' for
-                                unified credit pools."
+                                unified credit pools, 'ai_credit_system' for
+                                model-based token pricing."
                             consumable:
                               type: boolean
                               description: "For metered features: true if usage resets periodically (API
@@ -19165,6 +20883,45 @@ paths:
                                   - credit_cost
                               description: "For credit_system features: maps metered features to their credit
                                 costs."
+                            model_markups:
+                              anyOf:
+                                - type: object
+                                  propertyNames:
+                                    type: string
+                                  additionalProperties:
+                                    type: object
+                                    properties:
+                                      markup:
+                                        type: number
+                                        minimum: -100
+                                      input_cost:
+                                        type: number
+                                        minimum: 0
+                                      output_cost:
+                                        type: number
+                                        minimum: 0
+                                - type: "null"
+                              description: Per-model markup overrides for AI credit systems.
+                            default_markup:
+                              type: number
+                              minimum: -100
+                              description: Default percentage markup for AI credit systems. Use -100 to make
+                                usage free.
+                            provider_markups:
+                              anyOf:
+                                - type: object
+                                  propertyNames:
+                                    type: string
+                                  additionalProperties:
+                                    type: object
+                                    properties:
+                                      markup:
+                                        type: number
+                                        minimum: -100
+                                    required:
+                                      - markup
+                                - type: "null"
+                              description: Per-provider default markup percentages for AI credit systems.
                             display:
                               type: object
                               properties:
@@ -19328,7 +21085,7 @@ paths:
                   - balances
                   - flags
                 examples:
-                  - &a70
+                  - &a73
                     id: seat_42
                     name: Seat 42
                     customer_id: cus_123
@@ -19373,7 +21130,7 @@ paths:
                             price: null
                             expires_at: null
                     invoices: []
-              example: *a70
+              example: *a73
       x-speakeasy-name-override: update
       parameters:
         - *a5
@@ -19446,10 +21203,10 @@ paths:
                 - entity_id
               title: DeleteEntityParams
               examples:
-                - &a71
+                - &a74
                   customer_id: cus_123
                   entity_id: seat_42
-            example: *a71
+            example: *a74
       responses:
         "200":
           description: OK
@@ -19463,9 +21220,9 @@ paths:
                 required:
                   - success
                 examples:
-                  - &a72
+                  - &a75
                     success: true
-              example: *a72
+              example: *a75
       x-speakeasy-name-override: delete
       parameters:
         - *a5
@@ -19516,10 +21273,10 @@ paths:
                 - program_id
               title: CreateReferralCodeParams
               examples:
-                - &a73
+                - &a76
                   customer_id: cus_123
                   program_id: prog_123
-            example: *a73
+            example: *a76
       responses:
         "200":
           description: OK
@@ -19542,11 +21299,11 @@ paths:
                   - customer_id
                   - created_at
                 examples:
-                  - &a74
+                  - &a77
                     code: <string>
                     customer_id: <string>
                     created_at: 123
-              example: *a74
+              example: *a77
       x-speakeasy-name-override: createCode
       parameters:
         - *a5
@@ -19597,10 +21354,10 @@ paths:
                 - customer_id
               title: RedeemReferralCodeParams
               examples:
-                - &a75
+                - &a78
                   code: REF123
                   customer_id: cus_456
-            example: *a75
+            example: *a78
       responses:
         "200":
           description: OK
@@ -19623,11 +21380,11 @@ paths:
                   - customer_id
                   - reward_id
                 examples:
-                  - &a76
+                  - &a79
                     id: <string>
                     customer_id: <string>
                     reward_id: <string>
-              example: *a76
+              example: *a79
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a5
@@ -19678,10 +21435,10 @@ paths:
                 - customer_id
               title: RedeemRewardCodeParams
               examples:
-                - &a77
+                - &a80
                   code: REWARD10
                   customer_id: cus_456
-            example: *a77
+            example: *a80
       responses:
         "200":
           description: OK
@@ -19712,12 +21469,12 @@ paths:
                   - reward_id
                   - entitlements_granted
                 examples:
-                  - &a78
+                  - &a81
                     reward_id: reward_789
                     entitlements_granted:
                       - feature_id: messages
                         balance: 100
-              example: *a78
+              example: *a81
       x-speakeasy-name-override: redeemCode
       parameters:
         - *a5
@@ -19779,12 +21536,12 @@ paths:
                 - redirect_url
               title: LinkRevenueCatParams
               examples:
-                - &a77
+                - &a82
                   organization_slug: acme
                   env: test
                   project_name: acme-mobile
                   redirect_url: https://dashboard.useautumn.com/dev?tab=revenuecat
-            example: *a77
+            example: *a82
       responses:
         "200":
           description: OK
@@ -19799,9 +21556,9 @@ paths:
                   - oauth_url
                 title: LinkRevenueCatResponse
                 examples:
-                  - &a78
+                  - &a83
                     oauth_url: https://api.revenuecat.com/oauth2/authorize?client_id=...&redirect_uri=...&response_type=code&scope=project.read+project.write
-              example: *a78
+              example: *a83
       x-speakeasy-name-override: linkRevenueCat
       parameters:
         - *a5
@@ -19870,13 +21627,13 @@ paths:
                 - env
               title: SyncRevenueCatParams
               examples:
-                - &a79
+                - &a84
                   organization_slug: acme
                   env: test
                   product_ids:
                     - pro
                     - premium
-            example: *a79
+            example: *a84
       responses:
         "200":
           description: OK
@@ -19942,7 +21699,7 @@ paths:
                   - results
                 title: SyncRevenueCatResponse
                 examples:
-                  - &a80
+                  - &a85
                     results:
                       - plan_id: pro
                         status: synced
@@ -19953,7 +21710,7 @@ paths:
                             product: created
                             store_push: skipped
                             price: set
-              example: *a80
+              example: *a85
       x-speakeasy-name-override: syncRevenueCat
       parameters:
         - *a5
@@ -20018,10 +21775,10 @@ paths:
                 - env
               title: GetRevenueCatKeysParams
               examples:
-                - &a81
+                - &a86
                   organization_slug: acme
                   env: test
-            example: *a81
+            example: *a86
       responses:
         "200":
           description: OK
@@ -20084,7 +21841,7 @@ paths:
                   - oauth_access_token
                 title: GetRevenueCatKeysResponse
                 examples:
-                  - &a82
+                  - &a87
                     apps:
                       - app_id: app1a2b3c4d
                         app_type: test_store
@@ -20095,7 +21852,7 @@ paths:
                             environment: production
                             app_id: app1a2b3c4
                     oauth_access_token: atk_aBcDeFgHiJkLmNoPqRsTuVwXyZ
-              example: *a82
+              example: *a87
       x-speakeasy-name-override: getRevenueCatKeys
       parameters:
         - *a5
@@ -20594,9 +22351,249 @@ webhooks:
                                 feature_id:
                                   description: The ID of the feature that was added or removed.
                                   type: string
+                                item:
+                                  description: The item snapshot that was added or removed.
+                                  type: object
+                                  properties:
+                                    feature_id:
+                                      description: The ID of the feature this item configures.
+                                      type: string
+                                    feature:
+                                      description: The full feature object if expanded.
+                                      type: object
+                                      properties:
+                                        id:
+                                          description: The ID of the feature, used to refer to it in other API calls like
+                                            /track or /check.
+                                          type: string
+                                        name:
+                                          description: The name of the feature.
+                                          anyOf:
+                                            - type: string
+                                            - type: "null"
+                                        type:
+                                          description: The type of the feature
+                                          type: string
+                                          enum:
+                                            - static
+                                            - boolean
+                                            - single_use
+                                            - continuous_use
+                                            - credit_system
+                                            - ai_credit_system
+                                        display:
+                                          description: Singular and plural display names for the feature.
+                                          anyOf:
+                                            - type: object
+                                              properties:
+                                                singular:
+                                                  description: The singular display name for the feature.
+                                                  type: string
+                                                plural:
+                                                  description: The plural display name for the feature.
+                                                  type: string
+                                              required:
+                                                - singular
+                                                - plural
+                                              additionalProperties: false
+                                            - type: "null"
+                                        credit_schema:
+                                          description: Credit cost schema for credit system features.
+                                          anyOf:
+                                            - type: array
+                                              items:
+                                                type: object
+                                                properties:
+                                                  metered_feature_id:
+                                                    description: The ID of the metered feature (should be a single_use feature).
+                                                    type: string
+                                                  credit_cost:
+                                                    description: The credit cost of the metered feature.
+                                                    type: number
+                                                required:
+                                                  - metered_feature_id
+                                                  - credit_cost
+                                                additionalProperties: false
+                                            - type: "null"
+                                        archived:
+                                          description: Whether or not the feature is archived.
+                                          anyOf:
+                                            - type: boolean
+                                            - type: "null"
+                                      required:
+                                        - id
+                                        - type
+                                      additionalProperties: false
+                                    included:
+                                      description: Number of free units included. For consumable features, balance
+                                        resets to this number each interval.
+                                      type: number
+                                    unlimited:
+                                      description: Whether the customer has unlimited access to this feature.
+                                      type: boolean
+                                    reset:
+                                      description: Reset configuration for consumable features. Null for
+                                        non-consumable features like seats where
+                                        usage persists across billing cycles.
+                                      anyOf:
+                                        - type: object
+                                          properties:
+                                            interval:
+                                              description: The interval at which the feature balance resets (e.g. 'month',
+                                                'year'). For consumable
+                                                features, usage resets to 0 and
+                                                included units are restored.
+                                              type: string
+                                              enum:
+                                                - one_off
+                                                - minute
+                                                - hour
+                                                - day
+                                                - week
+                                                - month
+                                                - quarter
+                                                - semi_annual
+                                                - year
+                                            interval_count:
+                                              description: Number of intervals between resets. Defaults to 1.
+                                              type: number
+                                          required:
+                                            - interval
+                                          additionalProperties: false
+                                        - type: "null"
+                                    price:
+                                      description: Pricing configuration for usage beyond included units. Null if
+                                        feature is entirely free.
+                                      anyOf:
+                                        - type: object
+                                          properties:
+                                            amount:
+                                              description: Price per billing_units after included usage is consumed. Mutually
+                                                exclusive with tiers.
+                                              type: number
+                                            tiers:
+                                              description: Tiered pricing configuration. Each tier's 'to' INCLUDES the
+                                                included amount. Either 'tiers'
+                                                or 'amount' is required.
+                                              type: array
+                                              items:
+                                                type: object
+                                                properties:
+                                                  to:
+                                                    anyOf:
+                                                      - type: number
+                                                      - type: string
+                                                        const: inf
+                                                  amount:
+                                                    type: number
+                                                  flat_amount:
+                                                    type: number
+                                                required:
+                                                  - to
+                                                  - amount
+                                                additionalProperties: false
+                                            tier_behavior:
+                                              type: string
+                                              enum:
+                                                - graduated
+                                                - volume
+                                            interval:
+                                              description: Billing interval for this price. For consumable features, should
+                                                match reset.interval.
+                                              type: string
+                                              enum:
+                                                - one_off
+                                                - week
+                                                - month
+                                                - quarter
+                                                - semi_annual
+                                                - year
+                                            interval_count:
+                                              description: Number of intervals per billing cycle. Defaults to 1.
+                                              type: number
+                                            billing_units:
+                                              description: Number of units per price increment. Usage is rounded UP to the
+                                                nearest billing_units when
+                                                billed (e.g. billing_units=100
+                                                means 101 usage rounds to 200).
+                                              type: number
+                                            billing_method:
+                                              description: "'prepaid' for features like seats where customers pay upfront,
+                                                'usage_based' for pay-as-you-go
+                                                after included usage."
+                                              type: string
+                                              enum:
+                                                - prepaid
+                                                - usage_based
+                                            max_purchase:
+                                              description: Maximum units a customer can purchase beyond included. E.g. if
+                                                included=100 and
+                                                max_purchase=300, customer can
+                                                use up to 400 total before usage
+                                                is capped. Null for no limit.
+                                              anyOf:
+                                                - type: number
+                                                - type: "null"
+                                          required:
+                                            - interval
+                                            - billing_units
+                                            - billing_method
+                                            - max_purchase
+                                          additionalProperties: false
+                                        - type: "null"
+                                    display:
+                                      description: Display text for showing this item in pricing pages.
+                                      type: object
+                                      properties:
+                                        primary_text:
+                                          description: Main display text (e.g. '$10' or '100 messages').
+                                          type: string
+                                        secondary_text:
+                                          description: Secondary display text (e.g. 'per month' or 'then $0.5 per 100').
+                                          type: string
+                                      required:
+                                        - primary_text
+                                      additionalProperties: false
+                                    rollover:
+                                      description: Rollover configuration for unused units. If set, unused included
+                                        units roll over to the next period.
+                                      type: object
+                                      properties:
+                                        max:
+                                          description: Maximum rollover units. Null for unlimited rollover.
+                                          anyOf:
+                                            - type: number
+                                            - type: "null"
+                                        max_percentage:
+                                          description: Maximum rollover as a percentage (0-100) of included + prepaid
+                                            grant. Mutually exclusive with max.
+                                          anyOf:
+                                            - type: number
+                                            - type: "null"
+                                        expiry_duration_type:
+                                          description: When rolled over units expire.
+                                          type: string
+                                          enum:
+                                            - month
+                                            - forever
+                                        expiry_duration_length:
+                                          description: Number of periods before expiry.
+                                          type: number
+                                      required:
+                                        - max
+                                        - expiry_duration_type
+                                      additionalProperties: false
+                                  required:
+                                    - feature_id
+                                    - included
+                                    - unlimited
+                                    - reset
+                                    - price
+                                  additionalProperties: false
                               required:
                                 - action
                                 - feature_id
+                                - item
                               additionalProperties: false
                         required:
                           - action

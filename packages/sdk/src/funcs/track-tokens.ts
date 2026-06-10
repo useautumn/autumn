@@ -27,43 +27,45 @@ import { APICall, APIPromise } from "../types/async.js";
 import { Result } from "../types/fp.js";
 
 /**
- * Updates an existing feature.
+ * Records AI token usage for a customer and returns the updated AI credit balance.
  *
- * Use this to modify feature properties like name, display settings, or to archive a feature.
- *
- * @example
- * ```typescript
- * // Update a feature's display name
- * const response = await client.features.update({ featureId: "api-calls", name: "API Requests", display: {"singular":"API request","plural":"API requests"} });
- * ```
+ * Use this after an LLM request when you have input and output token counts. Autumn converts token usage to a dollar amount using the configured model pricing and markup, then tracks that value against the customer's AI credit system.
  *
  * @example
  * ```typescript
- * // Archive a feature
- * const response = await client.features.update({ featureId: "deprecated-feature", archived: true });
+ * // Track one LLM response
+ * const response = await client.trackTokens({
+ *
+ *   customerId: "cus_123",
+ *   featureId: "ai_credits",
+ *   modelId: "anthropic/claude-sonnet-4-20250514",
+ *   inputTokens: 1000,
+ *   outputTokens: 500,
+ * });
  * ```
  *
- * @param name - The name of the feature. (optional)
- * @param type - The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system. (optional)
- * @param consumable - Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. (optional)
- * @param display - Singular and plural display names for the feature in your user interface. (optional)
- * @param creditSchema - A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead. (optional)
- * @param modelMarkups - Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration. (optional)
- * @param defaultMarkup - Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free. (optional)
- * @param providerMarkups - Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id. (optional)
- * @param archived - Whether the feature is archived. Archived features are hidden from the dashboard. (optional)
- * @param featureId - The ID of the feature to update.
- * @param newFeatureId - The new ID of the feature. Feature ID can only be updated if it's not being used by any customers. (optional)
+ * @param customerId - The ID of the customer.
+ * @param entityId - The ID of the entity for entity-scoped balances. (optional)
+ * @param featureId - The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted — only required when a customer has multiple AI credit systems. (optional)
+ * @param modelId - The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+ * @param inputTokens - Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools.
+ * @param outputTokens - Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
+ * @param cacheReadTokens - Number of cached input tokens read. (optional)
+ * @param cacheWriteTokens - Number of input tokens written to the cache. (optional)
+ * @param audioInputTokens - Number of audio input tokens consumed. (optional)
+ * @param audioOutputTokens - Number of audio output tokens generated. (optional)
+ * @param reasoningTokens - Number of reasoning tokens generated. (optional)
+ * @param properties - Additional properties to attach to this usage event. (optional)
  *
- * @returns The updated feature object.
+ * @returns The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.
  */
-export function featuresUpdate(
+export function trackTokens(
   client: AutumnCore,
-  request: models.UpdateFeatureParams,
+  request: models.TrackTokensParams,
   options?: RequestOptions,
 ): APIPromise<
   Result<
-    models.UpdateFeatureResponse,
+    models.TrackTokensResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -83,12 +85,12 @@ export function featuresUpdate(
 
 async function $do(
   client: AutumnCore,
-  request: models.UpdateFeatureParams,
+  request: models.TrackTokensParams,
   options?: RequestOptions,
 ): Promise<
   [
     Result<
-      models.UpdateFeatureResponse,
+      models.TrackTokensResponse,
       | AutumnError
       | ResponseValidationError
       | ConnectionError
@@ -103,7 +105,7 @@ async function $do(
 > {
   const parsed = safeParse(
     request,
-    (value) => z.parse(models.UpdateFeatureParams$outboundSchema, value),
+    (value) => z.parse(models.TrackTokensParams$outboundSchema, value),
     "Input validation failed",
   );
   if (!parsed.ok) {
@@ -112,7 +114,7 @@ async function $do(
   const payload = parsed.value;
   const body = encodeJSON("body", payload, { explode: true });
 
-  const path = pathToFunc("/v1/features.update")();
+  const path = pathToFunc("/v1/balances.track_tokens")();
 
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
@@ -131,7 +133,7 @@ async function $do(
   const context = {
     options: client._options,
     baseURL: options?.serverURL ?? client._baseURL ?? "",
-    operationID: "updateFeature",
+    operationID: "trackTokens",
     oAuth2Scopes: null,
 
     resolvedSecurity: requestSecurity,
@@ -171,7 +173,7 @@ async function $do(
   const response = doResult.value;
 
   const [result] = await M.match<
-    models.UpdateFeatureResponse,
+    models.TrackTokensResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -181,7 +183,8 @@ async function $do(
     | UnexpectedClientError
     | SDKValidationError
   >(
-    M.json(200, models.UpdateFeatureResponse$inboundSchema),
+    M.json(200, models.TrackTokensResponse$inboundSchema),
+    M.json(202, models.TrackTokensResponse$inboundSchema),
     M.fail("4XX"),
     M.fail("5XX"),
   )(response, req);

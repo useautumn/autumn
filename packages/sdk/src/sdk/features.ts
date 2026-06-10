@@ -39,7 +39,10 @@ export class Features extends ClientSDK {
    * @param type - The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system.
    * @param consumable - Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. (optional)
    * @param display - Singular and plural display names for the feature in your user interface. (optional)
-   * @param creditSchema - A schema that maps 'single_use' feature IDs to credit costs. Applicable only for 'credit_system' features. (optional)
+   * @param creditSchema - A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead. (optional)
+   * @param modelMarkups - Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration. (optional)
+   * @param defaultMarkup - Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free. (optional)
+   * @param providerMarkups - Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id. (optional)
    * @param featureId - The ID of the feature to create.
    *
    * @returns The created feature object.
@@ -120,7 +123,10 @@ export class Features extends ClientSDK {
    * @param type - The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system. (optional)
    * @param consumable - Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. (optional)
    * @param display - Singular and plural display names for the feature in your user interface. (optional)
-   * @param creditSchema - A schema that maps 'single_use' feature IDs to credit costs. Applicable only for 'credit_system' features. (optional)
+   * @param creditSchema - A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead. (optional)
+   * @param modelMarkups - Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration. (optional)
+   * @param defaultMarkup - Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free. (optional)
+   * @param providerMarkups - Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id. (optional)
    * @param archived - Whether the feature is archived. Archived features are hidden from the dashboard. (optional)
    * @param featureId - The ID of the feature to update.
    * @param newFeatureId - The new ID of the feature. Feature ID can only be updated if it's not being used by any customers. (optional)
