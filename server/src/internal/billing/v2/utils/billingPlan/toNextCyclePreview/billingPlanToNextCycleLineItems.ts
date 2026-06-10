@@ -129,11 +129,17 @@ export const billingPlanToNextCycleLineItems = ({
 	);
 
 	if (billingContext.stripeDiscounts?.length) {
+		// Mirrors buildStripeInvoiceAction's condition for creating an invoice now.
+		const hasImmediateInvoice = (autumnBillingPlan.lineItems ?? []).some(
+			(lineItem) => lineItem.chargeImmediately && lineItem.amount !== 0,
+		);
+
 		const nextCycleDiscounts = filterStripeDiscountsForNextCycle({
 			stripeDiscounts: billingContext.stripeDiscounts,
 			currentEpochMs: billingContext.currentEpochMs,
 			nextCycleStart,
 			discountStartMs: billingContext.subscriptionBackdateStartMs,
+			hasImmediateInvoice,
 		});
 
 		nextCycleAutumnLineItems = applyStripeDiscountsToLineItems({
