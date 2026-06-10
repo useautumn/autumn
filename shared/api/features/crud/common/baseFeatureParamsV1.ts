@@ -55,9 +55,9 @@ export const BaseFeatureV1ParamsSchema = z.object({
 			"Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.",
 	}),
 
-	default_markup: z.number().min(0).optional().meta({
+	default_markup: z.number().min(-100).optional().meta({
 		description:
-			"Default percentage markup for this AI credit system. Used when no model or provider markup applies.",
+			"Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free.",
 	}),
 
 	provider_markups: ProviderMarkupsSchema.optional().meta({

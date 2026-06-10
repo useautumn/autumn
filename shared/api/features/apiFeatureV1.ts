@@ -50,8 +50,9 @@ export const ApiFeatureV1Schema = z.object({
 		description: "Per-model markup overrides for AI credit systems.",
 	}),
 
-	default_markup: z.number().min(0).optional().meta({
-		description: "Default percentage markup for AI credit systems.",
+	default_markup: z.number().min(-100).optional().meta({
+		description:
+			"Default percentage markup for AI credit systems. Use -100 to make usage free.",
 	}),
 
 	provider_markups: ProviderMarkupsSchema.optional().meta({

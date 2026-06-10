@@ -80,9 +80,10 @@ export const validateCreditSystem = (
 	const defaultMarkup = newConfig.default_markup;
 	if (defaultMarkup != null) {
 		const parsedDefaultMarkup = Number(defaultMarkup);
-		if (Number.isNaN(parsedDefaultMarkup) || parsedDefaultMarkup < 0) {
+		if (Number.isNaN(parsedDefaultMarkup) || parsedDefaultMarkup < -100) {
 			throw new RecaseError({
-				message: "Default markup should be a non-negative number",
+				message:
+					"Default markup must be -100 or greater (-100 makes usage free)",
 				code: ErrCode.InvalidFeature,
 				statusCode: 400,
 			});
@@ -94,9 +95,10 @@ export const validateCreditSystem = (
 	if (providerMarkups != null) {
 		for (const [provider, entry] of Object.entries(providerMarkups)) {
 			const markup = Number(entry?.markup);
-			if (!provider || Number.isNaN(markup) || markup < 0) {
+			if (!provider || Number.isNaN(markup) || markup < -100) {
 				throw new RecaseError({
-					message: "Provider markups must be non-negative numbers",
+					message:
+						"Provider markups must be -100 or greater (-100 makes usage free)",
 					code: ErrCode.InvalidFeature,
 					statusCode: 400,
 				});
