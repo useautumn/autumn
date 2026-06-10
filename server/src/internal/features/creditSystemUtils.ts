@@ -8,10 +8,6 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
-import {
-	getModelCreditCost,
-	type TokenInput,
-} from "@/internal/features/aiCreditSystemUtils.js";
 
 const creditSystemContainsFeature = ({
 	creditSystem,
@@ -79,44 +75,30 @@ export const featureToCreditSystem = ({
 	return amount;
 };
 
-export const getCreditCost = async ({
+/** Sync credit-schema math; token pricing (models.dev I/O) lives in getModelCreditCost. */
+export const getCreditCost = ({
 	featureId,
 	creditSystem,
 	amount = 1,
-	tokens,
-	modelName,
 }: {
 	featureId: string;
 	creditSystem: Feature;
 	amount?: number;
-	modelName?: string;
-	tokens?: TokenInput;
 }) => {
 	if (!isAnyCreditSystem(creditSystem.type)) {
 		return amount;
 	}
-	if (isAiCreditSystem(creditSystem.type)) {
-		if (tokens && modelName) {
-			return await getModelCreditCost({
-				modelName,
-				creditSystem,
-				...tokens,
-			});
-		}
-		// No token context (plain /track values, balance updates, queued replays):
-		// the feature's own balance is already in USD, so the value maps 1:1.
-		if (featureId === creditSystem.id) {
-			return amount;
-		}
-		throw new RecaseError({
-			message: "modelName and tokens must be provided for AI credit systems",
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
-		});
-	}
-	// If tracking the credit system feature itself, 1:1 mapping
+	// Own balance is in the system's native unit (USD for AI), so values map 1:1.
 	if (featureId === creditSystem.id) {
 		return amount;
+	}
+	if (isAiCreditSystem(creditSystem.type)) {
+		throw new RecaseError({
+			message: `AI credit system ${creditSystem.id} has no schema; only its own feature can be priced here. Use getModelCreditCost for token pricing.`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+			data: { featureId, creditSystemId: creditSystem.id },
+		});
 	}
 	const schema: CreditSchemaItem[] = creditSystem.config.schema;
 	for (const schemaItem of schema) {

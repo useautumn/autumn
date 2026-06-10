@@ -5,6 +5,7 @@ import {
 	FeatureType,
 	FeatureUsageType,
 } from "@autumn/shared";
+import { getModelCreditCost } from "@/internal/features/aiCreditSystemUtils.js";
 import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
 
 // Uses custom/* models so pricing resolves offline (no models.dev fetch).
@@ -26,9 +27,9 @@ const aiCreditFeature: Feature = {
 	},
 };
 
-describe("getCreditCost — AI credit system without token context", () => {
-	test("self feature with no tokens maps 1:1 (plain /track values, queued replays)", async () => {
-		const cost = await getCreditCost({
+describe("getCreditCost — AI credit system schema math", () => {
+	test("self feature maps 1:1 (plain /track values, queued replays)", () => {
+		const cost = getCreditCost({
 			featureId: aiCreditFeature.id,
 			creditSystem: aiCreditFeature,
 			amount: 5.25,
@@ -36,35 +37,47 @@ describe("getCreditCost — AI credit system without token context", () => {
 		expect(cost).toBe(5.25);
 	});
 
-	test("self feature with no tokens defaults to a per-unit cost of 1", async () => {
-		const cost = await getCreditCost({
+	test("self feature defaults to a per-unit cost of 1", () => {
+		const cost = getCreditCost({
 			featureId: aiCreditFeature.id,
 			creditSystem: aiCreditFeature,
 		});
 		expect(cost).toBe(1);
 	});
 
-	test("self feature WITH tokens still prices through the model (not 1:1)", async () => {
-		const cost = await getCreditCost({
-			featureId: aiCreditFeature.id,
-			creditSystem: aiCreditFeature,
-			modelName: CUSTOM_MODEL,
-			tokens: { input: 1000, output: 500 },
-		});
-		// (1000 * 1000 + 2000 * 500) / 1_000_000 = 2.0
-		expect(cost).toBeCloseTo(2.0, 10);
-	});
-
-	test("non-self feature with no tokens throws", async () => {
-		expect(
+	test("non-self feature throws — AI credit systems have no schema", () => {
+		expect(() =>
 			getCreditCost({
 				featureId: "some_other_feature",
 				creditSystem: aiCreditFeature,
 				amount: 5,
 			}),
+		).toThrow(/no schema/);
+	});
+});
+
+describe("getModelCreditCost — token pricing", () => {
+	test("prices through the model markup config", async () => {
+		const cost = await getModelCreditCost({
+			modelName: CUSTOM_MODEL,
+			creditSystem: aiCreditFeature,
+			input: 1000,
+			output: 500,
+		});
+		// (1000 * 1000 + 2000 * 500) / 1_000_000 = 2.0
+		expect(cost).toBeCloseTo(2.0, 10);
+	});
+
+	test("custom model without configured costs throws", async () => {
+		expect(
+			getModelCreditCost({
+				modelName: "custom/unconfigured",
+				creditSystem: aiCreditFeature,
+				input: 100,
+				output: 50,
+			}),
 		).rejects.toMatchObject({
 			code: ErrCode.InvalidRequest,
-			message: expect.stringContaining("modelName and tokens"),
 		});
 	});
 });

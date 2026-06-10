@@ -11,7 +11,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
-import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
+import { getModelCreditCost } from "@/internal/features/aiCreditSystemUtils.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 
@@ -77,9 +77,7 @@ const resolveAiCreditFeatureFromEntitlements = async ({
 	const aiCreditFeatures = [
 		...new Map(
 			cusEnts
-				.filter(
-					(ce) => isAiCreditSystem(ce.entitlement.feature.type),
-				)
+				.filter((ce) => isAiCreditSystem(ce.entitlement.feature.type))
 				.map((ce) => [ce.entitlement.feature.id, ce.entitlement.feature]),
 		).values(),
 	];
@@ -120,19 +118,16 @@ export const getTokenTrackParams = async ({
 				entityId: input.entity_id,
 			});
 
-	const cost = await getCreditCost({
-		featureId: aiCreditFeature.id,
-		creditSystem: aiCreditFeature,
+	const cost = await getModelCreditCost({
 		modelName: input.model_id,
-		tokens: {
-			input: input.input_tokens,
-			output: input.output_tokens,
-			cacheRead: input.cache_read_tokens,
-			cacheWrite: input.cache_write_tokens,
-			audioInput: input.audio_input_tokens,
-			audioOutput: input.audio_output_tokens,
-			reasoning: input.reasoning_tokens,
-		},
+		creditSystem: aiCreditFeature,
+		input: input.input_tokens,
+		output: input.output_tokens,
+		cacheRead: input.cache_read_tokens,
+		cacheWrite: input.cache_write_tokens,
+		audioInput: input.audio_input_tokens,
+		audioOutput: input.audio_output_tokens,
+		reasoning: input.reasoning_tokens,
 	});
 
 	const featureDeductions: FeatureDeduction[] = [

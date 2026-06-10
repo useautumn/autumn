@@ -29,7 +29,7 @@ import type { FeatureDeduction } from "../types/featureDeduction.js";
  * Prepares all the inputs needed to execute a deduction for a single feature.
  * Mirrors the legacy helper, but reads from FullSubject.
  */
-export const prepareFeatureDeductionV2 = async ({
+export const prepareFeatureDeductionV2 = ({
 	ctx,
 	fullSubject,
 	deduction,
@@ -39,7 +39,7 @@ export const prepareFeatureDeductionV2 = async ({
 	fullSubject: FullSubject;
 	deduction: FeatureDeduction;
 	options?: DeductionOptions;
-}): Promise<PreparedFeatureDeduction> => {
+}): PreparedFeatureDeduction => {
 	const { org, env } = ctx;
 	const { feature, lock, targetBalance } = deduction;
 	const { overageBehaviour = "cap", customerEntitlementFilters } = options;
@@ -115,7 +115,7 @@ export const prepareFeatureDeductionV2 = async ({
 			.map((customerEntitlement) => customerEntitlement.entitlement.feature.id),
 	);
 
-	const getCreditCostForEnt = await computeCreditCosts({
+	const getCreditCostForEnt = computeCreditCosts({
 		cusEnts: customerEntitlements,
 		deduction,
 	});

@@ -6,11 +6,11 @@ import {
 	type ModelMarkups,
 	type ProviderMarkups,
 } from "@autumn/shared";
-import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
+import { getModelCreditCost } from "@/internal/features/aiCreditSystemUtils.js";
 
-// Custom models carry their own input/output costs, so getCreditCost resolves
-// them without hitting the models.dev pricing fetch — ideal for unit-testing
-// the tiered markup resolution (model > provider > global > none).
+// Custom models carry their own input/output costs, so getModelCreditCost
+// resolves them without hitting the models.dev pricing fetch — ideal for
+// unit-testing the tiered markup resolution (model > provider > global > none).
 const CUSTOM_MODEL = "custom/foo";
 const TOKENS = { input: 1000, output: 500 };
 // base cost = (1000 * 1000 + 500 * 2000) / 1_000_000 = 2.0
@@ -46,14 +46,13 @@ const makeAiCredit = ({
 });
 
 const cost = (creditSystem: Feature) =>
-	getCreditCost({
-		featureId: "ai_credits",
-		creditSystem,
-		tokens: TOKENS,
+	getModelCreditCost({
 		modelName: CUSTOM_MODEL,
+		creditSystem,
+		...TOKENS,
 	});
 
-describe("getCreditCost — tiered AI markup resolution", () => {
+describe("getModelCreditCost — tiered AI markup resolution", () => {
 	test("per-model markup wins over provider and global", async () => {
 		const creditSystem = makeAiCredit({
 			model_markups: {

@@ -15,7 +15,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
-import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
+import { getModelCreditCost } from "@/internal/features/aiCreditSystemUtils.js";
 
 // ═══════════════════════════════════════════════════════════════════
 // TRACK-TOKENS-1: Basic trackTokens with models.dev pricing
@@ -57,11 +57,11 @@ test.concurrent(
 		const outputTokens = 500;
 		const modelId = "anthropic/claude-sonnet-4-20250514";
 
-		const expectedCost = await getCreditCost({
-			featureId: aiCreditFeature.id,
-			creditSystem: aiCreditFeature,
+		const expectedCost = await getModelCreditCost({
 			modelName: modelId,
-			tokens: { input: inputTokens, output: outputTokens },
+			creditSystem: aiCreditFeature,
+			input: inputTokens,
+			output: outputTokens,
 		});
 
 		const trackRes: TrackResponseV2 = await autumnV2.post("/track_tokens", {
@@ -140,11 +140,11 @@ test.concurrent(
 		const outputTokens = 1000;
 		const modelId = "anthropic/claude-sonnet-4-20250514";
 
-		const expectedCost = await getCreditCost({
-			featureId: aiCreditFeature.id,
-			creditSystem: aiCreditFeature,
+		const expectedCost = await getModelCreditCost({
 			modelName: modelId,
-			tokens: { input: inputTokens, output: outputTokens },
+			creditSystem: aiCreditFeature,
+			input: inputTokens,
+			output: outputTokens,
 		});
 
 		const trackRes: TrackResponseV2 = await autumnV2.post("/track_tokens", {
@@ -284,11 +284,11 @@ test.concurrent(
 		const outputTokens = 10000;
 		const modelId = "anthropic/claude-3-5-haiku-20241022";
 
-		const expectedCost = await getCreditCost({
-			featureId: aiCreditFeature.id,
-			creditSystem: aiCreditFeature,
+		const expectedCost = await getModelCreditCost({
 			modelName: modelId,
-			tokens: { input: inputTokens, output: outputTokens },
+			creditSystem: aiCreditFeature,
+			input: inputTokens,
+			output: outputTokens,
 		});
 
 		const trackRes: TrackResponseV2 = await autumnV2.post("/track_tokens", {
@@ -358,11 +358,11 @@ test.concurrent(
 		}
 
 		// First track: custom/internal-model (input_cost=5, output_cost=15, markup=0%)
-		const cost1 = await getCreditCost({
-			featureId: aiCreditFeature.id,
-			creditSystem: aiCreditFeature,
+		const cost1 = await getModelCreditCost({
 			modelName: "custom/internal-model",
-			tokens: { input: 5000, output: 2000 },
+			creditSystem: aiCreditFeature,
+			input: 5000,
+			output: 2000,
 		});
 
 		await autumnV2.post("/track_tokens", {
@@ -374,11 +374,11 @@ test.concurrent(
 		});
 
 		// Second track: custom/marked-up-model (input_cost=10, output_cost=30, markup=50%)
-		const cost2 = await getCreditCost({
-			featureId: aiCreditFeature.id,
-			creditSystem: aiCreditFeature,
+		const cost2 = await getModelCreditCost({
 			modelName: "custom/marked-up-model",
-			tokens: { input: 3000, output: 1000 },
+			creditSystem: aiCreditFeature,
+			input: 3000,
+			output: 1000,
 		});
 
 		await autumnV2.post("/track_tokens", {
@@ -491,20 +491,19 @@ test.concurrent(
 			reasoning: 4000,
 		};
 
-		const expectedCost = await getCreditCost({
-			featureId: aiCreditFeature.id,
-			creditSystem: aiCreditFeature,
+		const expectedCost = await getModelCreditCost({
 			modelName: modelId,
-			tokens: pools,
+			creditSystem: aiCreditFeature,
+			...pools,
 		});
 
 		// Pools must increase the bill vs text-only — otherwise the assertion
 		// below couldn't tell whether the HTTP layer forwarded them at all.
-		const textOnlyCost = await getCreditCost({
-			featureId: aiCreditFeature.id,
-			creditSystem: aiCreditFeature,
+		const textOnlyCost = await getModelCreditCost({
 			modelName: modelId,
-			tokens: { input: pools.input, output: pools.output },
+			creditSystem: aiCreditFeature,
+			input: pools.input,
+			output: pools.output,
 		});
 		expect(expectedCost).toBeGreaterThan(textOnlyCost);
 
