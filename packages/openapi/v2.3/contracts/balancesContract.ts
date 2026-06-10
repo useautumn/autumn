@@ -9,6 +9,7 @@ import {
 	FinalizeLockParamsV0Schema,
 	TrackParamsSchema,
 	TrackResponseV3Schema,
+	TrackTokensParamsSchema,
 	UpdateBalanceParamsV0Schema,
 } from "@autumn/shared";
 import { oc } from "@orpc/contract";
@@ -16,6 +17,7 @@ import { z } from "zod/v4";
 import {
 	balancesCheckJsDoc,
 	balancesTrackJsDoc,
+	balancesTrackTokensJsDoc,
 } from "../jsDocs/balancesJsDocs";
 
 type SpecWithResponses = {
@@ -150,6 +152,63 @@ export const balancesTrackContract = oc
 								resets_at: 1781288736881,
 							},
 							value: 1,
+						},
+					],
+				},
+			],
+		}),
+	);
+
+export const balancesTrackTokensContract = oc
+	.route({
+		method: "POST",
+		path: "/v1/balances.track_tokens",
+		operationId: "trackTokens",
+		description: balancesTrackTokensJsDoc,
+		spec: (spec) =>
+			withAcceptedResponse(
+				spec,
+				"trackTokens",
+				"Accepted. Autumn is experiencing degraded service from a downstream provider, so the token usage event was accepted for replay and will be tracked as soon as the service is restored.",
+			),
+	})
+	.input(
+		TrackTokensParamsSchema.meta({
+			title: "TrackTokensParams",
+			examples: [
+				{
+					customer_id: "cus_123",
+					feature_id: "ai_credits",
+					model_id: "anthropic/claude-sonnet-4-20250514",
+					input_tokens: 1000,
+					output_tokens: 500,
+				},
+			],
+		}),
+	)
+	.output(
+		TrackResponseV3Schema.meta({
+			examples: [
+				{
+					customer_id: "cus_123",
+					value: 0.006,
+					balance: {
+						...API_BALANCE_V1_EXAMPLE,
+						feature_id: "ai_credits",
+						granted: 10,
+						remaining: 9.994,
+						usage: 0.006,
+					},
+					deductions: [
+						{
+							balance_id: "cus_ent_3DdSDoyFmoA9Neecl2a2Gc507X2",
+							feature_id: "ai_credits",
+							plan_id: "pro",
+							reset: {
+								interval: "month",
+								resets_at: 1781288736881,
+							},
+							value: 0.006,
 						},
 					],
 				},

@@ -1,7 +1,11 @@
 import {
 	type CreditSchemaItem,
+	ErrCode,
 	type Feature,
 	FeatureType,
+	isAiCreditSystem,
+	isAnyCreditSystem,
+	RecaseError,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 
@@ -15,7 +19,8 @@ const creditSystemContainsFeature = ({
 	if (creditSystem.type !== FeatureType.CreditSystem) {
 		return false;
 	}
-	const schema: CreditSchemaItem[] = creditSystem.config.schema;
+	const schema: CreditSchemaItem[] | undefined = creditSystem.config?.schema;
+	if (!schema) return false;
 
 	for (const schemaItem of schema) {
 		if (schemaItem.metered_feature_id === meteredFeatureId) {
@@ -70,6 +75,7 @@ export const featureToCreditSystem = ({
 	return amount;
 };
 
+/** Sync credit-schema math; token pricing (models.dev I/O) lives in getModelCreditCost. */
 export const getCreditCost = ({
 	featureId,
 	creditSystem,
@@ -79,11 +85,22 @@ export const getCreditCost = ({
 	creditSystem: Feature;
 	amount?: number;
 }) => {
-	if (creditSystem.type !== FeatureType.CreditSystem) {
+	if (!isAnyCreditSystem(creditSystem.type)) {
 		return amount;
 	}
+	// Own balance is in the system's native unit (USD for AI), so values map 1:1.
+	if (featureId === creditSystem.id) {
+		return amount;
+	}
+	if (isAiCreditSystem(creditSystem.type)) {
+		throw new RecaseError({
+			message: `AI credit system ${creditSystem.id} has no schema; only its own feature can be priced here. Use getModelCreditCost for token pricing.`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+			data: { featureId, creditSystemId: creditSystem.id },
+		});
+	}
 	const schema: CreditSchemaItem[] = creditSystem.config.schema;
-
 	for (const schemaItem of schema) {
 		if (schemaItem.metered_feature_id === featureId) {
 			return new Decimal(schemaItem.credit_amount)
@@ -93,5 +110,10 @@ export const getCreditCost = ({
 		}
 	}
 
-	return 1;
+	throw new RecaseError({
+		message: "Feature is not included in credit system schema",
+		code: ErrCode.InvalidRequest,
+		statusCode: 400,
+		data: { featureId, creditSystemId: creditSystem.id },
+	});
 };

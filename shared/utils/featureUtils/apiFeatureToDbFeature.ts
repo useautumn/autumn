@@ -8,6 +8,8 @@ import {
 	FeatureUsageType,
 } from "@models/featureModels/featureEnums.js";
 import type { Feature } from "@models/featureModels/featureModels.js";
+import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
+import { isAnyCreditSystem } from "./classifyFeature/isAnyCreditSystem.js";
 import { AppEnv } from "@models/genModels/genEnums.js";
 import type { ApiFeatureV1 } from "../../api/features/apiFeatureV1.js";
 import type {
@@ -23,6 +25,7 @@ import {
 import type { CreditSchemaItem } from "../../models/featureModels/featureConfig/creditConfig.js";
 import type { SharedContext } from "../../types/sharedContext.js";
 import { notNullish, nullish } from "../utils.js";
+import { buildAiCreditSystemConfig } from "./buildAiCreditSystemConfig.js";
 
 export const apiFeatureToDbFeature = ({
 	apiFeature,
@@ -72,6 +75,7 @@ export const apiFeatureToDbFeature = ({
 		config: newConfig,
 		archived: apiFeature.archived ?? originalFeature?.archived ?? false,
 		event_names: [],
+		model_markups: null,
 	} satisfies Feature;
 };
 
@@ -83,6 +87,24 @@ export const featureV1ToDbFeatureConfig = ({
 	originalFeature: Feature;
 }) => {
 	const type = apiFeature.type || originalFeature.type;
+	const hasProviderMarkups = "provider_markups" in apiFeature;
+	const hasDefaultMarkup = "default_markup" in apiFeature;
+
+	if (
+		isAiCreditSystem(type) &&
+		(isAiCreditSystem(apiFeature.type) ||
+			hasDefaultMarkup ||
+			hasProviderMarkups)
+	) {
+		return buildAiCreditSystemConfig({
+			defaultMarkup: hasDefaultMarkup
+				? apiFeature.default_markup
+				: originalFeature.config?.default_markup,
+			providerMarkups: hasProviderMarkups
+				? apiFeature.provider_markups
+				: originalFeature.config?.provider_markups,
+		});
+	}
 
 	if (nullish(apiFeature.consumable) && nullish(apiFeature.credit_schema))
 		return;
@@ -140,6 +162,16 @@ export const featureV1ToDbFeature = ({
 			: FeatureUsageType.Continuous;
 	}
 
+	if (isAiCreditSystem(apiFeature.type)) {
+		Object.assign(
+			newConfig,
+			buildAiCreditSystemConfig({
+				defaultMarkup: apiFeature.default_markup,
+				providerMarkups: apiFeature.provider_markups,
+			}),
+		);
+	}
+
 	if (apiFeature.credit_schema) {
 		newConfig.usage_type = FeatureUsageType.Single;
 		newConfig.schema = apiFeature.credit_schema.map(
@@ -149,6 +181,9 @@ export const featureV1ToDbFeature = ({
 			}),
 		);
 	}
+
+	const modelMarkups =
+		apiFeature.model_markups ?? originalFeature?.model_markups ?? null;
 
 	return {
 		internal_id: originalFeature?.internal_id ?? "",
@@ -165,6 +200,7 @@ export const featureV1ToDbFeature = ({
 				? apiFeature.archived
 				: (originalFeature?.archived ?? false),
 		event_names: eventNames ?? [],
+		model_markups: modelMarkups,
 	} satisfies Feature;
 };
 
@@ -191,7 +227,7 @@ export const dbToApiFeatureV1 = ({
 		name: dbFeature.name,
 		type: dbFeature.type,
 		consumable:
-			dbFeature.type === FeatureType.CreditSystem ||
+			isAnyCreditSystem(dbFeature.type) ||
 			dbFeature.config?.usage_type === FeatureUsageType.Single,
 
 		credit_schema: Array.isArray(dbFeature.config?.schema)
@@ -200,6 +236,9 @@ export const dbToApiFeatureV1 = ({
 					credit_cost: schema.credit_amount,
 				}))
 			: undefined,
+		model_markups: dbFeature.model_markups ?? undefined,
+		default_markup: dbFeature.config?.default_markup ?? undefined,
+		provider_markups: dbFeature.config?.provider_markups ?? undefined,
 		event_names: Array.isArray(dbFeature.event_names)
 			? dbFeature.event_names
 			: [],

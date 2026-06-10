@@ -15,7 +15,31 @@ import { globalSyncBatchingManagerV2 } from "../../utils/sync/SyncBatchingManage
 import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import type { RolloverUpdate } from "../../utils/types/rolloverUpdate.js";
+import { buildAiCreditCostProperty } from "./buildAiCreditCostProperty.js";
 import { handleRedisTrackError } from "./handleRedisTrackError.js";
+
+const aiCreditCostEntries = ({
+	updates,
+	fullCustomer,
+}: {
+	updates: Record<string, DeductionUpdate>;
+	fullCustomer: FullCustomer;
+}): Array<{ featureId: string; amount: number }> => {
+	const cusEntIdToFeatureId = new Map<string, string>();
+	for (const cp of fullCustomer.customer_products) {
+		for (const ce of cp.customer_entitlements ?? []) {
+			cusEntIdToFeatureId.set(ce.id, ce.entitlement.feature.id);
+		}
+	}
+
+	const entries: Array<{ featureId: string; amount: number }> = [];
+	for (const [cusEntId, update] of Object.entries(updates)) {
+		const featureId = cusEntIdToFeatureId.get(cusEntId);
+		if (!featureId) continue;
+		entries.push({ featureId, amount: update.deducted });
+	}
+	return entries;
+};
 
 const queueSyncItem = ({
 	ctx,
@@ -110,6 +134,14 @@ export const runRedisTrack = async ({
 	}
 
 	const { updates, fullCus, rolloverUpdates } = result;
+
+	const aiCreditCost = buildAiCreditCostProperty({
+		featureDeductions,
+		entries: aiCreditCostEntries({ updates, fullCustomer }),
+	});
+	if (aiCreditCost) {
+		body.properties = { ...(body.properties ?? {}), credit_cost: aiCreditCost };
+	}
 
 	// Queue sync and event
 	queueSyncItem({
