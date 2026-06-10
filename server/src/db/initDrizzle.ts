@@ -120,9 +120,22 @@ const PROD_POOL_MAX = {
 	replica: 6,
 };
 
+const criticalPoolMax = poolMaxFromEnv({
+	envVar: "CRITICAL_DB_POOL_MAX",
+	fallback: isProd ? PROD_POOL_MAX.critical : 10,
+});
+const generalPoolMax = poolMaxFromEnv({
+	envVar: "GENERAL_DB_POOL_MAX",
+	fallback: isProd ? PROD_POOL_MAX.general : 10,
+});
+const replicaPoolMax = poolMaxFromEnv({
+	envVar: "REPLICA_DB_POOL_MAX",
+	fallback: PROD_POOL_MAX.replica,
+});
+
 const budgetedFleetConnections =
 	BUDGETED_FLEET_PROCESSES *
-		(PROD_POOL_MAX.critical + PROD_POOL_MAX.general + PROD_POOL_MAX.replica) +
+		(criticalPoolMax + generalPoolMax + replicaPoolMax) +
 	BUDGETED_NON_SERVER_CONNECTIONS;
 
 if (
@@ -130,14 +143,9 @@ if (
 	PGBOUNCER_MAX_CLIENT_CONN * POOL_BUDGET_HEADROOM
 ) {
 	logger.warn(
-		`[initDrizzle] pool budget (${budgetedFleetConnections}) exceeds ${POOL_BUDGET_HEADROOM} of max_client_conn (${PGBOUNCER_MAX_CLIENT_CONN}) — resize PROD_POOL_MAX`,
+		`[initDrizzle] pool budget (${budgetedFleetConnections}) exceeds ${POOL_BUDGET_HEADROOM} of max_client_conn (${PGBOUNCER_MAX_CLIENT_CONN}) — lower the pool maxes or raise the ceiling`,
 	);
 }
-
-const criticalPoolMax = poolMaxFromEnv({
-	envVar: "CRITICAL_DB_POOL_MAX",
-	fallback: isProd ? PROD_POOL_MAX.critical : 10,
-});
 
 export const { db: dbCritical, client: clientCritical } = initDrizzle({
 	name: "critical",
@@ -155,10 +163,7 @@ export const { db: dbCritical, client: clientCritical } = initDrizzle({
 // -- General pool: used by all other endpoints --
 export const { db: dbGeneral, client: clientGeneral } = initDrizzle({
 	name: "general",
-	maxConnections: poolMaxFromEnv({
-		envVar: "GENERAL_DB_POOL_MAX",
-		fallback: isProd ? PROD_POOL_MAX.general : 10,
-	}),
+	maxConnections: generalPoolMax,
 	connectTimeout: isProd ? 5 : 30,
 });
 
@@ -168,10 +173,7 @@ const replicaResult = process.env.DATABASE_REPLICA_URL
 	? initDrizzle({
 			name: "replica",
 			replica: true,
-			maxConnections: poolMaxFromEnv({
-				envVar: "REPLICA_DB_POOL_MAX",
-				fallback: PROD_POOL_MAX.replica,
-			}),
+			maxConnections: replicaPoolMax,
 			connectTimeout: null,
 		})
 	: null;
