@@ -17,45 +17,15 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
+import { setOrgCurrency } from "@tests/utils/testInitUtils/setOrgCurrency.js";
 import chalk from "chalk";
-import { db } from "@/db/initDrizzle.js";
-import {
-	getConfiguredRegions,
-	getRegionalRedis,
-	waitForRedisReady,
-} from "@/external/redis/initRedis.js";
-import { OrgService } from "@/internal/orgs/OrgService.js";
-import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache.js";
-
-const setOrgCurrency = async ({
-	orgId,
-	currency,
-}: {
-	orgId: string;
-	currency: string;
-}) => {
-	await OrgService.update({
-		db,
-		orgId,
-		updates: { default_currency: currency },
-	});
-	// clearOrgCache silently skips Redis deletes until each regional client is ready
-	await Promise.all(
-		getConfiguredRegions().map((region) =>
-			waitForRedisReady(getRegionalRedis(region), region),
-		),
-	);
-	await clearOrgCache({ db, orgId });
-};
 
 test(`${chalk.yellowBright("legacy one-off rwf: prepaid one-off charges major units, not x100")}`, async () => {
 	const customerId = "legacy-oneoff-rwf-zero-decimal";
 
 	// Sub-org first so the currency is RWF before any Stripe prices exist.
 	const { ctx } = await initScenario({
-		setup: [
-			s.platform.create({ setupDefaultFeatures: true }),
-		],
+		setup: [s.platform.create({ setupDefaultFeatures: true })],
 		actions: [],
 	});
 
