@@ -39,19 +39,19 @@ export const withClaimedCheckoutSessionMetadata = async ({
 		return;
 	}
 
-	if (checkoutContext.stripeSubscription) {
-		await setStripeSubscriptionLock({
-			stripeSubscriptionId: checkoutContext.stripeSubscription.id,
-			lockedAtMs: Date.now(),
-		});
-	}
-
 	const deferredData = metadata.data as DeferredAutumnBillingPlanData;
 	const lockCustomerId =
 		deferredData?.billingContext?.fullCustomer?.id ??
 		deferredData?.billingContext?.fullCustomer?.internal_id;
 
 	try {
+		if (checkoutContext.stripeSubscription) {
+			await setStripeSubscriptionLock({
+				stripeSubscriptionId: checkoutContext.stripeSubscription.id,
+				lockedAtMs: Date.now(),
+			});
+		}
+
 		await execute();
 	} catch (error) {
 		await revertMetadataClaim({ ctx, metadataId: metadata.id });
