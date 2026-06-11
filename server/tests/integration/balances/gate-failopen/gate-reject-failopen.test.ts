@@ -38,6 +38,12 @@ const { invalidateCachedFullSubject } = await import(
 const { _setFullSubjectGateConfigForTesting } = await import(
 	"@/internal/misc/fullSubjectGateEdgeConfig/fullSubjectGateEdgeConfigStore.js"
 );
+const { primeRedisV2Monitor } = await import(
+	"@/external/redis/initUtils/redisV2Availability.js"
+);
+
+// In-process runs skip server boot, which is what normally primes availability.
+await primeRedisV2Monitor();
 
 const CONCURRENCY = 8;
 
@@ -144,7 +150,12 @@ test.concurrent(
 			actions: [s.attach({ productId: freeProd.id })],
 		});
 
-		const ctx = await buildContext({ customerId });
+		// One ctx per call: concurrent prod tracks carry distinct request IDs,
+		// and the Redis dedup treats a reused ID as a duplicate request.
+		const contexts = await Promise.all(
+			Array.from({ length: CONCURRENCY }, () => buildContext({ customerId })),
+		);
+		const [ctx] = contexts;
 		const feature = ctx.features.find(
 			(candidate: { id: string }) => candidate.id === TestFeature.Messages,
 		);
@@ -154,9 +165,9 @@ test.concurrent(
 		queueCalls.length = 0;
 
 		const results = await Promise.allSettled(
-			Array.from({ length: CONCURRENCY }, () =>
+			contexts.map((trackContext) =>
 				runTrackWithRollout({
-					ctx,
+					ctx: trackContext,
 					body: { customer_id: customerId, feature_id: TestFeature.Messages },
 					featureDeductions: [{ feature, deduction: 1 }],
 				}),
