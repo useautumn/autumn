@@ -7,10 +7,16 @@
 //   ENV_FILE=.env infisical run --env=dev --recursive -- \
 //     bun apps/leaf/scripts/seedSlackInstall.ts   (DATABASE_URL=<worktree>)
 //
-// Needs SLACK_BOT_TOKEN (the app's Bot User OAuth Token, xoxb-…) in the env —
-// skips cleanly if absent.
+// Needs SLACK_BOT_TOKEN (the app's Bot User OAuth Token, xoxb-…) in the env.
+// SLACK_CLIENT_ID / SLACK_CLIENT_SECRET configure OAuth, but cannot mint a bot
+// token without an install callback code, so this skips cleanly if absent.
 import crypto from "node:crypto";
-import { AppEnv, type ChatInstallState, member, organizations } from "@autumn/shared";
+import {
+	AppEnv,
+	type ChatInstallState,
+	member,
+	organizations,
+} from "@autumn/shared";
 import { eq } from "drizzle-orm";
 import { db } from "../src/lib/db.js";
 import { replaceInstallation } from "../src/providers/slack/installations.js";
@@ -44,7 +50,9 @@ const log = (message: string) => console.log(`[seed-slack] ${message}`);
 const main = async () => {
 	const botToken = process.env.SLACK_BOT_TOKEN;
 	if (!botToken) {
-		log("skipping: SLACK_BOT_TOKEN not set");
+		log(
+			"skipping: SLACK_BOT_TOKEN not set (client id/secret are not enough to seed an installed bot)",
+		);
 		return;
 	}
 
@@ -82,7 +90,9 @@ const main = async () => {
 		orgId = byId?.id;
 	}
 	if (!orgId) {
-		log(`skipping: org '${SEED_ORG_SLUG}' not found (run the test-org seed first)`);
+		log(
+			`skipping: org '${SEED_ORG_SLUG}' not found (run the test-org seed first)`,
+		);
 		return;
 	}
 

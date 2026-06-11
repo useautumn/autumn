@@ -1,6 +1,13 @@
 import "dotenv/config";
-import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
-import { homedir } from "node:os";
+import {
+	chmodSync,
+	existsSync,
+	mkdtempSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import chalk from "chalk";
 import inquirer from "inquirer";
@@ -29,7 +36,11 @@ const readEnvVarFromFile = ({
 // the dw registry. Prefer those over process.env.NGROK_URL, which Infisical
 // injects as a single shared dev tunnel — otherwise every worktree's Slack app
 // would be pointed at the same URL instead of its own.
-const resolveWorktreeNgrokUrl = (): string | undefined => {
+const resolveWorktreeNgrokUrl = ({
+	includeEnvFallback = true,
+}: {
+	includeEnvFallback?: boolean;
+} = {}): string | undefined => {
 	const fromEnvFile = readEnvVarFromFile({
 		filePath: join(repoRoot, "server", ".env.local"),
 		key: "NGROK_URL",
@@ -39,10 +50,9 @@ const resolveWorktreeNgrokUrl = (): string | undefined => {
 	try {
 		const registryPath = join(homedir(), ".autumn-worktrees.json");
 		if (existsSync(registryPath)) {
-			const registry = JSON.parse(readFileSync(registryPath, "utf-8")) as Record<
-				string,
-				{ ngrokUrl?: string }
-			>;
+			const registry = JSON.parse(
+				readFileSync(registryPath, "utf-8"),
+			) as Record<string, { ngrokUrl?: string }>;
 			const entry = registry[repoRoot];
 			if (entry?.ngrokUrl) return entry.ngrokUrl;
 		}
@@ -50,7 +60,7 @@ const resolveWorktreeNgrokUrl = (): string | undefined => {
 		// Malformed/absent registry — fall through to the shared env value.
 	}
 
-	return process.env.NGROK_URL;
+	return includeEnvFallback ? process.env.NGROK_URL : undefined;
 };
 
 const defaultSlackScopes = [
@@ -88,15 +98,18 @@ type Args = {
 	dryRun: boolean;
 	envFile?: string;
 	help: boolean;
+	yes: boolean;
 	printManifest: boolean;
 	provider?: SlackInstallProvider;
 	scopes: string[];
 	target?: SlackManifestTarget;
 	teamId?: string;
+	writeInfisicalEnv?: SlackInfisicalWriteEnv;
 };
 
 type SlackInstallProvider = "slack" | "slack_admin";
 type SlackManifestTarget = "local" | "prod" | "admin" | "all";
+type SlackInfisicalWriteEnv = "dev" | "prod";
 
 type SlackManifest = {
 	display_information: {
@@ -153,6 +166,10 @@ type SlackManifestUpdateResponse = SlackApiResponse & {
 	app_id?: string;
 };
 
+type SlackManifestExportResponse = SlackApiResponse & {
+	manifest?: SlackManifest;
+};
+
 type SlackApiResponse = {
 	ok: boolean;
 	error?: string;
@@ -167,32 +184,46 @@ const usage = () =>
 		"  bun slack <command> [options]",
 		"",
 		chalk.bold("Commands:"),
-		`  ${chalk.cyan("worktree")}                   Repoint the local Slack app's chat (/slack/events),`,
+		`  ${chalk.cyan("worktree")}                   Repoint known local Slack app chat (/slack/events),`,
 		"                             approval (/slack/interactions) and OAuth URLs at THIS",
 		"                             worktree's ngrok tunnel. Base URL is auto-read from",
 		"                             server/.env.local / the dw registry — no --base-url needed.",
 		`  ${chalk.cyan("setup-bot")}                  Interactively create a NEW Slack app (manifest) for`,
 		"                             local dev and print its credentials. Prompts for a",
 		"                             regular org bot or an admin impersonation bot.",
+		`  ${chalk.cyan("setup-local-bot")}            Create a NEW regular local Slack app and write only`,
+		"                             the local Slack bot env vars as Infisical dev",
+		"                             personal overrides.",
+		`  ${chalk.cyan("setup-local-admin-bot")}      Create a NEW local admin Slack app and, after`,
+		"                             confirmation, overwrite only the Slack bot env vars",
+		"                             as Infisical prod personal overrides.",
 		`  ${chalk.cyan("update-manifest")}            Update an EXISTING Slack app's manifest. Choose the`,
 		"                             app(s) with --target <local|prod|admin|all>.",
 		"",
 		chalk.bold("Options:"),
 		"  --app-id <id>              Existing Slack app id for manifest updates.",
-		"  --base-url <url>           Public Leaf URL. Defaults to this worktree's NGROK_URL,",
-		"                             then SLACK_BOT_URL / CHAT_URL.",
+		"  --base-url <url>           Public Leaf URL. Local setup defaults to this",
+		"                             worktree's NGROK_URL only; manifest updates can",
+		"                             also fall back to SLACK_BOT_URL / CHAT_URL.",
 		"  --name <name>              Slack app name. Defaults to Autumn Chat Local.",
 		"  --env-file <path>          Write Slack env vars to this file.",
 		"  --provider <provider>      slack or slack_admin (setup-bot only).",
 		"  --scopes <csv>             Override bot scopes.",
 		"  --target <target>          update-manifest target: local, prod, admin, or all.",
 		"  --team-id <id>             Workspace team id for org-scoped Slack CLI auth.",
+		"  --no-infisical             Do not write setup-local-bot vars to Infisical.",
+		"  --infisical-dev            Write local Slack bot vars as Infisical dev personal overrides.",
+		"  --infisical-prod           Write local Slack bot vars as Infisical prod personal overrides.",
+		"  --yes                      Skip confirmation prompts for Infisical writes.",
+		"                             Ignored for setup-local-admin-bot prod writes.",
 		"  --print-manifest           Print generated Slack app manifest.",
 		"  --dry-run                  Print manifest/env without calling Slack.",
 		"  --help                     Show this help.",
 		"",
 		chalk.bold("Examples:"),
 		"  bun slack worktree",
+		"  bun slack setup-local-bot",
+		"  bun slack setup-local-admin-bot",
 		"  bun slack setup-bot --provider slack_admin",
 		"  bun slack update-manifest --target all --base-url https://j.dev.useautumn.com",
 	].join("\n");
@@ -219,10 +250,20 @@ const parseArgs = ({ argv }: { argv: string[] }): Args => {
 	const scopes = readOption({ args: argv, name: "--scopes" });
 	const providerArg = readOption({ args: argv, name: "--provider" });
 	const targetArg = readOption({ args: argv, name: "--target" });
+	const isLocalSetupAction =
+		action === "setup-local-bot" || action === "setup-local-admin-bot";
+	const baseUrlOption = readOption({ args: argv, name: "--base-url" });
+	const writeInfisicalEnv = argv.includes("--no-infisical")
+		? undefined
+		: argv.includes("--infisical-prod") || action === "setup-local-admin-bot"
+			? "prod"
+			: argv.includes("--infisical-dev") || action === "setup-local-bot"
+				? "dev"
+				: undefined;
 	const provider =
 		providerArg === "slack" || providerArg === "slack_admin"
 			? providerArg
-			: action === "setup-admin-bot"
+			: action === "setup-admin-bot" || action === "setup-local-admin-bot"
 				? "slack_admin"
 				: action === "setup-local-bot" || action === "setup-regular-bot"
 					? "slack"
@@ -237,13 +278,17 @@ const parseArgs = ({ argv }: { argv: string[] }): Args => {
 		appId: readOption({ args: argv, name: "--app-id" }),
 		appName: readOption({ args: argv, name: "--name" }) ?? defaultAppName,
 		baseUrl:
-			readOption({ args: argv, name: "--base-url" }) ??
-			resolveWorktreeNgrokUrl() ??
-			process.env.SLACK_BOT_URL ??
-			process.env.CHAT_URL,
+			baseUrlOption ??
+			resolveWorktreeNgrokUrl({
+				includeEnvFallback: !isLocalSetupAction,
+			}) ??
+			(isLocalSetupAction
+				? undefined
+				: (process.env.SLACK_BOT_URL ?? process.env.CHAT_URL)),
 		dryRun: argv.includes("--dry-run"),
 		envFile: readOption({ args: argv, name: "--env-file" }),
 		help: argv.includes("--help") || argv.includes("-h"),
+		yes: argv.includes("--yes") || argv.includes("-y"),
 		printManifest: argv.includes("--print-manifest"),
 		provider,
 		scopes: scopes
@@ -265,6 +310,7 @@ const parseArgs = ({ argv }: { argv: string[] }): Args => {
 								? "all"
 								: undefined,
 		teamId: readOption({ args: argv, name: "--team-id" }),
+		writeInfisicalEnv,
 	};
 };
 
@@ -291,6 +337,9 @@ const resolveInteractiveArgs = async ({
 }: {
 	args: Args;
 }): Promise<Args & { provider: SlackInstallProvider }> => {
+	const isLocalSetupAction =
+		args.action === "setup-local-bot" ||
+		args.action === "setup-local-admin-bot";
 	const answers = await inquirer.prompt<{
 		provider?: SlackInstallProvider;
 		appName?: string;
@@ -317,16 +366,19 @@ const resolveInteractiveArgs = async ({
 					},
 				]
 			: []),
-		{
-			type: "input",
-			name: "appName",
-			message: "Slack app name",
-			default: ({ provider }: { provider?: SlackInstallProvider }) =>
-				args.appName ??
-				defaultAppNameForProvider({
-					provider: provider ?? args.provider ?? "slack",
-				}),
-		},
+		...(!args.appName
+			? [
+					{
+						type: "input" as const,
+						name: "appName" as const,
+						message: "Slack app name",
+						default: ({ provider }: { provider?: SlackInstallProvider }) =>
+							defaultAppNameForProvider({
+								provider: provider ?? args.provider ?? "slack",
+							}),
+					},
+				]
+			: []),
 		...(!args.baseUrl
 			? [
 					{
@@ -334,16 +386,19 @@ const resolveInteractiveArgs = async ({
 						name: "baseUrl" as const,
 						message: "Public ngrok/Leaf URL",
 						default:
-							resolveWorktreeNgrokUrl() ??
-							process.env.SLACK_BOT_URL ??
-							process.env.CHAT_URL,
+							resolveWorktreeNgrokUrl({
+								includeEnvFallback: !isLocalSetupAction,
+							}) ??
+							(isLocalSetupAction
+								? undefined
+								: (process.env.SLACK_BOT_URL ?? process.env.CHAT_URL)),
 						filter: (value: string) => trimTrailingSlash({ url: value.trim() }),
 						validate: (value: string) =>
 							isUrl({ value }) || "Enter a valid http(s) URL",
 					},
 				]
 			: []),
-		...(!args.envFile
+		...(!args.envFile && !args.writeInfisicalEnv
 			? [
 					{
 						type: "input" as const,
@@ -479,6 +534,80 @@ const parseSlackJson = <T>({
 // Config tokens come from https://api.slack.com/apps → "Your App Configuration
 // Tokens". Generate once, set SLACK_CONFIG_REFRESH_TOKEN, and we self-rotate.
 const configTokenStorePath = join(homedir(), ".autumn-slack-config.json");
+const localSlackAppsStorePath = join(homedir(), ".autumn-slack-apps.json");
+
+type StoredLocalSlackApp = {
+	appId: string;
+	appName: string;
+	clientId: string;
+	provider: SlackInstallProvider;
+	updatedAt: number;
+};
+
+const readStoredLocalSlackApps = (): StoredLocalSlackApp[] => {
+	if (!existsSync(localSlackAppsStorePath)) return [];
+	try {
+		const parsed = JSON.parse(
+			readFileSync(localSlackAppsStorePath, "utf-8"),
+		) as { apps?: StoredLocalSlackApp[] };
+		return Array.isArray(parsed.apps) ? parsed.apps : [];
+	} catch {
+		return [];
+	}
+};
+
+const writeStoredLocalSlackApps = ({
+	apps,
+}: {
+	apps: StoredLocalSlackApp[];
+}) => {
+	writeFileSync(localSlackAppsStorePath, JSON.stringify({ apps }, null, 2));
+	try {
+		chmodSync(localSlackAppsStorePath, 0o600);
+	} catch {
+		// Best-effort file permissions; not fatal where chmod is unavailable.
+	}
+};
+
+const rememberLocalSlackApp = ({
+	appId,
+	appName,
+	clientId,
+	provider,
+}: {
+	appId: string;
+	appName: string;
+	clientId: string;
+	provider: SlackInstallProvider;
+}) => {
+	const apps = readStoredLocalSlackApps();
+	const withoutExisting = apps.filter(
+		(app) => app.appId !== appId && app.clientId !== clientId,
+	);
+	writeStoredLocalSlackApps({
+		apps: [
+			...withoutExisting,
+			{ appId, appName, clientId, provider, updatedAt: Date.now() },
+		],
+	});
+};
+
+const resolveStoredLocalSlackAppId = ({
+	clientId,
+	provider,
+}: {
+	clientId?: string;
+	provider: SlackInstallProvider;
+}) => {
+	const apps = readStoredLocalSlackApps()
+		.filter((app) => app.provider === provider)
+		.sort((a, b) => b.updatedAt - a.updatedAt);
+	return (
+		(clientId
+			? apps.find((app) => app.clientId === clientId)?.appId
+			: undefined) ?? apps[0]?.appId
+	);
+};
 
 const readStoredRefreshToken = (): string | undefined => {
 	if (!existsSync(configTokenStorePath)) return undefined;
@@ -497,7 +626,10 @@ const writeStoredRefreshToken = ({
 }: {
 	refreshToken: string;
 }) => {
-	writeFileSync(configTokenStorePath, JSON.stringify({ refreshToken }, null, 2));
+	writeFileSync(
+		configTokenStorePath,
+		JSON.stringify({ refreshToken }, null, 2),
+	);
 	try {
 		chmodSync(configTokenStorePath, 0o600);
 	} catch {
@@ -641,9 +773,261 @@ const updateSlackAppManifest = async ({
 	return json;
 };
 
+const exportSlackAppManifest = async ({
+	appId,
+	configToken,
+	teamId,
+}: {
+	appId: string;
+	configToken?: string;
+	teamId?: string;
+}): Promise<SlackManifest | undefined> => {
+	const output = runSlackCli({
+		args: [
+			"api",
+			"apps.manifest.export",
+			...(configToken ? ["--token", configToken] : []),
+			"--json",
+			JSON.stringify({
+				app_id: appId,
+				...(teamId ? { team_id: teamId } : {}),
+			}),
+		],
+		quiet: true,
+	});
+	const json = parseSlackJson<SlackManifestExportResponse>({
+		output,
+		label: "apps.manifest.export",
+	});
+	if (!json.ok)
+		throw new Error(`Slack app manifest export failed: ${json.error}`);
+	return json.manifest;
+};
+
+const preserveSlackAppManifestNames = async ({
+	appId,
+	configToken,
+	manifest,
+	teamId,
+}: {
+	appId: string;
+	configToken?: string;
+	manifest: SlackManifest;
+	teamId?: string;
+}): Promise<SlackManifest> => {
+	const currentManifest = await exportSlackAppManifest({
+		appId,
+		configToken,
+		teamId,
+	});
+	if (!currentManifest) return manifest;
+
+	return {
+		...manifest,
+		display_information:
+			currentManifest.display_information ?? manifest.display_information,
+		features: {
+			...manifest.features,
+			bot_user: {
+				...manifest.features.bot_user,
+				display_name:
+					currentManifest.features?.bot_user?.display_name ??
+					manifest.features.bot_user.display_name,
+			},
+		},
+	};
+};
+
 const escapeEnvValue = ({ value }: { value: string }) => {
 	if (/^[A-Za-z0-9_./:@-]+$/.test(value)) return value;
 	return JSON.stringify(value);
+};
+
+const localSlackInfisicalKeys = [
+	"SLACK_APP_ID",
+	"SLACK_CLIENT_ID",
+	"SLACK_CLIENT_SECRET",
+	"SLACK_SIGNING_SECRET",
+] as const;
+
+const slackInfisicalSecretPath = "/leaf";
+const slackInfisicalSecretType = "personal";
+
+const localSlackInfisicalKeySet = new Set<string>(localSlackInfisicalKeys);
+
+const assertSafeInfisicalSlackWrite = ({
+	vars,
+}: {
+	vars: Record<string, string>;
+}) => {
+	const keys = Object.keys(vars);
+	const unexpectedKeys = keys.filter(
+		(key) => !localSlackInfisicalKeySet.has(key),
+	);
+	if (unexpectedKeys.length > 0) {
+		throw new Error(
+			[
+				"Refusing to write unexpected Infisical Slack keys.",
+				`Allowed keys: ${localSlackInfisicalKeys.join(", ")}`,
+				`Unexpected keys: ${unexpectedKeys.join(", ")}`,
+			].join("\n"),
+		);
+	}
+};
+
+const redactValues = ({
+	output,
+	values,
+}: {
+	output: string;
+	values: string[];
+}) => {
+	let redacted = output;
+	for (const value of values) {
+		if (!value) continue;
+		redacted = redacted.replaceAll(value, "<redacted>");
+	}
+	return redacted;
+};
+
+const formatEnvFile = ({ vars }: { vars: Record<string, string> }) =>
+	Object.entries(vars)
+		.map(([key, value]) => `${key}=${escapeEnvValue({ value })}`)
+		.join("\n");
+
+const verifyInfisicalSecretsNonEmpty = ({
+	env,
+	keys,
+}: {
+	env: SlackInfisicalWriteEnv;
+	keys: string[];
+}) => {
+	const missingKeys: string[] = [];
+	for (const key of keys) {
+		const result = Bun.spawnSync(
+			[
+				"infisical",
+				"secrets",
+				"get",
+				key,
+				`--env=${env}`,
+				`--path=${slackInfisicalSecretPath}`,
+				"--plain",
+				"--silent",
+			],
+			{
+				stdout: "pipe",
+				stderr: "pipe",
+			},
+		);
+		const value = new TextDecoder().decode(result.stdout).trim();
+		if (result.exitCode !== 0 || !value) {
+			missingKeys.push(key);
+		}
+	}
+
+	if (missingKeys.length > 0) {
+		throw new Error(
+			[
+				`Infisical ${env}${slackInfisicalSecretPath} write verification failed.`,
+				`Missing or empty keys: ${missingKeys.join(", ")}`,
+			].join("\n"),
+		);
+	}
+};
+
+const syncInfisicalLocalSlackSecrets = async ({
+	env,
+	forceConfirmation,
+	provider,
+	vars,
+	yes,
+}: {
+	env: SlackInfisicalWriteEnv;
+	forceConfirmation: boolean;
+	provider: SlackInstallProvider;
+	vars: Record<string, string>;
+	yes: boolean;
+}) => {
+	assertSafeInfisicalSlackWrite({ vars });
+	if (env === "prod" && provider !== "slack_admin") {
+		throw new Error(
+			"Refusing to write Infisical prod Slack vars for a non-admin local bot",
+		);
+	}
+
+	const keys = Object.keys(vars);
+	if (forceConfirmation || !yes) {
+		const answer = await inquirer.prompt<{ confirmed: boolean }>([
+			{
+				type: "confirm",
+				name: "confirmed",
+				default: false,
+				message: [
+					`Overwrite Infisical ${env.toUpperCase()} personal overrides for the ${provider === "slack_admin" ? "local admin" : "local"} Slack bot?`,
+					`Path: ${slackInfisicalSecretPath}`,
+					`Only these keys will be written: ${keys.join(", ")}`,
+				].join("\n"),
+			},
+		]);
+		if (!answer.confirmed) {
+			throw new Error(`Cancelled Infisical ${env} secret overwrite`);
+		}
+	}
+
+	const tempDir = mkdtempSync(join(tmpdir(), "autumn-slack-infisical-"));
+	const tempFile = join(tempDir, "slack.env");
+	try {
+		writeFileSync(tempFile, `${formatEnvFile({ vars })}\n`);
+		try {
+			chmodSync(tempFile, 0o600);
+		} catch {
+			// Best-effort file permissions; the temp dir is still removed below.
+		}
+
+		const result = Bun.spawnSync(
+			[
+				"infisical",
+				"secrets",
+				"set",
+				`--env=${env}`,
+				`--path=${slackInfisicalSecretPath}`,
+				`--type=${slackInfisicalSecretType}`,
+				"--silent",
+				"--file",
+				tempFile,
+			],
+			{
+				stdout: "pipe",
+				stderr: "pipe",
+			},
+		);
+		const stdout = new TextDecoder().decode(result.stdout).trim();
+		const stderr = new TextDecoder().decode(result.stderr).trim();
+
+		if (result.exitCode !== 0) {
+			const values = Object.values(vars);
+			throw new Error(
+				[
+					`infisical secrets set failed for ${env} keys: ${keys.join(", ")}`,
+					stdout ? redactValues({ output: stdout, values }) : undefined,
+					stderr ? redactValues({ output: stderr, values }) : undefined,
+				]
+					.filter(Boolean)
+					.join("\n"),
+			);
+		}
+
+		verifyInfisicalSecretsNonEmpty({ env, keys });
+	} finally {
+		rmSync(tempDir, { force: true, recursive: true });
+	}
+
+	console.log(
+		chalk.green(
+			`Overwrote local Slack bot personal overrides in Infisical ${env}${slackInfisicalSecretPath}: ${keys.join(", ")}`,
+		),
+	);
 };
 
 const upsertEnvFile = ({
@@ -690,6 +1074,11 @@ const setupSlackBot = async ({ args }: { args: Args }) => {
 	const provider = resolvedArgs.provider;
 	const baseUrl = resolvedArgs.baseUrl;
 	if (!baseUrl) throw new Error("Missing public Leaf URL");
+	if (resolvedArgs.writeInfisicalEnv === "prod" && provider !== "slack_admin") {
+		throw new Error(
+			"Refusing to write Infisical prod Slack vars for a non-admin local bot",
+		);
+	}
 	const readyLabel =
 		provider === "slack_admin"
 			? "Slack admin app ready"
@@ -728,6 +1117,7 @@ const setupSlackBot = async ({ args }: { args: Args }) => {
 	const clientSecret = credentials?.client_secret;
 	const signingSecret = credentials?.signing_secret;
 	const redirectUrl = manifest.oauth_config.redirect_urls[0];
+	const appId = slackResponse?.app_id;
 
 	if (!resolvedArgs.dryRun && (!clientId || !clientSecret || !signingSecret)) {
 		console.log(
@@ -736,13 +1126,21 @@ const setupSlackBot = async ({ args }: { args: Args }) => {
 		console.log(JSON.stringify(slackResponse, null, 2));
 		throw new Error("Could not extract Slack app credentials from response");
 	}
-
 	const envVars = {
+		SLACK_APP_ID: appId ?? "<app-id-from-slack>",
 		SLACK_CLIENT_ID: clientId ?? "<client-id-from-slack>",
 		SLACK_CLIENT_SECRET: clientSecret ?? "<client-secret-from-slack>",
 		SLACK_SIGNING_SECRET: signingSecret ?? "<signing-secret-from-slack>",
 		SLACK_REDIRECT_URI: redirectUrl,
 	};
+	if (!resolvedArgs.dryRun && appId && clientId) {
+		rememberLocalSlackApp({
+			appId,
+			appName: manifest.display_information.name,
+			clientId,
+			provider,
+		});
+	}
 
 	console.log(chalk.green(`\n${readyLabel}`));
 	if (slackResponse?.app_id) console.log(`App ID: ${slackResponse.app_id}`);
@@ -753,6 +1151,30 @@ const setupSlackBot = async ({ args }: { args: Args }) => {
 			filePath: resolvedArgs.envFile,
 			vars: envVars,
 		});
+	}
+
+	if (resolvedArgs.writeInfisicalEnv) {
+		const infisicalEnvVars = {
+			...(provider === "slack" ? { SLACK_APP_ID: envVars.SLACK_APP_ID } : {}),
+			SLACK_CLIENT_ID: envVars.SLACK_CLIENT_ID,
+			SLACK_CLIENT_SECRET: envVars.SLACK_CLIENT_SECRET,
+			SLACK_SIGNING_SECRET: envVars.SLACK_SIGNING_SECRET,
+		};
+		if (resolvedArgs.dryRun) {
+			console.log(
+				chalk.cyan(
+					`\nDry run: would overwrite Infisical ${resolvedArgs.writeInfisicalEnv}${slackInfisicalSecretPath} personal override keys: ${Object.keys(infisicalEnvVars).join(", ")}`,
+				),
+			);
+		} else {
+			await syncInfisicalLocalSlackSecrets({
+				env: resolvedArgs.writeInfisicalEnv,
+				forceConfirmation: resolvedArgs.writeInfisicalEnv === "prod",
+				provider,
+				vars: infisicalEnvVars,
+				yes: resolvedArgs.yes,
+			});
+		}
 	}
 
 	if (slackResponse?.oauth_authorize_url) {
@@ -771,6 +1193,11 @@ const setupAdminBot = async ({ args }: { args: Args }) =>
 const setupLocalBot = async ({ args }: { args: Args }) =>
 	setupSlackBot({ args: { ...args, provider: "slack" } });
 
+const setupLocalAdminBot = async ({ args }: { args: Args }) =>
+	setupSlackBot({
+		args: { ...args, provider: "slack_admin" },
+	});
+
 const prodBaseUrl = "https://api.useautumn.com";
 
 const targetDefaults = ({
@@ -788,7 +1215,12 @@ const targetDefaults = ({
 	}
 	if (target === "admin") {
 		return {
-			appId: process.env.SLACK_ADMIN_APP_IDS ?? process.env.SLACK_ADMIN_APP_ID,
+			appId:
+				process.env.SLACK_ADMIN_APP_IDS ??
+				process.env.SLACK_ADMIN_APP_ID ??
+				resolveStoredLocalSlackAppId({
+					provider: "slack_admin",
+				}),
 			appName: process.env.SLACK_ADMIN_APP_NAME ?? "Autumn Chat Admin Local",
 			baseUrl:
 				resolveWorktreeNgrokUrl() ??
@@ -798,7 +1230,13 @@ const targetDefaults = ({
 		};
 	}
 	return {
-		appId: process.env.SLACK_APP_ID ?? process.env.SLACK_LOCAL_APP_ID,
+		appId:
+			process.env.SLACK_APP_ID ??
+			process.env.SLACK_LOCAL_APP_ID ??
+			resolveStoredLocalSlackAppId({
+				clientId: process.env.SLACK_CLIENT_ID,
+				provider: "slack",
+			}),
 		appName: process.env.SLACK_APP_NAME ?? "Autumn Chat Local",
 		baseUrl:
 			resolveWorktreeNgrokUrl() ??
@@ -861,10 +1299,23 @@ const resolveManifestUpdateTarget = async ({
 
 const updateManifestTargets = async ({ args }: { args: Args }) => {
 	const target = args.target ?? "local";
-	const targets =
+	const targets: Exclude<SlackManifestTarget, "all">[] =
 		target === "all"
 			? (["local", "prod", "admin"] as const)
-			: ([target] as Exclude<SlackManifestTarget, "all">[]);
+			: args.action === "worktree" && target === "local" && !args.appId
+				? (["local", "admin"] as const).filter((worktreeTarget) =>
+						Boolean(targetDefaults({ target: worktreeTarget }).appId),
+					)
+				: ([target] as Exclude<SlackManifestTarget, "all">[]);
+
+	if (targets.length === 0) {
+		throw new Error(
+			[
+				"No local Slack app ids found for worktree manifest update.",
+				"Run setup-local-bot/setup-local-admin-bot first, or pass --app-id <id>.",
+			].join("\n"),
+		);
+	}
 
 	if (!args.dryRun) {
 		ensureSlackCli();
@@ -893,6 +1344,13 @@ const updateManifestTargets = async ({ args }: { args: Args }) => {
 
 		if (args.printManifest || args.dryRun) {
 			console.log(chalk.cyan(`\n${updateTarget} Slack app manifest:`));
+			if (args.action === "worktree") {
+				console.log(
+					chalk.gray(
+						"Worktree updates preserve the existing Slack app name on real updates.",
+					),
+				);
+			}
 			console.log(JSON.stringify(manifest, null, 2));
 		}
 
@@ -901,9 +1359,18 @@ const updateManifestTargets = async ({ args }: { args: Args }) => {
 			throw new Error(`Missing Slack app id for ${updateTarget} manifest`);
 		}
 		for (const appId of resolved.appIds) {
+			const manifestForApp =
+				args.action === "worktree"
+					? await preserveSlackAppManifestNames({
+							appId,
+							configToken,
+							manifest,
+							teamId: args.teamId,
+						})
+					: manifest;
 			await updateSlackAppManifest({
 				appId,
-				manifest,
+				manifest: manifestForApp,
 				configToken,
 				teamId: args.teamId,
 			});
@@ -917,6 +1384,7 @@ const updateManifestTargets = async ({ args }: { args: Args }) => {
 const actions = {
 	"setup-bot": setupSlackBot,
 	"setup-admin-bot": setupAdminBot,
+	"setup-local-admin-bot": setupLocalAdminBot,
 	"setup-local-bot": setupLocalBot,
 	"setup-regular-bot": setupLocalBot,
 	"update-admin-manifest": updateManifestTargets,
