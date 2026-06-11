@@ -45,19 +45,21 @@ export const GetCustomerEnv = {
  */
 export type GetCustomerEnv = OpenEnum<typeof GetCustomerEnv>;
 
-export const GetCustomerInterval2 = {
+export const GetCustomerPurchaseLimitInterval2 = {
   Hour: "hour",
   Day: "day",
   Week: "week",
   Month: "month",
 } as const;
-export type GetCustomerInterval2 = OpenEnum<typeof GetCustomerInterval2>;
+export type GetCustomerPurchaseLimitInterval2 = OpenEnum<
+  typeof GetCustomerPurchaseLimitInterval2
+>;
 
 export type GetCustomerPurchaseLimit2 = {
   /**
    * The time interval for the purchase limit window. Null when no purchase limit is configured.
    */
-  interval: GetCustomerInterval2 | null;
+  interval: GetCustomerPurchaseLimitInterval2 | null;
   /**
    * Number of intervals in the purchase limit window. Null when no purchase limit is configured.
    */
@@ -79,7 +81,7 @@ export type GetCustomerPurchaseLimit2 = {
 /**
  * The time interval for the purchase limit window.
  */
-export const GetCustomerInterval1 = {
+export const GetCustomerPurchaseLimitInterval1 = {
   Hour: "hour",
   Day: "day",
   Week: "week",
@@ -88,13 +90,15 @@ export const GetCustomerInterval1 = {
 /**
  * The time interval for the purchase limit window.
  */
-export type GetCustomerInterval1 = OpenEnum<typeof GetCustomerInterval1>;
+export type GetCustomerPurchaseLimitInterval1 = OpenEnum<
+  typeof GetCustomerPurchaseLimitInterval1
+>;
 
 export type GetCustomerPurchaseLimit1 = {
   /**
    * The time interval for the purchase limit window.
    */
-  interval: GetCustomerInterval1;
+  interval: GetCustomerPurchaseLimitInterval1;
   /**
    * Number of intervals in the purchase limit window.
    */
@@ -148,13 +152,53 @@ export type GetCustomerSpendLimit = {
    */
   featureId?: string | undefined;
   /**
-   * Whether this spend limit is enabled.
+   * Whether the overage spend limit is enabled.
    */
   enabled: boolean;
   /**
    * Maximum allowed overage spend for the target feature.
    */
   overageLimit?: number | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const GetCustomerUsageLimitInterval = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type GetCustomerUsageLimitInterval = OpenEnum<
+  typeof GetCustomerUsageLimitInterval
+>;
+
+export type GetCustomerUsageLimit = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: GetCustomerUsageLimitInterval;
+  /**
+   * Current usage already consumed in the active interval. Response-only; not stored on billing controls.
+   */
+  usage?: number | undefined;
 };
 
 /**
@@ -216,9 +260,13 @@ export type GetCustomerBillingControls = {
    */
   autoTopups?: Array<GetCustomerAutoTopup> | undefined;
   /**
-   * List of overage spend limits per feature.
+   * List of overage spend limits per feature (caps overage spend).
    */
   spendLimits?: Array<GetCustomerSpendLimit> | undefined;
+  /**
+   * List of windowed hard usage caps per feature, with current window usage.
+   */
+  usageLimits?: Array<GetCustomerUsageLimit> | undefined;
   /**
    * List of usage alert configurations per feature.
    */
@@ -860,10 +908,10 @@ export const GetCustomerEnv$inboundSchema: z.ZodMiniType<
 > = openEnums.inboundSchema(GetCustomerEnv);
 
 /** @internal */
-export const GetCustomerInterval2$inboundSchema: z.ZodMiniType<
-  GetCustomerInterval2,
+export const GetCustomerPurchaseLimitInterval2$inboundSchema: z.ZodMiniType<
+  GetCustomerPurchaseLimitInterval2,
   unknown
-> = openEnums.inboundSchema(GetCustomerInterval2);
+> = openEnums.inboundSchema(GetCustomerPurchaseLimitInterval2);
 
 /** @internal */
 export const GetCustomerPurchaseLimit2$inboundSchema: z.ZodMiniType<
@@ -871,7 +919,7 @@ export const GetCustomerPurchaseLimit2$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    interval: types.nullable(GetCustomerInterval2$inboundSchema),
+    interval: types.nullable(GetCustomerPurchaseLimitInterval2$inboundSchema),
     interval_count: types.nullable(types.number()),
     limit: types.nullable(types.number()),
     count: types.number(),
@@ -896,10 +944,10 @@ export function getCustomerPurchaseLimit2FromJSON(
 }
 
 /** @internal */
-export const GetCustomerInterval1$inboundSchema: z.ZodMiniType<
-  GetCustomerInterval1,
+export const GetCustomerPurchaseLimitInterval1$inboundSchema: z.ZodMiniType<
+  GetCustomerPurchaseLimitInterval1,
   unknown
-> = openEnums.inboundSchema(GetCustomerInterval1);
+> = openEnums.inboundSchema(GetCustomerPurchaseLimitInterval1);
 
 /** @internal */
 export const GetCustomerPurchaseLimit1$inboundSchema: z.ZodMiniType<
@@ -907,7 +955,7 @@ export const GetCustomerPurchaseLimit1$inboundSchema: z.ZodMiniType<
   unknown
 > = z.pipe(
   z.object({
-    interval: GetCustomerInterval1$inboundSchema,
+    interval: GetCustomerPurchaseLimitInterval1$inboundSchema,
     interval_count: z._default(types.number(), 1),
     limit: types.number(),
   }),
@@ -1011,6 +1059,40 @@ export function getCustomerSpendLimitFromJSON(
 }
 
 /** @internal */
+export const GetCustomerUsageLimitInterval$inboundSchema: z.ZodMiniType<
+  GetCustomerUsageLimitInterval,
+  unknown
+> = openEnums.inboundSchema(GetCustomerUsageLimitInterval);
+
+/** @internal */
+export const GetCustomerUsageLimit$inboundSchema: z.ZodMiniType<
+  GetCustomerUsageLimit,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    limit: types.number(),
+    interval: GetCustomerUsageLimitInterval$inboundSchema,
+    usage: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function getCustomerUsageLimitFromJSON(
+  jsonString: string,
+): SafeParseResult<GetCustomerUsageLimit, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetCustomerUsageLimit$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetCustomerUsageLimit' from JSON`,
+  );
+}
+
+/** @internal */
 export const GetCustomerThresholdType$inboundSchema: z.ZodMiniType<
   GetCustomerThresholdType,
   unknown
@@ -1084,6 +1166,9 @@ export const GetCustomerBillingControls$inboundSchema: z.ZodMiniType<
     spend_limits: types.optional(
       z.array(z.lazy(() => GetCustomerSpendLimit$inboundSchema)),
     ),
+    usage_limits: types.optional(
+      z.array(z.lazy(() => GetCustomerUsageLimit$inboundSchema)),
+    ),
     usage_alerts: types.optional(
       z.array(z.lazy(() => GetCustomerUsageAlert$inboundSchema)),
     ),
@@ -1095,6 +1180,7 @@ export const GetCustomerBillingControls$inboundSchema: z.ZodMiniType<
     return remap$(v, {
       "auto_topups": "autoTopups",
       "spend_limits": "spendLimits",
+      "usage_limits": "usageLimits",
       "usage_alerts": "usageAlerts",
       "overage_allowed": "overageAllowed",
     });

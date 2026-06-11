@@ -13,11 +13,11 @@ export const DbUsageLimitSchema = z
 			description: "The feature this usage limit applies to.",
 		}),
 		limit: z.number().min(0).meta({
-			description: "Maximum units allowed per window.",
+			description: "Maximum units allowed per interval.",
 		}),
 		interval: z.enum(ResetInterval).meta({
 			description:
-				"Window interval for the cap, aligned to the customer's billing cycle.",
+				"Interval for the cap, aligned to the customer's billing cycle.",
 		}),
 	})
 	.refine((data) => data.interval !== ResetInterval.OneOff, {

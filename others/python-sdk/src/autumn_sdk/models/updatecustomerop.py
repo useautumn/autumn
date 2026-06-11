@@ -46,7 +46,7 @@ class UpdateCustomerGlobals(BaseModel):
         return m
 
 
-UpdateCustomerIntervalRequestBody = Literal[
+UpdateCustomerPurchaseLimitIntervalRequestBody = Literal[
     "hour",
     "day",
     "week",
@@ -58,7 +58,7 @@ r"""The time interval for the purchase limit window."""
 class UpdateCustomerPurchaseLimitRequestTypedDict(TypedDict):
     r"""Optional rate limit to cap how often auto top-ups occur."""
 
-    interval: UpdateCustomerIntervalRequestBody
+    interval: UpdateCustomerPurchaseLimitIntervalRequestBody
     r"""The time interval for the purchase limit window."""
     limit: float
     r"""Maximum number of auto top-ups allowed within the interval."""
@@ -69,7 +69,7 @@ class UpdateCustomerPurchaseLimitRequestTypedDict(TypedDict):
 class UpdateCustomerPurchaseLimitRequest(BaseModel):
     r"""Optional rate limit to cap how often auto top-ups occur."""
 
-    interval: UpdateCustomerIntervalRequestBody
+    interval: UpdateCustomerPurchaseLimitIntervalRequestBody
     r"""The time interval for the purchase limit window."""
 
     limit: float
@@ -150,7 +150,7 @@ class UpdateCustomerSpendLimitRequestTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
-    r"""Whether this spend limit is enabled."""
+    r"""Whether the overage spend limit is enabled."""
     overage_limit: NotRequired[float]
     r"""Maximum allowed overage spend for the target feature."""
 
@@ -160,7 +160,7 @@ class UpdateCustomerSpendLimitRequest(BaseModel):
     r"""Optional feature ID this spend limit applies to."""
 
     enabled: Optional[bool] = False
-    r"""Whether this spend limit is enabled."""
+    r"""Whether the overage spend limit is enabled."""
 
     overage_limit: Optional[float] = None
     r"""Maximum allowed overage spend for the target feature."""
@@ -180,6 +180,40 @@ class UpdateCustomerSpendLimitRequest(BaseModel):
                     m[k] = val
 
         return m
+
+
+UpdateCustomerUsageLimitIntervalRequestBody = Literal[
+    "one_off",
+    "minute",
+    "hour",
+    "day",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+class UpdateCustomerUsageLimitRequestTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+    limit: float
+    r"""Maximum units allowed per interval."""
+    interval: UpdateCustomerUsageLimitIntervalRequestBody
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+class UpdateCustomerUsageLimitRequest(BaseModel):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+
+    limit: float
+    r"""Maximum units allowed per interval."""
+
+    interval: UpdateCustomerUsageLimitIntervalRequestBody
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
 UpdateCustomerThresholdTypeRequestBody = Literal[
@@ -274,7 +308,9 @@ class UpdateCustomerBillingControlsRequestTypedDict(TypedDict):
     auto_topups: NotRequired[List[UpdateCustomerAutoTopupRequestTypedDict]]
     r"""List of auto top-up configurations per feature."""
     spend_limits: NotRequired[List[UpdateCustomerSpendLimitRequestTypedDict]]
-    r"""List of overage spend limits per feature."""
+    r"""List of overage spend limits per feature (caps overage spend)."""
+    usage_limits: NotRequired[List[UpdateCustomerUsageLimitRequestTypedDict]]
+    r"""List of windowed hard usage caps per feature (max units per interval window)."""
     usage_alerts: NotRequired[List[UpdateCustomerUsageAlertRequestBodyTypedDict]]
     r"""List of usage alert configurations per feature."""
     overage_allowed: NotRequired[List[UpdateCustomerOverageAllowedRequestTypedDict]]
@@ -288,7 +324,10 @@ class UpdateCustomerBillingControlsRequest(BaseModel):
     r"""List of auto top-up configurations per feature."""
 
     spend_limits: Optional[List[UpdateCustomerSpendLimitRequest]] = None
-    r"""List of overage spend limits per feature."""
+    r"""List of overage spend limits per feature (caps overage spend)."""
+
+    usage_limits: Optional[List[UpdateCustomerUsageLimitRequest]] = None
+    r"""List of windowed hard usage caps per feature (max units per interval window)."""
 
     usage_alerts: Optional[List[UpdateCustomerUsageAlertRequestBody]] = None
     r"""List of usage alert configurations per feature."""
@@ -299,7 +338,13 @@ class UpdateCustomerBillingControlsRequest(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["auto_topups", "spend_limits", "usage_alerts", "overage_allowed"]
+            [
+                "auto_topups",
+                "spend_limits",
+                "usage_limits",
+                "usage_alerts",
+                "overage_allowed",
+            ]
         )
         serialized = handler(self)
         m = {}
@@ -447,7 +492,7 @@ UpdateCustomerEnv = Union[
 r"""The environment this customer was created in."""
 
 
-UpdateCustomerIntervalResponse2 = Union[
+UpdateCustomerPurchaseLimitIntervalResponse2 = Union[
     Literal[
         "hour",
         "day",
@@ -459,7 +504,7 @@ UpdateCustomerIntervalResponse2 = Union[
 
 
 class UpdateCustomerPurchaseLimitResponse2TypedDict(TypedDict):
-    interval: Nullable[UpdateCustomerIntervalResponse2]
+    interval: Nullable[UpdateCustomerPurchaseLimitIntervalResponse2]
     r"""The time interval for the purchase limit window. Null when no purchase limit is configured."""
     interval_count: Nullable[float]
     r"""Number of intervals in the purchase limit window. Null when no purchase limit is configured."""
@@ -472,7 +517,7 @@ class UpdateCustomerPurchaseLimitResponse2TypedDict(TypedDict):
 
 
 class UpdateCustomerPurchaseLimitResponse2(BaseModel):
-    interval: Nullable[UpdateCustomerIntervalResponse2]
+    interval: Nullable[UpdateCustomerPurchaseLimitIntervalResponse2]
     r"""The time interval for the purchase limit window. Null when no purchase limit is configured."""
 
     interval_count: Nullable[float]
@@ -502,7 +547,7 @@ class UpdateCustomerPurchaseLimitResponse2(BaseModel):
         return m
 
 
-UpdateCustomerIntervalResponse1 = Union[
+UpdateCustomerPurchaseLimitIntervalResponse1 = Union[
     Literal[
         "hour",
         "day",
@@ -515,7 +560,7 @@ r"""The time interval for the purchase limit window."""
 
 
 class UpdateCustomerPurchaseLimitResponse1TypedDict(TypedDict):
-    interval: UpdateCustomerIntervalResponse1
+    interval: UpdateCustomerPurchaseLimitIntervalResponse1
     r"""The time interval for the purchase limit window."""
     limit: float
     r"""Maximum number of auto top-ups allowed within the interval."""
@@ -524,7 +569,7 @@ class UpdateCustomerPurchaseLimitResponse1TypedDict(TypedDict):
 
 
 class UpdateCustomerPurchaseLimitResponse1(BaseModel):
-    interval: UpdateCustomerIntervalResponse1
+    interval: UpdateCustomerPurchaseLimitIntervalResponse1
     r"""The time interval for the purchase limit window."""
 
     limit: float
@@ -622,7 +667,7 @@ class UpdateCustomerSpendLimitResponseTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
-    r"""Whether this spend limit is enabled."""
+    r"""Whether the overage spend limit is enabled."""
     overage_limit: NotRequired[float]
     r"""Maximum allowed overage spend for the target feature."""
 
@@ -632,7 +677,7 @@ class UpdateCustomerSpendLimitResponse(BaseModel):
     r"""Optional feature ID this spend limit applies to."""
 
     enabled: Optional[bool] = False
-    r"""Whether this spend limit is enabled."""
+    r"""Whether the overage spend limit is enabled."""
 
     overage_limit: Optional[float] = None
     r"""Maximum allowed overage spend for the target feature."""
@@ -640,6 +685,64 @@ class UpdateCustomerSpendLimitResponse(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+UpdateCustomerUsageLimitIntervalResponse = Union[
+    Literal[
+        "one_off",
+        "minute",
+        "hour",
+        "day",
+        "week",
+        "month",
+        "quarter",
+        "semi_annual",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+class UpdateCustomerUsageLimitResponseTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+    limit: float
+    r"""Maximum units allowed per interval."""
+    interval: UpdateCustomerUsageLimitIntervalResponse
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+    usage: NotRequired[float]
+    r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
+
+
+class UpdateCustomerUsageLimitResponse(BaseModel):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+
+    limit: float
+    r"""Maximum units allowed per interval."""
+
+    interval: UpdateCustomerUsageLimitIntervalResponse
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+    usage: Optional[float] = None
+    r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["usage"])
         serialized = handler(self)
         m = {}
 
@@ -749,7 +852,9 @@ class UpdateCustomerBillingControlsResponseTypedDict(TypedDict):
     auto_topups: NotRequired[List[UpdateCustomerAutoTopupResponseTypedDict]]
     r"""List of auto top-up configurations per feature."""
     spend_limits: NotRequired[List[UpdateCustomerSpendLimitResponseTypedDict]]
-    r"""List of overage spend limits per feature."""
+    r"""List of overage spend limits per feature (caps overage spend)."""
+    usage_limits: NotRequired[List[UpdateCustomerUsageLimitResponseTypedDict]]
+    r"""List of windowed hard usage caps per feature, with current window usage."""
     usage_alerts: NotRequired[List[UpdateCustomerUsageAlertResponseTypedDict]]
     r"""List of usage alert configurations per feature."""
     overage_allowed: NotRequired[List[UpdateCustomerOverageAllowedResponseTypedDict]]
@@ -763,7 +868,10 @@ class UpdateCustomerBillingControlsResponse(BaseModel):
     r"""List of auto top-up configurations per feature."""
 
     spend_limits: Optional[List[UpdateCustomerSpendLimitResponse]] = None
-    r"""List of overage spend limits per feature."""
+    r"""List of overage spend limits per feature (caps overage spend)."""
+
+    usage_limits: Optional[List[UpdateCustomerUsageLimitResponse]] = None
+    r"""List of windowed hard usage caps per feature, with current window usage."""
 
     usage_alerts: Optional[List[UpdateCustomerUsageAlertResponse]] = None
     r"""List of usage alert configurations per feature."""
@@ -774,7 +882,13 @@ class UpdateCustomerBillingControlsResponse(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["auto_topups", "spend_limits", "usage_alerts", "overage_allowed"]
+            [
+                "auto_topups",
+                "spend_limits",
+                "usage_limits",
+                "usage_alerts",
+                "overage_allowed",
+            ]
         )
         serialized = handler(self)
         m = {}

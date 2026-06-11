@@ -17,7 +17,7 @@ export type GetOrCreateCustomerGlobals = {
 /**
  * The time interval for the purchase limit window.
  */
-export const GetOrCreateCustomerInterval = {
+export const GetOrCreateCustomerPurchaseLimitInterval = {
   Hour: "hour",
   Day: "day",
   Week: "week",
@@ -26,8 +26,8 @@ export const GetOrCreateCustomerInterval = {
 /**
  * The time interval for the purchase limit window.
  */
-export type GetOrCreateCustomerInterval = ClosedEnum<
-  typeof GetOrCreateCustomerInterval
+export type GetOrCreateCustomerPurchaseLimitInterval = ClosedEnum<
+  typeof GetOrCreateCustomerPurchaseLimitInterval
 >;
 
 /**
@@ -37,7 +37,7 @@ export type GetOrCreateCustomerPurchaseLimit = {
   /**
    * The time interval for the purchase limit window.
    */
-  interval: GetOrCreateCustomerInterval;
+  interval: GetOrCreateCustomerPurchaseLimitInterval;
   /**
    * Number of intervals in the purchase limit window.
    */
@@ -81,13 +81,49 @@ export type GetOrCreateCustomerSpendLimit = {
    */
   featureId?: string | undefined;
   /**
-   * Whether this spend limit is enabled.
+   * Whether the overage spend limit is enabled.
    */
   enabled?: boolean | undefined;
   /**
    * Maximum allowed overage spend for the target feature.
    */
   overageLimit?: number | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const GetOrCreateCustomerUsageLimitInterval = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type GetOrCreateCustomerUsageLimitInterval = ClosedEnum<
+  typeof GetOrCreateCustomerUsageLimitInterval
+>;
+
+export type GetOrCreateCustomerUsageLimit = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: GetOrCreateCustomerUsageLimitInterval;
 };
 
 /**
@@ -149,9 +185,13 @@ export type GetOrCreateCustomerBillingControls = {
    */
   autoTopups?: Array<GetOrCreateCustomerAutoTopup> | undefined;
   /**
-   * List of overage spend limits per feature.
+   * List of overage spend limits per feature (caps overage spend).
    */
   spendLimits?: Array<GetOrCreateCustomerSpendLimit> | undefined;
+  /**
+   * List of windowed hard usage caps per feature (max units per interval window).
+   */
+  usageLimits?: Array<GetOrCreateCustomerUsageLimit> | undefined;
   /**
    * List of usage alert configurations per feature.
    */
@@ -221,9 +261,10 @@ export type GetOrCreateCustomerParams = {
 };
 
 /** @internal */
-export const GetOrCreateCustomerInterval$outboundSchema: z.ZodMiniEnum<
-  typeof GetOrCreateCustomerInterval
-> = z.enum(GetOrCreateCustomerInterval);
+export const GetOrCreateCustomerPurchaseLimitInterval$outboundSchema:
+  z.ZodMiniEnum<typeof GetOrCreateCustomerPurchaseLimitInterval> = z.enum(
+    GetOrCreateCustomerPurchaseLimitInterval,
+  );
 
 /** @internal */
 export type GetOrCreateCustomerPurchaseLimit$Outbound = {
@@ -238,7 +279,7 @@ export const GetOrCreateCustomerPurchaseLimit$outboundSchema: z.ZodMiniType<
   GetOrCreateCustomerPurchaseLimit
 > = z.pipe(
   z.object({
-    interval: GetOrCreateCustomerInterval$outboundSchema,
+    interval: GetOrCreateCustomerPurchaseLimitInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     limit: z.number(),
   }),
@@ -339,6 +380,46 @@ export function getOrCreateCustomerSpendLimitToJSON(
 }
 
 /** @internal */
+export const GetOrCreateCustomerUsageLimitInterval$outboundSchema:
+  z.ZodMiniEnum<typeof GetOrCreateCustomerUsageLimitInterval> = z.enum(
+    GetOrCreateCustomerUsageLimitInterval,
+  );
+
+/** @internal */
+export type GetOrCreateCustomerUsageLimit$Outbound = {
+  feature_id: string;
+  limit: number;
+  interval: string;
+};
+
+/** @internal */
+export const GetOrCreateCustomerUsageLimit$outboundSchema: z.ZodMiniType<
+  GetOrCreateCustomerUsageLimit$Outbound,
+  GetOrCreateCustomerUsageLimit
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    limit: z.number(),
+    interval: GetOrCreateCustomerUsageLimitInterval$outboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function getOrCreateCustomerUsageLimitToJSON(
+  getOrCreateCustomerUsageLimit: GetOrCreateCustomerUsageLimit,
+): string {
+  return JSON.stringify(
+    GetOrCreateCustomerUsageLimit$outboundSchema.parse(
+      getOrCreateCustomerUsageLimit,
+    ),
+  );
+}
+
+/** @internal */
 export const GetOrCreateCustomerThresholdType$outboundSchema: z.ZodMiniEnum<
   typeof GetOrCreateCustomerThresholdType
 > = z.enum(GetOrCreateCustomerThresholdType);
@@ -418,6 +499,7 @@ export function getOrCreateCustomerOverageAllowedToJSON(
 export type GetOrCreateCustomerBillingControls$Outbound = {
   auto_topups?: Array<GetOrCreateCustomerAutoTopup$Outbound> | undefined;
   spend_limits?: Array<GetOrCreateCustomerSpendLimit$Outbound> | undefined;
+  usage_limits?: Array<GetOrCreateCustomerUsageLimit$Outbound> | undefined;
   usage_alerts?: Array<GetOrCreateCustomerUsageAlert$Outbound> | undefined;
   overage_allowed?:
     | Array<GetOrCreateCustomerOverageAllowed$Outbound>
@@ -436,6 +518,9 @@ export const GetOrCreateCustomerBillingControls$outboundSchema: z.ZodMiniType<
     spendLimits: z.optional(
       z.array(z.lazy(() => GetOrCreateCustomerSpendLimit$outboundSchema)),
     ),
+    usageLimits: z.optional(
+      z.array(z.lazy(() => GetOrCreateCustomerUsageLimit$outboundSchema)),
+    ),
     usageAlerts: z.optional(
       z.array(z.lazy(() => GetOrCreateCustomerUsageAlert$outboundSchema)),
     ),
@@ -447,6 +532,7 @@ export const GetOrCreateCustomerBillingControls$outboundSchema: z.ZodMiniType<
     return remap$(v, {
       autoTopups: "auto_topups",
       spendLimits: "spend_limits",
+      usageLimits: "usage_limits",
       usageAlerts: "usage_alerts",
       overageAllowed: "overage_allowed",
     });

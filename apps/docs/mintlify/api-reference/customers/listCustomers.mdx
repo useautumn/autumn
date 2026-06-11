@@ -129,18 +129,40 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         </DynamicResponseField>
 
         <DynamicResponseField name="spend_limits" type="object[]">
-          List of overage spend limits per feature.
+          List of overage spend limits per feature (caps overage spend).
           <Expandable title="properties">
             <DynamicResponseField name="feature_id" type="string">
               Optional feature ID this spend limit applies to.
             </DynamicResponseField>
 
             <DynamicResponseField name="enabled" type="boolean">
-              Whether this spend limit is enabled.
+              Whether the overage spend limit is enabled.
             </DynamicResponseField>
 
             <DynamicResponseField name="overage_limit" type="number">
               Maximum allowed overage spend for the target feature.
+            </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="usage_limits" type="object[]">
+          List of windowed hard usage caps per feature, with current window usage.
+          <Expandable title="properties">
+            <DynamicResponseField name="feature_id" type="string">
+              The feature this usage limit applies to.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="limit" type="number">
+              Maximum units allowed per interval.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
+              Interval for the cap, aligned to the customer's billing cycle.
+            </DynamicResponseField>
+
+            <DynamicResponseField name="usage" type="number">
+              Current usage already consumed in the active interval. Response-only; not stored on billing controls.
             </DynamicResponseField>
 
           </Expandable>

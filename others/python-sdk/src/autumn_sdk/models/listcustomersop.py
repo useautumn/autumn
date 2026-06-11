@@ -157,7 +157,7 @@ ListCustomersEnv = Union[
 r"""The environment this customer was created in."""
 
 
-ListCustomersInterval2 = Union[
+ListCustomersPurchaseLimitInterval2 = Union[
     Literal[
         "hour",
         "day",
@@ -169,7 +169,7 @@ ListCustomersInterval2 = Union[
 
 
 class ListCustomersPurchaseLimit2TypedDict(TypedDict):
-    interval: Nullable[ListCustomersInterval2]
+    interval: Nullable[ListCustomersPurchaseLimitInterval2]
     r"""The time interval for the purchase limit window. Null when no purchase limit is configured."""
     interval_count: Nullable[float]
     r"""Number of intervals in the purchase limit window. Null when no purchase limit is configured."""
@@ -182,7 +182,7 @@ class ListCustomersPurchaseLimit2TypedDict(TypedDict):
 
 
 class ListCustomersPurchaseLimit2(BaseModel):
-    interval: Nullable[ListCustomersInterval2]
+    interval: Nullable[ListCustomersPurchaseLimitInterval2]
     r"""The time interval for the purchase limit window. Null when no purchase limit is configured."""
 
     interval_count: Nullable[float]
@@ -212,7 +212,7 @@ class ListCustomersPurchaseLimit2(BaseModel):
         return m
 
 
-ListCustomersInterval1 = Union[
+ListCustomersPurchaseLimitInterval1 = Union[
     Literal[
         "hour",
         "day",
@@ -225,7 +225,7 @@ r"""The time interval for the purchase limit window."""
 
 
 class ListCustomersPurchaseLimit1TypedDict(TypedDict):
-    interval: ListCustomersInterval1
+    interval: ListCustomersPurchaseLimitInterval1
     r"""The time interval for the purchase limit window."""
     limit: float
     r"""Maximum number of auto top-ups allowed within the interval."""
@@ -234,7 +234,7 @@ class ListCustomersPurchaseLimit1TypedDict(TypedDict):
 
 
 class ListCustomersPurchaseLimit1(BaseModel):
-    interval: ListCustomersInterval1
+    interval: ListCustomersPurchaseLimitInterval1
     r"""The time interval for the purchase limit window."""
 
     limit: float
@@ -329,7 +329,7 @@ class ListCustomersSpendLimitTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
-    r"""Whether this spend limit is enabled."""
+    r"""Whether the overage spend limit is enabled."""
     overage_limit: NotRequired[float]
     r"""Maximum allowed overage spend for the target feature."""
 
@@ -339,7 +339,7 @@ class ListCustomersSpendLimit(BaseModel):
     r"""Optional feature ID this spend limit applies to."""
 
     enabled: Optional[bool] = False
-    r"""Whether this spend limit is enabled."""
+    r"""Whether the overage spend limit is enabled."""
 
     overage_limit: Optional[float] = None
     r"""Maximum allowed overage spend for the target feature."""
@@ -347,6 +347,64 @@ class ListCustomersSpendLimit(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+ListCustomersUsageLimitInterval = Union[
+    Literal[
+        "one_off",
+        "minute",
+        "hour",
+        "day",
+        "week",
+        "month",
+        "quarter",
+        "semi_annual",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+class ListCustomersUsageLimitTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+    limit: float
+    r"""Maximum units allowed per interval."""
+    interval: ListCustomersUsageLimitInterval
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+    usage: NotRequired[float]
+    r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
+
+
+class ListCustomersUsageLimit(BaseModel):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+
+    limit: float
+    r"""Maximum units allowed per interval."""
+
+    interval: ListCustomersUsageLimitInterval
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+    usage: Optional[float] = None
+    r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["usage"])
         serialized = handler(self)
         m = {}
 
@@ -456,7 +514,9 @@ class ListCustomersBillingControlsTypedDict(TypedDict):
     auto_topups: NotRequired[List[ListCustomersAutoTopupTypedDict]]
     r"""List of auto top-up configurations per feature."""
     spend_limits: NotRequired[List[ListCustomersSpendLimitTypedDict]]
-    r"""List of overage spend limits per feature."""
+    r"""List of overage spend limits per feature (caps overage spend)."""
+    usage_limits: NotRequired[List[ListCustomersUsageLimitTypedDict]]
+    r"""List of windowed hard usage caps per feature, with current window usage."""
     usage_alerts: NotRequired[List[ListCustomersUsageAlertTypedDict]]
     r"""List of usage alert configurations per feature."""
     overage_allowed: NotRequired[List[ListCustomersOverageAllowedTypedDict]]
@@ -470,7 +530,10 @@ class ListCustomersBillingControls(BaseModel):
     r"""List of auto top-up configurations per feature."""
 
     spend_limits: Optional[List[ListCustomersSpendLimit]] = None
-    r"""List of overage spend limits per feature."""
+    r"""List of overage spend limits per feature (caps overage spend)."""
+
+    usage_limits: Optional[List[ListCustomersUsageLimit]] = None
+    r"""List of windowed hard usage caps per feature, with current window usage."""
 
     usage_alerts: Optional[List[ListCustomersUsageAlert]] = None
     r"""List of usage alert configurations per feature."""
@@ -481,7 +544,13 @@ class ListCustomersBillingControls(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["auto_topups", "spend_limits", "usage_alerts", "overage_allowed"]
+            [
+                "auto_topups",
+                "spend_limits",
+                "usage_limits",
+                "usage_alerts",
+                "overage_allowed",
+            ]
         )
         serialized = handler(self)
         m = {}

@@ -121,12 +121,43 @@ components:
                   enabled:
                     type: boolean
                     default: false
-                    description: Whether this spend limit is enabled.
+                    description: Whether the overage spend limit is enabled.
                   overage_limit:
                     type: number
                     minimum: 0
                     description: Maximum allowed overage spend for the target feature.
-              description: List of overage spend limits per feature.
+              description: List of overage spend limits per feature (caps overage spend).
+            usage_limits:
+              type: array
+              items:
+                type: object
+                properties:
+                  feature_id:
+                    type: string
+                    description: The feature this usage limit applies to.
+                  limit:
+                    type: number
+                    minimum: 0
+                    description: Maximum units allowed per interval.
+                  interval:
+                    enum:
+                      - one_off
+                      - minute
+                      - hour
+                      - day
+                      - week
+                      - month
+                      - quarter
+                      - semi_annual
+                      - year
+                    type: string
+                    description: Interval for the cap, aligned to the customer's billing cycle.
+                required:
+                  - feature_id
+                  - limit
+                  - interval
+              description: List of windowed hard usage caps per feature (max units per
+                interval window).
             usage_alerts:
               type: array
               items:
@@ -360,12 +391,48 @@ components:
                   enabled:
                     type: boolean
                     default: false
-                    description: Whether this spend limit is enabled.
+                    description: Whether the overage spend limit is enabled.
                   overage_limit:
                     type: number
                     minimum: 0
                     description: Maximum allowed overage spend for the target feature.
-              description: List of overage spend limits per feature.
+              description: List of overage spend limits per feature (caps overage spend).
+            usage_limits:
+              type: array
+              items:
+                type: object
+                properties:
+                  feature_id:
+                    type: string
+                    description: The feature this usage limit applies to.
+                  limit:
+                    type: number
+                    minimum: 0
+                    description: Maximum units allowed per interval.
+                  interval:
+                    enum:
+                      - one_off
+                      - minute
+                      - hour
+                      - day
+                      - week
+                      - month
+                      - quarter
+                      - semi_annual
+                      - year
+                    type: string
+                    description: Interval for the cap, aligned to the customer's billing cycle.
+                  usage:
+                    type: number
+                    minimum: 0
+                    description: Current usage already consumed in the active interval.
+                      Response-only; not stored on billing controls.
+                required:
+                  - feature_id
+                  - limit
+                  - interval
+              description: List of windowed hard usage caps per feature, with current window
+                usage.
             usage_alerts:
               type: array
               items:
@@ -1898,12 +1965,43 @@ paths:
                           enabled:
                             type: boolean
                             default: false
-                            description: Whether this spend limit is enabled.
+                            description: Whether the overage spend limit is enabled.
                           overage_limit:
                             type: number
                             minimum: 0
                             description: Maximum allowed overage spend for the target feature.
-                      description: List of overage spend limits per feature.
+                      description: List of overage spend limits per feature (caps overage spend).
+                    usage_limits:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The feature this usage limit applies to.
+                          limit:
+                            type: number
+                            minimum: 0
+                            description: Maximum units allowed per interval.
+                          interval:
+                            enum:
+                              - one_off
+                              - minute
+                              - hour
+                              - day
+                              - week
+                              - month
+                              - quarter
+                              - semi_annual
+                              - year
+                            type: string
+                            description: Interval for the cap, aligned to the customer's billing cycle.
+                        required:
+                          - feature_id
+                          - limit
+                          - interval
+                      description: List of windowed hard usage caps per feature (max units per
+                        interval window).
                     usage_alerts:
                       type: array
                       items:
@@ -2201,12 +2299,48 @@ paths:
                             enabled:
                               type: boolean
                               default: false
-                              description: Whether this spend limit is enabled.
+                              description: Whether the overage spend limit is enabled.
                             overage_limit:
                               type: number
                               minimum: 0
                               description: Maximum allowed overage spend for the target feature.
-                        description: List of overage spend limits per feature.
+                        description: List of overage spend limits per feature (caps overage spend).
+                      usage_limits:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature this usage limit applies to.
+                            limit:
+                              type: number
+                              minimum: 0
+                              description: Maximum units allowed per interval.
+                            interval:
+                              enum:
+                                - one_off
+                                - minute
+                                - hour
+                                - day
+                                - week
+                                - month
+                                - quarter
+                                - semi_annual
+                                - year
+                              type: string
+                              description: Interval for the cap, aligned to the customer's billing cycle.
+                            usage:
+                              type: number
+                              minimum: 0
+                              description: Current usage already consumed in the active interval.
+                                Response-only; not stored on billing controls.
+                          required:
+                            - feature_id
+                            - limit
+                            - interval
+                        description: List of windowed hard usage caps per feature, with current window
+                          usage.
                       usage_alerts:
                         type: array
                         items:
@@ -3117,12 +3251,49 @@ paths:
                                   enabled:
                                     type: boolean
                                     default: false
-                                    description: Whether this spend limit is enabled.
+                                    description: Whether the overage spend limit is enabled.
                                   overage_limit:
                                     type: number
                                     minimum: 0
                                     description: Maximum allowed overage spend for the target feature.
-                              description: List of overage spend limits per feature.
+                              description: List of overage spend limits per feature (caps overage spend).
+                            usage_limits:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  feature_id:
+                                    type: string
+                                    description: The feature this usage limit applies to.
+                                  limit:
+                                    type: number
+                                    minimum: 0
+                                    description: Maximum units allowed per interval.
+                                  interval:
+                                    enum:
+                                      - one_off
+                                      - minute
+                                      - hour
+                                      - day
+                                      - week
+                                      - month
+                                      - quarter
+                                      - semi_annual
+                                      - year
+                                    type: string
+                                    description: Interval for the cap, aligned to the customer's billing cycle.
+                                  usage:
+                                    type: number
+                                    minimum: 0
+                                    description: Current usage already consumed in the active interval.
+                                      Response-only; not stored on billing
+                                      controls.
+                                required:
+                                  - feature_id
+                                  - limit
+                                  - interval
+                              description: List of windowed hard usage caps per feature, with current window
+                                usage.
                             usage_alerts:
                               type: array
                               items:
@@ -3772,12 +3943,43 @@ paths:
                           enabled:
                             type: boolean
                             default: false
-                            description: Whether this spend limit is enabled.
+                            description: Whether the overage spend limit is enabled.
                           overage_limit:
                             type: number
                             minimum: 0
                             description: Maximum allowed overage spend for the target feature.
-                      description: List of overage spend limits per feature.
+                      description: List of overage spend limits per feature (caps overage spend).
+                    usage_limits:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The feature this usage limit applies to.
+                          limit:
+                            type: number
+                            minimum: 0
+                            description: Maximum units allowed per interval.
+                          interval:
+                            enum:
+                              - one_off
+                              - minute
+                              - hour
+                              - day
+                              - week
+                              - month
+                              - quarter
+                              - semi_annual
+                              - year
+                            type: string
+                            description: Interval for the cap, aligned to the customer's billing cycle.
+                        required:
+                          - feature_id
+                          - limit
+                          - interval
+                      description: List of windowed hard usage caps per feature (max units per
+                        interval window).
                     usage_alerts:
                       type: array
                       items:
@@ -4012,12 +4214,48 @@ paths:
                             enabled:
                               type: boolean
                               default: false
-                              description: Whether this spend limit is enabled.
+                              description: Whether the overage spend limit is enabled.
                             overage_limit:
                               type: number
                               minimum: 0
                               description: Maximum allowed overage spend for the target feature.
-                        description: List of overage spend limits per feature.
+                        description: List of overage spend limits per feature (caps overage spend).
+                      usage_limits:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature this usage limit applies to.
+                            limit:
+                              type: number
+                              minimum: 0
+                              description: Maximum units allowed per interval.
+                            interval:
+                              enum:
+                                - one_off
+                                - minute
+                                - hour
+                                - day
+                                - week
+                                - month
+                                - quarter
+                                - semi_annual
+                                - year
+                              type: string
+                              description: Interval for the cap, aligned to the customer's billing cycle.
+                            usage:
+                              type: number
+                              minimum: 0
+                              description: Current usage already consumed in the active interval.
+                                Response-only; not stored on billing controls.
+                          required:
+                            - feature_id
+                            - limit
+                            - interval
+                        description: List of windowed hard usage caps per feature, with current window
+                          usage.
                       usage_alerts:
                         type: array
                         items:
@@ -9366,8 +9604,8 @@ paths:
                                         (AND).
                                     description: Filters selecting items to remove from the plan.
                                 description: Customize the plan to schedule. Can override price, replace items,
-                                  or patch items with add_items, remove_items,
-                                  and update_items.
+                                  or patch items with add_items and
+                                  remove_items.
                               subscription_id:
                                 type: string
                                 description: A unique ID to identify this subscription. Useful when scheduling
@@ -9810,8 +10048,7 @@ paths:
                                       (AND).
                                   description: Filters selecting items to remove from the plan.
                               description: Customize the plan to schedule. Can override price, replace items,
-                                or patch items with add_items, remove_items, and
-                                update_items.
+                                or patch items with add_items and remove_items.
                             subscription_id:
                               type: string
                               description: A unique ID to identify this subscription. Useful when scheduling
@@ -10366,12 +10603,45 @@ paths:
                               enabled:
                                 type: boolean
                                 default: false
-                                description: Whether this spend limit is enabled.
+                                description: Whether the overage spend limit is enabled.
                               overage_limit:
                                 type: number
                                 minimum: 0
                                 description: Maximum allowed overage spend for the target feature.
-                          description: List of overage spend limits per feature.
+                          description: List of spend limits per feature. Each entry caps overage
+                            (overage_limit) and/or windowed usage (usage_limit).
+                        usage_limits:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              feature_id:
+                                type: string
+                                description: The feature this usage limit applies to.
+                              limit:
+                                type: number
+                                minimum: 0
+                                description: Maximum units allowed per interval.
+                              interval:
+                                enum:
+                                  - one_off
+                                  - minute
+                                  - hour
+                                  - day
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                                description: Interval for the cap, aligned to the customer's billing cycle.
+                            required:
+                              - feature_id
+                              - limit
+                              - interval
+                          description: List of windowed hard usage caps per feature for this entity. An
+                            entity entry overrides the customer's for that
+                            feature.
                         usage_alerts:
                           type: array
                           items:
@@ -12018,12 +12288,45 @@ paths:
                               enabled:
                                 type: boolean
                                 default: false
-                                description: Whether this spend limit is enabled.
+                                description: Whether the overage spend limit is enabled.
                               overage_limit:
                                 type: number
                                 minimum: 0
                                 description: Maximum allowed overage spend for the target feature.
-                          description: List of overage spend limits per feature.
+                          description: List of spend limits per feature. Each entry caps overage
+                            (overage_limit) and/or windowed usage (usage_limit).
+                        usage_limits:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              feature_id:
+                                type: string
+                                description: The feature this usage limit applies to.
+                              limit:
+                                type: number
+                                minimum: 0
+                                description: Maximum units allowed per interval.
+                              interval:
+                                enum:
+                                  - one_off
+                                  - minute
+                                  - hour
+                                  - day
+                                  - week
+                                  - month
+                                  - quarter
+                                  - semi_annual
+                                  - year
+                                type: string
+                                description: Interval for the cap, aligned to the customer's billing cycle.
+                            required:
+                              - feature_id
+                              - limit
+                              - interval
+                          description: List of windowed hard usage caps per feature for this entity. An
+                            entity entry overrides the customer's for that
+                            feature.
                         usage_alerts:
                           type: array
                           items:
@@ -17852,12 +18155,44 @@ paths:
                           enabled:
                             type: boolean
                             default: false
-                            description: Whether this spend limit is enabled.
+                            description: Whether the overage spend limit is enabled.
                           overage_limit:
                             type: number
                             minimum: 0
                             description: Maximum allowed overage spend for the target feature.
-                      description: List of overage spend limits per feature.
+                      description: List of spend limits per feature. Each entry caps overage
+                        (overage_limit) and/or windowed usage (usage_limit).
+                    usage_limits:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The feature this usage limit applies to.
+                          limit:
+                            type: number
+                            minimum: 0
+                            description: Maximum units allowed per interval.
+                          interval:
+                            enum:
+                              - one_off
+                              - minute
+                              - hour
+                              - day
+                              - week
+                              - month
+                              - quarter
+                              - semi_annual
+                              - year
+                            type: string
+                            description: Interval for the cap, aligned to the customer's billing cycle.
+                        required:
+                          - feature_id
+                          - limit
+                          - interval
+                      description: List of windowed hard usage caps per feature for this entity. An
+                        entity entry overrides the customer's for that feature.
                     usage_alerts:
                       type: array
                       items:
@@ -18255,12 +18590,50 @@ paths:
                             enabled:
                               type: boolean
                               default: false
-                              description: Whether this spend limit is enabled.
+                              description: Whether the overage spend limit is enabled.
                             overage_limit:
                               type: number
                               minimum: 0
                               description: Maximum allowed overage spend for the target feature.
-                        description: List of overage spend limits per feature.
+                        description: List of spend limits per feature. Each entry caps overage
+                          (overage_limit) and/or windowed usage (usage_limit).
+                      usage_limits:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature this usage limit applies to.
+                            limit:
+                              type: number
+                              minimum: 0
+                              description: Maximum units allowed per interval.
+                            interval:
+                              enum:
+                                - one_off
+                                - minute
+                                - hour
+                                - day
+                                - week
+                                - month
+                                - quarter
+                                - semi_annual
+                                - year
+                              type: string
+                              description: Interval for the cap, aligned to the customer's billing cycle.
+                            usage:
+                              type: number
+                              minimum: 0
+                              description: Current usage already consumed in the active interval.
+                                Response-only; not stored on billing controls.
+                          required:
+                            - feature_id
+                            - limit
+                            - interval
+                        description: List of windowed hard usage caps per feature for this entity. An
+                          entity entry overrides the customer's for that
+                          feature.
                       usage_alerts:
                         type: array
                         items:
@@ -18773,12 +19146,50 @@ paths:
                             enabled:
                               type: boolean
                               default: false
-                              description: Whether this spend limit is enabled.
+                              description: Whether the overage spend limit is enabled.
                             overage_limit:
                               type: number
                               minimum: 0
                               description: Maximum allowed overage spend for the target feature.
-                        description: List of overage spend limits per feature.
+                        description: List of spend limits per feature. Each entry caps overage
+                          (overage_limit) and/or windowed usage (usage_limit).
+                      usage_limits:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature this usage limit applies to.
+                            limit:
+                              type: number
+                              minimum: 0
+                              description: Maximum units allowed per interval.
+                            interval:
+                              enum:
+                                - one_off
+                                - minute
+                                - hour
+                                - day
+                                - week
+                                - month
+                                - quarter
+                                - semi_annual
+                                - year
+                              type: string
+                              description: Interval for the cap, aligned to the customer's billing cycle.
+                            usage:
+                              type: number
+                              minimum: 0
+                              description: Current usage already consumed in the active interval.
+                                Response-only; not stored on billing controls.
+                          required:
+                            - feature_id
+                            - limit
+                            - interval
+                        description: List of windowed hard usage caps per feature for this entity. An
+                          entity entry overrides the customer's for that
+                          feature.
                       usage_alerts:
                         type: array
                         items:
@@ -19345,12 +19756,52 @@ paths:
                                   enabled:
                                     type: boolean
                                     default: false
-                                    description: Whether this spend limit is enabled.
+                                    description: Whether the overage spend limit is enabled.
                                   overage_limit:
                                     type: number
                                     minimum: 0
                                     description: Maximum allowed overage spend for the target feature.
-                              description: List of overage spend limits per feature.
+                              description: List of spend limits per feature. Each entry caps overage
+                                (overage_limit) and/or windowed usage
+                                (usage_limit).
+                            usage_limits:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  feature_id:
+                                    type: string
+                                    description: The feature this usage limit applies to.
+                                  limit:
+                                    type: number
+                                    minimum: 0
+                                    description: Maximum units allowed per interval.
+                                  interval:
+                                    enum:
+                                      - one_off
+                                      - minute
+                                      - hour
+                                      - day
+                                      - week
+                                      - month
+                                      - quarter
+                                      - semi_annual
+                                      - year
+                                    type: string
+                                    description: Interval for the cap, aligned to the customer's billing cycle.
+                                  usage:
+                                    type: number
+                                    minimum: 0
+                                    description: Current usage already consumed in the active interval.
+                                      Response-only; not stored on billing
+                                      controls.
+                                required:
+                                  - feature_id
+                                  - limit
+                                  - interval
+                              description: List of windowed hard usage caps per feature for this entity. An
+                                entity entry overrides the customer's for that
+                                feature.
                             usage_alerts:
                               type: array
                               items:
@@ -19558,12 +20009,44 @@ paths:
                           enabled:
                             type: boolean
                             default: false
-                            description: Whether this spend limit is enabled.
+                            description: Whether the overage spend limit is enabled.
                           overage_limit:
                             type: number
                             minimum: 0
                             description: Maximum allowed overage spend for the target feature.
-                      description: List of overage spend limits per feature.
+                      description: List of spend limits per feature. Each entry caps overage
+                        (overage_limit) and/or windowed usage (usage_limit).
+                    usage_limits:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          feature_id:
+                            type: string
+                            description: The feature this usage limit applies to.
+                          limit:
+                            type: number
+                            minimum: 0
+                            description: Maximum units allowed per interval.
+                          interval:
+                            enum:
+                              - one_off
+                              - minute
+                              - hour
+                              - day
+                              - week
+                              - month
+                              - quarter
+                              - semi_annual
+                              - year
+                            type: string
+                            description: Interval for the cap, aligned to the customer's billing cycle.
+                        required:
+                          - feature_id
+                          - limit
+                          - interval
+                      description: List of windowed hard usage caps per feature for this entity. An
+                        entity entry overrides the customer's for that feature.
                     usage_alerts:
                       type: array
                       items:
@@ -19952,12 +20435,50 @@ paths:
                             enabled:
                               type: boolean
                               default: false
-                              description: Whether this spend limit is enabled.
+                              description: Whether the overage spend limit is enabled.
                             overage_limit:
                               type: number
                               minimum: 0
                               description: Maximum allowed overage spend for the target feature.
-                        description: List of overage spend limits per feature.
+                        description: List of spend limits per feature. Each entry caps overage
+                          (overage_limit) and/or windowed usage (usage_limit).
+                      usage_limits:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            feature_id:
+                              type: string
+                              description: The feature this usage limit applies to.
+                            limit:
+                              type: number
+                              minimum: 0
+                              description: Maximum units allowed per interval.
+                            interval:
+                              enum:
+                                - one_off
+                                - minute
+                                - hour
+                                - day
+                                - week
+                                - month
+                                - quarter
+                                - semi_annual
+                                - year
+                              type: string
+                              description: Interval for the cap, aligned to the customer's billing cycle.
+                            usage:
+                              type: number
+                              minimum: 0
+                              description: Current usage already consumed in the active interval.
+                                Response-only; not stored on billing controls.
+                          required:
+                            - feature_id
+                            - limit
+                            - interval
+                        description: List of windowed hard usage caps per feature for this entity. An
+                          entity entry overrides the customer's for that
+                          feature.
                       usage_alerts:
                         type: array
                         items:

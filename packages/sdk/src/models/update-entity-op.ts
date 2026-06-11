@@ -23,13 +23,49 @@ export type UpdateEntitySpendLimitRequest = {
    */
   featureId?: string | undefined;
   /**
-   * Whether this spend limit is enabled.
+   * Whether the overage spend limit is enabled.
    */
   enabled?: boolean | undefined;
   /**
    * Maximum allowed overage spend for the target feature.
    */
   overageLimit?: number | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const UpdateEntityIntervalRequestBody = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type UpdateEntityIntervalRequestBody = ClosedEnum<
+  typeof UpdateEntityIntervalRequestBody
+>;
+
+export type UpdateEntityUsageLimitRequest = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: UpdateEntityIntervalRequestBody;
 };
 
 /**
@@ -87,9 +123,13 @@ export type UpdateEntityOverageAllowedRequest = {
  */
 export type UpdateEntityBillingControlsRequest = {
   /**
-   * List of overage spend limits per feature.
+   * List of spend limits per feature. Each entry caps overage (overage_limit) and/or windowed usage (usage_limit).
    */
   spendLimits?: Array<UpdateEntitySpendLimitRequest> | undefined;
+  /**
+   * List of windowed hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.
+   */
+  usageLimits?: Array<UpdateEntityUsageLimitRequest> | undefined;
   /**
    * List of usage alert configurations per feature.
    */
@@ -382,13 +422,53 @@ export type UpdateEntitySpendLimitResponse = {
    */
   featureId?: string | undefined;
   /**
-   * Whether this spend limit is enabled.
+   * Whether the overage spend limit is enabled.
    */
   enabled: boolean;
   /**
    * Maximum allowed overage spend for the target feature.
    */
   overageLimit?: number | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const UpdateEntityIntervalResponse = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type UpdateEntityIntervalResponse = OpenEnum<
+  typeof UpdateEntityIntervalResponse
+>;
+
+export type UpdateEntityUsageLimitResponse = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: UpdateEntityIntervalResponse;
+  /**
+   * Current usage already consumed in the active interval. Response-only; not stored on billing controls.
+   */
+  usage?: number | undefined;
 };
 
 /**
@@ -446,9 +526,13 @@ export type UpdateEntityOverageAllowedResponse = {
  */
 export type UpdateEntityBillingControlsResponse = {
   /**
-   * List of overage spend limits per feature.
+   * List of spend limits per feature. Each entry caps overage (overage_limit) and/or windowed usage (usage_limit).
    */
   spendLimits?: Array<UpdateEntitySpendLimitResponse> | undefined;
+  /**
+   * List of windowed hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.
+   */
+  usageLimits?: Array<UpdateEntityUsageLimitResponse> | undefined;
   /**
    * List of usage alert configurations per feature.
    */
@@ -586,6 +670,45 @@ export function updateEntitySpendLimitRequestToJSON(
 }
 
 /** @internal */
+export const UpdateEntityIntervalRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof UpdateEntityIntervalRequestBody
+> = z.enum(UpdateEntityIntervalRequestBody);
+
+/** @internal */
+export type UpdateEntityUsageLimitRequest$Outbound = {
+  feature_id: string;
+  limit: number;
+  interval: string;
+};
+
+/** @internal */
+export const UpdateEntityUsageLimitRequest$outboundSchema: z.ZodMiniType<
+  UpdateEntityUsageLimitRequest$Outbound,
+  UpdateEntityUsageLimitRequest
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    limit: z.number(),
+    interval: UpdateEntityIntervalRequestBody$outboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function updateEntityUsageLimitRequestToJSON(
+  updateEntityUsageLimitRequest: UpdateEntityUsageLimitRequest,
+): string {
+  return JSON.stringify(
+    UpdateEntityUsageLimitRequest$outboundSchema.parse(
+      updateEntityUsageLimitRequest,
+    ),
+  );
+}
+
+/** @internal */
 export const UpdateEntityThresholdTypeRequestBody$outboundSchema: z.ZodMiniEnum<
   typeof UpdateEntityThresholdTypeRequestBody
 > = z.enum(UpdateEntityThresholdTypeRequestBody);
@@ -664,6 +787,7 @@ export function updateEntityOverageAllowedRequestToJSON(
 /** @internal */
 export type UpdateEntityBillingControlsRequest$Outbound = {
   spend_limits?: Array<UpdateEntitySpendLimitRequest$Outbound> | undefined;
+  usage_limits?: Array<UpdateEntityUsageLimitRequest$Outbound> | undefined;
   usage_alerts?: Array<UpdateEntityUsageAlertRequestBody$Outbound> | undefined;
   overage_allowed?:
     | Array<UpdateEntityOverageAllowedRequest$Outbound>
@@ -679,6 +803,9 @@ export const UpdateEntityBillingControlsRequest$outboundSchema: z.ZodMiniType<
     spendLimits: z.optional(
       z.array(z.lazy(() => UpdateEntitySpendLimitRequest$outboundSchema)),
     ),
+    usageLimits: z.optional(
+      z.array(z.lazy(() => UpdateEntityUsageLimitRequest$outboundSchema)),
+    ),
     usageAlerts: z.optional(
       z.array(z.lazy(() => UpdateEntityUsageAlertRequestBody$outboundSchema)),
     ),
@@ -689,6 +816,7 @@ export const UpdateEntityBillingControlsRequest$outboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       spendLimits: "spend_limits",
+      usageLimits: "usage_limits",
       usageAlerts: "usage_alerts",
       overageAllowed: "overage_allowed",
     });
@@ -1052,6 +1180,40 @@ export function updateEntitySpendLimitResponseFromJSON(
 }
 
 /** @internal */
+export const UpdateEntityIntervalResponse$inboundSchema: z.ZodMiniType<
+  UpdateEntityIntervalResponse,
+  unknown
+> = openEnums.inboundSchema(UpdateEntityIntervalResponse);
+
+/** @internal */
+export const UpdateEntityUsageLimitResponse$inboundSchema: z.ZodMiniType<
+  UpdateEntityUsageLimitResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    limit: types.number(),
+    interval: UpdateEntityIntervalResponse$inboundSchema,
+    usage: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function updateEntityUsageLimitResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateEntityUsageLimitResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateEntityUsageLimitResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateEntityUsageLimitResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateEntityThresholdTypeResponse$inboundSchema: z.ZodMiniType<
   UpdateEntityThresholdTypeResponse,
   unknown
@@ -1123,6 +1285,9 @@ export const UpdateEntityBillingControlsResponse$inboundSchema: z.ZodMiniType<
     spend_limits: types.optional(
       z.array(z.lazy(() => UpdateEntitySpendLimitResponse$inboundSchema)),
     ),
+    usage_limits: types.optional(
+      z.array(z.lazy(() => UpdateEntityUsageLimitResponse$inboundSchema)),
+    ),
     usage_alerts: types.optional(
       z.array(z.lazy(() => UpdateEntityUsageAlertResponse$inboundSchema)),
     ),
@@ -1133,6 +1298,7 @@ export const UpdateEntityBillingControlsResponse$inboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       "spend_limits": "spendLimits",
+      "usage_limits": "usageLimits",
       "usage_alerts": "usageAlerts",
       "overage_allowed": "overageAllowed",
     });

@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Literal, Optional
 from typing_extensions import NotRequired, TypedDict
 
 
-CustomerDataInterval = Literal[
+CustomerDataPurchaseLimitInterval = Literal[
     "hour",
     "day",
     "week",
@@ -25,7 +25,7 @@ r"""The time interval for the purchase limit window."""
 class CustomerDataPurchaseLimitTypedDict(TypedDict):
     r"""Optional rate limit to cap how often auto top-ups occur."""
 
-    interval: CustomerDataInterval
+    interval: CustomerDataPurchaseLimitInterval
     r"""The time interval for the purchase limit window."""
     limit: float
     r"""Maximum number of auto top-ups allowed within the interval."""
@@ -36,7 +36,7 @@ class CustomerDataPurchaseLimitTypedDict(TypedDict):
 class CustomerDataPurchaseLimit(BaseModel):
     r"""Optional rate limit to cap how often auto top-ups occur."""
 
-    interval: CustomerDataInterval
+    interval: CustomerDataPurchaseLimitInterval
     r"""The time interval for the purchase limit window."""
 
     limit: float
@@ -117,7 +117,7 @@ class CustomerDataSpendLimitTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
-    r"""Whether this spend limit is enabled."""
+    r"""Whether the overage spend limit is enabled."""
     overage_limit: NotRequired[float]
     r"""Maximum allowed overage spend for the target feature."""
 
@@ -127,7 +127,7 @@ class CustomerDataSpendLimit(BaseModel):
     r"""Optional feature ID this spend limit applies to."""
 
     enabled: Optional[bool] = False
-    r"""Whether this spend limit is enabled."""
+    r"""Whether the overage spend limit is enabled."""
 
     overage_limit: Optional[float] = None
     r"""Maximum allowed overage spend for the target feature."""
@@ -147,6 +147,40 @@ class CustomerDataSpendLimit(BaseModel):
                     m[k] = val
 
         return m
+
+
+CustomerDataUsageLimitInterval = Literal[
+    "one_off",
+    "minute",
+    "hour",
+    "day",
+    "week",
+    "month",
+    "quarter",
+    "semi_annual",
+    "year",
+]
+r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+class CustomerDataUsageLimitTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+    limit: float
+    r"""Maximum units allowed per interval."""
+    interval: CustomerDataUsageLimitInterval
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+class CustomerDataUsageLimit(BaseModel):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+
+    limit: float
+    r"""Maximum units allowed per interval."""
+
+    interval: CustomerDataUsageLimitInterval
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
 CustomerDataThresholdType = Literal[
@@ -241,7 +275,9 @@ class CustomerDataBillingControlsTypedDict(TypedDict):
     auto_topups: NotRequired[List[CustomerDataAutoTopupTypedDict]]
     r"""List of auto top-up configurations per feature."""
     spend_limits: NotRequired[List[CustomerDataSpendLimitTypedDict]]
-    r"""List of overage spend limits per feature."""
+    r"""List of overage spend limits per feature (caps overage spend)."""
+    usage_limits: NotRequired[List[CustomerDataUsageLimitTypedDict]]
+    r"""List of windowed hard usage caps per feature (max units per interval window)."""
     usage_alerts: NotRequired[List[CustomerDataUsageAlertTypedDict]]
     r"""List of usage alert configurations per feature."""
     overage_allowed: NotRequired[List[CustomerDataOverageAllowedTypedDict]]
@@ -255,7 +291,10 @@ class CustomerDataBillingControls(BaseModel):
     r"""List of auto top-up configurations per feature."""
 
     spend_limits: Optional[List[CustomerDataSpendLimit]] = None
-    r"""List of overage spend limits per feature."""
+    r"""List of overage spend limits per feature (caps overage spend)."""
+
+    usage_limits: Optional[List[CustomerDataUsageLimit]] = None
+    r"""List of windowed hard usage caps per feature (max units per interval window)."""
 
     usage_alerts: Optional[List[CustomerDataUsageAlert]] = None
     r"""List of usage alert configurations per feature."""
@@ -266,7 +305,13 @@ class CustomerDataBillingControls(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["auto_topups", "spend_limits", "usage_alerts", "overage_allowed"]
+            [
+                "auto_topups",
+                "spend_limits",
+                "usage_limits",
+                "usage_alerts",
+                "overage_allowed",
+            ]
         )
         serialized = handler(self)
         m = {}
