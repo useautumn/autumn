@@ -36,6 +36,17 @@ export const postApprovalRequest = async ({
 	const approval = approvalRequestFromOutput(output);
 	if (!approval) return false;
 
+	// approveAndRun can only confirm a suspended session tool, so a card missing
+	// either id would always fail at approval time — fall back to plain text.
+	if (!approval.runId || !approval.toolCallId) {
+		logger.warn("Skipped unexecutable approval request", {
+			event: "leaf.approval_unexecutable_skipped",
+			context: { env: approval.env, org_id: installation.org_id },
+			tool: approval.toolName,
+		});
+		return false;
+	}
+
 	const approvalId = await chatApprovalRepo.insert({
 		db,
 		data: {

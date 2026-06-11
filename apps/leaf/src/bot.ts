@@ -135,8 +135,11 @@ const runAndReply = async ({
 			return;
 		}
 
-		loading = await startLoading(target);
-		const logAction = createActionLogger(loading);
+		// Follow-up turns skip the Plan message so the user is only notified once
+		// (for the answer); progress shows via the silent typing status instead.
+		const isFollowUp = recentMessages?.some((m) => m.isBot) ?? false;
+		loading = await startLoading(target, { showPlan: !isFollowUp });
+		const logAction = createActionLogger(loading, target);
 		const rawFiles = getSlackFilesFromRaw({ raw });
 		const botToken = decrypt(installation.bot_access_token);
 		const output = await runMessage({

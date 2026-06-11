@@ -143,12 +143,17 @@ const getExpectedApiBodyNumberFields = (expected?: EvalExpected) =>
 		expectation.type === "api.bodyNumberFields" ? [expectation] : [],
 	);
 
-const getExpectedResponsePhrases = (expected?: EvalExpected) => [
-	...(getLegacyExpected(expected)?.finalTextIncludes ?? []),
-	...getExpectationList(expected).flatMap((expectation) =>
-		expectation.type === "response.mentions" ? expectation.phrases : [],
-	),
-];
+const getExpectedResponseMentions = (
+	expected?: EvalExpected,
+): { notPhrases?: string[]; phrases: string[] }[] => {
+	const legacyPhrases = getLegacyExpected(expected)?.finalTextIncludes ?? [];
+	return [
+		...(legacyPhrases.length ? [{ phrases: legacyPhrases }] : []),
+		...getExpectationList(expected).flatMap((expectation) =>
+			expectation.type === "response.mentions" ? [expectation] : [],
+		),
+	];
+};
 
 const getExpectedQuestions = (expected?: EvalExpected) =>
 	getExpectationList(expected).flatMap((expectation) =>
@@ -366,9 +371,17 @@ export const expectedApiBodyNumberFields = ({
 };
 
 export const finalTextIncludes = ({ expected, output }: EvalScoreArgs) => {
-	const phrases = getExpectedResponsePhrases(expected);
-	if (!phrases.length) return 1;
-	return textMatches({ phrases, text: output.finalText }) ? 1 : 0;
+	const mentions = getExpectedResponseMentions(expected);
+	if (!mentions.length) return 1;
+	return mentions.every((mention) =>
+		textMatches({
+			notPhrases: mention.notPhrases,
+			phrases: mention.phrases,
+			text: output.finalText,
+		}),
+	)
+		? 1
+		: 0;
 };
 
 export const askedClarification = ({ expected, output }: EvalScoreArgs) => {
@@ -394,20 +407,26 @@ export const askedClarificationBeforeTool = ({
 }: EvalScoreArgs) => {
 	const questions = getExpectedQuestionsBeforeTool(expected);
 	if (!questions.length) return 1;
-	const turns = output.turns?.filter((turn) => turn.type === "user") ?? [];
-	return questions.every((question) =>
-		turns.some((turn) => {
-			const hasAsked = textMatches({
-				notPhrases: question.notPhrases,
-				phrases: question.phrases,
-				text: turn.text ?? "",
-			});
-			const hasTargetTool =
-				turn.toolCalls?.some((call) => call.name === question.toolName) ??
-				false;
-			return hasAsked && !hasTargetTool;
-		}),
-	)
+	// Per-turn toolCalls are cumulative snapshots, so the asking turn must
+	// predate the tool's first appearance across any snapshot.
+	const turns = output.turns ?? [];
+	return questions.every((question) => {
+		const callsTargetTool = (turn: (typeof turns)[number]) =>
+			turn.toolCalls?.some((call) => call.name === question.toolName) ?? false;
+		const firstToolTurn = turns.findIndex(callsTargetTool);
+		const askTurn = turns.findIndex(
+			(turn) =>
+				turn.type === "user" &&
+				!callsTargetTool(turn) &&
+				textMatches({
+					notPhrases: question.notPhrases,
+					phrases: question.phrases,
+					text: turn.text ?? "",
+				}),
+		);
+		if (askTurn === -1) return false;
+		return firstToolTurn === -1 || askTurn < firstToolTurn;
+	})
 		? 1
 		: 0;
 };

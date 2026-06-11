@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { claudeManagedConfig } from "../../../harness/claudeManaged/config.js";
 import { driveSessionTurn } from "../../../harness/claudeManaged/session/driveSessionTurn.js";
 import { db } from "../../../lib/db.js";
+import { logger } from "../../../lib/logger.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
 import { approvalErrorResult } from "../utils/approvalErrors.js";
 
@@ -47,6 +48,12 @@ export const approveAndRun = async ({
 		});
 		const text = outcome.textParts.join("\n\n");
 		const failed = Boolean(outcome.errorMessage) && !text;
+		if (failed) {
+			logger.error("[chat] Approval run failed", outcome.errorMessage, {
+				event: "leaf.approval_run_failed",
+				approval_id: approvalId,
+			});
+		}
 		await chatApprovalRepo.finalize({
 			approvalId,
 			db,
@@ -55,6 +62,10 @@ export const approveAndRun = async ({
 		});
 		return failed ? approvalErrorResult(outcome.errorMessage) : { text };
 	} catch (error) {
+		logger.error("[chat] Approval run failed", error, {
+			event: "leaf.approval_run_failed",
+			approval_id: approvalId,
+		});
 		await chatApprovalRepo.finalize({
 			approvalId,
 			db,
