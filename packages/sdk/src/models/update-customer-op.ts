@@ -98,14 +98,9 @@ export type UpdateCustomerSpendLimitRequest = {
  * Interval for the cap, aligned to the customer's billing cycle.
  */
 export const UpdateCustomerUsageLimitIntervalRequestBody = {
-  OneOff: "one_off",
-  Minute: "minute",
-  Hour: "hour",
   Day: "day",
   Week: "week",
   Month: "month",
-  Quarter: "quarter",
-  SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
 /**
@@ -391,14 +386,9 @@ export type UpdateCustomerSpendLimitResponse = {
  * Interval for the cap, aligned to the customer's billing cycle.
  */
 export const UpdateCustomerUsageLimitIntervalResponse = {
-  OneOff: "one_off",
-  Minute: "minute",
-  Hour: "hour",
   Day: "day",
   Week: "week",
   Month: "month",
-  Quarter: "quarter",
-  SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
 /**

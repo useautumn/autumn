@@ -41,14 +41,9 @@ export type CreateEntitySpendLimitRequest = {
  * Interval for the cap, aligned to the customer's billing cycle.
  */
 export const CreateEntityIntervalRequestBody = {
-  OneOff: "one_off",
-  Minute: "minute",
-  Hour: "hour",
   Day: "day",
   Week: "week",
   Month: "month",
-  Quarter: "quarter",
-  SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
 /**
@@ -452,14 +447,9 @@ export type CreateEntitySpendLimitResponse = {
  * Interval for the cap, aligned to the customer's billing cycle.
  */
 export const CreateEntityIntervalResponse = {
-  OneOff: "one_off",
-  Minute: "minute",
-  Hour: "hour",
   Day: "day",
   Week: "week",
   Month: "month",
-  Quarter: "quarter",
-  SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
 /**

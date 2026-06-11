@@ -473,14 +473,9 @@ export type PreviewMultiAttachSpendLimit = {
  * Interval for the cap, aligned to the customer's billing cycle.
  */
 export const PreviewMultiAttachEntityDataInterval = {
-  OneOff: "one_off",
-  Minute: "minute",
-  Hour: "hour",
   Day: "day",
   Week: "week",
   Month: "month",
-  Quarter: "quarter",
-  SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
 /**

@@ -363,14 +363,9 @@ class ListCustomersSpendLimit(BaseModel):
 
 ListCustomersUsageLimitInterval = Union[
     Literal[
-        "one_off",
-        "minute",
-        "hour",
         "day",
         "week",
         "month",
-        "quarter",
-        "semi_annual",
         "year",
     ],
     UnrecognizedStr,

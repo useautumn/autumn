@@ -664,14 +664,9 @@ class ListEntitiesSpendLimit(BaseModel):
 
 ListEntitiesInterval = Union[
     Literal[
-        "one_off",
-        "minute",
-        "hour",
         "day",
         "week",
         "month",
-        "quarter",
-        "semi_annual",
         "year",
     ],
     UnrecognizedStr,

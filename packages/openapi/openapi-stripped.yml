@@ -141,14 +141,9 @@ components:
                     description: Maximum units allowed per interval.
                   interval:
                     enum:
-                      - one_off
-                      - minute
-                      - hour
                       - day
                       - week
                       - month
-                      - quarter
-                      - semi_annual
                       - year
                     type: string
                     description: Interval for the cap, aligned to the customer's billing cycle.
@@ -411,14 +406,9 @@ components:
                     description: Maximum units allowed per interval.
                   interval:
                     enum:
-                      - one_off
-                      - minute
-                      - hour
                       - day
                       - week
                       - month
-                      - quarter
-                      - semi_annual
                       - year
                     type: string
                     description: Interval for the cap, aligned to the customer's billing cycle.
@@ -1985,14 +1975,9 @@ paths:
                             description: Maximum units allowed per interval.
                           interval:
                             enum:
-                              - one_off
-                              - minute
-                              - hour
                               - day
                               - week
                               - month
-                              - quarter
-                              - semi_annual
                               - year
                             type: string
                             description: Interval for the cap, aligned to the customer's billing cycle.
@@ -2319,14 +2304,9 @@ paths:
                               description: Maximum units allowed per interval.
                             interval:
                               enum:
-                                - one_off
-                                - minute
-                                - hour
                                 - day
                                 - week
                                 - month
-                                - quarter
-                                - semi_annual
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
@@ -3271,14 +3251,9 @@ paths:
                                     description: Maximum units allowed per interval.
                                   interval:
                                     enum:
-                                      - one_off
-                                      - minute
-                                      - hour
                                       - day
                                       - week
                                       - month
-                                      - quarter
-                                      - semi_annual
                                       - year
                                     type: string
                                     description: Interval for the cap, aligned to the customer's billing cycle.
@@ -3963,14 +3938,9 @@ paths:
                             description: Maximum units allowed per interval.
                           interval:
                             enum:
-                              - one_off
-                              - minute
-                              - hour
                               - day
                               - week
                               - month
-                              - quarter
-                              - semi_annual
                               - year
                             type: string
                             description: Interval for the cap, aligned to the customer's billing cycle.
@@ -4234,14 +4204,9 @@ paths:
                               description: Maximum units allowed per interval.
                             interval:
                               enum:
-                                - one_off
-                                - minute
-                                - hour
                                 - day
                                 - week
                                 - month
-                                - quarter
-                                - semi_annual
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
@@ -10624,14 +10589,9 @@ paths:
                                 description: Maximum units allowed per interval.
                               interval:
                                 enum:
-                                  - one_off
-                                  - minute
-                                  - hour
                                   - day
                                   - week
                                   - month
-                                  - quarter
-                                  - semi_annual
                                   - year
                                 type: string
                                 description: Interval for the cap, aligned to the customer's billing cycle.
@@ -12309,14 +12269,9 @@ paths:
                                 description: Maximum units allowed per interval.
                               interval:
                                 enum:
-                                  - one_off
-                                  - minute
-                                  - hour
                                   - day
                                   - week
                                   - month
-                                  - quarter
-                                  - semi_annual
                                   - year
                                 type: string
                                 description: Interval for the cap, aligned to the customer's billing cycle.
@@ -18176,14 +18131,9 @@ paths:
                             description: Maximum units allowed per interval.
                           interval:
                             enum:
-                              - one_off
-                              - minute
-                              - hour
                               - day
                               - week
                               - month
-                              - quarter
-                              - semi_annual
                               - year
                             type: string
                             description: Interval for the cap, aligned to the customer's billing cycle.
@@ -18611,14 +18561,9 @@ paths:
                               description: Maximum units allowed per interval.
                             interval:
                               enum:
-                                - one_off
-                                - minute
-                                - hour
                                 - day
                                 - week
                                 - month
-                                - quarter
-                                - semi_annual
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
@@ -19167,14 +19112,9 @@ paths:
                               description: Maximum units allowed per interval.
                             interval:
                               enum:
-                                - one_off
-                                - minute
-                                - hour
                                 - day
                                 - week
                                 - month
-                                - quarter
-                                - semi_annual
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.
@@ -19778,14 +19718,9 @@ paths:
                                     description: Maximum units allowed per interval.
                                   interval:
                                     enum:
-                                      - one_off
-                                      - minute
-                                      - hour
                                       - day
                                       - week
                                       - month
-                                      - quarter
-                                      - semi_annual
                                       - year
                                     type: string
                                     description: Interval for the cap, aligned to the customer's billing cycle.
@@ -20030,14 +19965,9 @@ paths:
                             description: Maximum units allowed per interval.
                           interval:
                             enum:
-                              - one_off
-                              - minute
-                              - hour
                               - day
                               - week
                               - month
-                              - quarter
-                              - semi_annual
                               - year
                             type: string
                             description: Interval for the cap, aligned to the customer's billing cycle.
@@ -20456,14 +20386,9 @@ paths:
                               description: Maximum units allowed per interval.
                             interval:
                               enum:
-                                - one_off
-                                - minute
-                                - hour
                                 - day
                                 - week
                                 - month
-                                - quarter
-                                - semi_annual
                                 - year
                               type: string
                               description: Interval for the cap, aligned to the customer's billing cycle.

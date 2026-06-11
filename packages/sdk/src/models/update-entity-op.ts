@@ -36,14 +36,9 @@ export type UpdateEntitySpendLimitRequest = {
  * Interval for the cap, aligned to the customer's billing cycle.
  */
 export const UpdateEntityIntervalRequestBody = {
-  OneOff: "one_off",
-  Minute: "minute",
-  Hour: "hour",
   Day: "day",
   Week: "week",
   Month: "month",
-  Quarter: "quarter",
-  SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
 /**
@@ -435,14 +430,9 @@ export type UpdateEntitySpendLimitResponse = {
  * Interval for the cap, aligned to the customer's billing cycle.
  */
 export const UpdateEntityIntervalResponse = {
-  OneOff: "one_off",
-  Minute: "minute",
-  Hour: "hour",
   Day: "day",
   Week: "week",
   Month: "month",
-  Quarter: "quarter",
-  SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
 /**

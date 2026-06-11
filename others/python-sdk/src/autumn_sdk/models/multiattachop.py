@@ -767,14 +767,9 @@ class MultiAttachSpendLimit(BaseModel):
 
 
 MultiAttachEntityDataInterval = Literal[
-    "one_off",
-    "minute",
-    "hour",
     "day",
     "week",
     "month",
-    "quarter",
-    "semi_annual",
     "year",
 ]
 r"""Interval for the cap, aligned to the customer's billing cycle."""

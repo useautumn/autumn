@@ -7,22 +7,25 @@ import { ResetInterval } from "../../productModels/intervals/resetInterval.js";
  * column; an entry's presence arms the cap. Enforcement happens in the
  * deduction script against customer-scoped usage-window counters.
  */
-export const DbUsageLimitSchema = z
-	.object({
-		feature_id: z.string().meta({
-			description: "The feature this usage limit applies to.",
-		}),
-		limit: z.number().min(0).meta({
-			description: "Maximum units allowed per interval.",
-		}),
-		interval: z.enum(ResetInterval).meta({
-			description:
-				"Interval for the cap, aligned to the customer's billing cycle.",
-		}),
-	})
-	.refine((data) => data.interval !== ResetInterval.OneOff, {
-		message: "interval cannot be one_off for a usage limit",
-		path: ["interval"],
-	});
+/** Intervals supported for a usage-limit cap; kept in sync with the UI dropdown. */
+export const USAGE_LIMIT_INTERVALS = [
+	ResetInterval.Day,
+	ResetInterval.Week,
+	ResetInterval.Month,
+	ResetInterval.Year,
+] as const;
+
+export const DbUsageLimitSchema = z.object({
+	feature_id: z.string().meta({
+		description: "The feature this usage limit applies to.",
+	}),
+	limit: z.number().min(0).meta({
+		description: "Maximum units allowed per interval.",
+	}),
+	interval: z.enum(USAGE_LIMIT_INTERVALS).meta({
+		description:
+			"Interval for the cap, aligned to the customer's billing cycle.",
+	}),
+});
 
 export type DbUsageLimit = z.infer<typeof DbUsageLimitSchema>;

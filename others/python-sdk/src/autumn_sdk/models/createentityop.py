@@ -84,14 +84,9 @@ class CreateEntitySpendLimitRequest(BaseModel):
 
 
 CreateEntityIntervalRequestBody = Literal[
-    "one_off",
-    "minute",
-    "hour",
     "day",
     "week",
     "month",
-    "quarter",
-    "semi_annual",
     "year",
 ]
 r"""Interval for the cap, aligned to the customer's billing cycle."""
@@ -821,14 +816,9 @@ class CreateEntitySpendLimitResponse(BaseModel):
 
 CreateEntityIntervalResponse = Union[
     Literal[
-        "one_off",
-        "minute",
-        "hour",
         "day",
         "week",
         "month",
-        "quarter",
-        "semi_annual",
         "year",
     ],
     UnrecognizedStr,
