@@ -9,7 +9,7 @@ import { ClosedEnum } from "../types/enums.js";
 /**
  * The time interval for the purchase limit window.
  */
-export const CustomerDataInterval = {
+export const CustomerDataPurchaseLimitInterval = {
   Hour: "hour",
   Day: "day",
   Week: "week",
@@ -18,7 +18,9 @@ export const CustomerDataInterval = {
 /**
  * The time interval for the purchase limit window.
  */
-export type CustomerDataInterval = ClosedEnum<typeof CustomerDataInterval>;
+export type CustomerDataPurchaseLimitInterval = ClosedEnum<
+  typeof CustomerDataPurchaseLimitInterval
+>;
 
 /**
  * Optional rate limit to cap how often auto top-ups occur.
@@ -27,7 +29,7 @@ export type CustomerDataPurchaseLimit = {
   /**
    * The time interval for the purchase limit window.
    */
-  interval: CustomerDataInterval;
+  interval: CustomerDataPurchaseLimitInterval;
   /**
    * Number of intervals in the purchase limit window.
    */
@@ -71,13 +73,44 @@ export type CustomerDataSpendLimit = {
    */
   featureId?: string | undefined;
   /**
-   * Whether this spend limit is enabled.
+   * Whether the overage spend limit is enabled.
    */
   enabled?: boolean | undefined;
   /**
    * Maximum allowed overage spend for the target feature.
    */
   overageLimit?: number | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const CustomerDataUsageLimitInterval = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type CustomerDataUsageLimitInterval = ClosedEnum<
+  typeof CustomerDataUsageLimitInterval
+>;
+
+export type CustomerDataUsageLimit = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: CustomerDataUsageLimitInterval;
 };
 
 /**
@@ -139,9 +172,13 @@ export type CustomerDataBillingControls = {
    */
   autoTopups?: Array<CustomerDataAutoTopup> | undefined;
   /**
-   * List of overage spend limits per feature.
+   * List of overage spend limits per feature (caps overage spend).
    */
   spendLimits?: Array<CustomerDataSpendLimit> | undefined;
+  /**
+   * List of hard usage caps per feature (max units per interval).
+   */
+  usageLimits?: Array<CustomerDataUsageLimit> | undefined;
   /**
    * List of usage alert configurations per feature.
    */
@@ -209,9 +246,9 @@ export type CustomerData = {
 };
 
 /** @internal */
-export const CustomerDataInterval$outboundSchema: z.ZodMiniEnum<
-  typeof CustomerDataInterval
-> = z.enum(CustomerDataInterval);
+export const CustomerDataPurchaseLimitInterval$outboundSchema: z.ZodMiniEnum<
+  typeof CustomerDataPurchaseLimitInterval
+> = z.enum(CustomerDataPurchaseLimitInterval);
 
 /** @internal */
 export type CustomerDataPurchaseLimit$Outbound = {
@@ -226,7 +263,7 @@ export const CustomerDataPurchaseLimit$outboundSchema: z.ZodMiniType<
   CustomerDataPurchaseLimit
 > = z.pipe(
   z.object({
-    interval: CustomerDataInterval$outboundSchema,
+    interval: CustomerDataPurchaseLimitInterval$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     limit: z.number(),
   }),
@@ -321,6 +358,43 @@ export function customerDataSpendLimitToJSON(
 }
 
 /** @internal */
+export const CustomerDataUsageLimitInterval$outboundSchema: z.ZodMiniEnum<
+  typeof CustomerDataUsageLimitInterval
+> = z.enum(CustomerDataUsageLimitInterval);
+
+/** @internal */
+export type CustomerDataUsageLimit$Outbound = {
+  feature_id: string;
+  limit: number;
+  interval: string;
+};
+
+/** @internal */
+export const CustomerDataUsageLimit$outboundSchema: z.ZodMiniType<
+  CustomerDataUsageLimit$Outbound,
+  CustomerDataUsageLimit
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    limit: z.number(),
+    interval: CustomerDataUsageLimitInterval$outboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function customerDataUsageLimitToJSON(
+  customerDataUsageLimit: CustomerDataUsageLimit,
+): string {
+  return JSON.stringify(
+    CustomerDataUsageLimit$outboundSchema.parse(customerDataUsageLimit),
+  );
+}
+
+/** @internal */
 export const CustomerDataThresholdType$outboundSchema: z.ZodMiniEnum<
   typeof CustomerDataThresholdType
 > = z.enum(CustomerDataThresholdType);
@@ -396,6 +470,7 @@ export function customerDataOverageAllowedToJSON(
 export type CustomerDataBillingControls$Outbound = {
   auto_topups?: Array<CustomerDataAutoTopup$Outbound> | undefined;
   spend_limits?: Array<CustomerDataSpendLimit$Outbound> | undefined;
+  usage_limits?: Array<CustomerDataUsageLimit$Outbound> | undefined;
   usage_alerts?: Array<CustomerDataUsageAlert$Outbound> | undefined;
   overage_allowed?: Array<CustomerDataOverageAllowed$Outbound> | undefined;
 };
@@ -412,6 +487,9 @@ export const CustomerDataBillingControls$outboundSchema: z.ZodMiniType<
     spendLimits: z.optional(
       z.array(z.lazy(() => CustomerDataSpendLimit$outboundSchema)),
     ),
+    usageLimits: z.optional(
+      z.array(z.lazy(() => CustomerDataUsageLimit$outboundSchema)),
+    ),
     usageAlerts: z.optional(
       z.array(z.lazy(() => CustomerDataUsageAlert$outboundSchema)),
     ),
@@ -423,6 +501,7 @@ export const CustomerDataBillingControls$outboundSchema: z.ZodMiniType<
     return remap$(v, {
       autoTopups: "auto_topups",
       spendLimits: "spend_limits",
+      usageLimits: "usage_limits",
       usageAlerts: "usage_alerts",
       overageAllowed: "overage_allowed",
     });

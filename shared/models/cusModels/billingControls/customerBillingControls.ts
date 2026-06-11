@@ -106,7 +106,7 @@ export const CustomerBillingControlsSchema = z.object({
 	}),
 	usage_limits: z.array(DbUsageLimitSchema).optional().meta({
 		description:
-			"List of windowed hard usage caps per feature (max units per interval window).",
+			"List of hard usage caps per feature (max units per interval).",
 	}),
 	usage_alerts: z.array(DbUsageAlertSchema).optional().meta({
 		description: "List of usage alert configurations per feature.",
