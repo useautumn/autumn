@@ -47,7 +47,9 @@ RUN --mount=type=cache,target=/root/.bun/install/cache \
 	bun install --ignore-scripts --no-save \
 		--minimum-release-age 0 \
 		--filter @autumn/server \
-		--filter @autumn/leaf
+		--filter @autumn/leaf \
+		--filter autumn-js \
+		--filter @useautumn/sdk
 
 FROM oven/bun:1.3.10
 WORKDIR /app
