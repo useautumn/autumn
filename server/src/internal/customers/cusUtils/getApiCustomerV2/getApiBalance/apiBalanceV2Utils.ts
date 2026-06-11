@@ -40,6 +40,13 @@ export const mergeAggregatedBalanceIntoApiBalanceV2 = ({
 	const aggregatedRolloverGrant = new Decimal(aggregatedRolloverBalance)
 		.add(aggregatedRolloverUsage)
 		.toNumber();
+	const aggregatedNextResetAt = aggregatedFeatureBalance.next_reset_at ?? null;
+	const nextResetAt =
+		apiBalance.next_reset_at === null
+			? aggregatedNextResetAt
+			: aggregatedNextResetAt === null
+				? apiBalance.next_reset_at
+				: Math.min(apiBalance.next_reset_at, aggregatedNextResetAt);
 
 	// Aggregate rows do not retain the full per-entity/per-product breakdown, so
 	// the top-level summary is merged from the coarse aggregate values only.
@@ -77,6 +84,7 @@ export const mergeAggregatedBalanceIntoApiBalanceV2 = ({
 			apiBalance.overage_allowed ||
 			aggregatedFeatureBalance.usage_allowed ||
 			false,
+		next_reset_at: nextResetAt,
 		breakdown: apiBalance.breakdown ?? [],
 	};
 };

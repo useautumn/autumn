@@ -78,6 +78,13 @@
       "when": 1780990532501,
       "tag": "0010_magenta_misty_knight",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1781125150955,
+      "tag": "0011_low_moonstone",
+      "breakpoints": true
     }
   ]
 }

@@ -18,6 +18,7 @@ describe("fullSubject aggregate balance", () => {
 			balance: 180,
 			adjustment: 10,
 			additional_balance: 0,
+			next_reset_at: 1234567890,
 			rollover_balance: 0,
 			rollover_usage: 0,
 			unlimited: false,
@@ -76,5 +77,6 @@ describe("fullSubject aggregate balance", () => {
 		expect(merged.granted).toBe(310);
 		expect(merged.remaining).toBe(200);
 		expect(merged.usage).toBe(110);
+		expect(merged.next_reset_at).toBe(1234567890);
 	});
 });
