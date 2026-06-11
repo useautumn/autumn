@@ -9,7 +9,12 @@
  */
 
 import { expect, test } from "bun:test";
-import type { ApiCustomerV3, ApiCustomerV5 } from "@autumn/shared";
+import type {
+	ApiCustomerV3,
+	ApiCustomerV5,
+	AttachParamsV1Input,
+	UsagePriceConfig,
+} from "@autumn/shared";
 import { BillingMethod } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { expectCustomerProducts } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
@@ -24,7 +29,24 @@ import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
+import { CusService } from "@/internal/customers/CusService";
+import { getRelatedCusPrice } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils";
+import { PriceService } from "@/internal/products/prices/PriceService";
+import { ProductService } from "@/internal/products/ProductService";
 import { runUpdatePlanMigration } from "../../utils/runUpdatePlanMigration";
+
+const removeAllocatedBillingBehavior = ({
+	config,
+}: {
+	config: UsagePriceConfig;
+}) => {
+	const {
+		allocated_billing_behavior: _allocatedBillingBehavior,
+		...legacyConfig
+	} = config;
+
+	return legacyConfig;
+};
 
 test.concurrent(
 	`${chalk.yellowBright("migrations update_plan: consumable paid feature carries usage without charging")}`,
@@ -193,6 +215,143 @@ test.concurrent(
 		await expectCustomerInvoiceCorrect({
 			customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
 			count: invoiceCountBefore,
+		});
+		await expectNoExpiredCustomerProducts({
+			ctx,
+			customerId,
+			productId: pro.id,
+		});
+		await expectStripeSubscriptionCorrect({ ctx, customerId });
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("migrations update_plan: allocated v1 stays prorated after migration")}`,
+	async () => {
+		const customerId = "migration-update-paid-allocated-v1";
+		const pro = products.pro({
+			id: "migration-update-paid-allocated-v1-plan",
+			items: [items.allocatedUsers({ includedUsage: 1 })],
+		});
+
+		const { autumnV1, autumnV2_2, ctx } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro] }),
+			],
+			actions: [],
+		});
+
+		const fullProduct = await ProductService.getFull({
+			db: ctx.db,
+			idOrInternalId: pro.id,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
+		const allocatedPrice = fullProduct.prices.find(
+			(price) =>
+				(price.config as UsagePriceConfig).feature_id === TestFeature.Users,
+		);
+		if (!allocatedPrice) {
+			throw new Error("Expected allocated users price on pro plan");
+		}
+
+		await PriceService.update({
+			db: ctx.db,
+			id: allocatedPrice.id,
+			update: {
+				config: removeAllocatedBillingBehavior({
+					config: allocatedPrice.config as UsagePriceConfig,
+				}),
+			},
+		});
+
+		await autumnV2_2.billing.attach<AttachParamsV1Input>({
+			customer_id: customerId,
+			plan_id: pro.id,
+			redirect_mode: "if_required",
+		});
+
+		const invoiceCountBeforeMigration =
+			(await autumnV1.customers.get<ApiCustomerV3>(customerId)).invoices
+				?.length ?? 0;
+
+		await runUpdatePlanMigration({
+			ctx,
+			migrationClient: autumnV2_2,
+			migrationId: `${customerId}-mig`,
+			customerId,
+			filter: { customer: { plan: { plan_id: pro.id } } },
+			operations: {
+				customer: [
+					{
+						type: "update_plan",
+						plan_filter: { plan_id: pro.id },
+						customize: {
+							add_items: [itemsV2.dashboard()],
+						},
+					},
+				],
+			},
+			runOnServer: false,
+		});
+
+		const fullCustomer = await CusService.getFull({
+			ctx,
+			idOrInternalId: customerId,
+			skipReset: true,
+		});
+		const cusProduct = fullCustomer.customer_products.find(
+			(product) => product.product.id === pro.id,
+		);
+		const usersCusEnt = cusProduct?.customer_entitlements.find(
+			(cusEnt) => cusEnt.entitlement.feature_id === TestFeature.Users,
+		);
+		if (!cusProduct || !usersCusEnt) {
+			throw new Error(
+				"Expected migrated customer product with users entitlement",
+			);
+		}
+
+		const usersCusPrice = getRelatedCusPrice(
+			usersCusEnt,
+			cusProduct.customer_prices,
+		);
+		const usersPriceConfig = usersCusPrice?.price.config as
+			| UsagePriceConfig
+			| undefined;
+		expect(usersPriceConfig?.allocated_billing_behavior).toBeUndefined();
+		expect(usersPriceConfig?.should_prorate).toBe(true);
+
+		await autumnV1.track(
+			{
+				customer_id: customerId,
+				feature_id: TestFeature.Users,
+				value: 2,
+			},
+			{ timeout: 2000 },
+		);
+
+		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+		await expectCustomerProducts({ customer, active: [pro.id] });
+		expectFlagCorrect({
+			customer,
+			featureId: TestFeature.Dashboard,
+			planId: pro.id,
+		});
+		expectBalanceCorrect({
+			customer,
+			featureId: TestFeature.Users,
+			remaining: 0,
+			usage: 2,
+			planId: pro.id,
+			nextResetAt: null,
+		});
+		await expectCustomerInvoiceCorrect({
+			customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
+			count: invoiceCountBeforeMigration + 1,
+			latestTotal: 10,
 		});
 		await expectNoExpiredCustomerProducts({
 			ctx,

@@ -2,6 +2,7 @@ import {
 	type FullCusEntWithFullCusProduct,
 	type FullSubject,
 	fullSubjectToFullCustomer,
+	isUsageBasedAllocatedCustomerEntitlement,
 } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { currentRegion } from "@/external/redis/initRedis.js";
@@ -71,14 +72,14 @@ export const executeRedisDeductionV2 = async ({
 		deductions,
 	});
 
-	if (options.paidAllocated) {
+	if (options.paidAllocatedV1) {
 		throw new RedisDeductionError({
 			message: "Paid allocated deductions are not supported for Redis",
 			code: RedisDeductionErrorCode.PaidAllocated,
 		});
 	}
 
-	if (options.paidAllocated && deductions.some((d) => d.lock)) {
+	if (options.paidAllocatedV1 && deductions.some((d) => d.lock)) {
 		throw new RedisDeductionError({
 			message: "Locks are not supported for paid allocated features",
 			code: RedisDeductionErrorCode.PaidAllocated,
@@ -289,12 +290,14 @@ export const executeRedisDeductionV2 = async ({
 
 				if (!customerEntitlement) continue;
 
-				await createAllocatedInvoice({
-					ctx,
-					customerEntitlement,
-					oldFullCustomer,
-					update,
-				});
+				if (isUsageBasedAllocatedCustomerEntitlement(customerEntitlement)) {
+					await createAllocatedInvoice({
+						ctx,
+						customerEntitlement,
+						oldFullCustomer,
+						update,
+					});
+				}
 
 				applyDeductionUpdateToFullSubject({
 					fullSubject,

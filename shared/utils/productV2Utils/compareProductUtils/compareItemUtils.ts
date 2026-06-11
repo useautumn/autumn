@@ -6,6 +6,7 @@ import type { UsageTier } from "../../../models/productModels/priceModels/priceC
 import type { FeatureItem } from "../../../models/productV2Models/productItemModels/featureItem.js";
 import type { FeaturePriceItem } from "../../../models/productV2Models/productItemModels/featurePriceItem.js";
 import type { PriceItem } from "../../../models/productV2Models/productItemModels/priceItem.js";
+import { AllocatedBillingBehavior } from "../../../models/productV2Models/productItemModels/productItemEnums.js";
 import type {
 	ProductItem,
 	ProductItemConfig,
@@ -13,6 +14,7 @@ import type {
 } from "../../../models/productV2Models/productItemModels/productItemModels.js";
 import { intervalsSame } from "../../intervalUtils/priceIntervalUtils.js";
 import { entIntervalsSame } from "../../intervalUtils.js";
+import { notNullish } from "../../utils.js";
 import { itemToFeature } from "../productItemUtils/convertItemUtils.js";
 import {
 	isFeatureItem,
@@ -83,12 +85,13 @@ export const findSimilarItem = ({
 	return null;
 };
 
-type TierLike = { to: number | "inf"; amount: number; flat_amount?: number | null };
+type TierLike = {
+	to: number | "inf";
+	amount: number;
+	flat_amount?: number | null;
+};
 
-const tiersAreSame = (
-	tiers1: TierLike[] | null,
-	tiers2: TierLike[] | null,
-) => {
+const tiersAreSame = (tiers1: TierLike[] | null, tiers2: TierLike[] | null) => {
 	if (!tiers1 && !tiers2) {
 		return true;
 	}
@@ -214,6 +217,32 @@ const prorationConfigsAreSame = ({
 	);
 };
 
+const itemToExplicitAllocatedBillingBehavior = (item: ProductItem) => {
+	if (notNullish(item.config?.allocated_billing_behavior)) {
+		return item.config.allocated_billing_behavior;
+	}
+	const hasProrationKnobs =
+		notNullish(item.config?.on_increase) ||
+		notNullish(item.config?.on_decrease);
+	if (hasProrationKnobs) {
+		return AllocatedBillingBehavior.Prorated;
+	}
+	return undefined;
+};
+
+const allocatedBillingBehaviorAreSame = ({
+	item1,
+	item2,
+}: {
+	item1: ProductItem;
+	item2: ProductItem;
+}) => {
+	const behavior1 = itemToExplicitAllocatedBillingBehavior(item1);
+	const behavior2 = itemToExplicitAllocatedBillingBehavior(item2);
+	if (behavior1 === undefined || behavior2 === undefined) return true;
+	return behavior1 === behavior2;
+};
+
 const rolloversAreSame = ({
 	rollover1,
 	rollover2,
@@ -269,6 +298,10 @@ export const featurePriceItemsAreSame = ({
 				config2: item2.config || undefined,
 			}),
 			message: `Proration config different: ${JSON.stringify(item1.config)} !== ${JSON.stringify(item2.config)}`,
+		},
+		allocated_billing_behavior: {
+			condition: allocatedBillingBehaviorAreSame({ item1, item2 }),
+			message: `Allocated billing behavior different: ${item1.config?.allocated_billing_behavior} !== ${item2.config?.allocated_billing_behavior}`,
 		},
 		rollover_config: {
 			condition: rolloversAreSame({

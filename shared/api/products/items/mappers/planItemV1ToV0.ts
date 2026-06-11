@@ -1,7 +1,11 @@
 import type { CreatePlanItemParamsV1 } from "@api/models";
+import { RecaseError } from "@api/errors/base/RecaseError";
+import { ProductErrorCode } from "@api/errors/codes/productErrCodes";
+import { BillingMethod } from "@api/products/components/billingMethod";
 import { billingMethodToUsageModel } from "@api/products/components/mappers/billingMethodTousageModel";
 import type { ApiPlanItemV0 } from "@api/products/items/previousVersions/apiPlanItemV0";
 import { TierBehavior } from "@models/productModels/priceModels/priceConfig/usagePriceConfig";
+import { isContUseFeature } from "@utils/featureUtils/convertFeatureUtils";
 import { featureUtils } from "@utils/featureUtils/index";
 import { subtractIncludedFromTiers } from "@utils/productV2Utils/productItemUtils/tierUtils";
 import type { SharedContext } from "../../../../types/sharedContext";
@@ -23,6 +27,18 @@ export function planItemV1ToV0({
 	const resetUsageWhenEnabled = feature
 		? featureUtils.isConsumable(feature)
 		: true;
+	if (
+		feature &&
+		item.proration &&
+		price?.billing_method === BillingMethod.UsageBased &&
+		isContUseFeature({ feature })
+	) {
+		throw new RecaseError({
+			message: `proration is not supported for allocated usage-based features (feature: ${item.feature_id})`,
+			code: ProductErrorCode.InvalidProductItem,
+			statusCode: 400,
+		});
+	}
 
 	// V1 API: tier `to` values INCLUDE included usage.
 	// Internal: tier `to` values do NOT include included usage.

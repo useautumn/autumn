@@ -4,7 +4,11 @@ import { RolloverExpiryDurationType } from "../../productModels/durationTypes/ro
 import { ProductItemInterval } from "../../productModels/intervals/productItemInterval.js";
 import { TierBehavior } from "../../productModels/priceModels/priceConfig/usagePriceConfig.js";
 import { Infinite } from "../../productModels/productEnums.js";
-import { OnDecrease, OnIncrease } from "./productItemEnums.js";
+import {
+	AllocatedBillingBehavior,
+	OnDecrease,
+	OnIncrease,
+} from "./productItemEnums.js";
 
 export const TierInfinite = "inf";
 
@@ -29,13 +33,10 @@ export const PriceTierSchema = z
 				"A flat fee charged for this tier, in addition to the per-unit amount.",
 		}),
 	})
-	.refine(
-		(val) => val.amount != null || val.flat_amount != null,
-		{
-			message: "Either amount or flat_amount, or both must be defined",
-			path: ["amount", "flat_amount"],
-		},
-	)
+	.refine((val) => val.amount != null || val.flat_amount != null, {
+		message: "Either amount or flat_amount, or both must be defined",
+		path: ["amount", "flat_amount"],
+	})
 	.transform((val) => ({
 		...val,
 		amount: val.amount ?? 0,
@@ -63,6 +64,7 @@ export const RolloverConfigSchema = z.object({
 });
 
 const ProductItemConfigSchema = z.object({
+	allocated_billing_behavior: z.enum(AllocatedBillingBehavior).nullish(),
 	on_increase: z.enum(OnIncrease).nullish(),
 	on_decrease: z.enum(OnDecrease).nullish(),
 	rollover: RolloverConfigSchema.nullish(),

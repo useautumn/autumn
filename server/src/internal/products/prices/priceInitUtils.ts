@@ -78,6 +78,12 @@ export const pricesAreSame = (
 				condition: usageConfig1.should_prorate !== usageConfig2.should_prorate,
 				message: `Should prorate different: ${usageConfig1.should_prorate} !== ${usageConfig2.should_prorate}`,
 			},
+			allocated_billing_behavior: {
+				condition:
+					usageConfig1.allocated_billing_behavior !==
+					usageConfig2.allocated_billing_behavior,
+				message: `Allocated billing behavior different: ${usageConfig1.allocated_billing_behavior} !== ${usageConfig2.allocated_billing_behavior}`,
+			},
 			bill_when: {
 				condition: usageConfig1.bill_when !== usageConfig2.bill_when,
 				message: `Bill when different: ${usageConfig1.bill_when} !== ${usageConfig2.bill_when}`,
