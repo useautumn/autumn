@@ -19,7 +19,7 @@ export const PAGINATION_CONFIGS: Record<PaginationType, PaginationConfig> = {
 	},
 	[PaginationType.ListEntities]: {
 		defaultLimit: PaginationDefaults.DefaultLimit,
-		maxLimit: PaginationDefaults.MaxLimit,
+		maxLimit: PaginationDefaults.SchemaHardCeiling,
 	},
 	[PaginationType.SearchCustomers]: {
 		defaultLimit: PaginationDefaults.DefaultLimit,
@@ -30,5 +30,3 @@ export const PAGINATION_CONFIGS: Record<PaginationType, PaginationConfig> = {
 		maxLimit: PaginationDefaults.MaxLimit,
 	},
 };
-
-

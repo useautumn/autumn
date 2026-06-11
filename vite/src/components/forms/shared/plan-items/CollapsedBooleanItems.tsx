@@ -7,17 +7,20 @@ import {
 	AccordionTrigger,
 } from "@/components/ui/accordion";
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
+import { cn } from "@/lib/utils";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { motion } from "motion/react";
 
 interface CollapsedBooleanItemsProps {
 	items: ProductItem[];
 	renderItem: (item: ProductItem, index: number) => ReactNode;
+	triggerClassName?: string;
 }
 
 export function CollapsedBooleanItems({
 	items,
 	renderItem,
+	triggerClassName,
 }: CollapsedBooleanItemsProps) {
 	const [value, setValue] = useState<string[]>([]);
 
@@ -35,7 +38,12 @@ export function CollapsedBooleanItems({
 			className="w-full"
 		>
 			<AccordionItem value="boolean-flags" className="border-none">
-				<AccordionTrigger className="py-2 px-3 rounded-xl text-tertiary-foreground hover:bg-interative-secondary hover:no-underline">
+				<AccordionTrigger
+						className={cn(
+							"py-2 px-3 rounded-xl text-tertiary-foreground hover:bg-interative-secondary hover:no-underline",
+							triggerClassName,
+						)}
+					>
 					<span className="text-sm font-normal">
 						{label} boolean flag{items.length === 1 ? "" : "s"}
 					</span>

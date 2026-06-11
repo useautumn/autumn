@@ -12,10 +12,21 @@ import { z } from "zod/v4";
  */
 export const arrayFilter = <T extends z.ZodTypeAny>(element: T) =>
 	z.union([
+		// Quantifier wrapper must come first and assert a `$`-key is present:
+		// `element` is a permissive object that would otherwise strip `$some`/
+		// `$none`/`$every` down to `{}` and silently swallow the quantifier.
+		z
+			.object({
+				$some: element.optional(),
+				$every: element.optional(),
+				$none: element.optional(),
+			})
+			.refine(
+				(v) =>
+					v.$some !== undefined ||
+					v.$every !== undefined ||
+					v.$none !== undefined,
+				{ message: "quantifier object requires $some, $every, or $none" },
+			),
 		element,
-		z.object({
-			$some: element.optional(),
-			$every: element.optional(),
-			$none: element.optional(),
-		}),
 	]);

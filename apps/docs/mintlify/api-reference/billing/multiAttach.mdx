@@ -111,8 +111,8 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
                   'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
                 </DynamicParamField>
 
-                <DynamicParamField body="max_purchase" type="number">
-                  Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+                <DynamicParamField body="max_purchase" type="number | null">
+                  Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
                 </DynamicParamField>
 
               </Expandable>

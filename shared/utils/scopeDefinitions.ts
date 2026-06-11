@@ -402,7 +402,6 @@ export const ROLE_SCOPES: Record<Role, ScopeString[]> = {
 		Scopes.Rewards.Read,
 		Scopes.Balances.Read,
 		Scopes.Billing.Read,
-		Scopes.Migrations.Read,
 		Scopes.Analytics.Read,
 		Scopes.ApiKeys.Read,
 		Scopes.Platform.Read,

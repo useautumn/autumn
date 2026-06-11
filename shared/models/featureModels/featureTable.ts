@@ -10,7 +10,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { collatePgColumn } from "../../db/utils";
 import { organizations } from "../orgModels/orgTable";
-import type { CreditSystemConfig } from "./featureConfig/creditConfig";
+import type { CreditSystemConfig, ModelMarkups } from "./featureConfig/creditConfig";
 import type { MeteredConfig } from "./featureConfig/meteredConfig";
 
 type FeatureDisplay = {
@@ -33,6 +33,7 @@ export const features = pgTable(
 		display: jsonb().default(sql`null`).$type<FeatureDisplay>(),
 		archived: boolean("archived").notNull().default(false),
 		event_names: text("event_names").array().default([]),
+		model_markups: jsonb().$type<ModelMarkups>().default(sql`null`),
 	},
 	(table) => [
 		foreignKey({

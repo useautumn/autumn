@@ -184,9 +184,9 @@ export type PreviewAttachItemPrice = {
    */
   billingMethod: PreviewAttachItemBillingMethod;
   /**
-   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
    */
-  maxPurchase?: number | undefined;
+  maxPurchase?: number | null | undefined;
 };
 
 /**
@@ -419,9 +419,9 @@ export type PreviewAttachAddItemPrice = {
    */
   billingMethod: PreviewAttachAddItemBillingMethod;
   /**
-   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
    */
-  maxPurchase?: number | undefined;
+  maxPurchase?: number | null | undefined;
 };
 
 /**
@@ -555,10 +555,22 @@ export type PreviewAttachRemoveItemBillingMethod = ClosedEnum<
   typeof PreviewAttachRemoveItemBillingMethod
 >;
 
-/**
- * Match items with this interval.
- */
-export const PreviewAttachRemoveItemInterval = {
+export const PreviewAttachIntervalRemoveItemEnum2 = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+export type PreviewAttachIntervalRemoveItemEnum2 = ClosedEnum<
+  typeof PreviewAttachIntervalRemoveItemEnum2
+>;
+
+export const PreviewAttachIntervalRemoveItemEnum1 = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -566,12 +578,16 @@ export const PreviewAttachRemoveItemInterval = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-/**
- * Match items with this interval.
- */
-export type PreviewAttachRemoveItemInterval = ClosedEnum<
-  typeof PreviewAttachRemoveItemInterval
+export type PreviewAttachIntervalRemoveItemEnum1 = ClosedEnum<
+  typeof PreviewAttachIntervalRemoveItemEnum1
 >;
+
+/**
+ * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
+ */
+export type PreviewAttachIntervalUnion =
+  | PreviewAttachIntervalRemoveItemEnum1
+  | PreviewAttachIntervalRemoveItemEnum2;
 
 /**
  * Filter for matching plan items. All provided fields must match (AND).
@@ -586,9 +602,16 @@ export type PreviewAttachPlanItemFilter = {
    */
   billingMethod?: PreviewAttachRemoveItemBillingMethod | undefined;
   /**
-   * Match items with this interval.
+   * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
    */
-  interval?: PreviewAttachRemoveItemInterval | undefined;
+  interval?:
+    | PreviewAttachIntervalRemoveItemEnum1
+    | PreviewAttachIntervalRemoveItemEnum2
+    | undefined;
+  /**
+   * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
+   */
+  intervalCount?: number | undefined;
 };
 
 /**
@@ -649,7 +672,7 @@ export type PreviewAttachCustomize = {
    */
   price?: PreviewAttachBasePrice | null | undefined;
   /**
-   * Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / update_items.
+   * Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items.
    */
   items?: Array<PreviewAttachItemPlanItem> | undefined;
   /**
@@ -1438,7 +1461,7 @@ export type PreviewAttachItemPrice$Outbound = {
   interval_count: number;
   billing_units: number;
   billing_method: string;
-  max_purchase?: number | undefined;
+  max_purchase?: number | null | undefined;
 };
 
 /** @internal */
@@ -1456,7 +1479,7 @@ export const PreviewAttachItemPrice$outboundSchema: z.ZodMiniType<
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
     billingMethod: PreviewAttachItemBillingMethod$outboundSchema,
-    maxPurchase: z.optional(z.number()),
+    maxPurchase: z.optional(z.nullable(z.number())),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1711,7 +1734,7 @@ export type PreviewAttachAddItemPrice$Outbound = {
   interval_count: number;
   billing_units: number;
   billing_method: string;
-  max_purchase?: number | undefined;
+  max_purchase?: number | null | undefined;
 };
 
 /** @internal */
@@ -1729,7 +1752,7 @@ export const PreviewAttachAddItemPrice$outboundSchema: z.ZodMiniType<
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
     billingMethod: PreviewAttachAddItemBillingMethod$outboundSchema,
-    maxPurchase: z.optional(z.number()),
+    maxPurchase: z.optional(z.nullable(z.number())),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1889,15 +1912,41 @@ export const PreviewAttachRemoveItemBillingMethod$outboundSchema: z.ZodMiniEnum<
 > = z.enum(PreviewAttachRemoveItemBillingMethod);
 
 /** @internal */
-export const PreviewAttachRemoveItemInterval$outboundSchema: z.ZodMiniEnum<
-  typeof PreviewAttachRemoveItemInterval
-> = z.enum(PreviewAttachRemoveItemInterval);
+export const PreviewAttachIntervalRemoveItemEnum2$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewAttachIntervalRemoveItemEnum2
+> = z.enum(PreviewAttachIntervalRemoveItemEnum2);
+
+/** @internal */
+export const PreviewAttachIntervalRemoveItemEnum1$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewAttachIntervalRemoveItemEnum1
+> = z.enum(PreviewAttachIntervalRemoveItemEnum1);
+
+/** @internal */
+export type PreviewAttachIntervalUnion$Outbound = string | string;
+
+/** @internal */
+export const PreviewAttachIntervalUnion$outboundSchema: z.ZodMiniType<
+  PreviewAttachIntervalUnion$Outbound,
+  PreviewAttachIntervalUnion
+> = smartUnion([
+  PreviewAttachIntervalRemoveItemEnum1$outboundSchema,
+  PreviewAttachIntervalRemoveItemEnum2$outboundSchema,
+]);
+
+export function previewAttachIntervalUnionToJSON(
+  previewAttachIntervalUnion: PreviewAttachIntervalUnion,
+): string {
+  return JSON.stringify(
+    PreviewAttachIntervalUnion$outboundSchema.parse(previewAttachIntervalUnion),
+  );
+}
 
 /** @internal */
 export type PreviewAttachPlanItemFilter$Outbound = {
   feature_id?: string | undefined;
   billing_method?: string | undefined;
-  interval?: string | undefined;
+  interval?: string | string | undefined;
+  interval_count?: number | undefined;
 };
 
 /** @internal */
@@ -1910,12 +1959,19 @@ export const PreviewAttachPlanItemFilter$outboundSchema: z.ZodMiniType<
     billingMethod: z.optional(
       PreviewAttachRemoveItemBillingMethod$outboundSchema,
     ),
-    interval: z.optional(PreviewAttachRemoveItemInterval$outboundSchema),
+    interval: z.optional(
+      smartUnion([
+        PreviewAttachIntervalRemoveItemEnum1$outboundSchema,
+        PreviewAttachIntervalRemoveItemEnum2$outboundSchema,
+      ]),
+    ),
+    intervalCount: z.optional(z.int()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
       billingMethod: "billing_method",
+      intervalCount: "interval_count",
     });
   }),
 );

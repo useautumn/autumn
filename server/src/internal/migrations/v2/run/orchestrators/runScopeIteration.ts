@@ -13,6 +13,7 @@ import {
 } from "../../types/migrationDefinition.js";
 import { migrateCustomer } from "../migrateCustomer/index.js";
 import type { RunScopeItem, RunScopeKind } from "../types/runScope.js";
+import { isMigrationCancelRequested } from "../utils/migrationCancelToken.js";
 import { iterateScope } from "./iterateScope.js";
 
 /** Runs one filtered migration scope iteration. */
@@ -50,6 +51,10 @@ export const runScopeIteration = async ({
 		controls?.checkpoint !== false &&
 		(!dryRun || controls?.checkpointDryRun === true);
 
+	// In-memory latch so we hit Redis only until the first cancel detection;
+	// every later item short-circuits without a cache roundtrip.
+	let cancelRequested = false;
+
 	const perItem = async ({
 		item,
 		itemCtx,
@@ -61,6 +66,19 @@ export const runScopeIteration = async ({
 			throw new Error(
 				`runMigration: per-item handler missing for kind "${item.kind}"`,
 			);
+
+		if (!cancelRequested && (await isMigrationCancelRequested({ migrationRunId })))
+			cancelRequested = true;
+		if (cancelRequested) {
+			itemCtx.logger.info("run-migration: skipping item, cancel requested", {
+				data: {
+					migrationRunId,
+					customerId: item.id ?? item.internal_id,
+					internalId: item.internal_id,
+				},
+			});
+			return undefined;
+		}
 
 		itemCtx.logger.info("run-migration: processing customer", {
 			data: {
@@ -89,7 +107,7 @@ export const runScopeIteration = async ({
 			item,
 			dryRun,
 			claimItemRun: checkpointReadEnabled,
-			retryFailed: migration.retry_failed === true,
+			retryItemStatuses: controls?.retryItemStatuses,
 			run,
 		});
 	};

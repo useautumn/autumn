@@ -60,6 +60,7 @@ interface SheetState {
 		data?: Record<string, unknown> | null;
 	}) => void;
 	setInitialItem: (item: ProductItem | null) => void;
+	updateItemId: (itemId: string) => void;
 	closeSheet: () => void;
 	reset: () => void;
 }
@@ -89,6 +90,9 @@ export const useSheetStore = create<SheetState>((set) => ({
 
 	// Set the initial item state for change detection
 	setInitialItem: (item) => set({ initialItem: item }),
+
+	// Update just the itemId without clearing other state
+	updateItemId: (itemId) => set({ itemId }),
 
 	// Close the sheet
 	closeSheet: () =>

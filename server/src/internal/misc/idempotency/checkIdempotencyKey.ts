@@ -10,11 +10,22 @@ const hashIdempotencyKey = (key: string): string => {
 	return hasher.digest("base64url");
 };
 
-/**
- * Checks and sets an idempotency key in Redis using atomic SET NX operation.
- * If Redis is not ready, allows the request to proceed (fail-open).
- * Throws if the key already exists (duplicate request).
- */
+const buildRedisIdempotencyKey = ({
+	orgId,
+	env,
+	idempotencyKey,
+}: {
+	orgId: string;
+	env: string;
+	idempotencyKey: string;
+}) => {
+	const hashedKey = hashIdempotencyKey(idempotencyKey);
+	return {
+		hashedKey,
+		redisKey: `${orgId}:${env}:idempotency:${hashedKey}`,
+	};
+};
+
 export const checkIdempotencyKey = async ({
 	orgId,
 	env,
@@ -31,8 +42,11 @@ export const checkIdempotencyKey = async ({
 		return;
 	}
 
-	const hashedKey = hashIdempotencyKey(idempotencyKey);
-	const redisKey = `${orgId}:${env}:idempotency:${hashedKey}`;
+	const { hashedKey, redisKey } = buildRedisIdempotencyKey({
+		orgId,
+		env,
+		idempotencyKey,
+	});
 
 	try {
 		// Use SET NX (set if not exists) for atomic check-and-set to prevent race conditions
@@ -61,6 +75,32 @@ export const checkIdempotencyKey = async ({
 			throw error;
 		}
 		// For other Redis errors, fail-open (allow request)
+		return;
+	}
+};
+
+export const releaseIdempotencyKey = async ({
+	orgId,
+	env,
+	idempotencyKey,
+}: {
+	orgId: string;
+	env: string;
+	idempotencyKey: string;
+}): Promise<void> => {
+	if (redis.status !== "ready") {
+		return;
+	}
+
+	const { redisKey } = buildRedisIdempotencyKey({
+		orgId,
+		env,
+		idempotencyKey,
+	});
+
+	try {
+		await redis.del(redisKey);
+	} catch {
 		return;
 	}
 };

@@ -36,7 +36,7 @@ export const isLifetimeEntitlement = ({
 }: {
 	entitlement: EntitlementWithFeature;
 }) => {
-	return entitlement.interval === EntInterval.Lifetime;
+	return !entitlement.interval || entitlement.interval === EntInterval.Lifetime;
 };
 
 export const entitlementHasEntityFeature = ({

@@ -12,7 +12,8 @@ export const creditSystemContainsFeature = ({
 	if (creditSystem.type !== FeatureType.CreditSystem) {
 		return false;
 	}
-	const schema: CreditSchemaItem[] = creditSystem.config.schema;
+	const schema: CreditSchemaItem[] | undefined = creditSystem.config?.schema;
+	if (!schema) return false;
 
 	for (const schemaItem of schema) {
 		if (schemaItem.metered_feature_id === meteredFeatureId) {

@@ -6,14 +6,25 @@ import {
 	DropdownMenuSubTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
 
-const EXECUTION_STATUSES = [
-	{ value: "not_run", label: "Not Run" },
-	{ value: "succeeded", label: "Succeeded" },
-	{ value: "skipped", label: "Skipped" },
-	{ value: "failed", label: "Failed" },
+export const EXECUTION_STATUS_VALUES = [
+	"queued",
+	"running",
+	"not_run",
+	"succeeded",
+	"skipped",
+	"failed",
 ] as const;
 
-export type ExecutionStatus = (typeof EXECUTION_STATUSES)[number]["value"];
+export type ExecutionStatus = (typeof EXECUTION_STATUS_VALUES)[number];
+
+const EXECUTION_STATUS_LABELS: Record<ExecutionStatus, string> = {
+	queued: "Queued",
+	running: "Running",
+	not_run: "Not Run",
+	succeeded: "Succeeded",
+	skipped: "Skipped",
+	failed: "Failed",
+};
 
 export function hasActiveExecutionFilters(
 	statuses: ExecutionStatus[],
@@ -49,20 +60,20 @@ export function ExecutionStatusSubMenu({
 				)}
 			</DropdownMenuSubTrigger>
 			<DropdownMenuSubContent>
-				{EXECUTION_STATUSES.map(({ value, label }) => {
-					const isActive = selected.includes(value);
+				{EXECUTION_STATUS_VALUES.map((status) => {
+					const isActive = selected.includes(status);
 					return (
 						<DropdownMenuItem
-							key={value}
+							key={status}
 							onClick={(e) => {
 								e.preventDefault();
-								toggle(value);
+								toggle(status);
 							}}
 							onSelect={(e) => e.preventDefault()}
 							className="flex items-center gap-2 cursor-pointer text-sm"
 						>
 							<Checkbox checked={isActive} className="border-border" />
-							{label}
+							{EXECUTION_STATUS_LABELS[status]}
 						</DropdownMenuItem>
 					);
 				})}

@@ -5,6 +5,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
+export type MigrationWithRunInfo = Migration & { has_live_runs: boolean };
+export type RetryableMigrationItemRunStatus = "failed" | "skipped";
+
 interface PrepareModuleResult {
 	key: string;
 	kind: string;
@@ -24,12 +27,14 @@ export const useMigrationsQuery = () => {
 	const queryClient = useQueryClient();
 	const queryKey = buildKey(["migrations"]);
 
-	const { data, isLoading, error, refetch } = useQuery<{ list: Migration[] }>({
+	const { data, isLoading, error, refetch } = useQuery<{
+		list: MigrationWithRunInfo[];
+	}>({
 		queryKey,
 		queryFn: async () => {
-			const { data } = await axiosInstance.post<{ list: Migration[] }>(
-				"/migrations.list",
-			);
+			const { data } = await axiosInstance.post<{
+				list: MigrationWithRunInfo[];
+			}>("/migrations.list");
 			return data;
 		},
 	});
@@ -37,7 +42,12 @@ export const useMigrationsQuery = () => {
 	const invalidate = () => queryClient.invalidateQueries({ queryKey });
 
 	const createMutation = useMutation({
-		mutationFn: async (body: { id: string }) => {
+		mutationFn: async (body: {
+			id: string;
+			filter?: MigrationFilter | null;
+			operations?: Operations | null;
+			no_billing_changes?: boolean;
+		}) => {
 			const { data } = await axiosInstance.post<Migration>(
 				"/migrations.create",
 				body,
@@ -54,8 +64,8 @@ export const useMigrationsQuery = () => {
 				id?: string;
 				filter?: MigrationFilter | null;
 				operations?: Operations | null;
-				retry_failed?: boolean;
 				no_billing_changes?: boolean;
+				archived?: boolean;
 			};
 		}) => {
 			const { data } = await axiosInstance.post<Migration>(
@@ -97,10 +107,13 @@ export const useMigrationsQuery = () => {
 			only?: string[];
 			concurrency?: number;
 			lazy_run?: boolean;
+			retry_item_statuses?: RetryableMigrationItemRunStatus[];
 		}) => {
 			const { data } = await axiosInstance.post<{
 				migration_id: string;
 				dry_run: boolean;
+				lazy_run: boolean;
+				concurrency?: number;
 				run_id: string;
 				trigger_run_id?: string;
 				public_access_token?: string;
@@ -123,10 +136,11 @@ export const useMigrationsQuery = () => {
 	});
 
 	return {
-		migrations: (data?.list ?? []) as Migration[],
+		migrations: (data?.list ?? []) as MigrationWithRunInfo[],
 		isLoading,
 		error,
 		refetch,
+		invalidate,
 		createMigration: createMutation.mutateAsync,
 		isCreating: createMutation.isPending,
 		updateMigration: updateMutation.mutateAsync,

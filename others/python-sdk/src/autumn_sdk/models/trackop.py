@@ -220,7 +220,7 @@ class TrackReset2(BaseModel):
         return m
 
 
-class Deduction2TypedDict(TypedDict):
+class TrackDeduction2TypedDict(TypedDict):
     balance_id: str
     r"""ID of the underlying balance row that was deducted from (customer_entitlement or rollover)."""
     feature_id: str
@@ -233,7 +233,7 @@ class Deduction2TypedDict(TypedDict):
     r"""Amount deducted from this balance. Positive when usage was consumed, negative when credit was restored (e.g. a refund via negative track value)."""
 
 
-class Deduction2(BaseModel):
+class TrackDeduction2(BaseModel):
     balance_id: str
     r"""ID of the underlying balance row that was deducted from (customer_entitlement or rollover)."""
 
@@ -279,7 +279,7 @@ class TrackResponseBody2TypedDict(TypedDict):
     r"""The event name that was tracked, if event_name was used instead of feature_id."""
     balances: NotRequired[Dict[str, Nullable[BalanceTypedDict]]]
     r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
-    deductions: NotRequired[List[Deduction2TypedDict]]
+    deductions: NotRequired[List[TrackDeduction2TypedDict]]
     r"""Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling."""
 
 
@@ -304,7 +304,7 @@ class TrackResponseBody2(BaseModel):
     balances: Optional[Dict[str, Nullable[Balance]]] = None
     r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
 
-    deductions: Optional[List[Deduction2]] = None
+    deductions: Optional[List[TrackDeduction2]] = None
     r"""Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling."""
 
     @model_serializer(mode="wrap")
@@ -406,7 +406,7 @@ class TrackReset1(BaseModel):
         return m
 
 
-class Deduction1TypedDict(TypedDict):
+class TrackDeduction1TypedDict(TypedDict):
     balance_id: str
     r"""ID of the underlying balance row that was deducted from (customer_entitlement or rollover)."""
     feature_id: str
@@ -419,7 +419,7 @@ class Deduction1TypedDict(TypedDict):
     r"""Amount deducted from this balance. Positive when usage was consumed, negative when credit was restored (e.g. a refund via negative track value)."""
 
 
-class Deduction1(BaseModel):
+class TrackDeduction1(BaseModel):
     balance_id: str
     r"""ID of the underlying balance row that was deducted from (customer_entitlement or rollover)."""
 
@@ -465,7 +465,7 @@ class TrackResponseBody1TypedDict(TypedDict):
     r"""The event name that was tracked, if event_name was used instead of feature_id."""
     balances: NotRequired[Dict[str, Nullable[BalanceTypedDict]]]
     r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
-    deductions: NotRequired[List[Deduction1TypedDict]]
+    deductions: NotRequired[List[TrackDeduction1TypedDict]]
     r"""Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling."""
 
 
@@ -490,7 +490,7 @@ class TrackResponseBody1(BaseModel):
     balances: Optional[Dict[str, Nullable[Balance]]] = None
     r"""Map of feature_id to updated balance for the tracked feature and any related features (e.g. linked credit systems). Value is null when the customer has no balance for that feature."""
 
-    deductions: Optional[List[Deduction1]] = None
+    deductions: Optional[List[TrackDeduction1]] = None
     r"""Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling."""
 
     @model_serializer(mode="wrap")

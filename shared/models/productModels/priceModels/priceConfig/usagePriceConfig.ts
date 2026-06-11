@@ -29,7 +29,15 @@ export const UsageTierSchema = z
 	.transform((val) => ({
 		...val,
 		amount: val.amount ?? 0,
-	}));
+	}))
+	// zod-openapi can't serialize transforms in output schemas; pipe declares the output shape
+	.pipe(
+		z.object({
+			to: z.number().or(z.literal(Infinite)),
+			amount: z.number(),
+			flat_amount: z.number().optional(),
+		}),
+	);
 
 export type UsageTier = z.infer<typeof UsageTierSchema>;
 

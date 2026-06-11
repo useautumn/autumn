@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { ApiPlanItemV1Schema } from "../../products/items/apiPlanItemV1.js";
 
 export const PlanChangeActionEnum = z.enum([
 	"activated",
@@ -64,6 +65,9 @@ export const CustomerPlanItemChangeSchema = z.object({
 	}),
 	feature_id: z.string().meta({
 		description: "The ID of the feature that was added or removed.",
+	}),
+	item: ApiPlanItemV1Schema.meta({
+		description: "The item snapshot that was added or removed.",
 	}),
 });
 

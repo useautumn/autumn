@@ -74,6 +74,7 @@ export const listMigrationItemEventsEndpoint = defineEndpoint(
 			env: p.string(),
 			migration_internal_id: p.string(),
 			migration_run_id: p.string().optional(""),
+			item_ids: p.array(p.string()).optional(),
 			limit: p.int32().optional(1000),
 		},
 		nodes: [
@@ -98,6 +99,9 @@ export const listMigrationItemEventsEndpoint = defineEndpoint(
 						AND migration_internal_id = {{String(migration_internal_id)}}
 						{% if defined(migration_run_id) and String(migration_run_id, '') != '' %}
 							AND migration_run_id = {{String(migration_run_id)}}
+						{% end %}
+						{% if defined(item_ids) and length(item_ids) > 0 %}
+							AND item_id IN {{Array(item_ids, 'String')}}
 						{% end %}
 					ORDER BY timestamp DESC, item_kind ASC, item_id ASC
 					LIMIT {{Int32(limit, 1000)}}

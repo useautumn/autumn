@@ -19,10 +19,12 @@ export const STEPS: { id: StepId; label: string; icon: Icon }[] = [
 export function StepIndicator({
 	step,
 	onStepChange,
+	stepMeta,
 	children,
 }: {
 	step: StepId;
 	onStepChange: (step: StepId) => void;
+	stepMeta?: Partial<Record<StepId, ReactNode>>;
 	children?: ReactNode;
 }) {
 	return (
@@ -39,7 +41,9 @@ export function StepIndicator({
 								onClick={() => onStepChange(s.id)}
 								className={cn(
 									"flex items-center gap-2 text-md cursor-pointer transition-colors",
-									isActive ? "text-foreground font-medium" : "text-tertiary-foreground hover:text-muted-foreground",
+									isActive
+										? "text-foreground font-medium"
+										: "text-tertiary-foreground hover:text-muted-foreground",
 								)}
 							>
 								<StepIcon
@@ -48,6 +52,7 @@ export function StepIndicator({
 									className={cn(!isActive && "text-subtle")}
 								/>
 								{s.label}
+								{stepMeta?.[s.id]}
 							</button>
 						</div>
 					);

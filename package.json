@@ -22,7 +22,8 @@
 			"packages/autumn-js",
 			"packages/openapi",
 			"packages/ksuid",
-			"packages/stripe-sync"
+			"packages/stripe-sync",
+			"packages/ai-sdk"
 		],
 		"catalog": {
 			"stripe": "19.3.0-beta.1",
@@ -50,9 +51,7 @@
 		}
 	},
 	"overrides": {
-		"@better-auth/core": "1.6.5",
 		"@better-auth/passkey": "1.6.5",
-		"better-auth": "1.6.5",
 		"@modelcontextprotocol/sdk": "1.29.0",
 		"@isaacs/brace-expansion": "5.0.1",
 		"fast-xml-parser": "5.3.4",
@@ -140,7 +139,7 @@
 		"site": "cd apps/website && bun dev && cd ../..",
 		"docs": "bun -F @autumn/docs dev",
 		"docs:build": "bun -F @autumn/docs build",
-		"ts": "turbo run ts --filter=@autumn/server --filter=autumn-js --filter=@autumn/openapi --filter=atmn --filter=checkout --filter=@autumn/auth --filter=@autumn/mcp --filter=@autumn/leaf",
+		"ts": "turbo run ts --filter=@autumn/server --filter=autumn-js --filter=@autumn/openapi --filter=atmn --filter=checkout --filter=@useautumn/ai-sdk --filter=@autumn/auth --filter=@autumn/mcp --filter=@autumn/leaf",
 		"kill:ts": "while pgrep -f tsgo > /dev/null; do pkill -9 -f tsgo; sleep 0.1; done",
 		"atmn:build": "bun -F atmn build",
 		"openapi:ts": "bun -F @autumn/openapi ts",

@@ -6,6 +6,7 @@ import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCust
 import { withMigrationItemTracking } from "@/internal/migrations/v2/actions/migrationItem/index.js";
 import { migrationRepo } from "@/internal/migrations/v2/repos/index.js";
 import { migrateCustomer } from "@/internal/migrations/v2/run/migrateCustomer/index.js";
+import { isMigrationCancelRequested } from "@/internal/migrations/v2/run/utils/migrationCancelToken.js";
 import { createTriggerContext } from "@/trigger/utils/createTriggerContext.js";
 
 const PayloadSchema = z.object({
@@ -59,6 +60,13 @@ export const runMigrationCustomerTask = task({
 		logger.info("run-migration-customer: starting", {
 			data: { migrationInternalId, migrationRunId, customerInternalId },
 		});
+
+		if (await isMigrationCancelRequested({ migrationRunId })) {
+			logger.info("run-migration-customer: skipping, cancel requested", {
+				data: { migrationInternalId, migrationRunId, customerInternalId },
+			});
+			return;
+		}
 
 		const migration = await migrationRepo.find({
 			ctx,

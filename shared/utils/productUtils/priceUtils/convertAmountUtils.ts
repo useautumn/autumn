@@ -26,7 +26,7 @@ const ZERO_DECIMAL_CURRENCIES = [
 /**
  * Converts an Autumn amount to a Stripe amount.
  * For most currencies, multiplies by 100 (e.g., $1.00 -> 100 cents).
- * For zero-decimal currencies like JPY, returns the amount as-is.
+ * For zero-decimal currencies like JPY, rounds to the nearest integer.
  */
 export const atmnToStripeAmount = ({
 	amount,
@@ -36,7 +36,7 @@ export const atmnToStripeAmount = ({
 	currency?: string;
 }): number => {
 	if (ZERO_DECIMAL_CURRENCIES.includes(currency.toUpperCase())) {
-		return amount;
+		return new Decimal(amount).round().toNumber();
 	}
 	return new Decimal(amount).mul(100).round().toNumber();
 };

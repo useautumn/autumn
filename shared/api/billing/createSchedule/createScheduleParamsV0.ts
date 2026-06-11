@@ -5,36 +5,20 @@ import { z } from "zod/v4";
 import { AttachDiscountSchema } from "../attachV2/attachDiscount";
 import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
-import { CustomizePlanV1Schema } from "../common/customizePlan/customizePlanV1";
+import {
+	CustomizePlanV1Schema,
+	refineCustomizePlanV1Schema,
+} from "../common/customizePlan/customizePlanV1";
 
 // update_items is internal / not prod-ready — omit it from the schedule customize
 // surface so the agent never uses it.
-const CreateScheduleCustomizePlanSchema = CustomizePlanV1Schema.omit({
-	free_trial: true,
-	update_items: true,
-})
-	.refine(
-		(data) =>
-			data.items !== undefined ||
-			data.price !== undefined ||
-			data.add_items !== undefined ||
-			data.remove_items !== undefined,
-		{
-			message:
-				"When using customize, at least one of price, items, add_items, or remove_items must be provided",
-		},
-	)
-	.refine(
-		(data) =>
-			!(
-				data.items !== undefined &&
-				(data.add_items !== undefined || data.remove_items !== undefined)
-			),
-		{
-			message:
-				"customize.items (PUT-style) cannot be combined with add_items / remove_items (PATCH-style); pick one approach",
-		},
-	);
+const CreateScheduleCustomizePlanSchema = refineCustomizePlanV1Schema(
+	CustomizePlanV1Schema.omit({
+		free_trial: true,
+		update_items: true,
+	}),
+	{ includeFreeTrial: false, includeUpdateItems: false },
+);
 
 export const CreateSchedulePlanSchema = z.object({
 	plan_id: z.string().meta({

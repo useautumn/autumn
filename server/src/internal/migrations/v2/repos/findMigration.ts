@@ -24,6 +24,7 @@ export const findMigration = async ({
 			and(
 				eq(m.org_id, ctx.org.id),
 				eq(m.env, ctx.env),
+				eq(m.archived, false),
 				id !== undefined ? eq(m.id, id) : eq(m.internal_id, internalId!),
 			),
 	});

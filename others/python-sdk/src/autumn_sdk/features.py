@@ -5,7 +5,7 @@ from autumn_sdk import errors, models, utils
 from autumn_sdk._hooks import HookContext
 from autumn_sdk.types import BaseModel, OptionalNullable, UNSET
 from autumn_sdk.utils.unmarshal_json_response import unmarshal_json_response
-from typing import List, Mapping, Optional, Union, cast
+from typing import Dict, List, Mapping, Optional, Union, cast
 
 
 class Features(BaseSDK):
@@ -13,21 +13,34 @@ class Features(BaseSDK):
         self,
         *,
         name: str,
-        type_: models.CreateFeatureTypeRequest,
+        type_: models.CreateFeatureTypeRequestBody,
         feature_id: str,
         consumable: Optional[bool] = None,
         display: Optional[
             Union[
-                models.CreateFeatureDisplayRequest,
-                models.CreateFeatureDisplayRequestTypedDict,
+                models.CreateFeatureDisplayRequestBody,
+                models.CreateFeatureDisplayRequestBodyTypedDict,
             ]
         ] = None,
         credit_schema: Optional[
             Union[
-                List[models.CreateFeatureCreditSchemaRequest],
-                List[models.CreateFeatureCreditSchemaRequestTypedDict],
+                List[models.CreateFeatureCreditSchemaRequestBody],
+                List[models.CreateFeatureCreditSchemaRequestBodyTypedDict],
             ]
         ] = None,
+        model_markups: OptionalNullable[
+            Union[
+                Dict[str, models.CreateFeatureModelMarkupsRequest],
+                Dict[str, models.CreateFeatureModelMarkupsRequestTypedDict],
+            ]
+        ] = UNSET,
+        default_markup: Optional[float] = None,
+        provider_markups: OptionalNullable[
+            Union[
+                Dict[str, models.CreateFeatureProviderMarkupsRequest],
+                Dict[str, models.CreateFeatureProviderMarkupsRequestTypedDict],
+            ]
+        ] = UNSET,
         event_names: Optional[List[str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -43,7 +56,10 @@ class Features(BaseSDK):
         :param feature_id: The ID of the feature to create.
         :param consumable: Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.
         :param display: Singular and plural display names for the feature in your user interface.
-        :param credit_schema: A schema that maps 'single_use' feature IDs to credit costs. Applicable only for 'credit_system' features.
+        :param credit_schema: A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead.
+        :param model_markups: Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.
+        :param default_markup: Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free.
+        :param provider_markups: Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id.
         :param event_names:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -65,10 +81,20 @@ class Features(BaseSDK):
             type=type_,
             consumable=consumable,
             display=utils.get_pydantic_model(
-                display, Optional[models.CreateFeatureDisplayRequest]
+                display, Optional[models.CreateFeatureDisplayRequestBody]
             ),
             credit_schema=utils.get_pydantic_model(
-                credit_schema, Optional[List[models.CreateFeatureCreditSchemaRequest]]
+                credit_schema,
+                Optional[List[models.CreateFeatureCreditSchemaRequestBody]],
+            ),
+            model_markups=utils.get_pydantic_model(
+                model_markups,
+                OptionalNullable[Dict[str, models.CreateFeatureModelMarkupsRequest]],
+            ),
+            default_markup=default_markup,
+            provider_markups=utils.get_pydantic_model(
+                provider_markups,
+                OptionalNullable[Dict[str, models.CreateFeatureProviderMarkupsRequest]],
             ),
             event_names=event_names,
             feature_id=feature_id,
@@ -137,21 +163,34 @@ class Features(BaseSDK):
         self,
         *,
         name: str,
-        type_: models.CreateFeatureTypeRequest,
+        type_: models.CreateFeatureTypeRequestBody,
         feature_id: str,
         consumable: Optional[bool] = None,
         display: Optional[
             Union[
-                models.CreateFeatureDisplayRequest,
-                models.CreateFeatureDisplayRequestTypedDict,
+                models.CreateFeatureDisplayRequestBody,
+                models.CreateFeatureDisplayRequestBodyTypedDict,
             ]
         ] = None,
         credit_schema: Optional[
             Union[
-                List[models.CreateFeatureCreditSchemaRequest],
-                List[models.CreateFeatureCreditSchemaRequestTypedDict],
+                List[models.CreateFeatureCreditSchemaRequestBody],
+                List[models.CreateFeatureCreditSchemaRequestBodyTypedDict],
             ]
         ] = None,
+        model_markups: OptionalNullable[
+            Union[
+                Dict[str, models.CreateFeatureModelMarkupsRequest],
+                Dict[str, models.CreateFeatureModelMarkupsRequestTypedDict],
+            ]
+        ] = UNSET,
+        default_markup: Optional[float] = None,
+        provider_markups: OptionalNullable[
+            Union[
+                Dict[str, models.CreateFeatureProviderMarkupsRequest],
+                Dict[str, models.CreateFeatureProviderMarkupsRequestTypedDict],
+            ]
+        ] = UNSET,
         event_names: Optional[List[str]] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -167,7 +206,10 @@ class Features(BaseSDK):
         :param feature_id: The ID of the feature to create.
         :param consumable: Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.
         :param display: Singular and plural display names for the feature in your user interface.
-        :param credit_schema: A schema that maps 'single_use' feature IDs to credit costs. Applicable only for 'credit_system' features.
+        :param credit_schema: A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead.
+        :param model_markups: Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.
+        :param default_markup: Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free.
+        :param provider_markups: Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id.
         :param event_names:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -189,10 +231,20 @@ class Features(BaseSDK):
             type=type_,
             consumable=consumable,
             display=utils.get_pydantic_model(
-                display, Optional[models.CreateFeatureDisplayRequest]
+                display, Optional[models.CreateFeatureDisplayRequestBody]
             ),
             credit_schema=utils.get_pydantic_model(
-                credit_schema, Optional[List[models.CreateFeatureCreditSchemaRequest]]
+                credit_schema,
+                Optional[List[models.CreateFeatureCreditSchemaRequestBody]],
+            ),
+            model_markups=utils.get_pydantic_model(
+                model_markups,
+                OptionalNullable[Dict[str, models.CreateFeatureModelMarkupsRequest]],
+            ),
+            default_markup=default_markup,
+            provider_markups=utils.get_pydantic_model(
+                provider_markups,
+                OptionalNullable[Dict[str, models.CreateFeatureProviderMarkupsRequest]],
             ),
             event_names=event_names,
             feature_id=feature_id,
@@ -628,20 +680,33 @@ class Features(BaseSDK):
         *,
         feature_id: str,
         name: Optional[str] = None,
-        type_: Optional[models.UpdateFeatureTypeRequest] = None,
+        type_: Optional[models.UpdateFeatureTypeRequestBody] = None,
         consumable: Optional[bool] = None,
         display: Optional[
             Union[
-                models.UpdateFeatureDisplayRequest,
-                models.UpdateFeatureDisplayRequestTypedDict,
+                models.UpdateFeatureDisplayRequestBody,
+                models.UpdateFeatureDisplayRequestBodyTypedDict,
             ]
         ] = None,
         credit_schema: Optional[
             Union[
-                List[models.UpdateFeatureCreditSchemaRequest],
-                List[models.UpdateFeatureCreditSchemaRequestTypedDict],
+                List[models.UpdateFeatureCreditSchemaRequestBody],
+                List[models.UpdateFeatureCreditSchemaRequestBodyTypedDict],
             ]
         ] = None,
+        model_markups: OptionalNullable[
+            Union[
+                Dict[str, models.UpdateFeatureModelMarkupsRequest],
+                Dict[str, models.UpdateFeatureModelMarkupsRequestTypedDict],
+            ]
+        ] = UNSET,
+        default_markup: Optional[float] = None,
+        provider_markups: OptionalNullable[
+            Union[
+                Dict[str, models.UpdateFeatureProviderMarkupsRequest],
+                Dict[str, models.UpdateFeatureProviderMarkupsRequestTypedDict],
+            ]
+        ] = UNSET,
         event_names: Optional[List[str]] = None,
         archived: Optional[bool] = None,
         new_feature_id: Optional[str] = None,
@@ -659,7 +724,10 @@ class Features(BaseSDK):
         :param type: The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system.
         :param consumable: Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.
         :param display: Singular and plural display names for the feature in your user interface.
-        :param credit_schema: A schema that maps 'single_use' feature IDs to credit costs. Applicable only for 'credit_system' features.
+        :param credit_schema: A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead.
+        :param model_markups: Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.
+        :param default_markup: Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free.
+        :param provider_markups: Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id.
         :param event_names:
         :param archived: Whether the feature is archived. Archived features are hidden from the dashboard.
         :param new_feature_id: The new ID of the feature. Feature ID can only be updated if it's not being used by any customers.
@@ -683,10 +751,20 @@ class Features(BaseSDK):
             type=type_,
             consumable=consumable,
             display=utils.get_pydantic_model(
-                display, Optional[models.UpdateFeatureDisplayRequest]
+                display, Optional[models.UpdateFeatureDisplayRequestBody]
             ),
             credit_schema=utils.get_pydantic_model(
-                credit_schema, Optional[List[models.UpdateFeatureCreditSchemaRequest]]
+                credit_schema,
+                Optional[List[models.UpdateFeatureCreditSchemaRequestBody]],
+            ),
+            model_markups=utils.get_pydantic_model(
+                model_markups,
+                OptionalNullable[Dict[str, models.UpdateFeatureModelMarkupsRequest]],
+            ),
+            default_markup=default_markup,
+            provider_markups=utils.get_pydantic_model(
+                provider_markups,
+                OptionalNullable[Dict[str, models.UpdateFeatureProviderMarkupsRequest]],
             ),
             event_names=event_names,
             archived=archived,
@@ -758,20 +836,33 @@ class Features(BaseSDK):
         *,
         feature_id: str,
         name: Optional[str] = None,
-        type_: Optional[models.UpdateFeatureTypeRequest] = None,
+        type_: Optional[models.UpdateFeatureTypeRequestBody] = None,
         consumable: Optional[bool] = None,
         display: Optional[
             Union[
-                models.UpdateFeatureDisplayRequest,
-                models.UpdateFeatureDisplayRequestTypedDict,
+                models.UpdateFeatureDisplayRequestBody,
+                models.UpdateFeatureDisplayRequestBodyTypedDict,
             ]
         ] = None,
         credit_schema: Optional[
             Union[
-                List[models.UpdateFeatureCreditSchemaRequest],
-                List[models.UpdateFeatureCreditSchemaRequestTypedDict],
+                List[models.UpdateFeatureCreditSchemaRequestBody],
+                List[models.UpdateFeatureCreditSchemaRequestBodyTypedDict],
             ]
         ] = None,
+        model_markups: OptionalNullable[
+            Union[
+                Dict[str, models.UpdateFeatureModelMarkupsRequest],
+                Dict[str, models.UpdateFeatureModelMarkupsRequestTypedDict],
+            ]
+        ] = UNSET,
+        default_markup: Optional[float] = None,
+        provider_markups: OptionalNullable[
+            Union[
+                Dict[str, models.UpdateFeatureProviderMarkupsRequest],
+                Dict[str, models.UpdateFeatureProviderMarkupsRequestTypedDict],
+            ]
+        ] = UNSET,
         event_names: Optional[List[str]] = None,
         archived: Optional[bool] = None,
         new_feature_id: Optional[str] = None,
@@ -789,7 +880,10 @@ class Features(BaseSDK):
         :param type: The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system.
         :param consumable: Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features.
         :param display: Singular and plural display names for the feature in your user interface.
-        :param credit_schema: A schema that maps 'single_use' feature IDs to credit costs. Applicable only for 'credit_system' features.
+        :param credit_schema: A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead.
+        :param model_markups: Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration.
+        :param default_markup: Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free.
+        :param provider_markups: Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id.
         :param event_names:
         :param archived: Whether the feature is archived. Archived features are hidden from the dashboard.
         :param new_feature_id: The new ID of the feature. Feature ID can only be updated if it's not being used by any customers.
@@ -813,10 +907,20 @@ class Features(BaseSDK):
             type=type_,
             consumable=consumable,
             display=utils.get_pydantic_model(
-                display, Optional[models.UpdateFeatureDisplayRequest]
+                display, Optional[models.UpdateFeatureDisplayRequestBody]
             ),
             credit_schema=utils.get_pydantic_model(
-                credit_schema, Optional[List[models.UpdateFeatureCreditSchemaRequest]]
+                credit_schema,
+                Optional[List[models.UpdateFeatureCreditSchemaRequestBody]],
+            ),
+            model_markups=utils.get_pydantic_model(
+                model_markups,
+                OptionalNullable[Dict[str, models.UpdateFeatureModelMarkupsRequest]],
+            ),
+            default_markup=default_markup,
+            provider_markups=utils.get_pydantic_model(
+                provider_markups,
+                OptionalNullable[Dict[str, models.UpdateFeatureProviderMarkupsRequest]],
             ),
             event_names=event_names,
             archived=archived,

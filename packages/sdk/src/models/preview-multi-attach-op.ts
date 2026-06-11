@@ -171,9 +171,9 @@ export type PreviewMultiAttachPrice = {
    */
   billingMethod: PreviewMultiAttachBillingMethod;
   /**
-   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
    */
-  maxPurchase?: number | undefined;
+  maxPurchase?: number | null | undefined;
 };
 
 /**
@@ -1117,7 +1117,7 @@ export type PreviewMultiAttachPrice$Outbound = {
   interval_count: number;
   billing_units: number;
   billing_method: string;
-  max_purchase?: number | undefined;
+  max_purchase?: number | null | undefined;
 };
 
 /** @internal */
@@ -1135,7 +1135,7 @@ export const PreviewMultiAttachPrice$outboundSchema: z.ZodMiniType<
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
     billingMethod: PreviewMultiAttachBillingMethod$outboundSchema,
-    maxPurchase: z.optional(z.number()),
+    maxPurchase: z.optional(z.nullable(z.number())),
   }),
   z.transform((v) => {
     return remap$(v, {

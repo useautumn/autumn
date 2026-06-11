@@ -1,5 +1,5 @@
 {
-  "id": "d2c9ed21-2e65-4206-829d-206afa60d152",
+  "id": "42afdc3e-154a-493a-bb50-7ae1bfe59831",
   "prevId": "c5275384-0822-47e9-b14d-d23cd14d42cc",
   "version": "7",
   "dialect": "postgresql",
@@ -1184,163 +1184,6 @@
       },
       "foreignKeys": {},
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "leaf.cma_memory": {
-      "name": "cma_memory",
-      "schema": "leaf",
-      "columns": {
-        "org_id": {
-          "name": "org_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "env": {
-          "name": "env",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "memory_store_id": {
-          "name": "memory_store_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "cma_memory_org_id_env_pk": {
-          "name": "cma_memory_org_id_env_pk",
-          "columns": [
-            "org_id",
-            "env"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "leaf.cma_sessions": {
-      "name": "cma_sessions",
-      "schema": "leaf",
-      "columns": {
-        "org_id": {
-          "name": "org_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "env": {
-          "name": "env",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "thread_key": {
-          "name": "thread_key",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "session_id": {
-          "name": "session_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "braintrust_parent": {
-          "name": "braintrust_parent",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "cma_sessions_org_id_env_thread_key_pk": {
-          "name": "cma_sessions_org_id_env_thread_key_pk",
-          "columns": [
-            "org_id",
-            "env",
-            "thread_key"
-          ]
-        }
-      },
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "leaf.cma_vaults": {
-      "name": "cma_vaults",
-      "schema": "leaf",
-      "columns": {
-        "org_id": {
-          "name": "org_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "env": {
-          "name": "env",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "vault_id": {
-          "name": "vault_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "credential_id": {
-          "name": "credential_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {
-        "cma_vaults_org_id_env_pk": {
-          "name": "cma_vaults_org_id_env_pk",
-          "columns": [
-            "org_id",
-            "env"
-          ]
-        }
-      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -2721,6 +2564,33 @@
             },
             {
               "expression": "env",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "\"created_at\" DESC",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "\"id\" DESC",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_entities_customer_created_at": {
+          "name": "idx_entities_customer_created_at",
+          "columns": [
+            {
+              "expression": "internal_customer_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -7746,9 +7616,7 @@
     }
   },
   "enums": {},
-  "schemas": {
-    "leaf": "leaf"
-  },
+  "schemas": {},
   "sequences": {},
   "roles": {},
   "policies": {},

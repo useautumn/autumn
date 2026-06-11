@@ -168,7 +168,7 @@ export const previewMultiAttachPriceOutboundSchema = z.object({
 	interval_count: z.number(),
 	billing_units: z.number(),
 	billing_method: z.string(),
-	max_purchase: z.union([z.number(), z.undefined()]).optional(),
+	max_purchase: z.union([z.number(), z.undefined()]).optional().nullable(),
 });
 
 export const previewMultiAttachProrationOutboundSchema = z.object({
@@ -337,7 +337,7 @@ export const previewMultiAttachPriceSchema = z.object({
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 	billingUnits: z.union([z.number(), z.undefined()]).optional(),
 	billingMethod: previewMultiAttachBillingMethodSchema,
-	maxPurchase: z.union([z.number(), z.undefined()]).optional(),
+	maxPurchase: z.union([z.number(), z.undefined()]).optional().nullable(),
 });
 
 export const previewMultiAttachOnIncreaseSchema = closedEnumSchema;

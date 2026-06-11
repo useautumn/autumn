@@ -1,0 +1,75 @@
+<svg width="2048" height="430" viewBox="0 0 2048 430" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="2048" height="430" fill="#FFFFFF"/>
+  <rect x="0" y="0" width="2048" height="430" fill="#FFFFFF"/>
+  <line x1="34" y1="88" x2="2014" y2="88" stroke="#E2E7EE" stroke-width="1.5"/>
+  <line x1="34" y1="202" x2="2014" y2="202" stroke="#E2E7EE" stroke-width="1.5"/>
+  <line x1="34" y1="316" x2="2014" y2="316" stroke="#E2E7EE" stroke-width="1.5"/>
+  <text x="64" y="58" fill="#526070" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="17" font-weight="500" letter-spacing="0.2">MONITOR</text>
+  <text x="766" y="58" fill="#526070" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="17" font-weight="500" letter-spacing="0.2">TYPE</text>
+  <text x="876" y="58" fill="#526070" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="17" font-weight="500" letter-spacing="0.2">LAST 24 HRS</text>
+  <text x="1242" y="58" fill="#526070" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="17" font-weight="500" letter-spacing="0.2">UPTIME</text>
+  <text x="1386" y="58" fill="#526070" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="17" font-weight="500" letter-spacing="0.2">SUCCESS</text>
+  <text x="1552" y="58" fill="#526070" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="17" font-weight="500" letter-spacing="0.2">P99</text>
+  <text x="1680" y="58" fill="#526070" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="17" font-weight="500" letter-spacing="0.2">RESPONSE</text>
+  <text x="1830" y="58" fill="#526070" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="17" font-weight="500" letter-spacing="0.2">INTERVAL</text>
+
+  <g transform="translate(64 116)">
+    <circle cx="28" cy="28" r="28" fill="#63CE6C"/>
+    <path d="M17 29.5L25 37.5L41 18.5" stroke="white" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="106" y="24" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="26" font-weight="700">AWS ECS Get Customer (US East)</text>
+    <text x="106" y="62" fill="#718093" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="21" font-weight="400">1 minute ago</text>
+    <rect x="702" y="16" width="45" height="34" rx="4" fill="#263140"/>
+    <text x="712" y="38" fill="#FFFFFF" font-family="'SF Mono', ui-monospace, Menlo, monospace" font-size="15" font-weight="700">API</text>
+    <g fill="#60C96A" transform="translate(812 11)">
+      <rect x="0" y="30" width="7" height="35"/><rect x="18" y="22" width="7" height="43"/><rect x="36" y="42" width="7" height="23"/><rect x="54" y="18" width="7" height="47"/><rect x="72" y="54" width="7" height="11"/><rect x="90" y="32" width="7" height="33"/><rect x="108" y="12" width="7" height="53"/><rect x="126" y="36" width="7" height="29"/><rect x="144" y="45" width="7" height="20"/><rect x="162" y="38" width="7" height="27"/><rect x="180" y="29" width="7" height="36"/><rect x="198" y="44" width="7" height="21"/><rect x="216" y="52" width="7" height="13"/><rect x="234" y="26" width="7" height="39"/><rect x="252" y="48" width="7" height="17"/><rect x="270" y="42" width="7" height="23"/><rect x="288" y="18" width="7" height="47"/>
+    </g>
+    <text x="1178" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="25" font-weight="400">100 %</text>
+    <text x="1330" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="25" font-weight="400">100 %</text>
+    <text x="1492" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="25" font-weight="400">55</text>
+    <text x="1526" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="18" font-weight="400"> ms</text>
+    <text x="1638" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="25" font-weight="400">88</text>
+    <text x="1672" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="18" font-weight="400"> ms</text>
+    <text x="1788" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="25" font-weight="400">1 min</text>
+    <circle cx="1908" cy="23" r="3.5" fill="#68778A"/><circle cx="1908" cy="39" r="3.5" fill="#68778A"/><circle cx="1908" cy="55" r="3.5" fill="#68778A"/>
+  </g>
+
+  <g transform="translate(64 230)">
+    <circle cx="28" cy="28" r="28" fill="#63CE6C"/>
+    <path d="M17 29.5L25 37.5L41 18.5" stroke="white" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="106" y="24" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="26" font-weight="700">Railway Get Customer (US East)</text>
+    <text x="106" y="62" fill="#718093" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="21" font-weight="400">less than a minute ago</text>
+    <rect x="702" y="16" width="45" height="34" rx="4" fill="#263140"/>
+    <text x="712" y="38" fill="#FFFFFF" font-family="'SF Mono', ui-monospace, Menlo, monospace" font-size="15" font-weight="700">API</text>
+    <g fill="#60C96A" transform="translate(812 11)">
+      <rect x="0" y="20" width="7" height="45"/><rect x="18" y="42" width="7" height="23"/><rect x="36" y="51" width="7" height="14"/><rect x="54" y="48" width="7" height="17"/><rect x="72" y="34" width="7" height="31"/><rect x="90" y="45" width="7" height="20"/><rect x="108" y="41" width="7" height="24"/><rect x="126" y="39" width="7" height="26"/><rect x="144" y="56" width="7" height="9"/><rect x="162" y="47" width="7" height="18"/><rect x="180" y="37" width="7" height="28"/><rect x="198" y="35" width="7" height="30"/><rect x="216" y="43" width="7" height="22"/><rect x="234" y="51" width="7" height="14"/><rect x="252" y="28" width="7" height="37"/><rect x="270" y="38" width="7" height="27"/><rect x="288" y="14" width="7" height="51"/>
+    </g>
+    <text x="1178" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="25" font-weight="400">100 %</text>
+    <text x="1330" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="25" font-weight="400">100 %</text>
+    <text x="1492" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="25" font-weight="400">120</text>
+    <text x="1538" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="18" font-weight="400"> ms</text>
+    <text x="1638" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="25" font-weight="400">178</text>
+    <text x="1684" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="18" font-weight="400"> ms</text>
+    <text x="1788" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="25" font-weight="400">1 min</text>
+    <circle cx="1908" cy="23" r="3.5" fill="#68778A"/><circle cx="1908" cy="39" r="3.5" fill="#68778A"/><circle cx="1908" cy="55" r="3.5" fill="#68778A"/>
+  </g>
+
+  <g transform="translate(64 344)">
+    <circle cx="28" cy="28" r="28" fill="#63CE6C"/>
+    <path d="M17 29.5L25 37.5L41 18.5" stroke="white" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="106" y="24" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="26" font-weight="700">Render Get Customer (US East)</text>
+    <text x="106" y="62" fill="#718093" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="21" font-weight="400">less than a minute ago</text>
+    <rect x="702" y="16" width="45" height="34" rx="4" fill="#263140"/>
+    <text x="712" y="38" fill="#FFFFFF" font-family="'SF Mono', ui-monospace, Menlo, monospace" font-size="15" font-weight="700">API</text>
+    <g fill="#60C96A" transform="translate(812 11)">
+      <rect x="0" y="44" width="7" height="21"/><rect x="18" y="54" width="7" height="11"/><rect x="36" y="48" width="7" height="17"/><rect x="54" y="5" width="7" height="60"/><rect x="72" y="53" width="7" height="12"/><rect x="90" y="42" width="7" height="23"/><rect x="108" y="38" width="7" height="27"/><rect x="126" y="36" width="7" height="29"/><rect x="144" y="41" width="7" height="24"/><rect x="162" y="46" width="7" height="19"/><rect x="180" y="45" width="7" height="20"/><rect x="198" y="19" width="7" height="46"/><rect x="216" y="51" width="7" height="14"/><rect x="234" y="36" width="7" height="29"/><rect x="252" y="47" width="7" height="18"/><rect x="270" y="30" width="7" height="35"/><rect x="288" y="40" width="7" height="25"/>
+    </g>
+    <text x="1178" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="25" font-weight="400">100 %</text>
+    <text x="1330" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="25" font-weight="400">100 %</text>
+    <text x="1492" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="25" font-weight="400">106</text>
+    <text x="1538" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="18" font-weight="400"> ms</text>
+    <text x="1638" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="25" font-weight="400">154</text>
+    <text x="1684" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="18" font-weight="400"> ms</text>
+    <text x="1788" y="43" fill="#202632" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="25" font-weight="400">1 min</text>
+    <circle cx="1908" cy="23" r="3.5" fill="#68778A"/><circle cx="1908" cy="39" r="3.5" fill="#68778A"/><circle cx="1908" cy="55" r="3.5" fill="#68778A"/>
+  </g>
+</svg>

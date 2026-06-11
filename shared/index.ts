@@ -204,6 +204,8 @@ export * from "./models/rewardModels/rewardProgramModels/rewardProgramTable";
 export * from "./models/scheduleModels/scheduleTable";
 export * from "./models/subModels/subModels";
 export * from "./models/subModels/subTable";
+// AI Models
+export * from "./models/aiModels/modelsDevTypes";
 export * from "./types";
 // Agent Types (for pricing agent AI)
 export * from "./utils/agentTypes";
@@ -219,6 +221,8 @@ export * from "./utils/cusEntUtils/balanceUtils/cusEntToUsageAllowed";
 export * from "./utils/cusEntUtils/index";
 // Utils
 export * from "./utils/displayUtils";
+export * from "./utils/featureUtils/buildAiCreditSystemConfig";
+export * from "./utils/featureUtils/resolveInheritedMarkup";
 export * from "./utils/fullSubjectUtils";
 export * from "./utils/index";
 export * from "./utils/intervalUtils";

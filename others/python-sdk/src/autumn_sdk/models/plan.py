@@ -10,8 +10,8 @@ from autumn_sdk.types import (
     UnrecognizedStr,
 )
 from pydantic import model_serializer
-from typing import Any, List, Literal, Optional, Union
-from typing_extensions import NotRequired, TypedDict
+from typing import List, Literal, Optional, Union
+from typing_extensions import NotRequired, TypeAliasType, TypedDict
 
 
 PlanPriceInterval = Union[
@@ -111,6 +111,7 @@ PlanType = Union[
         "single_use",
         "continuous_use",
         "credit_system",
+        "ai_credit_system",
     ],
     UnrecognizedStr,
 ]
@@ -259,6 +260,42 @@ class PlanReset(BaseModel):
         return m
 
 
+PlanToTypedDict = TypeAliasType("PlanToTypedDict", Union[float, str])
+
+
+PlanTo = TypeAliasType("PlanTo", Union[float, str])
+
+
+class PlanTierTypedDict(TypedDict):
+    to: PlanToTypedDict
+    amount: float
+    flat_amount: NotRequired[float]
+
+
+class PlanTier(BaseModel):
+    to: PlanTo
+
+    amount: float
+
+    flat_amount: Optional[float] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 PlanTierBehavior = Union[
     Literal[
         "graduated",
@@ -303,7 +340,7 @@ class PlanItemPriceTypedDict(TypedDict):
     r"""Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage is consumed. Mutually exclusive with tiers."""
-    tiers: NotRequired[List[Nullable[Any]]]
+    tiers: NotRequired[List[PlanTierTypedDict]]
     r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
     tier_behavior: NotRequired[PlanTierBehavior]
     interval_count: NotRequired[float]
@@ -326,7 +363,7 @@ class PlanItemPrice(BaseModel):
     amount: Optional[float] = None
     r"""Price per billing_units after included usage is consumed. Mutually exclusive with tiers."""
 
-    tiers: Optional[List[Nullable[Any]]] = None
+    tiers: Optional[List[PlanTier]] = None
     r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
 
     tier_behavior: Optional[PlanTierBehavior] = None

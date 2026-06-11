@@ -4,6 +4,7 @@
 
 import { batchTrack } from "../funcs/batch-track.js";
 import { check } from "../funcs/check.js";
+import { trackTokens } from "../funcs/track-tokens.js";
 import { track } from "../funcs/track.js";
 import { ClientSDK, RequestOptions } from "../lib/sdks.js";
 import * as models from "../models/index.js";
@@ -147,6 +148,50 @@ export class Autumn extends ClientSDK {
     options?: RequestOptions,
   ): Promise<models.TrackResponse> {
     return unwrapAsync(track(
+      this,
+      request,
+      options,
+    ));
+  }
+
+  /**
+   * Records AI token usage for a customer and returns the updated AI credit balance.
+   *
+   * Use this after an LLM request when you have input and output token counts. Autumn converts token usage to a dollar amount using the configured model pricing and markup, then tracks that value against the customer's AI credit system.
+   *
+   * @example
+   * ```typescript
+   * // Track one LLM response
+   * const response = await client.trackTokens({
+   *
+   *   customerId: "cus_123",
+   *   featureId: "ai_credits",
+   *   modelId: "anthropic/claude-sonnet-4-20250514",
+   *   inputTokens: 1000,
+   *   outputTokens: 500,
+   * });
+   * ```
+   *
+   * @param customerId - The ID of the customer.
+   * @param entityId - The ID of the entity for entity-scoped balances. (optional)
+   * @param featureId - The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted — only required when a customer has multiple AI credit systems. (optional)
+   * @param modelId - The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+   * @param inputTokens - Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools.
+   * @param outputTokens - Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
+   * @param cacheReadTokens - Number of cached input tokens read. (optional)
+   * @param cacheWriteTokens - Number of input tokens written to the cache. (optional)
+   * @param audioInputTokens - Number of audio input tokens consumed. (optional)
+   * @param audioOutputTokens - Number of audio output tokens generated. (optional)
+   * @param reasoningTokens - Number of reasoning tokens generated. (optional)
+   * @param properties - Additional properties to attach to this usage event. (optional)
+   *
+   * @returns The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.
+   */
+  async trackTokens(
+    request: models.TrackTokensParams,
+    options?: RequestOptions,
+  ): Promise<models.TrackTokensResponse> {
+    return unwrapAsync(trackTokens(
       this,
       request,
       options,

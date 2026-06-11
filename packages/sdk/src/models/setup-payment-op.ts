@@ -182,9 +182,9 @@ export type SetupPaymentItemPrice = {
    */
   billingMethod: SetupPaymentItemBillingMethod;
   /**
-   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
    */
-  maxPurchase?: number | undefined;
+  maxPurchase?: number | null | undefined;
 };
 
 /**
@@ -417,9 +417,9 @@ export type SetupPaymentAddItemPrice = {
    */
   billingMethod: SetupPaymentAddItemBillingMethod;
   /**
-   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
    */
-  maxPurchase?: number | undefined;
+  maxPurchase?: number | null | undefined;
 };
 
 /**
@@ -553,10 +553,22 @@ export type SetupPaymentRemoveItemBillingMethod = ClosedEnum<
   typeof SetupPaymentRemoveItemBillingMethod
 >;
 
-/**
- * Match items with this interval.
- */
-export const SetupPaymentRemoveItemInterval = {
+export const SetupPaymentIntervalRemoveItemEnum2 = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+export type SetupPaymentIntervalRemoveItemEnum2 = ClosedEnum<
+  typeof SetupPaymentIntervalRemoveItemEnum2
+>;
+
+export const SetupPaymentIntervalRemoveItemEnum1 = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -564,12 +576,16 @@ export const SetupPaymentRemoveItemInterval = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-/**
- * Match items with this interval.
- */
-export type SetupPaymentRemoveItemInterval = ClosedEnum<
-  typeof SetupPaymentRemoveItemInterval
+export type SetupPaymentIntervalRemoveItemEnum1 = ClosedEnum<
+  typeof SetupPaymentIntervalRemoveItemEnum1
 >;
+
+/**
+ * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
+ */
+export type SetupPaymentIntervalUnion =
+  | SetupPaymentIntervalRemoveItemEnum1
+  | SetupPaymentIntervalRemoveItemEnum2;
 
 /**
  * Filter for matching plan items. All provided fields must match (AND).
@@ -584,9 +600,16 @@ export type SetupPaymentPlanItemFilter = {
    */
   billingMethod?: SetupPaymentRemoveItemBillingMethod | undefined;
   /**
-   * Match items with this interval.
+   * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
    */
-  interval?: SetupPaymentRemoveItemInterval | undefined;
+  interval?:
+    | SetupPaymentIntervalRemoveItemEnum1
+    | SetupPaymentIntervalRemoveItemEnum2
+    | undefined;
+  /**
+   * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
+   */
+  intervalCount?: number | undefined;
 };
 
 /**
@@ -647,7 +670,7 @@ export type SetupPaymentCustomize = {
    */
   price?: SetupPaymentBasePrice | null | undefined;
   /**
-   * Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / update_items.
+   * Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items.
    */
   items?: Array<SetupPaymentItemPlanItem> | undefined;
   /**
@@ -1019,7 +1042,7 @@ export type SetupPaymentItemPrice$Outbound = {
   interval_count: number;
   billing_units: number;
   billing_method: string;
-  max_purchase?: number | undefined;
+  max_purchase?: number | null | undefined;
 };
 
 /** @internal */
@@ -1037,7 +1060,7 @@ export const SetupPaymentItemPrice$outboundSchema: z.ZodMiniType<
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
     billingMethod: SetupPaymentItemBillingMethod$outboundSchema,
-    maxPurchase: z.optional(z.number()),
+    maxPurchase: z.optional(z.nullable(z.number())),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1290,7 +1313,7 @@ export type SetupPaymentAddItemPrice$Outbound = {
   interval_count: number;
   billing_units: number;
   billing_method: string;
-  max_purchase?: number | undefined;
+  max_purchase?: number | null | undefined;
 };
 
 /** @internal */
@@ -1308,7 +1331,7 @@ export const SetupPaymentAddItemPrice$outboundSchema: z.ZodMiniType<
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
     billingMethod: SetupPaymentAddItemBillingMethod$outboundSchema,
-    maxPurchase: z.optional(z.number()),
+    maxPurchase: z.optional(z.nullable(z.number())),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1468,15 +1491,41 @@ export const SetupPaymentRemoveItemBillingMethod$outboundSchema: z.ZodMiniEnum<
 > = z.enum(SetupPaymentRemoveItemBillingMethod);
 
 /** @internal */
-export const SetupPaymentRemoveItemInterval$outboundSchema: z.ZodMiniEnum<
-  typeof SetupPaymentRemoveItemInterval
-> = z.enum(SetupPaymentRemoveItemInterval);
+export const SetupPaymentIntervalRemoveItemEnum2$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentIntervalRemoveItemEnum2
+> = z.enum(SetupPaymentIntervalRemoveItemEnum2);
+
+/** @internal */
+export const SetupPaymentIntervalRemoveItemEnum1$outboundSchema: z.ZodMiniEnum<
+  typeof SetupPaymentIntervalRemoveItemEnum1
+> = z.enum(SetupPaymentIntervalRemoveItemEnum1);
+
+/** @internal */
+export type SetupPaymentIntervalUnion$Outbound = string | string;
+
+/** @internal */
+export const SetupPaymentIntervalUnion$outboundSchema: z.ZodMiniType<
+  SetupPaymentIntervalUnion$Outbound,
+  SetupPaymentIntervalUnion
+> = smartUnion([
+  SetupPaymentIntervalRemoveItemEnum1$outboundSchema,
+  SetupPaymentIntervalRemoveItemEnum2$outboundSchema,
+]);
+
+export function setupPaymentIntervalUnionToJSON(
+  setupPaymentIntervalUnion: SetupPaymentIntervalUnion,
+): string {
+  return JSON.stringify(
+    SetupPaymentIntervalUnion$outboundSchema.parse(setupPaymentIntervalUnion),
+  );
+}
 
 /** @internal */
 export type SetupPaymentPlanItemFilter$Outbound = {
   feature_id?: string | undefined;
   billing_method?: string | undefined;
-  interval?: string | undefined;
+  interval?: string | string | undefined;
+  interval_count?: number | undefined;
 };
 
 /** @internal */
@@ -1489,12 +1538,19 @@ export const SetupPaymentPlanItemFilter$outboundSchema: z.ZodMiniType<
     billingMethod: z.optional(
       SetupPaymentRemoveItemBillingMethod$outboundSchema,
     ),
-    interval: z.optional(SetupPaymentRemoveItemInterval$outboundSchema),
+    interval: z.optional(
+      smartUnion([
+        SetupPaymentIntervalRemoveItemEnum1$outboundSchema,
+        SetupPaymentIntervalRemoveItemEnum2$outboundSchema,
+      ]),
+    ),
+    intervalCount: z.optional(z.int()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
       billingMethod: "billing_method",
+      intervalCount: "interval_count",
     });
   }),
 );
