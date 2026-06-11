@@ -78,5 +78,21 @@ export const setupBillingCycleAnchor = ({
 	// Billing cycle anchor = trial ends at if exists
 	if (newIsTrialing) return trialContext?.trialEndsAt ?? "now";
 
-	return secondsToMs(stripeSubscription?.billing_cycle_anchor) ?? "now";
+	const stripeAnchorMs = secondsToMs(stripeSubscription?.billing_cycle_anchor);
+
+	// Stripe stores the anchor in SECONDS (rounded either way from the ms
+	// instant it was created). When it's the same instant the current product
+	// started, prefer the ms-precision starts_at so cycles recomputed across
+	// updates/upgrades don't drift sub-second (which would churn
+	// next_reset_at and spuriously move cycle-keyed state like usage windows).
+	const startsAtMs = customerProduct?.starts_at;
+	if (
+		stripeAnchorMs != null &&
+		startsAtMs != null &&
+		Math.abs(startsAtMs - stripeAnchorMs) < 1000
+	) {
+		return startsAtMs;
+	}
+
+	return stripeAnchorMs ?? "now";
 };

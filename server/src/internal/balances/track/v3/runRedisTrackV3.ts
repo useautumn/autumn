@@ -1,25 +1,26 @@
 import type {
-    FullSubject,
-    TrackDeduction,
-    TrackParams,
-    TrackResponseV3,
+	FullSubject,
+	TrackDeduction,
+	TrackParams,
+	TrackResponseV3,
 } from "@autumn/shared";
 import { tryCatch } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { globalEventBatchingManager } from "@/internal/balances/events/EventBatchingManager.js";
+import {
+	buildEventInfo,
+	initEvent,
+} from "@/internal/balances/events/initEvent.js";
 import { resolveInternalProductIdForEvent } from "@/internal/balances/events/resolveInternalProductIdForEvent.js";
 import {
-    buildEventInfo,
-    initEvent,
-} from "@/internal/balances/events/initEvent.js";
-import {
-    deductionToTrackResponseV2,
-    executeRedisDeductionV2,
-    projectMutationLogsToTrackDeductionsV2,
+	deductionToTrackResponseV2,
+	executeRedisDeductionV2,
+	projectMutationLogsToTrackDeductionsV2,
 } from "@/internal/balances/utils/deductionV2/index.js";
 import { globalSyncBatchingManagerV3 } from "@/internal/balances/utils/sync/SyncBatchingManagerV3.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import type { RolloverUpdate } from "../../utils/types/rolloverUpdate.js";
+import type { UsageWindowUpdate } from "../../utils/types/usageWindowUpdate.js";
 import { buildAiCreditCostProperty } from "../utils/buildAiCreditCostProperty.js";
 import { handleRedisTrackErrorV3 } from "./handleRedisTrackErrorV3.js";
 
@@ -29,18 +30,25 @@ const queueSyncItem = ({
 	fullSubject,
 	rolloverUpdates,
 	modifiedCusEntIdsByFeatureId,
+	usageWindowUpdates,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	fullSubject: FullSubject;
 	rolloverUpdates: Record<string, RolloverUpdate>;
 	modifiedCusEntIdsByFeatureId: Record<string, string[]>;
+	usageWindowUpdates?: UsageWindowUpdate[];
 }): void => {
 	const cusEntIds = Object.values(modifiedCusEntIdsByFeatureId).flat();
 	const rolloverIds = Object.keys(rolloverUpdates);
 
-	if (cusEntIds.length === 0 && rolloverIds.length === 0) return;
-
+	if (
+		cusEntIds.length === 0 &&
+		rolloverIds.length === 0 &&
+		(usageWindowUpdates?.length ?? 0) === 0
+	) {
+		return;
+	}
 
 	globalSyncBatchingManagerV3.addSyncItem({
 		customerId: body.customer_id,
@@ -50,6 +58,7 @@ const queueSyncItem = ({
 		rolloverIds,
 		entityId: fullSubject.entityId,
 		modifiedCusEntIdsByFeatureId,
+		usageWindowUpdates,
 	});
 };
 
@@ -129,6 +138,7 @@ export const runRedisTrackV3 = async ({
 		rolloverUpdates,
 		modifiedCusEntIdsByFeatureId,
 		mutationLogs,
+		usageWindowUpdates,
 	} = result;
 
 	queueSyncItem({
@@ -137,6 +147,7 @@ export const runRedisTrackV3 = async ({
 		fullSubject: updatedFullSubject,
 		rolloverUpdates,
 		modifiedCusEntIdsByFeatureId,
+		usageWindowUpdates,
 	});
 
 	const deductions = projectMutationLogsToTrackDeductionsV2({

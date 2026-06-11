@@ -41,13 +41,20 @@ export const runRedisFinalizeLockV2 = async ({
 		throw error;
 	}
 
-	const { updates, rolloverUpdates, modifiedCusEntIdsByFeatureId } =
-		redisResult;
+	const {
+		updates,
+		rolloverUpdates,
+		modifiedCusEntIdsByFeatureId,
+		usageWindowUpdates,
+	} = redisResult;
 	const modifiedCusEntIds = deductionUpdatesToModifiedIds({ updates });
 	const rolloverIds = Object.keys(rolloverUpdates);
 
-	if (modifiedCusEntIds.length > 0 || rolloverIds.length > 0) {
-
+	if (
+		modifiedCusEntIds.length > 0 ||
+		rolloverIds.length > 0 ||
+		usageWindowUpdates.length > 0
+	) {
 		globalSyncBatchingManagerV3.addSyncItem({
 			customerId: receipt.customer_id,
 			orgId: ctx.org.id,
@@ -57,6 +64,7 @@ export const runRedisFinalizeLockV2 = async ({
 			region: currentRegion,
 			entityId: receipt.entity_id ?? undefined,
 			modifiedCusEntIdsByFeatureId,
+			usageWindowUpdates,
 		});
 	}
 

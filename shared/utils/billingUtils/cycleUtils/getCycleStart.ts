@@ -49,25 +49,20 @@ export const getCycleStart = ({
 	const { add, difference } = intervalFunctions;
 
 	const intervalsPassed = difference(nowDate, anchorDate);
+	let cyclesPassed = Math.floor(intervalsPassed / intervalCount);
 
-	// How many complete cycles have passed?
-	const cyclesPassed = Math.floor(intervalsPassed / intervalCount);
-
-	// Cycle start is cyclesPassed * intervalCount from anchor
-	const cycleStart = add(anchorDate, cyclesPassed * intervalCount);
-
-	/**
-	 * Handling edge case with date-fns anchor in the future
-	 * Example: anchorDate: 28 Apr, nowDate: 15 Jan -> differenceInMonths gives -3
-	 * cyclesPassed = floor(-3/3) = -1, so cycleStart = Apr 28 - 3 = Jan 28
-	 * But Jan 28 > Jan 15, so we overshot - need to go back one more cycle to Oct 28
-	 */
-	let finalCycleStart = cycleStart;
-	if (cycleStart.getTime() > now) {
-		finalCycleStart = add(anchorDate, (cyclesPassed - 1) * intervalCount);
+	// date-fns shaves a cycle on a clamped end-of-month boundary (e.g.
+	// differenceInMonths(Apr 30, Jan 31) === 2, not 3) and on future anchors, so the
+	// estimate can land in the wrong cycle. Walk to the one that brackets `now`;
+	// boundaries are monotonic, so this is a bounded correction.
+	while (add(anchorDate, (cyclesPassed + 1) * intervalCount).getTime() <= now) {
+		cyclesPassed += 1;
+	}
+	while (add(anchorDate, cyclesPassed * intervalCount).getTime() > now) {
+		cyclesPassed -= 1;
 	}
 
-	const result = finalCycleStart.getTime();
+	const result = add(anchorDate, cyclesPassed * intervalCount).getTime();
 
 	// If floor is provided and result is before floor, return floor
 	if (floor !== undefined && result < floor) {

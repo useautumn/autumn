@@ -22,6 +22,7 @@ import {
 	DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT,
 	DELETE_FULL_CUSTOMER_CACHE_SCRIPT,
 	RESET_CUSTOMER_ENTITLEMENTS_SCRIPT,
+	ROLL_USAGE_WINDOWS_SCRIPT,
 	SET_CACHED_FULL_SUBJECT_SCRIPT,
 	SET_FULL_CUSTOMER_CACHE_SCRIPT,
 	UPDATE_CACHED_INVOICE_V2_SCRIPT,
@@ -125,6 +126,11 @@ export const registerRedisCommands = ({
 	redisInstance.defineCommand("updateSubjectBalances", {
 		numberOfKeys: 1,
 		lua: prepareScript(UPDATE_SUBJECT_BALANCES_SCRIPT),
+	});
+
+	redisInstance.defineCommand("rollUsageWindows", {
+		numberOfKeys: 1,
+		lua: prepareScript(ROLL_USAGE_WINDOWS_SCRIPT),
 	});
 
 	redisInstance.defineCommand("deleteFullCustomerCache", {

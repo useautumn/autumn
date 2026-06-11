@@ -2,13 +2,14 @@ import type { ApiSubjectV0 } from "@api/customers/apiSubjectV0";
 import type { ApiBalanceV1 } from "@api/customers/cusFeatures/apiBalanceV1";
 import { apiBalanceV1ToAvailableOverage } from "@api/customers/cusFeatures/utils/convert/apiBalanceV1ToAvailableOverage";
 import { apiSubjectToOverageAllowedControl } from "@api/customers/utils/apiSubjectToOverageAllowed";
+import { apiSubjectToUsageLimitHeadroom } from "@api/customers/utils/apiSubjectToUsageLimitHeadroom";
 import type { Feature } from "@models/featureModels/featureModels";
 import { isBooleanFeature, notNullish } from "@utils/index";
 import { Decimal } from "decimal.js";
 
 export type AllowedResult = {
 	allowed: boolean;
-	limitType?: "included" | "max_purchase" | "spend_limit";
+	limitType?: "included" | "max_purchase" | "spend_limit" | "usage_limit";
 };
 
 export type ApiBalanceInput = {
@@ -16,6 +17,9 @@ export type ApiBalanceInput = {
 	apiSubject: ApiSubjectV0;
 	feature: Feature;
 	requiredBalance: number;
+	/** The checked feature when it differs from the evaluated one (credit
+	 *  system member), so metered usage caps on it can gate the check. */
+	originalFeature?: Feature;
 };
 
 export const apiBalanceToAllowed = ({
@@ -23,6 +27,7 @@ export const apiBalanceToAllowed = ({
 	apiSubject,
 	feature,
 	requiredBalance,
+	originalFeature,
 }: ApiBalanceInput): AllowedResult => {
 	if (!apiBalance) return { allowed: false };
 
@@ -31,6 +36,19 @@ export const apiBalanceToAllowed = ({
 	if (apiBalance.unlimited) return { allowed: true };
 
 	if (requiredBalance < 0) return { allowed: true };
+
+	// Windowed usage caps gate regardless of balance or overage availability.
+	const usageLimitHeadroom = apiSubjectToUsageLimitHeadroom({
+		apiSubject,
+		feature,
+		originalFeature,
+	});
+	if (
+		notNullish(usageLimitHeadroom) &&
+		new Decimal(requiredBalance).gt(usageLimitHeadroom)
+	) {
+		return { allowed: false, limitType: "usage_limit" };
+	}
 
 	const overageAllowedControl = apiSubjectToOverageAllowedControl({
 		subject: apiSubject,

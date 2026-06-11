@@ -3,12 +3,12 @@ import type { ApiEntityV2 } from "../../api/entities/apiEntityV2.js";
 
 /**
  * Build a new entity apiSubject whose billing_controls inherit the customer's
- * spend_limits and overage_allowed entries per feature_id. Entity's own entry
- * always wins per feature; customer's entries fill any gaps.
+ * spend_limits, usage_limits and overage_allowed entries per feature_id.
+ * Entity's own entry always wins per feature; customer's entries fill gaps.
  *
- * Used at check time so `apiSubjectToSpendLimit` / `apiSubjectToOverageAllowedControl`
- * (which read from `subject.billing_controls`) see the inherited controls
- * without needing to know about the customer separately.
+ * Used at check time so `apiSubjectToSpendLimit` / `apiSubjectToUsageLimitHeadroom`
+ * / `apiSubjectToOverageAllowedControl` (which read from `subject.billing_controls`)
+ * see the inherited controls without needing to know about the customer separately.
  *
  * Pure — does not mutate inputs.
  */
@@ -19,11 +19,16 @@ export const mergeCustomerBillingControlsForCheck = ({
 	entityApiSubject: ApiEntityV2;
 	customerApiSubject: ApiCustomerV5;
 }): ApiEntityV2 => {
-	const entitySpendLimits = entityApiSubject.billing_controls?.spend_limits ?? [];
+	const entitySpendLimits =
+		entityApiSubject.billing_controls?.spend_limits ?? [];
+	const entityUsageLimits =
+		entityApiSubject.billing_controls?.usage_limits ?? [];
 	const entityOverageAllowed =
 		entityApiSubject.billing_controls?.overage_allowed ?? [];
 	const customerSpendLimits =
 		customerApiSubject.billing_controls?.spend_limits ?? [];
+	const customerUsageLimits =
+		customerApiSubject.billing_controls?.usage_limits ?? [];
 	const customerOverageAllowed =
 		customerApiSubject.billing_controls?.overage_allowed ?? [];
 
@@ -31,6 +36,9 @@ export const mergeCustomerBillingControlsForCheck = ({
 		entitySpendLimits
 			.map((entry) => entry.feature_id)
 			.filter((id): id is string => !!id),
+	);
+	const entityUsageLimitFeatureIds = new Set(
+		entityUsageLimits.map((entry) => entry.feature_id),
 	);
 	const entityOverageAllowedFeatureIds = new Set(
 		entityOverageAllowed.map((entry) => entry.feature_id),
@@ -40,12 +48,18 @@ export const mergeCustomerBillingControlsForCheck = ({
 		(entry) =>
 			!!entry.feature_id && !entitySpendLimitFeatureIds.has(entry.feature_id),
 	);
+	// Inherited entries keep the CUSTOMER-window `usage`: the gap-filling cap is
+	// the shared aggregate window, not a per-entity copy.
+	const inheritedUsageLimits = customerUsageLimits.filter(
+		(entry) => !entityUsageLimitFeatureIds.has(entry.feature_id),
+	);
 	const inheritedOverageAllowed = customerOverageAllowed.filter(
 		(entry) => !entityOverageAllowedFeatureIds.has(entry.feature_id),
 	);
 
 	if (
 		inheritedSpendLimits.length === 0 &&
+		inheritedUsageLimits.length === 0 &&
 		inheritedOverageAllowed.length === 0
 	) {
 		return entityApiSubject;
@@ -56,6 +70,7 @@ export const mergeCustomerBillingControlsForCheck = ({
 		billing_controls: {
 			...entityApiSubject.billing_controls,
 			spend_limits: [...entitySpendLimits, ...inheritedSpendLimits],
+			usage_limits: [...entityUsageLimits, ...inheritedUsageLimits],
 			overage_allowed: [...entityOverageAllowed, ...inheritedOverageAllowed],
 		},
 	};

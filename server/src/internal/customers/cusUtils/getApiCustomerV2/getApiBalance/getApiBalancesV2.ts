@@ -4,10 +4,10 @@ import {
 	type ApiFlagV0,
 	type Feature,
 	FeatureType,
-	findFeatureByInternalId,
 	type FullAggregatedFeatureBalance,
 	type FullCusEntWithFullCusProduct,
 	type FullSubject,
+	findFeatureByInternalId,
 	fullSubjectToCustomerEntitlements,
 	orgToInStatuses,
 	scopeExpandForCtx,
@@ -50,8 +50,10 @@ const getFeatureInputs = ({
 		string,
 		FullAggregatedFeatureBalance
 	> = {};
-	const aggregatedSubjectFlagByFeatureId: Record<string, AggregatedSubjectFlag> =
-		{};
+	const aggregatedSubjectFlagByFeatureId: Record<
+		string,
+		AggregatedSubjectFlag
+	> = {};
 
 	if (fullSubject.subjectType === "customer") {
 		for (const aggregatedFeatureBalance of fullSubject.aggregated_customer_entitlements ??

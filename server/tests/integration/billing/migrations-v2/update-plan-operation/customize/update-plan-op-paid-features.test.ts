@@ -100,6 +100,19 @@ test.concurrent(
 					},
 				],
 			},
+			waitFor: async () => {
+				const migratedCustomer = await autumnV2_2.customers.get<ApiCustomerV5>(
+					customerId,
+					{
+						skip_cache: "true",
+					},
+				);
+				expectFlagCorrect({
+					customer: migratedCustomer,
+					featureId: TestFeature.Dashboard,
+					planId: pro.id,
+				});
+			},
 		});
 
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);

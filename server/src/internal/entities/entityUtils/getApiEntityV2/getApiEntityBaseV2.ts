@@ -3,7 +3,9 @@ import {
 	ApiEntityV2Schema,
 	type EntityLegacyData,
 	type FullSubject,
+	fullSubjectToApiUsageLimits,
 	InternalError,
+	orgToInStatuses,
 	scopeExpandForCtx,
 } from "@autumn/shared";
 import type { RequestContext } from "@/honoUtils/HonoEnv.js";
@@ -59,6 +61,12 @@ export const getApiEntityBaseV2 = async ({
 			flags,
 			billing_controls: {
 				spend_limits: entity.spend_limits ?? undefined,
+				usage_limits: fullSubjectToApiUsageLimits({
+					fullSubject,
+					features: ctx.features,
+					inStatuses: orgToInStatuses({ org: ctx.org }),
+					source: "entity",
+				}),
 				usage_alerts: entity.usage_alerts ?? undefined,
 				overage_allowed: entity.overage_allowed ?? undefined,
 			},
