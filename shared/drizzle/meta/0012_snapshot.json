@@ -1,6 +1,6 @@
 {
-  "id": "42afdc3e-154a-493a-bb50-7ae1bfe59831",
-  "prevId": "c5275384-0822-47e9-b14d-d23cd14d42cc",
+  "id": "0dfbd2e0-13b8-4228-b7d4-21f02c2ba4c4",
+  "prevId": "42afdc3e-154a-493a-bb50-7ae1bfe59831",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3187,6 +3187,13 @@
           "primaryKey": false,
           "notNull": false,
           "default": "'{}'"
+        },
+        "model_markups": {
+          "name": "model_markups",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "null"
         }
       },
       "indexes": {},
@@ -4748,6 +4755,13 @@
         },
         "retry_failed": {
           "name": "retry_failed",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "archived": {
+          "name": "archived",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
