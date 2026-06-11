@@ -1,6 +1,7 @@
 import type { ApiVersion, TrackParams, TrackResponseV3 } from "@autumn/shared";
 import { withRedisFailOpen } from "@/external/redis/utils/withRedisFailOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { isFullSubjectGateRejection } from "@/internal/customers/repos/getFullSubject/getFullSubjectGate.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
 import { runTrackV2 } from "./runTrackV2.js";
@@ -38,6 +39,7 @@ export const runTrackWithRollout = async ({
 					featureDeductions,
 					apiVersion,
 				}),
+			alsoFailOpen: isFullSubjectGateRejection,
 			fallback: async (error) => {
 				const queuedResponse = await queueTrack({ ctx, body });
 				if (queuedResponse) return queuedResponse;
