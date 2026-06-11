@@ -41,11 +41,11 @@ COPY packages/stripe-sync/package.json packages/stripe-sync/
 # install step doesn't fail before the real source is copied.
 RUN mkdir -p scripts && touch scripts/preload-env.ts
 
-# Install only the workspaces the runtime services need (server hosts workers +
-# cron), plus their transitive workspace deps. --frozen-lockfile guarantees no
-# re-resolution; --filter skips the frontend-heavy workspaces.
+# Install only runtime workspaces; --no-save keeps this layer from mutating bun.lock.
+# Frozen filtered installs fail even immediately after Bun regenerates the lockfile.
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-	bun install --frozen-lockfile --ignore-scripts \
+	bun install --ignore-scripts --no-save \
+		--minimum-release-age 0 \
 		--filter @autumn/server \
 		--filter @autumn/leaf
 
