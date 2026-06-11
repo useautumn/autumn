@@ -11,7 +11,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "outDir": "dist",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "skipLibCheck": true
   },
   "include": ["src"],

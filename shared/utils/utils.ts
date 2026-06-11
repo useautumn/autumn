@@ -1,3 +1,4 @@
+/// <reference types="bun" />
 import { Decimal } from "decimal.js";
 
 export const nullish = <T>(

@@ -1,16 +1,13 @@
 {
 	"compilerOptions": {
 		"strict": true,
-		"composite": true,
-		"declaration": true,
-		"declarationMap": true,
 		"esModuleInterop": true,
 		"skipLibCheck": true,
 		"module": "Preserve",
 		"moduleResolution": "bundler",
 		"target": "ES2020",
-		"outDir": "./dist",
-		"rootDir": ".",
+		"noEmit": true,
+		"types": ["bun", "node"],
 		"paths": {
 			"@api/*": ["./api/*"],
 			"@models/*": ["./models/*"],
@@ -21,9 +18,5 @@
 		}
 	},
 	"include": ["./**/*"],
-	"types": ["node"],
-	"exclude": ["node_modules", "dist"],
-	"references": [
-		{ "path": "../packages/ksuid" }
-	]
+	"exclude": ["node_modules", "dist"]
 }

@@ -9,7 +9,7 @@
 		"types": ["bun", "node"],
 		"allowJs": true,
 		"checkJs": false,
-		"outDir": "./dist",
+		"noEmit": true,
 		"strict": true,
 		"esModuleInterop": true,
 		"skipLibCheck": true,
@@ -30,7 +30,9 @@
 			"autumn-js": ["../packages/autumn-js/src/sdk/index.ts"],
 			"autumn-js/backend/hono": ["../packages/autumn-js/src/backend/adapters/hono.ts"],
 			"@useautumn/sdk": ["../packages/sdk/src/index.ts"],
-			"@useautumn/sdk/*": ["../packages/sdk/src/*"]
+			"@useautumn/sdk/*": ["../packages/sdk/src/*"],
+			"stripe": ["../node_modules/.bun/node_modules/stripe/esm/stripe.esm.node"],
+			"stripe/*": ["../node_modules/.bun/node_modules/stripe/esm/*"]
 		}
 	},
 	"include": ["**/*.ts", "**/*.js"],
