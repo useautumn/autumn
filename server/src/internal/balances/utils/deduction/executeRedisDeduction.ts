@@ -88,7 +88,6 @@ export const executeRedisDeduction = async ({
 	let allMutationLogs: MutationLogItem[] = [];
 	const sideEffects: DeductionSideEffect[] = [];
 
-	// Build cache key
 	const customerId = fullCustomer.id || fullCustomer.internal_id;
 	const cacheKey = buildFullCustomerCacheKey({
 		orgId: org.id,
@@ -157,7 +156,6 @@ export const executeRedisDeduction = async ({
 				continue;
 			}
 
-			// Call Lua script to deduct from FullCustomer in Redis
 			const luaParams = {
 				org_id: org.id,
 				env,
@@ -235,15 +233,12 @@ export const executeRedisDeduction = async ({
 			allRolloverUpdates = { ...allRolloverUpdates, ...rollover_updates };
 			allMutationLogs = [...allMutationLogs, ...mutation_logs];
 
-			// Handle paid allocated entitlements and update fullCus in memory
 			try {
-				// Apply rollover updates first
 				applyRolloverUpdatesToFullCustomer({
 					fullCus: fullCustomer,
 					rolloverUpdates: rollover_updates,
 				});
 
-				// Apply customer entitlement updates
 				for (const cusEntId of Object.keys(updates)) {
 					const update = updates[cusEntId];
 					const cusEnt = customerEntitlements.find(

@@ -113,7 +113,6 @@ export const processMessage = async ({
 			return;
 		}
 
-		// Jobs below need worker context
 		const ctx = await createWorkerContext({
 			db,
 			payload: job.data,

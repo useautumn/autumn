@@ -34,7 +34,6 @@ export const handleRedisTrackError = async ({
 		throw error;
 	}
 
-	// Handle insufficient balance - throw specific error
 	if (error.code === RedisDeductionErrorCode.InsufficientBalance) {
 		throw new InsufficientBalanceError({
 			value: body.value ?? 1,
@@ -45,7 +44,6 @@ export const handleRedisTrackError = async ({
 		});
 	}
 
-	// Handle duplicate lock key
 	if (error.code === RedisDeductionErrorCode.LockAlreadyExists) {
 		throw new RecaseError({
 			message: "A lock with this ID already exists",
@@ -60,7 +58,6 @@ export const handleRedisTrackError = async ({
 		throw error;
 	}
 
-	// Fallback to Postgres for recoverable errors
 	if (error.shouldFallback()) {
 		ctx.logger.warn(
 			`Falling back to Postgres for track operation: ${error.code}`,
@@ -73,6 +70,5 @@ export const handleRedisTrackError = async ({
 		});
 	}
 
-	// All other Redis errors - rethrow
 	throw error;
 };
