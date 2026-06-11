@@ -225,6 +225,14 @@
 						]
 					},
 					{
+						"group": "Authorization",
+						"pages": [
+							"api-reference/keys/mintKey",
+							"api-reference/keys/refreshKey",
+							"api-reference/keys/revokeKey"
+						]
+					},
+					{
 						"group": "Events",
 						"pages": [
 							"api-reference/events/listEvents",

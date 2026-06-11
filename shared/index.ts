@@ -20,6 +20,8 @@ export * from "./api/billing/updateSubscription/previewUpdateSubscriptionRespons
 export * from "./api/common/cursorPaginationSchemas";
 export * from "./api/common/paginationConfigs";
 export * from "./api/customers/components/customerExpand/customerExpand";
+// Customer keys (per-customer JWTs)
+export * from "./api/keys/keysModels";
 export * from "./api/entities/crud/createEntityParams";
 export * from "./api/entities/crud/getEntityParams";
 export * from "./api/entities/crud/listEntitiesParamsV2_3";
@@ -97,6 +99,7 @@ export * from "./models/cusProductModels/cusProductModels";
 export * from "./models/cusProductModels/cusProductTable";
 export * from "./models/devModels/apiKeyModels";
 export * from "./models/devModels/apiKeyTable";
+export * from "./models/devModels/customerJwtFamilyTable";
 
 // 5. Others: events, apiKeys
 export * from "./models/eventModels/eventModels";

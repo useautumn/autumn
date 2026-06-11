@@ -35,6 +35,7 @@ import { customerProducts } from "../models/cusProductModels/cusProductTable.js"
 import { apiKeyRelations } from "../models/devModels/apiKeyRelations.js";
 // Other Tables
 import { apiKeys } from "../models/devModels/apiKeyTable.js";
+import { customerJwtFamilies } from "../models/devModels/customerJwtFamilyTable.js";
 import { events } from "../models/eventModels/eventTable.js";
 import { featureRelations } from "../models/featureModels/featureRelations.js";
 import { features } from "../models/featureModels/featureTable.js";
@@ -112,6 +113,7 @@ export {
 	actions,
 	apiKeyRelations,
 	apiKeys,
+	customerJwtFamilies,
 	autoTopupLimitStates as autoTopupLimits,
 	chatApprovals,
 	chatInstallations,
