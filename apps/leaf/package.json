@@ -34,8 +34,7 @@
 		"e2b": "^2.8.4",
 		"hono": "4.12.7",
 		"postgres": "catalog:",
-		"zod": "^3.25.23",
-		"zod-v4": "npm:zod@^4.4.3"
+		"zod": "^3.25.23"
 	},
 	"devDependencies": {
 		"@ngrok/ngrok": "^1.7.0",

@@ -4,8 +4,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createSdkMcpServer, tool } from "@anthropic-ai/claude-agent-sdk";
-// SDK tool() needs zod v4 internals; leaf is on zod 3, so use the aliased package.
-import { z } from "zod-v4";
+// SDK tool() needs v4 schemas from the same zod copy its peer resolves to (leaf's zod 3.25.x).
+import { z } from "zod/v4";
 import { createClaudeCodeHarness } from "../../src/harness/index.js";
 import type {
 	HarnessEvent,

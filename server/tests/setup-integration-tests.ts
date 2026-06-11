@@ -1,16 +1,15 @@
 import { execSync } from "node:child_process";
 import { loadLocalEnv } from "@/utils/envUtils";
-import {
-	createTestContext,
-	type TestContext,
-} from "./utils/testInitUtils/createTestContext";
+import type { TestContext } from "./utils/testInitUtils/createTestContext";
 
 const loadInfisicalSecrets = async () => {
 	// `bun test:integration` wraps the run in `infisical run --env=dev`, which
 	// already injects every secret into the parent process. Workers inherit
 	// those, so re-running the infisical CLI per worker is redundant churn
 	// (and a flake source). Skip when env is clearly already populated.
-	if (process.env.STRIPE_TEST_KEY || process.env.TESTS_ORG) return;
+	// CI never has the infisical CLI; this fetch is a local-dev convenience only.
+	if (process.env.CI || process.env.STRIPE_TEST_KEY || process.env.TESTS_ORG)
+		return;
 
 	try {
 		const secrets = execSync(
@@ -58,6 +57,11 @@ loadLocalEnv({ force: true });
 // "Default TestContext is not initialized" Proxy error from every test
 // scheduled on this worker.
 if (process.env.TESTS_ORG) {
+	// Dynamic import: createTestContext drags in the server init graph (db,
+	// redis, stripe), which unit-only lanes must never load or connect to.
+	const { createTestContext } = await import(
+		"./utils/testInitUtils/createTestContext"
+	);
 	globalThis.__autumnTestContext = await createTestContext();
 	console.log("--- Setup integration tests complete ---");
 }
