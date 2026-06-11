@@ -1,8 +1,5 @@
 import { api } from "./api.js";
-import type {
-	ApiCalledInOrderExpectation,
-	ExpectedApiCall,
-} from "./types.js";
+import type { ApiCalledInOrderExpectation, ExpectedApiCall } from "./types.js";
 
 export const billing = {
 	previewBeforeWrite: ({

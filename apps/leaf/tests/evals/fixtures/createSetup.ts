@@ -1,7 +1,10 @@
 import type { BaseApiCustomerV5 } from "@api/customers/apiCustomerV5.js";
 import type { ApiCustomerSchedule } from "@api/customers/components/apiCustomerSchedule";
+import type { ApiEntityV2 } from "@api/entities/apiEntityV2.js";
 import type { ApiFeatureV1 } from "@api/features/apiFeatureV1.js";
 import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
+import type { AgentRules } from "@autumn/shared";
+import { agentRules as agentRulesFixture } from "./agentRules/index.js";
 import {
 	balances as balanceFixtures,
 	customers as customerFixtures,
@@ -9,6 +12,7 @@ import {
 	schedules as scheduleFixtures,
 	subscriptions as subscriptionFixtures,
 } from "./customers/index.js";
+import { entities as entityFixtures } from "./entities/index.js";
 import {
 	basePrice as basePriceFixture,
 	features as featureFixtures,
@@ -18,7 +22,13 @@ import {
 	plan as planFixture,
 	planList as planListFixture,
 } from "./plans/index.js";
-import type { EvalSetup, EvalSetupIds, PlanRef, ScheduleRef } from "./types.js";
+import type {
+	EntityRef,
+	EvalSetup,
+	EvalSetupIds,
+	PlanRef,
+	ScheduleRef,
+} from "./types.js";
 
 const flattenRecordValues = <Value>(record: Record<string, Value | Value[]>) =>
 	Object.values(record).flatMap((value) =>
@@ -40,13 +50,16 @@ const setupIds = <
 	Plans extends Record<string, PlanRef>,
 	Customers extends Record<string, BaseApiCustomerV5 | BaseApiCustomerV5[]>,
 	Schedules extends Record<string, ScheduleRef>,
+	Entities extends Record<string, EntityRef>,
 >({
 	customers,
+	entities,
 	features,
 	plans,
 	schedules,
 }: {
 	customers: Customers;
+	entities: Entities;
 	features: Features;
 	plans: Plans;
 	schedules: Schedules;
@@ -56,7 +69,14 @@ const setupIds = <
 		features: refIds(features),
 		plans: refIds(plans),
 		schedules: refIds(schedules),
-	}) as unknown as EvalSetupIds<Features, Plans, Customers, Schedules>;
+		entities: refIds(entities),
+	}) as unknown as EvalSetupIds<
+		Features,
+		Plans,
+		Customers,
+		Schedules,
+		Entities
+	>;
 
 /**
  * Compose a mock Autumn org for evals from keyed feature, plan, and customer refs.
@@ -67,14 +87,22 @@ export const createSetup = <
 	Plans extends Record<string, PlanRef>,
 	Customers extends Record<string, BaseApiCustomerV5 | BaseApiCustomerV5[]>,
 	Schedules extends Record<string, ScheduleRef> = Record<string, never>,
+	Entities extends Record<string, EntityRef> = Record<string, never>,
 >({
+	agentRules: createAgentRules = ({ agentRules }) => agentRules.base(),
 	customers: createCustomers,
+	entities: createEntities,
 	features: createFeatures,
 	plans: createPlans,
 	schedules: createSchedules,
 	tag,
 }: {
 	tag: string;
+	agentRules?: ({
+		agentRules,
+	}: {
+		agentRules: typeof agentRulesFixture;
+	}) => AgentRules;
 	features: ({
 		featureList,
 		features,
@@ -121,7 +149,19 @@ export const createSetup = <
 		plans: Plans;
 		schedules: typeof scheduleFixtures;
 	}) => Schedules;
-}): EvalSetup<Features, Plans, Customers, Schedules> => {
+	entities?: ({
+		customers,
+		entities,
+		features,
+	}: {
+		customers: Customers;
+		entities: typeof entityFixtures;
+		features: Features;
+	}) => Entities;
+}): EvalSetup<Features, Plans, Customers, Schedules, Entities> => {
+	const agentRuleRefs = createAgentRules({
+		agentRules: agentRulesFixture,
+	});
 	const featureRefs = createFeatures({
 		featureList: featureListFixture,
 		features: featureFixtures,
@@ -147,26 +187,37 @@ export const createSetup = <
 		plans: planRefs,
 		schedules: scheduleFixtures,
 	});
+	const entityRefs =
+		createEntities?.({
+			customers: customerRefs,
+			entities: entityFixtures,
+			features: featureRefs,
+		}) ?? ({} as Entities);
 
 	return {
 		tag,
 		ids: setupIds({
 			customers: customerRefs,
+			entities: entityRefs,
 			features: featureRefs,
 			plans: planRefs,
 			schedules: (scheduleRefs ?? {}) as Schedules,
 		}),
+		agentRules: agentRuleRefs,
 		features: Object.values(featureRefs),
 		plans: flattenRecordValues<ApiPlanV1>(planRefs),
 		customers: flattenRecordValues<BaseApiCustomerV5>(customerRefs),
 		schedules: flattenRecordValues<ApiCustomerSchedule>(
 			(scheduleRefs ?? {}) as Schedules,
 		),
+		entities: flattenRecordValues<ApiEntityV2>(entityRefs),
 		refs: {
+			agentRules: agentRuleRefs,
 			features: featureRefs,
 			plans: planRefs,
 			customers: customerRefs,
 			schedules: (scheduleRefs ?? {}) as Schedules,
+			entities: entityRefs,
 		},
 	};
 };
@@ -175,8 +226,10 @@ export const createSetup = <
 export const withCustomers = <
 	Setup extends EvalSetup,
 	Customers extends Record<string, BaseApiCustomerV5 | BaseApiCustomerV5[]>,
+	Entities extends Record<string, EntityRef> = Record<string, never>,
 >({
 	customers: createCustomers,
+	entities: createEntities,
 	setup,
 }: {
 	setup: Setup;
@@ -195,11 +248,21 @@ export const withCustomers = <
 		plans: Setup["refs"]["plans"];
 		subscriptions: typeof subscriptionFixtures;
 	}) => Customers;
+	entities?: ({
+		customers,
+		entities,
+		features,
+	}: {
+		customers: Customers;
+		entities: typeof entityFixtures;
+		features: Setup["refs"]["features"];
+	}) => Entities;
 }): EvalSetup<
 	Setup["refs"]["features"],
 	Setup["refs"]["plans"],
 	Customers,
-	Setup["refs"]["schedules"]
+	Setup["refs"]["schedules"],
+	Setup["refs"]["entities"] & Entities
 > => {
 	const customerRefs = createCustomers({
 		balances: balanceFixtures,
@@ -209,11 +272,22 @@ export const withCustomers = <
 		plans: setup.refs.plans,
 		subscriptions: subscriptionFixtures,
 	});
+	const entityRefs =
+		createEntities?.({
+			customers: customerRefs,
+			entities: entityFixtures,
+			features: setup.refs.features,
+		}) ?? ({} as Entities);
+	const allEntityRefs = {
+		...setup.refs.entities,
+		...entityRefs,
+	} as Setup["refs"]["entities"] & Entities;
 
 	return {
 		...setup,
 		ids: setupIds({
 			customers: customerRefs,
+			entities: allEntityRefs,
 			features: setup.refs.features,
 			plans: setup.refs.plans,
 			schedules: setup.refs.schedules,
@@ -222,9 +296,14 @@ export const withCustomers = <
 			...setup.customers,
 			...flattenRecordValues<BaseApiCustomerV5>(customerRefs),
 		],
+		entities: [
+			...setup.entities,
+			...flattenRecordValues<ApiEntityV2>(entityRefs),
+		],
 		refs: {
 			...setup.refs,
 			customers: customerRefs,
+			entities: allEntityRefs,
 		},
 	};
 };

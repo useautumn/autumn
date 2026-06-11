@@ -45,7 +45,10 @@ export const refineCustomizePlanV1Schema = <
 	TSchema extends z.ZodType<CustomizePlanRefinementData>,
 >(
 	schema: TSchema,
-	{ includeFreeTrial = true }: { includeFreeTrial?: boolean } = {},
+	{
+		includeFreeTrial = true,
+		includeUpdateItems = true,
+	}: { includeFreeTrial?: boolean; includeUpdateItems?: boolean } = {},
 ) =>
 	schema
 		.refine(
@@ -55,11 +58,18 @@ export const refineCustomizePlanV1Schema = <
 				(includeFreeTrial && data.free_trial !== undefined) ||
 				data.add_items !== undefined ||
 				data.remove_items !== undefined ||
-				data.update_items !== undefined,
+				(includeUpdateItems && data.update_items !== undefined),
 			{
-				message: includeFreeTrial
-					? "When using customize, at least one of price, items, add_items, remove_items, deprecated update_items, or free_trial must be provided"
-					: "When using customize, at least one of price, items, add_items, remove_items, or deprecated update_items must be provided",
+				message: `When using customize, at least one of ${[
+					"price",
+					"items",
+					"add_items",
+					"remove_items",
+					includeUpdateItems ? "deprecated update_items" : null,
+					includeFreeTrial ? "free_trial" : null,
+				]
+					.filter(Boolean)
+					.join(", ")} must be provided`,
 			},
 		)
 		.refine(
@@ -68,11 +78,16 @@ export const refineCustomizePlanV1Schema = <
 					data.items !== undefined &&
 					(data.add_items !== undefined ||
 						data.remove_items !== undefined ||
-						data.update_items !== undefined)
+						(includeUpdateItems && data.update_items !== undefined))
 				),
 			{
-				message:
-					"customize.items (PUT-style) cannot be combined with add_items / remove_items / deprecated update_items (PATCH-style); pick one approach",
+				message: `customize.items (PUT-style) cannot be combined with ${[
+					"add_items",
+					"remove_items",
+					includeUpdateItems ? "deprecated update_items" : null,
+				]
+					.filter(Boolean)
+					.join(" / ")} (PATCH-style); pick one approach`,
 			},
 		);
 

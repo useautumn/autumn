@@ -15,12 +15,18 @@ export type {
 	EvalMcpServer,
 	EvalRuntimeContext,
 } from "./context/types.js";
+export { contractAttachment } from "./contracts.js";
 export type {
 	EvalRunResult,
 	EvalTurn,
 	EvalTurnResult,
 } from "./createEvalContext.js";
 export { createEvalContext } from "./createEvalContext.js";
+export {
+	type ClaudeManagedAgentDriverConfig,
+	createClaudeManagedAgentDriver,
+} from "./drivers/claudeManagedAgent.js";
+export { createClaudeManagedLiveDriver } from "./drivers/claudeManagedLiveAgent.js";
 export { createGenericMcpAgentDriver } from "./drivers/genericMcpAgent.js";
 export {
 	createLeafAgentDriver,

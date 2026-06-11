@@ -20,3 +20,4 @@ Prefer server-side filters before local filtering:
 Use limit 1000 for broad scans; that is the maximum page size.
 Always paginate until next_cursor is empty when the user asks for complete results. Use getCustomer only for details not returned by listCustomers.
 
+For operational billing requests, search by the customer name or email from the user or contract before saying customer_id is missing. If customer search does not resolve a match, ask for customer_id. If agent rules require entity-scoped billing, call listEntities with the resolved customer_id; if that does not resolve a match, ask for entity_id.

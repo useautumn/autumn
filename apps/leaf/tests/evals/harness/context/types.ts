@@ -4,15 +4,21 @@ import type { EvalSetup } from "../../fixtures/types.js";
 export type AutumnEvalToolName =
 	| "attach"
 	| "createBalance"
+	| "createEntity"
 	| "createSchedule"
+	| "getAgentRules"
 	| "getCustomer"
+	| "getEntity"
 	| "getOrCreateCustomer"
+	| "getCurrentOrganization"
 	| "getPlan"
 	| "listCustomers"
+	| "listEntities"
 	| "listFeatures"
 	| "listPlans"
 	| "previewAttach"
 	| "previewCreateSchedule"
+	| "updateAgentRules"
 	| "updateCustomer";
 
 export type AutumnApiCall = {

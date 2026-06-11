@@ -1,4 +1,7 @@
+import { readFile } from "node:fs/promises";
+import type { Attachment } from "chat";
 import type { AutumnMcpAuth } from "../../../../../packages/mcp/src/server/auth/auth.js";
+import { prepareAttachmentMessage } from "../../../src/agent/runMessage/setup/prepareAttachments.js";
 import type { EvalSetup } from "../fixtures/types.js";
 import { createEvalRuntimeContext } from "./context/createEvalRuntimeContext.js";
 import type {
@@ -9,12 +12,28 @@ import type { EvalAgentDriver } from "./drivers/types.js";
 import { createEvalTrace } from "./tracing/createEvalTrace.js";
 import type { EvalTrace, EvalTraceLevel } from "./tracing/types.js";
 
+export type EvalAttachment = {
+	mimeType: string;
+	name?: string;
+	path: string;
+	size?: number;
+};
+
 export type EvalTurn =
-	| { maxSteps?: number; message: string; type: "user" }
+	| {
+			attachments?: EvalAttachment[];
+			maxSteps?: number;
+			message: string;
+			type: "user";
+	  }
 	| { maxSteps?: number; optional?: boolean; type: "approve" };
 
 export type EvalTurnResult = {
+	apiCalls: EvalRuntimeContext["autumnApi"]["calls"];
 	text?: string;
+	toolCalls: ReturnType<
+		Awaited<ReturnType<EvalAgentDriver["start"]>>["getToolCalls"]
+	>;
 	type: EvalTurn["type"];
 };
 
@@ -60,27 +79,66 @@ export const createEvalContext = async ({
 		trace,
 	});
 
+	const toChatAttachment = (attachment: EvalAttachment): Attachment =>
+		({
+			fetchData: () => readFile(attachment.path),
+			mimeType: attachment.mimeType,
+			name: attachment.name,
+			size: attachment.size,
+		}) as Attachment;
+
 	const runConversation = async (turns: EvalTurn[]): Promise<EvalRunResult> => {
 		const turnResults: EvalTurnResult[] = [];
 		for (const turn of turns) {
 			if (turn.type === "user") {
-				trace.event({ message: turn.message, type: "user_turn" });
-				const output = await runningDriver.send(turn.message, {
+				trace.event({
+					attachments: turn.attachments?.map((attachment) => ({
+						mimeType: attachment.mimeType,
+						name: attachment.name,
+						path: attachment.path,
+						size: attachment.size,
+					})),
+					message: turn.message,
+					type: "user_turn",
+				});
+				const driverMessage = turn.attachments?.length
+					? (
+							await prepareAttachmentMessage({
+								attachments: turn.attachments.map(toChatAttachment),
+								text: turn.message,
+							})
+						).message
+					: turn.message;
+				const output = await runningDriver.send(driverMessage, {
 					maxSteps: turn.maxSteps,
 				});
-				turnResults.push({ text: output.text, type: turn.type });
+				turnResults.push({
+					apiCalls: [...runtimeContext.autumnApi.calls],
+					text: output.text,
+					toolCalls: runningDriver.getToolCalls(),
+					type: turn.type,
+				});
 				continue;
 			}
 
 			if (!runningDriver.hasPendingApproval()) {
 				if (turn.optional) {
-					turnResults.push({ type: turn.type });
+					turnResults.push({
+						apiCalls: [...runtimeContext.autumnApi.calls],
+						toolCalls: runningDriver.getToolCalls(),
+						type: turn.type,
+					});
 					continue;
 				}
 				throw new Error("No pending approval to approve.");
 			}
 			const output = await runningDriver.approve({ maxSteps: turn.maxSteps });
-			turnResults.push({ text: output.text, type: turn.type });
+			turnResults.push({
+				apiCalls: [...runtimeContext.autumnApi.calls],
+				text: output.text,
+				toolCalls: runningDriver.getToolCalls(),
+				type: turn.type,
+			});
 		}
 
 		trace.event({ type: "eval_finished" });

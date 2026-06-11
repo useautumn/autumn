@@ -1,3 +1,4 @@
+import type { MessageListInput } from "@mastra/core/agent/message-list";
 import type { EvalSetup } from "../../fixtures/types.js";
 import type { EvalRuntimeContext } from "../context/types.js";
 import type { EvalTrace } from "../tracing/types.js";
@@ -10,6 +11,8 @@ export type EvalToolCall = {
 export type EvalAgentOutput = {
 	text?: string;
 };
+
+export type EvalDriverMessage = string | MessageListInput;
 
 export type EvalDriverStartInput = {
 	context: EvalRuntimeContext;
@@ -25,7 +28,7 @@ export type RunningEvalDriver = {
 	getToolCalls(): EvalToolCall[];
 	hasPendingApproval(): boolean;
 	send(
-		message: string,
+		message: EvalDriverMessage,
 		options?: { maxSteps?: number },
 	): Promise<EvalAgentOutput>;
 };

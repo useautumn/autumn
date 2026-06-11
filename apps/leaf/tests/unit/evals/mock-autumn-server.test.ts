@@ -9,7 +9,11 @@ import {
 import { orgSetups } from "../../evals/fixtures/orgSetups.js";
 import { createAutumnApiMock } from "../../evals/harness/index.js";
 import {
+	askedClarification,
+	askedClarificationBeforeTool,
+	expectedApiBodyNumberFields,
 	expectedApiCalls,
+	expectedApiCallsAfterApproval,
 	expectedToolCalls,
 } from "../../evals/utils/scorers.js";
 
@@ -227,7 +231,9 @@ describe("eval mock Autumn server", () => {
 			}),
 			plans: ({ features, items, plan }) => ({
 				yearOne: plan.annual({
-					items: [items.included({ feature: features.credits, included: 5_000 })],
+					items: [
+						items.included({ feature: features.credits, included: 5_000 }),
+					],
 					planId: "year_one",
 				}),
 				yearTwo: plan.annual({
@@ -269,8 +275,7 @@ describe("eval mock Autumn server", () => {
 
 		expect(setup.ids.schedules.joeContract).toBe("sched_joe_contract");
 		expect(setup.schedules[0]?.phases.map((phase) => phase.starts_at)).toEqual([
-			1_767_225_600_000,
-			1_798_761_600_000,
+			1_767_225_600_000, 1_798_761_600_000,
 		]);
 		expect(setup.refs.customers.joe.subscriptions).toEqual(
 			expect.arrayContaining([
@@ -350,6 +355,18 @@ describe("eval mock Autumn server", () => {
 					endpoint: "/v1/customers.get_or_create",
 					toolName: "getOrCreateCustomer" as const,
 				},
+				{
+					body: {
+						customer_id: "joe_customer",
+						invoice_mode: {
+							enabled: true,
+							enable_plan_immediately: true,
+							finalize: false,
+						},
+					},
+					endpoint: "/v1/billing.preview_attach",
+					toolName: "previewAttach" as const,
+				},
 			],
 			finalText: "Joe is on Pro for $79 per month.",
 			toolCalls: [
@@ -377,5 +394,172 @@ describe("eval mock Autumn server", () => {
 				output,
 			}),
 		).toBe(1);
+		expect(
+			expectedApiCalls({
+				expected: {
+					apiCalls: [
+						{
+							body: {
+								customer_id: "joe_customer",
+								invoice_mode: {
+									enable_plan_immediately: true,
+									enabled: true,
+									finalize: false,
+								},
+							},
+							toolName: "previewAttach",
+						},
+					],
+				},
+				output,
+			}),
+		).toBe(1);
+		expect(
+			askedClarification({
+				expected: [
+					{
+						phrases: ["customer id", "entity name"],
+						notPhrases: ["deployment"],
+						type: "response.asked",
+					},
+				],
+				output: {
+					...output,
+					turns: [
+						{
+							text: "Please provide the customer_id, email, entity_id, and entity name.",
+							type: "user",
+						},
+					],
+				},
+			}),
+		).toBe(1);
+		expect(
+			askedClarificationBeforeTool({
+				expected: [
+					{
+						phrases: ["customer id", "entity name"],
+						toolName: "getOrCreateCustomer",
+						type: "response.askedBeforeTool",
+					},
+				],
+				output: {
+					...output,
+					turns: [
+						{
+							text: "Please provide the customer_id, email, entity_id, and entity name.",
+							toolCalls: [{ args: {}, name: "listPlans" }],
+							type: "user",
+						},
+					],
+				},
+			}),
+		).toBe(1);
+		expect(
+			expectedApiCallsAfterApproval({
+				expected: [
+					{
+						call: {
+							body: { customer_id: "joe_customer" },
+							toolName: "attach",
+						},
+						type: "api.calledAfterApproval",
+					},
+				],
+				output: {
+					...output,
+					apiCalls: [
+						...output.apiCalls,
+						{
+							body: { customer_id: "joe_customer" },
+							endpoint: "/v1/billing.attach",
+							toolName: "attach",
+						},
+					],
+					turns: [
+						{
+							apiCalls: output.apiCalls,
+							type: "user",
+						},
+						{
+							apiCalls: [
+								...output.apiCalls,
+								{
+									body: { customer_id: "joe_customer" },
+									endpoint: "/v1/billing.attach",
+									toolName: "attach",
+								},
+							],
+							type: "approve",
+						},
+					],
+				},
+			}),
+		).toBe(1);
+		expect(
+			expectedApiBodyNumberFields({
+				expected: [
+					{
+						paths: ["phases.*.starts_at"],
+						toolName: "previewCreateSchedule",
+						type: "api.bodyNumberFields",
+					},
+				],
+				output: {
+					...output,
+					apiCalls: [
+						...output.apiCalls,
+						{
+							body: {
+								phases: [
+									{ starts_at: 1_806_537_600_000 },
+									{ starts_at: 1_814_400_000_000 },
+								],
+							},
+							endpoint: "/v1/billing.preview_create_schedule",
+							toolName: "previewCreateSchedule",
+						},
+					],
+				},
+			}),
+		).toBe(1);
+		expect(
+			expectedApiBodyNumberFields({
+				expected: [
+					{
+						paths: ["phases.*.starts_at"],
+						toolName: "previewCreateSchedule",
+						type: "api.bodyNumberFields",
+					},
+				],
+				output: {
+					...output,
+					apiCalls: [
+						...output.apiCalls,
+						{
+							body: {
+								phases: [
+									{ starts_at: "1 April 2027 00:00 UTC (1806537600000)" },
+								],
+							},
+							endpoint: "/v1/billing.preview_create_schedule",
+							toolName: "previewCreateSchedule",
+						},
+					],
+				},
+			}),
+		).toBe(0);
+		expect(
+			expectedApiBodyNumberFields({
+				expected: [
+					{
+						paths: ["phases.*.starts_at"],
+						toolName: "createSchedule",
+						type: "api.bodyNumberFields",
+					},
+				],
+				output,
+			}),
+		).toBe(0);
 	});
 });

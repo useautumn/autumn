@@ -16,3 +16,22 @@ export const axiomNumberFrom = (value: unknown) => {
 
 export const axiomStringFrom = (value: unknown) =>
 	typeof value === "string" ? value : "";
+
+export const getAxiomResultDebug = ({ result }: { result: unknown }) => {
+	if (!result || typeof result !== "object") {
+		return { result_type: typeof result };
+	}
+
+	const record = result as {
+		datasetNames?: unknown;
+		matches?: unknown;
+		status?: unknown;
+	};
+
+	return {
+		dataset_names: record.datasetNames,
+		match_count: Array.isArray(record.matches) ? record.matches.length : null,
+		result_keys: Object.keys(result),
+		status: record.status,
+	};
+};
