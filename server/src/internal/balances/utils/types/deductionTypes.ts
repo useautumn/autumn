@@ -15,6 +15,7 @@ export type DeductionOptions = {
 	paidAllocated?: boolean;
 
 	triggerAutoTopUp?: boolean;
+	triggerSideEffects?: boolean;
 
 	/** @deprecated skipAdditionalBalance is deprecated and will be removed in a future release. */
 	skipAdditionalBalance?: boolean;

@@ -26,7 +26,11 @@ export const runTrackWithRollout = async ({
 }): Promise<TrackResponseV3> => {
 	if (shouldUseTrackV3({ ctx })) {
 		if (ctx.orgRateLimitDegraded) {
-			const queuedResponse = await queueTrack({ ctx, body });
+			const queuedResponse = await queueTrack({
+				ctx,
+				body,
+				featureDeductions,
+			});
 			if (queuedResponse) return queuedResponse;
 		}
 
@@ -41,7 +45,11 @@ export const runTrackWithRollout = async ({
 				}),
 			alsoFailOpen: isFullSubjectGateRejection,
 			fallback: async (error) => {
-				const queuedResponse = await queueTrack({ ctx, body });
+				const queuedResponse = await queueTrack({
+					ctx,
+					body,
+					featureDeductions,
+				});
 				if (queuedResponse) return queuedResponse;
 				throw error;
 			},

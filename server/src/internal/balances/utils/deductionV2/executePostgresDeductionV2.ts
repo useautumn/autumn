@@ -8,9 +8,11 @@ import {
 import { sql } from "drizzle-orm";
 import { withLock } from "@/external/redis/redisUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
-import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWebhooks.js";
 import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoice/createAllocatedInvoice.js";
+import {
+	type DeductionSideEffect,
+	flushDeductionSideEffects,
+} from "@/internal/balances/utils/deduction/deductionSideEffects.js";
 import { saveLockReceiptV2 } from "@/internal/balances/utils/lockV2/saveLockReceiptV2.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
@@ -94,6 +96,7 @@ export const executePostgresDeductionV2 = async ({
 		let allRolloverOverwrites: RolloverOverwrite[] = [];
 		let allMutationLogs: MutationLogItem[] = [];
 		const allModifiedCusEntIdsByFeatureId: Record<string, string[]> = {};
+		const sideEffects: DeductionSideEffect[] = [];
 
 		const cascadeSpill = new CascadeSpill();
 
@@ -322,24 +325,14 @@ export const executePostgresDeductionV2 = async ({
 
 				const newFullCustomer = fullSubjectToFullCustomer({ fullSubject });
 
-				fireTrackWebhooks({
-					ctx,
-					oldFullCus: oldFullCustomer,
-					newFullCus: newFullCustomer,
-					feature: deduction.feature,
-					entityId,
-					featuresFromMutationLogs,
-				});
-
-				if (resolvedOptions.triggerAutoTopUp) {
-					triggerAutoTopUp({
-						ctx,
-						newFullCus: newFullCustomer,
+				if (resolvedOptions.triggerSideEffects) {
+					sideEffects.push({
+						oldFullCus: structuredClone(oldFullCustomer),
+						newFullCus: structuredClone(newFullCustomer),
 						feature: deduction.feature,
-					}).catch((error) => {
-						ctx.logger.error(
-							`[executePostgresDeductionV2] Failed to trigger auto top-up: ${error}`,
-						);
+						entityId,
+						featuresFromMutationLogs,
+						triggerAutoTopUp: resolvedOptions.triggerAutoTopUp,
 					});
 				}
 			}
@@ -361,6 +354,12 @@ export const executePostgresDeductionV2 = async ({
 			cusEntUpdates: allSyncUpdates,
 			rolloverOverwrites: allRolloverOverwrites,
 			modifiedCusEntIdsByFeatureId: allModifiedCusEntIdsByFeatureId,
+		});
+
+		flushDeductionSideEffects({
+			ctx,
+			sideEffects,
+			source: "executePostgresDeductionV2",
 		});
 
 		return {
@@ -417,7 +416,11 @@ const compensateCascadeIncludedLeg = async ({
 			customerId,
 			entityId,
 			deductions: [compensation],
-			options: { overageBehaviour: "cap", triggerAutoTopUp: false },
+			options: {
+				overageBehaviour: "cap",
+				triggerAutoTopUp: false,
+				triggerSideEffects: false,
+			},
 		});
 	} catch (compensationError) {
 		ctx.logger.error(

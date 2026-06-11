@@ -55,7 +55,7 @@ export const handleRedisTrackError = async ({
 	}
 
 	if (error.isRedisUnavailable()) {
-		const queuedResponse = await queueTrack({ ctx, body });
+		const queuedResponse = await queueTrack({ ctx, body, featureDeductions });
 		if (queuedResponse) return queuedResponse;
 		throw error;
 	}

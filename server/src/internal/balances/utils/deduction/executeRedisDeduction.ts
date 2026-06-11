@@ -5,12 +5,10 @@ import type {
 import type { Redis } from "ioredis";
 import { currentRegion, redis } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { handlePaidAllocatedCusEnt } from "@/internal/balances/utils/paidAllocatedFeature/handlePaidAllocatedCusEnt.js";
 import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeature/rollbackDeduction.js";
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
-import { fireTrackWebhooks } from "../../trackWebhooks/fireTrackWebhooks.js";
 import { CascadeSpill } from "../deductionV2/cascadeSpill.js";
 import { saveLockReceipt } from "../lock/saveLockReceipt.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
@@ -25,6 +23,10 @@ import type { LuaDeductionResult } from "../types/redisDeductionResult.js";
 import type { RolloverUpdate } from "../types/rolloverUpdate.js";
 import { applyDeductionUpdateToFullCustomer } from "./applyDeductionUpdateToFullCustomer.js";
 import { applyRolloverUpdatesToFullCustomer } from "./applyRolloverUpdatesToFullCustomer.js";
+import {
+	type DeductionSideEffect,
+	flushDeductionSideEffects,
+} from "./deductionSideEffects.js";
 import { logDeductionUpdates } from "./logDeductionUpdates.js";
 import { mutationLogsToFeatures } from "./mutationLogsToFeatures.js";
 import { prepareDeductionOptions } from "./prepareDeductionOptions.js";
@@ -84,6 +86,7 @@ export const executeRedisDeduction = async ({
 	let allUpdates: Record<string, DeductionUpdate> = {};
 	let allRolloverUpdates: Record<string, RolloverUpdate> = {};
 	let allMutationLogs: MutationLogItem[] = [];
+	const sideEffects: DeductionSideEffect[] = [];
 
 	// Build cache key
 	const customerId = fullCustomer.id || fullCustomer.internal_id;
@@ -287,24 +290,14 @@ export const executeRedisDeduction = async ({
 				mutationLogs: mutation_logs,
 			});
 
-			fireTrackWebhooks({
-				ctx,
-				oldFullCus,
-				newFullCus: fullCustomer,
-				feature: deduction.feature,
-				entityId,
-				featuresFromMutationLogs,
-			});
-
-			if (options.triggerAutoTopUp) {
-				triggerAutoTopUp({
-					ctx,
-					newFullCus: fullCustomer,
+			if (options.triggerSideEffects) {
+				sideEffects.push({
+					oldFullCus: structuredClone(oldFullCus),
+					newFullCus: structuredClone(fullCustomer),
 					feature: deduction.feature,
-				}).catch((error) => {
-					ctx.logger.error(
-						`[executeRedisDeduction] Failed to trigger auto top-up: ${error}`,
-					);
+					entityId,
+					featuresFromMutationLogs,
+					triggerAutoTopUp: options.triggerAutoTopUp,
 				});
 			}
 		}
@@ -318,6 +311,12 @@ export const executeRedisDeduction = async ({
 		});
 		throw error;
 	}
+
+	flushDeductionSideEffects({
+		ctx,
+		sideEffects,
+		source: "executeRedisDeduction",
+	});
 
 	return {
 		oldFullCus,
@@ -355,7 +354,11 @@ const compensateCascadeIncludedLeg = async ({
 			entityId,
 			deductions: [compensation],
 			fullCustomer,
-			deductionOptions: { overageBehaviour: "cap", triggerAutoTopUp: false },
+			deductionOptions: {
+				overageBehaviour: "cap",
+				triggerAutoTopUp: false,
+				triggerSideEffects: false,
+			},
 			redisInstance,
 		});
 	} catch (compensationError) {

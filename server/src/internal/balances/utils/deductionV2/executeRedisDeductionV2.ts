@@ -7,13 +7,15 @@ import {
 import type { Redis } from "ioredis";
 import { currentRegion } from "@/external/redis/initRedis.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import {
 	getRedisTrackFeatureIdempotencyKey,
 	TRACK_V3_IDEMPOTENCY_TTL_MS,
 } from "@/internal/balances/track/v3/trackIdempotencyKey.js";
-import { fireTrackWebhooks } from "@/internal/balances/trackWebhooks/fireTrackWebhooks.js";
 import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoice/createAllocatedInvoice.js";
+import {
+	type DeductionSideEffect,
+	flushDeductionSideEffects,
+} from "@/internal/balances/utils/deduction/deductionSideEffects.js";
 import { saveLockReceiptV2 } from "@/internal/balances/utils/lockV2/saveLockReceiptV2.js";
 import { buildDeductFromSubjectBalancesKeys } from "@/internal/customers/cache/fullSubject/builders/buildDeductFromSubjectBalancesKeys.js";
 import { buildFullSubjectKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectKey.js";
@@ -105,6 +107,7 @@ export const executeRedisDeductionV2 = async ({
 	let allMutationLogs: MutationLogItem[] = [];
 	let allUsageWindowMutations: UsageWindowMutation[] = [];
 	const allModifiedCusEntIdsByFeatureId: Record<string, string[]> = {};
+	const sideEffects: DeductionSideEffect[] = [];
 	// Keyed by feature id: each Lua result carries the COMPLETE post-deduction
 	// counter array per capped feature, so last write wins across deductions.
 	const allUsageWindowUpdates: Record<string, UsageWindowUpdate> = {};
@@ -416,24 +419,14 @@ export const executeRedisDeductionV2 = async ({
 
 			const newFullCustomer = fullSubjectToFullCustomer({ fullSubject });
 
-			fireTrackWebhooks({
-				ctx,
-				oldFullCus: oldFullCustomer,
-				newFullCus: newFullCustomer,
-				feature: deduction.feature,
-				entityId,
-				featuresFromMutationLogs,
-			});
-
-			if (options.triggerAutoTopUp) {
-				triggerAutoTopUp({
-					ctx,
-					newFullCus: newFullCustomer,
+			if (options.triggerSideEffects) {
+				sideEffects.push({
+					oldFullCus: structuredClone(oldFullCustomer),
+					newFullCus: structuredClone(newFullCustomer),
 					feature: deduction.feature,
-				}).catch((error) => {
-					ctx.logger.error(
-						`[executeRedisDeductionV2] Failed to trigger auto top-up: ${error}`,
-					);
+					entityId,
+					featuresFromMutationLogs,
+					triggerAutoTopUp: options.triggerAutoTopUp,
 				});
 			}
 		}
@@ -447,6 +440,12 @@ export const executeRedisDeductionV2 = async ({
 		});
 		throw error;
 	}
+
+	flushDeductionSideEffects({
+		ctx,
+		sideEffects,
+		source: "executeRedisDeductionV2",
+	});
 
 	return {
 		oldFullSubject,
@@ -488,7 +487,11 @@ const compensateCascadeIncludedLeg = async ({
 			entityId,
 			deductions: [compensation],
 			idempotencyKey: null,
-			deductionOptions: { overageBehaviour: "cap", triggerAutoTopUp: false },
+			deductionOptions: {
+				overageBehaviour: "cap",
+				triggerAutoTopUp: false,
+				triggerSideEffects: false,
+			},
 			redisInstance,
 		});
 	} catch (compensationError) {

@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { FeatureType } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getQueuedTrackFeatureDeductions } from "@/internal/balances/track/runQueuedTrack.js";
 import { getTokenCascadeDeductionsFromBody } from "@/internal/balances/track/utils/getFeatureDeductions.js";
 
 const createCtx = (): AutumnContext =>
@@ -93,5 +94,27 @@ describe("getTokenCascadeDeductionsFromBody", () => {
 				body: badCost as typeof cascadeBody,
 			}),
 		).toBeNull();
+	});
+
+	test("queued track ignores caller-controlled cascade markers unless internally allowed", () => {
+		const forgedTrackDeductions = getQueuedTrackFeatureDeductions({
+			ctx: createCtx(),
+			body: cascadeBody,
+		});
+		expect(forgedTrackDeductions).toHaveLength(1);
+		expect(forgedTrackDeductions[0]).toMatchObject({
+			feature: { id: "ai_included" },
+			deduction: 4,
+		});
+		expect(forgedTrackDeductions[0].cascade).toBeUndefined();
+
+		const internalTokenDeductions = getQueuedTrackFeatureDeductions({
+			ctx: createCtx(),
+			body: cascadeBody,
+			allowTokenCascade: true,
+		});
+		expect(internalTokenDeductions).toHaveLength(2);
+		expect(internalTokenDeductions[0].cascade).toEqual({ role: "included" });
+		expect(internalTokenDeductions[1].cascade).toEqual({ role: "overage" });
 	});
 });

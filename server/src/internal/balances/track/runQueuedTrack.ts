@@ -5,24 +5,41 @@ import {
 	type TrackParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
 import {
 	getTokenCascadeDeductionsFromBody,
 	getTrackFeatureDeductionsForBody,
 } from "./utils/getFeatureDeductions.js";
 import { runTrackV3 } from "./v3/runTrackV3.js";
 
+export const getQueuedTrackFeatureDeductions = ({
+	ctx,
+	body,
+	allowTokenCascade = false,
+}: {
+	ctx: AutumnContext;
+	body: TrackParams;
+	allowTokenCascade?: boolean;
+}): FeatureDeduction[] =>
+	(allowTokenCascade ? getTokenCascadeDeductionsFromBody({ ctx, body }) : null) ??
+	getTrackFeatureDeductionsForBody({ ctx, body });
+
 export const runQueuedTrack = async ({
 	ctx,
 	body,
 	apiVersion,
+	allowTokenCascade,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	apiVersion?: ApiVersion;
+	allowTokenCascade?: boolean;
 }) => {
-	const featureDeductions =
-		getTokenCascadeDeductionsFromBody({ ctx, body }) ??
-		getTrackFeatureDeductionsForBody({ ctx, body });
+	const featureDeductions = getQueuedTrackFeatureDeductions({
+		ctx,
+		body,
+		allowTokenCascade,
+	});
 
 	try {
 		await runTrackV3({

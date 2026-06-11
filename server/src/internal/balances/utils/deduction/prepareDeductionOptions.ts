@@ -40,5 +40,6 @@ export const prepareDeductionOptions = ({
 		paidAllocated: isPaidAllocated,
 
 		triggerAutoTopUp: options.triggerAutoTopUp ?? false,
+		triggerSideEffects: options.triggerSideEffects ?? true,
 	};
 };

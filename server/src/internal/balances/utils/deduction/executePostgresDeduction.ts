@@ -5,12 +5,10 @@ import {
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { withLock } from "@/external/redis/redisUtils.js";
-import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
 import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeature/rollbackDeduction.js";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import { CusService } from "../../../customers/CusService.js";
 import type { EventInfo } from "../../events/initEvent.js";
-import { fireTrackWebhooks } from "../../trackWebhooks/fireTrackWebhooks.js";
 import { applyDeductionUpdateToFullCustomer } from "../../utils/deduction/applyDeductionUpdateToFullCustomer.js";
 import { saveLockReceipt } from "../../utils/lock/saveLockReceipt.js";
 import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
@@ -20,6 +18,10 @@ import { createAllocatedInvoice } from "../allocatedInvoice/createAllocatedInvoi
 import { CascadeSpill } from "../deductionV2/cascadeSpill.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import { applyRolloverUpdatesToFullCustomer } from "./applyRolloverUpdatesToFullCustomer.js";
+import {
+	type DeductionSideEffect,
+	flushDeductionSideEffects,
+} from "./deductionSideEffects.js";
 import {
 	type RolloverOverwrite,
 	syncCustomerEntitlementUpdatesToCache,
@@ -93,6 +95,7 @@ export const executePostgresDeduction = async ({
 		let allUpdates: Record<string, DeductionUpdate> = {};
 		let allRolloverOverwrites: RolloverOverwrite[] = [];
 		let allMutationLogs: MutationLogItem[] = [];
+		const sideEffects: DeductionSideEffect[] = [];
 
 		const cascadeSpill = new CascadeSpill();
 
@@ -284,24 +287,14 @@ export const executePostgresDeduction = async ({
 					mutationLogs: mutation_logs ?? [],
 				});
 
-				fireTrackWebhooks({
-					ctx,
-					oldFullCus,
-					newFullCus: fullCustomer,
-					feature: deduction.feature,
-					entityId,
-					featuresFromMutationLogs,
-				});
-
-				if (resolvedOptions.triggerAutoTopUp) {
-					triggerAutoTopUp({
-						ctx,
-						newFullCus: fullCustomer,
+				if (resolvedOptions.triggerSideEffects) {
+					sideEffects.push({
+						oldFullCus: structuredClone(oldFullCus),
+						newFullCus: structuredClone(fullCustomer),
 						feature: deduction.feature,
-					}).catch((error) => {
-						ctx.logger.error(
-							`[executePostgresDeduction] Failed to trigger auto top-up: ${error}`,
-						);
+						entityId,
+						featuresFromMutationLogs,
+						triggerAutoTopUp: resolvedOptions.triggerAutoTopUp,
 					});
 				}
 			}
@@ -326,6 +319,12 @@ export const executePostgresDeduction = async ({
 			fullCustomer: oldFullCus,
 			cusEntUpdates: allUpdates,
 			rolloverOverwrites: allRolloverOverwrites,
+		});
+
+		flushDeductionSideEffects({
+			ctx,
+			sideEffects,
+			source: "executePostgresDeduction",
 		});
 
 		return {
@@ -380,7 +379,11 @@ const compensateCascadeIncludedLeg = async ({
 			customerId,
 			entityId,
 			deductions: [compensation],
-			options: { overageBehaviour: "cap", triggerAutoTopUp: false },
+			options: {
+				overageBehaviour: "cap",
+				triggerAutoTopUp: false,
+				triggerSideEffects: false,
+			},
 		});
 	} catch (compensationError) {
 		ctx.logger.error(

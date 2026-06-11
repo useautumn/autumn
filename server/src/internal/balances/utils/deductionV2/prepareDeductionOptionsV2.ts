@@ -44,5 +44,6 @@ export const prepareDeductionOptionsV2 = ({
 		customerEntitlementFilters: options.customerEntitlementFilters,
 		paidAllocated: isPaidAllocated,
 		triggerAutoTopUp: options.triggerAutoTopUp ?? false,
+		triggerSideEffects: options.triggerSideEffects ?? true,
 	};
 };

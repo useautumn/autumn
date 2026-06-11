@@ -1,5 +1,6 @@
 import { ErrCode, RecaseError, type TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
 import { queueTrack } from "./utils/queueTrack.js";
 
 const ASYNC_TRACK_UNAVAILABLE_MESSAGE =
@@ -8,9 +9,11 @@ const ASYNC_TRACK_UNAVAILABLE_MESSAGE =
 export const runAsyncTrack = async ({
 	ctx,
 	body,
+	featureDeductions,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
+	featureDeductions?: FeatureDeduction[];
 }): Promise<void> => {
 	const queueUrl = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
 	if (!queueUrl) {
@@ -24,7 +27,7 @@ export const runAsyncTrack = async ({
 		});
 	}
 
-	const queued = await queueTrack({ ctx, body, queueUrl });
+	const queued = await queueTrack({ ctx, body, queueUrl, featureDeductions });
 	if (!queued) {
 		throw new RecaseError({
 			message: ASYNC_TRACK_UNAVAILABLE_MESSAGE,
