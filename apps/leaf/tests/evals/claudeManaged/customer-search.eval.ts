@@ -78,12 +78,10 @@ initEval<EvalMetadata>({
 			name: "pinpoints company account among personal email matches",
 			conversation: [user({ message: "get me details on quillforge" })],
 			expect: [
-				tools.called({ toolNames: ["listCustomers", "getCustomer"] }),
-				api.called({
-					calls: [
-						{ body: { customer_id: quillforgeId }, toolName: "getCustomer" },
-					],
-				}),
+				// listCustomers items carry subscriptions/balances, so answering from
+				// the search page (no getCustomer) is valid; identity is pinned by the
+				// required facts below.
+				tools.called({ toolNames: ["listCustomers"] }),
 				response.concise({
 					required: [
 						`customer is Quillforge (${quillforgeId})`,
