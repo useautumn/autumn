@@ -176,7 +176,7 @@ export type CustomerDataBillingControls = {
    */
   spendLimits?: Array<CustomerDataSpendLimit> | undefined;
   /**
-   * List of windowed hard usage caps per feature (max units per interval window).
+   * List of hard usage caps per feature (max units per interval).
    */
   usageLimits?: Array<CustomerDataUsageLimit> | undefined;
   /**

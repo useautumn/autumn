@@ -188,7 +188,7 @@ export type UpdateCustomerBillingControlsRequest = {
    */
   spendLimits?: Array<UpdateCustomerSpendLimitRequest> | undefined;
   /**
-   * List of windowed hard usage caps per feature (max units per interval window).
+   * List of hard usage caps per feature (max units per interval).
    */
   usageLimits?: Array<UpdateCustomerUsageLimitRequest> | undefined;
   /**
@@ -480,7 +480,7 @@ export type UpdateCustomerBillingControlsResponse = {
    */
   spendLimits?: Array<UpdateCustomerSpendLimitResponse> | undefined;
   /**
-   * List of windowed hard usage caps per feature, with current window usage.
+   * List of hard usage caps per feature, with current interval usage.
    */
   usageLimits?: Array<UpdateCustomerUsageLimitResponse> | undefined;
   /**

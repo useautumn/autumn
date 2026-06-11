@@ -890,9 +890,9 @@ class PreviewMultiAttachBillingControlsTypedDict(TypedDict):
     r"""Billing controls for the entity."""
 
     spend_limits: NotRequired[List[PreviewMultiAttachSpendLimitTypedDict]]
-    r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or windowed usage (usage_limit)."""
+    r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit)."""
     usage_limits: NotRequired[List[PreviewMultiAttachUsageLimitTypedDict]]
-    r"""List of windowed hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
+    r"""List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
     usage_alerts: NotRequired[List[PreviewMultiAttachUsageAlertTypedDict]]
     r"""List of usage alert configurations per feature."""
     overage_allowed: NotRequired[List[PreviewMultiAttachOverageAllowedTypedDict]]
@@ -903,10 +903,10 @@ class PreviewMultiAttachBillingControls(BaseModel):
     r"""Billing controls for the entity."""
 
     spend_limits: Optional[List[PreviewMultiAttachSpendLimit]] = None
-    r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or windowed usage (usage_limit)."""
+    r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit)."""
 
     usage_limits: Optional[List[PreviewMultiAttachUsageLimit]] = None
-    r"""List of windowed hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
+    r"""List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
 
     usage_alerts: Optional[List[PreviewMultiAttachUsageAlert]] = None
     r"""List of usage alert configurations per feature."""

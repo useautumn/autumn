@@ -2,8 +2,8 @@ import { z } from "zod/v4";
 import { ResetInterval } from "../../productModels/intervals/resetInterval.js";
 
 /**
- * A windowed hard usage cap on one feature: at most `limit` units per
- * `interval` window. Stored on the customer's `usage_limits` billing-control
+ * A hard usage cap on one feature: at most `limit` units per `interval`.
+ * Stored on the customer's `usage_limits` billing-control
  * column; an entry's presence arms the cap. Enforcement happens in the
  * deduction script against customer-scoped usage-window counters.
  */

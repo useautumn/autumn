@@ -151,8 +151,7 @@ components:
                   - feature_id
                   - limit
                   - interval
-              description: List of windowed hard usage caps per feature (max units per
-                interval window).
+              description: List of hard usage caps per feature (max units per interval).
             usage_alerts:
               type: array
               items:
@@ -421,8 +420,7 @@ components:
                   - feature_id
                   - limit
                   - interval
-              description: List of windowed hard usage caps per feature, with current window
-                usage.
+              description: List of hard usage caps per feature, with current interval usage.
             usage_alerts:
               type: array
               items:
@@ -1985,8 +1983,7 @@ paths:
                           - feature_id
                           - limit
                           - interval
-                      description: List of windowed hard usage caps per feature (max units per
-                        interval window).
+                      description: List of hard usage caps per feature (max units per interval).
                     usage_alerts:
                       type: array
                       items:
@@ -2344,8 +2341,7 @@ paths:
                             - feature_id
                             - limit
                             - interval
-                        description: List of windowed hard usage caps per feature, with current window
-                          usage.
+                        description: List of hard usage caps per feature, with current interval usage.
                       usage_alerts:
                         type: array
                         items:
@@ -3311,8 +3307,7 @@ paths:
                                   - feature_id
                                   - limit
                                   - interval
-                              description: List of windowed hard usage caps per feature, with current window
-                                usage.
+                              description: List of hard usage caps per feature, with current interval usage.
                             usage_alerts:
                               type: array
                               items:
@@ -4011,8 +4006,7 @@ paths:
                           - feature_id
                           - limit
                           - interval
-                      description: List of windowed hard usage caps per feature (max units per
-                        interval window).
+                      description: List of hard usage caps per feature (max units per interval).
                     usage_alerts:
                       type: array
                       items:
@@ -4282,8 +4276,7 @@ paths:
                             - feature_id
                             - limit
                             - interval
-                        description: List of windowed hard usage caps per feature, with current window
-                          usage.
+                        description: List of hard usage caps per feature, with current interval usage.
                       usage_alerts:
                         type: array
                         items:
@@ -11019,7 +11012,8 @@ paths:
                                 minimum: 0
                                 description: Maximum allowed overage spend for the target feature.
                           description: List of spend limits per feature. Each entry caps overage
-                            (overage_limit) and/or windowed usage (usage_limit).
+                            (overage_limit) and/or per-interval usage
+                            (usage_limit).
                         usage_limits:
                           type: array
                           items:
@@ -11044,9 +11038,8 @@ paths:
                               - feature_id
                               - limit
                               - interval
-                          description: List of windowed hard usage caps per feature for this entity. An
-                            entity entry overrides the customer's for that
-                            feature.
+                          description: List of hard usage caps per feature for this entity. An entity
+                            entry overrides the customer's for that feature.
                         usage_alerts:
                           type: array
                           items:
@@ -12773,7 +12766,8 @@ paths:
                                 minimum: 0
                                 description: Maximum allowed overage spend for the target feature.
                           description: List of spend limits per feature. Each entry caps overage
-                            (overage_limit) and/or windowed usage (usage_limit).
+                            (overage_limit) and/or per-interval usage
+                            (usage_limit).
                         usage_limits:
                           type: array
                           items:
@@ -12798,9 +12792,8 @@ paths:
                               - feature_id
                               - limit
                               - interval
-                          description: List of windowed hard usage caps per feature for this entity. An
-                            entity entry overrides the customer's for that
-                            feature.
+                          description: List of hard usage caps per feature for this entity. An entity
+                            entry overrides the customer's for that feature.
                         usage_alerts:
                           type: array
                           items:
@@ -19070,7 +19063,7 @@ paths:
                             minimum: 0
                             description: Maximum allowed overage spend for the target feature.
                       description: List of spend limits per feature. Each entry caps overage
-                        (overage_limit) and/or windowed usage (usage_limit).
+                        (overage_limit) and/or per-interval usage (usage_limit).
                     usage_limits:
                       type: array
                       items:
@@ -19095,8 +19088,8 @@ paths:
                           - feature_id
                           - limit
                           - interval
-                      description: List of windowed hard usage caps per feature for this entity. An
-                        entity entry overrides the customer's for that feature.
+                      description: List of hard usage caps per feature for this entity. An entity
+                        entry overrides the customer's for that feature.
                     usage_alerts:
                       type: array
                       items:
@@ -19500,7 +19493,8 @@ paths:
                               minimum: 0
                               description: Maximum allowed overage spend for the target feature.
                         description: List of spend limits per feature. Each entry caps overage
-                          (overage_limit) and/or windowed usage (usage_limit).
+                          (overage_limit) and/or per-interval usage
+                          (usage_limit).
                       usage_limits:
                         type: array
                         items:
@@ -19530,9 +19524,8 @@ paths:
                             - feature_id
                             - limit
                             - interval
-                        description: List of windowed hard usage caps per feature for this entity. An
-                          entity entry overrides the customer's for that
-                          feature.
+                        description: List of hard usage caps per feature for this entity. An entity
+                          entry overrides the customer's for that feature.
                       usage_alerts:
                         type: array
                         items:
@@ -20078,7 +20071,8 @@ paths:
                               minimum: 0
                               description: Maximum allowed overage spend for the target feature.
                         description: List of spend limits per feature. Each entry caps overage
-                          (overage_limit) and/or windowed usage (usage_limit).
+                          (overage_limit) and/or per-interval usage
+                          (usage_limit).
                       usage_limits:
                         type: array
                         items:
@@ -20108,9 +20102,8 @@ paths:
                             - feature_id
                             - limit
                             - interval
-                        description: List of windowed hard usage caps per feature for this entity. An
-                          entity entry overrides the customer's for that
-                          feature.
+                        description: List of hard usage caps per feature for this entity. An entity
+                          entry overrides the customer's for that feature.
                       usage_alerts:
                         type: array
                         items:
@@ -20702,7 +20695,7 @@ paths:
                                     minimum: 0
                                     description: Maximum allowed overage spend for the target feature.
                               description: List of spend limits per feature. Each entry caps overage
-                                (overage_limit) and/or windowed usage
+                                (overage_limit) and/or per-interval usage
                                 (usage_limit).
                             usage_limits:
                               type: array
@@ -20734,9 +20727,8 @@ paths:
                                   - feature_id
                                   - limit
                                   - interval
-                              description: List of windowed hard usage caps per feature for this entity. An
-                                entity entry overrides the customer's for that
-                                feature.
+                              description: List of hard usage caps per feature for this entity. An entity
+                                entry overrides the customer's for that feature.
                             usage_alerts:
                               type: array
                               items:
@@ -20969,7 +20961,7 @@ paths:
                             minimum: 0
                             description: Maximum allowed overage spend for the target feature.
                       description: List of spend limits per feature. Each entry caps overage
-                        (overage_limit) and/or windowed usage (usage_limit).
+                        (overage_limit) and/or per-interval usage (usage_limit).
                     usage_limits:
                       type: array
                       items:
@@ -20994,8 +20986,8 @@ paths:
                           - feature_id
                           - limit
                           - interval
-                      description: List of windowed hard usage caps per feature for this entity. An
-                        entity entry overrides the customer's for that feature.
+                      description: List of hard usage caps per feature for this entity. An entity
+                        entry overrides the customer's for that feature.
                     usage_alerts:
                       type: array
                       items:
@@ -21390,7 +21382,8 @@ paths:
                               minimum: 0
                               description: Maximum allowed overage spend for the target feature.
                         description: List of spend limits per feature. Each entry caps overage
-                          (overage_limit) and/or windowed usage (usage_limit).
+                          (overage_limit) and/or per-interval usage
+                          (usage_limit).
                       usage_limits:
                         type: array
                         items:
@@ -21420,9 +21413,8 @@ paths:
                             - feature_id
                             - limit
                             - interval
-                        description: List of windowed hard usage caps per feature for this entity. An
-                          entity entry overrides the customer's for that
-                          feature.
+                        description: List of hard usage caps per feature for this entity. An entity
+                          entry overrides the customer's for that feature.
                       usage_alerts:
                         type: array
                         items:

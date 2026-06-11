@@ -118,11 +118,11 @@ export type UpdateEntityOverageAllowedRequest = {
  */
 export type UpdateEntityBillingControlsRequest = {
   /**
-   * List of spend limits per feature. Each entry caps overage (overage_limit) and/or windowed usage (usage_limit).
+   * List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit).
    */
   spendLimits?: Array<UpdateEntitySpendLimitRequest> | undefined;
   /**
-   * List of windowed hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.
+   * List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.
    */
   usageLimits?: Array<UpdateEntityUsageLimitRequest> | undefined;
   /**
@@ -516,11 +516,11 @@ export type UpdateEntityOverageAllowedResponse = {
  */
 export type UpdateEntityBillingControlsResponse = {
   /**
-   * List of spend limits per feature. Each entry caps overage (overage_limit) and/or windowed usage (usage_limit).
+   * List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit).
    */
   spendLimits?: Array<UpdateEntitySpendLimitResponse> | undefined;
   /**
-   * List of windowed hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.
+   * List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.
    */
   usageLimits?: Array<UpdateEntityUsageLimitResponse> | undefined;
   /**

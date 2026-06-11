@@ -1066,7 +1066,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   Billing controls for the entity.
   <Expandable title="properties">
     <DynamicResponseField name="spend_limits" type="object[]">
-      List of spend limits per feature. Each entry caps overage (overage_limit) and/or windowed usage (usage_limit).
+      List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit).
       <Expandable title="properties">
         <DynamicResponseField name="feature_id" type="string">
           Optional feature ID this spend limit applies to.
@@ -1084,7 +1084,7 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
     </DynamicResponseField>
 
     <DynamicResponseField name="usage_limits" type="object[]">
-      List of windowed hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.
+      List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.
       <Expandable title="properties">
         <DynamicResponseField name="feature_id" type="string">
           The feature this usage limit applies to.

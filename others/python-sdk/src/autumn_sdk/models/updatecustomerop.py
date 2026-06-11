@@ -305,7 +305,7 @@ class UpdateCustomerBillingControlsRequestTypedDict(TypedDict):
     spend_limits: NotRequired[List[UpdateCustomerSpendLimitRequestTypedDict]]
     r"""List of overage spend limits per feature (caps overage spend)."""
     usage_limits: NotRequired[List[UpdateCustomerUsageLimitRequestTypedDict]]
-    r"""List of windowed hard usage caps per feature (max units per interval window)."""
+    r"""List of hard usage caps per feature (max units per interval)."""
     usage_alerts: NotRequired[List[UpdateCustomerUsageAlertRequestBodyTypedDict]]
     r"""List of usage alert configurations per feature."""
     overage_allowed: NotRequired[List[UpdateCustomerOverageAllowedRequestTypedDict]]
@@ -322,7 +322,7 @@ class UpdateCustomerBillingControlsRequest(BaseModel):
     r"""List of overage spend limits per feature (caps overage spend)."""
 
     usage_limits: Optional[List[UpdateCustomerUsageLimitRequest]] = None
-    r"""List of windowed hard usage caps per feature (max units per interval window)."""
+    r"""List of hard usage caps per feature (max units per interval)."""
 
     usage_alerts: Optional[List[UpdateCustomerUsageAlertRequestBody]] = None
     r"""List of usage alert configurations per feature."""
@@ -844,7 +844,7 @@ class UpdateCustomerBillingControlsResponseTypedDict(TypedDict):
     spend_limits: NotRequired[List[UpdateCustomerSpendLimitResponseTypedDict]]
     r"""List of overage spend limits per feature (caps overage spend)."""
     usage_limits: NotRequired[List[UpdateCustomerUsageLimitResponseTypedDict]]
-    r"""List of windowed hard usage caps per feature, with current window usage."""
+    r"""List of hard usage caps per feature, with current interval usage."""
     usage_alerts: NotRequired[List[UpdateCustomerUsageAlertResponseTypedDict]]
     r"""List of usage alert configurations per feature."""
     overage_allowed: NotRequired[List[UpdateCustomerOverageAllowedResponseTypedDict]]
@@ -861,7 +861,7 @@ class UpdateCustomerBillingControlsResponse(BaseModel):
     r"""List of overage spend limits per feature (caps overage spend)."""
 
     usage_limits: Optional[List[UpdateCustomerUsageLimitResponse]] = None
-    r"""List of windowed hard usage caps per feature, with current window usage."""
+    r"""List of hard usage caps per feature, with current interval usage."""
 
     usage_alerts: Optional[List[UpdateCustomerUsageAlertResponse]] = None
     r"""List of usage alert configurations per feature."""

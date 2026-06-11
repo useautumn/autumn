@@ -184,7 +184,7 @@ export type GetOrCreateCustomerBillingControls = {
    */
   spendLimits?: Array<GetOrCreateCustomerSpendLimit> | undefined;
   /**
-   * List of windowed hard usage caps per feature (max units per interval window).
+   * List of hard usage caps per feature (max units per interval).
    */
   usageLimits?: Array<GetOrCreateCustomerUsageLimit> | undefined;
   /**

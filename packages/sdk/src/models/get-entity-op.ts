@@ -388,11 +388,11 @@ export type GetEntityOverageAllowed = {
  */
 export type GetEntityBillingControls = {
   /**
-   * List of spend limits per feature. Each entry caps overage (overage_limit) and/or windowed usage (usage_limit).
+   * List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit).
    */
   spendLimits?: Array<GetEntitySpendLimit> | undefined;
   /**
-   * List of windowed hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.
+   * List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.
    */
   usageLimits?: Array<GetEntityUsageLimit> | undefined;
   /**

@@ -272,7 +272,7 @@ class CustomerDataBillingControlsTypedDict(TypedDict):
     spend_limits: NotRequired[List[CustomerDataSpendLimitTypedDict]]
     r"""List of overage spend limits per feature (caps overage spend)."""
     usage_limits: NotRequired[List[CustomerDataUsageLimitTypedDict]]
-    r"""List of windowed hard usage caps per feature (max units per interval window)."""
+    r"""List of hard usage caps per feature (max units per interval)."""
     usage_alerts: NotRequired[List[CustomerDataUsageAlertTypedDict]]
     r"""List of usage alert configurations per feature."""
     overage_allowed: NotRequired[List[CustomerDataOverageAllowedTypedDict]]
@@ -289,7 +289,7 @@ class CustomerDataBillingControls(BaseModel):
     r"""List of overage spend limits per feature (caps overage spend)."""
 
     usage_limits: Optional[List[CustomerDataUsageLimit]] = None
-    r"""List of windowed hard usage caps per feature (max units per interval window)."""
+    r"""List of hard usage caps per feature (max units per interval)."""
 
     usage_alerts: Optional[List[CustomerDataUsageAlert]] = None
     r"""List of usage alert configurations per feature."""

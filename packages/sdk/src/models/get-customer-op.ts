@@ -259,7 +259,7 @@ export type GetCustomerBillingControls = {
    */
   spendLimits?: Array<GetCustomerSpendLimit> | undefined;
   /**
-   * List of windowed hard usage caps per feature, with current window usage.
+   * List of hard usage caps per feature, with current interval usage.
    */
   usageLimits?: Array<GetCustomerUsageLimit> | undefined;
   /**

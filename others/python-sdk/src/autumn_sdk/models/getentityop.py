@@ -732,9 +732,9 @@ class GetEntityBillingControlsTypedDict(TypedDict):
     r"""Billing controls for the entity."""
 
     spend_limits: NotRequired[List[GetEntitySpendLimitTypedDict]]
-    r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or windowed usage (usage_limit)."""
+    r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit)."""
     usage_limits: NotRequired[List[GetEntityUsageLimitTypedDict]]
-    r"""List of windowed hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
+    r"""List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
     usage_alerts: NotRequired[List[GetEntityUsageAlertTypedDict]]
     r"""List of usage alert configurations per feature."""
     overage_allowed: NotRequired[List[GetEntityOverageAllowedTypedDict]]
@@ -745,10 +745,10 @@ class GetEntityBillingControls(BaseModel):
     r"""Billing controls for the entity."""
 
     spend_limits: Optional[List[GetEntitySpendLimit]] = None
-    r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or windowed usage (usage_limit)."""
+    r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit)."""
 
     usage_limits: Optional[List[GetEntityUsageLimit]] = None
-    r"""List of windowed hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
+    r"""List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
 
     usage_alerts: Optional[List[GetEntityUsageAlert]] = None
     r"""List of usage alert configurations per feature."""
