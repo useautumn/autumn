@@ -3,6 +3,7 @@ import type { EntitlementWithFeature } from "@models/productModels/entModels/ent
 import type Stripe from "stripe";
 import type { Price } from "../../productModels/priceModels/priceModels";
 import type { FullProduct } from "../../productModels/productModels";
+import type { StripeDecimal } from "./stripeDecimal";
 
 /**
  * Inline Stripe price data for entity-scoped items.
@@ -13,7 +14,7 @@ export type StripeInlinePrice = {
 	product: string;
 	currency: string;
 	recurring?: Stripe.PriceCreateParams.Recurring;
-	unit_amount_decimal: ReturnType<typeof Stripe.Decimal.from>;
+	unit_amount_decimal: StripeDecimal;
 };
 
 /**

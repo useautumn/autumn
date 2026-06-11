@@ -1,3 +1,5 @@
+import type { StripeDecimal } from "@autumn/shared";
+import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 
 type InlinePriceLike = {
@@ -13,11 +15,7 @@ type InlinePriceLike = {
 		divide_by?: number;
 		round?: string;
 	} | null;
-	unit_amount_decimal?:
-		| string
-		| number
-		| ReturnType<typeof Stripe.Decimal.from>
-		| null;
+	unit_amount_decimal?: string | number | StripeDecimal | null;
 };
 
 export type StripePriceShape = {
@@ -39,9 +37,10 @@ const stripeProductId = (
 	return typeof product === "string" ? product : product.id;
 };
 
+// Numeric normalization so "100.00" and "100" produce the same shape key.
 const decimalAmount = (amount: string | number | null | undefined) => {
 	if (amount === null || amount === undefined) return undefined;
-	return String(amount);
+	return new Decimal(String(amount)).toString();
 };
 
 const taxBehavior = (value?: string | null) => value ?? "unspecified";

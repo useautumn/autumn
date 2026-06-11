@@ -1,8 +1,8 @@
+import type { StripeDecimal } from "@models/billingModels/stripe/stripeDecimal";
 import { Decimal as DecimalJS } from "decimal.js";
-import type Stripe from "stripe";
+import Stripe from "stripe";
 
 type DecimalLike = { toString(): string };
-type StripeDecimal = string & ReturnType<typeof Stripe.Decimal.from>;
 /**
  * Zero-decimal currencies that Stripe handles without decimal places.
  * These currencies don't require multiplying/dividing by 100.
@@ -62,12 +62,13 @@ export const atmnToStripeAmountDecimal = ({
 	const decimal = amount instanceof DecimalJS ? amount : new DecimalJS(amount);
 
 	if (ZERO_DECIMAL_CURRENCIES.includes(currency.toUpperCase())) {
-		return decimal.toDecimalPlaces(decimalPlaces).toString() as StripeDecimal;
+		return Stripe.Decimal.from(
+			decimal.toDecimalPlaces(decimalPlaces).toString(),
+		);
 	}
-	return decimal
-		.mul(100)
-		.toDecimalPlaces(decimalPlaces)
-		.toString() as StripeDecimal;
+	return Stripe.Decimal.from(
+		decimal.mul(100).toDecimalPlaces(decimalPlaces).toString(),
+	);
 };
 
 /**
