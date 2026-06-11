@@ -3,12 +3,20 @@ import {
 	type StripeInlinePrice,
 	type StripeItemSpec,
 } from "@autumn/shared";
-import type Stripe from "stripe";
+import Stripe from "stripe";
+import type { Checkout as CheckoutSessions } from "stripe/resources/Checkout/Sessions.js";
 
 type StoredPriceParam = { price: string };
 type RecurringInlinePriceParam = {
 	price_data: Stripe.SubscriptionCreateParams.Item["price_data"];
 };
+
+const toStripeInlinePriceData = (stripeInlinePrice: StripeInlinePrice) => ({
+	...stripeInlinePrice,
+	unit_amount_decimal: Stripe.Decimal.from(
+		stripeInlinePrice.unit_amount_decimal.toString(),
+	),
+});
 
 /**
  * Returns the price param for a StripeItemSpec — either a stored price ID or inline price_data.
@@ -29,7 +37,7 @@ const toRecurringPriceParam = ({
 		}
 		return {
 			price_data: {
-				...spec.stripeInlinePrice,
+				...toStripeInlinePriceData(spec.stripeInlinePrice),
 				recurring: spec.stripeInlinePrice.recurring,
 			},
 		};
@@ -56,9 +64,11 @@ const toPriceParam = ({
 	spec,
 }: {
 	spec: StripeItemSpec;
-}): StoredPriceParam | { price_data: StripeInlinePrice } => {
+}):
+	| StoredPriceParam
+	| { price_data: ReturnType<typeof toStripeInlinePriceData> } => {
 	if (spec.stripeInlinePrice) {
-		return { price_data: spec.stripeInlinePrice };
+		return { price_data: toStripeInlinePriceData(spec.stripeInlinePrice) };
 	}
 	return { price: spec.stripePriceId! };
 };
@@ -68,7 +78,7 @@ export const stripeItemSpecToCheckoutLineItem = ({
 	spec,
 }: {
 	spec: StripeItemSpec;
-}): Stripe.Checkout.SessionCreateParams.LineItem => {
+}): CheckoutSessions.SessionCreateParams.LineItem => {
 	return {
 		...toPriceParam({ spec }),
 		quantity: spec.quantity,

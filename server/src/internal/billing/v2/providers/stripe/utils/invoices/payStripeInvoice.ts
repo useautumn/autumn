@@ -13,7 +13,7 @@ export type PayInvoiceResult = {
 		code: PaymentFailureCode;
 		reason: string;
 	};
-	stripeError?: Stripe.errors.StripeError;
+	stripeError?: Stripe.ErrorType.StripeError;
 };
 
 type PayStripeInvoiceParams = {

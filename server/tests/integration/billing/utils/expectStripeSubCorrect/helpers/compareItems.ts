@@ -16,7 +16,7 @@ export const normalizeActualSubItem = ({
 		quantity: item.quantity ?? 0,
 		isInline: !!autumnCusPriceId,
 		unitAmountDecimal: autumnCusPriceId
-			? (item.price.unit_amount_decimal ?? undefined)
+			? (item.price.unit_amount_decimal?.toString() ?? undefined)
 			: undefined,
 	};
 };
@@ -42,7 +42,7 @@ export const normalizeActualPhaseItem = ({
 		autumnCustomerPriceId: autumnCusPriceId || undefined,
 		quantity: item.quantity ?? 0,
 		isInline: !!autumnCusPriceId,
-		unitAmountDecimal,
+		unitAmountDecimal: unitAmountDecimal?.toString(),
 	};
 };
 
@@ -58,7 +58,7 @@ export const normalizeExpectedPhaseItem = ({
 	let unitAmountDecimal: string | undefined;
 	if (hasInlinePrice) {
 		const priceData = (item as { price_data: StripeInlinePrice }).price_data;
-		unitAmountDecimal = priceData.unit_amount_decimal;
+		unitAmountDecimal = priceData.unit_amount_decimal.toString();
 	}
 
 	return {

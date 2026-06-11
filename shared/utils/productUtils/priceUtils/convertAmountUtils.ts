@@ -1,5 +1,8 @@
-import { Decimal } from "decimal.js";
+import { Decimal as DecimalJS } from "decimal.js";
+import type Stripe from "stripe";
 
+type DecimalLike = { toString(): string };
+type StripeDecimal = string & ReturnType<typeof Stripe.Decimal.from>;
 /**
  * Zero-decimal currencies that Stripe handles without decimal places.
  * These currencies don't require multiplying/dividing by 100.
@@ -36,13 +39,13 @@ export const atmnToStripeAmount = ({
 	currency?: string;
 }): number => {
 	if (ZERO_DECIMAL_CURRENCIES.includes(currency.toUpperCase())) {
-		return new Decimal(amount).round().toNumber();
+		return new DecimalJS(amount).round().toNumber();
 	}
-	return new Decimal(amount).mul(100).round().toNumber();
+	return new DecimalJS(amount).mul(100).round().toNumber();
 };
 
 /**
- * Converts an Autumn amount to a Stripe decimal string.
+ * Converts an Autumn amount to a Stripe Decimal class.
  * For most currencies, multiplies by 100 and returns as string with decimal places.
  * For zero-decimal currencies like JPY, returns the amount as-is with decimal places.
  * Used for Stripe API calls that require unit_amount_decimal as a string.
@@ -52,16 +55,19 @@ export const atmnToStripeAmountDecimal = ({
 	currency = "USD",
 	decimalPlaces = 10,
 }: {
-	amount: number | Decimal;
+	amount: number | DecimalJS;
 	currency?: string;
 	decimalPlaces?: number;
-}): string => {
-	const decimal = amount instanceof Decimal ? amount : new Decimal(amount);
+}): StripeDecimal => {
+	const decimal = amount instanceof DecimalJS ? amount : new DecimalJS(amount);
 
 	if (ZERO_DECIMAL_CURRENCIES.includes(currency.toUpperCase())) {
-		return decimal.toDecimalPlaces(decimalPlaces).toString();
+		return decimal.toDecimalPlaces(decimalPlaces).toString() as StripeDecimal;
 	}
-	return decimal.mul(100).toDecimalPlaces(decimalPlaces).toString();
+	return decimal
+		.mul(100)
+		.toDecimalPlaces(decimalPlaces)
+		.toString() as StripeDecimal;
 };
 
 /**
@@ -75,24 +81,26 @@ export const stripeToAtmnAmount = ({
 	decimalPlaces = 10,
 	round = true,
 }: {
-	amount: number;
+	amount: number | string | DecimalLike;
 	currency?: string;
 	decimalPlaces?: number;
 	round?: boolean;
 }): number => {
-	let finalAmount = amount;
+	let finalAmount = new DecimalJS(
+		typeof amount === "number" ? amount : amount.toString(),
+	);
 
 	if (!ZERO_DECIMAL_CURRENCIES.includes(currency.toUpperCase())) {
-		finalAmount = new Decimal(amount).div(100).toNumber();
+		finalAmount = finalAmount.div(100);
 	}
 
 	if (round) {
-		return new Decimal(finalAmount).toDecimalPlaces(decimalPlaces).toNumber();
+		return finalAmount.toDecimalPlaces(decimalPlaces).toNumber();
 	}
 
 	if (decimalPlaces) {
-		return new Decimal(finalAmount).toDecimalPlaces(decimalPlaces).toNumber();
+		return finalAmount.toDecimalPlaces(decimalPlaces).toNumber();
 	}
 
-	return finalAmount;
+	return finalAmount.toNumber();
 };

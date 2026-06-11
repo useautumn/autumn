@@ -10,6 +10,8 @@ import { atmnToStripeAmountDecimal } from "@utils/productUtils/priceUtils/conver
 import { Decimal } from "decimal.js";
 import type Stripe from "stripe";
 
+type StripeDecimal = string & ReturnType<typeof Stripe.Decimal.from>;
+
 /**
  * Builds the Stripe tier array for a V2 prepaid price.
  *
@@ -46,7 +48,7 @@ export const priceToStripePrepaidV2Tiers = ({
 	// allowance. Applies to both graduated and volume pricing.
 	if (entitlement.allowance) {
 		tiers.push({
-			unit_amount_decimal: "0",
+			unit_amount_decimal: "0" as StripeDecimal,
 			up_to: entitlement.allowance,
 		});
 	}
@@ -93,8 +95,8 @@ export const priceToStripePrepaidV2Tiers = ({
 						.ceil()
 						.toNumber(),
 
-		unit_amount_decimal: new Decimal(tier.unit_amount_decimal ?? 0)
+		unit_amount_decimal: new Decimal(tier.unit_amount_decimal?.toString() ?? "0")
 			.mul(config.billing_units ?? 1)
-			.toString(),
+			.toString() as StripeDecimal,
 	}));
 };

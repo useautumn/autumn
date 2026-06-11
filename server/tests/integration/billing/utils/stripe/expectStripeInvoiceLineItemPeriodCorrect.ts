@@ -58,7 +58,10 @@ export const expectStripeInvoiceLineItemPeriodCorrect = async ({
 			Boolean(
 				findPriceFromStripeId({
 					prices: usagePrices,
-					stripePriceId: line.pricing?.price_details?.price ?? "",
+					stripePriceId:
+						typeof line.pricing?.price_details?.price === "string"
+							? line.pricing?.price_details?.price
+							: (line.pricing?.price_details?.price?.id ?? ""),
 				}),
 			),
 		),

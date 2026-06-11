@@ -26,10 +26,10 @@
 			"packages/ai-sdk"
 		],
 		"catalog": {
-			"stripe": "19.3.0-beta.1",
+			"stripe": "22.1.0",
 			"drizzle-orm": "0.43.1",
 			"drizzle-kit": "^0.31.1",
-			"@typescript/native-preview": "7.0.0-dev.20260220.1",
+			"@typescript/native-preview": "7.0.0-dev.20260527.2",
 			"@tailwindcss/vite": "4.2.1",
 			"@vitejs/plugin-react": "5.2.0",
 			"@sentry/bun": "10.38.0",
