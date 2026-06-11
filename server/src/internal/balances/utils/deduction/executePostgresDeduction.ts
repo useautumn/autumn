@@ -17,6 +17,7 @@ import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import type { MutationLogItem } from "../../utils/types/mutationLogItem.js";
 import { createAllocatedInvoice } from "../allocatedInvoice/createAllocatedInvoice.js";
+import { CascadeSpill } from "../deductionV2/cascadeSpill.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import { applyRolloverUpdatesToFullCustomer } from "./applyRolloverUpdatesToFullCustomer.js";
 import {
@@ -93,178 +94,226 @@ export const executePostgresDeduction = async ({
 		let allRolloverOverwrites: RolloverOverwrite[] = [];
 		let allMutationLogs: MutationLogItem[] = [];
 
-		// Need to deduct from customer entitlement...
-		for (const deduction of deductions) {
-			const {
-				feature,
-				deduction: toDeduct,
-				targetBalance,
-				lockReceipt,
-				unwindValue,
-			} = deduction;
+		const cascadeSpill = new CascadeSpill();
 
-			const {
-				customerEntitlementDeductions,
-				spendLimitByFeatureId,
-				usageBasedCusEntIdsByFeatureId,
-				rollovers,
-				customerEntitlements,
-				unlimitedFeatureIds,
-				lock: preparedLock,
-			} = prepareFeatureDeduction({
-				ctx,
-				fullCustomer,
-				deduction,
-				options,
-			});
+		try {
+			// Need to deduct from customer entitlement...
+			for (const deduction of deductions) {
+				const {
+					feature,
+					deduction: toDeduct,
+					targetBalance,
+					lockReceipt,
+					unwindValue,
+				} = deduction;
 
-			if (customerEntitlements.length === 0 || unlimitedFeatureIds.length > 0) {
-				if (unlimitedFeatureIds.length > 0 && preparedLock?.enabled) {
-					await saveLockReceipt({
-						lock: preparedLock,
-						customerId: fullCustomer.id || customerId,
-						featureId: feature.id,
-						entityId,
-						items: [],
-						overrideLockValue: toDeduct,
-					});
+				const effectiveToDeduct =
+					deduction.cascade?.role === "overage"
+						? cascadeSpill.effectiveAmount({ deduction })
+						: toDeduct;
+				if (deduction.cascade?.role === "overage" && effectiveToDeduct === 0) {
+					continue;
 				}
-				continue;
-			}
+				const legOverageBehaviour = cascadeSpill.effectiveOverageBehaviour({
+					deduction,
+					requestBehaviour: resolvedOptions.overageBehaviour,
+				});
 
-			// Call the stored function to deduct from entitlements with credit costs
-			const result = await db.execute(
-				sql`SELECT * FROM deduct_from_cus_ents(
+				const {
+					customerEntitlementDeductions,
+					spendLimitByFeatureId,
+					usageBasedCusEntIdsByFeatureId,
+					rollovers,
+					customerEntitlements,
+					unlimitedFeatureIds,
+					lock: preparedLock,
+				} = prepareFeatureDeduction({
+					ctx,
+					fullCustomer,
+					deduction,
+					options: { ...options, overageBehaviour: legOverageBehaviour },
+				});
+
+				if (
+					customerEntitlements.length === 0 ||
+					unlimitedFeatureIds.length > 0
+				) {
+					if (unlimitedFeatureIds.length > 0 && preparedLock?.enabled) {
+						await saveLockReceipt({
+							lock: preparedLock,
+							customerId: fullCustomer.id || customerId,
+							featureId: feature.id,
+							entityId,
+							items: [],
+							overrideLockValue: effectiveToDeduct,
+						});
+					}
+					// An unlimited included leg covers the whole event; an included leg
+					// with no entitlements covers nothing, so the full amount spills.
+					cascadeSpill.recordIncludedResult({
+						deduction,
+						remaining: unlimitedFeatureIds.length > 0 ? 0 : deduction.deduction,
+						mutationLogs: [],
+					});
+					continue;
+				}
+
+				// Call the stored function to deduct from entitlements with credit costs
+				const result = await db.execute(
+					sql`SELECT * FROM deduct_from_cus_ents(
 				${JSON.stringify({
 					sorted_entitlements: customerEntitlementDeductions,
 					spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
 					usage_based_cus_ent_ids_by_feature_id:
 						usageBasedCusEntIdsByFeatureId ?? null,
-					amount_to_deduct: toDeduct ?? null,
+					amount_to_deduct: effectiveToDeduct ?? null,
 					target_balance: targetBalance ?? null,
-					lock_receipt: lockReceipt ?? null,
+					lock_receipt:
+						lockReceipt ??
+						(deduction.unwindItems ? { items: deduction.unwindItems } : null),
 					unwind_value: unwindValue ?? null,
 					target_entity_id: entityId || null,
 					rollovers: rollovers.length > 0 ? rollovers : null,
 					cus_ent_ids: customerEntitlements.map((ce) => ce.id),
 					skip_additional_balance: resolvedOptions.skipAdditionalBalance,
 					alter_granted_balance: resolvedOptions.alterGrantedBalance,
-					overage_behaviour: resolvedOptions.overageBehaviour,
+					overage_behaviour: legOverageBehaviour,
 					feature_id: feature.id,
 				})}::jsonb
 			)`,
-			);
+				);
 
-			// Parse the JSONB result
-			const resultJson = result[0]?.deduct_from_cus_ents as {
-				updates: Record<string, DeductionUpdate>;
-				remaining: number;
-				rollover_updates: RolloverOverwrite[];
-				mutation_logs: MutationLogItem[];
-			};
+				// Parse the JSONB result
+				const resultJson = result[0]?.deduct_from_cus_ents as {
+					updates: Record<string, DeductionUpdate>;
+					remaining: number;
+					rollover_updates: RolloverOverwrite[];
+					mutation_logs: MutationLogItem[];
+				};
 
-			if (!resultJson) {
-				throw new InternalError({
-					message: "Failed to deduct from entitlements",
-				});
-			}
-
-			const { updates, rollover_updates, mutation_logs } = resultJson;
-			logDeductionUpdates({
-				ctx,
-				fullCustomer,
-				updates,
-				source: "executePostgresDeduction",
-			});
-			allUpdates = { ...allUpdates, ...updates };
-			allMutationLogs = [...allMutationLogs, ...(mutation_logs ?? [])];
-			if (rollover_updates?.length > 0) {
-				allRolloverOverwrites = [...allRolloverOverwrites, ...rollover_updates];
-			}
-
-			try {
-				applyRolloverUpdatesToFullCustomer({
-					fullCus: fullCustomer,
-					rolloverUpdates: Object.fromEntries(
-						(rollover_updates ?? []).map((rollover) => [
-							rollover.id,
-							{
-								balance: rollover.balance,
-								usage: rollover.usage,
-								entities: rollover.entities,
-							},
-						]),
-					),
-				});
-
-				for (const cusEntId of Object.keys(updates)) {
-					const update = updates[cusEntId];
-					const cusEnt = customerEntitlements.find((ce) => ce.id === cusEntId);
-
-					if (!cusEnt) continue;
-
-					await createAllocatedInvoice({
-						ctx,
-						customerEntitlement: cusEnt,
-						oldFullCustomer: oldFullCus,
-						update,
+				if (!resultJson) {
+					throw new InternalError({
+						message: "Failed to deduct from entitlements",
 					});
+				}
 
-					applyDeductionUpdateToFullCustomer({
+				const { updates, rollover_updates, mutation_logs } = resultJson;
+				logDeductionUpdates({
+					ctx,
+					fullCustomer,
+					updates,
+					source: "executePostgresDeduction",
+				});
+				allUpdates = { ...allUpdates, ...updates };
+				allMutationLogs = [...allMutationLogs, ...(mutation_logs ?? [])];
+				if (rollover_updates?.length > 0) {
+					allRolloverOverwrites = [
+						...allRolloverOverwrites,
+						...rollover_updates,
+					];
+				}
+
+				try {
+					applyRolloverUpdatesToFullCustomer({
 						fullCus: fullCustomer,
-						cusEntId,
-						update,
+						rolloverUpdates: Object.fromEntries(
+							(rollover_updates ?? []).map((rollover) => [
+								rollover.id,
+								{
+									balance: rollover.balance,
+									usage: rollover.usage,
+									entities: rollover.entities,
+								},
+							]),
+						),
 					});
+
+					for (const cusEntId of Object.keys(updates)) {
+						const update = updates[cusEntId];
+						const cusEnt = customerEntitlements.find(
+							(ce) => ce.id === cusEntId,
+						);
+
+						if (!cusEnt) continue;
+
+						await createAllocatedInvoice({
+							ctx,
+							customerEntitlement: cusEnt,
+							oldFullCustomer: oldFullCus,
+							update,
+						});
+
+						applyDeductionUpdateToFullCustomer({
+							fullCus: fullCustomer,
+							cusEntId,
+							update,
+						});
+					}
+
+					if (preparedLock?.enabled) {
+						await saveLockReceipt({
+							lock: preparedLock,
+							customerId: fullCustomer.id || customerId,
+							featureId: feature.id,
+							entityId,
+							items: mutation_logs ?? [],
+						});
+					}
+				} catch (error) {
+					if (error instanceof Error && !error?.message?.includes("declined")) {
+						ctx.logger.error(
+							`[deductFromCusEnts] Attempting rollback due to error: ${error}`,
+						);
+					}
+					await rollbackDeduction({
+						ctx,
+						oldFullCus,
+						updates,
+					});
+					throw error;
 				}
 
-				if (preparedLock?.enabled) {
-					await saveLockReceipt({
-						lock: preparedLock,
-						customerId: fullCustomer.id || customerId,
-						featureId: feature.id,
-						entityId,
-						items: mutation_logs ?? [],
-					});
-				}
-			} catch (error) {
-				if (error instanceof Error && !error?.message?.includes("declined")) {
-					ctx.logger.error(
-						`[deductFromCusEnts] Attempting rollback due to error: ${error}`,
-					);
-				}
-				await rollbackDeduction({
+				cascadeSpill.recordIncludedResult({
+					deduction,
+					remaining: resultJson.remaining,
+					mutationLogs: mutation_logs ?? [],
+				});
+
+				const featuresFromMutationLogs = mutationLogsToFeatures({
+					fullCustomer,
+					mutationLogs: mutation_logs ?? [],
+				});
+
+				fireTrackWebhooks({
 					ctx,
 					oldFullCus,
-					updates,
-				});
-				throw error;
-			}
-
-			const featuresFromMutationLogs = mutationLogsToFeatures({
-				fullCustomer,
-				mutationLogs: mutation_logs ?? [],
-			});
-
-			fireTrackWebhooks({
-				ctx,
-				oldFullCus,
-				newFullCus: fullCustomer,
-				feature: deduction.feature,
-				entityId,
-				featuresFromMutationLogs,
-			});
-
-			if (resolvedOptions.triggerAutoTopUp) {
-				triggerAutoTopUp({
-					ctx,
 					newFullCus: fullCustomer,
 					feature: deduction.feature,
-				}).catch((error) => {
-					ctx.logger.error(
-						`[executePostgresDeduction] Failed to trigger auto top-up: ${error}`,
-					);
+					entityId,
+					featuresFromMutationLogs,
 				});
+
+				if (resolvedOptions.triggerAutoTopUp) {
+					triggerAutoTopUp({
+						ctx,
+						newFullCus: fullCustomer,
+						feature: deduction.feature,
+					}).catch((error) => {
+						ctx.logger.error(
+							`[executePostgresDeduction] Failed to trigger auto top-up: ${error}`,
+						);
+					});
+				}
 			}
+		} catch (error) {
+			await compensateCascadeIncludedLeg({
+				ctx,
+				fullCustomer,
+				customerId,
+				entityId,
+				cascadeSpill,
+			});
+			throw error;
 		}
 
 		// Atomically update the Redis cache with the deduction results.
@@ -300,4 +349,42 @@ export const executePostgresDeduction = async ({
 		updates: deductionResult.updates,
 		mutationLogs: deductionResult.mutationLogs,
 	};
+};
+
+/**
+ * Restores a cascade's included leg after a later leg failed, by replaying the
+ * included mutations as an inline unwind (the SQL function accepts the receipt
+ * items inline via lock_receipt). Compensation failures are logged loudly but
+ * never mask the original error.
+ */
+const compensateCascadeIncludedLeg = async ({
+	ctx,
+	fullCustomer,
+	customerId,
+	entityId,
+	cascadeSpill,
+}: {
+	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
+	customerId: string;
+	entityId?: string;
+	cascadeSpill: CascadeSpill;
+}): Promise<void> => {
+	const compensation = cascadeSpill.buildCompensation();
+	if (!compensation) return;
+
+	try {
+		await executePostgresDeduction({
+			ctx,
+			fullCustomer,
+			customerId,
+			entityId,
+			deductions: [compensation],
+			options: { overageBehaviour: "cap", triggerAutoTopUp: false },
+		});
+	} catch (compensationError) {
+		ctx.logger.error(
+			`[executePostgresDeduction] track_cascade_compensation_failed: customer ${customerId}, feature ${compensation.feature.id}, unwind value ${compensation.unwindValue}: ${compensationError}`,
+		);
+	}
 };

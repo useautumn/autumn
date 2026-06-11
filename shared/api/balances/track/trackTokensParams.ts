@@ -11,7 +11,7 @@ export const TrackTokensParamsSchema = z.object({
 	}),
 	feature_id: z.string().optional().meta({
 		description:
-			"The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted — only required when a customer has multiple AI credit systems.",
+			"The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted. When the customer has exactly two AI credit systems and only one allows overage, usage drains the other (included) system first and the remainder spills into the overage system; pass a feature_id to target a single system instead. Required when the systems are ambiguous.",
 	}),
 	model_id: z.string().meta({
 		description:

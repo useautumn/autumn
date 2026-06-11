@@ -1,5 +1,6 @@
 import {
 	FeatureNotFoundError,
+	isAiCreditSystem,
 	type LockParams,
 	RecaseError,
 	type TrackParams,
@@ -8,6 +9,89 @@ import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 
 const DEFAULT_VALUE = 1;
+
+const asNumber = (value: unknown): number | null =>
+	typeof value === "number" && Number.isFinite(value) ? value : null;
+
+const resolveAiCreditFeatureForCascade = ({
+	ctx,
+	featureId,
+}: {
+	ctx: AutumnContext;
+	featureId: unknown;
+}) => {
+	if (typeof featureId !== "string") return null;
+	const feature = ctx.features.find((candidate) => candidate.id === featureId);
+	return feature && isAiCreditSystem(feature.type) ? feature : null;
+};
+
+/**
+ * Rebuilds the two cascade deductions of a token track from the
+ * `properties.cascade` marker that getTokenTrackParams stamps on the body, so
+ * queued replays keep included-then-overage semantics instead of replaying the
+ * whole value against the primary feature. Returns null when the body carries
+ * no valid marker; callers then fall back to the standard deductions. Only for
+ * internally queued bodies — properties on direct /track calls are
+ * caller-controlled and must not be honored as a cascade.
+ */
+export const getTokenCascadeDeductionsFromBody = ({
+	ctx,
+	body,
+}: {
+	ctx: AutumnContext;
+	body: TrackParams;
+}): FeatureDeduction[] | null => {
+	const properties = body.properties ?? {};
+	const cascade = properties.cascade as
+		| {
+				included_feature_id?: unknown;
+				overage_feature_id?: unknown;
+				included?: { cost?: unknown };
+				overage?: { cost?: unknown };
+		  }
+		| undefined;
+	if (!cascade) return null;
+
+	const includedFeature = resolveAiCreditFeatureForCascade({
+		ctx,
+		featureId: cascade.included_feature_id,
+	});
+	const overageFeature = resolveAiCreditFeatureForCascade({
+		ctx,
+		featureId: cascade.overage_feature_id,
+	});
+	const includedCost = asNumber(cascade.included?.cost);
+	const overageCost = asNumber(cascade.overage?.cost);
+	if (
+		!includedFeature ||
+		!overageFeature ||
+		includedCost === null ||
+		overageCost === null
+	) {
+		return null;
+	}
+
+	const tokenUsage = {
+		modelName: typeof properties.model === "string" ? properties.model : "",
+		inputTokens: asNumber(properties.input_tokens) ?? 0,
+		outputTokens: asNumber(properties.output_tokens) ?? 0,
+	};
+
+	return [
+		{
+			feature: includedFeature,
+			deduction: 1,
+			tokens: { usage: tokenUsage, cost: includedCost },
+			cascade: { role: "included" },
+		},
+		{
+			feature: overageFeature,
+			deduction: 1,
+			tokens: { usage: tokenUsage, cost: overageCost },
+			cascade: { role: "overage" },
+		},
+	];
+};
 
 export const getTrackFeatureDeductions = ({
 	ctx,

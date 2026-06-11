@@ -11,6 +11,7 @@ import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeatur
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { fireTrackWebhooks } from "../../trackWebhooks/fireTrackWebhooks.js";
+import { CascadeSpill } from "../deductionV2/cascadeSpill.js";
 import { saveLockReceipt } from "../lock/saveLockReceipt.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
@@ -92,190 +93,230 @@ export const executeRedisDeduction = async ({
 		customerId,
 	});
 
-	for (const deduction of deductions) {
-		const {
-			feature,
-			deduction: toDeduct,
-			targetBalance,
-			unwindValue,
-			lockReceiptKey,
-		} = deduction;
+	const cascadeSpill = new CascadeSpill();
 
-		const {
-			customerEntitlementDeductions,
-			spendLimitByFeatureId,
-			usageBasedCusEntIdsByFeatureId,
-			rollovers,
-			customerEntitlements,
-			unlimitedFeatureIds,
-			lock: preparedLock,
-		} = prepareFeatureDeduction({
-			ctx,
-			fullCustomer,
-			deduction,
-			options,
-		});
+	try {
+		for (const deduction of deductions) {
+			const {
+				feature,
+				deduction: toDeduct,
+				targetBalance,
+				unwindValue,
+				lockReceiptKey,
+			} = deduction;
 
-		if (unlimitedFeatureIds.length > 0) {
-			if (preparedLock) {
-				await saveLockReceipt({
-					lock: preparedLock,
-					customerId,
-					featureId: feature.id,
-					entityId,
-					items: [],
-					overrideLockValue: toDeduct,
-					redisInstance,
+			const effectiveToDeduct =
+				deduction.cascade?.role === "overage"
+					? cascadeSpill.effectiveAmount({ deduction })
+					: toDeduct;
+			if (deduction.cascade?.role === "overage" && effectiveToDeduct === 0) {
+				continue;
+			}
+			const legOverageBehaviour = cascadeSpill.effectiveOverageBehaviour({
+				deduction,
+				requestBehaviour: options.overageBehaviour,
+			});
+
+			const {
+				customerEntitlementDeductions,
+				spendLimitByFeatureId,
+				usageBasedCusEntIdsByFeatureId,
+				rollovers,
+				customerEntitlements,
+				unlimitedFeatureIds,
+				lock: preparedLock,
+			} = prepareFeatureDeduction({
+				ctx,
+				fullCustomer,
+				deduction,
+				options: { ...options, overageBehaviour: legOverageBehaviour },
+			});
+
+			if (unlimitedFeatureIds.length > 0) {
+				if (preparedLock) {
+					await saveLockReceipt({
+						lock: preparedLock,
+						customerId,
+						featureId: feature.id,
+						entityId,
+						items: [],
+						overrideLockValue: effectiveToDeduct,
+						redisInstance,
+					});
+				}
+				// An unlimited included leg covers the whole event: nothing spills and
+				// there is no balance mutation to compensate.
+				cascadeSpill.recordIncludedResult({
+					deduction,
+					remaining: 0,
+					mutationLogs: [],
+				});
+				continue;
+			}
+
+			// Call Lua script to deduct from FullCustomer in Redis
+			const luaParams = {
+				org_id: org.id,
+				env,
+				customer_id: customerId,
+				sorted_entitlements: customerEntitlementDeductions,
+				spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
+				usage_based_cus_ent_ids_by_feature_id:
+					usageBasedCusEntIdsByFeatureId ?? null,
+				amount_to_deduct: effectiveToDeduct ?? null,
+				target_balance: targetBalance ?? null,
+				target_entity_id: entityId || null,
+				rollovers: rollovers.length > 0 ? rollovers : null,
+				skip_additional_balance: options.skipAdditionalBalance,
+				alter_granted_balance: options.alterGrantedBalance,
+				overage_behaviour: legOverageBehaviour,
+				feature_id: feature.id,
+				lock: preparedLock
+					? {
+							...preparedLock,
+							region: currentRegion,
+						}
+					: null,
+
+				// For unwinding when finalizing a lock
+				unwind_value: unwindValue ?? null,
+				unwind_items: deduction.unwindItems ?? null,
+				lock_receipt_key: lockReceiptKey ?? null,
+			};
+
+			const targetRedis = redisInstance ?? redis;
+			const result = await tryRedisWrite(
+				() =>
+					targetRedis.deductFromCustomerEntitlements(
+						cacheKey,
+						JSON.stringify(luaParams),
+					),
+				redisInstance,
+			);
+
+			if (!result) {
+				throw new RedisDeductionError({
+					message: "Redis not ready for deduction",
+					code: RedisDeductionErrorCode.RedisUnavailable,
 				});
 			}
-			continue;
-		}
 
-		// Call Lua script to deduct from FullCustomer in Redis
-		const luaParams = {
-			org_id: org.id,
-			env,
-			customer_id: customerId,
-			sorted_entitlements: customerEntitlementDeductions,
-			spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
-			usage_based_cus_ent_ids_by_feature_id:
-				usageBasedCusEntIdsByFeatureId ?? null,
-			amount_to_deduct: toDeduct ?? null,
-			target_balance: targetBalance ?? null,
-			target_entity_id: entityId || null,
-			rollovers: rollovers.length > 0 ? rollovers : null,
-			skip_additional_balance: options.skipAdditionalBalance,
-			alter_granted_balance: options.alterGrantedBalance,
-			overage_behaviour: options.overageBehaviour,
-			feature_id: feature.id,
-			lock: preparedLock
-				? {
-						...preparedLock,
-						region: currentRegion,
-					}
-				: null,
+			const resultJson = JSON.parse(result) as LuaDeductionResult;
 
-			// For unwinding when finalizing a lock
-			unwind_value: unwindValue ?? null,
-			lock_receipt_key: lockReceiptKey ?? null,
-		};
-
-		const targetRedis = redisInstance ?? redis;
-		const result = await tryRedisWrite(
-			() =>
-				targetRedis.deductFromCustomerEntitlements(
-					cacheKey,
-					JSON.stringify(luaParams),
-				),
-			redisInstance,
-		);
-
-		if (!result) {
-			throw new RedisDeductionError({
-				message: "Redis not ready for deduction",
-				code: RedisDeductionErrorCode.RedisUnavailable,
-			});
-		}
-
-		const resultJson = JSON.parse(result) as LuaDeductionResult;
-
-		if (resultJson.logs && resultJson.logs.length > 0) {
-			ctx.logger.debug(
-				`[executeRedisDeduction] Logs: ${resultJson.logs.join("\n")}`,
-			);
-		}
-
-		if (resultJson.error) {
-			throw new RedisDeductionError({
-				message: `Redis deduction failed: ${resultJson.error}`,
-				code: resultJson.error as RedisDeductionErrorCode,
-			});
-		}
-
-		const { updates, rollover_updates } = resultJson;
-		const mutation_logs = Array.isArray(resultJson.mutation_logs)
-			? resultJson.mutation_logs
-			: [];
-		logDeductionUpdates({
-			ctx,
-			fullCustomer,
-			updates,
-			source: "executeRedisDeduction",
-		});
-
-		allUpdates = { ...allUpdates, ...updates };
-		allRolloverUpdates = { ...allRolloverUpdates, ...rollover_updates };
-		allMutationLogs = [...allMutationLogs, ...mutation_logs];
-
-		// Handle paid allocated entitlements and update fullCus in memory
-		try {
-			// Apply rollover updates first
-			applyRolloverUpdatesToFullCustomer({
-				fullCus: fullCustomer,
-				rolloverUpdates: rollover_updates,
-			});
-
-			// Apply customer entitlement updates
-			for (const cusEntId of Object.keys(updates)) {
-				const update = updates[cusEntId];
-				const cusEnt = customerEntitlements.find(
-					(ce: FullCusEntWithFullCusProduct) => ce.id === cusEntId,
+			if (resultJson.logs && resultJson.logs.length > 0) {
+				ctx.logger.debug(
+					`[executeRedisDeduction] Logs: ${resultJson.logs.join("\n")}`,
 				);
+			}
 
-				if (!cusEnt) continue;
+			if (resultJson.error) {
+				throw new RedisDeductionError({
+					message: `Redis deduction failed: ${resultJson.error}`,
+					code: resultJson.error as RedisDeductionErrorCode,
+					featureId: resultJson.feature_id,
+				});
+			}
 
-				await handlePaidAllocatedCusEnt({
-					ctx,
-					cusEnt,
+			const { updates, rollover_updates } = resultJson;
+			const mutation_logs = Array.isArray(resultJson.mutation_logs)
+				? resultJson.mutation_logs
+				: [];
+			logDeductionUpdates({
+				ctx,
+				fullCustomer,
+				updates,
+				source: "executeRedisDeduction",
+			});
+
+			allUpdates = { ...allUpdates, ...updates };
+			allRolloverUpdates = { ...allRolloverUpdates, ...rollover_updates };
+			allMutationLogs = [...allMutationLogs, ...mutation_logs];
+
+			// Handle paid allocated entitlements and update fullCus in memory
+			try {
+				// Apply rollover updates first
+				applyRolloverUpdatesToFullCustomer({
 					fullCus: fullCustomer,
+					rolloverUpdates: rollover_updates,
+				});
+
+				// Apply customer entitlement updates
+				for (const cusEntId of Object.keys(updates)) {
+					const update = updates[cusEntId];
+					const cusEnt = customerEntitlements.find(
+						(ce: FullCusEntWithFullCusProduct) => ce.id === cusEntId,
+					);
+
+					if (!cusEnt) continue;
+
+					await handlePaidAllocatedCusEnt({
+						ctx,
+						cusEnt,
+						fullCus: fullCustomer,
+						updates,
+					});
+
+					applyDeductionUpdateToFullCustomer({
+						fullCus: fullCustomer,
+						cusEntId,
+						update,
+					});
+				}
+			} catch (error) {
+				if (error instanceof Error && !error?.message?.includes("declined")) {
+					ctx.logger.error(
+						`[executeRedisDeduction] Attempting rollback due to error: ${error}`,
+					);
+				}
+				await rollbackDeduction({
+					ctx,
+					oldFullCus,
 					updates,
 				});
+				throw error;
+			}
 
-				applyDeductionUpdateToFullCustomer({
-					fullCus: fullCustomer,
-					cusEntId,
-					update,
-				});
-			}
-		} catch (error) {
-			if (error instanceof Error && !error?.message?.includes("declined")) {
-				ctx.logger.error(
-					`[executeRedisDeduction] Attempting rollback due to error: ${error}`,
-				);
-			}
-			await rollbackDeduction({
+			cascadeSpill.recordIncludedResult({
+				deduction,
+				remaining: resultJson.remaining,
+				mutationLogs: mutation_logs,
+			});
+
+			const featuresFromMutationLogs = mutationLogsToFeatures({
+				fullCustomer,
+				mutationLogs: mutation_logs,
+			});
+
+			fireTrackWebhooks({
 				ctx,
 				oldFullCus,
-				updates,
-			});
-			throw error;
-		}
-
-		const featuresFromMutationLogs = mutationLogsToFeatures({
-			fullCustomer,
-			mutationLogs: mutation_logs,
-		});
-
-		fireTrackWebhooks({
-			ctx,
-			oldFullCus,
-			newFullCus: fullCustomer,
-			feature: deduction.feature,
-			entityId,
-			featuresFromMutationLogs,
-		});
-
-		if (options.triggerAutoTopUp) {
-			triggerAutoTopUp({
-				ctx,
 				newFullCus: fullCustomer,
 				feature: deduction.feature,
-			}).catch((error) => {
-				ctx.logger.error(
-					`[executeRedisDeduction] Failed to trigger auto top-up: ${error}`,
-				);
+				entityId,
+				featuresFromMutationLogs,
 			});
+
+			if (options.triggerAutoTopUp) {
+				triggerAutoTopUp({
+					ctx,
+					newFullCus: fullCustomer,
+					feature: deduction.feature,
+				}).catch((error) => {
+					ctx.logger.error(
+						`[executeRedisDeduction] Failed to trigger auto top-up: ${error}`,
+					);
+				});
+			}
 		}
+	} catch (error) {
+		await compensateCascadeIncludedLeg({
+			ctx,
+			fullCustomer,
+			entityId,
+			cascadeSpill,
+			redisInstance,
+		});
+		throw error;
 	}
 
 	return {
@@ -285,4 +326,41 @@ export const executeRedisDeduction = async ({
 		rolloverUpdates: allRolloverUpdates,
 		mutationLogs: allMutationLogs,
 	};
+};
+
+/**
+ * Restores a cascade's included leg after a later leg failed, by replaying the
+ * included mutations as an inline unwind. Compensation failures are logged
+ * loudly but never mask the original error.
+ */
+const compensateCascadeIncludedLeg = async ({
+	ctx,
+	fullCustomer,
+	entityId,
+	cascadeSpill,
+	redisInstance,
+}: {
+	ctx: AutumnContext;
+	fullCustomer: FullCustomer;
+	entityId?: string;
+	cascadeSpill: CascadeSpill;
+	redisInstance?: Redis;
+}): Promise<void> => {
+	const compensation = cascadeSpill.buildCompensation();
+	if (!compensation) return;
+
+	try {
+		await executeRedisDeduction({
+			ctx,
+			entityId,
+			deductions: [compensation],
+			fullCustomer,
+			deductionOptions: { overageBehaviour: "cap", triggerAutoTopUp: false },
+			redisInstance,
+		});
+	} catch (compensationError) {
+		ctx.logger.error(
+			`[executeRedisDeduction] track_cascade_compensation_failed: customer ${fullCustomer.id}, feature ${compensation.feature.id}, unwind value ${compensation.unwindValue}: ${compensationError}`,
+		);
+	}
 };

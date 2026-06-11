@@ -373,6 +373,9 @@ end
 
 -- ============================================================================
 -- STEP 6: Unwind a lock receipt against an initialized context
+--
+-- Items come from params.items when supplied inline (cascade compensation),
+-- otherwise from the persisted lock receipt at params.lock_receipt_key.
 -- ============================================================================
 local function unwind_lock_on_context(params)
   local context = params.context
@@ -384,16 +387,19 @@ local function unwind_lock_on_context(params)
     mutation_logs = cjson.decode('[]'),
   }
 
-  local receipt = load_lock_receipt(lock_receipt_key)
+  local items = params.items
+  if is_nil(items) then
+    local receipt = load_lock_receipt(lock_receipt_key)
 
-  local pending_error = require_processing_receipt(receipt)
-  if not is_nil(pending_error) then
-    context.logger.log("[unwind_lock] receipt not in processing state: %s", pending_error)
-    empty_result.error = pending_error
-    return empty_result
+    local pending_error = require_processing_receipt(receipt)
+    if not is_nil(pending_error) then
+      context.logger.log("[unwind_lock] receipt not in processing state: %s", pending_error)
+      empty_result.error = pending_error
+      return empty_result
+    end
+
+    items = receipt.items or cjson.decode('[]')
   end
-
-  local items = receipt.items or cjson.decode('[]')
   context.logger.log("[unwind_lock] unwinding %d items, unwind_value=%s", #items, tostring(unwind_value))
 
   -- Compute lock_sign from the sum of value_deltas across all receipt items.

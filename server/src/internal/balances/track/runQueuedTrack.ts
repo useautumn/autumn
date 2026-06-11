@@ -5,7 +5,10 @@ import {
 	type TrackParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getTrackFeatureDeductionsForBody } from "./utils/getFeatureDeductions.js";
+import {
+	getTokenCascadeDeductionsFromBody,
+	getTrackFeatureDeductionsForBody,
+} from "./utils/getFeatureDeductions.js";
 import { runTrackV3 } from "./v3/runTrackV3.js";
 
 export const runQueuedTrack = async ({
@@ -17,7 +20,9 @@ export const runQueuedTrack = async ({
 	body: TrackParams;
 	apiVersion?: ApiVersion;
 }) => {
-	const featureDeductions = getTrackFeatureDeductionsForBody({ ctx, body });
+	const featureDeductions =
+		getTokenCascadeDeductionsFromBody({ ctx, body }) ??
+		getTrackFeatureDeductionsForBody({ ctx, body });
 
 	try {
 		await runTrackV3({

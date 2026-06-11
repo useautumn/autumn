@@ -1,5 +1,8 @@
 import type { Feature, LockParams } from "@autumn/shared";
 import type { LockReceipt } from "../lock/fetchLockReceipt.js";
+import type { MutationLogItem } from "./mutationLogItem.js";
+
+export type CascadeRole = "included" | "overage";
 
 export type TokenUsage = {
 	modelName: string;
@@ -23,4 +26,15 @@ export type FeatureDeduction = {
 	lockReceipt?: LockReceipt;
 	lockReceiptKey?: string;
 	unwindValue?: number;
+	/**
+	 * Token-cascade marker. "included" legs always run with overage behaviour
+	 * "cap" and report their leftover; "overage" legs have their amount scaled
+	 * by the included leg's remaining event fraction before executing.
+	 */
+	cascade?: { role: CascadeRole };
+	/**
+	 * Inline compensation: re-credit exactly these ordered mutation items in
+	 * reverse, without a persisted lock receipt. Used together with unwindValue.
+	 */
+	unwindItems?: MutationLogItem[];
 };

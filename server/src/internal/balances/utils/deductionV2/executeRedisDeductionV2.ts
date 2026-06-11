@@ -35,6 +35,7 @@ import { applyDeductionUpdateToFullSubject } from "./applyDeductionUpdateToFullS
 import { applyRolloverUpdatesToFullSubject } from "./applyRolloverUpdatesToFullSubject.js";
 import { applyUsageWindowUpdatesToFullSubject } from "./applyUsageWindowUpdatesToFullSubject.js";
 import { buildUnlimitedPlanMutationLog } from "./buildUnlimitedPlanMutationLog.js";
+import { CascadeSpill } from "./cascadeSpill.js";
 import { logDeductionUpdatesV2 } from "./logDeductionUpdatesV2.js";
 import { mutationLogsToFeaturesV2 } from "./mutationLogsToFeaturesV2.js";
 import { normalizeDeductionSyncStateV2 } from "./normalizeDeductionSyncStateV2.js";
@@ -120,291 +121,331 @@ export const executeRedisDeductionV2 = async ({
 	// and Lua receives the same value, so they never disagree on the window.
 	const usageWindowNow = Date.now();
 
-	for (const deduction of deductions) {
-		const {
-			feature,
-			deduction: toDeduct,
-			targetBalance,
-			unwindValue,
-			lockReceiptKey,
-		} = deduction;
+	const cascadeSpill = new CascadeSpill();
 
-		const {
-			customerEntitlementDeductions,
-			spendLimitByFeatureId,
-			usageBasedCusEntIdsByFeatureId,
-			usageWindowLimits,
-			usageWindowFeatureIds,
-			rollovers,
-			customerEntitlements,
-			unlimitedFeatureIds,
-			unlimitedCusEnt,
-			lock: preparedLock,
-		} = prepareFeatureDeductionV2({
-			ctx,
-			fullSubject,
-			deduction,
-			options,
-			now: usageWindowNow,
-		});
+	try {
+		for (const deduction of deductions) {
+			const {
+				feature,
+				deduction: toDeduct,
+				targetBalance,
+				unwindValue,
+				lockReceiptKey,
+			} = deduction;
 
-		if (unlimitedFeatureIds.length > 0) {
-			if (preparedLock?.enabled) {
-				await saveLockReceiptV2({
-					lock: preparedLock,
-					customerId,
-					featureId: feature.id,
-					entityId,
-					items: [],
-					overrideLockValue: toDeduct,
-					redisInstance: redisInstance ?? ctx.redisV2,
-				});
+			const effectiveToDeduct =
+				deduction.cascade?.role === "overage"
+					? cascadeSpill.effectiveAmount({ deduction })
+					: toDeduct;
+			if (deduction.cascade?.role === "overage" && effectiveToDeduct === 0) {
+				continue;
 			}
-			const unlimitedPlanLog = buildUnlimitedPlanMutationLog({
-				unlimitedCusEnt,
-				toDeduct,
-				fallbackDeduction: deduction.deduction,
-				entityId,
+			const legOverageBehaviour = cascadeSpill.effectiveOverageBehaviour({
+				deduction,
+				requestBehaviour: options.overageBehaviour,
 			});
-			if (unlimitedPlanLog) {
-				allMutationLogs.push(unlimitedPlanLog);
-			}
-			continue;
-		}
 
-		const idempotencyRedisKey = idempotencyKey
-			? getRedisTrackFeatureIdempotencyKey({
-					ctx,
-					customerId,
-					featureId: feature.id,
-				}).redisKey
-			: null;
-
-		const { keys, balanceKeyIndexByFeatureId } =
-			buildDeductFromSubjectBalancesKeys({
-				orgId: org.id,
-				env,
-				customerId,
-				routingKey,
-				lockReceiptKey: preparedLock?.redis_receipt_key ?? lockReceiptKey,
-				idempotencyKey: idempotencyRedisKey,
+			const {
 				customerEntitlementDeductions,
-				fallbackFeatureId: feature.id,
+				spendLimitByFeatureId,
+				usageBasedCusEntIdsByFeatureId,
+				usageWindowLimits,
 				usageWindowFeatureIds,
+				rollovers,
+				customerEntitlements,
+				unlimitedFeatureIds,
+				unlimitedCusEnt,
+				lock: preparedLock,
+			} = prepareFeatureDeductionV2({
+				ctx,
+				fullSubject,
+				deduction,
+				options: { ...options, overageBehaviour: legOverageBehaviour },
+				now: usageWindowNow,
 			});
 
-		// Usage windows are enforced/incremented only for real positive
-		// consumption, never for target_balance set-downs or granted-balance edits.
-		const isConsumption =
-			notNullish(toDeduct) &&
-			(toDeduct as number) > 0 &&
-			!notNullish(targetBalance) &&
-			!options.alterGrantedBalance;
+			if (unlimitedFeatureIds.length > 0) {
+				if (preparedLock?.enabled) {
+					await saveLockReceiptV2({
+						lock: preparedLock,
+						customerId,
+						featureId: feature.id,
+						entityId,
+						items: [],
+						overrideLockValue: effectiveToDeduct,
+						redisInstance: redisInstance ?? ctx.redisV2,
+					});
+				}
+				const unlimitedPlanLog = buildUnlimitedPlanMutationLog({
+					unlimitedCusEnt,
+					toDeduct: effectiveToDeduct,
+					fallbackDeduction: deduction.deduction,
+					entityId,
+				});
+				if (unlimitedPlanLog) {
+					allMutationLogs.push(unlimitedPlanLog);
+				}
+				// An unlimited included leg covers the whole event: nothing spills and
+				// there is no balance mutation to compensate.
+				cascadeSpill.recordIncludedResult({
+					deduction,
+					remaining: 0,
+					mutationLogs: [],
+				});
+				continue;
+			}
 
-		const luaParams = {
-			org_id: org.id,
-			env,
-			customer_id: customerId,
-			customer_entitlement_deductions: customerEntitlementDeductions,
-			balance_key_index_by_feature_id: balanceKeyIndexByFeatureId,
-			spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
-			usage_based_cus_ent_ids_by_feature_id:
-				usageBasedCusEntIdsByFeatureId ?? null,
-			usage_window_limits: usageWindowLimits ?? null,
-			usage_window_now: usageWindowNow,
-			usage_window_ttl_seconds: FULL_SUBJECT_CACHE_TTL_SECONDS,
-			is_consumption: isConsumption,
-			amount_to_deduct: toDeduct ?? null,
-			target_balance: targetBalance ?? null,
-			target_entity_id: entityId || null,
-			rollovers: rollovers.length > 0 ? rollovers : null,
-			skip_additional_balance: options.skipAdditionalBalance,
-			alter_granted_balance: options.alterGrantedBalance,
-			overage_behaviour: options.overageBehaviour,
-			feature_id: feature.id,
-			idempotency_ttl_ms:
-				idempotencyRedisKey !== null ? TRACK_V3_IDEMPOTENCY_TTL_MS : null,
-			lock: preparedLock
-				? {
-						...preparedLock,
-						region: currentRegion,
-					}
-				: null,
-			unwind_value: unwindValue ?? null,
-			debug: process.env.NODE_ENV !== "production",
-		};
+			const idempotencyRedisKey = idempotencyKey
+				? getRedisTrackFeatureIdempotencyKey({
+						ctx,
+						customerId,
+						featureId: feature.id,
+					}).redisKey
+				: null;
 
-		const targetRedis = redisInstance ?? ctx.redisV2;
+			const { keys, balanceKeyIndexByFeatureId } =
+				buildDeductFromSubjectBalancesKeys({
+					orgId: org.id,
+					env,
+					customerId,
+					routingKey,
+					lockReceiptKey: preparedLock?.redis_receipt_key ?? lockReceiptKey,
+					idempotencyKey: idempotencyRedisKey,
+					customerEntitlementDeductions,
+					fallbackFeatureId: feature.id,
+					usageWindowFeatureIds,
+				});
 
-		const result = await tryRedisWrite(
-			() =>
-				targetRedis.deductFromSubjectBalances(
-					keys.length,
-					...keys,
-					JSON.stringify(luaParams),
-				),
-			redisInstance,
-		);
+			// Usage windows are enforced/incremented only for real positive
+			// consumption, never for target_balance set-downs or granted-balance edits.
+			const isConsumption =
+				notNullish(effectiveToDeduct) &&
+				(effectiveToDeduct as number) > 0 &&
+				!notNullish(targetBalance) &&
+				!options.alterGrantedBalance;
 
-		if (!result) {
-			throw new RedisDeductionError({
-				message: "Redis not ready for deduction",
-				code: RedisDeductionErrorCode.RedisUnavailable,
-			});
-		}
-
-		const resultJson = JSON.parse(result) as LuaDeductionResult;
-
-		if (resultJson.logs && resultJson.logs.length > 0) {
-			ctx.logger.debug(
-				`[executeRedisDeductionV2] Logs: ${resultJson.logs.join("\n")}`,
-			);
-		}
-
-		if (resultJson.error) {
-			throw new RedisDeductionError({
-				message: `Redis deduction failed: ${resultJson.error}`,
-				code: resultJson.error as RedisDeductionErrorCode,
-				featureId: resultJson.feature_id,
-			});
-		}
-
-		const { updates, rollover_updates } = resultJson;
-		const mutationLogs = Array.isArray(resultJson.mutation_logs)
-			? resultJson.mutation_logs
-			: [];
-		const usageWindowMutations = Array.isArray(
-			resultJson.usage_window_mutations,
-		)
-			? resultJson.usage_window_mutations
-			: [];
-		const usageWindowsByFeatureId =
-			resultJson.usage_windows_by_feature_id ?? {};
-		const modifiedCustomerEntitlementIds = Array.isArray(
-			resultJson.modified_customer_entitlement_ids,
-		)
-			? resultJson.modified_customer_entitlement_ids
-			: Object.keys(updates);
-
-		logDeductionUpdatesV2({
-			ctx,
-			fullSubject,
-			updates,
-			source: "executeRedisDeductionV2",
-		});
-
-		allUpdates = { ...allUpdates, ...updates };
-		allRolloverUpdates = { ...allRolloverUpdates, ...rollover_updates };
-		allMutationLogs = [...allMutationLogs, ...mutationLogs];
-		allUsageWindowMutations = [
-			...allUsageWindowMutations,
-			...usageWindowMutations,
-		];
-		// Typed handoff for the PG mirror; empty arrays kept (prune-to-empty
-		// must still full-replace).
-		for (const [featureId, usageWindows] of Object.entries(
-			usageWindowsByFeatureId,
-		)) {
-			allUsageWindowUpdates[featureId] = {
-				internal_customer_id: fullSubject.internalCustomerId,
-				feature_id: featureId,
-				usage_windows: usageWindows,
+			const luaParams = {
+				org_id: org.id,
+				env,
+				customer_id: customerId,
+				customer_entitlement_deductions: customerEntitlementDeductions,
+				balance_key_index_by_feature_id: balanceKeyIndexByFeatureId,
+				spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
+				usage_based_cus_ent_ids_by_feature_id:
+					usageBasedCusEntIdsByFeatureId ?? null,
+				usage_window_limits: usageWindowLimits ?? null,
+				usage_window_now: usageWindowNow,
+				usage_window_ttl_seconds: FULL_SUBJECT_CACHE_TTL_SECONDS,
+				is_consumption: isConsumption,
+				amount_to_deduct: effectiveToDeduct ?? null,
+				target_balance: targetBalance ?? null,
+				target_entity_id: entityId || null,
+				rollovers: rollovers.length > 0 ? rollovers : null,
+				skip_additional_balance: options.skipAdditionalBalance,
+				alter_granted_balance: options.alterGrantedBalance,
+				overage_behaviour: legOverageBehaviour,
+				feature_id: feature.id,
+				idempotency_ttl_ms:
+					idempotencyRedisKey !== null ? TRACK_V3_IDEMPOTENCY_TTL_MS : null,
+				lock: preparedLock
+					? {
+							...preparedLock,
+							region: currentRegion,
+						}
+					: null,
+				unwind_value: unwindValue ?? null,
+				unwind_items: deduction.unwindItems ?? null,
+				debug: process.env.NODE_ENV !== "production",
 			};
-		}
 
-		const syncState = normalizeDeductionSyncStateV2({
-			customerEntitlements,
-			updates,
-			mutationLogs,
-			modifiedCustomerEntitlementIds,
-			syncUpdates: {},
-			modifiedCusEntIdsByFeatureId: allModifiedCusEntIdsByFeatureId,
-		});
-		Object.assign(
-			allModifiedCusEntIdsByFeatureId,
-			syncState.modifiedCusEntIdsByFeatureId,
-		);
+			const targetRedis = redisInstance ?? ctx.redisV2;
 
-		const oldFullCustomer = fullSubjectToFullCustomer({
-			fullSubject: oldFullSubject,
-		});
+			const result = await tryRedisWrite(
+				() =>
+					targetRedis.deductFromSubjectBalances(
+						keys.length,
+						...keys,
+						JSON.stringify(luaParams),
+					),
+				redisInstance,
+			);
 
-		try {
-			applyRolloverUpdatesToFullSubject({
-				fullSubject,
-				rolloverUpdates: rollover_updates,
-			});
-
-			applyUsageWindowUpdatesToFullSubject({
-				fullSubject,
-				usageWindowsByFeatureId: resultJson.usage_windows_by_feature_id,
-			});
-
-			for (const customerEntitlementId of Object.keys(updates)) {
-				const update = updates[customerEntitlementId];
-				const customerEntitlement = customerEntitlements.find(
-					(ce: FullCusEntWithFullCusProduct) => ce.id === customerEntitlementId,
-				);
-
-				if (!customerEntitlement) continue;
-
-				await createAllocatedInvoice({
-					ctx,
-					customerEntitlement,
-					oldFullCustomer,
-					update,
-				});
-
-				applyDeductionUpdateToFullSubject({
-					fullSubject,
-					customerEntitlementId,
-					update,
+			if (!result) {
+				throw new RedisDeductionError({
+					message: "Redis not ready for deduction",
+					code: RedisDeductionErrorCode.RedisUnavailable,
 				});
 			}
-		} catch (error) {
-			// if (error.message?.includes("declined")) {
-			// 	return;
-			// }
-			if (error instanceof Error && !error?.message?.includes("declined")) {
-				ctx.logger.error(
-					`[executeRedisDeductionV2] Attempting rollback due to error: ${error}`,
+
+			const resultJson = JSON.parse(result) as LuaDeductionResult;
+
+			if (resultJson.logs && resultJson.logs.length > 0) {
+				ctx.logger.debug(
+					`[executeRedisDeductionV2] Logs: ${resultJson.logs.join("\n")}`,
 				);
 			}
-			await rollbackDeductionV2({
+
+			if (resultJson.error) {
+				throw new RedisDeductionError({
+					message: `Redis deduction failed: ${resultJson.error}`,
+					code: resultJson.error as RedisDeductionErrorCode,
+					featureId: resultJson.feature_id,
+				});
+			}
+
+			const { updates, rollover_updates } = resultJson;
+			const mutationLogs = Array.isArray(resultJson.mutation_logs)
+				? resultJson.mutation_logs
+				: [];
+			const usageWindowMutations = Array.isArray(
+				resultJson.usage_window_mutations,
+			)
+				? resultJson.usage_window_mutations
+				: [];
+			const usageWindowsByFeatureId =
+				resultJson.usage_windows_by_feature_id ?? {};
+			const modifiedCustomerEntitlementIds = Array.isArray(
+				resultJson.modified_customer_entitlement_ids,
+			)
+				? resultJson.modified_customer_entitlement_ids
+				: Object.keys(updates);
+
+			logDeductionUpdatesV2({
 				ctx,
-				oldFullSubject,
+				fullSubject,
 				updates,
+				source: "executeRedisDeductionV2",
 			});
-			throw error;
-		}
 
-		const featuresFromMutationLogs = mutationLogsToFeaturesV2({
-			fullSubject,
-			mutationLogs,
-		});
+			allUpdates = { ...allUpdates, ...updates };
+			allRolloverUpdates = { ...allRolloverUpdates, ...rollover_updates };
+			allMutationLogs = [...allMutationLogs, ...mutationLogs];
+			allUsageWindowMutations = [
+				...allUsageWindowMutations,
+				...usageWindowMutations,
+			];
+			// Typed handoff for the PG mirror; empty arrays kept (prune-to-empty
+			// must still full-replace).
+			for (const [featureId, usageWindows] of Object.entries(
+				usageWindowsByFeatureId,
+			)) {
+				allUsageWindowUpdates[featureId] = {
+					internal_customer_id: fullSubject.internalCustomerId,
+					feature_id: featureId,
+					usage_windows: usageWindows,
+				};
+			}
 
-		const newFullCustomer = fullSubjectToFullCustomer({ fullSubject });
+			const syncState = normalizeDeductionSyncStateV2({
+				customerEntitlements,
+				updates,
+				mutationLogs,
+				modifiedCustomerEntitlementIds,
+				syncUpdates: {},
+				modifiedCusEntIdsByFeatureId: allModifiedCusEntIdsByFeatureId,
+			});
+			Object.assign(
+				allModifiedCusEntIdsByFeatureId,
+				syncState.modifiedCusEntIdsByFeatureId,
+			);
 
-		fireTrackWebhooks({
-			ctx,
-			oldFullCus: oldFullCustomer,
-			newFullCus: newFullCustomer,
-			feature: deduction.feature,
-			entityId,
-			featuresFromMutationLogs,
-		});
+			const oldFullCustomer = fullSubjectToFullCustomer({
+				fullSubject: oldFullSubject,
+			});
 
-		if (options.triggerAutoTopUp) {
-			triggerAutoTopUp({
+			try {
+				applyRolloverUpdatesToFullSubject({
+					fullSubject,
+					rolloverUpdates: rollover_updates,
+				});
+
+				applyUsageWindowUpdatesToFullSubject({
+					fullSubject,
+					usageWindowsByFeatureId: resultJson.usage_windows_by_feature_id,
+				});
+
+				for (const customerEntitlementId of Object.keys(updates)) {
+					const update = updates[customerEntitlementId];
+					const customerEntitlement = customerEntitlements.find(
+						(ce: FullCusEntWithFullCusProduct) =>
+							ce.id === customerEntitlementId,
+					);
+
+					if (!customerEntitlement) continue;
+
+					await createAllocatedInvoice({
+						ctx,
+						customerEntitlement,
+						oldFullCustomer,
+						update,
+					});
+
+					applyDeductionUpdateToFullSubject({
+						fullSubject,
+						customerEntitlementId,
+						update,
+					});
+				}
+			} catch (error) {
+				// if (error.message?.includes("declined")) {
+				// 	return;
+				// }
+				if (error instanceof Error && !error?.message?.includes("declined")) {
+					ctx.logger.error(
+						`[executeRedisDeductionV2] Attempting rollback due to error: ${error}`,
+					);
+				}
+				await rollbackDeductionV2({
+					ctx,
+					oldFullSubject,
+					updates,
+				});
+				throw error;
+			}
+
+			cascadeSpill.recordIncludedResult({
+				deduction,
+				remaining: resultJson.remaining,
+				mutationLogs,
+			});
+
+			const featuresFromMutationLogs = mutationLogsToFeaturesV2({
+				fullSubject,
+				mutationLogs,
+			});
+
+			const newFullCustomer = fullSubjectToFullCustomer({ fullSubject });
+
+			fireTrackWebhooks({
 				ctx,
+				oldFullCus: oldFullCustomer,
 				newFullCus: newFullCustomer,
 				feature: deduction.feature,
-			}).catch((error) => {
-				ctx.logger.error(
-					`[executeRedisDeductionV2] Failed to trigger auto top-up: ${error}`,
-				);
+				entityId,
+				featuresFromMutationLogs,
 			});
+
+			if (options.triggerAutoTopUp) {
+				triggerAutoTopUp({
+					ctx,
+					newFullCus: newFullCustomer,
+					feature: deduction.feature,
+				}).catch((error) => {
+					ctx.logger.error(
+						`[executeRedisDeductionV2] Failed to trigger auto top-up: ${error}`,
+					);
+				});
+			}
 		}
+	} catch (error) {
+		await compensateCascadeIncludedLeg({
+			ctx,
+			fullSubject,
+			entityId,
+			cascadeSpill,
+			redisInstance,
+		});
+		throw error;
 	}
 
 	return {
@@ -417,4 +458,42 @@ export const executeRedisDeductionV2 = async ({
 		usageWindowUpdates: Object.values(allUsageWindowUpdates),
 		usageWindowMutations: allUsageWindowMutations,
 	};
+};
+
+/**
+ * Restores a cascade's included leg after a later leg failed, by replaying the
+ * included mutations as an inline unwind. Compensation failures are logged
+ * loudly but never mask the original error.
+ */
+const compensateCascadeIncludedLeg = async ({
+	ctx,
+	fullSubject,
+	entityId,
+	cascadeSpill,
+	redisInstance,
+}: {
+	ctx: AutumnContext;
+	fullSubject: FullSubject;
+	entityId?: string;
+	cascadeSpill: CascadeSpill;
+	redisInstance?: Redis;
+}): Promise<void> => {
+	const compensation = cascadeSpill.buildCompensation();
+	if (!compensation) return;
+
+	try {
+		await executeRedisDeductionV2({
+			ctx,
+			fullSubject,
+			entityId,
+			deductions: [compensation],
+			idempotencyKey: null,
+			deductionOptions: { overageBehaviour: "cap", triggerAutoTopUp: false },
+			redisInstance,
+		});
+	} catch (compensationError) {
+		ctx.logger.error(
+			`[executeRedisDeductionV2] track_cascade_compensation_failed: customer ${fullSubject.customerId}, feature ${compensation.feature.id}, unwind value ${compensation.unwindValue}: ${compensationError}`,
+		);
+	}
 };
