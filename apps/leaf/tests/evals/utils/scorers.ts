@@ -180,9 +180,21 @@ const matchesApiCall = ({
 	actual.toolName === expected.toolName &&
 	(!expected.body || includesObject(actual.body, expected.body));
 
-const valuesAtPath = ({ path, value }: { path: string; value: unknown }) => {
+const valuesAtPath = ({
+	path,
+	value,
+}: {
+	path: string;
+	value: unknown;
+}): unknown[] => {
 	const parts = path.split(".");
-	const walk = ({ index, current }: { index: number; current: unknown }) => {
+	const walk = ({
+		index,
+		current,
+	}: {
+		index: number;
+		current: unknown;
+	}): unknown[] => {
 		if (index === parts.length) return [current];
 		const part = parts[index];
 		if (part === "*") {
@@ -308,7 +320,7 @@ export const expectedApiBodyNumberFields = ({
 					const values = valuesAtPath({ path, value: call.body });
 					return (
 						values.length > 0 &&
-						values.every((value) => typeof value === "number")
+						values.every((value: unknown) => typeof value === "number")
 					);
 				}),
 			)

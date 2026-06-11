@@ -32,7 +32,6 @@ const OTPEmail = (props: { otpCode: string }) => {
 							To protect your account, do not share this code.
 						</Text>
 
-						{/* Footer */}
 						<Section className="border-t border-gray-200 pt-[24px]">
 							<Text className="text-gray-500 text-[12px] leading-[16px] m-0">
 								Autumn
