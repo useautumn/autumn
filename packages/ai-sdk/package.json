@@ -19,7 +19,7 @@
 		}
 	},
 	"scripts": {
-		"ts": "tsgo --noEmit --skipLibCheck",
+		"ts": "bunx tsgo --noEmit --skipLibCheck",
 		"test": "bun test tests/unit",
 		"build": "rm -rf dist && tsup",
 		"prepublishOnly": "bun run build"
