@@ -44,7 +44,7 @@ class GetOrCreateCustomerGlobals(BaseModel):
         return m
 
 
-GetOrCreateCustomerInterval = Literal[
+GetOrCreateCustomerPurchaseLimitInterval = Literal[
     "hour",
     "day",
     "week",
@@ -56,7 +56,7 @@ r"""The time interval for the purchase limit window."""
 class GetOrCreateCustomerPurchaseLimitTypedDict(TypedDict):
     r"""Optional rate limit to cap how often auto top-ups occur."""
 
-    interval: GetOrCreateCustomerInterval
+    interval: GetOrCreateCustomerPurchaseLimitInterval
     r"""The time interval for the purchase limit window."""
     limit: float
     r"""Maximum number of auto top-ups allowed within the interval."""
@@ -67,7 +67,7 @@ class GetOrCreateCustomerPurchaseLimitTypedDict(TypedDict):
 class GetOrCreateCustomerPurchaseLimit(BaseModel):
     r"""Optional rate limit to cap how often auto top-ups occur."""
 
-    interval: GetOrCreateCustomerInterval
+    interval: GetOrCreateCustomerPurchaseLimitInterval
     r"""The time interval for the purchase limit window."""
 
     limit: float
@@ -148,7 +148,7 @@ class GetOrCreateCustomerSpendLimitTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
-    r"""Whether this spend limit is enabled."""
+    r"""Whether the overage spend limit is enabled."""
     overage_limit: NotRequired[float]
     r"""Maximum allowed overage spend for the target feature."""
 
@@ -158,7 +158,7 @@ class GetOrCreateCustomerSpendLimit(BaseModel):
     r"""Optional feature ID this spend limit applies to."""
 
     enabled: Optional[bool] = False
-    r"""Whether this spend limit is enabled."""
+    r"""Whether the overage spend limit is enabled."""
 
     overage_limit: Optional[float] = None
     r"""Maximum allowed overage spend for the target feature."""
@@ -178,6 +178,35 @@ class GetOrCreateCustomerSpendLimit(BaseModel):
                     m[k] = val
 
         return m
+
+
+GetOrCreateCustomerUsageLimitInterval = Literal[
+    "day",
+    "week",
+    "month",
+    "year",
+]
+r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+class GetOrCreateCustomerUsageLimitTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+    limit: float
+    r"""Maximum units allowed per interval."""
+    interval: GetOrCreateCustomerUsageLimitInterval
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+class GetOrCreateCustomerUsageLimit(BaseModel):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+
+    limit: float
+    r"""Maximum units allowed per interval."""
+
+    interval: GetOrCreateCustomerUsageLimitInterval
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
 GetOrCreateCustomerThresholdType = Literal[
@@ -272,7 +301,9 @@ class GetOrCreateCustomerBillingControlsTypedDict(TypedDict):
     auto_topups: NotRequired[List[GetOrCreateCustomerAutoTopupTypedDict]]
     r"""List of auto top-up configurations per feature."""
     spend_limits: NotRequired[List[GetOrCreateCustomerSpendLimitTypedDict]]
-    r"""List of overage spend limits per feature."""
+    r"""List of overage spend limits per feature (caps overage spend)."""
+    usage_limits: NotRequired[List[GetOrCreateCustomerUsageLimitTypedDict]]
+    r"""List of hard usage caps per feature (max units per interval)."""
     usage_alerts: NotRequired[List[GetOrCreateCustomerUsageAlertTypedDict]]
     r"""List of usage alert configurations per feature."""
     overage_allowed: NotRequired[List[GetOrCreateCustomerOverageAllowedTypedDict]]
@@ -286,7 +317,10 @@ class GetOrCreateCustomerBillingControls(BaseModel):
     r"""List of auto top-up configurations per feature."""
 
     spend_limits: Optional[List[GetOrCreateCustomerSpendLimit]] = None
-    r"""List of overage spend limits per feature."""
+    r"""List of overage spend limits per feature (caps overage spend)."""
+
+    usage_limits: Optional[List[GetOrCreateCustomerUsageLimit]] = None
+    r"""List of hard usage caps per feature (max units per interval)."""
 
     usage_alerts: Optional[List[GetOrCreateCustomerUsageAlert]] = None
     r"""List of usage alert configurations per feature."""
@@ -297,7 +331,13 @@ class GetOrCreateCustomerBillingControls(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
-            ["auto_topups", "spend_limits", "usage_alerts", "overage_allowed"]
+            [
+                "auto_topups",
+                "spend_limits",
+                "usage_limits",
+                "usage_alerts",
+                "overage_allowed",
+            ]
         )
         serialized = handler(self)
         m = {}
