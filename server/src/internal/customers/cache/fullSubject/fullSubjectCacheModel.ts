@@ -16,14 +16,23 @@ import {
 } from "@autumn/shared";
 import { z } from "zod/v4";
 
+// `usage_windows` is omitted alongside balances: counters live in the
+// per-feature balance hashes (`_usage_windows` field) and would be instantly
+// stale if serialized into the subject view.
 export type CachedFullSubject = Omit<
 	NormalizedFullSubject,
-	"customer_entitlements"
+	"customer_entitlements" | "usage_windows"
 > & {
 	_schemaVersion: number;
 	_cachedAt: number;
 	meteredFeatures: string[];
 	customerEntitlementIdsByFeatureId: Record<string, string[]>;
+	/** Features with an armed windowed cap (customer + entity usage_limits);
+	 *  may include features with no entitlements, so it cannot be derived from
+	 *  customerEntitlementIdsByFeatureId. Drives `_usage_windows` reads,
+	 *  writes, and invalidation. Optional: cache entries written before usage
+	 *  windows existed don't carry it (treat as []). */
+	usageWindowFeatureIds?: string[];
 	subjectViewEpoch: number;
 };
 
@@ -72,6 +81,9 @@ export const CachedFullSubjectSchema = z.object({
 	_cachedAt: z.number(),
 	meteredFeatures: z.array(z.string()),
 	customerEntitlementIdsByFeatureId: z.record(z.string(), z.array(z.string())),
+	// Optional (not defaulted): pre-usage-windows cache entries don't carry it,
+	// and the hole-filling walker must not invent it.
+	usageWindowFeatureIds: z.array(z.string()).optional(),
 	subjectViewEpoch: z.number(),
 });
 
@@ -105,6 +117,15 @@ export const normalizedToCachedFullSubject = ({
 
 	const meteredFeatures = [...meteredFeatureSet];
 
+	const usageWindowFeatureIds = [
+		...new Set(
+			[
+				...(normalized.customer.usage_limits ?? []),
+				...(normalized.entity?.usage_limits ?? []),
+			].map((usageLimit) => usageLimit.feature_id),
+		),
+	];
+
 	return {
 		subjectType: normalized.subjectType,
 		customerId: normalized.customerId,
@@ -128,6 +149,7 @@ export const normalizedToCachedFullSubject = ({
 		_cachedAt: Date.now(),
 		meteredFeatures,
 		customerEntitlementIdsByFeatureId,
+		usageWindowFeatureIds,
 		subjectViewEpoch,
 	};
 };
@@ -159,5 +181,8 @@ export const cachedFullSubjectToNormalized = ({
 		invoices: cached.invoices,
 		entity_aggregations: cached.entity_aggregations,
 		migration_item_runs: cached.migration_item_runs ?? [],
+		// Live data: filled from the balance hashes' `_usage_windows` fields by
+		// the caller, never from the cached subject view.
+		usage_windows: [],
 	};
 };

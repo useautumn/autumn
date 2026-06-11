@@ -16,8 +16,6 @@ export const NEON_TEMPLATE_BRANCH = "dw-template";
 export const NEON_PARENT_BRANCH = "production";
 
 export const EMULATE_PID_FILE = join(homedir(), ".autumn-emulate.pid");
-export const EMULATE_HEALTH_URL =
-	"https://google.emulate.localhost/.well-known/openid-configuration";
 export const START_EMULATE_SH = join(SCRIPT_DIR, "../setup/start-emulate.sh");
 
 export const ENV_LOCAL_TARGETS = [

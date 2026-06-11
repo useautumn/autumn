@@ -19,7 +19,10 @@ const toStripeSubscriptionAddInvoiceItem = ({
 		price_data: {
 			currency: context.currency,
 			product: stripeProductId,
-			unit_amount: atmnToStripeAmount({ amount: amountAfterDiscounts }),
+			unit_amount: atmnToStripeAmount({
+				amount: amountAfterDiscounts,
+				currency: context.currency,
+			}),
 		},
 		period: context.effectivePeriod
 			? {

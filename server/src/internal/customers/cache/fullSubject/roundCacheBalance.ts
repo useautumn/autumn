@@ -5,9 +5,7 @@ import { Decimal } from "decimal.js";
  * Round a number to avoid floating-point precision issues from Lua 5.1 double arithmetic.
  * Uses Decimal.js toDecimalPlaces(10) — enough precision while eliminating float drift.
  */
-export const roundCacheBalance = (
-	value: number | null | undefined,
-): number => {
+export const roundCacheBalance = (value: number | null | undefined): number => {
 	if (value === null || value === undefined) return 0;
 	return new Decimal(value).toDecimalPlaces(10).toNumber();
 };
@@ -23,11 +21,19 @@ export const roundSubjectBalance = ({
 }): SubjectBalance => {
 	subjectBalance.balance = roundCacheBalance(subjectBalance.balance);
 
-	if (subjectBalance.adjustment !== null && subjectBalance.adjustment !== undefined)
+	if (
+		subjectBalance.adjustment !== null &&
+		subjectBalance.adjustment !== undefined
+	)
 		subjectBalance.adjustment = roundCacheBalance(subjectBalance.adjustment);
 
-	if (subjectBalance.additional_balance !== null && subjectBalance.additional_balance !== undefined)
-		subjectBalance.additional_balance = roundCacheBalance(subjectBalance.additional_balance);
+	if (
+		subjectBalance.additional_balance !== null &&
+		subjectBalance.additional_balance !== undefined
+	)
+		subjectBalance.additional_balance = roundCacheBalance(
+			subjectBalance.additional_balance,
+		);
 
 	if (subjectBalance.entities && typeof subjectBalance.entities === "object") {
 		for (const entityId of Object.keys(subjectBalance.entities)) {

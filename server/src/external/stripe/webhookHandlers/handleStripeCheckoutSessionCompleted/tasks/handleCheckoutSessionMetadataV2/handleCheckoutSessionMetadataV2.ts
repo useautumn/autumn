@@ -7,9 +7,9 @@ import { createStripeScheduleFromCheckout } from "@/external/stripe/webhookHandl
 import { modifyStripeSubscriptionFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/modifyStripeSubscriptionFromCheckout";
 import { syncSubscriptionItemMetadataFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/syncSubscriptionItemMetadataFromCheckout";
 import { updateBillingPlanFromCheckout } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/updateBillingPlanFromCheckout";
+import { withClaimedCheckoutSessionMetadata } from "@/external/stripe/webhookHandlers/handleStripeCheckoutSessionCompleted/tasks/handleCheckoutSessionMetadataV2/withClaimedCheckoutSessionMetadata";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { persistDeferredCreateSchedule } from "@/internal/billing/v2/actions/createSchedule/utils/persistDeferredCreateSchedule";
-import { checkoutSessionLock } from "@/internal/billing/v2/actions/locks/checkoutSessionLock/checkoutSessionLock";
 import { addStripeSubscriptionScheduleIdToBillingPlan } from "@/internal/billing/v2/execute/addStripeSubscriptionScheduleIdToBillingPlan";
 import { executeAutumnBillingPlan } from "@/internal/billing/v2/execute/executeAutumnBillingPlan";
 import { logAutumnBillingPlan } from "@/internal/billing/v2/utils/logs/logAutumnBillingPlan";
@@ -34,6 +34,24 @@ export const handleCheckoutSessionMetadataV2 = async ({
 		`[checkout.completed] Handling checkout session metadata V2: ${metadata.id}`,
 	);
 
+	await withClaimedCheckoutSessionMetadata({
+		ctx,
+		checkoutContext,
+		metadata,
+		execute: () =>
+			executeCheckoutSessionMetadataV2({ ctx, checkoutContext, metadata }),
+	});
+};
+
+const executeCheckoutSessionMetadataV2 = async ({
+	ctx,
+	checkoutContext,
+	metadata,
+}: {
+	ctx: StripeWebhookContext;
+	checkoutContext: CheckoutSessionCompletedContext;
+	metadata: NonNullable<CheckoutSessionCompletedContext["metadata"]>;
+}): Promise<void> => {
 	const deferredData = metadata.data as DeferredAutumnBillingPlanData;
 
 	// 1. Sync Autumn metadata onto subscription items created by checkout
@@ -95,14 +113,6 @@ export const handleCheckoutSessionMetadataV2 = async ({
 		billingContext: updatedDeferredData.billingContext,
 		billingPlan: updatedDeferredData.billingPlan,
 	});
-
-	// Clear checkout session lock now that customer_product rows exist
-	const lockCustomerId =
-		updatedDeferredData.billingContext.fullCustomer.id ??
-		updatedDeferredData.billingContext.fullCustomer.internal_id;
-	if (lockCustomerId) {
-		await checkoutSessionLock.clear({ ctx, customerId: lockCustomerId });
-	}
 
 	// Queue customer.products.updated webhook (mirrors executeBillingPlan)
 	await billingPlanToSendProductsUpdated({

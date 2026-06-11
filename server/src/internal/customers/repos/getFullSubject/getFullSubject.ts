@@ -9,6 +9,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
 import { lazyResetSubjectEntitlements } from "../../actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
+import { lazyResetSubjectUsageWindows } from "../../actions/resetUsageWindows/lazyResetSubjectUsageWindows.js";
 import { RELEVANT_STATUSES } from "../../cusProducts/CusProductService.js";
 import { runWithFullSubjectGate } from "./getFullSubjectGate.js";
 import { getFullSubjectQuery } from "./getFullSubjectQuery.js";
@@ -59,6 +60,7 @@ export async function getFullSubject({
 		allowMissingEntity,
 	});
 	await lazyResetSubjectEntitlements({ ctx, fullSubject });
+	await lazyResetSubjectUsageWindows({ ctx, fullSubject });
 	await checkPendingMigrationsForCustomer({
 		ctx,
 		fullCustomer: fullSubjectToFullCustomer({ fullSubject }),
@@ -113,6 +115,7 @@ export async function getFullSubjectNormalized({
 
 	const fullSubject = normalizedToFullSubject({ normalized });
 	await lazyResetSubjectEntitlements({ ctx, fullSubject, normalized });
+	await lazyResetSubjectUsageWindows({ ctx, fullSubject, normalized });
 	await checkPendingMigrationsForCustomer({
 		ctx,
 		fullCustomer: fullSubjectToFullCustomer({ fullSubject }),

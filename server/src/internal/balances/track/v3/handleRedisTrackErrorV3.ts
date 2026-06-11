@@ -6,8 +6,8 @@ import {
 	type TrackParams,
 	type TrackResponseV3,
 } from "@autumn/shared";
-import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
+import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import {
 	RedisDeductionError,

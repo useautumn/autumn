@@ -40,6 +40,27 @@ const warnRateLimitBypass = () => {
 	);
 };
 
+const CAP_EXCEEDED_WARNING_INTERVAL_MS = 10_000;
+const lastCapWarnAtByType = new Map<string, number>();
+
+const warnOrgCapExceeded = ({
+	limitType,
+	orgSlug,
+}: {
+	limitType: string;
+	orgSlug?: string;
+}) => {
+	const now = Date.now();
+	const lastWarnAt = lastCapWarnAtByType.get(limitType) ?? 0;
+	if (now - lastWarnAt < CAP_EXCEEDED_WARNING_INTERVAL_MS) return;
+
+	lastCapWarnAtByType.set(limitType, now);
+	logger.warn(
+		`[rate-limit] org aggregate cap exceeded: ${orgSlug ?? "unknown"} (${limitType})`,
+		{ type: "org_rate_cap_exceeded", limitType, org: orgSlug },
+	);
+};
+
 export const rateLimitFactory = ({
 	type,
 	config,
@@ -69,6 +90,7 @@ export const rateLimitFactory = ({
 	): Promise<Response | undefined> => {
 		const honoContext = c as Context<HonoEnv>;
 		const ctx = honoContext.get("ctx");
+		warnOrgCapExceeded({ limitType: type, orgSlug: ctx?.org?.slug });
 
 		if (type === RateLimitType.CheckOrg && !isCheckFailOpenRoute(honoContext)) {
 			return c.json(

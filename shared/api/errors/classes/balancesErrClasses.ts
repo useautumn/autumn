@@ -18,3 +18,22 @@ export class InsufficientBalanceError extends RecaseError {
 		this.name = "InsufficientBalanceError";
 	}
 }
+
+export class UsageLimitExceededError extends RecaseError {
+	constructor(opts?: {
+		message?: string;
+		featureId?: string;
+		limit?: number;
+	}) {
+		super({
+			message:
+				opts?.message ||
+				`Usage limit exceeded${opts?.featureId ? ` for feature ${opts.featureId}` : ""}${opts?.limit !== undefined ? ` (limit ${opts.limit})` : ""}`,
+			code: BalancesErrorCode.UsageLimitExceeded,
+			// 400 (mirrors InsufficientBalanceError): clients flatten any 429 to a
+			// generic rate-limit error, which would hide the usage_limit_exceeded code.
+			statusCode: 400,
+		});
+		this.name = "UsageLimitExceededError";
+	}
+}

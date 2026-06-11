@@ -1,4 +1,5 @@
 import {
+	atmnToStripeAmount,
 	InternalError,
 	type LineItemContext,
 	type Organization,
@@ -76,7 +77,7 @@ export const updateOneOffTieredItems = ({
 				product_data: {
 					name: lineItem.description,
 				},
-				unit_amount: Math.round(lineItem.amount * 100),
+				unit_amount: atmnToStripeAmount({ amount: lineItem.amount, currency }),
 				currency,
 			},
 			quantity: 1,

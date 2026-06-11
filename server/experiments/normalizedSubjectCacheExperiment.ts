@@ -267,6 +267,7 @@ const generateNormalized = (): NormalizedFullSubject => {
 					},
 				},
 				rollovers: [] as any,
+				usage_windows: [] as any,
 				replaceables: [] as any,
 				customerPrice: null as any,
 				customerProductOptions: [] as any,

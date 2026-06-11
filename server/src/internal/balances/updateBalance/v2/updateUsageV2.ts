@@ -111,11 +111,16 @@ export const updateUsageV2 = async ({
 		});
 	}
 
-	const { rolloverUpdates, modifiedCusEntIdsByFeatureId } = result;
+	const { rolloverUpdates, modifiedCusEntIdsByFeatureId, usageWindowUpdates } =
+		result;
 	const cusEntIds = Object.values(modifiedCusEntIdsByFeatureId).flat();
 	const rolloverIds = Object.keys(rolloverUpdates);
 
-	if (cusEntIds.length > 0 || rolloverIds.length > 0) {
+	if (
+		cusEntIds.length > 0 ||
+		rolloverIds.length > 0 ||
+		usageWindowUpdates.length > 0
+	) {
 		await syncItemV4({
 			ctx,
 			payload: {
@@ -126,6 +131,7 @@ export const updateUsageV2 = async ({
 				rolloverIds,
 				entityId: fullSubject.entityId,
 				modifiedCusEntIdsByFeatureId,
+				usageWindowUpdates,
 			},
 		});
 	}

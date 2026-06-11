@@ -42,7 +42,10 @@ const envSchema = z
 		return {
 			...values,
 			MCP_SERVER_URL:
-				values.MCP_SERVER_URL ?? `http://localhost:${values.PORT}`,
+				values.MCP_SERVER_URL ??
+				(process.env.NODE_ENV === "production"
+					? "https://mcp.useautumn.com/mcp"
+					: `http://localhost:${values.PORT}`),
 			BETTER_AUTH_URL:
 				values.BETTER_AUTH_URL ??
 				(process.env.NODE_ENV === "production"

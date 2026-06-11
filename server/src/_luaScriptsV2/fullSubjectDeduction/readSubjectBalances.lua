@@ -18,28 +18,45 @@ local function read_subject_balances(params)
   local balances_by_id = {}
   local missing_customer_entitlement_ids = {}
   local entries_by_balance_key = {}
+  local seen_ids_by_balance_key = {}
   local balance_keys_by_feature_id = safe_table(params.balance_keys_by_feature_id)
+
+  local function queue_balance_read(customer_entitlement_id, feature_id)
+    if not (customer_entitlement_id and feature_id) then
+      return false
+    end
+
+    local balance_key = balance_keys_by_feature_id[feature_id]
+    if not balance_key then
+      return false
+    end
+
+    if entries_by_balance_key[balance_key] == nil then
+      entries_by_balance_key[balance_key] = {
+        feature_id = feature_id,
+        customer_entitlement_ids = {},
+      }
+      seen_ids_by_balance_key[balance_key] = {}
+    end
+
+    if seen_ids_by_balance_key[balance_key][customer_entitlement_id] then
+      return true
+    end
+    seen_ids_by_balance_key[balance_key][customer_entitlement_id] = true
+
+    table.insert(
+      entries_by_balance_key[balance_key].customer_entitlement_ids,
+      customer_entitlement_id
+    )
+    return true
+  end
 
   for _, ent_obj in ipairs(params.customer_entitlement_deductions or {}) do
     local customer_entitlement_id = ent_obj.customer_entitlement_id
-    local feature_id = ent_obj.feature_id
-
-    if customer_entitlement_id and feature_id then
-      local balance_key = balance_keys_by_feature_id[feature_id]
-      if not balance_key then
+    if customer_entitlement_id then
+      local queued = queue_balance_read(customer_entitlement_id, ent_obj.feature_id)
+      if not queued then
         table.insert(missing_customer_entitlement_ids, customer_entitlement_id)
-      else
-        if entries_by_balance_key[balance_key] == nil then
-          entries_by_balance_key[balance_key] = {
-            feature_id = feature_id,
-            customer_entitlement_ids = {},
-          }
-        end
-
-        table.insert(
-          entries_by_balance_key[balance_key].customer_entitlement_ids,
-          customer_entitlement_id
-        )
       end
     end
   end

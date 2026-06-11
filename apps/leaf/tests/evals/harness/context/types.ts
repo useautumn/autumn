@@ -10,6 +10,7 @@ export type AutumnEvalToolName =
 	| "getCustomer"
 	| "getEntity"
 	| "getOrCreateCustomer"
+	| "getCurrentOrganization"
 	| "getPlan"
 	| "listCustomers"
 	| "listEntities"

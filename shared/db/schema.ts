@@ -26,6 +26,7 @@ import { replaceableRelations } from "../models/cusProductModels/cusEntModels/re
 import { replaceables } from "../models/cusProductModels/cusEntModels/replaceableTable.js";
 import { rolloverRelations } from "../models/cusProductModels/cusEntModels/rolloverModels/rolloverRelations.js";
 import { rollovers } from "../models/cusProductModels/cusEntModels/rolloverModels/rolloverTable.js";
+import { usageWindows } from "../models/cusProductModels/cusEntModels/usageWindowTable.js";
 import { customerPricesRelations } from "../models/cusProductModels/cusPriceModels/cusPriceRelations.js";
 import { customerPrices } from "../models/cusProductModels/cusPriceModels/cusPriceTable.js";
 // CusProduct Relations
@@ -189,6 +190,7 @@ export {
 	schedules,
 	session,
 	subscriptions,
+	usageWindows,
 	// Auth
 	user,
 	// Auth Relations

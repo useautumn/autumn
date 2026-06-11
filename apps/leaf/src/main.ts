@@ -18,6 +18,8 @@ app.use("*", async (c, next) => {
 
 app.get("/health", (c) => c.json({ ok: true }));
 
+
+
 app.route(
 	"",
 	createMcpRouter({

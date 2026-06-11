@@ -14,6 +14,12 @@
 --     - balance: number
 --     - usage: number
 --     - entities: jsonb (the full entities object)
+--   usage_window_updates: array of objects with:
+--     - internal_customer_id: string
+--     - feature_id: string
+--     - usage_windows: jsonb array of DbUsageWindow rows (the COMPLETE set for
+--       that customer+feature; Redis is authoritative and prunes closed
+--       windows, so rows are full-replaced per customer+feature)
 --
 -- Returns JSONB with:
 --   updates: object mapping customer_entitlement_id -> { balance, adjustment, entities }
@@ -32,7 +38,8 @@ AS $$
 DECLARE
   customer_entitlement_updates jsonb := params->'customer_entitlement_updates';
   rollover_updates_param jsonb := params->'rollover_updates';
-  
+  usage_window_updates_param jsonb := params->'usage_window_updates';
+
   ent_obj jsonb;
   ent_id text;
   ent_balance numeric;
@@ -41,6 +48,11 @@ DECLARE
   ent_next_reset_at bigint;
   ent_entity_count int;
   ent_cache_version int;
+
+  uw_obj jsonb;
+  uw_internal_customer_id text;
+  uw_feature_id text;
+  uw_windows jsonb;
   
   db_next_reset_at bigint;
   db_entity_count int;
@@ -134,15 +146,13 @@ BEGIN
           ent_id, ent_cache_version, db_cache_version;
       END IF;
       
-      -- Update the customer_entitlement row directly
       UPDATE customer_entitlements ce
       SET
         balance = COALESCE(ent_balance, ce.balance),
         adjustment = COALESCE(ent_adjustment, ce.adjustment),
         entities = COALESCE(ent_entities, ce.entities)
       WHERE ce.id = ent_id;
-      
-      -- Track update
+
       IF FOUND THEN
         updates_json := jsonb_set(
           updates_json,
@@ -191,6 +201,75 @@ BEGIN
     END LOOP;
   END IF;
   
+  -- ============================================================================
+  -- STEP 4: Mirror usage-window counters (race-safe upsert)
+  -- ============================================================================
+  -- ONE mutable row per (customer, feature, entity scope); bounds roll in
+  -- place. Upsert on the scope key (never on id) so concurrent creates can't
+  -- abort, with an updated_at guard so older snapshots never clobber newer.
+  IF usage_window_updates_param IS NOT NULL THEN
+    FOR uw_obj IN SELECT * FROM jsonb_array_elements(usage_window_updates_param)
+    LOOP
+      uw_internal_customer_id := uw_obj->>'internal_customer_id';
+      uw_feature_id := uw_obj->>'feature_id';
+      uw_windows := uw_obj->'usage_windows';
+
+      IF uw_internal_customer_id IS NOT NULL
+         AND uw_feature_id IS NOT NULL
+         AND uw_windows IS NOT NULL
+         AND uw_windows != 'null'::jsonb THEN
+        IF jsonb_typeof(uw_windows) != 'array' THEN
+          uw_windows := '[]'::jsonb;
+        END IF;
+
+        INSERT INTO usage_windows (
+          id, internal_customer_id, internal_entity_id, feature_id,
+          internal_feature_id, anchor_customer_entitlement_id,
+          window_start_at, window_end_at, usage, updated_at
+        )
+        SELECT
+          w->>'id',
+          uw_internal_customer_id,
+          w->>'internal_entity_id',
+          uw_feature_id,
+          w->>'internal_feature_id',
+          CASE
+            WHEN w->>'anchor_customer_entitlement_id' IS NOT NULL
+              AND EXISTS (
+                SELECT 1 FROM customer_entitlements ce
+                WHERE ce.id = w->>'anchor_customer_entitlement_id'
+              )
+            THEN w->>'anchor_customer_entitlement_id'
+            ELSE NULL
+          END,
+          (w->>'window_start_at')::numeric,
+          (w->>'window_end_at')::numeric,
+          (w->>'usage')::numeric,
+          (w->>'updated_at')::numeric
+        FROM jsonb_array_elements(uw_windows) AS w
+        WHERE w->>'id' IS NOT NULL
+          AND w->>'internal_feature_id' IS NOT NULL
+          AND EXISTS (
+            SELECT 1 FROM features f
+            WHERE f.internal_id = w->>'internal_feature_id'
+          )
+        ON CONFLICT (
+          internal_customer_id, internal_feature_id,
+          COALESCE(internal_entity_id, '')
+        )
+        DO UPDATE SET
+          usage = EXCLUDED.usage,
+          updated_at = EXCLUDED.updated_at,
+          window_start_at = EXCLUDED.window_start_at,
+          window_end_at = EXCLUDED.window_end_at,
+          feature_id = EXCLUDED.feature_id,
+          anchor_customer_entitlement_id =
+            EXCLUDED.anchor_customer_entitlement_id
+        WHERE EXCLUDED.updated_at >= usage_windows.updated_at;
+      END IF;
+    END LOOP;
+  END IF;
+
   RETURN jsonb_build_object(
     'updates', updates_json,
     'rollover_updates', rollover_updates_json

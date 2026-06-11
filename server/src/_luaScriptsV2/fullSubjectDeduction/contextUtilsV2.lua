@@ -30,10 +30,18 @@ local function init_context(params)
   local context = {
     customer_entitlements = {},
     rollovers = {},
+    -- Customer-scoped windowed-cap counters, loaded below alongside the other
+    -- subject state: { [feature_id] = { balance_key, windows, dirty } }.
+    usage_windows = read_usage_windows({
+      usage_window_limits = params.usage_window_limits,
+      balance_keys_by_feature_id = params.balance_keys_by_feature_id,
+      now = params.usage_window_now,
+    }),
     org_id = params.org_id,
     env = params.env,
     customer_id = params.customer_id,
     mutation_logs = {},
+    usage_window_mutations = {},
     pending_writes = {},
     pending_write_ids = {},
     missing_customer_entitlement_ids =

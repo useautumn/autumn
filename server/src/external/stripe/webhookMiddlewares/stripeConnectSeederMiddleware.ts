@@ -1,6 +1,7 @@
 import {
 	type AppEnv,
 	AuthType,
+	ErrCode,
 	type Feature,
 	type Organization,
 } from "@autumn/shared";
@@ -11,6 +12,7 @@ import {
 	initMasterStripe,
 } from "@/external/connect/initStripeCli.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import RecaseError from "@/utils/errorUtils.js";
 import { createStripeCli } from "../../connect/createStripeCli.js";
 import type {
 	StripeWebhookContext,
@@ -100,7 +102,18 @@ export const stripeConnectSeederMiddleware = async (
 		});
 		org = data.org;
 		features = data.features;
-	} catch {
+	} catch (error) {
+		// Only ack accounts genuinely not linked to an org; any other failure
+		// (e.g. DB outage) must 500 so Stripe retries instead of dropping the event.
+		const isOrgNotFound =
+			error instanceof RecaseError && error.code === ErrCode.OrgNotFound;
+		if (!isOrgNotFound) {
+			logger.error(
+				`Failed to resolve org for Stripe account ${accountId}, returning 500 for Stripe to retry: ${error}`,
+			);
+			return c.json({ error: "Failed to resolve org for Stripe webhook" }, 500);
+		}
+
 		if (process.env.NODE_ENV !== "development") {
 			logger.error(
 				`Account ID ${accountId} not linked to any org, skipping Stripe webhook`,
