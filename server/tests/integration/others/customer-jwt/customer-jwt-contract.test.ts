@@ -244,4 +244,35 @@ test(`${chalk.yellowBright("customer-jwt: mint/scope/allowlist/refresh/revoke co
 		body: { feature_id: TestFeature.Messages },
 	});
 	expect(freshCheck.status).toBe(200);
+
+	// 14: indefinite mint — no-exp access token, no refresh token
+	const indef = await raw({
+		path: "/keys.mint",
+		token: adminKey,
+		body: { customer_id: customerId, indefinite: true },
+	});
+	expect(indef.status).toBe(200);
+	expect(startsWithJwt(indef.json?.access_token)).toBe(true);
+	expect(indef.json?.refresh_token).toBeUndefined();
+	expect(indef.json?.expires_at).toBeNull();
+	const indefToken = indef.json.access_token as string;
+	const indefCheck = await raw({
+		path: "/balances.check",
+		token: indefToken,
+		body: { feature_id: TestFeature.Messages },
+	});
+	expect(indefCheck.status).toBe(200);
+
+	// 15: revoke is durable — kills the indefinite token too
+	await raw({
+		path: "/keys.revoke",
+		token: adminKey,
+		body: { customer_id: customerId },
+	});
+	const deadIndef = await raw({
+		path: "/balances.check",
+		token: indefToken,
+		body: { feature_id: TestFeature.Messages },
+	});
+	expect(deadIndef.status).toBe(401);
 });

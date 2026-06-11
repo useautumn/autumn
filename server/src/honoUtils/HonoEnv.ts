@@ -54,6 +54,7 @@ export type RequestContext = {
 	 *  keys.refresh to rotate the family. */
 	customerJwt?: {
 		customerId: string;
+		internalCustomerId: string;
 		epoch: number;
 		refreshKid: number;
 	};

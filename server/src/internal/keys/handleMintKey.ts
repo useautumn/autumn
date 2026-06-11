@@ -5,20 +5,12 @@ import { readFamily, setFamily } from "@/internal/auth/customerJwtEpoch.js";
 import { CusService } from "@/internal/customers/CusService.js";
 import RecaseError from "@/utils/errorUtils.js";
 
-// Customer tokens always carry exactly the scopes the allowlisted routes need —
-// not caller-configurable. Enforced per-route by scopeCheckMiddleware.
-const TOKEN_SCOPES: string[] = [
-	Scopes.Customers.Read,
-	Scopes.Balances.Read,
-	Scopes.Balances.Write,
-];
-
 export const handleMintKey = createRoute({
 	scopes: [Scopes.ApiKeys.Write],
 	body: MintKeyParamsSchema,
 	handler: async (c) => {
 		const ctx = c.get("ctx");
-		const { customer_id } = c.req.valid("json");
+		const { customer_id, indefinite } = c.req.valid("json");
 
 		const customer = await CusService.get({
 			db: ctx.db,
@@ -35,24 +27,27 @@ export const handleMintKey = createRoute({
 		}
 
 		const family = await readFamily({
-			orgId: ctx.org.id,
-			customerId: customer_id,
+			internalCustomerId: customer.internal_id,
 		});
-		const refreshKid = family.refreshKid + 1;
+		const epoch = family?.epoch ?? 0;
+		const refreshKid = (family?.refreshKid ?? 0) + 1;
+
 		await setFamily({
+			internalCustomerId: customer.internal_id,
 			orgId: ctx.org.id,
-			customerId: customer_id,
-			epoch: family.epoch,
+			env: ctx.env,
+			epoch,
 			refreshKid,
+			indefinite: indefinite ?? false,
 		});
 
 		const pair = await mintTokenPair({
-			customerId: customer_id,
-			orgId: ctx.org.id,
+			customerId: customer.id ?? customer.internal_id, // external `sub`
+			internalCustomerId: customer.internal_id,
 			env: ctx.env,
-			scopes: TOKEN_SCOPES,
-			epoch: family.epoch,
+			epoch,
 			refreshKid,
+			indefinite: indefinite ?? false,
 		});
 
 		return c.json({

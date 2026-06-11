@@ -1,6 +1,7 @@
 import { ErrCode, RevokeKeyParamsSchema, Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { bumpEpoch } from "@/internal/auth/customerJwtEpoch.js";
+import { CusService } from "@/internal/customers/CusService.js";
 import RecaseError from "@/utils/errorUtils.js";
 
 export const handleRevokeKey = createRoute({
@@ -10,25 +11,25 @@ export const handleRevokeKey = createRoute({
 		const ctx = c.get("ctx");
 		const { customer_id } = c.req.valid("json");
 
-		const result = await bumpEpoch({
+		const customer = await CusService.get({
+			db: ctx.db,
+			idOrInternalId: customer_id,
 			orgId: ctx.org.id,
-			customerId: customer_id,
+			env: ctx.env,
 		});
-		if (result.succeeded === 0) {
-			// The bump persisted nowhere — do NOT claim the revoke succeeded.
+		if (!customer) {
 			throw new RecaseError({
-				message: "Failed to revoke: no Redis region was reachable",
-				code: ErrCode.InternalError,
-				statusCode: 503,
+				message: `Customer ${customer_id} not found`,
+				code: ErrCode.CustomerNotFound,
+				statusCode: 404,
 			});
 		}
-		if (result.succeeded < result.attempted) {
-			ctx.logger.warn(
-				`keys.revoke partial propagation: ${result.succeeded}/${result.attempted} regions`,
-				{ orgId: ctx.org.id, customerId: customer_id },
-			);
-		}
 
+		await bumpEpoch({
+			internalCustomerId: customer.internal_id,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		});
 		return c.json({ revoked: true });
 	},
 });

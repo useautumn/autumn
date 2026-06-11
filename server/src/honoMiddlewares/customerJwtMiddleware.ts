@@ -1,14 +1,19 @@
-import { AppEnv, AuthType, ErrCode, sortFeatures } from "@autumn/shared";
+import {
+	AppEnv,
+	AuthType,
+	ErrCode,
+	Scopes,
+	sortFeatures,
+} from "@autumn/shared";
 import type { Context, Next } from "hono";
 import { forceJsonBodyField } from "@/honoUtils/forceJsonBody.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import { getCustomerJwtOrg } from "@/internal/auth/cacheCustomerJwtOrg.js";
+import { getCustomerJwtAuth } from "@/internal/auth/cacheCustomerJwtAuth.js";
 import {
 	AUD_REFRESH,
 	CustomerJwtConfigError,
 	verifyCustomerJwt,
 } from "@/internal/auth/customerJwt.js";
-import { readEpoch } from "@/internal/auth/customerJwtEpoch.js";
 import RecaseError from "@/utils/errorUtils.js";
 
 /**
@@ -26,6 +31,14 @@ const ACCESS_ROUTES = new Set([
 ]);
 const REFRESH_ROUTES = new Set(["POST /v1/keys.refresh"]);
 
+// Scopes are a server-side constant (not minted into the token); scopeCheckMiddleware
+// enforces them per-route. Hardcoded here so an empty ctx.scopes can't fail open.
+const TOKEN_SCOPES: string[] = [
+	Scopes.Customers.Read,
+	Scopes.Balances.Read,
+	Scopes.Balances.Write,
+];
+
 export const customerJwtMiddleware = async (
 	c: Context<HonoEnv>,
 	token: string,
@@ -37,27 +50,12 @@ export const customerJwtMiddleware = async (
 	try {
 		claims = await verifyCustomerJwt({ token });
 	} catch (error) {
-		// A missing/weak secret is OUR misconfig — surface it as 500, not a 401
-		// that masquerades as every customer holding a bad token.
+		// Missing/weak secret is OUR misconfig — surface as 500, not a fake 401.
 		if (error instanceof CustomerJwtConfigError) {
 			throw error;
 		}
 		throw new RecaseError({
 			message: "Invalid or expired customer token",
-			code: ErrCode.InvalidRequest,
-			statusCode: 401,
-		});
-	}
-
-	// Revocation: token is dead if its epoch is below the family floor.
-	// Redis down ⇒ floor 0 ⇒ nothing rejected (fail-open).
-	const floor = await readEpoch({
-		orgId: claims.orgId,
-		customerId: claims.customerId,
-	});
-	if (claims.epoch < floor) {
-		throw new RecaseError({
-			message: "Customer token revoked",
 			code: ErrCode.InvalidRequest,
 			statusCode: 401,
 		});
@@ -73,38 +71,45 @@ export const customerJwtMiddleware = async (
 		});
 	}
 
-	const env = claims.env === AppEnv.Live ? AppEnv.Live : AppEnv.Sandbox;
-	const data = await getCustomerJwtOrg({
-		db: ctx.db,
-		orgId: claims.orgId,
-		env,
+	// One read: org + features + revocation epoch, keyed by the immutable
+	// internal_customer_id. Cache miss → DB; DB down → throws → auth fails.
+	const auth = await getCustomerJwtAuth({
+		internalCustomerId: claims.internalCustomerId,
 	});
-	if (!data) {
-		// 401 (not 404): the token names an org we can't resolve — treat as an
-		// auth failure rather than leaking org existence.
+	if (!auth) {
+		// Family gone (customer deleted) or unresolvable org — treat as auth failure.
 		throw new RecaseError({
-			message: "Organization not found",
-			code: ErrCode.OrgNotFound,
+			message: "Customer token is no longer valid",
+			code: ErrCode.InvalidRequest,
 			statusCode: 401,
 		});
 	}
-	const { org, features } = data;
-	sortFeatures({ features });
+	if (claims.epoch < auth.epoch) {
+		throw new RecaseError({
+			message: "Customer token revoked",
+			code: ErrCode.InvalidRequest,
+			statusCode: 401,
+		});
+	}
 
-	ctx.org = org;
-	ctx.features = features;
+	const env = claims.env === AppEnv.Live ? AppEnv.Live : AppEnv.Sandbox;
+	sortFeatures({ features: auth.features });
+
+	ctx.org = auth.org;
+	ctx.features = auth.features;
 	ctx.env = env;
 	ctx.authType = AuthType.CustomerJwt;
-	ctx.scopes = claims.scopes; // non-empty ⇒ scopeCheckMiddleware enforces
+	ctx.scopes = TOKEN_SCOPES;
 	ctx.isCustomerJwt = true; // read by customerJwtVersionMiddleware (v2.3+ gate)
 	ctx.customerJwt = {
 		customerId: claims.customerId,
+		internalCustomerId: claims.internalCustomerId,
 		epoch: claims.epoch,
 		refreshKid: claims.refreshKid,
 	};
 
-	// Access tokens: force-set customer_id so every downstream load is scoped.
-	// Force-set (not conditional) because getEntity's customer_id is optional.
+	// Access tokens: force-set customer_id (the external `sub`) so every
+	// downstream load is scoped. Refresh tokens carry no body to scope.
 	if (claims.aud !== AUD_REFRESH) {
 		await forceJsonBodyField(c, "customer_id", claims.customerId);
 	}

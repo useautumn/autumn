@@ -27,31 +27,29 @@ export const handleRefreshKey = createRoute({
 			});
 		}
 
-		const orgId = ctx.org.id;
-		const family = await readFamily({ orgId, customerId: claim.customerId });
-		const current = family.refreshKid;
+		const family = await readFamily({
+			internalCustomerId: claim.internalCustomerId,
+		});
+		const epoch = family?.epoch ?? 0;
+		const current = family?.refreshKid ?? 0;
 		const presented = claim.refreshKid;
+
+		const writeKey = {
+			internalCustomerId: claim.internalCustomerId,
+			orgId: ctx.org.id,
+			env: ctx.env,
+		};
 
 		let refreshKid: number;
 		if (presented === current) {
 			refreshKid = current + 1; // rotate
-			await setFamily({
-				orgId,
-				customerId: claim.customerId,
-				epoch: family.epoch,
-				refreshKid,
-			});
+			await setFamily({ ...writeKey, epoch, refreshKid });
 		} else if (presented === current - 1) {
-			refreshKid = current; // grace: re-issue at current generation, touch TTL
-			await setFamily({
-				orgId,
-				customerId: claim.customerId,
-				epoch: family.epoch,
-				refreshKid,
-			});
+			refreshKid = current; // grace: re-issue at current generation
+			await setFamily({ ...writeKey, epoch, refreshKid });
 		} else {
 			// Older than the grace window ⇒ reuse ⇒ revoke the whole family.
-			await bumpEpoch({ orgId, customerId: claim.customerId });
+			await bumpEpoch(writeKey);
 			throw new RecaseError({
 				message: "Refresh token reuse detected",
 				code: ErrCode.InvalidRequest,
@@ -61,10 +59,9 @@ export const handleRefreshKey = createRoute({
 
 		const pair = await mintTokenPair({
 			customerId: claim.customerId,
-			orgId,
+			internalCustomerId: claim.internalCustomerId,
 			env: ctx.env,
-			scopes: ctx.scopes,
-			epoch: family.epoch,
+			epoch,
 			refreshKid,
 		});
 

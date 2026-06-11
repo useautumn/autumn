@@ -1,116 +1,107 @@
-import type { Redis } from "ioredis";
-import {
-	getConfiguredRegions,
-	getRegionalRedis,
-	redis,
-} from "@/external/redis/initRedis.js";
-import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
+import { customerJwtFamilies } from "@autumn/shared";
+import { eq, sql } from "drizzle-orm";
+import { db } from "@/db/initDrizzle.js";
+import { generateId } from "@/utils/genUtils.js";
+import { invalidateCustomerJwtAuth } from "./cacheCustomerJwtAuth.js";
 
 /**
- * Stateless revocation state for per-customer JWTs, in Redis only (no DB).
- *
- * `jwt:{org}:{cus}` hash { epoch, refresh_kid }, TTL 24h.
- * - epoch: revocation floor. A token is dead if token.epoch < epoch.
- * - refresh_kid: current refresh-token generation (rotation + reuse detection).
- *
- * The TTL is touched on every mint/refresh so the counter always outlives the
- * longest token referencing it (monotonicity). With absent ⇒ epoch 0, a Redis
- * outage fails OPEN — matching the house posture (check itself fails open then).
+ * Per-customer JWT revocation/rotation state — Postgres is the source of truth
+ * (the `customer_jwt_families` table), keyed by the immutable internal_customer_id.
+ * Redis is only a cache (see cacheCustomerJwtAuth). No TTL games, no region
+ * fan-out: revoke is a single atomic UPDATE.
  */
-const REFRESH_TTL_MS = 24 * 60 * 60 * 1000;
-
-const key = ({ orgId, customerId }: { orgId: string; customerId: string }) =>
-	`jwt:${orgId}:${customerId}`;
-
-export type JwtFamily = { epoch: number; refreshKid: number };
-
-/** How many configured regions a write reached. `succeeded === 0` means the
- *  write did not persist anywhere. */
-export type RegionWriteResult = { attempted: number; succeeded: number };
-
-/** Hot path. Redis down ⇒ 0 (fail-open: no revocation floor enforced). */
-export const readEpoch = async (args: {
+export type JwtFamily = {
+	epoch: number;
+	refreshKid: number;
+	indefinite: boolean;
 	orgId: string;
-	customerId: string;
-}): Promise<number> => {
-	try {
-		const value = await redis.hget(key(args), "epoch");
-		return value ? Number(value) : 0;
-	} catch {
-		return 0;
-	}
+	env: string;
 };
 
-export const readFamily = async (args: {
-	orgId: string;
-	customerId: string;
-}): Promise<JwtFamily> => {
-	try {
-		const hash = await redis.hgetall(key(args));
-		return {
-			epoch: hash?.epoch ? Number(hash.epoch) : 0,
-			refreshKid: hash?.refresh_kid ? Number(hash.refresh_kid) : 0,
-		};
-	} catch {
-		return { epoch: 0, refreshKid: 0 };
+export const readFamily = async ({
+	internalCustomerId,
+}: {
+	internalCustomerId: string;
+}): Promise<JwtFamily | null> => {
+	const row = await db.query.customerJwtFamilies.findFirst({
+		where: eq(customerJwtFamilies.internal_customer_id, internalCustomerId),
+	});
+	if (!row) {
+		return null;
 	}
-};
-
-const writeAllRegions = async (
-	run: (r: Redis) => Promise<unknown>,
-): Promise<RegionWriteResult> => {
-	const regions = getConfiguredRegions();
-	const results = await Promise.all(
-		regions.map(async (region) => {
-			const regional = getRegionalRedis(region);
-			if (regional.status !== "ready") {
-				return false;
-			}
-			const result = await tryRedisWrite(() => run(regional), regional);
-			return result !== null;
-		}),
-	);
 	return {
-		attempted: regions.length,
-		succeeded: results.filter(Boolean).length,
+		epoch: row.epoch,
+		refreshKid: row.refresh_kid,
+		indefinite: row.indefinite,
+		orgId: row.org_id,
+		env: row.env,
 	};
 };
 
-/** Mint/refresh: persist the family generation and (re)set the 24h TTL. HSET +
- *  PEXPIRE in one MULTI so the key never lingers without a TTL on a crash. */
+/** Mint / refresh: upsert the family generation. */
 export const setFamily = async ({
+	internalCustomerId,
 	orgId,
-	customerId,
+	env,
 	epoch,
 	refreshKid,
+	indefinite = false,
 }: {
+	internalCustomerId: string;
 	orgId: string;
-	customerId: string;
-} & JwtFamily): Promise<RegionWriteResult> => {
-	const cacheKey = key({ orgId, customerId });
-	return writeAllRegions((r) =>
-		r
-			.multi()
-			.hset(cacheKey, "epoch", String(epoch), "refresh_kid", String(refreshKid))
-			.pexpire(cacheKey, REFRESH_TTL_MS)
-			.exec(),
-	);
+	env: string;
+	epoch: number;
+	refreshKid: number;
+	indefinite?: boolean;
+}) => {
+	const now = Date.now();
+	await db
+		.insert(customerJwtFamilies)
+		.values({
+			internal_id: generateId("cjwtfam"),
+			internal_customer_id: internalCustomerId,
+			org_id: orgId,
+			env,
+			epoch,
+			refresh_kid: refreshKid,
+			indefinite,
+			created_at: now,
+			updated_at: now,
+		})
+		.onConflictDoUpdate({
+			target: customerJwtFamilies.internal_customer_id,
+			set: { epoch, refresh_kid: refreshKid, indefinite, updated_at: now },
+		});
+	await invalidateCustomerJwtAuth({ internalCustomerId });
 };
 
-/** Revoke / reuse-detected: bump the floor so every outstanding token dies. */
+/** Revoke / reuse-detected: atomic bump of the floor — every outstanding token dies. */
 export const bumpEpoch = async ({
+	internalCustomerId,
 	orgId,
-	customerId,
+	env,
 }: {
+	internalCustomerId: string;
 	orgId: string;
-	customerId: string;
-}): Promise<RegionWriteResult> => {
-	const cacheKey = key({ orgId, customerId });
-	return writeAllRegions((r) =>
-		r
-			.multi()
-			.hincrby(cacheKey, "epoch", 1)
-			.pexpire(cacheKey, REFRESH_TTL_MS)
-			.exec(),
-	);
+	env: string;
+}) => {
+	const now = Date.now();
+	await db
+		.insert(customerJwtFamilies)
+		.values({
+			internal_id: generateId("cjwtfam"),
+			internal_customer_id: internalCustomerId,
+			org_id: orgId,
+			env,
+			epoch: 1,
+			refresh_kid: 0,
+			indefinite: false,
+			created_at: now,
+			updated_at: now,
+		})
+		.onConflictDoUpdate({
+			target: customerJwtFamilies.internal_customer_id,
+			set: { epoch: sql`${customerJwtFamilies.epoch} + 1`, updated_at: now },
+		});
+	await invalidateCustomerJwtAuth({ internalCustomerId });
 };
