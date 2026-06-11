@@ -434,6 +434,10 @@ export const responseConcise = async ({
 	const json = text.match(/\{[\s\S]*\}/)?.[0];
 	try {
 		const verdict = JSON.parse(json ?? "") as { pass: boolean; reason: string };
+		// Surface the verdict in the terminal; Braintrust metadata keeps it too.
+		process.stderr.write(
+			`[concise-judge] ${verdict.pass ? "pass" : "fail"}: ${verdict.reason}\n`,
+		);
 		return {
 			metadata: { reason: verdict.reason, reply },
 			name: "Concise",

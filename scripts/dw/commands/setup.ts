@@ -7,7 +7,11 @@ import {
 	allocateWorktreeNumber,
 	deriveBranchName,
 } from "../helpers/registry.ts";
-import { setupAgentWorktree, autoSetupTestOrg } from "../helpers/setup.ts";
+import {
+	setupAgentWorktree,
+	autoSetupTestOrg,
+	autoSeedSlackInstall,
+} from "../helpers/setup.ts";
 import { ensureChatDatabase } from "../helpers/neon.ts";
 import { promoteAllUsersToAdmin } from "./admin.ts";
 import { ensureComposeStack, readNgrokTunnelUrl } from "../helpers/compose.ts";
@@ -94,6 +98,8 @@ export async function cmdSetup(): Promise<RegistryEntry> {
 
 		writeEnvLocalFiles(entry);
 		await autoSetupTestOrg(entry);
+		// Seed the Slack install for the worktree's test org (needs SLACK_BOT_TOKEN).
+		await autoSeedSlackInstall(entry);
 		// Auto-grant local superuser, like `bun dw admin` — runs after the test org
 		// exists so there are users to promote. Non-fatal: a hiccup here shouldn't
 		// undo an otherwise-complete setup.
