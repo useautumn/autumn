@@ -1,11 +1,11 @@
 import type { FullCustomer } from "../../../models/cusModels/fullCusModel.js";
-import type { FullAggregatedCustomerEntitlement } from "../../../models/cusProductModels/cusEntModels/aggregatedCusEnt.js";
+import type { FullAggregatedFeatureBalance } from "../../../models/cusProductModels/cusEntModels/aggregatedCusEnt.js";
 import type { CustomerPrice } from "../../../models/cusProductModels/cusPriceModels/cusPriceModels.js";
 import type { FullCusProduct } from "../../../models/cusProductModels/cusProductModels.js";
 
 type FullCustomerWithAggregations = FullCustomer & {
 	aggregated_customer_products?: FullCusProduct[];
-	aggregated_customer_entitlements?: FullAggregatedCustomerEntitlement[];
+	aggregated_customer_entitlements?: FullAggregatedFeatureBalance[];
 	aggregated_customer_prices?: CustomerPrice[];
 };
 

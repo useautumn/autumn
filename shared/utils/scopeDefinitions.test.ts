@@ -566,7 +566,7 @@ describe("ROLE_SCOPES", () => {
 	});
 
 	test("developer has the exact 11 expected scopes", () => {
-		expect([...ROLE_SCOPES.developer].sort()).toEqual(
+		expect([...ROLE_SCOPES.developer].sort() as string[]).toEqual(
 			[
 				"organisation:read",
 				"customers:write",
@@ -585,7 +585,7 @@ describe("ROLE_SCOPES", () => {
 	});
 
 	test("sales has the exact 7 expected scopes", () => {
-		expect([...ROLE_SCOPES.sales].sort()).toEqual(
+		expect([...ROLE_SCOPES.sales].sort() as string[]).toEqual(
 			[
 				"customers:write",
 				"billing:write",
@@ -1328,7 +1328,7 @@ describe("validateScopes", () => {
 			"customers:garbage",
 			"openid",
 		]);
-		expect([...result.valid].sort()).toEqual(
+		expect([...result.valid].sort() as string[]).toEqual(
 			["customers:read", "openid"].sort(),
 		);
 		expect(result.invalid).toEqual(["customers:garbage"]);
@@ -1337,7 +1337,7 @@ describe("validateScopes", () => {
 	test("all valid inputs → empty invalid", () => {
 		const result = validateScopes(["customers:read", "admin", "openid"]);
 		expect(result.invalid).toEqual([]);
-		expect([...result.valid].sort()).toEqual(
+		expect([...result.valid].sort() as string[]).toEqual(
 			["admin", "customers:read", "openid"].sort(),
 		);
 	});
@@ -1351,7 +1351,7 @@ describe("validateScopes", () => {
 	test("legacy scopes count as valid", () => {
 		const result = validateScopes(["customers:create", "apiKeys"]);
 		expect(result.invalid).toEqual([]);
-		expect([...result.valid].sort()).toEqual(
+		expect([...result.valid].sort() as string[]).toEqual(
 			["apiKeys", "customers:create"].sort(),
 		);
 	});
