@@ -1,4 +1,6 @@
 import { describe, expect, test } from "bun:test";
+import type Anthropic from "@anthropic-ai/sdk";
+import type { AutumnLogger } from "@autumn/logging";
 import { AppEnv, type ChatApproval } from "@autumn/shared";
 import type { ActionEvent } from "chat";
 import { approvalErrorResult } from "../../../src/internal/approvals/utils/approvalErrors.js";
@@ -13,6 +15,15 @@ const setLeafTestEnv = () => {
 	process.env.SLACK_CLIENT_SECRET ??= "test-slack-client-secret";
 	process.env.SLACK_SIGNING_SECRET ??= "test-slack-signing-secret";
 };
+
+const testLogger = {
+	child: () => testLogger,
+	debug: () => {},
+	error: () => {},
+	info: () => {},
+	warn: () => {},
+	warning: () => {},
+} as unknown as AutumnLogger;
 
 describe("approval flow", () => {
 	test("maps suspended destructive tool output to a pending approval request", () => {
@@ -173,5 +184,121 @@ describe("approval flow", () => {
 		expect(JSON.stringify(edits[0])).toContain("Applying the approved action");
 		expect(JSON.stringify(edits[1])).toContain("Attach plan failed");
 		expect(JSON.stringify(edits[1])).toContain("Missing email.");
+	});
+
+	test("denies and cancels stale pending approvals before a new user message", async () => {
+		setLeafTestEnv();
+		const { cancelPendingSessionApprovalsWithDeps } = await import(
+			"../../../src/internal/approvals/actions/cancelPendingSessionApprovals.js"
+		);
+		const approval = {
+			id: "approval_1",
+			tool_call_id: "tool_use_1",
+		} as ChatApproval;
+		const sentEvents: unknown[] = [];
+		const cancelled: unknown[] = [];
+		const client = {
+			beta: {
+				sessions: {
+					events: {
+						send: async (_sessionId: string, body: { events: unknown[] }) => {
+							sentEvents.push(...body.events);
+						},
+					},
+				},
+			},
+		} as unknown as Anthropic;
+
+		const result = await cancelPendingSessionApprovalsWithDeps({
+			client,
+			db: {} as never,
+			logger: testLogger,
+			providerUserId: "U1",
+			query: {
+				channelId: "C1",
+				env: AppEnv.Sandbox,
+				orgId: "org_1",
+				provider: "slack",
+				runId: "sesn_1",
+				workspaceId: "T1",
+			},
+			sessionId: "sesn_1",
+			deps: {
+				cancelApproval: async (input) => {
+					cancelled.push(input);
+					return approval;
+				},
+				driveTurn: async ({ kickoff }) => {
+					await kickoff();
+					return {
+						textParts: [],
+						usage: {
+							cacheCreationInputTokens: 0,
+							cacheReadInputTokens: 0,
+							inputTokens: 0,
+							outputTokens: 0,
+						},
+					};
+				},
+				listPendingApprovals: async () => [approval],
+			},
+		});
+
+		expect(result.cancelledCount).toBe(1);
+		expect(sentEvents).toEqual([
+			{
+				deny_message: "User sent new instructions before approving this action.",
+				result: "deny",
+				tool_use_id: "tool_use_1",
+				type: "user.tool_confirmation",
+			},
+		]);
+		expect(cancelled).toEqual([
+			{
+				approvalId: "approval_1",
+				db: {},
+				providerUserId: "U1",
+			},
+		]);
+	});
+
+	test("cancels pending approvals without a tool call id", async () => {
+		setLeafTestEnv();
+		const { cancelPendingSessionApprovalsWithDeps } = await import(
+			"../../../src/internal/approvals/actions/cancelPendingSessionApprovals.js"
+		);
+		const approval = {
+			id: "approval_1",
+			tool_call_id: null,
+		} as ChatApproval;
+		const cancelled: unknown[] = [];
+
+		await cancelPendingSessionApprovalsWithDeps({
+			client: {} as Anthropic,
+			db: {} as never,
+			logger: testLogger,
+			providerUserId: "U1",
+			query: {
+				channelId: "C1",
+				env: AppEnv.Sandbox,
+				orgId: "org_1",
+				provider: "slack",
+				runId: "sesn_1",
+				workspaceId: "T1",
+			},
+			sessionId: "sesn_1",
+			deps: {
+				cancelApproval: async (input) => {
+					cancelled.push(input);
+					return approval;
+				},
+				driveTurn: async () => {
+					throw new Error("should not drive session");
+				},
+				listPendingApprovals: async () => [approval],
+			},
+		});
+
+		expect(cancelled).toHaveLength(1);
 	});
 });

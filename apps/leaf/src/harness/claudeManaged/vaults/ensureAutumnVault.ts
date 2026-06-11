@@ -30,12 +30,38 @@ const tokenEndpoint = () => {
 	return endpoint;
 };
 
+export const isCmaVaultStale = ({
+	credentialUpdatedAt,
+	vaultUpdatedAt,
+}: {
+	credentialUpdatedAt: number;
+	vaultUpdatedAt?: number | null;
+}) => !vaultUpdatedAt || credentialUpdatedAt > vaultUpdatedAt;
+
+const buildCredentialAuth = ({
+	accessToken,
+	credential,
+	mcpServerUrl,
+}: {
+	accessToken: string;
+	credential: NonNullable<
+		Awaited<ReturnType<typeof getChatOAuthCredentialByInstallationEnv>>
+	>;
+	mcpServerUrl: string;
+}) => ({
+	type: "mcp_oauth" as const,
+	mcp_server_url: mcpServerUrl,
+	access_token: accessToken,
+	refresh: {
+		client_id: credential.oauth_client_id,
+		refresh_token: decrypt(credential.refresh_token),
+		token_endpoint: tokenEndpoint(),
+		token_endpoint_auth: { type: "none" as const },
+	},
+});
+
 // Mirrors the org's Autumn MCP OAuth credential into a CMA vault so Anthropic
-// injects it after egress — the credential never enters the sandbox. Created
-// once per (org, env); Anthropic auto-refreshes via the stored refresh token.
-// NOTE: if Better Auth rotates the refresh token out-of-band, the vault copy goes
-// stale and the next session reports an MCP auth error — re-seed by clearing the
-// stored vault id. (Acceptable for v1; revisit if it bites.)
+// injects it after egress. Resync when our local OAuth credential rotates.
 export const ensureAutumnVault = async ({
 	client,
 	env,
@@ -49,9 +75,6 @@ export const ensureAutumnVault = async ({
 	provider: string;
 	workspaceId: string;
 }): Promise<string> => {
-	const existing = await cmaRepo.getVaultId({ db, env, orgId });
-	if (existing) return existing;
-
 	const installation = await db.query.chatInstallations.findFirst({
 		where: and(
 			eq(chatInstallations.org_id, orgId),
@@ -76,22 +99,55 @@ export const ensureAutumnVault = async ({
 	}
 
 	const mcpServerUrl = new URL("/mcp", chatEnv.MCP_SERVER_URL).toString();
+	const existing = await cmaRepo.getVault({ db, env, orgId });
+	if (
+		existing &&
+		!isCmaVaultStale({
+			credentialUpdatedAt: credential.updated_at,
+			vaultUpdatedAt: existing.updated_at,
+		})
+	) {
+		return existing.vault_id;
+	}
+
+	const auth = buildCredentialAuth({ accessToken, credential, mcpServerUrl });
+	if (existing) {
+		const updated = await client.beta.vaults.credentials.update(
+			existing.credential_id,
+			{
+				vault_id: existing.vault_id,
+				auth: {
+					type: "mcp_oauth",
+					access_token: auth.access_token,
+					refresh: {
+						refresh_token: auth.refresh.refresh_token,
+						scope: credential.scopes.join(" "),
+					},
+				},
+				metadata: {
+					credential_updated_at: String(credential.updated_at),
+				},
+			},
+		);
+		await cmaRepo.upsertVault({
+			credentialId: updated.id,
+			db,
+			env,
+			orgId,
+			vaultId: existing.vault_id,
+		});
+		return existing.vault_id;
+	}
+
 	const vault = await client.beta.vaults.create({
 		display_name: `autumn/${orgId}/${env}`,
 		metadata: { app: "leaf", env, orgId },
 	});
 	const created = await client.beta.vaults.credentials.create(vault.id, {
 		display_name: `autumn-mcp/${orgId}/${env}`,
-		auth: {
-			type: "mcp_oauth",
-			mcp_server_url: mcpServerUrl,
-			access_token: accessToken,
-			refresh: {
-				client_id: credential.oauth_client_id,
-				refresh_token: decrypt(credential.refresh_token),
-				token_endpoint: tokenEndpoint(),
-				token_endpoint_auth: { type: "none" },
-			},
+		auth,
+		metadata: {
+			credential_updated_at: String(credential.updated_at),
 		},
 	});
 	await cmaRepo.upsertVault({

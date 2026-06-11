@@ -26,6 +26,7 @@ export const runMessage = async ({
 	installation,
 	logger = rootLogger,
 	onAction,
+	providerUserId,
 	recentMessages,
 	text,
 	channelId,
@@ -87,6 +88,7 @@ export const runMessage = async ({
 					id: installation.org_id,
 					slug: installation.org_slug ?? undefined,
 				},
+				providerUserId,
 				thread: {
 					channelId,
 					provider: installation.provider,

@@ -3,6 +3,7 @@ import { claimChatApproval } from "./claimChatApproval.js";
 import { finalizeChatApproval } from "./finalizeChatApproval.js";
 import { getChatApproval } from "./getChatApproval.js";
 import { insertChatApproval } from "./insertChatApproval.js";
+import { listPendingChatApprovalsForRun } from "./listPendingChatApprovalsForRun.js";
 
 export const chatApprovalRepo = {
 	cancel: cancelChatApproval,
@@ -10,4 +11,5 @@ export const chatApprovalRepo = {
 	finalize: finalizeChatApproval,
 	get: getChatApproval,
 	insert: insertChatApproval,
+	listPendingForRun: listPendingChatApprovalsForRun,
 } as const;

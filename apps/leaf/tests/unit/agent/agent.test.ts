@@ -19,6 +19,9 @@ const { autumnChatInstructions } = await import(
 const { createFirecrawlTools } = await import(
 	"../../../src/agent/tools/firecrawl.js"
 );
+const { isCmaVaultStale } = await import(
+	"../../../src/harness/claudeManaged/vaults/ensureAutumnVault.js"
+);
 
 const execute = async (
 	tool: { execute?: (...args: never[]) => Promise<unknown> } | undefined,
@@ -173,5 +176,28 @@ describe("Firecrawl tools", () => {
 			url: "https://example.com",
 		});
 		expect((result as { markdown: string }).markdown.length).toBe(12_000);
+	});
+});
+
+describe("Claude Managed vault sync", () => {
+	test("treats the vault as stale when local OAuth credentials are newer", () => {
+		expect(
+			isCmaVaultStale({
+				credentialUpdatedAt: 2000,
+				vaultUpdatedAt: 1000,
+			}),
+		).toBe(true);
+		expect(
+			isCmaVaultStale({
+				credentialUpdatedAt: 1000,
+				vaultUpdatedAt: 2000,
+			}),
+		).toBe(false);
+		expect(
+			isCmaVaultStale({
+				credentialUpdatedAt: 1000,
+				vaultUpdatedAt: null,
+			}),
+		).toBe(true);
 	});
 });

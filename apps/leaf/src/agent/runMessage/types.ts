@@ -1,5 +1,5 @@
 import type { AutumnLogger } from "@autumn/logging";
-import type { AppEnv } from "@autumn/shared";
+import type { AppEnv, ChatProvider } from "@autumn/shared";
 import type { AgentHarnessName } from "../../lib/chatAgentConfig.js";
 import type { AgentOutput, ChatContextMessage } from "../../types.js";
 
@@ -17,7 +17,7 @@ export type MessageAttachment = {
 
 export type ThreadRef = {
 	channelId: string;
-	provider: string;
+	provider: ChatProvider;
 	threadId: string;
 	workspaceId: string;
 };
@@ -31,6 +31,7 @@ export type MessageContext = {
 	logger: AutumnLogger;
 	onAction?: (message: string) => Promise<void> | void;
 	org: { id: string; slug?: string };
+	providerUserId: string;
 	thread: ThreadRef;
 	timestamp: number;
 	/** Org+env OAuth access token used for Autumn MCP auth. */

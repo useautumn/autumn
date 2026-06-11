@@ -75,6 +75,7 @@ export type BotMessage = {
 	installation: LeafChatInstallation;
 	logger?: AutumnLogger;
 	onAction?: (message: string) => Promise<void> | void;
+	providerUserId: string;
 	recentMessages?: ChatContextMessage[];
 	text: string;
 	channelId: string;

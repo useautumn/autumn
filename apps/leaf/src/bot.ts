@@ -154,6 +154,7 @@ const runAndReply = async ({
 			installation,
 			logger,
 			onAction: logAction,
+			providerUserId,
 			recentMessages,
 			text,
 			channelId,

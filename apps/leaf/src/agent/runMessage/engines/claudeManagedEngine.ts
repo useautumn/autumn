@@ -14,6 +14,7 @@ import {
 	type UserMessageContentBlock,
 } from "../../../harness/claudeManaged/session/userMessage.js";
 import { ensureAutumnVault } from "../../../harness/claudeManaged/vaults/ensureAutumnVault.js";
+import { cancelPendingSessionApprovals } from "../../../internal/approvals/actions/cancelPendingSessionApprovals.js";
 import { containsSecret } from "../../../internal/sandbox/tool/guardrails.js";
 import { db } from "../../../lib/db.js";
 import { createBraintrustLogger } from "../../../providers/braintrust/index.js";
@@ -50,6 +51,27 @@ const redactSecrets = ({
 // preview-only turn must be nudged into a real write-tool suspension.
 const buildNudgeText = ({ toolName }: { toolName: string }) =>
 	`Call the ${toolName} tool now with the exact args from your preview. It will pause for user approval automatically — do not ask for confirmation or repeat the summary.`;
+
+const isWaitingOnSessionResponseError = (error: unknown) =>
+	error instanceof Error &&
+	error.message.includes("waiting on responses to events");
+
+const interruptSession = async ({
+	client,
+	sessionId,
+}: {
+	client: Anthropic;
+	sessionId: string;
+}) =>
+	await driveSessionTurn({
+		autumnMcpServerName: claudeManagedConfig.autumnMcpServerName,
+		client,
+		kickoff: () =>
+			client.beta.sessions.events.send(sessionId, {
+				events: [{ type: "user.interrupt" }],
+			}),
+		sessionId,
+	});
 
 const mergeTurnOutcomes = (
 	first: SessionTurnOutcome,
@@ -99,7 +121,7 @@ const buildMessageText = ({
 export const claudeManagedEngine: AgentEngine = {
 	name: "claude-managed",
 	run: async ({ ctx, params }) => {
-		const { env, logger, onAction, org, thread, token } = ctx;
+		const { env, logger, onAction, org, providerUserId, thread, token } = ctx;
 
 		const threadKey = [
 			thread.provider,
@@ -169,6 +191,29 @@ export const claudeManagedEngine: AgentEngine = {
 		}
 		const activeSessionId = sessionId;
 
+		if (!newSession) {
+			const { cancelledCount } = await cancelPendingSessionApprovals({
+				client,
+				db,
+				logger,
+				providerUserId,
+				query: {
+					channelId: thread.channelId,
+					env,
+					orgId: org.id,
+					provider: thread.provider,
+					runId: activeSessionId,
+					workspaceId: thread.workspaceId,
+				},
+				sessionId: activeSessionId,
+			});
+			if (cancelledCount > 0) {
+				await onAction?.(
+					"Cancelled the previous approval because new instructions were received.",
+				);
+			}
+		}
+
 		logger.info("Starting Claude Managed agent", {
 			event: "leaf.agent_started",
 			context: { env, org_id: org.id, provider: thread.provider },
@@ -232,8 +277,28 @@ export const claudeManagedEngine: AgentEngine = {
 			});
 		};
 
+		const driveTurnWithInterruptRetry = async ({
+			content,
+			span,
+		}: {
+			content: UserMessageContentBlock[];
+			span?: Span;
+		}) => {
+			try {
+				return await driveTurn({ content, span });
+			} catch (error) {
+				if (!isWaitingOnSessionResponseError(error)) throw error;
+				logger.warn("Interrupting blocked Claude Managed session", {
+					event: "leaf.claude_managed_session_interrupted",
+					context: { env, org_id: org.id },
+				});
+				await interruptSession({ client, sessionId: activeSessionId });
+				return await driveTurn({ content, span });
+			}
+		};
+
 		const runTurn = async ({ span }: { span?: Span }) => {
-			const first = await driveTurn({
+			const first = await driveTurnWithInterruptRetry({
 				content: buildUserMessageContent({
 					attachments: params.attachments,
 					text,

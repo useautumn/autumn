@@ -1,10 +1,12 @@
 import {
+	AppEnv,
 	FeatureUsageType,
 	type ProductItem,
 	type ProductV2,
 } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { clearOrg } from "@tests/utils/setup/clearOrg.js";
 import defaultCtx, {
 	createTestContext,
 	type TestContext,
@@ -329,6 +331,18 @@ export const buildKnowledgePlatformProducts = () => {
 	};
 };
 
+const withProductGroup = ({
+	products,
+	group,
+}: {
+	products: ProductV2[];
+	group: string;
+}) =>
+	products.map((product) => ({
+		...product,
+		group,
+	}));
+
 export const initKnowledgePlatformScenario = async ({
 	customerId = "agent-knowledge-platform",
 	attachPlan = "trial",
@@ -398,8 +412,11 @@ export const seedKnowledgePlatformCustomers = async ({
 	await initScenario({
 		setup: [
 			s.products({
-				list: Object.values(catalog.plans),
-				prefix: productPrefix,
+				list: withProductGroup({
+					products: Object.values(catalog.plans),
+					group: productPrefix,
+				}),
+				prefix: "",
 				createInStripe: false,
 			}),
 		],
@@ -448,6 +465,18 @@ const runKnowledgePlatformSeed = async () => {
 	const attachPlan = getArgValue("--attach-plan") as
 		| Extract<KnowledgePlatformPlanKey, "trial" | "enterprise">
 		| undefined;
+	if (!process.env.TESTS_ORG) {
+		throw new Error("TESTS_ORG is required to seed knowledge platform data");
+	}
+
+	if (!process.argv.includes("--skip-clear")) {
+		await clearOrg({
+			orgSlug: process.env.TESTS_ORG,
+			env: AppEnv.Sandbox,
+			skipStripeReset: true,
+		});
+	}
+
 	const ctx = await createTestContext();
 
 	const result = await seedKnowledgePlatformCustomers({

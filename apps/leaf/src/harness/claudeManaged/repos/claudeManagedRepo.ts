@@ -98,6 +98,21 @@ export const cmaRepo = {
 		return row?.vault_id;
 	},
 
+	getVault: async ({
+		db,
+		env,
+		orgId,
+	}: {
+		db: ChatDb;
+		env: AppEnv;
+		orgId: string;
+	}) => {
+		const row = await db.query.cmaVaults.findFirst({
+			where: and(eq(cmaVaults.org_id, orgId), eq(cmaVaults.env, env)),
+		});
+		return row;
+	},
+
 	upsertVault: async ({
 		credentialId,
 		db,
