@@ -12,7 +12,7 @@ from autumn_sdk.types import (
 from autumn_sdk.utils import FieldMetadata, HeaderMetadata
 import pydantic
 from pydantic import model_serializer
-from typing import Any, List, Literal, Optional, Union
+from typing import List, Literal, Optional, Union
 from typing_extensions import Annotated, NotRequired, TypeAliasType, TypedDict
 
 
@@ -44,7 +44,7 @@ class UpdatePlanGlobals(BaseModel):
         return m
 
 
-UpdatePlanPriceIntervalRequest = Literal[
+UpdatePlanPriceIntervalRequestBody = Literal[
     "one_off",
     "week",
     "month",
@@ -60,7 +60,7 @@ class UpdatePlanBasePriceTypedDict(TypedDict):
 
     amount: float
     r"""Base price amount for the plan."""
-    interval: UpdatePlanPriceIntervalRequest
+    interval: UpdatePlanPriceIntervalRequestBody
     r"""Billing interval (e.g. 'month', 'year')."""
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -72,7 +72,7 @@ class UpdatePlanBasePrice(BaseModel):
     amount: float
     r"""Base price amount for the plan."""
 
-    interval: UpdatePlanPriceIntervalRequest
+    interval: UpdatePlanPriceIntervalRequestBody
     r"""Billing interval (e.g. 'month', 'year')."""
 
     interval_count: Optional[float] = None
@@ -95,7 +95,7 @@ class UpdatePlanBasePrice(BaseModel):
         return m
 
 
-UpdatePlanResetIntervalRequest = Literal[
+UpdatePlanResetIntervalRequestBody = Literal[
     "one_off",
     "minute",
     "hour",
@@ -109,19 +109,19 @@ UpdatePlanResetIntervalRequest = Literal[
 r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
 
-class UpdatePlanResetRequestTypedDict(TypedDict):
+class UpdatePlanResetRequestBodyTypedDict(TypedDict):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: UpdatePlanResetIntervalRequest
+    interval: UpdatePlanResetIntervalRequestBody
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
     interval_count: NotRequired[float]
     r"""Number of intervals between resets. Defaults to 1."""
 
 
-class UpdatePlanResetRequest(BaseModel):
+class UpdatePlanResetRequestBody(BaseModel):
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    interval: UpdatePlanResetIntervalRequest
+    interval: UpdatePlanResetIntervalRequestBody
     r"""Interval at which balance resets (e.g. 'month', 'year'). For consumable features only."""
 
     interval_count: Optional[float] = None
@@ -144,20 +144,22 @@ class UpdatePlanResetRequest(BaseModel):
         return m
 
 
-UpdatePlanToTypedDict = TypeAliasType("UpdatePlanToTypedDict", Union[float, str])
+UpdatePlanToRequestBodyTypedDict = TypeAliasType(
+    "UpdatePlanToRequestBodyTypedDict", Union[float, str]
+)
 
 
-UpdatePlanTo = TypeAliasType("UpdatePlanTo", Union[float, str])
+UpdatePlanToRequestBody = TypeAliasType("UpdatePlanToRequestBody", Union[float, str])
 
 
-class UpdatePlanTierTypedDict(TypedDict):
-    to: UpdatePlanToTypedDict
+class UpdatePlanTierRequestBodyTypedDict(TypedDict):
+    to: UpdatePlanToRequestBodyTypedDict
     amount: NotRequired[float]
     flat_amount: NotRequired[float]
 
 
-class UpdatePlanTier(BaseModel):
-    to: UpdatePlanTo
+class UpdatePlanTierRequestBody(BaseModel):
+    to: UpdatePlanToRequestBody
 
     amount: Optional[float] = None
 
@@ -180,13 +182,13 @@ class UpdatePlanTier(BaseModel):
         return m
 
 
-UpdatePlanTierBehaviorRequest = Literal[
+UpdatePlanTierBehaviorRequestBody = Literal[
     "graduated",
     "volume",
 ]
 
 
-UpdatePlanItemPriceIntervalRequest = Literal[
+UpdatePlanItemPriceIntervalRequestBody = Literal[
     "one_off",
     "week",
     "month",
@@ -197,49 +199,49 @@ UpdatePlanItemPriceIntervalRequest = Literal[
 r"""Billing interval. For consumable features, should match reset.interval."""
 
 
-UpdatePlanBillingMethodRequest = Literal[
+UpdatePlanBillingMethodRequestBody = Literal[
     "prepaid",
     "usage_based",
 ]
 r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
 
-class UpdatePlanPriceRequestTypedDict(TypedDict):
+class UpdatePlanPriceRequestBodyTypedDict(TypedDict):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: UpdatePlanItemPriceIntervalRequest
+    interval: UpdatePlanItemPriceIntervalRequestBody
     r"""Billing interval. For consumable features, should match reset.interval."""
-    billing_method: UpdatePlanBillingMethodRequest
+    billing_method: UpdatePlanBillingMethodRequestBody
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
-    tiers: NotRequired[List[UpdatePlanTierTypedDict]]
+    tiers: NotRequired[List[UpdatePlanTierRequestBodyTypedDict]]
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
-    tier_behavior: NotRequired[UpdatePlanTierBehaviorRequest]
+    tier_behavior: NotRequired[UpdatePlanTierBehaviorRequestBody]
     interval_count: NotRequired[float]
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
     r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
-    max_purchase: NotRequired[float]
-    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
+    max_purchase: NotRequired[Nullable[float]]
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
 
-class UpdatePlanPriceRequest(BaseModel):
+class UpdatePlanPriceRequestBody(BaseModel):
     r"""Pricing for usage beyond included units. Omit for free features."""
 
-    interval: UpdatePlanItemPriceIntervalRequest
+    interval: UpdatePlanItemPriceIntervalRequestBody
     r"""Billing interval. For consumable features, should match reset.interval."""
 
-    billing_method: UpdatePlanBillingMethodRequest
+    billing_method: UpdatePlanBillingMethodRequestBody
     r"""'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go."""
 
     amount: Optional[float] = None
     r"""Price per billing_units after included usage. Either 'amount' or 'tiers' is required."""
 
-    tiers: Optional[List[UpdatePlanTier]] = None
+    tiers: Optional[List[UpdatePlanTierRequestBody]] = None
     r"""Tiered pricing.  Either 'amount' or 'tiers' is required."""
 
-    tier_behavior: Optional[UpdatePlanTierBehaviorRequest] = None
+    tier_behavior: Optional[UpdatePlanTierBehaviorRequestBody] = None
 
     interval_count: Optional[float] = 1
     r"""Number of intervals per billing cycle. Defaults to 1."""
@@ -247,8 +249,8 @@ class UpdatePlanPriceRequest(BaseModel):
     billing_units: Optional[float] = 1
     r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
 
-    max_purchase: Optional[float] = None
-    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
+    max_purchase: OptionalNullable[float] = UNSET
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -262,15 +264,24 @@ class UpdatePlanPriceRequest(BaseModel):
                 "max_purchase",
             ]
         )
+        nullable_fields = set(["max_purchase"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m
@@ -314,17 +325,17 @@ class UpdatePlanProration(BaseModel):
     r"""Credit behavior when quantity decreases mid-cycle."""
 
 
-UpdatePlanExpiryDurationTypeRequest = Literal[
+UpdatePlanExpiryDurationTypeRequestBody = Literal[
     "month",
     "forever",
 ]
 r"""When rolled over units expire."""
 
 
-class UpdatePlanRolloverRequestTypedDict(TypedDict):
+class UpdatePlanRolloverRequestBodyTypedDict(TypedDict):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: UpdatePlanExpiryDurationTypeRequest
+    expiry_duration_type: UpdatePlanExpiryDurationTypeRequestBody
     r"""When rolled over units expire."""
     max: NotRequired[float]
     r"""Max rollover units. Omit for unlimited rollover."""
@@ -334,10 +345,10 @@ class UpdatePlanRolloverRequestTypedDict(TypedDict):
     r"""Number of periods before expiry."""
 
 
-class UpdatePlanRolloverRequest(BaseModel):
+class UpdatePlanRolloverRequestBody(BaseModel):
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
-    expiry_duration_type: UpdatePlanExpiryDurationTypeRequest
+    expiry_duration_type: UpdatePlanExpiryDurationTypeRequestBody
     r"""When rolled over units expire."""
 
     max: Optional[float] = None
@@ -375,13 +386,13 @@ class UpdatePlanPlanItemTypedDict(TypedDict):
     r"""Number of free units included. Balance resets to this each interval for consumable features."""
     unlimited: NotRequired[bool]
     r"""If true, customer has unlimited access to this feature."""
-    reset: NotRequired[UpdatePlanResetRequestTypedDict]
+    reset: NotRequired[UpdatePlanResetRequestBodyTypedDict]
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
-    price: NotRequired[UpdatePlanPriceRequestTypedDict]
+    price: NotRequired[UpdatePlanPriceRequestBodyTypedDict]
     r"""Pricing for usage beyond included units. Omit for free features."""
     proration: NotRequired[UpdatePlanProrationTypedDict]
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
-    rollover: NotRequired[UpdatePlanRolloverRequestTypedDict]
+    rollover: NotRequired[UpdatePlanRolloverRequestBodyTypedDict]
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
 
@@ -397,16 +408,16 @@ class UpdatePlanPlanItem(BaseModel):
     unlimited: Optional[bool] = None
     r"""If true, customer has unlimited access to this feature."""
 
-    reset: Optional[UpdatePlanResetRequest] = None
+    reset: Optional[UpdatePlanResetRequestBody] = None
     r"""Reset configuration for consumable features. Omit for non-consumable features like seats."""
 
-    price: Optional[UpdatePlanPriceRequest] = None
+    price: Optional[UpdatePlanPriceRequestBody] = None
     r"""Pricing for usage beyond included units. Omit for free features."""
 
     proration: Optional[UpdatePlanProration] = None
     r"""Proration settings for prepaid features. Controls mid-cycle quantity change billing."""
 
-    rollover: Optional[UpdatePlanRolloverRequest] = None
+    rollover: Optional[UpdatePlanRolloverRequestBody] = None
     r"""Rollover config for unused units. If set, unused included units carry over."""
 
     @model_serializer(mode="wrap")
@@ -543,6 +554,7 @@ class UpdatePlanParamsTypedDict(TypedDict):
     archived: NotRequired[bool]
     new_plan_id: NotRequired[str]
     r"""The new ID to use for the plan. Can only be updated if the plan has not been used by any customers."""
+    disable_version: NotRequired[bool]
 
 
 class UpdatePlanParams(BaseModel):
@@ -584,6 +596,8 @@ class UpdatePlanParams(BaseModel):
     new_plan_id: Optional[str] = None
     r"""The new ID to use for the plan. Can only be updated if the plan has not been used by any customers."""
 
+    disable_version: Optional[bool] = None
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -601,6 +615,7 @@ class UpdatePlanParams(BaseModel):
                 "version",
                 "archived",
                 "new_plan_id",
+                "disable_version",
             ]
         )
         nullable_fields = set(["price", "free_trial"])
@@ -723,6 +738,7 @@ UpdatePlanType = Union[
         "single_use",
         "continuous_use",
         "credit_system",
+        "ai_credit_system",
     ],
     UnrecognizedStr,
 ]
@@ -871,6 +887,44 @@ class UpdatePlanResetResponse(BaseModel):
         return m
 
 
+UpdatePlanToResponseTypedDict = TypeAliasType(
+    "UpdatePlanToResponseTypedDict", Union[float, str]
+)
+
+
+UpdatePlanToResponse = TypeAliasType("UpdatePlanToResponse", Union[float, str])
+
+
+class UpdatePlanTierResponseTypedDict(TypedDict):
+    to: UpdatePlanToResponseTypedDict
+    amount: float
+    flat_amount: NotRequired[float]
+
+
+class UpdatePlanTierResponse(BaseModel):
+    to: UpdatePlanToResponse
+
+    amount: float
+
+    flat_amount: Optional[float] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["flat_amount"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 UpdatePlanTierBehaviorResponse = Union[
     Literal[
         "graduated",
@@ -915,7 +969,7 @@ class UpdatePlanItemPriceResponseTypedDict(TypedDict):
     r"""Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit."""
     amount: NotRequired[float]
     r"""Price per billing_units after included usage is consumed. Mutually exclusive with tiers."""
-    tiers: NotRequired[List[Nullable[Any]]]
+    tiers: NotRequired[List[UpdatePlanTierResponseTypedDict]]
     r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
     tier_behavior: NotRequired[UpdatePlanTierBehaviorResponse]
     interval_count: NotRequired[float]
@@ -938,7 +992,7 @@ class UpdatePlanItemPriceResponse(BaseModel):
     amount: Optional[float] = None
     r"""Price per billing_units after included usage is consumed. Mutually exclusive with tiers."""
 
-    tiers: Optional[List[Nullable[Any]]] = None
+    tiers: Optional[List[UpdatePlanTierResponse]] = None
     r"""Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required."""
 
     tier_behavior: Optional[UpdatePlanTierBehaviorResponse] = None

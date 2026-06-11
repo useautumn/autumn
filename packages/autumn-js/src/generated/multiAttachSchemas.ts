@@ -80,7 +80,7 @@ export const multiAttachPriceOutboundSchema = z.object({
 	interval_count: z.number(),
 	billing_units: z.number(),
 	billing_method: z.string(),
-	max_purchase: z.union([z.number(), z.undefined()]).optional(),
+	max_purchase: z.union([z.number(), z.undefined()]).optional().nullable(),
 });
 
 export const multiAttachProrationOutboundSchema = z.object({
@@ -235,7 +235,7 @@ export const multiAttachPriceSchema = z.object({
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 	billingUnits: z.union([z.number(), z.undefined()]).optional(),
 	billingMethod: multiAttachBillingMethodSchema,
-	maxPurchase: z.union([z.number(), z.undefined()]).optional(),
+	maxPurchase: z.union([z.number(), z.undefined()]).optional().nullable(),
 });
 
 export const multiAttachOnIncreaseSchema = closedEnumSchema;

@@ -21,7 +21,7 @@ export type UpdateCustomerGlobals = {
 /**
  * The time interval for the purchase limit window.
  */
-export const UpdateCustomerIntervalRequest = {
+export const UpdateCustomerIntervalRequestBody = {
   Hour: "hour",
   Day: "day",
   Week: "week",
@@ -30,8 +30,8 @@ export const UpdateCustomerIntervalRequest = {
 /**
  * The time interval for the purchase limit window.
  */
-export type UpdateCustomerIntervalRequest = ClosedEnum<
-  typeof UpdateCustomerIntervalRequest
+export type UpdateCustomerIntervalRequestBody = ClosedEnum<
+  typeof UpdateCustomerIntervalRequestBody
 >;
 
 /**
@@ -41,7 +41,7 @@ export type UpdateCustomerPurchaseLimitRequest = {
   /**
    * The time interval for the purchase limit window.
    */
-  interval: UpdateCustomerIntervalRequest;
+  interval: UpdateCustomerIntervalRequestBody;
   /**
    * Number of intervals in the purchase limit window.
    */
@@ -544,15 +544,16 @@ export type UpdateCustomerPurchase = {
 };
 
 /**
- * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
 export const UpdateCustomerType = {
   Boolean: "boolean",
   Metered: "metered",
   CreditSystem: "credit_system",
+  AiCreditSystem: "ai_credit_system",
 } as const;
 /**
- * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
 export type UpdateCustomerType = OpenEnum<typeof UpdateCustomerType>;
 
@@ -565,6 +566,16 @@ export type UpdateCustomerCreditSchema = {
    * Credits consumed per unit of the metered feature.
    */
   creditCost: number;
+};
+
+export type UpdateCustomerModelMarkups = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+export type UpdateCustomerProviderMarkups = {
+  markup: number;
 };
 
 /**
@@ -594,7 +605,7 @@ export type UpdateCustomerFeature = {
    */
   name: string;
   /**
-   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
    */
   type: UpdateCustomerType;
   /**
@@ -609,6 +620,21 @@ export type UpdateCustomerFeature = {
    * For credit_system features: maps metered features to their credit costs.
    */
   creditSchema?: Array<UpdateCustomerCreditSchema> | undefined;
+  /**
+   * Per-model markup overrides for AI credit systems.
+   */
+  modelMarkups?: { [k: string]: UpdateCustomerModelMarkups } | null | undefined;
+  /**
+   * Default percentage markup for AI credit systems. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider default markup percentages for AI credit systems.
+   */
+  providerMarkups?:
+    | { [k: string]: UpdateCustomerProviderMarkups }
+    | null
+    | undefined;
   /**
    * Display names for the feature in billing UI and customer-facing components.
    */
@@ -775,9 +801,9 @@ export type UpdateCustomerResponse = {
 };
 
 /** @internal */
-export const UpdateCustomerIntervalRequest$outboundSchema: z.ZodMiniEnum<
-  typeof UpdateCustomerIntervalRequest
-> = z.enum(UpdateCustomerIntervalRequest);
+export const UpdateCustomerIntervalRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof UpdateCustomerIntervalRequestBody
+> = z.enum(UpdateCustomerIntervalRequestBody);
 
 /** @internal */
 export type UpdateCustomerPurchaseLimitRequest$Outbound = {
@@ -792,7 +818,7 @@ export const UpdateCustomerPurchaseLimitRequest$outboundSchema: z.ZodMiniType<
   UpdateCustomerPurchaseLimitRequest
 > = z.pipe(
   z.object({
-    interval: UpdateCustomerIntervalRequest$outboundSchema,
+    interval: UpdateCustomerIntervalRequestBody$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     limit: z.number(),
   }),
@@ -1498,6 +1524,52 @@ export function updateCustomerCreditSchemaFromJSON(
 }
 
 /** @internal */
+export const UpdateCustomerModelMarkups$inboundSchema: z.ZodMiniType<
+  UpdateCustomerModelMarkups,
+  unknown
+> = z.pipe(
+  z.object({
+    markup: types.optional(types.number()),
+    input_cost: types.optional(types.number()),
+    output_cost: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "input_cost": "inputCost",
+      "output_cost": "outputCost",
+    });
+  }),
+);
+
+export function updateCustomerModelMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerModelMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerModelMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerModelMarkups' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdateCustomerProviderMarkups$inboundSchema: z.ZodMiniType<
+  UpdateCustomerProviderMarkups,
+  unknown
+> = z.object({
+  markup: types.number(),
+});
+
+export function updateCustomerProviderMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdateCustomerProviderMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdateCustomerProviderMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdateCustomerProviderMarkups' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdateCustomerDisplay$inboundSchema: z.ZodMiniType<
   UpdateCustomerDisplay,
   unknown
@@ -1530,13 +1602,27 @@ export const UpdateCustomerFeature$inboundSchema: z.ZodMiniType<
     credit_schema: types.optional(
       z.array(z.lazy(() => UpdateCustomerCreditSchema$inboundSchema)),
     ),
-    display: types.optional(z.lazy(() => UpdateCustomerDisplay$inboundSchema)),
+    model_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => UpdateCustomerModelMarkups$inboundSchema),
+    ))),
+    default_markup: types.optional(types.number()),
+    provider_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => UpdateCustomerProviderMarkups$inboundSchema),
+    ))),
+    display: types.optional(z.lazy(() =>
+      UpdateCustomerDisplay$inboundSchema
+    )),
     archived: types.boolean(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
+      "model_markups": "modelMarkups",
+      "default_markup": "defaultMarkup",
+      "provider_markups": "providerMarkups",
     });
   }),
 );

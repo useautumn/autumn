@@ -19,7 +19,7 @@ export type UpdatePlanGlobals = {
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export const UpdatePlanPriceIntervalRequest = {
+export const UpdatePlanPriceIntervalRequestBody = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -30,8 +30,8 @@ export const UpdatePlanPriceIntervalRequest = {
 /**
  * Billing interval (e.g. 'month', 'year').
  */
-export type UpdatePlanPriceIntervalRequest = ClosedEnum<
-  typeof UpdatePlanPriceIntervalRequest
+export type UpdatePlanPriceIntervalRequestBody = ClosedEnum<
+  typeof UpdatePlanPriceIntervalRequestBody
 >;
 
 /**
@@ -45,7 +45,7 @@ export type UpdatePlanBasePrice = {
   /**
    * Billing interval (e.g. 'month', 'year').
    */
-  interval: UpdatePlanPriceIntervalRequest;
+  interval: UpdatePlanPriceIntervalRequestBody;
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
@@ -55,7 +55,7 @@ export type UpdatePlanBasePrice = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export const UpdatePlanResetIntervalRequest = {
+export const UpdatePlanResetIntervalRequestBody = {
   OneOff: "one_off",
   Minute: "minute",
   Hour: "hour",
@@ -69,44 +69,44 @@ export const UpdatePlanResetIntervalRequest = {
 /**
  * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
  */
-export type UpdatePlanResetIntervalRequest = ClosedEnum<
-  typeof UpdatePlanResetIntervalRequest
+export type UpdatePlanResetIntervalRequestBody = ClosedEnum<
+  typeof UpdatePlanResetIntervalRequestBody
 >;
 
 /**
  * Reset configuration for consumable features. Omit for non-consumable features like seats.
  */
-export type UpdatePlanResetRequest = {
+export type UpdatePlanResetRequestBody = {
   /**
    * Interval at which balance resets (e.g. 'month', 'year'). For consumable features only.
    */
-  interval: UpdatePlanResetIntervalRequest;
+  interval: UpdatePlanResetIntervalRequestBody;
   /**
    * Number of intervals between resets. Defaults to 1.
    */
   intervalCount?: number | undefined;
 };
 
-export type UpdatePlanTo = number | string;
+export type UpdatePlanToRequestBody = number | string;
 
-export type UpdatePlanTier = {
+export type UpdatePlanTierRequestBody = {
   to: number | string;
   amount?: number | undefined;
   flatAmount?: number | undefined;
 };
 
-export const UpdatePlanTierBehaviorRequest = {
+export const UpdatePlanTierBehaviorRequestBody = {
   Graduated: "graduated",
   Volume: "volume",
 } as const;
-export type UpdatePlanTierBehaviorRequest = ClosedEnum<
-  typeof UpdatePlanTierBehaviorRequest
+export type UpdatePlanTierBehaviorRequestBody = ClosedEnum<
+  typeof UpdatePlanTierBehaviorRequestBody
 >;
 
 /**
  * Billing interval. For consumable features, should match reset.interval.
  */
-export const UpdatePlanItemPriceIntervalRequest = {
+export const UpdatePlanItemPriceIntervalRequestBody = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -117,28 +117,28 @@ export const UpdatePlanItemPriceIntervalRequest = {
 /**
  * Billing interval. For consumable features, should match reset.interval.
  */
-export type UpdatePlanItemPriceIntervalRequest = ClosedEnum<
-  typeof UpdatePlanItemPriceIntervalRequest
+export type UpdatePlanItemPriceIntervalRequestBody = ClosedEnum<
+  typeof UpdatePlanItemPriceIntervalRequestBody
 >;
 
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export const UpdatePlanBillingMethodRequest = {
+export const UpdatePlanBillingMethodRequestBody = {
   Prepaid: "prepaid",
   UsageBased: "usage_based",
 } as const;
 /**
  * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
  */
-export type UpdatePlanBillingMethodRequest = ClosedEnum<
-  typeof UpdatePlanBillingMethodRequest
+export type UpdatePlanBillingMethodRequestBody = ClosedEnum<
+  typeof UpdatePlanBillingMethodRequestBody
 >;
 
 /**
  * Pricing for usage beyond included units. Omit for free features.
  */
-export type UpdatePlanPriceRequest = {
+export type UpdatePlanPriceRequestBody = {
   /**
    * Price per billing_units after included usage. Either 'amount' or 'tiers' is required.
    */
@@ -146,12 +146,12 @@ export type UpdatePlanPriceRequest = {
   /**
    * Tiered pricing.  Either 'amount' or 'tiers' is required.
    */
-  tiers?: Array<UpdatePlanTier> | undefined;
-  tierBehavior?: UpdatePlanTierBehaviorRequest | undefined;
+  tiers?: Array<UpdatePlanTierRequestBody> | undefined;
+  tierBehavior?: UpdatePlanTierBehaviorRequestBody | undefined;
   /**
    * Billing interval. For consumable features, should match reset.interval.
    */
-  interval: UpdatePlanItemPriceIntervalRequest;
+  interval: UpdatePlanItemPriceIntervalRequestBody;
   /**
    * Number of intervals per billing cycle. Defaults to 1.
    */
@@ -163,11 +163,11 @@ export type UpdatePlanPriceRequest = {
   /**
    * 'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
    */
-  billingMethod: UpdatePlanBillingMethodRequest;
+  billingMethod: UpdatePlanBillingMethodRequestBody;
   /**
-   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
    */
-  maxPurchase?: number | undefined;
+  maxPurchase?: number | null | undefined;
 };
 
 /**
@@ -216,21 +216,21 @@ export type UpdatePlanProration = {
 /**
  * When rolled over units expire.
  */
-export const UpdatePlanExpiryDurationTypeRequest = {
+export const UpdatePlanExpiryDurationTypeRequestBody = {
   Month: "month",
   Forever: "forever",
 } as const;
 /**
  * When rolled over units expire.
  */
-export type UpdatePlanExpiryDurationTypeRequest = ClosedEnum<
-  typeof UpdatePlanExpiryDurationTypeRequest
+export type UpdatePlanExpiryDurationTypeRequestBody = ClosedEnum<
+  typeof UpdatePlanExpiryDurationTypeRequestBody
 >;
 
 /**
  * Rollover config for unused units. If set, unused included units carry over.
  */
-export type UpdatePlanRolloverRequest = {
+export type UpdatePlanRolloverRequestBody = {
   /**
    * Max rollover units. Omit for unlimited rollover.
    */
@@ -242,7 +242,7 @@ export type UpdatePlanRolloverRequest = {
   /**
    * When rolled over units expire.
    */
-  expiryDurationType: UpdatePlanExpiryDurationTypeRequest;
+  expiryDurationType: UpdatePlanExpiryDurationTypeRequestBody;
   /**
    * Number of periods before expiry.
    */
@@ -268,11 +268,11 @@ export type UpdatePlanPlanItem = {
   /**
    * Reset configuration for consumable features. Omit for non-consumable features like seats.
    */
-  reset?: UpdatePlanResetRequest | undefined;
+  reset?: UpdatePlanResetRequestBody | undefined;
   /**
    * Pricing for usage beyond included units. Omit for free features.
    */
-  price?: UpdatePlanPriceRequest | undefined;
+  price?: UpdatePlanPriceRequestBody | undefined;
   /**
    * Proration settings for prepaid features. Controls mid-cycle quantity change billing.
    */
@@ -280,7 +280,7 @@ export type UpdatePlanPlanItem = {
   /**
    * Rollover config for unused units. If set, unused included units carry over.
    */
-  rollover?: UpdatePlanRolloverRequest | undefined;
+  rollover?: UpdatePlanRolloverRequestBody | undefined;
 };
 
 /**
@@ -387,6 +387,7 @@ export type UpdatePlanParams = {
    * The new ID to use for the plan. Can only be updated if the plan has not been used by any customers.
    */
   newPlanId?: string | undefined;
+  disableVersion?: boolean | undefined;
 };
 
 /**
@@ -449,6 +450,7 @@ export const UpdatePlanType = {
   SingleUse: "single_use",
   ContinuousUse: "continuous_use",
   CreditSystem: "credit_system",
+  AiCreditSystem: "ai_credit_system",
 } as const;
 /**
  * The type of the feature
@@ -539,6 +541,14 @@ export type UpdatePlanResetResponse = {
   intervalCount?: number | undefined;
 };
 
+export type UpdatePlanToResponse = number | string;
+
+export type UpdatePlanTierResponse = {
+  to: number | string;
+  amount: number;
+  flatAmount?: number | undefined;
+};
+
 export const UpdatePlanTierBehaviorResponse = {
   Graduated: "graduated",
   Volume: "volume",
@@ -587,7 +597,7 @@ export type UpdatePlanItemPriceResponse = {
   /**
    * Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
    */
-  tiers?: Array<any | null> | undefined;
+  tiers?: Array<UpdatePlanTierResponse> | undefined;
   tierBehavior?: UpdatePlanTierBehaviorResponse | undefined;
   /**
    * Billing interval for this price. For consumable features, should match reset.interval.
@@ -879,9 +889,9 @@ export type UpdatePlanResponse = {
 };
 
 /** @internal */
-export const UpdatePlanPriceIntervalRequest$outboundSchema: z.ZodMiniEnum<
-  typeof UpdatePlanPriceIntervalRequest
-> = z.enum(UpdatePlanPriceIntervalRequest);
+export const UpdatePlanPriceIntervalRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanPriceIntervalRequestBody
+> = z.enum(UpdatePlanPriceIntervalRequestBody);
 
 /** @internal */
 export type UpdatePlanBasePrice$Outbound = {
@@ -897,7 +907,7 @@ export const UpdatePlanBasePrice$outboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: z.number(),
-    interval: UpdatePlanPriceIntervalRequest$outboundSchema,
+    interval: UpdatePlanPriceIntervalRequestBody$outboundSchema,
     intervalCount: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -916,23 +926,23 @@ export function updatePlanBasePriceToJSON(
 }
 
 /** @internal */
-export const UpdatePlanResetIntervalRequest$outboundSchema: z.ZodMiniEnum<
-  typeof UpdatePlanResetIntervalRequest
-> = z.enum(UpdatePlanResetIntervalRequest);
+export const UpdatePlanResetIntervalRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanResetIntervalRequestBody
+> = z.enum(UpdatePlanResetIntervalRequestBody);
 
 /** @internal */
-export type UpdatePlanResetRequest$Outbound = {
+export type UpdatePlanResetRequestBody$Outbound = {
   interval: string;
   interval_count?: number | undefined;
 };
 
 /** @internal */
-export const UpdatePlanResetRequest$outboundSchema: z.ZodMiniType<
-  UpdatePlanResetRequest$Outbound,
-  UpdatePlanResetRequest
+export const UpdatePlanResetRequestBody$outboundSchema: z.ZodMiniType<
+  UpdatePlanResetRequestBody$Outbound,
+  UpdatePlanResetRequestBody
 > = z.pipe(
   z.object({
-    interval: UpdatePlanResetIntervalRequest$outboundSchema,
+    interval: UpdatePlanResetIntervalRequestBody$outboundSchema,
     intervalCount: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -942,38 +952,42 @@ export const UpdatePlanResetRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanResetRequestToJSON(
-  updatePlanResetRequest: UpdatePlanResetRequest,
+export function updatePlanResetRequestBodyToJSON(
+  updatePlanResetRequestBody: UpdatePlanResetRequestBody,
 ): string {
   return JSON.stringify(
-    UpdatePlanResetRequest$outboundSchema.parse(updatePlanResetRequest),
+    UpdatePlanResetRequestBody$outboundSchema.parse(updatePlanResetRequestBody),
   );
 }
 
 /** @internal */
-export type UpdatePlanTo$Outbound = number | string;
+export type UpdatePlanToRequestBody$Outbound = number | string;
 
 /** @internal */
-export const UpdatePlanTo$outboundSchema: z.ZodMiniType<
-  UpdatePlanTo$Outbound,
-  UpdatePlanTo
+export const UpdatePlanToRequestBody$outboundSchema: z.ZodMiniType<
+  UpdatePlanToRequestBody$Outbound,
+  UpdatePlanToRequestBody
 > = smartUnion([z.number(), z.string()]);
 
-export function updatePlanToToJSON(updatePlanTo: UpdatePlanTo): string {
-  return JSON.stringify(UpdatePlanTo$outboundSchema.parse(updatePlanTo));
+export function updatePlanToRequestBodyToJSON(
+  updatePlanToRequestBody: UpdatePlanToRequestBody,
+): string {
+  return JSON.stringify(
+    UpdatePlanToRequestBody$outboundSchema.parse(updatePlanToRequestBody),
+  );
 }
 
 /** @internal */
-export type UpdatePlanTier$Outbound = {
+export type UpdatePlanTierRequestBody$Outbound = {
   to: number | string;
   amount?: number | undefined;
   flat_amount?: number | undefined;
 };
 
 /** @internal */
-export const UpdatePlanTier$outboundSchema: z.ZodMiniType<
-  UpdatePlanTier$Outbound,
-  UpdatePlanTier
+export const UpdatePlanTierRequestBody$outboundSchema: z.ZodMiniType<
+  UpdatePlanTierRequestBody$Outbound,
+  UpdatePlanTierRequestBody
 > = z.pipe(
   z.object({
     to: smartUnion([z.number(), z.string()]),
@@ -987,51 +1001,58 @@ export const UpdatePlanTier$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanTierToJSON(updatePlanTier: UpdatePlanTier): string {
-  return JSON.stringify(UpdatePlanTier$outboundSchema.parse(updatePlanTier));
+export function updatePlanTierRequestBodyToJSON(
+  updatePlanTierRequestBody: UpdatePlanTierRequestBody,
+): string {
+  return JSON.stringify(
+    UpdatePlanTierRequestBody$outboundSchema.parse(updatePlanTierRequestBody),
+  );
 }
 
 /** @internal */
-export const UpdatePlanTierBehaviorRequest$outboundSchema: z.ZodMiniEnum<
-  typeof UpdatePlanTierBehaviorRequest
-> = z.enum(UpdatePlanTierBehaviorRequest);
+export const UpdatePlanTierBehaviorRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanTierBehaviorRequestBody
+> = z.enum(UpdatePlanTierBehaviorRequestBody);
 
 /** @internal */
-export const UpdatePlanItemPriceIntervalRequest$outboundSchema: z.ZodMiniEnum<
-  typeof UpdatePlanItemPriceIntervalRequest
-> = z.enum(UpdatePlanItemPriceIntervalRequest);
+export const UpdatePlanItemPriceIntervalRequestBody$outboundSchema:
+  z.ZodMiniEnum<typeof UpdatePlanItemPriceIntervalRequestBody> = z.enum(
+    UpdatePlanItemPriceIntervalRequestBody,
+  );
 
 /** @internal */
-export const UpdatePlanBillingMethodRequest$outboundSchema: z.ZodMiniEnum<
-  typeof UpdatePlanBillingMethodRequest
-> = z.enum(UpdatePlanBillingMethodRequest);
+export const UpdatePlanBillingMethodRequestBody$outboundSchema: z.ZodMiniEnum<
+  typeof UpdatePlanBillingMethodRequestBody
+> = z.enum(UpdatePlanBillingMethodRequestBody);
 
 /** @internal */
-export type UpdatePlanPriceRequest$Outbound = {
+export type UpdatePlanPriceRequestBody$Outbound = {
   amount?: number | undefined;
-  tiers?: Array<UpdatePlanTier$Outbound> | undefined;
+  tiers?: Array<UpdatePlanTierRequestBody$Outbound> | undefined;
   tier_behavior?: string | undefined;
   interval: string;
   interval_count: number;
   billing_units: number;
   billing_method: string;
-  max_purchase?: number | undefined;
+  max_purchase?: number | null | undefined;
 };
 
 /** @internal */
-export const UpdatePlanPriceRequest$outboundSchema: z.ZodMiniType<
-  UpdatePlanPriceRequest$Outbound,
-  UpdatePlanPriceRequest
+export const UpdatePlanPriceRequestBody$outboundSchema: z.ZodMiniType<
+  UpdatePlanPriceRequestBody$Outbound,
+  UpdatePlanPriceRequestBody
 > = z.pipe(
   z.object({
     amount: z.optional(z.number()),
-    tiers: z.optional(z.array(z.lazy(() => UpdatePlanTier$outboundSchema))),
-    tierBehavior: z.optional(UpdatePlanTierBehaviorRequest$outboundSchema),
-    interval: UpdatePlanItemPriceIntervalRequest$outboundSchema,
+    tiers: z.optional(
+      z.array(z.lazy(() => UpdatePlanTierRequestBody$outboundSchema)),
+    ),
+    tierBehavior: z.optional(UpdatePlanTierBehaviorRequestBody$outboundSchema),
+    interval: UpdatePlanItemPriceIntervalRequestBody$outboundSchema,
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
-    billingMethod: UpdatePlanBillingMethodRequest$outboundSchema,
-    maxPurchase: z.optional(z.number()),
+    billingMethod: UpdatePlanBillingMethodRequestBody$outboundSchema,
+    maxPurchase: z.optional(z.nullable(z.number())),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1044,11 +1065,11 @@ export const UpdatePlanPriceRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanPriceRequestToJSON(
-  updatePlanPriceRequest: UpdatePlanPriceRequest,
+export function updatePlanPriceRequestBodyToJSON(
+  updatePlanPriceRequestBody: UpdatePlanPriceRequestBody,
 ): string {
   return JSON.stringify(
-    UpdatePlanPriceRequest$outboundSchema.parse(updatePlanPriceRequest),
+    UpdatePlanPriceRequestBody$outboundSchema.parse(updatePlanPriceRequestBody),
   );
 }
 
@@ -1094,12 +1115,13 @@ export function updatePlanProrationToJSON(
 }
 
 /** @internal */
-export const UpdatePlanExpiryDurationTypeRequest$outboundSchema: z.ZodMiniEnum<
-  typeof UpdatePlanExpiryDurationTypeRequest
-> = z.enum(UpdatePlanExpiryDurationTypeRequest);
+export const UpdatePlanExpiryDurationTypeRequestBody$outboundSchema:
+  z.ZodMiniEnum<typeof UpdatePlanExpiryDurationTypeRequestBody> = z.enum(
+    UpdatePlanExpiryDurationTypeRequestBody,
+  );
 
 /** @internal */
-export type UpdatePlanRolloverRequest$Outbound = {
+export type UpdatePlanRolloverRequestBody$Outbound = {
   max?: number | undefined;
   max_percentage?: number | undefined;
   expiry_duration_type: string;
@@ -1107,14 +1129,14 @@ export type UpdatePlanRolloverRequest$Outbound = {
 };
 
 /** @internal */
-export const UpdatePlanRolloverRequest$outboundSchema: z.ZodMiniType<
-  UpdatePlanRolloverRequest$Outbound,
-  UpdatePlanRolloverRequest
+export const UpdatePlanRolloverRequestBody$outboundSchema: z.ZodMiniType<
+  UpdatePlanRolloverRequestBody$Outbound,
+  UpdatePlanRolloverRequestBody
 > = z.pipe(
   z.object({
     max: z.optional(z.number()),
     maxPercentage: z.optional(z.number()),
-    expiryDurationType: UpdatePlanExpiryDurationTypeRequest$outboundSchema,
+    expiryDurationType: UpdatePlanExpiryDurationTypeRequestBody$outboundSchema,
     expiryDurationLength: z.optional(z.number()),
   }),
   z.transform((v) => {
@@ -1126,11 +1148,13 @@ export const UpdatePlanRolloverRequest$outboundSchema: z.ZodMiniType<
   }),
 );
 
-export function updatePlanRolloverRequestToJSON(
-  updatePlanRolloverRequest: UpdatePlanRolloverRequest,
+export function updatePlanRolloverRequestBodyToJSON(
+  updatePlanRolloverRequestBody: UpdatePlanRolloverRequestBody,
 ): string {
   return JSON.stringify(
-    UpdatePlanRolloverRequest$outboundSchema.parse(updatePlanRolloverRequest),
+    UpdatePlanRolloverRequestBody$outboundSchema.parse(
+      updatePlanRolloverRequestBody,
+    ),
   );
 }
 
@@ -1139,10 +1163,10 @@ export type UpdatePlanPlanItem$Outbound = {
   feature_id: string;
   included?: number | undefined;
   unlimited?: boolean | undefined;
-  reset?: UpdatePlanResetRequest$Outbound | undefined;
-  price?: UpdatePlanPriceRequest$Outbound | undefined;
+  reset?: UpdatePlanResetRequestBody$Outbound | undefined;
+  price?: UpdatePlanPriceRequestBody$Outbound | undefined;
   proration?: UpdatePlanProration$Outbound | undefined;
-  rollover?: UpdatePlanRolloverRequest$Outbound | undefined;
+  rollover?: UpdatePlanRolloverRequestBody$Outbound | undefined;
 };
 
 /** @internal */
@@ -1154,11 +1178,11 @@ export const UpdatePlanPlanItem$outboundSchema: z.ZodMiniType<
     featureId: z.string(),
     included: z.optional(z.number()),
     unlimited: z.optional(z.boolean()),
-    reset: z.optional(z.lazy(() => UpdatePlanResetRequest$outboundSchema)),
-    price: z.optional(z.lazy(() => UpdatePlanPriceRequest$outboundSchema)),
+    reset: z.optional(z.lazy(() => UpdatePlanResetRequestBody$outboundSchema)),
+    price: z.optional(z.lazy(() => UpdatePlanPriceRequestBody$outboundSchema)),
     proration: z.optional(z.lazy(() => UpdatePlanProration$outboundSchema)),
     rollover: z.optional(
-      z.lazy(() => UpdatePlanRolloverRequest$outboundSchema),
+      z.lazy(() => UpdatePlanRolloverRequestBody$outboundSchema),
     ),
   }),
   z.transform((v) => {
@@ -1270,6 +1294,7 @@ export type UpdatePlanParams$Outbound = {
   version?: number | undefined;
   archived: boolean;
   new_plan_id?: string | undefined;
+  disable_version?: boolean | undefined;
 };
 
 /** @internal */
@@ -1296,6 +1321,7 @@ export const UpdatePlanParams$outboundSchema: z.ZodMiniType<
     version: z.optional(z.number()),
     archived: z._default(z.boolean(), false),
     newPlanId: z.optional(z.string()),
+    disableVersion: z.optional(z.boolean()),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1305,6 +1331,7 @@ export const UpdatePlanParams$outboundSchema: z.ZodMiniType<
       freeTrial: "free_trial",
       createInStripe: "create_in_stripe",
       newPlanId: "new_plan_id",
+      disableVersion: "disable_version",
     });
   }),
 );
@@ -1497,6 +1524,49 @@ export function updatePlanResetResponseFromJSON(
 }
 
 /** @internal */
+export const UpdatePlanToResponse$inboundSchema: z.ZodMiniType<
+  UpdatePlanToResponse,
+  unknown
+> = smartUnion([types.number(), types.string()]);
+
+export function updatePlanToResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdatePlanToResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdatePlanToResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdatePlanToResponse' from JSON`,
+  );
+}
+
+/** @internal */
+export const UpdatePlanTierResponse$inboundSchema: z.ZodMiniType<
+  UpdatePlanTierResponse,
+  unknown
+> = z.pipe(
+  z.object({
+    to: smartUnion([types.number(), types.string()]),
+    amount: types.number(),
+    flat_amount: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "flat_amount": "flatAmount",
+    });
+  }),
+);
+
+export function updatePlanTierResponseFromJSON(
+  jsonString: string,
+): SafeParseResult<UpdatePlanTierResponse, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => UpdatePlanTierResponse$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'UpdatePlanTierResponse' from JSON`,
+  );
+}
+
+/** @internal */
 export const UpdatePlanTierBehaviorResponse$inboundSchema: z.ZodMiniType<
   UpdatePlanTierBehaviorResponse,
   unknown
@@ -1521,7 +1591,9 @@ export const UpdatePlanItemPriceResponse$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: types.optional(types.number()),
-    tiers: types.optional(z.array(types.nullable(z.any()))),
+    tiers: types.optional(
+      z.array(z.lazy(() => UpdatePlanTierResponse$inboundSchema)),
+    ),
     tier_behavior: types.optional(UpdatePlanTierBehaviorResponse$inboundSchema),
     interval: UpdatePlanPriceItemIntervalResponse$inboundSchema,
     interval_count: types.optional(types.number()),

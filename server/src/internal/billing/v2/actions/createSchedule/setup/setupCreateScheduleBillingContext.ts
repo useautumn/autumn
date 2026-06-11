@@ -114,6 +114,8 @@ export const setupCreateScheduleBillingContext = async ({
 	const scheduledPhaseContexts = await setupScheduledProductsContext({
 		ctx,
 		phases: futurePhases,
+		fullCustomer: billingContext.fullCustomer,
+		currentEpochMs: billingContext.currentEpochMs,
 	});
 
 	const scheduledCustomPrices = scheduledPhaseContexts.flatMap((phase) =>

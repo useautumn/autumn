@@ -51,6 +51,40 @@ export const getCustomerProductPriceAmounts = async ({
 		.filter((amount): amount is number => typeof amount === "number")
 		.sort((a, b) => a - b);
 
+export const getCustomerProductFeaturePriceAmounts = async ({
+	ctx,
+	customerProductId,
+	featureId,
+}: {
+	ctx: Ctx;
+	customerProductId: string;
+	featureId: string;
+}) =>
+	(
+		await ctx.db
+			.select({ config: prices.config })
+			.from(customerPrices)
+			.innerJoin(prices, eq(customerPrices.price_id, prices.id))
+			.where(eq(customerPrices.customer_product_id, customerProductId))
+	)
+		.flatMap((row) => {
+			const config = row.config;
+			if (
+				!config ||
+				!("feature_id" in config) ||
+				config.feature_id !== featureId ||
+				!("usage_tiers" in config) ||
+				!Array.isArray(config.usage_tiers)
+			) {
+				return [];
+			}
+
+			return config.usage_tiers
+				.map((tier) => tier.amount)
+				.filter((amount): amount is number => typeof amount === "number");
+		})
+		.sort((a, b) => a - b);
+
 export const getCustomerProductEntitlementBalances = async ({
 	ctx,
 	customerProductId,

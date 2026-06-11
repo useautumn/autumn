@@ -98,7 +98,7 @@ export const attachItemPriceOutboundSchema = z.object({
 	interval_count: z.number(),
 	billing_units: z.number(),
 	billing_method: z.string(),
-	max_purchase: z.union([z.number(), z.undefined()]).optional(),
+	max_purchase: z.union([z.number(), z.undefined()]).optional().nullable(),
 });
 
 export const attachItemProrationOutboundSchema = z.object({
@@ -150,7 +150,7 @@ export const attachAddItemPriceOutboundSchema = z.object({
 	interval_count: z.number(),
 	billing_units: z.number(),
 	billing_method: z.string(),
-	max_purchase: z.union([z.number(), z.undefined()]).optional(),
+	max_purchase: z.union([z.number(), z.undefined()]).optional().nullable(),
 });
 
 export const attachAddItemProrationOutboundSchema = z.object({
@@ -179,10 +179,16 @@ export const attachAddItemPlanItemOutboundSchema = z.object({
 		.optional(),
 });
 
+export const attachIntervalUnionOutboundSchema = z.union([
+	z.string(),
+	z.string(),
+]);
+
 export const attachPlanItemFilterOutboundSchema = z.object({
 	feature_id: z.union([z.string(), z.undefined()]).optional(),
 	billing_method: z.union([z.string(), z.undefined()]).optional(),
-	interval: z.union([z.string(), z.undefined()]).optional(),
+	interval: z.union([z.string(), z.string(), z.undefined()]).optional(),
+	interval_count: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const attachFreeTrialParamsOutboundSchema = z.object({
@@ -320,7 +326,7 @@ export const attachItemPriceSchema = z.object({
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 	billingUnits: z.union([z.number(), z.undefined()]).optional(),
 	billingMethod: attachItemBillingMethodSchema,
-	maxPurchase: z.union([z.number(), z.undefined()]).optional(),
+	maxPurchase: z.union([z.number(), z.undefined()]).optional().nullable(),
 });
 
 export const attachItemOnIncreaseSchema = closedEnumSchema;
@@ -374,7 +380,7 @@ export const attachAddItemPriceSchema = z.object({
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 	billingUnits: z.union([z.number(), z.undefined()]).optional(),
 	billingMethod: attachAddItemBillingMethodSchema,
-	maxPurchase: z.union([z.number(), z.undefined()]).optional(),
+	maxPurchase: z.union([z.number(), z.undefined()]).optional().nullable(),
 });
 
 export const attachAddItemOnIncreaseSchema = closedEnumSchema;
@@ -407,14 +413,28 @@ export const attachAddItemPlanItemSchema = z.object({
 
 export const attachRemoveItemBillingMethodSchema = closedEnumSchema;
 
-export const attachRemoveItemIntervalSchema = closedEnumSchema;
+export const attachIntervalRemoveItemEnum2Schema = closedEnumSchema;
+
+export const attachIntervalRemoveItemEnum1Schema = closedEnumSchema;
+
+export const attachIntervalUnionSchema = z.union([
+	attachIntervalRemoveItemEnum1Schema,
+	attachIntervalRemoveItemEnum2Schema,
+]);
 
 export const attachPlanItemFilterSchema = z.object({
 	featureId: z.union([z.string(), z.undefined()]).optional(),
 	billingMethod: z
 		.union([attachRemoveItemBillingMethodSchema, z.undefined()])
 		.optional(),
-	interval: z.union([attachRemoveItemIntervalSchema, z.undefined()]).optional(),
+	interval: z
+		.union([
+			attachIntervalRemoveItemEnum1Schema,
+			attachIntervalRemoveItemEnum2Schema,
+			z.undefined(),
+		])
+		.optional(),
+	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 });
 
 export const attachDurationTypeSchema = closedEnumSchema;

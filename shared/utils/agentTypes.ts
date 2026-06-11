@@ -10,6 +10,10 @@
  * - Converters: AgentFeature ↔ Feature, AgentProduct ↔ ProductV2
  */
 
+import type {
+	ModelMarkups,
+	ProviderMarkups,
+} from "../models/featureModels/featureConfig/creditConfig.js";
 import {
 	FeatureType,
 	FeatureUsageType,
@@ -19,6 +23,8 @@ import { AppEnv } from "../models/genModels/genEnums.js";
 import { Infinite } from "../models/productModels/productEnums.js";
 import type { ProductItem } from "../models/productV2Models/productItemModels/productItemModels.js";
 import type { ProductV2 } from "../models/productV2Models/productV2Models.js";
+import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
+import { buildAiCreditSystemConfig } from "./featureUtils/buildAiCreditSystemConfig.js";
 
 // ============ INTERFACES ============
 
@@ -27,7 +33,8 @@ export type AgentFeatureType =
 	| "boolean"
 	| "single_use"
 	| "continuous_use"
-	| "credit_system";
+	| "credit_system"
+	| "ai_credit_system";
 
 export interface AgentFeature {
 	id: string;
@@ -41,6 +48,9 @@ export interface AgentFeature {
 		metered_feature_id: string;
 		credit_cost: number;
 	}> | null;
+	model_markups?: ModelMarkups;
+	default_markup?: number | null;
+	provider_markups?: ProviderMarkups;
 }
 
 export interface AgentProductItem {
@@ -84,6 +94,8 @@ function mapAgentTypeToFeatureType(agentType: AgentFeatureType): FeatureType {
 			return FeatureType.Boolean;
 		case "credit_system":
 			return FeatureType.CreditSystem;
+		case "ai_credit_system":
+			return FeatureType.AiCreditSystem;
 		default:
 			return FeatureType.Metered;
 	}
@@ -116,6 +128,15 @@ export function agentFeatureToFeature(agentFeature: AgentFeature): Feature {
 			credit_amount: s.credit_cost,
 		}));
 	}
+	if (agentFeature.type === "ai_credit_system") {
+		Object.assign(
+			config,
+			buildAiCreditSystemConfig({
+				defaultMarkup: agentFeature.default_markup,
+				providerMarkups: agentFeature.provider_markups,
+			}),
+		);
+	}
 
 	return {
 		internal_id: agentFeature.id,
@@ -129,6 +150,7 @@ export function agentFeatureToFeature(agentFeature: AgentFeature): Feature {
 		display: agentFeature.display ?? undefined,
 		archived: false,
 		event_names: [],
+		model_markups: agentFeature.model_markups ?? null,
 	};
 }
 
@@ -172,6 +194,10 @@ export function agentProductToProductV2(product: AgentProduct): ProductV2 {
 // ============ SHARED → AGENT CONVERTERS ============
 
 function mapFeatureTypeToAgentType(feature: Feature): AgentFeatureType {
+	if (isAiCreditSystem(feature.type)) {
+		return "ai_credit_system";
+	}
+
 	if (feature.type === FeatureType.CreditSystem) {
 		return "credit_system";
 	}
@@ -216,6 +242,11 @@ export function featureToAgentFeature(feature: Feature): AgentFeature {
 				credit_cost: s.credit_amount,
 			}),
 		);
+	}
+	if (isAiCreditSystem(feature.type)) {
+		agentFeature.model_markups = feature.model_markups;
+		agentFeature.default_markup = feature.config?.default_markup;
+		agentFeature.provider_markups = feature.config?.provider_markups;
 	}
 
 	return agentFeature;

@@ -87,6 +87,27 @@ export const computeAttachTaxRateIdPreview = async ({
 	const taxableMinorUnits = immediateLines.map((lineItem) =>
 		lineItemToTaxableMinorUnits({ lineItem, currency }),
 	);
+
+	return computeTaxRateIdPreviewFromTaxableMinorUnits({
+		ctx,
+		billingContext,
+		taxableMinorUnits,
+	});
+};
+
+/** Core tax-rate-id math over pre-computed taxable amounts (minor units). */
+export const computeTaxRateIdPreviewFromTaxableMinorUnits = ({
+	ctx,
+	billingContext,
+	taxableMinorUnits,
+}: {
+	ctx: AutumnContext;
+	billingContext: BillingContext;
+	taxableMinorUnits: number[];
+}): PreviewTax | undefined => {
+	if (!billingContext.taxRateId) return undefined;
+
+	const currency = orgToCurrency({ org: ctx.org });
 	const totalTaxableMinorUnits = taxableMinorUnits.reduce(
 		(sum, amount) => sum + amount,
 		0,

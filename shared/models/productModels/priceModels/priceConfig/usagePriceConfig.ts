@@ -19,19 +19,17 @@ export const UsageTierSchema = z
 		amount: z.number().optional(),
 		flat_amount: z.number().optional(),
 	})
-	.refine(
-		(val) => val.amount !== undefined || val.flat_amount !== undefined,
-		{
-			message: "Either amount or flat_amount, or both must be defined",
-			path: ["amount", "flat_amount"],
-		},
-	)
+	.refine((val) => val.amount !== undefined || val.flat_amount !== undefined, {
+		message: "Either amount or flat_amount, or both must be defined",
+		path: ["amount", "flat_amount"],
+	})
 	.transform((val) => ({
 		...val,
 		amount: val.amount ?? 0,
 	}))
 	// Explicit output schema so zod-openapi can serialize this in response/webhook
 	// schemas (it rejects bare transforms) while keeping `amount` a required number.
+	// zod-openapi can't serialize transforms in output schemas; pipe declares the output shape
 	.pipe(
 		z.object({
 			to: z.number().or(z.literal(Infinite)),

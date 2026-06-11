@@ -12,6 +12,7 @@
 		"duplicates"
 	],
 	"ignoreWorkspaces": [
+		"packages/ai-sdk",
 		"packages/atmn",
 		"packages/autumn-js",
 		"packages/mcp",

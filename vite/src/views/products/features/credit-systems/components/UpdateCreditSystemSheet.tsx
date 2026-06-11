@@ -1,7 +1,6 @@
-import type { CreateFeature, CreditSchemaItem, Feature } from "@autumn/shared";
-import { FeatureType } from "@autumn/shared";
+import type { CreditSchemaItem, Feature } from "@autumn/shared";
+import { useStore } from "@tanstack/react-form";
 import type { AxiosError } from "axios";
-import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
@@ -13,6 +12,8 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
+import { buildFeatureMarkupParams } from "../../utils/buildFeatureMutationParams";
+import { useCreditSystemForm } from "../hooks/useCreditSystemForm";
 import { validateCreditSystem } from "../utils/validateCreditSystem";
 import { CreditSystemDetails } from "./CreditSystemDetails";
 import { CreditSystemSchema } from "./CreditSystemSchema";
@@ -30,127 +31,96 @@ function UpdateCreditSystemSheet({
 	selectedCreditSystem,
 	onSuccess,
 }: UpdateCreditSystemSheetProps) {
-	const [loading, setLoading] = useState(false);
-	const [creditSystem, setCreditSystem] = useState<CreateFeature>({
-		name: "",
-		id: "",
-		type: FeatureType.CreditSystem,
-		config: {
-			schema: [
-				{
-					metered_feature_id: "",
-					feature_amount: 1,
-					credit_amount: 0,
-				},
-			],
-		},
-		event_names: [],
-	});
-
 	const axiosInstance = useAxiosInstance();
 	const { refetch } = useFeaturesQuery();
 
-	// Initialize credit system when selectedCreditSystem changes
-	useEffect(() => {
-		if (open && selectedCreditSystem) {
-			setCreditSystem({
-				name: selectedCreditSystem.name,
-				id: selectedCreditSystem.id,
-				type: selectedCreditSystem.type,
-				config: selectedCreditSystem.config,
-				event_names: selectedCreditSystem.event_names,
-			});
-		}
-	}, [open, selectedCreditSystem]);
+	const form = useCreditSystemForm({
+		feature: open ? selectedCreditSystem : null,
+		onSubmit: async (values) => {
+			if (!selectedCreditSystem) return;
 
-	const handleUpdateCreditSystem = async () => {
-		if (!selectedCreditSystem) return;
+			const creditSystem = {
+				name: values.name,
+				id: values.id,
+				type: values.type,
+				config: values.config,
+				event_names: values.event_names,
+				model_markups: values.model_markups,
+			};
 
-		const validationError = validateCreditSystem(creditSystem);
-		if (validationError) {
-			toast.error(validationError);
-			return;
-		}
+			const validationError = validateCreditSystem(creditSystem);
+			if (validationError) {
+				toast.error(validationError);
+				return;
+			}
 
-		setLoading(true);
-		try {
 			await FeatureService.updateFeature(
 				axiosInstance,
 				selectedCreditSystem.id,
 				{
-					id: creditSystem.id,
-					name: creditSystem.name,
-					type: creditSystem.type,
-					credit_schema: creditSystem.config?.schema?.map(
-						(x: CreditSchemaItem) => ({
-							metered_feature_id: x.metered_feature_id,
-							credit_cost: Number(x.credit_amount),
-						}),
-					),
-					event_names: creditSystem.event_names,
+					id: values.id,
+					name: values.name,
+					type: values.type,
+					...buildFeatureMarkupParams({
+						type: values.type,
+						modelMarkups: values.model_markups,
+						defaultMarkup: values.defaultMarkup,
+						providerMarkups: values.provider_markups,
+						schema: values.config?.schema as CreditSchemaItem[] | undefined,
+					}),
+					event_names: values.event_names,
 					display: undefined,
 				},
 			);
 
 			await refetch();
 			toast.success("Credit system updated successfully");
-
-			// Call onSuccess with old and new IDs
-			if (onSuccess) {
-				onSuccess(
-					selectedCreditSystem.id,
-					creditSystem.id || selectedCreditSystem.id,
-				);
-			}
-
-			setOpen(false);
-		} catch (error: unknown) {
-			console.log(error);
-			toast.error(
-				getBackendErr(error as AxiosError, "Failed to update credit system"),
+			onSuccess?.(
+				selectedCreditSystem.id,
+				values.id || selectedCreditSystem.id,
 			);
-		} finally {
-			setLoading(false);
-		}
-	};
+			setOpen(false);
+		},
+	});
 
-	const handleCancel = () => {
-		setOpen(false);
-	};
+	const isSubmitting = useStore(form.store, (s) => s.isSubmitting);
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetContent className="flex flex-col overflow-hidden">
+			<SheetContent
+				key={selectedCreditSystem?.internal_id}
+				className="flex flex-col overflow-hidden md:max-w-xl"
+			>
 				<SheetHeader
 					title="Update Credit System"
 					description="Modify how this credit system is configured"
 				/>
 
 				<div className="flex-1 overflow-y-auto">
-					<CreditSystemDetails
-						creditSystem={creditSystem}
-						setCreditSystem={setCreditSystem}
-					/>
-					<CreditSystemSchema
-						creditSystem={creditSystem}
-						setCreditSystem={setCreditSystem}
-					/>
+					<CreditSystemDetails form={form} />
+					<CreditSystemSchema form={form} disableModeSwitch />
 				</div>
 
 				<SheetFooter>
 					<ShortcutButton
 						variant="secondary"
 						className="w-full"
-						onClick={handleCancel}
+						onClick={() => setOpen(false)}
 						singleShortcut="escape"
 					>
 						Cancel
 					</ShortcutButton>
 					<ShortcutButton
 						className="w-full"
-						onClick={handleUpdateCreditSystem}
+						onClick={() =>
+							form.handleSubmit().catch((err: AxiosError) => {
+								toast.error(
+									getBackendErr(err, "Failed to update credit system"),
+								);
+							})
+						}
 						metaShortcut="enter"
-						isLoading={loading}
+						isLoading={isSubmitting}
 					>
 						Update credit system
 					</ShortcutButton>

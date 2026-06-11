@@ -19,7 +19,10 @@ class Plans(BaseSDK):
         add_on: Optional[bool] = False,
         auto_enable: Optional[bool] = False,
         price: Optional[
-            Union[models.CreatePlanPriceRequest, models.CreatePlanPriceRequestTypedDict]
+            Union[
+                models.CreatePlanPriceRequestBody,
+                models.CreatePlanPriceRequestBodyTypedDict,
+            ]
         ] = None,
         items: Optional[
             Union[
@@ -81,7 +84,7 @@ class Plans(BaseSDK):
             add_on=add_on,
             auto_enable=auto_enable,
             price=utils.get_pydantic_model(
-                price, Optional[models.CreatePlanPriceRequest]
+                price, Optional[models.CreatePlanPriceRequestBody]
             ),
             items=utils.get_pydantic_model(
                 items, Optional[List[models.CreatePlanPlanItem]]
@@ -164,7 +167,10 @@ class Plans(BaseSDK):
         add_on: Optional[bool] = False,
         auto_enable: Optional[bool] = False,
         price: Optional[
-            Union[models.CreatePlanPriceRequest, models.CreatePlanPriceRequestTypedDict]
+            Union[
+                models.CreatePlanPriceRequestBody,
+                models.CreatePlanPriceRequestBodyTypedDict,
+            ]
         ] = None,
         items: Optional[
             Union[
@@ -226,7 +232,7 @@ class Plans(BaseSDK):
             add_on=add_on,
             auto_enable=auto_enable,
             price=utils.get_pydantic_model(
-                price, Optional[models.CreatePlanPriceRequest]
+                price, Optional[models.CreatePlanPriceRequestBody]
             ),
             items=utils.get_pydantic_model(
                 items, Optional[List[models.CreatePlanPlanItem]]
@@ -718,6 +724,7 @@ class Plans(BaseSDK):
         version: Optional[float] = None,
         archived: Optional[bool] = False,
         new_plan_id: Optional[str] = None,
+        disable_version: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -743,6 +750,7 @@ class Plans(BaseSDK):
         :param version:
         :param archived:
         :param new_plan_id: The new ID to use for the plan. Can only be updated if the plan has not been used by any customers.
+        :param disable_version:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -781,6 +789,7 @@ class Plans(BaseSDK):
             version=version,
             archived=archived,
             new_plan_id=new_plan_id,
+            disable_version=disable_version,
         )
 
         req = self._build_request(
@@ -875,6 +884,7 @@ class Plans(BaseSDK):
         version: Optional[float] = None,
         archived: Optional[bool] = False,
         new_plan_id: Optional[str] = None,
+        disable_version: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -900,6 +910,7 @@ class Plans(BaseSDK):
         :param version:
         :param archived:
         :param new_plan_id: The new ID to use for the plan. Can only be updated if the plan has not been used by any customers.
+        :param disable_version:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -938,6 +949,7 @@ class Plans(BaseSDK):
             version=version,
             archived=archived,
             new_plan_id=new_plan_id,
+            disable_version=disable_version,
         )
 
         req = self._build_request_async(

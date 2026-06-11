@@ -15,7 +15,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
+import { computeCreditCosts } from "./computeCreditCosts.js";
 import type {
 	CustomerEntitlementDeduction,
 	DeductionOptions,
@@ -68,7 +68,7 @@ export const prepareFeatureDeduction = ({
 	for (const rf of relevantFeatures) {
 		const { unlimited: featureUnlimited } = getUnlimitedAndUsageAllowed({
 			cusEnts,
-			internalFeatureId: rf.internal_id!,
+			internalFeatureId: rf.internal_id,
 		});
 
 		if (featureUnlimited) {
@@ -101,14 +101,12 @@ export const prepareFeatureDeduction = ({
 			.map((ce) => ce.entitlement.feature.id),
 	);
 
+	const getCreditCostForEnt = computeCreditCosts({ cusEnts, deduction });
+
 	// Build input for each customer entitlement
 	const customerEntitlementDeductions: CustomerEntitlementDeduction[] =
 		cusEnts.map((ce) => {
-			const creditCost = getCreditCost({
-				featureId: feature.id,
-				creditSystem: ce.entitlement.feature,
-			});
-
+			const creditCost = getCreditCostForEnt(ce.id);
 			const maxOverage = getMaxOverage({ cusEnt: ce });
 
 			const isFreeAllocated =
@@ -148,10 +146,7 @@ export const prepareFeatureDeduction = ({
 	// Collect and sort rollovers by expires_at (oldest first), including credit_cost from parent entitlement
 	const sortedRollovers = cusEnts
 		.flatMap((ce) => {
-			const creditCost = getCreditCost({
-				featureId: feature.id,
-				creditSystem: ce.entitlement.feature,
-			});
+			const creditCost = getCreditCostForEnt(ce.id);
 			return (ce.rollovers || []).map((r) => ({
 				...r,
 				credit_cost: creditCost,

@@ -271,3 +271,137 @@ See the credits pricing guide for a more detailed example of setting up a moneta
   href="/examples/monetary-credits"
   icon="money-bills"
 />
+
+## AI Credit Systems
+
+For AI applications that need to track token usage with per-model pricing, you can create an AI credit system. This lets you define markup percentages for each model and automatically calculate costs based on input/output tokens.
+
+<Tabs>
+<Tab title="CLI">
+
+Markups are optional. `defaultMarkup` applies to every model unless overridden — by `providerMarkups` (keyed by the first segment of the model ID, e.g. `openrouter`), or by `modelMarkups` for a specific model, which takes highest priority. With no markups set, models are billed at their Models.dev base cost.
+
+A markup of `-100` makes the model free: usage events are still recorded, but nothing is deducted from the balance.
+
+```ts Simplest setup — one markup for everything
+export const aiCredits = feature({
+  id: 'ai_credits',
+  name: 'AI Credits',
+  type: 'ai_credit_system',
+  defaultMarkup: 30, // every model billed at models.dev cost + 30%
+});
+```
+
+Or mix the levels for finer control:
+
+```ts autumn.config.ts
+import { feature, item, plan } from 'atmn';
+
+export const aiCredits = feature({
+  id: 'ai_credits',
+  name: 'AI Credits',
+  type: 'ai_credit_system',
+  // Global fallback markup
+  defaultMarkup: 30,
+  // Per-provider defaults
+  providerMarkups: {
+    openrouter: { markup: 25 },
+  },
+  // Per-model overrides (highest priority)
+  modelMarkups: {
+    'anthropic/claude-opus-4-5': { markup: 20 },
+    'anthropic/claude-sonnet-4-5': { markup: 15 },
+    'openai/gpt-4o-mini': { markup: -100 }, // free for customers
+    // For custom/self-hosted models, specify input/output costs in $/M tokens
+    'custom/my-model': { markup: 25, inputCost: 0.01, outputCost: 0.03 },
+  },
+});
+
+export const pro = plan({
+  id: 'pro',
+  name: 'Pro',
+  price: { amount: 50, interval: 'month' },
+  items: [
+    item({
+      featureId: aiCredits.id,
+      included: 10, // $10 worth of AI credits
+      reset: { interval: 'month' },
+    }),
+  ],
+});
+```
+
+Push changes with `atmn push`.
+
+</Tab>
+<Tab title="Dashboard">
+
+1. Navigate to the features page, under Plans.
+2. Click "Create Credit System"
+3. Toggle "AI Credit System" to enable model-based pricing
+4. Set a default markup %, and optionally add providers with their own default markups
+5. Add the models you want to support, overriding the markup per model where needed
+6. For custom models, also specify input/output costs per million tokens
+7. Click "Create"
+
+</Tab>
+</Tabs>
+
+### Model ID Format
+
+Model IDs follow the `provider/model` format:
+- Standard models: `anthropic/claude-opus-4-5`, `openai/gpt-4o`
+- OpenRouter models: `openrouter/anthropic/claude-opus-4.6`
+- Custom models: `custom/my-model-name`
+
+For standard models, pricing is automatically fetched from models.dev, including separate rates for cache reads/writes, reasoning, and audio tokens where the model publishes them, plus large-context tier pricing (e.g. above 200k input tokens) when applicable.
+
+For custom models, you must specify both `inputCost` and `outputCost` in dollars per million tokens — tracking fails if either is missing. Custom models bill input and output tokens only; cache, reasoning, and audio pools are ignored.
+
+### Tracking Token Usage
+
+Use the `trackTokens` endpoint to deduct credits based on token usage:
+
+<CodeGroup>
+
+```typescript TypeScript
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+
+await autumn.balances.trackTokens({
+  customerId: "user_123",
+  modelId: "anthropic/claude-opus-4-5",
+  inputTokens: 1500,
+  outputTokens: 500,
+});
+```
+
+```python Python
+from autumn_sdk import Autumn
+
+autumn = Autumn("am_sk_test_1234")
+
+await autumn.balances.track_tokens(
+    customer_id="user_123",
+    model_id="anthropic/claude-opus-4-5",
+    input_tokens=1500,
+    output_tokens=500,
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/balances.track_tokens" \
+  -H "Authorization: Bearer am_sk_test_1234" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "model_id": "anthropic/claude-opus-4-5",
+    "input_tokens": 1500,
+    "output_tokens": 500
+  }'
+```
+
+</CodeGroup>
+
+The cost is calculated automatically based on the model's pricing plus your configured markup percentage.

@@ -2,11 +2,13 @@ import type { Feature, ProductItem } from "@autumn/shared";
 import {
 	FeatureType,
 	FeatureUsageType,
+	isAiCreditSystem,
 	ProductItemFeatureType,
 } from "@autumn/shared";
 import {
 	BatteryHighIcon,
 	CoinsIcon,
+	CpuIcon,
 	TicketIcon,
 	ToggleRightIcon,
 } from "@phosphor-icons/react";
@@ -65,6 +67,15 @@ export const getFeatureIconConfig = (
 			icon: <ToggleRightIcon size={size} weight={weight} />,
 			color: "text-red-500",
 			label: "Boolean",
+		};
+	}
+
+	// Handle AI credit system
+	if (isAiCreditSystem(typeStr) || typeStr === "ai_credit_system") {
+		return {
+			icon: <CpuIcon size={size} weight={weight} />,
+			color: "text-yellow-500",
+			label: "AI Credit System",
 		};
 	}
 

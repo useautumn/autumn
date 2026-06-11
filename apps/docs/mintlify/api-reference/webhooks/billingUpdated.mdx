@@ -97,6 +97,168 @@ openapi: "api/openapi.yml webhook billing.updated"
           The ID of the feature that was added or removed.
         </ParamField>
 
+        <ParamField body="item" type="object" required>
+          The item snapshot that was added or removed.
+          <Expandable title="properties">
+            <ParamField body="feature_id" type="string" required>
+              The ID of the feature this item configures.
+            </ParamField>
+
+            <ParamField body="feature" type="object">
+              The full feature object if expanded.
+              <Expandable title="properties">
+                <ParamField body="id" type="string" required>
+                  The ID of the feature, used to refer to it in other API calls like /track or /check.
+                </ParamField>
+
+                <ParamField body="name" type="string | null">
+                  The name of the feature.
+                </ParamField>
+
+                <ParamField body="type" type="'static' | 'boolean' | 'single_use' | 'continuous_use' | 'credit_system' | 'ai_credit_system'" required>
+                  The type of the feature
+                </ParamField>
+
+                <ParamField body="display" type="object | null">
+                  Singular and plural display names for the feature.
+                  <Expandable title="properties">
+                    <ParamField body="singular" type="string" required>
+                      The singular display name for the feature.
+                    </ParamField>
+
+                    <ParamField body="plural" type="string" required>
+                      The plural display name for the feature.
+                    </ParamField>
+
+                  </Expandable>
+                </ParamField>
+
+                <ParamField body="credit_schema" type="object[] | null">
+                  Credit cost schema for credit system features.
+                  <Expandable title="properties">
+                    <ParamField body="metered_feature_id" type="string" required>
+                      The ID of the metered feature (should be a single_use feature).
+                    </ParamField>
+
+                    <ParamField body="credit_cost" type="number" required>
+                      The credit cost of the metered feature.
+                    </ParamField>
+
+                  </Expandable>
+                </ParamField>
+
+                <ParamField body="archived" type="boolean | null">
+                  Whether or not the feature is archived.
+                </ParamField>
+
+              </Expandable>
+            </ParamField>
+
+            <ParamField body="included" type="number" required>
+              Number of free units included. For consumable features, balance resets to this number each interval.
+            </ParamField>
+
+            <ParamField body="unlimited" type="boolean" required>
+              Whether the customer has unlimited access to this feature.
+            </ParamField>
+
+            <ParamField body="reset" type="object | null" required>
+              Reset configuration for consumable features. Null for non-consumable features like seats where usage persists across billing cycles.
+              <Expandable title="properties">
+                <ParamField body="interval" type="'one_off' | 'minute' | 'hour' | 'day' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                  The interval at which the feature balance resets (e.g. 'month', 'year'). For consumable features, usage resets to 0 and included units are restored.
+                </ParamField>
+
+                <ParamField body="interval_count" type="number">
+                  Number of intervals between resets. Defaults to 1.
+                </ParamField>
+
+              </Expandable>
+            </ParamField>
+
+            <ParamField body="price" type="object | null" required>
+              Pricing configuration for usage beyond included units. Null if feature is entirely free.
+              <Expandable title="properties">
+                <ParamField body="amount" type="number">
+                  Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
+                </ParamField>
+
+                <ParamField body="tiers" type="object[]">
+                  Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
+                  <Expandable title="properties">
+                    <ParamField body="to" type="number" required />
+
+                    <ParamField body="amount" type="number" required />
+
+                    <ParamField body="flat_amount" type="number" />
+
+                  </Expandable>
+                </ParamField>
+
+                <ParamField body="tier_behavior" type="'graduated' | 'volume'" />
+
+                <ParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'" required>
+                  Billing interval for this price. For consumable features, should match reset.interval.
+                </ParamField>
+
+                <ParamField body="interval_count" type="number">
+                  Number of intervals per billing cycle. Defaults to 1.
+                </ParamField>
+
+                <ParamField body="billing_units" type="number" required>
+                  Number of units per price increment. Usage is rounded UP to the nearest billing_units when billed (e.g. billing_units=100 means 101 usage rounds to 200).
+                </ParamField>
+
+                <ParamField body="billing_method" type="'prepaid' | 'usage_based'" required>
+                  'prepaid' for features like seats where customers pay upfront, 'usage_based' for pay-as-you-go after included usage.
+                </ParamField>
+
+                <ParamField body="max_purchase" type="number | null" required>
+                  Maximum units a customer can purchase beyond included. E.g. if included=100 and max_purchase=300, customer can use up to 400 total before usage is capped. Null for no limit.
+                </ParamField>
+
+              </Expandable>
+            </ParamField>
+
+            <ParamField body="display" type="object">
+              Display text for showing this item in pricing pages.
+              <Expandable title="properties">
+                <ParamField body="primary_text" type="string" required>
+                  Main display text (e.g. '$10' or '100 messages').
+                </ParamField>
+
+                <ParamField body="secondary_text" type="string">
+                  Secondary display text (e.g. 'per month' or 'then $0.5 per 100').
+                </ParamField>
+
+              </Expandable>
+            </ParamField>
+
+            <ParamField body="rollover" type="object">
+              Rollover configuration for unused units. If set, unused included units roll over to the next period.
+              <Expandable title="properties">
+                <ParamField body="max" type="number | null" required>
+                  Maximum rollover units. Null for unlimited rollover.
+                </ParamField>
+
+                <ParamField body="max_percentage" type="number | null">
+                  Maximum rollover as a percentage (0-100) of included + prepaid grant. Mutually exclusive with max.
+                </ParamField>
+
+                <ParamField body="expiry_duration_type" type="'month' | 'forever'" required>
+                  When rolled over units expire.
+                </ParamField>
+
+                <ParamField body="expiry_duration_length" type="number">
+                  Number of periods before expiry.
+                </ParamField>
+
+              </Expandable>
+            </ParamField>
+
+          </Expandable>
+        </ParamField>
+
       </Expandable>
     </ParamField>
 
