@@ -129,12 +129,12 @@ export const getApiSubscriptionV2 = async ({
 			trial_ends_at: isCustomerProductTrialing(customerProduct)
 				? (customerProduct.trial_ends_at ?? null)
 				: null,
-		started_at: customerProduct.starts_at,
-		quantity: customerProduct.quantity,
-		current_period_start: subscriptionPeriod.current_period_start,
-		current_period_end: subscriptionPeriod.current_period_end,
-		scope: customerProduct.internal_entity_id ? "entity" : "customer",
-	} satisfies ApiSubscriptionV1),
+			started_at: customerProduct.starts_at,
+			quantity: customerProduct.quantity,
+			current_period_start: subscriptionPeriod.current_period_start,
+			current_period_end: subscriptionPeriod.current_period_end,
+			scope: customerProduct.internal_entity_id ? "entity" : "customer",
+		} satisfies ApiSubscriptionV1),
 		legacyData: {
 			subscription_id: subId || undefined,
 			options: customerProduct.options,

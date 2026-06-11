@@ -13,6 +13,7 @@ const SUBJECT_AGGREGATES = [
 	{ cte: "extra_cus_entitlements_agg", column: "extra_customer_entitlements" },
 	{ cte: "replaceables_agg", column: "replaceables" },
 	{ cte: "rollovers_agg", column: "rollovers" },
+	{ cte: "usage_windows_agg", column: "usage_windows" },
 	{ cte: "products_agg", column: "products" },
 	{ cte: "entitlements_agg", column: "entitlements" },
 	{ cte: "prices_agg", column: "prices" },
@@ -243,6 +244,14 @@ export const getFullSubjectRowsQuery = ({
 				AND (ro.expires_at IS NULL OR ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000)
 		),
 
+		cus_usage_windows AS (
+			SELECT uw.*
+			FROM usage_windows uw
+			WHERE uw.internal_customer_id IN (
+				SELECT internal_customer_id FROM subject_records
+			)
+		),
+
 		cus_replaceables AS (
 			SELECT rep.*
 			FROM replaceables rep
@@ -420,6 +429,19 @@ export const getFullSubjectRowsQuery = ({
 			JOIN all_cus_ent_ids ace
 				ON ace.id = ro.cus_ent_id
 			GROUP BY ace.subject_key
+		),
+
+		usage_windows_agg AS (
+			SELECT
+				sr.subject_key,
+				json_agg(
+					row_to_json(uw)
+					ORDER BY uw.window_start_at ASC, uw.id ASC
+				) AS items
+			FROM subject_records sr
+			JOIN cus_usage_windows uw
+				ON uw.internal_customer_id = sr.internal_customer_id
+			GROUP BY sr.subject_key
 		),
 
 		products_agg AS (

@@ -50,7 +50,7 @@ local function process_deduction_pass(params)
     local ent_id = ent_obj.customer_entitlement_id
     local credit_cost = ent_obj.credit_cost
     local ent_feature_id = ent_obj.feature_id
-    if credit_cost == cjson.null or credit_cost == nil then
+    if credit_cost == cjson.null or credit_cost == nil or credit_cost == 0 then
       credit_cost = 1
     end
 
@@ -85,23 +85,43 @@ local function process_deduction_pass(params)
     usage_allowed = usage_allowed or overage_behavior_is_allow
 
     local should_process = not skip_if_not_usage_allowed or usage_allowed
+    local skip_reason = "usage_allowed=false"
     if not context.customer_entitlements[ent_id] then
       should_process = false
+      skip_reason = "not in context"
+    end
+
+    -- Usage-window gate, mirroring the spend-limit overage gate above: cap
+    -- this ent's deductible amount by the remaining window headroom (metered
+    -- limits cap every ent in tracked units; balance limits cap ents of the
+    -- capped feature, converted via THIS ent's credit_cost). A fully blocked
+    -- ent is skipped rather than breaking the loop -- a balance-dim cap only
+    -- binds its own feature's pools, so other ents may be unconstrained.
+    local ent_amount = remaining_amount
+    if should_process and remaining_amount > 0 then
+      local available_from_usage_windows = get_available_from_usage_windows({
+        context = context,
+        ent_feature_id = ent_feature_id,
+        credit_cost = credit_cost,
+      })
+      if not is_nil(available_from_usage_windows)
+          and available_from_usage_windows < ent_amount then
+        ent_amount = available_from_usage_windows
+      end
+      if ent_amount == 0 then
+        should_process = false
+        skip_reason = "usage window headroom exhausted"
+      end
     end
 
     if not should_process then
-      logger.log("%s skipping %s - usage_allowed=false or not in context", pass_name, ent_id)
-    elseif credit_cost == 0 then
-      -- Zero credit cost (e.g. -100% markup AI model): the usage is free.
-      -- Consume the requested amount without touching any balance.
-      logger.log("%s ent %s credit_cost=0 - free deduction, no balance change", pass_name, ent_id)
-      remaining_amount = 0
+      logger.log("%s skipping %s - %s", pass_name, ent_id, skip_reason)
     else
       local deducted = deduct_from_main_balance({
         context = context,
         ent_id = ent_id,
         target_entity_id = target_entity_id,
-        amount = remaining_amount,
+        amount = ent_amount,
         credit_cost = credit_cost,
         pass_number = pass_number,
         available_overage = available_overage,
@@ -112,7 +132,17 @@ local function process_deduction_pass(params)
         log_prefix = pass_name,
       })
 
-      remaining_amount = remaining_amount - (deducted / credit_cost)
+      local deducted_units = deducted / credit_cost
+      remaining_amount = remaining_amount - deducted_units
+
+      -- Settle the gate: record what this ent actually drained against every
+      -- applicable window limit so the next ent sees the reduced headroom.
+      consume_usage_window_headroom({
+        context = context,
+        ent_feature_id = ent_feature_id,
+        credit_cost = credit_cost,
+        units = deducted_units,
+      })
 
       if deducted ~= 0 then
         if not updates[ent_id] then
@@ -151,6 +181,26 @@ local function process_rollover_deduction(params)
     return 0
   end
 
+  -- Metered window limits count tracked units regardless of funding source,
+  -- so they gate the rollover phase too. Balance limits do not (ent_feature_id
+  -- = nil): rollover drains stay outside credit-pool caps, matching how spend
+  -- limits ignore them.
+  local rollover_amount = remaining_amount
+  local available_from_usage_windows = get_available_from_usage_windows({
+    context = context,
+    ent_feature_id = nil,
+    credit_cost = 1,
+  })
+  if not is_nil(available_from_usage_windows)
+      and available_from_usage_windows < rollover_amount then
+    rollover_amount = available_from_usage_windows
+  end
+
+  if rollover_amount <= 0 then
+    logger.log("Rollover deduction skipped - usage window headroom exhausted")
+    return 0
+  end
+
   local first_ent = customer_entitlement_deductions[1]
   local has_entity_scope = false
   if first_ent then
@@ -160,9 +210,16 @@ local function process_rollover_deduction(params)
   local rollover_deducted = deduct_from_rollovers({
     context = context,
     rollovers = rollovers,
-    amount = remaining_amount,
+    amount = rollover_amount,
     target_entity_id = target_entity_id,
     has_entity_scope = has_entity_scope,
+  })
+
+  consume_usage_window_headroom({
+    context = context,
+    ent_feature_id = nil,
+    credit_cost = 1,
+    units = rollover_deducted,
   })
 
   logger.log("Rollover deduction: deducted=%s, remaining=%s", rollover_deducted, remaining_amount - rollover_deducted)

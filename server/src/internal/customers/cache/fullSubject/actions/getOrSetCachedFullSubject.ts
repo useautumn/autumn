@@ -1,7 +1,7 @@
 import {
-    CustomerNotFoundError,
-    EntityNotFoundError,
-    type FullSubject,
+	CustomerNotFoundError,
+	EntityNotFoundError,
+	type FullSubject,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getFullSubjectNormalized } from "@/internal/customers/repos/getFullSubject/index.js";
@@ -26,7 +26,6 @@ export const getOrSetCachedFullSubject = async ({
 	const useRedis = !skipCache;
 
 	let fetchedSubjectViewEpoch = 0;
-
 
 	if (useRedis) {
 		// The pipeline inside getCachedFullSubject already fetches + refreshes

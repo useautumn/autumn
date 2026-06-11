@@ -23,17 +23,21 @@ export const FALLBACK_ERROR_CODES = [
 /** Error thrown by Redis deduction operations */
 export class RedisDeductionError extends Error {
 	code: RedisDeductionErrorCode;
+	featureId?: string;
 
 	constructor({
 		message,
 		code,
+		featureId,
 	}: {
 		message: string;
 		code: RedisDeductionErrorCode;
+		featureId?: string;
 	}) {
 		super(message);
 		this.name = "RedisDeductionError";
 		this.code = code;
+		this.featureId = featureId;
 	}
 
 	isRedisUnavailable(): boolean {

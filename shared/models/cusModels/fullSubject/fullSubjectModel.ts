@@ -1,6 +1,7 @@
 import { z } from "zod/v4";
 import { FullAggregatedFeatureBalanceSchema } from "../../cusProductModels/cusEntModels/aggregatedCusEnt.js";
 import { FullCustomerEntitlementSchema } from "../../cusProductModels/cusEntModels/cusEntModels.js";
+import { UsageWindowSchema } from "../../cusProductModels/cusEntModels/usageWindowTable.js";
 import { FullCusProductSchema } from "../../cusProductModels/cusProductModels.js";
 import { MigrationItemRunSchema } from "../../migrationV2Models/migrationItemRunSchema.js";
 import { SubscriptionSchema } from "../../subModels/subModels.js";
@@ -28,6 +29,12 @@ export const FullSubjectSchema = z.object({
 
 	customer_products: z.array(FullCusProductSchema),
 	extra_customer_entitlements: z.array(FullCustomerEntitlementSchema),
+
+	// Customer- or entity-scoped windowed-cap counters (one row per capped
+	// feature + window; internal_entity_id null = customer scope). On an entity
+	// subject this carries ONLY that entity's rows. Live data read from the
+	// per-feature balance hashes, never from the cached subject view.
+	usage_windows: z.array(UsageWindowSchema).optional(),
 
 	subscriptions: z.array(SubscriptionSchema).optional(),
 	invoices: z.array(InvoiceSchema),

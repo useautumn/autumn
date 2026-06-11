@@ -19,6 +19,7 @@ export const getRefundLineItemsForPrice = ({
 		ctx,
 		customerProduct,
 		billingContext,
+		includeCatalogFallback: false,
 	});
 
 	const matchedRefundsForPrice = matchedRefundLineItems.filter(
