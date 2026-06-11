@@ -66,6 +66,23 @@ describe("isFullSubjectGateRejection", () => {
 		expect(isFullSubjectGateRejection(wrongStatus)).toBe(false);
 	});
 
+	test("does not match rate-limit 429s that are not from the gate", () => {
+		const unknownReason = new RecaseError({
+			message: "rate limited",
+			code: "rate_limit_exceeded",
+			statusCode: 429,
+			data: { reason: "some_other_limiter" },
+		});
+		expect(isFullSubjectGateRejection(unknownReason)).toBe(false);
+
+		const noData = new RecaseError({
+			message: "rate limited",
+			code: "rate_limit_exceeded",
+			statusCode: 429,
+		});
+		expect(isFullSubjectGateRejection(noData)).toBe(false);
+	});
+
 	test("does not match plain errors or non-errors", () => {
 		expect(isFullSubjectGateRejection(new Error("rate_limit_exceeded"))).toBe(
 			false,

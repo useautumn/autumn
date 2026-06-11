@@ -41,7 +41,7 @@ const warnRateLimitBypass = () => {
 };
 
 const CAP_EXCEEDED_WARNING_INTERVAL_MS = 10_000;
-let lastCapExceededWarningAt = 0;
+const lastCapWarnAtByType = new Map<string, number>();
 
 const warnOrgCapExceeded = ({
 	limitType,
@@ -51,9 +51,10 @@ const warnOrgCapExceeded = ({
 	orgSlug?: string;
 }) => {
 	const now = Date.now();
-	if (now - lastCapExceededWarningAt < CAP_EXCEEDED_WARNING_INTERVAL_MS) return;
+	const lastWarnAt = lastCapWarnAtByType.get(limitType) ?? 0;
+	if (now - lastWarnAt < CAP_EXCEEDED_WARNING_INTERVAL_MS) return;
 
-	lastCapExceededWarningAt = now;
+	lastCapWarnAtByType.set(limitType, now);
 	logger.warn(
 		`[rate-limit] org aggregate cap exceeded: ${orgSlug ?? "unknown"} (${limitType})`,
 		{ type: "org_rate_cap_exceeded", limitType, org: orgSlug },
