@@ -2,6 +2,7 @@ import {
 	type AttachConfig,
 	type AttachFunctionResponse,
 	AttachFunctionResponseSchema,
+	atmnToStripeAmount,
 	isFixedPrice,
 	MetadataType,
 	priceToInvoiceAmount,
@@ -99,7 +100,10 @@ export const handleOneOffFunction = async ({
 			invoiceItemData = {
 				description,
 				price_data: {
-					unit_amount: new Decimal(amount).mul(100).round().toNumber(),
+					unit_amount: atmnToStripeAmount({
+						amount,
+						currency: orgToCurrency({ org }),
+					}),
 					currency: orgToCurrency({ org }),
 					product: price.config?.stripe_product_id || product?.processor?.id,
 				},
@@ -136,7 +140,7 @@ export const handleOneOffFunction = async ({
 
 	// Skip auto_tax in invoice mode: send_invoice has no
 	// address-collection UI so Stripe Tax rejects.
-const wantsAutoTax =
+	const wantsAutoTax =
 		!!org.config.automatic_tax &&
 		!attachParams.invoiceOnly &&
 		customerHasUsableTaxLocationForStripeTax(attachParams.stripeCus);
@@ -145,12 +149,8 @@ const wantsAutoTax =
 		customer: customer.processor.id!,
 		auto_advance: false,
 		currency: orgToCurrency({ org }),
-		discounts: rewards
-			? rewards.map((r) => ({ coupon: r.id }))
-			: undefined,
-		collection_method: attachParams.invoiceOnly
-			? "send_invoice"
-			: undefined,
+		discounts: rewards ? rewards.map((r) => ({ coupon: r.id })) : undefined,
+		collection_method: attachParams.invoiceOnly ? "send_invoice" : undefined,
 		days_until_due: attachParams.invoiceOnly ? 30 : undefined,
 		...(shouldMemo ? { description: invoiceMemo } : {}),
 		...(wantsAutoTax ? { automatic_tax: { enabled: true } } : {}),
