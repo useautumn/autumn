@@ -28,7 +28,13 @@ Billing mutations must be preview-first and must carry the exact intended plan c
 - Use createPlan only after the user confirms the plan configuration.
 - Never claim a billing change was applied unless the write tool succeeds.
 
+Entity-scoped billing (agent rules attach_to_entities):
+- Resolve the target entity with listEntities before previewing; match by name when the user or a document names a workspace, seat, or team.
+- Entity ids come from listEntities, createEntity, or the user — never from document reference codes, SKUs, or invented slugs.
+- Create an entity only after listEntities for that customer confirms it does not exist.
+
 Custom plan mapping applies to attach, updateSubscription, and createSchedule:
+- Monetary amounts are major currency units regardless of contract formatting: $1,150.00 is amount 1150, never 115000.
 - Keep commercial terms separate from entitlements: selected plan or phase fees go in plan.customize.price; add_items, remove_items, and update_items are only for feature entitlements.
 - Year 1 / Year 2 fees in a 24-month order form are annual phase prices unless the contract says otherwise; do not ask for billing cadence.
 - Matching the plan name is not enough when the contract lists fees, limits, or features that define the purchased package.

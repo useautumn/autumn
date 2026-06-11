@@ -245,7 +245,9 @@ export const claudeManagedEngine: AgentEngine = {
 						conversationSpan.end();
 						span.log({
 							metadata: {
-								finish_reason: result.suspended ? "suspended" : "stop",
+								finish_reason: result.suspendedQueue?.length
+									? "suspended"
+									: "stop",
 							},
 							metrics: {
 								completion_tokens: result.usage.outputTokens,
@@ -269,7 +271,8 @@ export const claudeManagedEngine: AgentEngine = {
 			logger,
 			text: outcome.textParts.join("\n\n"),
 		});
-		if (outcome.errorMessage && !finalText && !outcome.suspended) {
+		const suspended = outcome.suspendedQueue?.[0];
+		if (outcome.errorMessage && !finalText && !suspended) {
 			throw new Error(`Claude Managed agent failed: ${outcome.errorMessage}`);
 		}
 
@@ -278,7 +281,7 @@ export const claudeManagedEngine: AgentEngine = {
 			context: { env },
 			data: {
 				cost_tokens: outcome.usage.inputTokens + outcome.usage.outputTokens,
-				finish_reason: outcome.suspended ? "suspended" : "stop",
+				finish_reason: suspended ? "suspended" : "stop",
 				resumed: !newSession,
 				run_id: activeSessionId,
 			},
@@ -286,14 +289,14 @@ export const claudeManagedEngine: AgentEngine = {
 
 		return {
 			env,
-			finishReason: outcome.suspended ? "suspended" : "stop",
+			finishReason: suspended ? "suspended" : "stop",
 			previewApproval: previewCapture.captured as PreviewApproval | undefined,
 			runId: activeSessionId,
-			suspendPayload: outcome.suspended
+			suspendPayload: suspended
 				? {
-						args: outcome.suspended.args,
-						toolCallId: outcome.suspended.toolCallId,
-						toolName: outcome.suspended.toolName,
+						args: suspended.args,
+						toolCallId: suspended.toolCallId,
+						toolName: suspended.toolName,
 					}
 				: undefined,
 			text: finalText,
