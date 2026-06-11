@@ -61,7 +61,7 @@
 		"@smithy/config-resolver": "^4.4.0",
 		"lodash": "4.17.23",
 		"lodash-es": "4.17.23",
-		"@types/pg": "8.11.10"
+		"@types/pg": "8.20.0"
 	},
 	"resolutions": {
 		"@better-auth/core": "1.6.5",
@@ -75,7 +75,7 @@
 		"@smithy/config-resolver": "^4.4.0",
 		"lodash": "4.17.23",
 		"lodash-es": "4.17.23",
-		"@types/pg": "8.11.10"
+		"@types/pg": "8.20.0"
 	},
 	"type": "module",
 	"scripts": {

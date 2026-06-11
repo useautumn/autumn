@@ -5,10 +5,8 @@ import { Mastra } from "@mastra/core/mastra";
 import { InMemoryStore } from "@mastra/core/storage";
 import { MCPClient } from "@mastra/mcp";
 import { createRequestContext } from "../../../../../../packages/mcp/src/server/auth/auth.js";
-import {
-	agentDocUris,
-	createAutumnChatAgent,
-} from "../../../../src/agent/chatAgent.js";
+import { agentDocUris } from "../../../../src/agent/prompts/readDocs.js";
+import { createAutumnChatAgent } from "../../../../src/agent/runMessage/engines/autumnChatAgent.js";
 import { createLeafTracingOptions } from "../../../../src/internal/observability/leafTracingOptions.js";
 import { createMastraBraintrustObservability } from "../../../../src/providers/braintrust/index.js";
 import { defaultGenericMcpAgentConfig } from "../configs/genericMcpAgentConfig.js";

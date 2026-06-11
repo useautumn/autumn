@@ -1,7 +1,7 @@
 import {
 	type AgentRules,
-	type EntityRules,
 	defaultAgentRules,
+	type EntityRules,
 } from "@autumn/shared";
 
 export const entityRules = ({

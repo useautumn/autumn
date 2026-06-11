@@ -1,6 +1,6 @@
 import type {
-	ResponseAskedExpectation,
 	ResponseAskedBeforeToolExpectation,
+	ResponseAskedExpectation,
 	ResponseMentionsExpectation,
 } from "./types.js";
 

@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import type { Attachment } from "chat";
 import type { AutumnMcpAuth } from "../../../../../packages/mcp/src/server/auth/auth.js";
-import { prepareAttachmentMessage } from "../../../src/agent/attachments.js";
+import { prepareAttachmentMessage } from "../../../src/agent/runMessage/setup/prepareAttachments.js";
 import type { EvalSetup } from "../fixtures/types.js";
 import { createEvalRuntimeContext } from "./context/createEvalRuntimeContext.js";
 import type {

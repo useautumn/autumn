@@ -18,11 +18,7 @@ export const api = {
 		...(body ? { body } : {}),
 		toolName,
 	}),
-	called: ({
-		calls,
-	}: {
-		calls: ExpectedApiCall[];
-	}): ApiCalledExpectation => ({
+	called: ({ calls }: { calls: ExpectedApiCall[] }): ApiCalledExpectation => ({
 		calls,
 		type: "api.called",
 	}),

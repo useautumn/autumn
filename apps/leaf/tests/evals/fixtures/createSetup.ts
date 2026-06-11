@@ -12,6 +12,7 @@ import {
 	schedules as scheduleFixtures,
 	subscriptions as subscriptionFixtures,
 } from "./customers/index.js";
+import { entities as entityFixtures } from "./entities/index.js";
 import {
 	basePrice as basePriceFixture,
 	features as featureFixtures,
@@ -21,7 +22,6 @@ import {
 	plan as planFixture,
 	planList as planListFixture,
 } from "./plans/index.js";
-import { entities as entityFixtures } from "./entities/index.js";
 import type {
 	EntityRef,
 	EvalSetup,

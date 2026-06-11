@@ -7,32 +7,32 @@ import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { CustomizePlanV1Schema } from "../common/customizePlan/customizePlanV1";
 
+// update_items is internal / not prod-ready — omit it from the schedule customize
+// surface so the agent never uses it.
 const CreateScheduleCustomizePlanSchema = CustomizePlanV1Schema.omit({
 	free_trial: true,
+	update_items: true,
 })
 	.refine(
 		(data) =>
 			data.items !== undefined ||
 			data.price !== undefined ||
 			data.add_items !== undefined ||
-			data.remove_items !== undefined ||
-			data.update_items !== undefined,
+			data.remove_items !== undefined,
 		{
 			message:
-				"When using customize, at least one of price, items, add_items, remove_items, or update_items must be provided",
+				"When using customize, at least one of price, items, add_items, or remove_items must be provided",
 		},
 	)
 	.refine(
 		(data) =>
 			!(
 				data.items !== undefined &&
-				(data.add_items !== undefined ||
-					data.remove_items !== undefined ||
-					data.update_items !== undefined)
+				(data.add_items !== undefined || data.remove_items !== undefined)
 			),
 		{
 			message:
-				"customize.items (PUT-style) cannot be combined with add_items / remove_items / update_items (PATCH-style); pick one approach",
+				"customize.items (PUT-style) cannot be combined with add_items / remove_items (PATCH-style); pick one approach",
 		},
 	);
 
@@ -48,7 +48,7 @@ export const CreateSchedulePlanSchema = z.object({
 	}),
 	customize: CreateScheduleCustomizePlanSchema.optional().meta({
 		description:
-			"Customize the plan to schedule. Can override price, replace items, or patch items with add_items, remove_items, and update_items.",
+			"Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items.",
 	}),
 	subscription_id: z.string().optional().meta({
 		description:

@@ -75,26 +75,24 @@ const applyCustomizeItems = ({
 		);
 	}
 
-	const nextItems =
-		customize.items ??
-		[
-			...items
-				.filter(
-					(item) =>
-						!(customize.remove_items ?? []).some((filter) =>
-							itemMatchesFilter({ filter, item }),
-						),
-				)
-				.map((item) => {
-					const update = (customize.update_items ?? []).find((update) =>
-						itemMatchesFilter({ filter: update.filter, item }),
-					);
-					return update?.included !== undefined
-						? { ...item, included: update.included }
-						: item;
-				}),
-			...(customize.add_items ?? []),
-		];
+	const nextItems = customize.items ?? [
+		...items
+			.filter(
+				(item) =>
+					!(customize.remove_items ?? []).some((filter) =>
+						itemMatchesFilter({ filter, item }),
+					),
+			)
+			.map((item) => {
+				const update = (customize.update_items ?? []).find((update) =>
+					itemMatchesFilter({ filter: update.filter, item }),
+				);
+				return update?.included !== undefined
+					? { ...item, included: update.included }
+					: item;
+			}),
+		...(customize.add_items ?? []),
+	];
 	assertNoDuplicateItems(nextItems);
 	return nextItems;
 };

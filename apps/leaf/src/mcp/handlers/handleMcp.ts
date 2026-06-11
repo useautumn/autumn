@@ -1,24 +1,14 @@
 import { randomUUID } from "node:crypto";
-import {
-	type createAutumnOperationsMCPServer,
-} from "@autumn/mcp";
+import type { createAutumnOperationsMCPServer } from "@autumn/mcp";
 import { RESPONSE_ALREADY_SENT } from "@hono/node-server/utils/response";
-import {
-	buildAuthForRequest,
-} from "../auth/resolveRequestAuth.js";
 import { OAuthHttpError } from "../auth/protectedResourceMetadata.js";
+import { buildAuthForRequest } from "../auth/resolveRequestAuth.js";
 import type { LeafMcpContext, McpRouteOptions } from "../types.js";
 
 type McpServer = ReturnType<typeof createAutumnOperationsMCPServer>;
 type McpAuth = Awaited<ReturnType<typeof buildAuthForRequest>>;
 
-const setIncomingAuth = ({
-	c,
-	auth,
-}: {
-	c: LeafMcpContext;
-	auth: McpAuth;
-}) => {
+const setIncomingAuth = ({ c, auth }: { c: LeafMcpContext; auth: McpAuth }) => {
 	(c.env.incoming as typeof c.env.incoming & { auth?: McpAuth }).auth = auth;
 };
 

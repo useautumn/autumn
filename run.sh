@@ -29,9 +29,9 @@ run_leaf_eval() {
 
 	cd "$repo_root/apps/leaf"
 	if [[ -n "$filter" && "$filter" != ".*" ]]; then
-		exec env ENV_FILE=.env infisical run --env=dev --recursive -- "$repo_root/node_modules/.bin/braintrust" eval "$rel" --external-packages @mastra/mcp @mastra/core pino thread-stream --filter "evalName=$filter" "${args[@]}"
+		exec env ENV_FILE=.env infisical run --env=dev --recursive -- "$repo_root/node_modules/.bin/braintrust" eval "$rel" --external-packages @mastra/mcp @mastra/core pino thread-stream @anthropic-ai/claude-agent-sdk @anthropic-ai/sdk @ngrok/ngrok --filter "evalName=$filter" "${args[@]}"
 	fi
-	exec env ENV_FILE=.env infisical run --env=dev --recursive -- "$repo_root/node_modules/.bin/braintrust" eval "$rel" --external-packages @mastra/mcp @mastra/core pino thread-stream "${args[@]}"
+	exec env ENV_FILE=.env infisical run --env=dev --recursive -- "$repo_root/node_modules/.bin/braintrust" eval "$rel" --external-packages @mastra/mcp @mastra/core pino thread-stream @anthropic-ai/claude-agent-sdk @anthropic-ai/sdk @ngrok/ngrok "${args[@]}"
 }
 
 if [[ "$resolved" == "$repo_root/server/"* ]]; then

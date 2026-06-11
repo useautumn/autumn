@@ -19,7 +19,7 @@ Before creating a schedule, resolve:
 
 When an agreement gives different recurring fees for different periods, create one schedule phase per priced period and put each fee in that phase's plans[].customize.price. There is no top-level phase plan.price field for schedules; fees are commercial terms, not feature entitlements. Infer the price interval from the contract's period labels and term length unless the agreement states a different billing cadence.
 
-Use the exact calendar date from the user or contract. If a provisioning request or signed order form has no effective/start date, use the current date for the first phase and state that assumption in the preview. Convert date-only schedule starts to midnight UTC unless the user or contract specifies a timezone. If the first phase starts now, pass the current date as epoch milliseconds; never pass literal "now" to createSchedule. Do not shift years when converting dates.
+The first phase starts now unless the contract or user explicitly gives it a start date — for a now phase, pass the current time as epoch milliseconds (never literal "now"). Use an explicit calendar date only for a phase the contract or user dates (for example later phases like year 2); convert date-only starts to midnight UTC unless a timezone is specified, and do not shift years.
 When preview or response data includes starts_at or billing period timestamps, use epochMillisecondsToDate before explaining those timestamps to the user.
 
 If the user says year 1 is already paid or should have no billing changes, do not create an immediate/year-1 phase with a null price or billing_behavior "none". Start the schedule at the first future billing change (for example year 2), then add later phases such as year 3.

@@ -1,10 +1,10 @@
+import { withCustomers } from "../../../fixtures/createSetup.js";
 import {
 	api,
 	billing,
 	response,
 	tools,
 } from "../../../fixtures/expectations/index.js";
-import { withCustomers } from "../../../fixtures/createSetup.js";
 import { orgSetups } from "../../../fixtures/orgSetups.js";
 import { approve, initEval, user } from "../../../harness/index.js";
 import { billingAttachScores } from "../../../utils/scorers.js";

@@ -1,10 +1,10 @@
+import { createSetup } from "../../fixtures/createSetup.js";
 import {
 	api,
 	billing,
 	response,
 	tools,
 } from "../../fixtures/expectations/index.js";
-import { createSetup } from "../../fixtures/createSetup.js";
 import { approve, initEval, user } from "../../harness/index.js";
 import { billingAttachScores } from "../../utils/scorers.js";
 
