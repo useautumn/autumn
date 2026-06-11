@@ -33,6 +33,7 @@ import {
 } from "@autumn/shared";
 import { BillingMethod } from "@autumn/shared/api/products/components/billingMethod";
 import { planItemV1ToV0 } from "@autumn/shared/api/products/items/mappers/planItemV1ToV0";
+import { itemsAreSame } from "@autumn/shared/utils/productV2Utils/compareProductUtils/compareItemUtils";
 import { toProductItem } from "@autumn/shared/utils/productV2Utils/productItemUtils/mapToItem";
 import { productItemsToPlanItemsV1 } from "@autumn/shared/utils/productV2Utils/productItemUtils/convertProductItem/productItemToPlanItemV1";
 import type { DrizzleCli } from "@server/db/initDrizzle";
@@ -225,6 +226,49 @@ describe("itemToAllocatedBillingBehavior", () => {
 				features,
 			}),
 		).toThrow("rollover is not supported");
+	});
+});
+
+describe("itemsAreSame allocated billing behavior comparison", () => {
+	test("detects one-sided explicit arrear behavior", () => {
+		const result = itemsAreSame({
+			item1: seatsItem({
+				config: {
+					allocated_billing_behavior: AllocatedBillingBehavior.Arrear,
+				},
+			}),
+			item2: seatsItem(),
+			features,
+		});
+
+		expect(result.same).toBe(false);
+		expect(result.pricesChanged).toBe(true);
+	});
+
+	test("keeps omitted behavior equal on both sides", () => {
+		const result = itemsAreSame({
+			item1: seatsItem(),
+			item2: seatsItem(),
+			features,
+		});
+
+		expect(result.same).toBe(true);
+		expect(result.pricesChanged).toBe(false);
+	});
+
+	test("treats one-sided explicit prorated behavior as omitted", () => {
+		const result = itemsAreSame({
+			item1: seatsItem({
+				config: {
+					allocated_billing_behavior: AllocatedBillingBehavior.Prorated,
+				},
+			}),
+			item2: seatsItem(),
+			features,
+		});
+
+		expect(result.same).toBe(true);
+		expect(result.pricesChanged).toBe(false);
 	});
 });
 

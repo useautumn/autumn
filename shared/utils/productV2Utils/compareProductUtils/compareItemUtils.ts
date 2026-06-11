@@ -227,7 +227,7 @@ const itemToExplicitAllocatedBillingBehavior = (item: ProductItem) => {
 	if (hasProrationKnobs) {
 		return AllocatedBillingBehavior.Prorated;
 	}
-	return undefined;
+	return AllocatedBillingBehavior.Prorated;
 };
 
 const allocatedBillingBehaviorAreSame = ({
@@ -239,7 +239,6 @@ const allocatedBillingBehaviorAreSame = ({
 }) => {
 	const behavior1 = itemToExplicitAllocatedBillingBehavior(item1);
 	const behavior2 = itemToExplicitAllocatedBillingBehavior(item2);
-	if (behavior1 === undefined || behavior2 === undefined) return true;
 	return behavior1 === behavior2;
 };
 
