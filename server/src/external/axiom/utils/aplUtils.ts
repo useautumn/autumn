@@ -10,6 +10,14 @@ export type HttpMethodFilter =
 	| "PATCH"
 	| "DELETE";
 
+export const isBillingUrl = ({
+	urlExpression = "['req.url']",
+}: { urlExpression?: string } = {}) => {
+	const path = `tostring(parse_url(${urlExpression}).path)`;
+
+	return `(${path} startswith '/v1/billing' or ${path} startswith '/billing' or ${path} startswith '/v1/attach' or ${path} startswith '/v1/cancel')`;
+};
+
 const statusBucketClause = (bucket: StatusBucket): string | null => {
 	switch (bucket) {
 		case "2xx":

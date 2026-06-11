@@ -1,9 +1,10 @@
+import { withCustomers } from "../../../fixtures/createSetup.js";
 import {
+	api,
 	billing,
 	response,
 	tools,
 } from "../../../fixtures/expectations/index.js";
-import { withCustomers } from "../../../fixtures/createSetup.js";
 import { orgSetups } from "../../../fixtures/orgSetups.js";
 import { approve, initEval, user } from "../../../harness/index.js";
 import { billingAttachScores } from "../../../utils/scorers.js";
@@ -25,9 +26,18 @@ const setup = withCustomers({
 			name: "Northstar Labs",
 		}),
 	}),
+	entities: ({ customers, entities, features }) => ({
+		workspace: entities.base({
+			customer: customers.account,
+			feature: features.workspaces,
+			id: "workspace_northstar",
+			name: "Northstar Workspace",
+		}),
+	}),
 });
 const customer = setup.refs.customers.account;
 const enterprisePlan = setup.refs.plans.enterprise;
+const workspace = setup.refs.entities.workspace;
 
 const expectedAttachRequest = {
 	customer_id: customer.id,
@@ -38,13 +48,13 @@ const expectedAttachRequest = {
 		},
 	},
 	enable_plan_immediately: true,
+	entity_id: workspace.id,
 	invoice_mode: {
 		enable_plan_immediately: true,
 		enabled: true,
 		finalize: false,
 	},
 	plan_id: enterprisePlan.id,
-	redirect_mode: "if_required",
 };
 
 initEval<EvalMetadata>({
@@ -61,14 +71,26 @@ initEval<EvalMetadata>({
 			conversation: [
 				user({
 					message:
-						"Please attach the Enterprise plan to Northstar Labs with a custom base price of $49/month.",
+						"Please attach the Enterprise plan to Northstar Labs for Northstar Workspace with a custom base price of $49/month.",
 				}),
 				user({ message: "Looks good, attach it." }),
 				approve(),
 			],
 			expect: [
 				tools.called({
-					toolNames: ["listCustomers", "listPlans"],
+					toolNames: ["listCustomers", "listPlans", "listEntities"],
+				}),
+				api.calledInOrder({
+					calls: [
+						{
+							body: { customer_id: customer.id },
+							toolName: "listEntities",
+						},
+						{
+							body: expectedAttachRequest,
+							toolName: "previewAttach",
+						},
+					],
 				}),
 				billing.previewBeforeWrite({
 					preview: {
@@ -80,9 +102,16 @@ initEval<EvalMetadata>({
 						toolName: "attach",
 					},
 				}),
+				api.calledAfterApproval({
+					call: {
+						body: expectedAttachRequest,
+						toolName: "attach",
+					},
+				}),
 				response.mentions({
 					phrases: [
 						"Northstar Labs",
+						"Northstar Workspace",
 						"Enterprise",
 						"$49",
 						"invoice",

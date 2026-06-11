@@ -268,8 +268,12 @@ async function startDev() {
 				CHECKOUT_PORT: CHECKOUT_PORT.toString(),
 				CHAT_PORT: CHAT_PORT.toString(),
 				MCP_DEBUG_PENDING_ACTIONS: process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
+				// CMA runs in Anthropic's cloud and can't reach localhost — prefer the
+				// public NGROK_URL (proxied to leaf's /mcp) so Slack → CMA works locally.
 				MCP_SERVER_URL:
-					process.env.MCP_SERVER_URL ?? `http://localhost:${CHAT_PORT}`,
+					process.env.MCP_SERVER_URL ??
+					process.env.NGROK_URL ??
+					`http://localhost:${CHAT_PORT}`,
 				CHAT_SERVER_URL:
 					process.env.CHAT_SERVER_URL ?? `http://localhost:${CHAT_PORT}`,
 				MCP_RESOURCE_URLS:

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import type { Attachment } from "chat";
-import { prepareAttachmentMessage } from "../../../src/agent/attachments.js";
+import { prepareAttachmentMessage } from "../../../src/agent/runMessage/setup/prepareAttachments.js";
 
 const getUserContent = async (
 	params: Parameters<typeof prepareAttachmentMessage>[0],

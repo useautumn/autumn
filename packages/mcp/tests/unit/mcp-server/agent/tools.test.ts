@@ -42,6 +42,8 @@ describe("Autumn operation tools", () => {
 		expect(tools.listFeatures.description).toContain("List Autumn features");
 		expect(tools.listCustomers.description).toContain("plans");
 		expect(tools.listCustomers.description).toContain("paginate");
+		expect(tools.createEntity.description).toContain("entity_id");
+		expect(tools.createEntity.description).toContain("entity name");
 		expect(tools.updateCustomer.description).toContain("invoice_mode");
 		expect(tools.updateCustomer.description).toContain("Stripe");
 		expect(tools.createPlan.description).toContain("confirmation");
@@ -51,6 +53,9 @@ describe("Autumn operation tools", () => {
 		expect(tools.getAgentRules.description).toContain("agent rules");
 		expect(tools.getAgentRules.description).toContain("Use before customer");
 		expect(tools.updateAgentRules.description).toContain("agent rules");
+		expect(tools.listEntities.description).toContain("customer_id");
+		expect(tools.listEntities.description).toContain("one customer");
+		expect(tools.getEntity.description).toContain("entity_id");
 		expect(tools.previewCreateBalance.description).toContain("Does not mutate");
 		expect(tools.createSchedule.description).toContain("starts_at");
 		expect(tools.previewCreateSchedule.description).toContain("billing impact");
@@ -112,6 +117,9 @@ describe("Autumn operation tools", () => {
 			"getCurrentOrganization",
 			"getAgentRules",
 			"updateAgentRules",
+			"createEntity",
+			"listEntities",
+			"getEntity",
 		] as const) {
 			expect(tools[name].mcp?.annotations?.destructiveHint).toBe(false);
 		}
@@ -135,6 +143,49 @@ describe("Autumn operation tools", () => {
 		).toThrow();
 
 		expect(createAgentAutumnOperationTools().getAgentRules).toBeDefined();
+	});
+
+	test("entity tools expose create, list, and get schemas", () => {
+		expect(endpointByTool.createEntity).toBe("/v1/entities.create");
+		expect(endpointByTool.listEntities).toBe("/v1/entities.list");
+		expect(endpointByTool.getEntity).toBe("/v1/entities.get");
+		expect(
+			schemaByTool.createEntity.parse({
+				customer_id: "cus_123",
+				entity_id: "workspace_1",
+				feature_id: "workspaces",
+				name: "Workspace 1",
+			}),
+		).toEqual({
+			customer_id: "cus_123",
+			entity_id: "workspace_1",
+			feature_id: "workspaces",
+			name: "Workspace 1",
+		});
+		expect(
+			schemaByTool.listEntities.parse({
+				customer_id: "cus_123",
+				limit: 10,
+				start_cursor: "",
+			}),
+		).toMatchObject({
+			customer_id: "cus_123",
+			limit: 10,
+			start_cursor: "",
+		});
+		expect(
+			schemaByTool.getEntity.parse({
+				customer_id: "cus_123",
+				entity_id: "workspace_1",
+			}),
+		).toEqual({
+			customer_id: "cus_123",
+			entity_id: "workspace_1",
+		});
+
+		expect(createAgentAutumnOperationTools().createEntity).toBeDefined();
+		expect(createAgentAutumnOperationTools().listEntities).toBeDefined();
+		expect(createAgentAutumnOperationTools().getEntity).toBeDefined();
 	});
 
 	test("updateAgentRules accepts partial rules and rejects unknown fields", () => {

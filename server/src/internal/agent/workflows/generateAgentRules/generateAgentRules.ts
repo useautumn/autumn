@@ -20,13 +20,29 @@ export const generateAgentRules = async ({
 		generateEntityRules({ ctx, endTime, startTime }),
 		generateCreditRules({ ctx, endTime, startTime }),
 	]);
+	const rules = AgentRulesSchema.parse({
+		credit_rules: creditResult.creditRules,
+		entity_rules: entityResult.entityRules,
+		notes: "",
+	});
+
+	ctx.logger.info(
+		{
+			data2: {
+				env: ctx.env,
+				org_id: ctx.org.id,
+				org_slug: ctx.org.slug,
+				rules,
+				time_range: { endTime, startTime },
+				unconfigured:
+					entityResult.unconfigured || creditResult.unconfigured || undefined,
+			},
+		},
+		"[AgentRules] Generated rules",
+	);
 
 	return {
-		rules: AgentRulesSchema.parse({
-			credit_rules: creditResult.creditRules,
-			entity_rules: entityResult.entityRules,
-			notes: "",
-		}),
+		rules,
 		metadata: {
 			credit_rules: creditResult.metadata,
 			entity_rules: entityResult.metadata,

@@ -64,12 +64,13 @@ describe("Autumn MCP server", () => {
 	test("public server exposes Autumn composition docs", async () => {
 		const server = createAutumnOperationsMCPServer();
 		const resources = await server.listResources();
+		const resourceUris = autumnMcpResourceUris();
 
 		expect(resources.resources.map((resource) => resource.uri)).toEqual(
-			autumnMcpResourceUris,
+			resourceUris,
 		);
 
-		for (const uri of autumnMcpResourceUris) {
+		for (const uri of resourceUris) {
 			const resource = await server.readResource(uri);
 			expect(resource.contents[0]?.text).toContain("# ");
 		}
@@ -100,7 +101,7 @@ describe("Autumn MCP server", () => {
 		expect(schedules.contents[0]?.text).toContain("updateCustomer");
 
 		for (const uri of logResourceUris) {
-			expect(autumnMcpResourceUris).toContain(uri);
+			expect(resourceUris).toContain(uri);
 		}
 	});
 
