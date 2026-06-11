@@ -1,5 +1,9 @@
-import type { Price, Product, UsagePriceConfig } from "@autumn/shared";
-import { Decimal } from "decimal.js";
+import {
+	atmnToStripeAmount,
+	type Price,
+	type Product,
+	type UsagePriceConfig,
+} from "@autumn/shared";
 import type Stripe from "stripe";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
@@ -27,9 +31,10 @@ export const constructStripeInvoiceItem = ({
 	const { org } = ctx;
 	const config = price.config as UsagePriceConfig;
 
-	const amountInCents = Math.floor(
-		new Decimal(amount).mul(100).round().toNumber(),
-	);
+	const amountInCents = atmnToStripeAmount({
+		amount,
+		currency: org.default_currency || "usd",
+	});
 
 	const priceData =
 		amountInCents > 0

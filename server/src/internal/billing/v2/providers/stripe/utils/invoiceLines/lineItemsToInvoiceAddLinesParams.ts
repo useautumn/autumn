@@ -28,10 +28,10 @@ const toStripeAddLineParams = ({
 		description,
 		amount: shouldUsePriceData
 			? undefined
-			: atmnToStripeAmount({ amount: lineAmount }),
+			: atmnToStripeAmount({ amount: lineAmount, currency }),
 		price_data: shouldUsePriceData
 			? {
-					unit_amount: atmnToStripeAmount({ amount: lineAmount }),
+					unit_amount: atmnToStripeAmount({ amount: lineAmount, currency }),
 					currency,
 					product: stripeProductId,
 				}
