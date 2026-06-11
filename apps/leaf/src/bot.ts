@@ -2,8 +2,9 @@ import { createSlackAdapter } from "@chat-adapter/slack";
 import { createPostgresState } from "@chat-adapter/state-pg";
 import type { Attachment, Message, Thread } from "chat";
 import { Chat } from "chat";
-import { runMessage } from "./agent/messages.js";
-import { handleApprovalAction, postApprovalRequest } from "./approvals/flow.js";
+import { runMessage } from "./agent/runMessage/runMessage.js";
+import { handleApprovalAction } from "./internal/approvals/actions/handleApprovalAction.js";
+import { postApprovalRequest } from "./internal/approvals/actions/postApprovalRequest.js";
 import { decrypt } from "./lib/crypto.js";
 import { env } from "./lib/env.js";
 import {
@@ -188,6 +189,15 @@ const runAndReply = async ({
 };
 
 const handleMessage = async (thread: Thread, message: Message) => {
+	// Never respond to other bots (including a second Autumn app on the same
+	// workspace) — otherwise two bots reply to each other in an infinite loop.
+	if (message.author.isBot === true) {
+		rootLogger.info("Skipping bot-authored Slack message", {
+			event: "leaf.slack_message_skipped",
+			data: { reason: "bot_author" },
+		});
+		return;
+	}
 	await runAndReply({
 		target: thread,
 		attachments: message.attachments,

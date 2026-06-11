@@ -1,16 +1,14 @@
 import type { AppEnv } from "@autumn/shared";
 import { Actions, Button, Card, CardText, Divider, Field, Fields } from "chat";
-import { toolLabel } from "../agent/toolPolicy.js";
+import { toolLabel } from "../agent/tools/toolPolicy.js";
 
 const formatPreview = (preview: unknown) =>
-	typeof preview === "string"
-		? preview
-		: "";
+	typeof preview === "string" ? preview : "";
 
 const getRequest = (args?: Record<string, unknown>) =>
-	(args?.request && typeof args.request === "object"
-		? args.request
-		: args) as Record<string, unknown> | undefined;
+	(args?.request && typeof args.request === "object" ? args.request : args) as
+		| Record<string, unknown>
+		| undefined;
 
 const getFieldValue = (value: unknown) =>
 	typeof value === "string" || typeof value === "number"
@@ -97,7 +95,9 @@ const requestFields = ({
 			["Redirect", request.redirect_mode],
 		].flatMap(([label, value]) => {
 			const fieldValue = getFieldValue(value);
-			return fieldValue ? [Field({ label: String(label), value: fieldValue })] : [];
+			return fieldValue
+				? [Field({ label: String(label), value: fieldValue })]
+				: [];
 		}),
 	].slice(0, 8);
 };
@@ -120,7 +120,7 @@ const previewLines = (preview: unknown) =>
 		.filter(Boolean)
 		.filter(
 			(line) =>
-				!/^(i('|’)ll|let me|here('|’)s|would you like|shall i|tool:|[\{\}\"])/i.test(
+				!/^(i('|’)ll|let me|here('|’)s|would you like|shall i|tool:|[{}"])/i.test(
 					line,
 				),
 		)
@@ -133,7 +133,8 @@ const resultLines = (result: unknown) => {
 
 	const body = result as Record<string, unknown>;
 	const resultBody = getRecord(body.result);
-	const nested = resultBody.message || resultBody.status ? resultBody : getRecord(body.data);
+	const nested =
+		resultBody.message || resultBody.status ? resultBody : getRecord(body.data);
 	const value = (key: string) => body[key] ?? nested[key];
 	const message = value("message");
 	const status = value("status");
@@ -178,36 +179,35 @@ export const approvalCard = ({
 	toolName: string;
 	toolArgs?: Record<string, unknown>;
 	preview?: unknown;
-}) =>
-	{
-		const fields = requestFields({ env, toolName, toolArgs });
-		const lines = preview ? previewLines(preview) : [];
+}) => {
+	const fields = requestFields({ env, toolName, toolArgs });
+	const lines = preview ? previewLines(preview) : [];
 
-		return Card({
-			title: `${toolLabel(toolName)}?`,
-			subtitle: "Review the preview before this runs",
-			children: [
-				...(fields.length ? [Fields(fields)] : []),
-				...(lines.length
-					? [Divider(), CardText(lines.map((line) => `• ${line}`).join("\n"))]
-					: []),
-				Actions([
-					Button({
-						id: "approve_billing_action",
-						label: "Approve",
-						style: "primary",
-						value: id,
-					}),
-					Button({
-						id: "cancel_billing_action",
-						label: "Cancel",
-						style: "danger",
-						value: id,
-					}),
-				]),
-			],
-		});
-	};
+	return Card({
+		title: `${toolLabel(toolName)}?`,
+		subtitle: "Review the preview before this runs",
+		children: [
+			...(fields.length ? [Fields(fields)] : []),
+			...(lines.length
+				? [Divider(), CardText(lines.map((line) => `• ${line}`).join("\n"))]
+				: []),
+			Actions([
+				Button({
+					id: "approve_billing_action",
+					label: "Approve",
+					style: "primary",
+					value: id,
+				}),
+				Button({
+					id: "cancel_billing_action",
+					label: "Cancel",
+					style: "danger",
+					value: id,
+				}),
+			]),
+		],
+	});
+};
 
 export const approvalStatusCard = ({
 	env,
@@ -246,7 +246,9 @@ export const approvalStatusCard = ({
 			...(lines.length
 				? [
 						Divider(),
-						CardText(lines.map((line) => `• ${cleanPreviewLine(line)}`).join("\n")),
+						CardText(
+							lines.map((line) => `• ${cleanPreviewLine(line)}`).join("\n"),
+						),
 					]
 				: []),
 		],

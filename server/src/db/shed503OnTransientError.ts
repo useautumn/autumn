@@ -18,7 +18,7 @@ export const shed503OnTransientError = async <T>({
 		if (!(isTransientDbError({ error }) || isTransientRedisError({ error }))) {
 			throw error;
 		}
-		ctx.logger.warn(`[${source}] DB unavailable, shedding with 503`, {
+		ctx.logger.warn(`[${source}] transient DB error, shedding with 503`, {
 			type: `${source}_fail_open`,
 			error,
 		});

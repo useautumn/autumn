@@ -77,6 +77,9 @@ export const handleStripeSubscriptionRenewed = async ({
 
 		if (!valid) continue;
 
+		// attach-set ends_at expiry, not a cancellation
+		if (!customerProduct.canceled && !customerProduct.canceled_at) continue;
+
 		// Clear cancellation fields
 		const updates = {
 			canceled_at: null,

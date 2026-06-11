@@ -1,4 +1,10 @@
-import { AttachScenario, cp, type FullCusProduct } from "@autumn/shared";
+import {
+	AttachScenario,
+	cp,
+	type FullCusProduct,
+	notNullish,
+} from "@autumn/shared";
+import { msToSeconds } from "@shared/utils/common/unixUtils";
 import { getStripeSubscriptionLock } from "@/external/stripe/subscriptions/utils/lockStripeSubscriptionUtils";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
 import { addProductsUpdatedWebhookTask } from "@/internal/analytics/handlers/handleProductsUpdated";
@@ -67,6 +73,13 @@ export const handleStripeSubscriptionCanceled = async ({
 			.onStripeSubscription({ stripeSubscriptionId: stripeSubscription.id });
 
 		if (!isActiveRecurringAndOnSub) continue;
+
+		// attach-set ends_at, not an external cancellation
+		const endedAtMatchesCancelAt =
+			notNullish(customerProduct.ended_at) &&
+			notNullish(cancelsAtMs) &&
+			msToSeconds(customerProduct.ended_at!) === msToSeconds(cancelsAtMs!);
+		if (endedAtMatchesCancelAt) continue;
 
 		const updates = {
 			canceled_at: canceledAtMs ?? Date.now(),

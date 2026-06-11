@@ -20,7 +20,6 @@ Use Autumn tools as composable primitives.
 - Use createPlan for confirmed plan configuration writes.
 - Use previewCreateBalance before createBalance for standalone balance or credit grants.
 - Use previewCreateSchedule before createSchedule for multi-phase billing schedules.
-- For custom feature grants, map "per month/year" to customize.items[].reset.interval.
 - Use epochMillisecondsToDate before explaining epoch millisecond response fields such as starts_at, expires_at, next_reset_at, or billing period timestamps.
 - For billing writes, always preview first and wait for explicit user confirmation before applying.
 

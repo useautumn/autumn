@@ -201,6 +201,7 @@ export const getEntityAggregateFragments = ({
 				SUM(ce.balance::numeric) AS balance,
 				SUM(COALESCE(ce.adjustment, 0)::numeric) AS adjustment,
 				SUM(COALESCE(ce.additional_balance, 0)::numeric) AS additional_balance,
+				MIN(ce.next_reset_at) AS next_reset_at,
 				BOOL_OR(ce.unlimited) AS unlimited,
 				BOOL_OR(ce.usage_allowed) AS usage_allowed
 			FROM entity_level_cus_ents ce
@@ -219,6 +220,7 @@ export const getEntityAggregateFragments = ({
 				eat.balance,
 				eat.adjustment,
 				eat.additional_balance,
+				eat.next_reset_at,
 				COALESCE(erf.rollover_balance, 0) AS rollover_balance,
 				COALESCE(erf.rollover_usage, 0) AS rollover_usage,
 				eat.unlimited,

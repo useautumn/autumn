@@ -9,6 +9,7 @@ export { CreateCustomerParamsV1Schema } from "./customers/crud/createCustomerPar
 export { GetCustomerParamsV1Schema } from "./customers/crud/getCustomerParams.js";
 export { ListCustomersV2_3ParamsSchema } from "./customers/crud/listCustomersParamsV2_3.js";
 export { UpdateCustomerParamsV1Schema } from "./customers/crud/updateCustomerParams.js";
+export { CreateEntityParamsV1Schema } from "./entities/crud/createEntityParams.js";
 export { CreatePlanParamsV2Schema } from "./products/crud/createPlanParamsV1.js";
 export { GetPlanParamsV0Schema } from "./products/crud/getPlanParamsV0.js";
 export { ListPlanParamsSchema } from "./products/crud/listPlanParams.js";

@@ -40,6 +40,12 @@ import { events } from "../models/eventModels/eventTable.js";
 import { featureRelations } from "../models/featureModels/featureRelations.js";
 import { features } from "../models/featureModels/featureTable.js";
 import { invoiceTemplates } from "../models/invoiceTemplateModels/invoiceTemplateTable.js";
+import {
+	cmaMemory,
+	cmaSessions,
+	cmaVaults,
+} from "../models/leafModels/cmaStateTable.js";
+import { leafSchema } from "../models/leafModels/leafSchema.js";
 // Migration Relations
 import { migrationErrorRelations } from "../models/migrationModels/migrationErrorRelations.js";
 import { migrationErrors } from "../models/migrationModels/migrationErrorTable.js";
@@ -115,6 +121,10 @@ export {
 	chatResults,
 	checkouts,
 	checkoutsRelations,
+	cmaMemory,
+	cmaSessions,
+	cmaVaults,
+	leafSchema,
 	customerEntitlements,
 	customerEntitlementsRelations,
 	customerPrices,

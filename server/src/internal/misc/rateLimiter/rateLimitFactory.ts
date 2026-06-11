@@ -1,14 +1,15 @@
 import type { ApiVersion } from "@autumn/shared";
-import type { Context } from "hono";
+import type { Context, Next } from "hono";
 import { rateLimiter } from "hono-rate-limiter";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { shouldUseRedis } from "@/external/redis/initRedis";
 import type { HonoEnv } from "@/honoUtils/HonoEnv";
 import {
+	isCheckFailOpenRoute,
 	RATE_LIMIT_CONFIGS,
 	type RateLimitConfig,
 	RateLimitScope,
-	type RateLimitType,
+	RateLimitType,
 	resolveRateLimit,
 } from "./rateLimitConfigs";
 import { getOrgRateLimitOverride } from "./rateLimitOverridesStore";
@@ -39,6 +40,27 @@ const warnRateLimitBypass = () => {
 	);
 };
 
+const CAP_EXCEEDED_WARNING_INTERVAL_MS = 10_000;
+const lastCapWarnAtByType = new Map<string, number>();
+
+const warnOrgCapExceeded = ({
+	limitType,
+	orgSlug,
+}: {
+	limitType: string;
+	orgSlug?: string;
+}) => {
+	const now = Date.now();
+	const lastWarnAt = lastCapWarnAtByType.get(limitType) ?? 0;
+	if (now - lastWarnAt < CAP_EXCEEDED_WARNING_INTERVAL_MS) return;
+
+	lastCapWarnAtByType.set(limitType, now);
+	logger.warn(
+		`[rate-limit] org aggregate cap exceeded: ${orgSlug ?? "unknown"} (${limitType})`,
+		{ type: "org_rate_cap_exceeded", limitType, org: orgSlug },
+	);
+};
+
 export const rateLimitFactory = ({
 	type,
 	config,
@@ -60,11 +82,39 @@ export const rateLimitFactory = ({
 		return resolveRateLimit({ config, apiVersion }).limit;
 	};
 
+	// Over-limit "degrade": fail open instead of 429 — check routes get the
+	// allow-fallback via the ctx flag; establish routes shed a retryable 503.
+	const degradeHandler = async (
+		c: Context,
+		next: Next,
+	): Promise<Response | undefined> => {
+		const honoContext = c as Context<HonoEnv>;
+		const ctx = honoContext.get("ctx");
+		warnOrgCapExceeded({ limitType: type, orgSlug: ctx?.org?.slug });
+
+		if (type === RateLimitType.CheckOrg && !isCheckFailOpenRoute(honoContext)) {
+			return c.json(
+				{
+					message: "Service is temporarily unavailable, please retry shortly.",
+					code: "service_unavailable",
+					env: ctx?.env,
+				},
+				503,
+			);
+		}
+
+		if (ctx) ctx.orgRateLimitDegraded = true;
+		c.header("Retry-After", undefined);
+		await next();
+		return;
+	};
+
 	const options = {
 		windowMs,
 		limit: dynamicLimit,
 		standardHeaders: "draft-6" as const,
 		keyGenerator: getRateLimitKeyFromContext,
+		...(config.overLimit === "degrade" && { handler: degradeHandler }),
 	};
 
 	let inMemoryLimiter: ReturnType<typeof rateLimiter> | null = null;

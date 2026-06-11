@@ -9,14 +9,15 @@ process.env.SLACK_CLIENT_SECRET ??= "test";
 process.env.SLACK_SIGNING_SECRET ??= "test";
 process.env.FIRECRAWL_API_KEY ??= "fc_test";
 
-const { agentDocUris, getDefaultChatEnv, selectChatEnv } = await import(
-	"../../../src/agent/agent.js"
+const { agentDocUris } = await import("../../../src/agent/prompts/readDocs.js");
+const { getDefaultChatEnv, selectChatEnv } = await import(
+	"../../../src/agent/runMessage/setup/selectChatEnv.js"
 );
 const { autumnChatInstructions } = await import(
-	"../../../src/agent/chatAgent.js"
+	"../../../src/agent/prompts/instructions.js"
 );
 const { createFirecrawlTools } = await import(
-	"../../../src/agent/firecrawl.js"
+	"../../../src/agent/tools/firecrawl.js"
 );
 
 const execute = async (

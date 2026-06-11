@@ -29,7 +29,7 @@ Plan and billing usage:
 - Credit system: grant the credit_system feature, not each underlying metered feature.
 - Prepaid quantity changes belong in feature_quantities; custom contract grants or item-level prices belong in customize.
 
-For attach and updateSubscription, prefer patch-style customize.add_items, customize.remove_items, or customize.update_items when changing only part of an existing plan. customize.items replaces the full custom item list. createSchedule currently supports replacement-style customize.items for each phase.
+Follow Billing Safety for endpoint-specific customize semantics such as patch-style add_items/remove_items versus full customize.items replacement.
 
 Useful docs:
 - https://docs.useautumn.com/documentation/pricing/features

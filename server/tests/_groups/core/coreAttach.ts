@@ -27,5 +27,7 @@ export const coreAttach: TestGroup = {
 		"billing/attach/discounts/attach-discounts-basic.test.ts",
 		"billing/attach/new-billing-subscription/new-billing-subscription.test.ts",
 		"billing/attach/params/custom-plan/custom-plan-features.test.ts",
+		"billing/attach/params/billing-cycle-anchor/anchor-reset-refund/anchor-reset-with-carry-over.test.ts",
+		"billing/attach/params/start-date/starts-at-backdate.test.ts",
 	],
 };

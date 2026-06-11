@@ -10,11 +10,14 @@ import {
 	refineCustomizePlanV1Schema,
 } from "../common/customizePlan/customizePlanV1";
 
+// update_items is internal / not prod-ready — omit it from the schedule customize
+// surface so the agent never uses it.
 const CreateScheduleCustomizePlanSchema = refineCustomizePlanV1Schema(
 	CustomizePlanV1Schema.omit({
 		free_trial: true,
+		update_items: true,
 	}),
-	{ includeFreeTrial: false },
+	{ includeFreeTrial: false, includeUpdateItems: false },
 );
 
 export const CreateSchedulePlanSchema = z.object({
@@ -29,7 +32,7 @@ export const CreateSchedulePlanSchema = z.object({
 	}),
 	customize: CreateScheduleCustomizePlanSchema.optional().meta({
 		description:
-			"Customize the plan to schedule. Can override price, replace items, or patch items with add_items, remove_items, and update_items.",
+			"Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items.",
 	}),
 	subscription_id: z.string().optional().meta({
 		description:

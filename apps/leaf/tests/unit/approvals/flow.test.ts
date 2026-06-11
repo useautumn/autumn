@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { AppEnv, type ChatApproval } from "@autumn/shared";
 import type { ActionEvent } from "chat";
-import { approvalErrorResult } from "../../../src/approvals/errors.js";
-import { approvalRequestFromOutput } from "../../../src/approvals/request.js";
+import { approvalErrorResult } from "../../../src/internal/approvals/utils/approvalErrors.js";
+import { approvalRequestFromOutput } from "../../../src/internal/approvals/utils/approvalRequest.js";
 import type { AgentOutput } from "../../../src/types.js";
 
 const setLeafTestEnv = () => {
@@ -50,6 +50,8 @@ describe("approval flow", () => {
 
 		expect(request).toEqual({
 			env: AppEnv.Live,
+			runId: undefined,
+			toolCallId: undefined,
 			toolName: "updateSubscription",
 			toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
 			preview: { total: 100 },
@@ -110,7 +112,9 @@ describe("approval flow", () => {
 
 	test("detects MCP isError responses as failed tool results", async () => {
 		setLeafTestEnv();
-		const { isErrorResult } = await import("../../../src/approvals/store.js");
+		const { isErrorResult } = await import(
+			"../../../src/internal/approvals/utils/approvalErrors.js"
+		);
 
 		expect(
 			isErrorResult({
@@ -123,7 +127,7 @@ describe("approval flow", () => {
 	test("edits the approval message to failed when the approved tool fails", async () => {
 		setLeafTestEnv();
 		const { handleApprovalActionWithDeps } = await import(
-			"../../../src/approvals/flow.js"
+			"../../../src/internal/approvals/actions/handleApprovalAction.js"
 		);
 		const edits: unknown[] = [];
 		const approval = {
@@ -145,20 +149,23 @@ describe("approval flow", () => {
 			value: "approval_1",
 		} as unknown as ActionEvent;
 
-		await handleApprovalActionWithDeps(event, {
-			approveAndRun: async () => ({
-				error: true,
-				message: "Missing email.",
-			}),
-			cancelApproval: async () => approval,
-			editActionMessage: async (_event, content) => {
-				edits.push(content);
-			},
-			getApproval: async () => approval,
-			logger: {
-				error: () => {},
-				info: () => {},
-				warn: () => {},
+		await handleApprovalActionWithDeps({
+			event,
+			deps: {
+				approveAndRun: async () => ({
+					error: true,
+					message: "Missing email.",
+				}),
+				cancelApproval: async () => approval,
+				editActionMessage: async ({ content }) => {
+					edits.push(content);
+				},
+				getApproval: async () => approval,
+				logger: {
+					error: () => {},
+					info: () => {},
+					warn: () => {},
+				},
 			},
 		});
 
