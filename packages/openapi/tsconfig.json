@@ -7,6 +7,7 @@
 		"moduleResolution": "bundler",
 		"target": "ES2020",
 		"noEmit": true,
+		"types": ["node", "bun"],
 		"paths": {
 			"@autumn/shared": ["../../shared/index.ts"],
 			"@api/*": ["../../shared/api/*"],
@@ -15,6 +16,5 @@
 		}
 	},
 	"include": ["./**/*"],
-	"types": ["node"],
 	"exclude": ["node_modules", "dist"]
 }

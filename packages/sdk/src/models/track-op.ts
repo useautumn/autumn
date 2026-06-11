@@ -97,7 +97,7 @@ export type TrackReset2 = {
   resetsAt: number | null;
 };
 
-export type Deduction2 = {
+export type TrackDeduction2 = {
   /**
    * ID of the underlying balance row that was deducted from (customer_entitlement or rollover).
    */
@@ -151,7 +151,7 @@ export type TrackResponseBody2 = {
   /**
    * Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling.
    */
-  deductions?: Array<Deduction2> | undefined;
+  deductions?: Array<TrackDeduction2> | undefined;
 };
 
 export const TrackIntervalEnum1 = {
@@ -187,7 +187,7 @@ export type TrackReset1 = {
   resetsAt: number | null;
 };
 
-export type Deduction1 = {
+export type TrackDeduction1 = {
   /**
    * ID of the underlying balance row that was deducted from (customer_entitlement or rollover).
    */
@@ -241,7 +241,7 @@ export type TrackResponseBody1 = {
   /**
    * Per-balance breakdown of what this event deducted. A single event can consume from multiple balance rows when credit systems or rollovers are involved; this surfaces each one so callers can build per-feature usage views without polling.
    */
-  deductions?: Array<Deduction1> | undefined;
+  deductions?: Array<TrackDeduction1> | undefined;
 };
 
 export type TrackResponse = TrackResponseBody1 | TrackResponseBody2;
@@ -365,31 +365,33 @@ export function trackReset2FromJSON(
 }
 
 /** @internal */
-export const Deduction2$inboundSchema: z.ZodMiniType<Deduction2, unknown> = z
-  .pipe(
-    z.object({
-      balance_id: types.string(),
-      feature_id: types.string(),
-      plan_id: types.nullable(types.string()),
-      reset: types.nullable(z.lazy(() => TrackReset2$inboundSchema)),
-      value: types.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "balance_id": "balanceId",
-        "feature_id": "featureId",
-        "plan_id": "planId",
-      });
-    }),
-  );
+export const TrackDeduction2$inboundSchema: z.ZodMiniType<
+  TrackDeduction2,
+  unknown
+> = z.pipe(
+  z.object({
+    balance_id: types.string(),
+    feature_id: types.string(),
+    plan_id: types.nullable(types.string()),
+    reset: types.nullable(z.lazy(() => TrackReset2$inboundSchema)),
+    value: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "balance_id": "balanceId",
+      "feature_id": "featureId",
+      "plan_id": "planId",
+    });
+  }),
+);
 
-export function deduction2FromJSON(
+export function trackDeduction2FromJSON(
   jsonString: string,
-): SafeParseResult<Deduction2, SDKValidationError> {
+): SafeParseResult<TrackDeduction2, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Deduction2$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Deduction2' from JSON`,
+    (x) => TrackDeduction2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'TrackDeduction2' from JSON`,
   );
 }
 
@@ -407,7 +409,9 @@ export const TrackResponseBody2$inboundSchema: z.ZodMiniType<
     balances: types.optional(
       z.record(z.string(), types.nullable(Balance$inboundSchema)),
     ),
-    deductions: types.optional(z.array(z.lazy(() => Deduction2$inboundSchema))),
+    deductions: types.optional(
+      z.array(z.lazy(() => TrackDeduction2$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -477,31 +481,33 @@ export function trackReset1FromJSON(
 }
 
 /** @internal */
-export const Deduction1$inboundSchema: z.ZodMiniType<Deduction1, unknown> = z
-  .pipe(
-    z.object({
-      balance_id: types.string(),
-      feature_id: types.string(),
-      plan_id: types.nullable(types.string()),
-      reset: types.nullable(z.lazy(() => TrackReset1$inboundSchema)),
-      value: types.number(),
-    }),
-    z.transform((v) => {
-      return remap$(v, {
-        "balance_id": "balanceId",
-        "feature_id": "featureId",
-        "plan_id": "planId",
-      });
-    }),
-  );
+export const TrackDeduction1$inboundSchema: z.ZodMiniType<
+  TrackDeduction1,
+  unknown
+> = z.pipe(
+  z.object({
+    balance_id: types.string(),
+    feature_id: types.string(),
+    plan_id: types.nullable(types.string()),
+    reset: types.nullable(z.lazy(() => TrackReset1$inboundSchema)),
+    value: types.number(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "balance_id": "balanceId",
+      "feature_id": "featureId",
+      "plan_id": "planId",
+    });
+  }),
+);
 
-export function deduction1FromJSON(
+export function trackDeduction1FromJSON(
   jsonString: string,
-): SafeParseResult<Deduction1, SDKValidationError> {
+): SafeParseResult<TrackDeduction1, SDKValidationError> {
   return safeParse(
     jsonString,
-    (x) => Deduction1$inboundSchema.parse(JSON.parse(x)),
-    `Failed to parse 'Deduction1' from JSON`,
+    (x) => TrackDeduction1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'TrackDeduction1' from JSON`,
   );
 }
 
@@ -519,7 +525,9 @@ export const TrackResponseBody1$inboundSchema: z.ZodMiniType<
     balances: types.optional(
       z.record(z.string(), types.nullable(Balance$inboundSchema)),
     ),
-    deductions: types.optional(z.array(z.lazy(() => Deduction1$inboundSchema))),
+    deductions: types.optional(
+      z.array(z.lazy(() => TrackDeduction1$inboundSchema)),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {

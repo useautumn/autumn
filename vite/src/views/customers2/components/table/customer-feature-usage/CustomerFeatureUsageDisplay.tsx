@@ -51,6 +51,7 @@ export function CustomerFeatureUsageDisplay({
 
 	if (featureType === FeatureType.CreditSystem) {
 		let totalSpent = 0;
+		let canCompute = true;
 
 		for (const subRow of subRows) {
 			// Only process CreditSystemSubRow items
@@ -69,16 +70,20 @@ export function CustomerFeatureUsageDisplay({
 					});
 					totalSpent += used * creditCost;
 				}
+			} else {
+				canCompute = false;
 			}
 		}
 
-		const total = allowance * quantity;
+		if (canCompute) {
+			const total = allowance * quantity;
 
-		return (
-			<div className="flex items-center gap-1">
-				<PokerChipIcon className="min-w-4" /> {totalSpent}/{total} used
-			</div>
-		);
+			return (
+				<div className="flex items-center gap-1">
+					<PokerChipIcon className="min-w-4" /> {totalSpent}/{total} used
+				</div>
+			);
+		}
 	}
 
 	const { total, used } = calculateUsageMetrics({

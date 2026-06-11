@@ -1,0 +1,22 @@
+DESCRIPTION >
+    Materializes events into customer-leading hourly aggregates without properties.
+    Projection + GROUP BY are identical to events_hourly_no_properties_two_mv_pipe, so the two rollups
+    are row-for-row equivalent; only the destination sort key differs (customer-leading here).
+
+NODE materialize
+SQL >
+    SELECT
+        org_id,
+        env,
+        customer_id,
+        event_name,
+        coalesce(entity_id, '') as entity_id,
+        internal_product_id,
+        toStartOfHour(timestamp) as hour,
+        sum(toFloat64(coalesce(value, 1))) as total_value,
+        count() as event_count
+    FROM events
+    GROUP BY org_id, env, customer_id, event_name, entity_id, internal_product_id, hour
+
+TYPE materialized
+DATASOURCE events_customer_hourly_mv

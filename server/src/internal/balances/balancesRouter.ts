@@ -10,6 +10,7 @@ import { handleRecalculateBalance } from "./handlers/handleRecalculateBalance.js
 import { handleRecalculateBalancePreview } from "./handlers/handleRecalculateBalancePreview.js";
 import { handleSetUsage } from "./handlers/handleSetUsage.js";
 import { handleTrack } from "./handlers/handleTrack.js";
+import { handleTrackTokens } from "./handlers/handleTrackTokens.js";
 import { handleUpdateBalance } from "./handlers/handleUpdateBalance.js";
 
 // Create a Hono app for products
@@ -27,6 +28,7 @@ balancesRouter.post(
 // Track
 balancesRouter.post("/events", ...handleTrack);
 balancesRouter.post("/track", ...handleTrack);
+balancesRouter.post("/track_tokens", ...handleTrackTokens);
 
 // Check
 balancesRouter.post("/entitled", ...handleCheck);
@@ -46,6 +48,7 @@ balancesRpcRouter.post(
 );
 
 balancesRpcRouter.post("/balances.track", ...handleTrack);
+balancesRpcRouter.post("/balances.track_tokens", ...handleTrackTokens);
 balancesRpcRouter.post("/balances.batch_track", ...handleBatchTrack);
 balancesRpcRouter.post("/balances.check", ...handleCheck);
 balancesRpcRouter.post("/balances.finalize", ...handleFinalizeLock);

@@ -1,6 +1,6 @@
 /** biome-ignore-all lint/a11y/noStaticElementInteractions: needed */
 /** biome-ignore-all lint/a11y/useSemanticElements: needed */
-import type { ProductItem } from "@autumn/shared";
+import { type ProductItem, isAiCreditSystem } from "@autumn/shared";
 import { getProductItemDisplay } from "@autumn/shared";
 import { TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
@@ -68,6 +68,7 @@ export const PlanFeatureRow = ({
 
 	const feature = features.find((f) => f.id === item.feature_id);
 	const hasFeatureName = feature?.name && feature.name.trim() !== "";
+
 	const displayText = hasFeatureName
 		? display.primary_text
 		: "Name your feature";
@@ -206,7 +207,9 @@ export const PlanFeatureRow = ({
 						{displayText}
 					</span>
 
-					<span className="text-body-secondary"> {display.secondary_text}</span>
+					{!isAiCreditSystem(feature?.type) && display.secondary_text && (
+						<span className="text-body-secondary"> {display.secondary_text}</span>
+					)}
 				</p>
 
 				<div

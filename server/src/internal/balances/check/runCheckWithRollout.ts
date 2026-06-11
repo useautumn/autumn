@@ -18,6 +18,18 @@ export const runCheckWithRollout = async ({
 	body: ParsedCheckParams;
 	requiredBalance: number;
 }): Promise<RunCheckResult<CheckData | CheckDataV2>> => {
+	if (ctx.orgRateLimitDegraded) {
+		return {
+			checkData: null,
+			response: getCheckFailOpenFallback({
+				ctx,
+				body,
+				requiredBalance,
+				error: new Error("org aggregate rate cap exceeded"),
+			}) as Record<string, unknown>,
+		};
+	}
+
 	if (!isFullSubjectRolloutEnabled({ ctx })) {
 		return runCheckLegacyFlow({ ctx, body, requiredBalance });
 	}

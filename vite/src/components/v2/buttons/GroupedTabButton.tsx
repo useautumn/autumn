@@ -6,7 +6,7 @@ interface GroupedTabButtonProps {
 	onValueChange: (value: string) => void;
 	options: Array<{
 		value: string;
-		label: string;
+		label: React.ReactNode;
 		icon?: React.ReactNode;
 	}>;
 	className?: string;

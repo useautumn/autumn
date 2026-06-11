@@ -151,5 +151,6 @@ export const getCursorPaginatedEntitySubjectsQuery = ({
 		inStatuses,
 		includeInvoices: false,
 		includeEntityAggregations: false,
+		entityScopedOnly: true,
 	});
 };

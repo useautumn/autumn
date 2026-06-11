@@ -7,6 +7,7 @@ import {
 	FeatureType,
 	FeatureUsageType,
 	type FullCustomer,
+	isAiCreditSystem,
 	isAllocatedPrice,
 	type MeteredConfig,
 	type UsagePriceConfig,
@@ -41,9 +42,13 @@ export const validateMeteredConfig = (config: MeteredConfig) => {
 	return newConfig as MeteredConfig;
 };
 
-export const validateCreditSystem = (config: CreditSystemConfig) => {
-	const schema = config.schema;
-	if (!schema || schema.length === 0) {
+export const validateCreditSystem = (
+	config: CreditSystemConfig,
+	featureType: FeatureType = FeatureType.CreditSystem,
+) => {
+	const schema = Array.isArray(config?.schema) ? config.schema : [];
+
+	if (!isAiCreditSystem(featureType) && schema.length === 0) {
 		throw new RecaseError({
 			message: `At least one metered feature is required for credit system`,
 			code: ErrCode.InvalidFeature,
@@ -51,11 +56,17 @@ export const validateCreditSystem = (config: CreditSystemConfig) => {
 		});
 	}
 
-	// Check if multiple of the same feature
+	if (isAiCreditSystem(featureType) && schema.length > 0) {
+		throw new RecaseError({
+			message: `AI credit systems are leaf features and cannot define a schema. Model rates live in model_markups.`,
+			code: ErrCode.InvalidFeature,
+			statusCode: 400,
+		});
+	}
+
 	const meteredFeatureIds = schema.map(
 		(schemaItem) => schemaItem.metered_feature_id,
 	);
-	// console.log("Metered feature ids:", meteredFeatureIds);
 	const uniqueMeteredFeatureIds = Array.from(new Set(meteredFeatureIds));
 	if (meteredFeatureIds.length !== uniqueMeteredFeatureIds.length) {
 		throw new RecaseError({
@@ -65,7 +76,37 @@ export const validateCreditSystem = (config: CreditSystemConfig) => {
 		});
 	}
 
-	const newConfig = { ...config, usage_type: FeatureUsageType.Single };
+	const newConfig = { ...config, schema, usage_type: FeatureUsageType.Single };
+	const defaultMarkup = newConfig.default_markup;
+	if (defaultMarkup != null) {
+		const parsedDefaultMarkup = Number(defaultMarkup);
+		if (Number.isNaN(parsedDefaultMarkup) || parsedDefaultMarkup < -100) {
+			throw new RecaseError({
+				message:
+					"Default markup must be -100 or greater (-100 makes usage free)",
+				code: ErrCode.InvalidFeature,
+				statusCode: 400,
+			});
+		}
+		newConfig.default_markup = parsedDefaultMarkup;
+	}
+
+	const providerMarkups = newConfig.provider_markups;
+	if (providerMarkups != null) {
+		for (const [provider, entry] of Object.entries(providerMarkups)) {
+			const markup = Number(entry?.markup);
+			if (!provider || Number.isNaN(markup) || markup < -100) {
+				throw new RecaseError({
+					message:
+						"Provider markups must be -100 or greater (-100 makes usage free)",
+					code: ErrCode.InvalidFeature,
+					statusCode: 400,
+				});
+			}
+			entry.markup = markup;
+		}
+	}
+
 	for (let i = 0; i < newConfig.schema.length; i++) {
 		const creditAmount = parseFloat(
 			newConfig.schema[i].credit_amount.toString(),
@@ -83,6 +124,43 @@ export const validateCreditSystem = (config: CreditSystemConfig) => {
 	}
 
 	return newConfig;
+};
+
+/**
+ * Validates that every feature referenced by a credit system's schema is a
+ * Metered or AiCreditSystem feature. Rejects nesting one CreditSystem inside
+ * another — composition is capped at two levels (parent credit system → leaf).
+ *
+ * Self-references are tolerated (the create flow doesn't yet have the new id
+ * in the features list, and updates simply read back as the feature itself).
+ */
+export const validateCreditSystemSchemaReferences = ({
+	config,
+	allFeatures,
+	selfFeatureId,
+}: {
+	config: CreditSystemConfig;
+	allFeatures: Feature[];
+	selfFeatureId?: string;
+}) => {
+	const schema = Array.isArray(config?.schema) ? config.schema : [];
+	if (schema.length === 0) return;
+
+	for (const item of schema) {
+		const referencedId = item.metered_feature_id;
+		if (!referencedId || referencedId === selfFeatureId) continue;
+
+		const referenced = allFeatures.find((f) => f.id === referencedId);
+		if (!referenced) continue;
+
+		if (referenced.type === FeatureType.CreditSystem) {
+			throw new RecaseError({
+				message: `Credit system schema cannot reference another credit system (${referencedId}). Only metered or AI credit features are allowed.`,
+				code: ErrCode.InvalidFeature,
+				statusCode: 400,
+			});
+		}
+	}
 };
 
 const getCusFeatureType = ({ feature }: { feature: Feature }) => {

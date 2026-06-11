@@ -135,8 +135,8 @@ await autumn.track({
           Human-readable name displayed in the dashboard and billing UI.
         </DynamicResponseField>
 
-        <DynamicResponseField name="type" type="'boolean' | 'metered' | 'credit_system'">
-          Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+        <DynamicResponseField name="type" type="'boolean' | 'metered' | 'credit_system' | 'ai_credit_system'">
+          Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
         </DynamicResponseField>
 
         <DynamicResponseField name="consumable" type="boolean">
@@ -157,6 +157,30 @@ await autumn.track({
             <DynamicResponseField name="credit_cost" type="number">
               Credits consumed per unit of the metered feature.
             </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="model_markups.{key}" type="object | null">
+          Per-model markup overrides for AI credit systems.
+          <Expandable title="properties">
+            <DynamicResponseField name="markup" type="number" />
+
+            <DynamicResponseField name="input_cost" type="number" />
+
+            <DynamicResponseField name="output_cost" type="number" />
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="default_markup" type="number">
+          Default percentage markup for AI credit systems. Use -100 to make usage free.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="provider_markups.{key}" type="object | null">
+          Per-provider default markup percentages for AI credit systems.
+          <Expandable title="properties">
+            <DynamicResponseField name="markup" type="number" />
 
           </Expandable>
         </DynamicResponseField>
@@ -266,8 +290,16 @@ await autumn.track({
               The per-unit price amount.
             </DynamicResponseField>
 
-            <DynamicResponseField name="tiers" type="any[]">
+            <DynamicResponseField name="tiers" type="object[]">
               Tiered pricing configuration if applicable.
+              <Expandable title="properties">
+                <DynamicResponseField name="to" type="number" />
+
+                <DynamicResponseField name="amount" type="number" />
+
+                <DynamicResponseField name="flat_amount" type="number" />
+
+              </Expandable>
             </DynamicResponseField>
 
             <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">
@@ -331,8 +363,8 @@ await autumn.track({
           Human-readable name displayed in the dashboard and billing UI.
         </DynamicResponseField>
 
-        <DynamicResponseField name="type" type="'boolean' | 'metered' | 'credit_system'">
-          Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+        <DynamicResponseField name="type" type="'boolean' | 'metered' | 'credit_system' | 'ai_credit_system'">
+          Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
         </DynamicResponseField>
 
         <DynamicResponseField name="consumable" type="boolean">
@@ -353,6 +385,30 @@ await autumn.track({
             <DynamicResponseField name="credit_cost" type="number">
               Credits consumed per unit of the metered feature.
             </DynamicResponseField>
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="model_markups.{key}" type="object | null">
+          Per-model markup overrides for AI credit systems.
+          <Expandable title="properties">
+            <DynamicResponseField name="markup" type="number" />
+
+            <DynamicResponseField name="input_cost" type="number" />
+
+            <DynamicResponseField name="output_cost" type="number" />
+
+          </Expandable>
+        </DynamicResponseField>
+
+        <DynamicResponseField name="default_markup" type="number">
+          Default percentage markup for AI credit systems. Use -100 to make usage free.
+        </DynamicResponseField>
+
+        <DynamicResponseField name="provider_markups.{key}" type="object | null">
+          Per-provider default markup percentages for AI credit systems.
+          <Expandable title="properties">
+            <DynamicResponseField name="markup" type="number" />
 
           </Expandable>
         </DynamicResponseField>
@@ -462,8 +518,16 @@ await autumn.track({
               The per-unit price amount.
             </DynamicResponseField>
 
-            <DynamicResponseField name="tiers" type="any[]">
+            <DynamicResponseField name="tiers" type="object[]">
               Tiered pricing configuration if applicable.
+              <Expandable title="properties">
+                <DynamicResponseField name="to" type="number" />
+
+                <DynamicResponseField name="amount" type="number" />
+
+                <DynamicResponseField name="flat_amount" type="number" />
+
+              </Expandable>
             </DynamicResponseField>
 
             <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'">

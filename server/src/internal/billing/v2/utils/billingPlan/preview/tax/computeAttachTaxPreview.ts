@@ -59,10 +59,6 @@ export const computeAttachTaxPreview = async ({
 	billingContext: BillingContext;
 	autumnBillingPlan: AutumnBillingPlan;
 }): Promise<PreviewTax | undefined> => {
-	if (!ctx.org.config.automatic_tax) return undefined;
-	if (billingContext.checkoutMode === "stripe_checkout") return undefined;
-	if (!billingContext.stripeCustomer?.id) return undefined;
-
 	const allLineItems = autumnBillingPlan.lineItems ?? [];
 	if (allLineItems.length === 0) return undefined;
 
@@ -77,6 +73,27 @@ export const computeAttachTaxPreview = async ({
 		(sum, line) => sum + (line.amountAfterDiscounts ?? line.amount),
 		0,
 	);
+
+	return computeStripeTaxPreviewForNetSubtotal({
+		ctx,
+		billingContext,
+		netSubtotal,
+	});
+};
+
+/** Core Stripe Tax lookup for a net post-discount subtotal. */
+export const computeStripeTaxPreviewForNetSubtotal = async ({
+	ctx,
+	billingContext,
+	netSubtotal,
+}: {
+	ctx: AutumnContext;
+	billingContext: BillingContext;
+	netSubtotal: number;
+}): Promise<PreviewTax | undefined> => {
+	if (!ctx.org.config.automatic_tax) return undefined;
+	if (billingContext.checkoutMode === "stripe_checkout") return undefined;
+	if (!billingContext.stripeCustomer?.id) return undefined;
 
 	const currency = orgToCurrency({ org: ctx.org });
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });

@@ -18,15 +18,16 @@ export type ListFeaturesGlobals = {
 export type ListFeaturesRequest = {};
 
 /**
- * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
 export const ListFeaturesType = {
   Boolean: "boolean",
   Metered: "metered",
   CreditSystem: "credit_system",
+  AiCreditSystem: "ai_credit_system",
 } as const;
 /**
- * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
 export type ListFeaturesType = OpenEnum<typeof ListFeaturesType>;
 
@@ -39,6 +40,16 @@ export type ListFeaturesCreditSchema = {
    * Credits consumed per unit of the metered feature.
    */
   creditCost: number;
+};
+
+export type ListFeaturesModelMarkups = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+export type ListFeaturesProviderMarkups = {
+  markup: number;
 };
 
 /**
@@ -65,7 +76,7 @@ export type ListFeaturesList = {
    */
   name: string;
   /**
-   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
    */
   type: ListFeaturesType;
   /**
@@ -80,6 +91,21 @@ export type ListFeaturesList = {
    * For credit_system features: maps metered features to their credit costs.
    */
   creditSchema?: Array<ListFeaturesCreditSchema> | undefined;
+  /**
+   * Per-model markup overrides for AI credit systems.
+   */
+  modelMarkups?: { [k: string]: ListFeaturesModelMarkups } | null | undefined;
+  /**
+   * Default percentage markup for AI credit systems. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider default markup percentages for AI credit systems.
+   */
+  providerMarkups?:
+    | { [k: string]: ListFeaturesProviderMarkups }
+    | null
+    | undefined;
   /**
    * Display names for the feature in billing UI and customer-facing components.
    */
@@ -148,6 +174,52 @@ export function listFeaturesCreditSchemaFromJSON(
 }
 
 /** @internal */
+export const ListFeaturesModelMarkups$inboundSchema: z.ZodMiniType<
+  ListFeaturesModelMarkups,
+  unknown
+> = z.pipe(
+  z.object({
+    markup: types.optional(types.number()),
+    input_cost: types.optional(types.number()),
+    output_cost: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "input_cost": "inputCost",
+      "output_cost": "outputCost",
+    });
+  }),
+);
+
+export function listFeaturesModelMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<ListFeaturesModelMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListFeaturesModelMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListFeaturesModelMarkups' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListFeaturesProviderMarkups$inboundSchema: z.ZodMiniType<
+  ListFeaturesProviderMarkups,
+  unknown
+> = z.object({
+  markup: types.number(),
+});
+
+export function listFeaturesProviderMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<ListFeaturesProviderMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListFeaturesProviderMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListFeaturesProviderMarkups' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListFeaturesDisplay$inboundSchema: z.ZodMiniType<
   ListFeaturesDisplay,
   unknown
@@ -180,13 +252,27 @@ export const ListFeaturesList$inboundSchema: z.ZodMiniType<
     credit_schema: types.optional(
       z.array(z.lazy(() => ListFeaturesCreditSchema$inboundSchema)),
     ),
-    display: types.optional(z.lazy(() => ListFeaturesDisplay$inboundSchema)),
+    model_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => ListFeaturesModelMarkups$inboundSchema),
+    ))),
+    default_markup: types.optional(types.number()),
+    provider_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => ListFeaturesProviderMarkups$inboundSchema),
+    ))),
+    display: types.optional(z.lazy(() =>
+      ListFeaturesDisplay$inboundSchema
+    )),
     archived: types.boolean(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
+      "model_markups": "modelMarkups",
+      "default_markup": "defaultMarkup",
+      "provider_markups": "providerMarkups",
     });
   }),
 );

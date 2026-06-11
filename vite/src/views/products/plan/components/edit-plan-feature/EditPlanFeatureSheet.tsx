@@ -1,4 +1,4 @@
-import { FeatureType, TierBehavior } from "@autumn/shared";
+import { FeatureType, isAiCreditSystem, TierBehavior } from "@autumn/shared";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
@@ -170,7 +170,7 @@ export function EditPlanFeatureSheet({
 							<IncludedUsage />
 						</SheetSection>
 
-						{isFeaturePrice && (
+						{isFeaturePrice && !isAiCreditSystem(feature?.type) && (
 							<SheetSection
 								title={
 									item.tiers && item.tiers.length > 1 ? (
