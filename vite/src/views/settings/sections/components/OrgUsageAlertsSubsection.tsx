@@ -1,4 +1,10 @@
-import type { DbUsageAlert, Feature, FrontendOrg, OrgConfig } from "@autumn/shared";
+import {
+	AppEnv,
+	type DbUsageAlert,
+	type Feature,
+	type FrontendOrg,
+	type OrgConfig,
+} from "@autumn/shared";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
@@ -28,6 +34,11 @@ const formatThreshold = (alert: DbUsageAlert) => {
 	return isPct ? `${alert.threshold}%` : alert.threshold.toLocaleString();
 };
 
+type OrgUsageAlertsConfigKey = "usage_alerts" | "sandbox_usage_alerts";
+
+const getUsageAlertsConfigKey = (env: AppEnv): OrgUsageAlertsConfigKey =>
+	env === AppEnv.Sandbox ? "sandbox_usage_alerts" : "usage_alerts";
+
 interface DialogState {
 	open: boolean;
 	editingIndex: number | null;
@@ -40,6 +51,7 @@ export const OrgUsageAlertsSubsection = () => {
 	const queryClient = useQueryClient();
 	const env = useEnv();
 	const orgQueryKey = ["org", env];
+	const usageAlertsConfigKey = getUsageAlertsConfigKey(env);
 
 	const [dialog, setDialog] = useState<DialogState>({
 		open: false,
@@ -47,8 +59,8 @@ export const OrgUsageAlertsSubsection = () => {
 	});
 
 	const orgAlerts: DbUsageAlert[] = useMemo(
-		() => org?.config?.usage_alerts ?? [],
-		[org?.config?.usage_alerts],
+		() => org?.config?.[usageAlertsConfigKey] ?? [],
+		[org?.config, usageAlertsConfigKey],
 	);
 
 	const featureNameById = useMemo(
@@ -59,7 +71,7 @@ export const OrgUsageAlertsSubsection = () => {
 	const { mutateAsync, isPending } = useMutation({
 		mutationFn: async (updatedAlerts: DbUsageAlert[]) => {
 			const { data } = await axiosInstance.patch("/organization/config", {
-				usage_alerts: updatedAlerts,
+				[usageAlertsConfigKey]: updatedAlerts,
 			});
 			return data as { config: OrgConfig };
 		},
@@ -74,8 +86,7 @@ export const OrgUsageAlertsSubsection = () => {
 		},
 	});
 
-	const handleAddClick = () =>
-		setDialog({ open: true, editingIndex: null });
+	const handleAddClick = () => setDialog({ open: true, editingIndex: null });
 
 	const handleEditClick = (index: number) =>
 		setDialog({ open: true, editingIndex: index });
@@ -96,7 +107,9 @@ export const OrgUsageAlertsSubsection = () => {
 			await mutateAsync(next);
 			setDialog({ open: false, editingIndex: null });
 			toast.success(
-				dialog.editingIndex !== null ? "Usage alert updated" : "Usage alert added",
+				dialog.editingIndex !== null
+					? "Usage alert updated"
+					: "Usage alert added",
 			);
 		} catch {
 			// onError handles toast + invalidate
@@ -160,7 +173,8 @@ export const OrgUsageAlertsSubsection = () => {
 								</span>
 								<span className="truncate text-sm font-medium">
 									{alert.feature_id
-										? (featureNameById.get(alert.feature_id) ?? alert.feature_id)
+										? (featureNameById.get(alert.feature_id) ??
+											alert.feature_id)
 										: "All features"}
 								</span>
 								{alert.name && (

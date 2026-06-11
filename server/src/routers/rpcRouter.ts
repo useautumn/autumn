@@ -1,10 +1,12 @@
 import { Hono } from "hono";
+import { agentRulesRpcRouter } from "@/internal/agent/rules/agentRulesRouter";
 import { referralRpcRouter } from "@/internal/api/rewards/referralRouter";
 import { balancesRpcRouter } from "@/internal/balances/balancesRouter";
 import { billingRpcRouter } from "@/internal/billing/billingRouter";
 import { entityRpcRouter } from "@/internal/entities/entityRouter";
 import { eventsRpcRouter } from "@/internal/events/eventsRouter";
 import { featureRpcRouter } from "@/internal/features/featureRouter";
+import { logsRpcRouter } from "@/internal/logs/logsRouter";
 import { migrationRpcRouter } from "@/internal/migrations/v2/migrationRouter";
 import { platformRpcRouter } from "@/internal/platform/platformBeta/platformRpcRouter";
 import { plansRpcRouter } from "@/internal/products/productRouter";
@@ -25,6 +27,7 @@ export const rpcRouter = new Hono<HonoEnv>();
 // rpcRouter.use("*", idempotencyMiddleware);
 
 rpcRouter.route("", customerRpcRouter);
+rpcRouter.route("", agentRulesRpcRouter);
 rpcRouter.route("", plansRpcRouter);
 rpcRouter.route("", billingRpcRouter);
 rpcRouter.route("", balancesRpcRouter);
@@ -32,5 +35,6 @@ rpcRouter.route("", eventsRpcRouter);
 rpcRouter.route("", referralRpcRouter);
 rpcRouter.route("", entityRpcRouter);
 rpcRouter.route("", featureRpcRouter);
+rpcRouter.route("", logsRpcRouter);
 rpcRouter.route("", migrationRpcRouter);
 rpcRouter.route("", platformRpcRouter);

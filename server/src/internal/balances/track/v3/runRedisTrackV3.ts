@@ -21,6 +21,7 @@ import { globalSyncBatchingManagerV3 } from "@/internal/balances/utils/sync/Sync
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import type { RolloverUpdate } from "../../utils/types/rolloverUpdate.js";
 import type { UsageWindowUpdate } from "../../utils/types/usageWindowUpdate.js";
+import { buildAiCreditCostProperty } from "../utils/buildAiCreditCostProperty.js";
 import { handleRedisTrackErrorV3 } from "./handleRedisTrackErrorV3.js";
 
 const queueSyncItem = ({
@@ -158,6 +159,17 @@ export const runRedisTrackV3 = async ({
 		fullSubject: updatedFullSubject,
 		mutationLogs,
 	});
+
+	const aiCreditCost = buildAiCreditCostProperty({
+		featureDeductions,
+		entries: deductions.map((d) => ({
+			featureId: d.feature_id,
+			amount: d.value ?? 0,
+		})),
+	});
+	if (aiCreditCost) {
+		body.properties = { ...(body.properties ?? {}), credit_cost: aiCreditCost };
+	}
 
 	queueEvent({ ctx, body, fullSubject, deductions, internalProductId });
 

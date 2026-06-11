@@ -2,6 +2,7 @@ import {
 	FeatureType as APIFeatureType,
 	type CreateFeature,
 	FeatureUsageType,
+	isAnyCreditSystem,
 } from "@autumn/shared";
 import { BarcodeIcon, CoinsIcon } from "@phosphor-icons/react";
 import { PanelButton } from "@/components/v2/buttons/PanelButton";
@@ -57,7 +58,7 @@ export function NewFeatureType({
 
 					<div className="flex w-full items-center gap-4">
 						<PanelButton
-							isSelected={feature.type === APIFeatureType.CreditSystem}
+							isSelected={isAnyCreditSystem(feature.type)}
 							onClick={() => {
 								setFeature({
 									...feature,

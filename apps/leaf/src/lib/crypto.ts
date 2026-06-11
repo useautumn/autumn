@@ -25,13 +25,10 @@ export const decrypt = (data: string) => {
 	const iv = buffer.subarray(1, 13);
 	const authTag = buffer.subarray(13, 29);
 	const ciphertext = buffer.subarray(29);
-	const decipher = crypto.createDecipheriv(
-		"aes-256-gcm",
-		key(),
-		iv,
-	);
+	const decipher = crypto.createDecipheriv("aes-256-gcm", key(), iv);
 	decipher.setAuthTag(authTag);
-	return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString(
-		"utf8",
-	);
+	return Buffer.concat([
+		decipher.update(ciphertext),
+		decipher.final(),
+	]).toString("utf8");
 };

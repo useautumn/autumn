@@ -1,9 +1,9 @@
 import { GearIcon } from "@phosphor-icons/react";
 import {
 	BellIcon,
+	BotIcon,
 	BuildingIcon,
 	PaletteIcon,
-	PlugIcon,
 	ReceiptIcon,
 	ShieldCheckIcon,
 	SlidersHorizontalIcon,
@@ -15,10 +15,10 @@ import { PageContainer } from "@/components/general/PageContainer";
 import { PageHeader } from "@/components/general/PageHeader";
 import { cn } from "@/lib/utils";
 import { AccountSection } from "./sections/AccountSection";
+import { AgentSection } from "./sections/AgentSection";
 import { AppearanceSection } from "./sections/AppearanceSection";
 import { AuthorizedAppsSection } from "./sections/AuthorizedAppsSection";
 import { BillingSettingsSection } from "./sections/BillingSettingsSection";
-import { IntegrationsSection } from "./sections/IntegrationsSection";
 import { InvoicesSection } from "./sections/InvoicesSection";
 import { MembersSection } from "./sections/MembersSection";
 import { OrganizationSection } from "./sections/OrganizationSection";
@@ -28,7 +28,7 @@ type SettingsTab =
 	| "account"
 	| "organization"
 	| "members"
-	| "integrations"
+	| "agent"
 	| "appearance"
 	| "apps"
 	| "billing"
@@ -66,11 +66,6 @@ const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 				icon: <UsersIcon className="size-4" />,
 			},
 			{
-				id: "integrations",
-				label: "Integrations",
-				icon: <PlugIcon className="size-4" />,
-			},
-			{
 				id: "appearance",
 				label: "Appearance",
 				icon: <PaletteIcon className="size-4" />,
@@ -79,6 +74,11 @@ const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 				id: "apps",
 				label: "Authorized Apps",
 				icon: <ShieldCheckIcon className="size-4" />,
+			},
+			{
+				id: "agent",
+				label: "Agent",
+				icon: <BotIcon className="size-4" />,
 			},
 		],
 	},
@@ -108,7 +108,7 @@ const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
 	account: AccountSection,
 	organization: OrganizationSection,
 	members: MembersSection,
-	integrations: IntegrationsSection,
+	agent: AgentSection,
 	appearance: AppearanceSection,
 	apps: AuthorizedAppsSection,
 	billing: BillingSettingsSection,

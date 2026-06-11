@@ -22,7 +22,8 @@
 			"packages/autumn-js",
 			"packages/openapi",
 			"packages/ksuid",
-			"packages/stripe-sync"
+			"packages/stripe-sync",
+			"packages/ai-sdk"
 		],
 		"catalog": {
 			"stripe": "19.3.0-beta.1",
@@ -50,9 +51,7 @@
 		}
 	},
 	"overrides": {
-		"@better-auth/core": "1.6.5",
 		"@better-auth/passkey": "1.6.5",
-		"better-auth": "1.6.5",
 		"@modelcontextprotocol/sdk": "1.29.0",
 		"@isaacs/brace-expansion": "5.0.1",
 		"fast-xml-parser": "5.3.4",
@@ -61,7 +60,7 @@
 		"@smithy/config-resolver": "^4.4.0",
 		"lodash": "4.17.23",
 		"lodash-es": "4.17.23",
-		"@types/pg": "8.11.10"
+		"@types/pg": "8.20.0"
 	},
 	"resolutions": {
 		"@better-auth/core": "1.6.5",
@@ -75,12 +74,12 @@
 		"@smithy/config-resolver": "^4.4.0",
 		"lodash": "4.17.23",
 		"lodash-es": "4.17.23",
-		"@types/pg": "8.11.10"
+		"@types/pg": "8.20.0"
 	},
 	"type": "module",
 	"scripts": {
 		"dev": "bun scripts/dev.ts",
-		"dev:services": "bun scripts/devServices/index.ts",
+		"dev:services": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/devServices/index.ts",
 		"vite:build": "bun -F @autumn/vite build:bun",
 		"t": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/testScripts/testDispatcher.ts",
 		"cm": "cd server && bun cm",
@@ -102,6 +101,7 @@
 		"s": "ENV_FILE=.env.staging infisical run --env=staging --recursive -- bun scripts/dev.ts",
 		"l": "bash ./scripts/dev-local.sh",
 		"setup": "node scripts/setup/setup.js",
+		"contracts": "infisical run --env=dev --recursive -- bun scripts/s3/contracts.ts",
 		"setup:s3-admin": "bun scripts/setup/setupS3Admin.ts",
 		"setup:test": "infisical run --env=dev --recursive -- bun scripts/setup/setup-test.ts",
 		"stripe:link-test": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/setup/link-test-stripe-account.ts",
@@ -117,6 +117,7 @@
 		"tb:prod-legacy": "bun scripts/tinybird/index.ts prod-legacy",
 		"axiom": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/axiom/cli.ts",
 		"axiom:prod": "ENV_FILE=.env.prod infisical run --env=prod --recursive -- bun scripts/axiom/cli.ts",
+		"slack": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/slack/index.ts",
 		"add-mcp": "bun scripts/mcp/addMcp.ts",
 		"trigger:deploy": "bunx trigger.dev deploy",
 		"setupci": "node scripts/setup/setupci.js",
@@ -138,7 +139,7 @@
 		"site": "cd apps/website && bun dev && cd ../..",
 		"docs": "bun -F @autumn/docs dev",
 		"docs:build": "bun -F @autumn/docs build",
-		"ts": "turbo run ts --filter=@autumn/server --filter=autumn-js --filter=@autumn/openapi --filter=atmn --filter=checkout --filter=@autumn/auth --filter=@autumn/mcp --filter=@autumn/leaf",
+		"ts": "turbo run ts --filter=@autumn/server --filter=autumn-js --filter=@autumn/openapi --filter=atmn --filter=checkout --filter=@useautumn/ai-sdk --filter=@autumn/auth --filter=@autumn/mcp --filter=@autumn/leaf",
 		"kill:ts": "while pgrep -f tsgo > /dev/null; do pkill -9 -f tsgo; sleep 0.1; done",
 		"atmn:build": "bun -F atmn build",
 		"openapi:ts": "bun -F @autumn/openapi ts",

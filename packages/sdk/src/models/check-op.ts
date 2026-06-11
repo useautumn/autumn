@@ -71,15 +71,16 @@ export type CheckParams = {
 };
 
 /**
- * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
 export const FlagType2 = {
   Boolean: "boolean",
   Metered: "metered",
   CreditSystem: "credit_system",
+  AiCreditSystem: "ai_credit_system",
 } as const;
 /**
- * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
 export type FlagType2 = OpenEnum<typeof FlagType2>;
 
@@ -92,6 +93,16 @@ export type CheckCreditSchema2 = {
    * Credits consumed per unit of the metered feature.
    */
   creditCost: number;
+};
+
+export type CheckModelMarkups2 = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+export type CheckProviderMarkups2 = {
+  markup: number;
 };
 
 /**
@@ -121,7 +132,7 @@ export type CheckFeature2 = {
    */
   name: string;
   /**
-   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
    */
   type: FlagType2;
   /**
@@ -136,6 +147,18 @@ export type CheckFeature2 = {
    * For credit_system features: maps metered features to their credit costs.
    */
   creditSchema?: Array<CheckCreditSchema2> | undefined;
+  /**
+   * Per-model markup overrides for AI credit systems.
+   */
+  modelMarkups?: { [k: string]: CheckModelMarkups2 } | null | undefined;
+  /**
+   * Default percentage markup for AI credit systems. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider default markup percentages for AI credit systems.
+   */
+  providerMarkups?: { [k: string]: CheckProviderMarkups2 } | null | undefined;
   /**
    * Display names for the feature in billing UI and customer-facing components.
    */
@@ -563,15 +586,16 @@ export type CheckResponseBody2 = {
 };
 
 /**
- * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
 export const FlagType1 = {
   Boolean: "boolean",
   Metered: "metered",
   CreditSystem: "credit_system",
+  AiCreditSystem: "ai_credit_system",
 } as const;
 /**
- * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
 export type FlagType1 = OpenEnum<typeof FlagType1>;
 
@@ -584,6 +608,16 @@ export type CheckCreditSchema1 = {
    * Credits consumed per unit of the metered feature.
    */
   creditCost: number;
+};
+
+export type CheckModelMarkups1 = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+export type CheckProviderMarkups1 = {
+  markup: number;
 };
 
 /**
@@ -613,7 +647,7 @@ export type CheckFeature1 = {
    */
   name: string;
   /**
-   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
    */
   type: FlagType1;
   /**
@@ -628,6 +662,18 @@ export type CheckFeature1 = {
    * For credit_system features: maps metered features to their credit costs.
    */
   creditSchema?: Array<CheckCreditSchema1> | undefined;
+  /**
+   * Per-model markup overrides for AI credit systems.
+   */
+  modelMarkups?: { [k: string]: CheckModelMarkups1 } | null | undefined;
+  /**
+   * Default percentage markup for AI credit systems. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider default markup percentages for AI credit systems.
+   */
+  providerMarkups?: { [k: string]: CheckProviderMarkups1 } | null | undefined;
   /**
    * Display names for the feature in billing UI and customer-facing components.
    */
@@ -1160,6 +1206,52 @@ export function checkCreditSchema2FromJSON(
 }
 
 /** @internal */
+export const CheckModelMarkups2$inboundSchema: z.ZodMiniType<
+  CheckModelMarkups2,
+  unknown
+> = z.pipe(
+  z.object({
+    markup: types.optional(types.number()),
+    input_cost: types.optional(types.number()),
+    output_cost: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "input_cost": "inputCost",
+      "output_cost": "outputCost",
+    });
+  }),
+);
+
+export function checkModelMarkups2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckModelMarkups2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckModelMarkups2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckModelMarkups2' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckProviderMarkups2$inboundSchema: z.ZodMiniType<
+  CheckProviderMarkups2,
+  unknown
+> = z.object({
+  markup: types.number(),
+});
+
+export function checkProviderMarkups2FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckProviderMarkups2, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckProviderMarkups2$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckProviderMarkups2' from JSON`,
+  );
+}
+
+/** @internal */
 export const FlagDisplay2$inboundSchema: z.ZodMiniType<FlagDisplay2, unknown> =
   z.object({
     singular: z.optional(z.nullable(types.string())),
@@ -1190,13 +1282,27 @@ export const CheckFeature2$inboundSchema: z.ZodMiniType<
     credit_schema: types.optional(
       z.array(z.lazy(() => CheckCreditSchema2$inboundSchema)),
     ),
-    display: types.optional(z.lazy(() => FlagDisplay2$inboundSchema)),
+    model_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => CheckModelMarkups2$inboundSchema),
+    ))),
+    default_markup: types.optional(types.number()),
+    provider_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => CheckProviderMarkups2$inboundSchema),
+    ))),
+    display: types.optional(z.lazy(() =>
+      FlagDisplay2$inboundSchema
+    )),
     archived: types.boolean(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
+      "model_markups": "modelMarkups",
+      "default_markup": "defaultMarkup",
+      "provider_markups": "providerMarkups",
     });
   }),
 );
@@ -1657,6 +1763,52 @@ export function checkCreditSchema1FromJSON(
 }
 
 /** @internal */
+export const CheckModelMarkups1$inboundSchema: z.ZodMiniType<
+  CheckModelMarkups1,
+  unknown
+> = z.pipe(
+  z.object({
+    markup: types.optional(types.number()),
+    input_cost: types.optional(types.number()),
+    output_cost: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "input_cost": "inputCost",
+      "output_cost": "outputCost",
+    });
+  }),
+);
+
+export function checkModelMarkups1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckModelMarkups1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckModelMarkups1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckModelMarkups1' from JSON`,
+  );
+}
+
+/** @internal */
+export const CheckProviderMarkups1$inboundSchema: z.ZodMiniType<
+  CheckProviderMarkups1,
+  unknown
+> = z.object({
+  markup: types.number(),
+});
+
+export function checkProviderMarkups1FromJSON(
+  jsonString: string,
+): SafeParseResult<CheckProviderMarkups1, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => CheckProviderMarkups1$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'CheckProviderMarkups1' from JSON`,
+  );
+}
+
+/** @internal */
 export const FlagDisplay1$inboundSchema: z.ZodMiniType<FlagDisplay1, unknown> =
   z.object({
     singular: z.optional(z.nullable(types.string())),
@@ -1687,13 +1839,27 @@ export const CheckFeature1$inboundSchema: z.ZodMiniType<
     credit_schema: types.optional(
       z.array(z.lazy(() => CheckCreditSchema1$inboundSchema)),
     ),
-    display: types.optional(z.lazy(() => FlagDisplay1$inboundSchema)),
+    model_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => CheckModelMarkups1$inboundSchema),
+    ))),
+    default_markup: types.optional(types.number()),
+    provider_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => CheckProviderMarkups1$inboundSchema),
+    ))),
+    display: types.optional(z.lazy(() =>
+      FlagDisplay1$inboundSchema
+    )),
     archived: types.boolean(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
+      "model_markups": "modelMarkups",
+      "default_markup": "defaultMarkup",
+      "provider_markups": "providerMarkups",
     });
   }),
 );

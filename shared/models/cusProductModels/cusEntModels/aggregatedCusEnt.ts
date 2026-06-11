@@ -20,6 +20,7 @@ export const AggregatedFeatureBalanceSchema = z.object({
 	balance: z.number(),
 	adjustment: z.number(),
 	additional_balance: z.number(),
+	next_reset_at: z.number().nullable(),
 	rollover_balance: z.number().default(0),
 	rollover_usage: z.number().default(0),
 	unlimited: z.boolean(),

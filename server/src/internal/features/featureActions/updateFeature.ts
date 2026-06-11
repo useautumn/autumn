@@ -1,8 +1,12 @@
 import {
 	type CreditSchemaItem,
+	type CreditSystemConfig,
 	ErrCode,
 	type Feature,
 	FeatureType,
+	isAiCreditSystem,
+	isAnyCreditSystem,
+	type ModelMarkups,
 	notNullish,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -13,6 +17,7 @@ import RecaseError from "@/utils/errorUtils.js";
 import { FeatureService } from "../FeatureService.js";
 import {
 	validateCreditSystem,
+	validateCreditSystemSchemaReferences,
 	validateMeteredConfig,
 } from "../featureUtils.js";
 import { getObjectsUsingFeature } from "../utils/updateFeatureUtils/getObjectsUsingFeature.js";
@@ -26,6 +31,58 @@ interface UpdateFeatureParams {
 	featureId: string;
 	updates: Partial<Feature>;
 }
+
+/** Generic keyed-record equality check with a caller-supplied per-entry comparison. */
+const areMarkupRecordsEqual = <T>(
+	a: Record<string, T> | null | undefined,
+	b: Record<string, T> | null | undefined,
+	entriesEqual: (aEntry: T, bEntry: T) => boolean,
+): boolean => {
+	const aIsAbsent = a == null;
+	const bIsAbsent = b == null;
+	if (aIsAbsent && bIsAbsent) return true;
+	if (aIsAbsent || bIsAbsent) return false;
+
+	const aKeys = Object.keys(a);
+	const bKeys = Object.keys(b);
+	if (aKeys.length !== bKeys.length) return false;
+
+	for (const key of aKeys) {
+		const aEntry = a[key];
+		const bEntry = b[key];
+		if (!bEntry) return false;
+		if (!entriesEqual(aEntry, bEntry)) return false;
+	}
+
+	return true;
+};
+
+const areModelMarkupsEqual = ({
+	a,
+	b,
+}: {
+	a: ModelMarkups;
+	b: ModelMarkups;
+}): boolean =>
+	areMarkupRecordsEqual<NonNullable<ModelMarkups>[string]>(
+		a,
+		b,
+		(aEntry, bEntry) =>
+			aEntry.markup === bEntry.markup &&
+			aEntry.input_cost === bEntry.input_cost &&
+			aEntry.output_cost === bEntry.output_cost,
+	);
+
+const areProviderMarkupsEqual = ({
+	a,
+	b,
+}: {
+	a: CreditSystemConfig["provider_markups"];
+	b: CreditSystemConfig["provider_markups"];
+}): boolean =>
+	areMarkupRecordsEqual<
+		NonNullable<CreditSystemConfig["provider_markups"]>[string]
+	>(a, b, (aEntry, bEntry) => aEntry.markup === bEntry.markup);
 
 /**
  * Checks if the credit schema has changed between old and new config.
@@ -56,6 +113,26 @@ const hasCreditSchemaChanged = ({
 	}
 
 	return false;
+};
+
+const hasAiMarkupConfigChanged = ({
+	oldConfig,
+	newConfig,
+}: {
+	oldConfig: CreditSystemConfig | undefined;
+	newConfig: CreditSystemConfig | undefined;
+}): boolean => {
+	if (
+		(oldConfig?.default_markup ?? undefined) !==
+		(newConfig?.default_markup ?? undefined)
+	) {
+		return true;
+	}
+
+	return !areProviderMarkupsEqual({
+		a: oldConfig?.provider_markups,
+		b: newConfig?.provider_markups,
+	});
 };
 
 /**
@@ -146,15 +223,32 @@ export const updateFeature = async ({
 		}
 	}
 
-	// Validate config based on feature type
-	const newConfig =
-		updates.config !== undefined
-			? feature.type === FeatureType.CreditSystem
-				? validateCreditSystem(updates.config)
-				: feature.type === FeatureType.Metered
-					? validateMeteredConfig(updates.config)
-					: updates.config
-			: feature.config;
+	const effectiveType = updates.type ?? feature.type;
+
+	const newConfig = (() => {
+		if (updates.config === undefined) return feature.config;
+		switch (effectiveType) {
+			case FeatureType.AiCreditSystem:
+			case FeatureType.CreditSystem: {
+				const validatedConfig = validateCreditSystem(
+					updates.config,
+					effectiveType,
+				);
+				if (effectiveType === FeatureType.CreditSystem) {
+					validateCreditSystemSchemaReferences({
+						config: validatedConfig,
+						allFeatures,
+						selfFeatureId: updates.id ?? feature.id,
+					});
+				}
+				return validatedConfig;
+			}
+			case FeatureType.Metered:
+				return validateMeteredConfig(updates.config);
+			default:
+				return updates.config;
+		}
+	})();
 
 	// Update the feature
 	const updatedFeature = await FeatureService.update({
@@ -165,10 +259,11 @@ export const updateFeature = async ({
 		updates: {
 			id: updates.id,
 			name: updates.name,
-			type: updates.type,
+			type: effectiveType,
 			archived: updates.archived,
 			event_names: updates.event_names,
 			config: newConfig,
+			model_markups: updates.model_markups,
 		},
 	});
 
@@ -181,18 +276,32 @@ export const updateFeature = async ({
 		});
 	}
 
-	// Queue cache clear for credit system if schema changed
-	if (
-		feature.type === FeatureType.CreditSystem &&
-		updates.config?.schema &&
-		updatedFeature
-	) {
-		const schemaChanged = hasCreditSchemaChanged({
-			oldSchema: feature.config?.schema,
-			newSchema: updates.config.schema,
-		});
+	// Queue cache clear for credit system if schema or model markups changed
+	const isCreditSystem = isAnyCreditSystem(feature.type);
+	if (isCreditSystem && updatedFeature) {
+		const schemaChanged =
+			updates.config != null &&
+			hasCreditSchemaChanged({
+				oldSchema: feature.config?.schema,
+				newSchema: updates.config.schema,
+			});
 
-		if (schemaChanged) {
+		const markupsChanged =
+			updates.model_markups !== undefined &&
+			!areModelMarkupsEqual({
+				a: updates.model_markups,
+				b: feature.model_markups,
+			});
+
+		const aiMarkupConfigChanged =
+			isAiCreditSystem(feature.type) &&
+			updates.config != null &&
+			hasAiMarkupConfigChanged({
+				oldConfig: feature.config,
+				newConfig,
+			});
+
+		if (schemaChanged || markupsChanged || aiMarkupConfigChanged) {
 			await addTaskToQueue({
 				jobName: JobName.ClearCreditSystemCustomerCache,
 				payload: {

@@ -599,15 +599,16 @@ describe("ROLE_SCOPES", () => {
 		expect(ROLE_SCOPES.sales.length).toBe(7);
 	});
 
-	test("member contains all :read scopes, no :write", () => {
-		expect(ROLE_SCOPES.member.length).toBe(RESOURCES.length);
+	test("member contains expected :read scopes, no :write", () => {
+		expect(ROLE_SCOPES.member.length).toBe(RESOURCES.length - 1);
 		for (const s of ROLE_SCOPES.member) {
 			expect(s.endsWith(":read")).toBe(true);
 			expect(s.endsWith(":write")).toBe(false);
 		}
-		for (const r of RESOURCES) {
+		for (const r of RESOURCES.filter((r) => r !== "migrations")) {
 			expect(ROLE_SCOPES.member).toContain(`${r}:read` as ScopeString);
 		}
+		expect(ROLE_SCOPES.member).not.toContain(Scopes.Migrations.Read);
 	});
 });
 

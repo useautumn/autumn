@@ -174,6 +174,7 @@ export const getPaginatedEntitySubjectsQuery = ({
 		inStatuses,
 		includeInvoices: false,
 		includeEntityAggregations: false,
+		entityScopedOnly: true,
 	});
 };
 

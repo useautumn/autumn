@@ -9,7 +9,7 @@
  * C. Free product with free messages
  * D. One-time plan with prepaid messages
  * E. Premium product (same as pro but with higher prices)
- * F. Customer with 2 entity users
+ * F. Customer with 2 entity uasers
  *
  * Run: bun server/tests/_temp/seed-scenarios.ts
  */

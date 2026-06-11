@@ -1,15 +1,24 @@
+import { afterEach, describe, expect, test } from "bun:test";
 import { AppEnv } from "@autumn/shared";
-import { describe, expect, test } from "bun:test";
 
-process.env.DATABASE_URL ??= "postgresql://postgres:postgres@localhost:5432/postgres";
+process.env.DATABASE_URL ??=
+	"postgresql://postgres:postgres@localhost:5432/postgres";
 process.env.ENCRYPTION_PASSWORD ??= "test";
 process.env.SLACK_CLIENT_ID ??= "test";
 process.env.SLACK_CLIENT_SECRET ??= "test";
 process.env.SLACK_SIGNING_SECRET ??= "test";
 process.env.FIRECRAWL_API_KEY ??= "fc_test";
 
-const { selectChatEnv } = await import("../../../src/agent/agent.js");
-const { createFirecrawlTools } = await import("../../../src/agent/firecrawl.js");
+const { agentDocUris } = await import("../../../src/agent/prompts/readDocs.js");
+const { getDefaultChatEnv, selectChatEnv } = await import(
+	"../../../src/agent/runMessage/setup/selectChatEnv.js"
+);
+const { autumnChatInstructions } = await import(
+	"../../../src/agent/prompts/instructions.js"
+);
+const { createFirecrawlTools } = await import(
+	"../../../src/agent/tools/firecrawl.js"
+);
 
 const execute = async (
 	tool: { execute?: (...args: never[]) => Promise<unknown> } | undefined,
@@ -19,7 +28,48 @@ const execute = async (
 	return tool.execute(input as never, {} as never);
 };
 
+const originalNodeEnv = process.env.NODE_ENV;
+
+afterEach(() => {
+	if (originalNodeEnv === undefined) {
+		delete process.env.NODE_ENV;
+	} else {
+		process.env.NODE_ENV = originalNodeEnv;
+	}
+});
+
 describe("chat environment selection", () => {
+	test("loads feature catalog MCP guidance", () => {
+		expect(agentDocUris).toContain("autumn://docs/feature-catalog");
+	});
+
+	test("loads request-log MCP guidance", () => {
+		expect(agentDocUris).toContain("autumn://docs/request-logs");
+		expect(agentDocUris).toContain("autumn://docs/request-log-customers");
+		expect(agentDocUris).toContain("autumn://docs/request-log-balances");
+		expect(agentDocUris).toContain("autumn://docs/request-log-billing");
+		expect(agentDocUris).toContain("autumn://docs/request-log-stripe-webhooks");
+		expect(agentDocUris).toContain("autumn://docs/request-log-analytics");
+	});
+
+	test("instructs the agent to read org rules before Autumn work", () => {
+		expect(autumnChatInstructions).toContain("getAgentRules");
+		expect(autumnChatInstructions).toContain("org-specific behavior");
+	});
+
+	test("defaults to sandbox outside production", () => {
+		delete process.env.NODE_ENV;
+		expect(getDefaultChatEnv()).toBe(AppEnv.Sandbox);
+
+		process.env.NODE_ENV = "development";
+		expect(getDefaultChatEnv()).toBe(AppEnv.Sandbox);
+	});
+
+	test("defaults to live in production", () => {
+		process.env.NODE_ENV = "production";
+		expect(getDefaultChatEnv()).toBe(AppEnv.Live);
+	});
+
 	test("uses live from structured model output", async () => {
 		await expect(
 			selectChatEnv({

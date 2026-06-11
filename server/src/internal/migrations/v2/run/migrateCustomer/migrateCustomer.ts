@@ -83,6 +83,7 @@ export const migrateCustomer = async ({
 				ctx: migrationCtx,
 				context,
 				billingPlan,
+				billingContexts,
 			});
 		}
 

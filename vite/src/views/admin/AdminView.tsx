@@ -3,8 +3,8 @@ import { Globe, Sliders } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/v2/buttons/Button";
 import { authClient } from "@/lib/auth-client";
 import { useEnv } from "@/utils/envUtils";
 import { AdminOrgTable } from "@/views/admin/AdminOrgTable";
@@ -13,6 +13,7 @@ import { DefaultView } from "../DefaultView";
 import LoadingScreen from "../general/LoadingScreen";
 import { CreateUser } from "./components/CreateUser";
 import { EdgeConfigTab } from "./components/EdgeConfigTab";
+import { SlackAdminBotTab } from "./components/SlackAdminBotTab";
 import { useAdmin } from "./hooks/useAdmin";
 
 export const AdminView = () => {
@@ -81,6 +82,7 @@ export const AdminView = () => {
 				<TabsList>
 					<TabsTrigger value="orgs">Organizations</TabsTrigger>
 					<TabsTrigger value="users">Users</TabsTrigger>
+					<TabsTrigger value="slack-bot">Slack Bot</TabsTrigger>
 					<TabsTrigger value="edge-config">Edge Config</TabsTrigger>
 				</TabsList>
 
@@ -90,6 +92,10 @@ export const AdminView = () => {
 
 				<TabsContent value="users" className="mt-4">
 					<AdminUserTable />
+				</TabsContent>
+
+				<TabsContent value="slack-bot" className="mt-4">
+					<SlackAdminBotTab />
 				</TabsContent>
 
 				<TabsContent value="edge-config" className="mt-4">

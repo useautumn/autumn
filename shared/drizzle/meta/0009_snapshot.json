@@ -1,5 +1,5 @@
 {
-  "id": "a7af3028-b54b-45c6-b82b-585d2ddd6701",
+  "id": "39539832-23e8-42d6-84f4-402b99f7ba86",
   "prevId": "40c5361a-8cff-473f-93c1-4dfbc06b00d7",
   "version": "7",
   "dialect": "postgresql",
@@ -5100,6 +5100,13 @@
           "primaryKey": false,
           "notNull": false
         },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'{}'::jsonb"
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -7163,138 +7170,6 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
-    },
-    "public.usage_windows": {
-      "name": "usage_windows",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "customer_entitlement_id": {
-          "name": "customer_entitlement_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "feature_id": {
-          "name": "feature_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "internal_feature_id": {
-          "name": "internal_feature_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "window_start_at": {
-          "name": "window_start_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "window_end_at": {
-          "name": "window_end_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "usage": {
-          "name": "usage",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": true
-        }
-      },
-      "indexes": {
-        "idx_usage_windows_customer_entitlement_id": {
-          "name": "idx_usage_windows_customer_entitlement_id",
-          "columns": [
-            {
-              "expression": "customer_entitlement_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_usage_windows_cus_ent_feature_window": {
-          "name": "idx_usage_windows_cus_ent_feature_window",
-          "columns": [
-            {
-              "expression": "customer_entitlement_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "feature_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "window_start_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "usage_windows_customer_entitlement_id_fkey": {
-          "name": "usage_windows_customer_entitlement_id_fkey",
-          "tableFrom": "usage_windows",
-          "tableTo": "customer_entitlements",
-          "columnsFrom": [
-            "customer_entitlement_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "cascade"
-        },
-        "usage_windows_internal_feature_id_fkey": {
-          "name": "usage_windows_internal_feature_id_fkey",
-          "tableFrom": "usage_windows",
-          "tableTo": "features",
-          "columnsFrom": [
-            "internal_feature_id"
-          ],
-          "columnsTo": [
-            "internal_id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": true
     },
     "public.user": {
       "name": "user",

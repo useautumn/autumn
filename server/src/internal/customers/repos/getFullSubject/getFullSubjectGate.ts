@@ -99,11 +99,21 @@ const attrs = ({ orgId, env }: { orgId: string; env: AppEnv }) => ({
 	env,
 });
 
+const GATE_REJECTION_REASONS = [
+	"per_customer_queue_full",
+	"per_org_queue_full",
+	"wait_timeout",
+] as const;
+type GateRejectionReason = (typeof GATE_REJECTION_REASONS)[number];
+const gateRejectionReasonSet: ReadonlySet<string> = new Set(
+	GATE_REJECTION_REASONS,
+);
+
 const rejectOverloaded = ({
 	reason,
 	labels,
 }: {
-	reason: string;
+	reason: GateRejectionReason;
 	labels: Record<string, string>;
 }): never => {
 	rejectedCounter.add(1, { ...labels, reason });
@@ -114,6 +124,20 @@ const rejectOverloaded = ({
 		statusCode: 429,
 		data: { reason },
 	});
+};
+
+export const isFullSubjectGateRejection = (error: unknown): boolean => {
+	if (!(error instanceof RecaseError)) return false;
+	if (error.code !== "rate_limit_exceeded" || error.statusCode !== 429)
+		return false;
+	const data = error.data;
+	return (
+		typeof data === "object" &&
+		data !== null &&
+		"reason" in data &&
+		typeof data.reason === "string" &&
+		gateRejectionReasonSet.has(data.reason)
+	);
 };
 
 export const runWithFullSubjectGate = async <T>({

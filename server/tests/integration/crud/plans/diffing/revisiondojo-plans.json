@@ -1,0 +1,5642 @@
+{
+  "items": [
+    {
+      "id": "free",
+      "name": "Free",
+      "description": null,
+      "group": null,
+      "version": 6,
+      "add_on": false,
+      "auto_enable": true,
+      "price": null,
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 1000,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "1,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "create_lesson",
+          "included": 3,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "3 create lessons"
+          }
+        },
+        {
+          "feature_id": "create_test",
+          "included": 3,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "3 create tests"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 10,
+          "unlimited": false,
+          "reset": {
+            "interval": "week"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "10 energies"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 10,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "10 energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "week"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 3,
+          "unlimited": false,
+          "reset": {
+            "interval": "week"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "3 read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 3,
+          "unlimited": false,
+          "reset": {
+            "interval": "week"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "3 read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 10,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "10 read walkthroughs"
+          }
+        },
+        {
+          "feature_id": "teach_jojo_session",
+          "included": 3,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "3 teach jojo sessions"
+          }
+        },
+        {
+          "feature_id": "teacher_coursework_grader",
+          "included": 3,
+          "unlimited": false,
+          "reset": {
+            "interval": "week"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "3 teacher coursework graders"
+          }
+        }
+      ],
+      "created_at": 1774838343324,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_12m",
+      "name": "Plus (12 months)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 13,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 732,
+        "interval": "year",
+        "display": {
+          "primary_text": "$732",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1770403301468,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_12m_oneoff",
+      "name": "Plus",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 696,
+        "interval": "one_off",
+        "interval_count": 3,
+        "display": {
+          "primary_text": "$696"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1770740067183,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_14m_m27",
+      "name": "Plus",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 756,
+        "interval": "one_off",
+        "interval_count": 3,
+        "display": {
+          "primary_text": "$756"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1770740067183,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_15m",
+      "name": "Plus (15 months)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 2,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 180,
+        "interval": "month",
+        "interval_count": 15,
+        "display": {
+          "primary_text": "$180",
+          "secondary_text": "per 15 months"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1770402863094,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_18m",
+      "name": "Plus (18 months)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 6,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 810,
+        "interval": "month",
+        "interval_count": 18,
+        "display": {
+          "primary_text": "$810",
+          "secondary_text": "per 18 months"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1770389954591,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_18m_oneoff",
+      "name": "Plus",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 756,
+        "interval": "one_off",
+        "interval_count": 3,
+        "display": {
+          "primary_text": "$756"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1770740067183,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_1m",
+      "name": "Plus (1 month)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 9,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 129,
+        "interval": "month",
+        "display": {
+          "primary_text": "$129",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1772764131640,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_1m_new",
+      "name": "Plus (1 month)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 2,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 230,
+        "interval": "month",
+        "display": {
+          "primary_text": "$230",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1776656856472,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_1w",
+      "name": "Plus (1 week)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 3,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 130,
+        "interval": "week",
+        "display": {
+          "primary_text": "$130",
+          "secondary_text": "per week"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1776656945134,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_20m_n27",
+      "name": "Plus",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 840,
+        "interval": "one_off",
+        "interval_count": 3,
+        "display": {
+          "primary_text": "$840"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1770740067183,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_24m",
+      "name": "Plus (24 months)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 9,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 840,
+        "interval": "year",
+        "interval_count": 2,
+        "display": {
+          "primary_text": "$840",
+          "secondary_text": "per 2 years"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1770389963914,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_24m_oneoff",
+      "name": "Plus",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 816,
+        "interval": "one_off",
+        "interval_count": 3,
+        "display": {
+          "primary_text": "$816"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1770740067183,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_26m_m28",
+      "name": "Plus",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 816,
+        "interval": "one_off",
+        "interval_count": 3,
+        "display": {
+          "primary_text": "$816"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1770740067183,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_2m",
+      "name": "Plus (2 months)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 2,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 348,
+        "interval": "month",
+        "interval_count": 2,
+        "display": {
+          "primary_text": "$348",
+          "secondary_text": "per 2 months"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1772262541789,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_2m_m26",
+      "name": "Plus",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 3,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 350,
+        "interval": "one_off",
+        "interval_count": 3,
+        "display": {
+          "primary_text": "$350"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1776656791638,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_3m",
+      "name": "Plus (3 months)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 11,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 462,
+        "interval": "month",
+        "interval_count": 3,
+        "display": {
+          "primary_text": "$462",
+          "secondary_text": "per 3 months"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1770740067183,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_4m",
+      "name": "Plus (4 months)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 5,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 536,
+        "interval": "month",
+        "interval_count": 4,
+        "display": {
+          "primary_text": "$536",
+          "secondary_text": "per 4 months"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1770389934153,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_6m",
+      "name": "Plus (6 months)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 12,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 570,
+        "interval": "month",
+        "interval_count": 6,
+        "display": {
+          "primary_text": "$570",
+          "secondary_text": "per 6 months"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1770351892772,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_6m_oneoff",
+      "name": "Plus",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 540,
+        "interval": "one_off",
+        "interval_count": 3,
+        "display": {
+          "primary_text": "$540"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1770740067183,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_8m_n26",
+      "name": "Plus",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 656,
+        "interval": "one_off",
+        "interval_count": 3,
+        "display": {
+          "primary_text": "$656"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1770740067183,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "plus_free_grant",
+      "name": "Plus (Free Grant)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": null,
+      "items": [
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        }
+      ],
+      "created_at": 1770452484251,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_12m",
+      "name": "Pro (12 months)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 9,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 780,
+        "interval": "year",
+        "display": {
+          "primary_text": "$780",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1770389949158,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_12m_oneoff",
+      "name": "Pro",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 798,
+        "interval": "one_off",
+        "display": {
+          "primary_text": "$798"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1772244766802,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_14m_m27",
+      "name": "Pro",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 812,
+        "interval": "one_off",
+        "display": {
+          "primary_text": "$812"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1772244766802,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_15m",
+      "name": "Pro (15 months)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 285,
+        "interval": "month",
+        "interval_count": 15,
+        "display": {
+          "primary_text": "$285",
+          "secondary_text": "per 15 months"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1770203599491,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_18m",
+      "name": "Pro (18 months)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 5,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 882,
+        "interval": "month",
+        "interval_count": 18,
+        "display": {
+          "primary_text": "$882",
+          "secondary_text": "per 18 months"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1770389958694,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_18m_oneoff",
+      "name": "Pro",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 828,
+        "interval": "one_off",
+        "display": {
+          "primary_text": "$828"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1772244766802,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_1_month_mobile",
+      "name": "Pro (1 month)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 149,
+        "interval": "month",
+        "display": {
+          "primary_text": "$149",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1774951020658,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_1m",
+      "name": "Pro (1 month)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 7,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 139,
+        "interval": "month",
+        "display": {
+          "primary_text": "$139",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        },
+        {
+          "feature_id": "teacher_coursework_grader",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 teacher coursework graders"
+          }
+        }
+      ],
+      "created_at": 1773193560245,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_1m_new",
+      "name": "Pro (1 month)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 2,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 238,
+        "interval": "month",
+        "display": {
+          "primary_text": "$238",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        },
+        {
+          "feature_id": "teacher_coursework_grader",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 teacher coursework graders"
+          }
+        }
+      ],
+      "created_at": 1776656842190,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_1w",
+      "name": "Pro (1 week)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 2,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 138,
+        "interval": "week",
+        "display": {
+          "primary_text": "$138",
+          "secondary_text": "per week"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        },
+        {
+          "feature_id": "teacher_coursework_grader",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 teacher coursework graders"
+          }
+        }
+      ],
+      "created_at": 1776656898626,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_20m_n27",
+      "name": "Pro",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 920,
+        "interval": "one_off",
+        "display": {
+          "primary_text": "$920"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1772244766802,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_24m",
+      "name": "Pro (24 months)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 6,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 936,
+        "interval": "year",
+        "interval_count": 2,
+        "display": {
+          "primary_text": "$936",
+          "secondary_text": "per 2 years"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1770389969621,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_24m_oneoff",
+      "name": "Pro",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 912,
+        "interval": "one_off",
+        "display": {
+          "primary_text": "$912"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1772244766802,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_26m_m28",
+      "name": "Pro",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 988,
+        "interval": "one_off",
+        "display": {
+          "primary_text": "$988"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1772244766802,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_2m",
+      "name": "Pro (2 months)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 2,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 356,
+        "interval": "month",
+        "interval_count": 2,
+        "display": {
+          "primary_text": "$356",
+          "secondary_text": "per 2 months"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1772262524130,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_2m_m26",
+      "name": "Pro",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 5,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 358,
+        "interval": "one_off",
+        "display": {
+          "primary_text": "$358"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1777451713406,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_3m",
+      "name": "Pro (3 months)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 7,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 474,
+        "interval": "month",
+        "interval_count": 3,
+        "display": {
+          "primary_text": "$474",
+          "secondary_text": "per 3 months"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1770740063500,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_3m_special",
+      "name": "Pro (3 months)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 299,
+        "interval": "month",
+        "interval_count": 3,
+        "display": {
+          "primary_text": "$299",
+          "secondary_text": "per 3 months"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1770740063500,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_4m",
+      "name": "Pro (4 months)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 5,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 552,
+        "interval": "month",
+        "interval_count": 4,
+        "display": {
+          "primary_text": "$552",
+          "secondary_text": "per 4 months"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1770389937913,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_6m",
+      "name": "Pro (6 months)",
+      "description": null,
+      "group": "personal_sub",
+      "version": 8,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 594,
+        "interval": "month",
+        "interval_count": 6,
+        "display": {
+          "primary_text": "$594",
+          "secondary_text": "per 6 months"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1770389942710,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_6m_oneoff",
+      "name": "Pro",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 2,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 588,
+        "interval": "one_off",
+        "display": {
+          "primary_text": "$588"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1778823513623,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_8m_n26",
+      "name": "Pro",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 688,
+        "interval": "one_off",
+        "display": {
+          "primary_text": "$688"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1772244766802,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_free_grant",
+      "name": "Pro (Free Grant)",
+      "description": null,
+      "group": null,
+      "version": 4,
+      "add_on": false,
+      "auto_enable": false,
+      "price": null,
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "free_trial": {
+        "duration_length": 180,
+        "duration_type": "day",
+        "card_required": true
+      },
+      "created_at": 1773220491531,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_m26",
+      "name": "Pro (M26)",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 2,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 138,
+        "interval": "one_off",
+        "display": {
+          "primary_text": "$138"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1778157609759,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_m27",
+      "name": "Pro (M27)",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 3,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 798,
+        "interval": "one_off",
+        "display": {
+          "primary_text": "$798"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1778334816203,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_m28",
+      "name": "Pro (M28)",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 998,
+        "interval": "one_off",
+        "display": {
+          "primary_text": "$998"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1772244766802,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_n26",
+      "name": "Pro (N26)",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 498,
+        "interval": "one_off",
+        "display": {
+          "primary_text": "$498"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1772257336344,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_n27",
+      "name": "Pro (N27)",
+      "description": null,
+      "group": "personal_oneoff",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 898,
+        "interval": "one_off",
+        "display": {
+          "primary_text": "$898"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        }
+      ],
+      "created_at": 1772257458795,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_teacher",
+      "name": "Teacher Pro",
+      "description": null,
+      "group": null,
+      "version": 2,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 399,
+        "interval": "year",
+        "display": {
+          "primary_text": "$399",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "create_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited create lessons"
+          }
+        },
+        {
+          "feature_id": "create_test",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited create tests"
+          }
+        },
+        {
+          "feature_id": "enabled_subject",
+          "included": 3,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "3 enabled subjects"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        },
+        {
+          "feature_id": "teacher_coursework_grader",
+          "included": 150,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "150 teacher coursework graders"
+          }
+        }
+      ],
+      "created_at": 1773221106920,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_teacher_1m",
+      "name": "Teacher Pro (1m)",
+      "description": null,
+      "group": null,
+      "version": 2,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 149,
+        "interval": "month",
+        "display": {
+          "primary_text": "$149",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "create_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited create lessons"
+          }
+        },
+        {
+          "feature_id": "create_test",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited create tests"
+          }
+        },
+        {
+          "feature_id": "enabled_subject",
+          "included": 3,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "3 enabled subjects"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        },
+        {
+          "feature_id": "teacher_coursework_grader",
+          "included": 150,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "150 teacher coursework graders"
+          }
+        }
+      ],
+      "created_at": 1773821622225,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_teacher_24m",
+      "name": "Teacher Pro (2 years)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 549,
+        "interval": "year",
+        "interval_count": 2,
+        "display": {
+          "primary_text": "$549",
+          "secondary_text": "per 2 years"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "create_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited create lessons"
+          }
+        },
+        {
+          "feature_id": "create_test",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited create tests"
+          }
+        },
+        {
+          "feature_id": "enabled_subject",
+          "included": 3,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "3 enabled subjects"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        },
+        {
+          "feature_id": "teacher_coursework_grader",
+          "included": 150,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "150 teacher coursework graders"
+          }
+        }
+      ],
+      "created_at": 1773221106920,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": "pro_teacher_1m",
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "pro_teacher_trial",
+      "name": "Teacher Pro (Grant)",
+      "description": null,
+      "group": null,
+      "version": 5,
+      "add_on": false,
+      "auto_enable": false,
+      "price": null,
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "create_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited create lessons"
+          }
+        },
+        {
+          "feature_id": "create_test",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited create tests"
+          }
+        },
+        {
+          "feature_id": "enabled_subject",
+          "included": 3,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "3 enabled subjects"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 5,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        },
+        {
+          "feature_id": "school_student",
+          "included": 0,
+          "unlimited": true,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited student seats"
+          }
+        },
+        {
+          "feature_id": "teacher_coursework_grader",
+          "included": 150,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "150 teacher coursework graders"
+          }
+        },
+        {
+          "feature_id": "school_teacher",
+          "included": 0,
+          "unlimited": true,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited teacher seats"
+          }
+        }
+      ],
+      "created_at": 1778143401133,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "school_pro",
+      "name": "Classroom Pro",
+      "description": null,
+      "group": null,
+      "version": 11,
+      "add_on": false,
+      "auto_enable": false,
+      "price": null,
+      "items": [
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "ai_checker_word",
+          "included": 25000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "25,000 AI checker words"
+          }
+        },
+        {
+          "feature_id": "assign_tests",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Assign tests"
+          }
+        },
+        {
+          "feature_id": "can_add_students",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Can add students"
+          }
+        },
+        {
+          "feature_id": "classroom_analytics",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Classroom analytics"
+          }
+        },
+        {
+          "feature_id": "create_homework",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Create homework"
+          }
+        },
+        {
+          "feature_id": "create_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited create lessons"
+          }
+        },
+        {
+          "feature_id": "create_test",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited create tests"
+          }
+        },
+        {
+          "feature_id": "energy",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited energies"
+          }
+        },
+        {
+          "feature_id": "grader_daily_quota",
+          "included": 50,
+          "unlimited": false,
+          "reset": {
+            "interval": "day"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "50 grader daily quotas"
+          }
+        },
+        {
+          "feature_id": "publish_lessons",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "Publish lessons"
+          }
+        },
+        {
+          "feature_id": "read_flashcard",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read flashcards"
+          }
+        },
+        {
+          "feature_id": "read_lesson",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read lessons"
+          }
+        },
+        {
+          "feature_id": "read_note",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read notes"
+          }
+        },
+        {
+          "feature_id": "read_walkthrough",
+          "included": 0,
+          "unlimited": true,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "Unlimited read walkthroughs"
+          }
+        },
+        {
+          "feature_id": "school_student",
+          "included": 500,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "500 student seats"
+          }
+        },
+        {
+          "feature_id": "teacher_coursework_grader",
+          "included": 500,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "500 teacher coursework graders"
+          }
+        },
+        {
+          "feature_id": "school_teacher",
+          "included": 500,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "500 teacher seats"
+          }
+        }
+      ],
+      "created_at": 1777018263619,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    }
+  ],
+  "count": 55,
+  "next_cursor": null
+}

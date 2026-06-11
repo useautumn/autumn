@@ -22,6 +22,21 @@ export const deleteOAuthRefreshTokensByClientAndReference = async ({
 			),
 		);
 
+export const updateOAuthRefreshTokenScopes = async ({
+	db,
+	id,
+	scopes,
+}: {
+	db: DrizzleCli;
+	id: string;
+	scopes: string[];
+}) =>
+	db
+		.update(oauthRefreshToken)
+		.set({ scopes })
+		.where(eq(oauthRefreshToken.id, id));
+
 export const oauthRefreshTokenRepo = {
 	deleteByClientAndReference: deleteOAuthRefreshTokensByClientAndReference,
+	updateScopes: updateOAuthRefreshTokenScopes,
 };

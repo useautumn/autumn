@@ -395,6 +395,7 @@ export function AttachFormProvider({
 		product: effectiveProduct,
 		prepaidOptions,
 		items,
+		grantFree,
 		version,
 		trialLength,
 		trialDuration,

@@ -1,5 +1,5 @@
-import { AppEnv } from "@autumn/shared";
 import { describe, expect, test } from "bun:test";
+import { AppEnv } from "@autumn/shared";
 import { approvalCard, approvalStatusCard } from "../../../src/ui/blocks.js";
 
 describe("approval card", () => {
@@ -47,6 +47,22 @@ describe("approval card", () => {
 		expect(card.children.at(-1)?.type).not.toBe("actions");
 		expect(JSON.stringify(card)).toContain("Tool input validation failed.");
 		expect(JSON.stringify(card)).not.toContain("validationErrors");
+	});
+
+	test("renders failed execution errors in approval status cards", () => {
+		const card = approvalStatusCard({
+			status: "failed",
+			toolName: "attach",
+			result: {
+				error: true,
+				message: "Missing email.",
+			},
+		});
+
+		const json = JSON.stringify(card);
+		expect(card.title).toBe("Attach plan failed");
+		expect(json).toContain("Missing email.");
+		expect(json).not.toContain('"error"');
 	});
 
 	test("does not render raw request JSON as preview text", () => {

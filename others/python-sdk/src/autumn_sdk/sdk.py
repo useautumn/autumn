@@ -684,6 +684,260 @@ class Autumn(BaseSDK):
 
         raise errors.AutumnDefaultError("Unexpected response received", http_res)
 
+    def track_tokens(
+        self,
+        *,
+        customer_id: str,
+        model_id: str,
+        input_tokens: int,
+        output_tokens: int,
+        entity_id: Optional[str] = None,
+        feature_id: Optional[str] = None,
+        cache_read_tokens: Optional[int] = None,
+        cache_write_tokens: Optional[int] = None,
+        audio_input_tokens: Optional[int] = None,
+        audio_output_tokens: Optional[int] = None,
+        reasoning_tokens: Optional[int] = None,
+        properties: Optional[Dict[str, Any]] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.TrackTokensResponse:
+        r"""Records AI token usage for a customer and returns the updated AI credit balance.
+
+        Use this after an LLM request when you have input and output token counts. Autumn converts token usage to a dollar amount using the configured model pricing and markup, then tracks that value against the customer's AI credit system.
+
+        :param customer_id: The ID of the customer.
+        :param model_id: The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+        :param input_tokens: Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools.
+        :param output_tokens: Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
+        :param entity_id: The ID of the entity for entity-scoped balances.
+        :param feature_id: The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted — only required when a customer has multiple AI credit systems.
+        :param cache_read_tokens: Number of cached input tokens read.
+        :param cache_write_tokens: Number of input tokens written to the cache.
+        :param audio_input_tokens: Number of audio input tokens consumed.
+        :param audio_output_tokens: Number of audio output tokens generated.
+        :param reasoning_tokens: Number of reasoning tokens generated.
+        :param properties: Additional properties to attach to this usage event.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.TrackTokensParams(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            feature_id=feature_id,
+            model_id=model_id,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cache_read_tokens=cache_read_tokens,
+            cache_write_tokens=cache_write_tokens,
+            audio_input_tokens=audio_input_tokens,
+            audio_output_tokens=audio_output_tokens,
+            reasoning_tokens=reasoning_tokens,
+            properties=properties,
+        )
+
+        req = self._build_request(
+            method="POST",
+            path="/v1/balances.track_tokens",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.TrackTokensGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.TrackTokensParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = self.do_request(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="trackTokens",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.TrackTokensResponseBody1, http_res)
+        if utils.match_response(http_res, "202", "application/json"):
+            return unmarshal_json_response(models.TrackTokensResponseBody2, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = utils.stream_to_text(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
+    async def track_tokens_async(
+        self,
+        *,
+        customer_id: str,
+        model_id: str,
+        input_tokens: int,
+        output_tokens: int,
+        entity_id: Optional[str] = None,
+        feature_id: Optional[str] = None,
+        cache_read_tokens: Optional[int] = None,
+        cache_write_tokens: Optional[int] = None,
+        audio_input_tokens: Optional[int] = None,
+        audio_output_tokens: Optional[int] = None,
+        reasoning_tokens: Optional[int] = None,
+        properties: Optional[Dict[str, Any]] = None,
+        retries: OptionalNullable[utils.RetryConfig] = UNSET,
+        server_url: Optional[str] = None,
+        timeout_ms: Optional[int] = None,
+        http_headers: Optional[Mapping[str, str]] = None,
+    ) -> models.TrackTokensResponse:
+        r"""Records AI token usage for a customer and returns the updated AI credit balance.
+
+        Use this after an LLM request when you have input and output token counts. Autumn converts token usage to a dollar amount using the configured model pricing and markup, then tracks that value against the customer's AI credit system.
+
+        :param customer_id: The ID of the customer.
+        :param model_id: The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+        :param input_tokens: Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools.
+        :param output_tokens: Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
+        :param entity_id: The ID of the entity for entity-scoped balances.
+        :param feature_id: The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted — only required when a customer has multiple AI credit systems.
+        :param cache_read_tokens: Number of cached input tokens read.
+        :param cache_write_tokens: Number of input tokens written to the cache.
+        :param audio_input_tokens: Number of audio input tokens consumed.
+        :param audio_output_tokens: Number of audio output tokens generated.
+        :param reasoning_tokens: Number of reasoning tokens generated.
+        :param properties: Additional properties to attach to this usage event.
+        :param retries: Override the default retry configuration for this method
+        :param server_url: Override the default server URL for this method
+        :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
+        :param http_headers: Additional headers to set or replace on requests.
+        """
+        base_url = None
+        url_variables = None
+        if timeout_ms is None:
+            timeout_ms = self.sdk_configuration.timeout_ms
+
+        if server_url is not None:
+            base_url = server_url
+        else:
+            base_url = self._get_url(base_url, url_variables)
+
+        request = models.TrackTokensParams(
+            customer_id=customer_id,
+            entity_id=entity_id,
+            feature_id=feature_id,
+            model_id=model_id,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cache_read_tokens=cache_read_tokens,
+            cache_write_tokens=cache_write_tokens,
+            audio_input_tokens=audio_input_tokens,
+            audio_output_tokens=audio_output_tokens,
+            reasoning_tokens=reasoning_tokens,
+            properties=properties,
+        )
+
+        req = self._build_request_async(
+            method="POST",
+            path="/v1/balances.track_tokens",
+            base_url=base_url,
+            url_variables=url_variables,
+            request=request,
+            request_body_required=True,
+            request_has_path_params=False,
+            request_has_query_params=True,
+            user_agent_header="user-agent",
+            accept_header_value="application/json",
+            http_headers=http_headers,
+            _globals=models.TrackTokensGlobals(
+                x_api_version=self.sdk_configuration.globals.x_api_version,
+            ),
+            security=self.sdk_configuration.security,
+            get_serialized_body=lambda: utils.serialize_request_body(
+                request, False, False, "json", models.TrackTokensParams
+            ),
+            allow_empty_value=None,
+            timeout_ms=timeout_ms,
+        )
+
+        if retries == UNSET:
+            if self.sdk_configuration.retry_config is not UNSET:
+                retries = self.sdk_configuration.retry_config
+
+        retry_config = None
+        if isinstance(retries, utils.RetryConfig):
+            retry_config = (retries, ["429", "500", "502", "503", "504"])
+
+        http_res = await self.do_request_async(
+            hook_ctx=HookContext(
+                config=self.sdk_configuration,
+                base_url=base_url or "",
+                operation_id="trackTokens",
+                oauth2_scopes=None,
+                security_source=self.sdk_configuration.security,
+            ),
+            request=req,
+            is_error_status_code=lambda c: utils.match_status_codes(["4XX", "5XX"], c),
+            retry_config=retry_config,
+        )
+
+        if utils.match_response(http_res, "200", "application/json"):
+            return unmarshal_json_response(models.TrackTokensResponseBody1, http_res)
+        if utils.match_response(http_res, "202", "application/json"):
+            return unmarshal_json_response(models.TrackTokensResponseBody2, http_res)
+        if utils.match_response(http_res, "4XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+        if utils.match_response(http_res, "5XX", "*"):
+            http_res_text = await utils.stream_to_text_async(http_res)
+            raise errors.AutumnDefaultError(
+                "API error occurred", http_res, http_res_text
+            )
+
+        raise errors.AutumnDefaultError("Unexpected response received", http_res)
+
     def batch_track(
         self,
         *,

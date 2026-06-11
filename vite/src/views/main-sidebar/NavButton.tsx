@@ -1,6 +1,6 @@
 import type { AppEnv } from "@autumn/shared";
 import { ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { Link, useSearchParams } from "react-router";
 import { useTab } from "@/hooks/common/useTab";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,7 @@ export const NavButton = ({
 	isOpen,
 	isSubNav = false,
 	isGroup = false,
+	badge,
 }: {
 	value?: string;
 	subValue?: string;
@@ -34,6 +35,7 @@ export const NavButton = ({
 	isOpen?: boolean;
 	isSubNav?: boolean;
 	isGroup?: boolean;
+	badge?: ReactNode;
 }) => {
 	// Get window path
 	const finalEnv = useEnv();
@@ -67,6 +69,7 @@ export const NavButton = ({
 					>
 						{title}
 					</span>
+					{badge && expanded && badge}
 				</div>
 				{online && (
 					<span className="relative flex h-2 w-2 ml-2">

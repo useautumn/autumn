@@ -31,7 +31,7 @@ const PROCESSORS: { value: Processor; label: string; icon: React.ReactNode }[] =
 		},
 	];
 
-export const ProcessorSubMenu = () => {
+export const ProcessorSubMenu = ({ onChange }: { onChange?: () => void }) => {
 	const flags = useAutumnFlags();
 	const { queryStates, setFilters } = useCustomerFilters();
 
@@ -52,6 +52,7 @@ export const ProcessorSubMenu = () => {
 			: [...selectedProcessors, processor];
 
 		setFilters({ processor: updated });
+		onChange?.();
 	};
 
 	return (

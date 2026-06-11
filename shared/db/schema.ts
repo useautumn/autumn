@@ -40,6 +40,12 @@ import { events } from "../models/eventModels/eventTable.js";
 import { featureRelations } from "../models/featureModels/featureRelations.js";
 import { features } from "../models/featureModels/featureTable.js";
 import { invoiceTemplates } from "../models/invoiceTemplateModels/invoiceTemplateTable.js";
+import {
+	cmaMemory,
+	cmaSessions,
+	cmaVaults,
+} from "../models/leafModels/cmaStateTable.js";
+import { leafSchema } from "../models/leafModels/leafSchema.js";
 // Migration Relations
 import { migrationErrorRelations } from "../models/migrationModels/migrationErrorRelations.js";
 import { migrationErrors } from "../models/migrationModels/migrationErrorTable.js";
@@ -51,6 +57,7 @@ import { migrationRunsRelations } from "../models/migrationV2Models/migrationRun
 import { migrationRuns } from "../models/migrationV2Models/migrationRunTable.js";
 import { migrations } from "../models/migrationV2Models/migrationTable.js";
 /* RELATIONS */
+import { agentRules } from "../models/orgModels/agent/agentRulesTable.js";
 import { organizationsRelations } from "../models/orgModels/orgRelations.js";
 import { organizations } from "../models/orgModels/orgTable.js";
 import { metadata } from "../models/otherModels/metadataTable.js";
@@ -113,6 +120,10 @@ export {
 	chatResults,
 	checkouts,
 	checkoutsRelations,
+	cmaMemory,
+	cmaSessions,
+	cmaVaults,
+	leafSchema,
 	customerEntitlements,
 	customerEntitlementsRelations,
 	customerPrices,
@@ -152,6 +163,7 @@ export {
 	oauthClient,
 	oauthConsent,
 	oauthRefreshToken,
+	agentRules,
 	// Tables
 	organizations,
 	passkey,

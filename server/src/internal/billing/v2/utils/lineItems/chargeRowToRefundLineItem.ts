@@ -2,6 +2,7 @@ import { generateKsuid } from "@autumn/ksuid";
 import type { BillingContext } from "@autumn/shared";
 import {
 	customerProductToEntity,
+	cusPriceToCusEnt,
 	type DbInvoiceLineItem,
 	type FullCusProduct,
 	type InvoiceLineItemDiscount,
@@ -15,12 +16,14 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 export const chargeRowToRefundLineItem = ({
 	chargeRow,
 	creditAmount,
+	effectiveNow,
 	customerProduct,
 	billingContext,
 	ctx,
 }: {
 	chargeRow: DbInvoiceLineItem;
 	creditAmount: number;
+	effectiveNow: number;
 	customerProduct: FullCusProduct;
 	billingContext: BillingContext;
 	ctx: AutumnContext;
@@ -50,6 +53,12 @@ export const chargeRowToRefundLineItem = ({
 	);
 	const price =
 		matchingCusPrice?.price ?? customerProduct.customer_prices[0]?.price;
+	const matchingCusEnt = matchingCusPrice
+		? cusPriceToCusEnt({
+				cusPrice: matchingCusPrice,
+				cusEnts: customerProduct.customer_entitlements,
+			})
+		: undefined;
 
 	if (!price) {
 		throw new Error(
@@ -60,17 +69,18 @@ export const chargeRowToRefundLineItem = ({
 	const context: LineItemContext = {
 		price,
 		product: customerProduct.product,
-		feature: undefined,
+		feature: matchingCusEnt?.entitlement.feature,
 		currency: orgToCurrency({ org: ctx.org }),
 		billingPeriod: { start: periodStart, end: periodEnd },
-		effectivePeriod: { start: billingContext.currentEpochMs, end: periodEnd },
+		effectivePeriod: { start: effectiveNow, end: periodEnd },
 		direction: "refund",
-		now: billingContext.currentEpochMs,
+		now: effectiveNow,
 		billingTiming: "in_advance",
 		discountable: false,
 		entity,
 		customerProduct,
 		customerPrice: matchingCusPrice,
+		customerEntitlement: matchingCusEnt,
 	};
 
 	const description = chargeRow.description

@@ -1,6 +1,7 @@
 import type {
 	AutumnBillingPlan,
 	BillingContext,
+	LineItem,
 	PreviewTax,
 } from "@autumn/shared";
 import {
@@ -8,31 +9,63 @@ import {
 	orgToCurrency,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
+import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 
-/**
- * Build-stage helper that computes a tax preview for an attach when the
- * caller passed an explicit Stripe `tax_rate_id`. Sibling to
- * `computeAttachTaxPreview` (which handles automatic_tax).
- *
- * Pure math: the Stripe TaxRate was fetched once at setup and lives on
- * `billingContext.stripeTaxRate`. Tax is applied to the same net
- * `chargeImmediately` subtotal the automatic-tax helper uses, so both
- * branches feed the formatter and total-assembly identically.
- *
- * Skip-conditions (return undefined):
- *  - no `taxRateId` on context
- *  - flow is `stripe_checkout` (Stripe Checkout computes tax itself, same
- *    reasoning as the automatic-tax helper)
- *  - no `chargeImmediately` line items
- *
- * On `netSubtotal <= 0` we short-circuit with `{ status: "complete", ...zeros }` —
- * tax does not apply to a credit invoice.
- *
- * On a missing/expanded `stripeTaxRate` (fetch failed at setup) we return
- * `{ status: "incomplete", ...zeros }` so the merchant sees an explicit
- * "tax not computed" signal rather than a silently missing field.
- */
+const lineItemToTaxableMinorUnits = ({
+	lineItem,
+	currency,
+}: {
+	lineItem: LineItem;
+	currency: string;
+}) => {
+	const amount = lineItem.context.discountable
+		? lineItem.amount
+		: (lineItem.amountAfterDiscounts ?? lineItem.amount);
+
+	let taxableMinorUnits = atmnToStripeAmount({ amount, currency });
+
+	if (!lineItem.context.discountable || taxableMinorUnits <= 0) {
+		return taxableMinorUnits;
+	}
+
+	for (const discount of lineItem.discounts ?? []) {
+		const discountMinorUnits = discount.percentOff
+			? new Decimal(taxableMinorUnits)
+					.times(discount.percentOff)
+					.div(100)
+					.round()
+					.toNumber()
+			: atmnToStripeAmount({ amount: discount.amountOff, currency });
+
+		taxableMinorUnits = Math.max(taxableMinorUnits - discountMinorUnits, 0);
+	}
+
+	return taxableMinorUnits;
+};
+
+const taxableMinorUnitsToTaxMinorUnits = ({
+	taxableMinorUnits,
+	percentage,
+	inclusive,
+}: {
+	taxableMinorUnits: number;
+	percentage: number;
+	inclusive: boolean;
+}) => {
+	return inclusive
+		? new Decimal(taxableMinorUnits)
+				.times(percentage)
+				.div(100 + percentage)
+				.round()
+				.toNumber()
+		: new Decimal(taxableMinorUnits)
+				.times(percentage)
+				.div(100)
+				.round()
+				.toNumber();
+};
+
 export const computeAttachTaxRateIdPreview = async ({
 	ctx,
 	billingContext,
@@ -43,7 +76,6 @@ export const computeAttachTaxRateIdPreview = async ({
 	autumnBillingPlan: AutumnBillingPlan;
 }): Promise<PreviewTax | undefined> => {
 	if (!billingContext.taxRateId) return undefined;
-	if (billingContext.checkoutMode === "stripe_checkout") return undefined;
 
 	const allLineItems = autumnBillingPlan.lineItems ?? [];
 	if (allLineItems.length === 0) return undefined;
@@ -51,14 +83,37 @@ export const computeAttachTaxRateIdPreview = async ({
 	const immediateLines = allLineItems.filter((line) => line.chargeImmediately);
 	if (immediateLines.length === 0) return undefined;
 
-	const netSubtotal = immediateLines.reduce(
-		(sum, line) => sum + (line.amountAfterDiscounts ?? line.amount),
+	const currency = orgToCurrency({ org: ctx.org });
+	const taxableMinorUnits = immediateLines.map((lineItem) =>
+		lineItemToTaxableMinorUnits({ lineItem, currency }),
+	);
+
+	return computeTaxRateIdPreviewFromTaxableMinorUnits({
+		ctx,
+		billingContext,
+		taxableMinorUnits,
+	});
+};
+
+/** Core tax-rate-id math over pre-computed taxable amounts (minor units). */
+export const computeTaxRateIdPreviewFromTaxableMinorUnits = ({
+	ctx,
+	billingContext,
+	taxableMinorUnits,
+}: {
+	ctx: AutumnContext;
+	billingContext: BillingContext;
+	taxableMinorUnits: number[];
+}): PreviewTax | undefined => {
+	if (!billingContext.taxRateId) return undefined;
+
+	const currency = orgToCurrency({ org: ctx.org });
+	const totalTaxableMinorUnits = taxableMinorUnits.reduce(
+		(sum, amount) => sum + amount,
 		0,
 	);
 
-	const currency = orgToCurrency({ org: ctx.org });
-
-	if (netSubtotal <= 0) {
+	if (totalTaxableMinorUnits <= 0) {
 		return {
 			total: 0,
 			amount_inclusive: 0,
@@ -82,25 +137,22 @@ export const computeAttachTaxRateIdPreview = async ({
 		};
 	}
 
-	// Round through Stripe minor-units to match how Stripe rounds tax on
-	// the real invoice (per-line rounding to the nearest cent).
-	const subtotalMinorUnits = atmnToStripeAmount({
-		amount: netSubtotal,
+	const taxMinorUnits = taxableMinorUnits.reduce(
+		(sum, amount) =>
+			sum +
+			taxableMinorUnitsToTaxMinorUnits({
+				taxableMinorUnits: amount,
+				percentage: taxRate.percentage,
+				inclusive: taxRate.inclusive,
+			}),
+		0,
+	);
+
+	const taxAmount = stripeToAtmnAmount({
+		amount: Math.max(taxMinorUnits, 0),
 		currency,
 	});
 
-	const taxMinorUnits = taxRate.inclusive
-		? Math.round(
-				(subtotalMinorUnits * taxRate.percentage) / (100 + taxRate.percentage),
-			)
-		: Math.round((subtotalMinorUnits * taxRate.percentage) / 100);
-
-	const taxAmount = stripeToAtmnAmount({ amount: taxMinorUnits, currency });
-
-	// For an inclusive rate the line amount already contains the tax, so
-	// Stripe charges only the line amount. `total` drives
-	// applyPreviewAdjustmentsToTotal and must stay 0 here to avoid inflating
-	// preview.total. `amount_inclusive` still reports the notional split.
 	return {
 		total: taxRate.inclusive ? 0 : taxAmount,
 		amount_inclusive: taxRate.inclusive ? taxAmount : 0,

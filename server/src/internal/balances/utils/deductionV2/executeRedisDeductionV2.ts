@@ -34,6 +34,7 @@ import type { UsageWindowUpdate } from "../types/usageWindowUpdate.js";
 import { applyDeductionUpdateToFullSubject } from "./applyDeductionUpdateToFullSubject.js";
 import { applyRolloverUpdatesToFullSubject } from "./applyRolloverUpdatesToFullSubject.js";
 import { applyUsageWindowUpdatesToFullSubject } from "./applyUsageWindowUpdatesToFullSubject.js";
+import { buildUnlimitedPlanMutationLog } from "./buildUnlimitedPlanMutationLog.js";
 import { logDeductionUpdatesV2 } from "./logDeductionUpdatesV2.js";
 import { mutationLogsToFeaturesV2 } from "./mutationLogsToFeaturesV2.js";
 import { normalizeDeductionSyncStateV2 } from "./normalizeDeductionSyncStateV2.js";
@@ -159,24 +160,14 @@ export const executeRedisDeductionV2 = async ({
 					redisInstance: redisInstance ?? ctx.redisV2,
 				});
 			}
-			// Attribute the event to the unlimited plan even though we skip
-			// the actual deduction. Without this, resolveInternalProductIdForEvent
-			// gets an empty mutation log and the event lands in "No plan".
-			if (unlimitedCusEnt) {
-				const syntheticDelta = -(toDeduct ?? deduction.deduction ?? 1);
-				if (syntheticDelta !== 0) {
-					allMutationLogs.push({
-						target_type: "customer_entitlement",
-						customer_entitlement_id: unlimitedCusEnt.id,
-						rollover_id: null,
-						entity_id: entityId ?? null,
-						credit_cost: 1,
-						balance_delta: syntheticDelta,
-						adjustment_delta: 0,
-						usage_delta: 0,
-						value_delta: 0,
-					});
-				}
+			const unlimitedPlanLog = buildUnlimitedPlanMutationLog({
+				unlimitedCusEnt,
+				toDeduct,
+				fallbackDeduction: deduction.deduction,
+				entityId,
+			});
+			if (unlimitedPlanLog) {
+				allMutationLogs.push(unlimitedPlanLog);
 			}
 			continue;
 		}

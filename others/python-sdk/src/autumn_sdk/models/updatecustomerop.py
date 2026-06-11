@@ -46,7 +46,7 @@ class UpdateCustomerGlobals(BaseModel):
         return m
 
 
-UpdateCustomerIntervalRequest = Literal[
+UpdateCustomerIntervalRequestBody = Literal[
     "hour",
     "day",
     "week",
@@ -58,7 +58,7 @@ r"""The time interval for the purchase limit window."""
 class UpdateCustomerPurchaseLimitRequestTypedDict(TypedDict):
     r"""Optional rate limit to cap how often auto top-ups occur."""
 
-    interval: UpdateCustomerIntervalRequest
+    interval: UpdateCustomerIntervalRequestBody
     r"""The time interval for the purchase limit window."""
     limit: float
     r"""Maximum number of auto top-ups allowed within the interval."""
@@ -69,7 +69,7 @@ class UpdateCustomerPurchaseLimitRequestTypedDict(TypedDict):
 class UpdateCustomerPurchaseLimitRequest(BaseModel):
     r"""Optional rate limit to cap how often auto top-ups occur."""
 
-    interval: UpdateCustomerIntervalRequest
+    interval: UpdateCustomerIntervalRequestBody
     r"""The time interval for the purchase limit window."""
 
     limit: float
@@ -994,10 +994,11 @@ UpdateCustomerType = Union[
         "boolean",
         "metered",
         "credit_system",
+        "ai_credit_system",
     ],
     UnrecognizedStr,
 ]
-r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
 
 class UpdateCustomerCreditSchemaTypedDict(TypedDict):
@@ -1013,6 +1014,44 @@ class UpdateCustomerCreditSchema(BaseModel):
 
     credit_cost: float
     r"""Credits consumed per unit of the metered feature."""
+
+
+class UpdateCustomerModelMarkupsTypedDict(TypedDict):
+    markup: NotRequired[float]
+    input_cost: NotRequired[float]
+    output_cost: NotRequired[float]
+
+
+class UpdateCustomerModelMarkups(BaseModel):
+    markup: Optional[float] = None
+
+    input_cost: Optional[float] = None
+
+    output_cost: Optional[float] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["markup", "input_cost", "output_cost"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class UpdateCustomerProviderMarkupsTypedDict(TypedDict):
+    markup: float
+
+
+class UpdateCustomerProviderMarkups(BaseModel):
+    markup: float
 
 
 class UpdateCustomerDisplayTypedDict(TypedDict):
@@ -1067,7 +1106,7 @@ class UpdateCustomerFeatureTypedDict(TypedDict):
     name: str
     r"""Human-readable name displayed in the dashboard and billing UI."""
     type: UpdateCustomerType
-    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
     consumable: bool
     r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
     archived: bool
@@ -1076,6 +1115,14 @@ class UpdateCustomerFeatureTypedDict(TypedDict):
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
     credit_schema: NotRequired[List[UpdateCustomerCreditSchemaTypedDict]]
     r"""For credit_system features: maps metered features to their credit costs."""
+    model_markups: NotRequired[Nullable[Dict[str, UpdateCustomerModelMarkupsTypedDict]]]
+    r"""Per-model markup overrides for AI credit systems."""
+    default_markup: NotRequired[float]
+    r"""Default percentage markup for AI credit systems. Use -100 to make usage free."""
+    provider_markups: NotRequired[
+        Nullable[Dict[str, UpdateCustomerProviderMarkupsTypedDict]]
+    ]
+    r"""Per-provider default markup percentages for AI credit systems."""
     display: NotRequired[UpdateCustomerDisplayTypedDict]
     r"""Display names for the feature in billing UI and customer-facing components."""
 
@@ -1090,7 +1137,7 @@ class UpdateCustomerFeature(BaseModel):
     r"""Human-readable name displayed in the dashboard and billing UI."""
 
     type: UpdateCustomerType
-    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
     consumable: bool
     r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
@@ -1104,21 +1151,48 @@ class UpdateCustomerFeature(BaseModel):
     credit_schema: Optional[List[UpdateCustomerCreditSchema]] = None
     r"""For credit_system features: maps metered features to their credit costs."""
 
+    model_markups: OptionalNullable[Dict[str, UpdateCustomerModelMarkups]] = UNSET
+    r"""Per-model markup overrides for AI credit systems."""
+
+    default_markup: Optional[float] = None
+    r"""Default percentage markup for AI credit systems. Use -100 to make usage free."""
+
+    provider_markups: OptionalNullable[Dict[str, UpdateCustomerProviderMarkups]] = UNSET
+    r"""Per-provider default markup percentages for AI credit systems."""
+
     display: Optional[UpdateCustomerDisplay] = None
     r"""Display names for the feature in billing UI and customer-facing components."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["event_names", "credit_schema", "display"])
+        optional_fields = set(
+            [
+                "event_names",
+                "credit_schema",
+                "model_markups",
+                "default_markup",
+                "provider_markups",
+                "display",
+            ]
+        )
+        nullable_fields = set(["model_markups", "provider_markups"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m

@@ -153,6 +153,32 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/balances.track_tokens"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.trackTokens({
+                customerId: "cus_123",
+                featureId: "ai_credits",
+                modelId: "anthropic/claude-sonnet-4-20250514",
+                inputTokens: 1000,
+                outputTokens: 500,
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/balances.update"]["post"]
     update:
       x-codeSamples:

@@ -1,6 +1,10 @@
 import { randomUUID } from "node:crypto";
-import { AppEnv, apiKeys, chatInstallations } from "@autumn/shared";
-import { createChatInstallState } from "@autumn/shared/utils/chatState";
+import {
+	AppEnv,
+	apiKeys,
+	chatInstallations,
+	createChatInstallState,
+} from "@autumn/shared";
 import { addMinutes } from "date-fns";
 import { and, eq } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";

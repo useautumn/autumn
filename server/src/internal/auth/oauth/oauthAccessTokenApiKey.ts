@@ -127,7 +127,7 @@ export const getExternalOAuthApiKeyForToken = async ({
 		userId: string;
 		referenceId: string;
 	};
-	requestedScopes: ScopeString[] | null;
+	requestedScopes: string[] | null;
 }) => {
 	const isAtmnClient = await isAtmnOAuthClientId({
 		db,
@@ -151,7 +151,7 @@ export const getExternalOAuthApiKeyForToken = async ({
 	}
 
 	const env = consent.env ?? AppEnv.Sandbox;
-	const scopes = requestedScopes ?? (tokenRecord.scopes as ScopeString[]);
+	const scopes = requestedScopes ?? tokenRecord.scopes;
 	const apiKey = await rotateOAuthConsentApiKey({
 		db,
 		consent,

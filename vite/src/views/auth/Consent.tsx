@@ -2,6 +2,8 @@ import {
 	AppEnv,
 	type GroupedPermission,
 	groupAndFormatScopes,
+	isScopeSubset,
+	LEAF_OAUTH_SCOPES,
 } from "@autumn/shared";
 import { Check, Clock, ExternalLink, Shield, X } from "lucide-react";
 import { useEffect, useId, useState } from "react";
@@ -30,7 +32,12 @@ interface ClientInfo {
 	logo_uri?: string;
 	policy_uri?: string;
 	tos_uri?: string;
+	is_internal_mcp?: boolean;
 }
+
+type SessionWithScopes = {
+	scopes?: string[];
+};
 
 // Joke scopes - one is randomly selected to show at the end
 const JOKE_SCOPES = [
@@ -136,6 +143,23 @@ const openConsentRedirect = ({
 	}
 };
 
+const leafScopeSet = new Set<string>(LEAF_OAUTH_SCOPES);
+
+const getGrantableMcpScopes = ({
+	requestedScopes,
+	sessionScopes,
+}: {
+	requestedScopes: string[];
+	sessionScopes: string[];
+}) => {
+	const requested =
+		requestedScopes.length > 0 ? requestedScopes : [...LEAF_OAUTH_SCOPES];
+
+	return [...new Set(requested)]
+		.filter((scope) => leafScopeSet.has(scope))
+		.filter((scope) => isScopeSubset([scope], sessionScopes));
+};
+
 export const Consent = () => {
 	const [searchParams] = useSearchParams();
 	const { data: session } = useSession();
@@ -159,7 +183,10 @@ export const Consent = () => {
 
 	const clientId = searchParams.get("client_id");
 	const redirectUri = searchParams.get("redirect_uri");
-	const requestedScopes = searchParams.get("scope")?.split(" ") || [];
+	const requestedScopes =
+		searchParams.get("scope")?.split(/\s+/).filter(Boolean) || [];
+	const sessionScopes =
+		(session as SessionWithScopes | null | undefined)?.scopes ?? [];
 
 	// Get the current org (active or first available)
 	const currentOrg = activeOrganization || orgs?.[0];
@@ -185,6 +212,7 @@ export const Consent = () => {
 				return;
 			}
 
+			let isInternalMcp = false;
 			try {
 				// Fetch client name from our own endpoint
 				const clientInfoUrl = new URL(
@@ -198,10 +226,12 @@ export const Consent = () => {
 
 				if (response.ok) {
 					const data = await response.json();
+					isInternalMcp = data.is_internal_mcp === true;
 					setClientInfo({
 						client_id: clientId,
 						client_name: data.name || "Unknown Application",
 						is_atmn: data.is_atmn === true,
+						is_internal_mcp: isInternalMcp,
 					});
 				} else {
 					console.error("Error fetching client info:", response.status);
@@ -210,6 +240,7 @@ export const Consent = () => {
 						client_id: clientId,
 						client_name: "External Application",
 						is_atmn: false,
+						is_internal_mcp: false,
 					});
 				}
 			} catch (error) {
@@ -219,24 +250,41 @@ export const Consent = () => {
 					client_id: clientId,
 					client_name: "External Application",
 					is_atmn: false,
+					is_internal_mcp: false,
 				});
 			}
 
 			// Parse and group scopes by resource
-			const grouped = groupAndFormatScopes(requestedScopes);
+			const displayScopes =
+				isInternalMcp === true
+					? getGrantableMcpScopes({ requestedScopes, sessionScopes })
+					: requestedScopes;
+			const grouped = groupAndFormatScopes(displayScopes);
 			setGroupedPermissions(grouped);
 			setIsLoading(false);
 		}
 
 		fetchClientInfo();
-	}, [clientId, redirectUri, requestedScopes.join(",")]);
+	}, [
+		clientId,
+		redirectUri,
+		requestedScopes.join(","),
+		sessionScopes.join(","),
+	]);
 
 	const handleAuthorize = async () => {
+		if (!clientInfo) {
+			toast.error("Authorization failed");
+			return;
+		}
+
 		setIsSubmitting(true);
 		setPendingRedirectUrl(null);
 		try {
-			// Use the original requested scopes
-			const grantedScopes = requestedScopes.join(" ");
+			const grantedScopes =
+				clientInfo.is_internal_mcp === true
+					? getGrantableMcpScopes({ requestedScopes, sessionScopes }).join(" ")
+					: requestedScopes.join(" ");
 
 			const { data, error } = await authClient.oauth2.consent({
 				accept: true,

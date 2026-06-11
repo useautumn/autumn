@@ -105,12 +105,12 @@ export default async function BlogPostPage({ params }: { params: BlogParams }) {
 				</header>
 
 				{post.image && (
-					<div className="relative w-full aspect-[2/1] overflow-hidden border border-[#292929] mb-12">
+					<div className="relative w-full aspect-[2/1] overflow-hidden border border-[#292929] bg-[#080808] mb-12">
 						<Image
 							src={post.image}
 							alt={post.title}
 							fill
-							className="object-cover"
+							className="object-contain"
 							priority
 							sizes="(max-width: 768px) 100vw, 720px"
 						/>

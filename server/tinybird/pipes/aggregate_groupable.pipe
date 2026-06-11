@@ -41,7 +41,7 @@ SQL >
         sum(total_value) as total_value
     FROM
         {% if use_no_props %}
-        events_hourly_no_properties_two_mv
+        events_customer_hourly_mv
         {% elif use_property_rollup %}
         events_property_mv
         {% else %}

@@ -83,6 +83,17 @@ export const AutumnBillingPlanSchema = z.object({
 		})
 		.optional(),
 
+	schedulePhaseCustomerProductReplacements: z
+		.array(
+			z.object({
+				oldCustomerProductId: z.string(),
+				newCustomerProductId: z.string(),
+				internalCustomerId: z.string(),
+				internalEntityId: z.string().nullish(),
+			}),
+		)
+		.optional(),
+
 	deleteCustomerProduct: FullCusProductSchema.optional(), // Scheduled product to delete (e.g., when updating while canceling)
 	deleteCustomerProducts: z.array(FullCusProductSchema).optional(),
 

@@ -1,8 +1,7 @@
 import {
 	CreateFeatureSchema,
-	type CreditSchemaItem,
-	FeatureType,
 	FeatureUsageType,
+	isAnyCreditSystem,
 } from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
@@ -23,6 +22,7 @@ import { NewFeatureBehaviour } from "../../plan/components/new-feature/NewFeatur
 import { NewFeatureDetails } from "../../plan/components/new-feature/NewFeatureDetails";
 import { NewFeatureType } from "../../plan/components/new-feature/NewFeatureType";
 import { validateCreditSystem } from "../credit-systems/utils/validateCreditSystem";
+import { buildFeatureMarkupParams } from "../utils/buildFeatureMutationParams";
 import { getDefaultFeature } from "../utils/defaultFeature";
 
 function CreateFeatureSheet({
@@ -52,7 +52,7 @@ function CreateFeatureSheet({
 
 	const handleCreateFeature = async () => {
 		// Validate credit system specific fields first
-		if (feature.type === FeatureType.CreditSystem) {
+		if (isAnyCreditSystem(feature.type)) {
 			const validationError = validateCreditSystem(feature);
 			if (validationError) {
 				toast.error(validationError);
@@ -77,12 +77,13 @@ function CreateFeatureSheet({
 						id: feature.id,
 						type: feature.type,
 						consumable: feature.config?.usage_type === FeatureUsageType.Single,
-						credit_schema: feature.config?.schema?.map(
-							(x: CreditSchemaItem) => ({
-								metered_feature_id: x.metered_feature_id,
-								credit_cost: x.credit_amount,
-							}),
-						),
+						...buildFeatureMarkupParams({
+							type: feature.type,
+							modelMarkups: feature.model_markups ?? undefined,
+							defaultMarkup: feature.config?.default_markup,
+							providerMarkups: feature.config?.provider_markups,
+							schema: feature.config?.schema,
+						}),
 						event_names: feature.event_names,
 					},
 				);
@@ -119,13 +120,6 @@ function CreateFeatureSheet({
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			{/* {!isControlled && (
-				<SheetTrigger asChild>
-					<Button variant="add" className="w-full">
-						Feature
-					</Button>
-				</SheetTrigger>
-			)} */}
 			<SheetContent className="flex flex-col overflow-hidden">
 				<SheetHeader
 					title="Create a feature"

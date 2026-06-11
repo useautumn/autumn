@@ -1,3 +1,4 @@
+import { shed503OnTransientError } from "@/db/shed503OnTransientError.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/index.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
@@ -19,11 +20,11 @@ export const getApiCustomerByRollout = async ({
 	withAutumnId?: boolean;
 }) => {
 	if (isFullSubjectRolloutEnabled({ ctx })) {
-		const fullSubject = await getOrSetCachedFullSubject({
+		const fullSubject = await shed503OnTransientError({
 			ctx,
-			customerId,
-			entityId,
-			source,
+			source: "get_customer",
+			run: () =>
+				getOrSetCachedFullSubject({ ctx, customerId, entityId, source }),
 		});
 
 		return getApiCustomerV2({

@@ -67,30 +67,6 @@ function getEnvVariable(filePath: string, key: string): string | null {
 	return null;
 }
 
-function getPackageDependencyVersion({
-	projectRoot,
-	packageName,
-}: {
-	projectRoot: string;
-	packageName: string;
-}): string {
-	const packageJson = JSON.parse(
-		readFileSync(join(projectRoot, "package.json"), "utf-8"),
-	) as {
-		dependencies?: Record<string, string>;
-		devDependencies?: Record<string, string>;
-	};
-	const version =
-		packageJson.dependencies?.[packageName] ??
-		packageJson.devDependencies?.[packageName];
-
-	if (!version) {
-		throw new Error(`Missing ${packageName} in package.json`);
-	}
-
-	return version;
-}
-
 function killPorts({ ports }: { ports: number[] }) {
 	if (process.platform === "win32") {
 		return;
@@ -180,10 +156,6 @@ async function startDev() {
 
 		// Use cmd on Windows, sh on Unix
 		const isWindows = process.platform === "win32";
-		const triggerDevVersion = getPackageDependencyVersion({
-			projectRoot,
-			packageName: "trigger.dev",
-		});
 
 		let shellArgs: string[];
 		if (serverOnly) {
@@ -227,11 +199,10 @@ async function startDev() {
 			if (worktreeNum === 1) {
 				names.push("trigger");
 				colors.push("cyan");
-				cmds.push(
-					isWindows
-						? `"bunx trigger.dev@${triggerDevVersion} dev"`
-						: `"bunx trigger.dev@${triggerDevVersion} dev"`,
-				);
+				// Use the locally-installed (pinned) trigger.dev CLI. Passing
+				// `@<version>` makes bunx fetch a fresh copy into a temp dir,
+				// which can be broken/incomplete (ERR_MODULE_NOT_FOUND).
+				cmds.push(isWindows ? `"bunx trigger.dev dev"` : `"bunx trigger.dev dev"`);
 			}
 
 			names.push("vite", "checkout");
@@ -297,8 +268,12 @@ async function startDev() {
 				CHECKOUT_PORT: CHECKOUT_PORT.toString(),
 				CHAT_PORT: CHAT_PORT.toString(),
 				MCP_DEBUG_PENDING_ACTIONS: process.env.MCP_DEBUG_PENDING_ACTIONS ?? "1",
+				// CMA runs in Anthropic's cloud and can't reach localhost — prefer the
+				// public NGROK_URL (proxied to leaf's /mcp) so Slack → CMA works locally.
 				MCP_SERVER_URL:
-					process.env.MCP_SERVER_URL ?? `http://localhost:${CHAT_PORT}`,
+					process.env.MCP_SERVER_URL ??
+					process.env.NGROK_URL ??
+					`http://localhost:${CHAT_PORT}`,
 				CHAT_SERVER_URL:
 					process.env.CHAT_SERVER_URL ?? `http://localhost:${CHAT_PORT}`,
 				MCP_RESOURCE_URLS:

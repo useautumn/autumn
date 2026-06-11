@@ -22,6 +22,7 @@ supabase.sh
 tests/
 !server/tests
 !packages/mcp/tests
+!packages/ai-sdk/tests
 !apps/leaf/tests
 !vite/tests
 .secrets
@@ -154,3 +155,12 @@ server/.turbo
 notes.txt
 server/experiments/results/*
 !server/experiments/results/.gitkeep
+
+# Leaf contract fixtures are synced from private S3.
+apps/leaf/contracts/
+
+# Leaf harness (Claude Code) per-thread workspaces and config dirs.
+apps/leaf/.harness/
+
+# Built sandbox runner bundle (produced by sandbox/buildRunner.ts).
+apps/leaf/src/harness/claudeCode/runner/runner.mjs

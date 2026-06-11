@@ -183,9 +183,9 @@ export type BillingUpdateItemPrice = {
    */
   billingMethod: BillingUpdateItemBillingMethod;
   /**
-   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
    */
-  maxPurchase?: number | undefined;
+  maxPurchase?: number | null | undefined;
 };
 
 /**
@@ -418,9 +418,9 @@ export type BillingUpdateAddItemPrice = {
    */
   billingMethod: BillingUpdateAddItemBillingMethod;
   /**
-   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
    */
-  maxPurchase?: number | undefined;
+  maxPurchase?: number | null | undefined;
 };
 
 /**
@@ -554,10 +554,22 @@ export type BillingUpdateRemoveItemBillingMethod = ClosedEnum<
   typeof BillingUpdateRemoveItemBillingMethod
 >;
 
-/**
- * Match items with this interval.
- */
-export const BillingUpdateRemoveItemInterval = {
+export const BillingUpdateIntervalRemoveItemEnum2 = {
+  OneOff: "one_off",
+  Minute: "minute",
+  Hour: "hour",
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Quarter: "quarter",
+  SemiAnnual: "semi_annual",
+  Year: "year",
+} as const;
+export type BillingUpdateIntervalRemoveItemEnum2 = ClosedEnum<
+  typeof BillingUpdateIntervalRemoveItemEnum2
+>;
+
+export const BillingUpdateIntervalRemoveItemEnum1 = {
   OneOff: "one_off",
   Week: "week",
   Month: "month",
@@ -565,12 +577,16 @@ export const BillingUpdateRemoveItemInterval = {
   SemiAnnual: "semi_annual",
   Year: "year",
 } as const;
-/**
- * Match items with this interval.
- */
-export type BillingUpdateRemoveItemInterval = ClosedEnum<
-  typeof BillingUpdateRemoveItemInterval
+export type BillingUpdateIntervalRemoveItemEnum1 = ClosedEnum<
+  typeof BillingUpdateIntervalRemoveItemEnum1
 >;
+
+/**
+ * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
+ */
+export type BillingUpdateIntervalUnion =
+  | BillingUpdateIntervalRemoveItemEnum1
+  | BillingUpdateIntervalRemoveItemEnum2;
 
 /**
  * Filter for matching plan items. All provided fields must match (AND).
@@ -585,9 +601,16 @@ export type BillingUpdatePlanItemFilter = {
    */
   billingMethod?: BillingUpdateRemoveItemBillingMethod | undefined;
   /**
-   * Match items with this interval.
+   * Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
    */
-  interval?: BillingUpdateRemoveItemInterval | undefined;
+  interval?:
+    | BillingUpdateIntervalRemoveItemEnum1
+    | BillingUpdateIntervalRemoveItemEnum2
+    | undefined;
+  /**
+   * Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
+   */
+  intervalCount?: number | undefined;
 };
 
 /**
@@ -648,7 +671,7 @@ export type BillingUpdateCustomize = {
    */
   price?: BillingUpdateBasePrice | null | undefined;
   /**
-   * Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / update_items.
+   * Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items.
    */
   items?: Array<BillingUpdateItemPlanItem> | undefined;
   /**
@@ -1080,7 +1103,7 @@ export type BillingUpdateItemPrice$Outbound = {
   interval_count: number;
   billing_units: number;
   billing_method: string;
-  max_purchase?: number | undefined;
+  max_purchase?: number | null | undefined;
 };
 
 /** @internal */
@@ -1098,7 +1121,7 @@ export const BillingUpdateItemPrice$outboundSchema: z.ZodMiniType<
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
     billingMethod: BillingUpdateItemBillingMethod$outboundSchema,
-    maxPurchase: z.optional(z.number()),
+    maxPurchase: z.optional(z.nullable(z.number())),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1353,7 +1376,7 @@ export type BillingUpdateAddItemPrice$Outbound = {
   interval_count: number;
   billing_units: number;
   billing_method: string;
-  max_purchase?: number | undefined;
+  max_purchase?: number | null | undefined;
 };
 
 /** @internal */
@@ -1371,7 +1394,7 @@ export const BillingUpdateAddItemPrice$outboundSchema: z.ZodMiniType<
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
     billingMethod: BillingUpdateAddItemBillingMethod$outboundSchema,
-    maxPurchase: z.optional(z.number()),
+    maxPurchase: z.optional(z.nullable(z.number())),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1531,15 +1554,41 @@ export const BillingUpdateRemoveItemBillingMethod$outboundSchema: z.ZodMiniEnum<
 > = z.enum(BillingUpdateRemoveItemBillingMethod);
 
 /** @internal */
-export const BillingUpdateRemoveItemInterval$outboundSchema: z.ZodMiniEnum<
-  typeof BillingUpdateRemoveItemInterval
-> = z.enum(BillingUpdateRemoveItemInterval);
+export const BillingUpdateIntervalRemoveItemEnum2$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateIntervalRemoveItemEnum2
+> = z.enum(BillingUpdateIntervalRemoveItemEnum2);
+
+/** @internal */
+export const BillingUpdateIntervalRemoveItemEnum1$outboundSchema: z.ZodMiniEnum<
+  typeof BillingUpdateIntervalRemoveItemEnum1
+> = z.enum(BillingUpdateIntervalRemoveItemEnum1);
+
+/** @internal */
+export type BillingUpdateIntervalUnion$Outbound = string | string;
+
+/** @internal */
+export const BillingUpdateIntervalUnion$outboundSchema: z.ZodMiniType<
+  BillingUpdateIntervalUnion$Outbound,
+  BillingUpdateIntervalUnion
+> = smartUnion([
+  BillingUpdateIntervalRemoveItemEnum1$outboundSchema,
+  BillingUpdateIntervalRemoveItemEnum2$outboundSchema,
+]);
+
+export function billingUpdateIntervalUnionToJSON(
+  billingUpdateIntervalUnion: BillingUpdateIntervalUnion,
+): string {
+  return JSON.stringify(
+    BillingUpdateIntervalUnion$outboundSchema.parse(billingUpdateIntervalUnion),
+  );
+}
 
 /** @internal */
 export type BillingUpdatePlanItemFilter$Outbound = {
   feature_id?: string | undefined;
   billing_method?: string | undefined;
-  interval?: string | undefined;
+  interval?: string | string | undefined;
+  interval_count?: number | undefined;
 };
 
 /** @internal */
@@ -1552,12 +1601,19 @@ export const BillingUpdatePlanItemFilter$outboundSchema: z.ZodMiniType<
     billingMethod: z.optional(
       BillingUpdateRemoveItemBillingMethod$outboundSchema,
     ),
-    interval: z.optional(BillingUpdateRemoveItemInterval$outboundSchema),
+    interval: z.optional(
+      smartUnion([
+        BillingUpdateIntervalRemoveItemEnum1$outboundSchema,
+        BillingUpdateIntervalRemoveItemEnum2$outboundSchema,
+      ]),
+    ),
+    intervalCount: z.optional(z.int()),
   }),
   z.transform((v) => {
     return remap$(v, {
       featureId: "feature_id",
       billingMethod: "billing_method",
+      intervalCount: "interval_count",
     });
   }),
 );
