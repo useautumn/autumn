@@ -1,12 +1,12 @@
 #!/usr/bin/env bun
 import { AppEnv, organizations } from "@autumn/shared";
-import { eq } from "drizzle-orm";
 import { initDrizzle } from "@server/db/initDrizzle.js";
 import { createStripeCli } from "@server/external/connect/createStripeCli.js";
 import { initMasterStripe } from "@server/external/connect/initStripeCli.js";
 import { OrgService } from "@server/internal/orgs/OrgService.js";
 import { clearOrgCache } from "@server/internal/orgs/orgUtils/clearOrgCache.js";
 import { loadLocalEnv } from "@server/utils/envUtils.js";
+import { eq } from "drizzle-orm";
 
 loadLocalEnv();
 
@@ -118,8 +118,12 @@ try {
 		);
 	}
 
-	const stripe = initMasterStripe({ env, accountId, skipInstrumentation: true });
-	await stripe.accounts.retrieve();
+	const stripe = initMasterStripe({
+		env,
+		accountId,
+		skipInstrumentation: true,
+	});
+	await stripe.accounts.retrieve(null);
 
 	await OrgService.updateStripeConnect({
 		db,
@@ -148,7 +152,7 @@ try {
 		env,
 		skipInstrumentation: true,
 	});
-	const resolvedAccount = await resolvedStripe.accounts.retrieve();
+	const resolvedAccount = await resolvedStripe.accounts.retrieve(null);
 
 	console.log(
 		JSON.stringify(

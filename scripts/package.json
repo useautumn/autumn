@@ -10,14 +10,15 @@
 		"ts": "bunx tsgo --build --noEmit"
 	},
 	"dependencies": {
-		"@aws-sdk/client-s3": "^3.1017.0",
 		"@autumn/shared": "workspace:*",
+		"@aws-sdk/client-s3": "^3.1017.0",
+		"@tinybirdco/sdk": "^0.0.76",
 		"chalk": "^5.3.0",
 		"dotenv": "^16.5.0",
 		"drizzle-orm": "catalog:",
 		"ink": "^6.6.0",
-		"ioredis": "^5.10.0",
 		"inquirer": "^12.6.3",
+		"ioredis": "^5.10.0",
 		"p-limit": "^7.2.0",
 		"pg": "8.20.0",
 		"react": "^19.2.1"
