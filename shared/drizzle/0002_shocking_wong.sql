@@ -1,1 +1,0 @@
-ALTER TABLE "features" ADD COLUMN "model_markups" jsonb DEFAULT null;

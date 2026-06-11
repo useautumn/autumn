@@ -4,6 +4,8 @@ import {
 	CustomerExpand,
 	type CustomerLegacyData,
 	type FullSubject,
+	fullSubjectToApiUsageLimits,
+	orgToInStatuses,
 	scopeExpandForCtx,
 } from "@autumn/shared";
 import { z } from "zod/v4";
@@ -46,6 +48,11 @@ export const getApiCustomerBaseV2 = async ({
 	});
 
 	const customer = fullSubject.customer;
+	const usageLimits = fullSubjectToApiUsageLimits({
+		fullSubject,
+		features: ctx.features,
+		inStatuses: orgToInStatuses({ org: ctx.org }),
+	});
 
 	const apiCustomer = ApiCustomerV5Schema.extend({
 		autumn_id: z.string().optional(),
@@ -67,6 +74,7 @@ export const getApiCustomerBaseV2 = async ({
 		billing_controls: {
 			auto_topups: customer.auto_topups ?? undefined,
 			spend_limits: customer.spend_limits ?? undefined,
+			usage_limits: usageLimits,
 			usage_alerts: customer.usage_alerts ?? undefined,
 			overage_allowed: customer.overage_allowed ?? undefined,
 		},

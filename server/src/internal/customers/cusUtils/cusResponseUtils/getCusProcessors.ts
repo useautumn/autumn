@@ -2,8 +2,8 @@ import {
 	type ApiCusProcessors,
 	type Customer,
 	customerProductHasActiveStatus,
-	filterCustomerProductsByProcessorType,
 	type FullCusProduct,
+	filterCustomerProductsByProcessorType,
 	ProcessorType,
 } from "@autumn/shared";
 

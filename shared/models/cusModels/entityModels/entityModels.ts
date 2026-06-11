@@ -4,6 +4,7 @@ import {
 	DbOverageAllowedSchema,
 	DbSpendLimitSchema,
 	DbUsageAlertSchema,
+	DbUsageLimitSchema,
 } from "../billingControls/customerBillingControls.js";
 
 export const EntitySchema = z.object({
@@ -18,6 +19,7 @@ export const EntitySchema = z.object({
 	feature_id: z.string(),
 	internal_feature_id: z.string(),
 	spend_limits: z.array(DbSpendLimitSchema).nullish(),
+	usage_limits: z.array(DbUsageLimitSchema).nullish(),
 	usage_alerts: z.array(DbUsageAlertSchema).nullish(),
 	overage_allowed: z.array(DbOverageAllowedSchema).nullish(),
 });

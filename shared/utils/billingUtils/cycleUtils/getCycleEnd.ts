@@ -51,24 +51,18 @@ export const getCycleEnd = ({
 	const { add, difference } = intervalFunctions;
 
 	const intervalsPassed = difference(nowDate, anchorDate);
+	let cyclesPassed = Math.floor(intervalsPassed / intervalCount);
 
-	// How many complete cycles have passed?
-	// e.g., if intervalCount=2 and 5 months passed, that's 2 complete cycles
-	const cyclesPassed = Math.floor(intervalsPassed / intervalCount);
+	// Same clamped-boundary correction as getCycleStart: land on the cycle that
+	// brackets `now`, then the end is the next boundary after it (always > now).
+	while (add(anchorDate, (cyclesPassed + 1) * intervalCount).getTime() <= now) {
+		cyclesPassed += 1;
+	}
+	while (add(anchorDate, cyclesPassed * intervalCount).getTime() > now) {
+		cyclesPassed -= 1;
+	}
 
-	// Next cycle end is (cyclesPassed + 1) * intervalCount months from anchor
-	const nextCycleEnd = add(anchorDate, (cyclesPassed + 1) * intervalCount);
-
-	/**
-	 * Handling edge case with date-fns anchor in the future
-	 * Example: anchorDate: 28 Feb, nowDate: 15 Jan -> Next cycle end will be 28 Feb
-	 * This is because of how differenceInMonths rounds down
-	 * (28 Feb will see cycles passes as -1, so next cycle will be anchorDate + (-1 + 1) months)
-	 */
-
-	const candidate = add(anchorDate, cyclesPassed * intervalCount);
-	const result =
-		candidate.getTime() > now ? candidate.getTime() : nextCycleEnd.getTime();
+	const result = add(anchorDate, (cyclesPassed + 1) * intervalCount).getTime();
 
 	// If floor is provided and result is before floor, return floor
 	if (floor !== undefined && result < floor) {

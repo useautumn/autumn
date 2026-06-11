@@ -1,5 +1,5 @@
 import { z } from "zod/v4";
-import { ApiEntityBillingControlsSchema } from "../billingControls/entityBillingControls.js";
+import { ApiEntityBillingControlsParamsSchema } from "../billingControls/entityBillingControls.js";
 
 export const EntityDataSchema = z
 	.object({
@@ -9,7 +9,7 @@ export const EntityDataSchema = z
 		name: z.string().optional().meta({
 			description: "Name of the entity",
 		}),
-		billing_controls: ApiEntityBillingControlsSchema.optional().meta({
+		billing_controls: ApiEntityBillingControlsParamsSchema.optional().meta({
 			description: "Billing controls for the entity.",
 		}),
 	})

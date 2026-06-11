@@ -1,1 +1,0 @@
--- ALTER TABLE "migrations" ADD COLUMN "archived" boolean DEFAULT false NOT NULL;

@@ -92,6 +92,7 @@ declare module "ioredis" {
 			balanceKey: string,
 			paramsJson: string,
 		): Promise<string>;
+		rollUsageWindows(balanceKey: string, paramsJson: string): Promise<string>;
 		deleteFullCustomerCache(
 			cacheKey: string,
 			testGuardKey: string,
