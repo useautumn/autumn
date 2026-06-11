@@ -141,6 +141,9 @@ export const syncItemV4 = async ({
 		});
 
 		if (outcome.kind !== "ok") {
+			ctx.logger.warn(
+				`[SYNC V4] (${customerId}) Cache miss for feature ${featureId}; skipping this feature only.`,
+			);
 			logSyncItem({
 				ctx,
 				result: {
