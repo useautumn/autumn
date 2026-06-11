@@ -1,3 +1,4 @@
+import Anthropic from "@anthropic-ai/sdk";
 import type {
 	EvalExpectation,
 	EvalExpected,
@@ -30,10 +31,15 @@ export type EvalScoreArgs = {
 	output: EvalOutput;
 };
 
-export type EvalScorer = (args: EvalScoreArgs) => {
+export type EvalScore = {
+	metadata?: Record<string, unknown>;
 	name: string;
 	score: number;
 };
+
+export type EvalScorer = (
+	args: EvalScoreArgs,
+) => EvalScore | Promise<EvalScore>;
 
 const namedScorer = ({
 	name,
@@ -147,6 +153,11 @@ const getExpectedQuestions = (expected?: EvalExpected) =>
 const getExpectedQuestionsBeforeTool = (expected?: EvalExpected) =>
 	getExpectationList(expected).flatMap((expectation) =>
 		expectation.type === "response.askedBeforeTool" ? [expectation] : [],
+	);
+
+const getExpectedConcise = (expected?: EvalExpected) =>
+	getExpectationList(expected).flatMap((expectation) =>
+		expectation.type === "response.concise" ? [expectation] : [],
 	);
 
 const normalizeText = (value: string) =>
@@ -366,6 +377,77 @@ export const askedClarificationBeforeTool = ({
 		: 0;
 };
 
+const CONCISE_JUDGE_MODEL = "claude-haiku-4-5";
+
+const lastAssistantReply = (output: EvalOutput) => {
+	const turnTexts = (output.turns ?? [])
+		.map((turn) => turn.text)
+		.filter((text): text is string => Boolean(text));
+	return turnTexts.at(-1) ?? output.finalText;
+};
+
+const conciseJudgePrompt = ({
+	reply,
+	required,
+}: {
+	reply: string;
+	required: string[];
+}) =>
+	`You judge whether an AI billing assistant's reply is maximally concise.
+
+<reply>
+${reply}
+</reply>
+
+Required facts (semantic match, not verbatim):
+${required.map((fact) => `- ${fact}`).join("\n")}
+
+PASS only if the reply (1) states every required fact, (2) contains no greeting, preamble, hedging, or any sentence that could be removed without dropping a required fact, and (3) uses no emojis. A short reply must never be penalized for being short: at equal correctness, concise always beats verbose.
+
+Respond with JSON only: {"pass": true|false, "reason": "<one sentence>"}`;
+
+// Single ConCISE-style judge: one cheap LLM call over the final reply, scoring
+// "could this be shorter without dropping a required fact?" — verbosity-bias
+// correction is baked into the prompt rather than layered metrics.
+export const responseConcise = async ({
+	expected,
+	output,
+}: EvalScoreArgs): Promise<EvalScore> => {
+	const expectations = getExpectedConcise(expected);
+	if (!expectations.length) return { name: "Concise", score: 1 };
+
+	const reply = lastAssistantReply(output);
+	const required = expectations.flatMap((expectation) => expectation.required);
+	const client = new Anthropic();
+	const message = await client.messages.create({
+		max_tokens: 300,
+		messages: [
+			{ content: conciseJudgePrompt({ reply, required }), role: "user" },
+		],
+		model: CONCISE_JUDGE_MODEL,
+		temperature: 0,
+	});
+	const text =
+		message.content.find(
+			(block): block is Anthropic.TextBlock => block.type === "text",
+		)?.text ?? "";
+	const json = text.match(/\{[\s\S]*\}/)?.[0];
+	try {
+		const verdict = JSON.parse(json ?? "") as { pass: boolean; reason: string };
+		return {
+			metadata: { reason: verdict.reason, reply },
+			name: "Concise",
+			score: verdict.pass ? 1 : 0,
+		};
+	} catch {
+		return {
+			metadata: { reason: `Judge returned non-JSON: ${text}`, reply },
+			name: "Concise",
+			score: 0,
+		};
+	}
+};
+
 export const noAttachBeforePreview = ({ output }: { output: EvalOutput }) => {
 	const attachIndex = output.apiCalls.findIndex(
 		(call) => call.toolName === "attach",
@@ -409,44 +491,80 @@ export const noScheduleCalls = ({ output }: { output: EvalOutput }) =>
 		? 1
 		: 0;
 
-export const standardEvalScores = (): EvalScorer[] => [
-	namedScorer({
+const namedConciseScorer: EvalScorer = (args) => responseConcise(args);
+Object.defineProperty(namedConciseScorer, "name", { value: "Concise" });
+
+// One named evaluator per expectation type, in display order. The panel for a
+// file is derived from the expectation types its cases actually declare, so
+// Braintrust only shows columns a case can fail.
+const scorersByExpectationType: Record<EvalExpectation["type"], EvalScorer> = {
+	"tools.called": namedScorer({
 		name: "Expected tool calls",
 		score: expectedToolCalls,
 	}),
-	namedScorer({
+	"api.called": namedScorer({
 		name: "Expected API calls",
 		score: expectedApiCalls,
 	}),
-	namedScorer({
+	"api.calledInOrder": namedScorer({
 		name: "Expected API call order",
 		score: expectedApiCallsInOrder,
 	}),
-	namedScorer({
+	"api.calledAfterApproval": namedScorer({
 		name: "Expected API calls after approval",
 		score: expectedApiCallsAfterApproval,
 	}),
-	namedScorer({
+	"api.bodyExcludes": namedScorer({
 		name: "Expected API body exclusions",
 		score: expectedApiBodyExclusions,
 	}),
-	namedScorer({
+	"api.bodyNumberFields": namedScorer({
 		name: "Expected API body number fields",
 		score: expectedApiBodyNumberFields,
 	}),
-	namedScorer({
+	"response.mentions": namedScorer({
 		name: "Final text includes",
 		score: finalTextIncludes,
 	}),
-	namedScorer({
+	"response.asked": namedScorer({
 		name: "Asked clarification",
 		score: askedClarification,
 	}),
-	namedScorer({
+	"response.askedBeforeTool": namedScorer({
 		name: "Asked clarification before tool",
 		score: askedClarificationBeforeTool,
 	}),
-];
+	"response.concise": namedConciseScorer,
+};
+
+const expectationTypesIn = (
+	expected?: EvalExpected,
+): EvalExpectation["type"][] => {
+	const legacy = getLegacyExpected(expected);
+	return [
+		...(legacy?.toolCalls?.length ? (["tools.called"] as const) : []),
+		...(legacy?.apiCalls?.length ? (["api.called"] as const) : []),
+		...(legacy?.finalTextIncludes?.length
+			? (["response.mentions"] as const)
+			: []),
+		...getExpectationList(expected).map((expectation) => expectation.type),
+	];
+};
+
+/** Scorer panel derived from the expectation types declared across a file's cases. */
+export const scoresFromExpectations = (
+	expectedList: (EvalExpected | undefined)[],
+): EvalScorer[] => {
+	const declaredTypes = new Set(expectedList.flatMap(expectationTypesIn));
+	return Object.entries(scorersByExpectationType)
+		.filter(([type]) => declaredTypes.has(type as EvalExpectation["type"]))
+		.map(([, scorer]) => scorer);
+};
+
+export const standardEvalScores = (): EvalScorer[] =>
+	Object.entries(scorersByExpectationType)
+		.filter(([type]) => type !== "response.concise")
+		.map(([, scorer]) => scorer);
 
 export const billingAttachScores = (): EvalScorer[] => standardEvalScores();
 

@@ -48,6 +48,11 @@ export type ResponseMentionsExpectation = {
 	type: "response.mentions";
 };
 
+export type ResponseConciseExpectation = {
+	required: string[];
+	type: "response.concise";
+};
+
 export type ResponseAskedExpectation = {
 	notPhrases?: string[];
 	phrases: string[];
@@ -69,6 +74,7 @@ export type EvalExpectation =
 	| ApiCalledInOrderExpectation
 	| ResponseAskedExpectation
 	| ResponseAskedBeforeToolExpectation
+	| ResponseConciseExpectation
 	| ResponseMentionsExpectation
 	| ToolsCalledExpectation;
 

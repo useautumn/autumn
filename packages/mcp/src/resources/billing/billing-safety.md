@@ -21,6 +21,7 @@ Billing mutations must be preview-first and must carry the exact intended plan c
 - If a contract gives enough information to build a reasonable billing preview, preview the inferred request instead of asking the user to confirm each inference first.
 - Default paid billing changes should use a draft invoice: explicitly set enable_plan_immediately true and invoice_mode enabled true, enable_plan_immediately true, finalize false. Net terms do not imply finalize true. Only change if the user asks to finalize, charge, or pay now.
 - Explicitly set redirect_mode if_required unless the user asks to force or disable checkout.
+- If the user asks for a checkout link or session, omit invoice_mode, set redirect_mode always, and still set enable_plan_immediately true so access starts while payment is pending. Share the returned payment_url.
 - If the contract says Net N payment terms, set invoice_mode.net_terms_days to N.
 - invoice_mode requires customer email; if missing, ask for it and call updateCustomer with customer_id and email before billing.
 - Use listFeatures only when customizing plan items or passing non-zero prepaid feature_quantities and the required feature ids/types are not already known.

@@ -32,6 +32,12 @@ export function buildDevEnvAndArgs(entry: RegistryEntry): {
 		env.CLIENT_URL = aliases.viteUrl;
 		env.VITE_BACKEND_URL = aliases.apiUrl;
 		env.VITE_FRONTEND_URL = aliases.viteUrl;
+		// Hand the worktree's tunnel to dev.ts, which derives MCP_SERVER_URL /
+		// CHAT_URL / SLACK_BOT_URL from NGROK_URL. Set at `bun dw setup`; reused
+		// here on a plain `bun dw run`.
+		if (entry.ngrokUrl && !env.NGROK_URL) {
+			env.NGROK_URL = entry.ngrokUrl;
+		}
 	}
 
 	const args = [

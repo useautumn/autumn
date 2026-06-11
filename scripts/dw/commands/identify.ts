@@ -33,11 +33,14 @@ export function cmdIdentify(): void {
 	}
 
 	const tmuxHuman = tmux || "(canonical worktree — not in tmux)";
+	const ngrokUrl = entry.ngrokUrl ?? "";
+	const ngrokHuman = ngrokUrl || "(no public tunnel — run 'bun dw setup')";
 
 	console.log(`Worktree #${worktreeNum}  (${entry.path})`);
 	console.log(`  Branch:        ${branchName ?? "(canonical)"}`);
 	console.log(`  Server URL:    ${serverUrl}`);
 	console.log(`  Vite URL:      ${viteUrl}`);
+	console.log(`  Ngrok URL:     ${ngrokHuman}`);
 	console.log(`  Tmux session:  ${tmuxHuman}`);
 	console.log(`  Server port:   ${serverPort}`);
 	console.log(`  Vite port:     ${vitePort}`);
@@ -45,6 +48,7 @@ export function cmdIdentify(): void {
 	console.log(`DW_WORKTREE_NUM=${worktreeNum}`);
 	console.log(`DW_SERVER_URL=${serverUrl}`);
 	console.log(`DW_VITE_URL=${viteUrl}`);
+	console.log(`DW_NGROK_URL=${ngrokUrl}`);
 	console.log(`DW_TMUX_SESSION=${tmux}`);
 	console.log(`DW_SERVER_PORT=${serverPort}`);
 	console.log(`DW_VITE_PORT=${vitePort}`);

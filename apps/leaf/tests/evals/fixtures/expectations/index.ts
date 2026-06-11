@@ -14,6 +14,7 @@ export type {
 	LegacyEvalExpected,
 	ResponseAskedBeforeToolExpectation,
 	ResponseAskedExpectation,
+	ResponseConciseExpectation,
 	ResponseMentionsExpectation,
 	ToolsCalledExpectation,
 } from "./types.js";

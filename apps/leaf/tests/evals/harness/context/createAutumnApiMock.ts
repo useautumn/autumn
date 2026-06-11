@@ -31,6 +31,49 @@ const endpointToTool = {
 const getString = (body: Record<string, unknown>, key: string) =>
 	typeof body[key] === "string" ? body[key] : "";
 
+// Cursor pagination mirroring the real list endpoints: opaque base64url
+// cursor, `{ list, next_cursor }` response with next_cursor null on the last
+// page. The real API serves up to 1000 rows per page; the mock caps pages at
+// 50 regardless of the requested limit so multi-page cursor behavior is
+// exercisable with small fixtures — the contract the agent must honor (follow
+// next_cursor until null) is the same.
+const DEFAULT_PAGE_LIMIT = 50;
+const MAX_PAGE_LIMIT = 50;
+
+const decodeCursorOffset = (cursor: string) => {
+	if (!cursor) return 0;
+	try {
+		const parsed = JSON.parse(
+			Buffer.from(cursor, "base64url").toString("utf8"),
+		) as { offset?: unknown };
+		return typeof parsed.offset === "number" ? parsed.offset : 0;
+	} catch {
+		return 0;
+	}
+};
+
+const encodeCursorOffset = (offset: number) =>
+	Buffer.from(JSON.stringify({ offset, v: 0 }), "utf8").toString("base64url");
+
+const paginate = <Item>({
+	body,
+	items,
+}: {
+	body: Record<string, unknown>;
+	items: Item[];
+}) => {
+	const requestedLimit =
+		typeof body.limit === "number" ? body.limit : DEFAULT_PAGE_LIMIT;
+	const limit = Math.min(Math.max(requestedLimit, 1), MAX_PAGE_LIMIT);
+	const offset = decodeCursorOffset(getString(body, "start_cursor"));
+	const nextOffset = offset + limit;
+	return {
+		list: items.slice(offset, nextOffset),
+		next_cursor:
+			nextOffset < items.length ? encodeCursorOffset(nextOffset) : null,
+	};
+};
+
 const parseParenthesizedEpoch = (value: string) => {
 	const epoch = value.match(/\((\d{12,})\)/)?.[1];
 	return epoch ? Number(epoch) : value;
@@ -80,7 +123,7 @@ const defaultHandlers = {
 				trial_ends_at: null,
 			},
 		];
-		return responses.attachSuccess({ customer, plan });
+		return responses.attachSuccess({ customer, plan, request: body });
 	},
 	createBalance: () => ({ status: "created" }),
 	createEntity: ({ body, setup }) => {
@@ -162,7 +205,7 @@ const defaultHandlers = {
 	},
 	listCustomers: ({ body, setup }) => {
 		const search = getString(body, "search").toLowerCase();
-		const list = search
+		const matches = search
 			? setup.customers.filter((customer) =>
 					[customer.id, customer.name, customer.email].some(
 						(value) =>
@@ -171,19 +214,12 @@ const defaultHandlers = {
 				)
 			: setup.customers;
 
-		return {
-			limit: list.length,
-			list,
-			offset: 0,
-			total: setup.customers.length,
-			total_count: setup.customers.length,
-			total_filtered_count: list.length,
-		};
+		return paginate({ body, items: matches });
 	},
 	listEntities: ({ body, setup }) => {
 		const customerId = getString(body, "customer_id");
 		const search = getString(body, "search").toLowerCase();
-		const list = setup.entities.filter((entity) => {
+		const matches = setup.entities.filter((entity) => {
 			const matchesCustomer = customerId
 				? entity.customer_id === customerId
 				: true;
@@ -195,14 +231,8 @@ const defaultHandlers = {
 				: true;
 			return matchesCustomer && matchesSearch;
 		});
-		const limit = typeof body.limit === "number" ? body.limit : list.length;
 
-		return {
-			has_more: false,
-			limit,
-			list: list.slice(0, limit),
-			next_cursor: null,
-		};
+		return paginate({ body, items: matches });
 	},
 	listFeatures: ({ setup }) => ({ list: setup.features }),
 	listPlans: ({ setup }) => ({

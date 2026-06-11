@@ -4,12 +4,7 @@
 // numeric epoch ms via bodyNumberFields rather than pinned to a synthetic `today`.
 import { BillingInterval } from "@models/productModels/intervals/billingInterval";
 import { withCustomers } from "../fixtures/createSetup.js";
-import {
-	api,
-	billing,
-	response,
-	tools,
-} from "../fixtures/expectations/index.js";
+import { billing, response, tools } from "../fixtures/expectations/index.js";
 import { orgSetups } from "../fixtures/orgSetups.js";
 import {
 	approve,
@@ -18,14 +13,13 @@ import {
 	initEval,
 	user,
 } from "../harness/index.js";
-import { billingScheduleScores } from "../utils/scorers.js";
 
 type EvalMetadata = {
 	domain: "billing";
 	flow: "schedule";
 };
 
-const experimentName = "cm-boolean-schedule";
+const experimentName = "boolean-schedule";
 
 const setup = withCustomers({
 	setup: orgSetups.knowledgePlatform(),
@@ -95,7 +89,6 @@ initEval<EvalMetadata>({
 		domain: "billing",
 		flow: "schedule",
 	},
-	scores: billingScheduleScores(),
 	timeout: 150_000,
 	cases: [
 		{
@@ -125,29 +118,10 @@ initEval<EvalMetadata>({
 						"createSchedule",
 					],
 				}),
-				billing.previewBeforeWrite({
-					preview: {
-						body: expectedScheduleRequest,
-						toolName: "previewCreateSchedule",
-					},
-					write: {
-						body: expectedScheduleRequest,
-						toolName: "createSchedule",
-					},
-				}),
-				api.calledAfterApproval({
-					call: {
-						body: expectedScheduleRequest,
-						toolName: "createSchedule",
-					},
-				}),
-				api.bodyNumberFields({
-					paths: ["phases.*.starts_at"],
-					toolName: "previewCreateSchedule",
-				}),
-				api.bodyNumberFields({
-					paths: ["phases.*.starts_at"],
-					toolName: "createSchedule",
+				...billing.previewThenWrite({
+					body: expectedScheduleRequest,
+					numberFields: ["phases.*.starts_at"],
+					write: "createSchedule",
 				}),
 				response.mentions({
 					phrases: [

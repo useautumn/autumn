@@ -9,6 +9,16 @@ export function elasticMqPortFor(worktreeNum: number): number {
 	return 9324 + (worktreeNum - 1) * 100;
 }
 
+export function serverPortFor(worktreeNum: number): number {
+	return 8080 + (worktreeNum - 1) * 100;
+}
+
+// ngrok's local web API (the per-worktree container maps this to its :4040).
+// dw polls it to read back the random tunnel URL ngrok assigned.
+export function ngrokApiPortFor(worktreeNum: number): number {
+	return 4040 + (worktreeNum - 1) * 100;
+}
+
 export function composeProjectName(worktreeNum: number): string {
 	return `autumn-wt-${worktreeNum}`;
 }

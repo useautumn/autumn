@@ -8,7 +8,7 @@ import type { EvalSetup } from "../fixtures/types.js";
 import {
 	type EvalExpected,
 	type EvalScorer,
-	standardEvalScores,
+	scoresFromExpectations,
 } from "../utils/scorers.js";
 import type { AutumnApiMockOverrides } from "./context/types.js";
 import {
@@ -96,7 +96,7 @@ export const initEval = <Metadata extends EvalCaseMetadata>({
 	driver,
 	experimentName,
 	metadata,
-	scores = standardEvalScores(),
+	scores,
 	setup,
 	timeout = 45_000,
 	today,
@@ -104,6 +104,10 @@ export const initEval = <Metadata extends EvalCaseMetadata>({
 }: InitEvalOptions<Metadata>) => {
 	const driverKey = selectedDriverKey();
 	const resolvedDriver = driver ?? evalDrivers[driverKey]();
+	// Default panel: one named scorer per expectation type the cases declare,
+	// so Braintrust only shows columns a case can actually fail.
+	const resolvedScores =
+		scores ?? scoresFromExpectations(cases.map((testCase) => testCase.expect));
 	// Base experiment names belong to the default driver; non-default toggles
 	// get a suffix so Braintrust series stay per-driver.
 	const resolvedExperimentName =
@@ -136,7 +140,11 @@ export const initEval = <Metadata extends EvalCaseMetadata>({
 					setup: setup.tag,
 				},
 			})),
-			scores,
+			// The Autumn API mock intercepts global fetch per eval context, so
+			// concurrent cases corrupt each other's routing (one case's cleanup
+			// restores fetch mid-flight for the other). Run cases sequentially.
+			maxConcurrency: 1,
+			scores: resolvedScores,
 			task: async (input) => {
 				const context = await createEvalContext({
 					auth,

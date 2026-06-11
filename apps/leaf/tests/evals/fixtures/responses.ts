@@ -71,11 +71,19 @@ export const responses = {
 	attachSuccess: ({
 		customer,
 		plan,
+		request,
 	}: {
 		customer: BaseApiCustomerV5;
 		plan: ApiPlanV1;
+		request?: unknown;
 	}) => ({
 		customer_id: customer.id,
+		// Mirrors the real billing response: a checkout URL comes back when the
+		// caller forces a redirect; otherwise the field is null.
+		payment_url:
+			asRecord(request).redirect_mode === "always"
+				? `https://checkout.example.com/cs_${customer.id}`
+				: null,
 		plan_id: plan.id,
 		status: "created",
 	}),

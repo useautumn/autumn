@@ -1,6 +1,7 @@
 import type {
 	ResponseAskedBeforeToolExpectation,
 	ResponseAskedExpectation,
+	ResponseConciseExpectation,
 	ResponseMentionsExpectation,
 } from "./types.js";
 
@@ -29,6 +30,18 @@ export const response = {
 		phrases,
 		toolName,
 		type: "response.askedBeforeTool",
+	}),
+	/**
+	 * LLM-judged conciseness: the final reply must state every required fact
+	 * with zero removable sentences. Facts are checked semantically, not verbatim.
+	 */
+	concise: ({
+		required,
+	}: {
+		required: string[];
+	}): ResponseConciseExpectation => ({
+		required,
+		type: "response.concise",
 	}),
 	mentions: ({
 		phrases,

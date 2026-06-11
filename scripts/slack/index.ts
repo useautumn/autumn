@@ -1,8 +1,57 @@
 import "dotenv/config";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join, resolve } from "node:path";
 import chalk from "chalk";
 import inquirer from "inquirer";
+
+// Repo root resolved from this file, so worktree lookups work regardless of cwd.
+const repoRoot = resolve(import.meta.dir, "../..");
+
+const readEnvVarFromFile = ({
+	filePath,
+	key,
+}: {
+	filePath: string;
+	key: string;
+}): string | undefined => {
+	if (!existsSync(filePath)) return undefined;
+	for (const line of readFileSync(filePath, "utf-8").split(/\r?\n/)) {
+		const match = line.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+		if (match && match[1] === key) {
+			return match[2].trim().replace(/^["']|["']$/g, "") || undefined;
+		}
+	}
+	return undefined;
+};
+
+// `bun dw setup` writes each worktree's tunnel to its own server/.env.local and
+// the dw registry. Prefer those over process.env.NGROK_URL, which Infisical
+// injects as a single shared dev tunnel — otherwise every worktree's Slack app
+// would be pointed at the same URL instead of its own.
+const resolveWorktreeNgrokUrl = (): string | undefined => {
+	const fromEnvFile = readEnvVarFromFile({
+		filePath: join(repoRoot, "server", ".env.local"),
+		key: "NGROK_URL",
+	});
+	if (fromEnvFile) return fromEnvFile;
+
+	try {
+		const registryPath = join(homedir(), ".autumn-worktrees.json");
+		if (existsSync(registryPath)) {
+			const registry = JSON.parse(readFileSync(registryPath, "utf-8")) as Record<
+				string,
+				{ ngrokUrl?: string }
+			>;
+			const entry = registry[repoRoot];
+			if (entry?.ngrokUrl) return entry.ngrokUrl;
+		}
+	} catch {
+		// Malformed/absent registry — fall through to the shared env value.
+	}
+
+	return process.env.NGROK_URL;
+};
 
 const defaultSlackScopes = [
 	"app_mentions:read",
@@ -112,28 +161,40 @@ type SlackApiResponse = {
 
 const usage = () =>
 	[
-		"Usage:",
-		"  bun slack [setup-bot] [options]",
-		"  bun slack update-manifest --target <local|prod|admin|all> [options]",
+		chalk.bold("Autumn Slack app tooling"),
 		"",
-		"Options:",
-		"  --app-id <id>             Existing Slack app id for manifest updates.",
-		"  --base-url <url>           Public Leaf URL. Defaults to NGROK_URL, SLACK_BOT_URL, or CHAT_URL.",
+		chalk.bold("Usage:"),
+		"  bun slack <command> [options]",
+		"",
+		chalk.bold("Commands:"),
+		`  ${chalk.cyan("worktree")}                   Repoint the local Slack app's chat (/slack/events),`,
+		"                             approval (/slack/interactions) and OAuth URLs at THIS",
+		"                             worktree's ngrok tunnel. Base URL is auto-read from",
+		"                             server/.env.local / the dw registry — no --base-url needed.",
+		`  ${chalk.cyan("setup-bot")}                  Interactively create a NEW Slack app (manifest) for`,
+		"                             local dev and print its credentials. Prompts for a",
+		"                             regular org bot or an admin impersonation bot.",
+		`  ${chalk.cyan("update-manifest")}            Update an EXISTING Slack app's manifest. Choose the`,
+		"                             app(s) with --target <local|prod|admin|all>.",
+		"",
+		chalk.bold("Options:"),
+		"  --app-id <id>              Existing Slack app id for manifest updates.",
+		"  --base-url <url>           Public Leaf URL. Defaults to this worktree's NGROK_URL,",
+		"                             then SLACK_BOT_URL / CHAT_URL.",
 		"  --name <name>              Slack app name. Defaults to Autumn Chat Local.",
 		"  --env-file <path>          Write Slack env vars to this file.",
-		"  --provider <provider>      slack or slack_admin. Defaults to prompt for setup-bot.",
+		"  --provider <provider>      slack or slack_admin (setup-bot only).",
 		"  --scopes <csv>             Override bot scopes.",
-		"  --target <target>          Manifest update target: local, prod, admin, or all.",
+		"  --target <target>          update-manifest target: local, prod, admin, or all.",
 		"  --team-id <id>             Workspace team id for org-scoped Slack CLI auth.",
 		"  --print-manifest           Print generated Slack app manifest.",
 		"  --dry-run                  Print manifest/env without calling Slack.",
 		"  --help                     Show this help.",
 		"",
-		"Example:",
-		"  bun slack",
-		"  bun slack --provider slack_admin",
+		chalk.bold("Examples:"),
+		"  bun slack worktree",
+		"  bun slack setup-bot --provider slack_admin",
 		"  bun slack update-manifest --target all --base-url https://j.dev.useautumn.com",
-		"  bun slack --base-url https://j.dev.useautumn.com --env-file .env.slack-local",
 	].join("\n");
 
 const readOption = ({
@@ -152,9 +213,9 @@ const readOption = ({
 };
 
 const parseArgs = ({ argv }: { argv: string[] }): Args => {
-	const action = argv[0]?.startsWith("--")
-		? "setup-bot"
-		: (argv[0] ?? "setup-bot");
+	// No positional command (or flags only) => show help. The interactive setup
+	// now lives behind the explicit `setup-bot` command.
+	const action = argv[0] && !argv[0].startsWith("--") ? argv[0] : undefined;
 	const scopes = readOption({ args: argv, name: "--scopes" });
 	const providerArg = readOption({ args: argv, name: "--provider" });
 	const targetArg = readOption({ args: argv, name: "--target" });
@@ -177,7 +238,7 @@ const parseArgs = ({ argv }: { argv: string[] }): Args => {
 		appName: readOption({ args: argv, name: "--name" }) ?? defaultAppName,
 		baseUrl:
 			readOption({ args: argv, name: "--base-url" }) ??
-			process.env.NGROK_URL ??
+			resolveWorktreeNgrokUrl() ??
 			process.env.SLACK_BOT_URL ??
 			process.env.CHAT_URL,
 		dryRun: argv.includes("--dry-run"),
@@ -194,7 +255,7 @@ const parseArgs = ({ argv }: { argv: string[] }): Args => {
 			targetArg === "admin" ||
 			targetArg === "all"
 				? targetArg
-				: action === "update-local-manifest"
+				: action === "update-local-manifest" || action === "worktree"
 					? "local"
 					: action === "update-prod-manifest"
 						? "prod"
@@ -273,7 +334,7 @@ const resolveInteractiveArgs = async ({
 						name: "baseUrl" as const,
 						message: "Public ngrok/Leaf URL",
 						default:
-							process.env.NGROK_URL ??
+							resolveWorktreeNgrokUrl() ??
 							process.env.SLACK_BOT_URL ??
 							process.env.CHAT_URL,
 						filter: (value: string) => trimTrailingSlash({ url: value.trim() }),
@@ -399,20 +460,6 @@ const ensureSlackCli = () => {
 	}
 };
 
-const maybeShowSlackCliAuthInstructions = () => {
-	try {
-		const authList = runSlackCli({ args: ["auth", "list"], quiet: true });
-		if (authList.includes("No teams are authorized")) {
-			console.log(chalk.yellow("\nSlack CLI is not authenticated."));
-			console.log("Run this in another terminal if Slack CLI asks for auth:");
-			console.log("slack auth login");
-		}
-	} catch {
-		console.log(chalk.yellow("\nCould not read Slack CLI auth state."));
-		console.log("If Slack CLI prompts for auth, run: slack auth login");
-	}
-};
-
 const parseSlackJson = <T>({
 	output,
 	label,
@@ -427,105 +474,121 @@ const parseSlackJson = <T>({
 	}
 };
 
-const getSlackApiAuthState = () => {
-	const output = runSlackCli({
-		args: ["api", "auth.test"],
-		quiet: true,
+// App Manifest APIs (apps.manifest.create/update) require an *app configuration
+// token*, NOT the Slack CLI service token — the latter yields `missing_scope`.
+// Config tokens come from https://api.slack.com/apps → "Your App Configuration
+// Tokens". Generate once, set SLACK_CONFIG_REFRESH_TOKEN, and we self-rotate.
+const configTokenStorePath = join(homedir(), ".autumn-slack-config.json");
+
+const readStoredRefreshToken = (): string | undefined => {
+	if (!existsSync(configTokenStorePath)) return undefined;
+	try {
+		const parsed = JSON.parse(readFileSync(configTokenStorePath, "utf-8")) as {
+			refreshToken?: string;
+		};
+		return parsed.refreshToken;
+	} catch {
+		return undefined;
+	}
+};
+
+const writeStoredRefreshToken = ({
+	refreshToken,
+}: {
+	refreshToken: string;
+}) => {
+	writeFileSync(configTokenStorePath, JSON.stringify({ refreshToken }, null, 2));
+	try {
+		chmodSync(configTokenStorePath, 0o600);
+	} catch {
+		// Best-effort file permissions; not fatal where chmod is unavailable.
+	}
+};
+
+// Exchange a (rotating) refresh token for a fresh 12h access token, persisting the
+// new refresh token so the next run keeps working. No Authorization header — the
+// refresh token itself is the credential.
+const rotateConfigToken = async ({
+	refreshToken,
+}: {
+	refreshToken: string;
+}): Promise<string> => {
+	const response = await fetch("https://slack.com/api/tooling.tokens.rotate", {
+		method: "POST",
+		headers: { "content-type": "application/x-www-form-urlencoded" },
+		body: new URLSearchParams({ refresh_token: refreshToken }),
 	});
-	return parseSlackJson<SlackApiResponse>({ output, label: "auth.test" });
+	const json = (await response.json()) as {
+		ok: boolean;
+		token?: string;
+		refresh_token?: string;
+		error?: string;
+	};
+	if (!json.ok || !json.token || !json.refresh_token) {
+		throw new Error(
+			`Slack tooling.tokens.rotate failed: ${json.error ?? "unknown"}. Regenerate config tokens at https://api.slack.com/apps and reset SLACK_CONFIG_REFRESH_TOKEN.`,
+		);
+	}
+	writeStoredRefreshToken({ refreshToken: json.refresh_token });
+	return json.token;
 };
 
-const getTicketFromAuthTokenOutput = ({ output }: { output: string }) => {
-	const match = output.match(/\/slackauthticket\s+([^\s]+)/);
-	return match?.[1];
-};
-
-const getServiceTokenFromAuthTokenOutput = ({ output }: { output: string }) => {
-	const match = output.match(/\b(xoxp-[A-Za-z0-9-]+)\b/);
-	return match?.[1];
-};
-
-const ensureSlackApiAuth = async () => {
-	const initial = getSlackApiAuthState();
-	if (initial.ok) return undefined;
-	if (initial.error !== "not_authed") {
-		throw new Error(`Slack API auth failed: ${initial.error}`);
+const resolveSlackConfigToken = async (): Promise<string> => {
+	// An explicit access token wins — a deliberate one-off override.
+	if (process.env.SLACK_CONFIG_ACCESS_TOKEN) {
+		return process.env.SLACK_CONFIG_ACCESS_TOKEN;
 	}
 
-	console.log(
-		chalk.yellow(
-			"\nSlack CLI is logged in, but API calls need a service token.",
-		),
+	// Reliable path: rotate a refresh token into a fresh 12h access token. Static
+	// access tokens (e.g. SLACK_ACCESS_TOKEN in Infisical) expire after 12h, so
+	// rotation is preferred. Prefer the locally-persisted (already-rotated) token
+	// over the env one, which goes stale after the first rotation.
+	const refreshToken =
+		readStoredRefreshToken() ??
+		process.env.SLACK_REFRESH_TOKEN ??
+		process.env.SLACK_CONFIG_REFRESH_TOKEN;
+	if (refreshToken) {
+		try {
+			return await rotateConfigToken({ refreshToken });
+		} catch (error) {
+			// Refresh token already rotated/expired elsewhere — fall back to a
+			// static access token if one is set, else surface the rotation error.
+			const fallback =
+				process.env.SLACK_ACCESS_TOKEN ?? process.env.SLACK_CONFIG_TOKEN;
+			if (fallback) return fallback;
+			throw error;
+		}
+	}
+
+	const directToken =
+		process.env.SLACK_ACCESS_TOKEN ?? process.env.SLACK_CONFIG_TOKEN;
+	if (directToken) return directToken;
+
+	throw new Error(
+		[
+			"No Slack app configuration token available.",
+			"apps.manifest.update needs a *configuration* token (the CLI service token gives missing_scope).",
+			"1) https://api.slack.com/apps → 'Your App Configuration Tokens' → Generate (workspace: autumnpricing).",
+			"2) Set SLACK_REFRESH_TOKEN=<xoxe-...> (Infisical dev or your shell); it self-rotates after that.",
+			"   Or set SLACK_CONFIG_ACCESS_TOKEN=<xoxe.xoxp-...> for a one-off (expires in 12h).",
+		].join("\n"),
 	);
-	const ticketOutput = runSlackCli({
-		args: ["auth", "token", "--no-prompt"],
-		quiet: true,
-	});
-	console.log(ticketOutput);
-
-	const ticket = getTicketFromAuthTokenOutput({ output: ticketOutput });
-	if (!ticket) {
-		throw new Error("Could not read Slack auth ticket from Slack CLI output");
-	}
-
-	const { challenge } = await inquirer.prompt<{ challenge: string }>([
-		{
-			type: "input",
-			name: "challenge",
-			message: "Slack challenge code",
-			validate: (value: string) =>
-				Boolean(value.trim()) || "Challenge code is required",
-		},
-	]);
-
-	const tokenOutput = runSlackCli({
-		args: [
-			"auth",
-			"token",
-			"--ticket",
-			ticket,
-			"--challenge",
-			challenge.trim(),
-		],
-		quiet: true,
-	});
-	console.log(tokenOutput);
-
-	const serviceToken = getServiceTokenFromAuthTokenOutput({
-		output: tokenOutput,
-	});
-	if (!serviceToken) {
-		throw new Error("Could not read Slack service token from Slack CLI output");
-	}
-
-	const next = parseSlackJson<SlackApiResponse>({
-		output: runSlackCli({
-			args: ["api", "auth.test", "--token", serviceToken],
-			quiet: true,
-		}),
-		label: "auth.test",
-	});
-	if (!next.ok) {
-		throw new Error(`Slack API auth still failed: ${next.error}`);
-	}
-
-	return serviceToken;
 };
 
 const createSlackApp = async ({
 	manifest,
-	serviceToken,
+	configToken,
 	teamId,
 }: {
 	manifest: SlackManifest;
-	serviceToken?: string;
+	configToken?: string;
 	teamId?: string;
 }): Promise<SlackManifestCreateResponse> => {
 	const output = runSlackCli({
 		args: [
 			"api",
 			"apps.manifest.create",
-			...(serviceToken ? ["--token", serviceToken] : []),
+			...(configToken ? ["--token", configToken] : []),
 			"--json",
 			JSON.stringify({
 				manifest: JSON.stringify(manifest),
@@ -546,19 +609,19 @@ const createSlackApp = async ({
 const updateSlackAppManifest = async ({
 	appId,
 	manifest,
-	serviceToken,
+	configToken,
 	teamId,
 }: {
 	appId: string;
 	manifest: SlackManifest;
-	serviceToken?: string;
+	configToken?: string;
 	teamId?: string;
 }): Promise<SlackManifestUpdateResponse> => {
 	const output = runSlackCli({
 		args: [
 			"api",
 			"apps.manifest.update",
-			...(serviceToken ? ["--token", serviceToken] : []),
+			...(configToken ? ["--token", configToken] : []),
 			"--json",
 			JSON.stringify({
 				app_id: appId,
@@ -648,16 +711,15 @@ const setupSlackBot = async ({ args }: { args: Args }) => {
 	}
 
 	ensureSlackCli();
-	maybeShowSlackCliAuthInstructions();
-	const serviceToken = resolvedArgs.dryRun
+	const configToken = resolvedArgs.dryRun
 		? undefined
-		: await ensureSlackApiAuth();
+		: await resolveSlackConfigToken();
 
 	const slackResponse = resolvedArgs.dryRun
 		? undefined
 		: await createSlackApp({
 				manifest,
-				serviceToken,
+				configToken,
 				teamId: resolvedArgs.teamId,
 			});
 
@@ -729,7 +791,7 @@ const targetDefaults = ({
 			appId: process.env.SLACK_ADMIN_APP_IDS ?? process.env.SLACK_ADMIN_APP_ID,
 			appName: process.env.SLACK_ADMIN_APP_NAME ?? "Autumn Chat Admin Local",
 			baseUrl:
-				process.env.NGROK_URL ??
+				resolveWorktreeNgrokUrl() ??
 				process.env.SLACK_BOT_URL ??
 				process.env.CHAT_URL,
 			provider: "slack_admin" as const,
@@ -739,7 +801,7 @@ const targetDefaults = ({
 		appId: process.env.SLACK_APP_ID ?? process.env.SLACK_LOCAL_APP_ID,
 		appName: process.env.SLACK_APP_NAME ?? "Autumn Chat Local",
 		baseUrl:
-			process.env.NGROK_URL ??
+			resolveWorktreeNgrokUrl() ??
 			process.env.SLACK_BOT_URL ??
 			process.env.CHAT_URL,
 		provider: "slack" as const,
@@ -806,9 +868,8 @@ const updateManifestTargets = async ({ args }: { args: Args }) => {
 
 	if (!args.dryRun) {
 		ensureSlackCli();
-		maybeShowSlackCliAuthInstructions();
 	}
-	const serviceToken = args.dryRun ? undefined : await ensureSlackApiAuth();
+	const configToken = args.dryRun ? undefined : await resolveSlackConfigToken();
 
 	for (const updateTarget of targets) {
 		const targetArgs =
@@ -843,7 +904,7 @@ const updateManifestTargets = async ({ args }: { args: Args }) => {
 			await updateSlackAppManifest({
 				appId,
 				manifest,
-				serviceToken,
+				configToken,
 				teamId: args.teamId,
 			});
 			console.log(
@@ -863,6 +924,7 @@ const actions = {
 	"update-local-manifest": updateManifestTargets,
 	"update-manifest": updateManifestTargets,
 	"update-prod-manifest": updateManifestTargets,
+	worktree: updateManifestTargets,
 } satisfies Record<string, (params: { args: Args }) => Promise<void>>;
 
 type Action = keyof typeof actions;
@@ -872,9 +934,16 @@ const isAction = (action: string | undefined): action is Action =>
 
 const main = async () => {
 	const args = parseArgs({ argv: process.argv.slice(2) });
-	if (args.help || !isAction(args.action)) {
+	// `bun slack` (no command) or `--help` => show the help page and exit cleanly.
+	if (args.help || !args.action) {
 		console.log(usage());
-		process.exit(args.help ? 0 : 1);
+		process.exit(0);
+	}
+	// A command was given but isn't one we know about => help + non-zero exit.
+	if (!isAction(args.action)) {
+		console.error(chalk.red(`Unknown command: ${args.action}\n`));
+		console.log(usage());
+		process.exit(1);
 	}
 
 	await actions[args.action]({ args });

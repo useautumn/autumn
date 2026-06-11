@@ -86,6 +86,12 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 	if (existsSync(portlessCa)) {
 		serverEnv.NODE_EXTRA_CA_CERTS = portlessCa;
 	}
+	// Public tunnel for this worktree (CMA reaches /mcp through it). dev.ts derives
+	// MCP_SERVER_URL/CHAT_URL/SLACK_BOT_URL from NGROK_URL; we also write it here so
+	// it's visible to a standalone `cd server && bun dev` and documents the tunnel.
+	if (entry.ngrokUrl) {
+		serverEnv.NGROK_URL = entry.ngrokUrl;
+	}
 
 	const viteEnv: Record<string, string> = {
 		VITE_BACKEND_URL: aliases.apiUrl,
