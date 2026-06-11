@@ -4,9 +4,15 @@ import { Plan } from "chat";
 export type ReplyTarget = Thread | Channel;
 export type LoadingState = Plan | null;
 
-export const startLoading = async (target: ReplyTarget) => {
+// Posting the Plan notifies the user; follow-up turns skip it and rely on the
+// notification-free typing status line instead.
+export const startLoading = async (
+	target: ReplyTarget,
+	{ showPlan = true }: { showPlan?: boolean } = {},
+) => {
 	try {
 		await target.startTyping("Starting Autumn...");
+		if (!showPlan) return null;
 		const loading = new Plan({ initialMessage: "Starting Autumn..." });
 		await target.post(loading);
 		return loading;
@@ -16,15 +22,22 @@ export const startLoading = async (target: ReplyTarget) => {
 	}
 };
 
-export const createActionLogger = (loading: LoadingState) => {
+export const createActionLogger = (
+	loading: LoadingState,
+	target?: ReplyTarget,
+) => {
 	const seen = new Set<string>();
 	let first = true;
 
 	return async (message: string) => {
-		if (!loading || seen.has(message)) return;
+		if (seen.has(message)) return;
 		seen.add(message);
 
 		try {
+			if (!loading) {
+				await target?.startTyping(message);
+				return;
+			}
 			if (first) {
 				first = false;
 				await loading.reset({ initialMessage: message });
@@ -42,10 +55,7 @@ export const finishLoading = async (
 	loading: LoadingState,
 	message: string,
 ) => {
-	if (!loading) {
-		await target.post({ markdown: message });
-		return;
-	}
+	if (!loading) return;
 
 	try {
 		await loading.complete({ completeMessage: message });

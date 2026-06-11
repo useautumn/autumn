@@ -44,10 +44,13 @@ export const response = {
 		type: "response.concise",
 	}),
 	mentions: ({
+		notPhrases,
 		phrases,
 	}: {
 		phrases: string[];
+		notPhrases?: string[];
 	}): ResponseMentionsExpectation => ({
+		...(notPhrases ? { notPhrases } : {}),
 		phrases,
 		type: "response.mentions",
 	}),

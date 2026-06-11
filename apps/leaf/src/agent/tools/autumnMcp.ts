@@ -7,6 +7,7 @@ import { logger as rootLogger } from "../../lib/logger.js";
 import {
 	type createPreviewCapture,
 	getWriteToolForPreview,
+	isSilentTool,
 	toolLabel,
 } from "./toolPolicy.js";
 
@@ -95,10 +96,10 @@ export const formatToolAction = ({
 		args.request && typeof args.request === "object"
 			? (args.request as Record<string, unknown>)
 			: args;
+	// Only human-meaningful values — opaque ids (customer_id, entity_id) bloat
+	// the progress line without telling the reader anything.
 	const details = [
-		["customer", request.customer_id],
 		["plan", request.plan_id],
-		["entity", request.entity_id],
 		["search", request.search],
 	].flatMap(([label, value]) =>
 		typeof value === "string" && value ? [`${label}: ${value}`] : [],
@@ -145,7 +146,9 @@ export const getAutumnMcpTools = async ({
 					event: "leaf.mcp_tool_called",
 					tool: toolName,
 				});
-				await options.onToolCall?.(formatToolAction({ toolName, args }));
+				if (!isSilentTool(toolName)) {
+					await options.onToolCall?.(formatToolAction({ toolName, args }));
+				}
 				const result = await execute(args, ...rest);
 				if (getWriteToolForPreview(toolName)) {
 					logger.info("Captured Autumn MCP preview", {

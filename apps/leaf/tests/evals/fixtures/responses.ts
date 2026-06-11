@@ -1,3 +1,4 @@
+import type { BillingResponse } from "@api/billing/common/billingResponse.js";
 import type { BaseApiCustomerV5 } from "@api/customers/apiCustomerV5.js";
 import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
 
@@ -87,6 +88,25 @@ export const responses = {
 		plan_id: plan.id,
 		status: "created",
 	}),
+	// Mirrors the real BillingResponse when a charge is declined: no invoice,
+	// payment_url null, required_action carries the failure code and reason.
+	attachPaymentFailure: ({
+		reason,
+		request,
+	}: {
+		reason: string;
+		request?: unknown;
+	}): BillingResponse => {
+		const body = asRecord(request);
+		return {
+			customer_id: typeof body.customer_id === "string" ? body.customer_id : "",
+			...(typeof body.entity_id === "string"
+				? { entity_id: body.entity_id }
+				: {}),
+			payment_url: null,
+			required_action: { code: "payment_failed", reason },
+		};
+	},
 	createSchedulePreview: ({
 		customerId,
 		phases,

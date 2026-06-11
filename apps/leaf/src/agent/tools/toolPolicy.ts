@@ -19,6 +19,15 @@ const previewWriteTools: Record<string, string> = {
 export const getWriteToolForPreview = (toolName: string) =>
 	previewWriteTools[toolName.replace(/^autumn_/, "")];
 
+// Pure utility tools the agent calls constantly — not worth a progress line.
+const silentTools = new Set([
+	"dateToEpochMilliseconds",
+	"epochMillisecondsToDate",
+]);
+
+export const isSilentTool = (toolName: string) =>
+	silentTools.has(normalizeToolName(toolName));
+
 export const toolLabel = (toolName: string) =>
 	labels[toolName.replace(/^autumn_/, "")] ??
 	toolName

@@ -5,8 +5,14 @@ import { claudeManagedConfig } from "../../../harness/claudeManaged/config.js";
 import { ensureLeafResources } from "../../../harness/claudeManaged/ensureLeafResources.js";
 import { ensureMemoryStore } from "../../../harness/claudeManaged/memory/ensureMemoryStore.js";
 import { cmaRepo } from "../../../harness/claudeManaged/repos/claudeManagedRepo.js";
-import { driveSessionTurn } from "../../../harness/claudeManaged/session/driveSessionTurn.js";
-import { buildUserMessageContent } from "../../../harness/claudeManaged/session/userMessage.js";
+import {
+	driveSessionTurn,
+	type SessionTurnOutcome,
+} from "../../../harness/claudeManaged/session/driveSessionTurn.js";
+import {
+	buildUserMessageContent,
+	type UserMessageContentBlock,
+} from "../../../harness/claudeManaged/session/userMessage.js";
 import { ensureAutumnVault } from "../../../harness/claudeManaged/vaults/ensureAutumnVault.js";
 import { containsSecret } from "../../../internal/sandbox/tool/guardrails.js";
 import { db } from "../../../lib/db.js";
@@ -14,6 +20,7 @@ import { createBraintrustLogger } from "../../../providers/braintrust/index.js";
 import { formatToolAction } from "../../tools/autumnMcp.js";
 import {
 	createPreviewCapture,
+	isSilentTool,
 	type PreviewApproval,
 } from "../../tools/toolPolicy.js";
 import type { AgentEngine, MessageContext, MessageParams } from "../types.js";
@@ -38,6 +45,29 @@ const redactSecrets = ({
 	});
 	return "[response withheld: it appeared to contain a credential]";
 };
+
+// Approval cards are executed by confirming a suspended session tool, so a
+// preview-only turn must be nudged into a real write-tool suspension.
+const buildNudgeText = ({ toolName }: { toolName: string }) =>
+	`Call the ${toolName} tool now with the exact args from your preview. It will pause for user approval automatically — do not ask for confirmation or repeat the summary.`;
+
+const mergeTurnOutcomes = (
+	first: SessionTurnOutcome,
+	second: SessionTurnOutcome,
+): SessionTurnOutcome => ({
+	errorMessage: second.errorMessage ?? first.errorMessage,
+	suspendedQueue: second.suspendedQueue,
+	textParts: [...first.textParts, ...second.textParts],
+	usage: {
+		cacheCreationInputTokens:
+			first.usage.cacheCreationInputTokens +
+			second.usage.cacheCreationInputTokens,
+		cacheReadInputTokens:
+			first.usage.cacheReadInputTokens + second.usage.cacheReadInputTokens,
+		inputTokens: first.usage.inputTokens + second.usage.inputTokens,
+		outputTokens: first.usage.outputTokens + second.usage.outputTokens,
+	},
+});
 
 // The agent's system prompt is env/thread-agnostic (one shared agent), so a new
 // session's first message carries the env + recent thread context.
@@ -153,7 +183,13 @@ export const claudeManagedEngine: AgentEngine = {
 		const previewCapture = createPreviewCapture();
 		const text = buildMessageText({ env, newSession, params });
 
-		const runTurn = ({ span }: { span?: Span }) => {
+		const driveTurn = ({
+			content,
+			span,
+		}: {
+			content: UserMessageContentBlock[];
+			span?: Span;
+		}) => {
 			const openToolSpans = new Map<string, Span>();
 			return driveSessionTurn({
 				autumnMcpServerName: claudeManagedConfig.autumnMcpServerName,
@@ -162,10 +198,7 @@ export const claudeManagedEngine: AgentEngine = {
 					client.beta.sessions.events.send(activeSessionId, {
 						events: [
 							{
-								content: buildUserMessageContent({
-									attachments: params.attachments,
-									text,
-								}),
+								content,
 								type: "user.message",
 							},
 						],
@@ -175,7 +208,9 @@ export const claudeManagedEngine: AgentEngine = {
 						event: "leaf.mcp_tool_called",
 						tool: name,
 					});
-					await onAction?.(formatToolAction({ args: input, toolName: name }));
+					if (!isSilentTool(name)) {
+						await onAction?.(formatToolAction({ args: input, toolName: name }));
+					}
 					previewCapture.onToolCall({ input, name });
 					if (span) {
 						openToolSpans.set(
@@ -195,6 +230,44 @@ export const claudeManagedEngine: AgentEngine = {
 				},
 				sessionId: activeSessionId,
 			});
+		};
+
+		const runTurn = async ({ span }: { span?: Span }) => {
+			const first = await driveTurn({
+				content: buildUserMessageContent({
+					attachments: params.attachments,
+					text,
+				}),
+				span,
+			});
+			const captured = previewCapture.captured;
+			if (first.suspendedQueue?.length || first.errorMessage || !captured) {
+				return first;
+			}
+			// Preview-only turn: nudge once so the approval card comes from a real
+			// suspension (tool_use_id) instead of an unexecutable preview capture.
+			logger.info("Nudging Claude Managed agent to call write tool", {
+				event: "leaf.claude_managed_preview_nudge",
+				context: { env, org_id: org.id },
+				tool: captured.toolName,
+			});
+			const nudge = await driveTurn({
+				content: [
+					{
+						text: buildNudgeText({ toolName: captured.toolName }),
+						type: "text",
+					},
+				],
+				span,
+			});
+			if (!nudge.suspendedQueue?.length) {
+				logger.warn("Claude Managed agent did not suspend after nudge", {
+					event: "leaf.claude_managed_preview_nudge_failed",
+					context: { env, org_id: org.id },
+					tool: captured.toolName,
+				});
+			}
+			return mergeTurnOutcomes(first, nudge);
 		};
 
 		// One parent span per turn; child spans per Autumn tool; token usage as

@@ -50,6 +50,7 @@ export type ApiBodyNumberFieldsExpectation = {
 };
 
 export type ResponseMentionsExpectation = {
+	notPhrases?: string[];
 	phrases: string[];
 	type: "response.mentions";
 };
