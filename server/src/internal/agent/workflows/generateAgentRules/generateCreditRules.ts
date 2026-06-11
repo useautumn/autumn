@@ -10,6 +10,7 @@ import { queryAxiom } from "@/external/axiom/queryAxiom.js";
 import { escapeApl } from "@/external/axiom/utils/aplUtils.js";
 import {
 	axiomStringFrom,
+	getAxiomResultDebug,
 	getAxiomMatchData,
 } from "@/external/axiom/utils/resultUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -61,6 +62,9 @@ const resolveCreditFeatureId = ({
 	return "";
 };
 
+const resolveFallbackCreditFeatureId = ({ features }: { features: Feature[] }) =>
+	features.find(isConsumableCreditSystem)?.id ?? "";
+
 const getFeatures = async ({ ctx }: { ctx: AutumnContext }) =>
 	ctx.features.length > 0
 		? ctx.features
@@ -107,18 +111,41 @@ export const generateCreditRules = async ({
 	const trackedFeatureIds = getAxiomMatchData(trackedFeatureResult).map(
 		(match) => axiomStringFrom(match.selected_feature_id),
 	);
+	const trackedCreditFeatureId = resolveCreditFeatureId({
+		features,
+		trackedFeatureIds,
+	});
+	const fallbackCreditFeatureId = resolveFallbackCreditFeatureId({ features });
+	const inferenceSource = trackedCreditFeatureId
+		? "axiom_tracked_features"
+		: "features_fallback";
 	const creditRules = {
-		credit_feature_id: resolveCreditFeatureId({
-			features,
-			trackedFeatureIds,
-		}),
+		credit_feature_id: trackedCreditFeatureId || fallbackCreditFeatureId,
 	} satisfies CreditRules;
+
+	ctx.logger.info(
+		{
+			data2: {
+				axiom_result: getAxiomResultDebug({ result: trackedFeatureResult }),
+				credit_rules: creditRules,
+				env: ctx.env,
+				fallback_credit_feature_id: fallbackCreditFeatureId,
+				inference_source: inferenceSource,
+				org_id: ctx.org.id,
+				org_slug: ctx.org.slug,
+				time_range: { endTime, startTime },
+				top_tracked_feature_ids: trackedFeatureIds,
+			},
+		},
+		"[AgentRules] Generated credit rules",
+	);
 
 	return {
 		creditRules,
 		metadata: {
 			credit_feature_id: creditRules.credit_feature_id,
 			generated_from: "axiom",
+			inference_source: inferenceSource,
 			top_tracked_feature_ids: trackedFeatureIds,
 		},
 	};

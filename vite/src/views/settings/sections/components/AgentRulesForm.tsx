@@ -148,7 +148,7 @@ export const AgentRulesForm = ({ agent, features }: AgentRulesFormProps) => {
 								<Textarea
 									value={field.state.value}
 									onChange={(event) => field.handleChange(event.target.value)}
-									placeholder="e.g. Always recommend the annual plan when usage is steady."
+									placeholder="Jot your thoughts, we'll format it for you."
 									className="min-h-24"
 								/>
 							)}

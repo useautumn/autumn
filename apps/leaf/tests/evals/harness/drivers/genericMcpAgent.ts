@@ -13,6 +13,7 @@ import {
 } from "../configs/genericMcpAgentConfig.js";
 import type {
 	EvalAgentDriver,
+	EvalDriverMessage,
 	EvalDriverStartInput,
 	EvalToolCall,
 } from "./types.js";
@@ -65,6 +66,20 @@ const instrumentToolCalls = ({
 			return execute(args, ...rest);
 		};
 	}
+};
+
+const appendUserMessage = ({
+	input,
+	messages,
+}: {
+	input: EvalDriverMessage;
+	messages: MessageListItem[];
+}) => {
+	if (typeof input === "string") {
+		messages.push({ content: input, role: "user" });
+		return;
+	}
+	messages.push(...(input as MessageListItem[]));
 };
 
 export const createGenericMcpAgentDriver = ({
@@ -168,7 +183,7 @@ export const createGenericMcpAgentDriver = ({
 			getToolCalls: () => [...toolCalls],
 			hasPendingApproval: () => pendingApproval !== null,
 			send: async (message, { maxSteps: stepLimit } = {}) => {
-				messages.push({ content: message, role: "user" });
+				appendUserMessage({ input: message, messages });
 				const output = await evalAgent.generate(messages, options(stepLimit));
 				messages = output.messages;
 				rememberApproval(output);

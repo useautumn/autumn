@@ -8,6 +8,7 @@ const featureIds = {
 	compliance_controls: "compliance_controls",
 	credits: "credits",
 	export_center: "export_center",
+	hosted_solution: "hosted_solution",
 	insight_reports: "insight_reports",
 	member_slots: "member_slots",
 	outbound_hooks: "outbound_hooks",
@@ -17,6 +18,8 @@ const featureIds = {
 	project_slots: "project_slots",
 	revision_history: "revision_history",
 	team_policies: "team_policies",
+	unlimited_seats: "unlimited_seats",
+	workspaces: "workspaces",
 } as const;
 
 const planIds = {
@@ -45,10 +48,22 @@ const platformFeatureIds = [
 	featureIds.revision_history,
 ] as const;
 
+const contractFeatureIds = [
+	featureIds.hosted_solution,
+	featureIds.unlimited_seats,
+] as const;
+
 /** Anonymized org setup with credits, many feature flags, core plans, and add-ons. */
 export const knowledgePlatformSetup = () =>
 	createSetup({
 		tag: "knowledge-platform",
+		agentRules: ({ agentRules }) =>
+			agentRules.base({
+				entityRules: agentRules.entityRules({
+					attachToEntities: true,
+					entityFeatureId: featureIds.workspaces,
+				}),
+			}),
 		features: ({ featureList, features }) => ({
 			activity_events: features.consumable({
 				featureId: featureIds.activity_events,
@@ -62,7 +77,18 @@ export const knowledgePlatformSetup = () =>
 			project_slots: features.allocated({
 				featureId: featureIds.project_slots,
 			}),
+			workspaces: features.allocated({
+				featureId: featureIds.workspaces,
+				name: "Workspaces",
+			}),
 			...featureList.boolean({ featureIds: platformFeatureIds }),
+			...featureList.boolean({
+				featureIds: contractFeatureIds,
+				names: {
+					hosted_solution: "Hosted Solution",
+					unlimited_seats: "Unlimited Seats",
+				},
+			}),
 		}),
 		plans: ({ basePrice, features, itemList, items, plan, planList }) => {
 			const creditItems = [

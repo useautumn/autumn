@@ -7,6 +7,7 @@ import { agent } from "./agent.js";
 import { balances } from "./balances.js";
 import { billing } from "./billing.js";
 import { customers } from "./customers.js";
+import { entities } from "./entities.js";
 import { features } from "./features.js";
 import { logs } from "./logs.js";
 import { orgTools } from "./org.js";
@@ -37,6 +38,7 @@ export {
 export const endpointByTool = {
 	...agent.endpoints,
 	...customers.endpoints,
+	...entities.endpoints,
 	...features.endpoints,
 	...plans.endpoints,
 	...billing.endpoints,
@@ -48,6 +50,7 @@ export const endpointByTool = {
 export const schemaByTool = {
 	...agent.schemas,
 	...customers.schemas,
+	...entities.schemas,
 	...features.schemas,
 	...plans.schemas,
 	...billing.schemas,
@@ -61,6 +64,7 @@ export const schemaByTool = {
 const domains: ToolDomain[] = [
 	agent.domain,
 	customers.domain,
+	entities.domain,
 	features.domain,
 	plans.domain,
 	billing.domain,

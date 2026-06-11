@@ -1,4 +1,7 @@
 import type {
+	ApiBodyExcludesExpectation,
+	ApiBodyNumberFieldsExpectation,
+	ApiCalledAfterApprovalExpectation,
 	ApiCalledExpectation,
 	ApiCalledInOrderExpectation,
 	ExpectedApiCall,
@@ -15,11 +18,7 @@ export const api = {
 		...(body ? { body } : {}),
 		toolName,
 	}),
-	called: ({
-		calls,
-	}: {
-		calls: ExpectedApiCall[];
-	}): ApiCalledExpectation => ({
+	called: ({ calls }: { calls: ExpectedApiCall[] }): ApiCalledExpectation => ({
 		calls,
 		type: "api.called",
 	}),
@@ -30,5 +29,35 @@ export const api = {
 	}): ApiCalledInOrderExpectation => ({
 		calls,
 		type: "api.calledInOrder",
+	}),
+	calledAfterApproval: ({
+		call,
+	}: {
+		call: ExpectedApiCall;
+	}): ApiCalledAfterApprovalExpectation => ({
+		call,
+		type: "api.calledAfterApproval",
+	}),
+	bodyExcludes: ({
+		fields,
+		toolName,
+	}: {
+		fields: string[];
+		toolName: ExpectedApiCall["toolName"];
+	}): ApiBodyExcludesExpectation => ({
+		fields,
+		toolName,
+		type: "api.bodyExcludes",
+	}),
+	bodyNumberFields: ({
+		paths,
+		toolName,
+	}: {
+		paths: string[];
+		toolName: ExpectedApiCall["toolName"];
+	}): ApiBodyNumberFieldsExpectation => ({
+		paths,
+		toolName,
+		type: "api.bodyNumberFields",
 	}),
 };

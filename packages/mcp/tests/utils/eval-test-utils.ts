@@ -10,6 +10,11 @@ import {
 	type AutumnMcpAuth,
 	createRequestContext,
 } from "../../src/server/auth/auth.js";
+
+const leafChatAgentDefaults = {
+	maxSteps: 8,
+	model: "anthropic/claude-opus-4-8",
+} as const;
 import { createAutumnOperationsMCPServer } from "../../src/server/server.js";
 import { endpointByTool, schemaByTool } from "../../src/tools/index.js";
 
@@ -140,7 +145,7 @@ const createMcpConsumerAgent = async (auth: AutumnMcpAuth) => {
 		name: "MCP Consumer Eval",
 		description: "A generic agent using MCP tools.",
 		instructions: "You are a helpful assistant.",
-		model: "anthropic/claude-sonnet-4-6",
+		model: leafChatAgentDefaults.model,
 		tools,
 	});
 	const mastra = new Mastra({
@@ -264,7 +269,10 @@ export const initMcpEval = ({
 					}
 				: null;
 	};
-	const generate = async (message: string | string[], maxSteps = 4) => {
+	const generate = async (
+		message: string | string[],
+		maxSteps: number = leafChatAgentDefaults.maxSteps,
+	) => {
 		messages.push({
 			role: "user",
 			content: Array.isArray(message) ? message.join("\n") : message,
@@ -283,7 +291,10 @@ export const initMcpEval = ({
 		auth: resolvedAuth,
 		toolCalls,
 		generate,
-		approve: async (message: string, maxSteps = 4) => {
+		approve: async (
+			message: string,
+			maxSteps: number = leafChatAgentDefaults.maxSteps,
+		) => {
 			if (!pendingApproval) await generate(message, maxSteps);
 			if (!pendingApproval) {
 				throw new Error("No pending MCP tool approval to approve.");
