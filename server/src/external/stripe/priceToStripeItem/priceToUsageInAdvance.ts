@@ -1,4 +1,5 @@
 import {
+	atmnToStripeAmount,
 	type EntitlementWithFeature,
 	type FeatureOptions,
 	featureOptionUtils,
@@ -58,7 +59,10 @@ export const priceToOneOffAndTiered = ({
 			product: config.stripe_product_id
 				? config.stripe_product_id
 				: stripeProductId,
-			unit_amount: Number(amount.toFixed(2)) * 100,
+			unit_amount: atmnToStripeAmount({
+				amount,
+				currency: orgToCurrency({ org }),
+			}),
 			currency: orgToCurrency({ org }),
 		},
 

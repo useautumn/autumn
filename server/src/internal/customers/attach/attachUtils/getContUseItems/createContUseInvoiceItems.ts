@@ -1,4 +1,5 @@
 import {
+	atmnToStripeAmount,
 	type BillingInterval,
 	BillingType,
 	cusProductToPrices,
@@ -138,7 +139,10 @@ export const createAndFilterContUseItems = async ({
 		const { start, end } = subToPeriodStartEnd({ sub });
 		await stripeCli.invoiceItems.create({
 			customer: customer.processor?.id ?? undefined,
-			amount: Math.round(item.amount * 100),
+			amount: atmnToStripeAmount({
+				amount: item.amount,
+				currency: org.default_currency || "usd",
+			}),
 			description: item.description,
 			currency: org.default_currency || "usd",
 			subscription: sub.id,
