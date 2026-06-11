@@ -116,6 +116,11 @@ const rejectOverloaded = ({
 	});
 };
 
+export const isFullSubjectGateRejection = (error: unknown): boolean =>
+	error instanceof RecaseError &&
+	error.code === "rate_limit_exceeded" &&
+	error.statusCode === 429;
+
 export const runWithFullSubjectGate = async <T>({
 	customerId,
 	orgId,

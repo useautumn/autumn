@@ -3,16 +3,18 @@ import { shouldUseRedisV2 } from "@/external/redis/initUtils/redisV2Availability
 import { RedisUnavailableError } from "./errors.js";
 import { isTransientRedisError } from "./isTransientRedisError.js";
 
-/** Runs `run`. If Redis is unavailable or a transient DB error occurs,
- *  calls `fallback`. Any other error propagates. */
+/** Runs `run`. If Redis is unavailable, a transient DB error occurs, or
+ *  `alsoFailOpen` matches, calls `fallback`. Any other error propagates. */
 export const withRedisFailOpen = async <T>({
 	source,
 	run,
 	fallback,
+	alsoFailOpen,
 }: {
 	source: string;
 	run: () => T | Promise<T>;
 	fallback: (error: unknown) => T | Promise<T>;
+	alsoFailOpen?: (error: unknown) => boolean;
 }): Promise<T> => {
 	try {
 		if (!shouldUseRedisV2()) {
@@ -21,7 +23,11 @@ export const withRedisFailOpen = async <T>({
 
 		return await run();
 	} catch (error) {
-		if (isTransientRedisError({ error }) || isTransientDbError({ error })) {
+		if (
+			isTransientRedisError({ error }) ||
+			isTransientDbError({ error }) ||
+			alsoFailOpen?.(error)
+		) {
 			return await fallback(error);
 		}
 
