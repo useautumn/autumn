@@ -1,19 +1,17 @@
 import { existsSync, readFileSync, rmSync } from "node:fs";
-import { sh, log } from "./shell.ts";
-import {
-	EMULATE_PID_FILE,
-	EMULATE_HEALTH_URL,
-	START_EMULATE_SH,
-} from "../constants.ts";
+import { EMULATE_PID_FILE, START_EMULATE_SH } from "../constants.ts";
+import { portlessHttpsUrl } from "./ports.ts";
+import { log, sh } from "./shell.ts";
 
 function emulateReachable(): boolean {
+	const healthUrl = `${portlessHttpsUrl("google.emulate.localhost")}/.well-known/openid-configuration`;
 	const res = sh("curl", [
 		"-sf",
 		"-o",
 		"/dev/null",
 		"--max-time",
 		"1",
-		EMULATE_HEALTH_URL,
+		healthUrl,
 	]);
 	return res.code === 0;
 }

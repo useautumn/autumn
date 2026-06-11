@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import {
 	type ApiCustomerV3,
 	UpdateSubscriptionPreviewIntent,
+	type UpdateSubscriptionV1ParamsInput,
 } from "@autumn/shared";
 import {
 	expectProductActive,
@@ -262,6 +263,48 @@ test.concurrent(`${chalk.yellowBright("update-subscription preview: uncancel wit
 		cancel_action: "uncancel",
 	});
 
+	expectPreviewChanges({
+		preview,
+		incoming: [{ planId: pro.id, effectiveAt: null }],
+		outgoing: [{ planId: pro.id }],
+	});
+});
+
+// Regression: no_billing_changes previews showed immediate charges despite skipping Stripe.
+// Green: entitlement-only DB updates preview $0 due now and still show the plan change.
+test.concurrent(`${chalk.yellowBright("update-subscription preview: no_billing_changes custom entitlement has no immediate due")}`, async () => {
+	const customerId = "update-sub-preview-no-billing-custom-ent";
+	const pro = products.base({
+		id: "pro-no-billing-preview",
+		items: [
+			items.monthlyMessages({ includedUsage: 100 }),
+			items.monthlyPrice({ price: 20 }),
+		],
+	});
+
+	const { autumnV2_2 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [s.billing.attach({ productId: pro.id })],
+	});
+
+	const preview = await autumnV2_2.subscriptions.previewUpdate<UpdateSubscriptionV1ParamsInput>({
+		customer_id: customerId,
+		plan_id: pro.id,
+		no_billing_changes: true,
+		customize: {
+			price: itemsV2.monthlyPrice({ amount: 20 }),
+			items: [itemsV2.monthlyMessages({ included: 250 })],
+		},
+	});
+
+	expect(preview.intent).toBe(UpdateSubscriptionPreviewIntent.UpdatePlan);
+	expect(preview.line_items).toEqual([]);
+	expect(preview.subtotal).toBe(0);
+	expect(preview.total).toBe(0);
 	expectPreviewChanges({
 		preview,
 		incoming: [{ planId: pro.id, effectiveAt: null }],
