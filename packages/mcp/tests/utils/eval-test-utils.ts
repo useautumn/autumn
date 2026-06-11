@@ -271,7 +271,7 @@ export const initMcpEval = ({
 	};
 	const generate = async (
 		message: string | string[],
-		maxSteps = leafChatAgentDefaults.maxSteps,
+		maxSteps: number = leafChatAgentDefaults.maxSteps,
 	) => {
 		messages.push({
 			role: "user",
@@ -293,7 +293,7 @@ export const initMcpEval = ({
 		generate,
 		approve: async (
 			message: string,
-			maxSteps = leafChatAgentDefaults.maxSteps,
+			maxSteps: number = leafChatAgentDefaults.maxSteps,
 		) => {
 			if (!pendingApproval) await generate(message, maxSteps);
 			if (!pendingApproval) {
