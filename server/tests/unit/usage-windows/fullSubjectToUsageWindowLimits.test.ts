@@ -3,12 +3,14 @@ import {
 	buildUsageWindowKey,
 	CusProductStatus,
 	type DbSpendLimit,
+	type DbUsageLimit,
 	EntInterval,
 	type Feature,
 	FeatureType,
 	type FullSubject,
 	fullSubjectToUsageWindowLimits,
 	getUsageWindowBounds,
+	ResetInterval,
 } from "@autumn/shared";
 
 const NOW = Date.UTC(2026, 5, 15, 12, 0, 0);
@@ -37,33 +39,14 @@ const credits2ContainingAction1 = {
 	config: { schema: [{ metered_feature_id: "action1", credit_amount: 3 }] },
 } as unknown as Feature;
 
-// Test-input shape for a windowed usage cap. usage_limit arms the cap; `interval`
-// is the optional override (omit it to test inheriting from the entitlement).
-type UsageCap = {
-	feature_id: string;
-	limit: number;
-	interval?: EntInterval;
-};
-
-const toSpendLimit = (cap: UsageCap): DbSpendLimit => ({
-	feature_id: cap.feature_id,
-	// Entry-level enabled gates the (absent) overage cap, not the usage window.
-	enabled: false,
-	usage_limit: cap.limit,
-	usage_limit_interval: cap.interval,
-});
-
-// Minimal loose (product-less) customer entitlement for anchor/inherit tests.
-// `interval` is the entitlement's reset interval (the inherited window source).
+// Minimal loose (product-less) customer entitlement for anchor tests.
 const looseEntitlement = ({
 	id,
 	featureId,
-	usageLimit,
 	interval = EntInterval.Month,
 }: {
 	id: string;
 	featureId: string;
-	usageLimit?: number;
 	interval?: EntInterval | null;
 }) =>
 	({
@@ -80,7 +63,6 @@ const looseEntitlement = ({
 			id: `ent_${id}`,
 			feature_id: featureId,
 			interval,
-			usage_limit: usageLimit ?? null,
 			feature: { id: featureId, internal_id: featureId },
 		},
 		rollovers: [],
@@ -94,13 +76,13 @@ const looseEntitlement = ({
 const customerProductWithEntitlement = ({
 	id,
 	featureId,
-	usageLimit,
 	cycleAnchor,
+	nextResetAt,
 }: {
 	id: string;
 	featureId: string;
-	usageLimit?: number;
 	cycleAnchor?: number;
+	nextResetAt?: number;
 }) =>
 	({
 		id: `cusprod_${id}`,
@@ -119,11 +101,11 @@ const customerProductWithEntitlement = ({
 				created_at: 1000,
 				balance: 0,
 				expires_at: null,
+				next_reset_at: nextResetAt ?? null,
 				entitlement: {
 					id: `ent_${id}`,
 					feature_id: featureId,
 					interval: EntInterval.Month,
-					usage_limit: usageLimit ?? null,
 					feature: { id: featureId, internal_id: featureId },
 				},
 				rollovers: [],
@@ -133,43 +115,32 @@ const customerProductWithEntitlement = ({
 	}) as unknown as FullSubject["customer_products"][number];
 
 const buildSubject = ({
-	customerLimits = [],
-	entityLimits,
+	usageLimits = [],
+	spendLimits = [],
 	looseEntitlements = [],
-	extraCustomerSpendLimits = [],
 	customerProducts = [],
 }: {
-	customerLimits?: UsageCap[];
-	entityLimits?: UsageCap[];
+	// Entries injected as-is; pass Partial shapes to simulate stale stored data.
+	usageLimits?: Partial<DbUsageLimit>[];
+	spendLimits?: DbSpendLimit[];
 	looseEntitlements?: FullSubject["extra_customer_entitlements"];
-	// Raw spend-limit entries (e.g. overage-only or both-cap) injected as-is.
-	extraCustomerSpendLimits?: DbSpendLimit[];
 	customerProducts?: FullSubject["customer_products"];
 }): FullSubject =>
 	({
 		customer: {
-			spend_limits: [
-				...customerLimits.map(toSpendLimit),
-				...extraCustomerSpendLimits,
-			],
+			usage_limits: usageLimits,
+			spend_limits: spendLimits,
 		},
 		customer_products: customerProducts,
 		extra_customer_entitlements: looseEntitlements,
-		entity: entityLimits
-			? {
-					id: "ent_1",
-					internal_id: "ient_1",
-					spend_limits: entityLimits.map(toSpendLimit),
-				}
-			: undefined,
 	}) as unknown as FullSubject;
 
 describe("fullSubjectToUsageWindowLimits", () => {
 	test("resolves a customer-level metered-feature cap", () => {
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
-				customerLimits: [
-					{ feature_id: "action1", limit: 5, interval: EntInterval.Month },
+				usageLimits: [
+					{ feature_id: "action1", limit: 5, interval: ResetInterval.Month },
 				],
 			}),
 			featureIds: ["action1"],
@@ -208,8 +179,8 @@ describe("fullSubjectToUsageWindowLimits", () => {
 	test("skips a cap whose feature is absent from the catalog (unresolvable internal_feature_id)", () => {
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
-				customerLimits: [
-					{ feature_id: "action1", limit: 5, interval: EntInterval.Month },
+				usageLimits: [
+					{ feature_id: "action1", limit: 5, interval: ResetInterval.Month },
 				],
 			}),
 			featureIds: ["action1"],
@@ -223,8 +194,8 @@ describe("fullSubjectToUsageWindowLimits", () => {
 	test("a credit-system feature resolves to the balance dimension", () => {
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
-				customerLimits: [
-					{ feature_id: "credits", limit: 3, interval: EntInterval.Day },
+				usageLimits: [
+					{ feature_id: "credits", limit: 3, interval: ResetInterval.Day },
 				],
 			}),
 			featureIds: ["credits"],
@@ -239,34 +210,12 @@ describe("fullSubjectToUsageWindowLimits", () => {
 		});
 	});
 
-	test("inherits the interval from the anchor entitlement when no override", () => {
+	test("the window interval comes from the entry, independent of the entitlement's reset interval", () => {
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
-				// No `interval` => inherit the entitlement's reset interval (Month).
-				customerLimits: [{ feature_id: "credits", limit: 5 }],
-				looseEntitlements: [
-					looseEntitlement({ id: "ce_credits", featureId: "credits" }),
-				],
-			}),
-			featureIds: ["credits"],
-			features: [creditsFeature],
-			now: NOW,
-		});
-
-		expect(limits).toHaveLength(1);
-		expect(limits[0]).toMatchObject({
-			limit: 5,
-			interval: EntInterval.Month,
-			anchor_customer_entitlement_id: "ce_credits",
-		});
-	});
-
-	test("an explicit usage_limit_interval overrides the inherited interval", () => {
-		const limits = fullSubjectToUsageWindowLimits({
-			fullSubject: buildSubject({
-				// Entitlement interval is Month; the cap overrides to Day.
-				customerLimits: [
-					{ feature_id: "credits", limit: 3, interval: EntInterval.Day },
+				// Entitlement resets monthly; the cap windows daily.
+				usageLimits: [
+					{ feature_id: "credits", limit: 3, interval: ResetInterval.Day },
 				],
 				looseEntitlements: [
 					looseEntitlement({ id: "ce_credits", featureId: "credits" }),
@@ -281,16 +230,12 @@ describe("fullSubjectToUsageWindowLimits", () => {
 		expect(limits[0]).toMatchObject({ limit: 3, interval: EntInterval.Day });
 	});
 
-	test("a usage_limit with no override and a null-interval entitlement resolves nothing", () => {
+	test("a stale entry missing its interval resolves nothing (fail-safe)", () => {
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
-				customerLimits: [{ feature_id: "credits", limit: 3 }],
+				usageLimits: [{ feature_id: "credits", limit: 3 }],
 				looseEntitlements: [
-					looseEntitlement({
-						id: "ce_credits",
-						featureId: "credits",
-						interval: null,
-					}),
+					looseEntitlement({ id: "ce_credits", featureId: "credits" }),
 				],
 			}),
 			featureIds: ["credits"],
@@ -301,11 +246,11 @@ describe("fullSubjectToUsageWindowLimits", () => {
 		expect(limits).toHaveLength(0);
 	});
 
-	test("a usage_limit of 0 is a valid hard cap (blocks all usage)", () => {
+	test("a limit of 0 is a valid hard cap (blocks all usage)", () => {
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
-				customerLimits: [
-					{ feature_id: "credits", limit: 0, interval: EntInterval.Day },
+				usageLimits: [
+					{ feature_id: "credits", limit: 0, interval: ResetInterval.Day },
 				],
 			}),
 			featureIds: ["credits"],
@@ -322,8 +267,8 @@ describe("fullSubjectToUsageWindowLimits", () => {
 		const cycleAnchor = Date.UTC(2026, 0, 9, 15, 30, 0);
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
-				customerLimits: [
-					{ feature_id: "credits", limit: 3, interval: EntInterval.Day },
+				usageLimits: [
+					{ feature_id: "credits", limit: 3, interval: ResetInterval.Day },
 				],
 				customerProducts: [
 					customerProductWithEntitlement({
@@ -355,29 +300,51 @@ describe("fullSubjectToUsageWindowLimits", () => {
 		expect(aligned.windowStartAt).not.toBe(calendar.windowStartAt);
 	});
 
-	test("a spend_limit with usage_limit_interval but no usage_limit is not armed", () => {
+	test("the anchor ent's next_reset_at outranks the billing-cycle anchor for bounds", () => {
+		// Non-calendar, non-cycle-anchor timestamps so all three alignments differ.
+		const cycleAnchor = Date.UTC(2026, 0, 9, 15, 30, 0);
+		const nextResetAt = Date.UTC(2026, 5, 22, 8, 45, 0);
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
-				extraCustomerSpendLimits: [
-					{
-						feature_id: "action1",
-						enabled: false,
-						usage_limit_interval: EntInterval.Month,
-					},
+				usageLimits: [
+					{ feature_id: "credits", limit: 3, interval: ResetInterval.Day },
+				],
+				customerProducts: [
+					customerProductWithEntitlement({
+						id: "ce_credits",
+						featureId: "credits",
+						cycleAnchor,
+						nextResetAt,
+					}),
 				],
 			}),
-			featureIds: ["action1"],
-			features: [meteredAction1],
+			featureIds: ["credits"],
+			features: [creditsFeature],
 			now: NOW,
 		});
 
-		expect(limits).toHaveLength(0);
+		const resetAligned = getUsageWindowBounds({
+			interval: EntInterval.Day,
+			now: NOW,
+			anchor: nextResetAt,
+		});
+		const cycleAligned = getUsageWindowBounds({
+			interval: EntInterval.Day,
+			now: NOW,
+			anchor: cycleAnchor,
+		});
+
+		expect(limits).toHaveLength(1);
+		expect(limits[0].window_start_at).toBe(resetAligned.windowStartAt);
+		expect(limits[0].window_end_at).toBe(resetAligned.windowEndAt);
+		// Sanity: the reset-cycle window genuinely differs from the cycle-anchor one.
+		expect(resetAligned.windowStartAt).not.toBe(cycleAligned.windowStartAt);
 	});
 
-	test("ignores an overage-only spend_limit (no usage_limit)", () => {
+	test("an overage spend_limit does not arm a usage window", () => {
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
-				extraCustomerSpendLimits: [
+				spendLimits: [
 					{ feature_id: "action1", enabled: true, overage_limit: 20 },
 				],
 			}),
@@ -389,17 +356,14 @@ describe("fullSubjectToUsageWindowLimits", () => {
 		expect(limits).toHaveLength(0);
 	});
 
-	test("resolves the window when one entry carries both overage and usage caps", () => {
+	test("a usage limit coexists with an overage spend_limit on the same feature", () => {
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
-				extraCustomerSpendLimits: [
-					{
-						feature_id: "action1",
-						enabled: true,
-						overage_limit: 20,
-						usage_limit: 5,
-						usage_limit_interval: EntInterval.Month,
-					},
+				usageLimits: [
+					{ feature_id: "action1", limit: 5, interval: ResetInterval.Month },
+				],
+				spendLimits: [
+					{ feature_id: "action1", enabled: true, overage_limit: 20 },
 				],
 			}),
 			featureIds: ["action1"],
@@ -411,48 +375,9 @@ describe("fullSubjectToUsageWindowLimits", () => {
 		expect(limits[0]).toMatchObject({ feature_id: "action1", limit: 5 });
 	});
 
-	test("ignores entity-scoped usage windows in v1; the customer cap applies", () => {
-		const limits = fullSubjectToUsageWindowLimits({
-			fullSubject: buildSubject({
-				customerLimits: [
-					{ feature_id: "action1", limit: 5, interval: EntInterval.Month },
-				],
-				entityLimits: [
-					{ feature_id: "action1", limit: 2, interval: EntInterval.Month },
-				],
-			}),
-			featureIds: ["action1"],
-			features: [meteredAction1],
-			now: NOW,
-		});
-
-		expect(limits).toHaveLength(1);
-		expect(limits[0]).toMatchObject({
-			scope_type: "customer",
-			entity_id: null,
-			internal_entity_id: null,
-			limit: 5,
-		});
-	});
-
-	test("an entity-only usage window resolves nothing in v1", () => {
-		const limits = fullSubjectToUsageWindowLimits({
-			fullSubject: buildSubject({
-				entityLimits: [
-					{ feature_id: "action1", limit: 2, interval: EntInterval.Month },
-				],
-			}),
-			featureIds: ["action1"],
-			features: [meteredAction1],
-			now: NOW,
-		});
-
-		expect(limits).toHaveLength(0);
-	});
-
 	test("returns nothing when no cap matches the feature", () => {
 		const limits = fullSubjectToUsageWindowLimits({
-			fullSubject: buildSubject({ customerLimits: [] }),
+			fullSubject: buildSubject({ usageLimits: [] }),
 			featureIds: ["action1"],
 			features: [meteredAction1],
 			now: NOW,
@@ -469,9 +394,9 @@ describe("fullSubjectToUsageWindowLimits", () => {
 		} as Feature;
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
-				customerLimits: [
-					{ feature_id: "action1", limit: 5, interval: EntInterval.Month },
-					{ feature_id: "action2", limit: 9, interval: EntInterval.Day },
+				usageLimits: [
+					{ feature_id: "action1", limit: 5, interval: ResetInterval.Month },
+					{ feature_id: "action2", limit: 9, interval: ResetInterval.Day },
 				],
 			}),
 			featureIds: ["action1", "action2"],
@@ -489,8 +414,8 @@ describe("fullSubjectToUsageWindowLimits", () => {
 	test("resolves the anchor to the owning entitlement (balance dim)", () => {
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
-				customerLimits: [
-					{ feature_id: "credits", limit: 3, interval: EntInterval.Day },
+				usageLimits: [
+					{ feature_id: "credits", limit: 3, interval: ResetInterval.Day },
 				],
 				looseEntitlements: [
 					looseEntitlement({ id: "ce_credits", featureId: "credits" }),
@@ -504,15 +429,14 @@ describe("fullSubjectToUsageWindowLimits", () => {
 		expect(limits).toHaveLength(1);
 		expect(limits[0]).toMatchObject({
 			anchor_customer_entitlement_id: "ce_credits",
-			anchor_feature_id: "credits",
 		});
 	});
 
 	test("metered cap with no native entitlement anchors to the containing credit system", () => {
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
-				customerLimits: [
-					{ feature_id: "action1", limit: 5, interval: EntInterval.Month },
+				usageLimits: [
+					{ feature_id: "action1", limit: 5, interval: ResetInterval.Month },
 				],
 				looseEntitlements: [
 					looseEntitlement({ id: "ce_credits", featureId: "credits" }),
@@ -528,15 +452,14 @@ describe("fullSubjectToUsageWindowLimits", () => {
 			dimension_type: "metered_feature",
 			dimension_feature_id: "action1",
 			anchor_customer_entitlement_id: "ce_credits",
-			anchor_feature_id: "credits",
 		});
 	});
 
-	test("anchor is null when no owning entitlement exists (fail-closed signal)", () => {
+	test("anchor is null when no reference entitlement exists (calendar bounds, no provenance)", () => {
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
-				customerLimits: [
-					{ feature_id: "credits", limit: 3, interval: EntInterval.Day },
+				usageLimits: [
+					{ feature_id: "credits", limit: 3, interval: ResetInterval.Day },
 				],
 			}),
 			featureIds: ["credits"],
@@ -551,8 +474,8 @@ describe("fullSubjectToUsageWindowLimits", () => {
 	test("metered cap with a containing credit system but no entitlement resolves a null anchor", () => {
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
-				customerLimits: [
-					{ feature_id: "action1", limit: 5, interval: EntInterval.Month },
+				usageLimits: [
+					{ feature_id: "action1", limit: 5, interval: ResetInterval.Month },
 				],
 			}),
 			featureIds: ["action1"],
@@ -567,8 +490,8 @@ describe("fullSubjectToUsageWindowLimits", () => {
 	test("metered cap contained by two credit systems anchors deterministically", () => {
 		const limits = fullSubjectToUsageWindowLimits({
 			fullSubject: buildSubject({
-				customerLimits: [
-					{ feature_id: "action1", limit: 5, interval: EntInterval.Month },
+				usageLimits: [
+					{ feature_id: "action1", limit: 5, interval: ResetInterval.Month },
 				],
 				looseEntitlements: [
 					looseEntitlement({ id: "ce_credits", featureId: "credits" }),

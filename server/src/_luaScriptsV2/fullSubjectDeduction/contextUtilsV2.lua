@@ -24,17 +24,24 @@ local function init_context(params)
     env = params.env,
     customer_id = params.customer_id,
     customer_entitlement_deductions = params.customer_entitlement_deductions,
-    anchor_entitlements = params.anchor_entitlements,
     balance_keys_by_feature_id = params.balance_keys_by_feature_id,
   })
 
   local context = {
     customer_entitlements = {},
     rollovers = {},
+    -- Customer-scoped windowed-cap counters, loaded below alongside the other
+    -- subject state: { [feature_id] = { balance_key, windows, dirty } }.
+    usage_windows = read_usage_windows({
+      usage_window_limits = params.usage_window_limits,
+      balance_keys_by_feature_id = params.balance_keys_by_feature_id,
+      now = params.usage_window_now,
+    }),
     org_id = params.org_id,
     env = params.env,
     customer_id = params.customer_id,
     mutation_logs = {},
+    usage_window_mutations = {},
     pending_writes = {},
     pending_write_ids = {},
     missing_customer_entitlement_ids =
@@ -94,23 +101,6 @@ local function init_context(params)
           }
         end
       end
-    end
-  end
-
-  -- Register usage-window anchor cus_ents that are not in the deduction set so
-  -- their counter can be read/mutated and persisted (HSET) on apply.
-  for customer_entitlement_id, balance_entry in pairs(read_result.balances_by_id) do
-    if balance_entry.anchor_only
-        and is_nil(context.customer_entitlements[customer_entitlement_id])
-    then
-      context.customer_entitlements[customer_entitlement_id] = {
-        base_path = customer_entitlement_id,
-        balance_key = balance_entry.balance_key,
-        subject_balance = balance_entry.subject_balance,
-        customer_entitlement_id = customer_entitlement_id,
-        feature_id = balance_entry.feature_id,
-        is_anchor_only = true,
-      }
     end
   end
 

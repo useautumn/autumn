@@ -6,7 +6,7 @@ import {
 	type CustomerLegacyData,
 	type FullCustomer,
 	fullCustomerToFullSubject,
-	fullSubjectToApiSpendLimits,
+	fullSubjectToApiUsageLimits,
 	orgToInStatuses,
 	scopeExpandForCtx,
 } from "@autumn/shared";
@@ -48,7 +48,7 @@ export const getApiCustomerBase = async ({
 		ctx: subscriptionsScopedCtx,
 		fullCus,
 	});
-	const spendLimits = fullSubjectToApiSpendLimits({
+	const usageLimits = fullSubjectToApiUsageLimits({
 		fullSubject: fullCustomerToFullSubject({ fullCustomer: fullCus }),
 		features: ctx.features,
 		inStatuses: orgToInStatuses({ org: ctx.org }),
@@ -76,7 +76,8 @@ export const getApiCustomerBase = async ({
 		send_email_receipts: fullCus.send_email_receipts ?? false,
 		billing_controls: {
 			auto_topups: fullCus.auto_topups ?? undefined,
-			spend_limits: spendLimits,
+			spend_limits: fullCus.spend_limits ?? undefined,
+			usage_limits: usageLimits,
 			usage_alerts: fullCus.usage_alerts ?? undefined,
 			overage_allowed: fullCus.overage_allowed ?? undefined,
 		},

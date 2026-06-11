@@ -57,7 +57,7 @@ export const invoiceCreditFromStoredLineItems = ({
 				row.customer_product_ids.length > 0 &&
 				row.effective_period_start != null &&
 				row.effective_period_end != null &&
-				row.effective_period_start < now &&
+				row.effective_period_start <= now &&
 				row.effective_period_end > now,
 		);
 
@@ -76,7 +76,7 @@ export const invoiceCreditFromStoredLineItems = ({
 				r.customer_product_ids.includes(customerProduct.id) &&
 				r.effective_period_end != null &&
 				r.effective_period_start != null &&
-				r.effective_period_start < now &&
+				r.effective_period_start <= now &&
 				r.effective_period_end > now,
 		);
 

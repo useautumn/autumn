@@ -21,6 +21,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { getCreditCost } from "@/internal/features/creditSystemUtils.js";
+import { generateId } from "@/utils/genUtils.js";
 import type {
 	CustomerEntitlementDeduction,
 	DeductionOptions,
@@ -132,19 +133,16 @@ export const prepareFeatureDeductionV2 = ({
 		inStatuses: orgToInStatuses({ org }),
 	});
 
+	// Counters are customer-scoped: a null anchor only means calendar-aligned
+	// bounds with no provenance, not an unenforceable cap.
 	for (const windowLimit of usageWindowLimits) {
+		windowLimit.new_window_id = generateId("uw");
 		if (windowLimit.anchor_customer_entitlement_id === null) {
 			ctx.logger.warn(
-				`usage window for feature ${windowLimit.feature_id} has no eligible anchor entitlement; failing closed (rejecting). Likely a misconfigured cap with no in-status, non-entity-scoped owning entitlement.`,
+				`usage window for feature ${windowLimit.feature_id} has no anchor entitlement; using calendar-aligned bounds with no provenance.`,
 			);
 		}
 	}
-	if (fullSubject.entity?.spend_limits?.some((s) => s.usage_limit != null)) {
-		ctx.logger.warn(
-			`entity-scoped usage windows are not enforced in v1; ignored for entity ${fullSubject.entity.id}`,
-		);
-	}
-
 	// set_usage carries no window provenance, so it would silently bypass the hard
 	// cap; reject it when the feature has an enforced usage window.
 	if (notNullish(targetBalance) && usageWindowLimits.length > 0) {
@@ -260,6 +258,10 @@ export const prepareFeatureDeductionV2 = ({
 				: undefined,
 		usageWindowLimits:
 			usageWindowLimits.length > 0 ? usageWindowLimits : undefined,
+		usageWindowFeatureIds:
+			usageWindowLimits.length > 0
+				? [...new Set(usageWindowLimits.map((limit) => limit.feature_id))]
+				: undefined,
 		rollovers: sortedRollovers.map((rollover) => ({
 			id: rollover.id,
 			credit_cost: rollover.credit_cost,

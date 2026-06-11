@@ -3,6 +3,7 @@ import type {
 	DbOverageAllowed,
 	DbSpendLimit,
 	DbUsageAlert,
+	DbUsageLimit,
 	Entity,
 	Feature,
 	FullCustomer,
@@ -45,7 +46,9 @@ const StatusPill = ({ enabled }: { enabled: boolean }) => (
 	<span
 		className={cn(
 			"shrink-0 rounded-md px-1.5 py-0.5 text-xs font-medium",
-			enabled ? "bg-green-500/10 text-green-600" : "bg-muted text-tertiary-foreground",
+			enabled
+				? "bg-green-500/10 text-green-600"
+				: "bg-muted text-tertiary-foreground",
 		)}
 	>
 		{enabled ? "Enabled" : "Disabled"}
@@ -105,18 +108,20 @@ const AutoTopupRow = ({
 			<div className="ml-auto flex items-center gap-1.5 shrink-0">
 				<Pill>Threshold: {autoTopup.threshold.toLocaleString()}</Pill>
 				<Pill>Qty: {autoTopup.quantity.toLocaleString()}</Pill>
-			{purchaseLimit && purchaseLimit.limit != null && purchaseLimit.interval != null && (
-				<Pill className="hidden lg:inline">
-					{hasExpandedLimit
-						? `${purchaseLimit.count}/${purchaseLimit.limit} per ${purchaseLimit.interval}`
-						: `Limit: ${purchaseLimit.limit} per ${purchaseLimit.interval}`}
-				</Pill>
-			)}
-			{hasExpandedLimit && purchaseLimit.next_reset_at && (
-				<Pill className="hidden xl:inline">
-					Resets {format(new Date(purchaseLimit.next_reset_at), "MMM d")}
-				</Pill>
-			)}
+				{purchaseLimit &&
+					purchaseLimit.limit != null &&
+					purchaseLimit.interval != null && (
+						<Pill className="hidden lg:inline">
+							{hasExpandedLimit
+								? `${purchaseLimit.count}/${purchaseLimit.limit} per ${purchaseLimit.interval}`
+								: `Limit: ${purchaseLimit.limit} per ${purchaseLimit.interval}`}
+						</Pill>
+					)}
+				{hasExpandedLimit && purchaseLimit.next_reset_at && (
+					<Pill className="hidden xl:inline">
+						Resets {format(new Date(purchaseLimit.next_reset_at), "MMM d")}
+					</Pill>
+				)}
 			</div>
 		</button>
 	);
@@ -155,12 +160,13 @@ const UsageLimitRow = ({
 	featureNameById,
 	onClick,
 }: {
-	usageLimit: DbSpendLimit;
+	usageLimit: DbUsageLimit;
 	featureNameById: Map<string, string>;
 	onClick: () => void;
 }) => (
 	<button type="button" className={rowClassName} onClick={onClick}>
-		<StatusPill enabled={usageLimit.usage_limit != null} />
+		{/* A usage_limits entry's presence arms the cap. */}
+		<StatusPill enabled />
 		<span className="truncate text-sm text-foreground font-medium">
 			{getFeatureLabel({
 				featureId: usageLimit.feature_id,
@@ -170,9 +176,7 @@ const UsageLimitRow = ({
 		<div className="ml-auto flex items-center gap-1.5 shrink-0">
 			<Pill>
 				Usage limit:{" "}
-				{usageLimit.usage_limit == null
-					? "none"
-					: `${usageLimit.usage_limit.toLocaleString()} / ${usageLimit.usage_limit_interval ?? "cycle"}`}
+				{`${usageLimit.limit.toLocaleString()} / ${usageLimit.interval}`}
 			</Pill>
 		</div>
 	</button>
@@ -274,19 +278,15 @@ export function CustomerBillingControlsSection() {
 	const allSpendLimits = selectedEntity
 		? (selectedEntity.spend_limits ?? [])
 		: (fullCustomer?.spend_limits ?? []);
-	// Usage caps are folded into spend_limits (usage_limit set); surface them as a
-	// separate "Usage limits" control. Keep each entry's original index so edit/delete
-	// target the right slot in the full spend_limits array.
-	const indexedSpendLimits = allSpendLimits.map((item, index) => ({
+	const spendLimits = allSpendLimits.map((item, index) => ({
 		item,
 		index,
 	}));
-	const spendLimits = indexedSpendLimits.filter(
-		({ item }) => item.usage_limit == null,
-	);
-	const usageLimits = indexedSpendLimits.filter(
-		({ item }) => item.usage_limit != null,
-	);
+	// Usage limits are their own customer-scoped billing control (no entity
+	// variant in v1).
+	const usageLimits = (
+		selectedEntity ? [] : (fullCustomer?.usage_limits ?? [])
+	).map((item: DbUsageLimit, index: number) => ({ item, index }));
 	const usageAlerts = selectedEntity
 		? (selectedEntity.usage_alerts ?? [])
 		: (fullCustomer?.usage_alerts ?? []);

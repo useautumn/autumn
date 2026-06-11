@@ -2,8 +2,8 @@ import type { FeatureOptions } from "@autumn/shared";
 import {
 	type AggregatedFeatureBalance,
 	type AggregatedSubjectFlag,
-	type Customer,
 	CusProductStatus,
+	type Customer,
 	type DbCustomerEntitlement,
 	type DbCustomerPrice,
 	type DbFreeTrial,
@@ -71,14 +71,6 @@ export const subjectQueryRowToNormalized = ({
 		const existing = replaceablesByCusEntId.get(replaceable.cus_ent_id) ?? [];
 		existing.push(replaceable);
 		replaceablesByCusEntId.set(replaceable.cus_ent_id, existing);
-	}
-
-	const usageWindowsByCusEntId = new Map<string, DbUsageWindow[]>();
-	for (const usageWindow of row.usage_windows) {
-		const existing =
-			usageWindowsByCusEntId.get(usageWindow.customer_entitlement_id) ?? [];
-		existing.push(usageWindow);
-		usageWindowsByCusEntId.set(usageWindow.customer_entitlement_id, existing);
 	}
 
 	const customerProductsById = new Map(
@@ -217,7 +209,6 @@ export const subjectQueryRowToNormalized = ({
 				entitlement: catalogEntitlement as EntitlementWithFeature,
 				replaceables: replaceablesByCusEntId.get(customerEntitlement.id) ?? [],
 				rollovers: rolloversByCusEntId.get(customerEntitlement.id) ?? [],
-				usage_windows: usageWindowsByCusEntId.get(customerEntitlement.id) ?? [],
 				customerPrice: resolveCustomerPrice({
 					customerEntitlement,
 					entitlement: catalogEntitlement as EntitlementWithFeature,
@@ -294,6 +285,7 @@ export const subjectQueryRowToNormalized = ({
 		customer_products: row.customer_products,
 		customer_entitlements: meteredCustomerEntitlements,
 		customer_prices: row.customer_prices,
+		usage_windows: (row.usage_windows ?? []) as DbUsageWindow[],
 		flags,
 		products: row.products as DbProduct[],
 		entitlements: row.entitlements as EntitlementWithFeature[],

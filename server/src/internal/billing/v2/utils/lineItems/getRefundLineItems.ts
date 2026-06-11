@@ -9,12 +9,14 @@ export const getRefundLineItems = ({
 	billingContext,
 	priceFilters,
 	billingCycleAnchorMsOverride,
+	includeCatalogFallback = true,
 }: {
 	ctx: AutumnContext;
 	customerProduct: FullCusProduct;
 	billingContext: BillingContext;
 	priceFilters?: { excludeOneOffPrices?: boolean };
 	billingCycleAnchorMsOverride?: BillingContext["billingCycleAnchorMs"];
+	includeCatalogFallback?: boolean;
 }): LineItem[] => {
 	const {
 		lineItems: matchedCredits,
@@ -27,6 +29,7 @@ export const getRefundLineItems = ({
 	});
 
 	if (allPricesResolved) return matchedCredits;
+	if (!includeCatalogFallback) return matchedCredits;
 
 	const catalogCredits = customerProductToLineItems({
 		ctx,

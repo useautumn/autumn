@@ -28,6 +28,7 @@ export type UsageWindowScope = z.infer<typeof UsageWindowScopeSchema>;
 export const UsageWindowLimitSchema = z.object({
 	feature_id: z.string(),
 	internal_feature_id: z.string(),
+	internal_customer_id: z.string(),
 	key: z.string(),
 	dimension_type: UsageWindowDimensionSchema,
 	dimension_feature_id: z.string().nullable(),
@@ -38,12 +39,15 @@ export const UsageWindowLimitSchema = z.object({
 	window_start_at: z.number(),
 	window_end_at: z.number(),
 	limit: z.number(),
-	// The single entitlement that owns this counter, resolved in TS so it is
-	// deduction-order-independent. Null when no eligible owner exists (e.g. a
-	// customer-scope cap with only entity-scoped entitlements) -> enforcement
-	// must fail closed rather than split or silently allow.
+	// Bounds/interval provenance: the entitlement whose reset interval and
+	// billing-cycle anchor shaped this window. Stamped onto the counter row at
+	// creation; storage no longer depends on it, so null just means calendar
+	// bounds with no provenance.
 	anchor_customer_entitlement_id: z.string().nullable(),
-	anchor_feature_id: z.string().nullable(),
+	// Candidate row id (ksuid) minted server-side per request. Lua uses it ONLY
+	// when this request creates the counter row; lookups match the logical key
+	// (window_start_at + entity), never the id.
+	new_window_id: z.string().optional(),
 });
 
 export type UsageWindowLimit = z.infer<typeof UsageWindowLimitSchema>;

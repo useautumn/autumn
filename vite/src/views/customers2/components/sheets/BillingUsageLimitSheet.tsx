@@ -1,9 +1,9 @@
 import {
-	type DbSpendLimit,
-	EntInterval,
+	type DbUsageLimit,
 	type Feature,
 	FeatureType,
 	type FullCustomer,
+	ResetInterval,
 } from "@autumn/shared";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -30,43 +30,28 @@ import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
-import { useCustomerContext } from "../../customer/CustomerContext";
 
-// The empty value means "inherit the feature entitlement's reset interval"
-// (usage_limit_interval omitted -> backend defaults to the billing cycle).
-export const INHERIT_WINDOW = "inherit";
-
+// Interval is required (no inherit) and one_off windows are not supported.
 const WINDOW_OPTIONS: Record<string, string> = {
-	[INHERIT_WINDOW]: "Inherit (billing cycle)",
-	[EntInterval.Day]: "Day",
-	[EntInterval.Week]: "Week",
-	[EntInterval.Month]: "Month",
-	[EntInterval.Year]: "Year",
+	[ResetInterval.Day]: "Day",
+	[ResetInterval.Week]: "Week",
+	[ResetInterval.Month]: "Month",
+	[ResetInterval.Year]: "Year",
 };
 
-/**
- * Build the spend_limit entry for a usage cap. The cap is folded into spend_limits
- * (presence of usage_limit arms it); window === INHERIT_WINDOW omits the interval so
- * the backend inherits the entitlement's reset interval. Any co-located overage limit
- * on an edited entry is preserved.
- */
+/** Build the usage_limits entry for a windowed hard cap. */
 export const buildUsageLimitItem = ({
-	existing,
 	featureId,
-	usageLimit,
+	limit,
 	window,
 }: {
-	existing?: DbSpendLimit;
 	featureId: string;
-	usageLimit: number;
+	limit: number;
 	window: string;
-}): DbSpendLimit => ({
-	...existing,
-	feature_id: featureId || undefined,
-	enabled: existing?.enabled ?? false,
-	usage_limit: usageLimit,
-	usage_limit_interval:
-		window === INHERIT_WINDOW ? undefined : (window as EntInterval),
+}): DbUsageLimit => ({
+	feature_id: featureId,
+	limit,
+	interval: window as ResetInterval,
 });
 
 export function BillingUsageLimitSheet() {
@@ -74,57 +59,42 @@ export function BillingUsageLimitSheet() {
 	const sheetData = useSheetStore((s) => s.data);
 	const sheetType = useSheetStore((s) => s.type);
 	const { customer, refetch } = useCusQuery();
-	const { entityId } = useCustomerContext();
 	const { features } = useFeaturesQuery();
 	const axiosInstance = useAxiosInstance();
 
 	const isEdit = sheetType === "billing-usage-limit-edit";
-	const existingItem = sheetData?.item as DbSpendLimit | undefined;
+	const existingItem = sheetData?.item as DbUsageLimit | undefined;
 	const existingIndex = sheetData?.index as number | undefined;
 
+	// v1: usage limits are customer-scoped only (no entity variant).
 	const fullCustomer = customer as FullCustomer | undefined;
-	const selectedEntity = entityId
-		? fullCustomer?.entities?.find(
-				(e) => e.id === entityId || e.internal_id === entityId,
-			)
-		: null;
 
 	const [isSaving, setIsSaving] = useState(false);
 	const [featureId, setFeatureId] = useState(existingItem?.feature_id ?? "");
 	const [usageLimit, setUsageLimit] = useState(
-		existingItem?.usage_limit?.toString() ?? "",
+		existingItem?.limit?.toString() ?? "",
 	);
 	const [windowInterval, setWindowInterval] = useState<string>(
-		existingItem?.usage_limit_interval ?? INHERIT_WINDOW,
+		existingItem?.interval ?? ResetInterval.Month,
 	);
 
 	const nonArchivedFeatures = (features ?? []).filter(
 		(f: Feature) => !f.archived && f.type !== FeatureType.Boolean,
 	);
 
-	const getCurrentSpendLimits = (): DbSpendLimit[] => {
-		if (selectedEntity) return [...(selectedEntity.spend_limits ?? [])];
-		return [...(fullCustomer?.spend_limits ?? [])];
-	};
+	const getCurrentUsageLimits = (): DbUsageLimit[] => [
+		...(fullCustomer?.usage_limits ?? []),
+	];
 
-	const saveBillingControls = async (spendLimits: DbSpendLimit[]) => {
+	const saveBillingControls = async (usageLimits: DbUsageLimit[]) => {
 		const customerId = fullCustomer?.id || fullCustomer?.internal_id;
 		if (!customerId) return;
 
-		if (selectedEntity) {
-			await CusService.updateEntity({
-				axios: axiosInstance,
-				customerId,
-				entityId: selectedEntity.id || selectedEntity.internal_id,
-				billingControls: { spend_limits: spendLimits },
-			});
-		} else {
-			await CusService.updateCustomer({
-				axios: axiosInstance,
-				customer_id: customerId,
-				data: { billing_controls: { spend_limits: spendLimits } },
-			});
-		}
+		await CusService.updateCustomer({
+			axios: axiosInstance,
+			customer_id: customerId,
+			data: { billing_controls: { usage_limits: usageLimits } },
+		});
 	};
 
 	const handleSave = async () => {
@@ -140,22 +110,21 @@ export function BillingUsageLimitSheet() {
 		}
 
 		const item = buildUsageLimitItem({
-			existing: existingItem,
 			featureId,
-			usageLimit: parsedLimit,
+			limit: parsedLimit,
 			window: windowInterval,
 		});
 
-		const spendLimits = getCurrentSpendLimits();
+		const usageLimits = getCurrentUsageLimits();
 		if (isEdit && existingIndex !== undefined) {
-			spendLimits[existingIndex] = item;
+			usageLimits[existingIndex] = item;
 		} else {
-			spendLimits.push(item);
+			usageLimits.push(item);
 		}
 
 		setIsSaving(true);
 		try {
-			await saveBillingControls(spendLimits);
+			await saveBillingControls(usageLimits);
 			await refetch();
 			closeSheet();
 			toast.success(isEdit ? "Usage limit updated" : "Usage limit added");
@@ -169,22 +138,12 @@ export function BillingUsageLimitSheet() {
 	const handleDelete = async () => {
 		if (existingIndex === undefined) return;
 
-		const spendLimits = getCurrentSpendLimits();
-		const existing = spendLimits[existingIndex];
-		// Preserve a co-located overage limit; otherwise drop the entry entirely.
-		if (existing?.overage_limit != null || existing?.enabled) {
-			spendLimits[existingIndex] = {
-				...existing,
-				usage_limit: undefined,
-				usage_limit_interval: undefined,
-			};
-		} else {
-			spendLimits.splice(existingIndex, 1);
-		}
+		const usageLimits = getCurrentUsageLimits();
+		usageLimits.splice(existingIndex, 1);
 
 		setIsSaving(true);
 		try {
-			await saveBillingControls(spendLimits);
+			await saveBillingControls(usageLimits);
 			await refetch();
 			closeSheet();
 			toast.success("Usage limit deleted");

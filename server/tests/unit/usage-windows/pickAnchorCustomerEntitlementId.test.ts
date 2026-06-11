@@ -8,12 +8,25 @@ const candidate = (overrides: Partial<AnchorCandidate>): AnchorCandidate => ({
 	id: "ce_1",
 	is_entity_scoped: false,
 	is_add_on: false,
+	is_plan_backed: true,
 	status_rank: 0,
 	created_at: 1000,
 	...overrides,
 });
 
 describe("pickAnchorCustomerEntitlementId", () => {
+	test("a plan-backed ent outranks an older loose/top-up ent", () => {
+		const id = pickAnchorCustomerEntitlementId({
+			candidates: [
+				candidate({ id: "ce_topup", is_plan_backed: false, created_at: 500 }),
+				candidate({ id: "ce_plan", is_plan_backed: true, created_at: 2000 }),
+			],
+			scopeType: "customer",
+		});
+
+		expect(id).toBe("ce_plan");
+	});
+
 	test("returns null when there are no candidates", () => {
 		expect(
 			pickAnchorCustomerEntitlementId({

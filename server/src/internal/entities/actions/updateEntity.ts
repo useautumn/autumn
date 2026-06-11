@@ -43,6 +43,7 @@ export const updateEntity = async ({
 	const filteredUpdates = Object.fromEntries(
 		Object.entries({
 			spend_limits: billing_controls?.spend_limits,
+			usage_limits: billing_controls?.usage_limits,
 			usage_alerts: billing_controls?.usage_alerts,
 			overage_allowed: billing_controls?.overage_allowed,
 		}).filter(([, value]) => value !== undefined),

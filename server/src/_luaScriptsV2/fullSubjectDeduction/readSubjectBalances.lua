@@ -19,9 +19,6 @@ local function read_subject_balances(params)
   local missing_customer_entitlement_ids = {}
   local entries_by_balance_key = {}
   local seen_ids_by_balance_key = {}
-  -- Anchor-only cus_ents (usage-window owners not in the deduction set) must
-  -- not abort the deduction when absent; a missing anchor fails closed later.
-  local anchor_only_ids = {}
   local balance_keys_by_feature_id = safe_table(params.balance_keys_by_feature_id)
 
   local function queue_balance_read(customer_entitlement_id, feature_id)
@@ -54,7 +51,6 @@ local function read_subject_balances(params)
     return true
   end
 
-  local deduction_ids = {}
   for _, ent_obj in ipairs(params.customer_entitlement_deductions or {}) do
     local customer_entitlement_id = ent_obj.customer_entitlement_id
     if customer_entitlement_id then
@@ -62,17 +58,6 @@ local function read_subject_balances(params)
       if not queued then
         table.insert(missing_customer_entitlement_ids, customer_entitlement_id)
       end
-      deduction_ids[customer_entitlement_id] = true
-    end
-  end
-
-  -- A deduction target must never be marked anchor_only, or a cache miss on it is
-  -- swallowed instead of surfacing as missing + triggering the Postgres fallback.
-  for _, anchor in ipairs(params.anchor_entitlements or {}) do
-    local customer_entitlement_id = anchor.customer_entitlement_id
-    if customer_entitlement_id and not deduction_ids[customer_entitlement_id] then
-      anchor_only_ids[customer_entitlement_id] = true
-      queue_balance_read(customer_entitlement_id, anchor.feature_id)
     end
   end
 
@@ -89,19 +74,16 @@ local function read_subject_balances(params)
       local subject_balance = decode_subject_balance(raw_value)
 
       if subject_balance == nil then
-        if not anchor_only_ids[customer_entitlement_id] then
-          table.insert(
-            missing_customer_entitlement_ids,
-            customer_entitlement_id
-          )
-        end
+        table.insert(
+          missing_customer_entitlement_ids,
+          customer_entitlement_id
+        )
       else
         balances_by_id[customer_entitlement_id] = {
           balance_key = balance_key,
           customer_entitlement_id = customer_entitlement_id,
           feature_id = entry.feature_id,
           subject_balance = subject_balance,
-          anchor_only = anchor_only_ids[customer_entitlement_id] or nil,
         }
       end
     end

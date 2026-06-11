@@ -55,6 +55,7 @@ export const getCheckResponseV2 = async ({
 					apiSubject: evaluationApiSubject,
 					feature: featureToUse,
 					requiredBalance,
+					originalFeature,
 				}).allowed
 			: false;
 

@@ -84,7 +84,6 @@ const buildNormalized = (): NormalizedFullSubject =>
 					},
 				},
 				rollovers: [],
-				usage_windows: [],
 				replaceables: [],
 				customerPrice: null,
 				customerProductOptions: null,
@@ -93,6 +92,7 @@ const buildNormalized = (): NormalizedFullSubject =>
 			},
 		],
 		customer_prices: [],
+		usage_windows: [],
 		flags: {},
 		products: [],
 		entitlements: [],
@@ -127,5 +127,36 @@ describe("setSharedFullSubjectBalances", () => {
 		expect(writes[0].fields).toEqual({
 			cus_ent_1: JSON.stringify(normalized.customer_entitlements[0]),
 		});
+	});
+
+	test("always writes _usage_windows for capped features, even with no entitlements", () => {
+		const normalized = buildNormalized();
+
+		const writes = buildSharedBalanceWrites({
+			orgId: "org_1",
+			env: AppEnv.Live,
+			customerId: "cus_1",
+			customerEntitlements: normalized.customer_entitlements,
+			aggregatedCustomerEntitlements: [],
+			usageWindows: [],
+			usageWindowFeatureIds: ["messages", "action1"],
+		});
+
+		expect(writes).toHaveLength(2);
+
+		const messagesWrite = writes.find((write) =>
+			write.balanceKey.endsWith(":messages"),
+		);
+		expect(messagesWrite?.fields).toEqual({
+			cus_ent_1: JSON.stringify(normalized.customer_entitlements[0]),
+			_usage_windows: "[]",
+		});
+
+		// action1 has no entitlements: the write exists purely to seed the
+		// fail-closed `_usage_windows` field.
+		const actionWrite = writes.find((write) =>
+			write.balanceKey.endsWith(":action1"),
+		);
+		expect(actionWrite?.fields).toEqual({ _usage_windows: "[]" });
 	});
 });

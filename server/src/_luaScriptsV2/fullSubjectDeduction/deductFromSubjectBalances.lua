@@ -48,11 +48,30 @@
       idempotency_ttl_ms: number | null
     }
 
+  Usage windows (customer-scoped windowed caps):
+    CONFIG IN:    params.usage_window_limits[] -- the resolved caps (limit,
+                  bounds, dimension) from fullSubjectToUsageWindowLimits.
+    COUNTERS OUT: usage_windows_by_feature_id -- the post-deduction COUNTER
+                  ROWS (DbUsageWindow: usage amounts, mirrors the
+                  usage_windows table), NOT the config.
+    Counters live in the capped feature's balance hash under the reserved
+    '_usage_windows' field (so each capped feature's hash key must be in
+    KEYS[], via usageWindowFeatureIds in the TS key builder); they are loaded
+    into context.usage_windows by init_context and follow the same in-memory
+    mutate -> flush lifecycle as entitlement balances. Enforcement is woven
+    into the deduction passes like spend limits: each ent's deductible amount
+    is gated by window headroom (with credit conversions), and a window-capped
+    leftover flows through the standard overage_behaviour handling ('cap'
+    applies the partial deduction, 'reject' returns INSUFFICIENT_BALANCE). A
+    missing field loads as an empty counter set (fail open).
+
   Returns JSON:
     {
       updates: { [cus_ent_id]: { balance, additional_balance, adjustment, entities, deducted, additional_deducted } },
       rollover_updates: { [rollover_id]: { balance, usage, entities } },
       modified_customer_entitlement_ids: string[],
+      usage_windows_by_feature_id: { [feature_id]: DbUsageWindow[] } | null,
+      usage_window_mutations: { usage_window_id, feature_id, internal_entity_id, window_start_at, usage_delta }[],
       remaining: number,
       error: string | null,
       feature_id: string | null
@@ -113,28 +132,8 @@ local unwind_value = params.unwind_value
 local lock_receipt_key = lock_receipt_key_from_keys
 local usage_window_limits = params.usage_window_limits
 local usage_window_now = params.usage_window_now
+local usage_window_ttl_seconds = params.usage_window_ttl_seconds
 local is_consumption = params.is_consumption
-
--- Distinct usage-window anchor cus_ents to force-load into context (they own
--- the counters and may not be in the deduction set).
-local anchor_entitlements = {}
-if not is_nil(usage_window_limits) then
-  local seen_anchor_ids = {}
-  for _, usage_window_limit in ipairs(usage_window_limits) do
-    local anchor_id = usage_window_limit.anchor_customer_entitlement_id
-    local anchor_feature_id = usage_window_limit.anchor_feature_id
-    if not is_nil(anchor_id)
-        and not is_nil(anchor_feature_id)
-        and not seen_anchor_ids[anchor_id]
-    then
-      seen_anchor_ids[anchor_id] = true
-      table.insert(anchor_entitlements, {
-        customer_entitlement_id = anchor_id,
-        feature_id = anchor_feature_id,
-      })
-    end
-  end
-end
 
 if not is_nil(idempotency_key) then
   if redis.call('EXISTS', idempotency_key) == 1 then
@@ -163,12 +162,30 @@ if #customer_entitlement_deductions == 0 then
   })
 end
 
+-- Usage windows are enforced for positive consumption INCLUDING locks (a
+-- lock reserves headroom and counts at lock time), never for refunds,
+-- target_balance, or granted-balance edits. Unwinds don't enforce but DO
+-- load counters so the freed amount can be decremented back. Computed before
+-- init_context so non-participating calls skip the counter reads entirely.
+local has_usage_window_limits = not is_nil(usage_window_limits)
+    and #usage_window_limits > 0
+-- A zero unwind_value (finalize at-or-above the lock) is no unwind at all:
+-- the extra delta must still be enforced and counted.
+local has_unwind = not is_nil(unwind_value) and safe_number(unwind_value) > 0
+local enforce_usage_windows = is_consumption
+    and not has_unwind
+    and has_usage_window_limits
+local unwind_usage_windows = has_unwind and has_usage_window_limits
+
 local context = init_context({
   org_id = org_id,
   env = env,
   customer_id = customer_id,
   customer_entitlement_deductions = customer_entitlement_deductions,
-  anchor_entitlements = anchor_entitlements,
+  usage_window_limits = (enforce_usage_windows or unwind_usage_windows)
+      and usage_window_limits
+    or nil,
+  usage_window_now = usage_window_now,
   balance_keys_by_feature_id = params.balance_keys_by_feature_id,
   debug = params.debug,
 })
@@ -210,6 +227,14 @@ if not is_nil(unwind_value) and safe_number(unwind_value) > 0 then
   -- Track which entitlements the unwind touched so the caller can sync them.
   unwind_modified_cus_ent_ids = unwind_result.modified_customer_entitlement_ids or {}
 
+  if unwind_usage_windows then
+    decrement_usage_windows_for_unwind({
+      context = context,
+      iterations = unwind_result.iterations,
+      now = usage_window_now,
+    })
+  end
+
   -- Fold any skipped unwind (missing entitlements/rollovers) into amount_to_deduct
   -- so the forward pass compensates against current live entitlements.
   local skipped = unwind_result.remaining_signed_unwind_value or 0
@@ -219,37 +244,6 @@ if not is_nil(unwind_value) and safe_number(unwind_value) > 0 then
 end
 
 local logger = context.logger
-
--- Usage windows are enforced only for positive consumption, never for refunds,
--- target_balance, granted-balance edits, locks, or unwinds.
-local enforce_usage_windows = is_consumption
-    and is_nil(unwind_value)
-    and (is_nil(lock) or not lock.enabled)
-    and not is_nil(usage_window_limits)
-    and #usage_window_limits > 0
-
-if enforce_usage_windows then
-  local clamp_result = clamp_amount_to_usage_windows({
-    context = context,
-    usage_window_limits = usage_window_limits,
-    amount_to_deduct = amount_to_deduct,
-  })
-
-  if not is_nil(clamp_result.exceeded_feature_id) then
-    return cjson.encode({
-      error = 'USAGE_LIMIT_EXCEEDED',
-      feature_id = clamp_result.exceeded_feature_id,
-      remaining = safe_number(amount_to_deduct),
-      updates = {},
-      rollover_updates = {},
-      modified_customer_entitlement_ids = new_empty_array(),
-      mutation_logs = new_empty_array(),
-      logs = context.logs,
-    })
-  end
-
-  amount_to_deduct = clamp_result.amount_to_deduct
-end
 
 logger.log("=== LUA DEDUCTION START ===")
 logger.log("=== PARAMS ===")
@@ -298,7 +292,15 @@ local mutation_logs = context.mutation_logs
 if type(mutation_logs) ~= 'table' or #mutation_logs == 0 then
   mutation_logs = cjson.decode('[]')
 end
--- Throw error and don't apply updates if we're in reject mode and there's still remaining amount
+local usage_window_mutations = context.usage_window_mutations
+if type(usage_window_mutations) ~= 'table' or #usage_window_mutations == 0 then
+  usage_window_mutations = cjson.decode('[]')
+end
+-- Throw error and don't apply updates if we're in reject mode and there's
+-- still remaining amount. Usage-window shortfalls flow through here like any
+-- other: the deduction passes already gated every ent by window headroom, so
+-- a window-capped leftover clamps under 'cap' and rejects as
+-- INSUFFICIENT_BALANCE under 'reject'.
 if remaining_amount > 0 and overage_behaviour == 'reject' then
   return cjson.encode({
     error = 'INSUFFICIENT_BALANCE',
@@ -312,33 +314,9 @@ if remaining_amount > 0 and overage_behaviour == 'reject' then
 end
 
 if enforce_usage_windows then
-  local exceeded_feature_id = check_usage_window_limits({
-    context = context,
-    usage_window_limits = usage_window_limits,
-    updates = updates,
-    amount_to_deduct = amount_to_deduct,
-    remaining_amount = remaining_amount,
-  })
-
-  if not is_nil(exceeded_feature_id) then
-    return cjson.encode({
-      error = 'USAGE_LIMIT_EXCEEDED',
-      feature_id = exceeded_feature_id,
-      remaining = remaining_amount,
-      updates = {},
-      rollover_updates = {},
-      modified_customer_entitlement_ids = new_empty_array(),
-      mutation_logs = mutation_logs,
-      logs = context.logs,
-    })
-  end
-
   increment_usage_window_counters({
     context = context,
     usage_window_limits = usage_window_limits,
-    updates = updates,
-    amount_to_deduct = amount_to_deduct,
-    remaining_amount = remaining_amount,
     now = usage_window_now,
   })
 end
@@ -397,6 +375,10 @@ update_aggregated_balances({
   mutation_logs = mutation_logs,
 })
 
+if enforce_usage_windows or unwind_usage_windows then
+  apply_usage_window_writes(context, usage_window_ttl_seconds)
+end
+
 if not is_nil(idempotency_key) and not is_nil(idempotency_ttl_ms) then
   redis.call('SET', idempotency_key, '1', 'PX', idempotency_ttl_ms)
 end
@@ -408,6 +390,9 @@ return cjson.encode({
   rollover_updates = rollover_updates,
   modified_customer_entitlement_ids = modified_customer_entitlement_ids,
   mutation_logs = mutation_logs,
+  usage_windows_by_feature_id =
+    usage_windows_to_result(context) or cjson.null,
+  usage_window_mutations = usage_window_mutations,
   remaining = remaining_amount,
   error = cjson.null,
   logs = context.logs

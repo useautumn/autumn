@@ -21,7 +21,7 @@ export const buildDeductFromSubjectBalancesKeys = ({
 	idempotencyKey,
 	customerEntitlementDeductions,
 	fallbackFeatureId,
-	anchorFeatureIds = [],
+	usageWindowFeatureIds = [],
 }: {
 	orgId: string;
 	env: AppEnv;
@@ -31,10 +31,10 @@ export const buildDeductFromSubjectBalancesKeys = ({
 	idempotencyKey?: string | null;
 	customerEntitlementDeductions: { feature_id?: string }[];
 	fallbackFeatureId: string;
-	// Features owning a usage-window anchor counter. Their balance hash keys must
-	// be declared in KEYS[] so Lua can load the anchor even when it is not in the
-	// deduction set.
-	anchorFeatureIds?: string[];
+	// Capped features: their balance hashes carry the `_usage_windows` counter
+	// field, and a capped feature may have no entitlements (so no deduction
+	// entry references its hash). Declare those keys in KEYS[] too.
+	usageWindowFeatureIds?: string[];
 }) => {
 	const balanceKeysByFeatureId: Record<string, string> = {};
 	const addFeatureKey = (featureId: string) => {
@@ -49,8 +49,8 @@ export const buildDeductFromSubjectBalancesKeys = ({
 	for (const deductionEntry of customerEntitlementDeductions) {
 		addFeatureKey(deductionEntry.feature_id ?? fallbackFeatureId);
 	}
-	for (const anchorFeatureId of anchorFeatureIds) {
-		addFeatureKey(anchorFeatureId);
+	for (const usageWindowFeatureId of usageWindowFeatureIds) {
+		addFeatureKey(usageWindowFeatureId);
 	}
 
 	const balanceFeatureIds = Object.keys(balanceKeysByFeatureId);

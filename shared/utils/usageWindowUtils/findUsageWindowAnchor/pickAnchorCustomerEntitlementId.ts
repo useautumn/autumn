@@ -1,4 +1,4 @@
-import type { UsageWindowScope } from "../../models/cusProductModels/cusEntModels/usageWindowModels.js";
+import type { UsageWindowScope } from "../../../models/cusProductModels/cusEntModels/usageWindowModels.js";
 
 /**
  * A candidate customer entitlement for owning a usage-window counter, reduced to
@@ -10,6 +10,9 @@ export type AnchorCandidate = {
 	id: string;
 	is_entity_scoped: boolean;
 	is_add_on: boolean;
+	// Product-backed ents outrank loose/top-up grants: their reset cycle is
+	// what window bounds align to.
+	is_plan_backed: boolean;
 	// Lower rank = higher priority (e.g. active before past_due).
 	status_rank: number;
 	created_at: number;
@@ -46,6 +49,7 @@ export const pickAnchorCustomerEntitlementId = ({
 
 	const sorted = [...eligible].sort((a, b) => {
 		if (a.status_rank !== b.status_rank) return a.status_rank - b.status_rank;
+		if (a.is_plan_backed !== b.is_plan_backed) return a.is_plan_backed ? -1 : 1;
 		if (a.is_add_on !== b.is_add_on) return a.is_add_on ? 1 : -1;
 		if (a.created_at !== b.created_at) return a.created_at - b.created_at;
 		return a.id < b.id ? -1 : 1;

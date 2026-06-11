@@ -2,7 +2,6 @@ import type {
 	EntityBalance,
 	InsertReplaceable,
 	Replaceable,
-	UsageWindow,
 } from "@autumn/shared";
 
 export interface DeductionUpdate {
@@ -15,7 +14,6 @@ export interface DeductionUpdate {
 	additional_deducted?: number;
 	newReplaceables?: InsertReplaceable[];
 	deletedReplaceables?: Replaceable[];
-	usage_windows?: UsageWindow[] | null;
 }
 
 export type DeductionUpdates = Record<string, DeductionUpdate>;

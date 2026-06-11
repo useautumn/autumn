@@ -9,12 +9,9 @@ import {
 	DbOverageAllowedSchema,
 } from "./overageAllowed.js";
 import { PurchaseLimitIntervalEnum } from "./purchaseLimitInterval.js";
-import {
-	type DbSpendLimit,
-	DbSpendLimitSchema,
-	SpendLimitResponseSchema,
-} from "./spendLimit.js";
+import { type DbSpendLimit, DbSpendLimitSchema } from "./spendLimit.js";
 import { type DbUsageAlert, DbUsageAlertSchema } from "./usageAlert.js";
+import { type DbUsageLimit, DbUsageLimitSchema } from "./usageLimit.js";
 
 export const AutoTopupPurchaseLimitSchema = z.object({
 	interval: PurchaseLimitIntervalEnum.meta({
@@ -105,33 +102,11 @@ export const CustomerBillingControlsSchema = z.object({
 	}),
 	spend_limits: z.array(DbSpendLimitSchema).optional().meta({
 		description:
-			"List of spend limits per feature. Each entry caps overage (overage_limit) and/or windowed usage (usage_limit).",
+			"List of overage spend limits per feature (caps overage spend).",
 	}),
-	usage_alerts: z.array(DbUsageAlertSchema).optional().meta({
-		description: "List of usage alert configurations per feature.",
-	}),
-	overage_allowed: z.array(DbOverageAllowedSchema).optional().meta({
+	usage_limits: z.array(DbUsageLimitSchema).optional().meta({
 		description:
-			"List of overage allowed controls per feature. When enabled, usage can exceed balance.",
-	}),
-});
-
-/**
- * Response-only variant of CustomerBillingControlsSchema that uses
- * `AutoTopupResponseSchema` for `auto_topups` so the `purchase_limit` field
- * may be either the static config shape or the expanded runtime shape (when
- * expand=billing_controls.auto_topups.purchase_limit is requested).
- *
- * Input/params validation continues to use `CustomerBillingControlsSchema` /
- * `CustomerBillingControlsParamsSchema`, which remain strict.
- */
-export const CustomerBillingControlsResponseSchema = z.object({
-	auto_topups: z.array(AutoTopupResponseSchema).optional().meta({
-		description: "List of auto top-up configurations per feature.",
-	}),
-	spend_limits: z.array(SpendLimitResponseSchema).optional().meta({
-		description:
-			"List of spend limits per feature. Each entry caps overage (overage_limit) and/or windowed usage (usage_limit).",
+			"List of windowed hard usage caps per feature (max units per interval window).",
 	}),
 	usage_alerts: z.array(DbUsageAlertSchema).optional().meta({
 		description: "List of usage alert configurations per feature.",
@@ -167,6 +142,24 @@ export const CustomerBillingControlsParamsSchema =
 			spendLimitFeatureIds.add(spendLimit.feature_id);
 		}
 
+		const usageLimitFeatureIds = new Set<string>();
+
+		for (const [index, usageLimit] of (
+			billingControls.usage_limits ?? []
+		).entries()) {
+			if (usageLimitFeatureIds.has(usageLimit.feature_id)) {
+				ctx.issues.push({
+					code: "custom",
+					message: "Only one usage limit entry is allowed per feature_id",
+					input: usageLimit.feature_id,
+					path: ["usage_limits", index, "feature_id"],
+				});
+				return;
+			}
+
+			usageLimitFeatureIds.add(usageLimit.feature_id);
+		}
+
 		const overageAllowedFeatureIds = new Set<string>();
 
 		for (const [index, overageAllowed] of (
@@ -195,9 +188,6 @@ export type AutoTopupResponse = z.infer<typeof AutoTopupResponseSchema>;
 export type CustomerBillingControls = z.infer<
 	typeof CustomerBillingControlsSchema
 >;
-export type CustomerBillingControlsResponse = z.infer<
-	typeof CustomerBillingControlsResponseSchema
->;
 
 export type CustomerBillingControlsParams = z.input<
 	typeof CustomerBillingControlsParamsSchema
@@ -207,6 +197,7 @@ export type {
 	DbOverageAllowed,
 	DbSpendLimit,
 	DbUsageAlert,
+	DbUsageLimit,
 	EntityBillingControls,
 	EntityBillingControlsParams,
 };
@@ -214,5 +205,6 @@ export {
 	DbOverageAllowedSchema,
 	DbSpendLimitSchema,
 	DbUsageAlertSchema,
+	DbUsageLimitSchema,
 	EntityBillingControlsSchema,
 };

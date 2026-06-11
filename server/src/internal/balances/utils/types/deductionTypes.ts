@@ -43,9 +43,12 @@ export type PreparedFeatureDeduction = {
 	customerEntitlementDeductions: CustomerEntitlementDeduction[];
 	spendLimitByFeatureId?: Record<string, DbSpendLimit>;
 	usageBasedCusEntIdsByFeatureId?: Record<string, string[]>;
-	// Resolved windowed usage-limit caps (PR2: passed to Lua but not yet
-	// enforced; enforcement lands with the deduction-script changes).
+	// Resolved windowed usage-limit caps, enforced inside the deduction script.
 	usageWindowLimits?: UsageWindowLimit[];
+	// Distinct capped feature ids: their balance hashes carry the
+	// `_usage_windows` counter field, so their keys must be declared in KEYS[]
+	// even when no deduction entry references them.
+	usageWindowFeatureIds?: string[];
 	// rolloverIds: string[];
 	rollovers: RolloverDeduction[];
 	unlimitedFeatureIds: string[];

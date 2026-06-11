@@ -7,9 +7,9 @@ import {
 	type EntityBalance,
 	FullCustomerEntitlementSchema,
 } from "../../cusProductModels/cusEntModels/cusEntModels.js";
-import type { UsageWindow } from "../../cusProductModels/cusEntModels/usageWindowTable.js";
 import type { Replaceable } from "../../cusProductModels/cusEntModels/replaceableTable.js";
 import type { DbRollover } from "../../cusProductModels/cusEntModels/rolloverModels/rolloverTable.js";
+import type { UsageWindow } from "../../cusProductModels/cusEntModels/usageWindowTable.js";
 import type { FullCustomerPrice } from "../../cusProductModels/cusPriceModels/cusPriceModels.js";
 import { FullCustomerPriceSchema } from "../../cusProductModels/cusPriceModels/cusPriceModels.js";
 import type { DbCustomerPrice } from "../../cusProductModels/cusPriceModels/cusPriceTable.js";
@@ -90,7 +90,6 @@ export type SubjectBalance = {
 	expires_at: number | null;
 	external_id: string | null;
 	entities: Record<string, EntityBalance> | null;
-	usage_windows: UsageWindow[];
 	cache_version: number | null;
 	created_at: number;
 	customer_id?: string | null;
@@ -169,6 +168,12 @@ export type NormalizedFullSubject = {
 	customer_products: DbCustomerProduct[];
 	customer_entitlements: SubjectBalance[];
 	customer_prices: DbCustomerPrice[];
+
+	/** Windowed-cap counter rows for ALL scopes (customer + entity;
+	 *  internal_entity_id null = customer scope), live-read from the
+	 *  per-feature balance hashes' `_usage_windows` field — never the cached
+	 *  subject view. `normalizedToFullSubject` narrows to the subject's scope. */
+	usage_windows: UsageWindow[];
 
 	flags: Record<string, SubjectFlag>;
 

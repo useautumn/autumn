@@ -48,11 +48,6 @@ const subjectBalanceToFullCustomerEntitlement = ({
 	const rollovers = getArrayEntries<SubjectBalance["rollovers"][number]>({
 		value: subjectBalance.rollovers,
 	});
-	const usageWindows = getArrayEntries<
-		SubjectBalance["usage_windows"][number]
-	>({
-		value: subjectBalance.usage_windows,
-	});
 
 	return {
 		id: subjectBalance.id,
@@ -81,7 +76,6 @@ const subjectBalanceToFullCustomerEntitlement = ({
 				getRolloverSortValue({ rollover: left }) -
 				getRolloverSortValue({ rollover: right }),
 		),
-		usage_windows: usageWindows,
 	} as FullCustomerEntitlement;
 };
 
@@ -392,6 +386,19 @@ export const normalizedToFullSubject = ({
 		customer: normalized.customer,
 		customer_products: customerProducts,
 		extra_customer_entitlements: extraCustomerEntitlements,
+		// Normalized carries ALL scopes (the balance-hash field must stay
+		// complete); the subject view narrows to the rows that can gate it --
+		// an entity sees its own rows plus the inheritable customer-scope ones.
+		usage_windows: getArrayEntries<
+			NormalizedFullSubject["usage_windows"][number]
+		>({
+			value: normalized.usage_windows,
+		}).filter((usageWindow) =>
+			normalized.internalEntityId
+				? usageWindow.internal_entity_id === normalized.internalEntityId ||
+					usageWindow.internal_entity_id == null
+				: true,
+		),
 		subscriptions,
 		invoices,
 		...(aggregatedCustomerProducts

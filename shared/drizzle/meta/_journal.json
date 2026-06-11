@@ -71,6 +71,13 @@
       "when": 1780916308859,
       "tag": "0009_usage_windows",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1781100000000,
+      "tag": "0010_usage_limits_control",
+      "breakpoints": true
     }
   ]
 }

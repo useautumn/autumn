@@ -1,6 +1,6 @@
-import { CustomerBillingControlsResponseSchema } from "@models/cusModels/billingControls/customerBillingControls";
 import { AppEnv } from "@models/genModels/genEnums";
 import { z } from "zod/v4";
+import { CustomerBillingControlsResponseSchema } from "../billingControls/customerBillingControls.js";
 
 export const BaseApiCustomerSchema = z.object({
 	autumn_id: z.string().optional().meta({

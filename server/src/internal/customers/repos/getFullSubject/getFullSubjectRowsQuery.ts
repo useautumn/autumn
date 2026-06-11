@@ -204,7 +204,9 @@ export const getFullSubjectRowsQuery = ({
 		cus_usage_windows AS (
 			SELECT uw.*
 			FROM usage_windows uw
-			WHERE uw.customer_entitlement_id IN (SELECT id FROM all_cus_ent_ids)
+			WHERE uw.internal_customer_id IN (
+				SELECT internal_customer_id FROM subject_records
+			)
 		),
 
 		cus_replaceables AS (
@@ -406,11 +408,7 @@ export const getFullSubjectRowsQuery = ({
 						ORDER BY uw.window_start_at ASC, uw.id ASC
 					)
 					FROM cus_usage_windows uw
-					WHERE uw.customer_entitlement_id IN (
-						SELECT ace.id
-						FROM all_cus_ent_ids ace
-						WHERE ace.subject_key = sr.subject_key
-					)
+					WHERE uw.internal_customer_id = sr.internal_customer_id
 				),
 				'[]'::json
 			) AS usage_windows,

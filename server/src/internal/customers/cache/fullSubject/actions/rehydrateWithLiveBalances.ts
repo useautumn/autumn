@@ -2,6 +2,7 @@ import type { NormalizedFullSubject } from "@autumn/shared";
 import { type FullSubject, normalizedToFullSubject } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { applyLiveAggregatedBalances } from "../balances/applyLiveAggregatedBalances.js";
+import { applyLiveUsageWindows } from "../balances/applyLiveUsageWindows.js";
 import { getCachedFeatureBalancesBatch } from "../balances/getCachedFeatureBalances.js";
 
 /**
@@ -31,7 +32,18 @@ export const rehydrateWithLiveBalances = async ({
 		list.push(ce.id);
 		customerEntitlementIdsByFeatureId[ce.feature_id] = list;
 	}
-	const featureIds = Object.keys(customerEntitlementIdsByFeatureId);
+	const usageWindowFeatureIds = new Set(
+		[
+			...(normalized.customer.usage_limits ?? []),
+			...(normalized.entity?.usage_limits ?? []),
+		].map((usageLimit) => usageLimit.feature_id),
+	);
+	const featureIds = [
+		...new Set([
+			...Object.keys(customerEntitlementIdsByFeatureId),
+			...usageWindowFeatureIds,
+		]),
+	];
 
 	const isCustomerSubject = !entityId;
 	const outcome = await getCachedFeatureBalancesBatch({
@@ -40,6 +52,7 @@ export const rehydrateWithLiveBalances = async ({
 		featureIds,
 		customerEntitlementIdsByFeatureId,
 		includeAggregated: isCustomerSubject,
+		usageWindowFeatureIds,
 	});
 
 	if (outcome.kind !== "ok") return undefined;
@@ -52,6 +65,11 @@ export const rehydrateWithLiveBalances = async ({
 			featureBalances: outcome.value,
 		});
 	}
+
+	applyLiveUsageWindows({
+		normalized,
+		featureBalances: outcome.value,
+	});
 
 	return normalizedToFullSubject({ normalized });
 };

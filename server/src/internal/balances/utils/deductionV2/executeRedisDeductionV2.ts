@@ -17,6 +17,7 @@ import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoi
 import { saveLockReceiptV2 } from "@/internal/balances/utils/lockV2/saveLockReceiptV2.js";
 import { buildDeductFromSubjectBalancesKeys } from "@/internal/customers/cache/fullSubject/builders/buildDeductFromSubjectBalancesKeys.js";
 import { buildFullSubjectKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectKey.js";
+import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "@/internal/customers/cache/fullSubject/config/fullSubjectCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
@@ -28,8 +29,11 @@ import {
 } from "../types/redisDeductionError.js";
 import type { LuaDeductionResult } from "../types/redisDeductionResult.js";
 import type { RolloverUpdate } from "../types/rolloverUpdate.js";
+import type { UsageWindowMutation } from "../types/usageWindowMutation.js";
+import type { UsageWindowUpdate } from "../types/usageWindowUpdate.js";
 import { applyDeductionUpdateToFullSubject } from "./applyDeductionUpdateToFullSubject.js";
 import { applyRolloverUpdatesToFullSubject } from "./applyRolloverUpdatesToFullSubject.js";
+import { applyUsageWindowUpdatesToFullSubject } from "./applyUsageWindowUpdatesToFullSubject.js";
 import { logDeductionUpdatesV2 } from "./logDeductionUpdatesV2.js";
 import { mutationLogsToFeaturesV2 } from "./mutationLogsToFeaturesV2.js";
 import { normalizeDeductionSyncStateV2 } from "./normalizeDeductionSyncStateV2.js";
@@ -60,6 +64,8 @@ export const executeRedisDeductionV2 = async ({
 	rolloverUpdates: Record<string, RolloverUpdate>;
 	mutationLogs: MutationLogItem[];
 	modifiedCusEntIdsByFeatureId: Record<string, string[]>;
+	usageWindowUpdates: UsageWindowUpdate[];
+	usageWindowMutations: UsageWindowMutation[];
 }> => {
 	const { org, env } = ctx;
 	const oldFullSubject = structuredClone(fullSubject);
@@ -95,7 +101,11 @@ export const executeRedisDeductionV2 = async ({
 	let allUpdates: Record<string, DeductionUpdate> = {};
 	let allRolloverUpdates: Record<string, RolloverUpdate> = {};
 	let allMutationLogs: MutationLogItem[] = [];
+	let allUsageWindowMutations: UsageWindowMutation[] = [];
 	const allModifiedCusEntIdsByFeatureId: Record<string, string[]> = {};
+	// Keyed by feature id: each Lua result carries the COMPLETE post-deduction
+	// counter array per capped feature, so last write wins across deductions.
+	const allUsageWindowUpdates: Record<string, UsageWindowUpdate> = {};
 
 	const customerId = fullSubject.customerId;
 	const routingKey = buildFullSubjectKey({
@@ -123,6 +133,7 @@ export const executeRedisDeductionV2 = async ({
 			spendLimitByFeatureId,
 			usageBasedCusEntIdsByFeatureId,
 			usageWindowLimits,
+			usageWindowFeatureIds,
 			rollovers,
 			customerEntitlements,
 			unlimitedFeatureIds,
@@ -178,16 +189,6 @@ export const executeRedisDeductionV2 = async ({
 				}).redisKey
 			: null;
 
-		// Anchor features own usage-window counters and may not be in the
-		// deduction set, so their balance hash keys must be declared too.
-		const anchorFeatureIds = [
-			...new Set(
-				(usageWindowLimits ?? [])
-					.map((limit) => limit.anchor_feature_id)
-					.filter((featureId): featureId is string => featureId !== null),
-			),
-		];
-
 		const { keys, balanceKeyIndexByFeatureId } =
 			buildDeductFromSubjectBalancesKeys({
 				orgId: org.id,
@@ -198,7 +199,7 @@ export const executeRedisDeductionV2 = async ({
 				idempotencyKey: idempotencyRedisKey,
 				customerEntitlementDeductions,
 				fallbackFeatureId: feature.id,
-				anchorFeatureIds,
+				usageWindowFeatureIds,
 			});
 
 		// Usage windows are enforced/incremented only for real positive
@@ -220,6 +221,7 @@ export const executeRedisDeductionV2 = async ({
 				usageBasedCusEntIdsByFeatureId ?? null,
 			usage_window_limits: usageWindowLimits ?? null,
 			usage_window_now: usageWindowNow,
+			usage_window_ttl_seconds: FULL_SUBJECT_CACHE_TTL_SECONDS,
 			is_consumption: isConsumption,
 			amount_to_deduct: toDeduct ?? null,
 			target_balance: targetBalance ?? null,
@@ -280,6 +282,11 @@ export const executeRedisDeductionV2 = async ({
 		const mutationLogs = Array.isArray(resultJson.mutation_logs)
 			? resultJson.mutation_logs
 			: [];
+		const usageWindowMutations = Array.isArray(
+			resultJson.usage_window_mutations,
+		)
+			? resultJson.usage_window_mutations
+			: [];
 		const modifiedCustomerEntitlementIds = Array.isArray(
 			resultJson.modified_customer_entitlement_ids,
 		)
@@ -296,6 +303,21 @@ export const executeRedisDeductionV2 = async ({
 		allUpdates = { ...allUpdates, ...updates };
 		allRolloverUpdates = { ...allRolloverUpdates, ...rollover_updates };
 		allMutationLogs = [...allMutationLogs, ...mutationLogs];
+		allUsageWindowMutations = [
+			...allUsageWindowMutations,
+			...usageWindowMutations,
+		];
+		// Typed handoff for the PG mirror; empty arrays kept (prune-to-empty
+		// must still full-replace).
+		for (const [featureId, usageWindows] of Object.entries(
+			resultJson.usage_windows_by_feature_id ?? {},
+		)) {
+			allUsageWindowUpdates[featureId] = {
+				internal_customer_id: fullSubject.internalCustomerId,
+				feature_id: featureId,
+				usage_windows: usageWindows,
+			};
+		}
 
 		const syncState = normalizeDeductionSyncStateV2({
 			customerEntitlements,
@@ -318,6 +340,11 @@ export const executeRedisDeductionV2 = async ({
 			applyRolloverUpdatesToFullSubject({
 				fullSubject,
 				rolloverUpdates: rollover_updates,
+			});
+
+			applyUsageWindowUpdatesToFullSubject({
+				fullSubject,
+				usageWindowsByFeatureId: resultJson.usage_windows_by_feature_id,
 			});
 
 			for (const customerEntitlementId of Object.keys(updates)) {
@@ -394,5 +421,7 @@ export const executeRedisDeductionV2 = async ({
 		rolloverUpdates: allRolloverUpdates,
 		mutationLogs: allMutationLogs,
 		modifiedCusEntIdsByFeatureId: allModifiedCusEntIdsByFeatureId,
+		usageWindowUpdates: Object.values(allUsageWindowUpdates),
+		usageWindowMutations: allUsageWindowMutations,
 	};
 };

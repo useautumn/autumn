@@ -7,10 +7,12 @@ import { isRedisMigrationCacheStale } from "@/external/redis/customerRedisRoutin
 import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { lazyResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
+import { lazyResetSubjectUsageWindows } from "@/internal/customers/actions/resetUsageWindows/lazyResetSubjectUsageWindows.js";
 import { checkPendingMigrationsForCustomer } from "@/internal/migrations/v2/lazy/checkPendingMigrationsForCustomer.js";
 import { getFullSubjectRolloutSnapshot } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { applyLiveAggregatedBalances } from "../balances/applyLiveAggregatedBalances.js";
+import { applyLiveUsageWindows } from "../balances/applyLiveUsageWindows.js";
 import { getCachedFeatureBalancesBatch } from "../balances/getCachedFeatureBalances.js";
 import { buildFullSubjectKey } from "../builders/buildFullSubjectKey.js";
 import { buildFullSubjectViewEpochKey } from "../builders/buildFullSubjectViewEpochKey.js";
@@ -195,12 +197,19 @@ export const getCachedFullSubject = async ({
 	}
 
 	const isCustomerSubject = !entityId;
+	// Capped features may have no entitlements, so they aren't guaranteed to be
+	// in meteredFeatures; union them in so their `_usage_windows` field is read.
+	const usageWindowFeatureIds = new Set(cached.usageWindowFeatureIds ?? []);
+	const batchFeatureIds = [
+		...new Set([...cached.meteredFeatures, ...usageWindowFeatureIds]),
+	];
 	const balancesOutcome = await getCachedFeatureBalancesBatch({
 		ctx,
 		customerId,
-		featureIds: cached.meteredFeatures,
+		featureIds: batchFeatureIds,
 		customerEntitlementIdsByFeatureId: cached.customerEntitlementIdsByFeatureId,
 		includeAggregated: isCustomerSubject,
+		usageWindowFeatureIds,
 	});
 
 	if (balancesOutcome.kind === "missing") {
@@ -220,9 +229,9 @@ export const getCachedFullSubject = async ({
 	}
 
 	const balances = balancesOutcome.value;
-	if (balances.length !== cached.meteredFeatures.length) {
+	if (balances.length !== batchFeatureIds.length) {
 		logger.warn(
-			`[getCachedFullSubject] Incomplete cache for ${customerId}${entityId ? `:${entityId}` : ""}: expected ${cached.meteredFeatures.length} balance keys, got ${balances.length}. Rebuilding from DB, source: ${source}`,
+			`[getCachedFullSubject] Incomplete cache for ${customerId}${entityId ? `:${entityId}` : ""}: expected ${batchFeatureIds.length} balance keys, got ${balances.length}. Rebuilding from DB, source: ${source}`,
 		);
 		await invalidateCachedFullSubjectExact({
 			ctx,
@@ -249,8 +258,14 @@ export const getCachedFullSubject = async ({
 			});
 		}
 
+		applyLiveUsageWindows({
+			normalized,
+			featureBalances: balances,
+		});
+
 		const fullSubject = normalizedToFullSubject({ normalized });
 		await lazyResetSubjectEntitlements({ ctx, fullSubject });
+		await lazyResetSubjectUsageWindows({ ctx, fullSubject, normalized });
 		await checkPendingMigrationsForCustomer({
 			ctx,
 			fullCustomer: fullSubjectToFullCustomer({ fullSubject }),

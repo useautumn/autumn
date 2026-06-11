@@ -16,6 +16,7 @@ export * from "./api/billing/createSchedule/createScheduleResponse";
 export * from "./api/billing/openBillingPortal/openBillingPortalParamsV1";
 export * from "./api/billing/openBillingPortal/openBillingPortalResponse";
 export * from "./api/billing/updateSubscription/previewUpdateSubscriptionResponse";
+export * from "./api/billingControls/index";
 // Cursor pagination utilities
 export * from "./api/common/cursorPaginationSchemas";
 export * from "./api/common/paginationConfigs";
@@ -212,10 +213,6 @@ export * from "./utils/cusEntUtils/balanceUtils/cusEntsToUsage";
 export * from "./utils/cusEntUtils/balanceUtils/cusEntToMinBalance";
 export * from "./utils/cusEntUtils/balanceUtils/cusEntToUsageAllowed";
 export * from "./utils/cusEntUtils/index";
-// Utils
-export * from "./utils/usageWindowUtils/buildUsageWindowKey";
-export * from "./utils/usageWindowUtils/getUsageWindowBounds";
-export * from "./utils/usageWindowUtils/pickAnchorCustomerEntitlementId";
 export * from "./utils/displayUtils";
 export * from "./utils/fullSubjectUtils";
 export * from "./utils/index";
@@ -244,3 +241,15 @@ export * from "./utils/productV3Utils/productItemUtils/productV3ItemUtils";
 export * from "./utils/rewardUtils/rewardFilterUtils";
 export * from "./utils/rewardUtils/rewardMigrationUtils";
 export * from "./utils/scopeDefinitions";
+// Utils
+export * from "./utils/usageWindowUtils/buildUsageWindowKey";
+export * from "./utils/usageWindowUtils/classifyUsageWindow/usageWindowMatchesLimit";
+export * from "./utils/usageWindowUtils/convertUsageWindow/getUsageWindowDimension";
+export * from "./utils/usageWindowUtils/convertUsageWindow/usageLimitToUsageWindowLimit";
+export * from "./utils/usageWindowUtils/findUsageWindow/findUsageWindowByLimit";
+export * from "./utils/usageWindowUtils/findUsageWindow/findUsageWindowLimitByWindow";
+export * from "./utils/usageWindowUtils/findUsageWindowAnchor/findUsageWindowAnchor";
+export * from "./utils/usageWindowUtils/findUsageWindowAnchor/pickAnchorCustomerEntitlementId";
+export * from "./utils/usageWindowUtils/getCurrentUsageWindowUsage";
+export * from "./utils/usageWindowUtils/getUsageWindowAnchorTimestamp";
+export * from "./utils/usageWindowUtils/getUsageWindowBounds";

@@ -1,6 +1,8 @@
 import type { z } from "zod/v4";
-import { SpendLimitResponseSchema } from "../../models/cusModels/billingControls/spendLimit.js";
+import { DbSpendLimitSchema } from "../../models/cusModels/billingControls/spendLimit.js";
 
-export const ApiSpendLimitSchema = SpendLimitResponseSchema;
+// Spend limits (overage caps) carry no runtime state on responses; the API
+// shape is the stored shape.
+export const ApiSpendLimitSchema = DbSpendLimitSchema;
 
 export type ApiSpendLimit = z.infer<typeof ApiSpendLimitSchema>;
