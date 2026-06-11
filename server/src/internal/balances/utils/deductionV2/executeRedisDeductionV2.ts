@@ -278,6 +278,8 @@ export const executeRedisDeductionV2 = async ({
 		)
 			? resultJson.usage_window_mutations
 			: [];
+		const usageWindowsByFeatureId =
+			resultJson.usage_windows_by_feature_id ?? {};
 		const modifiedCustomerEntitlementIds = Array.isArray(
 			resultJson.modified_customer_entitlement_ids,
 		)
@@ -301,7 +303,7 @@ export const executeRedisDeductionV2 = async ({
 		// Typed handoff for the PG mirror; empty arrays kept (prune-to-empty
 		// must still full-replace).
 		for (const [featureId, usageWindows] of Object.entries(
-			resultJson.usage_windows_by_feature_id ?? {},
+			usageWindowsByFeatureId,
 		)) {
 			allUsageWindowUpdates[featureId] = {
 				internal_customer_id: fullSubject.internalCustomerId,

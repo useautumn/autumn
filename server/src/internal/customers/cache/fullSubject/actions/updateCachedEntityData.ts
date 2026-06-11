@@ -20,7 +20,10 @@ export const updateCachedEntityData = async ({
 	customerId: string;
 	entityId: string;
 	updates: Partial<
-		Pick<Entity, "spend_limits" | "usage_alerts" | "overage_allowed">
+		Pick<
+			Entity,
+			"spend_limits" | "usage_limits" | "usage_alerts" | "overage_allowed"
+		>
 	>;
 }): Promise<void> => {
 	if (Object.keys(updates).length === 0) return;
