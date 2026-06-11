@@ -133,6 +133,11 @@ const getExpectedApiBodyExclusions = (expected?: EvalExpected) =>
 		expectation.type === "api.bodyExcludes" ? [expectation] : [],
 	);
 
+const getExpectedApiCallTimes = (expected?: EvalExpected) =>
+	getExpectationList(expected).flatMap((expectation) =>
+		expectation.type === "api.calledTimes" ? [expectation] : [],
+	);
+
 const getExpectedApiBodyNumberFields = (expected?: EvalExpected) =>
 	getExpectationList(expected).flatMap((expectation) =>
 		expectation.type === "api.bodyNumberFields" ? [expectation] : [],
@@ -275,6 +280,19 @@ export const expectedApiCallsAfterApproval = ({
 		: 0;
 };
 
+export const expectedApiCallTimes = ({ expected, output }: EvalScoreArgs) => {
+	const expectations = getExpectedApiCallTimes(expected);
+	if (!expectations.length) return 1;
+	return expectations.every(
+		(expectation) =>
+			output.apiCalls.filter((call) =>
+				matchesApiCall({ actual: call, expected: expectation.call }),
+			).length === expectation.count,
+	)
+		? 1
+		: 0;
+};
+
 export const expectedToolCalls = ({ expected, output }: EvalScoreArgs) => {
 	const expectedTools = getExpectedToolNames(expected);
 	if (!expectedTools.length) return 1;
@@ -295,7 +313,13 @@ export const expectedApiBodyExclusions = ({
 		output.apiCalls
 			.filter((call) => call.toolName === exclusion.toolName)
 			.every((call) =>
-				exclusion.fields.every((field) => !(field in call.body)),
+				exclusion.fields.every((field) =>
+					field.includes(".")
+						? valuesAtPath({ path: field, value: call.body }).every(
+								(value: unknown) => value === undefined,
+							)
+						: !(field in call.body),
+				),
 			),
 	)
 		? 1
@@ -332,8 +356,7 @@ export const expectedApiBodyNumberFields = ({
 export const finalTextIncludes = ({ expected, output }: EvalScoreArgs) => {
 	const phrases = getExpectedResponsePhrases(expected);
 	if (!phrases.length) return 1;
-	const text = output.finalText.toLowerCase();
-	return phrases.every((phrase) => text.includes(phrase.toLowerCase())) ? 1 : 0;
+	return textMatches({ phrases, text: output.finalText }) ? 1 : 0;
 };
 
 export const askedClarification = ({ expected, output }: EvalScoreArgs) => {
@@ -517,6 +540,10 @@ const scorersByExpectationType: Record<EvalExpectation["type"], EvalScorer> = {
 	"api.calledAfterApproval": namedScorer({
 		name: "Expected API calls after approval",
 		score: expectedApiCallsAfterApproval,
+	}),
+	"api.calledTimes": namedScorer({
+		name: "Expected API call counts",
+		score: expectedApiCallTimes,
 	}),
 	"api.bodyExcludes": namedScorer({
 		name: "Expected API body exclusions",

@@ -7,13 +7,16 @@ export type SessionTurnUsage = {
 	outputTokens: number;
 };
 
+export type SuspendedToolCall = {
+	args: Record<string, unknown>;
+	toolCallId: string;
+	toolName: string;
+};
+
 export type SessionTurnOutcome = {
 	errorMessage?: string;
-	suspended?: {
-		args: Record<string, unknown>;
-		toolCallId: string;
-		toolName: string;
-	};
+	/** All confirmations the turn is waiting on. */
+	suspendedQueue?: SuspendedToolCall[];
 	textParts: string[];
 	usage: SessionTurnUsage;
 };
@@ -106,16 +109,18 @@ export const driveSessionTurn = async ({
 			break;
 		} else if (event.type === "session.status_idle") {
 			if (event.stop_reason.type === "requires_action") {
-				const id =
-					event.stop_reason.event_ids.find((e) => pendingAsk.has(e)) ??
-					event.stop_reason.event_ids[0];
-				const call = id ? pendingAsk.get(id) : undefined;
-				if (id && call) {
-					outcome.suspended = {
-						args: call.input,
-						toolCallId: id,
-						toolName: call.name,
+				// Awaited ids can reference tool calls streamed in an earlier
+				// turn; surface them even without local metadata.
+				const queue = event.stop_reason.event_ids.map((eventId) => {
+					const call = pendingAsk.get(eventId);
+					return {
+						args: call?.input ?? {},
+						toolCallId: eventId,
+						toolName: call?.name ?? "unknown",
 					};
+				});
+				if (queue.length > 0) {
+					outcome.suspendedQueue = queue;
 				}
 			}
 			// requires_action, end_turn, and retries_exhausted are all turn-terminal.

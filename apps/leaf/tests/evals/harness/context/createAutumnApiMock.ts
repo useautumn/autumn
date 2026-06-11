@@ -2,6 +2,7 @@ import { mergeAgentRules, type PartialAgentRules } from "@autumn/shared";
 import { customers } from "../../fixtures/customers/index.js";
 import { entities } from "../../fixtures/entities/index.js";
 import { responses } from "../../fixtures/responses.js";
+import type { EvalSetup } from "../../fixtures/types.js";
 import type { EvalTrace } from "../tracing/types.js";
 import type { AutumnApiMock, AutumnApiMockOverrides } from "./types.js";
 
@@ -96,6 +97,24 @@ const normalizeScheduleBody = (body: Record<string, unknown>) => ({
 		: body.phases,
 });
 
+// The real API rejects entity ids the customer does not have.
+const findAttachEntityError = ({
+	body,
+	customerId,
+	setup,
+}: {
+	body: Record<string, unknown>;
+	customerId: string | null;
+	setup: EvalSetup;
+}) => {
+	const entityId = getString(body, "entity_id");
+	if (!entityId) return null;
+	const entity = setup.entities.find(
+		(entity) => entity.id === entityId && entity.customer_id === customerId,
+	);
+	return entity ? null : { error: `entity ${entityId} not found for customer` };
+};
+
 const defaultHandlers = {
 	attach: ({ body, setup }) => {
 		const customer = setup.customers.find(
@@ -105,6 +124,12 @@ const defaultHandlers = {
 			(plan) => plan.id === getString(body, "plan_id"),
 		);
 		if (!customer || !plan) return { error: "missing customer or plan" };
+		const entityError = findAttachEntityError({
+			body,
+			customerId: customer.id,
+			setup,
+		});
+		if (entityError) return entityError;
 		customer.subscriptions = [
 			...customer.subscriptions,
 			{
@@ -246,6 +271,12 @@ const defaultHandlers = {
 			(plan) => plan.id === getString(body, "plan_id"),
 		);
 		if (!customer || !plan) return { error: "missing customer or plan" };
+		const entityError = findAttachEntityError({
+			body,
+			customerId: customer.id,
+			setup,
+		});
+		if (entityError) return entityError;
 		return responses.attachPreview({ customer, plan, request: body });
 	},
 	previewCreateSchedule: ({ body, setup }) => {

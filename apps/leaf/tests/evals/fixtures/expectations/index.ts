@@ -8,6 +8,7 @@ export type {
 	ApiCalledAfterApprovalExpectation,
 	ApiCalledExpectation,
 	ApiCalledInOrderExpectation,
+	ApiCalledTimesExpectation,
 	EvalExpectation,
 	EvalExpected,
 	ExpectedApiCall,
