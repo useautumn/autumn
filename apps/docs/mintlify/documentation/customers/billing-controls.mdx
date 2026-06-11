@@ -3,7 +3,7 @@ title: "Billing Controls"
 description: "Configure overage behavior, spend limits, usage alerts, and auto top-ups per customer or entity"
 ---
 
-Billing controls let you manage how individual customers (or [entities](/documentation/customers/feature-entities)) consume usage-based features. You can toggle whether overage is allowed, cap how much overage accumulates, get notified when usage crosses a threshold, and automatically replenish prepaid balances — all configured per-customer via the API or viewed in the dashboard.
+Billing controls let you manage how individual customers (or [entities](/documentation/customers/feature-entities)) consume usage-based features. You can toggle whether overage is allowed, cap how much overage accumulates, hard-cap how much a feature can be used per time window, get notified when usage crosses a threshold, and automatically replenish prepaid balances — all configured per-customer via the API or viewed in the dashboard.
 
 All billing controls are set through the `billingControls` field when [updating a customer](/api-reference/customers/updateCustomer) or [updating an entity](/api-reference/entities/updateEntity).
 
@@ -15,6 +15,7 @@ await autumn.customers.update({
   billingControls: {
     overageAllowed: [{ featureId: "api_calls", enabled: true }],
     spendLimits: [{ featureId: "api_calls", enabled: true, overageLimit: 5000 }],
+    usageLimits: [{ featureId: "api_calls", limit: 50, interval: "day" }],
     usageAlerts: [{ featureId: "api_calls", threshold: 80, thresholdType: "usage_percentage", enabled: true }],
     autoTopups: [{ featureId: "credits", enabled: true, threshold: 500, quantity: 1000 }],
   },
@@ -27,6 +28,7 @@ await autumn.customers.update(
     billing_controls={
         "overage_allowed": [{"feature_id": "api_calls", "enabled": True}],
         "spend_limits": [{"feature_id": "api_calls", "enabled": True, "overage_limit": 5000}],
+        "usage_limits": [{"feature_id": "api_calls", "limit": 50, "interval": "day"}],
         "usage_alerts": [{"feature_id": "api_calls", "threshold": 80, "threshold_type": "usage_percentage", "enabled": True}],
         "auto_topups": [{"feature_id": "credits", "enabled": True, "threshold": 500, "quantity": 1000}],
     },
@@ -42,6 +44,7 @@ curl -X POST "https://api.useautumn.com/v1/customers/update" \
     "billing_controls": {
       "overage_allowed": [{"feature_id": "api_calls", "enabled": true}],
       "spend_limits": [{"feature_id": "api_calls", "enabled": true, "overage_limit": 5000}],
+      "usage_limits": [{"feature_id": "api_calls", "limit": 50, "interval": "day"}],
       "usage_alerts": [{"feature_id": "api_calls", "threshold": 80, "threshold_type": "usage_percentage", "enabled": true}],
       "auto_topups": [{"feature_id": "credits", "enabled": true, "threshold": 500, "quantity": 1000}]
     }
@@ -204,6 +207,89 @@ The `overage_limit` is measured in feature units, not dollars. An `overage_limit
 When both a spend limit and a plan-level max purchase exist for the same feature, the **spend limit takes precedence**. This lets you use max purchase as a default for all customers, then selectively raise or lower the cap per-customer.
 
 For a deeper dive, see [Spend Limits & Usage Alerts](/documentation/modelling-pricing/spend-limits).
+
+## Usage Limits
+
+A usage limit is a **windowed hard cap**: at most `limit` units of a feature per `interval` window (day, week, month, or year), regardless of how much balance the customer has left or how the plan is priced. It's a throttle, that you or your customer may set.
+
+Once usage reaches the cap inside the active window, `check` returns `allowed: false` and `track` stops deducting.
+
+Usage limits cap *total usage* of a feature within a period: a sub-limit within an existing balance. They sit on top of the plan's allowance and apply even when there's balance remaining and even when the feature has no overage pricing.
+
+> **Example** <br />
+> A customer's plan includes **300 credits per month**, but you want to stop any single day from burning through them. Set a usage limit of **50 on `credits` with a `day` interval**. The customer still gets their 300 monthly credits, but can never spend more than 50 in a day.
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.customers.update({
+  customerId: "user_123",
+  billingControls: {
+    usageLimits: [{
+      featureId: "credits",
+      limit: 50,
+      interval: "day",
+    }],
+  },
+});
+```
+
+```python Python
+await autumn.customers.update(
+    customer_id="user_123",
+    billing_controls={
+        "usage_limits": [{
+            "feature_id": "credits",
+            "limit": 50,
+            "interval": "day",
+        }],
+    },
+)
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/customers/update" \
+  -H "Authorization: Bearer am_sk_..." \
+  -H "Content-Type: application/json" \
+  -d '{
+    "customer_id": "user_123",
+    "billing_controls": {
+      "usage_limits": [{
+        "feature_id": "credits",
+        "limit": 50,
+        "interval": "day"
+      }]
+    }
+  }'
+```
+
+</CodeGroup>
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `feature_id` | string | The feature to cap |
+| `limit` | number | Maximum units allowed per window |
+| `interval` | string | Window length: `"day"`, `"week"`, `"month"`, or `"year"`. Cannot be `one_off`. |
+
+Each customer/entity feature in a `get` response carries a `usage_limits` array where every entry also reports the `usage` consumed in the current window, so you can show "12 / 50 used today" without a separate call.
+
+### Window reset and plan changes
+
+Each window aligns to the **customer's billing cycle**, not the UTC calendar. A `day` cap rolls at the customer's billing time-of-day; a `month` cap rolls on their billing-cycle anchor. When there's no billing cycle to anchor to (e.g. a feature with no backing plan), the window falls back to UTC calendar alignment — daily windows roll at UTC midnight, monthly on the 1st.
+
+Because the window is tied to the feature's reset cycle, **a plan change that restarts that cycle also restarts the window.** If a customer upgrades mid-month and their billing anchor moves, the usage limit's window re-anchors to the new cycle and the consumed counter starts fresh.
+
+### Caps on credit systems
+
+When a feature is part of a [credit system](/documentation/modelling-pricing/credit-systems), you can cap usage at either level:
+
+- **Cap the credit balance** — e.g. limit total `credits` spend per window across every feature that draws from it.
+- **Cap an individual feature** — e.g. give a credit system shared by features A, B, and C, but limit how many units of B specifically can be used per window. The per-feature cap is converted into credits using B's credit cost, so both caps are enforced together.
+
+> **Example — per-feature cap inside a credit system** <br />
+> Your `credits` system is spent by `images`, `transcriptions`, and `exports`. Customers can spend credits freely across all three, but you cap `exports` at **10 per day** so one feature can't drain the whole balance. A check or track on `exports` is blocked at 10/day even if plenty of credits remain.
+
+When more than one cap applies to a check (the cap on the evaluated feature and a cap on its parent credit system), Autumn enforces the **tightest** one — the remaining headroom is the minimum across all armed caps.
 
 ## Usage Alerts
 
@@ -397,10 +483,16 @@ Billing controls can be set at two levels:
 |---------|---------------|--------------|
 | **Overage allowed** | Yes | Yes |
 | **Spend limits** | Yes | Yes |
+| **Usage limits** | Yes | Yes |
 | **Usage alerts** | Yes | Yes |
 | **Auto top-ups** | Yes | No |
 
 **Entity-level** controls are configured by updating the entity instead of the customer. Entity-level controls override customer-level controls for that entity — for example, an entity overage override takes precedence over the customer-level setting, and entity spend limits override the customer-level limit.
+
+Overrides are resolved **per feature**: an entity's own entry for a feature wins, and the customer's entries fill in any features the entity doesn't set. For usage limits specifically, an inherited (customer-level) cap counts usage against the **shared customer window** — it's the same aggregate cap, not a separate per-entity copy. An entity-level usage limit, by contrast, gets its own per-entity window and counter.
+
+> **Example — per-entity cap** <br />
+> An org (the customer) has 1,000 monthly API calls shared across its workspaces (entities). You set a customer-level usage limit of 1,000/month so the org can't exceed its plan, and an entity-level limit of 200/day on a noisy workspace so it can't starve the others. The workspace is blocked at 200/day; the org is blocked at 1,000/month.
 
 <CodeGroup>
 
@@ -417,6 +509,11 @@ await autumn.entities.update({
       featureId: "api_calls",
       enabled: true,
       overageLimit: 2000,
+    }],
+    usageLimits: [{
+      featureId: "api_calls",
+      limit: 200,
+      interval: "day",
     }],
     usageAlerts: [{
       featureId: "api_calls",
@@ -441,6 +538,11 @@ await autumn.entities.update(
             "feature_id": "api_calls",
             "enabled": True,
             "overage_limit": 2000,
+        }],
+        "usage_limits": [{
+            "feature_id": "api_calls",
+            "limit": 200,
+            "interval": "day",
         }],
         "usage_alerts": [{
             "feature_id": "api_calls",
@@ -469,6 +571,11 @@ curl -X POST "https://api.useautumn.com/v1/entities/update" \
         "enabled": true,
         "overage_limit": 2000
       }],
+      "usage_limits": [{
+        "feature_id": "api_calls",
+        "limit": 200,
+        "interval": "day"
+      }],
       "usage_alerts": [{
         "feature_id": "api_calls",
         "threshold": 90,
@@ -491,18 +598,8 @@ Billing controls tie into three webhook events that fire automatically based on 
 
 | Event | When it fires |
 |-------|---------------|
-| [`balances.limit_reached`](/api-reference/webhooks/balancesLimitReached) | Customer transitions from allowed to not allowed on a feature (included allowance exhausted, max purchase hit, or spend limit reached) |
+| [`balances.limit_reached`](/api-reference/webhooks/balancesLimitReached) | Customer transitions from allowed to not allowed on a feature (included allowance exhausted, max purchase hit, spend limit reached, or usage limit hit). The payload's `limit_type` distinguishes `included`, `max_purchase`, `spend_limit`, and `usage_limit`. |
 | [`balances.usage_alert_triggered`](/api-reference/webhooks/balancesUsageAlertTriggered) | Customer's usage crosses a configured alert threshold |
 | [`customer.products.updated`](/documentation/webhooks#customerproductsupdated) | Customer's subscription changes (new, upgrade, downgrade, cancel, etc.) |
 
 For webhook setup and security details, see [Webhooks](/documentation/webhooks).
-
-## Viewing in the Dashboard
-
-You can view a customer's active billing controls on their details page in the [Autumn dashboard](https://app.useautumn.com/customers). The billing controls section shows all configured auto top-ups, spend limits, and usage alerts with their current settings.
-
-When viewing an entity, the dashboard shows entity-level spend limits and usage alerts for that entity.
-
-<Note>
-Billing controls are configured via the API — the dashboard provides a read-only view of the current configuration.
-</Note>
