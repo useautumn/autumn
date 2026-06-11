@@ -113,6 +113,22 @@ export const cmaRepo = {
 		return row;
 	},
 
+	// Forces the next ensureAutumnVault to resync tokens into the vault.
+	markVaultStale: async ({
+		db,
+		env,
+		orgId,
+	}: {
+		db: ChatDb;
+		env: AppEnv;
+		orgId: string;
+	}) => {
+		await db
+			.update(cmaVaults)
+			.set({ updated_at: 0 })
+			.where(and(eq(cmaVaults.org_id, orgId), eq(cmaVaults.env, env)));
+	},
+
 	upsertVault: async ({
 		credentialId,
 		db,

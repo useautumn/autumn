@@ -1,6 +1,7 @@
 import type { AppEnv } from "@autumn/shared";
-import { Actions, Button, Card, CardText, Divider, Field, Fields } from "chat";
+import { Actions, Button, Card, CardText, Divider } from "chat";
 import { toolLabel } from "../agent/tools/toolPolicy.js";
+import { formatEpochDate, previewElements } from "./previewContent.js";
 
 const formatPreview = (preview: unknown) =>
 	typeof preview === "string" ? preview : "";
@@ -59,47 +60,50 @@ const formatInvoiceMode = (value: unknown) => {
 const envLabel = (env?: AppEnv) =>
 	env === "live" ? "Live" : env === "sandbox" ? "Sandbox" : null;
 
-const requestFields = ({
-	env,
-	toolName,
-	toolArgs,
-}: {
-	env?: AppEnv;
-	toolName: string;
-	toolArgs?: Record<string, unknown>;
-}) => {
-	const request = getRequest(toolArgs);
-	const environment = envLabel(env);
-	const baseFields = [
-		Field({
-			label: "Action",
-			value: toolLabel(toolName),
-		}),
-		...(environment
-			? [Field({ label: "Environment", value: environment })]
-			: []),
-	];
-	if (!request) return baseFields;
+const cardSubtitle = ({ env, hint }: { env?: AppEnv; hint: string }) =>
+	[envLabel(env), hint].filter(Boolean).join("  ·  ");
 
-	return [
-		...baseFields,
-		...[
-			["Customer", request.customer_id],
-			["Plan", request.plan_id],
-			["Entity", request.entity_id],
-			["Subscription", request.subscription_id],
-			["Price", formatPrice(request)],
-			["Enable immediately", request.enable_plan_immediately],
-			["Invoice mode", formatInvoiceMode(request.invoice_mode)],
-			["Proration", request.proration_behavior],
-			["Redirect", request.redirect_mode],
-		].flatMap(([label, value]) => {
+// One "**Label**  value" line per pair — half the height of stacked fields.
+const requestSummary = (toolArgs?: Record<string, unknown>) => {
+	const request = getRequest(toolArgs);
+	if (!request) return null;
+
+	const lines = [
+		["Customer", request.customer_id],
+		["Plan", request.plan_id],
+		["Feature", request.feature_id],
+		["Entity", request.entity_id],
+		["Subscription", request.subscription_id],
+		[
+			"Starts",
+			typeof request.starts_at === "number"
+				? formatEpochDate(request.starts_at)
+				: null,
+		],
+		["Price", formatPrice(request)],
+	]
+		.flatMap(([label, value]) => {
 			const fieldValue = getFieldValue(value);
-			return fieldValue
-				? [Field({ label: String(label), value: fieldValue })]
-				: [];
-		}),
-	].slice(0, 8);
+			return fieldValue ? [`**${label}**  ${fieldValue}`] : [];
+		})
+		.slice(0, 8);
+	return lines.length ? lines.join("\n") : null;
+};
+
+// Technical knobs the reviewer rarely acts on — shown as one muted line, not fields.
+const configSummary = (toolArgs?: Record<string, unknown>) => {
+	const request = getRequest(toolArgs);
+	if (!request) return null;
+
+	const summary = [
+		["Invoice", formatInvoiceMode(request.invoice_mode)],
+		["Enable immediately", getFieldValue(request.enable_plan_immediately)],
+		["Proration", getFieldValue(request.proration_behavior)],
+		["Redirect", getFieldValue(request.redirect_mode)],
+	]
+		.flatMap(([label, value]) => (value ? [`${label}: ${value}`] : []))
+		.join("  ·  ");
+	return summary.length ? summary : null;
 };
 
 const cleanPreviewLine = (line: string) =>
@@ -180,17 +184,25 @@ export const approvalCard = ({
 	toolArgs?: Record<string, unknown>;
 	preview?: unknown;
 }) => {
-	const fields = requestFields({ env, toolName, toolArgs });
-	const lines = preview ? previewLines(preview) : [];
+	const summary = requestSummary(toolArgs);
+	const config = configSummary(toolArgs);
+	const structured = preview ? previewElements(preview) : null;
+	const lines = !structured && preview ? previewLines(preview) : [];
 
 	return Card({
 		title: `${toolLabel(toolName)}?`,
-		subtitle: "Review the preview before this runs",
+		subtitle: cardSubtitle({
+			env,
+			hint: "Review the preview before this runs",
+		}),
 		children: [
-			...(fields.length ? [Fields(fields)] : []),
+			...(summary ? [CardText(summary)] : []),
+			...(structured ?? []),
 			...(lines.length
-				? [Divider(), CardText(lines.map((line) => `• ${line}`).join("\n"))]
+				? [CardText(lines.map((line) => `• ${line}`).join("\n"))]
 				: []),
+			...(config ? [CardText(config, { style: "muted" })] : []),
+			Divider(),
 			Actions([
 				Button({
 					id: "approve_billing_action",
@@ -224,7 +236,8 @@ export const approvalStatusCard = ({
 	preview?: unknown;
 	result?: unknown;
 }) => {
-	const fields = requestFields({ env, toolName, toolArgs });
+	const summary = requestSummary(toolArgs);
+	const config = configSummary(toolArgs);
 	const lines = statusLines({ status, result });
 	const title =
 		status === "approved"
@@ -237,20 +250,23 @@ export const approvalStatusCard = ({
 
 	return Card({
 		title,
-		subtitle:
-			status === "running"
-				? "Applying the approved action"
-				: "The approval is closed",
+		subtitle: cardSubtitle({
+			env,
+			hint:
+				status === "running"
+					? "Applying the approved action"
+					: "The approval is closed",
+		}),
 		children: [
-			...(fields.length ? [Fields(fields)] : []),
+			...(summary ? [CardText(summary)] : []),
 			...(lines.length
 				? [
-						Divider(),
 						CardText(
 							lines.map((line) => `• ${cleanPreviewLine(line)}`).join("\n"),
 						),
 					]
 				: []),
+			...(config ? [CardText(config, { style: "muted" })] : []),
 		],
 	});
 };

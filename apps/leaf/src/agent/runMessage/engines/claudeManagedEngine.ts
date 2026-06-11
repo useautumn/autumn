@@ -27,6 +27,16 @@ import {
 import type { AgentEngine, MessageContext, MessageParams } from "../types.js";
 
 const client = new Anthropic();
+
+const AUTH_FAILURE_PATTERN =
+	/invalid or expired access token|request failed \(401\)/i;
+const isAutumnAuthFailure = (output: unknown) => {
+	try {
+		return AUTH_FAILURE_PATTERN.test(JSON.stringify(output) ?? "");
+	} catch {
+		return false;
+	}
+};
 // initLogger sets Braintrust's ambient logger so traced()/spans are recorded.
 const braintrustLogger = createBraintrustLogger();
 const braintrustEnabled = Boolean(braintrustLogger);
@@ -226,6 +236,7 @@ export const claudeManagedEngine: AgentEngine = {
 		});
 
 		const previewCapture = createPreviewCapture();
+		let staleVaultMarked = false;
 		const text = buildMessageText({ env, newSession, params });
 
 		const driveTurn = ({
@@ -266,6 +277,16 @@ export const claudeManagedEngine: AgentEngine = {
 				},
 				onAutumnToolResult: ({ id, name, output }) => {
 					previewCapture.onToolResult({ name, output });
+					if (isAutumnAuthFailure(output) && !staleVaultMarked) {
+						staleVaultMarked = true;
+						logger.warn("Autumn MCP auth failed — marking vault stale", {
+							event: "leaf.vault_marked_stale",
+							tool: name,
+						});
+						void cmaRepo
+							.markVaultStale({ db, env, orgId: org.id })
+							.catch(() => undefined);
+					}
 					const toolSpan = openToolSpans.get(id);
 					if (toolSpan) {
 						toolSpan.log({ output });

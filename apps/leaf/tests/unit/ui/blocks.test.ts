@@ -19,7 +19,7 @@ describe("approval card", () => {
 		});
 
 		expect(card.title).toBe("Attach plan?");
-		expect(card.children[0]?.type).toBe("fields");
+		expect(card.children[0]?.type).toBe("text");
 		expect(card.children.at(-1)?.type).toBe("actions");
 		expect(JSON.stringify(card)).toContain("Sandbox");
 		expect(JSON.stringify(card)).toContain("pro_att-disc-dedup");
@@ -106,7 +106,7 @@ describe("approval card", () => {
 
 		const json = JSON.stringify(card);
 		expect(json).toContain("$178.65 due now");
-		expect(json).not.toContain("**");
+		expect(json).not.toContain("**Immediate");
 		expect(json).not.toContain("$178.\\n");
 		expect(json).not.toContain("Let me preview");
 	});
