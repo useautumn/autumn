@@ -31,5 +31,21 @@ export function parseCustomerFilter({
 			child: parseItemNav({ raw: filter.item, ctx }),
 		});
 
+	if (filter.$and !== undefined) {
+		for (const branch of filter.$and)
+			children.push(parseCustomerFilter({ filter: branch, ctx }));
+	}
+
+	if (filter.$or !== undefined) {
+		if (filter.$or.length === 0)
+			throw new Error("$or requires at least one branch");
+		children.push({
+			kind: "or",
+			children: filter.$or.map((branch) =>
+				parseCustomerFilter({ filter: branch, ctx }),
+			),
+		});
+	}
+
 	return wrapAnd(children);
 }
