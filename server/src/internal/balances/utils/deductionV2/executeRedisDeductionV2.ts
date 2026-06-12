@@ -2,6 +2,7 @@ import {
 	type FullCusEntWithFullCusProduct,
 	type FullSubject,
 	fullSubjectToFullCustomer,
+	isUsageBasedAllocatedCustomerEntitlement,
 	notNullish,
 } from "@autumn/shared";
 import type { Redis } from "ioredis";
@@ -22,6 +23,7 @@ import { buildDeductFromSubjectBalancesKeys } from "@/internal/customers/cache/f
 import { buildFullSubjectKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectKey.js";
 import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "@/internal/customers/cache/fullSubject/config/fullSubjectCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
+import { attachCascadeReplayState } from "../types/cascadeReplayState.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
@@ -30,7 +32,6 @@ import {
 	RedisDeductionError,
 	RedisDeductionErrorCode,
 } from "../types/redisDeductionError.js";
-import { attachCascadeReplayState } from "../types/cascadeReplayState.js";
 import type { LuaDeductionResult } from "../types/redisDeductionResult.js";
 import type { RolloverUpdate } from "../types/rolloverUpdate.js";
 import type { UsageWindowMutation } from "../types/usageWindowMutation.js";
@@ -83,14 +84,14 @@ export const executeRedisDeductionV2 = async ({
 		deductions,
 	});
 
-	if (options.paidAllocated) {
+	if (options.paidAllocatedV1) {
 		throw new RedisDeductionError({
 			message: "Paid allocated deductions are not supported for Redis",
 			code: RedisDeductionErrorCode.PaidAllocated,
 		});
 	}
 
-	if (options.paidAllocated && deductions.some((d) => d.lock)) {
+	if (options.paidAllocatedV1 && deductions.some((d) => d.lock)) {
 		throw new RedisDeductionError({
 			message: "Locks are not supported for paid allocated features",
 			code: RedisDeductionErrorCode.PaidAllocated,
@@ -169,53 +170,53 @@ export const executeRedisDeductionV2 = async ({
 				now: usageWindowNow,
 			});
 
-		if (unlimitedFeatureIds.length > 0) {
-			if (preparedLock?.enabled) {
-				await saveLockReceiptV2({
-					lock: preparedLock,
-					customerId,
-					featureId: feature.id,
+			if (unlimitedFeatureIds.length > 0) {
+				if (preparedLock?.enabled) {
+					await saveLockReceiptV2({
+						lock: preparedLock,
+						customerId,
+						featureId: feature.id,
+						entityId,
+						items: [],
+						overrideLockValue: effectiveToDeduct,
+						redisInstance: redisInstance ?? ctx.redisV2,
+					});
+				}
+				const unlimitedPlanLog = buildUnlimitedPlanMutationLog({
+					unlimitedCusEnt,
+					toDeduct: effectiveToDeduct,
+					fallbackDeduction: deduction.deduction,
 					entityId,
-					items: [],
-					overrideLockValue: effectiveToDeduct,
-					redisInstance: redisInstance ?? ctx.redisV2,
 				});
+				if (unlimitedPlanLog) {
+					allMutationLogs.push(unlimitedPlanLog);
+				}
+				// An unlimited included leg covers the whole event: nothing spills and
+				// there is no balance mutation to compensate.
+				cascadeSpill.recordIncludedResult({
+					deduction,
+					remaining: 0,
+					mutationLogs: [],
+				});
+				continue;
 			}
-			const unlimitedPlanLog = buildUnlimitedPlanMutationLog({
-				unlimitedCusEnt,
-				toDeduct: effectiveToDeduct,
-				fallbackDeduction: deduction.deduction,
-				entityId,
-			});
-			if (unlimitedPlanLog) {
-				allMutationLogs.push(unlimitedPlanLog);
-			}
-			// An unlimited included leg covers the whole event: nothing spills and
-			// there is no balance mutation to compensate.
-			cascadeSpill.recordIncludedResult({
-				deduction,
-				remaining: 0,
-				mutationLogs: [],
-			});
-			continue;
-		}
 
-		if (customerEntitlements.length === 0) {
-			if (deduction.cascade?.role === "overage") {
-				throw new RedisDeductionError({
-					message: `Redis deduction failed: ${RedisDeductionErrorCode.InsufficientBalance}`,
-					code: RedisDeductionErrorCode.InsufficientBalance,
-					featureId: feature.id,
-					rejectedValue: effectiveToDeduct,
+			if (customerEntitlements.length === 0) {
+				if (deduction.cascade?.role === "overage") {
+					throw new RedisDeductionError({
+						message: `Redis deduction failed: ${RedisDeductionErrorCode.InsufficientBalance}`,
+						code: RedisDeductionErrorCode.InsufficientBalance,
+						featureId: feature.id,
+						rejectedValue: effectiveToDeduct,
+					});
+				}
+				cascadeSpill.recordIncludedResult({
+					deduction,
+					remaining: deduction.deduction,
+					mutationLogs: [],
 				});
+				continue;
 			}
-			cascadeSpill.recordIncludedResult({
-				deduction,
-				remaining: deduction.deduction,
-				mutationLogs: [],
-			});
-			continue;
-		}
 
 			const idempotencyRedisKey = idempotencyKey
 				? getRedisTrackFeatureIdempotencyKey({
@@ -307,17 +308,17 @@ export const executeRedisDeductionV2 = async ({
 				);
 			}
 
-		if (resultJson.error) {
-			throw new RedisDeductionError({
-				message: `Redis deduction failed: ${resultJson.error}`,
-				code: resultJson.error as RedisDeductionErrorCode,
-				featureId: resultJson.feature_id,
-				rejectedValue:
-					resultJson.error === RedisDeductionErrorCode.InsufficientBalance
-						? effectiveToDeduct
-						: undefined,
-			});
-		}
+			if (resultJson.error) {
+				throw new RedisDeductionError({
+					message: `Redis deduction failed: ${resultJson.error}`,
+					code: resultJson.error as RedisDeductionErrorCode,
+					featureId: resultJson.feature_id,
+					rejectedValue:
+						resultJson.error === RedisDeductionErrorCode.InsufficientBalance
+							? effectiveToDeduct
+							: undefined,
+				});
+			}
 
 			const { updates, rollover_updates } = resultJson;
 			const mutationLogs = Array.isArray(resultJson.mutation_logs)
@@ -399,12 +400,14 @@ export const executeRedisDeductionV2 = async ({
 
 					if (!customerEntitlement) continue;
 
-					await createAllocatedInvoice({
-						ctx,
-						customerEntitlement,
-						oldFullCustomer,
-						update,
-					});
+					if (isUsageBasedAllocatedCustomerEntitlement(customerEntitlement)) {
+						await createAllocatedInvoice({
+							ctx,
+							customerEntitlement,
+							oldFullCustomer,
+							update,
+						});
+					}
 
 					applyDeductionUpdateToFullSubject({
 						fullSubject,

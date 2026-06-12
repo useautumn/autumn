@@ -84,7 +84,12 @@ export default function PlanChangeDialog({
 	const baseProduct = useProductStore((s) => s.baseProduct);
 	const setBaseProduct = useProductStore((s) => s.setBaseProduct);
 	const { features = [] } = useFeaturesQuery();
-	const { refetch, numVersions, versionCounts } = useProductQuery();
+	const {
+		refetch,
+		invalidate: invalidateProduct,
+		numVersions,
+		versionCounts,
+	} = useProductQuery();
 	const { setQueryStates } = useProductQueryState();
 	const { invalidate: invalidateProducts } = useProductsQuery();
 	const { createMigration, invalidate: invalidateMigrations } =
@@ -142,7 +147,7 @@ export default function PlanChangeDialog({
 	const syncToLatestVersion = async () => {
 		await setQueryStates({ version: null });
 		await refetch();
-		invalidateProducts();
+		await Promise.all([invalidateProduct(), invalidateProducts()]);
 	};
 
 	const markSaved = () => {
@@ -184,6 +189,7 @@ export default function PlanChangeDialog({
 					resetState();
 					void refetch();
 				}
+				void invalidateProduct();
 				void invalidateProducts();
 			} catch (error) {
 				toast.error(getBackendErr(error, "Failed to update plan"));
@@ -231,6 +237,7 @@ export default function PlanChangeDialog({
 			setOpen(false);
 			resetState();
 			void refetch();
+			void invalidateProduct();
 			void invalidateProducts();
 			return;
 		}
@@ -260,6 +267,7 @@ export default function PlanChangeDialog({
 			resetState();
 			navigateTo(`/migrations/${migration.id}?step=live&run=true`, navigate);
 			void refetch();
+			void invalidateProduct();
 			void invalidateProducts();
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to create migration"));

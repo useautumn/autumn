@@ -64,7 +64,7 @@ await autumn.balances.trackTokens({
 Each token parameter is an exclusive pool — no token should be counted in more than one. `input_tokens` is non-cached text input only (cached tokens go in `cache_read_tokens` / `cache_write_tokens`), and `output_tokens` is text output only (reasoning tokens go in `reasoning_tokens`, audio in `audio_input_tokens` / `audio_output_tokens`). Each pool is billed at the model's published rate for that pool, falling back to the text input/output rate when the model has none.
 
 <Warning>
-  If you pass a provider's raw totals (e.g. OpenAI's `prompt_tokens` and `completion_tokens`), subtract the cache and reasoning counts first — otherwise those tokens are billed twice. The [`@useautumn/ai-sdk` wrapper](/documentation/external-providers/ai-sdk) does this normalization for you.
+  If you pass a provider's raw totals (e.g. OpenAI's `prompt_tokens` and `completion_tokens`), subtract the cache and reasoning counts first — otherwise those tokens are billed twice. The `@useautumn/gateway` wrappers ([AI SDK](/documentation/external-providers/ai-sdk), [OpenRouter](/documentation/external-providers/openrouter)) do this normalization for you.
 </Warning>
 
 ### Markup Resolution

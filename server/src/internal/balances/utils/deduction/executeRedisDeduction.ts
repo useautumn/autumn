@@ -64,14 +64,14 @@ export const executeRedisDeduction = async ({
 		deductions,
 	});
 
-	if (options.paidAllocated) {
+	if (options.paidAllocatedV1) {
 		throw new RedisDeductionError({
 			message: `Paid allocated deductions are not supported for Redis`,
 			code: RedisDeductionErrorCode.PaidAllocated,
 		});
 	}
 
-	if (options.paidAllocated && deductions.some((d) => d.lock)) {
+	if (options.paidAllocatedV1 && deductions.some((d) => d.lock)) {
 		throw new RedisDeductionError({
 			message: "Locks are not supported for paid allocated features",
 			code: RedisDeductionErrorCode.PaidAllocated,

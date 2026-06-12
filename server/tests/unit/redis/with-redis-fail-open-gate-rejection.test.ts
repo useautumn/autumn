@@ -14,7 +14,13 @@ const gateRejection = () =>
 	});
 
 mock.module("@/internal/balances/check/runCheckV2.js", () => ({
-	runCheckV2: async () => {
+	runCheckV2: async ({ ctx }: { ctx?: { id?: string } } = {}) => {
+		if (ctx?.id !== "req_test_gate_failopen") {
+			return {
+				checkData: { source: "v2" },
+				response: { allowed: true, source: "v2" },
+			};
+		}
 		throw checkError;
 	},
 }));
@@ -29,6 +35,30 @@ const queueCalls: Record<string, unknown>[] = [];
 mock.module("@/queue/queueUtils.js", () => ({
 	addTaskToQueue: async (args: Record<string, unknown>) => {
 		queueCalls.push(args);
+		const queueUrl = args.queueUrl ?? process.env.SQS_QUEUE_URL_V2;
+		if (!queueUrl) return;
+		if (
+			typeof queueUrl === "string" &&
+			queueUrl.startsWith("https://sqs.test")
+		) {
+			return;
+		}
+
+		const { getSqsClient } = await import("@/queue/initSqs.js");
+		const sqsClient = getSqsClient({ queueUrl: queueUrl as string });
+		await sqsClient.send({
+			input: {
+				QueueUrl: queueUrl,
+				MessageBody: JSON.stringify({
+					name: args.jobName,
+					data: args.payload,
+				}),
+				...(args.messageGroupId ? { MessageGroupId: args.messageGroupId } : {}),
+				...(args.messageDeduplicationId
+					? { MessageDeduplicationId: args.messageDeduplicationId }
+					: {}),
+			},
+		} as never);
 	},
 }));
 

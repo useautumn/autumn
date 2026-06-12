@@ -50,6 +50,9 @@ export const pricesAreSame = (
 
 	const configDiffs = {
 		shouldProrate: usageConfig1.should_prorate !== usageConfig2.should_prorate,
+		allocatedBillingBehavior:
+			usageConfig1.allocated_billing_behavior !==
+			usageConfig2.allocated_billing_behavior,
 		billWhen: usageConfig1.bill_when !== usageConfig2.bill_when,
 		billingUnits: usageConfig1.billing_units !== usageConfig2.billing_units,
 		interval: usageConfig1.interval !== usageConfig2.interval,

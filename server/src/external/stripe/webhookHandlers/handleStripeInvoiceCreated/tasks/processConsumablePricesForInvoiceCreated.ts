@@ -72,6 +72,9 @@ export const processConsumablePricesForInvoiceCreated = async ({
 	}
 
 	const invoicePeriodEndMs = secondsToMs(stripeInvoice.period_end);
+	const billingCycleAnchorMs = secondsToMs(
+		stripeSubscription.billing_cycle_anchor,
+	);
 
 	const { lineItems, updateCustomerEntitlements } =
 		await eventContextToArrearLineItems({
@@ -83,6 +86,7 @@ export const processConsumablePricesForInvoiceCreated = async ({
 				customerEntitlementShouldBeBilled({
 					cusEnt,
 					invoicePeriodEndMs,
+					billingCycleAnchorMs,
 				}),
 		});
 	const skipOverageSubmission = parseSkipOverageSubmissionFlag({

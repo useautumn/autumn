@@ -4,6 +4,7 @@ import {
 	type FullSubject,
 	fullSubjectToFullCustomer,
 	InternalError,
+	isUsageBasedAllocatedCustomerEntitlement,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { withLock } from "@/external/redis/redisUtils.js";
@@ -82,7 +83,7 @@ export const executePostgresDeductionV2 = async ({
 		deductions,
 	});
 
-	if (resolvedOptions.paidAllocated && deductions.some((d) => d.lock)) {
+	if (resolvedOptions.paidAllocatedV1 && deductions.some((d) => d.lock)) {
 		throw new InternalError({
 			message: "Locks are not supported for paid allocated features",
 		});
@@ -284,12 +285,14 @@ export const executePostgresDeductionV2 = async ({
 
 						if (!customerEntitlement) continue;
 
-						await createAllocatedInvoice({
-							ctx,
-							customerEntitlement,
-							oldFullCustomer,
-							update,
-						});
+						if (isUsageBasedAllocatedCustomerEntitlement(customerEntitlement)) {
+							await createAllocatedInvoice({
+								ctx,
+								customerEntitlement,
+								oldFullCustomer,
+								update,
+							});
+						}
 
 						applyDeductionUpdateToFullSubject({
 							fullSubject,
@@ -386,7 +389,7 @@ export const executePostgresDeductionV2 = async ({
 		};
 	};
 
-	const deductionResult = resolvedOptions.paidAllocated
+	const deductionResult = resolvedOptions.paidAllocatedV1
 		? await withLock({
 				lockKey: `lock:deduction:${org.id}:${env}:${customerId}`,
 				ttlMs: 60000,

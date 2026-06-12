@@ -12,7 +12,7 @@ export type DeductionOptions = {
 	customerEntitlementFilters?: CustomerEntitlementFilters;
 
 	// only for resolved
-	paidAllocated?: boolean;
+	paidAllocatedV1?: boolean;
 
 	triggerAutoTopUp?: boolean;
 	triggerSideEffects?: boolean;
