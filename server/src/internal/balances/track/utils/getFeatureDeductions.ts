@@ -65,6 +65,7 @@ export const getTokenCascadeDeductionsFromBody = ({
 	if (
 		!includedFeature ||
 		!overageFeature ||
+		includedFeature.id === overageFeature.id ||
 		includedCost === null ||
 		overageCost === null
 	) {

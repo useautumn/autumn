@@ -19,6 +19,7 @@ import {
 	RedisDeductionError,
 	RedisDeductionErrorCode,
 } from "../types/redisDeductionError.js";
+import { attachCascadeReplayState } from "../types/cascadeReplayState.js";
 import type { LuaDeductionResult } from "../types/redisDeductionResult.js";
 import type { RolloverUpdate } from "../types/rolloverUpdate.js";
 import { applyDeductionUpdateToFullCustomer } from "./applyDeductionUpdateToFullCustomer.js";
@@ -26,6 +27,7 @@ import { applyRolloverUpdatesToFullCustomer } from "./applyRolloverUpdatesToFull
 import {
 	type DeductionSideEffect,
 	flushDeductionSideEffects,
+	queueDeductionSideEffect,
 } from "./deductionSideEffects.js";
 import { logDeductionUpdates } from "./logDeductionUpdates.js";
 import { mutationLogsToFeatures } from "./mutationLogsToFeatures.js";
@@ -134,27 +136,44 @@ export const executeRedisDeduction = async ({
 				options: { ...options, overageBehaviour: legOverageBehaviour },
 			});
 
-			if (unlimitedFeatureIds.length > 0) {
-				if (preparedLock) {
-					await saveLockReceipt({
-						lock: preparedLock,
-						customerId,
-						featureId: feature.id,
-						entityId,
-						items: [],
-						overrideLockValue: effectiveToDeduct,
-						redisInstance,
-					});
-				}
-				// An unlimited included leg covers the whole event: nothing spills and
-				// there is no balance mutation to compensate.
-				cascadeSpill.recordIncludedResult({
-					deduction,
-					remaining: 0,
-					mutationLogs: [],
+		if (unlimitedFeatureIds.length > 0) {
+			if (preparedLock) {
+				await saveLockReceipt({
+					lock: preparedLock,
+					customerId,
+					featureId: feature.id,
+					entityId,
+					items: [],
+					overrideLockValue: effectiveToDeduct,
+					redisInstance,
 				});
-				continue;
 			}
+			// An unlimited included leg covers the whole event: nothing spills and
+			// there is no balance mutation to compensate.
+			cascadeSpill.recordIncludedResult({
+				deduction,
+				remaining: 0,
+				mutationLogs: [],
+			});
+			continue;
+		}
+
+		if (customerEntitlements.length === 0) {
+			if (deduction.cascade?.role === "overage") {
+				throw new RedisDeductionError({
+					message: `Redis deduction failed: ${RedisDeductionErrorCode.InsufficientBalance}`,
+					code: RedisDeductionErrorCode.InsufficientBalance,
+					featureId: feature.id,
+					rejectedValue: effectiveToDeduct,
+				});
+			}
+			cascadeSpill.recordIncludedResult({
+				deduction,
+				remaining: deduction.deduction,
+				mutationLogs: [],
+			});
+			continue;
+		}
 
 			const luaParams = {
 				org_id: org.id,
@@ -210,13 +229,17 @@ export const executeRedisDeduction = async ({
 				);
 			}
 
-			if (resultJson.error) {
-				throw new RedisDeductionError({
-					message: `Redis deduction failed: ${resultJson.error}`,
-					code: resultJson.error as RedisDeductionErrorCode,
-					featureId: resultJson.feature_id,
-				});
-			}
+		if (resultJson.error) {
+			throw new RedisDeductionError({
+				message: `Redis deduction failed: ${resultJson.error}`,
+				code: resultJson.error as RedisDeductionErrorCode,
+				featureId: resultJson.feature_id,
+				rejectedValue:
+					resultJson.error === RedisDeductionErrorCode.InsufficientBalance
+						? effectiveToDeduct
+						: undefined,
+			});
+		}
 
 			const { updates, rollover_updates } = resultJson;
 			const mutation_logs = Array.isArray(resultJson.mutation_logs)
@@ -286,13 +309,16 @@ export const executeRedisDeduction = async ({
 			});
 
 			if (options.triggerSideEffects) {
-				sideEffects.push({
-					oldFullCus: structuredClone(oldFullCus),
-					newFullCus: structuredClone(fullCustomer),
-					feature: deduction.feature,
-					entityId,
-					featuresFromMutationLogs,
-					triggerAutoTopUp: options.triggerAutoTopUp,
+				queueDeductionSideEffect({
+					sideEffect: {
+						oldFullCus,
+						newFullCus: fullCustomer,
+						feature: deduction.feature,
+						entityId,
+						featuresFromMutationLogs,
+						triggerAutoTopUp: options.triggerAutoTopUp,
+					},
+					sideEffects,
 				});
 			}
 		}
@@ -304,14 +330,18 @@ export const executeRedisDeduction = async ({
 			cascadeSpill,
 			redisInstance,
 		});
+		attachCascadeReplayState({
+			error,
+			state: cascadeSpill.buildReplayState(),
+		});
 		throw error;
+	} finally {
+		flushDeductionSideEffects({
+			ctx,
+			sideEffects,
+			source: "executeRedisDeduction",
+		});
 	}
-
-	flushDeductionSideEffects({
-		ctx,
-		sideEffects,
-		source: "executeRedisDeduction",
-	});
 
 	return {
 		oldFullCus,
@@ -323,9 +353,9 @@ export const executeRedisDeduction = async ({
 };
 
 /**
- * Restores a cascade's included leg after a later leg failed, by replaying the
- * included mutations as an inline unwind. Compensation failures are logged
- * loudly but never mask the original error.
+ * Restores a cascade's included deduction after a later deduction failed, by
+ * replaying the included mutations as an inline unwind. Compensation failures
+ * are logged loudly but never mask the original error.
  */
 const compensateCascadeIncludedLeg = async ({
 	ctx,
@@ -358,7 +388,13 @@ const compensateCascadeIncludedLeg = async ({
 		});
 	} catch (compensationError) {
 		ctx.logger.error(
-			`[executeRedisDeduction] track_cascade_compensation_failed: customer ${fullCustomer.id}, feature ${compensation.feature.id}, unwind value ${compensation.unwindValue}: ${compensationError}`,
+			`[executeRedisDeduction] cascade compensation failed: ${compensationError}`,
+			{
+				type: "track_cascade_compensation_failed",
+				customer_id: fullCustomer.id,
+				feature_id: compensation.feature.id,
+				unwind_value: compensation.unwindValue,
+			},
 		);
 	}
 };

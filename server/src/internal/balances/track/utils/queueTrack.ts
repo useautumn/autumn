@@ -1,5 +1,6 @@
 import type { TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import type { CascadeReplayState } from "../../utils/types/cascadeReplayState.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
@@ -12,12 +13,14 @@ export const queueTrack = async ({
 	queueUrl,
 	messageDeduplicationId,
 	featureDeductions,
+	cascadeReplayState,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	queueUrl?: string;
 	messageDeduplicationId?: string;
 	featureDeductions?: FeatureDeduction[];
+	cascadeReplayState?: CascadeReplayState;
 }) => {
 	try {
 		const resolvedQueueUrl = queueUrl ?? process.env.TRACK_SQS_QUEUE_URL;
@@ -44,6 +47,7 @@ export const queueTrack = async ({
 				allowTokenCascade: featureDeductions?.some(
 					(deduction) => deduction.cascade,
 				),
+				cascadeReplayState,
 			},
 		});
 

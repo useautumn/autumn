@@ -83,6 +83,17 @@ describe("getTokenCascadeDeductionsFromBody", () => {
 		).toBeNull();
 	});
 
+	test("returns null when both roles reference the same feature", () => {
+		const sameFeature = structuredClone(cascadeBody);
+		sameFeature.properties.cascade.overage_feature_id = "ai_included";
+		expect(
+			getTokenCascadeDeductionsFromBody({
+				ctx: createCtx(),
+				body: sameFeature,
+			}),
+		).toBeNull();
+	});
+
 	test("returns null when a cost is missing or not a number", () => {
 		const badCost = structuredClone(cascadeBody) as Record<string, unknown> & {
 			properties: { cascade: { included: { cost: unknown } } };

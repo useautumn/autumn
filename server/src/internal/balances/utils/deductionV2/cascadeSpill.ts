@@ -1,6 +1,7 @@
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 import type { MutationLogItem } from "../types/mutationLogItem.js";
+import type { CascadeReplayState } from "../types/cascadeReplayState.js";
 
 type OverageBehaviour = NonNullable<DeductionOptions["overageBehaviour"]>;
 
@@ -92,6 +93,22 @@ export class CascadeSpill {
 			tokens: this.includedDeduction.tokens,
 			unwindValue: this.includedDeductedUnits,
 			unwindItems: this.includedMutationLogs,
+		};
+	}
+
+	buildReplayState(): CascadeReplayState | null {
+		if (
+			!this.includedDeduction ||
+			this.includedDeductedUnits <= 0 ||
+			this.includedMutationLogs.length === 0 ||
+			this.spillRemaining === null
+		) {
+			return null;
+		}
+
+		return {
+			includedApplied: true,
+			spillRemaining: this.spillRemaining,
 		};
 	}
 }

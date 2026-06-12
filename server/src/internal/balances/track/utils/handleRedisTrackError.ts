@@ -6,6 +6,7 @@ import {
 	type TrackResponseV3,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getCascadeReplayState } from "../../utils/types/cascadeReplayState.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import {
 	RedisDeductionError,
@@ -36,7 +37,7 @@ export const handleRedisTrackError = async ({
 
 	if (error.code === RedisDeductionErrorCode.InsufficientBalance) {
 		throw new InsufficientBalanceError({
-			value: body.value ?? 1,
+			value: error.rejectedValue ?? body.value ?? 1,
 			// A cascade rejects on the overage system, not the primary feature on
 			// the body; the deduction error carries the rejecting feature's id.
 			featureId: error.featureId ?? body.feature_id,
@@ -53,7 +54,12 @@ export const handleRedisTrackError = async ({
 	}
 
 	if (error.isRedisUnavailable()) {
-		const queuedResponse = await queueTrack({ ctx, body, featureDeductions });
+		const queuedResponse = await queueTrack({
+			ctx,
+			body,
+			featureDeductions,
+			cascadeReplayState: getCascadeReplayState(error),
+		});
 		if (queuedResponse) return queuedResponse;
 		throw error;
 	}

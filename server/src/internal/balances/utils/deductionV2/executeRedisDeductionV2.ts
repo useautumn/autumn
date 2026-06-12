@@ -15,6 +15,7 @@ import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoi
 import {
 	type DeductionSideEffect,
 	flushDeductionSideEffects,
+	queueDeductionSideEffect,
 } from "@/internal/balances/utils/deduction/deductionSideEffects.js";
 import { saveLockReceiptV2 } from "@/internal/balances/utils/lockV2/saveLockReceiptV2.js";
 import { buildDeductFromSubjectBalancesKeys } from "@/internal/customers/cache/fullSubject/builders/buildDeductFromSubjectBalancesKeys.js";
@@ -29,6 +30,7 @@ import {
 	RedisDeductionError,
 	RedisDeductionErrorCode,
 } from "../types/redisDeductionError.js";
+import { attachCascadeReplayState } from "../types/cascadeReplayState.js";
 import type { LuaDeductionResult } from "../types/redisDeductionResult.js";
 import type { RolloverUpdate } from "../types/rolloverUpdate.js";
 import type { UsageWindowMutation } from "../types/usageWindowMutation.js";
@@ -167,36 +169,53 @@ export const executeRedisDeductionV2 = async ({
 				now: usageWindowNow,
 			});
 
-			if (unlimitedFeatureIds.length > 0) {
-				if (preparedLock?.enabled) {
-					await saveLockReceiptV2({
-						lock: preparedLock,
-						customerId,
-						featureId: feature.id,
-						entityId,
-						items: [],
-						overrideLockValue: effectiveToDeduct,
-						redisInstance: redisInstance ?? ctx.redisV2,
-					});
-				}
-				const unlimitedPlanLog = buildUnlimitedPlanMutationLog({
-					unlimitedCusEnt,
-					toDeduct: effectiveToDeduct,
-					fallbackDeduction: deduction.deduction,
+		if (unlimitedFeatureIds.length > 0) {
+			if (preparedLock?.enabled) {
+				await saveLockReceiptV2({
+					lock: preparedLock,
+					customerId,
+					featureId: feature.id,
 					entityId,
+					items: [],
+					overrideLockValue: effectiveToDeduct,
+					redisInstance: redisInstance ?? ctx.redisV2,
 				});
-				if (unlimitedPlanLog) {
-					allMutationLogs.push(unlimitedPlanLog);
-				}
-				// An unlimited included leg covers the whole event: nothing spills and
-				// there is no balance mutation to compensate.
-				cascadeSpill.recordIncludedResult({
-					deduction,
-					remaining: 0,
-					mutationLogs: [],
-				});
-				continue;
 			}
+			const unlimitedPlanLog = buildUnlimitedPlanMutationLog({
+				unlimitedCusEnt,
+				toDeduct: effectiveToDeduct,
+				fallbackDeduction: deduction.deduction,
+				entityId,
+			});
+			if (unlimitedPlanLog) {
+				allMutationLogs.push(unlimitedPlanLog);
+			}
+			// An unlimited included leg covers the whole event: nothing spills and
+			// there is no balance mutation to compensate.
+			cascadeSpill.recordIncludedResult({
+				deduction,
+				remaining: 0,
+				mutationLogs: [],
+			});
+			continue;
+		}
+
+		if (customerEntitlements.length === 0) {
+			if (deduction.cascade?.role === "overage") {
+				throw new RedisDeductionError({
+					message: `Redis deduction failed: ${RedisDeductionErrorCode.InsufficientBalance}`,
+					code: RedisDeductionErrorCode.InsufficientBalance,
+					featureId: feature.id,
+					rejectedValue: effectiveToDeduct,
+				});
+			}
+			cascadeSpill.recordIncludedResult({
+				deduction,
+				remaining: deduction.deduction,
+				mutationLogs: [],
+			});
+			continue;
+		}
 
 			const idempotencyRedisKey = idempotencyKey
 				? getRedisTrackFeatureIdempotencyKey({
@@ -288,13 +307,17 @@ export const executeRedisDeductionV2 = async ({
 				);
 			}
 
-			if (resultJson.error) {
-				throw new RedisDeductionError({
-					message: `Redis deduction failed: ${resultJson.error}`,
-					code: resultJson.error as RedisDeductionErrorCode,
-					featureId: resultJson.feature_id,
-				});
-			}
+		if (resultJson.error) {
+			throw new RedisDeductionError({
+				message: `Redis deduction failed: ${resultJson.error}`,
+				code: resultJson.error as RedisDeductionErrorCode,
+				featureId: resultJson.feature_id,
+				rejectedValue:
+					resultJson.error === RedisDeductionErrorCode.InsufficientBalance
+						? effectiveToDeduct
+						: undefined,
+			});
+		}
 
 			const { updates, rollover_updates } = resultJson;
 			const mutationLogs = Array.isArray(resultJson.mutation_logs)
@@ -420,13 +443,16 @@ export const executeRedisDeductionV2 = async ({
 			const newFullCustomer = fullSubjectToFullCustomer({ fullSubject });
 
 			if (options.triggerSideEffects) {
-				sideEffects.push({
-					oldFullCus: structuredClone(oldFullCustomer),
-					newFullCus: structuredClone(newFullCustomer),
-					feature: deduction.feature,
-					entityId,
-					featuresFromMutationLogs,
-					triggerAutoTopUp: options.triggerAutoTopUp,
+				queueDeductionSideEffect({
+					sideEffect: {
+						oldFullCus: oldFullCustomer,
+						newFullCus: newFullCustomer,
+						feature: deduction.feature,
+						entityId,
+						featuresFromMutationLogs,
+						triggerAutoTopUp: options.triggerAutoTopUp,
+					},
+					sideEffects,
 				});
 			}
 		}
@@ -438,14 +464,18 @@ export const executeRedisDeductionV2 = async ({
 			cascadeSpill,
 			redisInstance,
 		});
+		attachCascadeReplayState({
+			error,
+			state: cascadeSpill.buildReplayState(),
+		});
 		throw error;
+	} finally {
+		flushDeductionSideEffects({
+			ctx,
+			sideEffects,
+			source: "executeRedisDeductionV2",
+		});
 	}
-
-	flushDeductionSideEffects({
-		ctx,
-		sideEffects,
-		source: "executeRedisDeductionV2",
-	});
 
 	return {
 		oldFullSubject,
@@ -460,9 +490,9 @@ export const executeRedisDeductionV2 = async ({
 };
 
 /**
- * Restores a cascade's included leg after a later leg failed, by replaying the
- * included mutations as an inline unwind. Compensation failures are logged
- * loudly but never mask the original error.
+ * Restores a cascade's included deduction after a later deduction failed, by
+ * replaying the included mutations as an inline unwind. Compensation failures
+ * are logged loudly but never mask the original error.
  */
 const compensateCascadeIncludedLeg = async ({
 	ctx,
@@ -496,7 +526,13 @@ const compensateCascadeIncludedLeg = async ({
 		});
 	} catch (compensationError) {
 		ctx.logger.error(
-			`[executeRedisDeductionV2] track_cascade_compensation_failed: customer ${fullSubject.customerId}, feature ${compensation.feature.id}, unwind value ${compensation.unwindValue}: ${compensationError}`,
+			`[executeRedisDeductionV2] cascade compensation failed: ${compensationError}`,
+			{
+				type: "track_cascade_compensation_failed",
+				customer_id: fullSubject.customerId,
+				feature_id: compensation.feature.id,
+				unwind_value: compensation.unwindValue,
+			},
 		);
 	}
 };

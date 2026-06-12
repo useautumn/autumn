@@ -11,6 +11,7 @@ import {
 	SendMessageCommand,
 } from "@aws-sdk/client-sqs";
 import { generateId } from "@server/utils/genUtils";
+import type { CascadeReplayState } from "@/internal/balances/utils/types/cascadeReplayState.js";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import type { GenerateFeatureDisplayPayload } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { getSqsClient } from "./initSqs.js";
@@ -79,6 +80,7 @@ export interface Payloads {
 		apiVersion: ApiVersion;
 		body: TrackParams;
 		allowTokenCascade?: boolean;
+		cascadeReplayState?: CascadeReplayState;
 	};
 	[JobName.ClearCreditSystemCustomerCache]: ClearCreditSystemCachePayload;
 	[JobName.GenerateFeatureDisplay]: GenerateFeatureDisplayPayload;

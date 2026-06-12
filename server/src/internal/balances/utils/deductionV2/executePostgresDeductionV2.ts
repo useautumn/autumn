@@ -12,8 +12,10 @@ import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoi
 import {
 	type DeductionSideEffect,
 	flushDeductionSideEffects,
+	queueDeductionSideEffect,
 } from "@/internal/balances/utils/deduction/deductionSideEffects.js";
 import { saveLockReceiptV2 } from "@/internal/balances/utils/lockV2/saveLockReceiptV2.js";
+import { attachCascadeReplayState } from "../types/cascadeReplayState.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
@@ -142,11 +144,8 @@ export const executePostgresDeductionV2 = async ({
 					now: Date.now(),
 				});
 
-				if (
-					customerEntitlements.length === 0 ||
-					unlimitedFeatureIds.length > 0
-				) {
-					if (unlimitedFeatureIds.length > 0 && preparedLock?.enabled) {
+				if (unlimitedFeatureIds.length > 0) {
+					if (preparedLock?.enabled) {
 						await saveLockReceiptV2({
 							lock: preparedLock,
 							customerId: fullSubject.customerId || customerId,
@@ -166,11 +165,23 @@ export const executePostgresDeductionV2 = async ({
 					if (unlimitedPlanLog) {
 						allMutationLogs.push(unlimitedPlanLog);
 					}
-					// An unlimited included leg covers the whole event; an included leg
-					// with no entitlements covers nothing, so the full amount spills.
 					cascadeSpill.recordIncludedResult({
 						deduction,
-						remaining: unlimitedFeatureIds.length > 0 ? 0 : deduction.deduction,
+						remaining: 0,
+						mutationLogs: [],
+					});
+					continue;
+				}
+
+				if (customerEntitlements.length === 0) {
+					if (deduction.cascade?.role === "overage") {
+						throw new InternalError({
+							message: `INSUFFICIENT_BALANCE|featureId:${feature.id}|value:${effectiveToDeduct}`,
+						});
+					}
+					cascadeSpill.recordIncludedResult({
+						deduction,
+						remaining: deduction.deduction,
 						mutationLogs: [],
 					});
 					continue;
@@ -188,10 +199,9 @@ export const executePostgresDeductionV2 = async ({
 						usageBasedCusEntIdsByFeatureId ?? null,
 					amount_to_deduct: effectiveToDeduct ?? null,
 					target_balance: targetBalance ?? null,
-					lock_receipt:
-						lockReceipt ??
-						(deduction.unwindItems ? { items: deduction.unwindItems } : null),
+					lock_receipt: lockReceipt ?? null,
 					unwind_value: unwindValue ?? null,
+					unwind_items: deduction.unwindItems ?? null,
 					target_entity_id: entityId || null,
 					rollovers: rollovers.length > 0 ? rollovers : null,
 					cus_ent_ids: customerEntitlements.map((ce) => ce.id),
@@ -326,13 +336,16 @@ export const executePostgresDeductionV2 = async ({
 				const newFullCustomer = fullSubjectToFullCustomer({ fullSubject });
 
 				if (resolvedOptions.triggerSideEffects) {
-					sideEffects.push({
-						oldFullCus: structuredClone(oldFullCustomer),
-						newFullCus: structuredClone(newFullCustomer),
-						feature: deduction.feature,
-						entityId,
-						featuresFromMutationLogs,
-						triggerAutoTopUp: resolvedOptions.triggerAutoTopUp,
+					queueDeductionSideEffect({
+						sideEffect: {
+							oldFullCus: oldFullCustomer,
+							newFullCus: newFullCustomer,
+							feature: deduction.feature,
+							entityId,
+							featuresFromMutationLogs,
+							triggerAutoTopUp: resolvedOptions.triggerAutoTopUp,
+						},
+						sideEffects,
 					});
 				}
 			}
@@ -344,7 +357,17 @@ export const executePostgresDeductionV2 = async ({
 				entityId,
 				cascadeSpill,
 			});
+			attachCascadeReplayState({
+				error,
+				state: cascadeSpill.buildReplayState(),
+			});
 			throw error;
+		} finally {
+			flushDeductionSideEffects({
+				ctx,
+				sideEffects,
+				source: "executePostgresDeductionV2",
+			});
 		}
 
 		await syncDeductionUpdatesToFullSubjectCache({
@@ -354,12 +377,6 @@ export const executePostgresDeductionV2 = async ({
 			cusEntUpdates: allSyncUpdates,
 			rolloverOverwrites: allRolloverOverwrites,
 			modifiedCusEntIdsByFeatureId: allModifiedCusEntIdsByFeatureId,
-		});
-
-		flushDeductionSideEffects({
-			ctx,
-			sideEffects,
-			source: "executePostgresDeductionV2",
 		});
 
 		return {
@@ -388,10 +405,13 @@ export const executePostgresDeductionV2 = async ({
 };
 
 /**
- * Restores a cascade's included leg after a later leg failed, by replaying the
- * included mutations as an inline unwind (the SQL function accepts the receipt
- * items inline via lock_receipt). Compensation failures are logged loudly but
- * never mask the original error.
+ * Restores a cascade's included deduction after a later deduction failed, by
+ * replaying the included mutations as an inline unwind via unwind_items.
+ * Compensation failures are logged loudly but never mask the original error.
+ *
+ * Re-enters the executor; safe because AI credit system features are never
+ * paidAllocated, so the recursive call cannot contend for the per-customer
+ * deduction lock the outer call may hold.
  */
 const compensateCascadeIncludedLeg = async ({
 	ctx,
@@ -424,7 +444,13 @@ const compensateCascadeIncludedLeg = async ({
 		});
 	} catch (compensationError) {
 		ctx.logger.error(
-			`[executePostgresDeductionV2] track_cascade_compensation_failed: customer ${customerId}, feature ${compensation.feature.id}, unwind value ${compensation.unwindValue}: ${compensationError}`,
+			`[executePostgresDeductionV2] cascade compensation failed: ${compensationError}`,
+			{
+				type: "track_cascade_compensation_failed",
+				customer_id: customerId,
+				feature_id: compensation.feature.id,
+				unwind_value: compensation.unwindValue,
+			},
 		);
 	}
 };

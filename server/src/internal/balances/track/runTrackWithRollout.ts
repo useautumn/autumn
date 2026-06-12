@@ -4,6 +4,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { isFullSubjectGateRejection } from "@/internal/customers/repos/getFullSubject/getFullSubjectGate.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
+import { getCascadeReplayState } from "../utils/types/cascadeReplayState.js";
 import { runTrackV2 } from "./runTrackV2.js";
 import { queueTrack } from "./utils/queueTrack.js";
 import { runTrackV3 } from "./v3/runTrackV3.js";
@@ -49,6 +50,7 @@ export const runTrackWithRollout = async ({
 					ctx,
 					body,
 					featureDeductions,
+					cascadeReplayState: getCascadeReplayState(error),
 				});
 				if (queuedResponse) return queuedResponse;
 				throw error;
