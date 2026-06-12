@@ -4,15 +4,17 @@ import { TestFeature } from "@tests/setup/v2Features.js";
 import ctx from "@tests/utils/testInitUtils/createTestContext.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
-import { currentRegion } from "@/external/redis/initRedis.js";
-import { executeRedisDeduction } from "@/internal/balances/utils/deduction/executeRedisDeduction.js";
-import { syncItemV3 } from "@/internal/balances/utils/sync/syncItemV3.js";
-import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
+import { waitForRedisReady } from "@/external/redis/initRedis.js";
+import { executeRedisDeductionV2 } from "@/internal/balances/utils/deductionV2/executeRedisDeductionV2.js";
+import { syncItemV4 } from "@/internal/balances/utils/sync/syncItemV4.js";
+import {
+	getOrSetCachedFullSubject,
+	invalidateCachedFullSubject,
+} from "@/internal/customers/cache/fullSubject/index.js";
 import { constructFeatureItem } from "@/utils/scriptUtils/constructItem.js";
 import { constructProduct } from "@/utils/scriptUtils/createTestProducts.js";
 import { initCustomerV3 } from "@/utils/scriptUtils/testUtils/initCustomerV3.js";
 import { initProductsV0 } from "@/utils/scriptUtils/testUtils/initProductsV0.js";
-import { deleteCachedFullCustomer } from "../../../../src/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { timeout } from "../../../utils/genUtils.js";
 
 const pro = constructProduct({
@@ -27,19 +29,28 @@ const pro = constructProduct({
 });
 
 const testCase = "track-race-condition4";
+const getMessagesRemaining = (customer: ApiCustomer) => {
+	const balance = customer.balances[TestFeature.Messages] as {
+		current_balance?: number;
+		remaining?: number;
+	};
+	return balance.remaining ?? balance.current_balance;
+};
 
 describe(`${chalk.yellowBright("track-race-condition4: sync should not wipe out newly created entity credits")}`, () => {
 	const customerId = testCase;
 	const autumnV2 = new AutumnInt({
-		version: ApiVersion.V2_0,
+		version: ApiVersion.V2_1,
 	});
 
 	const autumnV2WithoutCacheDeletion = new AutumnInt({
-		version: ApiVersion.V2_0,
+		version: ApiVersion.V2_1,
 		skipCacheDeletion: true,
 	});
 
 	beforeAll(async () => {
+		await waitForRedisReady(ctx.redisV2, "customer-redis", 5000);
+
 		await initCustomerV3({
 			ctx,
 			customerId,
@@ -74,21 +85,18 @@ describe(`${chalk.yellowBright("track-race-condition4: sync should not wipe out 
 			chalk.cyan("\n=== Manually orchestrating race condition steps ===\n"),
 		);
 
-		// STEP 1: Get full customer and set it in Redis cache
-		console.log(chalk.yellow("Step 1: Setting up customer in Redis cache..."));
+		console.log(chalk.yellow("Step 1: Setting up subject in Redis cache..."));
 
-		const fullCustomer = await getOrSetCachedFullCustomer({
+		const fullSubject = await getOrSetCachedFullSubject({
 			ctx,
 			customerId,
 			source: "test-setup",
 		});
-		console.log(chalk.green("✓ Customer cached in Redis"));
+		console.log(chalk.green("✓ Subject cached in Redis"));
 
-		// STEP 2: Track 5 messages using executeRedisDeduction() directly
-		// This deducts from Redis WITHOUT automatically queuing a sync
 		console.log(
 			chalk.yellow(
-				"\nStep 2: Tracking 5 messages directly via executeRedisDeduction() (no auto sync)...",
+				"\nStep 2: Tracking 5 messages directly via executeRedisDeductionV2() (no auto sync)...",
 			),
 		);
 
@@ -96,7 +104,7 @@ describe(`${chalk.yellowBright("track-race-condition4: sync should not wipe out 
 			(f) => f.id === TestFeature.Messages,
 		)!;
 
-		const deductionResult = await executeRedisDeduction({
+		const deductionResult = await executeRedisDeductionV2({
 			ctx,
 			deductions: [
 				{
@@ -104,7 +112,7 @@ describe(`${chalk.yellowBright("track-race-condition4: sync should not wipe out 
 					deduction: 5,
 				},
 			],
-			fullCustomer,
+			fullSubject,
 			deductionOptions: {
 				overageBehaviour: "cap",
 			},
@@ -122,7 +130,7 @@ describe(`${chalk.yellowBright("track-race-condition4: sync should not wipe out 
 
 		console.log(
 			chalk.blue(
-				`  Current balance in Redis: ${customerAfterTrack.balances[TestFeature.Messages].current_balance}`,
+				`  Current balance in Redis: ${getMessagesRemaining(customerAfterTrack)}`,
 			),
 		);
 
@@ -137,34 +145,30 @@ describe(`${chalk.yellowBright("track-race-condition4: sync should not wipe out 
 		]);
 		console.log(chalk.green("✓ New entity created"));
 
-		// STEP 4: Manually call syncItemV3 to sync the OLD Redis balance to DB
-		// This simulates the race condition where sync runs AFTER reset
-		// The sync should detect that DB has newer data and NOT overwrite it
 		console.log(
 			chalk.yellow(
 				"\nStep 4: Manually syncing OLD Redis balance to DB (testing race condition)...",
 			),
 		);
 
-		// Get the cusEntIds from the deduction result
-		const cusEntIds = Object.keys(deductionResult.updates);
-
-		await syncItemV3({
+		await syncItemV4({
 			ctx,
 			payload: {
 				customerId,
 				orgId: ctx.org.id,
 				env: ctx.env,
 				timestamp: Date.now(),
-				region: currentRegion,
-				cusEntIds,
+				rolloverIds: Object.keys(deductionResult.rolloverUpdates),
+				modifiedCusEntIdsByFeatureId:
+					deductionResult.modifiedCusEntIdsByFeatureId,
+				usageWindowUpdates: deductionResult.usageWindowUpdates,
 			},
 		});
 		console.log(chalk.red("✓ Sync completed"));
 
-		await deleteCachedFullCustomer({
+		await invalidateCachedFullSubject({
 			ctx,
-			customerId: customerId,
+			customerId,
 			source: "test-setup",
 		});
 
@@ -172,9 +176,7 @@ describe(`${chalk.yellowBright("track-race-condition4: sync should not wipe out 
 		const cachedCustomer =
 			await autumnV2.customers.get<ApiCustomer>(customerId);
 
-		expect(cachedCustomer.balances[TestFeature.Messages].current_balance).toBe(
-			200,
-		);
+		expect(getMessagesRemaining(cachedCustomer)).toBe(200);
 
 		const customerAfterSync = await autumnV2.customers.get<ApiCustomer>(
 			customerId,
@@ -182,8 +184,6 @@ describe(`${chalk.yellowBright("track-race-condition4: sync should not wipe out 
 				skip_cache: "true",
 			},
 		);
-		expect(
-			customerAfterSync.balances[TestFeature.Messages].current_balance,
-		).toBe(200);
+		expect(getMessagesRemaining(customerAfterSync)).toBe(200);
 	});
 });

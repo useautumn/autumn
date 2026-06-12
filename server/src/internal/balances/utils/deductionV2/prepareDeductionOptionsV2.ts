@@ -15,7 +15,7 @@ type ResolvedDeductionOptions = Required<
 };
 
 /**
- * Prepares deduction options with defaults and paidAllocated overrides.
+ * Prepares deduction options with defaults and paidAllocatedV1 overrides.
  * FullSubject version of prepareDeductionOptions.
  */
 export const prepareDeductionOptionsV2 = ({
@@ -29,20 +29,20 @@ export const prepareDeductionOptionsV2 = ({
 	options?: DeductionOptions;
 	deductions: FeatureDeduction[];
 }): ResolvedDeductionOptions => {
-	const isPaidAllocated = fullSubjectHasUsageBasedAllocated({
+	const isPaidAllocatedV1 = fullSubjectHasUsageBasedAllocated({
 		fullSubject,
 		features: deductions.map((d) => d.feature),
 		inStatuses: orgToInStatuses({ org: ctx.org }),
 	});
 
 	return {
-		overageBehaviour: isPaidAllocated
+		overageBehaviour: isPaidAllocatedV1
 			? "reject"
 			: (options.overageBehaviour ?? "cap"),
 		skipAdditionalBalance: true,
 		alterGrantedBalance: options.alterGrantedBalance ?? false,
 		customerEntitlementFilters: options.customerEntitlementFilters,
-		paidAllocated: isPaidAllocated,
+		paidAllocatedV1: isPaidAllocatedV1,
 		triggerAutoTopUp: options.triggerAutoTopUp ?? false,
 	};
 };

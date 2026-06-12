@@ -15,17 +15,18 @@ type MockOAuthState = {
 const mockConsumeOAuthState = mock(
 	(): Promise<MockOAuthState | null> => Promise.resolve(null),
 );
-const mockExchangeRcCode = mock(() =>
-	Promise.resolve(
-		new OAuth2Tokens({
-			access_token: "atk_new",
-			token_type: "Bearer",
-			expires_in: 3600,
-			refresh_token: "rtk_new",
-			scope:
-				"project_configuration:projects:read_write customer_information:customers:read_write",
-		}),
-	),
+const mockExchangeRcCode = mock(
+	(_args?: { code: string; codeVerifier: string }) =>
+		Promise.resolve(
+			new OAuth2Tokens({
+				access_token: "atk_new",
+				token_type: "Bearer",
+				expires_in: 3600,
+				refresh_token: "rtk_new",
+				scope:
+					"project_configuration:projects:read_write customer_information:customers:read_write",
+			}),
+		),
 );
 const mockOrgGetBySlug = mock(
 	(): Promise<Record<string, unknown> | null> => Promise.resolve(null),
@@ -56,11 +57,33 @@ mock.module(
 	"@/internal/platform/platformBeta/utils/oauthStateUtils.js",
 	() => ({
 		consumeOAuthState: mockConsumeOAuthState,
+		generateOAuthState: async () => "state_123",
 	}),
 );
 
 mock.module("@/external/revenueCat/misc/revenuecatOAuth.js", () => ({
-	exchangeRcCode: mockExchangeRcCode,
+	exchangeRcCode: async ({
+		code,
+		codeVerifier,
+	}: {
+		code: string;
+		codeVerifier: string;
+	}) => {
+		if (code !== "auth_code_123") {
+			return mockExchangeRcCode({ code, codeVerifier } as never);
+		}
+
+		const { OAuth2Client } = await import("arctic");
+		return new OAuth2Client(
+			process.env.REVENUECAT_OAUTH_CLIENT_ID!,
+			process.env.REVENUECAT_OAUTH_CLIENT_SECRET!,
+			`${process.env.BETTER_AUTH_URL}/revenuecat/oauth_callback`,
+		).validateAuthorizationCode(
+			"https://api.revenuecat.com/oauth2/token",
+			code,
+			codeVerifier,
+		);
+	},
 	RC_OAUTH_SCOPES: [
 		"project_configuration:projects:read_write",
 		"customer_information:customers:read_write",
@@ -75,14 +98,176 @@ mock.module("@/external/revenueCat/misc/revenuecatOAuth.js", () => ({
 		),
 }));
 
-mock.module("@/external/revenueCat/misc/initRevenuecatCli.js", () => ({
-	initRevenuecatCli: () => ({
-		createProject: mockCreateProject,
-		listProducts: async () => [],
-		listProjects: mockListProjects,
-		listProductStoreIdentifiers: mockListProductStoreIdentifiers,
-	}),
-}));
+mock.module("@/external/revenueCat/misc/initRevenuecatCli.js", () => {
+	const checkOk = async (response: Response) => {
+		if (!response.ok) throw new Error(`RevenueCat error (${response.status})`);
+	};
+
+	const fetchList = async ({
+		fetchImpl,
+		headers,
+		nextPage,
+	}: {
+		fetchImpl: typeof fetch;
+		headers: Record<string, string>;
+		nextPage: string | null;
+	}) => {
+		const items: Record<string, unknown>[] = [];
+		let page = nextPage;
+		while (page) {
+			const response = await fetchImpl(
+				new URL(`https://api.revenuecat.com${page}`),
+				{
+					headers,
+				},
+			);
+			await checkOk(response);
+			const data = (await response.json()) as {
+				items: Record<string, unknown>[];
+				next_page: string | null;
+			};
+			items.push(...data.items);
+			page = data.next_page;
+		}
+		return items;
+	};
+
+	return {
+		initRevenuecatCli: ({
+			projectId,
+			accessToken,
+			fetchImpl,
+		}: {
+			projectId?: string;
+			accessToken?: string;
+			fetchImpl?: typeof fetch;
+		} = {}) => {
+			if (!fetchImpl) {
+				return {
+					createProject: mockCreateProject,
+					listProducts: async () => [],
+					listProjects: mockListProjects,
+					listProductStoreIdentifiers: mockListProductStoreIdentifiers,
+				};
+			}
+
+			const headers = {
+				Authorization: `Bearer ${accessToken}`,
+				"Content-Type": "application/json",
+			};
+
+			return {
+				createProject: async ({ name }: { name: string }) => {
+					const response = await fetchImpl(
+						new URL("https://api.revenuecat.com/v2/projects"),
+						{
+							method: "POST",
+							headers,
+							body: JSON.stringify({ name }),
+						},
+					);
+					await checkOk(response);
+					return response.json();
+				},
+				listProductPrices: async (productId: string) => {
+					const response = await fetchImpl(
+						new URL(
+							`https://api.revenuecat.com/v2/projects/${projectId}/products/${productId}/prices`,
+						),
+						{ headers },
+					);
+					await checkOk(response);
+					const data = await response.json();
+					return Array.isArray(data) ? data : (data.items ?? []);
+				},
+				listAllProducts: () =>
+					fetchList({
+						fetchImpl,
+						headers,
+						nextPage: `/v2/projects/${projectId}/products?limit=100`,
+					}),
+				listWebhookIntegrations: () =>
+					fetchList({
+						fetchImpl,
+						headers,
+						nextPage: `/v2/projects/${projectId}/integrations/webhooks?limit=100`,
+					}),
+				createWebhookIntegration: async (body: Record<string, unknown>) => {
+					const response = await fetchImpl(
+						new URL(
+							`https://api.revenuecat.com/v2/projects/${projectId}/integrations/webhooks`,
+						),
+						{
+							method: "POST",
+							headers,
+							body: JSON.stringify(body),
+						},
+					);
+					await checkOk(response);
+					return response.json();
+				},
+				listApps: async () => {
+					const url = new URL(
+						`https://api.revenuecat.com/v2/projects/${projectId}/apps`,
+					);
+					url.searchParams.set("limit", "50");
+					const response = await fetchImpl(url, { headers });
+					await checkOk(response);
+					const data = await response.json();
+					return data.items ?? [];
+				},
+				createProduct: async (body: Record<string, unknown>) => {
+					const response = await fetchImpl(
+						new URL(
+							`https://api.revenuecat.com/v2/projects/${projectId}/products`,
+						),
+						{
+							method: "POST",
+							headers,
+							body: JSON.stringify(body),
+						},
+					);
+					await checkOk(response);
+					return response.json();
+				},
+				updateProduct: async (
+					productId: string,
+					body: Record<string, unknown>,
+				) => {
+					const response = await fetchImpl(
+						new URL(
+							`https://api.revenuecat.com/v2/projects/${projectId}/products/${productId}`,
+						),
+						{
+							method: "POST",
+							headers,
+							body: JSON.stringify(body),
+						},
+					);
+					await checkOk(response);
+					return response.json();
+				},
+				createInStore: async (
+					productId: string,
+					body: Record<string, unknown>,
+				) => {
+					const response = await fetchImpl(
+						new URL(
+							`https://api.revenuecat.com/v2/projects/${projectId}/products/${productId}/create_in_store`,
+						),
+						{
+							method: "POST",
+							headers,
+							body: JSON.stringify(body),
+						},
+					);
+					await checkOk(response);
+					return response.json();
+				},
+			};
+		},
+	};
+});
 
 mock.module("@/external/revenueCat/misc/RCMappingService.js", () => ({
 	RCMappingService: { getAll: mockMappingsGetAll },
