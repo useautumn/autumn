@@ -1,6 +1,7 @@
 import { expect } from "bun:test";
 import {
 	type ApiEntityV2,
+	type DbUsageLimit,
 	type EntityBillingControls,
 	ResetInterval,
 } from "@autumn/shared";
@@ -24,7 +25,7 @@ export const setEntityUsageLimit = async ({
 	entityId: string;
 	featureId: string;
 	limit: number;
-	interval?: ResetInterval;
+	interval?: DbUsageLimit["interval"];
 }) => {
 	const billingControls: EntityBillingControls = {
 		usage_limits: [

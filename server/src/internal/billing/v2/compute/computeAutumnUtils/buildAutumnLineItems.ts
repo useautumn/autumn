@@ -1,8 +1,9 @@
-import type {
-	BillingContext,
-	FullCusProduct,
-	LineItem,
-	UpdateCustomerEntitlement,
+import {
+	type BillingContext,
+	type FullCusProduct,
+	isAllocatedV2CustomerEntitlement,
+	type LineItem,
+	type UpdateCustomerEntitlement,
 } from "@autumn/shared";
 import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToArrearLineItems";
 import { getRefundLineItems } from "@/internal/billing/v2/utils/lineItems/getRefundLineItems";
@@ -40,6 +41,13 @@ export const buildAutumnLineItems = ({
 				ctx,
 				customerProduct,
 				billingContext,
+				filters: {
+					// Allocated v2 holdings are not billed at plan transitions — the
+					// carried-over balance is billed at the next cycle end on the new
+					// plan instead (billing it here would charge a full cycle of rent
+					// mid-cycle and double-bill the carried balance).
+					cusEntFilter: (cusEnt) => !isAllocatedV2CustomerEntitlement(cusEnt),
+				},
 				options: {
 					includePeriodDescription: true,
 					updateNextResetAt: true,

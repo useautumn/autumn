@@ -1,6 +1,7 @@
 import {
 	type ApiCustomerV5,
 	type CustomerBillingControls,
+	type DbUsageLimit,
 	ResetInterval,
 } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
@@ -23,7 +24,7 @@ export const setCustomerUsageLimit = async ({
 	customerId: string;
 	featureId: string;
 	limit: number;
-	interval?: ResetInterval;
+	interval?: DbUsageLimit["interval"];
 }) => {
 	const billingControls: CustomerBillingControls = {
 		usage_limits: [

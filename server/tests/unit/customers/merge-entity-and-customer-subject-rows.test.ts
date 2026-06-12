@@ -71,6 +71,7 @@ const createRow = (overrides: Partial<SubjectQueryRow> = {}): SubjectQueryRow =>
 		extra_customer_entitlements: [],
 		replaceables: [],
 		rollovers: [],
+		usage_windows: [],
 		products: [],
 		entitlements: [],
 		prices: [],

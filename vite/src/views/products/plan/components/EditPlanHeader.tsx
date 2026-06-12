@@ -70,8 +70,7 @@ export const EditPlanHeader = () => {
 			.filter(([version, counts]) => {
 				const v = Number(version);
 				if (v >= numVersions) return false;
-				const nonCustomActive = (counts.active ?? 0) - (counts.custom ?? 0);
-				return nonCustomActive > 0;
+				return (counts.active ?? 0) > 0;
 			})
 			.map(([version]) => Number(version));
 	}, [numVersions, versionCounts]);
@@ -154,6 +153,7 @@ export const EditPlanHeader = () => {
 				productId={product.id}
 				latestVersion={numVersions}
 				migratableVersions={migratableVersions}
+				pastVersions={pastVersionsWithCustomers}
 				versionCounts={versionCounts}
 			/>
 			<div className="flex flex-col gap-2 p-4 pb-3  border-none shadow-none w-full max-w-5xl mx-auto pt-4 sm:pt-8 px-4 sm:px-12">
@@ -246,7 +246,7 @@ export const EditPlanHeader = () => {
 					</div>
 
 					<div className="flex flex-row gap-2 items-center">
-						{migratableVersions.length > 0 && !isCusPlanEditor && (
+						{pastVersionsWithCustomers.length > 0 && !isCusPlanEditor && (
 							<IconButton
 								variant="secondary"
 								size="mini"

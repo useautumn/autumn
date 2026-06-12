@@ -293,13 +293,46 @@ export type GetEntitySpendLimit = {
    */
   featureId?: string | undefined;
   /**
-   * Whether this spend limit is enabled.
+   * Whether the overage spend limit is enabled.
    */
   enabled: boolean;
   /**
    * Maximum allowed overage spend for the target feature.
    */
   overageLimit?: number | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const GetEntityInterval = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type GetEntityInterval = OpenEnum<typeof GetEntityInterval>;
+
+export type GetEntityUsageLimit = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: GetEntityInterval;
+  /**
+   * Current usage already consumed in the active interval. Response-only; not stored on billing controls.
+   */
+  usage?: number | undefined;
 };
 
 /**
@@ -355,9 +388,13 @@ export type GetEntityOverageAllowed = {
  */
 export type GetEntityBillingControls = {
   /**
-   * List of overage spend limits per feature.
+   * List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit).
    */
   spendLimits?: Array<GetEntitySpendLimit> | undefined;
+  /**
+   * List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.
+   */
+  usageLimits?: Array<GetEntityUsageLimit> | undefined;
   /**
    * List of usage alert configurations per feature.
    */
@@ -795,6 +832,40 @@ export function getEntitySpendLimitFromJSON(
 }
 
 /** @internal */
+export const GetEntityInterval$inboundSchema: z.ZodMiniType<
+  GetEntityInterval,
+  unknown
+> = openEnums.inboundSchema(GetEntityInterval);
+
+/** @internal */
+export const GetEntityUsageLimit$inboundSchema: z.ZodMiniType<
+  GetEntityUsageLimit,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    limit: types.number(),
+    interval: GetEntityInterval$inboundSchema,
+    usage: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function getEntityUsageLimitFromJSON(
+  jsonString: string,
+): SafeParseResult<GetEntityUsageLimit, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetEntityUsageLimit$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetEntityUsageLimit' from JSON`,
+  );
+}
+
+/** @internal */
 export const GetEntityThresholdType$inboundSchema: z.ZodMiniType<
   GetEntityThresholdType,
   unknown
@@ -865,6 +936,9 @@ export const GetEntityBillingControls$inboundSchema: z.ZodMiniType<
     spend_limits: types.optional(
       z.array(z.lazy(() => GetEntitySpendLimit$inboundSchema)),
     ),
+    usage_limits: types.optional(
+      z.array(z.lazy(() => GetEntityUsageLimit$inboundSchema)),
+    ),
     usage_alerts: types.optional(
       z.array(z.lazy(() => GetEntityUsageAlert$inboundSchema)),
     ),
@@ -875,6 +949,7 @@ export const GetEntityBillingControls$inboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       "spend_limits": "spendLimits",
+      "usage_limits": "usageLimits",
       "usage_alerts": "usageAlerts",
       "overage_allowed": "overageAllowed",
     });

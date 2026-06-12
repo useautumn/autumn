@@ -22,7 +22,7 @@ supabase.sh
 tests/
 !server/tests
 !packages/mcp/tests
-!packages/ai-sdk/tests
+!packages/gateway/tests
 !apps/leaf/tests
 !vite/tests
 .secrets
