@@ -14,8 +14,8 @@ import { assertTinybirdAvailable } from "@/external/tinybird/tinybirdUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getCustomerNames } from "@/internal/analytics/actions/getCustomerNames.js";
 import { getEntityNames } from "@/internal/analytics/actions/getEntityNames.js";
-import { ProductService } from "@/internal/products/ProductService.js";
 import { CusService } from "@/internal/customers/CusService.js";
+import { ProductService } from "@/internal/products/ProductService.js";
 import { eventActions } from "../actions/eventActions.js";
 import { collapsePlanIdGroups } from "./utils/collapsePlanIdGroups.js";
 
@@ -38,7 +38,7 @@ const InternalAggregateEventsSchema = z.object({
 	customer_id: z.string().optional(),
 	entity_id: z.string().optional(),
 	group_by: z.string().optional(),
-	bin_size: z.enum(["day", "hour", "month"]).optional(),
+	bin_size: z.enum(["day", "hour", "week", "month"]).optional(),
 	timezone: z.string().optional(),
 	max_groups: z.number().int().min(1).max(250).optional(),
 });

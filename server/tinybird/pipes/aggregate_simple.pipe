@@ -15,6 +15,8 @@ SQL >
         formatDateTime(hour, '%F %T') as period,
         {% elif String(bin_size, 'day') == 'month' %}
         formatDateTime(toStartOfMonth(hour, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% elif String(bin_size, 'day') == 'week' %}
+        formatDateTime(toStartOfWeek(hour, 1, {{ String(timezone, 'UTC') }}), '%F %T') as period,
         {% else %}
         formatDateTime(toStartOfDay(hour, {{ String(timezone, 'UTC') }}), '%F %T') as period,
         {% end %}
