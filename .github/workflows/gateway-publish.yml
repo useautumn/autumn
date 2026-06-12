@@ -1,12 +1,11 @@
-name: SDK Publish
+name: Gateway Publish
 
 on:
   push:
     branches:
       - main
     paths:
-      - "packages/autumn-js/**"
-      - "packages/openapi/**"
+      - "packages/gateway/**"
 
   workflow_dispatch:
     inputs:
@@ -27,14 +26,6 @@ on:
           - "patch"
           - "minor"
           - "major"
-      test-package:
-        description: "Publish to @useautumn/js-test instead (for testing)"
-        required: false
-        default: "false"
-        type: choice
-        options:
-          - "true"
-          - "false"
 
 jobs:
   publish:
@@ -43,14 +34,6 @@ jobs:
       id-token: write
       contents: write
     with:
-      package-dir: packages/autumn-js
-      commit-paths: packages/autumn-js packages/openapi
-      install-speakeasy: true
-      pre-build-command: bun api
-      build-command: bun js:build
-      typecheck-command: bun js:ts
+      package-dir: packages/gateway
       version-bump: ${{ github.event_name == 'workflow_dispatch' && inputs.version-bump || '' }}
       dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || 'false' }}
-      publish-name-override: ${{ github.event_name == 'workflow_dispatch' && inputs.test-package == 'true' && '@useautumn/js-test' || '' }}
-    secrets:
-      SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
