@@ -1,9 +1,6 @@
 import { test } from "bun:test";
 import type {
 	ApiCustomerV3,
-	ApiPlanV1,
-	CreatePlanItemParamsV1,
-	UpdateSubscriptionV1ParamsInput,
 	UsagePriceConfig,
 } from "@autumn/shared";
 import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
@@ -25,7 +22,7 @@ test.concurrent(
 			items: [items.allocatedUsers({ includedUsage: 1 })],
 		});
 
-		const { autumnV1, autumnV2_3, ctx } = await initScenario({
+		const { autumnV1, ctx } = await initScenario({
 			customerId,
 			setup: [
 				s.customer({ paymentMethod: "success" }),
@@ -58,40 +55,18 @@ test.concurrent(
 			update: { config: legacyConfig },
 		});
 
-		const plan = await autumnV2_3.products.get<ApiPlanV1>(pro.id);
-		const customizeItems: CreatePlanItemParamsV1[] = plan.items.map(
-			({
-				feature: _feature,
-				reset,
-				price,
-				proration: _proration,
-				rollover: _rollover,
-				display: _display,
-				...item
-			}) => ({
-				feature_id: item.feature_id,
-				included: item.included,
-				unlimited: item.unlimited,
-				entity_feature_id: item.entity_feature_id,
-				...(reset ? { reset } : {}),
-				...(price ? { price } : {}),
-			}),
-		);
-		await autumnV2_3.subscriptions.update<UpdateSubscriptionV1ParamsInput>({
+		await autumnV1.subscriptions.update({
 			customer_id: customerId,
-			plan_id: pro.id,
-			customize: {
-				items: customizeItems,
-			},
+			product_id: pro.id,
+			items: [items.allocatedUsers({ includedUsage: 1 })],
 		});
 
 		await expectCustomerInvoiceCorrect({
 			customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
-			count: 1,
-			latestTotal: 20,
+			count: 2,
 		});
 
-		await autumnV2_3.track({
+		await autumnV1.track({
 			customer_id: customerId,
 			feature_id: TestFeature.Users,
 			value: 2,
@@ -99,7 +74,7 @@ test.concurrent(
 
 		await expectCustomerInvoiceCorrect({
 			customer: await autumnV1.customers.get<ApiCustomerV3>(customerId),
-			count: 2,
+			count: 3,
 			latestTotal: 10,
 		});
 		await expectStripeSubscriptionCorrect({ ctx, customerId });

@@ -32,9 +32,12 @@ import {
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { BillingMethod } from "@autumn/shared/api/products/components/billingMethod";
+import { CreatePlanItemParamsV1Schema } from "@autumn/shared/api/products/items/crud/createPlanItemParamsV1";
+import { planItemV0ToProductItem } from "@autumn/shared/api/products/items/mappers/planItemV0ToProductItem";
 import { planItemV1ToV0 } from "@autumn/shared/api/products/items/mappers/planItemV1ToV0";
 import { itemsAreSame } from "@autumn/shared/utils/productV2Utils/compareProductUtils/compareItemUtils";
 import { toProductItem } from "@autumn/shared/utils/productV2Utils/productItemUtils/mapToItem";
+import { productItemToPlanItemParamsV1 } from "@autumn/shared/utils/productV2Utils/productItemUtils/convertProductItem/productItemToPlanItemParamsV1";
 import { productItemsToPlanItemsV1 } from "@autumn/shared/utils/productV2Utils/productItemUtils/convertProductItem/productItemToPlanItemV1";
 import type { DrizzleCli } from "@server/db/initDrizzle";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems";
@@ -290,7 +293,82 @@ describe("public plan item proration boundary", () => {
 		expect(planItem?.proration).toBeUndefined();
 	});
 
-	test("allocated usage-based inputs reject proration", () => {
+	test("public usage-based inputs reject proration", () => {
+		const result = CreatePlanItemParamsV1Schema.safeParse({
+			feature_id: seatsFeature.id,
+			included: 0,
+			unlimited: false,
+			price: {
+				amount: 10,
+				interval: BillingInterval.Month,
+				billing_units: 1,
+				billing_method: BillingMethod.UsageBased,
+				max_purchase: null,
+			},
+			proration: {
+				on_increase: OnIncrease.BillImmediately,
+				on_decrease: OnDecrease.None,
+			},
+		});
+
+		expect(result.success).toBe(false);
+		expect(result.error?.issues[0]?.message).toBe(
+			"proration is only supported for prepaid features.",
+		);
+	});
+
+	test("old API allocated items synthesize internal proration", () => {
+		const planItem = productItemToPlanItemParamsV1({
+			ctx: { features, expand: [] } as never,
+			item: seatsItem({
+				config: {
+					on_increase: OnIncrease.BillImmediately,
+					on_decrease: OnDecrease.None,
+				},
+			}),
+		});
+
+		expect(planItem.proration).toEqual({
+			on_increase: OnIncrease.BillImmediately,
+			on_decrease: OnDecrease.None,
+		});
+
+		const planItemV0 = planItemV1ToV0({
+			ctx: { features } as never,
+			item: planItem,
+		});
+		const item = planItemV0ToProductItem({
+			ctx: { features } as never,
+			planItem: planItemV0,
+		});
+
+		expect(item.config?.on_increase).toBe(OnIncrease.BillImmediately);
+		expect(item.config?.on_decrease).toBe(OnDecrease.None);
+		expect(item.config?.allocated_billing_behavior).toBeUndefined();
+	});
+
+	test("old API allocated rollover also stays legacy prorated", () => {
+		const planItem = productItemToPlanItemParamsV1({
+			ctx: { features, expand: [] } as never,
+			item: seatsItem({
+				config: {
+					rollover: {
+						max: 10,
+						duration: RolloverExpiryDurationType.Month,
+						length: 1,
+					},
+				},
+			}),
+		});
+
+		expect(planItem.rollover).toBeDefined();
+		expect(planItem.proration).toEqual({
+			on_increase: OnIncrease.ProrateImmediately,
+			on_decrease: OnDecrease.Prorate,
+		});
+	});
+
+	test("public allocated rollover without proration is rejected", () => {
 		expect(() =>
 			planItemV1ToV0({
 				ctx: { features } as never,
@@ -306,13 +384,14 @@ describe("public plan item proration boundary", () => {
 						billing_method: BillingMethod.UsageBased,
 						max_purchase: null,
 					},
-					proration: {
-						on_increase: OnIncrease.BillImmediately,
-						on_decrease: OnDecrease.None,
+					rollover: {
+						max: 10,
+						expiry_duration_type: RolloverExpiryDurationType.Month,
+						expiry_duration_length: 1,
 					},
 				},
 			}),
-		).toThrow("proration is not supported");
+		).toThrow("rollover requires proration");
 	});
 });
 

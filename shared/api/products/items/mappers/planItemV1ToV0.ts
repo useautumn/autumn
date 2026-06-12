@@ -29,12 +29,13 @@ export function planItemV1ToV0({
 		: true;
 	if (
 		feature &&
-		item.proration &&
+		item.rollover &&
+		!item.proration &&
 		price?.billing_method === BillingMethod.UsageBased &&
 		isContUseFeature({ feature })
 	) {
 		throw new RecaseError({
-			message: `proration is not supported for allocated usage-based features (feature: ${item.feature_id})`,
+			message: `rollover requires proration for allocated usage-based features (feature: ${item.feature_id})`,
 			code: ProductErrorCode.InvalidProductItem,
 			statusCode: 400,
 		});
