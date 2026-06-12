@@ -30,6 +30,7 @@ import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "../../customer/CustomerContext";
 
 // Interval is required (no inherit) and one_off intervals are not supported.
 const INTERVAL_OPTIONS: Record<string, string> = {
@@ -59,6 +60,7 @@ export function BillingUsageLimitSheet() {
 	const sheetData = useSheetStore((s) => s.data);
 	const sheetType = useSheetStore((s) => s.type);
 	const { customer, refetch } = useCusQuery();
+	const { entityId } = useCustomerContext();
 	const { features } = useFeaturesQuery();
 	const axiosInstance = useAxiosInstance();
 
@@ -66,8 +68,12 @@ export function BillingUsageLimitSheet() {
 	const existingItem = sheetData?.item as DbUsageLimit | undefined;
 	const existingIndex = sheetData?.index as number | undefined;
 
-	// v1: usage limits are customer-scoped only (no entity variant).
 	const fullCustomer = customer as FullCustomer | undefined;
+	const selectedEntity = entityId
+		? fullCustomer?.entities?.find(
+				(e) => e.id === entityId || e.internal_id === entityId,
+			)
+		: null;
 
 	const [isSaving, setIsSaving] = useState(false);
 	const [featureId, setFeatureId] = useState(existingItem?.feature_id ?? "");
@@ -82,19 +88,29 @@ export function BillingUsageLimitSheet() {
 		(f: Feature) => !f.archived && f.type !== FeatureType.Boolean,
 	);
 
-	const getCurrentUsageLimits = (): DbUsageLimit[] => [
-		...(fullCustomer?.usage_limits ?? []),
-	];
+	const getCurrentUsageLimits = (): DbUsageLimit[] => {
+		if (selectedEntity) return [...(selectedEntity.usage_limits ?? [])];
+		return [...(fullCustomer?.usage_limits ?? [])];
+	};
 
 	const saveBillingControls = async (usageLimits: DbUsageLimit[]) => {
 		const customerId = fullCustomer?.id || fullCustomer?.internal_id;
 		if (!customerId) return;
 
-		await CusService.updateCustomer({
-			axios: axiosInstance,
-			customer_id: customerId,
-			data: { billing_controls: { usage_limits: usageLimits } },
-		});
+		if (selectedEntity) {
+			await CusService.updateEntity({
+				axios: axiosInstance,
+				customerId,
+				entityId: selectedEntity.id || selectedEntity.internal_id,
+				billingControls: { usage_limits: usageLimits },
+			});
+		} else {
+			await CusService.updateCustomer({
+				axios: axiosInstance,
+				customer_id: customerId,
+				data: { billing_controls: { usage_limits: usageLimits } },
+			});
+		}
 	};
 
 	const handleSave = async () => {
