@@ -102,10 +102,10 @@ const buildMessageText = ({
 	newSession: boolean;
 	params: MessageParams;
 }) => {
-	if (!newSession) return params.text;
 	const preamble = [
-		`Current Autumn environment: ${env}.`,
-		params.recentMessages?.length
+		"Reply style: one short sentence by default; no optional follow-ups unless asked.",
+		newSession ? `Current Autumn environment: ${env}.` : null,
+		newSession && params.recentMessages?.length
 			? `Recent thread messages:\n${params.recentMessages
 					.map(
 						(m) => `${m.author}${m.isBot === true ? " (bot)" : ""}: ${m.text}`,

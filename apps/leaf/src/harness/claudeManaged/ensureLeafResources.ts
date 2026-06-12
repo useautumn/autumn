@@ -40,49 +40,65 @@ const findAgentByName = async (client: Anthropic, name: string) => {
 	return undefined;
 };
 
-// Keep the shared agent's MCP URL in sync with MCP_SERVER_URL (it differs between
-// prod and a local tunnel). Runs once per process — not per message — so a config
-// change is picked up on restart without a hand-delete of the cached agent.
-let mcpUrlSynced = false;
-const syncAgentMcpUrl = async ({
+export const buildAgentSystem = ({ docsText }: { docsText: string }) =>
+	[autumnChatInstructions, docsText].filter(Boolean).join("\n\n");
+
+// Keep the shared agent config in sync with local code/tunnel changes.
+// Runs once per process, so restart is enough after prompt edits.
+let agentConfigSynced = false;
+const syncAgentConfig = async ({
 	agentId,
 	client,
+	docsText,
 	expectedUrl,
 	logger,
 }: {
 	agentId: string;
 	client: Anthropic;
+	docsText: string;
 	expectedUrl: string;
 	logger: AutumnLogger;
 }) => {
-	if (mcpUrlSynced) return;
+	if (agentConfigSynced) return;
 	const agent = await client.beta.agents.retrieve(agentId);
+	const expectedSystem = buildAgentSystem({ docsText });
 	const currentUrl = agent.mcp_servers?.find(
 		(server) => server.name === claudeManagedConfig.autumnMcpServerName,
 	)?.url;
-	if (currentUrl !== expectedUrl) {
+	const mcpUrlChanged = currentUrl !== expectedUrl;
+	const systemChanged = agent.system !== expectedSystem;
+	if (mcpUrlChanged || systemChanged) {
 		await client.beta.agents.update(agentId, {
-			mcp_servers: [
-				{
-					name: claudeManagedConfig.autumnMcpServerName,
-					type: "url",
-					url: expectedUrl,
-				},
-			],
+			...(mcpUrlChanged
+				? {
+						mcp_servers: [
+							{
+								name: claudeManagedConfig.autumnMcpServerName,
+								type: "url" as const,
+								url: expectedUrl,
+							},
+						],
+					}
+				: {}),
+			...(systemChanged ? { system: expectedSystem } : {}),
 			version: agent.version,
 		});
-		logger.info("Refreshed Claude Managed agent MCP URL", {
-			event: "leaf.claude_managed_agent_mcp_url_refreshed",
-			data: { agent_id: agentId, from: currentUrl, to: expectedUrl },
+		logger.info("Refreshed Claude Managed agent config", {
+			event: "leaf.claude_managed_agent_config_refreshed",
+			data: {
+				agent_id: agentId,
+				mcp_url_changed: mcpUrlChanged,
+				mcp_url_from: currentUrl,
+				mcp_url_to: expectedUrl,
+				system_changed: systemChanged,
+			},
 		});
 	}
-	mcpUrlSynced = true;
+	agentConfigSynced = true;
 };
 
-// Find-or-create the ONE shared Agent + Environment (not per tenant), cached
-// in-memory so creation/find-by-name happens only on the first cold start. The agent
-// is env-agnostic (env is conveyed per-session in the kickoff message); the message
-// token is used only to read Autumn docs + the destructive-tool set when building.
+// Find-or-create the ONE shared Agent + Environment, cached in-memory.
+// The agent is env-agnostic; env/thread context is carried per session.
 let cachedResources: { agentId: string; environmentId: string } | undefined;
 export const ensureLeafResources = async ({
 	client,
@@ -96,11 +112,19 @@ export const ensureLeafResources = async ({
 	token: string;
 }): Promise<{ agentId: string; environmentId: string }> => {
 	const mcpUrl = autumnMcpUrl();
+	if (cachedResources && agentConfigSynced) return cachedResources;
+
+	const { destructiveTools, docsText } = await setupAgentToolContext({
+		env,
+		logger,
+		token,
+	});
 
 	if (cachedResources) {
-		await syncAgentMcpUrl({
+		await syncAgentConfig({
 			agentId: cachedResources.agentId,
 			client,
+			docsText,
 			expectedUrl: mcpUrl,
 			logger,
 		});
@@ -121,18 +145,18 @@ export const ensureLeafResources = async ({
 
 	let agentId = await findAgentByName(client, claudeManagedConfig.agentName);
 	if (agentId) {
-		// An existing agent may have been built with a different MCP_SERVER_URL.
-		await syncAgentMcpUrl({ agentId, client, expectedUrl: mcpUrl, logger });
-	} else {
-		const { destructiveTools, docsText } = await setupAgentToolContext({
-			env,
+		await syncAgentConfig({
+			agentId,
+			client,
+			docsText,
+			expectedUrl: mcpUrl,
 			logger,
-			token,
 		});
+	} else {
 		const agent = await client.beta.agents.create({
 			model: claudeManagedConfig.model,
 			name: claudeManagedConfig.agentName,
-			system: [autumnChatInstructions, docsText].filter(Boolean).join("\n\n"),
+			system: buildAgentSystem({ docsText }),
 			mcp_servers: [
 				{
 					name: claudeManagedConfig.autumnMcpServerName,
@@ -155,7 +179,7 @@ export const ensureLeafResources = async ({
 			],
 		});
 		agentId = agent.id;
-		mcpUrlSynced = true;
+		agentConfigSynced = true;
 		logger.info("Created shared Claude Managed agent", {
 			event: "leaf.claude_managed_agent_created",
 			data: { agent_id: agentId, environment_id: environmentId },

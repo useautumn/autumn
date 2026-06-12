@@ -21,21 +21,20 @@ const createSchedulePhaseMcpSchema = CreateSchedulePhaseSchema.extend({
 const invoiceModeMcpSchema = InvoiceModeParamsSchema.extend({
 	finalize: z.boolean().default(true).meta({
 		description:
-			"Set false for preview-first agent workflows unless the user explicitly asks to finalize, charge, pay, or send the invoice now.",
+			"Follow the Billing resource for invoice finalization defaults.",
 	}),
 });
 
 const createScheduleMcpSchema = CreateScheduleParamsV0Schema.extend({
 	invoice_mode: invoiceModeMcpSchema.optional().meta({
 		description:
-			"Invoice mode for billing schedules. For paid agent previews, set enabled true, enable_plan_immediately true, finalize false, and include net_terms_days when specified.",
+			"Invoice mode for billing schedules. Follow the Billing resource.",
 	}),
 	phases: z
 		.tuple([createSchedulePhaseMcpSchema])
 		.rest(createSchedulePhaseMcpSchema),
 	redirect_mode: RedirectModeSchema.default("if_required").meta({
-		description:
-			"Set if_required for paid agent previews unless the user explicitly asks to force or disable checkout.",
+		description: "Follow the Billing resource for checkout redirect defaults.",
 	}),
 }).superRefine((data, ctx) => {
 	if (data.invoice_mode?.enabled !== true) return;
@@ -94,9 +93,7 @@ const domain = {
 			id: "previewAttach",
 			description: `
 - Preview attaching a plan before attach.
-- Follow Billing Safety for preview-first, invoice, and customization rules.
-- Monetary amounts are major units: $49 is amount 49, not 4900.
-- Preview summary should mention draft invoice, not finalized, and immediate access.
+- Follow the Billing resource.
 `.trim(),
 			writeToolName: "attach",
 		}),
@@ -104,7 +101,7 @@ const domain = {
 			id: "previewUpdateSubscription",
 			description: `
 - Preview updating a subscription before updateSubscription.
-- Follow Billing Safety for preview-first, invoice, and customization rules.
+- Follow the Billing resource.
 `.trim(),
 			writeToolName: "updateSubscription",
 		}),
@@ -112,10 +109,7 @@ const domain = {
 			id: "previewCreateSchedule",
 			description: `
 - Preview billing impact of a multi-phase schedule or multi-year order form before createSchedule.
-- Follow Billing Safety and Billing Schedules.
-- Set Billing Safety invoice and redirect defaults explicitly.
-- Put phase fees in plans[].customize.price; use customize item patches only for feature entitlements.
-- Inspect customer first when changing an existing/customer contract schedule.
+- Follow the Billing resource.
 `.trim(),
 			writeToolName: "createSchedule",
 		}),
@@ -125,24 +119,21 @@ const domain = {
 			id: "attach",
 			description: `
 - Attach a plan to a customer.
-- Follow Billing Safety for preview-first, invoice, and customization rules.
-- Monetary amounts are major units: $49 is amount 49, not 4900.
+- Follow the Billing resource.
 `.trim(),
 		}),
 		confirmedWrite({
 			id: "updateSubscription",
 			description: `
 - Update a subscription.
-- Follow Billing Safety for preview-first, invoice, and customization rules.
+- Follow the Billing resource.
 `.trim(),
 		}),
 		confirmedWrite({
 			id: "createSchedule",
 			description: `
 - Create a multi-phase billing schedule for phased or multi-year order forms.
-- Follow Billing Safety and Billing Schedules.
-- Preserve explicit Billing Safety invoice and redirect defaults from the preview.
-- Preserve phase fees in plans[].customize.price and feature changes in customize item patches.
+- Follow the Billing resource.
 `.trim(),
 		}),
 	],

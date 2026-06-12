@@ -5,6 +5,10 @@ import { AppEnv, type ChatApproval } from "@autumn/shared";
 import type { ActionEvent } from "chat";
 import { approvalErrorResult } from "../../../src/internal/approvals/utils/approvalErrors.js";
 import { approvalRequestFromOutput } from "../../../src/internal/approvals/utils/approvalRequest.js";
+import {
+	createPreviewCapture,
+	isToolErrorResult,
+} from "../../../src/agent/tools/toolPolicy.js";
 import type { AgentOutput } from "../../../src/types.js";
 
 const setLeafTestEnv = () => {
@@ -67,6 +71,34 @@ describe("approval flow", () => {
 			toolArgs: { request: { customer_id: "cus_1", plan_id: "pro" } },
 			preview: { total: 100 },
 		});
+	});
+
+	test("does not capture failed previews as approval candidates", () => {
+		const previewCapture = createPreviewCapture();
+		const failedPreview = {
+			isError: true,
+			content: [
+				{
+					type: "text",
+					text: JSON.stringify({
+						id: "TOOL_EXECUTION_FAILED",
+						details: { errorMessage: "plan_already_attached" },
+					}),
+				},
+			],
+		};
+
+		expect(isToolErrorResult(failedPreview)).toBe(true);
+		previewCapture.onToolCall({
+			name: "previewAttach",
+			input: { customer_id: "cus_1", product_id: "enterprise" },
+		});
+		previewCapture.onToolResult({
+			name: "previewAttach",
+			output: failedPreview,
+		});
+
+		expect(previewCapture.captured).toBeUndefined();
 	});
 
 	test("formats Autumn API errors for Slack approval cards", () => {

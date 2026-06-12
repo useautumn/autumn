@@ -4,15 +4,6 @@ import { autumnMcpResourceUris } from "../../../../src/resources/index.js";
 import { createAutumnOperationsMCPServer } from "../../../../src/server/server.js";
 
 describe("Autumn MCP server", () => {
-	const logResourceUris = [
-		"autumn://docs/request-logs",
-		"autumn://docs/request-log-customers",
-		"autumn://docs/request-log-balances",
-		"autumn://docs/request-log-billing",
-		"autumn://docs/request-log-stripe-webhooks",
-		"autumn://docs/request-log-analytics",
-	] as const;
-
 	test("public server advertises raw operation tools", async () => {
 		const tools = await createAutumnOperationsMCPServer().getToolListInfo();
 
@@ -23,6 +14,9 @@ describe("Autumn MCP server", () => {
 			"getOrCreateCustomer",
 			"updateCustomer",
 			"getCustomer",
+			"createEntity",
+			"listEntities",
+			"getEntity",
 			"listFeatures",
 			"listPlans",
 			"createPlan",
@@ -61,11 +55,12 @@ describe("Autumn MCP server", () => {
 		}
 	});
 
-	test("public server exposes Autumn composition docs", async () => {
+	test("public server exposes Autumn billing docs", async () => {
 		const server = createAutumnOperationsMCPServer();
 		const resources = await server.listResources();
 		const resourceUris = autumnMcpResourceUris();
 
+		expect(resourceUris).toEqual(["autumn://docs/billing"]);
 		expect(resources.resources.map((resource) => resource.uri)).toEqual(
 			resourceUris,
 		);
@@ -75,58 +70,17 @@ describe("Autumn MCP server", () => {
 			expect(resource.contents[0]?.text).toContain("# ");
 		}
 
-		const requestLogs = await server.readResource("autumn://docs/request-logs");
-		expect(requestLogs.contents[0]?.text).toContain("searchRequestLogs");
-		expect(requestLogs.contents[0]?.text).toContain("queryRequestLogs");
-
-		const featureCatalog = await server.readResource(
-			"autumn://docs/feature-catalog",
-		);
-		expect(featureCatalog.contents[0]?.text).toContain("listFeatures");
-
-		const billingSafety = await server.readResource(
-			"autumn://docs/billing-safety",
-		);
-		expect(billingSafety.contents[0]?.text).toContain(
-			"invoice_mode requires customer email",
-		);
-		expect(billingSafety.contents[0]?.text).toContain("finalize false");
-		expect(billingSafety.contents[0]?.text).toContain("updateCustomer");
-
-		const schedules = await server.readResource("autumn://docs/schedules");
-		expect(schedules.contents[0]?.text).toContain(
-			"invoice_mode requires customer email",
-		);
-		expect(schedules.contents[0]?.text).toContain("finalize false");
-		expect(schedules.contents[0]?.text).toContain("updateCustomer");
-
-		for (const uri of logResourceUris) {
-			expect(resourceUris).toContain(uri);
-		}
-	});
-
-	test("log resources stay external-safe", async () => {
-		const server = createAutumnOperationsMCPServer();
-		const bannedTerms = [
-			"Axiom",
-			"extras",
-			"workflow",
-			"req.id",
-			"msg",
-			"level",
-			"server/src",
-			"implementation files",
-			"database state",
-			"stack traces",
-		];
-
-		for (const uri of logResourceUris) {
-			const resource = await server.readResource(uri);
-			const text = String(resource.contents[0]?.text ?? "");
-			for (const term of bannedTerms) {
-				expect(text).not.toContain(term);
-			}
-		}
+		const billing = await server.readResource("autumn://docs/billing");
+		const billingText = String(billing.contents[0]?.text ?? "");
+		expect(billingText).toContain("previewUpdateSubscription");
+		expect(billingText).toContain("updateSubscription");
+		expect(billingText).toContain("previewAttach");
+		expect(billingText).toContain("previewCreateSchedule");
+		expect(billingText).toContain("explicit approval");
+		expect(billingText).toContain("### Customer and Entity");
+		expect(billingText).toContain("### Billing Controls");
+		expect(billingText).toContain("breakdown[]");
+		expect(billingText).toContain("Auto top-ups are customer-level only");
 	});
 
 	test("unknown resources are rejected", async () => {

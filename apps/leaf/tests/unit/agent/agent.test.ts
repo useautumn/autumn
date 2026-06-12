@@ -22,6 +22,9 @@ const { createFirecrawlTools } = await import(
 const { isCmaVaultStale } = await import(
 	"../../../src/harness/claudeManaged/vaults/ensureAutumnVault.js"
 );
+const { buildAgentSystem } = await import(
+	"../../../src/harness/claudeManaged/ensureLeafResources.js"
+);
 
 const execute = async (
 	tool: { execute?: (...args: never[]) => Promise<unknown> } | undefined,
@@ -42,22 +45,17 @@ afterEach(() => {
 });
 
 describe("chat environment selection", () => {
-	test("loads feature catalog MCP guidance", () => {
-		expect(agentDocUris).toContain("autumn://docs/feature-catalog");
-	});
-
-	test("loads request-log MCP guidance", () => {
-		expect(agentDocUris).toContain("autumn://docs/request-logs");
-		expect(agentDocUris).toContain("autumn://docs/request-log-customers");
-		expect(agentDocUris).toContain("autumn://docs/request-log-balances");
-		expect(agentDocUris).toContain("autumn://docs/request-log-billing");
-		expect(agentDocUris).toContain("autumn://docs/request-log-stripe-webhooks");
-		expect(agentDocUris).toContain("autumn://docs/request-log-analytics");
+	test("loads billing MCP guidance", () => {
+		expect(agentDocUris).toEqual(["autumn://docs/billing"]);
 	});
 
 	test("instructs the agent to read org rules before Autumn work", () => {
 		expect(autumnChatInstructions).toContain("getAgentRules");
 		expect(autumnChatInstructions).toContain("org-specific behavior");
+	});
+
+	test("points billing actions to the Billing MCP resource", () => {
+		expect(autumnChatInstructions).toContain("Billing MCP resource");
 	});
 
 	test("defaults to sandbox outside production", () => {
@@ -180,6 +178,13 @@ describe("Firecrawl tools", () => {
 });
 
 describe("Claude Managed vault sync", () => {
+	test("builds managed agent system from current Autumn instructions", () => {
+		const system = buildAgentSystem({ docsText: "Autumn docs" });
+
+		expect(system).toContain("Default to one short sentence");
+		expect(system).toContain("Autumn docs");
+	});
+
 	test("treats the vault as stale when local OAuth credentials are newer", () => {
 		expect(
 			isCmaVaultStale({

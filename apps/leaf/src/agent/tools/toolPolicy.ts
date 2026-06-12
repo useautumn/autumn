@@ -41,6 +41,22 @@ export type PreviewApproval = {
 	toolName: string;
 };
 
+export const isToolErrorResult = (output: unknown) => {
+	if (!output || typeof output !== "object") return false;
+	const result = output as {
+		content?: Array<{ text?: string; type?: string }>;
+		isError?: boolean;
+	};
+	if (result.isError === true) return true;
+	return (
+		result.content?.some(
+			(item) =>
+				typeof item.text === "string" &&
+				item.text.includes("TOOL_EXECUTION_FAILED"),
+		) ?? false
+	);
+};
+
 /** Captures the latest preview-tool result as a write-tool approval candidate. */
 export const createPreviewCapture = () => {
 	const previewArgsByTool = new Map<string, Record<string, unknown>>();
@@ -57,6 +73,7 @@ export const createPreviewCapture = () => {
 	}) => {
 		const writeTool = getWriteToolForPreview(toolName);
 		if (!writeTool) return;
+		if (isToolErrorResult(preview)) return;
 		captured = { preview, toolArgs: args, toolName: writeTool };
 	};
 
