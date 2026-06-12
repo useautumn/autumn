@@ -270,6 +270,7 @@ local function unwind_lock_items(params)
   local remaining_unwind_value = safe_number(params.unwind_value)
   local skipped_unwind_value = 0
   local iterations = {}
+  local skipped_iterations = {}
 
   if remaining_unwind_value <= 0 then
     return {
@@ -277,6 +278,7 @@ local function unwind_lock_items(params)
       remaining_unwind_value = 0,
       skipped_unwind_value = 0,
       iterations = iterations,
+      skipped_iterations = skipped_iterations,
       error = nil,
     }
   end
@@ -319,7 +321,15 @@ local function unwind_lock_items(params)
       })
     end
 
-    skipped_unwind_value = skipped_unwind_value + safe_number(result.skipped_unwind_value)
+    local skipped_value = safe_number(result.skipped_unwind_value)
+    if skipped_value > 0 then
+      table.insert(skipped_iterations, {
+        item = item,
+        unwind_iteration_value = skipped_value,
+      })
+    end
+
+    skipped_unwind_value = skipped_unwind_value + skipped_value
     remaining_unwind_value = result.remaining_unwind_value
   end
 
@@ -328,6 +338,7 @@ local function unwind_lock_items(params)
     remaining_unwind_value = remaining_unwind_value,
     skipped_unwind_value = skipped_unwind_value,
     iterations = iterations,
+    skipped_iterations = skipped_iterations,
     error = nil,
   }
 end
@@ -458,5 +469,6 @@ local function unwind_lock_on_context(params)
     -- Per-item applied amounts (tracked units + credit_cost), so callers can
     -- mirror the unwind onto usage-window counters.
     iterations = unwind_items_result.iterations,
+    skipped_iterations = unwind_items_result.skipped_iterations,
   }
 end

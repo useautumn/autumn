@@ -1,8 +1,16 @@
 import { describe, expect, test } from "bun:test";
 import type { Feature } from "@autumn/shared";
-import { CascadeSpill } from "@/internal/balances/utils/deductionV2/cascadeSpill.js";
+import {
+	buildCascadeCompensationFailureError,
+	CascadeSpill,
+	isCascadeBusinessRejection,
+} from "@/internal/balances/utils/deductionV2/cascadeSpill.js";
 import type { FeatureDeduction } from "@/internal/balances/utils/types/featureDeduction.js";
 import type { MutationLogItem } from "@/internal/balances/utils/types/mutationLogItem.js";
+import {
+	RedisDeductionError,
+	RedisDeductionErrorCode,
+} from "@/internal/balances/utils/types/redisDeductionError.js";
 
 const includedFeature = { id: "ai_included" } as Feature;
 const overageFeature = { id: "ai_overage" } as Feature;
@@ -160,5 +168,29 @@ describe("CascadeSpill", () => {
 		});
 		expect(spill.effectiveAmount({ deduction: overageDeduction })).toBe(0);
 		expect(spill.buildCompensation()).toBeNull();
+	});
+
+	test("business overage rejections are not replayable compensation failures", () => {
+		const redisRejection = new RedisDeductionError({
+			message: "Redis deduction failed: INSUFFICIENT_BALANCE",
+			code: RedisDeductionErrorCode.InsufficientBalance,
+		});
+
+		expect(isCascadeBusinessRejection(redisRejection)).toBe(true);
+		expect(
+			isCascadeBusinessRejection(
+				new Error("INSUFFICIENT_BALANCE|featureId:credits|value:1"),
+			),
+		).toBe(true);
+		expect(isCascadeBusinessRejection(new Error("REDIS_UNAVAILABLE"))).toBe(
+			false,
+		);
+
+		const compensationFailure = buildCascadeCompensationFailureError({
+			source: "test",
+			error: redisRejection,
+		});
+		expect(compensationFailure.message).not.toContain("INSUFFICIENT_BALANCE");
+		expect(compensationFailure.statusCode).toBe(500);
 	});
 });

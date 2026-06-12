@@ -26,8 +26,10 @@ import { applyDeductionUpdateToFullSubject } from "./applyDeductionUpdateToFullS
 import { applyRolloverUpdatesToFullSubject } from "./applyRolloverUpdatesToFullSubject.js";
 import { buildUnlimitedPlanMutationLog } from "./buildUnlimitedPlanMutationLog.js";
 import {
+	buildCascadeCompensationFailureError,
 	type CascadeCompensationOutcome,
 	CascadeSpill,
+	isCascadeBusinessRejection,
 } from "./cascadeSpill.js";
 import { logDeductionUpdatesV2 } from "./logDeductionUpdatesV2.js";
 import { mutationLogsToFeaturesV2 } from "./mutationLogsToFeaturesV2.js";
@@ -370,6 +372,12 @@ export const executePostgresDeductionV2 = async ({
 					featureId: compensationOutcome.compensatedFeatureId,
 				});
 			} else if (compensationOutcome.status === "failed") {
+				if (isCascadeBusinessRejection(error)) {
+					throw buildCascadeCompensationFailureError({
+						source: "executePostgresDeductionV2",
+						error,
+					});
+				}
 				attachCascadeReplayState({
 					error,
 					state: cascadeSpill.buildReplayState(),

@@ -1,7 +1,12 @@
+import { InternalError } from "@autumn/shared";
 import type { CascadeReplayState } from "../types/cascadeReplayState.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 import type { MutationLogItem } from "../types/mutationLogItem.js";
+import {
+	RedisDeductionError,
+	RedisDeductionErrorCode,
+} from "../types/redisDeductionError.js";
 
 type OverageBehaviour = NonNullable<DeductionOptions["overageBehaviour"]>;
 
@@ -16,6 +21,28 @@ export type CascadeCompensationOutcome =
 	| { status: "not_needed" }
 	| { status: "succeeded"; compensatedFeatureId: string }
 	| { status: "failed" };
+
+export const isCascadeBusinessRejection = (error: unknown): boolean => {
+	if (error instanceof RedisDeductionError) {
+		return error.code === RedisDeductionErrorCode.InsufficientBalance;
+	}
+
+	return error instanceof Error && error.message.includes("INSUFFICIENT_BALANCE");
+};
+
+export const buildCascadeCompensationFailureError = ({
+	source,
+	error,
+}: {
+	source: string;
+	error: unknown;
+}) =>
+	new InternalError({
+		message: `${source}: cascade compensation failed after overage rejection`,
+		data: {
+			original_error: error instanceof Error ? error.message : String(error),
+		},
+	});
 
 /**
  * Leftover event fractions below this are float residue from the engine's

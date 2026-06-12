@@ -10,8 +10,10 @@ import { rollbackDeduction } from "@/internal/balances/utils/paidAllocatedFeatur
 import { buildFullCustomerCacheKey } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/fullCustomerCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import {
+	buildCascadeCompensationFailureError,
 	type CascadeCompensationOutcome,
 	CascadeSpill,
+	isCascadeBusinessRejection,
 } from "../deductionV2/cascadeSpill.js";
 import { saveLockReceipt } from "../lock/saveLockReceipt.js";
 import { attachCascadeReplayState } from "../types/cascadeReplayState.js";
@@ -338,6 +340,12 @@ export const executeRedisDeduction = async ({
 				featureId: compensationOutcome.compensatedFeatureId,
 			});
 		} else if (compensationOutcome.status === "failed") {
+			if (isCascadeBusinessRejection(error)) {
+				throw buildCascadeCompensationFailureError({
+					source: "executeRedisDeduction",
+					error,
+				});
+			}
 			attachCascadeReplayState({
 				error,
 				state: cascadeSpill.buildReplayState(),

@@ -234,6 +234,8 @@ if not is_nil(unwind_value) and safe_number(unwind_value) > 0 then
     decrement_usage_windows_for_unwind({
       context = context,
       iterations = unwind_result.iterations,
+      skipped_iterations = unwind_result.skipped_iterations,
+      fallback_feature_id = feature_id,
       now = usage_window_now,
     })
   end

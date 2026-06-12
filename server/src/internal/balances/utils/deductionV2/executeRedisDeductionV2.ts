@@ -42,8 +42,10 @@ import { applyRolloverUpdatesToFullSubject } from "./applyRolloverUpdatesToFullS
 import { applyUsageWindowUpdatesToFullSubject } from "./applyUsageWindowUpdatesToFullSubject.js";
 import { buildUnlimitedPlanMutationLog } from "./buildUnlimitedPlanMutationLog.js";
 import {
+	buildCascadeCompensationFailureError,
 	type CascadeCompensationOutcome,
 	CascadeSpill,
+	isCascadeBusinessRejection,
 } from "./cascadeSpill.js";
 import { logDeductionUpdatesV2 } from "./logDeductionUpdatesV2.js";
 import { mutationLogsToFeaturesV2 } from "./mutationLogsToFeaturesV2.js";
@@ -468,6 +470,12 @@ export const executeRedisDeductionV2 = async ({
 				featureId: compensationOutcome.compensatedFeatureId,
 			});
 		} else if (compensationOutcome.status === "failed") {
+			if (isCascadeBusinessRejection(error)) {
+				throw buildCascadeCompensationFailureError({
+					source: "executeRedisDeductionV2",
+					error,
+				});
+			}
 			attachCascadeReplayState({
 				error,
 				state: cascadeSpill.buildReplayState(),

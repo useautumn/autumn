@@ -16,8 +16,10 @@ import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import type { MutationLogItem } from "../../utils/types/mutationLogItem.js";
 import { createAllocatedInvoice } from "../allocatedInvoice/createAllocatedInvoice.js";
 import {
+	buildCascadeCompensationFailureError,
 	type CascadeCompensationOutcome,
 	CascadeSpill,
+	isCascadeBusinessRejection,
 } from "../deductionV2/cascadeSpill.js";
 import { attachCascadeReplayState } from "../types/cascadeReplayState.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
@@ -325,6 +327,12 @@ export const executePostgresDeduction = async ({
 					featureId: compensationOutcome.compensatedFeatureId,
 				});
 			} else if (compensationOutcome.status === "failed") {
+				if (isCascadeBusinessRejection(error)) {
+					throw buildCascadeCompensationFailureError({
+						source: "executePostgresDeduction",
+						error,
+					});
+				}
 				attachCascadeReplayState({
 					error,
 					state: cascadeSpill.buildReplayState(),
