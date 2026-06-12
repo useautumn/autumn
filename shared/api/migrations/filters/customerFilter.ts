@@ -14,13 +14,43 @@ import { PlanItemFilterSchema } from "./planItemFilter.js";
  * `item` is sugar for `plan: { item: ... }` — matches customers with at
  * least one active plan that has at least one matching item. Sibling with
  * `plan` it AND's (each must independently have a match).
+ *
+ * `$and` / `$or` compose independent customer-level predicates: each branch
+ * is its own `CustomerFilter` (typically a single `plan` quantifier), so
+ * `$and: [{ plan: free }, { plan: pro }]` means "has free AND also has pro"
+ * — two separate existence checks, not one plan that is both.
  */
-export const CustomerFilterSchema = z.object({
-	customer_id: StringMatcherSchema.optional(),
-	plan: arrayFilter(PlanFilterSchema).optional(),
-	item: arrayFilter(PlanItemFilterSchema).optional(),
-});
+type PlanFilterValue = z.infer<typeof PlanFilterSchema>;
+type PlanItemFilterValue = z.infer<typeof PlanItemFilterSchema>;
 
-export type CustomerFilter = z.infer<typeof CustomerFilterSchema>;
+export type CustomerFilter = {
+	customer_id?: z.infer<typeof StringMatcherSchema>;
+	plan?:
+		| PlanFilterValue
+		| {
+				$some?: PlanFilterValue;
+				$every?: PlanFilterValue;
+				$none?: PlanFilterValue;
+		  };
+	item?:
+		| PlanItemFilterValue
+		| {
+				$some?: PlanItemFilterValue;
+				$every?: PlanItemFilterValue;
+				$none?: PlanItemFilterValue;
+		  };
+	$and?: CustomerFilter[];
+	$or?: CustomerFilter[];
+};
+
+export const CustomerFilterSchema: z.ZodType<CustomerFilter> = z.lazy(() =>
+	z.object({
+		customer_id: StringMatcherSchema.optional(),
+		plan: arrayFilter(PlanFilterSchema).optional(),
+		item: arrayFilter(PlanItemFilterSchema).optional(),
+		$and: z.array(CustomerFilterSchema).optional(),
+		$or: z.array(CustomerFilterSchema).optional(),
+	}),
+);
 
 export const DEFAULT_CUSTOMER_FILTER: CustomerFilter = {};

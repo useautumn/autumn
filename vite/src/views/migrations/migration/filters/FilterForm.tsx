@@ -1,4 +1,5 @@
 import type {
+	CustomerFilter,
 	MigrationFilter,
 	PlanFilter,
 	StringMatcher,
@@ -11,15 +12,20 @@ import { AddButton } from "../shared/AddButton";
 import { FilterGroup } from "./FilterGroup";
 import {
 	customerIdToStrings,
+	type FilterField,
 	type FilterGroupData,
 	type FilterOperator,
 	type FilterRule,
-	groupsToPlanFilter,
 	planFilterToGroups,
+	planKeysToFilter,
+	ruleToStringMatcher,
 	stringsToCustomerId,
 } from "./filterRowTypes";
 
 const DEFAULT_PLAN_FILTER: PlanFilter = { plan_id: "" };
+
+const hasStringValue = (rule: FilterRule) =>
+	rule.values.some((value) => value.trim().length > 0);
 
 function inferCustomerIdOperator(
 	matcher: StringMatcher | undefined,
@@ -53,15 +59,112 @@ function planNoneInner(plan: unknown): PlanFilter | null {
 	return null;
 }
 
-/** Flip a `plan_id` rule between the `in` (positive) and `not_in` forms. */
-function flipPlanIdInToNotIn(groups: FilterGroupData[]): FilterGroupData[] {
-	return groups.map((g) => ({
-		rules: g.rules.map((r) =>
-			r.field === "plan_id" && r.operator === "in"
-				? { ...r, operator: "not_in" as FilterOperator }
-				: r,
-		),
-	}));
+// Fields whose negation is a customer-level `$none` quantifier ("no plan that
+// is X" / "no plan with feature X"), not a per-plan matcher. Both fan out
+// one-to-many, so `$some ... <> X` would match customers who also hold X.
+const NEGATABLE_FIELDS = new Set<FilterField>(["plan_id", "item_feature_id"]);
+
+function isNegatedRule(rule: FilterRule): boolean {
+	return (
+		NEGATABLE_FIELDS.has(rule.field) &&
+		(rule.operator === "is_not" || rule.operator === "not_in") &&
+		rule.values.length > 0
+	);
+}
+
+/** `is_not`/`not_in` → `is`/`in`, so the rule builds a positive `$none` inner. */
+function flipNegatedToPositive(rule: FilterRule): FilterRule {
+	if (!NEGATABLE_FIELDS.has(rule.field)) return rule;
+	if (rule.operator === "not_in")
+		return { ...rule, operator: "in" as FilterOperator };
+	if (rule.operator === "is_not")
+		return { ...rule, operator: "is" as FilterOperator };
+	return rule;
+}
+
+/** Inverse of the above: decode a `$none` inner back to the negated operator. */
+function negateRules(rules: FilterRule[]): FilterRule[] {
+	return rules.map((r) => {
+		if (!NEGATABLE_FIELDS.has(r.field)) return r;
+		if (r.operator === "in")
+			return { ...r, operator: "not_in" as FilterOperator };
+		if (r.operator === "is")
+			return { ...r, operator: "is_not" as FilterOperator };
+		return r;
+	});
+}
+
+function negateGroups(groups: FilterGroupData[]): FilterGroupData[] {
+	return groups.map((g) => ({ rules: negateRules(g.rules) }));
+}
+
+// SAVE — one row becomes one customer-level quantifier (a CustomerFilter with
+// a single `plan` nav). Independent rows AND together at the customer level, so
+// "has free AND has pro" is two quantifiers, not one plan that is both.
+function planIdQuantifier(rule: FilterRule): CustomerFilter | null {
+	if (rule.operator === "none") return { plan: { $none: {} } };
+	if (!hasStringValue(rule)) return null;
+	const positive = isNegatedRule(rule) ? flipNegatedToPositive(rule) : rule;
+	const planFilter = planKeysToFilter(positive.values);
+	return isNegatedRule(rule)
+		? { plan: { $none: planFilter } }
+		: { plan: planFilter };
+}
+
+function featureQuantifier(rule: FilterRule): CustomerFilter | null {
+	if (!hasStringValue(rule)) return null;
+	if (isNegatedRule(rule))
+		return {
+			plan: {
+				$none: {
+					item: {
+						feature_id: ruleToStringMatcher(flipNegatedToPositive(rule)),
+					},
+				},
+			},
+		};
+	return { plan: { item: { feature_id: ruleToStringMatcher(rule) } } };
+}
+
+function ruleToQuantifier(rule: FilterRule): CustomerFilter | null {
+	switch (rule.field) {
+		case "plan_id":
+			return planIdQuantifier(rule);
+		case "item_feature_id":
+			return featureQuantifier(rule);
+		case "custom":
+			return { plan: { custom: rule.values[0] === "true" } };
+		case "paid":
+			return { plan: { paid: rule.values[0] === "true" } };
+		case "recurring":
+			return { plan: { recurring: rule.values[0] === "true" } };
+		case "price":
+			return {
+				plan: { price: rule.operator === "exists" ? { $ne: null } : null },
+			};
+		case "item_unlimited":
+			return { plan: { item: { unlimited: rule.values[0] === "true" } } };
+		default:
+			return null;
+	}
+}
+
+// DECODE — reverse a single `plan` quantifier back into its UI row(s).
+function planQuantifierToRules(plan: unknown): FilterRule[] {
+	if (planRawIsNone(plan))
+		return [{ field: "plan_id", operator: "none", values: [] }];
+	const noneInner = planNoneInner(plan);
+	if (noneInner)
+		return negateRules(planFilterToGroups(noneInner).flatMap((g) => g.rules));
+	return planFilterToGroups(plan as PlanFilter).flatMap((g) => g.rules);
+}
+
+function branchToRules(branch: CustomerFilter): FilterRule[] {
+	const rules: FilterRule[] = [];
+	if (branch.$and)
+		for (const sub of branch.$and) rules.push(...branchToRules(sub));
+	if (branch.plan) rules.push(...planQuantifierToRules(branch.plan));
+	return rules;
 }
 
 function customerIdRuleFromValue(value: MigrationFilter): FilterRule | null {
@@ -84,9 +187,26 @@ function prependCustomerId(
 	return [{ rules: [customerIdRule, ...(first?.rules ?? [])] }, ...rest];
 }
 
-function buildGroups(value: MigrationFilter): FilterGroupData[] {
+export function buildGroups(value: MigrationFilter): FilterGroupData[] {
 	const customerIdRule = customerIdRuleFromValue(value);
-	const plan = value.customer?.plan;
+	const customer = value.customer;
+
+	// Customer-level `$or` → one OR-group per branch.
+	if (customer?.$or) {
+		const groups = customer.$or.map((branch) => ({
+			rules: branchToRules(branch),
+		}));
+		return prependCustomerId(groups, customerIdRule);
+	}
+	// Customer-level `$and` → one group, a row per branch.
+	if (customer?.$and)
+		return prependCustomerId(
+			[{ rules: branchToRules(customer) }],
+			customerIdRule,
+		);
+
+	// Single quantifier / legacy merged plan filter — decode `customer.plan`.
+	const plan = customer?.plan;
 
 	// "has no plans at all" → single `none` rule.
 	if (planRawIsNone(plan)) {
@@ -99,11 +219,11 @@ function buildGroups(value: MigrationFilter): FilterGroupData[] {
 		return [{ rules }];
 	}
 
-	// `{ $none: <inner> }` is the empty-inclusive "not on plan X" — decode the
-	// inner filter and flip its `plan_id` rule back to `not_in`.
+	// `{ $none: <inner> }` is the empty-inclusive "not on plan X" / "no feature
+	// X" — decode the inner filter and flip its negatable rules back.
 	const noneInner = planNoneInner(plan);
 	if (noneInner) {
-		const groups = flipPlanIdInToNotIn(planFilterToGroups(noneInner));
+		const groups = negateGroups(planFilterToGroups(noneInner));
 		return prependCustomerId(groups, customerIdRule);
 	}
 
@@ -128,72 +248,49 @@ function ruleToCustomerIdMatcher(rule: FilterRule): StringMatcher | undefined {
 }
 
 /**
- * Inner filter for a customer-level `$none` quantifier, or null when the groups
- * carry no plan negation. "has none" → `{}`; a `plan_id` "not in [X]" rule →
- * the group's plan filter with `plan_id` flipped to `$in` (negated by `$none`).
+ * One group → its customer-level node: the lone quantifier when a single row
+ * carries a condition, otherwise `{ $and: [...] }` over each row's quantifier.
+ * `customer_id` rows are hoisted out (they constrain the customer, not a plan).
  */
-function groupsToPlanNone(groups: FilterGroupData[]): PlanFilter | null {
-	if (groups.some((g) => g.rules.some((r) => r.operator === "none"))) return {};
-
-	const hasPlanNotIn = groups.some((g) =>
-		g.rules.some(
-			(r) =>
-				r.field === "plan_id" &&
-				r.operator === "not_in" &&
-				r.values.length > 0,
-		),
-	);
-	if (!hasPlanNotIn) return null;
-
-	const flipped = groups.map((g) => ({
-		rules: g.rules.map((r) =>
-			r.field === "plan_id" && r.operator === "not_in"
-				? { ...r, operator: "in" as FilterOperator }
-				: r,
-		),
-	}));
-	return groupsToPlanFilter(flipped);
+function groupToNode(group: FilterGroupData): {
+	customerId: StringMatcher | undefined;
+	node: CustomerFilter | null;
+} {
+	let customerId: StringMatcher | undefined;
+	const quantifiers: CustomerFilter[] = [];
+	for (const rule of group.rules) {
+		if (rule.field === "customer_id") {
+			const matcher = ruleToCustomerIdMatcher(rule);
+			if (matcher !== undefined) customerId = matcher;
+			continue;
+		}
+		const quantifier = ruleToQuantifier(rule);
+		if (quantifier) quantifiers.push(quantifier);
+	}
+	if (quantifiers.length === 0) return { customerId, node: null };
+	if (quantifiers.length === 1) return { customerId, node: quantifiers[0] };
+	return { customerId, node: { $and: quantifiers } };
 }
 
-function groupsToMigrationFilter(
+export function groupsToMigrationFilter(
 	groups: FilterGroupData[],
 	base: MigrationFilter,
 ): MigrationFilter {
-	let customerIdMatcher: StringMatcher | undefined;
-	const cleaned = groups.map((g) => ({
-		rules: g.rules.filter((r) => {
-			if (r.field === "customer_id") {
-				customerIdMatcher = ruleToCustomerIdMatcher(r);
-				return false;
-			}
-			return true;
-		}),
-	}));
-	// Plan negation is a customer-level quantifier ($none), not a per-plan
-	// matcher: "has none" → $none: {}, and "plan_id not in [X]" →
-	// $none: { plan_id: { $in: [X] } } so zero-plan customers are included.
-	const noneInner = groupsToPlanNone(cleaned);
-	if (noneInner) {
-		return {
-			...base,
-			customer: {
-				...base.customer,
-				customer_id: customerIdMatcher,
-				plan: { $none: noneInner },
-			},
-		};
+	let customerId: StringMatcher | undefined;
+	const nodes: CustomerFilter[] = [];
+	for (const group of groups) {
+		const { customerId: groupCustomerId, node } = groupToNode(group);
+		if (groupCustomerId !== undefined) customerId = groupCustomerId;
+		if (node) nodes.push(node);
 	}
 
-	const planFilter = groupsToPlanFilter(cleaned);
-	const hasPlanFilter = Object.keys(planFilter).length > 0;
-	return {
-		...base,
-		customer: {
-			...base.customer,
-			customer_id: customerIdMatcher,
-			plan: hasPlanFilter ? planFilter : undefined,
-		},
-	};
+	const customer: CustomerFilter = {};
+	if (customerId !== undefined) customer.customer_id = customerId;
+	// One node spreads its `plan` / `$and` onto the customer; many nodes OR.
+	if (nodes.length === 1) Object.assign(customer, nodes[0]);
+	else if (nodes.length > 1) customer.$or = nodes;
+
+	return { ...base, customer };
 }
 
 const EMPTY_GROUP: FilterGroupData = {
@@ -297,7 +394,11 @@ export function FilterForm({
 			))}
 			{hasConditions && (
 				<div className="flex items-center gap-2 mt-3">
-					<AddButton label="OR condition" onClick={addGroup} className="flex-1" />
+					<AddButton
+						label="OR condition"
+						onClick={addGroup}
+						className="flex-1"
+					/>
 					<Button
 						variant="skeleton"
 						size="sm"
