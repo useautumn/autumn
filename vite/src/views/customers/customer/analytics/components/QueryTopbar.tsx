@@ -38,10 +38,12 @@ const INTERVAL_LABELS: Record<string, string> = {
 // Billing-cycle ranges, hidden when the customer has no billing cycle.
 const BILLING_CYCLE_INTERVALS = new Set(["1bc", "3bc"]);
 
+type Granularity = "hour" | "day" | "week" | "month";
+
 // Selectable granularities per range, in display order; the first is the
 // default. A single entry means the range has no choice, so the granularity
 // section is hidden for it.
-const INTERVAL_GRANULARITIES: Record<string, string[]> = {
+const INTERVAL_GRANULARITIES: Record<string, Granularity[]> = {
 	"24h": ["hour"],
 	"7d": ["day"],
 	"30d": ["day", "week"],
@@ -50,7 +52,7 @@ const INTERVAL_GRANULARITIES: Record<string, string[]> = {
 	"3bc": ["day", "week", "month"],
 };
 
-const GRANULARITY_LABELS: Record<string, string> = {
+const GRANULARITY_LABELS: Record<Granularity, string> = {
 	hour: "by hour",
 	day: "by day",
 	week: "by week",
@@ -58,9 +60,9 @@ const GRANULARITY_LABELS: Record<string, string> = {
 };
 
 const CUSTOM_INTERVAL = "custom";
-const DEFAULT_GRANULARITIES = ["day"];
+const DEFAULT_GRANULARITIES: Granularity[] = ["day"];
 
-const granularitiesFor = (interval: string): string[] =>
+const granularitiesFor = (interval: string): Granularity[] =>
 	INTERVAL_GRANULARITIES[interval] ?? DEFAULT_GRANULARITIES;
 
 // The bin size in effect for a range: the viewer's choice when it's valid for
@@ -71,10 +73,10 @@ const getEffectiveBinSize = ({
 }: {
 	interval: string;
 	binSize?: string | null;
-}): string => {
+}): Granularity => {
 	const granularities = granularitiesFor(interval);
-	return binSize && granularities.includes(binSize)
-		? binSize
+	return binSize && granularities.some((g) => g === binSize)
+		? (binSize as Granularity)
 		: granularities[0];
 };
 
@@ -84,7 +86,7 @@ const getDisplayLabel = ({
 	customRange,
 }: {
 	interval: string;
-	binSize: string;
+	binSize: Granularity;
 	customRange?: DateRange;
 }): string => {
 	if (interval === CUSTOM_INTERVAL) {
