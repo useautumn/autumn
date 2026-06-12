@@ -8,6 +8,7 @@ import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
+	DropdownMenuGroup,
 	DropdownMenuItem,
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
@@ -219,21 +220,23 @@ export const QueryTopbar = () => {
 					</DropdownMenuSub>
 
 					<DropdownMenuSeparator />
-					<DropdownMenuLabel>Granularity</DropdownMenuLabel>
-					{Object.entries(GRANULARITY_LABELS).map(([binSize, label]) => (
-						<DropdownMenuItem
-							key={binSize}
-							disabled={!binSizeChoiceEnabled}
-							closeOnClick={false}
-							onClick={() => handleBinSizeSelect(binSize)}
-							className="flex items-center justify-between"
-						>
-							{label}
-							{effectiveBinSize === binSize && (
-								<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
-							)}
-						</DropdownMenuItem>
-					))}
+					<DropdownMenuGroup>
+						<DropdownMenuLabel>Granularity</DropdownMenuLabel>
+						{Object.entries(GRANULARITY_LABELS).map(([binSize, label]) => (
+							<DropdownMenuItem
+								key={binSize}
+								disabled={!binSizeChoiceEnabled}
+								closeOnClick={false}
+								onClick={() => handleBinSizeSelect(binSize)}
+								className="flex items-center justify-between"
+							>
+								{label}
+								{effectiveBinSize === binSize && (
+									<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
+								)}
+							</DropdownMenuItem>
+						))}
+					</DropdownMenuGroup>
 				</DropdownMenuContent>
 			</DropdownMenu>
 			<SelectFeatureDropdown />
