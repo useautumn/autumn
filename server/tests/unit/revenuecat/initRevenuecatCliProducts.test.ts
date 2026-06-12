@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { initRevenuecatCli } from "@/external/revenueCat/misc/initRevenuecatCli.js";
+
+const { initRevenuecatCli } = await import(
+	"../../../src/external/revenueCat/misc/initRevenuecatCli.js"
+);
 
 const mockFetch = mock(() =>
 	Promise.resolve(
@@ -37,7 +40,11 @@ describe("initRevenuecatCli product/app methods", () => {
 			),
 		);
 
-		const cli = initRevenuecatCli({ projectId: "proj_1", accessToken: "tok", fetchImpl });
+		const cli = initRevenuecatCli({
+			projectId: "proj_1",
+			accessToken: "tok",
+			fetchImpl,
+		});
 		const apps = await cli.listApps();
 
 		const [url, init] = lastCall();
@@ -52,14 +59,18 @@ describe("initRevenuecatCli product/app methods", () => {
 	test("createProduct POSTs the body and returns the product", async () => {
 		mockFetch.mockImplementationOnce(() =>
 			Promise.resolve(
-				new Response(
-					JSON.stringify({ object: "product", id: "prod_1" }),
-					{ status: 201, headers: { "Content-Type": "application/json" } },
-				),
+				new Response(JSON.stringify({ object: "product", id: "prod_1" }), {
+					status: 201,
+					headers: { "Content-Type": "application/json" },
+				}),
 			),
 		);
 
-		const cli = initRevenuecatCli({ projectId: "proj_1", accessToken: "tok", fetchImpl });
+		const cli = initRevenuecatCli({
+			projectId: "proj_1",
+			accessToken: "tok",
+			fetchImpl,
+		});
 		const result = await cli.createProduct({
 			app_id: "app_1",
 			store_identifier: "autumn.live.acme.pro",
@@ -92,7 +103,11 @@ describe("initRevenuecatCli product/app methods", () => {
 			),
 		);
 
-		const cli = initRevenuecatCli({ projectId: "proj_1", accessToken: "tok", fetchImpl });
+		const cli = initRevenuecatCli({
+			projectId: "proj_1",
+			accessToken: "tok",
+			fetchImpl,
+		});
 		await cli.updateProduct("prod_1", { display_name: "Pro Plus" });
 
 		const [url, init] = lastCall();
@@ -115,7 +130,11 @@ describe("initRevenuecatCli product/app methods", () => {
 			),
 		);
 
-		const cli = initRevenuecatCli({ projectId: "proj_1", accessToken: "tok", fetchImpl });
+		const cli = initRevenuecatCli({
+			projectId: "proj_1",
+			accessToken: "tok",
+			fetchImpl,
+		});
 		await cli.createInStore("prod_1", {
 			store_information: {
 				duration: "ONE_MONTH",

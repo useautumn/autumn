@@ -1,13 +1,10 @@
-import {
-	type FullCusProduct,
-	type FullCustomer,
-	findMainActiveCustomerProductByGroup,
-} from "@autumn/shared";
+import { type FullCusProduct, type FullCustomer } from "@autumn/shared";
 import { cp } from "@utils/cusProductUtils/classifyCustomerProduct/cpBuilder";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { applyExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/applyExistingRollovers";
 import { cusProductToExistingRollovers } from "@/internal/billing/v2/utils/handleExistingRollovers/cusProductToExistingRollovers";
 import { RolloverService } from "@/internal/customers/cusProducts/cusEnts/cusRollovers/RolloverService";
+import { findTransitionSourceCustomerProduct } from "./findTransitionSourceCustomerProduct";
 
 export const reapplyExistingRolloversToCustomerProduct = async ({
 	ctx,
@@ -26,10 +23,9 @@ export const reapplyExistingRolloversToCustomerProduct = async ({
 
 	const currentCustomerProduct =
 		fromCustomerProduct ??
-		findMainActiveCustomerProductByGroup({
-			fullCus: fullCustomer,
-			productGroup: customerProduct.product.group,
-			internalEntityId: customerProduct.internal_entity_id ?? undefined,
+		findTransitionSourceCustomerProduct({
+			fullCustomer,
+			customerProduct,
 		});
 
 	if (!currentCustomerProduct) return;

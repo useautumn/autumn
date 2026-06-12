@@ -10,6 +10,7 @@ import {
 } from "../../../models/productModels/priceModels/priceConfig/usagePriceConfig.js";
 import type { Price } from "../../../models/productModels/priceModels/priceModels.js";
 import { Infinite } from "../../../models/productModels/productEnums.js";
+import { AllocatedBillingBehavior } from "../../../models/productV2Models/productItemModels/productItemEnums.js";
 import {
 	type ProductItem,
 	type ProductItemConfig,
@@ -17,6 +18,11 @@ import {
 	TierInfinite,
 	UsageModel,
 } from "../../../models/productV2Models/productItemModels/productItemModels.js";
+import { isContUseFeature } from "../../featureUtils/convertFeatureUtils.js";
+import {
+	isAllocatedPrice,
+	isPayPerUsePrice,
+} from "../../productUtils/priceUtils/classifyPriceUtils.js";
 import { nullish } from "../../utils.js";
 import {
 	billingToItemInterval,
@@ -84,10 +90,19 @@ export const toFeaturePriceItem = ({
 		};
 	});
 
-	// Build the item config from both price proration config and entitlement rollover
 	let itemConfig: ProductItemConfig = {};
 	if (price.proration_config) {
 		itemConfig = { ...price.proration_config };
+	}
+	if (
+		isContUseFeature({ feature: ent.feature }) &&
+		isPayPerUsePrice({ price })
+	) {
+		itemConfig.allocated_billing_behavior =
+			config.allocated_billing_behavior ??
+			(isAllocatedPrice(price)
+				? AllocatedBillingBehavior.Prorated
+				: AllocatedBillingBehavior.Arrear);
 	}
 	if (ent.rollover) {
 		itemConfig.rollover = ent.rollover;

@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, mock, test } from "bun:test";
-import { initRevenuecatCli } from "@/external/revenueCat/misc/initRevenuecatCli.js";
+
+const { initRevenuecatCli } = await import(
+	"../../../src/external/revenueCat/misc/initRevenuecatCli.js"
+);
 
 const mockFetch = mock(() =>
 	Promise.resolve(
@@ -76,7 +79,11 @@ describe("initRevenuecatCli.listProductPrices", () => {
 		mockFetch.mockImplementationOnce(() =>
 			jsonResponse([{ id: "prc1", amount_micros: 4_990_000, currency: "USD" }]),
 		);
-		const cli = initRevenuecatCli({ projectId: "proj_x", accessToken: "t", fetchImpl });
+		const cli = initRevenuecatCli({
+			projectId: "proj_x",
+			accessToken: "t",
+			fetchImpl,
+		});
 		const prices = await cli.listProductPrices("prod_1");
 
 		const [url] = mockFetch.mock.calls[0] as unknown as [string];
@@ -90,9 +97,15 @@ describe("initRevenuecatCli.listProductPrices", () => {
 
 	test("tolerates an { items } envelope", async () => {
 		mockFetch.mockImplementationOnce(() =>
-			jsonResponse({ items: [{ id: "prc2", amount_micros: 1_000_000, currency: "EUR" }] }),
+			jsonResponse({
+				items: [{ id: "prc2", amount_micros: 1_000_000, currency: "EUR" }],
+			}),
 		);
-		const cli = initRevenuecatCli({ projectId: "proj_x", accessToken: "t", fetchImpl });
+		const cli = initRevenuecatCli({
+			projectId: "proj_x",
+			accessToken: "t",
+			fetchImpl,
+		});
 		expect(await cli.listProductPrices("prod_2")).toEqual([
 			{ id: "prc2", amount_micros: 1_000_000, currency: "EUR" },
 		]);
@@ -118,7 +131,11 @@ describe("initRevenuecatCli.listAllProducts", () => {
 					next_page: null,
 				}),
 			);
-		const cli = initRevenuecatCli({ projectId: "proj_x", accessToken: "t", fetchImpl });
+		const cli = initRevenuecatCli({
+			projectId: "proj_x",
+			accessToken: "t",
+			fetchImpl,
+		});
 		const products = await cli.listAllProducts();
 
 		expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -145,7 +162,11 @@ describe("initRevenuecatCli webhook integrations", () => {
 					next_page: null,
 				}),
 			);
-		const cli = initRevenuecatCli({ projectId: "proj_x", accessToken: "t", fetchImpl });
+		const cli = initRevenuecatCli({
+			projectId: "proj_x",
+			accessToken: "t",
+			fetchImpl,
+		});
 		const hooks = await cli.listWebhookIntegrations();
 
 		expect(mockFetch).toHaveBeenCalledTimes(2);
@@ -160,7 +181,11 @@ describe("initRevenuecatCli webhook integrations", () => {
 		mockFetch.mockImplementationOnce(() =>
 			jsonResponse({ object: "webhook_integration", id: "wh_new" }, 201),
 		);
-		const cli = initRevenuecatCli({ projectId: "proj_x", accessToken: "t", fetchImpl });
+		const cli = initRevenuecatCli({
+			projectId: "proj_x",
+			accessToken: "t",
+			fetchImpl,
+		});
 		const result = await cli.createWebhookIntegration({
 			name: "Autumn (sandbox)",
 			url: "https://ngrok.test/webhooks/revenuecat/org_1/sandbox",
