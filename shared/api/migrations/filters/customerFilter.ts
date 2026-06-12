@@ -48,8 +48,8 @@ export const CustomerFilterSchema: z.ZodType<CustomerFilter> = z.lazy(() =>
 		customer_id: StringMatcherSchema.optional(),
 		plan: arrayFilter(PlanFilterSchema).optional(),
 		item: arrayFilter(PlanItemFilterSchema).optional(),
-		$and: z.array(CustomerFilterSchema).optional(),
-		$or: z.array(CustomerFilterSchema).optional(),
+		$and: z.array(CustomerFilterSchema).min(1).optional(),
+		$or: z.array(CustomerFilterSchema).min(1).optional(),
 	}),
 );
 

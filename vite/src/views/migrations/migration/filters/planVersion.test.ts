@@ -60,6 +60,25 @@ test("a non-selection plan filter is not treated as plan keys", () => {
 	expect(planFilterToPlanKeys({ item: { feature_id: "credits" } })).toBeNull();
 });
 
+// `version: { $eq: N }` is the object form of a single pinned version and must
+// fold into the key — dropping it would broaden the migration's scope on save.
+test("an $eq version matcher decodes to a pinned key", () => {
+	expect(planFilterToPlanKeys({ plan_id: "pro", version: { $eq: 2 } })).toEqual(
+		["pro:2"],
+	);
+});
+
+// A version range/set can't be carried by a plan key; it must not masquerade as
+// a clean "any version" selection.
+test("a non-foldable version matcher is not treated as plan keys", () => {
+	expect(
+		planFilterToPlanKeys({ plan_id: "pro", version: { $gte: 2 } }),
+	).toBeNull();
+	expect(
+		planFilterToPlanKeys({ plan_id: "pro", version: { $in: [2, 3] } }),
+	).toBeNull();
+});
+
 test("version-pinned selection round-trips through the UI", () => {
 	const filter: MigrationFilter = {
 		customer: { plan: { plan_id: "pro", version: 2 } },

@@ -194,8 +194,9 @@ export function PlanVersionPicker({
 													}}
 												>
 													<Checkbox
-														checked={
-															isWhole(plan.id) || isVersion(plan.id, version)
+														checked={isVersion(plan.id, version)}
+														indeterminate={
+															isWhole(plan.id) && !isVersion(plan.id, version)
 														}
 														className="border-border"
 													/>

@@ -1,4 +1,4 @@
-import type { PlanFilter, StringMatcher } from "@autumn/shared";
+import type { NumberMatcher, PlanFilter, StringMatcher } from "@autumn/shared";
 
 export type FilterField =
 	| "customer_id"
@@ -215,16 +215,34 @@ function planIdsFromMatcher(
 	return null;
 }
 
-/** A PlanFilter that is purely a plan selection (`plan_id` and an optional bare
- *  `version`) → its value keys, else null. */
+// A version pin folds into a plan key only as a single concrete number — bare
+// `N` or `{ $eq: N }`. Returns `undefined` when absent, or `"unfoldable"` for
+// matcher forms ($in, ranges, $ne, null) a key can't carry.
+function pinnedVersion(
+	matcher: NumberMatcher | undefined,
+): number | undefined | "unfoldable" {
+	if (matcher === undefined) return undefined;
+	if (typeof matcher === "number") return matcher;
+	if (
+		typeof matcher === "object" &&
+		matcher !== null &&
+		typeof matcher.$eq === "number" &&
+		Object.keys(matcher).length === 1
+	)
+		return matcher.$eq;
+	return "unfoldable";
+}
+
+/** A PlanFilter that is purely a plan selection (`plan_id` and an optional
+ *  single-version pin) → its value keys, else null. */
 function pureSelectionKeys(filter: PlanFilter): string[] | null {
 	if (filter.plan_id === undefined) return null;
 	if (Object.keys(filter).some((key) => !PLAN_SELECTION_KEYS.has(key)))
 		return null;
 	const ids = planIdsFromMatcher(filter.plan_id);
 	if (ids === null) return null;
-	const version =
-		typeof filter.version === "number" ? filter.version : undefined;
+	const version = pinnedVersion(filter.version);
+	if (version === "unfoldable") return null;
 	return ids.map((planId) => makePlanKey({ planId, version }));
 }
 

@@ -153,7 +153,16 @@ export function planHasPricingChange({
 	const diff = diffPlanV1({ from, to });
 	if (diff.price !== undefined) return true;
 	if (diff.add_items?.some((item) => item.price != null)) return true;
-	return diff.remove_items?.some((item) => item.billing_method != null) ?? false;
+	// Remove filters can omit billing_method even when priced, so check the
+	// source items by feature_id rather than the lossy filter.
+	const removedFeatureIds = new Set(
+		diff.remove_items?.map((item) => item.feature_id) ?? [],
+	);
+	return (
+		from.items?.some(
+			(item) => item.price != null && removedFeatureIds.has(item.feature_id),
+		) ?? false
+	);
 }
 
 function getMigratablePlanDiff(
