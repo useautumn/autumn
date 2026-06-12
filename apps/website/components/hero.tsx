@@ -277,9 +277,9 @@ export default function Hero() {
 						<div className="hero-reveal lg:opacity-0 relative z-10 w-[96%] sm:w-[90%] max-w-[520px] flex justify-center items-center">
 							{/* <AutumnConfig lines={16} initialDelay={1000} awaitEvent="preloader:complete" /> */}
 							<Image
-								src={"/images/hero/autumn_mobile.svg"}
-								width={1600}
-								height={1600}
+								src={"/images/hero/autumn_mobile.webp"}
+								width={942}
+								height={1044}
 								alt="xyz"
 								priority
 							/>
