@@ -5,7 +5,6 @@ import { useIsCusPlanEditor } from "@/hooks/stores/useProductStore";
 import { useIsMobile } from "@/hooks/useIsMobile";
 import { CustomerPlanEditorBar } from "@/views/customers2/customer-plan/CustomerPlanEditorBar";
 import { CustomerPlanInfoBox } from "@/views/customers2/customer-plan/CustomerPlanInfoBox";
-import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
 import { ProductSheets } from "../ProductSheets";
 import { SHEET_ANIMATION } from "../planAnimations";
 import { EditPlanHeader } from "./EditPlanHeader";
@@ -27,9 +26,6 @@ export const PlanEditor = () => {
 				transition={SHEET_ANIMATION}
 			>
 				<div className="flex flex-col justify-start h-full w-full overflow-x-hidden overflow-y-auto pb-20">
-					<div className="w-full max-w-5xl mx-auto pt-4 sm:pt-8 px-4 sm:px-10">
-						<OnboardingGuide />
-					</div>
 					<div onClick={(e) => e.stopPropagation()}>
 						<EditPlanHeader />
 					</div>

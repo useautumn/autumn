@@ -23,10 +23,22 @@ interface CodeSheetProps {
 	stepId: StepId;
 	title: string;
 	description: string;
+	open?: boolean;
+	onOpenChange?: (open: boolean) => void;
+	hideTrigger?: boolean;
 }
 
-export function CodeSheet({ stepId, title, description }: CodeSheetProps) {
-	const [open, setOpen] = useState(false);
+export function CodeSheet({
+	stepId,
+	title,
+	description,
+	open: controlledOpen,
+	onOpenChange,
+	hideTrigger = false,
+}: CodeSheetProps) {
+	const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+	const open = controlledOpen ?? uncontrolledOpen;
+	const setOpen = onOpenChange ?? setUncontrolledOpen;
 	const selectedSDK = useSDKStore((s) => s.selectedSDK);
 	const [stackConfig, setStackConfig] =
 		useState<StackConfig>(DEFAULT_STACK_CONFIG);
@@ -140,18 +152,20 @@ export function CodeSheet({ stepId, title, description }: CodeSheetProps) {
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			<Button
-				variant="secondary"
-				size="sm"
-				className=""
-				onClick={(e) => {
-					e.stopPropagation();
-					setOpen(true);
-				}}
-			>
-				<Code className="size-3.5" />
-				Show docs
-			</Button>
+			{!hideTrigger && (
+				<Button
+					variant="secondary"
+					size="sm"
+					className=""
+					onClick={(e) => {
+						e.stopPropagation();
+						setOpen(true);
+					}}
+				>
+					<Code className="size-3.5" />
+					Show docs
+				</Button>
+			)}
 			<SheetContent
 				className="flex flex-col overflow-hidden bg-background min-w-xl"
 				hideCloseButton
