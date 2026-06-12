@@ -15,12 +15,16 @@ export const validateFirstTimeDiscounts = async ({
 	discounts: StripeDiscountWithCoupon[];
 	stripeCustomerId?: string;
 }) => {
-	const hasFirstTimeRestriction = discounts.some(
+	const firstTimeDiscount = discounts.find(
 		(discount) => discount.firstTimeTransaction,
 	);
 
-	if (!hasFirstTimeRestriction) return;
+	if (!firstTimeDiscount) return;
 	if (!stripeCustomerId) return;
 
-	await assertFirstTimeStripeCustomer({ stripeCli, stripeCustomerId });
+	await assertFirstTimeStripeCustomer({
+		stripeCli,
+		stripeCustomerId,
+		promoCode: firstTimeDiscount.promotionCode,
+	});
 };

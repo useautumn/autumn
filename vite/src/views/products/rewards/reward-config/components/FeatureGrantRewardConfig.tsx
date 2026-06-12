@@ -120,9 +120,11 @@ export function FeatureGrantRewardConfig({
 	}) => {
 		const updated = [...(reward.promo_codes || [])];
 		const promoCode = updated[index] ?? { code: "" };
+		const globalMaxRedemption = getGlobalMaxRedemption(promoCode);
 		const { max_redemptions: _maxRedemptions, ...rest } = promoCode;
 		updated[index] = {
 			...rest,
+			global_max_redemption: globalMaxRedemption,
 			first_time_transaction: value,
 		};
 		setReward({ ...reward, promo_codes: updated });

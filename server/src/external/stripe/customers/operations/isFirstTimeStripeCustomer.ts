@@ -1,9 +1,11 @@
 import { ErrCode, RecaseError } from "@autumn/shared";
 import type Stripe from "stripe";
 
-/** Per Stripe's first_time_transaction rule, any non-void invoice counts */
+/**
+ * Drafts (and null statuses) don't count — never finalized or collected, and a
+ * false block is a hard denial while a false pass falls back to Stripe's check.
+ */
 const BLOCKING_INVOICE_STATUSES: Stripe.Invoice.Status[] = [
-	"draft",
 	"open",
 	"paid",
 	"uncollectible",
