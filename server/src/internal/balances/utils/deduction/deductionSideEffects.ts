@@ -1,7 +1,6 @@
 import type { Feature, FullCustomer } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
-import type { CascadeRole } from "../types/featureDeduction.js";
 import { fireTrackWebhooks } from "../../trackWebhooks/fireTrackWebhooks.js";
 
 export type DeductionSideEffect = {
@@ -11,7 +10,6 @@ export type DeductionSideEffect = {
 	entityId?: string;
 	featuresFromMutationLogs?: Feature[];
 	triggerAutoTopUp: boolean;
-	cascadeRole?: CascadeRole;
 };
 
 export const queueDeductionSideEffect = ({

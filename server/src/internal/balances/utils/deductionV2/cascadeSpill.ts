@@ -62,6 +62,13 @@ export class CascadeSpill {
 		mutationLogs: MutationLogItem[];
 	}): void {
 		if (deduction.cascade?.role !== "included") return;
+		if (!Number.isFinite(remaining)) {
+			this.spillRemaining = 0;
+			this.includedDeduction = deduction;
+			this.includedDeductedUnits = deduction.deduction;
+			this.includedMutationLogs = mutationLogs;
+			return;
+		}
 		let clampedRemaining = Math.min(
 			Math.max(remaining, 0),
 			deduction.deduction,
