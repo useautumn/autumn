@@ -1,9 +1,21 @@
+import type { CascadeReplayState } from "../types/cascadeReplayState.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { FeatureDeduction } from "../types/featureDeduction.js";
 import type { MutationLogItem } from "../types/mutationLogItem.js";
-import type { CascadeReplayState } from "../types/cascadeReplayState.js";
 
 type OverageBehaviour = NonNullable<DeductionOptions["overageBehaviour"]>;
+
+/**
+ * Outcome of an executor's attempt to unwind a cascade's included leg after a
+ * later leg failed. "failed" means the included mutations persisted, so the
+ * error must carry replay state; "succeeded" means they were reversed, so the
+ * included leg's queued side effect must be dropped and a retry re-runs the
+ * full cascade.
+ */
+export type CascadeCompensationOutcome =
+	| { status: "not_needed" }
+	| { status: "succeeded"; compensatedFeatureId: string }
+	| { status: "failed" };
 
 /**
  * Leftover event fractions below this are float residue from the engine's

@@ -2,6 +2,7 @@ import {
 	ErrCode,
 	type Feature,
 	fullCustomerToCustomerEntitlements,
+	fullCustomerToOverageAllowedByFeatureId,
 	fullSubjectToFullCustomer,
 	isAiCreditSystem,
 	RecaseError,
@@ -83,6 +84,24 @@ const resolveAiCreditFeaturesFromEntitlements = async ({
 		fullCustomer,
 		entity,
 	});
+	const featureIds = [
+		...new Set(
+			cusEnts
+				.map((customerEntitlement) => customerEntitlement.entitlement.feature)
+				.filter((feature) => isAiCreditSystem(feature.type))
+				.map((feature) => feature.id),
+		),
+	];
+	const overageAllowedByFeatureId = fullCustomerToOverageAllowedByFeatureId({
+		fullCustomer,
+		featureIds,
+		internalEntityId: entity?.internal_id,
+	});
+	const nativeUsageAllowedFeatureIds = new Set(
+		cusEnts
+			.filter((customerEntitlement) => customerEntitlement.usage_allowed)
+			.map((customerEntitlement) => customerEntitlement.entitlement.feature.id),
+	);
 
 	const systems = new Map<
 		string,
@@ -92,7 +111,16 @@ const resolveAiCreditFeaturesFromEntitlements = async ({
 		const feature = customerEntitlement.entitlement.feature;
 		if (!isAiCreditSystem(feature.type)) continue;
 
-		const usageAllowed = customerEntitlement.usage_allowed === true;
+		const overageAllowedControl = overageAllowedByFeatureId[feature.id];
+		let usageAllowed = customerEntitlement.usage_allowed === true;
+		if (
+			overageAllowedControl?.enabled === true &&
+			!nativeUsageAllowedFeatureIds.has(feature.id)
+		) {
+			usageAllowed = true;
+		} else if (overageAllowedControl?.enabled === false) {
+			usageAllowed = false;
+		}
 		const existing = systems.get(feature.id);
 		if (existing) {
 			existing.hasUsageAllowed = existing.hasUsageAllowed || usageAllowed;

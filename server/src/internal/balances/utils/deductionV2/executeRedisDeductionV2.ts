@@ -17,6 +17,7 @@ import {
 	type DeductionSideEffect,
 	flushDeductionSideEffects,
 	queueDeductionSideEffect,
+	removeDeductionSideEffectsForFeature,
 } from "@/internal/balances/utils/deduction/deductionSideEffects.js";
 import { saveLockReceiptV2 } from "@/internal/balances/utils/lockV2/saveLockReceiptV2.js";
 import { buildDeductFromSubjectBalancesKeys } from "@/internal/customers/cache/fullSubject/builders/buildDeductFromSubjectBalancesKeys.js";
@@ -40,7 +41,10 @@ import { applyDeductionUpdateToFullSubject } from "./applyDeductionUpdateToFullS
 import { applyRolloverUpdatesToFullSubject } from "./applyRolloverUpdatesToFullSubject.js";
 import { applyUsageWindowUpdatesToFullSubject } from "./applyUsageWindowUpdatesToFullSubject.js";
 import { buildUnlimitedPlanMutationLog } from "./buildUnlimitedPlanMutationLog.js";
-import { CascadeSpill } from "./cascadeSpill.js";
+import {
+	type CascadeCompensationOutcome,
+	CascadeSpill,
+} from "./cascadeSpill.js";
 import { logDeductionUpdatesV2 } from "./logDeductionUpdatesV2.js";
 import { mutationLogsToFeaturesV2 } from "./mutationLogsToFeaturesV2.js";
 import { normalizeDeductionSyncStateV2 } from "./normalizeDeductionSyncStateV2.js";
@@ -460,17 +464,24 @@ export const executeRedisDeductionV2 = async ({
 			}
 		}
 	} catch (error) {
-		await compensateCascadeIncludedLeg({
+		const compensationOutcome = await compensateCascadeIncludedLeg({
 			ctx,
 			fullSubject,
 			entityId,
 			cascadeSpill,
 			redisInstance,
 		});
-		attachCascadeReplayState({
-			error,
-			state: cascadeSpill.buildReplayState(),
-		});
+		if (compensationOutcome.status === "succeeded") {
+			removeDeductionSideEffectsForFeature({
+				sideEffects,
+				featureId: compensationOutcome.compensatedFeatureId,
+			});
+		} else if (compensationOutcome.status === "failed") {
+			attachCascadeReplayState({
+				error,
+				state: cascadeSpill.buildReplayState(),
+			});
+		}
 		throw error;
 	} finally {
 		flushDeductionSideEffects({
@@ -509,9 +520,9 @@ const compensateCascadeIncludedLeg = async ({
 	entityId?: string;
 	cascadeSpill: CascadeSpill;
 	redisInstance?: Redis;
-}): Promise<void> => {
+}): Promise<CascadeCompensationOutcome> => {
 	const compensation = cascadeSpill.buildCompensation();
-	if (!compensation) return;
+	if (!compensation) return { status: "not_needed" };
 
 	try {
 		await executeRedisDeductionV2({
@@ -527,6 +538,10 @@ const compensateCascadeIncludedLeg = async ({
 			},
 			redisInstance,
 		});
+		return {
+			status: "succeeded",
+			compensatedFeatureId: compensation.feature.id,
+		};
 	} catch (compensationError) {
 		ctx.logger.error(
 			`[executeRedisDeductionV2] cascade compensation failed: ${compensationError}`,
@@ -537,5 +552,6 @@ const compensateCascadeIncludedLeg = async ({
 				unwind_value: compensation.unwindValue,
 			},
 		);
+		return { status: "failed" };
 	}
 };

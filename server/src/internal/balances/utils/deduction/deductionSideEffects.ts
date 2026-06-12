@@ -25,6 +25,27 @@ export const queueDeductionSideEffect = ({
 	});
 };
 
+/**
+ * Drops queued side effects for a feature whose deduction was compensated:
+ * the balance change they describe was reversed, so firing them would report
+ * a drop that no longer exists. Cascade legs always have distinct feature
+ * ids, so matching by feature id only removes the compensated leg's entry.
+ */
+export const removeDeductionSideEffectsForFeature = ({
+	sideEffects,
+	featureId,
+}: {
+	sideEffects: DeductionSideEffect[];
+	featureId: string;
+}) => {
+	const retained = sideEffects.filter(
+		(sideEffect) => sideEffect.feature.id !== featureId,
+	);
+	if (retained.length === sideEffects.length) return;
+	sideEffects.length = 0;
+	sideEffects.push(...retained);
+};
+
 export const flushDeductionSideEffects = ({
 	ctx,
 	sideEffects,

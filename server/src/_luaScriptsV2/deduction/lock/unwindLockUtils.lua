@@ -109,6 +109,7 @@ end
 --     applied = boolean,
 --     unwind_iteration_value = number,
 --     remaining_unwind_value = number,
+--     skipped_unwind_value = number,
 --     error = string | nil,
 --   }
 -- ============================================================================
@@ -163,12 +164,13 @@ local function unwind_lock_item_iteration(params)
     local ent_data = context.customer_entitlements[customer_entitlement_id]
     if not ent_data then
       -- Entitlement no longer exists (e.g. product upgraded mid-flight).
-      -- Skip this item and leave remaining_unwind_value unchanged so the
-      -- caller can compensate against current live entitlements.
+      -- Skip this item, consume its receipt value, and let the caller
+      -- compensate that skipped value against current live entitlements.
       return {
         applied = false,
         unwind_iteration_value = 0,
-        remaining_unwind_value = remaining_unwind_value,
+        skipped_unwind_value = unwind_iteration_value,
+        remaining_unwind_value = remaining_unwind_value - unwind_iteration_value,
         error = nil,
       }
     end
@@ -209,11 +211,12 @@ local function unwind_lock_item_iteration(params)
     local rollover_data = context.rollovers[rollover_id]
     if not rollover_data then
       -- Rollover no longer exists (e.g. expired or removed mid-flight).
-      -- Skip this item and leave remaining_unwind_value unchanged.
+      -- Skip this item and consume its receipt value.
       return {
         applied = false,
         unwind_iteration_value = 0,
-        remaining_unwind_value = remaining_unwind_value,
+        skipped_unwind_value = unwind_iteration_value,
+        remaining_unwind_value = remaining_unwind_value - unwind_iteration_value,
         error = nil,
       }
     end
@@ -277,12 +280,14 @@ local function unwind_lock_items(params)
   local context = params.context
   local items = safe_table(params.items)
   local remaining_unwind_value = safe_number(params.unwind_value)
+  local skipped_unwind_value = 0
   local iterations = {}
 
   if remaining_unwind_value <= 0 then
     return {
       applied = false,
       remaining_unwind_value = 0,
+      skipped_unwind_value = 0,
       iterations = iterations,
       error = nil,
     }
@@ -326,12 +331,14 @@ local function unwind_lock_items(params)
       })
     end
 
+    skipped_unwind_value = skipped_unwind_value + safe_number(result.skipped_unwind_value)
     remaining_unwind_value = result.remaining_unwind_value
   end
 
   return {
     applied = #iterations > 0,
     remaining_unwind_value = remaining_unwind_value,
+    skipped_unwind_value = skipped_unwind_value,
     iterations = iterations,
     error = nil,
   }
@@ -424,7 +431,7 @@ local function unwind_lock_on_context(params)
     return empty_result
   end
 
-  local skipped_unwind = unwind_items_result.remaining_unwind_value
+  local skipped_unwind = unwind_items_result.skipped_unwind_value
   -- remaining_signed_unwind_value: the signed amount that could not be unwound
   -- because the target entitlement/rollover no longer exists.
   -- Callers can add this directly to additional_value to compensate:

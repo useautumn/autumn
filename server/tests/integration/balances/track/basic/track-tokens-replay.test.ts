@@ -123,6 +123,7 @@ test.concurrent(
 				},
 			},
 			apiVersion: ApiVersion.V2_1,
+			allowTokenCascade: true,
 		});
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);

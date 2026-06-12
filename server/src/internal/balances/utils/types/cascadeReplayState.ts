@@ -1,3 +1,5 @@
+import type { FeatureDeduction } from "./featureDeduction.js";
+
 /**
  * State attached to an error when a cascade was partially applied and its
  * compensation failed: the included deduction's mutations persisted, so a
@@ -43,4 +45,31 @@ export const getCascadeReplayState = (
 		current = current.cause;
 	}
 	return undefined;
+};
+
+/**
+ * Replay deductions for a cascade whose included leg already persisted: the
+ * single overage leg scaled by the event fraction the included leg never
+ * covered, with the cascade marker stripped so it executes as a plain
+ * deduction. Returns null when the deductions contain no overage leg.
+ */
+export const buildCascadeReplayDeductions = ({
+	featureDeductions,
+	replayState,
+}: {
+	featureDeductions: FeatureDeduction[];
+	replayState: CascadeReplayState;
+}): FeatureDeduction[] | null => {
+	const overageDeduction = featureDeductions.find(
+		(deduction) => deduction.cascade?.role === "overage",
+	);
+	if (!overageDeduction) return null;
+
+	return [
+		{
+			...overageDeduction,
+			deduction: overageDeduction.deduction * replayState.spillRemaining,
+			cascade: undefined,
+		},
+	];
 };

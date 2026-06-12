@@ -5,7 +5,10 @@ import {
 	type TrackParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { CascadeReplayState } from "../utils/types/cascadeReplayState.js";
+import {
+	buildCascadeReplayDeductions,
+	type CascadeReplayState,
+} from "../utils/types/cascadeReplayState.js";
 import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
 import {
 	getTokenCascadeDeductionsFromBody,
@@ -22,7 +25,7 @@ export const getQueuedTrackFeatureDeductions = ({
 	ctx: AutumnContext;
 	body: TrackParams;
 	allowTokenCascade?: boolean;
- 	cascadeReplayState?: CascadeReplayState;
+	cascadeReplayState?: CascadeReplayState;
 }): FeatureDeduction[] => {
 	if (cascadeReplayState) {
 		const cascadeDeductions = getTokenCascadeDeductionsFromBody({ ctx, body });
@@ -34,10 +37,11 @@ export const getQueuedTrackFeatureDeductions = ({
 			});
 		}
 
-		const overageDeduction = cascadeDeductions.find(
-			(deduction) => deduction.cascade?.role === "overage",
-		);
-		if (!overageDeduction) {
+		const replayDeductions = buildCascadeReplayDeductions({
+			featureDeductions: cascadeDeductions,
+			replayState: cascadeReplayState,
+		});
+		if (!replayDeductions) {
 			throw new RecaseError({
 				message: "Queued cascade replay is missing an overage deduction",
 				code: ErrCode.InvalidRequest,
@@ -45,13 +49,7 @@ export const getQueuedTrackFeatureDeductions = ({
 			});
 		}
 
-		return [
-			{
-				...overageDeduction,
-				deduction: overageDeduction.deduction * cascadeReplayState.spillRemaining,
-				cascade: undefined,
-			},
-		];
+		return replayDeductions;
 	}
 
 	if (allowTokenCascade) {

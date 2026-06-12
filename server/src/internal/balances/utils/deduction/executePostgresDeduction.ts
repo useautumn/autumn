@@ -15,7 +15,10 @@ import type { DeductionUpdate } from "../../utils/types/deductionUpdate.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import type { MutationLogItem } from "../../utils/types/mutationLogItem.js";
 import { createAllocatedInvoice } from "../allocatedInvoice/createAllocatedInvoice.js";
-import { CascadeSpill } from "../deductionV2/cascadeSpill.js";
+import {
+	type CascadeCompensationOutcome,
+	CascadeSpill,
+} from "../deductionV2/cascadeSpill.js";
 import { attachCascadeReplayState } from "../types/cascadeReplayState.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import { applyRolloverUpdatesToFullCustomer } from "./applyRolloverUpdatesToFullCustomer.js";
@@ -23,6 +26,7 @@ import {
 	type DeductionSideEffect,
 	flushDeductionSideEffects,
 	queueDeductionSideEffect,
+	removeDeductionSideEffectsForFeature,
 } from "./deductionSideEffects.js";
 import {
 	type RolloverOverwrite,
@@ -137,38 +141,38 @@ export const executePostgresDeduction = async ({
 					options: { ...options, overageBehaviour: legOverageBehaviour },
 				});
 
-			if (unlimitedFeatureIds.length > 0) {
-				if (preparedLock?.enabled) {
-					await saveLockReceipt({
-						lock: preparedLock,
-						customerId: fullCustomer.id || customerId,
-						featureId: feature.id,
-						entityId,
-						items: [],
-						overrideLockValue: effectiveToDeduct,
+				if (unlimitedFeatureIds.length > 0) {
+					if (preparedLock?.enabled) {
+						await saveLockReceipt({
+							lock: preparedLock,
+							customerId: fullCustomer.id || customerId,
+							featureId: feature.id,
+							entityId,
+							items: [],
+							overrideLockValue: effectiveToDeduct,
+						});
+					}
+					cascadeSpill.recordIncludedResult({
+						deduction,
+						remaining: 0,
+						mutationLogs: [],
 					});
+					continue;
 				}
-				cascadeSpill.recordIncludedResult({
-					deduction,
-					remaining: 0,
-					mutationLogs: [],
-				});
-				continue;
-			}
 
-			if (customerEntitlements.length === 0) {
-				if (deduction.cascade?.role === "overage") {
-					throw new InternalError({
-						message: `INSUFFICIENT_BALANCE|featureId:${feature.id}|value:${effectiveToDeduct}`,
+				if (customerEntitlements.length === 0) {
+					if (deduction.cascade?.role === "overage") {
+						throw new InternalError({
+							message: `INSUFFICIENT_BALANCE|featureId:${feature.id}|value:${effectiveToDeduct}`,
+						});
+					}
+					cascadeSpill.recordIncludedResult({
+						deduction,
+						remaining: deduction.deduction,
+						mutationLogs: [],
 					});
+					continue;
 				}
-				cascadeSpill.recordIncludedResult({
-					deduction,
-					remaining: deduction.deduction,
-					mutationLogs: [],
-				});
-				continue;
-			}
 
 				const result = await db.execute(
 					sql`SELECT * FROM deduct_from_cus_ents(
@@ -308,17 +312,24 @@ export const executePostgresDeduction = async ({
 				}
 			}
 		} catch (error) {
-			await compensateCascadeIncludedLeg({
+			const compensationOutcome = await compensateCascadeIncludedLeg({
 				ctx,
 				fullCustomer,
 				customerId,
 				entityId,
 				cascadeSpill,
 			});
-			attachCascadeReplayState({
-				error,
-				state: cascadeSpill.buildReplayState(),
-			});
+			if (compensationOutcome.status === "succeeded") {
+				removeDeductionSideEffectsForFeature({
+					sideEffects,
+					featureId: compensationOutcome.compensatedFeatureId,
+				});
+			} else if (compensationOutcome.status === "failed") {
+				attachCascadeReplayState({
+					error,
+					state: cascadeSpill.buildReplayState(),
+				});
+			}
 			throw error;
 		} finally {
 			flushDeductionSideEffects({
@@ -384,9 +395,9 @@ const compensateCascadeIncludedLeg = async ({
 	customerId: string;
 	entityId?: string;
 	cascadeSpill: CascadeSpill;
-}): Promise<void> => {
+}): Promise<CascadeCompensationOutcome> => {
 	const compensation = cascadeSpill.buildCompensation();
-	if (!compensation) return;
+	if (!compensation) return { status: "not_needed" };
 
 	try {
 		await executePostgresDeduction({
@@ -401,6 +412,10 @@ const compensateCascadeIncludedLeg = async ({
 				triggerSideEffects: false,
 			},
 		});
+		return {
+			status: "succeeded",
+			compensatedFeatureId: compensation.feature.id,
+		};
 	} catch (compensationError) {
 		ctx.logger.error(
 			`[executePostgresDeduction] cascade compensation failed: ${compensationError}`,
@@ -411,5 +426,6 @@ const compensateCascadeIncludedLeg = async ({
 				unwind_value: compensation.unwindValue,
 			},
 		);
+		return { status: "failed" };
 	}
 };
