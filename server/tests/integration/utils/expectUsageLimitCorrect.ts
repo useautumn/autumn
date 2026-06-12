@@ -1,5 +1,5 @@
 import { expect } from "bun:test";
-import type { ApiCustomerV5, ResetInterval } from "@autumn/shared";
+import type { ApiCustomerV5, DbUsageLimit } from "@autumn/shared";
 
 const roundTo8Dp = (value: number) => Math.round(value * 1e8) / 1e8;
 
@@ -15,7 +15,7 @@ export const expectUsageLimitCorrect = ({
 	featureId: string;
 	usage?: number;
 	limit?: number;
-	interval?: ResetInterval;
+	interval?: DbUsageLimit["interval"];
 }) => {
 	const usageLimit = customer.billing_controls?.usage_limits?.find(
 		(entry) => entry.feature_id === featureId,

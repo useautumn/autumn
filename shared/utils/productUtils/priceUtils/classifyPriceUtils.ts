@@ -1,5 +1,6 @@
 import type { Feature } from "@models/featureModels/featureModels";
 import { Infinite } from "@models/productModels/productEnums";
+import { AllocatedBillingBehavior } from "../../../models/productV2Models/productItemModels/productItemEnums";
 import { BillingInterval } from "../../../models/productModels/intervals/billingInterval";
 import type { FixedPriceConfig } from "../../../models/productModels/priceModels/priceConfig/fixedPriceConfig";
 import {
@@ -81,6 +82,14 @@ export const isAllocatedPrice = (
 	if (!price) return false;
 	const billingType = getBillingType(price.config);
 	return billingType === BillingType.InArrearProrated;
+};
+
+export const isAllocatedV2Price = (
+	price: Price,
+): price is Price & { config: UsagePriceConfig } => {
+	if (!price) return false;
+	const config = price.config as UsagePriceConfig;
+	return config.allocated_billing_behavior === AllocatedBillingBehavior.Arrear;
 };
 
 export const isPrepaidPrice = (

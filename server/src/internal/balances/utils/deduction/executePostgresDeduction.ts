@@ -79,7 +79,7 @@ export const executePostgresDeduction = async ({
 		deductions,
 	});
 
-	if (resolvedOptions.paidAllocated && deductions.some((d) => d.lock)) {
+	if (resolvedOptions.paidAllocatedV1 && deductions.some((d) => d.lock)) {
 		throw new InternalError({
 			message: "Locks are not supported for paid allocated features",
 		});
@@ -285,7 +285,7 @@ export const executePostgresDeduction = async ({
 		};
 	};
 
-	const deductionResult = resolvedOptions.paidAllocated
+	const deductionResult = resolvedOptions.paidAllocatedV1
 		? await withLock({
 				lockKey: `lock:deduction:${org.id}:${env}:${customerId}`,
 				ttlMs: 60000,

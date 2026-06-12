@@ -7,18 +7,18 @@ describe("buildUsageLimitItem", () => {
 		const item = buildUsageLimitItem({
 			featureId: "credits",
 			limit: 5,
-			window: ResetInterval.Month,
+			interval: ResetInterval.Month,
 		});
 		expect(item.feature_id).toBe("credits");
 		expect(item.limit).toBe(5);
 		expect(item.interval).toBe(ResetInterval.Month);
 	});
 
-	test("window selection carries through as the interval", () => {
+	test("the selected interval carries through to the cap interval", () => {
 		const item = buildUsageLimitItem({
 			featureId: "credits",
 			limit: 10,
-			window: ResetInterval.Day,
+			interval: ResetInterval.Day,
 		});
 		expect(item.interval).toBe(ResetInterval.Day);
 	});

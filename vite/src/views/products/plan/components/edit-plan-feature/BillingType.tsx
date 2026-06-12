@@ -1,4 +1,5 @@
 import {
+	AllocatedBillingBehavior,
 	BillingInterval,
 	FeatureUsageType,
 	getFeatureName,
@@ -23,6 +24,32 @@ export function BillingType() {
 
 	// Derive billing type from item state
 	const isFeaturePrice = isFeaturePriceItem(item);
+	const feature = features.find((f) => f.id === item.feature_id);
+
+	const getConfigForBillingType = ({
+		usageModel,
+	}: {
+		usageModel?: UsageModel;
+	}) => {
+		if (!isContUseItem({ item, features })) return item.config;
+
+		if (usageModel !== UsageModel.PayPerUse) {
+			const { allocated_billing_behavior, on_increase, on_decrease, ...config } =
+				item.config ?? {};
+			return Object.keys(config).length > 0 ? config : undefined;
+		}
+
+		const hasProrationKnobs =
+			item.config?.on_increase != null || item.config?.on_decrease != null;
+		return {
+			...item.config,
+			allocated_billing_behavior:
+				item.config?.allocated_billing_behavior ??
+				(hasProrationKnobs
+					? AllocatedBillingBehavior.Prorated
+					: AllocatedBillingBehavior.Arrear),
+		};
+	};
 
 	// Determine if we should preselect based on explicit configuration
 	const hasExplicitConfig =
@@ -53,6 +80,7 @@ export function BillingType() {
 				usage_model: undefined,
 				price: null,
 				price_config: null,
+				config: getConfigForBillingType({}),
 				included_usage: item.included_usage,
 				interval: isContUseItem({ item, features }) ? null : item.interval,
 			});
@@ -65,6 +93,9 @@ export function BillingType() {
 					tiers: [{ to: Infinite, amount: 0 }],
 					billing_units: 1,
 					usage_model: UsageModel.PayPerUse,
+					config: getConfigForBillingType({
+						usageModel: UsageModel.PayPerUse,
+					}),
 					included_usage:
 						item.included_usage === Infinite ? 0 : item.included_usage,
 					interval: getPricedInterval(),
@@ -73,7 +104,6 @@ export function BillingType() {
 		}
 	};
 
-	const feature = features.find((f) => f.id === item.feature_id);
 	const featureName =
 		getFeatureName({
 			feature,

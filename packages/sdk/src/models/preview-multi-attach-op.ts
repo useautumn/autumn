@@ -460,13 +460,44 @@ export type PreviewMultiAttachSpendLimit = {
    */
   featureId?: string | undefined;
   /**
-   * Whether this spend limit is enabled.
+   * Whether the overage spend limit is enabled.
    */
   enabled?: boolean | undefined;
   /**
    * Maximum allowed overage spend for the target feature.
    */
   overageLimit?: number | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const PreviewMultiAttachEntityDataInterval = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type PreviewMultiAttachEntityDataInterval = ClosedEnum<
+  typeof PreviewMultiAttachEntityDataInterval
+>;
+
+export type PreviewMultiAttachUsageLimit = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: PreviewMultiAttachEntityDataInterval;
 };
 
 /**
@@ -524,9 +555,13 @@ export type PreviewMultiAttachOverageAllowed = {
  */
 export type PreviewMultiAttachBillingControls = {
   /**
-   * List of overage spend limits per feature.
+   * List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit).
    */
   spendLimits?: Array<PreviewMultiAttachSpendLimit> | undefined;
+  /**
+   * List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.
+   */
+  usageLimits?: Array<PreviewMultiAttachUsageLimit> | undefined;
   /**
    * List of usage alert configurations per feature.
    */
@@ -1560,6 +1595,45 @@ export function previewMultiAttachSpendLimitToJSON(
 }
 
 /** @internal */
+export const PreviewMultiAttachEntityDataInterval$outboundSchema: z.ZodMiniEnum<
+  typeof PreviewMultiAttachEntityDataInterval
+> = z.enum(PreviewMultiAttachEntityDataInterval);
+
+/** @internal */
+export type PreviewMultiAttachUsageLimit$Outbound = {
+  feature_id: string;
+  limit: number;
+  interval: string;
+};
+
+/** @internal */
+export const PreviewMultiAttachUsageLimit$outboundSchema: z.ZodMiniType<
+  PreviewMultiAttachUsageLimit$Outbound,
+  PreviewMultiAttachUsageLimit
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    limit: z.number(),
+    interval: PreviewMultiAttachEntityDataInterval$outboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function previewMultiAttachUsageLimitToJSON(
+  previewMultiAttachUsageLimit: PreviewMultiAttachUsageLimit,
+): string {
+  return JSON.stringify(
+    PreviewMultiAttachUsageLimit$outboundSchema.parse(
+      previewMultiAttachUsageLimit,
+    ),
+  );
+}
+
+/** @internal */
 export const PreviewMultiAttachThresholdType$outboundSchema: z.ZodMiniEnum<
   typeof PreviewMultiAttachThresholdType
 > = z.enum(PreviewMultiAttachThresholdType);
@@ -1638,6 +1712,7 @@ export function previewMultiAttachOverageAllowedToJSON(
 /** @internal */
 export type PreviewMultiAttachBillingControls$Outbound = {
   spend_limits?: Array<PreviewMultiAttachSpendLimit$Outbound> | undefined;
+  usage_limits?: Array<PreviewMultiAttachUsageLimit$Outbound> | undefined;
   usage_alerts?: Array<PreviewMultiAttachUsageAlert$Outbound> | undefined;
   overage_allowed?:
     | Array<PreviewMultiAttachOverageAllowed$Outbound>
@@ -1653,6 +1728,9 @@ export const PreviewMultiAttachBillingControls$outboundSchema: z.ZodMiniType<
     spendLimits: z.optional(
       z.array(z.lazy(() => PreviewMultiAttachSpendLimit$outboundSchema)),
     ),
+    usageLimits: z.optional(
+      z.array(z.lazy(() => PreviewMultiAttachUsageLimit$outboundSchema)),
+    ),
     usageAlerts: z.optional(
       z.array(z.lazy(() => PreviewMultiAttachUsageAlert$outboundSchema)),
     ),
@@ -1663,6 +1741,7 @@ export const PreviewMultiAttachBillingControls$outboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       spendLimits: "spend_limits",
+      usageLimits: "usage_limits",
       usageAlerts: "usage_alerts",
       overageAllowed: "overage_allowed",
     });

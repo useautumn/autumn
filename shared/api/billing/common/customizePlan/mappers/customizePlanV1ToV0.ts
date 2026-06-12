@@ -26,10 +26,11 @@ export const customizePlanV1ToV0 = ({
 		customizePlanV1.items !== undefined
 	) {
 		// 1. If price AND items provided, return full items array
-		return planV1ToProductItems({
+		const items = planV1ToProductItems({
 			ctx,
 			plan: { price: customizePlanV1.price, items: customizePlanV1.items },
 		});
+		return items;
 	} else if (
 		customizePlanV1.price !== undefined &&
 		customizePlanV1.items === undefined
@@ -46,7 +47,10 @@ export const customizePlanV1ToV0 = ({
 				})
 			: undefined;
 
-		return basePriceItem ? [basePriceItem, ...featureItems] : featureItems;
+		const items = basePriceItem
+			? [basePriceItem, ...featureItems]
+			: featureItems;
+		return items;
 	} else {
 		// 3. If no price provided, then carry over base price
 		const basePriceItem = currentProductItems.filter((item) =>
@@ -57,6 +61,7 @@ export const customizePlanV1ToV0 = ({
 			plan: { price: null, items: customizePlanV1.items ?? [] },
 		});
 
-		return [...basePriceItem, ...featureItems];
+		const items = [...basePriceItem, ...featureItems];
+		return items;
 	}
 };
