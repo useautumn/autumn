@@ -32,6 +32,7 @@ import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import {
 	buildVersionMigrationDraft,
+	planHasPricingChange,
 	type VersionMigrateScope,
 } from "./buildMigrationDraft";
 import { getPlanPriceChange, hasPlanMigrationDiff } from "./planMigrationDiff";
@@ -169,6 +170,35 @@ export function MigrateCustomersDialog({
 
 	const versionProducts = useVersionProducts(productId, migratableVersions);
 	const latestProduct = useLatestProduct(productId, latestVersion);
+	const { features = [] } = useFeaturesQuery();
+
+	const hasPricingChange = useMemo(() => {
+		if (!latestProduct) return false;
+		const versionsToCheck =
+			scope === "all"
+				? migratableVersions
+				: effectiveVersion !== null
+					? [effectiveVersion]
+					: [];
+		return versionsToCheck.some((version) => {
+			const fromProduct = versionProducts.get(version);
+			return (
+				!!fromProduct &&
+				planHasPricingChange({
+					baseProduct: fromProduct,
+					product: latestProduct,
+					features,
+				})
+			);
+		});
+	}, [
+		scope,
+		migratableVersions,
+		effectiveVersion,
+		versionProducts,
+		latestProduct,
+		features,
+	]);
 
 	const selectedFromProduct =
 		effectiveVersion !== null
@@ -188,6 +218,7 @@ export function MigrateCustomersDialog({
 			latestVersion,
 			scope,
 			pastVersions: migratableVersions,
+			hasPricingChange,
 		});
 
 		try {
@@ -309,6 +340,14 @@ export function MigrateCustomersDialog({
 							<InfoBox variant="info">
 								Customers on custom plans will not be migrated.
 							</InfoBox>
+
+							{hasPricingChange && (
+								<InfoBox variant="warning">
+									{scope === "all"
+										? "Some of these versions have pricing changes. Migrated customers will move to the new prices from their next billing cycle."
+										: "This version has pricing changes. Migrated customers will move to the new prices from their next billing cycle."}
+								</InfoBox>
+							)}
 						</div>
 					</DialogDescription>
 				</div>

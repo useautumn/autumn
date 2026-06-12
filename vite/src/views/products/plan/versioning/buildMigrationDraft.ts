@@ -137,6 +137,25 @@ function diffHasBillingChanges(diff: DiffedCustomizePlanV1): boolean {
 	return false;
 }
 
+// Unlike `diffHasBillingChanges`, also flags pure removals of priced items so
+// the migration UI can warn about any change to what customers are billed.
+export function planHasPricingChange({
+	baseProduct,
+	product,
+	features,
+}: {
+	baseProduct: FrontendProduct;
+	product: FrontendProduct;
+	features: Feature[];
+}): boolean {
+	const from = frontendProductToApiPlanV1(baseProduct, features);
+	const to = frontendProductToApiPlanV1(product, features);
+	const diff = diffPlanV1({ from, to });
+	if (diff.price !== undefined) return true;
+	if (diff.add_items?.some((item) => item.price != null)) return true;
+	return diff.remove_items?.some((item) => item.billing_method != null) ?? false;
+}
+
 function getMigratablePlanDiff(
 	diff: DiffedCustomizePlanV1,
 ): DiffedCustomizePlanV1 {
@@ -161,12 +180,14 @@ export function buildVersionMigrationDraft({
 	latestVersion,
 	scope,
 	pastVersions,
+	hasPricingChange,
 	includeCustom = false,
 }: {
 	productId: string;
 	latestVersion: number;
 	scope: VersionMigrateScope;
 	pastVersions: number[];
+	hasPricingChange: boolean;
 	includeCustom?: boolean;
 }): MigrationDraft {
 	const versions = scope === "all" ? pastVersions : [scope];
@@ -201,7 +222,7 @@ export function buildVersionMigrationDraft({
 		id: `${productId}-${suffix}-to-v${latestVersion}-${migrationUid()}`,
 		filter,
 		operations,
-		no_billing_changes: true,
+		no_billing_changes: !hasPricingChange,
 	};
 }
 
