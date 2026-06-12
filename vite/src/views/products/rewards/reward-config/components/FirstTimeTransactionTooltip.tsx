@@ -12,8 +12,8 @@ export function FirstTimeTransactionTooltip() {
 				<InfoIcon className="size-3.5 cursor-help text-tertiary-foreground" />
 			</TooltipTrigger>
 			<TooltipContent>
-				Applies when this promo code is redeemed. First-time means the customer
-				has no prior successful payments or invoices in Stripe.
+				Applies when the customer has no prior successful payments or invoices
+				in Stripe.
 			</TooltipContent>
 		</Tooltip>
 	);

@@ -16,8 +16,6 @@ export type StripeDiscountWithCoupon = {
 	end?: number | null;
 	source: { coupon: Stripe.Coupon };
 	promotionCodeId?: string;
-	/** Human-readable promotion code, for error messages */
-	promotionCode?: string;
 	/** Promo code restricted to first-time transactions */
 	firstTimeTransaction?: boolean;
 };

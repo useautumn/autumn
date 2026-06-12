@@ -46,7 +46,6 @@ export const resolvePromotionCode = async ({
 		return {
 			source: { coupon: couponRaw },
 			promotionCodeId: promo.id,
-			promotionCode: promo.code,
 			firstTimeTransaction: promo.restrictions?.first_time_transaction,
 		};
 	} catch (error) {

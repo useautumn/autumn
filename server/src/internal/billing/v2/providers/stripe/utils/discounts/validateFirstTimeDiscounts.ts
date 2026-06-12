@@ -25,6 +25,5 @@ export const validateFirstTimeDiscounts = async ({
 	await assertFirstTimeStripeCustomer({
 		stripeCli,
 		stripeCustomerId,
-		promoCode: firstTimeDiscount.promotionCode,
 	});
 };
