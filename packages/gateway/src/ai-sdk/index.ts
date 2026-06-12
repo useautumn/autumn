@@ -1,52 +1,32 @@
 import type { LanguageModelV3 } from "@ai-sdk/provider";
 import { type LanguageModelMiddleware, wrapLanguageModel } from "ai";
-import { type AutumnClient, trackTokenUsage } from "../shared/track.js";
+import { type AutumnTrackingOptions, createTracker } from "../shared/track.js";
 import { normalizeUsage, type UsageLike } from "./usage.js";
 
-export type { AutumnClient } from "../shared/track.js";
+export type { AutumnClient, AutumnTrackingOptions } from "../shared/track.js";
 export type { TokenPools } from "../shared/usage.js";
 export type { UsageLike } from "./usage.js";
 
-export type WithAutumnOptions = {
-	/** Autumn SDK client instance. */
-	autumn: AutumnClient;
+export type WithAutumnOptions = AutumnTrackingOptions & {
 	/** The AI SDK language model to wrap. */
 	model: LanguageModelV3;
-	/** The Autumn customer ID to attribute usage to. */
-	customerId: string;
 	/** Override the provider prefix used in the model name (e.g. "openrouter", "custom"). Falls back to `model.provider`. */
 	providerId?: string;
-	/** Target a specific AI credit system feature. Auto-detected if omitted. */
-	featureId?: string;
-	/** Entity ID for entity-scoped balance tracking. */
-	entityId?: string;
-	/** Additional properties to attach to each usage event. */
-	properties?: Record<string, unknown>;
 };
 
 export const withAutumn = ({
-	autumn,
 	model,
-	customerId,
 	providerId,
-	featureId,
-	entityId,
-	properties,
+	...tracking
 }: WithAutumnOptions): LanguageModelV3 => {
 	const modelName = `${providerId ?? model.provider}/${model.modelId}`;
+	const track = createTracker(tracking);
 
 	const trackUsage = (usage: UsageLike) =>
-		trackTokenUsage({
-			autumn,
-			getParams: () => ({
-				...normalizeUsage(usage, modelName),
-				customerId,
-				modelId: modelName,
-				featureId,
-				entityId,
-				properties,
-			}),
-		});
+		track(() => ({
+			pools: normalizeUsage(usage, modelName),
+			modelId: modelName,
+		}));
 
 	const middleware: LanguageModelMiddleware = {
 		specificationVersion: "v3",

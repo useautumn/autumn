@@ -1,4 +1,8 @@
-import { clamp, requiredCount, type TokenPools } from "../shared/usage.js";
+import {
+	poolsFromParts,
+	type TokenParts,
+	type TokenPools,
+} from "../shared/usage.js";
 
 type NestedTokens = {
 	total?: number | null;
@@ -37,7 +41,7 @@ const isNested = (
 	value: number | NestedTokens | null | undefined,
 ): value is NestedTokens => value != null && typeof value === "object";
 
-const toParts = (usage: UsageLike) => {
+const toParts = (usage: UsageLike): TokenParts => {
 	const input = usage.inputTokens;
 	const output = usage.outputTokens;
 
@@ -73,25 +77,4 @@ const toParts = (usage: UsageLike) => {
 export const normalizeUsage = (
 	usage: UsageLike,
 	modelName: string,
-): TokenPools => {
-	const parts = toParts(usage);
-
-	const textInput =
-		parts.textInput ??
-		(parts.totalInput != null
-			? parts.totalInput - parts.cacheRead - parts.cacheWrite
-			: undefined);
-	const textOutput =
-		parts.textOutput ??
-		(parts.totalOutput != null
-			? parts.totalOutput - parts.reasoning
-			: undefined);
-
-	return {
-		inputTokens: clamp(requiredCount(textInput, "Input", modelName)),
-		outputTokens: clamp(requiredCount(textOutput, "Output", modelName)),
-		cacheReadTokens: clamp(parts.cacheRead),
-		cacheWriteTokens: clamp(parts.cacheWrite),
-		reasoningTokens: clamp(parts.reasoning),
-	};
-};
+): TokenPools => poolsFromParts(toParts(usage), modelName);

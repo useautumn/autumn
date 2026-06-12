@@ -1,9 +1,18 @@
-import { type AutumnClient, trackTokenUsage } from "../shared/track.js";
+import {
+	type AutumnTrackingOptions,
+	createTracker,
+} from "../shared/track.js";
 import { normalizeOpenRouterUsage, type OpenRouterUsageLike } from "./usage.js";
 
-export type { AutumnClient } from "../shared/track.js";
+export type { AutumnClient, AutumnTrackingOptions } from "../shared/track.js";
 export type { TokenPools } from "../shared/usage.js";
 export type { OpenRouterUsageLike } from "./usage.js";
+
+/** OpenRouter reports its own USD charge when usage accounting is on — attach it to the event. */
+const withCost = (
+	properties: Record<string, unknown> | undefined,
+	cost: number | null | undefined,
+) => (cost == null ? properties : { ...properties, openrouter_cost: cost });
 
 type ChatBody = {
 	model?: string;
@@ -106,61 +115,34 @@ export type OpenRouterLike = {
 	};
 };
 
-export type WithAutumnOptions<T extends OpenRouterLike> = {
-	/** Autumn SDK client instance. */
-	autumn: AutumnClient;
-	/** The @openrouter/sdk client to wrap. */
-	openRouter: T;
-	/** The Autumn customer ID to attribute usage to. */
-	customerId: string;
-	/** Target a specific AI credit system feature. Auto-detected if omitted. */
-	featureId?: string;
-	/** Entity ID for entity-scoped balance tracking. */
-	entityId?: string;
-	/** Additional properties to attach to each usage event. */
-	properties?: Record<string, unknown>;
-};
+export type WithAutumnOptions<T extends OpenRouterLike> =
+	AutumnTrackingOptions & {
+		/** The @openrouter/sdk client to wrap. */
+		openRouter: T;
+	};
 
 const toModelId = (slug: string): string =>
 	slug.startsWith("openrouter/") ? slug : `openrouter/${slug}`;
 
-export type TrackOpenRouterUsageOptions = {
-	autumn: AutumnClient;
+export type TrackOpenRouterUsageOptions = AutumnTrackingOptions & {
 	/** Usage object from an OpenRouter response (SDK model or raw API shape). */
 	usage: OpenRouterUsageLike;
 	/** OpenRouter model slug, e.g. "openai/gpt-4o". */
 	model: string;
-	customerId: string;
-	featureId?: string;
-	entityId?: string;
-	properties?: Record<string, unknown>;
 };
 
 /** Manual escape hatch for consumption patterns the wrapped client doesn't cover (e.g. callModel). */
 export const trackOpenRouterUsage = ({
-	autumn,
 	usage,
 	model,
-	customerId,
-	featureId,
-	entityId,
-	properties,
+	...tracking
 }: TrackOpenRouterUsageOptions): Promise<void> => {
 	const modelId = toModelId(model);
-	return trackTokenUsage({
-		autumn,
-		getParams: () => ({
-			...normalizeOpenRouterUsage(usage, modelId),
-			customerId,
-			modelId,
-			featureId,
-			entityId,
-			properties: {
-				...properties,
-				...(usage.cost != null && { openrouter_cost: usage.cost }),
-			},
-		}),
-	});
+	return createTracker(tracking)(() => ({
+		pools: normalizeOpenRouterUsage(usage, modelId),
+		modelId,
+		properties: withCost(tracking.properties, usage.cost),
+	}));
 };
 
 const isAsyncIterable = (value: unknown): value is AsyncIterable<unknown> =>
@@ -175,46 +157,35 @@ const hasUsage = (value: unknown): value is UsageCarrier & { usage: object } =>
 	"usage" in value &&
 	(value as UsageCarrier).usage != null;
 
-export const withAutumn = <T extends OpenRouterLike>({
-	autumn,
-	openRouter,
-	customerId,
-	featureId,
-	entityId,
-	properties,
-}: WithAutumnOptions<T>): T => {
+export const withAutumn = <T extends OpenRouterLike>(
+	options: WithAutumnOptions<T>,
+): T => {
+	const { openRouter } = options;
+	const track = createTracker(options);
+
 	const trackCarrier = (carrier: UsageCarrier, requestModel?: string) =>
-		trackTokenUsage({
-			autumn,
-			getParams: () => {
-				// Pricing is configured against the slug the caller requested;
-				// providers may resolve it to a dated snapshot (e.g.
-				// anthropic/claude-5-fable-20260609) that models.dev doesn't
-				// list. Router pseudo-models (openrouter/auto) only resolve
-				// server-side, so those fall back to the response slug.
-				const requested = requestModel?.endsWith("/auto")
-					? undefined
-					: requestModel;
-				const slug = requested ?? carrier.model ?? requestModel;
-				if (!slug) {
-					throw new Error(
-						"[Autumn] OpenRouter response did not include a model slug.",
-					);
-				}
-				const modelId = toModelId(slug);
-				const usage = carrier.usage ?? {};
-				return {
-					...normalizeOpenRouterUsage(usage, modelId),
-					customerId,
-					modelId,
-					featureId,
-					entityId,
-					properties: {
-						...properties,
-						...(usage.cost != null && { openrouter_cost: usage.cost }),
-					},
-				};
-			},
+		track(() => {
+			// Pricing is configured against the slug the caller requested;
+			// providers may resolve it to a dated snapshot (e.g.
+			// anthropic/claude-5-fable-20260609) that models.dev doesn't
+			// list. Router pseudo-models (openrouter/auto) only resolve
+			// server-side, so those fall back to the response slug.
+			const requested = requestModel?.endsWith("/auto")
+				? undefined
+				: requestModel;
+			const slug = requested ?? carrier.model ?? requestModel;
+			if (!slug) {
+				throw new Error(
+					"[Autumn] OpenRouter response did not include a model slug.",
+				);
+			}
+			const modelId = toModelId(slug);
+			const usage = carrier.usage ?? {};
+			return {
+				pools: normalizeOpenRouterUsage(usage, modelId),
+				modelId,
+				properties: withCost(options.properties, usage.cost),
+			};
 		});
 
 	const wrapStream = <S extends object>(

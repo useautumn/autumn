@@ -1,4 +1,4 @@
-import { clamp, requiredCount, type TokenPools } from "../shared/usage.js";
+import { poolsFromParts, type TokenPools } from "../shared/usage.js";
 
 type PromptDetails = {
 	cachedTokens?: number | null;
@@ -67,30 +67,21 @@ export const normalizeOpenRouterUsage = (
 		usage.outputTokens ??
 		usage.output_tokens;
 
-	const cacheRead =
-		promptDetails?.cachedTokens ?? promptDetails?.cached_tokens ?? 0;
-	const cacheWrite =
-		promptDetails?.cacheWriteTokens ?? promptDetails?.cache_write_tokens ?? 0;
-	const audioInput =
-		promptDetails?.audioTokens ?? promptDetails?.audio_tokens ?? 0;
-	const reasoning =
-		completionDetails?.reasoningTokens ??
-		completionDetails?.reasoning_tokens ??
-		0;
-
-	return {
-		inputTokens: clamp(
-			requiredCount(promptTotal, "Input", modelName) -
-				cacheRead -
-				cacheWrite -
-				audioInput,
-		),
-		outputTokens: clamp(
-			requiredCount(completionTotal, "Output", modelName) - reasoning,
-		),
-		cacheReadTokens: clamp(cacheRead),
-		cacheWriteTokens: clamp(cacheWrite),
-		reasoningTokens: clamp(reasoning),
-		audioInputTokens: clamp(audioInput),
-	};
+	return poolsFromParts(
+		{
+			totalInput: promptTotal,
+			totalOutput: completionTotal,
+			cacheRead: promptDetails?.cachedTokens ?? promptDetails?.cached_tokens ?? 0,
+			cacheWrite:
+				promptDetails?.cacheWriteTokens ??
+				promptDetails?.cache_write_tokens ??
+				0,
+			reasoning:
+				completionDetails?.reasoningTokens ??
+				completionDetails?.reasoning_tokens ??
+				0,
+			audioInput: promptDetails?.audioTokens ?? promptDetails?.audio_tokens ?? 0,
+		},
+		modelName,
+	);
 };
