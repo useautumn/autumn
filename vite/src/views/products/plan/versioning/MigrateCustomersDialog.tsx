@@ -42,6 +42,7 @@ interface MigrateCustomersDialogProps {
 	productId: string;
 	latestVersion: number;
 	migratableVersions: number[];
+	pastVersions: number[];
 	versionCounts: Record<
 		number,
 		{ active: number; canceled: number; custom: number; trialing: number }
@@ -150,6 +151,7 @@ export function MigrateCustomersDialog({
 	productId,
 	latestVersion,
 	migratableVersions,
+	pastVersions,
 	versionCounts,
 }: MigrateCustomersDialogProps) {
 	const navigate = useNavigate();
@@ -173,8 +175,9 @@ export function MigrateCustomersDialog({
 			? (versionProducts.get(effectiveVersion) ?? null)
 			: null;
 
+	const sortedCandidateVersions = [...pastVersions].sort((a, b) => b - a);
 	const versionSelectItems = Object.fromEntries(
-		migratableVersions.map((v) => [String(v), `Version ${v}`]),
+		sortedCandidateVersions.map((v) => [String(v), `Version ${v}`]),
 	);
 
 	const handleCreate = async () => {
@@ -198,7 +201,9 @@ export function MigrateCustomersDialog({
 		}
 	};
 
-	if (migratableVersions.length === 0) return null;
+	if (pastVersions.length === 0) return null;
+
+	const hasMigratableVersions = migratableVersions.length > 0;
 
 	return (
 		<Dialog
@@ -258,17 +263,28 @@ export function MigrateCustomersDialog({
 										<SelectValue placeholder="Select version" />
 									</SelectTrigger>
 									<SelectContent>
-										{migratableVersions.map((version) => {
+										{sortedCandidateVersions.map((version) => {
+											const hasDiff = migratableVersions.includes(version);
 											const count =
 												(versionCounts[version]?.active ?? 0) -
 												(versionCounts[version]?.custom ?? 0);
 											return (
-												<SelectItem key={version} value={String(version)}>
+												<SelectItem
+													key={version}
+													value={String(version)}
+													disabled={!hasDiff}
+												>
 													<div className="flex items-center justify-between w-full gap-3">
 														<span>Version {version}</span>
-														<IconBadge variant="muted" icon={<UserIcon />}>
-															{count}
-														</IconBadge>
+														{hasDiff ? (
+															<IconBadge variant="muted" icon={<UserIcon />}>
+																{count}
+															</IconBadge>
+														) : (
+															<span className="text-xs text-muted-foreground">
+																No diff
+															</span>
+														)}
 													</div>
 												</SelectItem>
 											);
@@ -303,10 +319,10 @@ export function MigrateCustomersDialog({
 						metaShortcut="enter"
 						onClick={handleCreate}
 						isLoading={isCreating}
-						disabled={isCreating}
+						disabled={isCreating || !hasMigratableVersions}
 						className="w-full"
 					>
-						Preview Migration
+						{hasMigratableVersions ? "Preview Migration" : "No changes to migrate"}
 					</ShortcutButton>
 				</DialogFooter>
 			</DialogContent>
