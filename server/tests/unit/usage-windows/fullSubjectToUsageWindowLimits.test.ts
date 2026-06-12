@@ -25,6 +25,11 @@ const creditsFeature = {
 	internal_id: "icredits",
 	type: FeatureType.CreditSystem,
 } as Feature;
+const aiCreditsFeature = {
+	id: "ai_credits",
+	internal_id: "iai_credits",
+	type: FeatureType.AiCreditSystem,
+} as Feature;
 // Credit system whose schema contains action1, for the membership-anchor path.
 const creditsContainingAction1 = {
 	id: "credits",
@@ -200,6 +205,25 @@ describe("fullSubjectToUsageWindowLimits", () => {
 			}),
 			featureIds: ["credits"],
 			features: [creditsFeature],
+			now: NOW,
+		});
+
+		expect(limits).toHaveLength(1);
+		expect(limits[0]).toMatchObject({
+			dimension_type: "balance",
+			dimension_feature_id: null,
+		});
+	});
+
+	test("an ai-credit-system feature resolves to the balance dimension", () => {
+		const limits = fullSubjectToUsageWindowLimits({
+			fullSubject: buildSubject({
+				usageLimits: [
+					{ feature_id: "ai_credits", limit: 100, interval: ResetInterval.Day },
+				],
+			}),
+			featureIds: ["ai_credits"],
+			features: [aiCreditsFeature],
 			now: NOW,
 		});
 
