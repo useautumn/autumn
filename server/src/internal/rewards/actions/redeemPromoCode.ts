@@ -7,6 +7,8 @@ import {
 	RecaseError,
 	RewardType,
 } from "@autumn/shared";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { assertFirstTimeStripeCustomer } from "@/external/stripe/customers/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { prepareNewBalanceForInsertion } from "@/internal/balances/createBalance/prepareNewBalanceForInsertion.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -112,6 +114,16 @@ export const redeemPromoCode = async ({
 			message: `Customer "${customerId}" has already redeemed this reward`,
 			code: ErrCode.CustomerAlreadyRedeemedReferralCode,
 			statusCode: 400,
+		});
+	}
+
+	// 4.5. First-time restriction (no Stripe customer → necessarily first-time)
+	if (promoCode.first_time_transaction && fullCustomer.processor?.id) {
+		const stripeCli = createStripeCli({ org, env });
+		await assertFirstTimeStripeCustomer({
+			stripeCli,
+			stripeCustomerId: fullCustomer.processor.id,
+			promoCode: code,
 		});
 	}
 
