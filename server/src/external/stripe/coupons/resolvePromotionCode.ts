@@ -46,6 +46,7 @@ export const resolvePromotionCode = async ({
 		return {
 			source: { coupon: couponRaw },
 			promotionCodeId: promo.id,
+			firstTimeTransaction: promo.restrictions?.first_time_transaction,
 		};
 	} catch (error) {
 		if (error instanceof RecaseError) throw error;
