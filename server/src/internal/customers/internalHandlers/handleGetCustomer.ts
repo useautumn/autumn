@@ -9,6 +9,7 @@ import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { CusService } from "@/internal/customers/CusService";
 import { getCusAutoTopupPurchaseLimits } from "@/internal/customers/cusUtils/cusResponseUtils/getCusAutoTopupPurchaseLimits";
 import { getCusRewards } from "@/internal/customers/cusUtils/cusResponseUtils/getCusRewards";
+import { getCusUsageLimitsWithUsage } from "@/internal/customers/cusUtils/cusResponseUtils/getCusUsageLimitsWithUsage";
 
 /**
  * Internal route for get full customer object.
@@ -42,34 +43,51 @@ export const handleGetCustomer = createRoute({
 			entityId: entityId || undefined,
 		});
 
-		const [testClockFrozenTimeMs, autoTopupsWithLimits, rewards] =
-			await Promise.all([
-				getTestClockFrozenTimeMs({
-					ctx,
-					stripeCustomerId: fullCus.processor?.id,
-				}),
-				getCusAutoTopupPurchaseLimits({
-					ctx,
-					internalCustomerId: fullCus.internal_id,
-					autoTopupsConfig: fullCus.auto_topups,
-					expand: [CustomerExpand.AutoTopupsPurchaseLimit],
-				}),
-				getCusRewards({
-					org: ctx.org,
-					env: ctx.env,
-					fullCus,
-					subIds: fullCus.customer_products.flatMap(
-						(cp: FullCusProduct) => cp.subscription_ids || [],
-					),
-					expand,
-				}),
-			]);
+		const [
+			testClockFrozenTimeMs,
+			autoTopupsWithLimits,
+			rewards,
+			usageLimitsWithUsage,
+		] = await Promise.all([
+			getTestClockFrozenTimeMs({
+				ctx,
+				stripeCustomerId: fullCus.processor?.id,
+			}),
+			getCusAutoTopupPurchaseLimits({
+				ctx,
+				internalCustomerId: fullCus.internal_id,
+				autoTopupsConfig: fullCus.auto_topups,
+				expand: [CustomerExpand.AutoTopupsPurchaseLimit],
+			}),
+			getCusRewards({
+				org: ctx.org,
+				env: ctx.env,
+				fullCus,
+				subIds: fullCus.customer_products.flatMap(
+					(cp: FullCusProduct) => cp.subscription_ids || [],
+				),
+				expand,
+			}),
+			getCusUsageLimitsWithUsage({ ctx, fullCus }),
+		]);
+
+		// Overlay usage onto the customer and every entity that has caps, so the
+		// pill shows usage regardless of which scope the client fetched.
+		const entities = usageLimitsWithUsage
+			? fullCus.entities?.map((entity) => {
+					const decorated =
+						usageLimitsWithUsage.byInternalEntityId[entity.internal_id];
+					return decorated ? { ...entity, usage_limits: decorated } : entity;
+				})
+			: fullCus.entities;
 
 		return c.json({
 			customer: {
 				...fullCus,
 				auto_topups: autoTopupsWithLimits ?? fullCus.auto_topups,
 				rewards: rewards ?? undefined,
+				entities: entities ?? fullCus.entities,
+				usage_limits: usageLimitsWithUsage?.customer ?? fullCus.usage_limits,
 			},
 			test_clock_frozen_time_ms: testClockFrozenTimeMs,
 		});

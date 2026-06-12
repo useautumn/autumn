@@ -1,4 +1,3 @@
-import { useEffect, useState } from "react";
 import {
 	Select,
 	SelectContent,
@@ -8,6 +7,7 @@ import {
 } from "@/components/v2/selects/Select";
 import { cn } from "@/lib/utils";
 import { BooleanPill } from "../shared/BooleanPill";
+import { PlanVersionPicker } from "../shared/PlanVersionPicker";
 import { RemoveButton } from "../shared/RemoveButton";
 import { ValuePicker } from "../shared/ValuePicker";
 import {
@@ -67,6 +67,13 @@ export function FilterRow({
 			values: next,
 		});
 	};
+
+	const handleValuesChange = (next: string[]) =>
+		onChange({
+			...rule,
+			operator: inferOperator(rule.operator, next.length),
+			values: next,
+		});
 
 	return (
 		<div className="flex items-center gap-2.5 group/row">
@@ -141,6 +148,7 @@ export function FilterRow({
 				onChange={onChange}
 				onToggle={handleToggle}
 				onChipRemove={handleChipRemove}
+				onValuesChange={handleValuesChange}
 			/>
 
 			<RemoveButton onClick={onRemove} />
@@ -156,6 +164,7 @@ function FilterValueInput({
 	onChange,
 	onToggle,
 	onChipRemove,
+	onValuesChange,
 }: {
 	config: FieldConfig;
 	rule: FilterRule;
@@ -164,10 +173,20 @@ function FilterValueInput({
 	onChange: (rule: FilterRule) => void;
 	onToggle: (value: string) => void;
 	onChipRemove: (value: string) => void;
+	onValuesChange: (values: string[]) => void;
 }) {
 	if (config.valueType === "none") return null;
 	// `none` (has no plans) takes no value.
 	if (rule.operator === "none") return null;
+
+	if (config.valueType === "plan")
+		return (
+			<PlanVersionPicker
+				className="flex-1"
+				onChange={onValuesChange}
+				values={rule.values}
+			/>
+		);
 
 	if (config.valueType === "boolean")
 		return (
@@ -178,25 +197,6 @@ function FilterValueInput({
 				/>
 			</div>
 		);
-
-	if (config.valueType === "number") {
-		const isMulti = rule.operator === "in" || rule.operator === "not_in";
-		if (isMulti) return <CommaSeparatedInput rule={rule} onChange={onChange} />;
-		return (
-			<input
-				type="number"
-				className="h-8 text-sm rounded-xl px-3 input-base flex-1 min-w-0 text-foreground placeholder:text-tertiary-foreground"
-				placeholder="Number"
-				value={rule.values[0] ?? ""}
-				onChange={(e) =>
-					onChange({
-						...rule,
-						values: e.target.value === "" ? [] : [e.target.value],
-					})
-				}
-			/>
-		);
-	}
 
 	if (suggestions && suggestions.length > 0)
 		return (
@@ -216,41 +216,6 @@ function FilterValueInput({
 			placeholder="Value"
 			value={rule.values[0] ?? ""}
 			onChange={(e) => onChange({ ...rule, values: [e.target.value] })}
-		/>
-	);
-}
-
-function CommaSeparatedInput({
-	rule,
-	onChange,
-}: {
-	rule: FilterRule;
-	onChange: (rule: FilterRule) => void;
-}) {
-	const [text, setText] = useState(() => rule.values.join(", "));
-
-	useEffect(() => {
-		setText(rule.values.join(", "));
-	}, [rule.values.join(",")]);
-
-	const commit = (raw: string) => {
-		const values = raw
-			.split(",")
-			.map((s) => s.trim())
-			.filter(Boolean);
-		onChange({ ...rule, values });
-	};
-
-	return (
-		<input
-			className="h-8 text-sm rounded-xl px-3 input-base flex-1 min-w-0 text-foreground placeholder:text-tertiary-foreground"
-			placeholder="1, 2, 3"
-			value={text}
-			onChange={(e) => setText(e.target.value)}
-			onBlur={(e) => commit(e.target.value)}
-			onKeyDown={(e) => {
-				if (e.key === "Enter") commit(e.currentTarget.value);
-			}}
 		/>
 	);
 }
