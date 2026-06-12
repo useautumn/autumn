@@ -5,6 +5,7 @@ import {
 	ProductItemInterval,
 	RolloverExpiryDurationType,
 } from "@autumn/shared";
+import { warmEntityCaches } from "@tests/integration/balances/utils/warmEntityCaches.js";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expireAllCusEntsForReset } from "@tests/utils/cusProductUtils/resetTestUtils.js";
@@ -52,20 +53,22 @@ test.concurrent(`${chalk.yellowBright("customer aggregated balance: rollover bal
 	// ── Step 1: Track 60 on ent-0, 30 on ent-1 ──
 	// Expected per-entity balance: ent-0 = 40, ent-1 = 70.
 	// Customer aggregated: remaining = 110, usage = 90.
+	await warmEntityCaches({ autumn: autumnV2_2, customerId, entities });
+
 	await autumnV1.track({
 		customer_id: customerId,
 		entity_id: entities[0].id,
 		feature_id: TestFeature.Messages,
 		value: 60,
-	});
+	}, { timeout: 2000 });
 	await autumnV1.track({
 		customer_id: customerId,
 		entity_id: entities[1].id,
 		feature_id: TestFeature.Messages,
 		value: 30,
-	});
+	}, { timeout: 2000 });
 
-	await new Promise((resolve) => setTimeout(resolve, 2000));
+	await warmEntityCaches({ autumn: autumnV2_2, customerId, entities });
 
 	const preReset = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 	expectBalanceCorrect({
@@ -98,9 +101,7 @@ test.concurrent(`${chalk.yellowBright("customer aggregated balance: rollover bal
 	});
 
 	// Force lazy reset to run via customer read + entity reads.
-	await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-	await autumnV2_2.entities.get(customerId, entities[0].id);
-	await autumnV2_2.entities.get(customerId, entities[1].id);
+	await warmEntityCaches({ autumn: autumnV2_2, customerId, entities });
 
 	const postReset = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 	expectBalanceCorrect({
@@ -133,7 +134,7 @@ test.concurrent(`${chalk.yellowBright("customer aggregated balance: rollover bal
 		value: 50,
 	});
 
-	await new Promise((resolve) => setTimeout(resolve, 1500));
+	await warmEntityCaches({ autumn: autumnV2_2, customerId, entities });
 
 	const postDeduct = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 	expectBalanceCorrect({

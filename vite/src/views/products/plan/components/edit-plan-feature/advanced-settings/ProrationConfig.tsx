@@ -1,4 +1,9 @@
-import { OnDecrease, OnIncrease, UsageModel } from "@autumn/shared";
+import {
+	AllocatedBillingBehavior,
+	OnDecrease,
+	OnIncrease,
+	UsageModel,
+} from "@autumn/shared";
 import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
@@ -46,6 +51,30 @@ export function ProrationConfig() {
 	const { item, setItem } = useProductItemContext();
 
 	if (!item) return null;
+
+	const isPrepaid = item.usage_model === UsageModel.Prepaid;
+	const hasProrationKnobs =
+		!nullish(item.config?.on_increase) || !nullish(item.config?.on_decrease);
+	const usesProratedBilling =
+		isPrepaid ||
+		(item.config?.allocated_billing_behavior
+			? item.config.allocated_billing_behavior ===
+				AllocatedBillingBehavior.Prorated
+			: hasProrationKnobs);
+
+	const setUsesProratedBilling = (enabled: boolean) => {
+		setItem({
+			...item,
+			config: {
+				...item.config,
+				allocated_billing_behavior: enabled
+					? AllocatedBillingBehavior.Prorated
+					: AllocatedBillingBehavior.Arrear,
+				on_increase: enabled ? item.config?.on_increase : undefined,
+				on_decrease: enabled ? item.config?.on_decrease : undefined,
+			},
+		});
+	};
 
 	const onIncreaseValue =
 		item.config?.on_increase || OnIncrease.ProrateImmediately;
@@ -95,22 +124,36 @@ export function ProrationConfig() {
 	return (
 		<AreaCheckbox
 			title="Configure proration behavior"
-			checked={true}
-			// disabled={true}
+			checked={usesProratedBilling}
+			onCheckedChange={isPrepaid ? undefined : setUsesProratedBilling}
 		>
 			<div className="space-y-4 w-xs max-w-full">
 				<div className="space-y-2 w-full">
 					<FormLabel>{increaseText}</FormLabel>
-				<Select
-					value={onIncreaseValue}
-					onValueChange={(value) => {
-						setItem({
-							...item,
-							config: { ...item.config, on_increase: value as OnIncrease },
-						});
-					}}
-					items={Object.fromEntries(onIncreaseOptions.map((option) => [option, getOnIncreaseText(option)]))}
-				>
+					<Select
+						value={onIncreaseValue}
+						onValueChange={(value) => {
+							setItem({
+								...item,
+								config: {
+									...item.config,
+									...(isPrepaid
+										? {}
+										: {
+												allocated_billing_behavior:
+													AllocatedBillingBehavior.Prorated,
+											}),
+									on_increase: value as OnIncrease,
+								},
+							});
+						}}
+						items={Object.fromEntries(
+							onIncreaseOptions.map((option) => [
+								option,
+								getOnIncreaseText(option),
+							]),
+						)}
+					>
 						<SelectTrigger
 							className="w-full [&>span]:truncate"
 							onClick={(e) => e.stopPropagation()}
@@ -129,16 +172,33 @@ export function ProrationConfig() {
 
 				<div className="space-y-2 w-full">
 					<FormLabel>{decreaseText}</FormLabel>
-				<Select
-					value={onDecreaseValue}
-					onValueChange={(value) => {
-						setItem({
-							...item,
-							config: { ...item.config, on_decrease: value as OnDecrease },
-						});
-					}}
-					items={Object.fromEntries([OnDecrease.Prorate, OnDecrease.None].map((option) => [option, getOnDecreaseText({ option, usageModel: item.usage_model ?? UsageModel.Prepaid })]))}
-				>
+					<Select
+						value={onDecreaseValue}
+						onValueChange={(value) => {
+							setItem({
+								...item,
+								config: {
+									...item.config,
+									...(isPrepaid
+										? {}
+										: {
+												allocated_billing_behavior:
+													AllocatedBillingBehavior.Prorated,
+											}),
+									on_decrease: value as OnDecrease,
+								},
+							});
+						}}
+						items={Object.fromEntries(
+							[OnDecrease.Prorate, OnDecrease.None].map((option) => [
+								option,
+								getOnDecreaseText({
+									option,
+									usageModel: item.usage_model ?? UsageModel.Prepaid,
+								}),
+							]),
+						)}
+					>
 						<SelectTrigger
 							className="w-full [&>span]:truncate"
 							onClick={(e) => e.stopPropagation()}

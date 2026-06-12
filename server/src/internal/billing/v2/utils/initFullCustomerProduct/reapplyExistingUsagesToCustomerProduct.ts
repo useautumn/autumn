@@ -2,7 +2,6 @@ import {
 	cusProductToProduct,
 	type FullCusProduct,
 	type FullCustomer,
-	findMainActiveCustomerProductByGroup,
 } from "@autumn/shared";
 import { cp } from "@utils/cusProductUtils/classifyCustomerProduct/cpBuilder";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -10,6 +9,7 @@ import { applyExistingUsages } from "@/internal/billing/v2/utils/handleExistingU
 import { cusProductToExistingUsages } from "@/internal/billing/v2/utils/handleExistingUsages/cusProductToExistingUsages";
 import { initCustomerEntitlementBalance } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerEntitlement/initCustomerEntitlementBalance";
 import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService";
+import { findTransitionSourceCustomerProduct } from "./findTransitionSourceCustomerProduct";
 
 export const reapplyExistingUsagesToCustomerProduct = async ({
 	ctx,
@@ -28,10 +28,9 @@ export const reapplyExistingUsagesToCustomerProduct = async ({
 
 	const currentCustomerProduct =
 		fromCustomerProduct ??
-		findMainActiveCustomerProductByGroup({
-			fullCus: fullCustomer,
-			productGroup: customerProduct.product.group,
-			internalEntityId: customerProduct.internal_entity_id ?? undefined,
+		findTransitionSourceCustomerProduct({
+			fullCustomer,
+			customerProduct,
 		});
 
 	if (!currentCustomerProduct) return;
