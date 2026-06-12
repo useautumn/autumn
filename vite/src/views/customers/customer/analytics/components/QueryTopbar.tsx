@@ -25,54 +25,59 @@ import { SelectEntityDropdown } from "./SelectEntityDropdown";
 import { SelectFeatureDropdown } from "./SelectFeatureDropdown";
 import { SelectGroupByDropdown } from "./SelectGroupByDropdown";
 
-// Intervals with a single fixed granularity (no day/week/month choice).
-const SIMPLE_INTERVALS: Record<string, string> = {
+// Time ranges shown in the dropdown, in display order.
+const INTERVAL_LABELS: Record<string, string> = {
 	"24h": "Last 24 hours",
 	"7d": "Last 7 days",
 	"30d": "Last 30 days",
 	"1bc": "Current billing cycle",
-};
-
-// Intervals that let the viewer choose the bin size (day/week/month).
-const BIN_SIZE_INTERVALS: Record<string, string> = {
 	"90d": "Last 90 days",
 	"3bc": "Latest 3 billing cycles",
 };
 
-const ALL_INTERVALS: Record<string, string> = {
-	...SIMPLE_INTERVALS,
-	...BIN_SIZE_INTERVALS,
+// Billing-cycle ranges, hidden when the customer has no billing cycle.
+const BILLING_CYCLE_INTERVALS = new Set(["1bc", "3bc"]);
+
+type Granularity = "hour" | "day" | "week" | "month";
+
+// Selectable granularities per range, in display order; the first is the
+// default. A single entry means the range has no choice, so the granularity
+// section is hidden for it.
+const INTERVAL_GRANULARITIES: Record<string, Granularity[]> = {
+	"24h": ["hour"],
+	"7d": ["day"],
+	"30d": ["day", "week"],
+	"1bc": ["day"],
+	"90d": ["day", "week", "month"],
+	"3bc": ["day", "week", "month"],
 };
 
-// Granularities offered in the bottom section, in display order.
-const GRANULARITY_LABELS: Record<string, string> = {
+const GRANULARITY_LABELS: Record<Granularity, string> = {
+	hour: "by hour",
 	day: "by day",
 	week: "by week",
 	month: "by month",
 };
 
-const DEFAULT_BIN_SIZE = "day";
 const CUSTOM_INTERVAL = "custom";
+const DEFAULT_GRANULARITIES: Granularity[] = ["day"];
 
-const supportsBinSizeChoice = (interval: string): boolean =>
-	Boolean(BIN_SIZE_INTERVALS[interval]);
+const granularitiesFor = (interval: string): Granularity[] =>
+	INTERVAL_GRANULARITIES[interval] ?? DEFAULT_GRANULARITIES;
 
-// The bin size actually in effect for an interval — fixed for simple/custom
-// ranges, viewer-chosen for the multi-granularity ones.
+// The bin size in effect for a range: the viewer's choice when it's valid for
+// the range, otherwise the range's default (first) granularity.
 const getEffectiveBinSize = ({
 	interval,
 	binSize,
 }: {
 	interval: string;
 	binSize?: string | null;
-}): string => {
-	if (interval === "24h") {
-		return "hour";
-	}
-	if (supportsBinSizeChoice(interval)) {
-		return binSize && GRANULARITY_LABELS[binSize] ? binSize : DEFAULT_BIN_SIZE;
-	}
-	return DEFAULT_BIN_SIZE;
+}): Granularity => {
+	const granularities = granularitiesFor(interval);
+	return binSize && granularities.some((g) => g === binSize)
+		? (binSize as Granularity)
+		: granularities[0];
 };
 
 const getDisplayLabel = ({
@@ -81,7 +86,7 @@ const getDisplayLabel = ({
 	customRange,
 }: {
 	interval: string;
-	binSize: string;
+	binSize: Granularity;
 	customRange?: DateRange;
 }): string => {
 	if (interval === CUSTOM_INTERVAL) {
@@ -90,10 +95,12 @@ const getDisplayLabel = ({
 		}
 		return "Custom range";
 	}
-	if (supportsBinSizeChoice(interval) && binSize !== DEFAULT_BIN_SIZE) {
-		return `${ALL_INTERVALS[interval]} (${GRANULARITY_LABELS[binSize]})`;
+	const granularities = granularitiesFor(interval);
+	const label = INTERVAL_LABELS[interval];
+	if (granularities.length > 1 && binSize !== granularities[0]) {
+		return `${label} (${GRANULARITY_LABELS[binSize]})`;
 	}
-	return ALL_INTERVALS[interval];
+	return label;
 };
 
 export const QueryTopbar = () => {
@@ -104,11 +111,12 @@ export const QueryTopbar = () => {
 	);
 
 	const { interval: selectedInterval, start, end } = queryStates;
+	const granularities = granularitiesFor(selectedInterval);
 	const effectiveBinSize = getEffectiveBinSize({
 		interval: selectedInterval,
 		binSize: queryStates.bin_size,
 	});
-	const binSizeChoiceEnabled = supportsBinSizeChoice(selectedInterval);
+	const showGranularity = granularities.length > 1;
 	const customRange =
 		selectedInterval === CUSTOM_INTERVAL && start && end
 			? { from: new Date(start), to: new Date(end) }
@@ -137,17 +145,16 @@ export const QueryTopbar = () => {
 		}
 		setQueryStates({
 			interval: CUSTOM_INTERVAL,
-			bin_size: DEFAULT_BIN_SIZE,
+			bin_size: granularitiesFor(CUSTOM_INTERVAL)[0],
 			start: range.from.getTime(),
 			end: endOfDay(range.to).getTime(),
 		});
 	};
 
 	const shouldShowBillingCycleOptions = !bcExclusionFlag && customer;
-	const visibleIntervals = Object.keys(ALL_INTERVALS).filter((interval) =>
-		shouldShowBillingCycleOptions
-			? true
-			: interval !== "1bc" && interval !== "3bc",
+	const visibleIntervals = Object.keys(INTERVAL_LABELS).filter(
+		(interval) =>
+			shouldShowBillingCycleOptions || !BILLING_CYCLE_INTERVALS.has(interval),
 	);
 
 	return (
@@ -182,7 +189,7 @@ export const QueryTopbar = () => {
 							onClick={() => handleIntervalSelect(interval)}
 							className="flex items-center justify-between"
 						>
-							{ALL_INTERVALS[interval]}
+							{INTERVAL_LABELS[interval]}
 							{selectedInterval === interval && (
 								<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
 							)}
@@ -219,24 +226,27 @@ export const QueryTopbar = () => {
 						</DropdownMenuSubContent>
 					</DropdownMenuSub>
 
-					<DropdownMenuSeparator />
-					<DropdownMenuGroup>
-						<DropdownMenuLabel>Granularity</DropdownMenuLabel>
-						{Object.entries(GRANULARITY_LABELS).map(([binSize, label]) => (
-							<DropdownMenuItem
-								key={binSize}
-								disabled={!binSizeChoiceEnabled}
-								closeOnClick={false}
-								onClick={() => handleBinSizeSelect(binSize)}
-								className="flex items-center justify-between"
-							>
-								{label}
-								{effectiveBinSize === binSize && (
-									<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
-								)}
-							</DropdownMenuItem>
-						))}
-					</DropdownMenuGroup>
+					{showGranularity && (
+						<>
+							<DropdownMenuSeparator />
+							<DropdownMenuGroup>
+								<DropdownMenuLabel>Granularity</DropdownMenuLabel>
+								{granularities.map((binSize) => (
+									<DropdownMenuItem
+										key={binSize}
+										closeOnClick={false}
+										onClick={() => handleBinSizeSelect(binSize)}
+										className="flex items-center justify-between"
+									>
+										{GRANULARITY_LABELS[binSize]}
+										{effectiveBinSize === binSize && (
+											<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
+										)}
+									</DropdownMenuItem>
+								))}
+							</DropdownMenuGroup>
+						</>
+					)}
 				</DropdownMenuContent>
 			</DropdownMenu>
 			<SelectFeatureDropdown />
