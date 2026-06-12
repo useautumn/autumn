@@ -1,0 +1,304 @@
+name: NPM Publish (reusable)
+
+# Shared publish pipeline: version from `<tag-prefix>-v*` git tags, bump type
+# from the commit message (or explicit input), npm OIDC trusted publishing.
+# Callers: sdk-publish.yml (autumn-js), gateway-publish.yml (@useautumn/gateway).
+
+on:
+  workflow_call:
+    inputs:
+      package-dir:
+        description: "Workspace path, e.g. packages/autumn-js"
+        required: true
+        type: string
+      tag-prefix:
+        description: "Git tag prefix (<prefix>-v* tags); defaults to the package-dir basename"
+        required: false
+        default: ""
+        type: string
+      pre-build-command:
+        description: "Optional command run before build (e.g. SDK regeneration)"
+        required: false
+        default: ""
+        type: string
+      install-speakeasy:
+        description: "Install the Speakeasy CLI before pre-build"
+        required: false
+        default: false
+        type: boolean
+      build-command:
+        description: "Build command override; defaults to the package's `build` script"
+        required: false
+        default: ""
+        type: string
+      typecheck-command:
+        description: "Typecheck command override; defaults to the package's `ts` script when present"
+        required: false
+        default: ""
+        type: string
+      test-command:
+        description: "Test command override; defaults to the package's `test` script when present"
+        required: false
+        default: ""
+        type: string
+      version-bump:
+        description: "Explicit bump (patch/minor/major); empty = parse commit messages"
+        required: false
+        default: ""
+        type: string
+      commit-paths:
+        description: "Space-separated paths whose commits are scanned for bump prefixes; defaults to package-dir"
+        required: false
+        default: ""
+        type: string
+      dry-run:
+        description: "'true' to npm publish --dry-run"
+        required: false
+        default: "false"
+        type: string
+      publish-name-override:
+        description: "Publish under this name instead (test packages); skips git tagging"
+        required: false
+        default: ""
+        type: string
+    secrets:
+      SPEAKEASY_API_KEY:
+        required: false
+
+jobs:
+  publish:
+    name: Build and Publish
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+
+    permissions:
+      id-token: write
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Resolve package
+        id: pkg
+        run: |
+          NAME=$(jq -r '.name' ${{ inputs.package-dir }}/package.json)
+          TAG_PREFIX="${{ inputs.tag-prefix }}"
+          if [ -z "$TAG_PREFIX" ]; then TAG_PREFIX=$(basename "${{ inputs.package-dir }}"); fi
+          echo "name=$NAME" >> $GITHUB_OUTPUT
+          echo "tag_prefix=$TAG_PREFIX" >> $GITHUB_OUTPUT
+          echo "Package: $NAME (tags: ${TAG_PREFIX}-v*)"
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.10
+
+      - name: Set up Node.js (for npm OIDC)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22.14.0"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Ensure npm >= 11.5.1 for OIDC trusted publishing
+        run: |
+          echo "Current npm version: $(npm --version)"
+          npm install -g npm@latest
+          echo "Updated npm version: $(npm --version)"
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Install Speakeasy CLI
+        if: inputs.install-speakeasy
+        run: |
+          curl -fsSL https://go.speakeasy.com/cli-install.sh | sh
+          echo "$HOME/.speakeasy/bin" >> $GITHUB_PATH
+          echo "Speakeasy CLI version: $($HOME/.speakeasy/bin/speakeasy --version)"
+
+      - name: Determine version bump type
+        id: version-type
+        run: |
+          if [ -n "${{ inputs.version-bump }}" ]; then
+            echo "bump=${{ inputs.version-bump }}" >> $GITHUB_OUTPUT
+            echo "Using explicit version bump: ${{ inputs.version-bump }}"
+            exit 0
+          fi
+
+          # Scan every commit in the push (a merged PR's commits, not just the
+          # merge commit), limited to commits touching the package's paths.
+          PATHS="${{ inputs.commit-paths }}"
+          if [ -z "$PATHS" ]; then PATHS="${{ inputs.package-dir }}"; fi
+
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.event.after }}"
+          if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] && git cat-file -e "$BEFORE" 2>/dev/null; then
+            COMMIT_MSGS=$(git log --pretty=%B "$BEFORE..$AFTER" -- $PATHS)
+          else
+            COMMIT_MSGS=$(git log -1 --pretty=%B)
+          fi
+          echo "Commit messages scanned:"
+          echo "$COMMIT_MSGS"
+
+          # Highest bump across all commits wins.
+          if echo "$COMMIT_MSGS" | grep -qE "^major:|BREAKING CHANGE"; then
+            echo "bump=major" >> $GITHUB_OUTPUT
+            echo "Detected major version bump"
+          elif echo "$COMMIT_MSGS" | grep -qE "^minor:"; then
+            echo "bump=minor" >> $GITHUB_OUTPUT
+            echo "Detected minor version bump"
+          elif echo "$COMMIT_MSGS" | grep -qE "^fix:|^patch:|^feat:"; then
+            echo "bump=patch" >> $GITHUB_OUTPUT
+            echo "Detected patch version bump"
+          else
+            echo "bump=skip" >> $GITHUB_OUTPUT
+            echo "No version bump pattern detected, skipping publish"
+          fi
+
+      - name: Calculate next version from tags
+        if: steps.version-type.outputs.bump != 'skip'
+        id: next-version
+        run: |
+          LATEST_TAG=$(git tag -l "${{ steps.pkg.outputs.tag_prefix }}-v*" --sort=-v:refname | head -n 1)
+
+          if [ -z "$LATEST_TAG" ]; then
+            # First release: publish the package.json version as-is, no bump applied.
+            VERSION=$(jq -r '.version' ${{ inputs.package-dir }}/package.json)
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "No existing ${{ steps.pkg.outputs.tag_prefix }}-v* tags, starting at $VERSION"
+            exit 0
+          fi
+
+          CURRENT=${LATEST_TAG#${{ steps.pkg.outputs.tag_prefix }}-v}
+          echo "Current version from tag: $CURRENT"
+
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+          case "${{ steps.version-type.outputs.bump }}" in
+            major)
+              MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor)
+              MINOR=$((MINOR + 1)); PATCH=0 ;;
+            patch)
+              PATCH=$((PATCH + 1)) ;;
+          esac
+
+          echo "version=${MAJOR}.${MINOR}.${PATCH}" >> $GITHUB_OUTPUT
+          echo "Next version: ${MAJOR}.${MINOR}.${PATCH}"
+
+      - name: Update package.json version
+        if: steps.version-type.outputs.bump != 'skip'
+        run: |
+          cd ${{ inputs.package-dir }}
+          jq --arg version "${{ steps.next-version.outputs.version }}" \
+             '.version = $version' package.json > package.json.tmp
+          mv package.json.tmp package.json
+          echo "Updated package.json:"
+          head -10 package.json
+
+      - name: Pre-build
+        if: steps.version-type.outputs.bump != 'skip' && inputs.pre-build-command != ''
+        env:
+          SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
+        run: ${{ inputs.pre-build-command }}
+
+      - name: Build
+        if: steps.version-type.outputs.bump != 'skip'
+        run: |
+          if [ -n "${{ inputs.build-command }}" ]; then
+            ${{ inputs.build-command }}
+          else
+            bun -F "${{ steps.pkg.outputs.name }}" build
+          fi
+
+      - name: TypeScript check
+        if: steps.version-type.outputs.bump != 'skip'
+        run: |
+          if [ -n "${{ inputs.typecheck-command }}" ]; then
+            ${{ inputs.typecheck-command }}
+          elif jq -e '.scripts.ts' ${{ inputs.package-dir }}/package.json > /dev/null; then
+            bun -F "${{ steps.pkg.outputs.name }}" ts
+          else
+            echo "No ts script, skipping"
+          fi
+
+      - name: Tests
+        if: steps.version-type.outputs.bump != 'skip'
+        run: |
+          if [ -n "${{ inputs.test-command }}" ]; then
+            ${{ inputs.test-command }}
+          elif jq -e '.scripts.test' ${{ inputs.package-dir }}/package.json > /dev/null; then
+            bun -F "${{ steps.pkg.outputs.name }}" test
+          else
+            echo "No test script, skipping"
+          fi
+
+      - name: Prepare manifest for publish
+        if: steps.version-type.outputs.bump != 'skip'
+        run: |
+          cd ${{ inputs.package-dir }}
+          # devDependencies are irrelevant to consumers and may use workspace
+          # catalog: specifiers npm can't parse. Already built, so drop
+          # prepublishOnly too when publishing under an override name.
+          if [ -n "${{ inputs.publish-name-override }}" ]; then
+            jq --arg name "${{ inputs.publish-name-override }}" \
+               '.name = $name | del(.devDependencies) | del(.scripts.prepublishOnly)' \
+               package.json > package.json.tmp
+          else
+            jq 'del(.devDependencies) | del(.scripts.prepublishOnly)' \
+               package.json > package.json.tmp
+          fi
+          mv package.json.tmp package.json
+          echo "Publishing as: $(jq -r '"\(.name)@\(.version)"' package.json)"
+
+      - name: Publish (dry-run)
+        if: steps.version-type.outputs.bump != 'skip' && inputs.dry-run == 'true'
+        run: |
+          cd ${{ inputs.package-dir }}
+          npm publish --dry-run --provenance --access public
+          echo "✅ Dry run completed successfully"
+
+      - name: Publish to npm
+        if: steps.version-type.outputs.bump != 'skip' && inputs.dry-run != 'true'
+        run: |
+          cd ${{ inputs.package-dir }}
+          npm publish --provenance --access public
+          echo "✅ Published $(jq -r '.name' package.json)@${{ steps.next-version.outputs.version }}"
+
+      - name: Create git tag
+        if: steps.version-type.outputs.bump != 'skip' && inputs.dry-run != 'true' && inputs.publish-name-override == ''
+        run: |
+          TAG_NAME="${{ steps.pkg.outputs.tag_prefix }}-v${{ steps.next-version.outputs.version }}"
+          git tag "$TAG_NAME"
+          git push origin "$TAG_NAME"
+          echo "✅ Created and pushed tag: $TAG_NAME"
+
+      - name: Summary
+        if: steps.version-type.outputs.bump != 'skip'
+        run: |
+          echo "## Publish Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Property | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
+          if [ -n "${{ inputs.publish-name-override }}" ]; then
+            echo "| Package | ${{ inputs.publish-name-override }} |" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "| Package | ${{ steps.pkg.outputs.name }} |" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "| Version | ${{ steps.next-version.outputs.version }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Bump Type | ${{ steps.version-type.outputs.bump }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dry Run | ${{ inputs.dry-run }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Trigger | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Skip notice
+        if: steps.version-type.outputs.bump == 'skip'
+        run: |
+          echo "## Publish Skipped" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No version bump pattern detected in any pushed commit touching the package." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "To trigger a publish, use one of these commit message prefixes:" >> $GITHUB_STEP_SUMMARY
+          echo "- \`fix:\`, \`patch:\`, or \`feat:\` for patch version" >> $GITHUB_STEP_SUMMARY
+          echo "- \`minor:\` for minor version" >> $GITHUB_STEP_SUMMARY
+          echo "- \`major:\` or \`BREAKING CHANGE\` for major version" >> $GITHUB_STEP_SUMMARY
