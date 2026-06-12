@@ -105,7 +105,7 @@ jobs:
       - name: Ensure npm >= 11.5.1 for OIDC trusted publishing
         run: |
           echo "Current npm version: $(npm --version)"
-          npm install -g npm@latest
+          npm install -g npm@11
           echo "Updated npm version: $(npm --version)"
 
       - name: Install dependencies
@@ -149,6 +149,8 @@ jobs:
           elif echo "$COMMIT_MSGS" | grep -qE "^minor:"; then
             echo "bump=minor" >> $GITHUB_OUTPUT
             echo "Detected minor version bump"
+          # NOTE: feat: maps to PATCH here (repo convention, unlike standard
+          # conventional commits). Minor bumps require an explicit minor: prefix.
           elif echo "$COMMIT_MSGS" | grep -qE "^fix:|^patch:|^feat:"; then
             echo "bump=patch" >> $GITHUB_OUTPUT
             echo "Detected patch version bump"
@@ -197,39 +199,51 @@ jobs:
           echo "Updated package.json:"
           head -10 package.json
 
+      # Command inputs are passed through env vars (not interpolated into the
+      # script) per GitHub's shell-injection hardening guidance.
       - name: Pre-build
         if: steps.version-type.outputs.bump != 'skip' && inputs.pre-build-command != ''
         env:
           SPEAKEASY_API_KEY: ${{ secrets.SPEAKEASY_API_KEY }}
-        run: ${{ inputs.pre-build-command }}
+          COMMAND: ${{ inputs.pre-build-command }}
+        run: eval "$COMMAND"
 
       - name: Build
         if: steps.version-type.outputs.bump != 'skip'
+        env:
+          COMMAND: ${{ inputs.build-command }}
+          PKG_NAME: ${{ steps.pkg.outputs.name }}
         run: |
-          if [ -n "${{ inputs.build-command }}" ]; then
-            ${{ inputs.build-command }}
+          if [ -n "$COMMAND" ]; then
+            eval "$COMMAND"
           else
-            bun -F "${{ steps.pkg.outputs.name }}" build
+            bun -F "$PKG_NAME" build
           fi
 
       - name: TypeScript check
         if: steps.version-type.outputs.bump != 'skip'
+        env:
+          COMMAND: ${{ inputs.typecheck-command }}
+          PKG_NAME: ${{ steps.pkg.outputs.name }}
         run: |
-          if [ -n "${{ inputs.typecheck-command }}" ]; then
-            ${{ inputs.typecheck-command }}
+          if [ -n "$COMMAND" ]; then
+            eval "$COMMAND"
           elif jq -e '.scripts.ts' ${{ inputs.package-dir }}/package.json > /dev/null; then
-            bun -F "${{ steps.pkg.outputs.name }}" ts
+            bun -F "$PKG_NAME" ts
           else
             echo "No ts script, skipping"
           fi
 
       - name: Tests
         if: steps.version-type.outputs.bump != 'skip'
+        env:
+          COMMAND: ${{ inputs.test-command }}
+          PKG_NAME: ${{ steps.pkg.outputs.name }}
         run: |
-          if [ -n "${{ inputs.test-command }}" ]; then
-            ${{ inputs.test-command }}
+          if [ -n "$COMMAND" ]; then
+            eval "$COMMAND"
           elif jq -e '.scripts.test' ${{ inputs.package-dir }}/package.json > /dev/null; then
-            bun -F "${{ steps.pkg.outputs.name }}" test
+            bun -F "$PKG_NAME" test
           else
             echo "No test script, skipping"
           fi
@@ -299,6 +313,6 @@ jobs:
           echo "No version bump pattern detected in any pushed commit touching the package." >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "To trigger a publish, use one of these commit message prefixes:" >> $GITHUB_STEP_SUMMARY
-          echo "- \`fix:\`, \`patch:\`, or \`feat:\` for patch version" >> $GITHUB_STEP_SUMMARY
+          echo "- \`fix:\`, \`patch:\`, or \`feat:\` for patch version (\`feat:\` is a patch here, not minor)" >> $GITHUB_STEP_SUMMARY
           echo "- \`minor:\` for minor version" >> $GITHUB_STEP_SUMMARY
           echo "- \`major:\` or \`BREAKING CHANGE\` for major version" >> $GITHUB_STEP_SUMMARY
