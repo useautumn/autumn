@@ -9519,7 +9519,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1781207020293,"plans":[{"planId":"trial_plan"}]},{"startsAt":1782416620293,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1781265695558,"plans":[{"planId":"trial_plan"}]},{"startsAt":1782475295558,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -22823,8 +22823,7 @@ webhooks:
                                       type: object
                                       properties:
                                         on_increase:
-                                          description: How to handle billing when quantity increases mid-cycle (prepaid
-                                            features only).
+                                          description: How to handle billing when quantity increases mid-cycle.
                                           type: string
                                           enum:
                                             - bill_immediately
@@ -22832,8 +22831,7 @@ webhooks:
                                             - prorate_next_cycle
                                             - bill_next_cycle
                                         on_decrease:
-                                          description: How to handle credits when quantity decreases mid-cycle (prepaid
-                                            features only).
+                                          description: How to handle credits when quantity decreases mid-cycle.
                                           type: string
                                           enum:
                                             - prorate

@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import type { LanguageModelV3, LanguageModelV3Usage } from "@ai-sdk/provider";
 import { generateText, streamText } from "ai";
-import { withAutumn } from "../../src/index.js";
+import { withAutumn } from "../../src/ai-sdk/index.js";
 
 type TrackTokensParams = {
 	customerId: string;

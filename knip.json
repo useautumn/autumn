@@ -12,7 +12,6 @@
 		"duplicates"
 	],
 	"ignoreWorkspaces": [
-		"packages/ai-sdk",
 		"packages/atmn",
 		"packages/autumn-js",
 		"packages/mcp",
@@ -80,6 +79,10 @@
 		},
 		"apps/leaf": {
 			"entry": ["tests/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"]
+		},
+		"packages/gateway": {
+			"entry": ["tests/**/*.test.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"]
 		},
 		"packages/ksuid": {
