@@ -1,17 +1,22 @@
 import { expect, test } from "bun:test";
 
 import type { ApiCustomerV5, TrackResponseV3 } from "@autumn/shared";
-import { ErrCode } from "@autumn/shared";
+import { ApiVersion, ErrCode, ResetInterval } from "@autumn/shared";
+import { setCustomerUsageLimit } from "@tests/integration/balances/utils/usage-limit-utils/customerUsageLimitUtils.js";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
+import { expectUsageLimitCorrect } from "@tests/integration/utils/expectUsageLimitCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
+import { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 // custom/internal-model: input_cost=5 $/M, output_cost=15 $/M, markup=0%
 // in=5000/out=2500 -> 0.0625; in=10000/out=5000 -> 0.125
+
+const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
 // ═══════════════════════════════════════════════════════════════════
 // TRACK-TOKENS-LIM-1: default behavior caps deduction at zero balance
@@ -249,6 +254,66 @@ test.concurrent(
 			featureId: TestFeature.AiCredits,
 			remaining: 999.875,
 			usage: 0.125,
+		});
+	},
+);
+
+// ═══════════════════════════════════════════════════════════════════
+// TRACK-TOKENS-LIM-6: a usage limit counts AI credits consumed, not calls
+// ═══════════════════════════════════════════════════════════════════
+
+test.concurrent(
+	`${chalk.yellowBright("track-tokens-lim-6: usage limit counts AI credits consumed, not call count")}`,
+	async () => {
+		const aiCreditsItem = items.free({
+			featureId: TestFeature.AiCredits,
+			includedUsage: 1000,
+		});
+		const freeProd = products.base({ id: "free", items: [aiCreditsItem] });
+
+		const { customerId } = await initScenario({
+			customerId: "track-tokens-lim-6",
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [freeProd] }),
+			],
+			actions: [s.attach({ productId: freeProd.id })],
+		});
+
+		// Cap AI-credit spend at 100 credits/day — well above one call's cost.
+		await setCustomerUsageLimit({
+			autumn: autumnV2_3,
+			customerId,
+			featureId: TestFeature.AiCredits,
+			limit: 100,
+			interval: ResetInterval.Day,
+		});
+
+		// One token track costs 0.125 credits.
+		await autumnV2_3.post("/track_tokens", {
+			customer_id: customerId,
+			feature_id: TestFeature.AiCredits,
+			model_id: "custom/internal-model",
+			input_tokens: 10000,
+			output_tokens: 5000,
+		});
+
+		const customer = await autumnV2_3.customers.get<ApiCustomerV5>(customerId);
+		// The balance is deducted by the dollar cost...
+		expectBalanceCorrect({
+			customer,
+			featureId: TestFeature.AiCredits,
+			remaining: 999.875,
+			usage: 0.125,
+		});
+		// ...and the cap counter must reflect that SAME spend. Regression: before
+		// the usage-window dimension fix this counted 1 (the call), not 0.125.
+		expectUsageLimitCorrect({
+			customer,
+			featureId: TestFeature.AiCredits,
+			usage: 0.125,
+			limit: 100,
+			interval: ResetInterval.Day,
 		});
 	},
 );
