@@ -5,7 +5,6 @@ import { create } from "zustand";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
-const isDev = import.meta.env.DEV;
 const REFETCH_INTERVAL = 5000;
 const DISMISSED_STORAGE_KEY = "autumn_products_onboarding_dismissed";
 
@@ -68,19 +67,10 @@ export const useOnboardingProgress = (): OnboardingProgress => {
 			const { data } = await axiosInstance.get("/products/products");
 			return data;
 		},
-		refetchInterval: isDev
-			? false
-			: (query) => {
-					const hasValidProduct = query.state.data?.products?.some((p) => {
-						const items = p.items ?? [];
-						const hasPrice = items.some(
-							(i) => i.price != null || i.tiers != null,
-						);
-						const hasFeature = items.some((i) => i.feature_id != null);
-						return hasPrice && hasFeature;
-					});
-					return hasValidProduct ? false : REFETCH_INTERVAL;
-				},
+		refetchInterval: (query) => {
+			const hasProduct = (query.state.data?.products?.length ?? 0) > 0;
+			return hasProduct ? false : REFETCH_INTERVAL;
+		},
 	});
 
 	// Customers query
@@ -95,13 +85,10 @@ export const useOnboardingProgress = (): OnboardingProgress => {
 			);
 			return data;
 		},
-		refetchInterval: isDev
-			? false
-			: (query) => {
-					const hasCustomers =
-						(query.state.data?.fullCustomers?.length ?? 0) > 0;
-					return hasCustomers ? false : REFETCH_INTERVAL;
-				},
+		refetchInterval: (query) => {
+			const hasCustomers = (query.state.data?.fullCustomers?.length ?? 0) > 0;
+			return hasCustomers ? false : REFETCH_INTERVAL;
+		},
 	});
 
 	// Events query
@@ -116,27 +103,16 @@ export const useOnboardingProgress = (): OnboardingProgress => {
 			});
 			return data;
 		},
-		refetchInterval: isDev
-			? false
-			: (query) => {
-					const hasEvents =
-						(query.state.data?.rawEvents?.data?.length ?? 0) > 0;
-					return hasEvents ? false : REFETCH_INTERVAL;
-				},
+		refetchInterval: (query) => {
+			const hasEvents = (query.state.data?.rawEvents?.data?.length ?? 0) > 0;
+			return hasEvents ? false : REFETCH_INTERVAL;
+		},
 	});
 
 	// Compute completion status directly from query data
 	const completedSteps = useMemo(
 		() => ({
-			plans:
-				productsData?.products?.some((p) => {
-					const items = p.items ?? [];
-					const hasPrice = items.some(
-						(i) => i.price != null || i.tiers != null,
-					);
-					const hasFeature = items.some((i) => i.feature_id != null);
-					return hasPrice && hasFeature;
-				}) ?? false,
+			plans: (productsData?.products?.length ?? 0) > 0,
 			customer: (customersData?.fullCustomers?.length ?? 0) > 0,
 			usage: (eventsData?.rawEvents?.data?.length ?? 0) > 0,
 		}),

@@ -6,6 +6,7 @@ import { WorkbenchButton } from "@/views/customers2/customer/workbench/Workbench
 import { NavButton } from "./NavButton";
 import { SidebarContact } from "./SidebarContact";
 import { useSidebarContext } from "./SidebarContext";
+import { SidebarOnboarding } from "./SidebarOnboarding";
 
 export default function SidebarBottom() {
 	const env = useEnv();
@@ -13,6 +14,7 @@ export default function SidebarBottom() {
 
 	return (
 		<div className="">
+			<SidebarOnboarding />
 			<div className="px-2 flex flex-col gap-1 mb-2">
 				<WorkbenchButton />
 				<NavButton
