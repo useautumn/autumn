@@ -39,8 +39,6 @@ export const handleRedisTrackErrorV3 = async ({
 	if (error.code === RedisDeductionErrorCode.InsufficientBalance) {
 		const insufficientBalanceError = new InsufficientBalanceError({
 			value: error.rejectedValue ?? body.value ?? 1,
-			// A cascade rejects on the overage system, not the primary feature on
-			// the body; the deduction error carries the rejecting feature's id.
 			featureId: error.featureId ?? body.feature_id,
 			eventName: body.event_name,
 		});

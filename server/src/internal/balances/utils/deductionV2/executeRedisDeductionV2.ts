@@ -195,8 +195,6 @@ export const executeRedisDeductionV2 = async ({
 				if (unlimitedPlanLog) {
 					allMutationLogs.push(unlimitedPlanLog);
 				}
-				// An unlimited included leg covers the whole event: nothing spills and
-				// there is no balance mutation to compensate.
 				cascadeSpill.recordIncludedResult({
 					deduction,
 					remaining: 0,
@@ -243,8 +241,6 @@ export const executeRedisDeductionV2 = async ({
 					usageWindowFeatureIds,
 				});
 
-			// Usage windows are enforced/incremented only for real positive
-			// consumption, never for target_balance set-downs or granted-balance edits.
 			const isConsumption =
 				notNullish(effectiveToDeduct) &&
 				(effectiveToDeduct as number) > 0 &&
@@ -355,8 +351,6 @@ export const executeRedisDeductionV2 = async ({
 				...allUsageWindowMutations,
 				...usageWindowMutations,
 			];
-			// Typed handoff for the PG mirror; empty arrays kept (prune-to-empty
-			// must still full-replace).
 			for (const [featureId, usageWindows] of Object.entries(
 				usageWindowsByFeatureId,
 			)) {
@@ -420,9 +414,6 @@ export const executeRedisDeductionV2 = async ({
 					});
 				}
 			} catch (error) {
-				// if (error.message?.includes("declined")) {
-				// 	return;
-				// }
 				if (error instanceof Error && !error?.message?.includes("declined")) {
 					ctx.logger.error(
 						`[executeRedisDeductionV2] Attempting rollback due to error: ${error}`,

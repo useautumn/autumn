@@ -9,7 +9,6 @@ import type { FeatureDeduction } from "./featureDeduction.js";
  */
 export type CascadeReplayState = {
 	includedApplied: boolean;
-	/** Leftover event fraction the overage deduction still has to cover. */
 	spillRemaining: number;
 };
 

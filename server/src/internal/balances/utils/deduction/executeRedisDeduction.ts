@@ -152,8 +152,6 @@ export const executeRedisDeduction = async ({
 						redisInstance,
 					});
 				}
-				// An unlimited included leg covers the whole event: nothing spills and
-				// there is no balance mutation to compensate.
 				cascadeSpill.recordIncludedResult({
 					deduction,
 					remaining: 0,
