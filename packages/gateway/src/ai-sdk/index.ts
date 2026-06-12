@@ -1,23 +1,11 @@
 import type { LanguageModelV3 } from "@ai-sdk/provider";
 import { type LanguageModelMiddleware, wrapLanguageModel } from "ai";
-import { normalizeUsage, type TokenPools, type UsageLike } from "./usage.js";
+import { type AutumnClient, trackTokenUsage } from "../shared/track.js";
+import { normalizeUsage, type UsageLike } from "./usage.js";
 
-export type { TokenPools, UsageLike } from "./usage.js";
-
-type TrackTokensParams = TokenPools & {
-	customerId: string;
-	modelId: string;
-	featureId?: string;
-	entityId?: string;
-	properties?: Record<string, unknown>;
-};
-
-/** Structural view of the autumn-js client; older versions may not ship balances.trackTokens. */
-export type AutumnClient = {
-	balances?: {
-		trackTokens?: (params: TrackTokensParams) => Promise<unknown>;
-	};
-};
+export type { AutumnClient } from "../shared/track.js";
+export type { TokenPools } from "../shared/usage.js";
+export type { UsageLike } from "./usage.js";
 
 export type WithAutumnOptions = {
 	/** Autumn SDK client instance. */
@@ -47,26 +35,18 @@ export const withAutumn = ({
 }: WithAutumnOptions): LanguageModelV3 => {
 	const modelName = `${providerId ?? model.provider}/${model.modelId}`;
 
-	const trackUsage = async (usage: UsageLike) => {
-		try {
-			const trackTokens = autumn.balances?.trackTokens;
-			if (!trackTokens) {
-				throw new Error(
-					"autumn-js client does not support balances.trackTokens — upgrade autumn-js.",
-				);
-			}
-			await trackTokens({
+	const trackUsage = (usage: UsageLike) =>
+		trackTokenUsage({
+			autumn,
+			getParams: () => ({
 				...normalizeUsage(usage, modelName),
 				customerId,
 				modelId: modelName,
 				featureId,
 				entityId,
 				properties,
-			});
-		} catch (error) {
-			console.error("[Autumn Tracking] Failed to track usage:", error);
-		}
-	};
+			}),
+		});
 
 	const middleware: LanguageModelMiddleware = {
 		specificationVersion: "v3",

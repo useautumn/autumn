@@ -1,3 +1,5 @@
+import { clamp, requiredCount, type TokenPools } from "../shared/usage.js";
+
 type NestedTokens = {
 	total?: number | null;
 	noCache?: number | null;
@@ -26,14 +28,6 @@ export type UsageLike = {
 	} | null;
 	cachedInputTokens?: number | null;
 	reasoningTokens?: number | null;
-};
-
-export type TokenPools = {
-	inputTokens: number;
-	outputTokens: number;
-	cacheReadTokens: number;
-	cacheWriteTokens: number;
-	reasoningTokens: number;
 };
 
 const flatCount = (value: LegacyCount | undefined): number | undefined =>
@@ -75,26 +69,12 @@ const toParts = (usage: UsageLike) => {
 	};
 };
 
-const clamp = (value: number) => Math.max(0, value);
-
 /** Splits provider usage into exclusive token pools; throws if the provider returned no usable counts. */
 export const normalizeUsage = (
 	usage: UsageLike,
 	modelName: string,
 ): TokenPools => {
 	const parts = toParts(usage);
-
-	const required = (
-		value: number | null | undefined,
-		label: string,
-	): number => {
-		if (value == null) {
-			throw new Error(
-				`[Autumn] ${label} token usage was not returned by the model provider (${modelName}). This provider may not support usage tracking.`,
-			);
-		}
-		return value;
-	};
 
 	const textInput =
 		parts.textInput ??
@@ -108,8 +88,8 @@ export const normalizeUsage = (
 			: undefined);
 
 	return {
-		inputTokens: clamp(required(textInput, "Input")),
-		outputTokens: clamp(required(textOutput, "Output")),
+		inputTokens: clamp(requiredCount(textInput, "Input", modelName)),
+		outputTokens: clamp(requiredCount(textOutput, "Output", modelName)),
 		cacheReadTokens: clamp(parts.cacheRead),
 		cacheWriteTokens: clamp(parts.cacheWrite),
 		reasoningTokens: clamp(parts.reasoning),
