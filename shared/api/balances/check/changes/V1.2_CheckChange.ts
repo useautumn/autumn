@@ -47,8 +47,10 @@ export const V1_2_CheckChange = defineVersionChange({
 		const { featureToUse } = legacyData;
 
 		if (!input.balance) {
+			// Redis fail-open emits allowed:true with a null balance; preserve it
+			// rather than equating "no balance object" with denial.
 			return {
-				allowed: false,
+				allowed: input.allowed,
 				code: "feature_found",
 				customer_id: input.customer_id,
 				feature_id: featureToUse.id,
