@@ -64,6 +64,33 @@ describe("getRequestedScopesForMcpClient", () => {
 		]);
 	});
 
+	test("keeps legacy CRUDL scopes (old CLI) whose alias is leaf-allowed, verbatim", () => {
+		expect(
+			getDefaultOAuthScopes([
+				"customers:create",
+				"customers:read",
+				"customers:list",
+				"customers:update",
+				"customers:delete",
+				"features:create",
+				"features:read",
+				"plans:update",
+				"apiKeys:create",
+				"organisation:read",
+			]),
+		).toEqual([
+			"customers:create",
+			"customers:read",
+			"customers:list",
+			"customers:update",
+			"customers:delete",
+			"features:create",
+			"features:read",
+			"plans:update",
+			"organisation:read",
+		]);
+	});
+
 	test("strips OAuth protocol scopes from resource scopes", () => {
 		expect(
 			getOAuthResourceScopes([
