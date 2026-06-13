@@ -1,4 +1,10 @@
-import { AppEnv, ErrCode, RecaseError, Scopes } from "@autumn/shared";
+import {
+	AppEnv,
+	ErrCode,
+	LEGACY_SCOPE_ALIASES,
+	RecaseError,
+	Scopes,
+} from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { isMcpOAuthClientId } from "@/internal/auth/oauth/mcpOAuthScopes.js";
 import {
@@ -84,7 +90,15 @@ export const handleCreateOAuthApiKeys = createRoute({
 				statusCode: 401,
 			});
 		}
-		const apiKeyScopes = requestedScopes ?? tokenRecord.scopes;
+		// Tokens may carry legacy CRUDL scopes (old CLI); store modern R/W on keys.
+		const apiKeyScopes = [
+			...new Set(
+				(requestedScopes ?? tokenRecord.scopes).map(
+					(scope) => LEGACY_SCOPE_ALIASES[scope] ?? scope,
+				),
+			),
+		];
+
 		if (await isMcpOAuthClientId({ clientId, ctx })) {
 			throw new RecaseError({
 				message: "MCP OAuth clients must use OAuth access tokens directly",
