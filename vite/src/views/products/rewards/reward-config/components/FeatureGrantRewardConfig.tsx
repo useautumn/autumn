@@ -37,11 +37,15 @@ export function FeatureGrantRewardConfig({
 }: FeatureGrantRewardConfigProps) {
 	const { features } = useFeaturesQuery();
 
-	// Keep existing metered filtering, but allow credit systems too
 	const availableGrantTargets = features.filter(
 		(f) =>
-			f.type === FeatureType.Metered || f.type === FeatureType.CreditSystem,
+			f.type === FeatureType.Metered ||
+			f.type === FeatureType.CreditSystem ||
+			f.type === FeatureType.Boolean,
 	);
+
+	const isBooleanFeature = (featureId: string) =>
+		features.find((f) => f.id === featureId)?.type === FeatureType.Boolean;
 
 	const entitlements = reward.featureGrantEntitlements;
 	const getGlobalMaxRedemption = (
@@ -320,22 +324,24 @@ export function FeatureGrantRewardConfig({
 										/>
 									</div>
 
-									{/* Allowance */}
-									<div>
-										<FormLabel>Balance Grant</FormLabel>
-										<Input
-											type="number"
-											value={ent.allowance || ""}
-											onChange={(e) =>
-												updateEntitlement({
-													index,
-													updates: { allowance: Number(e.target.value) },
-												})
-											}
-											placeholder="0"
-											className="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-										/>
-									</div>
+									{/* Allowance (boolean features grant on/off access, no balance) */}
+									{!isBooleanFeature(ent.feature_id) && (
+										<div>
+											<FormLabel>Balance Grant</FormLabel>
+											<Input
+												type="number"
+												value={ent.allowance || ""}
+												onChange={(e) =>
+													updateEntitlement({
+														index,
+														updates: { allowance: Number(e.target.value) },
+													})
+												}
+												placeholder="0"
+												className="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+											/>
+										</div>
+									)}
 
 									{/* Expiry */}
 									<div>
