@@ -1,26 +1,8 @@
 import { createStripeCli } from "@/external/connect/createStripeCli";
-import type { ExpandedStripeSubscription } from "@/external/stripe/subscriptions/operations/getExpandedStripeSubscription";
+import { isStripeSubscriptionPastDueTransition } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import { stripeSubscriptionToLatestInvoice } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import type { StripeWebhookContext } from "@/external/stripe/webhookMiddlewares/stripeWebhookContext";
-import type {
-	StripeSubscriptionUpdatedContext,
-	SubscriptionPreviousAttributes,
-} from "../stripeSubscriptionUpdatedContext";
-
-/**
- * Detects if a subscription.updated event represents a transition to past_due.
- */
-const isStripeSubscriptionPastDueEvent = ({
-	stripeSubscription,
-	previousAttributes,
-}: {
-	stripeSubscription: ExpandedStripeSubscription;
-	previousAttributes: SubscriptionPreviousAttributes;
-}): boolean => {
-	const wasPastDue = previousAttributes.status === "past_due";
-	const isPastDue = stripeSubscription.status === "past_due";
-	return !wasPastDue && isPastDue;
-};
+import type { StripeSubscriptionUpdatedContext } from "../stripeSubscriptionUpdatedContext";
 
 /**
  * Handles the cancel_on_past_due org setting.
@@ -40,11 +22,13 @@ export const handleCancelOnPastDue = async ({
 	if (!org.config.cancel_on_past_due) return;
 
 	// Only proceed if subscription just transitioned to past_due
-	const isPastDueEvent = isStripeSubscriptionPastDueEvent({
-		stripeSubscription,
-		previousAttributes,
-	});
-	if (!isPastDueEvent) return;
+	if (
+		!isStripeSubscriptionPastDueTransition({
+			stripeSubscription,
+			previousAttributes,
+		})
+	)
+		return;
 
 	const stripeCli = createStripeCli({ org, env });
 
