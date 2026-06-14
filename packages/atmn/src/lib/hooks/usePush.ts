@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { useMutation } from "@tanstack/react-query";
 import createJiti from "jiti";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { writeConfig } from "../../commands/pull/writeConfig.js";
 import {
 	analyzePush,
@@ -71,6 +71,7 @@ export interface UsePushOptions {
 	environment?: AppEnv;
 	yes?: boolean;
 	onComplete?: () => void;
+	onError?: (message: string) => void;
 }
 
 interface LocalConfig {
@@ -194,6 +195,7 @@ export function usePush(options?: UsePushOptions) {
 	const environment = options?.environment ?? AppEnv.Sandbox;
 	const yes = options?.yes ?? false;
 	const onComplete = options?.onComplete;
+	const onError = options?.onError;
 
 	const [startTime] = useState(Date.now());
 	const [phase, setPhase] = useState<PushPhase>("loading_config");
@@ -836,6 +838,15 @@ export function usePush(options?: UsePushOptions) {
 	// Combine errors
 	const combinedError =
 		error || orgQuery.error ? error || formatError(orgQuery.error) : null;
+
+	// Report the error to the caller once
+	const errorReported = useRef(false);
+	useEffect(() => {
+		if (combinedError && onError && !errorReported.current) {
+			errorReported.current = true;
+			onError(combinedError);
+		}
+	}, [combinedError, onError]);
 
 	return {
 		orgInfo: orgQuery.data as OrganizationInfo | null,
