@@ -175,16 +175,20 @@ end
 local function decrement_usage_windows_for_unwind(params)
   local context = params.context
   local iterations = safe_table(params.iterations)
+  local skipped_iterations = safe_table(params.skipped_iterations)
+  local fallback_feature_id = params.fallback_feature_id
   local now = params.now
 
-  if is_nil(context.usage_windows) or #iterations == 0 then
+  if is_nil(context.usage_windows)
+      or (#iterations == 0 and #skipped_iterations == 0)
+  then
     return
   end
 
   local total_units = 0
   local credits_by_feature_id = {}
 
-  for _, iteration in ipairs(iterations) do
+  local function count_iteration(iteration)
     local units = safe_number(iteration.unwind_iteration_value)
     total_units = total_units + units
 
@@ -201,12 +205,23 @@ local function decrement_usage_windows_for_unwind(params)
         ent_feature_id = rollover_ent.feature_id
       end
     end
+    if is_nil(ent_feature_id) then
+      ent_feature_id = fallback_feature_id
+    end
 
     if ent_feature_id then
       local credits = units * safe_number(item.credit_cost or 1)
       credits_by_feature_id[ent_feature_id] =
         (credits_by_feature_id[ent_feature_id] or 0) + credits
     end
+  end
+
+  for _, iteration in ipairs(iterations) do
+    count_iteration(iteration)
+  end
+
+  for _, iteration in ipairs(skipped_iterations) do
+    count_iteration(iteration)
   end
 
   for feature_id, feature_windows in pairs(context.usage_windows) do

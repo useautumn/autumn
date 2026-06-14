@@ -45,7 +45,9 @@
       alter_granted_balance: boolean,
       overage_behaviour: "cap" | "reject" | "allow",
       feature_id: string,
-      idempotency_ttl_ms: number | null
+      idempotency_ttl_ms: number | null,
+      unwind_items: mutation log items | null -- inline unwind source (cascade
+                    compensation); takes precedence over the lock receipt
     }
 
   Usage windows (customer-scoped windowed caps):
@@ -210,6 +212,7 @@ if not is_nil(unwind_value) and safe_number(unwind_value) > 0 then
     context = context,
     lock_receipt_key = lock_receipt_key,
     unwind_value = unwind_value,
+    items = params.unwind_items,
   })
 
   if not is_nil(unwind_result.error) then
@@ -231,6 +234,8 @@ if not is_nil(unwind_value) and safe_number(unwind_value) > 0 then
     decrement_usage_windows_for_unwind({
       context = context,
       iterations = unwind_result.iterations,
+      skipped_iterations = unwind_result.skipped_iterations,
+      fallback_feature_id = feature_id,
       now = usage_window_now,
     })
   end

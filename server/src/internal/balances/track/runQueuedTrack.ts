@@ -5,19 +5,87 @@ import {
 	type TrackParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getTrackFeatureDeductionsForBody } from "./utils/getFeatureDeductions.js";
+import {
+	buildCascadeReplayDeductions,
+	type CascadeReplayState,
+} from "../utils/types/cascadeReplayState.js";
+import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
+import {
+	getTokenCascadeDeductionsFromBody,
+	getTrackFeatureDeductionsForBody,
+} from "./utils/getFeatureDeductions.js";
 import { runTrackV3 } from "./v3/runTrackV3.js";
+
+export const getQueuedTrackFeatureDeductions = ({
+	ctx,
+	body,
+	allowTokenCascade = false,
+	cascadeReplayState,
+}: {
+	ctx: AutumnContext;
+	body: TrackParams;
+	allowTokenCascade?: boolean;
+	cascadeReplayState?: CascadeReplayState;
+}): FeatureDeduction[] => {
+	if (cascadeReplayState) {
+		const cascadeDeductions = getTokenCascadeDeductionsFromBody({ ctx, body });
+		if (!cascadeDeductions) {
+			throw new RecaseError({
+				message: "Queued cascade replay is missing a valid cascade marker",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		const replayDeductions = buildCascadeReplayDeductions({
+			featureDeductions: cascadeDeductions,
+			replayState: cascadeReplayState,
+		});
+		if (!replayDeductions) {
+			throw new RecaseError({
+				message: "Queued cascade replay is missing an overage deduction",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+
+		return replayDeductions;
+	}
+
+	if (allowTokenCascade) {
+		const cascadeDeductions = getTokenCascadeDeductionsFromBody({ ctx, body });
+		if (!cascadeDeductions) {
+			throw new RecaseError({
+				message: "Queued token cascade is missing a valid cascade marker",
+				code: ErrCode.InvalidRequest,
+				statusCode: 400,
+			});
+		}
+		return cascadeDeductions;
+	}
+
+	return getTrackFeatureDeductionsForBody({ ctx, body });
+};
 
 export const runQueuedTrack = async ({
 	ctx,
 	body,
 	apiVersion,
+	allowTokenCascade,
+	cascadeReplayState,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	apiVersion?: ApiVersion;
+	allowTokenCascade?: boolean;
+	cascadeReplayState?: CascadeReplayState;
 }) => {
-	const featureDeductions = getTrackFeatureDeductionsForBody({ ctx, body });
+	const featureDeductions = getQueuedTrackFeatureDeductions({
+		ctx,
+		body,
+		allowTokenCascade,
+		cascadeReplayState,
+	});
 
 	try {
 		await runTrackV3({

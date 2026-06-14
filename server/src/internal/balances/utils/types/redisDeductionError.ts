@@ -24,20 +24,29 @@ export const FALLBACK_ERROR_CODES = [
 export class RedisDeductionError extends Error {
 	code: RedisDeductionErrorCode;
 	featureId?: string;
+	/**
+	 * Credit amount the rejecting feature actually attempted to deduct, in that
+	 * feature's units. For a cascade this is the scaled overage amount, which
+	 * differs from the body's value (the included system's full cost).
+	 */
+	rejectedValue?: number;
 
 	constructor({
 		message,
 		code,
 		featureId,
+		rejectedValue,
 	}: {
 		message: string;
 		code: RedisDeductionErrorCode;
 		featureId?: string;
+		rejectedValue?: number;
 	}) {
 		super(message);
 		this.name = "RedisDeductionError";
 		this.code = code;
 		this.featureId = featureId;
+		this.rejectedValue = rejectedValue;
 	}
 
 	isRedisUnavailable(): boolean {

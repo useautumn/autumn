@@ -113,7 +113,6 @@ export const processMessage = async ({
 			return;
 		}
 
-		// Jobs below need worker context
 		const ctx = await createWorkerContext({
 			db,
 			payload: job.data,
@@ -211,6 +210,8 @@ export const processMessage = async ({
 				ctx,
 				body: job.data.body,
 				apiVersion: job.data.apiVersion,
+				allowTokenCascade: job.data.allowTokenCascade === true,
+				cascadeReplayState: job.data.cascadeReplayState,
 			});
 			return;
 		}

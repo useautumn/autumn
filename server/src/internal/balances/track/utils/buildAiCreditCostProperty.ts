@@ -14,12 +14,16 @@ export const buildAiCreditCostProperty = ({
 	featureDeductions: FeatureDeduction[];
 	entries: Array<{ featureId: string; amount: number }>;
 }): Record<string, number> | undefined => {
-	const aiDeduction = featureDeductions.find((d) => d.tokens);
-	if (!aiDeduction) return;
+	const aiFeatureIds = new Set(
+		featureDeductions
+			.filter((deduction) => deduction.tokens)
+			.map((deduction) => deduction.feature.id),
+	);
+	if (aiFeatureIds.size === 0) return;
 
 	const creditCost: Record<string, number> = {};
 	for (const { featureId, amount } of entries) {
-		if (featureId === aiDeduction.feature.id) continue;
+		if (aiFeatureIds.has(featureId)) continue;
 		if (!amount) continue;
 		creditCost[featureId] = (creditCost[featureId] ?? 0) + amount;
 	}

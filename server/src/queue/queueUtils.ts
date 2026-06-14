@@ -11,6 +11,7 @@ import {
 	SendMessageCommand,
 } from "@aws-sdk/client-sqs";
 import { generateId } from "@server/utils/genUtils";
+import type { CascadeReplayState } from "@/internal/balances/utils/types/cascadeReplayState.js";
 import type { ClearCreditSystemCachePayload } from "@/internal/features/featureActions/runClearCreditSystemCacheTask.js";
 import type { GenerateFeatureDisplayPayload } from "@/internal/features/workflows/generateFeatureDisplay.js";
 import { getSqsClient } from "./initSqs.js";
@@ -78,6 +79,8 @@ export interface Payloads {
 		requestId: string;
 		apiVersion: ApiVersion;
 		body: TrackParams;
+		allowTokenCascade?: boolean;
+		cascadeReplayState?: CascadeReplayState;
 	};
 	[JobName.ClearCreditSystemCustomerCache]: ClearCreditSystemCachePayload;
 	[JobName.GenerateFeatureDisplay]: GenerateFeatureDisplayPayload;
@@ -132,7 +135,6 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	if (resolvedQueueUrl) {
 		const sqsClient = getSqsClient({ queueUrl: resolvedQueueUrl });
 
-		// SQS implementation
 		const isFifoQueue = resolvedQueueUrl.endsWith(".fifo");
 		const messageId =
 			generateDeduplicationId === false ? undefined : generateId("job");
