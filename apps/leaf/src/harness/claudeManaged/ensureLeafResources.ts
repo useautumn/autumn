@@ -5,6 +5,11 @@ import { setupAgentToolContext } from "../../agent/runMessage/setup/setupAgentTo
 import { env as chatEnv } from "../../lib/env.js";
 import { autumnChatInstructions } from "../common/instructions/index.js";
 import { claudeManagedConfig } from "./config.js";
+import {
+	buildDesiredTools,
+	builtinSignatureFromToolset,
+	desiredBuiltinSignature,
+} from "./toolset.js";
 
 const isLoopback = (hostname: string) =>
 	hostname === "localhost" ||
@@ -44,31 +49,43 @@ export const buildAgentSystem = ({ docsText }: { docsText: string }) =>
 	[autumnChatInstructions, docsText].filter(Boolean).join("\n\n");
 
 // Keep the shared agent config in sync with local code/tunnel changes.
-// Runs once per process, so restart is enough after prompt edits.
+// Re-syncs every turn in dev so prompt edits land without a restart; once per
+// process in prod.
+const alwaysResync = process.env.NODE_ENV !== "production";
 let agentConfigSynced = false;
 const syncAgentConfig = async ({
 	agentId,
 	client,
+	destructiveTools,
 	docsText,
 	expectedUrl,
 	logger,
 }: {
 	agentId: string;
 	client: Anthropic;
+	destructiveTools: Iterable<string>;
 	docsText: string;
 	expectedUrl: string;
 	logger: AutumnLogger;
 }) => {
-	if (agentConfigSynced) return;
+	if (agentConfigSynced && !alwaysResync) return;
 	const agent = await client.beta.agents.retrieve(agentId);
 	const expectedSystem = buildAgentSystem({ docsText });
 	const currentUrl = agent.mcp_servers?.find(
 		(server) => server.name === claudeManagedConfig.autumnMcpServerName,
 	)?.url;
+	const currentToolset = agent.tools?.find(
+		(tool): tool is Extract<typeof tool, { type: "agent_toolset_20260401" }> =>
+			tool.type === "agent_toolset_20260401",
+	);
+	const currentBuiltinSig = currentToolset
+		? builtinSignatureFromToolset(currentToolset)
+		: "";
 	const mcpUrlChanged = currentUrl !== expectedUrl;
 	const systemChanged = agent.system !== expectedSystem;
 	const modelChanged = agent.model.id !== claudeManagedConfig.model;
-	if (mcpUrlChanged || systemChanged || modelChanged) {
+	const toolsChanged = currentBuiltinSig !== desiredBuiltinSignature();
+	if (mcpUrlChanged || systemChanged || modelChanged || toolsChanged) {
 		await client.beta.agents.update(agentId, {
 			...(mcpUrlChanged
 				? {
@@ -83,6 +100,9 @@ const syncAgentConfig = async ({
 				: {}),
 			...(systemChanged ? { system: expectedSystem } : {}),
 			...(modelChanged ? { model: claudeManagedConfig.model } : {}),
+			...(toolsChanged
+				? { tools: buildDesiredTools({ destructiveTools }) }
+				: {}),
 			version: agent.version,
 		});
 		logger.info("Refreshed Claude Managed agent config", {
@@ -96,6 +116,9 @@ const syncAgentConfig = async ({
 				model_changed: modelChanged,
 				model_from: agent.model.id,
 				model_to: claudeManagedConfig.model,
+				tools_changed: toolsChanged,
+				builtin_tools_from: currentBuiltinSig,
+				builtin_tools_to: desiredBuiltinSignature(),
 			},
 		});
 	}
@@ -117,7 +140,9 @@ export const ensureLeafResources = async ({
 	token: string;
 }): Promise<{ agentId: string; environmentId: string }> => {
 	const mcpUrl = autumnMcpUrl();
-	if (cachedResources && agentConfigSynced) return cachedResources;
+	if (cachedResources && agentConfigSynced && !alwaysResync) {
+		return cachedResources;
+	}
 
 	const { destructiveTools, docsText } = await setupAgentToolContext({
 		env,
@@ -129,6 +154,7 @@ export const ensureLeafResources = async ({
 		await syncAgentConfig({
 			agentId: cachedResources.agentId,
 			client,
+			destructiveTools,
 			docsText,
 			expectedUrl: mcpUrl,
 			logger,
@@ -153,6 +179,7 @@ export const ensureLeafResources = async ({
 		await syncAgentConfig({
 			agentId,
 			client,
+			destructiveTools,
 			docsText,
 			expectedUrl: mcpUrl,
 			logger,
@@ -169,19 +196,7 @@ export const ensureLeafResources = async ({
 					url: mcpUrl,
 				},
 			],
-			tools: [
-				// Full sandboxed unix toolset + Autumn MCP — a real Claude Code, not locked down.
-				{ type: "agent_toolset_20260401" },
-				{
-					default_config: { permission_policy: { type: "always_allow" } },
-					mcp_server_name: claudeManagedConfig.autumnMcpServerName,
-					type: "mcp_toolset",
-					configs: [...destructiveTools].map((name) => ({
-						name,
-						permission_policy: { type: "always_ask" as const },
-					})),
-				},
-			],
+			tools: buildDesiredTools({ destructiveTools }),
 		});
 		agentId = agent.id;
 		agentConfigSynced = true;

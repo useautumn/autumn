@@ -32,7 +32,7 @@ import {
 } from "../seedUtils";
 
 // ── Knowledge platform seed config ──
-// Defaults for `bun kp`; CLI flags override (e.g. `bun kp --count 1000`).
+// Defaults for `bun scenario kp`; CLI flags override (e.g. `bun scenario kp --count 1000`).
 const KP_SEED = {
 	customerCount: 0, // 0 = catalog only (features + plans, no customers)
 	concurrency: 10,
@@ -503,7 +503,7 @@ const getArgValue = (name: string) => {
 	return index === -1 ? undefined : process.argv[index + 1];
 };
 
-const runKnowledgePlatformSeed = async () => {
+export const runKnowledgePlatformSeed = async () => {
 	const customerCount = Number(getArgValue("--count") ?? KP_SEED.customerCount);
 	const concurrency = Number(getArgValue("--concurrency") ?? KP_SEED.concurrency);
 	const attachPlan = (getArgValue("--attach-plan") ?? KP_SEED.attachPlan) as

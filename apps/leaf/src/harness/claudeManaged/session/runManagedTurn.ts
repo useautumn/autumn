@@ -76,6 +76,7 @@ export const runClaudeManagedTurn = async ({
 	logger,
 	onAction,
 	onActionKeyed,
+	onThinking,
 	onTurnEnd,
 	orgId,
 	previewCapture,
@@ -89,6 +90,7 @@ export const runClaudeManagedTurn = async ({
 	logger: AutumnLogger;
 	onAction?: (message: string) => Promise<void> | void;
 	onActionKeyed?: KeyedActionLogger;
+	onThinking?: () => void;
 	onTurnEnd?: (
 		turn: SessionTurnOutcome,
 	) => Promise<"continue" | "stop"> | "continue" | "stop";
@@ -147,6 +149,7 @@ export const runClaudeManagedTurn = async ({
 					});
 				}
 			},
+			onThinking,
 			onSessionRetry: async ({ message }) => {
 				logger.warn("Claude Managed session retrying", {
 					event: "leaf.claude_managed_session_retrying",

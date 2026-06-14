@@ -36,13 +36,12 @@ import { findInstallationWithOrg } from "./providers/slack/installations.js";
 import { getRecentMessages } from "./providers/slack/threadContext.js";
 import type { ChatContextMessage } from "./types.js";
 import {
-	createActionLogger,
-	createKeyedActionLogger,
 	finishLoading,
 	type LoadingState,
 	type ReplyTarget,
 	startLoading,
 } from "./ui/progress.js";
+import { createStatusTicker } from "./ui/statusTicker.js";
 
 export const chatAdapterNames = ["slack"];
 
@@ -146,6 +145,7 @@ const runAndReply = async ({
 	let bootstrapLoading: LoadingState = null;
 	let logger = rootLogger;
 	let run: ActiveRun | undefined;
+	const ticker = createStatusTicker(target);
 	try {
 		const workspaceId = getSlackWorkspaceId(raw);
 		const installation = await findSlackInstallationForWorkspace({
@@ -192,23 +192,23 @@ const runAndReply = async ({
 		bootstrapLoading = isFollowUp
 			? null
 			: await startLoading(target, { showPlan: true });
-		// The quiet "Working on it..." status only starts once the bootstrap card
+		// The live status ticker only starts cycling once the bootstrap card
 		// resolves, so the two loading states never show at the same time.
-		const startWorkingStatus = () => startLoading(target, { showPlan: false });
 		const completeBootstrap = async () => {
 			if (!bootstrapLoading) return;
 			const card = bootstrapLoading;
 			bootstrapLoading = null;
 			await finishLoading(target, card, "Autumn started.");
-			await startWorkingStatus();
+			ticker.thinking();
 		};
 		run = registerRun({ key: runKey, kind: "message" });
-		// Follow-ups have no bootstrap card, so the quiet status starts right away.
+		// Follow-ups have no bootstrap card, so the status starts right away.
 		if (isFollowUp) {
-			await startWorkingStatus();
+			ticker.thinking();
 		}
-		const logAction = createActionLogger(loading, target);
-		const logKeyed = createKeyedActionLogger(loading, target);
+		const logAction = (message: string) => ticker.activity(message);
+		const logKeyed = ({ message }: { key: string; message: string }) =>
+			ticker.activity(message);
 		run.logAction = logAction;
 		const rawFiles = getSlackFilesFromRaw({ raw });
 		const botToken = decrypt(installation.bot_access_token);
@@ -229,6 +229,7 @@ const runAndReply = async ({
 			onAgentReady: completeBootstrap,
 			onApprovalsSuperseded: (approvals) =>
 				editSupersededApprovalCards({ approvals, logger, target }),
+			onThinking: ticker.thinking,
 			onTurnComplete: async (turnText) => {
 				await target.post({ markdown: turnText });
 			},
@@ -289,6 +290,7 @@ const runAndReply = async ({
 			markdown: "I could not complete that request. Please try again.",
 		});
 	} finally {
+		ticker.stop();
 		if (run) closeRun({ key: run.key, run });
 	}
 };

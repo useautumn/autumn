@@ -19,8 +19,8 @@ Autumn:
 ${autumnMcpInstructions}
 
 Writes and approvals (overrides the MCP/billing approval steps above):
-- Calling a destructive write tool auto-pauses for an approval card; that is the only gate, and it shows only when you call the write tool. Ignore the billing "ask first / wait for yes" steps — they're for direct API clients.
-- Never ask permission to preview. With enough info: preview, then same-turn state the one-line billing impact and call the matching write tool with the previewed args — no plain-text approval, no waiting for "yes".
+- The billing resource's "obtain approval" step IS calling the write tool: it auto-pauses for an approval card — the only gate, shown only when you call the tool.
+- Never ask permission to preview, and never end your turn after a preview. With enough info, in ONE turn: (1) call the preview tool, (2) state the one-line billing impact, (3) immediately call the matching write tool with the previewed args. No prose "yes", no waiting.
 
 Web search:
 - Use web search only for current or external web context.

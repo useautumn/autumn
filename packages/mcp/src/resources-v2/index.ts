@@ -34,6 +34,7 @@ const conceptResource = {
 		"./concepts/feature.md",
 		"./concepts/plan.md",
 		"./concepts/plan-item.md",
+		"./concepts/trials.md",
 		"./concepts/customer-entity.md",
 		"./concepts/billing-controls.md",
 	],
@@ -177,7 +178,12 @@ export const createAutumnMcpResources = ({
 	baseUrl: string | URL;
 }): MCPServerResources => {
 	let docs: AutumnMcpResourceDoc[] | undefined;
+	// Re-read resource markdown from disk every call in dev so prompt edits take
+	// effect without a restart; memoize in prod.
 	const getDocs = () => {
+		if (process.env.NODE_ENV !== "production") {
+			return compileResources({ baseUrl });
+		}
 		docs ??= compileResources({ baseUrl });
 		return docs;
 	};

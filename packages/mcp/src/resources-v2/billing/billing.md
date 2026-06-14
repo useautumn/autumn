@@ -33,15 +33,15 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 - If one ambiguity changes which of the other questions apply, resolve it first on its own before gathering the rest.
 - Gather all remaining missing questions from the checklist and ask them together.
 - If there are no missing questions, call the preview tool.
-- Surface the preview and ask for the user's feedback or approval.
-- If the user changes anything, update params and repeat from the relevant checklist step.
-- If the user approves the preview, execute the exact previewed billing action.
+- Surface the preview's immediate billing impact, then obtain approval via your client's approval mechanism.
+- If params change, update them and repeat from the relevant checklist step.
+- Once approved, apply the exact previewed billing action.
 
 </workflow>
 
 <rules>
 
-- **APPROVAL MUST BE GRANTED BEFORE PERFORMING ANY MUTATING BILLING ACTION.**
+- **A mutating billing action requires approval before it takes effect — obtain it via your client's approval mechanism.**
 - Don't propose or promise steps outside what your tools can do. If the goal isn't reachable, say so plainly rather than inventing a workaround.
 - Read this full resource before billing work and follow sections in order; later sections can define params that must be resolved before previewing.
 - Monetary amounts are major currency units: `$1,150` -> `1150`, not `115000`.
@@ -49,6 +49,10 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 - If using `invoice_mode` and the customer has no email, ask for the email and call `updateCustomer` before previewing.
 - Ask independent missing questions together in one concise message, using one bullet point per question.
 - While gathering params, ask only for values needed to build the billing request; do not explain plan internals unless the user asks.
+- If a customization is inferred, surface it for confirmation before previewing or writing. If its intent is ambiguous, ask before building — don't resolve it silently. When surfacing a customization, describe it as a patch (what was added/removed/changed vs the catalog plan), not a full restatement of every feature.
+- If the user gives an included credit/feature amount and the plan has a prepaid item for that feature, clarify whether they mean the quantity or a customization of the item, unless it's clear.
+- Before any trial action, re-read the Trials section in `autumn://docs/concepts`.
+- Adding a trial for a customer who already has a paid subscription resets the Stripe billing cycle; warn the user and offer the `on_end: "revert"` flow, then let them choose.
 
 </rules>
 
@@ -100,7 +104,7 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 - Preview only after action, target IDs, quantities, customization, timing, and billing behavior are known or intentionally defaulted.
 - If missing information could change immediate charges, access timing, or scheduled state, ask before previewing.
 - The main purpose of preview is to determine immediate billing impact: `total`, `currency`, and `line_items`.
-- Summarize the preview before asking for confirmation.
+- Summarize the preview's impact before the write.
 - Lead with immediate impact: amount due now, no immediate charge, or credit.
 - Include only preview facts that affect approval; avoid repeating context the user already resolved.
 - If `next_cycle` exists, explain the next event: date, amount, and likely reason such as renewal, trial end, cancellation, downgrade, phase change, or nearest multi-interval event.

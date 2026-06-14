@@ -42,6 +42,8 @@ export type MessageContext = {
 	onApprovalsSuperseded?: (approvals: ChatApproval[]) => Promise<void> | void;
 	/** Fires once the managed agent is ready to run its first turn (startup done). */
 	onAgentReady?: () => Promise<void> | void;
+	/** Fires when the agent starts an inference or emits thinking — drives the live status. */
+	onThinking?: () => void;
 	/** Posts a drained intermediate turn's text while follow-ups keep the run alive. */
 	onTurnComplete?: (text: string) => Promise<void> | void;
 	org: { id: string; slug?: string };

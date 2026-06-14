@@ -29,9 +29,8 @@
 
   <boolean>
 
-  - Pass `feature_id`.
+  - Pass only `feature_id`; set neither `included` nor `unlimited`. `feature_id` alone grants access.
   - Grants access rather than quantity.
-  - Boolean/unlimited feature grants use `unlimited: true`, not `included: 1`.
   - Boolean plan items cannot be paid today; charge through `Plan.price` or another metered feature instead.
 
   </boolean>

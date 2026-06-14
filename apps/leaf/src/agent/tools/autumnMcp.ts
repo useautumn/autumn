@@ -10,7 +10,7 @@ import {
 	type createPreviewCapture,
 	getWriteToolForPreview,
 	isSilentTool,
-	toolLabel,
+	toolGerund,
 } from "./toolPolicy.js";
 
 type AutumnTool = {
@@ -52,7 +52,7 @@ export const formatToolAction = ({
 		typeof value === "string" && value ? [`${label}: ${value}`] : [],
 	);
 
-	return `${toolLabel(toolName)}${details.length ? ` (${details.join(", ")})` : ""}`;
+	return `${toolGerund(toolName)}${details.length ? ` (${details.join(", ")})` : ""}`;
 };
 
 export const getAutumnMcpTools = async ({

@@ -9,8 +9,8 @@
 
   <attach-timing>
 
-  - If `plan_schedule` is omitted, downgrades are usually scheduled for end of cycle and the current plan transitions out then.
-  - Use `plan_schedule: "immediate"` when the user wants an immediate downgrade.
+  - To attach now, explicitly set `plan_schedule: "immediate"`; omitting it can schedule a lower- or zero-base-price plan for end of cycle.
+  - A downgrade (incoming base price genuinely lower than the current plan's) should be flagged to the user, asking whether to schedule it for end of cycle. A no-base-price plan (e.g. Enterprise/custom, priced per customer) is not a downgrade.
   - Use `starts_at` for single-plan backdates or future starts; do not use `createSchedule` just for this.
   - Backdating is only allowed when the customer has no existing Stripe subscription. If the API rejects it, explain that constraint.
   - For future billing start with immediate access, set future `starts_at` and `enable_plan_immediately: true`; otherwise the user's plan is created with `scheduled` status in Autumn and access starts on the specified `starts_at`.

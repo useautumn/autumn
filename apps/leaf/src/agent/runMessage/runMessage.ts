@@ -36,6 +36,7 @@ export const runMessage = async ({
 	onActionKeyed,
 	onAgentReady,
 	onApprovalsSuperseded,
+	onThinking,
 	onTurnComplete,
 	providerUserId,
 	recentMessages,
@@ -142,6 +143,7 @@ export const runMessage = async ({
 				onActionKeyed,
 				onAgentReady,
 				onApprovalsSuperseded,
+				onThinking,
 				org: {
 					id: installation.org_id,
 					slug: installation.org_slug ?? undefined,

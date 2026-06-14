@@ -410,6 +410,9 @@ const modifierPhrases = (toolArgs?: Record<string, unknown>) => {
 			: enableImmediately === false
 				? "access waits for payment"
 				: null,
+		getString(request.plan_schedule)
+			? `plan schedule: ${request.plan_schedule}`
+			: null,
 		getString(request.proration_behavior)
 			? `proration: ${request.proration_behavior}`
 			: null,

@@ -56,10 +56,9 @@
 
 <trial-behavior>
 
+- This covers how to MODEL trials in the catalog. For how to put a customer on a trial at attach time (card-required, no-card, revert), see the Trials concept.
 - For card-required trials, put `free_trial` on the real paid plan.
-- Stripe creates a trialing subscription and charges when the trial ends.
-- For no-card trials, prefer a separate limited-time trial plan, e.g. `pro_trial`, plus the real paid `pro`.
-- The limited-time trial plan gives temporary access, expires automatically, and lets the user later enter the normal checkout flow for `pro`.
+- For no-card trials, prefer a separate limited-time trial plan, e.g. `pro_trial`, plus the real paid `pro` — it gives temporary access, expires automatically, and lets the user later enter the normal checkout flow for `pro`.
 
 </trial-behavior>
 

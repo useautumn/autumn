@@ -35,6 +35,36 @@ export const toolLabel = (toolName: string) =>
 		.replace(/([a-z])([A-Z])/g, "$1 $2")
 		.replace(/^./, (char) => char.toUpperCase());
 
+// Present-progressive phrasing for live status lines ("Looking up the
+// customer…"). Falls back to the noun label for anything unmapped.
+const gerunds: Record<string, string> = {
+	getAgentRules: "Reading your billing setup",
+	listPlans: "Looking through your plans",
+	getPlan: "Pulling up the plan",
+	listFeatures: "Reviewing the features",
+	getCustomer: "Looking up the customer",
+	getOrCreateCustomer: "Finding the customer",
+	listCustomers: "Searching customers",
+	getEntity: "Looking up the entity",
+	listEntities: "Checking entities",
+	getCurrentOrganization: "Checking your org",
+	previewAttach: "Previewing the attach",
+	previewCreateSchedule: "Previewing the schedule",
+	previewUpdateSubscription: "Previewing the update",
+	previewCreateBalance: "Previewing the balance change",
+	attach: "Attaching the plan",
+	createSchedule: "Scheduling the change",
+	updateSubscription: "Updating the subscription",
+	createBalance: "Updating the balance",
+	createPlan: "Creating the plan",
+	updateCustomer: "Updating the customer",
+	searchRequestLogs: "Searching the logs",
+	queryRequestLogs: "Querying the logs",
+};
+
+export const toolGerund = (toolName: string) =>
+	gerunds[normalizeToolName(toolName)] ?? toolLabel(toolName);
+
 export type PreviewApproval = {
 	preview: unknown;
 	toolArgs: Record<string, unknown>;

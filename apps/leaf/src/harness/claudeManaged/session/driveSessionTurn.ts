@@ -17,6 +17,7 @@ export const driveSessionTurn = async ({
 	onAutumnToolResult,
 	onSandboxTool,
 	onSessionRetry,
+	onThinking,
 	onToolError,
 	onTurnEnd,
 	sessionId,
@@ -39,6 +40,8 @@ export const driveSessionTurn = async ({
 		name: string;
 	}) => Promise<void> | void;
 	onSessionRetry?: (input: { message: string }) => Promise<void> | void;
+	/** Fires when the agent starts an inference or emits thinking — drives the "still working" status. */
+	onThinking?: () => void;
 	onToolError?: (input: {
 		name: string;
 		output: unknown;
@@ -120,6 +123,10 @@ export const driveSessionTurn = async ({
 			}
 		} else if (event.type === "agent.tool_use") {
 			await onSandboxTool?.({ input: event.input, name: event.name });
+		} else if (event.type === "agent.thinking") {
+			onThinking?.();
+		} else if (event.type === "span.model_request_start") {
+			onThinking?.();
 		} else if (event.type === "span.model_request_end") {
 			const usage = event.model_usage;
 			outcome.usage.inputTokens += usage.input_tokens;

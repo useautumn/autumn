@@ -26,5 +26,5 @@ Always read the relevant Autumn MCP resources to understand Autumn before starti
 ## Writes
 
 - Use preview tools before billing writes.
-- Write tools are destructive; get explicit user approval before calling one.
+- Write tools are destructive; obtain approval via your client's approval mechanism before calling one.
 - If a preview fails, state the blocking reason once and stop; do not call or suggest the write tool.
