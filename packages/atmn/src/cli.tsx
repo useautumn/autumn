@@ -138,6 +138,10 @@ program
 						onComplete={() => {
 							process.exit(0);
 						}}
+						onError={(message) => {
+							console.error(chalk.red(`\nError: ${message}`));
+							process.exit(1);
+						}}
 					/>
 				</QueryProvider>,
 			);
@@ -184,6 +188,10 @@ program
 						noDeclarationFile={skipDts}
 						onComplete={() => {
 							process.exit(0);
+						}}
+						onError={(message) => {
+							console.error(chalk.red(`\nError: ${message}`));
+							process.exit(1);
 						}}
 					/>
 				</QueryProvider>,

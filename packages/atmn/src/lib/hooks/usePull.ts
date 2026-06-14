@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { useMutation } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { pull } from "../../commands/pull/pull.js";
 import type { Feature, Plan } from "../../compose/models/index.js";
 import { formatError } from "../api/client.js";
@@ -43,12 +43,14 @@ export function usePull(options?: {
 	cwd?: string;
 	environment?: AppEnv;
 	onComplete?: () => void;
+	onError?: (message: string) => void;
 	forceOverwrite?: boolean;
 	noDeclarationFile?: boolean;
 }) {
 	const effectiveCwd = options?.cwd ?? process.cwd();
 	const environment = options?.environment ?? AppEnv.Sandbox;
 	const onComplete = options?.onComplete;
+	const onError = options?.onError;
 	const forceOverwrite = options?.forceOverwrite ?? false;
 	const noDeclarationFile = options?.noDeclarationFile ?? false;
 
@@ -128,6 +130,16 @@ export function usePull(options?: {
 	]);
 
 	const error = orgQuery.error || pullMutation.error;
+	const errorMessage = error ? formatError(error) : null;
+
+	// Report the error to the caller once
+	const errorReported = useRef(false);
+	useEffect(() => {
+		if (errorMessage && onError && !errorReported.current) {
+			errorReported.current = true;
+			onError(errorMessage);
+		}
+	}, [errorMessage, onError]);
 
 	return {
 		orgInfo: orgQuery.data,
@@ -137,7 +149,7 @@ export function usePull(options?: {
 		isOrgLoading: orgQuery.isLoading,
 		isPullLoading: pullMutation.isPending,
 		isSuccess: pullMutation.isSuccess,
-		error: error ? formatError(error) : null,
+		error: errorMessage,
 		inPlace: pullMutation.data?.inPlace,
 		updateResult: pullMutation.data?.updateResult,
 	};
