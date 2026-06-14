@@ -1,6 +1,8 @@
 import type { MCPClient } from "@mastra/mcp";
 
 export const agentDocUris = [
+	"autumn://docs/concepts",
+	"autumn://docs/plan-management",
 	"autumn://docs/billing",
 ];
 

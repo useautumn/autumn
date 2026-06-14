@@ -1,7 +1,12 @@
 import type { AutumnLogger } from "@autumn/logging";
-import { AppEnv, type ChatInstallation } from "@autumn/shared";
+import {
+	AppEnv,
+	type ChatApproval,
+	type ChatInstallation,
+} from "@autumn/shared";
 import type { Attachment } from "chat";
 import { z } from "zod";
+import type { ActiveRun } from "./internal/runs/runRegistry.js";
 
 export type LeafChatInstallation = ChatInstallation & {
 	org_slug?: string;
@@ -23,6 +28,7 @@ export const agentOutputSchema = z.preprocess(
 			text: payload.text,
 			env: payload.env,
 			finishReason: payload.finishReason,
+			stopReason: payload.stopReason,
 			runId: payload.runId,
 			suspendPayload: suspendPayload && {
 				toolCallId: suspendPayload.toolCallId,
@@ -40,6 +46,7 @@ export const agentOutputSchema = z.preprocess(
 		text: z.string().optional(),
 		env: z.nativeEnum(AppEnv),
 		finishReason: z.string().optional(),
+		stopReason: z.enum(["timeout", "user"]).optional(),
 		runId: z.string().optional(),
 		suspendPayload: z
 			.strictObject({
@@ -75,7 +82,16 @@ export type BotMessage = {
 	installation: LeafChatInstallation;
 	logger?: AutumnLogger;
 	onAction?: (message: string) => Promise<void> | void;
+	onActionKeyed?: (input: {
+		key: string;
+		message: string;
+	}) => Promise<void> | void;
+	onApprovalsSuperseded?: (approvals: ChatApproval[]) => Promise<void> | void;
+	/** Fires once the managed agent is ready to run its first turn (startup done). */
+	onAgentReady?: () => Promise<void> | void;
+	onTurnComplete?: (text: string) => Promise<void> | void;
 	providerUserId: string;
+	run?: ActiveRun;
 	recentMessages?: ChatContextMessage[];
 	text: string;
 	channelId: string;

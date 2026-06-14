@@ -1,65 +1,39 @@
-import { InvoiceModeParamsSchema } from "@api/billing/common/invoiceModeParams";
-import { RedirectModeSchema } from "@api/billing/common/redirectMode";
 import {
 	AttachParamsV1Schema,
 	CreateScheduleParamsV0Schema,
-	CreateSchedulePhaseSchema,
 	UpdateSubscriptionV1ParamsSchema,
 } from "@autumn/shared/publicApiSchemas";
-import * as z from "zod/v4";
 import { createDomainTools } from "./utils/builders.js";
-import { epochMillisecondsSchema } from "./utils/dates.js";
 import type { ToolDomain } from "./utils/types.js";
 
-const createSchedulePhaseMcpSchema = CreateSchedulePhaseSchema.extend({
-	starts_at: epochMillisecondsSchema.meta({
-		description:
-			"Phase start time as epoch milliseconds or an ISO date string. Date-only values use midnight UTC.",
-	}),
-});
-
-const invoiceModeMcpSchema = InvoiceModeParamsSchema.extend({
-	finalize: z.boolean().default(true).meta({
-		description:
-			"Follow the Billing resource for invoice finalization defaults.",
-	}),
-});
-
-const createScheduleMcpSchema = CreateScheduleParamsV0Schema.extend({
-	invoice_mode: invoiceModeMcpSchema.optional().meta({
-		description:
-			"Invoice mode for billing schedules. Follow the Billing resource.",
-	}),
-	phases: z
-		.tuple([createSchedulePhaseMcpSchema])
-		.rest(createSchedulePhaseMcpSchema),
-	redirect_mode: RedirectModeSchema.default("if_required").meta({
-		description: "Follow the Billing resource for checkout redirect defaults.",
-	}),
-}).superRefine((data, ctx) => {
+const createScheduleMcpSchema = CreateScheduleParamsV0Schema.check((ctx) => {
+	const data = ctx.value;
 	if (data.invoice_mode?.enabled !== true) return;
 	if (data.invoice_mode.finalize !== false) {
-		ctx.addIssue({
+		ctx.issues.push({
 			code: "custom",
 			message:
 				"Paid schedule previews must use invoice_mode.finalize false unless a supported override path is added.",
 			path: ["invoice_mode", "finalize"],
+			input: data,
 		});
 	}
 	if (data.redirect_mode !== "if_required") {
-		ctx.addIssue({
+		ctx.issues.push({
 			code: "custom",
 			message:
 				"Paid schedule previews must use redirect_mode if_required unless a supported override path is added.",
 			path: ["redirect_mode"],
+			input: data,
 		});
 	}
 	if (data.enable_plan_immediately !== true) {
-		ctx.addIssue({
+		ctx.issues.push({
 			code: "custom",
 			message:
 				"Paid schedule previews must set top-level enable_plan_immediately true.",
 			path: ["enable_plan_immediately"],
+			input: data,
 		});
 	}
 });

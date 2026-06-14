@@ -4,6 +4,7 @@ import { finalizeChatApproval } from "./finalizeChatApproval.js";
 import { getChatApproval } from "./getChatApproval.js";
 import { insertChatApproval } from "./insertChatApproval.js";
 import { listPendingChatApprovalsForRun } from "./listPendingChatApprovalsForRun.js";
+import { setChatApprovalMessageTs } from "./setChatApprovalMessageTs.js";
 
 export const chatApprovalRepo = {
 	cancel: cancelChatApproval,
@@ -12,4 +13,5 @@ export const chatApprovalRepo = {
 	get: getChatApproval,
 	insert: insertChatApproval,
 	listPendingForRun: listPendingChatApprovalsForRun,
+	setMessageTs: setChatApprovalMessageTs,
 } as const;

@@ -27,14 +27,32 @@
 
 </composition>
 
+<plan-types>
+
+- Recurring plan: has at least one recurring paid price or recurring lifecycle; attach creates a subscription.
+- Free plan: has no paid prices; attach creates a free subscription.
+- One-off plan: has at least one paid price and all paid prices are one-off; attach creates a purchase.
+- One-off examples: $10 flat purchase, or $10 for 100 prepaid credits.
+- If any price is monthly or yearly, e.g. $10/month, it is not a one-off plan.
+
+</plan-types>
+
 <default-behavior>
 
 - `auto_enable` automatically attaches the plan when a subject is created.
 - Use it for free/default access, not normal paid plans.
 - Common examples: free tier, limited-time trial access plan, entity default tier.
 - If multiple defaults exist across groups, Autumn can assign one default per group.
+- Never use `auto_enable: true` for paid plans; `Plan.price` must be null and plan items should not contain paid prepaid or usage-based prices.
 
 </default-behavior>
+
+<variants>
+
+- Today, Autumn has no concept of "variants"; each variant is its own plan, e.g. `pro_monthly` or `pro_annual`.
+- Annual plan pricing can coexist with shorter plan item reset intervals, e.g. annual base price with monthly credit resets.
+
+</variants>
 
 <trial-behavior>
 

@@ -143,4 +143,38 @@ export const responses = {
 		schedule_id: `sched_${customerId}`,
 		status: "created",
 	}),
+	updateSubscriptionPreview: ({
+		customerId,
+		planId,
+		request,
+	}: {
+		customerId: string;
+		planId: string;
+		request?: unknown;
+	}) => {
+		const addedItems = asArray(asRecord(asRecord(request).customize).add_items);
+		const dueToday = amountFromCustomize(asRecord(request).customize);
+		return {
+			customer_id: customerId,
+			plan_id: planId,
+			currency: "usd",
+			added_items: addedItems,
+			due_today: { total: dueToday },
+			line_items: [],
+			total: dueToday,
+		};
+	},
+	updateSubscriptionSuccess: ({
+		customerId,
+		planId,
+	}: {
+		customerId: string;
+		planId: string;
+	}) => ({
+		customer_id: customerId,
+		plan_id: planId,
+		invoice: null,
+		payment_url: null,
+		status: "updated",
+	}),
 };

@@ -1,7 +1,11 @@
 import type { AutumnLogger } from "@autumn/logging";
-import type { AppEnv, ChatProvider } from "@autumn/shared";
+import type { AppEnv, ChatApproval, ChatProvider } from "@autumn/shared";
+import type { ClaudeManagedSessionRef } from "../../harness/claudeManaged/session/ensureSession.js";
+import type { VercelHarnessSessionRef } from "../../harness/vercelHarness/session/ensureSession.js";
+import type { ActiveRun } from "../../internal/runs/runRegistry.js";
 import type { AgentHarnessName } from "../../lib/chatAgentConfig.js";
 import type { AgentOutput, ChatContextMessage } from "../../types.js";
+import type { KeyedActionLogger } from "../../ui/progress.js";
 
 /** Leaf's ctx.features analog: what the agent may do, loaded once per message. */
 export type AgentToolContext = {
@@ -25,13 +29,24 @@ export type ThreadRef = {
 /** AutumnContext analog — built up by runMessage setup, complete before an engine runs. */
 export type MessageContext = {
 	agentTools: AgentToolContext;
+	claudeManagedSession?: ClaudeManagedSessionRef;
+	vercelHarnessSession?: VercelHarnessSessionRef;
+	/** Epoch ms after which the engine should interrupt the run instead of letting the outer timeout abandon it. */
+	deadlineAt?: number;
 	env: AppEnv;
 	/** Agent run id. */
 	id: string;
 	logger: AutumnLogger;
 	onAction?: (message: string) => Promise<void> | void;
+	onActionKeyed?: KeyedActionLogger;
+	onApprovalsSuperseded?: (approvals: ChatApproval[]) => Promise<void> | void;
+	/** Fires once the managed agent is ready to run its first turn (startup done). */
+	onAgentReady?: () => Promise<void> | void;
+	/** Posts a drained intermediate turn's text while follow-ups keep the run alive. */
+	onTurnComplete?: (text: string) => Promise<void> | void;
 	org: { id: string; slug?: string };
 	providerUserId: string;
+	run?: ActiveRun;
 	thread: ThreadRef;
 	timestamp: number;
 	/** Org+env OAuth access token used for Autumn MCP auth. */

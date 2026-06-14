@@ -19,7 +19,9 @@ type ListPendingApprovalsInput = Parameters<
 type CancelApprovalInput = Parameters<typeof chatApprovalRepo.cancel>[0];
 
 type CancelPendingSessionApprovalsDeps = {
-	cancelApproval: (input: CancelApprovalInput) => Promise<ChatApproval | undefined>;
+	cancelApproval: (
+		input: CancelApprovalInput,
+	) => Promise<ChatApproval | undefined>;
 	driveTurn: typeof driveSessionTurn;
 	listPendingApprovals: (
 		input: ListPendingApprovalsInput,
@@ -50,7 +52,8 @@ export const cancelPendingSessionApprovalsWithDeps = async ({
 	deps?: CancelPendingSessionApprovalsDeps;
 }) => {
 	const approvals = await deps.listPendingApprovals({ ...query, db });
-	if (approvals.length === 0) return { cancelledCount: 0 };
+	if (approvals.length === 0)
+		return { cancelledApprovals: [] as ChatApproval[], cancelledCount: 0 };
 
 	const executableApprovals = approvals.filter(
 		(approval): approval is ChatApproval & { tool_call_id: string } =>
@@ -82,12 +85,14 @@ export const cancelPendingSessionApprovalsWithDeps = async ({
 		}
 	}
 
+	const cancelledApprovals: ChatApproval[] = [];
 	for (const approval of approvals) {
-		await deps.cancelApproval({
+		const cancelled = await deps.cancelApproval({
 			approvalId: approval.id,
 			db,
 			providerUserId,
 		});
+		cancelledApprovals.push(cancelled ?? approval);
 	}
 
 	logger.info("Cancelled stale pending approvals before new user message", {
@@ -99,7 +104,7 @@ export const cancelPendingSessionApprovalsWithDeps = async ({
 		},
 	});
 
-	return { cancelledCount: approvals.length };
+	return { cancelledApprovals, cancelledCount: approvals.length };
 };
 
 export const cancelPendingSessionApprovals = async (

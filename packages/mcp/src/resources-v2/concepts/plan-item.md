@@ -31,6 +31,8 @@
 
   - Pass `feature_id`.
   - Grants access rather than quantity.
+  - Boolean/unlimited feature grants use `unlimited: true`, not `included: 1`.
+  - Boolean plan items cannot be paid today; charge through `Plan.price` or another metered feature instead.
 
   </boolean>
 
@@ -50,9 +52,11 @@
 
     <non-consumable>
 
-    - Customer commits to a persistent quantity upfront, commonly seats.
+    - Customer commits to a persistent quantity upfront, commonly seats or static limits.
     - Quantity does not reset each cycle.
     - The committed quantity is still charged every billing cycle.
+    - Can be used as a value the app reads and gates against, even if usage is not tracked.
+    - Example: concurrency limit of 10, where the app checks the allowed value but does not track consumption.
     - Mid-cycle quantity changes can create prorated charges or credits.
 
     </non-consumable>
@@ -72,6 +76,7 @@
   - Customer is billed in arrears for measured persistent usage.
   - Common for storage or compute capacity tracked through the cycle, e.g. $0.05/GB-month for storage used.
   - Usage does not reset like consumable balance, but the billing calculation happens each cycle.
+  - If the quantity is only a static entitlement like concurrency, do not use usage-based pricing unless the app reports measured usage.
 
   </usage-based-non-consumable>
 
@@ -142,7 +147,7 @@
 - For paid consumable items, `price.interval` determines both the billing cycle and the reset cycle.
 - `proration`: mainly relevant to prepaid quantity changes, especially non-consumable or seat-like items.
 - `max_purchase`: less common cap on purchasable units; customer billing controls are often used for spend or purchase limits.
-- `entity_feature_id`: legacy/less preferred; if entities need their own tiers, usually attach plans at entity scope.
+- `entity_feature_id`: legacy/deprecated per-entity balance scoping; prefer entity-scoped plan attachments.
 - Auto top-ups require a one-off prepaid item for the feature; customer billing controls configure threshold and quantity.
 
 </advanced>

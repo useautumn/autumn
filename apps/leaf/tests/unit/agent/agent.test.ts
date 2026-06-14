@@ -14,7 +14,10 @@ const { getDefaultChatEnv, selectChatEnv } = await import(
 	"../../../src/agent/runMessage/setup/selectChatEnv.js"
 );
 const { autumnChatInstructions } = await import(
-	"../../../src/agent/prompts/instructions.js"
+	"../../../src/harness/common/instructions/index.js"
+);
+const { orgMemoryInstructions } = await import(
+	"../../../src/harness/common/instructions/index.js"
 );
 const { createFirecrawlTools } = await import(
 	"../../../src/agent/tools/firecrawl.js"
@@ -45,17 +48,46 @@ afterEach(() => {
 });
 
 describe("chat environment selection", () => {
-	test("loads billing MCP guidance", () => {
-		expect(agentDocUris).toEqual(["autumn://docs/billing"]);
+	test("loads MCP guidance", () => {
+		expect(agentDocUris).toEqual([
+			"autumn://docs/concepts",
+			"autumn://docs/plan-management",
+			"autumn://docs/billing",
+		]);
 	});
 
-	test("instructs the agent to read org rules before Autumn work", () => {
-		expect(autumnChatInstructions).toContain("getAgentRules");
-		expect(autumnChatInstructions).toContain("org-specific behavior");
+	test("includes Autumn MCP instructions in the managed agent prompt", () => {
+		expect(autumnChatInstructions).toContain("# Autumn MCP Instructions");
+		expect(autumnChatInstructions).toContain(
+			"Always read the relevant Autumn MCP resources",
+		);
+		expect(autumnChatInstructions).toContain(
+			"call the tool directly, never through Bash",
+		);
+	});
+
+	test("allows managed-agent memory to be used autonomously", () => {
+		expect(orgMemoryInstructions).toContain("Use and inspect this memory");
+		expect(orgMemoryInstructions).not.toContain(
+			"do not inspect memory files with Bash",
+		);
+	});
+
+	test("uses bullets for multiple required items", () => {
+		expect(autumnChatInstructions).toContain(
+			"One fact answers in one short sentence",
+		);
+		expect(autumnChatInstructions).toContain("goes in bullets");
+		expect(autumnChatInstructions).toContain("Ask one direct question");
+		expect(autumnChatInstructions).toContain("do not expose internal modeling");
 	});
 
 	test("points billing actions to the Billing MCP resource", () => {
-		expect(autumnChatInstructions).toContain("Billing MCP resource");
+		expect(autumnChatInstructions).toContain("autumn://docs/billing");
+	});
+
+	test("points plan management to MCP resources", () => {
+		expect(autumnChatInstructions).toContain("autumn://docs/plan-management");
 	});
 
 	test("defaults to sandbox outside production", () => {
@@ -181,7 +213,11 @@ describe("Claude Managed vault sync", () => {
 	test("builds managed agent system from current Autumn instructions", () => {
 		const system = buildAgentSystem({ docsText: "Autumn docs" });
 
-		expect(system).toContain("Default to one short sentence");
+		expect(system).toContain("One fact answers in one short sentence");
+		expect(system).toContain("goes in bullets");
+		expect(system).toContain("# Autumn MCP Instructions");
+		expect(system).toContain("call the tool directly, never through Bash");
+		expect(system).toContain("Use preview tools before billing writes.");
 		expect(system).toContain("Autumn docs");
 	});
 

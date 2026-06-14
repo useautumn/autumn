@@ -1,10 +1,21 @@
 import { createSlackAdapter } from "@chat-adapter/slack";
+import { verifySlackSignature } from "@chat-adapter/slack/webhook";
 import { createPostgresState } from "@chat-adapter/state-pg";
 import type { Attachment, Message, Thread } from "chat";
 import { Chat } from "chat";
 import { runMessage } from "./agent/runMessage/runMessage.js";
+import { editSupersededApprovalCards } from "./internal/approvals/actions/editSupersededApprovalCards.js";
 import { handleApprovalAction } from "./internal/approvals/actions/handleApprovalAction.js";
+import { handleViewPayloadAction } from "./internal/approvals/actions/handleViewPayloadAction.js";
 import { postApprovalRequest } from "./internal/approvals/actions/postApprovalRequest.js";
+import { handleStopAction } from "./internal/runs/handleStopAction.js";
+import { dispatchThreadMessage } from "./internal/runs/runCoordinator.js";
+import {
+	type ActiveRun,
+	closeRun,
+	registerRun,
+	runKeyForThread,
+} from "./internal/runs/runRegistry.js";
 import { decrypt } from "./lib/crypto.js";
 import { env } from "./lib/env.js";
 import {
@@ -14,6 +25,10 @@ import {
 } from "./lib/logger.js";
 import { getSlackWorkspaceId } from "./providers/slack/context.js";
 import {
+	getSlackEventWorkspaceId,
+	normalizeSlackEventsBody,
+} from "./providers/slack/events.js";
+import {
 	fetchSlackAttachmentFallback,
 	getSlackFilesFromRaw,
 } from "./providers/slack/files.js";
@@ -22,6 +37,7 @@ import { getRecentMessages } from "./providers/slack/threadContext.js";
 import type { ChatContextMessage } from "./types.js";
 import {
 	createActionLogger,
+	createKeyedActionLogger,
 	finishLoading,
 	type LoadingState,
 	type ReplyTarget,
@@ -63,7 +79,19 @@ export const bot = new Chat({
 					};
 				},
 			},
-			signingSecret: env.SLACK_SIGNING_SECRET,
+			webhookVerifier: async (request, body) => {
+				await verifySlackSignature(body, request.headers, {
+					signingSecret: env.SLACK_SIGNING_SECRET,
+				});
+				const workspaceId = getSlackEventWorkspaceId(body);
+				const installation = workspaceId
+					? await findSlackInstallationForWorkspace({ workspaceId })
+					: null;
+				return normalizeSlackEventsBody({
+					body,
+					botUserId: installation?.bot_user_id,
+				});
+			},
 			userName: env.CHAT_NAME,
 		}),
 	},
@@ -71,8 +99,27 @@ export const bot = new Chat({
 		keyPrefix: "chat",
 		url: env.CHAT_STATE_DATABASE_URL,
 	}),
-	concurrency: "queue",
+	// Handlers run immediately; the run coordinator serializes new runs per
+	// thread and routes mid-run messages (stop keywords, live follow-ups).
+	concurrency: "concurrent",
 });
+
+// One key per physical Slack thread, shared by message and dispatch paths.
+const slackRunKey = ({
+	channelId,
+	raw,
+	threadId,
+}: {
+	channelId: string;
+	raw: unknown;
+	threadId: string;
+}) =>
+	runKeyForThread({
+		channelId,
+		provider: "slack",
+		threadId,
+		workspaceId: getSlackWorkspaceId(raw),
+	});
 
 const runAndReply = async ({
 	channelId,
@@ -80,6 +127,7 @@ const runAndReply = async ({
 	providerUserId,
 	raw,
 	recentMessages,
+	runKey,
 	target,
 	text,
 	threadId,
@@ -89,12 +137,15 @@ const runAndReply = async ({
 	providerUserId: string;
 	raw: unknown;
 	recentMessages?: ChatContextMessage[];
+	runKey: string;
 	target: ReplyTarget;
 	text: string;
 	threadId: string;
 }) => {
-	let loading: LoadingState = null;
+	const loading: LoadingState = null;
+	let bootstrapLoading: LoadingState = null;
 	let logger = rootLogger;
+	let run: ActiveRun | undefined;
 	try {
 		const workspaceId = getSlackWorkspaceId(raw);
 		const installation = await findSlackInstallationForWorkspace({
@@ -135,13 +186,33 @@ const runAndReply = async ({
 			return;
 		}
 
-		// Follow-up turns skip the Plan message so the user is only notified once
-		// (for the answer); progress shows via the silent typing status instead.
 		const isFollowUp = recentMessages?.some((m) => m.isBot) ?? false;
-		loading = await startLoading(target, { showPlan: !isFollowUp });
+		// First message in a thread shows a one-time "Starting Autumn" card that
+		// stays pending until the managed agent reports ready; follow-ups skip it.
+		bootstrapLoading = isFollowUp
+			? null
+			: await startLoading(target, { showPlan: true });
+		// The quiet "Working on it..." status only starts once the bootstrap card
+		// resolves, so the two loading states never show at the same time.
+		const startWorkingStatus = () => startLoading(target, { showPlan: false });
+		const completeBootstrap = async () => {
+			if (!bootstrapLoading) return;
+			const card = bootstrapLoading;
+			bootstrapLoading = null;
+			await finishLoading(target, card, "Autumn started.");
+			await startWorkingStatus();
+		};
+		run = registerRun({ key: runKey, kind: "message" });
+		// Follow-ups have no bootstrap card, so the quiet status starts right away.
+		if (isFollowUp) {
+			await startWorkingStatus();
+		}
 		const logAction = createActionLogger(loading, target);
+		const logKeyed = createKeyedActionLogger(loading, target);
+		run.logAction = logAction;
 		const rawFiles = getSlackFilesFromRaw({ raw });
 		const botToken = decrypt(installation.bot_access_token);
+
 		const output = await runMessage({
 			agentRunId: session.agentRunId,
 			attachmentFetchFallback: ({ attachment }) =>
@@ -154,12 +225,39 @@ const runAndReply = async ({
 			installation,
 			logger,
 			onAction: logAction,
+			onActionKeyed: logKeyed,
+			onAgentReady: completeBootstrap,
+			onApprovalsSuperseded: (approvals) =>
+				editSupersededApprovalCards({ approvals, logger, target }),
+			onTurnComplete: async (turnText) => {
+				await target.post({ markdown: turnText });
+			},
 			providerUserId,
 			recentMessages,
+			run,
 			text,
 			channelId,
 			threadId,
 		});
+
+		if (output.finishReason === "stopped") {
+			await finishLoading(target, loading, "Stopped.");
+			const stoppedBy = run.stop?.byUserId;
+			const notice =
+				output.stopReason === "timeout"
+					? "_I stopped because the run was taking too long. Send a new message to continue._"
+					: `_Stopped${stoppedBy ? ` by <@${stoppedBy}>` : ""}. Nothing further was run._`;
+			await target.post({
+				markdown: [output.text, notice]
+					.filter((part): part is string => Boolean(part?.trim()))
+					.join("\n\n"),
+			});
+			logger.info("Posted stopped run notice", {
+				event: "leaf.slack_run_stopped",
+				data: { stop_reason: output.stopReason ?? "user" },
+			});
+			return;
+		}
 
 		const postedApproval = await postApprovalRequest({
 			channelId,
@@ -185,10 +283,13 @@ const runAndReply = async ({
 		logger.error("[chat] Message failed", error, {
 			event: "leaf.slack_message_failed",
 		});
+		await finishLoading(target, bootstrapLoading, "Couldn't start Autumn.");
 		await finishLoading(target, loading, "Request failed.");
 		await target.post({
 			markdown: "I could not complete that request. Please try again.",
 		});
+	} finally {
+		if (run) closeRun({ key: run.key, run });
 	}
 };
 
@@ -202,15 +303,37 @@ const handleMessage = async (thread: Thread, message: Message) => {
 		});
 		return;
 	}
-	await runAndReply({
-		target: thread,
-		attachments: message.attachments,
-		raw: message.raw,
-		text: message.text,
+	const runKey = slackRunKey({
 		channelId: thread.channelId,
-		providerUserId: message.author.userId,
+		raw: message.raw,
 		threadId: thread.id,
-		recentMessages: await getRecentMessages(thread, message),
+	});
+	await dispatchThreadMessage({
+		hasAttachments: Boolean(message.attachments?.length),
+		onFollowUpInjected: async () => {
+			try {
+				await thread.adapter.addReaction(thread.id, message.id, "eyes");
+			} catch {
+				// The reaction is a best-effort ack.
+			}
+		},
+		providerUserId: message.author.userId,
+		runKey,
+		// Recent messages are fetched when the run actually starts, so a
+		// mutex-queued message still sees the turns that finished before it.
+		runNewMessage: async () =>
+			runAndReply({
+				target: thread,
+				attachments: message.attachments,
+				raw: message.raw,
+				runKey,
+				text: message.text,
+				channelId: thread.channelId,
+				providerUserId: message.author.userId,
+				threadId: thread.id,
+				recentMessages: await getRecentMessages(thread, message),
+			}),
+		text: message.text,
 	});
 };
 
@@ -224,13 +347,26 @@ bot.onNewMention(async (thread, message) => {
 bot.onSubscribedMessage(handleMessage);
 
 bot.onSlashCommand(async (event) => {
-	await runAndReply({
-		target: event.channel,
-		raw: event.raw,
-		text: event.text || event.command,
+	const runKey = slackRunKey({
 		channelId: event.channel.id,
-		providerUserId: event.user.userId,
+		raw: event.raw,
 		threadId: event.channel.id,
+	});
+	await dispatchThreadMessage({
+		hasAttachments: false,
+		providerUserId: event.user.userId,
+		runKey,
+		runNewMessage: () =>
+			runAndReply({
+				target: event.channel,
+				raw: event.raw,
+				runKey,
+				text: event.text || event.command,
+				channelId: event.channel.id,
+				providerUserId: event.user.userId,
+				threadId: event.channel.id,
+			}),
+		text: event.text || event.command,
 	});
 });
 
@@ -238,5 +374,9 @@ bot.onAction(
 	["approve_billing_action", "cancel_billing_action"],
 	handleApprovalAction,
 );
+
+bot.onAction(["view_approval_payload"], handleViewPayloadAction);
+
+bot.onAction(["stop_agent_run"], handleStopAction);
 
 bot.registerSingleton();

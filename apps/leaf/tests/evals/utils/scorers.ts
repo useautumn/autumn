@@ -536,6 +536,23 @@ export const noCreateScheduleBeforePreview = ({
 		: 0;
 };
 
+export const noUpdateSubscriptionBeforePreview = ({
+	output,
+}: {
+	output: EvalOutput;
+}) => {
+	const updateIndex = output.apiCalls.findIndex(
+		(call) => call.toolName === "updateSubscription",
+	);
+	const previewIndex = output.apiCalls.findIndex(
+		(call) => call.toolName === "previewUpdateSubscription",
+	);
+	return updateIndex === -1 ||
+		(previewIndex !== -1 && previewIndex < updateIndex)
+		? 1
+		: 0;
+};
+
 export const noScheduleCalls = ({ output }: { output: EvalOutput }) =>
 	output.apiCalls.every(
 		(call) =>
@@ -635,5 +652,13 @@ export const billingScheduleScores = (): EvalScorer[] => [
 	namedScorer({
 		name: "Preview before create schedule",
 		score: noCreateScheduleBeforePreview,
+	}),
+];
+
+export const billingUpdateSubscriptionScores = (): EvalScorer[] => [
+	...standardEvalScores(),
+	namedScorer({
+		name: "Preview before update subscription",
+		score: noUpdateSubscriptionBeforePreview,
 	}),
 ];

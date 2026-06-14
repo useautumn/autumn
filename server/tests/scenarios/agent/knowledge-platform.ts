@@ -1,8 +1,11 @@
 import {
 	AppEnv,
 	FeatureUsageType,
+	type FreeTrial,
+	FreeTrialDuration,
 	type ProductItem,
 	type ProductV2,
+	TierBehavior,
 } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
@@ -18,12 +21,24 @@ import {
 	constructCreditSystem,
 	constructMeteredFeature,
 } from "@/internal/features/utils/constructFeatureUtils";
-import { constructFeatureItem } from "@/utils/scriptUtils/constructItem";
+import {
+	constructFeatureItem,
+	constructPrepaidItem,
+} from "@/utils/scriptUtils/constructItem";
 import {
 	buildRealisticCustomerSeed,
 	createScenarioAutumn,
 	seedCustomersWithEntities,
 } from "../seedUtils";
+
+// ── Knowledge platform seed config ──
+// Defaults for `bun kp`; CLI flags override (e.g. `bun kp --count 1000`).
+const KP_SEED = {
+	customerCount: 0, // 0 = catalog only (features + plans, no customers)
+	concurrency: 10,
+	attachPlan: null as "trial" | "enterprise" | null,
+	clear: true, // wipe org before seeding; --skip-clear keeps existing
+};
 
 export const knowledgePlatformFeatureIds = {
 	activity_events: "activity_events",
@@ -103,12 +118,24 @@ const booleanItem = (featureId: KnowledgePlatformFeatureId): ProductItem =>
 const booleanItems = (featureIds: readonly KnowledgePlatformFeatureId[]) =>
 	featureIds.map(booleanItem);
 
+// 1k included, then volume-priced packs: the whole purchased quantity is
+// charged the flat amount of the tier it lands in.
+const creditTiers = [
+	{ amount: 0, to: 2_000, flat_amount: 200 },
+	{ amount: 0, to: 3_500, flat_amount: 300 },
+	{ amount: 0, to: 5_000, flat_amount: 400 },
+	{ amount: 0, to: 7_000, flat_amount: 500 },
+	{ amount: 0, to: "inf" as const, flat_amount: 600 },
+];
+
 const creditItems = () => [
-	items.prepaid({
+	constructPrepaidItem({
 		featureId: knowledgePlatformFeatureIds.credits,
-		billingUnits: 1_000,
-		price: 100,
-	}),
+		billingUnits: 1,
+		includedUsage: 1_000,
+		tierBehaviour: TierBehavior.VolumeBased,
+		tiers: creditTiers,
+	}) as ProductItem,
 	items.consumable({
 		featureId: knowledgePlatformFeatureIds.credits,
 		billingUnits: 1,
@@ -387,6 +414,23 @@ export const initKnowledgePlatformScenario = async ({
 	};
 };
 
+/** Return a copy of a plan with a card-required free trial, for trialing-state scenarios. */
+export const withFreeTrial = ({
+	product,
+	trialDays,
+}: {
+	product: ProductV2;
+	trialDays: number;
+}): ProductV2 => ({
+	...product,
+	free_trial: {
+		length: trialDays,
+		duration: FreeTrialDuration.Day,
+		unique_fingerprint: false,
+		card_required: true,
+	} as unknown as FreeTrial,
+});
+
 export const seedKnowledgePlatformCustomers = async ({
 	customerCount = 1_000,
 	idPrefix = "kp-customer",
@@ -460,16 +504,16 @@ const getArgValue = (name: string) => {
 };
 
 const runKnowledgePlatformSeed = async () => {
-	const customerCount = Number(getArgValue("--count") ?? "1000");
-	const concurrency = Number(getArgValue("--concurrency") ?? "10");
-	const attachPlan = getArgValue("--attach-plan") as
+	const customerCount = Number(getArgValue("--count") ?? KP_SEED.customerCount);
+	const concurrency = Number(getArgValue("--concurrency") ?? KP_SEED.concurrency);
+	const attachPlan = (getArgValue("--attach-plan") ?? KP_SEED.attachPlan) as
 		| Extract<KnowledgePlatformPlanKey, "trial" | "enterprise">
-		| undefined;
+		| null;
 	if (!process.env.TESTS_ORG) {
 		throw new Error("TESTS_ORG is required to seed knowledge platform data");
 	}
 
-	if (!process.argv.includes("--skip-clear")) {
+	if (KP_SEED.clear && !process.argv.includes("--skip-clear")) {
 		await clearOrg({
 			orgSlug: process.env.TESTS_ORG,
 			env: AppEnv.Sandbox,

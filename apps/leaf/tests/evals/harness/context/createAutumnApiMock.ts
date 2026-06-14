@@ -16,6 +16,8 @@ const endpointToTool = {
 	"/v1/billing.create_schedule": "createSchedule",
 	"/v1/billing.preview_attach": "previewAttach",
 	"/v1/billing.preview_create_schedule": "previewCreateSchedule",
+	"/v1/billing.preview_update": "previewUpdateSubscription",
+	"/v1/billing.update": "updateSubscription",
 	"/v1/customers.get": "getCustomer",
 	"/v1/customers.get_or_create": "getOrCreateCustomer",
 	"/v1/customers.list": "listCustomers",
@@ -289,6 +291,30 @@ const defaultHandlers = {
 			customerId,
 			phases: body.phases,
 		});
+	},
+	previewUpdateSubscription: ({ body, setup }) => {
+		const customerId = getString(body, "customer_id");
+		const planId = getString(body, "plan_id");
+		const customer = setup.customers.find(
+			(customer) => customer.id === customerId,
+		);
+		const plan = setup.plans.find((plan) => plan.id === planId);
+		if (!customer || !plan) return { error: "missing customer or plan" };
+		return responses.updateSubscriptionPreview({
+			customerId,
+			planId,
+			request: body,
+		});
+	},
+	updateSubscription: ({ body, setup }) => {
+		const customerId = getString(body, "customer_id");
+		const planId = getString(body, "plan_id");
+		const customer = setup.customers.find(
+			(customer) => customer.id === customerId,
+		);
+		const plan = setup.plans.find((plan) => plan.id === planId);
+		if (!customer || !plan) return { error: "missing customer or plan" };
+		return responses.updateSubscriptionSuccess({ customerId, planId });
 	},
 	updateCustomer: ({ body, setup }) => {
 		const customer = setup.customers.find(

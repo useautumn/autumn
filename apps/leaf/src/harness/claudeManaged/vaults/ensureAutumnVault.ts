@@ -1,11 +1,6 @@
 import type Anthropic from "@anthropic-ai/sdk";
-import {
-	type AppEnv,
-	type ChatProvider,
-	chatInstallations,
-} from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
-import { getInstallationOAuthAccessToken } from "../../../internal/installations/actions/getInstallationOAuthAccessToken.js";
+import type { AppEnv } from "@autumn/shared";
+import { getOrgInstallationToken } from "../../../internal/installations/actions/getOrgInstallationToken.js";
 import { getChatOAuthCredentialByInstallationEnv } from "../../../internal/installations/repos/chatOAuthCredentialsRepo.js";
 import { decrypt } from "../../../lib/crypto.js";
 import { db } from "../../../lib/db.js";
@@ -75,19 +70,11 @@ export const ensureAutumnVault = async ({
 	provider: string;
 	workspaceId: string;
 }): Promise<string> => {
-	const installation = await db.query.chatInstallations.findFirst({
-		where: and(
-			eq(chatInstallations.org_id, orgId),
-			eq(chatInstallations.provider, provider as ChatProvider),
-			eq(chatInstallations.workspace_id, workspaceId),
-		),
-	});
-	if (!installation) throw new Error("Chat installation not found for vault");
-
-	// Refreshes + persists the access token, then read the row for the refresh token.
-	const accessToken = await getInstallationOAuthAccessToken({
-		installation,
+	const { accessToken, installation } = await getOrgInstallationToken({
 		env,
+		orgId,
+		provider,
+		workspaceId,
 	});
 	const credential = await getChatOAuthCredentialByInstallationEnv({
 		db,

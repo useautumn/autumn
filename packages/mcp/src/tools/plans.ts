@@ -25,17 +25,18 @@ const domain = {
 		operation({
 			id: "listPlans",
 			description:
-				"List Autumn plans. This is usually a cheap full scan; filter returned plans locally and use matching id/version pairs before customer queries based on plan attributes.",
+				"List Autumn plans. For plan-management work, follow the Plan Management resource and Concepts resource.",
 		}),
 		operation({
 			id: "createPlan",
 			description:
-				"Create an Autumn plan. Destructive configuration write: gather plan_id, name, price, features/items, trials, and confirmation before running.",
+				"Create an Autumn plan. Destructive configuration write: follow Plan Management and Concepts; gather confirmed plan_id, name, price, items/features, trials, and credit/overage setup before running.",
 			destructive: true,
 		}),
 		operation({
 			id: "getPlan",
-			description: "Fetch one Autumn plan by id and optional version.",
+			description:
+				"Fetch one Autumn plan by id and optional version. For plan-management work, follow the Plan Management resource and Concepts resource.",
 		}),
 	],
 } satisfies ToolDomain;

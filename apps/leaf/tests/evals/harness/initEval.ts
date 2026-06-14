@@ -17,7 +17,7 @@ import {
 	type EvalRunResult,
 	type EvalTurn,
 } from "./createEvalContext.js";
-import { createClaudeManagedAgentDriver } from "./drivers/claudeManagedAgent.js";
+import { createClaudeManagedLiveDriver } from "./drivers/claudeManagedLiveAgent.js";
 import { createLeafAgentDriver } from "./drivers/leafAgent.js";
 import type { EvalAgentDriver } from "./drivers/types.js";
 import type { EvalTraceLevel } from "./tracing/types.js";
@@ -25,8 +25,9 @@ import type { EvalTraceLevel } from "./tracing/types.js";
 // Single toggle: default lives in chatAgentConfig (DEFAULT_EVAL_DRIVER);
 // EVAL_DRIVER=mastra|claude-managed overrides per run. Explicit `driver` on
 // initEval always wins (e.g. generic-mcp policy evals).
-const evalDrivers: Record<AgentHarnessName, () => EvalAgentDriver> = {
-	"claude-managed": createClaudeManagedAgentDriver,
+// The "vercel" harness has no eval driver yet; evals run through claude-managed/mastra.
+const evalDrivers: Partial<Record<AgentHarnessName, () => EvalAgentDriver>> = {
+	"claude-managed": createClaudeManagedLiveDriver,
 	mastra: createLeafAgentDriver,
 };
 
@@ -103,7 +104,11 @@ export const initEval = <Metadata extends EvalCaseMetadata>({
 	trace,
 }: InitEvalOptions<Metadata>) => {
 	const driverKey = selectedDriverKey();
-	const resolvedDriver = driver ?? evalDrivers[driverKey]();
+	const driverFactory = evalDrivers[driverKey];
+	if (!(driver || driverFactory)) {
+		throw new Error(`No eval driver wired for harness "${driverKey}"`);
+	}
+	const resolvedDriver = driver ?? driverFactory?.() ?? createLeafAgentDriver();
 	// Default panel: one named scorer per expectation type the cases declare,
 	// so Braintrust only shows columns a case can actually fail.
 	const resolvedScores =

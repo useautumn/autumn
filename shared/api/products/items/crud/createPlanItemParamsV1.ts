@@ -244,3 +244,6 @@ export const CreatePlanItemParamsV1Schema = z
 export type CreatePlanItemParamsV1 = z.infer<
 	typeof CreatePlanItemParamsV1Schema
 >;
+export type CreatePlanItemParamsV1Input = z.input<
+	typeof CreatePlanItemParamsV1Schema
+>;

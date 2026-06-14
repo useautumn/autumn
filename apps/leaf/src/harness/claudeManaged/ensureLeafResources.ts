@@ -1,9 +1,9 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv } from "@autumn/shared";
-import { autumnChatInstructions } from "../../agent/prompts/instructions.js";
 import { setupAgentToolContext } from "../../agent/runMessage/setup/setupAgentToolContext.js";
 import { env as chatEnv } from "../../lib/env.js";
+import { autumnChatInstructions } from "../common/instructions/index.js";
 import { claudeManagedConfig } from "./config.js";
 
 const isLoopback = (hostname: string) =>
@@ -67,7 +67,8 @@ const syncAgentConfig = async ({
 	)?.url;
 	const mcpUrlChanged = currentUrl !== expectedUrl;
 	const systemChanged = agent.system !== expectedSystem;
-	if (mcpUrlChanged || systemChanged) {
+	const modelChanged = agent.model.id !== claudeManagedConfig.model;
+	if (mcpUrlChanged || systemChanged || modelChanged) {
 		await client.beta.agents.update(agentId, {
 			...(mcpUrlChanged
 				? {
@@ -81,6 +82,7 @@ const syncAgentConfig = async ({
 					}
 				: {}),
 			...(systemChanged ? { system: expectedSystem } : {}),
+			...(modelChanged ? { model: claudeManagedConfig.model } : {}),
 			version: agent.version,
 		});
 		logger.info("Refreshed Claude Managed agent config", {
@@ -91,6 +93,9 @@ const syncAgentConfig = async ({
 				mcp_url_from: currentUrl,
 				mcp_url_to: expectedUrl,
 				system_changed: systemChanged,
+				model_changed: modelChanged,
+				model_from: agent.model.id,
+				model_to: claudeManagedConfig.model,
 			},
 		});
 	}

@@ -25,6 +25,13 @@
 
 </types>
 
+<feature-rules>
+
+- Do not create duplicate features for the same resource; use Plan Items to vary allowance, interval, package, or price.
+- Example: `tokens` should be one feature, not separate `monthly_tokens` and `one_time_tokens` features.
+
+</feature-rules>
+
 <additional>
 
 - `event_names`: optional aliases so one `track` request can target usage for multiple features.

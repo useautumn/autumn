@@ -97,5 +97,12 @@ export const createPreviewCapture = () => {
 			const args = previewArgsByTool.get(name);
 			if (args) capture({ args, preview: output, toolName: name });
 		},
+		/** A follow-up supersedes the turn's intent — its preview must not arm the write nudge. */
+		reset: () => {
+			captured = undefined;
+			previewArgsByTool.clear();
+		},
 	};
 };
+
+export type PreviewCapture = ReturnType<typeof createPreviewCapture>;
