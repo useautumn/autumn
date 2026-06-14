@@ -21,6 +21,7 @@ const normalizePromoCode = ({
 	code,
 	global_max_redemption,
 	max_redemptions,
+	first_time_transaction,
 }: ApiPromoCode): ApiPromoCode => {
 	const globalMaxRedemption = global_max_redemption ?? max_redemptions;
 
@@ -29,6 +30,7 @@ const normalizePromoCode = ({
 		...(globalMaxRedemption !== undefined
 			? { global_max_redemption: globalMaxRedemption }
 			: {}),
+		...(first_time_transaction ? { first_time_transaction: true } : {}),
 	};
 };
 

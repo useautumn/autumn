@@ -99,6 +99,7 @@ export const plotInsetsEqual = (a: PlotInsets, b: PlotInsets): boolean =>
 
 const MS_PER_HOUR = 3_600_000;
 const MS_PER_DAY = 86_400_000;
+const MS_PER_WEEK = 7 * MS_PER_DAY;
 const MIN_BARS = 6;
 const MAX_BARS = 366;
 
@@ -134,7 +135,7 @@ export const niceCeil = (value: number): number => {
 	return niceFraction * magnitude;
 };
 
-type BinSize = "hour" | "day" | "month";
+type BinSize = "hour" | "day" | "week" | "month";
 
 const resolveBinSize = ({
 	interval,
@@ -143,20 +144,36 @@ const resolveBinSize = ({
 	interval: string;
 	binSize: string | null;
 }): BinSize => {
-	if (binSize === "hour" || binSize === "day" || binSize === "month") {
+	if (
+		binSize === "hour" ||
+		binSize === "day" ||
+		binSize === "week" ||
+		binSize === "month"
+	) {
 		return binSize;
 	}
 	return interval === "24h" ? "hour" : "day";
 };
 
 /** Truncates a timestamp down to the start of its bin, matching the backend. */
-const alignDown = ({ ms, binSize }: { ms: number; binSize: BinSize }): number => {
+const alignDown = ({
+	ms,
+	binSize,
+}: {
+	ms: number;
+	binSize: BinSize;
+}): number => {
 	const date = new Date(ms);
 	if (binSize === "hour") {
 		date.setUTCMinutes(0, 0, 0);
 	} else if (binSize === "month") {
 		date.setUTCDate(1);
 		date.setUTCHours(0, 0, 0, 0);
+	} else if (binSize === "week") {
+		// Monday-aligned, matching the backend's toStartOfWeek(..., 1).
+		date.setUTCHours(0, 0, 0, 0);
+		const daysSinceMonday = (date.getUTCDay() + 6) % 7;
+		date.setUTCDate(date.getUTCDate() - daysSinceMonday);
 	} else {
 		date.setUTCHours(0, 0, 0, 0);
 	}
@@ -196,6 +213,8 @@ export const predictBarCount = ({
 			count++;
 			cursor.setUTCMonth(cursor.getUTCMonth() + 1);
 		}
+	} else if (bin === "week") {
+		count = Math.floor((rangeEnd - alignedStart) / MS_PER_WEEK) + 1;
 	} else {
 		const step = bin === "hour" ? MS_PER_HOUR : MS_PER_DAY;
 		count = Math.floor((rangeEnd - alignedStart) / step) + 1;

@@ -3,6 +3,19 @@
 	"version": "0.0.1",
 	"type": "module",
 	"description": "Autumn usage tracking adapters for AI SDKs and gateways (Vercel AI SDK, OpenRouter)",
+	"repository": "github:useautumn/autumn",
+	"homepage": "https://useautumn.com",
+	"license": "MIT",
+	"keywords": [
+		"autumn",
+		"billing",
+		"usage-based-billing",
+		"ai-sdk",
+		"openrouter",
+		"llm",
+		"token-tracking"
+	],
+	"sideEffects": false,
 	"files": [
 		"dist",
 		"README.md",
@@ -44,7 +57,7 @@
 	},
 	"devDependencies": {
 		"@types/node": "^24.9.1",
-		"@typescript/native-preview": "catalog:",
+		"@typescript/native-preview": "7.0.0-dev.20260220.1",
 		"tsup": "^8.4.0",
 		"typescript": "^5.8.3"
 	}

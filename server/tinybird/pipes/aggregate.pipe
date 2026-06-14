@@ -60,6 +60,8 @@ SQL >
         toStartOfHour(timestamp, {{ String(timezone, 'UTC') }}) as period,
         {% elif String(bin_size, 'day') == 'month' %}
         toStartOfMonth(timestamp, {{ String(timezone, 'UTC') }}) as period,
+        {% elif String(bin_size, 'day') == 'week' %}
+        toStartOfWeek(timestamp, 1, {{ String(timezone, 'UTC') }}) as period,
         {% else %}
         toStartOfDay(timestamp, {{ String(timezone, 'UTC') }}) as period,
         {% end %}
