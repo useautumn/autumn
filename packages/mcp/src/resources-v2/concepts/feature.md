@@ -22,8 +22,19 @@
 - `metered`, `consumable: true`: usage is spent and can reset, e.g. API calls or AI messages.
 - `metered`, `consumable: false`: persistent quantity, e.g. seats or storage.
 - `credit_system`: user-defined currency with credit costs for metered consumable features.
+- `ai_credit_system`: a monetary (dollar) balance for AI/LLM token usage, priced from Models.dev model pricing + a configured markup.
 
 </types>
+
+<credit-systems>
+
+- Classic `credit_system`: one shared balance for several metered features; `credit_schema` maps each `metered_feature_id` to a `credit_cost`. Track via the underlying `feature_id`.
+- `ai_credit_system`: a monetary balance (units = dollars) for AI/LLM token usage; no `credit_schema`. Cost = Models.dev model pricing + markup.
+  - Markups, low to high priority: `default_markup` (global %), `provider_markups` (keyed by the model id's provider prefix), `model_markups` (per model). No markup = Models.dev base cost; `-100` = free (recorded, not deducted).
+  - Model ids are `provider/model` (e.g. `anthropic/claude-opus-4-5`, `openrouter/anthropic/...`, `custom/...`). Standard models auto-price from Models.dev; `custom/...` models must set `input_cost`/`output_cost` ($/M tokens) and bill input/output only.
+  - Track usage with `trackTokens` (modelId + token counts); Autumn converts to dollars and deducts.
+
+</credit-systems>
 
 <feature-rules>
 
@@ -35,7 +46,7 @@
 <additional>
 
 - `event_names`: optional aliases so one `track` request can target usage for multiple features.
-- `credit_schema`: for `credit_system` only; maps `metered_feature_id` to `credit_cost`.
+- `credit_schema`: classic `credit_system` only (not `ai_credit_system`); maps `metered_feature_id` to `credit_cost`.
 - `archived`: deprecated config; may still exist in grandfathered plans or subscriptions.
 - Legacy pricing-agent wording: `single_use` means metered consumable; `continuous_use` means metered non-consumable.
 

@@ -24,6 +24,7 @@
   - Free allowance that comes with the plan.
   - For consumable features, `reset` controls the cycle, e.g. 5k credits/month on Pro.
   - `unlimited` means the feature is available without a tracked limit.
+  - (note: for `ai_credit_system` items, `included` and the balance are in dollars (`included: 10` = $10))
 
   </included-or-unlimited>
 
@@ -80,6 +81,14 @@
   </usage-based-non-consumable>
 
 </patterns>
+
+  <tiers>
+
+  - `price.tiers` set per-bracket pricing; `tier_behavior` is `volume` or graduated (the default).
+  - Volume (`tier_behavior: "volume"`): tiers are `{ amount: 0, to, flat_amount }`. `to` is the cumulative TOTAL the customer gets at that tier — it includes the item's `included` free amount, not just the paid amount. The whole selected bucket is billed the tier's `flat_amount`.
+  - Graduated/per-unit: the customer pays `amount` per `billing_units` within each bracket, and `included` free units are added on top of what they buy.
+
+  </tiers>
 
 <composition>
 

@@ -1,6 +1,7 @@
 // Dispatches `bun scenario <ep | kp | email | knowledge> [flags]` to the matching
 // agent seed. Flags (--count, --concurrency, --attach-plan, --skip-clear,
-// --keep-existing) are read from process.argv by each seed and pass through.
+// --keep-existing, --skip-stripe-reset) are read from process.argv by each seed and
+// pass through.
 import { runEmailPlatformSeed } from "./email-platform.js";
 import { runKnowledgePlatformSeed } from "./knowledge-platform.js";
 
@@ -19,7 +20,7 @@ const run = async () => {
 	const key = process.argv.slice(2).find(isScenarioKey);
 	if (!key) {
 		console.error(
-			"Usage: bun scenario <ep | kp | email | knowledge> [--count N] [--concurrency N] [--attach-plan trial|enterprise] [--skip-clear] [--keep-existing]",
+			"Usage: bun scenario <ep | kp | email | knowledge> [--count N] [--concurrency N] [--attach-plan trial|enterprise] [--skip-clear] [--keep-existing] [--skip-stripe-reset]",
 		);
 		process.exit(1);
 	}

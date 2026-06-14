@@ -10,6 +10,42 @@
 - Each `remove_items` entry is a filter for items to remove from the plan.
 - Include `billing_method`, `interval`, or `interval_count` in the filter when `feature_id` alone could match multiple items.
 - Replace an item's configuration: remove the old item and add the new version in the same PATCH-style `customize`.
+- When the same outcome can be expressed multiple ways, prefer the customization that preserves the catalog plan's existing item structure: same-shape customizations keep the customer consistent with others on the plan and with their existing update/quantity flows.
+
+  <example>
+  A plan prices `credits` as a prepaid, volume-tiered item (ladder
+  `10k=$90, 50k=$400, inf=$700`). To give a customer 20k credits at a custom
+  $150/mo, add a `20k=$150` tier into the existing ladder:
+
+  ```json
+  {
+    "customize": {
+      "remove_items": [{ "feature_id": "credits", "billing_method": "prepaid" }],
+      "add_items": [
+        {
+          "feature_id": "credits",
+          "price": {
+            "billing_method": "prepaid",
+            "interval": "month",
+            "tier_behavior": "volume",
+            "tiers": [
+              { "to": 10000, "flat_amount": 90 },
+              { "to": 20000, "flat_amount": 150 },
+              { "to": 50000, "flat_amount": 400 },
+              { "to": "inf", "flat_amount": 700 }
+            ]
+          }
+        }
+      ]
+    },
+    "feature_quantities": [{ "feature_id": "credits", "quantity": 20000 }]
+  }
+  ```
+
+  Note: the new tier is added into the plan's existing tiers — carry the whole
+  ladder over; don't replace it with just the custom tier or a flat base price.
+  </example>
+  
 - If a plan name/id/context suggests an Enterprise or custom placeholder plan and the plan has no base price, and no commercial terms were specified, ask the user whether they want to customize the base price.
 
 Use cases:

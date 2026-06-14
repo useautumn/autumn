@@ -46,7 +46,12 @@ const resourceOrder = [
 	"autumn://docs/billing",
 ] as const;
 
-const planManagementResourceFile = "./plan-management/plan-management.md";
+const planManagementResource = {
+	file: "./plan-management/plan-management.md",
+	parts: [
+		{ marker: "<!-- Modeling -->", file: "./plan-management/modeling.md" },
+	],
+} as const;
 
 const readResourceFile = ({
 	baseUrl,
@@ -55,28 +60,6 @@ const readResourceFile = ({
 	baseUrl: string | URL;
 	file: string;
 }) => readFileSync(new URL(file, baseUrl), "utf8").trim();
-
-const compileMarkdownResource = ({
-	baseUrl,
-	file,
-}: {
-	baseUrl: string | URL;
-	file: string;
-}): AutumnMcpResourceDoc => {
-	const parsed = parseResourceMarkdown({
-		path: file,
-		text: readResourceFile({ baseUrl, file }),
-	});
-	return {
-		name: parsed.name,
-		title: parsed.title,
-		description: parsed.description,
-		priority: parsed.priority,
-		audience: parsed.audience,
-		uri: `autumn://docs/${parsed.name}`,
-		text: parsed.body,
-	};
-};
 
 const compileMarkdownResourceWithParts = ({
 	baseUrl,
@@ -155,9 +138,10 @@ const compileResources = ({
 		priority: conceptResource.priority,
 		title: conceptResource.title,
 	});
-	const planManagement = compileMarkdownResource({
+	const planManagement = compileMarkdownResourceWithParts({
 		baseUrl,
-		file: planManagementResourceFile,
+		file: planManagementResource.file,
+		parts: planManagementResource.parts,
 	});
 	const billing = compileMarkdownResourceWithParts({
 		baseUrl,

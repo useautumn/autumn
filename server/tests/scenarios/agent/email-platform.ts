@@ -241,6 +241,7 @@ export const buildEmailPlatformFeatures = ({ ctx }: { ctx: TestContext }) => {
 		}),
 		constructCreditSystem({
 			featureId: f.ai_credits,
+			name: featureNames[f.ai_credits],
 			orgId,
 			env,
 			schema: [{ metered_feature_id: f.ai_actions, credit_cost: 1 }],
@@ -420,11 +421,14 @@ export const buildEmailPlatformProducts = () => {
 				...booleanItems(enterpriseBooleans),
 			],
 		}),
-		dedicatedIpPack: products.base({
-			id: p.dedicatedIpPack,
-			isAddOn: true,
-			items: [items.monthlyPrice({ price: 30 }), booleanItem(f.dedicated_ip)],
-		}),
+		dedicatedIpPack: {
+			...products.base({
+				id: p.dedicatedIpPack,
+				isAddOn: true,
+				items: [items.monthlyPrice({ price: 30 }), booleanItem(f.dedicated_ip)],
+			}),
+			name: "Dedicated IP Pack",
+		},
 	} satisfies Record<string, ProductV2>;
 
 	return {
@@ -587,9 +591,11 @@ export const runEmailPlatformSeed = async () => {
 	const concurrency = Number(
 		getArgValue("--concurrency") ?? EP_SEED.concurrency,
 	);
-	const attachPlan = (getArgValue("--attach-plan") ?? EP_SEED.attachPlan) as
-		| Extract<EmailPlatformPlanKey, "free" | "enterprise">
-		| null;
+	const attachPlan = (getArgValue("--attach-plan") ??
+		EP_SEED.attachPlan) as Extract<
+		EmailPlatformPlanKey,
+		"free" | "enterprise"
+	> | null;
 	if (!process.env.TESTS_ORG) {
 		throw new Error("TESTS_ORG is required to seed email platform data");
 	}
@@ -598,6 +604,9 @@ export const runEmailPlatformSeed = async () => {
 		await clearOrg({
 			orgSlug: process.env.TESTS_ORG,
 			env: AppEnv.Sandbox,
+			// Reset the Stripe account by default so stale usage meters don't
+			// collide on re-seed; pass --skip-stripe-reset to keep them (faster).
+			// skipStripeReset: process.argv.includes("--skip-stripe-reset"),
 			skipStripeReset: true,
 		});
 	}
