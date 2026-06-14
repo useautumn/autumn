@@ -253,7 +253,7 @@ export function FeatureGrantRewardConfig({
 					<AnimatePresence initial={false}>
 						{entitlements.map((ent, index) => (
 							<motion.div
-								key={`${ent.feature_id || "new"}-${index}`}
+								key={index}
 								initial={{ opacity: 0, scaleY: 0.95, originY: 0 }}
 								animate={{ opacity: 1, scaleY: 1 }}
 								exit={{ opacity: 0, scaleY: 0.95 }}
