@@ -1,6 +1,6 @@
 {
 	"name": "atmn",
-	"version": "1.1.8",
+	"version": "1.1.9",
 	"license": "MIT",
 	"bin": {
 		"atmn": "dist/cli.js"
@@ -34,6 +34,7 @@
 		"dev": "nodemon -e ts,tsx --watch src --ignore dist --exec \"bun run bun.config.ts\"",
 		"dev:bun": "bun run dev.ts",
 		"test": "bun test",
+		"test:unit": "bun test test/codegen",
 		"test:watch": "bun test --watch",
 		"test2": "prettier --check . && xo && ava",
 		"test-cli": "node --trace-deprecation -- ./dist/cli.js"

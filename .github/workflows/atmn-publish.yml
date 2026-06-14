@@ -35,5 +35,7 @@ jobs:
       contents: write
     with:
       package-dir: packages/atmn
+      # atmn's default `test` script is sandbox integration tests; release CI runs unit only
+      test-command: bun -F atmn test:unit
       version-bump: ${{ github.event_name == 'workflow_dispatch' && inputs.version-bump || '' }}
       dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || 'false' }}
