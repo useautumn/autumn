@@ -68,7 +68,8 @@ on:
 jobs:
   publish:
     name: Build and Publish
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    # GitHub-hosted: npm --provenance rejects self-hosted/Blacksmith runners
+    runs-on: ubuntu-latest
 
     permissions:
       id-token: write
