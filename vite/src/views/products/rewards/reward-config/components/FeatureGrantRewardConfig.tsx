@@ -4,7 +4,6 @@ import { CheckIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { cloneElement, isValidElement } from "react";
 import { Button } from "@/components/v2/buttons/Button";
-import { TextCheckbox } from "@/components/v2/checkboxes/TextCheckbox";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
@@ -24,7 +23,6 @@ import type {
 	FrontendReward,
 	FrontendRewardEntitlement,
 } from "../../types/frontendReward";
-import { FirstTimeTransactionTooltip } from "./FirstTimeTransactionTooltip";
 
 interface FeatureGrantRewardConfigProps {
 	reward: FrontendReward;
@@ -111,25 +109,6 @@ export function FeatureGrantRewardConfig({
 		updated[index] = {
 			...rest,
 			global_max_redemption: value,
-		};
-		setReward({ ...reward, promo_codes: updated });
-	};
-
-	const updateFirstTimeTransaction = ({
-		index,
-		value,
-	}: {
-		index: number;
-		value: boolean;
-	}) => {
-		const updated = [...(reward.promo_codes || [])];
-		const promoCode = updated[index] ?? { code: "" };
-		const globalMaxRedemption = getGlobalMaxRedemption(promoCode);
-		const { max_redemptions: _maxRedemptions, ...rest } = promoCode;
-		updated[index] = {
-			...rest,
-			global_max_redemption: globalMaxRedemption,
-			first_time_transaction: value,
 		};
 		setReward({ ...reward, promo_codes: updated });
 	};
@@ -224,20 +203,6 @@ export function FeatureGrantRewardConfig({
 										<TrashIcon size={14} />
 									</button>
 								)}
-							</div>
-							<div className="flex items-center gap-1.5">
-								<TextCheckbox
-									checked={promoCode.first_time_transaction ?? false}
-									onCheckedChange={(checked) =>
-										updateFirstTimeTransaction({
-											index,
-											value: checked === true,
-										})
-									}
-								>
-									Limit to first-time customers
-								</TextCheckbox>
-								<FirstTimeTransactionTooltip />
 							</div>
 						</div>
 					))}
