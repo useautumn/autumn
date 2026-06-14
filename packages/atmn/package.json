@@ -7,7 +7,8 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/useautumn/typescript"
+		"url": "git+https://github.com/useautumn/autumn.git",
+		"directory": "packages/atmn"
 	},
 	"homepage": "https://docs.useautumn.com/api-reference/cli/getting-started",
 	"main": "dist/compose/index.js",
