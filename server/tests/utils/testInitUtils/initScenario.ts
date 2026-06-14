@@ -74,7 +74,8 @@ type RewardConfig = {
 
 type FeatureGrantEntitlement = {
 	feature_id: string;
-	allowance: number;
+	// Optional: boolean features grant on/off access with no allowance
+	allowance?: number;
 	expiry?: { duration: EntitlementDuration; length: number };
 };
 
