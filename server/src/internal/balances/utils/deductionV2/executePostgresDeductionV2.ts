@@ -285,14 +285,16 @@ export const executePostgresDeductionV2 = async ({
 
 			const newFullCustomer = fullSubjectToFullCustomer({ fullSubject });
 
-			fireTrackWebhooks({
-				ctx,
-				oldFullCus: oldFullCustomer,
-				newFullCus: newFullCustomer,
-				feature: deduction.feature,
-				entityId,
-				featuresFromMutationLogs,
-			});
+			if (resolvedOptions.triggerSideEffects) {
+				fireTrackWebhooks({
+					ctx,
+					oldFullCus: oldFullCustomer,
+					newFullCus: newFullCustomer,
+					feature: deduction.feature,
+					entityId,
+					featuresFromMutationLogs,
+				});
+			}
 
 			if (resolvedOptions.triggerAutoTopUp) {
 				triggerAutoTopUp({

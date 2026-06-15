@@ -256,14 +256,16 @@ export const executeRedisDeduction = async ({
 			mutationLogs: mutation_logs,
 		});
 
-		fireTrackWebhooks({
-			ctx,
-			oldFullCus,
-			newFullCus: fullCustomer,
-			feature: deduction.feature,
-			entityId,
-			featuresFromMutationLogs,
-		});
+		if (options.triggerSideEffects) {
+			fireTrackWebhooks({
+				ctx,
+				oldFullCus,
+				newFullCus: fullCustomer,
+				feature: deduction.feature,
+				entityId,
+				featuresFromMutationLogs,
+			});
+		}
 
 		if (options.triggerAutoTopUp) {
 			triggerAutoTopUp({

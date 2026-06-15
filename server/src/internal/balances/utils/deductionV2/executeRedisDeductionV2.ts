@@ -388,14 +388,16 @@ export const executeRedisDeductionV2 = async ({
 
 		const newFullCustomer = fullSubjectToFullCustomer({ fullSubject });
 
-		fireTrackWebhooks({
-			ctx,
-			oldFullCus: oldFullCustomer,
-			newFullCus: newFullCustomer,
-			feature: deduction.feature,
-			entityId,
-			featuresFromMutationLogs,
-		});
+		if (options.triggerSideEffects) {
+			fireTrackWebhooks({
+				ctx,
+				oldFullCus: oldFullCustomer,
+				newFullCus: newFullCustomer,
+				feature: deduction.feature,
+				entityId,
+				featuresFromMutationLogs,
+			});
+		}
 
 		if (options.triggerAutoTopUp) {
 			triggerAutoTopUp({

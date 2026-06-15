@@ -245,14 +245,16 @@ export const executePostgresDeduction = async ({
 				mutationLogs: mutation_logs ?? [],
 			});
 
-			fireTrackWebhooks({
-				ctx,
-				oldFullCus,
-				newFullCus: fullCustomer,
-				feature: deduction.feature,
-				entityId,
-				featuresFromMutationLogs,
-			});
+			if (resolvedOptions.triggerSideEffects) {
+				fireTrackWebhooks({
+					ctx,
+					oldFullCus,
+					newFullCus: fullCustomer,
+					feature: deduction.feature,
+					entityId,
+					featuresFromMutationLogs,
+				});
+			}
 
 			if (resolvedOptions.triggerAutoTopUp) {
 				triggerAutoTopUp({
