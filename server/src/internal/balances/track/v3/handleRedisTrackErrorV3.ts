@@ -1,4 +1,5 @@
 import {
+	DocsLinks,
 	ErrCode,
 	type FullSubject,
 	InsufficientBalanceError,
@@ -44,6 +45,7 @@ export const handleRedisTrackErrorV3 = async ({
 			message: "A lock with this ID already exists",
 			code: ErrCode.LockAlreadyExists,
 			statusCode: 409,
+			docsUrl: DocsLinks.BalanceLocking,
 		});
 	}
 
@@ -54,6 +56,7 @@ export const handleRedisTrackErrorV3 = async ({
 				: "This track request has already been received",
 			code: ErrCode.DuplicateIdempotencyKey,
 			statusCode: 409,
+			docsUrl: DocsLinks.ApiIdempotency,
 		});
 	}
 

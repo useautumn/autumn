@@ -1,6 +1,7 @@
 import {
 	cusProductToPrices,
 	cusProductToProcessorType,
+	DocsLinks,
 	type FullCusProduct,
 	type FullProduct,
 	ProcessorType,
@@ -48,7 +49,9 @@ export const handleExternalPSPErrors = ({
 		const processorType = cusProductToProcessorType(customerProduct);
 		if (processorType === ProcessorType.RevenueCat) {
 			throw new RecaseError({
-				message: `Cannot update '${customerProduct.product.name}' because it is managed by RevenueCat.`,
+				message: `Subscription for '${customerProduct.product.name}' is managed by RevenueCat and cannot be updated directly`,
+				statusCode: 409,
+				docsUrl: DocsLinks.EdgeCases,
 			});
 		}
 		return;
@@ -69,8 +72,7 @@ export const handleExternalPSPErrors = ({
 	// (e.g. a previously-purchased RC one-off pack) don't have a recurring
 	// subscription and so can't conflict with the new Stripe attach.
 	const conflictingExternalCusProduct = customerProducts.find((cp) => {
-		const isExternal =
-			cusProductToProcessorType(cp) !== ProcessorType.Stripe;
+		const isExternal = cusProductToProcessorType(cp) !== ProcessorType.Stripe;
 		if (!isExternal) return false;
 
 		// Skip external products that are pure one-offs — they have no
@@ -84,6 +86,8 @@ export const handleExternalPSPErrors = ({
 	if (conflictingExternalCusProduct) {
 		throw new RecaseError({
 			message: `Cannot attach because the customer's current product '${conflictingExternalCusProduct.product.name}' is managed by RevenueCat.`,
+			statusCode: 409,
+			docsUrl: DocsLinks.EdgeCases,
 		});
 	}
 };

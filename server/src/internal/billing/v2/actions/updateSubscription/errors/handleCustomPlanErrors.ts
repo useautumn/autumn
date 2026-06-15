@@ -4,6 +4,7 @@ import type {
 } from "@autumn/shared";
 import {
 	cusProductToProduct,
+	DocsLinks,
 	productsAreSame,
 	RecaseError,
 	type UpdateSubscriptionV1Params,
@@ -46,7 +47,9 @@ export const handleCustomPlanErrors = ({
 	if (itemsSame) {
 		throw new RecaseError({
 			message:
-				"Cannot update to custom plan because the configuration (features and prices) are the same as the existing product",
+				"Custom plan configuration is identical to the current subscription; no update is needed",
+			statusCode: 400,
+			docsUrl: DocsLinks.UpdatingSubscriptions,
 		});
 	}
 
@@ -54,6 +57,8 @@ export const handleCustomPlanErrors = ({
 		throw new RecaseError({
 			message:
 				"Cannot create an invoice for this subscription update because there are no billing changes.",
+			statusCode: 400,
+			docsUrl: DocsLinks.SkippingCharges,
 		});
 	}
 };

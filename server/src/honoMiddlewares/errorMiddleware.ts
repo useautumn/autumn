@@ -1,4 +1,4 @@
-import { ErrCode, RecaseError as SharedRecaseError } from "@autumn/shared";
+import { ErrCode, RecaseError } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
@@ -6,7 +6,6 @@ import Stripe from "stripe";
 import { ZodError } from "zod/v4";
 import { formatZodError } from "@/errors/formatZodError.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { getSentryTags } from "../external/sentry/sentryUtils.js";
 import { handleErrorSkip } from "./errorSkipMiddleware.js";
 /**
@@ -44,7 +43,7 @@ export const errorMiddleware = (err: Error, c: Context<HonoEnv>) => {
 	});
 
 	// 1. Handle RecaseError (our custom errors)
-	if (err instanceof RecaseError || err instanceof SharedRecaseError) {
+	if (err instanceof RecaseError) {
 		logger.warn(
 			`RECASE WARNING (${ctx.org?.slug || "unknown"}): ${err.message} [${err.code}]`,
 			{
@@ -58,6 +57,7 @@ export const errorMiddleware = (err: Error, c: Context<HonoEnv>) => {
 				message: err.message,
 				code: err.code,
 				env: ctx.env,
+				...(err.docsUrl ? { docs_url: err.docsUrl } : {}),
 			},
 			err.statusCode as ContentfulStatusCode,
 		);

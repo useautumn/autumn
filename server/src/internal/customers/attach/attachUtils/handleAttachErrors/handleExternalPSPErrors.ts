@@ -1,10 +1,11 @@
 import {
 	cusProductToProcessorType,
+	DocsLinks,
 	ProcessorType,
 	RecaseError,
 } from "@autumn/shared";
-import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
+import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 
 export const handleExternalPSPErrors = ({
 	attachParams,
@@ -36,6 +37,8 @@ export const handleExternalPSPErrors = ({
 		throw new RecaseError({
 			message:
 				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",
+			statusCode: 400,
+			docsUrl: DocsLinks.EdgeCases,
 		});
 	}
 };

@@ -4,6 +4,7 @@ import {
 	type AttachConfig,
 	type BillingContext,
 	BillingType,
+	DocsLinks,
 	ErrCode,
 	RecaseError,
 	TierBehavior,
@@ -43,6 +44,7 @@ const handleNonCheckoutErrors = ({
 		throw new RecaseError({
 			message: `Not allowed to ${action} when using force_checkout`,
 			code: ErrCode.InvalidRequest,
+			statusCode: StatusCodes.BAD_REQUEST,
 		});
 	}
 	// } else if (config.invoiceCheckout) {
@@ -84,6 +86,7 @@ const handlePrepaidErrors = async ({
 					message: `Pass in 'quantity' for feature ${priceEnt.feature_id} in options`,
 					code: ErrCode.InvalidOptions,
 					statusCode: 400,
+					docsUrl: DocsLinks.PassingFeatureQuantities,
 				});
 			}
 
@@ -92,10 +95,11 @@ const handlePrepaidErrors = async ({
 				priceIsOneOffAndTiered(price, priceEnt)
 			) {
 				throw new RecaseError({
-					code: ErrCode.InvalidRequest,
+					code: ErrCode.InvalidOptions,
 					message:
-						"Quantity is required for start of period price that is one off and tiered",
+						"Quantity is required for start-of-period prices that are both one-off and tiered",
 					statusCode: 400,
+					docsUrl: DocsLinks.PassingFeatureQuantities,
 				});
 			}
 
@@ -105,15 +109,17 @@ const handlePrepaidErrors = async ({
 					message: `Quantity cannot be negative`,
 					code: ErrCode.InvalidOptions,
 					statusCode: 400,
+					docsUrl: DocsLinks.PrepaidPricing,
 				});
 			}
 
 			// 4. If there's only one price, quantity must be greater than 0
 			if (options?.quantity === 0 && prices.length === 1) {
 				throw new RecaseError({
-					message: `When there's only one price, quantity must be greater than 0`,
+					message: `When attaching a single prepaid price, quantity must be greater than 0`,
 					code: ErrCode.InvalidOptions,
 					statusCode: 400,
+					docsUrl: DocsLinks.PassingFeatureQuantities,
 				});
 			}
 
@@ -128,6 +134,8 @@ const handlePrepaidErrors = async ({
 			) {
 				throw new RecaseError({
 					message: `Quantity + included usage exceeds usage limit of ${usageLimit} for feature ${priceEnt.feature_id}`,
+					statusCode: 400,
+					docsUrl: DocsLinks.PrepaidPricing,
 				});
 			}
 		}
@@ -147,6 +155,8 @@ export const handleCustomPaymentMethodErrors = ({
 		throw new RecaseError({
 			message:
 				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",
+			statusCode: 400,
+			docsUrl: DocsLinks.EdgeCases,
 		});
 	}
 };
@@ -170,6 +180,8 @@ export const handleCustomPaymentMethodErrorsV2 = ({
 		throw new RecaseError({
 			message:
 				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",
+			statusCode: 400,
+			docsUrl: DocsLinks.EdgeCases,
 		});
 	}
 };
@@ -184,6 +196,8 @@ export const handlePrepaidVolumeErrors = ({
 			throw new RecaseError({
 				message:
 					"Volume pricing is not supported on attach V1. Please upgrade to V2 of the Autumn API to use prepaid volume tiers",
+				statusCode: 400,
+				docsUrl: DocsLinks.PrepaidPricing,
 			});
 		}
 	}
@@ -261,6 +275,7 @@ export const handleAttachErrors = async ({
 			throw new RecaseError({
 				message:
 					"Not allowed to update current product when using publishable key",
+				statusCode: 400,
 			});
 		}
 	}

@@ -3,6 +3,7 @@ import {
 	ApiVersion,
 	ApiVersionClass,
 	applyResponseVersionChanges,
+	DocsLinks,
 	ErrCode,
 	RecaseError,
 	type TrackParams,
@@ -33,6 +34,7 @@ export const runTrackV2 = async ({
 				'overage_behavior "reject" is not supported with event_name. Use feature_id or set overage_behavior to "cap".',
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
+			docsUrl: DocsLinks.UsingEventNames,
 		});
 	}
 

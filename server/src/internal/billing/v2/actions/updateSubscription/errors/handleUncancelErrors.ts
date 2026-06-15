@@ -1,5 +1,5 @@
 import type { UpdateSubscriptionBillingContext } from "@autumn/shared";
-import { CusProductStatus, RecaseError } from "@autumn/shared";
+import { CusProductStatus, DocsLinks, RecaseError } from "@autumn/shared";
 
 /**
  * Validates uncancel operation and throws appropriate errors.
@@ -20,13 +20,17 @@ export const handleUncancelErrors = ({
 
 	if (customerProduct.status === CusProductStatus.Scheduled) {
 		throw new RecaseError({
-			message: "Cannot uncancel a scheduled product",
+			message: "Cannot uncancel a subscription that is scheduled",
+			statusCode: 400,
+			docsUrl: DocsLinks.Uncanceling,
 		});
 	}
 
 	if (customerProduct.status === CusProductStatus.Expired) {
 		throw new RecaseError({
-			message: "Cannot uncancel an expired product",
+			message: "Cannot uncancel a subscription that has expired",
+			statusCode: 400,
+			docsUrl: DocsLinks.Uncanceling,
 		});
 	}
 

@@ -1,4 +1,5 @@
 import {
+	DocsLinks,
 	ErrCode,
 	RecaseError,
 	type UpdateSubscriptionBillingContext,
@@ -37,6 +38,7 @@ export const handleManualTopUpErrors = ({
 			message: COMPLEX_UPDATE_ERROR,
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
+			docsUrl: DocsLinks.UpdatePrepaidQuantity,
 		});
 	}
 
@@ -46,9 +48,11 @@ export const handleManualTopUpErrors = ({
 
 	if (hasForbiddenField) {
 		throw new RecaseError({
-			message: COMPLEX_UPDATE_ERROR,
+			message:
+				"A manual top-up can only change feature quantities; fields like customize, cancel_action, and billing_cycle_anchor are not allowed",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
+			docsUrl: DocsLinks.UpdatePrepaidQuantity,
 		});
 	}
 };

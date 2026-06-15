@@ -1,4 +1,5 @@
 import {
+	DocsLinks,
 	ErrCode,
 	InsufficientBalanceError,
 	RecaseError,
@@ -49,6 +50,7 @@ export const handleRedisTrackError = async ({
 			message: "A lock with this ID already exists",
 			code: ErrCode.LockAlreadyExists,
 			statusCode: 409,
+			docsUrl: DocsLinks.BalanceLocking,
 		});
 	}
 
