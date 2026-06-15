@@ -1,6 +1,28 @@
 import type { StripeDiscountWithCoupon } from "@autumn/shared";
-import { RecaseError } from "@autumn/shared";
+import { ErrCode, RecaseError } from "@autumn/shared";
 import type Stripe from "stripe";
+
+const assertNotMaxRedeemed = async ({
+	stripeCli,
+	code,
+}: {
+	stripeCli: Stripe;
+	code: string;
+}) => {
+	const promos = await stripeCli.promotionCodes.list({ code, limit: 1 });
+	const promo = promos.data[0];
+
+	if (
+		promo?.max_redemptions != null &&
+		promo.times_redeemed >= promo.max_redemptions
+	) {
+		throw new RecaseError({
+			message: `Promotion code "${code}" has reached its maximum number of redemptions`,
+			code: ErrCode.ReferralCodeMaxRedemptionsReached,
+			statusCode: 400,
+		});
+	}
+};
 
 /**
  * Resolves a human-readable promotion code string to a StripeDiscountWithCoupon.
@@ -23,6 +45,7 @@ export const resolvePromotionCode = async ({
 		});
 
 		if (promos.data.length === 0) {
+			await assertNotMaxRedeemed({ stripeCli, code });
 			throw new RecaseError({
 				message: `Promotion code not found or inactive: "${code}"`,
 			});

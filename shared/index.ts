@@ -255,6 +255,7 @@ export * from "./utils/productV2Utils/productItemUtils/convertProductItem/produc
 export * from "./utils/productV2Utils/productItemUtils/getProductItemRes";
 export * from "./utils/productV2Utils/productItemUtils/itemIntervalUtils";
 export * from "./utils/productV3Utils/productItemUtils/productV3ItemUtils";
+export * from "./utils/rewardUtils/promoCodeUtils";
 export * from "./utils/rewardUtils/rewardFilterUtils";
 export * from "./utils/rewardUtils/rewardMigrationUtils";
 export * from "./utils/scopeDefinitions";
