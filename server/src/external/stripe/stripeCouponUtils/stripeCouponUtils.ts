@@ -1,17 +1,19 @@
 import {
-    type AppEnv,
-    atmnToStripeAmount,
-    CouponDurationType,
-    ErrCode,
-    type FixedPriceConfig,
-    type Organization,
-    type Price,
-    PriceType,
-    type Product,
-    type Reward,
-    RewardType,
-    type UsagePriceConfig,
+	type AppEnv,
+	atmnToStripeAmount,
+	CouponDurationType,
+	ErrCode,
+	type FixedPriceConfig,
+	getGlobalMaxRedemption,
+	type Organization,
+	type Price,
+	PriceType,
+	type Product,
+	type Reward,
+	RewardType,
+	type UsagePriceConfig,
 } from "@autumn/shared";
+import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { pricesOnlyOneOff } from "@/internal/products/prices/priceUtils.js";
 import RecaseError from "@/utils/errorUtils.js";
@@ -120,6 +122,14 @@ const couponToStripeValue = ({
 	}
 };
 
+const getPromoCouponId = (promo: Stripe.PromotionCode): string | null => {
+	const coupon =
+		promo.promotion?.coupon ??
+		(promo as unknown as { coupon?: Stripe.Coupon | string }).coupon;
+	if (!coupon) return null;
+	return typeof coupon === "string" ? coupon : (coupon.id ?? null);
+};
+
 export const createStripeCoupon = async ({
 	reward,
 	org,
@@ -143,26 +153,24 @@ export const createStripeCoupon = async ({
 		legacyVersion,
 	});
 
-
+	const redeemedByCode = new Map<string, number>();
 	for (const promoCode of reward.promo_codes) {
-		const existing = await stripeCli.promotionCodes.list({
+		let totalRedeemed = 0;
+		for await (const existingPromo of stripeCli.promotionCodes.list({
 			code: promoCode.code,
-			active: true,
-			limit: 1,
-		});
-		if (existing.data.length === 0) continue;
-		const existingPromo = existing.data[0];
-		const attachedCoupon = existingPromo.promotion?.coupon;
-		const attachedCouponId =
-			typeof attachedCoupon === "string"
-				? attachedCoupon
-				: (attachedCoupon?.id ?? null);
-		if (attachedCouponId !== reward.id) {
-			throw new RecaseError({
-				message: `Promo code ${promoCode.code} (${existingPromo.id}) already exists in Stripe`,
-				code: ErrCode.PromoCodeAlreadyExistsInStripe,
-			});
+			limit: 100,
+		})) {
+			const attachedCouponId = getPromoCouponId(existingPromo);
+			if (attachedCouponId === reward.id) {
+				totalRedeemed += existingPromo.times_redeemed;
+			} else if (existingPromo.active) {
+				throw new RecaseError({
+					message: `Promo code ${promoCode.code} (${existingPromo.id}) already exists in Stripe`,
+					code: ErrCode.PromoCodeAlreadyExistsInStripe,
+				});
+			}
 		}
+		redeemedByCode.set(promoCode.code, totalRedeemed);
 	}
 
 	try {
@@ -219,12 +227,27 @@ export const createStripeCoupon = async ({
 
 	// Create promo codes
 	for (const promoCode of reward.promo_codes) {
+		const globalMaxRedemption = getGlobalMaxRedemption(promoCode);
+		const redeemed = redeemedByCode.get(promoCode.code) ?? 0;
+		const maxRedemptions =
+			globalMaxRedemption === undefined
+				? undefined
+				: globalMaxRedemption - redeemed;
+
+		if (maxRedemptions !== undefined && maxRedemptions <= 0) {
+			logger.warn(
+				`Promo code ${promoCode.code} on reward ${reward.id} has no redemptions remaining (max: ${globalMaxRedemption}, redeemed: ${redeemed}), skipping creation`,
+			);
+			continue;
+		}
+
 		await stripeCli.promotionCodes.create({
 			promotion: {
 				type: "coupon",
 				coupon: stripeCoupon.id,
 			},
 			code: promoCode.code,
+			max_redemptions: maxRedemptions,
 			...(promoCode.first_time_transaction
 				? { restrictions: { first_time_transaction: true } }
 				: {}),
