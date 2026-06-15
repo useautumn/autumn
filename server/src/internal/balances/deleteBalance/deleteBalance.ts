@@ -25,6 +25,7 @@ export const deleteBalance = async ({
 	if (recalculate_balances && !feature_id) {
 		throw new RecaseError({
 			message: "feature_id is required when recalculate_balances is true",
+			statusCode: 400,
 		});
 	}
 

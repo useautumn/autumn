@@ -50,6 +50,7 @@ export const validateAndGetInputEntities = async ({
 		if (featureUtils.isConsumable(feature)) {
 			throw new RecaseError({
 				message: "Entities cannot be linked to consumable features",
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 	}

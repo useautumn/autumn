@@ -48,6 +48,7 @@ export const updateNextResetAtV2 = async ({
 	if (targetCusEnt.entitlement.interval === EntInterval.Lifetime) {
 		throw new RecaseError({
 			message: `Cannot update next reset at for lifetime balance (feature ${featureId}, customer ${fullSubject.customerId})`,
+			statusCode: 400,
 		});
 	}
 
