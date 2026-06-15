@@ -591,3 +591,69 @@ test(
 		});
 	},
 );
+
+// ═══════════════════════════════════════════════════════════════════
+// CASCADE-8: included drains first via Postgres fallback path
+// ═══════════════════════════════════════════════════════════════════
+
+test(
+	`${chalk.yellowBright("track-tokens-cascade-8: cascade settles correctly through the Postgres fallback path")}`,
+	async () => {
+		const { includedFeatureId, overageFeatureId } =
+			await createCascadeFeatures();
+		const includedItem = items.free({
+			featureId: includedFeatureId,
+			includedUsage: 2,
+		});
+		const overageItem = items.consumable({
+			featureId: overageFeatureId,
+			includedUsage: 0,
+			price: 1,
+			billingUnits: 1,
+		});
+		const proProduct = products.base({
+			id: "cascade-8",
+			items: [includedItem, overageItem],
+		});
+
+		const { customerId, autumnV2_2 } = await initScenario({
+			customerId: "track-tokens-cascade-8",
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [proProduct] }),
+			],
+			actions: [s.attach({ productId: proProduct.id })],
+		});
+
+		// skip_cache forces ctx.skipCache = true, which makes Redis throw
+		// a SkipCache error. handleRedisTrackError sees shouldFallback() =
+		// true and routes through runPostgresTrack instead.
+		const trackRes: TrackResponseV3 = await autumnV2_2.post(
+			"/track_tokens?skip_cache=true",
+			{
+				customer_id: customerId,
+				model_id: CASCADE_MODEL,
+				input_tokens: 200000,
+				output_tokens: 200000,
+			},
+		);
+
+		expect(trackRes.value).toBeCloseTo(4, 10);
+		expect(deductionFor(trackRes, includedFeatureId)?.value).toBeCloseTo(2, 10);
+		expect(deductionFor(trackRes, overageFeatureId)?.value).toBeCloseTo(3, 10);
+
+		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+		expectBalanceCorrect({
+			customer,
+			featureId: includedFeatureId,
+			remaining: 0,
+			usage: 2,
+		});
+		expectBalanceCorrect({
+			customer,
+			featureId: overageFeatureId,
+			remaining: 0,
+			usage: 3,
+		});
+	},
+);
