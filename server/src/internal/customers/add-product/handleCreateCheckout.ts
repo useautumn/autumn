@@ -49,6 +49,7 @@ export const handleCreateCheckout = async ({
 	if (itemSets.length === 0) {
 		throw new RecaseError({
 			message: `Product ${attachParams.products.map((p) => p.name).join(", ")} has no prices, can't create checkout`,
+			statusCode: 400,
 		});
 	}
 

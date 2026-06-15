@@ -25,6 +25,7 @@ export const setupCreateCustomer = async ({
 	if (!customerId && !customerData?.email) {
 		throw new RecaseError({
 			message: "Either customer ID or email is required",
+			statusCode: 400,
 		});
 	}
 

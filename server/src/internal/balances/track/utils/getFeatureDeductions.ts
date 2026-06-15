@@ -131,6 +131,7 @@ export const getTrackEventNameDeductions = ({
 	if (featureDeductions.length === 0) {
 		throw new RecaseError({
 			message: `No features found for event name: ${eventName}`,
+			statusCode: 404,
 		});
 	}
 

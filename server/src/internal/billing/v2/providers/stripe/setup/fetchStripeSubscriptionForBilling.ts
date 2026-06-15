@@ -2,9 +2,9 @@ import {
 	type AttachParamsV1,
 	type FullCustomer,
 	getTargetSubscriptionCusProduct,
-	InternalError,
 	type MultiAttachParamsV0,
 	type Product,
+	RecaseError,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import { createStripeCli } from "@server/external/connect/createStripeCli";
@@ -60,20 +60,23 @@ export const fetchStripeSubscriptionForBilling = async ({
 	});
 
 	if (!sub) {
-		throw new InternalError({
-			message: `[Stripe Subscription] Subscription not found: ${subId}`,
+		throw new RecaseError({
+			message: `Subscription ${subId} not found`,
+			statusCode: 404,
 		});
 	}
 
 	if (isStripeSubscriptionCanceled(sub)) {
-		throw new InternalError({
-			message: `[Stripe Subscription] Subscription is canceled: ${subId}`,
+		throw new RecaseError({
+			message: `Subscription ${subId} is canceled`,
+			statusCode: 400,
 		});
 	}
 
 	if (sub.customer !== fullCus.processor.id) {
-		throw new InternalError({
-			message: `[Stripe Subscription] Subscription is not for the current customer: ${subId}`,
+		throw new RecaseError({
+			message: `Subscription ${subId} is not for the current customer`,
+			statusCode: 400,
 		});
 	}
 

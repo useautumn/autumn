@@ -1,11 +1,12 @@
-import { Scopes } from "@autumn/shared";
 import type { UpdateSubscriptionV1Params } from "@autumn/shared";
+import { Scopes } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler";
 import { computeUpdateSubscriptionPlan } from "@/internal/billing/v2/actions/updateSubscription/compute/computeUpdateSubscriptionPlan";
 import { handleUpdateSubscriptionErrors } from "@/internal/billing/v2/actions/updateSubscription/errors/handleUpdateSubscriptionErrors";
 import { logUpdateSubscriptionContext } from "@/internal/billing/v2/actions/updateSubscription/logs/logUpdateSubscriptionContext";
 import { setupUpdateSubscriptionBillingContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionBillingContext";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
+import { voidInvoicesOnImmediateCancel } from "@/internal/billing/v2/execute/voidInvoicesOnImmediateCancel";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
@@ -96,6 +97,13 @@ export const handleCancelV2 = createRoute({
 				autumn: autumnBillingPlan,
 				stripe: stripeBillingPlan,
 			},
+		});
+
+		await voidInvoicesOnImmediateCancel({
+			ctx,
+			billingContext,
+			billingPlan,
+			billingResult,
 		});
 
 		logStripeBillingResult({ ctx, result: billingResult.stripe });

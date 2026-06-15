@@ -24,6 +24,7 @@ export const handleDeleteFeatureV1 = createRoute({
 		if (creditSystems.length > 0) {
 			throw new RecaseError({
 				message: `Feature ${feature_id} is used by credit system ${creditSystems[0].id}`,
+				statusCode: 409,
 			});
 		}
 
@@ -36,6 +37,7 @@ export const handleDeleteFeatureV1 = createRoute({
 		if (ent) {
 			throw new RecaseError({
 				message: `Feature ${feature_id} is used in a product. You must delete the product first, or archive it instead.`,
+				statusCode: 409,
 			});
 		}
 
