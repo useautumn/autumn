@@ -14,6 +14,7 @@
  *       i.e. periods stay aligned to the custom first boundary.
  *   New validation:
  *     - next_reset_at without `reset` -> rejected.
+ *     - next_reset_at in the past -> rejected (would immediately cycle the balance).
  *     - next_reset_at >= expires_at -> rejected (next reset must precede expiry).
  *
  * Pre-impl red:
@@ -171,6 +172,32 @@ test.concurrent(
 				included_grant: 50,
 				// no `reset`
 				next_reset_at: Date.now() + 10 * DAY_MS,
+			}),
+		).rejects.toThrow();
+	},
+);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Validation: next_reset_at must be in the future
+// ─────────────────────────────────────────────────────────────────────────────
+test.concurrent(
+	`${chalk.yellowBright("create-balance next_reset_at: rejected when in the past")}`,
+	async () => {
+		const customerId = "create-balance-nra-past";
+
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false })],
+			actions: [],
+		});
+
+		await expect(
+			autumnV1.post("/balances/create", {
+				customer_id: customerId,
+				feature_id: TestFeature.Messages,
+				included_grant: 50,
+				reset: { interval: ResetInterval.Month },
+				next_reset_at: Date.now() - 10 * DAY_MS, // already elapsed
 			}),
 		).rejects.toThrow();
 	},

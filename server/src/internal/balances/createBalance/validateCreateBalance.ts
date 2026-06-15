@@ -80,15 +80,26 @@ export const validateCreateBalanceParams = async ({
 	}
 
 	// An explicit next_reset_at only makes sense for a resetting balance.
-	if (params.next_reset_at && !params.reset?.interval) {
+	if (params.next_reset_at !== undefined && !params.reset?.interval) {
 		throw new RecaseError({
 			message: `next_reset_at requires a reset interval to be provided`,
 		});
 	}
 
+	// An explicit first reset boundary must be in the future — a past value would
+	// immediately fire a lazy reset and cycle the balance the caller just created.
+	if (
+		params.next_reset_at !== undefined &&
+		params.next_reset_at <= Date.now()
+	) {
+		throw new RecaseError({
+			message: `next_reset_at must be in the future`,
+		});
+	}
+
 	// The first reset must happen before the balance expires.
 	if (
-		params.next_reset_at &&
+		params.next_reset_at !== undefined &&
 		params.expires_at &&
 		params.next_reset_at >= params.expires_at
 	) {
