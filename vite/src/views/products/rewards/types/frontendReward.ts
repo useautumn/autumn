@@ -21,7 +21,8 @@ export enum FrontendDiscountType {
 /** Frontend entitlement config for feature grant rewards */
 export interface FrontendRewardEntitlement {
 	feature_id: string;
-	allowance: number;
+	// Optional: boolean features grant on/off access with no allowance
+	allowance?: number;
 	expiry?: {
 		duration: EntitlementDuration;
 		length: number;

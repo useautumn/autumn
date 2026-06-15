@@ -4,7 +4,6 @@ import { CheckIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { cloneElement, isValidElement } from "react";
 import { Button } from "@/components/v2/buttons/Button";
-import { TextCheckbox } from "@/components/v2/checkboxes/TextCheckbox";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
@@ -24,7 +23,6 @@ import type {
 	FrontendReward,
 	FrontendRewardEntitlement,
 } from "../../types/frontendReward";
-import { FirstTimeTransactionTooltip } from "./FirstTimeTransactionTooltip";
 
 interface FeatureGrantRewardConfigProps {
 	reward: FrontendReward;
@@ -37,11 +35,15 @@ export function FeatureGrantRewardConfig({
 }: FeatureGrantRewardConfigProps) {
 	const { features } = useFeaturesQuery();
 
-	// Keep existing metered filtering, but allow credit systems too
 	const availableGrantTargets = features.filter(
 		(f) =>
-			f.type === FeatureType.Metered || f.type === FeatureType.CreditSystem,
+			f.type === FeatureType.Metered ||
+			f.type === FeatureType.CreditSystem ||
+			f.type === FeatureType.Boolean,
 	);
+
+	const isBooleanFeature = (featureId: string) =>
+		features.find((f) => f.id === featureId)?.type === FeatureType.Boolean;
 
 	const entitlements = reward.featureGrantEntitlements;
 	const getGlobalMaxRedemption = (
@@ -107,25 +109,6 @@ export function FeatureGrantRewardConfig({
 		updated[index] = {
 			...rest,
 			global_max_redemption: value,
-		};
-		setReward({ ...reward, promo_codes: updated });
-	};
-
-	const updateFirstTimeTransaction = ({
-		index,
-		value,
-	}: {
-		index: number;
-		value: boolean;
-	}) => {
-		const updated = [...(reward.promo_codes || [])];
-		const promoCode = updated[index] ?? { code: "" };
-		const globalMaxRedemption = getGlobalMaxRedemption(promoCode);
-		const { max_redemptions: _maxRedemptions, ...rest } = promoCode;
-		updated[index] = {
-			...rest,
-			global_max_redemption: globalMaxRedemption,
-			first_time_transaction: value,
 		};
 		setReward({ ...reward, promo_codes: updated });
 	};
@@ -221,20 +204,6 @@ export function FeatureGrantRewardConfig({
 									</button>
 								)}
 							</div>
-							<div className="flex items-center gap-1.5">
-								<TextCheckbox
-									checked={promoCode.first_time_transaction ?? false}
-									onCheckedChange={(checked) =>
-										updateFirstTimeTransaction({
-											index,
-											value: checked === true,
-										})
-									}
-								>
-									Limit to first-time customers
-								</TextCheckbox>
-								<FirstTimeTransactionTooltip />
-							</div>
 						</div>
 					))}
 					<Button variant="secondary" size="sm" onClick={addPromoCode}>
@@ -253,7 +222,7 @@ export function FeatureGrantRewardConfig({
 					<AnimatePresence initial={false}>
 						{entitlements.map((ent, index) => (
 							<motion.div
-								key={`${ent.feature_id || "new"}-${index}`}
+								key={index}
 								initial={{ opacity: 0, scaleY: 0.95, originY: 0 }}
 								animate={{ opacity: 1, scaleY: 1 }}
 								exit={{ opacity: 0, scaleY: 0.95 }}
@@ -320,22 +289,24 @@ export function FeatureGrantRewardConfig({
 										/>
 									</div>
 
-									{/* Allowance */}
-									<div>
-										<FormLabel>Balance Grant</FormLabel>
-										<Input
-											type="number"
-											value={ent.allowance || ""}
-											onChange={(e) =>
-												updateEntitlement({
-													index,
-													updates: { allowance: Number(e.target.value) },
-												})
-											}
-											placeholder="0"
-											className="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-										/>
-									</div>
+									{/* Allowance (boolean features grant on/off access, no balance) */}
+									{!isBooleanFeature(ent.feature_id) && (
+										<div>
+											<FormLabel>Balance Grant</FormLabel>
+											<Input
+												type="number"
+												value={ent.allowance || ""}
+												onChange={(e) =>
+													updateEntitlement({
+														index,
+														updates: { allowance: Number(e.target.value) },
+													})
+												}
+												placeholder="0"
+												className="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+											/>
+										</div>
+									)}
 
 									{/* Expiry */}
 									<div>
