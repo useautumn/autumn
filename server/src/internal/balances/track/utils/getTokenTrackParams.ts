@@ -47,14 +47,6 @@ const resolveAiCreditFeatureById = ({
 	return candidate;
 };
 
-/**
- * Resolve every AI credit system on the customer, ordered included-first. The
- * deduction engine settles them in one atomic pass: it drains included systems
- * (no overage) before overage systems, by interval then balance, and prices
- * each in its own cost domain — so any number of systems cascades naturally,
- * with included usage spent before the marked-up overage. Pass an explicit
- * feature_id to deduct from a single system instead.
- */
 const resolveAiCreditFeaturesFromEntitlements = async ({
 	ctx,
 	customerId,
@@ -143,10 +135,6 @@ const resolveAiCreditFeaturesFromEntitlements = async ({
 		});
 	}
 
-	// Hand the engine every system and let its deduction sort order them: it
-	// already drains included (no overage) before overage, by interval then
-	// balance, so this stable included-first sort only decides which system is
-	// reported as the cascade's primary.
 	return [...aiCreditSystems]
 		.sort(
 			(left, right) =>
@@ -218,8 +206,6 @@ export const getTokenTrackParams = async ({
 		outputTokens: input.output_tokens,
 	};
 
-	// One atomic deduction across every resolved system, drained in order:
-	// included usage first (capped), then each marked-up overage system.
 	const featureDeductions: FeatureDeduction[] = [
 		buildTokenCascadeDeduction({
 			systems: aiCreditFeatures.map((feature, index) => ({
@@ -230,8 +216,6 @@ export const getTokenTrackParams = async ({
 		}),
 	];
 
-	// Freeze each system's request-time price (ordered included-first) so a
-	// queued replay re-settles the same cascade instead of re-resolving.
 	const cascadeProperties = isCascade
 		? {
 				cascade: {

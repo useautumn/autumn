@@ -38,8 +38,6 @@ export const queueTrack = async ({
 				requestId: ctx.id,
 				apiVersion: ctx.apiVersion.value,
 				body,
-				// The cascade marker travels in the body; the worker rebuilds the
-				// spillover deduction from it so a queued replay keeps cascade pricing.
 				allowTokenCascade: Boolean(
 					(body.properties as Record<string, unknown> | undefined)?.cascade,
 				),
