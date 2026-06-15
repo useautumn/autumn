@@ -44,9 +44,9 @@ const allocateAmountOffDiscounts = ({
 		return diff === 0 ? a.index - b.index : diff;
 	});
 
-	for (const allocation of byRemainder) {
+	for (const { index } of byRemainder) {
 		if (remaining <= 0) break;
-		allocation.minorUnits += 1;
+		allocations[index].minorUnits += 1;
 		remaining -= 1;
 	}
 
