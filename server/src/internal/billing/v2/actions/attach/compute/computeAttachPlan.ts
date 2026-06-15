@@ -4,12 +4,13 @@ import type {
 	AutumnBillingPlan,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { cusProductToExistingBalanceCarryOvers } from "@/internal/billing/v2/utils/handleCarryOvers/cusProductToExistingBalanceCarryOvers";
 import { cusProductToOneOffPrepaidCarryOvers } from "@/internal/billing/v2/utils/handleOneOffPrepaidCarryOvers/cusProductToOneOffPrepaidCarryOvers";
-import { computeAttachLineItems } from "./computeAttachLineItems";
 import { computeAttachNewCustomerProduct } from "./computeAttachNewCustomerProduct";
 import { computeAttachTransitionUpdates } from "./computeAttachTransitionUpdates";
 import { finalizeAttachPlan } from "./finalizeAttachPlan";
+import { shouldBuildImmediateLineItems } from "./shouldBuildImmediateLineItems";
 
 /**
  * Computes the billing plan for attaching a product.
@@ -69,14 +70,23 @@ export const computeAttachPlan = ({
 				})
 			: { entitlements: [], customerEntitlements: [] };
 
+	const includeArrearLineItems = !params.carry_over_usages?.enabled;
+	const shouldBuildLineItems = shouldBuildImmediateLineItems({
+		planTiming,
+		customerProductStatus: newCustomerProduct.status,
+		accessStartsAt: attachBillingContext.accessStartsAt,
+	});
+
 	const { allLineItems: lineItems, updateCustomerEntitlements } =
-		computeAttachLineItems({
-			ctx,
-			attachBillingContext,
-			params,
-			newCustomerProduct,
-			currentCustomerProduct,
-		});
+		shouldBuildLineItems
+			? buildAutumnLineItems({
+					ctx,
+					newCustomerProducts: [newCustomerProduct],
+					deletedCustomerProduct: currentCustomerProduct,
+					billingContext: attachBillingContext,
+					includeArrearLineItems,
+				})
+			: { allLineItems: [], updateCustomerEntitlements: [] };
 
 	let plan: AutumnBillingPlan = {
 		customerId: attachBillingContext.fullCustomer?.id ?? "",

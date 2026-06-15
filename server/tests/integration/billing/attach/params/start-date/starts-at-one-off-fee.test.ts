@@ -26,11 +26,18 @@ import { expectProductScheduled } from "@tests/integration/billing/utils/expectC
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { addDays } from "date-fns";
+import { addDays, addHours, addMinutes } from "date-fns";
 import type Stripe from "stripe";
-import { getCustomerProduct } from "./utils";
+import { CusService } from "@/internal/customers/CusService";
+import { getCustomerProduct, triggerSubscriptionCreated } from "./utils";
+
+const getScheduleSubscriptionId = (schedule: Stripe.SubscriptionSchedule) =>
+	typeof schedule.subscription === "string"
+		? schedule.subscription
+		: schedule.subscription?.id;
 
 const ONBOARDING_FEE = 20;
 const BASE_PRICE = 20; // products.pro() has a $20/mo base price built in.
@@ -169,5 +176,74 @@ test.concurrent(`${chalk.yellowBright("starts_at one-off: immediate-access futur
 		ctx,
 		scheduleId: cusProduct.scheduled_ids![0]!,
 		startDate,
+	});
+});
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// TEST 3: end-to-end — advance the clock to activation, assert the fee is charged
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// Proves the schedule doesn't just CARRY the fee but that Stripe actually
+// invoices it (base + onboarding fee) once the plan activates at starts_at.
+test.concurrent(`${chalk.yellowBright("starts_at one-off: fee is invoiced in full when the schedule activates")}`, async () => {
+	const customerId = "starts-at-oneoff-activation";
+	const pro = buildProWithOnboardingFee("pro-oneoff-activation");
+
+	const { autumnV2_2, ctx, advancedTo, testClockId } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ paymentMethod: "success" }),
+			s.products({ list: [pro] }),
+		],
+		actions: [],
+	});
+
+	expect(testClockId).toBeDefined();
+	const startDate = addDays(advancedTo, 7).getTime();
+
+	await autumnV2_2.billing.attach<AttachParamsV1Input>({
+		customer_id: customerId,
+		plan_id: pro.id,
+		starts_at: startDate,
+		feature_quantities: onboardingFeeQuantities,
+	});
+
+	// Nothing charged before activation.
+	await expectCustomerInvoiceCorrect({ customerId, count: 0 });
+
+	const scheduledProduct = await getCustomerProduct({ ctx, customerId, productId: pro.id });
+	const scheduleId = scheduledProduct.scheduled_ids?.[0];
+	if (!scheduleId) throw new Error("Expected scheduled product to have schedule");
+
+	// Advance past starts_at so Stripe activates the schedule and invoices it.
+	await advanceTestClock({
+		stripeCli: ctx.stripeCli,
+		testClockId: testClockId!,
+		advanceTo: addHours(startDate, 1).getTime(),
+		waitForSeconds: 30,
+	});
+
+	const stripeSchedule = (await ctx.stripeCli.subscriptionSchedules.retrieve(
+		scheduleId,
+	)) as Stripe.SubscriptionSchedule;
+	const stripeSubId = getScheduleSubscriptionId(stripeSchedule);
+	if (!stripeSubId) throw new Error("Expected schedule to have a subscription");
+
+	await triggerSubscriptionCreated({
+		ctx,
+		stripeSubId,
+		scheduleId,
+		subscriptionCreatedAtMs: addMinutes(startDate, 5).getTime(),
+		fullCustomer: await CusService.getFull({ ctx, idOrInternalId: customerId }),
+	});
+
+	// Plan is now active, and the activation invoice charged base + onboarding fee.
+	const cusProduct = await getCustomerProduct({ ctx, customerId, productId: pro.id });
+	expect(cusProduct.status).toBe(CusProductStatus.Active);
+
+	await expectCustomerInvoiceCorrect({
+		customerId,
+		count: 1,
+		latestTotal: BASE_PRICE + ONBOARDING_FEE,
 	});
 });
