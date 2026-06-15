@@ -39,11 +39,15 @@ const viteAppEnv = envFile.includes(".env.prod")
 const useLocalAuthUrls = viteAppEnv === "dev" && !isProductionMode;
 const localUrl = (value: string | undefined, fallback: string) =>
 	value && !value.includes(".useautumn.com") ? value : fallback;
+const slackRedirectFromPublicTunnel = publicTunnelUrl
+	? `${publicTunnelUrl}/slack/oauth/callback`
+	: undefined;
 const SLACK_REDIRECT_URI = useLocalAuthUrls
-	? localUrl(
+	? (slackRedirectFromPublicTunnel ??
+		localUrl(
 			process.env.SLACK_REDIRECT_URI,
 			`${SLACK_BOT_URL}/slack/oauth/callback`,
-		)
+		))
 	: (process.env.SLACK_REDIRECT_URI ?? `${SLACK_BOT_URL}/slack/oauth/callback`);
 
 /**

@@ -15,7 +15,6 @@ import {
 	orgDisableStripeWrites,
 	orgToReturnUrl,
 } from "@autumn/shared";
-import { all } from "better-all";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setupStripeBillingContext } from "@/internal/billing/v2/providers/stripe/setup/setupStripeBillingContext";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
@@ -53,30 +52,25 @@ export const setupAttachBillingContext = async ({
 }): Promise<AttachBillingContext> => {
 	const { fullCustomer: fullCustomerOverride } = contextOverride;
 
+	// fullCustomer must resolve before the product context so patch-style customize
+	// (add_items/remove_items) routes through setupAttachPatchProductContext, matching
+	// multiAttach (setupImmediateMultiProductBillingContext) and createSchedule.
+	const fullCustomer =
+		fullCustomerOverride ??
+		(await setupFullCustomerContext({
+			ctx,
+			params,
+		}));
+
 	const {
+		fullProduct: attachProduct,
+		customPrices,
+		customEnts,
+	} = await setupAttachProductContext({
+		ctx,
+		params,
+		contextOverride,
 		fullCustomer,
-		attachProductContext: {
-			fullProduct: attachProduct,
-			customPrices,
-			customEnts,
-		},
-	} = await all({
-		async fullCustomer() {
-			return (
-				fullCustomerOverride ??
-				(await setupFullCustomerContext({
-					ctx,
-					params,
-				}))
-			);
-		},
-		async attachProductContext() {
-			return setupAttachProductContext({
-				ctx,
-				params,
-				contextOverride,
-			});
-		},
 	});
 
 	const { currentCustomerProduct, scheduledCustomerProduct, planTiming } =
