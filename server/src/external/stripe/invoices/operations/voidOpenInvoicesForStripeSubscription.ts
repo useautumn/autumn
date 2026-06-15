@@ -4,12 +4,8 @@ import { invoiceActions } from "@/internal/invoices/actions";
 
 const VOIDABLE_STATUSES: Stripe.Invoice.Status[] = ["open", "uncollectible"];
 
-/**
- * Void every open/uncollectible invoice on a Stripe subscription, then mirror the new status
- * into Autumn's invoice records. Per-invoice failures are tolerated (the subscription.deleted
- * webhook can race this for the same invoices, and Stripe rejects voiding an already-voided one)
- * but are counted and returned so the caller can surface a partial failure.
- */
+// Per-invoice failures are tolerated + counted: the subscription.deleted webhook can race the
+// same invoices, and Stripe rejects voiding an already-voided one.
 export const voidOpenInvoicesForStripeSubscription = async ({
 	ctx,
 	stripeCli,

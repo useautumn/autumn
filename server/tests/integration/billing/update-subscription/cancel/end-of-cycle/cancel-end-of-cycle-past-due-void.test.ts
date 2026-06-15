@@ -1,34 +1,7 @@
-/**
- * TDD (feature) for: void-on-cancel orgs cancel past_due customers immediately.
- *
- * Contract under test:
- *   New behavior:
- *     - flag void_invoices_on_subscription_deletion ON + product past_due + cancel_action "cancel_end_of_cycle"
- *       -> resolves to an IMMEDIATE cancel: product removed now, default/free active now (not scheduled).
- *   Side effects:
- *     - that immediate cancel voids the subscription's open/uncollectible invoices INLINE
- *       (the Autumn cancel sets the sub:<id> lock, so the subscription.deleted webhook is skipped).
- *   Gating (unchanged behavior, control cases):
- *     - flag OFF + past_due + cancel_end_of_cycle -> still scheduled-cancel, open invoice NOT voided.
- *     - flag ON + NOT past_due + cancel_end_of_cycle -> normal end-of-cycle (canceling + free scheduled).
- *
- * Pre-impl red: the PRIMARY test fails because cancel_end_of_cycle on a past_due sub today
- *   schedules the cancel (pro stays, free not active) and never voids the open invoice on the
- *   Autumn-initiated path.
- *
- * past_due setup: attach with a good card, swap the SUBSCRIPTION's default_payment_method to a
- * failing card and advance the test clock so the renewal charge fails (produces a real open
- * invoice in Stripe). The customer_product.status is then flipped to past_due directly in
- * Postgres (+ cache bust) rather than waiting on the subscription.updated webhook -- there is no
- * public API to set past_due, and the webhook sync is the flakiest part of a local run. This
- * mirrors balances/cron/past-due-reset.test.ts. What we're actually testing is the cancel
- * behavior, not the past_due sync.
- *
- * These tests mutate shared org.config, so they run serially (plain `test`) and restore in `finally`.
- */
+// void-on-cancel: flag ON + past_due + cancel_end_of_cycle -> immediate cancel + voided invoice.
+// PRIMARY + 2 controls (flag off; not past_due). Serial (shared org.config, restored in finally).
 
 import { expect, test } from "bun:test";
-import type { Stripe } from "stripe";
 import type { ApiCustomerV3 } from "@autumn/shared";
 import { CusProductStatus, customerProducts } from "@autumn/shared";
 import {
@@ -46,6 +19,7 @@ import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUti
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { eq } from "drizzle-orm";
+import type { Stripe } from "stripe";
 import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils";
 import { CusService } from "@/internal/customers/CusService";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
@@ -217,9 +191,9 @@ test(`${chalk.yellowBright("cancel eoc past_due: flag on -> cancels immediately 
 		const allInvoices = await ctx.stripeCli.invoices.list({
 			customer: stripeCustomerId,
 		});
-		expect(
-			allInvoices.data.filter((inv) => (inv.total ?? 0) < 0).length,
-		).toBe(0);
+		expect(allInvoices.data.filter((inv) => (inv.total ?? 0) < 0).length).toBe(
+			0,
+		);
 		const stripeCustomer = (await ctx.stripeCli.customers.retrieve(
 			stripeCustomerId!,
 		)) as Stripe.Customer;

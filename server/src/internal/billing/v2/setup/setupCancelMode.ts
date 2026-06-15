@@ -6,11 +6,8 @@ import type {
 } from "@autumn/shared";
 import { CusProductStatus } from "@autumn/shared";
 
-// Void-on-cancel orgs cancel a past_due end-of-cycle request immediately: the customer is in a
-// cycle they never paid for, so there is no paid period to honor. The unpaid invoice is voided
-// downstream (voidInvoicesOnImmediateCancel) and proration credits are suppressed by the caller
-// (no refund is owed for a cycle that was never paid).
-export const shouldForcePastDueImmediateCancel = ({
+// past_due end-of-cycle resolves to immediate: no paid period left to honor.
+const shouldForcePastDueImmediateCancel = ({
 	params,
 	org,
 	customerProduct,
@@ -35,3 +32,17 @@ export const setupCancelAction = ({
 	shouldForcePastDueImmediateCancel({ params, org, customerProduct })
 		? "cancel_immediately"
 		: params.cancel_action;
+
+// No refund for a past_due immediate cancel: the customer never paid the cycle being voided.
+export const shouldSuppressUnpaidCycleCredit = ({
+	cancelAction,
+	org,
+	customerProduct,
+}: {
+	cancelAction: CancelAction | undefined;
+	org: Organization;
+	customerProduct?: FullCusProduct;
+}): boolean =>
+	cancelAction === "cancel_immediately" &&
+	org.config.void_invoices_on_subscription_deletion &&
+	customerProduct?.status === CusProductStatus.PastDue;

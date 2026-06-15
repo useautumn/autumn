@@ -17,7 +17,7 @@ import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorR
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import {
 	setupCancelAction,
-	shouldForcePastDueImmediateCancel,
+	shouldSuppressUnpaidCycleCredit,
 } from "@/internal/billing/v2/setup/setupCancelMode";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
@@ -180,9 +180,10 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		customerProduct,
 	});
 
-	// A past_due cancel forced to immediate must not refund the unpaid cycle.
-	const forcePastDueImmediate = shouldForcePastDueImmediateCancel({
-		params,
+	// A past_due immediate cancel (resolved from end-of-cycle OR requested directly) must not
+	// credit the unpaid cycle — the open invoice is voided instead.
+	const suppressUnpaidCycleCredit = shouldSuppressUnpaidCycleCredit({
+		cancelAction,
 		org: ctx.org,
 		customerProduct,
 	});
@@ -235,7 +236,7 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
-		requestedProrationBehavior: forcePastDueImmediate
+		requestedProrationBehavior: suppressUnpaidCycleCredit
 			? "none"
 			: setupIgnoreProrationBehavior({ intent })
 				? undefined
