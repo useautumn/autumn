@@ -781,6 +781,20 @@ export class AutumnInt {
 			return data;
 		},
 
+		update: async ({
+			internalId,
+			reward,
+		}: {
+			internalId: string;
+			reward: any;
+		}) => {
+			const data = await this.post(
+				`/rewards/${internalId}?legacyStripe=true`,
+				reward,
+			);
+			return data;
+		},
+
 		delete: async (rewardId: string) => {
 			const data = await this.delete(`/rewards/${rewardId}`);
 			return data;

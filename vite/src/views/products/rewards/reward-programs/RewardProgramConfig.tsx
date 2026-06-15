@@ -5,25 +5,16 @@ import {
 	RewardReceivedBy,
 	RewardTriggerEvent,
 } from "@autumn/shared";
-import { Check, ChevronsUpDown, X } from "lucide-react";
-import { useId, useState } from "react";
+import { PackageIcon, XIcon } from "@phosphor-icons/react";
+import { useId } from "react";
 import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import {
-	Command,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandItem,
-	CommandList,
-} from "@/components/ui/command";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/v2/buttons/Button";
 import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@/components/v2/dropdowns/DropdownMenu";
 import { Input } from "@/components/v2/inputs/Input";
 import {
 	Select,
@@ -188,6 +179,8 @@ export const RewardProgramConfig = ({
 	);
 };
 
+const MAX_VISIBLE_CHIPS = 3;
+
 const ProductSelector = ({
 	rewardProgram,
 	setRewardProgram,
@@ -196,89 +189,89 @@ const ProductSelector = ({
 	setRewardProgram: (rewardProgram: RewardProgram) => void;
 }) => {
 	const { products } = useProductsQuery();
-	const [open, setOpen] = useState(false);
 
-	// Handle selection/deselection of a product
-	const handleProductToggle = (productId: string) => {
-		let newProductIds = [...(rewardProgram.product_ids || [])];
-		if (newProductIds.includes(productId)) {
-			newProductIds = newProductIds.filter((id) => id !== productId);
-		} else {
-			newProductIds = [...newProductIds, productId];
-		}
+	const productIds = rewardProgram.product_ids ?? [];
+
+	const toggleProduct = (productId: string) =>
 		setRewardProgram({
 			...rewardProgram,
-			product_ids: newProductIds,
+			product_ids: productIds.includes(productId)
+				? productIds.filter((id) => id !== productId)
+				: [...productIds, productId],
 		});
-	};
 
 	if (!products || products.length === 0) {
-		return <p className="text-sm text-tertiary-foreground">No products available</p>;
+		return (
+			<p className="text-sm text-tertiary-foreground">No products available</p>
+		);
 	}
 
-	const getProductText = (productId: string) => {
-		const product = products.find((p: ProductV2) => p.id === productId);
-		return product?.name || "Unknown Plan";
-	};
+	const getProductName = (productId: string) =>
+		products.find((p: ProductV2) => p.id === productId)?.name ?? "Unknown plan";
 
 	return (
-		<Popover modal open={open} onOpenChange={setOpen}>
-			<PopoverTrigger asChild>
-				<Button
-					variant="muted"
-					role="combobox"
-					aria-expanded={open}
-					className="w-full min-h-9 flex flex-wrap h-fit py-2 justify-start items-center gap-2 relative data-[state=open]:border-focus data-[state=open]:shadow-focus"
-				>
-					{rewardProgram.product_ids?.length === 0
-						? "Select Plans"
-						: rewardProgram.product_ids?.map((productId: string) => (
-								<div
+		<div className="min-w-0 w-full">
+			<DropdownMenu>
+				<DropdownMenuTrigger className="flex h-8 w-full min-w-0 cursor-pointer items-center gap-1.5 overflow-hidden rounded-xl px-3 input-base input-state-open-tiny text-sm">
+					{productIds.length === 0 ? (
+						<span className="text-tertiary-foreground">Select plans...</span>
+					) : (
+						<>
+							{productIds.slice(0, MAX_VISIBLE_CHIPS).map((productId) => (
+								<span
+									className="flex h-4.5 max-w-48 shrink-0 items-center gap-0.5 rounded border border-border bg-accent px-1 text-[10px] text-foreground"
 									key={productId}
-									className="py-0 px-3 text-xs text-tertiary-foreground border-zinc-300 bg-zinc-100 rounded-full w-fit flex items-center gap-2 h-fit"
 								>
-									<p className="text-muted-foreground">{getProductText(productId)}</p>
-									<Button
-										variant="skeleton"
-										size="sm"
+									<span className="shrink-0 [&_svg]:size-3">
+										<PackageIcon
+											className="text-tertiary-foreground"
+											size={12}
+											weight="duotone"
+										/>
+									</span>
+									<span className="truncate">{getProductName(productId)}</span>
+									<span
+										className="ml-0.5 cursor-pointer text-tertiary-foreground hover:text-destructive"
 										onClick={(e) => {
 											e.stopPropagation();
-											handleProductToggle(productId);
+											toggleProduct(productId);
 										}}
-										className="bg-transparent hover:bg-transparent p-0 w-5 h-5"
+										onPointerDown={(e) => e.stopPropagation()}
 									>
-										<X size={12} className="text-tertiary-foreground" />
-									</Button>
-								</div>
+										<XIcon size={10} />
+									</span>
+								</span>
 							))}
-					<ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 absolute right-2" />
-				</Button>
-			</PopoverTrigger>
-			<PopoverContent className="w-[400px] p-0" align="start">
-				<Command>
-					<CommandInput placeholder="Search plans..." className="h-9" />
-					<CommandList className="max-h-[300px] overflow-y-auto">
-						<ScrollArea>
-							<CommandEmpty>No products found.</CommandEmpty>
-							<CommandGroup>
-								{products.map((product: ProductV2) => (
-									<CommandItem
-										key={product.id}
-										value={product.id}
-										onSelect={() => handleProductToggle(product.id)}
-										className="cursor-pointer"
-									>
-										<div className="flex items-center">{product.name}</div>
-										{rewardProgram.product_ids?.includes(product.id) && (
-											<Check size={12} className="text-tertiary-foreground" />
-										)}
-									</CommandItem>
-								))}
-							</CommandGroup>
-						</ScrollArea>
-					</CommandList>
-				</Command>
-			</PopoverContent>
-		</Popover>
+							{productIds.length > MAX_VISIBLE_CHIPS && (
+								<span className="shrink-0 px-1 text-sm text-tertiary-foreground">
+									+{productIds.length - MAX_VISIBLE_CHIPS}
+								</span>
+							)}
+						</>
+					)}
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="start" className="w-64">
+					<div className="max-h-72 overflow-y-auto">
+						{products.map((product: ProductV2) => (
+							<DropdownMenuItem
+								className="flex cursor-pointer items-center gap-2 font-medium"
+								closeOnClick={false}
+								key={product.id}
+								onClick={(e) => {
+									e.preventDefault();
+									toggleProduct(product.id);
+								}}
+							>
+								<Checkbox
+									checked={productIds.includes(product.id)}
+									className="border-border"
+								/>
+								<span className="truncate">{product.name}</span>
+							</DropdownMenuItem>
+						))}
+					</div>
+				</DropdownMenuContent>
+			</DropdownMenu>
+		</div>
 	);
 };

@@ -1,4 +1,6 @@
 import { clearMasterOrg } from "./clearMasterOrg.js";
 
-await clearMasterOrg();
+const seedFeatures = !process.argv.includes("--no-seed");
+
+await clearMasterOrg({ seedFeatures });
 process.exit(0);

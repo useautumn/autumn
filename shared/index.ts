@@ -113,6 +113,11 @@ export * from "./models/featureModels/featureModels";
 // export * from "./models/featureModels/featureResModels";
 
 export * from "./api/products/items/previousVersions/apiPlanItemV0";
+export * from "./api/products/components/billingMethod";
+export type { CreatePlanItemParamsV1Input } from "./api/products/items/crud/createPlanItemParamsV1";
+export * from "./api/products/items/utils/display";
+export type { CreatePlanParamsV2Input } from "./api/products/crud/createPlanParamsV1";
+export * from "./api/products/utils/display";
 // Attach Function Response
 export * from "./models/attachModels/attachFunctionResponse";
 // Billing Models (all from single index)
@@ -250,6 +255,7 @@ export * from "./utils/productV2Utils/productItemUtils/convertProductItem/produc
 export * from "./utils/productV2Utils/productItemUtils/getProductItemRes";
 export * from "./utils/productV2Utils/productItemUtils/itemIntervalUtils";
 export * from "./utils/productV3Utils/productItemUtils/productV3ItemUtils";
+export * from "./utils/rewardUtils/promoCodeUtils";
 export * from "./utils/rewardUtils/rewardFilterUtils";
 export * from "./utils/rewardUtils/rewardMigrationUtils";
 export * from "./utils/scopeDefinitions";

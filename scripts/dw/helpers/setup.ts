@@ -1,14 +1,14 @@
-import { log, fatal, shInherit } from "./shell.ts";
+import { NEON_TEMPLATE_BRANCH, PROJECT_ROOT } from "../constants.ts";
+import type { RegistryEntry } from "../types.ts";
+import { applyCommittedMigrations, loadDbFunctions } from "./migration.ts";
 import {
-	ensureTemplateBranch,
-	createBranch,
 	connectionString,
+	createBranch,
+	ensureTemplateBranch,
 	findBranchByName,
 } from "./neon.ts";
-import { applyCommittedMigrations, loadDbFunctions } from "./migration.ts";
-import { loadRegistry, saveRegistry } from "./registry.ts";
-import { PROJECT_ROOT, NEON_TEMPLATE_BRANCH } from "../constants.ts";
-import type { RegistryEntry } from "../types.ts";
+import { saveRegistry } from "./registry.ts";
+import { fatal, log, shInherit } from "./shell.ts";
 
 export async function setupAgentWorktree(
 	entry: RegistryEntry,
@@ -61,19 +61,48 @@ export async function autoSetupTestOrg(entry: RegistryEntry): Promise<void> {
 		return;
 	}
 	log(`seeding unit test org in ${entry.branchName ?? "worktree"}`);
-	const code = shInherit(
-		"bun",
-		["scripts/setup/setup-test.ts", "--yes"],
-		{
-			cwd: PROJECT_ROOT,
-			env: {
-				...(process.env as Record<string, string>),
-				DATABASE_URL: entry.databaseUrl,
-				DATABASE_CRITICAL_URL: entry.databaseUrl,
-			},
+	const code = shInherit("bun", ["scripts/setup/setup-test.ts", "--yes"], {
+		cwd: PROJECT_ROOT,
+		env: {
+			...(process.env as Record<string, string>),
+			DATABASE_URL: entry.databaseUrl,
+			DATABASE_CRITICAL_URL: entry.databaseUrl,
 		},
-	);
+	});
 	if (code !== 0) {
 		console.error(`[dw] setup-test exited with code ${code}; continuing`);
+	}
+}
+
+// Seed the Slack `chat_installations` row (+ OAuth creds) for the worktree's test
+// org so the dev Slack app works without a manual OAuth install per worktree.
+// Needs SLACK_BOT_TOKEN (the app's Bot User OAuth Token). SLACK_CLIENT_ID /
+// SLACK_CLIENT_SECRET configure OAuth, but cannot mint a bot token without an
+// install callback code; skips otherwise.
+// Non-fatal, like autoSetupTestOrg.
+export async function autoSeedSlackInstall(
+	entry: RegistryEntry,
+): Promise<void> {
+	if (!entry.databaseUrl) {
+		log("autoSeedSlackInstall: no databaseUrl on entry, skipping");
+		return;
+	}
+	if (!process.env.SLACK_BOT_TOKEN) {
+		log(
+			"autoSeedSlackInstall: SLACK_BOT_TOKEN not set, skipping (client id/secret are not enough to seed an installed bot)",
+		);
+		return;
+	}
+	log(`seeding slack installation in ${entry.branchName ?? "worktree"}`);
+	const code = shInherit("bun", ["apps/leaf/scripts/seedSlackInstall.ts"], {
+		cwd: PROJECT_ROOT,
+		env: {
+			...(process.env as Record<string, string>),
+			DATABASE_URL: entry.databaseUrl,
+			DATABASE_CRITICAL_URL: entry.databaseUrl,
+		},
+	});
+	if (code !== 0) {
+		console.error(`[dw] seedSlackInstall exited with code ${code}; continuing`);
 	}
 }

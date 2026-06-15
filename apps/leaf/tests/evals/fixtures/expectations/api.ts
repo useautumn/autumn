@@ -4,6 +4,7 @@ import type {
 	ApiCalledAfterApprovalExpectation,
 	ApiCalledExpectation,
 	ApiCalledInOrderExpectation,
+	ApiCalledTimesExpectation,
 	ExpectedApiCall,
 } from "./types.js";
 
@@ -37,6 +38,18 @@ export const api = {
 	}): ApiCalledAfterApprovalExpectation => ({
 		call,
 		type: "api.calledAfterApproval",
+	}),
+	/** Calls matching `call` must occur exactly `count` times; 0 forbids a tool. */
+	calledTimes: ({
+		call,
+		count,
+	}: {
+		call: ExpectedApiCall;
+		count: number;
+	}): ApiCalledTimesExpectation => ({
+		call,
+		count,
+		type: "api.calledTimes",
 	}),
 	bodyExcludes: ({
 		fields,

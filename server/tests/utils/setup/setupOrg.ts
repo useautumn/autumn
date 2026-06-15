@@ -29,18 +29,24 @@ export const getAxiosInstance = (apiKey?: string) => {
 export const setupOrg = async ({
 	orgId,
 	env,
+	seedFeatures = true,
 }: {
 	orgId: string;
 	env: AppEnv;
+	seedFeatures?: boolean;
 }) => {
 	const { db } = initDrizzle();
-	// Only insert v2 features
-	const v2Features = getFeatures({ orgId });
-	await FeatureService.insert({
-		db,
-		data: Object.values(v2Features),
-		logger: console,
-	});
+	if (seedFeatures) {
+		const v2Features = getFeatures({ orgId });
+		await FeatureService.insert({
+			db,
+			data: Object.values(v2Features),
+			logger: console,
+		});
+		console.log("✅ Inserted v2 features");
+	} else {
+		console.log("↷ Skipped v2 feature seed");
+	}
 
 	// Update org config
 	const org = await OrgService.get({ db, orgId });
@@ -55,5 +61,4 @@ export const setupOrg = async ({
 		},
 	});
 
-	console.log("✅ Inserted v2 features");
 };
