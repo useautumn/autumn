@@ -12,7 +12,11 @@ import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorR
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
-import { normalizeCreateSchedulePhases } from "../errors/normalizeCreateSchedulePhases";
+import {
+	getInitialCreateSchedulePhase,
+	normalizeCreateSchedulePhases,
+	phaseHasNumericStart,
+} from "../errors/normalizeCreateSchedulePhases";
 import { validateCreateSchedulePhasePlans } from "../errors/validateCreateSchedulePhasePlans";
 import { billingContextToRecurringAndScheduled } from "../utils/billingContextToRecurringAndScheduled";
 import { setupScheduledProductsContext } from "./setupScheduledProductsContext";
@@ -77,15 +81,14 @@ export const setupCreateScheduleBillingContext = async ({
 	params: CreateScheduleParamsV0;
 	preview?: boolean;
 }): Promise<CreateScheduleBillingContext> => {
-	const normalizedPhases = normalizeCreateSchedulePhases({
+	const initialPhase = getInitialCreateSchedulePhase({
 		phases: params.phases,
 	});
-	const [immediatePhase, ...futurePhases] = normalizedPhases;
 
 	const immediateParams = {
 		customer_id: params.customer_id,
 		entity_id: params.entity_id,
-		plans: immediatePhase.plans.map((plan) => ({
+		plans: initialPhase.plans.map((plan) => ({
 			plan_id: plan.plan_id,
 			customize: plan.customize,
 			feature_quantities: plan.feature_quantities,
@@ -104,12 +107,20 @@ export const setupCreateScheduleBillingContext = async ({
 		ctx,
 		params: immediateParams,
 		preview,
-		billingStartsAt: immediatePhase.starts_at,
+		billingStartsAt: phaseHasNumericStart(initialPhase)
+			? initialPhase.starts_at
+			: undefined,
 	});
 
 	validateCreateSchedulePhasePlans({
 		fullProducts: billingContext.fullProducts,
 	});
+
+	const normalizedPhases = normalizeCreateSchedulePhases({
+		phases: params.phases,
+		currentEpochMs: billingContext.currentEpochMs,
+	});
+	const [immediatePhase, ...futurePhases] = normalizedPhases;
 
 	const scheduledPhaseContexts = await setupScheduledProductsContext({
 		ctx,

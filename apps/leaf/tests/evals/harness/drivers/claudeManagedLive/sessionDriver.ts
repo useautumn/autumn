@@ -21,7 +21,7 @@ export const createLiveSessionDriver = ({
 	trace: EvalDriverStartInput["trace"];
 }) => {
 	const toolCalls: EvalToolCall[] = [];
-	let pendingToolUseId: string | undefined;
+	let pendingToolUseIds: string[] = [];
 
 	const runTurn = async ({
 		input,
@@ -30,7 +30,7 @@ export const createLiveSessionDriver = ({
 		input?: string;
 		kickoff: () => Promise<unknown>;
 	}) => {
-		pendingToolUseId = undefined;
+		pendingToolUseIds = [];
 		const turnSpan = currentSpan().startSpan({
 			name: input ? "user-turn" : "approval-turn",
 			type: "llm",
@@ -67,14 +67,16 @@ export const createLiveSessionDriver = ({
 			console.error("[cma-live] turn failed:", error);
 			throw error;
 		});
-		if (outcome.suspended) {
-			pendingToolUseId = outcome.suspended.toolCallId;
+		if (outcome.suspendedQueue?.length) {
+			pendingToolUseIds = outcome.suspendedQueue.map(
+				(call) => call.toolCallId,
+			);
 			trace.event({ type: "approval_pending" });
 		}
 		const text = outcome.textParts.join("\n\n");
 		turnSpan.log({ output: text });
 		turnSpan.end();
-		if (outcome.errorMessage && !text && !outcome.suspended) {
+		if (outcome.errorMessage && !text && !outcome.suspendedQueue?.length) {
 			throw new Error(`CMA live eval turn failed: ${outcome.errorMessage}`);
 		}
 		trace.event({ text, type: "agent_text" });
@@ -83,9 +85,9 @@ export const createLiveSessionDriver = ({
 
 	return {
 		approve: async () => {
-			if (!pendingToolUseId) throw new Error("No pending approval to approve.");
+			const [toolUseId] = pendingToolUseIds;
+			if (!toolUseId) throw new Error("No pending approval to approve.");
 			trace.event({ type: "approval_approved" });
-			const toolUseId = pendingToolUseId;
 			return runTurn({
 				kickoff: () =>
 					client.beta.sessions.events.send(sessionId, {
@@ -100,7 +102,7 @@ export const createLiveSessionDriver = ({
 			});
 		},
 		getToolCalls: () => [...toolCalls],
-		hasPendingApproval: () => pendingToolUseId !== undefined,
+		hasPendingApproval: () => pendingToolUseIds.length > 0,
 		send: async ({
 			attachments,
 			text,
@@ -108,21 +110,21 @@ export const createLiveSessionDriver = ({
 			attachments?: Attachment[];
 			text: string;
 		}) => {
-			if (pendingToolUseId) {
-				const toDeny = pendingToolUseId;
-				pendingToolUseId = undefined;
+			// Denying can surface further queued confirmations; drain them all
+			// before the session will accept a plain user message.
+			while (pendingToolUseIds.length > 0) {
+				const toDeny = [...pendingToolUseIds];
+				pendingToolUseIds = [];
 				await runTurn({
 					kickoff: () =>
 						client.beta.sessions.events.send(sessionId, {
-							events: [
-								{
-									deny_message:
-										"Preview and wait for explicit user confirmation before writing.",
-									result: "deny",
-									tool_use_id: toDeny,
-									type: "user.tool_confirmation",
-								},
-							],
+							events: toDeny.map((toolUseId) => ({
+								deny_message:
+									"Preview and wait for explicit user confirmation before writing.",
+								result: "deny",
+								tool_use_id: toolUseId,
+								type: "user.tool_confirmation",
+							})),
 						}),
 				});
 			}

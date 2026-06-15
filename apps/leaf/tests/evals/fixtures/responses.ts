@@ -1,3 +1,4 @@
+import type { BillingResponse } from "@api/billing/common/billingResponse.js";
 import type { BaseApiCustomerV5 } from "@api/customers/apiCustomerV5.js";
 import type { ApiPlanV1 } from "@api/products/apiPlanV1.js";
 
@@ -71,14 +72,41 @@ export const responses = {
 	attachSuccess: ({
 		customer,
 		plan,
+		request,
 	}: {
 		customer: BaseApiCustomerV5;
 		plan: ApiPlanV1;
+		request?: unknown;
 	}) => ({
 		customer_id: customer.id,
+		// Mirrors the real billing response: a checkout URL comes back when the
+		// caller forces a redirect; otherwise the field is null.
+		payment_url:
+			asRecord(request).redirect_mode === "always"
+				? `https://checkout.example.com/cs_${customer.id}`
+				: null,
 		plan_id: plan.id,
 		status: "created",
 	}),
+	// Mirrors the real BillingResponse when a charge is declined: no invoice,
+	// payment_url null, required_action carries the failure code and reason.
+	attachPaymentFailure: ({
+		reason,
+		request,
+	}: {
+		reason: string;
+		request?: unknown;
+	}): BillingResponse => {
+		const body = asRecord(request);
+		return {
+			customer_id: typeof body.customer_id === "string" ? body.customer_id : "",
+			...(typeof body.entity_id === "string"
+				? { entity_id: body.entity_id }
+				: {}),
+			payment_url: null,
+			required_action: { code: "payment_failed", reason },
+		};
+	},
 	createSchedulePreview: ({
 		customerId,
 		phases,
@@ -114,5 +142,39 @@ export const responses = {
 		phases: schedulePhases(phases),
 		schedule_id: `sched_${customerId}`,
 		status: "created",
+	}),
+	updateSubscriptionPreview: ({
+		customerId,
+		planId,
+		request,
+	}: {
+		customerId: string;
+		planId: string;
+		request?: unknown;
+	}) => {
+		const addedItems = asArray(asRecord(asRecord(request).customize).add_items);
+		const dueToday = amountFromCustomize(asRecord(request).customize);
+		return {
+			customer_id: customerId,
+			plan_id: planId,
+			currency: "usd",
+			added_items: addedItems,
+			due_today: { total: dueToday },
+			line_items: [],
+			total: dueToday,
+		};
+	},
+	updateSubscriptionSuccess: ({
+		customerId,
+		planId,
+	}: {
+		customerId: string;
+		planId: string;
+	}) => ({
+		customer_id: customerId,
+		plan_id: planId,
+		invoice: null,
+		payment_url: null,
+		status: "updated",
 	}),
 };

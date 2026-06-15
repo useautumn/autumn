@@ -16,7 +16,8 @@ const PromoCodeSchema = z.object({
 
 const RewardEntitlementSchema = z.object({
 	internal_feature_id: z.string().min(1),
-	allowance: z.number().positive(),
+	// Optional: boolean features grant on/off access with no allowance
+	allowance: z.number().positive().optional(),
 	expiry: EntitlementExpirySchema.optional(),
 });
 

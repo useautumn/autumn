@@ -1,13 +1,14 @@
 {
 	"name": "atmn",
-	"version": "1.1.8",
+	"version": "1.1.9",
 	"license": "MIT",
 	"bin": {
 		"atmn": "dist/cli.js"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/useautumn/typescript"
+		"url": "git+https://github.com/useautumn/autumn.git",
+		"directory": "packages/atmn"
 	},
 	"homepage": "https://docs.useautumn.com/api-reference/cli/getting-started",
 	"main": "dist/compose/index.js",
@@ -34,6 +35,7 @@
 		"dev": "nodemon -e ts,tsx --watch src --ignore dist --exec \"bun run bun.config.ts\"",
 		"dev:bun": "bun run dev.ts",
 		"test": "bun test",
+		"test:unit": "bun test test/codegen",
 		"test:watch": "bun test --watch",
 		"test2": "prettier --check . && xo && ava",
 		"test-cli": "node --trace-deprecation -- ./dist/cli.js"

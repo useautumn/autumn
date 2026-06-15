@@ -91,9 +91,20 @@ export const knowledgePlatformSetup = () =>
 			}),
 		}),
 		plans: ({ basePrice, features, itemList, items, plan, planList }) => {
+			// Mirror server/tests/scenarios/agent/knowledge-platform.ts credit economics.
 			const creditItems = [
-				items.prepaidCredits({ feature: features.credits }),
-				items.consumableCredits({ feature: features.credits }),
+				items.prepaidCredits({
+					feature: features.credits,
+					included: 1_000,
+					tiers: [
+						{ to: 2_000, amount: 0, flat_amount: 200 },
+						{ to: 3_500, amount: 0, flat_amount: 300 },
+						{ to: 5_000, amount: 0, flat_amount: 400 },
+						{ to: 7_000, amount: 0, flat_amount: 500 },
+						{ to: "inf", amount: 0, flat_amount: 600 },
+					],
+				}),
+				items.consumableCredits({ feature: features.credits, amount: 0.1 }),
 			];
 			const coreFeatures = [
 				featureIds.insight_reports,

@@ -83,6 +83,7 @@
 		"vite:build": "bun -F @autumn/vite build:bun",
 		"t": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/testScripts/testDispatcher.ts",
 		"cm": "cd server && bun cm",
+		"scenario": "cd server && bun scenario",
 		"dw": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts",
 		"dw:teardown": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts teardown",
 		"dw:list": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts list",

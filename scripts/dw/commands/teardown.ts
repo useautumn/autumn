@@ -6,6 +6,7 @@ import {
 	hasOtherActiveWorktrees,
 } from "../helpers/registry.ts";
 import { deleteBranch } from "../helpers/neon.ts";
+import { deleteReservedDomain } from "../helpers/ngrok.ts";
 import { unregisterPortlessAliases } from "../helpers/portless.ts";
 import { tmuxSessionName, killTmuxSession } from "../helpers/tmux.ts";
 import { removeComposeStack, removeAllAutumnComposeStacks } from "../helpers/compose.ts";
@@ -20,6 +21,9 @@ export async function cmdTeardown(opts: { all?: boolean }): Promise<void> {
 		for (const entry of Object.values(registry)) {
 			if (entry.worktreeNum === 1) continue;
 			if (entry.branchName) deleteBranch(entry.branchName);
+			if (entry.reservedDomainId) {
+				await deleteReservedDomain(entry.reservedDomainId);
+			}
 			unregisterPortlessAliases(entry.worktreeNum);
 			killTmuxSession(tmuxSessionName(entry.worktreeNum));
 		}
@@ -47,6 +51,9 @@ export async function cmdTeardown(opts: { all?: boolean }): Promise<void> {
 		fatal("refusing to teardown canonical worktree (worktreeNum=1)");
 	}
 	if (entry.branchName) deleteBranch(entry.branchName);
+	if (entry.reservedDomainId) {
+		await deleteReservedDomain(entry.reservedDomainId);
+	}
 	unregisterPortlessAliases(entry.worktreeNum);
 	killTmuxSession(tmuxSessionName(entry.worktreeNum));
 	removeComposeStack(entry.worktreeNum);
