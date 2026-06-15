@@ -20,5 +20,7 @@ minimumReleaseAgeExcludes = [
 	"@ai-sdk/harness",
 	"@ai-sdk/harness-claude-code",
 	"@ai-sdk/sandbox-vercel",
+	"@ai-sdk/provider-utils",
+	"@ai-sdk/gateway",
 	"@vercel/sandbox",
 ]

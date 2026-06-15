@@ -824,7 +824,6 @@ export const approvalStatusCard = ({
 						),
 					]
 				: []),
-			...(config ? [CardText(config, { style: "muted" })] : []),
 		],
 	});
 };
