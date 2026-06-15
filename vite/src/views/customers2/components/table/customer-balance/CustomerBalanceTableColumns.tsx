@@ -7,7 +7,6 @@ import {
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
 	cusEntsToPrepaidQuantity,
-	cusEntToPrepaidQuantity,
 	getRolloverFields,
 	isFreeCustomerEntitlement,
 	isPrepaidCustomerEntitlement,
@@ -120,20 +119,15 @@ function getIndividualEntValues({
 		cusEnts: [ent],
 		sumAcrossEntities: nullish(entityId),
 	});
-	void grantedBalance;
-	void prepaidAllowance;
 
 	const rolloverBalance =
 		getRolloverFields({ cusEnt: ent, entityId: entityId ?? undefined })
 			?.balance ?? 0;
 
 	const quantity = ent.customer_product?.quantity || 1;
-	const allowance =
-		(ent.entitlement.allowance ?? 0) * quantity +
-		(entityId && ent.entities?.[entityId]
-			? (ent.entities[entityId].adjustment ?? ent.adjustment ?? 0)
-			: (ent.adjustment ?? 0)) +
-		cusEntToPrepaidQuantity({ cusEnt: ent });
+	// grantedBalance/prepaidAllowance already account for per-entity multiplication
+	// at customer level; the manual sum here dropped it, undercounting to one entity.
+	const allowance = grantedBalance + prepaidAllowance;
 	return { balance, allowance, quantity, rolloverBalance };
 }
 

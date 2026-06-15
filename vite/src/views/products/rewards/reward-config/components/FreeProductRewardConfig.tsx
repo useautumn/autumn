@@ -34,14 +34,16 @@ export function FreeProductRewardConfig({
 			{/* Product Selection */}
 			<div>
 				<FormLabel>Plan</FormLabel>
-			<Select
-				value={reward.free_product_id || undefined}
-				onValueChange={(value) =>
-					setReward({ ...reward, free_product_id: value })
-				}
-				disabled={isEmpty}
-				items={Object.fromEntries(freeAddOns.map((product: ProductV2) => [product.id, product.name]))}
-			>
+				<Select
+					value={reward.free_product_id || undefined}
+					onValueChange={(value) =>
+						setReward({ ...reward, free_product_id: value })
+					}
+					disabled={isEmpty}
+					items={Object.fromEntries(
+						freeAddOns.map((product: ProductV2) => [product.id, product.name]),
+					)}
+				>
 					<SelectTrigger>
 						<SelectValue
 							placeholder={

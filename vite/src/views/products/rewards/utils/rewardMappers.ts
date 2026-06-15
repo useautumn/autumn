@@ -3,6 +3,7 @@ import {
 	type Feature,
 	findFeatureById,
 	findFeatureByInternalId,
+	getGlobalMaxRedemption,
 	type Reward,
 	RewardType,
 } from "@autumn/shared";
@@ -17,20 +18,17 @@ type ApiRewardEntitlement =
 	| NonNullable<Reward["entitlements"]>[number];
 type ApiPromoCode = CreateReward["promo_codes"][number];
 
-const normalizePromoCode = ({
-	code,
-	global_max_redemption,
-	max_redemptions,
-	first_time_transaction,
-}: ApiPromoCode): ApiPromoCode => {
-	const globalMaxRedemption = global_max_redemption ?? max_redemptions;
+const normalizePromoCode = (promoCode: ApiPromoCode): ApiPromoCode => {
+	const globalMaxRedemption = getGlobalMaxRedemption(promoCode);
 
 	return {
-		code,
+		code: promoCode.code,
 		...(globalMaxRedemption !== undefined
 			? { global_max_redemption: globalMaxRedemption }
 			: {}),
-		...(first_time_transaction ? { first_time_transaction: true } : {}),
+		...(promoCode.first_time_transaction
+			? { first_time_transaction: true }
+			: {}),
 	};
 };
 

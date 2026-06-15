@@ -50,8 +50,8 @@
         "date-fns": "^4.1.0",
         "decimal.js": "catalog:",
         "motion": "^12.29.2",
-        "react": "^19.2.0",
-        "react-dom": "^19.2.0",
+        "react": "catalog:",
+        "react-dom": "catalog:",
         "react-router-dom": "^7.13.0",
         "shadcn": "^3.7.0",
         "tailwind-merge": "^3.4.0",
@@ -726,6 +726,8 @@
     "drizzle-kit": "^0.31.1",
     "drizzle-orm": "0.43.1",
     "postgres": "3.4.7",
+    "react": "19.2.7",
+    "react-dom": "19.2.7",
     "stripe": "19.3.0-beta.1",
     "vite": "7.3.2",
     "vite-tsconfig-paths": "6.1.1",
@@ -7327,7 +7329,7 @@
 
     "checkout/decimal.js": ["decimal.js@10.5.0", "", {}, "sha512-8vDa8Qxvr/+d94hSh5P3IJwI5t8/c0KsMp+g8bNw9cY2icONa5aPfvKeieW1WlG0WQYwwhJ7mjui2xtiePQSXw=="],
 
-    "checkout/react-dom": ["react-dom@19.2.4", "", { "dependencies": { "scheduler": "^0.27.0" }, "peerDependencies": { "react": "^19.2.4" } }, "sha512-AXJdLo8kgMbimY95O2aKQqsz2iWi9jMgKJhRBAxECE4IFxfcazB2LmzloIoibJI3C12IlY20+KFaLv+71bUJeQ=="],
+    "checkout/react-dom": ["react-dom@19.2.7", "", { "dependencies": { "scheduler": "^0.27.0" }, "peerDependencies": { "react": "^19.2.7" } }, "sha512-t0BRVXvbiE/o20Hfw669rLbMCDWtYZLvmJigy2f0MxsXF+71pxhR3xOkspmsO8h3ZlNzyibAmtCa3l4lYKk6gQ=="],
 
     "checkout/typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
