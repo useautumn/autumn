@@ -78,6 +78,13 @@ export const prepareNewBalanceForInsertion = async ({
 		newCustomerEntitlement.next_reset_at = null;
 	}
 
+	// Apply an explicit first reset boundary if provided. This overrides the
+	// derived next_reset_at (and the null set above when expires_at is present),
+	// allowing a custom first period that resets up until expiry.
+	if (params.next_reset_at) {
+		newCustomerEntitlement.next_reset_at = params.next_reset_at;
+	}
+
 	if (params.balance_id) {
 		newCustomerEntitlement.external_id = params.balance_id;
 	}

@@ -79,6 +79,24 @@ export const validateCreateBalanceParams = async ({
 		}
 	}
 
+	// An explicit next_reset_at only makes sense for a resetting balance.
+	if (params.next_reset_at && !params.reset?.interval) {
+		throw new RecaseError({
+			message: `next_reset_at requires a reset interval to be provided`,
+		});
+	}
+
+	// The first reset must happen before the balance expires.
+	if (
+		params.next_reset_at &&
+		params.expires_at &&
+		params.next_reset_at >= params.expires_at
+	) {
+		throw new RecaseError({
+			message: `next_reset_at (${new Date(params.next_reset_at).toISOString()}) must occur before expires_at (${new Date(params.expires_at).toISOString()})`,
+		});
+	}
+
 	if (params.balance_id) {
 		await validateBalanceIdUnique({
 			ctx,
