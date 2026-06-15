@@ -1,5 +1,6 @@
 import {
 	ErrCode,
+	normalizePromoCodes,
 	type Price,
 	PriceType,
 	type Product,
@@ -21,7 +22,7 @@ const UpdateCouponParamsSchema = z.object({
 });
 
 const UpdateCouponQuerySchema = z.object({
-	legacyStripe: z.string().optional(),
+	legacyStripe: z.boolean().optional(),
 });
 
 export const handleUpdateCoupon = createRoute({
@@ -54,6 +55,10 @@ export const handleUpdateCoupon = createRoute({
 				statusCode: 404,
 			});
 		}
+
+		rewardBody.promo_codes = normalizePromoCodes(
+			rewardBody.promo_codes ?? reward.promo_codes ?? [],
+		);
 
 		const rewardCat = getRewardCat(rewardBody);
 
@@ -103,7 +108,7 @@ export const handleUpdateCoupon = createRoute({
 				env,
 				prices,
 				logger,
-				legacyVersion: legacyStripe === "true",
+				legacyVersion: legacyStripe,
 			});
 		}
 

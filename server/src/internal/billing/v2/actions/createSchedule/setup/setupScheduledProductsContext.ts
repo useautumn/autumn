@@ -1,6 +1,6 @@
 import type {
-	CreateScheduleParamsV0,
 	FullCustomer,
+	ResolvedCreateSchedulePhaseV0,
 	ScheduledPhaseContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
@@ -16,7 +16,7 @@ export const setupScheduledProductsContext = async ({
 	currentEpochMs,
 }: {
 	ctx: AutumnContext;
-	phases: CreateScheduleParamsV0["phases"][number][];
+	phases: ResolvedCreateSchedulePhaseV0[];
 	fullCustomer: FullCustomer;
 	currentEpochMs: number;
 }): Promise<ScheduledPhaseContext[]> =>

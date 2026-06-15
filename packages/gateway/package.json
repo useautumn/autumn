@@ -58,6 +58,7 @@
 	"devDependencies": {
 		"@types/node": "^24.9.1",
 		"@typescript/native-preview": "7.0.0-dev.20260220.1",
+		"ai": "^6.0.116",
 		"tsup": "^8.4.0",
 		"typescript": "^5.8.3"
 	}

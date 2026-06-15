@@ -38,6 +38,7 @@ const domain = {
 			id: "getAgentRules",
 			description: `
 - Fetch current org agent rules.
+- MCP API call; invoke this tool directly, never through Bash.
 - Use before customer, billing, balance, entity, or plan work.
 - Includes entity defaults, credit defaults, and org notes.
 			`.trim(),

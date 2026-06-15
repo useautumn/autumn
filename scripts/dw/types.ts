@@ -6,6 +6,10 @@ export type RegistryEntry = {
 	branchName?: string;
 	databaseUrl?: string;
 	lastUsedAt?: number;
+	/** Public ngrok URL for this worktree's tunnel, refreshed each `bun dw setup`. */
+	ngrokUrl?: string;
+	/** ngrok reserved-domain id, so `bun dw teardown` can release it via the API. */
+	reservedDomainId?: string;
 };
 
 export type Registry = Record<string, RegistryEntry>;

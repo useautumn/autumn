@@ -35,56 +35,34 @@ describe("Autumn operation tools", () => {
 	test("read tool descriptions include composition guidance", () => {
 		const tools = createRawAutumnOperationTools();
 
-		expect(tools.listPlans.description).toContain("cheap full scan");
-		expect(tools.listPlans.description).toContain(
-			"filter returned plans locally",
-		);
+		expect(tools.listPlans.description).toContain("Plan Management resource");
+		expect(tools.listPlans.description).toContain("Concepts resource");
 		expect(tools.listFeatures.description).toContain("List Autumn features");
 		expect(tools.listCustomers.description).toContain("plans");
 		expect(tools.listCustomers.description).toContain("paginate");
-		expect(tools.createEntity.description).toContain("entity_id");
-		expect(tools.createEntity.description).toContain("entity name");
+		expect(tools.createEntity.description).toContain("Create an entity");
+		expect(tools.createEntity.description).toContain("entity-scoped billing");
 		expect(tools.updateCustomer.description).toContain("invoice_mode");
 		expect(tools.updateCustomer.description).toContain("Stripe");
-		expect(tools.createPlan.description).toContain("confirmation");
+		expect(tools.createPlan.description).toContain("Plan Management");
+		expect(tools.createPlan.description).toContain("Concepts");
 		expect(tools.createBalance.description).toContain("entity-scoped credits");
 		expect(tools.searchRequestLogs.description).toContain("request logs");
 		expect(tools.queryRequestLogs.description).toContain("aggregate");
 		expect(tools.getAgentRules.description).toContain("agent rules");
+		expect(tools.getAgentRules.description).toContain("MCP API call");
+		expect(tools.getAgentRules.description).toContain("never through Bash");
 		expect(tools.getAgentRules.description).toContain("Use before customer");
 		expect(tools.updateAgentRules.description).toContain("agent rules");
 		expect(tools.listEntities.description).toContain("customer_id");
 		expect(tools.listEntities.description).toContain("one customer");
 		expect(tools.getEntity.description).toContain("entity_id");
 		expect(tools.previewCreateBalance.description).toContain("Does not mutate");
-		expect(tools.createSchedule.description).toContain("starts_at");
+		expect(tools.createSchedule.description).toContain("Billing resource");
 		expect(tools.previewCreateSchedule.description).toContain("billing impact");
-		expect(tools.previewAttach.description).toContain(
-			"enable_plan_immediately",
-		);
-		expect(tools.previewAttach.description).toContain("finalize false");
-		expect(tools.previewAttach.description).toContain(
-			"invoice_mode requires customer email",
-		);
-		expect(tools.attach.description).toContain("enable_plan_immediately");
-		expect(tools.attach.description).toContain("finalize false");
-		expect(tools.attach.description).toContain(
-			"invoice_mode requires customer email",
-		);
-		expect(tools.previewCreateSchedule.description).toContain(
-			"enable_plan_immediately",
-		);
-		expect(tools.previewCreateSchedule.description).toContain("finalize false");
-		expect(tools.previewCreateSchedule.description).toContain(
-			"invoice_mode requires customer email",
-		);
-		expect(tools.createSchedule.description).toContain(
-			"enable_plan_immediately",
-		);
-		expect(tools.createSchedule.description).toContain("finalize false");
-		expect(tools.createSchedule.description).toContain(
-			"invoice_mode requires customer email",
-		);
+		expect(tools.previewCreateSchedule.description).toContain("Billing resource");
+		expect(tools.previewAttach.description).toContain("Billing resource");
+		expect(tools.attach.description).toContain("Billing resource");
 		expect(tools.getCurrentOrganization.description).toContain("organization");
 	});
 

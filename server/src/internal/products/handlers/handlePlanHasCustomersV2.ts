@@ -13,21 +13,31 @@ import { ProductService } from "@/internal/products/ProductService";
 export const handlePlanHasCustomersV2 = createRoute({
 	scopes: [Scopes.Plans.Read],
 	handler: async (c) => {
-		const { product_id } = c.req.param();
 		const ctx = c.get("ctx");
 		const { db, features, org, env, apiVersion } = ctx;
 
 		const body = await c.req.json();
 
+		// REST route passes the plan via `/:product_id`; the RPC route
+		// (plans.has_customers) passes `plan_id` in the body. Strip the
+		// update-only keys so the rest is the proposed plan to compare.
+		const { plan_id, new_plan_id, disable_version, version, ...planParams } =
+			body ?? {};
+		const productId = c.req.param().product_id ?? plan_id;
+
+		if (!productId) {
+			throw new ProductNotFoundError({ productId: "" });
+		}
+
 		const product = await ProductService.getFull({
 			db,
-			idOrInternalId: product_id,
+			idOrInternalId: productId,
 			orgId: org.id,
 			env: env,
 		});
 
 		if (!product) {
-			throw new ProductNotFoundError({ productId: product_id });
+			throw new ProductNotFoundError({ productId });
 		}
 
 		const cusProductsCurVersion =
@@ -41,7 +51,7 @@ export const handlePlanHasCustomersV2 = createRoute({
 		const productV2 = apiVersion.gte(ApiVersion.V2_0)
 			? (apiPlan.map.paramsV1ToProductV2({
 					ctx,
-					params: body,
+					params: planParams,
 				}) as ProductV2)
 			: (body as ProductV2);
 

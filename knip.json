@@ -44,7 +44,12 @@
 		"vite": {
 			"entry": ["tests/**/*.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
 			"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
-			"ignore": ["src/components/ai-elements/**", "src/hooks/useControllableState.ts", "src/types/**/*.d.ts"],
+			"ignore": [
+				"src/components/ai-elements/**",
+				"src/components/ui/scroll-area.tsx",
+				"src/hooks/useControllableState.ts",
+				"src/types/**/*.d.ts"
+			],
 			"ignoreDependencies": [
 				"tailwindcss",
 				"tailwind-scrollbar-hide",
