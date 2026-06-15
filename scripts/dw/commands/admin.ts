@@ -13,9 +13,20 @@ function describeTarget(url: string): string {
 	}
 }
 
-// Sets the better-auth global role to 'admin' for every user in the current
-// worktree's DB, which grants the superuser scope locally. Org membership
-// roles (the `member` table) are intentionally left untouched.
+// Sets the better-auth global role to 'admin' for every user in the given DB,
+// which grants the superuser scope locally. Org membership roles (the `member`
+// table) are intentionally left untouched. Throws (rather than exiting) so
+// callers like `bun dw setup` can treat a failure as non-fatal.
+export function promoteAllUsersToAdmin(url: string): void {
+	assertNotProductionDb(url);
+	log(`making all users admin on ${describeTarget(url)}`);
+	const res = sh("psql", [url, "-v", "ON_ERROR_STOP=1", "-c", UPDATE_SQL]);
+	if (res.code !== 0) {
+		throw new Error(`psql failed: ${res.stderr || res.stdout}`);
+	}
+	log(res.stdout || "done");
+}
+
 export function cmdAdmin(): void {
 	const cwd = getCurrentWorktree();
 	const entry = loadRegistry()[cwd];
@@ -25,15 +36,8 @@ export function cmdAdmin(): void {
 	}
 
 	try {
-		assertNotProductionDb(url);
+		promoteAllUsersToAdmin(url);
 	} catch (err) {
 		fatal(err instanceof Error ? err.message : String(err));
 	}
-
-	log(`making all users admin on ${describeTarget(url)}`);
-	const res = sh("psql", [url, "-v", "ON_ERROR_STOP=1", "-c", UPDATE_SQL]);
-	if (res.code !== 0) {
-		fatal(`psql failed: ${res.stderr || res.stdout}`);
-	}
-	log(res.stdout || "done");
 }

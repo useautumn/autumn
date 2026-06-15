@@ -45,6 +45,7 @@ const getOverrideAutoEnableProduct = async ({
 	) {
 		throw new RecaseError({
 			message: `Auto-enable plan must be a free product, or have a free trial with 'card_required' as false`,
+			statusCode: 400,
 		});
 	}
 

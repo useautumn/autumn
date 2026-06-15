@@ -27,10 +27,8 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
  *    existing Stripe customer; Stripe's location waterfall needs it)
  *  - no `chargeImmediately` line items at all
  *
- * When the net taxable subtotal is `<= 0` (proration credits exceed new
- * charges), we short-circuit with `{ status: "complete", ...zeros }` —
- * Stripe Tax rejects non-positive line amounts and produces no tax on
- * net-credit invoices anyway, so this matches actual billing.
+ * When the net taxable subtotal is negative, Stripe Tax is called with the
+ * absolute amount and the result is negated to preview tax-credit invoices.
  *
  * Net-subtotal collapsing: we sum positive and negative `chargeImmediately`
  * line items into a single Stripe Tax line. Stripe Tax requires positive
@@ -98,10 +96,7 @@ export const computeStripeTaxPreviewForNetSubtotal = async ({
 	const currency = orgToCurrency({ org: ctx.org });
 	const stripeCli = createStripeCli({ org: ctx.org, env: ctx.env });
 
-	// No tax owed when net subtotal is zero or negative (credit exceeds
-	// charge). Stripe Tax rejects non-positive line amounts anyway, and
-	// a credit invoice produces no tax in actual billing.
-	if (netSubtotal <= 0) {
+	if (netSubtotal === 0) {
 		return {
 			total: 0,
 			amount_inclusive: 0,
@@ -110,6 +105,8 @@ export const computeStripeTaxPreviewForNetSubtotal = async ({
 			status: "complete",
 		};
 	}
+	const taxSign = netSubtotal < 0 ? -1 : 1;
+	const taxableSubtotal = Math.abs(netSubtotal);
 
 	try {
 		const calc = await stripeCli.tax.calculations.create({
@@ -118,7 +115,7 @@ export const computeStripeTaxPreviewForNetSubtotal = async ({
 			line_items: [
 				{
 					amount: atmnToStripeAmount({
-						amount: netSubtotal,
+						amount: taxableSubtotal,
 						currency,
 					}),
 					reference: "preview_net_subtotal",
@@ -128,19 +125,23 @@ export const computeStripeTaxPreviewForNetSubtotal = async ({
 		});
 
 		return {
-			total: stripeToAtmnAmount({
-				amount:
-					(calc.tax_amount_exclusive ?? 0) + (calc.tax_amount_inclusive ?? 0),
-				currency,
-			}),
-			amount_inclusive: stripeToAtmnAmount({
-				amount: calc.tax_amount_inclusive ?? 0,
-				currency,
-			}),
-			amount_exclusive: stripeToAtmnAmount({
-				amount: calc.tax_amount_exclusive ?? 0,
-				currency,
-			}),
+			total:
+				stripeToAtmnAmount({
+					amount:
+						(calc.tax_amount_exclusive ?? 0) +
+						(calc.tax_amount_inclusive ?? 0),
+					currency,
+				}) * taxSign,
+			amount_inclusive:
+				stripeToAtmnAmount({
+					amount: calc.tax_amount_inclusive ?? 0,
+					currency,
+				}) * taxSign,
+			amount_exclusive:
+				stripeToAtmnAmount({
+					amount: calc.tax_amount_exclusive ?? 0,
+					currency,
+				}) * taxSign,
 			currency,
 			status: "complete",
 		};

@@ -8,7 +8,7 @@ import type { EvalSetup } from "../fixtures/types.js";
 import {
 	type EvalExpected,
 	type EvalScorer,
-	standardEvalScores,
+	scoresFromExpectations,
 } from "../utils/scorers.js";
 import type { AutumnApiMockOverrides } from "./context/types.js";
 import {
@@ -17,7 +17,7 @@ import {
 	type EvalRunResult,
 	type EvalTurn,
 } from "./createEvalContext.js";
-import { createClaudeManagedAgentDriver } from "./drivers/claudeManagedAgent.js";
+import { createClaudeManagedLiveDriver } from "./drivers/claudeManagedLiveAgent.js";
 import { createLeafAgentDriver } from "./drivers/leafAgent.js";
 import type { EvalAgentDriver } from "./drivers/types.js";
 import type { EvalTraceLevel } from "./tracing/types.js";
@@ -25,8 +25,9 @@ import type { EvalTraceLevel } from "./tracing/types.js";
 // Single toggle: default lives in chatAgentConfig (DEFAULT_EVAL_DRIVER);
 // EVAL_DRIVER=mastra|claude-managed overrides per run. Explicit `driver` on
 // initEval always wins (e.g. generic-mcp policy evals).
-const evalDrivers: Record<AgentHarnessName, () => EvalAgentDriver> = {
-	"claude-managed": createClaudeManagedAgentDriver,
+// The "vercel" harness has no eval driver yet; evals run through claude-managed/mastra.
+const evalDrivers: Partial<Record<AgentHarnessName, () => EvalAgentDriver>> = {
+	"claude-managed": createClaudeManagedLiveDriver,
 	mastra: createLeafAgentDriver,
 };
 
@@ -96,14 +97,22 @@ export const initEval = <Metadata extends EvalCaseMetadata>({
 	driver,
 	experimentName,
 	metadata,
-	scores = standardEvalScores(),
+	scores,
 	setup,
 	timeout = 45_000,
 	today,
 	trace,
 }: InitEvalOptions<Metadata>) => {
 	const driverKey = selectedDriverKey();
-	const resolvedDriver = driver ?? evalDrivers[driverKey]();
+	const driverFactory = evalDrivers[driverKey];
+	if (!(driver || driverFactory)) {
+		throw new Error(`No eval driver wired for harness "${driverKey}"`);
+	}
+	const resolvedDriver = driver ?? driverFactory?.() ?? createLeafAgentDriver();
+	// Default panel: one named scorer per expectation type the cases declare,
+	// so Braintrust only shows columns a case can actually fail.
+	const resolvedScores =
+		scores ?? scoresFromExpectations(cases.map((testCase) => testCase.expect));
 	// Base experiment names belong to the default driver; non-default toggles
 	// get a suffix so Braintrust series stay per-driver.
 	const resolvedExperimentName =
@@ -136,7 +145,11 @@ export const initEval = <Metadata extends EvalCaseMetadata>({
 					setup: setup.tag,
 				},
 			})),
-			scores,
+			// The Autumn API mock intercepts global fetch per eval context, so
+			// concurrent cases corrupt each other's routing (one case's cleanup
+			// restores fetch mid-flight for the other). Run cases sequentially.
+			maxConcurrency: 1,
+			scores: resolvedScores,
 			task: async (input) => {
 				const context = await createEvalContext({
 					auth,

@@ -33,6 +33,7 @@ export const handleFeatureTypeChanged = async ({
 	) {
 		throw new RecaseError({
 			message: `Cannot change type of feature ${feature.id} from ${feature.type} to ${newType}`,
+			statusCode: 400,
 		});
 	}
 

@@ -97,12 +97,12 @@ describe(chalk.yellowBright("applyAmountOffDiscountToLineItems"), () => {
 					discount,
 				});
 
-				// First item: 75/100 * 30 = 22.5 → 23 (rounded)
-				// Second item: 25/100 * 30 = 7.5 → 8 (rounded)
-				expect(result[0].discounts[0].amountOff).toBe(23);
-				expect(result[0].amountAfterDiscounts).toBe(52); // 75 - 23
-				expect(result[1].discounts[0].amountOff).toBe(8);
-				expect(result[1].amountAfterDiscounts).toBe(17); // 25 - 8
+				// First item: 75/100 * 30 = 22.5
+				// Second item: 25/100 * 30 = 7.5
+				expect(result[0].discounts[0].amountOff).toBe(22.5);
+				expect(result[0].amountAfterDiscounts).toBe(52.5);
+				expect(result[1].discounts[0].amountOff).toBe(7.5);
+				expect(result[1].amountAfterDiscounts).toBe(17.5);
 			});
 		},
 	);

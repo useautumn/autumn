@@ -26,8 +26,8 @@ const domain = {
 			id: "createEntity",
 			description: `
 - Create an entity under a customer.
-- Use when the user provides customer_id, entity_id, and entity name.
-- For entity-scoped attach, create missing entities before previewAttach.
+- Create only after listEntities for the customer confirms the entity does not exist.
+- Follow Billing Safety entity rules for entity-scoped billing.
 			`.trim(),
 			idempotent: true,
 		}),
@@ -36,7 +36,7 @@ const domain = {
 			description: `
 - List entities across the current org.
 - Pass customer_id to list entities for one customer.
-- Use before entity-scoped billing or balance work when entity ids are unknown.
+- Use before entity-scoped billing or balance work to resolve or verify entity ids.
 			`.trim(),
 		}),
 		operation({

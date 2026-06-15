@@ -17,13 +17,15 @@ export const handleCurrentCustomerProductErrors = ({
 		!billingContext.cancelAction
 	) {
 		throw new RecaseError({
-			message: `Cannot update subscription for '${customerProduct.product.name}' because it is scheduled and not yet active`,
+			message: `Subscription for '${customerProduct.product.name}' is scheduled and cannot be updated until it becomes active`,
+			statusCode: 400,
 		});
 	}
 
 	if (isCustomerProductExpired(customerProduct)) {
 		throw new RecaseError({
-			message: `Cannot update subscription for '${customerProduct.product.name}' because it has expired`,
+			message: `Subscription for '${customerProduct.product.name}' has expired and cannot be updated`,
+			statusCode: 400,
 		});
 	}
 };

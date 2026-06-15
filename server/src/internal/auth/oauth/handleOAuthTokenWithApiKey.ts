@@ -1,5 +1,6 @@
 import { prefixOAuthToken } from "@autumn/auth";
 import {
+	getOAuthResourceScopes,
 	getResourceFromOAuthTokenRequest,
 	returnsOAuthAccessTokenForClientId,
 } from "@autumn/auth/oauth";
@@ -123,7 +124,10 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 	const accessToken = getString(tokenPayload.access_token);
 	if (!accessToken) return response;
 
-	const requestedScopes = scopesFromOAuthScopeString(tokenPayload.scope);
+	const parsedRequestedScopes = scopesFromOAuthScopeString(tokenPayload.scope);
+	const requestedScopes = parsedRequestedScopes
+		? getOAuthResourceScopes(parsedRequestedScopes)
+		: null;
 	let apiKeyResult: Awaited<ReturnType<typeof getExternalOAuthApiKeyForToken>>;
 	try {
 		const tokenRecord = await getOAuthAccessTokenRecord({
@@ -142,15 +146,15 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 		const issuedScopes = await getOAuthConsentScopeGrant({
 			db,
 			organizationId: tokenRecord.referenceId,
-			requestedScopes: tokenRecord.scopes,
+			requestedScopes: parsedRequestedScopes ?? tokenRecord.scopes,
 			userId: tokenRecord.userId,
 		});
-		tokenRecord.scopes = issuedScopes;
+		tokenRecord.scopes = getOAuthResourceScopes(issuedScopes);
 		if (tokenRecord.id) {
 			await oauthAccessTokenRepo.updateScopes({
 				db,
 				id: tokenRecord.id,
-				scopes: issuedScopes,
+				scopes: tokenRecord.scopes,
 			});
 		}
 		if (tokenRecord.refreshId) {

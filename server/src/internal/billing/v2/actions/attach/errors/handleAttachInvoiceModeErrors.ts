@@ -4,27 +4,23 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import { StatusCodes } from "http-status-codes";
+import { isDeferredInvoiceMode } from "@/internal/billing/v2/utils/billingContext/isDeferredInvoiceMode";
 
 /**
  * Validates invoice mode configuration against the attach context.
  *
- * Throws error when:
- * - Invoice mode with deferred activation (enableProductImmediately=false) is used for a downgrade
- *   (planTiming="end_of_cycle"). Downgrades are scheduled for end of cycle and have no immediate
- *   invoice to pay, so deferred activation makes no sense.
+ * Throws when deferred invoice-mode activation is used for a downgrade
+ * (planTiming="end_of_cycle"): there is no immediate invoice to pay, so deferral makes no sense.
  */
 export const handleAttachInvoiceModeErrors = ({
 	billingContext,
 }: {
 	billingContext: AttachBillingContext;
 }) => {
-	const { invoiceMode, planTiming } = billingContext;
+	const { planTiming } = billingContext;
 
 	// Check: Invoice mode deferred + downgrade (scheduled plan)
-	if (
-		invoiceMode?.enableProductImmediately === false &&
-		planTiming === "end_of_cycle"
-	) {
+	if (isDeferredInvoiceMode({ billingContext }) && planTiming === "end_of_cycle") {
 		throw new RecaseError({
 			message:
 				"Cannot use invoice mode with deferred activation for downgrades. Downgrades are scheduled for end of cycle and have no immediate invoice to pay.",

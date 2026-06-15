@@ -1,19 +1,48 @@
-import type { CancelAction, UpdateSubscriptionV1Params } from "@autumn/shared";
+import type {
+	CancelAction,
+	FullCusProduct,
+	Organization,
+	UpdateSubscriptionV1Params,
+} from "@autumn/shared";
+import { CusProductStatus } from "@autumn/shared";
 
-/**
- * Setup cancel action from params
- * @param params - The params
- * cancel_action param maps directly to internal cancel action
- * - cancel_action: "cancel_immediately" means cancel immediately
- * - cancel_action: "cancel_end_of_cycle" means cancel at end of cycle
- * - cancel_action: "uncancel" means remove scheduled cancellation
- * - cancel_action: undefined means no cancel operation
- * @returns The cancel action
- */
-export const setupCancelAction = ({
+// past_due end-of-cycle resolves to immediate: no paid period left to honor.
+const shouldForcePastDueImmediateCancel = ({
 	params,
+	org,
+	customerProduct,
 }: {
 	params: UpdateSubscriptionV1Params;
-}): CancelAction | undefined => {
-	return params.cancel_action;
-};
+	org: Organization;
+	customerProduct?: FullCusProduct;
+}): boolean =>
+	params.cancel_action === "cancel_end_of_cycle" &&
+	org.config.void_invoices_on_subscription_deletion &&
+	customerProduct?.status === CusProductStatus.PastDue;
+
+export const setupCancelAction = ({
+	params,
+	org,
+	customerProduct,
+}: {
+	params: UpdateSubscriptionV1Params;
+	org: Organization;
+	customerProduct?: FullCusProduct;
+}): CancelAction | undefined =>
+	shouldForcePastDueImmediateCancel({ params, org, customerProduct })
+		? "cancel_immediately"
+		: params.cancel_action;
+
+// No refund for a past_due immediate cancel: the customer never paid the cycle being voided.
+export const shouldSuppressUnpaidCycleCredit = ({
+	cancelAction,
+	org,
+	customerProduct,
+}: {
+	cancelAction: CancelAction | undefined;
+	org: Organization;
+	customerProduct?: FullCusProduct;
+}): boolean =>
+	cancelAction === "cancel_immediately" &&
+	org.config.void_invoices_on_subscription_deletion &&
+	customerProduct?.status === CusProductStatus.PastDue;

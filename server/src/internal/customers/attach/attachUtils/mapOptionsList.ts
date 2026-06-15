@@ -4,12 +4,12 @@ import {
 	type FeatureOptions,
 	type FullCusProduct,
 	type Price,
+	RecaseError,
 	type UsagePriceConfig,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { findPrepaidPrice } from "@/internal/products/prices/priceUtils/findPriceUtils.js";
 import { isFreeProduct, isOneOff } from "@/internal/products/productUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
 
 /**
  * @deprecated Use setupFeatureQuantitiesContext from billing/v2/setup instead
@@ -36,6 +36,7 @@ export const mapOptionsList = ({
 			throw new RecaseError({
 				message: `Feature ${options.feature_id} passed into options but not found`,
 				code: ErrCode.FeatureNotFound,
+				statusCode: 404,
 			});
 		}
 
@@ -48,6 +49,7 @@ export const mapOptionsList = ({
 			throw new RecaseError({
 				message: `No prepaid price found for feature ${feature.id}`,
 				code: ErrCode.PriceNotFound,
+				statusCode: 404,
 			});
 		}
 

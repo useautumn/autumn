@@ -1,9 +1,7 @@
 import type { Entitlement, FeatureOptions, Price } from "@autumn/shared";
-import type { CreateScheduleParamsV0 } from "../../../api/billing/createSchedule/createScheduleParamsV0";
+import type { ResolvedCreateSchedulePhaseV0 } from "../../../api/billing/createSchedule/createScheduleParamsV0";
 import type { FullProduct } from "../../productModels/productModels";
 import type { MultiAttachBillingContext } from "./multiAttachBillingContext";
-
-type CreateSchedulePhase = CreateScheduleParamsV0["phases"][number];
 
 export interface ScheduledProductContext {
 	fullProduct: FullProduct;
@@ -22,7 +20,7 @@ export interface ScheduledPhaseContext {
 
 export interface CreateScheduleBillingContext
 	extends MultiAttachBillingContext {
-	immediatePhase: CreateSchedulePhase;
-	futurePhases: CreateSchedulePhase[];
+	immediatePhase: ResolvedCreateSchedulePhaseV0;
+	futurePhases: ResolvedCreateSchedulePhaseV0[];
 	scheduledPhaseContexts: ScheduledPhaseContext[];
 }

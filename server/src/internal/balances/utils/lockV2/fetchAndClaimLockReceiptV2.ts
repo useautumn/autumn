@@ -40,6 +40,7 @@ const normalizeLockReceiptItems = ({
 	throw new RecaseError({
 		message: `Lock receipt has invalid items for ID: ${lockId}`,
 		code: ErrCode.InvalidRequest,
+		statusCode: 400,
 	});
 };
 
@@ -106,6 +107,7 @@ export const fetchAndClaimLockReceiptV2 = async ({
 		throw new RecaseError({
 			message: `Lock receipt is missing ${missingField} for ID: ${lockId}`,
 			code: ErrCode.InvalidRequest,
+			statusCode: 400,
 		});
 	}
 

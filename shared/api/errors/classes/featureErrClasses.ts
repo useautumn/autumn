@@ -9,9 +9,9 @@ export class FeatureAlreadyExistsError extends RecaseError {
 		super({
 			message: `Feature ${opts.featureId} already exists`,
 			code: FeatureErrorCode.FeatureAlreadyExists,
-			statusCode: 404,
+			statusCode: 409,
 		});
-		this.name = "ProductNotFoundError";
+		this.name = "FeatureAlreadyExistsError";
 	}
 }
 
@@ -25,5 +25,6 @@ export class FeatureNotFoundError extends RecaseError {
 			code: FeatureErrorCode.FeatureNotFound,
 			statusCode: 404,
 		});
+		this.name = "FeatureNotFoundError";
 	}
 }

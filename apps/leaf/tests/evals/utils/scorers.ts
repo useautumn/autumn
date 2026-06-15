@@ -1,3 +1,4 @@
+import Anthropic from "@anthropic-ai/sdk";
 import type {
 	EvalExpectation,
 	EvalExpected,
@@ -30,10 +31,15 @@ export type EvalScoreArgs = {
 	output: EvalOutput;
 };
 
-export type EvalScorer = (args: EvalScoreArgs) => {
+export type EvalScore = {
+	metadata?: Record<string, unknown>;
 	name: string;
 	score: number;
 };
+
+export type EvalScorer = (
+	args: EvalScoreArgs,
+) => EvalScore | Promise<EvalScore>;
 
 const namedScorer = ({
 	name,
@@ -127,17 +133,27 @@ const getExpectedApiBodyExclusions = (expected?: EvalExpected) =>
 		expectation.type === "api.bodyExcludes" ? [expectation] : [],
 	);
 
+const getExpectedApiCallTimes = (expected?: EvalExpected) =>
+	getExpectationList(expected).flatMap((expectation) =>
+		expectation.type === "api.calledTimes" ? [expectation] : [],
+	);
+
 const getExpectedApiBodyNumberFields = (expected?: EvalExpected) =>
 	getExpectationList(expected).flatMap((expectation) =>
 		expectation.type === "api.bodyNumberFields" ? [expectation] : [],
 	);
 
-const getExpectedResponsePhrases = (expected?: EvalExpected) => [
-	...(getLegacyExpected(expected)?.finalTextIncludes ?? []),
-	...getExpectationList(expected).flatMap((expectation) =>
-		expectation.type === "response.mentions" ? expectation.phrases : [],
-	),
-];
+const getExpectedResponseMentions = (
+	expected?: EvalExpected,
+): { notPhrases?: string[]; phrases: string[] }[] => {
+	const legacyPhrases = getLegacyExpected(expected)?.finalTextIncludes ?? [];
+	return [
+		...(legacyPhrases.length ? [{ phrases: legacyPhrases }] : []),
+		...getExpectationList(expected).flatMap((expectation) =>
+			expectation.type === "response.mentions" ? [expectation] : [],
+		),
+	];
+};
 
 const getExpectedQuestions = (expected?: EvalExpected) =>
 	getExpectationList(expected).flatMap((expectation) =>
@@ -147,6 +163,11 @@ const getExpectedQuestions = (expected?: EvalExpected) =>
 const getExpectedQuestionsBeforeTool = (expected?: EvalExpected) =>
 	getExpectationList(expected).flatMap((expectation) =>
 		expectation.type === "response.askedBeforeTool" ? [expectation] : [],
+	);
+
+const getExpectedConcise = (expected?: EvalExpected) =>
+	getExpectationList(expected).flatMap((expectation) =>
+		expectation.type === "response.concise" ? [expectation] : [],
 	);
 
 const normalizeText = (value: string) =>
@@ -276,6 +297,19 @@ export const expectedApiCallsAfterApproval = ({
 		: 0;
 };
 
+export const expectedApiCallTimes = ({ expected, output }: EvalScoreArgs) => {
+	const expectations = getExpectedApiCallTimes(expected);
+	if (!expectations.length) return 1;
+	return expectations.every(
+		(expectation) =>
+			output.apiCalls.filter((call) =>
+				matchesApiCall({ actual: call, expected: expectation.call }),
+			).length === expectation.count,
+	)
+		? 1
+		: 0;
+};
+
 export const expectedToolCalls = ({ expected, output }: EvalScoreArgs) => {
 	const expectedTools = getExpectedToolNames(expected);
 	if (!expectedTools.length) return 1;
@@ -296,7 +330,13 @@ export const expectedApiBodyExclusions = ({
 		output.apiCalls
 			.filter((call) => call.toolName === exclusion.toolName)
 			.every((call) =>
-				exclusion.fields.every((field) => !(field in call.body)),
+				exclusion.fields.every((field) =>
+					field.includes(".")
+						? valuesAtPath({ path: field, value: call.body }).every(
+								(value: unknown) => value === undefined,
+							)
+						: !(field in call.body),
+				),
 			),
 	)
 		? 1
@@ -331,10 +371,17 @@ export const expectedApiBodyNumberFields = ({
 };
 
 export const finalTextIncludes = ({ expected, output }: EvalScoreArgs) => {
-	const phrases = getExpectedResponsePhrases(expected);
-	if (!phrases.length) return 1;
-	const text = output.finalText.toLowerCase();
-	return phrases.every((phrase) => text.includes(phrase.toLowerCase())) ? 1 : 0;
+	const mentions = getExpectedResponseMentions(expected);
+	if (!mentions.length) return 1;
+	return mentions.every((mention) =>
+		textMatches({
+			notPhrases: mention.notPhrases,
+			phrases: mention.phrases,
+			text: output.finalText,
+		}),
+	)
+		? 1
+		: 0;
 };
 
 export const askedClarification = ({ expected, output }: EvalScoreArgs) => {
@@ -360,22 +407,103 @@ export const askedClarificationBeforeTool = ({
 }: EvalScoreArgs) => {
 	const questions = getExpectedQuestionsBeforeTool(expected);
 	if (!questions.length) return 1;
-	const turns = output.turns?.filter((turn) => turn.type === "user") ?? [];
-	return questions.every((question) =>
-		turns.some((turn) => {
-			const hasAsked = textMatches({
-				notPhrases: question.notPhrases,
-				phrases: question.phrases,
-				text: turn.text ?? "",
-			});
-			const hasTargetTool =
-				turn.toolCalls?.some((call) => call.name === question.toolName) ??
-				false;
-			return hasAsked && !hasTargetTool;
-		}),
-	)
+	// Per-turn toolCalls are cumulative snapshots, so the asking turn must
+	// predate the tool's first appearance across any snapshot.
+	const turns = output.turns ?? [];
+	return questions.every((question) => {
+		const callsTargetTool = (turn: (typeof turns)[number]) =>
+			turn.toolCalls?.some((call) => call.name === question.toolName) ?? false;
+		const firstToolTurn = turns.findIndex(callsTargetTool);
+		const askTurn = turns.findIndex(
+			(turn) =>
+				turn.type === "user" &&
+				!callsTargetTool(turn) &&
+				textMatches({
+					notPhrases: question.notPhrases,
+					phrases: question.phrases,
+					text: turn.text ?? "",
+				}),
+		);
+		if (askTurn === -1) return false;
+		return firstToolTurn === -1 || askTurn < firstToolTurn;
+	})
 		? 1
 		: 0;
+};
+
+const CONCISE_JUDGE_MODEL = "claude-haiku-4-5";
+
+const lastAssistantReply = (output: EvalOutput) => {
+	const turnTexts = (output.turns ?? [])
+		.map((turn) => turn.text)
+		.filter((text): text is string => Boolean(text));
+	return turnTexts.at(-1) ?? output.finalText;
+};
+
+const conciseJudgePrompt = ({
+	reply,
+	required,
+}: {
+	reply: string;
+	required: string[];
+}) =>
+	`You judge whether an AI billing assistant's reply is maximally concise.
+
+<reply>
+${reply}
+</reply>
+
+Required facts (semantic match, not verbatim):
+${required.map((fact) => `- ${fact}`).join("\n")}
+
+PASS only if the reply (1) states every required fact, (2) contains no greeting, preamble, hedging, or any sentence that could be removed without dropping a required fact, and (3) uses no emojis. A short reply must never be penalized for being short: at equal correctness, concise always beats verbose.
+
+Respond with JSON only: {"pass": true|false, "reason": "<one sentence>"}`;
+
+// Single ConCISE-style judge: one cheap LLM call over the final reply, scoring
+// "could this be shorter without dropping a required fact?" — verbosity-bias
+// correction is baked into the prompt rather than layered metrics.
+export const responseConcise = async ({
+	expected,
+	output,
+}: EvalScoreArgs): Promise<EvalScore> => {
+	const expectations = getExpectedConcise(expected);
+	if (!expectations.length) return { name: "Concise", score: 1 };
+
+	const reply = lastAssistantReply(output);
+	const required = expectations.flatMap((expectation) => expectation.required);
+	const client = new Anthropic();
+	const message = await client.messages.create({
+		max_tokens: 300,
+		messages: [
+			{ content: conciseJudgePrompt({ reply, required }), role: "user" },
+		],
+		model: CONCISE_JUDGE_MODEL,
+		temperature: 0,
+	});
+	const text =
+		message.content.find(
+			(block): block is Anthropic.TextBlock => block.type === "text",
+		)?.text ?? "";
+	const json = text.match(/\{[\s\S]*\}/)?.[0];
+	try {
+		const verdict = JSON.parse(json ?? "") as { pass: boolean; reason: string };
+		// Surface the verdict in the terminal; Braintrust metadata keeps it too.
+		process.stderr.write(
+			`[concise-judge] ${verdict.pass ? "pass" : "fail"}: ${verdict.reason}\n`,
+		);
+		return {
+			metadata: { reason: verdict.reason, reply },
+			name: "Concise",
+			score: verdict.pass ? 1 : 0,
+		};
+	} catch {
+		return {
+			metadata: { reason: `Judge returned non-JSON: ${text}`, reply },
+			name: "Concise",
+			score: 0,
+		};
+	}
 };
 
 export const noAttachBeforePreview = ({ output }: { output: EvalOutput }) => {
@@ -408,6 +536,23 @@ export const noCreateScheduleBeforePreview = ({
 		: 0;
 };
 
+export const noUpdateSubscriptionBeforePreview = ({
+	output,
+}: {
+	output: EvalOutput;
+}) => {
+	const updateIndex = output.apiCalls.findIndex(
+		(call) => call.toolName === "updateSubscription",
+	);
+	const previewIndex = output.apiCalls.findIndex(
+		(call) => call.toolName === "previewUpdateSubscription",
+	);
+	return updateIndex === -1 ||
+		(previewIndex !== -1 && previewIndex < updateIndex)
+		? 1
+		: 0;
+};
+
 export const noScheduleCalls = ({ output }: { output: EvalOutput }) =>
 	output.apiCalls.every(
 		(call) =>
@@ -421,44 +566,84 @@ export const noScheduleCalls = ({ output }: { output: EvalOutput }) =>
 		? 1
 		: 0;
 
-export const standardEvalScores = (): EvalScorer[] => [
-	namedScorer({
+const namedConciseScorer: EvalScorer = (args) => responseConcise(args);
+Object.defineProperty(namedConciseScorer, "name", { value: "Concise" });
+
+// One named evaluator per expectation type, in display order. The panel for a
+// file is derived from the expectation types its cases actually declare, so
+// Braintrust only shows columns a case can fail.
+const scorersByExpectationType: Record<EvalExpectation["type"], EvalScorer> = {
+	"tools.called": namedScorer({
 		name: "Expected tool calls",
 		score: expectedToolCalls,
 	}),
-	namedScorer({
+	"api.called": namedScorer({
 		name: "Expected API calls",
 		score: expectedApiCalls,
 	}),
-	namedScorer({
+	"api.calledInOrder": namedScorer({
 		name: "Expected API call order",
 		score: expectedApiCallsInOrder,
 	}),
-	namedScorer({
+	"api.calledAfterApproval": namedScorer({
 		name: "Expected API calls after approval",
 		score: expectedApiCallsAfterApproval,
 	}),
-	namedScorer({
+	"api.calledTimes": namedScorer({
+		name: "Expected API call counts",
+		score: expectedApiCallTimes,
+	}),
+	"api.bodyExcludes": namedScorer({
 		name: "Expected API body exclusions",
 		score: expectedApiBodyExclusions,
 	}),
-	namedScorer({
+	"api.bodyNumberFields": namedScorer({
 		name: "Expected API body number fields",
 		score: expectedApiBodyNumberFields,
 	}),
-	namedScorer({
+	"response.mentions": namedScorer({
 		name: "Final text includes",
 		score: finalTextIncludes,
 	}),
-	namedScorer({
+	"response.asked": namedScorer({
 		name: "Asked clarification",
 		score: askedClarification,
 	}),
-	namedScorer({
+	"response.askedBeforeTool": namedScorer({
 		name: "Asked clarification before tool",
 		score: askedClarificationBeforeTool,
 	}),
-];
+	"response.concise": namedConciseScorer,
+};
+
+const expectationTypesIn = (
+	expected?: EvalExpected,
+): EvalExpectation["type"][] => {
+	const legacy = getLegacyExpected(expected);
+	return [
+		...(legacy?.toolCalls?.length ? (["tools.called"] as const) : []),
+		...(legacy?.apiCalls?.length ? (["api.called"] as const) : []),
+		...(legacy?.finalTextIncludes?.length
+			? (["response.mentions"] as const)
+			: []),
+		...getExpectationList(expected).map((expectation) => expectation.type),
+	];
+};
+
+/** Scorer panel derived from the expectation types declared across a file's cases. */
+export const scoresFromExpectations = (
+	expectedList: (EvalExpected | undefined)[],
+): EvalScorer[] => {
+	const declaredTypes = new Set(expectedList.flatMap(expectationTypesIn));
+	return Object.entries(scorersByExpectationType)
+		.filter(([type]) => declaredTypes.has(type as EvalExpectation["type"]))
+		.map(([, scorer]) => scorer);
+};
+
+export const standardEvalScores = (): EvalScorer[] =>
+	Object.entries(scorersByExpectationType)
+		.filter(([type]) => type !== "response.concise")
+		.map(([, scorer]) => scorer);
 
 export const billingAttachScores = (): EvalScorer[] => standardEvalScores();
 
@@ -467,5 +652,13 @@ export const billingScheduleScores = (): EvalScorer[] => [
 	namedScorer({
 		name: "Preview before create schedule",
 		score: noCreateScheduleBeforePreview,
+	}),
+];
+
+export const billingUpdateSubscriptionScores = (): EvalScorer[] => [
+	...standardEvalScores(),
+	namedScorer({
+		name: "Preview before update subscription",
+		score: noUpdateSubscriptionBeforePreview,
 	}),
 ];

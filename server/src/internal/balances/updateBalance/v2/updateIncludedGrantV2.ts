@@ -12,8 +12,8 @@ import {
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { updateSubjectBalanceCache } from "@/internal/customers/cusProducts/cusEnts/actions/cache/updateSubjectBalanceCache.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 
 export const updateIncludedGrantV2 = async ({
 	ctx,
@@ -37,7 +37,8 @@ export const updateIncludedGrantV2 = async ({
 
 	if (cusEnts.length === 0) {
 		throw new RecaseError({
-			message: `[updateIncludedGrantV2] No balances to update for feature ${featureId}, customer ${fullSubject.customerId}`,
+			message: `No balances to update for feature ${featureId}, customer ${fullSubject.customerId}`,
+			statusCode: 404,
 		});
 	}
 
