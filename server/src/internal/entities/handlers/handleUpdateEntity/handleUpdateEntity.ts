@@ -1,13 +1,14 @@
 import {
 	AffectedResource,
-	CustomerNotFoundError,
-	UpdateEntityParamsSchema,
+	ErrCode,
+	RecaseError,
 	Scopes,
+	UpdateEntityParamsSchema,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { findCustomerForEntity } from "../../actions/findCustomer.js";
-import { entityActions } from "../../actions/index.js";
 import { getApiEntityByRollout } from "../../actions/getApiEntityByRollout.js";
+import { entityActions } from "../../actions/index.js";
 
 export const handleUpdateEntity = createRoute({
 	scopes: [Scopes.Customers.Write],
@@ -28,7 +29,11 @@ export const handleUpdateEntity = createRoute({
 		}
 
 		if (!customerId) {
-			throw new CustomerNotFoundError({ customerId: body.customer_id ?? "" });
+			throw new RecaseError({
+				message: `No customer found for entity '${body.entity_id}'. Pass customer_id to identify the customer.`,
+				code: ErrCode.CustomerNotFound,
+				statusCode: 404,
+			});
 		}
 
 		await entityActions.update({

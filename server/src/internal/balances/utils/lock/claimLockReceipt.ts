@@ -1,4 +1,4 @@
-import { ErrCode, InternalError, RecaseError } from "@autumn/shared";
+import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 
@@ -6,7 +6,7 @@ import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
  * Atomically claims a lock receipt: pending → processing.
  *
  * Throws RecaseError for terminal/already-processing statuses.
- * Throws InternalError when Redis is unavailable.
+ * Throws a retryable 503 RecaseError when Redis is unavailable.
  */
 export const claimLockReceipt = async ({
 	lockReceiptKey,
@@ -21,8 +21,10 @@ export const claimLockReceipt = async ({
 	);
 
 	if (result === null) {
-		throw new InternalError({
-			message: "Redis not ready for claimLockReceipt",
+		throw new RecaseError({
+			message: "Redis is temporarily unavailable, please retry.",
+			code: ErrCode.InternalError,
+			statusCode: 503,
 		});
 	}
 

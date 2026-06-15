@@ -35,6 +35,7 @@ export const autoCreateEntity = async ({
 		throw new RecaseError({
 			message: `Entity with id ${entityId || "unknown"} not found. To automatically create this entity, please pass in 'feature_id' into the 'entity_data' field of the request body.`,
 			code: ErrCode.InvalidInputs,
+			statusCode: 400,
 		});
 	}
 

@@ -1,6 +1,7 @@
 import {
-	CustomerNotFoundError,
 	DeleteEntityParamsV0Schema,
+	ErrCode,
+	RecaseError,
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "../../../../honoMiddlewares/routeHandler.js";
@@ -25,7 +26,11 @@ export const handleDeleteEntityV2 = createRoute({
 		}
 
 		if (!customerId) {
-			throw new CustomerNotFoundError({ customerId: customerId ?? "" });
+			throw new RecaseError({
+				message: `No customer found for entity '${body.entity_id}'. Pass customer_id to identify the customer.`,
+				code: ErrCode.CustomerNotFound,
+				statusCode: 404,
+			});
 		}
 
 		await entityActions.delete({

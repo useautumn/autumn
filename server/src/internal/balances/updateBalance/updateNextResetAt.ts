@@ -32,7 +32,8 @@ export const updateNextResetAt = async ({
 
 	if (cusEnts.length === 0) {
 		throw new RecaseError({
-			message: `[updateNextResetAt] No balances found for feature ${featureId}, customer ${fullCustomer.id}`,
+			message: `No balances found for feature ${featureId}, customer ${fullCustomer.id}`,
+			statusCode: 404,
 		});
 	}
 
@@ -48,6 +49,7 @@ export const updateNextResetAt = async ({
 	if (targetCusEnt.entitlement.interval === EntInterval.Lifetime) {
 		throw new RecaseError({
 			message: `Cannot update next reset at for lifetime balance (feature ${featureId}, customer ${fullCustomer.id ?? fullCustomer.internal_id})`,
+			statusCode: 400,
 		});
 	}
 

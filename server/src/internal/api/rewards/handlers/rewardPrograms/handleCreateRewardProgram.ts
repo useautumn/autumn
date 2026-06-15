@@ -61,7 +61,7 @@ export const handleCreateRewardProgram = createRoute({
 
 		if (!reward) {
 			throw new RecaseError({
-				message: "Reward not found",
+				message: `Reward ${body.internal_reward_id} not found`,
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
 			});

@@ -20,13 +20,15 @@ export const handleUncancelErrors = ({
 
 	if (customerProduct.status === CusProductStatus.Scheduled) {
 		throw new RecaseError({
-			message: "Cannot uncancel a scheduled product",
+			message: "Cannot uncancel a subscription that is scheduled",
+			statusCode: 400,
 		});
 	}
 
 	if (customerProduct.status === CusProductStatus.Expired) {
 		throw new RecaseError({
-			message: "Cannot uncancel an expired product",
+			message: "Cannot uncancel a subscription that has expired",
+			statusCode: 400,
 		});
 	}
 
