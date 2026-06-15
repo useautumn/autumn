@@ -132,6 +132,22 @@ const resolveAiCreditFeaturesFromEntitlements = async ({
 		});
 	}
 
+	// The cascade drains capped (included) systems first and spills the
+	// remainder into the single overage system. With more than one overage
+	// system the engine would bill the marked-up overflow to an arbitrary one,
+	// so require feature_id to disambiguate instead of guessing.
+	const overageSystems = aiCreditSystems.filter(
+		(system) => system.hasUsageAllowed,
+	);
+	if (overageSystems.length > 1) {
+		throw new RecaseError({
+			message:
+				"Multiple AI credit systems allow overage for this customer, so the overflow target is ambiguous. Specify feature_id to choose which system to bill.",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+
 	return [...aiCreditSystems]
 		.sort((left, right) => {
 			const statusDiff =
