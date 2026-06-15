@@ -26,6 +26,13 @@ export type SpilloverDeduction = {
 
 export type FeatureDeduction = {
 	feature: Feature;
+	/**
+	 * Number of priced events/units to deduct. The actual credit balance
+	 * change is `deduction * credit_cost`, where credit_cost is resolved
+	 * per-entitlement by `computeCreditCosts`. For standard features
+	 * credit_cost is 1 so deduction equals the credit amount; for token
+	 * features credit_cost is the USD cost so deduction is the event count.
+	 */
 	deduction: number;
 	targetBalance?: number;
 	/** Present only for track_tokens deductions; standard deductions omit it. */
