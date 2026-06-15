@@ -3,6 +3,9 @@ import {
 	type CreateRewardProgram,
 	DiscountConfigSchema,
 	ErrCode,
+	type Feature,
+	FeatureType,
+	findFeatureByInternalId,
 	isFixedPrice,
 	notNullish,
 	type Price,
@@ -27,11 +30,13 @@ export const constructReward = ({
 	reward,
 	orgId,
 	env,
+	features = [],
 }: {
 	internalId?: string;
 	reward: CreateReward;
 	orgId: string;
 	env: string;
+	features?: Feature[];
 }) => {
 	if (!reward.id || !reward.name) {
 		throw new RecaseError({
@@ -61,7 +66,13 @@ export const constructReward = ({
 					code: ErrCode.InvalidReward,
 				});
 			}
-			if (!ent.allowance || ent.allowance <= 0) {
+			const feature = findFeatureByInternalId({
+				features,
+				internalId: ent.internal_feature_id,
+			});
+			// Boolean features grant on/off access, so they carry no allowance
+			const isBoolean = feature?.type === FeatureType.Boolean;
+			if (!isBoolean && (!ent.allowance || ent.allowance <= 0)) {
 				throw new RecaseError({
 					message: "Each entitlement must have a positive allowance",
 					code: ErrCode.InvalidReward,

@@ -1,0 +1,41 @@
+name: ATMN Publish
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/atmn/**"
+
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Dry run (no actual publish)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      version-bump:
+        description: "Version bump type (for manual triggers)"
+        required: false
+        default: "patch"
+        type: choice
+        options:
+          - "patch"
+          - "minor"
+          - "major"
+
+jobs:
+  publish:
+    uses: ./.github/workflows/npm-publish.yml
+    permissions:
+      id-token: write
+      contents: write
+    with:
+      package-dir: packages/atmn
+      # atmn's default `test` script is sandbox integration tests; release CI runs unit only
+      test-command: bun -F atmn test:unit
+      version-bump: ${{ github.event_name == 'workflow_dispatch' && inputs.version-bump || '' }}
+      dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || 'false' }}

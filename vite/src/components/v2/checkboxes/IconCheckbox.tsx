@@ -2,7 +2,7 @@
 
 import type { VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { cn } from "@/lib/utils";
+import { cn, hasSubmitShortcutModifier } from "@/lib/utils";
 import { Button, type ButtonProps } from "../buttons/Button";
 import { iconButtonVariants } from "../buttons/IconButton";
 
@@ -28,6 +28,7 @@ const IconCheckbox = React.forwardRef<HTMLButtonElement, IconCheckboxProps>(
 			onCheckedChange,
 			icon,
 			onClick,
+			onKeyDown,
 			children,
 			...props
 		},
@@ -38,6 +39,15 @@ const IconCheckbox = React.forwardRef<HTMLButtonElement, IconCheckboxProps>(
 			onClick?.(event);
 			// Remove focus after click to prevent stuck active state
 			event.currentTarget.blur();
+		};
+
+		const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>) => {
+			// Suppress the native button click without toggling, so
+			// cmd/ctrl+enter only triggers sheet-level submit shortcuts
+			if (event.key === "Enter" && hasSubmitShortcutModifier(event)) {
+				event.preventDefault();
+			}
+			onKeyDown?.(event);
 		};
 
 		const renderIcon = (icon: React.ReactNode) => {
@@ -116,6 +126,7 @@ const IconCheckbox = React.forwardRef<HTMLButtonElement, IconCheckboxProps>(
 					className,
 				)}
 				onClick={handleClick}
+				onKeyDown={handleKeyDown}
 				data-state={checked ? "open" : "closed"}
 				aria-pressed={checked}
 				{...props}

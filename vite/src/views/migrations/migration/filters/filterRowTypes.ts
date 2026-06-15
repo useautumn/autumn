@@ -3,7 +3,6 @@ import type { NumberMatcher, PlanFilter, StringMatcher } from "@autumn/shared";
 export type FilterField =
 	| "customer_id"
 	| "plan_id"
-	| "version"
 	| "custom"
 	| "paid"
 	| "recurring"
@@ -20,11 +19,7 @@ export type FilterOperator =
 	| "starts_with"
 	| "exists"
 	| "not_exists"
-	| "none"
-	| "gt"
-	| "gte"
-	| "lt"
-	| "lte";
+	| "none";
 
 export type FilterRule = {
 	field: FilterField;
@@ -42,7 +37,6 @@ export const FILTER_FIELD_OPTIONS: {
 }[] = [
 	{ value: "customer_id", label: "Customer" },
 	{ value: "plan_id", label: "Plan" },
-	{ value: "version", label: "Version" },
 	{ value: "custom", label: "Custom" },
 	{ value: "paid", label: "Paid" },
 	{ value: "recurring", label: "Recurring" },
@@ -54,24 +48,8 @@ export const FILTER_FIELD_OPTIONS: {
 type OperatorOption = { value: FilterOperator; label: string };
 export type FieldConfig = {
 	operators: OperatorOption[];
-	valueType: "string" | "boolean" | "number" | "none";
+	valueType: "string" | "boolean" | "plan" | "none";
 };
-
-const STRING_OPERATORS: OperatorOption[] = [
-	{ value: "is", label: "is" },
-	{ value: "is_not", label: "is not" },
-	{ value: "in", label: "in" },
-	{ value: "not_in", label: "not in" },
-	{ value: "regex", label: "regex" },
-	{ value: "starts_with", label: "starts with" },
-];
-
-// Plan adds "has none" — selects customers with no active plans at all
-// (compiles to the `$none` quantifier, not a per-plan matcher).
-const PLAN_OPERATORS: OperatorOption[] = [
-	...STRING_OPERATORS,
-	{ value: "none", label: "has none" },
-];
 
 const STRING_MATCH_OPERATORS: OperatorOption[] = [
 	{ value: "is", label: "is" },
@@ -80,15 +58,11 @@ const STRING_MATCH_OPERATORS: OperatorOption[] = [
 	{ value: "not_in", label: "not in" },
 ];
 
-const NUMBER_OPERATORS: OperatorOption[] = [
-	{ value: "is", label: "is" },
-	{ value: "is_not", label: "is not" },
-	{ value: "gt", label: ">" },
-	{ value: "gte", label: "≥" },
-	{ value: "lt", label: "<" },
-	{ value: "lte", label: "≤" },
-	{ value: "in", label: "in" },
-	{ value: "not_in", label: "not in" },
+// Plan adds "has none" — selects customers with no active plans at all
+// (compiles to the `$none` quantifier, not a per-plan matcher).
+const PLAN_OPERATORS: OperatorOption[] = [
+	...STRING_MATCH_OPERATORS,
+	{ value: "none", label: "has none" },
 ];
 
 const BOOLEAN_ONLY: FieldConfig = {
@@ -106,8 +80,7 @@ const NULLABLE_ONLY: FieldConfig = {
 
 export const FIELD_CONFIGS: Record<FilterField, FieldConfig> = {
 	customer_id: { operators: STRING_MATCH_OPERATORS, valueType: "string" },
-	plan_id: { operators: PLAN_OPERATORS, valueType: "string" },
-	version: { operators: NUMBER_OPERATORS, valueType: "number" },
+	plan_id: { operators: PLAN_OPERATORS, valueType: "plan" },
 	custom: BOOLEAN_ONLY,
 	paid: BOOLEAN_ONLY,
 	recurring: BOOLEAN_ONLY,
@@ -151,100 +124,7 @@ function stringMatcherToRule(
 	return { field, operator: "is", values: [] };
 }
 
-/**
- * Convert a NumberMatcher to one OR MORE FilterRules. A combined matcher like
- * `{ $gte: 2, $lte: 4 }` emits two rules (a "≥ 2" rule and a "≤ 4" rule) so
- * neither constraint is silently dropped. `groupsToPlanFilter` re-merges them
- * by field on save.
- */
-export function numberMatcherToRules(
-	field: FilterField,
-	matcher: NumberMatcher | undefined,
-): FilterRule[] {
-	if (matcher === undefined) return [];
-	if (matcher === null) return [{ field, operator: "is", values: [] }];
-	if (typeof matcher === "number")
-		return [{ field, operator: "is", values: [String(matcher)] }];
-
-	const rules: FilterRule[] = [];
-	if (matcher.$eq !== undefined) {
-		if (matcher.$eq === null) rules.push({ field, operator: "is", values: [] });
-		else rules.push({ field, operator: "is", values: [String(matcher.$eq)] });
-	}
-	if (matcher.$ne !== undefined && matcher.$ne !== null)
-		rules.push({ field, operator: "is_not", values: [String(matcher.$ne)] });
-	if (matcher.$in !== undefined)
-		rules.push({ field, operator: "in", values: matcher.$in.map(String) });
-	if (matcher.$nin !== undefined)
-		rules.push({ field, operator: "not_in", values: matcher.$nin.map(String) });
-	if (matcher.$gt !== undefined)
-		rules.push({ field, operator: "gt", values: [String(matcher.$gt)] });
-	if (matcher.$gte !== undefined)
-		rules.push({ field, operator: "gte", values: [String(matcher.$gte)] });
-	if (matcher.$lt !== undefined)
-		rules.push({ field, operator: "lt", values: [String(matcher.$lt)] });
-	if (matcher.$lte !== undefined)
-		rules.push({ field, operator: "lte", values: [String(matcher.$lte)] });
-	return rules;
-}
-
-/**
- * Convert a single FilterRule into a NumberMatcher fragment that can be
- * merged with other fragments for the same field. An empty `"is"` rule round-
- * trips from `version: null` and must preserve the explicit null match.
- */
-function ruleToNumberMatcherFragment(
-	rule: FilterRule,
-): Record<string, unknown> | null {
-	const nums = rule.values
-		.map((v) => Number.parseFloat(v))
-		.filter((n) => !Number.isNaN(n));
-	if (nums.length === 0) {
-		if (rule.operator === "is") return { $eq: null };
-		return null;
-	}
-	const first = nums[0];
-	switch (rule.operator) {
-		case "is":
-			return nums.length > 1 ? { $in: nums } : { $eq: first };
-		case "is_not":
-			return { $ne: first };
-		case "in":
-			return { $in: nums };
-		case "not_in":
-			return { $nin: nums };
-		case "gt":
-			return { $gt: first };
-		case "gte":
-			return { $gte: first };
-		case "lt":
-			return { $lt: first };
-		case "lte":
-			return { $lte: first };
-		default:
-			return { $eq: first };
-	}
-}
-
-export function mergeNumberFragments(
-	fragments: Record<string, unknown>[],
-): NumberMatcher | undefined {
-	if (fragments.length === 0) return undefined;
-	if (fragments.length === 1) {
-		const fragment = fragments[0];
-		const keys = Object.keys(fragment);
-		if (keys.length === 1 && "$eq" in fragment) {
-			// Simplify single-eq fragments back to bare value (matches the
-			// canonical "bare = $eq" convention) — handles version: 1 → 1
-			// and version: null → null.
-			return fragment.$eq as NumberMatcher;
-		}
-		return fragment as NumberMatcher;
-	}
-	return Object.assign({}, ...fragments) as NumberMatcher;
-}
-
-function ruleToStringMatcher(rule: FilterRule): StringMatcher {
+export function ruleToStringMatcher(rule: FilterRule): StringMatcher {
 	if (
 		rule.operator === "in" ||
 		(rule.operator === "is" && rule.values.length > 1)
@@ -280,13 +160,129 @@ function nullableToRule(field: FilterField, value: unknown): FilterRule | null {
 	return { field, operator: "exists", values: [] };
 }
 
+// Plan selections are encoded as value keys: "<planId>" (any version) or
+// "<planId>:<version>" (a specific version). Version is therefore always bound
+// to its plan — there is no standalone version field.
+const PLAN_KEY_SEPARATOR = ":";
+
+export type PlanSelection = { planId: string; version?: number };
+
+export function parsePlanKey(key: string): PlanSelection {
+	const separatorIndex = key.lastIndexOf(PLAN_KEY_SEPARATOR);
+	if (separatorIndex === -1) return { planId: key };
+	const version = Number.parseInt(key.slice(separatorIndex + 1), 10);
+	if (Number.isNaN(version)) return { planId: key };
+	return { planId: key.slice(0, separatorIndex), version };
+}
+
+export function makePlanKey({ planId, version }: PlanSelection): string {
+	return version === undefined
+		? planId
+		: `${planId}${PLAN_KEY_SEPARATOR}${version}`;
+}
+
+function selectionToFilter({ planId, version }: PlanSelection): PlanFilter {
+	return version === undefined
+		? { plan_id: planId }
+		: { plan_id: planId, version };
+}
+
+/**
+ * Plan-selection value keys → the PlanFilter for one quantifier. Version-less
+ * keys collapse to `plan_id` / `$in`; any pinned version forces an `$or` of
+ * `{ plan_id, version }` branches (each compiles to a single bound EXISTS).
+ */
+export function planKeysToFilter(keys: string[]): PlanFilter {
+	const selections = keys.map(parsePlanKey);
+	if (selections.every((s) => s.version === undefined)) {
+		const ids = selections.map((s) => s.planId);
+		return { plan_id: ids.length === 1 ? ids[0] : { $in: ids } };
+	}
+	if (selections.length === 1) return selectionToFilter(selections[0]);
+	return { $or: selections.map(selectionToFilter) };
+}
+
+const PLAN_SELECTION_KEYS = new Set(["plan_id", "version"]);
+
+function planIdsFromMatcher(
+	matcher: StringMatcher | undefined,
+): string[] | null {
+	if (typeof matcher === "string") return [matcher];
+	if (matcher && typeof matcher === "object") {
+		if (matcher.$eq) return [matcher.$eq];
+		if (matcher.$in) return matcher.$in;
+	}
+	return null;
+}
+
+// A version pin folds into a plan key only as a single concrete number — bare
+// `N` or `{ $eq: N }`. Returns `undefined` when absent, or `"unfoldable"` for
+// matcher forms ($in, ranges, $ne, null) a key can't carry.
+function pinnedVersion(
+	matcher: NumberMatcher | undefined,
+): number | undefined | "unfoldable" {
+	if (matcher === undefined) return undefined;
+	if (typeof matcher === "number") return matcher;
+	if (
+		typeof matcher === "object" &&
+		matcher !== null &&
+		typeof matcher.$eq === "number" &&
+		Object.keys(matcher).length === 1
+	)
+		return matcher.$eq;
+	return "unfoldable";
+}
+
+/** A PlanFilter that is purely a plan selection (`plan_id` and an optional
+ *  single-version pin) → its value keys, else null. */
+function pureSelectionKeys(filter: PlanFilter): string[] | null {
+	if (filter.plan_id === undefined) return null;
+	if (Object.keys(filter).some((key) => !PLAN_SELECTION_KEYS.has(key)))
+		return null;
+	const ids = planIdsFromMatcher(filter.plan_id);
+	if (ids === null) return null;
+	const version = pinnedVersion(filter.version);
+	if (version === "unfoldable") return null;
+	return ids.map((planId) => makePlanKey({ planId, version }));
+}
+
+/**
+ * Decode a quantifier's PlanFilter to plan-selection keys, or null when it
+ * isn't a plan selection (a non-plan field, or a legacy `$or` of full filters
+ * — those are handled by `planFilterToGroups`).
+ */
+export function planFilterToPlanKeys(filter: PlanFilter): string[] | null {
+	if (filter.$or) {
+		if (Object.keys(filter).some((key) => key !== "$or")) return null;
+		const keys: string[] = [];
+		for (const branch of filter.$or) {
+			const branchKeys = pureSelectionKeys(branch);
+			if (branchKeys === null) return null;
+			keys.push(...branchKeys);
+		}
+		return keys;
+	}
+	return pureSelectionKeys(filter);
+}
+
+function planKeysToRule(keys: string[]): FilterRule {
+	return {
+		field: "plan_id",
+		operator: keys.length > 1 ? "in" : "is",
+		values: keys,
+	};
+}
+
 export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
+	// A pure plan selection is a single plan row (version folded into the keys).
+	const planKeys = planFilterToPlanKeys(filter);
+	if (planKeys !== null)
+		return [{ rules: planKeys.length > 0 ? [planKeysToRule(planKeys)] : [] }];
+
 	const mainRules: FilterRule[] = [];
 
 	const planIdRule = stringMatcherToRule("plan_id", filter.plan_id);
 	if (planIdRule) mainRules.push(planIdRule);
-
-	mainRules.push(...numberMatcherToRules("version", filter.version));
 
 	if (filter.custom !== undefined)
 		mainRules.push(booleanRule("custom", filter.custom));
@@ -319,6 +315,7 @@ export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
 	const groups: FilterGroupData[] =
 		mainRules.length > 0 ? [{ rules: mainRules }] : [];
 
+	// Legacy `$or` of full filters — each branch is its own OR-group.
 	if (filter.$or) {
 		for (const orFilter of filter.$or) {
 			const orGroups = planFilterToGroups(orFilter);
@@ -327,69 +324,6 @@ export function planFilterToGroups(filter: PlanFilter): FilterGroupData[] {
 	}
 
 	return groups.length > 0 ? groups : [{ rules: [] }];
-}
-
-function groupToPlanFilter(group: FilterGroupData): PlanFilter {
-	const filter: PlanFilter = {};
-	let hasItemFields = false;
-	const itemInner: Record<string, unknown> = {};
-	const versionFragments: Record<string, unknown>[] = [];
-	const hasStringValue = (rule: FilterRule) =>
-		rule.values.some((value) => value.trim().length > 0);
-
-	for (const rule of group.rules) {
-		switch (rule.field) {
-			case "plan_id":
-				if (!hasStringValue(rule)) break;
-				filter.plan_id = ruleToStringMatcher(rule);
-				break;
-			case "version": {
-				const fragment = ruleToNumberMatcherFragment(rule);
-				if (fragment) versionFragments.push(fragment);
-				break;
-			}
-			case "custom":
-				filter.custom = rule.values[0] === "true";
-				break;
-			case "paid":
-				filter.paid = rule.values[0] === "true";
-				break;
-			case "recurring":
-				filter.recurring = rule.values[0] === "true";
-				break;
-			case "price":
-				filter.price = rule.operator === "exists" ? { $ne: null } : null;
-				break;
-			case "item_feature_id":
-				if (!hasStringValue(rule)) break;
-				hasItemFields = true;
-				itemInner.feature_id = ruleToStringMatcher(rule);
-				break;
-			case "item_unlimited":
-				hasItemFields = true;
-				itemInner.unlimited = rule.values[0] === "true";
-				break;
-		}
-	}
-
-	if (hasItemFields) {
-		filter.item = itemInner as PlanFilter["item"];
-	}
-
-	const versionMatcher = mergeNumberFragments(versionFragments);
-	if (versionMatcher !== undefined) filter.version = versionMatcher;
-
-	return filter;
-}
-
-export function groupsToPlanFilter(groups: FilterGroupData[]): PlanFilter {
-	const branches = groups
-		.map(groupToPlanFilter)
-		.filter((filter) => Object.keys(filter).length > 0);
-
-	if (branches.length === 0) return {};
-	if (branches.length === 1) return branches[0];
-	return { $or: branches };
 }
 
 export function customerIdToStrings(

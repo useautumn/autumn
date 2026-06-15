@@ -14,3 +14,11 @@ NODE_ENV = "test"
 [install]
 # Only install package versions published at least 3 days ago
 minimumReleaseAge = 259200 # seconds
+# Vercel-harness canary deps we intentionally pin; exempt from the age gate.
+minimumReleaseAgeExcludes = [
+	"ai",
+	"@ai-sdk/harness",
+	"@ai-sdk/harness-claude-code",
+	"@ai-sdk/sandbox-vercel",
+	"@vercel/sandbox",
+]

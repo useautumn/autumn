@@ -8,13 +8,16 @@ import { CouponDurationType, RewardType } from "./rewardEnums";
 const PromoCodeSchema = z.object({
 	code: z.string(),
 	global_max_redemption: z.number().positive().optional(),
+	/** Only redeemable by customers with no prior successful payments or invoices */
+	first_time_transaction: z.boolean().optional(),
 	/** @deprecated Use global_max_redemption. */
 	max_redemptions: z.number().positive().optional(),
 });
 
 const RewardEntitlementSchema = z.object({
 	internal_feature_id: z.string().min(1),
-	allowance: z.number().positive(),
+	// Optional: boolean features grant on/off access with no allowance
+	allowance: z.number().positive().optional(),
 	expiry: EntitlementExpirySchema.optional(),
 });
 

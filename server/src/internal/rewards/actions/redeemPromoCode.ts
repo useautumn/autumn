@@ -3,10 +3,13 @@ import {
 	type CustomerEntitlement,
 	type Entitlement,
 	ErrCode,
+	FeatureType,
 	findFeatureByInternalId,
 	RecaseError,
 	RewardType,
 } from "@autumn/shared";
+import { createStripeCli } from "@/external/connect/createStripeCli.js";
+import { assertFirstTimeStripeCustomer } from "@/external/stripe/customers/index.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { prepareNewBalanceForInsertion } from "@/internal/balances/createBalance/prepareNewBalanceForInsertion.js";
 import { CusService } from "@/internal/customers/CusService.js";
@@ -115,6 +118,16 @@ export const redeemPromoCode = async ({
 		});
 	}
 
+	// 4.5. First-time restriction (no Stripe customer → necessarily first-time)
+	if (promoCode.first_time_transaction && fullCustomer.processor?.id) {
+		const stripeCli = createStripeCli({ org, env });
+		await assertFirstTimeStripeCustomer({
+			stripeCli,
+			stripeCustomerId: fullCustomer.processor.id,
+			promoCode: code,
+		});
+	}
+
 	// 5. Create entitlements for each reward entitlement config
 	const newEntitlements: Entitlement[] = [];
 	const newCustomerEntitlements: CustomerEntitlement[] = [];
@@ -132,8 +145,9 @@ export const redeemPromoCode = async ({
 			continue;
 		}
 
+		const isBoolean = feature.type === FeatureType.Boolean;
 		const allowance = rewardEnt.allowance;
-		if (!allowance || allowance <= 0) {
+		if (!isBoolean && (!allowance || allowance <= 0)) {
 			throw new RecaseError({
 				message: `Reward entitlement for feature "${feature.id}" must have a positive allowance`,
 				code: ErrCode.InvalidReward,
@@ -158,7 +172,7 @@ export const redeemPromoCode = async ({
 				params: {
 					customer_id: customerId,
 					feature_id: feature.id,
-					included_grant: allowance,
+					included_grant: isBoolean ? undefined : (allowance ?? undefined),
 					expires_at: expiresAt,
 					balance_id: `reward_${code}_${new Date().toISOString().slice(0, 10).replace(/-/g, "_")}`,
 				},

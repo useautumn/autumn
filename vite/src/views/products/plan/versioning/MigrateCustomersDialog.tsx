@@ -32,6 +32,7 @@ import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import {
 	buildVersionMigrationDraft,
+	planHasPricingChange,
 	type VersionMigrateScope,
 } from "./buildMigrationDraft";
 import { getPlanPriceChange, hasPlanMigrationDiff } from "./planMigrationDiff";
@@ -42,6 +43,7 @@ interface MigrateCustomersDialogProps {
 	productId: string;
 	latestVersion: number;
 	migratableVersions: number[];
+	pastVersions: number[];
 	versionCounts: Record<
 		number,
 		{ active: number; canceled: number; custom: number; trialing: number }
@@ -150,6 +152,7 @@ export function MigrateCustomersDialog({
 	productId,
 	latestVersion,
 	migratableVersions,
+	pastVersions,
 	versionCounts,
 }: MigrateCustomersDialogProps) {
 	const navigate = useNavigate();
@@ -167,14 +170,44 @@ export function MigrateCustomersDialog({
 
 	const versionProducts = useVersionProducts(productId, migratableVersions);
 	const latestProduct = useLatestProduct(productId, latestVersion);
+	const { features = [] } = useFeaturesQuery();
+
+	const hasPricingChange = useMemo(() => {
+		if (!latestProduct) return false;
+		const versionsToCheck =
+			scope === "all"
+				? migratableVersions
+				: effectiveVersion !== null
+					? [effectiveVersion]
+					: [];
+		return versionsToCheck.some((version) => {
+			const fromProduct = versionProducts.get(version);
+			return (
+				!!fromProduct &&
+				planHasPricingChange({
+					baseProduct: fromProduct,
+					product: latestProduct,
+					features,
+				})
+			);
+		});
+	}, [
+		scope,
+		migratableVersions,
+		effectiveVersion,
+		versionProducts,
+		latestProduct,
+		features,
+	]);
 
 	const selectedFromProduct =
 		effectiveVersion !== null
 			? (versionProducts.get(effectiveVersion) ?? null)
 			: null;
 
+	const sortedCandidateVersions = [...pastVersions].sort((a, b) => b - a);
 	const versionSelectItems = Object.fromEntries(
-		migratableVersions.map((v) => [String(v), `Version ${v}`]),
+		sortedCandidateVersions.map((v) => [String(v), `Version ${v}`]),
 	);
 
 	const handleCreate = async () => {
@@ -185,6 +218,7 @@ export function MigrateCustomersDialog({
 			latestVersion,
 			scope,
 			pastVersions: migratableVersions,
+			hasPricingChange,
 		});
 
 		try {
@@ -198,7 +232,9 @@ export function MigrateCustomersDialog({
 		}
 	};
 
-	if (migratableVersions.length === 0) return null;
+	if (pastVersions.length === 0) return null;
+
+	const hasMigratableVersions = migratableVersions.length > 0;
 
 	return (
 		<Dialog
@@ -220,7 +256,9 @@ export function MigrateCustomersDialog({
 										if (val === "all") {
 											setScope("all");
 										} else {
-											setScope(selectedVersion);
+											// effectiveVersion is what the dropdown shows; selectedVersion
+											// may still be null before the user touches it.
+											setScope(effectiveVersion ?? "all");
 										}
 									}}
 								>
@@ -258,17 +296,28 @@ export function MigrateCustomersDialog({
 										<SelectValue placeholder="Select version" />
 									</SelectTrigger>
 									<SelectContent>
-										{migratableVersions.map((version) => {
+										{sortedCandidateVersions.map((version) => {
+											const hasDiff = migratableVersions.includes(version);
 											const count =
 												(versionCounts[version]?.active ?? 0) -
 												(versionCounts[version]?.custom ?? 0);
 											return (
-												<SelectItem key={version} value={String(version)}>
+												<SelectItem
+													key={version}
+													value={String(version)}
+													disabled={!hasDiff}
+												>
 													<div className="flex items-center justify-between w-full gap-3">
 														<span>Version {version}</span>
-														<IconBadge variant="muted" icon={<UserIcon />}>
-															{count}
-														</IconBadge>
+														{hasDiff ? (
+															<IconBadge variant="muted" icon={<UserIcon />}>
+																{count}
+															</IconBadge>
+														) : (
+															<span className="text-xs text-muted-foreground">
+																No diff
+															</span>
+														)}
 													</div>
 												</SelectItem>
 											);
@@ -293,6 +342,14 @@ export function MigrateCustomersDialog({
 							<InfoBox variant="info">
 								Customers on custom plans will not be migrated.
 							</InfoBox>
+
+							{hasPricingChange && (
+								<InfoBox variant="warning">
+									{scope === "all"
+										? "Some of these versions have pricing changes. Migrated customers will move to the new prices from their next billing cycle."
+										: "This version has pricing changes. Migrated customers will move to the new prices from their next billing cycle."}
+								</InfoBox>
+							)}
 						</div>
 					</DialogDescription>
 				</div>
@@ -303,10 +360,10 @@ export function MigrateCustomersDialog({
 						metaShortcut="enter"
 						onClick={handleCreate}
 						isLoading={isCreating}
-						disabled={isCreating}
+						disabled={isCreating || !hasMigratableVersions}
 						className="w-full"
 					>
-						Preview Migration
+						{hasMigratableVersions ? "Preview Migration" : "No changes to migrate"}
 					</ShortcutButton>
 				</DialogFooter>
 			</DialogContent>

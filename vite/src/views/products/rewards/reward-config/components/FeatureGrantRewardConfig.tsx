@@ -35,11 +35,15 @@ export function FeatureGrantRewardConfig({
 }: FeatureGrantRewardConfigProps) {
 	const { features } = useFeaturesQuery();
 
-	// Keep existing metered filtering, but allow credit systems too
 	const availableGrantTargets = features.filter(
 		(f) =>
-			f.type === FeatureType.Metered || f.type === FeatureType.CreditSystem,
+			f.type === FeatureType.Metered ||
+			f.type === FeatureType.CreditSystem ||
+			f.type === FeatureType.Boolean,
 	);
+
+	const isBooleanFeature = (featureId: string) =>
+		features.find((f) => f.id === featureId)?.type === FeatureType.Boolean;
 
 	const entitlements = reward.featureGrantEntitlements;
 	const getGlobalMaxRedemption = (
@@ -101,8 +105,9 @@ export function FeatureGrantRewardConfig({
 	}) => {
 		const updated = [...(reward.promo_codes || [])];
 		const promoCode = updated[index] ?? { code: "" };
+		const { max_redemptions: _maxRedemptions, ...rest } = promoCode;
 		updated[index] = {
-			code: promoCode.code,
+			...rest,
 			global_max_redemption: value,
 		};
 		setReward({ ...reward, promo_codes: updated });
@@ -156,47 +161,49 @@ export function FeatureGrantRewardConfig({
 			<SheetSection title="Promo Codes" withSeparator={false}>
 				<div className="space-y-3">
 					{(reward.promo_codes || []).map((promoCode, index) => (
-						<div key={index} className="flex items-end gap-2">
-							<div className="flex-1">
-								{index === 0 && <FormLabel>Code</FormLabel>}
-								<Input
-									value={promoCode.code}
-									onChange={(e) =>
-										updatePromoCode({
-											index,
-											code: e.target.value
-												.toUpperCase()
-												.replace(/[^A-Z0-9]/g, ""),
-										})
-									}
-									placeholder="PROMO2024"
-								/>
+						<div key={index} className="space-y-2">
+							<div className="flex items-end gap-2">
+								<div className="flex-1">
+									{index === 0 && <FormLabel>Code</FormLabel>}
+									<Input
+										value={promoCode.code}
+										onChange={(e) =>
+											updatePromoCode({
+												index,
+												code: e.target.value
+													.toUpperCase()
+													.replace(/[^A-Z0-9]/g, ""),
+											})
+										}
+										placeholder="PROMO2024"
+									/>
+								</div>
+								<div className="w-32">
+									{index === 0 && <FormLabel>Max Uses</FormLabel>}
+									<Input
+										type="number"
+										value={getGlobalMaxRedemption(promoCode) ?? ""}
+										onChange={(e) =>
+											updateMaxRedemptions({
+												index,
+												value: e.target.value
+													? Number(e.target.value)
+													: undefined,
+											})
+										}
+										placeholder="Unlimited"
+									/>
+								</div>
+								{(reward.promo_codes || []).length > 1 && (
+									<button
+										type="button"
+										onClick={() => removePromoCode({ index })}
+										className="p-2 text-subtle hover:text-foreground transition-colors"
+									>
+										<TrashIcon size={14} />
+									</button>
+								)}
 							</div>
-							<div className="w-32">
-								{index === 0 && <FormLabel>Max Uses</FormLabel>}
-								<Input
-									type="number"
-									value={getGlobalMaxRedemption(promoCode) ?? ""}
-									onChange={(e) =>
-										updateMaxRedemptions({
-											index,
-											value: e.target.value
-												? Number(e.target.value)
-												: undefined,
-										})
-									}
-									placeholder="Unlimited"
-								/>
-							</div>
-							{(reward.promo_codes || []).length > 1 && (
-								<button
-									type="button"
-									onClick={() => removePromoCode({ index })}
-									className="p-2 text-subtle hover:text-foreground transition-colors"
-								>
-									<TrashIcon size={14} />
-								</button>
-							)}
 						</div>
 					))}
 					<Button variant="secondary" size="sm" onClick={addPromoCode}>
@@ -215,7 +222,7 @@ export function FeatureGrantRewardConfig({
 					<AnimatePresence initial={false}>
 						{entitlements.map((ent, index) => (
 							<motion.div
-								key={`${ent.feature_id || "new"}-${index}`}
+								key={index}
 								initial={{ opacity: 0, scaleY: 0.95, originY: 0 }}
 								animate={{ opacity: 1, scaleY: 1 }}
 								exit={{ opacity: 0, scaleY: 0.95 }}
@@ -282,22 +289,24 @@ export function FeatureGrantRewardConfig({
 										/>
 									</div>
 
-									{/* Allowance */}
-									<div>
-										<FormLabel>Balance Grant</FormLabel>
-										<Input
-											type="number"
-											value={ent.allowance || ""}
-											onChange={(e) =>
-												updateEntitlement({
-													index,
-													updates: { allowance: Number(e.target.value) },
-												})
-											}
-											placeholder="0"
-											className="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-										/>
-									</div>
+									{/* Allowance (boolean features grant on/off access, no balance) */}
+									{!isBooleanFeature(ent.feature_id) && (
+										<div>
+											<FormLabel>Balance Grant</FormLabel>
+											<Input
+												type="number"
+												value={ent.allowance || ""}
+												onChange={(e) =>
+													updateEntitlement({
+														index,
+														updates: { allowance: Number(e.target.value) },
+													})
+												}
+												placeholder="0"
+												className="w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+											/>
+										</div>
+									)}
 
 									{/* Expiry */}
 									<div>
@@ -323,21 +332,26 @@ export function FeatureGrantRewardConfig({
 													placeholder="30"
 													className="w-20"
 												/>
-											<Select
-												value={ent.expiry.duration}
-												onValueChange={(value) =>
-													updateEntitlement({
-														index,
-														updates: {
-															expiry: {
-																duration: value as EntitlementDuration,
-																length: ent.expiry?.length ?? 1,
+												<Select
+													value={ent.expiry.duration}
+													onValueChange={(value) =>
+														updateEntitlement({
+															index,
+															updates: {
+																expiry: {
+																	duration: value as EntitlementDuration,
+																	length: ent.expiry?.length ?? 1,
+																},
 															},
-														},
-													})
-												}
-												items={{ [EntitlementDuration.Day]: "Day(s)", [EntitlementDuration.Week]: "Week(s)", [EntitlementDuration.Month]: "Month(s)", [EntitlementDuration.Year]: "Year(s)" }}
-											>
+														})
+													}
+													items={{
+														[EntitlementDuration.Day]: "Day(s)",
+														[EntitlementDuration.Week]: "Week(s)",
+														[EntitlementDuration.Month]: "Month(s)",
+														[EntitlementDuration.Year]: "Year(s)",
+													}}
+												>
 													<SelectTrigger className="flex-1">
 														<SelectValue />
 													</SelectTrigger>

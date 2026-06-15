@@ -198,10 +198,12 @@ export const createPromotionCode = async ({
 	stripeCli,
 	coupon,
 	code,
+	firstTimeTransaction,
 }: {
 	stripeCli: Stripe;
 	coupon: Stripe.Coupon;
 	code: string;
+	firstTimeTransaction?: boolean;
 }) => {
 	return stripeCli.promotionCodes.create({
 		promotion: {
@@ -209,6 +211,9 @@ export const createPromotionCode = async ({
 			coupon: coupon.id,
 		},
 		code: `${code}${Date.now()}`,
+		...(firstTimeTransaction
+			? { restrictions: { first_time_transaction: true } }
+			: {}),
 	});
 };
 

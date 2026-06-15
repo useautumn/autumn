@@ -9,6 +9,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { resolveParamDiscounts } from "../utils/discounts/resolveParamDiscounts";
 import { stripeCustomerToDiscounts } from "../utils/discounts/stripeCustomerToDiscounts";
 import { subToDiscounts } from "../utils/discounts/subToDiscounts";
+import { validateFirstTimeDiscounts } from "../utils/discounts/validateFirstTimeDiscounts";
 
 /**
  * Extracts discounts from already-fetched Stripe subscription or customer.
@@ -109,6 +110,20 @@ export const fetchStripeDiscountsForBilling = async ({
 	const resolvedParamDiscounts = await resolveParamDiscounts({
 		stripeCli,
 		discounts: paramDiscounts,
+	});
+
+	// Re-sent codes already on the subscription are deduped below, not re-redeemed
+	const existingCouponIds = new Set(
+		existingDiscounts.map((discount) => discount.source.coupon.id),
+	);
+	const newParamDiscounts = resolvedParamDiscounts.filter(
+		(discount) => !existingCouponIds.has(discount.source.coupon.id),
+	);
+
+	await validateFirstTimeDiscounts({
+		stripeCli,
+		discounts: newParamDiscounts,
+		stripeCustomerId: stripeCustomer?.id,
 	});
 
 	// Merge existing + param discounts, deduplicating by coupon ID.

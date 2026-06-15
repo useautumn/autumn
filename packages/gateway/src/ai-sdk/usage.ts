@@ -1,3 +1,9 @@
+import {
+	poolsFromParts,
+	type TokenParts,
+	type TokenPools,
+} from "../shared/usage.js";
+
 type NestedTokens = {
 	total?: number | null;
 	noCache?: number | null;
@@ -28,14 +34,6 @@ export type UsageLike = {
 	reasoningTokens?: number | null;
 };
 
-export type TokenPools = {
-	inputTokens: number;
-	outputTokens: number;
-	cacheReadTokens: number;
-	cacheWriteTokens: number;
-	reasoningTokens: number;
-};
-
 const flatCount = (value: LegacyCount | undefined): number | undefined =>
 	typeof value === "number" ? value : (value?.total ?? undefined);
 
@@ -43,7 +41,7 @@ const isNested = (
 	value: number | NestedTokens | null | undefined,
 ): value is NestedTokens => value != null && typeof value === "object";
 
-const toParts = (usage: UsageLike) => {
+const toParts = (usage: UsageLike): TokenParts => {
 	const input = usage.inputTokens;
 	const output = usage.outputTokens;
 
@@ -75,43 +73,8 @@ const toParts = (usage: UsageLike) => {
 	};
 };
 
-const clamp = (value: number) => Math.max(0, value);
-
 /** Splits provider usage into exclusive token pools; throws if the provider returned no usable counts. */
 export const normalizeUsage = (
 	usage: UsageLike,
 	modelName: string,
-): TokenPools => {
-	const parts = toParts(usage);
-
-	const required = (
-		value: number | null | undefined,
-		label: string,
-	): number => {
-		if (value == null) {
-			throw new Error(
-				`[Autumn] ${label} token usage was not returned by the model provider (${modelName}). This provider may not support usage tracking.`,
-			);
-		}
-		return value;
-	};
-
-	const textInput =
-		parts.textInput ??
-		(parts.totalInput != null
-			? parts.totalInput - parts.cacheRead - parts.cacheWrite
-			: undefined);
-	const textOutput =
-		parts.textOutput ??
-		(parts.totalOutput != null
-			? parts.totalOutput - parts.reasoning
-			: undefined);
-
-	return {
-		inputTokens: clamp(required(textInput, "Input")),
-		outputTokens: clamp(required(textOutput, "Output")),
-		cacheReadTokens: clamp(parts.cacheRead),
-		cacheWriteTokens: clamp(parts.cacheWrite),
-		reasoningTokens: clamp(parts.reasoning),
-	};
-};
+): TokenPools => poolsFromParts(toParts(usage), modelName);

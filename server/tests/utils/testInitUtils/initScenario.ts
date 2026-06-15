@@ -74,7 +74,8 @@ type RewardConfig = {
 
 type FeatureGrantEntitlement = {
 	feature_id: string;
-	allowance: number;
+	// Optional: boolean features grant on/off access with no allowance
+	allowance?: number;
 	expiry?: { duration: EntitlementDuration; length: number };
 };
 
@@ -82,7 +83,11 @@ type FeatureGrantConfig = {
 	id?: string;
 	name?: string;
 	entitlements: FeatureGrantEntitlement[];
-	promoCodes: { code: string; max_redemptions?: number }[];
+	promoCodes: {
+		code: string;
+		max_redemptions?: number;
+		first_time_transaction?: boolean;
+	}[];
 };
 
 // Discriminated union for all action types
@@ -1238,6 +1243,7 @@ export async function initScenario({
 				promo_codes: fg.promoCodes.map((pc) => ({
 					code: pc.code,
 					max_redemptions: pc.max_redemptions,
+					first_time_transaction: pc.first_time_transaction,
 				})),
 				created_at: Date.now(),
 			},

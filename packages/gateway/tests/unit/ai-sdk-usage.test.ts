@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { normalizeUsage } from "../../src/usage.js";
+import { normalizeUsage } from "../../src/ai-sdk/usage.js";
 
 const MODEL = "openai/gpt-test";
 

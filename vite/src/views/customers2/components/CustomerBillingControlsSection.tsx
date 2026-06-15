@@ -1,4 +1,5 @@
 import type {
+	ApiUsageLimit,
 	AutoTopupResponse,
 	DbOverageAllowed,
 	DbSpendLimit,
@@ -160,27 +161,34 @@ const UsageLimitRow = ({
 	featureNameById,
 	onClick,
 }: {
-	usageLimit: DbUsageLimit;
+	usageLimit: ApiUsageLimit;
 	featureNameById: Map<string, string>;
 	onClick: () => void;
-}) => (
-	<button type="button" className={rowClassName} onClick={onClick}>
-		{/* A usage_limits entry's presence arms the cap. */}
-		<StatusPill enabled />
-		<span className="truncate text-sm text-foreground font-medium">
-			{getFeatureLabel({
-				featureId: usageLimit.feature_id,
-				featureNameById,
-			})}
-		</span>
-		<div className="ml-auto flex items-center gap-1.5 shrink-0">
-			<Pill>
-				Usage limit:{" "}
-				{`${usageLimit.limit.toLocaleString()} / ${usageLimit.interval}`}
-			</Pill>
-		</div>
-	</button>
-);
+}) => {
+	const { usage, limit, interval } = usageLimit;
+	return (
+		<button type="button" className={rowClassName} onClick={onClick}>
+			{/* A usage_limits entry's presence arms the cap. */}
+			<StatusPill enabled />
+			<span className="truncate text-sm text-foreground font-medium">
+				{getFeatureLabel({
+					featureId: usageLimit.feature_id,
+					featureNameById,
+				})}
+			</span>
+			<div className="ml-auto flex items-center gap-1.5 shrink-0">
+				{usage != null && (
+					<Pill>
+						{`${usage.toLocaleString()} / ${limit.toLocaleString()} this ${interval}`}
+					</Pill>
+				)}
+				<Pill>
+					Usage limit: {`${limit.toLocaleString()} / ${interval}`}
+				</Pill>
+			</div>
+		</button>
+	);
+};
 
 const UsageAlertRow = ({
 	usageAlert,
@@ -282,10 +290,10 @@ export function CustomerBillingControlsSection() {
 		item,
 		index,
 	}));
-	// Usage limits are their own customer-scoped billing control (no entity
-	// variant in v1).
 	const usageLimits = (
-		selectedEntity ? [] : (fullCustomer?.usage_limits ?? [])
+		selectedEntity
+			? (selectedEntity.usage_limits ?? [])
+			: (fullCustomer?.usage_limits ?? [])
 	).map((item: DbUsageLimit, index: number) => ({ item, index }));
 	const usageAlerts = selectedEntity
 		? (selectedEntity.usage_alerts ?? [])
@@ -305,6 +313,7 @@ export function CustomerBillingControlsSection() {
 		fullCustomer?.entities?.filter(
 			(entity: Entity) =>
 				(entity.spend_limits?.length ?? 0) > 0 ||
+				(entity.usage_limits?.length ?? 0) > 0 ||
 				(entity.usage_alerts?.length ?? 0) > 0 ||
 				(entity.overage_allowed?.length ?? 0) > 0,
 		).length ?? 0;
