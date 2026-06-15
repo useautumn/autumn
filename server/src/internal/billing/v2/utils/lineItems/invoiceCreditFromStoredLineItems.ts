@@ -5,6 +5,7 @@ import {
 	type LineItem,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingContextForAnchorResetRefund";
 import { chargeRowToRefundLineItem } from "./chargeRowToRefundLineItem";
 import {
 	computeAlreadyRefundedForCharge,
@@ -57,7 +58,7 @@ export const invoiceCreditFromStoredLineItems = ({
 				row.customer_product_ids.length > 0 &&
 				row.effective_period_start != null &&
 				row.effective_period_end != null &&
-				row.effective_period_start < now &&
+				row.effective_period_start <= now &&
 				row.effective_period_end > now,
 		);
 
@@ -76,11 +77,25 @@ export const invoiceCreditFromStoredLineItems = ({
 				r.customer_product_ids.includes(customerProduct.id) &&
 				r.effective_period_end != null &&
 				r.effective_period_start != null &&
-				r.effective_period_start < now &&
+				r.effective_period_start <= now &&
 				r.effective_period_end > now,
 		);
 
 		for (const chargeRow of usableRows) {
+			const periodStart = chargeRow.effective_period_start;
+			const periodEnd = chargeRow.effective_period_end;
+			if (periodStart == null || periodEnd == null) continue;
+
+			const action = augmentBillingContextForAnchorResetRefund({
+				currentEpochMs: now,
+				billingPeriod: { start: periodStart, end: periodEnd },
+				anchorResetRefund: billingContext.anchorResetRefund,
+			});
+
+			if (action.type === "skip") continue;
+			const effectiveNow =
+				action.type === "use_snapped_now" ? action.snappedNow : now;
+
 			const attributedAmount = splitMultiEntityAmount(chargeRow);
 
 			const alreadyRefunded = computeAlreadyRefundedForCharge({
@@ -95,7 +110,7 @@ export const invoiceCreditFromStoredLineItems = ({
 
 			const creditAmount = computeProratedCredit({
 				chargeRow: adjustedChargeRow,
-				now,
+				now: effectiveNow,
 				alreadyRefunded,
 			});
 
@@ -105,6 +120,7 @@ export const invoiceCreditFromStoredLineItems = ({
 				chargeRowToRefundLineItem({
 					chargeRow,
 					creditAmount,
+					effectiveNow,
 					customerProduct,
 					billingContext,
 					ctx,

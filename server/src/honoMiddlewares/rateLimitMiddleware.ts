@@ -6,6 +6,7 @@ import {
 	setRateLimitKeyInContext,
 } from "@/internal/misc/rateLimiter/rateLimitFactory";
 import {
+	getOrgAggregateType,
 	getRateLimitType,
 	RateLimitType,
 } from "../internal/misc/rateLimiter/rateLimitConfigs";
@@ -39,8 +40,31 @@ export const rateLimitMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 		// 4. Get the appropriate limiter for this type
 		const limiter = getLimiterForType(rateLimitType);
 
-		// 5. Apply rate limiting
-		return await limiter(c as Context<Env>, next);
+		const aggregateType = getOrgAggregateType(rateLimitType);
+		if (!aggregateType) {
+			// 5. Apply rate limiting
+			return await limiter(c as Context<Env>, next);
+		}
+
+		// 5. Org-aggregate limiter wraps the per-customer one; the key slot is
+		// swapped between them since keyGenerator reads it at execution time.
+		setRateLimitKeyInContext(
+			c as Context,
+			getRateLimitKey({ c, rateLimitType: aggregateType }),
+		);
+		const aggregateLimiter = getLimiterForType(aggregateType);
+
+		let innerResponse: Response | undefined;
+		const aggregateResponse = await aggregateLimiter(
+			c as Context<Env>,
+			async () => {
+				setRateLimitKeyInContext(c as Context, rateLimitKey);
+				innerResponse = (await limiter(c as Context<Env>, next)) ?? undefined;
+			},
+		);
+
+		// hono-rate-limiter discards next()'s return, so re-surface an inner 429.
+		return aggregateResponse ?? innerResponse;
 	} catch (error) {
 		ctx.logger.error(
 			`Error checking rate limit, error: ${error}. Bypassing for now`,

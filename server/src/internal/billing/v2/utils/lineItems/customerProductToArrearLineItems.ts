@@ -1,12 +1,13 @@
 import type { BillingContext, UpdateCustomerEntitlement } from "@autumn/shared";
 import {
-	customerProductToEntity,
 	cusPriceToCusEntWithCusProduct,
 	cusProductToPrices,
+	customerProductToEntity,
 	EntInterval,
 	type FullCusEntWithFullCusProduct,
 	type FullCusProduct,
 	getCycleEnd,
+	isAllocatedV2CustomerEntitlement,
 	isConsumablePrice,
 	isV4Usage,
 	type LineItem,
@@ -121,6 +122,11 @@ export const customerProductToArrearLineItems = ({
 		if (options.includeZeroAmounts || lineItem.amount !== 0) {
 			lineItems.push(lineItem);
 		}
+
+		// Allocated v2 (continuous-use) balances are never reset — the customer
+		// is re-billed for current holdings each cycle. Skipping the update also
+		// keeps next_reset_at null and skips rollovers.
+		if (isAllocatedV2CustomerEntitlement(cusEnt)) continue;
 
 		// Update to make to customer entitlement.
 		const resetBalancesUpdate = getResetBalancesUpdate({

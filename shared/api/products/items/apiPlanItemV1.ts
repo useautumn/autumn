@@ -153,11 +153,11 @@ export const ApiPlanItemV1Schema = z
 			.object({
 				on_increase: z.enum(OnIncrease).optional().meta({
 					description:
-						"How to handle billing when quantity increases mid-cycle (prepaid features only).",
+						"How to handle billing when quantity increases mid-cycle.",
 				}),
 				on_decrease: z.enum(OnDecrease).optional().meta({
 					description:
-						"How to handle credits when quantity decreases mid-cycle (prepaid features only).",
+						"How to handle credits when quantity decreases mid-cycle.",
 				}),
 			})
 			.optional()

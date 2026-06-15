@@ -20,6 +20,7 @@ export {
 } from "./constants.js";
 export {
 	type AutumnMcpAuth,
+	createRequestContext,
 	environmentSchema,
 	type OAuthEnvironment,
 } from "./server/auth/auth.js";

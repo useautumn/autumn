@@ -170,9 +170,9 @@ export type MultiAttachPrice = {
    */
   billingMethod: MultiAttachBillingMethod;
   /**
-   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+   * Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
    */
-  maxPurchase?: number | undefined;
+  maxPurchase?: number | null | undefined;
 };
 
 /**
@@ -453,13 +453,44 @@ export type MultiAttachSpendLimit = {
    */
   featureId?: string | undefined;
   /**
-   * Whether this spend limit is enabled.
+   * Whether the overage spend limit is enabled.
    */
   enabled?: boolean | undefined;
   /**
    * Maximum allowed overage spend for the target feature.
    */
   overageLimit?: number | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const MultiAttachEntityDataInterval = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type MultiAttachEntityDataInterval = ClosedEnum<
+  typeof MultiAttachEntityDataInterval
+>;
+
+export type MultiAttachUsageLimit = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: MultiAttachEntityDataInterval;
 };
 
 /**
@@ -517,9 +548,13 @@ export type MultiAttachOverageAllowed = {
  */
 export type MultiAttachBillingControls = {
   /**
-   * List of overage spend limits per feature.
+   * List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit).
    */
   spendLimits?: Array<MultiAttachSpendLimit> | undefined;
+  /**
+   * List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.
+   */
+  usageLimits?: Array<MultiAttachUsageLimit> | undefined;
   /**
    * List of usage alert configurations per feature.
    */
@@ -815,7 +850,7 @@ export type MultiAttachPrice$Outbound = {
   interval_count: number;
   billing_units: number;
   billing_method: string;
-  max_purchase?: number | undefined;
+  max_purchase?: number | null | undefined;
 };
 
 /** @internal */
@@ -831,7 +866,7 @@ export const MultiAttachPrice$outboundSchema: z.ZodMiniType<
     intervalCount: z._default(z.number(), 1),
     billingUnits: z._default(z.number(), 1),
     billingMethod: MultiAttachBillingMethod$outboundSchema,
-    maxPurchase: z.optional(z.number()),
+    maxPurchase: z.optional(z.nullable(z.number())),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1224,6 +1259,43 @@ export function multiAttachSpendLimitToJSON(
 }
 
 /** @internal */
+export const MultiAttachEntityDataInterval$outboundSchema: z.ZodMiniEnum<
+  typeof MultiAttachEntityDataInterval
+> = z.enum(MultiAttachEntityDataInterval);
+
+/** @internal */
+export type MultiAttachUsageLimit$Outbound = {
+  feature_id: string;
+  limit: number;
+  interval: string;
+};
+
+/** @internal */
+export const MultiAttachUsageLimit$outboundSchema: z.ZodMiniType<
+  MultiAttachUsageLimit$Outbound,
+  MultiAttachUsageLimit
+> = z.pipe(
+  z.object({
+    featureId: z.string(),
+    limit: z.number(),
+    interval: MultiAttachEntityDataInterval$outboundSchema,
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureId: "feature_id",
+    });
+  }),
+);
+
+export function multiAttachUsageLimitToJSON(
+  multiAttachUsageLimit: MultiAttachUsageLimit,
+): string {
+  return JSON.stringify(
+    MultiAttachUsageLimit$outboundSchema.parse(multiAttachUsageLimit),
+  );
+}
+
+/** @internal */
 export const MultiAttachThresholdType$outboundSchema: z.ZodMiniEnum<
   typeof MultiAttachThresholdType
 > = z.enum(MultiAttachThresholdType);
@@ -1298,6 +1370,7 @@ export function multiAttachOverageAllowedToJSON(
 /** @internal */
 export type MultiAttachBillingControls$Outbound = {
   spend_limits?: Array<MultiAttachSpendLimit$Outbound> | undefined;
+  usage_limits?: Array<MultiAttachUsageLimit$Outbound> | undefined;
   usage_alerts?: Array<MultiAttachUsageAlert$Outbound> | undefined;
   overage_allowed?: Array<MultiAttachOverageAllowed$Outbound> | undefined;
 };
@@ -1311,6 +1384,9 @@ export const MultiAttachBillingControls$outboundSchema: z.ZodMiniType<
     spendLimits: z.optional(
       z.array(z.lazy(() => MultiAttachSpendLimit$outboundSchema)),
     ),
+    usageLimits: z.optional(
+      z.array(z.lazy(() => MultiAttachUsageLimit$outboundSchema)),
+    ),
     usageAlerts: z.optional(
       z.array(z.lazy(() => MultiAttachUsageAlert$outboundSchema)),
     ),
@@ -1321,6 +1397,7 @@ export const MultiAttachBillingControls$outboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       spendLimits: "spend_limits",
+      usageLimits: "usage_limits",
       usageAlerts: "usage_alerts",
       overageAllowed: "overage_allowed",
     });

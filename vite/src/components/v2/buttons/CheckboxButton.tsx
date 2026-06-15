@@ -1,7 +1,7 @@
 import type { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox";
 import * as React from "react";
 import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
-import { cn } from "@/lib/utils";
+import { cn, hasSubmitShortcutModifier } from "@/lib/utils";
 
 export const CheckboxButton = React.forwardRef<
 	HTMLButtonElement,
@@ -20,6 +20,10 @@ export const CheckboxButton = React.forwardRef<
 			tabIndex={0}
 			onClick={handleClick}
 			onKeyDown={(e) => {
+				// Cmd/ctrl+enter is reserved for sheet-level submit shortcuts
+				if (e.key === "Enter" && hasSubmitShortcutModifier(e)) {
+					return;
+				}
 				if (e.key === "Enter" || e.key === " ") {
 					e.preventDefault();
 					handleClick();

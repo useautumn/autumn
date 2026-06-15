@@ -54,6 +54,31 @@ export class MetadataService {
 		return meta as Metadata;
 	}
 
+	/**
+	 * Atomically transitions a metadata row from one type to another.
+	 * Returns true only for the caller whose update matched the `fromType`
+	 * predicate — concurrent executors racing on the same row get false.
+	 */
+	static async claim({
+		db,
+		id,
+		fromType,
+		toType,
+	}: {
+		db: DrizzleCli;
+		id: string;
+		fromType: MetadataType;
+		toType: MetadataType;
+	}): Promise<boolean> {
+		const claimedRows = await db
+			.update(metadata)
+			.set({ type: toType })
+			.where(and(eq(metadata.id, id), eq(metadata.type, fromType)))
+			.returning({ id: metadata.id });
+
+		return claimedRows.length > 0;
+	}
+
 	static async delete({ db, id }: { db: DrizzleCli; id: string }) {
 		await db.delete(metadata).where(eq(metadata.id, id));
 	}

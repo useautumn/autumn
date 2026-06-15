@@ -1,0 +1,2463 @@
+{
+  "items": [
+    {
+      "id": "concurrent_browser",
+      "name": "Concurrent Browser",
+      "description": null,
+      "group": null,
+      "version": 2,
+      "add_on": true,
+      "auto_enable": false,
+      "price": null,
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 0,
+          "unlimited": false,
+          "reset": null,
+          "price": {
+            "amount": 96,
+            "interval": "year",
+            "billing_units": 1,
+            "billing_method": "prepaid",
+            "max_purchase": null
+          },
+          "display": {
+            "primary_text": "$96 per concurrency"
+          }
+        }
+      ],
+      "created_at": 1777978939457,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "credit_pack_1k",
+      "name": "Credit Pack 1k",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": true,
+      "auto_enable": false,
+      "price": {
+        "amount": 9,
+        "interval": "month",
+        "display": {
+          "primary_text": "$9",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 1000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "1,000 credits"
+          }
+        }
+      ],
+      "created_at": 1773854694042,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "enterprise",
+      "name": "Enterprise",
+      "description": null,
+      "group": null,
+      "version": 2,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 38976,
+        "interval": "year",
+        "display": {
+          "primary_text": "$38,976",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 0,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": {
+            "amount": 2137,
+            "interval": "one_off",
+            "billing_units": 2450000,
+            "billing_method": "prepaid",
+            "max_purchase": null
+          },
+          "display": {
+            "primary_text": "$2,137 per 2,450,000 credits"
+          }
+        },
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 200,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "200 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 7000000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "7,000,000 credits"
+          },
+          "rollover": {
+            "max": null,
+            "max_percentage": null,
+            "expiry_duration_type": "month",
+            "expiry_duration_length": 2
+          }
+        }
+      ],
+      "created_at": 1775778953524,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": true
+      }
+    },
+    {
+      "id": "enterprise_expansion",
+      "name": "Enterprise Metered Expansion",
+      "description": null,
+      "group": null,
+      "version": 2,
+      "add_on": true,
+      "auto_enable": false,
+      "price": {
+        "amount": 5520,
+        "interval": "year",
+        "display": {
+          "primary_text": "$5,520",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 12000000,
+          "unlimited": false,
+          "reset": {
+            "interval": "year"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "12,000,000 credits"
+          }
+        }
+      ],
+      "created_at": 1778251701842,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "enterprise_metered",
+      "name": "Enterprise Metered",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 27830,
+        "interval": "year",
+        "display": {
+          "primary_text": "$27,830",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 150,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "150 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 5000000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5,000,000 credits"
+          },
+          "rollover": {
+            "max": 0,
+            "max_percentage": null,
+            "expiry_duration_type": "month",
+            "expiry_duration_length": 2
+          }
+        }
+      ],
+      "created_at": 1773854702144,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": true
+      }
+    },
+    {
+      "id": "extract_explorer_monthly",
+      "name": "Extract Explorer",
+      "description": null,
+      "group": "extract",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 399,
+        "interval": "month",
+        "display": {
+          "primary_text": "$399",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 466667,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "466,667 credits"
+          }
+        }
+      ],
+      "created_at": 1773854704525,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "extract_explorer_yearly",
+      "name": "Extract Explorer (Yearly)",
+      "description": null,
+      "group": "extract",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 4308,
+        "interval": "year",
+        "display": {
+          "primary_text": "$4,308",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 5600000,
+          "unlimited": false,
+          "reset": {
+            "interval": "year"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5,600,000 credits"
+          }
+        }
+      ],
+      "created_at": 1773854706910,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": "extract_explorer_monthly",
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "extract_pro",
+      "name": "Extract Pro",
+      "description": null,
+      "group": "extract",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 899,
+        "interval": "month",
+        "display": {
+          "primary_text": "$899",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 1333333,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "1,333,333 credits"
+          }
+        }
+      ],
+      "created_at": 1773854709451,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "extract_pro_yearly",
+      "name": "Extract Pro (Yearly)",
+      "description": null,
+      "group": "extract",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 8628,
+        "interval": "year",
+        "display": {
+          "primary_text": "$8,628",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 8000000,
+          "unlimited": false,
+          "reset": {
+            "interval": "year"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "8,000,000 credits"
+          }
+        }
+      ],
+      "created_at": 1773854833713,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": "extract_pro",
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "extract_starter",
+      "name": "Extract Starter",
+      "description": null,
+      "group": "extract",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 99,
+        "interval": "month",
+        "display": {
+          "primary_text": "$99",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 100000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "100,000 credits"
+          }
+        }
+      ],
+      "created_at": 1773854837037,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "extract_starter_yearly",
+      "name": "Extract Starter (Yearly)",
+      "description": null,
+      "group": "extract",
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 1068,
+        "interval": "year",
+        "display": {
+          "primary_text": "$1,068",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 1200000,
+          "unlimited": false,
+          "reset": {
+            "interval": "year"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "1,200,000 credits"
+          }
+        }
+      ],
+      "created_at": 1773854839364,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": "extract_starter",
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "free",
+      "name": "Free",
+      "description": null,
+      "group": null,
+      "version": 2,
+      "add_on": false,
+      "auto_enable": true,
+      "price": null,
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 2,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "2 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 1000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "1,000 credits"
+          }
+        }
+      ],
+      "created_at": 1778072155064,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "growth",
+      "name": "Growth",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 399,
+        "interval": "month",
+        "display": {
+          "primary_text": "$399",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 0,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": {
+            "amount": 217,
+            "interval": "one_off",
+            "billing_units": 150000,
+            "billing_method": "prepaid",
+            "max_purchase": null
+          },
+          "display": {
+            "primary_text": "$217 per 150,000 credits"
+          }
+        },
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 100,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "100 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 500000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "500,000 credits"
+          }
+        }
+      ],
+      "created_at": 1773317212882,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "growth_monthly_500k",
+      "name": "Growth (500k credits/month)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 399,
+        "interval": "month",
+        "display": {
+          "primary_text": "$399",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 100,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "100 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 500000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "500,000 credits"
+          }
+        }
+      ],
+      "created_at": 1778644941752,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "growth_monthly_650k",
+      "name": "Growth (650k credits/month)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 616,
+        "interval": "month",
+        "display": {
+          "primary_text": "$616",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 100,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "100 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 650000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "650,000 credits"
+          }
+        }
+      ],
+      "created_at": 1778644945443,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "growth_monthly_800k",
+      "name": "Growth (800k credits/month)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 833,
+        "interval": "month",
+        "display": {
+          "primary_text": "$833",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 100,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "100 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 800000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "800,000 credits"
+          }
+        }
+      ],
+      "created_at": 1778644948949,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "growth_yearly",
+      "name": "Growth (Yearly)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 3990,
+        "interval": "year",
+        "display": {
+          "primary_text": "$3,990",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 0,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": {
+            "amount": 177,
+            "interval": "one_off",
+            "billing_units": 175000,
+            "billing_method": "prepaid",
+            "max_purchase": null
+          },
+          "display": {
+            "primary_text": "$177 per 175,000 credits"
+          }
+        },
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 100,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "100 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 500000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "500,000 credits"
+          }
+        }
+      ],
+      "created_at": 1773317215521,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "growth_yearly_500k",
+      "name": "Growth Yearly (500k credits/month)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 3990,
+        "interval": "year",
+        "display": {
+          "primary_text": "$3,990",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 100,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "100 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 500000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "500,000 credits"
+          }
+        }
+      ],
+      "created_at": 1778645211284,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": "growth_monthly_500k",
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "growth_yearly_650k",
+      "name": "Growth Yearly (650k credits/month)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 6160,
+        "interval": "year",
+        "display": {
+          "primary_text": "$6,160",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 100,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "100 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 650000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "650,000 credits"
+          }
+        }
+      ],
+      "created_at": 1778645212029,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": "growth_monthly_650k",
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "hobby",
+      "name": "Hobby",
+      "description": null,
+      "group": null,
+      "version": 2,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 19,
+        "interval": "month",
+        "display": {
+          "primary_text": "$19",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 0,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": {
+            "amount": 9,
+            "interval": "one_off",
+            "billing_units": 1500,
+            "billing_method": "prepaid",
+            "max_purchase": null
+          },
+          "display": {
+            "primary_text": "$9 per 1,500 credits"
+          }
+        },
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 5,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "5 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 5000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5,000 credits"
+          }
+        }
+      ],
+      "created_at": 1778072203300,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "hobby_monthly_5k",
+      "name": "Hobby (5k credits/month)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 19,
+        "interval": "month",
+        "display": {
+          "primary_text": "$19",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 5,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "5 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 5000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5,000 credits"
+          }
+        }
+      ],
+      "created_at": 1778643662039,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "hobby_monthly_6_5k",
+      "name": "Hobby (6.5k credits/month)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 28,
+        "interval": "month",
+        "display": {
+          "primary_text": "$28",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 5,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "5 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 6500,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "6,500 credits"
+          }
+        }
+      ],
+      "created_at": 1778644675386,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "hobby_monthly_8k",
+      "name": "Hobby (8k credits/month)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 37,
+        "interval": "month",
+        "display": {
+          "primary_text": "$37",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 5,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "5 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 8000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "8,000 credits"
+          }
+        }
+      ],
+      "created_at": 1778644679445,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "hobby_yearly",
+      "name": "Hobby (Yearly)",
+      "description": null,
+      "group": null,
+      "version": 2,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 190,
+        "interval": "year",
+        "display": {
+          "primary_text": "$190",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 0,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": {
+            "amount": 9,
+            "interval": "one_off",
+            "billing_units": 1500,
+            "billing_method": "prepaid",
+            "max_purchase": null
+          },
+          "display": {
+            "primary_text": "$9 per 1,500 credits"
+          }
+        },
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 5,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "5 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 5000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5,000 credits"
+          }
+        }
+      ],
+      "created_at": 1778072255911,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "hobby_yearly_5k",
+      "name": "Hobby Yearly (5k credits/month)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 190,
+        "interval": "year",
+        "display": {
+          "primary_text": "$190",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 5,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "5 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 5000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "5,000 credits"
+          }
+        }
+      ],
+      "created_at": 1778645197783,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": "hobby_monthly_5k",
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "hobby_yearly_6_5k",
+      "name": "Hobby Yearly (6.5k credits/month)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 290,
+        "interval": "year",
+        "display": {
+          "primary_text": "$290",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 5,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "5 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 6500,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "6,500 credits"
+          }
+        }
+      ],
+      "created_at": 1778645199336,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": "hobby_monthly_6_5k",
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "hobby_yearly_8k",
+      "name": "Hobby Yearly (8k credits/month)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 390,
+        "interval": "year",
+        "display": {
+          "primary_text": "$390",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 5,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "5 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 8000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "8,000 credits"
+          }
+        }
+      ],
+      "created_at": 1778645201202,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": "hobby_monthly_8k",
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "legacy_scale_enterprise",
+      "name": "Legacy Scale/Enterprise",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": null,
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 150,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "150 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 1000000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "1,000,000 credits"
+          }
+        }
+      ],
+      "created_at": 1774028248100,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "legacy_standard",
+      "name": "Legacy Standard",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": null,
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 50,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "50 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 500000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "500,000 credits"
+          }
+        }
+      ],
+      "created_at": 1773855640751,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "legacy_starter",
+      "name": "Legacy Starter",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": null,
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 50,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "50 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 50000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "50,000 credits"
+          }
+        }
+      ],
+      "created_at": 1773855644561,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "scale_monthly",
+      "name": "Scale (Monthly)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 749,
+        "interval": "month",
+        "display": {
+          "primary_text": "$749",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 0,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": {
+            "amount": 397,
+            "interval": "one_off",
+            "billing_units": 300000,
+            "billing_method": "prepaid",
+            "max_purchase": null
+          },
+          "display": {
+            "primary_text": "$397 per 300,000 credits"
+          }
+        },
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 100,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "100 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 1000000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "1,000,000 credits"
+          }
+        }
+      ],
+      "created_at": 1773317235829,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "scale_tier_1",
+      "name": "Scale Tier 1",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 7190,
+        "interval": "year",
+        "display": {
+          "primary_text": "$7,190",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 0,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": {
+            "amount": 407,
+            "interval": "one_off",
+            "billing_units": 350000,
+            "billing_method": "prepaid",
+            "max_purchase": null
+          },
+          "display": {
+            "primary_text": "$407 per 350,000 credits"
+          }
+        },
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 150,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "150 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 1000000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "1,000,000 credits"
+          },
+          "rollover": {
+            "max": null,
+            "max_percentage": null,
+            "expiry_duration_type": "month",
+            "expiry_duration_length": 1
+          }
+        }
+      ],
+      "created_at": 1773317241022,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "scale_tier_1_quarterly",
+      "name": "Scale Tier 1 (Quarterly)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 2022,
+        "interval": "quarter",
+        "display": {
+          "primary_text": "$2,022",
+          "secondary_text": "per quarter"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 0,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": {
+            "amount": 407,
+            "interval": "one_off",
+            "billing_units": 350000,
+            "billing_method": "prepaid",
+            "max_purchase": null
+          },
+          "display": {
+            "primary_text": "$407 per 350,000 credits"
+          }
+        },
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 150,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "150 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 1000000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "1,000,000 credits"
+          }
+        }
+      ],
+      "created_at": 1773855648989,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "scale_tier_2",
+      "name": "Scale Tier 2",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 13430,
+        "interval": "year",
+        "display": {
+          "primary_text": "$13,430",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 0,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": {
+            "amount": 737,
+            "interval": "one_off",
+            "billing_units": 700000,
+            "billing_method": "prepaid",
+            "max_purchase": null
+          },
+          "display": {
+            "primary_text": "$737 per 700,000 credits"
+          }
+        },
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 150,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "150 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 2000000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "2,000,000 credits"
+          },
+          "rollover": {
+            "max": null,
+            "max_percentage": null,
+            "expiry_duration_type": "month",
+            "expiry_duration_length": 1
+          }
+        }
+      ],
+      "created_at": 1773317249023,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": true
+      }
+    },
+    {
+      "id": "scale_tier_2_quarterly",
+      "name": "Scale Tier 2 (Quarterly)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 3777,
+        "interval": "quarter",
+        "display": {
+          "primary_text": "$3,777",
+          "secondary_text": "per quarter"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 0,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": {
+            "amount": 737,
+            "interval": "one_off",
+            "billing_units": 700000,
+            "billing_method": "prepaid",
+            "max_purchase": null
+          },
+          "display": {
+            "primary_text": "$737 per 700,000 credits"
+          }
+        },
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 150,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "150 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 2000000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "2,000,000 credits"
+          }
+        }
+      ],
+      "created_at": 1773855652530,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": true
+      }
+    },
+    {
+      "id": "scale_tier_3",
+      "name": "Scale Tier 3",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 18710,
+        "interval": "year",
+        "display": {
+          "primary_text": "$18,710",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 0,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": {
+            "amount": 977,
+            "interval": "one_off",
+            "billing_units": 1000000,
+            "billing_method": "prepaid",
+            "max_purchase": null
+          },
+          "display": {
+            "primary_text": "$977 per 1,000,000 credits"
+          }
+        },
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 150,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "150 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 3000000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "3,000,000 credits"
+          },
+          "rollover": {
+            "max": null,
+            "max_percentage": null,
+            "expiry_duration_type": "month",
+            "expiry_duration_length": 1
+          }
+        }
+      ],
+      "created_at": 1773317256818,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": true
+      }
+    },
+    {
+      "id": "scale_tier_3_quarterly",
+      "name": "Scale Tier 3 (Quarterly)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 5262,
+        "interval": "quarter",
+        "display": {
+          "primary_text": "$5,262",
+          "secondary_text": "per quarter"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 0,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": {
+            "amount": 977,
+            "interval": "one_off",
+            "billing_units": 1000000,
+            "billing_method": "prepaid",
+            "max_purchase": null
+          },
+          "display": {
+            "primary_text": "$977 per 1,000,000 credits"
+          }
+        },
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 150,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "150 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 3000000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "3,000,000 credits"
+          }
+        }
+      ],
+      "created_at": 1773855656092,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": true
+      }
+    },
+    {
+      "id": "scale_tier_4",
+      "name": "Scale Tier 4",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 23030,
+        "interval": "year",
+        "display": {
+          "primary_text": "$23,030",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 0,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": {
+            "amount": 1257,
+            "interval": "one_off",
+            "billing_units": 1400000,
+            "billing_method": "prepaid",
+            "max_purchase": null
+          },
+          "display": {
+            "primary_text": "$1,257 per 1,400,000 credits"
+          }
+        },
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 150,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "150 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 4000000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "4,000,000 credits"
+          },
+          "rollover": {
+            "max": null,
+            "max_percentage": null,
+            "expiry_duration_type": "month",
+            "expiry_duration_length": 1
+          }
+        }
+      ],
+      "created_at": 1773317267120,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": true
+      }
+    },
+    {
+      "id": "scale_tier_4_quarterly",
+      "name": "Scale Tier 4 (Quarterly)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 6477,
+        "interval": "quarter",
+        "display": {
+          "primary_text": "$6,477",
+          "secondary_text": "per quarter"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 0,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": {
+            "amount": 1257,
+            "interval": "one_off",
+            "billing_units": 1400000,
+            "billing_method": "prepaid",
+            "max_purchase": null
+          },
+          "display": {
+            "primary_text": "$1,257 per 1,400,000 credits"
+          }
+        },
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 150,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "150 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 4000000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "4,000,000 credits"
+          }
+        }
+      ],
+      "created_at": 1773855659690,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": true
+      }
+    },
+    {
+      "id": "standard",
+      "name": "Standard",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 99,
+        "interval": "month",
+        "display": {
+          "primary_text": "$99",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 0,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": {
+            "amount": 57,
+            "interval": "one_off",
+            "billing_units": 30000,
+            "billing_method": "prepaid",
+            "max_purchase": null
+          },
+          "display": {
+            "primary_text": "$57 per 30,000 credits"
+          }
+        },
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 50,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "50 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 100000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "100,000 credits"
+          }
+        }
+      ],
+      "created_at": 1773317274820,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "standard_monthly_100k",
+      "name": "Standard (100k credits/month)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 99,
+        "interval": "month",
+        "display": {
+          "primary_text": "$99",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 50,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "50 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 100000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "100,000 credits"
+          }
+        }
+      ],
+      "created_at": 1778644930456,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "standard_monthly_130k",
+      "name": "Standard (130k credits/month)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 156,
+        "interval": "month",
+        "display": {
+          "primary_text": "$156",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 50,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "50 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 130000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "130,000 credits"
+          }
+        }
+      ],
+      "created_at": 1778644934131,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "standard_monthly_160k",
+      "name": "Standard (160k credits/month)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 213,
+        "interval": "month",
+        "display": {
+          "primary_text": "$213",
+          "secondary_text": "per month"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 50,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "50 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 160000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "160,000 credits"
+          }
+        }
+      ],
+      "created_at": 1778644938206,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "standard_yearly",
+      "name": "Standard (Yearly)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 990,
+        "interval": "year",
+        "display": {
+          "primary_text": "$990",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CREDITS",
+          "included": 0,
+          "unlimited": false,
+          "reset": {
+            "interval": "one_off"
+          },
+          "price": {
+            "amount": 47,
+            "interval": "one_off",
+            "billing_units": 35000,
+            "billing_method": "prepaid",
+            "max_purchase": null
+          },
+          "display": {
+            "primary_text": "$47 per 35,000 credits"
+          }
+        },
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 50,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "50 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 100000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "100,000 credits"
+          }
+        }
+      ],
+      "created_at": 1773317277420,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": null,
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "standard_yearly_100k",
+      "name": "Standard Yearly (100k credits/month)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 990,
+        "interval": "year",
+        "display": {
+          "primary_text": "$990",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 50,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "50 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 100000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "100,000 credits"
+          }
+        }
+      ],
+      "created_at": 1778645202781,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": "standard_monthly_100k",
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "standard_yearly_130k",
+      "name": "Standard Yearly (130k credits/month)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 1590,
+        "interval": "year",
+        "display": {
+          "primary_text": "$1,590",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 50,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "50 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 130000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "130,000 credits"
+          }
+        }
+      ],
+      "created_at": 1778645209666,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": "standard_monthly_130k",
+      "config": {
+        "ignore_past_due": false
+      }
+    },
+    {
+      "id": "standard_yearly_160k",
+      "name": "Standard Yearly (160k credits/month)",
+      "description": null,
+      "group": null,
+      "version": 1,
+      "add_on": false,
+      "auto_enable": false,
+      "price": {
+        "amount": 2190,
+        "interval": "year",
+        "display": {
+          "primary_text": "$2,190",
+          "secondary_text": "per year"
+        }
+      },
+      "items": [
+        {
+          "feature_id": "CONCURRENCY",
+          "included": 50,
+          "unlimited": false,
+          "reset": null,
+          "price": null,
+          "display": {
+            "primary_text": "50 concurrencies"
+          }
+        },
+        {
+          "feature_id": "CREDITS",
+          "included": 160000,
+          "unlimited": false,
+          "reset": {
+            "interval": "month"
+          },
+          "price": null,
+          "display": {
+            "primary_text": "160,000 credits"
+          }
+        }
+      ],
+      "created_at": 1778645210511,
+      "env": "live",
+      "archived": false,
+      "base_variant_id": "standard_monthly_160k",
+      "config": {
+        "ignore_past_due": false
+      }
+    }
+  ]
+}

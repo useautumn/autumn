@@ -12,7 +12,23 @@ export enum RateLimitType {
 	Attach = "attach",
 	ListCustomers = "list_customers",
 	CustomerEntitiesGet = "customer_entities_get",
+	Logs = "logs",
+	TrackOrg = "track_org",
+	CheckOrg = "check_org",
+	EntitiesGetOrg = "entities_get_org",
 }
+
+// Org-wide aggregate caps summed across all of an org's customers — the
+// per-customer limits never bind for many-customer storms (2026-06-08 incident).
+const ORG_AGGREGATE_TYPES: Partial<Record<RateLimitType, RateLimitType>> = {
+	[RateLimitType.Track]: RateLimitType.TrackOrg,
+	[RateLimitType.Check]: RateLimitType.CheckOrg,
+	[RateLimitType.CustomerEntitiesGet]: RateLimitType.EntitiesGetOrg,
+};
+
+export const getOrgAggregateType = (
+	type: RateLimitType,
+): RateLimitType | undefined => ORG_AGGREGATE_TYPES[type];
 
 type RoutePattern = {
 	method: string;
@@ -110,7 +126,30 @@ const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 		type: RateLimitType.CustomerEntitiesGet,
 		patterns: [route({ method: "POST", url: "/v1/entities.get" })],
 	},
+	{
+		type: RateLimitType.Logs,
+		patterns: [
+			route({ method: "POST", url: "/v1/logs.search" }),
+			route({ method: "POST", url: "/v1/logs.query" }),
+		],
+	},
 ];
+
+// Check-group routes that can fail open (allowed: true) when an org is over
+// its aggregate cap; the establish routes in the group shed a 503 instead.
+const CHECK_FAIL_OPEN_PATTERNS: RoutePattern[] = [
+	route({ method: "POST", url: "/v1/check" }),
+	route({ method: "POST", url: "/v1/entitled" }),
+	route({ method: "POST", url: "/v1/balances.check" }),
+];
+
+export const isCheckFailOpenRoute = (c: Context<HonoEnv>): boolean => {
+	const method = c.req.method;
+	const path = c.req.path;
+	return CHECK_FAIL_OPEN_PATTERNS.some((pattern) =>
+		matchRoute({ url: path, method, pattern }),
+	);
+};
 
 export const getRateLimitType = (c: Context<HonoEnv>) => {
 	const method = c.req.method;
@@ -146,6 +185,9 @@ export type RateLimitConfig = {
 	windowMs: number;
 	notInRedis: boolean;
 	scope: RateLimitScope;
+	// "degrade" = over-limit requests fail open (check -> allow, track -> SQS
+	// queue) instead of 429, so the cap sheds DB load without losing events.
+	overLimit?: "reject" | "degrade";
 };
 
 export const resolveRateLimit = ({
@@ -239,5 +281,37 @@ export const RATE_LIMIT_CONFIGS: Record<RateLimitType, RateLimitConfig> = {
 		windowMs: 1000,
 		notInRedis: false,
 		scope: RateLimitScope.Customer,
+	},
+	[RateLimitType.Logs]: {
+		name: "logs",
+		limit: 10,
+		windowMs: 1000,
+		notInRedis: false,
+		scope: RateLimitScope.Org,
+	},
+	// 60s windows sized ~1.5-2x the highest legit per-org peak observed over 7d
+	// of prod traffic (check 157k/min, track 60k/min, entities.get 53k/min).
+	[RateLimitType.TrackOrg]: {
+		name: "track_org",
+		limit: 120_000,
+		windowMs: 60_000,
+		notInRedis: false,
+		scope: RateLimitScope.Org,
+		overLimit: "degrade",
+	},
+	[RateLimitType.CheckOrg]: {
+		name: "check_org",
+		limit: 240_000,
+		windowMs: 60_000,
+		notInRedis: false,
+		scope: RateLimitScope.Org,
+		overLimit: "degrade",
+	},
+	[RateLimitType.EntitiesGetOrg]: {
+		name: "entities_get_org",
+		limit: 90_000,
+		windowMs: 60_000,
+		notInRedis: false,
+		scope: RateLimitScope.Org,
 	},
 };

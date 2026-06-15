@@ -1,5 +1,6 @@
+import { AUTUMN_ADMIN_OAUTH_CLIENT_ID } from "@autumn/auth/oauth";
 import { type AppEnv, oauthConsent } from "@autumn/shared";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull, ne, or, sql } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export type OAuthConsentApiKeyRecord = {
@@ -12,9 +13,13 @@ export type OAuthConsentApiKeyRecord = {
 export const listOAuthConsentsByReferenceId = async ({
 	db,
 	referenceId,
+	env,
+	includeInternal = false,
 }: {
 	db: DrizzleCli;
 	referenceId: string;
+	env?: AppEnv;
+	includeInternal?: boolean;
 }) =>
 	db
 		.select({
@@ -27,7 +32,20 @@ export const listOAuthConsentsByReferenceId = async ({
 			updatedAt: oauthConsent.updatedAt,
 		})
 		.from(oauthConsent)
-		.where(eq(oauthConsent.referenceId, referenceId));
+		.where(
+			and(
+				eq(oauthConsent.referenceId, referenceId),
+				env
+					? or(isNull(oauthConsent.env), eq(oauthConsent.env, env))
+					: undefined,
+				includeInternal
+					? undefined
+					: and(
+							ne(oauthConsent.clientId, AUTUMN_ADMIN_OAUTH_CLIENT_ID),
+							sql`COALESCE(${oauthConsent.metadata}->>'kind', '') != 'slack_admin'`,
+						),
+			),
+		);
 
 export const getOAuthConsentOwner = async ({
 	db,
@@ -56,6 +74,7 @@ export const updateOAuthConsentEnv = async ({
 	referenceId,
 	env,
 	redirectUri,
+	scopes,
 }: {
 	db: DrizzleCli;
 	clientId: string;
@@ -63,10 +82,16 @@ export const updateOAuthConsentEnv = async ({
 	referenceId: string;
 	env: AppEnv;
 	redirectUri: string | null;
+	scopes?: string[];
 }) =>
 	db
 		.update(oauthConsent)
-		.set({ env, redirectUri, updatedAt: new Date() })
+		.set({
+			env,
+			redirectUri,
+			...(scopes ? { scopes } : {}),
+			updatedAt: new Date(),
+		})
 		.where(
 			and(
 				eq(oauthConsent.clientId, clientId),
@@ -94,6 +119,7 @@ export const getOAuthConsentForClientUserOrg = async ({
 			env: oauthConsent.env,
 			oauthApiKeyId: oauthConsent.oauthApiKeyId,
 			redirectUri: oauthConsent.redirectUri,
+			scopes: oauthConsent.scopes,
 		})
 		.from(oauthConsent)
 		.where(

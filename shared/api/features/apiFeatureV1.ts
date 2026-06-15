@@ -1,4 +1,8 @@
 import { z } from "zod/v4";
+import {
+	ModelMarkupsSchema,
+	ProviderMarkupsSchema,
+} from "../../models/featureModels/featureConfig/creditConfig";
 import { FeatureType } from "../../models/featureModels/featureEnums";
 
 export const ApiFeatureV1Schema = z.object({
@@ -12,7 +16,7 @@ export const ApiFeatureV1Schema = z.object({
 	}),
 	type: z.enum(FeatureType).meta({
 		description:
-			"Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.",
+			"Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.",
 	}),
 
 	consumable: z.boolean().meta({
@@ -41,6 +45,20 @@ export const ApiFeatureV1Schema = z.object({
 			description:
 				"For credit_system features: maps metered features to their credit costs.",
 		}),
+
+	model_markups: ModelMarkupsSchema.optional().meta({
+		description: "Per-model markup overrides for AI credit systems.",
+	}),
+
+	default_markup: z.number().min(-100).optional().meta({
+		description:
+			"Default percentage markup for AI credit systems. Use -100 to make usage free.",
+	}),
+
+	provider_markups: ProviderMarkupsSchema.optional().meta({
+		description:
+			"Per-provider default markup percentages for AI credit systems.",
+	}),
 
 	display: z
 		.object({

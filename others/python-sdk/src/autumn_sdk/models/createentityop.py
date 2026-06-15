@@ -51,7 +51,7 @@ class CreateEntitySpendLimitRequestTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
-    r"""Whether this spend limit is enabled."""
+    r"""Whether the overage spend limit is enabled."""
     overage_limit: NotRequired[float]
     r"""Maximum allowed overage spend for the target feature."""
 
@@ -61,7 +61,7 @@ class CreateEntitySpendLimitRequest(BaseModel):
     r"""Optional feature ID this spend limit applies to."""
 
     enabled: Optional[bool] = False
-    r"""Whether this spend limit is enabled."""
+    r"""Whether the overage spend limit is enabled."""
 
     overage_limit: Optional[float] = None
     r"""Maximum allowed overage spend for the target feature."""
@@ -81,6 +81,35 @@ class CreateEntitySpendLimitRequest(BaseModel):
                     m[k] = val
 
         return m
+
+
+CreateEntityIntervalRequestBody = Literal[
+    "day",
+    "week",
+    "month",
+    "year",
+]
+r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+class CreateEntityUsageLimitRequestTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+    limit: float
+    r"""Maximum units allowed per interval."""
+    interval: CreateEntityIntervalRequestBody
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+class CreateEntityUsageLimitRequest(BaseModel):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+
+    limit: float
+    r"""Maximum units allowed per interval."""
+
+    interval: CreateEntityIntervalRequestBody
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
 CreateEntityThresholdTypeRequestBody = Literal[
@@ -173,7 +202,9 @@ class CreateEntityBillingControlsRequestTypedDict(TypedDict):
     r"""Billing controls for the entity."""
 
     spend_limits: NotRequired[List[CreateEntitySpendLimitRequestTypedDict]]
-    r"""List of overage spend limits per feature."""
+    r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit)."""
+    usage_limits: NotRequired[List[CreateEntityUsageLimitRequestTypedDict]]
+    r"""List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
     usage_alerts: NotRequired[List[CreateEntityUsageAlertRequestBodyTypedDict]]
     r"""List of usage alert configurations per feature."""
     overage_allowed: NotRequired[List[CreateEntityOverageAllowedRequestTypedDict]]
@@ -184,7 +215,10 @@ class CreateEntityBillingControlsRequest(BaseModel):
     r"""Billing controls for the entity."""
 
     spend_limits: Optional[List[CreateEntitySpendLimitRequest]] = None
-    r"""List of overage spend limits per feature."""
+    r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit)."""
+
+    usage_limits: Optional[List[CreateEntityUsageLimitRequest]] = None
+    r"""List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
 
     usage_alerts: Optional[List[CreateEntityUsageAlertRequestBody]] = None
     r"""List of usage alert configurations per feature."""
@@ -194,7 +228,9 @@ class CreateEntityBillingControlsRequest(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["spend_limits", "usage_alerts", "overage_allowed"])
+        optional_fields = set(
+            ["spend_limits", "usage_limits", "usage_alerts", "overage_allowed"]
+        )
         serialized = handler(self)
         m = {}
 
@@ -483,10 +519,11 @@ CreateEntityType = Union[
         "boolean",
         "metered",
         "credit_system",
+        "ai_credit_system",
     ],
     UnrecognizedStr,
 ]
-r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
 
 class CreateEntityCreditSchemaTypedDict(TypedDict):
@@ -502,6 +539,44 @@ class CreateEntityCreditSchema(BaseModel):
 
     credit_cost: float
     r"""Credits consumed per unit of the metered feature."""
+
+
+class CreateEntityModelMarkupsTypedDict(TypedDict):
+    markup: NotRequired[float]
+    input_cost: NotRequired[float]
+    output_cost: NotRequired[float]
+
+
+class CreateEntityModelMarkups(BaseModel):
+    markup: Optional[float] = None
+
+    input_cost: Optional[float] = None
+
+    output_cost: Optional[float] = None
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["markup", "input_cost", "output_cost"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+class CreateEntityProviderMarkupsTypedDict(TypedDict):
+    markup: float
+
+
+class CreateEntityProviderMarkups(BaseModel):
+    markup: float
 
 
 class CreateEntityDisplayTypedDict(TypedDict):
@@ -556,7 +631,7 @@ class CreateEntityFeatureTypedDict(TypedDict):
     name: str
     r"""Human-readable name displayed in the dashboard and billing UI."""
     type: CreateEntityType
-    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
     consumable: bool
     r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
     archived: bool
@@ -565,6 +640,14 @@ class CreateEntityFeatureTypedDict(TypedDict):
     r"""Event names that trigger this feature's balance. Allows multiple features to respond to a single event."""
     credit_schema: NotRequired[List[CreateEntityCreditSchemaTypedDict]]
     r"""For credit_system features: maps metered features to their credit costs."""
+    model_markups: NotRequired[Nullable[Dict[str, CreateEntityModelMarkupsTypedDict]]]
+    r"""Per-model markup overrides for AI credit systems."""
+    default_markup: NotRequired[float]
+    r"""Default percentage markup for AI credit systems. Use -100 to make usage free."""
+    provider_markups: NotRequired[
+        Nullable[Dict[str, CreateEntityProviderMarkupsTypedDict]]
+    ]
+    r"""Per-provider default markup percentages for AI credit systems."""
     display: NotRequired[CreateEntityDisplayTypedDict]
     r"""Display names for the feature in billing UI and customer-facing components."""
 
@@ -579,7 +662,7 @@ class CreateEntityFeature(BaseModel):
     r"""Human-readable name displayed in the dashboard and billing UI."""
 
     type: CreateEntityType
-    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools."""
+    r"""Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing."""
 
     consumable: bool
     r"""For metered features: true if usage resets periodically (API calls, credits), false if allocated persistently (seats, storage)."""
@@ -593,21 +676,48 @@ class CreateEntityFeature(BaseModel):
     credit_schema: Optional[List[CreateEntityCreditSchema]] = None
     r"""For credit_system features: maps metered features to their credit costs."""
 
+    model_markups: OptionalNullable[Dict[str, CreateEntityModelMarkups]] = UNSET
+    r"""Per-model markup overrides for AI credit systems."""
+
+    default_markup: Optional[float] = None
+    r"""Default percentage markup for AI credit systems. Use -100 to make usage free."""
+
+    provider_markups: OptionalNullable[Dict[str, CreateEntityProviderMarkups]] = UNSET
+    r"""Per-provider default markup percentages for AI credit systems."""
+
     display: Optional[CreateEntityDisplay] = None
     r"""Display names for the feature in billing UI and customer-facing components."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["event_names", "credit_schema", "display"])
+        optional_fields = set(
+            [
+                "event_names",
+                "credit_schema",
+                "model_markups",
+                "default_markup",
+                "provider_markups",
+                "display",
+            ]
+        )
+        nullable_fields = set(["model_markups", "provider_markups"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m
@@ -672,7 +782,7 @@ class CreateEntitySpendLimitResponseTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
-    r"""Whether this spend limit is enabled."""
+    r"""Whether the overage spend limit is enabled."""
     overage_limit: NotRequired[float]
     r"""Maximum allowed overage spend for the target feature."""
 
@@ -682,7 +792,7 @@ class CreateEntitySpendLimitResponse(BaseModel):
     r"""Optional feature ID this spend limit applies to."""
 
     enabled: Optional[bool] = False
-    r"""Whether this spend limit is enabled."""
+    r"""Whether the overage spend limit is enabled."""
 
     overage_limit: Optional[float] = None
     r"""Maximum allowed overage spend for the target feature."""
@@ -690,6 +800,59 @@ class CreateEntitySpendLimitResponse(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+CreateEntityIntervalResponse = Union[
+    Literal[
+        "day",
+        "week",
+        "month",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+class CreateEntityUsageLimitResponseTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+    limit: float
+    r"""Maximum units allowed per interval."""
+    interval: CreateEntityIntervalResponse
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+    usage: NotRequired[float]
+    r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
+
+
+class CreateEntityUsageLimitResponse(BaseModel):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+
+    limit: float
+    r"""Maximum units allowed per interval."""
+
+    interval: CreateEntityIntervalResponse
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+    usage: Optional[float] = None
+    r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["usage"])
         serialized = handler(self)
         m = {}
 
@@ -797,7 +960,9 @@ class CreateEntityBillingControlsResponseTypedDict(TypedDict):
     r"""Billing controls for the entity."""
 
     spend_limits: NotRequired[List[CreateEntitySpendLimitResponseTypedDict]]
-    r"""List of overage spend limits per feature."""
+    r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit)."""
+    usage_limits: NotRequired[List[CreateEntityUsageLimitResponseTypedDict]]
+    r"""List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
     usage_alerts: NotRequired[List[CreateEntityUsageAlertResponseTypedDict]]
     r"""List of usage alert configurations per feature."""
     overage_allowed: NotRequired[List[CreateEntityOverageAllowedResponseTypedDict]]
@@ -808,7 +973,10 @@ class CreateEntityBillingControlsResponse(BaseModel):
     r"""Billing controls for the entity."""
 
     spend_limits: Optional[List[CreateEntitySpendLimitResponse]] = None
-    r"""List of overage spend limits per feature."""
+    r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit)."""
+
+    usage_limits: Optional[List[CreateEntityUsageLimitResponse]] = None
+    r"""List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
 
     usage_alerts: Optional[List[CreateEntityUsageAlertResponse]] = None
     r"""List of usage alert configurations per feature."""
@@ -818,7 +986,9 @@ class CreateEntityBillingControlsResponse(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["spend_limits", "usage_alerts", "overage_allowed"])
+        optional_fields = set(
+            ["spend_limits", "usage_limits", "usage_alerts", "overage_allowed"]
+        )
         serialized = handler(self)
         m = {}
 

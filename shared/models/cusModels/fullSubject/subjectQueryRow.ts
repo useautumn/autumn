@@ -2,6 +2,7 @@ import type { AggregatedFeatureBalance } from "../../cusProductModels/cusEntMode
 import type { DbCustomerEntitlement } from "../../cusProductModels/cusEntModels/cusEntTable.js";
 import type { Replaceable } from "../../cusProductModels/cusEntModels/replaceableTable.js";
 import type { DbRollover } from "../../cusProductModels/cusEntModels/rolloverModels/rolloverTable.js";
+import type { DbUsageWindow } from "../../cusProductModels/cusEntModels/usageWindowTable.js";
 import type { DbCustomerPrice } from "../../cusProductModels/cusPriceModels/cusPriceTable.js";
 import type { DbCustomerProduct } from "../../cusProductModels/cusProductTable.js";
 import type { DbFeature } from "../../featureModels/featureTable.js";
@@ -28,6 +29,7 @@ export type SubjectQueryRow = {
 	extra_customer_entitlements: DbCustomerEntitlement[];
 	replaceables: Replaceable[];
 	rollovers: DbRollover[];
+	usage_windows: DbUsageWindow[];
 	products: DbProduct[];
 	entitlements: EntitlementWithFeatureRow[];
 	prices: DbPrice[];

@@ -17,6 +17,15 @@ const FRIENDLY_MESSAGES: Record<string, string> = {
 		"Add at least one operation",
 };
 
+/**
+ * Persist filter-only drafts: an operations block with no entries is sent as
+ * `null`, since the empty `{}` shape fails the server's resource-block check. A
+ * non-empty (even mid-edit) block is kept so in-progress operations aren't lost.
+ */
+export function toOperationsPayload(operations: Operations): Operations | null {
+	return (operations.customer?.length ?? 0) === 0 ? null : operations;
+}
+
 function humanizeValidationError(raw: string): string {
 	const stripped = raw.replace(/^\[Validation Errors\]\s*/, "");
 	const segments = stripped.split(";").map((s) => s.trim());
@@ -44,7 +53,7 @@ export function useMigrationEditorForm({
 		defaultValues: {
 			filter: (migration.filter ?? {}) as MigrationFilter,
 			operations: (migration.operations ?? {}) as Operations,
-			noBillingChanges: migration.no_billing_changes ?? false,
+			noBillingChanges: migration.no_billing_changes ?? true,
 		},
 		onSubmit: async ({ value }) => {
 			try {
@@ -52,7 +61,7 @@ export function useMigrationEditorForm({
 					id: migration.id,
 					updates: {
 						filter: value.filter,
-						operations: value.operations,
+						operations: toOperationsPayload(value.operations),
 						no_billing_changes: value.noBillingChanges,
 					},
 				});
@@ -79,7 +88,7 @@ export function useMigrationEditorForm({
 						id: migration.id,
 						updates: {
 							filter,
-							operations,
+							operations: toOperationsPayload(operations),
 							no_billing_changes: noBillingChanges,
 						},
 					});

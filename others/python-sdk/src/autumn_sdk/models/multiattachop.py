@@ -221,8 +221,8 @@ class MultiAttachPriceTypedDict(TypedDict):
     r"""Number of intervals per billing cycle. Defaults to 1."""
     billing_units: NotRequired[float]
     r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
-    max_purchase: NotRequired[float]
-    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
+    max_purchase: NotRequired[Nullable[float]]
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
 
 class MultiAttachPrice(BaseModel):
@@ -248,8 +248,8 @@ class MultiAttachPrice(BaseModel):
     billing_units: Optional[float] = 1
     r"""Units per price increment. Usage is rounded UP when billed (e.g. billing_units=100 means 101 rounds to 200)."""
 
-    max_purchase: Optional[float] = None
-    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total."""
+    max_purchase: OptionalNullable[float] = UNSET
+    r"""Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit."""
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
@@ -263,15 +263,24 @@ class MultiAttachPrice(BaseModel):
                 "max_purchase",
             ]
         )
+        nullable_fields = set(["max_purchase"])
         serialized = handler(self)
         m = {}
 
         for n, f in type(self).model_fields.items():
             k = f.alias or n
             val = serialized.get(k, serialized.get(n))
+            is_nullable_and_explicitly_set = (
+                k in nullable_fields
+                and (self.__pydantic_fields_set__.intersection({n}))  # pylint: disable=no-member
+            )
 
             if val != UNSET_SENTINEL:
-                if val is not None or k not in optional_fields:
+                if (
+                    val is not None
+                    or k not in optional_fields
+                    or is_nullable_and_explicitly_set
+                ):
                     m[k] = val
 
         return m
@@ -725,7 +734,7 @@ class MultiAttachSpendLimitTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
-    r"""Whether this spend limit is enabled."""
+    r"""Whether the overage spend limit is enabled."""
     overage_limit: NotRequired[float]
     r"""Maximum allowed overage spend for the target feature."""
 
@@ -735,7 +744,7 @@ class MultiAttachSpendLimit(BaseModel):
     r"""Optional feature ID this spend limit applies to."""
 
     enabled: Optional[bool] = False
-    r"""Whether this spend limit is enabled."""
+    r"""Whether the overage spend limit is enabled."""
 
     overage_limit: Optional[float] = None
     r"""Maximum allowed overage spend for the target feature."""
@@ -755,6 +764,35 @@ class MultiAttachSpendLimit(BaseModel):
                     m[k] = val
 
         return m
+
+
+MultiAttachEntityDataInterval = Literal[
+    "day",
+    "week",
+    "month",
+    "year",
+]
+r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+class MultiAttachUsageLimitTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+    limit: float
+    r"""Maximum units allowed per interval."""
+    interval: MultiAttachEntityDataInterval
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+class MultiAttachUsageLimit(BaseModel):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+
+    limit: float
+    r"""Maximum units allowed per interval."""
+
+    interval: MultiAttachEntityDataInterval
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
 
 
 MultiAttachThresholdType = Literal[
@@ -847,7 +885,9 @@ class MultiAttachBillingControlsTypedDict(TypedDict):
     r"""Billing controls for the entity."""
 
     spend_limits: NotRequired[List[MultiAttachSpendLimitTypedDict]]
-    r"""List of overage spend limits per feature."""
+    r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit)."""
+    usage_limits: NotRequired[List[MultiAttachUsageLimitTypedDict]]
+    r"""List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
     usage_alerts: NotRequired[List[MultiAttachUsageAlertTypedDict]]
     r"""List of usage alert configurations per feature."""
     overage_allowed: NotRequired[List[MultiAttachOverageAllowedTypedDict]]
@@ -858,7 +898,10 @@ class MultiAttachBillingControls(BaseModel):
     r"""Billing controls for the entity."""
 
     spend_limits: Optional[List[MultiAttachSpendLimit]] = None
-    r"""List of overage spend limits per feature."""
+    r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit)."""
+
+    usage_limits: Optional[List[MultiAttachUsageLimit]] = None
+    r"""List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
 
     usage_alerts: Optional[List[MultiAttachUsageAlert]] = None
     r"""List of usage alert configurations per feature."""
@@ -868,7 +911,9 @@ class MultiAttachBillingControls(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["spend_limits", "usage_alerts", "overage_allowed"])
+        optional_fields = set(
+            ["spend_limits", "usage_limits", "usage_alerts", "overage_allowed"]
+        )
         serialized = handler(self)
         m = {}
 

@@ -1,14 +1,21 @@
 import { prefixOAuthToken } from "@autumn/auth";
-import { RecaseError } from "@autumn/shared";
+import {
+	getOAuthResourceScopes,
+	getResourceFromOAuthTokenRequest,
+	returnsOAuthAccessTokenForClientId,
+} from "@autumn/auth/oauth";
+import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
-import { SLACK_MCP_OAUTH_CLIENT_ID } from "../actions/registerMcpOAuthClient.js";
+import { oauthAccessTokenRepo, oauthRefreshTokenRepo } from "../repos/index.js";
+import { isMcpOAuthClient } from "./mcpOAuthScopes.js";
 import {
 	getExternalOAuthApiKeyForToken,
 	getOAuthAccessTokenRecord,
 	scopesFromOAuthScopeString,
 } from "./oauthAccessTokenApiKey.js";
+import { getOAuthConsentScopeGrant } from "./oauthConsentScopes.js";
 
 const getString = (value: unknown) =>
 	typeof value === "string" && value.length > 0 ? value : null;
@@ -53,9 +60,11 @@ const rewriteTokenBody = ({
 const rewriteOAuthAccessTokenBody = ({
 	accessToken,
 	body,
+	scopes,
 }: {
 	accessToken: string;
 	body: Record<string, unknown>;
+	scopes: string[];
 }) => {
 	const response = body.response;
 	if (isRecord(response)) {
@@ -64,6 +73,7 @@ const rewriteOAuthAccessTokenBody = ({
 			response: {
 				...response,
 				access_token: accessToken,
+				scope: scopes.join(" "),
 			},
 		};
 	}
@@ -71,6 +81,7 @@ const rewriteOAuthAccessTokenBody = ({
 	return {
 		...body,
 		access_token: accessToken,
+		scope: scopes.join(" "),
 	};
 };
 
@@ -97,28 +108,8 @@ const jsonTokenResponse = ({
 		headers: tokenResponseHeaders(response),
 	});
 
-const getResourceFromTokenRequest = async (request: Request) => {
-	const contentType = request.headers.get("content-type") ?? "";
-	const rawBody = await request.text();
-	if (!rawBody) return null;
-
-	if (contentType.includes("application/json")) {
-		try {
-			const body = JSON.parse(rawBody) as Record<string, unknown>;
-			const resource = body.resource;
-			if (Array.isArray(resource)) return getString(resource[0]);
-			return getString(resource);
-		} catch {
-			return null;
-		}
-	}
-
-	const params = new URLSearchParams(rawBody);
-	return params.getAll("resource")[0] ?? null;
-};
-
 export const handleOAuthTokenWithApiKey = async (c: Context) => {
-	const resource = await getResourceFromTokenRequest(c.req.raw.clone());
+	const resource = await getResourceFromOAuthTokenRequest(c.req.raw.clone());
 	const response = await auth.handler(c.req.raw);
 	if (!response.ok) return response;
 
@@ -133,7 +124,10 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 	const accessToken = getString(tokenPayload.access_token);
 	if (!accessToken) return response;
 
-	const requestedScopes = scopesFromOAuthScopeString(tokenPayload.scope);
+	const parsedRequestedScopes = scopesFromOAuthScopeString(tokenPayload.scope);
+	const requestedScopes = parsedRequestedScopes
+		? getOAuthResourceScopes(parsedRequestedScopes)
+		: null;
 	let apiKeyResult: Awaited<ReturnType<typeof getExternalOAuthApiKeyForToken>>;
 	try {
 		const tokenRecord = await getOAuthAccessTokenRecord({
@@ -142,11 +136,48 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			resource,
 			requestedScopes,
 		});
-		if (tokenRecord.clientId === SLACK_MCP_OAUTH_CLIENT_ID) {
+		if (tokenRecord.scopes.length === 0) {
+			throw new RecaseError({
+				message: "OAuth token has no scopes",
+				code: ErrCode.InvalidRequest,
+				statusCode: 401,
+			});
+		}
+		const issuedScopes = await getOAuthConsentScopeGrant({
+			db,
+			organizationId: tokenRecord.referenceId,
+			requestedScopes: parsedRequestedScopes ?? tokenRecord.scopes,
+			userId: tokenRecord.userId,
+		});
+		tokenRecord.scopes = getOAuthResourceScopes(issuedScopes);
+		if (tokenRecord.id) {
+			await oauthAccessTokenRepo.updateScopes({
+				db,
+				id: tokenRecord.id,
+				scopes: tokenRecord.scopes,
+			});
+		}
+		if (tokenRecord.refreshId) {
+			await oauthRefreshTokenRepo.updateScopes({
+				db,
+				id: tokenRecord.refreshId,
+				scopes: issuedScopes,
+			});
+		}
+		const isMcpClient = await isMcpOAuthClient({
+			clientId: tokenRecord.clientId,
+			db,
+			resource: resource ?? undefined,
+		});
+		if (
+			isMcpClient ||
+			returnsOAuthAccessTokenForClientId({ clientId: tokenRecord.clientId })
+		) {
 			return jsonTokenResponse({
 				body: rewriteOAuthAccessTokenBody({
 					accessToken: prefixOAuthToken({ token: accessToken }),
 					body,
+					scopes: tokenRecord.scopes,
 				}),
 				response,
 				status: response.status,

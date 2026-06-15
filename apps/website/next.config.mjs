@@ -20,6 +20,20 @@ const nextConfig = {
     // falling back to WebP. Next.js negotiates via Accept header automatically.
     formats: ["image/avif", "image/webp"],
   },
+  async redirects() {
+    return [
+      {
+        source: "/docs",
+        destination: "https://docs.useautumn.com",
+        permanent: false,
+      },
+      {
+        source: "/blog/how-we-built-a-multi-region-architecture-and-why-we-went-back",
+        destination: "/blog/active-active-redis-cache",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     if (!isProd) return [];
 

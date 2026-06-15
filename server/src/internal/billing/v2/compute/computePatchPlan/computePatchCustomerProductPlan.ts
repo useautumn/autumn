@@ -8,6 +8,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
+import { computeSchedulePhaseReplacements } from "@/internal/billing/v2/compute/computeSchedulePhaseReplacements";
 import { initPatchCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initPatchedCustomerProduct";
 
 export const computePatchCustomerProductPlan = ({
@@ -24,7 +25,11 @@ export const computePatchCustomerProductPlan = ({
 		throw new Error("Patch context is required to compute patch customer plan");
 	}
 
-	const { finalCustomerProduct, customerProductUpdates } =
+	const {
+		finalCustomerProduct,
+		customerProductUpdates,
+		oneOffPrepaidCarryOverCustomerEntitlements,
+	} =
 		initPatchCustomerProduct({
 			ctx,
 			billingContext: updateSubscriptionContext,
@@ -46,6 +51,7 @@ export const computePatchCustomerProductPlan = ({
 		customEntitlements: patchContext.customEntitlements,
 		customFreeTrial: trialContext?.customFreeTrial,
 		lineItems: allLineItems,
+		insertCustomerEntitlements: oneOffPrepaidCarryOverCustomerEntitlements,
 		updateCustomerEntitlements: computeAnchorResetEntitlementUpdates({
 			updateSubscriptionContext,
 			finalCustomerProduct,
@@ -53,18 +59,31 @@ export const computePatchCustomerProductPlan = ({
 	} satisfies Partial<AutumnBillingPlan>;
 
 	if (patchContext.mode === "new") {
+		const isUpdatingScheduledProduct =
+			patchContext.originalCustomerProduct.status === CusProductStatus.Scheduled;
+
 		return {
 			...basePlan,
 			insertCustomerProducts: [finalCustomerProduct],
-			updateCustomerProduct: {
-				customerProduct: patchContext.originalCustomerProduct,
-				updates: {
-					status: CusProductStatus.Expired,
-					ended_at: Date.now(),
-					canceled: true,
-					canceled_at: Date.now(),
-				},
-			},
+			updateCustomerProduct: isUpdatingScheduledProduct
+				? undefined
+				: {
+						customerProduct: patchContext.originalCustomerProduct,
+						updates: {
+							status: CusProductStatus.Expired,
+							ended_at: Date.now(),
+							canceled: true,
+							canceled_at: Date.now(),
+						},
+					},
+			deleteCustomerProduct: isUpdatingScheduledProduct
+				? patchContext.originalCustomerProduct
+				: undefined,
+			schedulePhaseCustomerProductReplacements:
+				computeSchedulePhaseReplacements({
+					oldCustomerProduct: patchContext.originalCustomerProduct,
+					newCustomerProduct: finalCustomerProduct,
+				}),
 		} satisfies AutumnBillingPlan;
 	}
 

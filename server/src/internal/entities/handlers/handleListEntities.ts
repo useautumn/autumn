@@ -1,5 +1,5 @@
-import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
 import { Scopes } from "@autumn/shared";
+import { createRoute } from "../../../honoMiddlewares/routeHandler.js";
 import { CusService } from "../../customers/CusService.js";
 
 export const handleListEntities = createRoute({

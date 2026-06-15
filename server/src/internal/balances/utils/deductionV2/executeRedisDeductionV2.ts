@@ -2,6 +2,8 @@ import {
 	type FullCusEntWithFullCusProduct,
 	type FullSubject,
 	fullSubjectToFullCustomer,
+	isUsageBasedAllocatedCustomerEntitlement,
+	notNullish,
 } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { currentRegion } from "@/external/redis/initRedis.js";
@@ -16,6 +18,7 @@ import { createAllocatedInvoice } from "@/internal/balances/utils/allocatedInvoi
 import { saveLockReceiptV2 } from "@/internal/balances/utils/lockV2/saveLockReceiptV2.js";
 import { buildDeductFromSubjectBalancesKeys } from "@/internal/customers/cache/fullSubject/builders/buildDeductFromSubjectBalancesKeys.js";
 import { buildFullSubjectKey } from "@/internal/customers/cache/fullSubject/builders/buildFullSubjectKey.js";
+import { FULL_SUBJECT_CACHE_TTL_SECONDS } from "@/internal/customers/cache/fullSubject/config/fullSubjectCacheConfig.js";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import type { DeductionOptions } from "../types/deductionTypes.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
@@ -27,8 +30,12 @@ import {
 } from "../types/redisDeductionError.js";
 import type { LuaDeductionResult } from "../types/redisDeductionResult.js";
 import type { RolloverUpdate } from "../types/rolloverUpdate.js";
+import type { UsageWindowMutation } from "../types/usageWindowMutation.js";
+import type { UsageWindowUpdate } from "../types/usageWindowUpdate.js";
 import { applyDeductionUpdateToFullSubject } from "./applyDeductionUpdateToFullSubject.js";
 import { applyRolloverUpdatesToFullSubject } from "./applyRolloverUpdatesToFullSubject.js";
+import { applyUsageWindowUpdatesToFullSubject } from "./applyUsageWindowUpdatesToFullSubject.js";
+import { buildUnlimitedPlanMutationLog } from "./buildUnlimitedPlanMutationLog.js";
 import { logDeductionUpdatesV2 } from "./logDeductionUpdatesV2.js";
 import { mutationLogsToFeaturesV2 } from "./mutationLogsToFeaturesV2.js";
 import { normalizeDeductionSyncStateV2 } from "./normalizeDeductionSyncStateV2.js";
@@ -59,6 +66,8 @@ export const executeRedisDeductionV2 = async ({
 	rolloverUpdates: Record<string, RolloverUpdate>;
 	mutationLogs: MutationLogItem[];
 	modifiedCusEntIdsByFeatureId: Record<string, string[]>;
+	usageWindowUpdates: UsageWindowUpdate[];
+	usageWindowMutations: UsageWindowMutation[];
 }> => {
 	const { org, env } = ctx;
 	const oldFullSubject = structuredClone(fullSubject);
@@ -70,14 +79,14 @@ export const executeRedisDeductionV2 = async ({
 		deductions,
 	});
 
-	if (options.paidAllocated) {
+	if (options.paidAllocatedV1) {
 		throw new RedisDeductionError({
 			message: "Paid allocated deductions are not supported for Redis",
 			code: RedisDeductionErrorCode.PaidAllocated,
 		});
 	}
 
-	if (options.paidAllocated && deductions.some((d) => d.lock)) {
+	if (options.paidAllocatedV1 && deductions.some((d) => d.lock)) {
 		throw new RedisDeductionError({
 			message: "Locks are not supported for paid allocated features",
 			code: RedisDeductionErrorCode.PaidAllocated,
@@ -94,7 +103,11 @@ export const executeRedisDeductionV2 = async ({
 	let allUpdates: Record<string, DeductionUpdate> = {};
 	let allRolloverUpdates: Record<string, RolloverUpdate> = {};
 	let allMutationLogs: MutationLogItem[] = [];
+	let allUsageWindowMutations: UsageWindowMutation[] = [];
 	const allModifiedCusEntIdsByFeatureId: Record<string, string[]> = {};
+	// Keyed by feature id: each Lua result carries the COMPLETE post-deduction
+	// counter array per capped feature, so last write wins across deductions.
+	const allUsageWindowUpdates: Record<string, UsageWindowUpdate> = {};
 
 	const customerId = fullSubject.customerId;
 	const routingKey = buildFullSubjectKey({
@@ -103,6 +116,10 @@ export const executeRedisDeductionV2 = async ({
 		customerId,
 		entityId: fullSubject.entityId,
 	});
+
+	// One timestamp for the whole operation: the resolver keys windows from it
+	// and Lua receives the same value, so they never disagree on the window.
+	const usageWindowNow = Date.now();
 
 	for (const deduction of deductions) {
 		const {
@@ -117,6 +134,8 @@ export const executeRedisDeductionV2 = async ({
 			customerEntitlementDeductions,
 			spendLimitByFeatureId,
 			usageBasedCusEntIdsByFeatureId,
+			usageWindowLimits,
+			usageWindowFeatureIds,
 			rollovers,
 			customerEntitlements,
 			unlimitedFeatureIds,
@@ -127,6 +146,7 @@ export const executeRedisDeductionV2 = async ({
 			fullSubject,
 			deduction,
 			options,
+			now: usageWindowNow,
 		});
 
 		if (unlimitedFeatureIds.length > 0) {
@@ -141,24 +161,14 @@ export const executeRedisDeductionV2 = async ({
 					redisInstance: redisInstance ?? ctx.redisV2,
 				});
 			}
-			// Attribute the event to the unlimited plan even though we skip
-			// the actual deduction. Without this, resolveInternalProductIdForEvent
-			// gets an empty mutation log and the event lands in "No plan".
-			if (unlimitedCusEnt) {
-				const syntheticDelta = -(toDeduct ?? deduction.deduction ?? 1);
-				if (syntheticDelta !== 0) {
-					allMutationLogs.push({
-						target_type: "customer_entitlement",
-						customer_entitlement_id: unlimitedCusEnt.id,
-						rollover_id: null,
-						entity_id: entityId ?? null,
-						credit_cost: 1,
-						balance_delta: syntheticDelta,
-						adjustment_delta: 0,
-						usage_delta: 0,
-						value_delta: 0,
-					});
-				}
+			const unlimitedPlanLog = buildUnlimitedPlanMutationLog({
+				unlimitedCusEnt,
+				toDeduct,
+				fallbackDeduction: deduction.deduction,
+				entityId,
+			});
+			if (unlimitedPlanLog) {
+				allMutationLogs.push(unlimitedPlanLog);
 			}
 			continue;
 		}
@@ -181,7 +191,16 @@ export const executeRedisDeductionV2 = async ({
 				idempotencyKey: idempotencyRedisKey,
 				customerEntitlementDeductions,
 				fallbackFeatureId: feature.id,
+				usageWindowFeatureIds,
 			});
+
+		// Usage windows are enforced/incremented only for real positive
+		// consumption, never for target_balance set-downs or granted-balance edits.
+		const isConsumption =
+			notNullish(toDeduct) &&
+			(toDeduct as number) > 0 &&
+			!notNullish(targetBalance) &&
+			!options.alterGrantedBalance;
 
 		const luaParams = {
 			org_id: org.id,
@@ -192,6 +211,10 @@ export const executeRedisDeductionV2 = async ({
 			spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
 			usage_based_cus_ent_ids_by_feature_id:
 				usageBasedCusEntIdsByFeatureId ?? null,
+			usage_window_limits: usageWindowLimits ?? null,
+			usage_window_now: usageWindowNow,
+			usage_window_ttl_seconds: FULL_SUBJECT_CACHE_TTL_SECONDS,
+			is_consumption: isConsumption,
 			amount_to_deduct: toDeduct ?? null,
 			target_balance: targetBalance ?? null,
 			target_entity_id: entityId || null,
@@ -243,6 +266,7 @@ export const executeRedisDeductionV2 = async ({
 			throw new RedisDeductionError({
 				message: `Redis deduction failed: ${resultJson.error}`,
 				code: resultJson.error as RedisDeductionErrorCode,
+				featureId: resultJson.feature_id,
 			});
 		}
 
@@ -250,6 +274,13 @@ export const executeRedisDeductionV2 = async ({
 		const mutationLogs = Array.isArray(resultJson.mutation_logs)
 			? resultJson.mutation_logs
 			: [];
+		const usageWindowMutations = Array.isArray(
+			resultJson.usage_window_mutations,
+		)
+			? resultJson.usage_window_mutations
+			: [];
+		const usageWindowsByFeatureId =
+			resultJson.usage_windows_by_feature_id ?? {};
 		const modifiedCustomerEntitlementIds = Array.isArray(
 			resultJson.modified_customer_entitlement_ids,
 		)
@@ -266,6 +297,21 @@ export const executeRedisDeductionV2 = async ({
 		allUpdates = { ...allUpdates, ...updates };
 		allRolloverUpdates = { ...allRolloverUpdates, ...rollover_updates };
 		allMutationLogs = [...allMutationLogs, ...mutationLogs];
+		allUsageWindowMutations = [
+			...allUsageWindowMutations,
+			...usageWindowMutations,
+		];
+		// Typed handoff for the PG mirror; empty arrays kept (prune-to-empty
+		// must still full-replace).
+		for (const [featureId, usageWindows] of Object.entries(
+			usageWindowsByFeatureId,
+		)) {
+			allUsageWindowUpdates[featureId] = {
+				internal_customer_id: fullSubject.internalCustomerId,
+				feature_id: featureId,
+				usage_windows: usageWindows,
+			};
+		}
 
 		const syncState = normalizeDeductionSyncStateV2({
 			customerEntitlements,
@@ -290,6 +336,11 @@ export const executeRedisDeductionV2 = async ({
 				rolloverUpdates: rollover_updates,
 			});
 
+			applyUsageWindowUpdatesToFullSubject({
+				fullSubject,
+				usageWindowsByFeatureId: resultJson.usage_windows_by_feature_id,
+			});
+
 			for (const customerEntitlementId of Object.keys(updates)) {
 				const update = updates[customerEntitlementId];
 				const customerEntitlement = customerEntitlements.find(
@@ -298,12 +349,14 @@ export const executeRedisDeductionV2 = async ({
 
 				if (!customerEntitlement) continue;
 
-				await createAllocatedInvoice({
-					ctx,
-					customerEntitlement,
-					oldFullCustomer,
-					update,
-				});
+				if (isUsageBasedAllocatedCustomerEntitlement(customerEntitlement)) {
+					await createAllocatedInvoice({
+						ctx,
+						customerEntitlement,
+						oldFullCustomer,
+						update,
+					});
+				}
 
 				applyDeductionUpdateToFullSubject({
 					fullSubject,
@@ -364,5 +417,7 @@ export const executeRedisDeductionV2 = async ({
 		rolloverUpdates: allRolloverUpdates,
 		mutationLogs: allMutationLogs,
 		modifiedCusEntIdsByFeatureId: allModifiedCusEntIdsByFeatureId,
+		usageWindowUpdates: Object.values(allUsageWindowUpdates),
+		usageWindowMutations: allUsageWindowMutations,
 	};
 };

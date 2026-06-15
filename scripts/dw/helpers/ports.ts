@@ -1,5 +1,10 @@
-import { sh, log } from "./shell.ts";
+import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import type { WorktreeAliases } from "../types.ts";
+import { log, sh } from "./shell.ts";
+
+const PORTLESS_PROXY_PORT_FILE = join(homedir(), ".portless", "proxy.port");
 
 export function dragonflyPortFor(worktreeNum: number): number {
 	return 6379 + (worktreeNum - 1) * 100;
@@ -18,17 +23,38 @@ export function aliasesFor(worktreeNum: number): WorktreeAliases {
 	const viteHost = `wt${worktreeNum}.localhost`;
 	return {
 		apiHost,
-		apiUrl: `https://${apiHost}`,
+		apiUrl: portlessHttpsUrl(apiHost),
 		viteHost,
-		viteUrl: `https://${viteHost}`,
+		viteUrl: portlessHttpsUrl(viteHost),
 	};
+}
+
+export function portlessHttpsUrl(host: string): string {
+	const port = currentPortlessProxyPort();
+	const suffix = port && port !== 443 ? `:${port}` : "";
+	return `https://${host}${suffix}`;
+}
+
+export function currentPortlessProxyPort(): number | undefined {
+	const envPort = Number(process.env.PORTLESS_PORT);
+	if (Number.isInteger(envPort) && envPort > 0) return envPort;
+	if (!existsSync(PORTLESS_PROXY_PORT_FILE)) return undefined;
+
+	const filePort = Number(
+		readFileSync(PORTLESS_PROXY_PORT_FILE, "utf-8").trim(),
+	);
+	if (Number.isInteger(filePort) && filePort > 0) return filePort;
+	return undefined;
 }
 
 export function killOwnPorts(worktreeNum: number): void {
 	const offset = (worktreeNum - 1) * 100;
 	const ports = [8080 + offset, 3000 + offset, 3001 + offset];
 	if (process.platform === "win32") return;
-	const lsof = sh("lsof", ports.flatMap((p) => ["-ti", `:${p}`]));
+	const lsof = sh(
+		"lsof",
+		ports.flatMap((p) => ["-ti", `:${p}`]),
+	);
 	const pids = lsof.stdout.split("\n").filter(Boolean);
 	for (const pid of pids) {
 		try {

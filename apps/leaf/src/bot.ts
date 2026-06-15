@@ -1,9 +1,10 @@
 import { createSlackAdapter } from "@chat-adapter/slack";
 import { createPostgresState } from "@chat-adapter/state-pg";
-import type { Message, Thread } from "chat";
+import type { Attachment, Message, Thread } from "chat";
 import { Chat } from "chat";
-import { runMessage } from "./agent/messages.js";
-import { handleApprovalAction, postApprovalRequest } from "./approvals/flow.js";
+import { runMessage } from "./agent/runMessage/runMessage.js";
+import { handleApprovalAction } from "./internal/approvals/actions/handleApprovalAction.js";
+import { postApprovalRequest } from "./internal/approvals/actions/postApprovalRequest.js";
 import { decrypt } from "./lib/crypto.js";
 import { env } from "./lib/env.js";
 import {
@@ -12,7 +13,11 @@ import {
 	logger as rootLogger,
 } from "./lib/logger.js";
 import { getSlackWorkspaceId } from "./providers/slack/context.js";
-import { findInstallation } from "./providers/slack/installations.js";
+import {
+	fetchSlackAttachmentFallback,
+	getSlackFilesFromRaw,
+} from "./providers/slack/files.js";
+import { findInstallationWithOrg } from "./providers/slack/installations.js";
 import { getRecentMessages } from "./providers/slack/threadContext.js";
 import type { ChatContextMessage } from "./types.js";
 import {
@@ -25,6 +30,20 @@ import {
 
 export const chatAdapterNames = ["slack"];
 
+const getSlackAdminProvider = () =>
+	`slack_admin:${env.SLACK_CLIENT_ID}` as const;
+
+const findSlackInstallationForWorkspace = async ({
+	workspaceId,
+}: {
+	workspaceId: string;
+}) => {
+	return (
+		(await findInstallationWithOrg(getSlackAdminProvider(), workspaceId)) ??
+		(await findInstallationWithOrg("slack", workspaceId))
+	);
+};
+
 export const bot = new Chat({
 	userName: env.CHAT_NAME,
 	adapters: {
@@ -33,7 +52,9 @@ export const bot = new Chat({
 			clientSecret: env.SLACK_CLIENT_SECRET,
 			installationProvider: {
 				getInstallation: async (workspaceId) => {
-					const installation = await findInstallation("slack", workspaceId);
+					const installation = await findSlackInstallationForWorkspace({
+						workspaceId,
+					});
 					if (!installation) return null;
 					return {
 						botToken: decrypt(installation.bot_access_token),
@@ -55,6 +76,7 @@ export const bot = new Chat({
 
 const runAndReply = async ({
 	channelId,
+	attachments,
 	providerUserId,
 	raw,
 	recentMessages,
@@ -62,6 +84,7 @@ const runAndReply = async ({
 	text,
 	threadId,
 }: {
+	attachments?: Attachment[];
 	channelId: string;
 	providerUserId: string;
 	raw: unknown;
@@ -74,9 +97,19 @@ const runAndReply = async ({
 	let logger = rootLogger;
 	try {
 		const workspaceId = getSlackWorkspaceId(raw);
+		const installation = await findSlackInstallationForWorkspace({
+			workspaceId,
+		});
+		if (!installation) {
+			logger.warn("Slack installation not found", {
+				event: "leaf.slack_installation_missing",
+			});
+			return;
+		}
+
 		const session = createLeafSessionContext({
 			channelId,
-			provider: "slack",
+			provider: installation.provider,
 			providerUserId,
 			threadId,
 			workspaceId,
@@ -84,21 +117,17 @@ const runAndReply = async ({
 		logger = addLeafContext(rootLogger, {
 			...session.context,
 			agent_run_id: session.agentRunId,
+			org_id: installation.org_id,
+			org_slug: installation.org_slug,
 		});
 		logger.info("Received Slack message", {
 			event: "leaf.slack_message_received",
 			data: {
+				attachment_count: attachments?.length ?? 0,
 				text_length: text.length,
 			},
 		});
-		const installation = await findInstallation("slack", workspaceId);
-		if (!installation) {
-			logger.warn("Slack installation not found", {
-				event: "leaf.slack_installation_missing",
-			});
-			return;
-		}
-		if (!text.trim()) {
+		if (!text.trim() && !attachments?.length) {
 			logger.info("Skipping empty Slack message", {
 				event: "leaf.slack_message_skipped",
 				data: { reason: "empty" },
@@ -108,12 +137,23 @@ const runAndReply = async ({
 
 		loading = await startLoading(target);
 		const logAction = createActionLogger(loading);
+		const rawFiles = getSlackFilesFromRaw({ raw });
+		const botToken = decrypt(installation.bot_access_token);
 		const output = await runMessage({
+			agentRunId: session.agentRunId,
+			attachmentFetchFallback: ({ attachment }) =>
+				fetchSlackAttachmentFallback({
+					attachment,
+					botToken,
+					rawFiles,
+				}),
+			attachments,
 			installation,
 			logger,
 			onAction: logAction,
 			recentMessages,
 			text,
+			channelId,
 			threadId,
 		});
 
@@ -149,8 +189,18 @@ const runAndReply = async ({
 };
 
 const handleMessage = async (thread: Thread, message: Message) => {
+	// Never respond to other bots (including a second Autumn app on the same
+	// workspace) — otherwise two bots reply to each other in an infinite loop.
+	if (message.author.isBot === true) {
+		rootLogger.info("Skipping bot-authored Slack message", {
+			event: "leaf.slack_message_skipped",
+			data: { reason: "bot_author" },
+		});
+		return;
+	}
 	await runAndReply({
 		target: thread,
+		attachments: message.attachments,
 		raw: message.raw,
 		text: message.text,
 		channelId: thread.channelId,

@@ -80,7 +80,7 @@ export const multiAttachPriceOutboundSchema = z.object({
 	interval_count: z.number(),
 	billing_units: z.number(),
 	billing_method: z.string(),
-	max_purchase: z.union([z.number(), z.undefined()]).optional(),
+	max_purchase: z.union([z.number(), z.undefined()]).optional().nullable(),
 });
 
 export const multiAttachProrationOutboundSchema = z.object({
@@ -163,6 +163,12 @@ export const multiAttachSpendLimitOutboundSchema = z.object({
 	overage_limit: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const multiAttachUsageLimitOutboundSchema = z.object({
+	feature_id: z.string(),
+	limit: z.number(),
+	interval: z.string(),
+});
+
 export const multiAttachUsageAlertOutboundSchema = z.object({
 	feature_id: z.union([z.string(), z.undefined()]).optional(),
 	enabled: z.boolean(),
@@ -179,6 +185,9 @@ export const multiAttachOverageAllowedOutboundSchema = z.object({
 export const multiAttachBillingControlsOutboundSchema = z.object({
 	spend_limits: z
 		.union([z.array(multiAttachSpendLimitOutboundSchema), z.undefined()])
+		.optional(),
+	usage_limits: z
+		.union([z.array(multiAttachUsageLimitOutboundSchema), z.undefined()])
 		.optional(),
 	usage_alerts: z
 		.union([z.array(multiAttachUsageAlertOutboundSchema), z.undefined()])
@@ -235,7 +244,7 @@ export const multiAttachPriceSchema = z.object({
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 	billingUnits: z.union([z.number(), z.undefined()]).optional(),
 	billingMethod: multiAttachBillingMethodSchema,
-	maxPurchase: z.union([z.number(), z.undefined()]).optional(),
+	maxPurchase: z.union([z.number(), z.undefined()]).optional().nullable(),
 });
 
 export const multiAttachOnIncreaseSchema = closedEnumSchema;
@@ -301,6 +310,14 @@ export const multiAttachFreeTrialParamsSchema = z.object({
 
 export const multiAttachRedirectModeSchema = closedEnumSchema;
 
+export const multiAttachEntityDataIntervalSchema = closedEnumSchema;
+
+export const multiAttachUsageLimitSchema = z.object({
+	featureId: z.string(),
+	limit: z.number(),
+	interval: multiAttachEntityDataIntervalSchema,
+});
+
 export const multiAttachThresholdTypeSchema = closedEnumSchema;
 
 export const multiAttachUsageAlertSchema = z.object({
@@ -314,6 +331,9 @@ export const multiAttachUsageAlertSchema = z.object({
 export const multiAttachBillingControlsSchema = z.object({
 	spendLimits: z
 		.union([z.array(multiAttachSpendLimitSchema), z.undefined()])
+		.optional(),
+	usageLimits: z
+		.union([z.array(multiAttachUsageLimitSchema), z.undefined()])
 		.optional(),
 	usageAlerts: z
 		.union([z.array(multiAttachUsageAlertSchema), z.undefined()])

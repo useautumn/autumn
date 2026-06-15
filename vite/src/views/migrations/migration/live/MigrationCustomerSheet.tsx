@@ -1,5 +1,6 @@
-import type { CustomerWithProducts, Operations } from "@autumn/shared";
+import type { Operations } from "@autumn/shared";
 import { useMemo } from "react";
+import type { MigrationPreviewCustomer } from "@/hooks/queries/useMigrationFilterPreview";
 import { useMigrationRunsQuery } from "@/hooks/queries/useMigrationRunsQuery";
 import { useRealtimeSubscriptions } from "../hooks/useRealtimeSubscriptions";
 import { CustomerRunSheet } from "./CustomerRunSheet";
@@ -12,7 +13,7 @@ export function MigrationCustomerSheet({
 	noBillingChanges,
 }: {
 	migrationId: string;
-	customer: CustomerWithProducts;
+	customer: MigrationPreviewCustomer;
 	operations: Operations;
 	noBillingChanges: boolean;
 }) {
@@ -26,6 +27,7 @@ export function MigrationCustomerSheet({
 	const {
 		subscriptions: realtimeSubscriptions,
 		hasActive: hasRealtimeActive,
+		isSettling,
 		handleComplete: handleRealtimeComplete,
 		triggerRun,
 		isRunning,
@@ -55,6 +57,12 @@ export function MigrationCustomerSheet({
 		);
 	}, [customerEvents]);
 
+	const runIsActive = isActive || hasRealtimeActive || isSettling;
+	const customerHasResult =
+		(customer.migration_item_run?.status != null &&
+			customer.migration_item_run.status !== "running") ||
+		latestLiveEvent !== undefined;
+
 	return (
 		<>
 			{realtimeSubscriptions.map((sub) => (
@@ -69,9 +77,10 @@ export function MigrationCustomerSheet({
 				latestDryEvent={latestDryEvent}
 				latestLiveEvent={latestLiveEvent}
 				allEvents={customerEvents}
-				isActive={isActive || hasRealtimeActive}
+				isActive={runIsActive && !customerHasResult}
 				activeRunDryRun={activeRunDryRun}
 				isRunning={isRunning}
+				isRunInProgress={isRunning || isActive || hasRealtimeActive}
 				onTriggerRun={triggerRun}
 				operations={operations}
 				noBillingChanges={noBillingChanges}

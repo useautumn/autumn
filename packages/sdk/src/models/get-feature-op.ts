@@ -23,15 +23,16 @@ export type GetFeatureParams = {
 };
 
 /**
- * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
 export const GetFeatureType = {
   Boolean: "boolean",
   Metered: "metered",
   CreditSystem: "credit_system",
+  AiCreditSystem: "ai_credit_system",
 } as const;
 /**
- * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
 export type GetFeatureType = OpenEnum<typeof GetFeatureType>;
 
@@ -44,6 +45,16 @@ export type GetFeatureCreditSchema = {
    * Credits consumed per unit of the metered feature.
    */
   creditCost: number;
+};
+
+export type GetFeatureModelMarkups = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+export type GetFeatureProviderMarkups = {
+  markup: number;
 };
 
 /**
@@ -73,7 +84,7 @@ export type GetFeatureResponse = {
    */
   name: string;
   /**
-   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
    */
   type: GetFeatureType;
   /**
@@ -88,6 +99,21 @@ export type GetFeatureResponse = {
    * For credit_system features: maps metered features to their credit costs.
    */
   creditSchema?: Array<GetFeatureCreditSchema> | undefined;
+  /**
+   * Per-model markup overrides for AI credit systems.
+   */
+  modelMarkups?: { [k: string]: GetFeatureModelMarkups } | null | undefined;
+  /**
+   * Default percentage markup for AI credit systems. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider default markup percentages for AI credit systems.
+   */
+  providerMarkups?:
+    | { [k: string]: GetFeatureProviderMarkups }
+    | null
+    | undefined;
   /**
    * Display names for the feature in billing UI and customer-facing components.
    */
@@ -160,6 +186,52 @@ export function getFeatureCreditSchemaFromJSON(
 }
 
 /** @internal */
+export const GetFeatureModelMarkups$inboundSchema: z.ZodMiniType<
+  GetFeatureModelMarkups,
+  unknown
+> = z.pipe(
+  z.object({
+    markup: types.optional(types.number()),
+    input_cost: types.optional(types.number()),
+    output_cost: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "input_cost": "inputCost",
+      "output_cost": "outputCost",
+    });
+  }),
+);
+
+export function getFeatureModelMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<GetFeatureModelMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetFeatureModelMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetFeatureModelMarkups' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetFeatureProviderMarkups$inboundSchema: z.ZodMiniType<
+  GetFeatureProviderMarkups,
+  unknown
+> = z.object({
+  markup: types.number(),
+});
+
+export function getFeatureProviderMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<GetFeatureProviderMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetFeatureProviderMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetFeatureProviderMarkups' from JSON`,
+  );
+}
+
+/** @internal */
 export const GetFeatureDisplay$inboundSchema: z.ZodMiniType<
   GetFeatureDisplay,
   unknown
@@ -192,13 +264,27 @@ export const GetFeatureResponse$inboundSchema: z.ZodMiniType<
     credit_schema: types.optional(
       z.array(z.lazy(() => GetFeatureCreditSchema$inboundSchema)),
     ),
-    display: types.optional(z.lazy(() => GetFeatureDisplay$inboundSchema)),
+    model_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => GetFeatureModelMarkups$inboundSchema),
+    ))),
+    default_markup: types.optional(types.number()),
+    provider_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => GetFeatureProviderMarkups$inboundSchema),
+    ))),
+    display: types.optional(z.lazy(() =>
+      GetFeatureDisplay$inboundSchema
+    )),
     archived: types.boolean(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
+      "model_markups": "modelMarkups",
+      "default_markup": "defaultMarkup",
+      "provider_markups": "providerMarkups",
     });
   }),
 );

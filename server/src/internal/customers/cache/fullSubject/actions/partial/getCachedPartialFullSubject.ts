@@ -4,9 +4,11 @@ import { isRedisMigrationCacheStale } from "@/external/redis/customerRedisRoutin
 import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { lazyResetSubjectEntitlements } from "@/internal/customers/actions/resetCustomerEntitlementsV2/lazyResetSubjectEntitlements.js";
+import { lazyResetSubjectUsageWindows } from "@/internal/customers/actions/resetUsageWindows/lazyResetSubjectUsageWindows.js";
 import { getFullSubjectRolloutSnapshot } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { applyLiveAggregatedBalances } from "../../balances/applyLiveAggregatedBalances.js";
+import { applyLiveUsageWindows } from "../../balances/applyLiveUsageWindows.js";
 import { getCachedFeatureBalancesBatch } from "../../balances/getCachedFeatureBalances.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildFullSubjectViewEpochKey } from "../../builders/buildFullSubjectViewEpochKey.js";
@@ -212,9 +214,22 @@ export const getCachedPartialFullSubject = async ({
 		};
 	}
 
-	const meteredFeatureIdsToFetch = featureIds.filter((featureId) =>
-		cached.meteredFeatures.includes(featureId),
+	// Capped features carry the '_usage_windows' counter field and may have no
+	// entitlements at all, so they must be part of the batch even when absent
+	// from meteredFeatures.
+	const usageWindowFeatureIds = new Set(
+		(cached.usageWindowFeatureIds ?? []).filter((featureId) =>
+			featureIds.includes(featureId),
+		),
 	);
+	const meteredFeatureIdsToFetch = [
+		...new Set([
+			...featureIds.filter((featureId) =>
+				cached.meteredFeatures.includes(featureId),
+			),
+			...usageWindowFeatureIds,
+		]),
+	];
 
 	const isCustomerSubject = !entityId;
 	const featureBalancesOutcome = await getCachedFeatureBalancesBatch({
@@ -223,6 +238,7 @@ export const getCachedPartialFullSubject = async ({
 		featureIds: meteredFeatureIdsToFetch,
 		customerEntitlementIdsByFeatureId: cached.customerEntitlementIdsByFeatureId,
 		includeAggregated: isCustomerSubject,
+		usageWindowFeatureIds,
 	});
 
 	const invalidateIncomplete = () =>
@@ -287,8 +303,14 @@ export const getCachedPartialFullSubject = async ({
 				});
 			}
 
+			applyLiveUsageWindows({
+				normalized,
+				featureBalances,
+			});
+
 			const fullSubject = normalizedToFullSubject({ normalized });
 			await lazyResetSubjectEntitlements({ ctx, fullSubject, normalized });
+			await lazyResetSubjectUsageWindows({ ctx, fullSubject, normalized });
 			return fullSubject;
 		},
 		invalidate: () =>

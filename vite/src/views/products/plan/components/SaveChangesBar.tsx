@@ -1,4 +1,4 @@
-import { isFeaturePriceItem, productV2ToBasePrice } from "@autumn/shared";
+import { isFeaturePriceItem } from "@autumn/shared";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
@@ -8,15 +8,14 @@ import {
 	useHasChanges,
 	useIsCusPlanEditor,
 	useProductStore,
-	useWillVersion,
 } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
 import { useProductQuery } from "../../product/hooks/useProductQuery";
 import { useProductContext } from "../../product/ProductContext";
 import { updateProduct } from "../../product/utils/updateProduct";
 import { useProductChangedAlert } from "../hooks/useProductChangedAlert";
+import { useProductCountsQuery } from "../../product/hooks/queries/useProductCountsQuery";
 import { PlanEditorBar } from "./PlanEditorBar";
 
 interface SaveChangesBarProps {
@@ -34,17 +33,15 @@ export const SaveChangesBar = ({
 	const setProduct = useProductStore((s) => s.setProduct);
 	const { type: sheetType } = useSheetStore();
 	const hasChanges = useHasChanges();
-	const willVersion = useWillVersion();
 
 	const [saving, setSaving] = useState(false);
 
 	const { invalidate: invalidateProducts } = useProductsQuery();
-	const { counts, isLoading } = useProductCountsQuery();
-	const { refetch: queryRefetch } = useProductQuery();
-
-	// const { }
-
-	const basePrice = productV2ToBasePrice({ product });
+	const { refetch: queryRefetch, invalidate: invalidateProduct } =
+		useProductQuery();
+	const { counts, isLoading: isCountsLoading } = useProductCountsQuery(
+		product.version ? { version: product.version } : {},
+	);
 
 	const isCusPlanEditor = useIsCusPlanEditor();
 	const saveButtonText = isCusPlanEditor ? "Save and Return" : "Save";
@@ -65,16 +62,15 @@ export const SaveChangesBar = ({
 		// 	return;
 		// }
 
-		if (!isOnboarding && isLoading) {
-			toast.error("Plan counts are loading");
-			return;
-		}
-
-		// If changes require versioning and we can't confirm there are 0 customers, show dialog
-		// This errs on the side of caution when counts data is unavailable
-		if (!isOnboarding && willVersion && (!counts || counts.all !== 0)) {
-			setShowNewVersionDialog(true);
-			return;
+		if (!isOnboarding) {
+			if (isCountsLoading) {
+				toast.error("Plan counts are loading");
+				return;
+			}
+			if ((counts?.all ?? 0) > 0) {
+				setShowNewVersionDialog(true);
+				return;
+			}
 		}
 
 		setSaving(true);
@@ -91,9 +87,10 @@ export const SaveChangesBar = ({
 			axiosInstance,
 			productId: product.id,
 			product,
+			version: product.version,
 			onSuccess: async () => {
 				await queryRefetch();
-				invalidateProducts();
+				await Promise.all([invalidateProduct(), invalidateProducts()]);
 			},
 		});
 

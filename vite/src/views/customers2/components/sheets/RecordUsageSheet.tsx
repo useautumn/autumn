@@ -1,24 +1,33 @@
-import type { Entity, FullCustomer } from "@autumn/shared";
-import { LATEST_VERSION } from "@autumn/shared";
+import type {
+	CreditSystemConfig,
+	Entity,
+	Feature,
+	FullCustomer,
+} from "@autumn/shared";
+import { FeatureType, LATEST_VERSION } from "@autumn/shared";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { CheckIcon } from "lucide-react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
+import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import {
 	LayoutGroup,
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
 import { EntityScopeSelector } from "./EntityScopeSelector";
 
 export function RecordUsageSheet() {
@@ -39,6 +48,32 @@ export function RecordUsageSheet() {
 
 	const featureId = sheetData?.featureId as string | undefined;
 	const featureName = sheetData?.featureName as string | undefined;
+
+	const { features } = useFeaturesQuery();
+	const creditSystem = features.find((f) => f.id === featureId);
+	const isCreditSystem = creditSystem?.type === FeatureType.CreditSystem;
+
+	// Credit systems can deduct from the credit balance directly (default) or
+	// from any metered feature in their schema that still exists.
+	const featureOptions = useMemo<Feature[]>(() => {
+		if (!(isCreditSystem && creditSystem)) return [];
+		const schema =
+			(creditSystem.config as CreditSystemConfig | undefined)?.schema ?? [];
+		const schemaFeatures = schema
+			.map((item) => features.find((f) => f.id === item.metered_feature_id))
+			.filter((f): f is Feature => Boolean(f));
+		return [creditSystem, ...schemaFeatures];
+	}, [isCreditSystem, creditSystem, features]);
+
+	const [selectedFeatureId, setSelectedFeatureId] = useState<
+		string | undefined
+	>(undefined);
+	const trackingFeatureId = selectedFeatureId ?? featureId;
+	const trackingFeatureName =
+		features.find((f) => f.id === trackingFeatureId)?.name ??
+		featureName ??
+		featureId;
+	const showFeatureSelect = isCreditSystem && featureOptions.length > 1;
 
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [value, setValue] = useState("1");
@@ -72,7 +107,7 @@ export function RecordUsageSheet() {
 
 	const handleSubmit = async () => {
 		const customerId = customer?.id || customer?.internal_id;
-		if (!customerId || !featureId) return;
+		if (!customerId || !trackingFeatureId) return;
 
 		const parsedValue = value.trim() === "" ? 1 : Number.parseFloat(value);
 		if (Number.isNaN(parsedValue)) {
@@ -90,7 +125,7 @@ export function RecordUsageSheet() {
 
 		const params: Record<string, unknown> = {
 			customer_id: customerId,
-			feature_id: featureId,
+			feature_id: trackingFeatureId,
 			value: parsedValue,
 		};
 
@@ -128,7 +163,7 @@ export function RecordUsageSheet() {
 					description={
 						scopeEntityId
 							? `Tracking for entity ${fullEntity?.name || scopeEntityId}`
-							: `Record usage for ${featureName ?? featureId}`
+							: `Record usage for ${trackingFeatureName}`
 					}
 				/>
 
@@ -138,6 +173,50 @@ export function RecordUsageSheet() {
 						scopeEntityId={scopeEntityId}
 						onScopeChange={setScopeEntityId}
 					/>
+				)}
+
+				{showFeatureSelect && (
+					<SheetSection withSeparator>
+						<FormLabel>Feature</FormLabel>
+						<SearchableSelect<Feature>
+							value={trackingFeatureId ?? null}
+							onValueChange={setSelectedFeatureId}
+							options={featureOptions}
+							getOptionValue={(feature) => feature.id}
+							getOptionLabel={(feature) => feature.name}
+							triggerClassName="w-full"
+							renderValue={(option) =>
+								option ? (
+									<span className="flex items-center gap-2 min-w-0">
+										<span className="shrink-0">
+											{getFeatureIcon({ feature: option })}
+										</span>
+										<span className="truncate">{option.name}</span>
+									</span>
+								) : (
+									<span className="text-tertiary-foreground">
+										Select feature
+									</span>
+								)
+							}
+							renderOption={(option, isSelected) => (
+								<>
+									<div className="flex items-center gap-2 min-w-0 flex-1">
+										<span className="shrink-0">
+											{getFeatureIcon({ feature: option })}
+										</span>
+										<span className="truncate">{option.name}</span>
+										{option.id === featureId && (
+											<span className="shrink-0 text-tertiary-foreground text-xs">
+												Credit system
+											</span>
+										)}
+									</div>
+									{isSelected && <CheckIcon className="size-4 shrink-0" />}
+								</>
+							)}
+						/>
+					</SheetSection>
 				)}
 
 				<SheetSection withSeparator>

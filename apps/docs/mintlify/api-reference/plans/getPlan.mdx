@@ -119,7 +119,7 @@ const plan = await autumn.plans.get({
           The name of the feature.
         </DynamicResponseField>
 
-        <DynamicResponseField name="type" type="'static' | 'boolean' | 'single_use' | 'continuous_use' | 'credit_system'">
+        <DynamicResponseField name="type" type="'static' | 'boolean' | 'single_use' | 'continuous_use' | 'credit_system' | 'ai_credit_system'">
           The type of the feature
         </DynamicResponseField>
 
@@ -187,8 +187,16 @@ const plan = await autumn.plans.get({
           Price per billing_units after included usage is consumed. Mutually exclusive with tiers.
         </DynamicResponseField>
 
-        <DynamicResponseField name="tiers" type="any[]">
+        <DynamicResponseField name="tiers" type="object[]">
           Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
+          <Expandable title="properties">
+            <DynamicResponseField name="to" type="number" />
+
+            <DynamicResponseField name="amount" type="number" />
+
+            <DynamicResponseField name="flat_amount" type="number" />
+
+          </Expandable>
         </DynamicResponseField>
 
         <DynamicResponseField name="tier_behavior" type="'graduated' | 'volume'" />

@@ -3,7 +3,10 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 import { buildFullSubjectKey } from "../../builders/buildFullSubjectKey.js";
 import { buildSharedFullSubjectBalanceKey } from "../../builders/buildSharedFullSubjectBalanceKey.js";
-import { AGGREGATED_BALANCE_FIELD } from "../../config/fullSubjectCacheConfig.js";
+import {
+	AGGREGATED_BALANCE_FIELD,
+	USAGE_WINDOWS_FIELD,
+} from "../../config/fullSubjectCacheConfig.js";
 import type { CachedFullSubject } from "../../fullSubjectCacheModel.js";
 
 /**
@@ -61,19 +64,37 @@ async function deleteFieldsFromManifest({
 	const { customerEntitlementIdsByFeatureId } = manifest;
 	if (!customerEntitlementIdsByFeatureId) return;
 
+	// Capped features may have no entitlements, so their hashes only appear in
+	// usageWindowFeatureIds; union both so `_usage_windows` is cleared too.
+	// Safe to delete counters: capped tracks write through to PG synchronously,
+	// and the rebuild re-seeds the field from PG.
+	// Raw blob, no sanitize walker: cjson re-encodes empty arrays as {}, so
+	// array fields must be Array.isArray-guarded before spreading.
+	const usageWindowFeatureIds = Array.isArray(manifest.usageWindowFeatureIds)
+		? manifest.usageWindowFeatureIds
+		: [];
+	const featureIds = new Set([
+		...Object.keys(customerEntitlementIdsByFeatureId),
+		...usageWindowFeatureIds,
+	]);
+
 	const pipeline = redisV2.pipeline();
 	let fieldCount = 0;
 
-	for (const [featureId, cusEntIds] of Object.entries(
-		customerEntitlementIdsByFeatureId,
-	)) {
+	for (const featureId of featureIds) {
+		const rawCusEntIds = customerEntitlementIdsByFeatureId[featureId];
+		const cusEntIds = Array.isArray(rawCusEntIds) ? rawCusEntIds : [];
 		const balanceKey = buildSharedFullSubjectBalanceKey({
 			orgId: org.id,
 			env,
 			customerId,
 			featureId,
 		});
-		const fieldsToDelete = [...cusEntIds, AGGREGATED_BALANCE_FIELD];
+		const fieldsToDelete = [
+			...cusEntIds,
+			AGGREGATED_BALANCE_FIELD,
+			USAGE_WINDOWS_FIELD,
+		];
 		pipeline.hdel(balanceKey, ...fieldsToDelete);
 		fieldCount += fieldsToDelete.length;
 	}

@@ -73,6 +73,7 @@ export const CustomerFeatureUsageColumns = [
 			if (!subRowData && featureType === FeatureType.CreditSystem) {
 				const subRows = (cusEnt as FullCusEntWithSubRows).subRows || [];
 				let totalSpent = 0;
+				let canCompute = true;
 
 				for (const subRow of subRows) {
 					if (!("isSubRow" in subRow) || !subRow.isSubRow) continue;
@@ -90,11 +91,15 @@ export const CustomerFeatureUsageColumns = [
 							const subUsed = subTotal - subRemaining;
 							totalSpent += subUsed * creditCost;
 						}
+					} else {
+						canCompute = false;
 					}
 				}
 
-				const total = allowance * quantity;
-				balance = total - totalSpent;
+				if (canCompute) {
+					const total = allowance * quantity;
+					balance = total - totalSpent;
+				}
 			}
 
 			return (

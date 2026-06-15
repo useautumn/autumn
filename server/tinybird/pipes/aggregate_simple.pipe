@@ -15,12 +15,14 @@ SQL >
         formatDateTime(hour, '%F %T') as period,
         {% elif String(bin_size, 'day') == 'month' %}
         formatDateTime(toStartOfMonth(hour, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% elif String(bin_size, 'day') == 'week' %}
+        formatDateTime(toStartOfWeek(hour, 1, {{ String(timezone, 'UTC') }}), '%F %T') as period,
         {% else %}
         formatDateTime(toStartOfDay(hour, {{ String(timezone, 'UTC') }}), '%F %T') as period,
         {% end %}
         event_name,
         sum(total_value) as total_value
-    FROM {% if not no_property_filters %}events_hourly_mv{% elif use_org_rollup %}events_org_hourly_mv{% else %}events_hourly_no_properties_two_mv{% end %}
+    FROM {% if not no_property_filters %}events_hourly_mv{% elif use_org_rollup %}events_org_hourly_mv{% else %}events_customer_hourly_mv{% end %}
     WHERE
         org_id = {{ String(org_id, '') }}
         AND env = {{ String(env, 'test') }}

@@ -1,3 +1,4 @@
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import {
 	additionalFiles,
 	additionalPackages,
@@ -7,23 +8,32 @@ import {
 import { defineConfig } from "@trigger.dev/sdk/v3";
 import { fetchInfisicalSecretsFromEnv } from "./server/src/external/infisical/fetchInfisicalSecrets.js";
 
-const workspacePackageJsonPaths = [
-	"server/package.json",
-	"shared/package.json",
-	"vite/package.json",
-	"scripts/package.json",
-	"apps/checkout/package.json",
-	"apps/docs/package.json",
-	"apps/website/package.json",
-	"apps/sdk-test/package.json",
-	"packages/atmn/package.json",
-	"packages/atmn-tests/package.json",
-	"packages/sdk/package.json",
-	"packages/autumn-js/package.json",
-	"packages/openapi/package.json",
-	"packages/ksuid/package.json",
-	"packages/stripe-sync/package.json",
-];
+// Derived from the root package.json workspaces so new workspace packages are
+// picked up automatically — the deploy image COPYs every workspace
+// package.json, and a missing one makes `bun install` fail against bun.lock.
+const rootPackageJson = JSON.parse(readFileSync("package.json", "utf-8")) as {
+	workspaces: string[] | { packages: string[] };
+};
+
+const workspacePatterns = Array.isArray(rootPackageJson.workspaces)
+	? rootPackageJson.workspaces
+	: rootPackageJson.workspaces.packages;
+
+const expandWorkspacePattern = (pattern: string): string[] => {
+	if (!pattern.includes("*")) {
+		return [pattern];
+	}
+	const baseDir = pattern.slice(0, pattern.indexOf("*")).replace(/\/$/, "");
+	return readdirSync(baseDir, { withFileTypes: true })
+		.filter((entry) => entry.isDirectory())
+		.map((entry) => `${baseDir}/${entry.name}`);
+};
+
+const workspacePackageJsonPaths = workspacePatterns
+	.flatMap(expandWorkspacePattern)
+	.map((dir) => `${dir}/package.json`)
+	.filter((path) => existsSync(path))
+	.sort();
 
 const workspacePackageDirs = workspacePackageJsonPaths.map((path) =>
 	path.replace(/\/package\.json$/, ""),

@@ -10,6 +10,9 @@ import {
 	createAgentAutumnOperationTools,
 	createRawAutumnOperationTools,
 	dateToEpochMillisecondsTool,
+	endpointByTool,
+	epochMillisecondsToDateTool,
+	schemaByTool,
 } from "../../../../src/tools/index.js";
 import { createTestRedis } from "../../../utils/test-redis.js";
 
@@ -36,13 +39,52 @@ describe("Autumn operation tools", () => {
 		expect(tools.listPlans.description).toContain(
 			"filter returned plans locally",
 		);
+		expect(tools.listFeatures.description).toContain("List Autumn features");
 		expect(tools.listCustomers.description).toContain("plans");
 		expect(tools.listCustomers.description).toContain("paginate");
+		expect(tools.createEntity.description).toContain("entity_id");
+		expect(tools.createEntity.description).toContain("entity name");
+		expect(tools.updateCustomer.description).toContain("invoice_mode");
+		expect(tools.updateCustomer.description).toContain("Stripe");
 		expect(tools.createPlan.description).toContain("confirmation");
 		expect(tools.createBalance.description).toContain("entity-scoped credits");
+		expect(tools.searchRequestLogs.description).toContain("request logs");
+		expect(tools.queryRequestLogs.description).toContain("aggregate");
+		expect(tools.getAgentRules.description).toContain("agent rules");
+		expect(tools.getAgentRules.description).toContain("Use before customer");
+		expect(tools.updateAgentRules.description).toContain("agent rules");
+		expect(tools.listEntities.description).toContain("customer_id");
+		expect(tools.listEntities.description).toContain("one customer");
+		expect(tools.getEntity.description).toContain("entity_id");
 		expect(tools.previewCreateBalance.description).toContain("Does not mutate");
 		expect(tools.createSchedule.description).toContain("starts_at");
 		expect(tools.previewCreateSchedule.description).toContain("billing impact");
+		expect(tools.previewAttach.description).toContain(
+			"enable_plan_immediately",
+		);
+		expect(tools.previewAttach.description).toContain("finalize false");
+		expect(tools.previewAttach.description).toContain(
+			"invoice_mode requires customer email",
+		);
+		expect(tools.attach.description).toContain("enable_plan_immediately");
+		expect(tools.attach.description).toContain("finalize false");
+		expect(tools.attach.description).toContain(
+			"invoice_mode requires customer email",
+		);
+		expect(tools.previewCreateSchedule.description).toContain(
+			"enable_plan_immediately",
+		);
+		expect(tools.previewCreateSchedule.description).toContain("finalize false");
+		expect(tools.previewCreateSchedule.description).toContain(
+			"invoice_mode requires customer email",
+		);
+		expect(tools.createSchedule.description).toContain(
+			"enable_plan_immediately",
+		);
+		expect(tools.createSchedule.description).toContain("finalize false");
+		expect(tools.createSchedule.description).toContain(
+			"invoice_mode requires customer email",
+		);
 		expect(tools.getCurrentOrganization.description).toContain("organization");
 	});
 
@@ -61,17 +103,115 @@ describe("Autumn operation tools", () => {
 
 		for (const name of [
 			"listCustomers",
+			"updateCustomer",
 			"getCustomer",
+			"listFeatures",
 			"listPlans",
 			"getPlan",
+			"searchRequestLogs",
+			"queryRequestLogs",
 			"previewAttach",
 			"previewUpdateSubscription",
 			"previewCreateSchedule",
 			"previewCreateBalance",
 			"getCurrentOrganization",
+			"getAgentRules",
+			"updateAgentRules",
+			"createEntity",
+			"listEntities",
+			"getEntity",
 		] as const) {
 			expect(tools[name].mcp?.annotations?.destructiveHint).toBe(false);
 		}
+	});
+
+	test("listFeatures uses a strict empty request schema", () => {
+		expect(endpointByTool.listFeatures).toBe("/v1/features.list");
+		expect(schemaByTool.listFeatures.parse({})).toEqual({});
+		expect(() =>
+			schemaByTool.listFeatures.parse({ archived: false }),
+		).toThrow();
+
+		expect(createAgentAutumnOperationTools().listFeatures).toBeDefined();
+	});
+
+	test("getAgentRules uses a strict empty request schema", () => {
+		expect(endpointByTool.getAgentRules).toBe("/v1/agent.get_rules");
+		expect(schemaByTool.getAgentRules.parse({})).toEqual({});
+		expect(() =>
+			schemaByTool.getAgentRules.parse({ include_metadata: true }),
+		).toThrow();
+
+		expect(createAgentAutumnOperationTools().getAgentRules).toBeDefined();
+	});
+
+	test("entity tools expose create, list, and get schemas", () => {
+		expect(endpointByTool.createEntity).toBe("/v1/entities.create");
+		expect(endpointByTool.listEntities).toBe("/v1/entities.list");
+		expect(endpointByTool.getEntity).toBe("/v1/entities.get");
+		expect(
+			schemaByTool.createEntity.parse({
+				customer_id: "cus_123",
+				entity_id: "workspace_1",
+				feature_id: "workspaces",
+				name: "Workspace 1",
+			}),
+		).toEqual({
+			customer_id: "cus_123",
+			entity_id: "workspace_1",
+			feature_id: "workspaces",
+			name: "Workspace 1",
+		});
+		expect(
+			schemaByTool.listEntities.parse({
+				customer_id: "cus_123",
+				limit: 10,
+				start_cursor: "",
+			}),
+		).toMatchObject({
+			customer_id: "cus_123",
+			limit: 10,
+			start_cursor: "",
+		});
+		expect(
+			schemaByTool.getEntity.parse({
+				customer_id: "cus_123",
+				entity_id: "workspace_1",
+			}),
+		).toEqual({
+			customer_id: "cus_123",
+			entity_id: "workspace_1",
+		});
+
+		expect(createAgentAutumnOperationTools().createEntity).toBeDefined();
+		expect(createAgentAutumnOperationTools().listEntities).toBeDefined();
+		expect(createAgentAutumnOperationTools().getEntity).toBeDefined();
+	});
+
+	test("updateAgentRules accepts partial rules and rejects unknown fields", () => {
+		expect(endpointByTool.updateAgentRules).toBe("/v1/agent.update_rules");
+		expect(
+			schemaByTool.updateAgentRules.parse({
+				entity_rules: {
+					attach_to_entities: true,
+					entity_feature_id: "deployments",
+				},
+				credit_rules: { credit_feature_id: "credits" },
+				notes: "Attach add-ons at customer level.",
+			}),
+		).toEqual({
+			entity_rules: {
+				attach_to_entities: true,
+				entity_feature_id: "deployments",
+			},
+			credit_rules: { credit_feature_id: "credits" },
+			notes: "Attach add-ons at customer level.",
+		});
+		expect(() =>
+			schemaByTool.updateAgentRules.parse({ unexpected: true }),
+		).toThrow();
+
+		expect(createAgentAutumnOperationTools().updateAgentRules).toBeDefined();
 	});
 
 	test("dateToEpochMilliseconds converts UTC dates and offsets", async () => {
@@ -87,7 +227,36 @@ describe("Autumn operation tools", () => {
 		).resolves.toBe(Date.UTC(2027, 0, 1, 8));
 	});
 
-	test("raw createCustomer calls the get-or-create endpoint", async () => {
+	test("epochMillisecondsToDate converts keyed epoch milliseconds", async () => {
+		const tool = epochMillisecondsToDateTool as ExecutableTool;
+		if (!tool.execute)
+			throw new Error("epochMillisecondsToDate is not executable");
+
+		await expect(
+			tool.execute(
+				{
+					timestamps: {
+						starts_at: Date.UTC(2026, 0, 1),
+						expires_at: String(Date.UTC(2026, 5, 6, 12, 30, 45)),
+					},
+				},
+				{},
+			),
+		).resolves.toEqual({
+			starts_at: {
+				epoch_ms: Date.UTC(2026, 0, 1),
+				iso: "2026-01-01T00:00:00.000Z",
+				utc: "January 1, 2026, 00:00:00 UTC",
+			},
+			expires_at: {
+				epoch_ms: Date.UTC(2026, 5, 6, 12, 30, 45),
+				iso: "2026-06-06T12:30:45.000Z",
+				utc: "June 6, 2026, 12:30:45 UTC",
+			},
+		});
+	});
+
+	test("raw getOrCreateCustomer calls the get-or-create endpoint", async () => {
 		const originalFetch = globalThis.fetch;
 		globalThis.fetch = (async (url, init) => {
 			expect(String(url)).toBe(
@@ -101,8 +270,9 @@ describe("Autumn operation tools", () => {
 		}) as typeof fetch;
 
 		try {
-			const tool = createRawAutumnOperationTools().createCustomer;
-			if (!tool.execute) throw new Error("createCustomer is not executable");
+			const tool = createRawAutumnOperationTools().getOrCreateCustomer;
+			if (!tool.execute)
+				throw new Error("getOrCreateCustomer is not executable");
 
 			await expect(
 				tool.execute(
@@ -113,6 +283,94 @@ describe("Autumn operation tools", () => {
 					{ mcp: { extra: { authInfo: auth } } } as never,
 				),
 			).resolves.toEqual({ id: "cus_1" });
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	test("raw updateCustomer calls the update endpoint", async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (url, init) => {
+			expect(String(url)).toBe("http://localhost:8080/v1/customers.update");
+			expect(JSON.parse(init?.body as string)).toMatchObject({
+				customer_id: "mintlify",
+				email: "johnyeocx@gmail.com",
+			});
+			return Response.json({
+				id: "mintlify",
+				email: "johnyeocx@gmail.com",
+			});
+		}) as typeof fetch;
+
+		try {
+			const tool = createRawAutumnOperationTools().updateCustomer;
+			if (!tool.execute) throw new Error("updateCustomer is not executable");
+
+			await expect(
+				tool.execute(
+					{
+						intent: "set customer email",
+						request: {
+							customer_id: "mintlify",
+							email: "johnyeocx@gmail.com",
+						},
+					},
+					{ mcp: { extra: { authInfo: auth } } } as never,
+				),
+			).resolves.toEqual({
+				id: "mintlify",
+				email: "johnyeocx@gmail.com",
+			});
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	test("raw updateAgentRules calls the update rules endpoint", async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (url, init) => {
+			expect(String(url)).toBe("http://localhost:8080/v1/agent.update_rules");
+			expect(JSON.parse(init?.body as string)).toEqual({
+				entity_rules: {
+					attach_to_entities: true,
+					entity_feature_id: "deployments",
+				},
+				notes: "Attach add-ons at the customer level.",
+			});
+			return Response.json({
+				entity_rules: {
+					attach_to_entities: true,
+					entity_feature_id: "deployments",
+				},
+				credit_rules: { credit_feature_id: "" },
+				notes: "Attach add-ons at the customer level.",
+			});
+		}) as typeof fetch;
+
+		try {
+			const tool = createRawAutumnOperationTools().updateAgentRules;
+			if (!tool.execute) throw new Error("updateAgentRules is not executable");
+
+			await expect(
+				tool.execute(
+					{
+						intent: "set org agent rules",
+						request: {
+							entity_rules: {
+								attach_to_entities: true,
+								entity_feature_id: "deployments",
+							},
+							notes: "Attach add-ons at the customer level.",
+						},
+					},
+					{ mcp: { extra: { authInfo: auth } } } as never,
+				),
+			).resolves.toMatchObject({
+				entity_rules: {
+					attach_to_entities: true,
+					entity_feature_id: "deployments",
+				},
+			});
 		} finally {
 			globalThis.fetch = originalFetch;
 		}
@@ -343,6 +601,99 @@ describe("Autumn operation tools", () => {
 				slug: "unit-tests",
 				env: "sandbox",
 			});
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	test("raw listFeatures calls the feature list endpoint", async () => {
+		const originalFetch = globalThis.fetch;
+		globalThis.fetch = (async (url, init) => {
+			expect(String(url)).toBe("http://localhost:8080/v1/features.list");
+			expect(JSON.parse(init?.body as string)).toEqual({});
+			return Response.json({ list: [] });
+		}) as typeof fetch;
+
+		try {
+			const tool = createRawAutumnOperationTools().listFeatures;
+			if (!tool.execute) throw new Error("listFeatures is not executable");
+
+			await expect(
+				tool.execute(
+					{
+						intent: "find available product features",
+						request: {},
+					},
+					{ mcp: { extra: { authInfo: auth } } } as never,
+				),
+			).resolves.toEqual({ list: [] });
+		} finally {
+			globalThis.fetch = originalFetch;
+		}
+	});
+
+	test("raw request-log tools call the logs endpoints", async () => {
+		const originalFetch = globalThis.fetch;
+		const calls: Array<{ url: string; body: unknown }> = [];
+		globalThis.fetch = (async (url, init) => {
+			calls.push({
+				url: String(url),
+				body: JSON.parse(init?.body as string),
+			});
+			return Response.json({ list: [] });
+		}) as typeof fetch;
+
+		try {
+			const tools = createRawAutumnOperationTools();
+			if (!tools.searchRequestLogs.execute) {
+				throw new Error("searchRequestLogs is not executable");
+			}
+			if (!tools.queryRequestLogs.execute) {
+				throw new Error("queryRequestLogs is not executable");
+			}
+
+			await expect(
+				tools.searchRequestLogs.execute(
+					{
+						intent: "find recent failed requests",
+						request: {
+							query: "where status_code >= 400 | limit 10",
+							limit: 10,
+						},
+					},
+					{ mcp: { extra: { authInfo: auth } } } as never,
+				),
+			).resolves.toEqual({ list: [] });
+
+			await expect(
+				tools.queryRequestLogs.execute(
+					{
+						intent: "count errors by path",
+						request: {
+							query:
+								"where status_code >= 400 | summarize errors = count() by request_path",
+						},
+					},
+					{ mcp: { extra: { authInfo: auth } } } as never,
+				),
+			).resolves.toEqual({ list: [] });
+
+			expect(calls).toEqual([
+				{
+					url: "http://localhost:8080/v1/logs.search",
+					body: {
+						query: "where status_code >= 400 | limit 10",
+						limit: 10,
+					},
+				},
+				{
+					url: "http://localhost:8080/v1/logs.query",
+					body: {
+						query:
+							"where status_code >= 400 | summarize errors = count() by request_path",
+					},
+				},
+			]);
 		} finally {
 			globalThis.fetch = originalFetch;
 		}

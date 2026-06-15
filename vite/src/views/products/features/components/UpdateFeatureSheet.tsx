@@ -17,6 +17,7 @@ import { NewFeatureAdvanced } from "../../plan/components/new-feature/NewFeature
 import { NewFeatureBehaviour } from "../../plan/components/new-feature/NewFeatureBehaviour";
 import { NewFeatureDetails } from "../../plan/components/new-feature/NewFeatureDetails";
 import { NewFeatureType } from "../../plan/components/new-feature/NewFeatureType";
+import { buildFeatureMarkupParams } from "../utils/buildFeatureMutationParams";
 
 interface UpdateFeatureSheetProps {
 	open: boolean;
@@ -61,6 +62,13 @@ function UpdateFeatureSheet({
 				consumable: feature.config?.usage_type === FeatureUsageType.Single,
 				event_names: feature.event_names,
 				display: undefined,
+				...buildFeatureMarkupParams({
+					type: feature.type,
+					modelMarkups: feature.model_markups ?? undefined,
+					defaultMarkup: feature.config?.default_markup,
+					providerMarkups: feature.config?.provider_markups,
+					schema: feature.config?.schema,
+				}),
 			});
 
 			await refetch();

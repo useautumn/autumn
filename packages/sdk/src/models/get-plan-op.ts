@@ -9,6 +9,7 @@ import * as openEnums from "../types/enums.js";
 import { OpenEnum } from "../types/enums.js";
 import { Result as SafeParseResult } from "../types/fp.js";
 import * as types from "../types/primitives.js";
+import { smartUnion } from "../types/smart-union.js";
 import { SDKValidationError } from "./sdk-validation-error.js";
 
 export type GetPlanGlobals = {
@@ -84,6 +85,7 @@ export const GetPlanType = {
   SingleUse: "single_use",
   ContinuousUse: "continuous_use",
   CreditSystem: "credit_system",
+  AiCreditSystem: "ai_credit_system",
 } as const;
 /**
  * The type of the feature
@@ -172,6 +174,14 @@ export type GetPlanReset = {
   intervalCount?: number | undefined;
 };
 
+export type GetPlanTo = number | string;
+
+export type GetPlanTier = {
+  to: number | string;
+  amount: number;
+  flatAmount?: number | undefined;
+};
+
 export const GetPlanTierBehavior = {
   Graduated: "graduated",
   Volume: "volume",
@@ -216,7 +226,7 @@ export type GetPlanItemPrice = {
   /**
    * Tiered pricing configuration. Each tier's 'to' INCLUDES the included amount. Either 'tiers' or 'amount' is required.
    */
-  tiers?: Array<any | null> | undefined;
+  tiers?: Array<GetPlanTier> | undefined;
   tierBehavior?: GetPlanTierBehavior | undefined;
   /**
    * Billing interval for this price. For consumable features, should match reset.interval.
@@ -705,6 +715,45 @@ export function getPlanResetFromJSON(
 }
 
 /** @internal */
+export const GetPlanTo$inboundSchema: z.ZodMiniType<GetPlanTo, unknown> =
+  smartUnion([types.number(), types.string()]);
+
+export function getPlanToFromJSON(
+  jsonString: string,
+): SafeParseResult<GetPlanTo, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetPlanTo$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanTo' from JSON`,
+  );
+}
+
+/** @internal */
+export const GetPlanTier$inboundSchema: z.ZodMiniType<GetPlanTier, unknown> = z
+  .pipe(
+    z.object({
+      to: smartUnion([types.number(), types.string()]),
+      amount: types.number(),
+      flat_amount: types.optional(types.number()),
+    }),
+    z.transform((v) => {
+      return remap$(v, {
+        "flat_amount": "flatAmount",
+      });
+    }),
+  );
+
+export function getPlanTierFromJSON(
+  jsonString: string,
+): SafeParseResult<GetPlanTier, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => GetPlanTier$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'GetPlanTier' from JSON`,
+  );
+}
+
+/** @internal */
 export const GetPlanTierBehavior$inboundSchema: z.ZodMiniType<
   GetPlanTierBehavior,
   unknown
@@ -729,7 +778,7 @@ export const GetPlanItemPrice$inboundSchema: z.ZodMiniType<
 > = z.pipe(
   z.object({
     amount: types.optional(types.number()),
-    tiers: types.optional(z.array(types.nullable(z.any()))),
+    tiers: types.optional(z.array(z.lazy(() => GetPlanTier$inboundSchema))),
     tier_behavior: types.optional(GetPlanTierBehavior$inboundSchema),
     interval: GetPlanPriceItemInterval$inboundSchema,
     interval_count: types.optional(types.number()),

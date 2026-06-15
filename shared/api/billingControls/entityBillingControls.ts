@@ -1,11 +1,37 @@
 import { z } from "zod/v4";
+import { DbSpendLimitSchema } from "../../models/cusModels/billingControls/spendLimit.js";
+import { DbUsageLimitSchema } from "../../models/cusModels/billingControls/usageLimit.js";
 import { ApiOverageAllowedSchema } from "./overageAllowed.js";
 import { ApiSpendLimitSchema } from "./spendLimit.js";
 import { ApiUsageAlertSchema } from "./usageAlert.js";
+import { ApiUsageLimitSchema } from "./usageLimit.js";
 
 export const ApiEntityBillingControlsSchema = z.object({
 	spend_limits: z.array(ApiSpendLimitSchema).optional().meta({
-		description: "List of overage spend limits per feature.",
+		description:
+			"List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit).",
+	}),
+	usage_limits: z.array(ApiUsageLimitSchema).optional().meta({
+		description:
+			"List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.",
+	}),
+	usage_alerts: z.array(ApiUsageAlertSchema).optional().meta({
+		description: "List of usage alert configurations per feature.",
+	}),
+	overage_allowed: z.array(ApiOverageAllowedSchema).optional().meta({
+		description:
+			"List of overage allowed controls per feature. When enabled, usage can exceed balance.",
+	}),
+});
+
+const ApiEntityBillingControlsParamsBaseSchema = z.object({
+	spend_limits: z.array(DbSpendLimitSchema).optional().meta({
+		description:
+			"List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit).",
+	}),
+	usage_limits: z.array(DbUsageLimitSchema).optional().meta({
+		description:
+			"List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.",
 	}),
 	usage_alerts: z.array(ApiUsageAlertSchema).optional().meta({
 		description: "List of usage alert configurations per feature.",
@@ -17,7 +43,7 @@ export const ApiEntityBillingControlsSchema = z.object({
 });
 
 export const ApiEntityBillingControlsParamsSchema =
-	ApiEntityBillingControlsSchema.check((ctx) => {
+	ApiEntityBillingControlsParamsBaseSchema.check((ctx) => {
 		const billingControls = ctx.value;
 		const spendLimitFeatureIds = new Set<string>();
 
@@ -39,6 +65,24 @@ export const ApiEntityBillingControlsParamsSchema =
 			}
 
 			spendLimitFeatureIds.add(spendLimit.feature_id);
+		}
+
+		const usageLimitFeatureIds = new Set<string>();
+
+		for (const [index, usageLimit] of (
+			billingControls.usage_limits ?? []
+		).entries()) {
+			if (usageLimitFeatureIds.has(usageLimit.feature_id)) {
+				ctx.issues.push({
+					code: "custom",
+					message: "Only one usage limit entry is allowed per feature_id",
+					input: usageLimit.feature_id,
+					path: ["usage_limits", index, "feature_id"],
+				});
+				return;
+			}
+
+			usageLimitFeatureIds.add(usageLimit.feature_id);
 		}
 
 		const overageAllowedFeatureIds = new Set<string>();

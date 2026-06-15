@@ -1,0 +1,78 @@
+---
+title: "Track Token Usage"
+openapi: "openapi POST /v1/balances.track_tokens"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+<Note>
+  Track AI token usage against a customer's AI credit system balance. Converts token counts to a dollar cost using [Models.dev](https://models.dev) pricing and your configured markup, then deducts from the customer's credit balance.
+</Note>
+
+The `model_id` must use `provider/model` format, matching the provider and model keys from [Models.dev](https://models.dev). For providers with nested model paths (like OpenRouter), include the full path: `openrouter/anthropic/claude-opus-4.6`. The first path segment is the provider key used for `providerMarkups` lookup.
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript Anthropic
+await autumn.balances.trackTokens({
+  customerId: "cus_123",
+  modelId: "anthropic/claude-opus-4-6",
+  inputTokens: 1000,
+  outputTokens: 500
+});
+```
+
+```typescript With cache + reasoning
+await autumn.balances.trackTokens({
+  customerId: "cus_123",
+  modelId: "anthropic/claude-opus-4-6",
+  inputTokens: 800,        // excludes the cached tokens below
+  outputTokens: 350,       // excludes the reasoning tokens below
+  cacheReadTokens: 1000,
+  cacheWriteTokens: 200,
+  reasoningTokens: 150
+});
+```
+
+```typescript OpenRouter (nested path)
+await autumn.balances.trackTokens({
+  customerId: "cus_123",
+  modelId: "openrouter/anthropic/claude-opus-4-6",
+  inputTokens: 2000,
+  outputTokens: 1000
+});
+```
+
+```typescript With explicit feature
+await autumn.balances.trackTokens({
+  customerId: "cus_123",
+  featureId: "ai_credits",
+  modelId: "anthropic/claude-haiku-4-5",
+  inputTokens: 2000,
+  outputTokens: 1000
+});
+```
+
+</CodeGroup>
+
+### Token Pools
+
+Each token parameter is an exclusive pool — no token should be counted in more than one. `input_tokens` is non-cached text input only (cached tokens go in `cache_read_tokens` / `cache_write_tokens`), and `output_tokens` is text output only (reasoning tokens go in `reasoning_tokens`, audio in `audio_input_tokens` / `audio_output_tokens`). Each pool is billed at the model's published rate for that pool, falling back to the text input/output rate when the model has none.
+
+<Warning>
+  If you pass a provider's raw totals (e.g. OpenAI's `prompt_tokens` and `completion_tokens`), subtract the cache and reasoning counts first — otherwise those tokens are billed twice. The `@useautumn/gateway` wrappers ([AI SDK](/documentation/external-providers/ai-sdk), [OpenRouter](/documentation/external-providers/openrouter)) do this normalization for you.
+</Warning>
+
+### Markup Resolution
+
+Markups are optional — the credit system's default markup applies unless overridden per provider or per model. With no markups set, the Models.dev base cost is charged as-is. A markup of `-100` makes the model free — the usage event is still recorded, but nothing is deducted. See [AI Credit Systems](/documentation/modelling-pricing/credit-systems#ai-credit-systems) for configuration.
+
+The recorded event's `properties` include the full pricing breakdown: `cost`, `base_cost`, `markup`, `markup_source` (`model`, `provider`, or `default`), `tier_applied` (whether large-context tier pricing applied), and the per-pool `rates` used.
+
+<Tip>
+  `feature_id` is auto-detected when the customer has exactly one AI credit system. The request fails if the customer has none, or has more than one and `feature_id` is omitted.
+</Tip>

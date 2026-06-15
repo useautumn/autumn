@@ -1,19 +1,23 @@
 import type { AppEnv } from "@autumn/shared";
 import { Actions, Button, Card, CardText, Divider, Field, Fields } from "chat";
-import { toolLabel } from "../agent/toolPolicy.js";
+import { toolLabel } from "../agent/tools/toolPolicy.js";
 
 const formatPreview = (preview: unknown) =>
-	typeof preview === "string"
-		? preview
-		: "";
+	typeof preview === "string" ? preview : "";
 
 const getRequest = (args?: Record<string, unknown>) =>
-	(args?.request && typeof args.request === "object"
-		? args.request
-		: args) as Record<string, unknown> | undefined;
+	(args?.request && typeof args.request === "object" ? args.request : args) as
+		| Record<string, unknown>
+		| undefined;
 
 const getFieldValue = (value: unknown) =>
-	typeof value === "string" || typeof value === "number" ? String(value) : null;
+	typeof value === "string" || typeof value === "number"
+		? String(value)
+		: typeof value === "boolean"
+			? value
+				? "Yes"
+				: "No"
+			: null;
 
 const getRecord = (value: unknown) =>
 	value && typeof value === "object" ? (value as Record<string, unknown>) : {};
@@ -24,6 +28,32 @@ const formatPrice = (request: Record<string, unknown>) => {
 	const amount = getFieldValue(price.amount);
 	const interval = getFieldValue(price.interval);
 	return amount ? `$${amount}${interval ? `/${interval}` : ""}` : null;
+};
+
+const formatInvoiceMode = (value: unknown) => {
+	if (typeof value === "boolean") return value ? "enabled" : "disabled";
+	const invoiceMode = getRecord(value);
+	if (!Object.keys(invoiceMode).length) return null;
+
+	return [
+		invoiceMode.enabled === true
+			? "enabled"
+			: invoiceMode.enabled === false
+				? "disabled"
+				: null,
+		invoiceMode.finalize === false
+			? "draft invoice"
+			: invoiceMode.finalize === true
+				? "finalize invoice"
+				: null,
+		invoiceMode.enable_plan_immediately === true
+			? "enable immediately"
+			: invoiceMode.enable_plan_immediately === false
+				? "access waits"
+				: null,
+	]
+		.filter((part): part is string => Boolean(part))
+		.join(", ");
 };
 
 const envLabel = (env?: AppEnv) =>
@@ -59,12 +89,15 @@ const requestFields = ({
 			["Entity", request.entity_id],
 			["Subscription", request.subscription_id],
 			["Price", formatPrice(request)],
-			["Invoice mode", request.invoice_mode],
+			["Enable immediately", request.enable_plan_immediately],
+			["Invoice mode", formatInvoiceMode(request.invoice_mode)],
 			["Proration", request.proration_behavior],
 			["Redirect", request.redirect_mode],
 		].flatMap(([label, value]) => {
 			const fieldValue = getFieldValue(value);
-			return fieldValue ? [Field({ label: String(label), value: fieldValue })] : [];
+			return fieldValue
+				? [Field({ label: String(label), value: fieldValue })]
+				: [];
 		}),
 	].slice(0, 8);
 };
@@ -87,7 +120,7 @@ const previewLines = (preview: unknown) =>
 		.filter(Boolean)
 		.filter(
 			(line) =>
-				!/^(i('|’)ll|let me|here('|’)s|would you like|shall i|tool:|[\{\}\"])/i.test(
+				!/^(i('|’)ll|let me|here('|’)s|would you like|shall i|tool:|[{}"])/i.test(
 					line,
 				),
 		)
@@ -100,7 +133,8 @@ const resultLines = (result: unknown) => {
 
 	const body = result as Record<string, unknown>;
 	const resultBody = getRecord(body.result);
-	const nested = resultBody.message || resultBody.status ? resultBody : getRecord(body.data);
+	const nested =
+		resultBody.message || resultBody.status ? resultBody : getRecord(body.data);
 	const value = (key: string) => body[key] ?? nested[key];
 	const message = value("message");
 	const status = value("status");
@@ -145,36 +179,35 @@ export const approvalCard = ({
 	toolName: string;
 	toolArgs?: Record<string, unknown>;
 	preview?: unknown;
-}) =>
-	{
-		const fields = requestFields({ env, toolName, toolArgs });
-		const lines = preview ? previewLines(preview) : [];
+}) => {
+	const fields = requestFields({ env, toolName, toolArgs });
+	const lines = preview ? previewLines(preview) : [];
 
-		return Card({
-			title: `${toolLabel(toolName)}?`,
-			subtitle: "Review the preview before this runs",
-			children: [
-				...(fields.length ? [Fields(fields)] : []),
-				...(lines.length
-					? [Divider(), CardText(lines.map((line) => `• ${line}`).join("\n"))]
-					: []),
-				Actions([
-					Button({
-						id: "approve_billing_action",
-						label: "Approve",
-						style: "primary",
-						value: id,
-					}),
-					Button({
-						id: "cancel_billing_action",
-						label: "Cancel",
-						style: "danger",
-						value: id,
-					}),
-				]),
-			],
-		});
-	};
+	return Card({
+		title: `${toolLabel(toolName)}?`,
+		subtitle: "Review the preview before this runs",
+		children: [
+			...(fields.length ? [Fields(fields)] : []),
+			...(lines.length
+				? [Divider(), CardText(lines.map((line) => `• ${line}`).join("\n"))]
+				: []),
+			Actions([
+				Button({
+					id: "approve_billing_action",
+					label: "Approve",
+					style: "primary",
+					value: id,
+				}),
+				Button({
+					id: "cancel_billing_action",
+					label: "Cancel",
+					style: "danger",
+					value: id,
+				}),
+			]),
+		],
+	});
+};
 
 export const approvalStatusCard = ({
 	env,
@@ -213,7 +246,9 @@ export const approvalStatusCard = ({
 			...(lines.length
 				? [
 						Divider(),
-						CardText(lines.map((line) => `• ${cleanPreviewLine(line)}`).join("\n")),
+						CardText(
+							lines.map((line) => `• ${cleanPreviewLine(line)}`).join("\n"),
+						),
 					]
 				: []),
 		],

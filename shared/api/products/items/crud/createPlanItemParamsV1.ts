@@ -70,9 +70,9 @@ export const CreatePlanItemParamsV1Schema = z
 					description:
 						"'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.",
 				}),
-				max_purchase: z.number().optional().meta({
+				max_purchase: z.number().nullish().meta({
 					description:
-						"Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.",
+						"Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.",
 				}),
 			})
 			.optional()
@@ -148,6 +148,17 @@ export const CreatePlanItemParamsV1Schema = z
 		// At a minimum, if price is present, at least amount OR tiers must be defined, and not both
 		if (ctx.value.price) {
 			const { amount, tiers } = ctx.value.price;
+
+			if (
+				ctx.value.proration &&
+				ctx.value.price.billing_method === BillingMethod.UsageBased
+			) {
+				ctx.issues.push({
+					code: "custom",
+					message: "proration is only supported for prepaid features.",
+					input: ctx.value.proration,
+				});
+			}
 
 			const hasAmount = typeof amount === "number";
 			const hasTiers = Array.isArray(tiers) && tiers.length > 0;

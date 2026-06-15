@@ -2,7 +2,6 @@ import {
 	BillingVersion,
 	type FullCusProduct,
 	type FullCustomer,
-	hasCustomItems,
 	orgDisableStripeWrites,
 	type UpdateSubscriptionBillingContext,
 	UpdateSubscriptionIntent,
@@ -106,6 +105,7 @@ export const setupUpdatePlanProductContext = async ({
 		fullCustomer: productFullCustomer,
 		params,
 		reusePricesAndEntitlements,
+		resetToCatalogVersion: typeof preparedOp.version === "number",
 	});
 
 	const operationBillingContext = await setupMigrationOperationBillingContext({
@@ -154,7 +154,7 @@ export const setupUpdatePlanProductContext = async ({
 		customPrices,
 		customEnts,
 		trialContext: operationBillingContext.trialContext,
-		isCustom: hasCustomItems(params.customize),
+		isCustom: targetCustomerProduct.is_custom,
 		billingVersion: BillingVersion.V2,
 		actionSource: "migration",
 		skipBillingChanges,

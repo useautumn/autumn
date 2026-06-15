@@ -93,6 +93,7 @@ const buildCustomer = ({
 	send_email_receipts: false,
 	auto_topups: null,
 	spend_limits: null,
+	usage_limits: null,
 	usage_alerts: null,
 	overage_allowed: null,
 });

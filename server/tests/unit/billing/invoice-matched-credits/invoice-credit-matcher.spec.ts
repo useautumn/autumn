@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { BillingContext, DbInvoiceLineItem } from "@autumn/shared";
+import type { BillingContext, DbInvoiceLineItem, LineItem } from "@autumn/shared";
 import { contexts } from "@tests/utils/fixtures/db/contexts";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
 import { prices } from "@tests/utils/fixtures/db/prices";
@@ -266,6 +266,28 @@ describe(chalk.yellowBright("invoiceCreditFromStoredLineItems"), () => {
 		expect(result.resolvedPriceIds).toEqual(["price_pro", "price_addon"]);
 		expect(result.lineItems).toHaveLength(2);
 	});
+
+	test("matches charge rows that start exactly at the current timestamp", () => {
+		const { ctx, customerProduct, billingContext } = buildMultiPriceContext({
+			storedChargeLineItems: [
+				makeChargeRow({
+					id: "li_charge_boundary",
+					price_id: "price_pro",
+					effective_period_start: MID_CYCLE,
+					effective_period_end: PERIOD_END,
+				}),
+			],
+		});
+
+		const result = invoiceCreditFromStoredLineItems({
+			ctx,
+			customerProduct,
+			billingContext,
+		});
+
+		expect(result.resolvedPriceIds).toEqual(["price_pro"]);
+		expect(result.lineItems).toHaveLength(1);
+	});
 });
 
 describe(chalk.yellowBright("getRefundLineItemsForPrice"), () => {
@@ -313,5 +335,49 @@ describe(chalk.yellowBright("getRefundLineItemsForPrice"), () => {
 			expect(lineItem.context.price.id).toBe("price_pro");
 			expect(lineItem.amount).toBeLessThan(0);
 		}
+	});
+
+	test("keeps refunds for deferred stored charges deferred", () => {
+		const { ctx, customerProduct, billingContext } = buildSinglePriceContext({
+			storedChargeLineItems: [
+				makeChargeRow({ id: "li_charge_deferred", invoice_id: null }),
+			],
+		});
+
+		const result = getRefundLineItemsForPrice({
+			ctx,
+			customerProduct,
+			billingContext,
+			priceId: "price_pro",
+			catalogFallback: undefined,
+		});
+
+		expect(result).toHaveLength(1);
+		expect(result[0].chargeImmediately).toBe(false);
+	});
+
+	test("uses the explicit fallback when no stored credit matches the price", () => {
+		const { ctx, customerProduct, billingContext } = buildSinglePriceContext({
+			storedChargeLineItems: [],
+		});
+		const price = customerProduct.customer_prices[0].price;
+		const catalogFallback = {
+			id: "invoice_li_explicit_fallback",
+			amount: -100,
+			amountAfterDiscounts: -100,
+			context: { price },
+		} as LineItem;
+
+		const result = getRefundLineItemsForPrice({
+			ctx,
+			customerProduct,
+			billingContext,
+			priceId: price.id,
+			catalogFallback,
+		});
+
+		expect(result).toHaveLength(1);
+		expect(result[0].id).toBe(catalogFallback.id);
+		expect(result[0].amountAfterDiscounts).toBe(-100);
 	});
 });

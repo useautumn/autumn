@@ -29,6 +29,8 @@ export type SheetType =
 	| "billing-auto-topup-edit"
 	| "billing-spend-limit-add"
 	| "billing-spend-limit-edit"
+	| "billing-usage-limit-add"
+	| "billing-usage-limit-edit"
 	| "billing-usage-alert-add"
 	| "billing-usage-alert-edit"
 	| "billing-overage-allowed-add"
@@ -60,6 +62,7 @@ interface SheetState {
 		data?: Record<string, unknown> | null;
 	}) => void;
 	setInitialItem: (item: ProductItem | null) => void;
+	updateItemId: (itemId: string) => void;
 	closeSheet: () => void;
 	reset: () => void;
 }
@@ -89,6 +92,9 @@ export const useSheetStore = create<SheetState>((set) => ({
 
 	// Set the initial item state for change detection
 	setInitialItem: (item) => set({ initialItem: item }),
+
+	// Update just the itemId without clearing other state
+	updateItemId: (itemId) => set({ itemId }),
 
 	// Close the sheet
 	closeSheet: () =>

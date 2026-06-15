@@ -3,6 +3,7 @@ import { withRedisFailOpen } from "@/external/redis/utils/withRedisFailOpen.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import type { CheckData } from "@/internal/api/check/checkTypes/CheckData.js";
 import { getCheckFailOpenFallback } from "@/internal/api/check/checkUtils/getCheckFailOpenFallback.js";
+import { isFullSubjectGateRejection } from "@/internal/customers/repos/getFullSubject/getFullSubjectGate.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
 import { runCheckLegacyFlow } from "./runCheckLegacyFlow.js";
@@ -18,6 +19,18 @@ export const runCheckWithRollout = async ({
 	body: ParsedCheckParams;
 	requiredBalance: number;
 }): Promise<RunCheckResult<CheckData | CheckDataV2>> => {
+	if (ctx.orgRateLimitDegraded) {
+		return {
+			checkData: null,
+			response: getCheckFailOpenFallback({
+				ctx,
+				body,
+				requiredBalance,
+				error: new Error("org aggregate rate cap exceeded"),
+			}) as Record<string, unknown>,
+		};
+	}
+
 	if (!isFullSubjectRolloutEnabled({ ctx })) {
 		return runCheckLegacyFlow({ ctx, body, requiredBalance });
 	}
@@ -25,6 +38,7 @@ export const runCheckWithRollout = async ({
 	return withRedisFailOpen<RunCheckResult<CheckData | CheckDataV2>>({
 		source: "runCheckWithRollout",
 		run: () => runCheckV2({ ctx, body, requiredBalance }),
+		alsoFailOpen: isFullSubjectGateRejection,
 		fallback: (error) => ({
 			checkData: null,
 			response: getCheckFailOpenFallback({

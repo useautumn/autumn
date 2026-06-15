@@ -23,6 +23,8 @@ SQL >
         formatDateTime(hour, '%F %T') as period,
         {% elif String(bin_size, 'day') == 'month' %}
         formatDateTime(toStartOfMonth(hour, {{ String(timezone, 'UTC') }}), '%F %T') as period,
+        {% elif String(bin_size, 'day') == 'week' %}
+        formatDateTime(toStartOfWeek(hour, 1, {{ String(timezone, 'UTC') }}), '%F %T') as period,
         {% else %}
         formatDateTime(toStartOfDay(hour, {{ String(timezone, 'UTC') }}), '%F %T') as period,
         {% end %}
@@ -41,7 +43,7 @@ SQL >
         sum(total_value) as total_value
     FROM
         {% if use_no_props %}
-        events_hourly_no_properties_two_mv
+        events_customer_hourly_mv
         {% elif use_property_rollup %}
         events_property_mv
         {% else %}

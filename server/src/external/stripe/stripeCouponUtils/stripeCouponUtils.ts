@@ -225,6 +225,9 @@ export const createStripeCoupon = async ({
 				coupon: stripeCoupon.id,
 			},
 			code: promoCode.code,
+			...(promoCode.first_time_transaction
+				? { restrictions: { first_time_transaction: true } }
+				: {}),
 		});
 	}
 };

@@ -211,15 +211,16 @@ export type ListEntitiesPurchase = {
 };
 
 /**
- * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
 export const ListEntitiesType = {
   Boolean: "boolean",
   Metered: "metered",
   CreditSystem: "credit_system",
+  AiCreditSystem: "ai_credit_system",
 } as const;
 /**
- * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+ * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
  */
 export type ListEntitiesType = OpenEnum<typeof ListEntitiesType>;
 
@@ -232,6 +233,16 @@ export type ListEntitiesCreditSchema = {
    * Credits consumed per unit of the metered feature.
    */
   creditCost: number;
+};
+
+export type ListEntitiesModelMarkups = {
+  markup?: number | undefined;
+  inputCost?: number | undefined;
+  outputCost?: number | undefined;
+};
+
+export type ListEntitiesProviderMarkups = {
+  markup: number;
 };
 
 /**
@@ -261,7 +272,7 @@ export type ListEntitiesFeature = {
    */
   name: string;
   /**
-   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools.
+   * Feature type: 'boolean' for on/off access, 'metered' for usage-tracked features, 'credit_system' for unified credit pools, 'ai_credit_system' for model-based token pricing.
    */
   type: ListEntitiesType;
   /**
@@ -276,6 +287,21 @@ export type ListEntitiesFeature = {
    * For credit_system features: maps metered features to their credit costs.
    */
   creditSchema?: Array<ListEntitiesCreditSchema> | undefined;
+  /**
+   * Per-model markup overrides for AI credit systems.
+   */
+  modelMarkups?: { [k: string]: ListEntitiesModelMarkups } | null | undefined;
+  /**
+   * Default percentage markup for AI credit systems. Use -100 to make usage free.
+   */
+  defaultMarkup?: number | undefined;
+  /**
+   * Per-provider default markup percentages for AI credit systems.
+   */
+  providerMarkups?:
+    | { [k: string]: ListEntitiesProviderMarkups }
+    | null
+    | undefined;
   /**
    * Display names for the feature in billing UI and customer-facing components.
    */
@@ -315,13 +341,46 @@ export type ListEntitiesSpendLimit = {
    */
   featureId?: string | undefined;
   /**
-   * Whether this spend limit is enabled.
+   * Whether the overage spend limit is enabled.
    */
   enabled: boolean;
   /**
    * Maximum allowed overage spend for the target feature.
    */
   overageLimit?: number | undefined;
+};
+
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export const ListEntitiesInterval = {
+  Day: "day",
+  Week: "week",
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * Interval for the cap, aligned to the customer's billing cycle.
+ */
+export type ListEntitiesInterval = OpenEnum<typeof ListEntitiesInterval>;
+
+export type ListEntitiesUsageLimit = {
+  /**
+   * The feature this usage limit applies to.
+   */
+  featureId: string;
+  /**
+   * Maximum units allowed per interval.
+   */
+  limit: number;
+  /**
+   * Interval for the cap, aligned to the customer's billing cycle.
+   */
+  interval: ListEntitiesInterval;
+  /**
+   * Current usage already consumed in the active interval. Response-only; not stored on billing controls.
+   */
+  usage?: number | undefined;
 };
 
 /**
@@ -379,9 +438,13 @@ export type ListEntitiesOverageAllowed = {
  */
 export type ListEntitiesBillingControls = {
   /**
-   * List of overage spend limits per feature.
+   * List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit).
    */
   spendLimits?: Array<ListEntitiesSpendLimit> | undefined;
+  /**
+   * List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.
+   */
+  usageLimits?: Array<ListEntitiesUsageLimit> | undefined;
   /**
    * List of usage alert configurations per feature.
    */
@@ -709,6 +772,52 @@ export function listEntitiesCreditSchemaFromJSON(
 }
 
 /** @internal */
+export const ListEntitiesModelMarkups$inboundSchema: z.ZodMiniType<
+  ListEntitiesModelMarkups,
+  unknown
+> = z.pipe(
+  z.object({
+    markup: types.optional(types.number()),
+    input_cost: types.optional(types.number()),
+    output_cost: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "input_cost": "inputCost",
+      "output_cost": "outputCost",
+    });
+  }),
+);
+
+export function listEntitiesModelMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<ListEntitiesModelMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListEntitiesModelMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListEntitiesModelMarkups' from JSON`,
+  );
+}
+
+/** @internal */
+export const ListEntitiesProviderMarkups$inboundSchema: z.ZodMiniType<
+  ListEntitiesProviderMarkups,
+  unknown
+> = z.object({
+  markup: types.number(),
+});
+
+export function listEntitiesProviderMarkupsFromJSON(
+  jsonString: string,
+): SafeParseResult<ListEntitiesProviderMarkups, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListEntitiesProviderMarkups$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListEntitiesProviderMarkups' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListEntitiesDisplay$inboundSchema: z.ZodMiniType<
   ListEntitiesDisplay,
   unknown
@@ -741,13 +850,27 @@ export const ListEntitiesFeature$inboundSchema: z.ZodMiniType<
     credit_schema: types.optional(
       z.array(z.lazy(() => ListEntitiesCreditSchema$inboundSchema)),
     ),
-    display: types.optional(z.lazy(() => ListEntitiesDisplay$inboundSchema)),
+    model_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => ListEntitiesModelMarkups$inboundSchema),
+    ))),
+    default_markup: types.optional(types.number()),
+    provider_markups: z.optional(z.nullable(z.record(
+      z.string(),
+      z.lazy(() => ListEntitiesProviderMarkups$inboundSchema),
+    ))),
+    display: types.optional(z.lazy(() =>
+      ListEntitiesDisplay$inboundSchema
+    )),
     archived: types.boolean(),
   }),
   z.transform((v) => {
     return remap$(v, {
       "event_names": "eventNames",
       "credit_schema": "creditSchema",
+      "model_markups": "modelMarkups",
+      "default_markup": "defaultMarkup",
+      "provider_markups": "providerMarkups",
     });
   }),
 );
@@ -822,6 +945,40 @@ export function listEntitiesSpendLimitFromJSON(
 }
 
 /** @internal */
+export const ListEntitiesInterval$inboundSchema: z.ZodMiniType<
+  ListEntitiesInterval,
+  unknown
+> = openEnums.inboundSchema(ListEntitiesInterval);
+
+/** @internal */
+export const ListEntitiesUsageLimit$inboundSchema: z.ZodMiniType<
+  ListEntitiesUsageLimit,
+  unknown
+> = z.pipe(
+  z.object({
+    feature_id: types.string(),
+    limit: types.number(),
+    interval: ListEntitiesInterval$inboundSchema,
+    usage: types.optional(types.number()),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      "feature_id": "featureId",
+    });
+  }),
+);
+
+export function listEntitiesUsageLimitFromJSON(
+  jsonString: string,
+): SafeParseResult<ListEntitiesUsageLimit, SDKValidationError> {
+  return safeParse(
+    jsonString,
+    (x) => ListEntitiesUsageLimit$inboundSchema.parse(JSON.parse(x)),
+    `Failed to parse 'ListEntitiesUsageLimit' from JSON`,
+  );
+}
+
+/** @internal */
 export const ListEntitiesThresholdType$inboundSchema: z.ZodMiniType<
   ListEntitiesThresholdType,
   unknown
@@ -892,6 +1049,9 @@ export const ListEntitiesBillingControls$inboundSchema: z.ZodMiniType<
     spend_limits: types.optional(
       z.array(z.lazy(() => ListEntitiesSpendLimit$inboundSchema)),
     ),
+    usage_limits: types.optional(
+      z.array(z.lazy(() => ListEntitiesUsageLimit$inboundSchema)),
+    ),
     usage_alerts: types.optional(
       z.array(z.lazy(() => ListEntitiesUsageAlert$inboundSchema)),
     ),
@@ -902,6 +1062,7 @@ export const ListEntitiesBillingControls$inboundSchema: z.ZodMiniType<
   z.transform((v) => {
     return remap$(v, {
       "spend_limits": "spendLimits",
+      "usage_limits": "usageLimits",
       "usage_alerts": "usageAlerts",
       "overage_allowed": "overageAllowed",
     });

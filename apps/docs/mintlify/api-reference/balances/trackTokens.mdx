@@ -1,0 +1,206 @@
+---
+title: "Track Token Usage"
+openapi: "openapi POST /v1/balances.track_tokens"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+<Note>
+  Track AI token usage against a customer's AI credit system balance. Converts token counts to a dollar cost using [Models.dev](https://models.dev) pricing and your configured markup, then deducts from the customer's credit balance.
+</Note>
+
+The `model_id` must use `provider/model` format, matching the provider and model keys from [Models.dev](https://models.dev). For providers with nested model paths (like OpenRouter), include the full path: `openrouter/anthropic/claude-opus-4.6`. The first path segment is the provider key used for provider-level markup lookup.
+
+### Common Use Cases
+
+<CodeGroup>
+
+```typescript Anthropic
+await autumn.balances.trackTokens({
+  customerId: "cus_123",
+  modelId: "anthropic/claude-opus-4-6",
+  inputTokens: 1000,
+  outputTokens: 500
+});
+```
+
+```typescript With cache + reasoning
+await autumn.balances.trackTokens({
+  customerId: "cus_123",
+  modelId: "anthropic/claude-opus-4-6",
+  inputTokens: 800,        // excludes the cached tokens below
+  outputTokens: 350,       // excludes the reasoning tokens below
+  cacheReadTokens: 1000,
+  cacheWriteTokens: 200,
+  reasoningTokens: 150
+});
+```
+
+```typescript OpenRouter (nested path)
+await autumn.balances.trackTokens({
+  customerId: "cus_123",
+  modelId: "openrouter/anthropic/claude-opus-4.6",
+  inputTokens: 2000,
+  outputTokens: 1000
+});
+```
+
+```typescript With explicit feature
+await autumn.balances.trackTokens({
+  customerId: "cus_123",
+  featureId: "ai_credits",
+  modelId: "anthropic/claude-haiku-4-5",
+  inputTokens: 2000,
+  outputTokens: 1000
+});
+```
+
+</CodeGroup>
+
+### Token Pools
+
+Each token parameter is an exclusive pool — no token should be counted in more than one. Each pool is billed at the model's published rate for that pool, falling back to the text input/output rate when the model has none.
+
+<Warning>
+  If you pass a provider's raw totals (e.g. OpenAI's `prompt_tokens` and `completion_tokens`), subtract the cache and reasoning counts first — otherwise those tokens are billed twice. The `@useautumn/gateway` wrappers ([AI SDK](/documentation/external-providers/ai-sdk), [OpenRouter](/documentation/external-providers/openrouter)) do this normalization for you.
+</Warning>
+
+### Markup Resolution
+
+Markups are optional — the credit system's default markup applies unless overridden per provider or per model. With no markups set, the Models.dev base cost is charged as-is. A markup of `-100` makes the model free — the usage event is still recorded, but nothing is deducted. See [AI Credit Systems](/documentation/modelling-pricing/credit-systems#ai-credit-systems) for configuration.
+
+<Tip>
+  `feature_id` is auto-detected when the customer has exactly one AI credit system. The request fails if the customer has none, or has more than one and `feature_id` is omitted.
+</Tip>
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required>
+  The ID of the customer.
+</DynamicParamField>
+
+<DynamicParamField body="model_id" type="string" required>
+  The AI model in `provider/model` format, matching keys from [Models.dev](https://models.dev) (e.g., `anthropic/claude-opus-4-6`, `openai/gpt-4o`, `openrouter/anthropic/claude-opus-4.6`).
+</DynamicParamField>
+
+<DynamicParamField body="input_tokens" type="number" required>
+  Number of non-cached text input tokens consumed. Exclusive of the cache and audio token pools.
+</DynamicParamField>
+
+<DynamicParamField body="output_tokens" type="number" required>
+  Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
+</DynamicParamField>
+
+<DynamicParamField body="cache_read_tokens" type="number">
+  Number of cached input tokens read, billed at the model's cache read rate.
+</DynamicParamField>
+
+<DynamicParamField body="cache_write_tokens" type="number">
+  Number of input tokens written to the cache, billed at the model's cache write rate.
+</DynamicParamField>
+
+<DynamicParamField body="reasoning_tokens" type="number">
+  Number of reasoning tokens generated, billed at the model's reasoning rate (falls back to the output rate).
+</DynamicParamField>
+
+<DynamicParamField body="audio_input_tokens" type="number">
+  Number of audio input tokens consumed, billed at the model's audio input rate (falls back to the input rate).
+</DynamicParamField>
+
+<DynamicParamField body="audio_output_tokens" type="number">
+  Number of audio output tokens generated, billed at the model's audio output rate (falls back to the output rate).
+</DynamicParamField>
+
+<DynamicParamField body="feature_id" type="string">
+  The ID of the AI credit system feature. If omitted, automatically detects the customer's AI credit system feature. Required when the customer has more than one.
+</DynamicParamField>
+
+<DynamicParamField body="entity_id" type="string">
+  The ID of the entity for entity-scoped balances.
+</DynamicParamField>
+
+<DynamicParamField body="properties" type="object">
+  Additional properties to attach to this usage event. The token counts and a pricing breakdown (`cost`, `base_cost`, `markup`, `markup_source`, `tier_applied`, `rates`) are automatically included.
+</DynamicParamField>
+
+### Response
+
+<DynamicResponseField name="customer_id" type="string">
+  The ID of the customer whose token usage was tracked.
+</DynamicResponseField>
+
+<DynamicResponseField name="value" type="number">
+  The dollar cost that was deducted from the customer's AI credit balance.
+</DynamicResponseField>
+
+<DynamicResponseField name="balance" type="object | null">
+  The updated balance for the AI credit system feature.
+  <Expandable title="properties">
+    <DynamicResponseField name="feature_id" type="string">
+      The feature ID this balance is for.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="granted" type="number">
+      Total balance granted (included + prepaid).
+    </DynamicResponseField>
+
+    <DynamicResponseField name="remaining" type="number">
+      Remaining balance available for use.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="usage" type="number">
+      Total usage consumed in the current period.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="unlimited" type="boolean">
+      Whether this feature has unlimited usage.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="overage_allowed" type="boolean">
+      Whether usage beyond the granted balance is allowed.
+    </DynamicResponseField>
+
+    <DynamicResponseField name="next_reset_at" type="number | null">
+      Timestamp when the balance will reset, or null for no reset.
+    </DynamicResponseField>
+
+  </Expandable>
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "customer_id": "cus_123",
+  "value": 0.06,
+  "balance": {
+    "feature_id": "ai_credits",
+    "granted": 10.00,
+    "remaining": 9.94,
+    "usage": 0.06,
+    "unlimited": false,
+    "overage_allowed": false,
+    "next_reset_at": 1773851121437,
+    "breakdown": [
+      {
+        "id": "cus_ent_abc123",
+        "plan_id": "pro_plan",
+        "included_grant": 10.00,
+        "prepaid_grant": 0,
+        "remaining": 9.94,
+        "usage": 0.06,
+        "unlimited": false,
+        "reset": {
+          "interval": "month",
+          "resets_at": 1773851121437
+        },
+        "price": null,
+        "expires_at": null
+      }
+    ]
+  }
+}
+```
+</ResponseExample>

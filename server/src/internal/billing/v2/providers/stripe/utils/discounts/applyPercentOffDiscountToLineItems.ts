@@ -56,7 +56,6 @@ export const applyPercentOffDiscountToLineItems = ({
 		const itemDiscount = new Decimal(discountableAmount)
 			.times(percentOff)
 			.dividedBy(100)
-			.round()
 			.toNumber();
 
 		if (itemDiscount === 0) return item;
@@ -77,9 +76,10 @@ export const applyPercentOffDiscountToLineItems = ({
 			0,
 		);
 
-		const description = item.context.discountable
-			? item.description // if discountable, stripe applies discount, don't need our own tag
-			: addDiscountTagToDescription({ description: item.description });
+		const description =
+			item.context.discountable || options.skipDescriptionTag
+				? item.description
+				: addDiscountTagToDescription({ description: item.description });
 
 		return {
 			...item,

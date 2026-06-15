@@ -1,135 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import type { PlanFilter } from "@autumn/shared";
 import {
 	customerIdToStrings,
-	groupsToPlanFilter,
 	planFilterToGroups,
+	ruleToStringMatcher,
 	stringsToCustomerId,
 } from "@/views/migrations/migration/filters/filterRowTypes";
-
-describe("planFilterToGroups -> groupsToPlanFilter roundtrip", () => {
-	const roundtrip = (input: PlanFilter): PlanFilter => {
-		const groups = planFilterToGroups(input);
-		return groupsToPlanFilter(groups);
-	};
-
-	test("empty filter", () => {
-		expect(roundtrip({})).toEqual({});
-	});
-
-	test("plan_id bare string", () => {
-		expect(roundtrip({ plan_id: "pro" })).toEqual({ plan_id: "pro" });
-	});
-
-	test("plan_id $in", () => {
-		const input = { plan_id: { $in: ["a", "b"] } };
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("plan_id $nin", () => {
-		const input = { plan_id: { $nin: ["x"] } };
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("plan_id $ne", () => {
-		const input = { plan_id: { $ne: "old" } };
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("plan_id $regex", () => {
-		const input = { plan_id: { $regex: "^pro" } };
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("plan_id $startsWith", () => {
-		const input = { plan_id: { $startsWith: "pro" } };
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("paid: true", () => {
-		expect(roundtrip({ paid: true })).toEqual({ paid: true });
-	});
-
-	test("paid: false", () => {
-		expect(roundtrip({ paid: false })).toEqual({ paid: false });
-	});
-
-	test("recurring: true", () => {
-		expect(roundtrip({ recurring: true })).toEqual({ recurring: true });
-	});
-
-	test("price: null (free plan)", () => {
-		expect(roundtrip({ price: null })).toEqual({ price: null });
-	});
-
-	test("price: { $ne: null } (paid plan)", () => {
-		expect(roundtrip({ price: { $ne: null } })).toEqual({
-			price: { $ne: null },
-		});
-	});
-
-	test("item with implicit $some (feature_id)", () => {
-		const input: PlanFilter = { item: { feature_id: "credits" } };
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("item with $every wrapper", () => {
-		const input: PlanFilter = {
-			item: { $every: { feature_id: "credits" } },
-		};
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("item with $none wrapper", () => {
-		const input: PlanFilter = {
-			item: { $none: { feature_id: "credits" } },
-		};
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("item unlimited boolean", () => {
-		const input: PlanFilter = { item: { unlimited: true } };
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("item price null (free item)", () => {
-		const input: PlanFilter = { item: { price: null } };
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("item price { $ne: null } (paid item)", () => {
-		const input: PlanFilter = { item: { price: { $ne: null } } };
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("item billing_method", () => {
-		const input: PlanFilter = {
-			item: { price: { billing_method: "prepaid" } },
-		};
-		const result = roundtrip(input);
-		expect(result.item).toBeDefined();
-		const price = (result.item as Record<string, unknown>).price as Record<string, unknown>;
-		expect(price.billing_method).toBe("prepaid");
-	});
-
-	test("$or groups", () => {
-		const input: PlanFilter = {
-			plan_id: "pro",
-			$or: [{ plan_id: "enterprise" }, { plan_id: "team" }],
-		};
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("combined filters", () => {
-		const input: PlanFilter = {
-			plan_id: "pro",
-			paid: true,
-			recurring: true,
-			item: { feature_id: "credits", unlimited: false },
-		};
-		expect(roundtrip(input)).toEqual(input);
-	});
-});
 
 describe("planFilterToGroups structure", () => {
 	test("empty filter produces one group with no rules", () => {
@@ -138,29 +13,179 @@ describe("planFilterToGroups structure", () => {
 		expect(groups[0].rules).toHaveLength(0);
 	});
 
-	test("$or produces multiple groups", () => {
+	test("$or of pure plan selections collapses to a single plan row", () => {
 		const groups = planFilterToGroups({
-			plan_id: "a",
-			$or: [{ plan_id: "b" }],
+			$or: [{ plan_id: "a" }, { plan_id: "b" }],
+		});
+		expect(groups).toEqual([
+			{ rules: [{ field: "plan_id", operator: "in", values: ["a", "b"] }] },
+		]);
+	});
+
+	test("$or of non-selection filters produces multiple groups", () => {
+		const groups = planFilterToGroups({
+			$or: [{ paid: true }, { recurring: true }],
 		});
 		expect(groups).toHaveLength(2);
 	});
+});
 
-	test("$every item mode produces item_mode rule", () => {
-		const groups = planFilterToGroups({
-			item: { $every: { feature_id: "x" } },
-		});
-		const modeRule = groups[0].rules.find((r) => r.field === "item_mode");
-		expect(modeRule).toBeDefined();
-		expect(modeRule!.values).toEqual(["every"]);
+describe("planFilterToGroups decodes matcher forms", () => {
+	test("bare plan_id string", () => {
+		expect(planFilterToGroups({ plan_id: "pro" })).toEqual([
+			{ rules: [{ field: "plan_id", operator: "is", values: ["pro"] }] },
+		]);
 	});
 
-	test("implicit $some does not produce item_mode rule", () => {
+	test("plan_id $in", () => {
+		expect(planFilterToGroups({ plan_id: { $in: ["a", "b"] } })).toEqual([
+			{ rules: [{ field: "plan_id", operator: "in", values: ["a", "b"] }] },
+		]);
+	});
+
+	test("plan_id $ne", () => {
+		expect(planFilterToGroups({ plan_id: { $ne: "old" } })).toEqual([
+			{ rules: [{ field: "plan_id", operator: "is_not", values: ["old"] }] },
+		]);
+	});
+
+	test("plan_id $nin", () => {
+		expect(planFilterToGroups({ plan_id: { $nin: ["x"] } })).toEqual([
+			{ rules: [{ field: "plan_id", operator: "not_in", values: ["x"] }] },
+		]);
+	});
+
+	test("plan_id $regex", () => {
+		expect(planFilterToGroups({ plan_id: { $regex: "^pro" } })).toEqual([
+			{ rules: [{ field: "plan_id", operator: "regex", values: ["^pro"] }] },
+		]);
+	});
+
+	test("plan_id $startsWith", () => {
+		expect(planFilterToGroups({ plan_id: { $startsWith: "pro" } })).toEqual([
+			{
+				rules: [{ field: "plan_id", operator: "starts_with", values: ["pro"] }],
+			},
+		]);
+	});
+
+	test("booleans decode to is rules", () => {
+		expect(planFilterToGroups({ paid: true })).toEqual([
+			{ rules: [{ field: "paid", operator: "is", values: ["true"] }] },
+		]);
+		expect(planFilterToGroups({ custom: false })).toEqual([
+			{ rules: [{ field: "custom", operator: "is", values: ["false"] }] },
+		]);
+	});
+
+	test("price null decodes to not_exists, $ne null to exists", () => {
+		expect(planFilterToGroups({ price: null })).toEqual([
+			{ rules: [{ field: "price", operator: "not_exists", values: [] }] },
+		]);
+		expect(planFilterToGroups({ price: { $ne: null } })).toEqual([
+			{ rules: [{ field: "price", operator: "exists", values: [] }] },
+		]);
+	});
+
+	test("item filters decode to item_* rules", () => {
+		expect(
+			planFilterToGroups({ item: { feature_id: "credits", unlimited: false } }),
+		).toEqual([
+			{
+				rules: [
+					{ field: "item_feature_id", operator: "is", values: ["credits"] },
+					{ field: "item_unlimited", operator: "is", values: ["false"] },
+				],
+			},
+		]);
+	});
+
+	test("combined filters share one group", () => {
 		const groups = planFilterToGroups({
-			item: { feature_id: "x" },
+			plan_id: { $regex: "^pro" },
+			paid: true,
+			recurring: true,
 		});
-		const modeRule = groups[0].rules.find((r) => r.field === "item_mode");
-		expect(modeRule).toBeUndefined();
+		expect(groups).toHaveLength(1);
+		expect(groups[0].rules.map((rule) => rule.field)).toEqual([
+			"plan_id",
+			"paid",
+			"recurring",
+		]);
+	});
+});
+
+describe("ruleToStringMatcher", () => {
+	test("is with one value returns a bare string", () => {
+		expect(
+			ruleToStringMatcher({ field: "plan_id", operator: "is", values: ["x"] }),
+		).toBe("x");
+	});
+
+	test("is with no values returns an empty string", () => {
+		expect(
+			ruleToStringMatcher({ field: "plan_id", operator: "is", values: [] }),
+		).toBe("");
+	});
+
+	test("is with multiple values widens to $in", () => {
+		expect(
+			ruleToStringMatcher({
+				field: "plan_id",
+				operator: "is",
+				values: ["a", "b"],
+			}),
+		).toEqual({ $in: ["a", "b"] });
+	});
+
+	test("is_not returns $ne", () => {
+		expect(
+			ruleToStringMatcher({
+				field: "plan_id",
+				operator: "is_not",
+				values: ["x"],
+			}),
+		).toEqual({ $ne: "x" });
+	});
+
+	test("in returns $in", () => {
+		expect(
+			ruleToStringMatcher({
+				field: "plan_id",
+				operator: "in",
+				values: ["a", "b"],
+			}),
+		).toEqual({ $in: ["a", "b"] });
+	});
+
+	test("not_in returns $nin", () => {
+		expect(
+			ruleToStringMatcher({
+				field: "plan_id",
+				operator: "not_in",
+				values: ["x"],
+			}),
+		).toEqual({ $nin: ["x"] });
+	});
+
+	test("regex returns $regex", () => {
+		expect(
+			ruleToStringMatcher({
+				field: "plan_id",
+				operator: "regex",
+				values: ["^pro"],
+			}),
+		).toEqual({ $regex: "^pro" });
+	});
+
+	test("starts_with returns $startsWith", () => {
+		expect(
+			ruleToStringMatcher({
+				field: "plan_id",
+				operator: "starts_with",
+				values: ["pro"],
+			}),
+		).toEqual({ $startsWith: "pro" });
 	});
 });
 
@@ -239,92 +264,5 @@ describe("customerIdToStrings -> stringsToCustomerId roundtrip", () => {
 
 	test("undefined roundtrips", () => {
 		expect(stringsToCustomerId(customerIdToStrings(undefined))).toBeUndefined();
-	});
-});
-
-describe("planFilterToGroups -> groupsToPlanFilter: version (NumberMatcher)", () => {
-	const roundtrip = (input: PlanFilter): PlanFilter => {
-		const groups = planFilterToGroups(input);
-		return groupsToPlanFilter(groups);
-	};
-
-	test("bare number roundtrips", () => {
-		expect(roundtrip({ version: 2 })).toEqual({ version: 2 });
-	});
-
-	test("explicit null roundtrips", () => {
-		// Regression: previously the UI dropped `version: null` because
-		// ruleToNumberMatcher returned undefined for an empty values array.
-		expect(roundtrip({ version: null })).toEqual({ version: null });
-	});
-
-	test("$eq number roundtrips (simplified to bare value)", () => {
-		expect(roundtrip({ version: { $eq: 3 } })).toEqual({ version: 3 });
-	});
-
-	test("$ne number roundtrips", () => {
-		const input = { version: { $ne: 1 } };
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("$in roundtrips", () => {
-		const input = { version: { $in: [1, 2, 3] } };
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("$nin roundtrips", () => {
-		const input = { version: { $nin: [4, 5] } };
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("$gte roundtrips", () => {
-		const input = { version: { $gte: 2 } };
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("$lt roundtrips", () => {
-		const input = { version: { $lt: 5 } };
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("$gte + $lte (range) preserves BOTH constraints", () => {
-		// Regression: previously emitted only the first operator, silently
-		// broadening "versions 2–4" to "versions ≥ 2".
-		const input = { version: { $gte: 2, $lte: 4 } };
-		expect(roundtrip(input)).toEqual(input);
-	});
-
-	test("$gt + $lt (open range) preserves BOTH constraints", () => {
-		const input = { version: { $gt: 1, $lt: 10 } };
-		expect(roundtrip(input)).toEqual(input);
-	});
-});
-
-describe("planFilterToGroups: version emits multiple rules for combined matchers", () => {
-	test("single operator → single rule", () => {
-		const groups = planFilterToGroups({ version: { $gte: 2 } });
-		const versionRules = groups[0].rules.filter((r) => r.field === "version");
-		expect(versionRules.length).toBe(1);
-		expect(versionRules[0]).toEqual({
-			field: "version",
-			operator: "gte",
-			values: ["2"],
-		});
-	});
-
-	test("$gte + $lte → two rules in the same group", () => {
-		const groups = planFilterToGroups({ version: { $gte: 2, $lte: 4 } });
-		const versionRules = groups[0].rules.filter((r) => r.field === "version");
-		expect(versionRules.length).toBe(2);
-		const operators = versionRules.map((r) => r.operator).sort();
-		expect(operators).toEqual(["gte", "lte"]);
-	});
-
-	test("null → single empty `is` rule", () => {
-		const groups = planFilterToGroups({ version: null });
-		const versionRules = groups[0].rules.filter((r) => r.field === "version");
-		expect(versionRules).toEqual([
-			{ field: "version", operator: "is", values: [] },
-		]);
 	});
 });

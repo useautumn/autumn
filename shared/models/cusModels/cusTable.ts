@@ -18,6 +18,7 @@ import type {
 	DbOverageAllowed,
 	DbSpendLimit,
 	DbUsageAlert,
+	DbUsageLimit,
 } from "./billingControls/customerBillingControls.js";
 
 export type CustomerConfig = {
@@ -48,6 +49,7 @@ export const customers = pgTable(
 		send_email_receipts: boolean("send_email_receipts").default(false),
 		auto_topups: jsonb().$type<AutoTopup[]>(),
 		spend_limits: jsonb().$type<DbSpendLimit[]>(),
+		usage_limits: jsonb().$type<DbUsageLimit[]>(),
 		usage_alerts: jsonb().$type<DbUsageAlert[]>(),
 		overage_allowed: jsonb().$type<DbOverageAllowed[]>(),
 		config: jsonb().$type<CustomerConfig>().default({}),

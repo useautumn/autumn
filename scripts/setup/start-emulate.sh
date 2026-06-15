@@ -8,13 +8,23 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SEED="$ROOT/emulate.config.yaml"
 LOG="$HOME/.autumn-emulate.log"
 PID_FILE="$HOME/.autumn-emulate.pid"
+PORTLESS_PORT_FILE="$HOME/.portless/proxy.port"
+EMULATE_URL="https://google.emulate.localhost"
+
+PORTLESS_PROXY_PORT="${PORTLESS_PORT:-}"
+if [[ -z "$PORTLESS_PROXY_PORT" && -f "$PORTLESS_PORT_FILE" ]]; then
+	PORTLESS_PROXY_PORT="$(cat "$PORTLESS_PORT_FILE" 2>/dev/null || true)"
+fi
+if [[ -n "$PORTLESS_PROXY_PORT" && "$PORTLESS_PROXY_PORT" != "443" ]]; then
+	EMULATE_URL="${EMULATE_URL}:${PORTLESS_PROXY_PORT}"
+fi
 
 reachable() {
-	curl -sf -o /dev/null --max-time 1 "https://google.emulate.localhost/.well-known/openid-configuration"
+	curl -sf -o /dev/null --max-time 1 "${EMULATE_URL}/.well-known/openid-configuration"
 }
 
 if reachable; then
-	echo "[emulate] already reachable at https://google.emulate.localhost"
+	echo "[emulate] already reachable at ${EMULATE_URL}"
 	exit 0
 fi
 
@@ -54,7 +64,7 @@ disown
 # Block briefly until the emulator is actually serving so callers can race.
 for _ in $(seq 1 30); do
 	if reachable; then
-		echo "[emulate] ready at https://google.emulate.localhost (pid $(cat "$PID_FILE"))"
+		echo "[emulate] ready at ${EMULATE_URL} (pid $(cat "$PID_FILE"))"
 		exit 0
 	fi
 	sleep 0.3

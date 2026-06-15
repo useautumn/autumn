@@ -10,7 +10,11 @@ import { sqlNow } from "../../db/utils.js";
 import type { AppEnv } from "../genModels/genEnums.js";
 import { organizations } from "../orgModels/orgTable.js";
 
-export type ChatProvider = "slack" | "discord";
+export type ChatProvider =
+	| "slack"
+	| "slack_admin"
+	| `slack_admin:${string}`
+	| "discord";
 
 export const chatInstallations = pgTable(
 	"chat_installations",

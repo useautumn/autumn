@@ -1,0 +1,114 @@
+---
+title: "OpenRouter"
+description: "Automatically track AI token usage with the OpenRouter SDK"
+---
+
+The `@useautumn/gateway` package integrates Autumn with the [OpenRouter SDK](https://openrouter.ai/docs), automatically tracking token usage for every `chat.send` call. No manual `trackTokens` calls needed.
+
+<Note>
+  Using OpenRouter through the Vercel AI SDK (`@openrouter/ai-sdk-provider`)? Use the [AI SDK wrapper](/documentation/external-providers/ai-sdk) with `providerId: "openrouter"` instead.
+</Note>
+
+## Setup
+
+#### 1. Install the package
+
+<CodeGroup>
+```bash npm
+npm install @useautumn/gateway
+```
+
+```bash pnpm
+pnpm add @useautumn/gateway
+```
+
+```bash yarn
+yarn add @useautumn/gateway
+```
+
+```bash bun
+bun add @useautumn/gateway
+```
+</CodeGroup>
+
+<Note>
+  Requires `autumn-js` and `@openrouter/sdk` as peer dependencies.
+</Note>
+
+#### 2. Wrap your client
+
+Use `withAutumn` to wrap your OpenRouter client. It intercepts `chat.send` calls, enables OpenRouter's [usage accounting](https://openrouter.ai/docs/use-cases/usage-accounting) on every request, reads the token usage from the response, and reports it to Autumn automatically.
+
+```typescript
+import { Autumn } from "autumn-js";
+import { OpenRouter } from "@openrouter/sdk";
+import { withAutumn } from "@useautumn/gateway/openrouter";
+
+const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
+const openRouter = new OpenRouter({ apiKey: process.env.OPENROUTER_API_KEY });
+
+const client = withAutumn({
+  autumn,
+  openRouter,
+  customerId: "user_123",
+});
+```
+
+#### 3. Use as normal
+
+The wrapped client works exactly like a regular OpenRouter client — streaming and non-streaming. Token usage is tracked in the background after each call.
+
+```typescript
+// Non-streaming — usage tracked automatically
+const result = await client.chat.send({
+  model: "openai/gpt-4o",
+  messages: [{ role: "user", content: "Explain quantum computing" }],
+});
+
+// Streaming — usage tracked when the stream finishes
+const stream = await client.chat.send({
+  model: "anthropic/claude-sonnet-4-5",
+  messages: [{ role: "user", content: "Write a short poem" }],
+  stream: true,
+});
+
+for await (const chunk of stream) {
+  process.stdout.write(chunk.choices[0]?.delta?.content ?? "");
+}
+```
+
+## Token pools
+
+The wrapper normalizes OpenRouter's usage accounting into the exclusive token pools that [trackTokens](/api-reference/balances/trackTokens) expects: text input (excluding cached and audio tokens), text output (excluding reasoning tokens), cache reads, cache writes, audio input, and reasoning tokens. Each pool is billed at the model's published rate.
+
+The model is reported to Autumn as `openrouter/<slug>` (e.g. `openrouter/openai/gpt-4o`), using the resolved model from the response — so router aliases like `openrouter/auto` bill against the model that actually served the request. Autumn prices usage with OpenRouter's rates from [Models.dev](https://models.dev), and OpenRouter's own reported cost is attached to each event as the `openrouter_cost` property for reconciliation.
+
+## Options
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `autumn` | `Autumn` | Yes | Your Autumn SDK client instance |
+| `openRouter` | `OpenRouter` | Yes | The OpenRouter SDK client to wrap |
+| `customerId` | `string` | Yes | The Autumn customer ID to attribute usage to |
+| `featureId` | `string` | No | Target a specific AI credit system feature. Auto-detected if you only have one |
+| `entityId` | `string` | No | Entity ID for entity-scoped balance tracking |
+| `properties` | `Record<string, unknown>` | No | Additional properties to attach to each usage event |
+
+## Manual tracking
+
+If you consume OpenRouter through a path the wrapper doesn't cover (e.g. `callModel`, or raw `fetch` against the REST API), use `trackOpenRouterUsage` directly with the response's usage object — it accepts both the SDK's camelCase models and the raw snake_case API shape:
+
+```typescript
+import { trackOpenRouterUsage } from "@useautumn/gateway/openrouter";
+
+await trackOpenRouterUsage({
+  autumn,
+  customerId: "user_123",
+  model: response.model, // e.g. "openai/gpt-4o"
+  usage: response.usage,
+});
+```
+
+<Tip>
+  Tracking failures are caught and logged to the console — they won't break your AI features. Check your server logs if usage isn't appearing in Autumn.
+</Tip>

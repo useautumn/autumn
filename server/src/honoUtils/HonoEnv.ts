@@ -28,6 +28,7 @@ export type RequestContext = {
 	features: Feature[];
 	user?: User;
 	userId?: string;
+	oauthResource?: string;
 	customerId?: string;
 	entityId?: string;
 
@@ -72,6 +73,10 @@ export type RequestContext = {
 
 	fullCustomer?: FullCustomer;
 	rolloutSnapshot?: RolloutSnapshot;
+
+	/** Org is over its aggregate rate cap — check/track flows skip the DB and
+	 *  serve their fail-open responses (allow / SQS queue) instead. */
+	orgRateLimitDegraded?: boolean;
 
 	testOptions?: {
 		skipCacheDeletion?: boolean;

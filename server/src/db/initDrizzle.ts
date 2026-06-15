@@ -8,6 +8,7 @@ import { instrumentDrizzleClient } from "@kubiks/otel-drizzle";
 import type { SQLWrapper } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import pg, { type PoolConfig } from "pg";
+import { logger } from "../external/logtail/logtailUtils.js";
 import { otelConfig } from "../utils/otel/otelConfig.js";
 import { attachPoolErrorHandlers, registerPool } from "./pgPoolMonitor.js";
 
@@ -97,22 +98,72 @@ export const initDrizzle = ({
 // Strict latency limits in prod; relaxed locally so dev pool warm-up doesn't kill tests.
 const isProd = process.env.NODE_ENV === "production";
 
+const poolMaxFromEnv = ({
+	envVar,
+	fallback,
+}: {
+	envVar: string;
+	fallback: number;
+}): number => {
+	const parsed = Number(process.env[envVar]);
+	return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
+};
+
+const PGBOUNCER_MAX_CLIENT_CONN = 7_600;
+const BUDGETED_FLEET_PROCESSES = 150;
+const BUDGETED_NON_SERVER_CONNECTIONS = 80;
+const POOL_BUDGET_HEADROOM = 0.85;
+
+const PROD_POOL_MAX = {
+	critical: 22,
+	general: 14,
+	replica: 6,
+};
+
+const criticalPoolMax = poolMaxFromEnv({
+	envVar: "CRITICAL_DB_POOL_MAX",
+	fallback: isProd ? PROD_POOL_MAX.critical : 10,
+});
+const generalPoolMax = poolMaxFromEnv({
+	envVar: "GENERAL_DB_POOL_MAX",
+	fallback: isProd ? PROD_POOL_MAX.general : 10,
+});
+const replicaPoolMax = poolMaxFromEnv({
+	envVar: "REPLICA_DB_POOL_MAX",
+	fallback: PROD_POOL_MAX.replica,
+});
+
+const budgetedFleetConnections =
+	BUDGETED_FLEET_PROCESSES *
+		(criticalPoolMax + generalPoolMax + replicaPoolMax) +
+	BUDGETED_NON_SERVER_CONNECTIONS;
+
+if (
+	budgetedFleetConnections >
+	PGBOUNCER_MAX_CLIENT_CONN * POOL_BUDGET_HEADROOM
+) {
+	logger.warn(
+		`[initDrizzle] pool budget (${budgetedFleetConnections}) exceeds ${POOL_BUDGET_HEADROOM} of max_client_conn (${PGBOUNCER_MAX_CLIENT_CONN}) — lower the pool maxes or raise the ceiling`,
+	);
+}
+
 export const { db: dbCritical, client: clientCritical } = initDrizzle({
 	name: "critical",
-	maxConnections: isProd ? 100 : 10,
+	maxConnections: criticalPoolMax,
 	connectTimeout: isProd ? 2 : 30,
 	databaseUrl: process.env.DATABASE_CRITICAL_URL,
 	poolConfig: {
 		application_name: "autumn-critical",
 		query_timeout: isProd ? 2_000 : 30_000,
-		// Keep 10 warm conns to avoid TLS-handshake stampedes on bursty traffic.
-		min: 10,
+		// Keep warm conns to avoid TLS-handshake stampedes on bursty traffic.
+		min: Math.min(10, criticalPoolMax),
 	},
 });
 
 // -- General pool: used by all other endpoints --
 export const { db: dbGeneral, client: clientGeneral } = initDrizzle({
 	name: "general",
+	maxConnections: generalPoolMax,
 	connectTimeout: isProd ? 5 : 30,
 });
 
@@ -122,7 +173,7 @@ const replicaResult = process.env.DATABASE_REPLICA_URL
 	? initDrizzle({
 			name: "replica",
 			replica: true,
-			maxConnections: 15,
+			maxConnections: replicaPoolMax,
 			connectTimeout: null,
 		})
 	: null;

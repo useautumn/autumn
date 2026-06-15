@@ -1,10 +1,8 @@
 import { UserIcon } from "@phosphor-icons/react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useCusSearchQueryV2 } from "@/views/customers/hooks/useCusSearchQuery";
 import { AddButton } from "../shared/AddButton";
 import { buildFeatureSuggestions } from "../shared/featureSuggestions";
-import { buildPlanSuggestions } from "../shared/planSuggestions";
 import { RemoveButton } from "../shared/RemoveButton";
 import type { ValuePickerOption } from "../shared/ValuePicker";
 import { FilterRow } from "./FilterRow";
@@ -16,21 +14,9 @@ import {
 	type FilterRule,
 } from "./filterRowTypes";
 
-const BILLING_METHOD_SUGGESTIONS: ValuePickerOption[] = [
-	{ value: "prepaid", label: "Prepaid" },
-	{ value: "usage_based", label: "Usage Based" },
-];
-
-const ITEM_MODE_SUGGESTIONS: ValuePickerOption[] = [
-	{ value: "some", label: "Any match (some)" },
-	{ value: "every", label: "All match (every)" },
-	{ value: "none", label: "None match (none)" },
-];
-
 function useSuggestionsForField(
 	field: string,
 ): ValuePickerOption[] | undefined {
-	const { products } = useProductsQuery();
 	const { features } = useFeaturesQuery();
 	const { customers } = useCusSearchQueryV2({
 		search: "",
@@ -51,12 +37,9 @@ function useSuggestionsForField(
 				};
 			});
 	}
-	if (field === "plan_id") return buildPlanSuggestions(products);
 	if (field === "item_feature_id") {
 		return buildFeatureSuggestions(features);
 	}
-	if (field === "item_billing_method") return BILLING_METHOD_SUGGESTIONS;
-	if (field === "item_mode") return ITEM_MODE_SUGGESTIONS;
 	return undefined;
 }
 
@@ -132,7 +115,7 @@ export function FilterGroup({
 				/>
 			))}
 			<AddButton
-				label={group.rules.length === 0 ? "Add condition" : "Add and condition"}
+				label={group.rules.length === 0 ? "Add condition" : "AND condition"}
 				onClick={addRule}
 				className="mt-1"
 			/>

@@ -206,6 +206,37 @@ const response = await client.track({ customerId: "cus_123", eventName: "ai_chat
 @param async - If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information. (optional)
 
 @returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.
+* [trackTokens](docs/sdks/autumn/README.md#tracktokens) - Records AI token usage for a customer and returns the updated AI credit balance.
+
+Use this after an LLM request when you have input and output token counts. Autumn converts token usage to a dollar amount using the configured model pricing and markup, then tracks that value against the customer's AI credit system.
+
+@example
+```typescript
+// Track one LLM response
+const response = await client.trackTokens({
+
+  customerId: "cus_123",
+  featureId: "ai_credits",
+  modelId: "anthropic/claude-sonnet-4-20250514",
+  inputTokens: 1000,
+  outputTokens: 500,
+});
+```
+
+@param customerId - The ID of the customer.
+@param entityId - The ID of the entity for entity-scoped balances. (optional)
+@param featureId - The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted — only required when a customer has multiple AI credit systems. (optional)
+@param modelId - The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+@param inputTokens - Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools.
+@param outputTokens - Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
+@param cacheReadTokens - Number of cached input tokens read. (optional)
+@param cacheWriteTokens - Number of input tokens written to the cache. (optional)
+@param audioInputTokens - Number of audio input tokens consumed. (optional)
+@param audioOutputTokens - Number of audio output tokens generated. (optional)
+@param reasoningTokens - Number of reasoning tokens generated. (optional)
+@param properties - Additional properties to attach to this usage event. (optional)
+
+@returns The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.
 * [batchTrack](docs/sdks/autumn/README.md#batchtrack) - Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
 
 ### [Balances](docs/sdks/balances/README.md)
@@ -274,7 +305,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1780584084429,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781793684429,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1781265695558,"plans":[{"planId":"trial_plan"}]},{"startsAt":1782475295558,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -635,7 +666,10 @@ const response = await client.features.create({ featureId: "advanced-analytics",
 @param type - The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system.
 @param consumable - Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. (optional)
 @param display - Singular and plural display names for the feature in your user interface. (optional)
-@param creditSchema - A schema that maps 'single_use' feature IDs to credit costs. Applicable only for 'credit_system' features. (optional)
+@param creditSchema - A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead. (optional)
+@param modelMarkups - Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration. (optional)
+@param defaultMarkup - Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free. (optional)
+@param providerMarkups - Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id. (optional)
 @param featureId - The ID of the feature to create.
 
 @returns The created feature object.
@@ -677,7 +711,10 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 @param type - The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system. (optional)
 @param consumable - Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. (optional)
 @param display - Singular and plural display names for the feature in your user interface. (optional)
-@param creditSchema - A schema that maps 'single_use' feature IDs to credit costs. Applicable only for 'credit_system' features. (optional)
+@param creditSchema - A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead. (optional)
+@param modelMarkups - Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration. (optional)
+@param defaultMarkup - Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free. (optional)
+@param providerMarkups - Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id. (optional)
 @param archived - Whether the feature is archived. Archived features are hidden from the dashboard. (optional)
 @param featureId - The ID of the feature to update.
 @param newFeatureId - The new ID of the feature. Feature ID can only be updated if it's not being used by any customers. (optional)
@@ -800,7 +837,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1780584084429,"plans":[{"planId":"trial_plan"}]},{"startsAt":1781793684429,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1781265695558,"plans":[{"planId":"trial_plan"}]},{"startsAt":1782475295558,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -1181,7 +1218,10 @@ const response = await client.features.create({ featureId: "advanced-analytics",
 @param type - The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system.
 @param consumable - Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. (optional)
 @param display - Singular and plural display names for the feature in your user interface. (optional)
-@param creditSchema - A schema that maps 'single_use' feature IDs to credit costs. Applicable only for 'credit_system' features. (optional)
+@param creditSchema - A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead. (optional)
+@param modelMarkups - Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration. (optional)
+@param defaultMarkup - Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free. (optional)
+@param providerMarkups - Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id. (optional)
 @param featureId - The ID of the feature to create.
 
 @returns The created feature object.
@@ -1236,7 +1276,10 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 @param type - The type of the feature. 'single_use' features are consumed, like API calls, tokens, or messages. 'continuous_use' features are allocated, like seats, workspaces, or projects. 'credit_system' features are schemas that unify multiple 'single_use' features into a single credit system. (optional)
 @param consumable - Whether this feature is consumable. A consumable feature is one that periodically resets and is consumed rather than allocated (like credits, API requests, etc.). Applicable only for 'metered' features. (optional)
 @param display - Singular and plural display names for the feature in your user interface. (optional)
-@param creditSchema - A schema that maps 'single_use' feature IDs to credit costs. Applicable only for 'credit_system' features. (optional)
+@param creditSchema - A schema that maps 'single_use' feature IDs to credit costs. For classic credit systems only — AI credit systems use model_markups instead. (optional)
+@param modelMarkups - Per-model markup overrides for AI credit systems. Maps model IDs to their markup configuration. (optional)
+@param defaultMarkup - Default percentage markup for this AI credit system. Used when no model or provider markup applies. Use -100 to make usage free. (optional)
+@param providerMarkups - Per-provider default markup percentages for AI credit systems. Provider keys match the first segment of model_id. (optional)
 @param archived - Whether the feature is archived. Archived features are hidden from the dashboard. (optional)
 @param featureId - The ID of the feature to update.
 @param newFeatureId - The new ID of the feature. Feature ID can only be updated if it's not being used by any customers. (optional)
@@ -1278,6 +1321,37 @@ const response = await client.track({ customerId: "cus_123", eventName: "ai_chat
 @param async - If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information. (optional)
 
 @returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.
+- [`trackTokens`](docs/sdks/autumn/README.md#tracktokens) - Records AI token usage for a customer and returns the updated AI credit balance.
+
+Use this after an LLM request when you have input and output token counts. Autumn converts token usage to a dollar amount using the configured model pricing and markup, then tracks that value against the customer's AI credit system.
+
+@example
+```typescript
+// Track one LLM response
+const response = await client.trackTokens({
+
+  customerId: "cus_123",
+  featureId: "ai_credits",
+  modelId: "anthropic/claude-sonnet-4-20250514",
+  inputTokens: 1000,
+  outputTokens: 500,
+});
+```
+
+@param customerId - The ID of the customer.
+@param entityId - The ID of the entity for entity-scoped balances. (optional)
+@param featureId - The ID of the AI credit system feature. Auto-detected from the customer's entitlements if omitted — only required when a customer has multiple AI credit systems. (optional)
+@param modelId - The AI model as '<provider>/<model>' (e.g. 'anthropic/claude-opus-4-8', 'openrouter/openai/gpt-4o'). The provider is the first path segment and must match a provider + model key in models.dev.
+@param inputTokens - Number of non-cached text input tokens consumed. Exclusive of cache and audio token pools.
+@param outputTokens - Number of text output tokens consumed. Exclusive of the reasoning and audio output pools.
+@param cacheReadTokens - Number of cached input tokens read. (optional)
+@param cacheWriteTokens - Number of input tokens written to the cache. (optional)
+@param audioInputTokens - Number of audio input tokens consumed. (optional)
+@param audioOutputTokens - Number of audio output tokens generated. (optional)
+@param reasoningTokens - Number of reasoning tokens generated. (optional)
+@param properties - Additional properties to attach to this usage event. (optional)
+
+@returns The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.
 
 </details>
 <!-- End Standalone functions [standalone-funcs] -->

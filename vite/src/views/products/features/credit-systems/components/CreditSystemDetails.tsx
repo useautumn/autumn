@@ -1,23 +1,17 @@
-import type { CreateFeature } from "@autumn/shared";
+import { useStore } from "@tanstack/react-form";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
-import { useAutoSlug } from "@/hooks/common/useAutoSlug";
+import { slugify } from "@/utils/formatUtils/formatTextUtils";
+import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
 
 interface CreditSystemDetailsProps {
-	creditSystem: CreateFeature;
-	setCreditSystem: (creditSystem: CreateFeature) => void;
+	form: CreditSystemFormInstance;
 }
 
-export function CreditSystemDetails({
-	creditSystem,
-	setCreditSystem,
-}: CreditSystemDetailsProps) {
-	const { setSource, setTarget } = useAutoSlug({
-		setState: setCreditSystem,
-		sourceKey: "name",
-		targetKey: "id",
-	});
+export function CreditSystemDetails({ form }: CreditSystemDetailsProps) {
+	const name = useStore(form.store, (s) => s.values.name);
+	const id = useStore(form.store, (s) => s.values.id);
 
 	return (
 		<SheetSection title="Credit Details">
@@ -26,16 +20,21 @@ export function CreditSystemDetails({
 					<FormLabel>Name</FormLabel>
 					<Input
 						placeholder="eg. Credit System"
-						value={creditSystem.name}
-						onChange={(e) => setSource(e.target.value)}
+						value={name}
+						onChange={(e) => {
+							form.setFieldValue("name", e.target.value);
+							if (!id || id === slugify(name)) {
+								form.setFieldValue("id", slugify(e.target.value));
+							}
+						}}
 					/>
 				</div>
 				<div>
 					<FormLabel>ID</FormLabel>
 					<Input
 						placeholder="fills automatically"
-						value={creditSystem.id}
-						onChange={(e) => setTarget(e.target.value)}
+						value={id}
+						onChange={(e) => form.setFieldValue("id", e.target.value)}
 					/>
 				</div>
 			</div>

@@ -2,6 +2,7 @@ import type { BillingContext, BillingPlan } from "@autumn/shared";
 import { type BillingPreviewResponse, orgToCurrency } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { computeNextCycleTaxPreview } from "./billingPlan/preview/tax/computeNextCycleTaxPreview";
 import { billingPlanToImmediatePreview } from "./billingPlan/toImmediatePreview/billingPlanToImmediatePreview";
 import { billingPlanToNextCyclePreview } from "./billingPlan/toNextCyclePreview/billingPlanToNextCyclePreview";
 import { billingPlanToChanges } from "./billingPlan/toPreviewChanges/billingPlanToChanges";
@@ -16,13 +17,40 @@ import { logBillingPreview } from "./logs/logBillingPreview";
  *    never goes negative. Leftover credit rolls to the next invoice in
  *    Stripe; we don't surface that here beyond the row tooltip on the FE.
  *
- * `next_cycle.total` is intentionally NOT adjusted — we don't compute
- * next-cycle tax (would require a forward-dated Stripe Tax calculation),
- * and the `subtotal`/`total` doc strings on `next_cycle` reflect that.
+ * `next_cycle.total` is adjusted separately via `applyNextCycleTaxPreview`
+ * (tax only — credits are consumed by the immediate invoice first).
  *
  * If `billingPlan.preview` is undefined (non-attach flows that skip the
  * enrichment step) the math is a no-op and `total` is unchanged.
  */
+// Tax-only next-cycle adjustment; skipped for non-preview flows (no
+// billingPlan.preview bag) so checkout recomputes stay unchanged.
+const applyNextCycleTaxPreview = async ({
+	ctx,
+	billingContext,
+	billingPlan,
+	nextCycle,
+}: {
+	ctx: AutumnContext;
+	billingContext: BillingContext;
+	billingPlan: BillingPlan;
+	nextCycle: BillingPreviewResponse["next_cycle"];
+}): Promise<BillingPreviewResponse["next_cycle"]> => {
+	if (!nextCycle || !billingPlan.preview) return nextCycle;
+
+	const tax = await computeNextCycleTaxPreview({
+		ctx,
+		billingContext,
+		netSubtotal: nextCycle.total,
+	});
+	if (!tax) return nextCycle;
+
+	return {
+		...nextCycle,
+		total: new Decimal(nextCycle.total).add(tax.total).toDP(2).toNumber(),
+	};
+};
+
 const applyPreviewAdjustmentsToTotal = ({
 	subtotal,
 	total,
@@ -70,10 +98,18 @@ export const billingPlanToPreviewResponse = async ({
 	const currency = orgToCurrency({ org: ctx.org });
 
 	// Get next cycle object
-	const { nextCycle, debug: nextCycleDebug } = billingPlanToNextCyclePreview({
+	const { nextCycle: rawNextCycle, debug: nextCycleDebug } =
+		billingPlanToNextCyclePreview({
+			ctx,
+			billingContext,
+			billingPlan,
+		});
+
+	const nextCycle = await applyNextCycleTaxPreview({
 		ctx,
 		billingContext,
 		billingPlan,
+		nextCycle: rawNextCycle,
 	});
 
 	logBillingPreview({

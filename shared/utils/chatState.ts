@@ -4,7 +4,10 @@ import { z } from "zod";
 import { AppEnv } from "../models/genModels/genEnums.js";
 
 const chatInstallStateSchema = z.strictObject({
-	provider: z.enum(["slack", "discord"]),
+	provider: z.union([
+		z.enum(["slack", "slack_admin", "discord"]),
+		z.string().regex(/^slack_admin:.+$/),
+	]),
 	orgId: z.string(),
 	userId: z.string(),
 	env: z.nativeEnum(AppEnv),

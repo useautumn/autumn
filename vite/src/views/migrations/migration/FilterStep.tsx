@@ -1,4 +1,4 @@
-import type { MigrationFilter } from "@autumn/shared";
+import type { CustomerFilter, MigrationFilter } from "@autumn/shared";
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/v2/buttons/Button";
 import { CustomerPreview, useCustomerCount } from "./filters/CustomerPreview";
@@ -7,6 +7,16 @@ import { type StepId, StepIndicator } from "./StepIndicator";
 import type { useMigrationEditorForm } from "./useMigrationEditorForm";
 
 type FormInstance = ReturnType<typeof useMigrationEditorForm>["form"];
+
+export function hasActiveFilter(filter: CustomerFilter): boolean {
+	if (filter.customer_id) return true;
+	// Multi-condition filters compose quantifiers at the customer level.
+	if (filter.$and?.length || filter.$or?.length) return true;
+	if (!filter.plan) return false;
+	const plan = filter.plan;
+	if (typeof plan !== "object") return false;
+	return Object.values(plan).some((v) => v !== undefined && v !== "");
+}
 
 export function FilterStep({
 	form,
@@ -21,8 +31,10 @@ export function FilterStep({
 	onStepChange: (step: StepId) => void;
 	onNext: () => void;
 }) {
-	const customerCount = useCustomerCount(filter.customer ?? {});
+	const customerFilter = filter.customer ?? {};
+	const customerCount = useCustomerCount(customerFilter);
 	const hasCustomers = customerCount !== null && customerCount > 0;
+	const showPreview = hasActiveFilter(customerFilter);
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -33,7 +45,7 @@ export function FilterStep({
 					onClick={onNext}
 					disabled={!hasCustomers}
 				>
-					{hasCustomers ? `Next (${customerCount})` : "Next"}
+					{hasCustomers ? `Next (${customerCount.toLocaleString()})` : "Next"}
 					<ArrowRightIcon size={14} />
 				</Button>
 			</StepIndicator>
@@ -41,7 +53,7 @@ export function FilterStep({
 				value={filter}
 				onChange={(v) => form.setFieldValue("filter", v)}
 			/>
-			<CustomerPreview filter={filter.customer ?? {}} />
+			{showPreview && <CustomerPreview filter={customerFilter} />}
 		</div>
 	);
 }

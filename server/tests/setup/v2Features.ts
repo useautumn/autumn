@@ -4,6 +4,7 @@ dotenv.config();
 
 import { AppEnv, FeatureUsageType } from "@autumn/shared";
 import {
+	constructAiCreditSystem,
 	constructBooleanFeature,
 	constructCreditSystem,
 	constructMeteredFeature,
@@ -25,6 +26,12 @@ export enum TestFeature {
 
 	Action3 = "action3", // single use (pay per use)
 	Credits2 = "credits2", // credit system
+
+	AiCredits = "ai_credits", // AI credit system (models.dev pricing)
+	AiCredits2 = "ai_credits_2", // second AI credit system (for disambiguation tests)
+	AiCreditsTiered = "ai_credits_tiered", // AI credit system with global + provider markup tiers
+
+	Orbs = "orbs", // credit system that wraps an AI credit system (1000 orbs per $1)
 }
 
 export const getFeatures = ({ orgId }: { orgId: string }) => ({
@@ -118,6 +125,72 @@ export const getFeatures = ({ orgId }: { orgId: string }) => ({
 			{
 				metered_feature_id: TestFeature.Action3,
 				credit_cost: 1.4,
+			},
+		],
+	}),
+	[TestFeature.AiCredits]: constructAiCreditSystem({
+		featureId: TestFeature.AiCredits,
+		orgId,
+		env: AppEnv.Sandbox,
+		modelMarkups: {
+			"anthropic/claude-sonnet-4-20250514": {
+				markup: 0,
+			},
+			"anthropic/claude-3-5-haiku-20241022": {
+				markup: 20,
+			},
+			"custom/internal-model": {
+				markup: 0,
+				input_cost: 5,
+				output_cost: 15,
+			},
+			"custom/marked-up-model": {
+				markup: 50,
+				input_cost: 10,
+				output_cost: 30,
+			},
+		},
+	}),
+	[TestFeature.AiCredits2]: constructAiCreditSystem({
+		featureId: TestFeature.AiCredits2,
+		orgId,
+		env: AppEnv.Sandbox,
+		modelMarkups: {
+			"anthropic/claude-sonnet-4-20250514": {
+				markup: 10,
+			},
+		},
+	}),
+	[TestFeature.AiCreditsTiered]: constructAiCreditSystem({
+		featureId: TestFeature.AiCreditsTiered,
+		orgId,
+		env: AppEnv.Sandbox,
+		defaultMarkup: 10,
+		providerMarkups: {
+			custom: { markup: 30 },
+		},
+		modelMarkups: {
+			// Per-model override wins over provider/global.
+			"custom/override-model": {
+				markup: 5,
+				input_cost: 10,
+				output_cost: 20,
+			},
+			// No markup -> inherits the "custom" provider markup (30%).
+			"custom/provider-fallback-model": {
+				input_cost: 10,
+				output_cost: 20,
+			},
+		},
+	}),
+	[TestFeature.Orbs]: constructCreditSystem({
+		featureId: TestFeature.Orbs,
+		orgId,
+		env: AppEnv.Sandbox,
+		schema: [
+			{
+				metered_feature_id: TestFeature.AiCredits,
+				credit_cost: 1000, // 1000 orbs per $1 of AI usage
 			},
 		],
 	}),

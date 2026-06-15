@@ -7,7 +7,15 @@ import {
 } from "@autumn/shared";
 import { TZDate } from "@date-fns/tz";
 import { UTCDate } from "@date-fns/utc";
-import { addDays, addHours, addMonths, format, sub } from "date-fns";
+import {
+	addDays,
+	addHours,
+	addMonths,
+	addWeeks,
+	format,
+	startOfWeek,
+	sub,
+} from "date-fns";
 import { Decimal } from "decimal.js";
 import {
 	type AggregateGroupablePipeRow,
@@ -153,29 +161,42 @@ export const generateAllPeriods = ({
 		return periods;
 	}
 
-	// Day/month: build the grid in the viewer's zone ("UTC" = old behavior).
+	// Day/week/month: build the grid in the viewer's zone ("UTC" = old behavior).
 	const tz = timezone ?? "UTC";
 	const startInViewerTz = new TZDate(new UTCDate(startDate).getTime(), tz);
 	const end = new TZDate(new UTCDate(endDate).getTime(), tz);
 
-	let current =
-		binSize === "month"
-			? new TZDate(
-					startInViewerTz.getFullYear(),
-					startInViewerTz.getMonth(),
-					1,
-					tz,
-				)
-			: new TZDate(
-					startInViewerTz.getFullYear(),
-					startInViewerTz.getMonth(),
-					startInViewerTz.getDate(),
-					tz,
-				);
+	const startOfDayInViewerTz = new TZDate(
+		startInViewerTz.getFullYear(),
+		startInViewerTz.getMonth(),
+		startInViewerTz.getDate(),
+		tz,
+	);
+
+	let current: TZDate;
+	if (binSize === "month") {
+		current = new TZDate(
+			startInViewerTz.getFullYear(),
+			startInViewerTz.getMonth(),
+			1,
+			tz,
+		);
+	} else if (binSize === "week") {
+		// Monday-aligned to match the pipe's toStartOfWeek(hour, 1, tz) (mode 1).
+		current = startOfWeek(startOfDayInViewerTz, { weekStartsOn: 1 });
+	} else {
+		current = startOfDayInViewerTz;
+	}
 
 	while (current.getTime() <= end.getTime()) {
 		periods.push(format(current, "yyyy-MM-dd HH:mm:ss"));
-		current = binSize === "month" ? addMonths(current, 1) : addDays(current, 1);
+		if (binSize === "month") {
+			current = addMonths(current, 1);
+		} else if (binSize === "week") {
+			current = addWeeks(current, 1);
+		} else {
+			current = addDays(current, 1);
+		}
 	}
 
 	return periods;

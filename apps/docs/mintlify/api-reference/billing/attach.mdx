@@ -132,7 +132,7 @@ This is useful for attaching custom metadata to the Stripe subscription created 
     </DynamicParamField>
 
     <DynamicParamField body="items" type="object[]">
-      Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / update_items.
+      Override the items in the plan (PUT-style — replaces all existing items). Mutually exclusive with add_items / remove_items / deprecated update_items.
       <Expandable title="properties">
         <DynamicParamField body="feature_id" type="string" required>
           The ID of the feature to configure.
@@ -197,8 +197,8 @@ This is useful for attaching custom metadata to the Stripe subscription created 
               'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
             </DynamicParamField>
 
-            <DynamicParamField body="max_purchase" type="number">
-              Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+            <DynamicParamField body="max_purchase" type="number | null">
+              Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
             </DynamicParamField>
 
           </Expandable>
@@ -309,8 +309,8 @@ This is useful for attaching custom metadata to the Stripe subscription created 
               'prepaid' for upfront payment (seats), 'usage_based' for pay-as-you-go.
             </DynamicParamField>
 
-            <DynamicParamField body="max_purchase" type="number">
-              Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total.
+            <DynamicParamField body="max_purchase" type="number | null">
+              Max units purchasable beyond included. E.g. included=100, max_purchase=300 allows 400 total. Null for no limit.
             </DynamicParamField>
 
           </Expandable>
@@ -367,7 +367,11 @@ This is useful for attaching custom metadata to the Stripe subscription created 
         </DynamicParamField>
 
         <DynamicParamField body="interval" type="'one_off' | 'week' | 'month' | 'quarter' | 'semi_annual' | 'year'">
-          Match items with this interval.
+          Match items with this interval. Accepts either a BillingInterval (price-side) or a ResetInterval (reset-side, includes day/hour/minute) so price-less items keyed by reset.interval can be disambiguated.
+        </DynamicParamField>
+
+        <DynamicParamField body="interval_count" type="integer">
+          Match items with this interval_count. Disambiguates between items that share an interval but differ in count.
         </DynamicParamField>
 
       </Expandable>

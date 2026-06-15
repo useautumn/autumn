@@ -1,0 +1,64 @@
+{
+	"name": "@useautumn/gateway",
+	"version": "0.0.1",
+	"type": "module",
+	"description": "Autumn usage tracking adapters for AI SDKs and gateways (Vercel AI SDK, OpenRouter)",
+	"repository": "github:useautumn/autumn",
+	"homepage": "https://useautumn.com",
+	"license": "MIT",
+	"keywords": [
+		"autumn",
+		"billing",
+		"usage-based-billing",
+		"ai-sdk",
+		"openrouter",
+		"llm",
+		"token-tracking"
+	],
+	"sideEffects": false,
+	"files": [
+		"dist",
+		"README.md",
+		"LICENSE.md"
+	],
+	"exports": {
+		"./ai-sdk": {
+			"types": "./dist/ai-sdk/index.d.ts",
+			"require": "./dist/ai-sdk/index.cjs",
+			"import": "./dist/ai-sdk/index.js"
+		},
+		"./openrouter": {
+			"types": "./dist/openrouter/index.d.ts",
+			"require": "./dist/openrouter/index.cjs",
+			"import": "./dist/openrouter/index.js"
+		}
+	},
+	"scripts": {
+		"ts": "bunx tsgo --noEmit --skipLibCheck",
+		"test": "bun test tests/unit",
+		"build": "rm -rf dist && tsup",
+		"prepublishOnly": "bun run build"
+	},
+	"dependencies": {
+		"@ai-sdk/provider": "^3.0.0"
+	},
+	"peerDependencies": {
+		"@openrouter/sdk": "*",
+		"ai": "^6.0.116",
+		"autumn-js": "*"
+	},
+	"peerDependenciesMeta": {
+		"@openrouter/sdk": {
+			"optional": true
+		},
+		"ai": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"@types/node": "^24.9.1",
+		"@typescript/native-preview": "7.0.0-dev.20260220.1",
+		"tsup": "^8.4.0",
+		"typescript": "^5.8.3"
+	}
+}

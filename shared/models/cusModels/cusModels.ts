@@ -6,6 +6,7 @@ import {
 	DbOverageAllowedSchema,
 	DbSpendLimitSchema,
 	DbUsageAlertSchema,
+	DbUsageLimitSchema,
 } from "./billingControls/customerBillingControls.js";
 
 export const CustomerSchema = z.object({
@@ -25,6 +26,7 @@ export const CustomerSchema = z.object({
 	send_email_receipts: z.boolean().default(false),
 	auto_topups: z.array(AutoTopupSchema).nullish(),
 	spend_limits: z.array(DbSpendLimitSchema).nullish(),
+	usage_limits: z.array(DbUsageLimitSchema).nullish(),
 	usage_alerts: z.array(DbUsageAlertSchema).nullish(),
 	overage_allowed: z.array(DbOverageAllowedSchema).nullish(),
 	config: z

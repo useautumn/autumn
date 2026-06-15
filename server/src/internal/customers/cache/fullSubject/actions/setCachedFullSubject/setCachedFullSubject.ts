@@ -49,6 +49,8 @@ export const setCachedFullSubject = async ({
 		customerEntitlements: normalized.customer_entitlements,
 		aggregatedCustomerEntitlements:
 			normalized.entity_aggregations?.aggregated_customer_entitlements ?? [],
+		usageWindows: normalized.usage_windows ?? [],
+		usageWindowFeatureIds: cached.usageWindowFeatureIds,
 	});
 
 	const keys: string[] = [subjectKey, epochKey];
