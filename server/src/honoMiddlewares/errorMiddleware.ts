@@ -49,7 +49,6 @@ export const errorMiddleware = (err: Error, c: Context<HonoEnv>) => {
 				message: err.message,
 				code: err.code,
 				env: ctx.env,
-				...(err.docsUrl ? { docs_url: err.docsUrl } : {}),
 			},
 			err.statusCode as ContentfulStatusCode,
 		);

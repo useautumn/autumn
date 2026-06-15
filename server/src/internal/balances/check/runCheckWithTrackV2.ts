@@ -2,7 +2,6 @@ import {
 	type ApiBalanceV1,
 	ApiVersion,
 	CheckResponseV3Schema,
-	DocsLinks,
 	ErrCode,
 	FeatureType,
 	featureUtils,
@@ -51,7 +50,6 @@ export const runCheckWithTrackV2 = async ({
 			message: "Lock is not supported for allocated features",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
-			docsUrl: DocsLinks.BalanceLocking,
 		});
 	}
 

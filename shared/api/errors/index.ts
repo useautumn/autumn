@@ -12,4 +12,3 @@ export * from "./codes/cusErrCodes.js";
 export * from "./codes/cusProductErrCodes.js";
 export * from "./codes/entityErrCodes.js";
 export * from "./codes/productErrCodes.js";
-export * from "./docsLinks.js";

@@ -1,4 +1,4 @@
-import { DocsLinks, ErrCode, RecaseError } from "@autumn/shared";
+import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 
@@ -37,6 +37,5 @@ export const claimLockReceipt = async ({
 		code: ErrCode.InvalidRequest,
 		statusCode: 409,
 		data: { blockingStatus: result },
-		docsUrl: DocsLinks.ConcurrentRequests,
 	});
 };

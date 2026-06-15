@@ -3,7 +3,6 @@ import type {
 	UpdateSubscriptionBillingContext,
 } from "@autumn/shared";
 import {
-	DocsLinks,
 	ErrCode,
 	isCustomerProductFree,
 	isCustomerProductOneOff,
@@ -35,7 +34,6 @@ export const handleCancelEndOfCycleErrors = ({
 			message:
 				"Free products do not have billing cycles; use cancel: 'immediately' instead.",
 			statusCode: 400,
-			docsUrl: DocsLinks.CancelEndOfPeriod,
 		});
 	}
 
@@ -44,7 +42,6 @@ export const handleCancelEndOfCycleErrors = ({
 			message:
 				"One-off products do not have billing cycles; use cancel: 'immediately' instead.",
 			statusCode: 400,
-			docsUrl: DocsLinks.CancelEndOfPeriod,
 		});
 	}
 
@@ -56,7 +53,6 @@ export const handleCancelEndOfCycleErrors = ({
 			message: `Cannot use cancel: 'end_of_cycle' when ${getChargeReasonMessage(chargeResult.reason)}`,
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
-			docsUrl: DocsLinks.CancelEndOfPeriod,
 		});
 	}
 };

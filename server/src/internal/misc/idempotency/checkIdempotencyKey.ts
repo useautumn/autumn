@@ -1,4 +1,4 @@
-import { DocsLinks, ErrCode, ms, RecaseError } from "@autumn/shared";
+import { ErrCode, ms, RecaseError } from "@autumn/shared";
 import type { Logger } from "@/external/logtail/logtailUtils";
 import { redis } from "@/external/redis/initRedis.js";
 
@@ -67,7 +67,6 @@ export const checkIdempotencyKey = async ({
 				message: `Another request with idempotency key ${idempotencyKey} has already been received`,
 				code: ErrCode.DuplicateIdempotencyKey,
 				statusCode: 409,
-				docsUrl: DocsLinks.ApiIdempotency,
 			});
 		}
 	} catch (error) {

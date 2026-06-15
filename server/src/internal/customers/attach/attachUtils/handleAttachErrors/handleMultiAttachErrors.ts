@@ -1,7 +1,6 @@
 import {
 	type AttachBodyV0,
 	type AttachBranch,
-	DocsLinks,
 	ErrCode,
 	isUsagePrice,
 	notNullish,
@@ -38,7 +37,6 @@ export const handleMultiAttachErrors = async ({
 			code: ErrCode.InvalidInputs,
 			message: `The 'products' parameter doesn't support prices that are variable (usage-based) at the moment. The product ${product?.name} contains this.`,
 			statusCode: 400,
-			docsUrl: DocsLinks.PrepaidPricing,
 		});
 	}
 
@@ -65,7 +63,6 @@ export const handleMultiAttachErrors = async ({
 				code: ErrCode.InvalidInputs,
 				message: `Product ${prodOptions.product_id} is assigned to ${curEntityQuantity} entities and therefore can't be decreased to ${newQuantity}.`,
 				statusCode: 400,
-				docsUrl: DocsLinks.EdgeCases,
 			});
 		}
 	}

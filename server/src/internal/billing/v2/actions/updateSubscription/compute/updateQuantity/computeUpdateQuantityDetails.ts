@@ -1,7 +1,6 @@
 import {
 	addCusProductToCusEnt,
 	customerPriceToCustomerEntitlement,
-	DocsLinks,
 	type FeatureOptions,
 	findCusPriceByFeature,
 	findFeatureByInternalId,
@@ -90,7 +89,6 @@ export const computeUpdateQuantityDetails = ({
 		throw new RecaseError({
 			message: `Not allowed to update feature quantity for one off items.`,
 			statusCode: 400,
-			docsUrl: DocsLinks.UpdatePrepaidQuantity,
 		});
 	}
 

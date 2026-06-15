@@ -1,7 +1,6 @@
 import {
 	type AttachConfig,
 	BillingType,
-	DocsLinks,
 	ErrCode,
 	type FullCusProduct,
 } from "@autumn/shared";
@@ -53,7 +52,6 @@ export const handlePrepaidErrors = async ({
 					message: `Pass in 'quantity' for feature ${priceEnt.feature_id} in options`,
 					code: ErrCode.InvalidOptions,
 					statusCode: 400,
-					docsUrl: DocsLinks.PassingFeatureQuantities,
 				});
 			}
 
@@ -66,7 +64,6 @@ export const handlePrepaidErrors = async ({
 					message:
 						"Quantity is required for start-of-period prices that are both one-off and tiered",
 					statusCode: 400,
-					docsUrl: DocsLinks.PassingFeatureQuantities,
 				});
 			}
 
@@ -76,7 +73,6 @@ export const handlePrepaidErrors = async ({
 					message: `Quantity cannot be negative`,
 					code: ErrCode.InvalidOptions,
 					statusCode: 400,
-					docsUrl: DocsLinks.PrepaidPricing,
 				});
 			}
 
@@ -86,7 +82,6 @@ export const handlePrepaidErrors = async ({
 					message: `When attaching a single prepaid price, quantity must be greater than 0`,
 					code: ErrCode.InvalidOptions,
 					statusCode: 400,
-					docsUrl: DocsLinks.PassingFeatureQuantities,
 				});
 			}
 		}

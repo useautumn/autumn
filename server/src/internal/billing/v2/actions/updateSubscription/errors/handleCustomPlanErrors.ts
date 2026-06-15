@@ -4,7 +4,6 @@ import type {
 } from "@autumn/shared";
 import {
 	cusProductToProduct,
-	DocsLinks,
 	productsAreSame,
 	RecaseError,
 	type UpdateSubscriptionV1Params,
@@ -49,7 +48,6 @@ export const handleCustomPlanErrors = ({
 			message:
 				"Custom plan configuration is identical to the current subscription; no update is needed",
 			statusCode: 400,
-			docsUrl: DocsLinks.UpdatingSubscriptions,
 		});
 	}
 
@@ -58,7 +56,6 @@ export const handleCustomPlanErrors = ({
 			message:
 				"Cannot create an invoice for this subscription update because there are no billing changes.",
 			statusCode: 400,
-			docsUrl: DocsLinks.SkippingCharges,
 		});
 	}
 };

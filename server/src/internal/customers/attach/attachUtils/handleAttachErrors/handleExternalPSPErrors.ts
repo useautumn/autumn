@@ -1,6 +1,5 @@
 import {
 	cusProductToProcessorType,
-	DocsLinks,
 	ProcessorType,
 	RecaseError,
 } from "@autumn/shared";
@@ -38,7 +37,6 @@ export const handleExternalPSPErrors = ({
 			message:
 				"This customer is billed outside of Stripe, please use the origin platform to manage their billing.",
 			statusCode: 400,
-			docsUrl: DocsLinks.EdgeCases,
 		});
 	}
 };

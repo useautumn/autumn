@@ -1,6 +1,5 @@
 import { RecaseError } from "../base/RecaseError.js";
 import { BalancesErrorCode } from "../codes/balancesErrCodes.js";
-import { DocsLinks } from "../docsLinks.js";
 
 const buildInsufficientBalanceMessage = (opts: {
 	value: number;
@@ -36,7 +35,6 @@ export class InsufficientBalanceError extends RecaseError {
 				}),
 			code: BalancesErrorCode.InsufficientBalance,
 			statusCode: 400,
-			docsUrl: DocsLinks.TrackingUsage,
 		});
 		this.name = "InsufficientBalanceError";
 	}

@@ -1,5 +1,4 @@
 import {
-	DocsLinks,
 	ErrCode,
 	type Feature,
 	type FeatureOptions,
@@ -51,7 +50,6 @@ export const mapOptionsList = ({
 				message: `No prepaid price found for feature ${feature.id}`,
 				code: ErrCode.PriceNotFound,
 				statusCode: 404,
-				docsUrl: DocsLinks.PrepaidPricing,
 			});
 		}
 

@@ -2,7 +2,6 @@ import {
 	type AttachBodyV0,
 	CusProductStatus,
 	cusProductToProduct,
-	DocsLinks,
 	ErrCode,
 	nullish,
 	RecaseError,
@@ -49,7 +48,6 @@ const getProductsForAttach = async ({
 					"When providing product_ids, can't have multiple free trial products",
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
-				docsUrl: DocsLinks.Trials,
 			});
 		}
 
@@ -66,7 +64,6 @@ const getProductsForAttach = async ({
 						"Can't attach multiple products from the same group that are not add-ons",
 					code: ErrCode.InvalidRequest,
 					statusCode: 400,
-					docsUrl: DocsLinks.UpdatingSubscriptions,
 				});
 			}
 		}

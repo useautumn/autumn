@@ -4,7 +4,6 @@ import type {
 } from "@autumn/shared";
 import {
 	cusProductToProduct,
-	DocsLinks,
 	ErrCode,
 	isCustomerProductOneOff,
 	isCustomerProductPaidRecurring,
@@ -78,7 +77,6 @@ const blockOneOffQuantityChangeOutsideManualTopUp = ({
 				message: COMPLEX_UPDATE_ERROR,
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
-				docsUrl: DocsLinks.UpdatePrepaidQuantity,
 			});
 		}
 	}
@@ -118,7 +116,6 @@ export const handleOneOffErrors = ({
 		throw new RecaseError({
 			message: "Free trials are not available for one-off products",
 			statusCode: 400,
-			docsUrl: DocsLinks.Trials,
 		});
 	}
 
@@ -144,7 +141,6 @@ export const handleOneOffErrors = ({
 			message:
 				"For one-off products, only entitlement changes are allowed; price and billing changes are not supported",
 			statusCode: 400,
-			docsUrl: DocsLinks.UpdatingSubscriptions,
 		});
 	}
 };
@@ -180,7 +176,6 @@ export const checkTrialRemovalWithOneOffItems = ({
 			message:
 				"Cannot remove the free trial while adding one-off items to a paid recurring subscription",
 			statusCode: 400,
-			docsUrl: DocsLinks.Trials,
 		});
 	}
 };

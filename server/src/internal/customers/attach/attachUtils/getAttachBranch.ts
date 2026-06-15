@@ -5,7 +5,6 @@ import {
 	BillingInterval,
 	cusProductToPrices,
 	cusProductToProduct,
-	DocsLinks,
 	ErrCode,
 	type FeatureOptions,
 	type FullCusProduct,
@@ -60,7 +59,6 @@ const handleMultiProductErrors = async ({
 				message: `Product ${product.name} is already attached, can't attach again`,
 				code: AttachErrCode.ProductAlreadyAttached,
 				statusCode: 400,
-				docsUrl: DocsLinks.UpdatingSubscriptions,
 			});
 		}
 
@@ -74,7 +72,6 @@ const handleMultiProductErrors = async ({
 				message: `Can't perform upgrade/downgrade to ${product.name} when attaching multiple products simultaneously`,
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
-				docsUrl: DocsLinks.UpdatingSubscriptions,
 			});
 		}
 
@@ -83,7 +80,6 @@ const handleMultiProductErrors = async ({
 				message: `Can't attach multiple products when a scheduled product change is already pending`,
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
-				docsUrl: DocsLinks.SubscriptionLifecycle,
 			});
 		}
 	}
@@ -170,7 +166,6 @@ export const checkSameCustom = async ({
 			message: `Items specified for ${product.name} are the same as the existing product, can't attach again`,
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
-			docsUrl: DocsLinks.UpdatingSubscriptions,
 		});
 	}
 
@@ -244,7 +239,6 @@ const getSameProductBranch = async ({
 				message: `Product ${product.name} is already scheduled, can't attach again`,
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
-				docsUrl: DocsLinks.SubscriptionLifecycle,
 			});
 		}
 
@@ -271,7 +265,6 @@ const getSameProductBranch = async ({
 		message: `Product ${product.name} is already attached, can't attach again`,
 		code: AttachErrCode.ProductAlreadyAttached,
 		statusCode: 400,
-		docsUrl: DocsLinks.UpdatingSubscriptions,
 	});
 };
 

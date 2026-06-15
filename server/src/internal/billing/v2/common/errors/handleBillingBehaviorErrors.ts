@@ -4,7 +4,6 @@ import type {
 	BillingPlan,
 } from "@autumn/shared";
 import {
-	DocsLinks,
 	ErrCode,
 	RecaseError,
 	type UpdateSubscriptionV1Params,
@@ -46,7 +45,6 @@ export const handleProrationBehaviorErrors = ({
 				"Cannot set proration_behavior to 'none' when removing a free trial",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
-			docsUrl: DocsLinks.Proration,
 		});
 	}
 
@@ -57,7 +55,6 @@ export const handleProrationBehaviorErrors = ({
 			message: `Cannot set proration_behavior to 'none' when ${getChargeReasonMessage(chargeResult.reason)}`,
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
-			docsUrl: DocsLinks.Proration,
 		});
 	}
 };

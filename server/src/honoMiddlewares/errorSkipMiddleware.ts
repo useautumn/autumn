@@ -152,14 +152,12 @@ const createErrorResponse = ({
 	message,
 	code,
 	statusCode,
-	docsUrl,
 }: {
 	c: Context<HonoEnv>;
 	ctx: any;
 	message: string;
 	code: string;
 	statusCode: ContentfulStatusCode;
-	docsUrl?: string;
 }) => {
 	if (statusCode === 503) c.header("Retry-After", "1");
 	return c.json(
@@ -167,7 +165,6 @@ const createErrorResponse = ({
 			message,
 			code,
 			env: ctx.env,
-			...(docsUrl ? { docs_url: docsUrl } : {}),
 		},
 		statusCode,
 	);
@@ -205,7 +202,6 @@ export const handleErrorSkip = (err: Error, c: Context<HonoEnv>) => {
 					message: err.message,
 					code: err.code,
 					statusCode: 404,
-					docsUrl: err.docsUrl,
 				});
 			}
 		}

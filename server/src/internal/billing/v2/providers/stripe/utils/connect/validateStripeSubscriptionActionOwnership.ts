@@ -1,5 +1,5 @@
 import type { BillingContext, StripeSubscriptionAction } from "@autumn/shared";
-import { AppEnv, DocsLinks, ErrCode, RecaseError } from "@autumn/shared";
+import { AppEnv, ErrCode, RecaseError } from "@autumn/shared";
 import { stripeSubscriptionToApplication } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { isStripeConnected } from "@/internal/orgs/orgUtils";
@@ -60,7 +60,6 @@ export const validateStripeSubscriptionActionOwnership = ({
 			"Cannot update subscription because it was not created by Autumn. Import or relink the subscription with no_billing_changes before changing billing.",
 		code: ErrCode.InvalidRequest,
 		statusCode: 400,
-		docsUrl: DocsLinks.UpdatingSubscriptions,
 		data: {
 			stripe_subscription_id: billingContext.stripeSubscription?.id,
 			stripe_application_id: applicationId,

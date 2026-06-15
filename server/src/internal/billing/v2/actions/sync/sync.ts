@@ -50,7 +50,7 @@ export const sync = async ({
 	if (!stripeCustomerId) {
 		throw new RecaseError({
 			message:
-				"This customer has no linked Stripe account; connect Stripe before syncing.",
+				"This customer has no linked Stripe customer ID. Set the customer's Stripe ID, then resync.",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
