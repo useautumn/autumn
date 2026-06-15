@@ -1,5 +1,5 @@
-import { ImageIcon } from "lucide-react";
 import axios from "axios";
+import { ImageIcon } from "lucide-react";
 import type React from "react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
@@ -9,7 +9,6 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
-import { getOrgLogoUrl } from "@/utils/orgUtils";
 
 const MAX_SIZE_MB = 10;
 
@@ -44,12 +43,14 @@ const OrgLogoUploader: React.FC = () => {
 		inputRef.current?.click();
 	};
 
-	const uploadToSupabase = async (file: File) => {
+	const uploadToS3 = async (file: File) => {
 		const { data } = await axiosInstance.get("/organization/upload_url");
-		const { signedUrl } = data;
+		const { signedUrl, publicUrl } = data;
 		await axios.put(signedUrl, file, {
 			headers: { "Content-Type": file.type },
 		});
+
+		return publicUrl as string;
 	};
 
 	const handleUploading = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -62,9 +63,9 @@ const OrgLogoUploader: React.FC = () => {
 		}
 		setUploading(true);
 		try {
-			await uploadToSupabase(file);
+			const publicUrl = await uploadToS3(file);
 			const { error } = await authClient.organization.update({
-				data: { logo: getOrgLogoUrl(org.id) },
+				data: { logo: publicUrl },
 			});
 			if (error) {
 				toast.error(error.message || "Failed to update logo");
