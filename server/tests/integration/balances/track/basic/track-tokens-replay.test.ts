@@ -115,10 +115,10 @@ test.concurrent(
 					input_tokens: 200000,
 					output_tokens: 200000,
 					cascade: {
-						included_feature_id: TestFeature.AiCredits,
-						overage_feature_id: TestFeature.AiCredits2,
-						included: { cost: 4 },
-						overage: { cost: 6 },
+						systems: [
+							{ feature_id: TestFeature.AiCredits, cost: 4 },
+							{ feature_id: TestFeature.AiCredits2, cost: 6 },
+						],
 					},
 				},
 			},

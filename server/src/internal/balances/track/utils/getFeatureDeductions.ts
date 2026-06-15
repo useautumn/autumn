@@ -1,4 +1,5 @@
 import {
+	type Feature,
 	FeatureNotFoundError,
 	isAiCreditSystem,
 	type LockParams,
@@ -28,12 +29,13 @@ const resolveAiCreditFeatureForCascade = ({
 /**
  * Rebuilds the cascade deduction of a token track from the `properties.cascade`
  * marker that getTokenTrackParams stamps on the body, so queued replays keep
- * included-then-overage semantics instead of replaying the whole value against
- * the primary feature. The deduction is atomic and idempotency-keyed, so a full
- * replay is naturally safe — no partial-state bookkeeping needed. Returns null
- * when the body carries no valid marker; callers then fall back to the standard
- * deductions. Only for internally queued bodies — properties on direct /track
- * calls are caller-controlled and must not be honored as a cascade.
+ * each system's request-time pricing instead of replaying the whole value
+ * against the primary feature. The deduction is atomic and idempotency-keyed,
+ * so a full replay is naturally safe — no partial-state bookkeeping needed.
+ * Returns null when the body carries no valid cascade (fewer than two resolved,
+ * distinct systems); callers then fall back to the standard deductions. Only
+ * for internally queued bodies — properties on direct /track calls are
+ * caller-controlled and must not be honored as a cascade.
  */
 export const getTokenCascadeDeductionsFromBody = ({
 	ctx,
@@ -43,37 +45,27 @@ export const getTokenCascadeDeductionsFromBody = ({
 	body: TrackParams;
 }): FeatureDeduction[] | null => {
 	const properties = body.properties ?? {};
-	const cascade = properties.cascade as
-		| {
-				included_feature_id?: unknown;
-				overage_feature_id?: unknown;
-				included?: { cost?: unknown };
-				overage?: { cost?: unknown };
-		  }
-		| undefined;
-	if (!cascade) return null;
+	const cascade = properties.cascade as { systems?: unknown } | undefined;
+	const rawSystems =
+		cascade && Array.isArray(cascade.systems) ? cascade.systems : null;
+	// A cascade needs at least two systems; a single-system track carries no
+	// marker and replays through the standard path.
+	if (!rawSystems || rawSystems.length < 2) return null;
 
-	const includedFeature = resolveAiCreditFeatureForCascade({
-		ctx,
-		featureId: cascade.included_feature_id,
-	});
-	const overageFeature = resolveAiCreditFeatureForCascade({
-		ctx,
-		featureId: cascade.overage_feature_id,
-	});
-	const includedCost = asNumber(cascade.included?.cost);
-	const overageCost = asNumber(cascade.overage?.cost);
-	if (
-		!includedFeature ||
-		!overageFeature ||
-		includedFeature.id === overageFeature.id ||
-		includedCost === null ||
-		overageCost === null ||
-		includedCost < 0 ||
-		overageCost < 0
-	) {
-		return null;
+	const resolvedSystems: { feature: Feature; cost: number }[] = [];
+	for (const rawSystem of rawSystems) {
+		const entry = rawSystem as { feature_id?: unknown; cost?: unknown };
+		const feature = resolveAiCreditFeatureForCascade({
+			ctx,
+			featureId: entry.feature_id,
+		});
+		const cost = asNumber(entry.cost);
+		if (!feature || cost === null || cost < 0) return null;
+		resolvedSystems.push({ feature, cost });
 	}
+
+	const featureIds = resolvedSystems.map((system) => system.feature.id);
+	if (new Set(featureIds).size !== featureIds.length) return null;
 
 	const tokenUsage = {
 		modelName: typeof properties.model === "string" ? properties.model : "",
@@ -81,17 +73,16 @@ export const getTokenCascadeDeductionsFromBody = ({
 		outputTokens: asNumber(properties.output_tokens) ?? 0,
 	};
 
+	const [primary, ...rest] = resolvedSystems;
 	return [
 		{
-			feature: includedFeature,
+			feature: primary.feature,
 			deduction: 1,
-			tokens: { usage: tokenUsage, cost: includedCost },
-			spillover: [
-				{
-					feature: overageFeature,
-					tokens: { usage: tokenUsage, cost: overageCost },
-				},
-			],
+			tokens: { usage: tokenUsage, cost: primary.cost },
+			spillover: rest.map((system) => ({
+				feature: system.feature,
+				tokens: { usage: tokenUsage, cost: system.cost },
+			})),
 		},
 	];
 };

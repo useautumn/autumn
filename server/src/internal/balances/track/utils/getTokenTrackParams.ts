@@ -45,11 +45,12 @@ const resolveAiCreditFeatureById = ({
 };
 
 /**
- * Resolve the customer's AI credit systems in deduction order. One system
- * resolves as-is. Two systems form a cascade when exactly one of them has a
- * usage-allowed entitlement: the other ("included") deducts first, floored at
- * zero, and the usage-allowed one ("overage") absorbs the remainder. Any other
- * shape is ambiguous and requires an explicit feature_id.
+ * Resolve every AI credit system on the customer, ordered included-first. The
+ * deduction engine settles them in one atomic pass: it drains included systems
+ * (no overage) before overage systems, by interval then balance, and prices
+ * each in its own cost domain — so any number of systems cascades naturally,
+ * with included usage spent before the marked-up overage. Pass an explicit
+ * feature_id to deduct from a single system instead.
  */
 const resolveAiCreditFeaturesFromEntitlements = async ({
 	ctx,
@@ -138,24 +139,17 @@ const resolveAiCreditFeaturesFromEntitlements = async ({
 			statusCode: 404,
 		});
 	}
-	if (aiCreditSystems.length === 1) {
-		return [aiCreditSystems[0].feature];
-	}
 
-	if (aiCreditSystems.length === 2) {
-		const included = aiCreditSystems.find((system) => !system.hasUsageAllowed);
-		const overage = aiCreditSystems.find((system) => system.hasUsageAllowed);
-		if (included && overage) {
-			return [included.feature, overage.feature];
-		}
-	}
-
-	throw new RecaseError({
-		message:
-			"Multiple AI credit system features found for this customer. Please specify a feature_id to disambiguate.",
-		code: ErrCode.InvalidRequest,
-		statusCode: 400,
-	});
+	// Hand the engine every system and let its deduction sort order them: it
+	// already drains included (no overage) before overage, by interval then
+	// balance, so this stable included-first sort only decides which system is
+	// reported as the cascade's primary.
+	return [...aiCreditSystems]
+		.sort(
+			(left, right) =>
+				Number(left.hasUsageAllowed) - Number(right.hasUsageAllowed),
+		)
+		.map((system) => system.feature);
 };
 
 const buildPricingProperties = (pricing: ModelCostBreakdown) => ({
@@ -211,7 +205,7 @@ export const getTokenTrackParams = async ({
 		),
 	);
 
-	const isCascade = aiCreditFeatures.length === 2;
+	const isCascade = aiCreditFeatures.length >= 2;
 	const primaryFeature = aiCreditFeatures[0];
 	const primaryPricing = pricings[0];
 
@@ -221,32 +215,33 @@ export const getTokenTrackParams = async ({
 		outputTokens: input.output_tokens,
 	};
 
-	// One atomic deduction: the included system is primary and the overage
-	// system rides along as spillover, so the engine drains included first
-	// (capped) and spills the remainder into overage in its own cost domain.
+	// One atomic deduction: the remaining systems ride along as spillover so the
+	// engine settles every system in a single pass — draining included usage
+	// first (capped), then each marked-up overage system, each priced in its own
+	// cost domain.
 	const featureDeductions: FeatureDeduction[] = [
 		{
 			feature: primaryFeature,
 			deduction: 1,
 			tokens: { usage: tokenUsage, cost: primaryPricing.cost },
 			...(isCascade && {
-				spillover: [
-					{
-						feature: aiCreditFeatures[1],
-						tokens: { usage: tokenUsage, cost: pricings[1].cost },
-					},
-				],
+				spillover: aiCreditFeatures.slice(1).map((feature, index) => ({
+					feature,
+					tokens: { usage: tokenUsage, cost: pricings[index + 1].cost },
+				})),
 			}),
 		},
 	];
 
+	// Freeze each system's request-time price (ordered included-first) so a
+	// queued replay re-settles the same cascade instead of re-resolving.
 	const cascadeProperties = isCascade
 		? {
 				cascade: {
-					included_feature_id: aiCreditFeatures[0].id,
-					overage_feature_id: aiCreditFeatures[1].id,
-					included: buildPricingProperties(pricings[0]),
-					overage: buildPricingProperties(pricings[1]),
+					systems: aiCreditFeatures.map((feature, index) => ({
+						feature_id: feature.id,
+						...buildPricingProperties(pricings[index]),
+					})),
 				},
 			}
 		: undefined;

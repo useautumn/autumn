@@ -500,56 +500,94 @@ test(
 );
 
 // ═══════════════════════════════════════════════════════════════════
-// CASCADE-7: ambiguous system shapes still require an explicit feature_id
+// CASCADE-7: three systems cascade — both included pools drain before overage
 // ═══════════════════════════════════════════════════════════════════
 
 test(
-	`${chalk.yellowBright("track-tokens-cascade-7: two included-only systems still require an explicit feature_id")}`,
+	`${chalk.yellowBright("track-tokens-cascade-7: two included systems drain before overage, no feature_id")}`,
 	async () => {
 		const { includedFeatureId, overageFeatureId } =
 			await createCascadeFeatures();
-		const includedA = items.free({
+
+		// A second included (0% markup) system on the same model.
+		const autumn = new AutumnInt({ version: ApiVersion.V2_2 });
+		const suffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+		const secondIncludedFeatureId = `ai_cascade_inc2_${suffix}`;
+		await autumn.post("/features.create", {
+			feature_id: secondIncludedFeatureId,
+			name: "AI Cascade Included 2",
+			type: FeatureType.AiCreditSystem,
+			model_markups: {
+				[CASCADE_MODEL]: { markup: 0, input_cost: 5, output_cost: 15 },
+			},
+		});
+
+		// base $4. The two included pools hold 2 + 1 = 3 and both drain fully; the
+		// leftover quarter of the event spills into overage at its own markup:
+		// 0.25 × $6 = $1.5.
+		const includedAItem = items.free({
 			featureId: includedFeatureId,
-			includedUsage: 10,
+			includedUsage: 2,
 		});
-		const includedB = items.free({
+		const includedBItem = items.free({
+			featureId: secondIncludedFeatureId,
+			includedUsage: 1,
+		});
+		const overageItem = items.consumable({
 			featureId: overageFeatureId,
-			includedUsage: 10,
+			includedUsage: 0,
+			price: 1,
+			billingUnits: 1,
 		});
-		const freeProduct = products.base({
+		const proProduct = products.base({
 			id: "cascade-7",
-			items: [includedA, includedB],
+			items: [includedAItem, includedBItem, overageItem],
 		});
 
 		const { customerId, autumnV2_2 } = await initScenario({
 			customerId: "track-tokens-cascade-7",
 			setup: [
 				s.customer({ testClock: false }),
-				s.products({ list: [freeProduct] }),
+				s.products({ list: [proProduct] }),
 			],
-			actions: [s.attach({ productId: freeProduct.id })],
+			actions: [s.attach({ productId: proProduct.id })],
 		});
 
-		// Neither system allows overage, so there is no included/overage split.
-		await expectAutumnError({
-			errCode: ErrCode.InvalidRequest,
-			func: () =>
-				autumnV2_2.post("/track_tokens", {
-					customer_id: customerId,
-					model_id: CASCADE_MODEL,
-					input_tokens: 10000,
-					output_tokens: 5000,
-				}),
-		});
-
-		// Explicit feature_id still works
 		const trackRes: TrackResponseV3 = await autumnV2_2.post("/track_tokens", {
 			customer_id: customerId,
-			feature_id: includedFeatureId,
 			model_id: CASCADE_MODEL,
-			input_tokens: 10000,
-			output_tokens: 5000,
+			input_tokens: 200000,
+			output_tokens: 200000,
 		});
-		expect(trackRes.value).toBeCloseTo(0.125, 10);
+
+		expect(trackRes.value).toBeCloseTo(4, 10);
+		expect(deductionFor(trackRes, includedFeatureId)?.value).toBeCloseTo(2, 10);
+		expect(deductionFor(trackRes, secondIncludedFeatureId)?.value).toBeCloseTo(
+			1,
+			10,
+		);
+		expect(deductionFor(trackRes, overageFeatureId)?.value).toBeCloseTo(1.5, 10);
+		// Three systems were touched, so there is no single primary balance.
+		expect(trackRes.balance).toBeNull();
+
+		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+		expectBalanceCorrect({
+			customer,
+			featureId: includedFeatureId,
+			remaining: 0,
+			usage: 2,
+		});
+		expectBalanceCorrect({
+			customer,
+			featureId: secondIncludedFeatureId,
+			remaining: 0,
+			usage: 1,
+		});
+		expectBalanceCorrect({
+			customer,
+			featureId: overageFeatureId,
+			remaining: 0,
+			usage: 1.5,
+		});
 	},
 );

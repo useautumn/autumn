@@ -85,50 +85,37 @@ test.concurrent(
 );
 
 // ═══════════════════════════════════════════════════════════════════
-// TRACK-TOKENS-2: Disambiguation error + explicit feature_id resolution
+// TRACK-TOKENS-2: no feature_id cascades included → overage; explicit
+// feature_id targets a single system
 // ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
-	`${chalk.yellowBright("track-tokens-2: disambiguation error and explicit feature_id resolution")}`,
+	`${chalk.yellowBright("track-tokens-2: cascades across systems without feature_id, explicit feature_id targets one")}`,
 	async () => {
-		const aiCreditsItem = items.free({
+		const includedItem = items.free({
 			featureId: TestFeature.AiCredits,
 			includedUsage: 500,
 		});
-		const aiCredits2Item = items.free({
+		const overageItem = items.consumable({
 			featureId: TestFeature.AiCredits2,
-			includedUsage: 500,
+			includedUsage: 0,
+			price: 1,
+			billingUnits: 1,
 		});
-		const freeProd = products.base({
-			id: "free",
-			items: [aiCreditsItem, aiCredits2Item],
+		const proProd = products.base({
+			id: "pro",
+			items: [includedItem, overageItem],
 		});
 
 		const { customerId, autumnV1, autumnV2, ctx } = await initScenario({
 			customerId: "track-tokens-2",
 			setup: [
 				s.customer({ testClock: false }),
-				s.products({ list: [freeProd] }),
+				s.products({ list: [proProd] }),
 			],
-			actions: [s.attach({ productId: freeProd.id })],
+			actions: [s.attach({ productId: proProd.id })],
 		});
 
-		// Without feature_id, should fail with disambiguation error
-		let error: any;
-		try {
-			await autumnV2.post("/track_tokens", {
-				customer_id: customerId,
-				model_id: "anthropic/claude-sonnet-4-20250514",
-				input_tokens: 100,
-				output_tokens: 50,
-			});
-		} catch (e) {
-			error = e;
-		}
-		expect(error).toBeDefined();
-		expect(error.message).toContain("Multiple AI credit system features");
-
-		// With explicit feature_id, should succeed and only deduct from AiCredits
 		const aiCreditFeature = ctx.features.find(
 			(f) => f.id === TestFeature.AiCredits,
 		);
@@ -136,11 +123,29 @@ test.concurrent(
 			throw new Error(`${TestFeature.AiCredits} feature not found`);
 		}
 
-		const inputTokens = 2000;
-		const outputTokens = 1000;
 		const modelId = "anthropic/claude-sonnet-4-20250514";
 
-		const expectedCost = await getModelCreditCost({
+		// Without feature_id the engine resolves every AI credit system and drains
+		// the included pool first; this small event fits inside it, so the overage
+		// system stays untouched.
+		const cascadeCost = await getModelCreditCost({
+			modelName: modelId,
+			creditSystem: aiCreditFeature,
+			input: 100,
+			output: 50,
+		});
+		const cascadeRes: TrackResponseV2 = await autumnV2.post("/track_tokens", {
+			customer_id: customerId,
+			model_id: modelId,
+			input_tokens: 100,
+			output_tokens: 50,
+		});
+		expect(cascadeRes.value).toBeCloseTo(cascadeCost, 10);
+
+		// With an explicit feature_id only that system is charged.
+		const inputTokens = 2000;
+		const outputTokens = 1000;
+		const explicitCost = await getModelCreditCost({
 			modelName: modelId,
 			creditSystem: aiCreditFeature,
 			input: inputTokens,
@@ -156,15 +161,17 @@ test.concurrent(
 		});
 
 		expect(trackRes.customer_id).toBe(customerId);
-		expect(trackRes.value).toBeCloseTo(expectedCost, 10);
+		expect(trackRes.value).toBeCloseTo(explicitCost, 10);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expect(customer.features[TestFeature.AiCredits]).toMatchObject({
-			balance: new Decimal(500).minus(expectedCost).toNumber(),
-			usage: expectedCost,
+			balance: new Decimal(500)
+				.minus(cascadeCost)
+				.minus(explicitCost)
+				.toNumber(),
+			usage: new Decimal(cascadeCost).plus(explicitCost).toNumber(),
 		});
 		expect(customer.features[TestFeature.AiCredits2]).toMatchObject({
-			balance: 500,
 			usage: 0,
 		});
 	},
