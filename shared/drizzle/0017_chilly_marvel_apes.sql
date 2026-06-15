@@ -1,0 +1,4 @@
+ALTER TABLE "oauth_access_token" ADD COLUMN "oauth_consent_id" text;--> statement-breakpoint
+ALTER TABLE "oauth_refresh_token" ADD COLUMN "oauth_consent_id" text;--> statement-breakpoint
+ALTER TABLE "oauth_access_token" ADD CONSTRAINT "oauth_access_token_oauth_consent_id_oauth_consent_id_fk" FOREIGN KEY ("oauth_consent_id") REFERENCES "public"."oauth_consent"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "oauth_refresh_token" ADD CONSTRAINT "oauth_refresh_token_oauth_consent_id_oauth_consent_id_fk" FOREIGN KEY ("oauth_consent_id") REFERENCES "public"."oauth_consent"("id") ON DELETE cascade ON UPDATE no action;
