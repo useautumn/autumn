@@ -7,7 +7,7 @@ import {
 	createChatInstallState,
 } from "@autumn/shared";
 import { addMinutes } from "date-fns";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	createSlackInstallUrl,
@@ -25,32 +25,41 @@ export class ChatService {
 			),
 		});
 
-		return Promise.all(
-			installations.map(async (installation) => {
-				const missingScopes = getMissingSlackScopes(installation.scopes);
-				const credential =
-					await ctx.db.query.chatOAuthCredentials.findFirst({
-						where: and(
-							eq(chatOAuthCredentials.chat_installation_id, installation.id),
-							eq(chatOAuthCredentials.env, installation.default_env),
-						),
-					});
-				return {
-					connected: true,
-					provider: installation.provider,
-					workspace_id: installation.workspace_id,
-					workspace_name: installation.workspace_name,
-					bot_user_id: installation.bot_user_id,
-					default_env: installation.default_env,
-					scopes: installation.scopes,
-					agent_scopes: credential?.scopes ?? [],
-					missing_scopes: missingScopes,
-					needs_reconnect: missingScopes.length > 0,
-					created_at: installation.created_at,
-					updated_at: installation.updated_at,
-				};
-			}),
+		const credentials = installations.length
+			? await ctx.db.query.chatOAuthCredentials.findMany({
+					where: inArray(
+						chatOAuthCredentials.chat_installation_id,
+						installations.map((installation) => installation.id),
+					),
+				})
+			: [];
+		const scopesByInstallationEnv = new Map(
+			credentials.map((credential) => [
+				`${credential.chat_installation_id}:${credential.env}`,
+				credential.scopes,
+			]),
 		);
+
+		return installations.map((installation) => {
+			const missingScopes = getMissingSlackScopes(installation.scopes);
+			return {
+				connected: true,
+				provider: installation.provider,
+				workspace_id: installation.workspace_id,
+				workspace_name: installation.workspace_name,
+				bot_user_id: installation.bot_user_id,
+				default_env: installation.default_env,
+				scopes: installation.scopes,
+				agent_scopes:
+					scopesByInstallationEnv.get(
+						`${installation.id}:${installation.default_env}`,
+					) ?? [],
+				missing_scopes: missingScopes,
+				needs_reconnect: missingScopes.length > 0,
+				created_at: installation.created_at,
+				updated_at: installation.updated_at,
+			};
+		});
 	}
 
 	static createInstallUrl(
