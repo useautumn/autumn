@@ -49,7 +49,7 @@ export const validateAndGetInputEntities = async ({
 
 		if (featureUtils.isConsumable(feature)) {
 			throw new RecaseError({
-				message: `Feature '${entity.feature_id}' is a single-use feature. Entities can only be created for continuous-use features (e.g. seats).`,
+				message: `Feature '${entity.feature_id}' is consumable (e.g. credits, API calls). Entities can only be created for non-consumable features (e.g. seats).`,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
