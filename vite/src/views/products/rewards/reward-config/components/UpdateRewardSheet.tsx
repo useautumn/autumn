@@ -4,6 +4,14 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/v2/dialogs/Dialog";
+import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
@@ -40,6 +48,7 @@ export function UpdateRewardSheet({
 	const { features } = useFeaturesQuery();
 
 	const [loading, setLoading] = useState(false);
+	const [confirmCouponOpen, setConfirmCouponOpen] = useState(false);
 
 	const reward = useRewardStore((s) => s.reward);
 	const setReward = useRewardStore((s) => s.setReward);
@@ -106,8 +115,8 @@ export function UpdateRewardSheet({
 		return true;
 	};
 
-	const handleUpdate = async () => {
-		if (!selectedReward || !isFormValid()) return;
+	const performUpdate = async () => {
+		if (!selectedReward) return;
 
 		setLoading(true);
 		try {
@@ -124,6 +133,7 @@ export function UpdateRewardSheet({
 
 			await refetch();
 			toast.success("Reward updated successfully");
+			setConfirmCouponOpen(false);
 			setOpen(false);
 		} catch (error: unknown) {
 			toast.error(
@@ -134,55 +144,102 @@ export function UpdateRewardSheet({
 		}
 	};
 
+	const handleUpdate = async () => {
+		if (!selectedReward || !isFormValid()) return;
+
+		// Stripe can't update coupons in place, so discount updates delete & recreate.
+		if (reward.rewardCategory === "discount") {
+			setConfirmCouponOpen(true);
+			return;
+		}
+
+		await performUpdate();
+	};
+
 	const handleCancel = () => {
 		setOpen(false);
 	};
 
 	return (
-		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetContent className="flex flex-col overflow-hidden">
-				<SheetHeader
-					title="Update Reward"
-					description="Modify your discount or free plan reward"
-				/>
+		<>
+			<Sheet open={open} onOpenChange={setOpen}>
+				<SheetContent className="flex flex-col overflow-hidden">
+					<SheetHeader
+						title="Update Reward"
+						description="Modify your discount or free plan reward"
+					/>
 
-				<div className="flex-1 overflow-y-auto">
-					<RewardDetails reward={reward} setReward={setReward} />
-					<SelectRewardType reward={reward} setReward={setReward} />
+					<div className="flex-1 overflow-y-auto">
+						<RewardDetails reward={reward} setReward={setReward} />
+						<SelectRewardType reward={reward} setReward={setReward} />
 
-					{reward.rewardCategory === "discount" && (
-						<DiscountRewardConfig reward={reward} setReward={setReward} />
-					)}
+						{reward.rewardCategory === "discount" && (
+							<DiscountRewardConfig reward={reward} setReward={setReward} />
+						)}
 
-					{reward.rewardCategory === "free_product" && (
-						<FreeProductRewardConfig reward={reward} setReward={setReward} />
-					)}
+						{reward.rewardCategory === "free_product" && (
+							<FreeProductRewardConfig reward={reward} setReward={setReward} />
+						)}
 
-					{reward.rewardCategory === "feature_grant" && (
-						<FeatureGrantRewardConfig reward={reward} setReward={setReward} />
-					)}
-				</div>
+						{reward.rewardCategory === "feature_grant" && (
+							<FeatureGrantRewardConfig reward={reward} setReward={setReward} />
+						)}
+					</div>
 
-				<SheetFooter>
-					<ShortcutButton
-						variant="secondary"
-						className="w-full"
-						onClick={handleCancel}
-						singleShortcut="escape"
-					>
-						Cancel
-					</ShortcutButton>
-					<ShortcutButton
-						className="w-full"
-						onClick={handleUpdate}
-						metaShortcut="enter"
-						isLoading={loading}
-						disabled={!isFormValid()}
-					>
-						Update reward
-					</ShortcutButton>
-				</SheetFooter>
-			</SheetContent>
-		</Sheet>
+					<SheetFooter>
+						<ShortcutButton
+							variant="secondary"
+							className="w-full"
+							onClick={handleCancel}
+							singleShortcut="escape"
+						>
+							Cancel
+						</ShortcutButton>
+						<ShortcutButton
+							className="w-full"
+							onClick={handleUpdate}
+							metaShortcut="enter"
+							isLoading={loading}
+							disabled={!isFormValid()}
+						>
+							Update reward
+						</ShortcutButton>
+					</SheetFooter>
+				</SheetContent>
+			</Sheet>
+
+			<Dialog open={confirmCouponOpen} onOpenChange={setConfirmCouponOpen}>
+				<DialogContent className="max-w-md">
+					<DialogHeader>
+						<DialogTitle>Update coupon?</DialogTitle>
+						<DialogDescription>
+							Stripe doesn't have functionality to update coupons. This will
+							delete it and recreate it. Existing customers that have this
+							coupon will be unaffected.
+						</DialogDescription>
+					</DialogHeader>
+
+					<DialogFooter className="grid grid-cols-2 gap-2">
+						<ShortcutButton
+							variant="secondary"
+							className="w-full"
+							onClick={() => setConfirmCouponOpen(false)}
+							singleShortcut="escape"
+							disabled={loading}
+						>
+							Cancel
+						</ShortcutButton>
+						<ShortcutButton
+							className="w-full"
+							onClick={performUpdate}
+							metaShortcut="enter"
+							isLoading={loading}
+						>
+							Confirm
+						</ShortcutButton>
+					</DialogFooter>
+				</DialogContent>
+			</Dialog>
+		</>
 	);
 }
