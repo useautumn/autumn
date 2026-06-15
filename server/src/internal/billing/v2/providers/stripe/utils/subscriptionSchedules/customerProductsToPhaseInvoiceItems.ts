@@ -8,6 +8,10 @@ import { customerProductToStripeItemSpecs } from "@/internal/billing/v2/provider
  * One-off prices (e.g. onboarding fees) for products that START within this
  * phase window, as `add_invoice_items`. Restricting to the starting phase
  * stops a product spanning multiple phases being charged its fee repeatedly.
+ *
+ * Products with `access_starts_at` set (enable_plan_immediately) already had
+ * their one-off fees invoiced immediately, so they're skipped here to avoid a
+ * double charge when the schedule activates.
  */
 export const customerProductsToPhaseInvoiceItems = ({
 	ctx,
@@ -26,6 +30,8 @@ export const customerProductsToPhaseInvoiceItems = ({
 		[];
 
 	for (const customerProduct of customerProducts) {
+		if (customerProduct.access_starts_at != null) continue;
+
 		const productStartsAt = customerProduct.starts_at;
 		const startsInThisPhase =
 			productStartsAt >= phaseStartMs &&

@@ -151,4 +151,11 @@ test.concurrent(`${chalk.yellowBright("starts_at one-off: immediate-access futur
 		count: 1,
 		latestTotal: ONBOARDING_FEE,
 	});
+
+	// The fee was charged immediately, so the schedule must NOT queue it again
+	// (otherwise it gets invoiced a second time when the schedule activates).
+	const stripeSchedule = (await ctx.stripeCli.subscriptionSchedules.retrieve(
+		cusProduct.scheduled_ids![0]!,
+	)) as Stripe.SubscriptionSchedule;
+	expect(stripeSchedule.phases[0]?.add_invoice_items.length ?? 0).toBe(0);
 });
