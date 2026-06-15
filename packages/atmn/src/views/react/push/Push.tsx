@@ -17,7 +17,6 @@ interface PushViewProps {
 	environment?: AppEnv;
 	yes?: boolean;
 	onComplete?: () => void;
-	onError?: (message: string) => void;
 }
 
 /**
@@ -28,9 +27,8 @@ export function PushView({
 	environment = AppEnv.Sandbox,
 	yes = false,
 	onComplete,
-	onError,
 }: PushViewProps) {
-	const push = usePush({ environment, yes, onComplete, onError });
+	const push = usePush({ environment, yes, onComplete });
 	const duration = ((Date.now() - push.startTime) / 1000).toFixed(1);
 
 	// Error state

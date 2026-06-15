@@ -14,7 +14,6 @@ import {
 
 interface PullViewProps {
 	onComplete?: () => void;
-	onError?: (message: string) => void;
 	/** Environment to pull from */
 	environment?: AppEnv;
 	/** Force overwrite config (skip in-place update) */
@@ -31,7 +30,6 @@ interface PullViewProps {
  */
 export function PullView({
 	onComplete,
-	onError,
 	environment = AppEnv.Sandbox,
 	forceOverwrite = false,
 	cwd,
@@ -49,14 +47,7 @@ export function PullView({
 		error,
 		inPlace,
 		updateResult,
-	} = usePull({
-		environment,
-		onComplete,
-		onError,
-		forceOverwrite,
-		cwd,
-		noDeclarationFile,
-	});
+	} = usePull({ environment, onComplete, forceOverwrite, cwd, noDeclarationFile });
 
 	const duration = ((Date.now() - startTime) / 1000).toFixed(1);
 
