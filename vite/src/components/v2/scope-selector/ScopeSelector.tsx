@@ -4,8 +4,8 @@ import {
 	RESOURCE_METADATA,
 	RESOURCES,
 	type ResourceType,
-	Scopes,
 	type ScopeString,
+	Scopes,
 } from "@autumn/shared";
 import { useMemo, useState } from "react";
 import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
@@ -21,6 +21,8 @@ export type ScopeSelectorProps = {
 	 * set is disabled with a tooltip explaining the caller can't grant it.
 	 */
 	availableScopes?: readonly string[];
+	/** Optional: limit the picker to these resources (defaults to all). */
+	resources?: readonly ResourceType[];
 	disabled?: boolean;
 };
 
@@ -34,8 +36,7 @@ const TRI_OPTIONS_FULL: TriOption[] = [
 	{ value: "write", label: "Write" },
 ];
 
-const UNAVAILABLE_TOOLTIP =
-	"You don't have this scope on your current session";
+const UNAVAILABLE_TOOLTIP = "You don't have this scope on your current session";
 const READ_ONLY_RESOURCE_TOOLTIP =
 	"This resource is read-only — no write scope exists";
 
@@ -154,6 +155,7 @@ export function ScopeSelector({
 	value,
 	onChange,
 	availableScopes,
+	resources = RESOURCES,
 	disabled = false,
 }: ScopeSelectorProps) {
 	// Restricted mode is a local UI concern. We seed it from the initial
@@ -206,15 +208,14 @@ export function ScopeSelector({
 				<div className="flex flex-col gap-0.5">
 					<span className="text-sm text-foreground">Restricted mode</span>
 					<span className="text-xs text-muted-foreground">
-						Limit this key to specific scopes. Leave unchecked for full
-						access.
+						Limit this key to specific scopes. Leave unchecked for full access.
 					</span>
 				</div>
 			</label>
 
 			{restricted && (
 				<div className="flex flex-col border-t border-border">
-					{RESOURCES.map((resource) => {
+					{resources.map((resource) => {
 						const meta = RESOURCE_METADATA[resource];
 						const isAnalytics = resource === "analytics";
 
@@ -222,9 +223,7 @@ export function ScopeSelector({
 						const readAvailable = isScopeAvailable(readScope);
 						const writeAvailable = isAnalytics
 							? false
-							: isScopeAvailable(
-									`${resource}:write` as ScopeString,
-								);
+							: isScopeAvailable(`${resource}:write` as ScopeString);
 
 						const fullyUnavailable =
 							!!expandedAvailable &&
@@ -235,9 +234,7 @@ export function ScopeSelector({
 						// Always render 3 segments so every row has the same
 						// width. For analytics, `Write` is permanently disabled
 						// with an explanatory tooltip.
-						const writeReason = isAnalytics
-							? READ_ONLY_RESOURCE_TOOLTIP
-							: null;
+						const writeReason = isAnalytics ? READ_ONLY_RESOURCE_TOOLTIP : null;
 
 						return (
 							<div
