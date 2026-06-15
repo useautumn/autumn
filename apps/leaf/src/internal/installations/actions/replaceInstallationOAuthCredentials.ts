@@ -142,6 +142,7 @@ const upsertOAuthConsent = async ({
 	userId,
 	clientId,
 	metadata,
+	scopes,
 }: {
 	tx: ChatTransaction;
 	env: AppEnv;
@@ -149,6 +150,7 @@ const upsertOAuthConsent = async ({
 	userId: string;
 	clientId: string;
 	metadata: OAuthConsentMetadata;
+	scopes: string[];
 }) => {
 	const now = new Date();
 	const [existingConsent] = await tx
@@ -171,7 +173,7 @@ const upsertOAuthConsent = async ({
 		await tx
 			.update(oauthConsent)
 			.set({
-				scopes: [...LEAF_OAUTH_SCOPES],
+				scopes,
 				metadata,
 				updatedAt: now,
 			})
@@ -185,7 +187,7 @@ const upsertOAuthConsent = async ({
 		clientId,
 		userId,
 		referenceId: orgId,
-		scopes: [...LEAF_OAUTH_SCOPES],
+		scopes,
 		env,
 		redirectUri: "slack://autumn-chat",
 		metadata,
@@ -201,11 +203,13 @@ const createCredentialForEnv = async ({
 	installation,
 	env,
 	userId,
+	scopes,
 }: {
 	tx: ChatTransaction;
 	installation: ChatInstallation;
 	env: AppEnv;
 	userId: string;
+	scopes: string[];
 }) => {
 	const now = Date.now();
 	const nowDate = new Date(now);
@@ -224,6 +228,7 @@ const createCredentialForEnv = async ({
 		userId,
 		clientId,
 		metadata,
+		scopes,
 	});
 
 	await tx.insert(oauthRefreshToken).values({
@@ -235,7 +240,7 @@ const createCredentialForEnv = async ({
 		expiresAt: new Date(refreshTokenExpiresAt),
 		createdAt: nowDate,
 		authTime: nowDate,
-		scopes: [...LEAF_OAUTH_SCOPES],
+		scopes,
 	});
 	await tx.insert(oauthAccessToken).values({
 		id: accessTokenId,
@@ -246,7 +251,7 @@ const createCredentialForEnv = async ({
 		refreshId: refreshTokenId,
 		expiresAt: new Date(accessTokenExpiresAt),
 		createdAt: nowDate,
-		scopes: [...LEAF_OAUTH_SCOPES],
+		scopes,
 	});
 	const credential = {
 		id: `chat_oauth_${crypto.randomUUID().replace(/-/g, "")}`,
@@ -258,7 +263,7 @@ const createCredentialForEnv = async ({
 		access_token: encrypt(prefixOAuthToken({ token: rawAccessToken })),
 		refresh_token: encrypt(rawRefreshToken),
 		access_token_expires_at: accessTokenExpiresAt,
-		scopes: [...LEAF_OAUTH_SCOPES],
+		scopes,
 		created_at: now,
 		updated_at: now,
 	};
@@ -284,18 +289,31 @@ const createCredentialForEnv = async ({
 		});
 };
 
+const leafScopeSet = new Set<string>(LEAF_OAUTH_SCOPES);
+
+// Bound the requested scopes to the app's max; empty = full default set.
+const resolveAgentScopes = (agentScopes?: string[]) => {
+	if (!agentScopes || agentScopes.length === 0) return [...LEAF_OAUTH_SCOPES];
+	const bounded = agentScopes.filter((scope) => leafScopeSet.has(scope));
+	return bounded.length > 0 ? bounded : [...LEAF_OAUTH_SCOPES];
+};
+
 export const replaceInstallationOAuthCredentials = async ({
 	tx,
 	installation,
 	userId,
+	agentScopes,
 }: {
 	tx: ChatTransaction;
 	installation: ChatInstallation;
 	userId: string;
+	agentScopes?: string[];
 }) => {
 	if (!userId) {
 		throw new Error("Missing user id for Slack MCP OAuth credentials");
 	}
+
+	const scopes = resolveAgentScopes(agentScopes);
 
 	await ensureSlackMcpOAuthClient({ tx, installation });
 	await createCredentialForEnv({
@@ -303,11 +321,13 @@ export const replaceInstallationOAuthCredentials = async ({
 		installation,
 		env: AppEnv.Sandbox,
 		userId,
+		scopes,
 	});
 	await createCredentialForEnv({
 		tx,
 		installation,
 		env: AppEnv.Live,
 		userId,
+		scopes,
 	});
 };
