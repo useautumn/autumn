@@ -1,6 +1,6 @@
 import type { AppEnv } from "@autumn/shared";
+import { autumnChatInstructions } from "../../harness/common/instructions/index.js";
 import type { ChatContextMessage } from "../../types.js";
-import { autumnChatInstructions } from "./instructions.js";
 
 /**
  * Single source for agent system prompts. The Mastra engine omits thread and

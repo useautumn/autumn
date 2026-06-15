@@ -1,6 +1,9 @@
-import { EntitlementDuration } from "@models/productModels/entModels/entModels";
-import { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums";
+import type { StartingAfterDuration } from "@api/billing/createSchedule/createScheduleParamsV0";
+import type { EntitlementDuration } from "@models/productModels/entModels/entModels";
+import type { FreeTrialDuration } from "@models/productModels/freeTrialModels/freeTrialEnums";
 import { addDays, addMonths, addWeeks, addYears } from "date-fns";
+
+type DurationType = FreeTrialDuration | EntitlementDuration | StartingAfterDuration;
 
 export const addDuration = ({
 	now,
@@ -8,17 +11,17 @@ export const addDuration = ({
 	durationLength = 1,
 }: {
 	now: number;
-	durationType: FreeTrialDuration | EntitlementDuration;
+	durationType: DurationType;
 	durationLength?: number;
 }) => {
 	switch (durationType) {
-		case FreeTrialDuration.Day:
+		case "day":
 			return addDays(now, durationLength).getTime();
-		case EntitlementDuration.Week:
+		case "week":
 			return addWeeks(now, durationLength).getTime();
-		case FreeTrialDuration.Month:
+		case "month":
 			return addMonths(now, durationLength).getTime();
-		case FreeTrialDuration.Year:
+		case "year":
 			return addYears(now, durationLength).getTime();
 		default:
 			throw new Error(`Invalid duration type: ${durationType}`);

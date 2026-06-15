@@ -1,7 +1,7 @@
 import type Anthropic from "@anthropic-ai/sdk";
 import type { AppEnv } from "@autumn/shared";
 import { MCPClient } from "@mastra/mcp";
-import { autumnChatInstructions } from "../../../../../src/agent/prompts/instructions.js";
+import { autumnChatInstructions } from "../../../../../src/harness/common/instructions/index.js";
 import { agentDocUris } from "../../../../../src/agent/prompts/readDocs.js";
 import { claudeManagedConfig } from "../../../../../src/harness/claudeManaged/config.js";
 import type { EvalDriverMessage } from "../types.js";

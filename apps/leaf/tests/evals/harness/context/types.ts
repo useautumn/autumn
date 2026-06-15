@@ -5,6 +5,7 @@ export type AutumnEvalToolName =
 	| "attach"
 	| "createBalance"
 	| "createEntity"
+	| "createPlan"
 	| "createSchedule"
 	| "getAgentRules"
 	| "getCustomer"
@@ -18,8 +19,10 @@ export type AutumnEvalToolName =
 	| "listPlans"
 	| "previewAttach"
 	| "previewCreateSchedule"
+	| "previewUpdateSubscription"
 	| "updateAgentRules"
-	| "updateCustomer";
+	| "updateCustomer"
+	| "updateSubscription";
 
 export type AutumnApiCall = {
 	toolName: AutumnEvalToolName | null;
