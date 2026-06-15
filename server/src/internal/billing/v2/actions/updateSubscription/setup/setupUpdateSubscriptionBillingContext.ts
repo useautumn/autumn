@@ -15,7 +15,10 @@ import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v
 import { setupAdjustableQuantities } from "@/internal/billing/v2/setup/setupAdjustableQuantities";
 import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
-import { setupCancelAction } from "@/internal/billing/v2/setup/setupCancelMode";
+import {
+	setupCancelAction,
+	shouldForcePastDueImmediateCancel,
+} from "@/internal/billing/v2/setup/setupCancelMode";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { setupIgnoreProrationBehavior } from "@/internal/billing/v2/setup/setupIgnoreProrationBehavior";
@@ -171,7 +174,18 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		customerProduct,
 	});
 
-	const cancelAction = setupCancelAction({ params });
+	const cancelAction = setupCancelAction({
+		params,
+		org: ctx.org,
+		customerProduct,
+	});
+
+	// A past_due cancel forced to immediate must not refund the unpaid cycle.
+	const forcePastDueImmediate = shouldForcePastDueImmediateCancel({
+		params,
+		org: ctx.org,
+		customerProduct,
+	});
 
 	let checkoutMode = setupAttachCheckoutMode({
 		paymentMethod,
@@ -221,9 +235,11 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
-		requestedProrationBehavior: setupIgnoreProrationBehavior({ intent })
-			? undefined
-			: params.proration_behavior,
+		requestedProrationBehavior: forcePastDueImmediate
+			? "none"
+			: setupIgnoreProrationBehavior({ intent })
+				? undefined
+				: params.proration_behavior,
 
 		invoiceMode,
 		featureQuantities,
