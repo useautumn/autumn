@@ -85,18 +85,21 @@ test.concurrent(
 );
 
 // ═══════════════════════════════════════════════════════════════════
-// TRACK-TOKENS-2: no feature_id cascades included → overage; explicit
-// feature_id targets a single system
+// TRACK-TOKENS-2: multiple overage systems are ambiguous without feature_id;
+// an explicit feature_id resolves to a single system. (Cascade happy paths
+// live in track-tokens-cascade.test.ts.)
 // ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
-	`${chalk.yellowBright("track-tokens-2: cascades across systems without feature_id, explicit feature_id targets one")}`,
+	`${chalk.yellowBright("track-tokens-2: multiple overage systems require feature_id, explicit feature_id resolves one")}`,
 	async () => {
-		const includedItem = items.free({
+		const overageItemA = items.consumable({
 			featureId: TestFeature.AiCredits,
-			includedUsage: 500,
+			includedUsage: 0,
+			price: 1,
+			billingUnits: 1,
 		});
-		const overageItem = items.consumable({
+		const overageItemB = items.consumable({
 			featureId: TestFeature.AiCredits2,
 			includedUsage: 0,
 			price: 1,
@@ -104,13 +107,13 @@ test.concurrent(
 		});
 		const proProd = products.base({
 			id: "pro",
-			items: [includedItem, overageItem],
+			items: [overageItemA, overageItemB],
 		});
 
 		const { customerId, autumnV1, autumnV2, ctx } = await initScenario({
 			customerId: "track-tokens-2",
 			setup: [
-				s.customer({ testClock: false }),
+				s.customer({ testClock: false, paymentMethod: "success" }),
 				s.products({ list: [proProd] }),
 			],
 			actions: [s.attach({ productId: proProd.id })],
@@ -124,28 +127,24 @@ test.concurrent(
 		}
 
 		const modelId = "anthropic/claude-sonnet-4-20250514";
-
-		// Without feature_id the engine resolves every AI credit system and drains
-		// the included pool first; this small event fits inside it, so the overage
-		// system stays untouched.
-		const cascadeCost = await getModelCreditCost({
-			modelName: modelId,
-			creditSystem: aiCreditFeature,
-			input: 100,
-			output: 50,
-		});
-		const cascadeRes: TrackResponseV2 = await autumnV2.post("/track_tokens", {
-			customer_id: customerId,
-			model_id: modelId,
-			input_tokens: 100,
-			output_tokens: 50,
-		});
-		expect(cascadeRes.value).toBeCloseTo(cascadeCost, 10);
-
-		// With an explicit feature_id only that system is charged.
 		const inputTokens = 2000;
 		const outputTokens = 1000;
-		const explicitCost = await getModelCreditCost({
+
+		// Both systems allow overage, so the overflow target is ambiguous.
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage: "Multiple AI credit systems allow overage",
+			func: () =>
+				autumnV2.post("/track_tokens", {
+					customer_id: customerId,
+					model_id: modelId,
+					input_tokens: inputTokens,
+					output_tokens: outputTokens,
+				}),
+		});
+
+		// An explicit feature_id resolves the ambiguity and charges only that system.
+		const expectedCost = await getModelCreditCost({
 			modelName: modelId,
 			creditSystem: aiCreditFeature,
 			input: inputTokens,
@@ -161,15 +160,11 @@ test.concurrent(
 		});
 
 		expect(trackRes.customer_id).toBe(customerId);
-		expect(trackRes.value).toBeCloseTo(explicitCost, 10);
+		expect(trackRes.value).toBeCloseTo(expectedCost, 10);
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expect(customer.features[TestFeature.AiCredits]).toMatchObject({
-			balance: new Decimal(500)
-				.minus(cascadeCost)
-				.minus(explicitCost)
-				.toNumber(),
-			usage: new Decimal(cascadeCost).plus(explicitCost).toNumber(),
+			usage: expectedCost,
 		});
 		expect(customer.features[TestFeature.AiCredits2]).toMatchObject({
 			usage: 0,

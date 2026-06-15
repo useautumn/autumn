@@ -30,11 +30,14 @@ import { AutumnInt } from "@/external/autumn/autumnCli.js";
 
 const CASCADE_MODEL = "custom/cascade-model";
 
-const createCascadeFeatures = async () => {
+const createCascadeFeatures = async ({ withSecondIncluded = false } = {}) => {
 	const autumn = new AutumnInt({ version: ApiVersion.V2_2 });
 	const suffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 	const includedFeatureId = `ai_cascade_inc_${suffix}`;
 	const overageFeatureId = `ai_cascade_ovg_${suffix}`;
+	const secondIncludedFeatureId = withSecondIncluded
+		? `ai_cascade_inc2_${suffix}`
+		: undefined;
 
 	await autumn.post("/features.create", {
 		feature_id: includedFeatureId,
@@ -44,6 +47,16 @@ const createCascadeFeatures = async () => {
 			[CASCADE_MODEL]: { markup: 0, input_cost: 5, output_cost: 15 },
 		},
 	});
+	if (secondIncludedFeatureId) {
+		await autumn.post("/features.create", {
+			feature_id: secondIncludedFeatureId,
+			name: "AI Cascade Included 2",
+			type: FeatureType.AiCreditSystem,
+			model_markups: {
+				[CASCADE_MODEL]: { markup: 0, input_cost: 5, output_cost: 15 },
+			},
+		});
+	}
 	await autumn.post("/features.create", {
 		feature_id: overageFeatureId,
 		name: "AI Cascade Overage",
@@ -53,155 +66,182 @@ const createCascadeFeatures = async () => {
 		},
 	});
 
-	return { includedFeatureId, overageFeatureId };
+	return { includedFeatureId, overageFeatureId, secondIncludedFeatureId };
 };
 
-const deductionFor = (trackRes: TrackResponseV3, featureId: string) =>
-	trackRes.deductions?.find((deduction) => deduction.feature_id === featureId);
-
-// ═══════════════════════════════════════════════════════════════════
-// CASCADE-1: included drains first, remainder spills at the overage markup
-// ═══════════════════════════════════════════════════════════════════
-
-test(
-	`${chalk.yellowBright("track-tokens-cascade-1: included drains first, remainder spills at the overage markup")}`,
-	async () => {
-		const { includedFeatureId, overageFeatureId } =
-			await createCascadeFeatures();
-		const includedItem = items.free({
-			featureId: includedFeatureId,
-			includedUsage: 2,
+/**
+ * Builds a customer on a product carrying one included AI credit system, an
+ * overage one, and optionally a second included one — the shape every cascade
+ * scenario shares. Returns the scenario plus the throwaway feature ids.
+ */
+const setupCascade = async (
+	id: string,
+	{
+		includedUsage,
+		secondIncludedUsage,
+		overageMaxPurchase,
+		entityFeatureId,
+		entityCount,
+	}: {
+		includedUsage: number;
+		secondIncludedUsage?: number;
+		overageMaxPurchase?: number;
+		entityFeatureId?: TestFeature;
+		entityCount?: number;
+	},
+) => {
+	const { includedFeatureId, overageFeatureId, secondIncludedFeatureId } =
+		await createCascadeFeatures({
+			withSecondIncluded: secondIncludedUsage !== undefined,
 		});
-		const overageItem = items.consumable({
+
+	const productItems = [
+		items.free({
+			featureId: includedFeatureId,
+			includedUsage,
+			entityFeatureId,
+		}),
+	];
+	if (secondIncludedFeatureId && secondIncludedUsage !== undefined) {
+		productItems.push(
+			items.free({
+				featureId: secondIncludedFeatureId,
+				includedUsage: secondIncludedUsage,
+				entityFeatureId,
+			}),
+		);
+	}
+	productItems.push(
+		items.consumable({
 			featureId: overageFeatureId,
 			includedUsage: 0,
 			price: 1,
 			billingUnits: 1,
-		});
-		const proProduct = products.base({
-			id: "cascade-1",
-			items: [includedItem, overageItem],
-		});
+			maxPurchase: overageMaxPurchase,
+			entityFeatureId,
+		}),
+	);
 
-		const { customerId, autumnV2_2 } = await initScenario({
-			customerId: "track-tokens-cascade-1",
-			setup: [
-				s.customer({ testClock: false }),
-				s.products({ list: [proProduct] }),
-			],
-			actions: [s.attach({ productId: proProduct.id })],
-		});
+	const proProduct = products.base({ id, items: productItems });
 
-		// base $4: included covers 2 of it (fraction 0.5); the remaining half of
-		// the event charges the overage system at its own cost: 0.5 × $6 = $3.
-		const trackRes: TrackResponseV3 = await autumnV2_2.post("/track_tokens", {
-			customer_id: customerId,
-			model_id: CASCADE_MODEL,
-			input_tokens: 200000,
-			output_tokens: 200000,
-		});
+	const scenario = await initScenario({
+		customerId: id,
+		setup: [
+			s.customer({ testClock: false }),
+			s.products({ list: [proProduct] }),
+			...(entityCount && entityFeatureId
+				? [s.entities({ count: entityCount, featureId: entityFeatureId })]
+				: []),
+		],
+		actions: [s.attach({ productId: proProduct.id })],
+	});
 
-		expect(trackRes.value).toBeCloseTo(4, 10);
-		expect(deductionFor(trackRes, includedFeatureId)?.value).toBeCloseTo(2, 10);
-		expect(deductionFor(trackRes, overageFeatureId)?.value).toBeCloseTo(3, 10);
-		// Two systems were touched, so there is no single primary balance.
-		expect(trackRes.balance).toBeNull();
-		expect(Object.keys(trackRes.balances ?? {})).toEqual(
-			expect.arrayContaining([includedFeatureId, overageFeatureId]),
-		);
+	return {
+		...scenario,
+		includedFeatureId,
+		overageFeatureId,
+		secondIncludedFeatureId,
+	};
+};
 
-		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-		expectBalanceCorrect({
-			customer,
-			featureId: includedFeatureId,
-			remaining: 0,
-			usage: 2,
-		});
-		expectBalanceCorrect({
-			customer,
-			featureId: overageFeatureId,
-			remaining: 0,
-			usage: 3,
-		});
+const trackCascadeModel = (
+	autumn: { post: (path: string, body: unknown) => Promise<unknown> },
+	customerId: string,
+	{
+		entityId,
+		featureId,
+		overageBehavior,
+		skipCache,
+	}: {
+		entityId?: string;
+		featureId?: string;
+		overageBehavior?: "cap" | "reject";
+		skipCache?: boolean;
+	} = {},
+): Promise<TrackResponseV3> =>
+	autumn.post(skipCache ? "/track_tokens?skip_cache=true" : "/track_tokens", {
+		customer_id: customerId,
+		model_id: CASCADE_MODEL,
+		input_tokens: 200000,
+		output_tokens: 200000,
+		...(entityId ? { entity_id: entityId } : {}),
+		...(featureId ? { feature_id: featureId } : {}),
+		...(overageBehavior ? { overage_behavior: overageBehavior } : {}),
+	}) as Promise<TrackResponseV3>;
 
-		// Cached vs DB agreement (mutation-log sync is async)
-		await timeout(6000);
-		const customerNonCached = await autumnV2_2.customers.get<ApiCustomerV5>(
-			customerId,
-			{ skip_cache: "true" },
-		);
-		expectBalanceCorrect({
-			customer: customerNonCached,
-			featureId: includedFeatureId,
-			remaining: 0,
-			usage: 2,
-		});
-		expectBalanceCorrect({
-			customer: customerNonCached,
-			featureId: overageFeatureId,
-			remaining: 0,
-			usage: 3,
-		});
-	},
-);
+const deductionFor = (trackRes: TrackResponseV3, featureId: string) =>
+	trackRes.deductions?.find((deduction) => deduction.feature_id === featureId);
+
+const expectUsage = (
+	customer: ApiCustomerV5 | ApiEntityV2,
+	featureId: string,
+	remaining: number,
+	usage: number,
+) => expectBalanceCorrect({ customer, featureId, remaining, usage });
+
+// ═══════════════════════════════════════════════════════════════════
+// CASCADE-1: included drains first, remainder spills at the overage markup.
+// Run through both the Redis (cached) and Postgres (skip_cache fallback) paths
+// since they are separate deduction engines that must settle identically.
+// ═══════════════════════════════════════════════════════════════════
+
+for (const path of ["redis", "postgres"] as const) {
+	test.concurrent(
+		`${chalk.yellowBright(`track-tokens-cascade-1 (${path}): included drains first, remainder spills at the overage markup`)}`,
+		async () => {
+			const { customerId, autumnV2_2, includedFeatureId, overageFeatureId } =
+				await setupCascade(`track-tokens-cascade-1-${path}`, {
+					includedUsage: 2,
+				});
+
+			// base $4: included covers 2 of it (fraction 0.5); the remaining half of
+			// the event charges the overage system at its own cost: 0.5 × $6 = $3.
+			const trackRes = await trackCascadeModel(autumnV2_2, customerId, {
+				skipCache: path === "postgres",
+			});
+
+			expect(trackRes.value).toBeCloseTo(4, 10);
+			expect(deductionFor(trackRes, includedFeatureId)?.value).toBeCloseTo(
+				2,
+				10,
+			);
+			expect(deductionFor(trackRes, overageFeatureId)?.value).toBeCloseTo(
+				3,
+				10,
+			);
+			// Two systems were touched, so there is no single primary balance.
+			expect(trackRes.balance).toBeNull();
+			expect(Object.keys(trackRes.balances ?? {})).toEqual(
+				expect.arrayContaining([includedFeatureId, overageFeatureId]),
+			);
+
+			const customer =
+				await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
+			expectUsage(customer, includedFeatureId, 0, 2);
+			expectUsage(customer, overageFeatureId, 0, 3);
+		},
+	);
+}
 
 // ═══════════════════════════════════════════════════════════════════
 // CASCADE-2: included covers the whole event, overage untouched
 // ═══════════════════════════════════════════════════════════════════
 
-test(
+test.concurrent(
 	`${chalk.yellowBright("track-tokens-cascade-2: included covers the whole event, overage untouched")}`,
 	async () => {
-		const { includedFeatureId, overageFeatureId } =
-			await createCascadeFeatures();
-		const includedItem = items.free({
-			featureId: includedFeatureId,
-			includedUsage: 10,
-		});
-		const overageItem = items.consumable({
-			featureId: overageFeatureId,
-			includedUsage: 0,
-			price: 1,
-			billingUnits: 1,
-		});
-		const proProduct = products.base({
-			id: "cascade-2",
-			items: [includedItem, overageItem],
-		});
+		const { customerId, autumnV2_2, includedFeatureId, overageFeatureId } =
+			await setupCascade("track-tokens-cascade-2", { includedUsage: 10 });
 
-		const { customerId, autumnV2_2 } = await initScenario({
-			customerId: "track-tokens-cascade-2",
-			setup: [
-				s.customer({ testClock: false }),
-				s.products({ list: [proProduct] }),
-			],
-			actions: [s.attach({ productId: proProduct.id })],
-		});
-
-		const trackRes: TrackResponseV3 = await autumnV2_2.post("/track_tokens", {
-			customer_id: customerId,
-			model_id: CASCADE_MODEL,
-			input_tokens: 200000,
-			output_tokens: 200000,
-		});
+		const trackRes = await trackCascadeModel(autumnV2_2, customerId);
 
 		expect(trackRes.value).toBeCloseTo(4, 10);
 		expect(deductionFor(trackRes, includedFeatureId)?.value).toBeCloseTo(4, 10);
 		expect(deductionFor(trackRes, overageFeatureId)).toBeUndefined();
 
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-		expectBalanceCorrect({
-			customer,
-			featureId: includedFeatureId,
-			remaining: 6,
-			usage: 4,
-		});
-		expectBalanceCorrect({
-			customer,
-			featureId: overageFeatureId,
-			remaining: 0,
-			usage: 0,
-		});
+		expectUsage(customer, includedFeatureId, 6, 4);
+		expectUsage(customer, overageFeatureId, 0, 0);
 	},
 );
 
@@ -209,58 +249,20 @@ test(
 // CASCADE-3: included already empty, full event charges overage at its markup
 // ═══════════════════════════════════════════════════════════════════
 
-test(
+test.concurrent(
 	`${chalk.yellowBright("track-tokens-cascade-3: included already empty, full event charges overage at its markup")}`,
 	async () => {
-		const { includedFeatureId, overageFeatureId } =
-			await createCascadeFeatures();
-		const includedItem = items.free({
-			featureId: includedFeatureId,
-			includedUsage: 0,
-		});
-		const overageItem = items.consumable({
-			featureId: overageFeatureId,
-			includedUsage: 0,
-			price: 1,
-			billingUnits: 1,
-		});
-		const proProduct = products.base({
-			id: "cascade-3",
-			items: [includedItem, overageItem],
-		});
+		const { customerId, autumnV2_2, includedFeatureId, overageFeatureId } =
+			await setupCascade("track-tokens-cascade-3", { includedUsage: 0 });
 
-		const { customerId, autumnV2_2 } = await initScenario({
-			customerId: "track-tokens-cascade-3",
-			setup: [
-				s.customer({ testClock: false }),
-				s.products({ list: [proProduct] }),
-			],
-			actions: [s.attach({ productId: proProduct.id })],
-		});
-
-		const trackRes: TrackResponseV3 = await autumnV2_2.post("/track_tokens", {
-			customer_id: customerId,
-			model_id: CASCADE_MODEL,
-			input_tokens: 200000,
-			output_tokens: 200000,
-		});
+		const trackRes = await trackCascadeModel(autumnV2_2, customerId);
 
 		expect(deductionFor(trackRes, includedFeatureId)).toBeUndefined();
 		expect(deductionFor(trackRes, overageFeatureId)?.value).toBeCloseTo(6, 10);
 
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-		expectBalanceCorrect({
-			customer,
-			featureId: includedFeatureId,
-			remaining: 0,
-			usage: 0,
-		});
-		expectBalanceCorrect({
-			customer,
-			featureId: overageFeatureId,
-			remaining: 0,
-			usage: 6,
-		});
+		expectUsage(customer, includedFeatureId, 0, 0);
+		expectUsage(customer, overageFeatureId, 0, 6);
 	},
 );
 
@@ -268,73 +270,33 @@ test(
 // CASCADE-4: reject is all-or-nothing — the included deduction is restored
 // ═══════════════════════════════════════════════════════════════════
 
-test(
+test.concurrent(
 	`${chalk.yellowBright("track-tokens-cascade-4: reject is all-or-nothing, included deduction restored")}`,
 	async () => {
-		const { includedFeatureId, overageFeatureId } =
-			await createCascadeFeatures();
-		const includedItem = items.free({
-			featureId: includedFeatureId,
-			includedUsage: 2,
-		});
 		// usage_limit 1 → at most $1 of overage; the $3 spill cannot fit
-		const overageItem = items.consumable({
-			featureId: overageFeatureId,
-			includedUsage: 0,
-			price: 1,
-			billingUnits: 1,
-			maxPurchase: 1,
-		});
-		const proProduct = products.base({
-			id: "cascade-4",
-			items: [includedItem, overageItem],
-		});
-
-		const { customerId, autumnV2_2 } = await initScenario({
-			customerId: "track-tokens-cascade-4",
-			setup: [
-				s.customer({ testClock: false }),
-				s.products({ list: [proProduct] }),
-			],
-			actions: [s.attach({ productId: proProduct.id })],
-		});
+		const { customerId, autumnV2_2, includedFeatureId, overageFeatureId } =
+			await setupCascade("track-tokens-cascade-4", {
+				includedUsage: 2,
+				overageMaxPurchase: 1,
+			});
 
 		await expectAutumnError({
 			errCode: ErrCode.InsufficientBalance,
 			func: () =>
-				autumnV2_2.post("/track_tokens", {
-					customer_id: customerId,
-					model_id: CASCADE_MODEL,
-					input_tokens: 200000,
-					output_tokens: 200000,
-					overage_behavior: "reject",
+				trackCascadeModel(autumnV2_2, customerId, {
+					overageBehavior: "reject",
 				}),
 		});
 
 		// The included deduction already ran when the overage deduction
 		// rejected; the compensation must have restored it exactly.
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-		expectBalanceCorrect({
-			customer,
-			featureId: includedFeatureId,
-			remaining: 2,
-			usage: 0,
-		});
-		expectBalanceCorrect({
-			customer,
-			featureId: overageFeatureId,
-			remaining: 0,
-			usage: 0,
-		});
+		expectUsage(customer, includedFeatureId, 2, 0);
+		expectUsage(customer, overageFeatureId, 0, 0);
 
 		// Same track under "cap": included drains, overage clamps at its limit
 		// and the uncovered remainder is discarded.
-		const capRes: TrackResponseV3 = await autumnV2_2.post("/track_tokens", {
-			customer_id: customerId,
-			model_id: CASCADE_MODEL,
-			input_tokens: 200000,
-			output_tokens: 200000,
-		});
+		const capRes = await trackCascadeModel(autumnV2_2, customerId);
 		expect(deductionFor(capRes, includedFeatureId)?.value).toBeCloseTo(2, 10);
 		expect(deductionFor(capRes, overageFeatureId)?.value).toBeCloseTo(1, 10);
 
@@ -344,18 +306,8 @@ test(
 			customerId,
 			{ skip_cache: "true" },
 		);
-		expectBalanceCorrect({
-			customer: customerNonCached,
-			featureId: includedFeatureId,
-			remaining: 0,
-			usage: 2,
-		});
-		expectBalanceCorrect({
-			customer: customerNonCached,
-			featureId: overageFeatureId,
-			remaining: 0,
-			usage: 1,
-		});
+		expectUsage(customerNonCached, includedFeatureId, 0, 2);
+		expectUsage(customerNonCached, overageFeatureId, 0, 1);
 	},
 );
 
@@ -363,59 +315,22 @@ test(
 // CASCADE-5: explicit feature_id bypasses the cascade
 // ═══════════════════════════════════════════════════════════════════
 
-test(
+test.concurrent(
 	`${chalk.yellowBright("track-tokens-cascade-5: explicit feature_id bypasses the cascade")}`,
 	async () => {
-		const { includedFeatureId, overageFeatureId } =
-			await createCascadeFeatures();
-		const includedItem = items.free({
-			featureId: includedFeatureId,
-			includedUsage: 10,
-		});
-		const overageItem = items.consumable({
+		const { customerId, autumnV2_2, includedFeatureId, overageFeatureId } =
+			await setupCascade("track-tokens-cascade-5", { includedUsage: 10 });
+
+		const trackRes = await trackCascadeModel(autumnV2_2, customerId, {
 			featureId: overageFeatureId,
-			includedUsage: 0,
-			price: 1,
-			billingUnits: 1,
-		});
-		const proProduct = products.base({
-			id: "cascade-5",
-			items: [includedItem, overageItem],
-		});
-
-		const { customerId, autumnV2_2 } = await initScenario({
-			customerId: "track-tokens-cascade-5",
-			setup: [
-				s.customer({ testClock: false }),
-				s.products({ list: [proProduct] }),
-			],
-			actions: [s.attach({ productId: proProduct.id })],
-		});
-
-		const trackRes: TrackResponseV3 = await autumnV2_2.post("/track_tokens", {
-			customer_id: customerId,
-			feature_id: overageFeatureId,
-			model_id: CASCADE_MODEL,
-			input_tokens: 200000,
-			output_tokens: 200000,
 		});
 
 		// Single-system behavior at the overage system's own markup
 		expect(trackRes.value).toBeCloseTo(6, 10);
 
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-		expectBalanceCorrect({
-			customer,
-			featureId: includedFeatureId,
-			remaining: 10,
-			usage: 0,
-		});
-		expectBalanceCorrect({
-			customer,
-			featureId: overageFeatureId,
-			remaining: 0,
-			usage: 6,
-		});
+		expectUsage(customer, includedFeatureId, 10, 0);
+		expectUsage(customer, overageFeatureId, 0, 6);
 	},
 );
 
@@ -423,79 +338,38 @@ test(
 // CASCADE-6: entity-scoped balances cascade within the target entity only
 // ═══════════════════════════════════════════════════════════════════
 
-test(
+test.concurrent(
 	`${chalk.yellowBright("track-tokens-cascade-6: entity-scoped balances cascade within the target entity only")}`,
 	async () => {
-		const { includedFeatureId, overageFeatureId } =
-			await createCascadeFeatures();
-		const includedItem = items.free({
-			featureId: includedFeatureId,
+		const {
+			customerId,
+			autumnV2_2,
+			entities,
+			includedFeatureId,
+			overageFeatureId,
+		} = await setupCascade("track-tokens-cascade-6", {
 			includedUsage: 2,
 			entityFeatureId: TestFeature.Users,
-		});
-		const overageItem = items.consumable({
-			featureId: overageFeatureId,
-			includedUsage: 0,
-			price: 1,
-			billingUnits: 1,
-			entityFeatureId: TestFeature.Users,
-		});
-		const proProduct = products.base({
-			id: "cascade-6",
-			items: [includedItem, overageItem],
+			entityCount: 2,
 		});
 
-		const { customerId, autumnV2_2, entities } = await initScenario({
-			customerId: "track-tokens-cascade-6",
-			setup: [
-				s.customer({ testClock: false }),
-				s.products({ list: [proProduct] }),
-				s.entities({ count: 2, featureId: TestFeature.Users }),
-			],
-			actions: [s.attach({ productId: proProduct.id })],
-		});
-
-		await autumnV2_2.post("/track_tokens", {
-			customer_id: customerId,
-			entity_id: entities[0].id,
-			model_id: CASCADE_MODEL,
-			input_tokens: 200000,
-			output_tokens: 200000,
+		await trackCascadeModel(autumnV2_2, customerId, {
+			entityId: entities[0].id,
 		});
 
 		const entity0 = await autumnV2_2.entities.get<ApiEntityV2>(
 			customerId,
 			entities[0].id,
 		);
-		expectBalanceCorrect({
-			customer: entity0,
-			featureId: includedFeatureId,
-			remaining: 0,
-			usage: 2,
-		});
-		expectBalanceCorrect({
-			customer: entity0,
-			featureId: overageFeatureId,
-			remaining: 0,
-			usage: 3,
-		});
+		expectUsage(entity0, includedFeatureId, 0, 2);
+		expectUsage(entity0, overageFeatureId, 0, 3);
 
 		const entity1 = await autumnV2_2.entities.get<ApiEntityV2>(
 			customerId,
 			entities[1].id,
 		);
-		expectBalanceCorrect({
-			customer: entity1,
-			featureId: includedFeatureId,
-			remaining: 2,
-			usage: 0,
-		});
-		expectBalanceCorrect({
-			customer: entity1,
-			featureId: overageFeatureId,
-			remaining: 0,
-			usage: 0,
-		});
+		expectUsage(entity1, includedFeatureId, 2, 0);
+		expectUsage(entity1, overageFeatureId, 0, 0);
 	},
 );
 
@@ -503,157 +377,44 @@ test(
 // CASCADE-7: three systems cascade — both included pools drain before overage
 // ═══════════════════════════════════════════════════════════════════
 
-test(
+test.concurrent(
 	`${chalk.yellowBright("track-tokens-cascade-7: two included systems drain before overage, no feature_id")}`,
 	async () => {
-		const { includedFeatureId, overageFeatureId } =
-			await createCascadeFeatures();
-
-		// A second included (0% markup) system on the same model.
-		const autumn = new AutumnInt({ version: ApiVersion.V2_2 });
-		const suffix = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-		const secondIncludedFeatureId = `ai_cascade_inc2_${suffix}`;
-		await autumn.post("/features.create", {
-			feature_id: secondIncludedFeatureId,
-			name: "AI Cascade Included 2",
-			type: FeatureType.AiCreditSystem,
-			model_markups: {
-				[CASCADE_MODEL]: { markup: 0, input_cost: 5, output_cost: 15 },
-			},
-		});
-
 		// base $4. The two included pools hold 2 + 1 = 3 and both drain fully; the
 		// leftover quarter of the event spills into overage at its own markup:
 		// 0.25 × $6 = $1.5.
-		const includedAItem = items.free({
-			featureId: includedFeatureId,
+		const {
+			customerId,
+			autumnV2_2,
+			includedFeatureId,
+			overageFeatureId,
+			secondIncludedFeatureId,
+		} = await setupCascade("track-tokens-cascade-7", {
 			includedUsage: 2,
-		});
-		const includedBItem = items.free({
-			featureId: secondIncludedFeatureId,
-			includedUsage: 1,
-		});
-		const overageItem = items.consumable({
-			featureId: overageFeatureId,
-			includedUsage: 0,
-			price: 1,
-			billingUnits: 1,
-		});
-		const proProduct = products.base({
-			id: "cascade-7",
-			items: [includedAItem, includedBItem, overageItem],
+			secondIncludedUsage: 1,
 		});
 
-		const { customerId, autumnV2_2 } = await initScenario({
-			customerId: "track-tokens-cascade-7",
-			setup: [
-				s.customer({ testClock: false }),
-				s.products({ list: [proProduct] }),
-			],
-			actions: [s.attach({ productId: proProduct.id })],
-		});
-
-		const trackRes: TrackResponseV3 = await autumnV2_2.post("/track_tokens", {
-			customer_id: customerId,
-			model_id: CASCADE_MODEL,
-			input_tokens: 200000,
-			output_tokens: 200000,
-		});
+		const trackRes = await trackCascadeModel(autumnV2_2, customerId);
 
 		expect(trackRes.value).toBeCloseTo(4, 10);
 		expect(deductionFor(trackRes, includedFeatureId)?.value).toBeCloseTo(2, 10);
-		expect(deductionFor(trackRes, secondIncludedFeatureId)?.value).toBeCloseTo(
-			1,
+		expect(
+			secondIncludedFeatureId
+				? deductionFor(trackRes, secondIncludedFeatureId)?.value
+				: undefined,
+		).toBeCloseTo(1, 10);
+		expect(deductionFor(trackRes, overageFeatureId)?.value).toBeCloseTo(
+			1.5,
 			10,
 		);
-		expect(deductionFor(trackRes, overageFeatureId)?.value).toBeCloseTo(1.5, 10);
 		// Three systems were touched, so there is no single primary balance.
 		expect(trackRes.balance).toBeNull();
 
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-		expectBalanceCorrect({
-			customer,
-			featureId: includedFeatureId,
-			remaining: 0,
-			usage: 2,
-		});
-		expectBalanceCorrect({
-			customer,
-			featureId: secondIncludedFeatureId,
-			remaining: 0,
-			usage: 1,
-		});
-		expectBalanceCorrect({
-			customer,
-			featureId: overageFeatureId,
-			remaining: 0,
-			usage: 1.5,
-		});
-	},
-);
-
-// ═══════════════════════════════════════════════════════════════════
-// CASCADE-8: included drains first via Postgres fallback path
-// ═══════════════════════════════════════════════════════════════════
-
-test(
-	`${chalk.yellowBright("track-tokens-cascade-8: cascade settles correctly through the Postgres fallback path")}`,
-	async () => {
-		const { includedFeatureId, overageFeatureId } =
-			await createCascadeFeatures();
-		const includedItem = items.free({
-			featureId: includedFeatureId,
-			includedUsage: 2,
-		});
-		const overageItem = items.consumable({
-			featureId: overageFeatureId,
-			includedUsage: 0,
-			price: 1,
-			billingUnits: 1,
-		});
-		const proProduct = products.base({
-			id: "cascade-8",
-			items: [includedItem, overageItem],
-		});
-
-		const { customerId, autumnV2_2 } = await initScenario({
-			customerId: "track-tokens-cascade-8",
-			setup: [
-				s.customer({ testClock: false }),
-				s.products({ list: [proProduct] }),
-			],
-			actions: [s.attach({ productId: proProduct.id })],
-		});
-
-		// skip_cache forces ctx.skipCache = true, which makes Redis throw
-		// a SkipCache error. handleRedisTrackError sees shouldFallback() =
-		// true and routes through runPostgresTrack instead.
-		const trackRes: TrackResponseV3 = await autumnV2_2.post(
-			"/track_tokens?skip_cache=true",
-			{
-				customer_id: customerId,
-				model_id: CASCADE_MODEL,
-				input_tokens: 200000,
-				output_tokens: 200000,
-			},
-		);
-
-		expect(trackRes.value).toBeCloseTo(4, 10);
-		expect(deductionFor(trackRes, includedFeatureId)?.value).toBeCloseTo(2, 10);
-		expect(deductionFor(trackRes, overageFeatureId)?.value).toBeCloseTo(3, 10);
-
-		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
-		expectBalanceCorrect({
-			customer,
-			featureId: includedFeatureId,
-			remaining: 0,
-			usage: 2,
-		});
-		expectBalanceCorrect({
-			customer,
-			featureId: overageFeatureId,
-			remaining: 0,
-			usage: 3,
-		});
+		expectUsage(customer, includedFeatureId, 0, 2);
+		if (secondIncludedFeatureId) {
+			expectUsage(customer, secondIncludedFeatureId, 0, 1);
+		}
+		expectUsage(customer, overageFeatureId, 0, 1.5);
 	},
 );
