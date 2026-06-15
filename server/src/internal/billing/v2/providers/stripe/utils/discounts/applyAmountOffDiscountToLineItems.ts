@@ -1,14 +1,62 @@
 import {
+	atmnToStripeAmount,
 	type LineItem,
 	type LineItemDiscount,
 	type StripeDiscountWithCoupon,
 	stripeToAtmnAmount,
-	sumValues,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { addDiscountTagToDescription } from "./addDiscountTagToDescription";
 import { discountAppliesToLineItem } from "./discountAppliesToLineItem";
 import { getBackdatedDiscountCycleCount } from "./getBackdatedDiscountCycleCount";
+
+const allocateAmountOffDiscounts = ({
+	lineItems,
+	amountOffMinorUnits,
+	currency,
+}: {
+	lineItems: LineItem[];
+	amountOffMinorUnits: number;
+	currency: string;
+}) => {
+	const weightedItems = lineItems
+		.map((item, index) => ({
+			item,
+			index,
+			weight: atmnToStripeAmount({ amount: Math.abs(item.amount), currency }),
+		}))
+		.filter((item) => item.weight > 0);
+
+	const totalWeight = weightedItems.reduce((sum, item) => sum + item.weight, 0);
+	if (totalWeight === 0) return new Map<LineItem, number>();
+
+	const allocations = weightedItems.map(({ item, index, weight }) => {
+		const exact = new Decimal(amountOffMinorUnits).times(weight).div(totalWeight);
+		const minorUnits = exact.floor().toNumber();
+		return { item, index, minorUnits, remainder: exact.minus(minorUnits) };
+	});
+
+	let remaining =
+		amountOffMinorUnits -
+		allocations.reduce((sum, allocation) => sum + allocation.minorUnits, 0);
+	const byRemainder = [...allocations].sort((a, b) => {
+		const diff = b.remainder.comparedTo(a.remainder);
+		return diff === 0 ? a.index - b.index : diff;
+	});
+
+	for (const allocation of byRemainder) {
+		if (remaining <= 0) break;
+		allocation.minorUnits += 1;
+		remaining -= 1;
+	}
+
+	return new Map(
+		allocations.map(({ item, minorUnits }) => [
+			item,
+			stripeToAtmnAmount({ amount: minorUnits, currency }),
+		]),
+	);
+};
 
 /**
  * Applies an amount_off discount to line items.
@@ -32,11 +80,7 @@ export const applyAmountOffDiscountToLineItems = ({
 		return lineItems;
 	}
 
-	// Convert from Stripe cents to Autumn dollars
-	const baseDiscountAmountOff = stripeToAtmnAmount({
-		amount: amountOffCents,
-		currency: coupon.currency ?? "usd",
-	});
+	const currency = coupon.currency ?? "usd";
 
 	// Filter to applicable CHARGE line items only
 	// Discounts reduce what the customer pays, so only apply to charges
@@ -53,23 +97,12 @@ export const applyAmountOffDiscountToLineItems = ({
 	);
 	if (eligibleCycleCount <= 0) return lineItems;
 
-	const discountAmountOff = baseDiscountAmountOff;
-
 	// Build a map of line item -> discount amount
-	const discountMap = new Map<LineItem, number>();
-
-	// Distribute discount proportionally across charge items
-	const total = sumValues(
-		applicableChargeItems.map((item) => Math.abs(item.amount)),
-	);
-
-	if (total === 0) return lineItems;
-
-	for (const item of applicableChargeItems) {
-		const proportion = new Decimal(Math.abs(item.amount)).dividedBy(total);
-		const itemDiscount = proportion.times(discountAmountOff).round().toNumber();
-		discountMap.set(item, itemDiscount);
-	}
+	const discountMap = allocateAmountOffDiscounts({
+		lineItems: applicableChargeItems,
+		amountOffMinorUnits: amountOffCents,
+		currency,
+	});
 
 	// Apply discounts to line items
 	return lineItems.map((item) => {

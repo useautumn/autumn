@@ -12,13 +12,13 @@
  * Red-failure mode (current behavior):
  *  - Case 1 (upgrade with credit): preview.tax.total ~ positiveSum * rate
  *    (inflated, ignores negative proration credit)
- *  - Case 2 (downgrade, net <= 0): preview.tax.total > 0
- *    (Stripe still gets called with the positive line and taxes it)
+ *  - Case 2 (downgrade, net < 0): preview.tax.total === 0
+ *    (tax credit omitted from the preview)
  *  - Case 3 (all-positive new attach): correct
  *
  * Green-success criteria (after fix):
  *  - Case 1: preview.tax.total ~ netSubtotal * rate
- *  - Case 2: preview.tax.total === 0, status === "complete"
+ *  - Case 2: preview.tax.total ~ netSubtotal * rate (negative)
  *  - Case 3: unchanged (no regression)
  *
  * Architecture (per fetch-build-execute):
@@ -123,7 +123,7 @@ test.concurrent(`${chalk.yellowBright(
 }, 300_000);
 
 test.concurrent(`${chalk.yellowBright(
-	"automatic-tax-preview-attach-prorated-credit (downgrade, credit exceeds new charge): preview tax is zero with status complete",
+	"automatic-tax-preview-attach-prorated-credit (downgrade, credit exceeds new charge): preview returns negative tax credit",
 )}`, async () => {
 	const customerId = "tax-preview-prorated-credit-downgrade";
 	const proProd = products.pro({ id: "pro", items: [] });
@@ -154,8 +154,8 @@ test.concurrent(`${chalk.yellowBright(
 	//   Pro prorated charge:        ~ +$16.67 (25 days x $20 / 30)
 	//   Unused Premium credit:      ~ -$41.67 (25 days x $50 / 30)
 	//   netSubtotal:                ~ -$25.00  (credit exceeds charge)
-	// Bug: tax = positiveSum * rate ~ 16.67 * 0.10 = ~$1.67
-	// Fix: tax = 0 (skip Stripe call, no tax owed on net-credit invoice)
+	// Bug: tax = 0, omitting the tax credit from the preview
+	// Fix: tax = netSubtotal * rate = ~$-2.50
 	const preview = (await autumnV2_2.billing.previewAttach({
 		customer_id: customerId,
 		plan_id: `pro_${customerId}`,
@@ -179,9 +179,17 @@ test.concurrent(`${chalk.yellowBright(
 	const positiveLines = preview.line_items.filter((li) => li.total > 0);
 	expect(positiveLines.length).toBeGreaterThan(0);
 
-	// Core assertion: no tax when net subtotal is non-positive.
-	expect(preview.tax?.total).toBe(0);
-	expect(preview.tax?.amount_exclusive).toBe(0);
+	const expectedTax = immediateLineItemsTotal * AU_GST_RATE;
+
+	// Core assertion: tax mirrors the negative net subtotal.
+	expect(preview.tax?.total).toBeGreaterThanOrEqual(expectedTax - 0.05);
+	expect(preview.tax?.total).toBeLessThanOrEqual(expectedTax + 0.05);
+	expect(preview.tax?.amount_exclusive).toBeGreaterThanOrEqual(
+		expectedTax - 0.05,
+	);
+	expect(preview.tax?.amount_exclusive).toBeLessThanOrEqual(
+		expectedTax + 0.05,
+	);
 	expect(preview.tax?.amount_inclusive).toBe(0);
 }, 300_000);
 
