@@ -33,6 +33,7 @@ import type Stripe from "stripe";
 import { getCustomerProduct } from "./utils";
 
 const ONBOARDING_FEE = 20;
+const BASE_PRICE = 20; // products.pro() has a $20/mo base price built in.
 const BILLING_UNITS = 1;
 
 // products.pro -> $20/mo base + one-off onboarding fee billed via Messages.
@@ -92,6 +93,16 @@ test.concurrent(`${chalk.yellowBright("starts_at one-off: scheduled attach queue
 	});
 
 	const startDate = addDays(advancedTo, 7).getTime();
+
+	// Preview surfaces the one-off fee on the activation cycle ($0 due now).
+	const preview = await autumnV2_2.billing.previewAttach<AttachParamsV1Input>({
+		customer_id: customerId,
+		plan_id: pro.id,
+		starts_at: startDate,
+		feature_quantities: onboardingFeeQuantities,
+	});
+	expect(preview.total).toBe(0);
+	expect(preview.next_cycle?.total).toBe(BASE_PRICE + ONBOARDING_FEE);
 
 	await autumnV2_2.billing.attach<AttachParamsV1Input>({
 		customer_id: customerId,

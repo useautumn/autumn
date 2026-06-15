@@ -202,7 +202,7 @@ export const billingPlanToNextCyclePreview = ({
 					direction: "charge",
 					billingCycleAnchorMs,
 					filterBillingPeriodStart: false,
-					priceFilters: { excludeOneOffPrices: true },
+					// Include one-off fees: they're charged when the plan activates.
 				},
 			],
 			autumnBillingPlan: billingPlan.autumn,
