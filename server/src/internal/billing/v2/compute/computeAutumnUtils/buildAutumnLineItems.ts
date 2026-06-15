@@ -6,9 +6,12 @@ import {
 	type UpdateCustomerEntitlement,
 } from "@autumn/shared";
 import { customerProductToArrearLineItems } from "@/internal/billing/v2/utils/lineItems/customerProductToArrearLineItems";
+import {
+	customerProductToLineItems,
+	type LineItemPriceFilters,
+} from "@/internal/billing/v2/utils/lineItems/customerProductToLineItems";
 import { getRefundLineItems } from "@/internal/billing/v2/utils/lineItems/getRefundLineItems";
 import type { AutumnContext } from "../../../../../honoUtils/HonoEnv";
-import { customerProductToLineItems } from "../../utils/lineItems/customerProductToLineItems";
 import { logBuildAutumnLineItems } from "./logBuildAutumnLineItems";
 
 export const buildAutumnLineItems = ({
@@ -18,6 +21,7 @@ export const buildAutumnLineItems = ({
 	deletedCustomerProducts,
 	billingContext,
 	includeArrearLineItems = false,
+	newProductPriceFilters,
 }: {
 	ctx: AutumnContext;
 	newCustomerProducts: FullCusProduct[];
@@ -25,6 +29,7 @@ export const buildAutumnLineItems = ({
 	deletedCustomerProducts?: FullCusProduct[];
 	billingContext: BillingContext;
 	includeArrearLineItems?: boolean;
+	newProductPriceFilters?: LineItemPriceFilters;
 }) => {
 	const { logger } = ctx;
 	const customerProductsToDelete = [
@@ -78,6 +83,7 @@ export const buildAutumnLineItems = ({
 			customerProduct: newCustomerProduct,
 			billingContext,
 			direction: "charge",
+			priceFilters: newProductPriceFilters,
 		}),
 	);
 

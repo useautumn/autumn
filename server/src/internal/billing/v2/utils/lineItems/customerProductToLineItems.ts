@@ -23,6 +23,11 @@ import { augmentBillingContextForAnchorResetRefund } from "./augmentBillingConte
 import { getBackdatedLineItemContext } from "./getBackdatedLineItemContext";
 import { getLineItemBillingPeriod } from "./getLineItemBillingPeriod";
 
+export type LineItemPriceFilters = {
+	excludeOneOffPrices?: boolean;
+	includeOnlyOneOffPrices?: boolean;
+};
+
 /**
  * Generates line items for a customer product.
  * - "charge" direction: positive amounts (for NEW product)
@@ -43,9 +48,7 @@ export const customerProductToLineItems = ({
 	customerProduct: FullCusProduct;
 	billingContext: BillingContext;
 	direction: "charge" | "refund";
-	priceFilters?: {
-		excludeOneOffPrices?: boolean;
-	};
+	priceFilters?: LineItemPriceFilters;
 	billingCycleAnchorMsOverride?: BillingContext["billingCycleAnchorMs"];
 }): LineItem[] => {
 	const { currentEpochMs } = billingContext;
@@ -67,6 +70,11 @@ export const customerProductToLineItems = ({
 	if (priceFilters?.excludeOneOffPrices) {
 		filteredCustomerPrices = filteredCustomerPrices.filter(
 			(cp) => !isOneOffPrice(cp.price),
+		);
+	}
+	if (priceFilters?.includeOnlyOneOffPrices) {
+		filteredCustomerPrices = filteredCustomerPrices.filter((cp) =>
+			isOneOffPrice(cp.price),
 		);
 	}
 

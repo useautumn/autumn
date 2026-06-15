@@ -183,7 +183,7 @@
     },
     "packages/atmn": {
       "name": "atmn",
-      "version": "1.1.8",
+      "version": "1.1.9",
       "bin": {
         "atmn": "dist/cli.js",
       },
