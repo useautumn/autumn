@@ -311,8 +311,8 @@ test(
 				}),
 		});
 
-		// The included leg already ran when the overage leg rejected; the
-		// compensation must have restored it exactly.
+		// The included deduction already ran when the overage deduction
+		// rejected; the compensation must have restored it exactly.
 		const customer = await autumnV2_2.customers.get<ApiCustomerV5>(customerId);
 		expectBalanceCorrect({
 			customer,

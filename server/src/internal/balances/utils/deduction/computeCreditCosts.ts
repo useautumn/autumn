@@ -17,8 +17,6 @@ export const computeCreditCosts = ({
 }): CreditCostLookup => {
 	const costMap = new Map<string, number>();
 
-	// Direct token cost per AI credit system: the tracked feature, plus any
-	// cascade spillover systems (each priced in its own cost domain).
 	const tokenCostByFeatureId = new Map<string, number>();
 	if (deduction.tokens) {
 		tokenCostByFeatureId.set(deduction.feature.id, deduction.tokens.cost);
