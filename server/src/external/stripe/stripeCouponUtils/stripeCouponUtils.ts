@@ -155,13 +155,11 @@ export const createStripeCoupon = async ({
 
 	const redeemedByCode = new Map<string, number>();
 	for (const promoCode of reward.promo_codes) {
-		const existing = await stripeCli.promotionCodes.list({
+		let totalRedeemed = 0;
+		for await (const existingPromo of stripeCli.promotionCodes.list({
 			code: promoCode.code,
 			limit: 100,
-		});
-
-		let totalRedeemed = 0;
-		for (const existingPromo of existing.data) {
+		})) {
 			const attachedCouponId = getPromoCouponId(existingPromo);
 			if (attachedCouponId === reward.id) {
 				totalRedeemed += existingPromo.times_redeemed;
