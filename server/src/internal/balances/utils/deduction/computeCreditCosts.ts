@@ -21,8 +21,11 @@ export const computeCreditCosts = ({
 	if (deduction.tokens) {
 		tokenCostByFeatureId.set(deduction.feature.id, deduction.tokens.cost);
 	}
-	for (const spill of deduction.spillover ?? []) {
-		tokenCostByFeatureId.set(spill.feature.id, spill.tokens.cost);
+	for (const spilloverDeduction of deduction.spillover ?? []) {
+		tokenCostByFeatureId.set(
+			spilloverDeduction.feature.id,
+			spilloverDeduction.tokens.cost,
+		);
 	}
 
 	for (const ce of cusEnts) {

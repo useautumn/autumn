@@ -148,15 +148,17 @@ const resolveAiCreditFeaturesFromEntitlements = async ({
 		});
 	}
 
-	return [...aiCreditSystems]
-		.sort((left, right) => {
-			const statusDiff =
-				Number(left.hasUsageAllowed) - Number(right.hasUsageAllowed);
-			if (statusDiff !== 0) {
-				return statusDiff;
-			}
-			return left.feature.id.localeCompare(right.feature.id);
-		})
+	// Included (capped) systems drain first; the overage system settles the
+	// overflow last. Ties broken by id so the order is stable.
+	const includedFirst = (system: { hasUsageAllowed: boolean }) =>
+		system.hasUsageAllowed ? 1 : 0;
+
+	return aiCreditSystems
+		.sort(
+			(left, right) =>
+				includedFirst(left) - includedFirst(right) ||
+				left.feature.id.localeCompare(right.feature.id),
+		)
 		.map((system) => system.feature);
 };
 

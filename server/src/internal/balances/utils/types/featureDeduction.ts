@@ -96,12 +96,13 @@ export const expandCascadeDeductions = (
 		if (!deduction.spillover || deduction.spillover.length === 0) {
 			return [deduction];
 		}
+		const primaryOnly = { ...deduction, spillover: undefined };
 		return [
-			{ ...deduction, spillover: undefined },
-			...deduction.spillover.map((spill) => ({
-				feature: spill.feature,
+			primaryOnly,
+			...deduction.spillover.map((spilloverDeduction) => ({
+				feature: spilloverDeduction.feature,
 				deduction: deduction.deduction,
-				tokens: spill.tokens,
+				tokens: spilloverDeduction.tokens,
 			})),
 		];
 	});
@@ -122,7 +123,8 @@ export const getRelevantFeaturesForDeduction = ({
 	const { feature, targetBalance, spillover } = deduction;
 	if (notNullish(targetBalance)) return [feature];
 
-	const spilloverFeatures = spillover?.map((spill) => spill.feature) ?? [];
+	const spilloverFeatures =
+		spillover?.map((spilloverDeduction) => spilloverDeduction.feature) ?? [];
 	const relevantFeatures = [
 		...getRelevantFeatures({ features, featureId: feature.id }),
 		...spilloverFeatures.flatMap((spilloverFeature) =>
@@ -130,8 +132,13 @@ export const getRelevantFeaturesForDeduction = ({
 		),
 	];
 
-	return relevantFeatures.filter(
-		(candidate, index, all) =>
-			all.findIndex((other) => other.id === candidate.id) === index,
-	);
+	// Dedupe by feature id (same id resolves to the same feature).
+	return [
+		...new Map(
+			relevantFeatures.map((relevantFeature) => [
+				relevantFeature.id,
+				relevantFeature,
+			]),
+		).values(),
+	];
 };

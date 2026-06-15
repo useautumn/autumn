@@ -14,21 +14,21 @@ export const buildAiCreditCostProperty = ({
 	featureDeductions: FeatureDeduction[];
 	entries: Array<{ featureId: string; amount: number }>;
 }): Record<string, number> | undefined => {
-	const aiFeatureIds = new Set(
+	const aiCreditSystemIds = new Set(
 		featureDeductions
 			.filter((deduction) => deduction.tokens)
 			.flatMap((deduction) => [
 				deduction.feature.id,
-				// Cascade spillover systems are AI credit systems too — exclude them
-				// so the map only contains downstream metered features.
-				...(deduction.spillover?.map((spill) => spill.feature.id) ?? []),
+				...(deduction.spillover?.map(
+					(spilloverDeduction) => spilloverDeduction.feature.id,
+				) ?? []),
 			]),
 	);
-	if (aiFeatureIds.size === 0) return;
+	if (aiCreditSystemIds.size === 0) return;
 
 	const creditCost: Record<string, number> = {};
 	for (const { featureId, amount } of entries) {
-		if (aiFeatureIds.has(featureId)) continue;
+		if (aiCreditSystemIds.has(featureId)) continue;
 		if (!amount) continue;
 		creditCost[featureId] = (creditCost[featureId] ?? 0) + amount;
 	}
