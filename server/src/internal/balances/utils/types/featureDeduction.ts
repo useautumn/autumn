@@ -1,8 +1,5 @@
 import type { Feature, LockParams } from "@autumn/shared";
 import type { LockReceipt } from "../lock/fetchLockReceipt.js";
-import type { MutationLogItem } from "./mutationLogItem.js";
-
-export type CascadeRole = "included" | "overage";
 
 export type TokenUsage = {
 	modelName: string;
@@ -16,6 +13,12 @@ export type TokenDeduction = {
 	cost: number;
 };
 
+/** A credit system the cascade spills into, priced in its own cost domain. */
+export type SpilloverDeduction = {
+	feature: Feature;
+	tokens: TokenDeduction;
+};
+
 export type FeatureDeduction = {
 	feature: Feature;
 	deduction: number;
@@ -27,14 +30,34 @@ export type FeatureDeduction = {
 	lockReceiptKey?: string;
 	unwindValue?: number;
 	/**
-	 * Token-cascade marker. "included" legs always run with overage behaviour
-	 * "cap" and report their leftover; "overage" legs have their amount scaled
-	 * by the included leg's remaining event fraction before executing.
+	 * AI-credit cascade: extra credit systems whose balances absorb this
+	 * deduction after `feature`'s own, each in its own cost domain. Their
+	 * entitlements join the same atomic engine deduction, so the engine drains
+	 * `feature` first (capped, since it disallows overage) and the leftover
+	 * spills into these — settling the whole cascade in one call.
 	 */
-	cascade?: { role: CascadeRole };
-	/**
-	 * Inline compensation: re-credit exactly these ordered mutation items in
-	 * reverse, without a persisted lock receipt. Used together with unwindValue.
-	 */
-	unwindItems?: MutationLogItem[];
+	spillover?: SpilloverDeduction[];
 };
+
+/**
+ * Flattens a cascade deduction into one entry per feature. The engine settles a
+ * cascade as a single multi-feature deduction, but response/property helpers
+ * report per-feature, so they expand it back out first.
+ */
+export const expandCascadeDeductions = (
+	featureDeductions: FeatureDeduction[],
+): FeatureDeduction[] =>
+	featureDeductions.flatMap((deduction) => {
+		if (!deduction.spillover || deduction.spillover.length === 0) {
+			return [deduction];
+		}
+		return [
+			{ ...deduction, spillover: undefined },
+			...deduction.spillover.map((spill) => ({
+				...deduction,
+				feature: spill.feature,
+				tokens: spill.tokens,
+				spillover: undefined,
+			})),
+		];
+	});

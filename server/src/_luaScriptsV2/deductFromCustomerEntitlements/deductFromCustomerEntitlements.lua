@@ -134,7 +134,6 @@ if not is_nil(unwind_value) and safe_number(unwind_value) > 0 then
     context = context,
     lock_receipt_key = lock_receipt_key,
     unwind_value = unwind_value,
-    items = params.unwind_items,
   })
 
   if not is_nil(unwind_result.error) then

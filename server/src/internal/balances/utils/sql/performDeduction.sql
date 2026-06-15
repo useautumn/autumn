@@ -23,13 +23,7 @@ DECLARE
   END;
   -- New: rollovers array with {id, credit_cost} objects for credit cost support
   rollovers_arr jsonb := params->'rollovers';
-  -- Inline unwind items (cascade compensation) take precedence over a passed
-  -- lock receipt, mirroring unwind_items in the Redis deduction scripts.
-  lock_receipt jsonb := CASE
-    WHEN jsonb_typeof(params->'unwind_items') = 'array'
-      THEN jsonb_build_object('items', params->'unwind_items')
-    ELSE params->'lock_receipt'
-  END;
+  lock_receipt jsonb := params->'lock_receipt';
   cus_ent_ids text[] := CASE
     WHEN params->'cus_ent_ids' IS NULL OR jsonb_typeof(params->'cus_ent_ids') != 'array' THEN NULL
     ELSE ARRAY(SELECT jsonb_array_elements_text(params->'cus_ent_ids'))

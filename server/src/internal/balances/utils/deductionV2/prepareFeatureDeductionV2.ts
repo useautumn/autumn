@@ -52,12 +52,23 @@ export const prepareFeatureDeductionV2 = ({
 	const { feature, lock, targetBalance } = deduction;
 	const { overageBehaviour = "cap", customerEntitlementFilters } = options;
 
+	const spilloverFeatures = deduction.spillover?.map((spill) => spill.feature);
 	const relevantFeatures = notNullish(targetBalance)
 		? [feature]
-		: getRelevantFeatures({
-				features: ctx.features,
-				featureId: feature.id,
-			});
+		: [
+				...getRelevantFeatures({ features: ctx.features, featureId: feature.id }),
+				// Cascade spillover systems join the same deduction so the engine
+				// drains `feature` first and spills the remainder into them atomically.
+				...(spilloverFeatures ?? []).flatMap((spilloverFeature) =>
+					getRelevantFeatures({
+						features: ctx.features,
+						featureId: spilloverFeature.id,
+					}),
+				),
+			].filter(
+				(candidate, index, all) =>
+					all.findIndex((other) => other.id === candidate.id) === index,
+			);
 
 	const customerEntitlements = fullSubjectToCustomerEntitlements({
 		fullSubject,

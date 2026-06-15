@@ -44,13 +44,24 @@ export const prepareFeatureDeduction = ({
 
 	const { overageBehaviour = "cap", customerEntitlementFilters } = options;
 
-	// Get relevant features (just the feature itself if targetBalance is set)
+	// Get relevant features (just the feature itself if targetBalance is set).
+	// Cascade spillover systems join the same deduction so the engine drains
+	// `feature` first and spills the remainder into them atomically.
+	const spilloverFeatures = deduction.spillover?.map((spill) => spill.feature);
 	const relevantFeatures = notNullish(targetBalance)
 		? [feature]
-		: getRelevantFeatures({
-				features: ctx.features,
-				featureId: feature.id,
-			});
+		: [
+				...getRelevantFeatures({ features: ctx.features, featureId: feature.id }),
+				...(spilloverFeatures ?? []).flatMap((spilloverFeature) =>
+					getRelevantFeatures({
+						features: ctx.features,
+						featureId: spilloverFeature.id,
+					}),
+				),
+			].filter(
+				(candidate, index, all) =>
+					all.findIndex((other) => other.id === candidate.id) === index,
+			);
 
 	// Get customer entitlements for these features (includes both product and loose entitlements)
 	const cusEnts = fullCustomerToCustomerEntitlements({

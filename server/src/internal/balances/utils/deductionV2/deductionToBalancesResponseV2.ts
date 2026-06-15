@@ -5,7 +5,10 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getApiSubject } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiSubject.js";
-import type { FeatureDeduction } from "../types/featureDeduction.js";
+import {
+	expandCascadeDeductions,
+	type FeatureDeduction,
+} from "../types/featureDeduction.js";
 
 /**
  * V2 (FullSubject) variant of deductionToBalancesResponse — returns ALL
@@ -29,7 +32,7 @@ export const deductionToBalancesResponseV2 = async ({
 
 	const balances: Record<string, ApiBalanceV1 | null> = {};
 
-	for (const deduction of featureDeductions) {
+	for (const deduction of expandCascadeDeductions(featureDeductions)) {
 		const relevantFeatures = getRelevantFeatures({
 			features: ctx.features,
 			featureId: deduction.feature.id,

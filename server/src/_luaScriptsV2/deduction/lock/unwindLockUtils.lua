@@ -109,7 +109,6 @@ end
 --     applied = boolean,
 --     unwind_iteration_value = number,
 --     remaining_unwind_value = number,
---     skipped_unwind_value = number,
 --     error = string | nil,
 --   }
 -- ============================================================================
@@ -164,13 +163,12 @@ local function unwind_lock_item_iteration(params)
     local ent_data = context.customer_entitlements[customer_entitlement_id]
     if not ent_data then
       -- Entitlement no longer exists (e.g. product upgraded mid-flight).
-      -- Skip this item, consume its receipt value, and let the caller
-      -- compensate that skipped value against current live entitlements.
+      -- Skip this item and leave remaining_unwind_value unchanged so the
+      -- caller can compensate against current live entitlements.
       return {
         applied = false,
         unwind_iteration_value = 0,
-        skipped_unwind_value = unwind_iteration_value,
-        remaining_unwind_value = remaining_unwind_value - unwind_iteration_value,
+        remaining_unwind_value = remaining_unwind_value,
         error = nil,
       }
     end
@@ -211,12 +209,11 @@ local function unwind_lock_item_iteration(params)
     local rollover_data = context.rollovers[rollover_id]
     if not rollover_data then
       -- Rollover no longer exists (e.g. expired or removed mid-flight).
-      -- Skip this item and consume its receipt value.
+      -- Skip this item and leave remaining_unwind_value unchanged.
       return {
         applied = false,
         unwind_iteration_value = 0,
-        skipped_unwind_value = unwind_iteration_value,
-        remaining_unwind_value = remaining_unwind_value - unwind_iteration_value,
+        remaining_unwind_value = remaining_unwind_value,
         error = nil,
       }
     end
@@ -280,14 +277,12 @@ local function unwind_lock_items(params)
   local context = params.context
   local items = safe_table(params.items)
   local remaining_unwind_value = safe_number(params.unwind_value)
-  local skipped_unwind_value = 0
   local iterations = {}
 
   if remaining_unwind_value <= 0 then
     return {
       applied = false,
       remaining_unwind_value = 0,
-      skipped_unwind_value = 0,
       iterations = iterations,
       error = nil,
     }
@@ -331,14 +326,12 @@ local function unwind_lock_items(params)
       })
     end
 
-    skipped_unwind_value = skipped_unwind_value + safe_number(result.skipped_unwind_value)
     remaining_unwind_value = result.remaining_unwind_value
   end
 
   return {
     applied = #iterations > 0,
     remaining_unwind_value = remaining_unwind_value,
-    skipped_unwind_value = skipped_unwind_value,
     iterations = iterations,
     error = nil,
   }
@@ -380,9 +373,6 @@ end
 
 -- ============================================================================
 -- STEP 6: Unwind a lock receipt against an initialized context
---
--- Items come from params.items when supplied inline (cascade compensation),
--- otherwise from the persisted lock receipt at params.lock_receipt_key.
 -- ============================================================================
 local function unwind_lock_on_context(params)
   local context = params.context
@@ -394,19 +384,16 @@ local function unwind_lock_on_context(params)
     mutation_logs = cjson.decode('[]'),
   }
 
-  local items = params.items
-  if is_nil(items) then
-    local receipt = load_lock_receipt(lock_receipt_key)
+  local receipt = load_lock_receipt(lock_receipt_key)
 
-    local pending_error = require_processing_receipt(receipt)
-    if not is_nil(pending_error) then
-      context.logger.log("[unwind_lock] receipt not in processing state: %s", pending_error)
-      empty_result.error = pending_error
-      return empty_result
-    end
-
-    items = receipt.items or cjson.decode('[]')
+  local pending_error = require_processing_receipt(receipt)
+  if not is_nil(pending_error) then
+    context.logger.log("[unwind_lock] receipt not in processing state: %s", pending_error)
+    empty_result.error = pending_error
+    return empty_result
   end
+
+  local items = receipt.items or cjson.decode('[]')
   context.logger.log("[unwind_lock] unwinding %d items, unwind_value=%s", #items, tostring(unwind_value))
 
   -- Compute lock_sign from the sum of value_deltas across all receipt items.
@@ -431,7 +418,7 @@ local function unwind_lock_on_context(params)
     return empty_result
   end
 
-  local skipped_unwind = unwind_items_result.skipped_unwind_value
+  local skipped_unwind = unwind_items_result.remaining_unwind_value
   -- remaining_signed_unwind_value: the signed amount that could not be unwound
   -- because the target entitlement/rollover no longer exists.
   -- Callers can add this directly to additional_value to compensate:

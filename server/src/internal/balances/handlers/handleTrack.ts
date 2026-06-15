@@ -24,7 +24,7 @@ export const handleTrack = createRoute({
 		const featureDeductions = getTrackFeatureDeductionsForBody({ ctx, body });
 
 		if (body.async === true) {
-			await runAsyncTrack({ ctx, body, featureDeductions });
+			await runAsyncTrack({ ctx, body });
 			return c.json({ success: true }, 202);
 		}
 

@@ -1,7 +1,5 @@
 import type { TrackParams } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { CascadeReplayState } from "../../utils/types/cascadeReplayState.js";
-import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
 import { addToExtraLogs } from "@/utils/logging/addToExtraLogs.js";
@@ -12,15 +10,11 @@ export const queueTrack = async ({
 	body,
 	queueUrl,
 	messageDeduplicationId,
-	featureDeductions,
-	cascadeReplayState,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	queueUrl?: string;
 	messageDeduplicationId?: string;
-	featureDeductions?: FeatureDeduction[];
-	cascadeReplayState?: CascadeReplayState;
 }) => {
 	try {
 		const resolvedQueueUrl = queueUrl ?? process.env.TRACK_SQS_QUEUE_URL;
@@ -44,10 +38,11 @@ export const queueTrack = async ({
 				requestId: ctx.id,
 				apiVersion: ctx.apiVersion.value,
 				body,
-				allowTokenCascade: featureDeductions?.some(
-					(deduction) => deduction.cascade,
+				// The cascade marker travels in the body; the worker rebuilds the
+				// spillover deduction from it so a queued replay keeps cascade pricing.
+				allowTokenCascade: Boolean(
+					(body.properties as Record<string, unknown> | undefined)?.cascade,
 				),
-				cascadeReplayState,
 			},
 		});
 

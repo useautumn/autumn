@@ -221,21 +221,24 @@ export const getTokenTrackParams = async ({
 		outputTokens: input.output_tokens,
 	};
 
-	const featureDeductions: FeatureDeduction[] = aiCreditFeatures.map(
-		(feature, index) => ({
-			feature,
+	// One atomic deduction: the included system is primary and the overage
+	// system rides along as spillover, so the engine drains included first
+	// (capped) and spills the remainder into overage in its own cost domain.
+	const featureDeductions: FeatureDeduction[] = [
+		{
+			feature: primaryFeature,
 			deduction: 1,
-			tokens: {
-				usage: tokenUsage,
-				cost: pricings[index].cost,
-			},
+			tokens: { usage: tokenUsage, cost: primaryPricing.cost },
 			...(isCascade && {
-				cascade: {
-					role: index === 0 ? ("included" as const) : ("overage" as const),
-				},
+				spillover: [
+					{
+						feature: aiCreditFeatures[1],
+						tokens: { usage: tokenUsage, cost: pricings[1].cost },
+					},
+				],
 			}),
-		}),
-	);
+		},
+	];
 
 	const cascadeProperties = isCascade
 		? {

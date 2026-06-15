@@ -5,10 +5,6 @@ import {
 	type TrackParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import {
-	buildCascadeReplayDeductions,
-	type CascadeReplayState,
-} from "../utils/types/cascadeReplayState.js";
 import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
 import {
 	getTokenCascadeDeductionsFromBody,
@@ -20,38 +16,11 @@ export const getQueuedTrackFeatureDeductions = ({
 	ctx,
 	body,
 	allowTokenCascade = false,
-	cascadeReplayState,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	allowTokenCascade?: boolean;
-	cascadeReplayState?: CascadeReplayState;
 }): FeatureDeduction[] => {
-	if (cascadeReplayState) {
-		const cascadeDeductions = getTokenCascadeDeductionsFromBody({ ctx, body });
-		if (!cascadeDeductions) {
-			throw new RecaseError({
-				message: "Queued cascade replay is missing a valid cascade marker",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
-
-		const replayDeductions = buildCascadeReplayDeductions({
-			featureDeductions: cascadeDeductions,
-			replayState: cascadeReplayState,
-		});
-		if (!replayDeductions) {
-			throw new RecaseError({
-				message: "Queued cascade replay is missing an overage deduction",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
-
-		return replayDeductions;
-	}
-
 	if (allowTokenCascade) {
 		const cascadeDeductions = getTokenCascadeDeductionsFromBody({ ctx, body });
 		if (!cascadeDeductions) {
@@ -72,19 +41,16 @@ export const runQueuedTrack = async ({
 	body,
 	apiVersion,
 	allowTokenCascade,
-	cascadeReplayState,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	apiVersion?: ApiVersion;
 	allowTokenCascade?: boolean;
-	cascadeReplayState?: CascadeReplayState;
 }) => {
 	const featureDeductions = getQueuedTrackFeatureDeductions({
 		ctx,
 		body,
 		allowTokenCascade,
-		cascadeReplayState,
 	});
 
 	try {

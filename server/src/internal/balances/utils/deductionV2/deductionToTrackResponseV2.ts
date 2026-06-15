@@ -11,7 +11,10 @@ import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getApiSubject } from "@/internal/customers/cusUtils/getApiCustomerV2/getApiSubject.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
-import type { FeatureDeduction } from "../types/featureDeduction.js";
+import {
+	expandCascadeDeductions,
+	type FeatureDeduction,
+} from "../types/featureDeduction.js";
 import { deductionToBalancesResponseV2 } from "./deductionToBalancesResponseV2.js";
 
 type TrackBalanceResponse = {
@@ -164,7 +167,11 @@ export const deductionToTrackResponseV2 = async ({
 	});
 	const finalBalances: Record<string, ApiBalanceV1> = {};
 
-	for (const featureDeduction of featureDeductions) {
+	// A cascade settles as one multi-feature deduction; report each system's
+	// balance separately (so balance is null when more than one was touched).
+	const expandedDeductions = expandCascadeDeductions(featureDeductions);
+
+	for (const featureDeduction of expandedDeductions) {
 		const featureToUse = getFeatureToUseForBalance({
 			ctx,
 			fullSubject,

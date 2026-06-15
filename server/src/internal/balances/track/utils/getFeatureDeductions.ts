@@ -26,13 +26,14 @@ const resolveAiCreditFeatureForCascade = ({
 };
 
 /**
- * Rebuilds the two cascade deductions of a token track from the
- * `properties.cascade` marker that getTokenTrackParams stamps on the body, so
- * queued replays keep included-then-overage semantics instead of replaying the
- * whole value against the primary feature. Returns null when the body carries
- * no valid marker; callers then fall back to the standard deductions. Only for
- * internally queued bodies — properties on direct /track calls are
- * caller-controlled and must not be honored as a cascade.
+ * Rebuilds the cascade deduction of a token track from the `properties.cascade`
+ * marker that getTokenTrackParams stamps on the body, so queued replays keep
+ * included-then-overage semantics instead of replaying the whole value against
+ * the primary feature. The deduction is atomic and idempotency-keyed, so a full
+ * replay is naturally safe — no partial-state bookkeeping needed. Returns null
+ * when the body carries no valid marker; callers then fall back to the standard
+ * deductions. Only for internally queued bodies — properties on direct /track
+ * calls are caller-controlled and must not be honored as a cascade.
  */
 export const getTokenCascadeDeductionsFromBody = ({
 	ctx,
@@ -85,13 +86,12 @@ export const getTokenCascadeDeductionsFromBody = ({
 			feature: includedFeature,
 			deduction: 1,
 			tokens: { usage: tokenUsage, cost: includedCost },
-			cascade: { role: "included" },
-		},
-		{
-			feature: overageFeature,
-			deduction: 1,
-			tokens: { usage: tokenUsage, cost: overageCost },
-			cascade: { role: "overage" },
+			spillover: [
+				{
+					feature: overageFeature,
+					tokens: { usage: tokenUsage, cost: overageCost },
+				},
+			],
 		},
 	];
 };

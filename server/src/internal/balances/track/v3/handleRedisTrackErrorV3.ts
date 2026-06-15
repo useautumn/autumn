@@ -8,11 +8,6 @@ import {
 } from "@autumn/shared";
 import { RedisUnavailableError } from "@/external/redis/utils/errors.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import {
-	attachCascadeReplayState,
-	buildCascadeReplayDeductions,
-	getCascadeReplayState,
-} from "../../utils/types/cascadeReplayState.js";
 import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
 import {
 	RedisDeductionError,
@@ -37,16 +32,11 @@ export const handleRedisTrackErrorV3 = async ({
 	if (!(error instanceof RedisDeductionError)) throw error;
 
 	if (error.code === RedisDeductionErrorCode.InsufficientBalance) {
-		const insufficientBalanceError = new InsufficientBalanceError({
-			value: error.rejectedValue ?? body.value ?? 1,
-			featureId: error.featureId ?? body.feature_id,
+		throw new InsufficientBalanceError({
+			value: body.value ?? 1,
+			featureId: body.feature_id,
 			eventName: body.event_name,
 		});
-		attachCascadeReplayState({
-			error: insufficientBalanceError,
-			state: getCascadeReplayState(error),
-		});
-		throw insufficientBalanceError;
 	}
 
 	if (error.code === RedisDeductionErrorCode.LockAlreadyExists) {
@@ -79,26 +69,12 @@ export const handleRedisTrackErrorV3 = async ({
 		ctx.logger.warn(
 			`Falling back to Postgres V3 for track operation: ${error.code}`,
 		);
-		const replayState = getCascadeReplayState(error);
-		const fallbackFeatureDeductions = replayState
-			? buildCascadeReplayDeductions({
-					featureDeductions,
-					replayState,
-				})
-			: featureDeductions;
-		if (!fallbackFeatureDeductions) {
-			throw new RecaseError({
-				message: "Cascade replay is missing an overage deduction",
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
 
 		return runPostgresTrackV3({
 			ctx,
 			fullSubject,
 			body,
-			featureDeductions: fallbackFeatureDeductions,
+			featureDeductions,
 		});
 	}
 

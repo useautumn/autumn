@@ -1,18 +1,8 @@
 import { describe, expect, test } from "bun:test";
-import { FeatureType, InsufficientBalanceError } from "@autumn/shared";
+import { FeatureType } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getQueuedTrackFeatureDeductions } from "@/internal/balances/track/runQueuedTrack.js";
 import { getTokenCascadeDeductionsFromBody } from "@/internal/balances/track/utils/getFeatureDeductions.js";
-import { handleRedisTrackError } from "@/internal/balances/track/utils/handleRedisTrackError.js";
-import { handleRedisTrackErrorV3 } from "@/internal/balances/track/v3/handleRedisTrackErrorV3.js";
-import {
-	attachCascadeReplayState,
-	getCascadeReplayState,
-} from "@/internal/balances/utils/types/cascadeReplayState.js";
-import {
-	RedisDeductionError,
-	RedisDeductionErrorCode,
-} from "@/internal/balances/utils/types/redisDeductionError.js";
 
 const createCtx = (): AutumnContext =>
 	({
@@ -41,24 +31,18 @@ const cascadeBody = {
 };
 
 describe("getTokenCascadeDeductionsFromBody", () => {
-	test("rebuilds both cascade legs from a valid marker", () => {
+	test("rebuilds one deduction with overage as spillover", () => {
 		const deductions = getTokenCascadeDeductionsFromBody({
 			ctx: createCtx(),
 			body: cascadeBody,
 		});
 
-		expect(deductions).toHaveLength(2);
+		expect(deductions).toHaveLength(1);
 		expect(deductions?.[0]).toMatchObject({
 			feature: { id: "ai_included" },
 			deduction: 1,
 			tokens: { cost: 4 },
-			cascade: { role: "included" },
-		});
-		expect(deductions?.[1]).toMatchObject({
-			feature: { id: "ai_overage" },
-			deduction: 1,
-			tokens: { cost: 6 },
-			cascade: { role: "overage" },
+			spillover: [{ feature: { id: "ai_overage" }, tokens: { cost: 6 } }],
 		});
 		expect(deductions?.[0].tokens?.usage).toEqual({
 			modelName: "custom/internal-model",
@@ -117,7 +101,7 @@ describe("getTokenCascadeDeductionsFromBody", () => {
 		).toBeNull();
 	});
 
-	test("rebuilds both legs with cost 0 for a zero-cost marker", () => {
+	test("rebuilds with cost 0 for a zero-cost marker", () => {
 		const zeroCost = structuredClone(cascadeBody);
 		zeroCost.properties.cascade.included.cost = 0;
 		zeroCost.properties.cascade.overage.cost = 0;
@@ -127,16 +111,11 @@ describe("getTokenCascadeDeductionsFromBody", () => {
 			body: zeroCost,
 		});
 
-		expect(deductions).toHaveLength(2);
+		expect(deductions).toHaveLength(1);
 		expect(deductions?.[0]).toMatchObject({
 			feature: { id: "ai_included" },
 			tokens: { cost: 0 },
-			cascade: { role: "included" },
-		});
-		expect(deductions?.[1]).toMatchObject({
-			feature: { id: "ai_overage" },
-			tokens: { cost: 0 },
-			cascade: { role: "overage" },
+			spillover: [{ feature: { id: "ai_overage" }, tokens: { cost: 0 } }],
 		});
 	});
 
@@ -170,87 +149,18 @@ describe("getTokenCascadeDeductionsFromBody", () => {
 			feature: { id: "ai_included" },
 			deduction: 4,
 		});
-		expect(forgedTrackDeductions[0].cascade).toBeUndefined();
+		expect(forgedTrackDeductions[0].spillover).toBeUndefined();
 
 		const internalTokenDeductions = getQueuedTrackFeatureDeductions({
 			ctx: createCtx(),
 			body: cascadeBody,
 			allowTokenCascade: true,
 		});
-		expect(internalTokenDeductions).toHaveLength(2);
-		expect(internalTokenDeductions[0].cascade).toEqual({ role: "included" });
-		expect(internalTokenDeductions[1].cascade).toEqual({ role: "overage" });
-	});
-
-	test("queued cascade replay rebuilds only the overage remainder", () => {
-		const replayDeductions = getQueuedTrackFeatureDeductions({
-			ctx: createCtx(),
-			body: cascadeBody,
-			cascadeReplayState: {
-				includedApplied: true,
-				spillRemaining: 0.75,
-			},
+		expect(internalTokenDeductions).toHaveLength(1);
+		expect(internalTokenDeductions[0]).toMatchObject({
+			feature: { id: "ai_included" },
+			tokens: { cost: 4 },
+			spillover: [{ feature: { id: "ai_overage" }, tokens: { cost: 6 } }],
 		});
-
-		expect(replayDeductions).toHaveLength(1);
-		expect(replayDeductions[0]).toMatchObject({
-			feature: { id: "ai_overage" },
-			deduction: 0.75,
-			tokens: { cost: 6 },
-		});
-		expect(replayDeductions[0].cascade).toBeUndefined();
-	});
-
-	test("redis insufficient-balance conversion preserves cascade replay state", async () => {
-		const replayState = { includedApplied: true, spillRemaining: 0.75 };
-		const redisError = new RedisDeductionError({
-			message: "Redis deduction failed: INSUFFICIENT_BALANCE",
-			code: RedisDeductionErrorCode.InsufficientBalance,
-			featureId: "ai_overage",
-			rejectedValue: 0.75,
-		});
-		attachCascadeReplayState({ error: redisError, state: replayState });
-
-		let thrown: unknown;
-		try {
-			await handleRedisTrackError({
-				ctx: createCtx(),
-				error: redisError,
-				body: cascadeBody,
-				featureDeductions: [],
-			});
-		} catch (error) {
-			thrown = error;
-		}
-
-		expect(thrown).toBeInstanceOf(InsufficientBalanceError);
-		expect(getCascadeReplayState(thrown)).toEqual(replayState);
-	});
-
-	test("redis V3 insufficient-balance conversion preserves cascade replay state", async () => {
-		const replayState = { includedApplied: true, spillRemaining: 0.75 };
-		const redisError = new RedisDeductionError({
-			message: "Redis deduction failed: INSUFFICIENT_BALANCE",
-			code: RedisDeductionErrorCode.InsufficientBalance,
-			featureId: "ai_overage",
-			rejectedValue: 0.75,
-		});
-		attachCascadeReplayState({ error: redisError, state: replayState });
-
-		let thrown: unknown;
-		try {
-			await handleRedisTrackErrorV3({
-				ctx: createCtx(),
-				error: redisError,
-				body: cascadeBody,
-				fullSubject: {} as never,
-				featureDeductions: [],
-			});
-		} catch (error) {
-			thrown = error;
-		}
-
-		expect(thrown).toBeInstanceOf(InsufficientBalanceError);
-		expect(getCascadeReplayState(thrown)).toEqual(replayState);
 	});
 });

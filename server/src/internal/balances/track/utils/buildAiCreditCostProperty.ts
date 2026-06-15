@@ -17,7 +17,12 @@ export const buildAiCreditCostProperty = ({
 	const aiFeatureIds = new Set(
 		featureDeductions
 			.filter((deduction) => deduction.tokens)
-			.map((deduction) => deduction.feature.id),
+			.flatMap((deduction) => [
+				deduction.feature.id,
+				// Cascade spillover systems are AI credit systems too — exclude them
+				// so the map only contains downstream metered features.
+				...(deduction.spillover?.map((spill) => spill.feature.id) ?? []),
+			]),
 	);
 	if (aiFeatureIds.size === 0) return;
 
