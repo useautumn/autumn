@@ -56,7 +56,9 @@ export const handleUpdateCoupon = createRoute({
 			});
 		}
 
-		rewardBody.promo_codes = normalizePromoCodes(rewardBody.promo_codes ?? []);
+		rewardBody.promo_codes = normalizePromoCodes(
+			rewardBody.promo_codes ?? reward.promo_codes ?? [],
+		);
 
 		const rewardCat = getRewardCat(rewardBody);
 
