@@ -20,6 +20,16 @@ import { createBraintrustLogger } from "../../../providers/braintrust/index.js";
 import type { AgentEngine } from "../types.js";
 
 const client = new Anthropic();
+
+const AUTH_FAILURE_PATTERN =
+	/invalid or expired access token|request failed \(401\)/i;
+const isAutumnAuthFailure = (output: unknown) => {
+	try {
+		return AUTH_FAILURE_PATTERN.test(JSON.stringify(output) ?? "");
+	} catch {
+		return false;
+	}
+};
 // initLogger sets Braintrust's ambient logger so traced()/spans are recorded.
 const braintrustLogger = createBraintrustLogger();
 const braintrustEnabled = Boolean(braintrustLogger);
