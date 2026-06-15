@@ -40,6 +40,7 @@ export const updateRewardProgram = async ({
 		throw new RecaseError({
 			message: "Reward program not found",
 			code: ErrCode.RewardNotFound,
+			statusCode: 404,
 		});
 	}
 

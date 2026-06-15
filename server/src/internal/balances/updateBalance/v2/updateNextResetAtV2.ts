@@ -7,8 +7,8 @@ import {
 	RecaseError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 import { updateSubjectBalanceCache } from "@/internal/customers/cusProducts/cusEnts/actions/cache/updateSubjectBalanceCache.js";
+import { CusEntService } from "@/internal/customers/cusProducts/cusEnts/CusEntitlementService.js";
 
 export const updateNextResetAtV2 = async ({
 	ctx,
@@ -32,7 +32,8 @@ export const updateNextResetAtV2 = async ({
 
 	if (cusEnts.length === 0) {
 		throw new RecaseError({
-			message: `[updateNextResetAtV2] No balances found for feature ${featureId}, customer ${fullSubject.customerId}`,
+			message: `No balances found for feature ${featureId}, customer ${fullSubject.customerId}`,
+			statusCode: 404,
 		});
 	}
 

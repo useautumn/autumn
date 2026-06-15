@@ -47,7 +47,7 @@ export const handleCopyProductV2 = createRoute({
 
 		if (fromEnv === toEnv && fromProductId === toId) {
 			throw new RecaseError({
-				message: "Product ID already exists",
+				message: `Product ID ${toId} already exists in ${toEnv}`,
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
 			});

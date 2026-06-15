@@ -82,6 +82,7 @@ export const handleTransferProductV2 = createRoute({
 		if (to_entity_id && !toEntity) {
 			throw new RecaseError({
 				message: `Entity ${to_entity_id} not found`,
+				statusCode: 404,
 			});
 		}
 

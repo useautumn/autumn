@@ -65,7 +65,8 @@ export const syncProposals = async ({
 	const stripeCustomerId = fullCustomer.processor?.id;
 	if (!stripeCustomerId) {
 		throw new RecaseError({
-			message: "Customer has no linked Stripe customer",
+			message:
+				"This customer has no linked Stripe account; connect Stripe before syncing.",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});

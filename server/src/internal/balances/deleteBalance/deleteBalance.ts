@@ -48,6 +48,7 @@ export const deleteBalance = async ({
 	if (customerEntitlements.length === 0) {
 		throw new RecaseError({
 			message: `Balance not found for feature ${feature_id} and customer ${customer_id}`,
+			statusCode: 404,
 		});
 	}
 
@@ -55,6 +56,7 @@ export const deleteBalance = async ({
 		if (isPaidCustomerEntitlement(cusEnt)) {
 			throw new RecaseError({
 				message: `Cannot delete paid balance for feature ${feature_id} and customer ${customer_id}`,
+				statusCode: 409,
 			});
 		}
 	}

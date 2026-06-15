@@ -36,7 +36,8 @@ export const updateGrantedBalance = async ({
 
 	if (cusEnts.length === 0) {
 		throw new RecaseError({
-			message: `[updateGrantedBalance] No balances to update for feature ${featureId}, customer ${fullCustomer.id}`,
+			message: `No balances to update for feature ${featureId}, customer ${fullCustomer.id}`,
+			statusCode: 404,
 		});
 	}
 

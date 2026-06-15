@@ -1,4 +1,10 @@
-import { ErrCode, type EventInsert, events, RecaseError } from "@autumn/shared";
+import {
+	DocsLinks,
+	ErrCode,
+	type EventInsert,
+	events,
+	RecaseError,
+} from "@autumn/shared";
 import { and, desc, eq } from "drizzle-orm";
 import { StatusCodes } from "http-status-codes";
 import type { Logger } from "pino";
@@ -29,6 +35,7 @@ export class EventService {
 						"Event (event_name, customer_id, idempotency_key) already exists.",
 					code: ErrCode.DuplicateEvent,
 					statusCode: StatusCodes.CONFLICT,
+					docsUrl: DocsLinks.ApiIdempotency,
 				});
 			}
 			throw error;

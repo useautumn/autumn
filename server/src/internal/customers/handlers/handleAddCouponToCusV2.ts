@@ -48,6 +48,7 @@ export const handleAddCouponToCusV2 = createRoute({
 		if (!coupon) {
 			throw new RecaseError({
 				message: `Coupon ${coupon_id} not found`,
+				statusCode: 404,
 			});
 		}
 

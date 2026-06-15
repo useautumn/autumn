@@ -1,4 +1,5 @@
 import {
+	DocsLinks,
 	ErrCode,
 	type FinalizeLockParamsV0,
 	notNullish,
@@ -40,6 +41,7 @@ export const runFinalizeLockV2 = async ({
 			code: ErrCode.InvalidRequest,
 			statusCode: 409,
 			data: { blockingStatus: "RESERVATION_ALREADY_PROCESSING" },
+			docsUrl: DocsLinks.ConcurrentRequests,
 		});
 	}
 

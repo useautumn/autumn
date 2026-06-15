@@ -1,4 +1,4 @@
-import { ErrCode, InternalError, RecaseError } from "@autumn/shared";
+import { DocsLinks, ErrCode, InternalError, RecaseError } from "@autumn/shared";
 import type { Redis } from "ioredis";
 import { tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 
@@ -23,6 +23,7 @@ export const claimLockReceipt = async ({
 	if (result === null) {
 		throw new InternalError({
 			message: "Redis not ready for claimLockReceipt",
+			statusCode: 503,
 		});
 	}
 
@@ -35,5 +36,6 @@ export const claimLockReceipt = async ({
 		code: ErrCode.InvalidRequest,
 		statusCode: 409,
 		data: { blockingStatus: result },
+		docsUrl: DocsLinks.ConcurrentRequests,
 	});
 };

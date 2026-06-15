@@ -2,6 +2,7 @@ import {
 	ApiFeatureType,
 	type CreditSystemConfig,
 	cusProductsToCusPrices,
+	DocsLinks,
 	ErrCode,
 	type Feature,
 	FeatureType,
@@ -53,6 +54,7 @@ export const validateCreditSystem = (
 			message: `At least one metered feature is required for credit system`,
 			code: ErrCode.InvalidFeature,
 			statusCode: 400,
+			docsUrl: DocsLinks.UsingEventNames,
 		});
 	}
 
@@ -61,6 +63,7 @@ export const validateCreditSystem = (
 			message: `AI credit systems are leaf features and cannot define a schema. Model rates live in model_markups.`,
 			code: ErrCode.InvalidFeature,
 			statusCode: 400,
+			docsUrl: DocsLinks.UsingEventNames,
 		});
 	}
 
@@ -158,6 +161,7 @@ export const validateCreditSystemSchemaReferences = ({
 				message: `Credit system schema cannot reference another credit system (${referencedId}). Only metered or AI credit features are allowed.`,
 				code: ErrCode.InvalidFeature,
 				statusCode: 400,
+				docsUrl: DocsLinks.UsingEventNames,
 			});
 		}
 	}

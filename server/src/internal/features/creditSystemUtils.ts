@@ -1,5 +1,6 @@
 import {
 	type CreditSchemaItem,
+	DocsLinks,
 	ErrCode,
 	type Feature,
 	FeatureType,
@@ -115,5 +116,6 @@ export const getCreditCost = ({
 		code: ErrCode.InvalidRequest,
 		statusCode: 400,
 		data: { featureId, creditSystemId: creditSystem.id },
+		docsUrl: DocsLinks.UsingEventNames,
 	});
 };

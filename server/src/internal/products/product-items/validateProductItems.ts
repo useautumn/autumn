@@ -1,5 +1,6 @@
 import {
 	type AppEnv,
+	DocsLinks,
 	ErrCode,
 	type Feature,
 	FeatureType,
@@ -141,6 +142,7 @@ const validateProductItem = ({
 			message: `Usage model is required for priced features. Please select one for the feature ${item.feature_id}`,
 			code: ErrCode.InvalidInputs,
 			statusCode: StatusCodes.BAD_REQUEST,
+			docsUrl: DocsLinks.PassingFeatureQuantities,
 		});
 	}
 
@@ -182,6 +184,7 @@ const validateProductItem = ({
 				message: `Volume-based pricing is only supported for prepaid items`,
 				code: ErrCode.InvalidInputs,
 				statusCode: StatusCodes.BAD_REQUEST,
+				docsUrl: DocsLinks.PassingFeatureQuantities,
 			});
 		}
 
@@ -196,6 +199,7 @@ const validateProductItem = ({
 					message: `flat_amount on tiers is only supported for volume-based pricing`,
 					code: ErrCode.InvalidInputs,
 					statusCode: StatusCodes.BAD_REQUEST,
+					docsUrl: DocsLinks.PassingFeatureQuantities,
 				});
 			}
 
