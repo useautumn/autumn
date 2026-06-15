@@ -18,6 +18,15 @@ const asNumber = (value: unknown): number | null =>
 	typeof value === "number" && Number.isFinite(value) ? value : null;
 
 /**
+ * Untrusted shape of the `properties.cascade` marker stamped on a token-track
+ * body by getTokenTrackParams. Each field is `unknown` because the body may be
+ * caller-supplied; getTokenCascadeDeductionsFromBody validates it before use.
+ */
+type CascadeMarker = {
+	systems?: Array<{ feature_id?: unknown; cost?: unknown }>;
+};
+
+/**
  * Rebuilds the cascade deduction of a token track from the `properties.cascade`
  * marker that getTokenTrackParams stamps on the body, so queued replays keep
  * each system's request-time pricing instead of replaying the whole value
@@ -36,14 +45,13 @@ export const getTokenCascadeDeductionsFromBody = ({
 	body: TrackParams;
 }): FeatureDeduction[] | null => {
 	const properties = body.properties ?? {};
-	const cascade = properties.cascade as { systems?: unknown } | undefined;
+	const cascade = properties.cascade as CascadeMarker | undefined;
 	const rawSystems =
 		cascade && Array.isArray(cascade.systems) ? cascade.systems : null;
 	if (!rawSystems || rawSystems.length < 2) return null;
 
 	const resolvedSystems: { feature: Feature; cost: number }[] = [];
-	for (const rawSystem of rawSystems) {
-		const entry = rawSystem as { feature_id?: unknown; cost?: unknown };
+	for (const entry of rawSystems) {
 		const feature =
 			typeof entry.feature_id === "string"
 				? ctx.features.find((candidate) => candidate.id === entry.feature_id)

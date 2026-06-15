@@ -215,7 +215,6 @@ export const getTokenTrackParams = async ({
 		),
 	);
 
-	const isCascade = aiCreditFeatures.length >= 2;
 	const primaryFeature = aiCreditFeatures[0];
 	const primaryPricing = pricings[0];
 
@@ -234,6 +233,10 @@ export const getTokenTrackParams = async ({
 			tokenUsage,
 		}),
 	];
+
+	// A cascade is any deduction that spills into extra credit systems; derive it
+	// from the built deduction so "is this a cascade?" has one source of truth.
+	const isCascade = (featureDeductions[0]?.spillover?.length ?? 0) > 0;
 
 	const cascadeProperties = isCascade
 		? {
