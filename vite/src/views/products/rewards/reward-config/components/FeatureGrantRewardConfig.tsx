@@ -1,4 +1,9 @@
-import { EntitlementDuration, type Feature, FeatureType } from "@autumn/shared";
+import {
+	EntitlementDuration,
+	type Feature,
+	FeatureType,
+	getGlobalMaxRedemption,
+} from "@autumn/shared";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { CheckIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -44,9 +49,6 @@ export function FeatureGrantRewardConfig({
 	);
 
 	const entitlements = reward.featureGrantEntitlements;
-	const getGlobalMaxRedemption = (
-		promoCode: NonNullable<FrontendReward["promo_codes"]>[number],
-	) => promoCode.global_max_redemption ?? promoCode.max_redemptions;
 
 	const updateEntitlement = ({
 		index,

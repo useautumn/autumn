@@ -4,6 +4,7 @@ import {
 	DiscountConfigSchema,
 	ErrCode,
 	isFixedPrice,
+	normalizePromoCodes,
 	notNullish,
 	type Price,
 	type Product,
@@ -74,37 +75,7 @@ export const constructReward = ({
 		DiscountConfigSchema.parse(reward.discount_config);
 	}
 
-	const promoCodes = reward.promo_codes
-		.filter((promoCode) => {
-			return promoCode.code.length > 0;
-		})
-		.map(({ max_redemptions, global_max_redemption, ...promoCode }) => {
-			const globalMaxRedemption = global_max_redemption ?? max_redemptions;
-
-			return {
-				...promoCode,
-				...(globalMaxRedemption !== undefined
-					? { global_max_redemption: globalMaxRedemption }
-					: {}),
-			};
-		});
-
-	// Validate promo codes - Stripe only allows alphanumeric characters (a-z, A-Z, 0-9)
-	for (const promoCode of promoCodes) {
-		if (!/^[a-zA-Z0-9]+$/.test(promoCode.code)) {
-			throw new RecaseError({
-				message:
-					"Promotional code can only contain letters and numbers (a-z, A-Z, 0-9)",
-				code: ErrCode.InvalidReward,
-			});
-		}
-		if (promoCode.code.length > 500) {
-			throw new RecaseError({
-				message: "Promotional code cannot exceed 500 characters",
-				code: ErrCode.InvalidReward,
-			});
-		}
-	}
+	const promoCodes = normalizePromoCodes(reward.promo_codes);
 
 	let configData = {};
 	if (reward.type === RewardType.FreeProduct) {

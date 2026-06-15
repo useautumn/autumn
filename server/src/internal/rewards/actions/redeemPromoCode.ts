@@ -4,6 +4,7 @@ import {
 	type Entitlement,
 	ErrCode,
 	findFeatureByInternalId,
+	getGlobalMaxRedemption,
 	RecaseError,
 	RewardType,
 } from "@autumn/shared";
@@ -77,8 +78,7 @@ export const redeemPromoCode = async ({
 		});
 	}
 
-	const globalMaxRedemption =
-		promoCode.global_max_redemption ?? promoCode.max_redemptions;
+	const globalMaxRedemption = getGlobalMaxRedemption(promoCode);
 
 	if (globalMaxRedemption) {
 		const redemptionCount = await redemptionRepo.getPromoCodeRedemptionCount({
