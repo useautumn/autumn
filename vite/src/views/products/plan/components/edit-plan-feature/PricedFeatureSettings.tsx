@@ -1,5 +1,7 @@
 import {
+	AllocatedBillingBehavior,
 	BillingInterval,
+	FeatureUsageType,
 	itemToBillingInterval,
 	nullish,
 	ProductItemInterval,
@@ -9,10 +11,12 @@ import {
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { AreaRadioGroupItem } from "@/components/v2/radio-groups/AreaRadioGroupItem";
 import { RadioGroup } from "@/components/v2/radio-groups/RadioGroup";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
 export function PricedFeatureSettings() {
 	const { item, setItem } = useProductItemContext();
+	const { features } = useFeaturesQuery();
 
 	if (!item) return null;
 
@@ -23,9 +27,32 @@ export function PricedFeatureSettings() {
 
 	const handleUsageModelChange = (value: string) => {
 		const usageModel = value as UsageModel;
+		const feature = features.find((f) => f.id === item.feature_id);
+		const isAllocatedUsageBased =
+			usageModel === UsageModel.PayPerUse &&
+			feature?.config?.usage_type === FeatureUsageType.Continuous;
+		const hasProrationKnobs =
+			!nullish(item.config?.on_increase) || !nullish(item.config?.on_decrease);
+		const getConfig = () => {
+			if (isAllocatedUsageBased) {
+				return {
+					...item.config,
+					allocated_billing_behavior:
+						item.config?.allocated_billing_behavior ??
+						(hasProrationKnobs
+							? AllocatedBillingBehavior.Prorated
+							: AllocatedBillingBehavior.Arrear),
+				};
+			}
+
+			const { allocated_billing_behavior, ...config } = item.config ?? {};
+			return Object.keys(config).length > 0 ? config : undefined;
+		};
+
 		setItem({
 			...item,
 			usage_model: usageModel,
+			config: getConfig(),
 			interval:
 				usageModel === UsageModel.PayPerUse && nullish(item.interval)
 					? ProductItemInterval.Month

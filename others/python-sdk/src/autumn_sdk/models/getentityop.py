@@ -554,7 +554,7 @@ class GetEntitySpendLimitTypedDict(TypedDict):
     feature_id: NotRequired[str]
     r"""Optional feature ID this spend limit applies to."""
     enabled: NotRequired[bool]
-    r"""Whether this spend limit is enabled."""
+    r"""Whether the overage spend limit is enabled."""
     overage_limit: NotRequired[float]
     r"""Maximum allowed overage spend for the target feature."""
 
@@ -564,7 +564,7 @@ class GetEntitySpendLimit(BaseModel):
     r"""Optional feature ID this spend limit applies to."""
 
     enabled: Optional[bool] = False
-    r"""Whether this spend limit is enabled."""
+    r"""Whether the overage spend limit is enabled."""
 
     overage_limit: Optional[float] = None
     r"""Maximum allowed overage spend for the target feature."""
@@ -572,6 +572,59 @@ class GetEntitySpendLimit(BaseModel):
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(["feature_id", "enabled", "overage_limit"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
+GetEntityInterval = Union[
+    Literal[
+        "day",
+        "week",
+        "month",
+        "year",
+    ],
+    UnrecognizedStr,
+]
+r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+
+class GetEntityUsageLimitTypedDict(TypedDict):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+    limit: float
+    r"""Maximum units allowed per interval."""
+    interval: GetEntityInterval
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+    usage: NotRequired[float]
+    r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
+
+
+class GetEntityUsageLimit(BaseModel):
+    feature_id: str
+    r"""The feature this usage limit applies to."""
+
+    limit: float
+    r"""Maximum units allowed per interval."""
+
+    interval: GetEntityInterval
+    r"""Interval for the cap, aligned to the customer's billing cycle."""
+
+    usage: Optional[float] = None
+    r"""Current usage already consumed in the active interval. Response-only; not stored on billing controls."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["usage"])
         serialized = handler(self)
         m = {}
 
@@ -679,7 +732,9 @@ class GetEntityBillingControlsTypedDict(TypedDict):
     r"""Billing controls for the entity."""
 
     spend_limits: NotRequired[List[GetEntitySpendLimitTypedDict]]
-    r"""List of overage spend limits per feature."""
+    r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit)."""
+    usage_limits: NotRequired[List[GetEntityUsageLimitTypedDict]]
+    r"""List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
     usage_alerts: NotRequired[List[GetEntityUsageAlertTypedDict]]
     r"""List of usage alert configurations per feature."""
     overage_allowed: NotRequired[List[GetEntityOverageAllowedTypedDict]]
@@ -690,7 +745,10 @@ class GetEntityBillingControls(BaseModel):
     r"""Billing controls for the entity."""
 
     spend_limits: Optional[List[GetEntitySpendLimit]] = None
-    r"""List of overage spend limits per feature."""
+    r"""List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit)."""
+
+    usage_limits: Optional[List[GetEntityUsageLimit]] = None
+    r"""List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature."""
 
     usage_alerts: Optional[List[GetEntityUsageAlert]] = None
     r"""List of usage alert configurations per feature."""
@@ -700,7 +758,9 @@ class GetEntityBillingControls(BaseModel):
 
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
-        optional_fields = set(["spend_limits", "usage_alerts", "overage_allowed"])
+        optional_fields = set(
+            ["spend_limits", "usage_limits", "usage_alerts", "overage_allowed"]
+        )
         serialized = handler(self)
         m = {}
 

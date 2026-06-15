@@ -23,7 +23,7 @@ export const CustomerBillingControlsResponseSchema = z.object({
 	}),
 	usage_limits: z.array(ApiUsageLimitSchema).optional().meta({
 		description:
-			"List of windowed hard usage caps per feature, with current window usage.",
+			"List of hard usage caps per feature, with current interval usage.",
 	}),
 	usage_alerts: z.array(DbUsageAlertSchema).optional().meta({
 		description: "List of usage alert configurations per feature.",

@@ -132,6 +132,71 @@ test.concurrent(
 );
 
 test.concurrent(
+	`${chalk.yellowBright("ent-uw-enforce1b: entities.update usage_limits patches a pre-existing cached subject")}`,
+	async () => {
+		const perEntityProduct = products.base({
+			id: "ent-uw-enforce-cached-update",
+			items: [
+				items.monthlyMessages({
+					includedUsage: 100,
+					entityFeatureId: TestFeature.Users,
+				}),
+			],
+		});
+
+		const customerId = "ent-uw-enforce-cached-1";
+		const { entities } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [perEntityProduct] }),
+				s.entities({ count: 1, featureId: TestFeature.Users }),
+			],
+			actions: [s.billing.attach({ productId: perEntityProduct.id })],
+		});
+
+		await autumnV2_3.check({
+			customer_id: customerId,
+			entity_id: entities[0].id,
+			feature_id: TestFeature.Messages,
+		});
+
+		await setEntityUsageLimit({
+			autumn: autumnV2_3,
+			customerId,
+			entityId: entities[0].id,
+			featureId: TestFeature.Messages,
+			limit: 5,
+		});
+
+		await autumnV2_3.track({
+			customer_id: customerId,
+			entity_id: entities[0].id,
+			feature_id: TestFeature.Messages,
+			value: 7,
+		});
+
+		await expectEntityFeatureBalance({
+			autumn: autumnV2_3,
+			customerId,
+			entityId: entities[0].id,
+			featureId: TestFeature.Messages,
+			granted: 100,
+			remaining: 95,
+			usage: 5,
+		});
+		await expectEntityUsageLimit({
+			autumn: autumnV2_3,
+			customerId,
+			entityId: entities[0].id,
+			featureId: TestFeature.Messages,
+			usage: 5,
+			limit: 5,
+		});
+	},
+);
+
+test.concurrent(
 	`${chalk.yellowBright("ent-uw-enforce2: two entities with different caps stay isolated while customer balance aggregates")}`,
 	async () => {
 		const perEntityProduct = products.base({

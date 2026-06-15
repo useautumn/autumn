@@ -46,7 +46,7 @@ const { syncItemV4 } = await import(
 );
 
 describe("syncItemV4 cache misses", () => {
-	test("skips one missing feature without dropping another feature sync", async () => {
+	test("drops balance sync after a feature cache miss", async () => {
 		mockState.cacheReads = [];
 		mockState.executeCalls = [];
 
@@ -85,26 +85,8 @@ describe("syncItemV4 cache misses", () => {
 			},
 		});
 
-		expect(mockState.cacheReads).toEqual(["missing_feature", "present_feature"]);
-		expect(mockState.executeCalls).toHaveLength(1);
-
-		const query = mockState.executeCalls[0] as {
-			queryChunks?: unknown[];
-		};
-		const payloadJson = query.queryChunks?.find(
-			(chunk): chunk is string =>
-				typeof chunk === "string" &&
-				chunk.includes("customer_entitlement_updates"),
-		);
-		expect(payloadJson).toBeTruthy();
-
-		const payload = JSON.parse(payloadJson!);
-		expect(payload.customer_entitlement_updates).toHaveLength(1);
-		expect(payload.customer_entitlement_updates[0]).toMatchObject({
-			customer_entitlement_id: "cus_ent_present",
-			feature_id: "present_feature",
-			balance: 42,
-		});
+		expect(mockState.cacheReads).toEqual(["missing_feature"]);
+		expect(mockState.executeCalls).toHaveLength(0);
 	});
 });
 

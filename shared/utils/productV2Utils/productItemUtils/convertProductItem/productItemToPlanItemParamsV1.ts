@@ -1,12 +1,45 @@
 import { InternalError } from "@api/errors/base/InternalError";
 import type { CreatePlanItemParamsV1 } from "@api/products/items/crud/createPlanItemParamsV1";
 import {
+	AllocatedBillingBehavior,
 	OnDecrease,
 	OnIncrease,
 } from "@models/productV2Models/productItemModels/productItemEnums";
-import type { ProductItem } from "@models/productV2Models/productItemModels/productItemModels";
+import {
+	type ProductItem,
+	ProductItemFeatureType,
+	UsageModel,
+} from "@models/productV2Models/productItemModels/productItemModels";
 import type { SharedContext } from "../../../../types/sharedContext";
+import { itemToUsageType } from "../convertItemUtils";
+import { isFeaturePriceItem } from "../getItemType";
 import { productItemsToPlanItemsV1 } from "./productItemToPlanItemV1";
+
+const itemToAllocatedLegacyProration = ({
+	ctx,
+	item,
+}: {
+	ctx: SharedContext;
+	item: ProductItem;
+}): CreatePlanItemParamsV1["proration"] => {
+	const usageType = itemToUsageType({ item, features: ctx.features });
+	const isPayPerUseContinuous =
+		usageType === ProductItemFeatureType.ContinuousUse &&
+		isFeaturePriceItem(item) &&
+		item.usage_model !== UsageModel.Prepaid;
+
+	if (!isPayPerUseContinuous) return undefined;
+	if (
+		item.config?.allocated_billing_behavior === AllocatedBillingBehavior.Arrear
+	) {
+		return undefined;
+	}
+
+	return {
+		on_increase: item.config?.on_increase ?? OnIncrease.ProrateImmediately,
+		on_decrease: item.config?.on_decrease ?? OnDecrease.Prorate,
+	};
+};
 
 export const productItemToPlanItemParamsV1 = ({
 	ctx,
@@ -27,6 +60,13 @@ export const productItemToPlanItemParamsV1 = ({
 		});
 	}
 
+	const proration =
+		planItemV1.proration ??
+		itemToAllocatedLegacyProration({
+			ctx,
+			item,
+		});
+
 	return {
 		feature_id: planItemV1.feature_id,
 		included: planItemV1.included,
@@ -44,11 +84,11 @@ export const productItemToPlanItemParamsV1 = ({
 					tier_behavior: planItemV1.price.tier_behavior ?? undefined,
 				}
 			: undefined,
-		proration: planItemV1.proration
+		proration: proration
 			? {
 					on_increase:
-						planItemV1.proration.on_increase ?? OnIncrease.ProrateImmediately,
-					on_decrease: planItemV1.proration.on_decrease ?? OnDecrease.Prorate,
+						proration.on_increase ?? OnIncrease.ProrateImmediately,
+					on_decrease: proration.on_decrease ?? OnDecrease.Prorate,
 				}
 			: undefined,
 

@@ -149,6 +149,17 @@ export const CreatePlanItemParamsV1Schema = z
 		if (ctx.value.price) {
 			const { amount, tiers } = ctx.value.price;
 
+			if (
+				ctx.value.proration &&
+				ctx.value.price.billing_method === BillingMethod.UsageBased
+			) {
+				ctx.issues.push({
+					code: "custom",
+					message: "proration is only supported for prepaid features.",
+					input: ctx.value.proration,
+				});
+			}
+
 			const hasAmount = typeof amount === "number";
 			const hasTiers = Array.isArray(tiers) && tiers.length > 0;
 

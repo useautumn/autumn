@@ -21,10 +21,8 @@ import {
 } from "@tests/integration/billing/utils/expectCustomerProductCorrect";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
-import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
-import { addMonths } from "date-fns";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: Subscription enters past_due after failed payment at renewal
@@ -101,7 +99,7 @@ test.concurrent(`${chalk.yellowBright("sub.updated 2: invoice mode upgrade, prod
 		items: [dashboardItem, messagesItem, adminItem],
 	});
 
-	const { autumnV1, testClockId, ctx, advancedTo } = await initScenario({
+	const { autumnV1 } = await initScenario({
 		customerId,
 		setup: [
 			s.customer({ paymentMethod: "success" }),
@@ -117,14 +115,8 @@ test.concurrent(`${chalk.yellowBright("sub.updated 2: invoice mode upgrade, prod
 			}),
 			s.removePaymentMethod(),
 			s.attachPaymentMethod({ type: "fail" }),
-			s.advanceTestClock({ weeks: 6 }),
+			s.advanceTestClock({ weeks: 6, waitForSeconds: 30 }),
 		],
-	});
-
-	await advanceTestClock({
-		stripeCli: ctx.stripeCli,
-		testClockId: testClockId!,
-		advanceTo: addMonths(new Date(advancedTo), 1).getTime(),
 	});
 
 	const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
