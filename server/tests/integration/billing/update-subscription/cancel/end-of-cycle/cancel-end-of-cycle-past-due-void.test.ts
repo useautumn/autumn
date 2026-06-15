@@ -3,7 +3,7 @@
 
 import { expect, test } from "bun:test";
 import type { ApiCustomerV3 } from "@autumn/shared";
-import { CusProductStatus, customerProducts } from "@autumn/shared";
+import { driveProductPastDue } from "@tests/integration/billing/utils/driveProductPastDue";
 import {
 	expectCustomerProducts,
 	expectProductActive,
@@ -15,77 +15,12 @@ import { expectNoStripeSubscription } from "@tests/integration/billing/utils/exp
 import { getSubscriptionId } from "@tests/integration/billing/utils/stripe/getSubscriptionId";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
-import { advanceToNextInvoice } from "@tests/utils/testAttachUtils/testAttachUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
-import { eq } from "drizzle-orm";
 import type { Stripe } from "stripe";
-import { attachFailedPaymentMethod } from "@/external/stripe/stripeCusUtils";
 import { CusService } from "@/internal/customers/CusService";
-import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer";
 import { OrgService } from "@/internal/orgs/OrgService";
 import { timeout } from "@/utils/genUtils";
-
-/**
- * Fail the renewal to create a real open invoice, then force the product into past_due
- * directly in Postgres (no webhook dependency). Returns the Stripe customer + subscription ids.
- */
-const driveProductPastDue = async ({
-	ctx,
-	testClockId,
-	customerId,
-	productId,
-}: {
-	ctx: Awaited<ReturnType<typeof initScenario>>["ctx"];
-	testClockId: string;
-	customerId: string;
-	productId: string;
-}) => {
-	const subscriptionId = await getSubscriptionId({
-		ctx,
-		customerId,
-		productId,
-	});
-
-	const customer = await CusService.get({
-		db: ctx.db,
-		idOrInternalId: customerId,
-		orgId: ctx.org.id,
-		env: ctx.env,
-	});
-
-	await attachFailedPaymentMethod({
-		stripeCli: ctx.stripeCli,
-		customer: customer!,
-	});
-
-	const paymentMethods = await ctx.stripeCli.paymentMethods.list({
-		customer: customer!.processor?.id,
-	});
-	await ctx.stripeCli.subscriptions.update(subscriptionId, {
-		default_payment_method: paymentMethods.data[0].id,
-	});
-
-	await advanceToNextInvoice({ stripeCli: ctx.stripeCli, testClockId });
-	await timeout(4000);
-
-	// Flip the customer_product to past_due directly (no public API; webhook sync is unreliable
-	// locally), then bust the cache so the HTTP server re-reads it from Postgres.
-	const fullCustomer = await CusService.getFull({
-		ctx,
-		idOrInternalId: customerId,
-	});
-	const customerProduct = fullCustomer.customer_products.find(
-		(cp) => cp.product.id === productId,
-	);
-	await ctx.db
-		.update(customerProducts)
-		.set({ status: CusProductStatus.PastDue })
-		.where(eq(customerProducts.id, customerProduct!.id));
-	await deleteCachedFullCustomer({ ctx, customerId });
-
-	return { subscriptionId, stripeCustomerId: customer!.processor?.id };
-};
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // PRIMARY (pre-impl RED): flag on + past_due + cancel_end_of_cycle -> immediate + void
