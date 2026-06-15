@@ -24,6 +24,15 @@ export const getQueuedTrackFeatureDeductions = ({
 	if (allowTokenCascade) {
 		const cascadeDeductions = getTokenCascadeDeductionsFromBody({ ctx, body });
 		if (!cascadeDeductions) {
+			ctx.logger.warn(
+				"[track] queued cascade marker invalid or incomplete; event will not be deducted",
+				{
+					type: "track_cascade_marker_invalid",
+					customer_id: body.customer_id,
+					entity_id: body.entity_id,
+					feature_id: body.feature_id,
+				},
+			);
 			throw new RecaseError({
 				message: "Queued token cascade is missing a valid cascade marker",
 				code: ErrCode.InvalidRequest,
