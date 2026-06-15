@@ -20,11 +20,13 @@ export const runTrackV2 = async ({
 	body,
 	featureDeductions,
 	apiVersion,
+	allowTokenCascade = false,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	featureDeductions: FeatureDeduction[];
 	apiVersion?: ApiVersion;
+	allowTokenCascade?: boolean;
 }) => {
 	// Validate: event_name cannot be used with overage_behavior: "reject"
 	if (body.event_name && body.overage_behavior === "reject") {
@@ -66,6 +68,7 @@ export const runTrackV2 = async ({
 		featureDeductions,
 		overageBehavior: body.overage_behavior || "cap",
 		body,
+		allowTokenCascade,
 	});
 
 	// Version changes will transform V3 -> V2 -> V1 -> V0 based on target API version

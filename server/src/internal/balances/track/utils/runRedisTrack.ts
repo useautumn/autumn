@@ -103,12 +103,14 @@ export const runRedisTrack = async ({
 	featureDeductions,
 	overageBehavior,
 	body,
+	allowTokenCascade = false,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	featureDeductions: FeatureDeduction[];
 	overageBehavior: "cap" | "reject";
 	body: TrackParams;
+	allowTokenCascade?: boolean;
 }): Promise<TrackResponseV3> => {
 	const { data: result, error } = await tryCatch(
 		executeRedisDeduction({
@@ -130,6 +132,7 @@ export const runRedisTrack = async ({
 			error,
 			body,
 			featureDeductions,
+			allowTokenCascade,
 		});
 	}
 

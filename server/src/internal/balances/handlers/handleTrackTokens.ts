@@ -20,10 +20,13 @@ export const handleTrackTokens = createRoute({
 			input: body,
 		});
 
+		const allowTokenCascade = (featureDeductions[0]?.spillover?.length ?? 0) > 0;
+
 		const response = await runTrackWithRollout({
 			ctx,
 			body: trackBody,
 			featureDeductions,
+			allowTokenCascade,
 		});
 		const status = ctx.extraLogs.trackQueuedForReplay ? 202 : 200;
 
