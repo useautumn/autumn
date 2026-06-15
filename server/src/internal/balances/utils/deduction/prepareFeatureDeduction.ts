@@ -6,7 +6,6 @@ import {
 	fullCustomerToSpendLimitByFeatureId,
 	fullCustomerToUsageBasedCusEntsByFeatureId,
 	getMaxOverage,
-	getRelevantFeatures,
 	isAllocatedCustomerEntitlement,
 	isFreeCustomerEntitlement,
 	notNullish,
@@ -15,13 +14,17 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { computeCreditCosts } from "./computeCreditCosts.js";
+import { resolveEffectiveUsageAllowed } from "../resolveEffectiveUsageAllowed.js";
 import type {
 	CustomerEntitlementDeduction,
 	DeductionOptions,
 	PreparedFeatureDeduction,
 } from "../types/deductionTypes.js";
-import type { FeatureDeduction } from "../types/featureDeduction.js";
+import {
+	type FeatureDeduction,
+	getRelevantFeaturesForDeduction,
+} from "../types/featureDeduction.js";
+import { computeCreditCosts } from "./computeCreditCosts.js";
 
 /**
  * Prepares all the inputs needed to execute a deduction for a single feature.
@@ -40,28 +43,14 @@ export const prepareFeatureDeduction = ({
 }): PreparedFeatureDeduction => {
 	const { org } = ctx;
 	const { env } = ctx;
-	const { feature, lock, targetBalance } = deduction;
+	const { lock } = deduction;
 
 	const { overageBehaviour = "cap", customerEntitlementFilters } = options;
 
-	// Get relevant features (just the feature itself if targetBalance is set).
-	// Cascade spillover systems join the same deduction so the engine drains
-	// `feature` first and spills the remainder into them atomically.
-	const spilloverFeatures = deduction.spillover?.map((spill) => spill.feature);
-	const relevantFeatures = notNullish(targetBalance)
-		? [feature]
-		: [
-				...getRelevantFeatures({ features: ctx.features, featureId: feature.id }),
-				...(spilloverFeatures ?? []).flatMap((spilloverFeature) =>
-					getRelevantFeatures({
-						features: ctx.features,
-						featureId: spilloverFeature.id,
-					}),
-				),
-			].filter(
-				(candidate, index, all) =>
-					all.findIndex((other) => other.id === candidate.id) === index,
-			);
+	const relevantFeatures = getRelevantFeaturesForDeduction({
+		features: ctx.features,
+		deduction,
+	});
 
 	// Get customer entitlements for these features (includes both product and loose entitlements)
 	const cusEnts = fullCustomerToCustomerEntitlements({
@@ -128,20 +117,12 @@ export const prepareFeatureDeduction = ({
 			const isFreeAllocatedUsageAllowed =
 				isFreeAllocated && overageBehaviour !== "reject";
 
-			const overageAllowedControl =
-				overageAllowedByFeatureId[ce.entitlement.feature.id];
-
-			let effectiveUsageAllowed =
-				ce.usage_allowed || isFreeAllocatedUsageAllowed;
-
-			if (
-				overageAllowedControl?.enabled === true &&
-				!nativeUsageAllowedFeatureIds.has(ce.entitlement.feature.id)
-			) {
-				effectiveUsageAllowed = true;
-			} else if (overageAllowedControl?.enabled === false) {
-				effectiveUsageAllowed = false;
-			}
+			const effectiveUsageAllowed = resolveEffectiveUsageAllowed({
+				baseUsageAllowed: ce.usage_allowed || isFreeAllocatedUsageAllowed,
+				featureId: ce.entitlement.feature.id,
+				overageAllowedByFeatureId,
+				nativeUsageAllowedFeatureIds,
+			});
 
 			return {
 				customer_entitlement_id: ce.id,

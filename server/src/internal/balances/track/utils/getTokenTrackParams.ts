@@ -17,6 +17,7 @@ import {
 	type ModelCostBreakdown,
 } from "@/internal/features/aiCreditSystemUtils.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
+import { resolveEffectiveUsageAllowed } from "../../utils/resolveEffectiveUsageAllowed.js";
 import {
 	buildTokenCascadeDeduction,
 	type FeatureDeduction,
@@ -107,16 +108,12 @@ const resolveAiCreditFeaturesFromEntitlements = async ({
 		const feature = customerEntitlement.entitlement.feature;
 		if (!isAiCreditSystem(feature.type)) continue;
 
-		const overageAllowedControl = overageAllowedByFeatureId[feature.id];
-		let usageAllowed = customerEntitlement.usage_allowed === true;
-		if (
-			overageAllowedControl?.enabled === true &&
-			!nativeUsageAllowedFeatureIds.has(feature.id)
-		) {
-			usageAllowed = true;
-		} else if (overageAllowedControl?.enabled === false) {
-			usageAllowed = false;
-		}
+		const usageAllowed = resolveEffectiveUsageAllowed({
+			baseUsageAllowed: customerEntitlement.usage_allowed === true,
+			featureId: feature.id,
+			overageAllowedByFeatureId,
+			nativeUsageAllowedFeatureIds,
+		});
 		const existing = systems.get(feature.id);
 		if (existing) {
 			existing.hasUsageAllowed = existing.hasUsageAllowed || usageAllowed;
@@ -136,10 +133,14 @@ const resolveAiCreditFeaturesFromEntitlements = async ({
 	}
 
 	return [...aiCreditSystems]
-		.sort(
-			(left, right) =>
-				Number(left.hasUsageAllowed) - Number(right.hasUsageAllowed),
-		)
+		.sort((left, right) => {
+			const statusDiff =
+				Number(left.hasUsageAllowed) - Number(right.hasUsageAllowed);
+			if (statusDiff !== 0) {
+				return statusDiff;
+			}
+			return left.feature.id.localeCompare(right.feature.id);
+		})
 		.map((system) => system.feature);
 };
 

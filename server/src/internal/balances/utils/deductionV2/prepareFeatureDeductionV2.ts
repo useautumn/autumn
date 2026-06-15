@@ -22,12 +22,16 @@ import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockRec
 import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { computeCreditCosts } from "../deduction/computeCreditCosts.js";
+import { resolveEffectiveUsageAllowed } from "../resolveEffectiveUsageAllowed.js";
 import type {
 	CustomerEntitlementDeduction,
 	DeductionOptions,
 	PreparedFeatureDeduction,
 } from "../types/deductionTypes.js";
-import type { FeatureDeduction } from "../types/featureDeduction.js";
+import {
+	type FeatureDeduction,
+	getRelevantFeaturesForDeduction,
+} from "../types/featureDeduction.js";
 
 /**
  * Prepares all the inputs needed to execute a deduction for a single feature.
@@ -52,23 +56,10 @@ export const prepareFeatureDeductionV2 = ({
 	const { feature, lock, targetBalance } = deduction;
 	const { overageBehaviour = "cap", customerEntitlementFilters } = options;
 
-	const spilloverFeatures = deduction.spillover?.map((spill) => spill.feature);
-	const relevantFeatures = notNullish(targetBalance)
-		? [feature]
-		: [
-				...getRelevantFeatures({ features: ctx.features, featureId: feature.id }),
-				// Cascade spillover systems join the same deduction so the engine
-				// drains `feature` first and spills the remainder into them atomically.
-				...(spilloverFeatures ?? []).flatMap((spilloverFeature) =>
-					getRelevantFeatures({
-						features: ctx.features,
-						featureId: spilloverFeature.id,
-					}),
-				),
-			].filter(
-				(candidate, index, all) =>
-					all.findIndex((other) => other.id === candidate.id) === index,
-			);
+	const relevantFeatures = getRelevantFeaturesForDeduction({
+		features: ctx.features,
+		deduction,
+	});
 
 	const customerEntitlements = fullSubjectToCustomerEntitlements({
 		fullSubject,
@@ -189,22 +180,13 @@ export const prepareFeatureDeductionV2 = ({
 			});
 			const isFreeAllocatedUsageAllowed =
 				isFreeAllocated && overageBehaviour !== "reject";
-			const overageAllowedControl =
-				overageAllowedByFeatureId[customerEntitlement.entitlement.feature.id];
-
-			let effectiveUsageAllowed =
-				customerEntitlement.usage_allowed || isFreeAllocatedUsageAllowed;
-
-			if (
-				overageAllowedControl?.enabled === true &&
-				!nativeUsageAllowedFeatureIds.has(
-					customerEntitlement.entitlement.feature.id,
-				)
-			) {
-				effectiveUsageAllowed = true;
-			} else if (overageAllowedControl?.enabled === false) {
-				effectiveUsageAllowed = false;
-			}
+			const effectiveUsageAllowed = resolveEffectiveUsageAllowed({
+				baseUsageAllowed:
+					customerEntitlement.usage_allowed || isFreeAllocatedUsageAllowed,
+				featureId: customerEntitlement.entitlement.feature.id,
+				overageAllowedByFeatureId,
+				nativeUsageAllowedFeatureIds,
+			});
 
 			return {
 				customer_entitlement_id: customerEntitlement.id,

@@ -17,18 +17,6 @@ const DEFAULT_VALUE = 1;
 const asNumber = (value: unknown): number | null =>
 	typeof value === "number" && Number.isFinite(value) ? value : null;
 
-const resolveAiCreditFeatureForCascade = ({
-	ctx,
-	featureId,
-}: {
-	ctx: AutumnContext;
-	featureId: unknown;
-}) => {
-	if (typeof featureId !== "string") return null;
-	const feature = ctx.features.find((candidate) => candidate.id === featureId);
-	return feature && isAiCreditSystem(feature.type) ? feature : null;
-};
-
 /**
  * Rebuilds the cascade deduction of a token track from the `properties.cascade`
  * marker that getTokenTrackParams stamps on the body, so queued replays keep
@@ -51,19 +39,24 @@ export const getTokenCascadeDeductionsFromBody = ({
 	const cascade = properties.cascade as { systems?: unknown } | undefined;
 	const rawSystems =
 		cascade && Array.isArray(cascade.systems) ? cascade.systems : null;
-	// A cascade needs at least two systems; a single-system track carries no
-	// marker and replays through the standard path.
 	if (!rawSystems || rawSystems.length < 2) return null;
 
 	const resolvedSystems: { feature: Feature; cost: number }[] = [];
 	for (const rawSystem of rawSystems) {
 		const entry = rawSystem as { feature_id?: unknown; cost?: unknown };
-		const feature = resolveAiCreditFeatureForCascade({
-			ctx,
-			featureId: entry.feature_id,
-		});
+		const feature =
+			typeof entry.feature_id === "string"
+				? ctx.features.find((candidate) => candidate.id === entry.feature_id)
+				: undefined;
 		const cost = asNumber(entry.cost);
-		if (!feature || cost === null || cost < 0) return null;
+		if (
+			!feature ||
+			!isAiCreditSystem(feature.type) ||
+			cost === null ||
+			cost < 0
+		) {
+			return null;
+		}
 		resolvedSystems.push({ feature, cost });
 	}
 

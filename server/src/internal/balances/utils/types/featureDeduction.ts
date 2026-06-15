@@ -1,4 +1,9 @@
-import type { Feature, LockParams } from "@autumn/shared";
+import {
+	type Feature,
+	getRelevantFeatures,
+	type LockParams,
+	notNullish,
+} from "@autumn/shared";
 import type { LockReceipt } from "../lock/fetchLockReceipt.js";
 
 export type TokenUsage = {
@@ -87,10 +92,39 @@ export const expandCascadeDeductions = (
 		return [
 			{ ...deduction, spillover: undefined },
 			...deduction.spillover.map((spill) => ({
-				...deduction,
 				feature: spill.feature,
+				deduction: deduction.deduction,
 				tokens: spill.tokens,
-				spillover: undefined,
 			})),
 		];
 	});
+
+/**
+ * Resolves the customer-entitlement features a deduction should be settled
+ * against: just `feature` when targeting a specific balance, otherwise
+ * `feature` and its cascade spillover features each expanded to their
+ * relevant credit-system family, deduped by feature id.
+ */
+export const getRelevantFeaturesForDeduction = ({
+	features,
+	deduction,
+}: {
+	features: Feature[];
+	deduction: FeatureDeduction;
+}): Feature[] => {
+	const { feature, targetBalance, spillover } = deduction;
+	if (notNullish(targetBalance)) return [feature];
+
+	const spilloverFeatures = spillover?.map((spill) => spill.feature) ?? [];
+	const relevantFeatures = [
+		...getRelevantFeatures({ features, featureId: feature.id }),
+		...spilloverFeatures.flatMap((spilloverFeature) =>
+			getRelevantFeatures({ features, featureId: spilloverFeature.id }),
+		),
+	];
+
+	return relevantFeatures.filter(
+		(candidate, index, all) =>
+			all.findIndex((other) => other.id === candidate.id) === index,
+	);
+};
