@@ -9,15 +9,10 @@
  *     one-off fee price was missing.
  * => the customer was never charged the one-time fee.
  *
- * Root cause:
- *   - buildStripePhasesUpdate.ts -> customerProductsToPhaseItems uses only
- *     `recurringItems` from customerProductToStripeItemSpecs, dropping
- *     `oneOffItems`.
- *   - shouldBuildImmediateLineItems returns false when accessStartsAt is set
- *     (future starts_at), so no immediate invoice carries the one-off either.
- *
- * Expected (correct) behaviour: the one-time fee is charged. These tests
- * assert that and therefore FAIL on the buggy code, replicating the issue.
+ * Correct behaviour (confirmed with the reporter): the one-off fee is charged
+ * when the plan ACTIVATES at starts_at — not up front — for both a pure
+ * scheduled attach and an enable_plan_immediately attach. It rides on the
+ * activating schedule phase's add_invoice_items.
  */
 
 import { expect, test } from "bun:test";
@@ -57,14 +52,32 @@ const onboardingFeeQuantities = [
 	{ feature_id: TestFeature.Messages, quantity: 1 },
 ];
 
+const expectOnboardingFeeOnActivatingPhase = async ({
+	ctx,
+	scheduleId,
+	startDate,
+}: {
+	ctx: Awaited<ReturnType<typeof initScenario>>["ctx"];
+	scheduleId: string;
+	startDate: number;
+}) => {
+	const stripeSchedule = (await ctx.stripeCli.subscriptionSchedules.retrieve(
+		scheduleId,
+	)) as Stripe.SubscriptionSchedule;
+	const firstPhase = stripeSchedule.phases[0];
+	expect(firstPhase?.start_date).toBe(Math.floor(startDate / 1000));
+	// The one-off fee rides on the activating phase as an add_invoice_item, so
+	// Stripe charges it once when the plan starts. BUG: oneOffItems were dropped.
+	expect(firstPhase?.add_invoice_items.length ?? 0).toBeGreaterThanOrEqual(1);
+};
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 1: pure scheduled attach (future starts_at, Scheduled status)
 // ═══════════════════════════════════════════════════════════════════════════════
 //
 // Matches the customer exactly: brand-new plan, future starts_at, one-off
-// onboarding fee. Nothing is charged today (Scheduled), but the fee MUST be
-// queued on the schedule's first phase so Stripe invoices it once when the
-// plan activates. On buggy code the one-off was dropped entirely.
+// onboarding fee. Nothing is charged today (Scheduled); the fee is queued on
+// the activating phase and charged when the plan starts.
 test.concurrent(`${chalk.yellowBright("starts_at one-off: scheduled attach queues the onboarding fee on the activating phase")}`, async () => {
 	const customerId = "starts-at-oneoff-scheduled";
 	const pro = buildProWithOnboardingFee("pro-oneoff-scheduled");
@@ -97,25 +110,21 @@ test.concurrent(`${chalk.yellowBright("starts_at one-off: scheduled attach queue
 	// Nothing is charged today — billing starts when the schedule activates.
 	await expectCustomerInvoiceCorrect({ customerId, count: 0 });
 
-	// The one-off fee MUST be queued as an add_invoice_item on the first
-	// (activating) phase so Stripe charges it once when the plan starts.
-	// BUG: oneOffItems were dropped, so add_invoice_items was empty.
-	const stripeSchedule = (await ctx.stripeCli.subscriptionSchedules.retrieve(
-		cusProduct.scheduled_ids![0]!,
-	)) as Stripe.SubscriptionSchedule;
-	const firstPhase = stripeSchedule.phases[0];
-	expect(firstPhase?.start_date).toBe(Math.floor(startDate / 1000));
-	expect(firstPhase?.add_invoice_items.length ?? 0).toBeGreaterThanOrEqual(1);
+	await expectOnboardingFeeOnActivatingPhase({
+		ctx,
+		scheduleId: cusProduct.scheduled_ids![0]!,
+		startDate,
+	});
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // TEST 2: immediate-access future attach (enable_plan_immediately)
 // ═══════════════════════════════════════════════════════════════════════════════
 //
-// This is the closest match to the production log: planTiming "immediate"
-// with a future starts_at (Active status + a backing schedule). The one-off
-// onboarding fee should be charged immediately on attach.
-test.concurrent(`${chalk.yellowBright("starts_at one-off: immediate-access future attach charges the onboarding fee now")}`, async () => {
+// Access starts now, but billing starts later. The one-off onboarding fee is
+// NOT charged up front — it's deferred to the activating phase like the pure
+// scheduled case, so it's invoiced once when the plan starts.
+test.concurrent(`${chalk.yellowBright("starts_at one-off: immediate-access future attach defers the onboarding fee to the activating phase")}`, async () => {
 	const customerId = "starts-at-oneoff-immediate-access";
 	const pro = buildProWithOnboardingFee("pro-oneoff-immediate-access");
 
@@ -140,22 +149,14 @@ test.concurrent(`${chalk.yellowBright("starts_at one-off: immediate-access futur
 
 	const cusProduct = await getCustomerProduct({ ctx, customerId, productId: pro.id });
 	expect(cusProduct.status).toBe(CusProductStatus.Active);
+	expect(cusProduct.scheduled_ids).toHaveLength(1);
 
-	// Immediate access => ONLY the one-time onboarding fee is invoiced now.
-	// The recurring base price ($20/mo) is deferred to the schedule and billed
-	// when the future billing cycle starts.
-	// BUG: shouldBuildImmediateLineItems returned false for future starts_at,
-	// so no invoice was created at all (count 0).
-	await expectCustomerInvoiceCorrect({
-		customerId,
-		count: 1,
-		latestTotal: ONBOARDING_FEE,
+	// Nothing is charged up front — the fee is billed when the plan activates.
+	await expectCustomerInvoiceCorrect({ customerId, count: 0 });
+
+	await expectOnboardingFeeOnActivatingPhase({
+		ctx,
+		scheduleId: cusProduct.scheduled_ids![0]!,
+		startDate,
 	});
-
-	// The fee was charged immediately, so the schedule must NOT queue it again
-	// (otherwise it gets invoiced a second time when the schedule activates).
-	const stripeSchedule = (await ctx.stripeCli.subscriptionSchedules.retrieve(
-		cusProduct.scheduled_ids![0]!,
-	)) as Stripe.SubscriptionSchedule;
-	expect(stripeSchedule.phases[0]?.add_invoice_items.length ?? 0).toBe(0);
 });

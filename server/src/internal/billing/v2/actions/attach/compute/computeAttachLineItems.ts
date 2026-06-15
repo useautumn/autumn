@@ -10,13 +10,9 @@ import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutum
 import { shouldBuildImmediateLineItems } from "./shouldBuildImmediateLineItems";
 
 /**
- * Builds the line items invoiced immediately for an attach.
- *
- * - "none": nothing charged now (pure scheduled attach).
- * - "one-off-only": only the new product's one-time fees (e.g. onboarding
- *   fees) are charged now; the old product's refund/arrear and the recurring
- *   proration are deferred to the schedule.
- * - "all": full immediate charge (normal immediate attach/upgrade).
+ * Builds the line items invoiced immediately for an attach. Returns no items
+ * when access starts in the future (the recurring charges and any one-off fees
+ * are billed when the plan activates via its Stripe schedule).
  */
 export const computeAttachLineItems = ({
 	ctx,
@@ -34,28 +30,21 @@ export const computeAttachLineItems = ({
 	allLineItems: LineItem[];
 	updateCustomerEntitlements: UpdateCustomerEntitlement[];
 } => {
-	const mode = shouldBuildImmediateLineItems({
+	const shouldBuild = shouldBuildImmediateLineItems({
 		planTiming: attachBillingContext.planTiming,
 		customerProductStatus: newCustomerProduct.status,
 		accessStartsAt: attachBillingContext.accessStartsAt,
 	});
 
-	if (mode === "none") {
+	if (!shouldBuild) {
 		return { allLineItems: [], updateCustomerEntitlements: [] };
 	}
-
-	const isOneOffOnly = mode === "one-off-only";
 
 	return buildAutumnLineItems({
 		ctx,
 		newCustomerProducts: [newCustomerProduct],
-		deletedCustomerProduct: isOneOffOnly ? undefined : currentCustomerProduct,
+		deletedCustomerProduct: currentCustomerProduct,
 		billingContext: attachBillingContext,
-		includeArrearLineItems: isOneOffOnly
-			? false
-			: !params.carry_over_usages?.enabled,
-		newProductPriceFilters: isOneOffOnly
-			? { includeOnlyOneOffPrices: true }
-			: undefined,
+		includeArrearLineItems: !params.carry_over_usages?.enabled,
 	});
 };

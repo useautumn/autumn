@@ -9,9 +9,8 @@ import { customerProductToStripeItemSpecs } from "@/internal/billing/v2/provider
  * phase window, as `add_invoice_items`. Restricting to the starting phase
  * stops a product spanning multiple phases being charged its fee repeatedly.
  *
- * Products with `access_starts_at` set (enable_plan_immediately) already had
- * their one-off fees invoiced immediately, so they're skipped here to avoid a
- * double charge when the schedule activates.
+ * One-off fees on a future-dated attach are always billed when the plan
+ * activates (never up front), so they live on the activating phase here.
  */
 export const customerProductsToPhaseInvoiceItems = ({
 	ctx,
@@ -30,8 +29,6 @@ export const customerProductsToPhaseInvoiceItems = ({
 		[];
 
 	for (const customerProduct of customerProducts) {
-		if (customerProduct.access_starts_at != null) continue;
-
 		const productStartsAt = customerProduct.starts_at;
 		const startsInThisPhase =
 			productStartsAt >= phaseStartMs &&
