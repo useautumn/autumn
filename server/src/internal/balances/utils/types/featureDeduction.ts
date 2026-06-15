@@ -39,6 +39,39 @@ export type FeatureDeduction = {
 	spillover?: SpilloverDeduction[];
 };
 
+/** One AI credit system priced for a single token-track event. */
+export type TokenCascadeSystem = {
+	feature: Feature;
+	cost: number;
+};
+
+/**
+ * Builds the single atomic deduction for a token track from the ordered set of
+ * AI credit systems to settle (primary first). Extra systems ride along as
+ * spillover so the engine drains them in one pass; a lone system yields a plain
+ * token deduction with no spillover.
+ */
+export const buildTokenCascadeDeduction = ({
+	systems,
+	tokenUsage,
+}: {
+	systems: TokenCascadeSystem[];
+	tokenUsage: TokenUsage;
+}): FeatureDeduction => {
+	const [primary, ...rest] = systems;
+	return {
+		feature: primary.feature,
+		deduction: 1,
+		tokens: { usage: tokenUsage, cost: primary.cost },
+		...(rest.length > 0 && {
+			spillover: rest.map((system) => ({
+				feature: system.feature,
+				tokens: { usage: tokenUsage, cost: system.cost },
+			})),
+		}),
+	};
+};
+
 /**
  * Flattens a cascade deduction into one entry per feature. The engine settles a
  * cascade as a single multi-feature deduction, but response/property helpers

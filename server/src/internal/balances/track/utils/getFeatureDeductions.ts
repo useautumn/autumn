@@ -7,7 +7,10 @@ import {
 	type TrackParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "../../../../honoUtils/HonoEnv.js";
-import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
+import {
+	buildTokenCascadeDeduction,
+	type FeatureDeduction,
+} from "../../utils/types/featureDeduction.js";
 
 const DEFAULT_VALUE = 1;
 
@@ -73,18 +76,7 @@ export const getTokenCascadeDeductionsFromBody = ({
 		outputTokens: asNumber(properties.output_tokens) ?? 0,
 	};
 
-	const [primary, ...rest] = resolvedSystems;
-	return [
-		{
-			feature: primary.feature,
-			deduction: 1,
-			tokens: { usage: tokenUsage, cost: primary.cost },
-			spillover: rest.map((system) => ({
-				feature: system.feature,
-				tokens: { usage: tokenUsage, cost: system.cost },
-			})),
-		},
-	];
+	return [buildTokenCascadeDeduction({ systems: resolvedSystems, tokenUsage })];
 };
 
 export const getTrackFeatureDeductions = ({

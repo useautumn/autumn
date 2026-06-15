@@ -17,7 +17,10 @@ import {
 	type ModelCostBreakdown,
 } from "@/internal/features/aiCreditSystemUtils.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
-import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
+import {
+	buildTokenCascadeDeduction,
+	type FeatureDeduction,
+} from "../../utils/types/featureDeduction.js";
 
 const resolveAiCreditFeatureById = ({
 	features,
@@ -215,22 +218,16 @@ export const getTokenTrackParams = async ({
 		outputTokens: input.output_tokens,
 	};
 
-	// One atomic deduction: the remaining systems ride along as spillover so the
-	// engine settles every system in a single pass — draining included usage
-	// first (capped), then each marked-up overage system, each priced in its own
-	// cost domain.
+	// One atomic deduction across every resolved system, drained in order:
+	// included usage first (capped), then each marked-up overage system.
 	const featureDeductions: FeatureDeduction[] = [
-		{
-			feature: primaryFeature,
-			deduction: 1,
-			tokens: { usage: tokenUsage, cost: primaryPricing.cost },
-			...(isCascade && {
-				spillover: aiCreditFeatures.slice(1).map((feature, index) => ({
-					feature,
-					tokens: { usage: tokenUsage, cost: pricings[index + 1].cost },
-				})),
-			}),
-		},
+		buildTokenCascadeDeduction({
+			systems: aiCreditFeatures.map((feature, index) => ({
+				feature,
+				cost: pricings[index].cost,
+			})),
+			tokenUsage,
+		}),
 	];
 
 	// Freeze each system's request-time price (ordered included-first) so a
