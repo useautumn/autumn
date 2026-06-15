@@ -305,7 +305,7 @@ describe("eval mock Autumn server", () => {
 
 			expect(listed).toMatchObject({
 				list: [{ id: customer.id, subscriptions: [{ plan_id: "pro" }] }],
-				total_filtered_count: 1,
+				next_cursor: null,
 			});
 			expect(fetched).toMatchObject({
 				id: customer.id,

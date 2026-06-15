@@ -128,6 +128,7 @@ program
 		const environment = isProd() ? AppEnv.Live : AppEnv.Sandbox;
 
 		if (process.stdout.isTTY) {
+			process.exitCode = 1;
 			// Interactive mode - use new beautiful Ink UI
 			const { PushView } = await import("./views/react/push/Push.js");
 			render(
@@ -175,6 +176,7 @@ program
 			(getGlobalConfig().get("noDeclarationFile") === true);
 
 		if (process.stdout.isTTY) {
+			process.exitCode = 1;
 			// Interactive mode - use beautiful Ink UI
 			render(
 				<QueryProvider>

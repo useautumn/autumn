@@ -13,3 +13,4 @@ export { CreateEntityParamsV1Schema } from "./entities/crud/createEntityParams.j
 export { CreatePlanParamsV2Schema } from "./products/crud/createPlanParamsV1.js";
 export { GetPlanParamsV0Schema } from "./products/crud/getPlanParamsV0.js";
 export { ListPlanParamsSchema } from "./products/crud/listPlanParams.js";
+export { UpdatePlanParamsV2Schema } from "./products/crud/updatePlanParamsV1.js";

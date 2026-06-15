@@ -14,7 +14,6 @@ import {
 	isFeaturePriceItem,
 	isPriceItem,
 } from "./productV2Utils/productItemUtils/getItemType.js";
-import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
 import { notNullish, nullish } from "./utils.js";
 
 // ============================================================================
@@ -54,9 +53,6 @@ const getIncludedUsageText = (item: ProductItem, feature: Feature): string => {
 
 	if (item.included_usage === Infinite) {
 		return `Unlimited ${featureName}`;
-	}
-	if (isAiCreditSystem(feature.type)) {
-		return `$${numberWithCommas(item.included_usage ?? 0)} of ${featureName}`;
 	}
 	if (nullish(item.included_usage) || item.included_usage === 0) {
 		return `0 ${featureName}`;
@@ -229,11 +225,7 @@ export const getFeaturePriceItemDisplay = ({
 	});
 	let includedUsageStr = "";
 	if (hasIncludedUsage) {
-		if (isAiCreditSystem(feature.type)) {
-			includedUsageStr = `$${numberWithCommas(includedUsage)} of ${includedFeatureName}`;
-		} else {
-			includedUsageStr = `${numberWithCommas(includedUsage)} ${includedFeatureName}`;
-		}
+		includedUsageStr = `${numberWithCommas(includedUsage)} ${includedFeatureName}`;
 	}
 
 	const volumeFlatAmount = isVolumeFlatAmountItem(item);
@@ -242,7 +234,13 @@ export const getFeaturePriceItemDisplay = ({
 	// lives in tier.flat_amount, so we must pass useFlatAmount: true.
 	let priceStr: string;
 	if (volumeFlatAmount) {
-		priceStr = formatTiers({ item, currency, amountFormatOptions, useFlatAmount: true }) ?? "";
+		priceStr =
+			formatTiers({
+				item,
+				currency,
+				amountFormatOptions,
+				useFlatAmount: true,
+			}) ?? "";
 	} else if (item.tiers) {
 		priceStr = formatTiers({ item, currency, amountFormatOptions }) ?? "";
 	} else {
@@ -257,18 +255,10 @@ export const getFeaturePriceItemDisplay = ({
 		feature,
 		units: billingUnits,
 	});
-	let perUnitStr: string;
-	if (isAiCreditSystem(feature.type)) {
-		perUnitStr =
-			billingUnits > 1
-				? `$${numberWithCommas(billingUnits)} of ${billingFeatureName}`
-				: `$1 of ${billingFeatureName}`;
-	} else {
-		perUnitStr =
-			billingUnits > 1
-				? `${numberWithCommas(billingUnits)} ${billingFeatureName}`
-				: billingFeatureName;
-	}
+	const perUnitStr =
+		billingUnits > 1
+			? `${numberWithCommas(billingUnits)} ${billingFeatureName}`
+			: billingFeatureName;
 
 	// Build interval string
 	const showInterval = isMainPrice || fullDisplay;
@@ -283,13 +273,6 @@ export const getFeaturePriceItemDisplay = ({
 	}
 
 	// Format output based on what we have
-	if (isAiCreditSystem(feature.type)) {
-		return {
-			primary_text: includedUsageStr || "$0 included",
-			secondary_text: "then charged based on model usage",
-		};
-	}
-
 	if (hasIncludedUsage) {
 		if (volumeFlatAmount) {
 			const featureName = getFeatureName({ feature, units: 2 });
