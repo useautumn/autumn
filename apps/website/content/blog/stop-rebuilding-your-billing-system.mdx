@@ -8,9 +8,13 @@ image: "/images/blog/billing-relational-postgres-plans.png"
 heroComponent: "PostgresTablesHero"
 ---
 
-One of the hardest parts of pricing is changing it. When you built your system, you hadn't planned for a version change each month, you simply wanted to ship fast. So every time your growth team comes to you with an idea for pricing, you flinch because it's not a quick fix — it's a month of rework.
+One of the hardest parts of software monetization is changing it.
 
-We've been through this ourselves at Autumn — trying to build a system to generalize pricing changes and make them a one-day job. We've learnt a lot in doing so, and wanted to share some thoughts on how you can architect a flexible billing system that handles changes well.
+Pricing is one of the highest leverage parts of a business to experiment with. Even more so today: AI and usage-based models are many times more dynamic than flat fees and seats.
+
+But when you built your system, you hadn't planned for a pricing update each quarter. You just wanted to ship it quickly and get back to valuable features. That means every time your growth or sales team comes to you with an idea for pricing, you flinch because it's a month of rework.
+
+We've been through this ourselves at Autumn — trying to build a system and data model to generalize pricing. We've made mistakes and seen scars from our customers, and so wanted to share our learnings on how to architect a billing system that requires as little maintenance and rebuild as possible.
 
 ### Billing is a relational system
 
@@ -39,6 +43,10 @@ Compare this to storing all of your plan info, custom or not, in a Postgres tabl
 <RelationalDbSimulator />
 
 Everything is centralized, you can fetch a user and their plan in a single query, and most importantly, it's extensible. For example, if you wanted to let customers choose different credit amounts on a plan, you could simply add a `plan_credit_amounts` table and relate it back to your existing plans and customers.
+
+**Entitlements should be data too**
+
+The same goes for entitlements. Hardcoding access like `const hasPremiumModels = () => user.plan === 'pro'` works until you need to grant one free user access, and you're back to conditional logic all over your codebase. Model entitlements as data instead: a plan grants them, customers inherit through their plan, with per-customer overrides when needed. An exception becomes a row change, not a code change.
 
 The larger point here is that billing is really a set of relationships between your customers, plans, and entitlements, all of which evolve over time. If you treat it as such, you build a system that's much more robust and structured when it comes to pricing changes and save yourself the headache of re-building your system every time.
 

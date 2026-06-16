@@ -76,6 +76,39 @@ export function ConfigAsCodeSimulator() {
 					)}
 				</AnimatePresence>
 				<div className="ml-auto flex items-center gap-2">
+					<AnimatePresence>
+						{!applied.has("version") && (
+							<motion.span
+								animate={{ opacity: 1 }}
+								className="flex items-center gap-1 font-mono text-[11px] text-[#9564ff]"
+								exit={{ opacity: 0 }}
+								initial={{ opacity: 0 }}
+							>
+								click
+								<motion.svg
+									animate={reduce ? undefined : { x: [0, 3, 0] }}
+									aria-hidden="true"
+									fill="none"
+									height="11"
+									transition={{
+										duration: 1,
+										ease: "easeInOut",
+										repeat: Number.POSITIVE_INFINITY,
+									}}
+									viewBox="0 0 16 16"
+									width="11"
+								>
+									<path
+										d="M3 8h9M9 4l4 4-4 4"
+										stroke="currentColor"
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth="1.5"
+									/>
+								</motion.svg>
+							</motion.span>
+						)}
+					</AnimatePresence>
 					<Toggle change="version">Version Pro</Toggle>
 				</div>
 			</div>
