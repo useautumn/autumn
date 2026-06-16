@@ -1,0 +1,108 @@
+---
+title: "Stop rebuilding your billing system"
+description: "How to architect a flexible billing system that handles pricing changes well"
+date: "2026-06-16"
+author: "John, Autumn Co-Founder"
+slug: "stop-rebuilding-your-billing-system"
+image: "/images/blog/billing-relational-postgres-plans.png"
+heroComponent: "PostgresTablesHero"
+---
+
+One of the hardest parts of pricing is changing it. When you built your system, you hadn't planned for a version change each month, you simply wanted to ship fast. So every time your growth team comes to you with an idea for pricing, you flinch because it's not a quick fix — it's a month of rework.
+
+We've been through this ourselves at Autumn — trying to build a system to generalize pricing changes and make them a one-day job. We've learnt a lot in doing so, and wanted to share some thoughts on how you can architect a flexible billing system that handles changes well.
+
+### Billing is a relational system
+
+<ConfigSim>
+
+Most people think that billing data is just their customer data and thus only track that in their database. Other things like plan configurations end up being stored in code. So for instance, you might have a config file like the one below for your plans, and then a column on your user table indicating which plan they're on.
+
+<ConfigAsCodeSimulator />
+
+This is definitely quick to ship, but let's now try to make a pricing change. Imagine we'd like to update the `pro` plan to cost $40 and grant 400 credits each month — <Toggle change="version">Version Pro</Toggle> to update the config. On the customer side, we'd add another column for the version of the plan the customer is on. 
+
+</ConfigSim>
+
+Still relatively clean, but now you sign a custom deal with a user for them to pay $50/mo for 500 credits. To do this, we'd probably create another table called `custom_plans` and store the custom version of the user's plan in that table. 
+
+The problem with this is that our data is all over the place. Some plan data lives in code, while others live in the DB. There's no unified way to just fetch a customer and their plan info. The logic for this looks something like:
+
+```tsx
+import plans from "@plans"
+
+const userPlanInfo = user.customPlan ?? plans[user.regularPlan]
+```
+
+Compare this to storing all of your plan info, custom or not, in a Postgres table. To add a new plan version, or customize a plan for a user, you simply add a row to your `plans` table.
+
+<RelationalDbSimulator />
+
+Everything is centralized, you can fetch a user and their plan in a single query, and most importantly, it's extensible. For example, if you wanted to let customers choose different credit amounts on a plan, you could simply add a `plan_credit_amounts` table and relate it back to your existing plans and customers.
+
+The larger point here is that billing is really a set of relationships between your customers, plans, and entitlements, all of which evolve over time. If you treat it as such, you build a system that's much more robust and structured when it comes to pricing changes and save yourself the headache of re-building your system every time.
+
+### Billing is hierarchical
+
+The next important thing to understand about billing is that it's hierarchical. The same piece of configuration can often be specific to a customer, a plan, or even global. By designing your system so that configuration can be applied at any of these levels while sharing the same underlying logic, you make pricing changes much cheaper and easier to manage.
+
+![Configuration applied at global, plan, and customer levels](/images/blog/billing-hierarchical-config-levels.png)
+
+Let's look at an example. Imagine you have a `pro` plan that grants 100 credits per month. If you have a mix of sales-led and PLG customers, you probably end up creating custom contracts that grant arbitrary credit amounts. In that case, it might seem like a good idea to store the number of credits each customer receives directly on the customer row. However, let's say you now want to make a change to increase the number of credits this plan usually grants to 200/month. To do this you have to update every single one of your customers that's not on a custom plan. If you have a lot of these, that can get expensive — try raising it and watch the cost climb with your customer count:
+
+<HierarchyFlatSimulator />
+
+Now let's consider a second way to model this system. We'll store the default number of credits the `pro` plan grants each month on the plan row, and then on top of that, we'll also have a column on the customer table that indicates whether they get a custom number of credits. Now, if we want to make the same change as above, all we need to update is one row! As you can see, this is much quicker and even safer since it's easily reversible:
+
+<HierarchyLayeredSimulator />
+
+This concept extends beyond entitlements. Take usage alerts as an example. You might define a global alert that applies to every customer by default, while still allowing individual customers to configure their own alerts. Ultimately, if you're aware of this concept and model things at the appropriate level, you're far more flexible and efficient when it comes to changes to the system.
+
+### Don't design your billing around Stripe operations
+
+This is something we've found tremendously helpful at Autumn. When it comes to Stripe, most people think in terms of transitions:
+
+_"When we move a customer from Pro v1 to Pro v2, what Stripe update do we need to make?"_
+
+In code, that usually turns into something like this:
+
+```tsx
+const subscription = await stripe.subscriptions.retrieve("sub_xxx");
+
+const oldItem = subscription.items.data.find(
+  (item) => item.price.id  == "price_pro_v1"
+);
+
+await stripe.subscriptions.update("sub_xxx", {
+  items: [
+    { id: oldItem.id, deleted: true },
+    { price: "price_pro_v2", quantity: 1 },
+  ],
+});
+```
+
+At first this feels reasonable, Stripe's API even encourages it, but over time these transitions start to pile up. Every new pricing model, migration, or edge case requires another piece of Stripe-specific logic — each one routing through its own conditional to a different Stripe call:
+
+<StripeTransitionDiagram />
+
+Before long, your billing system becomes a collection of upgrade paths and special cases. Eventually, your Stripe and application begin to drift apart and you start running into state mismatches where customers are on the wrong price in Stripe, have the wrong entitlements in your app, or fall out of sync altogether.
+
+Alternatively, what we do is treat our application state as the source of truth and define a single translation layer between our application and Stripe. Rather than asking _"what Stripe operation should happen when this customer changes?"_, we ask a much simpler question: _"Given this customer's current state, what should their Stripe subscription look like?"_
+
+Using the previous example, to move a customer from Pro v1 to Pro v2 all we need to do is update the customer's state in our DB, then sync that to Stripe. We no longer need to care about what plan they were originally on, or what their previous state looked like:
+
+<StripeMappingDiagram />
+
+The important thing is that `syncToStripe` doesn't care how the customer got here. It doesn't matter whether they upgraded, downgraded, were migrated from a legacy plan, or manually edited by support. It only cares about the customer's current state and what Stripe should look like as a result.
+
+(ps. this sync function isn't magic — it's just a mapping from your billing state to a set of Stripe subscription items. Using Stripe's inline prices helps too: you don't depend on pre-created Stripe price objects, so your billing stays decoupled from Stripe state.)
+
+With this mapping layer, your billing system is now much more flexible, because you can make changes to a customer's state however you like, then simply re-run the mapping function to bring Stripe back in line. When you make a pricing change, you may need to edit the mapping function slightly, but it's going to be a lot cleaner than sprawling Stripe updates throughout your codebase. And perhaps the biggest benefit is that recovery is also now trivial. If a customer ever ends up out of sync, you don't need a bespoke repair script. You can simply run the same mapping function again and Stripe converges back to the correct state.
+
+### Concluding thoughts
+
+We've talked a lot about making billing systems flexible, and by now you might be thinking that it sounds like a lot of work. And honestly, it is.
+
+Compared to the one-shot implementation you might get from Claude or Codex, many of these ideas require more thought upfront and will probably take longer to build. But a perspective I like to take (though I may be biased) is that billing is a lot like infrastructure: the decisions you make early on matter because they're incredibly painful to change once your business starts depending on them, and the shortcuts you take today can easily become bottlenecks that slow you down far more than they ever helped.
+
+So I think it's important to find the right balance early on, and some of these trade-offs might be worth it! Or maybe you're already on your third billing rewrite and don't need convincing.
