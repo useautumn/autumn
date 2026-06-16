@@ -3,6 +3,7 @@ import { apiSubscriptionV1ToPurchaseV0 } from "@api/customers/cusPlans/mappers/a
 export * from "./apiSubscription";
 export * from "./apiSubscriptionV1";
 export * from "./cusProductLegacyData";
+export * from "./listCustomerProductsParams";
 export * from "./mappers/apiSubscriptionV1ToPurchaseV0";
 export * from "./mappers/apiSubscriptionV1ToV0";
 export * from "./previousVersions/apiCusProductV0";
