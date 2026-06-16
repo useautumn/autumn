@@ -9,6 +9,8 @@ export interface VirtualizationConfig {
 	rowHeight?: number;
 	/** Number of rows to render outside visible area (default: 30) - higher values improve fast scrolling smoothness */
 	overscan?: number;
+	/** Skeleton rows shown on first load (default: fill container). */
+	skeletonRowCount?: number;
 }
 
 export interface TableProps<T> {
