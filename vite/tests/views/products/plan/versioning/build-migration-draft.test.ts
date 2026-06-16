@@ -70,13 +70,11 @@ describe("buildMigrationDraft", () => {
 			scope: "this_version",
 		});
 
-		// Filter still excludes custom customers by default...
 		expect(draft.filter.customer?.plan).toMatchObject({
 			plan_id: "pro",
 			version: 2,
 			custom: false,
 		});
-		// ...but the patch op never scopes by `custom`.
 		expect(firstUpdatePlan(draft).plan_filter).toEqual({
 			plan_id: "pro",
 			version: 2,

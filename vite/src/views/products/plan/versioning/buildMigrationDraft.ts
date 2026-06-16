@@ -265,8 +265,6 @@ export function buildMigrationDraft({
 	const planFilter = includeCustom
 		? basePlanFilter
 		: { ...basePlanFilter, custom: false };
-	// Patch op (no version bump): never scope by `custom` so it applies to
-	// both custom and non-custom products the filter selected.
 	const updatePlanOp: UpdatePlanOp = {
 		type: "update_plan",
 		plan_filter: basePlanFilter,
