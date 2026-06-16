@@ -461,9 +461,6 @@ export function SubscriptionEditorView({
 
 				{phaseSections.map((section, phaseIndex) => {
 					const phasePlans = draftPlansByPhase[phaseIndex] ?? [];
-					const usedPlanIds = new Set(
-						phasePlans.map((p) => p.plan_id).filter(Boolean) as string[],
-					);
 
 					return (
 						<div
@@ -505,13 +502,6 @@ export function SubscriptionEditorView({
 										key={plan._key}
 										plan={plan}
 										products={products ?? []}
-										usedPlanIds={
-											new Set(
-												Array.from(usedPlanIds).filter(
-													(id) => id !== plan.plan_id,
-												),
-											)
-										}
 										entities={entities}
 										onChange={(next) =>
 											handlePlanChange(phaseIndex, planIndex, next)
