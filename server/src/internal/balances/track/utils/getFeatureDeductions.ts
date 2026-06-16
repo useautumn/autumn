@@ -21,9 +21,6 @@ type CascadeMarker = {
 	systems?: Array<{ feature_id?: unknown; cost?: unknown }>;
 };
 
-/**
- * Rebuilds a queued token cascade from its `properties.cascade` marker
- */
 export const getTokenCascadeDeductionsFromBody = ({
 	ctx,
 	body,
