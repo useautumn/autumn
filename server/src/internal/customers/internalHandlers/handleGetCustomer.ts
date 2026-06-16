@@ -1,6 +1,5 @@
 import {
 	ALL_STATUSES,
-	CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
 	CustomerExpand,
 	type FullCusProduct,
 	Scopes,
@@ -71,15 +70,7 @@ export const handleGetCustomer = createRoute({
 				expand,
 			}),
 			getCusUsageLimitsWithUsage({ ctx, fullCus }),
-			CusService.getProductsPage({
-				ctx,
-				idOrInternalId: customer_id,
-				params: {
-					start_cursor: "",
-					limit: CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
-					show_expired: false,
-				},
-			}),
+			CusService.getDefaultProductsPage({ ctx, idOrInternalId: customer_id }),
 		]);
 
 		// Overlay usage onto the customer and every entity that has caps, so the

@@ -1,5 +1,6 @@
 import {
 	AppEnv,
+	CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
 	type CusProductStatus,
 	type Customer,
 	CustomerExpand,
@@ -338,6 +339,24 @@ export class CusService {
 			next_cursor: lastRow ? encodeProductsCursor(lastRow) : null,
 			total_count: totalCount,
 		};
+	}
+
+	static getDefaultProductsPage({
+		ctx,
+		idOrInternalId,
+	}: {
+		ctx: AutumnContext;
+		idOrInternalId: string;
+	}): Promise<CustomerProductsPage> {
+		return CusService.getProductsPage({
+			ctx,
+			idOrInternalId,
+			params: {
+				start_cursor: "",
+				limit: CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
+				show_expired: false,
+			},
+		});
 	}
 
 	static async get({
