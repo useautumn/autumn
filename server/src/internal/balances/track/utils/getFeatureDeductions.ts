@@ -33,8 +33,10 @@ type CascadeMarker = {
  * against the primary feature. The deduction is atomic and idempotency-keyed,
  * so a full replay is naturally safe — no partial-state bookkeeping needed.
  * Returns null when the body carries no valid cascade (fewer than two resolved,
- * distinct systems); callers then fall back to the standard deductions. Only
- * for internally queued bodies — properties on direct /track calls are
+ * distinct systems). Its sole caller (getQueuedTrackFeatureDeductions) only
+ * invokes it when a cascade was expected at enqueue time, so it treats null as
+ * a corrupt marker and throws rather than silently under-charging the event.
+ * Only for internally queued bodies — properties on direct /track calls are
  * caller-controlled and must not be honored as a cascade.
  */
 export const getTokenCascadeDeductionsFromBody = ({

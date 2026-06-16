@@ -14,7 +14,10 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { resolveEffectiveUsageAllowed } from "../resolveEffectiveUsageAllowed.js";
+import {
+	getNativeUsageAllowedFeatureIds,
+	resolveEffectiveUsageAllowed,
+} from "../resolveEffectiveUsageAllowed.js";
 import type {
 	CustomerEntitlementDeduction,
 	DeductionOptions,
@@ -91,15 +94,7 @@ export const prepareFeatureDeduction = ({
 		featureIds: effectiveFeatureIds,
 	});
 
-	// For each feature, check if any cusEnt already has native usage_allowed
-	// (from pay-per-use pricing). If so, overage_allowed: enabled: true
-	// should NOT force usage_allowed on other cusEnts — the native overage
-	// mechanism (with max_purchase) already handles it.
-	const nativeUsageAllowedFeatureIds = new Set(
-		cusEnts
-			.filter((ce) => ce.usage_allowed)
-			.map((ce) => ce.entitlement.feature.id),
-	);
+	const nativeUsageAllowedFeatureIds = getNativeUsageAllowedFeatureIds(cusEnts);
 
 	const getCreditCostForEnt = computeCreditCosts({ cusEnts, deduction });
 

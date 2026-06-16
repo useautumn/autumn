@@ -22,7 +22,10 @@ import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockRec
 import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { computeCreditCosts } from "../deduction/computeCreditCosts.js";
-import { resolveEffectiveUsageAllowed } from "../resolveEffectiveUsageAllowed.js";
+import {
+	getNativeUsageAllowedFeatureIds,
+	resolveEffectiveUsageAllowed,
+} from "../resolveEffectiveUsageAllowed.js";
 import type {
 	CustomerEntitlementDeduction,
 	DeductionOptions,
@@ -154,11 +157,8 @@ export const prepareFeatureDeductionV2 = ({
 		});
 	}
 
-	const nativeUsageAllowedFeatureIds = new Set(
-		customerEntitlements
-			.filter((customerEntitlement) => customerEntitlement.usage_allowed)
-			.map((customerEntitlement) => customerEntitlement.entitlement.feature.id),
-	);
+	const nativeUsageAllowedFeatureIds =
+		getNativeUsageAllowedFeatureIds(customerEntitlements);
 
 	const getCreditCostForEnt = computeCreditCosts({
 		cusEnts: customerEntitlements,

@@ -17,7 +17,10 @@ import {
 	type ModelCostBreakdown,
 } from "@/internal/features/aiCreditSystemUtils.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
-import { resolveEffectiveUsageAllowed } from "../../utils/resolveEffectiveUsageAllowed.js";
+import {
+	getNativeUsageAllowedFeatureIds,
+	resolveEffectiveUsageAllowed,
+} from "../../utils/resolveEffectiveUsageAllowed.js";
 import {
 	buildTokenCascadeDeduction,
 	type FeatureDeduction,
@@ -95,11 +98,7 @@ const resolveAiCreditFeaturesFromEntitlements = async ({
 		featureIds,
 		internalEntityId: entity?.internal_id,
 	});
-	const nativeUsageAllowedFeatureIds = new Set(
-		cusEnts
-			.filter((customerEntitlement) => customerEntitlement.usage_allowed)
-			.map((customerEntitlement) => customerEntitlement.entitlement.feature.id),
-	);
+	const nativeUsageAllowedFeatureIds = getNativeUsageAllowedFeatureIds(cusEnts);
 
 	const systems = new Map<
 		string,
