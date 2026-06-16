@@ -27,10 +27,13 @@ export async function generateMetadata({
 			title: post.title,
 			description: post.description,
 			type: "article",
+			siteName: "Autumn",
 			...(post.date ? { publishedTime: post.date } : {}),
 			authors: [post.author],
 			...(post.image && {
-				images: [{ url: post.image }],
+				images: [
+					{ url: post.image, width: 1200, height: 630, alt: post.title },
+				],
 			}),
 		},
 		twitter: {
