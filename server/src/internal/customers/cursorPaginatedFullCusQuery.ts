@@ -179,6 +179,11 @@ export const getCursorPaginatedFullCusQuery = ({
 			FROM cp_ranked_raw cp
 			WHERE cp.rn <= ${cusProductLimit}
 		),
+		cp_counts AS MATERIALIZED (
+			SELECT internal_customer_id, COUNT(*)::int AS n
+			FROM cp_ranked_raw
+			GROUP BY internal_customer_id
+		),
 		ces_bound AS MATERIALIZED (
 			SELECT ce.id, ce.entitlement_id, row_to_json(ce) AS row_json
 			FROM cps_ranked
@@ -206,6 +211,7 @@ export const getCursorPaginatedFullCusQuery = ({
 		${invoicesCte}
 		SELECT
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cr) AS customers,
+			(SELECT COALESCE(json_object_agg(internal_customer_id, n), '{}'::json) FROM cp_counts) AS product_counts,
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cps_ranked) AS customer_products,
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM ces_bound) AS customer_entitlements,
 			(SELECT COALESCE(json_agg(row_json ORDER BY id DESC), '[]'::json) FROM ces_loose) AS extra_customer_entitlements,

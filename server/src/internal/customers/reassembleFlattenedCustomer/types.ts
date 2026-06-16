@@ -1,5 +1,6 @@
 export type FlattenedCustomerRow = {
 	customers: any[];
+	product_counts?: Record<string, number>;
 	customer_products: any[];
 	customer_entitlements: any[];
 	extra_customer_entitlements: any[];

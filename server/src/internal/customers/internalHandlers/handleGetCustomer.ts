@@ -1,5 +1,6 @@
 import {
 	ALL_STATUSES,
+	CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
 	CustomerExpand,
 	type FullCusProduct,
 	Scopes,
@@ -48,6 +49,7 @@ export const handleGetCustomer = createRoute({
 			autoTopupsWithLimits,
 			rewards,
 			usageLimitsWithUsage,
+			productsPage,
 		] = await Promise.all([
 			getTestClockFrozenTimeMs({
 				ctx,
@@ -69,6 +71,15 @@ export const handleGetCustomer = createRoute({
 				expand,
 			}),
 			getCusUsageLimitsWithUsage({ ctx, fullCus }),
+			CusService.getProductsPage({
+				ctx,
+				idOrInternalId: customer_id,
+				params: {
+					start_cursor: "",
+					limit: CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
+					show_expired: false,
+				},
+			}),
 		]);
 
 		// Overlay usage onto the customer and every entity that has caps, so the
@@ -88,6 +99,9 @@ export const handleGetCustomer = createRoute({
 				rewards: rewards ?? undefined,
 				entities: entities ?? fullCus.entities,
 				usage_limits: usageLimitsWithUsage?.customer ?? fullCus.usage_limits,
+				customer_products: productsPage.list,
+				products_total_count: productsPage.total_count,
+				products_next_cursor: productsPage.next_cursor,
 			},
 			test_clock_frozen_time_ms: testClockFrozenTimeMs,
 		});
