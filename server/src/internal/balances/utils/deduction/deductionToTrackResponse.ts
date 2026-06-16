@@ -176,7 +176,7 @@ export const deductionToTrackResponse = async ({
 	// 3. Build balances response (V1 format - version changes will transform for older API versions)
 	const finalBalances: Record<string, ApiBalanceV1> = {};
 
-	// Add primary features (always - they were requested to be tracked).
+	// Add primary features (always - they were requested to be tracked)
 	// A cascade settles as one multi-feature deduction; report each separately.
 	for (const deduction of expandCascadeDeductions(featureDeductions)) {
 		const featureToUse = getFeatureToUseForBalance({

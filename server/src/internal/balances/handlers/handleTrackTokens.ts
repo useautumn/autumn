@@ -6,6 +6,7 @@ import {
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
 import { getTokenTrackParams } from "@/internal/balances/track/utils/getTokenTrackParams.js";
+import { isTokenCascade } from "@/internal/balances/utils/types/featureDeduction.js";
 
 export const handleTrackTokens = createRoute({
 	scopes: [Scopes.Balances.Write],
@@ -20,7 +21,7 @@ export const handleTrackTokens = createRoute({
 			input: body,
 		});
 
-		const allowTokenCascade = (featureDeductions[0]?.spillover?.length ?? 0) > 0;
+		const allowTokenCascade = isTokenCascade(featureDeductions);
 
 		const response = await runTrackWithRollout({
 			ctx,

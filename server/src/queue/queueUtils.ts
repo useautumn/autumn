@@ -133,6 +133,7 @@ export const addTaskToQueue = async <T extends keyof Payloads>({
 	if (resolvedQueueUrl) {
 		const sqsClient = getSqsClient({ queueUrl: resolvedQueueUrl });
 
+		// SQS implementation
 		const isFifoQueue = resolvedQueueUrl.endsWith(".fifo");
 		const messageId =
 			generateDeduplicationId === false ? undefined : generateId("job");

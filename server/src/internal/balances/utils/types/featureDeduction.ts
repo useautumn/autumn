@@ -85,6 +85,15 @@ export const buildTokenCascadeDeduction = ({
 };
 
 /**
+ * A token track is a cascade when its deduction spills into extra credit
+ * systems. Derived from the built deduction so "is this a cascade?" has one
+ * source of truth across the request and queued-replay paths.
+ */
+export const isTokenCascade = (
+	featureDeductions: FeatureDeduction[],
+): boolean => (featureDeductions[0]?.spillover?.length ?? 0) > 0;
+
+/**
  * Flattens a cascade deduction into one entry per feature. The engine settles a
  * cascade as a single multi-feature deduction, but response/property helpers
  * report per-feature, so they expand it back out first.

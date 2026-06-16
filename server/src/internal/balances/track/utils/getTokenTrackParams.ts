@@ -21,6 +21,7 @@ import { resolveEffectiveUsageAllowed } from "../../utils/resolveEffectiveUsageA
 import {
 	buildTokenCascadeDeduction,
 	type FeatureDeduction,
+	isTokenCascade,
 } from "../../utils/types/featureDeduction.js";
 
 const resolveAiCreditFeatureById = ({
@@ -234,11 +235,7 @@ export const getTokenTrackParams = async ({
 		}),
 	];
 
-	// A cascade is any deduction that spills into extra credit systems; derive it
-	// from the built deduction so "is this a cascade?" has one source of truth.
-	const isCascade = (featureDeductions[0]?.spillover?.length ?? 0) > 0;
-
-	const cascadeProperties = isCascade
+	const cascadeProperties = isTokenCascade(featureDeductions)
 		? {
 				cascade: {
 					systems: aiCreditFeatures.map((feature, index) => ({
