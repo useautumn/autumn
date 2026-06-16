@@ -90,8 +90,6 @@ export const sortCusEntsForDeduction = ({
 			return 1;
 		}
 
-		// AI-credit: drain the included (no-overage) pool before the pay-per-use
-		// overage one, ahead of the interval ordering below.
 		if (
 			aEnt.feature.type === FeatureType.AiCreditSystem &&
 			bEnt.feature.type === FeatureType.AiCreditSystem &&
