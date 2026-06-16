@@ -62,7 +62,7 @@ const firstUpdatePlan = (draft: MigrationDraft): UpdatePlanOp => {
 };
 
 describe("buildMigrationDraft", () => {
-	test("excludes custom plans by default", () => {
+	test("excludes custom customers via the filter but patches both", () => {
 		const draft = buildMigrationDraft({
 			baseProduct,
 			editedProduct: { ...baseProduct, name: "Pro updated" },
@@ -70,15 +70,16 @@ describe("buildMigrationDraft", () => {
 			scope: "this_version",
 		});
 
+		// Filter still excludes custom customers by default...
 		expect(draft.filter.customer?.plan).toMatchObject({
 			plan_id: "pro",
 			version: 2,
 			custom: false,
 		});
-		expect(firstUpdatePlan(draft).plan_filter).toMatchObject({
+		// ...but the patch op never scopes by `custom`.
+		expect(firstUpdatePlan(draft).plan_filter).toEqual({
 			plan_id: "pro",
 			version: 2,
-			custom: false,
 		});
 	});
 
@@ -99,17 +100,11 @@ describe("buildMigrationDraft", () => {
 			{
 				plan_id: "pro",
 				version: 2,
-				custom: false,
-			},
-			{
-				plan_id: "pro",
-				version: 2,
-				custom: true,
 			},
 		]);
 	});
 
-	test("keeps custom targeting explicit for version reset migrations", () => {
+	test("patch op is never scoped by custom regardless of includeCustom", () => {
 		const draft = buildMigrationDraft({
 			baseProduct,
 			editedProduct: baseProduct,
@@ -122,17 +117,11 @@ describe("buildMigrationDraft", () => {
 			{
 				plan_id: "pro",
 				version: 2,
-				custom: false,
-			},
-			{
-				plan_id: "pro",
-				version: 2,
-				custom: true,
 			},
 		]);
 	});
 
-	test("keeps a single operation when custom plans are excluded", () => {
+	test("keeps a single unscoped operation when custom customers are excluded", () => {
 		const draft = buildMigrationDraft({
 			baseProduct,
 			editedProduct: baseProduct,
@@ -144,7 +133,6 @@ describe("buildMigrationDraft", () => {
 		expect(firstUpdatePlan(draft).plan_filter).toEqual({
 			plan_id: "pro",
 			version: 2,
-			custom: false,
 		});
 	});
 
