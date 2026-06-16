@@ -567,11 +567,13 @@ export class CusProductService {
 		productId,
 		internalCustomerId,
 		fingerprint,
+		internalEntityId,
 	}: {
 		db: DrizzleCli;
 		productId: string;
 		internalCustomerId: string;
 		fingerprint?: string;
+		internalEntityId?: string;
 	}) {
 		const data = await db
 			.select()
@@ -592,6 +594,11 @@ export class CusProductService {
 					),
 					eq(products.id, productId),
 					isNotNull(customerProducts.free_trial_id),
+					// Entity-scoped attach: each entity has its own trial history,
+					// so a customer-level or sibling-entity trial must not dedup it.
+					internalEntityId
+						? eq(customerProducts.internal_entity_id, internalEntityId)
+						: undefined,
 				),
 			);
 
