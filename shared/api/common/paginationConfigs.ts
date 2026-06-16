@@ -1,3 +1,7 @@
+import {
+	CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
+	CUSTOMER_PRODUCTS_MAX_LIMIT,
+} from "../customers/cusPlans/listCustomerProductsParams.js";
 import { PaginationDefaults } from "./cursorPaginationSchemas.js";
 
 export enum PaginationType {
@@ -31,7 +35,7 @@ export const PAGINATION_CONFIGS: Record<PaginationType, PaginationConfig> = {
 		maxLimit: PaginationDefaults.MaxLimit,
 	},
 	[PaginationType.ListCustomerProducts]: {
-		defaultLimit: 10,
-		maxLimit: 100,
+		defaultLimit: CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
+		maxLimit: CUSTOMER_PRODUCTS_MAX_LIMIT,
 	},
 };

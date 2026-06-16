@@ -1,7 +1,7 @@
 import { AppEnv, type Entity, type FullCusProduct } from "@autumn/shared";
 import { ArrowSquareOutIcon, PackageIcon } from "@phosphor-icons/react";
 import type { Row } from "@tanstack/react-table";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Table } from "@/components/general/table";
 import { Button } from "@/components/v2/buttons/Button";
@@ -64,16 +64,15 @@ function createScopeColumn(
 export function CustomerProductsTable() {
 	const env = useEnv();
 	const { customer, testClockFrozenTimeMs } = useCusQuery();
-	const { setEntityId } = useEntity();
+	const { entityId, setEntityId } = useEntity();
 
-	const tableState = useCustomerProductsTableState();
+	const tableState = useCustomerProductsTableState({ entityId });
 	const {
 		currentCursor,
 		page,
 		canGoBack,
 		pushCursor,
 		popCursor,
-		resetCursor,
 		pageSize,
 		changePageSize,
 		showExpired,
@@ -113,19 +112,11 @@ export function CustomerProductsTable() {
 
 	const hasEntities = customer.entities.length > 0;
 
-	const selectEntityScope = useCallback(
-		(id: string) => {
-			resetCursor();
-			setEntityId(id);
-		},
-		[resetCursor, setEntityId],
-	);
-
 	const columns = useMemo(() => {
 		const baseColumns = [CustomerProductsColumns[0]];
 
 		if (hasEntities) {
-			baseColumns.push(createScopeColumn(customer.entities, selectEntityScope));
+			baseColumns.push(createScopeColumn(customer.entities, setEntityId));
 		}
 
 		baseColumns.push(
@@ -136,7 +127,7 @@ export function CustomerProductsTable() {
 		);
 
 		return baseColumns;
-	}, [hasEntities, customer.entities, selectEntityScope]);
+	}, [hasEntities, customer.entities, setEntityId]);
 
 	const handleCancelClick = (product: FullCusProduct) => {
 		setSheet({ type: "subscription-cancel", itemId: product.id });

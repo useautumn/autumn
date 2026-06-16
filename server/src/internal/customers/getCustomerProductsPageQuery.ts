@@ -1,5 +1,4 @@
 import {
-	type AppEnv,
 	type CusProductStatus,
 	CustomerProductKind,
 	type CustomerProductsCursorFields,
@@ -16,6 +15,14 @@ export type CustomerProductsPageQueryArgs = {
 	cursor?: CustomerProductsCursorFields;
 };
 
+export const cpStatusInClause = (inStatuses?: CusProductStatus[]) =>
+	inStatuses?.length
+		? sql`AND cp.status = ANY(ARRAY[${sql.join(
+				inStatuses.map((status) => sql`${status}`),
+				sql`, `,
+			)}])`
+		: sql``;
+
 const oneOffPredicate = sql`(
 	EXISTS (
 		SELECT 1 FROM prices pr_one
@@ -28,7 +35,7 @@ const oneOffPredicate = sql`(
 	)
 )`;
 
-export const typeRankSql = sql`(
+const typeRankSql = sql`(
 	CASE
 		WHEN prod.is_add_on THEN 2
 		WHEN ${oneOffPredicate} THEN 1
@@ -36,14 +43,20 @@ export const typeRankSql = sql`(
 	END
 )`;
 
-export const entityRankSql = sql`(
+const KIND_RANK: Record<CustomerProductKind, number> = {
+	[CustomerProductKind.Subscription]: 0,
+	[CustomerProductKind.OneOff]: 1,
+	[CustomerProductKind.AddOn]: 2,
+};
+
+const entityRankSql = sql`(
 	CASE
 		WHEN cp.entity_id IS NULL AND cp.internal_entity_id IS NULL THEN 0
 		ELSE 1
 	END
 )`;
 
-export const customerProductsOrderBy = sql`ORDER BY ${entityRankSql} ASC, ${typeRankSql} ASC, cp.created_at DESC, cp.id ASC`;
+const customerProductsOrderBy = sql`ORDER BY ${entityRankSql} ASC, ${typeRankSql} ASC, cp.created_at DESC, cp.id ASC`;
 
 const buildFilters = ({
 	inStatuses,
@@ -56,29 +69,14 @@ const buildFilters = ({
 	entityId?: string;
 	kind?: CustomerProductKind;
 }) => {
-	const statusFilter =
-		!showExpired && inStatuses?.length
-			? sql`AND cp.status = ANY(ARRAY[${sql.join(
-					inStatuses.map((status) => sql`${status}`),
-					sql`, `,
-				)}])`
-			: sql``;
+	const statusFilter = showExpired ? sql`` : cpStatusInClause(inStatuses);
 
 	const entityFilter = entityId
 		? sql`AND (cp.entity_id = ${entityId} OR cp.internal_entity_id = ${entityId} OR (cp.entity_id IS NULL AND cp.internal_entity_id IS NULL))`
 		: sql``;
 
-	const kindRank =
-		kind === CustomerProductKind.AddOn
-			? 2
-			: kind === CustomerProductKind.OneOff
-				? 1
-				: kind === CustomerProductKind.Subscription
-					? 0
-					: undefined;
-
 	const kindFilter =
-		kindRank === undefined ? sql`` : sql`AND ${typeRankSql} = ${kindRank}`;
+		kind === undefined ? sql`` : sql`AND ${typeRankSql} = ${KIND_RANK[kind]}`;
 
 	return sql`${statusFilter} ${entityFilter} ${kindFilter}`;
 };

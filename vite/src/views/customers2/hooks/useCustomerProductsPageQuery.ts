@@ -1,6 +1,6 @@
 import {
 	CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
-	type FullCusProduct,
+	type CustomerProductsPage,
 } from "@autumn/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
@@ -12,12 +12,6 @@ import type {
 	CustomerProductsKindFilter,
 	CustomerProductsPageSize,
 } from "./useCustomerProductsTableState";
-
-type CustomerProductsPage = {
-	list: FullCusProduct[];
-	next_cursor: string | null;
-	total_count: number;
-};
 
 export function useCustomerProductsPageQuery({
 	cursor,
@@ -37,12 +31,13 @@ export function useCustomerProductsPageQuery({
 	const buildKey = useQueryKeyFactory();
 	const { entityId } = useEntity();
 
-	const isDefaultFirstPage =
+	const isUnfilteredFirstPage =
 		cursor === "" &&
 		kind === "all" &&
-		!(showExpired || entityId) &&
+		!showExpired &&
+		!entityId &&
 		pageSize === CUSTOMER_PRODUCTS_DEFAULT_LIMIT;
-	const seedPage = isDefaultFirstPage && initialPage ? initialPage : undefined;
+	const seedPage = isUnfilteredFirstPage ? initialPage : undefined;
 
 	const fetcher = async (): Promise<CustomerProductsPage> => {
 		try {

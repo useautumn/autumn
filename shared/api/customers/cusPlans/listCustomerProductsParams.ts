@@ -1,4 +1,6 @@
 import { z } from "zod/v4";
+import type { FullCusProduct } from "../../../models/cusProductModels/cusProductModels.js";
+import type { CursorPaginatedResponse } from "../../common/cursorPaginationSchemas.js";
 import {
 	CursorRequestFieldSchema,
 	createCursorLimitSchema,
@@ -28,6 +30,10 @@ export const ListCustomerProductsParamsSchema = z.object({
 export type ListCustomerProductsParams = z.infer<
 	typeof ListCustomerProductsParamsSchema
 >;
+
+export type CustomerProductsPage = CursorPaginatedResponse<FullCusProduct> & {
+	total_count: number;
+};
 
 const CustomerProductsCursorFieldsSchema = z.object({
 	v: z.literal(0),

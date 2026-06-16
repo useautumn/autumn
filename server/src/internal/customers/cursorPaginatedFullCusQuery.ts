@@ -5,6 +5,7 @@ import type {
 	StandardCursorFields,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
+import { cpStatusInClause } from "./getCustomerProductsPageQuery.js";
 import {
 	type DashboardProductVersionFilter,
 	type DashboardStatusFilter,
@@ -59,12 +60,7 @@ export const getCursorPaginatedFullCusQuery = ({
 	cusProductLimit,
 	customerId,
 }: CursorPaginatedFullCusQueryArgs) => {
-	const cpStatusFilter = inStatuses?.length
-		? sql`AND cp.status = ANY(ARRAY[${sql.join(
-				inStatuses.map((status) => sql`${status}`),
-				sql`, `,
-			)}])`
-		: sql``;
+	const cpStatusFilter = cpStatusInClause(inStatuses);
 
 	const customerListFilterSql = getCustomerListFilterSql({
 		internalCustomerIds,

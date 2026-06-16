@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
 import { CustomerProductKind } from "@autumn/shared";
-import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";

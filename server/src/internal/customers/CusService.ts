@@ -5,6 +5,7 @@ import {
 	CustomerExpand,
 	CustomerNotFoundError,
 	CustomerProductsCursor,
+	type CustomerProductsPage,
 	customerProducts,
 	customers,
 	type Entity,
@@ -57,13 +58,22 @@ import {
 	type FlattenedCustomerRow,
 	reassembleFlattenedCustomer,
 } from "./reassembleFlattenedCustomer/index.js";
-import {
-	toInt,
-	toNullableTimestamp,
-	toTimestamp,
-} from "./reassembleFlattenedCustomer/normalizeFields.js";
+import { normalizeCustomerProductTimeFields } from "./reassembleFlattenedCustomer/normalizeFields.js";
 
 // const tracer = trace.getTracer("express");
+
+type RankedCustomerProductRow = FullCusProduct & {
+	type_rank: number;
+	entity_rank: number;
+};
+
+const encodeProductsCursor = (row: RankedCustomerProductRow): string =>
+	CustomerProductsCursor.encode({
+		eRank: row.entity_rank,
+		rank: row.type_rank,
+		t: Number(row.created_at),
+		id: row.id,
+	});
 
 export class CusService {
 	static async getFull({
@@ -272,11 +282,7 @@ export class CusService {
 		ctx: AutumnContext;
 		idOrInternalId: string;
 		params: ListCustomerProductsParams;
-	}): Promise<{
-		list: FullCusProduct[];
-		next_cursor: string | null;
-		total_count: number;
-	}> {
+	}): Promise<CustomerProductsPage> {
 		const { db, org, env } = ctx;
 
 		const customer = await CusService.get({
@@ -311,45 +317,25 @@ export class CusService {
 			db.execute(getCustomerProductsCountQuery(sharedArgs)),
 		]);
 
-		const rows = (pageResult ?? []) as unknown as (FullCusProduct & {
-			type_rank: number;
-			entity_rank: number;
-		})[];
+		const rows = (pageResult ?? []) as unknown as RankedCustomerProductRow[];
 
 		const hasMore = rows.length > params.limit;
 		const pageRows = hasMore ? rows.slice(0, params.limit) : rows;
 
 		for (const product of pageRows) {
-			product.created_at = toTimestamp(product.created_at);
-			product.starts_at = product.starts_at
-				? toTimestamp(product.starts_at)
-				: product.created_at;
-			product.canceled_at = toNullableTimestamp(product.canceled_at);
-			product.ended_at = toNullableTimestamp(product.ended_at);
-			product.trial_ends_at = toNullableTimestamp(product.trial_ends_at);
-			product.quantity = toInt(product.quantity, 1);
-			if (!product.customer_prices) product.customer_prices = [];
-			if (!product.customer_entitlements) product.customer_entitlements = [];
+			normalizeCustomerProductTimeFields(product);
+			product.customer_prices ??= [];
+			product.customer_entitlements ??= [];
 		}
 
-		const lastRow = pageRows[pageRows.length - 1];
-		const next_cursor =
-			hasMore && lastRow
-				? CustomerProductsCursor.encode({
-						eRank: lastRow.entity_rank,
-						rank: lastRow.type_rank,
-						t: Number(lastRow.created_at),
-						id: lastRow.id,
-					})
-				: null;
-
+		const lastRow = hasMore ? pageRows[pageRows.length - 1] : undefined;
 		const totalCount =
 			(countResult?.[0] as { total_count?: number } | undefined)?.total_count ??
 			0;
 
 		return {
 			list: pageRows as FullCusProduct[],
-			next_cursor,
+			next_cursor: lastRow ? encodeProductsCursor(lastRow) : null,
 			total_count: totalCount,
 		};
 	}

@@ -83,7 +83,7 @@ import { ItemEventStatusBadge } from "../runs/RunStatusBadge";
 import { type StepId, StepIndicator } from "../StepIndicator";
 import { OperationsPreview } from "../shared/OperationsPreview";
 import { RunSummaryRows } from "../shared/RunSummaryRows";
-import { useCursorPagination } from "../shared/useCursorPagination";
+import { useCursorPagination } from "@/components/general/table/useCursorPagination";
 import { ActiveDot } from "./ActiveDot";
 import {
 	EXECUTION_STATUS_VALUES,

@@ -1,25 +1,33 @@
-import { CustomerProductKind } from "@autumn/shared";
+import {
+	CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
+	CustomerProductKind,
+} from "@autumn/shared";
 import { parseAsBoolean, parseAsStringEnum, useQueryState } from "nuqs";
 import { useCallback, useState } from "react";
+import { useCursorPagination } from "@/components/general/table/useCursorPagination";
 
 export const CUSTOMER_PRODUCTS_PAGE_SIZES = [10, 25, 50, 100] as const;
 export type CustomerProductsPageSize =
 	(typeof CUSTOMER_PRODUCTS_PAGE_SIZES)[number];
 
-const DEFAULT_PAGE_SIZE: CustomerProductsPageSize = 10;
+const DEFAULT_PAGE_SIZE: CustomerProductsPageSize =
+	CUSTOMER_PRODUCTS_DEFAULT_LIMIT;
 
 export type CustomerProductsKindFilter = CustomerProductKind | "all";
 
-export function useCustomerProductsTableState() {
-	const [cursorStack, setCursorStack] = useState<string[]>([""]);
+export function useCustomerProductsTableState({
+	entityId,
+}: {
+	entityId: string | null;
+}) {
 	const [pageSize, setPageSize] =
 		useState<CustomerProductsPageSize>(DEFAULT_PAGE_SIZE);
 
-	const [showExpired, setShowExpiredRaw] = useQueryState(
+	const [showExpired, setShowExpired] = useQueryState(
 		"customerProductsShowExpired",
 		parseAsBoolean.withDefault(false),
 	);
-	const [kind, setKindRaw] = useQueryState(
+	const [kind, setKind] = useQueryState(
 		"customerProductsKind",
 		parseAsStringEnum<CustomerProductsKindFilter>([
 			"all",
@@ -29,50 +37,23 @@ export function useCustomerProductsTableState() {
 		]).withDefault("all"),
 	);
 
-	const resetCursor = useCallback(() => setCursorStack([""]), []);
-
-	const setShowExpired = useCallback(
-		(value: boolean) => {
-			setShowExpiredRaw(value);
-			resetCursor();
-		},
-		[setShowExpiredRaw, resetCursor],
-	);
-
-	const setKind = useCallback(
-		(value: CustomerProductsKindFilter) => {
-			setKindRaw(value);
-			resetCursor();
-		},
-		[setKindRaw, resetCursor],
-	);
+	const { currentCursor, currentPage, canPrev, pushCursor, popCursor } =
+		useCursorPagination({
+			pageSize,
+			resetKey: `${pageSize}|${showExpired}|${kind}|${entityId ?? ""}`,
+		});
 
 	const changePageSize = useCallback(
-		(value: CustomerProductsPageSize) => {
-			setPageSize(value);
-			resetCursor();
-		},
-		[resetCursor],
+		(value: CustomerProductsPageSize) => setPageSize(value),
+		[],
 	);
-
-	const pushCursor = useCallback((nextCursor: string) => {
-		setCursorStack((stack) => [...stack, nextCursor]);
-	}, []);
-
-	const popCursor = useCallback(() => {
-		setCursorStack((stack) => (stack.length > 1 ? stack.slice(0, -1) : stack));
-	}, []);
-
-	const currentCursor = cursorStack[cursorStack.length - 1] ?? "";
-	const page = cursorStack.length;
 
 	return {
 		currentCursor,
-		page,
-		canGoBack: cursorStack.length > 1,
+		page: currentPage,
+		canGoBack: canPrev,
 		pushCursor,
 		popCursor,
-		resetCursor,
 		pageSize,
 		changePageSize,
 		showExpired: showExpired ?? false,

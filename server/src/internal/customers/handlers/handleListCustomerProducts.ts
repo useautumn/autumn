@@ -1,8 +1,7 @@
 import {
 	AffectedResource,
-	type CursorPaginatedResponse,
+	type CustomerProductsPage,
 	ErrCode,
-	type FullCusProduct,
 	ListCustomerProductsParamsSchema,
 	PaginationType,
 	RecaseError,
@@ -48,8 +47,6 @@ export const handleListCustomerProducts = createRoute({
 			params,
 		});
 
-		return c.json<
-			CursorPaginatedResponse<FullCusProduct> & { total_count: number }
-		>(page);
+		return c.json<CustomerProductsPage>(page);
 	},
 });
