@@ -91,7 +91,7 @@ describe("runCheckWithTrackV2", () => {
 			}),
 		).rejects.toMatchObject({
 			message:
-				"Can't pass in 'send_event: true' when using publishable key for Autumn",
+				"Can't use send_event: true with a publishable key. Use your secret API key instead.",
 		});
 	});
 
@@ -114,7 +114,8 @@ describe("runCheckWithTrackV2", () => {
 			}),
 		).rejects.toMatchObject({
 			code: ErrCode.InvalidRequest,
-			message: "Not allowed to pass in send_event: true for a boolean feature",
+			message:
+				"send_event cannot be used with boolean features, which are flags rather than usage-tracked.",
 		});
 	});
 
