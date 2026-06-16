@@ -32,14 +32,16 @@ export const handleCancelEndOfCycleErrors = ({
 	if (isCustomerProductFree(customerProduct)) {
 		throw new RecaseError({
 			message:
-				"Cannot use cancel: 'end_of_cycle' for free products. Use cancel: 'immediately' instead.",
+				"Free products do not have billing cycles; use cancel: 'immediately' instead.",
+			statusCode: 400,
 		});
 	}
 
 	if (isCustomerProductOneOff(customerProduct)) {
 		throw new RecaseError({
 			message:
-				"Cannot use cancel: 'end_of_cycle' for one-off products. Use cancel: 'immediately' instead.",
+				"One-off products do not have billing cycles; use cancel: 'immediately' instead.",
+			statusCode: 400,
 		});
 	}
 

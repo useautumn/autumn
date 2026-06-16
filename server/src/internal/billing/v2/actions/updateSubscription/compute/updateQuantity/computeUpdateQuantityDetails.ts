@@ -88,6 +88,7 @@ export const computeUpdateQuantityDetails = ({
 	if (isOneOffPrice(customerPrice.price)) {
 		throw new RecaseError({
 			message: `Not allowed to update feature quantity for one off items.`,
+			statusCode: 400,
 		});
 	}
 

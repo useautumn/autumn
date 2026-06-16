@@ -49,7 +49,8 @@ export const validateAndGetInputEntities = async ({
 
 		if (featureUtils.isConsumable(feature)) {
 			throw new RecaseError({
-				message: "Entities cannot be linked to consumable features",
+				message: `Feature '${entity.feature_id}' is consumable (e.g. credits, API calls). Entities can only be created for non-consumable features (e.g. seats).`,
+				statusCode: StatusCodes.BAD_REQUEST,
 			});
 		}
 	}
@@ -64,7 +65,8 @@ export const validateAndGetInputEntities = async ({
 
 	if (noIdEntities.length + noIdNewEntities.length > 1) {
 		throw new RecaseError({
-			message: "Can only have one entity with no ID",
+			message:
+				"Each entity must have a unique id; only one entity per customer may omit an id.",
 			code: ErrCode.EntityIdRequired,
 			statusCode: StatusCodes.BAD_REQUEST,
 		});

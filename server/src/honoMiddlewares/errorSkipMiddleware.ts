@@ -1,11 +1,10 @@
-import { ErrCode, RecaseError as SharedRecaseError } from "@autumn/shared";
+import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import Stripe from "stripe";
 import { ZodError } from "zod/v4";
 import { formatZodError } from "@/errors/formatZodError.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { matchRoute } from "./middlewareUtils.js";
 
 // ============================================================================
@@ -181,21 +180,8 @@ export const handleErrorSkip = (err: Error, c: Context<HonoEnv>) => {
 
 	if (!logger) return null; // Let main error handler deal with this
 
-	if (err instanceof SharedRecaseError) {
-		logger.warn(
-			`${err.message}, org: ${ctx.org?.slug || "unknown"}, path: ${c.req.path}`,
-		);
-		return createErrorResponse({
-			c,
-			ctx,
-			message: err.message,
-			code: err.code,
-			statusCode: (err.statusCode || 400) as ContentfulStatusCode,
-		});
-	}
-
 	// 1. Check route-based error code skipping (simplest case)
-	if (err instanceof RecaseError || err instanceof SharedRecaseError) {
+	if (err instanceof RecaseError) {
 		const pathname = new URL(c.req.url).pathname;
 
 		for (const skipRule of ROUTE_ERROR_SKIP_MAP) {
@@ -221,30 +207,11 @@ export const handleErrorSkip = (err: Error, c: Context<HonoEnv>) => {
 		}
 	}
 
-	// // 2. Check global warn-level error codes
-	// if (
-	// 	(err instanceof RecaseError || err instanceof SharedRecaseError) &&
-	// 	GLOBAL_WARN_ERROR_CODES.includes(err.code)
-	// ) {
-	// 	logger.warn(
-	// 		`${err.message}, org: ${ctx.org?.slug || "unknown"}, path: ${c.req.path}`,
-	// 	);
-	// 	return createErrorResponse({
-	// 		c,
-	// 		ctx,
-	// 		message: err.message,
-	// 		code: err.code,
-	// 		statusCode: 404,
-	// 	});
-	// }
-
-	// 3. Check advanced route-specific rules
+	// 2. Check advanced route-specific rules
 	for (const rule of ROUTE_SPECIFIC_RULES) {
 		if (rule.match(err, c)) {
 			const errorCode =
-				err instanceof RecaseError || err instanceof SharedRecaseError
-					? err.code
-					: ErrCode.InternalError;
+				err instanceof RecaseError ? err.code : ErrCode.InternalError;
 			logger.warn(`${rule.name}, org: ${ctx.org?.slug || "unknown"}`);
 			return createErrorResponse({
 				c,
@@ -256,7 +223,7 @@ export const handleErrorSkip = (err: Error, c: Context<HonoEnv>) => {
 		}
 	}
 
-	// 4. Check Stripe-specific rules
+	// 3. Check Stripe-specific rules
 	for (const rule of STRIPE_RULES) {
 		if (rule.match(err, c)) {
 			const stripeErr = err as Stripe.errors.StripeError;
@@ -271,7 +238,7 @@ export const handleErrorSkip = (err: Error, c: Context<HonoEnv>) => {
 		}
 	}
 
-	// 5. Check Zod-specific rules
+	// 4. Check Zod-specific rules
 	for (const rule of ZOD_RULES) {
 		if (rule.match(err, c)) {
 			const zodErr = err as ZodError;
@@ -291,13 +258,4 @@ export const handleErrorSkip = (err: Error, c: Context<HonoEnv>) => {
 
 	// No special case matched - continue to main error handler
 	return null;
-};
-
-/**
- * Middleware wrapper for error skip handling
- * Note: This doesn't actually prevent errors from reaching onError handler
- * It's used within the main error handler to check for skip cases
- */
-const errorSkipMiddleware = (err: Error, c: Context<HonoEnv>) => {
-	return handleErrorSkip(err, c);
 };
