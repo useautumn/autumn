@@ -20,6 +20,10 @@ const toCreatePhase = (
 		quantity: item.quantity,
 		...(item.metadata && { metadata: item.metadata }),
 	})),
+	...(phase.add_invoice_items && {
+		add_invoice_items:
+			phase.add_invoice_items as Stripe.SubscriptionScheduleCreateParams.Phase.AddInvoiceItem[],
+	}),
 	end_date: typeof phase.end_date === "number" ? phase.end_date : undefined,
 	proration_behavior: phase.proration_behavior,
 	discounts: phase.discounts as

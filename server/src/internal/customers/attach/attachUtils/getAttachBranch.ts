@@ -57,7 +57,8 @@ const handleMultiProductErrors = async ({
 		if (curSameProduct) {
 			throw new RecaseError({
 				message: `Product ${product.name} is already attached, can't attach again`,
-				code: ErrCode.InvalidRequest,
+				code: AttachErrCode.ProductAlreadyAttached,
+				statusCode: 400,
 			});
 		}
 
@@ -68,15 +69,17 @@ const handleMultiProductErrors = async ({
 		// 2. If existing paid product, not allowed
 		if (curPaidProduct) {
 			throw new RecaseError({
-				message: `Upgrade / downgrade to ${product.name} not allowed with multiple products`,
+				message: `Can't perform upgrade/downgrade to ${product.name} when attaching multiple products simultaneously`,
 				code: ErrCode.InvalidRequest,
+				statusCode: 400,
 			});
 		}
 
 		if (curScheduledProduct) {
 			throw new RecaseError({
-				message: `Can't attach multiple products at once when scheduled product exists`,
+				message: `Can't attach multiple products when a scheduled product change is already pending`,
 				code: ErrCode.InvalidRequest,
+				statusCode: 400,
 			});
 		}
 	}
@@ -162,6 +165,7 @@ export const checkSameCustom = async ({
 		throw new RecaseError({
 			message: `Items specified for ${product.name} are the same as the existing product, can't attach again`,
 			code: ErrCode.InvalidRequest,
+			statusCode: 400,
 		});
 	}
 
@@ -234,6 +238,7 @@ const getSameProductBranch = async ({
 			throw new RecaseError({
 				message: `Product ${product.name} is already scheduled, can't attach again`,
 				code: ErrCode.InvalidRequest,
+				statusCode: 400,
 			});
 		}
 
@@ -259,6 +264,7 @@ const getSameProductBranch = async ({
 	throw new RecaseError({
 		message: `Product ${product.name} is already attached, can't attach again`,
 		code: AttachErrCode.ProductAlreadyAttached,
+		statusCode: 400,
 	});
 };
 

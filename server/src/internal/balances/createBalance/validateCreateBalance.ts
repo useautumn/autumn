@@ -42,6 +42,7 @@ export const validateCreateBalanceParams = async ({
 	if (entity && feature.id === entity.feature_id) {
 		throw new RecaseError({
 			message: `Cannot give an entity a balance of its own feature type`,
+			statusCode: 400,
 		});
 	}
 
@@ -51,12 +52,14 @@ export const validateCreateBalanceParams = async ({
 	) {
 		throw new RecaseError({
 			message: `Rollover is not supported for continuous use features`,
+			statusCode: 400,
 		});
 	}
 
 	if (Object.keys(params.reset || {}).length <= 0 && params.rollover) {
 		throw new RecaseError({
 			message: `Rollover cannot be provided for one-time balances`,
+			statusCode: 400,
 		});
 	}
 
@@ -130,6 +133,7 @@ const validateBooleanEntitlementConflict = async ({
 		if (apiCustomer.flags?.[feature.id]) {
 			throw new RecaseError({
 				message: `A boolean entitlement ${feature.id} already exists for customer ${fullCustomer.internal_id}`,
+				statusCode: 409,
 			});
 		}
 	}

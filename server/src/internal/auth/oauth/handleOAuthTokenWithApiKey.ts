@@ -8,7 +8,12 @@ import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
-import { oauthAccessTokenRepo, oauthRefreshTokenRepo } from "../repos/index.js";
+import { hashOAuthToken } from "@/utils/oauthUtils.js";
+import {
+	oauthAccessTokenRepo,
+	oauthConsentRepo,
+	oauthRefreshTokenRepo,
+} from "../repos/index.js";
 import { isMcpOAuthClient } from "./mcpOAuthScopes.js";
 import {
 	getExternalOAuthApiKeyForToken,
@@ -108,8 +113,49 @@ const jsonTokenResponse = ({
 		headers: tokenResponseHeaders(response),
 	});
 
+const getRefreshToken = async (request: Request) => {
+	try {
+		const body = new URLSearchParams(await request.text());
+		return getString(body.get("refresh_token"));
+	} catch {
+		return null;
+	}
+};
+
+const getRefreshTokenConsentId = async (request: Request) => {
+	const refreshToken = await getRefreshToken(request);
+	if (!refreshToken) return null;
+
+	const hashedToken = await hashOAuthToken(refreshToken);
+	const tokenValues = [...new Set([hashedToken, refreshToken])];
+	const tokenRecord = await oauthRefreshTokenRepo.getByTokenValues({
+		db,
+		tokenValues,
+	});
+	return tokenRecord?.oauthConsentId ?? null;
+};
+
+const getUniqueOAuthConsentId = async ({
+	clientId,
+	referenceId,
+	userId,
+}: {
+	clientId: string;
+	referenceId: string;
+	userId: string;
+}) => {
+	const consents = await oauthConsentRepo.listForClientUserOrg({
+		db,
+		clientId,
+		referenceId,
+		userId,
+	});
+	return consents.length === 1 ? consents[0]!.id : null;
+};
+
 export const handleOAuthTokenWithApiKey = async (c: Context) => {
 	const resource = await getResourceFromOAuthTokenRequest(c.req.raw.clone());
+	const refreshTokenConsentId = await getRefreshTokenConsentId(c.req.raw.clone());
 	const response = await auth.handler(c.req.raw);
 	if (!response.ok) return response;
 
@@ -136,6 +182,15 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			resource,
 			requestedScopes,
 		});
+		const oauthConsentId =
+			tokenRecord.oauthConsentId ??
+			refreshTokenConsentId ??
+			(await getUniqueOAuthConsentId({
+				clientId: tokenRecord.clientId,
+				referenceId: tokenRecord.referenceId,
+				userId: tokenRecord.userId,
+			}));
+		tokenRecord.oauthConsentId = oauthConsentId;
 		if (tokenRecord.scopes.length === 0) {
 			throw new RecaseError({
 				message: "OAuth token has no scopes",
@@ -156,6 +211,13 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 				id: tokenRecord.id,
 				scopes: tokenRecord.scopes,
 			});
+			if (oauthConsentId) {
+				await oauthAccessTokenRepo.updateConsent({
+					db,
+					id: tokenRecord.id,
+					oauthConsentId,
+				});
+			}
 		}
 		if (tokenRecord.refreshId) {
 			await oauthRefreshTokenRepo.updateScopes({
@@ -163,12 +225,26 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 				id: tokenRecord.refreshId,
 				scopes: issuedScopes,
 			});
+			if (oauthConsentId) {
+				await oauthRefreshTokenRepo.updateConsent({
+					db,
+					id: tokenRecord.refreshId,
+					oauthConsentId,
+				});
+			}
 		}
 		const isMcpClient = await isMcpOAuthClient({
 			clientId: tokenRecord.clientId,
 			db,
 			resource: resource ?? undefined,
 		});
+		if (isMcpClient && !tokenRecord.oauthConsentId) {
+			throw new RecaseError({
+				message: "OAuth token consent is ambiguous",
+				code: ErrCode.InvalidRequest,
+				statusCode: 401,
+			});
+		}
 		if (
 			isMcpClient ||
 			returnsOAuthAccessTokenForClientId({ clientId: tokenRecord.clientId })

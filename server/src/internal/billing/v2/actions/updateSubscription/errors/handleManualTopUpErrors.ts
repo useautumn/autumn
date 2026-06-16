@@ -46,7 +46,8 @@ export const handleManualTopUpErrors = ({
 
 	if (hasForbiddenField) {
 		throw new RecaseError({
-			message: COMPLEX_UPDATE_ERROR,
+			message:
+				"A manual top-up can only change feature quantities; fields like customize, cancel_action, and billing_cycle_anchor are not allowed",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});

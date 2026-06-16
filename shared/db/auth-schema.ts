@@ -200,6 +200,24 @@ export const oauthClient = pgTable("oauth_client", {
 	metadata: jsonb("metadata"),
 }).enableRLS();
 
+export const oauthConsent = pgTable("oauth_consent", {
+	id: text("id").primaryKey(),
+	clientId: text("client_id")
+		.notNull()
+		.references(() => oauthClient.clientId, { onDelete: "cascade" }),
+	userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+	referenceId: text("reference_id"),
+	scopes: text("scopes").array().notNull(),
+	env: text("env").$type<AppEnv>(),
+	redirectUri: text("redirect_uri"),
+	oauthApiKeyId: text("oauth_api_key_id"),
+	metadata: jsonb("metadata")
+		.$type<Record<string, unknown> | null>()
+		.default({}),
+	createdAt: timestamp("created_at", { withTimezone: true }),
+	updatedAt: timestamp("updated_at", { withTimezone: true }),
+}).enableRLS();
+
 export const oauthRefreshToken = pgTable("oauth_refresh_token", {
 	id: text("id").primaryKey(),
 	token: text("token").notNull(),
@@ -213,6 +231,9 @@ export const oauthRefreshToken = pgTable("oauth_refresh_token", {
 		.notNull()
 		.references(() => user.id, { onDelete: "cascade" }),
 	referenceId: text("reference_id"),
+	oauthConsentId: text("oauth_consent_id").references(() => oauthConsent.id, {
+		onDelete: "cascade",
+	}),
 	expiresAt: timestamp("expires_at", { withTimezone: true }),
 	createdAt: timestamp("created_at", { withTimezone: true }),
 	revoked: timestamp("revoked", { withTimezone: true }),
@@ -231,30 +252,15 @@ export const oauthAccessToken = pgTable("oauth_access_token", {
 	}),
 	userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
 	referenceId: text("reference_id"),
+	oauthConsentId: text("oauth_consent_id").references(() => oauthConsent.id, {
+		onDelete: "cascade",
+	}),
 	refreshId: text("refresh_id").references(() => oauthRefreshToken.id, {
 		onDelete: "cascade",
 	}),
 	expiresAt: timestamp("expires_at", { withTimezone: true }),
 	createdAt: timestamp("created_at", { withTimezone: true }),
 	scopes: text("scopes").array().notNull(),
-}).enableRLS();
-
-export const oauthConsent = pgTable("oauth_consent", {
-	id: text("id").primaryKey(),
-	clientId: text("client_id")
-		.notNull()
-		.references(() => oauthClient.clientId, { onDelete: "cascade" }),
-	userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
-	referenceId: text("reference_id"),
-	scopes: text("scopes").array().notNull(),
-	env: text("env").$type<AppEnv>(),
-	redirectUri: text("redirect_uri"),
-	oauthApiKeyId: text("oauth_api_key_id"),
-	metadata: jsonb("metadata")
-		.$type<Record<string, unknown> | null>()
-		.default({}),
-	createdAt: timestamp("created_at", { withTimezone: true }),
-	updatedAt: timestamp("updated_at", { withTimezone: true }),
 }).enableRLS();
 
 export const passkey = pgTable(

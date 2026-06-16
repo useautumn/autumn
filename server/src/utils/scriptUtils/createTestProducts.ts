@@ -188,16 +188,18 @@ export const constructCoupon = ({
 	promoCode,
 	discountType = RewardType.FixedDiscount,
 	discountValue = 10,
+	maxRedemptions,
 }: {
 	id: string;
 	promoCode: string;
 	discountType?: RewardType;
 	discountValue?: number;
+	maxRedemptions?: number;
 }) => {
 	const reward: CreateReward = {
 		id,
 		name: keyToTitle(id),
-		promo_codes: [{ code: promoCode }],
+		promo_codes: [{ code: promoCode, global_max_redemption: maxRedemptions }],
 		type: discountType,
 		discount_config: {
 			discount_value: discountValue,

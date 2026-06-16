@@ -60,9 +60,9 @@ export const handlePrepaidErrors = async ({
 				priceIsOneOffAndTiered(price, priceEnt)
 			) {
 				throw new RecaseError({
-					code: ErrCode.InvalidRequest,
+					code: ErrCode.InvalidOptions,
 					message:
-						"Quantity is required for start of period price that is one off and tiered",
+						"Quantity is required for start-of-period prices that are both one-off and tiered",
 					statusCode: 400,
 				});
 			}
@@ -79,7 +79,7 @@ export const handlePrepaidErrors = async ({
 			// 4. If there's only one price, quantity must be greater than 0
 			if (options?.quantity === 0 && prices.length === 1) {
 				throw new RecaseError({
-					message: `When there's only one price, quantity must be greater than 0`,
+					message: `When attaching a single prepaid price, quantity must be greater than 0`,
 					code: ErrCode.InvalidOptions,
 					statusCode: 400,
 				});

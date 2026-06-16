@@ -114,7 +114,8 @@ export const handleOneOffErrors = ({
 
 	if (freeTrial) {
 		throw new RecaseError({
-			message: "Cannot set / remove a free trial on one off plans.",
+			message: "Free trials are not available for one-off products",
+			statusCode: 400,
 		});
 	}
 
@@ -138,7 +139,8 @@ export const handleOneOffErrors = ({
 	if (!onlyEntsChanged) {
 		throw new RecaseError({
 			message:
-				"When updating a one-off plan, price / billing changes are not allowed.",
+				"For one-off products, only entitlement changes are allowed; price and billing changes are not supported",
+			statusCode: 400,
 		});
 	}
 };
@@ -172,10 +174,11 @@ export const checkTrialRemovalWithOneOffItems = ({
 	if (newHasOneOffPrices) {
 		throw new RecaseError({
 			message:
-				"Cannot remove trial from a paid recurring subscription when adding one-off items.",
+				"Cannot remove the free trial while adding one-off items to a paid recurring subscription",
+			statusCode: 400,
 		});
 	}
 };
 
 export const COMPLEX_UPDATE_ERROR =
-	"Updating a one off prepaid feature quantity while performing other subscription updates is currently unsupported. Please perform your plan update first, followed by the quantity update.";
+	"Cannot update a one-off prepaid quantity alongside other subscription changes. Update the plan first, then adjust the quantity separately.";

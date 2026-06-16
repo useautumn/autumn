@@ -101,9 +101,9 @@ export const createAllocatedInvoice = async ({
 		}
 
 		throw new RecaseError({
-			message: `Failed to pay invoice for feature ${customerEntitlement.entitlement.feature.id}`,
+			message: `Failed to pay invoice for feature ${customerEntitlement.entitlement.feature.id}: check the customer's payment method and retry`,
 			code: ErrCode.PayInvoiceFailed,
-			statusCode: 400,
+			statusCode: 402,
 			data: voidedInvoice ?? stripeInvoice,
 		});
 	}

@@ -121,6 +121,7 @@ export const createEntityForCusProduct = async ({
 				throw new RecaseError({
 					message: `Failed to auto create entity for feature ${feature.name} because it is a paid feature.`,
 					code: ErrCode.InvalidInputs,
+					statusCode: 400,
 				});
 			}
 		}
@@ -158,6 +159,7 @@ export const createEntityForCusProduct = async ({
 					throw new RecaseError({
 						message: `Cannot create ${inputEntities.length} entities for feature ${feature.name} as it would exceed the usage limit.`,
 						code: ErrCode.FeatureLimitReached,
+						statusCode: 400,
 					});
 				}
 

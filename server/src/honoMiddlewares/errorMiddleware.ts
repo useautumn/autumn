@@ -1,4 +1,4 @@
-import { ErrCode, RecaseError as SharedRecaseError } from "@autumn/shared";
+import { ErrCode, RecaseError } from "@autumn/shared";
 import * as Sentry from "@sentry/bun";
 import type { Context } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
@@ -6,7 +6,6 @@ import Stripe from "stripe";
 import { ZodError } from "zod/v4";
 import { formatZodError } from "@/errors/formatZodError.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { getSentryTags } from "../external/sentry/sentryUtils.js";
 import { handleErrorSkip } from "./errorSkipMiddleware.js";
 /**
@@ -34,17 +33,9 @@ export const errorMiddleware = (err: Error, c: Context<HonoEnv>) => {
 	const skipResponse = handleErrorSkip(err, c);
 	if (skipResponse) return skipResponse;
 
-	// If we got here, it's an error worth tracking - capture to Sentry
-	Sentry.captureException(err, {
-		tags: getSentryTags({
-			ctx,
-			path: c.req.path,
-			method: c.req.method,
-		}),
-	});
-
-	// 1. Handle RecaseError (our custom errors)
-	if (err instanceof RecaseError || err instanceof SharedRecaseError) {
+	// 1. Handle RecaseError (our custom errors) — these are expected user-facing
+	// errors, so warn-log and respond WITHOUT capturing to Sentry.
+	if (err instanceof RecaseError) {
 		logger.warn(
 			`RECASE WARNING (${ctx.org?.slug || "unknown"}): ${err.message} [${err.code}]`,
 			{
@@ -62,6 +53,15 @@ export const errorMiddleware = (err: Error, c: Context<HonoEnv>) => {
 			err.statusCode as ContentfulStatusCode,
 		);
 	}
+
+	// If we got here, it's an error worth tracking - capture to Sentry
+	Sentry.captureException(err, {
+		tags: getSentryTags({
+			ctx,
+			path: c.req.path,
+			method: c.req.method,
+		}),
+	});
 
 	// 2. Handle Stripe errors
 	if (err instanceof Stripe.errors.StripeError) {

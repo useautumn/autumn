@@ -371,7 +371,7 @@ test.concurrent(
 				],
 				cancel_action: "cancel_end_of_cycle",
 			}),
-		).rejects.toThrow(/Updating a one off prepaid feature quantity/i);
+		).rejects.toThrow(/manual top-up can only change feature quantities/i);
 	},
 );
 
@@ -427,7 +427,7 @@ test.concurrent(
 					{ feature_id: TestFeature.Words, quantity: 100 },
 				],
 			}),
-		).rejects.toThrow(/Updating a one off prepaid feature quantity/i);
+		).rejects.toThrow(/one-off prepaid quantity alongside other subscription changes/i);
 	},
 );
 

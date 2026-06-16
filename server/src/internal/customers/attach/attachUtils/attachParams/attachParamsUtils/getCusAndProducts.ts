@@ -4,12 +4,12 @@ import {
 	cusProductToProduct,
 	ErrCode,
 	nullish,
+	RecaseError,
 } from "@autumn/shared";
 
 import { getOrCreateCustomer } from "@/internal/customers/cusUtils/getOrCreateCustomer.js";
 import { ProductService } from "@/internal/products/ProductService.js";
 import { isOneOff } from "@/internal/products/productUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { notNullish } from "@/utils/genUtils.js";
 
 import type { AutumnContext } from "../../../../../../honoUtils/HonoEnv";
@@ -47,6 +47,7 @@ const getProductsForAttach = async ({
 				message:
 					"When providing product_ids, can't have multiple free trial products",
 				code: ErrCode.InvalidRequest,
+				statusCode: 400,
 			});
 		}
 
@@ -62,6 +63,7 @@ const getProductsForAttach = async ({
 					message:
 						"Can't attach multiple products from the same group that are not add-ons",
 					code: ErrCode.InvalidRequest,
+					statusCode: 400,
 				});
 			}
 		}

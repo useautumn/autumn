@@ -25,6 +25,7 @@ export const deleteBalance = async ({
 	if (recalculate_balances && !feature_id) {
 		throw new RecaseError({
 			message: "feature_id is required when recalculate_balances is true",
+			statusCode: 400,
 		});
 	}
 
@@ -48,6 +49,7 @@ export const deleteBalance = async ({
 	if (customerEntitlements.length === 0) {
 		throw new RecaseError({
 			message: `Balance not found for feature ${feature_id} and customer ${customer_id}`,
+			statusCode: 404,
 		});
 	}
 
@@ -55,6 +57,7 @@ export const deleteBalance = async ({
 		if (isPaidCustomerEntitlement(cusEnt)) {
 			throw new RecaseError({
 				message: `Cannot delete paid balance for feature ${feature_id} and customer ${customer_id}`,
+				statusCode: 409,
 			});
 		}
 	}

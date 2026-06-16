@@ -17,7 +17,7 @@ export const findCustomerForEntity = async ({
 
 	if (entities.length > 1) {
 		throw new RecaseError({
-			message: `Two entities with the ID ${entityId} found`,
+			message: `More than one customer has an entity with ID '${entityId}'. Include customer_id in the request so we know which one to use.`,
 			code: ErrCode.EntityIdRequired,
 			statusCode: 400,
 		});

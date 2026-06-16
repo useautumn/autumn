@@ -11,6 +11,7 @@ import {
 	OnDecrease,
 	OnIncrease,
 	type Price,
+	RecaseError,
 	UsageModel,
 	type UsagePriceConfig,
 } from "@autumn/shared";
@@ -284,9 +285,10 @@ export const getUpgradeProductPreview = async ({
 		const newProduct = attachParamsToProduct({ attachParams });
 
 		if (isFreeProduct(curProduct.prices) && !isFreeProduct(newProduct.prices)) {
-			throw new Error(
-				`Version ${curProduct.version} is free, cannot upgrade to version ${newProduct.version} which has a paid price`,
-			);
+			throw new RecaseError({
+				message: `Version ${curProduct.version} is free, cannot upgrade to version ${newProduct.version} which has a paid price`,
+				statusCode: 400,
+			});
 		}
 
 		dueToday.line_items = [];
