@@ -17,15 +17,12 @@ const DEFAULT_VALUE = 1;
 const asNumber = (value: unknown): number | null =>
 	typeof value === "number" && Number.isFinite(value) ? value : null;
 
-/** Untrusted `properties.cascade` shape; validated in getTokenCascadeDeductionsFromBody before use. */
 type CascadeMarker = {
 	systems?: Array<{ feature_id?: unknown; cost?: unknown }>;
 };
 
 /**
- * Rebuilds a queued token cascade from its `properties.cascade` marker; returns
- * null on any invalid/incomplete marker. Internal queued bodies only — never
- * honor `properties.cascade` on caller-facing /track requests.
+ * Rebuilds a queued token cascade from its `properties.cascade` marker
  */
 export const getTokenCascadeDeductionsFromBody = ({
 	ctx,

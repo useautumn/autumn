@@ -25,16 +25,13 @@ export type SpilloverDeduction = {
 
 export type FeatureDeduction = {
 	feature: Feature;
-	/** Priced event/unit count; balance change is `deduction * credit_cost` (see computeCreditCosts). */
 	deduction: number;
 	targetBalance?: number;
-	/** Present only for track_tokens deductions; standard deductions omit it. */
 	tokens?: TokenDeduction;
 	lock?: LockParams;
 	lockReceipt?: LockReceipt;
 	lockReceiptKey?: string;
 	unwindValue?: number;
-	/** Extra AI-credit systems the leftover spills into after `feature`, settled in the same atomic deduction. */
 	spillover?: SpilloverDeduction[];
 };
 

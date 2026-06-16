@@ -32,11 +32,6 @@ const idsAfterSort = (cusEnts: FullCusEntWithFullCusProduct[]) => {
 };
 
 describe("sortCusEntsForDeduction — AI credit cascade ordering", () => {
-	// The capped/included AI credit system has no reset cadence (one-time credit);
-	// the overage one resets monthly. next_reset_at outranks usage_allowed for
-	// every other feature type, so without the AI-credit-scoped tiebreak the
-	// resetting overage system would drain first and charge the markup before the
-	// free included usage. The cascade requires included-first regardless.
 	const makeIncluded = () =>
 		makeCusEnt({
 			id: "included",
@@ -67,8 +62,6 @@ describe("sortCusEntsForDeduction — AI credit cascade ordering", () => {
 	});
 
 	test("non-AI-credit features keep the existing reset-first ordering", () => {
-		// Two metered features: the resetting one must still go first even though it
-		// allows overage — the AI-credit-scoped tiebreak must not touch them.
 		const capped = makeCusEnt({
 			id: "capped",
 			type: FeatureType.Metered,

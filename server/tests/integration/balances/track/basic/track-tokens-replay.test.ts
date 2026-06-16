@@ -101,8 +101,6 @@ test.concurrent(
 			actions: [s.attach({ productId: proProduct.id })],
 		});
 
-		// The body getTokenTrackParams would queue for a $4 base event with a
-		// 50%-marked-up overage system: the cascade marker carries both costs.
 		await runQueuedTrack({
 			ctx: { ...ctx, apiVersion: new ApiVersionClass(ApiVersion.V2_1) },
 			body: {
