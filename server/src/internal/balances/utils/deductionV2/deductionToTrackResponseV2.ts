@@ -167,8 +167,6 @@ export const deductionToTrackResponseV2 = async ({
 	});
 	const finalBalances: Record<string, ApiBalanceV1> = {};
 
-	// A cascade settles as one multi-feature deduction; report each system's
-	// balance separately (so balance is null when more than one was touched).
 	const expandedDeductions = expandCascadeDeductions(featureDeductions);
 
 	for (const featureDeduction of expandedDeductions) {

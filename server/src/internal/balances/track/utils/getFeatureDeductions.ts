@@ -17,27 +17,15 @@ const DEFAULT_VALUE = 1;
 const asNumber = (value: unknown): number | null =>
 	typeof value === "number" && Number.isFinite(value) ? value : null;
 
-/**
- * Untrusted shape of the `properties.cascade` marker stamped on a token-track
- * body by getTokenTrackParams. Each field is `unknown` because the body may be
- * caller-supplied; getTokenCascadeDeductionsFromBody validates it before use.
- */
+/** Untrusted `properties.cascade` shape; validated in getTokenCascadeDeductionsFromBody before use. */
 type CascadeMarker = {
 	systems?: Array<{ feature_id?: unknown; cost?: unknown }>;
 };
 
 /**
- * Rebuilds the cascade deduction of a token track from the `properties.cascade`
- * marker that getTokenTrackParams stamps on the body, so queued replays keep
- * each system's request-time pricing instead of replaying the whole value
- * against the primary feature. The deduction is atomic and idempotency-keyed,
- * so a full replay is naturally safe — no partial-state bookkeeping needed.
- * Returns null when the body carries no valid cascade (fewer than two resolved,
- * distinct systems). Its sole caller (getQueuedTrackFeatureDeductions) only
- * invokes it when a cascade was expected at enqueue time, so it treats null as
- * a corrupt marker and throws rather than silently under-charging the event.
- * Only for internally queued bodies — properties on direct /track calls are
- * caller-controlled and must not be honored as a cascade.
+ * Rebuilds a queued token cascade from its `properties.cascade` marker; returns
+ * null on any invalid/incomplete marker. Internal queued bodies only — never
+ * honor `properties.cascade` on caller-facing /track requests.
  */
 export const getTokenCascadeDeductionsFromBody = ({
 	ctx,

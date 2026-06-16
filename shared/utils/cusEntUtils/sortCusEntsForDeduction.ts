@@ -90,11 +90,8 @@ export const sortCusEntsForDeduction = ({
 			return 1;
 		}
 
-		// AI-credit cascade: when both entitlements belong to AI credit systems,
-		// drain the capped/included pool (no overage) before the pay-per-use
-		// overage one regardless of reset cadence or interval, so included usage
-		// is always spent before the marked-up overage. Scoped to AI credit
-		// systems; every other feature type keeps its interval-first ordering.
+		// AI-credit: drain the included (no-overage) pool before the pay-per-use
+		// overage one, ahead of the interval ordering below.
 		if (
 			aEnt.feature.type === FeatureType.AiCreditSystem &&
 			bEnt.feature.type === FeatureType.AiCreditSystem &&

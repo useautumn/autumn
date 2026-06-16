@@ -1,11 +1,6 @@
 import type { DbOverageAllowed } from "@autumn/shared";
 
-/**
- * Feature ids whose entitlements carry native (pay-per-use) usage_allowed. An
- * `overage_allowed: enabled: true` override must not force usage_allowed onto
- * these — their native overage mechanism already handles it. Built once from a
- * customer's entitlements and fed to resolveEffectiveUsageAllowed.
- */
+/** Feature ids with native pay-per-use usage_allowed; an overage override must not double-apply to these. */
 export const getNativeUsageAllowedFeatureIds = (
 	cusEnts: Array<{
 		usage_allowed?: boolean | null;
@@ -18,12 +13,7 @@ export const getNativeUsageAllowedFeatureIds = (
 			.map((cusEnt) => cusEnt.entitlement.feature.id),
 	);
 
-/**
- * Applies an org's overage-allowed override to a feature's base usage-allowed
- * flag. An `enabled: true` override grants overage unless the feature already
- * has native usage_allowed (pay-per-use already handles it); an
- * `enabled: false` override revokes overage outright.
- */
+/** Applies an org's overage override: enabled grants overage (unless native pay-per-use), disabled revokes it. */
 export const resolveEffectiveUsageAllowed = ({
 	baseUsageAllowed,
 	featureId,

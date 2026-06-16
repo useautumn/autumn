@@ -132,10 +132,6 @@ const resolveAiCreditFeaturesFromEntitlements = async ({
 		});
 	}
 
-	// The cascade drains capped (included) systems first and spills the
-	// remainder into the single overage system. With more than one overage
-	// system the engine would bill the marked-up overflow to an arbitrary one,
-	// so require feature_id to disambiguate instead of guessing.
 	const overageSystems = aiCreditSystems.filter(
 		(system) => system.hasUsageAllowed,
 	);
@@ -148,8 +144,6 @@ const resolveAiCreditFeaturesFromEntitlements = async ({
 		});
 	}
 
-	// Included (capped) systems drain first; the overage system settles the
-	// overflow last. Ties broken by id so the order is stable.
 	const includedFirst = (system: { hasUsageAllowed: boolean }) =>
 		system.hasUsageAllowed ? 1 : 0;
 
