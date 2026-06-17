@@ -2,7 +2,6 @@ import type { FullCustomer } from "@autumn/shared";
 import { LATEST_VERSION } from "@autumn/shared";
 import { Spinner } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
 import { useParams } from "react-router";
 import {
 	CodeGroup,
@@ -18,6 +17,7 @@ import {
 	SheetTitle,
 } from "@/components/v2/sheets/Sheet";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -51,9 +51,7 @@ export function ShowCustomerObjectSheet({
 	const { customer } = useCusQuery();
 	const fullCustomer = customer as FullCustomer | undefined;
 	const entities = fullCustomer?.entities ?? [];
-	const [scopeEntityId, setScopeEntityId] = useState<string | undefined>(
-		undefined,
-	);
+	const [scopeEntityId, setScopeEntityId] = useSheetScopeEntityId(fullCustomer);
 
 	const { data, isLoading, error } = useQuery({
 		queryKey: buildKey(["customer-object", customer_id, scopeEntityId]),
