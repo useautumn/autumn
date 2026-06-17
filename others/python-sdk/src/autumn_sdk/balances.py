@@ -24,6 +24,7 @@ class Balances(BaseSDK):
             Union[models.CreateBalanceRollover, models.CreateBalanceRolloverTypedDict]
         ] = None,
         expires_at: Optional[float] = None,
+        next_reset_at: Optional[float] = None,
         balance_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -40,6 +41,7 @@ class Balances(BaseSDK):
         :param reset: Reset configuration for the balance. If not provided, the balance is a one-time grant that never resets.
         :param rollover: Rollover configuration for the balance.
         :param expires_at: Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset.
+        :param next_reset_at: Unix timestamp (milliseconds) for the first reset boundary, allowing a custom (e.g. shorter) first period. Requires 'reset', and must occur before 'expires_at' if both are provided. Subsequent resets advance by one reset interval from this boundary.
         :param balance_id: A unique identifier for this balance. Use this to target the balance in future update / delete calls.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -67,6 +69,7 @@ class Balances(BaseSDK):
                 rollover, Optional[models.CreateBalanceRollover]
             ),
             expires_at=expires_at,
+            next_reset_at=next_reset_at,
             balance_id=balance_id,
         )
 
@@ -144,6 +147,7 @@ class Balances(BaseSDK):
             Union[models.CreateBalanceRollover, models.CreateBalanceRolloverTypedDict]
         ] = None,
         expires_at: Optional[float] = None,
+        next_reset_at: Optional[float] = None,
         balance_id: Optional[str] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
@@ -160,6 +164,7 @@ class Balances(BaseSDK):
         :param reset: Reset configuration for the balance. If not provided, the balance is a one-time grant that never resets.
         :param rollover: Rollover configuration for the balance.
         :param expires_at: Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset.
+        :param next_reset_at: Unix timestamp (milliseconds) for the first reset boundary, allowing a custom (e.g. shorter) first period. Requires 'reset', and must occur before 'expires_at' if both are provided. Subsequent resets advance by one reset interval from this boundary.
         :param balance_id: A unique identifier for this balance. Use this to target the balance in future update / delete calls.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -187,6 +192,7 @@ class Balances(BaseSDK):
                 rollover, Optional[models.CreateBalanceRollover]
             ),
             expires_at=expires_at,
+            next_reset_at=next_reset_at,
             balance_id=balance_id,
         )
 

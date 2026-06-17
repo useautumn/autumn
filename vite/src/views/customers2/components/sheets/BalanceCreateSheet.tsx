@@ -69,6 +69,7 @@ export function BalanceCreateSheet() {
 	const [resetInterval, setResetInterval] = useState<string>("");
 	const [oneOff, setOneOff] = useState(false);
 	const [expiresAt, setExpiresAt] = useState<number | null>(null);
+	const [nextResetAt, setNextResetAt] = useState<number | null>(null);
 	const [rollover, setRollover] = useState<RolloverConfig | null>(null);
 
 	// Rollover requires a recurring reset interval. If the interval goes away
@@ -111,6 +112,10 @@ export function BalanceCreateSheet() {
 		if (!nextIsMetered || nextIsContUse) {
 			setRollover(null);
 		}
+		// next_reset_at only applies to a resetting (metered) balance.
+		if (!nextIsMetered) {
+			setNextResetAt(null);
+		}
 	};
 
 	const handleCreate = async () => {
@@ -151,6 +156,21 @@ export function BalanceCreateSheet() {
 
 		if (expiresAt) {
 			params.expires_at = expiresAt;
+		}
+
+		// next_reset_at sets a custom first reset boundary. It requires a recurring
+		// reset, must be in the future, and must precede expires_at — match the
+		// server-side validation so we fail fast with a clear message.
+		if (nextResetAt && hasRecurringReset) {
+			if (nextResetAt <= Date.now()) {
+				toast.error("Next reset must be in the future");
+				return;
+			}
+			if (expiresAt && nextResetAt >= expiresAt) {
+				toast.error("Next reset must be before the expiry date");
+				return;
+			}
+			params.next_reset_at = nextResetAt;
 		}
 
 		setIsCreating(true);
@@ -227,6 +247,7 @@ export function BalanceCreateSheet() {
 													setResetInterval("");
 													setOneOff(false);
 													setRollover(null);
+													setNextResetAt(null);
 												}
 											}}
 											className="py-1 w-26 text-subtle gap-2"
@@ -271,6 +292,7 @@ export function BalanceCreateSheet() {
 												if (checked) {
 													setResetInterval("");
 													setRollover(null);
+													setNextResetAt(null);
 												}
 											}}
 											className="py-1 w-26 text-subtle gap-2 justify-start"
@@ -278,6 +300,18 @@ export function BalanceCreateSheet() {
 											One-off
 										</IconCheckbox>
 									</div>
+								</div>
+							)}
+
+							{isMetered && hasRecurringReset && (
+								<div className="flex flex-col shrink-0 w-full">
+									<FormLabel>Next Reset At</FormLabel>
+									<DateInputUnix
+										unixDate={nextResetAt}
+										setUnixDate={setNextResetAt}
+										withTime
+										use24Hour
+									/>
 								</div>
 							)}
 

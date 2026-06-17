@@ -8799,7 +8799,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1781265695558,"plans":[{"planId":"trial_plan"}]},{"startsAt":1782475295558,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1781546357840,"plans":[{"planId":"trial_plan"}]},{"startsAt":1782755957840,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -14663,6 +14663,9 @@ paths:
                 expires_at:
                   type: number
                   description: Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset.
+                next_reset_at:
+                  type: number
+                  description: Unix timestamp (milliseconds) for the first reset boundary, allowing a custom (e.g. shorter) first period. Requires 'reset', and must occur before 'expires_at' if both are provided. Subsequent resets advance by one reset interval from this boundary.
                 balance_id:
                   type: string
                   description: A unique identifier for this balance. Use this to target the balance in future update / delete calls.
@@ -17178,6 +17181,7 @@ paths:
                   enum:
                     - day
                     - hour
+                    - week
                     - month
                   type: string
                   default: day
