@@ -2,7 +2,8 @@
 	"include": [
 		"tinybird/**/*.datasource",
 		"tinybird/**/*.pipe",
-		"src/external/tinybird/migrations/migrationItemEventsDataSource.ts"
+		"src/external/tinybird/migrations/migrationItemEventsDataSource.ts",
+		"src/external/tinybird/connections/eventsS3.ts"
 	],
 	"token": "${TINYBIRD_TOKEN}",
 	"baseUrl": "${TINYBIRD_API_URL}",

@@ -35,7 +35,8 @@
 				"tests/**/*.ts"
 			],
 			"project": ["src/**/*.ts", "tests/**/*.ts"],
-			"ignoreDependencies": ["@react-email/components", "@axiomhq/pino"]
+			"ignoreDependencies": ["@react-email/components", "@axiomhq/pino"],
+			"ignore": ["src/external/tinybird/connections/eventsS3.ts"]
 		},
 		"shared": {
 			"project": ["**/*.ts", "!utils/**"],
@@ -44,7 +45,11 @@
 		"vite": {
 			"entry": ["tests/**/*.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
 			"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
-			"ignore": ["src/components/ai-elements/**", "src/hooks/useControllableState.ts", "src/types/**/*.d.ts"],
+			"ignore": [
+				"src/components/ai-elements/**",
+				"src/hooks/useControllableState.ts",
+				"src/types/**/*.d.ts"
+			],
 			"ignoreDependencies": [
 				"tailwindcss",
 				"tailwind-scrollbar-hide",
