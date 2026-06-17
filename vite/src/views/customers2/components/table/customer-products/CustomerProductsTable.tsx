@@ -81,23 +81,13 @@ export function CustomerProductsTable() {
 		setKind,
 	} = tableState;
 
-	const initialPage =
-		customer.products_next_cursor !== undefined &&
-		customer.products_total_count !== undefined
-			? {
-					list: customer.customer_products,
-					next_cursor: customer.products_next_cursor,
-					total_count: customer.products_total_count,
-				}
-			: undefined;
-
 	const { products, nextCursor, totalCount, isLoading, isTransitioning } =
 		useCustomerProductsPageQuery({
 			cursor: currentCursor,
 			pageSize,
 			showExpired,
 			kind,
-			initialPage,
+			initialPage: customer.products_page,
 		});
 
 	const totalPages = totalCount > 0 ? Math.ceil(totalCount / pageSize) : null;

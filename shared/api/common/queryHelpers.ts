@@ -96,3 +96,13 @@ export function queryInteger(options?: {
 		return val;
 	}, schema);
 }
+
+export function queryBoolean() {
+	return z.preprocess((val) => {
+		if (typeof val === "string") {
+			if (val === "false" || val === "0") return false;
+			if (val === "true" || val === "1") return true;
+		}
+		return val;
+	}, z.boolean());
+}

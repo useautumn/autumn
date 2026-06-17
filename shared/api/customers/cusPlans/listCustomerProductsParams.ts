@@ -6,6 +6,7 @@ import {
 	createCursorLimitSchema,
 	defineCursor,
 } from "../../common/cursorPaginationSchemas.js";
+import { queryBoolean } from "../../common/queryHelpers.js";
 
 export enum CustomerProductKind {
 	Subscription = "subscription",
@@ -22,7 +23,7 @@ export const ListCustomerProductsParamsSchema = z.object({
 		defaultLimit: CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
 		maxLimit: CUSTOMER_PRODUCTS_MAX_LIMIT,
 	}),
-	show_expired: z.coerce.boolean().default(false),
+	show_expired: queryBoolean().default(false),
 	entity_id: z.string().optional(),
 	kind: z.enum(CustomerProductKind).optional(),
 });

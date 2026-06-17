@@ -278,29 +278,35 @@ export class CusService {
 	static async getProductsPage({
 		ctx,
 		idOrInternalId,
+		internalCustomerId,
 		params,
 	}: {
 		ctx: AutumnContext;
 		idOrInternalId: string;
+		internalCustomerId?: string;
 		params: ListCustomerProductsParams;
 	}): Promise<CustomerProductsPage> {
 		const { db, org, env } = ctx;
 
-		const customer = await CusService.get({
-			db,
-			idOrInternalId,
-			orgId: org.id,
-			env,
-		});
-		if (!customer) {
-			throw new CustomerNotFoundError({ customerId: idOrInternalId });
+		let resolvedInternalId = internalCustomerId;
+		if (!resolvedInternalId) {
+			const customer = await CusService.get({
+				db,
+				idOrInternalId,
+				orgId: org.id,
+				env,
+			});
+			if (!customer) {
+				throw new CustomerNotFoundError({ customerId: idOrInternalId });
+			}
+			resolvedInternalId = customer.internal_id;
 		}
 
 		const cursor =
 			CustomerProductsCursor.decode(params.start_cursor) ?? undefined;
 
 		const sharedArgs = {
-			internalCustomerId: customer.internal_id,
+			internalCustomerId: resolvedInternalId,
 			inStatuses: RELEVANT_STATUSES,
 			showExpired: params.show_expired,
 			entityId: params.entity_id,
@@ -344,13 +350,16 @@ export class CusService {
 	static getDefaultProductsPage({
 		ctx,
 		idOrInternalId,
+		internalCustomerId,
 	}: {
 		ctx: AutumnContext;
 		idOrInternalId: string;
+		internalCustomerId?: string;
 	}): Promise<CustomerProductsPage> {
 		return CusService.getProductsPage({
 			ctx,
 			idOrInternalId,
+			internalCustomerId,
 			params: {
 				start_cursor: "",
 				limit: CUSTOMER_PRODUCTS_DEFAULT_LIMIT,

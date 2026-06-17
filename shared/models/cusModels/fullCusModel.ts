@@ -1,5 +1,6 @@
 import { ProductSchema } from "@models/productModels/productModels.js";
 import { z } from "zod/v4";
+import type { CustomerProductsPage } from "../../api/customers/cusPlans/listCustomerProductsParams.js";
 import type { FullCustomerEntitlement } from "../cusProductModels/cusEntModels/cusEntModels.js";
 import {
 	CusProductSchema,
@@ -72,7 +73,7 @@ export type FullCustomerSchedule = Schedule & { phases: SchedulePhase[] };
 export type FullCustomer = Customer & {
 	customer_products: FullCusProduct[];
 	products_total_count?: number;
-	products_next_cursor?: string | null;
+	products_page?: CustomerProductsPage;
 	entities: Entity[];
 	entity?: Entity;
 	trials_used?: {

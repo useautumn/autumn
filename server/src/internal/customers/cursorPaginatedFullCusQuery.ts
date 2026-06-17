@@ -1,8 +1,9 @@
-import type {
-	AppEnv,
-	CusProductStatus,
-	ListCustomersV2Params,
-	StandardCursorFields,
+import {
+	ACTIVE_STATUSES,
+	type AppEnv,
+	type CusProductStatus,
+	type ListCustomersV2Params,
+	type StandardCursorFields,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { cpStatusInClause } from "./getCustomerProductsPageQuery.js";
@@ -151,6 +152,7 @@ export const getCursorPaginatedFullCusQuery = ({
 				cp.internal_product_id,
 				cp.free_trial_id,
 				cp.subscription_ids,
+				cp.status,
 				cp.created_at,
 				row_to_json(cp) AS cp_json,
 				prod.is_add_on AS prod_is_add_on,
@@ -178,6 +180,10 @@ export const getCursorPaginatedFullCusQuery = ({
 		cp_counts AS MATERIALIZED (
 			SELECT internal_customer_id, COUNT(*)::int AS n
 			FROM cp_ranked_raw
+			WHERE status = ANY(ARRAY[${sql.join(
+				ACTIVE_STATUSES.map((status) => sql`${status}`),
+				sql`, `,
+			)}])
 			GROUP BY internal_customer_id
 		),
 		ces_bound AS MATERIALIZED (

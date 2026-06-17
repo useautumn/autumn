@@ -70,7 +70,11 @@ export const handleGetCustomer = createRoute({
 				expand,
 			}),
 			getCusUsageLimitsWithUsage({ ctx, fullCus }),
-			CusService.getDefaultProductsPage({ ctx, idOrInternalId: customer_id }),
+			CusService.getDefaultProductsPage({
+				ctx,
+				idOrInternalId: customer_id,
+				internalCustomerId: fullCus.internal_id,
+			}),
 		]);
 
 		// Overlay usage onto the customer and every entity that has caps, so the
@@ -90,9 +94,7 @@ export const handleGetCustomer = createRoute({
 				rewards: rewards ?? undefined,
 				entities: entities ?? fullCus.entities,
 				usage_limits: usageLimitsWithUsage?.customer ?? fullCus.usage_limits,
-				customer_products: productsPage.list,
-				products_total_count: productsPage.total_count,
-				products_next_cursor: productsPage.next_cursor,
+				products_page: productsPage,
 			},
 			test_clock_frozen_time_ms: testClockFrozenTimeMs,
 		});
