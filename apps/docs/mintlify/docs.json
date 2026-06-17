@@ -139,6 +139,15 @@
 							"documentation/external-providers/revenuecat",
 							"documentation/external-providers/vercel-marketplace"
 						]
+					},
+					{
+						"group": "Lakehouse",
+						"pages": [
+							"documentation/lakehouse/overview",
+							"documentation/lakehouse/connecting",
+							"documentation/lakehouse/schema",
+							"documentation/lakehouse/querying"
+						]
 					}
 				]
 			},
