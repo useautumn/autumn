@@ -270,21 +270,25 @@ function BarCellContent({
 }) {
 	const hasReset = ent.next_reset_at != null;
 	const hasExpiry = ent.expires_at != null;
+	const expiryIcon = hasExpiry ? (
+		<BalanceExpiryIcon expiresAt={ent.expires_at} />
+	) : null;
 
 	return (
 		<div className="flex gap-3 items-center">
 			<div className="flex items-center gap-1.5 shrink-0">
-				<div className="w-3.5 shrink-0 flex justify-center">
-					{hasExpiry && <BalanceExpiryIcon expiresAt={ent.expires_at} />}
-				</div>
-				<span
-					className={cn(
-						"text-tertiary-foreground text-tiny flex justify-center !px-1 bg-muted rounded-md min-w-36 whitespace-nowrap",
-						hasReset ? "opacity-100" : "opacity-0",
-					)}
-				>
-					Resets {formatChipDate(ent.next_reset_at)}
-				</span>
+				{hasReset ? (
+					<>
+						<div className="w-3.5 shrink-0 flex justify-center">
+							{expiryIcon}
+						</div>
+						<span className="text-tertiary-foreground text-tiny flex justify-center !px-1 bg-muted rounded-md min-w-36 whitespace-nowrap">
+							Resets {formatChipDate(ent.next_reset_at)}
+						</span>
+					</>
+				) : (
+					expiryIcon
+				)}
 			</div>
 			<div
 				className={cn(
