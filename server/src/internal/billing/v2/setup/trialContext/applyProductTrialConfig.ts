@@ -53,6 +53,7 @@ export const applyProductTrialConfig = async ({
 		productId: fullProduct.id,
 		fingerprint: fullCustomer.fingerprint,
 		internalCustomerId: fullCustomer.internal_id,
+		internalEntityId: fullCustomer.entity?.internal_id,
 		multipleAllowed: multipleTrialsAllowed,
 	});
 
