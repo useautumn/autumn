@@ -28,6 +28,13 @@ type EntIntervalConfig = {
 	intervalCount?: number | null;
 };
 
+type BillingAndEntIntervalConfig = {
+	billingInterval: BillingInterval;
+	billingIntervalCount?: number | null;
+	entInterval: EntInterval;
+	entIntervalCount?: number | null;
+};
+
 export const entIntervalToValue = (
 	interval?: EntInterval | null,
 	intervalCount?: number | null,
@@ -90,4 +97,32 @@ export const entIntervalsDifferent = ({
 	intervalB: EntIntervalConfig;
 }) => {
 	return !entIntervalsSame({ intervalA, intervalB });
+};
+
+export const billingAndEntIntervalsSame = ({
+	billingInterval,
+	billingIntervalCount,
+	entInterval,
+	entIntervalCount,
+}: BillingAndEntIntervalConfig) => {
+	if (
+		billingInterval === BillingInterval.OneOff ||
+		entInterval === EntInterval.Lifetime
+	) {
+		return (
+			billingInterval === BillingInterval.OneOff &&
+			entInterval === EntInterval.Lifetime
+		);
+	}
+
+	return (
+		String(billingInterval) === String(entInterval) &&
+		(billingIntervalCount ?? 1) === (entIntervalCount ?? 1)
+	);
+};
+
+export const billingAndEntIntervalsDifferent = (
+	params: BillingAndEntIntervalConfig,
+) => {
+	return !billingAndEntIntervalsSame(params);
 };

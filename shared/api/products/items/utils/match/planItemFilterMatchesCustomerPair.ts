@@ -46,11 +46,24 @@ export const planItemFilterMatchesCustomerPair = ({
 	}
 
 	if (filter.interval !== undefined) {
-		const interval =
-			customerPrice?.price.config.interval ??
-			customerEntitlement?.entitlement.interval ??
-			undefined;
-		if (String(interval) !== String(filter.interval)) return false;
+		const priceInterval = customerPrice?.price.config.interval;
+		const resetInterval = customerEntitlement?.entitlement.interval;
+		if (
+			String(priceInterval) !== String(filter.interval) &&
+			String(resetInterval) !== String(filter.interval)
+		)
+			return false;
+	}
+
+	if (filter.interval_count !== undefined) {
+		const priceIntervalCount = customerPrice?.price.config.interval_count ?? 1;
+		const resetIntervalCount =
+			customerEntitlement?.entitlement.interval_count ?? 1;
+		if (
+			priceIntervalCount !== filter.interval_count &&
+			resetIntervalCount !== filter.interval_count
+		)
+			return false;
 	}
 
 	return true;

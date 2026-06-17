@@ -30,6 +30,7 @@
         additional_balance: number | null,
         adjustment: number | null,
         entities: object | null,
+        reset_cycle_anchor: number | null,
         next_reset_at: number | null,
         expected_next_reset_at: number | null,
         rollover_insert: { id, cus_ent_id, balance, usage, expires_at, entities } | null,
@@ -106,6 +107,7 @@ for _, update in ipairs(updates) do
 
       apply_balance_and_adjustment_update(helper_params)
       apply_entities_update(helper_params)
+      apply_reset_cycle_anchor_update(helper_params)
       apply_next_reset_at_update(helper_params)
       apply_rollover_updates(helper_params)
       apply_replaceable_updates(helper_params)

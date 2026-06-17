@@ -526,3 +526,100 @@ test.concurrent(`${chalk.yellowBright("validation: ACCEPT only price.interval (u
 		interval: ProductItemInterval.Month,
 	});
 });
+
+test.concurrent(`${chalk.yellowBright("create: V2.1 price interval defaults reset interval when reset omitted")}`, async () => {
+	const productId = "price_interval_defaults_reset";
+	try {
+		await autumnV2_1.products.delete(productId);
+	} catch (_error) {}
+
+	const created = await autumnV2_1.products.create<
+		ApiPlanV1,
+		CreatePlanParamsInput
+	>({
+		id: productId,
+		name: "Price Interval Defaults Reset",
+		items: [
+			{
+				feature_id: TestFeature.Messages,
+				included: 100,
+				price: {
+					amount: 10,
+					interval: BillingInterval.Month,
+					interval_count: 2,
+					billing_method: BillingMethod.UsageBased,
+					billing_units: 1,
+				},
+			},
+		],
+	});
+
+	const item = created.items[0];
+	expect(item.reset).toMatchObject({
+		interval: ResetInterval.Month,
+		interval_count: 2,
+	});
+	expect(item.price).toMatchObject({
+		amount: 10,
+		interval: BillingInterval.Month,
+		interval_count: 2,
+		billing_method: BillingMethod.UsageBased,
+	});
+
+	const v1_2 = await autumnV1_2.products.get<ApiProduct>(productId);
+	expect(v1_2.items[0]).toMatchObject({
+		price: 10,
+		interval: ProductItemInterval.Month,
+		interval_count: 2,
+		usage_model: UsageModel.PayPerUse,
+	});
+});
+
+test.concurrent(`${chalk.yellowBright("create: V2.1 prepaid price interval can differ from reset interval")}`, async () => {
+	const productId = "prepaid_split_reset_price_interval";
+	try {
+		await autumnV2_1.products.delete(productId);
+	} catch (_error) {}
+
+	const created = await autumnV2_1.products.create<
+		ApiPlanV1,
+		CreatePlanParamsInput
+	>({
+		id: productId,
+		name: "Prepaid Split Reset Price Interval",
+		items: [
+			{
+				feature_id: TestFeature.Messages,
+				included: 0,
+				reset: {
+					interval: ResetInterval.Month,
+				},
+				price: {
+					amount: 10,
+					interval: BillingInterval.Year,
+					billing_method: BillingMethod.Prepaid,
+					billing_units: 100,
+				},
+			},
+		],
+	});
+
+	const item = created.items[0];
+	expect(item.reset).toMatchObject({
+		interval: ResetInterval.Month,
+	});
+	expect(item.price).toMatchObject({
+		amount: 10,
+		interval: BillingInterval.Year,
+		billing_method: BillingMethod.Prepaid,
+		billing_units: 100,
+	});
+
+	const v1_2 = await autumnV1_2.products.get<ApiProduct>(productId);
+	expect(v1_2.items[0]).toMatchObject({
+		price: 10,
+		interval: ProductItemInterval.Month,
+		usage_model: UsageModel.Prepaid,
+		billing_units: 100,
+	});
+});

@@ -132,15 +132,22 @@ export const CreatePlanItemParamsV1Schema = z
 	.check((ctx) => {
 		const resetInterval = ctx.value.reset?.interval;
 		const priceInterval = ctx.value.price?.interval;
+		const resetIntervalCount = ctx.value.reset?.interval_count ?? 1;
+		const priceIntervalCount = ctx.value.price?.interval_count ?? 1;
+		const hasDifferentResetAndPriceInterval =
+			!!resetInterval &&
+			!!priceInterval &&
+			(String(resetInterval) !== String(priceInterval) ||
+				resetIntervalCount !== priceIntervalCount);
 
 		if (
-			resetInterval &&
-			priceInterval &&
-			String(resetInterval) !== String(priceInterval)
+			hasDifferentResetAndPriceInterval &&
+			ctx.value.price?.billing_method !== BillingMethod.Prepaid
 		) {
 			ctx.issues.push({
 				code: "custom",
-				message: "either pass in reset.interval, or price.interval, not both.",
+				message:
+					"reset.interval and price.interval can only differ for prepaid prices.",
 				input: ctx.value,
 			});
 		}

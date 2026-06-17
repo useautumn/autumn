@@ -203,8 +203,9 @@ export class CusEntService {
 				),
 			);
 
-		// Exclude price-backed cusEnts: their reset is owned by the Stripe
-		// invoice.created handler, not this cron. Must stay in sync with
+		// Exclude normal price-backed cusEnts: their reset is owned by the Stripe
+		// invoice.created handler, not this cron. Split prepaid reset intervals
+		// are included by dedicated branches below. Must stay in sync with
 		// `cusEntToCusPrice` (shared/utils/cusEntUtils/.../cusEntToCusPrice.ts)
 		// and the in-memory `getResettableCustomerEntitlements` filter.
 		// Only applies to branches with `customer_product_id` set (i.e. 2 + 3).
@@ -221,6 +222,9 @@ export class CusEntService {
 						),
 					),
 			);
+
+		const resetOwnedByAutumn = () =>
+			or(eq(customerEntitlements.separate_interval, true), notPriceBacked());
 
 		while (hasMore) {
 			// Branch 1: cusEnts with no customer_product. Left-join to
@@ -273,7 +277,7 @@ export class CusEntService {
 					and(
 						eq(customerProducts.status, CusProductStatus.Active),
 						commonResetPredicates(),
-						notPriceBacked(),
+						resetOwnedByAutumn(),
 					),
 				);
 
@@ -307,7 +311,7 @@ export class CusEntService {
 						eq(customerProducts.status, CusProductStatus.PastDue),
 						sql`(${products.config}->>'ignore_past_due')::boolean = true`,
 						commonResetPredicates(),
-						notPriceBacked(),
+						resetOwnedByAutumn(),
 					),
 				);
 

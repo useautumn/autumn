@@ -14,6 +14,10 @@ import {
 	isFeaturePriceItem,
 	isPriceItem,
 } from "./productV2Utils/productItemUtils/getItemType.js";
+import {
+	itemToBillingInterval,
+	itemToBillingIntervalCount,
+} from "./productV2Utils/productItemUtils/itemIntervalUtils.js";
 import { isAiCreditSystem } from "@utils/featureUtils/classifyFeature/isAiCreditSystem";
 import { notNullish, nullish } from "./utils.js";
 
@@ -37,12 +41,22 @@ interface FormatTiersParams {
 // Helpers
 // ============================================================================
 
-const getIntervalDisplay = (item: ProductItem): string | undefined => {
+const getResetIntervalDisplay = (item: ProductItem): string | undefined => {
 	if (!item.interval) return undefined;
 
 	return formatInterval({
 		interval: item.interval,
 		intervalCount: item.interval_count ?? undefined,
+	});
+};
+
+const getBillingIntervalDisplay = (item: ProductItem): string | undefined => {
+	const interval = itemToBillingInterval({ item });
+	if (!interval) return undefined;
+
+	return formatInterval({
+		interval,
+		intervalCount: itemToBillingIntervalCount({ item }),
 	});
 };
 
@@ -151,7 +165,7 @@ export const getFeatureItemDisplay = ({
 			}
 		}
 
-		const intervalDisplay = getIntervalDisplay(item);
+		const intervalDisplay = getResetIntervalDisplay(item);
 		if (intervalDisplay) {
 			parts.push(intervalDisplay);
 		} else if (
@@ -188,7 +202,7 @@ export const getPriceItemDisplay = ({
 		amount: item.price as number,
 	});
 
-	const secondaryText = getIntervalDisplay(item);
+	const secondaryText = getBillingIntervalDisplay(item);
 
 	return {
 		primary_text: primaryText,
@@ -274,7 +288,7 @@ export const getFeaturePriceItemDisplay = ({
 	const showInterval = isMainPrice || fullDisplay;
 	let intervalStr = "";
 	if (showInterval) {
-		const intervalDisplay = getIntervalDisplay(item);
+		const intervalDisplay = getBillingIntervalDisplay(item);
 		if (intervalDisplay) {
 			intervalStr = intervalDisplay;
 		} else if (isSingleUseFeature(feature)) {

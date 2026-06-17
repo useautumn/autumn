@@ -321,6 +321,10 @@ const prepaid = ({
 	config,
 	prorationConfig,
 	entityFeatureId,
+	interval,
+	intervalCount,
+	priceInterval,
+	priceIntervalCount,
 }: {
 	featureId: string;
 	price?: number;
@@ -332,6 +336,10 @@ const prepaid = ({
 		onDecrease?: ProductItemConfig["on_decrease"];
 	};
 	entityFeatureId?: string;
+	interval?: ProductItemInterval | null;
+	intervalCount?: number;
+	priceInterval?: ProductItemInterval | null;
+	priceIntervalCount?: number;
 }): LimitedItem => {
 	const mergedConfig =
 		config || prorationConfig
@@ -353,6 +361,10 @@ const prepaid = ({
 		includedUsage,
 		config: mergedConfig,
 		entityFeatureId,
+		interval,
+		intervalCount,
+		priceInterval,
+		priceIntervalCount,
 	}) as LimitedItem;
 };
 
@@ -368,6 +380,10 @@ const prepaidMessages = ({
 	config,
 	prorationConfig,
 	entityFeatureId,
+	interval,
+	intervalCount,
+	priceInterval,
+	priceIntervalCount,
 }: {
 	includedUsage?: number;
 	billingUnits?: number;
@@ -378,6 +394,10 @@ const prepaidMessages = ({
 		onDecrease?: ProductItemConfig["on_decrease"];
 	};
 	entityFeatureId?: string;
+	interval?: ProductItemInterval | null;
+	intervalCount?: number;
+	priceInterval?: ProductItemInterval | null;
+	priceIntervalCount?: number;
 } = {}): LimitedItem =>
 	prepaid({
 		featureId: TestFeature.Messages,
@@ -387,6 +407,10 @@ const prepaidMessages = ({
 		config,
 		prorationConfig,
 		entityFeatureId,
+		interval,
+		intervalCount,
+		priceInterval,
+		priceIntervalCount,
 	});
 
 /**
