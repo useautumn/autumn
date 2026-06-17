@@ -58,6 +58,66 @@ const entityRankSql = sql`(
 
 const customerProductsOrderBy = sql`ORDER BY ${entityRankSql} ASC, ${typeRankSql} ASC, cp.created_at DESC, cp.id ASC`;
 
+// Per-product JSON aggregates, joined laterally so each customer_products row
+// carries its fully-hydrated prices / entitlements / free trial.
+const customerPricesLateral = sql`
+	LEFT JOIN LATERAL (
+		SELECT COALESCE(
+			json_agg(
+				to_jsonb(cpr.*) || jsonb_build_object('price', to_jsonb(p.*))
+			) FILTER (WHERE cpr.id IS NOT NULL),
+			'[]'::json
+		) AS customer_prices
+		FROM customer_prices cpr
+		LEFT JOIN prices p ON cpr.price_id = p.id
+		WHERE cpr.customer_product_id = cp.id
+	) cpr_data ON true`;
+
+const customerEntitlementsLateral = sql`
+	LEFT JOIN LATERAL (
+		SELECT COALESCE(
+			json_agg(
+				to_jsonb(ce.*) || jsonb_build_object(
+					'entitlement', (
+						SELECT row_to_json(ent_with_feature)
+						FROM (
+							SELECT e.*, row_to_json(f) AS feature
+							FROM entitlements e
+							JOIN features f ON e.internal_feature_id = f.internal_id
+							WHERE e.id = ce.entitlement_id
+						) AS ent_with_feature
+					),
+					'replaceables', (
+						SELECT COALESCE(
+							json_agg(row_to_json(r)) FILTER (WHERE r.id IS NOT NULL),
+							'[]'::json
+						)
+						FROM replaceables r
+						WHERE r.cus_ent_id = ce.id
+					),
+					'rollovers', (
+						SELECT COALESCE(
+							json_agg(row_to_json(ro) ORDER BY ro.expires_at ASC NULLS LAST) FILTER (WHERE ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000 OR ro.expires_at IS NULL),
+							'[]'::json
+						)
+						FROM rollovers ro
+						WHERE ro.cus_ent_id = ce.id
+					)
+				)
+			) FILTER (WHERE ce.id IS NOT NULL),
+			'[]'::json
+		) AS customer_entitlements
+		FROM customer_entitlements ce
+		WHERE ce.customer_product_id = cp.id
+	) ce_data ON true`;
+
+const freeTrialLateral = sql`
+	LEFT JOIN LATERAL (
+		SELECT row_to_json(ft) AS free_trial
+		FROM free_trials ft
+		WHERE ft.id = cp.free_trial_id
+	) ft_data ON true`;
+
 const buildFilters = ({
 	inStatuses,
 	showExpired,
@@ -114,58 +174,9 @@ export const getCustomerProductsPageQuery = ({
 			ft_data.free_trial
 		FROM customer_products cp
 		JOIN products prod ON cp.internal_product_id = prod.internal_id
-		LEFT JOIN LATERAL (
-			SELECT COALESCE(
-				json_agg(
-					to_jsonb(cpr.*) || jsonb_build_object('price', to_jsonb(p.*))
-				) FILTER (WHERE cpr.id IS NOT NULL),
-				'[]'::json
-			) AS customer_prices
-			FROM customer_prices cpr
-			LEFT JOIN prices p ON cpr.price_id = p.id
-			WHERE cpr.customer_product_id = cp.id
-		) cpr_data ON true
-		LEFT JOIN LATERAL (
-			SELECT COALESCE(
-				json_agg(
-					to_jsonb(ce.*) || jsonb_build_object(
-						'entitlement', (
-							SELECT row_to_json(ent_with_feature)
-							FROM (
-								SELECT e.*, row_to_json(f) AS feature
-								FROM entitlements e
-								JOIN features f ON e.internal_feature_id = f.internal_id
-								WHERE e.id = ce.entitlement_id
-							) AS ent_with_feature
-						),
-						'replaceables', (
-							SELECT COALESCE(
-								json_agg(row_to_json(r)) FILTER (WHERE r.id IS NOT NULL),
-								'[]'::json
-							)
-							FROM replaceables r
-							WHERE r.cus_ent_id = ce.id
-						),
-						'rollovers', (
-							SELECT COALESCE(
-								json_agg(row_to_json(ro) ORDER BY ro.expires_at ASC NULLS LAST) FILTER (WHERE ro.expires_at > EXTRACT(EPOCH FROM now()) * 1000 OR ro.expires_at IS NULL),
-								'[]'::json
-							)
-							FROM rollovers ro
-							WHERE ro.cus_ent_id = ce.id
-						)
-					)
-				) FILTER (WHERE ce.id IS NOT NULL),
-				'[]'::json
-			) AS customer_entitlements
-			FROM customer_entitlements ce
-			WHERE ce.customer_product_id = cp.id
-		) ce_data ON true
-		LEFT JOIN LATERAL (
-			SELECT row_to_json(ft) AS free_trial
-			FROM free_trials ft
-			WHERE ft.id = cp.free_trial_id
-		) ft_data ON true
+		${customerPricesLateral}
+		${customerEntitlementsLateral}
+		${freeTrialLateral}
 		WHERE cp.internal_customer_id = ${internalCustomerId}
 		${filters}
 		${cursorPredicate}
