@@ -1,0 +1,98 @@
+---
+title: "Connecting"
+sidebarTitle: "Connecting"
+description: "Attach ClickHouse to your Autumn Lakehouse catalog."
+---
+
+<Warning>
+  **Available on request** — The Autumn Lakehouse is provisioned per customer. Contact us at [hey@useautumn.com](mailto:hey@useautumn.com) to get access.
+</Warning>
+
+When your Lakehouse is provisioned, Autumn privately sends you:
+
+- Your **catalog** and **namespace** names (the namespace is where your `v2_3_*` tables live).
+- A **scoped access key and secret** for the underlying object storage.
+- The **region**: `us-east-2`.
+
+Keep these credentials private. Then connect your engine below.
+
+<Tabs>
+<Tab title="ClickHouse">
+
+<Steps>
+<Step>
+#### Add a Data Lake Catalog
+
+In ClickHouse Cloud, go to **Data Sources → Add → Data Lake Catalog → AWS Glue**.
+
+<Frame>
+  <img src="/assets/lakehouse/ch-add-data-source.png" alt="ClickHouse Cloud Data Sources page with the Add button" />
+</Frame>
+</Step>
+
+<Step>
+#### Configure the catalog
+
+Set the **region** to `us-east-2`, then paste the **access key** and **secret** Autumn sent you.
+
+<Frame>
+  <img src="/assets/lakehouse/ch-add-catalog.png" alt="Selecting Data Lake Catalog then AWS Glue as the source type" />
+</Frame>
+</Step>
+
+<Step>
+#### Save and browse
+
+Save the connection. The catalog mounts as a database, and your tables appear as `` `<catalog>`.`<namespace>.v2_3_<object>` ``.
+
+<Frame>
+  <img src="/assets/lakehouse/ch-catalog-tree.png" alt="Mounted catalog tree showing the v2_3_* tables" />
+</Frame>
+
+<Note>
+  The whole `<namespace>.v2_3_<object>` is the **table name** — the dot is literal, not a database separator. You must backtick both parts when querying. See [Querying](/documentation/lakehouse/querying#identifier-syntax).
+</Note>
+</Step>
+</Steps>
+
+</Tab>
+{/*
+BigQuery delivery is not live yet — this tab is hidden until BQ delivery ships. Restore by removing this comment wrapper.
+TODO confirm BigQuery onboarding exact steps before re-enabling.
+<Tab title="BigQuery">
+
+<Steps>
+<Step>
+Access the dataset
+
+Autumn provisions your Iceberg tables as BigLake / external tables in a dataset you're granted access to (or via an external connection to the storage bucket). We'll share the project and dataset with you during onboarding.
+
+IMAGE bq-dataset.png: BigQuery dataset showing the external v2_3 tables — place at /assets/lakehouse/bq-dataset.png
+
+</Step>
+
+<Step>
+Verify access
+
+List the dataset to confirm the tables are visible. They appear as project.dataset.v2_3_object.
+</Step>
+</Steps>
+
+</Tab>
+*/}
+</Tabs>
+
+## Test the connection
+
+Run a quick count against any table to confirm everything is wired up:
+
+```sql
+SELECT count() FROM <your v2_3_customers table>;
+```
+
+<Frame>
+  <img src="/assets/lakehouse/test-connection.png" alt="Successful row-count result in the query console" />
+</Frame>
+
+Once that returns, head to the [Schema Reference](/documentation/lakehouse/schema) to see what's available, then [Querying](/documentation/lakehouse/querying) for examples.
+If you notice the number seems lower than expected, it's because it may take a few minutes to a few hours for your data warehouse to catch up.

@@ -1,0 +1,38 @@
+DESCRIPTION >
+    Export-optimized mirror of `events`, sorted (org_id, timestamp) so the per-customer ETL sink can
+    seek to one org and range-scan a time window from the index — the base table is sorted org_id-
+    first but timestamp-LAST, so a bounded time export there rescans the whole month partition
+    (≈1.3B rows) and exceeds the 30s sink limit. Here `org_id=X AND timestamp ∈ [a,b)` reads only
+    that org's slice, so even a whale (Firecrawl ≈800M rows/mo) exports in cheap hourly chunks.
+
+    Scoped to onboarded enterprise customers via the WHERE in events_by_org_ts_mv_pipe — keeps this
+    a small fraction of the 4B-row firehose instead of a full 2× copy. Onboarding a new customer:
+    add their org_id to that WHERE + the sink + the backfill, then populate history for that org.
+
+    BACKFILL skip: deploy attaches the forward materialization trigger only. History is filled
+    separately in bounded chunks via events_by_org_ts_backfill (a plain SELECT * populate over all
+    history would OOM). MergeTree does NOT dedup — keep populate windows half-open and ending at the
+    MV promote time so they never overlap the forward trigger.
+
+SCHEMA >
+    `id` String,
+    `org_id` String,
+    `org_slug` Nullable(String),
+    `internal_customer_id` Nullable(String),
+    `env` String,
+    `created_at` Nullable(Int64),
+    `timestamp` DateTime64(6),
+    `event_name` String,
+    `idempotency_key` Nullable(String),
+    `value` Nullable(Decimal(38, 19)),
+    `set_usage` Nullable(UInt8),
+    `entity_id` Nullable(String),
+    `internal_entity_id` Nullable(String),
+    `internal_product_id` Nullable(String),
+    `customer_id` String,
+    `properties` String,
+    `deductions` String
+
+ENGINE "MergeTree"
+ENGINE_PARTITION_KEY "toYYYYMM(timestamp)"
+ENGINE_SORTING_KEY "org_id, timestamp"

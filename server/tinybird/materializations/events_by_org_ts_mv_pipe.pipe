@@ -1,0 +1,31 @@
+DESCRIPTION >
+    Forward materialization of onboarded enterprise customers' events into events_by_org_ts (the
+    export-optimized (org_id, timestamp) mirror). Filtered to the onboarded org allowlist so the
+    mirror stays small. Keep this allowlist in sync with events_sink_s3.pipe and the backfill script.
+    SQL mirrors events_by_org_ts_backfill exactly so forward and backfilled rows are identical.
+
+NODE materialize
+SQL >
+    SELECT
+        id,
+        org_id,
+        org_slug,
+        internal_customer_id,
+        env,
+        created_at,
+        timestamp,
+        event_name,
+        idempotency_key,
+        value,
+        set_usage,
+        entity_id,
+        internal_entity_id,
+        internal_product_id,
+        customer_id,
+        properties::String AS properties,
+        deductions::String AS deductions
+    FROM events
+    WHERE org_id IN ('biu9vSF7vghBLSKW1UTDwxHBAivjnPaK', 'GG6tnmO7cHb40PNhwYBTZtxQdeL74NHF')
+
+TYPE materialized
+DATASOURCE events_by_org_ts
