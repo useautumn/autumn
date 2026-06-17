@@ -51,7 +51,7 @@ jobs:
 
       - name: Install dependencies
         if: needs.changes.outputs.schema == 'true'
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Validate schema
         if: needs.changes.outputs.schema == 'true'
