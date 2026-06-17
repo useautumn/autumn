@@ -1,5 +1,6 @@
 import {
 	computeGrantedBalanceInput,
+	customerEntitlementToBillingCycleEnd,
 	type Entity,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
@@ -69,6 +70,10 @@ export function BalanceEditSheet() {
 
 	const isUnlimited = isUnlimitedCusEnt(selectedCusEnt);
 	const feature = selectedCusEnt.entitlement.feature;
+	const billingCycleEnd = customerEntitlementToBillingCycleEnd({
+		customerEntitlement: selectedCusEnt,
+		now: Date.now(),
+	});
 
 	const cusProduct = customer?.customer_products.find(
 		(cp: FullCusProduct) => cp.id === selectedCusEnt.customer_product_id,
@@ -106,6 +111,7 @@ export function BalanceEditSheet() {
 					entity={derivedEntity}
 					selectedCusEnt={selectedCusEnt}
 					cusProduct={cusProduct}
+					billingCycleEnd={billingCycleEnd}
 				/>
 			) : (
 				<BalanceEditForm
@@ -115,6 +121,7 @@ export function BalanceEditSheet() {
 					cusProduct={cusProduct}
 					cusPrice={cusPrice}
 					featureId={featureId}
+					billingCycleEnd={billingCycleEnd}
 				/>
 			)}
 		</div>
@@ -127,10 +134,12 @@ function UnlimitedBalanceInfo({
 	entity,
 	selectedCusEnt,
 	cusProduct,
+	billingCycleEnd,
 }: {
 	entity: Entity | undefined;
 	selectedCusEnt: FullCustomerEntitlement;
 	cusProduct: FullCusProduct | undefined;
+	billingCycleEnd: number | null;
 }) {
 	return (
 		<div className="flex-1 overflow-y-auto">
@@ -140,6 +149,7 @@ function UnlimitedBalanceInfo({
 					selectedCusEnt={selectedCusEnt}
 					cusProduct={cusProduct}
 					isUnlimited
+					billingCycleEnd={billingCycleEnd}
 				/>
 			</SheetSection>
 			<RolloversSection selectedCusEnt={selectedCusEnt} />
@@ -156,6 +166,7 @@ function BalanceEditForm({
 	cusProduct,
 	cusPrice,
 	featureId,
+	billingCycleEnd,
 }: {
 	selectedCusEnt: FullCustomerEntitlement;
 	entity: Entity | undefined;
@@ -163,6 +174,7 @@ function BalanceEditForm({
 	cusProduct: FullCusProduct | undefined;
 	cusPrice: FullCustomerPrice | undefined;
 	featureId: string;
+	billingCycleEnd: number | null;
 }) {
 	const { customer } = useCusQuery();
 	const form = useBalanceEditForm({
@@ -178,6 +190,7 @@ function BalanceEditForm({
 					selectedCusEnt={selectedCusEnt}
 					cusProduct={cusProduct}
 					isUnlimited={false}
+					billingCycleEnd={billingCycleEnd}
 				/>
 			</SheetSection>
 
@@ -265,11 +278,13 @@ function EntitlementInfoRows({
 	selectedCusEnt,
 	cusProduct,
 	isUnlimited,
+	billingCycleEnd,
 }: {
 	entity: Entity | undefined;
 	selectedCusEnt: FullCustomerEntitlement;
 	cusProduct: FullCusProduct | undefined;
 	isUnlimited: boolean;
+	billingCycleEnd: number | null;
 }) {
 	return (
 		<div className="flex flex-col gap-2 rounded-lg">
@@ -306,6 +321,14 @@ function EntitlementInfoRows({
 							Unlimited
 						</span>
 					}
+				/>
+			)}
+			{billingCycleEnd && (
+				<InfoRow
+					label="Bills"
+					value={`${
+						formatUnixToDateTime(billingCycleEnd, { withYear: true }).date
+					}, ${formatUnixToDateTime(billingCycleEnd).time}`}
 				/>
 			)}
 			{selectedCusEnt.expires_at && (

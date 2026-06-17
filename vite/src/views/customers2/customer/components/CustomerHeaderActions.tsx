@@ -9,13 +9,17 @@ import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
-import { getStripeCusLink } from "@/utils/linkUtils";
+import { getStripeConnectViewAsLink, getStripeCusLink } from "@/utils/linkUtils";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
+import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { ShowCustomerObjectSheet } from "./ShowCustomerObjectSheet";
 
 export function CustomerHeaderActions() {
 	const { customer } = useCusQuery();
 	const { stripeAccount } = useOrgStripeQuery();
+	const { isAdmin } = useAdmin();
+	const { masterStripeAccount } = useMasterStripeAccount();
 	const env = useEnv();
 	const axiosInstance = useAxiosInstance();
 
@@ -29,12 +33,22 @@ export function CustomerHeaderActions() {
 
 	const handleOpenStripe = () => {
 		if (!stripeCustomerId) return;
+		const connectViewAsLink =
+			isAdmin && masterStripeAccount?.id && stripeAccount?.id
+				? getStripeConnectViewAsLink({
+						masterAccountId: masterStripeAccount.id,
+						connectedAccountId: stripeAccount.id,
+						env,
+						path: `customers/${stripeCustomerId}`,
+					})
+				: null;
 		window.open(
-			getStripeCusLink({
-				customerId: stripeCustomerId,
-				env,
-				accountId: stripeAccount?.id,
-			}),
+			connectViewAsLink ??
+				getStripeCusLink({
+					customerId: stripeCustomerId,
+					env,
+					accountId: stripeAccount?.id,
+				}),
 			"_blank",
 		);
 	};
