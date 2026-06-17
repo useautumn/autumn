@@ -35,7 +35,8 @@
 				"tests/**/*.ts"
 			],
 			"project": ["src/**/*.ts", "tests/**/*.ts"],
-			"ignoreDependencies": ["@react-email/components", "@axiomhq/pino"]
+			"ignoreDependencies": ["@react-email/components", "@axiomhq/pino"],
+			"ignore": ["src/external/tinybird/connections/eventsS3.ts"]
 		},
 		"shared": {
 			"project": ["**/*.ts", "!utils/**"],
