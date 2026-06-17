@@ -8,7 +8,7 @@ import {
 	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
-import { getOrgPaginationMaxLimit } from "../../misc/edgeConfig/orgLimitsStore.js";
+import { assertWithinOrgPaginationLimit } from "../../misc/edgeConfig/orgLimitsStore.js";
 import { CusService } from "../CusService.js";
 
 export const handleListCustomerProducts = createRoute({
@@ -28,18 +28,11 @@ export const handleListCustomerProducts = createRoute({
 			});
 		}
 
-		const maxLimit = getOrgPaginationMaxLimit({
-			orgId: ctx.org.id,
-			orgSlug: ctx.org.slug,
+		assertWithinOrgPaginationLimit({
+			org: ctx.org,
+			limit: params.limit,
 			type: PaginationType.ListCustomerProducts,
 		});
-		if (params.limit > maxLimit) {
-			throw new RecaseError({
-				message: `limit ${params.limit} exceeds max of ${maxLimit} for this org`,
-				code: ErrCode.InvalidRequest,
-				statusCode: 400,
-			});
-		}
 
 		const page = await CusService.getProductsPage({
 			ctx,
