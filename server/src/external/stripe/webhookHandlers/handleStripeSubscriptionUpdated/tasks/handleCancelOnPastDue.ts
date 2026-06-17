@@ -1,3 +1,4 @@
+import { isCustomerProductOnStripeSubscription } from "@autumn/shared";
 import { createStripeCli } from "@/external/connect/createStripeCli";
 import { isStripeSubscriptionPastDueTransition } from "@/external/stripe/subscriptions/utils/classifyStripeSubscriptionUtils";
 import { stripeSubscriptionToLatestInvoice } from "@/external/stripe/subscriptions/utils/convertStripeSubscription";
@@ -16,7 +17,8 @@ export const handleCancelOnPastDue = async ({
 	subscriptionUpdatedContext: StripeSubscriptionUpdatedContext;
 }): Promise<void> => {
 	const { org, env, logger } = ctx;
-	const { stripeSubscription, previousAttributes } = subscriptionUpdatedContext;
+	const { stripeSubscription, previousAttributes, customerProducts } =
+		subscriptionUpdatedContext;
 
 	// Only proceed if org has cancel_on_past_due enabled
 	if (!org.config.cancel_on_past_due) return;
@@ -29,6 +31,21 @@ export const handleCancelOnPastDue = async ({
 		})
 	)
 		return;
+
+	// ignore_past_due preserves the subscription, so it wins over cancellation.
+	const ignorePastDue = customerProducts.some(
+		(customerProduct) =>
+			isCustomerProductOnStripeSubscription({
+				customerProduct,
+				stripeSubscriptionId: stripeSubscription.id,
+			}) && customerProduct.product.config?.ignore_past_due,
+	);
+	if (ignorePastDue) {
+		logger.info(
+			`subscription.updated (past_due): skipping cancel for ${stripeSubscription.id}, ignore_past_due is set`,
+		);
+		return;
+	}
 
 	const stripeCli = createStripeCli({ org, env });
 

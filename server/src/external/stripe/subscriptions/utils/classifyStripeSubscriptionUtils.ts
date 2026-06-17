@@ -129,6 +129,8 @@ export const isStripeSubscriptionPastDueTransition = ({
 	stripeSubscription?: Stripe.Subscription;
 	previousAttributes?: { status?: Stripe.Subscription.Status };
 }) => {
-	const wasPastDue = previousAttributes?.status === "past_due";
-	return !wasPastDue && isStripeSubscriptionPastDue(stripeSubscription);
+	// previousAttributes only contains fields that changed; status present means
+	// it changed in this event, so reaching past_due is a real transition.
+	const statusChanged = !!previousAttributes && "status" in previousAttributes;
+	return statusChanged && isStripeSubscriptionPastDue(stripeSubscription);
 };
