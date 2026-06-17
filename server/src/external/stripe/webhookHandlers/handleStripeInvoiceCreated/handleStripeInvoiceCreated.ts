@@ -5,6 +5,7 @@ import {
 	upsertAutumnInvoice,
 } from "@/external/stripe/webhookHandlers/common";
 import { processAllocatedPricesForInvoiceCreated } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/processAllocatedPricesForInvoiceCreated";
+import { processFreeEntitlementsForInvoiceCreated } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/processFreeEntitlementsForInvoiceCreated";
 import { processPrepaidPricesForInvoiceCreated } from "@/external/stripe/webhookHandlers/handleStripeInvoiceCreated/tasks/processPrepaidPricesForInvoiceCreated";
 import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhookContext";
 import { setupInvoiceCreatedContext } from "./setupInvoiceCreatedContext";
@@ -35,6 +36,7 @@ export const handleStripeInvoiceCreated = async ({
 	});
 	await processPrepaidPricesForInvoiceCreated({ ctx, eventContext });
 	await processAllocatedPricesForInvoiceCreated({ ctx, eventContext });
+	await processFreeEntitlementsForInvoiceCreated({ ctx, eventContext });
 
 	const shouldStoreScheduleProrationInvoice =
 		eventContext.stripeInvoice.billing_reason === "subscription_update" &&

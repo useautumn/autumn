@@ -13,6 +13,7 @@ import {
 } from "@/internal/balances/utils/sql/client.js";
 import type { ProcessResetResult } from "../resetCustomerEntitlements/processReset.js";
 import { processReset } from "../resetCustomerEntitlements/processReset.js";
+import { getWebhookOwnedIntervals } from "../resetCustomerEntitlements/getWebhookOwnedIntervals.js";
 import {
 	applyResetResultsToFullSubject,
 	applyResetResultsToNormalized,
@@ -67,9 +68,14 @@ export const lazyResetSubjectEntitlements = async ({
 		inStatuses: [CusProductStatus.Active, CusProductStatus.PastDue],
 	});
 
+	const webhookOwnedIntervals = getWebhookOwnedIntervals({
+		customerProducts: fullSubject.customer_products,
+	});
+
 	const customerEntitlementsNeedingReset = getResettableCustomerEntitlements({
 		customerEntitlements: allCustomerEntitlements,
 		now,
+		webhookOwnedIntervals,
 	});
 
 	if (customerEntitlementsNeedingReset.length === 0) return false;
