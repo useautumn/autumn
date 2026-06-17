@@ -13,7 +13,7 @@
 set -uo pipefail
 
 # Onboarded enterprise customers. Keep in sync with events_sink_s3.pipe + events_by_org_ts_mv_pipe.pipe.
-DEFAULT_ORGS="biu9vSF7vghBLSKW1UTDwxHBAivjnPaK GG6tnmO7cHb40PNhwYBTZtxQdeL74NHF"  # Firecrawl, Mintlify
+DEFAULT_ORGS="biu9vSF7vghBLSKW1UTDwxHBAivjnPaK GG6tnmO7cHb40PNhwYBTZtxQdeL74NHF"
 read -r -a ORGS <<< "${ORGS:-$DEFAULT_ORGS}"
 
 FLOOR_DATE=${FLOOR_DATE:-2024-04-01}      # oldest month to export (ignores the 197001 epoch bucket)
