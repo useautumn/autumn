@@ -17,6 +17,7 @@ import {
 	BoxArrowDownIcon,
 	BracketsSquareIcon,
 	CaretRightIcon,
+	ClockCountdownIcon,
 	MoneyWavyIcon,
 	PulseIcon,
 	WalletIcon,
@@ -43,7 +44,6 @@ import { useFeatureUsageBalance } from "@/views/customers2/hooks/useFeatureUsage
 import { CustomerFeatureUsageBar } from "../customer-feature-usage/CustomerFeatureUsageBar";
 import { FeatureBalanceDisplay } from "../customer-feature-usage/FeatureBalanceDisplay";
 import type { CustomerBalanceRowData } from "./CustomerBalanceTable";
-import { getEarliestCustomerBalanceBillingCycleEnd } from "./customerBalanceBillingCycle";
 import {
 	canDeleteCustomerBalance,
 	canRecalculateCustomerBalances,
@@ -240,18 +240,33 @@ const formatChipDate = (timestamp: number | null | undefined) => {
 	return `${date} ${time}`;
 };
 
+function BalanceExpiryIcon({
+	expiresAt,
+}: {
+	expiresAt: number | null | undefined;
+}) {
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<div className="shrink-0 text-amber-500">
+					<ClockCountdownIcon size={14} weight="duotone" />
+				</div>
+			</TooltipTrigger>
+			<TooltipContent>Expires {formatChipDate(expiresAt)}</TooltipContent>
+		</Tooltip>
+	);
+}
+
 function BarCellContent({
 	ent,
 	allowance,
 	balance,
 	quantity,
-	billingCycleEnd,
 }: {
 	ent: FullCusEntWithFullCusProduct;
 	allowance: number;
 	balance: number;
 	quantity: number;
-	billingCycleEnd: number | null;
 }) {
 	const hasReset = ent.next_reset_at != null;
 	const hasExpiry = ent.expires_at != null;
@@ -259,27 +274,17 @@ function BarCellContent({
 	return (
 		<div className="flex gap-3 items-center">
 			<div className="flex items-center gap-1.5 shrink-0">
-				{billingCycleEnd ? (
-					<span className="text-tiny flex justify-center !px-1 rounded-md min-w-36 whitespace-nowrap bg-sky-500/10 text-sky-700 dark:text-sky-300">
-						Bills {formatChipDate(billingCycleEnd)}
-					</span>
-				) : (
-					<span className="text-tiny flex justify-center !px-1 rounded-md min-w-36 whitespace-nowrap opacity-0" />
-				)}
-				{hasExpiry ? (
-					<span className="text-tiny flex justify-center !px-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-md min-w-36 whitespace-nowrap">
-						Expires {formatChipDate(ent.expires_at)}
-					</span>
-				) : (
-					<span
-						className={cn(
-							"text-tertiary-foreground text-tiny flex justify-center !px-1 bg-muted rounded-md min-w-36 whitespace-nowrap",
-							hasReset ? "opacity-100" : "opacity-0",
-						)}
-					>
-						Resets {formatChipDate(ent.next_reset_at)}
-					</span>
-				)}
+				<div className="w-3.5 shrink-0 flex justify-center">
+					{hasExpiry && <BalanceExpiryIcon expiresAt={ent.expires_at} />}
+				</div>
+				<span
+					className={cn(
+						"text-tertiary-foreground text-tiny flex justify-center !px-1 bg-muted rounded-md min-w-36 whitespace-nowrap",
+						hasReset ? "opacity-100" : "opacity-0",
+					)}
+				>
+					Resets {formatChipDate(ent.next_reset_at)}
+				</span>
 			</div>
 			<div
 				className={cn(
@@ -315,11 +320,6 @@ function ParentBarCell({
 		entityId,
 		customerEntitlements,
 	});
-	const balances = customerEntitlements ?? [ent];
-	const billingCycleEnd = getEarliestCustomerBalanceBillingCycleEnd({
-		balances,
-		now: Date.now(),
-	});
 
 	return (
 		<BarCellContent
@@ -327,7 +327,6 @@ function ParentBarCell({
 			allowance={allowance}
 			balance={balance}
 			quantity={quantity}
-			billingCycleEnd={billingCycleEnd}
 		/>
 	);
 }
@@ -343,10 +342,6 @@ function SubRowBarCell({
 		ent,
 		entityId,
 	});
-	const billingCycleEnd = getEarliestCustomerBalanceBillingCycleEnd({
-		balances: [ent],
-		now: Date.now(),
-	});
 
 	return (
 		<BarCellContent
@@ -354,7 +349,6 @@ function SubRowBarCell({
 			allowance={allowance}
 			balance={balance}
 			quantity={quantity}
-			billingCycleEnd={billingCycleEnd}
 		/>
 	);
 }
