@@ -120,3 +120,15 @@ export const isStripeSubscriptionPastDue = (
 
 	return stripeSubscription.status === "past_due";
 };
+
+/** True only on the event where the subscription just entered past_due. */
+export const isStripeSubscriptionPastDueTransition = ({
+	stripeSubscription,
+	previousAttributes,
+}: {
+	stripeSubscription?: Stripe.Subscription;
+	previousAttributes?: { status?: Stripe.Subscription.Status };
+}) => {
+	const wasPastDue = previousAttributes?.status === "past_due";
+	return !wasPastDue && isStripeSubscriptionPastDue(stripeSubscription);
+};
