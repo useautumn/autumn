@@ -1,9 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import {
+	BillingInterval,
+	BillWhen,
 	CusProductStatus,
+	EntInterval,
 	type FullCustomer,
 	type FullCustomerPrice,
 	type FullProduct,
+	PriceType,
 } from "@autumn/shared";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
@@ -24,11 +28,13 @@ const buildFullCustomer = ({
 	ignorePastDue,
 	nextResetAt,
 	withMatchingPrice = false,
+	withSeparateIntervalPrice = false,
 }: {
 	productStatus: CusProductStatus;
 	ignorePastDue: boolean;
 	nextResetAt: number | null;
 	withMatchingPrice?: boolean;
+	withSeparateIntervalPrice?: boolean;
 }): FullCustomer => {
 	const cusEnt = customerEntitlements.create({
 		featureId: FEATURE_ID,
@@ -37,6 +43,7 @@ const buildFullCustomer = ({
 		balance: 50,
 		nextResetAt,
 		customerProductId: CUS_PROD_ID,
+		interval: withSeparateIntervalPrice ? EntInterval.Month : null,
 	});
 
 	const customerPrices: FullCustomerPrice[] = withMatchingPrice
@@ -47,18 +54,27 @@ const buildFullCustomer = ({
 					customer_product_id: CUS_PROD_ID,
 					created_at: Date.now(),
 					price_id: "price_test",
-					// The price's entitlement_id must match the cusEnt.entitlement.id
-					// for cusEntToCusPrice() to resolve a truthy match.
 					price: {
 						entitlement_id: cusEnt.entitlement.id,
+						config: {
+							type: PriceType.Usage,
+							bill_when: withSeparateIntervalPrice
+								? BillWhen.InAdvance
+								: BillWhen.EndOfPeriod,
+							billing_units: null,
+							internal_feature_id: cusEnt.internal_feature_id,
+							feature_id: cusEnt.feature_id,
+							usage_tiers: [{ to: -1, amount: 1 }],
+							interval: withSeparateIntervalPrice
+								? BillingInterval.Year
+								: BillingInterval.Month,
+							interval_count: 1,
+						},
 					} as FullCustomerPrice["price"],
 				},
 			]
 		: [];
 
-	// Build a FullProduct with the plan-level ignore_past_due flag. The
-	// shared fixture `products.createFull` defaults config.ignore_past_due
-	// to false, so we spread + override to flip it on.
 	const baseProduct = products.createFull({ id: PRODUCT_ID });
 	const product: FullProduct = {
 		...baseProduct,
@@ -75,7 +91,17 @@ const buildFullCustomer = ({
 	});
 
 	return customers.create({
-		customerProducts: [cusProduct],
+		customerProducts: [
+			{
+				...cusProduct,
+				customer_entitlements: cusProduct.customer_entitlements.map(
+					(customerEntitlement) => ({
+						...customerEntitlement,
+						separate_interval: withSeparateIntervalPrice,
+					}),
+				),
+			},
+		],
 	});
 };
 
@@ -157,5 +183,20 @@ describe(chalk.yellowBright("getCusEntsNeedingReset"), () => {
 		const result = getCusEntsNeedingReset({ fullCus, now: NOW });
 
 		expect(result).toHaveLength(0);
+	});
+
+	test("returns separate-interval prepaid cusEnt when a matching cusPrice exists", () => {
+		const fullCus = buildFullCustomer({
+			productStatus: CusProductStatus.Active,
+			ignorePastDue: false,
+			nextResetAt: PAST,
+			withMatchingPrice: true,
+			withSeparateIntervalPrice: true,
+		});
+
+		const result = getCusEntsNeedingReset({ fullCus, now: NOW });
+
+		expect(result).toHaveLength(1);
+		expect(result[0].separate_interval).toBe(true);
 	});
 });

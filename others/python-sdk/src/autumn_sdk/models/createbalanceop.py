@@ -161,6 +161,8 @@ class CreateBalanceParamsTypedDict(TypedDict):
     r"""Rollover configuration for the balance."""
     expires_at: NotRequired[float]
     r"""Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset."""
+    next_reset_at: NotRequired[float]
+    r"""Unix timestamp (milliseconds) for the first reset boundary, allowing a custom (e.g. shorter) first period. Requires 'reset', and must occur before 'expires_at' if both are provided. Subsequent resets advance by one reset interval from this boundary."""
     balance_id: NotRequired[str]
     r"""A unique identifier for this balance. Use this to target the balance in future update / delete calls."""
 
@@ -190,6 +192,9 @@ class CreateBalanceParams(BaseModel):
     expires_at: Optional[float] = None
     r"""Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset."""
 
+    next_reset_at: Optional[float] = None
+    r"""Unix timestamp (milliseconds) for the first reset boundary, allowing a custom (e.g. shorter) first period. Requires 'reset', and must occur before 'expires_at' if both are provided. Subsequent resets advance by one reset interval from this boundary."""
+
     balance_id: Optional[str] = None
     r"""A unique identifier for this balance. Use this to target the balance in future update / delete calls."""
 
@@ -203,6 +208,7 @@ class CreateBalanceParams(BaseModel):
                 "reset",
                 "rollover",
                 "expires_at",
+                "next_reset_at",
                 "balance_id",
             ]
         )

@@ -4,6 +4,10 @@ import {
 	type ProductItem,
 	UsageModel,
 } from "../../../models/productV2Models/productItemModels/productItemModels.js";
+import {
+	itemToBillingInterval,
+	itemToBillingIntervalCount,
+} from "../productItemUtils/itemIntervalUtils.js";
 import type { ItemEdit } from "./itemEditTypes.js";
 
 /** Keys that are internal/metadata and should not trigger change detection */
@@ -255,8 +259,10 @@ export function generateItemChanges({
 			if (original && updated) {
 				const hasChanged =
 					original.price !== updated.price ||
-					original.interval !== updated.interval ||
-					original.interval_count !== updated.interval_count;
+					itemToBillingInterval({ item: original }) !==
+						itemToBillingInterval({ item: updated }) ||
+					itemToBillingIntervalCount({ item: original }) !==
+						itemToBillingIntervalCount({ item: updated });
 
 				if (hasChanged) {
 					const label =
@@ -392,9 +398,14 @@ function formatChangedItemValue({
 		parts.push(formatPriceWithUnits(item.price, billingUnits));
 	}
 
-	const intervalChanged = originalItem.interval !== updatedItem.interval;
-	if (intervalChanged && item.interval) {
-		parts.push(`${item.interval}`);
+	const intervalChanged =
+		itemToBillingInterval({ item: originalItem }) !==
+			itemToBillingInterval({ item: updatedItem }) ||
+		itemToBillingIntervalCount({ item: originalItem }) !==
+			itemToBillingIntervalCount({ item: updatedItem });
+	const billingInterval = itemToBillingInterval({ item });
+	if (intervalChanged && billingInterval) {
+		parts.push(`${billingInterval}`);
 	}
 
 	if (parts.length === 0) return "Enabled";

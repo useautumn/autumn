@@ -7,6 +7,8 @@ export const FeaturePriceItemSchema = ProductItemSchema.pick({
 	included_usage: true,
 	interval: true,
 	interval_count: true,
+	price_interval: true,
+	price_interval_count: true,
 	usage_model: true,
 
 	price: true,

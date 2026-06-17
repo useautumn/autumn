@@ -5,6 +5,7 @@ import type { StripeWebhookContext } from "../../webhookMiddlewares/stripeWebhoo
 import { emitBillingChangeWebhook, logCustomerProductUpdates } from "../common";
 import { setupStripeSubscriptionUpdatedContext } from "./setupStripeSubscriptionUpdatedContext.js";
 import { handleCancelOnPastDue } from "./tasks/handleCancelOnPastDue.js";
+import { handleIgnorePastDue } from "./tasks/handleIgnorePastDue.js";
 import { handleSchedulePhaseChanges } from "./tasks/handleSchedulePhaseChanges/handleSchedulePhaseChanges.js";
 import { handleStripeSubscriptionRenewed } from "./tasks/handleStripeSubscriptionRenewed/handleStripeSubscriptionRenewed.js";
 import { handleStripeSubscriptionTrialEnded } from "./tasks/handleStripeSubscriptionTrialEnded/handleStripeSubscriptionTrialEnded.js";
@@ -61,6 +62,12 @@ export const handleStripeSubscriptionUpdated = async ({
 
 	// 5. Handle cancel_on_past_due org setting
 	await handleCancelOnPastDue({
+		ctx,
+		subscriptionUpdatedContext,
+	});
+
+	// 5b. Keep ignore_past_due plans alive instead of letting Stripe cancel them
+	await handleIgnorePastDue({
 		ctx,
 		subscriptionUpdatedContext,
 	});

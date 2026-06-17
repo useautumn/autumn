@@ -1,6 +1,6 @@
 import {
 	cusEntToOptions,
-	type EntInterval,
+	cusEntToCusPrice,
 	type EntityBalance,
 	type FullCusEntWithFullCusProduct,
 	type FullCusEntWithProduct,
@@ -57,6 +57,7 @@ export const processReset = async ({
 	const resetBalance = getStartingBalance({
 		entitlement: cusEnt.entitlement,
 		options,
+		relatedPrice: cusEntToCusPrice({ cusEnt })?.price,
 		productQuantity: cusProduct?.quantity ?? 1,
 	});
 
@@ -68,11 +69,17 @@ export const processReset = async ({
 	}
 
 	const { org, env } = ctx;
+	if (!ent.interval) {
+		logger.error(
+			`[customerEntitlement processReset] interval is null, cusEntId: ${cusEnt.id}`,
+		);
+		return null;
+	}
 
 	// Compute next reset time (with Stripe anchor adjustment on edge dates)
 	const nextResetAt = await getResetAtUpdate({
 		curResetAt: cusEnt.next_reset_at,
-		interval: ent.interval as EntInterval,
+		interval: ent.interval,
 		intervalCount: ent.interval_count,
 		cusProduct,
 		org,

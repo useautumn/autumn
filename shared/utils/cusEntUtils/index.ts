@@ -37,6 +37,7 @@ export * from "./convertCusEntUtils/cusEntToBillingObjects";
 export * from "./convertCusEntUtils/cusEntToCusPrice";
 export * from "./convertCusEntUtils/cusEntToKey";
 export * from "./convertCusEntUtils/cusEntToStripeIds";
+export * from "./convertCusEntUtils/customerEntitlementToBillingCycleEnd";
 export * from "./convertCusEntUtils/customerEntitlementToPlanItemV1";
 // Convert utils barrel
 export * from "./convertCusEntUtils/customerEntitlementToOptions";

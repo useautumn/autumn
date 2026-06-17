@@ -41,6 +41,7 @@ export interface InitFullCustomerProductContext {
 	entity?: Entity;
 
 	// For customer entitlements
+	billingCycleAnchor?: number | "now";
 	resetCycleAnchor: number | "now"; // Unix timestamp of the next
 	// existingUsages?: ExistingUsages;
 	// existingRollovers?: ExistingRollover[];

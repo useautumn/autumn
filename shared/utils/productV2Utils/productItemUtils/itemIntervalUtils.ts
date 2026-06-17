@@ -40,11 +40,20 @@ export const itemToBillingOrEntInterval = ({ item }: { item: ProductItem }) => {
 };
 
 export const itemToBillingInterval = ({ item }: { item: ProductItem }) => {
-	if (nullish(item.interval)) {
+	const interval = item.price_interval ?? item.interval;
+	if (nullish(interval)) {
 		return BillingInterval.OneOff as unknown as BillingInterval;
 	}
 
-	return item.interval as unknown as BillingInterval;
+	return interval as unknown as BillingInterval;
+};
+
+export const itemToBillingIntervalCount = ({
+	item,
+}: {
+	item: ProductItem;
+}) => {
+	return item.price_interval_count ?? item.interval_count ?? 1;
 };
 
 export const itemToEntInterval = ({ item }: { item: ProductItem }) => {
@@ -57,4 +66,8 @@ export const itemToEntInterval = ({ item }: { item: ProductItem }) => {
 	}
 
 	return item.interval as unknown as EntInterval;
+};
+
+export const itemToEntIntervalCount = ({ item }: { item: ProductItem }) => {
+	return item.interval_count ?? 1;
 };
