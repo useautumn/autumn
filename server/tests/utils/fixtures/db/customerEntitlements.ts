@@ -61,6 +61,8 @@ const create = ({
 		balance,
 		additional_balance: 0,
 		usage_allowed: usageAllowed,
+		separate_interval: false,
+		reset_cycle_anchor: null,
 		next_reset_at: nextResetAt,
 		adjustment: 0,
 		entities,

@@ -200,6 +200,7 @@ export const handleUpdateProductDetails = async ({
 				throw new RecaseError({
 					message:
 						"Cannot make a product default if it has fixed prices or paid features",
+					statusCode: 400,
 				});
 			}
 		} else {
@@ -207,6 +208,7 @@ export const handleUpdateProductDetails = async ({
 				throw new RecaseError({
 					message:
 						"Cannot make a product default if it has fixed prices or paid features",
+					statusCode: 400,
 				});
 			}
 		}
@@ -218,6 +220,7 @@ export const handleUpdateProductDetails = async ({
 		if (customersOnAllVersions.length > 0) {
 			throw new RecaseError({
 				message: "Cannot change product ID because it has existing customers",
+				statusCode: 409,
 			});
 		}
 
@@ -225,6 +228,7 @@ export const handleUpdateProductDetails = async ({
 			throw new RecaseError({
 				message:
 					"Cannot change product ID because existing reward programs are linked to it",
+				statusCode: 409,
 			});
 		}
 	}

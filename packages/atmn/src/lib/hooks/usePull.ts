@@ -128,6 +128,7 @@ export function usePull(options?: {
 	]);
 
 	const error = orgQuery.error || pullMutation.error;
+	const errorMessage = error ? formatError(error) : null;
 
 	return {
 		orgInfo: orgQuery.data,
@@ -137,7 +138,7 @@ export function usePull(options?: {
 		isOrgLoading: orgQuery.isLoading,
 		isPullLoading: pullMutation.isPending,
 		isSuccess: pullMutation.isSuccess,
-		error: error ? formatError(error) : null,
+		error: errorMessage,
 		inPlace: pullMutation.data?.inPlace,
 		updateResult: pullMutation.data?.updateResult,
 	};

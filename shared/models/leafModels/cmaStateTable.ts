@@ -1,4 +1,4 @@
-import { numeric, primaryKey, text } from "drizzle-orm/pg-core";
+import { jsonb, numeric, primaryKey, text } from "drizzle-orm/pg-core";
 import { sqlNow } from "../../db/utils.js";
 import { leafSchema } from "./leafSchema.js";
 
@@ -33,6 +33,26 @@ export const cmaVaults = leafSchema.table(
 		updated_at: numeric({ mode: "number" }).notNull().default(sqlNow),
 	},
 	(table) => [primaryKey({ columns: [table.org_id, table.env] })],
+);
+
+// AI SDK harness runtime state, scoped per thread. Holds the HarnessAgent
+// session id + opaque resume payload so follow-up turns reattach the same
+// session across processes; the sandbox provider derives the sandbox from it.
+export const harnessSessions = leafSchema.table(
+	"harness_sessions",
+	{
+		org_id: text("org_id").notNull(),
+		env: text("env").notNull(),
+		thread_key: text("thread_key").notNull(),
+		session_id: text("session_id").notNull(),
+		// HarnessAgentResumeSessionState from session.stop()/detach(), replayed on resume.
+		resume_state: jsonb("resume_state"),
+		braintrust_parent: text("braintrust_parent"),
+		updated_at: numeric({ mode: "number" }).notNull().default(sqlNow),
+	},
+	(table) => [
+		primaryKey({ columns: [table.org_id, table.env, table.thread_key] }),
+	],
 );
 
 // Per-(org, env) CMA memory store id → cross-thread memory. Content lives in CMA.

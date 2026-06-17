@@ -164,3 +164,6 @@ apps/leaf/.harness/
 
 # Built sandbox runner bundle (produced by sandbox/buildRunner.ts).
 apps/leaf/src/harness/claudeCode/runner/runner.mjs
+
+
+tmp/

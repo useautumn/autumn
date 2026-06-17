@@ -7,6 +7,32 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { finalizeLineItems } from "@/internal/billing/v2/compute/finalize/finalizeLineItems";
 import { computeRefundPlan } from "@/internal/billing/v2/compute/finalize/computeRefundPlan";
+import { customerProductToBillingCycleAnchor } from "@/internal/billing/v2/utils/initFullCustomerProduct/cycleAnchorUtils";
+
+const applyAnchorResetCustomerProductUpdate = ({
+	plan,
+	billingContext,
+}: {
+	plan: AutumnBillingPlan;
+	billingContext: UpdateSubscriptionBillingContext;
+}): AutumnBillingPlan => {
+	if (billingContext.requestedBillingCycleAnchor !== "now") return plan;
+
+	return {
+		...plan,
+		updateCustomerProduct: {
+			customerProduct: billingContext.customerProduct,
+			updates: {
+				...plan.updateCustomerProduct?.updates,
+				billing_cycle_anchor: customerProductToBillingCycleAnchor({
+					customerProduct: billingContext.customerProduct,
+					billingCycleAnchor: billingContext.billingCycleAnchorMs,
+					now: billingContext.currentEpochMs,
+				}),
+			},
+		},
+	};
+};
 
 /**
  * Finalizes the update subscription billing plan by processing line items,
@@ -23,6 +49,8 @@ export const finalizeUpdateSubscriptionPlan = async ({
 	billingContext: UpdateSubscriptionBillingContext;
 	params: UpdateSubscriptionV1Params;
 }): Promise<AutumnBillingPlan> => {
+	plan = applyAnchorResetCustomerProductUpdate({ plan, billingContext });
+
 	// Finalize line items (shared logic)
 	plan.lineItems = finalizeLineItems({
 		ctx,

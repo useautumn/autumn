@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import { useEffect, useRef } from "react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { normalizeResetInterval } from "@/utils/product/productItemUtils";
 import { useProductStore } from "./useProductStore";
 
 /**
@@ -38,7 +39,9 @@ export const useProductSync = ({
 			const converted = productV2ToFrontendProduct({ product });
 			const frontendProduct: FrontendProduct = {
 				...converted,
-				items: sortPlanItems({ items: converted.items }),
+				items: sortPlanItems({ items: converted.items }).map(
+					normalizeResetInterval,
+				),
 			};
 
 			// "Clean" = working copy has no unsaved edits vs the base it was synced

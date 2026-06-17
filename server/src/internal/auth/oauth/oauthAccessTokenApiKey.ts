@@ -114,9 +114,23 @@ export const getOAuthAccessTokenRecord = async ({
 	return tokenRecord as ResourceAccessTokenRecord & {
 		userId: string;
 		referenceId: string;
+		oauthConsentId?: string | null;
 	};
 };
 
+const getTokenConsentId = ({
+	oauthConsentId,
+}: {
+	oauthConsentId?: string | null;
+}) => {
+	if (oauthConsentId) return oauthConsentId;
+
+	throw new RecaseError({
+		message: "OAuth token is missing a consent",
+		code: ErrCode.InvalidRequest,
+		statusCode: 401,
+	});
+};
 export const getExternalOAuthApiKeyForToken = async ({
 	db,
 	tokenRecord,
@@ -135,11 +149,12 @@ export const getExternalOAuthApiKeyForToken = async ({
 	});
 	if (isAtmnClient) return null;
 
-	const consent = await oauthConsentRepo.getForClientUserOrg({
+	const oauthConsentId = getTokenConsentId({
+		oauthConsentId: tokenRecord.oauthConsentId,
+	});
+	const consent = await oauthConsentRepo.getApiKeyRecord({
 		db,
-		clientId: tokenRecord.clientId,
-		userId: tokenRecord.userId,
-		referenceId: tokenRecord.referenceId,
+		consentId: oauthConsentId,
 	});
 
 	if (!consent) {
@@ -150,19 +165,26 @@ export const getExternalOAuthApiKeyForToken = async ({
 		});
 	}
 
-	const env = consent.env ?? AppEnv.Sandbox;
+	if (consent.env !== AppEnv.Live && consent.env !== AppEnv.Sandbox) {
+		throw new RecaseError({
+			message: "OAuth consent is missing an environment",
+			code: ErrCode.InvalidRequest,
+			statusCode: 401,
+		});
+	}
+
 	const scopes = requestedScopes ?? tokenRecord.scopes;
 	const apiKey = await rotateOAuthConsentApiKey({
 		db,
 		consent,
 		tokenRecord,
-		env,
+		env: consent.env,
 		scopes,
 	});
 
 	return {
 		apiKey,
-		env,
+		env: consent.env,
 		orgId: tokenRecord.referenceId,
 		userId: tokenRecord.userId,
 		clientId: tokenRecord.clientId,

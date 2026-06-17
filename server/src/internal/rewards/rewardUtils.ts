@@ -3,7 +3,11 @@ import {
 	type CreateRewardProgram,
 	DiscountConfigSchema,
 	ErrCode,
+	type Feature,
+	FeatureType,
+	findFeatureByInternalId,
 	isFixedPrice,
+	normalizePromoCodes,
 	notNullish,
 	type Price,
 	type Product,
@@ -27,11 +31,13 @@ export const constructReward = ({
 	reward,
 	orgId,
 	env,
+	features = [],
 }: {
 	internalId?: string;
 	reward: CreateReward;
 	orgId: string;
 	env: string;
+	features?: Feature[];
 }) => {
 	if (!reward.id || !reward.name) {
 		throw new RecaseError({
@@ -61,7 +67,13 @@ export const constructReward = ({
 					code: ErrCode.InvalidReward,
 				});
 			}
-			if (!ent.allowance || ent.allowance <= 0) {
+			const feature = findFeatureByInternalId({
+				features,
+				internalId: ent.internal_feature_id,
+			});
+			// Boolean features grant on/off access, so they carry no allowance
+			const isBoolean = feature?.type === FeatureType.Boolean;
+			if (!isBoolean && (!ent.allowance || ent.allowance <= 0)) {
 				throw new RecaseError({
 					message: "Each entitlement must have a positive allowance",
 					code: ErrCode.InvalidReward,
@@ -74,37 +86,7 @@ export const constructReward = ({
 		DiscountConfigSchema.parse(reward.discount_config);
 	}
 
-	const promoCodes = reward.promo_codes
-		.filter((promoCode) => {
-			return promoCode.code.length > 0;
-		})
-		.map(({ max_redemptions, global_max_redemption, ...promoCode }) => {
-			const globalMaxRedemption = global_max_redemption ?? max_redemptions;
-
-			return {
-				...promoCode,
-				...(globalMaxRedemption !== undefined
-					? { global_max_redemption: globalMaxRedemption }
-					: {}),
-			};
-		});
-
-	// Validate promo codes - Stripe only allows alphanumeric characters (a-z, A-Z, 0-9)
-	for (const promoCode of promoCodes) {
-		if (!/^[a-zA-Z0-9]+$/.test(promoCode.code)) {
-			throw new RecaseError({
-				message:
-					"Promotional code can only contain letters and numbers (a-z, A-Z, 0-9)",
-				code: ErrCode.InvalidReward,
-			});
-		}
-		if (promoCode.code.length > 500) {
-			throw new RecaseError({
-				message: "Promotional code cannot exceed 500 characters",
-				code: ErrCode.InvalidReward,
-			});
-		}
-	}
+	const promoCodes = normalizePromoCodes(reward.promo_codes);
 
 	let configData = {};
 	if (reward.type === RewardType.FreeProduct) {

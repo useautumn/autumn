@@ -202,7 +202,6 @@ export const billingPlanToNextCyclePreview = ({
 					direction: "charge",
 					billingCycleAnchorMs,
 					filterBillingPeriodStart: false,
-					priceFilters: { excludeOneOffPrices: true },
 				},
 			],
 			autumnBillingPlan: billingPlan.autumn,

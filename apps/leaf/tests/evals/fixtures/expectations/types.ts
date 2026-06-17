@@ -31,6 +31,12 @@ export type ApiCalledAfterApprovalExpectation = {
 	type: "api.calledAfterApproval";
 };
 
+export type ApiCalledTimesExpectation = {
+	call: ExpectedApiCall;
+	count: number;
+	type: "api.calledTimes";
+};
+
 export type ApiBodyExcludesExpectation = {
 	fields: string[];
 	toolName: AutumnEvalToolName;
@@ -44,8 +50,14 @@ export type ApiBodyNumberFieldsExpectation = {
 };
 
 export type ResponseMentionsExpectation = {
+	notPhrases?: string[];
 	phrases: string[];
 	type: "response.mentions";
+};
+
+export type ResponseConciseExpectation = {
+	required: string[];
+	type: "response.concise";
 };
 
 export type ResponseAskedExpectation = {
@@ -67,8 +79,10 @@ export type EvalExpectation =
 	| ApiCalledAfterApprovalExpectation
 	| ApiCalledExpectation
 	| ApiCalledInOrderExpectation
+	| ApiCalledTimesExpectation
 	| ResponseAskedExpectation
 	| ResponseAskedBeforeToolExpectation
+	| ResponseConciseExpectation
 	| ResponseMentionsExpectation
 	| ToolsCalledExpectation;
 

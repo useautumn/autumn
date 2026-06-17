@@ -3,7 +3,9 @@ import {
 	type CustomerEntitlement,
 	type Entitlement,
 	ErrCode,
+	FeatureType,
 	findFeatureByInternalId,
+	getGlobalMaxRedemption,
 	RecaseError,
 	RewardType,
 } from "@autumn/shared";
@@ -77,8 +79,7 @@ export const redeemPromoCode = async ({
 		});
 	}
 
-	const globalMaxRedemption =
-		promoCode.global_max_redemption ?? promoCode.max_redemptions;
+	const globalMaxRedemption = getGlobalMaxRedemption(promoCode);
 
 	if (globalMaxRedemption) {
 		const redemptionCount = await redemptionRepo.getPromoCodeRedemptionCount({
@@ -144,8 +145,9 @@ export const redeemPromoCode = async ({
 			continue;
 		}
 
+		const isBoolean = feature.type === FeatureType.Boolean;
 		const allowance = rewardEnt.allowance;
-		if (!allowance || allowance <= 0) {
+		if (!isBoolean && (!allowance || allowance <= 0)) {
 			throw new RecaseError({
 				message: `Reward entitlement for feature "${feature.id}" must have a positive allowance`,
 				code: ErrCode.InvalidReward,
@@ -170,7 +172,7 @@ export const redeemPromoCode = async ({
 				params: {
 					customer_id: customerId,
 					feature_id: feature.id,
-					included_grant: allowance,
+					included_grant: isBoolean ? undefined : (allowance ?? undefined),
 					expires_at: expiresAt,
 					balance_id: `reward_${code}_${new Date().toISOString().slice(0, 10).replace(/-/g, "_")}`,
 				},

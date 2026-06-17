@@ -12,6 +12,7 @@ import { stripeItemSpecToPhaseItem } from "@/internal/billing/v2/providers/strip
 import { customerProductToStripeItemSpecs } from "@/internal/billing/v2/providers/stripe/utils/subscriptionItems/customerProductToStripeItemSpecs";
 import { isCustomerProductActiveDuringPeriod } from "@/internal/billing/v2/providers/stripe/utils/subscriptionSchedules/isCustomerProductActiveAtEpochMs";
 import { buildTransitionPoints } from "./buildTransitionPoints";
+import { customerProductsToPhaseInvoiceItems } from "./customerProductsToPhaseInvoiceItems";
 import { logTransitionPoints } from "./logBuildPhaseHelpers";
 import { normalizeCustomerProductTimestamps } from "./normalizeCustomerProductTimestamps";
 
@@ -209,6 +210,13 @@ export const buildStripePhasesUpdate = ({
 			billingContext,
 			customerProducts: activeCustomerProducts,
 		});
+		const phaseAddInvoiceItems = customerProductsToPhaseInvoiceItems({
+			ctx,
+			billingContext,
+			customerProducts: activeCustomerProducts,
+			phaseStartMs: startMs,
+			phaseEndMs: endMs,
+		});
 
 		// Only set trial_end if trial extends into this phase
 		// Constraint: trial_end must be ≤ phase end_date
@@ -231,12 +239,18 @@ export const buildStripePhasesUpdate = ({
 		const phaseStartDateSeconds = msToSeconds(startMs);
 		const isBillingCycleAnchorResetPhase =
 			billingCycleAnchorResetAt === startMs;
+		const hasOneOffInvoiceItems = phaseAddInvoiceItems.length > 0;
 		const shouldInvoicePhaseTransition =
 			phaseIndex > 0 && phaseItems.length > 0;
 		const shouldAlwaysInvoice =
-			shouldInvoicePhaseTransition || isBillingCycleAnchorResetPhase;
+			shouldInvoicePhaseTransition ||
+			isBillingCycleAnchorResetPhase ||
+			hasOneOffInvoiceItems;
 		const phase: Stripe.SubscriptionScheduleUpdateParams.Phase = {
 			items: phaseItems,
+			...(hasOneOffInvoiceItems && {
+				add_invoice_items: phaseAddInvoiceItems,
+			}),
 			start_date: phaseStartDateSeconds,
 			end_date: endMs ? msToSeconds(endMs) : undefined,
 			trial_end: computePhaseTrialEndsAt(),

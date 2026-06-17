@@ -27,6 +27,7 @@ export const updateRedemption = async ({
 		throw new RecaseError({
 			code: ErrCode.RewardRedemptionNotFound,
 			message: `Reward redemption ${id} not found`,
+			statusCode: 404,
 		});
 	}
 

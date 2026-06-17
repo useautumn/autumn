@@ -1,5 +1,4 @@
 import { CouponDurationType } from "@autumn/shared";
-import { TextCheckbox } from "@/components/v2/checkboxes/TextCheckbox";
 import { FormLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
 import {
@@ -17,8 +16,8 @@ import {
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import type { FrontendReward } from "../../types/frontendReward";
-import { FirstTimeTransactionTooltip } from "./FirstTimeTransactionTooltip";
 import { ProductPriceSelector } from "./ProductPriceSelector";
+import { PromoCodeField } from "./PromoCodeField";
 
 interface DiscountRewardConfigProps {
 	reward: FrontendReward;
@@ -31,7 +30,6 @@ export function DiscountRewardConfig({
 }: DiscountRewardConfigProps) {
 	const { org } = useOrg();
 	const config = reward.discount_config!;
-	const promoCode = reward.promo_codes[0];
 
 	const setConfig = (key: string, value: any) => {
 		setReward({
@@ -45,7 +43,7 @@ export function DiscountRewardConfig({
 	return (
 		<SheetSection title="Discount Configuration" withSeparator={false}>
 			<div className="flex flex-col gap-4">
-				{/* Row 1: Discount Type and Promotional Code */}
+				{/* Row 1: Discount Type and Amount */}
 				<div className="grid grid-cols-2 gap-2">
 					<div className="flex flex-col">
 						<FormLabel>Discount Type</FormLabel>
@@ -78,47 +76,6 @@ export function DiscountRewardConfig({
 					</div>
 
 					<div>
-						<FormLabel>Promotional Code (Optional)</FormLabel>
-						<Input
-							placeholder="SAVE20"
-							value={promoCode?.code || ""}
-							maxLength={500}
-							onChange={(e) => {
-								// Stripe only allows alphanumeric characters (a-z, A-Z, 0-9)
-								const sanitized = e.target.value.replace(/[^a-zA-Z0-9]/g, "");
-								setReward({
-									...reward,
-									promo_codes: sanitized
-										? [{ ...promoCode, code: sanitized }]
-										: [],
-								});
-							}}
-						/>
-					</div>
-				</div>
-
-				{promoCode && (
-					<div className="flex items-center gap-1.5">
-						<TextCheckbox
-							checked={promoCode.first_time_transaction ?? false}
-							onCheckedChange={(checked) =>
-								setReward({
-									...reward,
-									promo_codes: [
-										{ ...promoCode, first_time_transaction: checked === true },
-									],
-								})
-							}
-						>
-							Limit to first-time customers
-						</TextCheckbox>
-						<FirstTimeTransactionTooltip />
-					</div>
-				)}
-
-				{/* Row 2: Amount and Duration */}
-				<div className="grid grid-cols-2 gap-2">
-					<div>
 						<FormLabel>Amount</FormLabel>
 						<InputGroup className="input-base p-2">
 							<input
@@ -141,7 +98,10 @@ export function DiscountRewardConfig({
 							</InputGroupAddon>
 						</InputGroup>
 					</div>
+				</div>
 
+				{/* Row 2: Duration */}
+				<div className="grid grid-cols-2 gap-2">
 					<div>
 						<FormLabel>Duration</FormLabel>
 						<div className="flex items-center gap-2">
@@ -189,6 +149,8 @@ export function DiscountRewardConfig({
 						</div>
 					</div>
 				</div>
+
+				<PromoCodeField reward={reward} setReward={setReward} />
 
 				{/* Products */}
 				<div className="w-full">

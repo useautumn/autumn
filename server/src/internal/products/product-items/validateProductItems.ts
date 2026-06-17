@@ -4,7 +4,10 @@ import {
 	type Feature,
 	FeatureType,
 	Infinite,
+	itemToBillingInterval,
+	itemToBillingIntervalCount,
 	itemToEntInterval,
+	itemToEntIntervalCount,
 	notNullish,
 	nullish,
 	OnIncrease,
@@ -115,10 +118,11 @@ const validateProductItem = ({
 
 	// 5. If it's a price, can't have day, minute or hour interval
 	if (isFeaturePriceItem(item) || isPriceItem(item)) {
+		const billingInterval = itemToBillingInterval({ item });
 		if (
-			item.interval === ProductItemInterval.Day ||
-			item.interval === ProductItemInterval.Minute ||
-			item.interval === ProductItemInterval.Hour
+			String(billingInterval) === ProductItemInterval.Day ||
+			String(billingInterval) === ProductItemInterval.Minute ||
+			String(billingInterval) === ProductItemInterval.Hour
 		) {
 			throw new RecaseError({
 				message: `Price can't have day, minute or hour interval`,
@@ -332,7 +336,7 @@ export const validateProductItems = ({
 	for (let index = 0; index < newItems.length; index++) {
 		const item = newItems[index];
 		const entInterval = itemToEntInterval({ item });
-		const intervalCount = item.interval_count || 1;
+		const intervalCount = itemToEntIntervalCount({ item });
 
 		// Boolean duplicate
 		if (isBooleanFeatureItem(item)) {
@@ -358,7 +362,7 @@ export const validateProductItems = ({
 				i.feature_id === item.feature_id &&
 				index2 !== index &&
 				itemToEntInterval({ item: i }) === entInterval &&
-				(i.interval_count || 1) === intervalCount &&
+				itemToEntIntervalCount({ item: i }) === intervalCount &&
 				i.entity_feature_id === item.entity_feature_id
 			);
 		});
@@ -385,7 +389,13 @@ export const validateProductItems = ({
 
 		if (isPriceItem(item)) {
 			const otherItem = newItems.find((i: any, index2: any) => {
-				return i.interval === item.interval && index2 !== index;
+				return (
+					itemToBillingInterval({ item: i }) ===
+						itemToBillingInterval({ item }) &&
+					itemToBillingIntervalCount({ item: i }) ===
+						itemToBillingIntervalCount({ item }) &&
+					index2 !== index
+				);
 			});
 
 			if (otherItem) {
@@ -402,12 +412,12 @@ export const validateProductItems = ({
 	const hasWeeklyPrice = newItems.some(
 		(item) =>
 			(isPriceItem(item) || isFeaturePriceItem(item)) &&
-			item.interval === ProductItemInterval.Week,
+			String(itemToBillingInterval({ item })) === ProductItemInterval.Week,
 	);
 	const hasMonthlyPrice = newItems.some(
 		(item) =>
 			(isPriceItem(item) || isFeaturePriceItem(item)) &&
-			item.interval === ProductItemInterval.Month,
+			String(itemToBillingInterval({ item })) === ProductItemInterval.Month,
 	);
 
 	if (hasWeeklyPrice && hasMonthlyPrice) {

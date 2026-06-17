@@ -1,16 +1,20 @@
 import { InternalError } from "@api/errors/base/InternalError.js";
-import type { FullCusEntWithFullCusProduct } from "../../../models/cusProductModels/cusEntModels/cusEntWithProduct";
+import type { FullCustomerEntitlement } from "../../../models/cusProductModels/cusEntModels/cusEntModels";
 import type { FullCustomerPrice } from "../../../models/cusProductModels/cusPriceModels/cusPriceModels";
+
+export type CustomerEntitlementWithCustomerPrices = FullCustomerEntitlement & {
+	customer_product: { customer_prices: FullCustomerPrice[] } | null;
+};
 
 // Overload: errorOnNotFound = true → guaranteed FullCustomerPrice
 export function cusEntToCusPrice(params: {
-	cusEnt: FullCusEntWithFullCusProduct;
+	cusEnt: CustomerEntitlementWithCustomerPrices;
 	errorOnNotFound: true;
 }): FullCustomerPrice;
 
 // Overload: errorOnNotFound = false/undefined → FullCustomerPrice | undefined
 export function cusEntToCusPrice(params: {
-	cusEnt: FullCusEntWithFullCusProduct;
+	cusEnt: CustomerEntitlementWithCustomerPrices;
 	errorOnNotFound?: false;
 }): FullCustomerPrice | undefined;
 
@@ -19,7 +23,7 @@ export function cusEntToCusPrice({
 	cusEnt,
 	errorOnNotFound,
 }: {
-	cusEnt: FullCusEntWithFullCusProduct;
+	cusEnt: CustomerEntitlementWithCustomerPrices;
 	errorOnNotFound?: boolean;
 }): FullCustomerPrice | undefined {
 	const cusProduct = cusEnt.customer_product;

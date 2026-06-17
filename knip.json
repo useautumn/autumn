@@ -47,6 +47,7 @@
 			"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
 			"ignore": [
 				"src/components/ai-elements/**",
+				"src/components/ui/scroll-area.tsx",
 				"src/hooks/useControllableState.ts",
 				"src/types/**/*.d.ts"
 			],

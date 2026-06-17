@@ -14,7 +14,9 @@ import {
 	Infinite,
 	itemToAllocatedBillingBehavior,
 	itemToBillingInterval,
+	itemToBillingIntervalCount,
 	itemToEntInterval,
+	itemToEntIntervalCount,
 	OnDecrease,
 	OnIncrease,
 	type Price,
@@ -77,7 +79,7 @@ const toPrice = ({
 		type: PriceType.Fixed,
 		amount: notNullish(item.price) ? item.price : item.tiers![0].amount,
 		interval: itemToBillingInterval({ item }) as BillingInterval,
-		interval_count: item.interval_count || 1,
+		interval_count: itemToBillingIntervalCount({ item }),
 		stripe_product_id: null,
 		feature_id: null,
 		internal_feature_id: null,
@@ -145,7 +147,7 @@ export const toFeature = ({
 				: AllowanceType.Fixed,
 
 		interval: isBoolean ? null : (itemToEntInterval({ item }) as EntInterval),
-		interval_count: item.interval_count || 1,
+		interval_count: itemToEntIntervalCount({ item }),
 
 		carry_from_previous: !resetUsage,
 		entity_feature_id: item.entity_feature_id,
@@ -211,7 +213,7 @@ const toFeatureAndPrice = ({
 		allowance: (item.included_usage as number) || 0,
 		allowance_type: AllowanceType.Fixed,
 		interval: itemToEntInterval({ item }) as EntInterval,
-		interval_count: item.interval_count || 1,
+		interval_count: itemToEntIntervalCount({ item }),
 
 		carry_from_previous: !resetUsage,
 		entity_feature_id: item.entity_feature_id,
@@ -265,7 +267,7 @@ const toFeatureAndPrice = ({
 					};
 				}) as UsageTier[]),
 		interval: itemToBillingInterval({ item }) as BillingInterval,
-		interval_count: item.interval_count || 1,
+		interval_count: itemToBillingIntervalCount({ item }),
 	};
 
 	const canProrate =

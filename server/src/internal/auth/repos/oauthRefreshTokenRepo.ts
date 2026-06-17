@@ -1,5 +1,5 @@
 import { oauthRefreshToken } from "@autumn/shared";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 
 export const deleteOAuthRefreshTokensByClientAndReference = async ({
@@ -36,7 +36,39 @@ export const updateOAuthRefreshTokenScopes = async ({
 		.set({ scopes })
 		.where(eq(oauthRefreshToken.id, id));
 
+export const getOAuthRefreshTokenByTokenValues = async ({
+	db,
+	tokenValues,
+}: {
+	db: DrizzleCli;
+	tokenValues: string[];
+}) => {
+	const [token] = await db
+		.select()
+		.from(oauthRefreshToken)
+		.where(inArray(oauthRefreshToken.token, tokenValues))
+		.limit(1);
+
+	return token ?? null;
+};
+
+export const updateOAuthRefreshTokenConsent = async ({
+	db,
+	id,
+	oauthConsentId,
+}: {
+	db: DrizzleCli;
+	id: string;
+	oauthConsentId: string;
+}) =>
+	db
+		.update(oauthRefreshToken)
+		.set({ oauthConsentId })
+		.where(eq(oauthRefreshToken.id, id));
+
 export const oauthRefreshTokenRepo = {
 	deleteByClientAndReference: deleteOAuthRefreshTokensByClientAndReference,
 	updateScopes: updateOAuthRefreshTokenScopes,
+	getByTokenValues: getOAuthRefreshTokenByTokenValues,
+	updateConsent: updateOAuthRefreshTokenConsent,
 };

@@ -1,6 +1,9 @@
 # Per-worktree infra stack for `bun dw`.
 # Project name is set per-worktree via COMPOSE_PROJECT_NAME (e.g. autumn-wt-8).
 # Ports are substituted from env vars (DRAGONFLY_PORT, ELASTICMQ_PORT).
+# The ngrok service is gated behind the `ngrok` profile so it only starts when
+# `bun dw setup` finds an NGROK_AUTHTOKEN; env vars carry `:-` defaults so
+# `docker compose down` (teardown) never warns about unset values.
 
 services:
   dragonfly:
@@ -20,4 +23,33 @@ services:
     volumes:
       - ./elasticmq.conf:/opt/elasticmq.conf:ro
     command: ["-Dconfig.file=/opt/elasticmq.conf"]
+    restart: unless-stopped
+
+  # Public tunnel so Anthropic's cloud (Claude Managed Agents) + Slack can reach
+  # this worktree's /mcp + /slack/*. Forwards to the host's server port, which
+  # proxies to leaf. The container lives in the compose stack, so it outlives
+  # `bun d` restarts (the tunnel stays up) and is removed on `bun dw teardown`.
+  #
+  # NGROK_DOMAIN (a *reserved* domain) => stable URL via ${NGROK_URL_FLAG}, so
+  # Slack/CMA never need re-pointing and the eval's random tunnel can't steal it.
+  # Unset => ngrok assigns a random domain (dw reads it back from :${NGROK_API_PORT}).
+  # --pooling-enabled lets a restarting agent take over its own domain instead of
+  # crashing with ERR_NGROK_334 ("endpoint already online"). sh -c so the --url
+  # flag can be omitted cleanly when no reserved domain is configured.
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-ngrok
+    profiles:
+      - ngrok
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
+    entrypoint:
+      - /bin/sh
+      - -c
+    command:
+      - "ngrok http host.docker.internal:${SERVER_PORT:-8080} --pooling-enabled --log=stdout ${NGROK_URL_FLAG:-}"
+    ports:
+      - "${NGROK_API_PORT:-4040}:4040"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped

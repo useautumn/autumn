@@ -1,14 +1,14 @@
 import {
 	ErrCode,
 	type FullCusProduct,
-	RecaseError,
-	secondsToMs,
 	filterCustomerProductsByStripeSubscriptionId,
 	isCustomerProductOnStripeSubscriptionSchedule,
+	RecaseError,
 	type SyncPhase,
 	type SyncProposalsV2Params,
 	type SyncProposalsV2Response,
 	type SyncProposalV2,
+	secondsToMs,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { createStripeCli } from "@/external/connect/createStripeCli";
@@ -57,9 +57,7 @@ const buildScheduleProposalPhases = ({
 			phase: schedulePhase,
 			nowSeconds,
 		});
-		const startsAt = isCurrent
-			? "now"
-			: secondsToMs(schedulePhase.start_date);
+		const startsAt = isCurrent ? "now" : secondsToMs(schedulePhase.start_date);
 		const detectedPhase = detectedPhases.find(
 			(phase) => phase.starts_at === startsAt,
 		);
@@ -99,12 +97,14 @@ const buildProposal = async ({
 	schedule?: Stripe.SubscriptionSchedule;
 	customerProducts: FullCusProduct[];
 }): Promise<SyncProposalV2> => {
-	const { params, schedule: resolvedSchedule } = await subscriptionToSyncParams({
-		ctx,
-		customerId,
-		subscription,
-		schedule,
-	});
+	const { params, schedule: resolvedSchedule } = await subscriptionToSyncParams(
+		{
+			ctx,
+			customerId,
+			subscription,
+			schedule,
+		},
+	);
 
 	const detectedPhases = params.phases ?? [];
 	const phases = buildProposalPhases({
@@ -150,7 +150,8 @@ export const syncProposalsV2 = async ({
 	const stripeCustomerId = fullCustomer.processor?.id;
 	if (!stripeCustomerId) {
 		throw new RecaseError({
-			message: "Customer has no linked Stripe customer",
+			message:
+				"This customer has no linked Stripe customer ID. Set the customer's Stripe ID, then resync.",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});

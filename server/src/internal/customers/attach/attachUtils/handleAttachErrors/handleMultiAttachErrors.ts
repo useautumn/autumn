@@ -1,13 +1,14 @@
 import {
 	type AttachBodyV0,
 	type AttachBranch,
+	ErrCode,
 	isUsagePrice,
 	notNullish,
 	nullish,
 	type Price,
+	RecaseError,
 } from "@autumn/shared";
 import type { AttachParams } from "@/internal/customers/cusProducts/AttachParams.js";
-import RecaseError from "@/utils/errorUtils.js";
 import { handleExternalPSPErrors } from "./handleExternalPSPErrors.js";
 
 export const handleMultiAttachErrors = async ({
@@ -33,8 +34,9 @@ export const handleMultiAttachErrors = async ({
 			(p) => p.internal_id === usagePrice.internal_product_id,
 		);
 		throw new RecaseError({
-			code: "invalid_inputs",
+			code: ErrCode.InvalidInputs,
 			message: `The 'products' parameter doesn't support prices that are variable (usage-based) at the moment. The product ${product?.name} contains this.`,
+			statusCode: 400,
 		});
 	}
 
@@ -58,8 +60,9 @@ export const handleMultiAttachErrors = async ({
 
 		if (newQuantity < curEntityQuantity) {
 			throw new RecaseError({
-				code: "invalid_inputs",
+				code: ErrCode.InvalidInputs,
 				message: `Product ${prodOptions.product_id} is assigned to ${curEntityQuantity} entities and therefore can't be decreased to ${newQuantity}.`,
+				statusCode: 400,
 			});
 		}
 	}

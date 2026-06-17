@@ -1,4 +1,4 @@
-import { FeatureType, isAiCreditSystem, TierBehavior } from "@autumn/shared";
+import { FeatureType, isAnyCreditSystem, TierBehavior } from "@autumn/shared";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { IconButton } from "@/components/v2/buttons/IconButton";
@@ -170,7 +170,7 @@ export function EditPlanFeatureSheet({
 							<IncludedUsage />
 						</SheetSection>
 
-						{isFeaturePrice && !isAiCreditSystem(feature?.type) && (
+						{isFeaturePrice && (
 							<SheetSection
 								title={
 									item.tiers && item.tiers.length > 1 ? (
@@ -223,7 +223,7 @@ export function EditPlanFeatureSheet({
 			/>
 
 			{/* Edit Feature Sheet */}
-			{feature?.type === FeatureType.CreditSystem ? (
+			{isAnyCreditSystem(feature?.type) ? (
 				<UpdateCreditSystemSheet
 					open={editFeatureOpen}
 					setOpen={setEditFeatureOpen}

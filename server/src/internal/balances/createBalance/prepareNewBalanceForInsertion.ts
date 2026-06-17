@@ -53,14 +53,15 @@ export const prepareNewBalanceForInsertion = async ({
 		entitlement: newEntitlement,
 		feature,
 	});
+	const now = Date.now();
 
 	const newCustomerEntitlement = initCustomerEntitlement({
 		initContext: {
 			fullCustomer,
 			featureQuantities: [],
-			resetCycleAnchor: Date.now(),
+			resetCycleAnchor: now,
 			freeTrial: null,
-			now: Date.now(),
+			now,
 		},
 		entitlement: newEntitlementWithFeature,
 		cusProductId: null,
@@ -76,6 +77,14 @@ export const prepareNewBalanceForInsertion = async ({
 		newCustomerEntitlement.expires_at = params.expires_at ?? null;
 		// Clear next_reset_at since expiring entitlements don't reset
 		newCustomerEntitlement.next_reset_at = null;
+		newCustomerEntitlement.reset_cycle_anchor = null;
+	}
+
+	// Apply an explicit first reset boundary if provided. This overrides the
+	// derived next_reset_at (and the null set above when expires_at is present),
+	// allowing a custom first period that resets up until expiry.
+	if (params.next_reset_at !== undefined) {
+		newCustomerEntitlement.next_reset_at = params.next_reset_at;
 	}
 
 	if (params.balance_id) {

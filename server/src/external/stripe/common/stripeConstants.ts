@@ -18,6 +18,7 @@ export const MAIN_STRIPE_EVENT_TYPES: StripeEventType[] = [
 	"invoice.updated",
 	"subscription_schedule.canceled",
 	"subscription_schedule.updated",
+	"test_helpers.test_clock.ready",
 ];
 
 /** Additional events needed to keep the stripe-sync DB up to date. */

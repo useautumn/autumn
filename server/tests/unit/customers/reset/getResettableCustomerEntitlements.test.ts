@@ -1,9 +1,13 @@
 import { describe, expect, test } from "bun:test";
 import {
+	BillingInterval,
+	BillWhen,
 	CusProductStatus,
+	EntInterval,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomerPrice,
 	type FullProduct,
+	PriceType,
 } from "@autumn/shared";
 import { customerEntitlements } from "@tests/utils/fixtures/db/customerEntitlements";
 import { customerProducts } from "@tests/utils/fixtures/db/customerProducts";
@@ -23,12 +27,14 @@ const buildCusEnt = ({
 	ignorePastDue = false,
 	nextResetAt,
 	withMatchingPrice = false,
+	withSeparateIntervalPrice = false,
 	withCustomerProduct = true,
 }: {
 	productStatus?: CusProductStatus;
 	ignorePastDue?: boolean;
 	nextResetAt: number | null;
 	withMatchingPrice?: boolean;
+	withSeparateIntervalPrice?: boolean;
 	withCustomerProduct?: boolean;
 }): FullCusEntWithFullCusProduct => {
 	const cusEnt = customerEntitlements.create({
@@ -38,6 +44,7 @@ const buildCusEnt = ({
 		balance: 50,
 		nextResetAt,
 		customerProductId: withCustomerProduct ? CUS_PROD_ID : undefined,
+		interval: withSeparateIntervalPrice ? EntInterval.Month : null,
 	});
 
 	if (!withCustomerProduct) {
@@ -58,6 +65,20 @@ const buildCusEnt = ({
 					price_id: "price_test",
 					price: {
 						entitlement_id: cusEnt.entitlement.id,
+						config: {
+							type: PriceType.Usage,
+							bill_when: withSeparateIntervalPrice
+								? BillWhen.InAdvance
+								: BillWhen.EndOfPeriod,
+							billing_units: null,
+							internal_feature_id: cusEnt.internal_feature_id,
+							feature_id: cusEnt.feature_id,
+							usage_tiers: [{ to: -1, amount: 1 }],
+							interval: withSeparateIntervalPrice
+								? BillingInterval.Year
+								: BillingInterval.Month,
+							interval_count: 1,
+						},
 					} as FullCustomerPrice["price"],
 				},
 			]
@@ -80,6 +101,7 @@ const buildCusEnt = ({
 
 	return {
 		...cusEnt,
+		separate_interval: withSeparateIntervalPrice,
 		customer_product: cusProduct,
 	};
 };
@@ -218,6 +240,25 @@ describe(chalk.yellowBright("getResettableCustomerEntitlements"), () => {
 		});
 
 		expect(result).toHaveLength(0);
+	});
+
+	test("returns separate-interval prepaid cusEnt when a matching cusPrice exists", () => {
+		const customerEntitlements = [
+			buildCusEnt({
+				productStatus: CusProductStatus.Active,
+				nextResetAt: PAST,
+				withMatchingPrice: true,
+				withSeparateIntervalPrice: true,
+			}),
+		];
+
+		const result = getResettableCustomerEntitlements({
+			customerEntitlements,
+			now: NOW,
+		});
+
+		expect(result).toHaveLength(1);
+		expect(result[0].separate_interval).toBe(true);
 	});
 
 	test("returns overdue extra customer entitlements without a customer_product", () => {

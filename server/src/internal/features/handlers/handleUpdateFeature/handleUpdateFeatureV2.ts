@@ -9,8 +9,8 @@ import {
 	InternalError,
 	nullish,
 	RecaseError,
-	UpdateFeatureV2ParamsSchema,
 	Scopes,
+	UpdateFeatureV2ParamsSchema,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { updateFeature } from "@/internal/features/featureActions/updateFeature.js";
@@ -34,6 +34,7 @@ export const handleUpdateFeatureV2 = createRoute({
 		if (body.type === FeatureType.Metered && nullish(body.consumable)) {
 			throw new RecaseError({
 				message: "Consumable is required when changing type to metered",
+				statusCode: 400,
 			});
 		}
 

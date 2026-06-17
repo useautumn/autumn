@@ -7,6 +7,7 @@ import {
 	type EntitlementWithFeature,
 	type Entity,
 	type EntityBalance,
+	entitlementAndPriceHaveSeparateInterval,
 	entitlementHasEntityFeature,
 	type FeatureOptions,
 	FeatureType,
@@ -163,21 +164,20 @@ export const initCusEntitlement = ({
 		anchorToUnix,
 		now,
 	});
-
 	// 3. Define expires at (TODO next time...)
 	const isBooleanFeature = entitlement.feature.type === FeatureType.Boolean;
 	let usageAllowed = false;
 
 	if (
 		relatedPrice &&
-		(getBillingType(relatedPrice.config!) === BillingType.UsageInArrear ||
-			getBillingType(relatedPrice.config!) === BillingType.InArrearProrated)
+		(getBillingType(relatedPrice.config) === BillingType.UsageInArrear ||
+			getBillingType(relatedPrice.config) === BillingType.InArrearProrated)
 	) {
 		usageAllowed = true;
 	}
 
 	if (notNullish(productOptions?.quantity) && notNullish(newBalance)) {
-		newBalance = new Decimal(newBalance!)
+		newBalance = new Decimal(newBalance)
 			.mul(productOptions?.quantity || 1)
 			.toNumber();
 	}
@@ -187,7 +187,7 @@ export const initCusEntitlement = ({
 		internal_customer_id: customer.internal_id,
 		internal_feature_id: entitlement.internal_feature_id,
 		internal_entity_id: entity?.internal_id ?? null,
-		feature_id: (entitlement.feature_id ?? entitlement.feature.id) as string,
+		feature_id: entitlement.feature_id ?? entitlement.feature.id,
 		customer_id: customer.id,
 
 		// Foreign keys
@@ -204,6 +204,10 @@ export const initCusEntitlement = ({
 		adjustment: 0,
 		entities: newEntities,
 		usage_allowed: usageAllowed,
+		separate_interval: entitlementAndPriceHaveSeparateInterval({
+			entitlement,
+			price: relatedPrice,
+		}),
 		next_reset_at: nextResetAtValue,
 		expires_at: expires_at ?? null,
 

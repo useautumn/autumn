@@ -1,26 +1,30 @@
-import { AppEnv } from "@autumn/shared";
+import { AppEnv, type ScopeString } from "@autumn/shared";
 import { faSlack } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
+import { useSession } from "@/lib/auth-client";
 import { OrgService } from "@/services/OrgService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
+import { SlackScopesSheet } from "./SlackScopesSheet";
+
+type SlackInstallation = {
+	provider: "slack";
+	connected: true;
+	workspace_name: string;
+	default_env: AppEnv;
+	agent_scopes: ScopeString[];
+	needs_reconnect?: boolean;
+	updated_at: number;
+};
 
 type ChatStatus =
 	| { installations: [] }
-	| {
-			installations: {
-				provider: "slack";
-				connected: true;
-				workspace_name: string;
-				default_env: AppEnv;
-				needs_reconnect?: boolean;
-				updated_at: number;
-			}[];
-	  };
+	| { installations: SlackInstallation[] };
 
 const providers = [
 	{
@@ -38,6 +42,12 @@ export const ChatConnections = () => {
 	const queryClient = useQueryClient();
 	const env = useEnv();
 	const queryKey = ["chat"];
+	const { data: session } = useSession();
+	// better-auth's customSession additions aren't always inferred; cast to read
+	// the caller's scopes (mirrors CreateApiKeySheet).
+	const callerScopes = ((session as any)?.scopes ?? []) as string[];
+
+	const [sheetOpen, setSheetOpen] = useState(false);
 
 	const { data, isLoading } = useQuery({
 		queryKey,
@@ -48,10 +58,11 @@ export const ChatConnections = () => {
 	});
 
 	const install = useMutation({
-		mutationFn: async (provider: ChatProvider) => {
+		mutationFn: async (scopes: ScopeString[]) => {
 			const res = await OrgService.createChatInstall(axiosInstance, {
-				provider,
+				provider: "slack",
 				env: env === AppEnv.Live ? AppEnv.Live : AppEnv.Sandbox,
+				scopes,
 			});
 			return res.data as { url: string };
 		},
@@ -76,15 +87,14 @@ export const ChatConnections = () => {
 		},
 	});
 
+	const installation = data?.installations.find(
+		(item) => item.provider === "slack",
+	);
+
 	return (
 		<div className="flex flex-col gap-3">
 			<span className="text-sm font-medium text-foreground">Connections</span>
 			{providers.map((provider) => {
-				const installation = data?.installations.find(
-					(item) => item.provider === provider.id,
-				);
-				const isInstalling =
-					install.isPending && install.variables === provider.id;
 				const isDisconnecting =
 					disconnect.isPending && disconnect.variables === provider.id;
 				return (
@@ -126,8 +136,8 @@ export const ChatConnections = () => {
 										? "secondary"
 										: "primary"
 								}
-								onClick={() => install.mutate(provider.id)}
-								isLoading={isInstalling || isLoading}
+								onClick={() => setSheetOpen(true)}
+								isLoading={isLoading}
 							>
 								{installation ? "Reconnect" : `Add ${provider.name}`}
 							</Button>
@@ -135,6 +145,16 @@ export const ChatConnections = () => {
 					</div>
 				);
 			})}
+
+			<SlackScopesSheet
+				open={sheetOpen}
+				onOpenChange={setSheetOpen}
+				initialScopes={installation?.agent_scopes}
+				callerScopes={callerScopes}
+				isReconnect={!!installation}
+				isSubmitting={install.isPending}
+				onConfirm={(scopes) => install.mutate(scopes)}
+			/>
 		</div>
 	);
 };

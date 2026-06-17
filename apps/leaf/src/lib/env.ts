@@ -2,6 +2,7 @@ import { z } from "zod";
 import {
 	DEFAULT_AGENT_HARNESS,
 	DEFAULT_CHAT_MODEL,
+	SANDBOX_PROVIDER,
 } from "./chatAgentConfig.js";
 
 const optionalString = z.preprocess(
@@ -12,9 +13,35 @@ const optionalString = z.preprocess(
 const envSchema = z
 	.object({
 		AGENT_HARNESS: z
-			.enum(["mastra", "claude-managed"])
+			.enum(["mastra", "claude-managed", "vercel"])
 			.default(DEFAULT_AGENT_HARNESS),
 		ANTHROPIC_API_KEY: optionalString,
+		// Vercel Sandbox auth for the "vercel" harness. Omit all three to fall
+		// back to the ambient VERCEL_OIDC_TOKEN the SDK reads automatically.
+		VERCEL_TOKEN: optionalString,
+		VERCEL_TEAM_ID: optionalString,
+		VERCEL_PROJECT_ID: optionalString,
+		// Which sandbox the AI SDK harness runs inside; overrides SANDBOX_PROVIDER.
+		SANDBOX_PROVIDER: z
+			.enum(["vercel", "daytona", "e2b"])
+			.default(SANDBOX_PROVIDER),
+		// Bake the claude-code bridge into the E2B template so cold starts skip the
+		// ~30s reinstall. On by default; set "false" to use a node+pnpm template with
+		// a runtime bridge install instead.
+		E2B_BAKE_BRIDGE: z
+			.preprocess((value) => value !== "false" && value !== false, z.boolean())
+			.default(true),
+		// Daytona Sandbox auth for the "daytona" sandbox provider.
+		DAYTONA_API_KEY: optionalString,
+		DAYTONA_API_URL: optionalString,
+		DAYTONA_TARGET: optionalString,
+		DAYTONA_SANDBOX_IMAGE: optionalString,
+		// Fork sessions from a cached template snapshot instead of reinstalling the
+		// bridge each cold start. Off by default: needs a Daytona tier with headroom
+		// for the build sandbox, and snapshot fork-by-name round-trip support.
+		DAYTONA_USE_SNAPSHOT_TEMPLATE: z
+			.preprocess((value) => value === "true" || value === true, z.boolean())
+			.default(false),
 		MCP_SERVER_URL: optionalString,
 		BETTER_AUTH_SECRET: optionalString,
 		BETTER_AUTH_URL: optionalString,

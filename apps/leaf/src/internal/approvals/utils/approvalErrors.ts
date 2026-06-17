@@ -92,7 +92,7 @@ export const approvalErrorResult = (error: unknown) => {
 	);
 
 	return {
-		error: true,
+		error: true as const,
 		message: truncateMessage(message || "The action failed."),
 	};
 };

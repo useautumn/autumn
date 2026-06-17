@@ -1,6 +1,5 @@
 import {
 	type AppEnv,
-	type CustomerEntitlement,
 	type Feature,
 	notNullish,
 	type Organization,
@@ -94,7 +93,7 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 
 				const uniqueOrgEnvs = new Map<string, { orgId: string; env: AppEnv }>();
 				for (const customerEntitlement of batch) {
-					const env = customerEntitlement.customer.env as AppEnv;
+					const env = customerEntitlement.customer.env;
 					const orgId = customerEntitlement.customer.org_id;
 					uniqueOrgEnvs.set(buildFullSubjectOrgEnvKey({ orgId, env }), {
 						orgId,
@@ -113,7 +112,7 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 					const orgWithFeatures = orgWithFeaturesCache.get(
 						buildFullSubjectOrgEnvKey({
 							orgId: cusEnt.customer.org_id,
-							env: cusEnt.customer.env as AppEnv,
+							env: cusEnt.customer.env,
 						}),
 					);
 					if (!orgWithFeatures) continue;
@@ -135,7 +134,7 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 				const toUpsert = results.filter(notNullish);
 				await CusEntService.upsert({
 					db,
-					data: toUpsert as CustomerEntitlement[],
+					data: toUpsert,
 				});
 				console.log(`Upserted ${toUpsert.length} short entitlements`);
 

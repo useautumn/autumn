@@ -1,3 +1,4 @@
+import { FeatureType } from "@autumn/shared";
 import type { AxiosError } from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -85,9 +86,13 @@ export function CreateRewardSheet({
 			)
 				return false;
 			if (
-				reward.featureGrantEntitlements.some(
-					(e) => !e.allowance || e.allowance <= 0,
-				)
+				reward.featureGrantEntitlements.some((e) => {
+					// Boolean features grant on/off access with no allowance
+					const isBoolean =
+						features.find((f) => f.id === e.feature_id)?.type ===
+						FeatureType.Boolean;
+					return !isBoolean && (!e.allowance || e.allowance <= 0);
+				})
 			)
 				return false;
 			if (

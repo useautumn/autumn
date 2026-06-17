@@ -57,6 +57,7 @@ const main = async () => {
 					data: { message },
 				}),
 			org: { id: orgId },
+			providerUserId: "smoke",
 			thread: {
 				channelId: "smoke",
 				provider,

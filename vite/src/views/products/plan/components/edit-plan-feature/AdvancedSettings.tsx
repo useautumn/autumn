@@ -1,7 +1,9 @@
 /** biome-ignore-all lint/a11y/noStaticElementInteractions: shush */
 import {
+	BillingInterval,
 	FeatureUsageType,
 	isFeaturePriceItem,
+	itemToBillingInterval,
 	UsageModel,
 } from "@autumn/shared";
 import {
@@ -17,6 +19,7 @@ import { useProductItemContext } from "@/views/products/product/product-item/Pro
 import { useHasEntityFeatureId } from "../../hooks/useHasEntityFeatureId";
 import { EntityFeatureConfig } from "./advanced-settings/EntityFeatureConfig";
 import { ProrationConfig } from "./advanced-settings/ProrationConfig";
+import { ResetIntervalConfig } from "./advanced-settings/ResetIntervalConfig";
 import { RolloverConfig } from "./advanced-settings/RolloverConfig";
 import { UsageLimit } from "./advanced-settings/UsageLimit";
 
@@ -48,12 +51,21 @@ export function AdvancedSettings() {
 		(item.usage_model === UsageModel.Prepaid ||
 			usageType === FeatureUsageType.Continuous);
 
+	// Consumable prepaid features can reset their granted balance on a different
+	// cycle to billing (continuous-use balances don't reset).
+	const showResetInterval =
+		isPriced &&
+		item.usage_model === UsageModel.Prepaid &&
+		usageType === FeatureUsageType.Single &&
+		itemToBillingInterval({ item }) !== BillingInterval.OneOff;
+
 	// Hide Advanced section if nothing will render inside it
 	const hasAnyContent =
 		showUsageLimits ||
 		showRollover ||
 		showEntityFeature ||
-		showProration;
+		showProration ||
+		showResetInterval;
 
 	if (!hasAnyContent) return null;
 
@@ -76,6 +88,9 @@ export function AdvancedSettings() {
 
 					{/* Proration Config */}
 					{showProration && <ProrationConfig />}
+
+					{/* Reset Interval Config */}
+					{showResetInterval && <ResetIntervalConfig />}
 				</div>
 			</SheetAccordionItem>
 		</SheetAccordion>

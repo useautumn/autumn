@@ -15,6 +15,7 @@ import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
+import { CusService } from "@/internal/customers/CusService.js";
 
 /**
  * Update Subscription — Billing Cycle Anchor Reset + Custom Plan Changes
@@ -81,6 +82,32 @@ test.concurrent(`${chalk.yellowBright("update-sub anchor+custom 1: increase base
 		planId: pro.id,
 		nextResetAt: addMonths(advancedTo, 1).getTime(),
 	});
+
+	const fullCustomer = await CusService.getFull({
+		ctx,
+		idOrInternalId: customerId,
+		skipReset: true,
+	});
+	const customerProduct = fullCustomer.customer_products.find(
+		(candidate) => candidate.product.id === pro.id,
+	);
+	if (!customerProduct) {
+		throw new Error("Expected customer product after anchor reset");
+	}
+	const customerEntitlement = customerProduct.customer_entitlements.find(
+		(candidate) => candidate.entitlement.feature.id === TestFeature.Messages,
+	);
+	if (!customerEntitlement) {
+		throw new Error("Expected customer entitlement after anchor reset");
+	}
+	expect(customerProduct.billing_cycle_anchor).toBeDefined();
+	expect(customerEntitlement.reset_cycle_anchor).toBeDefined();
+	expect(customerEntitlement.reset_cycle_anchor).toBe(
+		customerProduct.billing_cycle_anchor,
+	);
+	expect(customerProduct.billing_cycle_anchor).toBeLessThan(
+		customerEntitlement.next_reset_at ?? 0,
+	);
 
 	await expectCustomerInvoiceCorrect({
 		customerId,

@@ -38,6 +38,8 @@ export const CustomerEntitlementSchema = z.object({
 	additional_balance: z.number().default(0),
 
 	usage_allowed: z.boolean().nullable(),
+	separate_interval: z.boolean().default(false),
+	reset_cycle_anchor: z.number().nullable().optional(),
 	next_reset_at: z.number().nullable(),
 	adjustment: z.number().nullish().default(0),
 
