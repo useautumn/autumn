@@ -588,17 +588,22 @@ export class CusProductService {
 			)
 			.where(
 				and(
-					or(
-						fingerprint ? eq(customers.fingerprint, fingerprint) : undefined,
-						eq(customers.internal_id, internalCustomerId),
-					),
 					eq(products.id, productId),
 					isNotNull(customerProducts.free_trial_id),
-					// Entity-scoped attach: each entity has its own trial history,
-					// so a customer-level or sibling-entity trial must not dedup it.
-					internalEntityId
-						? eq(customerProducts.internal_entity_id, internalEntityId)
-						: undefined,
+					or(
+						// Cross-customer fingerprint dedup (unique_fingerprint abuse
+						// prevention) must match other customers regardless of entity,
+						// so it stays unscoped.
+						fingerprint ? eq(customers.fingerprint, fingerprint) : undefined,
+						// Same-customer dedup is scoped to the entity when entity-scoped,
+						// so each entity gets its own trial.
+						and(
+							eq(customers.internal_id, internalCustomerId),
+							internalEntityId
+								? eq(customerProducts.internal_entity_id, internalEntityId)
+								: undefined,
+						),
+					),
 				),
 			);
 

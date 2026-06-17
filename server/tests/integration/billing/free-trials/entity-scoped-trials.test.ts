@@ -19,7 +19,12 @@
  */
 
 import { expect, test } from "bun:test";
-import { ALL_STATUSES, CusProductStatus, type FullCusProduct } from "@autumn/shared";
+import {
+	ALL_STATUSES,
+	CusProductStatus,
+	FreeTrialDuration,
+	type FullCusProduct,
+} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
@@ -184,6 +189,56 @@ test.concurrent(
 		expect(
 			reTrial?.free_trial_id,
 			"An entity that already trialed must not be re-granted a trial",
+		).toBeNull();
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("entity-trials: unique_fingerprint still dedups across entities (device-level)")}`,
+	async () => {
+		const customerId = "entity-scoped-trials-fingerprint";
+		const trial = products.base({
+			id: "trial-fp",
+			items: trialItems,
+			freeTrial: {
+				length: 30,
+				duration: FreeTrialDuration.Day,
+				cardRequired: false,
+				uniqueFingerprint: true,
+			},
+		});
+
+		const { entities } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({
+					testClock: false,
+					data: { fingerprint: "device-shared-fp" },
+				}),
+				s.products({ list: [trial] }),
+				s.entities({ count: 2, featureId: TestFeature.Users }),
+			],
+			actions: [
+				s.billing.attach({ productId: trial.id, entityIndex: 0 }),
+				s.billing.attach({ productId: trial.id, entityIndex: 1 }),
+			],
+		});
+
+		const first = await activeTrialForEntity({
+			customerId,
+			entityId: entities[0].id,
+		});
+		const second = await activeTrialForEntity({
+			customerId,
+			entityId: entities[1].id,
+		});
+
+		expect(first?.free_trial_id, "First entity should trial").not.toBeNull();
+		// unique_fingerprint is device-level abuse prevention, so it must keep
+		// deduping across entities even though entity scoping is now applied.
+		expect(
+			second?.free_trial_id,
+			"unique_fingerprint must still dedup across entities",
 		).toBeNull();
 	},
 );
