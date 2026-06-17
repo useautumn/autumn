@@ -47,7 +47,7 @@ Types below are **engine-neutral**. How each engine surfaces them:
 - ⭐ marks the **stable, immutable key** for a table — join and filter on this.
 - 🔗 marks a **stable foreign key** (`internal_customer_id`, `internal_feature_id`, `internal_product_id`, `internal_entity_id`, `internal_reward_id`) — join to the matching `internal_id`.
 - External ids (`customer_id`, `plan_id`, `feature_id`, `entity_id`, `id`, …) are **mutable** — convenient for display, but don't rely on them as stable keys. See [Querying → Use internal ids](/documentation/lakehouse/querying#use-internal-ids-not-external-ids).
-- `org_id` is your tenant id (constant across your tables); `env` is `sandbox` or `production`.
+- `org_id` is your tenant id (constant across your tables); `env` is `sandbox` or `live` (**not** `production` — filtering `env = 'production'` silently returns zero rows).
 
 ---
 
@@ -63,7 +63,7 @@ Your pricing model: features, plans, plan items, rewards, and referral programs.
 | `internal_id` | string | ⭐ stable key |
 | `feature_id` | string | external id (e.g. `AI_CREDITS`), mutable |
 | `org_id` | string | your tenant id |
-| `env` | string | `sandbox` / `production` |
+| `env` | string | `sandbox` / `live` |
 | `name` | string | |
 | `type` | string | feature type |
 | `display` | json (string) | display config |
@@ -77,7 +77,7 @@ Your pricing model: features, plans, plan items, rewards, and referral programs.
 | `internal_id` | string | ⭐ stable key — one row **per plan version** |
 | `plan_id` | string | external id, mutable, shared across versions |
 | `org_id` | string | your tenant id |
-| `env` | string | `sandbox` / `production` |
+| `env` | string | `sandbox` / `live` |
 | `name` | string | |
 | `description` | string | |
 | `group` | string | |
@@ -105,7 +105,7 @@ Your pricing model: features, plans, plan items, rewards, and referral programs.
 | `plan_id` | string | external plan id |
 | `internal_product_id` | string | 🔗 → `v2_3_plans.internal_id` |
 | `org_id` | string | your tenant id |
-| `env` | string | `sandbox` / `production` |
+| `env` | string | `sandbox` / `live` |
 | `feature_id` | string | external feature id |
 | `internal_feature_id` | string | 🔗 → `v2_3_features.internal_id` |
 | `included` | number | allowance (`0` if unlimited) |
@@ -134,7 +134,7 @@ Your pricing model: features, plans, plan items, rewards, and referral programs.
 | `internal_id` | string | ⭐ stable key |
 | `id` | string | external id, mutable |
 | `org_id` | string | your tenant id |
-| `env` | string | `sandbox` / `production` |
+| `env` | string | `sandbox` / `live` |
 | `name` | string | |
 | `type` | string | percentage_discount / fixed_discount / free_product |
 | `created_at` | number (epoch ms) | |
@@ -156,7 +156,7 @@ Your pricing model: features, plans, plan items, rewards, and referral programs.
 | `internal_id` | string | ⭐ stable key |
 | `id` | string | external id, mutable |
 | `org_id` | string | your tenant id |
-| `env` | string | `sandbox` / `production` |
+| `env` | string | `sandbox` / `live` |
 | `created_at` | number (epoch ms) | |
 | `reward_id` | string | external reward id |
 | `internal_reward_id` | string | 🔗 → `v2_3_rewards.internal_id` |
@@ -184,7 +184,7 @@ Who your plans apply to: customers and entities (sub-customers).
 | `internal_id` | string | ⭐ stable key |
 | `customer_id` | string | external id, mutable (may be null) |
 | `org_id` | string | your tenant id |
-| `env` | string | `sandbox` / `production` |
+| `env` | string | `sandbox` / `live` |
 | `name` | string | |
 | `email` | string | |
 | `created_at` | number (epoch ms) | |
@@ -204,7 +204,7 @@ Who your plans apply to: customers and entities (sub-customers).
 | `internal_id` | string | ⭐ stable key |
 | `id` | string | external id, mutable |
 | `org_id` | string | your tenant id |
-| `env` | string | `sandbox` / `production` |
+| `env` | string | `sandbox` / `live` |
 | `customer_id` | string | parent customer external id |
 | `internal_customer_id` | string | 🔗 → `v2_3_customers.internal_id` |
 | `feature_id` | string | entity feature scope (external) |
@@ -232,7 +232,7 @@ Active customer–product relationships: recurring subscriptions and one-off pur
 | `customer_id` | string | external customer id |
 | `internal_customer_id` | string | 🔗 → `v2_3_customers.internal_id` |
 | `org_id` | string | your tenant id |
-| `env` | string | `sandbox` / `production` |
+| `env` | string | `sandbox` / `live` |
 | `plan_id` | string | external plan id |
 | `internal_product_id` | string | 🔗 → `v2_3_plans.internal_id` |
 | `add_on` | boolean | |
@@ -259,7 +259,7 @@ Active customer–product relationships: recurring subscriptions and one-off pur
 | `customer_id` | string | external customer id |
 | `internal_customer_id` | string | 🔗 → `v2_3_customers.internal_id` |
 | `org_id` | string | your tenant id |
-| `env` | string | `sandbox` / `production` |
+| `env` | string | `sandbox` / `live` |
 | `plan_id` | string | external plan id |
 | `internal_product_id` | string | 🔗 → `v2_3_plans.internal_id` |
 | `expires_at` | number (epoch ms) | null if no expiry |
@@ -277,8 +277,12 @@ Active customer–product relationships: recurring subscriptions and one-off pur
 
 Feature balances, their per-entitlement breakdowns, and boolean feature flags.
 
+<Warning>
+  **These tables do not behave like a clean relational schema.** They are denormalized snapshots of Autumn's read-time balance computation, and they include **every** `customer_entitlement` row — across superseded product versions and past reset cycles — with **no active-status or current-cycle filter**. A naive `SELECT ... FROM v2_3_balances` therefore double- and triple-counts. Before you query balances, breakdowns, or overage, read **[Balance semantics](/documentation/lakehouse/balance-semantics)** — it explains what each column means, why `usage`/`granted`/`remaining` don't form a closed arithmetic triple, where overage comes from (it is **not** stored), and the active + current-cycle filter you must apply.
+</Warning>
+
 <Note>
-  Balances, breakdowns, and flags carry both **pooled** (customer-level) rows — where `entity_id` is null — and **per-entity** rows. Filter on `entity_id IS NULL` for customer-level totals to avoid double counting. See [Querying → Pooled vs per-entity](/documentation/lakehouse/querying#pooled-vs-per-entity-rows).
+  Balances, breakdowns, and flags carry both **pooled** (customer-level) rows — where `entity_id` is null — and **per-entity** rows. For customer-level totals, keep only the pooled rows with `coalesce(entity_id, '') = ''` to avoid double counting. (Use `coalesce`, **not** `entity_id IS NULL` — `IS NULL` throws on these Iceberg columns; see [Querying → Pooled vs per-entity](/documentation/lakehouse/querying#pooled-vs-per-entity-rows).)
 </Note>
 
 <AccordionGroup>
@@ -293,17 +297,21 @@ Feature balances, their per-entitlement breakdowns, and boolean feature flags.
 | `feature_id` | string | external feature id |
 | `internal_entity_id` | string | 🔗 → `v2_3_entities.internal_id` (null = pooled) |
 | `org_id` | string | your tenant id |
-| `env` | string | `sandbox` / `production` |
+| `env` | string | `sandbox` / `live` |
 | `unlimited` | boolean | |
-| `granted` | number | total granted (incl. rollover) |
-| `remaining` | number | total remaining (incl. rollover) |
-| `usage` | number | total usage |
+| `granted` | number | Σ(`included_grant` + `prepaid_grant`) + rollover-granted, over **all** entitlements in the group |
+| `remaining` | number | Σ(floored per-entitlement balance) + rollover-balance + unused — **floored at 0**, never negative |
+| `usage` | number | Σ(per-entitlement `usage`) + rollover-usage − unused. **Not** `granted − remaining`; see below |
 | `overage_allowed` | boolean | |
 | `max_purchase` | number | null if unbounded |
 | `reset_interval` | string | single interval or `multiple` |
 | `reset_interval_count` | number | null if `multiple` or count 1 |
 | `reset_resets_at` | number (epoch ms) | earliest reset across entitlements |
 | `next_reset_at` | number (epoch ms) | earliest next reset |
+
+<Warning>
+  `granted` / `remaining` / `usage` are **not** a closed arithmetic triple — `remaining ≠ granted − usage`. Each is aggregated **over every entitlement row for this customer × feature × scope**, including superseded product versions and past cycles, so a single row routinely sums many lifetimes of usage. `remaining` is floored per-entitlement, manual "Set Balance" decouples balance from grant, and rollover/unused are layered in. **There is no overage column** — it is derived. Always read [Balance semantics](/documentation/lakehouse/balance-semantics) and apply the active + current-cycle filter before trusting these numbers.
+</Warning>
 
 </Accordion>
 <Accordion title="v2_3_breakdowns — per-entitlement balance detail">
@@ -320,14 +328,14 @@ Feature balances, their per-entitlement breakdowns, and boolean feature flags.
 | `internal_feature_id` | string | 🔗 → `v2_3_features.internal_id` |
 | `plan_id` | string | external plan id |
 | `internal_product_id` | string | 🔗 → `v2_3_plans.internal_id` |
-| `included_grant` | number | allowance grant |
+| `included_grant` | number | allowance grant (allowance + adjustment) |
 | `prepaid_grant` | number | prepaid grant |
-| `remaining` | number | |
-| `usage` | number | |
+| `remaining` | number | floored balance — `max(0, balance)`, **never negative** |
+| `usage` | number | `included_grant` + `prepaid_grant` − raw (signed) balance |
 | `unlimited` | boolean | |
-| `reset_interval` | string | null for continuous-use |
+| `reset_interval` | string | null for continuous-use; `one_off` for lifetime grants |
 | `reset_interval_count` | number | null if count 1 |
-| `reset_resets_at` | number (epoch ms) | next reset |
+| `reset_resets_at` | number (epoch ms) | next reset for **this** entitlement (use to pick the current cycle) |
 | `price_amount` | number | single-tier only |
 | `price_billing_method` | string | prepaid / usage_based |
 | `price_billing_units` | number | default 1 |
@@ -336,7 +344,11 @@ Feature balances, their per-entitlement breakdowns, and boolean feature flags.
 | `price_tiers` | json (string) | multi-tier array |
 | `expires_at` | number (epoch ms) | null if no expiry |
 | `org_id` | string | your tenant id |
-| `env` | string | `sandbox` / `production` |
+| `env` | string | `sandbox` / `live` |
+
+<Warning>
+  **`v2_3_breakdowns` has no `status` / `is_active` / `is_current` column** and mixes rows from superseded/cancelled product versions, past reset cycles, and pre-seeded future cycles. To get the rows the API would use, join `internal_product_id` to active subscription status and pick the current cycle (earliest upcoming `reset_resets_at`); `one_off` rows are always live. See [Balance semantics → The active + current-cycle filter](/documentation/lakehouse/balance-semantics#the-active-current-cycle-filter).
+</Warning>
 
 </Accordion>
 <Accordion title="v2_3_flags — boolean feature flags">
@@ -355,7 +367,7 @@ Feature balances, their per-entitlement breakdowns, and boolean feature flags.
 | `internal_product_id` | string | 🔗 → `v2_3_plans.internal_id` |
 | `expires_at` | number (epoch ms) | null if no expiry |
 | `org_id` | string | your tenant id |
-| `env` | string | `sandbox` / `production` |
+| `env` | string | `sandbox` / `live` |
 
 </Accordion>
 </AccordionGroup>
@@ -373,7 +385,7 @@ Invoices and their line items.
 |---|---|---|
 | `id` | string | ⭐ stable key (invoice id) |
 | `org_id` | string | your tenant id |
-| `env` | string | `sandbox` / `production` |
+| `env` | string | `sandbox` / `live` |
 | `customer_id` | string | external customer id |
 | `internal_customer_id` | string | 🔗 → `v2_3_customers.internal_id` |
 | `entity_id` | string | external entity id (null = customer-scoped) |
@@ -398,7 +410,7 @@ Invoices and their line items.
 |---|---|---|
 | `id` | string | ⭐ stable key (line item id) |
 | `org_id` | string | your tenant id |
-| `env` | string | `sandbox` / `production` |
+| `env` | string | `sandbox` / `live` |
 | `invoice_id` | string | 🔗 → `v2_3_invoices.id` |
 | `customer_id` | string | external customer id |
 | `description` | string | |
@@ -435,7 +447,7 @@ The append-only usage event log. This is the highest-volume table and is **appen
 | `org_id` | string | your tenant id |
 | `org_slug` | string | |
 | `internal_customer_id` | string | 🔗 → `v2_3_customers.internal_id` |
-| `env` | string | `sandbox` / `production` |
+| `env` | string | `sandbox` / `live` |
 | `created_at` | number (epoch ms) | when Autumn recorded the event |
 | `timestamp` | timestamp | event time — a **real timestamp**, use directly |
 | `event_name` | string | |

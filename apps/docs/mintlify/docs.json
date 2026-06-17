@@ -146,6 +146,7 @@
 							"documentation/lakehouse/overview",
 							"documentation/lakehouse/connecting",
 							"documentation/lakehouse/schema",
+							"documentation/lakehouse/balance-semantics",
 							"documentation/lakehouse/querying"
 						]
 					}

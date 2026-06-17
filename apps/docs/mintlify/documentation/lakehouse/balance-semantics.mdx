@@ -1,0 +1,107 @@
+---
+title: "Balance semantics"
+sidebarTitle: "Balance semantics"
+description: "What v2_3_balances and v2_3_breakdowns actually mean — and how to reconstruct the figures the API and dashboard show."
+---
+
+{/*
+  MAINTAINER SOURCE TRACE — every claim on this page is grounded in code, not in the prose docs.
+  When the implementation changes, update this page against these files:
+  - ETL reshape (the warehouse tables ARE this computation, materialized):
+      terraform/risingwave-etl/sql/03_v2.3_mvs_balances.sql  (api_2_3.breakdowns, api_2_3.balances)
+  - API read path the ETL mirrors:
+      server/src/internal/customers/cusUtils/getApiCustomerV2/getApiBalance/getApiBalanceV2.ts
+      server/src/internal/customers/cusUtils/getApiCustomerV2/getApiBalance/getApiBalancesV2.ts
+  - Active-status / expiry / dedup filter applied by the API but NOT by the ETL:
+      shared/utils/fullSubjectUtils/fullSubjectToCustomerEntitlements.ts
+      shared/utils/orgUtils/convertOrgUtils.ts                 (orgToInStatuses)
+  - Per-column math:
+      shared/utils/cusEntUtils/balanceUtils/cusEntsToUsage.ts  (usage = granted + prepaid − balance)
+      shared/utils/cusEntUtils/balanceUtils.ts                 (cusEntToCurrentBalance — floors at 0)
+      shared/utils/cusEntUtils/overageUtils/cusEntToInvoiceOverage.ts  (overage = max(0, −balance))
+      shared/utils/cusEntUtils/sortCusEntsForDeduction.ts      (shortest-interval-first deduction)
+*/}
+
+<Warning>
+  **Available on request** — The Autumn Lakehouse is provisioned per customer. Contact us at [hey@useautumn.com](mailto:hey@useautumn.com) to get access.
+</Warning>
+
+`v2_3_balances` and `v2_3_breakdowns` look like a tidy relational schema, but they aren't one. They are **denormalized snapshots of Autumn's read-time balance computation** — the same computation behind `GET /customers/:id` and the dashboard. Read them as columns named after their source values rather than as a schema you can do naive arithmetic on, and the surprises below disappear.
+
+If you only take one thing from this page: **the warehouse keeps every entitlement row, the API does not.** To reproduce an API or dashboard figure you must re-apply the filter the API applies — active products, non-expired entitlements, current cycle.
+
+## The model in one paragraph
+
+For each feature, the API gathers a customer's **active** `customer_entitlement` rows, computes a small set of values per row (`included_grant`, `prepaid_grant`, `remaining`, `usage`, `overage`), and sums them into one balance. The ETL materializes exactly this: `v2_3_breakdowns` is one row **per entitlement per scope** (the per-row values), and `v2_3_balances` is the `GROUP BY customer × feature × scope` sum over it. The only — but decisive — difference is that the ETL aggregates over **all** entitlement rows in your database, while the API first filters to the active, current set.
+
+## Why your numbers look inflated
+
+`v2_3_breakdowns` is built from a plain join over `customer_entitlements` with **no status, expiry, or cycle filter**. Every entitlement row your account has ever held is in there:
+
+- superseded / cancelled product **versions**,
+- past reset **cycles** that already rolled over,
+- pre-seeded **future** cycles.
+
+The API, by contrast, keeps only entitlements whose product is **active** (status `active`, or `past_due` if your org enables `include_past_due`) and whose `expires_at` is in the future, then dedups and sums.
+
+So a single `v2_3_balances` row can sum *many lifetimes* of `usage` for one customer × feature. This is **not** because `usage` is a lifetime accumulator — each entitlement's `usage` is its own current value. It's because the row aggregates over entitlements the API would have thrown away. A pooled balance that reads `granted = 53,000`, `usage = 3,408,161`, `remaining = +10,312` is not a corrupted row — it is dozens of historical entitlements summed together. Filter to the active, current-cycle set and it reconciles.
+
+## Per-column meaning
+
+These are the values the ETL writes, verbatim from the read-time math.
+
+| Column (both tables unless noted) | Definition |
+|---|---|
+| `included_grant` *(breakdowns)* | `allowance + adjustment`, scaled by product quantity / entity count |
+| `prepaid_grant` *(breakdowns)* | prepaid quantity × billing units (0 unless a prepaid price is linked) |
+| `granted` *(balances)* | `Σ(included_grant + prepaid_grant)` + rollover-granted |
+| `usage` | `included_grant + prepaid_grant − balance` per row (signed balance); summed, then `+ rollover_usage − unused` |
+| `remaining` | `max(0, balance)` per row — **floored at 0** — summed, then `+ rollover_balance + unused` |
+| `overage` | **not stored** — see below |
+
+Two consequences fall straight out of these definitions:
+
+1. **`remaining` is floored.** Each entitlement contributes `max(0, balance)`, never a negative. You cannot recover how far a balance went negative from `remaining` — that information lives only in `usage`.
+2. **`usage` carries the sign.** Because `usage = granted − balance` (per row), `usage − granted = −balance`. When a balance goes negative (overage), `usage` exceeds `granted` by exactly that amount. This is the hook used to reconstruct overage.
+
+### `granted`, `remaining`, `usage` are not a closed triple
+
+`remaining ≠ granted − usage`. They diverge for three independent reasons, all by design:
+
+- **Manual "Set Balance"** writes `balance` directly, decoupling it from `granted`. Set a balance below zero and `usage` (= `granted − balance`) inflates past `granted` with no real consumption behind it — the "spurious negative balance / huge usage" artifact.
+- **Rollover and unused** terms are layered into `granted`/`remaining`/`usage` separately (rollover-granted, rollover-balance, rollover-usage, unused), and don't cancel.
+- **The flooring** of `remaining` (above) breaks the identity whenever any entitlement is in overage.
+
+Treat each column as the named sum it is, not as a term in an equation.
+
+## Overage is derived, not stored
+
+There is **no overage column** on `v2_3_balances` or `v2_3_breakdowns`. The dashboard's overage figure is computed at read time: per entitlement, `overage = max(0, −balance)`, summed. That is identical to `max(0, usage − (included_grant + prepaid_grant))` per breakdown row, since `usage − granted = −balance`.
+
+So the faithful warehouse reconstruction is:
+
+```text
+overage = Σ  max(0, usage − included_grant − prepaid_grant)
+          over active, current-cycle breakdown rows
+```
+
+**Floor per row, then sum.** Flooring at the customer level instead lets a surplus on one entitlement cancel an overage on another, which the API never does. (`overage` is only meaningful where a usage-based price exists — a feature with no overage-allowed price never goes negative.)
+
+## The active + current-cycle filter
+
+This is the filter the API applies and the warehouse does not. Re-apply it before any balance, usage, or overage query.
+
+1. **Active product only.** Keep breakdown rows whose `internal_product_id` matches an active subscription (`v2_3_subscriptions.status = 'active'`). If your org enables `include_past_due`, also keep `past_due`. One-off entitlements (`reset_interval = 'one_off'`) are always live.
+2. **Current cycle only.** An entitlement carries one row per reset cycle it has lived through. The current cycle is the one whose reset is the **earliest still in the future**: per `(internal_customer_id, internal_product_id)`, `min(reset_resets_at)` where `reset_resets_at > now`. `one_off` rows have no cycle and are always kept.
+3. **Pooled vs per-entity.** Keep `coalesce(entity_id, '') = ''` for customer-level (pooled) totals. Customers with `config.disable_pooled_balance` set track per-entity instead — for those, sum the per-entity rows rather than the pooled row. See [Querying → Pooled vs per-entity](/documentation/lakehouse/querying#pooled-vs-per-entity-rows).
+4. **Not expired.** Drop rows whose `expires_at` is in the past.
+
+A ready-to-run query that applies all of this and reproduces the dashboard's overage leaderboard is in [Querying → Current-period billable overage](/documentation/lakehouse/querying#current-period-billable-overage).
+
+## Deduction order (why monthly drains before lifetime)
+
+When usage is recorded, Autumn deducts from entitlements **shortest-reset-interval-first** (a daily grant drains before a monthly, which drains before a lifetime/`one_off`), after a few higher-priority rules — entity-scoped before pooled when tracking an entity, unlimited first, prepaid before pay-per-use. This is why, when a customer has both a monthly grant and a lifetime grant for the same feature, the monthly empties first and overage lands on whichever pool is drained last. It matters for analytics because it determines **which** breakdown row shows the overage, not just the total.
+
+## Footgun: `IS NULL` throws on these tables
+
+On the Iceberg balances/breakdowns/flags tables, `WHERE entity_id IS NULL` raises `NOT_FOUND_COLUMN_IN_BLOCK` (it reaches for an unmaterialized `entity_id.null` subcolumn). Use `coalesce(entity_id, '') = ''` instead, everywhere you'd reach for `IS NULL`. See [Querying → Pooled vs per-entity](/documentation/lakehouse/querying#pooled-vs-per-entity-rows).

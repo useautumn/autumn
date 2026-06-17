@@ -10,6 +10,22 @@ description: "How to address tables, convert types, join, and avoid footguns."
 
 Throughout this page, replace `<catalog>` and `<namespace>` with the names Autumn assigned you.
 
+## Find your catalog and namespace
+
+Autumn sends you both names when your Lakehouse is provisioned (see [Connecting](/documentation/lakehouse/connecting)). If you need to rediscover them in ClickHouse Cloud, the catalog mounts as a database — list databases to find it:
+
+<Tabs>
+<Tab title="ClickHouse">
+
+```sql
+SHOW DATABASES;
+```
+
+The catalog appears as one of the listed databases. Your tables then live under `` `<catalog>`.`<namespace>.v2_3_<object>` `` (the `<namespace>.v2_3_<object>` part is a single literal table name — see below).
+
+</Tab>
+</Tabs>
+
 ## Identifier syntax
 
 <Tabs>
@@ -21,7 +37,7 @@ The Glue catalog mounts as a database. The whole `<namespace>.v2_3_<object>` is 
 SELECT * FROM `<catalog>`.`<namespace>.v2_3_features` LIMIT 10;
 ```
 
-A common mistake is `` `<catalog>.<namespace>`.`v2_3_features` `` — that won't resolve, because `<namespace>.v2_3_features` is a single identifier, not `database.table`.
+A common mistake is `` `<catalog>.<namespace>`.`v2_3_features` `` — that won't resolve, because `<namespace>.v2_3_features` is a single identifier, not `database.table`. The single-quoted `'<namespace>.v2_3_features'` form does not resolve in ClickHouse Cloud either — use backticks on both parts.
 
 </Tab>
 {/*
@@ -93,6 +109,19 @@ FROM `<project>.<dataset>.v2_3_events`;
 */}
 </Tabs>
 
+## Nullable columns: don't use `IS NULL`
+
+<Warning>
+  On the Iceberg tables, `WHERE col IS NULL` raises `NOT_FOUND_COLUMN_IN_BLOCK` — the engine reaches for an unmaterialized `col.null` subcolumn that doesn't exist. This bites hardest on `entity_id` (the pooled-vs-entity discriminator). Use **`coalesce(col, '') = ''`** for "is null" and **`coalesce(col, '') != ''`** for "is not null".
+</Warning>
+
+```sql
+-- ✗ throws NOT_FOUND_COLUMN_IN_BLOCK
+WHERE entity_id IS NULL
+-- ✓ pooled (customer-level) rows
+WHERE coalesce(entity_id, '') = ''
+```
+
 ## Examples
 
 ### Fetch one customer
@@ -161,7 +190,11 @@ WHERE s.status = 'active';
 
 ### A customer's balances for a feature
 
-Use the pooled (customer-level) rows where `entity_id IS NULL`.
+Use the pooled (customer-level) rows where `coalesce(entity_id, '') = ''`.
+
+<Warning>
+  This returns the **raw** aggregated row, which sums over *every* entitlement — including superseded versions and past cycles — so `granted`/`remaining`/`usage` will not match the API for customers with history. To reproduce the API/dashboard figure, apply the active + current-cycle filter from [Balance semantics](/documentation/lakehouse/balance-semantics). For overage specifically, use [the reference query below](#current-period-billable-overage).
+</Warning>
 
 <Tabs>
 <Tab title="ClickHouse">
@@ -171,7 +204,7 @@ SELECT feature_id, granted, remaining, usage
 FROM `<catalog>`.`<namespace>.v2_3_balances`
 WHERE customer_id = 'cus_123'
   AND feature_id = 'AI_CREDITS'
-  AND entity_id IS NULL;
+  AND coalesce(entity_id, '') = '';
 ```
 
 </Tab>
@@ -188,6 +221,89 @@ WHERE customer_id = 'cus_123'
 
 </Tab>
 */}
+</Tabs>
+
+### Current-period billable overage
+
+Overage is **derived, not stored** (see [Balance semantics → Overage](/documentation/lakehouse/balance-semantics#overage-is-derived-not-stored)). This query reconstructs the dashboard's overage leaderboard from `v2_3_breakdowns`: it keeps only rows whose product is an **active** subscription (plus always-live `one_off` rows), picks each entitlement's **current cycle** (earliest upcoming reset), floors overage **per row** (`max(0, usage − granted)`), then sums per customer. It reproduces the dashboard figure to within sync-lag drift.
+
+<Note>
+  Swap in your `<catalog>` / `<namespace>` and the feature id. Known simplifications: it omits `rollover` / `unused` terms (zero for most customers, non-zero in general) and is pooled-only (`coalesce(entity_id,'') = ''`), so per-entity overage under `config.disable_pooled_balance` is not counted. For those customers, sum the per-entity rows instead.
+</Note>
+
+<Tabs>
+<Tab title="ClickHouse">
+<Expandable title="ClickHouse">
+
+```sql
+WITH
+  active_prod AS (
+    SELECT DISTINCT internal_customer_id, internal_product_id
+    FROM `<catalog>`.`<namespace>.v2_3_subscriptions`
+    WHERE env = 'live' AND status = 'active'
+  ),
+  bd AS (
+    SELECT
+      b.internal_customer_id AS icid,
+      b.internal_product_id  AS ipid,
+      b.reset_interval       AS ri,
+      toInt64(b.reset_resets_at) AS rra,
+      (b.included_grant + b.prepaid_grant) AS granted,
+      b.usage AS usage
+    FROM `<catalog>`.`<namespace>.v2_3_breakdowns` AS b
+    WHERE b.env = 'live'
+      AND b.feature_id = 'AI_CREDITS'
+      AND coalesce(b.entity_id, '') = ''
+      AND (
+        b.reset_interval = 'one_off'
+        OR (b.internal_customer_id, b.internal_product_id)
+             IN (SELECT internal_customer_id, internal_product_id FROM active_prod)
+      )
+  ),
+  cur_cycle AS (
+    SELECT icid, ipid, min(rra) AS cur_reset
+    FROM bd
+    WHERE ri != 'one_off' AND rra > toUnixTimestamp(now()) * 1000
+    GROUP BY icid, ipid
+  ),
+  per_customer AS (
+    SELECT
+      bd.icid AS icid,
+      sum(bd.granted) AS granted,
+      sum(bd.usage)   AS usage,
+      -- floor overage PER ROW, then sum (matches the API's per-entitlement max(0, −balance))
+      sum(greatest(0, bd.usage - bd.granted)) AS overage
+    FROM bd
+    LEFT JOIN cur_cycle AS cc ON cc.icid = bd.icid AND cc.ipid = bd.ipid
+    WHERE bd.ri = 'one_off' OR bd.rra = cc.cur_reset
+    GROUP BY bd.icid
+    HAVING overage > 0
+    ORDER BY overage DESC
+    LIMIT 10
+  ),
+  active_subs AS (
+    SELECT s.internal_customer_id AS icid, groupArray(coalesce(p.name, s.plan_id)) AS subscriptions
+    FROM `<catalog>`.`<namespace>.v2_3_subscriptions` AS s
+    LEFT JOIN `<catalog>`.`<namespace>.v2_3_plans` AS p ON p.internal_id = s.internal_product_id
+    WHERE s.env = 'live' AND s.status = 'active'
+    GROUP BY s.internal_customer_id
+  )
+SELECT
+  c.customer_id AS customer_id,
+  nullIf(c.name, '')  AS name,
+  nullIf(c.email, '') AS email,
+  pc.granted AS granted,
+  pc.usage   AS usage,
+  pc.overage AS overage,
+  s.subscriptions AS subscriptions
+FROM per_customer AS pc
+INNER JOIN `<catalog>`.`<namespace>.v2_3_customers` AS c ON c.internal_id = pc.icid
+LEFT JOIN active_subs AS s ON s.icid = pc.icid
+ORDER BY pc.overage DESC;
+```
+
+</Expandable>
+</Tab>
 </Tabs>
 
 ### Invoice totals by status
@@ -273,6 +389,10 @@ ORDER BY day;
 This rebuilds the **entire** `GET /customers/:id` response — scalars, subscriptions, purchases, balances (with per-plan breakdowns), flags, and invoices — from the warehouse in a single query, returned as one JSON object. It's the most useful query if you want the API's customer view without calling the API.
 
 ClickHouse-specific (uses `groupArray`, `Tuple`/`Map` casts, and the `JSON` type — ClickHouse 24.8+). Customer-level (pooled) balances and flags use `entity_id = ''`; per-entity rows are excluded from the customer envelope. `FORMAT PrettyJSONEachRow` emits one pretty-printed JSON object.
+
+<Warning>
+  This mirrors the **shape** of the API response, but the `balances` / `breakdown` values are the raw aggregated rows — they sum over superseded versions and past cycles, so they will not match `GET /customers/:id` for customers with billing history. To match the API, restrict the balances/breakdowns subqueries to active, current-cycle rows per [Balance semantics → The active + current-cycle filter](/documentation/lakehouse/balance-semantics#the-active-current-cycle-filter).
+</Warning>
 <Tabs>
 <Tab title="ClickHouse">
 <Expandable title="ClickHouse">
@@ -462,10 +582,16 @@ So:
 
 `v2_3_balances`, `v2_3_breakdowns`, and `v2_3_flags` contain two kinds of row:
 
-- **Pooled** (customer-level) — `entity_id IS NULL`.
+- **Pooled** (customer-level) — `entity_id` is null.
 - **Per-entity** — `entity_id` is set.
 
-For customer-level totals, filter `entity_id IS NULL` to avoid double counting. To analyze a specific entity, filter on its `entity_id` (or `internal_entity_id`).
+For customer-level totals, keep the pooled rows with `coalesce(entity_id, '') = ''` to avoid double counting. To analyze a specific entity, filter on its `entity_id` (or `internal_entity_id`).
+
+<Warning>
+  Write `coalesce(entity_id, '') = ''`, **not** `entity_id IS NULL` — `IS NULL` throws on these Iceberg columns (see [Nullable columns](#nullable-columns-dont-use-is-null)).
+</Warning>
+
+Customers with `config.disable_pooled_balance` track per-entity rather than pooled — for them, sum the per-entity rows instead of reading the pooled row. See [Balance semantics](/documentation/lakehouse/balance-semantics) for what the aggregated values mean and the active + current-cycle filter you need before trusting them.
 
 ### Freshness
 
