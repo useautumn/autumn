@@ -288,8 +288,14 @@ export function SubscriptionDetailSheet() {
 						<InfoRow
 							icon={<HashIcon size={16} weight="duotone" />}
 							label="Entity ID"
-							value={entity.id || entity.internal_id}
-							mono
+							value={
+								<CopyButton
+									text={entity.id || entity.internal_id}
+									size="mini"
+									className="text-tertiary-foreground"
+									innerClassName={ID_CHIP_INNER_CLASS}
+								/>
+							}
 						/>
 					</div>
 				</SheetSection>
