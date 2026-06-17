@@ -4,6 +4,10 @@ import {
 	type ProductItem,
 	UsageModel,
 } from "../../../models/productV2Models/productItemModels/productItemModels.js";
+import {
+	itemToBillingInterval,
+	itemToBillingIntervalCount,
+} from "./itemIntervalUtils.js";
 
 const usageModelToBillingMethod = (
 	usageModel: ProductItem["usage_model"],
@@ -30,13 +34,15 @@ export const matchesPlanItemFilter = ({
 
 	if (
 		filter.interval !== undefined &&
-		String(item.interval) !== String(filter.interval)
+		String(itemToBillingInterval({ item })) !== String(filter.interval)
+		// String(itemToEntInterval({ item })) !== String(filter.interval)
 	)
 		return false;
 
 	if (
 		filter.interval_count !== undefined &&
-		(item.interval_count ?? 1) !== filter.interval_count
+		itemToBillingIntervalCount({ item }) !== filter.interval_count
+		// itemToEntIntervalCount({ item }) !== filter.interval_count
 	)
 		return false;
 

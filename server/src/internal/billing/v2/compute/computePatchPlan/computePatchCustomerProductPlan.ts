@@ -9,6 +9,7 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { buildAutumnLineItems } from "@/internal/billing/v2/compute/computeAutumnUtils/buildAutumnLineItems";
 import { computeSchedulePhaseReplacements } from "@/internal/billing/v2/compute/computeSchedulePhaseReplacements";
+import { entitlementToResetCycleAnchor } from "@/internal/billing/v2/utils/initFullCustomerProduct/cycleAnchorUtils";
 import { initPatchCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initPatchedCustomerProduct";
 
 export const computePatchCustomerProductPlan = ({
@@ -131,6 +132,11 @@ const computeAnchorResetEntitlementUpdates = ({
 		.map((customerEntitlement) => ({
 			customerEntitlement,
 			updates: {
+				reset_cycle_anchor: entitlementToResetCycleAnchor({
+					entitlement: customerEntitlement.entitlement,
+					resetCycleAnchor: updateSubscriptionContext.resetCycleAnchorMs,
+					now: updateSubscriptionContext.currentEpochMs,
+				}),
 				next_reset_at: getCycleEnd({
 					anchor: updateSubscriptionContext.resetCycleAnchorMs,
 					interval:

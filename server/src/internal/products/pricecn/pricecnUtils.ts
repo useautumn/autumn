@@ -8,6 +8,8 @@ import {
 	type FullProduct,
 	formatAmount,
 	Infinite,
+	itemToBillingInterval,
+	itemToBillingIntervalCount,
 	numberWithCommas,
 	type Organization,
 	type ProductItem,
@@ -107,6 +109,16 @@ const getPriceText = ({
 	}
 };
 
+const getBillingIntervalText = (item: ProductItem) => {
+	const interval = itemToBillingInterval({ item });
+	if (!interval || interval === "one_off") return "";
+
+	const intervalCount = itemToBillingIntervalCount({ item });
+	return intervalCount > 1
+		? `per ${intervalCount} ${interval}s`
+		: `per ${interval}`;
+};
+
 // Deprecate
 export const getPricecnPrice = ({
 	org,
@@ -136,7 +148,7 @@ export const getPricecnPrice = ({
 		return {
 			...priceItem,
 			primaryText: getPriceText({ item: priceItem, org }),
-			secondaryText: priceItem.interval ? `per ${priceItem.interval}` : " ",
+			secondaryText: getBillingIntervalText(priceItem) || " ",
 		};
 	} else {
 		const feature = features.find((f) => f.id === priceItem.feature_id);
@@ -242,8 +254,9 @@ const featurePricetoPricecnItem = ({
 		priceStr2 = `${billingFeatureName}`;
 	}
 
+	const billingIntervalText = getBillingIntervalText(item);
 	const intervalStr =
-		isMainPrice && item.interval ? ` per ${item.interval}` : "";
+		isMainPrice && billingIntervalText ? ` ${billingIntervalText}` : "";
 
 	if (includedUsageStr) {
 		return {
@@ -335,7 +348,7 @@ export const toPricecnProduct = async ({
 			const priceTxt = getPriceText({ item: i, org });
 			data = {
 				primaryText: priceTxt,
-				secondaryText: i.interval ? `per ${i.interval}` : undefined,
+				secondaryText: getBillingIntervalText(i) || undefined,
 			};
 		}
 

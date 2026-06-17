@@ -42,12 +42,12 @@ const toResetParam = ({
 export const resetCustomerEntitlements = async ({
 	ctx,
 	fullCus,
+	now = Date.now(),
 }: {
 	ctx: AutumnContext;
 	fullCus: FullCustomer;
+	now?: number;
 }): Promise<boolean> => {
-	const now = Date.now();
-
 	const { logger } = ctx;
 	const customerId = fullCus.id || fullCus.internal_id;
 

@@ -29,8 +29,10 @@ export const customerEntitlements = pgTable(
 		unlimited: boolean("unlimited").default(false),
 		balance: numeric({ mode: "number" }).notNull().default(0),
 		created_at: numeric({ mode: "number" }).notNull(),
+		reset_cycle_anchor: numeric({ mode: "number" }),
 		next_reset_at: numeric({ mode: "number" }),
 		usage_allowed: boolean("usage_allowed").default(false),
+		separate_interval: boolean("separate_interval").notNull().default(false),
 
 		// Adjustment is how much balance changes. Eg. balance goes from 100 -> 200, adjustment is +100 (will deprecate soon)
 		adjustment: numeric({ mode: "number" }),
@@ -90,6 +92,12 @@ export const customerEntitlements = pgTable(
 			table.internal_entity_id,
 		),
 		index("idx_customer_entitlements_on_next_reset_at").on(table.next_reset_at),
+		index("idx_customer_entitlements_separate_interval_reset")
+			.on(table.next_reset_at, table.id)
+			.where(
+				sql`${table.separate_interval} = true AND ${table.next_reset_at} IS NOT NULL`,
+			)
+			.concurrently(),
 		index("idx_customer_entitlements_loose_customer_expires")
 			.on(table.internal_customer_id, table.expires_at)
 			.where(sql`${table.customer_product_id} IS NULL`),

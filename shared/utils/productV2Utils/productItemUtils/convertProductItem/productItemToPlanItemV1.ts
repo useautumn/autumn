@@ -19,7 +19,11 @@ import {
 import { toApiFeature } from "../../../featureUtils.js";
 import { getProductItemDisplay } from "../../../productDisplayUtils.js";
 import { isFeaturePriceItem } from "../getItemType.js";
-import { itemToBillingInterval } from "../itemIntervalUtils.js";
+import {
+	itemToBillingInterval,
+	itemToBillingIntervalCount,
+	itemToEntIntervalCount,
+} from "../itemIntervalUtils.js";
 import { addIncludedToTiers } from "../tierUtils.js";
 import { itemIntvToResetIntv } from "./planItemIntervals.js";
 
@@ -38,8 +42,8 @@ const itemToReset = ({
 	return {
 		interval: itemIntvToResetIntv(item.interval ?? null),
 		interval_count:
-			item.interval_count !== 1 && typeof item.interval_count === "number"
-				? item.interval_count
+			itemToEntIntervalCount({ item }) !== 1
+				? itemToEntIntervalCount({ item })
 				: undefined,
 		// Note: reset_when_enabled is NOT in V1 schema - removed
 	};
@@ -90,8 +94,8 @@ const itemToPlanFeaturePrice = ({
 
 		interval: itemToBillingInterval({ item }),
 		interval_count:
-			item.interval_count !== 1 && typeof item.interval_count === "number"
-				? item.interval_count
+			itemToBillingIntervalCount({ item }) !== 1
+				? itemToBillingIntervalCount({ item })
 				: undefined,
 
 		billing_units: item.billing_units ?? 1,

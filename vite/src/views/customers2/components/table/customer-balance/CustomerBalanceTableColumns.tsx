@@ -38,12 +38,13 @@ import {
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
-import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { getCusEntHoverTexts } from "@/views/admin/adminUtils";
 import { useFeatureUsageBalance } from "@/views/customers2/hooks/useFeatureUsageBalance";
 import { CustomerFeatureUsageBar } from "../customer-feature-usage/CustomerFeatureUsageBar";
 import { FeatureBalanceDisplay } from "../customer-feature-usage/FeatureBalanceDisplay";
 import type { CustomerBalanceRowData } from "./CustomerBalanceTable";
+import { getEarliestCustomerBalanceBillingCycleEnd } from "./customerBalanceBillingCycle";
 import {
 	canDeleteCustomerBalance,
 	canRecalculateCustomerBalances,
@@ -239,36 +240,53 @@ function UsageCell({
 
 // --- Bar cells ---
 
+const formatChipDate = (timestamp: number | null | undefined) => {
+	if (!timestamp) return "";
+	const { date, time } = formatUnixToDateTime(timestamp, { withYear: true });
+	return `${date} ${time}`;
+};
+
 function BarCellContent({
 	ent,
 	allowance,
 	balance,
 	quantity,
+	billingCycleEnd,
 }: {
 	ent: FullCusEntWithFullCusProduct;
 	allowance: number;
 	balance: number;
 	quantity: number;
+	billingCycleEnd: number | null;
 }) {
 	const hasReset = ent.next_reset_at != null;
 	const hasExpiry = ent.expires_at != null;
 
 	return (
 		<div className="flex gap-3 items-center">
-			{hasExpiry ? (
-				<span className="text-tertiary-foreground text-tiny flex justify-center !px-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-md min-w-30">
-					Expires {formatUnixToDateTimeString(ent.expires_at)}
-				</span>
-			) : (
-				<span
-					className={cn(
-						"text-tertiary-foreground text-tiny flex justify-center !px-1 bg-muted rounded-md min-w-30",
-						hasReset ? "opacity-100" : "opacity-0",
-					)}
-				>
-					Resets {formatUnixToDateTimeString(ent.next_reset_at)}
-				</span>
-			)}
+			<div className="flex items-center gap-1.5 shrink-0">
+				{billingCycleEnd ? (
+					<span className="text-tiny flex justify-center !px-1 rounded-md min-w-36 whitespace-nowrap bg-sky-500/10 text-sky-700 dark:text-sky-300">
+						Bills {formatChipDate(billingCycleEnd)}
+					</span>
+				) : (
+					<span className="text-tiny flex justify-center !px-1 rounded-md min-w-36 whitespace-nowrap opacity-0" />
+				)}
+				{hasExpiry ? (
+					<span className="text-tiny flex justify-center !px-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-md min-w-36 whitespace-nowrap">
+						Expires {formatChipDate(ent.expires_at)}
+					</span>
+				) : (
+					<span
+						className={cn(
+							"text-tertiary-foreground text-tiny flex justify-center !px-1 bg-muted rounded-md min-w-36 whitespace-nowrap",
+							hasReset ? "opacity-100" : "opacity-0",
+						)}
+					>
+						Resets {formatChipDate(ent.next_reset_at)}
+					</span>
+				)}
+			</div>
 			<div
 				className={cn(
 					"w-full max-w-50 flex justify-center pr-2 h-full items-center min-w-16",
@@ -303,6 +321,11 @@ function ParentBarCell({
 		entityId,
 		customerEntitlements,
 	});
+	const balances = customerEntitlements ?? [ent];
+	const billingCycleEnd = getEarliestCustomerBalanceBillingCycleEnd({
+		balances,
+		now: Date.now(),
+	});
 
 	return (
 		<BarCellContent
@@ -310,6 +333,7 @@ function ParentBarCell({
 			allowance={allowance}
 			balance={balance}
 			quantity={quantity}
+			billingCycleEnd={billingCycleEnd}
 		/>
 	);
 }
@@ -325,6 +349,10 @@ function SubRowBarCell({
 		ent,
 		entityId,
 	});
+	const billingCycleEnd = getEarliestCustomerBalanceBillingCycleEnd({
+		balances: [ent],
+		now: Date.now(),
+	});
 
 	return (
 		<BarCellContent
@@ -332,6 +360,7 @@ function SubRowBarCell({
 			allowance={allowance}
 			balance={balance}
 			quantity={quantity}
+			billingCycleEnd={billingCycleEnd}
 		/>
 	);
 }

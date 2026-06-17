@@ -1,8 +1,9 @@
 import {
+	addCusProductToCusEnt,
 	AllowanceType,
 	EntInterval,
-	type FullEntitlement,
 	getStartingBalance,
+	isCustomerEntitlementPrepaidWithSeparateResetInterval,
 	type ResetCusEnt,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
@@ -54,11 +55,13 @@ const resetCustomerEntitlementInDb = async ({
 	};
 
 	try {
-		const ent = cusEnt.entitlement as FullEntitlement;
+		const ent = cusEnt.entitlement;
+		const shortDurationInterval = ent.interval;
 
 		if (
 			ent.allowance_type === AllowanceType.Fixed &&
-			shortDurations.includes(ent.interval as EntInterval)
+			shortDurationInterval &&
+			shortDurations.includes(shortDurationInterval)
 		) {
 			return await resetShortDurationCustomerEntitlement({
 				ctx: repoContext,
@@ -67,7 +70,8 @@ const resetCustomerEntitlementInDb = async ({
 			});
 		}
 
-		// Fetch related price (skip for loose ents)
+		// Fetch related price. Normal paid entitlements reset from
+		// invoice.created; split prepaid reset intervals reset here.
 		let relatedCusPrice = null;
 		if (cusEnt.customer_product_id) {
 			const cusPrices = await CusPriceService.getByCustomerProductId({
@@ -75,7 +79,23 @@ const resetCustomerEntitlementInDb = async ({
 				customerProductId: cusEnt.customer_product_id,
 			});
 			relatedCusPrice = getRelatedCusPrice(cusEnt, cusPrices);
-			if (relatedCusPrice) {
+			const customerEntitlementWithPrices = cusEnt.customer_product
+				? addCusProductToCusEnt({
+						cusEnt,
+						cusProduct: {
+							...cusEnt.customer_product,
+							customer_prices: cusPrices,
+						},
+					})
+				: null;
+			if (
+				relatedCusPrice &&
+				(!customerEntitlementWithPrices ||
+					!isCustomerEntitlementPrepaidWithSeparateResetInterval({
+						customerEntitlement: customerEntitlementWithPrices,
+						customerPrice: relatedCusPrice,
+					}))
+			) {
 				return;
 			}
 		}
@@ -121,16 +141,18 @@ const resetCustomerEntitlementInDb = async ({
 		const resetBalance = getStartingBalance({
 			entitlement: cusEnt.entitlement,
 			options: entOptions || undefined,
-			relatedPrice: undefined,
+			relatedPrice: relatedCusPrice?.price,
 			productQuantity: cusEnt.customer_product?.quantity ?? 1,
 		});
 
 		if (!cusEnt.next_reset_at) return;
+		const resetInterval = cusEnt.entitlement.interval;
+		if (!resetInterval) return;
 
 		// 1. Check if should reset
 		let nextResetAt = getNextResetAt({
 			curReset: new UTCDate(cusEnt.next_reset_at),
-			interval: cusEnt.entitlement.interval as EntInterval,
+			interval: resetInterval,
 			intervalCount: cusEnt.entitlement.interval_count,
 		});
 

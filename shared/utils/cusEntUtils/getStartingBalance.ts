@@ -4,6 +4,7 @@ import { BillingType } from "@models/productModels/priceModels/priceEnums.js";
 import type { Price } from "@models/productModels/priceModels/priceModels.js";
 import { getBillingType } from "@utils/productUtils/priceUtils.js";
 import { nullish } from "@utils/utils.js";
+import { Decimal } from "decimal.js";
 
 export const getStartingBalance = ({
 	entitlement,
@@ -18,7 +19,9 @@ export const getStartingBalance = ({
 }) => {
 	// 1. No related price
 	if (!relatedPrice) {
-		return (entitlement.allowance || 0) * (productQuantity || 1);
+		return new Decimal(entitlement.allowance || 0)
+			.mul(productQuantity || 1)
+			.toNumber();
 	}
 
 	const config = relatedPrice.config;
@@ -35,7 +38,9 @@ export const getStartingBalance = ({
 	}
 
 	try {
-		return (entitlement.allowance || 0) + quantity * billingUnits;
+		return new Decimal(entitlement.allowance || 0)
+			.plus(new Decimal(quantity).mul(billingUnits))
+			.toNumber();
 	} catch (_error) {
 		console.log(
 			"WARNING: Failed to return quantity * billing units, returning allowance...",
