@@ -156,6 +156,17 @@ export const CreatePlanItemParamsV1Schema = z
 		if (ctx.value.price) {
 			const { amount, tiers } = ctx.value.price;
 
+			if (
+				ctx.value.proration &&
+				ctx.value.price.billing_method === BillingMethod.UsageBased
+			) {
+				ctx.issues.push({
+					code: "custom",
+					message: "proration is only supported for prepaid features.",
+					input: ctx.value.proration,
+				});
+			}
+
 			const hasAmount = typeof amount === "number";
 			const hasTiers = Array.isArray(tiers) && tiers.length > 0;
 
@@ -249,5 +260,8 @@ export const CreatePlanItemParamsV1Schema = z
 			"Configuration for a feature item in a plan, including usage limits, pricing, and rollover settings.",
 	});
 export type CreatePlanItemParamsV1 = z.infer<
+	typeof CreatePlanItemParamsV1Schema
+>;
+export type CreatePlanItemParamsV1Input = z.input<
 	typeof CreatePlanItemParamsV1Schema
 >;

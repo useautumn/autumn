@@ -12,3 +12,8 @@ export enum OnDecrease {
 	None = "none", // replaceable strategy
 	NoProrations = "no_prorations", // no charges at all...
 }
+
+export enum AllocatedBillingBehavior {
+	Arrear = "arrear",
+	Prorated = "prorated",
+}

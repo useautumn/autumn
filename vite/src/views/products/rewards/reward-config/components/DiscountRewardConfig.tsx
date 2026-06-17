@@ -17,6 +17,7 @@ import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import type { FrontendReward } from "../../types/frontendReward";
 import { ProductPriceSelector } from "./ProductPriceSelector";
+import { PromoCodeField } from "./PromoCodeField";
 
 interface DiscountRewardConfigProps {
 	reward: FrontendReward;
@@ -42,7 +43,7 @@ export function DiscountRewardConfig({
 	return (
 		<SheetSection title="Discount Configuration" withSeparator={false}>
 			<div className="flex flex-col gap-4">
-				{/* Row 1: Discount Type and Promotional Code */}
+				{/* Row 1: Discount Type and Amount */}
 				<div className="grid grid-cols-2 gap-2">
 					<div className="flex flex-col">
 						<FormLabel>Discount Type</FormLabel>
@@ -54,7 +55,9 @@ export function DiscountRewardConfig({
 							items={{
 								percentage: "Percentage",
 								fixed: "Fixed",
-								...(reward.discountType === "invoice_credits" && { invoice_credits: "Invoice Credits" }),
+								...(reward.discountType === "invoice_credits" && {
+									invoice_credits: "Invoice Credits",
+								}),
 							}}
 						>
 							<SelectTrigger className="w-full">
@@ -72,26 +75,6 @@ export function DiscountRewardConfig({
 						</Select>
 					</div>
 
-					<div>
-						<FormLabel>Promotional Code (Optional)</FormLabel>
-						<Input
-							placeholder="SAVE20"
-							value={reward.promo_codes[0]?.code || ""}
-							maxLength={500}
-							onChange={(e) => {
-								// Stripe only allows alphanumeric characters (a-z, A-Z, 0-9)
-								const sanitized = e.target.value.replace(/[^a-zA-Z0-9]/g, "");
-								setReward({
-									...reward,
-									promo_codes: sanitized ? [{ code: sanitized }] : [],
-								});
-							}}
-						/>
-					</div>
-				</div>
-
-				{/* Row 2: Amount and Duration */}
-				<div className="grid grid-cols-2 gap-2">
 					<div>
 						<FormLabel>Amount</FormLabel>
 						<InputGroup className="input-base p-2">
@@ -115,7 +98,10 @@ export function DiscountRewardConfig({
 							</InputGroupAddon>
 						</InputGroup>
 					</div>
+				</div>
 
+				{/* Row 2: Duration */}
+				<div className="grid grid-cols-2 gap-2">
 					<div>
 						<FormLabel>Duration</FormLabel>
 						<div className="flex items-center gap-2">
@@ -163,6 +149,8 @@ export function DiscountRewardConfig({
 						</div>
 					</div>
 				</div>
+
+				<PromoCodeField reward={reward} setReward={setReward} />
 
 				{/* Products */}
 				<div className="w-full">

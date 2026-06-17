@@ -677,7 +677,7 @@ export type CreateSchedulePlanItemFilter2 = {
 };
 
 /**
- * Customize the plan to schedule. Can override price, replace items, or patch items with add_items, remove_items, and update_items.
+ * Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items.
  */
 export type CreateScheduleCustomize2 = {
   /**
@@ -712,7 +712,7 @@ export type CreateSchedulePlan2 = {
    */
   version?: number | undefined;
   /**
-   * Customize the plan to schedule. Can override price, replace items, or patch items with add_items, remove_items, and update_items.
+   * Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items.
    */
   customize?: CreateScheduleCustomize2 | undefined;
   /**

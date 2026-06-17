@@ -254,3 +254,26 @@ test(`${chalk.yellowBright("feature-grant-6: add customer coupon requires promo 
 	expect(messagesAfterMatch.allowed).toBe(true);
 	expect(messagesAfterMatch.balance).toBe(10);
 });
+
+test(`${chalk.yellowBright("feature-grant-7: redeem boolean feature grant (on/off, no allowance)")}`, async () => {
+	const customerId = "feature-grant-7";
+
+	const { autumnV1 } = await initScenario({
+		customerId,
+		setup: [
+			s.customer({ testClock: false }),
+			s.featureGrant({
+				entitlements: [{ feature_id: TestFeature.Dashboard }],
+				promoCodes: [{ code: "DASHBOARD" }],
+			}),
+		],
+		actions: [s.rewards.redeem({ code: "DASHBOARD" })],
+	});
+
+	const check = await autumnV1.check({
+		customer_id: customerId,
+		feature_id: TestFeature.Dashboard,
+	});
+
+	expect(check.allowed).toBe(true);
+});

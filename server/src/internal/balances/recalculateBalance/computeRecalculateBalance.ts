@@ -70,6 +70,7 @@ export const computeRecalculateBalance = async ({
 	if (before.length === 0) {
 		throw new RecaseError({
 			message: `Balance not found for feature ${feature_id} and customer ${customer_id}`,
+			statusCode: 404,
 		});
 	}
 	const entityId = fullCustomer.entity?.id ?? undefined;

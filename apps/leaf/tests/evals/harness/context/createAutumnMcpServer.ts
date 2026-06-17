@@ -39,7 +39,7 @@ const createEvalMcpServer = () =>
 		version: "0.0.1",
 		description: "Operate on Autumn customers, plans, and billing.",
 		instructions:
-			"Use preview tools before billing writes. Write tools are destructive and should only be called after explicit user confirmation.",
+			"Use preview tools before billing writes. Write tools are destructive; obtain approval via your client's approval mechanism before calling one.",
 		resources: evalResources,
 		tools: createRawAutumnOperationTools(),
 	});

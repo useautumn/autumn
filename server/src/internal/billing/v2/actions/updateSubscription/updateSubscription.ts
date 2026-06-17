@@ -10,6 +10,7 @@ import { handleUpdateSubscriptionErrors } from "@/internal/billing/v2/actions/up
 import { logUpdateSubscriptionContext } from "@/internal/billing/v2/actions/updateSubscription/logs/logUpdateSubscriptionContext";
 import { setupUpdateSubscriptionBillingContext } from "@/internal/billing/v2/actions/updateSubscription/setup/setupUpdateSubscriptionBillingContext";
 import { executeBillingPlan } from "@/internal/billing/v2/execute/executeBillingPlan";
+import { voidInvoicesOnImmediateCancel } from "@/internal/billing/v2/execute/voidInvoicesOnImmediateCancel";
 import { evaluateStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/actionBuilders/evaluateStripeBillingPlan";
 import { logStripeBillingPlan } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingPlan";
 import { logStripeBillingResult } from "@/internal/billing/v2/providers/stripe/logs/logStripeBillingResult";
@@ -112,6 +113,13 @@ export async function updateSubscription({
 		ctx,
 		billingContext,
 		billingPlan,
+	});
+
+	await voidInvoicesOnImmediateCancel({
+		ctx,
+		billingContext,
+		billingPlan,
+		billingResult,
 	});
 
 	logStripeBillingResult({ ctx, result: billingResult.stripe });

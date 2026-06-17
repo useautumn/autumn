@@ -188,6 +188,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created entity: billing units - e
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
+		withPause: true,
 	});
 
 	// Verify entities still active with reset balances
@@ -311,6 +312,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created entity: 2 entities, 2 dif
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
+		withPause: true,
 	});
 
 	// Verify entities still active with reset balances
@@ -452,6 +454,7 @@ test.concurrent(`${chalk.yellowBright("invoice.created entity: 4 entities, 2 pro
 	await advanceToNextInvoice({
 		stripeCli: ctx.stripeCli,
 		testClockId: testClockId!,
+		withPause: true,
 	});
 
 	// Verify all entities still active with reset balances

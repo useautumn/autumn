@@ -18,7 +18,11 @@ import { getSqsClient } from "@/queue/initSqs.js";
 import { clearOrg } from "./utils/setup/clearOrg.js";
 import { setupOrg } from "./utils/setup/setupOrg.js";
 
-export const clearMasterOrg = async () => {
+export const clearMasterOrg = async ({
+	seedFeatures = true,
+}: {
+	seedFeatures?: boolean;
+} = {}) => {
 	console.log(chalk.blue("\n🧹 Clearing Master Org...\n"));
 
 	try {
@@ -135,6 +139,7 @@ export const clearMasterOrg = async () => {
 		await setupOrg({
 			orgId: org.id,
 			env: AppEnv.Sandbox,
+			seedFeatures,
 		});
 
 		const isRegionalRedisUrl = (url: string | undefined) =>

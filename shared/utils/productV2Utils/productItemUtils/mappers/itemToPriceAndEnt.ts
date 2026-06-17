@@ -3,6 +3,7 @@
 import { generateKsuid } from "@autumn/ksuid";
 import {
 	AllowanceType,
+	AllocatedBillingBehavior,
 	BillingInterval,
 	BillingType,
 	BillWhen,
@@ -14,6 +15,7 @@ import {
 	FeatureUsageType,
 	type FixedPriceConfig,
 	Infinite,
+	itemToAllocatedBillingBehavior,
 	itemToBillingInterval,
 	itemToBillingIntervalCount,
 	itemToEntInterval,
@@ -196,6 +198,14 @@ const toFeatureAndPrice = ({
 		feature: features.find((f) => f.id === item.feature_id),
 	});
 
+	const allocatedBillingBehavior = itemToAllocatedBillingBehavior({
+		item,
+		features,
+		curPrice,
+	});
+	const itemIsAllocatedArrear =
+		allocatedBillingBehavior === AllocatedBillingBehavior.Arrear;
+
 	let ent: Entitlement = {
 		id: item.entitlement_id || curEnt?.id || entitlementId(),
 		org_id: orgId,
@@ -239,7 +249,13 @@ const toFeatureAndPrice = ({
 				: BillWhen.EndOfPeriod,
 
 		billing_units: item.billing_units || 1,
-		should_prorate: entInterval === EntInterval.Lifetime,
+		should_prorate:
+			entInterval === EntInterval.Lifetime && !itemIsAllocatedArrear,
+		...(allocatedBillingBehavior
+			? {
+					allocated_billing_behavior: allocatedBillingBehavior,
+				}
+			: {}),
 
 		internal_feature_id: internalFeatureId,
 		feature_id: item.feature_id!,
@@ -260,7 +276,8 @@ const toFeatureAndPrice = ({
 		interval_count: itemToBillingIntervalCount({ item }),
 	};
 
-	const canProrate = itemCanBeProrated({ item, features });
+	const canProrate =
+		itemCanBeProrated({ item, features }) && !itemIsAllocatedArrear;
 
 	let prorationConfig = null;
 	if (canProrate) {

@@ -44,6 +44,7 @@ import {
 	cmaMemory,
 	cmaSessions,
 	cmaVaults,
+	harnessSessions,
 } from "../models/leafModels/cmaStateTable.js";
 import { leafSchema } from "../models/leafModels/leafSchema.js";
 // Migration Relations
@@ -123,6 +124,7 @@ export {
 	cmaMemory,
 	cmaSessions,
 	cmaVaults,
+	harnessSessions,
 	leafSchema,
 	customerEntitlements,
 	customerEntitlementsRelations,

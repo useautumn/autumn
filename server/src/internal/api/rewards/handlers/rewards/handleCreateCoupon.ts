@@ -36,6 +36,7 @@ export const handleCreateCoupon = createRoute({
 			reward: rewardData,
 			orgId: org.id,
 			env,
+			features: ctx.features,
 		});
 
 		if (getRewardCat(newReward) === RewardCategory.Discount) {

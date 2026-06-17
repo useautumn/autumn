@@ -1,6 +1,7 @@
 import type { Operations } from "@autumn/shared";
 import { GearIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { AutumnMark, StripeMark } from "./BillingScopeMarks";
 import { getOperationsSummaryText } from "./operationUtils";
 
@@ -41,6 +42,11 @@ export function RunSummaryRows({
 					</>
 				)}
 			</div>
+			{!noBillingChanges && (
+				<InfoBox variant="warning">
+					Customer subscriptions will be updated with this change.
+				</InfoBox>
+			)}
 		</div>
 	);
 }

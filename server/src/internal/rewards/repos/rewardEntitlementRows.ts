@@ -23,6 +23,9 @@ export const rewardToEntitlementRows = ({
 
 	return entitlements.map((entitlement) => {
 		const expiry = "expiry" in entitlement ? entitlement.expiry : undefined;
+		// Boolean grants carry no allowance
+		const hasAllowance =
+			entitlement.allowance != null && entitlement.allowance > 0;
 
 		return {
 			id:
@@ -37,8 +40,8 @@ export const rewardToEntitlementRows = ({
 			internal_product_id: null,
 			internal_reward_id: reward.internal_id,
 			is_custom: false,
-			allowance_type: AllowanceType.Fixed,
-			allowance: entitlement.allowance ?? null,
+			allowance_type: hasAllowance ? AllowanceType.Fixed : AllowanceType.None,
+			allowance: hasAllowance ? entitlement.allowance : null,
 			interval: null,
 			interval_count: 1,
 			carry_from_previous: false,

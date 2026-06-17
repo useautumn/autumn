@@ -43,6 +43,12 @@ export const getOrCreateCustomerSpendLimitOutboundSchema = z.object({
 	overage_limit: z.union([z.number(), z.undefined()]).optional(),
 });
 
+export const getOrCreateCustomerUsageLimitOutboundSchema = z.object({
+	feature_id: z.string(),
+	limit: z.number(),
+	interval: z.string(),
+});
+
 export const getOrCreateCustomerUsageAlertOutboundSchema = z.object({
 	feature_id: z.union([z.string(), z.undefined()]).optional(),
 	enabled: z.boolean(),
@@ -63,6 +69,12 @@ export const getOrCreateCustomerBillingControlsOutboundSchema = z.object({
 	spend_limits: z
 		.union([
 			z.array(getOrCreateCustomerSpendLimitOutboundSchema),
+			z.undefined(),
+		])
+		.optional(),
+	usage_limits: z
+		.union([
+			z.array(getOrCreateCustomerUsageLimitOutboundSchema),
 			z.undefined(),
 		])
 		.optional(),
@@ -110,10 +122,10 @@ const closedEnumSchema = z.any();
 
 const customerExpandSchema = z.any();
 
-export const getOrCreateCustomerIntervalSchema = closedEnumSchema;
+export const getOrCreateCustomerPurchaseLimitIntervalSchema = closedEnumSchema;
 
 export const getOrCreateCustomerPurchaseLimitSchema = z.object({
-	interval: getOrCreateCustomerIntervalSchema,
+	interval: getOrCreateCustomerPurchaseLimitIntervalSchema,
 	intervalCount: z.union([z.number(), z.undefined()]).optional(),
 	limit: z.number(),
 });
@@ -127,6 +139,14 @@ export const getOrCreateCustomerAutoTopupSchema = z.object({
 		.union([getOrCreateCustomerPurchaseLimitSchema, z.undefined()])
 		.optional(),
 	invoiceMode: z.union([z.boolean(), z.undefined()]).optional(),
+});
+
+export const getOrCreateCustomerUsageLimitIntervalSchema = closedEnumSchema;
+
+export const getOrCreateCustomerUsageLimitSchema = z.object({
+	featureId: z.string(),
+	limit: z.number(),
+	interval: getOrCreateCustomerUsageLimitIntervalSchema,
 });
 
 export const getOrCreateCustomerThresholdTypeSchema = closedEnumSchema;
@@ -145,6 +165,9 @@ export const getOrCreateCustomerBillingControlsSchema = z.object({
 		.optional(),
 	spendLimits: z
 		.union([z.array(getOrCreateCustomerSpendLimitSchema), z.undefined()])
+		.optional(),
+	usageLimits: z
+		.union([z.array(getOrCreateCustomerUsageLimitSchema), z.undefined()])
 		.optional(),
 	usageAlerts: z
 		.union([z.array(getOrCreateCustomerUsageAlertSchema), z.undefined()])

@@ -39,11 +39,15 @@ const viteAppEnv = envFile.includes(".env.prod")
 const useLocalAuthUrls = viteAppEnv === "dev" && !isProductionMode;
 const localUrl = (value: string | undefined, fallback: string) =>
 	value && !value.includes(".useautumn.com") ? value : fallback;
+const slackRedirectFromPublicTunnel = publicTunnelUrl
+	? `${publicTunnelUrl}/slack/oauth/callback`
+	: undefined;
 const SLACK_REDIRECT_URI = useLocalAuthUrls
-	? localUrl(
+	? (slackRedirectFromPublicTunnel ??
+		localUrl(
 			process.env.SLACK_REDIRECT_URI,
 			`${SLACK_BOT_URL}/slack/oauth/callback`,
-		)
+		))
 	: (process.env.SLACK_REDIRECT_URI ?? `${SLACK_BOT_URL}/slack/oauth/callback`);
 
 /**
@@ -196,14 +200,13 @@ async function startDev() {
 				);
 			}
 
-			if (worktreeNum === 1) {
-				names.push("trigger");
-				colors.push("cyan");
-				// Use the locally-installed (pinned) trigger.dev CLI. Passing
-				// `@<version>` makes bunx fetch a fresh copy into a temp dir,
-				// which can be broken/incomplete (ERR_MODULE_NOT_FOUND).
-				cmds.push(isWindows ? `"bunx trigger.dev dev"` : `"bunx trigger.dev dev"`);
-			}
+			names.push("trigger");
+			colors.push("cyan");
+			// Local Trigger's Bun worker can't resolve the optional Axiom transport.
+			const triggerCmd = isWindows
+				? "set AXIOM_TOKEN= && bunx trigger.dev dev"
+				: "env -u AXIOM_TOKEN bunx trigger.dev dev";
+			cmds.push(`"${triggerCmd}"`);
 
 			names.push("vite", "checkout");
 			colors.push("blue", "magenta");

@@ -10,13 +10,18 @@ import {
 	refineCustomizePlanV1Schema,
 } from "../common/customizePlan/customizePlanV1";
 
+export enum StartingAfterDuration {
+	Month = "month",
+	Year = "year",
+}
+
 // update_items is internal / not prod-ready — omit it from the schedule customize
 // surface so the agent never uses it.
 const CreateScheduleCustomizePlanSchema = refineCustomizePlanV1Schema(
 	CustomizePlanV1Schema.omit({
 		free_trial: true,
 		update_items: true,
-	}),
+	}).strict(),
 	{ includeFreeTrial: false, includeUpdateItems: false },
 );
 
@@ -40,14 +45,43 @@ export const CreateSchedulePlanSchema = z.object({
 	}),
 });
 
-export const CreateSchedulePhaseSchema = z.object({
-	starts_at: z.number().meta({
-		description: "When this phase should start, in epoch milliseconds.",
+export const CreateScheduleStartingAfterSchema = z.object({
+	duration_type: z.enum(StartingAfterDuration).meta({
+		description: "The duration unit to offset this phase from the prior phase.",
 	}),
-	plans: z.array(CreateSchedulePlanSchema).min(1).meta({
-		description: "Plans to materialize for this phase.",
+	duration_count: z.number().int().positive().meta({
+		description: "How many duration_type periods after the prior phase to start.",
 	}),
 });
+
+export const CreateSchedulePhaseSchema = z
+	.object({
+		starts_at: z.union([z.number(), z.literal("now")]).optional().meta({
+			description:
+				"When this phase should start, in epoch milliseconds, or 'now' for the immediate phase.",
+		}),
+		starting_after: CreateScheduleStartingAfterSchema.optional().meta({
+			description:
+				"Relative start offset from the previous resolved schedule phase.",
+		}),
+		plans: z.array(CreateSchedulePlanSchema).min(1).meta({
+			description: "Plans to materialize for this phase.",
+		}),
+	})
+	.check((ctx) => {
+		const hasStartsAt = ctx.value.starts_at !== undefined;
+		const hasStartingAfter = ctx.value.starting_after !== undefined;
+
+		if (hasStartsAt === hasStartingAfter) {
+			ctx.issues.push({
+				code: "custom",
+				message:
+					"Each phase must include exactly one of starts_at or starting_after",
+				path: ["starts_at"],
+				input: ctx.value,
+			});
+		}
+	});
 
 export const CreateScheduleParamsV0Schema = z
 	.object({
@@ -95,31 +129,62 @@ export const CreateScheduleParamsV0Schema = z
 				description: "Ordered phase definitions for the schedule.",
 			}),
 	})
-	.refine(
-		(data) => {
-			const sortedPhases = [...data.phases].sort(
-				(a, b) => a.starts_at - b.starts_at,
-			);
+	.check((ctx) => {
+		const hasRelativeTiming = ctx.value.phases.some(
+			(phase) => phase.starts_at === "now" || phase.starting_after !== undefined,
+		);
 
-			for (let index = 1; index < sortedPhases.length; index++) {
-				const previousPhase = sortedPhases[index - 1];
-				const currentPhase = sortedPhases[index];
+		for (let index = 0; index < ctx.value.phases.length; index++) {
+			const phase = ctx.value.phases[index];
+			if (!phase) continue;
 
-				if (
-					previousPhase &&
-					currentPhase?.starts_at <= previousPhase.starts_at
-				) {
-					return false;
-				}
+			if (phase.starting_after !== undefined && index === 0) {
+				ctx.issues.push({
+					code: "custom",
+					message: "starting_after cannot be used on the first phase",
+					path: ["phases", index, "starting_after"],
+					input: ctx.value,
+				});
 			}
 
-			return true;
-		},
-		{
-			message: "Phase starts_at values must be strictly increasing",
-			path: ["phases"],
-		},
-	);
+			if (phase.starts_at === "now" && index !== 0) {
+				ctx.issues.push({
+					code: "custom",
+					message: "starts_at: 'now' can only be used on the first phase",
+					path: ["phases", index, "starts_at"],
+					input: ctx.value,
+				});
+			}
+		}
+
+		if (hasRelativeTiming) return;
+
+		const sortedPhases = [...ctx.value.phases].sort((a, b) => {
+			if (typeof a.starts_at !== "number" || typeof b.starts_at !== "number") {
+				return 0;
+			}
+			return a.starts_at - b.starts_at;
+		});
+
+		for (let index = 1; index < sortedPhases.length; index++) {
+			const previousPhase = sortedPhases[index - 1];
+			const currentPhase = sortedPhases[index];
+
+			if (
+				typeof previousPhase?.starts_at === "number" &&
+				typeof currentPhase?.starts_at === "number" &&
+				currentPhase.starts_at <= previousPhase.starts_at
+			) {
+				ctx.issues.push({
+					code: "custom",
+					message: "Phase starts_at values must be strictly increasing",
+					path: ["phases"],
+					input: ctx.value,
+				});
+				return;
+			}
+		}
+	});
 
 export type CreateScheduleParamsV0 = z.infer<
 	typeof CreateScheduleParamsV0Schema
@@ -127,3 +192,10 @@ export type CreateScheduleParamsV0 = z.infer<
 export type CreateScheduleParamsV0Input = z.input<
 	typeof CreateScheduleParamsV0Schema
 >;
+export type CreateSchedulePhaseV0 = CreateScheduleParamsV0["phases"][number];
+export type ResolvedCreateSchedulePhaseV0 = Omit<
+	CreateSchedulePhaseV0,
+	"starts_at" | "starting_after"
+> & {
+	starts_at: number;
+};

@@ -3,10 +3,8 @@ import type { AppEnv } from "@autumn/shared";
 import { db } from "../../../lib/db.js";
 import { cmaRepo } from "../repos/claudeManagedRepo.js";
 
-// One CMA memory store per (org, env) gives the agent cross-thread memory — it recalls
-// the org's customers, billing actions, and preferences across Slack threads. The
-// memory CONTENT lives in CMA (mounted at /mnt/memory/, read/written by the agent's
-// file tools); we persist only the memstore_… id in leaf.cma_memory.
+// One CMA memory store per (org, env); content lives in CMA's mounted files.
+// Leaf persists only the memstore_… id.
 export const ensureMemoryStore = async ({
 	client,
 	env,

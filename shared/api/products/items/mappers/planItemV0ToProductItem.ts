@@ -1,5 +1,4 @@
 import type { ApiPlanItemV0 } from "@api/products/items/previousVersions/apiPlanItemV0";
-import type { ProrationConfig } from "@models/productModels/priceModels/priceModels";
 import { Infinite } from "@models/productModels/productEnums";
 import {
 	OnDecrease,
@@ -66,14 +65,14 @@ const planItemV0ToItemConfig = ({
 	};
 
 	const toItemProration = () => {
-		if (planItemV0.proration) {
-			return {
-				on_increase:
-					planItemV0.proration.on_increase ?? OnIncrease.ProrateImmediately,
-				on_decrease: planItemV0.proration.on_decrease ?? OnDecrease.Prorate,
-			} satisfies ProrationConfig;
-		}
-		return undefined;
+		if (!planItemV0.proration) return undefined;
+
+		const { on_increase, on_decrease } = planItemV0.proration;
+
+		return {
+			on_increase: on_increase ?? OnIncrease.ProrateImmediately,
+			on_decrease: on_decrease ?? OnDecrease.Prorate,
+		};
 	};
 
 	const rollover = toItemRollover();

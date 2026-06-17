@@ -30,28 +30,29 @@ import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerContext } from "../../customer/CustomerContext";
 
-// Interval is required (no inherit) and one_off windows are not supported.
-const WINDOW_OPTIONS: Record<string, string> = {
+// Interval is required (no inherit) and one_off intervals are not supported.
+const INTERVAL_OPTIONS: Record<string, string> = {
 	[ResetInterval.Day]: "Day",
 	[ResetInterval.Week]: "Week",
 	[ResetInterval.Month]: "Month",
 	[ResetInterval.Year]: "Year",
 };
 
-/** Build the usage_limits entry for a windowed hard cap. */
+/** Build the usage_limits entry for an interval-based hard cap. */
 export const buildUsageLimitItem = ({
 	featureId,
 	limit,
-	window,
+	interval,
 }: {
 	featureId: string;
 	limit: number;
-	window: string;
+	interval: string;
 }): DbUsageLimit => ({
 	feature_id: featureId,
 	limit,
-	interval: window as ResetInterval,
+	interval: interval as ResetInterval,
 });
 
 export function BillingUsageLimitSheet() {
@@ -59,6 +60,7 @@ export function BillingUsageLimitSheet() {
 	const sheetData = useSheetStore((s) => s.data);
 	const sheetType = useSheetStore((s) => s.type);
 	const { customer, refetch } = useCusQuery();
+	const { entityId } = useCustomerContext();
 	const { features } = useFeaturesQuery();
 	const axiosInstance = useAxiosInstance();
 
@@ -66,15 +68,19 @@ export function BillingUsageLimitSheet() {
 	const existingItem = sheetData?.item as DbUsageLimit | undefined;
 	const existingIndex = sheetData?.index as number | undefined;
 
-	// v1: usage limits are customer-scoped only (no entity variant).
 	const fullCustomer = customer as FullCustomer | undefined;
+	const selectedEntity = entityId
+		? fullCustomer?.entities?.find(
+				(e) => e.id === entityId || e.internal_id === entityId,
+			)
+		: null;
 
 	const [isSaving, setIsSaving] = useState(false);
 	const [featureId, setFeatureId] = useState(existingItem?.feature_id ?? "");
 	const [usageLimit, setUsageLimit] = useState(
 		existingItem?.limit?.toString() ?? "",
 	);
-	const [windowInterval, setWindowInterval] = useState<string>(
+	const [selectedInterval, setSelectedInterval] = useState<string>(
 		existingItem?.interval ?? ResetInterval.Month,
 	);
 
@@ -82,19 +88,29 @@ export function BillingUsageLimitSheet() {
 		(f: Feature) => !f.archived && f.type !== FeatureType.Boolean,
 	);
 
-	const getCurrentUsageLimits = (): DbUsageLimit[] => [
-		...(fullCustomer?.usage_limits ?? []),
-	];
+	const getCurrentUsageLimits = (): DbUsageLimit[] => {
+		if (selectedEntity) return [...(selectedEntity.usage_limits ?? [])];
+		return [...(fullCustomer?.usage_limits ?? [])];
+	};
 
 	const saveBillingControls = async (usageLimits: DbUsageLimit[]) => {
 		const customerId = fullCustomer?.id || fullCustomer?.internal_id;
 		if (!customerId) return;
 
-		await CusService.updateCustomer({
-			axios: axiosInstance,
-			customer_id: customerId,
-			data: { billing_controls: { usage_limits: usageLimits } },
-		});
+		if (selectedEntity) {
+			await CusService.updateEntity({
+				axios: axiosInstance,
+				customerId,
+				entityId: selectedEntity.id || selectedEntity.internal_id,
+				billingControls: { usage_limits: usageLimits },
+			});
+		} else {
+			await CusService.updateCustomer({
+				axios: axiosInstance,
+				customer_id: customerId,
+				data: { billing_controls: { usage_limits: usageLimits } },
+			});
+		}
 	};
 
 	const handleSave = async () => {
@@ -112,7 +128,7 @@ export function BillingUsageLimitSheet() {
 		const item = buildUsageLimitItem({
 			featureId,
 			limit: parsedLimit,
-			window: windowInterval,
+			interval: selectedInterval,
 		});
 
 		const usageLimits = getCurrentUsageLimits();
@@ -159,7 +175,7 @@ export function BillingUsageLimitSheet() {
 			<div className="flex h-full flex-col overflow-y-auto">
 				<SheetHeader
 					title={isEdit ? "Edit Usage Limit" : "Add Usage Limit"}
-					description="Hard-cap how much of a feature can be used per window, regardless of remaining balance."
+					description="Hard-cap how much of a feature can be used per interval, regardless of remaining balance."
 				/>
 
 				<SheetSection withSeparator>
@@ -183,7 +199,7 @@ export function BillingUsageLimitSheet() {
 						<div>
 							<FormLabel>Limit</FormLabel>
 							<Input
-								placeholder="Max usage allowed per window"
+								placeholder="Max usage allowed per interval"
 								type="number"
 								value={usageLimit}
 								onChange={(e) => setUsageLimit(e.target.value)}
@@ -191,13 +207,16 @@ export function BillingUsageLimitSheet() {
 						</div>
 
 						<div>
-							<FormLabel>Window</FormLabel>
-							<Select value={windowInterval} onValueChange={setWindowInterval}>
+							<FormLabel>Interval</FormLabel>
+							<Select
+								value={selectedInterval}
+								onValueChange={setSelectedInterval}
+							>
 								<SelectTrigger className="w-full">
-									<SelectValue placeholder="Select window" />
+									<SelectValue placeholder="Select interval" />
 								</SelectTrigger>
 								<SelectContent>
-									{Object.entries(WINDOW_OPTIONS).map(([value, label]) => (
+									{Object.entries(INTERVAL_OPTIONS).map(([value, label]) => (
 										<SelectItem key={value} value={value}>
 											{label}
 										</SelectItem>

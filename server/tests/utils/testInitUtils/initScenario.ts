@@ -74,7 +74,8 @@ type RewardConfig = {
 
 type FeatureGrantEntitlement = {
 	feature_id: string;
-	allowance: number;
+	// Optional: boolean features grant on/off access with no allowance
+	allowance?: number;
 	expiry?: { duration: EntitlementDuration; length: number };
 };
 
@@ -82,7 +83,11 @@ type FeatureGrantConfig = {
 	id?: string;
 	name?: string;
 	entitlements: FeatureGrantEntitlement[];
-	promoCodes: { code: string; max_redemptions?: number }[];
+	promoCodes: {
+		code: string;
+		max_redemptions?: number;
+		first_time_transaction?: boolean;
+	}[];
 };
 
 // Discriminated union for all action types
@@ -984,6 +989,7 @@ type InitScenarioImplementationResult = {
 	/** @deprecated Use autumnV2_2 instead */
 	autumnV2_1: AutumnInt;
 	autumnV2_2: AutumnInt;
+	autumnV2_3: AutumnInt;
 	testClockId: string | undefined;
 	testClockIds: Record<string, string>;
 	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"] | null;
@@ -1011,6 +1017,7 @@ export async function initScenario(params: {
 	/** @deprecated Use autumnV2_2 instead */
 	autumnV2_1: AutumnInt;
 	autumnV2_2: AutumnInt;
+	autumnV2_3: AutumnInt;
 	testClockId: string | undefined;
 	testClockIds: Record<string, string>;
 	customer: Awaited<ReturnType<typeof initCustomerV3>>["customer"];
@@ -1038,6 +1045,7 @@ export async function initScenario(params: {
 	/** @deprecated Use autumnV2_2 instead */
 	autumnV2_1: AutumnInt;
 	autumnV2_2: AutumnInt;
+	autumnV2_3: AutumnInt;
 	testClockId: undefined;
 	testClockIds: Record<string, string>;
 	customer: null;
@@ -1235,6 +1243,7 @@ export async function initScenario({
 				promo_codes: fg.promoCodes.map((pc) => ({
 					code: pc.code,
 					max_redemptions: pc.max_redemptions,
+					first_time_transaction: pc.first_time_transaction,
 				})),
 				created_at: Date.now(),
 			},
@@ -1323,6 +1332,10 @@ export async function initScenario({
 	});
 	const autumnV2_2 = new AutumnInt({
 		version: ApiVersion.V2_2,
+		secretKey: ctx.orgSecretKey,
+	});
+	const autumnV2_3 = new AutumnInt({
+		version: ApiVersion.V2_3,
 		secretKey: ctx.orgSecretKey,
 	});
 
@@ -1715,6 +1728,7 @@ export async function initScenario({
 		autumnV2,
 		autumnV2_1,
 		autumnV2_2,
+		autumnV2_3,
 		testClockId,
 		testClockIds,
 		customer,

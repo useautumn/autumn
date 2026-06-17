@@ -1,4 +1,8 @@
-import { FeatureType, FeatureUsageType, isAiCreditSystem } from "@autumn/shared";
+import {
+	FeatureType,
+	FeatureUsageType,
+	isAnyCreditSystem,
+} from "@autumn/shared";
 import { BoxArrowDownIcon } from "@phosphor-icons/react";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";
 import { cn } from "@/lib/utils";
@@ -38,7 +42,7 @@ export const DummyPlanFeatureRow = () => {
 
 	// Get placeholder name based on feature type
 	const getPlaceholderName = () => {
-		if (featureType === FeatureType.CreditSystem) return "Credits";
+		if (isAnyCreditSystem(featureType)) return "Credits";
 		if (isBoolean) return "Premium Analytics";
 		if (isNonConsumable) return "Seats";
 		return "Chat Messages";
@@ -48,11 +52,7 @@ export const DummyPlanFeatureRow = () => {
 	const getDisplayText = () => {
 		const name = hasName ? featureName : getPlaceholderName();
 
-		if (isAiCreditSystem(feature.type)) {
-			return { primary: `$10.00 of ${name}`, secondary: "" };
-		}
-
-		if (featureType === FeatureType.CreditSystem) {
+		if (isAnyCreditSystem(featureType)) {
 			return { primary: `100 ${name}`, secondary: "" };
 		}
 

@@ -42,7 +42,7 @@ export const handleUpdateRewardProgram = createRoute({
 
 		if (!existingProgram) {
 			throw new RecaseError({
-				message: `Program with ID ${id} does not exist`,
+				message: `Reward program ${id} not found`,
 				code: ErrCode.InvalidRequest,
 				statusCode: 404,
 			});

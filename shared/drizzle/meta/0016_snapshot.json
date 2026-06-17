@@ -1,5 +1,5 @@
 {
-  "id": "36b6fc61-90c3-4816-8b1d-306917440379",
+  "id": "1e753dde-3672-42cb-aeb3-85ef5c6d3cb6",
   "prevId": "321bbc6e-bbb0-474f-83df-76fadf81f04d",
   "version": "7",
   "dialect": "postgresql",
@@ -689,6 +689,12 @@
         },
         "run_id": {
           "name": "run_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "harness": {
+          "name": "harness",
           "type": "text",
           "primaryKey": false,
           "notNull": false
@@ -1406,12 +1412,6 @@
           "primaryKey": false,
           "notNull": true
         },
-        "reset_cycle_anchor": {
-          "name": "reset_cycle_anchor",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
         "next_reset_at": {
           "name": "next_reset_at",
           "type": "numeric",
@@ -1423,13 +1423,6 @@
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
-        },
-        "separate_interval": {
-          "name": "separate_interval",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
           "default": false
         },
         "adjustment": {
@@ -1571,28 +1564,6 @@
           ],
           "isUnique": false,
           "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "idx_customer_entitlements_separate_interval_reset": {
-          "name": "idx_customer_entitlements_separate_interval_reset",
-          "columns": [
-            {
-              "expression": "next_reset_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "where": "\"customer_entitlements\".\"separate_interval\" = true AND \"customer_entitlements\".\"next_reset_at\" IS NOT NULL",
-          "concurrently": true,
           "method": "btree",
           "with": {}
         },
@@ -1918,12 +1889,6 @@
         },
         "trial_ends_at": {
           "name": "trial_ends_at",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "billing_cycle_anchor": {
-          "name": "billing_cycle_anchor",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
@@ -3533,6 +3498,71 @@
         }
       },
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "leaf.harness_sessions": {
+      "name": "harness_sessions",
+      "schema": "leaf",
+      "columns": {
+        "org_id": {
+          "name": "org_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "env": {
+          "name": "env",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "thread_key": {
+          "name": "thread_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resume_state": {
+          "name": "resume_state",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "braintrust_parent": {
+          "name": "braintrust_parent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "harness_sessions_org_id_env_thread_key_pk": {
+          "name": "harness_sessions_org_id_env_thread_key_pk",
+          "columns": [
+            "org_id",
+            "env",
+            "thread_key"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

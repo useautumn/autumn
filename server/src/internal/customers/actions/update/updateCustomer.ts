@@ -51,7 +51,8 @@ export const updateCustomer = async ({
 
 	if (newCustomerId === null) {
 		throw new RecaseError({
-			message: `Not allowed to update a customer's ID to null`,
+			message: "Customer ID cannot be set to null",
+			statusCode: 400,
 		});
 	}
 

@@ -1,6 +1,10 @@
 import { InternalError } from "@api/errors";
+import { getCycleEnd } from "@utils/billingUtils/cycleUtils/getCycleEnd";
 import { ms } from "@utils/common";
 import {
+	isAllocatedPrice,
+	isAllocatedV2Price,
+	isConsumablePrice,
 	isOneOffPrice,
 	isPayPerUsePrice,
 	isPrepaidPrice,
@@ -99,9 +103,11 @@ export const customerEntitlementAllowsRollovers = (
 export const customerEntitlementShouldBeBilled = ({
 	cusEnt,
 	invoicePeriodEndMs,
+	billingCycleAnchorMs,
 }: {
 	cusEnt: FullCusEntWithFullCusProduct;
 	invoicePeriodEndMs: number;
+	billingCycleAnchorMs?: number;
 }) => {
 	if (!isPaidCustomerEntitlement(cusEnt)) {
 		throw new InternalError({
@@ -109,10 +115,30 @@ export const customerEntitlementShouldBeBilled = ({
 		});
 	}
 
-	const nextResetAt = cusEnt.next_reset_at;
-	if (!nextResetAt) return false;
-
 	const TOLERANCE_MS = ms.days(1);
+
+	const nextResetAt = cusEnt.next_reset_at;
+	if (!nextResetAt) {
+		// Allocated v2 (continuous-use) cusEnts never reset so they carry no
+		// next_reset_at — bill them whenever their price's billing cycle ends at
+		// this invoice's period end (multi-interval safe: a yearly item on a
+		// monthly subscription only bills at the year boundary).
+		if (!billingCycleAnchorMs) return false;
+		if (!isAllocatedV2CustomerEntitlement(cusEnt)) return false;
+
+		const cusPrice = cusEntToCusPrice({ cusEnt });
+		if (!cusPrice || !isConsumablePrice(cusPrice.price)) return false;
+
+		const priceConfig = cusPrice.price.config;
+		const cycleEnd = getCycleEnd({
+			anchor: billingCycleAnchorMs,
+			interval: priceConfig.interval,
+			intervalCount: priceConfig.interval_count ?? 1,
+			now: invoicePeriodEndMs - TOLERANCE_MS,
+		});
+
+		return Math.abs(cycleEnd - invoicePeriodEndMs) <= TOLERANCE_MS;
+	}
 
 	return nextResetAt <= invoicePeriodEndMs + TOLERANCE_MS;
 };
@@ -130,9 +156,23 @@ export const isUsageBasedAllocatedCustomerEntitlement = (
 
 	const cusPrice = cusEntToCusPrice({ cusEnt });
 	if (!cusPrice) return false;
-	const isUsageBased = isPayPerUsePrice({ price: cusPrice.price });
 
-	return isAllocated && isUsageBased;
+	return isAllocated && isAllocatedPrice(cusPrice.price);
+};
+
+/**
+ * Continuous-use feature billed like a consumable (allocated v2): holdings are
+ * billed in arrears at each cycle end and the balance is never reset.
+ */
+export const isAllocatedV2CustomerEntitlement = (
+	cusEnt: FullCusEntWithFullCusProduct,
+) => {
+	const isAllocated = isAllocatedCustomerEntitlement(cusEnt);
+
+	const cusPrice = cusEntToCusPrice({ cusEnt });
+	if (!cusPrice) return false;
+
+	return isAllocated && isAllocatedV2Price(cusPrice.price);
 };
 
 /** Whether the customer entitlement has a prepaid price (usage billed in advance). */

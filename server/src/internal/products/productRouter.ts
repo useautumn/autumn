@@ -59,3 +59,4 @@ plansRpcRouter.post(
 	"/plans.revenuecat_mappings",
 	...handleListRevenueCatMappings,
 );
+plansRpcRouter.post("/plans.has_customers", ...handlePlanHasCustomersV2);

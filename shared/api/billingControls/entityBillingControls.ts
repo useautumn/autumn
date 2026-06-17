@@ -9,11 +9,11 @@ import { ApiUsageLimitSchema } from "./usageLimit.js";
 export const ApiEntityBillingControlsSchema = z.object({
 	spend_limits: z.array(ApiSpendLimitSchema).optional().meta({
 		description:
-			"List of spend limits per feature. Each entry caps overage (overage_limit) and/or windowed usage (usage_limit).",
+			"List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit).",
 	}),
 	usage_limits: z.array(ApiUsageLimitSchema).optional().meta({
 		description:
-			"List of windowed hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.",
+			"List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.",
 	}),
 	usage_alerts: z.array(ApiUsageAlertSchema).optional().meta({
 		description: "List of usage alert configurations per feature.",
@@ -27,11 +27,11 @@ export const ApiEntityBillingControlsSchema = z.object({
 const ApiEntityBillingControlsParamsBaseSchema = z.object({
 	spend_limits: z.array(DbSpendLimitSchema).optional().meta({
 		description:
-			"List of spend limits per feature. Each entry caps overage (overage_limit) and/or windowed usage (usage_limit).",
+			"List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit).",
 	}),
 	usage_limits: z.array(DbUsageLimitSchema).optional().meta({
 		description:
-			"List of windowed hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.",
+			"List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.",
 	}),
 	usage_alerts: z.array(ApiUsageAlertSchema).optional().meta({
 		description: "List of usage alert configurations per feature.",

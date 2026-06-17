@@ -88,6 +88,7 @@ export const getFreeTrialAfterFingerprint = async ({
 	productId,
 	fingerprint,
 	internalCustomerId,
+	internalEntityId,
 	multipleAllowed,
 }: {
 	db: DrizzleCli;
@@ -95,6 +96,7 @@ export const getFreeTrialAfterFingerprint = async ({
 	productId: string;
 	fingerprint: string | null | undefined;
 	internalCustomerId: string;
+	internalEntityId?: string;
 	multipleAllowed: boolean;
 }): Promise<FreeTrial | null> => {
 	if (!freeTrial) return null;
@@ -109,6 +111,7 @@ export const getFreeTrialAfterFingerprint = async ({
 		db,
 		productId,
 		internalCustomerId,
+		internalEntityId,
 		fingerprint: uniqueFreeTrial.unique_fingerprint ? fingerprint! : undefined,
 	});
 

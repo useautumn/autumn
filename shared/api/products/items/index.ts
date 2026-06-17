@@ -8,6 +8,7 @@ export * from "./mappers/planItemV1ToPriceAndEnt";
 export * from "./mappers/planItemV1ToV0";
 export * from "./previousVersions/apiPlanItemV0";
 export * from "./previousVersions/apiProductItemV0";
+export * from "./utils/display";
 export * from "./utils/match";
 
 export const apiPlanItem = {
