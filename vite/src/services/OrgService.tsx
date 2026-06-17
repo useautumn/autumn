@@ -31,7 +31,7 @@ export class OrgService {
 
 	static async createChatInstall(
 		axiosInstance: AxiosInstance,
-		data: { provider: "slack"; env: string },
+		data: { provider: "slack"; env: string; scopes?: string[] },
 	) {
 		return await axiosInstance.post(`/organization/chat/install`, data);
 	}

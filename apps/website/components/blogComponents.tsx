@@ -1,5 +1,16 @@
 import Link from "next/link";
 import type { ComponentPropsWithoutRef, ElementType, ReactNode } from "react";
+import { ConfigAsCodeSimulator } from "./blogComponents/stop-rebuilding-your-billing-system/ConfigAsCodeSimulator";
+import {
+	ConfigSim,
+	Toggle,
+} from "./blogComponents/stop-rebuilding-your-billing-system/configSim";
+import { HierarchyFlatSimulator } from "./blogComponents/stop-rebuilding-your-billing-system/HierarchyFlatSimulator";
+import { HierarchyLayeredSimulator } from "./blogComponents/stop-rebuilding-your-billing-system/HierarchyLayeredSimulator";
+import { PostgresTablesHero } from "./blogComponents/stop-rebuilding-your-billing-system/PostgresTablesHero";
+import { RelationalDbSimulator } from "./blogComponents/stop-rebuilding-your-billing-system/RelationalDbSimulator";
+import { StripeMappingDiagram } from "./blogComponents/stop-rebuilding-your-billing-system/StripeMappingDiagram";
+import { StripeTransitionDiagram } from "./blogComponents/stop-rebuilding-your-billing-system/StripeTransitionDiagram";
 import { Expand } from "./blogExpand";
 
 function BlogHeading({
@@ -109,4 +120,13 @@ export const mdxComponents = {
 		</td>
 	),
 	Expand,
+	ConfigAsCodeSimulator,
+	ConfigSim,
+	HierarchyFlatSimulator,
+	HierarchyLayeredSimulator,
+	PostgresTablesHero,
+	RelationalDbSimulator,
+	StripeMappingDiagram,
+	StripeTransitionDiagram,
+	Toggle,
 };

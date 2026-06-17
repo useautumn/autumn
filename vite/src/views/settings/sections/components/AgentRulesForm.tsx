@@ -116,24 +116,6 @@ export const AgentRulesForm = ({ agent, features }: AgentRulesFormProps) => {
 						</RuleField>
 					</RuleGroup>
 
-					<RuleGroup
-						title="Credit rules"
-						description="The feature the agent treats as spendable credits"
-					>
-						<RuleField label="Credit feature">
-							<form.AppField name="credit_rules.credit_feature_id">
-								{(field) => (
-									<FeatureSearchDropdown
-										features={features}
-										value={field.state.value || null}
-										onSelect={(featureId) => field.handleChange(featureId)}
-										triggerClassName="w-56"
-									/>
-								)}
-							</form.AppField>
-						</RuleField>
-					</RuleGroup>
-
 					<div className="flex flex-col gap-2.5 px-4 py-3.5">
 						<div className="flex flex-col gap-0.5">
 							<span className="text-sm font-medium text-foreground">

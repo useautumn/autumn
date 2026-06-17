@@ -11,6 +11,8 @@ const chatInstallStateSchema = z.strictObject({
 	orgId: z.string(),
 	userId: z.string(),
 	env: z.nativeEnum(AppEnv),
+	// Autumn OAuth scopes to mint for the bot credential; omitted = full default set.
+	scopes: z.array(z.string()).optional(),
 	expiresAt: z.number(),
 	nonce: z.string(),
 });
