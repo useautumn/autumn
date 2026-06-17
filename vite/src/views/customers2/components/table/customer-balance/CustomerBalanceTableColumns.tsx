@@ -276,12 +276,14 @@ function BarCellContent({
 
 	return (
 		<div className="flex gap-3 items-center">
-			<div className="flex items-center gap-1.5 shrink-0">
+			<div className="flex items-center justify-end gap-1.5 shrink-0 min-w-44">
 				{hasReset ? (
 					<>
-						<div className="w-3.5 shrink-0 flex justify-center">
-							{expiryIcon}
-						</div>
+						{hasExpiry && (
+							<div className="w-3.5 shrink-0 flex justify-center mr-auto">
+								{expiryIcon}
+							</div>
+						)}
 						<span className="text-tertiary-foreground text-tiny flex justify-center !px-1 bg-muted rounded-md min-w-36 whitespace-nowrap">
 							Resets {formatChipDate(ent.next_reset_at)}
 						</span>
