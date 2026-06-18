@@ -3,8 +3,10 @@
 // adminS3Config.ts — that bucket has public access blocked and holds private
 // data. Objects here are served directly via their public URL with no signing.
 const publicBucket = process.env.S3_PUBLIC_BUCKET || "autumn-public-assets";
-const publicRegion =
-	process.env.S3_PUBLIC_REGION || process.env.S3_REGION || "us-east-2";
+// Pinned to where the public bucket actually lives. Do NOT fall back to
+// S3_REGION — that's the admin bucket's region (e.g. eu-west-2) and a mismatch
+// makes S3 301-redirect the presigned PUT, which surfaces as a CORS error.
+const publicRegion = process.env.S3_PUBLIC_REGION || "us-east-2";
 
 export const getPublicAssetsS3Config = () => {
 	return {
