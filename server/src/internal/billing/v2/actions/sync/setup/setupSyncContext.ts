@@ -173,10 +173,6 @@ export const setupSyncContext = async ({
 				: null;
 
 			const isImmediatePhase = phase.starts_at === "now";
-			const phaseCanExpirePrevious =
-				isImmediatePhase ||
-				phase.plans.some((plan) => plan.enable_plan_immediately) ||
-				(!firstPhaseIsImmediate && index === 0);
 
 			const productContextsPerPlan = await Promise.all(
 				phase.plans.map((plan) =>
@@ -185,7 +181,8 @@ export const setupSyncContext = async ({
 						fullCustomer,
 						plan,
 						shouldFindCurrentCustomerProduct:
-							phaseCanExpirePrevious && plan.expire_previous === true,
+							plan.expire_previous === true &&
+							(isImmediatePhase || plan.enable_plan_immediately === true),
 						accessStartsAt: plan.enable_plan_immediately
 							? currentEpochMs
 							: undefined,
