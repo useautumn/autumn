@@ -39,6 +39,7 @@ export function useAttachForm({
 			grantFree: false,
 			noBillingChanges: false,
 			enablePlanImmediately: false,
+			longLivedCheckout: false,
 			carryOverBalances: false,
 			carryOverBalanceFeatureIds: [],
 			carryOverUsages: false,

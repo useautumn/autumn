@@ -49,6 +49,8 @@ const baseParams: Omit<
 	carryOverUsageFeatureIds: [],
 	customLineItems: [],
 	disableProration: false,
+	enablePlanImmediately: false,
+	longLivedCheckout: false,
 };
 
 describe("buildAttachRequestBody — billing_units handling", () => {
@@ -300,5 +302,32 @@ describe("buildAttachRequestBody — grant free", () => {
 		});
 
 		expect(result?.items).toBeUndefined();
+	});
+});
+
+describe("buildAttachRequestBody — long-lived checkout", () => {
+	const product = makeProduct({
+		items: [{ price: 20, interval: ProductItemInterval.Month }],
+	});
+
+	test("omits long_lived_checkout by default", () => {
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+		});
+
+		expect(result?.long_lived_checkout).toBeUndefined();
+	});
+
+	test("sends long_lived_checkout when enabled", () => {
+		const result = buildAttachRequestBody({
+			...baseParams,
+			product,
+			prepaidOptions: {},
+			longLivedCheckout: true,
+		});
+
+		expect(result?.long_lived_checkout).toBe(true);
 	});
 });

@@ -41,6 +41,11 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 			"Additional parameters to pass into the creation of the Stripe checkout session.",
 	}),
 
+	long_lived_checkout: z.boolean().optional().meta({
+		description:
+			"If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened.",
+	}),
+
 	custom_line_items: z.array(CustomLineItemSchema).optional().meta({
 		description:
 			"Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).",

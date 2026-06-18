@@ -14,9 +14,21 @@ import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 
 export function AttachPlanOptions() {
-	const { form, formValues, numVersions, product, handleGrantFreeToggle, hasActiveSubscription } =
-		useAttachFormContext();
-	const { trialEnabled, trialCardRequired, trialOnEnd, grantFree } = formValues;
+	const {
+		form,
+		formValues,
+		numVersions,
+		product,
+		handleGrantFreeToggle,
+		hasActiveSubscription,
+	} = useAttachFormContext();
+	const {
+		trialEnabled,
+		trialCardRequired,
+		trialOnEnd,
+		grantFree,
+		longLivedCheckout,
+	} = formValues;
 	const [versionOpen, setVersionOpen] = useState(false);
 
 	const showVersionSelector = numVersions > 1;
@@ -118,6 +130,19 @@ export function AttachPlanOptions() {
 					<Switch
 						checked={!!grantFree}
 						onCheckedChange={(enabled) => handleGrantFreeToggle({ enabled })}
+					/>
+				}
+			/>
+
+			<ConfigRow
+				title="Long-lived Checkout"
+				description="Create a reusable link that stays valid for 30 days"
+				action={
+					<Switch
+						checked={!!longLivedCheckout}
+						onCheckedChange={(enabled) =>
+							form.setFieldValue("longLivedCheckout", !!enabled)
+						}
 					/>
 				}
 			/>
