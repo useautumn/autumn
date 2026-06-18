@@ -634,7 +634,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		}
 		if (requestedWorkers < MIN_WORKERS_FOR_MIXED_RUN) {
 			throw new Error(
-				`this run has both svix and normal test files, so it needs a dedicated svix shard plus at least one normal worker — pass --workers>=${MIN_WORKERS_FOR_MIXED_RUN} (got ${requestedWorkers})`,
+				`this run has both svix and normal test files, so it needs a dedicated svix shard plus at least one normal worker — pass --max>=${MIN_WORKERS_FOR_MIXED_RUN} (got ${requestedWorkers})`,
 			);
 		}
 		effectiveWorkers = Math.max(effectiveWorkers, MIN_WORKERS_FOR_MIXED_RUN);
@@ -771,7 +771,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			// above should make this unreachable, but fail loud rather than hang.
 			if (normalHandles.length === 0) {
 				throw new Error(
-					`${normalFiles.length} normal file(s) remain but no normal workers are available (svix shard consumed the only worker) — pass --workers>=2`,
+					`${normalFiles.length} normal file(s) remain but no normal workers are available (svix shard consumed the only worker) — pass --max>=2`,
 				);
 			}
 			const normalPool = new WorkerPool(normalHandles);

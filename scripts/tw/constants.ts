@@ -21,7 +21,7 @@ export const REGISTRY_FILE = join(REGISTRY_DIR, "registry.json");
  */
 export const SANDBOX_NAME_PREFIX = "tw";
 
-/** Pool size `N` default (`--workers`). Sensible mid default per plan §3/§8.6. */
+/** Pool size `N` default (`--max`). Sensible mid default per plan §3/§8.6. */
 export const DEFAULT_WORKERS = 50;
 
 /** Per-worker file concurrency `K` default (`--per-worker`). Plan §3/§8.6. */

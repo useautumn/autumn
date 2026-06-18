@@ -112,7 +112,7 @@ the window is "at most N files executing at once." This bounds provisioning cost
 balancing across slow/fast files, and maps cleanly onto the existing `pLimit` runner
 (replace "spawn local `bun test`" with "assign to a remote worker").
 
-- **`N` (worker count)** is the primary knob: `bun tw --workers=200` (default
+- **`N` (worker count)** is the primary knob: `bun tw --max=200` (default
   configurable; sensible default e.g. 50). 1,264 files / 200 workers ≈ ~6 files per
   worker, run sequentially (or with small per-worker concurrency `K`).
 - **`K` (per-worker file concurrency)** optional secondary knob: because each worker has
@@ -516,13 +516,13 @@ pool eviction.
 
 ### 8.6 CLI shape (mirrors `bun t`)
 ```
-bun tw [group|suite|pattern …] [--workers=N] [--per-worker=K] [--ref=<git-ref>] [--keep]
+bun tw [group|suite|pattern …] [--max=N] [--per-worker=K] [--ref=<git-ref>] [--keep]
 bun tw list                 # this user's runs + orphans (§9a)
 bun tw kill <runId>         # tear down one run's resources
 bun tw kill-all             # tear down all of THIS user's non-completed runs
 bun tw kill --orphans       # tag-sweep fallback for SIGKILL'd runs
 ```
-- `--workers=N` pool size (the knob → `maxParallel`); auto-capped to `min(N, fileCount)` (§8.7).
+- `--max=N` pool size (the knob → `maxParallel`); auto-capped to `min(N, fileCount)` (§8.7).
   `--per-worker=K` per-worker file concurrency (window becomes `N*K`).
 - `--ref` defaults to current `HEAD` (must be resolvable for the warm checkout). `--keep`
   leaves the pool up for debugging (clean up later with `bun tw kill`).
@@ -768,7 +768,7 @@ A full ~1,264-file run, ~4 vCPU / 8 GB workers, mostly I/O-bound on Stripe:
    restore + a real test group passing.
 2. **MVP** — `bun tw` with a small fixed pool (`N` small), warm-up + fork + per-worker
    Stripe attach + sequential file dispatch + basic TUI. No retries/GC yet.
-3. **Pool + sliding window** — full dispatcher, `--workers=N`, retries, worker-death
+3. **Pool + sliding window** — full dispatcher, `--max=N`, retries, worker-death
    reschedule, Svix gating.
 4. **Hardening** — GC/sweeper, base-snapshot rebuild automation (lockfile hook + nightly),
    cost reporting, `--keep`/debug ergonomics.

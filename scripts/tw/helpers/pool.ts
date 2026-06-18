@@ -112,7 +112,7 @@ export class WorkerPool {
 		// If the pool is now empty, no future `acquire*` can ever be served (the
 		// runner does not `replace()` dead workers). Reject every parked waiter so
 		// the run FAILS CLEANLY instead of hanging forever — this is the property
-		// that saves an N===1 pool (e.g. the svix shard / `--workers=1`): the first
+		// that saves an N===1 pool (e.g. the svix shard / `--max=1`): the first
 		// death drains the pool to zero, and the reschedule's parked acquire would
 		// otherwise block indefinitely. The rejection surfaces as a normal error the
 		// runner can report.

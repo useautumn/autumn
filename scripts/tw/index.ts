@@ -4,7 +4,7 @@
  *
  * Mirrors `scripts/dw/index.ts`'s style (subcommand switch + a `fatal()` helper):
  *
- *   bun tw [group|suite|path …] [--workers=N] [--per-worker=K] [--ref=<ref>] [--keep]
+ *   bun tw [group|suite|path …] [--max=N] [--per-worker=K] [--ref=<ref>] [--keep]
  *   bun tw list                 # this user's runs + orphans
  *   bun tw kill <runId>         # tear down one run's resources
  *   bun tw kill --orphans       # tag-sweep fallback for SIGKILL'd runs
@@ -77,7 +77,7 @@ const parseStringFlag = (args: string[], flag: string): string | undefined => {
 
 const parseRunArgs = (args: string[]): TwRunArgs => {
 	const groupsOrPatterns = args.filter((arg) => !arg.startsWith("-"));
-	const workers = parseIntFlag(args, "--workers", DEFAULT_WORKERS);
+	const workers = parseIntFlag(args, "--max", DEFAULT_WORKERS);
 	const perWorker = parseIntFlag(args, "--per-worker", DEFAULT_PER_WORKER);
 	const ref = parseStringFlag(args, "--ref") ?? resolveDefaultRef();
 	const keep = args.includes("--keep");
@@ -90,14 +90,14 @@ const printUsage = (): void => {
 			chalk.bold("bun tw — cloud test swarm"),
 			"",
 			"Usage:",
-			"  bun tw [group|suite|path …] [--workers=N] [--per-worker=K] [--ref=<ref>] [--keep]",
+			"  bun tw [group|suite|path …] [--max=N] [--per-worker=K] [--ref=<ref>] [--keep]",
 			"  bun tw list                       this user's runs + orphans",
 			"  bun tw kill <runId>               tear down one run's resources",
 			"  bun tw kill --orphans             tag-sweep fallback for SIGKILL'd runs",
 			"  bun tw kill-all [--all-users]     tear down all your non-completed runs",
 			"",
 			"Flags:",
-			`  --workers=N      pool size (default ${DEFAULT_WORKERS}); auto-capped to file count`,
+			`  --max=N      pool size (default ${DEFAULT_WORKERS}); auto-capped to file count`,
 			`  --per-worker=K   per-worker file concurrency (default ${DEFAULT_PER_WORKER})`,
 			"  --ref=<git-ref>  ref the warm snapshot checks out (default current HEAD)",
 			"  --keep           leave the pool up for debugging (clean up with `bun tw kill`)",
