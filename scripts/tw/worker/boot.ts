@@ -15,7 +15,7 @@
  *      start script (`scripts/tw/image/start-services.sh`), resolved against the
  *      in-sandbox repo root (process.cwd()).
  *   2. Wait for PG / Dragonfly / elasticmq TCP health.
- *   3. (if NEEDS_SVIX) provision the Svix app + bind svix_config (plan §7).
+ *   3. (if NEEDS_SVIX) bind the orchestrator-created Svix app into svix_config (plan §7/§9a).
  *   4. Bind the Stripe sub-account into the localhost DB (plan §6a step 2 / §9a).
  *   5. Start the Autumn server (dev single-process path, NODE_ENV=development)
  *      listening on SERVER_PORT.
@@ -31,6 +31,7 @@
  *   - STRIPE_ACCOUNT_ID (the `acct_*` the orchestrator minted + recorded; §9a)
  *   - NEEDS_SVIX        (set/truthy on the single dedicated Svix shard; §7)
  *   - SVIX_API_KEY      (only present on the Svix shard; §7/§11a)
+ *   - SVIX_APP_ID       (orchestrator-created Svix app id; only on the Svix shard; §9a)
  *   - SERVER_PORT       (the only exposed port; defaults to constants.SERVER_PORT)
  *   - plus the baked/localhost service env from §11a.
  */
@@ -168,46 +169,33 @@ const startNativeServices = async (repoRoot: string): Promise<void> => {
 };
 
 /**
- * Provisions the dedicated Svix shard's app and binds it into the localhost org
- * (plan §7). Today's seed does NOT create a Svix app (the warm parent skips it),
- * so the Svix worker creates one here after its baked org row exists, then writes
- * `svix_config.sandbox_app_id` so the tests' `getTestSvixAppId` resolves.
+ * Binds the orchestrator-created Svix app into the localhost org (plan §7/§9a).
+ * The orchestrator now CREATES + RECORDS the one dedicated svix-shard app before
+ * this worker boots (so a fork/boot failure can never orphan an untracked Svix
+ * app), injecting its id as `SVIX_APP_ID`. This worker only writes
+ * `svix_config.sandbox_app_id` so the tests' `getTestSvixAppId` resolves — it
+ * does NOT call `createSvixApp`.
  */
 const provisionSvixApp = async (orgId: string): Promise<void> => {
-	if (!isTruthyEnv(process.env.SVIX_API_KEY)) {
+	const svixAppId = process.env.SVIX_APP_ID;
+	if (!svixAppId) {
 		throw new Error(
-			"[tw-boot] NEEDS_SVIX set but SVIX_API_KEY is missing — the Svix shard cannot provision an app",
+			"[tw-boot] NEEDS_SVIX set but SVIX_APP_ID is missing — the orchestrator must create + inject the Svix app id (plan §9a)",
 		);
 	}
 
-	log("provisioning Svix app for the dedicated Svix shard");
-	const { AppEnv } = await import("@autumn/shared");
-	const { createSvixApp } = await import(
-		"@server/external/svix/svixHelpers.js"
-	);
+	log(`binding orchestrator-created Svix app ${svixAppId} into the Svix shard`);
 	const { db } = await import("@server/db/initDrizzle.js");
 	const { OrgService } = await import("@server/internal/orgs/OrgService.js");
 
 	const org = await OrgService.get({ db, orgId });
-
-	const app = await createSvixApp({
-		name: `${org.slug}_${AppEnv.Sandbox}`,
-		orgId,
-		env: AppEnv.Sandbox,
-	});
-
-	if (!app?.id) {
-		throw new Error(
-			"[tw-boot] createSvixApp returned no app id — Svix shard cannot serve Svix tests",
-		);
-	}
 
 	const updated = await OrgService.update({
 		db,
 		orgId,
 		updates: {
 			svix_config: {
-				sandbox_app_id: app.id,
+				sandbox_app_id: svixAppId,
 				live_app_id: org.svix_config?.live_app_id ?? "",
 			},
 		},
@@ -219,7 +207,7 @@ const provisionSvixApp = async (orgId: string): Promise<void> => {
 		);
 	}
 
-	log(`Svix app ${app.id} bound to org ${orgId} (svix_config.sandbox_app_id)`);
+	log(`Svix app ${svixAppId} bound to org ${orgId} (svix_config.sandbox_app_id)`);
 };
 
 /**
@@ -270,8 +258,9 @@ const main = async (): Promise<void> => {
 		waitForTcpPort("elasticmq", ELASTICMQ_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 	]);
 
-	// 3. Svix shard provisioning (only when flagged). It only touches the DB, so
-	//    it runs before the server starts to keep all DB-bind steps together.
+	// 3. Bind the orchestrator-created Svix app (only when flagged). It only
+	//    touches the DB, so it runs before the server starts to keep all DB-bind
+	//    steps together.
 	if (isTruthyEnv(process.env.NEEDS_SVIX)) {
 		await provisionSvixApp(orgId);
 	}

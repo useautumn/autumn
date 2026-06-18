@@ -79,7 +79,15 @@ async function findFileByPath(
 // Ultra-kill on Ctrl+C. `runningProcesses` is owned by the LocalExecutor (the
 // SIGINT-kill behavior is preserved verbatim); a remote executor manages its
 // own teardown.
-process.on("SIGINT", () => {
+//
+// IMPORTANT: this handler calls the REAL `process.exit(130)`, which is correct
+// for the `bun t` path (this module is the whole process) but catastrophic when
+// the runner is driven via `runWithExecutor` by the `bun tw` orchestrator: it
+// would hard-kill the process mid-teardown and leak sandboxes/sub-accounts. So
+// it is installed ONLY on the local `bun t` path (in `main()`), never at module
+// import time, and the orchestrator's own SIGINT handler stays the only one live
+// when the runner is injected.
+const localSigintHandler = (): void => {
 	// Kill all running test processes immediately
 	for (const proc of runningProcesses) {
 		try {
@@ -92,7 +100,7 @@ process.on("SIGINT", () => {
 
 	console.log("\n\n⚠️  Tests interrupted by user (Ctrl+C)\n");
 	process.exit(130);
-});
+};
 
 interface IndividualTest {
 	name: string;
@@ -586,6 +594,14 @@ interface TestRunnerAppProps {
 	maxParallel: number;
 	verbose: boolean;
 	executor: TestExecutor;
+	/**
+	 * Invoked once, when the run finishes, with the intended exit code. The
+	 * caller decides how the process winds down: `bun t` exits for real; the
+	 * `bun tw` orchestrator unmounts Ink + clears the flush interval so the event
+	 * loop drains and teardown can run (the runner must NOT `process.exit` out
+	 * from under the orchestrator).
+	 */
+	onComplete: (exitCode: number) => void;
 }
 
 function TestRunnerApp({
@@ -593,6 +609,7 @@ function TestRunnerApp({
 	maxParallel,
 	verbose,
 	executor,
+	onComplete,
 }: TestRunnerAppProps) {
 	const { exit } = useApp();
 
@@ -869,11 +886,16 @@ function TestRunnerApp({
 		const exitFailedFiles = exitResults.some((r) => r.status === "failed");
 
 		// Small delay to ensure final render
-		setTimeout(() => {
+		const timer = setTimeout(() => {
+			// Unmount Ink. This runs the flush-interval effect's cleanup
+			// (`clearInterval`), so the ~10fps timer no longer keeps the event loop
+			// alive. `onComplete` then decides whether to `process.exit` (`bun t`)
+			// or just let the loop drain so the orchestrator can tear down (`bun tw`).
 			exit();
-			process.exit(exitFailedFiles ? 1 : 0);
+			onComplete(exitFailedFiles ? 1 : 0);
 		}, 100);
-	}, [isComplete, results, exit]);
+		return () => clearTimeout(timer);
+	}, [isComplete, results, exit, onComplete]);
 
 	const allResults: TestFileResult[] = Array.from(results.values());
 	const runningFiles = allResults.filter((r) => r.status === "running");
@@ -1124,10 +1146,24 @@ export function runWithExecutor(
 	executor: TestExecutor,
 	opts: { maxParallel: number; verbose?: boolean },
 ): void {
-	render(
+	const onComplete = (exitCode: number): void => {
+		// Tear down Ink so the process can exit cleanly. The flush `setInterval`
+		// is cleared by the app's effect cleanup on unmount; explicitly unmounting
+		// here (in addition to the in-app `exit()`) guarantees the Ink instance and
+		// its timers release the event loop even when `process.exit` is intercepted
+		// by the `bun tw` orchestrator (which captures the code via `process.exit`).
+		instance?.unmount();
+		// Preserve `bun t`'s behavior verbatim: a standalone CLI run terminates the
+		// process here. The `bun tw` orchestrator intercepts `process.exit` (to run
+		// teardown), so this records the verdict for it instead of killing it.
+		process.exit(exitCode);
+	};
+
+	const instance = render(
 		<TestRunnerApp
 			executor={executor}
 			maxParallel={opts.maxParallel}
+			onComplete={onComplete}
 			testFiles={testFiles}
 			verbose={opts.verbose ?? false}
 		/>,
@@ -1211,8 +1247,19 @@ async function main() {
 	}
 
 	// `bun t` always runs locally — inject the LocalExecutor so behavior is
-	// byte-for-byte compatible with the pre-seam runner.
+	// byte-for-byte compatible with the pre-seam runner. Install the local-only
+	// SIGINT handler here (NOT at module import) so it never fires when the runner
+	// is driven by the `bun tw` orchestrator via `runWithExecutor`.
+	process.on("SIGINT", localSigintHandler);
 	runWithExecutor(testFiles, new LocalExecutor(), { maxParallel, verbose });
 }
 
-main();
+// Only auto-run as the direct `bun t` entrypoint. The `bun tw` orchestrator
+// dynamically imports this module purely to grab `runWithExecutor`; without this
+// guard that import would (a) run `main()` and double-render the TUI, and
+// (b) install the local-only SIGINT handler — reintroducing the very leak fixed
+// above. `bun t` runs the file directly, so `import.meta.main` is true → behavior
+// unchanged.
+if (import.meta.main) {
+	main();
+}

@@ -35,7 +35,7 @@
  */
 
 import { Writable } from "node:stream";
-import { Sandbox } from "@vercel/sandbox";
+import { APIError, Sandbox } from "@vercel/sandbox";
 import {
 	SANDBOX_NAME_PREFIX,
 	SERVER_PORT,
@@ -285,39 +285,70 @@ export const listSandboxesByOwner = async (
 	}
 
 	const namePrefix = `${SANDBOX_NAME_PREFIX}-${owner}-`;
-	const paginator = await Sandbox.list({
-		projectId,
-		namePrefix,
-		tags: { [TAG_KIND]: TAG_KIND_VALUE, [TAG_OWNER]: owner },
-		signal: opts?.signal,
-	});
 
-	const result: ListedSandbox[] = [];
-	for await (const sandbox of paginator) {
-		result.push({
-			name: sandbox.name,
-			status: sandbox.status,
-			createdAt: sandbox.createdAt,
-			tags: sandbox.tags,
-		});
-	}
-	return result;
+	// `Sandbox.list` AND-filters `namePrefix` + `tags` server-side, but the sweep
+	// wants an OR: a SIGKILL'd run may have a matching name but no/partial tags,
+	// while a renamed/older sandbox may have the tags but not the name prefix.
+	// Run two passes (name-only, tags-only) and union by sandbox name.
+	const byName = new Map<string, ListedSandbox>();
+
+	const collect = async (
+		paginator: AsyncIterable<{
+			name: string;
+			status: ListedSandbox["status"];
+			createdAt: number;
+			tags?: Record<string, string>;
+		}>,
+	): Promise<void> => {
+		for await (const sandbox of paginator) {
+			if (!byName.has(sandbox.name)) {
+				byName.set(sandbox.name, {
+					name: sandbox.name,
+					status: sandbox.status,
+					createdAt: sandbox.createdAt,
+					tags: sandbox.tags,
+				});
+			}
+		}
+	};
+
+	const [byPrefix, byTags] = await Promise.all([
+		Sandbox.list({ projectId, namePrefix, signal: opts?.signal }),
+		Sandbox.list({
+			projectId,
+			tags: { [TAG_KIND]: TAG_KIND_VALUE, [TAG_OWNER]: owner },
+			signal: opts?.signal,
+		}),
+	]);
+
+	await collect(byPrefix);
+	await collect(byTags);
+
+	return Array.from(byName.values());
 };
 
+/** HTTP status codes that mean "this resource no longer exists". */
+const HTTP_NOT_FOUND = 404;
+const HTTP_GONE = 410;
+
 /**
- * Best-effort detection of a "this resource no longer exists" error so teardown
- * stays idempotent. The SDK throws `APIError`s with a `not_found`-flavoured
- * code/status; we match defensively on common shapes rather than importing the
- * error class (its code field naming is not part of the stable surface).
+ * Detect a "this resource no longer exists" error so teardown stays idempotent
+ * (plan §9a — tolerant of already-deleted resources).
+ *
+ * The real `@vercel/sandbox` `APIError` carries the HTTP status on
+ * `error.response.status` (NOT a top-level `status`/`code`) and the slug on
+ * `error.json?.error?.code` (NOT a top-level `code`). We match those exact
+ * shapes: a 404/410 response, or an error code that ends in `not_found`.
  */
 const isAlreadyGone = (error: unknown): boolean => {
-	if (!(error instanceof Error)) {
+	if (!(error instanceof APIError)) {
 		return false;
 	}
-	const candidate = error as Error & { status?: number; code?: string };
-	if (candidate.status === 404) {
+	const status = error.response?.status;
+	if (status === HTTP_NOT_FOUND || status === HTTP_GONE) {
 		return true;
 	}
-	const haystack = `${candidate.code ?? ""} ${candidate.message}`.toLowerCase();
-	return haystack.includes("not_found") || haystack.includes("not found");
+	const code = (error.json as { error?: { code?: string } } | undefined)?.error
+		?.code;
+	return typeof code === "string" && code.endsWith("not_found");
 };

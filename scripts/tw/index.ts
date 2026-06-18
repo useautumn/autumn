@@ -111,7 +111,7 @@ const main = async (): Promise<void> => {
 
 	if (sub === "--help" || sub === "-h" || sub === "help") {
 		printUsage();
-		return;
+		process.exit(0);
 	}
 
 	// A bare invocation (no subcommand or only flags) runs the orchestrator.
@@ -121,15 +121,20 @@ const main = async (): Promise<void> => {
 		process.exit(getLastRunExitCode());
 	}
 
+	// Each completed subcommand exits explicitly: imported modules (DB pool, redis,
+	// the Vercel SDK) leave open handles that keep the event loop alive, so falling
+	// out of the switch would hang the CLI. `fatal()` already exits non-zero.
 	switch (sub) {
 		case "list":
 			await list();
+			process.exit(0);
 			break;
 
 		case "kill": {
 			const rest = argv.slice(1);
 			if (rest.includes("--orphans")) {
 				await killOrphans();
+				process.exit(0);
 				break;
 			}
 			const runId = rest.find((arg) => !arg.startsWith("-"));
@@ -137,11 +142,13 @@ const main = async (): Promise<void> => {
 				fatal("kill requires a <runId> (or use `kill --orphans`)");
 			}
 			await kill(runId as string);
+			process.exit(0);
 			break;
 		}
 
 		case "kill-all":
 			await killAll({ allUsers: argv.includes("--all-users") });
+			process.exit(0);
 			break;
 
 		default:

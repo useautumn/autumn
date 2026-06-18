@@ -63,7 +63,10 @@ import {
 	deleteSubAccount,
 	registerSubAccountWebhook,
 } from "../helpers/stripe.ts";
-import { partitionShards } from "../helpers/svix.ts";
+import {
+	createSvixApp as orchestratorCreateSvixApp,
+	partitionShards,
+} from "../helpers/svix.ts";
 import {
 	createWarmSandbox,
 	deleteSandbox,
@@ -250,9 +253,11 @@ const requireSecret = (name: string): string => {
 const buildWorkerEnv = ({
 	stripeAccountId,
 	isSvixShard,
+	svixAppId,
 }: {
 	stripeAccountId: string;
 	isSvixShard: boolean;
+	svixAppId?: string;
 }): Record<string, string> => {
 	const env: Record<string, string> = {
 		NODE_ENV: "development",
@@ -282,6 +287,14 @@ const buildWorkerEnv = ({
 	if (isSvixShard) {
 		env.NEEDS_SVIX = "1";
 		env.SVIX_API_KEY = requireSecret("SVIX_API_KEY");
+		// The orchestrator already created + recorded the Svix app (§9a); the worker
+		// only BINDS this id into svix_config (it no longer creates the app itself).
+		if (!svixAppId) {
+			throw new Error(
+				"[tw] svix shard worker requires the orchestrator-created SVIX_APP_ID",
+			);
+		}
+		env.SVIX_APP_ID = svixAppId;
 	}
 
 	return env;
@@ -442,6 +455,7 @@ const provisionWorker = async ({
 	runId,
 	warmName,
 	isSvixShard,
+	svixAppId,
 	ownerEmail,
 	signal,
 }: {
@@ -450,6 +464,7 @@ const provisionWorker = async ({
 	runId: string;
 	warmName: string;
 	isSvixShard: boolean;
+	svixAppId?: string;
 	ownerEmail: string;
 	signal: AbortSignal;
 }): Promise<ProvisionedWorker> => {
@@ -472,7 +487,7 @@ const provisionWorker = async ({
 	const sandbox = await forkWorker({
 		sourceSandbox: warmName,
 		name,
-		env: buildWorkerEnv({ stripeAccountId: accountId, isSvixShard }),
+		env: buildWorkerEnv({ stripeAccountId: accountId, isSvixShard, svixAppId }),
 		tags: vercelTags(owner, runId),
 		signal,
 	});
@@ -601,11 +616,30 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 	// Pool sizing: never over-provision (plan §8.7). One worker covers ≥1 file.
 	// When svix files exist, one worker MUST be the dedicated svix shard.
 	const requestedWorkers = Math.max(1, args.workers);
-	const effectiveWorkers = Math.min(requestedWorkers, allFiles.length);
+	let effectiveWorkers = Math.min(requestedWorkers, allFiles.length);
 	const needsSvixShard = svixFiles.length > 0;
-	if (needsSvixShard && effectiveWorkers < 1) {
-		throw new Error("svix files present but no worker slots available");
+
+	// When there are BOTH svix and normal files, worker 0 becomes the dedicated
+	// svix shard and is filtered out of the normal pool. With only one worker the
+	// normal pool would be EMPTY while normal files remain — `pool.acquire()` would
+	// park forever and hang the whole run. Require (and, where possible, bump to)
+	// at least two workers so the normal pool is never empty (plan §7/§8.7).
+	if (needsSvixShard && normalFiles.length > 0) {
+		const MIN_WORKERS_FOR_MIXED_RUN = 2;
+		if (allFiles.length < MIN_WORKERS_FOR_MIXED_RUN) {
+			// Can't happen with ≥1 svix + ≥1 normal file, but keep the invariant explicit.
+			throw new Error(
+				"a mixed svix+normal run needs at least 2 test files (1 svix shard + 1 normal worker)",
+			);
+		}
+		if (requestedWorkers < MIN_WORKERS_FOR_MIXED_RUN) {
+			throw new Error(
+				`this run has both svix and normal test files, so it needs a dedicated svix shard plus at least one normal worker — pass --workers>=${MIN_WORKERS_FOR_MIXED_RUN} (got ${requestedWorkers})`,
+			);
+		}
+		effectiveWorkers = Math.max(effectiveWorkers, MIN_WORKERS_FOR_MIXED_RUN);
 	}
+
 	const maxParallel = effectiveWorkers * Math.max(1, args.perWorker);
 
 	log(
@@ -666,6 +700,17 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 
 		// ----- FAN-OUT --------------------------------------------------------
 		// Worker 0 is the dedicated svix shard when svix files exist (plan §7).
+		// The orchestrator creates + RECORDS the one svix app BEFORE that worker
+		// boots, so a fork/boot failure can never orphan an untracked Svix app
+		// (§9a); the worker only binds the recorded id into svix_config.
+		let svixAppId: string | undefined;
+		if (needsSvixShard) {
+			log("creating dedicated svix shard app (orchestrator-driven, §9a)");
+			svixAppId = await orchestratorCreateSvixApp(TEST_ORG_CONFIG.id);
+			await registry.setSvixApp(runId, svixAppId);
+			log(`svix app ${svixAppId} created and recorded`);
+		}
+
 		log(`fanning out ${effectiveWorkers} worker(s) from the warm snapshot`);
 		const provisionTasks: Promise<ProvisionedWorker>[] = [];
 		for (let idx = 0; idx < effectiveWorkers; idx++) {
@@ -677,6 +722,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 					runId,
 					warmName,
 					isSvixShard,
+					svixAppId: isSvixShard ? svixAppId : undefined,
 					ownerEmail,
 					signal,
 				}),
@@ -715,24 +761,34 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			svixPool.close();
 		}
 
-		log(`running ${normalFiles.length} normal file(s) on the pool`);
-		const normalHandles = provisioned
-			.filter(({ handle }) => !(svixShard && handle.isSvixShard))
-			.map(({ handle }) => handle);
-		const normalPool = new WorkerPool(normalHandles);
-		const normalExecutor = new RemoteExecutor({
-			pool: normalPool,
-			resolveSandbox,
-			toWorkerPath: toSandboxPath,
-		});
-		const normalParallel = Math.max(
-			1,
-			normalHandles.length * Math.max(1, args.perWorker),
-		);
-		await runFiles(normalFiles, normalExecutor, {
-			maxParallel: normalParallel,
-		});
-		normalPool.close();
+		if (normalFiles.length > 0) {
+			log(`running ${normalFiles.length} normal file(s) on the pool`);
+			const normalHandles = provisioned
+				.filter(({ handle }) => !(svixShard && handle.isSvixShard))
+				.map(({ handle }) => handle);
+			// Never construct a WorkerPool([]) while files remain: an empty pool's
+			// `acquire()` parks forever and hangs the run. The worker-count guard
+			// above should make this unreachable, but fail loud rather than hang.
+			if (normalHandles.length === 0) {
+				throw new Error(
+					`${normalFiles.length} normal file(s) remain but no normal workers are available (svix shard consumed the only worker) — pass --workers>=2`,
+				);
+			}
+			const normalPool = new WorkerPool(normalHandles);
+			const normalExecutor = new RemoteExecutor({
+				pool: normalPool,
+				resolveSandbox,
+				toWorkerPath: toSandboxPath,
+			});
+			const normalParallel = Math.max(
+				1,
+				normalHandles.length * Math.max(1, args.perWorker),
+			);
+			await runFiles(normalFiles, normalExecutor, {
+				maxParallel: normalParallel,
+			});
+			normalPool.close();
+		}
 
 		// ----- TEARDOWN -------------------------------------------------------
 		await teardown({ runId, skip: args.keep });

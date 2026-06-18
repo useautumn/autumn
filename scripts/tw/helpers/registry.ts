@@ -12,6 +12,7 @@
  * can't corrupt the registry.
  */
 
+import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { REGISTRY_DIR, REGISTRY_FILE } from "../constants.ts";
@@ -52,37 +53,61 @@ export const save = async (registry: Registry): Promise<void> => {
 	await mkdir(REGISTRY_DIR, { recursive: true });
 	const tmpPath = join(
 		dirname(REGISTRY_FILE),
-		`.registry.${process.pid}.${Date.now()}.tmp`,
+		`.registry.${randomUUID()}.tmp`,
 	);
 	await writeFile(tmpPath, `${JSON.stringify(registry, null, 2)}\n`, "utf-8");
 	await rename(tmpPath, REGISTRY_FILE);
 };
 
 /**
- * Read-modify-write one entry under a fresh load each time, so concurrent
- * runs (each its own `runId`) don't clobber each other's incremental writes.
- * The mutator receives the current entry (throws if absent) and may mutate it
- * in place; the whole registry is then persisted.
+ * In-process write queue (mutex). The registry is a single shared JSON file and
+ * the default run path mutates the SAME `runId` entry from N workers
+ * concurrently (`Promise.all` in run.ts). A bare load→mutate→save would race:
+ * worker B's `load()` could read a snapshot taken before worker A's `save()`
+ * landed, clobbering A's record and orphaning its resources (plan §9a — "nothing
+ * is ever orphaned"). To prevent that, every mutating operation chains onto a
+ * single shared promise so each load→mutate→save runs atomically as a unit;
+ * concurrent mutations queue instead of interleaving.
  */
-const updateEntry = async (
+let writeQueue: Promise<unknown> = Promise.resolve();
+
+const enqueueWrite = <T>(task: () => Promise<T>): Promise<T> => {
+	// Swallow the predecessor's rejection so one failed write doesn't poison the
+	// chain, but run `task` strictly after it has settled.
+	const run = writeQueue.then(task, task);
+	writeQueue = run.then(
+		() => undefined,
+		() => undefined,
+	);
+	return run;
+};
+
+/**
+ * Read-modify-write one entry, serialized through {@link enqueueWrite} so
+ * concurrent mutations of the same (or any) entry can't clobber each other. The
+ * mutator receives the current entry (throws if absent) and may mutate it in
+ * place; the whole registry is then persisted.
+ */
+const updateEntry = (
 	runId: string,
 	mutate: (entry: RegistryEntry) => void,
-): Promise<RegistryEntry> => {
-	const registry = await load();
-	const entry = registry[runId];
-	if (!entry) {
-		throw new Error(`tw registry: no entry for runId ${runId}`);
-	}
-	mutate(entry);
-	await save(registry);
-	return entry;
-};
+): Promise<RegistryEntry> =>
+	enqueueWrite(async () => {
+		const registry = await load();
+		const entry = registry[runId];
+		if (!entry) {
+			throw new Error(`tw registry: no entry for runId ${runId}`);
+		}
+		mutate(entry);
+		await save(registry);
+		return entry;
+	});
 
 /**
  * Create and persist a new `running` run entry. Written before any resource is
  * provisioned so the run is recoverable from its first side effect (plan §9a).
  */
-export const createRun = async ({
+export const createRun = ({
 	owner,
 	runId,
 	ref,
@@ -90,22 +115,23 @@ export const createRun = async ({
 	owner: string;
 	runId: string;
 	ref: string;
-}): Promise<RegistryEntry> => {
-	const registry = await load();
-	const entry: RegistryEntry = {
-		runId,
-		owner,
-		startedAt: Date.now(),
-		status: "running",
-		ref,
-		sandboxes: [],
-		subAccounts: [],
-		webhooks: [],
-	};
-	registry[runId] = entry;
-	await save(registry);
-	return entry;
-};
+}): Promise<RegistryEntry> =>
+	enqueueWrite(async () => {
+		const registry = await load();
+		const entry: RegistryEntry = {
+			runId,
+			owner,
+			startedAt: Date.now(),
+			status: "running",
+			ref,
+			sandboxes: [],
+			subAccounts: [],
+			webhooks: [],
+		};
+		registry[runId] = entry;
+		await save(registry);
+		return entry;
+	});
 
 /**
  * Record a sandbox for a run (name is the cleanup key; id once known). If a
@@ -171,14 +197,15 @@ export const markCancelled = async (runId: string): Promise<RegistryEntry> =>
 	});
 
 /** Drop a run entry entirely (after `kill` finishes its teardown). No-op if absent. */
-export const removeRun = async (runId: string): Promise<void> => {
-	const registry = await load();
-	if (!(runId in registry)) {
-		return;
-	}
-	delete registry[runId];
-	await save(registry);
-};
+export const removeRun = (runId: string): Promise<void> =>
+	enqueueWrite(async () => {
+		const registry = await load();
+		if (!(runId in registry)) {
+			return;
+		}
+		delete registry[runId];
+		await save(registry);
+	});
 
 /** All runs owned by `owner`, newest first (plan §9a `list` is owner-scoped). */
 export const listRuns = async (owner: string): Promise<RegistryEntry[]> => {

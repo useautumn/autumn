@@ -97,16 +97,41 @@ export class WorkerPool {
 	}
 
 	/**
-	 * Evict a dead worker from the pool (plan §8.4). Any waiter blocked
-	 * specifically on a different worker can now be re-evaluated; if the dead
-	 * worker was the last live one, waiters stay parked until `replace()` adds a
-	 * fresh worker (or `close()` rejects them).
+	 * Evict a dead worker from the pool (plan §8.4) and re-evaluate parked
+	 * waiters via `pump()` so any reschedule lands on a healthy worker. If the
+	 * dead worker was the LAST live one, parked waiters are rejected (the runner
+	 * does not `replace()` dead workers, so they can never be served) — this makes
+	 * an N===1 pool fail cleanly instead of deadlocking on the first death.
 	 */
 	markDead(worker: WorkerHandle): void {
 		const index = this.workers.findIndex((w) => w.name === worker.name);
 		if (index !== -1) {
 			this.workers.splice(index, 1);
 		}
+
+		// If the pool is now empty, no future `acquire*` can ever be served (the
+		// runner does not `replace()` dead workers). Reject every parked waiter so
+		// the run FAILS CLEANLY instead of hanging forever — this is the property
+		// that saves an N===1 pool (e.g. the svix shard / `--workers=1`): the first
+		// death drains the pool to zero, and the reschedule's parked acquire would
+		// otherwise block indefinitely. The rejection surfaces as a normal error the
+		// runner can report.
+		if (this.workers.length === 0 && this.waiters.length > 0) {
+			const rejection = new Error(
+				"WorkerPool exhausted: all workers died and none were replaced",
+			);
+			while (this.waiters.length > 0) {
+				this.waiters.shift()?.reject(rejection);
+			}
+			return;
+		}
+
+		// Otherwise re-evaluate parked waiters: removing the dead worker may unblock
+		// a waiter that was strictly avoiding it (it's now the only live worker, or a
+		// different idle worker is the obvious pick), and lets `pickFor` recompute
+		// "the only live worker" semantics. Without this pump a death never wakes a
+		// parked waiter.
+		this.pump();
 	}
 
 	/**

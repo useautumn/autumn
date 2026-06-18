@@ -21,6 +21,7 @@ import chalk from "chalk";
 import { getOwner } from "../helpers/owner.ts";
 import * as registry from "../helpers/registry.ts";
 import { deleteSubAccount, sweepOrphans } from "../helpers/stripe.ts";
+import { sweepOrphanSvixApps } from "../helpers/svix.ts";
 import { deleteSandbox, listSandboxesByOwner } from "../helpers/vercel.ts";
 import type { RegistryEntry } from "../types.ts";
 import { deleteSvixApp } from "./run.ts";
@@ -154,6 +155,10 @@ export const killAll = async ({
  * §9a `kill --orphans`): delete stale Stripe sub-accounts (by
  * `metadata.autumn_tw_owner`) and Vercel sandboxes (by `owner` tag / name
  * prefix) older than the cutoff. Owner-scoped so a teammate's swarm is untouched.
+ *
+ * Also sweeps orphaned Svix test apps older than the cutoff. Those carry no
+ * per-owner tag (shared unit-test org), so the age cutoff alone guards against
+ * nuking an in-flight run's app — see `sweepOrphanSvixApps`.
  */
 export const killOrphans = async ({
 	olderThanMs = ORPHAN_CUTOFF_MS,
@@ -192,6 +197,15 @@ export const killOrphans = async ({
 		});
 	}
 	log(`vercel: deleted ${deletedSandboxes} orphan sandbox(es)`);
+
+	// Svix test apps (shared org — age cutoff is the only in-flight guard).
+	const deletedSvixApps = await sweepOrphanSvixApps({ olderThanMs }).catch(
+		(error) => {
+			warn(`svix sweep failed: ${(error as Error).message}`);
+			return 0;
+		},
+	);
+	log(`svix: deleted ${deletedSvixApps} orphan app(s)`);
 
 	// Drop any registry entries whose resources are now gone (best-effort).
 	const all = await registry.load();

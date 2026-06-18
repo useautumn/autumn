@@ -120,14 +120,23 @@ export class RemoteExecutor implements TestExecutor {
 		onChunk: (text: string) => void;
 		signal?: AbortSignal;
 	}): Promise<{ exitCode: number; stderr: string }> {
-		// `failedTestNames` present is the runner's signal that this is a retry
-		// (plan §8.3); on a retry, prefer a DIFFERENT worker than the one that last
-		// ran this file (plan §8.7), since a worker can accumulate bad local state.
-		const isRetry = args.failedTestNames !== undefined;
+		// A file is being RE-RUN whenever we've already tracked a worker for it —
+		// either a test-failure retry (`failedTestNames` present, plan §8.3) OR a
+		// worker-death reschedule (first-attempt file, `failedTestNames` undefined,
+		// plan §8.4). On a worker-death reschedule `failedTestNames` is undefined,
+		// so keying off it alone would wrongly land back on `acquire()` (the same
+		// pool). Instead, key off whether we've seen this file before.
 		const lastWorker = this.lastWorkerByFile.get(args.file);
+		const isRerun = lastWorker !== undefined;
 
-		const worker = isRetry
-			? await this.pool.acquireDifferentFrom(lastWorker)
+		// On a worker-death reschedule the previous worker is provably dead (it was
+		// `markDead`'d), so a different worker is mandatory → strict. A test-failure
+		// retry merely prefers a different worker. Either way `acquireDifferentFrom`
+		// falls back to the same worker only when it's the only live one (N === 1).
+		const isWorkerDeathReschedule = isRerun && args.failedTestNames === undefined;
+
+		const worker = isRerun
+			? await this.pool.acquireDifferentFrom(lastWorker, isWorkerDeathReschedule)
 			: await this.pool.acquire();
 
 		worker.lastFile = args.file;
@@ -170,18 +179,24 @@ export class RemoteExecutor implements TestExecutor {
 			// classified; any other failure to obtain an exit code means the
 			// transport/VM dropped, which is also worker death (plan §8.4).
 			//
-			// On worker death we deliberately do NOT `release()` the worker: it is
-			// dead, and releasing would let `pump()` hand it to another waiter before
-			// the runner can `markDead`/`replace` it. The runner's death handler owns
-			// eviction; the reschedule then naturally lands on a different worker.
-			if (error instanceof WorkerDeathError) {
-				throw error;
-			}
-			throw new WorkerDeathError({
-				file: args.file,
-				workerName: worker.name,
-				cause: error,
-			});
+			// The worker is provably dead, so we evict it from the pool here BEFORE
+			// throwing. We deliberately do NOT `release()` it (releasing would let
+			// `pump()` hand a dead worker to another waiter). `markDead` removes it
+			// from rotation and pumps the waiter queue, so any parked acquire
+			// re-evaluates against the remaining healthy workers (or — if this was
+			// the last worker — the pool stays empty and parked acquires fail/await
+			// rather than hanging on a busy-forever zombie). For a 1-worker pool this
+			// is what prevents the first death from deadlocking the whole run.
+			const deathError =
+				error instanceof WorkerDeathError
+					? error
+					: new WorkerDeathError({
+							file: args.file,
+							workerName: worker.name,
+							cause: error,
+						});
+			this.pool.markDead(worker);
+			throw deathError;
 		}
 	}
 }
