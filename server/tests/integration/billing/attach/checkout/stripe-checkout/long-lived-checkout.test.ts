@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
 import type { AttachParamsV1Input } from "@autumn/shared";
+import { ms } from "@shared/utils/common/unixUtils";
+import { checkoutRepo } from "@/internal/checkouts/repos/checkoutRepo";
 import { items } from "@tests/utils/fixtures/items";
 import { products } from "@tests/utils/fixtures/products";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
@@ -35,6 +37,30 @@ const getStripeSessionId = (url: string) => {
 	return sessionId;
 };
 
+const expectStoredPaymentUrl = async ({
+	ctx,
+	checkoutId,
+	paymentUrl,
+}: {
+	ctx: Awaited<ReturnType<typeof initScenario>>["ctx"];
+	checkoutId: string;
+	paymentUrl: string;
+}) => {
+	const checkout = await checkoutRepo.get({ db: ctx.db, id: checkoutId });
+	expect(checkout?.response?.payment_url).toBe(paymentUrl);
+};
+
+const expectLongLivedCheckoutExpiry = async ({
+	ctx,
+	checkoutId,
+}: {
+	ctx: Awaited<ReturnType<typeof initScenario>>["ctx"];
+	checkoutId: string;
+}) => {
+	const checkout = await checkoutRepo.get({ db: ctx.db, id: checkoutId });
+	expect(checkout?.expires_at).toBe(checkout!.created_at + ms.days(90));
+};
+
 test.concurrent(
 	`${chalk.yellowBright("long-lived checkout: creates reusable launcher for stripe checkout")}`,
 	async () => {
@@ -60,15 +86,24 @@ test.concurrent(
 		expect(result.payment_url).not.toContain("checkout.stripe.com");
 
 		const checkoutId = getLongLivedCheckoutId(result.payment_url);
+		await expectLongLivedCheckoutExpiry({ ctx, checkoutId });
+
 		const stripeUrl = await startLongLivedCheckout(checkoutId);
 		const stripeSessionId = getStripeSessionId(stripeUrl);
+		await expectStoredPaymentUrl({ ctx, checkoutId, paymentUrl: stripeUrl });
 
 		const reusedStripeUrl = await startLongLivedCheckout(checkoutId);
 		expect(getStripeSessionId(reusedStripeUrl)).toBe(stripeSessionId);
+		await expectStoredPaymentUrl({ ctx, checkoutId, paymentUrl: reusedStripeUrl });
 
 		await ctx.stripeCli.checkout.sessions.expire(stripeSessionId);
 		const freshStripeUrl = await startLongLivedCheckout(checkoutId);
 		expect(getStripeSessionId(freshStripeUrl)).not.toBe(stripeSessionId);
+		await expectStoredPaymentUrl({
+			ctx,
+			checkoutId,
+			paymentUrl: freshStripeUrl,
+		});
 	},
 );
 
