@@ -58,8 +58,11 @@ if ! command -v dnf >/dev/null 2>&1; then
 fi
 
 log "Installing base system packages via dnf"
+# NOTE: do NOT install `curl` — Amazon Linux 2023 ships `curl-minimal`, which
+# already provides /usr/bin/curl and CONFLICTS with the full `curl` package
+# (dnf errors out). curl-minimal handles the https downloads below, so use it.
 sudo dnf install -y --setopt=install_weak_deps=False \
-  tar gzip xz curl ca-certificates shadow-utils glibc-langpack-en \
+  tar gzip xz ca-certificates shadow-utils glibc-langpack-en \
   >/dev/null
 
 # ---------------------------------------------------------------------------
