@@ -189,8 +189,8 @@ const main = async (): Promise<void> => {
 	// Pre-flight: fail fast locally with actionable guidance instead of a cryptic
 	// Vercel "git clone failed" 400. The µVM clones the PUSHED ref over https.
 	if (url.includes("github.com") && !token) {
-		fail(
-			"private GitHub repo needs auth — set GITHUB_TOKEN (a PAT/installation token with repo read) in .env.local or the env, then re-run.",
+		console.warn(
+			"\n\x1b[33m[tw-spike] note:\x1b[0m no GITHUB_TOKEN set — fine for a PUBLIC repo; a private repo would need one.\x1b[0m",
 		);
 	}
 	if (!git("ls-remote", "origin", ref)) {
@@ -216,9 +216,11 @@ const main = async (): Promise<void> => {
 
 	// Private-repo clones use the username/password source variant (token as the
 	// password). Public repos use the plain variant.
+	// NOTE: no `depth` — a shallow clone is single-branch (default branch only),
+	// so checking out a non-default `revision` (e.g. feat/*) fails with git 128.
 	const source = token
-		? { type: "git" as const, url, username: "x-access-token", password: token, revision: ref, depth: 1 }
-		: { type: "git" as const, url, revision: ref, depth: 1 };
+		? { type: "git" as const, url, username: "x-access-token", password: token, revision: ref }
+		: { type: "git" as const, url, revision: ref };
 
 	log(`Creating µVM '${name}' from ${url} @ ${ref} (${vcpus} vCPU)`);
 	const sandbox = await Sandbox.create({
