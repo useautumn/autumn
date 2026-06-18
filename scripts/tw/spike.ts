@@ -35,7 +35,6 @@
  * expected and informative — read the streamed [tw-build-base]/[tw-warmup] logs.
  */
 
-import { Writable } from "node:stream";
 import { Sandbox } from "@vercel/sandbox";
 import { SERVER_PORT } from "./constants.ts";
 import { getOwner } from "./helpers/owner.ts";
@@ -51,20 +50,18 @@ const git = (...args: string[]): string => {
 	return new TextDecoder().decode(proc.stdout).trim();
 };
 
-const log = (msg: string): void => console.log(`\n\x1b[1m[tw-spike]\x1b[0m ${msg}`);
+const START = Date.now();
+const elapsed = (): string => `${((Date.now() - START) / 1000).toFixed(0)}s`;
+const log = (msg: string): void =>
+	console.log(`\x1b[1m[tw-spike +${elapsed()}]\x1b[0m ${msg}`);
+const banner = (msg: string): void =>
+	console.log(
+		`\n\x1b[1;36m${"═".repeat(72)}\n  ${msg}   (+${elapsed()})\n${"═".repeat(72)}\x1b[0m`,
+	);
 const fail = (msg: string): never => {
 	console.error(`\n\x1b[31m[tw-spike] FAIL:\x1b[0m ${msg}`);
 	process.exit(1);
 };
-
-/** A Writable that tees the sandbox command's output to our stdout. */
-const teeWritable = (): Writable =>
-	new Writable({
-		write(chunk, _enc, cb) {
-			process.stdout.write(chunk);
-			cb();
-		},
-	});
 
 /** Stream a command's output live; throw on non-zero exit. */
 const stream = async (
@@ -73,19 +70,32 @@ const stream = async (
 	args: string[],
 	opts: { cwd?: string; env?: Record<string, string>; label: string; timeoutMs?: number },
 ): Promise<void> => {
-	log(`▶ ${opts.label}: ${cmd} ${args.join(" ")}`);
-	const finished = await sandbox.runCommand({
+	const t0 = Date.now();
+	log(`▶ ${opts.label} — running (live output below)…`);
+	// Detached + logs() gives TRUE incremental streaming; a `stdout` Writable on a
+	// non-detached runCommand buffers until the command finishes.
+	const command = await sandbox.runCommand({
 		cmd,
 		args,
 		cwd: opts.cwd ?? SANDBOX_DIR,
 		env: opts.env,
-		stdout: teeWritable(),
-		stderr: teeWritable(),
+		detached: true,
 		timeoutMs: opts.timeoutMs,
 	});
-	if (finished.exitCode !== 0) {
-		fail(`${opts.label} exited ${finished.exitCode}`);
+	for await (const entry of command.logs()) {
+		if (entry.stream === "stderr") {
+			process.stderr.write(entry.data);
+		} else {
+			process.stdout.write(entry.data);
+		}
 	}
+	const finished = await command.wait();
+	const secs = ((Date.now() - t0) / 1000).toFixed(0);
+	if (finished.exitCode !== 0) {
+		// Throw (don't process.exit) so main()'s catch tears down the sandbox.
+		throw new Error(`${opts.label} exited ${finished.exitCode} (after ${secs}s)`);
+	}
+	log(`✓ ${opts.label} done in ${secs}s`);
 };
 
 /** Run a command and capture its stdout (for verification probes). */
@@ -97,7 +107,7 @@ const capture = async (
 	const out = await finished.stdout();
 	if (finished.exitCode !== 0) {
 		const err = await finished.stderr();
-		fail(`verification probe exited ${finished.exitCode}:\n${err}`);
+		throw new Error(`verification probe exited ${finished.exitCode}:\n${err}`);
 	}
 	return out;
 };
@@ -118,7 +128,7 @@ const assert = (cond: boolean, label: string, detail: string): void => {
 	if (cond) {
 		console.log(`  \x1b[32m✓\x1b[0m ${label} — ${detail}`);
 	} else {
-		fail(`${label} — ${detail}`);
+		throw new Error(`${label} — ${detail}`);
 	}
 };
 
@@ -222,7 +232,10 @@ const main = async (): Promise<void> => {
 		? { type: "git" as const, url, username: "x-access-token", password: token, revision: ref }
 		: { type: "git" as const, url, revision: ref };
 
-	log(`Creating µVM '${name}' from ${url} @ ${ref} (${vcpus} vCPU)`);
+	banner("STEP 1/5 — Create µVM + clone repo");
+	log(
+		`Creating '${name}' from ${url} @ ${ref} (${vcpus} vCPU). Vercel clones the repo now — this step is SILENT and can take 30–90s…`,
+	);
 	const sandbox = await Sandbox.create({
 		name,
 		source,
@@ -237,24 +250,26 @@ const main = async (): Promise<void> => {
 
 	let snapshotId: string | undefined;
 	try {
-		// Step 2 — base image.
+		banner("STEP 2/5 — Build base image (PG18 + pg_trgm, Dragonfly, elasticmq, bun)");
 		await stream(sandbox, "bash", ["scripts/tw/image/build-base.sh"], {
 			label: "build-base",
 			timeoutMs: BUILD_TIMEOUT_MS,
 			env: installClickhouse ? { TW_INSTALL_CLICKHOUSE: "1" } : undefined,
 		});
+		banner("STEP 3/5 — Start services + verify base");
 		await stream(sandbox, "bash", ["scripts/tw/image/start-services.sh"], {
 			label: "start-services",
 			env: installClickhouse ? { TW_START_CLICKHOUSE: "1" } : undefined,
 		});
 		await verifyBase(sandbox);
 
-		// Step 3 — warm snapshot (warmup ends by clean-stopping services).
+		banner("STEP 4/5 — Warm up: checkout + migrate + functions + seed");
 		await stream(sandbox, "bash", ["scripts/tw/image/warmup.sh", ref], {
 			label: "warmup",
 			timeoutMs: BUILD_TIMEOUT_MS,
 		});
 
+		banner("STEP 5/5 — Verify warm state + snapshot");
 		// Restart services to verify the migrated/seeded state, then clean-stop
 		// again so the snapshot is filesystem-consistent (plan §5a step 6).
 		await stream(sandbox, "bash", ["scripts/tw/image/start-services.sh"], {
