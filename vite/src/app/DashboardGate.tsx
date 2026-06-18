@@ -1,6 +1,7 @@
 import { Navigate, Outlet, useLocation } from "react-router";
 import { useEffect, useState } from "react";
 import {
+	clearLastSwitchedOrgId,
 	getLastSwitchedOrgId,
 	useOrg,
 	useSwitchActiveOrg,
@@ -16,10 +17,12 @@ export const DashboardGate = () => {
 	const switchActiveOrg = useSwitchActiveOrg();
 	const { org, isLoading: orgLoading } = useOrg();
 	const [switchingToLastOrg, setSwitchingToLastOrg] = useState(false);
+	const [ignoredLastOrgId, setIgnoredLastOrgId] = useState<string | null>(null);
 	const lastOrgId = getLastSwitchedOrgId();
 	const activeOrgId = session?.session.activeOrganizationId;
 	const shouldSwitchToLastOrg =
 		!!lastOrgId &&
+		lastOrgId !== ignoredLastOrgId &&
 		!!activeOrgId &&
 		lastOrgId !== activeOrgId &&
 		!!orgList?.some((org) => org.id === lastOrgId);
@@ -27,11 +30,22 @@ export const DashboardGate = () => {
 	useEffect(() => {
 		if (!lastOrgId || !shouldSwitchToLastOrg || switchingToLastOrg) return;
 
-		setSwitchingToLastOrg(true);
-		switchActiveOrg(lastOrgId).finally(() => {
-			setSwitchingToLastOrg(false);
-		});
+		const switchToLastOrg = async () => {
+			setSwitchingToLastOrg(true);
+			try {
+				await switchActiveOrg(lastOrgId);
+			} catch (error) {
+				console.warn("Failed to switch to remembered org", error);
+				clearLastSwitchedOrgId(lastOrgId);
+				setIgnoredLastOrgId(lastOrgId);
+			} finally {
+				setSwitchingToLastOrg(false);
+			}
+		};
+
+		switchToLastOrg();
 	}, [
+		ignoredLastOrgId,
 		lastOrgId,
 		shouldSwitchToLastOrg,
 		switchActiveOrg,

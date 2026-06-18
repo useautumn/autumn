@@ -25,6 +25,14 @@ export const getLastSwitchedOrgId = (): string | null => {
 	}
 };
 
+export const clearLastSwitchedOrgId = (id?: string) => {
+	try {
+		if (!id || localStorage.getItem(LAST_ORG_KEY) === id) {
+			localStorage.removeItem(LAST_ORG_KEY);
+		}
+	} catch {}
+};
+
 export const useSwitchActiveOrg = () => {
 	const queryClient = useQueryClient();
 	const { refetch: refetchSession } = useSession();
