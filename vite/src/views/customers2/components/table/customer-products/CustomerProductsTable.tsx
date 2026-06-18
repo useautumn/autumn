@@ -4,22 +4,23 @@ import type { Row } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 
 import { Table } from "@/components/general/table";
-import { SectionTag } from "@/components/v2/badges/SectionTag";
 import { Button } from "@/components/v2/buttons/Button";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useEnv } from "@/utils/envUtils";
-import { useFullCusSearchQuery } from "@/views/customers/hooks/useFullCusSearchQuery";
-import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
-import { useCustomerProductsData } from "@/views/customers2/hooks/useCustomerProductsData";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerProductsPageQuery } from "@/views/customers2/hooks/useCustomerProductsPageQuery";
+import {
+	CUSTOMER_PRODUCTS_PAGE_SIZES,
+	useCustomerProductsTableState,
+} from "@/views/customers2/hooks/useCustomerProductsTableState";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
 import { AttachProductSheetTrigger } from "./AttachProductSheetTrigger";
 import { CustomerProductsColumns } from "./CustomerProductsColumns";
-import { ShowExpiredActionButton } from "./ShowExpiredActionButton";
+import { CustomerProductsFilterButton } from "./CustomerProductsFilterButton";
 import { TransferProductDialog } from "./TransferProductDialog";
 
-// Shared scope column factory
 function createScopeColumn(
 	entities: Entity[],
 	setEntityId: (id: string) => void,
@@ -62,19 +63,36 @@ function createScopeColumn(
 
 export function CustomerProductsTable() {
 	const env = useEnv();
+	const { customer, testClockFrozenTimeMs } = useCusQuery();
+	const { entityId, setEntityId } = useEntity();
+
+	const tableState = useCustomerProductsTableState({ entityId });
 	const {
-		customer,
-		isLoading,
-		isEntityTransitioning,
+		currentCursor,
+		page,
+		canGoBack,
+		pushCursor,
+		popCursor,
+		pageSize,
+		changePageSize,
 		showExpired,
 		setShowExpired,
-		subscriptions,
-		hasEntities,
-		purchases,
-		testClockFrozenTimeMs,
-	} = useCustomerProductsData();
+		kind,
+		setKind,
+	} = tableState;
 
-	const { setEntityId } = useEntity();
+	const { products, nextCursor, totalCount, isLoading, isTransitioning } =
+		useCustomerProductsPageQuery({
+			cursor: currentCursor,
+			pageSize,
+			showExpired,
+			kind,
+			initialPage: customer.products_page,
+		});
+
+	const totalPages = totalCount > 0 ? Math.ceil(totalCount / pageSize) : null;
+	const showFooter = totalCount >= CUSTOMER_PRODUCTS_PAGE_SIZES[0];
+
 	const [transferOpen, setTransferOpen] = useState(false);
 	const [selectedProduct, setSelectedProduct] = useState<FullCusProduct | null>(
 		null,
@@ -82,14 +100,8 @@ export function CustomerProductsTable() {
 	const selectedItemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
 
-	useSavedViewsQuery();
-	useFullCusSearchQuery();
+	const hasEntities = customer.entities.length > 0;
 
-	const hasPurchases = purchases.all.length > 0;
-	const hasEntityProducts =
-		subscriptions.hasEntityProducts || purchases.hasEntityProducts;
-
-	// Build columns - same for both tables to keep them consistent
 	const columns = useMemo(() => {
 		const baseColumns = [CustomerProductsColumns[0]];
 
@@ -125,45 +137,26 @@ export function CustomerProductsTable() {
 	};
 
 	const handleRowClick = (cusProduct: FullCusProduct) => {
-		setSheet({
-			type: "subscription-detail",
-			itemId: cusProduct.id,
-		});
+		setSheet({ type: "subscription-detail", itemId: cusProduct.id });
 	};
 
-	const tableMeta = {
-		onCancelClick: handleCancelClick,
-		onUncancelClick: handleUncancelClick,
-		onTransferClick: handleTransferClick,
-		onUpdateClick: handleUpdateClick,
-		hasEntities,
-		nowMs: testClockFrozenTimeMs,
-	};
-
-	const subscriptionTable = useCustomerTable({
-		data: subscriptions.all,
+	const productsTable = useCustomerTable({
+		data: products,
 		columns,
 		options: {
-			globalFilterFn: "includesString",
-			enableGlobalFilter: true,
-			meta: tableMeta,
-		},
-	});
-
-	const purchaseTable = useCustomerTable({
-		data: purchases.all,
-		columns,
-		options: {
-			globalFilterFn: "includesString",
-			enableGlobalFilter: true,
-			meta: tableMeta,
+			meta: {
+				onCancelClick: handleCancelClick,
+				onUncancelClick: handleUncancelClick,
+				onTransferClick: handleTransferClick,
+				onUpdateClick: handleUpdateClick,
+				hasEntities,
+				nowMs: testClockFrozenTimeMs,
+			},
 		},
 	});
 
 	const emptyStateChildren =
-		hasEntityProducts || hasPurchases ? (
-			"No subscriptions found"
-		) : (
+		kind === "all" ? (
 			<>
 				Enable a plan to start a subscription
 				{env === AppEnv.Sandbox && (
@@ -184,6 +177,8 @@ export function CustomerProductsTable() {
 					</IconButton>
 				)}
 			</>
+		) : (
+			"No plans found"
 		);
 
 	return (
@@ -196,18 +191,18 @@ export function CustomerProductsTable() {
 				/>
 			)}
 
-			{/* Subscriptions Table */}
 			<Table.Provider
 				config={{
-					table: subscriptionTable,
+					table: productsTable,
 					numberOfColumns: columns.length,
 					enableSorting: false,
 					isLoading,
-					isTransitioning: isEntityTransitioning,
+					isTransitioning,
 					onRowClick: handleRowClick,
 					emptyStateChildren,
 					flexibleTableColumns: true,
 					selectedItemId,
+					virtualization: { containerHeight: "428px", skeletonRowCount: 3 },
 				}}
 			>
 				<Table.Container>
@@ -217,44 +212,39 @@ export function CustomerProductsTable() {
 							Plans
 						</Table.Heading>
 						<Table.Actions>
-							<ShowExpiredActionButton
+							<CustomerProductsFilterButton
+								kind={kind}
+								setKind={setKind}
 								showExpired={showExpired}
 								setShowExpired={setShowExpired}
 							/>
 							<AttachProductSheetTrigger />
 						</Table.Actions>
 					</Table.Toolbar>
-					{hasPurchases && <SectionTag>Subscriptions</SectionTag>}
-					<Table.Content>
-						<Table.Header />
-						<Table.Body />
-					</Table.Content>
+					<Table.VirtualizedContent>
+						<Table.VirtualizedBody />
+					</Table.VirtualizedContent>
+					{showFooter && (
+						<Table.PaginationFooter
+							currentPage={page}
+							totalPages={totalPages}
+							totalCount={totalCount}
+							canGoPrev={canGoBack}
+							canGoNext={!!nextCursor}
+							onPrev={popCursor}
+							onNext={() => nextCursor && pushCursor(nextCursor)}
+							pageSize={pageSize}
+							pageSizeOptions={CUSTOMER_PRODUCTS_PAGE_SIZES}
+							onPageSizeChange={(size) =>
+								changePageSize(
+									size as (typeof CUSTOMER_PRODUCTS_PAGE_SIZES)[number],
+								)
+							}
+							disabled={isTransitioning}
+						/>
+					)}
 				</Table.Container>
 			</Table.Provider>
-
-			{/* Purchases Table - only rendered if there are purchases */}
-			{hasPurchases && (
-				<Table.Provider
-					config={{
-						table: purchaseTable,
-						numberOfColumns: columns.length,
-						enableSorting: false,
-						isLoading,
-						isTransitioning: isEntityTransitioning,
-						onRowClick: handleRowClick,
-						emptyStateText: "No purchases found",
-						flexibleTableColumns: true,
-						selectedItemId,
-					}}
-				>
-					<Table.Container>
-						<SectionTag>Purchases</SectionTag>
-						<Table.Content>
-							<Table.Body />
-						</Table.Content>
-					</Table.Container>
-				</Table.Provider>
-			)}
 		</div>
 	);
 }

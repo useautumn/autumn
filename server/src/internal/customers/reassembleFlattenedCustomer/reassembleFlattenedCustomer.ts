@@ -33,7 +33,10 @@ export const reassembleFlattenedCustomer = (
 		else looseCesByCusId.set(ce.internal_customer_id, [hydrated]);
 	}
 
-	const cpsByCusId = new Map<string, ReturnType<typeof hydrateCustomerProduct>[]>();
+	const cpsByCusId = new Map<
+		string,
+		ReturnType<typeof hydrateCustomerProduct>[]
+	>();
 	for (const cp of flat.customer_products as FlatCustomerProduct[]) {
 		const hydratedCes = cesByCpId.get(cp.id) ?? [];
 		const hydratedCp = hydrateCustomerProduct(cp, hydratedCes, maps);
@@ -52,13 +55,17 @@ export const reassembleFlattenedCustomer = (
 	const entitiesByCusId = groupByInternalCustomerId(flat.entities);
 	const invoicesByCusId = groupByInternalCustomerId(flat.invoices);
 
+	const productCounts = flat.product_counts ?? {};
 	const out: FullCustomer[] = [];
 	for (const c of flat.customers) {
 		const internalId = c.internal_id as string;
+		const customerProducts = cpsByCusId.get(internalId) ?? [];
 		const hydrated: Record<string, unknown> = {
 			...c,
 			created_at: toTimestamp(c.created_at),
-			customer_products: cpsByCusId.get(internalId) ?? [],
+			customer_products: customerProducts,
+			products_total_count:
+				productCounts[internalId] ?? customerProducts.length,
 			extra_customer_entitlements: looseCesByCusId.get(internalId) ?? [],
 			subscriptions: subsByCusId.get(internalId) ?? [],
 		};

@@ -4,11 +4,18 @@ import type { Row, Table } from "@tanstack/react-table";
 import { ArrowRightLeft, Delete, RotateCcw } from "lucide-react";
 import { TableDropdownMenuCell } from "@/components/general/table/table-dropdown-menu-cell";
 import {
-	dateSkeleton,
 	hiddenSkeleton,
+	nameWithIconSkeleton,
 	statusSkeleton,
 } from "@/components/general/table/table-skeleton-presets";
 import { DropdownMenuItem } from "@/components/v2/dropdowns/DropdownMenu";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@/components/v2/tooltips/Tooltip";
+import { cn } from "@/lib/utils";
+import { getCusProductKind, getPlanKindConfig } from "@/utils/planKind";
 import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
 import { AdminHover } from "../../../../../components/general/AdminHover";
 import { getCusProductHoverTexts } from "../../../../admin/adminUtils";
@@ -19,14 +26,23 @@ export const CustomerProductsColumns = [
 	{
 		header: "Name",
 		accessorKey: "name",
-		minSize: 10,
-		maxSize: 200,
+		size: 150,
+		meta: { skeleton: nameWithIconSkeleton },
 		cell: ({ row }: { row: Row<FullCusProduct> }) => {
 			const quantity = row.original.quantity;
 			const showQuantity = quantity && quantity > 1;
+			const config = getPlanKindConfig(getCusProductKind(row.original));
 
 			return (
 				<div className="font-medium text-foreground flex items-center gap-2 ">
+					<Tooltip delayDuration={0}>
+						<TooltipTrigger asChild>
+							<span className={cn("flex items-center", config.color)}>
+								{config.icon}
+							</span>
+						</TooltipTrigger>
+						<TooltipContent>{config.label}</TooltipContent>
+					</Tooltip>
 					<AdminHover texts={getCusProductHoverTexts(row.original)}>
 						{row.original.product.name}
 					</AdminHover>
@@ -42,6 +58,7 @@ export const CustomerProductsColumns = [
 	{
 		header: "Price",
 		accessorKey: "price",
+		size: 120,
 		cell: ({ row }: { row: Row<FullCusProduct> }) => {
 			return <CustomerProductPrice cusProduct={row.original} />;
 		},
@@ -49,6 +66,7 @@ export const CustomerProductsColumns = [
 	{
 		header: "Status",
 		accessorKey: "status",
+		size: 110,
 		meta: { skeleton: statusSkeleton },
 		cell: ({
 			row,
@@ -72,11 +90,14 @@ export const CustomerProductsColumns = [
 			);
 		},
 	},
-	createDateTimeColumn<FullCusProduct>({
-		header: "Created At",
-		accessorKey: "created_at",
-		withYear: true,
-	}),
+	{
+		...createDateTimeColumn<FullCusProduct>({
+			header: "Created At",
+			accessorKey: "created_at",
+			withYear: true,
+		}),
+		size: 150,
+	},
 	{
 		id: "actions",
 		header: "",
