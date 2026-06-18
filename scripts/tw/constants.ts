@@ -32,7 +32,7 @@ export const DEFAULT_PER_WORKER = 1;
  * PLATFORM-account write; bursting all N at once gets 429'd, so throttle to a
  * low concurrency (+ retry/backoff in stripe.ts). Plan §6a "provisioning burst".
  */
-export const STRIPE_SUBACCOUNT_CONCURRENCY = 2;
+export const STRIPE_SUBACCOUNT_CONCURRENCY = 4;
 
 /**
  * Deterministic name prefix for the CACHED warm parent (`tw-warm-<refSha>`).

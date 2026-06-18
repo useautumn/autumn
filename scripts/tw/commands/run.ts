@@ -76,6 +76,7 @@ import {
 	forkWorker,
 	getPublicUrl,
 	getSandboxByName,
+	isSandboxStreamClosed,
 	runStreaming,
 	snapshotAndStop,
 } from "../helpers/vercel.ts";
@@ -198,7 +199,75 @@ const collectTestFilesFromDir = async (dir: string): Promise<string[]> => {
 	return files;
 };
 
-/** Resolve one `_groups` path (relative to `server/tests/`) to absolute test files. */
+/**
+ * Recursively find the first file under `baseDir` whose path ends with
+ * `/${pathSuffix}` (mirrors the dispatcher's `findFileByPath`). `_groups` file
+ * paths are relative to the test ROOT (e.g. `billing/attach/...test.ts`) but the
+ * files actually live under a sub-tree (`server/tests/integration/billing/...`),
+ * so a plain `join(TESTS_DIR, groupPath)` misses them — we suffix-search instead.
+ */
+const findFileBySuffix = async (
+	baseDir: string,
+	pathSuffix: string,
+): Promise<string | undefined> => {
+	const normalizedSuffix = `/${pathSuffix}`;
+	const walk = async (current: string): Promise<string | undefined> => {
+		const entries = await readdir(current);
+		for (const entry of entries) {
+			const fullPath = join(current, entry);
+			const entryStat = await stat(fullPath);
+			if (entryStat.isDirectory()) {
+				const found = await walk(fullPath);
+				if (found) {
+					return found;
+				}
+			} else if (fullPath.endsWith(normalizedSuffix)) {
+				return fullPath;
+			}
+		}
+		return undefined;
+	};
+	return walk(baseDir);
+};
+
+/**
+ * Recursively find the first directory under `baseDir` whose path ends with
+ * `/${pathSuffix}` (mirrors the dispatcher's `findFolderByPath`), for
+ * directory-style `_groups` paths nested below the test root.
+ */
+const findFolderBySuffix = async (
+	baseDir: string,
+	pathSuffix: string,
+): Promise<string | undefined> => {
+	const normalizedSuffix = `/${pathSuffix}`;
+	const walk = async (current: string): Promise<string | undefined> => {
+		const entries = await readdir(current);
+		for (const entry of entries) {
+			const fullPath = join(current, entry);
+			const entryStat = await stat(fullPath);
+			if (entryStat.isDirectory()) {
+				if (fullPath.endsWith(normalizedSuffix)) {
+					return fullPath;
+				}
+				const found = await walk(fullPath);
+				if (found) {
+					return found;
+				}
+			}
+		}
+		return undefined;
+	};
+	return walk(baseDir);
+};
+
+/**
+ * Resolve one `_groups` path to absolute test files. A path can be either a
+ * single `.test.ts` FILE or a DIRECTORY, and it may sit at the exact
+ * `server/tests/<groupPath>` location OR nested deeper (e.g. under
+ * `server/tests/integration/`). Try the exact location first (cheap), then fall
+ * back to a recursive suffix search — the same two-step the `bun t` dispatcher
+ * uses, so file-list groups (whose paths are individual files) resolve too.
+ */
 const resolveGroupPath = async (groupPath: string): Promise<string[]> => {
 	const exactPath = join(TESTS_DIR, groupPath);
 	try {
@@ -212,7 +281,15 @@ const resolveGroupPath = async (groupPath: string): Promise<string[]> => {
 	} catch {
 		// Falls through — the path doesn't exist at the exact location.
 	}
-	return [];
+
+	// Not at the exact location: suffix-search the test tree (mirrors the
+	// dispatcher). Files resolve to themselves; directories are walked.
+	if (groupPath.endsWith(".test.ts")) {
+		const found = await findFileBySuffix(TESTS_DIR, groupPath);
+		return found ? [found] : [];
+	}
+	const foundDir = await findFolderBySuffix(TESTS_DIR, groupPath);
+	return foundDir ? collectTestFilesFromDir(foundDir) : [];
 };
 
 /**
@@ -311,9 +388,28 @@ const buildWorkerEnv = ({
 		STRIPE_SANDBOX_SECRET_KEY: requireSecret("STRIPE_SANDBOX_SECRET_KEY"),
 		STRIPE_ACCOUNT_ID: stripeAccountId,
 		ORG_ID: TEST_ORG_CONFIG.id,
+		// The bun-test preload (server/tests/setup-integration-tests.ts) only builds
+		// the default TestContext when TESTS_ORG is set, and createTestContext reads
+		// it as the org SLUG (OrgService.getBySlug). Without it EVERY integration test
+		// fails with "Default TestContext is not initialized". The org secret key
+		// (UNIT_TEST_AUTUMN_SECRET_KEY) is baked into server/.env.local by the warm
+		// seed and loaded by the preload, so only TESTS_ORG + the base URL are needed.
+		TESTS_ORG: TEST_ORG_CONFIG.slug,
+		AUTUMN_TEST_BASE_URL: `http://localhost:${SERVER_PORT}`,
 		// keep the DB CLI / preload paths off Infisical inside the µVM.
 		AUTUMN_DB_DIRECT: "1",
 	};
+
+	// Browser tests (e.g. invoice checkout) use Kernel CLOUD browsers when
+	// USE_KERNEL_BROWSER + KERNEL_API_KEY are set (browserConfig.ts) — so no
+	// Chromium has to be installed in every µVM. Pass them through from the
+	// orchestrator's env (Infisical) when present; harmless for workers running no
+	// browser tests (they never touch browserPool). Each test file opens + tears
+	// down its own Kernel session, so workers stay isolated.
+	if (process.env.KERNEL_API_KEY) {
+		env.USE_KERNEL_BROWSER = process.env.USE_KERNEL_BROWSER ?? "1";
+		env.KERNEL_API_KEY = process.env.KERNEL_API_KEY;
+	}
 
 	if (isSvixShard) {
 		env.NEEDS_SVIX = "1";
@@ -427,7 +523,7 @@ const getOrBuildWarmParent = async ({
 		warm,
 		["bash", BUILD_BASE_SCRIPT],
 		(text) => process.stdout.write(text),
-		{ signal },
+		{ signal, swallowStreamClose: true },
 	);
 	if (baseRun.exitCode !== 0) {
 		await failBuild(
@@ -440,7 +536,7 @@ const getOrBuildWarmParent = async ({
 		warm,
 		["bash", WARMUP_SCRIPT, ref],
 		(text) => process.stdout.write(text),
-		{ signal },
+		{ signal, swallowStreamClose: true },
 	);
 	if (warmRun.exitCode !== 0) {
 		await failBuild(
@@ -509,13 +605,26 @@ const waitForReady = async ({
 		signal,
 	});
 
-	const exitedFirst = command.wait({ signal }).then((finished) => {
-		if (!ready) {
-			throw new Error(
-				`worker ${name} boot exited (code ${finished.exitCode}) before READY`,
-			);
-		}
-	});
+	const exitedFirst = command
+		.wait({ signal })
+		.then((finished) => {
+			if (!ready) {
+				throw new Error(
+					`worker ${name} boot exited (code ${finished.exitCode}) before READY`,
+				);
+			}
+		})
+		.catch((error: unknown) => {
+			// Once READY, the detached boot keeps streaming for the whole run; when
+			// teardown deletes the sandbox the log stream closes and `wait()` rejects
+			// with a benign `sandbox_stream_closed` StreamError. Swallow it so it
+			// can't surface as an uncaught rejection spamming the console — but only
+			// after READY (a pre-READY stream close is a real boot failure).
+			if (ready && isSandboxStreamClosed(error)) {
+				return;
+			}
+			throw error;
+		});
 
 	const deadline = sleep(WORKER_READY_TIMEOUT_MS).then(() => {
 		if (!ready) {

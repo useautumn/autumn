@@ -35,7 +35,7 @@
  */
 
 import { Writable } from "node:stream";
-import { APIError, Sandbox } from "@vercel/sandbox";
+import { APIError, Sandbox, StreamError } from "@vercel/sandbox";
 import {
 	SANDBOX_NAME_PREFIX,
 	SERVER_PORT,
@@ -190,6 +190,33 @@ export const getPublicUrl = (
 	port: number = SERVER_PORT,
 ): string => sandbox.domain(port);
 
+/**
+ * The `@vercel/sandbox` stream-error code raised when a sandbox's command log
+ * stream is closed out from under a still-iterating reader — exactly what
+ * happens when teardown deletes a sandbox while its detached boot/ingress logs
+ * are still streaming. It is a benign end-of-stream, NOT a command failure.
+ */
+const SANDBOX_STREAM_CLOSED_CODE = "sandbox_stream_closed";
+
+/**
+ * Detect the "sandbox stream was closed" error so log-streaming loops can treat
+ * it as a benign end-of-stream during teardown instead of letting it escape as
+ * an uncaught throw. Matches the typed `StreamError` first, then falls back to
+ * the error `code` / message so it still trips if the SDK surfaces a plain error.
+ */
+export const isSandboxStreamClosed = (error: unknown): boolean => {
+	if (error instanceof StreamError) {
+		return true;
+	}
+	const code = (error as { code?: unknown } | undefined)?.code;
+	if (code === SANDBOX_STREAM_CLOSED_CODE) {
+		return true;
+	}
+	const message =
+		error instanceof Error ? error.message : typeof error === "string" ? error : "";
+	return message.includes("Sandbox stream was closed");
+};
+
 /** Result of a streamed remote command. */
 export type RunStreamingResult = {
 	/** The exit code reported by the command on the worker (NOT the transport). */
@@ -211,13 +238,25 @@ export type RunStreamingResult = {
  * thrown/rejected error from the SDK here — the caller (RemoteExecutor) maps
  * that to a {@link WorkerDeathError} (plan §8.4); this wrapper does not mask it.
  *
+ * `swallowStreamClose` is opt-in: when set, a `sandbox_stream_closed`
+ * {@link StreamError} (the sandbox was torn down while its logs were streaming)
+ * is treated as a benign end-of-stream and resolves with the bytes seen so far
+ * (exit code `-1`). The TEST path (RemoteExecutor) MUST leave it OFF so a
+ * mid-run worker death still throws and triggers a reschedule (plan §8.4); only
+ * the build-base / warmup phases — which run while the orchestrator may be
+ * tearing the warm parent down — turn it on to silence teardown spam.
+ *
  * @param argv `[cmd, ...args]` — the first element is the executable.
  */
 export const runStreaming = async (
 	sandbox: Sandbox,
 	argv: string[],
 	onChunk: (text: string) => void,
-	opts?: { env?: Record<string, string>; signal?: AbortSignal },
+	opts?: {
+		env?: Record<string, string>;
+		signal?: AbortSignal;
+		swallowStreamClose?: boolean;
+	},
 ): Promise<RunStreamingResult> => {
 	const [cmd, ...args] = argv;
 	if (!cmd) {
@@ -238,16 +277,26 @@ export const runStreaming = async (
 			},
 		});
 
-	const finished = await sandbox.runCommand({
-		cmd,
-		args,
-		env: opts?.env,
-		stdout: makeSink(false),
-		stderr: makeSink(true),
-		signal: opts?.signal,
-	});
+	try {
+		const finished = await sandbox.runCommand({
+			cmd,
+			args,
+			env: opts?.env,
+			stdout: makeSink(false),
+			stderr: makeSink(true),
+			signal: opts?.signal,
+		});
 
-	return { exitCode: finished.exitCode, stderr };
+		return { exitCode: finished.exitCode, stderr };
+	} catch (error) {
+		// Only swallow a stream-closed error for callers that opted in (boot/warmup
+		// teardown), AND never for the test path: RemoteExecutor relies on this
+		// throw to detect worker death mid-run. Treat the close as end-of-stream.
+		if (opts?.swallowStreamClose && isSandboxStreamClosed(error)) {
+			return { exitCode: -1, stderr };
+		}
+		throw error;
+	}
 };
 
 /**

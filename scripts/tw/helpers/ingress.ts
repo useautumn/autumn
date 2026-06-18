@@ -21,7 +21,7 @@ import { Sandbox } from "@vercel/sandbox";
 import chalk from "chalk";
 import { INGRESS_PORT, TW_ENV, VERCEL_RUNTIME, WORKER_TIMEOUT_MS } from "../constants.ts";
 import { resolveGitSource } from "../commands/run.ts";
-import { getPublicUrl } from "./vercel.ts";
+import { getPublicUrl, isSandboxStreamClosed } from "./vercel.ts";
 
 /** Path to the ingress http server, relative to the in-sandbox repo root. */
 const INGRESS_SCRIPT = "scripts/tw/ingress/server.mjs";
@@ -111,7 +111,7 @@ export const createIngress = async ({
 			callback();
 		},
 	});
-	await sandbox.runCommand({
+	const ingressCommand = await sandbox.runCommand({
 		cmd: "node",
 		args: [INGRESS_SCRIPT],
 		cwd: SANDBOX_REPO_ROOT,
@@ -120,6 +120,24 @@ export const createIngress = async ({
 		stderr: sink,
 		signal,
 	});
+
+	// The ingress server is detached and streams logs for the whole run; we never
+	// await its completion. When teardown deletes the ingress sandbox the log
+	// stream closes and `wait()` rejects with a benign `sandbox_stream_closed`
+	// StreamError. Attach a swallowing handler so it can't surface as an uncaught
+	// rejection spamming the console at teardown (any other error still throws).
+	void ingressCommand
+		.wait({ signal })
+		.catch((error: unknown) => {
+			if (isSandboxStreamClosed(error)) {
+				return;
+			}
+			throw error;
+		})
+		.catch(() => {
+			// A genuine ingress crash is surfaced by the worker-mapping push / the
+			// teardown path; nothing to do here beyond not crashing the process.
+		});
 
 	// Poll /health until the server is listening (bounded — fail loud if it never
 	// comes up so a broken ingress can't silently drop every worker's events).
