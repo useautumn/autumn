@@ -5,6 +5,7 @@ import {
 	ms,
 	type SyncParamsV1,
 } from "@autumn/shared";
+import { expectCustomerProductStatuses } from "@tests/integration/billing/utils/expectCustomerProductStatuses";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils";
 import { products } from "@tests/utils/fixtures/products";
 import ctx from "@tests/utils/testInitUtils/createTestContext";
@@ -118,6 +119,65 @@ test.concurrent(
 		);
 		expect(cusProduct.subscription_ids ?? []).toEqual([]);
 		expect(cusProduct.scheduled_ids).toEqual([schedule.id]);
+	},
+);
+
+// Pre-fix: scheduled sync ignored expire_previous because setup skipped transition lookup for future phases.
+// Post-fix: the first scheduled phase expires the active product in the same group.
+test.concurrent(
+	`${chalk.yellowBright("sync-v2: future schedule expires previous product in same group")}`,
+	async () => {
+		const customerId = "sync-v2-schedule-only-expire-previous";
+		const free = products.base({ id: "free", items: [], group: "main" });
+		const pro = products.pro({ id: "pro", items: [], group: "main" });
+
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [free, pro] }),
+			],
+			actions: [s.attach({ productId: free.id })],
+		});
+
+		const proFull = await fetchFullProduct({ ctx, productId: pro.id });
+		const schedule = await createFutureStripeSubscriptionSchedule({
+			ctx,
+			customerId,
+			startDateMs: Date.now() + ms.days(1),
+			phases: [
+				{ items: [{ price: getBaseStripePriceId({ fullProduct: proFull }) }] },
+			],
+		});
+		const startsAt = schedule.phases[0].start_date * 1000;
+
+		const result = await autumnV1.post("/billing.sync_v2", {
+			customer_id: customerId,
+			stripe_schedule_id: schedule.id,
+			phases: [
+				{
+					starts_at: startsAt,
+					plans: [{ plan_id: pro.id, expire_previous: true }],
+				},
+			],
+		} satisfies SyncParamsV1);
+
+		expect(result.expired_cus_product_ids).toHaveLength(1);
+
+		await expectCustomerProductStatuses({
+			ctx,
+			customerId,
+			productId: free.id,
+			expected: { [CusProductStatus.Expired]: 1 },
+		});
+
+		const proCusProduct = await getCustomerProduct({
+			ctx,
+			customerId,
+			productId: pro.id,
+		});
+		expect(proCusProduct.status).toBe(CusProductStatus.Scheduled);
+		expect(proCusProduct.starts_at).toBe(startsAt);
 	},
 );
 
