@@ -13,7 +13,7 @@ const STRIPE_SESSION_ID_REGEX = /cs_(test|live)_[A-Za-z0-9]+/;
 
 const getLongLivedCheckoutId = (paymentUrl: string | null | undefined) => {
 	if (!paymentUrl) throw new Error("Expected payment_url");
-	const checkoutId = paymentUrl.split("/l/")[1];
+	const checkoutId = paymentUrl.split("/co/")[1];
 	if (!checkoutId) {
 		throw new Error(`Expected long-lived checkout URL: ${paymentUrl}`);
 	}
@@ -82,7 +82,7 @@ test.concurrent(
 			long_lived_checkout: true,
 		});
 
-		expect(result.payment_url).toContain("/l/");
+		expect(result.payment_url).toContain("/co/");
 		expect(result.payment_url).not.toContain("checkout.stripe.com");
 
 		const checkoutId = getLongLivedCheckoutId(result.payment_url);
@@ -128,6 +128,6 @@ test.concurrent(
 		});
 
 		expect(result.payment_url).toContain("checkout.stripe.com");
-		expect(result.payment_url).not.toContain("/l/");
+		expect(result.payment_url).not.toContain("/co/");
 	},
 );
