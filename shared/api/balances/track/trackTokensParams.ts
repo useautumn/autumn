@@ -61,6 +61,10 @@ export const TrackTokensParamsSchema = z.object({
 	skip_event: z.boolean().optional().meta({
 		internal: true,
 	}),
+	async: z.boolean().optional().meta({
+		description:
+			"If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information.",
+	}),
 });
 
 export type TrackTokensParams = z.infer<typeof TrackTokensParamsSchema>;

@@ -5,7 +5,7 @@ import { auth } from "@/utils/auth.js";
 import { oauthConsentRepo } from "../repos/index.js";
 import { isAtmnOAuthClientId } from "./atmnOAuthClients.js";
 import { getOAuthConsentScopeGrant } from "./oauthConsentScopes.js";
-import { isSpringOAuthClientId } from "./springOAuthClient.js";
+import { isSummerOAuthClientId } from "./summerOAuthClient.js";
 
 type RequestFields = Record<string, unknown>;
 
@@ -127,7 +127,7 @@ export const handleOAuthConsentWithEnv = async (c: Context) => {
 	const redirectUri = getRedirectUriFromFields(fields);
 	const env =
 		parseEnv(fields.env) ??
-		(isSpringOAuthClientId({ clientId }) ? AppEnv.Sandbox : null);
+		(isSummerOAuthClientId({ clientId }) ? AppEnv.Sandbox : null);
 
 	let request = c.req.raw;
 	let grantedScopes: string[] | undefined;

@@ -182,6 +182,7 @@ export const getTokenTrackParams = async ({
 		entity_data: input.entity_data,
 		skip_event: input.skip_event,
 		timestamp: input.timestamp,
+		async: input.async,
 	};
 
 	return { body, featureDeductions };

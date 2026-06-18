@@ -1,39 +1,39 @@
 import {
 	getDefaultOAuthScopes,
-	SPRING_OAUTH_CLIENT_ID,
+	SUMMER_OAUTH_CLIENT_ID,
 } from "@autumn/auth/oauth";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { generateId } from "@/utils/genUtils.js";
 import { oauthClientRepo } from "../repos/index.js";
 
-export const SPRING_OAUTH_CLIENT_NAME = "Spring";
+export const SUMMER_OAUTH_CLIENT_NAME = "Summer";
 
-const SPRING_REDIRECT_PORTS = [31548, 31549, 31550, 31551, 31552] as const;
+const SUMMER_REDIRECT_PORTS = [31548, 31549, 31550, 31551, 31552] as const;
 
-const SPRING_REDIRECT_URIS = SPRING_REDIRECT_PORTS.map(
+const SUMMER_REDIRECT_URIS = SUMMER_REDIRECT_PORTS.map(
 	(port) => `http://localhost:${port}/`,
 );
 
-const SPRING_CLIENT_METADATA = {
-	kind: "spring",
-	client: "spring",
-	source: "spring-cli",
+const SUMMER_CLIENT_METADATA = {
+	kind: "summer",
+	client: "summer",
+	source: "summer-cli",
 } as const;
 
-export const isSpringOAuthClientId = ({
+export const isSummerOAuthClientId = ({
 	clientId,
 }: {
 	clientId: string | null | undefined;
-}) => clientId === SPRING_OAUTH_CLIENT_ID;
+}) => clientId === SUMMER_OAUTH_CLIENT_ID;
 
-export const isSpringOAuthClientRecord = ({
+export const isSummerOAuthClientRecord = ({
 	clientId,
 	metadata,
 }: {
 	clientId: string | null | undefined;
 	metadata?: unknown;
 }) => {
-	if (isSpringOAuthClientId({ clientId })) return true;
+	if (isSummerOAuthClientId({ clientId })) return true;
 	if (!metadata) return false;
 
 	let metadataObject = metadata;
@@ -47,46 +47,46 @@ export const isSpringOAuthClientRecord = ({
 
 	if (!metadataObject || typeof metadataObject !== "object") return false;
 	const record = metadataObject as Record<string, unknown>;
-	return record.kind === "spring" || record.client === "spring";
+	return record.kind === "summer" || record.client === "summer";
 };
 
-export const ensureSpringOAuthClient = async ({
+export const ensureSummerOAuthClient = async ({
 	clientId,
 	db,
 }: {
 	clientId: string | null | undefined;
 	db: DrizzleCli;
 }) => {
-	if (!isSpringOAuthClientId({ clientId })) return null;
+	if (!isSummerOAuthClientId({ clientId })) return null;
 
 	const now = new Date();
 	return oauthClientRepo.upsert({
 		db,
 		insert: {
 			id: generateId("oauth_client"),
-			clientId: SPRING_OAUTH_CLIENT_ID,
-			name: SPRING_OAUTH_CLIENT_NAME,
-			redirectUris: SPRING_REDIRECT_URIS,
+			clientId: SUMMER_OAUTH_CLIENT_ID,
+			name: SUMMER_OAUTH_CLIENT_NAME,
+			redirectUris: SUMMER_REDIRECT_URIS,
 			scopes: getDefaultOAuthScopes(),
 			tokenEndpointAuthMethod: "none",
 			grantTypes: ["authorization_code", "refresh_token"],
 			responseTypes: ["code"],
 			public: true,
 			type: "native",
-			metadata: SPRING_CLIENT_METADATA,
+			metadata: SUMMER_CLIENT_METADATA,
 			createdAt: now,
 			updatedAt: now,
 		},
 		update: {
-			name: SPRING_OAUTH_CLIENT_NAME,
-			redirectUris: SPRING_REDIRECT_URIS,
+			name: SUMMER_OAUTH_CLIENT_NAME,
+			redirectUris: SUMMER_REDIRECT_URIS,
 			scopes: getDefaultOAuthScopes(),
 			tokenEndpointAuthMethod: "none",
 			grantTypes: ["authorization_code", "refresh_token"],
 			responseTypes: ["code"],
 			public: true,
 			type: "native",
-			metadata: SPRING_CLIENT_METADATA,
+			metadata: SUMMER_CLIENT_METADATA,
 			updatedAt: now,
 		},
 	});

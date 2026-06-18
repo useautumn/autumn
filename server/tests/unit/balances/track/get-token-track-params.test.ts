@@ -67,4 +67,37 @@ describe("getTokenTrackParams", () => {
 
 		expect(body.timestamp).toBeUndefined();
 	});
+
+	test("forwards async passthrough into the TrackParams body", async () => {
+		const { body } = await getTokenTrackParams({
+			ctx: createCtx(),
+			input: {
+				customer_id: "cus_123",
+				feature_id: "ai_credits",
+				model_id: "openai/gpt-4.1",
+				input_tokens: 100,
+				output_tokens: 50,
+				async: true,
+				idempotency_key: "token-import-1",
+			},
+		});
+
+		expect(body.async).toBe(true);
+		expect(body.idempotency_key).toBe("token-import-1");
+	});
+
+	test("leaves async unset when track_tokens omits it", async () => {
+		const { body } = await getTokenTrackParams({
+			ctx: createCtx(),
+			input: {
+				customer_id: "cus_123",
+				feature_id: "ai_credits",
+				model_id: "openai/gpt-4.1",
+				input_tokens: 100,
+				output_tokens: 50,
+			},
+		});
+
+		expect(body.async).toBeUndefined();
+	});
 });

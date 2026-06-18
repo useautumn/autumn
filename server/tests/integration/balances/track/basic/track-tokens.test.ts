@@ -4,9 +4,11 @@ import type {
 	ApiCustomerV3,
 	ApiCustomerV5,
 	ApiEventsListResponse,
+	TrackParams,
 	TrackResponseV2,
 	TrackResponseV3,
 } from "@autumn/shared";
+import type { SQSClient } from "@aws-sdk/client-sqs";
 import { ErrCode, events } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
@@ -19,7 +21,9 @@ import chalk from "chalk";
 import { Decimal } from "decimal.js";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
+import { runQueuedTrack } from "@/internal/balances/track/runQueuedTrack.js";
 import { getModelCreditCost } from "@/internal/features/aiCreditSystemUtils.js";
+import { getSqsClient } from "@/queue/initSqs.js";
 
 const TINYBIRD_INGEST_WAIT_MS = 3000;
 
@@ -198,6 +202,100 @@ test.concurrent(
 		expect(dbDefaultEvent?.created_at).toBeLessThanOrEqual(
 			afterDefaultTrack + TINYBIRD_INGEST_WAIT_MS,
 		);
+	},
+);
+
+test(
+	`${chalk.yellowBright("track-tokens async: queues token usage and replay writes an idempotent event")}`,
+	async () => {
+		const trackAsyncQueueUrl =
+			"https://sqs.eu-west-1.amazonaws.com/123456789012/track-tokens-async-dev.fifo";
+		const originalEnv = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
+		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
+		const originalSend = sqsClient.send.bind(sqsClient);
+		const queueCommands: Record<string, unknown>[] = [];
+
+		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackAsyncQueueUrl;
+		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
+			queueCommands.push(command.input);
+			return {};
+		}) as SQSClient["send"];
+
+		try {
+			const aiCreditsItem = items.free({
+				featureId: TestFeature.AiCredits,
+				includedUsage: 1000,
+			});
+			const freeProd = products.base({
+				id: "free",
+				items: [aiCreditsItem],
+			});
+			const runId = Date.now();
+
+			const { customerId, autumnV1, autumnV2_2, ctx } = await initScenario({
+				customerId: `track-tokens-async-${runId}`,
+				setup: [
+					s.customer({ testClock: false }),
+					s.products({ list: [freeProd] }),
+				],
+				actions: [s.attach({ productId: freeProd.id })],
+			});
+
+			const timestamp = Date.UTC(2024, 1, 15, 12, 30, 0);
+			const idempotencyKey = `track-tokens-async-${runId}`;
+			const response = await autumnV2_2.post("/track_tokens", {
+				customer_id: customerId,
+				feature_id: TestFeature.AiCredits,
+				model_id: "anthropic/claude-sonnet-4-20250514",
+				input_tokens: 100,
+				output_tokens: 50,
+				properties: { marker: "async-track-tokens" },
+				timestamp,
+				idempotency_key: idempotencyKey,
+				async: true,
+			});
+
+			expect(response).toEqual({ success: true });
+			expect(queueCommands).toHaveLength(1);
+
+			const queuedMessage = JSON.parse(
+				queueCommands[0]?.MessageBody as string,
+			) as { data: { body: TrackParams } };
+			expect(queuedMessage.data.body).toMatchObject({
+				customer_id: customerId,
+				feature_id: TestFeature.AiCredits,
+				idempotency_key: idempotencyKey,
+				timestamp,
+				async: true,
+			});
+
+			await runQueuedTrack({
+				ctx,
+				body: queuedMessage.data.body,
+			});
+			await runQueuedTrack({
+				ctx,
+				body: queuedMessage.data.body,
+			});
+
+			let asyncEvents: ApiEventsListResponse["list"] = [];
+			for (let attempt = 0; attempt < 5; attempt++) {
+				await timeout(TINYBIRD_INGEST_WAIT_MS);
+				const eventsList = (await autumnV1.events.list({
+					customer_id: customerId,
+				})) as ApiEventsListResponse;
+				asyncEvents = eventsList.list.filter(
+					(event) => event.properties?.marker === "async-track-tokens",
+				);
+				if (asyncEvents.length > 0) break;
+			}
+
+			expect(asyncEvents).toHaveLength(1);
+			expect(asyncEvents[0]?.timestamp).toBe(timestamp);
+		} finally {
+			sqsClient.send = originalSend as SQSClient["send"];
+			process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalEnv;
+		}
 	},
 );
 

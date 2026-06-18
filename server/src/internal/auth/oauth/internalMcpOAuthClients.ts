@@ -3,7 +3,7 @@ import type { Context } from "hono";
 import { type DrizzleCli, db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
 import { oauthClientRepo } from "../repos/index.js";
-import { ensureSpringOAuthClient } from "./springOAuthClient.js";
+import { ensureSummerOAuthClient } from "./summerOAuthClient.js";
 
 const INTERNAL_MCP_CLIENT_ID = process.env.INTERNAL_MCP_OAUTH_CLIENT_ID;
 const INTERNAL_MCP_CLIENT_NAME = "Autumn internal-mcp";
@@ -92,7 +92,7 @@ export const isInternalMcpOAuthClientId = async ({
 export const handleInternalMcpOAuthAuthorize = async (c: Context) => {
 	const url = new URL(c.req.raw.url);
 	const clientId = url.searchParams.get("client_id");
-	await ensureSpringOAuthClient({ db, clientId });
+	await ensureSummerOAuthClient({ db, clientId });
 	if (!clientId || !(await isInternalMcpOAuthClientId({ db, clientId }))) {
 		return auth.handler(c.req.raw);
 	}

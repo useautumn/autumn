@@ -7,9 +7,9 @@ import {
 	isInternalMcpOAuthClientRecord,
 } from "./internalMcpOAuthClients.js";
 import {
-	ensureSpringOAuthClient,
-	isSpringOAuthClientRecord,
-} from "./springOAuthClient.js";
+	ensureSummerOAuthClient,
+	isSummerOAuthClientRecord,
+} from "./summerOAuthClient.js";
 
 export const handleGetOAuthClient = async (c: Context) => {
 	const clientId = c.req.param("client_id");
@@ -19,7 +19,7 @@ export const handleGetOAuthClient = async (c: Context) => {
 	}
 
 	const client =
-		(await ensureSpringOAuthClient({ db, clientId })) ??
+		(await ensureSummerOAuthClient({ db, clientId })) ??
 		(await oauthClientRepo.getByClientId({ db, clientId }));
 
 	if (!client) {
@@ -39,6 +39,6 @@ export const handleGetOAuthClient = async (c: Context) => {
 		name: internalMcpName || client.name || "Unknown Application",
 		is_atmn: isAtmnOAuthClientRecord(client),
 		is_internal_mcp: isInternalMcp,
-		default_env: isSpringOAuthClientRecord(client) ? "sandbox" : undefined,
+		default_env: isSummerOAuthClientRecord(client) ? "sandbox" : undefined,
 	});
 };
