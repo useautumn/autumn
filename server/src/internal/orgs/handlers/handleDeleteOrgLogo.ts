@@ -1,21 +1,19 @@
 import { InternalError, Scopes } from "@autumn/shared";
 import {
 	getOrgLogoKey,
-	getOrgLogoPublicUrl,
 	getOrgLogoS3Credentials,
 	getPublicAssetsS3Config,
 } from "@/external/aws/s3/publicAssetsS3Config.js";
-import { getS3PresignedPutUrl } from "@/external/aws/s3/s3PresignUtils.js";
+import { deleteS3Object } from "@/external/aws/s3/s3PresignUtils.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 
-export const handleGetUploadUrl = createRoute({
+export const handleDeleteOrgLogo = createRoute({
 	scopes: [Scopes.Organisation.Write],
 	handler: async (c) => {
 		const ctx = c.get("ctx");
 		const { org } = ctx;
 
 		const { bucket, region } = getPublicAssetsS3Config();
-		const key = getOrgLogoKey(org.id);
 
 		if (!bucket || !region) {
 			throw new InternalError({
@@ -24,14 +22,15 @@ export const handleGetUploadUrl = createRoute({
 			});
 		}
 
-		const signedUrl = await getS3PresignedPutUrl({
+		// S3 DeleteObject is idempotent — a missing object is not an error, so
+		// this is safe to call even if the logo was never uploaded.
+		await deleteS3Object({
 			bucket,
 			region,
-			key,
+			key: getOrgLogoKey(org.id),
 			credentials: getOrgLogoS3Credentials(),
 		});
-		const publicUrl = getOrgLogoPublicUrl({ bucket, region, orgId: org.id });
 
-		return c.json({ signedUrl, publicUrl, key });
+		return c.json({ success: true });
 	},
 });

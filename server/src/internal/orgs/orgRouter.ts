@@ -8,14 +8,15 @@ import {
 import { handlePreflightRevenueCatSync } from "@/external/revenueCat/handlers/handlePreflightRevenueCatSync.js";
 import { handleSaveRCMappings } from "@/external/revenueCat/handlers/handleSaveRevenuecatMappings.js";
 import { handleSyncRevenueCatProducts } from "@/external/revenueCat/handlers/handleSyncRevenueCatProducts.js";
+import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleDisconnectRevenueCat } from "@/internal/orgs/handlers/revenueCatHandlers/handleDisconnectRevenueCat.js";
 import {
 	handleGetRevenueCatWebhook,
 	handleRegisterRevenueCatWebhook,
 } from "@/internal/orgs/handlers/revenueCatHandlers/handleRevenueCatWebhook.js";
-import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleDeleteOrg } from "./handlers/crudHandlers/handleDeleteOrg.js";
 import { handleGetOrg } from "./handlers/crudHandlers/handleGetOrg.js";
+import { handleDeleteOrgLogo } from "./handlers/handleDeleteOrgLogo.js";
 import { handleGetOrgFlags } from "./handlers/handleGetOrgFlags.js";
 import { handleGetUploadUrl } from "./handlers/handleGetUploadUrl.js";
 import {
@@ -37,11 +38,11 @@ import {
 import { handleGetInvites } from "./handlers/memberHandlers/handleGetInvites.js";
 import { handleGetOrgMembers } from "./handlers/memberHandlers/handleGetOrgMembers.js";
 import { handleRemoveMember } from "./handlers/memberHandlers/handleRemoveMember.js";
+import { handleGetRevenueCatOAuthUrl } from "./handlers/revenueCatHandlers/handleGetRevenueCatOAuthUrl.js";
 import { handleConnectStripe } from "./handlers/stripeHandlers/handleConnectStripe.js";
 import { handleDeleteStripe } from "./handlers/stripeHandlers/handleDeleteStripe.js";
 import { handleGetOAuthUrl } from "./handlers/stripeHandlers/handleGetOAuthUrl.js";
 import { handleGetStripeAccount } from "./handlers/stripeHandlers/handleGetStripeAccount.js";
-import { handleGetRevenueCatOAuthUrl } from "./handlers/revenueCatHandlers/handleGetRevenueCatOAuthUrl.js";
 
 export const internalOrgRouter = new Hono<HonoEnv>();
 
@@ -51,6 +52,7 @@ internalOrgRouter.patch("/config", ...handleUpdateOrgConfig);
 internalOrgRouter.get("/members", ...handleGetOrgMembers);
 internalOrgRouter.post("/remove-member", ...handleRemoveMember);
 internalOrgRouter.get("/upload_url", ...handleGetUploadUrl);
+internalOrgRouter.delete("/logo", ...handleDeleteOrgLogo);
 internalOrgRouter.get("/invites", ...handleGetInvites);
 
 export const honoOrgRouter = new Hono<HonoEnv>();

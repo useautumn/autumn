@@ -24,6 +24,8 @@ const OrgLogoUploader: React.FC = () => {
 	const handleRemove = async () => {
 		setRemoving(true);
 		try {
+			await axiosInstance.delete("/organization/logo");
+
 			const { error } = await authClient.organization.update({
 				data: { logo: "" },
 			});
@@ -32,8 +34,8 @@ const OrgLogoUploader: React.FC = () => {
 				return;
 			}
 			await mutate();
-		} catch {
-			toast.error("Failed to remove logo");
+		} catch (error) {
+			toast.error(getBackendErr(error, "Failed to remove logo"));
 		} finally {
 			setRemoving(false);
 		}

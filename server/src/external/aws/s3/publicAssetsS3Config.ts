@@ -13,6 +13,22 @@ export const getPublicAssetsS3Config = () => {
 	};
 };
 
+const ORG_LOGOS_PREFIX = "logos";
+
+// Single source of truth for an org logo's S3 key, so upload and delete never
+// drift apart.
+export const getOrgLogoKey = (orgId: string) => `${ORG_LOGOS_PREFIX}/${orgId}`;
+
+export const getOrgLogoPublicUrl = ({
+	bucket,
+	region,
+	orgId,
+}: {
+	bucket: string;
+	region: string;
+	orgId: string;
+}) => `https://${bucket}.s3.${region}.amazonaws.com/${getOrgLogoKey(orgId)}`;
+
 // Dedicated, least-privilege IAM user scoped to s3:PutObject on
 // autumn-public-assets/logos/*. The presigned upload URL is signed with these
 // credentials, so the signer must hold that permission. When unset (e.g. local
