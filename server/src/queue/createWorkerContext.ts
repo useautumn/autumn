@@ -13,6 +13,7 @@ export const createWorkerContext = async ({
 	db,
 	payload,
 	logger,
+	skipCache = true,
 }: {
 	db: DrizzleCli;
 	payload: {
@@ -22,6 +23,7 @@ export const createWorkerContext = async ({
 		requestId?: string;
 	};
 	logger: Logger;
+	skipCache?: boolean;
 }) => {
 	const { orgId, env, customerId, requestId } = payload;
 	if (!orgId || !env) return;
@@ -83,7 +85,7 @@ export const createWorkerContext = async ({
 		apiVersion,
 		scopes: [],
 		expand: [],
-		skipCache: true,
+		skipCache,
 		extraLogs: {},
 		rolloutSnapshot,
 	};
