@@ -861,7 +861,23 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 				}),
 			);
 		}
-		const provisioned = await Promise.all(provisionTasks);
+		// Wait for ALL provisionWorker tasks to SETTLE (not just bail on the first
+		// rejection) so every sub-account/sandbox is recorded before teardown reads
+		// the registry. Otherwise a peer still creating an account AFTER another's
+		// failure leaks it — and the create/delete interleaving is ugly.
+		const settled = await Promise.allSettled(provisionTasks);
+		const failures = settled.filter(
+			(r): r is PromiseRejectedResult => r.status === "rejected",
+		);
+		if (failures.length > 0) {
+			const first = failures[0].reason;
+			throw new Error(
+				`fan-out: ${failures.length}/${effectiveWorkers} worker(s) failed to provision — aborting (first: ${first instanceof Error ? first.message : String(first)})`,
+			);
+		}
+		const provisioned = settled.map(
+			(r) => (r as PromiseFulfilledResult<ProvisionedWorker>).value,
+		);
 
 		// ----- RUN ------------------------------------------------------------
 		const sandboxByName = new Map<string, Sandbox>();

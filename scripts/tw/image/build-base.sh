@@ -251,6 +251,14 @@ export PATH="$HOME/.bun/bin:$PATH"
 command -v bun >/dev/null 2>&1 || die "bun not on PATH after install"
 log "bun $(bun --version)"
 
+# Symlink bun onto the system PATH so the orchestrator's `runCommand({cmd:"bun"})`
+# (worker boot + `bun test`) finds it. The installer only adds ~/.bun/bin to
+# ~/.bash_profile, which runCommand does NOT source — so without this, boot fails
+# with "executable file not found in $PATH: bun".
+BUN_BIN="$(command -v bun)"
+sudo ln -sf "$BUN_BIN" /usr/local/bin/bun
+log "linked bun -> /usr/local/bin/bun ($BUN_BIN)"
+
 # ---------------------------------------------------------------------------
 # 7. initdb a PG18 cluster, role postgres/postgres SUPERUSER, createdb autumn,
 #    CREATE EXTENSION pg_trgm into an EMPTY db (NO application tables).
