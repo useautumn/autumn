@@ -43,6 +43,17 @@ const typeRankSql = sql`(
 	END
 )`;
 
+// Status-first ordering: active recurring, then scheduled, then one-off, then
+// everything else (expired/past_due/paused/canceling/add-ons).
+const statusRankSql = sql`(
+	CASE
+		WHEN cp.status = 'scheduled' THEN 1
+		WHEN ${oneOffPredicate} THEN 2
+		WHEN cp.status = 'active' AND cp.canceled_at IS NULL AND NOT prod.is_add_on THEN 0
+		ELSE 3
+	END
+)`;
+
 const KIND_RANK: Record<CustomerProductKind, number> = {
 	[CustomerProductKind.Subscription]: 0,
 	[CustomerProductKind.OneOff]: 1,
@@ -56,7 +67,7 @@ const entityRankSql = sql`(
 	END
 )`;
 
-const customerProductsOrderExpr = sql`${entityRankSql} ASC, ${typeRankSql} ASC, cp.created_at DESC, cp.id ASC`;
+const customerProductsOrderExpr = sql`${statusRankSql} ASC, ${entityRankSql} ASC, cp.created_at DESC, cp.id ASC`;
 
 const customerProductsOrderBy = sql`ORDER BY ${customerProductsOrderExpr}`;
 
@@ -158,10 +169,10 @@ export const getCustomerProductsPageQuery = ({
 
 	const cursorPredicate = cursor
 		? sql`AND (
-			${entityRankSql} > ${cursor.eRank}
-			OR (${entityRankSql} = ${cursor.eRank} AND ${typeRankSql} > ${cursor.rank})
-			OR (${entityRankSql} = ${cursor.eRank} AND ${typeRankSql} = ${cursor.rank} AND cp.created_at < ${cursor.t})
-			OR (${entityRankSql} = ${cursor.eRank} AND ${typeRankSql} = ${cursor.rank} AND cp.created_at = ${cursor.t} AND cp.id > ${cursor.id})
+			${statusRankSql} > ${cursor.rank}
+			OR (${statusRankSql} = ${cursor.rank} AND ${entityRankSql} > ${cursor.eRank})
+			OR (${statusRankSql} = ${cursor.rank} AND ${entityRankSql} = ${cursor.eRank} AND cp.created_at < ${cursor.t})
+			OR (${statusRankSql} = ${cursor.rank} AND ${entityRankSql} = ${cursor.eRank} AND cp.created_at = ${cursor.t} AND cp.id > ${cursor.id})
 		)`
 		: sql``;
 
@@ -170,7 +181,7 @@ export const getCustomerProductsPageQuery = ({
 	return sql`
 		SELECT
 			cp.*,
-			${typeRankSql} AS type_rank,
+			${statusRankSql} AS status_rank,
 			${entityRankSql} AS entity_rank,
 			row_to_json(prod) AS product,
 			cpr_data.customer_prices,
@@ -228,7 +239,7 @@ export const customerProductsSeedCte = ({
 			SELECT
 				cp.id,
 				cp.internal_customer_id,
-				${typeRankSql} AS type_rank,
+				${statusRankSql} AS status_rank,
 				${entityRankSql} AS entity_rank,
 				cp.created_at,
 				ROW_NUMBER() OVER (
@@ -244,7 +255,7 @@ export const customerProductsSeedCte = ({
 		products_seed AS MATERIALIZED (
 			SELECT
 				cp.*,
-				ranked.type_rank,
+				ranked.status_rank,
 				ranked.entity_rank,
 				ranked.total_count,
 				row_to_json(prod) AS product,
@@ -272,7 +283,7 @@ export const customerProductsSeedSelect = sql`
 			internal_customer_id,
 			json_agg(
 				row_to_json(products_seed)
-				ORDER BY entity_rank ASC, type_rank ASC, created_at DESC, id ASC
+				ORDER BY status_rank ASC, entity_rank ASC, created_at DESC, id ASC
 			) AS rows
 		FROM products_seed
 		GROUP BY internal_customer_id

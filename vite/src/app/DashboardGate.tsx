@@ -19,7 +19,9 @@ export const DashboardGate = () => {
 	const [ignoredLastOrgId, setIgnoredLastOrgId] = useState<string | null>(null);
 	const lastOrgId = getLastSwitchedOrgId();
 	const activeOrgId = session?.session.activeOrganizationId;
+	const onImpersonateRoute = pathname.includes("impersonate-redirect");
 	const shouldSwitchToLastOrg =
+		!onImpersonateRoute &&
 		!!lastOrgId &&
 		lastOrgId !== ignoredLastOrgId &&
 		!!activeOrgId &&

@@ -89,7 +89,7 @@ export function CustomerInvoicesTable() {
 				onRowClick: handleRowClick,
 				emptyStateText: "Invoices will display when a customer makes a payment",
 				flexibleTableColumns: false,
-				// rowClassName: "h-14 py-4 cursor-pointer",
+				rowClassName: "h-10 py-0",
 			}}
 		>
 			<Table.Container>

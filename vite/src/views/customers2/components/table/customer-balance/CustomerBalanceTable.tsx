@@ -152,6 +152,7 @@ export function CustomerBalanceTable({
 					onRowClick: handleRowClick,
 					flexibleTableColumns: true,
 					selectedItemId: getSelectedRowId(),
+					rowClassName: "h-10 py-0",
 				}}
 			>
 				<Table.Container>

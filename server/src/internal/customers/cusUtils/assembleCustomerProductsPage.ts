@@ -6,14 +6,14 @@ import {
 import { normalizeCustomerProductTimeFields } from "../reassembleFlattenedCustomer/normalizeFields.js";
 
 export type RankedCustomerProductRow = FullCusProduct & {
-	type_rank: number;
+	status_rank: number;
 	entity_rank: number;
 };
 
 export const encodeProductsCursor = (row: RankedCustomerProductRow): string =>
 	CustomerProductsCursor.encode({
 		eRank: row.entity_rank,
-		rank: row.type_rank,
+		rank: row.status_rank,
 		t: Number(row.created_at),
 		id: row.id,
 	});

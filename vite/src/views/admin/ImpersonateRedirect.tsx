@@ -2,6 +2,7 @@ import { AlertCircle, Loader2, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { Button } from "@/components/v2/buttons/Button";
+import { setLastSwitchedOrgId } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 import { useAxiosInstance } from "../../services/useAxiosInstance";
 import { useAdmin } from "./hooks/useAdmin";
@@ -60,8 +61,11 @@ export function ImpersonateRedirect() {
 					return;
 				}
 
-				// Step 4: Set the active organization
+				// Step 4: Set the active organization. Persist it as the
+				// last-switched org so DashboardGate's auto-switch doesn't
+				// bounce back to the admin's previous org.
 				setStatus("Setting active organization...");
+				setLastSwitchedOrgId(orgId);
 				await authClient.organization.setActive({
 					organizationId: orgId,
 				});
