@@ -6,6 +6,10 @@ import {
 	getInternalMcpDisplayName,
 	isInternalMcpOAuthClientRecord,
 } from "./internalMcpOAuthClients.js";
+import {
+	ensureSpringOAuthClient,
+	isSpringOAuthClientRecord,
+} from "./springOAuthClient.js";
 
 export const handleGetOAuthClient = async (c: Context) => {
 	const clientId = c.req.param("client_id");
@@ -14,7 +18,9 @@ export const handleGetOAuthClient = async (c: Context) => {
 		return c.json({ error: "client_id is required" }, 400);
 	}
 
-	const client = await oauthClientRepo.getByClientId({ db, clientId });
+	const client =
+		(await ensureSpringOAuthClient({ db, clientId })) ??
+		(await oauthClientRepo.getByClientId({ db, clientId }));
 
 	if (!client) {
 		return c.json({ error: "Client not found" }, 404);
@@ -33,5 +39,6 @@ export const handleGetOAuthClient = async (c: Context) => {
 		name: internalMcpName || client.name || "Unknown Application",
 		is_atmn: isAtmnOAuthClientRecord(client),
 		is_internal_mcp: isInternalMcp,
+		default_env: isSpringOAuthClientRecord(client) ? "sandbox" : undefined,
 	});
 };

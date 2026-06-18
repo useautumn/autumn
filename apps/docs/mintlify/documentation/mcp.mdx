@@ -1,0 +1,219 @@
+---
+title: "MCP Server"
+sidebarTitle: "Agents & MCP"
+description: "Connect Autumn's MCP server to AI assistants for billing actions, plan management, and request-log investigations."
+---
+
+## Intro
+
+Autumn MCP connects AI assistants to Autumn's billing, customer, plan, balance,
+and log tools.
+
+### Starter prompt
+
+```text
+Use Autumn MCP for this request.
+
+- Always start with autumn://docs/concepts to understand Autumn's data model.
+- Use autumn://docs/plan-management for pricing setup, plan creation, plan updates, and plan modeling.
+- Use autumn://docs/billing for attaching plans, updating subscriptions, cancellations, schedules, trials, and billing state changes.
+- Use autumn://docs/logs for API request logs, Stripe webhook timelines, customer request histories, and log analytics.
+- Use https://docs.useautumn.com/llms.txt to find product docs if the MCP resources do not answer something.
+- Preview billing changes before applying them, and ask for approval before any destructive write.
+```
+
+## Setup
+
+Autumn MCP can be installed in any MCP client with the server URL:
+
+```text
+https://mcp.useautumn.com/mcp
+```
+
+You do not need an API key. By default, your MCP client opens an Autumn sign-in
+flow and connects to your organization.
+
+For a long-lived setup, you can also use an Autumn secret key with Bearer auth:
+
+```json
+{
+  "headers": {
+    "Authorization": "Bearer am_sk_test_..."
+  }
+}
+```
+
+<Tabs>
+<Tab title="Cursor">
+
+[![Install with one click](https://img.shields.io/badge/Install_with_one_click-Cursor-000000?style=flat-square&logoColor=white)](https://cursor.com/en/install-mcp?name=autumn&config=eyJuYW1lIjoiYXV0dW1uIiwidHlwZSI6Imh0dHAiLCJ1cmwiOiJodHRwczovL21jcC51c2VhdXR1bW4uY29tL21jcCJ9)
+
+Or add to `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "autumn": {
+      "url": "https://mcp.useautumn.com/mcp"
+    }
+  }
+}
+```
+
+</Tab>
+<Tab title="Claude Code">
+
+Run in terminal:
+
+```bash
+claude mcp add --transport http autumn https://mcp.useautumn.com/mcp
+```
+
+Or add to your project's `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "autumn": {
+      "type": "http",
+      "url": "https://mcp.useautumn.com/mcp"
+    }
+  }
+}
+```
+
+</Tab>
+<Tab title="Claude Desktop">
+
+1. Open Claude Desktop settings.
+2. Go to **Connectors**.
+3. Click **Add custom connector**.
+4. Paste `https://mcp.useautumn.com/mcp` and sign in.
+
+Or add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "autumn": {
+      "type": "http",
+      "url": "https://mcp.useautumn.com/mcp"
+    }
+  }
+}
+```
+
+</Tab>
+<Tab title="Codex">
+
+Run in terminal:
+
+```bash
+codex mcp add autumn --url https://mcp.useautumn.com/mcp
+```
+
+Or add to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.autumn]
+url = "https://mcp.useautumn.com/mcp"
+```
+
+</Tab>
+<Tab title="OpenCode">
+
+Add to `~/.config/opencode/opencode.json`:
+
+```json
+{
+  "mcp": {
+    "autumn": {
+      "type": "remote",
+      "url": "https://mcp.useautumn.com/mcp",
+      "enabled": true
+    }
+  }
+}
+```
+
+</Tab>
+<Tab title="Zed">
+
+Add to `~/.config/zed/settings.json`:
+
+```json
+{
+  "context_servers": {
+    "autumn": {
+      "url": "https://mcp.useautumn.com/mcp"
+    }
+  }
+}
+```
+
+</Tab>
+<Tab title="VS Code">
+
+[![Install with one click](https://img.shields.io/badge/Install_with_one_click-VS_Code-0098FF?style=flat-square&logo=visualstudiocode&logoColor=white)](https://vscode.dev/redirect/mcp/install?name=autumn&config=%7B%22type%22%3A%22http%22%2C%22url%22%3A%22https%3A%2F%2Fmcp.useautumn.com%2Fmcp%22%7D)
+
+Or add to `.vscode/mcp.json`:
+
+```json
+{
+  "servers": {
+    "autumn": {
+      "type": "http",
+      "url": "https://mcp.useautumn.com/mcp"
+    }
+  }
+}
+```
+
+</Tab>
+<Tab title="Other">
+
+For other MCP clients that support remote MCP:
+
+```json
+{
+  "mcpServers": {
+    "autumn": {
+      "url": "https://mcp.useautumn.com/mcp"
+    }
+  }
+}
+```
+
+If your client does not support remote MCP servers directly:
+
+```json
+{
+  "mcpServers": {
+    "autumn": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.useautumn.com/mcp"]
+    }
+  }
+}
+```
+
+</Tab>
+</Tabs>
+
+## Using MCP
+
+Autumn MCP exposes tools and resources. Ask your agent to read the relevant Autumn MCP resource before it acts:
+
+- Start with `autumn://docs/concepts` to understand Autumn's data model.
+- Use `autumn://docs/plan-management` for pricing setup, plan creation, and plan updates.
+- Use `autumn://docs/billing` for attaching plans, updating subscriptions, cancellations, schedules, trials, and billing state changes.
+- Use `autumn://docs/logs` for API request logs, Stripe webhook timelines, customer request histories, and log analytics.
+
+## Resources
+
+| Resource | Use for |
+| --- | --- |
+| `autumn://docs/concepts` | Autumn concepts and object relationships |
+| `autumn://docs/plan-management` | Creating and updating pricing plans |
+| `autumn://docs/billing` | Billing actions and preview-first workflows |
+| `autumn://docs/logs` | Request logs, Stripe webhooks, and log analytics |

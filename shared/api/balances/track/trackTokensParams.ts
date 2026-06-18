@@ -46,6 +46,9 @@ export const TrackTokensParamsSchema = z.object({
 	idempotency_key: z.string().optional().meta({
 		internal: true,
 	}),
+	timestamp: z.number().optional().meta({
+		internal: true,
+	}),
 	overage_behavior: z.enum(["cap", "reject"]).optional().meta({
 		internal: true,
 	}),

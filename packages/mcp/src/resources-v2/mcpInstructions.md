@@ -15,8 +15,10 @@ Always read the relevant Autumn MCP resources to understand Autumn before starti
 
 ## Resources
 
+- Start with `autumn://docs/concepts` when you need to understand Autumn's model or translate user language into Autumn objects.
 - For pricing setup, plan creation, plan updates, and plan modeling, follow `autumn://docs/plan-management`.
 - For billing actions such as attaching plans, updating subscriptions, canceling or uncanceling subscriptions, creating schedules, and changing customer billing state, follow `autumn://docs/billing`.
+- For API request logs, Stripe webhook timelines, customer request histories, and log analytics, follow `autumn://docs/logs`.
 
 ## Org Rules
 

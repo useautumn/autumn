@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, beforeEach, describe, expect, mock, test } from "bun:test";
 import { Hono } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
 
@@ -33,7 +33,11 @@ const featureDeductions = [
 mock.module("@/internal/balances/track/utils/getTokenTrackParams.js", () => ({
 	getTokenTrackParams: async (args: Record<string, unknown>) => {
 		mockState.getTokenTrackParamsCalls.push(args);
-		return { body: trackBody, featureDeductions };
+		const input = args.input as { timestamp?: number };
+		return {
+			body: { ...trackBody, timestamp: input.timestamp },
+			featureDeductions,
+		};
 	},
 }));
 
@@ -65,6 +69,7 @@ const requestBody = {
 	input_tokens: 100,
 	output_tokens: 50,
 };
+const timestamp = Date.UTC(2024, 0, 15, 12, 30, 0);
 
 const createApp = ({ ctx }: { ctx: AutumnContext }) => {
 	const app = new Hono<HonoEnv>();
@@ -85,6 +90,10 @@ const createCtx = (): AutumnContext =>
 	}) as unknown as AutumnContext;
 
 describe("handleTrackTokens", () => {
+	afterAll(() => {
+		mock.restore();
+	});
+
 	beforeEach(() => {
 		mockState.getTokenTrackParamsCalls = [];
 		mockState.runTrackWithRolloutCalls = [];
@@ -96,7 +105,7 @@ describe("handleTrackTokens", () => {
 		const response = await createApp({ ctx }).request("/track_tokens", {
 			method: "POST",
 			headers: { "content-type": "application/json" },
-			body: JSON.stringify(requestBody),
+			body: JSON.stringify({ ...requestBody, timestamp }),
 		});
 
 		expect(response.status).toBe(200);
@@ -108,7 +117,7 @@ describe("handleTrackTokens", () => {
 		});
 		expect(mockState.getTokenTrackParamsCalls).toHaveLength(1);
 		expect(mockState.getTokenTrackParamsCalls[0]).toMatchObject({
-			input: requestBody,
+			input: { ...requestBody, timestamp },
 		});
 		expect(mockState.runTrackWithRolloutCalls).toHaveLength(1);
 		expect(mockState.runTrackWithRolloutCalls[0]).toMatchObject({
