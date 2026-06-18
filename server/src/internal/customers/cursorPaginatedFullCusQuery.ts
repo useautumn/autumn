@@ -1,12 +1,18 @@
 import {
 	ACTIVE_STATUSES,
 	type AppEnv,
+	CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
 	type CusProductStatus,
 	type ListCustomersV2Params,
+	RELEVANT_STATUSES,
 	type StandardCursorFields,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
-import { cpStatusInClause } from "./getCustomerProductsPageQuery.js";
+import {
+	cpStatusInClause,
+	customerProductsSeedCte,
+	customerProductsSeedSelect,
+} from "./getCustomerProductsPageQuery.js";
 import {
 	type DashboardProductVersionFilter,
 	type DashboardStatusFilter,
@@ -62,6 +68,11 @@ export const getCursorPaginatedFullCusQuery = ({
 	customerId,
 }: CursorPaginatedFullCusQueryArgs) => {
 	const cpStatusFilter = cpStatusInClause(inStatuses);
+
+	const productsSeedCte = customerProductsSeedCte({
+		inStatuses: RELEVANT_STATUSES,
+		limit: CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
+	});
 
 	const customerListFilterSql = getCustomerListFilterSql({
 		internalCustomerIds,
@@ -208,12 +219,14 @@ export const getCursorPaginatedFullCusQuery = ({
 			SELECT id, entitlement_id FROM ces_bound
 			UNION ALL
 			SELECT id, entitlement_id FROM ces_loose
-		)
+		),
+		${productsSeedCte}
 		${entitiesCte}
 		${invoicesCte}
 		SELECT
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cr) AS customers,
 			(SELECT COALESCE(json_object_agg(internal_customer_id, n), '{}'::json) FROM cp_counts) AS product_counts,
+			${customerProductsSeedSelect},
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cps_ranked) AS customer_products,
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM ces_bound) AS customer_entitlements,
 			(SELECT COALESCE(json_agg(row_json ORDER BY id DESC), '[]'::json) FROM ces_loose) AS extra_customer_entitlements,

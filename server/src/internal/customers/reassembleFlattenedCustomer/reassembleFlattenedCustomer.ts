@@ -1,4 +1,5 @@
-import type { FullCustomer } from "@autumn/shared";
+import { CUSTOMER_PRODUCTS_DEFAULT_LIMIT, type FullCustomer } from "@autumn/shared";
+import { buildCustomerProductsSeedByCustomer } from "../cusUtils/buildCustomerProductsSeed.js";
 import { buildLookupMaps } from "./buildLookupMaps.js";
 import { compareCusProducts } from "./compareCusProducts.js";
 import { hydrateCustomerEntitlement } from "./hydrateCustomerEntitlement.js";
@@ -56,6 +57,11 @@ export const reassembleFlattenedCustomer = (
 	const invoicesByCusId = groupByInternalCustomerId(flat.invoices);
 
 	const productCounts = flat.product_counts ?? {};
+	const seedRows = Object.values(flat.products_seed ?? {}).flat();
+	const productsPageByCusId = buildCustomerProductsSeedByCustomer({
+		rows: seedRows,
+		limit: CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
+	});
 	const out: FullCustomer[] = [];
 	for (const c of flat.customers) {
 		const internalId = c.internal_id as string;
@@ -66,6 +72,11 @@ export const reassembleFlattenedCustomer = (
 			customer_products: customerProducts,
 			products_total_count:
 				productCounts[internalId] ?? customerProducts.length,
+			products_page: productsPageByCusId.get(internalId) ?? {
+				list: [],
+				next_cursor: null,
+				total_count: 0,
+			},
 			extra_customer_entitlements: looseCesByCusId.get(internalId) ?? [],
 			subscriptions: subsByCusId.get(internalId) ?? [],
 		};

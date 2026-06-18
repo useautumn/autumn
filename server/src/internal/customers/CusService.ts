@@ -51,6 +51,10 @@ import {
 	RELEVANT_STATUSES,
 } from "./cusProducts/CusProductService.js";
 import {
+	assembleCustomerProductsPage,
+	type RankedCustomerProductRow,
+} from "./cusUtils/assembleCustomerProductsPage.js";
+import {
 	getCustomerProductsCountQuery,
 	getCustomerProductsPageQuery,
 } from "./getCustomerProductsPageQuery.js";
@@ -59,22 +63,8 @@ import {
 	type FlattenedCustomerRow,
 	reassembleFlattenedCustomer,
 } from "./reassembleFlattenedCustomer/index.js";
-import { normalizeCustomerProductTimeFields } from "./reassembleFlattenedCustomer/normalizeFields.js";
 
 // const tracer = trace.getTracer("express");
-
-type RankedCustomerProductRow = FullCusProduct & {
-	type_rank: number;
-	entity_rank: number;
-};
-
-const encodeProductsCursor = (row: RankedCustomerProductRow): string =>
-	CustomerProductsCursor.encode({
-		eRank: row.entity_rank,
-		rank: row.type_rank,
-		t: Number(row.created_at),
-		id: row.id,
-	});
 
 export class CusService {
 	static async getFull({
@@ -325,26 +315,15 @@ export class CusService {
 		]);
 
 		const rows = (pageResult ?? []) as unknown as RankedCustomerProductRow[];
-
-		const hasMore = rows.length > params.limit;
-		const pageRows = hasMore ? rows.slice(0, params.limit) : rows;
-
-		for (const product of pageRows) {
-			normalizeCustomerProductTimeFields(product);
-			product.customer_prices ??= [];
-			product.customer_entitlements ??= [];
-		}
-
-		const lastRow = hasMore ? pageRows[pageRows.length - 1] : undefined;
 		const totalCount =
 			(countResult?.[0] as { total_count?: number } | undefined)?.total_count ??
 			0;
 
-		return {
-			list: pageRows as FullCusProduct[],
-			next_cursor: lastRow ? encodeProductsCursor(lastRow) : null,
-			total_count: totalCount,
-		};
+		return assembleCustomerProductsPage({
+			rows,
+			limit: params.limit,
+			totalCount,
+		});
 	}
 
 	static getDefaultProductsPage({
