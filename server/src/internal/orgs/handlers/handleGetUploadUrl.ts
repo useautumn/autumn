@@ -1,5 +1,8 @@
 import { InternalError, Scopes } from "@autumn/shared";
-import { getPublicAssetsS3Config } from "@/external/aws/s3/publicAssetsS3Config.js";
+import {
+	getOrgLogoS3Credentials,
+	getPublicAssetsS3Config,
+} from "@/external/aws/s3/publicAssetsS3Config.js";
 import { getS3PresignedPutUrl } from "@/external/aws/s3/s3PresignUtils.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 
@@ -33,7 +36,12 @@ export const handleGetUploadUrl = createRoute({
 			});
 		}
 
-		const signedUrl = await getS3PresignedPutUrl({ bucket, region, key });
+		const signedUrl = await getS3PresignedPutUrl({
+			bucket,
+			region,
+			key,
+			credentials: getOrgLogoS3Credentials(),
+		});
 		const publicUrl = getOrgLogoPublicUrl({ bucket, region, orgId: org.id });
 
 		return c.json({ signedUrl, publicUrl, key });

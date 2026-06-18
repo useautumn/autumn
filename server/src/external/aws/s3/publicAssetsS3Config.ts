@@ -12,3 +12,18 @@ export const getPublicAssetsS3Config = () => {
 		region: publicRegion,
 	};
 };
+
+// Dedicated, least-privilege IAM user scoped to s3:PutObject on
+// autumn-public-assets/logos/*. The presigned upload URL is signed with these
+// credentials, so the signer must hold that permission. When unset (e.g. local
+// dev), the S3 client falls back to the default AWS credential provider chain.
+export const getOrgLogoS3Credentials = () => {
+	const accessKeyId = process.env.ORG_LOGO_S3_KEY;
+	const secretAccessKey = process.env.ORG_LOGO_S3_SECRET;
+
+	if (!accessKeyId || !secretAccessKey) {
+		return;
+	}
+
+	return { accessKeyId, secretAccessKey };
+};
