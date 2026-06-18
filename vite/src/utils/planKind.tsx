@@ -34,7 +34,7 @@ export function getPlanKindConfig(
 		default:
 			return {
 				label: "Subscription",
-				color: "text-blue-500",
+				color: "text-emerald-500",
 				icon: <CalendarDotsIcon size={size} weight="fill" />,
 			};
 	}
