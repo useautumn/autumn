@@ -15,7 +15,7 @@ export const DashboardGate = () => {
 	const { data: session, isPending: sessionLoading } = useSession();
 	const { data: orgList, isPending: orgListLoading } = useListOrganizations();
 	const switchActiveOrg = useSwitchActiveOrg();
-	const { org, isLoading: orgLoading } = useOrg();
+	const { org, isLoading: orgLoading, error: orgError } = useOrg();
 	const [switchingToLastOrg, setSwitchingToLastOrg] = useState(false);
 	const [ignoredLastOrgId, setIgnoredLastOrgId] = useState<string | null>(null);
 	const lastOrgId = getLastSwitchedOrgId();
@@ -58,6 +58,24 @@ export const DashboardGate = () => {
 		return <LoadingScreen fullPage />;
 	}
 	if (orgLoading) return <LoadingScreen fullPage />;
+	if (orgError) {
+		return (
+			<div className="flex min-h-screen w-full items-center justify-center">
+				<div className="flex max-w-sm flex-col items-center gap-3 text-center">
+					<p className="text-sm text-muted-foreground">
+						We couldn't load your organization.
+					</p>
+					<button
+						type="button"
+						className="text-sm text-tertiary-foreground hover:underline"
+						onClick={() => window.location.reload()}
+					>
+						Refresh
+					</button>
+				</div>
+			</div>
+		);
+	}
 	if (!org) return <LoadingScreen fullPage />;
 
 	const redirect = getOrgRouteRedirect({

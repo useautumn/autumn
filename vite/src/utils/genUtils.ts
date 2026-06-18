@@ -53,6 +53,17 @@ export const getDefaultOrgPath = (
 	path = "/products?tab=products",
 ) => (org?.deployed ? path : `/sandbox${path}`);
 
+export const getSafeNextPath = (searchParams: URLSearchParams) => {
+	const next = searchParams.get("next");
+	return next?.startsWith("/") && !next.startsWith("//") ? next : "/";
+};
+
+const appendSearch = (path: string, search: string) => {
+	const query = search.replace(/^\?/, "");
+	if (!query) return path;
+	return `${path}${path.includes("?") ? "&" : "?"}${query}`;
+};
+
 export const getOrgRouteRedirect = ({
 	pathname,
 	search = "",
@@ -63,7 +74,7 @@ export const getOrgRouteRedirect = ({
 	deployed: boolean;
 }) => {
 	if (pathname === "/") {
-		return getDefaultOrgPath({ deployed });
+		return appendSearch(getDefaultOrgPath({ deployed }), search);
 	}
 
 	if (!deployed && !pathname.startsWith("/sandbox")) {

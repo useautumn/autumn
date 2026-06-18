@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { getDefaultOrgPath, getOrgRouteRedirect } from "@/utils/genUtils";
+import {
+	getDefaultOrgPath,
+	getOrgRouteRedirect,
+	getSafeNextPath,
+} from "@/utils/genUtils";
 
 describe("getDefaultOrgPath", () => {
 	test("defaults deployed orgs to production", () => {
@@ -19,11 +23,38 @@ describe("getDefaultOrgPath", () => {
 	});
 });
 
+describe("getSafeNextPath", () => {
+	test("allows local absolute paths", () => {
+		expect(getSafeNextPath(new URLSearchParams("next=/accept?id=inv_123"))).toBe(
+			"/accept?id=inv_123",
+		);
+	});
+
+	test("rejects external redirects", () => {
+		expect(
+			getSafeNextPath(new URLSearchParams("next=https://example.com")),
+		).toBe("/");
+		expect(getSafeNextPath(new URLSearchParams("next=//example.com"))).toBe(
+			"/",
+		);
+	});
+});
+
 describe("getOrgRouteRedirect", () => {
 	test("routes root to production for deployed orgs", () => {
 		expect(getOrgRouteRedirect({ pathname: "/", deployed: true })).toBe(
 			"/products?tab=products",
 		);
+	});
+
+	test("preserves root search params on default redirects", () => {
+		expect(
+			getOrgRouteRedirect({
+				pathname: "/",
+				search: "?invite=inv_123",
+				deployed: true,
+			}),
+		).toBe("/products?tab=products&invite=inv_123");
 	});
 
 	test("routes root to sandbox for undeployed orgs", () => {
