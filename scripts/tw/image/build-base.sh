@@ -170,51 +170,22 @@ install_elasticmq_native() {
 }
 
 install_elasticmq_jar_fallback() {
-  log "WARN: crane/skopeo unavailable — falling back to JVM jar (needs java at runtime)"
+  log "Installing elasticmq via JVM jar (needs java at runtime)"
   sudo dnf install -y --setopt=install_weak_deps=False java-17-amazon-corretto-headless >/dev/null
   curl -fsSL -o "$ELASTICMQ_DIR/elasticmq.jar" \
     "https://s3-eu-west-1.amazonaws.com/softwaremill-public/elasticmq-server-${ELASTICMQ_VERSION}.jar"
   log "Wrote JVM jar to $ELASTICMQ_DIR/elasticmq.jar (start-services.sh detects it)"
 }
 
-# Install `crane` (single static Go binary) so we can extract the native
-# elasticmq binary from its OCI image WITHOUT a Docker daemon. If this fails,
-# the elasticmq step falls back to the JVM jar below.
-if ! command -v crane >/dev/null 2>&1 && [ ! -x "$BIN_DIR/crane" ]; then
-  case "$(uname -m)" in
-    x86_64) CRANE_ARCH="x86_64" ;;
-    aarch64 | arm64) CRANE_ARCH="arm64" ;;
-    *) CRANE_ARCH="" ;;
-  esac
-  if [ -n "$CRANE_ARCH" ]; then
-    log "Installing crane (for native elasticmq extraction)"
-    TMP_CR="$(mktemp -d)"
-    if curl -fsSL -o "$TMP_CR/crane.tgz" \
-        "https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_${CRANE_ARCH}.tar.gz" \
-        && tar -xzf "$TMP_CR/crane.tgz" -C "$TMP_CR" crane; then
-      install -m 0755 "$TMP_CR/crane" "$BIN_DIR/crane"
-    else
-      log "WARN: crane download failed — elasticmq will use the JVM jar fallback"
-    fi
-    rm -rf "$TMP_CR"
-  fi
-fi
 export PATH="$BIN_DIR:$PATH"
 
-if [ ! -x "$ELASTICMQ_BIN" ] && [ ! -f "$ELASTICMQ_DIR/elasticmq.jar" ]; then
-  # Try the native extraction; on ANY failure fall back to the JVM jar so the
-  # build never hard-fails on the elasticmq step.
-  native_installed=0
-  set +e
-  if command -v crane >/dev/null 2>&1; then
-    install_elasticmq_native crane && native_installed=1
-  elif command -v skopeo >/dev/null 2>&1; then
-    install_elasticmq_native skopeo && native_installed=1
-  fi
-  set -e
-  if [ "$native_installed" != "1" ] && [ ! -x "$ELASTICMQ_BIN" ]; then
-    install_elasticmq_jar_fallback
-  fi
+# elasticmq: the GraalVM native binary extracted from the OCI image does NOT run
+# standalone in the µVM (it crashes with an empty log — missing shared libs /
+# resources that only exist inside the full image). The JVM jar is reliable
+# (needs only java, installed below), so use it. A self-contained native SQS is
+# a follow-up; `install_elasticmq_native` is kept above for that future work.
+if [ ! -f "$ELASTICMQ_DIR/elasticmq.jar" ] && [ ! -x "$ELASTICMQ_BIN" ]; then
+  install_elasticmq_jar_fallback
 fi
 
 # Place the elasticmq config declaring BOTH FIFO queues (mirrors
