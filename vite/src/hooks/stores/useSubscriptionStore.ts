@@ -34,7 +34,7 @@ export const useSubscriptionById = ({ itemId }: { itemId: string | null }) => {
 		if (fromInline) return fromInline;
 
 		const cached = queryClient.getQueriesData<{ list?: FullCusProduct[] }>({
-			queryKey: ["customer-products"],
+			queryKey: ["customer"],
 		});
 		for (const [, data] of cached) {
 			const match = data?.list?.find((p) => p.id === itemId);

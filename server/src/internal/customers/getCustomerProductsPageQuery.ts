@@ -56,7 +56,9 @@ const entityRankSql = sql`(
 	END
 )`;
 
-const customerProductsOrderBy = sql`ORDER BY ${entityRankSql} ASC, ${typeRankSql} ASC, cp.created_at DESC, cp.id ASC`;
+const customerProductsOrderExpr = sql`${entityRankSql} ASC, ${typeRankSql} ASC, cp.created_at DESC, cp.id ASC`;
+
+const customerProductsOrderBy = sql`ORDER BY ${customerProductsOrderExpr}`;
 
 // Per-product JSON aggregates, joined laterally so each customer_products row
 // carries its fully-hydrated prices / entitlements / free trial.
@@ -204,3 +206,74 @@ export const getCustomerProductsCountQuery = ({
 		${filters}
 	`;
 };
+
+/**
+ * CTE that ranks each customer's first products page (matching the page-1
+ * ordering of {@link getCustomerProductsPageQuery}) over an existing customer
+ * set CTE named `cr` (with an `internal_id` column). Pair with
+ * {@link customerProductsSeedSelect} to emit one `products_page` per customer.
+ */
+export const customerProductsSeedCte = ({
+	inStatuses,
+	limit,
+}: {
+	inStatuses?: CusProductStatus[];
+	limit: number;
+}) => {
+	const statusFilter = cpStatusInClause(inStatuses);
+	const fetchLimit = limit + 1;
+
+	return sql`
+		products_seed_ranked AS MATERIALIZED (
+			SELECT
+				cp.id,
+				cp.internal_customer_id,
+				${typeRankSql} AS type_rank,
+				${entityRankSql} AS entity_rank,
+				cp.created_at,
+				ROW_NUMBER() OVER (
+					PARTITION BY cp.internal_customer_id
+					ORDER BY ${customerProductsOrderExpr}
+				) AS rn,
+				COUNT(*) OVER (PARTITION BY cp.internal_customer_id)::int AS total_count
+			FROM cr
+			JOIN customer_products cp ON cp.internal_customer_id = cr.internal_id
+			JOIN products prod ON cp.internal_product_id = prod.internal_id
+			WHERE TRUE ${statusFilter}
+		),
+		products_seed AS MATERIALIZED (
+			SELECT
+				cp.*,
+				ranked.type_rank,
+				ranked.entity_rank,
+				ranked.total_count,
+				row_to_json(prod) AS product,
+				cpr_data.customer_prices,
+				ce_data.customer_entitlements,
+				ft_data.free_trial
+			FROM products_seed_ranked ranked
+			JOIN customer_products cp ON cp.id = ranked.id
+			JOIN products prod ON cp.internal_product_id = prod.internal_id
+			${customerPricesLateral}
+			${customerEntitlementsLateral}
+			${freeTrialLateral}
+			WHERE ranked.rn <= ${fetchLimit}
+		)`;
+};
+
+/** Per-customer `products_seed` rows, keyed by internal_customer_id. */
+export const customerProductsSeedSelect = sql`
+	(SELECT COALESCE(
+		json_object_agg(internal_customer_id, rows),
+		'{}'::json
+	)
+	FROM (
+		SELECT
+			internal_customer_id,
+			json_agg(
+				row_to_json(products_seed)
+				ORDER BY entity_rank ASC, type_rank ASC, created_at DESC, id ASC
+			) AS rows
+		FROM products_seed
+		GROUP BY internal_customer_id
+	) seed_by_customer) AS products_seed`;

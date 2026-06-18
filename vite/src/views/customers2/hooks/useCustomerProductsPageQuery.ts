@@ -63,8 +63,9 @@ export function useCustomerProductsPageQuery({
 	const { data, isLoading, isFetching, isPlaceholderData, error, refetch } =
 		useQuery({
 			queryKey: buildKey([
-				"customer-products",
+				"customer",
 				customer_id,
+				"products",
 				cursor,
 				pageSize,
 				showExpired,
@@ -74,6 +75,7 @@ export function useCustomerProductsPageQuery({
 			queryFn: fetcher,
 			enabled: !!customer_id,
 			initialData: seedPage,
+			initialDataUpdatedAt: 0,
 			placeholderData: keepPreviousData,
 		});
 
