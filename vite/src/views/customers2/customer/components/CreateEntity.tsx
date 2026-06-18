@@ -109,6 +109,7 @@ export const CreateEntity = ({
 			(feature: Feature) =>
 				feature.config?.usage_type === FeatureUsageType.Continuous,
 		) || [];
+	const hasContinuousFeatures = continuousFeatures.length > 0;
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
@@ -116,7 +117,8 @@ export const CreateEntity = ({
 				<DialogHeader>
 					<DialogTitle>Create Entity</DialogTitle>
 					<DialogDescription>
-						Create a new entity for this customer to track usage separately.
+						Create an entity under this customer to grant plans and balances to
+						a child resource.
 					</DialogDescription>
 				</DialogHeader>
 				<div className="flex flex-col gap-4">
@@ -149,11 +151,18 @@ export const CreateEntity = ({
 							<SelectValue placeholder="Select feature" />
 						</SelectTrigger>
 							<SelectContent>
-								{continuousFeatures.map((feature: Feature) => (
-									<SelectItem key={feature.id} value={feature.id}>
-										{feature.name}
-									</SelectItem>
-								))}
+								{hasContinuousFeatures ? (
+									continuousFeatures.map((feature: Feature) => (
+										<SelectItem key={feature.id} value={feature.id}>
+											{feature.name}
+										</SelectItem>
+									))
+								) : (
+									<div className="px-2 py-1.5 text-sm text-muted-foreground">
+										Create a non-consumable feature first (e.g. seats,
+										projects)
+									</div>
+								)}
 							</SelectContent>
 						</Select>
 					</div>

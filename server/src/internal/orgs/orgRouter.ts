@@ -1,3 +1,5 @@
+import { user as userTable } from "@autumn/shared";
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { handleGetRCMappings } from "@/external/revenueCat/handlers/handleGetRevenuecatMappings.js";
 import { handleGetRevenueCatProducts } from "@/external/revenueCat/handlers/handleGetRevenuecatProducts.js";
@@ -58,12 +60,27 @@ internalOrgRouter.get("/invites", ...handleGetInvites);
 export const honoOrgRouter = new Hono<HonoEnv>();
 honoOrgRouter.get("", ...handleGetOrg);
 honoOrgRouter.get("/flags", ...handleGetOrgFlags);
-honoOrgRouter.get("/me", (c) => {
-	const { org, env } = c.get("ctx");
+honoOrgRouter.get("/me", async (c) => {
+	const { db, org, env, user, userId } = c.get("ctx");
+	const authUser =
+		user ??
+		(userId
+			? await db.query.user.findFirst({
+					where: eq(userTable.id, userId),
+				})
+			: undefined);
 	return c.json({
+		id: org.id,
 		name: org.name,
 		slug: org.slug,
 		env,
+		user: authUser
+			? {
+					id: authUser.id,
+					email: authUser.email,
+					name: authUser.name,
+				}
+			: undefined,
 	});
 });
 honoOrgRouter.patch("", ...handleUpdateOrg);

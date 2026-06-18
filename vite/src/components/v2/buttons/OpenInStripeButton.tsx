@@ -2,7 +2,9 @@ import { IconTooltipButton } from "@/components/v2/buttons/IconTooltipButton";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useEnv } from "@/utils/envUtils";
-import { getStripeSubLink } from "@/utils/linkUtils";
+import { getStripeConnectViewAsLink, getStripeSubLink } from "@/utils/linkUtils";
+import { useAdmin } from "@/views/admin/hooks/useAdmin";
+import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
 
 export function OpenInStripeButton({
 	subscriptionId,
@@ -12,15 +14,28 @@ export function OpenInStripeButton({
 	className?: string;
 }) {
 	const { stripeAccount } = useOrgStripeQuery();
+	const { isAdmin } = useAdmin();
+	const { masterStripeAccount } = useMasterStripeAccount();
 	const env = useEnv();
+
+	const connectViewAsLink =
+		isAdmin && masterStripeAccount?.id && stripeAccount?.id
+			? getStripeConnectViewAsLink({
+					masterAccountId: masterStripeAccount.id,
+					connectedAccountId: stripeAccount.id,
+					env,
+					path: `subscriptions/${subscriptionId}`,
+				})
+			: null;
 
 	const handleOpen = () => {
 		window.open(
-			getStripeSubLink({
-				subscriptionId,
-				env,
-				accountId: stripeAccount?.id,
-			}),
+			connectViewAsLink ??
+				getStripeSubLink({
+					subscriptionId,
+					env,
+					accountId: stripeAccount?.id,
+				}),
 			"_blank",
 		);
 	};
