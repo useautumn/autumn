@@ -18,7 +18,6 @@ const OrgLogoUploader: React.FC = () => {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const [uploading, setUploading] = useState(false);
 	const axiosInstance = useAxiosInstance();
-	const [logoVersion, setLogoVersion] = useState(0);
 	const [removing, setRemoving] = useState(false);
 
 	const handleRemove = async () => {
@@ -66,15 +65,18 @@ const OrgLogoUploader: React.FC = () => {
 		setUploading(true);
 		try {
 			const publicUrl = await uploadToS3(file);
+			// Uploads overwrite the same S3 key, so the URL is byte-identical each
+			// time. Store a cache-bust token so every surface that renders org.logo
+			// (this preview + the sidebar org selector) repaints the new image.
+			const versionedUrl = `${publicUrl}?v=${Date.now()}`;
 			const { error } = await authClient.organization.update({
-				data: { logo: publicUrl },
+				data: { logo: versionedUrl },
 			});
 			if (error) {
 				toast.error(error.message || "Failed to update logo");
 				return;
 			}
 			await mutate();
-			setLogoVersion(logoVersion + 1);
 			toast.success("Successfully uploaded logo");
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to upload logo"));
@@ -98,7 +100,7 @@ const OrgLogoUploader: React.FC = () => {
 				/>
 				{org.logo ? (
 					<img
-						src={`${org.logo}?v=${logoVersion}`}
+						src={org.logo}
 						alt="Organization logo"
 						className="w-10 h-10 rounded-md object-cover border border-border"
 					/>
