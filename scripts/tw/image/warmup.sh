@@ -67,10 +67,23 @@ cd "$REPO_ROOT"
 # ---------------------------------------------------------------------------
 # 1. git checkout <ref>
 # ---------------------------------------------------------------------------
-log "Fetching + checking out ref: $REF"
-git fetch --quiet --all --tags || log "WARN: git fetch failed (offline?) — using local refs"
-git checkout --quiet --force "$REF" || die "git checkout $REF failed"
-log "HEAD now at $(git rev-parse --short HEAD)"
+log "Ensuring working tree is at ref: $REF"
+git fetch --quiet --all --tags 2>/dev/null \
+  || log "WARN: git fetch failed (offline / shallow clone) — using what's checked out"
+# Vercel clones the `revision` in a DETACHED state with no local branch, so a
+# plain `git checkout <branch>` fails ("pathspec did not match"). Resolve the ref
+# however it exists; if it's not a local branch/tag/remote ref, the clone is
+# already AT it (Vercel checked out the revision at create) — just proceed.
+if git rev-parse --verify --quiet "refs/heads/$REF" >/dev/null 2>&1; then
+  git checkout --quiet --force "$REF"
+elif git rev-parse --verify --quiet "refs/remotes/origin/$REF" >/dev/null 2>&1; then
+  git checkout --quiet --force -B "$REF" "origin/$REF"
+elif git rev-parse --verify --quiet "$REF" >/dev/null 2>&1; then
+  git checkout --quiet --force "$REF"
+else
+  log "ref '$REF' is not a local branch/tag — assuming the clone is already at it"
+fi
+log "HEAD at $(git rev-parse --short HEAD)"
 
 # ---------------------------------------------------------------------------
 # 2. bun install --frozen-lockfile (delta only — deps baked into base)
