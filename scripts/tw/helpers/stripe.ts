@@ -31,11 +31,7 @@ import { createConnectAccount } from "@server/internal/orgs/orgUtils/createConne
 import type { User } from "better-auth";
 import type { Organization } from "better-auth/plugins";
 import pLimit from "p-limit";
-import {
-	buildWebhookUrl,
-	STRIPE_SUBACCOUNT_CONCURRENCY,
-	TW_ENV,
-} from "../constants.js";
+import { STRIPE_SUBACCOUNT_CONCURRENCY, TW_ENV } from "../constants.js";
 import type { OwnerTag } from "../types.js";
 import { stripeMetadata } from "./owner.js";
 
@@ -144,37 +140,39 @@ export const createSandboxSubAccount = async ({
 };
 
 /**
- * Register a webhook endpoint ON the sub-account (NOT `connect: true`), pointed
- * at the legacy route `/webhooks/stripe/<orgId>/sandbox`. Because the endpoint
- * lives on the sub-account, Stripe only delivers that sub-account's events there
- * → automatic isolation even though every worker's org id is identical.
+ * Register a PLATFORM Connect webhook (`connect: true`, NO `Stripe-Account`
+ * header) pointed at this worker's public URL + the connect route
+ * `/webhooks/connect/<env>`.
  *
- * We skip storing the signing secret: workers run with
- * `STRIPE_WEBHOOK_SKIP_VERIFY=true`, so the seeder never reads it (plan §6a).
+ * WHY not a sub-account endpoint: Stripe does NOT permit configuring webhook
+ * endpoints ON a connected account ("You are not permitted to configure webhook
+ * endpoints on a connected account"). The ONLY way to receive a connected
+ * account's events is a platform Connect webhook routed by `event.account`. Each
+ * worker registers its own, pointed at its own URL; Stripe fans EVERY connected
+ * account's events to EVERY connect endpoint, but the connect seeder's
+ * `getByAccountId` finds an org only for THIS worker's bound sub-account, so the
+ * worker processes its own events and 200-skips the rest → isolation holds.
  *
- * Returns the webhook endpoint id (recorded so teardown can drop it explicitly
- * if deleting the account doesn't cascade — plan §9a teardown step 2).
+ * LIMIT: Stripe caps webhook endpoints at 16/account, so this per-worker model
+ * tops out at ~16 workers. Larger swarms need ONE shared Connect webhook + an
+ * ingress that fans events to workers by `event.account` (planned follow-up).
+ *
+ * Skip-verify is on (`STRIPE_WEBHOOK_SKIP_VERIFY=true`), so we don't store the
+ * signing secret. Returns the endpoint id (recorded for teardown).
  */
 export const registerSubAccountWebhook = async ({
-	accountId,
 	publicUrl,
-	orgId,
 }: {
-	accountId: string;
 	publicUrl: string;
-	orgId: string;
 }): Promise<string> => {
-	// Sub-account-scoped client (the `stripeAccount` header is set), so the
-	// endpoint is created ON the sub-account — deliberately not a platform
-	// `connect: true` endpoint (that one fans every sub-account's events out).
-	const stripeCli = initMasterStripe({
-		env: AppEnv.Sandbox,
-		accountId,
-	});
+	// PLATFORM client (no `accountId`/`stripeAccount`) — required for a
+	// `connect: true` endpoint. A sub-account-scoped client is rejected by Stripe.
+	const stripeCli = initMasterStripe({ env: AppEnv.Sandbox });
 
 	const endpoint = await stripeCli.webhookEndpoints.create({
-		url: buildWebhookUrl(publicUrl, orgId, TW_ENV),
+		url: `${publicUrl}/webhooks/connect/${TW_ENV}`,
 		enabled_events: WEBHOOK_EVENTS,
+		connect: true,
 	});
 
 	return endpoint.id;

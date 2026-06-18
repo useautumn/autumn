@@ -47,6 +47,7 @@ import {
 	SERVER_PORT,
 	SQS_QUEUE_URL_V2,
 	TRACK_SQS_QUEUE_URL,
+	STRIPE_CONNECT_WEBHOOK_LIMIT,
 	TW_ENV,
 	WARM_SANDBOX_PREFIX,
 } from "../constants.ts";
@@ -578,11 +579,7 @@ const provisionWorker = async ({
 	// 3. Resolve the public URL (the inbound Stripe webhook target) and register
 	//    the webhook ON the sub-account, recording it before boot proceeds (§9a).
 	const publicUrl = getPublicUrl(sandbox, SERVER_PORT);
-	const webhookId = await registerSubAccountWebhook({
-		accountId,
-		publicUrl,
-		orgId,
-	});
+	const webhookId = await registerSubAccountWebhook({ publicUrl });
 	await registry.addWebhook(runId, {
 		sandboxName: sandbox.name,
 		accountId,
@@ -720,6 +717,17 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			);
 		}
 		effectiveWorkers = Math.max(effectiveWorkers, MIN_WORKERS_FOR_MIXED_RUN);
+	}
+
+	// Each worker registers its own platform Connect webhook; Stripe caps webhook
+	// endpoints at 16/account, so the per-worker model tops out there. Cap (with a
+	// warning) rather than fail on the 17th webhook creation. Larger swarms need a
+	// shared Connect webhook + an ingress that routes by event.account (follow-up).
+	if (effectiveWorkers > STRIPE_CONNECT_WEBHOOK_LIMIT) {
+		log(
+			`note: capping ${effectiveWorkers} → ${STRIPE_CONNECT_WEBHOOK_LIMIT} workers (Stripe allows ≤16 webhook endpoints/account; the per-worker Connect-webhook model is limited until the shared ingress lands)`,
+		);
+		effectiveWorkers = STRIPE_CONNECT_WEBHOOK_LIMIT;
 	}
 
 	const maxParallel = effectiveWorkers * Math.max(1, args.perWorker);

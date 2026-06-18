@@ -35,6 +35,14 @@ export const DEFAULT_PER_WORKER = 1;
 export const STRIPE_SUBACCOUNT_CONCURRENCY = 2;
 
 /**
+ * Stripe caps webhook endpoints at 16 per account. Each worker registers its own
+ * platform Connect webhook (the only way to receive a connected account's events
+ * — you can't put a webhook ON a connected account), so the per-worker model is
+ * capped here. Larger swarms need one shared Connect webhook + an ingress.
+ */
+export const STRIPE_CONNECT_WEBHOOK_LIMIT = 16;
+
+/**
  * Deterministic name prefix for the CACHED warm parent (`tw-warm-<refSha>`).
  * Keyed by the git ref's commit sha so it's reused across runs — and across
  * teammates on the same Vercel project — instead of rebuilt every run (plan §4a).
