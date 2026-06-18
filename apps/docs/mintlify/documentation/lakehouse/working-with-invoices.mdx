@@ -1,0 +1,108 @@
+---
+title: "Working with invoices"
+sidebarTitle: "Working with invoices"
+description: "Revenue, MRR, and paying-customer metrics — the rows to drop and the column that actually carries truth."
+---
+
+{/*
+  MAINTAINER SOURCE TRACE — ground every recipe here in code, not prose.
+  - ETL reshape (warehouse columns are passed through verbatim from the billing tables):
+      terraform/risingwave-etl/sql/03_v2.3_mvs_invoices.sql   (api_2_3.invoices, api_2_3.invoice_line_items)
+      terraform/risingwave-etl/sql/03_v2.3_mvs_states.sql      (api_2_3.subscriptions / purchases)
+      terraform/risingwave-etl/sql/03_v2.3_mvs_catalog.sql     (api_2_3.plans price_* columns)
+  - API builders the columns mirror:
+      server/src/internal/invoices/invoiceUtils.ts                                   (invoicesToResponse)
+      server/src/internal/customers/cusUtils/getApiCustomerV2/getApiSubscription/getApiSubscriptionsV2.ts
+  Note: invoices carry no org_id/env of their own — both are joined from the customer in the ETL.
+  Plan-header price (v2_3_plans.price_amount) is the base list price; custom/enterprise pricing is
+  set per subscription and is NOT on the plan header, so plan-header MRR undercounts those accounts.
+*/}
+
+<Warning>
+  **Available on request** — The Autumn Lakehouse is provisioned per customer. Contact us at [hey@useautumn.com](mailto:hey@useautumn.com) to get access.
+</Warning>
+
+The same lesson as [Working with balances](/documentation/lakehouse/balance-semantics) applies across the rest of the schema: **the warehouse stores inputs; the business number is a derivation that drops rows.** Columns are named like a clean OLTP table, but realized revenue, MRR, and paying-customer counts each require knowing which rows to exclude and which column actually carries truth. The traps below all surfaced from running realistic BI queries against live data.
+
+## Revenue: `total` is not realized revenue
+
+`sum(total)` over invoices **overstates** what you collected — typically by low double digits — because `total` is the **gross, pre-refund** amount and includes discounts, proration, and partially-paid invoices. Realized revenue is what cleared, net of refunds:
+
+```text
+realized_revenue = Σ amount_paid − Σ refunded_amount   over status = 'paid'
+```
+
+Three traps around it:
+
+- **Amounts are in the currency's major unit (dollars), not Stripe cents.** Sanity-check one known invoice before scaling — porting Stripe intuition will put you off by 100×.
+- **`void` invoices carry real-looking totals** and must be excluded. Filter `status = 'paid'`, not merely non-null.
+- **`paid` includes negative totals** (credit notes / refunds modeled as negative invoices) — expected, and correctly handled by the `amount_paid − refunded_amount` form.
+
+```sql
+SELECT
+  sum(amount_paid) - sum(refunded_amount) AS net_revenue,
+  sum(total)                              AS gross_total_do_not_use
+FROM `<catalog>`.`<namespace>.v2_3_invoices`
+WHERE env = 'live' AND status = 'paid';
+```
+
+## Paying customers: `status = 'active'` is not "paying"
+
+Active subscriptions include your entire **free** base and everyone **mid-trial**. A naive `count()` of active rows can overstate paying customers by orders of magnitude. A paying customer has an active, **priced**, **non-trial** base subscription — and you must dedup, because one customer holds several subscription rows (versions + add-ons).
+
+```sql
+SELECT uniqExact(s.internal_customer_id) AS paying_customers
+FROM `<catalog>`.`<namespace>.v2_3_subscriptions` AS s
+INNER JOIN `<catalog>`.`<namespace>.v2_3_plans` AS p
+  ON p.internal_id = s.internal_product_id
+WHERE s.env = 'live'
+  AND s.status = 'active'
+  AND s.add_on = false
+  AND coalesce(p.price_amount, 0) > 0
+  AND coalesce(s.trial_ends_at, 0) <= toUnixTimestamp(now()) * 1000;  -- not currently in trial
+```
+
+<Note>
+  Row count ≠ customer count: subscription rows exceed distinct customers because of plan versions, duplicate base rows, and add-ons. Anything customer-level needs `uniqExact(internal_customer_id)`, never `count()`.
+</Note>
+
+## MRR: six footguns, and an honest floor
+
+MRR is the densest seam in the schema. Building it from `v2_3_subscriptions` × `v2_3_plans` hits six independent traps:
+
+1. **Plan versioning is live.** A plan has many internal versions sharing one external `plan_id`. Filtering or joining on `plan_id` silently fans out across versions — join on `internal_product_id → v2_3_plans.internal_id`.
+2. **`plans.price_amount` is hollow exactly where the money is.** For custom / enterprise / usage-priced plans the recurring amount is set **per subscription**, not on the plan header, so the header price is null or zero. Plan-header MRR therefore **systematically undercounts your largest accounts**.
+3. **`status = 'active'` includes free and trial** — exclude price-0 / null-interval plans and in-trial subs (as above).
+4. **Intervals are mixed.** `month` and `year` plans share the same `price_amount` column; summing across them is meaningless. Normalize yearly to monthly (`year → /12`).
+5. **Row count ≠ customer count** — see the dedup note above.
+6. **Add-ons are separate priced rows** (`add_on = true`, e.g. SSO, extra credits). Fold them into MRR, but never treat them as base plans or you double-count.
+
+For an **accurate** figure, derive recurring revenue from invoices / `v2_3_invoice_line_items` (the line items carry the real billed amounts, including custom pricing) rather than the plan header. The query below is a deliberate **floor for self-serve tiers only** — it is correct for plans whose price lives on the header and silently omits custom/enterprise accounts:
+
+```sql
+-- CAVEAT: undercounts. plans.price_amount is null/0 for custom/enterprise/usage plans,
+-- so this covers self-serve tiers only. For true MRR, derive recurring amounts from invoices.
+SELECT
+  sum(
+    multiIf(
+      p.price_interval = 'year',  p.price_amount / 12,
+      p.price_interval = 'month', p.price_amount,
+      0
+    ) * s.quantity
+  ) AS approx_self_serve_mrr
+FROM `<catalog>`.`<namespace>.v2_3_subscriptions` AS s
+INNER JOIN `<catalog>`.`<namespace>.v2_3_plans` AS p
+  ON p.internal_id = s.internal_product_id
+WHERE s.env = 'live'
+  AND s.status = 'active'
+  AND coalesce(p.price_amount, 0) > 0
+  AND coalesce(s.trial_ends_at, 0) <= toUnixTimestamp(now()) * 1000;
+```
+
+## Cross-reference: which overage?
+
+Overage (on the balances side) has the same "two figures" hazard as revenue here — **billable** (what you invoice) vs **displayed** (what the dashboard header shows) diverge by undrawn grants. If a report combines revenue and overage, make sure both pages agree on which overage you mean. See [Working with balances → Overage](/documentation/lakehouse/balance-semantics#overage-is-derived-not-stored-and-there-are-two-of-them).
+
+<Note>
+  All queries here use `env = 'live'` (**not** `production`) and the `` `<catalog>`.`<namespace>.v2_3_…` `` addressing form. Join on `internal_*` ids — external ids are mutable and versioned. See [Querying](/documentation/lakehouse/querying) for the addressing and `IS NULL` footguns.
+</Note>

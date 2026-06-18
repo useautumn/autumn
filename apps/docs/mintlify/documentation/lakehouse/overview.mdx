@@ -12,7 +12,7 @@ The Autumn Lakehouse mirrors your entire Autumn dataset — customers, plans, su
 
 It's built for analytics: BI dashboards, revenue and usage reporting, cohort analysis, and joining Autumn's billing data against your own product data — all in SQL, against the full history.
 
-Every object is delivered as a table named `v2_3_<object>` (for example `v2_3_customers`, `v2_3_subscriptions`, `v2_3_events`) inside a namespace Autumn assigns you.
+Every object is delivered as a table named `v2_3_<object>` (for example `v2_3_customers`, `v2_3_subscriptions`) inside a namespace Autumn assigns you. The usage event log is the one exception — it's immutable and unversioned, delivered as `events` (not `v2_3_events`).
 
 ## How it works
 
