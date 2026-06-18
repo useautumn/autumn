@@ -35,14 +35,6 @@ export const DEFAULT_PER_WORKER = 1;
 export const STRIPE_SUBACCOUNT_CONCURRENCY = 2;
 
 /**
- * Stripe caps webhook endpoints at 16 per account. Each worker registers its own
- * platform Connect webhook (the only way to receive a connected account's events
- * — you can't put a webhook ON a connected account), so the per-worker model is
- * capped here. Larger swarms need one shared Connect webhook + an ingress.
- */
-export const STRIPE_CONNECT_WEBHOOK_LIMIT = 16;
-
-/**
  * Deterministic name prefix for the CACHED warm parent (`tw-warm-<refSha>`).
  * Keyed by the git ref's commit sha so it's reused across runs — and across
  * teammates on the same Vercel project — instead of rebuilt every run (plan §4a).
@@ -54,6 +46,15 @@ export const WARM_SANDBOX_PREFIX = "tw-warm";
  * `ports` at fork so `sandbox.domain(SERVER_PORT)` resolves). Plan §5/§10.
  */
 export const SERVER_PORT = 8080;
+
+/**
+ * The port the Stripe Connect webhook INGRESS sandbox listens on. The ingress is
+ * its OWN lightweight sandbox (it only runs a node http server, no µVM services),
+ * so it can reuse the same base port as the worker server (8080). The orchestrator
+ * exposes this port on the ingress sandbox and registers the ONE shared platform
+ * Connect webhook at `<ingressPublicUrl>/ingress/connect/<env>` (plan §6a / §9a).
+ */
+export const INGRESS_PORT = SERVER_PORT;
 
 /**
  * Vercel sandbox runtime. `node24` is the SDK default and what the swarm pins.

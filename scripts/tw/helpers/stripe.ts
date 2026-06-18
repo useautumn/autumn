@@ -140,42 +140,58 @@ export const createSandboxSubAccount = async ({
 };
 
 /**
- * Register a PLATFORM Connect webhook (`connect: true`, NO `Stripe-Account`
- * header) pointed at this worker's public URL + the connect route
- * `/webhooks/connect/<env>`.
+ * Register the ONE shared PLATFORM Connect webhook (`connect: true`, NO
+ * `Stripe-Account` header) pointed at the ingress sandbox's connect route
+ * `<ingressUrl>/ingress/connect/<env>`.
  *
- * WHY not a sub-account endpoint: Stripe does NOT permit configuring webhook
+ * WHY one shared webhook + an ingress: Stripe does NOT permit configuring webhook
  * endpoints ON a connected account ("You are not permitted to configure webhook
  * endpoints on a connected account"). The ONLY way to receive a connected
- * account's events is a platform Connect webhook routed by `event.account`. Each
- * worker registers its own, pointed at its own URL; Stripe fans EVERY connected
- * account's events to EVERY connect endpoint, but the connect seeder's
- * `getByAccountId` finds an org only for THIS worker's bound sub-account, so the
- * worker processes its own events and 200-skips the rest → isolation holds.
- *
- * LIMIT: Stripe caps webhook endpoints at 16/account, so this per-worker model
- * tops out at ~16 workers. Larger swarms need ONE shared Connect webhook + an
- * ingress that fans events to workers by `event.account` (planned follow-up).
+ * account's events is a platform Connect webhook routed by `event.account`. Stripe
+ * caps webhook endpoints at 16/account, so a per-worker Connect webhook tops out
+ * at ~16 workers. Instead the swarm registers ONE platform Connect webhook → the
+ * ingress sandbox, which routes each event to exactly the owning worker by
+ * `event.account` (scripts/tw/ingress/server.mjs). This removes the 16-worker cap
+ * AND keeps full per-worker delivery isolation.
  *
  * Skip-verify is on (`STRIPE_WEBHOOK_SKIP_VERIFY=true`), so we don't store the
- * signing secret. Returns the endpoint id (recorded for teardown).
+ * signing secret. Returns the endpoint id (recorded for teardown — the platform
+ * Connect webhook is NOT cascade-deleted by sub-account deletion).
  */
-export const registerSubAccountWebhook = async ({
-	publicUrl,
-}: {
-	publicUrl: string;
-}): Promise<string> => {
+export const registerConnectIngressWebhook = async (
+	ingressUrl: string,
+): Promise<string> => {
 	// PLATFORM client (no `accountId`/`stripeAccount`) — required for a
 	// `connect: true` endpoint. A sub-account-scoped client is rejected by Stripe.
 	const stripeCli = initMasterStripe({ env: AppEnv.Sandbox });
 
 	const endpoint = await stripeCli.webhookEndpoints.create({
-		url: `${publicUrl}/webhooks/connect/${TW_ENV}`,
+		url: `${ingressUrl}/ingress/connect/${TW_ENV}`,
 		enabled_events: WEBHOOK_EVENTS,
 		connect: true,
 	});
 
 	return endpoint.id;
+};
+
+/**
+ * Delete the shared platform Connect webhook (idempotently — tolerates
+ * "already deleted"). Unlike a sub-account's account-scoped webhook, the platform
+ * Connect webhook is NOT cascade-deleted when its sub-accounts are deleted, so
+ * teardown must drop it explicitly. Best-effort + time-boxed: logs and continues
+ * on any error so it never blocks teardown.
+ */
+export const deleteConnectWebhook = async (
+	webhookId: string,
+): Promise<void> => {
+	try {
+		const stripeCli = initMasterStripe({ env: AppEnv.Sandbox });
+		await stripeCli.webhookEndpoints.del(webhookId);
+	} catch (error) {
+		console.warn(
+			`[tw] failed to delete connect webhook ${webhookId} (continuing): ${(error as Error).message}`,
+		);
+	}
 };
 
 /**

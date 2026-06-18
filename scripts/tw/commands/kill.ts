@@ -20,7 +20,11 @@
 import chalk from "chalk";
 import { getOwner } from "../helpers/owner.ts";
 import * as registry from "../helpers/registry.ts";
-import { deleteSubAccount, sweepOrphans } from "../helpers/stripe.ts";
+import {
+	deleteConnectWebhook,
+	deleteSubAccount,
+	sweepOrphans,
+} from "../helpers/stripe.ts";
 import { sweepOrphanSvixApps } from "../helpers/svix.ts";
 import { deleteSandbox, listSandboxesByOwner } from "../helpers/vercel.ts";
 import type { RegistryEntry } from "../types.ts";
@@ -79,6 +83,14 @@ const teardownEntry = async (entry: RegistryEntry): Promise<void> => {
 	for (const accountId of entry.subAccounts) {
 		await timeBoxed(`delete sub-account ${accountId}`, () =>
 			deleteSubAccount(accountId),
+		);
+	}
+
+	// The shared platform Connect webhook is NOT cascade-deleted by sub-account
+	// deletion, so drop recorded webhooks explicitly (matches run.ts teardown, §9a).
+	for (const webhook of entry.webhooks) {
+		await timeBoxed(`delete connect webhook ${webhook.webhookId}`, () =>
+			deleteConnectWebhook(webhook.webhookId),
 		);
 	}
 

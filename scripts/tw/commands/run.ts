@@ -47,7 +47,6 @@ import {
 	SERVER_PORT,
 	SQS_QUEUE_URL_V2,
 	TRACK_SQS_QUEUE_URL,
-	STRIPE_CONNECT_WEBHOOK_LIMIT,
 	TW_ENV,
 	WARM_SANDBOX_PREFIX,
 } from "../constants.ts";
@@ -57,13 +56,15 @@ import {
 	sandboxName,
 	vercelTags,
 } from "../helpers/owner.ts";
+import { createIngress, pushWorkerMapping } from "../helpers/ingress.ts";
 import { WorkerPool } from "../helpers/pool.ts";
 import * as registry from "../helpers/registry.ts";
 import { RemoteExecutor } from "../helpers/remoteExecutor.ts";
 import {
 	createSandboxSubAccount,
+	deleteConnectWebhook,
 	deleteSubAccount,
-	registerSubAccountWebhook,
+	registerConnectIngressWebhook,
 } from "../helpers/stripe.ts";
 import {
 	createSvixApp as orchestratorCreateSvixApp,
@@ -100,7 +101,7 @@ const WARMUP_SCRIPT = "scripts/tw/image/warmup.sh";
  * `GITHUB_TOKEN`. Vercel clones this `revision` into the warm sandbox so
  * `build-base.sh` / `warmup.sh` have the repo to operate on.
  */
-const resolveGitSource = (
+export const resolveGitSource = (
 	ref: string,
 ): { url: string; revision: string; username?: string; password?: string } => {
 	const git = (...a: string[]): string =>
@@ -529,8 +530,10 @@ const waitForReady = async ({
 
 /**
  * Provision one worker: fork from the warm snapshot, read its public URL,
- * orchestrator-create + RECORD the Stripe sub-account + webhook BEFORE the worker
- * does anything that can fail (§9a), then run the detached boot and wait READY.
+ * orchestrator-create + RECORD the Stripe sub-account BEFORE the worker does
+ * anything that can fail (§9a), then run the detached boot, wait READY, and push
+ * the `{ accountId → workerUrl }` mapping to the shared ingress so the one Connect
+ * webhook can route this worker's events to it (replaces the per-worker webhook).
  */
 const provisionWorker = async ({
 	idx,
@@ -540,6 +543,8 @@ const provisionWorker = async ({
 	isSvixShard,
 	svixAppId,
 	ownerEmail,
+	ingressUrl,
+	ingressToken,
 	signal,
 }: {
 	idx: number;
@@ -549,6 +554,8 @@ const provisionWorker = async ({
 	isSvixShard: boolean;
 	svixAppId?: string;
 	ownerEmail: string;
+	ingressUrl: string;
+	ingressToken: string;
 	signal: AbortSignal;
 }): Promise<ProvisionedWorker> => {
 	const name = sandboxName(owner, runId, idx);
@@ -576,20 +583,25 @@ const provisionWorker = async ({
 	});
 	await registry.addSandbox(runId, { name: sandbox.name });
 
-	// 3. Resolve the public URL (the inbound Stripe webhook target) and register
-	//    the webhook ON the sub-account, recording it before boot proceeds (§9a).
+	// 3. Resolve the public URL (the worker's connect-route target).
 	const publicUrl = getPublicUrl(sandbox, SERVER_PORT);
-	const webhookId = await registerSubAccountWebhook({ publicUrl });
-	await registry.addWebhook(runId, {
-		sandboxName: sandbox.name,
-		accountId,
-		webhookId,
-	});
 
 	// 4. Boot the worker (detached) and wait for READY.
 	log(`worker ${name}: booting${isSvixShard ? " (svix shard)" : ""}`);
 	await waitForReady({ sandbox, name, signal });
 	log(`worker ${name}: READY`);
+
+	// 5. Push the `{ accountId → workerUrl }` mapping to the shared ingress so the
+	//    one platform Connect webhook routes THIS sub-account's events here. Because
+	//    the RUN phase only starts after all provisionTasks resolve, every mapping is
+	//    in place before any test fires events — no race (replaces the per-worker
+	//    Connect webhook + its 16-worker cap, §6a).
+	await pushWorkerMapping({
+		ingressUrl,
+		token: ingressToken,
+		accountId,
+		workerUrl: publicUrl,
+	});
 
 	const handle: WorkerHandle = {
 		name,
@@ -647,12 +659,21 @@ const teardown = async ({
 	}
 
 	log(
-		`teardown: ${entry.subAccounts.length} sub-account(s), ${entry.sandboxes.length} sandbox(es)`,
+		`teardown: ${entry.subAccounts.length} sub-account(s), ${entry.webhooks.length} webhook(s), ${entry.sandboxes.length} sandbox(es)`,
 	);
 
 	for (const accountId of entry.subAccounts) {
 		await timeBoxed(`delete sub-account ${accountId}`, () =>
 			deleteSubAccount(accountId),
+		);
+	}
+
+	// Delete recorded webhooks (the shared platform Connect webhook). Unlike a
+	// sub-account's account-scoped webhook, the platform Connect webhook is NOT
+	// cascade-deleted by sub-account deletion, so drop it explicitly (§9a).
+	for (const webhook of entry.webhooks) {
+		await timeBoxed(`delete connect webhook ${webhook.webhookId}`, () =>
+			deleteConnectWebhook(webhook.webhookId),
 		);
 	}
 
@@ -719,17 +740,9 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		effectiveWorkers = Math.max(effectiveWorkers, MIN_WORKERS_FOR_MIXED_RUN);
 	}
 
-	// Each worker registers its own platform Connect webhook; Stripe caps webhook
-	// endpoints at 16/account, so the per-worker model tops out there. Cap (with a
-	// warning) rather than fail on the 17th webhook creation. Larger swarms need a
-	// shared Connect webhook + an ingress that routes by event.account (follow-up).
-	if (effectiveWorkers > STRIPE_CONNECT_WEBHOOK_LIMIT) {
-		log(
-			`note: capping ${effectiveWorkers} → ${STRIPE_CONNECT_WEBHOOK_LIMIT} workers (Stripe allows ≤16 webhook endpoints/account; the per-worker Connect-webhook model is limited until the shared ingress lands)`,
-		);
-		effectiveWorkers = STRIPE_CONNECT_WEBHOOK_LIMIT;
-	}
-
+	// No per-worker webhook cap: the swarm registers ONE shared platform Connect
+	// webhook → the ingress sandbox, which routes each event to the owning worker by
+	// `event.account` (§6a). This removes the old Stripe 16-webhook/account ceiling.
 	const maxParallel = effectiveWorkers * Math.max(1, args.perWorker);
 
 	log(
@@ -787,6 +800,35 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			signal,
 		});
 
+		// ----- INGRESS --------------------------------------------------------
+		// Stand up the ONE shared Connect webhook ingress before fanning out: a
+		// lightweight sandbox running the ingress http server, plus the single
+		// platform Connect webhook pointed at it. Workers push their
+		// `{ accountId → workerUrl }` mapping to it as they come up; Stripe → the one
+		// Connect webhook → ingress → the owning worker, routed by `event.account`.
+		// Both are recorded so teardown drops them (the ingress sandbox via the
+		// sandbox loop, the platform webhook explicitly — it is NOT cascade-deleted
+		// by sub-account deletion). Replaces the per-worker webhook + its 16-cap (§6a).
+		log("creating shared Connect webhook ingress");
+		const ingress = await createIngress({
+			owner,
+			runId,
+			ref: args.ref,
+			signal,
+		});
+		await registry.addSandbox(runId, { name: ingress.sandbox.name });
+		const ingressWebhookId = await registerConnectIngressWebhook(
+			ingress.publicUrl,
+		);
+		await registry.addWebhook(runId, {
+			sandboxName: ingress.sandbox.name,
+			accountId: "platform",
+			webhookId: ingressWebhookId,
+		});
+		log(
+			`ingress ready (${ingress.publicUrl}), platform Connect webhook ${ingressWebhookId} registered`,
+		);
+
 		// ----- FAN-OUT --------------------------------------------------------
 		// Worker 0 is the dedicated svix shard when svix files exist (plan §7).
 		// The orchestrator creates + RECORDS the one svix app BEFORE that worker
@@ -813,6 +855,8 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 					isSvixShard,
 					svixAppId: isSvixShard ? svixAppId : undefined,
 					ownerEmail,
+					ingressUrl: ingress.publicUrl,
+					ingressToken: ingress.token,
 					signal,
 				}),
 			);
