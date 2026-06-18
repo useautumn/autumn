@@ -1,5 +1,5 @@
 import { InternalError, Scopes } from "@autumn/shared";
-import { getAdminS3Config } from "@/external/aws/s3/adminS3Config.js";
+import { getPublicAssetsS3Config } from "@/external/aws/s3/publicAssetsS3Config.js";
 import { getS3PresignedPutUrl } from "@/external/aws/s3/s3PresignUtils.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 
@@ -23,12 +23,12 @@ export const handleGetUploadUrl = createRoute({
 		const ctx = c.get("ctx");
 		const { org } = ctx;
 
-		const { bucket, region } = getAdminS3Config();
+		const { bucket, region } = getPublicAssetsS3Config();
 		const key = `${ORG_LOGOS_PREFIX}/${org.id}`;
 
 		if (!bucket || !region) {
 			throw new InternalError({
-				message: "S3 storage not configured",
+				message: "Public asset storage not configured",
 				code: "s3_not_configured",
 			});
 		}
