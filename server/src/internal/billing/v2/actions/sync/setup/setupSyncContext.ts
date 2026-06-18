@@ -93,6 +93,10 @@ const buildProductContext = async ({
 		const transition = setupAttachTransitionContext({
 			fullCustomer,
 			attachProduct: fullProduct,
+			// Scope the "previous product to expire" lookup to the plan's entity
+			// so an entity-scoped sync replaces the existing product on that
+			// same entity rather than missing it (which would duplicate).
+			internalEntityId: entity?.internal_id,
 		});
 		currentCustomerProduct = transition.currentCustomerProduct;
 	}

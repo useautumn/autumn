@@ -103,6 +103,7 @@ const buildProposal = async ({
 			customerId,
 			subscription,
 			schedule,
+			customerProducts,
 		},
 	);
 
