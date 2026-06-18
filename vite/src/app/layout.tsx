@@ -9,17 +9,17 @@ import { SandboxBanner } from "@/components/general/SandboxBanner";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { PortalContainerContext } from "@/contexts/PortalContainerContext";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
-import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import CommandBar from "@/views/command-bar/CommandBar";
-import LoadingScreen from "@/views/general/LoadingScreen";
 import { useEventNames } from "@/views/customers/customer/analytics/hooks/useEventNames";
+import LoadingScreen from "@/views/general/LoadingScreen";
 import { InviteNotifications } from "@/views/general/notifications/InviteNotifications";
 import { DeployToProdDialog } from "@/views/main-sidebar/components/deploy-button/DeployToProdDialog";
 import { MainSidebar } from "@/views/main-sidebar/MainSidebar";
@@ -83,7 +83,7 @@ const MainContent = ({
 	onOpenMobileSidebar: () => void;
 }) => {
 	const env = useEnv();
-	const { org } = useOrg();
+	const { org, isLoading: orgLoading } = useOrg();
 	const [showDeployDialog, setShowDeployDialog] = useState(false);
 
 	useDevQuery();
@@ -92,6 +92,8 @@ const MainContent = ({
 	useFeaturesQuery();
 	useRewardsQuery();
 	useEventNames();
+
+	const showLoading = orgLoading || !org;
 
 	return (
 		<AppContext.Provider value={{}}>
@@ -134,7 +136,7 @@ const MainContent = ({
 						)}
 					>
 						<div className="w-full h-full justify-center">
-							<Outlet />
+							{showLoading ? <LoadingScreen /> : <Outlet />}
 						</div>
 					</div>
 				</div>

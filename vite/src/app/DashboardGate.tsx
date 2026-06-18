@@ -1,5 +1,5 @@
-import { Navigate, Outlet, useLocation } from "react-router";
 import { useEffect, useState } from "react";
+import { Navigate, Outlet, useLocation } from "react-router";
 import {
 	clearLastSwitchedOrgId,
 	getLastSwitchedOrgId,
@@ -8,14 +8,13 @@ import {
 } from "@/hooks/common/useOrg";
 import { useListOrganizations, useSession } from "@/lib/auth-client";
 import { getOrgRouteRedirect } from "@/utils/genUtils";
-import LoadingScreen from "@/views/general/LoadingScreen";
 
 export const DashboardGate = () => {
 	const { pathname, search } = useLocation();
 	const { data: session, isPending: sessionLoading } = useSession();
-	const { data: orgList, isPending: orgListLoading } = useListOrganizations();
+	const { data: orgList } = useListOrganizations();
 	const switchActiveOrg = useSwitchActiveOrg();
-	const { org, isLoading: orgLoading, error: orgError } = useOrg();
+	const { org, error: orgError } = useOrg();
 	const [switchingToLastOrg, setSwitchingToLastOrg] = useState(false);
 	const [ignoredLastOrgId, setIgnoredLastOrgId] = useState<string | null>(null);
 	const lastOrgId = getLastSwitchedOrgId();
@@ -52,12 +51,9 @@ export const DashboardGate = () => {
 		switchingToLastOrg,
 	]);
 
-	if (sessionLoading) return <LoadingScreen fullPage />;
-	if (!session) return <Navigate to="/sign-in" replace />;
-	if (orgListLoading || shouldSwitchToLastOrg || switchingToLastOrg) {
-		return <LoadingScreen fullPage />;
+	if (!sessionLoading && !session) {
+		return <Navigate to="/sign-in" replace />;
 	}
-	if (orgLoading) return <LoadingScreen fullPage />;
 	if (orgError) {
 		return (
 			<div className="flex min-h-screen w-full items-center justify-center">
@@ -76,14 +72,15 @@ export const DashboardGate = () => {
 			</div>
 		);
 	}
-	if (!org) return <LoadingScreen fullPage />;
 
-	const redirect = getOrgRouteRedirect({
-		pathname,
-		search,
-		deployed: org.deployed,
-	});
-	if (redirect) return <Navigate to={redirect} replace />;
+	if (org) {
+		const redirect = getOrgRouteRedirect({
+			pathname,
+			search,
+			deployed: org.deployed,
+		});
+		if (redirect) return <Navigate to={redirect} replace />;
+	}
 
 	return <Outlet />;
 };
