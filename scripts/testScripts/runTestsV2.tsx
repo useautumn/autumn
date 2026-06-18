@@ -589,11 +589,24 @@ interface StaticItem {
 	willRetry?: boolean;
 }
 
+/**
+ * Swarm-only run metadata, present ONLY when the runner is driven in-process by
+ * the `bun tw` orchestrator (never under `bun t`). Drives the header line and the
+ * "full logs at …" pointer in the final summary. Its absence is what keeps `bun t`
+ * output unchanged.
+ */
+interface SwarmRunMeta {
+	target: string;
+	workers: number;
+	logFile: string;
+}
+
 interface TestRunnerAppProps {
 	testFiles: string[];
 	maxParallel: number;
 	verbose: boolean;
 	executor: TestExecutor;
+	swarm?: SwarmRunMeta;
 	/**
 	 * Invoked once, when the run finishes, with the intended exit code. The
 	 * caller decides how the process winds down: `bun t` exits for real; the
@@ -609,6 +622,7 @@ function TestRunnerApp({
 	maxParallel,
 	verbose,
 	executor,
+	swarm,
 	onComplete,
 }: TestRunnerAppProps) {
 	const { exit } = useApp();
@@ -953,7 +967,20 @@ function TestRunnerApp({
 				}}
 			</Static>
 
-			{/* Dynamic section below — only this part re-renders */}
+			{/* Dynamic section below — only this part re-renders. The header is a
+			    single constant line, so it never reflows. */}
+			{swarm && (
+				<Text>
+					<Text bold color="cyan">
+						swarm
+					</Text>
+					<Text dimColor>
+						{" "}
+						{swarm.target} · {swarm.workers} worker
+						{swarm.workers === 1 ? "" : "s"}
+					</Text>
+				</Text>
+			)}
 			<Text dimColor>{"─".repeat(60)}</Text>
 
 			{/* Running files */}
@@ -999,7 +1026,7 @@ function TestRunnerApp({
 			{/* Final summary when complete */}
 			{isComplete && (
 				<Box flexDirection="column" marginTop={1}>
-					<FinalSummary results={allResults} />
+					<FinalSummary results={allResults} swarm={swarm} />
 				</Box>
 			)}
 		</Box>
@@ -1008,9 +1035,10 @@ function TestRunnerApp({
 
 interface FinalSummaryProps {
 	results: TestFileResult[];
+	swarm?: SwarmRunMeta;
 }
 
-function FinalSummary({ results }: FinalSummaryProps) {
+function FinalSummary({ results, swarm }: FinalSummaryProps) {
 	const allTests = results.flatMap((r) => r.tests);
 	const passedTests = allTests.filter((t) => t.status === "passed");
 	const failedTests = allTests.filter((t) => t.status === "failed");
@@ -1048,6 +1076,7 @@ function FinalSummary({ results }: FinalSummaryProps) {
 				<Text color="green" bold>
 					{"═".repeat(60)}
 				</Text>
+				{swarm && <SwarmLogHint logFile={swarm.logFile} />}
 			</Box>
 		);
 	}
@@ -1123,8 +1152,18 @@ function FinalSummary({ results }: FinalSummaryProps) {
 			<Text color="red" bold>
 				{"═".repeat(60)}
 			</Text>
+			{swarm && <SwarmLogHint logFile={swarm.logFile} />}
 		</Box>
 	);
+}
+
+/**
+ * One-line pointer (swarm only) to the run log file that captured the full
+ * orchestrator/ingress/worker firehose during the run, so the user can inspect
+ * the noise that quiet-mode kept off the terminal.
+ */
+function SwarmLogHint({ logFile }: { logFile: string }) {
+	return <Text dimColor>full run log: {logFile}</Text>;
 }
 
 // ============================================================================
@@ -1144,7 +1183,7 @@ function FinalSummary({ results }: FinalSummaryProps) {
 export function runWithExecutor(
 	testFiles: string[],
 	executor: TestExecutor,
-	opts: { maxParallel: number; verbose?: boolean },
+	opts: { maxParallel: number; verbose?: boolean; swarm?: SwarmRunMeta },
 ): void {
 	const onComplete = (exitCode: number): void => {
 		// Tear down Ink so the process can exit cleanly. The flush `setInterval`
@@ -1164,6 +1203,7 @@ export function runWithExecutor(
 			executor={executor}
 			maxParallel={opts.maxParallel}
 			onComplete={onComplete}
+			swarm={opts.swarm}
 			testFiles={testFiles}
 			verbose={opts.verbose ?? false}
 		/>,

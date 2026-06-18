@@ -44,19 +44,27 @@ import {
 	DATABASE_URL,
 	PROJECT_ROOT,
 	REDIS_URL,
+	REGISTRY_DIR,
 	SERVER_PORT,
 	SQS_QUEUE_URL_V2,
 	TRACK_SQS_QUEUE_URL,
 	TW_ENV,
 	WARM_SANDBOX_PREFIX,
 } from "../constants.ts";
+import { createIngress, pushWorkerMapping } from "../helpers/ingress.ts";
+import {
+	disableQuietMode,
+	enableQuietMode,
+	setLogFile,
+	sink,
+	sinkLine,
+} from "../helpers/logSink.ts";
 import {
 	getOwner,
 	newRunId,
 	sandboxName,
 	vercelTags,
 } from "../helpers/owner.ts";
-import { createIngress, pushWorkerMapping } from "../helpers/ingress.ts";
 import { WorkerPool } from "../helpers/pool.ts";
 import * as registry from "../helpers/registry.ts";
 import { RemoteExecutor } from "../helpers/remoteExecutor.ts";
@@ -111,7 +119,8 @@ export const resolveGitSource = (
 				Bun.spawnSync(["git", ...a], { stdout: "pipe", stderr: "pipe" }).stdout,
 			)
 			.trim();
-	let url = process.env.TW_GIT_URL || git("config", "--get", "remote.origin.url");
+	let url =
+		process.env.TW_GIT_URL || git("config", "--get", "remote.origin.url");
 	if (url.startsWith("git@github.com:")) {
 		url = `https://github.com/${url.slice("git@github.com:".length)}`;
 	}
@@ -139,15 +148,15 @@ const sleep = (ms: number): Promise<void> =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
 const log = (message: string): void => {
-	console.log(chalk.cyan(`[tw] ${message}`));
+	sinkLine(chalk.cyan(`[tw] ${message}`));
 };
 
 const warn = (message: string): void => {
-	console.warn(chalk.yellow(`[tw] ${message}`));
+	sinkLine(chalk.yellow(`[tw] ${message}`));
 };
 
 const errorLog = (message: string): void => {
-	console.error(chalk.red(`[tw] ${message}`));
+	sinkLine(chalk.red(`[tw] ${message}`));
 };
 
 /** Run a best-effort, time-boxed async action; never throws (teardown safety). */
@@ -519,7 +528,9 @@ const getOrBuildWarmParent = async ({
 	// broken cache entry isn't reused next run, and no workers are forked (the
 	// "don't get wrecked ×1000" property, plan §4b step 3).
 	const failBuild = async (message: string): Promise<never> => {
-		await timeBoxed(`delete warm parent ${warmName}`, () => deleteSandbox(warm));
+		await timeBoxed(`delete warm parent ${warmName}`, () =>
+			deleteSandbox(warm),
+		);
 		throw new Error(message);
 	};
 
@@ -527,7 +538,7 @@ const getOrBuildWarmParent = async ({
 	const baseRun = await runStreaming(
 		warm,
 		["bash", BUILD_BASE_SCRIPT],
-		(text) => process.stdout.write(text),
+		(text) => sink(text),
 		{ signal, swallowStreamClose: true },
 	);
 	if (baseRun.exitCode !== 0) {
@@ -540,7 +551,7 @@ const getOrBuildWarmParent = async ({
 	const warmRun = await runStreaming(
 		warm,
 		["bash", WARMUP_SCRIPT, ref],
-		(text) => process.stdout.write(text),
+		(text) => sink(text),
 		{ signal, swallowStreamClose: true },
 	);
 	if (warmRun.exitCode !== 0) {
@@ -586,13 +597,21 @@ const waitForReady = async ({
 		resolveReady = resolve;
 	});
 
-	const sink = new Writable({
+	// Forward the worker's BOOT output through the log sink ONLY until READY.
+	// Before READY the orchestrator has no TUI (the sink writes to stdout, useful
+	// boot progress); once the run phase mounts Ink the sink is quiet (the lines
+	// go to the run log file). After READY we stop forwarding entirely — the
+	// worker's per-request server logs (incl. noisy `[Redis] Connection error`
+	// retries × 50 workers) are pure noise during the run.
+	const bootSink = new Writable({
 		write(chunk, _encoding, callback) {
-			const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
-			process.stdout.write(chalk.gray(`[${name}] ${text}`));
-			if (!ready && text.includes(READY_SENTINEL)) {
-				ready = true;
-				resolveReady();
+			if (!ready) {
+				const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
+				sinkLine(chalk.gray(`[${name}] ${text.replace(/\n$/, "")}`));
+				if (text.includes(READY_SENTINEL)) {
+					ready = true;
+					resolveReady();
+				}
 			}
 			callback();
 		},
@@ -605,8 +624,8 @@ const waitForReady = async ({
 		args: [BOOT_SCRIPT],
 		cwd: SANDBOX_REPO_ROOT,
 		detached: true,
-		stdout: sink,
-		stderr: sink,
+		stdout: bootSink,
+		stderr: bootSink,
 		signal,
 	});
 
@@ -816,6 +835,13 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 	const runId = newRunId();
 	const ownerEmail = process.env.TW_OWNER_EMAIL ?? OWNER_EMAIL_FALLBACK;
 
+	// Point the log sink at this run's log file. During the RUN phase (Ink mounted)
+	// quiet mode routes ALL orchestrator/ingress/worker-boot logging here instead of
+	// stdout, so Ink owns the terminal; resolve/warm-up/fan-out/teardown still print
+	// to stdout. The file keeps the full firehose for `bun tw` to point the user at.
+	const runLogFile = join(REGISTRY_DIR, "runs", `${runId}.log`);
+	setLogFile(runLogFile);
+
 	log(`resolving test files for: ${args.groupsOrPatterns.join(" ") || "core"}`);
 	const allFiles = await resolveTestFiles(args.groupsOrPatterns);
 	if (allFiles.length === 0) {
@@ -1006,6 +1032,16 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		const resolveSandbox = (worker: WorkerHandle): Sandbox | undefined =>
 			sandboxByName.get(worker.name);
 
+		// Shared swarm metadata for the in-process Ink TUI — drives its header and the
+		// "full logs at …" pointer in the final summary, and (by its mere presence)
+		// tells the runner it is the swarm TUI rather than `bun t`.
+		const swarmTarget = args.groupsOrPatterns.join(" ") || "core";
+		const swarmMeta: SwarmRunMeta = {
+			target: swarmTarget,
+			workers: effectiveWorkers,
+			logFile: runLogFile,
+		};
+
 		// Route svix files onto the svix shard, normal onto the rest. The routing
 		// constraint is a build-time partition (plan §7): the svix files run on a
 		// pool of exactly the one svix shard, the normal files on a pool of the
@@ -1020,6 +1056,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			});
 			await runFiles(svixFiles, svixExecutor, {
 				maxParallel: Math.max(1, args.perWorker),
+				swarm: { ...swarmMeta, target: `${swarmTarget} (svix shard)` },
 			});
 			svixPool.close();
 		}
@@ -1049,6 +1086,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			);
 			await runFiles(normalFiles, normalExecutor, {
 				maxParallel: normalParallel,
+				swarm: swarmMeta,
 			});
 			normalPool.close();
 		}
@@ -1108,16 +1146,28 @@ let lastRunExitCode = 0;
  * typed dynamic import — Bun handles the JSX at runtime, and the orchestrator
  * never type-checks the JSX module. The signature mirrors the runner's export.
  */
+/**
+ * Swarm-only run metadata (set by `bun tw`, never by `bun t`). Its presence tells
+ * the runner it is the IN-PROCESS swarm TUI — so it may render a swarm header + the
+ * run log file path in its final summary. `bun t` passes no `swarm`, so its
+ * semantics and output are unchanged.
+ */
+type SwarmRunMeta = {
+	target: string;
+	workers: number;
+	logFile: string;
+};
+
 type RunWithExecutor = (
 	testFiles: string[],
 	executor: TestExecutor,
-	opts: { maxParallel: number; verbose?: boolean },
+	opts: { maxParallel: number; verbose?: boolean; swarm?: SwarmRunMeta },
 ) => void;
 
 const runFiles = async (
 	files: string[],
 	executor: TestExecutor,
-	opts: { maxParallel: number },
+	opts: { maxParallel: number; swarm?: SwarmRunMeta },
 ): Promise<void> => {
 	if (files.length === 0) {
 		return;
@@ -1132,6 +1182,23 @@ const runFiles = async (
 	};
 	const { runWithExecutor } = runnerModule;
 
+	// Quiet mode for the duration of the in-process Ink TUI: ALL orchestrator,
+	// ingress, and worker-boot logging routes to the run log file so Ink is the
+	// SOLE stdout writer. Restored in `finally` so teardown logs hit stdout again.
+	enableQuietMode();
+	try {
+		await runInk(runWithExecutor, files, executor, opts);
+	} finally {
+		disableQuietMode();
+	}
+};
+
+const runInk = async (
+	runWithExecutor: RunWithExecutor,
+	files: string[],
+	executor: TestExecutor,
+	opts: { maxParallel: number; swarm?: SwarmRunMeta },
+): Promise<void> => {
 	await new Promise<void>((resolve) => {
 		const realExit = process.exit.bind(process);
 		let restored = false;
@@ -1160,7 +1227,10 @@ const runFiles = async (
 		}) as typeof process.exit;
 
 		try {
-			runWithExecutor(files, executor, { maxParallel: opts.maxParallel });
+			runWithExecutor(files, executor, {
+				maxParallel: opts.maxParallel,
+				swarm: opts.swarm,
+			});
 		} catch (error) {
 			restore();
 			warn(`runner threw during render: ${(error as Error).message}`);

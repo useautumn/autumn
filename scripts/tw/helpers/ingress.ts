@@ -19,8 +19,14 @@ import { randomUUID } from "node:crypto";
 import { Writable } from "node:stream";
 import { Sandbox } from "@vercel/sandbox";
 import chalk from "chalk";
-import { INGRESS_PORT, TW_ENV, VERCEL_RUNTIME, WORKER_TIMEOUT_MS } from "../constants.ts";
 import { resolveGitSource } from "../commands/run.ts";
+import {
+	INGRESS_PORT,
+	TW_ENV,
+	VERCEL_RUNTIME,
+	WORKER_TIMEOUT_MS,
+} from "../constants.ts";
+import { sinkLine } from "./logSink.ts";
 import { getPublicUrl, isSandboxStreamClosed } from "./vercel.ts";
 
 /** Path to the ingress http server, relative to the in-sandbox repo root. */
@@ -40,7 +46,7 @@ const sleep = (ms: number): Promise<void> =>
 	new Promise((resolve) => setTimeout(resolve, ms));
 
 const log = (message: string): void => {
-	console.log(chalk.cyan(`[tw] ${message}`));
+	sinkLine(chalk.cyan(`[tw] ${message}`));
 };
 
 export type CreateIngressResult = {
@@ -103,11 +109,14 @@ export const createIngress = async ({
 	const publicUrl = getPublicUrl(sandbox, INGRESS_PORT);
 
 	// Launch the ingress http server DETACHED — it must keep running for the whole
-	// run (mirrors the worker boot's detached runCommand in run.ts).
-	const sink = new Writable({
+	// run (mirrors the worker boot's detached runCommand in run.ts). Forward its
+	// output through the shared log sink, so during the RUN phase (Ink mounted) the
+	// `[ingress] …` firehose lands in the run log file instead of fighting the TUI
+	// for stdout.
+	const ingressSink = new Writable({
 		write(chunk, _encoding, callback) {
 			const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
-			process.stdout.write(chalk.gray(`[ingress] ${text}`));
+			sinkLine(chalk.gray(`[ingress] ${text.replace(/\n$/, "")}`));
 			callback();
 		},
 	});
@@ -116,8 +125,8 @@ export const createIngress = async ({
 		args: [INGRESS_SCRIPT],
 		cwd: SANDBOX_REPO_ROOT,
 		detached: true,
-		stdout: sink,
-		stderr: sink,
+		stdout: ingressSink,
+		stderr: ingressSink,
 		signal,
 	});
 
