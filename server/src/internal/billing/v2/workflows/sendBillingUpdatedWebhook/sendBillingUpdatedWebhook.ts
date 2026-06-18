@@ -3,7 +3,7 @@
  *
  * Skips when:
  *   - `ctx.testOptions?.skipWebhooks` is set
- *   - the resulting response has no `plan_changes`
+ *   - the resulting response has no `plan_changes` and no `tags`
  *
  * Intended to be called fire-and-forget from emission sites:
  *   `void sendBillingUpdatedWebhook({ ctx, autumnBillingPlan, originalFullCustomer });`
@@ -18,7 +18,10 @@ import {
 } from "@autumn/shared";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { buildBillingChangeResponse } from "@/internal/billing/v2/utils/billingChangeResponse";
+import {
+	billingChangeResponseHasContent,
+	buildBillingChangeResponse,
+} from "@/internal/billing/v2/utils/billingChangeResponse";
 
 export const sendBillingUpdatedWebhook = async ({
 	ctx,
@@ -41,7 +44,7 @@ export const sendBillingUpdatedWebhook = async ({
 			tags,
 		});
 
-		if (response.plan_changes.length === 0) return;
+		if (!billingChangeResponseHasContent(response)) return;
 
 		// Svix message tags (separate from the payload `tags` field) — used
 		// for routing/filtering at the Svix dashboard level. Mirrors the
