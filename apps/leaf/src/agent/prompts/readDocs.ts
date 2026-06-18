@@ -4,6 +4,7 @@ export const agentDocUris = [
 	"autumn://docs/concepts",
 	"autumn://docs/plan-management",
 	"autumn://docs/billing",
+	"autumn://docs/logs",
 ];
 
 export const readDocs = async ({ mcp }: { mcp: MCPClient }) => {

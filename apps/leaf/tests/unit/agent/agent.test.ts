@@ -53,6 +53,7 @@ describe("chat environment selection", () => {
 			"autumn://docs/concepts",
 			"autumn://docs/plan-management",
 			"autumn://docs/billing",
+			"autumn://docs/logs",
 		]);
 	});
 

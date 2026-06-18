@@ -55,6 +55,7 @@
 						"group": " ",
 						"pages": [
 							"welcome",
+							"documentation/mcp",
 							{
 								"group": "Concepts",
 								"pages": [
