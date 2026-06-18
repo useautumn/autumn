@@ -21,6 +21,11 @@ import { checkoutActions } from "../actions";
 
 const STRIPE_SESSION_ID_REGEX = /cs_(test|live)_[A-Za-z0-9]+/;
 
+const isLongLivedAttachCheckout = (checkout: Checkout) =>
+	checkout.action === CheckoutAction.Attach &&
+	"long_lived_checkout" in checkout.params &&
+	checkout.params.long_lived_checkout === true;
+
 const getActiveStripeCheckoutUrl = async ({
 	ctx,
 	url,
@@ -40,8 +45,9 @@ const getActiveStripeCheckoutUrl = async ({
 	} catch (error) {
 		if (error instanceof Stripe.errors.StripeError) {
 			ctx.logger.warn(`Unable to retrieve checkout session ${sessionId}`);
+			return null;
 		}
-		return null;
+		throw error;
 	}
 };
 
@@ -69,9 +75,9 @@ export const handleStartLongLivedCheckout = createRoute({
 		const ctx = c.get("ctx");
 		const checkout = c.get("checkout");
 
-		if (checkout.action !== CheckoutAction.Attach) {
+		if (!isLongLivedAttachCheckout(checkout)) {
 			throw new RecaseError({
-				message: "Long-lived checkout only supports attach checkouts",
+				message: "Long-lived checkout start only supports long-lived attach checkouts",
 				code: ErrCode.InvalidRequest,
 				statusCode: StatusCodes.BAD_REQUEST,
 			});

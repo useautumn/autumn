@@ -23,7 +23,7 @@ import {
 	createAutumnCheckout,
 } from "../../common/createAutumnCheckout";
 
-const LONG_LIVED_CHECKOUT_EXPIRY_MS = ms.days(30);
+const LONG_LIVED_CHECKOUT_EXPIRY_MS = ms.days(90);
 
 export async function attach({
 	ctx,

@@ -136,7 +136,7 @@ export function AttachPlanOptions() {
 
 			<ConfigRow
 				title="Long-lived Checkout"
-				description="Create a reusable link that stays valid for 30 days"
+				description="Create a checkout link that stays valid for 90 days"
 				action={
 					<Switch
 						checked={!!longLivedCheckout}
