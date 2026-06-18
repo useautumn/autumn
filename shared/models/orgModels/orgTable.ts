@@ -100,6 +100,7 @@ export const organizations = pgTable(
 		created_by: text("created_by"),
 		onboarded: boolean("onboarded").default(false),
 		deployed: boolean("deployed").default(false),
+		is_sandbox: boolean("is_sandbox").default(false).notNull(),
 
 		redis_config: jsonb("redis_config").$type<OrgRedisConfig>(),
 	},

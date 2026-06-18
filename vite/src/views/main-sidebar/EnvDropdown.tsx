@@ -2,7 +2,7 @@
 "use client";
 
 import { AppEnv } from "@autumn/shared";
-import { Check } from "lucide-react";
+import { Check, FlaskConical, Plus } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
@@ -10,10 +10,18 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
+	DropdownMenuSeparator,
 } from "@/components/v2/dropdowns/DropdownMenu";
 import { useOrg } from "@/hooks/common/useOrg";
+import { useSandboxesQuery } from "@/hooks/queries/useSandboxesQuery";
+import {
+	type ActiveSandbox,
+	setActiveSandbox,
+	useActiveSandbox,
+} from "@/hooks/sandbox/useActiveSandbox";
 import { cn } from "@/lib/utils";
 import { envToPath } from "@/utils/genUtils";
+import { CreateSandboxDialog } from "./env-dropdown/CreateSandboxDialog";
 import { ExpandedEnvTrigger } from "./env-dropdown/ExpandedEnvTrigger";
 import { StaticEnvPill } from "./env-dropdown/StaticEnvPill";
 
@@ -41,9 +49,12 @@ export const useEnvChange = () => {
 export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 	const { org, isLoading } = useOrg();
 	const canSwitch = !isLoading && !!org?.deployed;
+	const activeSandbox = useActiveSandbox();
+	const { sandboxes } = useSandboxesQuery({ enabled: canSwitch });
 
 	const [isHovered, setIsHovered] = useState(false);
 	const [open, setOpen] = useState(false);
+	const [createOpen, setCreateOpen] = useState(false);
 	const handleEnvChange = useEnvChange();
 
 	if (!canSwitch) {
@@ -54,6 +65,20 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 		);
 	}
 
+	const selectMainEnv = (target: AppEnv) => {
+		setActiveSandbox(null);
+		handleEnvChange(target);
+	};
+
+	const selectSandbox = (sandbox: ActiveSandbox) => {
+		setActiveSandbox(sandbox);
+		handleEnvChange(AppEnv.Sandbox);
+	};
+
+	const itemClass =
+		"flex justify-between items-center text-muted-foreground gap-2";
+	const inLegacySandbox = env === AppEnv.Sandbox && !activeSandbox;
+
 	return (
 		<div
 			className={cn("flex text-muted-foreground text-xs gap-1 px-3")}
@@ -63,32 +88,65 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 			<DropdownMenu open={open} onOpenChange={setOpen}>
 				<ExpandedEnvTrigger isHovered={isHovered} />
 
-				<DropdownMenuContent side="bottom" align="start" className="w-[180px]">
+				<DropdownMenuContent side="bottom" align="start" className="w-[200px]">
 					<DropdownMenuItem
-						className="flex justify-between items-center text-muted-foreground"
-						onClick={() => {
-							handleEnvChange(AppEnv.Sandbox);
-						}}
+						className={itemClass}
+						onClick={() => selectMainEnv(AppEnv.Sandbox)}
 					>
 						<span>Sandbox</span>
-						{env === AppEnv.Sandbox && (
+						{inLegacySandbox && (
 							<Check size={12} className="!h-4 text-tertiary-foreground" />
 						)}
 					</DropdownMenuItem>
 
 					<DropdownMenuItem
-						className="flex justify-between items-center text-muted-foreground"
-						onClick={() => {
-							handleEnvChange(AppEnv.Live);
-						}}
+						className={itemClass}
+						onClick={() => selectMainEnv(AppEnv.Live)}
 					>
 						<span>Production</span>
 						{env === AppEnv.Live && (
 							<Check size={12} className="!h-4 text-tertiary-foreground" />
 						)}
 					</DropdownMenuItem>
+
+					{sandboxes.length > 0 && <DropdownMenuSeparator />}
+
+					{sandboxes.map((sandbox) => {
+						const isActive =
+							env === AppEnv.Sandbox && activeSandbox?.id === sandbox.id;
+						return (
+							<DropdownMenuItem
+								key={sandbox.id}
+								className={itemClass}
+								onClick={() =>
+									selectSandbox({ id: sandbox.id, name: sandbox.name })
+								}
+							>
+								<span className="flex items-center gap-2 truncate">
+									<FlaskConical size={12} className="!h-3 w-3 shrink-0" />
+									<span className="truncate">{sandbox.name}</span>
+								</span>
+								{isActive && (
+									<Check size={12} className="!h-4 text-tertiary-foreground" />
+								)}
+							</DropdownMenuItem>
+						);
+					})}
+
+					<DropdownMenuSeparator />
+					<DropdownMenuItem
+						className="flex items-center gap-2 text-muted-foreground"
+						onClick={() => {
+							setOpen(false);
+							setCreateOpen(true);
+						}}
+					>
+						<Plus size={12} className="!h-3 w-3 shrink-0" />
+						<span>New sandbox</span>
+					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
+			<CreateSandboxDialog open={createOpen} onOpenChange={setCreateOpen} />
 		</div>
 	);
 };

@@ -238,6 +238,7 @@ type PlatformCreateConfig = {
 	configOverrides?: Partial<OrgConfig>;
 	taxRegistrations?: TaxRegistrationCountry[];
 	setupDefaultFeatures?: boolean;
+	isSandbox?: boolean;
 };
 
 type ScenarioConfig = {
@@ -1088,6 +1089,7 @@ export async function initScenario({
 			name,
 			slug,
 			env: "test",
+			is_sandbox: config.platformConfig.isSandbox,
 		})) as {
 			test_secret_key: string;
 			live_secret_key?: string;

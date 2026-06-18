@@ -23,7 +23,9 @@ export const getLastSwitchedOrgId = (): string | null => {
 
 export const useOrg = (params?: { env?: AppEnv }) => {
 	const currentEnv = useEnv();
-	const axiosInstance = useAxiosInstance({ env: params?.env });
+	// useOrg is your authenticated main org, never the active sandbox sub-org —
+	// the switcher, query-key namespace and canSwitch all key off it.
+	const axiosInstance = useAxiosInstance({ env: params?.env, skipSandbox: true });
 	const { data: orgList } = useListOrganizations();
 
 	const fetcher = async () => {

@@ -1,6 +1,7 @@
 import { AppEnv } from "@autumn/shared";
 import { ChevronDown, FlaskConical, Sailboat } from "lucide-react";
 import { DropdownMenuTrigger } from "@/components/v2/dropdowns/DropdownMenu";
+import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { useSidebarContext } from "../SidebarContext";
@@ -10,6 +11,7 @@ const liveStyles = "text-primary bg-primary/10 border-primary";
 
 export const ExpandedEnvTrigger = ({ isHovered }: { isHovered: boolean }) => {
 	const env = useEnv();
+	const activeSandbox = useActiveSandbox();
 	const { expanded } = useSidebarContext();
 
 	const isSandbox = env === AppEnv.Sandbox;
@@ -47,7 +49,7 @@ export const ExpandedEnvTrigger = ({ isHovered }: { isHovered: boolean }) => {
 							//   : "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0"
 						)}
 					>
-						{isSandbox ? "Sandbox" : "Production"}
+						{isSandbox ? (activeSandbox?.name ?? "Sandbox") : "Production"}
 					</p>
 				</div>
 				<ChevronDown size={14} className="!h-4 w-4" />
