@@ -2,7 +2,6 @@ import type { AttachPreviewResponse } from "@autumn/shared";
 import {
 	ArrowLeft,
 	CalendarCheckIcon,
-	CheckCircleIcon,
 	LinkIcon,
 } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
@@ -15,17 +14,23 @@ import {
 	getAttachPreviewLineItems,
 	getAttachScheduledStartDate,
 } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
+import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/v2/buttons/Button";
 import type { BillingLineItem } from "@/components/v2/LineItemsPreview";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
 import {
 	SheetFooter,
 	SheetHeader,
+	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
+import { ConfigRow } from "./ConfigRow";
 import { PlanActivationSection } from "./SendInvoiceStage";
 import { UrlSuccessView } from "./UrlSuccessView";
 
 type PreviewData = AttachPreviewResponse | null | undefined;
+type GenerateCheckoutSubmitParams = {
+	longLivedCheckout?: boolean;
+};
 
 function usePreviewTotals({
 	previewData,
@@ -52,12 +57,13 @@ function ActivationPreviewStage({
 	buttonLabel,
 	buttonIcon,
 	scheduledStartDate,
+	showLongLivedCheckout = false,
 }: {
 	title: string;
 	description: string;
 	isPending: boolean;
 	onBack: () => void;
-	onSubmit: () => void | Promise<void>;
+	onSubmit: (params?: GenerateCheckoutSubmitParams) => void | Promise<void>;
 	lineItems?: BillingLineItem[];
 	currency?: string;
 	totals?: {
@@ -69,18 +75,27 @@ function ActivationPreviewStage({
 	buttonLabel: string;
 	buttonIcon: ReactNode;
 	scheduledStartDate?: number | null;
+	showLongLivedCheckout?: boolean;
 }) {
 	const { form } = useAttachFormContext();
 	const enablePlanImmediately = useStore(
 		form.store,
 		(state) => state.values.enablePlanImmediately,
 	);
+	const longLivedCheckout = useStore(
+		form.store,
+		(state) => state.values.longLivedCheckout,
+	);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
 	const handleSubmit = async () => {
 		setIsSubmitting(true);
 		try {
-			await onSubmit();
+			await onSubmit(
+				showLongLivedCheckout
+					? { longLivedCheckout: !!longLivedCheckout }
+					: undefined,
+			);
 		} finally {
 			setIsSubmitting(false);
 		}
@@ -106,6 +121,23 @@ function ActivationPreviewStage({
 				}
 				scheduledStartDate={scheduledStartDate}
 			/>
+
+			{showLongLivedCheckout && (
+				<SheetSection withSeparator>
+					<ConfigRow
+						title="Long-lived checkout link"
+						description="Link lasts for 90 days. Stripe checkout sessions are only created when required."
+						action={
+							<Switch
+								checked={!!longLivedCheckout}
+								onCheckedChange={(enabled) =>
+									form.setFieldValue("longLivedCheckout", !!enabled)
+								}
+							/>
+						}
+					/>
+				</SheetSection>
+			)}
 
 			<LineItemsPreview
 				title="Pricing Preview"
@@ -143,7 +175,7 @@ export function GenerateCheckoutStage({
 	productName?: string;
 	isPending: boolean;
 	onBack: () => void;
-	onSubmit: () => Promise<{
+	onSubmit: (params?: GenerateCheckoutSubmitParams) => Promise<{
 		paymentUrl: string | null | undefined;
 	}>;
 	lineItems?: BillingLineItem[];
@@ -159,8 +191,8 @@ export function GenerateCheckoutStage({
 		string | null
 	>(null);
 
-	const handleGenerate = async () => {
-		const { paymentUrl } = await onSubmit();
+	const handleGenerate = async (params?: GenerateCheckoutSubmitParams) => {
+		const { paymentUrl } = await onSubmit(params);
 		if (paymentUrl) {
 			setCompletedCheckoutUrl(paymentUrl);
 			navigator.clipboard.writeText(paymentUrl);
@@ -202,6 +234,7 @@ export function GenerateCheckoutStage({
 			totals={totals}
 			buttonLabel="Generate Checkout URL"
 			buttonIcon={<LinkIcon size={16} weight="bold" />}
+			showLongLivedCheckout
 		/>
 	);
 }
@@ -218,7 +251,7 @@ export function GenerateCheckoutStageWithPreview({
 		data?: PreviewData;
 	};
 	isPending: boolean;
-	onSubmit: () => Promise<{
+	onSubmit: (params?: GenerateCheckoutSubmitParams) => Promise<{
 		paymentUrl: string | null | undefined;
 	}>;
 	onBack: () => void;

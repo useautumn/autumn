@@ -47,6 +47,8 @@ export const AttachParamsV0Schema = ExtAttachParamsV0Schema.extend({
 
 	checkout_session_params: z.record(z.string(), z.unknown()).optional(),
 
+	long_lived_checkout: z.boolean().optional(),
+
 	carry_over_balances: z
 		.object({
 			enabled: z.boolean(),
