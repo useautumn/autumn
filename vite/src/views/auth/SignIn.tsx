@@ -8,7 +8,7 @@ import { CustomToaster } from "@/components/general/CustomToaster";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { Input } from "@/components/v2/inputs/Input";
 import { authClient, signIn, useSession } from "@/lib/auth-client";
-import { getBackendErr } from "@/utils/genUtils";
+import { getBackendErr, getSafeNextPath } from "@/utils/genUtils";
 import { AuthBackground } from "./components/AuthBackground";
 import { AutumnWordmark } from "./components/AutumnWordmark";
 import { OTPSignIn } from "./components/OTPSignIn";
@@ -45,18 +45,16 @@ export const SignIn = () => {
 		[searchParams],
 	);
 
-	const defaultNewPath = "/sandbox/products?tab=products";
-	const defaultCallbackPath = "/sandbox/products?tab=products";
-
-	const newPath = oauthRedirectUrl || defaultNewPath;
-	const callbackPath = oauthRedirectUrl || defaultCallbackPath;
+	const defaultPath = getSafeNextPath(searchParams);
+	const newPath = oauthRedirectUrl || defaultPath;
+	const callbackPath = oauthRedirectUrl || defaultPath;
 
 	useEffect(() => {
 		if (oauthRedirectUrl) return;
 		if (session) {
-			navigate("/", { replace: true });
+			navigate(defaultPath, { replace: true });
 		}
-	}, [session, navigate, oauthRedirectUrl]);
+	}, [session, navigate, oauthRedirectUrl, defaultPath]);
 
 	// Passkey Conditional UI: browsers surface saved passkeys directly in the
 	// email field's autocomplete dropdown (no extra button needed). Requires
@@ -114,9 +112,8 @@ export const SignIn = () => {
 		try {
 			const frontendUrl = import.meta.env.VITE_FRONTEND_URL;
 			const googleCallbackUrl =
-				oauthRedirectUrl || `${frontendUrl}${defaultCallbackPath}`;
-			const googleNewUserUrl =
-				oauthRedirectUrl || `${frontendUrl}${defaultNewPath}`;
+				oauthRedirectUrl || `${frontendUrl}${defaultPath}`;
+			const googleNewUserUrl = oauthRedirectUrl || `${frontendUrl}${defaultPath}`;
 			const { error } = await signIn.social({
 				provider: "google",
 				callbackURL: googleCallbackUrl,
