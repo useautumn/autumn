@@ -9,18 +9,18 @@ import { SandboxBanner } from "@/components/general/SandboxBanner";
 import { IconButton } from "@/components/v2/buttons/IconButton";
 import { PortalContainerContext } from "@/contexts/PortalContainerContext";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
-import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
 import { getLastSwitchedOrgId, useOrg } from "@/hooks/common/useOrg";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useSession } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import CommandBar from "@/views/command-bar/CommandBar";
-import LoadingScreen from "@/views/general/LoadingScreen";
 import { useEventNames } from "@/views/customers/customer/analytics/hooks/useEventNames";
+import LoadingScreen from "@/views/general/LoadingScreen";
 import { InviteNotifications } from "@/views/general/notifications/InviteNotifications";
 import { DeployToProdDialog } from "@/views/main-sidebar/components/deploy-button/DeployToProdDialog";
 import { MainSidebar } from "@/views/main-sidebar/MainSidebar";
@@ -68,7 +68,11 @@ export function MainLayout() {
 		}
 	}, [orgLoading, org, env, navigate]);
 
-	if (isPending) {
+	if (!isPending && !data) {
+		return <Navigate to="/sign-in" replace={true} />;
+	}
+
+	if (isPending || orgLoading) {
 		return (
 			<AutumnProvider
 				backendUrl={import.meta.env.VITE_BACKEND_URL}
@@ -89,10 +93,6 @@ export function MainLayout() {
 				</div>
 			</AutumnProvider>
 		);
-	}
-
-	if (!data) {
-		return <Navigate to="/sign-in" replace={true} />;
 	}
 
 	return (
