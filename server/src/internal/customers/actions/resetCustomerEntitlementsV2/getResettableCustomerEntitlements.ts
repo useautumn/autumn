@@ -1,6 +1,7 @@
 import {
 	cusEntToCusPrice,
 	CusProductStatus,
+	isCustomerEntitlementPrepaidWithSeparateResetInterval,
 	type FullCusEntWithFullCusProduct,
 } from "@autumn/shared";
 
@@ -32,7 +33,16 @@ export const getResettableCustomerEntitlements = ({
 			if (!cusProduct.product?.config?.ignore_past_due) continue;
 		}
 
-		if (cusEntToCusPrice({ cusEnt })) continue;
+		const cusPrice = cusEntToCusPrice({ cusEnt });
+		if (
+			cusPrice &&
+			!isCustomerEntitlementPrepaidWithSeparateResetInterval({
+				customerEntitlement: cusEnt,
+				customerPrice: cusPrice,
+			})
+		) {
+			continue;
+		}
 
 		result.push(cusEnt);
 	}

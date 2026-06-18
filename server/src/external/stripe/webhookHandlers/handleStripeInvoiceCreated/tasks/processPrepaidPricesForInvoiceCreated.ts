@@ -6,6 +6,7 @@ import {
 	EntInterval,
 	type FullCusEntWithFullCusProduct,
 	type FullCustomerPrice,
+	isCustomerEntitlementPrepaidWithSeparateResetInterval,
 	notNullish,
 } from "@autumn/shared";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils";
@@ -58,6 +59,11 @@ const processPrepaidPrice = async ({
 	});
 
 	const ent = customerEntitlement.entitlement;
+	const hasSeparateResetInterval =
+		isCustomerEntitlementPrepaidWithSeparateResetInterval({
+			customerEntitlement,
+			customerPrice,
+		});
 
 	const { start, end } = subToPeriodStartEnd({ sub: stripeSubscription });
 
@@ -96,6 +102,18 @@ const processPrepaidPrice = async ({
 			});
 			return true;
 		}
+	}
+
+	if (hasSeparateResetInterval) {
+		logPrepaidPriceProcessed({
+			ctx,
+			customerEntitlement,
+			previousQuantity,
+			resetQuantity,
+			newAllowance,
+			nextResetAt: customerEntitlement.next_reset_at ?? end * 1000,
+		});
+		return true;
 	}
 
 	if (ent.interval === EntInterval.Lifetime) {

@@ -1,0 +1,472 @@
+---
+title: "Querying"
+sidebarTitle: "Querying"
+description: "How to address tables, convert types, join, and avoid footguns."
+---
+
+<Warning>
+  **Available on request** — The Autumn Lakehouse is provisioned per customer. Contact us at [hey@useautumn.com](mailto:hey@useautumn.com) to get access.
+</Warning>
+
+Throughout this page, replace `<catalog>` and `<namespace>` with the names Autumn assigned you.
+
+## Identifier syntax
+
+<Tabs>
+<Tab title="ClickHouse">
+
+The Glue catalog mounts as a database. The whole `<namespace>.v2_3_<object>` is the **table name** — the dot is literal, so backtick **both** parts:
+
+```sql
+SELECT * FROM `<catalog>`.`<namespace>.v2_3_features` LIMIT 10;
+```
+
+A common mistake is `` `<catalog>.<namespace>`.`v2_3_features` `` — that won't resolve, because `<namespace>.v2_3_features` is a single identifier, not `database.table`.
+
+</Tab>
+{/*
+<Tab title="BigQuery">
+
+Iceberg tables are addressed as standard fully-qualified BigQuery tables:
+
+```sql
+SELECT * FROM `<project>.<dataset>.v2_3_features` LIMIT 10;
+```
+
+</Tab>
+*/}
+</Tabs>
+
+## Timestamps
+
+All `number (epoch ms)` columns (`created_at`, `started_at`, `expires_at`, `current_period_*`, `*_resets_at`, …) are epoch-milliseconds. Convert before use. The only native timestamp is `v2_3_events.timestamp`.
+
+<Tabs>
+<Tab title="ClickHouse">
+
+```sql
+SELECT
+  customer_id,
+  toDateTime(toInt64(created_at) / 1000) AS created
+FROM `<catalog>`.`<namespace>.v2_3_customers`;
+```
+
+`fromUnixTimestamp64Milli(toInt64(created_at))` also works and preserves millisecond precision. `v2_3_events.timestamp` is already a `DateTime` — use it directly.
+
+</Tab>
+{/*
+<Tab title="BigQuery">
+
+```sql
+SELECT
+  customer_id,
+  TIMESTAMP_MILLIS(created_at) AS created
+FROM `<project>.<dataset>.v2_3_customers`;
+```
+
+</Tab>
+*/}
+</Tabs>
+
+## JSON columns
+
+`metadata`, `config`, `processors`, `properties`, `deductions`, `display`, and the `discounts` arrays are stored as JSON strings.
+
+<Tabs>
+<Tab title="ClickHouse">
+
+```sql
+SELECT JSONExtractString(properties, 'subtype') AS subtype
+FROM `<catalog>`.`<namespace>.v2_3_events`;
+```
+
+</Tab>
+{/*
+<Tab title="BigQuery">
+
+```sql
+SELECT JSON_VALUE(properties, '$.subtype') AS subtype
+FROM `<project>.<dataset>.v2_3_events`;
+```
+
+</Tab>
+*/}
+</Tabs>
+
+## Examples
+
+### Fetch one customer
+
+<Tabs>
+<Tab title="ClickHouse">
+
+```sql
+SELECT internal_id, customer_id, name, email
+FROM `<catalog>`.`<namespace>.v2_3_customers`
+WHERE customer_id = 'cus_123';
+```
+
+</Tab>
+{/*
+<Tab title="BigQuery">
+
+```sql
+SELECT internal_id, customer_id, name, email
+FROM `<project>.<dataset>.v2_3_customers`
+WHERE customer_id = 'cus_123';
+```
+
+</Tab>
+*/}
+</Tabs>
+
+### Active subscriptions joined to their plan
+
+Join on the **internal** ids, not the external ones (see [below](#use-internal-ids-not-external-ids)).
+
+<Tabs>
+<Tab title="ClickHouse">
+
+```sql
+SELECT
+  s.customer_id,
+  p.name AS plan_name,
+  p.price_amount,
+  toDateTime(toInt64(s.current_period_end) / 1000) AS renews_at
+FROM `<catalog>`.`<namespace>.v2_3_subscriptions` AS s
+INNER JOIN `<catalog>`.`<namespace>.v2_3_plans` AS p
+  ON p.internal_id = s.internal_product_id
+WHERE s.status = 'active';
+```
+
+</Tab>
+{/*
+<Tab title="BigQuery">
+
+```sql
+SELECT
+  s.customer_id,
+  p.name AS plan_name,
+  p.price_amount,
+  TIMESTAMP_MILLIS(s.current_period_end) AS renews_at
+FROM `<project>.<dataset>.v2_3_subscriptions` AS s
+INNER JOIN `<project>.<dataset>.v2_3_plans` AS p
+  ON p.internal_id = s.internal_product_id
+WHERE s.status = 'active';
+```
+
+</Tab>
+*/}
+</Tabs>
+
+### A customer's balances for a feature
+
+Use the pooled (customer-level) rows where `entity_id IS NULL`.
+
+<Tabs>
+<Tab title="ClickHouse">
+
+```sql
+SELECT feature_id, granted, remaining, usage
+FROM `<catalog>`.`<namespace>.v2_3_balances`
+WHERE customer_id = 'cus_123'
+  AND feature_id = 'AI_CREDITS'
+  AND entity_id IS NULL;
+```
+
+</Tab>
+{/*
+<Tab title="BigQuery">
+
+```sql
+SELECT feature_id, granted, remaining, usage
+FROM `<project>.<dataset>.v2_3_balances`
+WHERE customer_id = 'cus_123'
+  AND feature_id = 'AI_CREDITS'
+  AND entity_id IS NULL;
+```
+
+</Tab>
+*/}
+</Tabs>
+
+### Invoice totals by status
+
+<Tabs>
+<Tab title="ClickHouse">
+
+```sql
+SELECT status, count() AS invoices, sum(total) AS total
+FROM `<catalog>`.`<namespace>.v2_3_invoices`
+GROUP BY status
+ORDER BY total DESC;
+```
+
+To break down by plan, expand the `plan_ids` array with `ARRAY JOIN`:
+
+```sql
+SELECT plan_id, count() AS invoices
+FROM `<catalog>`.`<namespace>.v2_3_invoices`
+ARRAY JOIN plan_ids AS plan_id
+GROUP BY plan_id;
+```
+
+</Tab>
+{/*
+<Tab title="BigQuery">
+
+```sql
+SELECT status, COUNT(*) AS invoices, SUM(total) AS total
+FROM `<project>.<dataset>.v2_3_invoices`
+GROUP BY status
+ORDER BY total DESC;
+```
+
+To break down by plan, expand the `plan_ids` array with `UNNEST`:
+
+```sql
+SELECT plan_id, COUNT(*) AS invoices
+FROM `<project>.<dataset>.v2_3_invoices`, UNNEST(plan_ids) AS plan_id
+GROUP BY plan_id;
+```
+
+</Tab>
+*/}
+</Tabs>
+
+### Event volume per day by subtype
+
+<Tabs>
+<Tab title="ClickHouse">
+
+```sql
+SELECT
+  toStartOfDay(timestamp) AS day,
+  JSONExtractString(properties, 'subtype') AS subtype,
+  count() AS events
+FROM `<catalog>`.`<namespace>.v2_3_events`
+WHERE timestamp > now() - INTERVAL 30 DAY
+GROUP BY day, subtype
+ORDER BY day;
+```
+
+</Tab>
+{/*
+<Tab title="BigQuery">
+
+```sql
+SELECT
+  TIMESTAMP_TRUNC(timestamp, DAY) AS day,
+  JSON_VALUE(properties, '$.subtype') AS subtype,
+  COUNT(*) AS events
+FROM `<project>.<dataset>.v2_3_events`
+WHERE timestamp > TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 30 DAY)
+GROUP BY day, subtype
+ORDER BY day;
+```
+
+</Tab>
+*/}
+</Tabs>
+
+### Reconstruct a full customer (API shape)
+This rebuilds the **entire** `GET /customers/:id` response — scalars, subscriptions, purchases, balances (with per-plan breakdowns), flags, and invoices — from the warehouse in a single query, returned as one JSON object. It's the most useful query if you want the API's customer view without calling the API.
+
+ClickHouse-specific (uses `groupArray`, `Tuple`/`Map` casts, and the `JSON` type — ClickHouse 24.8+). Customer-level (pooled) balances and flags use `entity_id = ''`; per-entity rows are excluded from the customer envelope. `FORMAT PrettyJSONEachRow` emits one pretty-printed JSON object.
+<Tabs>
+<Tab title="ClickHouse">
+<Expandable title="ClickHouse">
+
+```sql
+SELECT
+  -- customer scalars — from v2_3_customers
+  c.customer_id                                       AS id,
+  nullIf(c.name, '')                                  AS name,
+  nullIf(c.email, '')                                 AS email,
+  c.created_at                                        AS created_at,
+  nullIf(c.fingerprint, '')                           AS fingerprint,
+  nullIf(c.stripe_id, '')                             AS stripe_id,
+  c.env                                               AS env,
+  c.internal_id                                       AS autumn_id,
+  c.send_email_receipts                               AS send_email_receipts,
+  CAST(if(empty(c.metadata), '{}', c.metadata) AS JSON)                 AS metadata,
+  CAST(if(empty(c.billing_controls), '{}', c.billing_controls) AS JSON) AS billing_controls,
+  CAST(if(empty(c.config), '{}', c.config) AS JSON)                     AS config,
+  CAST(if(empty(c.processors), '{}', c.processors) AS JSON)             AS processors,
+
+  -- subscriptions[] — recurring customer products, from v2_3_subscriptions
+  (
+    SELECT groupArray(CAST((
+      s.id, s.plan_id, s.auto_enable, s.add_on, s.status, s.past_due,
+      nullIf(s.canceled_at, 0), nullIf(s.expires_at, 0), nullIf(s.trial_ends_at, 0),
+      s.started_at, s.quantity,
+      nullIf(s.current_period_start, 0), nullIf(s.current_period_end, 0),
+      if(coalesce(s.entity_id, '') = '', 'customer', 'entity'),
+      nullIf(s.entity_id, ''), nullIf(s.internal_entity_id, '')
+    ) AS Tuple(
+      id String, plan_id String, auto_enable Bool, add_on Bool, status String, past_due Bool,
+      canceled_at Nullable(Int64), expires_at Nullable(Int64), trial_ends_at Nullable(Int64),
+      started_at Int64, quantity Float64,
+      current_period_start Nullable(Int64), current_period_end Nullable(Int64),
+      scope String, entity_id Nullable(String), internal_entity_id Nullable(String))))
+    FROM `<catalog>`.`<namespace>.v2_3_subscriptions` s
+    WHERE s.customer_id = 'cus_123'
+  )                                                   AS subscriptions,
+
+  -- purchases[] — one-off customer products, from v2_3_purchases
+  (
+    SELECT groupArray(CAST((
+      p.plan_id, nullIf(p.expires_at, 0), p.started_at, p.quantity,
+      if(coalesce(p.entity_id, '') = '', 'customer', 'entity'),
+      nullIf(p.entity_id, ''), nullIf(p.internal_entity_id, '')
+    ) AS Tuple(plan_id String, expires_at Nullable(Int64), started_at Int64, quantity Float64,
+      scope String, entity_id Nullable(String), internal_entity_id Nullable(String))))
+    FROM `<catalog>`.`<namespace>.v2_3_purchases` p
+    WHERE p.customer_id = 'cus_123'
+  )                                                   AS purchases,
+
+  -- balances{} — keyed by feature_id, with nested breakdown[], from v2_3_balances + v2_3_breakdowns
+  (
+    SELECT CAST(groupArray((b.feature_id, CAST((
+      'balance', b.feature_id, b.granted, b.remaining, b.usage, b.unlimited,
+      b.overage_allowed, b.max_purchase, nullIf(b.next_reset_at, 0),
+      bd.breakdown
+    ) AS Tuple(
+      object String, feature_id String, granted Float64, remaining Float64, usage Float64,
+      unlimited Bool, overage_allowed Bool, max_purchase Nullable(Float64), next_reset_at Nullable(Int64),
+      breakdown Array(Tuple(
+        object String, id String, plan_id Nullable(String), included_grant Float64, prepaid_grant Float64,
+        remaining Float64, usage Float64, unlimited Bool, expires_at Nullable(Int64),
+        reset_interval Nullable(String), reset_interval_count Nullable(Float64), reset_resets_at Nullable(Int64),
+        price_amount Nullable(Float64), price_billing_method Nullable(String), price_billing_units Nullable(Float64),
+        price_tier_behavior Nullable(String), price_max_purchase Nullable(Float64))))))
+    ) AS Map(String, Tuple(
+      object String, feature_id String, granted Float64, remaining Float64, usage Float64,
+      unlimited Bool, overage_allowed Bool, max_purchase Nullable(Float64), next_reset_at Nullable(Int64),
+      breakdown Array(Tuple(
+        object String, id String, plan_id Nullable(String), included_grant Float64, prepaid_grant Float64,
+        remaining Float64, usage Float64, unlimited Bool, expires_at Nullable(Int64),
+        reset_interval Nullable(String), reset_interval_count Nullable(Float64), reset_resets_at Nullable(Int64),
+        price_amount Nullable(Float64), price_billing_method Nullable(String), price_billing_units Nullable(Float64),
+        price_tier_behavior Nullable(String), price_max_purchase Nullable(Float64))))))
+    FROM `<catalog>`.`<namespace>.v2_3_balances` b
+    LEFT JOIN (
+      SELECT feature_id, groupArray(CAST((
+        'balance_breakdown', id, nullIf(plan_id, ''), included_grant, prepaid_grant, remaining, usage, unlimited,
+        nullIf(expires_at, 0), nullIf(reset_interval, ''), reset_interval_count, nullIf(reset_resets_at, 0),
+        price_amount, nullIf(price_billing_method, ''), price_billing_units, nullIf(price_tier_behavior, ''), price_max_purchase
+      ) AS Tuple(
+        object String, id String, plan_id Nullable(String), included_grant Float64, prepaid_grant Float64,
+        remaining Float64, usage Float64, unlimited Bool, expires_at Nullable(Int64),
+        reset_interval Nullable(String), reset_interval_count Nullable(Float64), reset_resets_at Nullable(Int64),
+        price_amount Nullable(Float64), price_billing_method Nullable(String), price_billing_units Nullable(Float64),
+        price_tier_behavior Nullable(String), price_max_purchase Nullable(Float64)))) AS breakdown
+      FROM `<catalog>`.`<namespace>.v2_3_breakdowns`
+      WHERE customer_id = 'cus_123' AND coalesce(entity_id, '') = ''
+      GROUP BY feature_id
+    ) bd ON bd.feature_id = b.feature_id
+    WHERE b.customer_id = 'cus_123' AND coalesce(b.entity_id, '') = ''
+  )                                                   AS balances,
+
+  -- flags{} — keyed by feature_id, boolean features, from v2_3_flags
+  (
+    SELECT CAST(groupArray((f.feature_id, CAST((
+      'flag', f.id, nullIf(f.plan_id, ''), nullIf(f.expires_at, 0), f.feature_id
+    ) AS Tuple(object String, id String, plan_id Nullable(String), expires_at Nullable(Int64), feature_id String))))
+    AS Map(String, Tuple(object String, id String, plan_id Nullable(String), expires_at Nullable(Int64), feature_id String)))
+    FROM `<catalog>`.`<namespace>.v2_3_flags` f
+    WHERE f.customer_id = 'cus_123' AND coalesce(f.entity_id, '') = ''
+  )                                                   AS flags,
+
+  -- invoices[] — from v2_3_invoices
+  (
+    SELECT groupArray(CAST((
+      i.plan_ids, i.stripe_id, coalesce(nullIf(i.processor_type, ''), 'stripe'),
+      coalesce(i.status, ''), i.total, i.currency, i.created_at, nullIf(i.hosted_invoice_url, '')
+    ) AS Tuple(
+      plan_ids Array(String), stripe_id String, processor_type String, status String,
+      total Float64, currency String, created_at Int64, hosted_invoice_url Nullable(String))))
+    FROM `<catalog>`.`<namespace>.v2_3_invoices` i
+    WHERE i.customer_id = 'cus_123'
+  )                                                   AS invoices
+
+FROM `<catalog>`.`<namespace>.v2_3_customers` c
+WHERE c.customer_id = 'cus_123'
+FORMAT PrettyJSONEachRow;
+```
+
+<Note>
+  Timestamps in the output are epoch-milliseconds (the API's convention); `0` is normalized to `null` via `nullIf(x, 0)`. `metadata` / `billing_controls` / `config` / `processors` are stored as JSON strings and re-parsed with `CAST(... AS JSON)` — on ClickHouse older than 24.8, drop the `CAST` to emit the raw JSON string.
+</Note>
+
+</Expandable>
+</Tab>
+</Tabs>
+
+## Cross-database joins
+
+You can join your Lakehouse tables against your own data living elsewhere in the same engine.
+
+<Tabs>
+<Tab title="ClickHouse">
+
+Qualify each side fully — the Iceberg catalog table and your own ClickHouse table:
+
+```sql
+SELECT c.customer_id, c.email, u.signup_source
+FROM `<catalog>`.`<namespace>.v2_3_customers` AS c
+INNER JOIN my_db.users AS u
+  ON u.autumn_customer_id = c.customer_id;
+```
+
+<Note>
+  The catalog connection is best for **ad-hoc and bounded** queries. For very large scans, filter early (by `env`, time range, or id) or materialize a subset into a native table first.
+</Note>
+
+</Tab>
+{/*
+<Tab title="BigQuery">
+
+Cross-dataset joins are native — fully-qualify `project.dataset.table` on both sides:
+
+```sql
+SELECT i.id, i.total, a.region
+FROM `<project>.<dataset>.v2_3_invoices` AS i
+INNER JOIN `<project>.analytics.accounts` AS a
+  ON a.autumn_customer_id = i.customer_id;
+```
+
+</Tab>
+*/}
+</Tabs>
+
+## Important notes
+
+### Use internal ids, not external ids
+
+This is the single most important rule for reliable queries.
+
+- Each **plan version is its own row** in `v2_3_plans`, with its own `internal_id`. The only identifier shared *across versions* is the external `plan_id`.
+- External ids (`plan_id`, `customer_id`, `feature_id`, `entity_id`, …) are **mutable** — you can rename them in Autumn at any time — and a single external id can map to multiple versioned rows.
+
+So:
+
+- **Join and filter on `internal_id`** and the `internal_*` foreign keys (`internal_customer_id`, `internal_feature_id`, `internal_product_id`, `internal_entity_id`). These are immutable and globally unique.
+- Treat external ids as **display-only** — great for human-readable output, unreliable as join or lookup keys.
+
+<Warning>
+  Filtering by an external `plan_id` can silently match **multiple plan versions** (and breaks entirely if the id was renamed). Reach for `internal_id` whenever you need a stable, exact reference.
+</Warning>
+
+### Pooled vs per-entity rows
+
+`v2_3_balances`, `v2_3_breakdowns`, and `v2_3_flags` contain two kinds of row:
+
+- **Pooled** (customer-level) — `entity_id IS NULL`.
+- **Per-entity** — `entity_id` is set.
+
+For customer-level totals, filter `entity_id IS NULL` to avoid double counting. To analyze a specific entity, filter on its `entity_id` (or `internal_entity_id`).
+
+### Freshness
+
+State tables sync within **~5 minutes** under normal load; events have a variable lead time and backfill on first connection. See [Overview → Data freshness](/documentation/lakehouse/overview#data-freshness).

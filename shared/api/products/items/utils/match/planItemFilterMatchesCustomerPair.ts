@@ -23,6 +23,30 @@ const customerPriceToBillingMethod = ({
 	return undefined;
 };
 
+const intervalSideMatchesFilter = ({
+	interval,
+	intervalCount,
+	filter,
+}: {
+	interval?: string | null;
+	intervalCount?: number | null;
+	filter: PlanItemFilter;
+}) => {
+	if (
+		filter.interval !== undefined &&
+		String(interval) !== String(filter.interval)
+	)
+		return false;
+
+	if (
+		filter.interval_count !== undefined &&
+		(intervalCount ?? 1) !== filter.interval_count
+	)
+		return false;
+
+	return true;
+};
+
 export const planItemFilterMatchesCustomerPair = ({
 	filter,
 	customerPrice,
@@ -45,12 +69,23 @@ export const planItemFilterMatchesCustomerPair = ({
 		if (billingMethod !== filter.billing_method) return false;
 	}
 
-	if (filter.interval !== undefined) {
-		const interval =
-			customerPrice?.price.config.interval ??
-			customerEntitlement?.entitlement.interval ??
-			undefined;
-		if (String(interval) !== String(filter.interval)) return false;
+	if (filter.interval !== undefined || filter.interval_count !== undefined) {
+		const priceMatches =
+			!!customerPrice &&
+			intervalSideMatchesFilter({
+				interval: customerPrice.price.config.interval,
+				intervalCount: customerPrice.price.config.interval_count,
+				filter,
+			});
+		const resetMatches =
+			!!customerEntitlement &&
+			intervalSideMatchesFilter({
+				interval: customerEntitlement.entitlement.interval,
+				intervalCount: customerEntitlement.entitlement.interval_count,
+				filter,
+			});
+
+		if (!priceMatches && !resetMatches) return false;
 	}
 
 	return true;

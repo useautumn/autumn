@@ -57,6 +57,7 @@ const buildExtraCustomerEntitlement = ({
 		balance,
 		additional_balance: 0,
 		usage_allowed: true,
+		separate_interval: false,
 		next_reset_at: null,
 		adjustment,
 		expires_at: null,

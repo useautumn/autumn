@@ -3,10 +3,11 @@ import {
 	AppEnv,
 	apiKeys,
 	chatInstallations,
+	chatOAuthCredentials,
 	createChatInstallState,
 } from "@autumn/shared";
 import { addMinutes } from "date-fns";
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
 	createSlackInstallUrl,
@@ -24,6 +25,21 @@ export class ChatService {
 			),
 		});
 
+		const credentials = installations.length
+			? await ctx.db.query.chatOAuthCredentials.findMany({
+					where: inArray(
+						chatOAuthCredentials.chat_installation_id,
+						installations.map((installation) => installation.id),
+					),
+				})
+			: [];
+		const scopesByInstallationEnv = new Map(
+			credentials.map((credential) => [
+				`${credential.chat_installation_id}:${credential.env}`,
+				credential.scopes,
+			]),
+		);
+
 		return installations.map((installation) => {
 			const missingScopes = getMissingSlackScopes(installation.scopes);
 			return {
@@ -34,6 +50,10 @@ export class ChatService {
 				bot_user_id: installation.bot_user_id,
 				default_env: installation.default_env,
 				scopes: installation.scopes,
+				agent_scopes:
+					scopesByInstallationEnv.get(
+						`${installation.id}:${installation.default_env}`,
+					) ?? [],
 				missing_scopes: missingScopes,
 				needs_reconnect: missingScopes.length > 0,
 				created_at: installation.created_at,
@@ -42,13 +62,18 @@ export class ChatService {
 		});
 	}
 
-	static createInstallUrl(ctx: AutumnContext, env = AppEnv.Live) {
+	static createInstallUrl(
+		ctx: AutumnContext,
+		env = AppEnv.Live,
+		scopes?: string[],
+	) {
 		const state = createChatInstallState({
 			secret: getChatStateSecret(),
 			provider: slackProvider,
 			orgId: ctx.org.id,
 			userId: ctx.userId ?? "",
 			env,
+			scopes,
 			expiresAt: addMinutes(Date.now(), 10).getTime(),
 			nonce: randomUUID(),
 		});

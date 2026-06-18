@@ -92,6 +92,7 @@ export const replaceInstallation = async ({
 	botUserId,
 	botAccessToken,
 	scopes,
+	agentScopes,
 	installedByProviderUserId,
 }: {
 	state: ChatInstallState;
@@ -101,6 +102,7 @@ export const replaceInstallation = async ({
 	botUserId?: string;
 	botAccessToken: string;
 	scopes: string[];
+	agentScopes?: string[];
 	installedByProviderUserId?: string;
 }) => {
 	const sameOrg = and(
@@ -144,6 +146,7 @@ export const replaceInstallation = async ({
 			tx,
 			installation,
 			userId: state.userId,
+			agentScopes,
 		});
 	});
 };

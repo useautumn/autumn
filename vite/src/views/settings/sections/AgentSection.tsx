@@ -1,6 +1,7 @@
 import { SettingsSection } from "../SettingsSection";
 import { AgentRules } from "./components/AgentRules";
 import { ChatConnections } from "./components/ChatConnections";
+import { McpInstall } from "./components/McpInstall";
 
 export const AgentSection = () => {
 	return (
@@ -10,6 +11,7 @@ export const AgentSection = () => {
 		>
 			<ChatConnections />
 			<AgentRules />
+			<McpInstall />
 		</SettingsSection>
 	);
 };

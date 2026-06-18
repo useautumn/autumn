@@ -28,9 +28,10 @@ export const UpdateCustomerEntitlementSchema = z.object({
 	balanceChange: z.number().optional(),
 
 	// For arrear billing:
-	updates: z
+		updates: z
 		.object({
 			next_reset_at: z.number().optional(),
+			reset_cycle_anchor: z.number().nullable().optional(),
 			adjustment: z.number().optional(),
 			entities: z.record(z.string(), EntityBalanceSchema).optional(),
 			balance: z.number().optional(),
@@ -46,6 +47,7 @@ export const CustomerProductUpdateSchema = z.object({
 	updates: z.object({
 		options: z.array(FeatureOptionsSchema).optional(),
 		status: z.enum(CusProductStatus).optional(),
+		billing_cycle_anchor: z.number().nullish(),
 		billing_cycle_anchor_resets_at: z.number().nullish(),
 		free_trial_id: z.string().nullish(),
 		trial_ends_at: z.number().nullish(),

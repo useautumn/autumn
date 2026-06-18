@@ -1,12 +1,15 @@
 import {
 	type CustomerEntitlement,
+	entitlementAndPriceHaveSeparateInterval,
 	type EntitlementWithFeature,
+	entToPrice,
 	type InitCustomerEntitlementContext,
 	type InitFullCustomerProductOptions,
 	isBooleanEntitlement,
 	isUnlimitedEntitlement,
 } from "@autumn/shared";
 import { generateId } from "@server/utils/genUtils";
+import { entitlementToResetCycleAnchor } from "../cycleAnchorUtils";
 import { initCustomerEntitlementBalance } from "./initCustomerEntitlementBalance";
 import { initCustomerEntitlementNextResetAt } from "./initCustomerEntitlementNextResetAt";
 import { initCustomerEntitlementUsageAllowed } from "./initCustomerEntitlementUsageAllowed";
@@ -43,8 +46,21 @@ export const initCustomerEntitlement = ({
 		initOptions,
 		entitlement,
 	});
+	const resetCycleAnchor = entitlementToResetCycleAnchor({
+		entitlement,
+		resetCycleAnchor: initContext.resetCycleAnchor,
+		now: initContext.now,
+	});
 
 	const { fullCustomer } = initContext;
+	const relatedPrice = entToPrice({
+		ent: entitlement,
+		prices: initContext.fullProduct?.prices ?? [],
+	});
+	const separateInterval = entitlementAndPriceHaveSeparateInterval({
+		entitlement,
+		price: relatedPrice,
+	});
 
 	return {
 		id: generateId("cus_ent"),
@@ -65,6 +81,8 @@ export const initCustomerEntitlement = ({
 		adjustment: 0,
 		entities,
 		usage_allowed: usageAllowed,
+		separate_interval: separateInterval,
+		reset_cycle_anchor: resetCycleAnchor,
 		next_reset_at: nextResetAt,
 
 		expires_at: null,

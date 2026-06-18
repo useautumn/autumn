@@ -16,6 +16,7 @@ import { handleStripeInvoiceCreated } from "./webhookHandlers/handleStripeInvoic
 import { handleStripeInvoiceFinalized } from "./webhookHandlers/handleStripeInvoiceFinalized/handleStripeInvoiceFinalized.js";
 import { handleStripeSubscriptionDeleted } from "./webhookHandlers/handleStripeSubscriptionDeleted/handleStripeSubscriptionDeleted.js";
 import { handleStripeSubscriptionCreated } from "./webhookHandlers/handleStripeSubscriptionCreated/handleStripeSubscriptionCreated.js";
+import { handleStripeTestClockReady } from "./webhookHandlers/handleStripeTestClockReady.js";
 import { handleSubscriptionScheduleCanceled } from "./webhookHandlers/handleSubScheduleCanceled.js";
 import type {
 	StripeWebhookContext,
@@ -93,6 +94,11 @@ export const handleStripeWebhookEvent = async (
 
 			case "checkout.session.expired": {
 				await handleStripeCheckoutSessionExpired({ ctx, event });
+				break;
+			}
+
+			case "test_helpers.test_clock.ready": {
+				await handleStripeTestClockReady({ ctx, event });
 				break;
 			}
 		}

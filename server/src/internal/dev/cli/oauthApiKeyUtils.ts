@@ -17,6 +17,7 @@ export type ResourceAccessTokenRecord = {
 	userId: string | null;
 	referenceId: string | null;
 	clientId: string;
+	oauthConsentId?: string | null;
 	scopes: string[];
 };
 

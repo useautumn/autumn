@@ -97,6 +97,10 @@ export type CreateBalanceParams = {
    */
   expiresAt?: number | undefined;
   /**
+   * Unix timestamp (milliseconds) for the first reset boundary, allowing a custom (e.g. shorter) first period. Requires 'reset', and must occur before 'expires_at' if both are provided. Subsequent resets advance by one reset interval from this boundary.
+   */
+  nextResetAt?: number | undefined;
+  /**
    * A unique identifier for this balance. Use this to target the balance in future update / delete calls.
    */
   balanceId?: string | undefined;
@@ -193,6 +197,7 @@ export type CreateBalanceParams$Outbound = {
   reset?: CreateBalanceReset$Outbound | undefined;
   rollover?: CreateBalanceRollover$Outbound | undefined;
   expires_at?: number | undefined;
+  next_reset_at?: number | undefined;
   balance_id?: string | undefined;
 };
 
@@ -210,6 +215,7 @@ export const CreateBalanceParams$outboundSchema: z.ZodMiniType<
     reset: z.optional(z.lazy(() => CreateBalanceReset$outboundSchema)),
     rollover: z.optional(z.lazy(() => CreateBalanceRollover$outboundSchema)),
     expiresAt: z.optional(z.number()),
+    nextResetAt: z.optional(z.number()),
     balanceId: z.optional(z.string()),
   }),
   z.transform((v) => {
@@ -219,6 +225,7 @@ export const CreateBalanceParams$outboundSchema: z.ZodMiniType<
       entityId: "entity_id",
       includedGrant: "included_grant",
       expiresAt: "expires_at",
+      nextResetAt: "next_reset_at",
       balanceId: "balance_id",
     });
   }),

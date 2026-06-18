@@ -250,6 +250,7 @@ const buildCustomerProduct = ({
 	entityId?: string | null;
 	subscriptionStripeIds?: string[];
 }): DbCustomerProduct => ({
+	billing_cycle_anchor: null,
 	billing_cycle_anchor_resets_at: null,
 	id: `cp_${key}_${suffix}`,
 	internal_customer_id: customer.internal_id,
@@ -333,9 +334,11 @@ const buildCustomerEntitlement = ({
 	unlimited: false,
 	balance,
 	created_at: now,
-	next_reset_at: now + 30 * 24 * 60 * 60 * 1000,
-	usage_allowed: false,
-	adjustment: 0,
+		next_reset_at: now + 30 * 24 * 60 * 60 * 1000,
+		usage_allowed: false,
+		separate_interval: false,
+		reset_cycle_anchor: null,
+		adjustment: 0,
 	additional_balance: 0,
 	entities: null,
 	expires_at: expiresAt,

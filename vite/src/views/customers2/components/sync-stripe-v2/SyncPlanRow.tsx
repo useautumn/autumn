@@ -113,7 +113,6 @@ const EntityScopeSubRow = ({
 export function SyncPlanRow({
 	plan,
 	products,
-	usedPlanIds,
 	entities,
 	onChange,
 	onRemove,
@@ -121,7 +120,6 @@ export function SyncPlanRow({
 }: {
 	plan: DraftPlan;
 	products: ProductV2[];
-	usedPlanIds: Set<string>;
 	entities: Entity[];
 	onChange: (plan: DraftPlan) => void;
 	onRemove: () => void;
@@ -145,14 +143,8 @@ export function SyncPlanRow({
 				options={availableProducts}
 				getOptionValue={(product) => product.id}
 				getOptionLabel={(product) => product.name}
-				getOptionDisabled={(product) => usedPlanIds.has(product.id)}
 				renderOption={(product) => (
-					<>
-						<span className="flex-1 truncate min-w-0">{product.name}</span>
-						{usedPlanIds.has(product.id) && (
-							<span className="text-xs text-subtle shrink-0">Already added</span>
-						)}
-					</>
+					<span className="flex-1 truncate min-w-0">{product.name}</span>
 				)}
 				placeholder="Select plan…"
 				searchable
