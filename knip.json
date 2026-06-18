@@ -36,7 +36,10 @@
 			],
 			"project": ["src/**/*.ts", "tests/**/*.ts"],
 			"ignoreDependencies": ["@react-email/components", "@axiomhq/pino"],
-			"ignore": ["src/external/tinybird/connections/eventsS3.ts"]
+			"ignore": [
+				"src/external/tinybird/connections/eventsS3.ts",
+				"server/src/external/connect/attachSandboxStripeAccount.ts"
+			]
 		},
 		"shared": {
 			"project": ["**/*.ts", "!utils/**"],
