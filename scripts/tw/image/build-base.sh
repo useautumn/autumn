@@ -255,6 +255,10 @@ if [ ! -s "$PGDATA/PG_VERSION" ]; then
   {
     echo "listen_addresses = 'localhost'"
     echo "port = $PG_PORT"
+    # Minimal µVMs lack /run/postgresql and have a tiny /dev/shm; point the
+    # socket at /tmp and use mmap DSM so startup doesn't depend on either.
+    echo "unix_socket_directories = '/tmp'"
+    echo "dynamic_shared_memory_type = mmap"
     echo "fsync = off"            # ephemeral test DB — durability not needed, faster
     echo "synchronous_commit = off"
     echo "full_page_writes = off"
@@ -265,7 +269,11 @@ fi
 
 # Start PG transiently to create the db + extension, then clean-stop.
 log "Starting PG transiently to create db '$DB_NAME' + pg_trgm"
-pg_ctl -D "$PGDATA" -l "$LOG_DIR/pg.log" -w -o "-p $PG_PORT" start
+pg_ctl -D "$PGDATA" -l "$LOG_DIR/pg.log" -w -o "-p $PG_PORT" start || {
+  echo "[tw-build-base] ERROR: PG failed to start — pg.log follows:" >&2
+  cat "$LOG_DIR/pg.log" >&2 2>/dev/null || true
+  exit 1
+}
 
 createdb_if_missing() {
   if ! psql -h localhost -p "$PG_PORT" -U "$PG_SUPERUSER" -d postgres -tAc \
