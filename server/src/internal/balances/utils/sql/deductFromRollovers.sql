@@ -64,6 +64,11 @@ BEGIN
     
     rollover_id := rollover_obj->>'id';
     credit_cost := COALESCE((rollover_obj->>'credit_cost')::numeric, 1);
+
+    IF credit_cost = 0 THEN
+      remaining_amount := 0;
+      EXIT;
+    END IF;
     
     -- Lock and fetch rollover data
     SELECT r.balance, COALESCE(r.usage, 0), r.entities, r.cus_ent_id
