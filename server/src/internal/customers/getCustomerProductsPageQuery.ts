@@ -1,5 +1,5 @@
 import {
-	type CusProductStatus,
+	CusProductStatus,
 	CustomerProductKind,
 	type CustomerProductsCursorFields,
 } from "@autumn/shared";
@@ -129,7 +129,9 @@ const buildFilters = ({
 	entityId?: string;
 	kind?: CustomerProductKind;
 }) => {
-	const statusFilter = showExpired ? sql`` : cpStatusInClause(inStatuses);
+	const statusFilter = showExpired
+		? cpStatusInClause([CusProductStatus.Expired])
+		: cpStatusInClause(inStatuses);
 
 	const entityFilter = entityId
 		? sql`AND (cp.entity_id = ${entityId} OR cp.internal_entity_id = ${entityId} OR (cp.entity_id IS NULL AND cp.internal_entity_id IS NULL))`
