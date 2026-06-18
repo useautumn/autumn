@@ -958,23 +958,6 @@ test.concurrent(
 	},
 );
 
-/**
- * TDD regression for the "preview numbers are cooked" report: a scheduled plan
- * swap dated on the current cycle's renewal *date* but at an incidental wall-clock
- * time (the dashboard date picker emits the selected date with a time-of-day that
- * does not equal the subscription's anchor instant) lands a few hours short of the
- * real cycle boundary.
- *
- * Red-failure mode (pre-fix):
- *  - The transition is classified as a mid-cycle scheduled_change and the new plan
- *    is prorated over the tiny gap to the anchor boundary, so next_cycle.total is a
- *    near-zero sliver and next_cycle.starts_at is the offset timestamp, not the
- *    renewal boundary. The full charge is silently deferred to a separate invoice.
- *
- * Green-success criteria (after fix):
- *  - The phase snaps to the exact cycle boundary, so next_cycle bills the new plan's
- *    full first period ($50) at the renewal boundary.
- */
 test.concurrent(
 	`${chalk.yellowBright("create-schedule preview 16: replacement landing on the cycle boundary charges the full new plan, not a sliver")}`,
 	async () => {
@@ -996,12 +979,9 @@ test.concurrent(
 			actions: [s.billing.attach({ productId: pro.id })],
 		});
 
-		// Anchor == advancedTo, so the next renewal boundary is one month out.
 		const renewalAt = truncateMsToSecondPrecision(
 			addMonths(advancedTo, 1).getTime(),
 		);
-		// Dashboard sends the renewal *date* with an incidental time-of-day, so the
-		// scheduled switch lands a few hours short of the real anchor instant.
 		const transitionAt = renewalAt - ms.hours(6);
 
 		await expectPreviewToMatchCreateSchedule({
@@ -1017,13 +997,10 @@ test.concurrent(
 			assertPreview: (preview) => {
 				expect(preview.line_items).toHaveLength(0);
 				expect(preview.next_cycle).toBeDefined();
-				// Snapped onto the real cycle boundary (Stripe's anchor instant, a few
-				// seconds off a naive month-add), not the offset the dashboard sent.
 				expect(preview.next_cycle?.starts_at).not.toBe(transitionAt);
 				expect(
 					Math.abs((preview.next_cycle?.starts_at ?? 0) - renewalAt),
 				).toBeLessThan(ms.hours(1));
-				// Full new-plan first period, not a proration sliver.
 				expectCloseToCents({
 					actual: preview.next_cycle?.total ?? 0,
 					expected: 50,
@@ -1033,11 +1010,6 @@ test.concurrent(
 	},
 );
 
-/**
- * End-to-end billing proof for the boundary snap: advancing past the renewal must
- * produce a single full charge for the new plan, not a tiny proration sliver at the
- * offset time followed by the full charge at the anchor (the pre-fix double-invoice).
- */
 test.concurrent(
 	`${chalk.yellowBright("create-schedule preview 17: snapped boundary bills one full renewal invoice, no sliver")}`,
 	async () => {
@@ -1073,7 +1045,6 @@ test.concurrent(
 			],
 		});
 
-		// Only the Pro attach has billed; the swap is scheduled for the boundary.
 		const beforeRenewal =
 			await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		await expectCustomerInvoiceCorrect({
@@ -1089,9 +1060,6 @@ test.concurrent(
 			waitForSeconds: 30,
 		});
 
-		// Assert against Stripe directly (the source of truth for what billed). With the
-		// snap there is no mid-cycle sliver: exactly two invoices, the $20 Pro attach and
-		// the full $50 renewal. The pre-fix bug would add a third tiny proration invoice.
 		const stripeInvoices = await ctx.stripeCli.invoices.list({
 			customer: beforeRenewal.stripe_id!,
 			limit: 20,

@@ -101,8 +101,6 @@ export const getInitialCreateSchedulePhase = ({
 	return firstPhase;
 };
 
-// The schedule date picker defaults a phase to noon, so a switch meant for the renewal date
-// lands within 12h of the anchor; snap onto the boundary to bill a full period, not a sliver.
 const CYCLE_BOUNDARY_SNAP_WINDOW_MS = ms.hours(12);
 
 const snapResolvedPhasesToCycleBoundary = ({
@@ -111,27 +109,31 @@ const snapResolvedPhasesToCycleBoundary = ({
 }: {
 	phases: ResolvedPhase[];
 	cycleBoundaryMs: number;
-}): ResolvedPhase[] =>
-	phases.map((phase, index) => {
-		// The first phase is the immediate one ("now"); never move it.
-		if (index === 0) return phase;
-		if (
-			Math.abs(phase.starts_at - cycleBoundaryMs) >
-			CYCLE_BOUNDARY_SNAP_WINDOW_MS
-		) {
-			return phase;
+}): ResolvedPhase[] => {
+	let snapIndex = -1;
+	let snapDistance = CYCLE_BOUNDARY_SNAP_WINDOW_MS;
+	for (let index = 1; index < phases.length; index++) {
+		const phase = phases[index];
+		if (!phase) continue;
+		const distance = Math.abs(phase.starts_at - cycleBoundaryMs);
+		if (distance <= snapDistance) {
+			snapDistance = distance;
+			snapIndex = index;
 		}
+	}
 
-		// Only snap when the boundary stays strictly between neighbours, so we never
-		// turn a valid schedule into a non-increasing one.
-		const previousPhase = phases[index - 1];
-		const nextPhase = phases[index + 1];
-		if (previousPhase && cycleBoundaryMs <= previousPhase.starts_at)
-			return phase;
-		if (nextPhase && cycleBoundaryMs >= nextPhase.starts_at) return phase;
+	if (snapIndex === -1) return phases;
 
-		return { ...phase, starts_at: cycleBoundaryMs };
-	});
+	const previousPhase = phases[snapIndex - 1];
+	const nextPhase = phases[snapIndex + 1];
+	if (previousPhase && cycleBoundaryMs <= previousPhase.starts_at)
+		return phases;
+	if (nextPhase && cycleBoundaryMs >= nextPhase.starts_at) return phases;
+
+	return phases.map((phase, index) =>
+		index === snapIndex ? { ...phase, starts_at: cycleBoundaryMs } : phase,
+	);
+};
 
 /** Sort phases for downstream create_schedule setup and execution. */
 export const normalizeCreateSchedulePhases = ({
@@ -141,10 +143,6 @@ export const normalizeCreateSchedulePhases = ({
 }: {
 	phases: CreateScheduleParamsV0["phases"];
 	currentEpochMs: number;
-	/**
-	 * Active subscription's next cycle boundary, when there is one. Future phases that
-	 * land within {@link CYCLE_BOUNDARY_SNAP_WINDOW_MS} of it snap onto it.
-	 */
 	cycleBoundaryMs?: number;
 }): [ResolvedPhase, ...ResolvedPhase[]] => {
 	const orderedPhases = hasRelativeTiming({ phases })

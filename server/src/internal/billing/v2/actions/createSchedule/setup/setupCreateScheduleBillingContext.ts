@@ -117,8 +117,6 @@ export const setupCreateScheduleBillingContext = async ({
 		fullProducts: billingContext.fullProducts,
 	});
 
-	// Snap near-boundary future phases onto the active sub's cycle end (see
-	// normalizeCreateSchedulePhases). Skipped on cycle reset, since the boundary moves.
 	const cycleBoundaryMs =
 		params.billing_cycle_anchor === undefined
 			? setupAttachEndOfCycleMs({
