@@ -23,8 +23,9 @@ const OrgLogoUploader: React.FC = () => {
 	const handleRemove = async () => {
 		setRemoving(true);
 		try {
-			await axiosInstance.delete("/organization/logo");
-
+			// Clear the DB reference first — the org row is what the UI renders.
+			// Only then delete the S3 object, as best-effort cleanup, so a failed
+			// delete can never strand org.logo pointing at a removed object.
 			const { error } = await authClient.organization.update({
 				data: { logo: "" },
 			});
@@ -33,6 +34,13 @@ const OrgLogoUploader: React.FC = () => {
 				return;
 			}
 			await mutate();
+
+			try {
+				await axiosInstance.delete("/organization/logo");
+			} catch {
+				// Orphaned object is harmless and DeleteObject is idempotent, so a
+				// later removal retries it. The logo is already gone for the user.
+			}
 		} catch (error) {
 			toast.error(getBackendErr(error, "Failed to remove logo"));
 		} finally {
