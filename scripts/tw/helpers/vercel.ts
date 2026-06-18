@@ -256,6 +256,26 @@ export const runStreaming = async (
  * Idempotent-friendly: a "not found"/already-deleted error is swallowed so the
  * teardown sequence can be re-run safely. Other errors propagate.
  */
+/**
+ * Look up a sandbox by name, returning `undefined` if it doesn't exist. Used to
+ * detect a CACHED warm parent (named deterministically by ref-sha) so the swarm
+ * can skip the build and fork straight from it.
+ */
+export const getSandboxByName = async (
+	name: string,
+): Promise<Sandbox | undefined> => {
+	try {
+		// `resume: false` — we only need to know it exists + fork from its snapshot;
+		// don't spend compute starting the cached parent.
+		return await Sandbox.get({ name, resume: false });
+	} catch (error) {
+		if (isAlreadyGone(error)) {
+			return undefined;
+		}
+		throw error;
+	}
+};
+
 export const deleteSandbox = async (
 	sandboxOrName: Sandbox | string,
 	opts?: { signal?: AbortSignal },

@@ -30,7 +30,12 @@ import {
 import { createConnectAccount } from "@server/internal/orgs/orgUtils/createConnectAccount.js";
 import type { User } from "better-auth";
 import type { Organization } from "better-auth/plugins";
-import { buildWebhookUrl, TW_ENV } from "../constants.js";
+import pLimit from "p-limit";
+import {
+	buildWebhookUrl,
+	STRIPE_SUBACCOUNT_CONCURRENCY,
+	TW_ENV,
+} from "../constants.js";
 import type { OwnerTag } from "../types.js";
 import { stripeMetadata } from "./owner.js";
 
@@ -50,6 +55,44 @@ const orchestratorLogger: Logger = {
 
 /** All Stripe events the legacy webhook + sync middleware chain needs (plan §6a). */
 const WEBHOOK_EVENTS = [...MAIN_STRIPE_EVENT_TYPES, ...SYNC_STRIPE_EVENT_TYPES];
+
+/**
+ * `accounts.create` is a PLATFORM-account write — creating N sub-accounts at once
+ * gets the platform 429'd. Throttle to a low concurrency AND retry 429s with
+ * exponential backoff + jitter (plan §6a "provisioning burst").
+ */
+const subAccountCreateLimit = pLimit(STRIPE_SUBACCOUNT_CONCURRENCY);
+
+const isRateLimited = (error: unknown): boolean => {
+	const e = error as { statusCode?: number; code?: string; type?: string };
+	return (
+		e?.statusCode === 429 ||
+		e?.code === "rate_limit" ||
+		e?.type === "StripeRateLimitError"
+	);
+};
+
+const withRateLimitRetry = async <T>(
+	fn: () => Promise<T>,
+	label: string,
+): Promise<T> => {
+	const MAX_RETRIES = 6;
+	for (let attempt = 0; ; attempt++) {
+		try {
+			return await fn();
+		} catch (error) {
+			if (!isRateLimited(error) || attempt >= MAX_RETRIES) {
+				throw error;
+			}
+			const delayMs =
+				Math.min(15_000, 1000 * 2 ** attempt) + Math.floor(Math.random() * 500);
+			console.warn(
+				`[tw] Stripe rate-limited on ${label} — retry ${attempt + 1}/${MAX_RETRIES} in ${delayMs}ms`,
+			);
+			await new Promise((resolve) => setTimeout(resolve, delayMs));
+		}
+	}
+};
 
 /**
  * `createConnectAccount` only needs `org.name`; we never have a full
@@ -81,13 +124,21 @@ export const createSandboxSubAccount = async ({
 	const org: SubAccountOrgInput = { name: orgName };
 	const user: SubAccountUserInput = { email: ownerEmail };
 
-	const account = await createConnectAccount({
-		// `createConnectAccount` only reads `org.name` / `user.email`; the full
-		// better-auth shapes aren't available orchestrator-side.
-		org: org as Organization,
-		user: user as User,
-		metadata: stripeMetadata(owner, runId, orgId),
-	});
+	// Throttle + retry: bursting `accounts.create` across N workers 429s the
+	// platform account (plan §6a provisioning burst).
+	const account = await subAccountCreateLimit(() =>
+		withRateLimitRetry(
+			() =>
+				createConnectAccount({
+					// `createConnectAccount` only reads `org.name` / `user.email`; the full
+					// better-auth shapes aren't available orchestrator-side.
+					org: org as Organization,
+					user: user as User,
+					metadata: stripeMetadata(owner, runId, orgId),
+				}),
+			"accounts.create",
+		),
+	);
 
 	return account.id;
 };

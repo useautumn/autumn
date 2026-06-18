@@ -48,6 +48,7 @@ import {
 	SQS_QUEUE_URL_V2,
 	TRACK_SQS_QUEUE_URL,
 	TW_ENV,
+	WARM_SANDBOX_PREFIX,
 } from "../constants.ts";
 import {
 	getOwner,
@@ -72,6 +73,7 @@ import {
 	deleteSandbox,
 	forkWorker,
 	getPublicUrl,
+	getSandboxByName,
 	runStreaming,
 	snapshotAndStop,
 } from "../helpers/vercel.ts";
@@ -350,41 +352,74 @@ const buildWarmEnv = (): Record<string, string> => ({
 	BETTER_AUTH_URL: `http://localhost:${SERVER_PORT}`,
 });
 
-const warmUp = async ({
-	owner,
-	runId,
+/**
+ * Resolve the commit sha the warm parent is keyed/cached on. Vercel clones
+ * `origin/<ref>` at create, so key on what origin resolves to NOW; fall back to a
+ * local rev-parse, then the ref string itself.
+ */
+const resolveRefSha = (ref: string): string => {
+	const git = (...a: string[]): string =>
+		new TextDecoder()
+			.decode(
+				Bun.spawnSync(["git", ...a], { stdout: "pipe", stderr: "pipe" }).stdout,
+			)
+			.trim();
+	const remote = git("ls-remote", "origin", ref).split(/\s+/)[0] ?? "";
+	if (/^[0-9a-f]{40}$/.test(remote)) {
+		return remote;
+	}
+	const local = git("rev-parse", ref);
+	return /^[0-9a-f]{40}$/.test(local) ? local : ref;
+};
+
+/**
+ * Get the CACHED warm parent for this ref-sha, or build it. The warm parent is
+ * named deterministically (`tw-warm-<sha>`), so a prior run — or a teammate on
+ * the same Vercel project — that already built this exact ref is reused: build-base
+ * + warmup are skipped and workers fork straight from it (plan §4a).
+ *
+ * It is intentionally NOT registered for teardown — it's a persistent per-ref
+ * cache. (Pruning old warm parents is a follow-up `kill --warm-gc`.) Returns the
+ * warm parent's name (the fork source for every worker).
+ */
+const getOrBuildWarmParent = async ({
 	ref,
+	sha,
 	signal,
 }: {
-	owner: string;
-	runId: string;
 	ref: string;
+	sha: string;
 	signal: AbortSignal;
-}): Promise<WarmUpResult> => {
-	const name = `${sandboxName(owner, runId, 0)}-warm`;
-	log(`warm-up: creating warm parent ${name} (ref=${ref})`);
+}): Promise<string> => {
+	const warmName = `${WARM_SANDBOX_PREFIX}-${sha.slice(0, 12)}`;
 
+	const cached = await getSandboxByName(warmName);
+	if (cached) {
+		log(
+			`warm-up: reusing cached warm parent ${warmName} (ref ${ref} @ ${sha.slice(0, 7)}) — skipping build`,
+		);
+		return warmName;
+	}
+
+	log(
+		`warm-up: building warm parent ${warmName} (ref=${ref} @ ${sha.slice(0, 7)})`,
+	);
 	const warm = await createWarmSandbox({
-		name,
-		tags: vercelTags(owner, runId),
+		name: warmName,
+		tags: { kind: "bun-tw-warm", sha: sha.slice(0, 12) },
 		env: buildWarmEnv(),
 		source: resolveGitSource(ref),
 		signal,
 	});
-	await registry.addSandbox(runId, { name: warm.name });
 
-	// FAIL FAST: any warm-up step (build-base, migrate, seed) aborts BEFORE any
-	// worker is forked — the "don't get wrecked ×1000" property (plan §4b step 3).
-	const failWarmUp = async (message: string): Promise<never> => {
-		await timeBoxed(`delete warm parent ${warm.name}`, () =>
-			deleteSandbox(warm),
-		);
+	// FAIL FAST: on any build failure delete the half-built warm parent so a
+	// broken cache entry isn't reused next run, and no workers are forked (the
+	// "don't get wrecked ×1000" property, plan §4b step 3).
+	const failBuild = async (message: string): Promise<never> => {
+		await timeBoxed(`delete warm parent ${warmName}`, () => deleteSandbox(warm));
 		throw new Error(message);
 	};
 
-	// Build the BASE layer (PG18, Dragonfly, elasticmq, bun) on the warm parent.
-	// (Future optimization: fork a cached base snapshot instead of rebuilding each
-	// run — plan §4a. For now the warm parent is self-contained, like the spike.)
 	log("warm-up: running build-base.sh (PG18, Dragonfly, elasticmq, bun)");
 	const baseRun = await runStreaming(
 		warm,
@@ -393,29 +428,28 @@ const warmUp = async ({
 		{ signal },
 	);
 	if (baseRun.exitCode !== 0) {
-		await failWarmUp(
+		await failBuild(
 			`warm-up failed (build-base.sh exited ${baseRun.exitCode}) — aborting, no workers forked`,
 		);
 	}
 
 	log("warm-up: running warmup.sh (checkout → install → migrate → seed)");
-	const { exitCode } = await runStreaming(
+	const warmRun = await runStreaming(
 		warm,
 		["bash", WARMUP_SCRIPT, ref],
 		(text) => process.stdout.write(text),
 		{ signal },
 	);
-	if (exitCode !== 0) {
-		await failWarmUp(
-			`warm-up failed (warmup.sh exited ${exitCode}) — aborting, no workers forked`,
+	if (warmRun.exitCode !== 0) {
+		await failBuild(
+			`warm-up failed (warmup.sh exited ${warmRun.exitCode}) — aborting, no workers forked`,
 		);
 	}
 
-	log("warm-up: snapshotting warm parent");
-	const warmSnapshotId = await snapshotAndStop(warm, { signal });
-	log(`warm-up: warm snapshot ready (${warmSnapshotId})`);
-
-	return { warmSnapshotId };
+	log("warm-up: snapshotting warm parent (cached for this ref)");
+	await snapshotAndStop(warm, { signal });
+	log(`warm-up: cached warm parent ${warmName} ready`);
+	return warmName;
 };
 
 // ============================================================================
@@ -737,14 +771,13 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 	let teardownDone = false;
 
 	try {
-		// ----- WARM-UP --------------------------------------------------------
-		await warmUp({
-			owner,
-			runId,
+		// ----- WARM-UP (cached per ref-sha) -----------------------------------
+		const refSha = resolveRefSha(args.ref);
+		const warmName = await getOrBuildWarmParent({
 			ref: args.ref,
+			sha: refSha,
 			signal,
 		});
-		const warmName = `${sandboxName(owner, runId, 0)}-warm`;
 
 		// ----- FAN-OUT --------------------------------------------------------
 		// Worker 0 is the dedicated svix shard when svix files exist (plan §7).

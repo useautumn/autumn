@@ -28,6 +28,20 @@ export const DEFAULT_WORKERS = 50;
 export const DEFAULT_PER_WORKER = 1;
 
 /**
+ * Max concurrent Stripe Connect sub-account creations. `accounts.create` is a
+ * PLATFORM-account write; bursting all N at once gets 429'd, so throttle to a
+ * low concurrency (+ retry/backoff in stripe.ts). Plan §6a "provisioning burst".
+ */
+export const STRIPE_SUBACCOUNT_CONCURRENCY = 2;
+
+/**
+ * Deterministic name prefix for the CACHED warm parent (`tw-warm-<refSha>`).
+ * Keyed by the git ref's commit sha so it's reused across runs — and across
+ * teammates on the same Vercel project — instead of rebuilt every run (plan §4a).
+ */
+export const WARM_SANDBOX_PREFIX = "tw-warm";
+
+/**
  * The Autumn server port inside the µVM — the ONLY exposed port (declared in
  * `ports` at fork so `sandbox.domain(SERVER_PORT)` resolves). Plan §5/§10.
  */
