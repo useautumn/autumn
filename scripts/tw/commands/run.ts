@@ -88,7 +88,34 @@ import { READY_SENTINEL } from "../worker/boot.ts";
 const SANDBOX_REPO_ROOT = process.env.TW_SANDBOX_REPO_ROOT ?? "/vercel/sandbox";
 
 /** Path to the warm-up image script, relative to the in-sandbox repo root. */
+const BUILD_BASE_SCRIPT = "scripts/tw/image/build-base.sh";
 const WARMUP_SCRIPT = "scripts/tw/image/warmup.sh";
+
+/**
+ * Git source for the warm parent's clone (repo @ ref). Mirrors spike.ts: the
+ * origin URL (or `TW_GIT_URL`), normalized to https; private repos use
+ * `GITHUB_TOKEN`. Vercel clones this `revision` into the warm sandbox so
+ * `build-base.sh` / `warmup.sh` have the repo to operate on.
+ */
+const resolveGitSource = (
+	ref: string,
+): { url: string; revision: string; username?: string; password?: string } => {
+	const git = (...a: string[]): string =>
+		new TextDecoder()
+			.decode(
+				Bun.spawnSync(["git", ...a], { stdout: "pipe", stderr: "pipe" }).stdout,
+			)
+			.trim();
+	let url = process.env.TW_GIT_URL || git("config", "--get", "remote.origin.url");
+	if (url.startsWith("git@github.com:")) {
+		url = `https://github.com/${url.slice("git@github.com:".length)}`;
+	}
+	url = `${url.replace(/\.git$/, "")}.git`;
+	const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+	return token
+		? { url, revision: ref, username: "x-access-token", password: token }
+		: { url, revision: ref };
+};
 /** Path to the per-worker boot script, relative to the in-sandbox repo root. */
 const BOOT_SCRIPT = "scripts/tw/worker/boot.ts";
 
@@ -341,9 +368,35 @@ const warmUp = async ({
 		name,
 		tags: vercelTags(owner, runId),
 		env: buildWarmEnv(),
+		source: resolveGitSource(ref),
 		signal,
 	});
 	await registry.addSandbox(runId, { name: warm.name });
+
+	// FAIL FAST: any warm-up step (build-base, migrate, seed) aborts BEFORE any
+	// worker is forked — the "don't get wrecked ×1000" property (plan §4b step 3).
+	const failWarmUp = async (message: string): Promise<never> => {
+		await timeBoxed(`delete warm parent ${warm.name}`, () =>
+			deleteSandbox(warm),
+		);
+		throw new Error(message);
+	};
+
+	// Build the BASE layer (PG18, Dragonfly, elasticmq, bun) on the warm parent.
+	// (Future optimization: fork a cached base snapshot instead of rebuilding each
+	// run — plan §4a. For now the warm parent is self-contained, like the spike.)
+	log("warm-up: running build-base.sh (PG18, Dragonfly, elasticmq, bun)");
+	const baseRun = await runStreaming(
+		warm,
+		["bash", BUILD_BASE_SCRIPT],
+		(text) => process.stdout.write(text),
+		{ signal },
+	);
+	if (baseRun.exitCode !== 0) {
+		await failWarmUp(
+			`warm-up failed (build-base.sh exited ${baseRun.exitCode}) — aborting, no workers forked`,
+		);
+	}
 
 	log("warm-up: running warmup.sh (checkout → install → migrate → seed)");
 	const { exitCode } = await runStreaming(
@@ -353,12 +406,7 @@ const warmUp = async ({
 		{ signal },
 	);
 	if (exitCode !== 0) {
-		// FAIL FAST: a bad migration (or any warm-up step) aborts before any worker
-		// is forked — the "don't get wrecked ×1000" property (plan §4b step 3).
-		await timeBoxed(`delete warm parent ${warm.name}`, () =>
-			deleteSandbox(warm),
-		);
-		throw new Error(
+		await failWarmUp(
 			`warm-up failed (warmup.sh exited ${exitCode}) — aborting, no workers forked`,
 		);
 	}

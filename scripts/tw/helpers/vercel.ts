@@ -59,6 +59,17 @@ export type CreateWarmSandboxOptions = {
 	tags: Record<string, string>;
 	/** Env baked into the warm sandbox while building. */
 	env: Record<string, string>;
+	/**
+	 * Git source to clone into the warm parent at create (repo @ ref). Without
+	 * this the sandbox is empty and `build-base.sh`/`warmup.sh` can't run.
+	 * `username`/`password` are for a private repo (token as the password).
+	 */
+	source?: {
+		url: string;
+		revision: string;
+		username?: string;
+		password?: string;
+	};
 	/** Ports to expose; defaults to `[SERVER_PORT]` so `domain()` resolves. */
 	ports?: number[];
 	/** Sandbox lifetime in ms; defaults to {@link WORKER_TIMEOUT_MS}. */
@@ -81,9 +92,23 @@ export type CreateWarmSandboxOptions = {
 export const createWarmSandbox = async (
 	opts: CreateWarmSandboxOptions,
 ): Promise<Sandbox> => {
+	// No `depth` — a shallow clone is single-branch, so a non-default `revision`
+	// (e.g. feat/*) fails with git 128 (learned in the spike).
+	const gitSource = opts.source
+		? opts.source.username && opts.source.password
+			? {
+					type: "git" as const,
+					url: opts.source.url,
+					username: opts.source.username,
+					password: opts.source.password,
+					revision: opts.source.revision,
+				}
+			: { type: "git" as const, url: opts.source.url, revision: opts.source.revision }
+		: undefined;
 	const sandbox = await Sandbox.create({
 		name: opts.name,
 		runtime: VERCEL_RUNTIME,
+		source: gitSource,
 		ports: opts.ports ?? [SERVER_PORT],
 		timeout: opts.timeout ?? WORKER_TIMEOUT_MS,
 		resources: { vcpus: opts.vcpus ?? WORKER_VCPUS },
