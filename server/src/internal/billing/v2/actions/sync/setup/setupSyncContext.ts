@@ -229,5 +229,6 @@ export const setupSyncContext = async ({
 		futurePhases,
 		currentEpochMs,
 		acknowledgedWarnings: params.acknowledge_warnings ?? [],
+		carryOverUsage: params.carry_over_usage ?? true,
 	};
 };

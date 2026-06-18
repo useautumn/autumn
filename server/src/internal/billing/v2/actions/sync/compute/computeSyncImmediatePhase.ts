@@ -7,6 +7,7 @@ import {
 	type SyncBillingContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { carryOverEntitlementUsage } from "./carryOverUsage";
 import { initImmediateSyncCustomerProduct } from "./initImmediateSyncCustomerProduct";
 
 type CustomerProductUpdate = NonNullable<
@@ -50,8 +51,13 @@ export const computeSyncImmediatePhase = ({
 	ctx: AutumnContext;
 	syncContext: SyncBillingContext;
 }): ImmediatePhaseResult => {
-	const { immediatePhase, fullCustomer, stripeSubscription, currentEpochMs } =
-		syncContext;
+	const {
+		immediatePhase,
+		fullCustomer,
+		stripeSubscription,
+		currentEpochMs,
+		carryOverUsage,
+	} = syncContext;
 	if (!immediatePhase || !stripeSubscription) {
 		return {
 			insertCustomerProducts: [],
@@ -67,15 +73,22 @@ export const computeSyncImmediatePhase = ({
 	const customEntitlements: Entitlement[] = [];
 
 	for (const productContext of immediatePhase.productContexts) {
-		insertCustomerProducts.push(
-			initImmediateSyncCustomerProduct({
-				ctx,
-				fullCustomer,
-				productContext,
-				stripeSubscription,
-				currentEpochMs,
-			}),
-		);
+		const insertedCustomerProduct = initImmediateSyncCustomerProduct({
+			ctx,
+			fullCustomer,
+			productContext,
+			stripeSubscription,
+			currentEpochMs,
+		});
+
+		if (carryOverUsage && productContext.currentCustomerProduct) {
+			carryOverEntitlementUsage({
+				inserted: insertedCustomerProduct,
+				expiring: productContext.currentCustomerProduct,
+			});
+		}
+
+		insertCustomerProducts.push(insertedCustomerProduct);
 		customPrices.push(...productContext.customPrices);
 		customEntitlements.push(...productContext.customEntitlements);
 
