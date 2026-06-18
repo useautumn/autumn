@@ -30,7 +30,7 @@ export const buildCustomerProductsSeedByCustomer = ({
 			assembleCustomerProductsPage({
 				rows: customerRows,
 				limit,
-				totalCount: customerRows[0]?.total_count ?? customerRows.length,
+				totalCount: customerRows[0]?.total_count ?? 0,
 			}),
 		);
 	}
