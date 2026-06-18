@@ -43,7 +43,6 @@ export interface BuildAttachRequestBodyParams {
 	discounts: FormDiscount[];
 	noBillingChanges: boolean;
 	enablePlanImmediately: boolean;
-	longLivedCheckout: boolean;
 	carryOverBalances: boolean;
 	carryOverBalanceFeatureIds: string[];
 	carryOverUsages: boolean;
@@ -76,7 +75,6 @@ export function buildAttachRequestBody({
 	discounts,
 	noBillingChanges,
 	enablePlanImmediately,
-	longLivedCheckout,
 	carryOverBalances,
 	carryOverBalanceFeatureIds = [],
 	carryOverUsages,
@@ -180,10 +178,6 @@ export function buildAttachRequestBody({
 		body.enable_product_immediately = true;
 	}
 
-	if (longLivedCheckout) {
-		body.long_lived_checkout = true;
-	}
-
 	if (carryOverBalances) {
 		body.carry_over_balances =
 			carryOverBalanceFeatureIds.length > 0
@@ -235,7 +229,6 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 		discounts,
 		noBillingChanges,
 		enablePlanImmediately,
-		longLivedCheckout,
 		carryOverBalances,
 		carryOverBalanceFeatureIds,
 		carryOverUsages,
@@ -269,7 +262,6 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				discounts,
 				noBillingChanges,
 				enablePlanImmediately,
-				longLivedCheckout,
 				carryOverBalances,
 				carryOverBalanceFeatureIds,
 				carryOverUsages,
@@ -300,7 +292,6 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 			discounts,
 			noBillingChanges,
 			enablePlanImmediately,
-			longLivedCheckout,
 			carryOverBalances,
 			carryOverBalanceFeatureIds,
 			carryOverUsages,
@@ -318,12 +309,14 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				finalizeInvoice,
 				invoiceTemplateId,
 				netTermsDays,
+				longLivedCheckout,
 			}: {
 				useInvoice?: boolean;
 				enableProductImmediately?: boolean;
 				finalizeInvoice?: boolean;
 				invoiceTemplateId?: string;
 				netTermsDays?: number;
+				longLivedCheckout?: boolean;
 			} = {}): AttachParamsV0 | null => {
 				if (!requestBody) return null;
 
@@ -342,6 +335,10 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				// copying a checkout URL too.
 				if (enableProductImmediately !== undefined) {
 					body.enable_product_immediately = enableProductImmediately;
+				}
+
+				if (longLivedCheckout) {
+					body.long_lived_checkout = true;
 				}
 
 				return body;

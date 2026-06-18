@@ -50,7 +50,6 @@ const baseParams: Omit<
 	customLineItems: [],
 	disableProration: false,
 	enablePlanImmediately: false,
-	longLivedCheckout: false,
 };
 
 describe("buildAttachRequestBody — billing_units handling", () => {
@@ -310,7 +309,7 @@ describe("buildAttachRequestBody — long-lived checkout", () => {
 		items: [{ price: 20, interval: ProductItemInterval.Month }],
 	});
 
-	test("omits long_lived_checkout by default", () => {
+	test("omits long_lived_checkout from the base attach body", () => {
 		const result = buildAttachRequestBody({
 			...baseParams,
 			product,
@@ -318,16 +317,5 @@ describe("buildAttachRequestBody — long-lived checkout", () => {
 		});
 
 		expect(result?.long_lived_checkout).toBeUndefined();
-	});
-
-	test("sends long_lived_checkout when enabled", () => {
-		const result = buildAttachRequestBody({
-			...baseParams,
-			product,
-			prepaidOptions: {},
-			longLivedCheckout: true,
-		});
-
-		expect(result?.long_lived_checkout).toBe(true);
 	});
 });

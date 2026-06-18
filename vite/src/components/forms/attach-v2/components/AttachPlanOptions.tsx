@@ -27,7 +27,6 @@ export function AttachPlanOptions() {
 		trialCardRequired,
 		trialOnEnd,
 		grantFree,
-		longLivedCheckout,
 	} = formValues;
 	const [versionOpen, setVersionOpen] = useState(false);
 
@@ -130,19 +129,6 @@ export function AttachPlanOptions() {
 					<Switch
 						checked={!!grantFree}
 						onCheckedChange={(enabled) => handleGrantFreeToggle({ enabled })}
-					/>
-				}
-			/>
-
-			<ConfigRow
-				title="Long-lived Checkout"
-				description="Create a checkout link that stays valid for 90 days"
-				action={
-					<Switch
-						checked={!!longLivedCheckout}
-						onCheckedChange={(enabled) =>
-							form.setFieldValue("longLivedCheckout", !!enabled)
-						}
 					/>
 				}
 			/>

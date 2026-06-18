@@ -96,7 +96,7 @@ interface AttachFormContextValue {
 		stripeId: string | undefined;
 		hostedInvoiceUrl: string | null | undefined;
 	}>;
-	handleCheckoutAttach: () => Promise<{
+	handleCheckoutAttach: (params?: { longLivedCheckout?: boolean }) => Promise<{
 		paymentUrl: string | null | undefined;
 	}>;
 }
@@ -189,7 +189,6 @@ export function AttachFormProvider({
 		grantFree,
 		noBillingChanges,
 		enablePlanImmediately,
-		longLivedCheckout,
 		carryOverBalances,
 		carryOverBalanceFeatureIds,
 		carryOverUsages,
@@ -413,7 +412,6 @@ export function AttachFormProvider({
 		discounts,
 		noBillingChanges,
 		enablePlanImmediately,
-		longLivedCheckout,
 		carryOverBalances,
 		carryOverBalanceFeatureIds,
 		carryOverUsages,
