@@ -3,6 +3,10 @@ import { FeatureType } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getQueuedTrackFeatureDeductions } from "@/internal/balances/track/runQueuedTrack.js";
 import { getTokenCascadeDeductionsFromBody } from "@/internal/balances/track/utils/getFeatureDeductions.js";
+import {
+	buildTokenCascadeDeduction,
+	sortCusEntsForTokenCascade,
+} from "@/internal/balances/utils/types/featureDeduction.js";
 
 const createCtx = (): AutumnContext =>
 	({
@@ -201,5 +205,33 @@ describe("getTokenCascadeDeductionsFromBody", () => {
 			tokens: { cost: 4 },
 			spillover: [{ feature: { id: "ai_overage" }, tokens: { cost: 6 } }],
 		});
+	});
+
+	test("orders prepared entitlements by cascade system order", () => {
+		const ctx = createCtx();
+		const included = ctx.features[0];
+		const overage = ctx.features[2];
+		const deduction = buildTokenCascadeDeduction({
+			systems: [
+				{ feature: included, cost: 4 },
+				{ feature: overage, cost: 6 },
+			],
+			tokenUsage: {
+				modelName: "custom/internal-model",
+				inputTokens: 200000,
+				outputTokens: 200000,
+			},
+		});
+		const cusEnts = [
+			{ id: "ce_overage", entitlement: { feature: overage } },
+			{ id: "ce_included", entitlement: { feature: included } },
+		];
+
+		sortCusEntsForTokenCascade(cusEnts, deduction);
+
+		expect(cusEnts.map((cusEnt) => cusEnt.id)).toEqual([
+			"ce_included",
+			"ce_overage",
+		]);
 	});
 });

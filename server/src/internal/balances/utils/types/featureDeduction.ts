@@ -83,6 +83,40 @@ export const expandCascadeDeductions = (
 		];
 	});
 
+export const sortCusEntsForTokenCascade = <
+	T extends { entitlement: { feature: { id: string } } },
+>(
+	cusEnts: T[],
+	deduction: FeatureDeduction,
+): void => {
+	if (!deduction.spillover || deduction.spillover.length === 0) return;
+
+	const featureOrder = new Map([
+		[deduction.feature.id, 0],
+		...deduction.spillover.map(
+			(spilloverDeduction, index) =>
+				[spilloverDeduction.feature.id, index + 1] as const,
+		),
+	]);
+	const originalIndex = new Map(cusEnts.map((cusEnt, index) => [cusEnt, index]));
+
+	cusEnts.sort((left, right) => {
+		const leftOrder = featureOrder.get(left.entitlement.feature.id);
+		const rightOrder = featureOrder.get(right.entitlement.feature.id);
+
+		if (leftOrder === undefined && rightOrder === undefined) {
+			return (originalIndex.get(left) ?? 0) - (originalIndex.get(right) ?? 0);
+		}
+		if (leftOrder === undefined) return 1;
+		if (rightOrder === undefined) return -1;
+
+		return (
+			leftOrder - rightOrder ||
+			(originalIndex.get(left) ?? 0) - (originalIndex.get(right) ?? 0)
+		);
+	});
+};
+
 export const getRelevantFeaturesForDeduction = ({
 	features,
 	deduction,

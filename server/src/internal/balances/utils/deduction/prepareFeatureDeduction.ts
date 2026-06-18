@@ -26,6 +26,7 @@ import type {
 import {
 	type FeatureDeduction,
 	getRelevantFeaturesForDeduction,
+	sortCusEntsForTokenCascade,
 } from "../types/featureDeduction.js";
 import { computeCreditCosts } from "./computeCreditCosts.js";
 
@@ -64,6 +65,7 @@ export const prepareFeatureDeduction = ({
 		inStatuses: orgToInStatuses({ org }),
 		customerEntitlementFilters,
 	});
+	sortCusEntsForTokenCascade(cusEnts, deduction);
 
 	// Check if ANY relevant feature is unlimited
 	const unlimitedFeatureIds: string[] = [];

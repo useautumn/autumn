@@ -34,6 +34,7 @@ import type {
 import {
 	type FeatureDeduction,
 	getRelevantFeaturesForDeduction,
+	sortCusEntsForTokenCascade,
 } from "../types/featureDeduction.js";
 
 /**
@@ -71,6 +72,7 @@ export const prepareFeatureDeductionV2 = ({
 		inStatuses: orgToInStatuses({ org }),
 		customerEntitlementFilters,
 	});
+	sortCusEntsForTokenCascade(customerEntitlements, deduction);
 
 	const unlimitedFeatureIds: string[] = [];
 	// Track the chosen unlimited cusEnt so the deduction short-circuit can
