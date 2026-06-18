@@ -386,6 +386,11 @@ const buildWorkerEnv = ({
 		STRIPE_WEBHOOK_SKIP_VERIFY: "true",
 		// per-worker Stripe (platform key + the sub-account this worker binds).
 		STRIPE_SANDBOX_SECRET_KEY: requireSecret("STRIPE_SANDBOX_SECRET_KEY"),
+		// The connect seeder calls getStripeWebhookSecret UNCONDITIONALLY (before the
+		// skip-verify branch) and throws if it's unset; the ingress forwards without an
+		// org_id query, so it falls to this env var. Skip-verify never uses the value,
+		// so a dummy satisfies it (plan §6a) — otherwise the worker 500s every webhook.
+		STRIPE_SANDBOX_WEBHOOK_SECRET: "whsec_tw_skipverify",
 		STRIPE_ACCOUNT_ID: stripeAccountId,
 		ORG_ID: TEST_ORG_CONFIG.id,
 		// The bun-test preload (server/tests/setup-integration-tests.ts) only builds
