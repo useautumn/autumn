@@ -1,6 +1,6 @@
 import { member } from "@autumn/shared";
 import type { Session } from "better-auth";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/db/initDrizzle.js";
 import { createDefaultOrg } from "@/utils/authUtils/createDefaultOrg.js";
 
@@ -10,6 +10,7 @@ export const beforeSessionCreated = async (session: Session) => {
 
 		const membership = await db.query.member.findFirst({
 			where: eq(member.userId, session.userId),
+			orderBy: [desc(member.createdAt)],
 		});
 
 		if (membership) {

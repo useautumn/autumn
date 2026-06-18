@@ -45,8 +45,8 @@ export const SignIn = () => {
 		[searchParams],
 	);
 
-	const defaultNewPath = "/sandbox/products?tab=products";
-	const defaultCallbackPath = "/sandbox/products?tab=products";
+	const defaultNewPath = "/";
+	const defaultCallbackPath = "/";
 
 	const newPath = oauthRedirectUrl || defaultNewPath;
 	const callbackPath = oauthRedirectUrl || defaultCallbackPath;

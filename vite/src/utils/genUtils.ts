@@ -48,6 +48,31 @@ export const getEnvFromPath = (path: string) => {
 	return AppEnv.Live;
 };
 
+export const getDefaultOrgPath = (
+	org?: { deployed?: boolean } | null,
+	path = "/products?tab=products",
+) => (org?.deployed ? path : `/sandbox${path}`);
+
+export const getOrgRouteRedirect = ({
+	pathname,
+	search = "",
+	deployed,
+}: {
+	pathname: string;
+	search?: string;
+	deployed: boolean;
+}) => {
+	if (pathname === "/") {
+		return getDefaultOrgPath({ deployed });
+	}
+
+	if (!deployed && !pathname.startsWith("/sandbox")) {
+		return `/sandbox${pathname}${search}`;
+	}
+
+	return null;
+};
+
 export const envToPath = (env: AppEnv, currentPath: string) => {
 	// Check if we're on a customer detail page
 	const customerDetailPattern = /^(\/sandbox)?\/customers\/[^/]+/;
