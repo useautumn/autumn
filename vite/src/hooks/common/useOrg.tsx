@@ -1,7 +1,11 @@
 import type { AppEnv, FrontendOrg } from "@autumn/shared";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { authClient, useListOrganizations } from "@/lib/auth-client";
+import {
+	keepPreviousData,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
+import { useCallback, useEffect } from "react";
+import { authClient, useListOrganizations, useSession } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 
@@ -21,38 +25,56 @@ export const getLastSwitchedOrgId = (): string | null => {
 	}
 };
 
+export const clearLastSwitchedOrgId = (id?: string) => {
+	try {
+		if (!id || localStorage.getItem(LAST_ORG_KEY) === id) {
+			localStorage.removeItem(LAST_ORG_KEY);
+		}
+	} catch {}
+};
+
+export const useSwitchActiveOrg = () => {
+	const queryClient = useQueryClient();
+	const { refetch: refetchSession } = useSession();
+
+	return useCallback(async (orgId: string) => {
+		await authClient.organization.setActive({ organizationId: orgId });
+		setLastSwitchedOrgId(orgId);
+		await Promise.all([
+			refetchSession(),
+			queryClient.invalidateQueries({ queryKey: ["org"] }),
+		]);
+	}, [queryClient, refetchSession]);
+};
+
 export const useOrg = (params?: { env?: AppEnv }) => {
 	const currentEnv = useEnv();
 	const axiosInstance = useAxiosInstance({ env: params?.env });
-	const { data: orgList } = useListOrganizations();
+	const { data: orgList, isPending: orgListLoading } = useListOrganizations();
+	const { data: session } = useSession();
+	const activeOrgId = session?.session.activeOrganizationId;
 
 	const fetcher = async () => {
-		try {
-			const { data } = await axiosInstance.get("/organization");
-			return data;
-		} catch {
-			return null;
-		}
+		const { data } = await axiosInstance.get("/organization");
+		return data;
 	};
 
 	const {
 		data: org,
 		isLoading,
+		isPlaceholderData,
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: params?.env ? ["org", params.env] : ["org", currentEnv],
+		queryKey: ["org", params?.env ?? currentEnv, activeOrgId],
 		queryFn: fetcher,
 		placeholderData: keepPreviousData,
 		refetchOnWindowFocus: true,
 		staleTime: 30_000,
+		enabled: !!activeOrgId,
 	});
-
-	useEffect(() => {
-		if (org?.id) {
-			setLastSwitchedOrgId(org.id);
-		}
-	}, [org?.id]);
+	const orgLoading =
+		!session || (!!activeOrgId && (isLoading || isPlaceholderData));
 
 	useEffect(() => {
 		const handleNoActiveOrg = async () => {
@@ -75,10 +97,15 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 			window.location.reload();
 		};
 
-		if (!org && !isLoading) {
+		if (session && !activeOrgId && !orgListLoading) {
 			handleNoActiveOrg();
 		}
-	}, [org, orgList, isLoading]);
+	}, [activeOrgId, orgList, orgListLoading, session]);
 
-	return { org: org as FrontendOrg, isLoading, error, mutate: refetch };
+	return {
+		org: org as FrontendOrg,
+		isLoading: orgLoading,
+		error,
+		mutate: refetch,
+	};
 };

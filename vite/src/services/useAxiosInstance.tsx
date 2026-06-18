@@ -63,8 +63,7 @@ export function useAxiosInstance(params?: {
 								await authClient.organization.setActive({
 									organizationId: nextOrg.id,
 								});
-								// Redirect to products page of the new organization
-								window.location.href = `/${currentEnv === AppEnv.Sandbox ? "sandbox" : "production"}/products`;
+								window.location.href = "/";
 								return Promise.reject(
 									new Error("Redirecting to available organization"),
 								);
