@@ -117,6 +117,23 @@ if [ ! -x "$BIN_DIR/dragonfly" ]; then
 fi
 log "Dragonfly installed at $BIN_DIR/dragonfly"
 
+# redis-cli — Dragonfly speaks the Redis protocol but ships NO client. The
+# readiness probes (PING), the clean-stop (SAVE/SHUTDOWN), and the spike's verify
+# all need `redis-cli`. AL2023 packages it as `redis6` (binary redis6-cli);
+# symlink it to `redis-cli` on BIN_DIR (which start-services puts on PATH).
+if ! command -v redis-cli >/dev/null 2>&1 && [ ! -x "$BIN_DIR/redis-cli" ]; then
+  log "Installing redis-cli (redis6)"
+  sudo dnf install -y --setopt=install_weak_deps=False redis6 >/dev/null 2>&1 \
+    || log "WARN: dnf install redis6 failed"
+  REDIS_CLI_BIN="$(command -v redis6-cli 2>/dev/null || command -v redis-cli 2>/dev/null || true)"
+  if [ -n "$REDIS_CLI_BIN" ]; then
+    ln -sf "$REDIS_CLI_BIN" "$BIN_DIR/redis-cli"
+    log "redis-cli -> $REDIS_CLI_BIN"
+  else
+    die "redis-cli not found after installing redis6 (Dragonfly probes need it)"
+  fi
+fi
+
 # ---------------------------------------------------------------------------
 # 4. elasticmq-native (GraalVM static binary — NOT the JVM jar).
 # It is published ONLY inside the softwaremill/elasticmq-native image at

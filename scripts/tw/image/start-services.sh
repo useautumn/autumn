@@ -49,14 +49,19 @@ done
 export PATH="$PG_BINDIR:$BIN_DIR:$HOME/.bun/bin:$PATH"
 
 wait_for() {
-  local label="$1" probe="$2" tries="${3:-60}"
+  local label="$1" probe="$2" tries="${3:-60}" logfile="${4:-}"
   for _ in $(seq 1 "$tries"); do
     if eval "$probe" >/dev/null 2>&1; then
       return 0
     fi
     sleep 0.25
   done
-  die "$label did not become ready"
+  echo "[tw-start-services] ERROR: $label did not become ready" >&2
+  if [ -n "$logfile" ] && [ -f "$logfile" ]; then
+    echo "--- last 40 lines of $logfile ---" >&2
+    tail -n 40 "$logfile" >&2
+  fi
+  exit 1
 }
 
 # ---------------------------------------------------------------------------
@@ -69,7 +74,7 @@ else
   log "Starting PostgreSQL (pg_ctl) on :$PG_PORT"
   pg_ctl -D "$PGDATA" -l "$LOG_DIR/pg.log" -w -o "-p $PG_PORT" start
 fi
-wait_for "PostgreSQL" "pg_isready -h localhost -p $PG_PORT"
+wait_for "PostgreSQL" "pg_isready -h localhost -p $PG_PORT" 60 "$LOG_DIR/pg.log"
 
 # ---------------------------------------------------------------------------
 # 2. Dragonfly — Redis-protocol cache on :6379. --dir is the snapshot path so
@@ -88,7 +93,7 @@ else
     >"$LOG_DIR/dragonfly.log" 2>&1 &
   disown || true
 fi
-wait_for "Dragonfly" "redis-cli -p $DRAGONFLY_PORT PING"
+wait_for "Dragonfly" "redis-cli -p $DRAGONFLY_PORT PING" 60 "$LOG_DIR/dragonfly.log"
 
 # ---------------------------------------------------------------------------
 # 3. elasticmq-native (:9324). Prefer the GraalVM native binary; fall back to
@@ -114,7 +119,7 @@ else
     die "no elasticmq binary or jar found (run build-base.sh)"
   fi
 fi
-wait_for "elasticmq" "$elasticmq_ready_probe"
+wait_for "elasticmq" "$elasticmq_ready_probe" 240 "$LOG_DIR/elasticmq.log"
 
 # ---------------------------------------------------------------------------
 # 4. ClickHouse (optional).
