@@ -2,6 +2,7 @@ import {
 	addDuration,
 	type CreateScheduleParamsV0,
 	ErrCode,
+	ms,
 	RecaseError,
 	type ResolvedCreateSchedulePhaseV0,
 } from "@autumn/shared";
@@ -100,13 +101,51 @@ export const getInitialCreateSchedulePhase = ({
 	return firstPhase;
 };
 
+// The schedule date picker defaults a phase to noon, so a switch meant for the renewal date
+// lands within 12h of the anchor; snap onto the boundary to bill a full period, not a sliver.
+const CYCLE_BOUNDARY_SNAP_WINDOW_MS = ms.hours(12);
+
+const snapResolvedPhasesToCycleBoundary = ({
+	phases,
+	cycleBoundaryMs,
+}: {
+	phases: ResolvedPhase[];
+	cycleBoundaryMs: number;
+}): ResolvedPhase[] =>
+	phases.map((phase, index) => {
+		// The first phase is the immediate one ("now"); never move it.
+		if (index === 0) return phase;
+		if (
+			Math.abs(phase.starts_at - cycleBoundaryMs) >
+			CYCLE_BOUNDARY_SNAP_WINDOW_MS
+		) {
+			return phase;
+		}
+
+		// Only snap when the boundary stays strictly between neighbours, so we never
+		// turn a valid schedule into a non-increasing one.
+		const previousPhase = phases[index - 1];
+		const nextPhase = phases[index + 1];
+		if (previousPhase && cycleBoundaryMs <= previousPhase.starts_at)
+			return phase;
+		if (nextPhase && cycleBoundaryMs >= nextPhase.starts_at) return phase;
+
+		return { ...phase, starts_at: cycleBoundaryMs };
+	});
+
 /** Sort phases for downstream create_schedule setup and execution. */
 export const normalizeCreateSchedulePhases = ({
 	phases,
 	currentEpochMs,
+	cycleBoundaryMs,
 }: {
 	phases: CreateScheduleParamsV0["phases"];
 	currentEpochMs: number;
+	/**
+	 * Active subscription's next cycle boundary, when there is one. Future phases that
+	 * land within {@link CYCLE_BOUNDARY_SNAP_WINDOW_MS} of it snap onto it.
+	 */
+	cycleBoundaryMs?: number;
 }): [ResolvedPhase, ...ResolvedPhase[]] => {
 	const orderedPhases = hasRelativeTiming({ phases })
 		? [...phases]
@@ -147,7 +186,8 @@ export const normalizeCreateSchedulePhases = ({
 			});
 		} else {
 			throw new RecaseError({
-				message: "Each phase must include exactly one of starts_at or starting_after",
+				message:
+					"Each phase must include exactly one of starts_at or starting_after",
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
 			});
@@ -156,7 +196,15 @@ export const normalizeCreateSchedulePhases = ({
 		resolvedPhases.push(phaseToResolvedPhase({ phase, startsAt }));
 	}
 
-	assertStrictlyIncreasing({ phases: resolvedPhases });
+	const snappedPhases =
+		cycleBoundaryMs === undefined
+			? resolvedPhases
+			: snapResolvedPhasesToCycleBoundary({
+					phases: resolvedPhases,
+					cycleBoundaryMs,
+				});
 
-	return toNonEmptyResolvedPhases({ phases: resolvedPhases });
+	assertStrictlyIncreasing({ phases: snappedPhases });
+
+	return toNonEmptyResolvedPhases({ phases: snappedPhases });
 };

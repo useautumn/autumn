@@ -8,6 +8,7 @@ import {
 	type MultiAttachParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { setupAttachEndOfCycleMs } from "@/internal/billing/v2/actions/attach/setup/setupAttachEndOfCycleMs";
 import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
@@ -116,9 +117,22 @@ export const setupCreateScheduleBillingContext = async ({
 		fullProducts: billingContext.fullProducts,
 	});
 
+	// Snap near-boundary future phases onto the active sub's cycle end (see
+	// normalizeCreateSchedulePhases). Skipped on cycle reset, since the boundary moves.
+	const cycleBoundaryMs =
+		params.billing_cycle_anchor === undefined
+			? setupAttachEndOfCycleMs({
+					planTiming: "end_of_cycle",
+					stripeSubscription: billingContext.stripeSubscription,
+					billingCycleAnchorMs: billingContext.billingCycleAnchorMs,
+					currentEpochMs: billingContext.currentEpochMs,
+				})
+			: undefined;
+
 	const normalizedPhases = normalizeCreateSchedulePhases({
 		phases: params.phases,
 		currentEpochMs: billingContext.currentEpochMs,
+		cycleBoundaryMs,
 	});
 	const [immediatePhase, ...futurePhases] = normalizedPhases;
 

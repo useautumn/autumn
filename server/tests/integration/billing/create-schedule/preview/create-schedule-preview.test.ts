@@ -9,10 +9,12 @@ import {
 	ms,
 	truncateMsToSecondPrecision,
 } from "@autumn/shared";
+import { expectCustomerInvoiceCorrect } from "@tests/integration/billing/utils/expectCustomerInvoiceCorrect";
 import { TestFeature } from "@tests/setup/v2Features";
 import { items } from "@tests/utils/fixtures/items";
 import { itemsV2 } from "@tests/utils/fixtures/itemsV2";
 import { products } from "@tests/utils/fixtures/products";
+import { advanceTestClock } from "@tests/utils/stripeUtils";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario";
 import chalk from "chalk";
 import { addMonths } from "date-fns";
@@ -953,5 +955,151 @@ test.concurrent(
 				(line) => line.description === "Unrelated pending Stripe invoice item",
 			),
 		).toBe(false);
+	},
+);
+
+/**
+ * TDD regression for the "preview numbers are cooked" report: a scheduled plan
+ * swap dated on the current cycle's renewal *date* but at an incidental wall-clock
+ * time (the dashboard date picker emits the selected date with a time-of-day that
+ * does not equal the subscription's anchor instant) lands a few hours short of the
+ * real cycle boundary.
+ *
+ * Red-failure mode (pre-fix):
+ *  - The transition is classified as a mid-cycle scheduled_change and the new plan
+ *    is prorated over the tiny gap to the anchor boundary, so next_cycle.total is a
+ *    near-zero sliver and next_cycle.starts_at is the offset timestamp, not the
+ *    renewal boundary. The full charge is silently deferred to a separate invoice.
+ *
+ * Green-success criteria (after fix):
+ *  - The phase snaps to the exact cycle boundary, so next_cycle bills the new plan's
+ *    full first period ($50) at the renewal boundary.
+ */
+test.concurrent(
+	`${chalk.yellowBright("create-schedule preview 16: replacement landing on the cycle boundary charges the full new plan, not a sliver")}`,
+	async () => {
+		const pro = products.pro({
+			id: "preview-boundary-snap-pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const premium = products.premium({
+			id: "preview-boundary-snap-premium",
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+
+		const { customerId, autumnV1, advancedTo } = await initScenario({
+			customerId: "create-schedule-preview-boundary-snap",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, premium] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		// Anchor == advancedTo, so the next renewal boundary is one month out.
+		const renewalAt = truncateMsToSecondPrecision(
+			addMonths(advancedTo, 1).getTime(),
+		);
+		// Dashboard sends the renewal *date* with an incidental time-of-day, so the
+		// scheduled switch lands a few hours short of the real anchor instant.
+		const transitionAt = renewalAt - ms.hours(6);
+
+		await expectPreviewToMatchCreateSchedule({
+			autumnV1,
+			params: {
+				customer_id: customerId,
+				phases: [
+					{ starts_at: advancedTo, plans: [{ plan_id: pro.id }] },
+					{ starts_at: transitionAt, plans: [{ plan_id: premium.id }] },
+				],
+			},
+			expectedTotal: 0,
+			assertPreview: (preview) => {
+				expect(preview.line_items).toHaveLength(0);
+				expect(preview.next_cycle).toBeDefined();
+				// Snapped onto the real cycle boundary (Stripe's anchor instant, a few
+				// seconds off a naive month-add), not the offset the dashboard sent.
+				expect(preview.next_cycle?.starts_at).not.toBe(transitionAt);
+				expect(
+					Math.abs((preview.next_cycle?.starts_at ?? 0) - renewalAt),
+				).toBeLessThan(ms.hours(1));
+				// Full new-plan first period, not a proration sliver.
+				expectCloseToCents({
+					actual: preview.next_cycle?.total ?? 0,
+					expected: 50,
+				});
+			},
+		});
+	},
+);
+
+/**
+ * End-to-end billing proof for the boundary snap: advancing past the renewal must
+ * produce a single full charge for the new plan, not a tiny proration sliver at the
+ * offset time followed by the full charge at the anchor (the pre-fix double-invoice).
+ */
+test.concurrent(
+	`${chalk.yellowBright("create-schedule preview 17: snapped boundary bills one full renewal invoice, no sliver")}`,
+	async () => {
+		const pro = products.pro({
+			id: "preview-boundary-snap-billing-pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const premium = products.premium({
+			id: "preview-boundary-snap-billing-premium",
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+
+		const { customerId, autumnV1, ctx, testClockId, advancedTo } =
+			await initScenario({
+				customerId: "create-schedule-preview-boundary-snap-billing",
+				setup: [
+					s.customer({ paymentMethod: "success" }),
+					s.products({ list: [pro, premium] }),
+				],
+				actions: [s.billing.attach({ productId: pro.id })],
+			});
+
+		const renewalAt = truncateMsToSecondPrecision(
+			addMonths(advancedTo, 1).getTime(),
+		);
+		const transitionAt = renewalAt - ms.hours(6);
+
+		await autumnV1.billing.createSchedule({
+			customer_id: customerId,
+			phases: [
+				{ starts_at: advancedTo, plans: [{ plan_id: pro.id }] },
+				{ starts_at: transitionAt, plans: [{ plan_id: premium.id }] },
+			],
+		});
+
+		// Only the Pro attach has billed; the swap is scheduled for the boundary.
+		const beforeRenewal =
+			await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		await expectCustomerInvoiceCorrect({
+			customer: beforeRenewal,
+			count: 1,
+			latestTotal: 20,
+		});
+
+		await advanceTestClock({
+			stripeCli: ctx.stripeCli,
+			testClockId: testClockId!,
+			advanceTo: renewalAt + ms.days(1),
+			waitForSeconds: 30,
+		});
+
+		// Assert against Stripe directly (the source of truth for what billed). With the
+		// snap there is no mid-cycle sliver: exactly two invoices, the $20 Pro attach and
+		// the full $50 renewal. The pre-fix bug would add a third tiny proration invoice.
+		const stripeInvoices = await ctx.stripeCli.invoices.list({
+			customer: beforeRenewal.stripe_id!,
+			limit: 20,
+		});
+		const invoiceTotals = stripeInvoices.data
+			.map((invoice) => invoice.total)
+			.filter((total) => total !== 0)
+			.sort((a, b) => a - b);
+		expect(invoiceTotals).toEqual([2000, 5000]);
 	},
 );
