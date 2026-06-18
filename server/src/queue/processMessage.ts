@@ -118,6 +118,7 @@ export const processMessage = async ({
 			db,
 			payload: job.data,
 			logger: workerLogger,
+			skipCache: job.name !== JobName.Track,
 		});
 		workerCtx = ctx;
 
