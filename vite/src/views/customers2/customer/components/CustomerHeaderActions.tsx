@@ -4,19 +4,25 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { IconTooltipButton } from "@/components/v2/buttons/IconTooltipButton";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
-import { getStripeConnectViewAsLink, getStripeCusLink } from "@/utils/linkUtils";
+import {
+	getStripeConnectViewAsLink,
+	getStripeCusLink,
+} from "@/utils/linkUtils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { CustomButtons } from "./CustomButtons";
 import { ShowCustomerObjectSheet } from "./ShowCustomerObjectSheet";
 
 export function CustomerHeaderActions() {
 	const { customer } = useCusQuery();
+	const { org } = useOrg();
 	const { stripeAccount } = useOrgStripeQuery();
 	const { isAdmin } = useAdmin();
 	const { masterStripeAccount } = useMasterStripeAccount();
@@ -30,6 +36,8 @@ export function CustomerHeaderActions() {
 	const showStripe =
 		Boolean(stripeCustomerId) &&
 		customer?.processor?.type === ProcessorType.Stripe;
+
+	const customButtons = org?.custom_buttons ?? [];
 
 	const handleOpenStripe = () => {
 		if (!stripeCustomerId) return;
@@ -71,6 +79,7 @@ export function CustomerHeaderActions() {
 
 	return (
 		<div className="flex items-center gap-1">
+			<CustomButtons buttons={customButtons} customer={customer} />
 			<ShowCustomerObjectSheet
 				open={showObjectOpen}
 				setOpen={setShowObjectOpen}

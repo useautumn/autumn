@@ -2,6 +2,34 @@
 
 import { AppEnv } from "@autumn/shared";
 
+const CUSTOM_BUTTON_VARS = {
+	"{customerId}": (customer: { id?: string | null }) => customer.id ?? "",
+} as const;
+
+export const resolveCustomButtonUrl = (
+	template: string,
+	customer: { id?: string | null },
+) => {
+	let resolved = template;
+	for (const [token, getValue] of Object.entries(CUSTOM_BUTTON_VARS)) {
+		resolved = resolved.replaceAll(
+			token,
+			encodeURIComponent(getValue(customer)),
+		);
+	}
+	return resolved;
+};
+
+const SAFE_PROTOCOLS = new Set(["http:", "https:"]);
+
+export const isSafeCustomButtonUrl = (url: string) => {
+	try {
+		return SAFE_PROTOCOLS.has(new URL(url).protocol);
+	} catch {
+		return false;
+	}
+};
+
 export const getStripeCusLink = ({
 	customerId,
 	env,
