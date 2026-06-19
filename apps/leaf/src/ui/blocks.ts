@@ -397,6 +397,7 @@ const modifierPhrases = (toolArgs?: Record<string, unknown>) => {
 	const request = getRequest(toolArgs);
 	if (!request) return [];
 	const invoiceMode = getRecord(request.invoice_mode);
+	const startsAt = getNumber(request.starts_at);
 	const enableImmediately =
 		request.enable_plan_immediately ?? invoiceMode.enable_plan_immediately;
 
@@ -419,6 +420,7 @@ const modifierPhrases = (toolArgs?: Record<string, unknown>) => {
 		getString(request.redirect_mode)
 			? `redirect: ${request.redirect_mode}`
 			: null,
+		startsAt !== null ? `Starts: ${formatDay(startsAt)}` : null,
 	].filter((phrase): phrase is string => Boolean(phrase));
 };
 

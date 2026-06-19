@@ -171,11 +171,13 @@ export class CusEntService {
 		customDateUnix,
 		batchSize = 1000,
 		limit,
+		includeSeparateIntervalResets = true,
 	}: {
 		db: DrizzleCli;
 		customDateUnix?: number;
 		batchSize?: number;
 		limit?: number;
+		includeSeparateIntervalResets?: boolean;
 	}) {
 		const allResults: FullCusEntWithProduct[] = [];
 		let offset = 0;
@@ -224,7 +226,9 @@ export class CusEntService {
 			);
 
 		const resetOwnedByAutumn = () =>
-			or(eq(customerEntitlements.separate_interval, true), notPriceBacked());
+			includeSeparateIntervalResets
+				? or(eq(customerEntitlements.separate_interval, true), notPriceBacked())
+				: notPriceBacked();
 
 		while (hasMore) {
 			// Branch 1: cusEnts with no customer_product. Left-join to

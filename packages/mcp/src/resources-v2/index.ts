@@ -44,6 +44,7 @@ const resourceOrder = [
 	"autumn://docs/concepts",
 	"autumn://docs/plan-management",
 	"autumn://docs/billing",
+	"autumn://docs/logs",
 ] as const;
 
 const planManagementResource = {
@@ -51,6 +52,10 @@ const planManagementResource = {
 	parts: [
 		{ marker: "<!-- Modeling -->", file: "./plan-management/modeling.md" },
 	],
+} as const;
+const logsResource = {
+	file: "./logs/logs.md",
+	parts: [],
 } as const;
 
 const readResourceFile = ({
@@ -76,7 +81,9 @@ const compileMarkdownResourceWithParts = ({
 	});
 	const text = partSpecs.reduce(
 		(body, part) =>
-			body.replace(part.marker, readResourceFile({ baseUrl, file: part.file })),
+			body.replace(part.marker, () =>
+				readResourceFile({ baseUrl, file: part.file }),
+			),
 		parsed.body,
 	);
 
@@ -148,11 +155,17 @@ const compileResources = ({
 		file: billingResource.file,
 		parts: billingResource.parts,
 	});
+	const logs = compileMarkdownResourceWithParts({
+		baseUrl,
+		file: logsResource.file,
+		parts: logsResource.parts,
+	});
 
 	return orderResources([
 		concepts,
 		planManagement,
 		billing,
+		logs,
 	]);
 };
 

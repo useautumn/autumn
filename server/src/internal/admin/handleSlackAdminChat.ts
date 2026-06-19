@@ -2,7 +2,6 @@ import crypto, { randomUUID } from "node:crypto";
 import { stripOAuthTokenPrefix } from "@autumn/auth";
 import {
 	AppEnv,
-	apiKeys,
 	type ChatOAuthCredential,
 	chatInstallations,
 	chatOAuthCredentials,
@@ -14,9 +13,10 @@ import {
 	organizations,
 	RecaseError,
 	Scopes,
+	slackAdminThreads,
 } from "@autumn/shared";
 import { addMinutes } from "date-fns";
-import { and, eq, inArray, or, sql } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -26,26 +26,11 @@ import {
 	getChatStateSecret,
 	getSlackAdminProvider,
 } from "../chat/chatUtils.js";
-import { clearSecretKeyCache } from "../dev/api-keys/cacheApiKeyUtils.js";
 
 const targetBody = z.strictObject({
 	org_id: z.string().min(1),
 	env: z.enum(AppEnv),
 });
-
-const findTargetOrg = ({
-	db,
-	orgIdOrSlug,
-}: {
-	db: DrizzleCli;
-	orgIdOrSlug: string;
-}) =>
-	db.query.organizations.findFirst({
-		where: or(
-			eq(organizations.id, orgIdOrSlug),
-			eq(organizations.slug, orgIdOrSlug),
-		),
-	});
 
 const getSlackAdminInstallation = async ({ db }: { db: DrizzleCli }) =>
 	db.query.chatInstallations.findFirst({
@@ -156,19 +141,6 @@ const revokeSlackAdminOAuthArtifacts = async ({
 				.where(inArray(oauthRefreshToken.token, uniqueRefreshTokenValues));
 		}
 
-		for (const consentId of consentIds) {
-			const linkedKeys = await db
-				.select({ id: apiKeys.id, hashedKey: apiKeys.hashed_key })
-				.from(apiKeys)
-				.where(sql`${apiKeys.meta}->>'oauth_consent_id' = ${consentId}`);
-
-			for (const key of linkedKeys) {
-				await db.delete(apiKeys).where(eq(apiKeys.id, key.id));
-				if (key.hashedKey)
-					await clearSecretKeyCache({ hashedKey: key.hashedKey });
-			}
-		}
-
 		await db.delete(oauthConsent).where(inArray(oauthConsent.id, consentIds));
 	}
 
@@ -203,7 +175,7 @@ export const handleGetSlackAdminInstall = createRoute({
 	handler: async (c) => {
 		const { db } = c.get("ctx");
 		const installation = await getSlackAdminInstallation({ db });
-		const targetOrg = installation
+		const installOwnerOrg = installation
 			? await getOrgSummary({ db, orgId: installation.org_id })
 			: null;
 		const oauthCredentials = installation
@@ -220,14 +192,15 @@ export const handleGetSlackAdminInstall = createRoute({
 						workspace_id: installation.workspace_id,
 						workspace_name: installation.workspace_name,
 						bot_user_id: installation.bot_user_id,
-						target_org_id: installation.org_id,
-						target_org_name: targetOrg?.name ?? null,
-						target_org_slug: targetOrg?.slug ?? null,
-						target_env: installation.default_env,
+						install_owner_org_id: installation.org_id,
+						install_owner_org_name: installOwnerOrg?.name ?? null,
+						install_owner_org_slug: installOwnerOrg?.slug ?? null,
+						default_env: installation.default_env,
 						updated_at: installation.updated_at,
 						installed_by_user_id: installation.installed_by_user_id,
 						oauth_credentials: oauthCredentials.map((credential) => ({
 							id: credential.id,
+							org_id: credential.org_id,
 							env: credential.env,
 							oauth_client_id: credential.oauth_client_id,
 							oauth_consent_id: credential.oauth_consent_id,
@@ -244,64 +217,12 @@ export const handleUpdateSlackAdminTarget = createRoute({
 	scopes: [Scopes.Superuser],
 	body: targetBody,
 	handler: async (c) => {
-		const ctx = c.get("ctx");
-		const { db } = ctx;
-		const { org_id: orgIdOrSlug, env } = c.req.valid("json");
-		const installation = await getSlackAdminInstallation({ db });
-		if (!installation) {
-			throw new RecaseError({
-				message: "Slack admin bot is not installed",
-				code: ErrCode.InvalidRequest,
-				statusCode: 404,
-			});
-		}
-
-		const targetOrg = await findTargetOrg({ db, orgIdOrSlug });
-		if (!targetOrg) {
-			throw new RecaseError({
-				message: "Target org not found for ID or slug",
-				code: ErrCode.OrgNotFound,
-				statusCode: 404,
-			});
-		}
-
-		const oauthCredentials = await getSlackAdminOAuthCredentials({
-			db,
-			installationId: installation.id,
-		});
-		const updated = await db.transaction(async (tx) => {
-			const now = Date.now();
-			const [updatedInstallation] = await tx
-				.update(chatInstallations)
-				.set({
-					org_id: targetOrg.id,
-					default_env: env,
-					installed_by_user_id: ctx.userId,
-					updated_at: now,
-				})
-				.where(eq(chatInstallations.id, installation.id))
-				.returning();
-
-			await revokeSlackAdminOAuthArtifacts({
-				db: tx,
-				credentials: oauthCredentials,
-			});
-
-			return updatedInstallation;
-		});
-
-		return c.json({
-			installation: {
-				id: updated.id,
-				workspace_id: updated.workspace_id,
-				workspace_name: updated.workspace_name,
-				target_org_id: updated.org_id,
-				target_org_name: targetOrg.name,
-				target_org_slug: targetOrg.slug,
-				target_env: updated.default_env,
-				updated_at: updated.updated_at,
-				installed_by_user_id: updated.installed_by_user_id,
-			},
+		c.req.valid("json");
+		throw new RecaseError({
+			message:
+				"Slack admin targets are selected and locked per Slack thread. Start a Slack thread with an explicit org slug or ID.",
+			code: ErrCode.InvalidRequest,
+			statusCode: 410,
 		});
 	},
 });
@@ -322,6 +243,9 @@ export const handleDeleteSlackAdminInstall = createRoute({
 				db: tx,
 				credentials: oauthCredentials,
 			});
+			await tx
+				.delete(slackAdminThreads)
+				.where(eq(slackAdminThreads.chat_installation_id, installation.id));
 			await tx
 				.delete(chatInstallations)
 				.where(

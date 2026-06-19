@@ -45,6 +45,7 @@ import {
 	cmaSessions,
 	cmaVaults,
 	harnessSessions,
+	slackAdminThreads,
 } from "../models/leafModels/cmaStateTable.js";
 import { leafSchema } from "../models/leafModels/leafSchema.js";
 // Migration Relations
@@ -125,6 +126,7 @@ export {
 	cmaSessions,
 	cmaVaults,
 	harnessSessions,
+	slackAdminThreads,
 	leafSchema,
 	customerEntitlements,
 	customerEntitlementsRelations,

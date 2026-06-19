@@ -146,7 +146,12 @@ export const claudeManagedEngine: AgentEngine = {
 
 		const content = buildUserMessageContent({
 			attachments: params.attachments,
-			text: buildHarnessMessageText({ env, newSession, orgContext, params }),
+			text: buildHarnessMessageText({
+				env,
+				newSession,
+				orgContext,
+				params,
+			}),
 		});
 
 		return runEngineLoop({

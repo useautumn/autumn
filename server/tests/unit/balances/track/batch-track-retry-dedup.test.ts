@@ -20,8 +20,9 @@
  *    server/src/queue/queueUtils.ts: the single-track path derives its
  *    dedup ID from a freshly generated random `generateId("dedup")`, also
  *    with no client-supplied idempotency token. Client retries on the
- *    single-track path have the same duplication risk and have always
- *    had it. Pinning batch behavior here keeps the two paths consistent.
+ *    single-track path have the same duplication risk when the client does
+ *    not supply an idempotency key. Pinning no-key batch behavior here keeps
+ *    the two no-key paths consistent.
  *
  * 2. Same-request retries ARE protected. The purpose `${ctx.id}-${index}`
  *    actually serves is collapsing AWS SDK auto-retries inside a single
@@ -29,23 +30,17 @@
  *    retries, so if AWS returns a 500 and the SDK retries the call, no
  *    duplicate is enqueued.
  *
- * 3. A correct fix needs an API contract change. The honest fix is to
- *    accept an Idempotency-Key header (or a per-item idempotency_key
- *    field) and use it as the dedup ID. That's a customer-facing contract
- *    change requiring SDK regen, documentation, and consumer input. Out
- *    of scope for the PR that introduced batchTrack.
+ * 3. Client-supplied per-item idempotency_key is handled by Redis replay,
+ *    not SQS deduplication. This pin covers queue dedup fallback behavior.
  *
  * If this test starts failing:
- *   DO NOT "fix" it by undoing the pin. The fix is to add idempotency
- *   keys to the /v1/balances.batch_track API contract — at which point
- *   this file should be rotated to assert the NEW dedup contract
- *   (client-supplied keys produce stable MessageDeduplicationId across
- *   client-driven retries). Until then, this behavior is intentional.
+ *   DO NOT "fix" it by undoing the pin. The fallback behavior for items
+ *   without idempotency keys is intentional.
  *
  * Layer (declared in the handoff, not re-derived):
  *   Symptom surfaces in: server/src/internal/balances/track/runBatchTrack.ts:entries.map
- *   Root cause lives in: the API contract — no idempotency key accepted
- *   Fix layer: declined — needs an API contract change, tracked outside this PR
+ *   Root cause lives in: the API contract — idempotency key is optional
+ *   Fix layer: declined — no-key fallback behavior is intentional
  */
 
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";

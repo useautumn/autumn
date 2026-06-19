@@ -16,6 +16,7 @@ export const upsertInstallationOAuthCredential = async ({
 	scopes,
 	oauthClientId = AUTUMN_SLACK_OAUTH_CLIENT_ID,
 	oauthConsentId,
+	orgId = installation.org_id,
 }: {
 	installation: ChatInstallation;
 	env: AppEnv;
@@ -25,6 +26,7 @@ export const upsertInstallationOAuthCredential = async ({
 	scopes: string[];
 	oauthClientId?: string;
 	oauthConsentId?: string | null;
+	orgId?: string;
 }) => {
 	const now = Date.now();
 
@@ -33,7 +35,7 @@ export const upsertInstallationOAuthCredential = async ({
 		credential: {
 			id: `chat_oauth_${crypto.randomUUID().replace(/-/g, "")}`,
 			chat_installation_id: installation.id,
-			org_id: installation.org_id,
+			org_id: orgId,
 			env,
 			oauth_client_id: oauthClientId,
 			oauth_consent_id: oauthConsentId ?? null,

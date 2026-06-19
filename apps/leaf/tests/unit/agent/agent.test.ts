@@ -13,6 +13,15 @@ const { agentDocUris } = await import("../../../src/agent/prompts/readDocs.js");
 const { getDefaultChatEnv, selectChatEnv } = await import(
 	"../../../src/agent/runMessage/setup/selectChatEnv.js"
 );
+const { selectChatOrg } = await import(
+	"../../../src/agent/runMessage/setup/selectChatOrg.js"
+);
+const {
+	shouldUseSlackAdminInstallationForWorkspace,
+	validateSlackAdminAccessConfig,
+} = await import(
+	"../../../src/internal/slackAdmin/access.js"
+);
 const { autumnChatInstructions } = await import(
 	"../../../src/harness/common/instructions/index.js"
 );
@@ -27,6 +36,9 @@ const { isCmaVaultStale } = await import(
 );
 const { buildAgentSystem } = await import(
 	"../../../src/harness/claudeManaged/ensureLeafResources.js"
+);
+const { containsInternalToolCall } = await import(
+	"../../../src/harness/common/output.js"
 );
 
 const execute = async (
@@ -53,6 +65,7 @@ describe("chat environment selection", () => {
 			"autumn://docs/concepts",
 			"autumn://docs/plan-management",
 			"autumn://docs/billing",
+			"autumn://docs/logs",
 		]);
 	});
 
@@ -88,6 +101,15 @@ describe("chat environment selection", () => {
 
 	test("points plan management to MCP resources", () => {
 		expect(autumnChatInstructions).toContain("autumn://docs/plan-management");
+	});
+
+	test("detects raw tool-call markup before posting output", () => {
+		expect(
+			containsInternalToolCall(
+				'<tool_call>\n{"name":"listCustomers","arguments":{}}\n</tool_call>',
+			),
+		).toBe(true);
+		expect(containsInternalToolCall("Here are the customers.")).toBe(false);
 	});
 
 	test("defaults to sandbox outside production", () => {
@@ -126,6 +148,33 @@ describe("chat environment selection", () => {
 			selectChatEnv({
 				message: "test mode",
 				select: () => ({ env: "test" }),
+			}),
+		).rejects.toThrow();
+	});
+
+	test("extracts an explicit org identifier from structured model output", async () => {
+		await expect(
+			selectChatOrg({
+				message: "for org acme-prod, list customers",
+				select: () => ({ org_identifier: "acme-prod" }),
+			}),
+		).resolves.toBe("acme-prod");
+	});
+
+	test("allows missing org identifier from structured model output", async () => {
+		await expect(
+			selectChatOrg({
+				message: "list customers",
+				select: () => ({ org_identifier: null }),
+			}),
+		).resolves.toBeNull();
+	});
+
+	test("rejects malformed org selector output", async () => {
+		await expect(
+			selectChatOrg({
+				message: "for org acme-prod",
+				select: () => ({ org_identifier: 42 }),
 			}),
 		).rejects.toThrow();
 	});
@@ -209,6 +258,71 @@ describe("Firecrawl tools", () => {
 	});
 });
 
+describe("Slack admin access gate", () => {
+	test("allows the configured admin workspace", () => {
+		expect(
+			validateSlackAdminAccessConfig({
+				configuredWorkspaceId: "T_ADMIN",
+				workspaceId: "T_ADMIN",
+			}),
+		).toEqual({ allowed: true });
+	});
+
+	test("fails closed without a workspace config", () => {
+		expect(
+			validateSlackAdminAccessConfig({
+				workspaceId: "T_ADMIN",
+			}),
+		).toEqual({ allowed: false, reason: "admin_config_missing" });
+		expect(
+			validateSlackAdminAccessConfig({
+				workspaceId: "T_ADMIN",
+			}),
+		).toEqual({ allowed: false, reason: "admin_config_missing" });
+	});
+
+	test("denies the wrong workspace", () => {
+		expect(
+			validateSlackAdminAccessConfig({
+				configuredWorkspaceId: "T_ADMIN",
+				workspaceId: "T_OTHER",
+			}),
+		).toEqual({ allowed: false, reason: "wrong_workspace" });
+	});
+
+	test("only checks the admin install for the configured admin workspace", () => {
+		expect(
+			shouldUseSlackAdminInstallationForWorkspace({
+				configuredWorkspaceId: "T_ADMIN",
+				isProduction: true,
+				workspaceId: "T_ADMIN",
+			}),
+		).toBe(true);
+		expect(
+			shouldUseSlackAdminInstallationForWorkspace({
+				configuredWorkspaceId: "T_ADMIN",
+				isProduction: true,
+				workspaceId: "T_CUSTOMER",
+			}),
+		).toBe(false);
+	});
+
+	test("does not check admin installs without workspace config", () => {
+		expect(
+			shouldUseSlackAdminInstallationForWorkspace({
+				isProduction: true,
+				workspaceId: "T_ADMIN",
+			}),
+		).toBe(false);
+		expect(
+			shouldUseSlackAdminInstallationForWorkspace({
+				isProduction: false,
+				workspaceId: "T_ADMIN",
+			}),
+		).toBe(false);
+	});
+});
+
 describe("Claude Managed vault sync", () => {
 	test("builds managed agent system from current Autumn instructions", () => {
 		const system = buildAgentSystem({ docsText: "Autumn docs" });
@@ -225,19 +339,33 @@ describe("Claude Managed vault sync", () => {
 		expect(
 			isCmaVaultStale({
 				credentialUpdatedAt: 2000,
+				currentMcpServerUrl: "https://j.dev.useautumn.com/mcp",
+				storedMcpServerUrl: "https://j.dev.useautumn.com/mcp",
 				vaultUpdatedAt: 1000,
 			}),
 		).toBe(true);
 		expect(
 			isCmaVaultStale({
 				credentialUpdatedAt: 1000,
+				currentMcpServerUrl: "https://j.dev.useautumn.com/mcp",
+				storedMcpServerUrl: "https://j.dev.useautumn.com/mcp",
 				vaultUpdatedAt: 2000,
 			}),
 		).toBe(false);
 		expect(
 			isCmaVaultStale({
 				credentialUpdatedAt: 1000,
+				currentMcpServerUrl: "https://j.dev.useautumn.com/mcp",
+				storedMcpServerUrl: "https://j.dev.useautumn.com/mcp",
 				vaultUpdatedAt: null,
+			}),
+		).toBe(true);
+		expect(
+			isCmaVaultStale({
+				credentialUpdatedAt: 1000,
+				currentMcpServerUrl: "https://j.dev.useautumn.com/mcp",
+				storedMcpServerUrl: "https://old.dev.useautumn.com/mcp",
+				vaultUpdatedAt: 2000,
 			}),
 		).toBe(true);
 	});

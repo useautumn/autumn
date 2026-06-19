@@ -46,6 +46,9 @@ export const TrackTokensParamsSchema = z.object({
 	idempotency_key: z.string().optional().meta({
 		internal: true,
 	}),
+	timestamp: z.number().optional().meta({
+		internal: true,
+	}),
 	overage_behavior: z.enum(["cap", "reject"]).optional().meta({
 		internal: true,
 	}),
@@ -58,6 +61,19 @@ export const TrackTokensParamsSchema = z.object({
 	skip_event: z.boolean().optional().meta({
 		internal: true,
 	}),
+	async: z.boolean().optional().meta({
+		description:
+			"If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.",
+	}),
 });
 
 export type TrackTokensParams = z.infer<typeof TrackTokensParamsSchema>;
+
+export const BatchTrackTokensParamsSchema = z
+	.array(TrackTokensParamsSchema)
+	.min(1)
+	.max(1000);
+
+export type BatchTrackTokensParams = z.infer<
+	typeof BatchTrackTokensParamsSchema
+>;

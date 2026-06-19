@@ -1,5 +1,5 @@
 {
-  "id": "55a45614-15df-43a2-a865-e36e549d31e6",
+  "id": "689549f0-c531-49b1-9696-00260a8925c3",
   "prevId": "de543951-f255-4201-a1da-9ad6efed6c5c",
   "version": "7",
   "dialect": "postgresql",
@@ -1035,11 +1035,12 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "chat_oauth_credentials_installation_env_key": {
-          "name": "chat_oauth_credentials_installation_env_key",
+        "chat_oauth_credentials_installation_org_env_key": {
+          "name": "chat_oauth_credentials_installation_org_env_key",
           "nullsNotDistinct": false,
           "columns": [
             "chat_installation_id",
+            "org_id",
             "env"
           ]
         }
@@ -5825,13 +5826,6 @@
           "notNull": true,
           "default": "'{}'::jsonb"
         },
-        "custom_buttons": {
-          "name": "custom_buttons",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'[]'::jsonb"
-        },
         "created_by": {
           "name": "created_by",
           "type": "text",
@@ -7518,6 +7512,97 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": true
+    },
+    "leaf.slack_admin_threads": {
+      "name": "slack_admin_threads",
+      "schema": "leaf",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "chat_installation_id": {
+          "name": "chat_installation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "channel_id": {
+          "name": "channel_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "thread_id": {
+          "name": "thread_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "org_slug": {
+          "name": "org_slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_identifier": {
+          "name": "target_identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by_provider_user_id": {
+          "name": "created_by_provider_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "slack_admin_threads_thread_key": {
+          "name": "slack_admin_threads_thread_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workspace_id",
+            "channel_id",
+            "thread_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.subscriptions": {
       "name": "subscriptions",

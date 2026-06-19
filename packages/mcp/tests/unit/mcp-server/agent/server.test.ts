@@ -85,6 +85,8 @@ describe("Autumn MCP server", () => {
 			"listPlans",
 			"createPlan",
 			"getPlan",
+			"hasCustomers",
+			"updatePlan",
 			"createBalance",
 			"searchRequestLogs",
 			"queryRequestLogs",
@@ -128,6 +130,7 @@ describe("Autumn MCP server", () => {
 			"autumn://docs/concepts",
 			"autumn://docs/plan-management",
 			"autumn://docs/billing",
+			"autumn://docs/logs",
 		]);
 		expect(resources.resources.map((resource) => resource.uri)).toEqual(
 			resourceUris,
@@ -155,9 +158,6 @@ describe("Autumn MCP server", () => {
 		expect(conceptsText).toContain("`pro_monthly` or `pro_annual`");
 		expect(conceptsText).toContain("Do not create duplicate features");
 		expect(conceptsText).toContain("`monthly_tokens` and `one_time_tokens`");
-		expect(conceptsText).toContain(
-			"Boolean/unlimited feature grants use `unlimited: true`",
-		);
 		expect(conceptsText).toContain("Boolean plan items cannot be paid today");
 		expect(conceptsText).toContain("concurrency limit of 10");
 
@@ -223,22 +223,32 @@ describe("Autumn MCP server", () => {
 			"Resolve invoice, checkout, and proration behavior with <billing-behavior>",
 		);
 		expect(billingText).toContain(
-			"Gather all missing questions from the checklist and ask them together",
+			"Gather all remaining missing questions from the checklist and ask them together",
 		);
 		expect(billingText).toContain(
 			"If there are no missing questions, call the preview tool",
 		);
+
+		const logs = await server.readResource("autumn://docs/logs");
+		const logsText = String(logs.contents[0]?.text ?? "");
+		expect(logsText).toContain("# Logs");
+		expect(logsText).toContain("searchRequestLogs");
+		expect(logsText).toContain("queryRequestLogs");
+		expect(logsText).toContain("## Stripe Webhooks");
+		expect(logsText).toContain("## Analytics");
 		expect(billingText).toContain(
-			"If the user approves the preview, execute the exact previewed billing action",
+			"Once approved, apply the exact previewed billing action",
 		);
 		expect(billingText).toContain("<param-checklist>");
-		expect(billingText).toContain("Do not use `update_items`");
+		expect(billingText).toContain(
+			"Never use `customize.items` (PUT-style full replacement) or `update_items`",
+		);
 		expect(billingText).toContain("Change prepaid to usage-based");
 		expect(billingText).toContain('plan_schedule: "immediate"');
 		expect(billingText).toContain("<attach-timing>");
 		expect(billingText).toContain("dateToEpochMilliseconds");
-		expect(billingText).toContain("pass the literal `now`");
-		expect(billingText).toContain("addInterval");
+		expect(billingText).toContain('`starts_at: "now"`');
+		expect(billingText).toContain("`starting_after`");
 		expect(billingText).toContain("Future first-phase `starts_at`");
 		expect(billingText).toContain("<billing-behavior>");
 		expect(billingText).toContain(
@@ -255,7 +265,7 @@ describe("Autumn MCP server", () => {
 		);
 		expect(billingText).toContain("<preview-and-approval>");
 		expect(billingText).toContain(
-			"APPROVAL MUST BE GRANTED BEFORE PERFORMING ANY MUTATING BILLING ACTION",
+			"A mutating billing action requires approval before it takes effect",
 		);
 		expect(billingText).toContain("Monetary amounts are major currency units");
 		expect(billingText).toContain(
@@ -309,23 +319,23 @@ describe("Autumn MCP server", () => {
 	test("resource markdown parser validates frontmatter", () => {
 		expect(
 			parseResourceMarkdown({
-				path: "logs/request-logs.md",
+				path: "logs/logs.md",
 				text: [
 					"---",
-					"name: request-logs",
-					"title: Request Logs",
+					"name: logs",
+					"title: Logs",
 					"description: Log docs",
 					"---",
-					"# Request Logs",
+					"# Logs",
 				].join("\n"),
 			}),
 		).toMatchObject({
-			name: "request-logs",
-			title: "Request Logs",
+			name: "logs",
+			title: "Logs",
 			description: "Log docs",
 			priority: 0.8,
 			audience: ["assistant"],
-			body: "# Request Logs",
+			body: "# Logs",
 		});
 
 		expect(() =>

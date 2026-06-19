@@ -1,6 +1,11 @@
 import type { AutumnLogger } from "@autumn/logging";
 import { containsSecret } from "../../internal/sandbox/tool/guardrails.js";
 
+const internalToolCallPattern = /<tool_call\b[\s\S]*?<\/tool_call>/i;
+
+export const containsInternalToolCall = (text: string) =>
+	internalToolCallPattern.test(text);
+
 export const redactAgentOutput = ({
 	logger,
 	text,

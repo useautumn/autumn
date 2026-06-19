@@ -1,5 +1,9 @@
 import type { ChatApproval } from "@autumn/shared";
 import type { ActionEvent } from "chat";
+import {
+	isSlackAdminProvider,
+	validateSlackAdminAccess,
+} from "../../slackAdmin/access.js";
 import { db } from "../../../lib/db.js";
 import { logger as rootLogger } from "../../../lib/logger.js";
 import { approvalStatusCard } from "../../../ui/blocks.js";
@@ -80,6 +84,28 @@ export const handleApprovalActionWithDeps = async ({
 			action: event.actionId,
 			data: { provider_user_id: providerUserId },
 		});
+
+		const approval = await deps.getApproval({ approvalId });
+		if (!approval) {
+			await editToCurrentStatus();
+			return;
+		}
+		if (
+			approval.provider &&
+			isSlackAdminProvider({ provider: approval.provider })
+		) {
+			const access = validateSlackAdminAccess({
+				workspaceId: approval.workspace_id,
+			});
+			if (!access.allowed) {
+				deps.logger.warn("Slack admin approval action denied", {
+					event: "leaf.slack_admin_approval_denied",
+					approval_id: approvalId,
+					data: { reason: access.reason },
+				});
+				return;
+			}
+		}
 
 		if (event.actionId === "cancel_billing_action") {
 			const cancelled = await deps.cancelApproval({

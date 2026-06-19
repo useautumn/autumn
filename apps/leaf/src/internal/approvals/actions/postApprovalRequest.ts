@@ -28,6 +28,7 @@ export const postApprovalRequest = async ({
 	loading,
 	logAction,
 	logger = rootLogger,
+	orgId,
 	output,
 	providerUserId,
 	target,
@@ -37,6 +38,7 @@ export const postApprovalRequest = async ({
 	loading: LoadingState;
 	logAction: (message: string) => Promise<void> | void;
 	logger?: AutumnLogger;
+	orgId: string;
 	output: AgentOutput;
 	providerUserId: string;
 	target: ReplyTarget;
@@ -49,7 +51,7 @@ export const postApprovalRequest = async ({
 	if (!approval.runId || !approval.toolCallId) {
 		logger.warn("Skipped unexecutable approval request", {
 			event: "leaf.approval_unexecutable_skipped",
-			context: { env: approval.env, org_id: installation.org_id },
+			context: { env: approval.env, org_id: orgId },
 			tool: approval.toolName,
 		});
 		return false;
@@ -62,6 +64,7 @@ export const postApprovalRequest = async ({
 			const token = await getInstallationOAuthAccessToken({
 				installation,
 				env: approval.env,
+				orgId,
 			});
 			const request = getRequest(approval.toolArgs);
 			if (request) {
@@ -85,7 +88,7 @@ export const postApprovalRequest = async ({
 	const approvalId = await chatApprovalRepo.insert({
 		db,
 		data: {
-			orgId: installation.org_id,
+			orgId,
 			provider: installation.provider,
 			workspaceId: installation.workspace_id,
 			channelId,
@@ -105,7 +108,7 @@ export const postApprovalRequest = async ({
 		event: "leaf.approval_created",
 		context: {
 			env: approval.env,
-			org_id: installation.org_id,
+			org_id: orgId,
 		},
 		approval_id: approvalId,
 		tool: approval.toolName,

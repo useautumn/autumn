@@ -1,6 +1,7 @@
 export const MCP_CLIENT_KIND = "mcp_client";
 export const SLACK_MCP_OAUTH_CLIENT_ID = "autumn_mcp_slack";
 export const AUTUMN_ADMIN_OAUTH_CLIENT_ID = "autumn_admin";
+export const SUMMER_OAUTH_CLIENT_ID = "autumn_summer";
 
 export const MCP_OAUTH_CLIENTS = [
 	{ type: "claude", name: "Claude", clientId: "autumn_mcp_claude" },
@@ -61,7 +62,8 @@ export const returnsOAuthAccessTokenForClientId = ({
 	clientId: string;
 }) =>
 	isKnownMcpOAuthClientId({ clientId }) ||
-	clientId === AUTUMN_ADMIN_OAUTH_CLIENT_ID;
+	clientId === AUTUMN_ADMIN_OAUTH_CLIENT_ID ||
+	clientId === SUMMER_OAUTH_CLIENT_ID;
 
 export const isMcpOAuthResource = (resource: string | null | undefined) => {
 	if (!resource || !URL.canParse(resource)) return false;

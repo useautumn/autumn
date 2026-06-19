@@ -74,6 +74,7 @@ export const runResetCron = async ({ ctx }: { ctx: CronContext }) => {
 				db,
 				batchSize: 5_000,
 				limit: 5_000,
+				includeSeparateIntervalResets: false,
 			});
 
 			if (cusEnts.length < 5_000) {

@@ -3,6 +3,10 @@ import { decrypt, encrypt } from "../../../lib/crypto.js";
 import { db } from "../../../lib/db.js";
 import { env as leafEnv } from "../../../lib/env.js";
 import {
+	isSlackAdminProvider,
+	validateSlackAdminAccess,
+} from "../../slackAdmin/access.js";
+import {
 	getChatOAuthCredentialByInstallationEnv,
 	updateChatOAuthCredentialTokens,
 } from "../repos/chatOAuthCredentialsRepo.js";
@@ -22,24 +26,37 @@ const getDefaultExpiresAt = () => Date.now() + 60 * 60 * 1000;
 export const getInstallationOAuthAccessToken = async ({
 	installation,
 	env,
+	orgId = installation.org_id,
 }: {
 	installation: ChatInstallation;
 	env: AppEnv;
+	orgId?: string;
 }) => {
+	if (isSlackAdminProvider({ provider: installation.provider })) {
+		const access = validateSlackAdminAccess({
+			workspaceId: installation.workspace_id,
+		});
+		if (!access.allowed) {
+			throw new Error("Slack admin workspace is not authorized for OAuth token access");
+		}
+	}
+
 	let credential = await getChatOAuthCredentialByInstallationEnv({
 		db,
 		chatInstallationId: installation.id,
 		env,
+		orgId,
 	});
 
 	if (
-		installation.provider.startsWith("slack_admin") &&
-		(!credential || credential.org_id !== installation.org_id)
+		isSlackAdminProvider({ provider: installation.provider }) &&
+		(!credential || credential.org_id !== orgId)
 	) {
 		await db.transaction(async (tx) => {
 			await replaceInstallationOAuthCredentials({
 				tx,
 				installation,
+				orgId,
 				userId: installation.installed_by_user_id ?? "",
 			});
 		});
@@ -48,6 +65,7 @@ export const getInstallationOAuthAccessToken = async ({
 			db,
 			chatInstallationId: installation.id,
 			env,
+			orgId,
 		});
 	}
 

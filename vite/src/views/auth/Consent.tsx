@@ -34,6 +34,7 @@ interface ClientInfo {
 	policy_uri?: string;
 	tos_uri?: string;
 	is_internal_mcp?: boolean;
+	default_env?: AppEnv;
 }
 
 type SessionWithScopes = {
@@ -123,6 +124,32 @@ const getConsentRedirectUrl = (data: unknown) => {
 	);
 };
 
+const parseAppEnv = (value: unknown) =>
+	value === AppEnv.Sandbox || value === AppEnv.Live ? value : null;
+
+const getOAuthQueryParam = (
+	searchParams: URLSearchParams,
+	key: string,
+): string | null => {
+	const directValue = searchParams.get(key);
+	if (directValue) return directValue;
+
+	const rawOAuthQuery = searchParams.get("oauth_query");
+	if (!rawOAuthQuery) return null;
+
+	try {
+		const parsed = JSON.parse(rawOAuthQuery);
+		if (parsed && typeof parsed === "object") {
+			const value = (parsed as Record<string, unknown>)[key];
+			return typeof value === "string" && value.length > 0 ? value : null;
+		}
+	} catch {
+		return new URLSearchParams(rawOAuthQuery).get(key);
+	}
+
+	return null;
+};
+
 const isExternalAppRedirect = (redirectUrl: string) => {
 	if (!URL.canParse(redirectUrl)) return false;
 	const protocol = new URL(redirectUrl).protocol;
@@ -179,13 +206,15 @@ export const Consent = () => {
 	const [pendingRedirectUrl, setPendingRedirectUrl] = useState<string | null>(
 		null,
 	);
-	const [selectedEnv, setSelectedEnv] = useState<AppEnv>(AppEnv.Live);
 	const [switchingOrg, setSwitchingOrg] = useState(false);
 
 	const clientId = searchParams.get("client_id");
 	const redirectUri = searchParams.get("redirect_uri");
 	const requestedScopes =
 		searchParams.get("scope")?.split(/\s+/).filter(Boolean) || [];
+	const requestedEnv = getOAuthQueryParam(searchParams, "env");
+	const initialEnv = parseAppEnv(requestedEnv) ?? AppEnv.Live;
+	const [selectedEnv, setSelectedEnv] = useState<AppEnv>(initialEnv);
 	const sessionScopes =
 		(session as SessionWithScopes | null | undefined)?.scopes ?? [];
 
@@ -225,12 +254,17 @@ export const Consent = () => {
 
 				if (response.ok) {
 					const data = await response.json();
+					const defaultEnv = parseAppEnv(data.default_env);
+					if (defaultEnv) {
+						setSelectedEnv(defaultEnv);
+					}
 					isInternalMcp = data.is_internal_mcp === true;
 					setClientInfo({
 						client_id: clientId,
 						client_name: data.name || "Unknown Application",
 						is_atmn: data.is_atmn === true,
 						is_internal_mcp: isInternalMcp,
+						default_env: defaultEnv ?? undefined,
 					});
 				} else {
 					console.error("Error fetching client info:", response.status);

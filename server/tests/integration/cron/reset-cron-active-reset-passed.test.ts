@@ -103,10 +103,27 @@ test.concurrent(
 		const resetCusEnts = await CusEntService.getActiveResetPassed({
 			db: ctx.db,
 			customDateUnix: now,
+			includeSeparateIntervalResets: true,
 		});
 		const resetCusEntIds = resetCusEnts.map((cusEnt) => cusEnt.id);
 
 		expect(resetCusEntIds).not.toContain(stripeOwnedCusEnt.id);
 		expect(resetCusEntIds).toContain(autumnOwnedCusEnt.id);
+
+		const resetCusEntsWithoutSeparateIntervals =
+			await CusEntService.getActiveResetPassed({
+				db: ctx.db,
+				customDateUnix: now,
+				includeSeparateIntervalResets: false,
+			});
+		const resetCusEntIdsWithoutSeparateIntervals =
+			resetCusEntsWithoutSeparateIntervals.map((cusEnt) => cusEnt.id);
+
+		expect(resetCusEntIdsWithoutSeparateIntervals).not.toContain(
+			stripeOwnedCusEnt.id,
+		);
+		expect(resetCusEntIdsWithoutSeparateIntervals).not.toContain(
+			autumnOwnedCusEnt.id,
+		);
 	},
 );
