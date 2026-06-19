@@ -31,6 +31,8 @@ export const setActiveOrg = async (orgId: string) => {
 	const result = await authClient.organization.setActive({
 		organizationId: orgId,
 	});
-	setLastSwitchedOrgId(orgId);
+	if (!result.error) {
+		setLastSwitchedOrgId(orgId);
+	}
 	return result;
 };

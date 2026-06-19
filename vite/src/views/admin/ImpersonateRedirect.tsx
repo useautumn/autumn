@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from "react-router";
 import { Button } from "@/components/v2/buttons/Button";
 import { authClient } from "@/lib/auth-client";
 import { setActiveOrg } from "@/lib/orgSync";
-import { getDefaultOrgPath } from "@/utils/genUtils";
+import { getDefaultOrgPath, isSafeLocalPath } from "@/utils/genUtils";
 import { useAxiosInstance } from "../../services/useAxiosInstance";
 import { useAdmin } from "./hooks/useAdmin";
 
@@ -30,7 +30,8 @@ export function ImpersonateRedirect() {
 	const hasRun = useRef(false);
 
 	const orgId = searchParams.get("org_id");
-	const redirect = searchParams.get("redirect") || "/";
+	const rawRedirect = searchParams.get("redirect");
+	const redirect = isSafeLocalPath(rawRedirect) ? rawRedirect : "/";
 
 	useEffect(() => {
 		const doImpersonate = async () => {
@@ -84,8 +85,8 @@ export function ImpersonateRedirect() {
 				// isn't deployed to prod, land on its sandbox rather than a live
 				// route that doesn't exist for it.
 				setStatus("Redirecting...");
-				const target = searchParams.get("redirect")
-					? redirect
+				const target = isSafeLocalPath(rawRedirect)
+					? rawRedirect
 					: await resolveDefaultRedirect(axiosInstance);
 				window.location.href = target;
 			} catch (err: unknown) {
@@ -99,7 +100,7 @@ export function ImpersonateRedirect() {
 			hasRun.current = true;
 			doImpersonate();
 		}
-	}, [orgId, redirect, navigate, isAdmin, isPending, isCurrentlyImpersonating, axiosInstance]);
+	}, [orgId, rawRedirect, navigate, isAdmin, isPending, isCurrentlyImpersonating, axiosInstance]);
 
 	if (!isAdmin && isPending) {
 		navigate("/");
