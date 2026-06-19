@@ -18,6 +18,10 @@ import {
 } from "@/internal/orgs/handlers/revenueCatHandlers/handleRevenueCatWebhook.js";
 import { handleDeleteOrg } from "./handlers/crudHandlers/handleDeleteOrg.js";
 import { handleGetOrg } from "./handlers/crudHandlers/handleGetOrg.js";
+import {
+	handleGetCustomButtons,
+	handleUpdateCustomButtons,
+} from "./handlers/handleCustomButtons.js";
 import { handleDeleteOrgLogo } from "./handlers/handleDeleteOrgLogo.js";
 import { handleGetOrgFlags } from "./handlers/handleGetOrgFlags.js";
 import { handleGetUploadUrl } from "./handlers/handleGetUploadUrl.js";
@@ -51,6 +55,8 @@ export const internalOrgRouter = new Hono<HonoEnv>();
 internalOrgRouter.get("", ...handleGetOrg);
 internalOrgRouter.delete("", ...handleDeleteOrg);
 internalOrgRouter.patch("/config", ...handleUpdateOrgConfig);
+internalOrgRouter.get("/custom-buttons", ...handleGetCustomButtons);
+internalOrgRouter.patch("/custom-buttons", ...handleUpdateCustomButtons);
 internalOrgRouter.get("/members", ...handleGetOrgMembers);
 internalOrgRouter.post("/remove-member", ...handleRemoveMember);
 internalOrgRouter.get("/upload_url", ...handleGetUploadUrl);
@@ -85,6 +91,8 @@ honoOrgRouter.get("/me", async (c) => {
 });
 honoOrgRouter.patch("", ...handleUpdateOrg);
 honoOrgRouter.patch("/config", ...handleUpdateOrgConfig);
+honoOrgRouter.get("/custom-buttons", ...handleGetCustomButtons);
+honoOrgRouter.patch("/custom-buttons", ...handleUpdateCustomButtons);
 honoOrgRouter.get("/stripe", ...handleGetStripeAccount);
 honoOrgRouter.delete("/stripe", ...handleDeleteStripe);
 honoOrgRouter.post("/stripe", ...handleConnectStripe);

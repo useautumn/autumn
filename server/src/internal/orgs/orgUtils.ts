@@ -128,6 +128,7 @@ const constructOrg = ({ id, slug }: { id: string; slug: string }) => {
 			live_app_id: "",
 		},
 		config: {} as any,
+		custom_buttons: [],
 	};
 };
 
@@ -267,6 +268,7 @@ export const createOrgResponse = ({
 		onboarded: org.onboarded ?? true,
 		deployed: org.deployed ?? true,
 		config: OrgConfigSchema.parse(org.config || {}),
+		custom_buttons: org.custom_buttons ?? [],
 		redis_config: org.redis_config
 			? {
 					host: org.redis_config.url,

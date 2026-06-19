@@ -146,6 +146,7 @@ export * from "./models/orgModels/agent/agentRules";
 export * from "./models/orgModels/agent/agentRulesTable";
 export * from "./models/orgModels/frontendOrg";
 // 1. Org Models
+export * from "./models/orgModels/customButton";
 export * from "./models/orgModels/frontendOrg";
 export * from "./models/orgModels/fullOrgModel";
 export * from "./models/orgModels/orgConfig";

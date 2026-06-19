@@ -3,6 +3,7 @@ import {
 	BellIcon,
 	BotIcon,
 	BuildingIcon,
+	MousePointerClickIcon,
 	PaletteIcon,
 	ReceiptIcon,
 	ShieldCheckIcon,
@@ -19,6 +20,7 @@ import { AgentSection } from "./sections/AgentSection";
 import { AppearanceSection } from "./sections/AppearanceSection";
 import { AuthorizedAppsSection } from "./sections/AuthorizedAppsSection";
 import { BillingSettingsSection } from "./sections/BillingSettingsSection";
+import { CustomButtonsSection } from "./sections/CustomButtonsSection";
 import { InvoicesSection } from "./sections/InvoicesSection";
 import { MembersSection } from "./sections/MembersSection";
 import { OrganizationSection } from "./sections/OrganizationSection";
@@ -31,6 +33,7 @@ type SettingsTab =
 	| "agent"
 	| "appearance"
 	| "apps"
+	| "custom-buttons"
 	| "billing"
 	| "invoices"
 	| "usage-alerts";
@@ -76,6 +79,11 @@ const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 				icon: <ShieldCheckIcon className="size-4" />,
 			},
 			{
+				id: "custom-buttons",
+				label: "Custom Buttons",
+				icon: <MousePointerClickIcon className="size-4" />,
+			},
+			{
 				id: "agent",
 				label: "Agent",
 				icon: <BotIcon className="size-4" />,
@@ -111,6 +119,7 @@ const SECTION_MAP: Record<SettingsTab, React.ComponentType> = {
 	agent: AgentSection,
 	appearance: AppearanceSection,
 	apps: AuthorizedAppsSection,
+	"custom-buttons": CustomButtonsSection,
 	billing: BillingSettingsSection,
 	invoices: InvoicesSection,
 	"usage-alerts": UsageAlertsSection,
