@@ -36,12 +36,14 @@ export async function createAutumnCheckout<
 	params,
 	billingContext,
 	billingPlan,
+	expiresInMs,
 }: {
 	ctx: AutumnContext;
 	action: CheckoutAction;
 	params: AttachParamsV1 | CreateScheduleParamsV0 | UpdateSubscriptionV1Params;
 	billingContext: T;
 	billingPlan: BillingPlan;
+	expiresInMs?: number;
 }): Promise<CreateAutumnCheckoutResult<T>> {
 	const { checkout } = await billingPlanToAutumnCheckout({
 		ctx,
@@ -49,6 +51,7 @@ export async function createAutumnCheckout<
 		params,
 		billingContext,
 		billingPlan,
+		expiresInMs,
 	});
 
 	return {

@@ -1,9 +1,12 @@
 import {
 	AppEnv,
+	CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
 	type CusProductStatus,
 	type Customer,
 	CustomerExpand,
 	CustomerNotFoundError,
+	CustomerProductsCursor,
+	type CustomerProductsPage,
 	customerProducts,
 	customers,
 	type Entity,
@@ -12,6 +15,7 @@ import {
 	type FullCusProduct,
 	type FullCustomer,
 	InternalError,
+	type ListCustomerProductsParams,
 	type ListCustomersV2Params,
 	type Organization,
 	products,
@@ -46,6 +50,14 @@ import {
 	ACTIVE_STATUSES,
 	RELEVANT_STATUSES,
 } from "./cusProducts/CusProductService.js";
+import {
+	assembleCustomerProductsPage,
+	type RankedCustomerProductRow,
+} from "./cusUtils/assembleCustomerProductsPage.js";
+import {
+	getCustomerProductsCountQuery,
+	getCustomerProductsPageQuery,
+} from "./getCustomerProductsPageQuery.js";
 import { getFullCusQuery, hasCustomerListFilters } from "./getFullCusQuery.js";
 import {
 	type FlattenedCustomerRow,
@@ -249,6 +261,87 @@ export class CusService {
 				}
 
 				return fullCus;
+			},
+		});
+	}
+
+	static async getProductsPage({
+		ctx,
+		idOrInternalId,
+		internalCustomerId,
+		params,
+	}: {
+		ctx: AutumnContext;
+		idOrInternalId: string;
+		internalCustomerId?: string;
+		params: ListCustomerProductsParams;
+	}): Promise<CustomerProductsPage> {
+		const { db, org, env } = ctx;
+
+		let resolvedInternalId = internalCustomerId;
+		if (!resolvedInternalId) {
+			const customer = await CusService.get({
+				db,
+				idOrInternalId,
+				orgId: org.id,
+				env,
+			});
+			if (!customer) {
+				throw new CustomerNotFoundError({ customerId: idOrInternalId });
+			}
+			resolvedInternalId = customer.internal_id;
+		}
+
+		const cursor =
+			CustomerProductsCursor.decode(params.start_cursor) ?? undefined;
+
+		const sharedArgs = {
+			internalCustomerId: resolvedInternalId,
+			showExpired: params.show_expired,
+			entityId: params.entity_id,
+			kind: params.kind,
+		};
+
+		const [pageResult, countResult] = await Promise.all([
+			db.execute(
+				getCustomerProductsPageQuery({
+					...sharedArgs,
+					limit: params.limit,
+					cursor,
+				}),
+			),
+			db.execute(getCustomerProductsCountQuery(sharedArgs)),
+		]);
+
+		const rows = (pageResult ?? []) as unknown as RankedCustomerProductRow[];
+		const totalCount =
+			(countResult?.[0] as { total_count?: number } | undefined)?.total_count ??
+			0;
+
+		return assembleCustomerProductsPage({
+			rows,
+			limit: params.limit,
+			totalCount,
+		});
+	}
+
+	static getDefaultProductsPage({
+		ctx,
+		idOrInternalId,
+		internalCustomerId,
+	}: {
+		ctx: AutumnContext;
+		idOrInternalId: string;
+		internalCustomerId?: string;
+	}): Promise<CustomerProductsPage> {
+		return CusService.getProductsPage({
+			ctx,
+			idOrInternalId,
+			internalCustomerId,
+			params: {
+				start_cursor: "",
+				limit: CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
+				show_expired: false,
 			},
 		});
 	}

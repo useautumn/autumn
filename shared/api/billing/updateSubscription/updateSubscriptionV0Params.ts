@@ -6,6 +6,7 @@ import { BillingBehaviorSchema } from "../common/billingBehavior";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { BillingParamsBaseV0Schema } from "../common/billingParamsBase/billingParamsBaseV0";
 import { CancelActionSchema } from "../common/cancelAction";
+import { CarryOverUsagesSchema } from "../common/carryOverUsages";
 import { RedirectModeSchema } from "../common/redirectMode";
 import { RefundLastPaymentSchema } from "../common/refundLastPayment";
 
@@ -34,6 +35,7 @@ export const ExtUpdateSubscriptionV0ParamsSchema =
 
 		processor_subscription_id: z.string().nullable().optional(),
 		no_billing_changes: z.boolean().optional(),
+		carry_over_usages: CarryOverUsagesSchema,
 		discounts: z.array(AttachDiscountSchema).optional(),
 		recalculate_balances: z
 			.object({

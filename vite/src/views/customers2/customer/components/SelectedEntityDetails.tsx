@@ -34,7 +34,7 @@ export const SelectedEntityDetails = () => {
 
 	return (
 		<>
-			<div className="flex gap-2 items-center justify-between w-full bg-card mt-1 border p-2 rounded-lg overflow-hidden flex-wrap">
+			<div className="flex gap-2 items-center justify-between w-full bg-card/50 mt-1 border p-2 rounded-lg overflow-hidden flex-wrap">
 				<div className="flex items-center gap-2 min-w-0 flex-1">
 					<SearchableSelect
 						value={entityId}

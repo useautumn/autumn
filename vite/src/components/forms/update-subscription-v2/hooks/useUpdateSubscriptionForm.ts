@@ -53,6 +53,7 @@ export function useUpdateSubscriptionForm({
 			cancelAction: null,
 			billingBehavior: null,
 			resetBillingCycle: false,
+			resetUsage: false,
 			refundBehavior: null,
 			refundAmount: null,
 			noBillingChanges: false,

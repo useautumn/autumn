@@ -167,10 +167,20 @@ export function TableBodyVirtualized() {
 		skeleton: col.columnDef.meta?.skeleton,
 	}));
 
+	const configuredSkeletonRows = virtualization?.skeletonRowCount;
 	const containerPx = scrollContainer?.clientHeight ?? 0;
-	const skeletonRowCount = containerPx > 0
-		? Math.max(1, Math.floor(containerPx / rowHeight))
-		: lastRowCountRef.current;
+
+	let skeletonRowCount: number;
+	if (hasLoadedRef.current) {
+		skeletonRowCount = lastRowCountRef.current;
+	} else if (configuredSkeletonRows !== undefined) {
+		skeletonRowCount = configuredSkeletonRows;
+	} else {
+		skeletonRowCount =
+			containerPx > 0
+				? Math.max(1, Math.floor(containerPx / rowHeight))
+				: lastRowCountRef.current;
+	}
 
 	if (showSkeleton) {
 		return (

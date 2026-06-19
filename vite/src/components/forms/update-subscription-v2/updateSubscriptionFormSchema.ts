@@ -25,6 +25,7 @@ export const UpdateSubscriptionFormSchema = z.object({
 	cancelAction: CancelActionSchema.nullable(),
 	billingBehavior: BillingBehaviorSchema.nullable(),
 	resetBillingCycle: z.boolean(),
+	resetUsage: z.boolean(),
 	refundBehavior: RefundBehaviorSchema.nullable(),
 	refundAmount: z.enum(["prorated", "full"]).nullable(),
 	noBillingChanges: z.boolean(),

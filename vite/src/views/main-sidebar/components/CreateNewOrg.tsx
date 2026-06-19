@@ -12,7 +12,7 @@ import {
 } from "@/components/v2/dialogs/Dialog";
 import { FormLabel as FieldLabel } from "@/components/v2/form/FormLabel";
 import { Input } from "@/components/v2/inputs/Input";
-import { useOrg } from "@/hooks/common/useOrg";
+import { useSwitchActiveOrg } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 import { slugify } from "@/utils/formatUtils/formatTextUtils";
 
@@ -24,7 +24,7 @@ export const CreateNewOrg = ({
 	setDialogType: (dialogType: "create" | "manage" | null) => void;
 }) => {
 	const navigate = useNavigate();
-	const { mutate } = useOrg();
+	const switchActiveOrg = useSwitchActiveOrg();
 	const [name, setName] = useState("");
 	const [slugChanged, setSlugChanged] = useState(false);
 	const [slug, setSlug] = useState("");
@@ -40,11 +40,7 @@ export const CreateNewOrg = ({
 
 			if (error) throw error;
 
-			await authClient.organization.setActive({
-				organizationId: data.id,
-			});
-
-			await mutate();
+			await switchActiveOrg(data.id);
 
 			toast.success("Organization created");
 			setDialogType(null);
