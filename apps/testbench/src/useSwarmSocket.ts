@@ -103,7 +103,10 @@ export const useSwarmSocket = (wsUrl: string | null): SwarmSocket => {
 				} else if (msg.type === "fileBuffer" || msg.type === "workerBuffer") {
 					setOutput(msg.output ?? "");
 				} else if (msg.type === "fileOutput") {
-					if (subRef.current?.kind === "file" && subRef.current.key === msg.file) {
+					if (
+						subRef.current?.kind === "file" &&
+						subRef.current.key === msg.file
+					) {
 						setOutput((prev) => prev + (msg.chunk ?? ""));
 					}
 				} else if (msg.type === "workerOutput") {

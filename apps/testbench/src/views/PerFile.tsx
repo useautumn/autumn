@@ -1,14 +1,15 @@
+import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
 import {
 	ResizableHandle,
 	ResizablePanel,
 	ResizablePanelGroup,
 } from "@/components/ui/resizable";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { useState } from "react";
-import type { SwarmSocket } from "../useSwarmSocket";
+import { TerminalOutput } from "../Terminal";
 import type { FileRow, Snapshot } from "../types";
-import { FileStatusBadge, OutputPane } from "../widgets";
+import type { SwarmSocket } from "../useSwarmSocket";
+import { FileStatusBadge } from "../widgets";
 
 function FileList({
 	files,
@@ -24,25 +25,27 @@ function FileList({
 		? files.filter((f) => f.name.toLowerCase().includes(q.toLowerCase()))
 		: files;
 	return (
-		<div className="flex h-full flex-col gap-2">
+		<div className="flex h-full min-h-0 flex-col gap-2">
 			<input
-				className="w-full rounded-md border bg-card px-2 py-1.5 text-sm outline-none focus:ring-1 focus:ring-ring"
+				className="input-base input-shadow-default input-state-focus h-input w-full shrink-0 rounded-lg border text-sm"
 				onChange={(e) => setQ(e.target.value)}
 				placeholder="filter files…"
 				value={q}
 			/>
-			<div className="flex-1 overflow-auto rounded-lg border bg-card">
+			<div className="min-h-0 flex-1 overflow-auto rounded-lg border bg-card">
 				{filtered.map((f) => (
 					<button
 						className={cn(
-							"flex w-full items-center justify-between gap-2 border-b px-2 py-1.5 text-left text-xs last:border-b-0 hover:bg-muted",
-							active === f.file && "bg-muted",
+							"flex w-full items-center justify-between gap-2 border-b px-2.5 py-1.5 text-left text-xs last:border-b-0 hover:bg-interactive-secondary-hover",
+							active === f.file && "bg-interactive-secondary-hover",
 						)}
 						key={f.file}
 						onClick={() => onPick(f.file)}
 						type="button"
 					>
-						<span className="truncate font-mono">{f.name}</span>
+						<span className="truncate font-mono text-tertiary-foreground">
+							{f.name}
+						</span>
 						<FileStatusBadge status={f.status} />
 					</button>
 				))}
@@ -58,13 +61,13 @@ export function PerFile({
 	snap: Snapshot;
 	socket: SwarmSocket;
 }) {
-	const activeFile =
-		socket.sub?.kind === "file" ? socket.sub.key : undefined;
+	const activeFile = socket.sub?.kind === "file" ? socket.sub.key : undefined;
 	const row = snap.files.find((f) => f.file === activeFile);
+	const showOutput = socket.sub?.kind === "file";
 	return (
-		<ResizablePanelGroup className="min-h-[70vh]" orientation="horizontal">
+		<ResizablePanelGroup className="h-full" orientation="horizontal">
 			<ResizablePanel defaultSize={28} minSize={18}>
-				<div className="h-full pr-3">
+				<div className="h-full min-h-0 pr-3">
 					<FileList
 						active={activeFile}
 						files={snap.files}
@@ -74,9 +77,9 @@ export function PerFile({
 			</ResizablePanel>
 			<ResizableHandle withHandle />
 			<ResizablePanel defaultSize={72}>
-				<div className="flex h-full flex-col gap-3 pl-3">
+				<div className="flex h-full min-h-0 flex-col gap-3 pl-3">
 					{row ? (
-						<div className="flex flex-wrap items-center gap-2">
+						<div className="flex shrink-0 flex-wrap items-center gap-2">
 							<span className="font-mono text-sm">{row.name}</span>
 							<FileStatusBadge status={row.status} />
 							<Badge variant="green">✓ {row.passed}</Badge>
@@ -88,18 +91,21 @@ export function PerFile({
 							) : null}
 						</div>
 					) : (
-						<div className="text-muted-foreground text-sm">
+						<div className="shrink-0 text-muted-foreground text-sm">
 							select a file to view its test output
 						</div>
 					)}
 					{row && row.failedTests.length > 0 ? (
-						<div className="rounded-lg border border-red-500/30 bg-red-500/5 p-3">
+						<div className="max-h-32 shrink-0 overflow-auto rounded-lg border border-red-500/30 bg-red-500/5 p-3">
 							<div className="mb-1 font-medium text-red-400 text-xs">
 								{row.failedTests.length} failing
 							</div>
 							<ul className="flex flex-col gap-1">
 								{row.failedTests.map((t) => (
-									<li className="font-mono text-xs" key={`${t.name}-${t.location ?? ""}`}>
+									<li
+										className="font-mono text-xs"
+										key={`${t.name}-${t.location ?? ""}`}
+									>
 										<span className="text-red-400">✗</span> {t.name}
 										{t.message ? (
 											<span className="text-muted-foreground">
@@ -112,8 +118,16 @@ export function PerFile({
 							</ul>
 						</div>
 					) : null}
-					<div className="min-h-0 flex-1">
-						<OutputPane text={socket.sub?.kind === "file" ? socket.output : ""} />
+					{/* WTERM read-only surface — fills the remaining height, scrolls
+					    internally, renders ANSI colors instead of raw escapes. */}
+					<div className="min-h-0 flex-1 overflow-hidden rounded-lg border bg-card">
+						{showOutput ? (
+							<TerminalOutput text={socket.output} />
+						) : (
+							<div className="flex h-full items-center justify-center text-muted-foreground text-xs">
+								(no output yet)
+							</div>
+						)}
 					</div>
 				</div>
 			</ResizablePanel>

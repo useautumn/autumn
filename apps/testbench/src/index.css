@@ -7,11 +7,33 @@
 @source "./**/*.tsx";
 @source "../../../vite/src/components/**/*.tsx";
 
-/* Fill the viewport with the dark app background — otherwise the page's bare
-   (light) background shows below the PageContainer's content. */
+/* Single-screen shell: the app is h-dvh and scrolls only inside its panels (the
+   vite app's convention — `w-screen h-screen overflow-hidden`). The page itself
+   never scrolls, so no bare background shows through. */
 html,
 body,
 #root {
-  min-height: 100vh;
-  background-color: var(--background);
+	height: 100%;
+	background-color: var(--outer-background);
+}
+
+body {
+	overflow: hidden;
+}
+
+/* WTERM terminal surface — reuse the dashboard's own tokens so the read-only
+   output pane is seamless with the card it sits in (no shadow / radius of its
+   own; the card provides the border). The ANSI 16-color palette keeps WTERM's
+   VS-Code-style defaults, which read well on the dark card. */
+.wterm {
+	--term-bg: var(--card);
+	--term-fg: var(--foreground);
+	--term-font-size: 12px;
+	--term-line-height: 1.25;
+	--term-row-height: 16px;
+	height: 100% !important;
+	width: 100% !important;
+	padding: 10px !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
 }

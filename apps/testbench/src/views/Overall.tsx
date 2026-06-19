@@ -26,7 +26,7 @@ const fmtWall = (ms: number): string => {
 function PhaseProgress({ snap }: { snap: Snapshot }) {
 	if (snap.phase === "warm") {
 		return (
-			<div className="text-sm text-muted-foreground">
+			<div className="text-muted-foreground text-sm">
 				building / warming the snapshot…
 			</div>
 		);
@@ -77,7 +77,11 @@ function PhaseProgress({ snap }: { snap: Snapshot }) {
 	// run / done
 	return (
 		<div className="flex flex-col gap-3">
-			<ProgressBar color="bg-green-500" total={snap.run.total} value={snap.run.done} />
+			<ProgressBar
+				color="bg-green-500"
+				total={snap.run.total}
+				value={snap.run.done}
+			/>
 			<div className="flex flex-wrap gap-2">
 				<Badge variant="green">✓ {snap.run.passed}</Badge>
 				<Badge variant="red">✗ {snap.run.failed}</Badge>
@@ -96,13 +100,13 @@ export function Overall({
 	onOpenFile: (file: string) => void;
 }) {
 	return (
-		<div className="flex flex-col gap-4">
-			<div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-				<Card className="lg:col-span-2">
+		<div className="flex h-full flex-col gap-3">
+			<div className="grid shrink-0 grid-cols-1 gap-3 lg:grid-cols-3">
+				<Card className="gap-2 lg:col-span-2">
 					<CardHeader>
 						<CardTitle className="flex items-center gap-2">
 							<Badge variant="blue">{snap.phase}</Badge>
-							<span className="text-muted-foreground text-sm font-normal">
+							<span className="font-normal text-muted-foreground text-sm">
 								{snap.target} · {snap.workerCount} workers
 							</span>
 						</CardTitle>
@@ -112,7 +116,7 @@ export function Overall({
 					</CardContent>
 				</Card>
 
-				<Card>
+				<Card className="gap-2">
 					<CardHeader>
 						<CardTitle>{snap.summary ? "Result" : "Live"}</CardTitle>
 					</CardHeader>
@@ -122,14 +126,21 @@ export function Overall({
 								<InfoRow label="passed" value={snap.summary.passed} />
 								<InfoRow label="failed" value={snap.summary.failed} />
 								<InfoRow label="crashed" value={snap.summary.crashed} />
-								<InfoRow label="wall" value={fmtWall(snap.summary.wallMs)} mono />
+								<InfoRow
+									label="wall"
+									mono
+									value={fmtWall(snap.summary.wallMs)}
+								/>
 								{snap.summary.costLine ? (
 									<InfoRow label="cost" mono value={snap.summary.costLine} />
 								) : null}
 							</>
 						) : (
 							<>
-								<InfoRow label="tests" value={`${snap.run.done}/${snap.run.total}`} />
+								<InfoRow
+									label="tests"
+									value={`${snap.run.done}/${snap.run.total}`}
+								/>
 								<InfoRow label="passed" value={snap.run.passed} />
 								<InfoRow label="failed" value={snap.run.failed} />
 								<InfoRow label="running" value={snap.run.running} />
@@ -139,7 +150,7 @@ export function Overall({
 				</Card>
 			</div>
 
-			<Card>
+			<Card className="shrink-0 gap-2">
 				<CardHeader>
 					<CardTitle>Speed — files completed / sec</CardTitle>
 				</CardHeader>
@@ -148,34 +159,38 @@ export function Overall({
 				</CardContent>
 			</Card>
 
-			<Card className="py-0">
-				<div className="max-h-[420px] overflow-auto">
-					<Table>
-						<TableHeader>
-							<TableRow>
-								<TableHead>File</TableHead>
-								<TableHead className="w-24">Status</TableHead>
-								<TableHead className="w-20">✓ / ✗</TableHead>
-								<TableHead className="w-56">Worker</TableHead>
+			{/* The file table owns the remaining height and scrolls INTERNALLY — the
+			    header stays sticky, the page never grows past one screen. */}
+			<Card className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
+				<div className="min-h-0 flex-1 overflow-auto">
+					<Table className="p-0">
+						<TableHeader className="sticky top-0 z-20 bg-card">
+							<TableRow className="border-b">
+								<TableHead className="px-3">File</TableHead>
+								<TableHead className="w-24 px-3">Status</TableHead>
+								<TableHead className="w-20 px-3">✓ / ✗</TableHead>
+								<TableHead className="w-56 px-3">Worker</TableHead>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{snap.files.map((f) => (
 								<TableRow
-									className="cursor-pointer"
+									className="cursor-pointer border-b hover:bg-interactive-secondary-hover"
 									key={f.file}
 									onClick={() => onOpenFile(f.file)}
 								>
-									<TableCell className="font-mono text-xs">{f.name}</TableCell>
-									<TableCell>
+									<TableCell className="px-3 font-medium font-mono text-foreground text-xs">
+										{f.name}
+									</TableCell>
+									<TableCell className="px-3">
 										<FileStatusBadge status={f.status} />
 									</TableCell>
-									<TableCell className="font-mono text-xs tabular-nums">
+									<TableCell className="px-3 font-mono text-xs tabular-nums">
 										<span className="text-green-500">{f.passed}</span>
 										{" / "}
 										<span className="text-red-500">{f.failed}</span>
 									</TableCell>
-									<TableCell className="font-mono text-xs text-muted-foreground">
+									<TableCell className="px-3 font-mono text-muted-foreground text-xs">
 										{f.worker ?? "—"}
 									</TableCell>
 								</TableRow>

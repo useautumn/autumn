@@ -1,12 +1,11 @@
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { Badge } from "@/components/ui/badge";
 import {
 	ChartContainer,
 	ChartTooltip,
 	ChartTooltipContent,
 } from "@/components/ui/chart";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { useEffect, useRef } from "react";
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 
 type BadgeVariant =
 	| "green"
@@ -65,31 +64,6 @@ const WORKER_STATUS: Record<string, { v: BadgeVariant; label: string }> = {
 export function WorkerStatusBadge({ status }: { status: string }) {
 	const s = WORKER_STATUS[status] ?? WORKER_STATUS.booting;
 	return <Badge variant={s.v}>{s.label}</Badge>;
-}
-
-/** Monospaced output pane that auto-scrolls to the bottom unless the user scrolled up. */
-export function OutputPane({ text }: { text: string }) {
-	const ref = useRef<HTMLDivElement>(null);
-	const stick = useRef(true);
-	useEffect(() => {
-		const el = ref.current;
-		if (el && stick.current) {
-			el.scrollTop = el.scrollHeight;
-		}
-	}, [text]);
-	return (
-		<div
-			className="h-full overflow-auto rounded-lg border bg-card p-3 font-mono text-xs whitespace-pre-wrap text-foreground/90"
-			onScroll={(e) => {
-				const el = e.currentTarget;
-				stick.current =
-					el.scrollHeight - el.scrollTop - el.clientHeight < 48;
-			}}
-			ref={ref}
-		>
-			{text || <span className="text-muted-foreground">(no output yet)</span>}
-		</div>
-	);
 }
 
 const SPEED_CONFIG = {

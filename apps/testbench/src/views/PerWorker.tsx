@@ -4,9 +4,10 @@ import {
 	ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { cn } from "@/lib/utils";
-import type { SwarmSocket } from "../useSwarmSocket";
+import { TerminalOutput } from "../Terminal";
 import type { Snapshot, WorkerRow } from "../types";
-import { OutputPane, WorkerStatusBadge } from "../widgets";
+import type { SwarmSocket } from "../useSwarmSocket";
+import { WorkerStatusBadge } from "../widgets";
 
 function WorkerList({
 	workers,
@@ -18,18 +19,20 @@ function WorkerList({
 	onPick: (worker: string) => void;
 }) {
 	return (
-		<div className="h-full overflow-auto rounded-lg border bg-card">
+		<div className="h-full min-h-0 overflow-auto rounded-lg border bg-card">
 			{workers.map((w) => (
 				<button
 					className={cn(
-						"flex w-full items-center justify-between gap-2 border-b px-2 py-1.5 text-left text-xs last:border-b-0 hover:bg-muted",
-						active === w.name && "bg-muted",
+						"flex w-full items-center justify-between gap-2 border-b px-2.5 py-1.5 text-left text-xs last:border-b-0 hover:bg-interactive-secondary-hover",
+						active === w.name && "bg-interactive-secondary-hover",
 					)}
 					key={w.name}
 					onClick={() => onPick(w.name)}
 					type="button"
 				>
-					<span className="truncate font-mono">{w.name}</span>
+					<span className="truncate font-mono text-tertiary-foreground">
+						{w.name}
+					</span>
 					<span className="flex items-center gap-1.5">
 						<span className="text-muted-foreground tabular-nums">
 							{w.fileCount}
@@ -54,10 +57,11 @@ export function PerWorker({
 	const activeWorker =
 		socket.sub?.kind === "worker" ? socket.sub.key : undefined;
 	const row = snap.workers.find((w) => w.name === activeWorker);
+	const showOutput = socket.sub?.kind === "worker";
 	return (
-		<ResizablePanelGroup className="min-h-[70vh]" orientation="horizontal">
+		<ResizablePanelGroup className="h-full" orientation="horizontal">
 			<ResizablePanel defaultSize={26} minSize={18}>
-				<div className="h-full pr-3">
+				<div className="h-full min-h-0 pr-3">
 					<WorkerList
 						active={activeWorker}
 						onPick={socket.subscribeWorker}
@@ -67,9 +71,9 @@ export function PerWorker({
 			</ResizablePanel>
 			<ResizableHandle withHandle />
 			<ResizablePanel defaultSize={74}>
-				<div className="flex h-full flex-col gap-3 pl-3">
+				<div className="flex h-full min-h-0 flex-col gap-3 pl-3">
 					{row ? (
-						<div className="flex flex-wrap items-center gap-2">
+						<div className="flex shrink-0 flex-wrap items-center gap-2">
 							<span className="font-mono text-sm">{row.name}</span>
 							<WorkerStatusBadge status={row.status} />
 							<span className="text-muted-foreground text-xs">
@@ -77,15 +81,15 @@ export function PerWorker({
 							</span>
 						</div>
 					) : (
-						<div className="text-muted-foreground text-sm">
+						<div className="shrink-0 text-muted-foreground text-sm">
 							select a worker to view its server output
 						</div>
 					)}
 					{row && row.files.length > 0 ? (
-						<div className="flex flex-wrap gap-1.5">
+						<div className="flex max-h-24 shrink-0 flex-wrap gap-1.5 overflow-auto">
 							{row.files.map((f) => (
 								<button
-									className="rounded-md border bg-card px-2 py-0.5 font-mono text-xs hover:bg-muted"
+									className="rounded-md border bg-card px-2 py-0.5 font-mono text-xs hover:bg-interactive-secondary-hover"
 									key={f.file}
 									onClick={() => onOpenFile(f.file)}
 									type="button"
@@ -95,10 +99,15 @@ export function PerWorker({
 							))}
 						</div>
 					) : null}
-					<div className="min-h-0 flex-1">
-						<OutputPane
-							text={socket.sub?.kind === "worker" ? socket.output : ""}
-						/>
+					{/* WTERM read-only surface for this worker's server output. */}
+					<div className="min-h-0 flex-1 overflow-hidden rounded-lg border bg-card">
+						{showOutput ? (
+							<TerminalOutput text={socket.output} />
+						) : (
+							<div className="flex h-full items-center justify-center text-muted-foreground text-xs">
+								(no output yet)
+							</div>
+						)}
 					</div>
 				</div>
 			</ResizablePanel>
