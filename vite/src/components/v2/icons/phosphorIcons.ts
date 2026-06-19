@@ -49,10 +49,9 @@ export const STARTER_PHOSPHOR_ICONS = [
 ].filter((name) => loaderByName.has(name));
 
 export const loadPhosphorIcon = async (name: string): Promise<Icon> => {
-	const loader =
-		loaderByName.get(name) ?? loaderByName.get(DEFAULT_PHOSPHOR_ICON);
-	const mod = await loader?.();
-	const icon = mod?.[name] ?? mod?.[`${name}Icon`];
-	if (!icon) throw new Error(`Phosphor icon not found: ${name}`);
+	const resolvedName = loaderByName.has(name) ? name : DEFAULT_PHOSPHOR_ICON;
+	const mod = await loaderByName.get(resolvedName)?.();
+	const icon = mod?.[resolvedName] ?? mod?.[`${resolvedName}Icon`];
+	if (!icon) throw new Error(`Phosphor icon not found: ${resolvedName}`);
 	return icon;
 };
