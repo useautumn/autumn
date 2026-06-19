@@ -95,16 +95,21 @@ const RATE_LIMIT_ROUTE_GROUPS: RateLimitRouteGroup[] = [
 		patterns: [
 			route({ method: "POST", url: "/v1/events" }),
 			route({ method: "POST", url: "/v1/track" }),
+			route({ method: "POST", url: "/v1/track_tokens" }),
 			route({ method: "POST", url: "/v1/usage" }),
 			route({ method: "POST", url: "/v1/balances/update" }),
 			route({ method: "POST", url: "/v1/balances.track" }),
+			route({ method: "POST", url: "/v1/balances.track_tokens" }),
 			route({ method: "POST", url: "/v1/balances.finalize" }),
 			route({ method: "POST", url: "/v1/balances.update" }),
 		],
 	},
 	{
 		type: RateLimitType.BatchTrack,
-		patterns: [route({ method: "POST", url: "/v1/balances.batch_track" })],
+		patterns: [
+			route({ method: "POST", url: "/v1/balances.batch_track" }),
+			route({ method: "POST", url: "/v1/balances.batch_track_tokens" }),
+		],
 	},
 	{
 		type: RateLimitType.Check,

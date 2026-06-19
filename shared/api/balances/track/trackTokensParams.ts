@@ -68,3 +68,12 @@ export const TrackTokensParamsSchema = z.object({
 });
 
 export type TrackTokensParams = z.infer<typeof TrackTokensParamsSchema>;
+
+export const BatchTrackTokensParamsSchema = z
+	.array(TrackTokensParamsSchema)
+	.min(1)
+	.max(1000);
+
+export type BatchTrackTokensParams = z.infer<
+	typeof BatchTrackTokensParamsSchema
+>;
