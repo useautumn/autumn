@@ -16,6 +16,10 @@
  */
 
 import chalk from "chalk";
+import {
+	getAllGroups,
+	getAllSuites,
+} from "../../server/tests/_groups/index.ts";
 import { kill, killAll, killOrphans } from "./commands/kill.ts";
 import { list } from "./commands/list.ts";
 import { getLastRunExitCode, run } from "./commands/run.ts";
@@ -111,6 +115,36 @@ const parseRunArgs = (args: string[]): TwRunArgs => {
 	};
 };
 
+/**
+ * Render the available test groups (split by tier) and suites as aligned,
+ * name → description lines for `--help`. A bare positional to `bun tw` is matched
+ * against these names (groups first, then suites) before falling back to a path.
+ */
+const formatTargets = (): string => {
+	const groups = getAllGroups();
+	const suites = getAllSuites();
+	const names = [...groups.map((g) => g.name), ...suites.map((s) => s.name)];
+	const pad = Math.max(...names.map((n) => n.length));
+	const line = (name: string, desc: string): string =>
+		`  ${chalk.cyan(name.padEnd(pad))}  ${chalk.dim(desc)}`;
+
+	const core = groups.filter((g) => g.tier === "core");
+	const domain = groups.filter((g) => g.tier === "domain");
+
+	return [
+		chalk.bold("Groups (core):"),
+		...core.map((g) => line(g.name, g.description)),
+		"",
+		chalk.bold("Groups (domain):"),
+		...domain.map((g) => line(g.name, g.description)),
+		"",
+		chalk.bold("Suites:"),
+		...suites.map((s) =>
+			line(s.name, `${s.description} → ${s.groups.join(", ")}`),
+		),
+	].join("\n");
+};
+
 const printUsage = (): void => {
 	console.log(
 		[
@@ -131,6 +165,8 @@ const printUsage = (): void => {
 			`  --stripe-concurrency=N   concurrent Stripe account creations (default ${STRIPE_SUBACCOUNT_CONCURRENCY})`,
 			"  --allow-dirty    skip the preflight git gate (dirty tree / unpushed HEAD)",
 			"  --dashboard      serve the live web dashboard (random port) + keep it up after the run",
+			"",
+			formatTargets(),
 		].join("\n"),
 	);
 };
