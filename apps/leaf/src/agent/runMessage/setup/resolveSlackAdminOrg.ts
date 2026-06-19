@@ -72,7 +72,6 @@ export const resolveSlackAdminOrgContext = async ({
 	}
 
 	const access = validateSlackAdminAccess({
-		providerUserId,
 		workspaceId: thread.workspaceId,
 	});
 	if (!access.allowed) {

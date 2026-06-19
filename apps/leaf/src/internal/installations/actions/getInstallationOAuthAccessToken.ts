@@ -2,7 +2,10 @@ import type { AppEnv, ChatInstallation } from "@autumn/shared";
 import { decrypt, encrypt } from "../../../lib/crypto.js";
 import { db } from "../../../lib/db.js";
 import { env as leafEnv } from "../../../lib/env.js";
-import { isSlackAdminProvider } from "../../slackAdmin/access.js";
+import {
+	isSlackAdminProvider,
+	validateSlackAdminAccess,
+} from "../../slackAdmin/access.js";
 import {
 	getChatOAuthCredentialByInstallationEnv,
 	updateChatOAuthCredentialTokens,
@@ -29,6 +32,15 @@ export const getInstallationOAuthAccessToken = async ({
 	env: AppEnv;
 	orgId?: string;
 }) => {
+	if (isSlackAdminProvider({ provider: installation.provider })) {
+		const access = validateSlackAdminAccess({
+			workspaceId: installation.workspace_id,
+		});
+		if (!access.allowed) {
+			throw new Error("Slack admin workspace is not authorized for OAuth token access");
+		}
+	}
+
 	let credential = await getChatOAuthCredentialByInstallationEnv({
 		db,
 		chatInstallationId: installation.id,

@@ -12,35 +12,18 @@ export const isSlackAdminInstallation = ({
 	installation: ChatInstallation;
 }) => isSlackAdminProvider({ provider: installation.provider });
 
-const adminUserIds = () =>
-	new Set(
-		(env.SLACK_ADMIN_USER_IDS ?? "")
-			.split(",")
-			.map((id) => id.trim())
-			.filter(Boolean),
-	);
-
 export const validateSlackAdminAccessConfig = ({
 	configuredWorkspaceId,
-	isProduction,
-	providerUserId,
-	userIds,
 	workspaceId,
 }: {
 	configuredWorkspaceId?: string;
-	isProduction: boolean;
-	providerUserId: string;
-	userIds: Set<string>;
 	workspaceId: string;
 }): { allowed: true } | { allowed: false; reason: string } => {
-	if (isProduction && !configuredWorkspaceId) {
+	if (!configuredWorkspaceId) {
 		return { allowed: false, reason: "admin_config_missing" };
 	}
 	if (configuredWorkspaceId && workspaceId !== configuredWorkspaceId) {
 		return { allowed: false, reason: "wrong_workspace" };
-	}
-	if (userIds.size > 0 && !userIds.has(providerUserId)) {
-		return { allowed: false, reason: "user_not_allowed" };
 	}
 
 	return { allowed: true };
@@ -55,23 +38,17 @@ export const shouldUseSlackAdminInstallationForWorkspace = ({
 	isProduction: boolean;
 	workspaceId: string;
 }) => {
-	if (isProduction && !configuredWorkspaceId) return false;
-	if (!configuredWorkspaceId) return true;
+	if (!configuredWorkspaceId) return false;
 	return workspaceId === configuredWorkspaceId;
 };
 
 export const validateSlackAdminAccess = ({
-	providerUserId,
 	workspaceId,
 }: {
-	providerUserId: string;
 	workspaceId: string;
 }) =>
 	validateSlackAdminAccessConfig({
 		configuredWorkspaceId: env.SLACK_ADMIN_WORKSPACE_ID,
-		isProduction: process.env.NODE_ENV === "production",
-		providerUserId,
-		userIds: adminUserIds(),
 		workspaceId,
 	});
 

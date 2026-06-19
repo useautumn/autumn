@@ -259,63 +259,35 @@ describe("Firecrawl tools", () => {
 });
 
 describe("Slack admin access gate", () => {
-	test("allows configured admin users in the configured workspace", () => {
+	test("allows the configured admin workspace", () => {
 		expect(
 			validateSlackAdminAccessConfig({
 				configuredWorkspaceId: "T_ADMIN",
-				isProduction: true,
-				providerUserId: "U_ADMIN",
-				userIds: new Set(["U_ADMIN"]),
 				workspaceId: "T_ADMIN",
 			}),
 		).toEqual({ allowed: true });
 	});
 
-	test("fails closed in production without a workspace config", () => {
+	test("fails closed without a workspace config", () => {
 		expect(
 			validateSlackAdminAccessConfig({
-				isProduction: true,
-				providerUserId: "U_ADMIN",
-				userIds: new Set(),
 				workspaceId: "T_ADMIN",
 			}),
 		).toEqual({ allowed: false, reason: "admin_config_missing" });
-	});
-
-	test("allows any user when no allowlist is configured", () => {
 		expect(
 			validateSlackAdminAccessConfig({
-				configuredWorkspaceId: "T_ADMIN",
-				isProduction: true,
-				providerUserId: "U_ANY",
-				userIds: new Set(),
 				workspaceId: "T_ADMIN",
 			}),
-		).toEqual({ allowed: true });
+		).toEqual({ allowed: false, reason: "admin_config_missing" });
 	});
 
 	test("denies the wrong workspace", () => {
 		expect(
 			validateSlackAdminAccessConfig({
 				configuredWorkspaceId: "T_ADMIN",
-				isProduction: true,
-				providerUserId: "U_ADMIN",
-				userIds: new Set(["U_ADMIN"]),
 				workspaceId: "T_OTHER",
 			}),
 		).toEqual({ allowed: false, reason: "wrong_workspace" });
-	});
-
-	test("denies users outside the admin allowlist", () => {
-		expect(
-			validateSlackAdminAccessConfig({
-				configuredWorkspaceId: "T_ADMIN",
-				isProduction: true,
-				providerUserId: "U_OTHER",
-				userIds: new Set(["U_ADMIN"]),
-				workspaceId: "T_ADMIN",
-			}),
-		).toEqual({ allowed: false, reason: "user_not_allowed" });
 	});
 
 	test("only checks the admin install for the configured admin workspace", () => {
@@ -335,10 +307,16 @@ describe("Slack admin access gate", () => {
 		).toBe(false);
 	});
 
-	test("does not check admin installs in production without workspace config", () => {
+	test("does not check admin installs without workspace config", () => {
 		expect(
 			shouldUseSlackAdminInstallationForWorkspace({
 				isProduction: true,
+				workspaceId: "T_ADMIN",
+			}),
+		).toBe(false);
+		expect(
+			shouldUseSlackAdminInstallationForWorkspace({
+				isProduction: false,
 				workspaceId: "T_ADMIN",
 			}),
 		).toBe(false);

@@ -95,7 +95,6 @@ export const handleApprovalActionWithDeps = async ({
 			isSlackAdminProvider({ provider: approval.provider })
 		) {
 			const access = validateSlackAdminAccess({
-				providerUserId,
 				workspaceId: approval.workspace_id,
 			});
 			if (!access.allowed) {

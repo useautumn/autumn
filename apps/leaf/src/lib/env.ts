@@ -58,7 +58,6 @@ const envSchema = z
 		PORT: z.coerce.number().int().positive().default(3099),
 		SLACK_CLIENT_ID: z.string().min(1),
 		SLACK_CLIENT_SECRET: z.string().min(1),
-		SLACK_ADMIN_USER_IDS: optionalString,
 		SLACK_ADMIN_WORKSPACE_ID: optionalString,
 		SLACK_REDIRECT_URI: optionalString,
 		SLACK_SIGNING_SECRET: z.string().min(1),

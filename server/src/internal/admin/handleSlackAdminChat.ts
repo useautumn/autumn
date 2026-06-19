@@ -2,7 +2,6 @@ import crypto, { randomUUID } from "node:crypto";
 import { stripOAuthTokenPrefix } from "@autumn/auth";
 import {
 	AppEnv,
-	apiKeys,
 	type ChatOAuthCredential,
 	chatInstallations,
 	chatOAuthCredentials,
@@ -17,7 +16,7 @@ import {
 	slackAdminThreads,
 } from "@autumn/shared";
 import { addMinutes } from "date-fns";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -27,7 +26,6 @@ import {
 	getChatStateSecret,
 	getSlackAdminProvider,
 } from "../chat/chatUtils.js";
-import { clearSecretKeyCache } from "../dev/api-keys/cacheApiKeyUtils.js";
 
 const targetBody = z.strictObject({
 	org_id: z.string().min(1),
@@ -141,19 +139,6 @@ const revokeSlackAdminOAuthArtifacts = async ({
 			await db
 				.delete(oauthRefreshToken)
 				.where(inArray(oauthRefreshToken.token, uniqueRefreshTokenValues));
-		}
-
-		for (const consentId of consentIds) {
-			const linkedKeys = await db
-				.select({ id: apiKeys.id, hashedKey: apiKeys.hashed_key })
-				.from(apiKeys)
-				.where(sql`${apiKeys.meta}->>'oauth_consent_id' = ${consentId}`);
-
-			for (const key of linkedKeys) {
-				await db.delete(apiKeys).where(eq(apiKeys.id, key.id));
-				if (key.hashedKey)
-					await clearSecretKeyCache({ hashedKey: key.hashedKey });
-			}
 		}
 
 		await db.delete(oauthConsent).where(inArray(oauthConsent.id, consentIds));

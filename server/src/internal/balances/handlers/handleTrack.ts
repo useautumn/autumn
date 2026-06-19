@@ -25,7 +25,7 @@ export const handleTrack = createRoute({
 
 		if (body.async === true) {
 			await runAsyncTrack({ ctx, body });
-			return c.body(null, 204);
+			return c.json({ success: true }, 202);
 		}
 
 		const response = await runTrackWithRollout({

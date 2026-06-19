@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { stripOAuthTokenPrefix } from "@autumn/auth";
 import {
 	AppEnv,
 	apiKeys,
@@ -6,9 +7,12 @@ import {
 	type ChatInstallState,
 	type ChatProvider,
 	chatInstallations,
+	chatOAuthCredentials,
+	oauthAccessToken,
+	oauthRefreshToken,
 	organizations,
 } from "@autumn/shared";
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { replaceInstallationOAuthCredentials } from "../../internal/installations/actions/replaceInstallationOAuthCredentials.js";
 import { slackAdminThreadsRepo } from "../../internal/slackAdmin/repos/slackAdminThreadsRepo.js";
 import { decrypt, encrypt } from "../../lib/crypto.js";
@@ -74,6 +78,32 @@ const deleteInstallationArtifacts = async (
 	tx: ChatTransaction,
 	installation: ChatInstallation,
 ) => {
+	const credentials = await tx.query.chatOAuthCredentials.findMany({
+		where: eq(chatOAuthCredentials.chat_installation_id, installation.id),
+	});
+	const tokenHash = ({ token }: { token: string }) =>
+		crypto.createHash("sha256").update(token).digest("base64url");
+	const accessTokenHashes = credentials.map((credential) =>
+		tokenHash({
+			token: stripOAuthTokenPrefix({
+				token: decrypt(credential.access_token),
+			}),
+		}),
+	);
+	const refreshTokenHashes = credentials.map((credential) =>
+		tokenHash({ token: decrypt(credential.refresh_token) }),
+	);
+
+	if (accessTokenHashes.length > 0) {
+		await tx
+			.delete(oauthAccessToken)
+			.where(inArray(oauthAccessToken.token, accessTokenHashes));
+	}
+	if (refreshTokenHashes.length > 0) {
+		await tx
+			.delete(oauthRefreshToken)
+			.where(inArray(oauthRefreshToken.token, refreshTokenHashes));
+	}
 	await slackAdminThreadsRepo.deleteByInstallation({
 		db: tx,
 		chatInstallationId: installation.id,

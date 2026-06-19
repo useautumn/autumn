@@ -48,7 +48,7 @@ describe("batch track handlers", () => {
 		mockState.batchTrackTokenBodies = [];
 	});
 
-	test("returns 204 with no body after enqueueing batch track", async () => {
+	test("returns 200 success after enqueueing batch track", async () => {
 		const body = [{ customer_id: "cus_123", feature_id: "messages" }];
 		const response = await createApp({ ctx: createCtx() }).request(
 			"/balances.batch_track",
@@ -59,12 +59,12 @@ describe("batch track handlers", () => {
 			},
 		);
 
-		expect(response.status).toBe(204);
-		expect(await response.text()).toBe("");
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ success: true });
 		expect(mockState.batchTrackBodies).toEqual([body]);
 	});
 
-	test("returns 204 with no body after enqueueing batch track tokens", async () => {
+	test("returns 200 success after enqueueing batch track tokens", async () => {
 		const body = [
 			{
 				customer_id: "cus_123",
@@ -82,8 +82,8 @@ describe("batch track handlers", () => {
 			},
 		);
 
-		expect(response.status).toBe(204);
-		expect(await response.text()).toBe("");
+		expect(response.status).toBe(200);
+		expect(await response.json()).toEqual({ success: true });
 		expect(mockState.batchTrackTokenBodies).toEqual([body]);
 	});
 });

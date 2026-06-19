@@ -72,6 +72,7 @@ export const runMessage = async ({
 				thread,
 			});
 			if ("blockedText" in orgContext) {
+				await onAgentReady?.();
 				return { env: getDefaultChatEnv(), text: orgContext.blockedText };
 			}
 			const { org } = orgContext;
