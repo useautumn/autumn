@@ -1,4 +1,9 @@
-import type { FullCusProduct, FullCustomerEntitlement } from "@autumn/shared";
+import {
+	cusEntsToUsage,
+	type FullCusEntWithFullCusProduct,
+	type FullCusProduct,
+	type FullCustomerEntitlement,
+} from "@autumn/shared";
 
 /**
  * When a sync expires an existing plan and inserts a replacement for the same
@@ -8,11 +13,16 @@ import type { FullCusProduct, FullCustomerEntitlement } from "@autumn/shared";
  *
  * Example: Free at 5/10 (5 used) replaced by Pro (20 included) → Pro at 15/20.
  *
+ * The new entitlement was just initialized to its full granted amount (plain
+ * allowance OR prepaid quantity), so the carry is simply
+ *   newBalance = newInitialBalance − oldUsage
+ * where `oldUsage` is computed via `cusEntsToUsage`, which correctly accounts
+ * for prepaid quantity (prepaid features carry their included amount in the
+ * prepaid quantity, not in `entitlement.allowance`).
+ *
  * Mutates `inserted` in place. Matches entitlements by `internal_feature_id`.
- * Conservatively skips entitlements where carry-over is ambiguous or would
- * corrupt structure — unlimited features, features without a numeric
- * allowance (prepaid/pure-usage), and legacy per-entity balance hashes — and
- * leaves those at their fresh allowance.
+ * Skips unlimited features and legacy per-entity balance hashes (whose balance
+ * lives in a per-entity map rather than the top-level `balance`).
  */
 export const carryOverEntitlementUsage = ({
 	inserted,
@@ -30,24 +40,28 @@ export const carryOverEntitlementUsage = ({
 		const oldCusEnt = expiringByFeature.get(newCusEnt.internal_feature_id);
 		if (!oldCusEnt) continue;
 
-		// Skip cases where a simple balance transfer doesn't apply.
 		if (newCusEnt.unlimited || oldCusEnt.unlimited) continue;
-		// Legacy per-entity balance hash — handled differently; leave untouched.
+		// Legacy per-entity balance hash — balance lives per-entity, not on the
+		// top-level `balance` we mutate here; leave untouched.
 		if (newCusEnt.entities || oldCusEnt.entities) continue;
 
-		const newAllowance = newCusEnt.entitlement.allowance;
-		const oldAllowance = oldCusEnt.entitlement.allowance;
-		if (newAllowance == null || oldAllowance == null) continue;
+		// Usage consumed on the expiring plan. `cusEntsToUsage` needs the cusEnt
+		// linked to its product (for prepaid quantity + plan quantity).
+		const oldUsage = cusEntsToUsage({
+			cusEnts: [
+				{
+					...oldCusEnt,
+					customer_product: expiring,
+				} as FullCusEntWithFullCusProduct,
+			],
+		});
+		if (oldUsage <= 0) continue;
 
-		const oldBalance = oldCusEnt.balance ?? 0;
-		const consumed = Math.max(0, oldAllowance - oldBalance);
-		if (consumed === 0) continue;
-
-		const carriedBalance = newAllowance - consumed;
+		const carried = (newCusEnt.balance ?? 0) - oldUsage;
 		// Allow negative (overage) when the feature permits it; otherwise floor
 		// at zero so a larger prior consumption can't over-credit.
 		newCusEnt.balance = newCusEnt.usage_allowed
-			? carriedBalance
-			: Math.max(0, carriedBalance);
+			? carried
+			: Math.max(0, carried);
 	}
 };
