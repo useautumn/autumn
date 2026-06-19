@@ -6,7 +6,11 @@ import { createDefaultOrg } from "@/utils/authUtils/createDefaultOrg.js";
 
 export const beforeSessionCreated = async (session: Session) => {
 	try {
-		console.log(`Running beforeSessionCreated for user ${session.userId}`);
+		// Impersonation sets its own active org; don't override with the
+		// target user's most-recent membership.
+		if ((session as { impersonatedBy?: string | null }).impersonatedBy) {
+			return;
+		}
 
 		const membership = await db.query.member.findFirst({
 			where: eq(member.userId, session.userId),
@@ -14,9 +18,6 @@ export const beforeSessionCreated = async (session: Session) => {
 		});
 
 		if (membership) {
-			// console.log(
-			// 	`Active membership found for user ${session.userId}, org ${membership.organizationId}`,
-			// );
 			return {
 				data: {
 					...session,

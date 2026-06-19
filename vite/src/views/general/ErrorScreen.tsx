@@ -2,6 +2,7 @@ import React from "react";
 import { Link, useNavigate } from "react-router";
 import { authClient } from "@/lib/auth-client";
 import { getRedirectUrl } from "@/utils/genUtils";
+import { useEnv } from "@/utils/envUtils";
 import { useSwitchActiveOrg } from "@/hooks/common/useOrg";
 
 function ErrorScreen({
@@ -16,6 +17,7 @@ function ErrorScreen({
 	errorData?: any;
 }) {
 	const navigate = useNavigate();
+	const env = useEnv();
 	const switchActiveOrg = useSwitchActiveOrg();
 
 	const handleOrgRemovalError = async () => {

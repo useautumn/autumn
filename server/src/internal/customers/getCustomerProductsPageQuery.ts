@@ -7,7 +7,6 @@ import { sql } from "drizzle-orm";
 
 export type CustomerProductsPageQueryArgs = {
 	internalCustomerId: string;
-	inStatuses?: CusProductStatus[];
 	showExpired: boolean;
 	entityId?: string;
 	kind?: CustomerProductKind;
@@ -132,19 +131,17 @@ const freeTrialLateral = sql`
 	) ft_data ON true`;
 
 const buildFilters = ({
-	inStatuses,
 	showExpired,
 	entityId,
 	kind,
 }: {
-	inStatuses?: CusProductStatus[];
 	showExpired: boolean;
 	entityId?: string;
 	kind?: CustomerProductKind;
 }) => {
 	const statusFilter = showExpired
 		? cpStatusInClause([CusProductStatus.Expired])
-		: cpStatusInClause(inStatuses);
+		: sql`AND cp.status <> ${CusProductStatus.Expired}`;
 
 	const entityFilter = entityId
 		? sql`AND (cp.entity_id = ${entityId} OR cp.internal_entity_id = ${entityId} OR (cp.entity_id IS NULL AND cp.internal_entity_id IS NULL))`
@@ -158,14 +155,13 @@ const buildFilters = ({
 
 export const getCustomerProductsPageQuery = ({
 	internalCustomerId,
-	inStatuses,
 	showExpired,
 	entityId,
 	kind,
 	limit,
 	cursor,
 }: CustomerProductsPageQueryArgs) => {
-	const filters = buildFilters({ inStatuses, showExpired, entityId, kind });
+	const filters = buildFilters({ showExpired, entityId, kind });
 
 	const cursorPredicate = cursor
 		? sql`AND (
@@ -202,12 +198,11 @@ export const getCustomerProductsPageQuery = ({
 
 export const getCustomerProductsCountQuery = ({
 	internalCustomerId,
-	inStatuses,
 	showExpired,
 	entityId,
 	kind,
 }: Omit<CustomerProductsPageQueryArgs, "limit" | "cursor">) => {
-	const filters = buildFilters({ inStatuses, showExpired, entityId, kind });
+	const filters = buildFilters({ showExpired, entityId, kind });
 
 	return sql`
 		SELECT COUNT(*)::int AS total_count

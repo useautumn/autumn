@@ -1,50 +1,33 @@
 import type { AppEnv, FrontendOrg } from "@autumn/shared";
-import {
-	keepPreviousData,
-	useQuery,
-	useQueryClient,
-} from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect } from "react";
 import { authClient, useListOrganizations, useSession } from "@/lib/auth-client";
+import {
+	clearLastSwitchedOrgId,
+	getLastSwitchedOrgId,
+	setActiveOrg,
+	setLastSwitchedOrgId,
+} from "@/lib/orgSync";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 
-const LAST_ORG_KEY = "autumn_last_active_org_id";
-
-export const setLastSwitchedOrgId = (id: string) => {
-	try {
-		localStorage.setItem(LAST_ORG_KEY, id);
-	} catch {}
-};
-
-export const getLastSwitchedOrgId = (): string | null => {
-	try {
-		return localStorage.getItem(LAST_ORG_KEY);
-	} catch {
-		return null;
-	}
-};
-
-export const clearLastSwitchedOrgId = (id?: string) => {
-	try {
-		if (!id || localStorage.getItem(LAST_ORG_KEY) === id) {
-			localStorage.removeItem(LAST_ORG_KEY);
-		}
-	} catch {}
+export {
+	clearLastSwitchedOrgId,
+	getLastSwitchedOrgId,
+	setActiveOrg,
+	setLastSwitchedOrgId,
 };
 
 export const useSwitchActiveOrg = () => {
-	const queryClient = useQueryClient();
 	const { refetch: refetchSession } = useSession();
 
 	return useCallback(async (orgId: string) => {
-		await authClient.organization.setActive({ organizationId: orgId });
-		setLastSwitchedOrgId(orgId);
-		await Promise.all([
-			refetchSession(),
-			queryClient.invalidateQueries({ queryKey: ["org"] }),
-		]);
-	}, [queryClient, refetchSession]);
+		await setActiveOrg(orgId);
+		// The org query is keyed on activeOrgId, so refreshing the session
+		// (which updates activeOrgId) is enough to refetch the new org. An extra
+		// invalidate would force a redundant refetch and flash a skeleton.
+		await refetchSession();
+	}, [refetchSession]);
 };
 
 export const useOrg = (params?: { env?: AppEnv }) => {
@@ -61,8 +44,6 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 
 	const {
 		data: org,
-		isLoading,
-		isPlaceholderData,
 		error,
 		refetch,
 	} = useQuery({
@@ -73,13 +54,19 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 		staleTime: 30_000,
 		enabled: !!activeOrgId,
 	});
-	const orgLoading =
-		!session || (!!activeOrgId && (isLoading || isPlaceholderData));
+	const lastOrgId = getLastSwitchedOrgId();
+	const rememberedOrgValid =
+		orgListLoading || !orgList || orgList.some((o) => o.id === lastOrgId);
+	const pendingOrgSwitch =
+		!!lastOrgId && !!activeOrgId && lastOrgId !== activeOrgId && rememberedOrgValid;
+
+	const orgIsReady =
+		!!org && !!activeOrgId && org.id === activeOrgId && !pendingOrgSwitch;
+	const orgLoading = !session || (!!activeOrgId && !orgIsReady);
 
 	useEffect(() => {
 		const handleNoActiveOrg = async () => {
 			if (!orgList || orgList.length === 0) {
-				console.log("No org to set active, signing out");
 				await authClient.signOut();
 				window.location.href = "/sign-in";
 				return;
@@ -91,13 +78,14 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 				: null;
 			const targetOrgId = preferredOrg?.id ?? orgList[0].id;
 
-			await authClient.organization.setActive({
-				organizationId: targetOrgId,
-			});
+			await setActiveOrg(targetOrgId);
 			window.location.reload();
 		};
 
-		if (session && !activeOrgId && !orgListLoading) {
+		const onImpersonateRoute =
+			window.location.pathname.includes("impersonate-redirect");
+
+		if (session && !activeOrgId && !orgListLoading && !onImpersonateRoute) {
 			handleNoActiveOrg();
 		}
 	}, [activeOrgId, orgList, orgListLoading, session]);

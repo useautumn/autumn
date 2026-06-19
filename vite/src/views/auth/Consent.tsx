@@ -23,6 +23,7 @@ import {
 	useListOrganizations,
 	useSession,
 } from "@/lib/auth-client";
+import { setActiveOrg } from "@/lib/orgSync";
 
 interface ClientInfo {
 	client_id: string;
@@ -194,9 +195,7 @@ export const Consent = () => {
 	const handleSwitchOrg = async (orgId: string) => {
 		setSwitchingOrg(true);
 		try {
-			await authClient.organization.setActive({
-				organizationId: orgId,
-			});
+			await setActiveOrg(orgId);
 			window.location.reload();
 		} catch (_) {
 			toast.error("Failed to switch organization");
