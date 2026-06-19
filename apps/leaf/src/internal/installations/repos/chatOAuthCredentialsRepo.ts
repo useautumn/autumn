@@ -13,15 +13,18 @@ export const getChatOAuthCredentialByInstallationEnv = async ({
 	db,
 	chatInstallationId,
 	env,
+	orgId,
 }: {
 	db: ChatDb;
 	chatInstallationId: string;
 	env: AppEnv;
+	orgId?: string;
 }) =>
 	db.query.chatOAuthCredentials.findFirst({
 		where: and(
 			eq(chatOAuthCredentials.chat_installation_id, chatInstallationId),
 			eq(chatOAuthCredentials.env, env),
+			orgId ? eq(chatOAuthCredentials.org_id, orgId) : undefined,
 		),
 	});
 
@@ -38,6 +41,7 @@ export const upsertChatOAuthCredential = async ({
 		.onConflictDoUpdate({
 			target: [
 				chatOAuthCredentials.chat_installation_id,
+				chatOAuthCredentials.org_id,
 				chatOAuthCredentials.env,
 			],
 			set: {

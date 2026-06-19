@@ -10,8 +10,12 @@ const mockState = {
 mock.module("@/queue/createWorkerContext.js", () => ({
 	createWorkerContext: async (args: Record<string, unknown>) => {
 		mockState.createWorkerContextCalls.push(args);
+		const logger = {
+			child: mock(() => logger),
+			error: mock(() => {}),
+		};
 		return {
-			logger: { error: mock(() => {}) },
+			logger,
 			skipCache: args.skipCache ?? true,
 			extraLogs: {},
 		};

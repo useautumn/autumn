@@ -10,7 +10,7 @@ import type {
 import { createPreviewCapture } from "../../agent/tools/toolPolicy.js";
 import type { AgentOutput } from "../../types.js";
 import { runHarnessTurnWithBraintrust } from "./braintrust.js";
-import { redactAgentOutput } from "./output.js";
+import { containsInternalToolCall, redactAgentOutput } from "./output.js";
 import type { SessionTurnOutcome } from "./types.js";
 
 /** Drives one engine turn through the shared pump gate, deadline watchdog, and
@@ -71,6 +71,17 @@ export const runEngineLoop = async ({
 	const previewCapture = providedPreviewCapture ?? createPreviewCapture();
 	let timedOut = false;
 	const isCancelled = () => timedOut || Boolean(run?.stop);
+	const assertPostableText = (text: string) => {
+		if (!containsInternalToolCall(text)) return;
+		logger.error("Blocked internal tool-call markup in agent output", {
+			event: "leaf.agent_output_internal_tool_call_blocked",
+			context: { env, org_id: org.id },
+			data: { session_id: sessionId },
+		});
+		throw new Error(
+			"Agent returned internal tool-call markup instead of a user response",
+		);
+	};
 
 	// Pump gate: keep consuming while injected follow-ups are pending, posting
 	// each drained turn's text as its own reply.
@@ -78,9 +89,11 @@ export const runEngineLoop = async ({
 		if (!isCancelled() && run && run.pendingTurns > 0) {
 			run.pendingTurns -= 1;
 			previewCapture.reset();
+			const rawTurnText = turn.textParts.join("\n\n");
+			assertPostableText(rawTurnText);
 			const turnText = redactAgentOutput({
 				logger,
-				text: turn.textParts.join("\n\n"),
+				text: rawTurnText,
 			});
 			if (turnText.trim()) await onTurnComplete?.(turnText);
 			return "continue" as const;
@@ -128,9 +141,11 @@ export const runEngineLoop = async ({
 		if (deadlineWatchdog) clearTimeout(deadlineWatchdog);
 	}
 
+	const rawFinalText = outcome.textParts.join("\n\n");
+	assertPostableText(rawFinalText);
 	const finalText = redactAgentOutput({
 		logger,
-		text: outcome.textParts.join("\n\n"),
+		text: rawFinalText,
 	});
 	const stopped = isCancelled();
 	const suspended = stopped ? undefined : outcome.suspendedQueue?.[0];

@@ -10,11 +10,15 @@ export const queueTrack = async ({
 	body,
 	queueUrl,
 	messageDeduplicationId,
+	logFallback = true,
+	markQueuedForReplay = true,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	queueUrl?: string;
 	messageDeduplicationId?: string;
+	logFallback?: boolean;
+	markQueuedForReplay?: boolean;
 }) => {
 	try {
 		const resolvedQueueUrl = queueUrl ?? process.env.TRACK_SQS_QUEUE_URL;
@@ -41,19 +45,23 @@ export const queueTrack = async ({
 			},
 		});
 
-		ctx.logger.warn("[track] Redis unavailable, queued track fallback", {
-			type: "track_queue_fallback",
-			feature_id: body.feature_id,
-			event_name: body.event_name,
-			env: ctx.env,
-			queue_name: resolvedQueueUrl.split("/").pop(),
-		});
-		addToExtraLogs({
-			ctx,
-			extras: {
-				trackQueuedForReplay: true,
-			},
-		});
+		if (logFallback) {
+			ctx.logger.warn("[track] Redis unavailable, queued track fallback", {
+				type: "track_queue_fallback",
+				feature_id: body.feature_id,
+				event_name: body.event_name,
+				env: ctx.env,
+				queue_name: resolvedQueueUrl.split("/").pop(),
+			});
+		}
+		if (markQueuedForReplay) {
+			addToExtraLogs({
+				ctx,
+				extras: {
+					trackQueuedForReplay: true,
+				},
+			});
+		}
 
 		return getQueuedTrackResponse({
 			ctx,

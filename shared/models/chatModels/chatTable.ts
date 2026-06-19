@@ -116,8 +116,9 @@ export const chatOAuthCredentials = pgTable(
 			foreignColumns: [organizations.id],
 			name: "chat_oauth_credentials_org_id_fkey",
 		}).onDelete("cascade"),
-		unique("chat_oauth_credentials_installation_env_key").on(
+		unique("chat_oauth_credentials_installation_org_env_key").on(
 			table.chat_installation_id,
+			table.org_id,
 			table.env,
 		),
 	],

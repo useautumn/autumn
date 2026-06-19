@@ -18,13 +18,17 @@ const isLoopback = (hostname: string) =>
 	hostname === "::1" ||
 	hostname === "[::1]";
 
-// CMA runs in Anthropic's cloud and cannot reach a loopback host, so MCP_SERVER_URL
-// must be publicly reachable. Fail fast with an actionable message.
 const autumnMcpUrl = () => {
 	const base = chatEnv.MCP_SERVER_URL;
-	if (isLoopback(new URL(base).hostname)) {
+	const url = new URL(base);
+	if (isLoopback(url.hostname)) {
 		throw new Error(
 			`MCP_SERVER_URL must be publicly reachable for Claude Managed Agents, but is "${base}". Point it at your public tunnel (e.g. https://j.dev.useautumn.com), which proxies /mcp to leaf.`,
+		);
+	}
+	if (url.protocol !== "https:") {
+		throw new Error(
+			`MCP_SERVER_URL must be HTTPS for Claude Managed Agents, but is "${base}". Point it at your public tunnel (e.g. https://j.dev.useautumn.com), which proxies /mcp to leaf.`,
 		);
 	}
 	return new URL("/mcp", base).toString();

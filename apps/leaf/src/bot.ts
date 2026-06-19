@@ -16,6 +16,7 @@ import {
 	registerRun,
 	runKeyForThread,
 } from "./internal/runs/runRegistry.js";
+import { shouldUseSlackAdminInstallationForWorkspace } from "./internal/slackAdmin/access.js";
 import { decrypt } from "./lib/crypto.js";
 import { env } from "./lib/env.js";
 import {
@@ -53,10 +54,21 @@ const findSlackInstallationForWorkspace = async ({
 }: {
 	workspaceId: string;
 }) => {
-	return (
-		(await findInstallationWithOrg(getSlackAdminProvider(), workspaceId)) ??
-		(await findInstallationWithOrg("slack", workspaceId))
-	);
+	if (
+		shouldUseSlackAdminInstallationForWorkspace({
+			configuredWorkspaceId: env.SLACK_ADMIN_WORKSPACE_ID,
+			isProduction: process.env.NODE_ENV === "production",
+			workspaceId,
+		})
+	) {
+		const adminInstallation = await findInstallationWithOrg(
+			getSlackAdminProvider(),
+			workspaceId,
+		);
+		if (adminInstallation) return adminInstallation;
+	}
+
+	return await findInstallationWithOrg("slack", workspaceId);
 };
 
 export const bot = new Chat({
@@ -266,6 +278,7 @@ const runAndReply = async ({
 			loading,
 			logAction,
 			logger,
+			orgId: output.org?.id ?? installation.org_id,
 			output,
 			providerUserId,
 			target,

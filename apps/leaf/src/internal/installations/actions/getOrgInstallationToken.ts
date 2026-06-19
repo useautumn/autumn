@@ -5,6 +5,7 @@ import {
 	chatInstallations,
 } from "@autumn/shared";
 import { and, eq } from "drizzle-orm";
+import { isSlackAdminProvider } from "../../slackAdmin/access.js";
 import { db } from "../../../lib/db.js";
 import { getInstallationOAuthAccessToken } from "./getInstallationOAuthAccessToken.js";
 
@@ -22,11 +23,16 @@ export const getOrgInstallationToken = async ({
 	workspaceId: string;
 }): Promise<{ accessToken: string; installation: ChatInstallation }> => {
 	const installation = await db.query.chatInstallations.findFirst({
-		where: and(
-			eq(chatInstallations.org_id, orgId),
-			eq(chatInstallations.provider, provider as ChatProvider),
-			eq(chatInstallations.workspace_id, workspaceId),
-		),
+		where: isSlackAdminProvider({ provider })
+			? and(
+					eq(chatInstallations.provider, provider as ChatProvider),
+					eq(chatInstallations.workspace_id, workspaceId),
+				)
+			: and(
+					eq(chatInstallations.org_id, orgId),
+					eq(chatInstallations.provider, provider as ChatProvider),
+					eq(chatInstallations.workspace_id, workspaceId),
+				),
 	});
 	if (!installation) {
 		throw new Error("Chat installation not found");
@@ -34,6 +40,7 @@ export const getOrgInstallationToken = async ({
 	const accessToken = await getInstallationOAuthAccessToken({
 		env,
 		installation,
+		orgId,
 	});
 	return { accessToken, installation };
 };
