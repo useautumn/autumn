@@ -83,6 +83,12 @@ const Header = ({ state }: { state: TuiState }) => (
 		<text style={{ fg: COLOR.dim }}>{state.workers} workers</text>
 		<text style={{ fg: COLOR.dim }}>·</text>
 		<text style={{ fg: COLOR.cyan }}>{state.phase}</text>
+		{state.dashboardUrl ? (
+			<>
+				<text style={{ fg: COLOR.dim }}>·</text>
+				<text style={{ fg: COLOR.accent }}>{state.dashboardUrl}</text>
+			</>
+		) : null}
 	</box>
 );
 

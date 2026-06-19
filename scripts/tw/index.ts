@@ -87,6 +87,7 @@ const parseRunArgs = (args: string[]): TwRunArgs => {
 	const ref = parseStringFlag(args, "--ref") ?? resolveDefaultRef();
 	const keep = args.includes("--keep");
 	const allowDirty = args.includes("--allow-dirty");
+	const dashboard = args.includes("--dashboard");
 
 	// `--stripe-concurrency=N` is surfaced as an env var the (lazily-built) Stripe
 	// limiter in helpers/stripe.ts reads when the run starts.
@@ -99,7 +100,15 @@ const parseRunArgs = (args: string[]): TwRunArgs => {
 		process.env.STRIPE_SUBACCOUNT_CONCURRENCY = String(concurrency);
 	}
 
-	return { groupsOrPatterns, workers, perWorker, ref, keep, allowDirty };
+	return {
+		groupsOrPatterns,
+		workers,
+		perWorker,
+		ref,
+		keep,
+		allowDirty,
+		dashboard,
+	};
 };
 
 const printUsage = (): void => {
@@ -121,6 +130,7 @@ const printUsage = (): void => {
 			"  --keep           leave the pool up for debugging (clean up with `bun tw kill`)",
 			`  --stripe-concurrency=N   concurrent Stripe account creations (default ${STRIPE_SUBACCOUNT_CONCURRENCY})`,
 			"  --allow-dirty    skip the preflight git gate (dirty tree / unpushed HEAD)",
+			"  --dashboard      serve the live web dashboard (random port) + keep it up after the run",
 		].join("\n"),
 	);
 };

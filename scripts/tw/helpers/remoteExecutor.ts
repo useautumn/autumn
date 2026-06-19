@@ -31,6 +31,11 @@ import {
 	type TestExecutor,
 	WorkerDeathError,
 } from "../../testScripts/testExecutor.ts";
+import {
+	appendFileOutput,
+	setFileWorker,
+	setWorkerStatus,
+} from "../dashboard/hub.ts";
 import type { WorkerHandle } from "../types.ts";
 import type { WorkerPool } from "./pool.ts";
 import { runStreaming } from "./vercel.ts";
@@ -133,14 +138,20 @@ export class RemoteExecutor implements TestExecutor {
 		// `markDead`'d), so a different worker is mandatory → strict. A test-failure
 		// retry merely prefers a different worker. Either way `acquireDifferentFrom`
 		// falls back to the same worker only when it's the only live one (N === 1).
-		const isWorkerDeathReschedule = isRerun && args.failedTestNames === undefined;
+		const isWorkerDeathReschedule =
+			isRerun && args.failedTestNames === undefined;
 
 		const worker = isRerun
-			? await this.pool.acquireDifferentFrom(lastWorker, isWorkerDeathReschedule)
+			? await this.pool.acquireDifferentFrom(
+					lastWorker,
+					isWorkerDeathReschedule,
+				)
 			: await this.pool.acquire();
 
 		worker.lastFile = args.file;
 		this.lastWorkerByFile.set(args.file, worker.name);
+		// Dashboard: record which worker runs this file (no-op unless enabled).
+		setFileWorker(args.file, worker.name);
 
 		try {
 			const sandbox = this.resolveSandbox(worker);
@@ -158,12 +169,15 @@ export class RemoteExecutor implements TestExecutor {
 				args.failedTestNames,
 			);
 
-			const { exitCode, stderr } = await runStreaming(
-				sandbox,
-				argv,
-				args.onChunk,
-				{ signal: args.signal },
-			);
+			// Tee the raw test output to the dashboard's per-file buffer while still
+			// feeding the runner's parser (the per-file view shows this verbatim).
+			const tee = (text: string): void => {
+				appendFileOutput(args.file, text);
+				args.onChunk(text);
+			};
+			const { exitCode, stderr } = await runStreaming(sandbox, argv, tee, {
+				signal: args.signal,
+			});
 			// Clean completion (real exit code, even if non-zero) — the worker is
 			// healthy, hand it back to the pool for the next file.
 			this.pool.release(worker);
@@ -196,6 +210,7 @@ export class RemoteExecutor implements TestExecutor {
 							cause: error,
 						});
 			this.pool.markDead(worker);
+			setWorkerStatus(worker.name, "dead");
 			throw deathError;
 		}
 	}

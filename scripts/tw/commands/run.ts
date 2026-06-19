@@ -54,6 +54,15 @@ import {
 	WORKER_VCPUS,
 } from "../constants.ts";
 import {
+	appendWorkerOutput,
+	resetHub,
+	setWorkerStatus,
+} from "../dashboard/hub.ts";
+import {
+	type DashboardServer,
+	startDashboardServer,
+} from "../dashboard/server.ts";
+import {
 	type CostEstimate,
 	estimateCost,
 	formatCost,
@@ -104,6 +113,7 @@ import {
 	bumpWorkerReady,
 	getTuiState,
 	resetTui,
+	setDashboardUrl,
 	setFanoutTotals,
 	setPhase,
 	setRunMeta,
@@ -670,6 +680,7 @@ const waitForReady = async ({
 	name: string;
 	signal: AbortSignal;
 }): Promise<void> => {
+	setWorkerStatus(name, "booting");
 	let ready = false;
 	let resolveReady: () => void = () => {
 		// replaced below
@@ -686,12 +697,16 @@ const waitForReady = async ({
 	// retries × 50 workers) are pure noise during the run.
 	const bootSink = new Writable({
 		write(chunk, _encoding, callback) {
+			const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
+			// Dashboard: capture the worker's server output for its WHOLE life (the
+			// per-worker view shows this); no-op unless the dashboard is enabled.
+			appendWorkerOutput(name, text);
 			if (!ready) {
-				const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
 				sinkLine(chalk.gray(`[${name}] ${text.replace(/\n$/, "")}`));
 				if (text.includes(READY_SENTINEL)) {
 					ready = true;
 					resolveReady();
+					setWorkerStatus(name, "ready");
 				}
 			}
 			callback();
@@ -984,6 +999,20 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 	// non-TTY (CI/piped) keeps the plain stdout logging. The JSX module is
 	// dynamic-imported (the scripts tsconfig compiles only `.ts`, no `--jsx`).
 	const swarmTarget = args.groupsOrPatterns.join(" ") || "core";
+
+	// ----- DASHBOARD (optional, WS on a random port) ----------------------
+	let dashboard: DashboardServer | undefined;
+	if (args.dashboard) {
+		resetHub();
+		dashboard = startDashboardServer();
+		const wsUrl = `${dashboard.url.replace("http://", "ws://")}/ws`;
+		setDashboardUrl(dashboard.url);
+		// Print to the normal screen BEFORE the TUI takes the alt-screen.
+		process.stdout.write(
+			`\n📊 tw dashboard — run \`cd apps/testbench && bun dev\`, then open:\n   http://localhost:5910/?ws=${encodeURIComponent(wsUrl)}\n   (WS server: ${dashboard.url})\n\n`,
+		);
+	}
+
 	const useTui = Boolean(process.stdout.isTTY);
 	let tui:
 		| { mountTui: () => Promise<void>; unmountTui: () => void }
@@ -1344,6 +1373,18 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 				// best-effort
 			});
 		}
+	}
+
+	// With --dashboard, keep the WS server up after the run so the user can inspect
+	// per-file/per-worker output + the final summary. Block until Ctrl+C.
+	if (dashboard) {
+		log(`dashboard still live at ${dashboard.url} — press Ctrl+C to exit`);
+		await new Promise<void>((resolve) => {
+			const done = (): void => resolve();
+			process.once("SIGINT", done);
+			process.once("SIGTERM", done);
+		});
+		dashboard.stop();
 	}
 };
 

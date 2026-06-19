@@ -11,6 +11,8 @@
  * Pure data + functions only (no JSX), so it's covered by the scripts tsconfig.
  */
 
+import { recordCompletion } from "../dashboard/hub.ts";
+
 export type TuiPhase = "warm" | "fanout" | "run" | "teardown" | "done";
 
 export type TuiFailedTest = {
@@ -65,6 +67,8 @@ export type TuiState = {
 	summary?: TuiSummary;
 	/** Raw logs ring buffer for Pane B. */
 	logs: string[];
+	/** Live web dashboard URL (when `--dashboard`), shown in the header. */
+	dashboardUrl?: string;
 };
 
 const MAX_LOG_LINES = 5000;
@@ -87,9 +91,14 @@ const state: TuiState = {
 	accountsTotal: 0,
 	summary: undefined,
 	logs: [],
+	dashboardUrl: undefined,
 };
 
 export const getTuiState = (): TuiState => state;
+
+export const setDashboardUrl = (url: string): void => {
+	state.dashboardUrl = url;
+};
 
 /** Reset everything (a fresh run reuses the module singleton). */
 export const resetTui = (): void => {
@@ -110,6 +119,7 @@ export const resetTui = (): void => {
 	state.accountsTotal = 0;
 	state.summary = undefined;
 	state.logs = [];
+	state.dashboardUrl = undefined;
 };
 
 export const setPhase = (phase: TuiPhase): void => {
@@ -188,6 +198,11 @@ export const upsertTestFile = (result: TuiTestFile): void => {
 		appendLog(
 			`✗ ${name} (✓${result.passed} ✗${result.failed})${result.willRetry ? " — retrying" : ""}`,
 		);
+	}
+	// Dashboard speed graph: record FINAL verdicts only (a will-retry failure
+	// isn't done yet). No-op unless the dashboard is enabled.
+	if (result.status === "passed" || !result.willRetry) {
+		recordCompletion(result.file);
 	}
 };
 

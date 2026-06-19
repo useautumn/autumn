@@ -30,6 +30,8 @@ export type TwRunArgs = {
 	keep: boolean;
 	/** Skip the preflight git gate (dirty tree / unpushed HEAD). For debugging. */
 	allowDirty: boolean;
+	/** Serve the live web dashboard (WS, random port) + keep it up after the run. */
+	dashboard: boolean;
 };
 
 /**
