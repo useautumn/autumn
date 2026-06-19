@@ -6,3 +6,12 @@
    components for class names. */
 @source "./**/*.tsx";
 @source "../../../vite/src/components/**/*.tsx";
+
+/* Fill the viewport with the dark app background — otherwise the page's bare
+   (light) background shows below the PageContainer's content. */
+html,
+body,
+#root {
+  min-height: 100vh;
+  background-color: var(--background);
+}
