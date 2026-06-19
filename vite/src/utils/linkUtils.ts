@@ -2,6 +2,24 @@
 
 import { AppEnv } from "@autumn/shared";
 
+const CUSTOM_BUTTON_VARS = {
+	"{customerId}": (customer: { id?: string | null }) => customer.id ?? "",
+} as const;
+
+export const resolveCustomButtonUrl = (
+	template: string,
+	customer: { id?: string | null },
+) => {
+	let resolved = template;
+	for (const [token, getValue] of Object.entries(CUSTOM_BUTTON_VARS)) {
+		resolved = resolved.replaceAll(
+			token,
+			encodeURIComponent(getValue(customer)),
+		);
+	}
+	return resolved;
+};
+
 export const getStripeCusLink = ({
 	customerId,
 	env,

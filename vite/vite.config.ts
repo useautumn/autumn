@@ -94,6 +94,7 @@ export default defineConfig({
 			"@base-ui/react/tabs",
 			"@base-ui/react/tooltip",
 			"@base-ui/react/use-render",
+			"nanoid",
 		],
 		// Exclude workspace dependencies from pre-bundling to avoid cache issues
 		exclude: [

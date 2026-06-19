@@ -1,6 +1,16 @@
 import { z } from "zod/v4";
 import { DbUsageAlertSchema } from "../cusModels/billingControls/usageAlert.js";
 
+export const CustomButtonSchema = z.object({
+	id: z.string(),
+	label: z.string(),
+	/** URL template; `{customerId}` is substituted with the customer's id. */
+	url: z.string(),
+	open_in_new_tab: z.boolean().default(true),
+});
+
+export type CustomButton = z.infer<typeof CustomButtonSchema>;
+
 export const OrgConfigSchema = z.object({
 	usage_alerts: z.array(DbUsageAlertSchema).optional().default([]),
 	/** Sandbox-env-only usage alerts. `checkUsageAlerts` reads this list when
@@ -46,6 +56,8 @@ export const OrgConfigSchema = z.object({
 	// When true, Stripe writes pass `automatic_tax: { enabled: true }`.
 	// Customer must have a tax-resolvable address.
 	automatic_tax: z.boolean().default(false),
+
+	custom_buttons: z.array(CustomButtonSchema).optional().default([]),
 });
 
 export type OrgConfig = z.infer<typeof OrgConfigSchema>;
