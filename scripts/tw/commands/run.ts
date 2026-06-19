@@ -412,6 +412,13 @@ const buildWorkerEnv = ({
 		AUTUMN_TEST_BASE_URL: `http://localhost:${SERVER_PORT}`,
 		// keep the DB CLI / preload paths off Infisical inside the µVM.
 		AUTUMN_DB_DIRECT: "1",
+		// The µVM is isolated and has NO AWS creds, so the S3-backed edge config
+		// can't be read — the v2-cache (fullSubject) rollout would resolve EMPTY and
+		// the server would silently fall back to the legacy cache-v1 path, breaking
+		// every test that asserts atomic v2 deduction (concurrency counts) and
+		// queueing tracks (202). Force the rollout to 100% so the server uses cache
+		// v2 (the prod default for months), no edge config required.
+		TW_FORCE_FULL_SUBJECT_ROLLOUT: "1",
 	};
 
 	// Browser tests (e.g. invoice checkout) use Kernel CLOUD browsers when
