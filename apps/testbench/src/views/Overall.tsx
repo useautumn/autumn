@@ -1,18 +1,20 @@
+import { Activity, FileText, Zap } from "lucide-react";
+import type { ReactNode } from "react";
+// Light section primitives imported DIRECTLY (not via the barrel, which pulls in
+// motion/react-router/ErrorScreen) — these only depend on `cn`.
+import { TableActions } from "@/components/general/table/table-actions";
+import { TableContainer } from "@/components/general/table/table-container";
+import { TableHeading } from "@/components/general/table/table-heading";
+import { TableToolbar } from "@/components/general/table/table-toolbar";
 import { Badge } from "@/components/ui/badge";
 import {
-	Table,
 	TableBody,
 	TableCell,
 	TableHead,
 	TableHeader,
 	TableRow,
+	Table as UiTable,
 } from "@/components/ui/table";
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from "@/components/v2/cards/Card";
 import { InfoRow } from "@/components/v2/InfoRow";
 import type { Snapshot } from "../types";
 import {
@@ -31,6 +33,34 @@ const fmtWall = (ms: number): string => {
 	return m > 0 ? `${m}m${String(s % 60).padStart(2, "0")}s` : `${s}s`;
 };
 
+/** App-faithful borderless section: heading row (icon + title + right actions). */
+function Section({
+	icon,
+	title,
+	actions,
+	children,
+	className,
+}: {
+	icon: ReactNode;
+	title: ReactNode;
+	actions?: ReactNode;
+	children: ReactNode;
+	className?: string;
+}) {
+	return (
+		<TableContainer className={className}>
+			<TableToolbar>
+				<TableHeading>
+					{icon}
+					{title}
+				</TableHeading>
+				{actions ? <TableActions>{actions}</TableActions> : null}
+			</TableToolbar>
+			{children}
+		</TableContainer>
+	);
+}
+
 function PhaseProgress({ snap }: { snap: Snapshot }) {
 	if (snap.phase === "warm") {
 		return (
@@ -48,7 +78,7 @@ function PhaseProgress({ snap }: { snap: Snapshot }) {
 				<WarmStepper stage={snap.warmStage} />
 				<IndeterminateBar />
 				{snap.activity ? (
-					<div className="truncate rounded-md border bg-card px-2.5 py-1.5 font-mono text-muted-foreground text-xs">
+					<div className="truncate rounded-md border bg-interactive-secondary px-2.5 py-1.5 font-mono text-muted-foreground text-xs">
 						{snap.activity}
 					</div>
 				) : null}
@@ -128,7 +158,32 @@ function PhaseProgress({ snap }: { snap: Snapshot }) {
 	);
 }
 
-export function Overall({
+function LiveStats({ snap }: { snap: Snapshot }) {
+	if (snap.summary) {
+		return (
+			<div className="flex flex-col gap-1.5">
+				<InfoRow label="passed" value={snap.summary.passed} />
+				<InfoRow label="failed" value={snap.summary.failed} />
+				<InfoRow label="crashed" value={snap.summary.crashed} />
+				<InfoRow label="wall" mono value={fmtWall(snap.summary.wallMs)} />
+				{snap.summary.costLine ? (
+					<InfoRow label="cost" mono value={snap.summary.costLine} />
+				) : null}
+			</div>
+		);
+	}
+	return (
+		<div className="flex flex-col gap-1.5">
+			<InfoRow label="tests" value={`${snap.run.done}/${snap.run.total}`} />
+			<InfoRow label="passed" value={snap.run.passed} />
+			<InfoRow label="failed" value={snap.run.failed} />
+			<InfoRow label="running" value={snap.run.running} />
+		</div>
+	);
+}
+
+/** File table — `ui/table` primitives styled to match the app's real tables. */
+function FileTable({
 	snap,
 	onOpenFile,
 }: {
@@ -136,105 +191,122 @@ export function Overall({
 	onOpenFile: (file: string) => void;
 }) {
 	return (
-		<div className="flex h-full flex-col gap-3">
-			<div className="grid shrink-0 grid-cols-1 gap-3 lg:grid-cols-3">
-				<Card className="gap-2 lg:col-span-2">
-					<CardHeader>
-						<CardTitle className="flex items-center gap-2">
-							<Badge variant="blue">{snap.phase}</Badge>
-							<span className="font-normal text-muted-foreground text-sm">
-								{snap.target} · {snap.workerCount} workers
-							</span>
-						</CardTitle>
-					</CardHeader>
-					<CardContent>
-						<PhaseProgress snap={snap} />
-					</CardContent>
-				</Card>
+		<div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border">
+			<UiTable className="w-full overflow-auto p-0">
+				<TableHeader className="sticky top-0 z-20 bg-card">
+					<TableRow className="border-b bg-card text-subtle">
+						<TableHead className="h-7 px-2 pl-4 font-medium text-subtle text-xs">
+							File
+						</TableHead>
+						<TableHead className="h-7 w-28 px-2 font-medium text-subtle text-xs">
+							Status
+						</TableHead>
+						<TableHead className="h-7 w-20 px-2 font-medium text-subtle text-xs">
+							✓ / ✗
+						</TableHead>
+						<TableHead className="h-7 w-56 px-2 font-medium text-subtle text-xs">
+							Worker
+						</TableHead>
+					</TableRow>
+				</TableHeader>
+				<TableBody className="divide-y bg-interactive-secondary">
+					{snap.files.map((f) => (
+						<TableRow
+							className="h-12 cursor-pointer text-tertiary-foreground transition-none hover:bg-interactive-secondary-hover"
+							key={f.file}
+							onClick={() => onOpenFile(f.file)}
+						>
+							<TableCell className="h-4 px-2 pl-4 font-medium font-mono text-muted-foreground text-xs">
+								{f.name}
+							</TableCell>
+							<TableCell className="h-4 px-2">
+								<FileStatusBadge status={f.status} />
+							</TableCell>
+							<TableCell className="h-4 px-2 font-mono text-xs tabular-nums">
+								<span className="text-green-500">{f.passed}</span>
+								{" / "}
+								<span className="text-red-500">{f.failed}</span>
+							</TableCell>
+							<TableCell className="h-4 px-2 font-mono text-tertiary-foreground text-xs">
+								{f.worker ?? "—"}
+							</TableCell>
+						</TableRow>
+					))}
+				</TableBody>
+			</UiTable>
+		</div>
+	);
+}
 
-				<Card className="gap-2">
-					<CardHeader>
-						<CardTitle>{snap.summary ? "Result" : "Live"}</CardTitle>
-					</CardHeader>
-					<CardContent className="flex flex-col gap-1.5">
-						{snap.summary ? (
+export function Overall({
+	snap,
+	onOpenFile,
+}: {
+	snap: Snapshot;
+	onOpenFile: (file: string) => void;
+}) {
+	const completedRate =
+		snap.completions.length > 1
+			? `${snap.completions.length} done`
+			: "warming up";
+	return (
+		<div className="flex h-full flex-col gap-5 overflow-hidden">
+			<Section
+				actions={
+					<span className="text-muted-foreground text-xs">
+						{snap.phase === "warm" || snap.phase === "fanout" ? (
 							<>
-								<InfoRow label="passed" value={snap.summary.passed} />
-								<InfoRow label="failed" value={snap.summary.failed} />
-								<InfoRow label="crashed" value={snap.summary.crashed} />
-								<InfoRow
-									label="wall"
-									mono
-									value={fmtWall(snap.summary.wallMs)}
-								/>
-								{snap.summary.costLine ? (
-									<InfoRow label="cost" mono value={snap.summary.costLine} />
-								) : null}
+								elapsed <Elapsed since={snap.phaseStartedAt} />
 							</>
 						) : (
-							<>
-								<InfoRow
-									label="tests"
-									value={`${snap.run.done}/${snap.run.total}`}
-								/>
-								<InfoRow label="passed" value={snap.run.passed} />
-								<InfoRow label="failed" value={snap.run.failed} />
-								<InfoRow label="running" value={snap.run.running} />
-							</>
+							`${snap.run.done}/${snap.run.total} files`
 						)}
-					</CardContent>
-				</Card>
-			</div>
-
-			<Card className="shrink-0 gap-2">
-				<CardHeader>
-					<CardTitle>Speed — files completed / sec</CardTitle>
-				</CardHeader>
-				<CardContent>
-					<SpeedChart completions={snap.completions} />
-				</CardContent>
-			</Card>
-
-			{/* The file table owns the remaining height and scrolls INTERNALLY — the
-			    header stays sticky, the page never grows past one screen. */}
-			<Card className="flex min-h-0 flex-1 flex-col overflow-hidden py-0">
-				<div className="min-h-0 flex-1 overflow-auto">
-					<Table className="p-0">
-						<TableHeader className="sticky top-0 z-20 bg-card">
-							<TableRow className="border-b">
-								<TableHead className="px-3">File</TableHead>
-								<TableHead className="w-24 px-3">Status</TableHead>
-								<TableHead className="w-20 px-3">✓ / ✗</TableHead>
-								<TableHead className="w-56 px-3">Worker</TableHead>
-							</TableRow>
-						</TableHeader>
-						<TableBody>
-							{snap.files.map((f) => (
-								<TableRow
-									className="cursor-pointer border-b hover:bg-interactive-secondary-hover"
-									key={f.file}
-									onClick={() => onOpenFile(f.file)}
-								>
-									<TableCell className="px-3 font-medium font-mono text-foreground text-xs">
-										{f.name}
-									</TableCell>
-									<TableCell className="px-3">
-										<FileStatusBadge status={f.status} />
-									</TableCell>
-									<TableCell className="px-3 font-mono text-xs tabular-nums">
-										<span className="text-green-500">{f.passed}</span>
-										{" / "}
-										<span className="text-red-500">{f.failed}</span>
-									</TableCell>
-									<TableCell className="px-3 font-mono text-muted-foreground text-xs">
-										{f.worker ?? "—"}
-									</TableCell>
-								</TableRow>
-							))}
-						</TableBody>
-					</Table>
+					</span>
+				}
+				icon={<Activity className="size-4 text-subtle" />}
+				title={
+					<span className="flex items-center gap-2">
+						Run
+						<Badge variant="blue">{snap.phase}</Badge>
+						<span className="font-normal text-muted-foreground text-sm">
+							{snap.target} · {snap.workerCount} workers
+						</span>
+					</span>
+				}
+			>
+				<div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+					<div className="lg:col-span-2">
+						<PhaseProgress snap={snap} />
+					</div>
+					<LiveStats snap={snap} />
 				</div>
-			</Card>
+			</Section>
+
+			<Section
+				actions={
+					<span className="text-muted-foreground text-xs">{completedRate}</span>
+				}
+				className="shrink-0"
+				icon={<Zap className="size-4 text-subtle" />}
+				title="Speed — files / sec"
+			>
+				<SpeedChart completions={snap.completions} />
+			</Section>
+
+			<Section
+				className="flex min-h-0 flex-1 flex-col"
+				icon={<FileText className="size-4 text-subtle" />}
+				title={
+					<span className="flex items-center gap-2">
+						Files
+						<span className="font-normal text-muted-foreground text-sm">
+							{snap.files.length}
+						</span>
+					</span>
+				}
+			>
+				<FileTable onOpenFile={onOpenFile} snap={snap} />
+			</Section>
 		</div>
 	);
 }
