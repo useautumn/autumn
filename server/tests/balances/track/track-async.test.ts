@@ -23,7 +23,7 @@ const free = constructProduct({
 	],
 });
 
-describe(`${chalk.yellowBright("track-async: async=true returns 202 + success")}`, () => {
+describe(`${chalk.yellowBright("track-async: async=true returns 204")}`, () => {
 	const autumn: AutumnInt = new AutumnInt({ version: ApiVersion.V1_2 });
 
 	beforeAll(async () => {
@@ -44,7 +44,7 @@ describe(`${chalk.yellowBright("track-async: async=true returns 202 + success")}
 		await autumn.attach({ customer_id: customerId, product_id: free.id });
 	});
 
-	test("POST /v1/track with async=true returns 202 and { success: true }", async () => {
+	test("POST /v1/track with async=true returns 204 and no body", async () => {
 		const response = await fetch(`${autumn["baseUrl"]}/track`, {
 			method: "POST",
 			headers: autumn["headers"],
@@ -56,8 +56,7 @@ describe(`${chalk.yellowBright("track-async: async=true returns 202 + success")}
 			}),
 		});
 
-		expect(response.status).toBe(202);
-		const body = await response.json();
-		expect(body).toEqual({ success: true });
+		expect(response.status).toBe(204);
+		expect(await response.text()).toBe("");
 	});
 });

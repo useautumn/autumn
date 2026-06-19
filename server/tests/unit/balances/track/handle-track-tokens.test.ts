@@ -172,7 +172,7 @@ describe("handleTrackTokens", () => {
 		expect(mockState.queueCommands).toHaveLength(0);
 	});
 
-	test("returns 202 and queues when async passthrough is true", async () => {
+	test("returns 204 and queues when async passthrough is true", async () => {
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackAsyncQueueUrl;
 		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
 		mockState.originalSend = sqsClient.send.bind(sqsClient);
@@ -193,8 +193,8 @@ describe("handleTrackTokens", () => {
 			}),
 		});
 
-		expect(response.status).toBe(202);
-		expect(await response.json()).toEqual({ success: true });
+		expect(response.status).toBe(204);
+		expect(await response.text()).toBe("");
 		expect(mockState.getTokenTrackParamsCalls).toHaveLength(1);
 		expect(mockState.getTokenTrackParamsCalls[0]).toMatchObject({
 			input: {

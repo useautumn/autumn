@@ -16,6 +16,6 @@ export const handleBatchTrackTokens = createRoute({
 
 		await runBatchTrackTokens({ ctx, body });
 
-		return c.json({ success: true }, 202);
+		return c.body(null, 204);
 	},
 });

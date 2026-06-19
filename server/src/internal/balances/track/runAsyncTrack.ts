@@ -24,7 +24,13 @@ export const runAsyncTrack = async ({
 		});
 	}
 
-	const queued = await queueTrack({ ctx, body, queueUrl });
+	const queued = await queueTrack({
+		ctx,
+		body,
+		queueUrl,
+		logFallback: false,
+		markQueuedForReplay: false,
+	});
 	if (!queued) {
 		throw new RecaseError({
 			message: ASYNC_TRACK_UNAVAILABLE_MESSAGE,

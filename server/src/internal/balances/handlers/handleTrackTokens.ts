@@ -23,7 +23,7 @@ export const handleTrackTokens = createRoute({
 
 		if (trackBody.async === true) {
 			await runAsyncTrack({ ctx, body: trackBody });
-			return c.json({ success: true }, 202);
+			return c.body(null, 204);
 		}
 
 		const response = await runTrackWithRollout({
