@@ -51,6 +51,14 @@ import {
 	TW_ENV,
 	WARM_SANDBOX_PREFIX,
 } from "../constants.ts";
+import {
+	type CostBreakdown,
+	computeCost,
+	formatCost,
+	formatWall,
+	readSandboxUsage,
+	type SandboxUsage,
+} from "../helpers/cost.ts";
 import { createIngress, pushWorkerMapping } from "../helpers/ingress.ts";
 import {
 	disableQuietMode,
@@ -867,10 +875,22 @@ const teardown = async ({
 		);
 	}
 
+	// Read each sandbox's final usage metrics RIGHT BEFORE deleting it, so we can
+	// estimate the run's cost (the SDK exposes usage, not dollars — see cost.ts).
+	const usages: SandboxUsage[] = [];
 	for (const sandbox of entry.sandboxes) {
-		await timeBoxed(`delete sandbox ${sandbox.name}`, () =>
-			deleteSandbox(sandbox.name),
-		);
+		await timeBoxed(`delete sandbox ${sandbox.name}`, async () => {
+			const instance = await getSandboxByName(sandbox.name);
+			if (instance) {
+				usages.push(readSandboxUsage(instance));
+				await deleteSandbox(instance);
+			} else {
+				await deleteSandbox(sandbox.name);
+			}
+		});
+	}
+	if (usages.length > 0) {
+		lastRunCost = computeCost(usages);
 	}
 
 	await registry.markCompleted(runId);
@@ -1086,6 +1106,10 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			logFile: runLogFile,
 		};
 
+		// Wall-clock of the RUN phase — the correct parallel-aware test duration
+		// (the per-file durations summed by the runner over-count by ~Nx).
+		const runPhaseStart = Date.now();
+
 		// Route svix files onto the svix shard, normal onto the rest. The routing
 		// constraint is a build-time partition (plan §7): the svix files run on a
 		// pool of exactly the one svix shard, the normal files on a pool of the
@@ -1135,9 +1159,15 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			normalPool.close();
 		}
 
+		lastRunWallMs = Date.now() - runPhaseStart;
+
 		// ----- TEARDOWN -------------------------------------------------------
 		await teardown({ runId, skip: args.keep });
 		teardownDone = true;
+
+		// Correct, parallel-aware timing + a cost estimate (collected during teardown).
+		const costLine = lastRunCost ? ` · ${formatCost(lastRunCost)}` : "";
+		log(`tests wall-clock ${formatWall(lastRunWallMs)}${costLine}`);
 	} finally {
 		process.off("SIGINT", sigintHandler);
 		process.off("SIGTERM", sigtermHandler);
@@ -1183,6 +1213,13 @@ const toSandboxPath = (localFile: string): string => {
  * `process.exitCode` so the overall `bun tw` still exits non-zero on failures.
  */
 let lastRunExitCode = 0;
+
+/** RUN-phase wall-clock (ms) of the last run — the correct parallel-aware test time. */
+let lastRunWallMs = 0;
+/** Cost estimate of the last run, collected from sandbox usage during teardown. */
+let lastRunCost: CostBreakdown | undefined;
+export const getLastRunWallMs = (): number => lastRunWallMs;
+export const getLastRunCost = (): CostBreakdown | undefined => lastRunCost;
 
 /**
  * The runner lives in a `.tsx` (JSX) module; the scripts tsconfig's `include`
