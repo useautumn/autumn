@@ -6,6 +6,7 @@ import {
 
 export const CustomButtonFormSchema = z.object({
 	label: z.string().trim().min(1, "Label is required"),
+	icon: z.string().min(1, "Icon is required"),
 	url: z
 		.string()
 		.trim()

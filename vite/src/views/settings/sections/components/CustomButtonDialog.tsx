@@ -11,12 +11,14 @@ import {
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
 import { FormLabel } from "@/components/v2/form/FormLabel";
+import { DEFAULT_PHOSPHOR_ICON } from "@/components/v2/icons/phosphorIcons";
 import { Input } from "@/components/v2/inputs/Input";
 import { useAppForm } from "@/hooks/form/form";
 import {
 	type CustomButtonForm,
 	CustomButtonFormSchema,
 } from "./customButtonFormSchema";
+import { IconPicker } from "./IconPicker";
 
 export const CustomButtonDialog = ({
 	open,
@@ -35,6 +37,7 @@ export const CustomButtonDialog = ({
 	const form = useAppForm({
 		defaultValues: {
 			label: initialButton?.label ?? "",
+			icon: initialButton?.icon ?? DEFAULT_PHOSPHOR_ICON,
 			url: initialButton?.url ?? "",
 			open_in_new_tab: initialButton?.open_in_new_tab ?? true,
 		} as CustomButtonForm,
@@ -42,6 +45,7 @@ export const CustomButtonDialog = ({
 		onSubmit: ({ value }) =>
 			onSubmit({
 				label: value.label.trim(),
+				icon: value.icon,
 				url: value.url.trim(),
 				open_in_new_tab: value.open_in_new_tab,
 			}),
@@ -58,20 +62,33 @@ export const CustomButtonDialog = ({
 					</DialogDescription>
 				</DialogHeader>
 				<div className="flex flex-col gap-4">
-					<form.Field name="label">
-						{(field) => (
-							<div>
-								<FormLabel>Label</FormLabel>
-								<Input
-									placeholder="Internal dashboard"
-									value={field.state.value}
-									onBlur={field.handleBlur}
-									onChange={(e) => field.handleChange(e.target.value)}
-								/>
-								<FieldInfo field={field} />
-							</div>
-						)}
-					</form.Field>
+					<div className="flex items-end gap-2">
+						<form.Field name="icon">
+							{(field) => (
+								<div>
+									<FormLabel>Icon</FormLabel>
+									<IconPicker
+										value={field.state.value}
+										onChange={(name) => field.handleChange(name)}
+									/>
+								</div>
+							)}
+						</form.Field>
+						<form.Field name="label">
+							{(field) => (
+								<div className="flex-1">
+									<FormLabel>Label</FormLabel>
+									<Input
+										placeholder="Internal dashboard"
+										value={field.state.value}
+										onBlur={field.handleBlur}
+										onChange={(e) => field.handleChange(e.target.value)}
+									/>
+									<FieldInfo field={field} />
+								</div>
+							)}
+						</form.Field>
+					</div>
 					<form.Field name="url">
 						{(field) => (
 							<div>

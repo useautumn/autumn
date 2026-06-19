@@ -55,6 +55,8 @@ export const internalOrgRouter = new Hono<HonoEnv>();
 internalOrgRouter.get("", ...handleGetOrg);
 internalOrgRouter.delete("", ...handleDeleteOrg);
 internalOrgRouter.patch("/config", ...handleUpdateOrgConfig);
+internalOrgRouter.get("/custom-buttons", ...handleGetCustomButtons);
+internalOrgRouter.patch("/custom-buttons", ...handleUpdateCustomButtons);
 internalOrgRouter.get("/members", ...handleGetOrgMembers);
 internalOrgRouter.post("/remove-member", ...handleRemoveMember);
 internalOrgRouter.get("/upload_url", ...handleGetUploadUrl);

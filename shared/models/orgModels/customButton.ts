@@ -5,6 +5,8 @@ export const CustomButtonSchema = z.object({
 	label: z.string(),
 	/** URL template; `{customerId}` is substituted with the customer's id. */
 	url: z.string(),
+	/** Phosphor icon name (see customButtonIcons in the dashboard). */
+	icon: z.string().optional(),
 	open_in_new_tab: z.boolean().default(true),
 });
 

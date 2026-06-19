@@ -1,20 +1,22 @@
 import type { CustomButton } from "@autumn/shared";
-import { ArrowSquareOutIcon, DotsThreeIcon } from "@phosphor-icons/react";
+import { DotsThreeIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
+import { IconTooltipButton } from "@/components/v2/buttons/IconTooltipButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
+import { PhosphorIcon } from "@/components/v2/icons/PhosphorIcon";
 import {
 	isSafeCustomButtonUrl,
 	resolveCustomButtonUrl,
 } from "@/utils/linkUtils";
 
-const MAX_INLINE_BUTTONS = 3;
+const MAX_INLINE_BUTTONS = 4;
 
 export function CustomButtons({
 	buttons,
@@ -47,18 +49,12 @@ export function CustomButtons({
 	return (
 		<>
 			{inlineButtons.map((button) => (
-				<Button
+				<IconTooltipButton
 					key={button.id}
-					variant="secondary"
-					size="sm"
-					className="max-w-40 gap-1.5 text-xs font-normal text-tertiary-foreground hover:text-foreground"
+					tooltip={button.label}
+					icon={<PhosphorIcon name={button.icon} className="size-3.5" />}
 					onClick={() => openButton(button)}
-				>
-					<span className="truncate">{button.label}</span>
-					{button.open_in_new_tab && (
-						<ArrowSquareOutIcon className="size-3 shrink-0 text-tertiary-foreground" />
-					)}
-				</Button>
+				/>
 			))}
 			{overflowButtons.length > 0 && (
 				<DropdownMenu open={overflowOpen} onOpenChange={setOverflowOpen}>
@@ -78,10 +74,11 @@ export function CustomButtons({
 								key={button.id}
 								onClick={() => openButton(button)}
 							>
+								<PhosphorIcon
+									name={button.icon}
+									className="size-4 shrink-0 text-tertiary-foreground"
+								/>
 								<span className="truncate">{button.label}</span>
-								{button.open_in_new_tab && (
-									<ArrowSquareOutIcon className="ml-auto size-3 shrink-0 text-tertiary-foreground" />
-								)}
 							</DropdownMenuItem>
 						))}
 					</DropdownMenuContent>

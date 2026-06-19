@@ -6,6 +6,7 @@ import {
 } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import { Button } from "@/components/v2/buttons/Button";
+import { PhosphorIcon } from "@/components/v2/icons/PhosphorIcon";
 
 export function CustomButtonRow({
 	button,
@@ -29,17 +30,22 @@ export function CustomButtonRow({
 		>
 			<button
 				type="button"
-				className="flex flex-col gap-0.5 min-w-0 flex-1 text-left cursor-pointer"
+				className="flex items-center gap-2.5 min-w-0 flex-1 text-left cursor-pointer"
 				onClick={onEdit}
 			>
-				<span className="flex items-center gap-1.5 text-sm font-medium min-w-0">
-					<span className="truncate">{button.label}</span>
-					{button.open_in_new_tab && (
-						<ArrowSquareOutIcon className="size-3 shrink-0 text-tertiary-foreground" />
-					)}
+				<span className="flex size-7 shrink-0 items-center justify-center text-foreground">
+					<PhosphorIcon name={button.icon} className="size-4" />
 				</span>
-				<span className="truncate text-xs text-tertiary-foreground">
-					{button.url}
+				<span className="flex flex-col gap-0.5 min-w-0">
+					<span className="flex items-center gap-1.5 text-sm font-medium min-w-0">
+						<span className="truncate">{button.label}</span>
+						{button.open_in_new_tab && (
+							<ArrowSquareOutIcon className="size-3 shrink-0 text-tertiary-foreground" />
+						)}
+					</span>
+					<span className="truncate text-xs text-tertiary-foreground">
+						{button.url}
+					</span>
 				</span>
 			</button>
 			<Button
