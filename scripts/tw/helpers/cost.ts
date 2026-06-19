@@ -1,98 +1,72 @@
 /**
- * Per-run cost estimate for the `bun tw` swarm, from the `@vercel/sandbox` usage
- * getters × the Pro rate card (`VERCEL_SANDBOX_PRICING`). The SDK exposes usage
- * metrics but NOT dollars, so we translate. Read each sandbox's metrics RIGHT
- * BEFORE teardown deletes it (they're final by then), accumulate, and render one
- * summary line. It's an estimate — sanity-check against the Vercel dashboard.
+ * Per-run cost ESTIMATE for the `bun tw` swarm.
+ *
+ * The `@vercel/sandbox` SDK does NOT expose usage metrics for a running sandbox
+ * (`totalActiveCpuDurationMs` / `totalDurationMs` / egress / ingress are all
+ * `undefined` — verified; they're only on finalized sandboxes via `Sandbox.list`,
+ * which needs a static API token we don't have). So we can't read actual usage.
+ *
+ * Instead we estimate from what we DO know — worker count, vCPUs, provisioned
+ * memory (2048 MB/vCPU), and each worker's lifetime — against the Pro rate card.
+ * CPU is billed as the full vCPU-hours (an UPPER BOUND: the suite is I/O-bound, so
+ * real active-CPU is lower); memory is exact (it's provisioned for the lifetime);
+ * network is omitted (unmeasurable, small). Hence "≈ … est".
  */
 
-import type { Sandbox } from "@vercel/sandbox";
 import { VERCEL_SANDBOX_PRICING } from "../constants.ts";
 
 const MS_PER_HOUR = 3_600_000;
-const BYTES_PER_GB = 1_000_000_000;
+const MB_PER_VCPU = 2048; // Vercel allocates 2048 MB per vCPU
 const MB_PER_GB = 1024;
 
-/** Raw usage for one sandbox (any field may be absent on an older SDK / dead sandbox). */
-export type SandboxUsage = {
-	activeCpuMs: number;
-	durationMs: number;
-	egressBytes: number;
-	ingressBytes: number;
-	memoryMb: number;
-};
-
-export type CostBreakdown = {
-	sandboxCount: number;
+export type CostEstimate = {
+	workers: number;
+	vcpus: number;
+	lifetimeHours: number;
 	cpuUsd: number;
 	memUsd: number;
-	netUsd: number;
 	creationsUsd: number;
 	totalUsd: number;
-	/** Aggregate raw metrics, for the detail line. */
-	activeCpuHours: number;
-	transferGb: number;
-};
-
-/** Read a sandbox's usage getters defensively (any may be undefined → 0). */
-export const readSandboxUsage = (sandbox: Sandbox): SandboxUsage => {
-	const s = sandbox as unknown as Record<string, number | undefined>;
-	const num = (v: number | undefined): number =>
-		typeof v === "number" && Number.isFinite(v) ? v : 0;
-	return {
-		activeCpuMs: num(s.totalActiveCpuDurationMs),
-		durationMs: num(s.totalDurationMs),
-		egressBytes: num(s.totalEgressBytes),
-		ingressBytes: num(s.totalIngressBytes),
-		memoryMb: num(s.memory),
-	};
 };
 
 /**
- * Aggregate per-sandbox usage into a dollar estimate.
- *
- * NOTE on Active CPU: we treat `totalActiveCpuDurationMs` as the billable
- * active-CPU duration as-is (NOT multiplied by vCPU count) — Vercel bills "Active
- * CPU" by measured active CPU time. If the dashboard disagrees this is the knob
- * to revisit.
+ * Estimate the cost of `workers` sandboxes, each with `vcpus` vCPUs, alive for
+ * `lifetimeMs`. CPU is an upper bound (100% active); memory is exact.
  */
-export const computeCost = (usages: SandboxUsage[]): CostBreakdown => {
-	let activeCpuMs = 0;
-	let memGbMs = 0;
-	let transferBytes = 0;
-	for (const u of usages) {
-		activeCpuMs += u.activeCpuMs;
-		memGbMs += (u.memoryMb / MB_PER_GB) * u.durationMs;
-		transferBytes += u.egressBytes + u.ingressBytes;
-	}
-
-	const activeCpuHours = activeCpuMs / MS_PER_HOUR;
-	const memGbHours = memGbMs / MS_PER_HOUR;
-	const transferGb = transferBytes / BYTES_PER_GB;
-
-	const cpuUsd = activeCpuHours * VERCEL_SANDBOX_PRICING.activeCpuPerHour;
-	const memUsd = memGbHours * VERCEL_SANDBOX_PRICING.memoryPerGbHour;
-	const netUsd = transferGb * VERCEL_SANDBOX_PRICING.dataTransferPerGb;
+export const estimateCost = ({
+	workers,
+	vcpus,
+	lifetimeMs,
+}: {
+	workers: number;
+	vcpus: number;
+	lifetimeMs: number;
+}): CostEstimate => {
+	const hours = lifetimeMs / MS_PER_HOUR;
+	const memGb = (vcpus * MB_PER_VCPU) / MB_PER_GB;
+	const cpuUsd =
+		workers * vcpus * hours * VERCEL_SANDBOX_PRICING.activeCpuPerHour;
+	const memUsd =
+		workers * memGb * hours * VERCEL_SANDBOX_PRICING.memoryPerGbHour;
 	const creationsUsd =
-		(usages.length / 1_000_000) * VERCEL_SANDBOX_PRICING.creationsPerMillion;
-
+		(workers / 1_000_000) * VERCEL_SANDBOX_PRICING.creationsPerMillion;
 	return {
-		sandboxCount: usages.length,
+		workers,
+		vcpus,
+		lifetimeHours: hours,
 		cpuUsd,
 		memUsd,
-		netUsd,
 		creationsUsd,
-		totalUsd: cpuUsd + memUsd + netUsd + creationsUsd,
-		activeCpuHours,
-		transferGb,
+		totalUsd: cpuUsd + memUsd + creationsUsd,
 	};
 };
 
 const usd = (n: number): string => `$${n.toFixed(2)}`;
 
-/** One-line cost summary, e.g. `~$0.74 (cpu $0.41 · mem $0.28 · net $0.05) · 50 sandboxes`. */
-export const formatCost = (cost: CostBreakdown): string =>
-	`~${usd(cost.totalUsd)} (cpu ${usd(cost.cpuUsd)} · mem ${usd(cost.memUsd)} · net ${usd(cost.netUsd)}) · ${cost.sandboxCount} sandbox${cost.sandboxCount === 1 ? "" : "es"}`;
+/** e.g. `~$1.71 est (cpu ≤$1.28 · mem $0.43) · 51 sandboxes × 2 vCPU · ~6min each`. */
+export const formatCost = (c: CostEstimate): string =>
+	`~${usd(c.totalUsd)} est (cpu ≤${usd(c.cpuUsd)} · mem ${usd(c.memUsd)}) · ` +
+	`${c.workers} sandboxes × ${c.vcpus} vCPU · ~${Math.round(c.lifetimeHours * 60)}min each`;
 
 /** Human wall-clock, e.g. `9m42s` or `48s`. */
 export const formatWall = (ms: number): string => {

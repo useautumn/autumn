@@ -54,12 +54,10 @@ import {
 	WORKER_VCPUS,
 } from "../constants.ts";
 import {
-	type CostBreakdown,
-	computeCost,
+	type CostEstimate,
+	estimateCost,
 	formatCost,
 	formatWall,
-	readSandboxUsage,
-	type SandboxUsage,
 } from "../helpers/cost.ts";
 import { createIngress, pushWorkerMapping } from "../helpers/ingress.ts";
 import {
@@ -908,24 +906,12 @@ const teardown = async ({
 		);
 	}
 
-	// Read each sandbox's final usage metrics RIGHT BEFORE deleting it, so we can
-	// estimate the run's cost (the SDK exposes usage, not dollars — see cost.ts).
-	const usages: SandboxUsage[] = [];
 	setTeardownSandboxes(0, entry.sandboxes.length);
 	for (const sandbox of entry.sandboxes) {
-		await timeBoxed(`delete sandbox ${sandbox.name}`, async () => {
-			const instance = await getSandboxByName(sandbox.name);
-			if (instance) {
-				usages.push(readSandboxUsage(instance));
-				await deleteSandbox(instance);
-			} else {
-				await deleteSandbox(sandbox.name);
-			}
-		});
+		await timeBoxed(`delete sandbox ${sandbox.name}`, () =>
+			deleteSandbox(sandbox.name),
+		);
 		bumpSandboxDone();
-	}
-	if (usages.length > 0) {
-		lastRunCost = computeCost(usages);
 	}
 
 	await registry.markCompleted(runId);
@@ -1254,12 +1240,16 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		teardownDone = true;
 
 		// ----- SUMMARY --------------------------------------------------------
-		// Cost is collected DURING teardown, so read it here. Only show it when the
-		// SDK actually gave us usage metrics (otherwise it'd read a misleading $0.00).
+		// Cost ESTIMATE (the SDK doesn't expose usage for running sandboxes, see
+		// cost.ts): workers + the ingress, each at WORKER_VCPUS, alive from fan-out
+		// start until teardown finished, against the Pro rate card.
+		lastRunCost = estimateCost({
+			workers: provisioned.length + 1,
+			vcpus: WORKER_VCPUS,
+			lifetimeMs: Date.now() - fanoutStart,
+		});
 		const costLine =
-			lastRunCost && lastRunCost.totalUsd > 0
-				? formatCost(lastRunCost)
-				: undefined;
+			lastRunCost.totalUsd > 0 ? formatCost(lastRunCost) : undefined;
 		let totalPassed = 0;
 		let totalFailed = 0;
 		let totalCrashed = 0;
@@ -1379,10 +1369,10 @@ let lastRunExitCode = 0;
 
 /** RUN-phase wall-clock (ms) of the last run — the correct parallel-aware test time. */
 let lastRunWallMs = 0;
-/** Cost estimate of the last run, collected from sandbox usage during teardown. */
-let lastRunCost: CostBreakdown | undefined;
+/** Cost estimate of the last run (computed at summary from worker count + lifetime). */
+let lastRunCost: CostEstimate | undefined;
 export const getLastRunWallMs = (): number => lastRunWallMs;
-export const getLastRunCost = (): CostBreakdown | undefined => lastRunCost;
+export const getLastRunCost = (): CostEstimate | undefined => lastRunCost;
 
 /**
  * Run a file set through the headless swarm runner (`runSwarmTests`), which drives
