@@ -1,4 +1,4 @@
-import type { CustomButton, OrgConfig } from "@autumn/shared";
+import type { CustomButton, FrontendOrg, OrgConfig } from "@autumn/shared";
 import { useMutation } from "@tanstack/react-query";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
@@ -16,17 +16,23 @@ export function useCustomButtons() {
 			custom_buttons: next,
 		} satisfies Partial<OrgConfig>);
 
+	const fetchButtons = async (): Promise<CustomButton[]> => {
+		const { data } = await axiosInstance.get<FrontendOrg>("/organization");
+		return data.config?.custom_buttons ?? [];
+	};
+
 	const save = useMutation({
-		mutationFn: ({
+		mutationFn: async ({
 			id,
 			values,
 		}: {
 			id: string | null;
 			values: CustomButtonForm;
 		}) => {
+			const current = await fetchButtons();
 			const next = id
-				? buttons.map((b) => (b.id === id ? { ...b, ...values } : b))
-				: [...buttons, { id: nanoid(), ...values }];
+				? current.map((b) => (b.id === id ? { ...b, ...values } : b))
+				: [...current, { id: nanoid(), ...values }];
 			return persist(next);
 		},
 		onSuccess: (_data, { id }) => {
@@ -37,7 +43,10 @@ export function useCustomButtons() {
 	});
 
 	const remove = useMutation({
-		mutationFn: (id: string) => persist(buttons.filter((b) => b.id !== id)),
+		mutationFn: async (id: string) => {
+			const current = await fetchButtons();
+			return persist(current.filter((b) => b.id !== id));
+		},
 		onSuccess: () => {
 			mutate();
 			toast.success("Button removed");

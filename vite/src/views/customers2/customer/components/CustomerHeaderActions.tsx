@@ -18,6 +18,7 @@ import { getBackendErr } from "@/utils/genUtils";
 import {
 	getStripeConnectViewAsLink,
 	getStripeCusLink,
+	isSafeCustomButtonUrl,
 	resolveCustomButtonUrl,
 } from "@/utils/linkUtils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
@@ -47,6 +48,10 @@ export function CustomerHeaderActions() {
 	const handleOpenCustomButton = (url: string, openInNewTab: boolean) => {
 		if (!customer) return;
 		const resolved = resolveCustomButtonUrl(url, customer);
+		if (!isSafeCustomButtonUrl(resolved)) {
+			toast.error("This button has an invalid URL");
+			return;
+		}
 		if (openInNewTab) {
 			window.open(resolved, "_blank", "noopener");
 		} else {

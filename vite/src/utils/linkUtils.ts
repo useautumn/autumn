@@ -20,6 +20,16 @@ export const resolveCustomButtonUrl = (
 	return resolved;
 };
 
+const SAFE_PROTOCOLS = new Set(["http:", "https:"]);
+
+export const isSafeCustomButtonUrl = (url: string) => {
+	try {
+		return SAFE_PROTOCOLS.has(new URL(url).protocol);
+	} catch {
+		return false;
+	}
+};
+
 export const getStripeCusLink = ({
 	customerId,
 	env,
