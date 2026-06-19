@@ -29,12 +29,17 @@ export const DEFAULT_PER_WORKER = 1;
 
 /**
  * Max concurrent Stripe Connect sub-account creations. `accounts.create` is a
- * PLATFORM-account write; bursting all N at once gets 429'd, so throttle to a
- * low concurrency (+ retry/backoff in stripe.ts). Plan §6a "provisioning burst".
- * Overridable per-run via `--stripe-concurrency=N` (CLI) or the
- * `STRIPE_SUBACCOUNT_CONCURRENCY` env var; this is the default.
+ * PLATFORM-account write; bursting all N at once eventually gets 429'd, so cap
+ * concurrency (+ retry/backoff in stripe.ts). Plan §6a "provisioning burst".
+ *
+ * Benchmarked (50 accounts, ramping concurrency): 5 → 37s, 10 → 20s, 15 → 14s,
+ * 20 → 11s (0 429s), 25 → 8.7s (0 429s), 30 → 8.7s but 429s start and there's no
+ * further speedup. So the wall is ~25–30 concurrent. Default 20 sits comfortably
+ * below it (≈11s, zero throttling, headroom); push higher with --stripe-concurrency
+ * if you want ~8s and don't mind brushing the limiter. Overridable per-run via
+ * `--stripe-concurrency=N` (CLI) or the `STRIPE_SUBACCOUNT_CONCURRENCY` env var.
  */
-export const STRIPE_SUBACCOUNT_CONCURRENCY = 5;
+export const STRIPE_SUBACCOUNT_CONCURRENCY = 20;
 
 /**
  * Minimum spacing between consecutive Stripe sub-account creations (ms). A small
