@@ -16,6 +16,8 @@
  * snapshot stays small even with 189 files × 50 workers.
  */
 
+import { existsSync } from "node:fs";
+import { join, resolve } from "node:path";
 import type { ServerWebSocket } from "bun";
 import { getTuiState, runTallies } from "../tui/store.ts";
 import {
@@ -82,12 +84,28 @@ const snapshot = () => {
 	};
 };
 
-export type DashboardServer = { url: string; port: number; stop: () => void };
+export type DashboardServer = {
+	/** Base HTTP origin (also the WS origin). */
+	url: string;
+	/** The openable browser URL: the served SPA when built, else the dev-server combo. */
+	webUrl: string;
+	port: number;
+	/** Whether the built dashboard SPA is being served same-origin. */
+	servingSpa: boolean;
+	stop: () => void;
+};
+
+/** Built dashboard SPA dir (apps/testbench/dist), relative to this file. */
+const DIST_DIR = resolve(import.meta.dir, "../../../apps/testbench/dist");
+const ASSET_EXT = /\.(js|css|png|svg|ico|woff2?|map|json|txt)$/;
 
 /** Start the dashboard WS server on a random port. Enables the data hub. */
 export const startDashboardServer = (): DashboardServer => {
 	enableHub();
 	const clients = new Set<ServerWebSocket<ClientData>>();
+	// Serve the built SPA same-origin (one-click) when it exists; the app then
+	// connects to ws://<same-host>/ws with no query param needed.
+	const servingSpa = existsSync(join(DIST_DIR, "index.html"));
 
 	const server = Bun.serve<ClientData>({
 		port: 0, // random
@@ -97,6 +115,13 @@ export const startDashboardServer = (): DashboardServer => {
 				return srv.upgrade(req, { data: {} })
 					? undefined
 					: new Response("upgrade failed", { status: 500 });
+			}
+			if (servingSpa) {
+				// Static asset by extension; otherwise SPA fallback to index.html.
+				const file = ASSET_EXT.test(pathname)
+					? Bun.file(join(DIST_DIR, pathname.slice(1)))
+					: Bun.file(join(DIST_DIR, "index.html"));
+				return new Response(file);
 			}
 			return new Response("bun tw dashboard ws — connect to /ws", {
 				status: 200,
@@ -176,9 +201,17 @@ export const startDashboardServer = (): DashboardServer => {
 	}, 250);
 
 	const port = server.port ?? 0;
+	const url = `http://localhost:${port}`;
+	// One-click when the SPA is built (served same-origin); otherwise point at the
+	// testbench dev server (5910) with the ws origin in the query string.
+	const webUrl = servingSpa
+		? url
+		: `http://localhost:5910/?ws=${encodeURIComponent(`ws://localhost:${port}/ws`)}`;
 	return {
-		url: `http://localhost:${port}`,
+		url,
+		webUrl,
 		port,
+		servingSpa,
 		stop: () => {
 			clearInterval(interval);
 			off();

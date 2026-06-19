@@ -1,8 +1,8 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Activity, FileText, Server } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
 import { PageContainer } from "@/components/general/PageContainer";
 import { PageHeader } from "@/components/general/PageHeader";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { useSwarmSocket } from "./useSwarmSocket";
 import { Overall } from "./views/Overall";
@@ -18,12 +18,15 @@ function resolveWsUrl(): string {
 		localStorage.setItem(WS_STORAGE_KEY, fromQuery);
 		return fromQuery;
 	}
-	const stored = localStorage.getItem(WS_STORAGE_KEY);
-	if (stored) {
-		return stored;
+	const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+	const sameOrigin = `${proto}//${window.location.host}/ws`;
+	// On the standalone dev server (:5910) the WS lives on another port, so fall
+	// back to the last-used URL; otherwise we're served by the dashboard server
+	// itself → connect to /ws on this same origin (no ?ws needed).
+	if (window.location.port === "5910") {
+		return localStorage.getItem(WS_STORAGE_KEY) ?? sameOrigin;
 	}
-	// Default: same host, dashboard server typically advertises its own URL.
-	return `ws://${window.location.hostname}:0`;
+	return sameOrigin;
 }
 
 export function App() {
@@ -51,7 +54,10 @@ export function App() {
 
 	return (
 		<PageContainer className="max-w-[1400px]">
-			<PageHeader icon={<Activity className="size-4" />} title="testbench — swarm">
+			<PageHeader
+				icon={<Activity className="size-4" />}
+				title="testbench — swarm"
+			>
 				<div className="flex items-center gap-2 text-muted-foreground text-xs">
 					<span className={cn("size-2 rounded-full", status.dot)} />
 					<span>{status.label}</span>

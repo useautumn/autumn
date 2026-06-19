@@ -26,7 +26,7 @@
  * signal → force-exit (registry + tags persist for `bun tw kill`).
  */
 
-import { writeFileSync } from "node:fs";
+import { existsSync, writeFileSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { Writable } from "node:stream";
@@ -215,6 +215,60 @@ const warn = (message: string): void => {
 
 const errorLog = (message: string): void => {
 	sinkLine(chalk.red(`[tw] ${message}`));
+};
+
+/** Copy text to the OS clipboard (best-effort, platform-aware). */
+const copyToClipboard = (text: string): void => {
+	const argv =
+		process.platform === "darwin"
+			? ["pbcopy"]
+			: process.platform === "win32"
+				? ["clip"]
+				: ["xclip", "-selection", "clipboard"];
+	try {
+		const proc = Bun.spawn(argv, {
+			stdin: "pipe",
+			stdout: "ignore",
+			stderr: "ignore",
+		});
+		proc.stdin.write(text);
+		proc.stdin.end();
+	} catch {
+		// best-effort
+	}
+};
+
+/**
+ * Build the dashboard SPA (apps/testbench) once so the WS server can serve it
+ * same-origin → one-click open. Skips if already built; best-effort (a failure
+ * just means the WS server falls back to the dev-server URL).
+ */
+const ensureDashboardSpa = (): void => {
+	const dir = join(PROJECT_ROOT, "apps", "testbench");
+	if (existsSync(join(dir, "dist", "index.html"))) {
+		return;
+	}
+	process.stdout.write("📊 building dashboard (first run, ~once)…\n");
+	Bun.spawnSync(["bun", "run", "build"], {
+		cwd: dir,
+		stdout: "ignore",
+		stderr: "ignore",
+	});
+};
+
+/** Open a URL in the default browser (best-effort, platform-aware). */
+const openInBrowser = (url: string): void => {
+	const argv =
+		process.platform === "darwin"
+			? ["open", url]
+			: process.platform === "win32"
+				? ["cmd", "/c", "start", "", url]
+				: ["xdg-open", url];
+	try {
+		Bun.spawn(argv, { stdout: "ignore", stderr: "ignore" });
+	} catch {
+		// best-effort
+	}
 };
 
 // Detached sandbox log streams (worker boot, ingress) reject with a
@@ -1004,12 +1058,17 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 	let dashboard: DashboardServer | undefined;
 	if (args.dashboard) {
 		resetHub();
+		ensureDashboardSpa();
 		dashboard = startDashboardServer();
-		const wsUrl = `${dashboard.url.replace("http://", "ws://")}/ws`;
-		setDashboardUrl(dashboard.url);
+		// Copy the URL + open it in the browser (best-effort).
+		copyToClipboard(dashboard.webUrl);
+		openInBrowser(dashboard.webUrl);
+		const hint = dashboard.servingSpa
+			? "(copied to clipboard · opening in your browser)"
+			: "(copied to clipboard — build the dashboard once: `cd apps/testbench && bun run build`, or run its dev server: `bun dev`)";
 		// Print to the normal screen BEFORE the TUI takes the alt-screen.
 		process.stdout.write(
-			`\n📊 tw dashboard — run \`cd apps/testbench && bun dev\`, then open:\n   http://localhost:5910/?ws=${encodeURIComponent(wsUrl)}\n   (WS server: ${dashboard.url})\n\n`,
+			`\n📊 tw dashboard: ${dashboard.webUrl}\n   ${hint}\n\n`,
 		);
 	}
 
@@ -1024,6 +1083,10 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			unmountTui: () => void;
 		};
 		resetTui();
+		// AFTER resetTui (which clears it) so the URL persists in the header.
+		if (dashboard) {
+			setDashboardUrl(dashboard.webUrl);
+		}
 		setRunMeta(swarmTarget, effectiveWorkers);
 		setPhase("warm");
 		await tui.mountTui();
@@ -1378,7 +1441,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 	// With --dashboard, keep the WS server up after the run so the user can inspect
 	// per-file/per-worker output + the final summary. Block until Ctrl+C.
 	if (dashboard) {
-		log(`dashboard still live at ${dashboard.url} — press Ctrl+C to exit`);
+		log(`dashboard still live at ${dashboard.webUrl} — press Ctrl+C to exit`);
 		await new Promise<void>((resolve) => {
 			const done = (): void => resolve();
 			process.once("SIGINT", done);
