@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
-import { Badge } from "@/components/ui/badge";
 import {
 	ChartContainer,
 	ChartTooltip,
@@ -107,13 +106,42 @@ export function WorkerDots({
 	);
 }
 
-type BadgeVariant =
-	| "green"
-	| "red"
-	| "blue"
-	| "yellow"
-	| "secondary"
-	| "default";
+/**
+ * Subtle status/tally chip — the app's StatusPill convention: a 10%-tinted
+ * background with same-hue text (no bright pastel fill, no hard border), so it
+ * sits quietly on the dark surface instead of standing out.
+ */
+export type PillTone = "green" | "red" | "blue" | "yellow" | "muted";
+
+const PILL_TONE: Record<PillTone, string> = {
+	green: "bg-green-500/10 text-green-500",
+	red: "bg-red-500/10 text-red-500",
+	blue: "bg-sandbox/10 text-sandbox",
+	yellow: "bg-amber-500/10 text-amber-500",
+	muted: "bg-muted text-tertiary-foreground",
+};
+
+export function Pill({
+	tone = "muted",
+	className,
+	children,
+}: {
+	tone?: PillTone;
+	className?: string;
+	children: ReactNode;
+}) {
+	return (
+		<span
+			className={cn(
+				"inline-flex items-center gap-1 rounded-md px-2 py-0.5 font-medium text-xs",
+				PILL_TONE[tone],
+				className,
+			)}
+		>
+			{children}
+		</span>
+	);
+}
 
 export function ProgressBar({
 	value,
@@ -142,28 +170,28 @@ export function ProgressBar({
 	);
 }
 
-const FILE_STATUS: Record<string, { v: BadgeVariant; label: string }> = {
-	passed: { v: "green", label: "pass" },
-	failed: { v: "red", label: "fail" },
-	running: { v: "blue", label: "running" },
-	retrying: { v: "yellow", label: "retry" },
-	pending: { v: "secondary", label: "pending" },
+const FILE_STATUS: Record<string, { tone: PillTone; label: string }> = {
+	passed: { tone: "green", label: "pass" },
+	failed: { tone: "red", label: "fail" },
+	running: { tone: "blue", label: "running" },
+	retrying: { tone: "yellow", label: "retry" },
+	pending: { tone: "muted", label: "pending" },
 };
 
 export function FileStatusBadge({ status }: { status: string }) {
 	const s = FILE_STATUS[status] ?? FILE_STATUS.pending;
-	return <Badge variant={s.v}>{s.label}</Badge>;
+	return <Pill tone={s.tone}>{s.label}</Pill>;
 }
 
-const WORKER_STATUS: Record<string, { v: BadgeVariant; label: string }> = {
-	ready: { v: "green", label: "ready" },
-	booting: { v: "blue", label: "booting" },
-	dead: { v: "red", label: "dead" },
+const WORKER_STATUS: Record<string, { tone: PillTone; label: string }> = {
+	ready: { tone: "green", label: "ready" },
+	booting: { tone: "blue", label: "booting" },
+	dead: { tone: "red", label: "dead" },
 };
 
 export function WorkerStatusBadge({ status }: { status: string }) {
 	const s = WORKER_STATUS[status] ?? WORKER_STATUS.booting;
-	return <Badge variant={s.v}>{s.label}</Badge>;
+	return <Pill tone={s.tone}>{s.label}</Pill>;
 }
 
 const SPEED_CONFIG = {

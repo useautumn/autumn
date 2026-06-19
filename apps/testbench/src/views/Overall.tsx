@@ -6,7 +6,6 @@ import { TableActions } from "@/components/general/table/table-actions";
 import { TableContainer } from "@/components/general/table/table-container";
 import { TableHeading } from "@/components/general/table/table-heading";
 import { TableToolbar } from "@/components/general/table/table-toolbar";
-import { Badge } from "@/components/ui/badge";
 import {
 	TableBody,
 	TableCell,
@@ -16,16 +15,26 @@ import {
 	Table as UiTable,
 } from "@/components/ui/table";
 import { InfoRow } from "@/components/v2/InfoRow";
-import type { Snapshot } from "../types";
+import type { Phase, Snapshot } from "../types";
 import {
 	Elapsed,
 	FileStatusBadge,
 	IndeterminateBar,
+	Pill,
+	type PillTone,
 	ProgressBar,
 	SpeedChart,
 	WarmStepper,
 	WorkerDots,
 } from "../widgets";
+
+const PHASE_TONE: Record<Phase, PillTone> = {
+	warm: "muted",
+	fanout: "blue",
+	run: "blue",
+	teardown: "yellow",
+	done: "green",
+};
 
 const fmtWall = (ms: number): string => {
 	const s = Math.round(ms / 1000);
@@ -149,10 +158,12 @@ function PhaseProgress({ snap }: { snap: Snapshot }) {
 				value={snap.run.done}
 			/>
 			<div className="flex flex-wrap gap-2">
-				<Badge variant="green">✓ {snap.run.passed}</Badge>
-				<Badge variant="red">✗ {snap.run.failed}</Badge>
-				<Badge variant="blue">{snap.run.running} running</Badge>
-				<Badge variant="yellow">{snap.run.retrying} retrying</Badge>
+				<Pill tone="green">✓ {snap.run.passed}</Pill>
+				<Pill tone="red">✗ {snap.run.failed}</Pill>
+				<Pill tone="blue">{snap.run.running} running</Pill>
+				<Pill tone={snap.run.retrying > 0 ? "yellow" : "muted"}>
+					{snap.run.retrying} retrying
+				</Pill>
 			</div>
 		</div>
 	);
@@ -267,7 +278,7 @@ export function Overall({
 				title={
 					<span className="flex items-center gap-2">
 						Run
-						<Badge variant="blue">{snap.phase}</Badge>
+						<Pill tone={PHASE_TONE[snap.phase]}>{snap.phase}</Pill>
 						<span className="font-normal text-muted-foreground text-sm">
 							{snap.target} · {snap.workerCount} workers
 						</span>

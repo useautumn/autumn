@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import {
 	ResizableHandle,
 	ResizablePanel,
@@ -9,7 +8,7 @@ import { cn } from "@/lib/utils";
 import { TerminalOutput } from "../Terminal";
 import type { FileRow, Snapshot } from "../types";
 import type { SwarmSocket } from "../useSwarmSocket";
-import { FileStatusBadge } from "../widgets";
+import { FileStatusBadge, Pill } from "../widgets";
 
 function FileList({
 	files,
@@ -82,8 +81,8 @@ export function PerFile({
 						<div className="flex shrink-0 flex-wrap items-center gap-2">
 							<span className="font-mono text-sm">{row.name}</span>
 							<FileStatusBadge status={row.status} />
-							<Badge variant="green">✓ {row.passed}</Badge>
-							<Badge variant="red">✗ {row.failed}</Badge>
+							<Pill tone="green">✓ {row.passed}</Pill>
+							<Pill tone="red">✗ {row.failed}</Pill>
 							{row.worker ? (
 								<span className="text-muted-foreground text-xs">
 									on {row.worker}
