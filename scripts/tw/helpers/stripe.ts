@@ -31,21 +31,45 @@ import { createConnectAccount } from "@server/internal/orgs/orgUtils/createConne
 import type { User } from "better-auth";
 import type { Organization } from "better-auth/plugins";
 import pLimit from "p-limit";
-import { STRIPE_SUBACCOUNT_CONCURRENCY, TW_ENV } from "../constants.js";
+import {
+	STRIPE_SUBACCOUNT_CONCURRENCY,
+	STRIPE_SUBACCOUNT_CREATE_SPACING_MS,
+	TW_ENV,
+} from "../constants.js";
 import type { OwnerTag } from "../types.js";
+import { sinkLine } from "./logSink.js";
 import { stripeMetadata } from "./owner.js";
 
+/** Flatten a logger's varargs into one line (strings as-is; errors → message). */
+const formatLogArgs = (args: unknown[]): string =>
+	args
+		.map((arg) => {
+			if (typeof arg === "string") {
+				return arg;
+			}
+			if (arg instanceof Error) {
+				return arg.message;
+			}
+			try {
+				return JSON.stringify(arg);
+			} catch {
+				return String(arg);
+			}
+		})
+		.join(" ");
+
 /**
- * A minimal console-backed `Logger` for `deleteConnectedAccount`. The real
- * server logger pulls in pino + OTel at module load (and expects Infisical
- * secrets), which we don't want in the orchestrator; the connect util only ever
- * calls `.info`/`.error`, so a thin shim is enough.
+ * A minimal `Logger` for `deleteConnectedAccount`. The real server logger pulls
+ * in pino + OTel at module load (and expects Infisical secrets), which we don't
+ * want in the orchestrator. Routes through the log sink so teardown chatter
+ * (e.g. "Deleted account …") lands in the run log file / logs pane instead of
+ * spamming the foreground during the run.
  */
 const orchestratorLogger: Logger = {
-	debug: (...args: unknown[]) => console.debug(...args),
-	info: (...args: unknown[]) => console.info(...args),
-	warn: (...args: unknown[]) => console.warn(...args),
-	error: (...args: unknown[]) => console.error(...args),
+	debug: (...args: unknown[]) => sinkLine(`[connect] ${formatLogArgs(args)}`),
+	info: (...args: unknown[]) => sinkLine(`[connect] ${formatLogArgs(args)}`),
+	warn: (...args: unknown[]) => sinkLine(`[connect] ${formatLogArgs(args)}`),
+	error: (...args: unknown[]) => sinkLine(`[connect] ${formatLogArgs(args)}`),
 	child: () => orchestratorLogger,
 };
 
@@ -56,8 +80,41 @@ const WEBHOOK_EVENTS = [...MAIN_STRIPE_EVENT_TYPES, ...SYNC_STRIPE_EVENT_TYPES];
  * `accounts.create` is a PLATFORM-account write — creating N sub-accounts at once
  * gets the platform 429'd. Throttle to a low concurrency AND retry 429s with
  * exponential backoff + jitter (plan §6a "provisioning burst").
+ *
+ * Lazily-built concurrency limiter so a `--stripe-concurrency=N` CLI flag (which
+ * `index.ts` surfaces as the `STRIPE_SUBACCOUNT_CONCURRENCY` env var before the
+ * run starts) is honored — a module-load-time `pLimit()` would capture the
+ * default before the flag is applied.
  */
-const subAccountCreateLimit = pLimit(STRIPE_SUBACCOUNT_CONCURRENCY);
+let subAccountCreateLimit: ReturnType<typeof pLimit> | undefined;
+const getSubAccountCreateLimit = (): ReturnType<typeof pLimit> => {
+	if (!subAccountCreateLimit) {
+		const fromEnv = Number(process.env.STRIPE_SUBACCOUNT_CONCURRENCY);
+		const concurrency =
+			Number.isFinite(fromEnv) && fromEnv > 0
+				? fromEnv
+				: STRIPE_SUBACCOUNT_CONCURRENCY;
+		subAccountCreateLimit = pLimit(concurrency);
+	}
+	return subAccountCreateLimit;
+};
+
+/**
+ * Global creation pacer: regardless of concurrency, no two `accounts.create`
+ * calls START closer than `STRIPE_SUBACCOUNT_CREATE_SPACING_MS` apart. This
+ * smooths the provisioning burst so the platform account's rate-limit bucket
+ * refills between writes.
+ */
+let nextCreateAt = 0;
+const paceCreate = async (): Promise<void> => {
+	const now = Date.now();
+	const waitMs = Math.max(0, nextCreateAt - now);
+	nextCreateAt =
+		Math.max(now, nextCreateAt) + STRIPE_SUBACCOUNT_CREATE_SPACING_MS;
+	if (waitMs > 0) {
+		await new Promise((resolve) => setTimeout(resolve, waitMs));
+	}
+};
 
 const isRateLimited = (error: unknown): boolean => {
 	const e = error as { statusCode?: number; code?: string; type?: string };
@@ -122,18 +179,17 @@ export const createSandboxSubAccount = async ({
 
 	// Throttle + retry: bursting `accounts.create` across N workers 429s the
 	// platform account (plan §6a provisioning burst).
-	const account = await subAccountCreateLimit(() =>
-		withRateLimitRetry(
-			() =>
-				createConnectAccount({
-					// `createConnectAccount` only reads `org.name` / `user.email`; the full
-					// better-auth shapes aren't available orchestrator-side.
-					org: org as Organization,
-					user: user as User,
-					metadata: stripeMetadata(owner, runId, orgId),
-				}),
-			"accounts.create",
-		),
+	const account = await getSubAccountCreateLimit()(() =>
+		withRateLimitRetry(async () => {
+			await paceCreate();
+			return createConnectAccount({
+				// `createConnectAccount` only reads `org.name` / `user.email`; the full
+				// better-auth shapes aren't available orchestrator-side.
+				org: org as Organization,
+				user: user as User,
+				metadata: stripeMetadata(owner, runId, orgId),
+			});
+		}, "accounts.create"),
 	);
 
 	return account.id;

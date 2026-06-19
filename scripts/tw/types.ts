@@ -28,6 +28,8 @@ export type TwRunArgs = {
 	perWorker: number;
 	ref: string;
 	keep: boolean;
+	/** Skip the preflight git gate (dirty tree / unpushed HEAD). For debugging. */
+	allowDirty: boolean;
 };
 
 /**

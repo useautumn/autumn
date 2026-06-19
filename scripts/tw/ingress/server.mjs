@@ -99,9 +99,9 @@ const forwardConnectEvent = async (rawBody, env) => {
 
 	const workerUrl = routes.get(accountId);
 	if (!workerUrl) {
-		logWarn(
-			`no route for account ${accountId} — dropping (known accounts: ${routes.size})`,
-		);
+		// Silently drop: after teardown, Stripe retries webhooks for deleted
+		// sub-accounts for a while — there's no worker to route them to and it's
+		// expected, so logging each one just spams the run output.
 		return;
 	}
 
@@ -136,7 +136,9 @@ const handleMapWrite = async (req, res) => {
 		const raw = await readBody(req);
 		payload = raw ? JSON.parse(raw) : {};
 	} catch (error) {
-		sendJson(res, HTTP_BAD_REQUEST, { error: `invalid JSON: ${error.message}` });
+		sendJson(res, HTTP_BAD_REQUEST, {
+			error: `invalid JSON: ${error.message}`,
+		});
 		return;
 	}
 
@@ -157,7 +159,10 @@ const handleMapWrite = async (req, res) => {
 
 /** GET /ingress/map — dump the current routing table (debug). */
 const handleMapRead = (res) => {
-	sendJson(res, HTTP_OK, { map: Object.fromEntries(routes), size: routes.size });
+	sendJson(res, HTTP_OK, {
+		map: Object.fromEntries(routes),
+		size: routes.size,
+	});
 };
 
 /**

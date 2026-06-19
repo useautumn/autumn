@@ -31,8 +31,17 @@ export const DEFAULT_PER_WORKER = 1;
  * Max concurrent Stripe Connect sub-account creations. `accounts.create` is a
  * PLATFORM-account write; bursting all N at once gets 429'd, so throttle to a
  * low concurrency (+ retry/backoff in stripe.ts). Plan §6a "provisioning burst".
+ * Overridable per-run via `--stripe-concurrency=N` (CLI) or the
+ * `STRIPE_SUBACCOUNT_CONCURRENCY` env var; this is the default.
  */
-export const STRIPE_SUBACCOUNT_CONCURRENCY = 4;
+export const STRIPE_SUBACCOUNT_CONCURRENCY = 5;
+
+/**
+ * Minimum spacing between consecutive Stripe sub-account creations (ms). A small
+ * sleep smooths the burst so the platform account's rate-limit bucket refills
+ * between writes, on top of the concurrency cap above.
+ */
+export const STRIPE_SUBACCOUNT_CREATE_SPACING_MS = 10;
 
 /**
  * Deterministic name prefix for the CACHED warm parent (`tw-warm-<refSha>`).
@@ -68,8 +77,30 @@ export const VERCEL_REGION = "iad1";
 /** vCPUs per worker (→ 2048 MB memory per vCPU = 8 GB). Plan §5 sizing. */
 export const WORKER_VCPUS = 4;
 
-/** Default per-worker sandbox lifetime; the 5-min default is too short (plan §10). */
-export const WORKER_TIMEOUT_MS = 45 * 60 * 1000;
+/**
+ * Default per-worker sandbox lifetime. 10 minutes comfortably covers a swarm run
+ * (the full suite is ~10min wall-clock) while bounding cost/leak if teardown is
+ * skipped. Pro's max runtime is 24h, so this is well within limits (plan §10).
+ */
+export const WORKER_TIMEOUT_MS = 10 * 60 * 1000;
+
+/**
+ * Vercel Sandbox PRO pricing (USD), for the post-run cost estimate. Rates are
+ * per the Vercel pricing page (Pro tier). Storage is ephemeral over a minutes-long
+ * run, so it's omitted as negligible. These translate the SDK's per-sandbox usage
+ * getters (`totalActiveCpuDurationMs`, `totalDurationMs`, `total{Egress,Ingress}Bytes`,
+ * `vcpus`, `memory`) into a dollar estimate — see `commands/run.ts` cost summary.
+ */
+export const VERCEL_SANDBOX_PRICING = {
+	/** Active CPU, per active-CPU-hour. */
+	activeCpuPerHour: 0.128,
+	/** Provisioned memory, per GB-hour. */
+	memoryPerGbHour: 0.0212,
+	/** Data transfer (egress + ingress), per GB. */
+	dataTransferPerGb: 0.15,
+	/** Sandbox creations, per 1,000,000 creations. */
+	creationsPerMillion: 0.6,
+} as const;
 
 /**
  * The env workers register Stripe webhooks + run tests under. The legacy webhook

@@ -19,7 +19,12 @@ import chalk from "chalk";
 import { kill, killAll, killOrphans } from "./commands/kill.ts";
 import { list } from "./commands/list.ts";
 import { getLastRunExitCode, run } from "./commands/run.ts";
-import { DEFAULT_PER_WORKER, DEFAULT_WORKERS } from "./constants.ts";
+import {
+	DEFAULT_PER_WORKER,
+	DEFAULT_WORKERS,
+	STRIPE_SUBACCOUNT_CONCURRENCY,
+} from "./constants.ts";
+import { runPreflight } from "./helpers/preflight.ts";
 import type { TwRunArgs } from "./types.ts";
 
 const RESERVED_SUBCOMMANDS = new Set(["list", "kill", "kill-all"]);
@@ -81,7 +86,20 @@ const parseRunArgs = (args: string[]): TwRunArgs => {
 	const perWorker = parseIntFlag(args, "--per-worker", DEFAULT_PER_WORKER);
 	const ref = parseStringFlag(args, "--ref") ?? resolveDefaultRef();
 	const keep = args.includes("--keep");
-	return { groupsOrPatterns, workers, perWorker, ref, keep };
+	const allowDirty = args.includes("--allow-dirty");
+
+	// `--stripe-concurrency=N` is surfaced as an env var the (lazily-built) Stripe
+	// limiter in helpers/stripe.ts reads when the run starts.
+	if (args.some((arg) => arg.startsWith("--stripe-concurrency="))) {
+		const concurrency = parseIntFlag(
+			args,
+			"--stripe-concurrency",
+			STRIPE_SUBACCOUNT_CONCURRENCY,
+		);
+		process.env.STRIPE_SUBACCOUNT_CONCURRENCY = String(concurrency);
+	}
+
+	return { groupsOrPatterns, workers, perWorker, ref, keep, allowDirty };
 };
 
 const printUsage = (): void => {
@@ -101,6 +119,8 @@ const printUsage = (): void => {
 			`  --per-worker=K   per-worker file concurrency (default ${DEFAULT_PER_WORKER})`,
 			"  --ref=<git-ref>  ref the warm snapshot checks out (default current HEAD)",
 			"  --keep           leave the pool up for debugging (clean up with `bun tw kill`)",
+			`  --stripe-concurrency=N   concurrent Stripe account creations (default ${STRIPE_SUBACCOUNT_CONCURRENCY})`,
+			"  --allow-dirty    skip the preflight git gate (dirty tree / unpushed HEAD)",
 		].join("\n"),
 	);
 };
@@ -117,6 +137,7 @@ const main = async (): Promise<void> => {
 	// A bare invocation (no subcommand or only flags) runs the orchestrator.
 	if (!sub || sub.startsWith("-") || !RESERVED_SUBCOMMANDS.has(sub)) {
 		const runArgs = parseRunArgs(argv);
+		runPreflight({ ref: runArgs.ref, allowDirty: runArgs.allowDirty });
 		await run(runArgs);
 		process.exit(getLastRunExitCode());
 	}

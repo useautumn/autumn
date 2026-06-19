@@ -10,13 +10,14 @@ import {
 const POLL_SETTLE_MS = 3000;
 
 /**
- * Isolated test envs (`bun tw` µVMs) force the v2-cache rollout to 100% globally
- * via TW_FORCE_FULL_SUBJECT_ROLLOUT (no S3/edge-config). When that's set the
- * per-org rollout writes here are both unnecessary AND impossible (the S3
- * PutObject has no creds and would throw), so they no-op.
+ * Isolated test envs (`bun tw` µVMs) serve the v2-cache rollout from the base64
+ * edge-config override (AUTUMN_EDGE_CONFIG_OVERRIDE_B64) instead of S3, since
+ * there are no AWS creds. When that's set, the per-org rollout writes here are
+ * served in-memory and don't propagate across processes, so they no-op (the
+ * override already enables v2-cache globally).
  */
-const FORCE_FULL_SUBJECT_ROLLOUT = ["1", "true", "yes"].includes(
-	(process.env.TW_FORCE_FULL_SUBJECT_ROLLOUT ?? "").trim().toLowerCase(),
+const EDGE_CONFIG_OVERRIDDEN = Boolean(
+	process.env.AUTUMN_EDGE_CONFIG_OVERRIDE_B64,
 );
 
 /**
@@ -30,7 +31,7 @@ export const setOrgRolloutPercent = async ({
 	orgId: string;
 	percent: number;
 }) => {
-	if (FORCE_FULL_SUBJECT_ROLLOUT) {
+	if (EDGE_CONFIG_OVERRIDDEN) {
 		return;
 	}
 	await updateRolloutPercent({
@@ -62,7 +63,7 @@ export const removeCachedAtField = async ({
  * Removes the org-level rollout override (cleanup after test).
  */
 export const cleanupOrgRollout = async ({ orgId }: { orgId: string }) => {
-	if (FORCE_FULL_SUBJECT_ROLLOUT) {
+	if (EDGE_CONFIG_OVERRIDDEN) {
 		return;
 	}
 	await removeRolloutOrg({

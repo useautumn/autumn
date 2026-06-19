@@ -46,7 +46,10 @@ const SANDBOX_TIMEOUT_MS = 60 * 60 * 1000;
 
 /** Run a local git command and return trimmed stdout (orchestrator side). */
 const git = (...args: string[]): string => {
-	const proc = Bun.spawnSync(["git", ...args], { stdout: "pipe", stderr: "pipe" });
+	const proc = Bun.spawnSync(["git", ...args], {
+		stdout: "pipe",
+		stderr: "pipe",
+	});
 	return new TextDecoder().decode(proc.stdout).trim();
 };
 
@@ -68,7 +71,12 @@ const stream = async (
 	sandbox: Sandbox,
 	cmd: string,
 	args: string[],
-	opts: { cwd?: string; env?: Record<string, string>; label: string; timeoutMs?: number },
+	opts: {
+		cwd?: string;
+		env?: Record<string, string>;
+		label: string;
+		timeoutMs?: number;
+	},
 ): Promise<void> => {
 	const t0 = Date.now();
 	log(`▶ ${opts.label} — running (live output below)…`);
@@ -93,17 +101,19 @@ const stream = async (
 	const secs = ((Date.now() - t0) / 1000).toFixed(0);
 	if (finished.exitCode !== 0) {
 		// Throw (don't process.exit) so main()'s catch tears down the sandbox.
-		throw new Error(`${opts.label} exited ${finished.exitCode} (after ${secs}s)`);
+		throw new Error(
+			`${opts.label} exited ${finished.exitCode} (after ${secs}s)`,
+		);
 	}
 	log(`✓ ${opts.label} done in ${secs}s`);
 };
 
 /** Run a command and capture its stdout (for verification probes). */
-const capture = async (
-	sandbox: Sandbox,
-	script: string,
-): Promise<string> => {
-	const finished = await sandbox.runCommand({ cmd: "bash", args: ["-lc", script] });
+const capture = async (sandbox: Sandbox, script: string): Promise<string> => {
+	const finished = await sandbox.runCommand({
+		cmd: "bash",
+		args: ["-lc", script],
+	});
 	const out = await finished.stdout();
 	if (finished.exitCode !== 0) {
 		const err = await finished.stderr();
@@ -151,11 +161,20 @@ echo "QUEUES=$(curl -sf 'http://localhost:9324/?Action=ListQueues&Version=2012-1
 echo "BUN=$(bun --version)"`,
 	);
 	const kv = parseKv(out);
-	assert(kv.TABLES === "0", "empty DB", `public tables = ${kv.TABLES} (want 0)`);
-	assert(kv.TRGM === "1", "pg_trgm installed", `pg_extension rows = ${kv.TRGM}`);
+	assert(
+		kv.TABLES === "0",
+		"empty DB",
+		`public tables = ${kv.TABLES} (want 0)`,
+	);
+	assert(
+		kv.TRGM === "1",
+		"pg_trgm installed",
+		`pg_extension rows = ${kv.TRGM}`,
+	);
 	assert(kv.REDIS === "PONG", "Dragonfly :6379", `PING → ${kv.REDIS}`);
 	assert(
-		kv.QUEUES.includes("autumn.fifo") && kv.QUEUES.includes("autumn-track.fifo"),
+		kv.QUEUES.includes("autumn.fifo") &&
+			kv.QUEUES.includes("autumn-track.fifo"),
 		"elasticmq :9324 queues",
 		kv.QUEUES || "(none)",
 	);
@@ -163,7 +182,9 @@ echo "BUN=$(bun --version)"`,
 };
 
 const verifyWarm = async (sandbox: Sandbox): Promise<void> => {
-	log("Verifying WARM (Step 3): tables migrated, org seeded, NO Stripe account");
+	log(
+		"Verifying WARM (Step 3): tables migrated, org seeded, NO Stripe account",
+	);
 	const out = await capture(
 		sandbox,
 		`${PROBE_PREAMBLE}
@@ -172,8 +193,16 @@ echo "ORG=$(PSQL "SELECT slug FROM organizations WHERE id='${UNIT_TEST_ORG_ID}'"
 echo "STRIPE_ACCT=$(PSQL "SELECT coalesce(test_stripe_connect->>'default_account_id','<none>') FROM organizations WHERE id='${UNIT_TEST_ORG_ID}'")"`,
 	);
 	const kv = parseKv(out);
-	assert(Number(kv.TABLES) > 0, "schema migrated", `public tables = ${kv.TABLES} (want > 0)`);
-	assert(kv.ORG === "unit-test-org", "test org seeded", `slug = ${kv.ORG || "(missing)"}`);
+	assert(
+		Number(kv.TABLES) > 0,
+		"schema migrated",
+		`public tables = ${kv.TABLES} (want > 0)`,
+	);
+	assert(
+		kv.ORG === "unit-test-org",
+		"test org seeded",
+		`slug = ${kv.ORG || "(missing)"}`,
+	);
 	assert(
 		kv.STRIPE_ACCT === "<none>",
 		"NO Stripe sub-account in warm parent",
@@ -182,11 +211,15 @@ echo "STRIPE_ACCT=$(PSQL "SELECT coalesce(test_stripe_connect->>'default_account
 };
 
 const main = async (): Promise<void> => {
-	const ref = process.env.TW_REF || git("rev-parse", "--abbrev-ref", "HEAD") || "HEAD";
+	const ref =
+		process.env.TW_REF || git("rev-parse", "--abbrev-ref", "HEAD") || "HEAD";
 
-	let url = process.env.TW_GIT_URL || git("config", "--get", "remote.origin.url");
+	let url =
+		process.env.TW_GIT_URL || git("config", "--get", "remote.origin.url");
 	if (!url) {
-		fail("no git URL — set TW_GIT_URL or run inside a repo with an `origin` remote");
+		fail(
+			"no git URL — set TW_GIT_URL or run inside a repo with an `origin` remote",
+		);
 	}
 	// Normalize ssh → https (the µVM clones over https, not your local SSH key).
 	if (url.startsWith("git@github.com:")) {
@@ -198,11 +231,7 @@ const main = async (): Promise<void> => {
 
 	// Pre-flight: fail fast locally with actionable guidance instead of a cryptic
 	// Vercel "git clone failed" 400. The µVM clones the PUSHED ref over https.
-	if (url.includes("github.com") && !token) {
-		console.warn(
-			"\n\x1b[33m[tw-spike] note:\x1b[0m no GITHUB_TOKEN set — fine for a PUBLIC repo; a private repo would need one.\x1b[0m",
-		);
-	}
+	// (The repo is always public, so no private-repo token warning.)
 	if (!git("ls-remote", "origin", ref)) {
 		fail(
 			`ref "${ref}" is not on origin — commit and push it first:\n` +
@@ -229,7 +258,13 @@ const main = async (): Promise<void> => {
 	// NOTE: no `depth` — a shallow clone is single-branch (default branch only),
 	// so checking out a non-default `revision` (e.g. feat/*) fails with git 128.
 	const source = token
-		? { type: "git" as const, url, username: "x-access-token", password: token, revision: ref }
+		? {
+				type: "git" as const,
+				url,
+				username: "x-access-token",
+				password: token,
+				revision: ref,
+			}
 		: { type: "git" as const, url, revision: ref };
 
 	banner("STEP 1/5 — Create µVM + clone repo");
@@ -250,7 +285,9 @@ const main = async (): Promise<void> => {
 
 	let snapshotId: string | undefined;
 	try {
-		banner("STEP 2/5 — Build base image (PG18 + pg_trgm, Dragonfly, elasticmq, bun)");
+		banner(
+			"STEP 2/5 — Build base image (PG18 + pg_trgm, Dragonfly, elasticmq, bun)",
+		);
 		await stream(sandbox, "bash", ["scripts/tw/image/build-base.sh"], {
 			label: "build-base",
 			timeoutMs: BUILD_TIMEOUT_MS,
@@ -283,14 +320,20 @@ const main = async (): Promise<void> => {
 		log("Taking warm snapshot (this stops the sandbox)…");
 		const snapshot = await sandbox.snapshot();
 		snapshotId = snapshot.snapshotId;
-		log(`\x1b[32m✅ Steps 2 + 3 PASSED.\x1b[0m warm snapshot id = ${snapshotId}`);
+		log(
+			`\x1b[32m✅ Steps 2 + 3 PASSED.\x1b[0m warm snapshot id = ${snapshotId}`,
+		);
 		console.log("\nFork the swarm from this snapshot (or re-run to rebuild).");
 	} catch (error) {
 		console.error(error);
 		if (keep) {
-			log(`Left sandbox '${name}' running for debugging (TW_KEEP). Inspect via the Vercel Sandboxes dashboard, then delete it.`);
+			log(
+				`Left sandbox '${name}' running for debugging (TW_KEEP). Inspect via the Vercel Sandboxes dashboard, then delete it.`,
+			);
 		} else {
-			log(`Tearing down sandbox '${name}' (set TW_KEEP=1 to keep it for debugging).`);
+			log(
+				`Tearing down sandbox '${name}' (set TW_KEEP=1 to keep it for debugging).`,
+			);
 			await sandbox.delete().catch(() => undefined);
 		}
 		process.exit(1);

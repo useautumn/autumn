@@ -136,6 +136,31 @@ const BOOT_SCRIPT = "scripts/tw/worker/boot.ts";
 /** Default owner email stamped on Stripe sub-accounts (contact_email). */
 const OWNER_EMAIL_FALLBACK = "tw@autumn.test";
 
+/**
+ * Base64 edge-config override injected into every worker (`AUTUMN_EDGE_CONFIG_OVERRIDE_B64`).
+ * The server's `createEdgeConfigStore` decodes this `{ [s3Key]: config }` map and
+ * serves each store from memory instead of polling S3 (which has no creds in the
+ * µVM). We force the `v2-cache` rollout to 100% so track/check use the atomic
+ * cache-v2 (Dragonfly) path; every other edge config falls back to its safe
+ * default (no S3 chatter). The key mirrors `ADMIN_ROLLOUT_CONFIG_KEY`
+ * ("admin/rollout-config.json") on the server (inlined to avoid importing the AWS
+ * SDK into the orchestrator).
+ */
+const EDGE_CONFIG_OVERRIDE_B64 = Buffer.from(
+	JSON.stringify({
+		"admin/rollout-config.json": {
+			rollouts: {
+				"v2-cache": {
+					percent: 100,
+					previousPercent: 100,
+					changedAt: 0,
+					orgs: {},
+				},
+			},
+		},
+	}),
+).toString("base64");
+
 /** How long a single resource's teardown may take before we give up on it (§9a). */
 const TEARDOWN_PER_RESOURCE_TIMEOUT_MS = 20_000;
 
@@ -158,6 +183,24 @@ const warn = (message: string): void => {
 const errorLog = (message: string): void => {
 	sinkLine(chalk.red(`[tw] ${message}`));
 };
+
+// Detached sandbox log streams (worker boot, ingress) reject with a
+// `sandbox_stream_closed` StreamError when teardown deletes the sandbox out from
+// under a still-iterating `cmd.logs()` reader — benign end-of-stream, but it
+// surfaces as an UNHANDLED rejection (the iterator isn't inside a try/catch).
+// Swallow exactly those; re-surface anything else so real bugs still show.
+process.on("unhandledRejection", (reason) => {
+	if (isSandboxStreamClosed(reason)) {
+		return;
+	}
+	errorLog(
+		`unhandled rejection: ${
+			reason instanceof Error
+				? (reason.stack ?? reason.message)
+				: String(reason)
+		}`,
+	);
+});
 
 /** Run a best-effort, time-boxed async action; never throws (teardown safety). */
 const timeBoxed = async (
@@ -412,13 +455,14 @@ const buildWorkerEnv = ({
 		AUTUMN_TEST_BASE_URL: `http://localhost:${SERVER_PORT}`,
 		// keep the DB CLI / preload paths off Infisical inside the µVM.
 		AUTUMN_DB_DIRECT: "1",
-		// The µVM is isolated and has NO AWS creds, so the S3-backed edge config
-		// can't be read — the v2-cache (fullSubject) rollout would resolve EMPTY and
-		// the server would silently fall back to the legacy cache-v1 path, breaking
-		// every test that asserts atomic v2 deduction (concurrency counts) and
-		// queueing tracks (202). Force the rollout to 100% so the server uses cache
-		// v2 (the prod default for months), no edge config required.
-		TW_FORCE_FULL_SUBJECT_ROLLOUT: "1",
+		// The µVM is isolated and has NO AWS creds, so the S3-backed edge configs
+		// (rollout, cache-v2-ramp, redis-v2-cache, blue-green, …) can't be read —
+		// they'd poll S3 every 1s and spam CredentialsProviderError, AND the
+		// v2-cache rollout would resolve EMPTY, silently dropping the server to the
+		// legacy non-atomic cache-v1 path (breaking concurrency assertions + 202s).
+		// The base64 edge-config override makes every store serve from memory (no
+		// S3) and forces the v2-cache rollout to 100% — the prod default for months.
+		AUTUMN_EDGE_CONFIG_OVERRIDE_B64: EDGE_CONFIG_OVERRIDE_B64,
 	};
 
 	// Browser tests (Stripe checkout / setup-payment) use the LOCAL Playwright
