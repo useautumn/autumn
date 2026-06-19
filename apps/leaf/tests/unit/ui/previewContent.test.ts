@@ -99,7 +99,7 @@ describe("previewElements", () => {
 });
 
 describe("approvalCard with structured previews", () => {
-	test("uses the structured renderer instead of text scraping", () => {
+	test("summarizes structured billing previews in the approval card", () => {
 		const card = approvalCard({
 			id: "approval_1",
 			toolName: "attach",
@@ -108,8 +108,9 @@ describe("approvalCard with structured previews", () => {
 		});
 		const json = JSON.stringify(card);
 
-		expect(json).toContain("table");
-		expect(json).toContain("Due now");
+		expect(json).toContain("Due today");
+		expect(json).toContain("$25.50");
+		expect(json).toContain("then $40.00");
 		expect(card.children.at(-1)?.type).toBe("actions");
 	});
 
@@ -134,8 +135,9 @@ describe("approvalCard with structured previews", () => {
 			(child) => child.type === "text" && child.style === "muted",
 		);
 		const mutedJson = JSON.stringify(muted);
-		expect(mutedJson).toContain("Redirect: if_required");
-		expect(mutedJson).toContain("Invoice: enabled, draft invoice");
+		expect(mutedJson).toContain("redirect: if_required");
+		expect(mutedJson).toContain("billed by invoice");
+		expect(mutedJson).toContain("draft invoice");
 		expect(JSON.stringify(card.children)).not.toContain("Environment");
 	});
 

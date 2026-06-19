@@ -1,25 +1,17 @@
-import { describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { ApiVersion, ApiVersionClass, AppEnv } from "@autumn/shared";
+import type { SQSClient } from "@aws-sdk/client-sqs";
 import { Hono } from "hono";
 import type { AutumnContext, HonoEnv } from "@/honoUtils/HonoEnv.js";
+import { getSqsClient } from "@/queue/initSqs.js";
+
+const trackAsyncQueueUrl =
+	"https://sqs.eu-west-1.amazonaws.com/123456789012/track-async-dev.fifo";
 
 const mockState = {
-	runAsyncTrackCalls: [] as Record<string, unknown>[],
+	queueCommands: [] as Record<string, unknown>[],
+	originalSend: null as null | SQSClient["send"],
 };
-
-mock.module("@/internal/balances/track/runAsyncTrack.js", () => ({
-	runAsyncTrack: async (args: Record<string, unknown>) => {
-		mockState.runAsyncTrackCalls.push(args);
-	},
-}));
-
-mock.module("@/internal/balances/track/runTrackWithRollout.js", () => ({
-	runTrackWithRollout: async () => ({ value: 1 }),
-}));
-
-mock.module("@/internal/balances/track/utils/getFeatureDeductions.js", () => ({
-	getTrackFeatureDeductionsForBody: () => [],
-}));
 
 import { handleTrack } from "@/internal/balances/handlers/handleTrack.js";
 
@@ -29,7 +21,7 @@ const createCtx = (): AutumnContext =>
 		org: { id: "org_123" },
 		env: AppEnv.Sandbox,
 		apiVersion: new ApiVersionClass(ApiVersion.V2_1),
-		features: [],
+		features: [{ id: "messages" }],
 		extraLogs: {},
 		scopes: [],
 		skipCache: false,
@@ -52,9 +44,29 @@ const createApp = ({ ctx }: { ctx: AutumnContext }) => {
 };
 
 describe("handleTrack", () => {
-	test("returns 202 success for async track", async () => {
-		mockState.runAsyncTrackCalls = [];
+	const originalEnv = process.env.TRACK_ASYNC_SQS_QUEUE_URL;
 
+	beforeEach(() => {
+		mockState.queueCommands = [];
+		process.env.TRACK_ASYNC_SQS_QUEUE_URL = trackAsyncQueueUrl;
+		const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
+		mockState.originalSend = sqsClient.send.bind(sqsClient);
+		sqsClient.send = (async (command: { input: Record<string, unknown> }) => {
+			mockState.queueCommands.push(command.input);
+			return {};
+		}) as typeof sqsClient.send;
+	});
+
+	afterEach(() => {
+		if (mockState.originalSend) {
+			const sqsClient = getSqsClient({ queueUrl: trackAsyncQueueUrl });
+			sqsClient.send = mockState.originalSend as typeof sqsClient.send;
+			mockState.originalSend = null;
+		}
+		process.env.TRACK_ASYNC_SQS_QUEUE_URL = originalEnv;
+	});
+
+	test("returns 202 success for async track", async () => {
 		const response = await createApp({ ctx: createCtx() }).request("/track", {
 			method: "POST",
 			headers: { "Content-Type": "application/json" },
@@ -68,6 +80,10 @@ describe("handleTrack", () => {
 
 		expect(response.status).toBe(202);
 		expect(await response.json()).toEqual({ success: true });
-		expect(mockState.runAsyncTrackCalls).toHaveLength(1);
+		expect(mockState.queueCommands).toHaveLength(1);
+		expect(mockState.queueCommands[0]).toMatchObject({
+			QueueUrl: trackAsyncQueueUrl,
+			MessageDeduplicationId: "req_track_1",
+		});
 	});
 });
