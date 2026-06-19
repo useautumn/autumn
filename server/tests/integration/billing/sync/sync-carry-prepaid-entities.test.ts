@@ -73,10 +73,14 @@ const activeProductsOnEntity = async ({
 	);
 };
 
-const messagesBalance = (cusProduct: FullCusProduct): number | undefined =>
-	cusProduct.customer_entitlements.find(
-		(ce) => ce.entitlement?.feature?.id === MESSAGES,
-	)?.balance ?? undefined;
+// The included/prepaid component carries the largest balance; the pay-per-use
+// overage component sits at 0 / negative. Pick the max to read the included one.
+const messagesBalance = (cusProduct: FullCusProduct): number | undefined => {
+	const balances = cusProduct.customer_entitlements
+		.filter((ce) => ce.entitlement?.feature?.id === MESSAGES)
+		.map((ce) => ce.balance ?? 0);
+	return balances.length ? Math.max(...balances) : undefined;
+};
 
 test(
 	chalk.yellowBright(
@@ -215,5 +219,126 @@ test(
 				cp.product_id === free.id && cp.status === CusProductStatus.Active,
 		);
 		expect(activeFree.length).toBe(0);
+	},
+);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Multi-component feature: AI Credits as an included allowance (5000) PLUS a
+// pay-per-use overage ($/credit) — two cusEnts under the same feature id, like
+// prod. The carry must match the included component (not collide with the
+// overage row) and leave the meter-billed overage alone.
+// ═══════════════════════════════════════════════════════════════════════════
+
+test(
+	chalk.yellowBright(
+		"sync-v2 carry-usage: included + pay-per-use overage on one feature carries the included component",
+	),
+	async () => {
+		const customerId = "sync-carry-dual-component";
+
+		const free = products.base({
+			id: "free",
+			items: [items.monthlyMessages({ includedUsage: 50 })],
+			isDefault: true,
+		});
+		const pro = products.pro({
+			id: "pro",
+			items: [
+				items.monthlyMessages({ includedUsage: 5000 }),
+				items.consumableMessages({ includedUsage: 0, price: 0.01 }),
+			],
+		});
+
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [free, pro] }),
+				s.entities({
+					count: 2,
+					featureId: TestFeature.Users,
+					defaultGroup: customerId,
+				}),
+			],
+			actions: [
+				s.attach({ productId: pro.id, entityIndex: 0 }),
+				s.attach({ productId: pro.id, entityIndex: 1 }),
+			],
+		});
+
+		const full = await CusService.getFull({ ctx, idOrInternalId: customerId });
+		const entityList = await EntityService.list({
+			db: ctx.db,
+			internalCustomerId: full.internal_id,
+		});
+		const entityX = entityList[0];
+		const entityY = entityList[1];
+		const proSubId = full.customer_products.find(
+			(cp) => cp.product_id === pro.id,
+		)?.subscription_ids?.[0];
+		if (!proSubId) throw new Error("no Pro sub id");
+
+		// Delink X → Free auto-reattaches on X.
+		await autumnV1.subscriptions.update({
+			customer_id: customerId,
+			product_id: pro.id,
+			entity_id: entityX.id ?? undefined,
+			cancel_action: "cancel_immediately",
+			no_billing_changes: true,
+		});
+		await new Promise((r) => setTimeout(r, 1500));
+
+		await autumnV1.track({
+			customer_id: customerId,
+			entity_id: entityY.id ?? undefined,
+			feature_id: MESSAGES,
+			value: 500,
+		});
+		await autumnV1.track({
+			customer_id: customerId,
+			entity_id: entityX.id ?? undefined,
+			feature_id: MESSAGES,
+			value: 40,
+		});
+		await new Promise((r) => setTimeout(r, 2000));
+
+		await autumnV1.post("/billing.sync_v2", {
+			customer_id: customerId,
+			stripe_subscription_id: proSubId,
+			phases: [
+				{
+					starts_at: "now",
+					plans: [
+						{
+							plan_id: pro.id,
+							entity_id: entityY.id ?? undefined,
+							expire_previous: true,
+						},
+						{
+							plan_id: pro.id,
+							entity_id: entityX.id ?? undefined,
+							expire_previous: true,
+						},
+					],
+				},
+			],
+		} satisfies SyncParamsV1);
+
+		// Included component carries on both entities; X from Free (40 used).
+		const proY = await activeProductsOnEntity({
+			customerId,
+			productId: pro.id,
+			internalEntityId: entityY.internal_id,
+		});
+		expect(proY.length).toBe(1);
+		expect(messagesBalance(proY[0])).toBe(4500);
+
+		const proX = await activeProductsOnEntity({
+			customerId,
+			productId: pro.id,
+			internalEntityId: entityX.internal_id,
+		});
+		expect(proX.length).toBe(1);
+		expect(messagesBalance(proX[0])).toBe(4960);
 	},
 );
