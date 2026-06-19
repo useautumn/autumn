@@ -224,3 +224,60 @@ test.concurrent(
 		});
 	},
 );
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Assertion 4 — V0 wire shape (dashboard path)
+//
+// The dashboard sends V0-shaped params (product_id, free_trial) that the server
+// maps to V1. carry_over_usages must survive the V0 parse + version mapping.
+// Same flow as assertion 1 but via the V0 client.
+// ═══════════════════════════════════════════════════════════════════════════
+test.concurrent(
+	`${chalk.yellowBright("trial->paid: carry_over_usages survives the V0 param mapping")}`,
+	async () => {
+		const customerId = "update-cou-v0";
+		const proTrial = products.proWithTrial({
+			id: "pro-trial-cou-v0",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+			trialDays: 14,
+		});
+
+		const { autumnV1 } = await initScenario({
+			customerId,
+			setup: [
+				s.customer({ testClock: true, paymentMethod: "success" }),
+				s.products({ list: [proTrial] }),
+			],
+			actions: [
+				s.attach({ productId: proTrial.id }),
+				s.advanceTestClock({ days: 7 }),
+			],
+		});
+
+		await autumnV1.track({
+			customer_id: customerId,
+			feature_id: TestFeature.Messages,
+			value: 40,
+		});
+		await new Promise((resolve) => setTimeout(resolve, REDIS_SYNC_MS));
+
+		await autumnV1.subscriptions.update(
+			{
+				customer_id: customerId,
+				product_id: proTrial.id,
+				free_trial: null,
+				carry_over_usages: { enabled: false },
+			},
+			{ timeout: 5000 },
+		);
+		await new Promise((resolve) => setTimeout(resolve, REDIS_SYNC_MS));
+
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+		expectCustomerFeatureCorrect({
+			customer,
+			featureId: TestFeature.Messages,
+			balance: 100,
+			usage: 0,
+		});
+	},
+);
