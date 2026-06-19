@@ -72,6 +72,29 @@ export default defineConfig({
 	},
 
 	optimizeDeps: {
+		// Pre-bundle base-ui subpaths up front. They are pulled in transitively by
+		// excluded workspace deps, so without this Vite discovers them mid-session
+		// and re-optimizes, invalidating already-served chunks (504 Outdated Dep).
+		include: [
+			"@base-ui/react/accordion",
+			"@base-ui/react/button",
+			"@base-ui/react/checkbox",
+			"@base-ui/react/dialog",
+			"@base-ui/react/field",
+			"@base-ui/react/menu",
+			"@base-ui/react/merge-props",
+			"@base-ui/react/popover",
+			"@base-ui/react/preview-card",
+			"@base-ui/react/radio",
+			"@base-ui/react/radio-group",
+			"@base-ui/react/scroll-area",
+			"@base-ui/react/select",
+			"@base-ui/react/separator",
+			"@base-ui/react/switch",
+			"@base-ui/react/tabs",
+			"@base-ui/react/tooltip",
+			"@base-ui/react/use-render",
+		],
 		// Exclude workspace dependencies from pre-bundling to avoid cache issues
 		exclude: [
 			"@autumn/shared",

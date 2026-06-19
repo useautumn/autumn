@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/v2/buttons/Button";
 import { Input } from "@/components/v2/inputs/Input";
-import { useOrg } from "@/hooks/common/useOrg";
+import { setActiveOrg, useOrg } from "@/hooks/common/useOrg";
 import { authClient, useListOrganizations } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
@@ -45,9 +45,7 @@ export const DeleteOrgPopover = () => {
 
 		// Other org is now the active org
 		const otherOrg = organizations.find((o) => o.id !== org.id);
-		await authClient.organization.setActive({
-			organizationId: otherOrg!.id,
-		});
+		await setActiveOrg(otherOrg!.id);
 
 		const { data, error } = await authClient.organization.delete({
 			organizationId: org.id,

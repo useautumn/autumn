@@ -55,8 +55,13 @@ export const getDefaultOrgPath = (
 
 export const getSafeNextPath = (searchParams: URLSearchParams) => {
 	const next = searchParams.get("next");
-	return next?.startsWith("/") && !next.startsWith("//") ? next : "/";
+	return isSafeLocalPath(next) ? next : "/";
 };
+
+// Guard against open redirects: only allow same-origin paths, rejecting
+// protocol-relative ("//host") and backslash-trick ("/\host") URLs.
+export const isSafeLocalPath = (path?: string | null): path is string =>
+	!!path && path.startsWith("/") && !path.startsWith("//") && path[1] !== "\\";
 
 const appendSearch = (path: string, search: string) => {
 	const query = search.replace(/^\?/, "");

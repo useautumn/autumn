@@ -3,6 +3,7 @@ import { type ApiVersion, AppEnv } from "@autumn/shared";
 import axios from "axios";
 import { useMemo } from "react";
 import { authClient } from "@/lib/auth-client";
+import { setActiveOrg } from "@/lib/orgSync";
 import { useEnv } from "@/utils/envUtils";
 
 const defaultParams = {
@@ -60,9 +61,7 @@ export function useAxiosInstance(params?: {
 								(org) => org.id !== error.response.data.orgId,
 							);
 							if (nextOrg) {
-								await authClient.organization.setActive({
-									organizationId: nextOrg.id,
-								});
+								await setActiveOrg(nextOrg.id);
 								window.location.href = "/";
 								return Promise.reject(
 									new Error("Redirecting to available organization"),

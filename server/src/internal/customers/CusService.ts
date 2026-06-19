@@ -297,7 +297,6 @@ export class CusService {
 
 		const sharedArgs = {
 			internalCustomerId: resolvedInternalId,
-			inStatuses: RELEVANT_STATUSES,
 			showExpired: params.show_expired,
 			entityId: params.entity_id,
 			kind: params.kind,
