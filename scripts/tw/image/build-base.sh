@@ -325,5 +325,30 @@ pg_ctl -D "$PGDATA" -m fast -w stop
 log "bun install at repo root ($REPO_ROOT)"
 ( cd "$REPO_ROOT" && bun install --frozen-lockfile )
 
+# ---------------------------------------------------------------------------
+# 9. Playwright Chromium for browser tests (Stripe checkout / setup-payment).
+#    ~68 test files drive a browser. With USE_KERNEL_BROWSER unset the server
+#    uses the LOCAL Playwright path (`chromium.launch()`), which resolves the
+#    binary via playwright-core's `chromium.executablePath()` — so we bake the
+#    matching Chromium build (+ its runtime shared libs) into the BASE snapshot.
+#    No Kernel, no network at test time. Pin the `playwright` CLI to the same
+#    version as `playwright-core` in server/package.json so the browser revision
+#    matches what the runtime expects.
+# ---------------------------------------------------------------------------
+log "Installing Chromium runtime libraries (AL2023)"
+# --skip-broken so a renamed/absent lib never fails the whole base build; a truly
+# missing lib will surface clearly as a chromium launch error at test time.
+sudo dnf install -y --setopt=install_weak_deps=False --skip-broken \
+  nss nspr atk at-spi2-atk at-spi2-core cups-libs libdrm libxkbcommon \
+  libXcomposite libXdamage libXext libXfixes libXrandr libXrender libXi \
+  libXtst libXScrnSaver mesa-libgbm pango cairo alsa-lib gtk3 \
+  >/dev/null 2>&1 || log "WARN: some Chromium libraries may be missing"
+
+PLAYWRIGHT_VERSION="$(cd "$REPO_ROOT/server" && node -p "require('playwright-core/package.json').version" 2>/dev/null || echo "1.58.2")"
+log "Installing Playwright Chromium (playwright@$PLAYWRIGHT_VERSION) into ~/.cache/ms-playwright"
+( cd "$REPO_ROOT/server" && bunx "playwright@$PLAYWRIGHT_VERSION" install chromium ) \
+  || die "playwright chromium install failed"
+log "Chromium ready at $(cd "$REPO_ROOT/server" && bun -e 'import {chromium} from "playwright-core"; console.log(chromium.executablePath())' 2>/dev/null || echo "(path probe failed)")"
+
 log "BASE layer built. Paths: PGDATA=$PGDATA, BIN_DIR=$BIN_DIR, ELASTICMQ_CONF=$ELASTICMQ_CONF"
 log "Next: snapshot this filesystem -> base snapshot. Then warmup.sh per run."

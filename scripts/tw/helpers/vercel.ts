@@ -103,7 +103,11 @@ export const createWarmSandbox = async (
 					password: opts.source.password,
 					revision: opts.source.revision,
 				}
-			: { type: "git" as const, url: opts.source.url, revision: opts.source.revision }
+			: {
+					type: "git" as const,
+					url: opts.source.url,
+					revision: opts.source.revision,
+				}
 		: undefined;
 	const sandbox = await Sandbox.create({
 		name: opts.name,
@@ -212,9 +216,23 @@ export const isSandboxStreamClosed = (error: unknown): boolean => {
 	if (code === SANDBOX_STREAM_CLOSED_CODE) {
 		return true;
 	}
+	// Vercel's `cmd.logs()` paginator occasionally fails to decompress a log
+	// chunk (`BrotliDecompressionError`) — a transient hiccup on the LOG fetch,
+	// not the command itself. Treat it like a closed stream so the opted-in
+	// forward streams (boot/warmup/ingress) swallow it instead of spewing it.
+	if (code === "BrotliDecompressionError") {
+		return true;
+	}
 	const message =
-		error instanceof Error ? error.message : typeof error === "string" ? error : "";
-	return message.includes("Sandbox stream was closed");
+		error instanceof Error
+			? error.message
+			: typeof error === "string"
+				? error
+				: "";
+	return (
+		message.includes("Sandbox stream was closed") ||
+		message.includes("BrotliDecompressionError")
+	);
 };
 
 /** Result of a streamed remote command. */
