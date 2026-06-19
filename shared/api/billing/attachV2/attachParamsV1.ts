@@ -2,6 +2,7 @@ import { BillingParamsBaseV1Schema } from "@api/billing/common/billingParamsBase
 import { z } from "zod/v4";
 import { PlanTimingSchema } from "../../../models/billingModels/context/attachBillingContext";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
+import { CarryOverUsagesSchema } from "../common/carryOverUsages";
 import { CustomLineItemSchema } from "../common/customLineItem";
 import { UnixMsTimestampSchema } from "../common/unixMsTimestamp";
 import { AttachDiscountSchema } from "./attachDiscount";
@@ -72,20 +73,7 @@ export const AttachParamsV1Schema = BillingParamsBaseV1Schema.extend({
 			description: "Whether to carry over balances from the previous plan.",
 		}),
 
-	carry_over_usages: z
-		.object({
-			enabled: z.boolean().meta({
-				description: "Whether to carry over usages from the previous plan.",
-			}),
-			feature_ids: z.array(z.string()).optional().meta({
-				description:
-					"The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over.",
-			}),
-		})
-		.optional()
-		.meta({
-			description: "Whether to carry over usages from the previous plan.",
-		}),
+	carry_over_usages: CarryOverUsagesSchema,
 
 	metadata: z.record(z.string(), z.string()).optional().meta({
 		description:
