@@ -421,14 +421,14 @@ const buildWorkerEnv = ({
 		TW_FORCE_FULL_SUBJECT_ROLLOUT: "1",
 	};
 
-	// Browser tests (e.g. invoice checkout) use Kernel CLOUD browsers when
-	// USE_KERNEL_BROWSER + KERNEL_API_KEY are set (browserConfig.ts) — so no
-	// Chromium has to be installed in every µVM. Pass them through from the
-	// orchestrator's env (Infisical) when present; harmless for workers running no
-	// browser tests (they never touch browserPool). Each test file opens + tears
-	// down its own Kernel session, so workers stay isolated.
-	if (process.env.KERNEL_API_KEY) {
-		env.USE_KERNEL_BROWSER = process.env.USE_KERNEL_BROWSER ?? "1";
+	// Browser tests (Stripe checkout / setup-payment) use the LOCAL Playwright
+	// Chromium baked into the image (build-base §9). `USE_KERNEL_BROWSER` stays
+	// UNSET so browserConfig.ts takes the local `chromium.launch()` path (verified
+	// launching v148 in-µVM). Kernel cloud browsers were crashing every checkout
+	// ("[kernelExecute] … Target crashed"). Opt back into Kernel — e.g. to debug a
+	// browser-specific issue — with TW_USE_KERNEL=1 + KERNEL_API_KEY.
+	if (process.env.TW_USE_KERNEL && process.env.KERNEL_API_KEY) {
+		env.USE_KERNEL_BROWSER = "1";
 		env.KERNEL_API_KEY = process.env.KERNEL_API_KEY;
 	}
 
