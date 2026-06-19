@@ -36,11 +36,18 @@ export const CustomButtonsSection = () => {
 	const openDialog = (button: CustomButton | null) =>
 		setDialog((prev) => ({ open: true, button, nonce: prev.nonce + 1 }));
 
-	const handleSubmit = (values: CustomButtonForm) =>
+	const handleSubmit = (values: CustomButtonForm) => {
+		const { nonce } = dialog;
 		save.mutate(
 			{ id: dialog.button?.id ?? null, values },
-			{ onSuccess: () => setDialog((prev) => ({ ...prev, open: false })) },
+			{
+				onSuccess: () =>
+					setDialog((prev) =>
+						prev.nonce === nonce ? { ...prev, open: false } : prev,
+					),
+			},
 		);
+	};
 
 	const handleDelete = () => {
 		if (!deleteDialog.button) return;
