@@ -96,6 +96,21 @@ import {
 	runStreaming,
 	snapshotAndStop,
 } from "../helpers/vercel.ts";
+import { runSwarmTests } from "../tui/runnerCore.ts";
+import {
+	bumpAccountDone,
+	bumpSandboxDone,
+	bumpStripeDone,
+	bumpWorkerReady,
+	getTuiState,
+	resetTui,
+	setFanoutTotals,
+	setPhase,
+	setRunMeta,
+	setSummary,
+	setTeardownAccounts,
+	setTeardownSandboxes,
+} from "../tui/store.ts";
 import type { TwRunArgs, WorkerHandle } from "../types.ts";
 import { READY_SENTINEL } from "../worker/boot.ts";
 
@@ -763,6 +778,7 @@ const provisionWorker = async ({
 		orgId,
 	});
 	await registry.addSubAccount(runId, accountId);
+	bumpStripeDone();
 
 	// 2. Fork the worker with its per-worker env (fork does NOT copy env). The SDK
 	//    forks from the warm parent's NAME (its current snapshot is the warm one).
@@ -782,6 +798,7 @@ const provisionWorker = async ({
 	log(`worker ${name}: booting${isSvixShard ? " (svix shard)" : ""}`);
 	await waitForReady({ sandbox, name, signal });
 	log(`worker ${name}: READY`);
+	bumpWorkerReady();
 
 	// 5. Push the `{ accountId → workerUrl }` mapping to the shared ingress so the
 	//    one platform Connect webhook routes THIS sub-account's events here. Because
@@ -854,10 +871,12 @@ const teardown = async ({
 		`teardown: ${entry.subAccounts.length} sub-account(s), ${entry.webhooks.length} webhook(s), ${entry.sandboxes.length} sandbox(es)`,
 	);
 
+	setTeardownAccounts(0, entry.subAccounts.length);
 	for (const accountId of entry.subAccounts) {
 		await timeBoxed(`delete sub-account ${accountId}`, () =>
 			deleteSubAccount(accountId),
 		);
+		bumpAccountDone();
 	}
 
 	// Delete recorded webhooks (the shared platform Connect webhook). Unlike a
@@ -878,6 +897,7 @@ const teardown = async ({
 	// Read each sandbox's final usage metrics RIGHT BEFORE deleting it, so we can
 	// estimate the run's cost (the SDK exposes usage, not dollars — see cost.ts).
 	const usages: SandboxUsage[] = [];
+	setTeardownSandboxes(0, entry.sandboxes.length);
 	for (const sandbox of entry.sandboxes) {
 		await timeBoxed(`delete sandbox ${sandbox.name}`, async () => {
 			const instance = await getSandboxByName(sandbox.name);
@@ -888,6 +908,7 @@ const teardown = async ({
 				await deleteSandbox(sandbox.name);
 			}
 		});
+		bumpSandboxDone();
 	}
 	if (usages.length > 0) {
 		lastRunCost = computeCost(usages);
@@ -956,6 +977,30 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 	await registry.createRun({ owner, runId, ref: args.ref });
 	log(`run ${runId} (owner=${owner}, ref=${args.ref}, env=${TW_ENV})`);
 
+	// ----- TUI ------------------------------------------------------------
+	// Mount the opentui two-pane TUI for the WHOLE lifecycle (warm → fan-out → run
+	// → teardown → summary). Quiet mode routes ALL sink output to the run log file
+	// + the logs pane so the TUI owns the terminal. Only for an interactive TTY;
+	// non-TTY (CI/piped) keeps the plain stdout logging. The JSX module is
+	// dynamic-imported (the scripts tsconfig compiles only `.ts`, no `--jsx`).
+	const swarmTarget = args.groupsOrPatterns.join(" ") || "core";
+	const useTui = Boolean(process.stdout.isTTY);
+	let tui:
+		| { mountTui: () => Promise<void>; unmountTui: () => void }
+		| undefined;
+	if (useTui) {
+		const mountSpecifier = "../tui/mount.tsx";
+		tui = (await import(mountSpecifier)) as {
+			mountTui: () => Promise<void>;
+			unmountTui: () => void;
+		};
+		resetTui();
+		setRunMeta(swarmTarget, effectiveWorkers);
+		setPhase("warm");
+		await tui.mountTui();
+		enableQuietMode();
+	}
+
 	// ----- SIGINT/SIGTERM guard (plan §9a) -----------------------------------
 	const abortController = new AbortController();
 	let teardownStarted = false;
@@ -976,6 +1021,9 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		}
 		teardownStarted = true;
 		forceExitArmed = true;
+		// Restore the terminal before printing teardown logs.
+		tui?.unmountTui();
+		disableQuietMode();
 		warn(`${signalName}: stopping scheduling and tearing down…`);
 		abortController.abort();
 		void (async () => {
@@ -1047,6 +1095,8 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		}
 
 		log(`fanning out ${effectiveWorkers} worker(s) from the warm snapshot`);
+		setPhase("fanout");
+		setFanoutTotals(effectiveWorkers);
 		const provisionTasks: Promise<ProvisionedWorker>[] = [];
 		for (let idx = 0; idx < effectiveWorkers; idx++) {
 			const isSvixShard = needsSvixShard && idx === 0;
@@ -1096,15 +1146,8 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		const resolveSandbox = (worker: WorkerHandle): Sandbox | undefined =>
 			sandboxByName.get(worker.name);
 
-		// Shared swarm metadata for the in-process Ink TUI — drives its header and the
-		// "full logs at …" pointer in the final summary, and (by its mere presence)
-		// tells the runner it is the swarm TUI rather than `bun t`.
-		const swarmTarget = args.groupsOrPatterns.join(" ") || "core";
-		const swarmMeta: SwarmRunMeta = {
-			target: swarmTarget,
-			workers: effectiveWorkers,
-			logFile: runLogFile,
-		};
+		// Drive the swarm TUI's RUN phase.
+		setPhase("run");
 
 		// Wall-clock of the RUN phase — the correct parallel-aware test duration
 		// (the per-file durations summed by the runner over-count by ~Nx).
@@ -1124,7 +1167,6 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			});
 			await runFiles(svixFiles, svixExecutor, {
 				maxParallel: Math.max(1, args.perWorker),
-				swarm: { ...swarmMeta, target: `${swarmTarget} (svix shard)` },
 			});
 			svixPool.close();
 		}
@@ -1154,23 +1196,65 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			);
 			await runFiles(normalFiles, normalExecutor, {
 				maxParallel: normalParallel,
-				swarm: swarmMeta,
 			});
 			normalPool.close();
 		}
 
 		lastRunWallMs = Date.now() - runPhaseStart;
 
+		// Worst verdict → process exit code, from the swarm store's per-file results.
+		const runResults = Array.from(getTuiState().files.values());
+		lastRunExitCode = runResults.some((file) => file.status === "failed")
+			? 1
+			: 0;
+
 		// ----- TEARDOWN -------------------------------------------------------
+		setPhase("teardown");
 		await teardown({ runId, skip: args.keep });
 		teardownDone = true;
 
-		// Correct, parallel-aware timing + a cost estimate (collected during teardown).
-		const costLine = lastRunCost ? ` · ${formatCost(lastRunCost)}` : "";
-		log(`tests wall-clock ${formatWall(lastRunWallMs)}${costLine}`);
+		// ----- SUMMARY --------------------------------------------------------
+		// Cost is collected DURING teardown, so read it here.
+		const costLine = lastRunCost ? formatCost(lastRunCost) : undefined;
+		let totalPassed = 0;
+		let totalFailed = 0;
+		let totalCrashed = 0;
+		for (const file of runResults) {
+			totalPassed += file.passed;
+			totalFailed += file.failed;
+			if (file.crashError) {
+				totalCrashed++;
+			}
+		}
+		setSummary({
+			passed: totalPassed,
+			failed: totalFailed,
+			crashed: totalCrashed,
+			wallMs: lastRunWallMs,
+			costLine,
+			logFile: runLogFile,
+		});
+		setPhase("done");
+
+		if (tui) {
+			// Hold the final summary on screen, then restore the terminal.
+			await sleep(2500);
+			tui.unmountTui();
+			disableQuietMode();
+		}
+		log(
+			`done — ${totalPassed} passed, ${totalFailed} failed, ${totalCrashed} crashed · ${formatWall(lastRunWallMs)}${costLine ? ` · ${costLine}` : ""}`,
+		);
+		if (runLogFile) {
+			log(`full run log: ${runLogFile}`);
+		}
 	} finally {
 		process.off("SIGINT", sigintHandler);
 		process.off("SIGTERM", sigtermHandler);
+		// Always restore the terminal (idempotent) — on an error path the TUI may
+		// still be mounted; tear it down so the error/teardown logs are visible.
+		tui?.unmountTui();
+		disableQuietMode();
 		if (!(teardownDone || teardownStarted)) {
 			// An error path that isn't a signal — still attempt teardown so a thrown
 			// warm-up/fan-out error doesn't leak the resources created so far.
@@ -1198,19 +1282,9 @@ const toSandboxPath = (localFile: string): string => {
 };
 
 /**
- * Hand a file set to the UNCHANGED sliding-window runner (`runWithExecutor`) and
- * resolve when it finishes — keeping the runner's `pLimit` window, parser, retry
- * phase and Ink TUI exactly as-is (plan §8).
- *
- * The runner is a self-contained CLI: on completion it calls `process.exit(code)`
- * inside the Ink app (`runTestsV2.tsx`). As an orchestrator we must run teardown
- * AFTER the tests finish, so we cannot let it terminate the process. We can't
- * modify the runner (it is owned by the runner-refactor step), so we intercept
- * `process.exit` for the duration of this phase: the runner's exit call is
- * captured as the run's pass/fail verdict and resolves this promise instead of
- * killing the process; `process.exit` is restored before we return so later
- * phases (teardown) behave normally. The captured non-zero code is preserved on
- * `process.exitCode` so the overall `bun tw` still exits non-zero on failures.
+ * The worst test verdict of the last run (0 = all passed, 1 = any file failed).
+ * `index.ts` propagates it to the process exit code. Computed after the RUN phase
+ * from the swarm store's per-file results.
  */
 let lastRunExitCode = 0;
 
@@ -1222,102 +1296,20 @@ export const getLastRunWallMs = (): number => lastRunWallMs;
 export const getLastRunCost = (): CostBreakdown | undefined => lastRunCost;
 
 /**
- * The runner lives in a `.tsx` (JSX) module; the scripts tsconfig's `include`
- * compiles only `.ts` files (not `.tsx`), so we resolve `runWithExecutor` via a
- * typed dynamic import — Bun handles the JSX at runtime, and the orchestrator
- * never type-checks the JSX module. The signature mirrors the runner's export.
+ * Run a file set through the headless swarm runner (`runSwarmTests`), which drives
+ * the opentui store. The pLimit window + two-phase retry + worker-death reschedule
+ * live in `tui/runnerCore.ts`; this is a thin await. `bun t` keeps its own Ink
+ * runner (`runTestsV2.tsx`) — the swarm no longer touches it.
  */
-/**
- * Swarm-only run metadata (set by `bun tw`, never by `bun t`). Its presence tells
- * the runner it is the IN-PROCESS swarm TUI — so it may render a swarm header + the
- * run log file path in its final summary. `bun t` passes no `swarm`, so its
- * semantics and output are unchanged.
- */
-type SwarmRunMeta = {
-	target: string;
-	workers: number;
-	logFile: string;
-};
-
-type RunWithExecutor = (
-	testFiles: string[],
-	executor: TestExecutor,
-	opts: { maxParallel: number; verbose?: boolean; swarm?: SwarmRunMeta },
-) => void;
-
 const runFiles = async (
 	files: string[],
 	executor: TestExecutor,
-	opts: { maxParallel: number; swarm?: SwarmRunMeta },
+	opts: { maxParallel: number },
 ): Promise<void> => {
 	if (files.length === 0) {
 		return;
 	}
-
-	// Non-literal specifier: keeps the typechecker from pulling the JSX module
-	// into this (`.ts`-only) program (`--jsx` is not set here), while Bun still
-	// resolves it relative to this file at runtime.
-	const runnerSpecifier = "../../testScripts/runTestsV2.tsx";
-	const runnerModule = (await import(runnerSpecifier)) as {
-		runWithExecutor: RunWithExecutor;
-	};
-	const { runWithExecutor } = runnerModule;
-
-	// Quiet mode for the duration of the in-process Ink TUI: ALL orchestrator,
-	// ingress, and worker-boot logging routes to the run log file so Ink is the
-	// SOLE stdout writer. Restored in `finally` so teardown logs hit stdout again.
-	enableQuietMode();
-	try {
-		await runInk(runWithExecutor, files, executor, opts);
-	} finally {
-		disableQuietMode();
-	}
-};
-
-const runInk = async (
-	runWithExecutor: RunWithExecutor,
-	files: string[],
-	executor: TestExecutor,
-	opts: { maxParallel: number; swarm?: SwarmRunMeta },
-): Promise<void> => {
-	await new Promise<void>((resolve) => {
-		const realExit = process.exit.bind(process);
-		let restored = false;
-		const restore = (): void => {
-			if (!restored) {
-				restored = true;
-				process.exit = realExit;
-			}
-		};
-
-		// Capture the runner's intended exit instead of terminating: the runner is
-		// a self-contained CLI that calls `process.exit(code)` on completion, but
-		// the orchestrator must run teardown AFTER the tests finish. We can't modify
-		// the runner, so we intercept `process.exit` for the duration of this phase
-		// — its exit call resolves this promise (and is recorded as the verdict) —
-		// then restore `process.exit` so teardown behaves normally.
-		(process as unknown as { exit: (code?: number) => never }).exit = ((
-			code?: number,
-		): never => {
-			if (typeof code === "number" && code !== 0) {
-				lastRunExitCode = code;
-			}
-			restore();
-			resolve();
-			return undefined as never;
-		}) as typeof process.exit;
-
-		try {
-			runWithExecutor(files, executor, {
-				maxParallel: opts.maxParallel,
-				swarm: opts.swarm,
-			});
-		} catch (error) {
-			restore();
-			warn(`runner threw during render: ${(error as Error).message}`);
-			resolve();
-		}
-	});
+	await runSwarmTests(files, executor, { maxParallel: opts.maxParallel });
 };
 
 /** Propagate the worst test verdict to the process exit code (set in `index.ts`). */

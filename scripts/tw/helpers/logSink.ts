@@ -27,6 +27,41 @@ let logFilePath: string | undefined;
 let warnedFileFailure = false;
 
 /**
+ * Optional live subscriber (the opentui TUI's raw-logs pane). When set, every
+ * complete line is delivered to it AND the terminal is left untouched (the TUI
+ * owns stdout), while the run log file still captures the full firehose.
+ */
+let logSubscriber: ((line: string) => void) | undefined;
+let lineBuffer = "";
+
+const feedSubscriber = (text: string): void => {
+	if (!logSubscriber) {
+		return;
+	}
+	lineBuffer += text;
+	let newlineIndex = lineBuffer.indexOf("\n");
+	while (newlineIndex >= 0) {
+		logSubscriber(lineBuffer.slice(0, newlineIndex));
+		lineBuffer = lineBuffer.slice(newlineIndex + 1);
+		newlineIndex = lineBuffer.indexOf("\n");
+	}
+};
+
+/**
+ * Register (or clear with `undefined`) the live logs subscriber. Setting one puts
+ * the sink in "TUI owns the terminal" mode: lines flow to the subscriber + log
+ * file, never to stdout.
+ */
+export const setLogSubscriber = (
+	subscriber: ((line: string) => void) | undefined,
+): void => {
+	logSubscriber = subscriber;
+	if (!subscriber) {
+		lineBuffer = "";
+	}
+};
+
+/**
  * Point the sink at a run log file. Creates the parent directory. Called by the
  * orchestrator right before it mounts the Ink runner, so quiet-mode writes have
  * somewhere to land.
@@ -61,6 +96,10 @@ export const getLogFile = (): string | undefined => logFilePath;
  * logging failure must not break the run.
  */
 export const sink = (text: string): void => {
+	// Live TUI logs pane (line-buffered). Independent of file/stdout routing.
+	feedSubscriber(text);
+
+	// The run log file keeps the full firehose whenever quiet mode is on.
 	if (quietMode && logFilePath) {
 		try {
 			appendFileSync(logFilePath, text);
@@ -72,6 +111,11 @@ export const sink = (text: string): void => {
 				);
 			}
 		}
+		return;
+	}
+
+	// Only touch the terminal when nothing else owns it (no TUI subscriber).
+	if (logSubscriber) {
 		return;
 	}
 	process.stdout.write(text);
