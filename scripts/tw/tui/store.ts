@@ -50,6 +50,16 @@ export type TuiState = {
 	/** WARM-UP: single elided activity line + whether we're building vs reusing cache. */
 	warmActivity: string;
 	warmBuilding: boolean;
+	/**
+	 * Monotonic warm-up stage index (see {@link WARM_STAGE_PATTERNS}); -1 until the
+	 * first recognized marker. Drives the dashboard's warm-up stepper so the
+	 * snapshot/build phase shows real per-stage progress instead of looking frozen.
+	 */
+	warmStage: number;
+	/** Epoch-ms the CURRENT phase started — lets the UI show a live elapsed timer. */
+	phaseStartedAt: number;
+	/** Latest non-empty log line in ANY phase — the dashboard's activity ticker. */
+	lastLine: string;
 	/** FAN-OUT progress. */
 	stripeDone: number;
 	stripeTotal: number;
@@ -73,12 +83,38 @@ export type TuiState = {
 
 const MAX_LOG_LINES = 5000;
 
+/**
+ * Ordered warm-up stage matchers, scoped to the actual `[tw-build-base]` /
+ * `[tw-warmup]` script output (NOT the orchestrator's own `[tw]` summary lines,
+ * which mention every stage at once and would jump the stepper to the end). The
+ * index of the highest matching pattern becomes the (monotonic) `warmStage`.
+ *
+ * Labels for these indices live in the dashboard (apps/testbench Overall view) —
+ * keep the two in the same order:
+ *   0 base image · 1 checkout · 2 install · 3 migrate · 4 seed · 5 snapshot
+ */
+const WARM_STAGE_PATTERNS: ((line: string) => boolean)[] = [
+	(l) => l.includes("[tw-build-base]"),
+	(l) =>
+		l.includes("[tw-warmup]") &&
+		(l.includes("Ensuring working tree") || l.includes("HEAD at")),
+	(l) => l.includes("[tw-warmup]") && l.includes("bun install"),
+	(l) => l.includes("[tw-warmup]") && l.includes("migrate"),
+	(l) => l.includes("[tw-warmup]") && l.includes("Seeding"),
+	(l) =>
+		l.includes("[tw-warmup]") &&
+		(l.includes("snapshot") || l.includes("WARM layer ready")),
+];
+
 const state: TuiState = {
 	phase: "warm",
 	target: "",
 	workers: 0,
 	warmActivity: "",
 	warmBuilding: false,
+	warmStage: -1,
+	phaseStartedAt: Date.now(),
+	lastLine: "",
 	stripeDone: 0,
 	stripeTotal: 0,
 	workersReady: 0,
@@ -107,6 +143,9 @@ export const resetTui = (): void => {
 	state.workers = 0;
 	state.warmActivity = "";
 	state.warmBuilding = false;
+	state.warmStage = -1;
+	state.phaseStartedAt = Date.now();
+	state.lastLine = "";
 	state.stripeDone = 0;
 	state.stripeTotal = 0;
 	state.workersReady = 0;
@@ -124,6 +163,7 @@ export const resetTui = (): void => {
 
 export const setPhase = (phase: TuiPhase): void => {
 	state.phase = phase;
+	state.phaseStartedAt = Date.now();
 };
 
 export const setRunMeta = (target: string, workers: number): void => {
@@ -226,10 +266,23 @@ export const appendLog = (line: string): void => {
 	if (state.logs.length > MAX_LOG_LINES) {
 		state.logs.splice(0, state.logs.length - MAX_LOG_LINES);
 	}
-	// During warm-up the elided activity line tracks the latest build/log line.
+	const trimmed = line.trim();
+	if (trimmed) {
+		state.lastLine = trimmed;
+	}
+	// During warm-up the elided activity line tracks the latest build/log line,
+	// and the monotonic stage stepper advances off recognized script markers.
 	if (state.phase === "warm" && line.trim()) {
 		state.warmActivity = line.trim();
 		state.warmBuilding = true;
+		for (let i = WARM_STAGE_PATTERNS.length - 1; i >= 0; i--) {
+			if (WARM_STAGE_PATTERNS[i](line)) {
+				if (i > state.warmStage) {
+					state.warmStage = i;
+				}
+				break;
+			}
+		}
 	}
 };
 

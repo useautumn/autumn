@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -6,6 +7,105 @@ import {
 	ChartTooltipContent,
 } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
+
+/** mm:ss-style live elapsed timer, re-rendering once a second from `since` (epoch ms). */
+export function Elapsed({ since }: { since: number }) {
+	const [, tick] = useState(0);
+	useEffect(() => {
+		const id = setInterval(() => tick((n) => n + 1), 1000);
+		return () => clearInterval(id);
+	}, []);
+	const s = Math.max(0, Math.round((Date.now() - since) / 1000));
+	const m = Math.floor(s / 60);
+	return (
+		<span className="font-mono tabular-nums">
+			{m > 0 ? `${m}m${String(s % 60).padStart(2, "0")}s` : `${s}s`}
+		</span>
+	);
+}
+
+/** A sweeping bar for work with no countable total (warm build / snapshot). */
+export function IndeterminateBar({ color = "bg-sandbox" }: { color?: string }) {
+	return (
+		<div className="relative h-2 w-full overflow-hidden rounded-full bg-muted">
+			<span className={cn("tb-indeterminate", color)} />
+		</div>
+	);
+}
+
+/** Warm-up stages — labels MUST stay in step with WARM_STAGE_PATTERNS (store.ts). */
+const WARM_STAGES = [
+	"base image",
+	"checkout",
+	"install",
+	"migrate",
+	"seed",
+	"snapshot",
+];
+
+/** Horizontal stepper marking warm-up stages done / active / pending. */
+export function WarmStepper({ stage }: { stage: number }) {
+	return (
+		<div className="flex flex-wrap items-center gap-x-1.5 gap-y-1.5">
+			{WARM_STAGES.map((label, i) => {
+				const done = i < stage;
+				const active = i === stage;
+				return (
+					<span className="flex items-center gap-1.5" key={label}>
+						<span
+							className={cn(
+								"flex size-4 items-center justify-center rounded-full border text-[9px] tabular-nums",
+								done && "border-green-500 bg-green-500/15 text-green-500",
+								active &&
+									"animate-pulse border-sandbox bg-sandbox/15 text-sandbox",
+								!(done || active) && "border-border text-subtle",
+							)}
+						>
+							{done ? "✓" : i + 1}
+						</span>
+						<span
+							className={cn(
+								"text-xs",
+								active && "text-foreground",
+								done && "text-muted-foreground",
+								!(done || active) && "text-subtle",
+							)}
+						>
+							{label}
+						</span>
+						{i < WARM_STAGES.length - 1 ? (
+							<span className="text-subtle text-xs">·</span>
+						) : null}
+					</span>
+				);
+			})}
+		</div>
+	);
+}
+
+/** Compact per-worker status grid (booting → ready → dead) for the fan-out phase. */
+export function WorkerDots({
+	workers,
+}: {
+	workers: { name: string; status: string }[];
+}) {
+	return (
+		<div className="flex flex-wrap gap-1">
+			{workers.map((w) => (
+				<span
+					className={cn(
+						"size-2.5 rounded-[3px]",
+						w.status === "ready" && "bg-green-500",
+						w.status === "booting" && "animate-pulse bg-sandbox",
+						w.status === "dead" && "bg-destructive",
+					)}
+					key={w.name}
+					title={`${w.name} · ${w.status}`}
+				/>
+			))}
+		</div>
+	);
+}
 
 type BadgeVariant =
 	| "green"

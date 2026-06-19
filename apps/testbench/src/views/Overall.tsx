@@ -15,7 +15,15 @@ import {
 } from "@/components/v2/cards/Card";
 import { InfoRow } from "@/components/v2/InfoRow";
 import type { Snapshot } from "../types";
-import { FileStatusBadge, ProgressBar, SpeedChart } from "../widgets";
+import {
+	Elapsed,
+	FileStatusBadge,
+	IndeterminateBar,
+	ProgressBar,
+	SpeedChart,
+	WarmStepper,
+	WorkerDots,
+} from "../widgets";
 
 const fmtWall = (ms: number): string => {
 	const s = Math.round(ms / 1000);
@@ -26,14 +34,36 @@ const fmtWall = (ms: number): string => {
 function PhaseProgress({ snap }: { snap: Snapshot }) {
 	if (snap.phase === "warm") {
 		return (
-			<div className="text-muted-foreground text-sm">
-				building / warming the snapshot…
+			<div className="flex flex-col gap-3">
+				<div className="flex items-center justify-between text-sm">
+					<span className="text-muted-foreground">
+						{snap.warmStage < 0
+							? "preparing warm parent…"
+							: "building warm snapshot"}
+					</span>
+					<span className="text-muted-foreground text-xs">
+						elapsed <Elapsed since={snap.phaseStartedAt} />
+					</span>
+				</div>
+				<WarmStepper stage={snap.warmStage} />
+				<IndeterminateBar />
+				{snap.activity ? (
+					<div className="truncate rounded-md border bg-card px-2.5 py-1.5 font-mono text-muted-foreground text-xs">
+						{snap.activity}
+					</div>
+				) : null}
 			</div>
 		);
 	}
 	if (snap.phase === "fanout") {
 		return (
-			<div className="flex flex-col gap-2">
+			<div className="flex flex-col gap-2.5">
+				<div className="flex items-center justify-between text-muted-foreground text-xs">
+					<span>spinning up {snap.fanout.workersTotal} workers</span>
+					<span>
+						elapsed <Elapsed since={snap.phaseStartedAt} />
+					</span>
+				</div>
 				<div className="flex items-center gap-2 text-sm">
 					<span className="w-20 text-muted-foreground">stripe</span>
 					<ProgressBar
@@ -49,6 +79,12 @@ function PhaseProgress({ snap }: { snap: Snapshot }) {
 						value={snap.fanout.workersReady}
 					/>
 				</div>
+				{snap.workers.length > 0 ? <WorkerDots workers={snap.workers} /> : null}
+				{snap.activity ? (
+					<div className="truncate font-mono text-muted-foreground text-xs">
+						{snap.activity}
+					</div>
+				) : null}
 			</div>
 		);
 	}

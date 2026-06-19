@@ -41,6 +41,12 @@ const snapshot = () => {
 		phase: s.phase,
 		target: s.target,
 		workerCount: s.workers,
+		// Warm-up liveness: latest activity line + monotonic stage + phase clock.
+		warmActivity: s.warmActivity,
+		warmBuilding: s.warmBuilding,
+		warmStage: s.warmStage,
+		phaseStartedAt: s.phaseStartedAt,
+		activity: s.lastLine,
 		fanout: {
 			stripeDone: s.stripeDone,
 			stripeTotal: s.stripeTotal,

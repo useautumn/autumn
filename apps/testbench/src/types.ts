@@ -31,6 +31,15 @@ export type Snapshot = {
 	phase: Phase;
 	target: string;
 	workerCount: number;
+	/** Latest warm-up build/log line (elided activity ticker). */
+	warmActivity: string;
+	warmBuilding: boolean;
+	/** Monotonic warm-up stage index (-1 until first marker); see Overall view. */
+	warmStage: number;
+	/** Epoch-ms the current phase started — for the live elapsed timer. */
+	phaseStartedAt: number;
+	/** Latest non-empty log line in any phase (activity ticker). */
+	activity: string;
 	fanout: {
 		stripeDone: number;
 		stripeTotal: number;
