@@ -16,7 +16,7 @@ import {
 	resolveCustomButtonUrl,
 } from "@/utils/linkUtils";
 
-const MAX_INLINE_BUTTONS = 4;
+const MAX_INLINE_BUTTONS = 8;
 
 export function CustomButtons({
 	buttons,
