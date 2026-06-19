@@ -231,7 +231,13 @@ export const isSandboxStreamClosed = (error: unknown): boolean => {
 				: "";
 	return (
 		message.includes("Sandbox stream was closed") ||
-		message.includes("BrotliDecompressionError")
+		message.includes("BrotliDecompressionError") ||
+		// Bun's generic wording when an in-flight SDK `fetch` (log stream, status
+		// poll) loses its socket because teardown deleted the sandbox underneath
+		// it — the same benign end-of-stream race, different message. Genuine
+		// mid-run drops never reach here (runStreaming catches them and raises a
+		// WorkerDeathError); only detached/teardown streams surface this.
+		message.includes("socket connection was closed unexpectedly")
 	);
 };
 
