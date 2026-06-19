@@ -49,7 +49,7 @@ local function process_deduction_pass(params)
     local ent_id = ent_obj.customer_entitlement_id
     local credit_cost = ent_obj.credit_cost
     local ent_feature_id = ent_obj.feature_id
-    if credit_cost == cjson.null or credit_cost == nil or credit_cost == 0 then
+    if credit_cost == cjson.null or credit_cost == nil then
       credit_cost = 1
     end
 
@@ -90,6 +90,10 @@ local function process_deduction_pass(params)
 
     if not should_process then
       logger.log("%s skipping %s - usage_allowed=false or not in context", pass_name, ent_id)
+    elseif credit_cost == 0 then
+      logger.log("%s ent %s credit_cost=0 - remaining covered for free", pass_name, ent_id)
+      remaining_amount = 0
+      break
     else
       local deducted = deduct_from_main_balance({
         context = context,

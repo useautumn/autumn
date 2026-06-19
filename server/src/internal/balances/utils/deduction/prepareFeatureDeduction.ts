@@ -6,7 +6,6 @@ import {
 	fullCustomerToSpendLimitByFeatureId,
 	fullCustomerToUsageBasedCusEntsByFeatureId,
 	getMaxOverage,
-	getRelevantFeatures,
 	isAllocatedCustomerEntitlement,
 	isFreeCustomerEntitlement,
 	notNullish,
@@ -15,13 +14,21 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockReceiptKey.js";
 import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
-import { computeCreditCosts } from "./computeCreditCosts.js";
+import {
+	getNativeUsageAllowedFeatureIds,
+	resolveEffectiveUsageAllowed,
+} from "../resolveEffectiveUsageAllowed.js";
 import type {
 	CustomerEntitlementDeduction,
 	DeductionOptions,
 	PreparedFeatureDeduction,
 } from "../types/deductionTypes.js";
-import type { FeatureDeduction } from "../types/featureDeduction.js";
+import {
+	type FeatureDeduction,
+	getRelevantFeaturesForDeduction,
+	sortCusEntsForTokenCascade,
+} from "../types/featureDeduction.js";
+import { computeCreditCosts } from "./computeCreditCosts.js";
 
 /**
  * Prepares all the inputs needed to execute a deduction for a single feature.
@@ -40,17 +47,14 @@ export const prepareFeatureDeduction = ({
 }): PreparedFeatureDeduction => {
 	const { org } = ctx;
 	const { env } = ctx;
-	const { feature, lock, targetBalance } = deduction;
+	const { lock } = deduction;
 
 	const { overageBehaviour = "cap", customerEntitlementFilters } = options;
 
-	// Get relevant features (just the feature itself if targetBalance is set)
-	const relevantFeatures = notNullish(targetBalance)
-		? [feature]
-		: getRelevantFeatures({
-				features: ctx.features,
-				featureId: feature.id,
-			});
+	const relevantFeatures = getRelevantFeaturesForDeduction({
+		features: ctx.features,
+		deduction,
+	});
 
 	// Get customer entitlements for these features (includes both product and loose entitlements)
 	const cusEnts = fullCustomerToCustomerEntitlements({
@@ -61,6 +65,7 @@ export const prepareFeatureDeduction = ({
 		inStatuses: orgToInStatuses({ org }),
 		customerEntitlementFilters,
 	});
+	sortCusEntsForTokenCascade(cusEnts, deduction);
 
 	// Check if ANY relevant feature is unlimited
 	const unlimitedFeatureIds: string[] = [];
@@ -91,15 +96,7 @@ export const prepareFeatureDeduction = ({
 		featureIds: effectiveFeatureIds,
 	});
 
-	// For each feature, check if any cusEnt already has native usage_allowed
-	// (from pay-per-use pricing). If so, overage_allowed: enabled: true
-	// should NOT force usage_allowed on other cusEnts — the native overage
-	// mechanism (with max_purchase) already handles it.
-	const nativeUsageAllowedFeatureIds = new Set(
-		cusEnts
-			.filter((ce) => ce.usage_allowed)
-			.map((ce) => ce.entitlement.feature.id),
-	);
+	const nativeUsageAllowedFeatureIds = getNativeUsageAllowedFeatureIds(cusEnts);
 
 	const getCreditCostForEnt = computeCreditCosts({ cusEnts, deduction });
 
@@ -117,20 +114,12 @@ export const prepareFeatureDeduction = ({
 			const isFreeAllocatedUsageAllowed =
 				isFreeAllocated && overageBehaviour !== "reject";
 
-			const overageAllowedControl =
-				overageAllowedByFeatureId[ce.entitlement.feature.id];
-
-			let effectiveUsageAllowed =
-				ce.usage_allowed || isFreeAllocatedUsageAllowed;
-
-			if (
-				overageAllowedControl?.enabled === true &&
-				!nativeUsageAllowedFeatureIds.has(ce.entitlement.feature.id)
-			) {
-				effectiveUsageAllowed = true;
-			} else if (overageAllowedControl?.enabled === false) {
-				effectiveUsageAllowed = false;
-			}
+			const effectiveUsageAllowed = resolveEffectiveUsageAllowed({
+				baseUsageAllowed: ce.usage_allowed || isFreeAllocatedUsageAllowed,
+				featureId: ce.entitlement.feature.id,
+				overageAllowedByFeatureId,
+				nativeUsageAllowedFeatureIds,
+			});
 
 			return {
 				customer_entitlement_id: ce.id,

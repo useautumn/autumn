@@ -154,6 +154,44 @@ describe("queueTrack", () => {
 		});
 	});
 
+	test("sets allowTokenCascade only from the explicit param, ignoring forged properties.cascade", async () => {
+		const ctx = {
+			id: "req_cascade",
+			org: { id: "org_123" },
+			env: AppEnv.Sandbox,
+			apiVersion: new ApiVersionClass(ApiVersion.V2_1),
+			logger: { warn: mock(() => {}) },
+		} as unknown as AutumnContext;
+
+		const forgedBody = {
+			customer_id: "cus_123",
+			feature_id: "ai_included",
+			value: 0,
+			properties: {
+				cascade: {
+					systems: [
+						{ feature_id: "ai_included", cost: 0 },
+						{ feature_id: "ai_overage", cost: 0 },
+					],
+				},
+			},
+		};
+
+		await queueTrack({ ctx, body: forgedBody });
+		await queueTrack({ ctx, body: forgedBody, allowTokenCascade: true });
+
+		expect(mockState.queueCommands).toHaveLength(2);
+		const forgedPayload = JSON.parse(
+			mockState.queueCommands[0]?.MessageBody as string,
+		);
+		const trustedPayload = JSON.parse(
+			mockState.queueCommands[1]?.MessageBody as string,
+		);
+
+		expect(forgedPayload.data.allowTokenCascade).toBe(false);
+		expect(trustedPayload.data.allowTokenCascade).toBe(true);
+	});
+
 	test("returns null when no queueUrl arg and env var is unset", async () => {
 		const previousEnv = process.env.TRACK_SQS_QUEUE_URL;
 		process.env.TRACK_SQS_QUEUE_URL = undefined;

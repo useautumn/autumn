@@ -85,50 +85,40 @@ test.concurrent(
 );
 
 // ═══════════════════════════════════════════════════════════════════
-// TRACK-TOKENS-2: Disambiguation error + explicit feature_id resolution
+// TRACK-TOKENS-2: multiple overage systems are ambiguous without feature_id;
+// an explicit feature_id resolves to a single system. (Cascade happy paths
+// live in track-tokens-cascade.test.ts.)
 // ═══════════════════════════════════════════════════════════════════
 
 test.concurrent(
-	`${chalk.yellowBright("track-tokens-2: disambiguation error and explicit feature_id resolution")}`,
+	`${chalk.yellowBright("track-tokens-2: multiple overage systems require feature_id, explicit feature_id resolves one")}`,
 	async () => {
-		const aiCreditsItem = items.free({
+		const overageItemA = items.consumable({
 			featureId: TestFeature.AiCredits,
-			includedUsage: 500,
+			includedUsage: 0,
+			price: 1,
+			billingUnits: 1,
 		});
-		const aiCredits2Item = items.free({
+		const overageItemB = items.consumable({
 			featureId: TestFeature.AiCredits2,
-			includedUsage: 500,
+			includedUsage: 0,
+			price: 1,
+			billingUnits: 1,
 		});
-		const freeProd = products.base({
-			id: "free",
-			items: [aiCreditsItem, aiCredits2Item],
+		const proProd = products.base({
+			id: "pro",
+			items: [overageItemA, overageItemB],
 		});
 
 		const { customerId, autumnV1, autumnV2, ctx } = await initScenario({
 			customerId: "track-tokens-2",
 			setup: [
-				s.customer({ testClock: false }),
-				s.products({ list: [freeProd] }),
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [proProd] }),
 			],
-			actions: [s.attach({ productId: freeProd.id })],
+			actions: [s.attach({ productId: proProd.id })],
 		});
 
-		// Without feature_id, should fail with disambiguation error
-		let error: any;
-		try {
-			await autumnV2.post("/track_tokens", {
-				customer_id: customerId,
-				model_id: "anthropic/claude-sonnet-4-20250514",
-				input_tokens: 100,
-				output_tokens: 50,
-			});
-		} catch (e) {
-			error = e;
-		}
-		expect(error).toBeDefined();
-		expect(error.message).toContain("Multiple AI credit system features");
-
-		// With explicit feature_id, should succeed and only deduct from AiCredits
 		const aiCreditFeature = ctx.features.find(
 			(f) => f.id === TestFeature.AiCredits,
 		);
@@ -136,10 +126,24 @@ test.concurrent(
 			throw new Error(`${TestFeature.AiCredits} feature not found`);
 		}
 
+		const modelId = "anthropic/claude-sonnet-4-20250514";
 		const inputTokens = 2000;
 		const outputTokens = 1000;
-		const modelId = "anthropic/claude-sonnet-4-20250514";
 
+		// Both systems allow overage, so the overflow target is ambiguous.
+		await expectAutumnError({
+			errCode: ErrCode.InvalidRequest,
+			errMessage: "Multiple AI credit systems allow overage",
+			func: () =>
+				autumnV2.post("/track_tokens", {
+					customer_id: customerId,
+					model_id: modelId,
+					input_tokens: inputTokens,
+					output_tokens: outputTokens,
+				}),
+		});
+
+		// An explicit feature_id resolves the ambiguity and charges only that system.
 		const expectedCost = await getModelCreditCost({
 			modelName: modelId,
 			creditSystem: aiCreditFeature,
@@ -160,11 +164,9 @@ test.concurrent(
 
 		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
 		expect(customer.features[TestFeature.AiCredits]).toMatchObject({
-			balance: new Decimal(500).minus(expectedCost).toNumber(),
 			usage: expectedCost,
 		});
 		expect(customer.features[TestFeature.AiCredits2]).toMatchObject({
-			balance: 500,
 			usage: 0,
 		});
 	},

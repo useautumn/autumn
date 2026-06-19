@@ -24,11 +24,13 @@ export const handleRedisTrackError = async ({
 	error,
 	body,
 	featureDeductions,
+	allowTokenCascade = false,
 }: {
 	ctx: AutumnContext;
 	error: Error;
 	body: TrackParams;
 	featureDeductions: FeatureDeduction[];
+	allowTokenCascade?: boolean;
 }): Promise<TrackResponseV3> => {
 	if (!(error instanceof RedisDeductionError)) {
 		throw error;
@@ -53,7 +55,7 @@ export const handleRedisTrackError = async ({
 	}
 
 	if (error.isRedisUnavailable()) {
-		const queuedResponse = await queueTrack({ ctx, body });
+		const queuedResponse = await queueTrack({ ctx, body, allowTokenCascade });
 		if (queuedResponse) return queuedResponse;
 		throw error;
 	}

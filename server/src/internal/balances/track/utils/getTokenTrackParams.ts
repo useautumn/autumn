@@ -2,6 +2,7 @@ import {
 	ErrCode,
 	type Feature,
 	fullCustomerToCustomerEntitlements,
+	fullCustomerToOverageAllowedByFeatureId,
 	fullSubjectToFullCustomer,
 	isAiCreditSystem,
 	RecaseError,
@@ -11,9 +12,20 @@ import {
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getOrSetCachedFullSubject } from "@/internal/customers/cache/fullSubject/actions/getOrSetCachedFullSubject.js";
 import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
-import { getModelCreditCostBreakdown } from "@/internal/features/aiCreditSystemUtils.js";
+import {
+	getModelCreditCostBreakdown,
+	type ModelCostBreakdown,
+} from "@/internal/features/aiCreditSystemUtils.js";
 import { isFullSubjectRolloutEnabled } from "@/internal/misc/rollouts/fullSubjectRolloutUtils.js";
-import type { FeatureDeduction } from "../../utils/types/featureDeduction.js";
+import {
+	getNativeUsageAllowedFeatureIds,
+	resolveEffectiveUsageAllowed,
+} from "../../utils/resolveEffectiveUsageAllowed.js";
+import {
+	buildTokenCascadeDeduction,
+	type FeatureDeduction,
+	isTokenCascade,
+} from "../../utils/types/featureDeduction.js";
 
 const resolveAiCreditFeatureById = ({
 	features,
@@ -40,7 +52,7 @@ const resolveAiCreditFeatureById = ({
 	return candidate;
 };
 
-const resolveAiCreditFeatureFromEntitlements = async ({
+const resolveAiCreditFeaturesFromEntitlements = async ({
 	ctx,
 	customerId,
 	entityId,
@@ -48,7 +60,7 @@ const resolveAiCreditFeatureFromEntitlements = async ({
 	ctx: AutumnContext;
 	customerId: string;
 	entityId?: string;
-}): Promise<Feature> => {
+}): Promise<Feature[]> => {
 	const fullCustomer = isFullSubjectRolloutEnabled({ ctx })
 		? fullSubjectToFullCustomer({
 				fullSubject: await getOrSetCachedFullSubject({
@@ -73,32 +85,93 @@ const resolveAiCreditFeatureFromEntitlements = async ({
 		fullCustomer,
 		entity,
 	});
-
-	const aiCreditFeatures = [
-		...new Map(
+	const featureIds = [
+		...new Set(
 			cusEnts
-				.filter((ce) => isAiCreditSystem(ce.entitlement.feature.type))
-				.map((ce) => [ce.entitlement.feature.id, ce.entitlement.feature]),
-		).values(),
+				.map((customerEntitlement) => customerEntitlement.entitlement.feature)
+				.filter((feature) => isAiCreditSystem(feature.type))
+				.map((feature) => feature.id),
+		),
 	];
+	const overageAllowedByFeatureId = fullCustomerToOverageAllowedByFeatureId({
+		fullCustomer,
+		featureIds,
+		internalEntityId: entity?.internal_id,
+	});
+	const nativeUsageAllowedFeatureIds = getNativeUsageAllowedFeatureIds(cusEnts);
 
-	if (aiCreditFeatures.length === 0) {
+	const systems = new Map<
+		string,
+		{ feature: Feature; hasUsageAllowed: boolean }
+	>();
+	for (const customerEntitlement of cusEnts) {
+		const feature = customerEntitlement.entitlement.feature;
+		if (!isAiCreditSystem(feature.type)) continue;
+
+		const usageAllowed = resolveEffectiveUsageAllowed({
+			baseUsageAllowed: customerEntitlement.usage_allowed === true,
+			featureId: feature.id,
+			overageAllowedByFeatureId,
+			nativeUsageAllowedFeatureIds,
+		});
+		const existing = systems.get(feature.id);
+		if (existing) {
+			existing.hasUsageAllowed = existing.hasUsageAllowed || usageAllowed;
+		} else {
+			systems.set(feature.id, { feature, hasUsageAllowed: usageAllowed });
+		}
+	}
+
+	const aiCreditSystems = [...systems.values()];
+
+	if (aiCreditSystems.length === 0) {
 		throw new RecaseError({
 			message: "No AI credit system feature found for this customer",
 			code: ErrCode.FeatureNotFound,
 			statusCode: 404,
 		});
 	}
-	if (aiCreditFeatures.length > 1) {
+
+	const overageSystems = aiCreditSystems.filter(
+		(system) => system.hasUsageAllowed,
+	);
+	if (overageSystems.length > 1) {
 		throw new RecaseError({
 			message:
-				"Multiple AI credit system features found for this customer. Please specify a feature_id to disambiguate.",
+				"Multiple AI credit systems allow overage for this customer, so the overflow target is ambiguous. Specify feature_id to choose which system to bill.",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
 	}
-	return aiCreditFeatures[0];
+
+	const includedFirst = (system: { hasUsageAllowed: boolean }) =>
+		system.hasUsageAllowed ? 1 : 0;
+
+	return aiCreditSystems
+		.sort(
+			(left, right) =>
+				includedFirst(left) - includedFirst(right) ||
+				left.feature.id.localeCompare(right.feature.id),
+		)
+		.map((system) => system.feature);
 };
+
+const buildPricingProperties = (pricing: ModelCostBreakdown) => ({
+	cost: pricing.cost,
+	base_cost: pricing.baseCost,
+	markup: pricing.markup,
+	markup_source: pricing.markupSource,
+	tier_applied: pricing.tierApplied,
+	rates: {
+		input: pricing.rates.input,
+		output: pricing.rates.output,
+		cache_read: pricing.rates.cacheRead,
+		cache_write: pricing.rates.cacheWrite,
+		audio_input: pricing.rates.audioInput,
+		audio_output: pricing.rates.audioOutput,
+		reasoning: pricing.rates.reasoning,
+	},
+});
 
 export const getTokenTrackParams = async ({
 	ctx,
@@ -107,50 +180,70 @@ export const getTokenTrackParams = async ({
 	ctx: AutumnContext;
 	input: TrackTokensParams;
 }): Promise<{ body: TrackParams; featureDeductions: FeatureDeduction[] }> => {
-	const aiCreditFeature = input.feature_id
-		? resolveAiCreditFeatureById({
-				features: ctx.features,
-				featureId: input.feature_id,
-			})
-		: await resolveAiCreditFeatureFromEntitlements({
+	const aiCreditFeatures = input.feature_id
+		? [
+				resolveAiCreditFeatureById({
+					features: ctx.features,
+					featureId: input.feature_id,
+				}),
+			]
+		: await resolveAiCreditFeaturesFromEntitlements({
 				ctx,
 				customerId: input.customer_id,
 				entityId: input.entity_id,
 			});
 
-	const pricing = await getModelCreditCostBreakdown({
+	const pricings = await Promise.all(
+		aiCreditFeatures.map((feature) =>
+			getModelCreditCostBreakdown({
+				modelName: input.model_id,
+				creditSystem: feature,
+				input: input.input_tokens,
+				output: input.output_tokens,
+				cacheRead: input.cache_read_tokens,
+				cacheWrite: input.cache_write_tokens,
+				audioInput: input.audio_input_tokens,
+				audioOutput: input.audio_output_tokens,
+				reasoning: input.reasoning_tokens,
+			}),
+		),
+	);
+
+	const primaryFeature = aiCreditFeatures[0];
+	const primaryPricing = pricings[0];
+
+	const tokenUsage = {
 		modelName: input.model_id,
-		creditSystem: aiCreditFeature,
-		input: input.input_tokens,
-		output: input.output_tokens,
-		cacheRead: input.cache_read_tokens,
-		cacheWrite: input.cache_write_tokens,
-		audioInput: input.audio_input_tokens,
-		audioOutput: input.audio_output_tokens,
-		reasoning: input.reasoning_tokens,
-	});
-	const cost = pricing.cost;
+		inputTokens: input.input_tokens,
+		outputTokens: input.output_tokens,
+	};
 
 	const featureDeductions: FeatureDeduction[] = [
-		{
-			feature: aiCreditFeature,
-			deduction: 1,
-			tokens: {
-				usage: {
-					modelName: input.model_id,
-					inputTokens: input.input_tokens,
-					outputTokens: input.output_tokens,
-				},
-				cost,
-			},
-		},
+		buildTokenCascadeDeduction({
+			systems: aiCreditFeatures.map((feature, index) => ({
+				feature,
+				cost: pricings[index].cost,
+			})),
+			tokenUsage,
+		}),
 	];
+
+	const cascadeProperties = isTokenCascade(featureDeductions)
+		? {
+				cascade: {
+					systems: aiCreditFeatures.map((feature, index) => ({
+						feature_id: feature.id,
+						...buildPricingProperties(pricings[index]),
+					})),
+				},
+			}
+		: undefined;
 
 	const body: TrackParams = {
 		customer_id: input.customer_id,
 		entity_id: input.entity_id,
-		feature_id: aiCreditFeature.id,
-		value: cost,
+		feature_id: primaryFeature.id,
+		value: primaryPricing.cost,
 		properties: {
 			...input.properties,
 			model: input.model_id,
@@ -161,20 +254,8 @@ export const getTokenTrackParams = async ({
 			audio_input_tokens: input.audio_input_tokens,
 			audio_output_tokens: input.audio_output_tokens,
 			reasoning_tokens: input.reasoning_tokens,
-			cost,
-			base_cost: pricing.baseCost,
-			markup: pricing.markup,
-			markup_source: pricing.markupSource,
-			tier_applied: pricing.tierApplied,
-			rates: {
-				input: pricing.rates.input,
-				output: pricing.rates.output,
-				cache_read: pricing.rates.cacheRead,
-				cache_write: pricing.rates.cacheWrite,
-				audio_input: pricing.rates.audioInput,
-				audio_output: pricing.rates.audioOutput,
-				reasoning: pricing.rates.reasoning,
-			},
+			...buildPricingProperties(primaryPricing),
+			...cascadeProperties,
 		},
 		idempotency_key: input.idempotency_key,
 		overage_behavior: input.overage_behavior,

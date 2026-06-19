@@ -212,6 +212,11 @@ BEGIN
     max_balance := (ent_obj->>'max_balance')::numeric;
     has_entity_scope := (ent_obj->>'entity_feature_id') IS NOT NULL;
 
+    IF credit_cost = 0 THEN
+      remaining_amount := 0;
+      EXIT;
+    END IF;
+
     -- STEP 1: Handle rollovers (only on first entitlement)
     -- Use new rollovers array (with credit_cost) if present, otherwise fall back to rollover_ids
     IF ((rollovers_arr IS NOT NULL AND jsonb_typeof(rollovers_arr) = 'array' AND jsonb_array_length(rollovers_arr) > 0) OR
@@ -363,6 +368,11 @@ BEGIN
       -- Skip entitlements without usage_allowed
       IF NOT usage_allowed THEN
         CONTINUE;
+      END IF;
+
+      IF credit_cost = 0 THEN
+        remaining_amount := 0;
+        EXIT;
       END IF;
 
       -- Fetch current state (rows already locked in STEP 0)

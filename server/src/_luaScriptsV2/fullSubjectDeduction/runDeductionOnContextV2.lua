@@ -50,7 +50,7 @@ local function process_deduction_pass(params)
     local ent_id = ent_obj.customer_entitlement_id
     local credit_cost = ent_obj.credit_cost
     local ent_feature_id = ent_obj.feature_id
-    if credit_cost == cjson.null or credit_cost == nil or credit_cost == 0 then
+    if credit_cost == cjson.null or credit_cost == nil then
       credit_cost = 1
     end
 
@@ -89,6 +89,12 @@ local function process_deduction_pass(params)
     if not context.customer_entitlements[ent_id] then
       should_process = false
       skip_reason = "not in context"
+    end
+
+    if should_process and credit_cost == 0 then
+      logger.log("%s ent %s credit_cost=0 - remaining covered for free", pass_name, ent_id)
+      remaining_amount = 0
+      break
     end
 
     -- Usage-window gate, mirroring the spend-limit overage gate above: cap

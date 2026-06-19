@@ -4,7 +4,10 @@ import {
 	getRelevantFeatures,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import type { FeatureDeduction } from "../types/featureDeduction.js";
+import {
+	expandCascadeDeductions,
+	type FeatureDeduction,
+} from "../types/featureDeduction.js";
 
 /**
  * Builds the `balances` map for a track/check response: the tracked feature's
@@ -26,7 +29,7 @@ export const deductionToBalancesResponse = ({
 }): Record<string, ApiBalanceV1 | null> | undefined => {
 	const balances: Record<string, ApiBalanceV1 | null> = {};
 
-	for (const deduction of featureDeductions) {
+	for (const deduction of expandCascadeDeductions(featureDeductions)) {
 		const relevantFeatures = getRelevantFeatures({
 			features: ctx.features,
 			featureId: deduction.feature.id,

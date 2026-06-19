@@ -18,15 +18,17 @@ export const runTrackWithRollout = async ({
 	body,
 	featureDeductions,
 	apiVersion,
+	allowTokenCascade = false,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	featureDeductions: FeatureDeduction[];
 	apiVersion?: ApiVersion;
+	allowTokenCascade?: boolean;
 }): Promise<TrackResponseV3> => {
 	if (shouldUseTrackV3({ ctx })) {
 		if (ctx.orgRateLimitDegraded) {
-			const queuedResponse = await queueTrack({ ctx, body });
+			const queuedResponse = await queueTrack({ ctx, body, allowTokenCascade });
 			if (queuedResponse) return queuedResponse;
 		}
 
@@ -41,7 +43,11 @@ export const runTrackWithRollout = async ({
 				}),
 			alsoFailOpen: isFullSubjectGateRejection,
 			fallback: async (error) => {
-				const queuedResponse = await queueTrack({ ctx, body });
+				const queuedResponse = await queueTrack({
+					ctx,
+					body,
+					allowTokenCascade,
+				});
 				if (queuedResponse) return queuedResponse;
 				throw error;
 			},
@@ -53,5 +59,6 @@ export const runTrackWithRollout = async ({
 		body,
 		featureDeductions,
 		apiVersion,
+		allowTokenCascade,
 	});
 };

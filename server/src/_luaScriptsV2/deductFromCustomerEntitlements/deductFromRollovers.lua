@@ -74,8 +74,13 @@ local function deduct_from_rollovers(params)
 
     local rollover_id = rollover_obj.id
     local credit_cost = rollover_obj.credit_cost
-    if is_nil(credit_cost) or credit_cost == 0 then
+    if is_nil(credit_cost) then
       credit_cost = 1
+    end
+    if credit_cost == 0 then
+      logger.log("  Rollover %s credit_cost=0 - remaining covered for free", rollover_id)
+      remaining = 0
+      break
     end
 
     local rollover_data = context.rollovers[rollover_id]

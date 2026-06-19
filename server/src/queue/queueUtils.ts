@@ -78,6 +78,7 @@ export interface Payloads {
 		requestId: string;
 		apiVersion: ApiVersion;
 		body: TrackParams;
+		allowTokenCascade?: boolean;
 	};
 	[JobName.ClearCreditSystemCustomerCache]: ClearCreditSystemCachePayload;
 	[JobName.GenerateFeatureDisplay]: GenerateFeatureDisplayPayload;

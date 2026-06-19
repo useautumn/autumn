@@ -211,6 +211,7 @@ export const processMessage = async ({
 				ctx,
 				body: job.data.body,
 				apiVersion: job.data.apiVersion,
+				allowTokenCascade: job.data.allowTokenCascade === true,
 			});
 			return;
 		}

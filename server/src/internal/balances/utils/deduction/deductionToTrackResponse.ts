@@ -11,7 +11,10 @@ import { Decimal } from "decimal.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
 import type { DeductionUpdate } from "../types/deductionUpdate.js";
-import type { FeatureDeduction } from "../types/featureDeduction.js";
+import {
+	expandCascadeDeductions,
+	type FeatureDeduction,
+} from "../types/featureDeduction.js";
 import { deductionToBalancesResponse } from "./deductionToBalancesResponse.js";
 
 type TrackBalanceResponse = {
@@ -174,7 +177,7 @@ export const deductionToTrackResponse = async ({
 	const finalBalances: Record<string, ApiBalanceV1> = {};
 
 	// Add primary features (always - they were requested to be tracked)
-	for (const deduction of featureDeductions) {
+	for (const deduction of expandCascadeDeductions(featureDeductions)) {
 		const featureToUse = getFeatureToUseForBalance({
 			ctx,
 			featureDeduction: deduction,

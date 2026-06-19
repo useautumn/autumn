@@ -90,6 +90,14 @@ export const sortCusEntsForDeduction = ({
 			return 1;
 		}
 
+		if (
+			aEnt.feature.type === FeatureType.AiCreditSystem &&
+			bEnt.feature.type === FeatureType.AiCreditSystem &&
+			a.usage_allowed !== b.usage_allowed
+		) {
+			return a.usage_allowed ? 1 : -1;
+		}
+
 		// If one has a next_reset_at, it should go first
 		const nextResetFirst = reverseOrder ? 1 : -1;
 

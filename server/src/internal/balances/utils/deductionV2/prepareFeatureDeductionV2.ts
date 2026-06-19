@@ -22,12 +22,20 @@ import { buildLockReceiptKey } from "@/internal/balances/utils/lock/buildLockRec
 import { getUnlimitedAndUsageAllowed } from "@/internal/customers/cusProducts/cusEnts/cusEntUtils.js";
 import { generateId } from "@/utils/genUtils.js";
 import { computeCreditCosts } from "../deduction/computeCreditCosts.js";
+import {
+	getNativeUsageAllowedFeatureIds,
+	resolveEffectiveUsageAllowed,
+} from "../resolveEffectiveUsageAllowed.js";
 import type {
 	CustomerEntitlementDeduction,
 	DeductionOptions,
 	PreparedFeatureDeduction,
 } from "../types/deductionTypes.js";
-import type { FeatureDeduction } from "../types/featureDeduction.js";
+import {
+	type FeatureDeduction,
+	getRelevantFeaturesForDeduction,
+	sortCusEntsForTokenCascade,
+} from "../types/featureDeduction.js";
 
 /**
  * Prepares all the inputs needed to execute a deduction for a single feature.
@@ -52,12 +60,10 @@ export const prepareFeatureDeductionV2 = ({
 	const { feature, lock, targetBalance } = deduction;
 	const { overageBehaviour = "cap", customerEntitlementFilters } = options;
 
-	const relevantFeatures = notNullish(targetBalance)
-		? [feature]
-		: getRelevantFeatures({
-				features: ctx.features,
-				featureId: feature.id,
-			});
+	const relevantFeatures = getRelevantFeaturesForDeduction({
+		features: ctx.features,
+		deduction,
+	});
 
 	const customerEntitlements = fullSubjectToCustomerEntitlements({
 		fullSubject,
@@ -66,6 +72,7 @@ export const prepareFeatureDeductionV2 = ({
 		inStatuses: orgToInStatuses({ org }),
 		customerEntitlementFilters,
 	});
+	sortCusEntsForTokenCascade(customerEntitlements, deduction);
 
 	const unlimitedFeatureIds: string[] = [];
 	// Track the chosen unlimited cusEnt so the deduction short-circuit can
@@ -152,11 +159,8 @@ export const prepareFeatureDeductionV2 = ({
 		});
 	}
 
-	const nativeUsageAllowedFeatureIds = new Set(
-		customerEntitlements
-			.filter((customerEntitlement) => customerEntitlement.usage_allowed)
-			.map((customerEntitlement) => customerEntitlement.entitlement.feature.id),
-	);
+	const nativeUsageAllowedFeatureIds =
+		getNativeUsageAllowedFeatureIds(customerEntitlements);
 
 	const getCreditCostForEnt = computeCreditCosts({
 		cusEnts: customerEntitlements,
@@ -178,22 +182,13 @@ export const prepareFeatureDeductionV2 = ({
 			});
 			const isFreeAllocatedUsageAllowed =
 				isFreeAllocated && overageBehaviour !== "reject";
-			const overageAllowedControl =
-				overageAllowedByFeatureId[customerEntitlement.entitlement.feature.id];
-
-			let effectiveUsageAllowed =
-				customerEntitlement.usage_allowed || isFreeAllocatedUsageAllowed;
-
-			if (
-				overageAllowedControl?.enabled === true &&
-				!nativeUsageAllowedFeatureIds.has(
-					customerEntitlement.entitlement.feature.id,
-				)
-			) {
-				effectiveUsageAllowed = true;
-			} else if (overageAllowedControl?.enabled === false) {
-				effectiveUsageAllowed = false;
-			}
+			const effectiveUsageAllowed = resolveEffectiveUsageAllowed({
+				baseUsageAllowed:
+					customerEntitlement.usage_allowed || isFreeAllocatedUsageAllowed,
+				featureId: customerEntitlement.entitlement.feature.id,
+				overageAllowedByFeatureId,
+				nativeUsageAllowedFeatureIds,
+			});
 
 			return {
 				customer_entitlement_id: customerEntitlement.id,

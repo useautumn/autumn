@@ -10,11 +10,13 @@ export const queueTrack = async ({
 	body,
 	queueUrl,
 	messageDeduplicationId,
+	allowTokenCascade = false,
 }: {
 	ctx: AutumnContext;
 	body: TrackParams;
 	queueUrl?: string;
 	messageDeduplicationId?: string;
+	allowTokenCascade?: boolean;
 }) => {
 	try {
 		const resolvedQueueUrl = queueUrl ?? process.env.TRACK_SQS_QUEUE_URL;
@@ -38,6 +40,7 @@ export const queueTrack = async ({
 				requestId: ctx.id,
 				apiVersion: ctx.apiVersion.value,
 				body,
+				allowTokenCascade,
 			},
 		});
 

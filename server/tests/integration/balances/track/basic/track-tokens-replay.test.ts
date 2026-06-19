@@ -75,6 +75,70 @@ test.concurrent(
 );
 
 test.concurrent(
+	`${chalk.yellowBright("track-tokens-replay-3: queued cascade body replays included-then-overage from the properties marker")}`,
+	async () => {
+		const includedItem = items.free({
+			featureId: TestFeature.AiCredits,
+			includedUsage: 2,
+		});
+		const overageItem = items.consumable({
+			featureId: TestFeature.AiCredits2,
+			includedUsage: 0,
+			price: 1,
+			billingUnits: 1,
+		});
+		const proProduct = products.pro({
+			id: "replay-cascade",
+			items: [includedItem, overageItem],
+		});
+
+		const { customerId, autumnV1, ctx } = await initScenario({
+			customerId: "track-tokens-replay-3",
+			setup: [
+				s.customer({ testClock: false, paymentMethod: "success" }),
+				s.products({ list: [proProduct] }),
+			],
+			actions: [s.attach({ productId: proProduct.id })],
+		});
+
+		await runQueuedTrack({
+			ctx: { ...ctx, apiVersion: new ApiVersionClass(ApiVersion.V2_1) },
+			body: {
+				customer_id: customerId,
+				feature_id: TestFeature.AiCredits,
+				value: 4,
+				idempotency_key: `replay-${crypto.randomUUID()}`,
+				properties: {
+					model: "custom/internal-model",
+					input_tokens: 200000,
+					output_tokens: 200000,
+					cascade: {
+						systems: [
+							{ feature_id: TestFeature.AiCredits, cost: 4 },
+							{ feature_id: TestFeature.AiCredits2, cost: 6 },
+						],
+					},
+				},
+			},
+			apiVersion: ApiVersion.V2_1,
+			allowTokenCascade: true,
+		});
+
+		const customer = await autumnV1.customers.get<ApiCustomerV3>(customerId);
+
+		// Included drains its 2 credits; the remaining half of the event charges
+		// the overage system at its own cost: 0.5 × $6 = $3.
+		expect(customer.features[TestFeature.AiCredits]).toMatchObject({
+			balance: 0,
+			usage: 2,
+		});
+		expect(customer.features[TestFeature.AiCredits2]).toMatchObject({
+			usage: 3,
+		});
+	},
+);
+
+test.concurrent(
 	`${chalk.yellowBright("track-tokens-replay-2: plain /track with a USD value deducts an AI credit balance 1:1")}`,
 	async () => {
 		const aiCreditsItem = items.free({

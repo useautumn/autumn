@@ -17,13 +17,22 @@ export const computeCreditCosts = ({
 }): CreditCostLookup => {
 	const costMap = new Map<string, number>();
 
+	const tokenCostByFeatureId = new Map<string, number>();
+	if (deduction.tokens) {
+		tokenCostByFeatureId.set(deduction.feature.id, deduction.tokens.cost);
+	}
+	for (const spilloverDeduction of deduction.spillover ?? []) {
+		tokenCostByFeatureId.set(
+			spilloverDeduction.feature.id,
+			spilloverDeduction.tokens.cost,
+		);
+	}
+
 	for (const ce of cusEnts) {
 		// Token cost is USD: 1:1 on its own ent; parents apply their ratio to it.
-		if (
-			deduction.tokens &&
-			ce.entitlement.feature.id === deduction.feature.id
-		) {
-			costMap.set(ce.id, deduction.tokens.cost);
+		const directCost = tokenCostByFeatureId.get(ce.entitlement.feature.id);
+		if (directCost !== undefined) {
+			costMap.set(ce.id, directCost);
 			continue;
 		}
 
