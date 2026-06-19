@@ -79,8 +79,14 @@ export const VERCEL_RUNTIME = "node24";
 /** Vercel region — `iad1` is the only supported region (plan §10). */
 export const VERCEL_REGION = "iad1";
 
-/** vCPUs per worker (→ 2048 MB memory per vCPU = 8 GB). Plan §5 sizing. */
-export const WORKER_VCPUS = 4;
+/**
+ * vCPUs per worker (→ 2048 MB each, so 2 vCPU = 4 GB). Benchmarked fork→READY for
+ * 50 workers: 4 vCPU = 200 total = exactly Vercel's 200 vCPU/min cap → forks
+ * queue → all-READY 51s (tail to 51s). 2 vCPU = 100 total, well under the cap →
+ * everything admits in the burst → all-READY ~30s (no tail), 0 boot failures on
+ * 4 GB. The suite is I/O-bound (Stripe/DB), so 2 cores per worker is plenty.
+ */
+export const WORKER_VCPUS = 2;
 
 /**
  * Default per-worker sandbox lifetime. 10 minutes comfortably covers a swarm run
