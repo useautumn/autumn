@@ -207,7 +207,9 @@ const provisionSvixApp = async (orgId: string): Promise<void> => {
 		);
 	}
 
-	log(`Svix app ${svixAppId} bound to org ${orgId} (svix_config.sandbox_app_id)`);
+	log(
+		`Svix app ${svixAppId} bound to org ${orgId} (svix_config.sandbox_app_id)`,
+	);
 };
 
 /**
@@ -229,6 +231,45 @@ const startServer = (repoRoot: string, port: number): Subprocess => {
 			SERVER_PORT: String(port),
 		} as Record<string, string>,
 	});
+};
+
+/**
+ * Starts the SQS queue workers (`bun src/workers.ts`) AND the cron job
+ * (`bun src/cron.ts`). WITHOUT these, tests that POST to `/track` / `/batch_track`
+ * fail: the server fails open and returns 202 ("queued for replay"), the message
+ * lands in `autumn-track.fifo`, and nothing ever drains it — so balances never
+ * settle and every balance assertion is wrong. The cron (runs every minute) is
+ * what resets/expires entitlements and generates invoices. Both skip Infisical
+ * (no creds in the µVM → `initInfisical` no-ops) and inherit the localhost
+ * service env from `process.env`. NODE_ENV=development keeps the dev process
+ * counts + skip-verify consistent with the server.
+ */
+const startBackgroundProcs = (
+	repoRoot: string,
+): { workersProc: Subprocess; cronProc: Subprocess } => {
+	const serverRoot = join(repoRoot, "server");
+	const env = {
+		...process.env,
+		NODE_ENV: "development",
+	} as Record<string, string>;
+
+	log("starting SQS queue workers (bun src/workers.ts)");
+	const workersProc = spawn(["bun", "src/workers.ts"], {
+		cwd: serverRoot,
+		stdout: "inherit",
+		stderr: "inherit",
+		env,
+	});
+
+	log("starting cron (bun src/cron.ts)");
+	const cronProc = spawn(["bun", "src/cron.ts"], {
+		cwd: serverRoot,
+		stdout: "inherit",
+		stderr: "inherit",
+		env,
+	});
+
+	return { workersProc, cronProc };
 };
 
 const main = async (): Promise<void> => {
@@ -281,6 +322,23 @@ const main = async (): Promise<void> => {
 		}
 	});
 
+	// 5b. Start the SQS workers + cron so /track messages get drained and balances
+	//     settle (without these every balance test fails with a 202 fail-open).
+	//     They run independently of server health; monitor them for early crashes.
+	const { workersProc, cronProc } = startBackgroundProcs(repoRoot);
+	void workersProc.exited.then((code) => {
+		if (code !== 0) {
+			console.error(
+				chalk.red(`[tw-boot] SQS workers exited early with code ${code}`),
+			);
+		}
+	});
+	void cronProc.exited.then((code) => {
+		if (code !== 0) {
+			console.error(chalk.red(`[tw-boot] cron exited early with code ${code}`));
+		}
+	});
+
 	await waitForServerHealth(serverPort, SERVER_HEALTH_TIMEOUT_MS);
 
 	if (serverExited) {
@@ -294,8 +352,8 @@ const main = async (): Promise<void> => {
 	log(`worker ready (env=${TW_ENV}, server :${serverPort})`);
 	console.log(READY_SENTINEL);
 
-	// Keep the process alive so the server subprocess stays up for the run.
-	await serverProc.exited;
+	// Keep the process alive so the server + workers + cron stay up for the run.
+	await Promise.all([serverProc.exited, workersProc.exited, cronProc.exited]);
 };
 
 if (import.meta.main) {

@@ -955,9 +955,9 @@ function TestRunnerApp({
 							<CompletedFile result={result} willRetry={willRetry} />
 							{result.tests
 								.filter((t: IndividualTest) => t.status === "failed")
-								.map((t: IndividualTest) => (
+								.map((t: IndividualTest, index: number) => (
 									<FailedTest
-										key={`${result.file}-${t.name}`}
+										key={`${result.file}-${t.name}-${index}`}
 										test={t}
 										isWarning={willRetry}
 									/>
@@ -1120,8 +1120,12 @@ function FinalSummary({ results, swarm }: FinalSummaryProps) {
 					</Text>
 					<Text dimColor>{"─".repeat(50)}</Text>
 
-					{tests.map((test) => (
-						<Box key={test.name} flexDirection="column" marginTop={1}>
+					{tests.map((test, index) => (
+						<Box
+							key={`${test.name}-${index}`}
+							flexDirection="column"
+							marginTop={1}
+						>
 							<Text color="red"> ✗ {test.name}</Text>
 							{test.error?.location && (
 								<Text color="cyan">

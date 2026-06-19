@@ -849,36 +849,29 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 	}
 
 	const { svixFiles, normalFiles } = await partitionShards(allFiles);
-	log(
-		`${allFiles.length} file(s): ${normalFiles.length} normal, ${svixFiles.length} svix`,
-	);
+
+	// Svix/webhook tests are skipped for now: they need a Trigger.dev runner
+	// (TRIGGER_SECRET_KEY) plus a browser (Kernel/Playwright) that aren't wired
+	// into the swarm yet, so they would only ever fail. Drop them from the run and
+	// surface the count. The remaining files run mixed into the pool with no
+	// dedicated shard — no blocking, no --max>=2 requirement.
+	if (svixFiles.length > 0) {
+		warn(
+			`skipping ${svixFiles.length} svix/webhook file(s) for now (Trigger + browser not wired into the swarm)`,
+		);
+	}
+	if (normalFiles.length === 0) {
+		throw new Error(
+			"no runnable test files after skipping svix/webhook files — nothing to run",
+		);
+	}
+	log(`running ${normalFiles.length} file(s) on the pool (svix skipped)`);
 
 	// Pool sizing: never over-provision (plan §8.7). One worker covers ≥1 file.
-	// When svix files exist, one worker MUST be the dedicated svix shard.
+	// No dedicated svix shard anymore, so the whole pool runs the normal files.
 	const requestedWorkers = Math.max(1, args.workers);
-	let effectiveWorkers = Math.min(requestedWorkers, allFiles.length);
-	const needsSvixShard = svixFiles.length > 0;
-
-	// When there are BOTH svix and normal files, worker 0 becomes the dedicated
-	// svix shard and is filtered out of the normal pool. With only one worker the
-	// normal pool would be EMPTY while normal files remain — `pool.acquire()` would
-	// park forever and hang the whole run. Require (and, where possible, bump to)
-	// at least two workers so the normal pool is never empty (plan §7/§8.7).
-	if (needsSvixShard && normalFiles.length > 0) {
-		const MIN_WORKERS_FOR_MIXED_RUN = 2;
-		if (allFiles.length < MIN_WORKERS_FOR_MIXED_RUN) {
-			// Can't happen with ≥1 svix + ≥1 normal file, but keep the invariant explicit.
-			throw new Error(
-				"a mixed svix+normal run needs at least 2 test files (1 svix shard + 1 normal worker)",
-			);
-		}
-		if (requestedWorkers < MIN_WORKERS_FOR_MIXED_RUN) {
-			throw new Error(
-				`this run has both svix and normal test files, so it needs a dedicated svix shard plus at least one normal worker — pass --max>=${MIN_WORKERS_FOR_MIXED_RUN} (got ${requestedWorkers})`,
-			);
-		}
-		effectiveWorkers = Math.max(effectiveWorkers, MIN_WORKERS_FOR_MIXED_RUN);
-	}
+	const effectiveWorkers = Math.min(requestedWorkers, normalFiles.length);
+	const needsSvixShard = false;
 
 	// No per-worker webhook cap: the swarm registers ONE shared platform Connect
 	// webhook → the ingress sandbox, which routes each event to the owning worker by
@@ -886,7 +879,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 	const maxParallel = effectiveWorkers * Math.max(1, args.perWorker);
 
 	log(
-		`pool: ${effectiveWorkers} worker(s) (requested ${requestedWorkers}, files ${allFiles.length}), maxParallel=${maxParallel}`,
+		`pool: ${effectiveWorkers} worker(s) (requested ${requestedWorkers}, files ${normalFiles.length}), maxParallel=${maxParallel}`,
 	);
 
 	await registry.createRun({ owner, runId, ref: args.ref });
