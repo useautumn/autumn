@@ -26,6 +26,7 @@
  * signal → force-exit (registry + tags persist for `bun tw kill`).
  */
 
+import { writeFileSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { Writable } from "node:stream";
@@ -1214,8 +1215,12 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		teardownDone = true;
 
 		// ----- SUMMARY --------------------------------------------------------
-		// Cost is collected DURING teardown, so read it here.
-		const costLine = lastRunCost ? formatCost(lastRunCost) : undefined;
+		// Cost is collected DURING teardown, so read it here. Only show it when the
+		// SDK actually gave us usage metrics (otherwise it'd read a misleading $0.00).
+		const costLine =
+			lastRunCost && lastRunCost.totalUsd > 0
+				? formatCost(lastRunCost)
+				: undefined;
 		let totalPassed = 0;
 		let totalFailed = 0;
 		let totalCrashed = 0;
@@ -1236,6 +1241,40 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		});
 		setPhase("done");
 
+		// Build a durable failure report (the swarm streams test output through the
+		// TUI store, which is gone after exit — persist the failures so they survive).
+		const failedFiles = runResults.filter(
+			(file) => file.status === "failed" || Boolean(file.crashError),
+		);
+		const failureReport: string[] = [];
+		for (const file of failedFiles) {
+			failureReport.push(`\n✗ ${file.file}`);
+			if (file.crashError) {
+				failureReport.push(`    CRASH: ${file.crashError.split("\n")[0]}`);
+			}
+			for (const test of file.failedTests) {
+				failureReport.push(`    ✗ ${test.name}`);
+				if (test.location) {
+					failureReport.push(`        ${test.location}`);
+				}
+				if (test.message) {
+					failureReport.push(`        ${test.message}`);
+				}
+			}
+		}
+		let failuresFile: string | undefined;
+		if (failureReport.length > 0) {
+			failuresFile = join(REGISTRY_DIR, "runs", `${runId}-failures.txt`);
+			try {
+				writeFileSync(
+					failuresFile,
+					`${failureReport.join("\n").trimStart()}\n`,
+				);
+			} catch {
+				// best-effort — the in-terminal dump below still surfaces them.
+			}
+		}
+
 		if (tui) {
 			// Hold the final summary on screen, then restore the terminal.
 			await sleep(2500);
@@ -1245,6 +1284,17 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		log(
 			`done — ${totalPassed} passed, ${totalFailed} failed, ${totalCrashed} crashed · ${formatWall(lastRunWallMs)}${costLine ? ` · ${costLine}` : ""}`,
 		);
+
+		// Surface the failures right in the terminal (TUI is down now → stdout).
+		if (failureReport.length > 0) {
+			errorLog(`${failedFiles.length} file(s) failed:`);
+			for (const line of failureReport) {
+				sinkLine(line);
+			}
+			if (failuresFile) {
+				log(`failures saved to ${failuresFile}`);
+			}
+		}
 		if (runLogFile) {
 			log(`full run log: ${runLogFile}`);
 		}
