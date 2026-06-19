@@ -53,11 +53,14 @@ const toFailedTests = (tests: ParsedTest[]): TuiTestFile["failedTests"] =>
 
 /** Project an internal result into the store's display shape. */
 const emit = (result: InternalResult, willRetry: boolean): void => {
-	const tests = result.firstAttemptFailures
-		? [...result.tests, ...result.firstAttemptFailures]
-		: result.tests;
 	const status: TuiTestFile["status"] =
 		result.status === "retry_queued" ? "retrying" : result.status;
+	// Failed tests to surface: the latest attempt's failures, or — if the file
+	// recovered on retry — what originally failed. (Don't merge both, or a retried
+	// file double-counts the same failure.)
+	const failures = result.passedOnRetry
+		? (result.firstAttemptFailures ?? [])
+		: result.tests;
 	upsertTestFile({
 		file: result.file,
 		status,
@@ -67,9 +70,7 @@ const emit = (result: InternalResult, willRetry: boolean): void => {
 		attempt: result.attempt,
 		willRetry,
 		passedOnRetry: result.passedOnRetry,
-		failedTests: toFailedTests(
-			result.passedOnRetry ? (result.firstAttemptFailures ?? []) : tests,
-		),
+		failedTests: toFailedTests(failures),
 		crashError: result.crashError,
 	});
 };
