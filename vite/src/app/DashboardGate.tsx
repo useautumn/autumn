@@ -14,7 +14,7 @@ export const DashboardGate = () => {
 	const { data: session, isPending: sessionLoading } = useSession();
 	const { data: orgList } = useListOrganizations();
 	const switchActiveOrg = useSwitchActiveOrg();
-	const { org, error: orgError } = useOrg();
+	const { org, isLoading: orgLoading, error: orgError } = useOrg();
 	const [switchingToLastOrg, setSwitchingToLastOrg] = useState(false);
 	const [ignoredLastOrgId, setIgnoredLastOrgId] = useState<string | null>(null);
 	const lastOrgId = getLastSwitchedOrgId();
@@ -75,7 +75,12 @@ export const DashboardGate = () => {
 		);
 	}
 
-	if (org) {
+	// Only resolve the env redirect once the org is settled. Redirecting on a
+	// transitional org (e.g. a stale sandbox-only org during the login switch)
+	// would strand a user with production in sandbox.
+	const orgSettled =
+		!orgLoading && !shouldSwitchToLastOrg && !switchingToLastOrg;
+	if (org && orgSettled) {
 		const redirect = getOrgRouteRedirect({
 			pathname,
 			search,
