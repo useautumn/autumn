@@ -162,9 +162,33 @@ export const setRunTotal = (total: number): void => {
 	state.runTotal = total;
 };
 
-/** Insert/replace a per-file test result. */
+const isTerminal = (status: TuiTestFile["status"]): boolean =>
+	status === "passed" || status === "failed";
+
+/**
+ * Insert/replace a per-file test result. When a file first reaches a terminal
+ * verdict, emit a one-line completion entry into the logs (Pane B) — Pane A only
+ * shows IN-PROGRESS tests, so finished results live in the log pane.
+ */
 export const upsertTestFile = (result: TuiTestFile): void => {
+	const previous = state.files.get(result.file);
 	state.files.set(result.file, result);
+
+	const justFinished =
+		isTerminal(result.status) && !(previous && isTerminal(previous.status));
+	if (!justFinished) {
+		return;
+	}
+	const name = result.file.split("/").pop() ?? result.file;
+	if (result.status === "passed") {
+		appendLog(
+			`✓ ${name} (✓${result.passed})${result.passedOnRetry ? " (retry)" : ""}`,
+		);
+	} else {
+		appendLog(
+			`✗ ${name} (✓${result.passed} ✗${result.failed})${result.willRetry ? " — retrying" : ""}`,
+		);
+	}
 };
 
 export const setTeardownSandboxes = (done: number, total: number): void => {

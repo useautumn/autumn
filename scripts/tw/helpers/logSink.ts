@@ -34,6 +34,13 @@ let warnedFileFailure = false;
 let logSubscriber: ((line: string) => void) | undefined;
 let lineBuffer = "";
 
+// SGR / control escape sequences (chalk colors etc). opentui draws its own colors,
+// so raw ANSI in `<text>` content is rendered as literal bytes and corrupts the
+// layout — strip it before handing lines to the TUI subscriber.
+// biome-ignore lint/suspicious/noControlCharactersInRegex: matching ANSI escapes is the point
+const ANSI_PATTERN = /\u001b\[[0-9;]*[A-Za-z]/g;
+const stripAnsi = (text: string): string => text.replace(ANSI_PATTERN, "");
+
 const feedSubscriber = (text: string): void => {
 	if (!logSubscriber) {
 		return;
@@ -41,7 +48,7 @@ const feedSubscriber = (text: string): void => {
 	lineBuffer += text;
 	let newlineIndex = lineBuffer.indexOf("\n");
 	while (newlineIndex >= 0) {
-		logSubscriber(lineBuffer.slice(0, newlineIndex));
+		logSubscriber(stripAnsi(lineBuffer.slice(0, newlineIndex)));
 		lineBuffer = lineBuffer.slice(newlineIndex + 1);
 		newlineIndex = lineBuffer.indexOf("\n");
 	}
