@@ -37,6 +37,7 @@ export const AttachFormSchema = z.object({
 
 	noBillingChanges: z.boolean(),
 	enablePlanImmediately: z.boolean(),
+	longLivedCheckout: z.boolean(),
 	carryOverBalances: z.boolean(),
 	carryOverBalanceFeatureIds: z.array(z.string()),
 	carryOverUsages: z.boolean(),

@@ -121,7 +121,7 @@ export function TableSkeletonRows({
 		<TableRow
 			key={`skeleton-${rowIndex}`}
 			className={cn(
-				"h-12 hover:bg-transparent dark:hover:bg-transparent",
+				"h-10 hover:bg-transparent dark:hover:bg-transparent",
 				rowClassName,
 			)}
 		>

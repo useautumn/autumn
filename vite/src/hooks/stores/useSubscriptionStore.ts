@@ -4,6 +4,7 @@ import {
 	mapToProductV2,
 	productV2ToFrontendProduct,
 } from "@autumn/shared";
+import { useQueryClient } from "@tanstack/react-query";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useMemo } from "react";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -22,15 +23,25 @@ export const useEntity = () => {
 
 export const useSubscriptionById = ({ itemId }: { itemId: string | null }) => {
 	const { customer } = useCusQuery();
+	const queryClient = useQueryClient();
 
 	const cusProduct = useMemo(() => {
-		if (!itemId || !customer?.customer_products) return null;
-		return (
-			customer.customer_products.find(
-				(p: FullCusProduct) => p.id === itemId,
-			) ?? null
+		if (!itemId) return null;
+
+		const fromInline = customer?.customer_products?.find(
+			(p: FullCusProduct) => p.id === itemId,
 		);
-	}, [itemId, customer?.customer_products]);
+		if (fromInline) return fromInline;
+
+		const cached = queryClient.getQueriesData<{ list?: FullCusProduct[] }>({
+			queryKey: ["customer"],
+		});
+		for (const [, data] of cached) {
+			const match = data?.list?.find((p) => p.id === itemId);
+			if (match) return match;
+		}
+		return null;
+	}, [itemId, customer?.customer_products, queryClient]);
 
 	const productV2 = useMemo(() => {
 		if (!cusProduct) return null;

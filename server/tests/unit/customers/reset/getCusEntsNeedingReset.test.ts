@@ -185,6 +185,50 @@ describe(chalk.yellowBright("getCusEntsNeedingReset"), () => {
 		expect(result).toHaveLength(0);
 	});
 
+	// The dashboard list embeds only a capped preview of customer_products, so its
+	// opportunistic batch reset only queues ents on the products it loaded. Ents on
+	// omitted products are reset lazily when the customer is fully loaded
+	// (detail GET → getFull, which loads up to the org product limit).
+	test("only considers ents on the products present in customer_products", () => {
+		const stale = (id: string) =>
+			customerProducts.create({
+				id,
+				productId: PRODUCT_ID,
+				status: CusProductStatus.Active,
+				product: products.createFull({ id: PRODUCT_ID }),
+				customerEntitlements: [
+					customerEntitlements.create({
+						featureId: FEATURE_ID,
+						featureName: "Messages",
+						allowance: 100,
+						balance: 50,
+						nextResetAt: PAST,
+						customerProductId: id,
+					}),
+				],
+			});
+
+		const allThree = customers.create({
+			customerProducts: [stale("cp_1"), stale("cp_2"), stale("cp_3")],
+		});
+		expect(getCusEntsNeedingReset({ fullCus: allThree, now: NOW })).toHaveLength(
+			3,
+		);
+
+		// Truncating the embedded array (as the list preview cap does) bounds the
+		// reset candidates to the loaded products — the omitted one is deferred.
+		const truncated: FullCustomer = {
+			...allThree,
+			customer_products: allThree.customer_products.slice(0, 2),
+		};
+		const result = getCusEntsNeedingReset({ fullCus: truncated, now: NOW });
+		expect(result).toHaveLength(2);
+		expect(result.map((e) => e.customer_product?.id).sort()).toEqual([
+			"cp_1",
+			"cp_2",
+		]);
+	});
+
 	test("returns separate-interval prepaid cusEnt when a matching cusPrice exists", () => {
 		const fullCus = buildFullCustomer({
 			productStatus: CusProductStatus.Active,

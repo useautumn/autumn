@@ -147,6 +147,8 @@
 							"documentation/lakehouse/overview",
 							"documentation/lakehouse/connecting",
 							"documentation/lakehouse/schema",
+							"documentation/lakehouse/balance-semantics",
+							"documentation/lakehouse/working-with-invoices",
 							"documentation/lakehouse/querying"
 						]
 					}

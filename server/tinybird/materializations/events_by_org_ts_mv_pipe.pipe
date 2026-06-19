@@ -25,7 +25,7 @@ SQL >
         properties::String AS properties,
         deductions::String AS deductions
     FROM events
-    WHERE org_id IN ('biu9vSF7vghBLSKW1UTDwxHBAivjnPaK', 'GG6tnmO7cHb40PNhwYBTZtxQdeL74NHF')
+    WHERE org_id IN ('GG6tnmO7cHb40PNhwYBTZtxQdeL74NHF')
 
 TYPE materialized
 DATASOURCE events_by_org_ts

@@ -6,10 +6,12 @@ import { createPortal } from "react-dom";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/v2/buttons/Button";
+import { useSwitchActiveOrg } from "@/hooks/common/useOrg";
 import { useInvitesQuery } from "@/hooks/queries/useInvitesQuery";
 import { authClient } from "@/lib/auth-client";
 
 export const InviteNotifications = () => {
+	const switchActiveOrg = useSwitchActiveOrg();
 	const [loading, setLoading] = useState(false);
 	const [inviteStatus, setInviteStatus] = useState<
 		Map<string, "unavailable" | "dismissed">
@@ -30,12 +32,8 @@ export const InviteNotifications = () => {
 
 				if (error) throw error;
 
-				// Switch to that org
-				await authClient.organization.setActive({
-					organizationId: invite.organization.id,
-				});
-
-				window.location.reload();
+				await switchActiveOrg(invite.organization.id);
+				window.location.href = "/";
 			} else {
 				await authClient.organization.rejectInvitation({
 					invitationId: invite.id,

@@ -1,9 +1,16 @@
 import type { BillingContext, BillingResult } from "@autumn/shared";
 import {
 	type BillingResponse,
+	type Checkout,
+	CheckoutAction,
 	checkoutToUrl,
 	stripeToAtmnAmount,
 } from "@autumn/shared";
+
+const isLongLivedCheckout = (checkout: Checkout) =>
+	checkout.action === CheckoutAction.Attach &&
+	"long_lived_checkout" in checkout.params &&
+	checkout.params.long_lived_checkout === true;
 
 export const billingResultToResponse = ({
 	billingContext,
@@ -25,6 +32,7 @@ export const billingResultToResponse = ({
 		? checkoutToUrl({
 				action: autumnCheckout.action,
 				checkoutId: autumnCheckout.id,
+				longLived: isLongLivedCheckout(autumnCheckout),
 			})
 		: stripeCheckoutSession?.url
 			? stripeCheckoutSession.url

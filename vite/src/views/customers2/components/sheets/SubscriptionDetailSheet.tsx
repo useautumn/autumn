@@ -39,6 +39,7 @@ import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useSubscriptionById } from "@/hooks/stores/useSubscriptionStore";
 
 import { backendToDisplayQuantity } from "@/utils/billing/prepaidQuantityUtils";
+import { getCusProductKind, getPlanKindConfig } from "@/utils/planKind";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { BasePriceDisplay } from "@/views/products/plan/components/plan-card/BasePriceDisplay";
 import { PlanFeatureRow } from "@/views/products/plan/components/plan-card/PlanFeatureRow";
@@ -191,10 +192,17 @@ export function SubscriptionDetailSheet() {
 		setSheet({ type: "subscription-update", itemId });
 	};
 
+	const kindConfig = getPlanKindConfig(getCusProductKind(cusProduct));
+
 	return (
 		<div className="flex flex-col h-full overflow-y-auto">
 			<SheetHeader
-				title={`${cusProduct.product.name ?? "Subscription Details"}`}
+				title={
+					<span className="flex items-center gap-2">
+						<span className={kindConfig.color}>{kindConfig.icon}</span>
+						{cusProduct.product.name ?? "Subscription Details"}
+					</span>
+				}
 				description={`Subscription details for ${cusProduct.product.name}`}
 			/>
 

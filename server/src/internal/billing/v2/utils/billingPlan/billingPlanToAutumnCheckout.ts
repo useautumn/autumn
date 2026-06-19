@@ -11,13 +11,13 @@ import {
 	type UpdateSubscriptionBillingContext,
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
+import { ms } from "@shared/utils/common/unixUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { setCheckoutCache } from "@/internal/checkouts/actions/cache";
 import { checkoutRepo } from "@/internal/checkouts/repos/checkoutRepo";
 import { generateId } from "@/utils/genUtils";
 
-// 24 hours in milliseconds
-const CHECKOUT_EXPIRY_MS = 24 * 60 * 60 * 1000;
+export const CHECKOUT_EXPIRY_MS = ms.days(1);
 
 const CHECKOUT_PARAMS_VERSION = 1;
 
@@ -31,6 +31,7 @@ export async function billingPlanToAutumnCheckout({
 	action,
 	params,
 	billingContext,
+	expiresInMs = CHECKOUT_EXPIRY_MS,
 }: {
 	ctx: AutumnContext;
 	action: CheckoutAction;
@@ -40,10 +41,11 @@ export async function billingPlanToAutumnCheckout({
 		| CreateScheduleBillingContext
 		| UpdateSubscriptionBillingContext;
 	billingPlan: BillingPlan;
+	expiresInMs?: number;
 }): Promise<{ checkout: Checkout; checkoutUrl: string }> {
 	const checkoutId = generateId("co");
 	const now = Date.now();
-	const expiresAt = now + CHECKOUT_EXPIRY_MS;
+	const expiresAt = now + expiresInMs;
 
 	const { fullCustomer } = billingContext;
 

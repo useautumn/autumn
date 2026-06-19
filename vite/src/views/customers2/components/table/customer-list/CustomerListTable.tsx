@@ -56,8 +56,7 @@ export function CustomerListTable({
 			queryStates.processor,
 			queryStates.q,
 		]),
-		queryFn: () =>
-			Promise.resolve({ fullCustomers: [], next_cursor: null }),
+		queryFn: () => Promise.resolve({ fullCustomers: [], next_cursor: null }),
 		enabled: false,
 	});
 
@@ -84,6 +83,12 @@ export function CustomerListTable({
 
 			return {
 				...customer,
+				...(fullCustomer
+					? {
+							customer_products: fullCustomer.customer_products,
+							products_total_count: fullCustomer.products_total_count,
+						}
+					: {}),
 				fullCustomer,
 				isFullDataLoading: !fullCustomer && isFullDataLoading,
 			} as CustomerWithProducts;
@@ -91,9 +96,7 @@ export function CustomerListTable({
 	}, [customers, fullCustomersMap, isFullDataLoading]);
 
 	const orgId = org?.id ?? getLastSwitchedOrgId();
-	const columnStorageKey = orgId
-		? `customer-list:${orgId}`
-		: "customer-list";
+	const columnStorageKey = orgId ? `customer-list:${orgId}` : "customer-list";
 
 	const { columns, defaultVisibleColumnIds, columnGroups } =
 		useCustomerListColumns({

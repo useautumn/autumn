@@ -1,5 +1,6 @@
 "use client";
 
+import { TablePaginationFooter } from "./TablePaginationFooter";
 import { TableActions } from "./table-actions";
 import { TableBody } from "./table-body";
 import { TableBodyVirtualized } from "./table-body-virtualized";
@@ -23,6 +24,7 @@ export const Table = {
 	Header: TableHeader,
 	Heading: TableHeading,
 	Footer: TableFooter,
+	PaginationFooter: TablePaginationFooter,
 	Body: TableBody,
 	VirtualizedBody: TableBodyVirtualized,
 	Container: TableContainer,

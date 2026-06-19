@@ -127,6 +127,7 @@ export function useUpdateSubscriptionRequestBody({
 			cancelAction,
 			billingBehavior,
 			resetBillingCycle,
+			resetUsage,
 			refundBehavior,
 			refundAmount,
 			noBillingChanges,
@@ -186,6 +187,7 @@ export function useUpdateSubscriptionRequestBody({
 			version: version !== initialVersion ? version : undefined,
 			billing_behavior: billingBehavior || undefined,
 			billing_cycle_anchor: resetBillingCycle ? "now" : undefined,
+			carry_over_usages: resetUsage ? { enabled: false } : undefined,
 			no_billing_changes: noBillingChanges || undefined,
 			discounts: validDiscounts,
 		};

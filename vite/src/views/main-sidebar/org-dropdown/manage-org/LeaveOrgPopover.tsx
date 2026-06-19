@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/popover";
 import { Button } from "@/components/v2/buttons/Button";
 import { Input } from "@/components/v2/inputs/Input";
-import { useOrg } from "@/hooks/common/useOrg";
+import { setActiveOrg, useOrg } from "@/hooks/common/useOrg";
 import {
 	authClient,
 	useListOrganizations,
@@ -44,9 +44,7 @@ export const LeaveOrgPopover = () => {
 		});
 
 		const otherOrg = organizations.find((o) => o.id !== org.id);
-		await authClient.organization.setActive({
-			organizationId: otherOrg!.id,
-		});
+		await setActiveOrg(otherOrg!.id);
 
 		window.location.reload();
 	};

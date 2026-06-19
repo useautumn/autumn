@@ -1,9 +1,9 @@
-import { AppEnv } from "@autumn/shared";
 import React from "react";
 import { Link, useNavigate } from "react-router";
 import { authClient } from "@/lib/auth-client";
-import { useEnv } from "@/utils/envUtils";
 import { getRedirectUrl } from "@/utils/genUtils";
+import { useEnv } from "@/utils/envUtils";
+import { useSwitchActiveOrg } from "@/hooks/common/useOrg";
 
 function ErrorScreen({
 	children,
@@ -16,8 +16,9 @@ function ErrorScreen({
 	errorCode?: string;
 	errorData?: any;
 }) {
-	const env = useEnv();
 	const navigate = useNavigate();
+	const env = useEnv();
+	const switchActiveOrg = useSwitchActiveOrg();
 
 	const handleOrgRemovalError = async () => {
 		if (errorCode === "USER_REMOVED_FROM_ORG" && errorData) {
@@ -31,12 +32,8 @@ function ErrorScreen({
 						(org) => org.id !== errorData.orgId,
 					);
 					if (nextOrg) {
-						await authClient.organization.setActive({
-							organizationId: nextOrg.id,
-						});
-						// Redirect to products page of the new organization
-						const envPath = env === AppEnv.Sandbox ? "sandbox" : "production";
-						navigate(`/${envPath}/products`);
+						await switchActiveOrg(nextOrg.id);
+						navigate("/");
 						return;
 					}
 				}

@@ -13,6 +13,7 @@ import {
 } from "./handlers/handleDeleteCustomer.js";
 import { handleGetCustomerV2 } from "./handlers/handleGetCustomerV2.js";
 import { handlePostCustomer } from "./handlers/handleGetOrCreateCustomer/handleGetOrCreateCustomer.js";
+import { handleListCustomerProducts } from "./handlers/handleListCustomerProducts.js";
 import { handleListCustomers } from "./handlers/handleListCustomers.js";
 import { handleListCustomersV2 } from "./handlers/handleListCustomersV2.js";
 import { handleRefundInvoice } from "./handlers/handleRefundInvoice/handleRefundInvoice.js";
@@ -28,6 +29,7 @@ cusRouter.post("", ...handlePostCustomer);
 
 cusRouter.post("/clear_cache", ...handleClearCustomerCache);
 
+cusRouter.get("/:customer_id/products", ...handleListCustomerProducts);
 cusRouter.get("/:customer_id", ...handleGetCustomerV2);
 cusRouter.post("/:customer_id", ...handleUpdateCustomer);
 cusRouter.patch("/:customer_id", ...handleUpdateCustomer);

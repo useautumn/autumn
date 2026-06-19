@@ -4,6 +4,7 @@ import { AttachDiscountSchema } from "../attachV2/attachDiscount";
 import { BillingCycleAnchorSchema } from "../common/billingCycleAnchor";
 import { BillingParamsBaseV1Schema } from "../common/billingParamsBase/billingParamsBaseV1";
 import { CancelActionSchema } from "../common/cancelAction";
+import { CarryOverUsagesSchema } from "../common/carryOverUsages";
 import { RedirectModeSchema } from "../common/redirectMode";
 import { RefundLastPaymentSchema } from "../common/refundLastPayment";
 
@@ -52,6 +53,8 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 					"Controls whether balances should be recalculated during the subscription update.",
 			}),
 
+		carry_over_usages: CarryOverUsagesSchema,
+
 		status: z
 			.enum([
 				CusProductStatus.Active,
@@ -62,7 +65,6 @@ export const ExtUpdateSubscriptionV1ParamsSchema =
 			.meta({
 				internal: true,
 			}),
-
 	});
 
 const UPDATE_FIELDS = [

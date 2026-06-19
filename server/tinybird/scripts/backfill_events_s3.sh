@@ -51,7 +51,6 @@ mstart() { local v; v=$(mspec "$1"); date -u -v"$v" -v1d -v0H -v0M -v0S +%s 2>/d
 mlabel() { local v; v=$(mspec "$1"); date -u -v"$v" +%Y%m 2>/dev/null || date -u -d "$(date -u +%Y-%m-01) $(( -$1 )) month" +%Y%m; }
 isots()  { date -u -r "$1" "+%Y-%m-%d %H:%M:%S" 2>/dev/null || date -u -d "@$1" "+%Y-%m-%d %H:%M:%S"; }
 ts2epoch() { date -u -j -f '%Y-%m-%d %H:%M:%S' "$1" +%s 2>/dev/null || date -u -d "$1" +%s; }
-hago()   { local d=$(( (NOW - $1) / 3600 )); (( d < 0 )) && d=0; echo "$d"; }
 FLOOR_EPOCH=$(ts2epoch "$FLOOR_DATE 00:00:00")
 POP_END_EPOCH=$(ts2epoch "$POP_END_TS")
 
@@ -119,15 +118,21 @@ scan_density() {  # parallel pruned counts → DENSITY, sorted per-org newest→
   log "density: $(wc -l < "$DENSITY" | tr -d ' ')/$n months have data"
 }
 
-plan_chunks() {  # DENSITY → CHUNKS: split each month into ceil(rows/TARGET_ROWS) equal time windows
+plan_chunks() {  # DENSITY → CHUNKS: split each month into ceil(rows/TARGET_ROWS) windows, every boundary hour-aligned
   : > "$CHUNKS"
   while read -r o ym s e rows; do
+    s=$(( s - s % 3600 )); e=$(( e - e % 3600 ))   # hour-align unit bounds; drops the in-progress hour (cron exports settled hours)
+    (( e <= s )) && continue
     local n=$(( (rows + TARGET_ROWS - 1) / TARGET_ROWS )); (( n < 1 )) && n=1
     local span=$(( e - s )) w est i a b
     w=$(( span / n )); est=$(( rows / n ))
+    b=$e
     for (( i=0; i<n; i++ )); do
-      b=$(( e - i*w )); a=$(( e - (i+1)*w )); (( i == n-1 )) && a=$s   # oldest chunk hits exact month start
+      a=$(( e - (i+1)*w )); (( i == n-1 )) && a=$s   # oldest chunk hits exact (aligned) month start
+      a=$(( a - a % 3600 )); (( a < s )) && a=$s     # hour-align so no two chunks share a clock-hour (one S3 file per org/day/hour)
+      (( a >= b )) && continue                       # rounding collapsed this window — fold into the next chunk
       echo "$o $a $b $est $ym" >> "$CHUNKS"
+      b=$a                                           # contiguous: next chunk ends where this one started
     done
   done < "$DENSITY"
 }
@@ -136,18 +141,20 @@ CHUNK_FLOOR=${CHUNK_FLOOR:-3600}   # min chunk window (s) before declaring a win
 run_chunk() {  # $1=org $2=a_epoch $3=b_epoch $4=est_rows $5=ym → 0 ok / 1 fail. Splits on OOM and retries.
   local key="$1:$2:$3"
   grep -qxF "$key" "$DONE" 2>/dev/null && return 0   # already exported (resume / sub-chunk dedup)
-  local out sa ea; sa=$(hago "$2"); ea=$(hago "$3")
-  out=$(tb --cloud sink run "$SINK" --param org_id="$1" --param start_hours_ago="$sa" --param end_hours_ago="$ea" --wait 2>&1)
+  local out
+  out=$(tb --cloud sink run "$SINK" --param org_id="$1" --param start_ts="$(isots "$2")" --param end_ts="$(isots "$3")" --wait 2>&1)
   if grep -q "Data exported" <<<"$out"; then
     echo "$key" >> "$DONE"; echo "$5 $4" >> "$PROGRESS"; return 0
   fi
   if grep -qiE "MEMORY_LIMIT|Timeout exceeded" <<<"$out" && (( $3 - $2 > CHUNK_FLOOR )); then
-    local mid=$(( $2 + ($3 - $2)/2 ))
-    log "      ↳ too big $(isots "$2")→$(isots "$3") (~$(( $4/1000 ))k) — split & retry"
-    if run_chunk "$1" "$2" "$mid" "$(( $4/2 ))" "$5" && run_chunk "$1" "$mid" "$3" "$(( $4/2 ))" "$5"; then
-      echo "$key" >> "$DONE"; return 0   # both halves landed → mark parent done so resume skips it
+    local mid=$(( ( ($2 + ($3 - $2)/2) / 3600 ) * 3600 ))   # hour-align the split so the two halves never share a clock-hour
+    if (( mid > $2 && mid < $3 )); then
+      log "      ↳ too big $(isots "$2")→$(isots "$3") (~$(( $4/1000 ))k) — split & retry"
+      if run_chunk "$1" "$2" "$mid" "$(( $4/2 ))" "$5" && run_chunk "$1" "$mid" "$3" "$(( $4/2 ))" "$5"; then
+        echo "$key" >> "$DONE"; return 0   # both halves landed → mark parent done so resume skips it
+      fi
+      return 1
     fi
-    return 1
   fi
   if grep -qiE "MEMORY_LIMIT|Timeout exceeded" <<<"$out"; then
     echo "org=$1 $(isots "$2")→$(isots "$3") rows=$4 reason=toobig_at_floor" >> "$FAILED"

@@ -4,6 +4,7 @@ import { init } from "@squircle/core";
 import * as React from "react";
 import { useEffect } from "react";
 import { BrowserRouter, Route, Routes } from "react-router";
+import { DashboardGate } from "./app/DashboardGate";
 import { MainLayout } from "./app/layout";
 import { OnboardingLayout } from "./app/OnboardingLayout";
 import { useSession } from "./lib/auth-client";
@@ -36,6 +37,19 @@ function SquircleProvider({ children }: { children: React.ReactNode }) {
 	React.useEffect(() => void init(), []);
 	return children;
 }
+
+const envRoutes = (
+	path: string,
+	element: React.ReactNode,
+	sandboxElement = element,
+) => [
+	<Route key={path} path={`/${path}`} element={element} />,
+	<Route
+		key={`sandbox-${path}`}
+		path={`/sandbox/${path}`}
+		element={sandboxElement}
+	/>,
+];
 
 export default function App() {
 	const { data } = useSession();
@@ -79,84 +93,40 @@ export default function App() {
 					<Route path="/sandbox/quickstart" element={<QuickstartView />} />
 				</Route>
 
-				<Route element={<MainLayout />}>
-					<Route path="*" element={<DefaultView />} />
-					<Route path="/settings" element={<SettingsView />} />
-					<Route path="/sandbox/settings" element={<SettingsView />} />
-					<Route path="/admin" element={<AdminView />} />
-					<Route path="/sandbox/admin" element={<AdminView />} />
-					<Route path="/admin/oauth" element={<OAuthClientsView />} />
-					<Route path="/sandbox/admin/oauth" element={<OAuthClientsView />} />
-					<Route path="/admin/edge-config" element={<EdgeConfigView />} />
-					<Route
-						path="/sandbox/admin/edge-config"
-						element={<EdgeConfigView />}
-					/>
-					<Route
-						path="/sandbox/impersonate-redirect"
-						element={<ImpersonateRedirect />}
-					/>
-					<Route
-						path="/impersonate-redirect"
-						element={<ImpersonateRedirect />}
-					/>
-					<Route path="/trmnl" element={<TerminalView />} />
+				<Route element={<DashboardGate />}>
+					<Route element={<MainLayout />}>
+						<Route path="*" element={<DefaultView />} />
+						{envRoutes("settings", <SettingsView />)}
+						{envRoutes("admin", <AdminView />)}
+						{envRoutes("admin/oauth", <OAuthClientsView />)}
+						{envRoutes("admin/edge-config", <EdgeConfigView />)}
+						{envRoutes("impersonate-redirect", <ImpersonateRedirect />)}
+						<Route path="/trmnl" element={<TerminalView />} />
 
-					<Route
-						path="/products"
-						element={<ProductsView env={AppEnv.Live} />}
-					/>
-					<Route
-						path="/sandbox/products"
-						element={<ProductsView env={AppEnv.Sandbox} />}
-					/>
-					<Route path="/migrations" element={<MigrationsView />} />
-					<Route path="/sandbox/migrations" element={<MigrationsView />} />
-					<Route path="/migrations/:migration_id" element={<MigrationView />} />
-					<Route
-						path="/sandbox/migrations/:migration_id"
-						element={<MigrationView />}
-					/>
-					<Route
-						path="/products/:product_id"
-						element={
+						{envRoutes(
+							"products",
+							<ProductsView env={AppEnv.Live} />,
+							<ProductsView env={AppEnv.Sandbox} />,
+						)}
+						{envRoutes("migrations", <MigrationsView />)}
+						{envRoutes("migrations/:migration_id", <MigrationView />)}
+						{envRoutes(
+							"products/:product_id",
 							<SquircleProvider>
 								<PlanEditorView />
-							</SquircleProvider>
-						}
-					/>
-					<Route
-						path="/sandbox/products/:product_id"
-						element={
-							<SquircleProvider>
-								<PlanEditorView />
-							</SquircleProvider>
-						}
-					/>
+							</SquircleProvider>,
+						)}
 
-					<Route path="/customers" element={<CustomersPage />} />
-					<Route path="/sandbox/customers" element={<CustomersPage />} />
-					<Route path="/customers/:customer_id" element={<CustomerView2 />} />
-					<Route
-						path="/sandbox/customers/:customer_id"
-						element={<CustomerView2 />}
-					/>
-					<Route
-						path="/customers/:customer_id/:product_id"
-						// element={<CustomerProductView />}
-						element={<CustomerPlanEditor />}
-					/>
-					<Route
-						path="/sandbox/customers/:customer_id/:product_id"
-						// element={<CustomerProductView />}
-						element={<CustomerPlanEditor />}
-					/>
-					<Route path="/dev" element={<DevScreen />} />
-					<Route path="/sandbox/dev" element={<DevScreen />} />
-					<Route path="/analytics" element={<AnalyticsView />} />
-					<Route path="/sandbox/analytics" element={<AnalyticsView />} />
-					<Route path="/dev/cli" element={<Otp />} />
-					<Route path="/sandbox/dev/cli" element={<Otp />} />
+						{envRoutes("customers", <CustomersPage />)}
+						{envRoutes("customers/:customer_id", <CustomerView2 />)}
+						{envRoutes(
+							"customers/:customer_id/:product_id",
+							<CustomerPlanEditor />,
+						)}
+						{envRoutes("dev", <DevScreen />)}
+						{envRoutes("analytics", <AnalyticsView />)}
+						{envRoutes("dev/cli", <Otp />)}
+					</Route>
 				</Route>
 			</Routes>
 		</BrowserRouter>

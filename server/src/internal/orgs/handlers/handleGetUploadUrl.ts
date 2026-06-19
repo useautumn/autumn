@@ -1,6 +1,11 @@
-import { ErrCode, Scopes } from "@autumn/shared";
-import { getUploadUrl } from "@/external/supabase/storageUtils.js";
-import RecaseError from "@/utils/errorUtils.js";
+import { InternalError, Scopes } from "@autumn/shared";
+import {
+	getOrgLogoKey,
+	getOrgLogoPublicUrl,
+	getOrgLogoS3Credentials,
+	getPublicAssetsS3Config,
+} from "@/external/aws/s3/publicAssetsS3Config.js";
+import { getS3PresignedPutUrl } from "@/external/aws/s3/s3PresignUtils.js";
 import { createRoute } from "../../../honoMiddlewares/routeHandler";
 
 export const handleGetUploadUrl = createRoute({
@@ -9,18 +14,24 @@ export const handleGetUploadUrl = createRoute({
 		const ctx = c.get("ctx");
 		const { org } = ctx;
 
-		const path = `logo/${org.id}`;
+		const { bucket, region } = getPublicAssetsS3Config();
+		const key = getOrgLogoKey(org.id);
 
-		if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
-			throw new RecaseError({
-				message: "Supabase storage not set up",
-				code: ErrCode.SupabaseNotFound,
-				statusCode: 400,
+		if (!bucket || !region) {
+			throw new InternalError({
+				message: "Public asset storage not configured",
+				code: "s3_not_configured",
 			});
 		}
 
-		const data = await getUploadUrl({ path });
+		const signedUrl = await getS3PresignedPutUrl({
+			bucket,
+			region,
+			key,
+			credentials: getOrgLogoS3Credentials(),
+		});
+		const publicUrl = getOrgLogoPublicUrl({ bucket, region, orgId: org.id });
 
-		return c.json(data);
+		return c.json({ signedUrl, publicUrl, key });
 	},
 });
