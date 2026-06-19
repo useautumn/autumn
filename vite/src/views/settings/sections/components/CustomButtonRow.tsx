@@ -32,8 +32,8 @@ export function CustomButtonRow({
 				className="flex flex-col gap-0.5 min-w-0 flex-1 text-left cursor-pointer"
 				onClick={onEdit}
 			>
-				<span className="flex items-center gap-1.5 truncate text-sm font-medium">
-					{button.label}
+				<span className="flex items-center gap-1.5 text-sm font-medium min-w-0">
+					<span className="truncate">{button.label}</span>
 					{button.open_in_new_tab && (
 						<ArrowSquareOutIcon className="size-3 shrink-0 text-tertiary-foreground" />
 					)}

@@ -26,10 +26,11 @@ export const DeleteCustomButtonDialog = ({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="max-w-md">
 				<DialogHeader>
-					<DialogTitle className="truncate">Delete {button?.label}</DialogTitle>
-					<DialogDescription>
-						Are you sure you want to delete this button? This action cannot be
-						undone.
+					<DialogTitle>Delete custom button</DialogTitle>
+					<DialogDescription className="break-words">
+						Are you sure you want to delete{" "}
+						<span className="font-medium text-foreground">{button?.label}</span>
+						? This action cannot be undone.
 					</DialogDescription>
 				</DialogHeader>
 				<DialogFooter>

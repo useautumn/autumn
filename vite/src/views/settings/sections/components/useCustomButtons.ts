@@ -1,4 +1,4 @@
-import type { CustomButton, FrontendOrg, OrgConfig } from "@autumn/shared";
+import type { CustomButton } from "@autumn/shared";
 import { useMutation } from "@tanstack/react-query";
 import { nanoid } from "nanoid";
 import { toast } from "sonner";
@@ -6,19 +6,23 @@ import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import type { CustomButtonForm } from "./customButtonFormSchema";
 
+type CustomButtonsResponse = { custom_buttons: CustomButton[] };
+
 export function useCustomButtons() {
 	const axiosInstance = useAxiosInstance();
 	const { org, mutate } = useOrg();
-	const buttons = org?.config?.custom_buttons ?? [];
+	const buttons = org?.custom_buttons ?? [];
 
 	const persist = (next: CustomButton[]) =>
-		axiosInstance.patch("/organization/config", {
+		axiosInstance.patch("/organization/custom-buttons", {
 			custom_buttons: next,
-		} satisfies Partial<OrgConfig>);
+		});
 
 	const fetchButtons = async (): Promise<CustomButton[]> => {
-		const { data } = await axiosInstance.get<FrontendOrg>("/organization");
-		return data.config?.custom_buttons ?? [];
+		const { data } = await axiosInstance.get<CustomButtonsResponse>(
+			"/organization/custom-buttons",
+		);
+		return data.custom_buttons ?? [];
 	};
 
 	const save = useMutation({

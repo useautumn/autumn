@@ -11,6 +11,7 @@ import {
 	timestamp,
 	unique,
 } from "drizzle-orm/pg-core";
+import type { CustomButton } from "./customButton.js";
 import type { OrgConfig } from "./orgConfig.js";
 
 export type SvixConfig = {
@@ -97,6 +98,10 @@ export const organizations = pgTable(
 
 		created_at: numeric({ mode: "number" }),
 		config: jsonb().default({}).notNull().$type<OrgConfig>(),
+		custom_buttons: jsonb("custom_buttons")
+			.default(sql`'[]'::jsonb`)
+			.notNull()
+			.$type<CustomButton[]>(),
 		created_by: text("created_by"),
 		onboarded: boolean("onboarded").default(false),
 		deployed: boolean("deployed").default(false),

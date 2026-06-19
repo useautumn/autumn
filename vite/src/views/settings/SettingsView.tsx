@@ -3,7 +3,7 @@ import {
 	BellIcon,
 	BotIcon,
 	BuildingIcon,
-	LinkIcon,
+	MousePointerClickIcon,
 	PaletteIcon,
 	ReceiptIcon,
 	ShieldCheckIcon,
@@ -81,7 +81,7 @@ const SETTINGS_GROUPS: readonly SettingsNavGroup[] = [
 			{
 				id: "custom-buttons",
 				label: "Custom Buttons",
-				icon: <LinkIcon className="size-4" />,
+				icon: <MousePointerClickIcon className="size-4" />,
 			},
 			{
 				id: "agent",
