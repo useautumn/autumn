@@ -1342,3 +1342,119 @@ export const ProblemBgSvg = (props: ComponentPropsWithoutRef<"div">) => (
 		/>
 	</div>
 );
+
+export type CustomerStoryStat = { value: string; label: string };
+
+export type CustomerStory = {
+	slug: string;
+	name: string;
+	logo: string;
+	iconLogo: string;
+	logoClassName?: string;
+	accent: string;
+	surface: string;
+	textOn: "dark" | "light";
+	founderImage: string;
+	glyphHeight?: string;
+	headline: { lead: string; emphasis: string };
+	stats: CustomerStoryStat[];
+	quote: string;
+	author: { name: string; title: string };
+};
+
+// TODO: replace placeholder stats/quotes with real customer numbers.
+export const customerStoriesData: CustomerStory[] = [
+	{
+		slug: "mintlify",
+		name: "Mintlify",
+		logo: "/images/logos/mintlify_logo.svg.svg",
+		iconLogo: "/images/logos/icons/mintlify.svg",
+		logoClassName: "scale-90",
+		accent: "#18E299",
+		surface: "#18E299",
+		textOn: "dark",
+		founderImage: "/images/customers/founder-placeholder.png",
+		headline: {
+			lead: "Mintlify shipped usage-based docs billing",
+			emphasis: "in under a week.",
+		},
+		stats: [
+			{ value: "5x", label: "Faster billing launch" },
+			{ value: "120K", label: "Active developers" },
+			{ value: "0", label: "Stripe webhooks written" },
+		],
+		quote:
+			"Autumn replaced the entire billing layer we were dreading. Adding a new plan is now a config change, not a sprint.",
+		author: { name: "Han Wang", title: "Co-Founder & CEO at Mintlify" },
+	},
+	{
+		slug: "firecrawl",
+		name: "Firecrawl",
+		logo: "/images/logos/Firecrawl.svg.svg",
+		iconLogo: "/images/logos/icons/firecrawl.svg",
+		logoClassName: "scale-95 -translate-y-0.5",
+		accent: "#FF4D00",
+		surface: "#FF4D00",
+		textOn: "light",
+		founderImage: "/images/customers/founder-placeholder.png",
+		headline: {
+			lead: "Firecrawl metered every crawl with Autumn",
+			emphasis: "without touching Stripe.",
+		},
+		stats: [
+			{ value: "9.2M", label: "Pages metered / mo" },
+			{ value: "40ms", label: "P90 track latency" },
+			{ value: "3", label: "Pricing models live" },
+		],
+		quote:
+			"We had crazy usage-based limits across features. Autumn gave us one source of truth for gating and billing overnight.",
+		author: { name: "Caleb Peffer", title: "Co-Founder & CEO at Firecrawl" },
+	},
+	{
+		slug: "browser-use",
+		name: "Browser Use",
+		logo: "/images/logos/Browser use.svg",
+		iconLogo: "/images/logos/icons/browser-use.svg",
+		logoClassName: "scale-85",
+		accent: "#FE750E",
+		surface: "#09090B",
+		textOn: "light",
+		founderImage: "/images/customers/founder-placeholder.png",
+		glyphHeight: "95%",
+		headline: {
+			lead: "Browser Use scaled seat + usage billing",
+			emphasis: "as it grew 10x.",
+		},
+		stats: [
+			{ value: "10x", label: "Revenue growth" },
+			{ value: "85%", label: "Less billing code" },
+			{ value: "24/7", label: "Automated invoicing" },
+		],
+		quote:
+			"@autumnpricing is so good it ruined every other tool for me. Hybrid seat and usage billing just works.",
+		author: { name: "Gregor Žunič", title: "Co-Founder at Browser Use" },
+	},
+	{
+		slug: "t3-chat",
+		name: "T3.chat",
+		logo: "/images/logos/T3_svg.svg",
+		iconLogo: "/images/logos/icons/t3-chat.svg",
+		logoClassName: "scale-65",
+		accent: "#F6339A",
+		surface: "#F6339A",
+		textOn: "light",
+		founderImage: "/images/customers/founder-placeholder.png",
+		headline: {
+			lead: "T3.chat handled a viral launch",
+			emphasis: "on Autumn from day one.",
+		},
+		stats: [
+			{ value: "300K", label: "Users onboarded" },
+			{ value: "99.9%", label: "Billing uptime" },
+			{ value: "$0", label: "Revenue leakage" },
+		],
+		quote:
+			"Literally cannot imagine going without it. Free trials, usage limits and AI credits across every feature.",
+		author: { name: "Theo Browne", title: "Founder at T3.chat" },
+	},
+];

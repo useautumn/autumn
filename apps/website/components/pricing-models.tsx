@@ -9,10 +9,10 @@ import { cn } from "@/lib/utils";
 
 const sidebarItems = [
 	{
-		id: "subscriptions",
-		label: "Subscriptions",
-		model: 0,
-		desc: "Monthly or yearly plans with feature gating. Upgrades and downgrades handled automatically. Proration included.",
+		id: "credits",
+		label: "Credits & Top-ups",
+		model: 1,
+		desc: "Prepaid credits that features draw from. One-time purchases or auto-refill. Set minimum thresholds.",
 	},
 	{
 		id: "free-trials",
@@ -21,10 +21,10 @@ const sidebarItems = [
 		desc: "Card-required or card-optional trials. Auto-convert to paid. Configurable trial lengths per plan.",
 	},
 	{
-		id: "credits",
-		label: "Credits & Top-ups",
-		model: 1,
-		desc: "Prepaid credits that features draw from. One-time purchases or auto-refill. Set minimum thresholds.",
+		id: "subscriptions",
+		label: "Subscriptions",
+		model: 0,
+		desc: "Monthly or yearly plans with feature gating. Upgrades and downgrades handled automatically. Proration included.",
 	},
 	{
 		id: "usage",
@@ -150,7 +150,7 @@ export default function PricingModels() {
 				<div className="hidden lg:block border-l border-r border-b border-[#292929] min-h-[120px] lg:min-h-[260px]"></div>
 				<div className="hidden lg:block border-r border-b border-[#292929]"></div>
 				<div className="hidden z-20 lg:block border-r border-b bg-[#0F0F0F] border-[#292929]"></div>
-				<div className="hidden lg:flex lg:row-span-2 items-end justify-center lg:pl-4 lg:pr-4 relative z-10 w-full lg:h-full order-first lg:order-0 mt-0 xl:mt-10.5">
+				<div className="hidden lg:flex lg:row-span-2 items-center justify-center lg:pl-4 lg:pr-4 relative z-10 w-full lg:h-full order-first lg:order-0 mt-0 xl:mt-10.5">
 					<div className="relative z-10 w-full lg:max-w-120 xl:max-w-150 h-auto overflow-hidden">
 						<div className="relative w-full aspect-square">
 							{Object.entries(images).map(([key, src]) => {

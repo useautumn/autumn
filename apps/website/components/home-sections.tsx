@@ -12,12 +12,12 @@ import SectionDivider from "./section-divider";
 // LazySection gates each component behind an IntersectionObserver so chunks
 // and their heavy assets (Lottie JSON, ScrollTrigger) only download as the
 // user scrolls toward them rather than all at once on page load.
+const CustomerStories = dynamic(() => import("./customer-stories"));
 const LogoWall = dynamic(() => import("./logo-wall"));
 const Problem = dynamic(() => import("./problem"));
 const Solution = dynamic(() => import("./solution"));
 const PricingModels = dynamic(() => import("./pricing-models"));
 const Features = dynamic(() => import("./features"));
-const Testimonials = dynamic(() => import("./testimonials"));
 const ProductionScale = dynamic(() => import("./production-scale"));
 const Pricing = dynamic(() => import("./pricing"));
 const FAQ = dynamic(() => import("./faq"));
@@ -47,24 +47,42 @@ export default function HomeSections() {
 		<>
 			<Hero />
 
- <LogoWall />
+			<LogoWall />
 			<SectionDivider title="THE PROBLEM" />
-			<LazySection><Problem /></LazySection>
+			<LazySection>
+				<Problem />
+			</LazySection>
+			<SectionDivider title="CUSTOMER STORIES" />
+			<LazySection>
+				<CustomerStories />
+			</LazySection>
 			<SectionDivider title="THE SOLUTION" />
-			<LazySection><Solution /></LazySection>
+			<LazySection>
+				<Solution />
+			</LazySection>
 			<SectionDivider title="PRICING MODELS" />
-			<LazySection><PricingModels /></LazySection>
+			<LazySection>
+				<PricingModels />
+			</LazySection>
 			<SectionDivider title="FEATURES" />
-			<LazySection><Features /></LazySection>
-			<SectionDivider title="TESTIMONIALS" />
-			<LazySection><Testimonials /></LazySection>
+			<LazySection>
+				<Features />
+			</LazySection>
 			<SectionDivider title="PRODUCTION SCALE" />
-			<LazySection><ProductionScale /></LazySection>
+			<LazySection>
+				<ProductionScale />
+			</LazySection>
 			<SectionDivider title="PRICING" />
-			<LazySection><Pricing /></LazySection>
+			<LazySection>
+				<Pricing />
+			</LazySection>
 			<SectionDivider title="FAQ" />
-			<LazySection><FAQ /></LazySection>
-			<LazySection><Footer /></LazySection>
+			<LazySection>
+				<FAQ />
+			</LazySection>
+			<LazySection>
+				<Footer />
+			</LazySection>
 		</>
 	);
 }
