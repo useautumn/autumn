@@ -51,6 +51,7 @@ import {
 	TRACK_SQS_QUEUE_URL,
 	TW_ENV,
 	WARM_SANDBOX_PREFIX,
+	WORKER_VCPUS,
 } from "../constants.ts";
 import {
 	type CostBreakdown,
@@ -648,6 +649,13 @@ const getOrBuildWarmParent = async ({
 type ProvisionedWorker = {
 	handle: WorkerHandle;
 	sandbox: Sandbox;
+	/** Timings (ms since fan-out start) for benchmarking the provisioning phase. */
+	timing: {
+		/** When this worker's Stripe sub-account finished creating. */
+		stripeMs: number;
+		/** When this worker reached READY (fork + boot complete). */
+		readyMs: number;
+	};
 };
 
 /**
@@ -753,6 +761,7 @@ const provisionWorker = async ({
 	ownerEmail,
 	ingressUrl,
 	ingressToken,
+	fanoutStart,
 	signal,
 }: {
 	idx: number;
@@ -764,6 +773,8 @@ const provisionWorker = async ({
 	ownerEmail: string;
 	ingressUrl: string;
 	ingressToken: string;
+	/** Epoch ms when the fan-out phase began, for per-worker provisioning timings. */
+	fanoutStart: number;
 	signal: AbortSignal;
 }): Promise<ProvisionedWorker> => {
 	const name = sandboxName(owner, runId, idx);
@@ -780,6 +791,7 @@ const provisionWorker = async ({
 	});
 	await registry.addSubAccount(runId, accountId);
 	bumpStripeDone();
+	const stripeMs = Date.now() - fanoutStart;
 
 	// 2. Fork the worker with its per-worker env (fork does NOT copy env). The SDK
 	//    forks from the warm parent's NAME (its current snapshot is the warm one).
@@ -800,6 +812,7 @@ const provisionWorker = async ({
 	await waitForReady({ sandbox, name, signal });
 	log(`worker ${name}: READY`);
 	bumpWorkerReady();
+	const readyMs = Date.now() - fanoutStart;
 
 	// 5. Push the `{ accountId → workerUrl }` mapping to the shared ingress so the
 	//    one platform Connect webhook routes THIS sub-account's events here. Because
@@ -822,7 +835,7 @@ const provisionWorker = async ({
 		busy: false,
 	};
 
-	return { handle, sandbox };
+	return { handle, sandbox, timing: { stripeMs, readyMs } };
 };
 
 // ============================================================================
@@ -1098,6 +1111,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		log(`fanning out ${effectiveWorkers} worker(s) from the warm snapshot`);
 		setPhase("fanout");
 		setFanoutTotals(effectiveWorkers);
+		const fanoutStart = Date.now();
 		const provisionTasks: Promise<ProvisionedWorker>[] = [];
 		for (let idx = 0; idx < effectiveWorkers; idx++) {
 			const isSvixShard = needsSvixShard && idx === 0;
@@ -1112,6 +1126,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 					ownerEmail,
 					ingressUrl: ingress.publicUrl,
 					ingressToken: ingress.token,
+					fanoutStart,
 					signal,
 				}),
 			);
@@ -1132,6 +1147,30 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		}
 		const provisioned = settled.map(
 			(r) => (r as PromiseFulfilledResult<ProvisionedWorker>).value,
+		);
+
+		// Fan-out benchmark. All timings are ms from fan-out start. `stripeMs` is
+		// when a worker's account finished; `readyMs` is when it hit READY (fork +
+		// boot done). The fork→ready slice per worker is `readyMs - stripeMs`.
+		const stat = (xs: number[]): { avg: number; min: number; max: number } => ({
+			avg: xs.reduce((sum, x) => sum + x, 0) / Math.max(1, xs.length),
+			min: Math.min(...xs),
+			max: Math.max(...xs),
+		});
+		const stripe = stat(provisioned.map((p) => p.timing.stripeMs));
+		const ready = stat(provisioned.map((p) => p.timing.readyMs));
+		const forkBoot = stat(
+			provisioned.map((p) => p.timing.readyMs - p.timing.stripeMs),
+		);
+		log(
+			`fan-out benchmark (${provisioned.length} workers, ${WORKER_VCPUS} vCPU each):`,
+		);
+		log(
+			`  · all Stripe accounts created in ${formatWall(stripe.max)} (last @ ${formatWall(stripe.max)})`,
+		);
+		log(`  · all workers READY in ${formatWall(ready.max)} from fan-out start`);
+		log(
+			`  · per-worker fork→boot→READY: avg ${formatWall(forkBoot.avg)}, min ${formatWall(forkBoot.min)}, max ${formatWall(forkBoot.max)}`,
 		);
 
 		// ----- RUN ------------------------------------------------------------
