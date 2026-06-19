@@ -2,6 +2,7 @@ import type { AppEnv, ChatInstallation } from "@autumn/shared";
 import { decrypt, encrypt } from "../../../lib/crypto.js";
 import { db } from "../../../lib/db.js";
 import { env as leafEnv } from "../../../lib/env.js";
+import { isSlackAdminProvider } from "../../slackAdmin/access.js";
 import {
 	getChatOAuthCredentialByInstallationEnv,
 	updateChatOAuthCredentialTokens,
@@ -22,24 +23,28 @@ const getDefaultExpiresAt = () => Date.now() + 60 * 60 * 1000;
 export const getInstallationOAuthAccessToken = async ({
 	installation,
 	env,
+	orgId = installation.org_id,
 }: {
 	installation: ChatInstallation;
 	env: AppEnv;
+	orgId?: string;
 }) => {
 	let credential = await getChatOAuthCredentialByInstallationEnv({
 		db,
 		chatInstallationId: installation.id,
 		env,
+		orgId,
 	});
 
 	if (
-		installation.provider.startsWith("slack_admin") &&
-		(!credential || credential.org_id !== installation.org_id)
+		isSlackAdminProvider({ provider: installation.provider }) &&
+		(!credential || credential.org_id !== orgId)
 	) {
 		await db.transaction(async (tx) => {
 			await replaceInstallationOAuthCredentials({
 				tx,
 				installation,
+				orgId,
 				userId: installation.installed_by_user_id ?? "",
 			});
 		});
@@ -48,6 +53,7 @@ export const getInstallationOAuthAccessToken = async ({
 			db,
 			chatInstallationId: installation.id,
 			env,
+			orgId,
 		});
 	}
 

@@ -10,6 +10,7 @@ import {
 } from "@autumn/shared";
 import { and, eq, or } from "drizzle-orm";
 import { replaceInstallationOAuthCredentials } from "../../internal/installations/actions/replaceInstallationOAuthCredentials.js";
+import { slackAdminThreadsRepo } from "../../internal/slackAdmin/repos/slackAdminThreadsRepo.js";
 import { decrypt, encrypt } from "../../lib/crypto.js";
 import { db } from "../../lib/db.js";
 import { env } from "../../lib/env.js";
@@ -69,10 +70,14 @@ export const getInstallationKey = (
 	return decrypt(key);
 };
 
-const deleteInstallationApiKeys = async (
+const deleteInstallationArtifacts = async (
 	tx: ChatTransaction,
 	installation: ChatInstallation,
 ) => {
+	await slackAdminThreadsRepo.deleteByInstallation({
+		db: tx,
+		chatInstallationId: installation.id,
+	});
 	for (const id of [
 		installation.sandbox_api_key_id,
 		installation.live_api_key_id,
@@ -119,7 +124,7 @@ export const replaceInstallation = async ({
 			where: or(sameOrg, sameWorkspace),
 		});
 		for (const installation of existingInstallations) {
-			await deleteInstallationApiKeys(tx, installation);
+			await deleteInstallationArtifacts(tx, installation);
 		}
 
 		await tx.delete(chatInstallations).where(or(sameOrg, sameWorkspace));

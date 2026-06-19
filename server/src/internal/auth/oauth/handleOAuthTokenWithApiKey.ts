@@ -1,5 +1,6 @@
 import { prefixOAuthToken } from "@autumn/auth";
 import {
+	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
 	getOAuthResourceScopes,
 	getResourceFromOAuthTokenRequest,
 	returnsOAuthAccessTokenForClientId,
@@ -198,12 +199,15 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 				statusCode: 401,
 			});
 		}
-		const issuedScopes = await getOAuthConsentScopeGrant({
-			db,
-			organizationId: tokenRecord.referenceId,
-			requestedScopes: parsedRequestedScopes ?? tokenRecord.scopes,
-			userId: tokenRecord.userId,
-		});
+		const issuedScopes =
+			tokenRecord.clientId === AUTUMN_ADMIN_OAUTH_CLIENT_ID
+				? (parsedRequestedScopes ?? tokenRecord.scopes)
+				: await getOAuthConsentScopeGrant({
+						db,
+						organizationId: tokenRecord.referenceId,
+						requestedScopes: parsedRequestedScopes ?? tokenRecord.scopes,
+						userId: tokenRecord.userId,
+					});
 		tokenRecord.scopes = getOAuthResourceScopes(issuedScopes);
 		if (tokenRecord.id) {
 			await oauthAccessTokenRepo.updateScopes({

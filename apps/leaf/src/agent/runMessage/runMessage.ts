@@ -7,10 +7,12 @@ import { messageTimeoutMs } from "../../lib/chatAgentConfig.js";
 import { db } from "../../lib/db.js";
 import { env as chatEnv } from "../../lib/env.js";
 import { logger as rootLogger } from "../../lib/logger.js";
-import type { BotMessage } from "../../types.js";
+import type { AgentOutput, BotMessage } from "../../types.js";
 import { agentEngines } from "./engines/engines.js";
 import { prepareAttachmentMessage } from "./setup/prepareAttachments.js";
 import { selectChatEnv } from "./setup/selectChatEnv.js";
+import { getDefaultChatEnv } from "./setup/selectChatEnv.js";
+import { resolveSlackAdminOrgContext } from "./setup/resolveSlackAdminOrg.js";
 import { setupAgentToolContext } from "./setup/setupAgentToolContext.js";
 import type { MessageContext, MessageParams } from "./types.js";
 
@@ -24,6 +26,10 @@ const withTimeout = <T>(promise: Promise<T>, ms: number) =>
 	});
 
 const TIMEOUT_BACKSTOP_GRACE_MS = 20_000;
+
+type RunMessageOutput = AgentOutput & {
+	org?: { id: string; slug?: string };
+};
 
 /** Entry point for one chat message: staged ctx build, then engine dispatch. */
 export const runMessage = async ({
@@ -44,7 +50,7 @@ export const runMessage = async ({
 	text,
 	channelId,
 	threadId,
-}: BotMessage) => {
+}: BotMessage): Promise<RunMessageOutput> => {
 	// The engine interrupts the session at the deadline; the wider outer
 	// timeout only fires if the stream itself wedges.
 	const deadlineAt = Date.now() + messageTimeoutMs[chatEnv.AGENT_HARNESS];
@@ -57,6 +63,18 @@ export const runMessage = async ({
 				threadId,
 				workspaceId: installation.workspace_id,
 			};
+			const orgContext = await resolveSlackAdminOrgContext({
+				installation,
+				logger,
+				providerUserId,
+				recentMessages,
+				text,
+				thread,
+			});
+			if ("blockedText" in orgContext) {
+				return { env: getDefaultChatEnv(), text: orgContext.blockedText };
+			}
+			const { org } = orgContext;
 
 			const preparedPromise = prepareAttachmentMessage({
 				attachments,
@@ -68,14 +86,14 @@ export const runMessage = async ({
 				if (engine.name === "claude-managed") {
 					return findClaudeManagedSessionForThread({
 						db,
-						orgId: installation.org_id,
+						orgId: org.id,
 						thread,
 					});
 				}
 				if (engine.name === "vercel") {
 					return findVercelHarnessSessionForThread({
 						db,
-						orgId: installation.org_id,
+						orgId: org.id,
 						thread,
 					});
 				}
@@ -107,7 +125,7 @@ export const runMessage = async ({
 				event: "leaf.chat_env_selected",
 				context: {
 					env,
-					org_id: installation.org_id,
+					org_id: org.id,
 					provider: installation.provider,
 				},
 				data: {
@@ -118,6 +136,7 @@ export const runMessage = async ({
 			const token = await getInstallationOAuthAccessToken({
 				installation,
 				env,
+				orgId: org.id,
 			});
 
 			const agentTools =
@@ -144,10 +163,7 @@ export const runMessage = async ({
 				onAgentReady,
 				onApprovalsSuperseded,
 				onThinking,
-				org: {
-					id: installation.org_id,
-					slug: installation.org_slug ?? undefined,
-				},
+				org,
 				onTurnComplete,
 				providerUserId,
 				run,
@@ -156,7 +172,8 @@ export const runMessage = async ({
 				token,
 			};
 
-			return engine.run({ ctx, params });
+			const output = await engine.run({ ctx, params });
+			return { ...output, org };
 		})(),
 		deadlineAt - Date.now() + TIMEOUT_BACKSTOP_GRACE_MS,
 	);
