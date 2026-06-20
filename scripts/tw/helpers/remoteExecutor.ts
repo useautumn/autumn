@@ -21,7 +21,6 @@
  *     (real exit code, even non-zero) flows through the normal path.
  */
 
-import type { Sandbox } from "@vercel/sandbox";
 // NOTE: `TestExecutor` and `WorkerDeathError` are owned + exported by the
 // runner-refactor step from `scripts/testScripts/testExecutor.ts` (see plan §8.2
 // and tw/types.ts). They are imported (NOT redefined) here so the seam — including
@@ -38,10 +37,13 @@ import {
 } from "../dashboard/hub.ts";
 import type { WorkerHandle } from "../types.ts";
 import type { WorkerPool } from "./pool.ts";
-import { runStreaming } from "./vercel.ts";
+import type { ProviderSandbox } from "./provider.ts";
+import { runStreaming } from "./provider.ts";
 
-/** How the executor maps a {@link WorkerHandle} to a live {@link Sandbox}. */
-export type SandboxResolver = (worker: WorkerHandle) => Sandbox | undefined;
+/** How the executor maps a {@link WorkerHandle} to a live sandbox handle. */
+export type SandboxResolver = (
+	worker: WorkerHandle,
+) => ProviderSandbox | undefined;
 
 export type RemoteExecutorOptions = {
 	/** The pool the executor checks workers out of (plan §8.7). */

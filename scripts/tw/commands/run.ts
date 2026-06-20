@@ -29,9 +29,7 @@
 import { existsSync, writeFileSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { Writable } from "node:stream";
 import { deleteSvixApp as serverDeleteSvixApp } from "@server/external/svix/svixHelpers.js";
-import type { Sandbox } from "@vercel/sandbox";
 import chalk from "chalk";
 import {
 	getGroup,
@@ -83,6 +81,19 @@ import {
 	vercelTags,
 } from "../helpers/owner.ts";
 import { WorkerPool } from "../helpers/pool.ts";
+import {
+	createWarmSandbox,
+	deleteSandbox,
+	forkWorker,
+	getPublicUrl,
+	getSandboxByName,
+	isSandboxStreamClosed,
+	type ProviderSandbox,
+	runDetached,
+	runStreaming,
+	setProvider,
+	snapshotAndStop,
+} from "../helpers/provider.ts";
 import * as registry from "../helpers/registry.ts";
 import { RemoteExecutor } from "../helpers/remoteExecutor.ts";
 import {
@@ -95,16 +106,6 @@ import {
 	createSvixApp as orchestratorCreateSvixApp,
 	partitionShards,
 } from "../helpers/svix.ts";
-import {
-	createWarmSandbox,
-	deleteSandbox,
-	forkWorker,
-	getPublicUrl,
-	getSandboxByName,
-	isSandboxStreamClosed,
-	runStreaming,
-	snapshotAndStop,
-} from "../helpers/vercel.ts";
 import { runSwarmTests } from "../tui/runnerCore.ts";
 import {
 	bumpAccountDone,
@@ -710,7 +711,7 @@ const getOrBuildWarmParent = async ({
 
 type ProvisionedWorker = {
 	handle: WorkerHandle;
-	sandbox: Sandbox;
+	sandbox: ProviderSandbox;
 	/** Timings (ms since fan-out start) for benchmarking the provisioning phase. */
 	timing: {
 		/** When this worker's Stripe sub-account finished creating. */
@@ -730,7 +731,7 @@ const waitForReady = async ({
 	name,
 	signal,
 }: {
-	sandbox: Sandbox;
+	sandbox: ProviderSandbox;
 	name: string;
 	signal: AbortSignal;
 }): Promise<void> => {
@@ -749,33 +750,25 @@ const waitForReady = async ({
 	// go to the run log file). After READY we stop forwarding entirely — the
 	// worker's per-request server logs (incl. noisy `[Redis] Connection error`
 	// retries × 50 workers) are pure noise during the run.
-	const bootSink = new Writable({
-		write(chunk, _encoding, callback) {
-			const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
-			// Dashboard: capture the worker's server output for its WHOLE life (the
-			// per-worker view shows this); no-op unless the dashboard is enabled.
-			appendWorkerOutput(name, text);
-			if (!ready) {
-				sinkLine(chalk.gray(`[${name}] ${text.replace(/\n$/, "")}`));
-				if (text.includes(READY_SENTINEL)) {
-					ready = true;
-					resolveReady();
-					setWorkerStatus(name, "ready");
-				}
+	const onBootChunk = (text: string): void => {
+		// Dashboard: capture the worker's server output for its WHOLE life (the
+		// per-worker view shows this); no-op unless the dashboard is enabled.
+		appendWorkerOutput(name, text);
+		if (!ready) {
+			sinkLine(chalk.gray(`[${name}] ${text.replace(/\n$/, "")}`));
+			if (text.includes(READY_SENTINEL)) {
+				ready = true;
+				resolveReady();
+				setWorkerStatus(name, "ready");
 			}
-			callback();
-		},
-	});
+		}
+	};
 
 	// Detached: the boot command (services + the long-lived server) must keep
 	// running for the whole test run, so we don't await its completion here.
-	const command = await sandbox.runCommand({
-		cmd: "bun",
-		args: [BOOT_SCRIPT],
+	const command = await runDetached(sandbox, ["bun", BOOT_SCRIPT], {
 		cwd: SANDBOX_REPO_ROOT,
-		detached: true,
-		stdout: bootSink,
-		stderr: bootSink,
+		onChunk: onBootChunk,
 		signal,
 	});
 
@@ -872,7 +865,7 @@ const provisionWorker = async ({
 	await registry.addSandbox(runId, { name: sandbox.name });
 
 	// 3. Resolve the public URL (the worker's connect-route target).
-	const publicUrl = getPublicUrl(sandbox, SERVER_PORT);
+	const publicUrl = await getPublicUrl(sandbox, SERVER_PORT);
 
 	// 4. Boot the worker (detached) and wait for READY.
 	log(`worker ${name}: booting${isSvixShard ? " (svix shard)" : ""}`);
@@ -992,6 +985,9 @@ const teardown = async ({
 // ============================================================================
 
 export const run = async (args: TwRunArgs): Promise<void> => {
+	// Select the cloud backend (Vercel default; Modal via --provider=modal). The
+	// chosen backend module is dynamically imported so the unused SDK never loads.
+	await setProvider(args.provider);
 	const owner = getOwner();
 	const runId = newRunId();
 	const ownerEmail = process.env.TW_OWNER_EMAIL ?? OWNER_EMAIL_FALLBACK;
@@ -1252,7 +1248,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		);
 
 		// ----- RUN ------------------------------------------------------------
-		const sandboxByName = new Map<string, Sandbox>();
+		const sandboxByName = new Map<string, ProviderSandbox>();
 		for (const { handle, sandbox } of provisioned) {
 			sandboxByName.set(handle.name, sandbox);
 		}
@@ -1261,8 +1257,9 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			? provisioned.find(({ handle }) => handle.isSvixShard)
 			: undefined;
 
-		const resolveSandbox = (worker: WorkerHandle): Sandbox | undefined =>
-			sandboxByName.get(worker.name);
+		const resolveSandbox = (
+			worker: WorkerHandle,
+		): ProviderSandbox | undefined => sandboxByName.get(worker.name);
 
 		// Drive the swarm TUI's RUN phase.
 		setPhase("run");

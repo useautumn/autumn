@@ -43,6 +43,13 @@ import {
 	WORKER_TIMEOUT_MS,
 	WORKER_VCPUS,
 } from "../constants.ts";
+import type {
+	CreateSandboxOptions,
+	DetachedCommand,
+	ProviderImpl,
+	ProviderSandbox,
+	RunDetachedOptions,
+} from "./provider.ts";
 
 /** Tag keys stamped on every swarm-created sandbox (plan §9a ownership tagging). */
 export const TAG_OWNER = "owner";
@@ -469,4 +476,93 @@ const isAlreadyGone = (error: unknown): boolean => {
 	const code = (error.json as { error?: { code?: string } } | undefined)?.error
 		?.code;
 	return typeof code === "string" && code.endsWith("not_found");
+};
+
+// ---------------------------------------------------------------------------
+// Provider adapter — conforms the wrappers above to the `ProviderImpl` seam
+// (helpers/provider.ts) so the orchestrator can swap Vercel ↔ Modal. The
+// `ProviderSandbox.handle` is the `@vercel/sandbox` `Sandbox`; this layer only
+// wraps/unwraps it and routes the two direct-SDK spots (ingress create, detached
+// boot) through the same surface.
+// ---------------------------------------------------------------------------
+const wrap = (s: Sandbox): ProviderSandbox => ({ name: s.name, handle: s });
+const unwrap = (s: ProviderSandbox): Sandbox => s.handle as Sandbox;
+
+const gitSourceOf = (source: CreateSandboxOptions["source"]) =>
+	source
+		? source.username && source.password
+			? {
+					type: "git" as const,
+					url: source.url,
+					username: source.username,
+					password: source.password,
+					revision: source.revision,
+				}
+			: { type: "git" as const, url: source.url, revision: source.revision }
+		: undefined;
+
+const detachedSink = (onChunk: (text: string) => void): Writable =>
+	new Writable({
+		write(chunk, _encoding, callback) {
+			onChunk(typeof chunk === "string" ? chunk : chunk.toString("utf8"));
+			callback();
+		},
+	});
+
+export const vercelProvider: ProviderImpl = {
+	createWarmSandbox: async (o) => wrap(await createWarmSandbox(o)),
+	forkWorker: async (o) => wrap(await forkWorker(o)),
+	snapshotAndStop: (s, o) => snapshotAndStop(unwrap(s), o),
+	// Async in the interface (Modal's tunnels() is async); Vercel's is sync.
+	getPublicUrl: (s, port) => Promise.resolve(getPublicUrl(unwrap(s), port)),
+	getSandboxByName: async (name) => {
+		const s = await getSandboxByName(name);
+		return s ? wrap(s) : undefined;
+	},
+	deleteSandbox: (s, o) =>
+		deleteSandbox(typeof s === "string" ? s : unwrap(s), o),
+	runStreaming: (s, argv, onChunk, o) =>
+		runStreaming(unwrap(s), argv, onChunk, o),
+	listSandboxesByOwner,
+	isSandboxStreamClosed,
+
+	// The ingress sandbox: a fresh node24 sandbox (no build-base), persistent:false.
+	createIngressSandbox: async (o: CreateSandboxOptions) =>
+		wrap(
+			await Sandbox.create({
+				name: o.name,
+				runtime: VERCEL_RUNTIME,
+				source: gitSourceOf(o.source),
+				ports: o.ports ?? [SERVER_PORT],
+				timeout: o.timeout ?? WORKER_TIMEOUT_MS,
+				resources: { vcpus: o.vcpus ?? 1 },
+				tags: o.tags,
+				env: o.env,
+				persistent: false,
+				signal: o.signal,
+			}),
+		),
+
+	// Detached long-lived command (worker boot / ingress server): start it and
+	// return a handle whose wait() resolves on exit. Output streams to onChunk.
+	runDetached: async (
+		s: ProviderSandbox,
+		argv: string[],
+		o: RunDetachedOptions,
+	): Promise<DetachedCommand> => {
+		const [cmd, ...args] = argv;
+		const command = await unwrap(s).runCommand({
+			cmd: cmd as string,
+			args,
+			cwd: o.cwd,
+			env: o.env,
+			detached: true,
+			stdout: detachedSink(o.onChunk),
+			stderr: detachedSink(o.onChunk),
+			signal: o.signal,
+		});
+		return {
+			wait: async (w) => ({ exitCode: (await command.wait(w)).exitCode }),
+		};
+	},
 };

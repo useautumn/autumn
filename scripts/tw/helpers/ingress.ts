@@ -16,18 +16,17 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { Writable } from "node:stream";
-import { Sandbox } from "@vercel/sandbox";
 import chalk from "chalk";
 import { resolveGitSource } from "../commands/run.ts";
-import {
-	INGRESS_PORT,
-	TW_ENV,
-	VERCEL_RUNTIME,
-	WORKER_TIMEOUT_MS,
-} from "../constants.ts";
+import { INGRESS_PORT, TW_ENV, WORKER_TIMEOUT_MS } from "../constants.ts";
 import { sinkLine } from "./logSink.ts";
-import { getPublicUrl, isSandboxStreamClosed } from "./vercel.ts";
+import {
+	createIngressSandbox,
+	getPublicUrl,
+	isSandboxStreamClosed,
+	type ProviderSandbox,
+	runDetached,
+} from "./provider.ts";
 
 /** Path to the ingress http server, relative to the in-sandbox repo root. */
 const INGRESS_SCRIPT = "scripts/tw/ingress/server.mjs";
@@ -50,7 +49,7 @@ const log = (message: string): void => {
 };
 
 export type CreateIngressResult = {
-	sandbox: Sandbox;
+	sandbox: ProviderSandbox;
 	publicUrl: string;
 	token: string;
 };
@@ -77,56 +76,34 @@ export const createIngress = async ({
 	const token = randomUUID();
 
 	const source = resolveGitSource(ref);
-	const gitSource =
-		source.username && source.password
-			? {
-					type: "git" as const,
-					url: source.url,
-					username: source.username,
-					password: source.password,
-					revision: source.revision,
-				}
-			: { type: "git" as const, url: source.url, revision: source.revision };
 
 	log(`ingress: creating sandbox ${name}`);
-	const sandbox = await Sandbox.create({
+	const sandbox = await createIngressSandbox({
 		name,
-		runtime: VERCEL_RUNTIME,
-		source: gitSource,
+		source,
 		ports: [INGRESS_PORT],
 		timeout: WORKER_TIMEOUT_MS,
-		resources: { vcpus: 1 },
+		vcpus: 1,
 		tags: { kind: "bun-tw-ingress", owner, run: runId },
 		env: {
 			INGRESS_TOKEN: token,
 			INGRESS_PORT: String(INGRESS_PORT),
 			TW_ENV,
 		},
-		persistent: false,
 		signal,
 	});
 
-	const publicUrl = getPublicUrl(sandbox, INGRESS_PORT);
+	const publicUrl = await getPublicUrl(sandbox, INGRESS_PORT);
 
 	// Launch the ingress http server DETACHED — it must keep running for the whole
 	// run (mirrors the worker boot's detached runCommand in run.ts). Forward its
 	// output through the shared log sink, so during the RUN phase (Ink mounted) the
 	// `[ingress] …` firehose lands in the run log file instead of fighting the TUI
 	// for stdout.
-	const ingressSink = new Writable({
-		write(chunk, _encoding, callback) {
-			const text = typeof chunk === "string" ? chunk : chunk.toString("utf8");
-			sinkLine(chalk.gray(`[ingress] ${text.replace(/\n$/, "")}`));
-			callback();
-		},
-	});
-	const ingressCommand = await sandbox.runCommand({
-		cmd: "node",
-		args: [INGRESS_SCRIPT],
+	const ingressCommand = await runDetached(sandbox, ["node", INGRESS_SCRIPT], {
 		cwd: SANDBOX_REPO_ROOT,
-		detached: true,
-		stdout: ingressSink,
-		stderr: ingressSink,
+		onChunk: (text) =>
+			sinkLine(chalk.gray(`[ingress] ${text.replace(/\n$/, "")}`)),
 		signal,
 	});
 

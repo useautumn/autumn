@@ -29,6 +29,7 @@ import {
 	STRIPE_SUBACCOUNT_CONCURRENCY,
 } from "./constants.ts";
 import { runPreflight } from "./helpers/preflight.ts";
+import type { ProviderName } from "./helpers/provider.ts";
 import type { TwRunArgs } from "./types.ts";
 
 const RESERVED_SUBCOMMANDS = new Set(["list", "kill", "kill-all"]);
@@ -95,6 +96,13 @@ const parseRunArgs = (args: string[]): TwRunArgs => {
 	// accepted as an explicit no-op for back-compat).
 	const dashboard = !args.includes("--no-dashboard");
 
+	// Cloud backend. Default vercel; modal selectable via --provider=modal.
+	const providerArg = parseStringFlag(args, "--provider") ?? "vercel";
+	if (providerArg !== "vercel" && providerArg !== "modal") {
+		fatal(`--provider must be "vercel" or "modal" (got "${providerArg}")`);
+	}
+	const provider = providerArg as ProviderName;
+
 	// `--stripe-concurrency=N` is surfaced as an env var the (lazily-built) Stripe
 	// limiter in helpers/stripe.ts reads when the run starts.
 	if (args.some((arg) => arg.startsWith("--stripe-concurrency="))) {
@@ -114,6 +122,7 @@ const parseRunArgs = (args: string[]): TwRunArgs => {
 		keep,
 		allowDirty,
 		dashboard,
+		provider,
 	};
 };
 
@@ -167,6 +176,7 @@ const printUsage = (): void => {
 			`  --stripe-concurrency=N   concurrent Stripe account creations (default ${STRIPE_SUBACCOUNT_CONCURRENCY})`,
 			"  --allow-dirty    skip the preflight git gate (dirty tree / unpushed HEAD)",
 			"  --no-dashboard   disable the live web dashboard (on by default; opens + keeps it up after the run)",
+			"  --provider=NAME  cloud backend: vercel (default) or modal",
 			"",
 			formatTargets(),
 		].join("\n"),

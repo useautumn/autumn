@@ -10,6 +10,8 @@
  * places would let the seam drift. See plan §8.2.
  */
 
+import type { ProviderName } from "./helpers/provider.ts";
+
 /** The Stripe/Svix env the swarm runs against. Workers run in `sandbox` env. */
 export type TwEnv = "sandbox";
 
@@ -32,6 +34,8 @@ export type TwRunArgs = {
 	allowDirty: boolean;
 	/** Serve the live web dashboard (WS, random port) + keep it up after the run. */
 	dashboard: boolean;
+	/** Cloud backend: "vercel" (default) or "modal" (`--provider=modal`). */
+	provider: ProviderName;
 };
 
 /**
