@@ -24,8 +24,16 @@
  * warmup migrate/seed on the Debian image · server boot · per-worker tunnels +
  * Stripe · `bun test` exec · teardown. The wiring is from proven primitives.
  */
-import { type App, type Image, ModalClient, type Sandbox } from "modal";
+import chalk from "chalk";
+import {
+	type App,
+	type Image,
+	type Logger,
+	ModalClient,
+	type Sandbox,
+} from "modal";
 import { INGRESS_PORT, SERVER_PORT, WORKER_TIMEOUT_MS } from "../constants.ts";
+import { narrate, sink } from "./logSink.ts";
 import { buildBaseImage } from "./modalImage.ts";
 import type {
 	CreateSandboxOptions,
@@ -48,8 +56,54 @@ const APP_NAME = "autumn-tw";
 const WORKER_MEMORY_MIB = 4096;
 const WORKER_CPU = 2;
 const INGRESS_MEMORY_MIB = 1024;
+/**
+ * Snapshot budget — the warm filesystem (node_modules + migrated PGDATA, tens of
+ * thousands of files) far exceeds Modal's 55s default, so give it 10 min.
+ */
+const SNAPSHOT_TIMEOUT_MS = 10 * 60 * 1000;
 
-const modal = new ModalClient();
+const secs = (ms: number): string => (ms / 1000).toFixed(1);
+
+/**
+ * Timed stage breadcrumb, ALWAYS visible on the terminal (via `narrate`, which
+ * ignores quiet mode). Logs `▸ label` immediately, an optional heartbeat every
+ * `heartbeatMs` for long opaque ops (image build, snapshot — so the terminal is
+ * never silent for minutes), and `✓ label (+Xs)` on completion. Returns the
+ * done-callback.
+ */
+const stage = (label: string, heartbeatMs?: number): (() => void) => {
+	const startedAt = Date.now();
+	narrate(chalk.magenta(`[modal] ▸ ${label}`));
+	const ticker =
+		heartbeatMs === undefined
+			? undefined
+			: setInterval(() => {
+					narrate(
+						chalk.magenta.dim(
+							`[modal]   … ${label} — still running (+${secs(Date.now() - startedAt)}s)`,
+						),
+					);
+				}, heartbeatMs);
+	return () => {
+		if (ticker) {
+			clearInterval(ticker);
+		}
+		narrate(
+			chalk.magenta(`[modal] ✓ ${label} (+${secs(Date.now() - startedAt)}s)`),
+		);
+	};
+};
+
+/** Forward the Modal SDK's own logs (notably image-build progress) to the sink. */
+const sdkLogger: Logger = {
+	// debug is gRPC-level chatter → file only (sink respects quiet mode).
+	debug: (message: string) => sink(chalk.dim(`[modal-sdk] ${message}\n`)),
+	info: (message: string) => narrate(chalk.dim(`[modal-sdk] ${message}`)),
+	warn: (message: string) => narrate(chalk.yellow(`[modal-sdk] ${message}`)),
+	error: (message: string) => narrate(chalk.red(`[modal-sdk] ${message}`)),
+};
+
+const modal = new ModalClient({ logger: sdkLogger, logLevel: "info" });
 
 let appPromise: Promise<App> | undefined;
 const getApp = (): Promise<App> => {
@@ -59,7 +113,18 @@ const getApp = (): Promise<App> => {
 
 let baseImagePromise: Promise<Image> | undefined;
 const getBaseImage = (): Promise<Image> => {
-	baseImagePromise ??= getApp().then((app) => buildBaseImage(modal, app));
+	baseImagePromise ??= (async () => {
+		const app = await getApp();
+		const done = stage(
+			"building base services image (first run ~90s; cached after)",
+			15_000,
+		);
+		try {
+			return await buildBaseImage(modal, app);
+		} finally {
+			done();
+		}
+	})();
 	return baseImagePromise;
 };
 
@@ -139,14 +204,22 @@ const cloneRepo = async (
 	// Run from `/` (always exists): the sandbox's default workdir is /repo, which
 	// doesn't exist until THIS clone creates it — execing there fails with
 	// "Unable to read current working directory".
+	const done = stage(`clone repo @ ${source.revision}`);
 	const proc = await sandbox.exec(["bash", "-lc", script], {
 		stdout: "pipe",
 		stderr: "pipe",
 		workdir: "/",
 	});
-	const stderrText = await proc.stderr.readText().catch(() => "");
-	await proc.stdout.readText().catch(() => "");
+	let stderrText = "";
+	await Promise.all([
+		pumpStream(proc.stdout, (text) => sink(text)),
+		pumpStream(proc.stderr, (text) => {
+			stderrText += text;
+			sink(text);
+		}),
+	]);
 	const exitCode = await proc.wait();
+	done();
 	if (exitCode !== 0) {
 		throw new Error(
 			`modal: git clone failed (exit ${exitCode}): ${stderrText}`,
@@ -168,6 +241,7 @@ const createFromImage = async (
 ): Promise<Sandbox> => {
 	const app = await getApp();
 	await pace();
+	const done = stage(`create sandbox ${opts.name}`);
 	const sandbox = await modal.sandboxes.create(app, image, {
 		cpu: opts.cpu,
 		memoryMiB: opts.memoryMiB,
@@ -180,6 +254,7 @@ const createFromImage = async (
 		encryptedPorts: opts.encryptedPorts,
 	});
 	sandboxByName.set(opts.name, sandbox);
+	done();
 	return sandbox;
 };
 
@@ -244,15 +319,27 @@ export const modalProvider: ProviderImpl = {
 	async snapshotAndStop(sandbox: ProviderSandbox): Promise<string> {
 		const sb = unwrap(sandbox);
 		// Services were clean-stopped by warmup.sh; capture the filesystem (migrated
-		// PGDATA + node_modules + /repo). Workers fork from this Image.
-		const image = await sb.snapshotFilesystem();
-		warmImageByName.set(sandbox.name, image);
-		// The warm parent is no longer needed (forks use the Image) — free its slot.
-		await sb.terminate().catch(() => {
-			/* best-effort */
-		});
-		sandboxByName.delete(sandbox.name);
-		return image.imageId;
+		// PGDATA + node_modules + /repo). Workers fork from this Image. The tree is
+		// large (tens of thousands of files) → a generous budget + a heartbeat so
+		// the terminal isn't silent while it runs.
+		const done = stage(
+			"snapshot warm filesystem (node_modules + pgdata — can take minutes)",
+			15_000,
+		);
+		try {
+			const image = await sb.snapshotFilesystem({
+				timeoutMs: SNAPSHOT_TIMEOUT_MS,
+			});
+			warmImageByName.set(sandbox.name, image);
+			// The warm parent is no longer needed (forks use the Image) — free it.
+			await sb.terminate().catch(() => {
+				/* best-effort */
+			});
+			sandboxByName.delete(sandbox.name);
+			return image.imageId;
+		} finally {
+			done();
+		}
 	},
 
 	async getPublicUrl(sandbox: ProviderSandbox, port: number): Promise<string> {

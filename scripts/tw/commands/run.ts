@@ -70,6 +70,7 @@ import { createIngress, pushWorkerMapping } from "../helpers/ingress.ts";
 import {
 	disableQuietMode,
 	enableQuietMode,
+	narrate,
 	setLogFile,
 	sink,
 	sinkLine,
@@ -210,6 +211,16 @@ const sleep = (ms: number): Promise<void> =>
 
 const log = (message: string): void => {
 	sinkLine(chalk.cyan(`[tw] ${message}`));
+};
+
+/**
+ * Phase-boundary milestone — ALWAYS visible on the terminal (via `narrate`),
+ * even during quiet mode when the firehose is routed to the run log + web
+ * dashboard. Keeps the terminal from sitting silent for minutes during warm-up /
+ * snapshot / fan-out. Use sparingly: lifecycle transitions, not the firehose.
+ */
+const milestone = (message: string): void => {
+	narrate(chalk.cyan.bold(`[tw] ${message}`));
 };
 
 const warn = (message: string): void => {
@@ -654,7 +665,7 @@ const getOrBuildWarmParent = async ({
 		return warmName;
 	}
 
-	log(
+	milestone(
 		`warm-up: building warm parent ${warmName} (ref=${ref} @ ${sha.slice(0, 7)})`,
 	);
 	const warm = await createWarmSandbox({
@@ -669,6 +680,9 @@ const getOrBuildWarmParent = async ({
 	// broken cache entry isn't reused next run, and no workers are forked (the
 	// "don't get wrecked ×1000" property, plan §4b step 3).
 	const failBuild = async (message: string): Promise<never> => {
+		// Surface the failure on the terminal (quiet mode routes errorLog to the file
+		// only) so a warm-up abort isn't invisible behind the dashboard.
+		milestone(`✗ ${message}`);
 		await timeBoxed(`delete warm parent ${warmName}`, () =>
 			deleteSandbox(warm),
 		);
@@ -698,7 +712,9 @@ const getOrBuildWarmParent = async ({
 		);
 	}
 
-	log("warm-up: running warmup.sh (checkout → install → migrate → seed)");
+	milestone(
+		"warm-up: running warmup.sh (checkout → install → migrate → seed) — streaming to the run log",
+	);
 	const warmRun = await runStreaming(
 		warm,
 		["bash", WARMUP_SCRIPT, ref],
@@ -711,9 +727,15 @@ const getOrBuildWarmParent = async ({
 		);
 	}
 
-	log("warm-up: snapshotting warm parent (cached for this ref)");
-	await snapshotAndStop(warm, { signal });
-	log(`warm-up: cached warm parent ${warmName} ready`);
+	milestone("warm-up: snapshotting warm parent (cached for this ref)");
+	try {
+		await snapshotAndStop(warm, { signal });
+	} catch (error) {
+		await failBuild(
+			`warm-up failed (snapshot: ${(error as Error).message}) — aborting, no workers forked`,
+		);
+	}
+	milestone(`warm-up: warm parent ${warmName} ready`);
 	return warmName;
 };
 
@@ -1194,7 +1216,9 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			log(`svix app ${svixAppId} created and recorded`);
 		}
 
-		log(`fanning out ${effectiveWorkers} worker(s) from the warm snapshot`);
+		milestone(
+			`fan-out: provisioning ${effectiveWorkers} worker(s) from the warm snapshot`,
+		);
 		setPhase("fanout");
 		setFanoutTotals(effectiveWorkers);
 		const fanoutStart = Date.now();
@@ -1274,6 +1298,9 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		): ProviderSandbox | undefined => sandboxByName.get(worker.name);
 
 		// Drive the swarm TUI's RUN phase.
+		milestone(
+			"run: executing tests across the pool — live progress in the dashboard",
+		);
 		setPhase("run");
 
 		// Wall-clock of the RUN phase — the correct parallel-aware test duration
@@ -1336,6 +1363,11 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			: 0;
 
 		// ----- TEARDOWN -------------------------------------------------------
+		milestone(
+			args.keep
+				? "teardown: skipped (--keep) — clean up later with `bun tw kill`"
+				: "teardown: releasing sandboxes + Stripe sub-accounts",
+		);
 		setPhase("teardown");
 		await teardown({ runId, skip: args.keep });
 		teardownDone = true;

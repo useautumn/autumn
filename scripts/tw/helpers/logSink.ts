@@ -132,3 +132,31 @@ export const sink = (text: string): void => {
 export const sinkLine = (line: string): void => {
 	sink(`${line}\n`);
 };
+
+/**
+ * Stage-marker channel: ALWAYS surfaces on the terminal, even in quiet mode.
+ *
+ * `sink`/`sinkLine` go to the run log file during the warm-up / fan-out / run
+ * phases (quiet mode), so the terminal would otherwise sit silent for minutes
+ * (image build, snapshot, …). `narrate` is for the coarse "what phase are we in,
+ * is it alive" breadcrumbs that must stay visible regardless — it writes to
+ * stdout (ignoring quiet mode) AND tees to the log file. When an opentui TUI owns
+ * the terminal (a log subscriber is set), it feeds the TUI pane instead of
+ * corrupting the render. Never throws.
+ */
+export const narrate = (line: string): void => {
+	const text = `${line}\n`;
+	feedSubscriber(text);
+	if (logFilePath) {
+		try {
+			appendFileSync(logFilePath, text);
+		} catch {
+			// best-effort tee; stdout below is the source of truth for narration.
+		}
+	}
+	// A TUI subscriber owns the terminal — never write stdout underneath it.
+	if (logSubscriber) {
+		return;
+	}
+	process.stdout.write(text);
+};
