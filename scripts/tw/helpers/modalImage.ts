@@ -46,10 +46,13 @@ export const buildBaseImage = (modal: ModalClient, app: App): Promise<Image> =>
 	modal.images
 		.fromRegistry("debian:bookworm-slim")
 		// 1. Base system packages (+ redis-tools for redis-cli, nodejs for ingress).
+		//    Pre-create /repo so the sandbox's default workdir exists before the
+		//    warm parent's clone runs (execing in a missing cwd is a git-128 error).
 		.dockerfileCommands([
 			"RUN apt-get update && apt-get install -y --no-install-recommends " +
 				"ca-certificates curl wget gnupg bash git xz-utils procps tar gzip " +
-				"locales unzip redis-tools nodejs && rm -rf /var/lib/apt/lists/*",
+				"locales unzip redis-tools nodejs && rm -rf /var/lib/apt/lists/* && " +
+				"mkdir -p /repo",
 		])
 		// 2. PostgreSQL 18 + contrib (pg_trgm) from the PGDG apt repo.
 		.dockerfileCommands([

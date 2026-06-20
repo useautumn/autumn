@@ -136,9 +136,13 @@ const cloneRepo = async (
 	const script =
 		`set -e; rm -rf ${MODAL_REPO_ROOT}; git clone ${url} ${MODAL_REPO_ROOT}; ` +
 		`git -C ${MODAL_REPO_ROOT} checkout ${source.revision}`;
+	// Run from `/` (always exists): the sandbox's default workdir is /repo, which
+	// doesn't exist until THIS clone creates it — execing there fails with
+	// "Unable to read current working directory".
 	const proc = await sandbox.exec(["bash", "-lc", script], {
 		stdout: "pipe",
 		stderr: "pipe",
+		workdir: "/",
 	});
 	const stderrText = await proc.stderr.readText().catch(() => "");
 	await proc.stdout.readText().catch(() => "");
