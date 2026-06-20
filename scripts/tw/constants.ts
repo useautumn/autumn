@@ -24,8 +24,14 @@ export const SANDBOX_NAME_PREFIX = "tw";
 /** Pool size `N` default (`--max`). Sensible mid default per plan §3/§8.6. */
 export const DEFAULT_WORKERS = 50;
 
-/** Per-worker file concurrency `K` default (`--per-worker`). Plan §3/§8.6. */
-export const DEFAULT_PER_WORKER = 1;
+/**
+ * Per-worker file concurrency `K` default (`--per-worker`). Each worker hosts one
+ * server + PG + Dragonfly + goaws and can run several org-isolated test files at
+ * once (the same model as a local parallel `bun test`), so the pool admits up to
+ * `K` files per worker. 4 keeps a 4-vCPU worker busy without thrashing; tune via
+ * `--per-worker`.
+ */
+export const DEFAULT_PER_WORKER = 4;
 
 /**
  * Max concurrent Stripe Connect sub-account creations. `accounts.create` is a

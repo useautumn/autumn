@@ -107,7 +107,12 @@ export type WorkerHandle = {
 	accountId?: string;
 	isSvixShard: boolean;
 	lastFile?: string;
-	busy: boolean;
+	/**
+	 * Number of test files currently running ON this worker. The pool admits up to
+	 * `slotsPerWorker` (`--per-worker`) concurrent files per worker, so a worker is
+	 * available while `inFlight < slotsPerWorker` (replaces the old binary `busy`).
+	 */
+	inFlight: number;
 };
 
 /**

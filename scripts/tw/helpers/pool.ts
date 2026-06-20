@@ -53,10 +53,15 @@ export class WorkerPool {
 	/** Set once `close()` is called — further acquires reject. */
 	private closed = false;
 
-	constructor(workers: WorkerHandle[]) {
+	/** Max concurrent files per worker (`--per-worker`); a worker is available
+	 * while `inFlight < slotsPerWorker`. */
+	private readonly slotsPerWorker: number;
+
+	constructor(workers: WorkerHandle[], slotsPerWorker = 1) {
 		this.workers = [...workers];
+		this.slotsPerWorker = Math.max(1, slotsPerWorker);
 		for (const worker of this.workers) {
-			worker.busy = false;
+			worker.inFlight = 0;
 		}
 	}
 
@@ -90,9 +95,9 @@ export class WorkerPool {
 		return this.enqueue({ avoidName: lastWorkerName, strict });
 	}
 
-	/** Mark a worker idle and admit the next compatible waiter. */
+	/** Free one slot on a worker (a file finished) and admit the next waiter. */
 	release(worker: WorkerHandle): void {
-		worker.busy = false;
+		worker.inFlight = Math.max(0, worker.inFlight - 1);
 		this.pump();
 	}
 
@@ -144,7 +149,7 @@ export class WorkerPool {
 		if (index !== -1) {
 			this.workers.splice(index, 1);
 		}
-		fresh.busy = false;
+		fresh.inFlight = 0;
 		this.workers.push(fresh);
 		this.pump();
 	}
@@ -154,7 +159,7 @@ export class WorkerPool {
 		if (this.workers.some((w) => w.name === worker.name)) {
 			return;
 		}
-		worker.busy = false;
+		worker.inFlight = 0;
 		this.workers.push(worker);
 		this.pump();
 	}
@@ -203,7 +208,7 @@ export class WorkerPool {
 		for (const waiter of this.waiters) {
 			const worker = this.pickFor(waiter);
 			if (worker) {
-				worker.busy = true;
+				worker.inFlight += 1;
 				waiter.resolve(worker);
 			} else {
 				stillWaiting.push(waiter);
@@ -219,31 +224,36 @@ export class WorkerPool {
 	 * `undefined` if none is currently available.
 	 */
 	private pickFor(waiter: Waiter): WorkerHandle | undefined {
-		const idle = this.workers.filter((w) => !w.busy);
-		if (idle.length === 0) {
+		// A worker is available while it has a free slot (`--per-worker`). Among
+		// available workers we pick the LEAST-loaded so files spread evenly instead
+		// of piling K onto worker 1 before touching worker 2.
+		const available = this.workers.filter(
+			(w) => w.inFlight < this.slotsPerWorker,
+		);
+		if (available.length === 0) {
 			return undefined;
 		}
 
 		if (!waiter.avoidName) {
-			return idle[0];
+			return leastLoaded(available);
 		}
 
-		const different = idle.find((w) => w.name !== waiter.avoidName);
-		if (different) {
-			return different;
+		const different = available.filter((w) => w.name !== waiter.avoidName);
+		if (different.length > 0) {
+			return leastLoaded(different);
 		}
 
-		// Only the avoided worker is idle. In strict mode (worker-death) we may
-		// still use it iff it's the ONLY live worker (N === 1); otherwise wait for
-		// a different one to free up. In non-strict mode (retry) same-worker is an
-		// acceptable fallback.
-		const sameWorkerIsIdle = idle.some((w) => w.name === waiter.avoidName);
-		if (!sameWorkerIsIdle) {
-			return undefined;
-		}
+		// Only the avoided worker has a free slot. In strict mode (worker-death) we
+		// may still use it iff it's the ONLY live worker (N === 1); otherwise wait
+		// for a different one to free up. In non-strict mode (retry) same-worker is
+		// an acceptable fallback.
 		if (waiter.strict && this.workers.length > 1) {
 			return undefined;
 		}
-		return idle.find((w) => w.name === waiter.avoidName);
+		return leastLoaded(available);
 	}
 }
+
+/** The worker with the fewest in-flight files (ties → first). Never empty. */
+const leastLoaded = (workers: WorkerHandle[]): WorkerHandle =>
+	workers.reduce((best, w) => (w.inFlight < best.inFlight ? w : best));

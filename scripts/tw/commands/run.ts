@@ -926,7 +926,7 @@ const provisionWorker = async ({
 		publicUrl,
 		accountId,
 		isSvixShard,
-		busy: false,
+		inFlight: 0,
 	};
 
 	return { handle, sandbox, timing: { stripeMs, readyMs } };
@@ -1313,7 +1313,10 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		// rest. When there's no svix shard, the whole pool runs the normal files.
 		if (svixShard && svixFiles.length > 0) {
 			log(`running ${svixFiles.length} svix file(s) on the dedicated shard`);
-			const svixPool = new WorkerPool([svixShard.handle]);
+			const svixPool = new WorkerPool(
+				[svixShard.handle],
+				Math.max(1, args.perWorker),
+			);
 			const svixExecutor = new RemoteExecutor({
 				pool: svixPool,
 				resolveSandbox,
@@ -1338,7 +1341,10 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 					`${normalFiles.length} normal file(s) remain but no normal workers are available (svix shard consumed the only worker) — pass --max>=2`,
 				);
 			}
-			const normalPool = new WorkerPool(normalHandles);
+			const normalPool = new WorkerPool(
+				normalHandles,
+				Math.max(1, args.perWorker),
+			);
 			const normalExecutor = new RemoteExecutor({
 				pool: normalPool,
 				resolveSandbox,

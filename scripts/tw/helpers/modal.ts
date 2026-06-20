@@ -68,9 +68,14 @@ const NODE_MODULES_PATH = `${MODAL_REPO_ROOT}/node_modules`;
 const NODE_MODULES_VOLUME = "autumn-tw-node-modules";
 /** The Modal App all swarm sandboxes live under (one per Modal workspace). */
 const APP_NAME = "autumn-tw";
-/** Memory per worker — ~matches a Vercel 2-vCPU µVM (2048 MiB/vCPU). */
-const WORKER_MEMORY_MIB = 4096;
-const WORKER_CPU = 2;
+/**
+ * Worker size. Each worker runs the server + PG + Dragonfly + goaws AND up to
+ * `--per-worker` (default 4) concurrent test files, so it's provisioned wider
+ * than a Vercel 2-vCPU µVM: 4 vCPU + 8 GiB gives the concurrent files room
+ * without thrashing. Tune alongside `--per-worker`.
+ */
+const WORKER_MEMORY_MIB = 8192;
+const WORKER_CPU = 4;
 const INGRESS_MEMORY_MIB = 1024;
 /**
  * Snapshot budget — the warm filesystem (node_modules + migrated PGDATA, tens of
