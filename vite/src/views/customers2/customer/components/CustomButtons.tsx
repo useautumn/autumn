@@ -23,7 +23,7 @@ export function CustomButtons({
 	customer,
 }: {
 	buttons: CustomButton[];
-	customer: { id?: string | null } | undefined;
+	customer: { id?: string | null; email?: string | null } | undefined;
 }) {
 	const [overflowOpen, setOverflowOpen] = useState(false);
 

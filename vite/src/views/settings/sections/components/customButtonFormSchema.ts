@@ -12,8 +12,11 @@ export const CustomButtonFormSchema = z.object({
 		.trim()
 		.min(1, "URL is required")
 		.refine(
-			(url) => isSafeCustomButtonUrl(resolveCustomButtonUrl(url, { id: "id" })),
-			"Must be a valid http:// or https:// URL",
+			(url) =>
+				isSafeCustomButtonUrl(
+					resolveCustomButtonUrl(url, { id: "id", email: "email" }),
+				),
+			"Must be a valid http, https, mailto, or tel URL",
 		),
 	open_in_new_tab: z.boolean(),
 });
