@@ -29,6 +29,16 @@
  */
 import type { App, Image, ModalClient } from "modal";
 
+/** Inputs for baking node_modules into the base image (see buildBaseImage). */
+export type BaseImageDeps = {
+	/** Clone URL (may embed a token for a private repo — see the bake step note). */
+	gitUrl: string;
+	/** Ref whose lockfile/deps to install (branch name or sha). */
+	gitRef: string;
+	/** Hash of the local lockfile — cache-busts the bake when deps change. */
+	lockHash: string;
+};
+
 const DRAGONFLY_URL =
 	"https://dragonflydb.gateway.scarf.sh/latest/dragonfly-x86_64.tar.gz";
 const CRANE_URL =
@@ -41,8 +51,20 @@ const TW_PREFIX = "/opt/autumn-tw";
 /**
  * Build (or cache-hit) the published Debian services image. Idempotent: Modal
  * content-addresses the dockerfile commands, so repeat calls are ~free.
+ *
+ * `deps` bakes the monorepo's node_modules into the image as a base layer. This
+ * is load-bearing for speed: node_modules (~5 GB / ~350k files) must NOT be
+ * captured per-run by snapshotFilesystem (minutes) and must NOT be read over a
+ * network Volume at boot (every `bun` import = a slow small-file read → ~2.5 min
+ * server boot). A base image layer is the only place that is BOTH local-fast to
+ * read AND excluded from the snapshot diff. warmup.sh's `--frozen-lockfile`
+ * install then reconciles the small delta for the exact ref.
  */
-export const buildBaseImage = (modal: ModalClient, app: App): Promise<Image> =>
+export const buildBaseImage = (
+	modal: ModalClient,
+	app: App,
+	deps: BaseImageDeps,
+): Promise<Image> =>
 	modal.images
 		.fromRegistry("debian:bookworm-slim")
 		// 1. Base system packages (+ redis-tools for redis-cli, nodejs for ingress).
@@ -120,5 +142,21 @@ export const buildBaseImage = (modal: ModalClient, app: App): Promise<Image> =>
 				"runuser -u postgres -- psql -h localhost -p 5432 -U postgres -d autumn " +
 				"-c 'CREATE EXTENSION IF NOT EXISTS pg_trgm;' && " +
 				'runuser -u postgres -- pg_ctl -D "$PGDATA" -m fast -w stop',
+		])
+		// 8. Bake the monorepo's node_modules into the image at /repo/node_modules
+		//    (the warm clone + every worker keep it; warmup.sh's --frozen-lockfile
+		//    reconciles the exact-ref delta). Clone the ref shallow, install, keep
+		//    ONLY node_modules. The `lockHash` comment is part of the (content-
+		//    addressed) command, so the bake rebuilds when the lockfile changes.
+		//    NOTE: gitUrl may embed a token for a private repo — it lands in this
+		//    (workspace-private) image's build history; rotate scoped tokens.
+		.dockerfileCommands([
+			`# node_modules bake — lockfile ${deps.lockHash}\n` +
+				"RUN export PATH=/usr/local/bin:$PATH && rm -rf /tmp/seed && " +
+				`git clone --depth 1 ${deps.gitUrl} /tmp/seed && ` +
+				`( cd /tmp/seed && git fetch --depth 1 origin ${deps.gitRef} && git checkout -q FETCH_HEAD ) && ` +
+				"( cd /tmp/seed && bun install --frozen-lockfile ) && " +
+				"mkdir -p /repo && rm -rf /repo/node_modules && " +
+				"mv /tmp/seed/node_modules /repo/node_modules && rm -rf /tmp/seed",
 		])
 		.build(app);

@@ -24,6 +24,9 @@
  * warmup migrate/seed on the Debian image · server boot · per-worker tunnels +
  * Stripe · `bun test` exec · teardown. The wiring is from proven primitives.
  */
+import { createHash } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import chalk from "chalk";
 import {
 	type App,
@@ -31,11 +34,15 @@ import {
 	type Logger,
 	ModalClient,
 	type Sandbox,
-	type Volume,
 } from "modal";
-import { INGRESS_PORT, SERVER_PORT, WORKER_TIMEOUT_MS } from "../constants.ts";
+import {
+	INGRESS_PORT,
+	PROJECT_ROOT,
+	SERVER_PORT,
+	WORKER_TIMEOUT_MS,
+} from "../constants.ts";
 import { narrate, sink } from "./logSink.ts";
-import { buildBaseImage } from "./modalImage.ts";
+import { type BaseImageDeps, buildBaseImage } from "./modalImage.ts";
 import type {
 	CreateSandboxOptions,
 	DetachedCommand,
@@ -51,21 +58,12 @@ import type {
 
 /** Where the repo is cloned inside every Modal sandbox (cf. /vercel/sandbox). */
 const MODAL_REPO_ROOT = "/repo";
-/** node_modules lives on a persistent Volume, NOT the snapshot (see below). */
-const NODE_MODULES_PATH = `${MODAL_REPO_ROOT}/node_modules`;
 /**
- * Persistent Volume holding the monorepo's node_modules (~5 GB / ~350k files).
- *
- * Capturing that into every per-run filesystem snapshot is the dominant cost
- * (snapshotFilesystem content-addresses + uploads every file — minutes). Instead
- * the warm parent's `bun install` writes node_modules to this Volume (mounted
- * rw); volume-mounted paths are EXCLUDED from snapshotFilesystem, so the snapshot
- * captures only /repo source + PGDATA (seconds). Workers mount the SAME Volume
- * read-only and read deps from it. It persists across runs, so subsequent
- * `--frozen-lockfile` installs are fast deltas. Auto-commits in the background;
- * terminating the warm parent (in snapshotAndStop) flushes before workers fork.
+ * node_modules is BAKED into the base image at /repo/node_modules (see
+ * modalImage.ts) rather than snapshotted or mounted from a Volume: a base layer
+ * is both local-fast to read (fast boot) AND excluded from the snapshot diff
+ * (fast snapshot). The warm clone preserves it; warmup.sh reconciles the delta.
  */
-const NODE_MODULES_VOLUME = "autumn-tw-node-modules";
 /** The Modal App all swarm sandboxes live under (one per Modal workspace). */
 const APP_NAME = "autumn-tw";
 /**
@@ -133,24 +131,38 @@ const getApp = (): Promise<App> => {
 	return appPromise;
 };
 
-let nodeModulesVolumePromise: Promise<Volume> | undefined;
-const getNodeModulesVolume = (): Promise<Volume> => {
-	nodeModulesVolumePromise ??= modal.volumes.fromName(NODE_MODULES_VOLUME, {
-		createIfMissing: true,
-	});
-	return nodeModulesVolumePromise;
+/** Build a token-embedding clone URL for a private repo (no-op when public). */
+const cloneUrl = (source: GitSource): string =>
+	source.username && source.password
+		? source.url.replace(
+				/^https:\/\//,
+				`https://${encodeURIComponent(source.username)}:${encodeURIComponent(source.password)}@`,
+			)
+		: source.url;
+
+/** Hash of the local lockfile — cache-busts the image's node_modules bake. */
+const lockHash = (): string => {
+	for (const name of ["bun.lock", "bun.lockb", "package-lock.json"]) {
+		try {
+			const buf = readFileSync(join(PROJECT_ROOT, name));
+			return createHash("sha256").update(buf).digest("hex").slice(0, 16);
+		} catch {
+			// try the next candidate
+		}
+	}
+	return "nolock";
 };
 
 let baseImagePromise: Promise<Image> | undefined;
-const getBaseImage = (): Promise<Image> => {
+const getBaseImage = (deps: BaseImageDeps): Promise<Image> => {
 	baseImagePromise ??= (async () => {
 		const app = await getApp();
 		const done = stage(
-			"building base services image (first run ~90s; cached after)",
+			"building base services image + node_modules (first run ~2-3m; cached after)",
 			15_000,
 		);
 		try {
-			return await buildBaseImage(modal, app);
+			return await buildBaseImage(modal, app, deps);
 		} finally {
 			done();
 		}
@@ -219,16 +231,10 @@ const cloneRepo = async (
 	sandbox: Sandbox,
 	source: GitSource,
 ): Promise<void> => {
-	const url =
-		source.username && source.password
-			? source.url.replace(
-					/^https:\/\//,
-					`https://${encodeURIComponent(source.username)}:${encodeURIComponent(source.password)}@`,
-				)
-			: source.url;
-	// /repo/node_modules is a Volume mount, so /repo already exists and is
-	// non-empty → `git clone /repo` would fail. Clone to a temp dir and move the
-	// source into /repo, PRESERVING the node_modules mount. Full clone (not
+	const url = cloneUrl(source);
+	// /repo already exists and is non-empty (node_modules is baked into the base
+	// image there) → `git clone /repo` would fail. Clone to a temp dir and move
+	// the source into /repo, PRESERVING the baked node_modules. Full clone (not
 	// shallow) so a non-default revision (e.g. feat/*) resolves + warmup.sh's own
 	// `git checkout <ref>` is a no-op.
 	const script = [
@@ -282,7 +288,6 @@ const createFromImage = async (
 		memoryMiB: number;
 		timeout?: number;
 		encryptedPorts?: number[];
-		volumes?: Record<string, Volume>;
 	},
 ): Promise<Sandbox> => {
 	const app = await getApp();
@@ -298,7 +303,6 @@ const createFromImage = async (
 		name: opts.name,
 		workdir: MODAL_REPO_ROOT,
 		encryptedPorts: opts.encryptedPorts,
-		volumes: opts.volumes,
 	});
 	sandboxByName.set(opts.name, sandbox);
 	done();
@@ -309,12 +313,16 @@ export const modalProvider: ProviderImpl = {
 	async createWarmSandbox(
 		opts: CreateSandboxOptions,
 	): Promise<ProviderSandbox> {
-		const [image, volume] = await Promise.all([
-			getBaseImage(),
-			getNodeModulesVolume(),
-		]);
-		// Warm parent mounts node_modules read-WRITE so warmup.sh's `bun install`
-		// populates the Volume (excluded from the snapshot).
+		if (!opts.source) {
+			throw new Error("modal: createWarmSandbox requires a git source");
+		}
+		// The base image bakes node_modules for THIS ref (cache-keyed on the
+		// lockfile), so the warm clone + workers read deps from a fast local layer.
+		const image = await getBaseImage({
+			gitUrl: cloneUrl(opts.source),
+			gitRef: opts.source.revision,
+			lockHash: lockHash(),
+		});
 		const sandbox = await createFromImage(image, {
 			name: opts.name,
 			env: opts.env,
@@ -323,18 +331,24 @@ export const modalProvider: ProviderImpl = {
 			memoryMiB: WORKER_MEMORY_MIB,
 			timeout: opts.timeout,
 			encryptedPorts: opts.ports ?? [SERVER_PORT],
-			volumes: { [NODE_MODULES_PATH]: volume },
 		});
-		if (opts.source) {
-			await cloneRepo(sandbox, opts.source);
-		}
+		await cloneRepo(sandbox, opts.source);
 		return wrap(opts.name, sandbox);
 	},
 
 	async createIngressSandbox(
 		opts: CreateSandboxOptions,
 	): Promise<ProviderSandbox> {
-		const image = await getBaseImage();
+		if (!opts.source) {
+			throw new Error("modal: createIngressSandbox requires a git source");
+		}
+		// Memoized — shares the warm parent's base image build (or builds it if the
+		// ingress somehow comes first).
+		const image = await getBaseImage({
+			gitUrl: cloneUrl(opts.source),
+			gitRef: opts.source.revision,
+			lockHash: lockHash(),
+		});
 		const sandbox = await createFromImage(image, {
 			name: opts.name,
 			env: opts.env,
@@ -357,11 +371,8 @@ export const modalProvider: ProviderImpl = {
 				`modal: no warm snapshot for "${opts.sourceSandbox}" — snapshotAndStop must run first`,
 			);
 		}
-		const volume = await getNodeModulesVolume();
-		// Mount the node_modules Volume the SAME way the warm parent did (read-write):
-		// the snapshot was taken with an rw mount here, and re-mounting it read-only
-		// crashes the restored container. Workers only READ deps (never install), so
-		// rw is safe — no writes means no cross-worker contention.
+		// node_modules is in the base image layer (fast local reads); the worker
+		// forks from the warm snapshot for the source + migrated PGDATA.
 		const sandbox = await createFromImage(image, {
 			name: opts.name,
 			env: opts.env,
@@ -370,21 +381,17 @@ export const modalProvider: ProviderImpl = {
 			memoryMiB: WORKER_MEMORY_MIB,
 			timeout: opts.timeout,
 			encryptedPorts: opts.ports ?? [SERVER_PORT],
-			volumes: { [NODE_MODULES_PATH]: volume },
 		});
 		return wrap(opts.name, sandbox);
 	},
 
 	async snapshotAndStop(sandbox: ProviderSandbox): Promise<string> {
 		const sb = unwrap(sandbox);
-		// Services were clean-stopped by warmup.sh; capture the filesystem (migrated
-		// PGDATA + node_modules + /repo). Workers fork from this Image. The tree is
-		// large (tens of thousands of files) → a generous budget + a heartbeat so
-		// the terminal isn't silent while it runs.
-		const done = stage(
-			"snapshot warm filesystem (node_modules + pgdata — can take minutes)",
-			15_000,
-		);
+		// Services were clean-stopped by warmup.sh; capture the filesystem (/repo
+		// source + migrated PGDATA + any node_modules delta — the bulk of
+		// node_modules is in the base image layer, NOT this diff). Workers fork from
+		// this Image. Generous budget + heartbeat so the terminal isn't silent.
+		const done = stage("snapshot warm filesystem (source + pgdata)", 15_000);
 		try {
 			const image = await sb.snapshotFilesystem({
 				timeoutMs: SNAPSHOT_TIMEOUT_MS,
