@@ -296,7 +296,7 @@ const main = async (): Promise<void> => {
 	await Promise.all([
 		waitForTcpPort("PostgreSQL", PG_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 		waitForTcpPort("Dragonfly", DRAGONFLY_PORT, SERVICE_HEALTH_TIMEOUT_MS),
-		waitForTcpPort("elasticmq", ELASTICMQ_PORT, SERVICE_HEALTH_TIMEOUT_MS),
+		waitForTcpPort("goaws (SQS)", ELASTICMQ_PORT, SERVICE_HEALTH_TIMEOUT_MS),
 	]);
 
 	// 3. Bind the orchestrator-created Svix app (only when flagged). It only

@@ -672,7 +672,7 @@ const getOrBuildWarmParent = async ({
 		throw new Error(message);
 	};
 
-	log("warm-up: running build-base.sh (PG18, Dragonfly, elasticmq, bun)");
+	log("warm-up: running build-base.sh (PG18, Dragonfly, goaws, bun)");
 	const baseRun = await runStreaming(
 		warm,
 		["bash", BUILD_BASE_SCRIPT],

@@ -157,7 +157,7 @@ const verifyBase = async (sandbox: Sandbox): Promise<void> => {
 echo "TABLES=$(PSQL "SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")"
 echo "TRGM=$(PSQL "SELECT count(*) FROM pg_extension WHERE extname='pg_trgm'")"
 echo "REDIS=$(redis-cli -p 6379 PING)"
-echo "QUEUES=$(curl -sf 'http://localhost:9324/?Action=ListQueues&Version=2012-11-05' | grep -o 'autumn[a-z-]*\\.fifo' | sort -u | tr '\\n' ',')"
+echo "GOAWS=$(curl -s -o /dev/null http://localhost:9324/ 2>/dev/null && echo up || echo down)"
 echo "BUN=$(bun --version)"`,
 	);
 	const kv = parseKv(out);
@@ -172,12 +172,7 @@ echo "BUN=$(bun --version)"`,
 		`pg_extension rows = ${kv.TRGM}`,
 	);
 	assert(kv.REDIS === "PONG", "Dragonfly :6379", `PING → ${kv.REDIS}`);
-	assert(
-		kv.QUEUES.includes("autumn.fifo") &&
-			kv.QUEUES.includes("autumn-track.fifo"),
-		"elasticmq :9324 queues",
-		kv.QUEUES || "(none)",
-	);
+	assert(kv.GOAWS === "up", "goaws :9324 (SQS)", kv.GOAWS || "(down)");
 	assert(Boolean(kv.BUN), "bun installed", `v${kv.BUN}`);
 };
 

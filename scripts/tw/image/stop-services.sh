@@ -19,7 +19,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 TW_PREFIX="${TW_PREFIX:-/opt/autumn-tw}"
 PGDATA="${PGDATA:-$TW_PREFIX/pgdata}"
-ELASTICMQ_CONF="${ELASTICMQ_CONF:-$TW_PREFIX/elasticmq/elasticmq.conf}"
+# goaws (native SQS) replaced elasticmq — no on-disk config needed at stop time.
 BIN_DIR="${TW_BIN_DIR:-$TW_PREFIX/bin}"
 
 PG_PORT="${PG_PORT:-5432}"
@@ -58,17 +58,15 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 3. elasticmq — SIGTERM. Queues are re-declared from config on next boot, so
-#    no on-disk state needs preserving.
+# 3. goaws — SIGTERM. Queues are re-declared from config on next boot, so no
+#    on-disk state needs preserving. Match the binary path to avoid killing the
+#    pkill/script itself (the config path contains "goaws").
 # ---------------------------------------------------------------------------
-if pgrep -f 'elasticmq-native-server' >/dev/null 2>&1; then
-  log "SIGTERM elasticmq-native"
-  pkill -TERM -f 'elasticmq-native-server' || true
-elif pgrep -f 'elasticmq.*\.jar' >/dev/null 2>&1; then
-  log "SIGTERM elasticmq (jar)"
-  pkill -TERM -f 'elasticmq.*\.jar' || true
+if pgrep -f "$BIN_DIR/goaws" >/dev/null 2>&1; then
+  log "SIGTERM goaws"
+  pkill -TERM -f "$BIN_DIR/goaws" || true
 else
-  log "elasticmq not running"
+  log "goaws not running"
 fi
 
 # ---------------------------------------------------------------------------

@@ -31,15 +31,16 @@ REPO_ROOT="${TW_REPO_ROOT:-$(cd "$SCRIPT_DIR/../../.." && pwd)}"
 TW_PREFIX="${TW_PREFIX:-/opt/autumn-tw}"
 PGDATA="${PGDATA:-$TW_PREFIX/pgdata}"
 DRAGONFLY_DIR="${DRAGONFLY_DIR:-$TW_PREFIX/dragonfly}"
-ELASTICMQ_DIR="${ELASTICMQ_DIR:-$TW_PREFIX/elasticmq}"
-ELASTICMQ_BIN="${ELASTICMQ_BIN:-$ELASTICMQ_DIR/elasticmq-native-server}"
-ELASTICMQ_CONF="${ELASTICMQ_CONF:-$ELASTICMQ_DIR/elasticmq.conf}"
+GOAWS_DIR="${GOAWS_DIR:-$TW_PREFIX/goaws}"
+GOAWS_CONF="${GOAWS_CONF:-$GOAWS_DIR/goaws.yaml}"
 BIN_DIR="${TW_BIN_DIR:-$TW_PREFIX/bin}"
+GOAWS_BIN="${GOAWS_BIN:-$BIN_DIR/goaws}"
 LOG_DIR="${TW_LOG_DIR:-$TW_PREFIX/logs}"
 
 # Versions — mirror scripts/setup/* and dw.compose.yml.
-ELASTICMQ_VERSION="${ELASTICMQ_VERSION:-1.6.11}" # matches agent-bootstrap.sh:110
-ELASTICMQ_IMAGE="${ELASTICMQ_IMAGE:-docker.io/softwaremill/elasticmq-native:${ELASTICMQ_VERSION}}"
+# goaws (native Go SQS) replaces elasticmq; crane extracts its binary from the OCI image.
+GOAWS_IMAGE="${GOAWS_IMAGE:-docker.io/admiralpiett/goaws:latest}"
+CRANE_VERSION="${CRANE_VERSION:-v0.20.2}"
 DRAGONFLY_VERSION="${DRAGONFLY_VERSION:-latest}" # dw uses :latest (dw.compose.yml:10)
 INSTALL_CLICKHOUSE="${TW_INSTALL_CLICKHOUSE:-0}"
 
@@ -48,7 +49,7 @@ PG_SUPERUSER="postgres"
 PG_PASSWORD="postgres"
 DB_NAME="autumn"
 
-mkdir -p "$TW_PREFIX" "$DRAGONFLY_DIR" "$ELASTICMQ_DIR" "$BIN_DIR" "$LOG_DIR"
+mkdir -p "$TW_PREFIX" "$DRAGONFLY_DIR" "$GOAWS_DIR" "$BIN_DIR" "$LOG_DIR"
 
 # ---------------------------------------------------------------------------
 # 1. System packages (Amazon Linux 2023 = dnf)
@@ -135,93 +136,60 @@ if ! command -v redis-cli >/dev/null 2>&1 && [ ! -x "$BIN_DIR/redis-cli" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 4. elasticmq-native (GraalVM static binary — NOT the JVM jar).
-# It is published ONLY inside the softwaremill/elasticmq-native image at
-# /opt/elasticmq/bin/elasticmq-native-server (native-server/Dockerfile,
-# verified). There is no standalone GitHub release asset for the native build,
-# so we extract the binary from the OCI image WITHOUT a Docker daemon, using
-# `crane` (preferred) or `skopeo`. Fall back to the JVM jar only if neither is
-# present (so the build never hard-fails on a fresh box during iteration).
+# 4. goaws (native Go SQS server) — replaces elasticmq.
+# The GraalVM-native elasticmq binary SEGFAULTS in sandboxed kernels (SubstrateVM
+# signal handler; not fixed by -R:-InstallSegfaultHandler), and the JVM jar is a
+# slow ~5s startup long-pole. goaws (github.com/Admiral-Piett/goaws) is a single
+# static Go binary (~100ms start), supports FIFO + explicit MessageDeduplicationId
+# dedup — which is exactly what the app always sends (queue/queueUtils.ts sets a
+# non-empty MessageDeduplicationId on every FIFO message). The binary is published
+# only inside the admiralpiett/goaws image, so we extract it WITHOUT a Docker
+# daemon via `crane` (a single static Go binary fetched from GitHub releases).
 # ---------------------------------------------------------------------------
-install_elasticmq_native() {
-  local tool="$1"
-  local oci_dir tar_dir
-  oci_dir="$(mktemp -d)"
-  tar_dir="$(mktemp -d)"
-  log "Extracting elasticmq-native binary from $ELASTICMQ_IMAGE via $tool"
-  case "$tool" in
-    crane)
-      # crane export flattens the image filesystem into a single tar.
-      crane export "$ELASTICMQ_IMAGE" "$oci_dir/rootfs.tar"
-      ;;
-    skopeo)
-      skopeo copy "docker://$ELASTICMQ_IMAGE" "oci:$oci_dir/oci:latest"
-      # Flatten OCI layers into a rootfs tar via `umoci` if present, else bail.
-      command -v umoci >/dev/null 2>&1 \
-        || die "skopeo copy succeeded but umoci missing to unpack layers"
-      umoci unpack --image "$oci_dir/oci:latest" "$oci_dir/bundle"
-      tar -C "$oci_dir/bundle/rootfs" -cf "$oci_dir/rootfs.tar" .
-      ;;
-    *) return 1 ;;
-  esac
-  tar -xf "$oci_dir/rootfs.tar" -C "$tar_dir" opt/elasticmq/bin/elasticmq-native-server
-  install -m 0755 "$tar_dir/opt/elasticmq/bin/elasticmq-native-server" "$ELASTICMQ_BIN"
-  rm -rf "$oci_dir" "$tar_dir"
-}
-
-install_elasticmq_jar_fallback() {
-  log "Installing elasticmq via JVM jar (needs java at runtime)"
-  sudo dnf install -y --setopt=install_weak_deps=False java-17-amazon-corretto-headless >/dev/null
-  curl -fsSL -o "$ELASTICMQ_DIR/elasticmq.jar" \
-    "https://s3-eu-west-1.amazonaws.com/softwaremill-public/elasticmq-server-${ELASTICMQ_VERSION}.jar"
-  log "Wrote JVM jar to $ELASTICMQ_DIR/elasticmq.jar (start-services.sh detects it)"
-}
-
 export PATH="$BIN_DIR:$PATH"
 
-# elasticmq: the GraalVM native binary extracted from the OCI image does NOT run
-# standalone in the µVM (it crashes with an empty log — missing shared libs /
-# resources that only exist inside the full image). The JVM jar is reliable
-# (needs only java, installed below), so use it. A self-contained native SQS is
-# a follow-up; `install_elasticmq_native` is kept above for that future work.
-if [ ! -f "$ELASTICMQ_DIR/elasticmq.jar" ] && [ ! -x "$ELASTICMQ_BIN" ]; then
-  install_elasticmq_jar_fallback
+if [ ! -x "$GOAWS_BIN" ]; then
+  ARCH="$(uname -m)"
+  case "$ARCH" in
+    x86_64) CR_ARCH="x86_64" ;;
+    aarch64 | arm64) CR_ARCH="arm64" ;;
+    *) die "unsupported arch for crane/goaws: $ARCH" ;;
+  esac
+  log "Fetching crane $CRANE_VERSION to extract goaws from $GOAWS_IMAGE"
+  TMP_GO="$(mktemp -d)"
+  curl -fsSL -o "$TMP_GO/crane.tgz" \
+    "https://github.com/google/go-containerregistry/releases/download/${CRANE_VERSION}/go-containerregistry_Linux_${CR_ARCH}.tar.gz"
+  tar -xzf "$TMP_GO/crane.tgz" -C "$TMP_GO" crane
+  # crane export flattens the image filesystem into a single tar; pull out the binary.
+  "$TMP_GO/crane" export "$GOAWS_IMAGE" "$TMP_GO/goaws-rootfs.tar"
+  GOAWS_PATH="$(tar -tf "$TMP_GO/goaws-rootfs.tar" | grep -iE '(^|/)goaws$' | head -n1)"
+  [ -n "$GOAWS_PATH" ] || die "goaws binary not found in $GOAWS_IMAGE"
+  tar -xf "$TMP_GO/goaws-rootfs.tar" -C "$TMP_GO" "$GOAWS_PATH"
+  install -m 0755 "$TMP_GO/$GOAWS_PATH" "$GOAWS_BIN"
+  rm -rf "$TMP_GO"
 fi
+log "goaws installed at $GOAWS_BIN"
 
-# Place the elasticmq config declaring BOTH FIFO queues (mirrors
-# scripts/setup/elasticmq.conf:18-27). Host bound to 0.0.0.0/localhost so the
-# server reaches it over localhost.
-cat >"$ELASTICMQ_CONF" <<'EOF'
-include classpath("application.conf")
-
-node-address {
-  protocol = http
-  host = "localhost"
-  port = 9324
-  context-path = ""
-}
-
-rest-sqs {
-  enabled = true
-  bind-port = 9324
-  bind-hostname = "0.0.0.0"
-  sqs-limits = strict
-}
-
-generate-node-address = false
-
-queues {
-  "autumn.fifo" {
-    fifo = true
-    contentBasedDeduplication = true
-  }
-  "autumn-track.fifo" {
-    fifo = true
-    contentBasedDeduplication = true
-  }
-}
+# goaws config — same port (9324) + AccountId (000000000000) + queue names as the
+# old elasticmq, so SQS_QUEUE_URL_V2 / TRACK_SQS_QUEUE_URL (constants.ts) resolve
+# UNCHANGED. EnableDuplicates is ENV-LEVEL (not per-queue) and turns on FIFO dedup
+# against the explicit MessageDeduplicationId the app sends.
+mkdir -p "$GOAWS_DIR"
+cat >"$GOAWS_CONF" <<'EOF'
+Local:
+  Host: localhost
+  Scheme: http
+  Port: 9324
+  Region: us-east-1
+  AccountId: "000000000000"
+  LogToFile: false
+  LogLevel: warn
+  EnableDuplicates: true
+  Queues:
+    - Name: autumn.fifo
+    - Name: autumn-track.fifo
 EOF
-log "Wrote elasticmq config to $ELASTICMQ_CONF (autumn.fifo + autumn-track.fifo)"
+log "Wrote goaws config to $GOAWS_CONF (autumn.fifo + autumn-track.fifo, dedup on)"
 
 # ---------------------------------------------------------------------------
 # 5. ClickHouse (optional — only when analytics tests are in scope).
@@ -350,5 +318,5 @@ log "Installing Playwright Chromium (playwright@$PLAYWRIGHT_VERSION) into ~/.cac
   || die "playwright chromium install failed"
 log "Chromium ready at $(cd "$REPO_ROOT/server" && bun -e 'import {chromium} from "playwright-core"; console.log(chromium.executablePath())' 2>/dev/null || echo "(path probe failed)")"
 
-log "BASE layer built. Paths: PGDATA=$PGDATA, BIN_DIR=$BIN_DIR, ELASTICMQ_CONF=$ELASTICMQ_CONF"
+log "BASE layer built. Paths: PGDATA=$PGDATA, BIN_DIR=$BIN_DIR, GOAWS_CONF=$GOAWS_CONF"
 log "Next: snapshot this filesystem -> base snapshot. Then warmup.sh per run."

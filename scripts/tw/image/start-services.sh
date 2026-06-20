@@ -22,11 +22,10 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TW_PREFIX="${TW_PREFIX:-/opt/autumn-tw}"
 PGDATA="${PGDATA:-$TW_PREFIX/pgdata}"
 DRAGONFLY_DIR="${DRAGONFLY_DIR:-$TW_PREFIX/dragonfly}"
-ELASTICMQ_DIR="${ELASTICMQ_DIR:-$TW_PREFIX/elasticmq}"
-ELASTICMQ_BIN="${ELASTICMQ_BIN:-$ELASTICMQ_DIR/elasticmq-native-server}"
-ELASTICMQ_JAR="${ELASTICMQ_JAR:-$ELASTICMQ_DIR/elasticmq.jar}"
-ELASTICMQ_CONF="${ELASTICMQ_CONF:-$ELASTICMQ_DIR/elasticmq.conf}"
+GOAWS_DIR="${GOAWS_DIR:-$TW_PREFIX/goaws}"
+GOAWS_CONF="${GOAWS_CONF:-$GOAWS_DIR/goaws.yaml}"
 BIN_DIR="${TW_BIN_DIR:-$TW_PREFIX/bin}"
+GOAWS_BIN="${GOAWS_BIN:-$BIN_DIR/goaws}"
 LOG_DIR="${TW_LOG_DIR:-$TW_PREFIX/logs}"
 
 PG_PORT="${PG_PORT:-5432}"
@@ -96,30 +95,22 @@ fi
 wait_for "Dragonfly" "redis-cli -p $DRAGONFLY_PORT PING" 60 "$LOG_DIR/dragonfly.log"
 
 # ---------------------------------------------------------------------------
-# 3. elasticmq-native (:9324). Prefer the GraalVM native binary; fall back to
-#    the JVM jar if only that was baked (build-base.sh fallback path).
+# 3. goaws (native Go SQS, :9324) — replaces elasticmq (see build-base.sh §4).
+#    Single static Go binary; ~100ms start; FIFO + explicit-dedup. Same port +
+#    account + queues as the old elasticmq, so the queue URLs are unchanged.
 # ---------------------------------------------------------------------------
-elasticmq_ready_probe="curl -sf -o /dev/null 'http://localhost:$ELASTICMQ_PORT/?Action=ListQueues&Version=2012-11-05'"
-if eval "$elasticmq_ready_probe" >/dev/null 2>&1; then
-  log "elasticmq already running"
+# goaws answers `GET /` with HTTP 400 (no Action) but the connection succeeding
+# means it's bound and serving — a sufficient readiness probe (no `-f`).
+goaws_ready_probe="curl -s -o /dev/null http://localhost:$ELASTICMQ_PORT/"
+if eval "$goaws_ready_probe" >/dev/null 2>&1; then
+  log "goaws already running"
 else
-  if [ -x "$ELASTICMQ_BIN" ]; then
-    log "Starting elasticmq-native on :$ELASTICMQ_PORT"
-    nohup "$ELASTICMQ_BIN" \
-      "-Dconfig.file=$ELASTICMQ_CONF" \
-      >"$LOG_DIR/elasticmq.log" 2>&1 &
-    disown || true
-  elif [ -f "$ELASTICMQ_JAR" ]; then
-    command -v java >/dev/null 2>&1 || die "elasticmq jar fallback needs java"
-    log "Starting elasticmq (JVM jar fallback) on :$ELASTICMQ_PORT"
-    nohup java -Dconfig.file="$ELASTICMQ_CONF" -jar "$ELASTICMQ_JAR" \
-      >"$LOG_DIR/elasticmq.log" 2>&1 &
-    disown || true
-  else
-    die "no elasticmq binary or jar found (run build-base.sh)"
-  fi
+  [ -x "$GOAWS_BIN" ] || die "goaws binary missing at $GOAWS_BIN (run build-base.sh)"
+  log "Starting goaws (native SQS) on :$ELASTICMQ_PORT"
+  nohup "$GOAWS_BIN" -config "$GOAWS_CONF" >"$LOG_DIR/goaws.log" 2>&1 &
+  disown || true
 fi
-wait_for "elasticmq" "$elasticmq_ready_probe" 240 "$LOG_DIR/elasticmq.log"
+wait_for "goaws" "$goaws_ready_probe" 120 "$LOG_DIR/goaws.log"
 
 # ---------------------------------------------------------------------------
 # 4. ClickHouse (optional).
@@ -142,4 +133,4 @@ else
   log "Skipping ClickHouse (set TW_START_CLICKHOUSE=1 to start it)"
 fi
 
-log "All services ready (pg:$PG_PORT dragonfly:$DRAGONFLY_PORT elasticmq:$ELASTICMQ_PORT)"
+log "All services ready (pg:$PG_PORT dragonfly:$DRAGONFLY_PORT goaws:$ELASTICMQ_PORT)"
