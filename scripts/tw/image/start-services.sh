@@ -47,6 +47,18 @@ done
 [ -n "$PG_BINDIR" ] || die "could not locate pg_ctl"
 export PATH="$PG_BINDIR:$BIN_DIR:$HOME/.bun/bin:$PATH"
 
+# PostgreSQL refuses to run as root. On the Vercel µVM we're already a non-root
+# user, but Modal runs sandboxes as root — so when EUID=0, run pg_ctl as the
+# `postgres` user that owns PGDATA (forwarding PATH so the PG bins resolve). This
+# is a no-op (`"$@"` directly) on the non-root Vercel path.
+run_pg() {
+  if [ "$(id -u)" = "0" ]; then
+    runuser -u postgres -- env "PATH=$PATH" "$@"
+  else
+    "$@"
+  fi
+}
+
 wait_for() {
   local label="$1" probe="$2" tries="${3:-60}" logfile="${4:-}"
   for _ in $(seq 1 "$tries"); do
@@ -71,12 +83,12 @@ wait_for() {
 
 # 1. PostgreSQL — pg_ctl against the baked data dir. No `-w` so the launch is
 #    non-blocking (the wait_for below is the readiness gate). No migration here.
-if pg_ctl -D "$PGDATA" status >/dev/null 2>&1; then
+if run_pg pg_ctl -D "$PGDATA" status >/dev/null 2>&1; then
   log "PG already running"
 else
   [ -s "$PGDATA/PG_VERSION" ] || die "PGDATA $PGDATA not initialized (run build-base.sh)"
   log "Starting PostgreSQL (pg_ctl) on :$PG_PORT"
-  pg_ctl -D "$PGDATA" -l "$LOG_DIR/pg.log" -o "-p $PG_PORT" start
+  run_pg pg_ctl -D "$PGDATA" -l "$LOG_DIR/pg.log" -o "-p $PG_PORT" start
 fi
 
 # 2. Dragonfly — Redis-protocol cache on :6379. --dir is the snapshot path so the

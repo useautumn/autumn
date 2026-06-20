@@ -35,12 +35,23 @@ for candidate in /usr/pgsql-18/bin /usr/lib/postgresql/18/bin /usr/bin "$BIN_DIR
 done
 export PATH="${PG_BINDIR:-/usr/bin}:$BIN_DIR:$HOME/.bun/bin:$PATH"
 
+# PG refuses to run as root; on Modal (sandboxes run as root) drive pg_ctl as the
+# `postgres` user that owns PGDATA. No-op on the non-root Vercel µVM. Mirrors
+# start-services.sh's run_pg.
+run_pg() {
+  if [ "$(id -u)" = "0" ]; then
+    runuser -u postgres -- env "PATH=$PATH" "$@"
+  else
+    "$@"
+  fi
+}
+
 # ---------------------------------------------------------------------------
 # 1. PostgreSQL — fast clean shutdown (checkpoints, no client wait).
 # ---------------------------------------------------------------------------
-if command -v pg_ctl >/dev/null 2>&1 && pg_ctl -D "$PGDATA" status >/dev/null 2>&1; then
+if command -v pg_ctl >/dev/null 2>&1 && run_pg pg_ctl -D "$PGDATA" status >/dev/null 2>&1; then
   log "Stopping PostgreSQL (-m fast)"
-  pg_ctl -D "$PGDATA" -m fast -w stop || log "WARN: pg_ctl stop returned non-zero"
+  run_pg pg_ctl -D "$PGDATA" -m fast -w stop || log "WARN: pg_ctl stop returned non-zero"
 else
   log "PostgreSQL not running"
 fi

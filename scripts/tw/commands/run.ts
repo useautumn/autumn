@@ -89,8 +89,10 @@ import {
 	getSandboxByName,
 	isSandboxStreamClosed,
 	type ProviderSandbox,
+	providerName,
 	runDetached,
 	runStreaming,
+	sandboxRepoRoot,
 	setProvider,
 	snapshotAndStop,
 } from "../helpers/provider.ts";
@@ -130,9 +132,9 @@ import { READY_SENTINEL } from "../worker/boot.ts";
  * `/vercel/sandbox`, where the base snapshot's repo checkout lives; the image
  * scripts (`warmup.sh`, `start-services.sh`) resolve their own root relative to
  * their location, but `boot.ts` reads `process.cwd()`, so detached boot must run
- * from here. Overridable via env for local iteration on a real sandbox.
+ * from here. Provider-aware (`/vercel/sandbox` vs Modal's `/repo`); overridable
+ * via `TW_SANDBOX_REPO_ROOT` for local iteration. See `sandboxRepoRoot()`.
  */
-const SANDBOX_REPO_ROOT = process.env.TW_SANDBOX_REPO_ROOT ?? "/vercel/sandbox";
 
 /** Path to the warm-up image script, relative to the in-sandbox repo root. */
 const BUILD_BASE_SCRIPT = "scripts/tw/image/build-base.sh";
@@ -673,16 +675,26 @@ const getOrBuildWarmParent = async ({
 		throw new Error(message);
 	};
 
-	log("warm-up: running build-base.sh (PG18, Dragonfly, goaws, bun)");
-	const baseRun = await runStreaming(
-		warm,
-		["bash", BUILD_BASE_SCRIPT],
-		(text) => sink(text),
-		{ signal, swallowStreamClose: true },
-	);
-	if (baseRun.exitCode !== 0) {
-		await failBuild(
-			`warm-up failed (build-base.sh exited ${baseRun.exitCode}) — aborting, no workers forked`,
+	// build-base.sh installs the services (PG18 / Dragonfly / goaws / bun) on the
+	// Vercel µVM (Amazon Linux 2023, dnf). On Modal those are baked into the
+	// published base image (helpers/modalImage.ts) — the dnf script can't run on
+	// Debian — so this step is skipped and the repo is cloned by createWarmSandbox.
+	if (providerName() === "vercel") {
+		log("warm-up: running build-base.sh (PG18, Dragonfly, goaws, bun)");
+		const baseRun = await runStreaming(
+			warm,
+			["bash", BUILD_BASE_SCRIPT],
+			(text) => sink(text),
+			{ signal, swallowStreamClose: true },
+		);
+		if (baseRun.exitCode !== 0) {
+			await failBuild(
+				`warm-up failed (build-base.sh exited ${baseRun.exitCode}) — aborting, no workers forked`,
+			);
+		}
+	} else {
+		log(
+			"warm-up: services baked into the Modal base image (build-base skipped)",
 		);
 	}
 
@@ -767,7 +779,7 @@ const waitForReady = async ({
 	// Detached: the boot command (services + the long-lived server) must keep
 	// running for the whole test run, so we don't await its completion here.
 	const command = await runDetached(sandbox, ["bun", BOOT_SCRIPT], {
-		cwd: SANDBOX_REPO_ROOT,
+		cwd: sandboxRepoRoot(),
 		onChunk: onBootChunk,
 		signal,
 	});
@@ -1456,7 +1468,7 @@ export const run = async (args: TwRunArgs): Promise<void> => {
  */
 const toSandboxPath = (localFile: string): string => {
 	if (localFile.startsWith(`${PROJECT_ROOT}/`)) {
-		return `${SANDBOX_REPO_ROOT}/${localFile.slice(PROJECT_ROOT.length + 1)}`;
+		return `${sandboxRepoRoot()}/${localFile.slice(PROJECT_ROOT.length + 1)}`;
 	}
 	return localFile;
 };

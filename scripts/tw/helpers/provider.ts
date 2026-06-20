@@ -144,6 +144,16 @@ export const providerName = (): ProviderName => {
 	return active;
 };
 
+/**
+ * The in-sandbox repo root for the active backend. Vercel's SDK clones into
+ * `/vercel/sandbox`; Modal clones into `/repo`. Lazily reads the selected
+ * provider (so it must be called after `setProvider`). `TW_SANDBOX_REPO_ROOT`
+ * overrides both, for local iteration.
+ */
+export const sandboxRepoRoot = (): string =>
+	process.env.TW_SANDBOX_REPO_ROOT ??
+	(providerName() === "modal" ? "/repo" : "/vercel/sandbox");
+
 const get = (): ProviderImpl => {
 	if (!impl) {
 		throw new Error("provider not selected — call setProvider() first");

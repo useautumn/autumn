@@ -26,13 +26,11 @@ import {
 	isSandboxStreamClosed,
 	type ProviderSandbox,
 	runDetached,
+	sandboxRepoRoot,
 } from "./provider.ts";
 
 /** Path to the ingress http server, relative to the in-sandbox repo root. */
 const INGRESS_SCRIPT = "scripts/tw/ingress/server.mjs";
-
-/** The in-sandbox repo root (matches run.ts's SANDBOX_REPO_ROOT default). */
-const SANDBOX_REPO_ROOT = process.env.TW_SANDBOX_REPO_ROOT ?? "/vercel/sandbox";
 
 /** How long to wait for the ingress `/health` to come up after boot. */
 const INGRESS_HEALTH_TIMEOUT_MS = 90_000;
@@ -101,7 +99,7 @@ export const createIngress = async ({
 	// `[ingress] …` firehose lands in the run log file instead of fighting the TUI
 	// for stdout.
 	const ingressCommand = await runDetached(sandbox, ["node", INGRESS_SCRIPT], {
-		cwd: SANDBOX_REPO_ROOT,
+		cwd: sandboxRepoRoot(),
 		onChunk: (text) =>
 			sinkLine(chalk.gray(`[ingress] ${text.replace(/\n$/, "")}`)),
 		signal,
