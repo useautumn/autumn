@@ -2,13 +2,19 @@
 
 import { AppEnv } from "@autumn/shared";
 
-const CUSTOM_BUTTON_VARS = {
-	"{customerId}": (customer: { id?: string | null }) => customer.id ?? "",
-} as const;
+type CustomButtonCustomer = { id?: string | null; email?: string | null };
+
+const CUSTOM_BUTTON_VARS: Record<
+	string,
+	(customer: CustomButtonCustomer) => string
+> = {
+	"{customerId}": (customer) => customer.id ?? "",
+	"{customerEmail}": (customer) => customer.email ?? "",
+};
 
 export const resolveCustomButtonUrl = (
 	template: string,
-	customer: { id?: string | null },
+	customer: CustomButtonCustomer,
 ) => {
 	let resolved = template;
 	for (const [token, getValue] of Object.entries(CUSTOM_BUTTON_VARS)) {
@@ -20,7 +26,7 @@ export const resolveCustomButtonUrl = (
 	return resolved;
 };
 
-const SAFE_PROTOCOLS = new Set(["http:", "https:"]);
+const SAFE_PROTOCOLS = new Set(["http:", "https:", "mailto:", "tel:"]);
 
 export const isSafeCustomButtonUrl = (url: string) => {
 	try {

@@ -68,9 +68,8 @@ export function IconPicker({
 							aria-label={humanize(name)}
 							onClick={() => select(name)}
 							className={cn(
-								"flex aspect-square items-center justify-center rounded-md text-tertiary-foreground transition-colors hover:bg-interactive-secondary-hover hover:text-foreground",
-								value === name &&
-									"bg-interactive-secondary-hover text-foreground ring-1 ring-primary",
+								"flex aspect-square items-center justify-center rounded-md text-tertiary-foreground outline-none transition-colors hover:bg-interactive-secondary-hover hover:text-foreground focus-visible:bg-interactive-secondary-hover focus-visible:text-foreground",
+								value === name && "bg-interactive-secondary text-foreground",
 							)}
 						>
 							<PhosphorIcon name={name} className="size-4" />
