@@ -64,21 +64,23 @@ wait_for() {
 }
 
 # ---------------------------------------------------------------------------
-# 1. PostgreSQL — pg_ctl against the baked data dir. No migration here.
+# Services start in PARALLEL: launch all three daemons up-front (non-blocking),
+# then wait for each below. Because the daemons are already coming up, the
+# readiness polls overlap — total ≈ the slowest single service, not their sum.
 # ---------------------------------------------------------------------------
+
+# 1. PostgreSQL — pg_ctl against the baked data dir. No `-w` so the launch is
+#    non-blocking (the wait_for below is the readiness gate). No migration here.
 if pg_ctl -D "$PGDATA" status >/dev/null 2>&1; then
   log "PG already running"
 else
   [ -s "$PGDATA/PG_VERSION" ] || die "PGDATA $PGDATA not initialized (run build-base.sh)"
   log "Starting PostgreSQL (pg_ctl) on :$PG_PORT"
-  pg_ctl -D "$PGDATA" -l "$LOG_DIR/pg.log" -w -o "-p $PG_PORT" start
+  pg_ctl -D "$PGDATA" -l "$LOG_DIR/pg.log" -o "-p $PG_PORT" start
 fi
-wait_for "PostgreSQL" "pg_isready -h localhost -p $PG_PORT" 60 "$LOG_DIR/pg.log"
 
-# ---------------------------------------------------------------------------
-# 2. Dragonfly — Redis-protocol cache on :6379. --dir is the snapshot path so
-#    the clean-stop SAVE in stop-services.sh persists to disk for the fork.
-# ---------------------------------------------------------------------------
+# 2. Dragonfly — Redis-protocol cache on :6379. --dir is the snapshot path so the
+#    clean-stop SAVE in stop-services.sh persists to disk for the fork.
 if redis-cli -p "$DRAGONFLY_PORT" PING >/dev/null 2>&1; then
   log "Dragonfly already running"
 else
@@ -92,15 +94,12 @@ else
     >"$LOG_DIR/dragonfly.log" 2>&1 &
   disown || true
 fi
-wait_for "Dragonfly" "redis-cli -p $DRAGONFLY_PORT PING" 60 "$LOG_DIR/dragonfly.log"
 
-# ---------------------------------------------------------------------------
 # 3. goaws (native Go SQS, :9324) — replaces elasticmq (see build-base.sh §4).
 #    Single static Go binary; ~100ms start; FIFO + explicit-dedup. Same port +
 #    account + queues as the old elasticmq, so the queue URLs are unchanged.
-# ---------------------------------------------------------------------------
-# goaws answers `GET /` with HTTP 400 (no Action) but the connection succeeding
-# means it's bound and serving — a sufficient readiness probe (no `-f`).
+#    `GET /` returns HTTP 400 (no Action), but a successful connection means it's
+#    bound and serving — sufficient readiness probe (no `-f`).
 goaws_ready_probe="curl -s -o /dev/null http://localhost:$ELASTICMQ_PORT/"
 if eval "$goaws_ready_probe" >/dev/null 2>&1; then
   log "goaws already running"
@@ -110,6 +109,10 @@ else
   nohup "$GOAWS_BIN" -config "$GOAWS_CONF" >"$LOG_DIR/goaws.log" 2>&1 &
   disown || true
 fi
+
+# Wait for all three (started above) concurrently — readiness overlaps.
+wait_for "PostgreSQL" "pg_isready -h localhost -p $PG_PORT" 60 "$LOG_DIR/pg.log"
+wait_for "Dragonfly" "redis-cli -p $DRAGONFLY_PORT PING" 60 "$LOG_DIR/dragonfly.log"
 wait_for "goaws" "$goaws_ready_probe" 120 "$LOG_DIR/goaws.log"
 
 # ---------------------------------------------------------------------------
