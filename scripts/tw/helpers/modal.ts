@@ -72,10 +72,11 @@ const APP_NAME = "autumn-tw";
  * Worker size. Each worker runs the server + PG + Dragonfly + goaws AND up to
  * `--per-worker` (default 4) concurrent test files, so it's provisioned wider
  * than a Vercel 2-vCPU µVM: 4 vCPU + 8 GiB gives the concurrent files room
- * without thrashing. Tune alongside `--per-worker`.
+ * without thrashing. Env-overridable (`TW_MODAL_WORKER_CPU` / `_MEM_MIB`) so a
+ * resource-quota kill can be ruled out by dialing down without a rebuild.
  */
-const WORKER_MEMORY_MIB = 8192;
-const WORKER_CPU = 4;
+const WORKER_CPU = Number(process.env.TW_MODAL_WORKER_CPU ?? 4);
+const WORKER_MEMORY_MIB = Number(process.env.TW_MODAL_WORKER_MEM_MIB ?? 8192);
 const INGRESS_MEMORY_MIB = 1024;
 /**
  * Snapshot budget — the warm filesystem (node_modules + migrated PGDATA, tens of
@@ -357,8 +358,10 @@ export const modalProvider: ProviderImpl = {
 			);
 		}
 		const volume = await getNodeModulesVolume();
-		// Workers mount the SAME node_modules Volume READ-ONLY: they only read deps
-		// (never install), and read-only avoids N workers racing writes to it.
+		// Mount the node_modules Volume the SAME way the warm parent did (read-write):
+		// the snapshot was taken with an rw mount here, and re-mounting it read-only
+		// crashes the restored container. Workers only READ deps (never install), so
+		// rw is safe — no writes means no cross-worker contention.
 		const sandbox = await createFromImage(image, {
 			name: opts.name,
 			env: opts.env,
@@ -367,9 +370,7 @@ export const modalProvider: ProviderImpl = {
 			memoryMiB: WORKER_MEMORY_MIB,
 			timeout: opts.timeout,
 			encryptedPorts: opts.ports ?? [SERVER_PORT],
-			volumes: {
-				[NODE_MODULES_PATH]: volume.withMountOptions({ readOnly: true }),
-			},
+			volumes: { [NODE_MODULES_PATH]: volume },
 		});
 		return wrap(opts.name, sandbox);
 	},

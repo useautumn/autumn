@@ -1251,8 +1251,21 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		);
 		if (failures.length > 0) {
 			const first = failures[0].reason;
+			const firstMessage =
+				first instanceof Error ? first.message : String(first);
+			milestone(
+				`✗ fan-out: ${failures.length}/${effectiveWorkers} worker(s) failed to provision`,
+			);
+			// A Modal "Sandbox … not found / already shut down" means the worker
+			// container died right after fork — usually a snapshot/volume-mount issue
+			// or a resource-quota kill. Point at the tunable knobs.
+			if (/not found|already shut down|shut down/i.test(firstMessage)) {
+				milestone(
+					"  hint: workers crashed on start. Try smaller workers (TW_MODAL_WORKER_CPU=2 TW_MODAL_WORKER_MEM_MIB=4096) to rule out a Modal resource-quota kill",
+				);
+			}
 			throw new Error(
-				`fan-out: ${failures.length}/${effectiveWorkers} worker(s) failed to provision — aborting (first: ${first instanceof Error ? first.message : String(first)})`,
+				`fan-out: ${failures.length}/${effectiveWorkers} worker(s) failed to provision — aborting (first: ${firstMessage})`,
 			);
 		}
 		const provisioned = settled.map(
