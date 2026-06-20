@@ -31,6 +31,7 @@ import {
 	type Logger,
 	ModalClient,
 	type Sandbox,
+	type Volume,
 } from "modal";
 import { INGRESS_PORT, SERVER_PORT, WORKER_TIMEOUT_MS } from "../constants.ts";
 import { narrate, sink } from "./logSink.ts";
@@ -50,6 +51,21 @@ import type {
 
 /** Where the repo is cloned inside every Modal sandbox (cf. /vercel/sandbox). */
 const MODAL_REPO_ROOT = "/repo";
+/** node_modules lives on a persistent Volume, NOT the snapshot (see below). */
+const NODE_MODULES_PATH = `${MODAL_REPO_ROOT}/node_modules`;
+/**
+ * Persistent Volume holding the monorepo's node_modules (~5 GB / ~350k files).
+ *
+ * Capturing that into every per-run filesystem snapshot is the dominant cost
+ * (snapshotFilesystem content-addresses + uploads every file — minutes). Instead
+ * the warm parent's `bun install` writes node_modules to this Volume (mounted
+ * rw); volume-mounted paths are EXCLUDED from snapshotFilesystem, so the snapshot
+ * captures only /repo source + PGDATA (seconds). Workers mount the SAME Volume
+ * read-only and read deps from it. It persists across runs, so subsequent
+ * `--frozen-lockfile` installs are fast deltas. Auto-commits in the background;
+ * terminating the warm parent (in snapshotAndStop) flushes before workers fork.
+ */
+const NODE_MODULES_VOLUME = "autumn-tw-node-modules";
 /** The Modal App all swarm sandboxes live under (one per Modal workspace). */
 const APP_NAME = "autumn-tw";
 /** Memory per worker — ~matches a Vercel 2-vCPU µVM (2048 MiB/vCPU). */
@@ -109,6 +125,14 @@ let appPromise: Promise<App> | undefined;
 const getApp = (): Promise<App> => {
 	appPromise ??= modal.apps.fromName(APP_NAME, { createIfMissing: true });
 	return appPromise;
+};
+
+let nodeModulesVolumePromise: Promise<Volume> | undefined;
+const getNodeModulesVolume = (): Promise<Volume> => {
+	nodeModulesVolumePromise ??= modal.volumes.fromName(NODE_MODULES_VOLUME, {
+		createIfMissing: true,
+	});
+	return nodeModulesVolumePromise;
 };
 
 let baseImagePromise: Promise<Image> | undefined;
@@ -196,11 +220,26 @@ const cloneRepo = async (
 					`https://${encodeURIComponent(source.username)}:${encodeURIComponent(source.password)}@`,
 				)
 			: source.url;
-	// Full clone (not shallow) so a non-default revision (e.g. feat/*) resolves;
-	// warmup.sh's own `git checkout <ref>` is then a no-op.
-	const script =
-		`set -e; rm -rf ${MODAL_REPO_ROOT}; git clone ${url} ${MODAL_REPO_ROOT}; ` +
-		`git -C ${MODAL_REPO_ROOT} checkout ${source.revision}`;
+	// /repo/node_modules is a Volume mount, so /repo already exists and is
+	// non-empty → `git clone /repo` would fail. Clone to a temp dir and move the
+	// source into /repo, PRESERVING the node_modules mount. Full clone (not
+	// shallow) so a non-default revision (e.g. feat/*) resolves + warmup.sh's own
+	// `git checkout <ref>` is a no-op.
+	const script = [
+		"set -e",
+		"shopt -s dotglob nullglob",
+		"rm -rf /tmp/twclone",
+		`git clone ${url} /tmp/twclone`,
+		`git -C /tmp/twclone checkout ${source.revision}`,
+		`mkdir -p ${MODAL_REPO_ROOT}`,
+		"for entry in /tmp/twclone/*; do",
+		'  base=$(basename "$entry")',
+		'  [ "$base" = "node_modules" ] && continue',
+		`  rm -rf "${MODAL_REPO_ROOT}/$base"`,
+		`  mv "$entry" "${MODAL_REPO_ROOT}/$base"`,
+		"done",
+		"rm -rf /tmp/twclone",
+	].join("\n");
 	// Run from `/` (always exists): the sandbox's default workdir is /repo, which
 	// doesn't exist until THIS clone creates it — execing there fails with
 	// "Unable to read current working directory".
@@ -237,6 +276,7 @@ const createFromImage = async (
 		memoryMiB: number;
 		timeout?: number;
 		encryptedPorts?: number[];
+		volumes?: Record<string, Volume>;
 	},
 ): Promise<Sandbox> => {
 	const app = await getApp();
@@ -252,6 +292,7 @@ const createFromImage = async (
 		name: opts.name,
 		workdir: MODAL_REPO_ROOT,
 		encryptedPorts: opts.encryptedPorts,
+		volumes: opts.volumes,
 	});
 	sandboxByName.set(opts.name, sandbox);
 	done();
@@ -262,7 +303,12 @@ export const modalProvider: ProviderImpl = {
 	async createWarmSandbox(
 		opts: CreateSandboxOptions,
 	): Promise<ProviderSandbox> {
-		const image = await getBaseImage();
+		const [image, volume] = await Promise.all([
+			getBaseImage(),
+			getNodeModulesVolume(),
+		]);
+		// Warm parent mounts node_modules read-WRITE so warmup.sh's `bun install`
+		// populates the Volume (excluded from the snapshot).
 		const sandbox = await createFromImage(image, {
 			name: opts.name,
 			env: opts.env,
@@ -271,6 +317,7 @@ export const modalProvider: ProviderImpl = {
 			memoryMiB: WORKER_MEMORY_MIB,
 			timeout: opts.timeout,
 			encryptedPorts: opts.ports ?? [SERVER_PORT],
+			volumes: { [NODE_MODULES_PATH]: volume },
 		});
 		if (opts.source) {
 			await cloneRepo(sandbox, opts.source);
@@ -304,6 +351,9 @@ export const modalProvider: ProviderImpl = {
 				`modal: no warm snapshot for "${opts.sourceSandbox}" — snapshotAndStop must run first`,
 			);
 		}
+		const volume = await getNodeModulesVolume();
+		// Workers mount the SAME node_modules Volume READ-ONLY: they only read deps
+		// (never install), and read-only avoids N workers racing writes to it.
 		const sandbox = await createFromImage(image, {
 			name: opts.name,
 			env: opts.env,
@@ -312,6 +362,9 @@ export const modalProvider: ProviderImpl = {
 			memoryMiB: WORKER_MEMORY_MIB,
 			timeout: opts.timeout,
 			encryptedPorts: opts.ports ?? [SERVER_PORT],
+			volumes: {
+				[NODE_MODULES_PATH]: volume.withMountOptions({ readOnly: true }),
+			},
 		});
 		return wrap(opts.name, sandbox);
 	},
