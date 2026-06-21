@@ -150,9 +150,6 @@ export const buildBaseImage = (
 		//    addressed) command, so the bake rebuilds when the lockfile changes.
 		//    NOTE: gitUrl may embed a token for a private repo — it lands in this
 		//    (workspace-private) image's build history; rotate scoped tokens.
-		//    Playwright Chromium is NOT baked here — the image builder fails opaquely
-		//    on the chromium install (it works fine via exec), so warmup installs it
-		//    on the warm parent and the snapshot captures it (see run.ts).
 		.dockerfileCommands([
 			`# node_modules bake — lockfile ${deps.lockHash}\n` +
 				"RUN export PATH=/usr/local/bin:$PATH && rm -rf /tmp/seed && " +
@@ -161,5 +158,19 @@ export const buildBaseImage = (
 				"( cd /tmp/seed && bun install --frozen-lockfile ) && " +
 				"mkdir -p /repo && rm -rf /repo/node_modules && " +
 				"mv /tmp/seed/node_modules /repo/node_modules && rm -rf /tmp/seed",
+		])
+		// 9. Playwright Chromium → /root/.cache/ms-playwright (the ~68 browser-driven
+		//    test files use the LOCAL Playwright path). Reads playwright-core from the
+		//    baked /repo/node_modules; `--with-deps` apt-installs the OS libs (refresh
+		//    the index first — earlier layers cleared it). Rebuilds whenever the
+		//    node_modules layer does (its parent). Uses `bun x` (not `bunx`) — only
+		//    `bun` is symlinked onto /usr/local/bin — and puts /root/.bun/bin on PATH.
+		.dockerfileCommands([
+			"# chromium bake\n" +
+				"RUN export PATH=/root/.bun/bin:/usr/local/bin:$PATH && cd /repo && " +
+				"PWV=$(node -p \"require('playwright-core/package.json').version\" 2>/dev/null || echo 1.60.0) && " +
+				"apt-get update && " +
+				"bun x playwright@$PWV install --with-deps chromium && " +
+				"rm -rf /var/lib/apt/lists/*",
 		])
 		.build(app);

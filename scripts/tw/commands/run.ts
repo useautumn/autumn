@@ -745,30 +745,6 @@ const getOrBuildWarmParent = async ({
 		);
 	}
 
-	// Playwright Chromium for the ~68 browser-driven test files. On Vercel it's
-	// baked into build-base.sh; on Modal the image BUILDER fails opaquely on the
-	// chromium install (it works fine via exec), so install it here on the warm
-	// parent — the snapshot then carries /root/.cache/ms-playwright to every
-	// worker. Best-effort: a failure only breaks browser tests, not the run.
-	if (providerName() === "modal") {
-		milestone("warm-up: installing Playwright Chromium (browser tests)");
-		const chromiumRun = await runStreaming(
-			warm,
-			[
-				"bash",
-				"-lc",
-				"cd /repo/server && PWV=$(node -p \"require('playwright-core/package.json').version\" 2>/dev/null || echo 1.60.0) && apt-get update && bunx playwright@$PWV install --with-deps chromium",
-			],
-			(text) => sink(text),
-			{ signal, swallowStreamClose: true },
-		);
-		if (chromiumRun.exitCode !== 0) {
-			warn(
-				`warm-up: Playwright Chromium install exited ${chromiumRun.exitCode} — browser tests will fail (others unaffected)`,
-			);
-		}
-	}
-
 	milestone("warm-up: snapshotting warm parent (cached for this ref)");
 	try {
 		await snapshotAndStop(warm, { signal });
