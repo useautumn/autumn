@@ -11,8 +11,9 @@
  * POOL of platform keys (helpers/stripeKeyPool.ts) rather than one shared key:
  * Stripe rate-limits per platform key, so sharding workers across keys multiplies
  * the ceiling. Each call uses a per-key client (`stripeClientForKey`):
- *   - `createSandboxSubAccount` mints the sub-account via `stripe.v2.core.accounts.create`
- *     on a chosen pool key (owner-tag `metadata` lets the sweeper find orphans).
+ *   - `createSandboxSubAccount` mints a v1 Connect "Custom" account on a chosen
+ *     pool key (owner-tag `metadata` lets the sweeper find orphans). v1 (not the
+ *     Accounts v2 API) so it works on any Connect platform without the v2 preview.
  *   - `registerConnectIngressWebhook` registers ONE platform Connect webhook per key.
  *   - `deleteSubAccount` deletes a sub-account under the key it was created on
  *     (the registry stores `acct_*::keyIndex`).
@@ -119,6 +120,26 @@ const paceCreate = async (): Promise<void> => {
 	}
 };
 
+/**
+ * v1 Connect "Custom" account shape: the PLATFORM fully controls the account (no
+ * Stripe-hosted dashboard, platform collects requirements + owns fees/losses), so
+ * the worker can create subscriptions on it via the `Stripe-Account` header with
+ * no onboarding. Works on any Connect-enabled platform WITHOUT the Accounts v2
+ * preview — which is why the swarm uses v1 instead of `v2.core.accounts.create`.
+ * Requires the platform to have signed up for Connect AND accepted the
+ * loss-liability responsibility (else create 400s — surfaced by the preflight).
+ */
+const CUSTOM_ACCOUNT_CONTROLLER = {
+	stripe_dashboard: { type: "none" as const },
+	fees: { payer: "application" as const },
+	losses: { payments: "application" as const },
+	requirement_collection: "application" as const,
+};
+const CUSTOM_ACCOUNT_CAPABILITIES = {
+	card_payments: { requested: true },
+	transfers: { requested: true },
+};
+
 const isRateLimited = (error: unknown): boolean => {
 	const e = error as { statusCode?: number; code?: string; type?: string };
 	return (
@@ -158,10 +179,9 @@ const withRateLimitRetry = async <T>(
  * Returns the `acct_*` id; the orchestrator records it (with the key index) in
  * the registry, then the worker binds it into its localhost DB (§6a/§9a).
  *
- * Mirrors the server's `createConnectAccount` v2 create body, but on a per-key
- * client so account creation shards across the pool (we never have a full
- * better-auth `Organization`/`User` orchestrator-side — the v2 call only reads
- * `display_name` / `contact_email`).
+ * Uses v1 `accounts.create` (Custom controller) on a per-key client so creation
+ * shards across the pool AND works on any Connect platform without the Accounts
+ * v2 preview (see {@link CUSTOM_ACCOUNT_CONTROLLER}).
  */
 export const createSandboxSubAccount = async ({
 	orgName,
@@ -183,19 +203,13 @@ export const createSandboxSubAccount = async ({
 	const account = await getSubAccountCreateLimit()(() =>
 		withRateLimitRetry(async () => {
 			await paceCreate();
-			return stripe.v2.core.accounts.create({
-				contact_email: ownerEmail,
-				display_name: orgName,
-				dashboard: "full",
+			return stripe.accounts.create({
+				country: "US",
+				email: ownerEmail,
+				business_profile: { name: orgName },
 				metadata: stripeMetadata(owner, runId, orgId),
-				identity: { country: "us" },
-				configuration: { merchant: {} },
-				defaults: {
-					responsibilities: {
-						losses_collector: "stripe",
-						fees_collector: "stripe",
-					},
-				},
+				controller: CUSTOM_ACCOUNT_CONTROLLER,
+				capabilities: CUSTOM_ACCOUNT_CAPABILITIES,
 			});
 		}, "accounts.create"),
 	);
@@ -204,22 +218,38 @@ export const createSandboxSubAccount = async ({
 };
 
 /**
- * Preflight the key pool: probe each key's v2 Connect account capability and DROP
- * the ones that can't (so workers aren't assigned to dead keys mid-fan-out). The
- * probe is a read (`v2.core.accounts.list`) which fails with "The API method
- * cannot be found." on platforms that don't have Connect / the v2 Accounts API
- * enabled — the exact gate that breaks {@link createSandboxSubAccount} — so no
- * throwaway accounts are created. Returns the usable count + the dropped keys (by
- * prefix + reason) for a clear report.
+ * Preflight the key pool: probe each key by actually creating a v1 Custom account
+ * (then deleting it) — the exact operation {@link createSandboxSubAccount} does —
+ * and DROP the keys that fail, so workers aren't assigned to keys whose platform
+ * can't create sub-accounts (Connect not enabled, loss-responsibility not
+ * accepted, …). The throwaway account is tagged with the run's owner metadata so
+ * a missed cleanup is caught by {@link sweepOrphans}. Returns the usable count +
+ * the dropped keys (prefix + reason) for a clear report.
  */
-export const validateStripeKeyPool = async (): Promise<{
+export const validateStripeKeyPool = async ({
+	owner,
+	runId,
+	orgId,
+}: { orgId: string } & OwnerTag): Promise<{
 	usable: number;
 	dropped: { keyPrefix: string; reason: string }[];
 }> => {
 	const probes = await Promise.all(
 		allPoolKeys().map(async (key) => {
+			const stripe = stripeClientForKey(key);
 			try {
-				await stripeClientForKey(key).v2.core.accounts.list({ limit: 1 });
+				const account = await stripe.accounts.create({
+					country: "US",
+					metadata: {
+						...stripeMetadata(owner, runId, orgId),
+						autumn_tw_probe: "1",
+					},
+					controller: CUSTOM_ACCOUNT_CONTROLLER,
+					capabilities: CUSTOM_ACCOUNT_CAPABILITIES,
+				});
+				await stripe.accounts.del(account.id).catch(() => {
+					/* swept later via the owner metadata tag */
+				});
 				return { key, ok: true as const };
 			} catch (error) {
 				return { key, ok: false as const, reason: (error as Error).message };

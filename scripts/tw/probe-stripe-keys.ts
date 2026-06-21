@@ -1,9 +1,9 @@
 #!/usr/bin/env bun
 /**
  * Probe every Stripe key in STRIPE_TEST_KEY_POOL (+ STRIPE_SANDBOX_SECRET_KEY):
- * for each, fetch the platform account's id + display name and test whether
- * `v2.core.accounts.list` works (the gate the swarm needs to create sub-accounts).
- * Prints a table + a usable count.
+ * for each, fetch the platform account's id + display name and test whether the
+ * swarm's actual operation — creating a v1 Connect "Custom" account — works (then
+ * deletes the throwaway). Prints a table + a usable count.
  *
  * Run:
  *   ENV_FILE=.env infisical run --env=dev --recursive -- \
@@ -91,11 +91,30 @@ const probe = async ({ key, label }: KeyRef): Promise<Row> => {
 		name = `account.retrieve failed: ${(error as Error).message}`;
 	}
 
+	// Test what the swarm actually does: create a v1 Custom connected account
+	// (platform-controlled) then delete it. Works on any Connect platform without
+	// the Accounts v2 preview.
 	let v2 = "ok";
 	let error = "";
 	let detail: string | undefined;
 	try {
-		await stripe.v2.core.accounts.list({ limit: 1 });
+		const probe = await stripe.accounts.create({
+			country: "US",
+			controller: {
+				stripe_dashboard: { type: "none" },
+				fees: { payer: "application" },
+				losses: { payments: "application" },
+				requirement_collection: "application",
+			},
+			capabilities: {
+				card_payments: { requested: true },
+				transfers: { requested: true },
+			},
+			metadata: { autumn_tw_probe: "1" },
+		});
+		await stripe.accounts.del(probe.id).catch(() => {
+			/* best-effort cleanup */
+		});
 	} catch (e) {
 		v2 = "FAIL";
 		const described = describeStripeError(e);
@@ -129,7 +148,7 @@ const main = async (): Promise<void> => {
 		{ header: "key", get: (row) => `${row.label} ${row.prefix}` },
 		{ header: "account id", get: (row) => row.accountId },
 		{ header: "account name", get: (row) => row.name },
-		{ header: "v2.list", get: (row) => row.v2 },
+		{ header: "v1.create", get: (row) => row.v2 },
 		{ header: "error", get: (row) => row.error },
 	];
 	const widths = cols.map((col) =>
@@ -146,7 +165,7 @@ const main = async (): Promise<void> => {
 
 	const usable = rows.filter((row) => row.v2 === "ok").length;
 	console.log(
-		`\n${usable}/${rows.length} keys usable for v2.core.accounts (Connect / v2 Accounts API enabled)`,
+		`\n${usable}/${rows.length} keys usable for v1 Custom account creation (Connect enabled)`,
 	);
 
 	const failed = rows.filter((row) => row.v2 === "FAIL");
