@@ -105,6 +105,7 @@ import {
 	deleteConnectWebhook,
 	deleteSubAccount,
 	registerConnectIngressWebhook,
+	validateStripeKeyPool,
 } from "../helpers/stripe.ts";
 import {
 	encodeSubAccount,
@@ -1084,6 +1085,28 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 	const allFiles = await resolveTestFiles(args.groupsOrPatterns);
 	if (allFiles.length === 0) {
 		throw new Error("no test files resolved — nothing to run");
+	}
+
+	// Stripe key-pool preflight (only when a pool is configured): probe each key's
+	// Connect/v2-accounts capability and DROP the dead ones up-front, so workers
+	// aren't assigned to keys that can't create their sub-account (67/90 cryptic
+	// mid-fan-out failures). Read-only + fast; runs before the expensive warm-up.
+	if (stripeKeyPoolSize() > 1) {
+		milestone(`validating ${stripeKeyPoolSize()} Stripe pool key(s)…`);
+		const { usable, dropped } = await validateStripeKeyPool();
+		for (const badKey of dropped) {
+			warn(`Stripe key ${badKey.keyPrefix} unusable — ${badKey.reason}`);
+		}
+		if (usable === 0) {
+			throw new Error(
+				"no usable Stripe pool keys: every STRIPE_TEST_KEY_POOL key failed the Connect probe — enable Connect + the v2 Accounts API on those platform accounts",
+			);
+		}
+		milestone(
+			dropped.length > 0
+				? `Stripe key pool: ${usable}/${usable + dropped.length} key(s) usable — sharding across them (enable Connect on the rest to use all ${usable + dropped.length})`
+				: `Stripe key pool: all ${usable} key(s) usable`,
+		);
 	}
 
 	const { svixFiles, normalFiles } = await partitionShards(allFiles);

@@ -35,7 +35,9 @@ import type { OwnerTag } from "../types.js";
 import { sinkLine } from "./logSink.js";
 import { stripeMetadata } from "./owner.js";
 import {
+	allPoolKeys,
 	decodeSubAccount,
+	restrictPoolTo,
 	stripeClientForKey,
 	stripeKeyByIndex,
 	stripeKeyPoolSize,
@@ -199,6 +201,44 @@ export const createSandboxSubAccount = async ({
 	);
 
 	return account.id;
+};
+
+/**
+ * Preflight the key pool: probe each key's v2 Connect account capability and DROP
+ * the ones that can't (so workers aren't assigned to dead keys mid-fan-out). The
+ * probe is a read (`v2.core.accounts.list`) which fails with "The API method
+ * cannot be found." on platforms that don't have Connect / the v2 Accounts API
+ * enabled — the exact gate that breaks {@link createSandboxSubAccount} — so no
+ * throwaway accounts are created. Returns the usable count + the dropped keys (by
+ * prefix + reason) for a clear report.
+ */
+export const validateStripeKeyPool = async (): Promise<{
+	usable: number;
+	dropped: { keyPrefix: string; reason: string }[];
+}> => {
+	const probes = await Promise.all(
+		allPoolKeys().map(async (key) => {
+			try {
+				await stripeClientForKey(key).v2.core.accounts.list({ limit: 1 });
+				return { key, ok: true as const };
+			} catch (error) {
+				return { key, ok: false as const, reason: (error as Error).message };
+			}
+		}),
+	);
+
+	const usable = probes.filter((probe) => probe.ok).map((probe) => probe.key);
+	restrictPoolTo(usable);
+
+	return {
+		usable: usable.length,
+		dropped: probes
+			.filter((probe) => !probe.ok)
+			.map((probe) => ({
+				keyPrefix: `${probe.key.slice(0, 16)}…`,
+				reason: "reason" in probe ? probe.reason : "unknown",
+			})),
+	};
 };
 
 /**

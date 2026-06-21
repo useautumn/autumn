@@ -58,6 +58,20 @@ const pool = (): string[] => {
 /** Number of distinct platform keys (= the rate-limit multiplier). */
 export const stripeKeyPoolSize = (): number => pool().length;
 
+/** Every configured pool key (used by the preflight validator). */
+export const allPoolKeys = (): string[] => [...pool()];
+
+/**
+ * Restrict the pool to the given keys (the preflight drops keys that can't create
+ * Connect accounts). Ignores an empty set so a fully-failed probe doesn't wipe the
+ * pool (the caller aborts on zero usable keys instead).
+ */
+export const restrictPoolTo = (keys: string[]): void => {
+	if (keys.length > 0) {
+		poolCache = keys;
+	}
+};
+
 /** Round-robin a worker index onto a pool key + the key's index (for teardown). */
 export const stripeKeyForWorker = (
 	idx: number,
