@@ -41,10 +41,37 @@ type Row = {
 	name: string;
 	v2: string;
 	error: string;
+	detail?: string;
 };
 
 const truncate = (text: string, max: number): string =>
 	text.length > max ? `${text.slice(0, max - 1)}…` : text;
+
+/** Pull the useful fields off a Stripe error (type, code, status, request log). */
+const describeStripeError = (
+	error: unknown,
+): { short: string; full: string } => {
+	const e = error as {
+		message?: string;
+		type?: string;
+		code?: string;
+		statusCode?: number;
+		requestId?: string;
+		raw?: { code?: string; request_log_url?: string; message?: string };
+	};
+	const short = e?.message ?? String(error);
+	const parts = [
+		e?.type && `type=${e.type}`,
+		e?.statusCode && `status=${e.statusCode}`,
+		(e?.code || e?.raw?.code) && `code=${e.code ?? e.raw?.code}`,
+		e?.requestId && `req=${e.requestId}`,
+		e?.raw?.request_log_url && `log=${e.raw.request_log_url}`,
+	].filter(Boolean);
+	return {
+		short,
+		full: `${short}${parts.length ? `  [${parts.join("  ")}]` : ""}`,
+	};
+};
 
 const probe = async ({ key, label }: KeyRef): Promise<Row> => {
 	const stripe = stripeClientForKey(key);
@@ -66,11 +93,14 @@ const probe = async ({ key, label }: KeyRef): Promise<Row> => {
 
 	let v2 = "ok";
 	let error = "";
+	let detail: string | undefined;
 	try {
 		await stripe.v2.core.accounts.list({ limit: 1 });
 	} catch (e) {
 		v2 = "FAIL";
-		error = (e as Error).message;
+		const described = describeStripeError(e);
+		error = described.short;
+		detail = described.full;
 	}
 
 	return {
@@ -80,6 +110,7 @@ const probe = async ({ key, label }: KeyRef): Promise<Row> => {
 		name: truncate(name, 48),
 		v2,
 		error: truncate(error, 70),
+		detail,
 	};
 };
 
@@ -117,6 +148,15 @@ const main = async (): Promise<void> => {
 	console.log(
 		`\n${usable}/${rows.length} keys usable for v2.core.accounts (Connect / v2 Accounts API enabled)`,
 	);
+
+	const failed = rows.filter((row) => row.v2 === "FAIL");
+	if (failed.length > 0) {
+		console.log(`\nFailing keys — full error detail:`);
+		for (const row of failed) {
+			console.log(`  ${row.label} ${row.name} (${row.accountId})`);
+			console.log(`    ${row.detail}`);
+		}
+	}
 };
 
 await main();
