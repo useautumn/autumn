@@ -96,8 +96,9 @@ const parseRunArgs = (args: string[]): TwRunArgs => {
 	// accepted as an explicit no-op for back-compat).
 	const dashboard = !args.includes("--no-dashboard");
 
-	// Cloud backend. Default vercel; modal selectable via --provider=modal.
-	const providerArg = parseStringFlag(args, "--provider") ?? "vercel";
+	// Cloud backend. Default modal (faster, breaks Vercel's 200-µVM wall); the
+	// original Vercel path stays available via --provider=vercel.
+	const providerArg = parseStringFlag(args, "--provider") ?? "modal";
 	if (providerArg !== "vercel" && providerArg !== "modal") {
 		fatal(`--provider must be "vercel" or "modal" (got "${providerArg}")`);
 	}
@@ -176,7 +177,7 @@ const printUsage = (): void => {
 			`  --stripe-concurrency=N   concurrent Stripe account creations (default ${STRIPE_SUBACCOUNT_CONCURRENCY})`,
 			"  --allow-dirty    skip the preflight git gate (dirty tree / unpushed HEAD)",
 			"  --no-dashboard   disable the live web dashboard (on by default; opens + keeps it up after the run)",
-			"  --provider=NAME  cloud backend: vercel (default) or modal",
+			"  --provider=NAME  cloud backend: modal (default) or vercel",
 			"",
 			chalk.bold("Env:"),
 			"  STRIPE_TEST_KEY_POOL   comma-separated Stripe platform secret keys; workers",
