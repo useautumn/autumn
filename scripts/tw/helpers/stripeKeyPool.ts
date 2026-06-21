@@ -20,8 +20,14 @@
  *
  * Unset (or single value) → falls back to the lone `STRIPE_SANDBOX_SECRET_KEY`
  * (a pool of one): identical behavior to before.
+ *
+ * NOTE: the per-key Stripe CLIENT factory lives in the server package (which has
+ * the `stripe` dependency — `scripts/` deliberately does not), re-exported below.
  */
-import Stripe from "stripe";
+
+// Per-key Stripe client factory (cached). Lives server-side; `scripts/` has no
+// `stripe` dep, so we re-export it rather than `import Stripe from "stripe"` here.
+export { stripeClientForKey } from "@server/external/connect/stripeFromKey.js";
 
 const parsePool = (): string[] => {
 	const raw = process.env.STRIPE_TEST_KEY_POOL?.trim();
@@ -100,15 +106,4 @@ export const keyIndexFromWebhookTag = (tag: string): number => {
 	}
 	const keyIndex = Number(tag.slice(at + SUB_ACCOUNT_SEP.length));
 	return Number.isFinite(keyIndex) ? keyIndex : 0;
-};
-
-const clientCache = new Map<string, Stripe>();
-/** A cached Stripe client bound to a specific pool key. */
-export const stripeClientForKey = (key: string): Stripe => {
-	let client = clientCache.get(key);
-	if (!client) {
-		client = new Stripe(key);
-		clientCache.set(key, client);
-	}
-	return client;
 };
