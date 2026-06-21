@@ -1,9 +1,17 @@
+import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import AnimatedFooterImage from "@/components/animated-footer-image";
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
 import type { PageStyle } from "@/lib/types";
 import { cn } from "@/lib/utils";
+
+export const metadata: Metadata = {
+	title: "Terms & Privacy",
+	description:
+		"Autumn's Terms of Service and Privacy Policy covering use of our billing infrastructure, APIs, and SDKs.",
+	alternates: { canonical: "/privacy" },
+};
 
 const privacyTerms: Array<{
 	title: string;
