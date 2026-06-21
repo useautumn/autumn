@@ -31,6 +31,7 @@ import { readdir, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { deleteSvixApp as serverDeleteSvixApp } from "@server/external/svix/svixHelpers.js";
 import chalk from "chalk";
+import pLimit from "p-limit";
 import {
 	getGroup,
 	resolveSuite,
@@ -200,6 +201,10 @@ const EDGE_CONFIG_OVERRIDE_B64 = Buffer.from(
 
 /** How long a single resource's teardown may take before we give up on it (§9a). */
 const TEARDOWN_PER_RESOURCE_TIMEOUT_MS = 20_000;
+
+/** Bounded concurrency for teardown deletes (serial was the long-pole at N=62). */
+const TEARDOWN_STRIPE_CONCURRENCY = 16;
+const TEARDOWN_SANDBOX_CONCURRENCY = 16;
 
 /** How long to wait for a worker to print the READY sentinel after boot starts. */
 const WORKER_READY_TIMEOUT_MS = 5 * 60 * 1000;
@@ -979,13 +984,21 @@ const teardown = async ({
 		`teardown: ${entry.subAccounts.length} sub-account(s), ${entry.webhooks.length} webhook(s), ${entry.sandboxes.length} sandbox(es)`,
 	);
 
+	// Delete sub-accounts CONCURRENTLY (bounded) — a 62-worker run has 62 accounts
+	// and serial Stripe deletes are the teardown long-pole. Stripe tolerates this
+	// fan-out; the limit just avoids hammering the API.
 	setTeardownAccounts(0, entry.subAccounts.length);
-	for (const accountId of entry.subAccounts) {
-		await timeBoxed(`delete sub-account ${accountId}`, () =>
-			deleteSubAccount(accountId),
-		);
-		bumpAccountDone();
-	}
+	const accountLimit = pLimit(TEARDOWN_STRIPE_CONCURRENCY);
+	await Promise.all(
+		entry.subAccounts.map((accountId) =>
+			accountLimit(async () => {
+				await timeBoxed(`delete sub-account ${accountId}`, () =>
+					deleteSubAccount(accountId),
+				);
+				bumpAccountDone();
+			}),
+		),
+	);
 
 	// Delete recorded webhooks (the shared platform Connect webhook). Unlike a
 	// sub-account's account-scoped webhook, the platform Connect webhook is NOT
@@ -1002,13 +1015,20 @@ const teardown = async ({
 		);
 	}
 
+	// Delete sandboxes concurrently too (bounded) — terminating N µVMs serially is
+	// the other teardown long-pole.
 	setTeardownSandboxes(0, entry.sandboxes.length);
-	for (const sandbox of entry.sandboxes) {
-		await timeBoxed(`delete sandbox ${sandbox.name}`, () =>
-			deleteSandbox(sandbox.name),
-		);
-		bumpSandboxDone();
-	}
+	const sandboxLimit = pLimit(TEARDOWN_SANDBOX_CONCURRENCY);
+	await Promise.all(
+		entry.sandboxes.map((sandbox) =>
+			sandboxLimit(async () => {
+				await timeBoxed(`delete sandbox ${sandbox.name}`, () =>
+					deleteSandbox(sandbox.name),
+				);
+				bumpSandboxDone();
+			}),
+		),
+	);
 
 	await registry.markCompleted(runId);
 	log("teardown complete");
@@ -1246,31 +1266,49 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		// the registry. Otherwise a peer still creating an account AFTER another's
 		// failure leaks it — and the create/delete interleaving is ugly.
 		const settled = await Promise.allSettled(provisionTasks);
+		const provisioned = settled
+			.filter(
+				(r): r is PromiseFulfilledResult<ProvisionedWorker> =>
+					r.status === "fulfilled",
+			)
+			.map((r) => r.value);
 		const failures = settled.filter(
 			(r): r is PromiseRejectedResult => r.status === "rejected",
 		);
+		const firstFailure =
+			failures[0] &&
+			(failures[0].reason instanceof Error
+				? failures[0].reason.message
+				: String(failures[0].reason));
+
+		// Partial fan-out failures are TOLERATED: a few workers losing the (often
+		// transient) fork/boot race shouldn't waste the dozens that came up healthy.
+		// Proceed with whoever provisioned; the failed workers' partial resources are
+		// recorded in the registry and get cleaned up at teardown. Only a TOTAL
+		// wipeout (zero healthy) is fatal.
 		if (failures.length > 0) {
-			const first = failures[0].reason;
-			const firstMessage =
-				first instanceof Error ? first.message : String(first);
-			milestone(
-				`✗ fan-out: ${failures.length}/${effectiveWorkers} worker(s) failed to provision`,
+			warn(
+				`fan-out: ${failures.length}/${effectiveWorkers} worker(s) failed to provision (first: ${firstFailure})`,
 			);
-			// A Modal "Sandbox … not found / already shut down" means the worker
-			// container died right after fork — usually a snapshot/volume-mount issue
-			// or a resource-quota kill. Point at the tunable knobs.
-			if (/not found|already shut down|shut down/i.test(firstMessage)) {
+		}
+		if (provisioned.length === 0) {
+			milestone(
+				`✗ fan-out: all ${effectiveWorkers} worker(s) failed to provision`,
+			);
+			if (firstFailure && /not found|shut down/i.test(firstFailure)) {
 				milestone(
 					"  hint: workers crashed on start. Try smaller workers (TW_MODAL_WORKER_CPU=2 TW_MODAL_WORKER_MEM_MIB=4096) to rule out a Modal resource-quota kill",
 				);
 			}
 			throw new Error(
-				`fan-out: ${failures.length}/${effectiveWorkers} worker(s) failed to provision — aborting (first: ${firstMessage})`,
+				`fan-out: all ${effectiveWorkers} worker(s) failed to provision — aborting (first: ${firstFailure})`,
 			);
 		}
-		const provisioned = settled.map(
-			(r) => (r as PromiseFulfilledResult<ProvisionedWorker>).value,
-		);
+		if (failures.length > 0) {
+			milestone(
+				`fan-out: proceeding with ${provisioned.length}/${effectiveWorkers} healthy worker(s)`,
+			);
+		}
 
 		// Fan-out benchmark. All timings are ms from fan-out start. `stripeMs` is
 		// when a worker's account finished; `readyMs` is when it hit READY (fork +
@@ -1305,6 +1343,13 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		const svixShard = needsSvixShard
 			? provisioned.find(({ handle }) => handle.isSvixShard)
 			: undefined;
+		// If the dedicated svix shard was the worker that failed to provision, its
+		// files can't run — surface that loudly rather than silently dropping them.
+		if (needsSvixShard && !svixShard && svixFiles.length > 0) {
+			warn(
+				`fan-out: the svix shard failed to provision — ${svixFiles.length} svix file(s) will be SKIPPED this run`,
+			);
+		}
 
 		const resolveSandbox = (
 			worker: WorkerHandle,
