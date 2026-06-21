@@ -4,7 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { mdxComponents } from "@/components/blogComponents";
+import JsonLd from "@/components/json-ld";
 import { getAllPosts, getPostBySlug } from "@/lib/blogUtils";
+import { blogPostingSchema, breadcrumbSchema } from "@/lib/seo";
 import type { BlogParams } from "@/lib/types";
 
 export function generateStaticParams() {
@@ -23,6 +25,7 @@ export async function generateMetadata({
 	return {
 		title: post.title,
 		description: post.description,
+		alternates: { canonical: `/blog/${slug}` },
 		openGraph: {
 			title: post.title,
 			description: post.description,
@@ -81,6 +84,15 @@ export default async function BlogPostPage({ params }: { params: BlogParams }) {
 
 	return (
 		<div className="py-16 md:py-24 bg-[#0F0F0F]">
+			<JsonLd
+				data={[
+					blogPostingSchema(post),
+					breadcrumbSchema([
+						{ name: "Blog", path: "/blog" },
+						{ name: post.title, path: `/blog/${post.slug}` },
+					]),
+				]}
+			/>
 			<div className="max-w-[720px] mx-auto px-4 xl:px-0">
 				<Link
 					href="/blog"

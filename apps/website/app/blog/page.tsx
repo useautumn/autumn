@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import JsonLd from "@/components/json-ld";
 import { getAllPosts } from "@/lib/blogUtils";
+import { breadcrumbSchema } from "@/lib/seo";
 
 export const metadata: Metadata = {
 	title: "Blog",
 	description:
 		"Thoughts on billing infrastructure, usage-based pricing, and building for AI startups.",
+	alternates: { canonical: "/blog" },
 };
 
 function stripHtml(html: string) {
@@ -27,6 +30,7 @@ export default function BlogListingPage() {
 
 	return (
 		<div className="py-16 md:py-24 bg-[#0F0F0F]">
+			<JsonLd data={breadcrumbSchema([{ name: "Blog", path: "/blog" }])} />
 			<div className="max-w-[800px] mx-auto px-4 xl:px-0">
 				<h1 className="text-[30px] md:text-[40px] font-normal tracking-[-2%] leading-[1.1] font-sans mb-4">
 					<span className="text-[#FFFFFF99] font-light">From the </span>
