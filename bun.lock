@@ -155,6 +155,7 @@
       "name": "@autumn/website",
       "version": "0.1.0",
       "dependencies": {
+        "@bydefault/vercel": "^0.1.4",
         "@gsap/react": "^2.1.2",
         "@mdx-js/loader": "^3.1.1",
         "@mdx-js/mdx": "^3.1.1",
@@ -1134,6 +1135,8 @@
     "@bufbuild/protobuf": ["@bufbuild/protobuf@2.12.0", "", {}, "sha512-B/XlCaFIP8LOwzo+bz5uFzATYokcwCKQcghqnlfwSmM5eX/qTkvDBnDPs+gXtX/RyjxJ4DRikECcPJbyALA8FA=="],
 
     "@bugsnag/cuid": ["@bugsnag/cuid@3.2.2", "", {}, "sha512-7onuYLTMqMmHE9BBPG0YER4nFsU1rB+me1/YIeMusqcLbVbKKuG9u9+BDVDpje5e0llkkrVNOKYwmzM9DRIo7A=="],
+
+    "@bydefault/vercel": ["@bydefault/vercel@0.1.4", "", {}, "sha512-sw5GSwCZ9JE8bpLd0tG8kTPWLt6iJStmRnomfB1wX65biAbu1W+Fz67IMPmHafaF7oBaLNw10+sSnvedQk6PYw=="],
 
     "@canvas/image-data": ["@canvas/image-data@1.1.0", "", {}, "sha512-QdObRRjRbcXGmM1tmJ+MrHcaz1MftF2+W7YI+MsphnsCrmtyfS0d5qJbk0MeSbUeyM/jCb0hmnkXPsy026L7dA=="],
 
