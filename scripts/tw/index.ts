@@ -178,6 +178,11 @@ const printUsage = (): void => {
 			"  --no-dashboard   disable the live web dashboard (on by default; opens + keeps it up after the run)",
 			"  --provider=NAME  cloud backend: vercel (default) or modal",
 			"",
+			chalk.bold("Env:"),
+			"  STRIPE_TEST_KEY_POOL   comma-separated Stripe platform secret keys; workers",
+			"                         shard across them round-robin (K keys ≈ K× the Stripe",
+			"                         rate limit). Falls back to STRIPE_SANDBOX_SECRET_KEY.",
+			"",
 			formatTargets(),
 		].join("\n"),
 	);

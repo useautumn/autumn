@@ -107,6 +107,14 @@ import {
 	registerConnectIngressWebhook,
 } from "../helpers/stripe.ts";
 import {
+	encodeSubAccount,
+	keyIndexFromWebhookTag,
+	stripeKeyByIndex,
+	stripeKeyForWorker,
+	stripeKeyPoolSize,
+	webhookKeyTag,
+} from "../helpers/stripeKeyPool.ts";
+import {
 	createSvixApp as orchestratorCreateSvixApp,
 	partitionShards,
 } from "../helpers/svix.ts";
@@ -518,10 +526,13 @@ const requireSecret = (name: string): string => {
  */
 const buildWorkerEnv = ({
 	stripeAccountId,
+	stripeSecretKey,
 	isSvixShard,
 	svixAppId,
 }: {
 	stripeAccountId: string;
+	/** This worker's pool key — MUST match the key its sub-account was created on. */
+	stripeSecretKey: string;
 	isSvixShard: boolean;
 	svixAppId?: string;
 }): Record<string, string> => {
@@ -542,8 +553,9 @@ const buildWorkerEnv = ({
 		ENCRYPTION_PASSWORD: requireSecret("ENCRYPTION_PASSWORD"),
 		BETTER_AUTH_SECRET: requireSecret("BETTER_AUTH_SECRET"),
 		STRIPE_WEBHOOK_SKIP_VERIFY: "true",
-		// per-worker Stripe (platform key + the sub-account this worker binds).
-		STRIPE_SANDBOX_SECRET_KEY: requireSecret("STRIPE_SANDBOX_SECRET_KEY"),
+		// per-worker Stripe (this worker's POOL key + the sub-account it binds; the
+		// account was created on this same key, so they share one rate-limit bucket).
+		STRIPE_SANDBOX_SECRET_KEY: stripeSecretKey,
 		// The connect seeder calls getStripeWebhookSecret UNCONDITIONALLY (before the
 		// skip-verify branch) and throws if it's unset; the ingress forwards without an
 		// org_id query, so it falls to this env var. Skip-verify never uses the value,
@@ -878,17 +890,23 @@ const provisionWorker = async ({
 }): Promise<ProvisionedWorker> => {
 	const name = sandboxName(owner, runId, idx);
 	const orgId = TEST_ORG_CONFIG.id;
+	// This worker's Stripe pool key (round-robin). The sub-account is CREATED on
+	// this key and the worker's server USES this key, so they share one platform
+	// rate-limit bucket — sharding workers across keys multiplies the ceiling.
+	const { key: stripeSecretKey, keyIndex } = stripeKeyForWorker(idx);
 
 	// 1. Orchestrator-create + RECORD the sub-account before the worker exists, so
-	//    a fork/boot failure can never orphan an untracked Stripe account (§9a).
+	//    a fork/boot failure can never orphan an untracked Stripe account (§9a). The
+	//    key index is stored with the id so teardown deletes it under the right key.
 	const accountId = await createSandboxSubAccount({
 		orgName: `${TEST_ORG_CONFIG.name} (${name})`,
 		ownerEmail,
 		owner,
 		runId,
 		orgId,
+		secretKey: stripeSecretKey,
 	});
-	await registry.addSubAccount(runId, accountId);
+	await registry.addSubAccount(runId, encodeSubAccount(accountId, keyIndex));
 	bumpStripeDone();
 	const stripeMs = Date.now() - fanoutStart;
 
@@ -897,7 +915,12 @@ const provisionWorker = async ({
 	const sandbox = await forkWorker({
 		sourceSandbox: warmName,
 		name,
-		env: buildWorkerEnv({ stripeAccountId: accountId, isSvixShard, svixAppId }),
+		env: buildWorkerEnv({
+			stripeAccountId: accountId,
+			stripeSecretKey,
+			isSvixShard,
+			svixAppId,
+		}),
 		tags: vercelTags(owner, runId),
 		signal,
 	});
@@ -1004,8 +1027,12 @@ const teardown = async ({
 	// sub-account's account-scoped webhook, the platform Connect webhook is NOT
 	// cascade-deleted by sub-account deletion, so drop it explicitly (§9a).
 	for (const webhook of entry.webhooks) {
+		// The webhook lives on the pool key tagged in `accountId` ("platform::<idx>").
+		const webhookKey = stripeKeyByIndex(
+			keyIndexFromWebhookTag(webhook.accountId),
+		);
 		await timeBoxed(`delete connect webhook ${webhook.webhookId}`, () =>
-			deleteConnectWebhook(webhook.webhookId),
+			deleteConnectWebhook(webhook.webhookId, webhookKey),
 		);
 	}
 
@@ -1211,16 +1238,23 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			signal,
 		});
 		await registry.addSandbox(runId, { name: ingress.sandbox.name });
-		const ingressWebhookId = await registerConnectIngressWebhook(
-			ingress.publicUrl,
-		);
-		await registry.addWebhook(runId, {
-			sandboxName: ingress.sandbox.name,
-			accountId: "platform",
-			webhookId: ingressWebhookId,
-		});
+		// One Connect webhook PER pool key actually in use (each platform key only
+		// delivers events for the accounts it owns). The ingress routes every event
+		// to the owning worker by `event.account` regardless of which key sent it.
+		const usedKeys = Math.min(stripeKeyPoolSize(), effectiveWorkers);
+		for (let keyIndex = 0; keyIndex < usedKeys; keyIndex++) {
+			const webhookId = await registerConnectIngressWebhook(
+				ingress.publicUrl,
+				stripeKeyByIndex(keyIndex),
+			);
+			await registry.addWebhook(runId, {
+				sandboxName: ingress.sandbox.name,
+				accountId: webhookKeyTag(keyIndex),
+				webhookId,
+			});
+		}
 		log(
-			`ingress ready (${ingress.publicUrl}), platform Connect webhook ${ingressWebhookId} registered`,
+			`ingress ready (${ingress.publicUrl}), ${usedKeys} platform Connect webhook(s) registered across the key pool`,
 		);
 
 		// ----- FAN-OUT --------------------------------------------------------

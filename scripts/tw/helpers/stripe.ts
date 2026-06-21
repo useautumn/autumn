@@ -7,29 +7,24 @@
  * binds the returned `acct_*` id into its localhost DB (that half lives in the
  * server's `attachSandboxStripeAccount`, §6a).
  *
- * Everything here runs in the orchestrator process (it holds the platform key
- * `STRIPE_SANDBOX_SECRET_KEY`). The server modules are imported via `@server/*`
- * aliases (see scripts/tsconfig.json) and reused verbatim:
- *   - `createConnectAccount` mints the sub-account via `stripe.v2.core.accounts.create`
- *     (we pass the owner-tag `metadata` so the sweeper can find orphans).
- *   - `initMasterStripe` builds the platform / sub-account-scoped clients.
- *   - `deleteConnectedAccount` deletes a sub-account (drops its account-scoped
- *     webhook with it).
+ * Everything here runs in the orchestrator process. It drives Stripe through a
+ * POOL of platform keys (helpers/stripeKeyPool.ts) rather than one shared key:
+ * Stripe rate-limits per platform key, so sharding workers across keys multiplies
+ * the ceiling. Each call uses a per-key client (`stripeClientForKey`):
+ *   - `createSandboxSubAccount` mints the sub-account via `stripe.v2.core.accounts.create`
+ *     on a chosen pool key (owner-tag `metadata` lets the sweeper find orphans).
+ *   - `registerConnectIngressWebhook` registers ONE platform Connect webhook per key.
+ *   - `deleteSubAccount` deletes a sub-account under the key it was created on
+ *     (the registry stores `acct_*::keyIndex`).
  *
  * See plan §6, §6a, §9a.
  */
 
-import { AppEnv } from "@autumn/shared";
-import { deleteConnectedAccount } from "@server/external/connect/connectUtils.js";
-import { initMasterStripe } from "@server/external/connect/initStripeCli.js";
 import type { Logger } from "@server/external/logtail/logtailUtils.js";
 import {
 	MAIN_STRIPE_EVENT_TYPES,
 	SYNC_STRIPE_EVENT_TYPES,
 } from "@server/external/stripe/common/stripeConstants.js";
-import { createConnectAccount } from "@server/internal/orgs/orgUtils/createConnectAccount.js";
-import type { User } from "better-auth";
-import type { Organization } from "better-auth/plugins";
 import pLimit from "p-limit";
 import {
 	STRIPE_SUBACCOUNT_CONCURRENCY,
@@ -39,6 +34,12 @@ import {
 import type { OwnerTag } from "../types.js";
 import { sinkLine } from "./logSink.js";
 import { stripeMetadata } from "./owner.js";
+import {
+	decodeSubAccount,
+	stripeClientForKey,
+	stripeKeyByIndex,
+	stripeKeyPoolSize,
+} from "./stripeKeyPool.js";
 
 /** Flatten a logger's varargs into one line (strings as-is; errors → message). */
 const formatLogArgs = (args: unknown[]): string =>
@@ -148,20 +149,17 @@ const withRateLimitRetry = async <T>(
 };
 
 /**
- * `createConnectAccount` only needs `org.name`; we never have a full
- * better-auth `Organization` on the orchestrator (the seeded org lives in the
- * worker's localhost DB), so accept just the fields the v2 create call reads.
- */
-type SubAccountOrgInput = Pick<Organization, "name">;
-
-/** `createConnectAccount` reads `user.email` for `contact_email`. */
-type SubAccountUserInput = Pick<User, "email">;
-
-/**
- * Create a Stripe Connect sub-account for one worker org, tagged with the run's
- * owner/run metadata so {@link sweepOrphans} can find it later. Returns the
- * `acct_*` id; the orchestrator records it in the run registry, then the worker
- * binds it into its localhost DB (plan §6a step 2, §9a).
+ * Create a Stripe Connect sub-account for one worker org under a SPECIFIC pool
+ * key (`secretKey`), tagged with the run's owner/run metadata so
+ * {@link sweepOrphans} can find it later. The account belongs to that key's
+ * platform, so the worker's server must use the same key (see stripeKeyPool.ts).
+ * Returns the `acct_*` id; the orchestrator records it (with the key index) in
+ * the registry, then the worker binds it into its localhost DB (§6a/§9a).
+ *
+ * Mirrors the server's `createConnectAccount` v2 create body, but on a per-key
+ * client so account creation shards across the pool (we never have a full
+ * better-auth `Organization`/`User` orchestrator-side — the v2 call only reads
+ * `display_name` / `contact_email`).
  */
 export const createSandboxSubAccount = async ({
 	orgName,
@@ -169,25 +167,33 @@ export const createSandboxSubAccount = async ({
 	owner,
 	runId,
 	orgId,
+	secretKey,
 }: {
 	orgName: string;
 	ownerEmail: string;
 	orgId: string;
+	secretKey: string;
 } & OwnerTag): Promise<string> => {
-	const org: SubAccountOrgInput = { name: orgName };
-	const user: SubAccountUserInput = { email: ownerEmail };
+	const stripe = stripeClientForKey(secretKey);
 
 	// Throttle + retry: bursting `accounts.create` across N workers 429s the
 	// platform account (plan §6a provisioning burst).
 	const account = await getSubAccountCreateLimit()(() =>
 		withRateLimitRetry(async () => {
 			await paceCreate();
-			return createConnectAccount({
-				// `createConnectAccount` only reads `org.name` / `user.email`; the full
-				// better-auth shapes aren't available orchestrator-side.
-				org: org as Organization,
-				user: user as User,
+			return stripe.v2.core.accounts.create({
+				contact_email: ownerEmail,
+				display_name: orgName,
+				dashboard: "full",
 				metadata: stripeMetadata(owner, runId, orgId),
+				identity: { country: "us" },
+				configuration: { merchant: {} },
+				defaults: {
+					responsibilities: {
+						losses_collector: "stripe",
+						fees_collector: "stripe",
+					},
+				},
 			});
 		}, "accounts.create"),
 	);
@@ -216,10 +222,12 @@ export const createSandboxSubAccount = async ({
  */
 export const registerConnectIngressWebhook = async (
 	ingressUrl: string,
+	secretKey: string,
 ): Promise<string> => {
 	// PLATFORM client (no `accountId`/`stripeAccount`) — required for a
-	// `connect: true` endpoint. A sub-account-scoped client is rejected by Stripe.
-	const stripeCli = initMasterStripe({ env: AppEnv.Sandbox });
+	// `connect: true` endpoint. One webhook is registered PER pool key, since each
+	// platform key only delivers events for the accounts it owns.
+	const stripeCli = stripeClientForKey(secretKey);
 
 	const endpoint = await stripeCli.webhookEndpoints.create({
 		url: `${ingressUrl}/ingress/connect/${TW_ENV}`,
@@ -239,10 +247,10 @@ export const registerConnectIngressWebhook = async (
  */
 export const deleteConnectWebhook = async (
 	webhookId: string,
+	secretKey: string,
 ): Promise<void> => {
 	try {
-		const stripeCli = initMasterStripe({ env: AppEnv.Sandbox });
-		await stripeCli.webhookEndpoints.del(webhookId);
+		await stripeClientForKey(secretKey).webhookEndpoints.del(webhookId);
 	} catch (error) {
 		console.warn(
 			`[tw] failed to delete connect webhook ${webhookId} (continuing): ${(error as Error).message}`,
@@ -256,12 +264,18 @@ export const deleteConnectWebhook = async (
  * the server's `deleteConnectedAccount`, which swallows errors and logs them, so
  * this is safe to call during best-effort, time-boxed teardown.
  */
-export const deleteSubAccount = async (accountId: string): Promise<void> => {
-	await deleteConnectedAccount({
-		accountId,
-		env: AppEnv.Sandbox,
-		logger: orchestratorLogger,
-	});
+export const deleteSubAccount = async (encoded: string): Promise<void> => {
+	// The registry stores `acct_*::keyIndex`; the account belongs to that pool
+	// key's platform, so it can only be deleted with that key.
+	const { accountId, keyIndex } = decodeSubAccount(encoded);
+	try {
+		await stripeClientForKey(stripeKeyByIndex(keyIndex)).accounts.del(
+			accountId,
+		);
+		orchestratorLogger.info(`Deleted account ${accountId} for sandbox`);
+	} catch (error) {
+		orchestratorLogger.error(`Failed to delete account ${accountId}`, error);
+	}
 };
 
 const STRIPE_LIST_PAGE_SIZE = 100;
@@ -305,31 +319,34 @@ export const sweepOrphans = async ({
 	owner: string;
 	olderThanMs: number;
 }): Promise<string[]> => {
-	const masterStripe = initMasterStripe({
-		env: AppEnv.Sandbox,
-		skipInstrumentation: true,
-	});
-
 	const cutoff = Date.now() - olderThanMs;
 	const deleted: string[] = [];
 
-	for await (const account of masterStripe.accounts.list({
-		limit: STRIPE_LIST_PAGE_SIZE,
-	})) {
-		const metadata = account.metadata as Record<string, string> | null;
-		if (metadata?.autumn_tw_owner !== owner) {
-			continue;
-		}
+	// Orphans can live under ANY pool key's platform — sweep every key.
+	for (let keyIndex = 0; keyIndex < stripeKeyPoolSize(); keyIndex++) {
+		const stripe = stripeClientForKey(stripeKeyByIndex(keyIndex));
+		for await (const account of stripe.accounts.list({
+			limit: STRIPE_LIST_PAGE_SIZE,
+		})) {
+			const metadata = account.metadata as Record<string, string> | null;
+			if (metadata?.autumn_tw_owner !== owner) {
+				continue;
+			}
 
-		const createdAtMs = accountCreatedAtMs(account);
-		// Without a usable timestamp we can't prove the account is stale, so skip
-		// it rather than risk deleting a live worker's sub-account.
-		if (createdAtMs === undefined || createdAtMs > cutoff) {
-			continue;
-		}
+			const createdAtMs = accountCreatedAtMs(account);
+			// Without a usable timestamp we can't prove the account is stale, so skip
+			// it rather than risk deleting a live worker's sub-account.
+			if (createdAtMs === undefined || createdAtMs > cutoff) {
+				continue;
+			}
 
-		await deleteSubAccount(account.id);
-		deleted.push(account.id);
+			try {
+				await stripe.accounts.del(account.id);
+				deleted.push(account.id);
+			} catch {
+				// best-effort sweep — a failed delete is retried on the next sweep
+			}
+		}
 	}
 
 	return deleted;

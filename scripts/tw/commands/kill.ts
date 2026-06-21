@@ -25,6 +25,10 @@ import {
 	deleteSubAccount,
 	sweepOrphans,
 } from "../helpers/stripe.ts";
+import {
+	keyIndexFromWebhookTag,
+	stripeKeyByIndex,
+} from "../helpers/stripeKeyPool.ts";
 import { sweepOrphanSvixApps } from "../helpers/svix.ts";
 import { deleteSandbox, listSandboxesByOwner } from "../helpers/vercel.ts";
 import type { RegistryEntry } from "../types.ts";
@@ -89,8 +93,11 @@ const teardownEntry = async (entry: RegistryEntry): Promise<void> => {
 	// The shared platform Connect webhook is NOT cascade-deleted by sub-account
 	// deletion, so drop recorded webhooks explicitly (matches run.ts teardown, §9a).
 	for (const webhook of entry.webhooks) {
+		const webhookKey = stripeKeyByIndex(
+			keyIndexFromWebhookTag(webhook.accountId),
+		);
 		await timeBoxed(`delete connect webhook ${webhook.webhookId}`, () =>
-			deleteConnectWebhook(webhook.webhookId),
+			deleteConnectWebhook(webhook.webhookId, webhookKey),
 		);
 	}
 
