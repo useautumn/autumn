@@ -26,12 +26,12 @@ export const DEFAULT_WORKERS = 50;
 
 /**
  * Per-worker file concurrency `K` default (`--per-worker`). Each worker hosts one
- * server + PG + Dragonfly + goaws and can run several org-isolated test files at
- * once (the same model as a local parallel `bun test`), so the pool admits up to
- * `K` files per worker. 4 keeps a 4-vCPU worker busy without thrashing; tune via
- * `--per-worker`.
+ * server + PG + Dragonfly + goaws and runs up to `K` org-isolated test files at
+ * once (the pool admits a worker while `inFlight < K`, least-loaded first); total
+ * in-flight is `workers × K`, the rest queue. 3 keeps a worker busy without
+ * thrashing its single server+PG; tune via `--per-worker`.
  */
-export const DEFAULT_PER_WORKER = 4;
+export const DEFAULT_PER_WORKER = 3;
 
 /**
  * Max concurrent Stripe Connect sub-account creations. `accounts.create` is a
