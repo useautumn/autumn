@@ -1093,17 +1093,13 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 	// mid-fan-out failures). Read-only + fast; runs before the expensive warm-up.
 	if (stripeKeyPoolSize() > 1) {
 		milestone(`validating ${stripeKeyPoolSize()} Stripe pool key(s)…`);
-		const { usable, dropped } = await validateStripeKeyPool({
-			owner,
-			runId,
-			orgId: TEST_ORG_CONFIG.id,
-		});
+		const { usable, dropped } = await validateStripeKeyPool();
 		for (const badKey of dropped) {
 			warn(`Stripe key ${badKey.keyPrefix} unusable — ${badKey.reason}`);
 		}
 		if (usable === 0) {
 			throw new Error(
-				"no usable Stripe pool keys: every STRIPE_TEST_KEY_POOL key failed the account-create probe — enable Connect (and accept the loss-liability responsibility) on those platform accounts",
+				"no usable Stripe pool keys: every STRIPE_TEST_KEY_POOL key failed the Connect probe — enable Connect + the v2 Accounts API on those platform accounts",
 			);
 		}
 		milestone(
