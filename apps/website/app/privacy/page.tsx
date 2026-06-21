@@ -170,8 +170,8 @@ export default function PrivacyPolicy() {
 									Effective Date: February 1, 2025
 								</p>
 
-								{privacyTerms.map((term, index) => (
-									<div key={index}>
+								{privacyTerms.map((term) => (
+									<div key={term.title}>
 										<h3 className="mb-2 mt-8 text-[24px] leading-[30px] font-normal tracking-[-2%] text-white">
 											{term.title}
 										</h3>
