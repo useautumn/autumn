@@ -49,14 +49,6 @@ const GOAWS_IMAGE = "admiralpiett/goaws:latest";
 const TW_PREFIX = "/opt/autumn-tw";
 
 /**
- * Cache-bust token for the base image. The image is content-addressed by its
- * dockerfile commands, so any change here forces Modal to build a NEW image
- * (the old one is untouched — running sandboxes created from it keep going).
- * BUMP this to deliberately force a fresh base build without changing logic.
- */
-const BASE_IMAGE_VERSION = "v2-playwright";
-
-/**
  * Build (or cache-hit) the published Debian services image. Idempotent: Modal
  * content-addresses the dockerfile commands, so repeat calls are ~free.
  *
@@ -153,23 +145,20 @@ export const buildBaseImage = (
 		])
 		// 8. Bake the monorepo's node_modules into the image at /repo/node_modules
 		//    (the warm clone + every worker keep it; warmup.sh's --frozen-lockfile
-		//    reconciles the exact-ref delta) AND Playwright Chromium into
-		//    /root/.cache/ms-playwright (~68 test files drive a browser via the LOCAL
-		//    Playwright path; without this they fail with "executable doesn't exist").
-		//    Clone the ref shallow, install, install the matching Chromium + its OS
-		//    libs (`--with-deps`), then keep ONLY node_modules. The `lockHash` +
-		//    `BASE_IMAGE_VERSION` comment is part of the (content-addressed) command,
-		//    so the bake rebuilds when the lockfile changes or the version is bumped.
+		//    reconciles the exact-ref delta). Clone the ref shallow, install, keep
+		//    ONLY node_modules. The `lockHash` comment is part of the (content-
+		//    addressed) command, so the bake rebuilds when the lockfile changes.
 		//    NOTE: gitUrl may embed a token for a private repo — it lands in this
 		//    (workspace-private) image's build history; rotate scoped tokens.
+		//    Playwright Chromium is NOT baked here — the image builder fails opaquely
+		//    on the chromium install (it works fine via exec), so warmup installs it
+		//    on the warm parent and the snapshot captures it (see run.ts).
 		.dockerfileCommands([
-			`# node_modules + chromium bake — ${BASE_IMAGE_VERSION} lockfile ${deps.lockHash}\n` +
+			`# node_modules bake — lockfile ${deps.lockHash}\n` +
 				"RUN export PATH=/usr/local/bin:$PATH && rm -rf /tmp/seed && " +
 				`git clone --depth 1 ${deps.gitUrl} /tmp/seed && ` +
 				`( cd /tmp/seed && git fetch --depth 1 origin ${deps.gitRef} && git checkout -q FETCH_HEAD ) && ` +
 				"( cd /tmp/seed && bun install --frozen-lockfile ) && " +
-				"PWV=$(cd /tmp/seed/server && node -p \"require('playwright-core/package.json').version\") && " +
-				"( cd /tmp/seed/server && bunx playwright@$PWV install --with-deps chromium ) && " +
 				"mkdir -p /repo && rm -rf /repo/node_modules && " +
 				"mv /tmp/seed/node_modules /repo/node_modules && rm -rf /tmp/seed",
 		])
