@@ -94,7 +94,9 @@ export const EmptyState = ({
 		<div className="flex flex-col items-center justify-center gap-4 p-8 text-sm pt-20 animate-in fade-in-0 duration-500 slide-in-from-bottom-1">
 			<img src={svg} alt={title} className="h-20" />
 			<div className="space-y-1">
-				<h2 className="text-muted-foreground font-medium text-center">{title}</h2>
+				<h2 className="text-muted-foreground font-medium text-center">
+					{title}
+				</h2>
 				<p className="text-subtle w-xs text-wrap text-center">{description}</p>
 			</div>
 			{actionButton && actionButton}

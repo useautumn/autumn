@@ -1,7 +1,6 @@
 import type { Invite, Role } from "@autumn/shared";
+import { Badge, TableCell, TableRow } from "@autumn/ui";
 import { isFuture } from "date-fns";
-import { TableCell, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/v2/badges/Badge";
 import { ROLE_META } from "@/components/v2/selects/RoleSelect";
 import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
 import {
@@ -31,7 +30,11 @@ export const OrgInvitesList = () => {
 	});
 
 	if (pendingInvites.length === 0) {
-		return <p className="text-tertiary-foreground text-sm py-4">No pending invites</p>;
+		return (
+			<p className="text-tertiary-foreground text-sm py-4">
+				No pending invites
+			</p>
+		);
 	}
 
 	return (
@@ -43,8 +46,12 @@ export const OrgInvitesList = () => {
 					"";
 				return (
 					<TableRow key={invite.id} className={SETTINGS_ROW_CLASS}>
-						<TableCell className="pl-4 text-foreground">{invite.email}</TableCell>
-						<TableCell className="text-tertiary-foreground">{invite.status}</TableCell>
+						<TableCell className="pl-4 text-foreground">
+							{invite.email}
+						</TableCell>
+						<TableCell className="text-tertiary-foreground">
+							{invite.status}
+						</TableCell>
 						<TableCell>
 							<Badge variant="muted">{roleLabel}</Badge>
 						</TableCell>

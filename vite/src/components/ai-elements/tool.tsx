@@ -11,12 +11,12 @@ import {
 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { isValidElement } from "react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@autumn/ui";
 import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { CodeBlock } from "./code-block";
 

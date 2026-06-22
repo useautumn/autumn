@@ -1,14 +1,14 @@
+import {
+	Checkbox,
+	TableBody as ShadcnTableBody,
+	Skeleton,
+	TableCell,
+	TableRow,
+} from "@autumn/ui";
 import type { Row } from "@tanstack/react-table";
 import { flexRender } from "@tanstack/react-table";
 import { memo, type ReactNode } from "react";
 import { Link } from "react-router";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
-import { Skeleton } from "@/components/ui/skeleton";
-import {
-	TableBody as ShadcnTableBody,
-	TableCell,
-	TableRow,
-} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 
 interface TableRowCellsProps<T> {
@@ -141,9 +141,7 @@ export function TableSkeletonRows({
 				}
 
 				const widthClass =
-					SKELETON_WIDTHS[
-						(colIndex * 3 + rowIndex) % SKELETON_WIDTHS.length
-					];
+					SKELETON_WIDTHS[(colIndex * 3 + rowIndex) % SKELETON_WIDTHS.length];
 
 				const skeletonContent =
 					typeof meta?.skeleton === "function"
@@ -173,4 +171,3 @@ export function TableSkeletonRows({
 		</ShadcnTableBody>
 	);
 }
-

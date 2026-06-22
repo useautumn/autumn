@@ -1,4 +1,4 @@
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
+import { Checkbox } from "@autumn/ui";
 import {
 	DropdownMenuItem,
 	DropdownMenuSub,

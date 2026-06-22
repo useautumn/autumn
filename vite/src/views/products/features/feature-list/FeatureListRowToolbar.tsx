@@ -1,7 +1,7 @@
 import { type Feature, FeatureType } from "@autumn/shared";
+import { ToolbarButton } from "@autumn/ui";
 import { ArchiveRestore, Delete, Pen } from "lucide-react";
 import { useState } from "react";
-import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,

@@ -1,3 +1,4 @@
+import { Button, Skeleton } from "@autumn/ui";
 import {
 	ChevronDown,
 	Monitor,
@@ -10,8 +11,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
-import { Button } from "@/components/v2/buttons/Button";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -32,10 +31,10 @@ import {
 	useSession,
 } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import { navigateTo } from "@/utils/genUtils";
 import { OrgLogo } from "../org-dropdown/components/OrgLogo";
 import { useMemberships } from "../org-dropdown/hooks/useMemberships";
 import { useSidebarContext } from "../SidebarContext";
-import { navigateTo } from "@/utils/genUtils";
 import { AdminDropdownItems } from "./AdminDropdownItems";
 import { CreateNewOrg } from "./CreateNewOrg";
 import { LogOutItem } from "./LogOutItem";
@@ -106,16 +105,15 @@ export const OrgDropdown = () => {
 										: "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0",
 								)}
 							>
-								<span className="text-muted-foreground max-w-24 truncate">{org?.name}</span>
+								<span className="text-muted-foreground max-w-24 truncate">
+									{org?.name}
+								</span>
 								<ChevronDown size={14} className="text-tertiary-foreground" />
 							</div>
 						</Button>
 					</DropdownMenuTrigger>
 				</AdminHover>
-				<DropdownMenuContent
-					align="start"
-					className="w-48"
-				>
+				<DropdownMenuContent align="start" className="w-48">
 					<AdminDropdownItems />
 					<DropdownMenuItem
 						className="flex justify-between w-full items-center gap-2 text-muted-foreground cursor-pointer"

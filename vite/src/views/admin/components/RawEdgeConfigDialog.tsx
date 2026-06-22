@@ -1,16 +1,16 @@
-import Editor from "@monaco-editor/react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Badge,
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+} from "@autumn/ui";
+import Editor from "@monaco-editor/react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
@@ -130,7 +130,9 @@ export function RawEdgeConfigDialog({
 				</DialogHeader>
 
 				{loading ? (
-					<div className="py-8 text-sm text-tertiary-foreground text-center">Loading...</div>
+					<div className="py-8 text-sm text-tertiary-foreground text-center">
+						Loading...
+					</div>
 				) : (
 					<div className="grid grid-cols-2 gap-6">
 						{/* Left: summary */}
@@ -157,7 +159,9 @@ export function RawEdgeConfigDialog({
 								)}
 							</div>
 							{orgEntries.length === 0 ? (
-								<div className="text-xs text-tertiary-foreground">No orgs configured.</div>
+								<div className="text-xs text-tertiary-foreground">
+									No orgs configured.
+								</div>
 							) : (
 								<div className="rounded-lg border border-border overflow-hidden">
 									<table className="w-full text-xs">

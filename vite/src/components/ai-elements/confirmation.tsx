@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@autumn/ui";
 import type { ToolUIPart } from "ai";
 import {
 	type ComponentProps,
@@ -7,8 +8,7 @@ import {
 	type ReactNode,
 	useContext,
 } from "react";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/v2/buttons/Button";
+import { Alert, AlertDescription } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 
 type ToolUIPartApproval =

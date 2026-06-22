@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import type { ColumnSkeletonMeta } from "./table-row-cells";
 

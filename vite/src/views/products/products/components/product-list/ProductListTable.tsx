@@ -1,8 +1,8 @@
 import { isOneOffProductV2, type ProductV2 } from "@autumn/shared";
+import { SectionTag } from "@autumn/ui";
 import type { SortingState } from "@tanstack/react-table";
 import { useCallback, useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
-import { SectionTag } from "@/components/v2/badges/SectionTag";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { pushPage } from "@/utils/genUtils";

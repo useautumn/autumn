@@ -1,15 +1,15 @@
 import {
+	IconButton,
+	ResizableHandle,
+	ResizablePanel,
+	ResizablePanelGroup,
+} from "@autumn/ui";
+import {
 	ArrowClockwiseIcon,
 	TerminalWindowIcon,
 	XIcon,
 } from "@phosphor-icons/react";
 import { Drawer as DrawerPrimitive } from "vaul";
-import {
-	ResizableHandle,
-	ResizablePanel,
-	ResizablePanelGroup,
-} from "@/components/ui/resizable";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useCusRequestLogsQuery } from "@/hooks/queries/useCusRequestLogsQuery";
 import { useWorkbenchStore } from "@/hooks/stores/useWorkbenchStore";
 import { cn } from "@/lib/utils";

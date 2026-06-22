@@ -1,5 +1,4 @@
-import { Button } from "@/components/v2/buttons/Button";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
+import { Button, ShortcutButton } from "@autumn/ui";
 import {
 	useSetCurrentItem,
 	useSheet,

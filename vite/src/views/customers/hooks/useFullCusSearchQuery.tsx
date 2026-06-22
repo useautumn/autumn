@@ -7,11 +7,7 @@ import { useCustomerFilters } from "./useCustomerFilters";
 export const FULL_CUSTOMERS_QUERY_KEY = "full_customers";
 
 export const useFullCusSearchQuery = () => {
-	const {
-		queryStates,
-		isInitialized,
-		currentCursor,
-	} = useCustomerFilters();
+	const { queryStates, isInitialized, currentCursor } = useCustomerFilters();
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 

@@ -1,17 +1,17 @@
-import Editor from "@monaco-editor/react";
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Badge,
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { Input } from "@/components/v2/inputs/Input";
+	Input,
+} from "@autumn/ui";
+import Editor from "@monaco-editor/react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
@@ -194,7 +194,9 @@ export function OrgLimitsDialog({
 				</DialogHeader>
 
 				{loading ? (
-					<div className="py-8 text-center text-sm text-tertiary-foreground">Loading...</div>
+					<div className="py-8 text-center text-sm text-tertiary-foreground">
+						Loading...
+					</div>
 				) : (
 					<div className="grid grid-cols-[320px_1fr] gap-6">
 						<div className="flex flex-col gap-4">

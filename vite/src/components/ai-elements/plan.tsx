@@ -1,10 +1,7 @@
 "use client";
 
-import { ChevronsUpDownIcon } from "lucide-react";
-import type { ComponentProps } from "react";
-import { createContext, useContext } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Card,
 	CardAction,
 	CardContent,
@@ -12,12 +9,15 @@ import {
 	CardFooter,
 	CardHeader,
 	CardTitle,
-} from "@/components/v2/cards/Card";
+} from "@autumn/ui";
+import { ChevronsUpDownIcon } from "lucide-react";
+import type { ComponentProps } from "react";
+import { createContext, useContext } from "react";
 import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { Shimmer } from "./shimmer";
 

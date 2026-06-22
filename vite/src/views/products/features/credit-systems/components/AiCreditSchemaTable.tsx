@@ -3,17 +3,17 @@ import {
 	type ModelsDevProvider,
 	splitModelId,
 } from "@autumn/shared";
+import {
+	IconButton,
+	Input,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { InfoIcon, PlusIcon, X } from "lucide-react";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import { Input } from "@/components/v2/inputs/Input";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
 import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
 import { useProviderMarkup } from "../hooks/useProviderMarkup";

@@ -33,6 +33,14 @@ export function useGuardedStepNavigation({
 			if (targetIndex === 2) enableErrorDisplay();
 			setStep(target);
 		},
-		[step, hasCustomers, hasRuns, operations, saveError, enableErrorDisplay, setStep],
+		[
+			step,
+			hasCustomers,
+			hasRuns,
+			operations,
+			saveError,
+			enableErrorDisplay,
+			setStep,
+		],
 	);
 }

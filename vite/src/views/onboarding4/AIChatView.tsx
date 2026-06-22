@@ -1,3 +1,4 @@
+import { Button } from "@autumn/ui";
 import { AnimatePresence, motion } from "motion/react";
 import {
 	PromptInput,
@@ -6,7 +7,6 @@ import {
 	PromptInputSubmit,
 	PromptInputTextarea,
 } from "@/components/ai-elements/prompt-input";
-import { Button } from "@/components/v2/buttons/Button";
 import { OrgDropdown } from "@/views/main-sidebar/components/OrgDropdown";
 import { SidebarContext } from "@/views/main-sidebar/SidebarContext";
 import { CopyPlansButton } from "./CopyPlansButton";

@@ -1,4 +1,4 @@
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
+import { Checkbox } from "@autumn/ui";
 import {
 	DropdownMenuItem,
 	DropdownMenuSub,
@@ -8,7 +8,11 @@ import {
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { useCustomerFilters } from "../../hooks/useCustomerFilters";
 
-export const FilterStatusSubMenu = ({ onChange }: { onChange?: () => void }) => {
+export const FilterStatusSubMenu = ({
+	onChange,
+}: {
+	onChange?: () => void;
+}) => {
 	const { queryStates, setFilters } = useCustomerFilters();
 
 	const statuses: string[] = [
@@ -47,16 +51,16 @@ export const FilterStatusSubMenu = ({ onChange }: { onChange?: () => void }) => 
 				{statuses.map((status: any) => {
 					const isActive = selectedStatuses.includes(status);
 					return (
-					<DropdownMenuItem
-						key={status}
-						closeOnClick={false}
-						onClick={(e) => {
-							e.preventDefault();
-							e.stopPropagation();
-							toggleStatus(status);
-						}}
-						className="flex items-center gap-2 cursor-pointer text-sm"
-					>
+						<DropdownMenuItem
+							key={status}
+							closeOnClick={false}
+							onClick={(e) => {
+								e.preventDefault();
+								e.stopPropagation();
+								toggleStatus(status);
+							}}
+							className="flex items-center gap-2 cursor-pointer text-sm"
+						>
 							<Checkbox checked={isActive} className="border-border" />
 							{keyToTitle(status)}
 						</DropdownMenuItem>

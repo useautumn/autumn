@@ -1,11 +1,11 @@
 import type { FullInvite } from "@autumn/shared";
+import { Button } from "@autumn/ui";
 import { format, isSameYear } from "date-fns";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { createPortal } from "react-dom";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/v2/buttons/Button";
+import { Badge } from "@autumn/ui";
 import { useSwitchActiveOrg } from "@/hooks/common/useOrg";
 import { useInvitesQuery } from "@/hooks/queries/useInvitesQuery";
 import { authClient } from "@/lib/auth-client";

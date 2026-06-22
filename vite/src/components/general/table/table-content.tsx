@@ -1,4 +1,4 @@
-import { Table } from "@/components/ui/table";
+import { Table } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { TableColumnVisibility } from "./table-column-visibility";
 import { useTableContext } from "./table-context";
@@ -10,15 +10,20 @@ export function TableContent({
 	children: React.ReactNode;
 	className?: string;
 }) {
-	const { flexibleTableColumns, enableColumnVisibility, isLoading, isTransitioning, table } =
-		useTableContext();
+	const {
+		flexibleTableColumns,
+		enableColumnVisibility,
+		isLoading,
+		isTransitioning,
+		table,
+	} = useTableContext();
 	const rows = table.getRowModel().rows;
 
 	return (
 		<div
 			className={cn(
-"rounded-lg border relative z-50 min-w-0",
-			!rows.length && "border-dashed",
+				"rounded-lg border relative z-50 min-w-0",
+				!rows.length && "border-dashed",
 				className,
 			)}
 		>

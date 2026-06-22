@@ -1,6 +1,14 @@
+import {
+	Button,
+	Card,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@autumn/ui";
 import { useState } from "react";
 import CopyButton from "@/components/general/CopyButton";
-import { Button } from "@/components/v2/buttons/Button";
 import {
 	CodeGroup,
 	CodeGroupCode,
@@ -9,14 +17,6 @@ import {
 	CodeGroupList,
 	CodeGroupTab,
 } from "@/components/v2/CodeGroup";
-import { Card } from "@/components/v2/cards/Card";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/v2/selects/Select";
 
 const MCP_NAME = "autumn";
 const MCP_URL = "https://mcp.useautumn.com/mcp";

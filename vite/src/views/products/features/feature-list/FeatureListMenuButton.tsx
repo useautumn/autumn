@@ -1,3 +1,4 @@
+import { IconButton } from "@autumn/ui";
 import { EllipsisVertical } from "lucide-react";
 import { useState } from "react";
 import {
@@ -6,7 +7,6 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useProductsQueryState } from "@/views/products/hooks/useProductsQueryState";
 
 export function FeatureListMenuButton() {

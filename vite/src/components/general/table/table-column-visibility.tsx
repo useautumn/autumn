@@ -1,9 +1,7 @@
+import { Button, Checkbox, IconButton } from "@autumn/ui";
 import { FadersHorizontalIcon } from "@phosphor-icons/react";
 import type { Column } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -120,7 +118,12 @@ export function TableColumnVisibility() {
 					<IconButton
 						variant="secondary"
 						className={cn(isOpen && "btn-secondary-active")}
-						icon={<FadersHorizontalIcon size={14} className="text-tertiary-foreground" />}
+						icon={
+							<FadersHorizontalIcon
+								size={14}
+								className="text-tertiary-foreground"
+							/>
+						}
 					>
 						Display
 					</IconButton>

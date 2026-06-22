@@ -1,5 +1,5 @@
+import { TableCell, TableRow } from "@autumn/ui";
 import { useRef } from "react";
-import { TableCell, TableRow } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { useTableContext } from "./table-context";
 import { MotionTbody, TABLE_FADE_IN, TABLE_TRANSITION } from "./table-motion";
@@ -63,7 +63,10 @@ export function TableBody() {
 		return (
 			<MotionTbody key="empty" {...TABLE_FADE_IN} transition={TABLE_TRANSITION}>
 				<TableRow className="hover:bg-transparent dark:hover:bg-transparent">
-					<TableCell className="h-10 text-center py-0" colSpan={numberOfColumns}>
+					<TableCell
+						className="h-10 text-center py-0"
+						colSpan={numberOfColumns}
+					>
 						<div className="text-subtle text-xs text-center w-full h-full items-center justify-center flex">
 							{emptyStateChildren || emptyStateText}
 						</div>

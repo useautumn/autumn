@@ -1,5 +1,5 @@
+import { Button } from "@autumn/ui";
 import { EllipsisVertical } from "lucide-react";
-import { Button } from "@/components/v2/buttons/Button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,

@@ -1,9 +1,5 @@
 import type { Feature } from "@autumn/shared";
 import { FeatureUsageType } from "@autumn/shared";
-import { useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router";
-import { toast } from "sonner";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Dialog,
 	DialogContent,
@@ -11,15 +7,17 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { LabelInput } from "@/components/v2/inputs/LabelInput";
-import {
+	LabelInput,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+	ShortcutButton,
+} from "@autumn/ui";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
+import { toast } from "sonner";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
@@ -140,16 +138,21 @@ export const CreateEntity = ({
 					</div>
 					<div>
 						<div className="text-form-label block mb-1">Feature ID</div>
-					<Select
-						value={entity.feature_id}
-						onValueChange={(value) =>
-							setEntity({ ...entity, feature_id: value })
-						}
-						items={Object.fromEntries(continuousFeatures.map((feature: Feature) => [feature.id, feature.name]))}
-					>
-						<SelectTrigger className="w-full">
-							<SelectValue placeholder="Select feature" />
-						</SelectTrigger>
+						<Select
+							value={entity.feature_id}
+							onValueChange={(value) =>
+								setEntity({ ...entity, feature_id: value })
+							}
+							items={Object.fromEntries(
+								continuousFeatures.map((feature: Feature) => [
+									feature.id,
+									feature.name,
+								]),
+							)}
+						>
+							<SelectTrigger className="w-full">
+								<SelectValue placeholder="Select feature" />
+							</SelectTrigger>
 							<SelectContent>
 								{hasContinuousFeatures ? (
 									continuousFeatures.map((feature: Feature) => (
@@ -159,8 +162,7 @@ export const CreateEntity = ({
 									))
 								) : (
 									<div className="px-2 py-1.5 text-sm text-muted-foreground">
-										Create a non-consumable feature first (e.g. seats,
-										projects)
+										Create a non-consumable feature first (e.g. seats, projects)
 									</div>
 								)}
 							</SelectContent>

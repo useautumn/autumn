@@ -8,10 +8,12 @@ import { type EventNameWithCount, useEventNames } from "./useEventNames";
  * selection (event_names / feature_ids) or the top metered events by default.
  * Shared by the chart and the events table so they stay in sync. */
 export const useSelectedEventNames = () => {
-	const [{ feature_ids: featureIds, event_names: eventNames }] = useQueryStates({
-		feature_ids: parseAsArrayOf(parseAsString),
-		event_names: parseAsArrayOf(parseAsString),
-	});
+	const [{ feature_ids: featureIds, event_names: eventNames }] = useQueryStates(
+		{
+			feature_ids: parseAsArrayOf(parseAsString),
+			event_names: parseAsArrayOf(parseAsString),
+		},
+	);
 
 	const { eventNames: cachedEventNames, isLoading: eventNamesLoading } =
 		useEventNames();

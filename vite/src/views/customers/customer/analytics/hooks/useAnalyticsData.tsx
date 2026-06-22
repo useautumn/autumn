@@ -35,13 +35,19 @@ export const useAnalyticsData = ({
 	const customRange =
 		interval === "custom" && start && end ? { start, end } : undefined;
 
-	const { selectedEventNames, featuresData, featuresLoading, eventNamesLoading } =
-		useSelectedEventNames();
+	const {
+		selectedEventNames,
+		featuresData,
+		featuresLoading,
+		eventNamesLoading,
+	} = useSelectedEventNames();
 
 	const timezone = useMemo(() => getUserTimezone(), []);
 
 	const formattedGroupBy = groupBy
-		? groupBy === "customer_id" || groupBy === "entity_id" || groupBy === "plan_id"
+		? groupBy === "customer_id" ||
+			groupBy === "entity_id" ||
+			groupBy === "plan_id"
 			? groupBy
 			: `properties.${groupBy}`
 		: undefined;
@@ -120,8 +126,12 @@ export const useRawAnalyticsData = () => {
 	const customRange =
 		interval === "custom" && start && end ? { start, end } : undefined;
 
-	const { selectedEventNames, featuresData, featuresLoading, eventNamesLoading } =
-		useSelectedEventNames();
+	const {
+		selectedEventNames,
+		featuresData,
+		featuresLoading,
+		eventNamesLoading,
+	} = useSelectedEventNames();
 
 	const isReady = !eventNamesLoading && !featuresLoading;
 

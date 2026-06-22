@@ -14,11 +14,7 @@ export const StaticEnvPill = () => {
 	const isSandbox = env === AppEnv.Sandbox;
 
 	return (
-		<div
-			className={cn(
-				"w-full flex items-center h-6 select-none",
-			)}
-		>
+		<div className={cn("w-full flex items-center h-6 select-none")}>
 			<div
 				className={cn(
 					"flex items-center border gap-2 rounded-md !w-full transition-all duration-300 overflow-hidden",
@@ -34,9 +30,7 @@ export const StaticEnvPill = () => {
 							<Sailboat size={14} className="!h-4 w-4" />
 						)}
 					</div>
-					<p className="text-sm">
-						{isSandbox ? "Sandbox" : "Production"}
-					</p>
+					<p className="text-sm">{isSandbox ? "Sandbox" : "Production"}</p>
 				</div>
 			</div>
 		</div>

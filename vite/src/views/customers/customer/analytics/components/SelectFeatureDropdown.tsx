@@ -1,10 +1,10 @@
 import type { Feature } from "@autumn/shared";
 import { FeatureType } from "@autumn/shared";
+import { IconButton } from "@autumn/ui";
 import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -182,12 +182,12 @@ export const SelectFeatureDropdown = () => {
 							{filteredOptions.map((option) => {
 								const featureLabel = formatFeatureLabel(option.linkedFeatures);
 								return (
-								<DropdownMenuCheckboxItem
-									key={option.eventName}
-									checked={option.selected}
-									onCheckedChange={() => handleToggleItem(option)}
-									className="pl-2"
-								>
+									<DropdownMenuCheckboxItem
+										key={option.eventName}
+										checked={option.selected}
+										onCheckedChange={() => handleToggleItem(option)}
+										className="pl-2"
+									>
 										<div className="flex items-center gap-1.5 min-w-0">
 											<span className="text-xs truncate">
 												{option.eventName}

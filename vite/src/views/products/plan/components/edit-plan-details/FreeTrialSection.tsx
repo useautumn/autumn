@@ -1,16 +1,16 @@
 import { FreeTrialDuration } from "@autumn/shared";
-import { useId } from "react";
-import { TextCheckbox } from "@/components/v2/checkboxes/TextCheckbox";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
-import { Input } from "@/components/v2/inputs/Input";
 import {
+	FormLabel,
+	Input,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+	TextCheckbox,
+} from "@autumn/ui";
+import { useId } from "react";
+import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 
 export const FreeTrialSection = () => {
 	const { product, setProduct } = useProduct();
@@ -53,22 +53,27 @@ export const FreeTrialSection = () => {
 						placeholder="eg. 7"
 					/>
 					{/* <FormLabel disabled={!product.free_trial}>Duration</FormLabel> */}
-				<Select
-					disabled={!product.free_trial}
-					value={product.free_trial?.duration || ""}
-					onValueChange={(value) => {
-						setProduct({
-							...product,
-							free_trial: product.free_trial
-								? {
-										...product.free_trial,
-										duration: value as FreeTrialDuration,
-									}
-								: null,
-						});
-					}}
-					items={Object.fromEntries(Object.values(FreeTrialDuration).map((duration) => [duration, `${duration}s`]))}
-				>
+					<Select
+						disabled={!product.free_trial}
+						value={product.free_trial?.duration || ""}
+						onValueChange={(value) => {
+							setProduct({
+								...product,
+								free_trial: product.free_trial
+									? {
+											...product.free_trial,
+											duration: value as FreeTrialDuration,
+										}
+									: null,
+							});
+						}}
+						items={Object.fromEntries(
+							Object.values(FreeTrialDuration).map((duration) => [
+								duration,
+								`${duration}s`,
+							]),
+						)}
+					>
 						<SelectTrigger className="w-full max-w-32">
 							<SelectValue placeholder="days" />{" "}
 						</SelectTrigger>

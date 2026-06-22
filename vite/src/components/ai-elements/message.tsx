@@ -1,5 +1,14 @@
 "use client";
 
+import {
+	Button,
+	ButtonGroup,
+	ButtonGroupText,
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@autumn/ui";
 import type { FileUIPart, UIMessage } from "ai";
 import {
 	ChevronLeftIcon,
@@ -10,14 +19,6 @@ import {
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
 import { createContext, memo, useContext, useEffect, useState } from "react";
 import { Streamdown } from "streamdown";
-import { Button } from "@/components/v2/buttons/Button";
-import { ButtonGroup, ButtonGroupText } from "@/components/ui/button-group";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
@@ -382,16 +383,16 @@ export function MessageAttachment({
 						</TooltipContent>
 					</Tooltip>
 					{onRemove && (
-					<Button
-						aria-label="Remove attachment"
-						className="size-6 shrink-0 rounded-full p-0 opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100 [&>svg]:size-3"
-						onClick={(e) => {
-							e.stopPropagation();
-							onRemove();
-						}}
-						type="button"
-						variant="skeleton"
-					>
+						<Button
+							aria-label="Remove attachment"
+							className="size-6 shrink-0 rounded-full p-0 opacity-0 transition-opacity hover:bg-accent group-hover:opacity-100 [&>svg]:size-3"
+							onClick={(e) => {
+								e.stopPropagation();
+								onRemove();
+							}}
+							type="button"
+							variant="skeleton"
+						>
 							<XIcon />
 							<span className="sr-only">Remove</span>
 						</Button>

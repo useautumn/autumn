@@ -1,3 +1,4 @@
+import { ToolbarButton } from "@autumn/ui";
 import {
 	ArrowCounterClockwiseIcon,
 	CheckCircleIcon,
@@ -6,7 +7,6 @@ import {
 import type { MouseEvent } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -14,8 +14,8 @@ import {
 	DropdownMenuTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
 import {
-	useMigrationsQuery,
 	type MigrationWithRunInfo,
+	useMigrationsQuery,
 } from "@/hooks/queries/useMigrationsQuery";
 import { DeleteMigrationDialog } from "./DeleteMigrationDialog";
 
@@ -92,8 +92,14 @@ export function MigrationListRowToolbar({
 		<>
 			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
 				<div
-					onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-					onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+					onClick={(e) => {
+						e.preventDefault();
+						e.stopPropagation();
+					}}
+					onMouseDown={(e) => {
+						e.preventDefault();
+						e.stopPropagation();
+					}}
 				>
 					<DropdownMenuTrigger asChild>
 						<ToolbarButton />

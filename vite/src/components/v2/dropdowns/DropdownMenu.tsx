@@ -1,10 +1,10 @@
 "use client";
 
+import { SmallSpinner } from "@autumn/ui";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Check, ChevronRight } from "lucide-react";
 import * as React from "react";
-import SmallSpinner from "@/components/general/SmallSpinner";
 import {
 	type ShortcutEntry,
 	useMenuShortcuts,
@@ -131,7 +131,9 @@ const DropdownMenuSubTrigger = React.forwardRef<
 			{...rest}
 		>
 			{children}
-			{withIcon && <ChevronRight className="ml-auto size-3.5 text-tertiary-foreground" />}
+			{withIcon && (
+				<ChevronRight className="ml-auto size-3.5 text-tertiary-foreground" />
+			)}
 		</MenuPrimitive.SubmenuTrigger>
 	);
 });

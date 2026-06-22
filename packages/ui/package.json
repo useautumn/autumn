@@ -1,0 +1,56 @@
+{
+	"name": "@autumn/ui",
+	"version": "0.0.1",
+	"type": "module",
+	"private": true,
+	"author": "Autumn",
+	"sideEffects": ["*.css"],
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"import": "./src/index.ts",
+			"default": "./src/index.ts"
+		},
+		"./styles.css": "./src/styles/index.css"
+	},
+	"files": [
+		"src"
+	],
+	"scripts": {
+		"ts": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@base-ui/react": "^1.4.1",
+		"@phosphor-icons/react": "^2.1.10",
+		"@squircle/core": "^1.0.6",
+		"@squircle/paint-polyfill": "^1.0.6",
+		"@squircle/tailwindcss": "^1.0.6",
+		"class-variance-authority": "^0.7.1",
+		"clsx": "^2.1.1",
+		"cmdk": "^1.1.1",
+		"date-fns": "^3.6.0",
+		"embla-carousel-react": "^8.6.0",
+		"input-otp": "^1.4.2",
+		"lucide-react": "^0.562.0",
+		"motion": "^12.26.1",
+		"react-day-picker": "^8.10.1",
+		"react-hotkeys-hook": "^4.6.1",
+		"react-resizable-panels": "^4.11.0",
+		"recharts": "^3.3.0",
+		"tailwind-merge": "^3.0.2",
+		"tailwind-scrollbar-hide": "^4.0.0",
+		"tailwindcss": "^4.0.13",
+		"tailwindcss-animate": "^1.0.7"
+	},
+	"peerDependencies": {
+		"react": "^19.0.0",
+		"react-dom": "^19.0.0"
+	},
+	"devDependencies": {
+		"@types/react": "^19.0.0",
+		"@types/react-dom": "^19.0.0",
+		"typescript": "~5.7.2"
+	}
+}

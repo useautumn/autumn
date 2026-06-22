@@ -1,0 +1,222 @@
+import { format } from "date-fns";
+import { CalendarIcon, Clock } from "lucide-react";
+import { useRef, useState } from "react";
+import { cn } from "../../lib/utils";
+import { Calendar } from "./calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "./popover";
+import { TimePickerInput } from "./time-picker-input";
+import {
+	display12HourValue,
+	type Period,
+	setDateByType,
+} from "./time-picker-utils";
+
+function TimePicker({
+	date,
+	setDate,
+	use24Hour,
+}: {
+	date: Date | undefined;
+	setDate: (date: Date | undefined) => void;
+	use24Hour?: boolean;
+}) {
+	const hourRef = useRef<HTMLInputElement>(null);
+	const minuteRef = useRef<HTMLInputElement>(null);
+
+	const period: Period = date && date.getHours() >= 12 ? "PM" : "AM";
+
+	const togglePeriod = () => {
+		if (!date) return;
+		const newPeriod: Period = period === "AM" ? "PM" : "AM";
+		const tempDate = new Date(date);
+		const hours = display12HourValue(date.getHours());
+		setDate(
+			setDateByType({
+				date: tempDate,
+				value: hours.toString(),
+				type: "12hours",
+				period: newPeriod,
+			}),
+		);
+	};
+
+	return (
+		<div className="border-t px-3 py-3">
+			<div className="flex items-center rounded-lg h-input input-base input-shadow-default input-state-focus-within px-2 bg-popover">
+				<Clock className="size-3.5 shrink-0 text-tertiary-foreground mr-1" />
+				<TimePickerInput
+					picker={use24Hour ? "hours" : "12hours"}
+					period={use24Hour ? undefined : period}
+					date={date}
+					setDate={setDate}
+					ref={hourRef}
+					onRightFocus={() => minuteRef.current?.focus()}
+				/>
+				<span className="text-xs text-tertiary-foreground select-none">:</span>
+				<TimePickerInput
+					picker="minutes"
+					date={date}
+					setDate={setDate}
+					ref={minuteRef}
+					onLeftFocus={() => hourRef.current?.focus()}
+				/>
+				{!use24Hour && (
+					<>
+						<div className="border-l h-4 mx-1.5" />
+						<button
+							type="button"
+							onClick={togglePeriod}
+							className="rounded-sm px-1.5 py-0.5 text-xs font-medium text-muted-foreground transition-none hover:bg-accent select-none"
+						>
+							{period}
+						</button>
+					</>
+				)}
+			</div>
+		</div>
+	);
+}
+
+export const DateInputUnix = ({
+	unixDate,
+	setUnixDate,
+	disabled,
+	disablePastDates,
+	disableFutureDates,
+	minUnixDate,
+	maxUnixDate,
+	fromYear,
+	withTime,
+	use24Hour,
+	placeholder,
+	className,
+}: {
+	unixDate: number | null;
+	setUnixDate: (unixDate: number | null) => void;
+	disabled?: boolean;
+	disablePastDates?: boolean;
+	disableFutureDates?: boolean;
+	minUnixDate?: number;
+	maxUnixDate?: number;
+	fromYear?: number;
+	withTime?: boolean;
+	/** Show 24-hour clock (00–23) instead of 12-hour with AM/PM. */
+	use24Hour?: boolean;
+	/** Override the empty-state label (e.g. "Now" when null means immediate). */
+	placeholder?: string;
+	className?: string;
+}) => {
+	const [popoverOpen, setPopoverOpen] = useState(false);
+	const minDate = minUnixDate ? new Date(minUnixDate) : null;
+	const minDay = minDate ? new Date(minDate) : null;
+
+	if (minDay) {
+		minDay.setHours(0, 0, 0, 0);
+	}
+
+	const maxDate = maxUnixDate != null ? new Date(maxUnixDate) : null;
+	const maxDay = maxDate ? new Date(maxDate) : null;
+
+	if (maxDay) {
+		maxDay.setHours(0, 0, 0, 0);
+	}
+
+	const displayFormat = !withTime
+		? "EEEE, MMMM do yyyy"
+		: use24Hour
+			? "EEEE, MMMM do yyyy 'at' HH:mm"
+			: "EEEE, MMMM do yyyy 'at' h:mm a";
+
+	const dateObj = unixDate ? new Date(unixDate) : undefined;
+	const clampUnixDate = (nextUnixDate: number) => {
+		if (minUnixDate != null && nextUnixDate < minUnixDate) {
+			return minUnixDate;
+		}
+
+		if (maxUnixDate != null && nextUnixDate > maxUnixDate) {
+			return maxUnixDate;
+		}
+
+		return nextUnixDate;
+	};
+
+	const handleDaySelect = (newDay: Date | undefined) => {
+		// Ignore deselect (re-clicking the selected day fires onSelect(undefined));
+		// callers should clear via their own control (e.g. a toggle), not via the calendar.
+		if (!newDay) return;
+
+		if (!withTime) {
+			setUnixDate(clampUnixDate(newDay.getTime()));
+			setPopoverOpen(false);
+			return;
+		}
+
+		if (!dateObj) {
+			newDay.setHours(12, 0, 0, 0);
+			setUnixDate(clampUnixDate(newDay.getTime()));
+			return;
+		}
+
+		// Preserve the current time on the newly selected day.
+		const newDateFull = new Date(dateObj);
+		newDateFull.setFullYear(
+			newDay.getFullYear(),
+			newDay.getMonth(),
+			newDay.getDate(),
+		);
+		setUnixDate(clampUnixDate(newDateFull.getTime()));
+	};
+
+	const handleTimeChange = (newDate: Date | undefined) => {
+		if (!newDate) return;
+		setUnixDate(clampUnixDate(newDate.getTime()));
+	};
+
+	return (
+		<Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+			<PopoverTrigger asChild>
+				<button
+					type="button"
+					data-state={popoverOpen ? "open" : "closed"}
+					disabled={disabled}
+					className={cn(
+						"w-full rounded-lg flex items-center justify-start gap-3 text-sm outline-none disabled:cursor-not-allowed disabled:opacity-50",
+						"h-input input-base input-shadow-default input-state-open truncate",
+						!unixDate && "text-muted-foreground",
+						className,
+					)}
+				>
+					<CalendarIcon className="size-3.5 shrink-0 text-tertiary-foreground ml-1" />
+					{unixDate ? (
+						format(new Date(unixDate), displayFormat)
+					) : (
+						<span>
+							{placeholder ?? `Pick a date${withTime ? " and time" : ""}`}
+						</span>
+					)}
+				</button>
+			</PopoverTrigger>
+			<PopoverContent className="w-auto p-0">
+				<Calendar
+					mode="single"
+					selected={dateObj}
+					onSelect={handleDaySelect}
+					disabled={[
+						...(disablePastDates && minDay ? [{ before: minDay }] : []),
+						...(disableFutureDates && maxDay ? [{ after: maxDay }] : []),
+					]}
+					captionLayout="dropdown-buttons"
+					fromYear={fromYear ?? new Date().getFullYear()}
+					toYear={new Date().getFullYear() + 10}
+				/>
+				{withTime && (
+					<TimePicker
+						date={dateObj}
+						setDate={handleTimeChange}
+						use24Hour={use24Hour}
+					/>
+				)}
+			</PopoverContent>
+		</Popover>
+	);
+};

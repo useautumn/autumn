@@ -1,7 +1,7 @@
 import type { SyncProposalV2 } from "@autumn/shared";
+import { SmallSpinner } from "@autumn/ui";
 import { LinkIcon } from "@phosphor-icons/react";
 import type Stripe from "stripe";
-import SmallSpinner from "@/components/general/SmallSpinner";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { cn } from "@/lib/utils";
 
@@ -73,7 +73,9 @@ const StripeItemRow = ({ item }: { item: Stripe.SubscriptionItem }) => {
 
 	return (
 		<div className="flex items-center justify-between text-xs gap-3">
-			<span className="text-muted-foreground truncate min-w-0">{productName}</span>
+			<span className="text-muted-foreground truncate min-w-0">
+				{productName}
+			</span>
 			<div className="shrink-0 ml-2 text-tertiary-foreground text-right">
 				{priceLabel}
 				{showQuantity && <span className="text-subtle"> × {quantity}</span>}
@@ -98,7 +100,9 @@ const ScheduleItemRow = ({
 
 	return (
 		<div className="flex items-center justify-between text-xs gap-3">
-			<span className="text-muted-foreground truncate min-w-0">{productName}</span>
+			<span className="text-muted-foreground truncate min-w-0">
+				{productName}
+			</span>
 			<div className="shrink-0 ml-2 text-tertiary-foreground text-right">
 				{priceLabel}
 				{showQuantity && <span className="text-subtle"> × {quantity}</span>}
@@ -128,7 +132,8 @@ const ProposalCard = ({
 	const isLinked = proposal.already_linked_product_id !== null;
 	const matchedPlans = proposal.phases[0]?.plans ?? [];
 	const objectId = proposalKey(proposal);
-	const objectLabel = objectId || (schedule ? "Stripe schedule" : "Stripe object");
+	const objectLabel =
+		objectId || (schedule ? "Stripe schedule" : "Stripe object");
 	const schedulePhaseItems = schedule?.phases[0]?.items ?? [];
 
 	return (
@@ -166,7 +171,9 @@ const ProposalCard = ({
 
 			{!sub && schedulePhaseItems.length > 0 && (
 				<div className="space-y-1.5">
-					<span className="text-xs text-tertiary-foreground font-medium">Schedule items</span>
+					<span className="text-xs text-tertiary-foreground font-medium">
+						Schedule items
+					</span>
 					<div className="space-y-1">
 						{schedulePhaseItems.map((item, index) => (
 							<ScheduleItemRow key={`${objectId}-${index}`} item={item} />
@@ -177,7 +184,9 @@ const ProposalCard = ({
 
 			{matchedPlans.length > 0 && (
 				<div className="space-y-1.5">
-					<span className="text-xs text-tertiary-foreground font-medium">Matched Plans</span>
+					<span className="text-xs text-tertiary-foreground font-medium">
+						Matched Plans
+					</span>
 					<div className="space-y-1">
 						{matchedPlans.map((plan, index) => {
 							const name = productNamesById[plan.plan_id] ?? plan.plan_id;
@@ -189,7 +198,9 @@ const ProposalCard = ({
 								>
 									<span className="text-muted-foreground truncate">{name}</span>
 									{quantity > 1 && (
-										<span className="text-subtle shrink-0 ml-2">× {quantity}</span>
+										<span className="text-subtle shrink-0 ml-2">
+											× {quantity}
+										</span>
 									)}
 								</div>
 							);

@@ -13,7 +13,9 @@ export function TableProvider<T>(props: TableProviderProps<T>) {
 	if (!config) {
 		return (
 			<ErrorScreen>
-				<span className="text-muted-foreground text-sm">Table config is required</span>
+				<span className="text-muted-foreground text-sm">
+					Table config is required
+				</span>
 			</ErrorScreen>
 		);
 	}

@@ -1,6 +1,5 @@
 "use client";
 
-import { useControllableState } from "@/hooks/useControllableState";
 import {
 	BrainIcon,
 	ChevronDownIcon,
@@ -9,12 +8,13 @@ import {
 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { createContext, memo, useContext, useMemo } from "react";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@autumn/ui";
 import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@autumn/ui";
+import { useControllableState } from "@/hooks/useControllableState";
 import { cn } from "@/lib/utils";
 
 type ChainOfThoughtContextValue = {

@@ -1,6 +1,6 @@
+import { InputGroupButton } from "@autumn/ui";
 import { CornerDownLeftIcon, Loader2Icon } from "lucide-react";
 import type { FormEvent, KeyboardEvent } from "react";
-import { InputGroupButton } from "@/components/v2/inputs/InputGroup";
 import { cn } from "@/lib/utils";
 
 /**

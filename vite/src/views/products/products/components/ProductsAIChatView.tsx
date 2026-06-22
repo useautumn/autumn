@@ -1,6 +1,6 @@
+import { Button } from "@autumn/ui";
 import { useMemo } from "react";
 import { CompactPromptInput } from "@/components/ai-elements/CompactPromptInput";
-import { Button } from "@/components/v2/buttons/Button";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { PricingChatPanel } from "@/views/onboarding4/components/PricingChatPanel";

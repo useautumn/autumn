@@ -44,8 +44,7 @@ export function getVisibleUsageColumnsFromStorage({
 			)
 			.map(([key, value]) => {
 				const featureId = key.replace("usage_", "");
-				const name =
-					typeof value === "object" ? value.name : featureId;
+				const name = typeof value === "object" ? value.name : featureId;
 				return { featureId, featureName: name };
 			});
 	} catch {
@@ -65,10 +64,7 @@ function saveToStorage(
 			const header = typeof col?.header === "string" ? col.header : null;
 			out[id] = header ? { visible, name: header } : visible;
 		}
-		localStorage.setItem(
-			`${STORAGE_PREFIX}${storageKey}`,
-			JSON.stringify(out),
-		);
+		localStorage.setItem(`${STORAGE_PREFIX}${storageKey}`, JSON.stringify(out));
 	} catch {}
 }
 

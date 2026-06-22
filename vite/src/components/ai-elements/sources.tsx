@@ -6,7 +6,7 @@ import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+} from "@autumn/ui";
 import { cn } from "@/lib/utils";
 
 export type SourcesProps = ComponentProps<"div">;

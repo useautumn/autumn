@@ -5,24 +5,24 @@ import {
 	RewardReceivedBy,
 	RewardTriggerEvent,
 } from "@autumn/shared";
+import {
+	Checkbox,
+	FieldLabel,
+	Input,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@autumn/ui";
 import { PackageIcon, XIcon } from "@phosphor-icons/react";
 import { useId } from "react";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
-import { Input } from "@/components/v2/inputs/Input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/v2/selects/Select";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
@@ -55,13 +55,18 @@ export const RewardProgramConfig = ({
 				</div>
 				<div className="w-full">
 					<FieldLabel>Reward</FieldLabel>
-				<Select
-					value={rewardProgram.internal_reward_id}
-					onValueChange={(value) =>
-						setRewardProgram({ ...rewardProgram, internal_reward_id: value })
-					}
-					items={Object.fromEntries(rewards.map((reward: Reward) => [reward.internal_id, reward.name]))}
-				>
+					<Select
+						value={rewardProgram.internal_reward_id}
+						onValueChange={(value) =>
+							setRewardProgram({ ...rewardProgram, internal_reward_id: value })
+						}
+						items={Object.fromEntries(
+							rewards.map((reward: Reward) => [
+								reward.internal_id,
+								reward.name,
+							]),
+						)}
+					>
 						<SelectTrigger className="w-full">
 							<SelectValue placeholder="Select a reward" />
 						</SelectTrigger>
@@ -78,17 +83,27 @@ export const RewardProgramConfig = ({
 			<div className="flex gap-2">
 				<div className="w-full">
 					<FieldLabel>Redeem On</FieldLabel>
-				<Select
-					defaultValue={RewardTriggerEvent.CustomerCreation}
-					value={rewardProgram.when}
-					onValueChange={(value) =>
-						setRewardProgram({
-							...rewardProgram,
-							when: value as RewardTriggerEvent,
-						})
-					}
-					items={Object.fromEntries(Object.values(RewardTriggerEvent).map((event) => [event, keyToTitle(event, { exclusionMap: { [RewardTriggerEvent.CustomerCreation]: "Customer Redemption" } })]))}
-				>
+					<Select
+						defaultValue={RewardTriggerEvent.CustomerCreation}
+						value={rewardProgram.when}
+						onValueChange={(value) =>
+							setRewardProgram({
+								...rewardProgram,
+								when: value as RewardTriggerEvent,
+							})
+						}
+						items={Object.fromEntries(
+							Object.values(RewardTriggerEvent).map((event) => [
+								event,
+								keyToTitle(event, {
+									exclusionMap: {
+										[RewardTriggerEvent.CustomerCreation]:
+											"Customer Redemption",
+									},
+								}),
+							]),
+						)}
+					>
 						<SelectTrigger className="w-full">
 							<SelectValue placeholder="Select a redeem on" />
 						</SelectTrigger>
@@ -122,16 +137,23 @@ export const RewardProgramConfig = ({
 			</div>
 			<div className="w-full">
 				<FieldLabel>Received by</FieldLabel>
-			<Select
-				value={rewardProgram.received_by}
-				onValueChange={(value) =>
-					setRewardProgram({
-						...rewardProgram,
-						received_by: value as RewardReceivedBy,
-					})
-				}
-				items={Object.fromEntries(Object.values(RewardReceivedBy).map((receivedBy) => [receivedBy, receivedBy === RewardReceivedBy.All ? "Referrer & Redeemer" : keyToTitle(receivedBy)]))}
-			>
+				<Select
+					value={rewardProgram.received_by}
+					onValueChange={(value) =>
+						setRewardProgram({
+							...rewardProgram,
+							received_by: value as RewardReceivedBy,
+						})
+					}
+					items={Object.fromEntries(
+						Object.values(RewardReceivedBy).map((receivedBy) => [
+							receivedBy,
+							receivedBy === RewardReceivedBy.All
+								? "Referrer & Redeemer"
+								: keyToTitle(receivedBy),
+						]),
+					)}
+				>
 					<SelectTrigger className="w-full">
 						<SelectValue placeholder="Who should receive the reward" />
 					</SelectTrigger>

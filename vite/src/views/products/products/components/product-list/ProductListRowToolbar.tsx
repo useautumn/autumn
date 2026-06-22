@@ -1,4 +1,5 @@
 import { AppEnv, type ProductV2 } from "@autumn/shared";
+import { ToolbarButton } from "@autumn/ui";
 import {
 	ArchiveIcon,
 	ArrowCounterClockwiseIcon,
@@ -6,7 +7,6 @@ import {
 	TrashIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
-import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -52,8 +52,14 @@ export const ProductListRowToolbar = ({
 
 			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
 				<div
-					onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-					onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+					onClick={(e) => {
+						e.preventDefault();
+						e.stopPropagation();
+					}}
+					onMouseDown={(e) => {
+						e.preventDefault();
+						e.stopPropagation();
+					}}
 				>
 					<DropdownMenuTrigger asChild>
 						<ToolbarButton />

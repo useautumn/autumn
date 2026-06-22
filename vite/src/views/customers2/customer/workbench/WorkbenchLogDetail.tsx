@@ -93,7 +93,9 @@ const DetailHeader = ({ log }: { log: RequestLogEntry }) => (
 			<span className={cn("font-semibold", methodColorClass(log.method))}>
 				{log.method ?? "—"}
 			</span>
-			<span className="text-foreground break-all">{log.path ?? "(unknown)"}</span>
+			<span className="text-foreground break-all">
+				{log.path ?? "(unknown)"}
+			</span>
 		</div>
 	</div>
 );

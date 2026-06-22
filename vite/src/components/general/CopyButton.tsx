@@ -1,8 +1,8 @@
+import { Button, type ButtonProps } from "@autumn/ui";
 import { Check, Copy } from "lucide-react";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Button, type ButtonProps } from "@/components/v2/buttons/Button";
 
 function CopyButton({
 	text,

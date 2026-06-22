@@ -1,5 +1,5 @@
+import { Checkbox } from "@autumn/ui";
 import { CoinVerticalIcon, TriangleIcon } from "@phosphor-icons/react";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
 	DropdownMenuItem,
 	DropdownMenuSub,

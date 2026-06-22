@@ -11,7 +11,11 @@ interface RevenueCatProjectsResponse {
 	projects: RevenueCatProject[];
 }
 
-export const useRCProjects = ({ enabled = true }: { enabled?: boolean } = {}) => {
+export const useRCProjects = ({
+	enabled = true,
+}: {
+	enabled?: boolean;
+} = {}) => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
 	const buildKey = useQueryKeyFactory();

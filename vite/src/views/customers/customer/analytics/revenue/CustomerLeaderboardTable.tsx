@@ -41,7 +41,9 @@ const createColumns = ({
 		id: "rank",
 		size: 50,
 		cell: ({ row }: { row: Row<LeaderboardRow> }) => (
-			<span className="text-tertiary-foreground tabular-nums">{row.index + 1}</span>
+			<span className="text-tertiary-foreground tabular-nums">
+				{row.index + 1}
+			</span>
 		),
 	},
 	{

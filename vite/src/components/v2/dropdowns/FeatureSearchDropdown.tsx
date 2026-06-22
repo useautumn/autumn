@@ -76,10 +76,7 @@ export function FeatureSearchDropdown({
 					<CaretDownIcon className="size-4 opacity-50" />
 				</button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent
-				align="start"
-				className="w-(--anchor-width) p-0"
-			>
+			<DropdownMenuContent align="start" className="w-(--anchor-width) p-0">
 				<div className="flex items-center gap-2 px-3 py-2 border-b border-border/40">
 					<MagnifyingGlassIcon className="size-3.5 text-subtle" />
 					<input
@@ -114,9 +111,7 @@ export function FeatureSearchDropdown({
 					)}
 				</div>
 				{footer && (
-					<div className="border-t border-border/40 p-1">
-						{footer}
-					</div>
+					<div className="border-t border-border/40 p-1">{footer}</div>
 				)}
 			</DropdownMenuContent>
 		</DropdownMenu>

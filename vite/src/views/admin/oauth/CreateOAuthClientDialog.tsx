@@ -1,18 +1,18 @@
-import { Copy, Eye, EyeOff } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
+	Button,
+	Checkbox,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { Input } from "@/components/v2/inputs/Input";
-import { TagInput } from "@/components/v2/inputs/TagInput";
+	Input,
+	TagInput,
+} from "@autumn/ui";
+import { Copy, Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { getBackendErr } from "@/utils/genUtils";

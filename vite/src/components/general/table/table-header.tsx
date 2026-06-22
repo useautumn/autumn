@@ -1,11 +1,11 @@
+import {
+	Checkbox,
+	TableHeader as ShadcnTableHeader,
+	TableHead,
+	TableRow,
+} from "@autumn/ui";
 import { flexRender, type HeaderGroup } from "@tanstack/react-table";
 import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
-import {
-    TableHeader as ShadcnTableHeader,
-    TableHead,
-    TableRow,
-} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { useTableContext } from "./table-context";
 
@@ -23,7 +23,10 @@ function SortIcon({ sortDirection }: { sortDirection: string | false }) {
 	return (
 		<ChevronDownIcon
 			aria-hidden="true"
-			className={cn("shrink-0", sortDirection ? "text-foreground" : "opacity-30")}
+			className={cn(
+				"shrink-0",
+				sortDirection ? "text-foreground" : "opacity-30",
+			)}
 			size={16}
 		/>
 	);

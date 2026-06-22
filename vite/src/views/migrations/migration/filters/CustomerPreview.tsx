@@ -1,5 +1,15 @@
 import type { CustomerFilter, CustomerWithProducts } from "@autumn/shared";
 import {
+	IconButton,
+	Input,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Separator,
+} from "@autumn/ui";
+import {
 	ArrowSquareOutIcon,
 	CaretLeftIcon,
 	CaretRightIcon,
@@ -9,16 +19,7 @@ import type { ColumnDef, Row } from "@tanstack/react-table";
 import { useDeferredValue, useState } from "react";
 import { Link } from "react-router";
 import { Table } from "@/components/general/table";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import { Input } from "@/components/v2/inputs/Input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/v2/selects/Select";
-import { Separator } from "@/components/v2/separator";
+import { useCursorPagination } from "@/components/general/table/useCursorPagination";
 import { useMigrationFilterPreview } from "@/hooks/queries/useMigrationFilterPreview";
 import { cn } from "@/lib/utils";
 import {
@@ -28,7 +29,6 @@ import {
 import { pushPage } from "@/utils/genUtils";
 import { createCustomerListColumns } from "@/views/customers2/components/table/customer-list/CustomerListColumns";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
-import { useCursorPagination } from "@/components/general/table/useCursorPagination";
 
 const previewColumns = createCustomerListColumns()
 	.filter((col) => col.id !== "actions")
@@ -78,12 +78,14 @@ export function CustomerPreview({ filter }: { filter: CustomerFilter }) {
 		resetKey: JSON.stringify({ filter, pageSize, search: search.trim() }),
 	});
 
-	const { count, customers, nextCursor, isLoading } = useMigrationFilterPreview({
-		filter,
-		search: deferredSearch,
-		cursor: currentCursor,
-		pageSize,
-	});
+	const { count, customers, nextCursor, isLoading } = useMigrationFilterPreview(
+		{
+			filter,
+			search: deferredSearch,
+			cursor: currentCursor,
+			pageSize,
+		},
+	);
 
 	const pageCount =
 		count !== null ? Math.max(Math.ceil(count / pageSize), 1) : 1;

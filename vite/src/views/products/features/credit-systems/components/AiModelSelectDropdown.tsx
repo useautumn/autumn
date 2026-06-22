@@ -1,6 +1,6 @@
 import type { ModelsDevModel, ModelsDevProvider } from "@autumn/shared";
+import { SearchableSelect } from "@autumn/ui";
 import { useMemo } from "react";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 
 interface AiModelSelectDropdownProps {
 	value: string;

@@ -7,20 +7,20 @@ import {
 	ProductItemInterval,
 	productV2ToBasePrice,
 } from "@autumn/shared";
+import {
+	AreaRadioGroupItem,
+	FormLabel,
+	GroupedTabButton,
+	InputGroup,
+	InputGroupAddon,
+	InputGroupInput,
+	RadioGroup,
+} from "@autumn/ui";
 import { ArrowsClockwiseIcon, CheckCircleIcon } from "@phosphor-icons/react";
-import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
-import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
 	useProduct,
 	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
-import {
-	InputGroup,
-	InputGroupAddon,
-	InputGroupInput,
-} from "@/components/v2/inputs/InputGroup";
-import { AreaRadioGroupItem } from "@/components/v2/radio-groups/AreaRadioGroupItem";
-import { RadioGroup } from "@/components/v2/radio-groups/RadioGroup";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useOrg } from "@/hooks/common/useOrg";
 import { SelectBillingCycle } from "./SelectBillingCycle";
@@ -209,7 +209,6 @@ export const BasePriceSection = ({
 					</RadioGroup>
 				</div>
 
-
 				<div className="space-y-2">
 					<GroupedTabButton
 						value={billingType}
@@ -231,10 +230,7 @@ export const BasePriceSection = ({
 								value: "one-off",
 								label: "One-off",
 								icon: (
-									<CheckCircleIcon
-										className="size-[14px]"
-										weight="regular"
-									/>
+									<CheckCircleIcon className="size-[14px]" weight="regular" />
 								),
 							},
 						]}
@@ -243,32 +239,34 @@ export const BasePriceSection = ({
 				<div className="flex gap-2">
 					<div className="w-full">
 						<FormLabel disabled={disabled || isPerUnitOnly}>Price</FormLabel>
-					<InputGroup data-disabled={isPerUnitOnly}>
-						<InputGroupInput
-							type="number"
-							placeholder="eg. 100"
-							disabled={isPerUnitOnly}
-							value={isPerUnitOnly ? "" : (basePrice?.price ?? "")}
-							onKeyDown={(e) => {
-								// Prevent typing minus sign
-								if (e.key === "-" || e.key === "Minus") {
-									e.preventDefault();
-								}
-							}}
-							onChange={(e) => {
-								// extra guard in case value changes programmatically
-								const cleanedValue = e.target.value.replace(/-/g, "");
-								if (Number(cleanedValue) >= 0) {
-									handleUpdateBasePrice({
-										amount: cleanedValue,
-									});
-								}
-							}}
-						/>
-						<InputGroupAddon align="inline-end">
-							<span className="text-tertiary-foreground text-xs">{defaultCurrency}</span>
-						</InputGroupAddon>
-					</InputGroup>
+						<InputGroup data-disabled={isPerUnitOnly}>
+							<InputGroupInput
+								type="number"
+								placeholder="eg. 100"
+								disabled={isPerUnitOnly}
+								value={isPerUnitOnly ? "" : (basePrice?.price ?? "")}
+								onKeyDown={(e) => {
+									// Prevent typing minus sign
+									if (e.key === "-" || e.key === "Minus") {
+										e.preventDefault();
+									}
+								}}
+								onChange={(e) => {
+									// extra guard in case value changes programmatically
+									const cleanedValue = e.target.value.replace(/-/g, "");
+									if (Number(cleanedValue) >= 0) {
+										handleUpdateBasePrice({
+											amount: cleanedValue,
+										});
+									}
+								}}
+							/>
+							<InputGroupAddon align="inline-end">
+								<span className="text-tertiary-foreground text-xs">
+									{defaultCurrency}
+								</span>
+							</InputGroupAddon>
+						</InputGroup>
 					</div>
 					{billingType === "recurring" && (
 						<div className="w-full">
@@ -281,7 +279,6 @@ export const BasePriceSection = ({
 						</div>
 					)}
 				</div>
-
 			</div>
 		</SheetSection>
 	);

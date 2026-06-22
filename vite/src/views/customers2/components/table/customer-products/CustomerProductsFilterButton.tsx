@@ -1,9 +1,8 @@
 import { CustomerProductKind } from "@autumn/shared";
+import { Checkbox, IconButton } from "@autumn/ui";
 import { FunnelSimpleIcon } from "@phosphor-icons/react";
 import { X } from "lucide-react";
 import { useState } from "react";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuContent,

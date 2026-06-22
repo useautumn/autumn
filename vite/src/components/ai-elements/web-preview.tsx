@@ -1,21 +1,21 @@
 "use client";
 
-import { ChevronDownIcon } from "lucide-react";
-import type { ComponentProps, ReactNode } from "react";
-import { createContext, useContext, useEffect, useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { Input } from "@/components/v2/inputs/Input";
-import {
+	Button,
+	Input,
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
+} from "@autumn/ui";
+import { ChevronDownIcon } from "lucide-react";
+import type { ComponentProps, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
+import {
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+} from "@autumn/ui";
 import { cn } from "@/lib/utils";
 
 export type WebPreviewContextValue = {
@@ -106,12 +106,12 @@ export const WebPreviewNavigationButton = ({
 	<TooltipProvider>
 		<Tooltip>
 			<TooltipTrigger asChild>
-			<Button
-				className="h-8 w-8 p-0 hover:text-foreground"
-				disabled={disabled}
-				onClick={onClick}
-				size="sm"
-				variant="skeleton"
+				<Button
+					className="h-8 w-8 p-0 hover:text-foreground"
+					disabled={disabled}
+					onClick={onClick}
+					size="sm"
+					variant="skeleton"
 					{...props}
 				>
 					{children}
@@ -215,9 +215,9 @@ export const WebPreviewConsole = ({
 			{...props}
 		>
 			<CollapsibleTrigger asChild>
-			<Button
-				className="flex w-full items-center justify-between p-4 text-left font-medium hover:bg-muted/50"
-				variant="skeleton"
+				<Button
+					className="flex w-full items-center justify-between p-4 text-left font-medium hover:bg-muted/50"
+					variant="skeleton"
 				>
 					Console
 					<ChevronDownIcon

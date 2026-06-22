@@ -1,9 +1,9 @@
 import { AppEnv, type FullCustomer } from "@autumn/shared";
+import { IconButton } from "@autumn/ui";
 import { ArrowSquareOutIcon, UsersIcon } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo } from "react";
 import { Table } from "@/components/general/table";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import { EmptyState } from "@/components/v2/empty-states/EmptyState";
 import { getLastSwitchedOrgId, useOrg } from "@/hooks/common/useOrg";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";

@@ -5,8 +5,7 @@ import {
 	isAiCreditSystem,
 	isAnyCreditSystem,
 } from "@autumn/shared";
-import { AreaRadioGroupItem } from "@/components/v2/radio-groups/AreaRadioGroupItem";
-import { RadioGroup } from "@/components/v2/radio-groups/RadioGroup";
+import { AreaRadioGroupItem, RadioGroup } from "@autumn/ui";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { CreditSystemSchema } from "@/views/products/features/credit-systems/components/CreditSystemSchema";
 import { useCreditSystemForm } from "@/views/products/features/credit-systems/hooks/useCreditSystemForm";

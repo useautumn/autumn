@@ -1,5 +1,6 @@
 import type { FullCustomer } from "@autumn/shared";
 import { LATEST_VERSION } from "@autumn/shared";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@autumn/ui";
 import { Spinner } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "react-router";
@@ -10,12 +11,6 @@ import {
 	CodeGroupList,
 	CodeGroupTab,
 } from "@/components/v2/CodeGroup";
-import {
-	Sheet,
-	SheetContent,
-	SheetHeader,
-	SheetTitle,
-} from "@/components/v2/sheets/Sheet";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { useAxiosInstance } from "@/services/useAxiosInstance";

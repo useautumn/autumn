@@ -66,9 +66,11 @@ export const CollapsibleNavGroup = ({
 							<Link
 								to={pushPage({
 									path: subTab.path ?? `/${value}`,
-									queryParams: subTab.path ? {} : {
-										tab: subTab.value,
-									},
+									queryParams: subTab.path
+										? {}
+										: {
+												tab: subTab.value,
+											},
 									preserveParams: false,
 								})}
 								className="cursor-pointer flex items-center gap-2"

@@ -1,5 +1,6 @@
 import type { FullCusProduct } from "@autumn/shared";
 import { AppEnv, ProcessorType } from "@autumn/shared";
+import { Button, Dialog } from "@autumn/ui";
 import {
 	ArrowSquareOutIcon,
 	ArrowsClockwiseIcon,
@@ -12,8 +13,6 @@ import {
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
-import { Dialog } from "@/components/v2/dialogs/Dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,

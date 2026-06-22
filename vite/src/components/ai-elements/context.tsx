@@ -1,15 +1,15 @@
 "use client";
 
-import type { LanguageModelUsage } from "ai";
-import { type ComponentProps, createContext, useContext } from "react";
-import { getUsage } from "tokenlens";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	HoverCard,
 	HoverCardContent,
 	HoverCardTrigger,
-} from "@/components/ui/hover-card";
-import { Progress } from "@/components/ui/progress";
+} from "@autumn/ui";
+import type { LanguageModelUsage } from "ai";
+import { type ComponentProps, createContext, useContext } from "react";
+import { getUsage } from "tokenlens";
+import { Progress } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 
 const PERCENT_MAX = 100;

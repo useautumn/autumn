@@ -1,27 +1,28 @@
 import { groupAndFormatScopes } from "@autumn/shared";
-import { EllipsisVertical, Key, Shield, TrashIcon } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { TableCell, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
+	Badge,
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+	IconButton,
+	TableCell,
+	TableRow,
+} from "@autumn/ui";
+import { EllipsisVertical, Key, Shield, TrashIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 } from "@/components/v2/dropdowns/DropdownMenu";
-import { getBackendErr } from "@/utils/genUtils";
 import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";
+import { getBackendErr } from "@/utils/genUtils";
 import {
 	SETTINGS_ROW_CLASS,
 	SettingsTable,
@@ -237,11 +238,7 @@ export const AuthorizedApps = () => {
 										</span>
 									) : (
 										grouped.map((p) => (
-											<Badge
-												key={p.resource}
-												variant="muted"
-												size="sm"
-											>
+											<Badge key={p.resource} variant="muted" size="sm">
 												{p.resourceName}: {p.actions.join(", ")}
 											</Badge>
 										))

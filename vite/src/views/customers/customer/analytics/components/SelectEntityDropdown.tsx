@@ -1,9 +1,9 @@
 import type { Entity } from "@autumn/shared";
+import { IconButton } from "@autumn/ui";
 import { CaretDownIcon, MagnifyingGlassIcon } from "@phosphor-icons/react";
 import { Check } from "lucide-react";
 import { useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -93,7 +93,9 @@ export const SelectEntityDropdown = () => {
 						className="flex items-center justify-between"
 					>
 						<span className="text-xs">All entities</span>
-						{!currentEntityId && <Check className="ml-2 h-3 w-3 text-tertiary-foreground" />}
+						{!currentEntityId && (
+							<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
+						)}
 					</DropdownMenuItem>
 
 					{entities.length > 0 && <DropdownMenuSeparator />}

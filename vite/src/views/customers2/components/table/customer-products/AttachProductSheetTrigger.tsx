@@ -1,10 +1,10 @@
+import { Button } from "@autumn/ui";
 import {
 	CalendarBlankIcon,
 	CaretDownIcon,
 	PlusIcon,
 } from "@phosphor-icons/react";
 import { useHasSchedule } from "@/components/forms/create-schedule/hooks/useHasSchedule";
-import { Button } from "@/components/v2/buttons/Button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,

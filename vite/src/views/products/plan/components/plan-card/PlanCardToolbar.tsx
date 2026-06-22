@@ -1,7 +1,7 @@
+import { IconButton } from "@autumn/ui";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { cn } from "@/lib/utils";
 import { pushPage } from "@/utils/genUtils";

@@ -1,8 +1,8 @@
 import { ProcessorType } from "@autumn/shared";
+import { IconTooltipButton } from "@autumn/ui";
 import { BracketsSquareIcon, UserCircleGearIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { IconTooltipButton } from "@/components/v2/buttons/IconTooltipButton";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";

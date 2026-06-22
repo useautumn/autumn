@@ -1,16 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Badge,
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { Switch } from "@/components/ui/switch";
+	Switch,
+} from "@autumn/ui";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
@@ -97,8 +97,7 @@ export function JobQueuesDialog({
 		() =>
 			config.knownQueues.map((queue) => ({
 				...queue,
-				enabled:
-					config.queues[queue.id]?.enabled ?? queue.defaultEnabled,
+				enabled: config.queues[queue.id]?.enabled ?? queue.defaultEnabled,
 			})),
 		[config],
 	);
@@ -155,7 +154,9 @@ export function JobQueuesDialog({
 				</DialogHeader>
 
 				{loading ? (
-					<div className="py-8 text-center text-sm text-tertiary-foreground">Loading...</div>
+					<div className="py-8 text-center text-sm text-tertiary-foreground">
+						Loading...
+					</div>
 				) : (
 					<div className="flex flex-col gap-4">
 						<div className="flex flex-col gap-3">

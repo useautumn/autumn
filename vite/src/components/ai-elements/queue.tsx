@@ -1,14 +1,13 @@
 "use client";
 
+import { Button, ScrollArea } from "@autumn/ui";
 import { ChevronDownIcon, PaperclipIcon } from "lucide-react";
 import type { ComponentProps } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { ScrollArea } from "@/components/ui/scroll-area";
+} from "@autumn/ui";
 import { cn } from "@/lib/utils";
 
 export type QueueMessagePart = {

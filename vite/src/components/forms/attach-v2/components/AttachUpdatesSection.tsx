@@ -1,11 +1,11 @@
 import { formatAmount } from "@autumn/shared";
+import { Skeleton } from "@autumn/ui";
 import {
 	MinusCircleIcon,
 	PauseCircleIcon,
 	PlusCircleIcon,
 } from "@phosphor-icons/react";
 import { getPreviewCreditAmount } from "@/components/forms/shared/previewCreditUtils";
-import { Skeleton } from "@/components/ui/skeleton";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { useAttachFormContext } from "../context/AttachFormProvider";
@@ -24,7 +24,12 @@ function AttachUpdatesSkeleton() {
 function OutgoingIcon({ isPausing }: { isPausing: boolean }) {
 	const Icon = isPausing ? PauseCircleIcon : MinusCircleIcon;
 	const color = isPausing ? "text-orange-500" : "text-red-500";
-	return <Icon weight="fill" className={`${color} size-3.5 inline align-middle mr-1`} />;
+	return (
+		<Icon
+			weight="fill"
+			className={`${color} size-3.5 inline align-middle mr-1`}
+		/>
+	);
 }
 
 function PlanName({ name }: { name: string }) {
@@ -42,7 +47,8 @@ function OutgoingPlans({
 
 	return (
 		<>
-			{" "}and {verb}{" "}
+			{" "}
+			and {verb}{" "}
 			{outgoing.map((change, index) => {
 				const isLast = index === outgoing.length - 1;
 				return (
@@ -83,8 +89,7 @@ export function AttachUpdatesSection() {
 	if (isPending) return <AttachUpdatesSkeleton />;
 	if (!product) return null;
 
-	const isPausing =
-		formValues.trialOnEnd === "revert" && hasActiveSubscription;
+	const isPausing = formValues.trialOnEnd === "revert" && hasActiveSubscription;
 
 	return (
 		<SheetSection withSeparator={false} className="pb-0">
@@ -101,8 +106,8 @@ export function AttachUpdatesSection() {
 					)}
 					{hasCreditIndicator && (
 						<>
-							. This update includes{" "}
-							<PlanName name={formattedCreditAmount!} /> in invoice credits.
+							. This update includes <PlanName name={formattedCreditAmount!} />{" "}
+							in invoice credits.
 						</>
 					)}
 				</span>
