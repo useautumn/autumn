@@ -1,0 +1,96 @@
+---
+slug: autumn-vs-building-in-house
+title: Autumn vs Building In-House
+description: Building billing in-house starts simple, but real-time checks, credit ledgers, reset rules, rollovers, custom contracts, analytics, and pricing changes become hard to maintain over time.
+date: "2026-06-22"
+updated: "2026-06-22"
+author: Autumn
+category: Comparisons
+summary: "Building in-house gives you maximum control. Autumn is for teams that want real-time checks, credits, entitlements, ledgers, rollovers, reset rules, custom packages, and pricing changes without maintaining a billing system forever."
+relatedDocs:
+  - { label: "Autumn overview", href: "https://docs.useautumn.com/welcome" }
+  - { label: "Checking access", href: "https://docs.useautumn.com/documentation/customers/check" }
+relatedAlog:
+  - autumn-vs-stripe-billing
+  - autumn-vs-orb
+  - autumn-vs-metronome
+---
+
+# Autumn vs Building In-House
+
+> Building billing in-house starts simple. Keeping it correct as pricing changes is the hard part.
+
+## Short Answer
+
+If your billing model is simple, building in-house can work. You can create a few tables for plans, credits, usage, and entitlements, then wire them into Stripe and your application.
+
+The problem is that billing rarely stays simple. Pricing changes. Credits roll over. Some balances reset monthly, others never expire. Enterprise customers need custom packages. Usage limits become product behavior. Eventually, the "simple billing table" becomes a system with a counter, a ledger, reset jobs, analytics pipelines, migration logic, and Stripe sync.
+
+Autumn is for teams that want that application billing state managed from the beginning: real-time checks, credits, entitlements, limits, usage, rollovers, reset behavior, custom packages, ledgers, and Stripe sync.
+
+## When Autumn Fits
+
+- Your pricing is based on credits, seats, usage limits, feature tiers, or hybrid packages.
+- You need low-latency `check()` calls and reliable `track()` writes.
+- You iterate on pricing often, or billing work is blocking your team.
+- You support both self-serve and custom enterprise packages.
+- You do not want billing logic scattered across tables, webhooks, cron jobs, queues, analytics jobs, and product code.
+
+## When Building In-House Fits
+
+- You need full control over the billing data model.
+- You have very custom analytics, reporting, or data warehouse needs.
+- You have a team that wants to own billing as core infrastructure.
+- You generally prefer building critical systems yourself instead of outsourcing them.
+
+## What Usually Gets Hard
+
+The first version is usually manageable. The later versions are where the work compounds:
+
+- Modeling credits as rows, not columns, once you add top-ups, coupons, expirations, and rollovers.
+- Keeping a fast counter for real-time checks and a durable ledger for auditability.
+- Handling monthly, annual, lifetime, and custom reset schedules without double-granting credits.
+- Choosing deterministic deduction order across paid credits, free credits, expiring credits, and recurring grants.
+- Scaling concurrent deductions without locking your primary database on every request.
+- Building analytics over usage and credit events without making the analytics store your source of truth.
+- Supporting custom enterprise contracts, one-off grants, pricing migrations, and Stripe sync.
+
+Larger companies often have teams dedicated to this work. For most startups, that is not the highest-leverage place to spend engineering time.
+
+For a deeper breakdown of why this becomes hard, read [Stop rebuilding your billing system](/blog/stop-rebuilding-billing). It covers the flexibility problems that show up once plans, entitlements, custom packages, and pricing changes start interacting.
+
+OpenAI described a similar shift when scaling Codex and Sora: asynchronous usage billing was not enough for real-time access decisions, so they built a system that combines limits, usage tracking, and credits in one evaluation path.
+
+## Implementation Model
+
+With an in-house system, the typical model is:
+
+```text
+Your DB -> plans / credits / usage / limits / entitlements
+Your app -> custom checks / usage writes / deduction logic
+Your jobs -> resets / rollovers / migrations / analytics / Stripe sync
+```
+
+With Autumn, the typical model is:
+
+```text
+Autumn -> plans / credits / usage / limits / entitlements / ledgers
+Your app -> Autumn check() / track()
+Autumn -> Stripe -> subscriptions / invoices / payments
+```
+
+## Bottom Line
+
+Building in-house gives you maximum control over the data model and analytics. Autumn gives you a maintained billing-state layer so your team can spend less time rebuilding counters, ledgers, credits, entitlements, limits, rollovers, reset logic, and pricing migrations.
+
+If billing is not your product, Autumn is usually the better default.
+
+## Sources
+
+- Autumn: [overview](https://docs.useautumn.com/welcome), [checking access](https://docs.useautumn.com/documentation/customers/check)
+- External: [OpenAI on real-time access, limits, and credits](https://openai.com/index/beyond-rate-limits/), [OpenMeter on credit systems](https://openmeter.io/blog/credit-systems-are-challenging), [Stripe on credit-based subscription models](https://stripe.com/resources/more/what-is-a-credits-based-subscription-model-and-how-does-it-work)
+- Related: [Stop rebuilding your billing system](/blog/stop-rebuilding-billing), [We built a billing company but didn't replace Stripe Billing](/blog/we-built-a-billing-company-but-didnt-replace-stripe-billing)
+
+## Last Updated
+
+2026-06-22

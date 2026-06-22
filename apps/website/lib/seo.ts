@@ -92,6 +92,30 @@ export function blogPostingSchema(post: BlogPostSummary) {
 	};
 }
 
+export function techArticleSchema(doc: {
+	slug: string;
+	title: string;
+	description: string;
+	date: string | null;
+	updated: string | null;
+	author: string;
+}) {
+	const url = `${SITE_URL}/alog/${doc.slug}`;
+	return {
+		"@context": "https://schema.org",
+		"@type": "TechArticle",
+		"@id": `${url}/#article`,
+		headline: doc.title,
+		description: toPlainText(doc.description),
+		url,
+		mainEntityOfPage: url,
+		...(doc.date ? { datePublished: doc.date } : {}),
+		...(doc.updated ? { dateModified: doc.updated } : {}),
+		author: { "@type": "Organization", name: doc.author },
+		publisher: { "@id": `${SITE_URL}/#organization` },
+	};
+}
+
 export function breadcrumbSchema(items: Array<{ name: string; path: string }>) {
 	return {
 		"@context": "https://schema.org",
