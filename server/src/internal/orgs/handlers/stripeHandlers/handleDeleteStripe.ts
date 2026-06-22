@@ -200,9 +200,16 @@ export const handleDeleteStripe = createRoute({
 					? { test_stripe_connect: clearedConnect }
 					: { live_stripe_connect: clearedConnect };
 
-			// Secret key kept but its direct webhook was skipped under OAuth — register it now.
+			// Secret key kept but its direct webhook was skipped under OAuth — register
+			// it now. Skip when a webhook secret is already stored: that means a live
+			// direct webhook predates OAuth, and re-registering would orphan it.
+			const existingWebhookSecret =
+				env === AppEnv.Sandbox
+					? org.stripe_config?.test_webhook_secret
+					: org.stripe_config?.live_webhook_secret;
 			if (
 				!clearSecretKey &&
+				!existingWebhookSecret &&
 				isStripeConnected({ org, env, throughSecretKey: true })
 			) {
 				const webhookSecret = await reRegisterDirectWebhook({

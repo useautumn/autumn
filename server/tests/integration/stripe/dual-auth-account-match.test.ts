@@ -57,7 +57,7 @@ describe("dual-auth: secret key must match OAuth account", () => {
 	test("throws when OAuth account differs from the secret key account", async () => {
 		const org = buildOrg("acct_different_oauth");
 
-		expect(
+		await expect(
 			handleStripeSecretKey({
 				orgId: org.id,
 				secretKey: "sk_test_x",

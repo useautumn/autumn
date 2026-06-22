@@ -43,21 +43,19 @@ export const handleStripeSecretKey = async ({
 		});
 	}
 
-	// OAuth (master connect webhook) already covers this org's events; registering
-	// a direct webhook too would double-deliver. Skip all webhook mutations.
-	const oauthConnected = Boolean(oauthAccountId);
+	// Always clear stale direct endpoints on the org's own account. When OAuth is
+	// connected its master connect webhook covers the org, so we must NOT also keep
+	// or create a direct webhook (it would double-deliver).
+	const curWebhooks = await stripe.webhookEndpoints.list();
+	for (const existing of curWebhooks.data) {
+		if (existing.url.includes(orgId) && existing.url.includes(env)) {
+			await stripe.webhookEndpoints.del(existing.id);
+		}
+	}
 
+	const oauthConnected = Boolean(oauthAccountId);
 	let webhook: Stripe.WebhookEndpoint | null = null;
 	if (!oauthConnected) {
-		// 2. Disconnect existing direct webhook endpoints on the org's own account
-		const curWebhooks = await stripe.webhookEndpoints.list();
-		for (const webhook of curWebhooks.data) {
-			if (webhook.url.includes(orgId) && webhook.url.includes(env)) {
-				await stripe.webhookEndpoints.del(webhook.id);
-			}
-		}
-
-		// 3. Create new direct webhook endpoint
 		try {
 			webhook = await createWebhookEndpoint(secretKey, env, orgId);
 		} catch (error) {

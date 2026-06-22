@@ -150,7 +150,7 @@ export const handleOAuthCallback = async (c: Context<HonoEnv>) => {
 				}
 			} catch (error) {
 				console.error(
-					"Failed to verify account match against secret key:",
+					`Failed to verify account match against secret key for org ${org.id} (${org.slug}):`,
 					error,
 				);
 				redirectUrl.searchParams.set("error", "account_mismatch_check_failed");

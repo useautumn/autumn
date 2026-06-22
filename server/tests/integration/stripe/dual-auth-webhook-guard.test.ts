@@ -26,10 +26,13 @@ const calls = {
 	del: 0,
 };
 
+let staleWebhooks: Array<{ id: string; url: string }> = [];
+
 const resetCalls = () => {
 	calls.create = 0;
 	calls.list = 0;
 	calls.del = 0;
+	staleWebhooks = [];
 };
 
 mock.module("stripe", () => {
@@ -44,7 +47,7 @@ mock.module("stripe", () => {
 			webhookEndpoints = {
 				list: async () => {
 					calls.list++;
-					return { data: [] };
+					return { data: staleWebhooks };
 				},
 				del: async () => {
 					calls.del++;
@@ -97,9 +100,30 @@ describe("dual-auth: handleStripeSecretKey webhook guard", () => {
 		});
 
 		expect(calls.create).toBe(0);
-		expect(calls.del).toBe(0);
 		expect(result.test_api_key).toBeTruthy();
 		expect(result.test_webhook_secret ?? null).toBeNull();
+	});
+
+	test("OAuth connected -> deletes a stale direct webhook so it can't double-deliver", async () => {
+		staleWebhooks = [
+			{
+				id: "we_stale",
+				url: `https://x/webhooks/stripe/org_webhook_guard/sandbox`,
+			},
+		];
+		const org = buildOrg({
+			test_stripe_connect: { account_id: "acct_oauth_existing" },
+		});
+
+		await handleStripeSecretKey({
+			orgId: org.id,
+			secretKey: "sk_test_added",
+			env: AppEnv.Sandbox,
+			org,
+		});
+
+		expect(calls.del).toBe(1);
+		expect(calls.create).toBe(0);
 	});
 
 	test("no OAuth -> registers direct webhook and returns secret", async () => {

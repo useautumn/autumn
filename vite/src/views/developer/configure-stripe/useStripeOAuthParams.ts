@@ -48,6 +48,7 @@ export const useStripeOAuthParams = () => {
 	const clear = () => setParams(CLEARED);
 
 	const consumedError = useRef<string | null>(null);
+	// biome-ignore lint/correctness/useExhaustiveDependencies: clear is a stable wrapper; only params.error should re-trigger.
 	useEffect(() => {
 		const toastFor = params.error && ERROR_TOASTS[params.error];
 		if (!toastFor || consumedError.current === params.error) return;
@@ -55,7 +56,7 @@ export const useStripeOAuthParams = () => {
 		consumedError.current = params.error;
 		toast.error(toastFor());
 		clear();
-	});
+	}, [params.error]);
 
 	return { params, clear };
 };
