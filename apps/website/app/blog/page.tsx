@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import AgentNote from "@/components/agent-note";
+import DocsCallout from "@/components/docs-callout";
 import JsonLd from "@/components/json-ld";
 import { getAllPosts } from "@/lib/blogUtils";
 import { breadcrumbSchema } from "@/lib/seo";
@@ -36,10 +38,32 @@ export default function BlogListingPage() {
 					<span className="text-[#FFFFFF99] font-light">From the </span>
 					<span className="text-white">Blog</span>
 				</h1>
-				<p className="text-[14px] md:text-[16px] leading-5 text-[#FFFFFF99] font-light font-sans mb-16">
+				<p className="text-[14px] md:text-[16px] leading-5 text-[#FFFFFF99] font-light font-sans mb-4">
 					Thoughts on billing infrastructure, usage-based pricing, and building
 					for AI startups.
 				</p>
+				<div className="flex flex-col gap-1.5 mb-16">
+					<AgentNote>
+						If you're an agent, append{" "}
+						<code className="text-[#FFFFFF99] font-mono text-[12px]">.md</code> to
+						any post for raw markdown, read the{" "}
+						<Link
+							href="/llms.txt"
+							className="text-[#9564ff] hover:text-[#b08aff] underline underline-offset-2"
+						>
+							llms.txt
+						</Link>{" "}
+						index, or browse the{" "}
+						<Link
+							href="/alog"
+							className="text-[#9564ff] hover:text-[#b08aff] underline underline-offset-2"
+						>
+							Alog
+						</Link>
+						.
+					</AgentNote>
+					<DocsCallout />
+				</div>
 
 				{posts.length === 0 && (
 					<p className="text-[#FFFFFF66] text-center py-16 font-light">
