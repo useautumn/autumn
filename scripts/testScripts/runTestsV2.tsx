@@ -3,11 +3,24 @@
 import { existsSync } from "node:fs";
 import { readdir, stat } from "node:fs/promises";
 import { basename, join, resolve } from "node:path";
-import { spawn } from "bun";
 import { Box, render, Static, Text, useApp } from "ink";
 import pLimit from "p-limit";
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	LocalExecutor,
+	runningProcesses,
+	type TestExecutor,
+	WorkerDeathError,
+} from "./testExecutor";
 import { testRunConfig } from "./testRunConfig";
+
+/**
+ * Cap on how many times a single file may be rescheduled after worker death
+ * (§8.4) before we give up and let it fail normally. Prevents a flapping worker
+ * from re-queueing one file forever. Local execution never hits this (the
+ * {@link LocalExecutor} never throws {@link WorkerDeathError}).
+ */
+const MAX_WORKER_DEATH_RESCHEDULES = 5;
 
 // Base path for shorthand test paths
 const INTEGRATION_TEST_BASE = testRunConfig.testsBaseDir;
@@ -63,11 +76,18 @@ async function findFileByPath(
 	return null;
 }
 
-// Track all running processes for cleanup
-const runningProcesses = new Set<ReturnType<typeof spawn>>();
-
-// Ultra-kill on Ctrl+C
-process.on("SIGINT", () => {
+// Ultra-kill on Ctrl+C. `runningProcesses` is owned by the LocalExecutor (the
+// SIGINT-kill behavior is preserved verbatim); a remote executor manages its
+// own teardown.
+//
+// IMPORTANT: this handler calls the REAL `process.exit(130)`, which is correct
+// for the `bun t` path (this module is the whole process) but catastrophic when
+// the runner is driven via `runWithExecutor` by the `bun tw` orchestrator: it
+// would hard-kill the process mid-teardown and leak sandboxes/sub-accounts. So
+// it is installed ONLY on the local `bun t` path (in `main()`), never at module
+// import time, and the orchestrator's own SIGINT handler stays the only one live
+// when the runner is injected.
+const localSigintHandler = (): void => {
 	// Kill all running test processes immediately
 	for (const proc of runningProcesses) {
 		try {
@@ -80,7 +100,7 @@ process.on("SIGINT", () => {
 
 	console.log("\n\n⚠️  Tests interrupted by user (Ctrl+C)\n");
 	process.exit(130);
-});
+};
 
 interface IndividualTest {
 	name: string;
@@ -298,12 +318,16 @@ async function runTestFile({
 	attempt = 1,
 	failedTestNames,
 	verbose = false,
+	executor,
+	signal,
 }: {
 	file: string;
 	onUpdate: (result: TestFileResult) => void;
 	attempt?: number;
 	failedTestNames?: string[];
 	verbose?: boolean;
+	executor: TestExecutor;
+	signal?: AbortSignal;
 }): Promise<TestFileResult> {
 	const startTime = performance.now();
 
@@ -318,75 +342,50 @@ async function runTestFile({
 
 	onUpdate(result);
 
-	try {
-		const command = ["bun", "test", "--timeout", "0"];
+	// Accumulated stdout — fed chunk-by-chunk by the executor, re-parsed on each
+	// chunk so the TUI shows live progress. The parser is a pure
+	// string -> result function; it does not care where the bytes came from.
+	let output = "";
+	const fileLabel = basename(file);
 
-		if (failedTestNames && failedTestNames.length > 0) {
-			const pattern = failedTestNames
-				.map((name) => name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"))
-				.join("|");
-			command.push("--test-name-pattern", pattern);
+	const onChunk = (text: string): void => {
+		output += text;
+
+		if (verbose) {
+			process.stderr.write(`[${fileLabel}:stdout] ${text}`);
 		}
 
-		command.push(file);
+		// Update with parsed tests
+		const tests = parseTestOutput(output, file);
+		const currentTest = extractCurrentTest(output);
 
-		const proc = spawn(command, {
-			stdout: "pipe",
-			stderr: "pipe",
-			env: { ...process.env },
+		onUpdate({
+			...result,
+			tests,
+			currentTest: currentTest || undefined,
+		});
+	};
+
+	try {
+		// Delegate the byte source to the injected executor. The local executor
+		// spawns `bun test` (`bun t`); a remote executor pipes a worker's output.
+		const { exitCode, stderr } = await executor.run({
+			file,
+			failedTestNames,
+			onChunk,
+			signal,
 		});
 
-		// Track process for cleanup on SIGINT
-		runningProcesses.add(proc);
-
-		let output = "";
-		let stderrOutput = "";
-		const decoder = new TextDecoder();
-		const stderrDecoder = new TextDecoder();
-
-		const fileLabel = basename(file);
-
-		if (proc.stdout) {
-			for await (const chunk of proc.stdout) {
-				const text = decoder.decode(chunk);
-				output += text;
-
-				if (verbose) {
-					process.stderr.write(`[${fileLabel}:stdout] ${text}`);
-				}
-
-				// Update with parsed tests
-				const tests = parseTestOutput(output, file);
-				const currentTest = extractCurrentTest(output);
-
-				onUpdate({
-					...result,
-					tests,
-					currentTest: currentTest || undefined,
-				});
-			}
+		if (verbose && stderr) {
+			process.stderr.write(`[${fileLabel}:stderr] ${stderr}`);
 		}
 
-		if (proc.stderr) {
-			for await (const chunk of proc.stderr) {
-				const text = stderrDecoder.decode(chunk);
-				output += text;
-				stderrOutput += text;
-
-				if (verbose) {
-					process.stderr.write(`[${fileLabel}:stderr] ${text}`);
-				}
-			}
-		}
-
-		const exitCode = await proc.exited;
-
-		// Remove from tracking
-		runningProcesses.delete(proc);
+		const stderrOutput = stderr;
+		const combinedOutput = stderrOutput ? `${output}${stderrOutput}` : output;
 
 		const duration = performance.now() - startTime;
 
-		const tests = parseTestOutput(output, file);
+		const tests = parseTestOutput(combinedOutput, file);
 		const hasFailures = tests.some((t) => t.status === "failed");
 		const hasNoTests = tests.length === 0;
 		const processExitedNonZero = exitCode !== 0;
@@ -413,7 +412,14 @@ async function runTestFile({
 
 		onUpdate(finalResult);
 		return finalResult;
-	} catch {
+	} catch (error) {
+		// Worker death (§8.4) is a transient infra fault, not a test verdict.
+		// Re-throw so the window loop can reschedule the file attempt-preservingly.
+		// The LocalExecutor never throws this, so `bun t` never reaches here.
+		if (error instanceof WorkerDeathError) {
+			throw error;
+		}
+
 		const duration = performance.now() - startTime;
 		const finalResult: TestFileResult = {
 			file,
@@ -583,16 +589,41 @@ interface StaticItem {
 	willRetry?: boolean;
 }
 
+/**
+ * Swarm-only run metadata, present ONLY when the runner is driven in-process by
+ * the `bun tw` orchestrator (never under `bun t`). Drives the header line and the
+ * "full logs at …" pointer in the final summary. Its absence is what keeps `bun t`
+ * output unchanged.
+ */
+interface SwarmRunMeta {
+	target: string;
+	workers: number;
+	logFile: string;
+}
+
 interface TestRunnerAppProps {
 	testFiles: string[];
 	maxParallel: number;
 	verbose: boolean;
+	executor: TestExecutor;
+	swarm?: SwarmRunMeta;
+	/**
+	 * Invoked once, when the run finishes, with the intended exit code. The
+	 * caller decides how the process winds down: `bun t` exits for real; the
+	 * `bun tw` orchestrator unmounts Ink + clears the flush interval so the event
+	 * loop drains and teardown can run (the runner must NOT `process.exit` out
+	 * from under the orchestrator).
+	 */
+	onComplete: (exitCode: number) => void;
 }
 
 function TestRunnerApp({
 	testFiles,
 	maxParallel,
 	verbose,
+	executor,
+	swarm,
+	onComplete,
 }: TestRunnerAppProps) {
 	const { exit } = useApp();
 
@@ -693,11 +724,66 @@ function TestRunnerApp({
 		const runAllTests = async () => {
 			const limit = pLimit(maxParallel);
 
+			// §8.4: a worker dying mid-file is NOT a test failure — the file got no
+			// verdict. Re-submit it through the SAME limit at the SAME attempt number
+			// (attempt-preserving, doesn't consume the auto-retry budget), capped so a
+			// flapping worker can't re-queue one file forever. Each execution attempt
+			// is its OWN `limit(...)` slot, so the slot is released on worker death
+			// before the file is re-queued (no deadlock). The LocalExecutor never
+			// throws WorkerDeathError, so `bun t` never takes this branch.
+			const runWithReschedule = async (params: {
+				limit: ReturnType<typeof pLimit>;
+				file: string;
+				attempt: number;
+				failedTestNames?: string[];
+			}): Promise<TestFileResult> => {
+				let lastWorkerDeath: WorkerDeathError | undefined;
+				for (
+					let rescheduleCount = 0;
+					rescheduleCount <= MAX_WORKER_DEATH_RESCHEDULES;
+					rescheduleCount++
+				) {
+					try {
+						return await params.limit(() =>
+							runTestFile({
+								file: params.file,
+								onUpdate: updateResult,
+								attempt: params.attempt,
+								failedTestNames: params.failedTestNames,
+								verbose,
+								executor,
+							}),
+						);
+					} catch (error) {
+						if (!(error instanceof WorkerDeathError)) {
+							throw error;
+						}
+						// Slot freed; loop re-submits through the same limit.
+						lastWorkerDeath = error;
+					}
+				}
+
+				// Reschedule cap exceeded: a flapping worker can't re-queue forever.
+				// Surface as a failed result (not an unhandled rejection) so the rest
+				// of the run completes and the file is reported as crashed.
+				const cappedResult: TestFileResult = {
+					file: params.file,
+					status: "failed",
+					tests: [],
+					duration: 0,
+					attempt: params.attempt,
+					passedOnRetry: false,
+					crashError: `Worker died repeatedly (>${MAX_WORKER_DEATH_RESCHEDULES} reschedules): ${
+						lastWorkerDeath?.message ?? "worker death"
+					}`,
+				};
+				updateResult(cappedResult);
+				return cappedResult;
+			};
+
 			// Phase 1: Initial run
 			const promises = testFiles.map((file) =>
-				limit(() =>
-					runTestFile({ file, onUpdate: updateResult, attempt: 1, verbose }),
-				),
+				runWithReschedule({ limit, file, attempt: 1 }),
 			);
 
 			await Promise.all(promises);
@@ -727,43 +813,42 @@ function TestRunnerApp({
 
 				// Run retries concurrently with same limit as initial run
 				const retryLimit = pLimit(maxParallel);
-				const retryPromises = failedFiles.map((result) =>
-					retryLimit(async () => {
-						const firstAttemptFailures = result.tests.filter(
-							(t) => t.status === "failed",
-						);
-						const hasUnnamedFailure = firstAttemptFailures.some((test) =>
-							test.name.includes("(unnamed)"),
-						);
-						const failedTestNames = hasUnnamedFailure
-							? []
-							: firstAttemptFailures.map((test) => test.name);
+				const retryPromises = failedFiles.map(async (result) => {
+					const firstAttemptFailures = result.tests.filter(
+						(t) => t.status === "failed",
+					);
+					const hasUnnamedFailure = firstAttemptFailures.some((test) =>
+						test.name.includes("(unnamed)"),
+					);
+					const failedTestNames = hasUnnamedFailure
+						? []
+						: firstAttemptFailures.map((test) => test.name);
 
-						// Mark this specific file as actively retrying
-						const retryingResult: TestFileResult = {
-							...result,
-							status: "retrying",
-							firstAttemptFailures,
-						};
-						pendingRef.current.set(result.file, retryingResult);
-						dirtyRef.current = true;
+					// Mark this specific file as actively retrying
+					const retryingResult: TestFileResult = {
+						...result,
+						status: "retrying",
+						firstAttemptFailures,
+					};
+					pendingRef.current.set(result.file, retryingResult);
+					dirtyRef.current = true;
 
-						const retryResult = await runTestFile({
-							file: result.file,
-							onUpdate: updateResult,
-							attempt: 2,
-							failedTestNames,
-							verbose,
-						});
-						if (retryResult.status === "passed") {
-							retryResult.passedOnRetry = true;
-						}
-						retryResult.firstAttemptFailures = firstAttemptFailures;
-						pendingRef.current.set(result.file, retryResult);
-						dirtyRef.current = true;
-						return retryResult;
-					}),
-				);
+					// Worker-death during a retry is attempt-preserving too (re-runs at
+					// attempt 2 via the same retryLimit; §8.4).
+					const retryResult = await runWithReschedule({
+						limit: retryLimit,
+						file: result.file,
+						attempt: 2,
+						failedTestNames,
+					});
+					if (retryResult.status === "passed") {
+						retryResult.passedOnRetry = true;
+					}
+					retryResult.firstAttemptFailures = firstAttemptFailures;
+					pendingRef.current.set(result.file, retryResult);
+					dirtyRef.current = true;
+					return retryResult;
+				});
 
 				await Promise.all(retryPromises);
 			}
@@ -805,7 +890,7 @@ function TestRunnerApp({
 		if (testFiles.length > 0) {
 			runAllTests();
 		}
-	}, [testFiles, maxParallel, updateResult, verbose]);
+	}, [testFiles, maxParallel, updateResult, verbose, executor]);
 
 	// Exit when complete
 	useEffect(() => {
@@ -815,11 +900,16 @@ function TestRunnerApp({
 		const exitFailedFiles = exitResults.some((r) => r.status === "failed");
 
 		// Small delay to ensure final render
-		setTimeout(() => {
+		const timer = setTimeout(() => {
+			// Unmount Ink. This runs the flush-interval effect's cleanup
+			// (`clearInterval`), so the ~10fps timer no longer keeps the event loop
+			// alive. `onComplete` then decides whether to `process.exit` (`bun t`)
+			// or just let the loop drain so the orchestrator can tear down (`bun tw`).
 			exit();
-			process.exit(exitFailedFiles ? 1 : 0);
+			onComplete(exitFailedFiles ? 1 : 0);
 		}, 100);
-	}, [isComplete, results, exit]);
+		return () => clearTimeout(timer);
+	}, [isComplete, results, exit, onComplete]);
 
 	const allResults: TestFileResult[] = Array.from(results.values());
 	const runningFiles = allResults.filter((r) => r.status === "running");
@@ -865,9 +955,9 @@ function TestRunnerApp({
 							<CompletedFile result={result} willRetry={willRetry} />
 							{result.tests
 								.filter((t: IndividualTest) => t.status === "failed")
-								.map((t: IndividualTest) => (
+								.map((t: IndividualTest, index: number) => (
 									<FailedTest
-										key={`${result.file}-${t.name}`}
+										key={`${result.file}-${t.name}-${index}`}
 										test={t}
 										isWarning={willRetry}
 									/>
@@ -877,7 +967,20 @@ function TestRunnerApp({
 				}}
 			</Static>
 
-			{/* Dynamic section below — only this part re-renders */}
+			{/* Dynamic section below — only this part re-renders. The header is a
+			    single constant line, so it never reflows. */}
+			{swarm && (
+				<Text>
+					<Text bold color="cyan">
+						swarm
+					</Text>
+					<Text dimColor>
+						{" "}
+						{swarm.target} · {swarm.workers} worker
+						{swarm.workers === 1 ? "" : "s"}
+					</Text>
+				</Text>
+			)}
 			<Text dimColor>{"─".repeat(60)}</Text>
 
 			{/* Running files */}
@@ -923,7 +1026,7 @@ function TestRunnerApp({
 			{/* Final summary when complete */}
 			{isComplete && (
 				<Box flexDirection="column" marginTop={1}>
-					<FinalSummary results={allResults} />
+					<FinalSummary results={allResults} swarm={swarm} />
 				</Box>
 			)}
 		</Box>
@@ -932,9 +1035,10 @@ function TestRunnerApp({
 
 interface FinalSummaryProps {
 	results: TestFileResult[];
+	swarm?: SwarmRunMeta;
 }
 
-function FinalSummary({ results }: FinalSummaryProps) {
+function FinalSummary({ results, swarm }: FinalSummaryProps) {
 	const allTests = results.flatMap((r) => r.tests);
 	const passedTests = allTests.filter((t) => t.status === "passed");
 	const failedTests = allTests.filter((t) => t.status === "failed");
@@ -972,6 +1076,7 @@ function FinalSummary({ results }: FinalSummaryProps) {
 				<Text color="green" bold>
 					{"═".repeat(60)}
 				</Text>
+				{swarm && <SwarmLogHint logFile={swarm.logFile} />}
 			</Box>
 		);
 	}
@@ -1015,8 +1120,12 @@ function FinalSummary({ results }: FinalSummaryProps) {
 					</Text>
 					<Text dimColor>{"─".repeat(50)}</Text>
 
-					{tests.map((test) => (
-						<Box key={test.name} flexDirection="column" marginTop={1}>
+					{tests.map((test, index) => (
+						<Box
+							key={`${test.name}-${index}`}
+							flexDirection="column"
+							marginTop={1}
+						>
 							<Text color="red"> ✗ {test.name}</Text>
 							{test.error?.location && (
 								<Text color="cyan">
@@ -1047,7 +1156,61 @@ function FinalSummary({ results }: FinalSummaryProps) {
 			<Text color="red" bold>
 				{"═".repeat(60)}
 			</Text>
+			{swarm && <SwarmLogHint logFile={swarm.logFile} />}
 		</Box>
+	);
+}
+
+/**
+ * One-line pointer (swarm only) to the run log file that captured the full
+ * orchestrator/ingress/worker firehose during the run, so the user can inspect
+ * the noise that quiet-mode kept off the terminal.
+ */
+function SwarmLogHint({ logFile }: { logFile: string }) {
+	return <Text dimColor>full run log: {logFile}</Text>;
+}
+
+// ============================================================================
+// Reusable entrypoint (the §8 seam)
+// ============================================================================
+
+/**
+ * Run the existing sliding-window + retry + Ink TUI using an injected
+ * {@link TestExecutor}. `bun t` calls this with a {@link LocalExecutor} (so it
+ * is byte-for-byte behavior-compatible); `bun tw` calls it with a remote
+ * executor that fans execution out to the worker swarm.
+ *
+ * `maxParallel` is the window size: ≤ `maxParallel` files in flight at once
+ * (for the swarm, `maxParallel === N workers`, or `N*K` with per-worker
+ * concurrency `K`).
+ */
+export function runWithExecutor(
+	testFiles: string[],
+	executor: TestExecutor,
+	opts: { maxParallel: number; verbose?: boolean; swarm?: SwarmRunMeta },
+): void {
+	const onComplete = (exitCode: number): void => {
+		// Tear down Ink so the process can exit cleanly. The flush `setInterval`
+		// is cleared by the app's effect cleanup on unmount; explicitly unmounting
+		// here (in addition to the in-app `exit()`) guarantees the Ink instance and
+		// its timers release the event loop even when `process.exit` is intercepted
+		// by the `bun tw` orchestrator (which captures the code via `process.exit`).
+		instance?.unmount();
+		// Preserve `bun t`'s behavior verbatim: a standalone CLI run terminates the
+		// process here. The `bun tw` orchestrator intercepts `process.exit` (to run
+		// teardown), so this records the verdict for it instead of killing it.
+		process.exit(exitCode);
+	};
+
+	const instance = render(
+		<TestRunnerApp
+			executor={executor}
+			maxParallel={opts.maxParallel}
+			onComplete={onComplete}
+			swarm={opts.swarm}
+			testFiles={testFiles}
+			verbose={opts.verbose ?? false}
+		/>,
 	);
 }
 
@@ -1127,13 +1290,20 @@ async function main() {
 		return;
 	}
 
-	render(
-		<TestRunnerApp
-			testFiles={testFiles}
-			maxParallel={maxParallel}
-			verbose={verbose}
-		/>,
-	);
+	// `bun t` always runs locally — inject the LocalExecutor so behavior is
+	// byte-for-byte compatible with the pre-seam runner. Install the local-only
+	// SIGINT handler here (NOT at module import) so it never fires when the runner
+	// is driven by the `bun tw` orchestrator via `runWithExecutor`.
+	process.on("SIGINT", localSigintHandler);
+	runWithExecutor(testFiles, new LocalExecutor(), { maxParallel, verbose });
 }
 
-main();
+// Only auto-run as the direct `bun t` entrypoint. The `bun tw` orchestrator
+// dynamically imports this module purely to grab `runWithExecutor`; without this
+// guard that import would (a) run `main()` and double-render the TUI, and
+// (b) install the local-only SIGINT handler — reintroducing the very leak fixed
+// above. `bun t` runs the file directly, so `import.meta.main` is true → behavior
+// unchanged.
+if (import.meta.main) {
+	main();
+}
