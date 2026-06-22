@@ -15,7 +15,13 @@ The just-replaced refresh token is honored for one more rotation (a grace window
 
 ```typescript TypeScript
 // Client configured with the refresh token as its key
-const { accessToken, refreshToken } = await autumn.keys.refresh();
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: JWT_REFRESH_TOKEN,
+});
+
+const { accessToken, refreshToken } = await autumn.keys.refresh({});
 ```
 
 ```bash cURL
