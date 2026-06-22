@@ -1,5 +1,6 @@
-import { AppEnv, RecaseError, Scopes } from "@autumn/shared";
+import { AppEnv, RecaseError, Scopes, type StripeConfig } from "@autumn/shared";
 import { z } from "zod/v4";
+import { orgToAccountId } from "@/external/connect/connectUtils";
 import { redis } from "@/external/redis/initRedis";
 import {
 	checkKeyValid,
@@ -10,6 +11,26 @@ import { OrgService } from "@/internal/orgs/OrgService";
 import { clearOrgCache } from "@/internal/orgs/orgUtils/clearOrgCache";
 import { CacheManager } from "@/utils/cacheUtils/CacheManager";
 import { encryptData } from "@/utils/encryptUtils";
+
+export const buildCliStripeConfig = ({
+	existing,
+	testApiKey,
+	liveApiKey,
+	testWebhookSecret,
+	liveWebhookSecret,
+}: {
+	existing: StripeConfig | null;
+	testApiKey: string;
+	liveApiKey: string;
+	testWebhookSecret?: string;
+	liveWebhookSecret?: string;
+}): StripeConfig => ({
+	...(existing || {}),
+	test_api_key: testApiKey,
+	live_api_key: liveApiKey,
+	...(testWebhookSecret ? { test_webhook_secret: testWebhookSecret } : {}),
+	...(liveWebhookSecret ? { live_webhook_secret: liveWebhookSecret } : {}),
+});
 
 /**
  * POST /dev/cli/stripe
@@ -58,17 +79,21 @@ export const handleCliStripe = createRoute({
 		await checkKeyValid(stripeTestKey);
 		await checkKeyValid(stripeLiveKey);
 
-		const testWebhook = await createWebhookEndpoint(
-			stripeTestKey,
-			AppEnv.Sandbox,
-			orgId,
+		const org = await OrgService.get({ db, orgId });
+
+		const testOauthConnected = Boolean(
+			orgToAccountId({ org, env: AppEnv.Sandbox, noDefaultAccount: true }),
+		);
+		const liveOauthConnected = Boolean(
+			orgToAccountId({ org, env: AppEnv.Live, noDefaultAccount: true }),
 		);
 
-		const liveWebhook = await createWebhookEndpoint(
-			stripeLiveKey,
-			AppEnv.Live,
-			orgId,
-		);
+		const testWebhook = testOauthConnected
+			? null
+			: await createWebhookEndpoint(stripeTestKey, AppEnv.Sandbox, orgId);
+		const liveWebhook = liveOauthConnected
+			? null
+			: await createWebhookEndpoint(stripeLiveKey, AppEnv.Live, orgId);
 
 		await OrgService.update({
 			db,
@@ -76,12 +101,17 @@ export const handleCliStripe = createRoute({
 			updates: {
 				stripe_connected: true,
 				default_currency: "usd",
-				stripe_config: {
-					test_api_key: encryptData(stripeTestKey),
-					live_api_key: encryptData(stripeLiveKey),
-					test_webhook_secret: encryptData(testWebhook.secret as string),
-					live_webhook_secret: encryptData(liveWebhook.secret as string),
-				},
+				stripe_config: buildCliStripeConfig({
+					existing: org.stripe_config,
+					testApiKey: encryptData(stripeTestKey),
+					liveApiKey: encryptData(stripeLiveKey),
+					testWebhookSecret: testWebhook
+						? encryptData(testWebhook.secret as string)
+						: undefined,
+					liveWebhookSecret: liveWebhook
+						? encryptData(liveWebhook.secret as string)
+						: undefined,
+				}),
 			},
 		});
 

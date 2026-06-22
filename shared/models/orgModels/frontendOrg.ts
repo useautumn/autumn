@@ -16,6 +16,8 @@ export const FrontendOrgSchema = z.object({
 	live_pkey: z.string().nullable(),
 
 	stripe_connection: z.string(),
+	stripe_secret_key_connected: z.boolean(),
+	stripe_oauth_connected: z.boolean(),
 	master: z
 		.object({
 			id: z.string(),
