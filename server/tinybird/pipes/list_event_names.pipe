@@ -1,5 +1,7 @@
 DESCRIPTION >
     Lists distinct event names for an org/env sorted by popularity (event count).
+    With a date range, ranks by count within the window (reads the time-keyed org
+    rollup) so callers can default to events that are actually active in the window.
 
 TOKEN "list_event_names_read" READ
 
@@ -7,6 +9,24 @@ NODE endpoint
 TYPE endpoint
 SQL >
     %
+    {% set use_window = defined(start_date) and String(start_date, '') != '' and defined(end_date) and String(end_date, '') != '' %}
+    {% if use_window %}
+    SELECT
+        event_name,
+        sum(event_count) as event_count
+    FROM events_org_hourly_mv
+    WHERE
+        org_id = {{ String(org_id, '') }}
+        AND env = {{ String(env, 'test') }}
+        AND hour >= toDateTime({{ String(start_date) }})
+        AND hour <= toDateTime({{ String(end_date) }})
+    GROUP BY event_name
+    HAVING event_count > 0
+    ORDER BY event_count DESC
+    {% if defined(limit) %}
+    LIMIT {{ Int32(limit, 100) }}
+    {% end %}
+    {% else %}
     SELECT
         event_name,
         sum(event_count) as event_count
@@ -18,4 +38,5 @@ SQL >
     ORDER BY event_count DESC
     {% if defined(limit) %}
     LIMIT {{ Int32(limit, 100) }}
+    {% end %}
     {% end %}

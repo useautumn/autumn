@@ -15,6 +15,7 @@ import {
 } from "@/components/v2/dropdowns/DropdownMenu";
 import { cn } from "@/lib/utils";
 import { useAnalyticsContext } from "../AnalyticsContext";
+import { useAnalyticsQueryState } from "../hooks/useAnalyticsQueryState";
 import { useEventNames } from "../hooks/useEventNames";
 
 const MAX_NUM_SELECTED = 10;
@@ -64,7 +65,10 @@ const formatFeatureLabel = (linkedFeatures: Feature[]): string | null => {
 
 export const SelectFeatureDropdown = () => {
 	const { features, setHasCleared } = useAnalyticsContext();
-	const { eventNames: eventNamesData } = useEventNames();
+	const { queryStates } = useAnalyticsQueryState();
+	const { eventNames: eventNamesData } = useEventNames({
+		interval: queryStates.interval,
+	});
 	const [open, setOpen] = useState(false);
 	const [searchValue, setSearchValue] = useState("");
 
@@ -76,16 +80,14 @@ export const SelectFeatureDropdown = () => {
 	const currentEventNames =
 		searchParams.get("event_names")?.split(",").filter(Boolean) || [];
 
-	// Build event options from useEventNames data, keeping only those linked to a feature
+	// Show every ingested event; feature linkage only drives the optional label, not visibility
 	const eventOptions: EventOption[] = useMemo(() => {
-		return eventNamesData
-			.map((item) => ({
-				eventName: item.event_name,
-				eventCount: item.event_count,
-				linkedFeatures: getFeaturesForEventName(item.event_name, features),
-				selected: currentEventNames.includes(item.event_name),
-			}))
-			.filter((option) => option.linkedFeatures.length > 0);
+		return eventNamesData.map((item) => ({
+			eventName: item.event_name,
+			eventCount: item.event_count,
+			linkedFeatures: getFeaturesForEventName(item.event_name, features),
+			selected: currentEventNames.includes(item.event_name),
+		}));
 	}, [eventNamesData, features, currentEventNames]);
 
 	// Filter options based on search (search both event name and feature ids)
@@ -182,12 +184,12 @@ export const SelectFeatureDropdown = () => {
 							{filteredOptions.map((option) => {
 								const featureLabel = formatFeatureLabel(option.linkedFeatures);
 								return (
-								<DropdownMenuCheckboxItem
-									key={option.eventName}
-									checked={option.selected}
-									onCheckedChange={() => handleToggleItem(option)}
-									className="pl-2"
-								>
+									<DropdownMenuCheckboxItem
+										key={option.eventName}
+										checked={option.selected}
+										onCheckedChange={() => handleToggleItem(option)}
+										className="pl-2"
+									>
 										<div className="flex items-center gap-1.5 min-w-0">
 											<span className="text-xs truncate">
 												{option.eventName}

@@ -9,13 +9,41 @@ import {
 	RecaseError,
 	type Subscription,
 } from "@autumn/shared";
+import { UTCDate } from "@date-fns/utc";
+import { format, startOfDay, sub } from "date-fns";
+import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { ACTIVE_STATUSES } from "@/internal/customers/cusProducts/CusProductService.js";
 import { isFreeProduct } from "../products/productUtils.js";
-import type Stripe from "stripe";
+
+export const STANDARD_INTERVAL_DAYS: Record<string, number> = {
+	"24h": 1,
+	"7d": 7,
+	"30d": 30,
+	"90d": 90,
+};
+
+const CLICKHOUSE_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
+
+/** Resolves a standard interval (24h/7d/30d/90d) to a UTC start/end window
+ * aligned to the day boundary. Returns undefined for non-standard intervals
+ * (billing cycles, custom ranges) which the caller handles separately. */
+export const getStandardIntervalWindow = (
+	interval?: string,
+): { startDate: string; endDate: string } | undefined => {
+	const days = interval ? STANDARD_INTERVAL_DAYS[interval] : undefined;
+	if (!days) {
+		return undefined;
+	}
+	const now = new UTCDate();
+	return {
+		startDate: format(startOfDay(sub(now, { days })), CLICKHOUSE_DATE_FORMAT),
+		endDate: format(now, CLICKHOUSE_DATE_FORMAT),
+	};
+};
 
 export async function getBillingCycleStartDate({
 	customer,
@@ -153,7 +181,9 @@ function getDateRangesFromStripeSubscriptions(
 
 				startDates.push(formatDateToString(new Date(period.start * 1000)));
 				endDates.push(formatDateToString(new Date(period.end * 1000)));
-				createdDates.push(formatDateToString(new Date(subscription.created * 1000)));
+				createdDates.push(
+					formatDateToString(new Date(subscription.created * 1000)),
+				);
 			}
 		}
 	}
@@ -232,9 +262,7 @@ function getDateRangesFromEntitlements(customerProducts?: FullCusProduct[]): {
 
 		for (const entitlement of product.customer_entitlements) {
 			if (entitlement.next_reset_at) {
-				endDates.push(
-					formatDateToString(new Date(entitlement.next_reset_at)),
-				);
+				endDates.push(formatDateToString(new Date(entitlement.next_reset_at)));
 			}
 
 			const startDate = calculateStartDateFromInterval(
@@ -296,7 +324,7 @@ function calculateBillingCycleResult(
 
 	const gapMultiplier = intervalType === "1bc" ? 1 : 3;
 	const now = new Date();
-	
+
 	// For analytics, we look BACKWARD from today for N billing cycles
 	// End date is today, start date is today - (gap * multiplier)
 	const adjustedStartDate = new Date(now.getTime() - gap * gapMultiplier);
