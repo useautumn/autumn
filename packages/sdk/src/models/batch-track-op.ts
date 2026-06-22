@@ -54,7 +54,7 @@ export type RequestBody = {
    */
   properties?: { [k: string]: any } | undefined;
   /**
-   * If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information.
+   * If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
    */
   async?: boolean | undefined;
   lock?: BatchTrackLock | undefined;
