@@ -97,10 +97,10 @@ const parseRunArgs = (args: string[]): TwRunArgs => {
 	const dashboard = !args.includes("--no-dashboard");
 	const fanoutBench = args.includes("--fanout-bench");
 
-	// Cloud backend. Default modal (faster, breaks Vercel's 200-µVM wall); the
-	// original Vercel path stays available via --provider=vercel, and the
-	// experimental high-scale V2 backend via --provider=modalv2.
-	const providerArg = parseStringFlag(args, "--provider") ?? "modal";
+	// Cloud backend. Default modalv2 (Modal's V2 sandbox backend: 10k concurrent,
+	// 20+/s, no pacing). `--provider=modal` is the classic V1 backend (5/s + 100
+	// cap), `--provider=vercel` the original Vercel path.
+	const providerArg = parseStringFlag(args, "--provider") ?? "modalv2";
 	if (
 		providerArg !== "vercel" &&
 		providerArg !== "modal" &&
@@ -186,7 +186,7 @@ const printUsage = (): void => {
 			`  --stripe-concurrency=N   concurrent Stripe account creations (default ${STRIPE_SUBACCOUNT_CONCURRENCY})`,
 			"  --allow-dirty    skip the preflight git gate (dirty tree / unpushed HEAD)",
 			"  --no-dashboard   disable the live web dashboard (on by default; opens + keeps it up after the run)",
-			"  --provider=NAME  cloud backend: modal (default), modalv2 (experimental high-scale), or vercel",
+			"  --provider=NAME  cloud backend: modalv2 (default, high-scale), modal (classic V1), or vercel",
 			"  --fanout-bench   provision + report fan-out timings, then tear down (no tests)",
 			"",
 			chalk.bold("Env:"),
