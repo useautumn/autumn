@@ -5,14 +5,18 @@ import {
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { assertNotSandboxContext } from "../createSandbox.js";
+import {
+	assertDashboardActor,
+	assertNotSandboxContext,
+} from "../createSandbox.js";
 
 export const handleListSandboxes = createRoute({
 	scopes: [Scopes.Platform.Read],
 	handler: async (c) => {
-		const { db, org } = c.get("ctx");
+		const { db, org, user, authType } = c.get("ctx");
 
 		assertNotSandboxContext(org);
+		assertDashboardActor({ authType, user });
 
 		const sandboxes = await OrgService.listSandboxes({
 			db,
