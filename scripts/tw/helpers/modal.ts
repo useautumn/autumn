@@ -1,8 +1,14 @@
 /**
  * Modal backend for the provider seam (helpers/provider.ts).
  *
- * Implements `ProviderImpl` over the `modal` SDK (v0.8.0), using the patterns
- * proven in `scripts/tw/modal-spike/` (create ~180ms, paced fan-out, goaws SQS).
+ * Implements `ProviderImpl` over the `modal` SDK (v0.8.0). Exports TWO providers
+ * from one factory (`makeModalProvider`):
+ *   - `modalProvider` (`--provider=modal`): classic V1 backend — tags, list,
+ *     fromName, but capped at 5 creates/s + 100 concurrent (so fan-out is paced).
+ *   - `modalV2Provider` (`--provider=modalv2`): experimental V2 backend —
+ *     `experimentalCreate`, 10k concurrent + 20+/s (NO pacing), region-pinned, but
+ *     NO tags/list/fromName (teardown reattaches by sandboxId via `fromId`, tracked
+ *     in the run registry; orphans rely on each sandbox's `timeoutMs` auto-expiry).
  *
  * ## Lifecycle mapping (vs Vercel)
  *   - **base image** — the published Debian services image (helpers/modalImage.ts),
@@ -172,14 +178,23 @@ const getBaseImage = (deps: BaseImageDeps): Promise<Image> => {
 
 /** Warm snapshot images keyed by warm sandbox name (forkWorker restores these). */
 const warmImageByName = new Map<string, Image>();
-/** Live sandboxes created this process — teardown-by-name resolves through here. */
-const sandboxByName = new Map<string, Sandbox>();
+/**
+ * Live sandboxes created this process, keyed by BOTH our name AND the Modal
+ * sandboxId, so teardown resolves an in-run name (fast path) or a cross-process
+ * id (V2 has no `fromName` — only `fromId`).
+ */
+const liveSandboxes = new Map<string, Sandbox>();
 
 const wrap = (name: string, handle: Sandbox): ProviderSandbox => ({
 	name,
 	handle,
+	id: handle.sandboxId,
 });
 const unwrap = (sandbox: ProviderSandbox): Sandbox => sandbox.handle as Sandbox;
+
+/** Modal region for V2 placement (London / eu-west-2). Env-overridable in case
+ * Modal names the region differently. */
+const MODAL_REGION = process.env.TW_MODAL_REGION ?? "eu-west-2";
 
 /** Stamp the name into tags so `list({tags})` can recover it (Sandbox has no name). */
 const tagsWithName = (
@@ -278,6 +293,20 @@ const cloneRepo = async (
 	}
 };
 
+/** Shared stream-closed classifier (used by runStreaming + the provider method). */
+const isSandboxStreamClosed = (error: unknown): boolean => {
+	const message = error instanceof Error ? error.message : String(error);
+	return /terminated|already (completed|finished)|stream (closed|error)|connection (closed|reset)|ECONNRESET|UNAVAILABLE|task .* (exited|gone)/i.test(
+		message,
+	);
+};
+
+/**
+ * Create a sandbox. `v2=true` uses Modal's experimental V2 backend (10k
+ * concurrent, 20+/s) — NO pacing, NO tags/name (unsupported), region-pinned. V1
+ * uses the classic `create` (tags + name + 5/s pacing). Both tracked in
+ * {@link liveSandboxes} by name AND sandboxId for teardown.
+ */
 const createFromImage = async (
 	image: Image,
 	opts: {
@@ -289,27 +318,41 @@ const createFromImage = async (
 		timeout?: number;
 		encryptedPorts?: number[];
 	},
+	v2: boolean,
 ): Promise<Sandbox> => {
 	const app = await getApp();
-	await pace();
+	if (!v2) {
+		// V1 only: stay under the 5/s create + 100-concurrent caps. V2 doesn't need it.
+		await pace();
+	}
 	const done = stage(`create sandbox ${opts.name}`);
-	const sandbox = await modal.sandboxes.create(app, image, {
+	const base = {
 		cpu: opts.cpu,
 		memoryMiB: opts.memoryMiB,
 		timeoutMs: opts.timeout ?? WORKER_TIMEOUT_MS,
 		command: ["sleep", "infinity"],
 		env: opts.env,
-		tags: tagsWithName(opts.name, opts.tags),
-		name: opts.name,
 		workdir: MODAL_REPO_ROOT,
 		encryptedPorts: opts.encryptedPorts,
-	});
-	sandboxByName.set(opts.name, sandbox);
+	};
+	const sandbox = v2
+		? await modal.sandboxes.experimentalCreate(app, image, {
+				...base,
+				// V2 supports neither tags nor name lookups; pin the region instead.
+				regions: [MODAL_REGION],
+			})
+		: await modal.sandboxes.create(app, image, {
+				...base,
+				tags: tagsWithName(opts.name, opts.tags),
+				name: opts.name,
+			});
+	liveSandboxes.set(opts.name, sandbox);
+	liveSandboxes.set(sandbox.sandboxId, sandbox);
 	done();
 	return sandbox;
 };
 
-export const modalProvider: ProviderImpl = {
+const makeModalProvider = (v2: boolean): ProviderImpl => ({
 	async createWarmSandbox(
 		opts: CreateSandboxOptions,
 	): Promise<ProviderSandbox> {
@@ -323,15 +366,19 @@ export const modalProvider: ProviderImpl = {
 			gitRef: opts.source.revision,
 			lockHash: lockHash(),
 		});
-		const sandbox = await createFromImage(image, {
-			name: opts.name,
-			env: opts.env,
-			tags: opts.tags,
-			cpu: opts.vcpus ?? WORKER_CPU,
-			memoryMiB: WORKER_MEMORY_MIB,
-			timeout: opts.timeout,
-			encryptedPorts: opts.ports ?? [SERVER_PORT],
-		});
+		const sandbox = await createFromImage(
+			image,
+			{
+				name: opts.name,
+				env: opts.env,
+				tags: opts.tags,
+				cpu: opts.vcpus ?? WORKER_CPU,
+				memoryMiB: WORKER_MEMORY_MIB,
+				timeout: opts.timeout,
+				encryptedPorts: opts.ports ?? [SERVER_PORT],
+			},
+			v2,
+		);
 		await cloneRepo(sandbox, opts.source);
 		return wrap(opts.name, sandbox);
 	},
@@ -342,25 +389,25 @@ export const modalProvider: ProviderImpl = {
 		if (!opts.source) {
 			throw new Error("modal: createIngressSandbox requires a git source");
 		}
-		// Memoized — shares the warm parent's base image build (or builds it if the
-		// ingress somehow comes first).
 		const image = await getBaseImage({
 			gitUrl: cloneUrl(opts.source),
 			gitRef: opts.source.revision,
 			lockHash: lockHash(),
 		});
-		const sandbox = await createFromImage(image, {
-			name: opts.name,
-			env: opts.env,
-			tags: opts.tags,
-			cpu: opts.vcpus ?? 1,
-			memoryMiB: INGRESS_MEMORY_MIB,
-			timeout: opts.timeout,
-			encryptedPorts: opts.ports ?? [INGRESS_PORT],
-		});
-		if (opts.source) {
-			await cloneRepo(sandbox, opts.source);
-		}
+		const sandbox = await createFromImage(
+			image,
+			{
+				name: opts.name,
+				env: opts.env,
+				tags: opts.tags,
+				cpu: opts.vcpus ?? 1,
+				memoryMiB: INGRESS_MEMORY_MIB,
+				timeout: opts.timeout,
+				encryptedPorts: opts.ports ?? [INGRESS_PORT],
+			},
+			v2,
+		);
+		await cloneRepo(sandbox, opts.source);
 		return wrap(opts.name, sandbox);
 	},
 
@@ -373,15 +420,19 @@ export const modalProvider: ProviderImpl = {
 		}
 		// node_modules is in the base image layer (fast local reads); the worker
 		// forks from the warm snapshot for the source + migrated PGDATA.
-		const sandbox = await createFromImage(image, {
-			name: opts.name,
-			env: opts.env,
-			tags: opts.tags,
-			cpu: opts.vcpus ?? WORKER_CPU,
-			memoryMiB: WORKER_MEMORY_MIB,
-			timeout: opts.timeout,
-			encryptedPorts: opts.ports ?? [SERVER_PORT],
-		});
+		const sandbox = await createFromImage(
+			image,
+			{
+				name: opts.name,
+				env: opts.env,
+				tags: opts.tags,
+				cpu: opts.vcpus ?? WORKER_CPU,
+				memoryMiB: WORKER_MEMORY_MIB,
+				timeout: opts.timeout,
+				encryptedPorts: opts.ports ?? [SERVER_PORT],
+			},
+			v2,
+		);
 		return wrap(opts.name, sandbox);
 	},
 
@@ -401,7 +452,8 @@ export const modalProvider: ProviderImpl = {
 			await sb.terminate().catch(() => {
 				/* best-effort */
 			});
-			sandboxByName.delete(sandbox.name);
+			liveSandboxes.delete(sandbox.name);
+			liveSandboxes.delete(sb.sandboxId);
 			return image.imageId;
 		} finally {
 			done();
@@ -420,12 +472,15 @@ export const modalProvider: ProviderImpl = {
 	},
 
 	async getSandboxByName(name: string): Promise<ProviderSandbox | undefined> {
-		const local = sandboxByName.get(name);
+		const local = liveSandboxes.get(name);
 		if (local) {
 			return wrap(name, local);
 		}
-		// No cross-run warm cache on Modal yet (the warm parent is terminated after
-		// snapshot, so fromName won't find it) → undefined makes run.ts build fresh.
+		// No cross-run warm cache (warm parent terminated after snapshot). V2 has no
+		// fromName at all → undefined makes run.ts build fresh.
+		if (v2) {
+			return undefined;
+		}
 		try {
 			const sb = await modal.sandboxes.fromName(APP_NAME, name);
 			return wrap(name, sb);
@@ -435,24 +490,35 @@ export const modalProvider: ProviderImpl = {
 	},
 
 	async deleteSandbox(sandboxOrName: ProviderSandbox | string): Promise<void> {
-		const name =
-			typeof sandboxOrName === "string" ? sandboxOrName : sandboxOrName.name;
+		// Callers pass the sandboxId (preferred) or our name. In-run: hit the live
+		// map (keyed by both). Cross-process (`bun tw kill`): reattach via fromId
+		// (V2 has no fromName; V1 falls back to it).
+		const key =
+			typeof sandboxOrName === "string"
+				? sandboxOrName
+				: (sandboxOrName.id ?? sandboxOrName.name);
 		let target: Sandbox | undefined =
 			typeof sandboxOrName === "string"
-				? sandboxByName.get(name)
+				? liveSandboxes.get(key)
 				: unwrap(sandboxOrName);
 		if (!target) {
-			target = await modal.sandboxes
-				.fromName(APP_NAME, name)
-				.catch(() => undefined);
+			target = await modal.sandboxes.fromId(key).catch(() => undefined);
+			if (!target && !v2) {
+				target = await modal.sandboxes
+					.fromName(APP_NAME, key)
+					.catch(() => undefined);
+			}
 		}
 		if (target) {
 			await target.terminate().catch(() => {
 				/* already gone */
 			});
 		}
-		sandboxByName.delete(name);
-		warmImageByName.delete(name);
+		liveSandboxes.delete(key);
+		warmImageByName.delete(key);
+		if (typeof sandboxOrName !== "string") {
+			liveSandboxes.delete(sandboxOrName.name);
+		}
 	},
 
 	async runStreaming(
@@ -478,11 +544,7 @@ export const modalProvider: ProviderImpl = {
 		try {
 			await pumps;
 		} catch (error) {
-			if (
-				!(
-					opts?.swallowStreamClose && modalProvider.isSandboxStreamClosed(error)
-				)
-			) {
+			if (!(opts?.swallowStreamClose && isSandboxStreamClosed(error))) {
 				throw error;
 			}
 		}
@@ -515,6 +577,12 @@ export const modalProvider: ProviderImpl = {
 	},
 
 	async listSandboxesByOwner(owner: string): Promise<ListedSandbox[]> {
+		// V2 sandboxes aren't returned by list() and have no tags — cross-run
+		// enumeration relies on the run registry (sandboxIds) + each sandbox's
+		// timeoutMs auto-expiry instead.
+		if (v2) {
+			return [];
+		}
 		const listed: ListedSandbox[] = [];
 		for await (const sb of modal.sandboxes.list({ tags: { owner } })) {
 			let tags: Record<string, string> = {};
@@ -533,10 +601,10 @@ export const modalProvider: ProviderImpl = {
 		return listed;
 	},
 
-	isSandboxStreamClosed(error: unknown): boolean {
-		const message = error instanceof Error ? error.message : String(error);
-		return /terminated|already (completed|finished)|stream (closed|error)|connection (closed|reset)|ECONNRESET|UNAVAILABLE|task .* (exited|gone)/i.test(
-			message,
-		);
-	},
-};
+	isSandboxStreamClosed,
+});
+
+/** Classic V1 backend (tags, list, fromName, 5/s + 100-concurrent caps). */
+export const modalProvider = makeModalProvider(false);
+/** Experimental V2 backend (10k concurrent, 20+/s, no tags/list/fromName). */
+export const modalV2Provider = makeModalProvider(true);

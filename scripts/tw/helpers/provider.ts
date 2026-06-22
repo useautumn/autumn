@@ -13,7 +13,7 @@
  * `helpers/modal.ts` (`modalProvider`) wraps the `modal` SDK.
  */
 
-export type ProviderName = "vercel" | "modal";
+export type ProviderName = "vercel" | "modal" | "modalv2";
 
 /** Provider-neutral sandbox handle: the backend-native object + its name. */
 export type ProviderSandbox = {
@@ -21,6 +21,11 @@ export type ProviderSandbox = {
 	name: string;
 	/** Backend-native handle (Vercel `Sandbox` | Modal `Sandbox`) — opaque here. */
 	handle: unknown;
+	/**
+	 * Backend-native sandbox id, when known. Recorded in the registry so teardown
+	 * can reattach cross-process (Modal V2 has no name lookup — only `fromId`).
+	 */
+	id?: string;
 };
 
 /** Git source cloned into a freshly-created sandbox (warm parent / ingress). */
@@ -128,7 +133,9 @@ let active: ProviderName | undefined;
  * SDK (e.g. the `modal` package for a Vercel run) is never loaded.
  */
 export const setProvider = async (name: ProviderName): Promise<void> => {
-	if (name === "modal") {
+	if (name === "modalv2") {
+		impl = (await import("./modal.ts")).modalV2Provider;
+	} else if (name === "modal") {
 		impl = (await import("./modal.ts")).modalProvider;
 	} else {
 		impl = (await import("./vercel.ts")).vercelProvider;
@@ -152,7 +159,7 @@ export const providerName = (): ProviderName => {
  */
 export const sandboxRepoRoot = (): string =>
 	process.env.TW_SANDBOX_REPO_ROOT ??
-	(providerName() === "modal" ? "/repo" : "/vercel/sandbox");
+	(providerName() === "vercel" ? "/vercel/sandbox" : "/repo");
 
 const get = (): ProviderImpl => {
 	if (!impl) {

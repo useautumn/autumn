@@ -925,7 +925,7 @@ const provisionWorker = async ({
 		tags: vercelTags(owner, runId),
 		signal,
 	});
-	await registry.addSandbox(runId, { name: sandbox.name });
+	await registry.addSandbox(runId, { name: sandbox.name, id: sandbox.id });
 
 	// 3. Resolve the public URL (the worker's connect-route target).
 	const publicUrl = await getPublicUrl(sandbox, SERVER_PORT);
@@ -1050,8 +1050,10 @@ const teardown = async ({
 	await Promise.all(
 		entry.sandboxes.map((sandbox) =>
 			sandboxLimit(async () => {
+				// Prefer the sandboxId (Modal V2 has no name lookup — only fromId);
+				// fall back to name for older registry entries / other providers.
 				await timeBoxed(`delete sandbox ${sandbox.name}`, () =>
-					deleteSandbox(sandbox.name),
+					deleteSandbox(sandbox.id ?? sandbox.name),
 				);
 				bumpSandboxDone();
 			}),
@@ -1260,7 +1262,10 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			ref: args.ref,
 			signal,
 		});
-		await registry.addSandbox(runId, { name: ingress.sandbox.name });
+		await registry.addSandbox(runId, {
+			name: ingress.sandbox.name,
+			id: ingress.sandbox.id,
+		});
 		// One Connect webhook PER pool key actually in use (each platform key only
 		// delivers events for the accounts it owns). The ingress routes every event
 		// to the owning worker by `event.account` regardless of which key sent it.
