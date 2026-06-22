@@ -26,13 +26,15 @@ export const useSelectedEventNames = () => {
 		.slice(0, 3)
 		.map((e: EventNameWithCount) => e.event_name);
 
-	const selectedEventNames =
-		eventNames || featureIds
-			? [...(eventNames || []), ...(featureIds || [])]
-			: defaultEventNames;
+	const hasExplicitSelection = Boolean(eventNames || featureIds);
+
+	const selectedEventNames = hasExplicitSelection
+		? [...(eventNames || []), ...(featureIds || [])]
+		: defaultEventNames;
 
 	return {
 		selectedEventNames,
+		hasExplicitSelection,
 		featuresData,
 		featuresLoading,
 		eventNamesLoading,
