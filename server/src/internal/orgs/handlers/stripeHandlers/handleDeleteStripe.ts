@@ -266,8 +266,10 @@ export const handleDeleteStripe = createRoute({
 			);
 		}
 
-		// 3. Persist
-		await OrgService.update({ db, orgId: org.id, updates });
+		// 3. Persist (nothing to clear if neither channel was connected for this env)
+		if (Object.keys(updates).length > 0) {
+			await OrgService.update({ db, orgId: org.id, updates });
+		}
 
 		return c.json({});
 	},

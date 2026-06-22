@@ -126,6 +126,7 @@ export const ConfigureStripe = () => {
 					<CardContent className="flex flex-col">
 						<StripeChannelCell
 							title="Secret Key"
+							icon={<KeyIcon />}
 							withBorder
 							subtitle={
 								secretKeyConnected
@@ -156,6 +157,7 @@ export const ConfigureStripe = () => {
 
 						<StripeChannelCell
 							title="OAuth"
+							icon={<PlugsConnectedIcon />}
 							subtitle={
 								oauthConnected
 									? connectedSubtitle
