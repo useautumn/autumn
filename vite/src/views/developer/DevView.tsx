@@ -11,7 +11,6 @@ import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import LoadingScreen from "../general/LoadingScreen";
-import { OnboardingGuide } from "../onboarding4/OnboardingGuide";
 import { ApiKeysPage } from "./api-keys/ApiKeysPage";
 import { ConfigureRevenueCat } from "./configure-revenuecat/ConfigureRevenueCat";
 import { ConfigureStripe } from "./configure-stripe/ConfigureStripe";
@@ -29,7 +28,6 @@ export default function DevScreen() {
 
 	return (
 		<PageContainer className="text-sm">
-			<OnboardingGuide />
 			{(tab === "api_keys" || !tab) && (
 				<div className="flex flex-col gap-16">
 					<ApiKeysPage />

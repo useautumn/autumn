@@ -6,7 +6,6 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { useSheetCleanup } from "@/hooks/stores/useSheetStore";
 import { CustomerListTable } from "../customers2/components/table/customer-list/CustomerListTable";
-import { OnboardingGuide } from "../onboarding4/OnboardingGuide";
 import { CustomersContext } from "./CustomersContext";
 import { useCusSearchQuery } from "./hooks/useCusSearchQuery";
 import {
@@ -40,7 +39,6 @@ function CustomersPageContent() {
 	return (
 		<CustomersContext.Provider value={{ customers: customers ?? [] }}>
 			<PageContainer>
-				<OnboardingGuide />
 				<CustomerListTable
 					key={org?.id}
 					customers={customers ?? []}

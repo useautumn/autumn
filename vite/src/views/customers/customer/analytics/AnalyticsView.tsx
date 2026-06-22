@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { PageContainer } from "@/components/general/PageContainer";
 import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useEnv } from "@/utils/envUtils";
-import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";
 import { AnalyticsContext } from "./AnalyticsContext";
 import { EventsBarChart } from "./AnalyticsGraph";
 import { colors } from "./components/analytics-types";
@@ -341,7 +340,6 @@ export const AnalyticsView = () => {
 	return (
 		<AnalyticsContext.Provider value={contextValue}>
 			<PageContainer className="text-sm h-full overflow-hidden">
-				<OnboardingGuide />
 				{showRevenueMetrics && <RevenueMetricsSection />}
 				<div className="pb-6 shrink-0">
 					<div className="flex justify-between pb-4 h-10">
