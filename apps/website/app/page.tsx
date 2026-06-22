@@ -1,7 +1,19 @@
+import type { Metadata } from "next";
 import ElasticRecoil from "@/components/elastic-footer";
 import HomeSections from "@/components/home-sections";
+import JsonLd from "@/components/json-ld";
 import Navbar from "@/components/navbar";
+import {
+	faqPageSchema,
+	organizationSchema,
+	softwareApplicationSchema,
+	websiteSchema,
+} from "@/lib/seo";
 import type { PageStyle } from "@/lib/types";
+
+export const metadata: Metadata = {
+	alternates: { canonical: "/" },
+};
 
 export default function Home() {
 	return (
@@ -11,6 +23,14 @@ export default function Home() {
 				{ "--page-pad": "max(2.5rem, calc((100vw - 1440px) / 2))" } as PageStyle
 			}
 		>
+			<JsonLd
+				data={[
+					organizationSchema(),
+					websiteSchema(),
+					softwareApplicationSchema(),
+					faqPageSchema(),
+				]}
+			/>
 			<ElasticRecoil>
 				<div className="relative z-10 bg-[#000000] min-h-screen">
 					<div className="relative w-full px-4 md:px-(--page-pad) pt-5">

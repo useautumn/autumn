@@ -4,6 +4,72 @@ mode: "center"
 description: "Some new things we've shipped at Autumn HQ"
 ---
 
+<Update label="June 19th 2026">
+  ## Autumn Lakehouse
+
+  Stream every event, balance change, and invoice straight into your own data warehouse via the new **Autumn Lakehouse**. Connect once and query Autumn data with the SQL engine of your choice — Snowflake, BigQuery, DuckDB, Athena, Spark, or anything else that speaks Apache Iceberg.
+
+  See the [Lakehouse overview](/documentation/lakehouse/overview) and [connecting guide](/documentation/lakehouse/connecting) to get started.
+
+  ## Instant customer products table
+
+  The customer detail page now renders its products table immediately, with the rest of the list paginated in the background. Loading a customer with hundreds of products is no longer a wait.
+
+  ## Weekly analytics granularity
+
+  Analytics now supports a **weekly** bin size, and granularity options are tailored per time range (no more greyed-out choices). The granularity picker has moved into the time-period dropdown for fewer clicks.
+
+  ## Plan version migrations: filter compiler & migrate dialog
+
+  Plan version migrations get a new **filter compiler** for targeting exactly the customers you want, a refreshed migrate dialog, and clearer visibility into billing changes before you commit. See [custom plans](/documentation/customers/custom-plans).
+
+  ## Rewards: boolean grants & first-time conditions
+
+  Rewards can now grant **boolean features** (e.g. unlock an add-on as a perk) and can be gated to a customer's **first-time** purchase only. Useful for launch promos and onboarding incentives.
+
+  ## OpenRouter support in the AI gateway
+
+  The Autumn [AI gateway](/documentation/external-providers/openrouter) now supports OpenRouter as a provider, so you can meter and bill OpenRouter usage the same way as direct OpenAI, Anthropic, and others.
+
+  <AccordionGroup>
+    <Accordion title="Improvements">
+      - New `carry_over_usages` option on [`billing.update`](/api-reference/billing/billingUpdate) to preserve usage across plan changes — [#1974](https://github.com/useautumn/autumn/pull/1974)
+      - New `next_reset_at` parameter on [create balance](/api-reference/balances/createBalance) for scheduling the first reset — [#1950](https://github.com/useautumn/autumn/pull/1950)
+      - Long-lived Stripe checkout sessions so links stay valid for longer — [#1976](https://github.com/useautumn/autumn/pull/1976)
+      - Consolidated customer header actions, entity-scoped views, and direct Stripe Connect links from the customer page — [#1964](https://github.com/useautumn/autumn/pull/1964)
+      - Separate billing intervals per price component — [#1961](https://github.com/useautumn/autumn/pull/1961)
+      - Discounts now support a max-redemptions cap — [#1939](https://github.com/useautumn/autumn/pull/1939)
+      - Past-due cancellations void the open invoice immediately — [#1948](https://github.com/useautumn/autumn/pull/1948)
+      - Option to ignore past-due state and preserve the subscription — [#1963](https://github.com/useautumn/autumn/pull/1963)
+      - Clearer error messages across the dashboard and API — [#1943](https://github.com/useautumn/autumn/pull/1943)
+      - Refreshed reward selectors and coupon update confirmation — [#1928](https://github.com/useautumn/autumn/pull/1928)
+      - Org logos now upload to S3 with reliable hosting — [#1225](https://github.com/useautumn/autumn/pull/1225)
+      - Custom buttons in the dashboard — [#1987](https://github.com/useautumn/autumn/pull/1987)
+      - AI credit systems are now treated as generic credit systems in the plan editor — [#1903](https://github.com/useautumn/autumn/pull/1903)
+    </Accordion>
+    <Accordion title="Bug fixes">
+      - Patch migrations no longer skip custom products — [#1953](https://github.com/useautumn/autumn/pull/1953)
+      - Multi-entity granted amounts now display correctly in balance sub-rows — [#1947](https://github.com/useautumn/autumn/pull/1947)
+      - Free-trial dedup is now scoped per entity so each entity gets its own trial — [#1956](https://github.com/useautumn/autumn/pull/1956)
+      - `billing.updated` webhook now fires on trial-to-paid conversion — [#1972](https://github.com/useautumn/autumn/pull/1972)
+      - Tax and discounts now render correctly in [attach preview](/api-reference/billing/previewAttach) — [#1944](https://github.com/useautumn/autumn/pull/1944)
+      - [`createSchedule`](/api-reference/billing/createSchedule) phases now snap to the cycle boundary — [#1975](https://github.com/useautumn/autumn/pull/1975)
+      - Checkout page no longer renders blank on certain React versions — [#1937](https://github.com/useautumn/autumn/pull/1937)
+      - Usage limits now respect the AI credit dimension — [#1912](https://github.com/useautumn/autumn/pull/1912)
+      - Onboarding fee no longer double-charges in edge cases — [#1946](https://github.com/useautumn/autumn/pull/1946)
+      - Environment selection and org switching in the dashboard — [#1952](https://github.com/useautumn/autumn/pull/1952), [#1970](https://github.com/useautumn/autumn/pull/1970)
+      - Copy entity ID and allow duplicate plans in the sync editor — [#1957](https://github.com/useautumn/autumn/pull/1957)
+      - Sync expire no longer fails on certain customer states — [#1967](https://github.com/useautumn/autumn/pull/1967)
+      - Batch operations are now idempotent — [#1981](https://github.com/useautumn/autumn/pull/1981)
+      - Slack admin and dashboard gate fixes — [#1986](https://github.com/useautumn/autumn/pull/1986), [#1984](https://github.com/useautumn/autumn/pull/1984)
+      - CLI auth and Claude OAuth flows — [#1926](https://github.com/useautumn/autumn/pull/1926), [#1925](https://github.com/useautumn/autumn/pull/1925)
+      - `atmn` CLI now exits with a non-zero code on interactive push/pull errors — [#1927](https://github.com/useautumn/autumn/pull/1927)
+      - Copy product API call no longer fires with missing required fields — [#1585](https://github.com/useautumn/autumn/pull/1585)
+      - Keyboard shortcut and scroll fixes in the dashboard — [#1915](https://github.com/useautumn/autumn/pull/1915), [#1942](https://github.com/useautumn/autumn/pull/1942)
+    </Accordion>
+  </AccordionGroup>
+</Update>
+
 <Update label="May 29th 2026">
   ## Autumn MCP server
 
