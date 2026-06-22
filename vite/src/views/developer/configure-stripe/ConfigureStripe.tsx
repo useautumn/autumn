@@ -85,10 +85,8 @@ export const ConfigureStripe = () => {
 		? getStripeDashboardLink({ env, accountId: stripeAccount?.id })
 		: null;
 
-	const unconnectedDescription =
-		env === AppEnv.Live
-			? "To start taking payments in Production, connect your Stripe live account below:"
-			: "You are using a default sandbox account managed by Autumn. Connect your own Stripe account via OAuth, a secret key, or both.";
+	const description =
+		"Connect a secret key, OAuth, or both. By default the secret key is used if connected, otherwise OAuth. Both methods must be the same Stripe account.";
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -110,9 +108,7 @@ export const ConfigureStripe = () => {
 							</div>
 						) : (
 							<CardDescription>
-								{anyConnected
-									? "Secret key is used for all API calls; OAuth grants Stripe dashboard access. You can connect both."
-									: unconnectedDescription}
+								{description}
 								{dashboardUrl && (
 									<span className="text-muted-foreground">
 										{" "}
@@ -139,7 +135,7 @@ export const ConfigureStripe = () => {
 								subtitle={
 									secretKeyConnected
 										? `Connected${accountSuffix}`
-										: "Used for all API operations"
+										: "Your Stripe API secret key. Used for all operations, and preferred over OAuth when both are connected."
 								}
 								connected={secretKeyConnected}
 								action={
@@ -169,7 +165,7 @@ export const ConfigureStripe = () => {
 							subtitle={
 								oauthConnected
 									? `Connected${accountSuffix}`
-									: "Grants Stripe dashboard access"
+									: "Sign in with Stripe Connect. Allows the Autumn team to access your Stripe organization via Connect for support."
 							}
 							connected={oauthConnected}
 							action={

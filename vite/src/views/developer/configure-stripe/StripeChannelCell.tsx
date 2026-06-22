@@ -16,7 +16,7 @@ export const StripeChannelCell = ({
 	return (
 		<div
 			className={cn(
-				"flex w-full max-w-md items-center justify-between gap-6 py-3",
+				"flex w-full max-w-2xl items-center justify-between gap-6 py-3",
 				withBorder && "border-border border-b",
 			)}
 		>
@@ -30,9 +30,7 @@ export const StripeChannelCell = ({
 						</span>
 					)}
 				</div>
-				<span className="truncate text-sm text-tertiary-foreground">
-					{subtitle}
-				</span>
+				<span className="text-sm text-tertiary-foreground">{subtitle}</span>
 			</div>
 			<div className="shrink-0">{action}</div>
 		</div>
