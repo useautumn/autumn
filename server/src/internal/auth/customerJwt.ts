@@ -137,7 +137,7 @@ export const verifyCustomerJwt = async ({
 	const { payload } = await jwtVerify(
 		stripCustomerJwtPrefix({ token }),
 		getSecret(),
-		{ algorithms: [ALG], issuer: ISSUER },
+		{ algorithms: [ALG], issuer: ISSUER, audience: [AUD_ACCESS, AUD_REFRESH] },
 	);
 
 	const aud = payload.aud as string;

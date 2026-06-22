@@ -27,42 +27,15 @@ import { APICall, APIPromise } from "../types/async.js";
 import { Result } from "../types/fp.js";
 
 /**
- * Previews the billing changes that would occur when updating a subscription, without actually making any changes.
- *
- * Use this endpoint to show customers prorated charges or refunds before confirming subscription modifications.
- *
- * @example
- * ```typescript
- * // Preview updating seat quantity
- * const response = await client.billing.previewUpdate({ customerId: "cus_123", planId: "pro_plan", featureQuantities: [{"featureId":"seats","quantity":15}] });
- * ```
- *
- * @param customerId - The ID of the customer to attach the plan to.
- * @param entityId - The ID of the entity to attach the plan to. (optional)
- * @param planId - The ID of the plan to update. Optional if subscription_id is provided, or if the customer has only one product. (optional)
- * @param featureQuantities - If this plan contains prepaid features, use this field to specify the quantity of each prepaid feature. This quantity includes the included amount and billing units defined when setting up the plan. (optional)
- * @param version - The version of the plan to attach. (optional)
- * @param customize - Customize the plan to attach. Can override the price, items, free trial, or a combination. (optional)
- * @param invoiceMode - Invoice mode creates a draft or open invoice and sends it to the customer, instead of charging their card immediately. This uses Stripe's send_invoice collection method. (optional)
- * @param prorationBehavior - How to handle proration when updating an existing subscription. 'prorate_immediately' charges/credits prorated amounts now, 'none' skips creating any charges. (optional)
- * @param redirectMode - Controls when to return a checkout URL. 'always' returns a URL even if payment succeeds, 'if_required' only when payment action is needed, 'never' disables redirects. (optional)
- * @param subscriptionId - A unique ID to identify this subscription. Can be used to target specific subscriptions in update operations when a customer has multiple products with the same plan. (optional)
- * @param discounts - List of discounts to apply. Each discount can be an Autumn reward ID, Stripe coupon ID, or Stripe promotion code. (optional)
- * @param cancelAction - Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation. (optional)
- * @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
- * @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
- * @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
- * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
- *
- * @returns A preview response with line items showing prorated charges or credits for the proposed changes.
+ * Revokes every outstanding token (access and refresh) for a customer. Authenticated with your secret key. New tokens can be issued afterwards with `keys.mint`.
  */
-export function billingPreviewUpdate(
+export function keysRevoke(
   client: AutumnCore,
-  request: models.PreviewUpdateParams,
+  request: models.RevokeKeyParams,
   options?: RequestOptions,
 ): APIPromise<
   Result<
-    models.PreviewUpdateResponse,
+    models.RevokeKeyResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -82,12 +55,12 @@ export function billingPreviewUpdate(
 
 async function $do(
   client: AutumnCore,
-  request: models.PreviewUpdateParams,
+  request: models.RevokeKeyParams,
   options?: RequestOptions,
 ): Promise<
   [
     Result<
-      models.PreviewUpdateResponse,
+      models.RevokeKeyResponse,
       | AutumnError
       | ResponseValidationError
       | ConnectionError
@@ -102,7 +75,7 @@ async function $do(
 > {
   const parsed = safeParse(
     request,
-    (value) => z.parse(models.PreviewUpdateParams$outboundSchema, value),
+    (value) => z.parse(models.RevokeKeyParams$outboundSchema, value),
     "Input validation failed",
   );
   if (!parsed.ok) {
@@ -111,7 +84,7 @@ async function $do(
   const payload = parsed.value;
   const body = encodeJSON("body", payload, { explode: true });
 
-  const path = pathToFunc("/v1/billing.preview_update")();
+  const path = pathToFunc("/v1/keys.revoke")();
 
   const headers = new Headers(compactMap({
     "Content-Type": "application/json",
@@ -130,7 +103,7 @@ async function $do(
   const context = {
     options: client._options,
     baseURL: options?.serverURL ?? client._baseURL ?? "",
-    operationID: "previewUpdate",
+    operationID: "revokeKey",
     oAuth2Scopes: null,
 
     resolvedSecurity: requestSecurity,
@@ -170,7 +143,7 @@ async function $do(
   const response = doResult.value;
 
   const [result] = await M.match<
-    models.PreviewUpdateResponse,
+    models.RevokeKeyResponse,
     | AutumnError
     | ResponseValidationError
     | ConnectionError
@@ -180,7 +153,7 @@ async function $do(
     | UnexpectedClientError
     | SDKValidationError
   >(
-    M.json(200, models.PreviewUpdateResponse$inboundSchema),
+    M.json(200, models.RevokeKeyResponse$inboundSchema),
     M.fail("4XX"),
     M.fail("5XX"),
   )(response, req);

@@ -1,0 +1,61 @@
+---
+title: "Refresh"
+openapi: "openapi POST /v1/keys.refresh"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+<Note>
+  Exchanges a refresh token for a freshly rotated access + refresh pair. Self-service for the token holder — **no secret key required**. Send the refresh token as the Bearer credential.
+</Note>
+
+### How it works
+
+The just-replaced refresh token is honored for one more rotation (a grace window so a dropped response or a second app instance doesn't lock the customer out). Replaying a refresh token that is more than one generation old is treated as theft and revokes the customer's tokens.
+
+<CodeGroup>
+
+```typescript TypeScript
+// Client configured with the refresh token as its key
+const { accessToken, refreshToken } = await autumn.keys.refresh();
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/keys.refresh" \
+  -H "Authorization: Bearer am_jwt_<refresh_token>"
+```
+
+</CodeGroup>
+
+
+### Response
+
+<DynamicResponseField name="access_token" type="string">
+  Access token (1h, or non-expiring if indefinite), prefixed `am_jwt_`.
+</DynamicResponseField>
+
+<DynamicResponseField name="refresh_token" type="string">
+  Rotating refresh token (24h). Omitted for indefinite tokens.
+</DynamicResponseField>
+
+<DynamicResponseField name="expires_at" type="number | null">
+  Access-token expiry, ms since epoch. null for indefinite tokens.
+</DynamicResponseField>
+
+<DynamicResponseField name="refresh_expires_at" type="number">
+  Refresh-token expiry, ms since epoch. Omitted for indefinite tokens.
+</DynamicResponseField>
+
+
+<ResponseExample>
+```json 200
+{
+  "access_token": "am_jwt_eyJhbGciOiJIUzI1NiJ9...",
+  "refresh_token": "am_jwt_eyJhbGciOiJIUzI1NiJ9...",
+  "expires_at": 1781113864000,
+  "refresh_expires_at": 1781196664000
+}
+```
+</ResponseExample>

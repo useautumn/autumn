@@ -11,6 +11,7 @@ import {
 	getRegionalRedis,
 	redis,
 } from "@/external/redis/initRedis.js";
+import { logger } from "@/external/logtail/logtailUtils.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { tryRedisRead, tryRedisWrite } from "@/utils/cacheUtils/cacheUtils.js";
 
@@ -99,6 +100,9 @@ export const invalidateCustomerJwtAuth = async ({
 		getConfiguredRegions().map(async (region) => {
 			const regional = getRegionalRedis(region);
 			if (regional.status !== "ready") {
+				logger.warn(
+					`NOTICE: Could not delete expired epoch; Redis not ready (region=${region}, internalCustomerId=${internalCustomerId})`,
+				);
 				return;
 			}
 			await tryRedisWrite(() => regional.del(cacheKey), regional);

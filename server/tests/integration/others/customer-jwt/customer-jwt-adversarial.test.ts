@@ -162,7 +162,7 @@ test(`${chalk.yellowBright("customer-jwt adversarial: forgery / escalation / cro
 	});
 	expect([400, 404]).toContain(crossEntity.status);
 
-	// ── 7: refresh reuse — replaying a rotated-away refresh revokes family ─
+	// ── 6: refresh reuse — replaying a rotated-away refresh revokes family ─
 	const family = await mint(reuseId);
 	const rt1 = family.refresh_token;
 	const refresh1 = await raw({ path: "/keys.refresh", token: rt1 });

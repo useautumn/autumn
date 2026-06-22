@@ -92,7 +92,7 @@ class TrackParamsTypedDict(TypedDict):
     properties: NotRequired[Dict[str, Any]]
     r"""Additional properties to attach to this usage event."""
     async_: NotRequired[bool]
-    r"""If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information."""
+    r"""If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information."""
     lock: NotRequired[TrackLockTypedDict]
 
 
@@ -116,7 +116,7 @@ class TrackParams(BaseModel):
     r"""Additional properties to attach to this usage event."""
 
     async_: Annotated[Optional[bool], pydantic.Field(alias="async")] = None
-    r"""If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information."""
+    r"""If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information."""
 
     lock: Optional[TrackLock] = None
 
