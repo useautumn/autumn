@@ -5,8 +5,8 @@ import type { Context } from "hono";
  * (validators, handlers) observes the forced value.
  *
  * This is the ONE place coupled to Hono's body cache: `c.req.json()` resolves
- * `bodyCache.text` (a `Promise<string>`) and JSON.parses it, so we overwrite
- * that. Covered by forceJsonBody.test.ts — if a Hono upgrade changes the cache
+ * `bodyCache.text` and JSON.parses it, so we reset the cache to the forced
+ * text. Covered by forceJsonBody.test.ts — if a Hono upgrade changes the cache
  * shape, that test fails loudly here instead of silently unscoping requests.
  */
 export const forceJsonBodyField = async (
@@ -16,6 +16,9 @@ export const forceJsonBodyField = async (
 ) => {
 	const body = await c.req.json().catch(() => ({}) as Record<string, unknown>);
 	const forced = JSON.stringify({ ...body, [field]: value });
-	(c.req.bodyCache as { text?: Promise<string> }).text =
-		Promise.resolve(forced);
+	// Replace the whole cache, not just `.text`: drops any parsed/json
+	// representation so every downstream reader re-derives from the forced body.
+	(c.req as { bodyCache: Record<string, unknown> }).bodyCache = {
+		text: Promise.resolve(forced),
+	};
 };
