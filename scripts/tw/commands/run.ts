@@ -1216,7 +1216,12 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		`pool: ${effectiveWorkers} worker(s) (requested ${requestedWorkers}, files ${normalFiles.length}), maxParallel=${maxParallel}`,
 	);
 
-	await registry.createRun({ owner, runId, ref: args.ref });
+	await registry.createRun({
+		owner,
+		runId,
+		ref: args.ref,
+		provider: args.provider,
+	});
 	log(`run ${runId} (owner=${owner}, ref=${args.ref}, env=${TW_ENV})`);
 
 	// ----- TUI ------------------------------------------------------------

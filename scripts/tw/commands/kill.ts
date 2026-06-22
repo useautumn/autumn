@@ -10,15 +10,23 @@
  *   - `killAll()`      — same for every current-owner non-`completed` run. Refuses
  *                        to touch other owners' runs unless `--all-users`.
  *   - `killOrphans()`  — tag-sweep fallback: delete stale Stripe sub-accounts
- *                        (helpers/stripe.sweepOrphans) + Vercel sandboxes
- *                        (helpers/vercel.listSandboxesByOwner) by the owner tag.
+ *                        (helpers/stripe.sweepOrphans) + sandboxes by the owner
+ *                        tag (Vercel/Modal-V1; Modal-V2 sandboxes self-expire).
  *
- * The teardown sequence mirrors `run.ts` exactly (plan §9a teardown #4):
- * Stripe sub-account → (svix) app → Vercel sandbox → drop the registry record.
+ * Sandbox teardown runs through the provider seam: each registry entry records
+ * the backend it ran on (`entry.provider`), so `kill` selects it via
+ * `setProvider` and `deleteSandbox` resolves by id (Modal `fromId`) or name
+ * (Vercel). The sequence mirrors `run.ts` exactly (plan §9a teardown #4):
+ * Stripe sub-account → (svix) app → sandbox → drop the registry record.
  */
 
 import chalk from "chalk";
 import { getOwner } from "../helpers/owner.ts";
+import {
+	deleteSandbox,
+	listSandboxesByOwner,
+	setProvider,
+} from "../helpers/provider.ts";
 import * as registry from "../helpers/registry.ts";
 import {
 	deleteConnectWebhook,
@@ -30,7 +38,6 @@ import {
 	stripeKeyByIndex,
 } from "../helpers/stripeKeyPool.ts";
 import { sweepOrphanSvixApps } from "../helpers/svix.ts";
-import { deleteSandbox, listSandboxesByOwner } from "../helpers/vercel.ts";
 import type { RegistryEntry } from "../types.ts";
 import { deleteSvixApp } from "./run.ts";
 
@@ -84,6 +91,12 @@ const teardownEntry = async (entry: RegistryEntry): Promise<void> => {
 		})`,
 	);
 
+	// Select the backend this run's sandboxes live on so `deleteSandbox` resolves
+	// them the right way (Modal V2 needs `fromId`+terminate, Vercel deletes by
+	// name). Entries written before the `provider` field existed default to vercel
+	// (the only backend back then).
+	await setProvider(entry.provider ?? "vercel");
+
 	for (const accountId of entry.subAccounts) {
 		await timeBoxed(`delete sub-account ${accountId}`, () =>
 			deleteSubAccount(accountId),
@@ -108,8 +121,9 @@ const teardownEntry = async (entry: RegistryEntry): Promise<void> => {
 	}
 
 	for (const sandbox of entry.sandboxes) {
+		// Prefer the sandbox id (Modal `fromId`); fall back to the name (Vercel).
 		await timeBoxed(`delete sandbox ${sandbox.name}`, () =>
-			deleteSandbox(sandbox.name),
+			deleteSandbox(sandbox.id ?? sandbox.name),
 		);
 	}
 
@@ -196,12 +210,18 @@ export const killOrphans = async ({
 	);
 	log(`stripe: deleted ${deletedAccounts.length} orphan sub-account(s)`);
 
-	// Vercel sandboxes (owner tag / name prefix).
+	// Sandboxes (owner tag / name prefix). This tag-sweep only recovers backends
+	// that support list-by-owner: Vercel (and Modal V1 tags). Modal V2 can't list
+	// by owner, but its sandboxes self-expire via `timeoutMs`, so they need no
+	// sweep — they cost nothing once the run dies. Orphan entries carry no provider
+	// (the run never reached the registry), so we sweep with Vercel, where a leaked
+	// sandbox lingers and actually costs money.
+	await setProvider("vercel");
 	let listed: Awaited<ReturnType<typeof listSandboxesByOwner>> = [];
 	try {
 		listed = await listSandboxesByOwner(owner);
 	} catch (error) {
-		warn(`vercel sandbox list failed: ${(error as Error).message}`);
+		warn(`sandbox list failed: ${(error as Error).message}`);
 	}
 
 	const cutoff = Date.now() - ORPHAN_SANDBOX_AGE_MS;

@@ -22,6 +22,7 @@ import type {
 	RegistrySandbox,
 	RegistryWebhook,
 } from "../types.ts";
+import type { ProviderName } from "./provider.ts";
 
 /**
  * Load the on-disk registry. Never throws: a missing or unreadable/corrupt file
@@ -108,10 +109,12 @@ export const createRun = ({
 	owner,
 	runId,
 	ref,
+	provider,
 }: {
 	owner: string;
 	runId: string;
 	ref: string;
+	provider: ProviderName;
 }): Promise<RegistryEntry> =>
 	enqueueWrite(async () => {
 		const registry = await load();
@@ -121,6 +124,7 @@ export const createRun = ({
 			startedAt: Date.now(),
 			status: "running",
 			ref,
+			provider,
 			sandboxes: [],
 			subAccounts: [],
 			webhooks: [],

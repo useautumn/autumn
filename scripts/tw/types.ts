@@ -85,6 +85,10 @@ export type RegistryEntry = {
 	startedAt: number;
 	status: RunStatus;
 	ref: string;
+	/** Cloud backend the run's sandboxes live on — so `kill` selects the right
+	 * provider seam (`fromId`/terminate) instead of assuming Vercel. Optional for
+	 * back-compat with entries written before this field existed (→ "vercel"). */
+	provider?: ProviderName;
 	sandboxes: RegistrySandbox[];
 	/** Stripe Connect sub-account ids (`acct_*`) created for this run. */
 	subAccounts: string[];
