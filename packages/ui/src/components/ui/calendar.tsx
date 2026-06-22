@@ -6,7 +6,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@autumn/ui";
-import { format, setMonth, setYear } from "date-fns";
+import { setMonth, setYear } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type * as React from "react";
 import {

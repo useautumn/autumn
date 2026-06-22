@@ -138,8 +138,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 				{...props}
 			>
 				{effectiveRender ? undefined : (
-					<>
-						{isLoading ? (
+					isLoading ? (
 							<SmallSpinner
 								size={14}
 								className={variant === "primary" ? "relative z-10" : undefined}
@@ -150,8 +149,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 							</span>
 						) : (
 							children
-						)}
-					</>
+						)
 				)}
 			</ButtonPrimitive>
 		);

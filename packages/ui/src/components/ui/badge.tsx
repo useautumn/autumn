@@ -2,7 +2,6 @@ import { cn } from "@autumn/ui";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";
-import type * as React from "react";
 
 const badgeVariants = cva(
 	"inline-flex items-center rounded-lg border border-zinc-200 px-1.5 py-0.5 text-body-secondary",

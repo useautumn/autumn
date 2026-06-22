@@ -67,7 +67,7 @@ function ButtonGroupText({
 	});
 }
 
-function ButtonGroupSeparator({
+function _ButtonGroupSeparator({
 	className,
 	orientation = "vertical",
 	...props

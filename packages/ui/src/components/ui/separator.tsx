@@ -2,7 +2,6 @@
 
 import { cn } from "@autumn/ui";
 import { Separator as SeparatorPrimitive } from "@base-ui/react/separator";
-import type * as React from "react";
 
 function Separator({
 	className,

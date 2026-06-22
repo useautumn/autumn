@@ -271,9 +271,9 @@ function ChartTooltipContent({
 	);
 }
 
-const ChartLegend = RechartsPrimitive.Legend;
+const _ChartLegend = RechartsPrimitive.Legend;
 
-function ChartLegendContent({
+function _ChartLegendContent({
 	className,
 	hideIcon = false,
 	payload,

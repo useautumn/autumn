@@ -30,7 +30,7 @@ function SheetTrigger({
 	);
 }
 
-function SheetClose({
+function _SheetClose({
 	asChild,
 	children,
 	...props
@@ -136,7 +136,7 @@ function SheetHeader({ className, ...props }: React.ComponentProps<"div">) {
 	);
 }
 
-function SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
+function _SheetFooter({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="sheet-footer"
@@ -156,7 +156,7 @@ function SheetTitle({ className, ...props }: SheetPrimitive.Title.Props) {
 	);
 }
 
-function SheetDescription({
+function _SheetDescription({
 	className,
 	...props
 }: SheetPrimitive.Description.Props) {
