@@ -865,6 +865,70 @@ actions:
             }
 
             run();
+  - target: $["paths"]["/v1/keys.mint"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.keys.mint({
+                customerId: "cus_123",
+              });
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/keys.refresh"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.keys.refresh({});
+
+              console.log(result);
+            }
+
+            run();
+  - target: $["paths"]["/v1/keys.revoke"]["post"]
+    update:
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from "@useautumn/sdk";
+
+            const autumn = new Autumn({
+              xApiVersion: "2.3.0",
+              secretKey: process.env["AUTUMN_SECRET_KEY"] ?? "",
+            });
+
+            async function run() {
+              const result = await autumn.keys.revoke({
+                customerId: "cus_123",
+              });
+
+              console.log(result);
+            }
+
+            run();
   - target: $["paths"]["/v1/plans.create"]["post"]
     update:
       x-codeSamples:

@@ -84,6 +84,39 @@ export const BillingBehavior = {
 export type BillingBehavior = ClosedEnum<typeof BillingBehavior>;
 
 /**
+ * When this phase should start, in epoch milliseconds, or 'now' for the immediate phase.
+ */
+export type StartsAt2 = number | string;
+
+/**
+ * The duration unit to offset this phase from the prior phase.
+ */
+export const CreateScheduleDurationType2 = {
+  Month: "month",
+  Year: "year",
+} as const;
+/**
+ * The duration unit to offset this phase from the prior phase.
+ */
+export type CreateScheduleDurationType2 = ClosedEnum<
+  typeof CreateScheduleDurationType2
+>;
+
+/**
+ * Relative start offset from the previous resolved schedule phase.
+ */
+export type StartingAfter2 = {
+  /**
+   * The duration unit to offset this phase from the prior phase.
+   */
+  durationType: CreateScheduleDurationType2;
+  /**
+   * How many duration_type periods after the prior phase to start.
+   */
+  durationCount: number;
+};
+
+/**
  * Quantity configuration for a prepaid feature.
  */
 export type CreateScheduleFeatureQuantity2 = {
@@ -723,9 +756,13 @@ export type CreateSchedulePlan2 = {
 
 export type PhaseRequest2 = {
   /**
-   * When this phase should start, in epoch milliseconds.
+   * When this phase should start, in epoch milliseconds, or 'now' for the immediate phase.
    */
-  startsAt: number;
+  startsAt?: number | string | undefined;
+  /**
+   * Relative start offset from the previous resolved schedule phase.
+   */
+  startingAfter?: StartingAfter2 | undefined;
   /**
    * Plans to materialize for this phase.
    */
@@ -973,6 +1010,51 @@ export const CreateScheduleRedirectMode$outboundSchema: z.ZodMiniEnum<
 export const BillingBehavior$outboundSchema: z.ZodMiniEnum<
   typeof BillingBehavior
 > = z.enum(BillingBehavior);
+
+/** @internal */
+export type StartsAt2$Outbound = number | string;
+
+/** @internal */
+export const StartsAt2$outboundSchema: z.ZodMiniType<
+  StartsAt2$Outbound,
+  StartsAt2
+> = smartUnion([z.number(), z.string()]);
+
+export function startsAt2ToJSON(startsAt2: StartsAt2): string {
+  return JSON.stringify(StartsAt2$outboundSchema.parse(startsAt2));
+}
+
+/** @internal */
+export const CreateScheduleDurationType2$outboundSchema: z.ZodMiniEnum<
+  typeof CreateScheduleDurationType2
+> = z.enum(CreateScheduleDurationType2);
+
+/** @internal */
+export type StartingAfter2$Outbound = {
+  duration_type: string;
+  duration_count: number;
+};
+
+/** @internal */
+export const StartingAfter2$outboundSchema: z.ZodMiniType<
+  StartingAfter2$Outbound,
+  StartingAfter2
+> = z.pipe(
+  z.object({
+    durationType: CreateScheduleDurationType2$outboundSchema,
+    durationCount: z.int(),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      durationType: "duration_type",
+      durationCount: "duration_count",
+    });
+  }),
+);
+
+export function startingAfter2ToJSON(startingAfter2: StartingAfter2): string {
+  return JSON.stringify(StartingAfter2$outboundSchema.parse(startingAfter2));
+}
 
 /** @internal */
 export type CreateScheduleFeatureQuantity2$Outbound = {
@@ -1749,7 +1831,8 @@ export function createSchedulePlan2ToJSON(
 
 /** @internal */
 export type PhaseRequest2$Outbound = {
-  starts_at: number;
+  starts_at?: number | string | undefined;
+  starting_after?: StartingAfter2$Outbound | undefined;
   plans: Array<CreateSchedulePlan2$Outbound>;
 };
 
@@ -1759,12 +1842,14 @@ export const PhaseRequest2$outboundSchema: z.ZodMiniType<
   PhaseRequest2
 > = z.pipe(
   z.object({
-    startsAt: z.number(),
+    startsAt: z.optional(smartUnion([z.number(), z.string()])),
+    startingAfter: z.optional(z.lazy(() => StartingAfter2$outboundSchema)),
     plans: z.array(z.lazy(() => CreateSchedulePlan2$outboundSchema)),
   }),
   z.transform((v) => {
     return remap$(v, {
       startsAt: "starts_at",
+      startingAfter: "starting_after",
     });
   }),
 );

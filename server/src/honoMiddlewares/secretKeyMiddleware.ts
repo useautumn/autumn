@@ -1,5 +1,6 @@
 import {
 	getBearerToken,
+	isCustomerJwt,
 	isOAuthToken,
 	isPublishableKeyPrefix,
 	isSecretKeyPrefix,
@@ -10,6 +11,7 @@ import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { verifyKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { handleOAuthMiddleware } from "./authMiddlewares/handleOAuthMiddleware.js";
 import { betterAuthMiddleware } from "./betterAuthMiddleware.js";
+import { customerJwtMiddleware } from "./customerJwtMiddleware.js";
 import { publicKeyMiddleware } from "./publicKeyMiddleware.js";
 
 const maskApiKey = (apiKey: string) => {
@@ -50,6 +52,11 @@ export const secretKeyMiddleware = async (c: Context<HonoEnv>, next: Next) => {
 
 	if (isOAuthToken({ token: bearerToken })) {
 		return handleOAuthMiddleware({ c, token: bearerToken, next });
+	}
+
+	// Per-customer JWT: scoped credential for self-hosted / licensed apps.
+	if (isCustomerJwt({ token: bearerToken })) {
+		return customerJwtMiddleware(c, bearerToken, next);
 	}
 
 	// Step 3: Handle publishable key verification

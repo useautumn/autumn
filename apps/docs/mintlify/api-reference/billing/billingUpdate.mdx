@@ -443,6 +443,20 @@ const response = await autumn.billing.update({
   </Expandable>
 </DynamicParamField>
 
+<DynamicParamField body="carry_over_usages" type="object">
+  Whether to carry over usages from the previous plan.
+  <Expandable title="properties">
+    <DynamicParamField body="enabled" type="boolean" required>
+      Whether to carry over usages from the previous plan.
+    </DynamicParamField>
+
+    <DynamicParamField body="feature_ids" type="string[]">
+      The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over.
+    </DynamicParamField>
+
+  </Expandable>
+</DynamicParamField>
+
 
 ### Response
 

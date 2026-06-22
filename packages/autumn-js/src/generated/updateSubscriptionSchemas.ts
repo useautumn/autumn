@@ -44,6 +44,11 @@ export const billingUpdateRecalculateBalancesSchema = z.object({
 	enabled: z.boolean(),
 });
 
+export const billingUpdateCarryOverUsagesSchema = z.object({
+	enabled: z.boolean(),
+	featureIds: z.union([z.array(z.string()), z.undefined()]).optional(),
+});
+
 export const billingUpdateInvoiceSchema = z.object({
 	status: z.string().nullable(),
 	stripeId: z.string(),
@@ -238,6 +243,11 @@ export const billingUpdateRecalculateBalancesOutboundSchema = z.object({
 	enabled: z.boolean(),
 });
 
+export const billingUpdateCarryOverUsagesOutboundSchema = z.object({
+	enabled: z.boolean(),
+	feature_ids: z.union([z.array(z.string()), z.undefined()]).optional(),
+});
+
 export const updateSubscriptionParamsOutboundSchema = z.object({
 	customer_id: z.string(),
 	entity_id: z.union([z.string(), z.undefined()]).optional(),
@@ -263,6 +273,9 @@ export const updateSubscriptionParamsOutboundSchema = z.object({
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
 	recalculate_balances: z
 		.union([billingUpdateRecalculateBalancesOutboundSchema, z.undefined()])
+		.optional(),
+	carry_over_usages: z
+		.union([billingUpdateCarryOverUsagesOutboundSchema, z.undefined()])
 		.optional(),
 });
 
@@ -492,6 +505,9 @@ export const updateSubscriptionParamsSchema = z.object({
 	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
 	recalculateBalances: z
 		.union([billingUpdateRecalculateBalancesSchema, z.undefined()])
+		.optional(),
+	carryOverUsages: z
+		.union([billingUpdateCarryOverUsagesSchema, z.undefined()])
 		.optional(),
 });
 

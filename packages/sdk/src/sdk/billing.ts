@@ -57,6 +57,7 @@ export class Billing extends ClientSDK {
    * @param startsAt - Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription. (optional)
    * @param endsAt - Unix timestamp in milliseconds for when the attached plan should end. (optional)
    * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
+   * @param longLivedCheckout - If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened. (optional)
    * @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
    * @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
    * @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
@@ -87,7 +88,7 @@ export class Billing extends ClientSDK {
    * @example
    * ```typescript
    * // Schedule a transition from a trial plan to a paid plan
-   * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1781265695558,"plans":[{"planId":"trial_plan"}]},{"startsAt":1782475295558,"plans":[{"planId":"pro_plan"}]}] });
+   * const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782125735170,"plans":[{"planId":"trial_plan"}]},{"startsAt":1783335335170,"plans":[{"planId":"pro_plan"}]}] });
    * ```
    *
    * @param customerId - The ID of the customer to create the schedule for.
@@ -192,6 +193,7 @@ export class Billing extends ClientSDK {
    * @param startsAt - Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription. (optional)
    * @param endsAt - Unix timestamp in milliseconds for when the attached plan should end. (optional)
    * @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
+   * @param longLivedCheckout - If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened. (optional)
    * @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
    * @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
    * @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
@@ -288,6 +290,7 @@ export class Billing extends ClientSDK {
    * @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
    * @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
    * @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
+   * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
    *
    * @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
    */
@@ -328,6 +331,7 @@ export class Billing extends ClientSDK {
    * @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
    * @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
    * @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
+   * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
    *
    * @returns A preview response with line items showing prorated charges or credits for the proposed changes.
    */

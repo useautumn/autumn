@@ -203,7 +203,7 @@ const response = await client.track({ customerId: "cus_123", eventName: "ai_chat
 @param eventName - Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event. (optional)
 @param value - The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat). (optional)
 @param properties - Additional properties to attach to this usage event. (optional)
-@param async - If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information. (optional)
+@param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
 
 @returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.
 * [trackTokens](docs/sdks/autumn/README.md#tracktokens) - Records AI token usage for a customer and returns the updated AI credit balance.
@@ -235,6 +235,7 @@ const response = await client.trackTokens({
 @param audioOutputTokens - Number of audio output tokens generated. (optional)
 @param reasoningTokens - Number of reasoning tokens generated. (optional)
 @param properties - Additional properties to attach to this usage event. (optional)
+@param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
 
 @returns The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.
 * [batchTrack](docs/sdks/autumn/README.md#batchtrack) - Enqueue up to 1000 usage events for asynchronous processing. Items are validated synchronously up front; validated items are then enqueued via SQS for background deduction by workers. The response returns 202 immediately and does not include balance information. On partial enqueue failure (some items fail to enqueue, others succeed), the endpoint still returns 202 and logs the failures server-side; clients should NOT retry, because retrying re-enqueues the already-succeeded items. A 503 is returned only when zero items were successfully enqueued (queue entirely unavailable) — that case is safe to retry.
@@ -288,6 +289,7 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param startsAt - Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription. (optional)
 @param endsAt - Unix timestamp in milliseconds for when the attached plan should end. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
+@param longLivedCheckout - If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened. (optional)
 @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
 @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
@@ -305,7 +307,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1781265695558,"plans":[{"planId":"trial_plan"}]},{"startsAt":1782475295558,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782125735170,"plans":[{"planId":"trial_plan"}]},{"startsAt":1783335335170,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -384,6 +386,7 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param startsAt - Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription. (optional)
 @param endsAt - Unix timestamp in milliseconds for when the attached plan should end. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
+@param longLivedCheckout - If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened. (optional)
 @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
 @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
@@ -454,6 +457,7 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
 @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
+@param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
 * [previewUpdate](docs/sdks/billing/README.md#previewupdate) - Previews the billing changes that would occur when updating a subscription, without actually making any changes.
@@ -481,6 +485,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
 @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
+@param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
 @returns A preview response with line items showing prorated charges or credits for the proposed changes.
 * [openCustomerPortal](docs/sdks/billing/README.md#opencustomerportal) - Create a billing portal session for a customer to manage their subscription.
@@ -734,6 +739,12 @@ const response = await client.features.delete({ featureId: "old-feature" });
 
 @returns A success flag indicating the feature was deleted.
 
+### [Keys](docs/sdks/keys/README.md)
+
+* [mint](docs/sdks/keys/README.md#mint) - Mints a per-customer token (a scoped `am_jwt_` credential) so a downstream / self-hosted app can call Autumn directly without your secret key. Returns a short-lived access token plus a rotating refresh token, both bound to the given customer. Authenticated with your secret key.
+* [refresh](docs/sdks/keys/README.md#refresh) - Exchanges a refresh token (sent as the Bearer credential) for a freshly rotated access + refresh pair. Self-service for the token holder — no secret key required. The previous refresh token is honored for one rotation as a grace window; replaying an older one revokes the customer's tokens.
+* [revoke](docs/sdks/keys/README.md#revoke) - Revokes every outstanding token (access and refresh) for a customer. Authenticated with your secret key. New tokens can be issued afterwards with `keys.mint`.
+
 ### [Plans](docs/sdks/plans/README.md)
 
 * [create](docs/sdks/plans/README.md#create) - Create a plan
@@ -820,6 +831,7 @@ const response = await client.billing.attach({ customerId: "cus_123", planId: "p
 @param startsAt - Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription. (optional)
 @param endsAt - Unix timestamp in milliseconds for when the attached plan should end. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
+@param longLivedCheckout - If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened. (optional)
 @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
 @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
@@ -837,7 +849,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1781265695558,"plans":[{"planId":"trial_plan"}]},{"startsAt":1782475295558,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782125735170,"plans":[{"planId":"trial_plan"}]},{"startsAt":1783335335170,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -917,6 +929,7 @@ const response = await client.billing.previewAttach({ customerId: "cus_123", pla
 @param startsAt - Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription. (optional)
 @param endsAt - Unix timestamp in milliseconds for when the attached plan should end. (optional)
 @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
+@param longLivedCheckout - If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened. (optional)
 @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
 @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
 @param carryOverBalances - Whether to carry over balances from the previous plan. (optional)
@@ -975,6 +988,7 @@ const response = await client.billing.previewUpdate({ customerId: "cus_123", pla
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
 @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
+@param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
 @returns A preview response with line items showing prorated charges or credits for the proposed changes.
 - [`billingSetupPayment`](docs/sdks/billing/README.md#setuppayment) - Create a payment setup session for a customer to add or update their payment method.
@@ -1015,6 +1029,7 @@ const response = await client.billing.update({ customerId: "cus_123", planId: "p
 @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
 @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
 @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
+@param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
 @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
 - [`check`](docs/sdks/autumn/README.md#check) - Checks whether a customer currently has enough balance to use a feature.
@@ -1285,6 +1300,9 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 @param newFeatureId - The new ID of the feature. Feature ID can only be updated if it's not being used by any customers. (optional)
 
 @returns The updated feature object.
+- [`keysMint`](docs/sdks/keys/README.md#mint) - Mints a per-customer token (a scoped `am_jwt_` credential) so a downstream / self-hosted app can call Autumn directly without your secret key. Returns a short-lived access token plus a rotating refresh token, both bound to the given customer. Authenticated with your secret key.
+- [`keysRefresh`](docs/sdks/keys/README.md#refresh) - Exchanges a refresh token (sent as the Bearer credential) for a freshly rotated access + refresh pair. Self-service for the token holder — no secret key required. The previous refresh token is honored for one rotation as a grace window; replaying an older one revokes the customer's tokens.
+- [`keysRevoke`](docs/sdks/keys/README.md#revoke) - Revokes every outstanding token (access and refresh) for a customer. Authenticated with your secret key. New tokens can be issued afterwards with `keys.mint`.
 - [`plansCreate`](docs/sdks/plans/README.md#create) - Create a plan
 - [`plansDelete`](docs/sdks/plans/README.md#delete) - Delete a plan
 - [`plansGet`](docs/sdks/plans/README.md#get) - Get a plan
@@ -1318,7 +1336,7 @@ const response = await client.track({ customerId: "cus_123", eventName: "ai_chat
 @param eventName - Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event. (optional)
 @param value - The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat). (optional)
 @param properties - Additional properties to attach to this usage event. (optional)
-@param async - If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information. (optional)
+@param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
 
 @returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.
 - [`trackTokens`](docs/sdks/autumn/README.md#tracktokens) - Records AI token usage for a customer and returns the updated AI credit balance.
@@ -1350,6 +1368,7 @@ const response = await client.trackTokens({
 @param audioOutputTokens - Number of audio output tokens generated. (optional)
 @param reasoningTokens - Number of reasoning tokens generated. (optional)
 @param properties - Additional properties to attach to this usage event. (optional)
+@param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
 
 @returns The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.
 
