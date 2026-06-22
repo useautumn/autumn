@@ -192,9 +192,14 @@ const wrap = (name: string, handle: Sandbox): ProviderSandbox => ({
 });
 const unwrap = (sandbox: ProviderSandbox): Sandbox => sandbox.handle as Sandbox;
 
-/** Modal region for V2 placement (London / eu-west-2). Env-overridable in case
- * Modal names the region differently. */
-const MODAL_REGION = process.env.TW_MODAL_REGION ?? "eu-west-2";
+/**
+ * Modal region for V2 placement. Defaults to us-east-1: benchmarks showed
+ * eu-west-2 (London) cliffs at N=100 — `experimentalCreate` (which blocks until
+ * the VM is live) jumps from ~8s @ N=50 to ~2m33s @ N=100 — while us-east-1 holds
+ * at ~1s/create, turning a 100-wide fan-out from 3m45s into ~41s. Override with
+ * `TW_MODAL_REGION` (e.g. eu-west-2 for small London-local runs).
+ */
+const MODAL_REGION = process.env.TW_MODAL_REGION ?? "us-east-1";
 
 /** Stamp the name into tags so `list({tags})` can recover it (Sandbox has no name). */
 const tagsWithName = (
