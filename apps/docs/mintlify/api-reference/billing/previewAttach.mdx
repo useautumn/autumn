@@ -415,6 +415,10 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
   Additional parameters to pass into the creation of the Stripe checkout session.
 </DynamicParamField>
 
+<DynamicParamField body="long_lived_checkout" type="boolean">
+  If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened.
+</DynamicParamField>
+
 <DynamicParamField body="custom_line_items" type="object[]">
   Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
   <Expandable title="properties">

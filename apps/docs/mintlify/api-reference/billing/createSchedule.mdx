@@ -84,8 +84,22 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
 <DynamicParamField body="phases" type="object[]" required>
   Ordered phase definitions for the schedule.
   <Expandable title="properties">
-    <DynamicParamField body="starts_at" type="number" required>
-      When this phase should start, in epoch milliseconds.
+    <DynamicParamField body="starts_at" type="number">
+      When this phase should start, in epoch milliseconds, or 'now' for the immediate phase.
+    </DynamicParamField>
+
+    <DynamicParamField body="starting_after" type="object">
+      Relative start offset from the previous resolved schedule phase.
+      <Expandable title="properties">
+        <DynamicParamField body="duration_type" type="'month' | 'year'" required>
+          The duration unit to offset this phase from the prior phase.
+        </DynamicParamField>
+
+        <DynamicParamField body="duration_count" type="integer" required>
+          How many duration_type periods after the prior phase to start.
+        </DynamicParamField>
+
+      </Expandable>
     </DynamicParamField>
 
     <DynamicParamField body="plans" type="object[]" required>

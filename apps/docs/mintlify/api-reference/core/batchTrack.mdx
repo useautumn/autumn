@@ -79,7 +79,7 @@ If your workload requires per-item delivery guarantees, use the [single-event tr
     </DynamicParamField>
 
     <DynamicParamField body="async" type="boolean">
-      If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information.
+      If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
     </DynamicParamField>
 
     <DynamicParamField body="lock" type="object">

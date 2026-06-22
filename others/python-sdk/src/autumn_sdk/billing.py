@@ -43,6 +43,7 @@ class Billing(BaseSDK):
         starts_at: Optional[int] = None,
         ends_at: Optional[int] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
+        long_lived_checkout: Optional[bool] = None,
         custom_line_items: Optional[
             Union[
                 List[models.AttachCustomLineItem],
@@ -88,6 +89,7 @@ class Billing(BaseSDK):
         :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
         :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
+        :param long_lived_checkout: If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
@@ -137,6 +139,7 @@ class Billing(BaseSDK):
             starts_at=starts_at,
             ends_at=ends_at,
             checkout_session_params=checkout_session_params,
+            long_lived_checkout=long_lived_checkout,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.AttachCustomLineItem]]
             ),
@@ -246,6 +249,7 @@ class Billing(BaseSDK):
         starts_at: Optional[int] = None,
         ends_at: Optional[int] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
+        long_lived_checkout: Optional[bool] = None,
         custom_line_items: Optional[
             Union[
                 List[models.AttachCustomLineItem],
@@ -291,6 +295,7 @@ class Billing(BaseSDK):
         :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
         :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
+        :param long_lived_checkout: If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
@@ -340,6 +345,7 @@ class Billing(BaseSDK):
             starts_at=starts_at,
             ends_at=ends_at,
             checkout_session_params=checkout_session_params,
+            long_lived_checkout=long_lived_checkout,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.AttachCustomLineItem]]
             ),
@@ -1030,6 +1036,7 @@ class Billing(BaseSDK):
         starts_at: Optional[int] = None,
         ends_at: Optional[int] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
+        long_lived_checkout: Optional[bool] = None,
         custom_line_items: Optional[
             Union[
                 List[models.PreviewAttachCustomLineItem],
@@ -1079,6 +1086,7 @@ class Billing(BaseSDK):
         :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
         :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
+        :param long_lived_checkout: If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
@@ -1129,6 +1137,7 @@ class Billing(BaseSDK):
             starts_at=starts_at,
             ends_at=ends_at,
             checkout_session_params=checkout_session_params,
+            long_lived_checkout=long_lived_checkout,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.PreviewAttachCustomLineItem]]
             ),
@@ -1241,6 +1250,7 @@ class Billing(BaseSDK):
         starts_at: Optional[int] = None,
         ends_at: Optional[int] = None,
         checkout_session_params: Optional[Dict[str, Any]] = None,
+        long_lived_checkout: Optional[bool] = None,
         custom_line_items: Optional[
             Union[
                 List[models.PreviewAttachCustomLineItem],
@@ -1290,6 +1300,7 @@ class Billing(BaseSDK):
         :param starts_at: Unix timestamp in milliseconds for when the attached plan should start. Future dates create a scheduled subscription.
         :param ends_at: Unix timestamp in milliseconds for when the attached plan should end.
         :param checkout_session_params: Additional parameters to pass into the creation of the Stripe checkout session.
+        :param long_lived_checkout: If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened.
         :param custom_line_items: Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
         :param processor_subscription_id: The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one.
         :param carry_over_balances: Whether to carry over balances from the previous plan.
@@ -1340,6 +1351,7 @@ class Billing(BaseSDK):
             starts_at=starts_at,
             ends_at=ends_at,
             checkout_session_params=checkout_session_params,
+            long_lived_checkout=long_lived_checkout,
             custom_line_items=utils.get_pydantic_model(
                 custom_line_items, Optional[List[models.PreviewAttachCustomLineItem]]
             ),
@@ -1780,6 +1792,12 @@ class Billing(BaseSDK):
                 models.BillingUpdateRecalculateBalancesTypedDict,
             ]
         ] = None,
+        carry_over_usages: Optional[
+            Union[
+                models.BillingUpdateCarryOverUsages,
+                models.BillingUpdateCarryOverUsagesTypedDict,
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1803,6 +1821,7 @@ class Billing(BaseSDK):
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
+        :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -1842,6 +1861,9 @@ class Billing(BaseSDK):
             no_billing_changes=no_billing_changes,
             recalculate_balances=utils.get_pydantic_model(
                 recalculate_balances, Optional[models.BillingUpdateRecalculateBalances]
+            ),
+            carry_over_usages=utils.get_pydantic_model(
+                carry_over_usages, Optional[models.BillingUpdateCarryOverUsages]
             ),
         )
 
@@ -1943,6 +1965,12 @@ class Billing(BaseSDK):
                 models.BillingUpdateRecalculateBalancesTypedDict,
             ]
         ] = None,
+        carry_over_usages: Optional[
+            Union[
+                models.BillingUpdateCarryOverUsages,
+                models.BillingUpdateCarryOverUsagesTypedDict,
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -1966,6 +1994,7 @@ class Billing(BaseSDK):
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
+        :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2005,6 +2034,9 @@ class Billing(BaseSDK):
             no_billing_changes=no_billing_changes,
             recalculate_balances=utils.get_pydantic_model(
                 recalculate_balances, Optional[models.BillingUpdateRecalculateBalances]
+            ),
+            carry_over_usages=utils.get_pydantic_model(
+                carry_over_usages, Optional[models.BillingUpdateCarryOverUsages]
             ),
         )
 
@@ -2106,6 +2138,12 @@ class Billing(BaseSDK):
                 models.PreviewUpdateRecalculateBalancesTypedDict,
             ]
         ] = None,
+        carry_over_usages: Optional[
+            Union[
+                models.PreviewUpdateCarryOverUsages,
+                models.PreviewUpdateCarryOverUsagesTypedDict,
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2129,6 +2167,7 @@ class Billing(BaseSDK):
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
+        :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2169,6 +2208,9 @@ class Billing(BaseSDK):
             no_billing_changes=no_billing_changes,
             recalculate_balances=utils.get_pydantic_model(
                 recalculate_balances, Optional[models.PreviewUpdateRecalculateBalances]
+            ),
+            carry_over_usages=utils.get_pydantic_model(
+                carry_over_usages, Optional[models.PreviewUpdateCarryOverUsages]
             ),
         )
 
@@ -2270,6 +2312,12 @@ class Billing(BaseSDK):
                 models.PreviewUpdateRecalculateBalancesTypedDict,
             ]
         ] = None,
+        carry_over_usages: Optional[
+            Union[
+                models.PreviewUpdateCarryOverUsages,
+                models.PreviewUpdateCarryOverUsagesTypedDict,
+            ]
+        ] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -2293,6 +2341,7 @@ class Billing(BaseSDK):
         :param cancel_action: Action to perform for cancellation. 'cancel_immediately' cancels now with prorated refund, 'cancel_end_of_cycle' cancels at period end, 'uncancel' reverses a pending cancellation.
         :param no_billing_changes: If true, the subscription is updated internally without applying billing changes in Stripe.
         :param recalculate_balances: Controls whether balances should be recalculated during the subscription update.
+        :param carry_over_usages: Whether to carry over usages from the previous plan.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -2333,6 +2382,9 @@ class Billing(BaseSDK):
             no_billing_changes=no_billing_changes,
             recalculate_balances=utils.get_pydantic_model(
                 recalculate_balances, Optional[models.PreviewUpdateRecalculateBalances]
+            ),
+            carry_over_usages=utils.get_pydantic_model(
+                carry_over_usages, Optional[models.PreviewUpdateCarryOverUsages]
             ),
         )
 

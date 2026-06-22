@@ -782,6 +782,20 @@ export type BillingUpdateRecalculateBalances = {
   enabled: boolean;
 };
 
+/**
+ * Whether to carry over usages from the previous plan.
+ */
+export type BillingUpdateCarryOverUsages = {
+  /**
+   * Whether to carry over usages from the previous plan.
+   */
+  enabled: boolean;
+  /**
+   * The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over.
+   */
+  featureIds?: Array<string> | undefined;
+};
+
 export type UpdateSubscriptionParams = {
   /**
    * The ID of the customer to attach the plan to.
@@ -843,6 +857,10 @@ export type UpdateSubscriptionParams = {
    * Controls whether balances should be recalculated during the subscription update.
    */
   recalculateBalances?: BillingUpdateRecalculateBalances | undefined;
+  /**
+   * Whether to carry over usages from the previous plan.
+   */
+  carryOverUsages?: BillingUpdateCarryOverUsages | undefined;
 };
 
 /**
@@ -1835,6 +1853,38 @@ export function billingUpdateRecalculateBalancesToJSON(
 }
 
 /** @internal */
+export type BillingUpdateCarryOverUsages$Outbound = {
+  enabled: boolean;
+  feature_ids?: Array<string> | undefined;
+};
+
+/** @internal */
+export const BillingUpdateCarryOverUsages$outboundSchema: z.ZodMiniType<
+  BillingUpdateCarryOverUsages$Outbound,
+  BillingUpdateCarryOverUsages
+> = z.pipe(
+  z.object({
+    enabled: z.boolean(),
+    featureIds: z.optional(z.array(z.string())),
+  }),
+  z.transform((v) => {
+    return remap$(v, {
+      featureIds: "feature_ids",
+    });
+  }),
+);
+
+export function billingUpdateCarryOverUsagesToJSON(
+  billingUpdateCarryOverUsages: BillingUpdateCarryOverUsages,
+): string {
+  return JSON.stringify(
+    BillingUpdateCarryOverUsages$outboundSchema.parse(
+      billingUpdateCarryOverUsages,
+    ),
+  );
+}
+
+/** @internal */
 export type UpdateSubscriptionParams$Outbound = {
   customer_id: string;
   entity_id?: string | undefined;
@@ -1851,6 +1901,7 @@ export type UpdateSubscriptionParams$Outbound = {
   billing_cycle_anchor?: "now" | undefined;
   no_billing_changes?: boolean | undefined;
   recalculate_balances?: BillingUpdateRecalculateBalances$Outbound | undefined;
+  carry_over_usages?: BillingUpdateCarryOverUsages$Outbound | undefined;
 };
 
 /** @internal */
@@ -1887,6 +1938,9 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
     recalculateBalances: z.optional(
       z.lazy(() => BillingUpdateRecalculateBalances$outboundSchema),
     ),
+    carryOverUsages: z.optional(
+      z.lazy(() => BillingUpdateCarryOverUsages$outboundSchema),
+    ),
   }),
   z.transform((v) => {
     return remap$(v, {
@@ -1902,6 +1956,7 @@ export const UpdateSubscriptionParams$outboundSchema: z.ZodMiniType<
       billingCycleAnchor: "billing_cycle_anchor",
       noBillingChanges: "no_billing_changes",
       recalculateBalances: "recalculate_balances",
+      carryOverUsages: "carry_over_usages",
     });
   }),
 );
