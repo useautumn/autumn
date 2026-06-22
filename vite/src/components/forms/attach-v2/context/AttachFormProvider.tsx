@@ -15,6 +15,7 @@ import {
 	isFreeProduct,
 	isFreeProductV2,
 	isOneOffProductV2,
+	normalizeResetInterval,
 	productV2ToFrontendProduct,
 } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
@@ -217,10 +218,19 @@ export function AttachFormProvider({
 	});
 
 	const effectiveProduct = useMemo((): ProductV2 | undefined => {
-		if (isVersionChanged && versionProductQuery.data) {
-			return versionProductQuery.data.product;
-		}
-		return product;
+		const resolved =
+			isVersionChanged && versionProductQuery.data
+				? versionProductQuery.data.product
+				: product;
+		if (!resolved) return resolved;
+
+		// The API mirrors `price_interval` onto priced items; drop it when it just
+		// echoes `interval` so the interval control edits `interval` (price + reset
+		// together) instead of silently splitting into price-only.
+		return {
+			...resolved,
+			items: (resolved.items as ProductItem[]).map(normalizeResetInterval),
+		};
 	}, [product, isVersionChanged, versionProductQuery.data]);
 
 	const { customer } = useCusQuery();
