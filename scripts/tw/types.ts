@@ -36,6 +36,9 @@ export type TwRunArgs = {
 	dashboard: boolean;
 	/** Cloud backend: "vercel" (default) or "modal" (`--provider=modal`). */
 	provider: ProviderName;
+	/** Benchmark mode (`--fanout-bench`): provision + report fan-out timings, then
+	 * tear down WITHOUT running tests. */
+	fanoutBench: boolean;
 };
 
 /**

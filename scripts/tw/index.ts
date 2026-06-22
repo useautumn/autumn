@@ -95,6 +95,7 @@ const parseRunArgs = (args: string[]): TwRunArgs => {
 	// Dashboard is on by default; `--no-dashboard` opts out (`--dashboard` still
 	// accepted as an explicit no-op for back-compat).
 	const dashboard = !args.includes("--no-dashboard");
+	const fanoutBench = args.includes("--fanout-bench");
 
 	// Cloud backend. Default modal (faster, breaks Vercel's 200-µVM wall); the
 	// original Vercel path stays available via --provider=vercel, and the
@@ -131,6 +132,7 @@ const parseRunArgs = (args: string[]): TwRunArgs => {
 		allowDirty,
 		dashboard,
 		provider,
+		fanoutBench,
 	};
 };
 
@@ -185,6 +187,7 @@ const printUsage = (): void => {
 			"  --allow-dirty    skip the preflight git gate (dirty tree / unpushed HEAD)",
 			"  --no-dashboard   disable the live web dashboard (on by default; opens + keeps it up after the run)",
 			"  --provider=NAME  cloud backend: modal (default), modalv2 (experimental high-scale), or vercel",
+			"  --fanout-bench   provision + report fan-out timings, then tear down (no tests)",
 			"",
 			chalk.bold("Env:"),
 			"  STRIPE_TEST_KEY_POOL   comma-separated Stripe platform secret keys; workers",

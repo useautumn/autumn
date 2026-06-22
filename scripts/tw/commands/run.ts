@@ -768,7 +768,12 @@ type ProvisionedWorker = {
 	timing: {
 		/** When this worker's Stripe sub-account finished creating. */
 		stripeMs: number;
-		/** When this worker reached READY (fork + boot complete). */
+		/** When the `create`/fork call returned (sandbox object in hand). */
+		createMs: number;
+		/** When `getPublicUrl`/`tunnels()` resolved — i.e. the sandbox is actually
+		 * RUNNING (this is where snapshot-restore/start wait shows up). */
+		tunnelMs: number;
+		/** When this worker reached READY (boot + server health). */
 		readyMs: number;
 	};
 };
@@ -926,9 +931,13 @@ const provisionWorker = async ({
 		signal,
 	});
 	await registry.addSandbox(runId, { name: sandbox.name, id: sandbox.id });
+	const createMs = Date.now() - fanoutStart;
 
-	// 3. Resolve the public URL (the worker's connect-route target).
+	// 3. Resolve the public URL (the worker's connect-route target). On Modal this
+	//    `tunnels()` call blocks until the sandbox is actually RUNNING, so the
+	//    create→tunnel slice captures the snapshot-restore/start wait.
 	const publicUrl = await getPublicUrl(sandbox, SERVER_PORT);
+	const tunnelMs = Date.now() - fanoutStart;
 
 	// 4. Boot the worker (detached) and wait for READY.
 	log(`worker ${name}: booting${isSvixShard ? " (svix shard)" : ""}`);
@@ -958,7 +967,7 @@ const provisionWorker = async ({
 		inFlight: 0,
 	};
 
-	return { handle, sandbox, timing: { stripeMs, readyMs } };
+	return { handle, sandbox, timing: { stripeMs, createMs, tunnelMs, readyMs } };
 };
 
 // ============================================================================
@@ -1385,16 +1394,43 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 		const forkBoot = stat(
 			provisioned.map((p) => p.timing.readyMs - p.timing.stripeMs),
 		);
-		log(
-			`fan-out benchmark (${provisioned.length} workers, ${WORKER_VCPUS} vCPU each):`,
+		// Per-worker phase splits (the instrumentation): create (fork call),
+		// restore (create→tunnel: sandbox actually starts from the snapshot), and
+		// boot (tunnel→READY: services + server + health).
+		const createPhase = stat(
+			provisioned.map((p) => p.timing.createMs - p.timing.stripeMs),
 		);
-		log(
-			`  · all Stripe accounts created in ${formatWall(stripe.max)} (last @ ${formatWall(stripe.max)})`,
+		const restorePhase = stat(
+			provisioned.map((p) => p.timing.tunnelMs - p.timing.createMs),
 		);
+		const bootPhase = stat(
+			provisioned.map((p) => p.timing.readyMs - p.timing.tunnelMs),
+		);
+		const fmt = (s: { avg: number; min: number; max: number }): string =>
+			`avg ${formatWall(s.avg)} · min ${formatWall(s.min)} · max ${formatWall(s.max)}`;
+		log(
+			`fan-out benchmark (${provisioned.length}/${effectiveWorkers} workers, ${WORKER_VCPUS} vCPU each):`,
+		);
+		log(`  · stripe accounts: all created in ${formatWall(stripe.max)}`);
 		log(`  · all workers READY in ${formatWall(ready.max)} from fan-out start`);
-		log(
-			`  · per-worker fork→boot→READY: avg ${formatWall(forkBoot.avg)}, min ${formatWall(forkBoot.min)}, max ${formatWall(forkBoot.max)}`,
-		);
+		log(`  · per-worker fork→READY: ${fmt(forkBoot)}`);
+		log(`      ├─ create (fork call):        ${fmt(createPhase)}`);
+		log(`      ├─ restore (sandbox starting): ${fmt(restorePhase)}`);
+		log(`      └─ boot (services+server):     ${fmt(bootPhase)}`);
+
+		// `--fanout-bench`: we only wanted the fan-out timings — skip the test run
+		// and tear straight down (saves the test compute/credits). The finally still
+		// guards teardown via `teardownDone`.
+		if (args.fanoutBench) {
+			milestone(
+				"--fanout-bench: provisioned + measured; skipping tests, tearing down",
+			);
+			setPhase("teardown");
+			await teardown({ runId, skip: args.keep });
+			teardownDone = true;
+			setPhase("done");
+			return;
+		}
 
 		// ----- RUN ------------------------------------------------------------
 		const sandboxByName = new Map<string, ProviderSandbox>();
