@@ -1,4 +1,4 @@
-import { AppEnv, type StripeConfig, Scopes } from "@autumn/shared";
+import { AppEnv, Scopes, type StripeConfig } from "@autumn/shared";
 import { z } from "zod/v4";
 import { ensureStripeProductsWithEnv } from "@/external/stripe/stripeEnsureUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -42,16 +42,21 @@ export const handleConnectStripe = createRoute({
 				orgId: org.id,
 				secretKey: body.secret_key,
 				env,
+				org,
 			});
 
 			if (env === AppEnv.Sandbox) {
 				configUpdates.test_api_key = result.test_api_key;
-				configUpdates.test_webhook_secret =
-					result.test_webhook_secret ?? undefined;
+				// Only set when a webhook was registered; OAuth path skips it and we
+				// must not clobber an existing secret.
+				if (result.test_webhook_secret) {
+					configUpdates.test_webhook_secret = result.test_webhook_secret;
+				}
 			} else {
 				configUpdates.live_api_key = result.live_api_key;
-				configUpdates.live_webhook_secret =
-					result.live_webhook_secret ?? undefined;
+				if (result.live_webhook_secret) {
+					configUpdates.live_webhook_secret = result.live_webhook_secret;
+				}
 			}
 		}
 

@@ -28,8 +28,10 @@ export const handleGetOAuthUrl = createRoute({
 
 		// Generate OAuth state and store in Redis
 		const frontendUrl = process.env.CLIENT_URL || "http://localhost:5173";
+		const envPath = env === AppEnv.Sandbox ? "/sandbox" : "";
 
-		const redirectUri = redirect_url || `${frontendUrl}/dev?tab=stripe`;
+		const redirectUri =
+			redirect_url || `${frontendUrl}${envPath}/dev?tab=stripe`;
 
 		const stateKey = await generateOAuthState({
 			organizationSlug: org.slug,

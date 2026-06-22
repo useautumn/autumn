@@ -13,8 +13,14 @@ import { getBackendErr } from "@/utils/genUtils";
 
 export const DisconnectStripePopover = ({
 	onSuccess,
+	channel,
+	label = "Disconnect Stripe",
+	icon,
 }: {
 	onSuccess: () => Promise<void>;
+	channel?: "secret_key" | "oauth";
+	label?: string;
+	icon?: React.ReactNode;
 }) => {
 	const [confirmText, setConfirmText] = useState("");
 	const axiosInstance = useAxiosInstance();
@@ -22,7 +28,7 @@ export const DisconnectStripePopover = ({
 	const [disconnecting, setDisconnecting] = useState(false);
 
 	const disconnectStripe = async () => {
-		await OrgService.disconnectStripe(axiosInstance);
+		await OrgService.disconnectStripe(axiosInstance, channel);
 	};
 	const handleDeleteClicked = async () => {
 		if (confirmText !== "disconnect") {
@@ -44,15 +50,17 @@ export const DisconnectStripePopover = ({
 	return (
 		<Popover>
 			<PopoverTrigger asChild>
-				<Button variant="destructive">Disconnect Stripe</Button>
+				<Button variant="secondary" className="gap-1.5">
+					{icon}
+					{label}
+				</Button>
 			</PopoverTrigger>
-			<PopoverContent align="start" className="border border-zinc-200">
+			<PopoverContent align="start">
 				<div className="flex flex-col gap-4 text-sm w-fit">
 					<p className="text-tertiary-foreground">
 						Are you sure you want to disconnect your Stripe account?
 					</p>
 					<Input
-						variant="destructive"
 						placeholder={`Type "disconnect" to confirm`}
 						value={confirmText}
 						onChange={(e) => setConfirmText(e.target.value)}

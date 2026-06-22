@@ -63,6 +63,7 @@
 		box-shadow: 0 4px 4px 0 rgba(0, 0, 0, 0.06);
 	}
 
+	&:focus,
 	&[data-state="open"] {
 		box-shadow:
 			0 0 0 0.5px var(--color-destructive),
@@ -76,6 +77,7 @@
 		border-color: var(--color-destructive);
 	}
 
+	&:focus,
 	&[data-state="open"] {
 		border-color: var(--color-destructive);
 	}
