@@ -190,9 +190,11 @@ const runWithReschedule = async (params: {
 };
 
 /**
- * Run all `files` through `executor` with a `maxParallel` sliding window, then a
- * second pass retrying only the attempt-1 failures. Writes live state into the
- * TUI store. Resolves when every file has a terminal verdict.
+ * Run all `files` through `executor` in a single `maxParallel` sliding window.
+ * A file that fails attempt 1 is retried IMMEDIATELY (attempt 2) on a free worker
+ * — we don't wait for the whole first pass to finish before retrying (the executor
+ * prefers a DIFFERENT worker for the rerun, §8.4/§8.7). Writes live state into the
+ * TUI store; resolves when every file has a terminal verdict.
  */
 export const runSwarmTests = async (
 	files: string[],
@@ -202,51 +204,45 @@ export const runSwarmTests = async (
 	setRunTotal(files.length);
 	const limit = pLimit(opts.maxParallel);
 
-	// Phase 1.
-	const firstResults = await Promise.all(
-		files.map((file) =>
-			runWithReschedule({
-				limit,
-				file,
-				attempt: 1,
-				executor,
-				willRetry: true,
-			}),
-		),
-	);
+	const runFileWithRetry = async (file: string): Promise<void> => {
+		const first = await runWithReschedule({
+			limit,
+			file,
+			attempt: 1,
+			executor,
+			willRetry: true,
+		});
+		if (first.status !== "failed") {
+			return;
+		}
 
-	// Phase 2 — retry attempt-1 failures.
-	const failed = firstResults.filter((result) => result.status === "failed");
-	if (failed.length === 0) {
-		return;
-	}
+		// Failed → re-enqueue the retry into the SAME window right away (no phase-2
+		// wait). It competes for a slot with the still-running first attempts and
+		// lands on a free worker as soon as one frees up.
+		const firstAttemptFailures = first.tests.filter(
+			(test) => test.status === "failed",
+		);
+		const hasUnnamed = firstAttemptFailures.some((test) =>
+			test.name.includes("(unnamed)"),
+		);
+		const failedTestNames = hasUnnamed
+			? []
+			: firstAttemptFailures.map((test) => test.name);
 
-	const retryLimit = pLimit(opts.maxParallel);
-	await Promise.all(
-		failed.map(async (result) => {
-			const firstAttemptFailures = result.tests.filter(
-				(test) => test.status === "failed",
-			);
-			const hasUnnamed = firstAttemptFailures.some((test) =>
-				test.name.includes("(unnamed)"),
-			);
-			const failedTestNames = hasUnnamed
-				? []
-				: firstAttemptFailures.map((test) => test.name);
+		emit({ ...first, status: "retrying", firstAttemptFailures }, false);
 
-			emit({ ...result, status: "retrying", firstAttemptFailures }, false);
+		const retryResult = await runWithReschedule({
+			limit,
+			file,
+			attempt: 2,
+			failedTestNames,
+			executor,
+			willRetry: false,
+		});
+		retryResult.passedOnRetry = retryResult.status === "passed";
+		retryResult.firstAttemptFailures = firstAttemptFailures;
+		emit(retryResult, false);
+	};
 
-			const retryResult = await runWithReschedule({
-				limit: retryLimit,
-				file: result.file,
-				attempt: 2,
-				failedTestNames,
-				executor,
-				willRetry: false,
-			});
-			retryResult.passedOnRetry = retryResult.status === "passed";
-			retryResult.firstAttemptFailures = firstAttemptFailures;
-			emit(retryResult, false);
-		}),
-	);
+	await Promise.all(files.map(runFileWithRetry));
 };
