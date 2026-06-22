@@ -135,7 +135,8 @@ const getApp = (): Promise<App> => {
 	return appPromise;
 };
 
-/** Build a token-embedding clone URL for a private repo (no-op when public). */
+/** Clone URL. The repo is public → anonymous (no token); a token is embedded only
+ * if `TW_GIT_TOKEN` is explicitly set (private fork). */
 const cloneUrl = (source: GitSource): string =>
 	source.username && source.password
 		? source.url.replace(

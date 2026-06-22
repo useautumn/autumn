@@ -172,7 +172,10 @@ export const resolveGitSource = (
 		url = `https://github.com/${url.slice("git@github.com:".length)}`;
 	}
 	url = `${url.replace(/\.git$/, "")}.git`;
-	const token = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
+	// The repo is PUBLIC → clone anonymously (no token in the URL, so nothing lands
+	// in the Modal image build history). A token is opt-in ONLY via `TW_GIT_TOKEN`
+	// (for a private fork); we deliberately do NOT auto-pull GITHUB_TOKEN here.
+	const token = process.env.TW_GIT_TOKEN;
 	return token
 		? { url, revision: ref, username: "x-access-token", password: token }
 		: { url, revision: ref };

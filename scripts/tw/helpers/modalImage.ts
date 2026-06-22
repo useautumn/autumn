@@ -31,7 +31,8 @@ import type { App, Image, ModalClient } from "modal";
 
 /** Inputs for baking node_modules into the base image (see buildBaseImage). */
 export type BaseImageDeps = {
-	/** Clone URL (may embed a token for a private repo — see the bake step note). */
+	/** Clone URL — anonymous for the public repo; only carries a token if
+	 * `TW_GIT_TOKEN` is set (private fork). */
 	gitUrl: string;
 	/** Ref whose lockfile/deps to install (branch name or sha). */
 	gitRef: string;
@@ -148,8 +149,9 @@ export const buildBaseImage = (
 		//    reconciles the exact-ref delta). Clone the ref shallow, install, keep
 		//    ONLY node_modules. The `lockHash` comment is part of the (content-
 		//    addressed) command, so the bake rebuilds when the lockfile changes.
-		//    NOTE: gitUrl may embed a token for a private repo — it lands in this
-		//    (workspace-private) image's build history; rotate scoped tokens.
+		//    The repo is PUBLIC, so gitUrl is anonymous — no secret in the image
+		//    build history. (Only a `TW_GIT_TOKEN`-opted-in private fork would embed
+		//    one, in which case use a scoped/rotatable token.)
 		.dockerfileCommands([
 			`# node_modules bake — lockfile ${deps.lockHash}\n` +
 				"RUN export PATH=/usr/local/bin:$PATH && rm -rf /tmp/seed && " +
