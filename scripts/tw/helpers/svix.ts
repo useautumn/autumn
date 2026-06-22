@@ -140,9 +140,7 @@ export const sweepOrphanSvixApps = async ({
 
 	// Collect every application across all pages first (paginate via the
 	// `iterator`/`done` cursor the SDK returns), then delete the test orphans.
-	const apps: Awaited<
-		ReturnType<typeof svix.application.list>
-	>["data"] = [];
+	const apps: Awaited<ReturnType<typeof svix.application.list>>["data"] = [];
 	let iterator: string | null | undefined;
 	do {
 		const page = await svix.application.list({ iterator });

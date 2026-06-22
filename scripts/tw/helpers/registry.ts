@@ -51,10 +51,7 @@ export const load = async (): Promise<Registry> => {
  */
 export const save = async (registry: Registry): Promise<void> => {
 	await mkdir(REGISTRY_DIR, { recursive: true });
-	const tmpPath = join(
-		dirname(REGISTRY_FILE),
-		`.registry.${randomUUID()}.tmp`,
-	);
+	const tmpPath = join(dirname(REGISTRY_FILE), `.registry.${randomUUID()}.tmp`);
 	await writeFile(tmpPath, `${JSON.stringify(registry, null, 2)}\n`, "utf-8");
 	await rename(tmpPath, REGISTRY_FILE);
 };

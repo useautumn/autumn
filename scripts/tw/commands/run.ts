@@ -152,7 +152,7 @@ const BUILD_BASE_SCRIPT = "scripts/tw/image/build-base.sh";
 const WARMUP_SCRIPT = "scripts/tw/image/warmup.sh";
 
 /**
- * Git source for the warm parent's clone (repo @ ref). Mirrors spike.ts: the
+ * Git source for the warm parent's clone (repo @ ref): the
  * origin URL (or `TW_GIT_URL`), normalized to https; private repos use
  * `GITHUB_TOKEN`. Vercel clones this `revision` into the warm sandbox so
  * `build-base.sh` / `warmup.sh` have the repo to operate on.
