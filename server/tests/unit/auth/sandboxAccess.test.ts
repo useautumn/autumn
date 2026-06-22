@@ -84,6 +84,19 @@ describe("assertSandboxAccess (the multi-sandbox tenant-isolation spine)", () =>
 	test("rejects app_env=live targeting a sandbox", () => {
 		expect(() => call({ appEnv: AppEnv.Live })).toThrow();
 	});
+
+	test("superuser can access an owned sandbox", () => {
+		expect(() => call({ scopes: ["superuser"] })).not.toThrow();
+	});
+
+	test("superuser still cannot cross created_by to a foreign sandbox", () => {
+		expect(() =>
+			call({
+				scopes: ["superuser"],
+				candidate: { ...validCandidate, created_by: "org_attacker" },
+			}),
+		).toThrow();
+	});
 });
 
 describe("assertSandboxAccess rejection codes + precedence (leak guard)", () => {
@@ -155,7 +168,10 @@ describe("assertSandboxAccess rejection codes + precedence (leak guard)", () => 
 
 	test("under-scoped + foreign id -> scopes error first (no ownership oracle)", () => {
 		expectReject(
-			{ scopes: [], candidate: { ...validCandidate, created_by: "org_attacker" } },
+			{
+				scopes: [],
+				candidate: { ...validCandidate, created_by: "org_attacker" },
+			},
 			ErrCode.InsufficientScopes,
 			403,
 		);

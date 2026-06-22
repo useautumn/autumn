@@ -1,13 +1,14 @@
 import { afterAll, beforeAll, describe, expect, spyOn, test } from "bun:test";
-import { AppEnv, organizations } from "@autumn/shared";
+import { AppEnv, member, organizations, user } from "@autumn/shared";
 import defaultCtx from "@tests/utils/testInitUtils/createTestContext.js";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import type { Context } from "hono";
 import { initDrizzle } from "@/db/initDrizzle.js";
 import { betterAuthMiddleware } from "@/honoMiddlewares/betterAuthMiddleware.js";
 import { SANDBOX_ORG_HEADER } from "@/honoMiddlewares/sandboxAccess.js";
 import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { auth } from "@/utils/auth.js";
+import { getScopesForUserInOrg } from "@/utils/authUtils/customSessionScopes.js";
 import { generateId } from "@/utils/genUtils.js";
 
 const { db } = initDrizzle();
@@ -83,5 +84,123 @@ describe("sandbox resolver end-to-end (betterAuthMiddleware)", () => {
 		expect(nexted).toBe(true);
 		expect(ctx.org.id).toBe(MAIN_ORG_ID);
 		expect(ctx.env).toBe(AppEnv.Sandbox);
+	});
+});
+
+const mockLiveSession = (userId: string) =>
+	// biome-ignore lint/suspicious/noExplicitAny: getSession's overloaded endpoint type rejects a plain async impl
+	(spyOn(auth.api, "getSession") as any).mockImplementation(async () => {
+		const { scopes } = await getScopesForUserInOrg({
+			db,
+			userId,
+			organizationId: MAIN_ORG_ID,
+		});
+		return {
+			session: { activeOrganizationId: MAIN_ORG_ID },
+			user: { id: userId },
+			scopes,
+		};
+	});
+
+const teammates = {
+	developer: generateId("usr"),
+	owner: generateId("usr"),
+	sales: generateId("usr"),
+	nonMember: generateId("usr"),
+	revoke: generateId("usr"),
+};
+
+const seedUser = (id: string) =>
+	db.insert(user).values({ id, name: `tm-${id}`, email: `${id}@resolve.test` });
+
+const seedMember = (userId: string, role: string) =>
+	db.insert(member).values({
+		id: generateId("mem"),
+		organizationId: MAIN_ORG_ID,
+		userId,
+		role,
+		createdAt: new Date(),
+	});
+
+const removeMember = (userId: string) =>
+	db
+		.delete(member)
+		.where(
+			and(eq(member.userId, userId), eq(member.organizationId, MAIN_ORG_ID)),
+		);
+
+describe("transitive multi-seat access + live revocation", () => {
+	beforeAll(async () => {
+		for (const id of Object.values(teammates)) {
+			await seedUser(id);
+		}
+		await seedMember(teammates.developer, "developer");
+		await seedMember(teammates.owner, "owner");
+		await seedMember(teammates.sales, "sales");
+		await seedMember(teammates.revoke, "developer");
+	});
+
+	afterAll(async () => {
+		for (const id of Object.values(teammates)) {
+			await removeMember(id);
+			await db.delete(user).where(eq(user.id, id));
+		}
+	});
+
+	test("a developer teammate of the master resolves the sandbox (no sandbox member row)", async () => {
+		mockLiveSession(teammates.developer);
+		const { ctx, nexted } = await runMiddleware({
+			[SANDBOX_ORG_HEADER]: sandboxOrgId,
+		});
+		expect(nexted).toBe(true);
+		expect(ctx.org.id).toBe(sandboxOrgId);
+	});
+
+	test("a second teammate (owner) resolves the same sandbox (multi-seat)", async () => {
+		mockLiveSession(teammates.owner);
+		const { ctx } = await runMiddleware({
+			[SANDBOX_ORG_HEADER]: sandboxOrgId,
+		});
+		expect(ctx.org.id).toBe(sandboxOrgId);
+	});
+
+	test("a sales teammate cannot resolve (no platform:write)", async () => {
+		mockLiveSession(teammates.sales);
+		await expect(
+			runMiddleware({ [SANDBOX_ORG_HEADER]: sandboxOrgId }),
+		).rejects.toThrow();
+	});
+
+	test("a non-member of the master cannot resolve (empty scopes)", async () => {
+		mockLiveSession(teammates.nonMember);
+		await expect(
+			runMiddleware({ [SANDBOX_ORG_HEADER]: sandboxOrgId }),
+		).rejects.toThrow();
+	});
+
+	test("revoking access is reflected on the next request (scopes are not cached)", async () => {
+		mockLiveSession(teammates.revoke);
+		const { ctx } = await runMiddleware({
+			[SANDBOX_ORG_HEADER]: sandboxOrgId,
+		});
+		expect(ctx.org.id).toBe(sandboxOrgId);
+
+		await db
+			.update(member)
+			.set({ role: "member" })
+			.where(
+				and(
+					eq(member.userId, teammates.revoke),
+					eq(member.organizationId, MAIN_ORG_ID),
+				),
+			);
+		await expect(
+			runMiddleware({ [SANDBOX_ORG_HEADER]: sandboxOrgId }),
+		).rejects.toThrow();
+
+		await removeMember(teammates.revoke);
+		await expect(
+			runMiddleware({ [SANDBOX_ORG_HEADER]: sandboxOrgId }),
+		).rejects.toThrow();
 	});
 });

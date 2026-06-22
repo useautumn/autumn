@@ -77,6 +77,7 @@ mock.module("@/internal/orgs/OrgService.js", () => ({
 			state.getCalled += 1;
 			return reReadOrg;
 		},
+		listSandboxes: async () => [],
 	},
 }));
 mock.module("@/internal/dev/api-keys/apiKeyUtils.js", () => ({
@@ -141,6 +142,7 @@ beforeEach(() => {
 	state.svixLive = "ok";
 	state.keyThrows = false;
 	process.env.SVIX_API_KEY = "test_key";
+	process.env.AUTUMN_SECRET_KEY = "";
 });
 
 describe("provisionOrgResources rollback (external resources)", () => {
@@ -212,35 +214,35 @@ describe("provisionOrgResources rollback (external resources)", () => {
 	});
 });
 
-describe("provisionSubOrg rollback (local rows)", () => {
-	const call = (createMembership: boolean) =>
+describe("provisionSubOrg rollback", () => {
+	const call = (isSandbox: boolean, createMembership: boolean) =>
 		provisionSubOrg({
 			db: fakeDb,
 			masterOrg: { id: "org_master" } as never,
 			actorUser: user,
 			slug: "my-sandbox|org_master",
 			name: "My Sandbox",
-			isSandbox: true,
+			isSandbox,
 			createMembership,
 		});
 
-	test("provisioning fails (no membership): deletes the org row and rethrows", async () => {
+	test("provisioning fails (sandbox, no membership): deletes the org row and rethrows", async () => {
 		state.createConnectThrows = true;
-		await expect(call(false)).rejects.toThrow();
+		await expect(call(true, false)).rejects.toThrow();
 		expect(state.rowDeletes).toContain("organizations");
 		expect(state.getCalled).toBe(0);
 	});
 
-	test("provisioning fails (with membership): deletes member + org rows", async () => {
+	test("provisioning fails (reseller sub-org, with membership): deletes member + org rows", async () => {
 		state.createConnectThrows = true;
-		await expect(call(true)).rejects.toThrow();
+		await expect(call(false, true)).rejects.toThrow();
 		expect(state.rowDeletes).toEqual(
 			expect.arrayContaining(["member", "organizations"]),
 		);
 	});
 
 	test("success re-reads the provisioned org (external ids present), no deletes", async () => {
-		const result = await call(false);
+		const result = await call(true, false);
 		expect(state.rowDeletes).toEqual([]);
 		expect(state.getCalled).toBe(1);
 		expect(

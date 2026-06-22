@@ -5,12 +5,14 @@ import {
 	type Organization,
 	RecaseError,
 } from "@autumn/shared";
+import { Autumn } from "autumn-js";
 import type { User } from "better-auth";
 import { generateId } from "better-auth";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { logger } from "@/external/logtail/logtailUtils.js";
 import { createKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
+import { OrgService } from "@/internal/orgs/OrgService.js";
 import { provisionSubOrg } from "@/internal/orgs/orgUtils/provisionSubOrg.js";
 import { slugify } from "@/utils/genUtils.js";
 
@@ -53,6 +55,56 @@ export const assertNotSandboxContext = (org: {
 	}
 };
 
+const MAX_SANDBOXES_FEATURE_ID = "max_sandboxes";
+
+type SandboxCapacityCheck = (args: {
+	customerId: string;
+	requiredBalance: number;
+}) => Promise<{ allowed?: boolean }>;
+
+const defaultSandboxCapacityCheck: SandboxCapacityCheck = async ({
+	customerId,
+	requiredBalance,
+}) => {
+	if (!process.env.AUTUMN_SECRET_KEY) {
+		return { allowed: true };
+	}
+	try {
+		const autumn = new Autumn();
+		const { allowed } = await autumn.check({
+			customerId,
+			featureId: MAX_SANDBOXES_FEATURE_ID,
+			requiredBalance,
+		});
+		return { allowed };
+	} catch {
+		return { allowed: true };
+	}
+};
+
+export const assertSandboxCapacity = async ({
+	db,
+	masterOrgId,
+	checkCapacity = defaultSandboxCapacityCheck,
+}: {
+	db: DrizzleCli;
+	masterOrgId: string;
+	checkCapacity?: SandboxCapacityCheck;
+}): Promise<void> => {
+	const existing = await OrgService.listSandboxes({ db, masterOrgId });
+	const { allowed } = await checkCapacity({
+		customerId: masterOrgId,
+		requiredBalance: existing.length + 1,
+	});
+	if (allowed === false) {
+		throw new RecaseError({
+			message: "You've reached your sandbox limit. Contact us to raise it.",
+			code: ErrCode.FeatureLimitReached,
+			statusCode: 403,
+		});
+	}
+};
+
 export const createSandboxForOrg = async ({
 	db,
 	masterOrg,
@@ -64,6 +116,8 @@ export const createSandboxForOrg = async ({
 	actorUser: User;
 	name: string;
 }): Promise<{ org: Organization; secret_key: string }> => {
+	await assertSandboxCapacity({ db, masterOrgId: masterOrg.id });
+
 	const slug = `${slugify(name, "dash")}-${generateId()}|${masterOrg.id}`;
 
 	const org = await provisionSubOrg({

@@ -21,7 +21,6 @@ const CreateOrganizationSchema = z.object({
 	name: z.string().min(1),
 	slug: z.string().min(1),
 	env: z.enum(["test", "live", "both"]).default("both"),
-	is_sandbox: z.boolean().optional(),
 });
 
 /**
@@ -37,7 +36,7 @@ export const handleCreatePlatformOrg = createRoute({
 		const ctx = c.get("ctx");
 		const { db, org: masterOrg, logger } = ctx;
 
-		const { user_email, name, slug, env, is_sandbox } = c.req.valid("json");
+		const { user_email, name, slug, env } = c.req.valid("json");
 
 		// 1. Check if user with this email already exists, otherwise create
 		let user = await UserService.getByEmail({
@@ -105,7 +104,7 @@ export const handleCreatePlatformOrg = createRoute({
 				actorUser: user,
 				slug: orgSlug,
 				name,
-				isSandbox: is_sandbox === true,
+				isSandbox: false,
 				createMembership: true,
 			});
 
