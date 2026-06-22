@@ -1,4 +1,8 @@
-import { Scopes } from "@autumn/shared";
+import {
+	DEFAULT_SANDBOX_COLOR,
+	DEFAULT_SANDBOX_ICON,
+	Scopes,
+} from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { assertNotSandboxContext } from "../createSandbox.js";
@@ -21,6 +25,8 @@ export const handleListSandboxes = createRoute({
 				name: sandbox.name,
 				slug: sandbox.slug,
 				created_at: sandbox.createdAt,
+				color: sandbox.sandbox_color ?? DEFAULT_SANDBOX_COLOR,
+				icon: sandbox.sandbox_icon ?? DEFAULT_SANDBOX_ICON,
 			})),
 		});
 	},

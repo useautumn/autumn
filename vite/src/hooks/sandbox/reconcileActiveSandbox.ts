@@ -1,21 +1,35 @@
 import type { ActiveSandbox } from "./useActiveSandbox";
 
-/** The active sandbox after reconciling against the loaded list. Returns the
- *  current value unchanged until `listLoaded`, so a cold-reload restore is never
- *  dropped before the list arrives; drops it only once a loaded list omits it. */
+/** Preserve the selection until the list loads (cold-reload restore); then drop it if
+ *  absent, self-heal name/color/icon if present, keeping the same reference when nothing
+ *  changed (the consumer effect guards on identity, so a fresh object every render loops). */
 export const reconcileActiveSandbox = ({
 	activeSandbox,
 	sandboxes,
 	listLoaded,
 }: {
 	activeSandbox: ActiveSandbox | null;
-	sandboxes: { id: string }[];
+	sandboxes: ActiveSandbox[];
 	listLoaded: boolean;
 }): ActiveSandbox | null => {
 	if (!listLoaded || activeSandbox === null) {
 		return activeSandbox;
 	}
-	return sandboxes.some((sandbox) => sandbox.id === activeSandbox.id)
-		? activeSandbox
-		: null;
+	const loaded = sandboxes.find((sandbox) => sandbox.id === activeSandbox.id);
+	if (!loaded) {
+		return null;
+	}
+	const unchanged =
+		loaded.name === activeSandbox.name &&
+		loaded.color === activeSandbox.color &&
+		loaded.icon === activeSandbox.icon;
+	if (unchanged) {
+		return activeSandbox;
+	}
+	return {
+		id: loaded.id,
+		name: loaded.name,
+		color: loaded.color,
+		icon: loaded.icon,
+	};
 };

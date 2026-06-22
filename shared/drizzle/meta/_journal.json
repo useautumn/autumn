@@ -127,6 +127,13 @@
       "when": 1781628233746,
       "tag": "0017_elite_korg",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1782128914372,
+      "tag": "0018_silky_vengeance",
+      "breakpoints": true
     }
   ]
 }

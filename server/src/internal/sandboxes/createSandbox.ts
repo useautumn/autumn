@@ -1,9 +1,13 @@
 import {
 	AppEnv,
 	AuthType,
+	DEFAULT_SANDBOX_COLOR,
+	DEFAULT_SANDBOX_ICON,
 	ErrCode,
 	type Organization,
 	RecaseError,
+	type SandboxColor,
+	type SandboxIcon,
 } from "@autumn/shared";
 import { Autumn } from "autumn-js";
 import type { User } from "better-auth";
@@ -110,11 +114,15 @@ export const createSandboxForOrg = async ({
 	masterOrg,
 	actorUser,
 	name,
+	color,
+	icon,
 }: {
 	db: DrizzleCli;
 	masterOrg: Organization;
 	actorUser: User;
 	name: string;
+	color?: SandboxColor;
+	icon?: SandboxIcon;
 }): Promise<{ org: Organization; secret_key: string }> => {
 	await assertSandboxCapacity({ db, masterOrgId: masterOrg.id });
 
@@ -128,6 +136,8 @@ export const createSandboxForOrg = async ({
 		name,
 		isSandbox: true,
 		createMembership: false,
+		sandboxColor: color ?? DEFAULT_SANDBOX_COLOR,
+		sandboxIcon: icon ?? DEFAULT_SANDBOX_ICON,
 	});
 
 	try {

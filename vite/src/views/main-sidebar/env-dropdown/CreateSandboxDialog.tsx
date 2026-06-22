@@ -1,3 +1,4 @@
+import { DEFAULT_SANDBOX_COLOR, DEFAULT_SANDBOX_ICON } from "@autumn/shared";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
@@ -10,11 +11,10 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/v2/dialogs/Dialog";
-import { FormLabel as FieldLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
 import { useCreateSandbox } from "@/hooks/queries/useSandboxesQuery";
 import { setActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { getBackendErr } from "@/utils/genUtils";
+import { SandboxFormFields } from "./SandboxFormFields";
 
 export const CreateSandboxDialog = ({
 	open,
@@ -26,16 +26,42 @@ export const CreateSandboxDialog = ({
 	const navigate = useNavigate();
 	const createSandbox = useCreateSandbox();
 	const [name, setName] = useState("");
+	const [color, setColor] = useState<string>(DEFAULT_SANDBOX_COLOR);
+	const [icon, setIcon] = useState<string>(DEFAULT_SANDBOX_ICON);
+
+	const resetSelections = () => {
+		setName("");
+		setColor(DEFAULT_SANDBOX_COLOR);
+		setIcon(DEFAULT_SANDBOX_ICON);
+	};
+
+	const handleOpenChange = (next: boolean) => {
+		if (!next) {
+			resetSelections();
+		}
+		onOpenChange(next);
+	};
 
 	const handleCreate = async () => {
 		const trimmed = name.trim();
-		if (!trimmed) return;
+		if (!trimmed) {
+			return;
+		}
 
 		try {
-			const sandbox = await createSandbox.mutateAsync(trimmed);
-			setActiveSandbox({ id: sandbox.id, name: sandbox.name });
+			const sandbox = await createSandbox.mutateAsync({
+				name: trimmed,
+				color,
+				icon,
+			});
+			setActiveSandbox({
+				id: sandbox.id,
+				name: sandbox.name,
+				color: sandbox.color,
+				icon: sandbox.icon,
+			});
 			toast.success("Sandbox created");
-			setName("");
+			resetSelections();
 			onOpenChange(false);
 			navigate("/sandbox/products");
 		} catch (error) {
@@ -44,7 +70,7 @@ export const CreateSandboxDialog = ({
 	};
 
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
+		<Dialog open={open} onOpenChange={handleOpenChange}>
 			<DialogContent className="w-[400px] bg-card">
 				<DialogHeader>
 					<DialogTitle>New sandbox</DialogTitle>
@@ -52,14 +78,14 @@ export const CreateSandboxDialog = ({
 						An isolated test environment with its own data and API keys.
 					</DialogDescription>
 				</DialogHeader>
-				<div>
-					<FieldLabel>Name</FieldLabel>
-					<Input
-						placeholder="Staging"
-						value={name}
-						onChange={(e) => setName(e.target.value)}
-					/>
-				</div>
+				<SandboxFormFields
+					name={name}
+					onNameChange={setName}
+					color={color}
+					onColorChange={setColor}
+					icon={icon}
+					onIconChange={setIcon}
+				/>
 				<DialogFooter>
 					<ShortcutButton
 						variant="primary"

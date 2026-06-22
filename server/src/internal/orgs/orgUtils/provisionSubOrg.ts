@@ -1,4 +1,10 @@
-import { member, type Organization, organizations } from "@autumn/shared";
+import {
+	member,
+	type Organization,
+	organizations,
+	type SandboxColor,
+	type SandboxIcon,
+} from "@autumn/shared";
 import type { User } from "better-auth";
 import { generateId } from "better-auth";
 import { eq } from "drizzle-orm";
@@ -23,6 +29,8 @@ export const provisionSubOrg = async ({
 	name,
 	isSandbox,
 	createMembership,
+	sandboxColor,
+	sandboxIcon,
 }: {
 	db: DrizzleCli;
 	masterOrg: Organization;
@@ -31,6 +39,8 @@ export const provisionSubOrg = async ({
 	name: string;
 	isSandbox: boolean;
 	createMembership: boolean;
+	sandboxColor?: SandboxColor;
+	sandboxIcon?: SandboxIcon;
 }): Promise<Organization & { master?: Organization | null }> => {
 	const orgId = generateId();
 	const [insertedOrg] = await db
@@ -44,6 +54,8 @@ export const provisionSubOrg = async ({
 			metadata: "",
 			created_by: masterOrg.id,
 			is_sandbox: isSandbox,
+			sandbox_color: sandboxColor ?? null,
+			sandbox_icon: sandboxIcon ?? null,
 		})
 		.returning();
 

@@ -2,6 +2,12 @@ import { expect, test } from "bun:test";
 import { reconcileActiveSandbox } from "@/hooks/sandbox/reconcileActiveSandbox";
 
 const sandbox = (id: string) => ({ id, name: id });
+const summary = (id: string, name: string, color?: string, icon?: string) => ({
+	id,
+	name,
+	color,
+	icon,
+});
 
 // A disabled or in-flight sandboxes query reports an empty list. Dropping the
 // selection then wipes the sandbox useActiveSandbox just restored from
@@ -22,7 +28,34 @@ test("keeps the selection once loaded and still present", () => {
 	expect(
 		reconcileActiveSandbox({
 			activeSandbox: active,
-			sandboxes: [sandbox("sb_1"), sandbox("sb_2")],
+			sandboxes: [summary("sb_1", "sb_1"), summary("sb_2", "sb_2")],
+			listLoaded: true,
+		}),
+	).toEqual({ id: "sb_1", name: "sb_1", color: undefined, icon: undefined });
+});
+
+test("loaded matching sandbox replaces the persisted active with the latest name/color/icon", () => {
+	const active = summary("sb_1", "Old Name", "gray", "flask");
+	expect(
+		reconcileActiveSandbox({
+			activeSandbox: active,
+			sandboxes: [summary("sb_1", "New Name", "blue", "rocket")],
+			listLoaded: true,
+		}),
+	).toEqual({
+		id: "sb_1",
+		name: "New Name",
+		color: "blue",
+		icon: "rocket",
+	});
+});
+
+test("returns the same reference when content is unchanged (avoids an update loop)", () => {
+	const active = summary("sb_1", "Staging", "blue", "rocket");
+	expect(
+		reconcileActiveSandbox({
+			activeSandbox: active,
+			sandboxes: [summary("sb_1", "Staging", "blue", "rocket")],
 			listLoaded: true,
 		}),
 	).toBe(active);
@@ -32,7 +65,7 @@ test("drops the selection once loaded and genuinely absent", () => {
 	expect(
 		reconcileActiveSandbox({
 			activeSandbox: sandbox("sb_deleted"),
-			sandboxes: [sandbox("sb_other")],
+			sandboxes: [summary("sb_other", "sb_other")],
 			listLoaded: true,
 		}),
 	).toBeNull();
@@ -52,7 +85,7 @@ test("is a no-op when there is no active sandbox", () => {
 // disabled (canSwitch false) -> in-flight -> loaded. The restore must survive.
 test("cold reload survives disabled then in-flight then loaded-present", () => {
 	const active = sandbox("sb_staging");
-	const list = [sandbox("sb_staging")];
+	const list = [summary("sb_staging", "sb_staging", "blue", "rocket")];
 	const disabled = reconcileActiveSandbox({
 		activeSandbox: active,
 		sandboxes: [],
@@ -68,5 +101,10 @@ test("cold reload survives disabled then in-flight then loaded-present", () => {
 		sandboxes: list,
 		listLoaded: true,
 	});
-	expect(loaded).toBe(active);
+	expect(loaded).toEqual({
+		id: "sb_staging",
+		name: "sb_staging",
+		color: "blue",
+		icon: "rocket",
+	});
 });

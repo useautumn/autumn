@@ -1,6 +1,11 @@
 import { useSyncExternalStore } from "react";
 
-export type ActiveSandbox = { id: string; name: string };
+export type ActiveSandbox = {
+	id: string;
+	name: string;
+	color?: string;
+	icon?: string;
+};
 
 const STORAGE_KEY = "autumn_active_sandbox";
 const listeners = new Set<() => void>();

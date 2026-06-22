@@ -150,6 +150,7 @@ export * from "./models/orgModels/frontendOrg";
 export * from "./models/orgModels/fullOrgModel";
 export * from "./models/orgModels/orgConfig";
 export * from "./models/orgModels/orgTable";
+export * from "./models/orgModels/sandboxDisplay";
 export * from "./models/otherModels/metadataTable";
 // Duration Types
 export * from "./models/productModels/durationTypes/rolloverExpiryDurationType";

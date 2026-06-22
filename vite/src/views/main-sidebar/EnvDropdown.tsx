@@ -2,7 +2,7 @@
 "use client";
 
 import { AppEnv } from "@autumn/shared";
-import { Check, FlaskConical, Plus } from "lucide-react";
+import { Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
@@ -12,8 +12,13 @@ import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 } from "@/components/v2/dropdowns/DropdownMenu";
+import { PhosphorIcon } from "@/components/v2/icons/PhosphorIcon";
 import { useOrg } from "@/hooks/common/useOrg";
-import { useSandboxesQuery } from "@/hooks/queries/useSandboxesQuery";
+import {
+	type SandboxSummary,
+	useSandboxesQuery,
+} from "@/hooks/queries/useSandboxesQuery";
+import { sandboxColorClass } from "@/hooks/sandbox/sandboxDisplay";
 import {
 	type ActiveSandbox,
 	setActiveSandbox,
@@ -22,6 +27,8 @@ import {
 import { cn } from "@/lib/utils";
 import { envToPath } from "@/utils/genUtils";
 import { CreateSandboxDialog } from "./env-dropdown/CreateSandboxDialog";
+import { DeleteSandboxDialog } from "./env-dropdown/DeleteSandboxDialog";
+import { EditSandboxDialog } from "./env-dropdown/EditSandboxDialog";
 import { ExpandedEnvTrigger } from "./env-dropdown/ExpandedEnvTrigger";
 import { StaticEnvPill } from "./env-dropdown/StaticEnvPill";
 
@@ -55,6 +62,12 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 	const [isHovered, setIsHovered] = useState(false);
 	const [open, setOpen] = useState(false);
 	const [createOpen, setCreateOpen] = useState(false);
+	const [sandboxToDelete, setSandboxToDelete] = useState<SandboxSummary | null>(
+		null,
+	);
+	const [sandboxToEdit, setSandboxToEdit] = useState<SandboxSummary | null>(
+		null,
+	);
 	const handleEnvChange = useEnvChange();
 
 	if (!canSwitch) {
@@ -119,16 +132,56 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 								key={sandbox.id}
 								className={itemClass}
 								onClick={() =>
-									selectSandbox({ id: sandbox.id, name: sandbox.name })
+									selectSandbox({
+										id: sandbox.id,
+										name: sandbox.name,
+										color: sandbox.color,
+										icon: sandbox.icon,
+									})
 								}
 							>
 								<span className="flex items-center gap-2 truncate">
-									<FlaskConical size={12} className="!h-3 w-3 shrink-0" />
+									<PhosphorIcon
+										name={sandbox.icon}
+										className={cn(
+											"size-3 shrink-0",
+											sandboxColorClass(sandbox.color),
+										)}
+									/>
 									<span className="truncate">{sandbox.name}</span>
 								</span>
-								{isActive && (
-									<Check size={12} className="!h-4 text-tertiary-foreground" />
-								)}
+								<span className="flex shrink-0 items-center gap-1">
+									{isActive && (
+										<Check
+											size={12}
+											className="!h-4 text-tertiary-foreground"
+										/>
+									)}
+									<button
+										aria-label={`Edit ${sandbox.name}`}
+										className="text-muted-foreground transition-colors hover:text-foreground"
+										onClick={(e) => {
+											e.stopPropagation();
+											setOpen(false);
+											setSandboxToEdit(sandbox);
+										}}
+										type="button"
+									>
+										<Pencil size={12} className="!h-3 w-3" />
+									</button>
+									<button
+										aria-label={`Delete ${sandbox.name}`}
+										className="text-muted-foreground transition-colors hover:text-destructive"
+										onClick={(e) => {
+											e.stopPropagation();
+											setOpen(false);
+											setSandboxToDelete(sandbox);
+										}}
+										type="button"
+									>
+										<Trash2 size={12} className="!h-3 w-3" />
+									</button>
+								</span>
 							</DropdownMenuItem>
 						);
 					})}
@@ -147,6 +200,28 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 				</DropdownMenuContent>
 			</DropdownMenu>
 			<CreateSandboxDialog open={createOpen} onOpenChange={setCreateOpen} />
+			{sandboxToDelete && (
+				<DeleteSandboxDialog
+					sandbox={sandboxToDelete}
+					open
+					setOpen={(next) => {
+						if (!next) {
+							setSandboxToDelete(null);
+						}
+					}}
+				/>
+			)}
+			{sandboxToEdit && (
+				<EditSandboxDialog
+					sandbox={sandboxToEdit}
+					open
+					setOpen={(next) => {
+						if (!next) {
+							setSandboxToEdit(null);
+						}
+					}}
+				/>
+			)}
 		</div>
 	);
 };

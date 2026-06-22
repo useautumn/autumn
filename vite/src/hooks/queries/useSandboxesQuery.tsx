@@ -13,6 +13,8 @@ export type SandboxSummary = {
 	name: string;
 	slug: string;
 	created_at: string;
+	color: string;
+	icon: string;
 };
 
 // Sandboxes are main-org-scoped, so the key is env-independent (no refetch on env switch).
@@ -68,6 +70,8 @@ export type CreateSandboxResponse = {
 	id: string;
 	name: string;
 	slug: string;
+	color: string;
+	icon: string;
 	secret_key: string;
 };
 
@@ -77,10 +81,18 @@ export const useCreateSandbox = () => {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: async (name: string) => {
+		mutationFn: async ({
+			name,
+			color,
+			icon,
+		}: {
+			name: string;
+			color: string;
+			icon: string;
+		}) => {
 			const { data } = await axiosInstance.post<CreateSandboxResponse>(
 				"/v1/sandboxes.create",
-				{ name },
+				{ name, color, icon },
 			);
 			return data;
 		},
@@ -96,10 +108,77 @@ export const useCreateSandbox = () => {
 							id: created.id,
 							name: created.name,
 							slug: created.slug,
+							color: created.color,
+							icon: created.icon,
 							created_at: new Date().toISOString(),
 						},
 						...(old?.list ?? []),
 					],
+				}),
+			);
+			queryClient.invalidateQueries({ queryKey: key });
+		},
+	});
+};
+
+export const useUpdateSandbox = () => {
+	const axiosInstance = useAxiosInstance({ skipSandbox: true });
+	const { org } = useOrg();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async ({
+			id,
+			name,
+			color,
+			icon,
+		}: {
+			id: string;
+			name: string;
+			color: string;
+			icon: string;
+		}) => {
+			await axiosInstance.post("/v1/sandboxes.update", {
+				id,
+				name,
+				color,
+				icon,
+			});
+			return { id, name, color, icon };
+		},
+		onSuccess: ({ id, name, color, icon }) => {
+			const key = sandboxesKey(org?.id);
+			queryClient.setQueryData(
+				key,
+				(old: { list?: SandboxSummary[] } | undefined) => ({
+					...old,
+					list: (old?.list ?? []).map((s) =>
+						s.id === id ? { ...s, name, color, icon } : s,
+					),
+				}),
+			);
+			queryClient.invalidateQueries({ queryKey: key });
+		},
+	});
+};
+
+export const useDeleteSandbox = () => {
+	const axiosInstance = useAxiosInstance({ skipSandbox: true });
+	const { org } = useOrg();
+	const queryClient = useQueryClient();
+
+	return useMutation({
+		mutationFn: async (id: string) => {
+			await axiosInstance.post("/v1/sandboxes.delete", { id });
+			return id;
+		},
+		onSuccess: (deletedId) => {
+			const key = sandboxesKey(org?.id);
+			queryClient.setQueryData(
+				key,
+				(old: { list?: SandboxSummary[] } | undefined) => ({
+					...old,
+					list: (old?.list ?? []).filter((s) => s.id !== deletedId),
 				}),
 			);
 			queryClient.invalidateQueries({ queryKey: key });
