@@ -885,6 +885,10 @@ export type PreviewAttachParams = {
    */
   checkoutSessionParams?: { [k: string]: any } | undefined;
   /**
+   * If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened.
+   */
+  longLivedCheckout?: boolean | undefined;
+  /**
    * Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans).
    */
   customLineItems?: Array<PreviewAttachCustomLineItem> | undefined;
@@ -2280,6 +2284,7 @@ export type PreviewAttachParams$Outbound = {
   starts_at?: number | undefined;
   ends_at?: number | undefined;
   checkout_session_params?: { [k: string]: any } | undefined;
+  long_lived_checkout?: boolean | undefined;
   custom_line_items?: Array<PreviewAttachCustomLineItem$Outbound> | undefined;
   processor_subscription_id?: string | undefined;
   carry_over_balances?: PreviewAttachCarryOverBalances$Outbound | undefined;
@@ -2325,6 +2330,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
     startsAt: z.optional(z.int()),
     endsAt: z.optional(z.int()),
     checkoutSessionParams: z.optional(z.record(z.string(), z.any())),
+    longLivedCheckout: z.optional(z.boolean()),
     customLineItems: z.optional(
       z.array(z.lazy(() => PreviewAttachCustomLineItem$outboundSchema)),
     ),
@@ -2357,6 +2363,7 @@ export const PreviewAttachParams$outboundSchema: z.ZodMiniType<
       startsAt: "starts_at",
       endsAt: "ends_at",
       checkoutSessionParams: "checkout_session_params",
+      longLivedCheckout: "long_lived_checkout",
       customLineItems: "custom_line_items",
       processorSubscriptionId: "processor_subscription_id",
       carryOverBalances: "carry_over_balances",

@@ -377,6 +377,7 @@ export const previewAttachParamsOutboundSchema = z.object({
 	checkout_session_params: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
 		.optional(),
+	long_lived_checkout: z.union([z.boolean(), z.undefined()]).optional(),
 	custom_line_items: z
 		.union([z.array(previewAttachCustomLineItemOutboundSchema), z.undefined()])
 		.optional(),
@@ -627,6 +628,7 @@ export const previewAttachParamsSchema = z.object({
 	checkoutSessionParams: z
 		.union([z.record(z.string(), z.any()), z.undefined()])
 		.optional(),
+	longLivedCheckout: z.union([z.boolean(), z.undefined()]).optional(),
 	customLineItems: z
 		.union([z.array(previewAttachCustomLineItemSchema), z.undefined()])
 		.optional(),
