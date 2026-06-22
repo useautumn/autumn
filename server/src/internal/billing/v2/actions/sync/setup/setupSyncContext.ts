@@ -64,13 +64,13 @@ const buildProductContext = async ({
 	ctx,
 	fullCustomer,
 	plan,
-	isImmediate,
+	shouldFindCurrentCustomerProduct,
 	accessStartsAt,
 }: {
 	ctx: AutumnContext;
 	fullCustomer: FullCustomer;
 	plan: SyncPlanInstance;
-	isImmediate: boolean;
+	shouldFindCurrentCustomerProduct: boolean;
 	accessStartsAt?: number;
 }): Promise<SyncProductContext> => {
 	const {
@@ -89,7 +89,7 @@ const buildProductContext = async ({
 	const entity = resolvePlanEntity({ plan, fullCustomer });
 
 	let currentCustomerProduct: FullCusProduct | undefined;
-	if ((isImmediate || plan.enable_plan_immediately) && plan.expire_previous) {
+	if (shouldFindCurrentCustomerProduct) {
 		const transition = setupAttachTransitionContext({
 			fullCustomer,
 			attachProduct: fullProduct,
@@ -156,6 +156,7 @@ export const setupSyncContext = async ({
 
 	const currentEpochMs = Date.now();
 	const inputPhases = params.phases ?? [];
+	const firstPhaseIsImmediate = inputPhases[0]?.starts_at === "now";
 
 	const phaseContexts: SyncPhaseContext[] = await Promise.all(
 		inputPhases.map(async (phase, index) => {
@@ -179,7 +180,9 @@ export const setupSyncContext = async ({
 						ctx,
 						fullCustomer,
 						plan,
-						isImmediate: isImmediatePhase,
+						shouldFindCurrentCustomerProduct:
+							plan.expire_previous === true &&
+							(isImmediatePhase || plan.enable_plan_immediately === true),
 						accessStartsAt: plan.enable_plan_immediately
 							? currentEpochMs
 							: undefined,
@@ -206,7 +209,6 @@ export const setupSyncContext = async ({
 		}),
 	);
 
-	const firstPhaseIsImmediate = inputPhases[0]?.starts_at === "now";
 	const immediatePhase = firstPhaseIsImmediate
 		? (phaseContexts[0] ?? null)
 		: null;

@@ -1,6 +1,8 @@
 import {
 	CustomerNotFoundError,
 	EntityNotFoundError,
+	ErrCode,
+	RecaseError,
 	type UpdateEntityParams,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -21,7 +23,11 @@ export const updateEntity = async ({
 		billing_controls,
 	} = params;
 	if (!customerId) {
-		throw new CustomerNotFoundError({ customerId: "" });
+		throw new RecaseError({
+			message: "customer_id is required to update an entity",
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
 	}
 
 	const fullSubject = await getFullSubject({
@@ -43,6 +49,7 @@ export const updateEntity = async ({
 	const filteredUpdates = Object.fromEntries(
 		Object.entries({
 			spend_limits: billing_controls?.spend_limits,
+			usage_limits: billing_controls?.usage_limits,
 			usage_alerts: billing_controls?.usage_alerts,
 			overage_allowed: billing_controls?.overage_allowed,
 		}).filter(([, value]) => value !== undefined),

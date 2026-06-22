@@ -1,6 +1,6 @@
-import fs from "fs";
+import fs from "node:fs";
+import path from "node:path";
 import matter from "gray-matter";
-import path from "path";
 
 const CONTENT_DIR = path.join(process.cwd(), "content", "blog");
 
@@ -15,6 +15,7 @@ export type BlogPostSummary = {
 
 export type BlogPost = BlogPostSummary & {
 	source: string;
+	heroComponent: string | null;
 };
 
 export function getAllPosts(): BlogPostSummary[] {
@@ -66,6 +67,7 @@ export function getPostBySlug({ slug }: { slug: string }): BlogPost | null {
 				date: data.date || null,
 				author: data.author || "Autumn Team",
 				image: data.image || null,
+				heroComponent: data.heroComponent || null,
 				source: content,
 			};
 		}

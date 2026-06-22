@@ -15,7 +15,10 @@ import { fetchStoredLineItemsForSubscriptionBilling } from "@/internal/billing/v
 import { setupAdjustableQuantities } from "@/internal/billing/v2/setup/setupAdjustableQuantities";
 import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
-import { setupCancelAction } from "@/internal/billing/v2/setup/setupCancelMode";
+import {
+	setupCancelAction,
+	shouldSuppressUnpaidCycleCredit,
+} from "@/internal/billing/v2/setup/setupCancelMode";
 import { setupFeatureQuantitiesContext } from "@/internal/billing/v2/setup/setupFeatureQuantitiesContext";
 import { setupFullCustomerContext } from "@/internal/billing/v2/setup/setupFullCustomerContext";
 import { setupIgnoreProrationBehavior } from "@/internal/billing/v2/setup/setupIgnoreProrationBehavior";
@@ -171,7 +174,19 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		customerProduct,
 	});
 
-	const cancelAction = setupCancelAction({ params });
+	const cancelAction = setupCancelAction({
+		params,
+		org: ctx.org,
+		customerProduct,
+	});
+
+	// A past_due immediate cancel (resolved from end-of-cycle OR requested directly) must not
+	// credit the unpaid cycle — the open invoice is voided instead.
+	const suppressUnpaidCycleCredit = shouldSuppressUnpaidCycleCredit({
+		cancelAction,
+		org: ctx.org,
+		customerProduct,
+	});
 
 	let checkoutMode = setupAttachCheckoutMode({
 		paymentMethod,
@@ -221,9 +236,11 @@ export const setupUpdateSubscriptionBillingContext = async ({
 		billingCycleAnchorMs,
 		resetCycleAnchorMs,
 		requestedBillingCycleAnchor: params.billing_cycle_anchor,
-		requestedProrationBehavior: setupIgnoreProrationBehavior({ intent })
-			? undefined
-			: params.proration_behavior,
+		requestedProrationBehavior: suppressUnpaidCycleCredit
+			? "none"
+			: setupIgnoreProrationBehavior({ intent })
+				? undefined
+				: params.proration_behavior,
 
 		invoiceMode,
 		featureQuantities,
@@ -254,5 +271,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 
 		chargeExistingOverages: contextOverride.chargeExistingOverages,
 		skipExistingUsageCarry: contextOverride.skipExistingUsageCarry,
+		carryOverUsages: params.carry_over_usages,
 	};
 };

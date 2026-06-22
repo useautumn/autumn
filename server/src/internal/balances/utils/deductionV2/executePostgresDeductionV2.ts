@@ -4,6 +4,7 @@ import {
 	type FullSubject,
 	fullSubjectToFullCustomer,
 	InternalError,
+	isUsageBasedAllocatedCustomerEntitlement,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import { withLock } from "@/external/redis/redisUtils.js";
@@ -77,7 +78,7 @@ export const executePostgresDeductionV2 = async ({
 		deductions,
 	});
 
-	if (resolvedOptions.paidAllocated && deductions.some((d) => d.lock)) {
+	if (resolvedOptions.paidAllocatedV1 && deductions.some((d) => d.lock)) {
 		throw new InternalError({
 			message: "Locks are not supported for paid allocated features",
 		});
@@ -117,6 +118,7 @@ export const executePostgresDeductionV2 = async ({
 				fullSubject,
 				deduction,
 				options: resolvedOptions,
+				now: Date.now(),
 			});
 
 			if (customerEntitlements.length === 0 || unlimitedFeatureIds.length > 0) {
@@ -147,6 +149,9 @@ export const executePostgresDeductionV2 = async ({
 				sql`SELECT * FROM deduct_from_cus_ents(
 				${JSON.stringify({
 					sorted_entitlements: customerEntitlementDeductions,
+					// No usage_window_limits here: the hard usage cap is enforced only on the
+					// Redis/Lua path, so this Postgres fallback intentionally fails open
+					// (availability over strict cap enforcement during a Redis outage).
 					spend_limit_by_feature_id: spendLimitByFeatureId ?? null,
 					usage_based_cus_ent_ids_by_feature_id:
 						usageBasedCusEntIdsByFeatureId ?? null,
@@ -233,12 +238,14 @@ export const executePostgresDeductionV2 = async ({
 
 					if (!customerEntitlement) continue;
 
-					await createAllocatedInvoice({
-						ctx,
-						customerEntitlement,
-						oldFullCustomer,
-						update,
-					});
+					if (isUsageBasedAllocatedCustomerEntitlement(customerEntitlement)) {
+						await createAllocatedInvoice({
+							ctx,
+							customerEntitlement,
+							oldFullCustomer,
+							update,
+						});
+					}
 
 					applyDeductionUpdateToFullSubject({
 						fullSubject,
@@ -316,13 +323,13 @@ export const executePostgresDeductionV2 = async ({
 		};
 	};
 
-	const deductionResult = resolvedOptions.paidAllocated
+	const deductionResult = resolvedOptions.paidAllocatedV1
 		? await withLock({
-				lockKey: `lock:deduction:${org.id}:${env}:${customerId}`,
-				ttlMs: 60000,
-				errorMessage: `Deduction for paid feature ${deductions[0]?.feature?.name} already in progress for customer ${customerId}.`,
-				fn: executeDeduction,
-			})
+			lockKey: `lock:deduction:${org.id}:${env}:${customerId}`,
+			ttlMs: 60000,
+			errorMessage: `Deduction for paid feature ${deductions[0]?.feature?.name} already in progress for customer ${customerId}.`,
+			fn: executeDeduction,
+		})
 		: await executeDeduction();
 
 	return {

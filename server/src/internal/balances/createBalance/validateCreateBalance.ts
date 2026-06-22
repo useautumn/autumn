@@ -42,6 +42,7 @@ export const validateCreateBalanceParams = async ({
 	if (entity && feature.id === entity.feature_id) {
 		throw new RecaseError({
 			message: `Cannot give an entity a balance of its own feature type`,
+			statusCode: 400,
 		});
 	}
 
@@ -51,12 +52,14 @@ export const validateCreateBalanceParams = async ({
 	) {
 		throw new RecaseError({
 			message: `Rollover is not supported for continuous use features`,
+			statusCode: 400,
 		});
 	}
 
 	if (Object.keys(params.reset || {}).length <= 0 && params.rollover) {
 		throw new RecaseError({
 			message: `Rollover cannot be provided for one-time balances`,
+			statusCode: 400,
 		});
 	}
 
@@ -77,6 +80,35 @@ export const validateCreateBalanceParams = async ({
 				message: `expires_at (${new Date(params.expires_at).toISOString()}) occurs before the next rollover event (${new Date(nextResetAt).toISOString()})`,
 			});
 		}
+	}
+
+	// An explicit next_reset_at only makes sense for a resetting balance.
+	if (params.next_reset_at !== undefined && !params.reset?.interval) {
+		throw new RecaseError({
+			message: `next_reset_at requires a reset interval to be provided`,
+		});
+	}
+
+	// An explicit first reset boundary must be in the future — a past value would
+	// immediately fire a lazy reset and cycle the balance the caller just created.
+	if (
+		params.next_reset_at !== undefined &&
+		params.next_reset_at <= Date.now()
+	) {
+		throw new RecaseError({
+			message: `next_reset_at must be in the future`,
+		});
+	}
+
+	// The first reset must happen before the balance expires.
+	if (
+		params.next_reset_at !== undefined &&
+		params.expires_at &&
+		params.next_reset_at >= params.expires_at
+	) {
+		throw new RecaseError({
+			message: `next_reset_at (${new Date(params.next_reset_at).toISOString()}) must occur before expires_at (${new Date(params.expires_at).toISOString()})`,
+		});
 	}
 
 	if (params.balance_id) {
@@ -130,6 +162,7 @@ const validateBooleanEntitlementConflict = async ({
 		if (apiCustomer.flags?.[feature.id]) {
 			throw new RecaseError({
 				message: `A boolean entitlement ${feature.id} already exists for customer ${fullCustomer.internal_id}`,
+				statusCode: 409,
 			});
 		}
 	}

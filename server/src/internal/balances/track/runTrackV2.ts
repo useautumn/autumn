@@ -12,7 +12,6 @@ import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCu
 import type { AutumnContext } from "../../../honoUtils/HonoEnv.js";
 import { getOrCreateCachedFullCustomer } from "../../customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
 import type { FeatureDeduction } from "../utils/types/featureDeduction.js";
-import { handleEventIdempotencyKey } from "./utils/handleEventIdempotencyKey.js";
 import { runRedisTrack } from "./utils/runRedisTrack.js";
 
 export const runTrackV2 = async ({
@@ -50,14 +49,6 @@ export const runTrackV2 = async ({
 				params: body,
 				source: "runTrackV2",
 			});
-
-	// If idempotency key is provided, insert event first and skip insertion later
-	if (body.idempotency_key) {
-		await handleEventIdempotencyKey({
-			ctx,
-			body,
-		});
-	}
 
 	// Try Redis deduction - returns TrackResponseV3 (with ApiBalanceV1)
 	const response: TrackResponseV3 = await runRedisTrack({

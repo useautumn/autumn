@@ -8,8 +8,9 @@ import type {
 } from "@autumn/shared";
 import { enrichEntitlementsWithFeatures } from "@shared/utils/productUtils/entUtils/enrichEntitlement";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { getCustomerProductCarryGroups } from "@/internal/billing/v2/utils/initFullCustomerProduct/carryExisting";
+import { resolveUpdateExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/resolveUpdateExistingUsagesConfig";
 import { applyExistingStatesToCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/applyExisting/applyExistingStatesToCustomerProduct";
+import { getCustomerProductCarryGroups } from "@/internal/billing/v2/utils/initFullCustomerProduct/carryExisting";
 import { initCustomerEntitlement } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerEntitlement/initCustomerEntitlement";
 import { initCustomerPrice } from "@/internal/billing/v2/utils/initFullCustomerProduct/initCustomerPrice";
 import { applyOneOffPrepaidCarryOvers } from "../../handleOneOffPrepaidCarryOvers/applyOneOffPrepaidCarryOvers";
@@ -22,6 +23,7 @@ type PatchInitBillingContext = Pick<
 	| "currentEpochMs"
 	| "trialContext"
 	| "skipExistingUsageCarry"
+	| "carryOverUsages"
 >;
 
 export const initPatchedCustomerEntitlementsAndPrices = ({
@@ -45,6 +47,7 @@ export const initPatchedCustomerEntitlementsAndPrices = ({
 		currentEpochMs,
 		trialContext,
 		skipExistingUsageCarry,
+		carryOverUsages,
 	} = billingContext;
 	const {
 		customPrices,
@@ -128,12 +131,12 @@ export const initPatchedCustomerEntitlementsAndPrices = ({
 			ctx,
 			fullCustomer,
 			customerProduct: carryGroup.toCustomerProduct,
-			existingUsagesConfig: skipExistingUsageCarry
-				? undefined
-				: {
-						fromCustomerProduct: carryGroup.fromCustomerProduct,
-						carryAllConsumableFeatures: true,
-					},
+			existingUsagesConfig: resolveUpdateExistingUsagesConfig({
+				ctx,
+				skipExistingUsageCarry,
+				carryOverUsages,
+				currentCustomerProduct: carryGroup.fromCustomerProduct,
+			}),
 			existingRolloversConfig: {
 				fromCustomerProduct: carryGroup.fromCustomerProduct,
 			},

@@ -114,16 +114,12 @@ export const createRedisAvailability = ({
 		}
 
 		const shouldReconnectReadyClient =
-			failedWhileReady &&
-			consecutiveFailures + 1 >= REDIS_FAILURES_TO_DEGRADE;
+			failedWhileReady && consecutiveFailures + 1 >= REDIS_FAILURES_TO_DEGRADE;
 
 		if (shouldReconnectReadyClient) {
 			await reconnectRedis();
 		} else if (redis.status !== "ready") {
-			if (
-				redis.status === "connecting" ||
-				redis.status === "reconnecting"
-			) {
+			if (redis.status === "connecting" || redis.status === "reconnecting") {
 				reconnectStartedAt ??= Date.now();
 				if (Date.now() - reconnectStartedAt < REDIS_STALE_RECONNECT_MS) {
 					return false;
@@ -149,10 +145,7 @@ export const createRedisAvailability = ({
 	return {
 		prime: async () => {
 			if (!hasConfig) return;
-			if (
-				redis.status === "connecting" ||
-				redis.status === "reconnecting"
-			) {
+			if (redis.status === "connecting" || redis.status === "reconnecting") {
 				await waitForRedisReady(redis, logPrefix).catch(() => undefined);
 			}
 			const available = await probeRedisAvailability();
@@ -174,8 +167,7 @@ export const createRedisAvailability = ({
 			clearInterval(redisMonitorInterval);
 			redisMonitorInterval = null;
 		},
-		shouldUseRedis: () =>
-			hasConfig && redisAvailabilityState === "healthy",
+		shouldUseRedis: () => hasConfig && redisAvailabilityState === "healthy",
 		getRedisAvailability: (): RedisAvailabilitySnapshot => ({
 			configured: hasConfig,
 			state: redisAvailabilityState,

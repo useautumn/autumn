@@ -55,6 +55,7 @@
 						"group": " ",
 						"pages": [
 							"welcome",
+							"documentation/mcp",
 							{
 								"group": "Concepts",
 								"pages": [
@@ -134,9 +135,21 @@
 							"documentation/fail-open",
 							"documentation/rate-limits",
 							"documentation/external-providers/ai-sdk",
+							"documentation/external-providers/openrouter",
 							"documentation/external-providers/convex",
 							"documentation/external-providers/revenuecat",
 							"documentation/external-providers/vercel-marketplace"
+						]
+					},
+					{
+						"group": "Lakehouse",
+						"pages": [
+							"documentation/lakehouse/overview",
+							"documentation/lakehouse/connecting",
+							"documentation/lakehouse/schema",
+							"documentation/lakehouse/balance-semantics",
+							"documentation/lakehouse/working-with-invoices",
+							"documentation/lakehouse/querying"
 						]
 					}
 				]

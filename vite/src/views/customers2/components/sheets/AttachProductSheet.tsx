@@ -1,4 +1,4 @@
-import type { Entity, FullCustomer } from "@autumn/shared";
+import type { FullCustomer } from "@autumn/shared";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
 import type { AxiosError } from "axios";
@@ -49,6 +49,7 @@ import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";
 import { CreateEntity } from "@/views/customers2/customer/components/CreateEntity";
+import { useScopeEntitySearch } from "@/views/customers2/customer/hooks/useScopeEntitySearch";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { EntityScopeSelector } from "./EntityScopeSelector";
 
@@ -229,12 +230,13 @@ function SelectContent() {
 	const itemId = useSheetStore((s) => s.itemId);
 	const hasProductSelected = !!formValues.productId;
 
-	const { customer } = useCusQuery();
-	const fullCustomer = customer as FullCustomer | null;
-	const entities = fullCustomer?.entities || [];
-	const fullEntity = entities.find(
-		(e: Entity) => e.id === entityId || e.internal_id === entityId,
-	);
+	const {
+		hasEntities,
+		entities,
+		selectedEntity: fullEntity,
+		isLoading: isEntitiesLoading,
+		setSearch: setEntitySearch,
+	} = useScopeEntitySearch({ selectedEntityId: entityId ?? undefined });
 
 	const [createEntityOpen, setCreateEntityOpen] = useState(false);
 
@@ -249,11 +251,13 @@ function SelectContent() {
 				<div className="space-y-2">
 					<AttachProductSelection />
 
-					{entities.length > 0 && (
+					{hasEntities && (
 						<EntityScopeSelector
 							entities={entities}
 							scopeEntityId={entityId ?? undefined}
 							onScopeChange={(value) => onScopeChange?.(value)}
+							onSearchChange={setEntitySearch}
+							isLoading={isEntitiesLoading}
 							wrapInSection={false}
 							footer={
 								<div className="border-t py-1.5 px-2">
@@ -282,7 +286,7 @@ function SelectContent() {
 								</span>
 							</InfoBox>
 						</div>
-					) : entities.length > 0 ? (
+					) : hasEntities ? (
 						<div className="pt-2">
 							<InfoBox variant="note">
 								Attaching plan to customer - all entities will get access

@@ -1,0 +1,1 @@
+ALTER TABLE "organizations" ADD COLUMN "custom_buttons" jsonb DEFAULT '[]'::jsonb NOT NULL;

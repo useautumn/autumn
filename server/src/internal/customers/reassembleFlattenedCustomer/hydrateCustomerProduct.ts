@@ -1,5 +1,5 @@
 import type { LookupMaps } from "./buildLookupMaps.js";
-import { toInt, toNullableTimestamp, toTimestamp } from "./normalizeFields.js";
+import { normalizeCustomerProductTimeFields } from "./normalizeFields.js";
 import type { FlatCustomerProduct } from "./types.js";
 
 export const hydrateCustomerProduct = (
@@ -13,15 +13,7 @@ export const hydrateCustomerProduct = (
 		: null;
 
 	return {
-		...cp,
-		created_at: toTimestamp(cp.created_at),
-		starts_at: cp.starts_at
-			? toTimestamp(cp.starts_at)
-			: toTimestamp(cp.created_at),
-		canceled_at: toNullableTimestamp(cp.canceled_at),
-		ended_at: toNullableTimestamp(cp.ended_at),
-		trial_ends_at: toNullableTimestamp(cp.trial_ends_at),
-		quantity: toInt(cp.quantity, 1),
+		...normalizeCustomerProductTimeFields({ ...cp }),
 		options: cp.options ?? [],
 		collection_method: cp.collection_method ?? "charge_automatically",
 		subscription_ids: cp.subscription_ids ?? [],

@@ -1,10 +1,8 @@
 import { UserIcon } from "@phosphor-icons/react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useCusSearchQueryV2 } from "@/views/customers/hooks/useCusSearchQuery";
 import { AddButton } from "../shared/AddButton";
 import { buildFeatureSuggestions } from "../shared/featureSuggestions";
-import { buildPlanSuggestions } from "../shared/planSuggestions";
 import { RemoveButton } from "../shared/RemoveButton";
 import type { ValuePickerOption } from "../shared/ValuePicker";
 import { FilterRow } from "./FilterRow";
@@ -19,7 +17,6 @@ import {
 function useSuggestionsForField(
 	field: string,
 ): ValuePickerOption[] | undefined {
-	const { products } = useProductsQuery();
 	const { features } = useFeaturesQuery();
 	const { customers } = useCusSearchQueryV2({
 		search: "",
@@ -40,7 +37,6 @@ function useSuggestionsForField(
 				};
 			});
 	}
-	if (field === "plan_id") return buildPlanSuggestions(products);
 	if (field === "item_feature_id") {
 		return buildFeatureSuggestions(features);
 	}

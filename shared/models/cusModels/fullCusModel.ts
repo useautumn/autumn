@@ -1,5 +1,6 @@
 import { ProductSchema } from "@models/productModels/productModels.js";
 import { z } from "zod/v4";
+import type { CustomerProductsPage } from "../../api/customers/cusPlans/listCustomerProductsParams.js";
 import type { FullCustomerEntitlement } from "../cusProductModels/cusEntModels/cusEntModels.js";
 import {
 	CusProductSchema,
@@ -60,6 +61,7 @@ export const FullCustomerSchema = CustomerSchema.extend({
 		.optional(),
 	invoices: z.array(InvoiceSchema).optional(),
 	schedule: FullCustomerScheduleSchema.optional(),
+	products_total_count: z.number().optional(),
 	// `.default([])` makes the FullCustomer cache (which uses this schema for
 	// hole-filling via `normalizeFromSchema`) tolerant of entries written
 	// before this field existed. Empty array also matches the SQL default.
@@ -70,6 +72,8 @@ export type FullCustomerSchedule = Schedule & { phases: SchedulePhase[] };
 
 export type FullCustomer = Customer & {
 	customer_products: FullCusProduct[];
+	products_total_count?: number;
+	products_page?: CustomerProductsPage;
 	entities: Entity[];
 	entity?: Entity;
 	trials_used?: {

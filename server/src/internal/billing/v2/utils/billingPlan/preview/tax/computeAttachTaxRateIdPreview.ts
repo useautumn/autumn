@@ -113,7 +113,7 @@ export const computeTaxRateIdPreviewFromTaxableMinorUnits = ({
 		0,
 	);
 
-	if (totalTaxableMinorUnits <= 0) {
+	if (totalTaxableMinorUnits === 0) {
 		return {
 			total: 0,
 			amount_inclusive: 0,
@@ -149,7 +149,7 @@ export const computeTaxRateIdPreviewFromTaxableMinorUnits = ({
 	);
 
 	const taxAmount = stripeToAtmnAmount({
-		amount: Math.max(taxMinorUnits, 0),
+		amount: taxMinorUnits,
 		currency,
 	});
 

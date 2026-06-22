@@ -6,8 +6,8 @@ import {
 	ErrCode,
 	GetCustomerQuerySchema,
 	RecaseError,
-	V0_2_InvoicesAlwaysExpanded,
 	Scopes,
+	V0_2_InvoicesAlwaysExpanded,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { getApiCustomerByRollout } from "../actions/getApiCustomerByRollout.js";
@@ -30,6 +30,7 @@ export const handleGetCustomerV2 = createRoute({
 			throw new RecaseError({
 				message: "Customer ID is required",
 				code: ErrCode.InvalidRequest,
+				statusCode: 400,
 			});
 		}
 

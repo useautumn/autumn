@@ -12,19 +12,23 @@ import { Input } from "@/components/v2/inputs/Input";
 export const CustomiseIntervalPopover = ({
 	item,
 	setItem,
+	countField = "interval_count",
 }: {
 	item: ProductItem;
 	setItem: (item: ProductItem) => void;
+	countField?: "interval_count" | "price_interval_count";
 }) => {
 	const [open, setOpen] = useState(false);
+	const intervalField =
+		countField === "price_interval_count" ? "price_interval" : "interval";
 	const [intervalCount, setIntervalCount] = useState<number | string>(
-		item.interval_count || 1,
+		item[countField] || 1,
 	);
 
 	const handleSave = () => {
 		setItem({
 			...item,
-			interval_count: parseInt(intervalCount.toString()),
+			[countField]: parseInt(intervalCount.toString()),
 		});
 		setOpen(false);
 	};
@@ -35,7 +39,9 @@ export const CustomiseIntervalPopover = ({
 				<Button
 					className="w-full justify-start px-2 group-hover:text-primary active:border-0"
 					variant="skeleton"
-					disabled={item.included_usage === Infinite || item.interval == null}
+					disabled={
+						item.included_usage === Infinite || item[intervalField] == null
+					}
 				>
 					<p className="text-tertiary-foreground group-hover/btn:text-primary">
 						Customize Interval

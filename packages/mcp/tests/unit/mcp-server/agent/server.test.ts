@@ -1,17 +1,72 @@
 import { describe, expect, test } from "bun:test";
+import { createServer, type IncomingMessage, type Server } from "node:http";
+import { MCPClient } from "@mastra/mcp";
 import { parseResourceMarkdown } from "../../../../src/resources/compileResources.js";
 import { autumnMcpResourceUris } from "../../../../src/resources/index.js";
+import type { AutumnMcpAuth } from "../../../../src/server/auth/auth.js";
 import { createAutumnOperationsMCPServer } from "../../../../src/server/server.js";
 
+const closeServer = (server: Server) =>
+	new Promise<void>((resolve, reject) => {
+		server.close((error) => (error ? reject(error) : resolve()));
+	});
+
+const startMcpServer = () =>
+	new Promise<{ url: URL; close: () => Promise<void> }>((resolve) => {
+		const auth: AutumnMcpAuth = {
+			apiKey: "sk_test",
+			env: "sandbox",
+			principalId: "test-user",
+			resource: "http://localhost/mcp",
+			scopes: ["plans:read"],
+			serverURL: "http://localhost:8080",
+		};
+		const server = createServer(async (req, res) => {
+			const url = new URL(req.url ?? "/mcp", `http://${req.headers.host}`);
+			(req as IncomingMessage & { auth?: AutumnMcpAuth }).auth = auth;
+			await createAutumnOperationsMCPServer().startHTTP({
+				httpPath: "/mcp",
+				req,
+				res,
+				url,
+				options: { serverless: true },
+			});
+		});
+		server.listen(0, "127.0.0.1", () => {
+			const address = server.address();
+			if (!address || typeof address === "string") {
+				throw new Error("MCP test server did not bind.");
+			}
+			resolve({
+				close: () => closeServer(server),
+				url: new URL(`http://127.0.0.1:${address.port}/mcp`),
+			});
+		});
+	});
+
 describe("Autumn MCP server", () => {
-	const logResourceUris = [
-		"autumn://docs/request-logs",
-		"autumn://docs/request-log-customers",
-		"autumn://docs/request-log-balances",
-		"autumn://docs/request-log-billing",
-		"autumn://docs/request-log-stripe-webhooks",
-		"autumn://docs/request-log-analytics",
-	] as const;
+	test("advertises Autumn MCP instructions during initialize", async () => {
+		const server = await startMcpServer();
+		const mcp = new MCPClient({
+			id: `autumn-mcp-instructions-${crypto.randomUUID()}`,
+			servers: { autumn: { url: server.url } },
+		});
+
+		try {
+			await mcp.listToolsetsWithErrors();
+			const instructions = mcp.getServerInstructions().autumn;
+
+			expect(instructions).toContain("# Autumn MCP Instructions");
+			expect(instructions).toContain("autumn://docs/plan-management");
+			expect(instructions).toContain("call them in the same tool batch");
+			expect(instructions).toContain(
+				"Use preview tools before billing writes.",
+			);
+		} finally {
+			await mcp.disconnect();
+			await server.close();
+		}
+	});
 
 	test("public server advertises raw operation tools", async () => {
 		const tools = await createAutumnOperationsMCPServer().getToolListInfo();
@@ -23,10 +78,15 @@ describe("Autumn MCP server", () => {
 			"getOrCreateCustomer",
 			"updateCustomer",
 			"getCustomer",
+			"createEntity",
+			"listEntities",
+			"getEntity",
 			"listFeatures",
 			"listPlans",
 			"createPlan",
 			"getPlan",
+			"hasCustomers",
+			"updatePlan",
 			"createBalance",
 			"searchRequestLogs",
 			"queryRequestLogs",
@@ -61,11 +121,17 @@ describe("Autumn MCP server", () => {
 		}
 	});
 
-	test("public server exposes Autumn composition docs", async () => {
+	test("public server exposes Autumn docs", async () => {
 		const server = createAutumnOperationsMCPServer();
 		const resources = await server.listResources();
 		const resourceUris = autumnMcpResourceUris();
 
+		expect(resourceUris).toEqual([
+			"autumn://docs/concepts",
+			"autumn://docs/plan-management",
+			"autumn://docs/billing",
+			"autumn://docs/logs",
+		]);
 		expect(resources.resources.map((resource) => resource.uri)).toEqual(
 			resourceUris,
 		);
@@ -75,58 +141,168 @@ describe("Autumn MCP server", () => {
 			expect(resource.contents[0]?.text).toContain("# ");
 		}
 
-		const requestLogs = await server.readResource("autumn://docs/request-logs");
-		expect(requestLogs.contents[0]?.text).toContain("searchRequestLogs");
-		expect(requestLogs.contents[0]?.text).toContain("queryRequestLogs");
-
-		const featureCatalog = await server.readResource(
-			"autumn://docs/feature-catalog",
+		const concepts = await server.readResource("autumn://docs/concepts");
+		const conceptsText = String(concepts.contents[0]?.text ?? "");
+		expect(conceptsText.indexOf("## Intro")).toBeLessThan(
+			conceptsText.indexOf("### Feature"),
 		);
-		expect(featureCatalog.contents[0]?.text).toContain("listFeatures");
+		expect(conceptsText).toContain("Autumn is a database");
+		expect(conceptsText).toContain("## Object Graph");
+		expect(conceptsText).toContain("### Plan");
+		expect(conceptsText).toContain("### Customer and Entity");
+		expect(conceptsText).toContain("### Billing Controls");
+		expect(conceptsText).toContain("actual balance source");
+		expect(conceptsText).toContain("Auto top-ups are customer-level only");
+		expect(conceptsText).toContain("Never use `auto_enable: true`");
+		expect(conceptsText).toContain('no concept of "variants"');
+		expect(conceptsText).toContain("`pro_monthly` or `pro_annual`");
+		expect(conceptsText).toContain("Do not create duplicate features");
+		expect(conceptsText).toContain("`monthly_tokens` and `one_time_tokens`");
+		expect(conceptsText).toContain("Boolean plan items cannot be paid today");
+		expect(conceptsText).toContain("concurrency limit of 10");
 
-		const billingSafety = await server.readResource(
-			"autumn://docs/billing-safety",
+		const planManagement = await server.readResource(
+			"autumn://docs/plan-management",
 		);
-		expect(billingSafety.contents[0]?.text).toContain(
-			"invoice_mode requires customer email",
+		const planManagementText = String(planManagement.contents[0]?.text ?? "");
+		expect(planManagementText).toContain("# Plan Management");
+		expect(planManagementText).toContain("Building pricing is iterative");
+		expect(planManagementText).toContain("never assume behavior");
+		expect(planManagementText).toContain("usage-based or prepaid");
+
+		const billing = await server.readResource("autumn://docs/billing");
+		const billingText = String(billing.contents[0]?.text ?? "");
+		expect(billingText).toContain("# Billing");
+		expect(billingText).toContain("Read `autumn://docs/concepts`");
+		expect(billingText).toContain("<goal>");
+		expect(billingText).toContain("<action-selection>");
+		expect(billingText).toContain("<target-resolution>");
+		expect(billingText).toContain(
+			"If preloaded `listPlans` / `listFeatures` results are present",
 		);
-		expect(billingSafety.contents[0]?.text).toContain("finalize false");
-		expect(billingSafety.contents[0]?.text).toContain("updateCustomer");
-
-		const schedules = await server.readResource("autumn://docs/schedules");
-		expect(schedules.contents[0]?.text).toContain(
-			"invoice_mode requires customer email",
+		expect(billingText).toContain(
+			"Do not call them again unless the needed record is absent or the user asks to refresh",
 		);
-		expect(schedules.contents[0]?.text).toContain("finalize false");
-		expect(schedules.contents[0]?.text).toContain("updateCustomer");
+		expect(billingText.indexOf("<target-resolution>")).toBeLessThan(
+			billingText.indexOf("<action-selection>"),
+		);
+		expect(billingText.indexOf("<action-selection>")).toBeLessThan(
+			billingText.indexOf("<param-checklist>"),
+		);
+		expect(billingText.indexOf("<param-checklist>")).toBeLessThan(
+			billingText.indexOf("<customizations>"),
+		);
+		expect(billingText.indexOf("<customizations>")).toBeLessThan(
+			billingText.indexOf("<timing-and-schedules>"),
+		);
+		expect(billingText.indexOf("<timing-and-schedules>")).toBeLessThan(
+			billingText.indexOf("<billing-behavior>"),
+		);
+		expect(billingText.indexOf("<billing-behavior>")).toBeLessThan(
+			billingText.indexOf("<preview-and-approval>"),
+		);
+		expect(billingText.indexOf("<preview-and-approval>")).toBeLessThan(
+			billingText.indexOf("<completion-response>"),
+		);
+		expect(billingText).toContain(
+			"Usually choose `attach` or `updateSubscription`",
+		);
+		expect(billingText).toContain(
+			"You MUST follow this checklist in order for every billing request",
+		);
+		expect(billingText).toContain("Resolve targets with <target-resolution>");
+		expect(billingText).toContain(
+			"Choose the operation with <action-selection>",
+		);
+		expect(billingText).toContain(
+			"Collect action-specific params with <param-checklist>",
+		);
+		expect(billingText).toContain("Resolve custom terms with <customizations>");
+		expect(billingText).toContain("Resolve timing with <timing-and-schedules>");
+		expect(billingText).toContain(
+			"Resolve invoice, checkout, and proration behavior with <billing-behavior>",
+		);
+		expect(billingText).toContain(
+			"Gather all remaining missing questions from the checklist and ask them together",
+		);
+		expect(billingText).toContain(
+			"If there are no missing questions, call the preview tool",
+		);
 
-		for (const uri of logResourceUris) {
-			expect(resourceUris).toContain(uri);
-		}
-	});
-
-	test("log resources stay external-safe", async () => {
-		const server = createAutumnOperationsMCPServer();
-		const bannedTerms = [
-			"Axiom",
-			"extras",
-			"workflow",
-			"req.id",
-			"msg",
-			"level",
-			"server/src",
-			"implementation files",
-			"database state",
-			"stack traces",
-		];
-
-		for (const uri of logResourceUris) {
-			const resource = await server.readResource(uri);
-			const text = String(resource.contents[0]?.text ?? "");
-			for (const term of bannedTerms) {
-				expect(text).not.toContain(term);
-			}
-		}
+		const logs = await server.readResource("autumn://docs/logs");
+		const logsText = String(logs.contents[0]?.text ?? "");
+		expect(logsText).toContain("# Logs");
+		expect(logsText).toContain("searchRequestLogs");
+		expect(logsText).toContain("queryRequestLogs");
+		expect(logsText).toContain("## Stripe Webhooks");
+		expect(logsText).toContain("## Analytics");
+		expect(billingText).toContain(
+			"Once approved, apply the exact previewed billing action",
+		);
+		expect(billingText).toContain("<param-checklist>");
+		expect(billingText).toContain(
+			"Never use `customize.items` (PUT-style full replacement) or `update_items`",
+		);
+		expect(billingText).toContain("Change prepaid to usage-based");
+		expect(billingText).toContain('plan_schedule: "immediate"');
+		expect(billingText).toContain("<attach-timing>");
+		expect(billingText).toContain("dateToEpochMilliseconds");
+		expect(billingText).toContain('`starts_at: "now"`');
+		expect(billingText).toContain("`starting_after`");
+		expect(billingText).toContain("Future first-phase `starts_at`");
+		expect(billingText).toContain("<billing-behavior>");
+		expect(billingText).toContain(
+			"Default operator-led billing actions to invoice mode",
+		);
+		expect(billingText).toContain(
+			"Use invoice mode even when the immediate charge is $0",
+		);
+		expect(billingText).toContain("invoice_mode.finalize: false");
+		expect(billingText).toContain('redirect_mode: "always"');
+		expect(billingText).toContain("Default proration to `none`");
+		expect(billingText).toContain(
+			'If the customer has no existing subscriptions, do not pass `proration_behavior: "none"`',
+		);
+		expect(billingText).toContain("<preview-and-approval>");
+		expect(billingText).toContain(
+			"A mutating billing action requires approval before it takes effect",
+		);
+		expect(billingText).toContain("Monetary amounts are major currency units");
+		expect(billingText).toContain(
+			"Read this full resource before billing work",
+		);
+		expect(billingText).toContain("call `updateCustomer` before previewing");
+		expect(billingText).toContain("one bullet point per question");
+		expect(billingText).toContain("do not explain plan internals");
+		expect(billingText).toContain(
+			"resolve any required `customize` params identified in <customizations>",
+		);
+		expect(billingText).toContain(
+			"If the plan has prepaid items and quantity is missing",
+		);
+		expect(billingText).toContain("cancel now vs cancel at end of cycle");
+		expect(billingText).toContain("`feature_quantities.quantity` is inclusive");
+		expect(
+			billingText.match(
+				/ask the user whether they want to customize the base price/g,
+			) ?? [],
+		).toHaveLength(1);
+		expect(billingText).toContain("Enterprise or custom placeholder plan");
+		expect(billingText).toContain("determine immediate billing impact");
+		expect(billingText).toContain("Lead with immediate impact");
+		expect(billingText).toContain("facts that affect approval");
+		expect(billingText).toContain("Apply only the exact previewed request");
+		expect(billingText).toContain("<completion-response>");
+		expect(billingText).toContain("payment_url");
+		expect(billingText).toContain("invoice.hosted_invoice_url");
+		expect(billingText).toContain("Stripe dashboard invoice URL");
+		expect(billingText).toContain(
+			"https://dashboard.stripe.com/test/invoices/{stripe_id}",
+		);
+		expect(billingText).toContain(
+			"https://dashboard.stripe.com/invoices/{stripe_id}",
+		);
+		expect(billingText).toContain("quote the server error/status clearly");
 	});
 
 	test("unknown resources are rejected", async () => {
@@ -143,23 +319,23 @@ describe("Autumn MCP server", () => {
 	test("resource markdown parser validates frontmatter", () => {
 		expect(
 			parseResourceMarkdown({
-				path: "logs/request-logs.md",
+				path: "logs/logs.md",
 				text: [
 					"---",
-					"name: request-logs",
-					"title: Request Logs",
+					"name: logs",
+					"title: Logs",
 					"description: Log docs",
 					"---",
-					"# Request Logs",
+					"# Logs",
 				].join("\n"),
 			}),
 		).toMatchObject({
-			name: "request-logs",
-			title: "Request Logs",
+			name: "logs",
+			title: "Logs",
 			description: "Log docs",
 			priority: 0.8,
 			audience: ["assistant"],
-			body: "# Request Logs",
+			body: "# Logs",
 		});
 
 		expect(() =>

@@ -102,6 +102,16 @@ export const mergeEntityAndCustomerSubjectRows = ({
 		rollovers: [...entityRow.rollovers, ...customerRow.rollovers].filter(
 			(rollover) => keptCusEntIds.has(rollover.cus_ent_id),
 		),
+		usage_windows: dedupeBy(
+			[...entityRow.usage_windows, ...customerRow.usage_windows],
+			(window) => window.id,
+		).sort((left, right) => {
+			if (left.window_start_at !== right.window_start_at) {
+				return Number(left.window_start_at) - Number(right.window_start_at);
+			}
+			if (left.id === right.id) return 0;
+			return left.id < right.id ? -1 : 1;
+		}),
 		replaceables: [
 			...entityRow.replaceables,
 			...customerRow.replaceables,

@@ -17,6 +17,21 @@ const itemIsUnlimited = (item: ProductItem) => {
 	return item.included_usage === Infinite;
 };
 
+// The API always populates price_interval for priced items; drop it when it
+// just mirrors the reset interval so "split" means price_interval is set.
+export const normalizeResetInterval = (item: ProductItem): ProductItem => {
+	if (nullish(item.price_interval)) return item;
+
+	const sameInterval = item.price_interval === item.interval;
+	const sameCount =
+		(item.price_interval_count ?? 1) === (item.interval_count ?? 1);
+	if (sameInterval && sameCount) {
+		return { ...item, price_interval: null, price_interval_count: null };
+	}
+
+	return item;
+};
+
 export const getItemType = (item: ProductItem) => {
 	if (isPriceItem(item)) {
 		return ProductItemType.Price;
@@ -110,12 +125,15 @@ const itemsHaveSameInterval = ({
  * `1`/missing is treated the same as omitted.
  */
 const intervalSuffix = (item: ProductItem): string => {
-	if (!item.interval) return "-oneoff";
-	const count =
-		item.interval_count && item.interval_count !== 1
-			? `x${item.interval_count}`
-			: "";
-	return `-${item.interval}${count}`;
+	// Identity follows the billing cycle for priced items; a prepaid feature's
+	// reset interval can differ and must not change the item's identity.
+	const interval = item.price_interval ?? item.interval;
+	if (!interval) return "-oneoff";
+	const intervalCount = item.price_interval
+		? item.price_interval_count
+		: item.interval_count;
+	const count = intervalCount && intervalCount !== 1 ? `x${intervalCount}` : "";
+	return `-${interval}${count}`;
 };
 
 export const getItemId = ({

@@ -31,6 +31,10 @@ export const finalizeLineItems = ({
 	autumnBillingPlan: AutumnBillingPlan;
 	customLineItems?: CustomLineItem[];
 }): LineItem[] => {
+	if (billingContext.skipBillingChanges) {
+		return [];
+	}
+
 	if (
 		billingContext.requestedProrationBehavior === "none" &&
 		!billingContext.anchorResetRefund?.noPartialRefund

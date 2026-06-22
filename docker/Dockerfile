@@ -25,11 +25,11 @@ COPY apps/checkout/package.json apps/checkout/
 COPY apps/docs/package.json apps/docs/
 COPY apps/sdk-test/package.json apps/sdk-test/
 COPY apps/website/package.json apps/website/
-COPY packages/ai-sdk/package.json packages/ai-sdk/
 COPY packages/atmn/package.json packages/atmn/
 COPY packages/atmn-tests/package.json packages/atmn-tests/
 COPY packages/auth/package.json packages/auth/
 COPY packages/autumn-js/package.json packages/autumn-js/
+COPY packages/gateway/package.json packages/gateway/
 COPY packages/ksuid/package.json packages/ksuid/
 COPY packages/logging/package.json packages/logging/
 COPY packages/mcp/package.json packages/mcp/
@@ -41,11 +41,10 @@ COPY packages/stripe-sync/package.json packages/stripe-sync/
 # install step doesn't fail before the real source is copied.
 RUN mkdir -p scripts && touch scripts/preload-env.ts
 
-# Install the full workspace because runtime source imports cross package boundaries.
-# --no-save keeps this image layer from mutating bun.lock.
+# Install the full workspace (runtime source imports cross package boundaries).
+# --frozen-lockfile pins bun.lock exactly; --ignore-scripts blocks postinstall hooks.
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-	bun install --ignore-scripts --no-save \
-		--minimum-release-age 0
+	bun install --ignore-scripts --frozen-lockfile
 
 FROM oven/bun:1.3.10
 WORKDIR /app

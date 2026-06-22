@@ -442,5 +442,8 @@ local function unwind_lock_on_context(params)
     modified_customer_entitlement_ids = modified_ids.modified_customer_entitlement_ids,
     modified_rollover_ids = modified_ids.modified_rollover_ids,
     mutation_logs = context.mutation_logs,
+    -- Per-item applied amounts (tracked units + credit_cost), so callers can
+    -- mirror the unwind onto usage-window counters.
+    iterations = unwind_items_result.iterations,
   }
 end

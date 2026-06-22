@@ -1,6 +1,12 @@
 import type { FrontendProduct, ProductV2 } from "@autumn/shared";
-import { productV2ToFrontendProduct, sortPlanItems } from "@autumn/shared";
+import {
+	productsAreSame,
+	productV2ToFrontendProduct,
+	sortPlanItems,
+} from "@autumn/shared";
 import { useEffect, useRef } from "react";
+import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { normalizeResetInterval } from "@/utils/product/productItemUtils";
 import { useProductStore } from "./useProductStore";
 
 /**
@@ -14,6 +20,7 @@ export const useProductSync = ({
 	const setBaseProduct = useProductStore((s) => s.setBaseProduct);
 	const setProduct = useProductStore((s) => s.setProduct);
 	const currentProduct = useProductStore((s) => s.product);
+	const { features = [] } = useFeaturesQuery();
 	const hasInitialized = useRef(false);
 	const lastProductRef = useRef<ProductV2 | null>(null);
 
@@ -32,14 +39,35 @@ export const useProductSync = ({
 			const converted = productV2ToFrontendProduct({ product });
 			const frontendProduct: FrontendProduct = {
 				...converted,
-				items: sortPlanItems({ items: converted.items }),
+				items: sortPlanItems({ items: converted.items }).map(
+					normalizeResetInterval,
+				),
 			};
+
+			// "Clean" = working copy has no unsaved edits vs the base it was synced
+			// from. Captured before setBaseProduct overwrites it below.
+			const baseBeforeSync = useProductStore.getState().baseProduct;
+			const editorIsClean =
+				!!baseBeforeSync &&
+				productsAreSame({
+					newProductV2: currentProduct,
+					curProductV2: baseBeforeSync,
+					features,
+				}).same;
 
 			// Always update baseProduct to reflect backend state
 			setBaseProduct(frontendProduct);
 
-			// Update product on initial load, when switching products, or when version changes
-			if (!hasInitialized.current || isNewProduct || isVersionChanged) {
+			// Reset the working copy on initial load, when switching products, on a
+			// version change, or whenever the editor is clean — the last case keeps
+			// the working copy in lockstep after an in-place save (same version),
+			// without clobbering genuine unsaved edits.
+			if (
+				!hasInitialized.current ||
+				isNewProduct ||
+				isVersionChanged ||
+				editorIsClean
+			) {
 				// Preserve frontend-only fields during creation flow, so Free vs Variable shows correctly
 				const shouldPreserveFrontendFields =
 					!currentProduct?.internal_id &&
@@ -59,5 +87,5 @@ export const useProductSync = ({
 				hasInitialized.current = true;
 			}
 		}
-	}, [product, setBaseProduct, setProduct, currentProduct]);
+	}, [product, setBaseProduct, setProduct, currentProduct, features]);
 };

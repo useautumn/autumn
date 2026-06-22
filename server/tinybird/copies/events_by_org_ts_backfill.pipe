@@ -1,0 +1,41 @@
+DESCRIPTION >
+    PRIMARY history backfill for events_by_org_ts. The mirror deploys with BACKFILL skip, so the
+    deploy only materializes forward from promote time — this copy fills history before that seam,
+    one org and bounded time-range at a time, on isolated on-demand compute
+    (tb copy run events_by_org_ts_backfill --on-demand-compute --param org_id=... --param start_date=... --param end_date=...).
+    org_id uses the base table's leading sort key, so each run reads only that org's slice.
+    SQL mirrors events_by_org_ts_mv_pipe exactly so backfilled rows are identical to forward ones.
+
+    Seam safety: MergeTree does not dedup. The window is half-open [start_date, end_date). Always set
+    end_date strictly <= the mirror's promote time — overlapping the forward trigger duplicates rows.
+    Chunk by month and watch memory; the default window is a no-op-ish floor, always pass explicit params.
+
+NODE migrate
+SQL >
+    %
+    SELECT
+        id,
+        org_id,
+        org_slug,
+        internal_customer_id,
+        env,
+        created_at,
+        timestamp,
+        event_name,
+        idempotency_key,
+        value,
+        set_usage,
+        entity_id,
+        internal_entity_id,
+        internal_product_id,
+        customer_id,
+        properties::String AS properties,
+        deductions::String AS deductions
+    FROM events
+    WHERE org_id = {{String(org_id, 'biu9vSF7vghBLSKW1UTDwxHBAivjnPaK')}}
+      AND timestamp >= {{DateTime(start_date, '2026-03-01 00:00:00')}}
+      AND timestamp <  {{DateTime(end_date, '2026-03-02 00:00:00')}}
+
+TYPE COPY
+TARGET_DATASOURCE events_by_org_ts
+COPY_MODE append

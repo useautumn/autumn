@@ -104,6 +104,7 @@ export const ErrCode = {
 	CreateEntitlementFailed: "create_entitlement_failed",
 	DeleteEntitlementFailed: "delete_entitlement_failed",
 	InsufficientBalance: "insufficient_balance",
+	SetUsageNotAllowedWithUsageLimit: "set_usage_not_allowed_with_usage_limit",
 
 	// Invoice
 	CreateInvoiceFailed: "create_invoice_failed",
@@ -126,6 +127,7 @@ export const ErrCode = {
 	// Rewards
 	InvalidReward: "invalid_reward",
 	PromoCodeAlreadyExistsInStripe: "promo_code_already_exists_in_stripe",
+	PromoCodeFirstTimeOnly: "promo_code_first_time_only",
 
 	// Entity
 	EntityNotFound: "entity_not_found",

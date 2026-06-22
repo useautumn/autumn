@@ -1,13 +1,13 @@
 import { existsSync } from "node:fs";
-import { join } from "node:path";
 import { homedir } from "node:os";
-import { log, fatal } from "./shell.ts";
-import { registerPortlessAliases } from "./portless.ts";
-import { rewriteDbEnv } from "./url.ts";
-import { aliasesFor, killOwnPorts } from "./ports.ts";
-import { tmuxSessionName, spawnDevInTmux } from "./tmux.ts";
+import { join } from "node:path";
 import { PROJECT_ROOT } from "../constants.ts";
 import type { RegistryEntry } from "../types.ts";
+import { registerPortlessAliases } from "./portless.ts";
+import { portlessHttpsUrl } from "./ports.ts";
+import { fatal, log } from "./shell.ts";
+import { spawnDevInTmux, tmuxSessionName } from "./tmux.ts";
+import { rewriteDbEnv } from "./url.ts";
 
 export function buildDevEnvAndArgs(entry: RegistryEntry): {
 	env: Record<string, string>;
@@ -21,7 +21,7 @@ export function buildDevEnvAndArgs(entry: RegistryEntry): {
 		if (!databaseUrl) fatal("agent worktree missing databaseUrl");
 		env = rewriteDbEnv(env, databaseUrl);
 		if (!env.EMULATE_GOOGLE_URL) {
-			env.EMULATE_GOOGLE_URL = "https://google.emulate.localhost";
+			env.EMULATE_GOOGLE_URL = portlessHttpsUrl("google.emulate.localhost");
 		}
 		const portlessCa = join(homedir(), ".portless", "ca.pem");
 		if (existsSync(portlessCa) && !env.NODE_EXTRA_CA_CERTS) {
@@ -32,6 +32,12 @@ export function buildDevEnvAndArgs(entry: RegistryEntry): {
 		env.CLIENT_URL = aliases.viteUrl;
 		env.VITE_BACKEND_URL = aliases.apiUrl;
 		env.VITE_FRONTEND_URL = aliases.viteUrl;
+		// Hand the worktree's tunnel to dev.ts, which derives MCP_SERVER_URL /
+		// CHAT_URL / SLACK_BOT_URL from NGROK_URL. Set at `bun dw setup`; reused
+		// here on a plain `bun dw run`.
+		if (entry.ngrokUrl && !env.NGROK_URL) {
+			env.NGROK_URL = entry.ngrokUrl;
+		}
 	}
 
 	const args = [
@@ -44,14 +50,18 @@ export function buildDevEnvAndArgs(entry: RegistryEntry): {
 	return { env, args };
 }
 
-export function startDev(entry: RegistryEntry, opts?: { allowTmux?: boolean }): never {
+export function startDev(
+	entry: RegistryEntry,
+	opts?: { allowTmux?: boolean },
+): never {
 	const { worktreeNum, branchName } = entry;
 	const { env, args } = buildDevEnvAndArgs(entry);
 
 	// Agent worktrees (N > 1) in a non-TTY invocation: wrap in detached tmux
 	// so the calling agent doesn't block. Canonical (N=1) stays inline always.
 	// Node/Bun sets isTTY to true when stdout is a TTY and undefined otherwise.
-	const useTmux = (opts?.allowTmux ?? true) && worktreeNum > 1 && !process.stdout.isTTY;
+	const useTmux =
+		(opts?.allowTmux ?? true) && worktreeNum > 1 && !process.stdout.isTTY;
 	if (useTmux) {
 		log(
 			`starting dev in tmux (worktree=${worktreeNum}${branchName ? `, branch=${branchName}` : ""}, non-TTY)`,

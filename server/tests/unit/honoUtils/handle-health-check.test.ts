@@ -17,6 +17,7 @@ const fakeLogger = {
 	warn: mock(() => undefined),
 	error: mock(() => undefined),
 	debug: mock(() => undefined),
+	child: mock(() => fakeLogger),
 };
 
 mock.module("@/external/redis/initRedis.js", () => ({

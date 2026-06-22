@@ -72,6 +72,32 @@ export default defineConfig({
 	},
 
 	optimizeDeps: {
+		// Only list deps the cold-start scanner can't reach on its own: base-ui
+		// subpaths are pulled in transitively by excluded workspace deps (see
+		// `exclude` below), so Vite never sees them when crawling from main.tsx,
+		// and discovering them mid-session re-optimizes (504 Outdated Dep).
+		// Directly-imported deps (phosphor, nanoid, etc.) are auto-discovered by
+		// the scanner on cold start and must NOT be listed here.
+		include: [
+			"@base-ui/react/accordion",
+			"@base-ui/react/button",
+			"@base-ui/react/checkbox",
+			"@base-ui/react/dialog",
+			"@base-ui/react/field",
+			"@base-ui/react/menu",
+			"@base-ui/react/merge-props",
+			"@base-ui/react/popover",
+			"@base-ui/react/preview-card",
+			"@base-ui/react/radio",
+			"@base-ui/react/radio-group",
+			"@base-ui/react/scroll-area",
+			"@base-ui/react/select",
+			"@base-ui/react/separator",
+			"@base-ui/react/switch",
+			"@base-ui/react/tabs",
+			"@base-ui/react/tooltip",
+			"@base-ui/react/use-render",
+		],
 		// Exclude workspace dependencies from pre-bundling to avoid cache issues
 		exclude: [
 			"@autumn/shared",

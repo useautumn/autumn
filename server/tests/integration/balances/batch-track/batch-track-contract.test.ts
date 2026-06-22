@@ -10,7 +10,7 @@
  *   New endpoint:
  *     - POST /v1/balances.batch_track
  *         request body:  BatchTrackParams = TrackParams[] where 1 <= len <= 1000
- *         response:      202, body { success: true }
+ *         response:      204, no body
  *         auth:          requires Scopes.Balances.Write
  *         rate limit:    BatchTrack (10 req/sec per org)
  *
@@ -20,7 +20,7 @@
  *       the handler throws and NOTHING is enqueued.
  *     - Items are enqueued via SQS SendMessageBatch (chunks of 10).
  *     - On partial SQS failure (some entries fail, others succeed),
- *       the handler returns 202 success and logs the failed entries.
+ *       the handler returns 204 success and logs the failed entries.
  *       Clients are NOT asked to retry, because retrying re-enqueues
  *       the already-succeeded items (no client-supplied idempotency key
  *       exists yet — see batch-track-retry-dedup.test.ts for the pin).
@@ -49,7 +49,7 @@
  * Split of coverage:
  *
  *   THIS FILE (HTTP integration, against the live dev server):
- *     - 202 happy path with { success: true }
+ *     - 204 happy path with no body
  *     - 422 validation: empty array, > 1000 items, item with neither
  *       feature_id nor event_name, item with BOTH (refine rejects)
  *     - 429 BatchTrack rate limit kicks in past 10 req/sec/org
@@ -80,7 +80,7 @@
  *
  * "Happy path" assertion shape: dev SQS health is independent of the
  * HTTP-layer contract this file enforces. A successful HTTP path can
- * land as 202 { success: true } (full happy path, dev SQS healthy) OR
+ * land as 204 with no body (full happy path, dev SQS healthy) OR
  * as 503 { code: "internal_error", message: "Async track is not
  * available right now" } (validation/auth/routing all passed, handler
  * was reached, downstream SQS choked). Both prove the HTTP contract
@@ -209,7 +209,7 @@ describe(chalk.yellowBright(testCase), () => {
 
 	// ── Assertion 1: validation passes for a valid single-item batch ────────
 	// Contract: route exists, auth accepted, schema parsed, handler reached.
-	// Full 202 happy path is contingent on dev SQS being healthy.
+	// Full 204 happy path is contingent on dev SQS being healthy.
 	test("valid single-item batch reaches the handler past validation/auth", async () => {
 		const result = await postBatchTrack({
 			autumn,
@@ -217,8 +217,8 @@ describe(chalk.yellowBright(testCase), () => {
 		});
 
 		expect(isHandlerReached(result)).toBe(true);
-		if (result.status === 202) {
-			expect(result.body).toEqual({ success: true });
+		if (result.status === 204) {
+			expect(result.body).toBeNull();
 		}
 	});
 
@@ -232,8 +232,8 @@ describe(chalk.yellowBright(testCase), () => {
 		const result = await postBatchTrack({ autumn, body });
 
 		expect(isHandlerReached(result)).toBe(true);
-		if (result.status === 202) {
-			expect(result.body).toEqual({ success: true });
+		if (result.status === 204) {
+			expect(result.body).toBeNull();
 		}
 	});
 
@@ -246,14 +246,14 @@ describe(chalk.yellowBright(testCase), () => {
 		status >= 400 && status < 500 && status !== 401 && status !== 429;
 
 	// Helper: a "request reached the handler and passed validation" is either
-	// 202 (full happy path — SQS enqueue succeeded) or 503 with the handler's
+	// 204 (full happy path — SQS enqueue succeeded) or 503 with the handler's
 	// own "Async track is not available right now" message (validation passed,
 	// auth passed, route matched; SQS-side failed downstream). Both responses
 	// prove the HTTP-layer contract held. The 503 path is shape-matched so we
 	// only accept the handler's own RecaseError — a 503 from infra (proxy,
 	// nginx, lambda) without that exact code would correctly fail this gate.
 	const isHandlerReached = (result: BatchTrackHttpResult): boolean => {
-		if (result.status === 202) return true;
+		if (result.status === 204) return true;
 		if (result.status === 503) {
 			const body = result.body as
 				| { message?: unknown; code?: unknown }

@@ -54,7 +54,7 @@ export const TrackParamsSchema = BalanceParamsBaseSchema.extend({
 
 	async: z.boolean().optional().meta({
 		description:
-			"If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information.",
+			"If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.",
 	}),
 
 	lock: LockParamsSchema.optional(),

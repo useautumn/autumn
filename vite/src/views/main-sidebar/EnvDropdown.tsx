@@ -11,11 +11,13 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 } from "@/components/v2/dropdowns/DropdownMenu";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
 import { envToPath } from "@/utils/genUtils";
 import { ExpandedEnvTrigger } from "./env-dropdown/ExpandedEnvTrigger";
 import { StaticEnvPill } from "./env-dropdown/StaticEnvPill";
+import { useSidebarContext } from "./SidebarContext";
 
 export const useEnvChange = () => {
 	const navigate = useNavigate();
@@ -40,12 +42,24 @@ export const useEnvChange = () => {
 
 export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 	const { org, isLoading } = useOrg();
-	const canSwitch = !isLoading && !!org?.deployed;
 
 	const [isHovered, setIsHovered] = useState(false);
 	const [open, setOpen] = useState(false);
 	const handleEnvChange = useEnvChange();
+	const { expanded } = useSidebarContext();
 
+	const isResolving = isLoading || !org;
+	const willRedirectToSandbox = !!org && !org.deployed && env === AppEnv.Live;
+
+	if (isResolving || willRedirectToSandbox) {
+		return (
+			<div className={cn("flex text-muted-foreground text-xs gap-1 px-3")}>
+				<Skeleton className={cn("h-6", expanded ? "w-full" : "w-7")} />
+			</div>
+		);
+	}
+
+	const canSwitch = !!org?.deployed;
 	if (!canSwitch) {
 		return (
 			<div className={cn("flex text-muted-foreground text-xs gap-1 px-3")}>

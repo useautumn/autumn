@@ -36,7 +36,7 @@ export class CusProductAlreadyExistsError extends RecaseError {
 		super({
 			message,
 			code: CusProductErrorCode.CustomerProductAlreadyExists,
-			statusCode: 400,
+			statusCode: 409,
 		});
 		this.name = "CusProductAlreadyExistsError";
 	}

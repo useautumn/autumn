@@ -66,6 +66,8 @@ export const chatApprovals = pgTable(
 		provider_user_id: text("provider_user_id").notNull(),
 		env: text("env").$type<AppEnv>().notNull(),
 		run_id: text("run_id"),
+		// Which harness owns this approval's resume path; null = pre-column rows.
+		harness: text("harness"),
 		tool_call_id: text("tool_call_id"),
 		tool_name: text("tool_name").notNull(),
 		tool_args: jsonb("tool_args").$type<Record<string, unknown>>().notNull(),
@@ -114,8 +116,9 @@ export const chatOAuthCredentials = pgTable(
 			foreignColumns: [organizations.id],
 			name: "chat_oauth_credentials_org_id_fkey",
 		}).onDelete("cascade"),
-		unique("chat_oauth_credentials_installation_env_key").on(
+		unique("chat_oauth_credentials_installation_org_env_key").on(
 			table.chat_installation_id,
+			table.org_id,
 			table.env,
 		),
 	],

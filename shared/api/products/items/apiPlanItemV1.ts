@@ -153,11 +153,11 @@ export const ApiPlanItemV1Schema = z
 			.object({
 				on_increase: z.enum(OnIncrease).optional().meta({
 					description:
-						"How to handle billing when quantity increases mid-cycle (prepaid features only).",
+						"How to handle billing when quantity increases mid-cycle.",
 				}),
 				on_decrease: z.enum(OnDecrease).optional().meta({
 					description:
-						"How to handle credits when quantity decreases mid-cycle (prepaid features only).",
+						"How to handle credits when quantity decreases mid-cycle.",
 				}),
 			})
 			.optional()
@@ -172,15 +172,22 @@ export const ApiPlanItemV1Schema = z
 	.check((ctx) => {
 		const resetInterval = ctx.value.reset?.interval;
 		const priceInterval = ctx.value.price?.interval;
+		const resetIntervalCount = ctx.value.reset?.interval_count ?? 1;
+		const priceIntervalCount = ctx.value.price?.interval_count ?? 1;
+		const hasDifferentResetAndPriceInterval =
+			!!resetInterval &&
+			!!priceInterval &&
+			(String(resetInterval) !== String(priceInterval) ||
+				resetIntervalCount !== priceIntervalCount);
 
 		if (
-			resetInterval &&
-			priceInterval &&
-			String(resetInterval) !== String(priceInterval)
+			hasDifferentResetAndPriceInterval &&
+			ctx.value.price?.billing_method !== BillingMethod.Prepaid
 		) {
 			ctx.issues.push({
 				code: "custom",
-				message: "either pass in reset.interval, or price.interval, not both.",
+				message:
+					"reset.interval and price.interval can only differ for prepaid prices.",
 				input: ctx.value,
 			});
 		}

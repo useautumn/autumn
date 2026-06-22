@@ -28,7 +28,7 @@ import {
 import { pushPage } from "@/utils/genUtils";
 import { createCustomerListColumns } from "@/views/customers2/components/table/customer-list/CustomerListColumns";
 import { useProductTable } from "@/views/products/hooks/useProductTable";
-import { useCursorPagination } from "../shared/useCursorPagination";
+import { useCursorPagination } from "@/components/general/table/useCursorPagination";
 
 const previewColumns = createCustomerListColumns()
 	.filter((col) => col.id !== "actions")

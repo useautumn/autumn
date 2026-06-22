@@ -1,6 +1,6 @@
 /** biome-ignore-all lint/a11y/noStaticElementInteractions: needed */
 /** biome-ignore-all lint/a11y/useSemanticElements: needed */
-import { type ProductItem, isAiCreditSystem } from "@autumn/shared";
+import type { ProductItem } from "@autumn/shared";
 import { getProductItemDisplay } from "@autumn/shared";
 import { TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
@@ -56,7 +56,7 @@ export const PlanFeatureRow = ({
 		(queryStates.step !== OnboardingStep.Playground ||
 			playgroundMode !== "edit");
 
-	const item = readOnly ? itemProp : (product.items?.[index] || itemProp);
+	const item = readOnly ? itemProp : product.items?.[index] || itemProp;
 
 	const display = getProductItemDisplay({
 		item,
@@ -207,8 +207,11 @@ export const PlanFeatureRow = ({
 						{displayText}
 					</span>
 
-					{!isAiCreditSystem(feature?.type) && display.secondary_text && (
-						<span className="text-body-secondary"> {display.secondary_text}</span>
+					{display.secondary_text && (
+						<span className="text-body-secondary">
+							{" "}
+							{display.secondary_text}
+						</span>
 					)}
 				</p>
 

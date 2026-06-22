@@ -10,6 +10,7 @@ import {
 	type ParsedCheckParams,
 	RecaseError,
 	type TrackParams,
+	UsageLimitExceededError,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackFeatureDeductions } from "@/internal/balances/track/utils/getFeatureDeductions.js";
@@ -39,7 +40,8 @@ export const runCheckWithTrackV2 = async ({
 	if (ctx.isPublic) {
 		throw new RecaseError({
 			message:
-				"Can't pass in 'send_event: true' when using publishable key for Autumn",
+				"Can't use send_event: true with a publishable key. Use your secret API key instead.",
+			statusCode: 400,
 		});
 	}
 
@@ -53,7 +55,8 @@ export const runCheckWithTrackV2 = async ({
 
 	if (checkData.originalFeature.type === FeatureType.Boolean) {
 		throw new RecaseError({
-			message: "Not allowed to pass in send_event: true for a boolean feature",
+			message:
+				"send_event cannot be used with boolean features, which are flags rather than usage-tracked.",
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
@@ -94,7 +97,10 @@ export const runCheckWithTrackV2 = async ({
 		checkData.evaluationApiBalance = trackedBalance ?? undefined;
 		trackBalances = response.balances;
 	} catch (error) {
-		if (error instanceof InsufficientBalanceError) {
+		if (
+			error instanceof InsufficientBalanceError ||
+			error instanceof UsageLimitExceededError
+		) {
 			allowed = false;
 		} else {
 			throw error;

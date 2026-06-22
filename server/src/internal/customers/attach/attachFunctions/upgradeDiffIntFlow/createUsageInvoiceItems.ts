@@ -1,4 +1,5 @@
 import {
+	atmnToStripeAmount,
 	type BillingInterval,
 	BillingType,
 	cusProductsToCusPrices,
@@ -91,7 +92,10 @@ const getUsageInvoiceItems = async ({
 			description,
 			price_data: {
 				product: config.stripe_product_id!,
-				unit_amount: Math.round(amount * 100),
+				unit_amount: atmnToStripeAmount({
+					amount,
+					currency: org.default_currency || "usd",
+				}),
 				currency: org.default_currency || "usd",
 			},
 			period: {

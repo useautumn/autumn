@@ -6,6 +6,7 @@ import type { UsageTier } from "../../../models/productModels/priceModels/priceC
 import type { FeatureItem } from "../../../models/productV2Models/productItemModels/featureItem.js";
 import type { FeaturePriceItem } from "../../../models/productV2Models/productItemModels/featurePriceItem.js";
 import type { PriceItem } from "../../../models/productV2Models/productItemModels/priceItem.js";
+import { AllocatedBillingBehavior } from "../../../models/productV2Models/productItemModels/productItemEnums.js";
 import type {
 	ProductItem,
 	ProductItemConfig,
@@ -13,6 +14,7 @@ import type {
 } from "../../../models/productV2Models/productItemModels/productItemModels.js";
 import { intervalsSame } from "../../intervalUtils/priceIntervalUtils.js";
 import { entIntervalsSame } from "../../intervalUtils.js";
+import { notNullish } from "../../utils.js";
 import { itemToFeature } from "../productItemUtils/convertItemUtils.js";
 import {
 	isFeatureItem,
@@ -21,7 +23,9 @@ import {
 } from "../productItemUtils/getItemType.js";
 import {
 	itemToBillingInterval,
+	itemToBillingIntervalCount,
 	itemToEntInterval,
+	itemToEntIntervalCount,
 } from "../productItemUtils/itemIntervalUtils.js";
 
 export const findSimilarItem = ({
@@ -39,11 +43,11 @@ export const findSimilarItem = ({
 				entIntervalsSame({
 					intervalA: {
 						interval: itemToEntInterval({ item: i }),
-						intervalCount: i.interval_count,
+						intervalCount: itemToEntIntervalCount({ item: i }),
 					},
 					intervalB: {
 						interval: itemToEntInterval({ item }),
-						intervalCount: item.interval_count,
+						intervalCount: itemToEntIntervalCount({ item }),
 					},
 				}),
 		);
@@ -57,11 +61,11 @@ export const findSimilarItem = ({
 				intervalsSame({
 					intervalA: {
 						interval: itemToBillingInterval({ item: i }),
-						intervalCount: i.interval_count,
+						intervalCount: itemToBillingIntervalCount({ item: i }),
 					},
 					intervalB: {
 						interval: itemToBillingInterval({ item }),
-						intervalCount: item.interval_count,
+						intervalCount: itemToBillingIntervalCount({ item }),
 					},
 				}) &&
 				item.usage_model == i.usage_model,
@@ -74,8 +78,9 @@ export const findSimilarItem = ({
 			return (
 				isPriceItem(i) &&
 				i.price == item.price &&
-				i.interval == item.interval &&
-				(i.interval_count || 1) == (item.interval_count || 1)
+				itemToBillingInterval({ item: i }) == itemToBillingInterval({ item }) &&
+				itemToBillingIntervalCount({ item: i }) ==
+					itemToBillingIntervalCount({ item })
 			);
 		});
 	}
@@ -83,12 +88,13 @@ export const findSimilarItem = ({
 	return null;
 };
 
-type TierLike = { to: number | "inf"; amount: number; flat_amount?: number | null };
+type TierLike = {
+	to: number | "inf";
+	amount: number;
+	flat_amount?: number | null;
+};
 
-const tiersAreSame = (
-	tiers1: TierLike[] | null,
-	tiers2: TierLike[] | null,
-) => {
+const tiersAreSame = (tiers1: TierLike[] | null, tiers2: TierLike[] | null) => {
 	if (!tiers1 && !tiers2) {
 		return true;
 	}
@@ -191,8 +197,10 @@ export const priceItemsAreSame = ({
 }) => {
 	const same =
 		item1.price === item2.price &&
-		item1.interval == item2.interval &&
-		(item1.interval_count || 1) == (item2.interval_count || 1);
+		itemToBillingInterval({ item: item1 }) ==
+			itemToBillingInterval({ item: item2 }) &&
+		itemToBillingIntervalCount({ item: item1 }) ==
+			itemToBillingIntervalCount({ item: item2 });
 
 	if (!same && logDifferences) {
 		console.log(`Price items different: ${item1.price}`);
@@ -212,6 +220,31 @@ const prorationConfigsAreSame = ({
 		config1?.on_increase === config2?.on_increase &&
 		config1?.on_decrease === config2?.on_decrease
 	);
+};
+
+const itemToExplicitAllocatedBillingBehavior = (item: ProductItem) => {
+	if (notNullish(item.config?.allocated_billing_behavior)) {
+		return item.config.allocated_billing_behavior;
+	}
+	const hasProrationKnobs =
+		notNullish(item.config?.on_increase) ||
+		notNullish(item.config?.on_decrease);
+	if (hasProrationKnobs) {
+		return AllocatedBillingBehavior.Prorated;
+	}
+	return AllocatedBillingBehavior.Prorated;
+};
+
+const allocatedBillingBehaviorAreSame = ({
+	item1,
+	item2,
+}: {
+	item1: ProductItem;
+	item2: ProductItem;
+}) => {
+	const behavior1 = itemToExplicitAllocatedBillingBehavior(item1);
+	const behavior2 = itemToExplicitAllocatedBillingBehavior(item2);
+	return behavior1 === behavior2;
 };
 
 const rolloversAreSame = ({
@@ -270,6 +303,10 @@ export const featurePriceItemsAreSame = ({
 			}),
 			message: `Proration config different: ${JSON.stringify(item1.config)} !== ${JSON.stringify(item2.config)}`,
 		},
+		allocated_billing_behavior: {
+			condition: allocatedBillingBehaviorAreSame({ item1, item2 }),
+			message: `Allocated billing behavior different: ${item1.config?.allocated_billing_behavior} !== ${item2.config?.allocated_billing_behavior}`,
+		},
 		rollover_config: {
 			condition: rolloversAreSame({
 				rollover1: item1.config?.rollover || undefined,
@@ -294,12 +331,16 @@ export const featurePriceItemsAreSame = ({
 			message: `Feature ID different: ${item1.feature_id} != ${item2.feature_id}`,
 		},
 		interval: {
-			condition: item1.interval == item2.interval,
-			message: `Interval different: ${item1.interval} != ${item2.interval}`,
+			condition:
+				itemToBillingInterval({ item: item1 }) ==
+				itemToBillingInterval({ item: item2 }),
+			message: `Billing interval different: ${itemToBillingInterval({ item: item1 })} != ${itemToBillingInterval({ item: item2 })}`,
 		},
 		interval_count: {
-			condition: (item1.interval_count || 1) == (item2.interval_count || 1),
-			message: `Interval count different: ${item1.interval_count} != ${item2.interval_count}`,
+			condition:
+				itemToBillingIntervalCount({ item: item1 }) ==
+				itemToBillingIntervalCount({ item: item2 }),
+			message: `Billing interval count different: ${itemToBillingIntervalCount({ item: item1 })} != ${itemToBillingIntervalCount({ item: item2 })}`,
 		},
 		usage_model: {
 			condition: item1.usage_model === item2.usage_model,

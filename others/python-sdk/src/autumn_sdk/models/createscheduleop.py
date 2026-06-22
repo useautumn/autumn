@@ -1007,7 +1007,7 @@ class CreateSchedulePlanItemFilter2(BaseModel):
 
 
 class CreateScheduleCustomize2TypedDict(TypedDict):
-    r"""Customize the plan to schedule. Can override price, replace items, or patch items with add_items, remove_items, and update_items."""
+    r"""Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items."""
 
     price: NotRequired[Nullable[CreateScheduleBasePrice2TypedDict]]
     r"""Override the base price of the plan. Pass null to remove the base price."""
@@ -1020,7 +1020,7 @@ class CreateScheduleCustomize2TypedDict(TypedDict):
 
 
 class CreateScheduleCustomize2(BaseModel):
-    r"""Customize the plan to schedule. Can override price, replace items, or patch items with add_items, remove_items, and update_items."""
+    r"""Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items."""
 
     price: OptionalNullable[CreateScheduleBasePrice2] = UNSET
     r"""Override the base price of the plan. Pass null to remove the base price."""
@@ -1068,7 +1068,7 @@ class CreateSchedulePlan2TypedDict(TypedDict):
     version: NotRequired[float]
     r"""Optional explicit plan version to schedule."""
     customize: NotRequired[CreateScheduleCustomize2TypedDict]
-    r"""Customize the plan to schedule. Can override price, replace items, or patch items with add_items, remove_items, and update_items."""
+    r"""Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items."""
     subscription_id: NotRequired[str]
     r"""A unique ID to identify this subscription. Useful when scheduling the same plan multiple times."""
 
@@ -1084,7 +1084,7 @@ class CreateSchedulePlan2(BaseModel):
     r"""Optional explicit plan version to schedule."""
 
     customize: Optional[CreateScheduleCustomize2] = None
-    r"""Customize the plan to schedule. Can override price, replace items, or patch items with add_items, remove_items, and update_items."""
+    r"""Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items."""
 
     subscription_id: Optional[str] = None
     r"""A unique ID to identify this subscription. Useful when scheduling the same plan multiple times."""

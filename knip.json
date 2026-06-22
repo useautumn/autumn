@@ -12,7 +12,6 @@
 		"duplicates"
 	],
 	"ignoreWorkspaces": [
-		"packages/ai-sdk",
 		"packages/atmn",
 		"packages/autumn-js",
 		"packages/mcp",
@@ -36,16 +35,22 @@
 				"tests/**/*.ts"
 			],
 			"project": ["src/**/*.ts", "tests/**/*.ts"],
-			"ignoreDependencies": ["@react-email/components", "@axiomhq/pino"]
+			"ignoreDependencies": ["@react-email/components", "@axiomhq/pino"],
+			"ignore": ["src/external/tinybird/connections/eventsS3.ts"]
 		},
 		"shared": {
 			"project": ["**/*.ts", "!utils/**"],
 			"includeEntryExports": false
 		},
 		"vite": {
-			"entry": ["tests/**/*.{ts,tsx}"],
+			"entry": ["tests/**/*.{ts,tsx}", "src/**/*.test.{ts,tsx}"],
 			"project": ["src/**/*.{ts,tsx}", "tests/**/*.{ts,tsx}"],
-			"ignore": ["src/components/ai-elements/**", "src/hooks/useControllableState.ts", "src/types/**/*.d.ts"],
+			"ignore": [
+				"src/components/ai-elements/**",
+				"src/components/ui/scroll-area.tsx",
+				"src/hooks/useControllableState.ts",
+				"src/types/**/*.d.ts"
+			],
 			"ignoreDependencies": [
 				"tailwindcss",
 				"tailwind-scrollbar-hide",
@@ -80,6 +85,10 @@
 		},
 		"apps/leaf": {
 			"entry": ["tests/**/*.ts"],
+			"project": ["src/**/*.ts", "tests/**/*.ts"]
+		},
+		"packages/gateway": {
+			"entry": ["tests/**/*.test.ts"],
 			"project": ["src/**/*.ts", "tests/**/*.ts"]
 		},
 		"packages/ksuid": {

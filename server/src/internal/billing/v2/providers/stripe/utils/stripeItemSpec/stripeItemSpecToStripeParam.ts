@@ -88,3 +88,16 @@ export const stripeItemSpecToPhaseItem = ({
 		...(spec.metadata && { metadata: spec.metadata }),
 	} as Stripe.SubscriptionScheduleUpdateParams.Phase.Item;
 };
+
+/** Converts a one-off StripeItemSpec to a Stripe schedule phase add_invoice_item (invoiced once when the phase activates). */
+export const stripeItemSpecToPhaseAddInvoiceItem = ({
+	spec,
+}: {
+	spec: StripeItemSpec;
+}): Stripe.SubscriptionScheduleUpdateParams.Phase.AddInvoiceItem => {
+	return {
+		...toPriceParam({ spec }),
+		...(spec.quantity !== undefined && { quantity: spec.quantity }),
+		...(spec.metadata && { metadata: spec.metadata }),
+	} as Stripe.SubscriptionScheduleUpdateParams.Phase.AddInvoiceItem;
+};

@@ -22,7 +22,7 @@ supabase.sh
 tests/
 !server/tests
 !packages/mcp/tests
-!packages/ai-sdk/tests
+!packages/gateway/tests
 !apps/leaf/tests
 !vite/tests
 .secrets
@@ -164,3 +164,6 @@ apps/leaf/.harness/
 
 # Built sandbox runner bundle (produced by sandbox/buildRunner.ts).
 apps/leaf/src/harness/claudeCode/runner/runner.mjs
+
+
+tmp/

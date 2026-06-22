@@ -1,5 +1,4 @@
 import type { ApiPlanItemV0 } from "@api/products/items/previousVersions/apiPlanItemV0";
-import type { ProrationConfig } from "@models/productModels/priceModels/priceModels";
 import { Infinite } from "@models/productModels/productEnums";
 import {
 	OnDecrease,
@@ -27,17 +26,18 @@ import { ApiVersion } from "../../../versionUtils/ApiVersion";
 import { ApiVersionClass } from "../../../versionUtils/ApiVersionClass";
 import { hasPrice, hasResetInterval } from "../utils/classifyPlanItemV0";
 
-const planItemV0ToProductItemInterval = ({
+const planItemV0ToResetProductItemInterval = ({
 	planItemV0,
 }: {
 	planItemV0: ApiPlanItemV0;
 }) => {
-	// 1. If feature has reset interval, use it
+	// If reset is omitted, default the entitlement reset interval to the
+	// price interval. This preserves the existing create-plan behavior while
+	// still allowing explicit reset/price split intervals for prepaid items.
 	if (hasResetInterval(planItemV0)) {
 		return resetIntvToItemIntv(planItemV0.reset.interval);
 	}
 
-	// 2. If feature has price interval, use it
 	if (hasPrice(planItemV0)) {
 		return billingToItemInterval({
 			billingInterval: planItemV0.price.interval,
@@ -65,14 +65,14 @@ const planItemV0ToItemConfig = ({
 	};
 
 	const toItemProration = () => {
-		if (planItemV0.proration) {
-			return {
-				on_increase:
-					planItemV0.proration.on_increase ?? OnIncrease.ProrateImmediately,
-				on_decrease: planItemV0.proration.on_decrease ?? OnDecrease.Prorate,
-			} satisfies ProrationConfig;
-		}
-		return undefined;
+		if (!planItemV0.proration) return undefined;
+
+		const { on_increase, on_decrease } = planItemV0.proration;
+
+		return {
+			on_increase: on_increase ?? OnIncrease.ProrateImmediately,
+			on_decrease: on_decrease ?? OnDecrease.Prorate,
+		};
 	};
 
 	const rollover = toItemRollover();
@@ -112,7 +112,18 @@ export const planItemV0ToProductItem = ({
 	}
 
 	// Get interval
-	const interval = planItemV0ToProductItemInterval({ planItemV0: planItem });
+	const resetInterval = planItemV0ToResetProductItemInterval({
+		planItemV0: planItem,
+	});
+	const resetIntervalCount =
+		planItem.reset?.interval_count ?? planItem.price?.interval_count;
+	const priceInterval = planItem.price
+		? billingToItemInterval({
+				billingInterval: planItem.price.interval,
+			})
+		: undefined;
+
+	const priceIntervalCount = planItem.price?.interval_count ?? 1;
 	const config = planItemV0ToItemConfig({ planItemV0: planItem });
 
 	const type = planItem.price
@@ -138,8 +149,10 @@ export const planItemV0ToProductItem = ({
 
 		included_usage: planItem.unlimited ? Infinite : planItem.granted_balance,
 
-		interval,
-		interval_count: planItem.reset?.interval_count,
+		interval: resetInterval,
+		interval_count: resetIntervalCount,
+		price_interval: priceInterval,
+		price_interval_count: priceIntervalCount,
 
 		price: planItem.price?.amount,
 

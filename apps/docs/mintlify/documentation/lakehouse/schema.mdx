@@ -1,0 +1,472 @@
+---
+title: "Schema Reference"
+sidebarTitle: "Schema Reference"
+description: "Every Lakehouse table and column, with the keys to join on."
+---
+
+<Warning>
+  **Available on request** — The Autumn Lakehouse is provisioned per customer. Contact us at [hey@useautumn.com](mailto:hey@useautumn.com) to get access.
+</Warning>
+
+Every object is delivered as a table named `v2_3_<object>`, grouped below by lane. The **one exception is events**: the event log is immutable and unversioned, delivered as `events` (not `v2_3_events`) — see [Events](#events).
+
+## Type legend
+
+Types below are **engine-neutral**. How each engine surfaces them:
+
+{/* BigQuery column hidden until BigQuery delivery ships — restore the right-hand column when re-enabling:
+| Logical type | ClickHouse | BigQuery |
+| `string` | `Nullable(String)` | `STRING` |
+| `number` | `Nullable(Decimal(38, …))` | `INT64` / `NUMERIC` |
+| `number (epoch ms)` | `Nullable(Decimal(38, …))` | `INT64` |
+| `boolean` | `Nullable(Bool)` | `BOOL` |
+| `json (string)` | `Nullable(String)` | `STRING` |
+| `json[] (string)` | `Array(Nullable(String))` | `ARRAY<STRING>` |
+| `string[]` | `Array(Nullable(String))` | `ARRAY<STRING>` |
+| `timestamp` | `Nullable(DateTime64)` | `TIMESTAMP` |
+*/}
+
+| Logical type | ClickHouse |
+|---|---|
+| `string` | `Nullable(String)` |
+| `number` | `Nullable(Decimal(38, …))` |
+| `number (epoch ms)` | `Nullable(Decimal(38, …))` |
+| `boolean` | `Nullable(Bool)` |
+| `json (string)` | `Nullable(String)` |
+| `json[] (string)` | `Array(Nullable(String))` |
+| `string[]` | `Array(Nullable(String))` |
+| `timestamp` | `Nullable(DateTime64)` |
+
+<Info>
+  - **Timestamps are epoch-milliseconds** (`number (epoch ms)`), not native datetimes — convert before use. See [Querying → Timestamps](/documentation/lakehouse/querying#timestamps). The one exception is `events.timestamp`, which is a real `timestamp`.
+  - **JSON columns are stored as strings** — parse them with `JSONExtract*` (ClickHouse).
+</Info>
+
+## Keys
+
+- ⭐ marks the **stable, immutable key** for a table — join and filter on this.
+- 🔗 marks a **stable foreign key** (`internal_customer_id`, `internal_feature_id`, `internal_product_id`, `internal_entity_id`, `internal_reward_id`) — join to the matching `internal_id`.
+- External ids (`customer_id`, `plan_id`, `feature_id`, `entity_id`, `id`, …) are **mutable** — convenient for display, but don't rely on them as stable keys. See [Querying → Use internal ids](/documentation/lakehouse/querying#use-internal-ids-not-external-ids).
+- `org_id` is your tenant id (constant across your tables); `env` is `sandbox` or `live` (**not** `production` — filtering `env = 'production'` silently returns zero rows).
+
+---
+
+## Catalog
+
+Your pricing model: features, plans, plan items, rewards, and referral programs.
+
+<AccordionGroup>
+<Accordion title="v2_3_features — feature catalog">
+
+| Column | Type | Notes |
+|---|---|---|
+| `internal_id` | string | ⭐ stable key |
+| `feature_id` | string | external id (e.g. `AI_CREDITS`), mutable |
+| `org_id` | string | your tenant id |
+| `env` | string | `sandbox` / `live` |
+| `name` | string | |
+| `type` | string | feature type |
+| `display` | json (string) | display config |
+| `config` | json (string) | metered / credit-system config |
+
+</Accordion>
+<Accordion title="v2_3_plans — plan headers with base pricing">
+
+| Column | Type | Notes |
+|---|---|---|
+| `internal_id` | string | ⭐ stable key — one row **per plan version** |
+| `plan_id` | string | external id, mutable, shared across versions |
+| `org_id` | string | your tenant id |
+| `env` | string | `sandbox` / `live` |
+| `name` | string | |
+| `description` | string | |
+| `group` | string | |
+| `version` | number | plan version number |
+| `add_on` | boolean | |
+| `auto_enable` | boolean | |
+| `archived` | boolean | |
+| `base_variant_id` | string | |
+| `created_at` | number (epoch ms) | |
+| `config` | json (string) | |
+| `price_amount` | number | base recurring price |
+| `price_interval` | string | billing interval |
+| `price_interval_count` | number | |
+| `trial_duration_length` | number | |
+| `trial_duration_type` | string | |
+| `trial_card_required` | boolean | |
+| `trial_on_end` | string | |
+
+</Accordion>
+<Accordion title="v2_3_plan_items — entitlements + linked prices">
+
+| Column | Type | Notes |
+|---|---|---|
+| `internal_id` | string | ⭐ stable key |
+| `plan_id` | string | external plan id |
+| `internal_product_id` | string | 🔗 → `v2_3_plans.internal_id` |
+| `org_id` | string | your tenant id |
+| `env` | string | `sandbox` / `live` |
+| `feature_id` | string | external feature id |
+| `internal_feature_id` | string | 🔗 → `v2_3_features.internal_id` |
+| `included` | number | allowance (`0` if unlimited) |
+| `unlimited` | boolean | |
+| `reset_interval` | string | null for boolean / continuous-use |
+| `reset_interval_count` | number | null if count is 1 |
+| `has_price` | boolean | |
+| `price_amount` | number | single-tier only |
+| `price_tiers` | json (string) | multi-tier array (null if single/fixed) |
+| `price_tier_behavior` | string | graduated / stairstep |
+| `price_interval` | string | |
+| `price_interval_count` | number | |
+| `price_billing_units` | number | |
+| `price_billing_method` | string | prepaid / usage_based |
+| `price_max_purchase` | number | usage_limit − included |
+| `rollover_max` | number | |
+| `rollover_max_percentage` | number | |
+| `rollover_expiry_duration_type` | string | |
+| `rollover_expiry_duration_length` | number | |
+
+</Accordion>
+<Accordion title="v2_3_rewards — discounts, free products, promos">
+
+| Column | Type | Notes |
+|---|---|---|
+| `internal_id` | string | ⭐ stable key |
+| `id` | string | external id, mutable |
+| `org_id` | string | your tenant id |
+| `env` | string | `sandbox` / `live` |
+| `name` | string | |
+| `type` | string | percentage_discount / fixed_discount / free_product |
+| `created_at` | number (epoch ms) | |
+| `discount_value` | number | |
+| `discount_duration_type` | string | |
+| `discount_duration_value` | number | |
+| `discount_apply_to_all` | boolean | |
+| `discount_price_ids` | json (string) | string array (null for free-product) |
+| `free_product_id` | string | plan id (null for discount) |
+| `free_product_duration_type` | string | |
+| `free_product_duration_value` | number | |
+| `promo_codes` | json (string) | array of `{code, global_max_redemption}` |
+
+</Accordion>
+<Accordion title="v2_3_referral_programs — referral configuration">
+
+| Column | Type | Notes |
+|---|---|---|
+| `internal_id` | string | ⭐ stable key |
+| `id` | string | external id, mutable |
+| `org_id` | string | your tenant id |
+| `env` | string | `sandbox` / `live` |
+| `created_at` | number (epoch ms) | |
+| `reward_id` | string | external reward id |
+| `internal_reward_id` | string | 🔗 → `v2_3_rewards.internal_id` |
+| `trigger_event` | string | customer_creation / checkout |
+| `received_by` | string | referrer / all |
+| `product_ids` | string[] | external plan ids |
+| `exclude_trial` | boolean | |
+| `unlimited_redemptions` | boolean | |
+| `max_redemptions` | number | |
+
+</Accordion>
+</AccordionGroup>
+
+---
+
+## Subjects
+
+Who your plans apply to: customers and entities (sub-customers).
+
+<AccordionGroup>
+<Accordion title="v2_3_customers — customer master record">
+
+| Column | Type | Notes |
+|---|---|---|
+| `internal_id` | string | ⭐ stable key |
+| `customer_id` | string | external id, mutable (may be null) |
+| `org_id` | string | your tenant id |
+| `env` | string | `sandbox` / `live` |
+| `name` | string | |
+| `email` | string | |
+| `created_at` | number (epoch ms) | |
+| `fingerprint` | string | |
+| `stripe_id` | string | Stripe customer id |
+| `metadata` | json (string) | |
+| `send_email_receipts` | boolean | |
+| `billing_controls` | json (string) | auto_topups, spend_limits, usage_alerts, overage_allowed |
+| `config` | json (string) | |
+| `processors` | json (string) | stripe / vercel / revenuecat links |
+
+</Accordion>
+<Accordion title="v2_3_entities — sub-customers scoped to a feature">
+
+| Column | Type | Notes |
+|---|---|---|
+| `internal_id` | string | ⭐ stable key |
+| `id` | string | external id, mutable |
+| `org_id` | string | your tenant id |
+| `env` | string | `sandbox` / `live` |
+| `customer_id` | string | parent customer external id |
+| `internal_customer_id` | string | 🔗 → `v2_3_customers.internal_id` |
+| `feature_id` | string | entity feature scope (external) |
+| `name` | string | |
+| `created_at` | number (epoch ms) | |
+| `deleted` | boolean | |
+| `billing_controls` | json (string) | spend_limits, usage_alerts, overage_allowed |
+
+</Accordion>
+</AccordionGroup>
+
+---
+
+## States
+
+Active customer–product relationships: recurring subscriptions and one-off purchases.
+
+<AccordionGroup>
+<Accordion title="v2_3_subscriptions — recurring customer products">
+
+| Column | Type | Notes |
+|---|---|---|
+| `internal_id` | string | ⭐ stable key |
+| `id` | string | external id, mutable |
+| `customer_id` | string | external customer id |
+| `internal_customer_id` | string | 🔗 → `v2_3_customers.internal_id` |
+| `org_id` | string | your tenant id |
+| `env` | string | `sandbox` / `live` |
+| `plan_id` | string | external plan id |
+| `internal_product_id` | string | 🔗 → `v2_3_plans.internal_id` |
+| `add_on` | boolean | |
+| `auto_enable` | boolean | |
+| `status` | string | active / scheduled |
+| `past_due` | boolean | |
+| `canceled_at` | number (epoch ms) | null if not canceled |
+| `expires_at` | number (epoch ms) | null if no expiry |
+| `trial_ends_at` | number (epoch ms) | null if no trial |
+| `started_at` | number (epoch ms) | |
+| `quantity` | number | |
+| `current_period_start` | number (epoch ms) | null if none |
+| `current_period_end` | number (epoch ms) | null if none |
+| `entity_id` | string | external entity id (null = customer-scoped) |
+| `internal_entity_id` | string | 🔗 → `v2_3_entities.internal_id` (null = customer-scoped) |
+
+</Accordion>
+<Accordion title="v2_3_purchases — one-off purchases">
+
+| Column | Type | Notes |
+|---|---|---|
+| `internal_id` | string | ⭐ stable key |
+| `id` | string | external id, mutable |
+| `customer_id` | string | external customer id |
+| `internal_customer_id` | string | 🔗 → `v2_3_customers.internal_id` |
+| `org_id` | string | your tenant id |
+| `env` | string | `sandbox` / `live` |
+| `plan_id` | string | external plan id |
+| `internal_product_id` | string | 🔗 → `v2_3_plans.internal_id` |
+| `expires_at` | number (epoch ms) | null if no expiry |
+| `started_at` | number (epoch ms) | |
+| `quantity` | number | |
+| `entity_id` | string | external entity id (null = customer-scoped) |
+| `internal_entity_id` | string | 🔗 → `v2_3_entities.internal_id` (null = customer-scoped) |
+
+</Accordion>
+</AccordionGroup>
+
+---
+
+## Balances
+
+Feature balances, their per-entitlement breakdowns, and boolean feature flags.
+
+<Warning>
+  **These tables do not behave like a clean relational schema.** They are denormalized snapshots of Autumn's read-time balance computation, and they include **every** `customer_entitlement` row — across superseded product versions and past reset cycles — with **no active-status or current-cycle filter**. A naive `SELECT ... FROM v2_3_balances` therefore double- and triple-counts. Before you query balances, breakdowns, or overage, read **[Working with balances](/documentation/lakehouse/balance-semantics)** — it explains what each column means, why `usage`/`granted`/`remaining` don't form a closed arithmetic triple, where overage comes from (it is **not** stored), and the active + current-cycle filter you must apply.
+</Warning>
+
+<Note>
+  Balances, breakdowns, and flags carry both **pooled** (customer-level) rows — where `entity_id` is null — and **per-entity** rows. For customer-level totals, keep only the pooled rows with `coalesce(entity_id, '') = ''` to avoid double counting. (Use `coalesce`, **not** `entity_id IS NULL` — `IS NULL` throws on these Iceberg columns; see [Querying → Pooled vs per-entity](/documentation/lakehouse/querying#pooled-vs-per-entity-rows).)
+</Note>
+
+<AccordionGroup>
+<Accordion title="v2_3_balances — aggregated balance per customer × feature × entity">
+
+| Column | Type | Notes |
+|---|---|---|
+| `internal_customer_id` | string | ⭐🔗 part of key → `v2_3_customers.internal_id` |
+| `internal_feature_id` | string | ⭐🔗 part of key → `v2_3_features.internal_id` |
+| `entity_id` | string | ⭐ part of key (null = pooled) |
+| `customer_id` | string | external customer id |
+| `feature_id` | string | external feature id |
+| `internal_entity_id` | string | 🔗 → `v2_3_entities.internal_id` (null = pooled) |
+| `org_id` | string | your tenant id |
+| `env` | string | `sandbox` / `live` |
+| `unlimited` | boolean | |
+| `granted` | number | Σ(`included_grant` + `prepaid_grant`) + rollover-granted, over **all** entitlements in the group |
+| `remaining` | number | Σ(floored per-entitlement balance) + rollover-balance + unused — **floored at 0**, never negative |
+| `usage` | number | Σ(per-entitlement `usage`) + rollover-usage − unused. **Not** `granted − remaining`; see below |
+| `overage_allowed` | boolean | |
+| `max_purchase` | number | null if unbounded |
+| `reset_interval` | string | single interval or `multiple` |
+| `reset_interval_count` | number | null if `multiple` or count 1 |
+| `reset_resets_at` | number (epoch ms) | earliest reset across entitlements |
+| `next_reset_at` | number (epoch ms) | earliest next reset |
+
+<Warning>
+  `granted` / `remaining` / `usage` are **not** a closed arithmetic triple — `remaining ≠ granted − usage`. Each is aggregated **over every entitlement row for this customer × feature × scope**, including superseded product versions and past cycles, so a single row routinely sums many lifetimes of usage. `remaining` is floored per-entitlement, manual "Set Balance" decouples balance from grant, and rollover/unused are layered in. **There is no overage column** — it is derived. Always read [Working with balances](/documentation/lakehouse/balance-semantics) and apply the active + current-cycle filter before trusting these numbers.
+</Warning>
+
+</Accordion>
+<Accordion title="v2_3_breakdowns — per-entitlement balance detail">
+
+| Column | Type | Notes |
+|---|---|---|
+| `internal_id` | string | ⭐ part of key (customer_entitlement id) |
+| `entity_id` | string | ⭐ part of key (null = pooled) |
+| `id` | string | external id, mutable |
+| `customer_id` | string | external customer id |
+| `internal_customer_id` | string | 🔗 → `v2_3_customers.internal_id` |
+| `internal_entity_id` | string | 🔗 → `v2_3_entities.internal_id` (null = pooled) |
+| `feature_id` | string | external feature id |
+| `internal_feature_id` | string | 🔗 → `v2_3_features.internal_id` |
+| `plan_id` | string | external plan id |
+| `internal_product_id` | string | 🔗 → `v2_3_plans.internal_id` |
+| `included_grant` | number | allowance grant (allowance + adjustment) |
+| `prepaid_grant` | number | prepaid grant |
+| `remaining` | number | floored balance — `max(0, balance)`, **never negative** |
+| `usage` | number | `included_grant` + `prepaid_grant` − raw (signed) balance |
+| `unlimited` | boolean | |
+| `reset_interval` | string | null for continuous-use; `one_off` for lifetime grants |
+| `reset_interval_count` | number | null if count 1 |
+| `reset_resets_at` | number (epoch ms) | next reset for **this** entitlement (use to pick the current cycle) |
+| `price_amount` | number | single-tier only |
+| `price_billing_method` | string | prepaid / usage_based |
+| `price_billing_units` | number | default 1 |
+| `price_max_purchase` | number | |
+| `price_tier_behavior` | string | graduated / stairstep (multi-tier) |
+| `price_tiers` | json (string) | multi-tier array |
+| `expires_at` | number (epoch ms) | null if no expiry |
+| `org_id` | string | your tenant id |
+| `env` | string | `sandbox` / `live` |
+
+<Warning>
+  **`v2_3_breakdowns` has no `status` / `is_active` / `is_current` column** and mixes rows from superseded/cancelled product versions, past reset cycles, and pre-seeded future cycles. To get the rows the API would use, join `internal_product_id` to active subscription status and pick the current cycle (earliest upcoming `reset_resets_at`); `one_off` rows are always live. See [Working with balances → The active + current-cycle filter](/documentation/lakehouse/balance-semantics#the-active-current-cycle-filter).
+</Warning>
+
+</Accordion>
+<Accordion title="v2_3_flags — boolean feature flags">
+
+| Column | Type | Notes |
+|---|---|---|
+| `internal_id` | string | ⭐ part of key |
+| `entity_id` | string | ⭐ part of key (null = pooled) |
+| `id` | string | external id, mutable |
+| `customer_id` | string | external customer id |
+| `internal_customer_id` | string | 🔗 → `v2_3_customers.internal_id` |
+| `internal_entity_id` | string | 🔗 → `v2_3_entities.internal_id` (null = pooled) |
+| `feature_id` | string | external feature id |
+| `internal_feature_id` | string | 🔗 → `v2_3_features.internal_id` |
+| `plan_id` | string | external plan id |
+| `internal_product_id` | string | 🔗 → `v2_3_plans.internal_id` |
+| `expires_at` | number (epoch ms) | null if no expiry |
+| `org_id` | string | your tenant id |
+| `env` | string | `sandbox` / `live` |
+
+</Accordion>
+</AccordionGroup>
+
+---
+
+## Invoices
+
+Invoices and their line items.
+
+<AccordionGroup>
+<Accordion title="v2_3_invoices — invoice master record">
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | string | ⭐ stable key (invoice id) |
+| `org_id` | string | your tenant id |
+| `env` | string | `sandbox` / `live` |
+| `customer_id` | string | external customer id |
+| `internal_customer_id` | string | 🔗 → `v2_3_customers.internal_id` |
+| `entity_id` | string | external entity id (null = customer-scoped) |
+| `internal_entity_id` | string | 🔗 → `v2_3_entities.internal_id` (null = customer-scoped) |
+| `plan_ids` | string[] | external plan ids |
+| `internal_product_ids` | string[] | 🔗 → `v2_3_plans.internal_id` |
+| `stripe_id` | string | Stripe invoice id |
+| `processor_type` | string | stripe / … |
+| `status` | string | paid / open / void / draft |
+| `total` | number | invoice total |
+| `amount_paid` | number | |
+| `refunded_amount` | number | |
+| `currency` | string | ISO 4217 code |
+| `created_at` | number (epoch ms) | |
+| `hosted_invoice_url` | string | raw Stripe URL |
+| `discounts` | json[] (string) | array of discount objects |
+
+</Accordion>
+<Accordion title="v2_3_invoice_line_items — invoice line detail">
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | string | ⭐ stable key (line item id) |
+| `org_id` | string | your tenant id |
+| `env` | string | `sandbox` / `live` |
+| `invoice_id` | string | 🔗 → `v2_3_invoices.id` |
+| `customer_id` | string | external customer id |
+| `description` | string | |
+| `period_start` | number (epoch ms) | |
+| `period_end` | number (epoch ms) | |
+| `feature_id` | string | external feature id (null for non-feature lines) |
+| `internal_feature_id` | string | 🔗 → `v2_3_features.internal_id` |
+| `feature_name` | string | resolved feature name |
+| `plan_id` | string | external plan id |
+| `internal_product_id` | string | 🔗 → `v2_3_plans.internal_id` |
+| `amount` | number | pre-discount |
+| `amount_after_discounts` | number | |
+| `currency` | string | ISO 4217 code |
+| `direction` | string | charge / refund |
+| `billing_timing` | string | in_advance / in_arrear |
+| `prorated` | boolean | |
+| `discounts` | json[] (string) | array of discount objects |
+
+</Accordion>
+</AccordionGroup>
+
+---
+
+## Events
+
+The append-only usage event log. This is the highest-volume table and is **append-only** (no updates).
+
+<Warning>
+  **The events table is `events`, not `v2_3_events`.** Events are immutable and **unversioned** — they are *not* subject to the `v2_3` schema versioning that every other object uses. Address it as `` `<catalog>`.`<namespace>.events` ``. Querying `v2_3_events` returns `Unknown table expression identifier` because that table does not exist.
+</Warning>
+
+<AccordionGroup>
+<Accordion title="events — usage event log">
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | string | ⭐ stable key (event id) |
+| `org_id` | string | your tenant id |
+| `org_slug` | string | |
+| `internal_customer_id` | string | 🔗 → `v2_3_customers.internal_id` |
+| `env` | string | `sandbox` / `live` |
+| `created_at` | number (epoch ms) | when Autumn recorded the event |
+| `timestamp` | timestamp | event time — a **real timestamp**, use directly |
+| `event_name` | string | |
+| `idempotency_key` | string | |
+| `value` | number | |
+| `entity_id` | string | external entity id (null = customer-scoped) |
+| `internal_entity_id` | string | 🔗 → `v2_3_entities.internal_id` |
+| `internal_product_id` | string | 🔗 → `v2_3_plans.internal_id` |
+| `customer_id` | string | external customer id |
+| `properties` | json (string) | event properties (e.g. `subtype`, `model`) |
+| `deductions` | json (string) | per-feature deductions for this event |
+
+</Accordion>
+</AccordionGroup>
+
+<Note>
+  Unlike every other table, `events.timestamp` is a native `timestamp` — no epoch-ms conversion needed. `created_at` is still epoch-ms.
+</Note>

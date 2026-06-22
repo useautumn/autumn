@@ -137,6 +137,34 @@ function diffHasBillingChanges(diff: DiffedCustomizePlanV1): boolean {
 	return false;
 }
 
+// Unlike `diffHasBillingChanges`, also flags pure removals of priced items so
+// the migration UI can warn about any change to what customers are billed.
+export function planHasPricingChange({
+	baseProduct,
+	product,
+	features,
+}: {
+	baseProduct: FrontendProduct;
+	product: FrontendProduct;
+	features: Feature[];
+}): boolean {
+	const from = frontendProductToApiPlanV1(baseProduct, features);
+	const to = frontendProductToApiPlanV1(product, features);
+	const diff = diffPlanV1({ from, to });
+	if (diff.price !== undefined) return true;
+	if (diff.add_items?.some((item) => item.price != null)) return true;
+	// Remove filters can omit billing_method even when priced, so check the
+	// source items by feature_id rather than the lossy filter.
+	const removedFeatureIds = new Set(
+		diff.remove_items?.map((item) => item.feature_id) ?? [],
+	);
+	return (
+		from.items?.some(
+			(item) => item.price != null && removedFeatureIds.has(item.feature_id),
+		) ?? false
+	);
+}
+
 function getMigratablePlanDiff(
 	diff: DiffedCustomizePlanV1,
 ): DiffedCustomizePlanV1 {
@@ -161,12 +189,14 @@ export function buildVersionMigrationDraft({
 	latestVersion,
 	scope,
 	pastVersions,
+	hasPricingChange,
 	includeCustom = false,
 }: {
 	productId: string;
 	latestVersion: number;
 	scope: VersionMigrateScope;
 	pastVersions: number[];
+	hasPricingChange: boolean;
 	includeCustom?: boolean;
 }): MigrationDraft {
 	const versions = scope === "all" ? pastVersions : [scope];
@@ -201,7 +231,7 @@ export function buildVersionMigrationDraft({
 		id: `${productId}-${suffix}-to-v${latestVersion}-${migrationUid()}`,
 		filter,
 		operations,
-		no_billing_changes: true,
+		no_billing_changes: !hasPricingChange,
 	};
 }
 
@@ -235,11 +265,11 @@ export function buildMigrationDraft({
 	const planFilter = includeCustom
 		? basePlanFilter
 		: { ...basePlanFilter, custom: false };
-	const updatePlanOp = (custom: boolean): UpdatePlanOp => ({
+	const updatePlanOp: UpdatePlanOp = {
 		type: "update_plan",
-		plan_filter: { ...basePlanFilter, custom },
+		plan_filter: basePlanFilter,
 		...(customize ? { customize } : {}),
-	});
+	};
 
 	const filter: MigrationFilter = {
 		customer: { plan: planFilter },
@@ -252,9 +282,7 @@ export function buildMigrationDraft({
 		id: `${baseProduct.id}-${suffix}-${migrationUid()}`,
 		filter,
 		operations: {
-			customer: includeCustom
-				? [updatePlanOp(false), updatePlanOp(true)]
-				: [updatePlanOp(false)],
+			customer: [updatePlanOp],
 		},
 		no_billing_changes: diffHasBillingChanges(migrationDiff) === false,
 	};

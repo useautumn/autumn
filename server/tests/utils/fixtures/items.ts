@@ -1,4 +1,5 @@
 import {
+	AllocatedBillingBehavior,
 	BillingInterval,
 	type LimitedItem,
 	type ProductItemConfig,
@@ -321,6 +322,10 @@ const prepaid = ({
 	config,
 	prorationConfig,
 	entityFeatureId,
+	interval,
+	intervalCount,
+	priceInterval,
+	priceIntervalCount,
 }: {
 	featureId: string;
 	price?: number;
@@ -332,6 +337,10 @@ const prepaid = ({
 		onDecrease?: ProductItemConfig["on_decrease"];
 	};
 	entityFeatureId?: string;
+	interval?: ProductItemInterval | null;
+	intervalCount?: number;
+	priceInterval?: ProductItemInterval | null;
+	priceIntervalCount?: number;
 }): LimitedItem => {
 	const mergedConfig =
 		config || prorationConfig
@@ -353,6 +362,10 @@ const prepaid = ({
 		includedUsage,
 		config: mergedConfig,
 		entityFeatureId,
+		interval,
+		intervalCount,
+		priceInterval,
+		priceIntervalCount,
 	}) as LimitedItem;
 };
 
@@ -368,6 +381,10 @@ const prepaidMessages = ({
 	config,
 	prorationConfig,
 	entityFeatureId,
+	interval,
+	intervalCount,
+	priceInterval,
+	priceIntervalCount,
 }: {
 	includedUsage?: number;
 	billingUnits?: number;
@@ -378,6 +395,10 @@ const prepaidMessages = ({
 		onDecrease?: ProductItemConfig["on_decrease"];
 	};
 	entityFeatureId?: string;
+	interval?: ProductItemInterval | null;
+	intervalCount?: number;
+	priceInterval?: ProductItemInterval | null;
+	priceIntervalCount?: number;
 } = {}): LimitedItem =>
 	prepaid({
 		featureId: TestFeature.Messages,
@@ -387,6 +408,10 @@ const prepaidMessages = ({
 		config,
 		prorationConfig,
 		entityFeatureId,
+		interval,
+		intervalCount,
+		priceInterval,
+		priceIntervalCount,
 	});
 
 /**
@@ -743,6 +768,55 @@ const allocatedMessages = ({
 		includedUsage,
 	}) as LimitedItem;
 
+// Allocated v2 bills current holdings at each cycle end and never resets.
+const allocatedV2Users = ({
+	includedUsage = 0,
+	pricePerUnit = 10,
+	interval = ProductItemInterval.Month,
+	entityFeatureId,
+}: {
+	includedUsage?: number;
+	pricePerUnit?: number;
+	interval?: ProductItemInterval;
+	entityFeatureId?: string;
+} = {}): LimitedItem =>
+	({
+		...constructArrearProratedItem({
+			featureId: TestFeature.Users,
+			pricePerUnit,
+			includedUsage,
+			interval,
+			config: {
+				allocated_billing_behavior: AllocatedBillingBehavior.Arrear,
+			},
+		}),
+		entity_feature_id: entityFeatureId,
+	}) as LimitedItem;
+
+const allocatedV2Workflows = ({
+	includedUsage = 0,
+	pricePerUnit = 10,
+	interval = ProductItemInterval.Month,
+	entityFeatureId,
+}: {
+	includedUsage?: number;
+	pricePerUnit?: number;
+	interval?: ProductItemInterval;
+	entityFeatureId?: string;
+} = {}): LimitedItem =>
+	({
+		...constructArrearProratedItem({
+			featureId: TestFeature.Workflows,
+			pricePerUnit,
+			includedUsage,
+			interval,
+			config: {
+				allocated_billing_behavior: AllocatedBillingBehavior.Arrear,
+			},
+		}),
+		entity_feature_id: entityFeatureId,
+	}) as LimitedItem;
+
 // ═══════════════════════════════════════════════════════════════════
 // BASE PRICES
 // ═══════════════════════════════════════════════════════════════════
@@ -825,6 +899,8 @@ export const items = {
 	allocatedUsers,
 	allocatedWorkflows,
 	allocatedMessages,
+	allocatedV2Users,
+	allocatedV2Workflows,
 
 	// Base prices
 	monthlyPrice,

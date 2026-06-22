@@ -7,7 +7,6 @@ import {
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
 	cusEntsToPrepaidQuantity,
-	cusEntToPrepaidQuantity,
 	getRolloverFields,
 	isFreeCustomerEntitlement,
 	isPrepaidCustomerEntitlement,
@@ -18,6 +17,7 @@ import {
 	BoxArrowDownIcon,
 	BracketsSquareIcon,
 	CaretRightIcon,
+	ClockCountdownIcon,
 	MoneyWavyIcon,
 	PulseIcon,
 	WalletIcon,
@@ -38,7 +38,7 @@ import {
 	TooltipTrigger,
 } from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
-import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { getCusEntHoverTexts } from "@/views/admin/adminUtils";
 import { useFeatureUsageBalance } from "@/views/customers2/hooks/useFeatureUsageBalance";
 import { CustomerFeatureUsageBar } from "../customer-feature-usage/CustomerFeatureUsageBar";
@@ -120,20 +120,15 @@ function getIndividualEntValues({
 		cusEnts: [ent],
 		sumAcrossEntities: nullish(entityId),
 	});
-	void grantedBalance;
-	void prepaidAllowance;
 
 	const rolloverBalance =
 		getRolloverFields({ cusEnt: ent, entityId: entityId ?? undefined })
 			?.balance ?? 0;
 
 	const quantity = ent.customer_product?.quantity || 1;
-	const allowance =
-		(ent.entitlement.allowance ?? 0) * quantity +
-		(entityId && ent.entities?.[entityId]
-			? (ent.entities[entityId].adjustment ?? ent.adjustment ?? 0)
-			: (ent.adjustment ?? 0)) +
-		cusEntToPrepaidQuantity({ cusEnt: ent });
+	// grantedBalance/prepaidAllowance already account for per-entity multiplication
+	// at customer level; the manual sum here dropped it, undercounting to one entity.
+	const allowance = grantedBalance + prepaidAllowance;
 	return { balance, allowance, quantity, rolloverBalance };
 }
 
@@ -239,6 +234,29 @@ function UsageCell({
 
 // --- Bar cells ---
 
+const formatChipDate = (timestamp: number | null | undefined) => {
+	if (!timestamp) return "";
+	const { date, time } = formatUnixToDateTime(timestamp, { withYear: true });
+	return `${date} ${time}`;
+};
+
+function BalanceExpiryIcon({
+	expiresAt,
+}: {
+	expiresAt: number | null | undefined;
+}) {
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<div className="shrink-0 text-amber-500">
+					<ClockCountdownIcon size={14} weight="duotone" />
+				</div>
+			</TooltipTrigger>
+			<TooltipContent>Expires {formatChipDate(expiresAt)}</TooltipContent>
+		</Tooltip>
+	);
+}
+
 function BarCellContent({
 	ent,
 	allowance,
@@ -252,23 +270,28 @@ function BarCellContent({
 }) {
 	const hasReset = ent.next_reset_at != null;
 	const hasExpiry = ent.expires_at != null;
+	const expiryIcon = hasExpiry ? (
+		<BalanceExpiryIcon expiresAt={ent.expires_at} />
+	) : null;
 
 	return (
 		<div className="flex gap-3 items-center">
-			{hasExpiry ? (
-				<span className="text-tertiary-foreground text-tiny flex justify-center !px-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-md min-w-30">
-					Expires {formatUnixToDateTimeString(ent.expires_at)}
-				</span>
-			) : (
-				<span
-					className={cn(
-						"text-tertiary-foreground text-tiny flex justify-center !px-1 bg-muted rounded-md min-w-30",
-						hasReset ? "opacity-100" : "opacity-0",
-					)}
-				>
-					Resets {formatUnixToDateTimeString(ent.next_reset_at)}
-				</span>
-			)}
+			<div className="flex items-center justify-end gap-1.5 shrink-0 min-w-44">
+				{hasReset ? (
+					<>
+						{hasExpiry && (
+							<div className="w-3.5 shrink-0 flex justify-center mr-auto">
+								{expiryIcon}
+							</div>
+						)}
+						<span className="text-tertiary-foreground text-tiny flex justify-center !px-1 bg-muted rounded-md min-w-36 whitespace-nowrap">
+							Resets {formatChipDate(ent.next_reset_at)}
+						</span>
+					</>
+				) : (
+					expiryIcon
+				)}
+			</div>
 			<div
 				className={cn(
 					"w-full max-w-50 flex justify-center pr-2 h-full items-center min-w-16",

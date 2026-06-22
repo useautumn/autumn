@@ -101,6 +101,67 @@ export function connectionString(
 	return res.stdout.trim();
 }
 
+// Leaf's chat-sdk connects to a separate `chat` database on the same branch
+// (env.ts rewrites DATABASE_URL's path to /chat). Create it via the Neon control
+// plane (no CREATE DATABASE privilege / pooler issues), owned by the same role as
+// neondb so leaf can connect. Idempotent + non-fatal.
+export function ensureChatDatabase(branchName: string): void {
+	const list = neon([
+		"databases",
+		"list",
+		"--project-id",
+		NEON_PROJECT_ID,
+		"--branch",
+		branchName,
+		"--output",
+		"json",
+	]);
+	if (list.code !== 0) {
+		console.error(
+			`[dw] neon databases list for ${branchName} failed: ${list.stderr || list.stdout}`,
+		);
+		return;
+	}
+	let databases: { name: string; owner_name: string }[];
+	try {
+		databases = JSON.parse(list.stdout) as {
+			name: string;
+			owner_name: string;
+		}[];
+	} catch {
+		console.error(`[dw] could not parse neon databases list for ${branchName}`);
+		return;
+	}
+	if (databases.some((db) => db.name === "chat")) {
+		log(`chat database already present on ${branchName}`);
+		return;
+	}
+	const owner =
+		databases.find((db) => db.name === "neondb")?.owner_name ??
+		databases[0]?.owner_name ??
+		"neondb_owner";
+	log(`creating chat database on ${branchName} (owner ${owner})`);
+	const create = neon([
+		"databases",
+		"create",
+		"--project-id",
+		NEON_PROJECT_ID,
+		"--branch",
+		branchName,
+		"--name",
+		"chat",
+		"--owner-name",
+		owner,
+	]);
+	if (create.code !== 0) {
+		console.error(
+			`[dw] neon databases create chat on ${branchName} failed: ${create.stderr || create.stdout}`,
+		);
+		return;
+	}
+	log(`chat database created on ${branchName}`);
+}
+
 export function ensureTemplateBranch(): void {
 	const branch = findBranchByName(NEON_TEMPLATE_BRANCH);
 	if (branch) return;

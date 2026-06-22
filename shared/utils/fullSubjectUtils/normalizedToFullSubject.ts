@@ -62,6 +62,8 @@ const subjectBalanceToFullCustomerEntitlement = ({
 		balance: subjectBalance.balance,
 		additional_balance: subjectBalance.additional_balance,
 		usage_allowed: subjectBalance.usage_allowed,
+		separate_interval: subjectBalance.separate_interval,
+		reset_cycle_anchor: subjectBalance.reset_cycle_anchor,
 		next_reset_at: subjectBalance.next_reset_at,
 		adjustment: subjectBalance.adjustment,
 		expires_at: subjectBalance.expires_at,
@@ -103,6 +105,8 @@ const subjectFlagToFullCustomerEntitlement = ({
 		balance: 0,
 		additional_balance: 0,
 		usage_allowed: null,
+		separate_interval: false,
+		reset_cycle_anchor: null,
 		next_reset_at: null,
 		adjustment: 0,
 		expires_at: subjectFlag.expiresAt,
@@ -386,6 +390,19 @@ export const normalizedToFullSubject = ({
 		customer: normalized.customer,
 		customer_products: customerProducts,
 		extra_customer_entitlements: extraCustomerEntitlements,
+		// Normalized carries ALL scopes (the balance-hash field must stay
+		// complete); the subject view narrows to the rows that can gate it --
+		// an entity sees its own rows plus the inheritable customer-scope ones.
+		usage_windows: getArrayEntries<
+			NormalizedFullSubject["usage_windows"][number]
+		>({
+			value: normalized.usage_windows,
+		}).filter((usageWindow) =>
+			normalized.internalEntityId
+				? usageWindow.internal_entity_id === normalized.internalEntityId ||
+					usageWindow.internal_entity_id == null
+				: true,
+		),
 		subscriptions,
 		invoices,
 		...(aggregatedCustomerProducts

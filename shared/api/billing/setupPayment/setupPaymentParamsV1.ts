@@ -14,6 +14,7 @@ export const SetupPaymentParamsV1Schema = AttachParamsV1Schema.extend({
 	redirect_mode: true,
 	new_billing_subscription: true,
 	plan_schedule: true,
+	long_lived_checkout: true,
 });
 
 export const SetupPaymentResponseV1Schema = z.object({

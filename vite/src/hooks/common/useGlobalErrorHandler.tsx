@@ -1,11 +1,10 @@
-import { AppEnv } from "@autumn/shared";
 import { useNavigate } from "react-router";
 import { authClient } from "@/lib/auth-client";
-import { useEnv } from "@/utils/envUtils";
+import { useSwitchActiveOrg } from "./useOrg";
 
 export const useGlobalErrorHandler = () => {
 	const navigate = useNavigate();
-	const env = useEnv();
+	const switchActiveOrg = useSwitchActiveOrg();
 
 	const handleOrganizationRemoval = async (orgId: string) => {
 		try {
@@ -16,12 +15,8 @@ export const useGlobalErrorHandler = () => {
 				// User has other organizations, switch to the first available one
 				const nextOrg = organizations.find((org) => org.id !== orgId);
 				if (nextOrg) {
-					await authClient.organization.setActive({
-						organizationId: nextOrg.id,
-					});
-					// Redirect to products page of the new organization
-					const envPath = env === AppEnv.Sandbox ? "sandbox" : "production";
-					navigate(`/${envPath}/products`);
+					await switchActiveOrg(nextOrg.id);
+					navigate("/");
 					return true;
 				}
 			}

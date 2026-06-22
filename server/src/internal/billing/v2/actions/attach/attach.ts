@@ -4,6 +4,7 @@ import {
 	type BillingContextOverride,
 	CheckoutAction,
 } from "@autumn/shared";
+import { ms } from "@shared/utils/common/unixUtils";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeAttachPlan } from "@/internal/billing/v2/actions/attach/compute/computeAttachPlan";
 import { handleAttachV2Errors } from "@/internal/billing/v2/actions/attach/errors/handleAttachV2Errors";
@@ -21,6 +22,8 @@ import {
 	type CreateAutumnCheckoutResult,
 	createAutumnCheckout,
 } from "../../common/createAutumnCheckout";
+
+const LONG_LIVED_CHECKOUT_EXPIRY_MS = ms.days(90);
 
 export async function attach({
 	ctx,
@@ -93,11 +96,31 @@ export async function attach({
 		};
 	}
 
+	const shouldCreateLongLivedCheckout =
+		params.long_lived_checkout &&
+		billingContext.checkoutMode === "stripe_checkout" &&
+		!skipAutumnCheckout;
+
+	if (shouldCreateLongLivedCheckout) {
+		return createAutumnCheckout<AttachBillingContext>({
+			ctx,
+			action: CheckoutAction.Attach,
+			params,
+			billingContext,
+			billingPlan,
+			expiresInMs: LONG_LIVED_CHECKOUT_EXPIRY_MS,
+		});
+	}
+
+	const autumnCheckoutParams = params.long_lived_checkout
+		? { ...params, long_lived_checkout: false }
+		: params;
+
 	// 5. Checkout session lock (skip for confirm flows)
 	if (!skipAutumnCheckout) {
 		const cachedResult = await checkCheckoutSessionLock({
 			ctx,
-			params,
+			params: autumnCheckoutParams,
 			billingContext,
 			billingPlan,
 		});
@@ -112,7 +135,7 @@ export async function attach({
 		return createAutumnCheckout<AttachBillingContext>({
 			ctx,
 			action: CheckoutAction.Attach,
-			params,
+			params: autumnCheckoutParams,
 			billingContext,
 			billingPlan,
 		});
@@ -124,7 +147,7 @@ export async function attach({
 		billingContext,
 		billingPlan,
 		checkoutLockParamsHash: !skipAutumnCheckout
-			? hashJson({ value: params })
+			? hashJson({ value: autumnCheckoutParams })
 			: undefined,
 	});
 

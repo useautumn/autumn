@@ -164,6 +164,41 @@ describe("runBatchTrack", () => {
 		});
 	});
 
+	test("preserves per-item idempotency keys in queued jobs without relying on SQS deduplication", async () => {
+		const ctx = buildCtx();
+		const bodyWithIdempotency: BatchTrackParams = [
+			{
+				customer_id: "cus_123",
+				feature_id: "messages",
+				value: 1,
+				idempotency_key: "batch-item-1",
+			},
+			{
+				customer_id: "cus_456",
+				feature_id: "credits",
+				value: 2,
+			},
+		];
+
+		await runBatchTrack({ ctx, body: bodyWithIdempotency });
+
+		expect(mockState.queueCommands[0]?.Entries?.[0]).toMatchObject({
+			MessageDeduplicationId: "req_batch_1-0",
+		});
+		expect(mockState.queueCommands[0]?.Entries?.[1]).toMatchObject({
+			MessageDeduplicationId: "req_batch_1-1",
+		});
+		expect(
+			JSON.parse(mockState.queueCommands[0]?.Entries?.[0]?.MessageBody ?? "{}"),
+		).toMatchObject({
+			data: {
+				body: {
+					idempotency_key: "batch-item-1",
+				},
+			},
+		});
+	});
+
 	test("throws 503 RecaseError when TRACK_ASYNC_SQS_QUEUE_URL is unset", async () => {
 		process.env.TRACK_ASYNC_SQS_QUEUE_URL = undefined;
 		const ctx = buildCtx();

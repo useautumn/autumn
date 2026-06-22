@@ -17,6 +17,7 @@ export function useAttachMutation({
 		finalizeInvoice?: boolean;
 		invoiceTemplateId?: string;
 		netTermsDays?: number;
+		longLivedCheckout?: boolean;
 	}) => AttachParamsV0 | null;
 	onCheckoutRedirect?: (checkoutUrl: string) => void;
 	onSuccess?: () => void;
@@ -31,6 +32,7 @@ export function useAttachMutation({
 			finalizeInvoice,
 			invoiceTemplateId,
 			netTermsDays,
+			longLivedCheckout,
 			skipDefaultSuccess,
 		}: {
 			useInvoice?: boolean;
@@ -38,6 +40,7 @@ export function useAttachMutation({
 			finalizeInvoice?: boolean;
 			invoiceTemplateId?: string;
 			netTermsDays?: number;
+			longLivedCheckout?: boolean;
 			skipDefaultSuccess?: boolean;
 		}) => {
 			if (!customerId) {
@@ -50,6 +53,7 @@ export function useAttachMutation({
 				finalizeInvoice,
 				invoiceTemplateId,
 				netTermsDays,
+				longLivedCheckout,
 			});
 
 			if (!requestBody) {
@@ -131,9 +135,14 @@ export function useAttachMutation({
 		};
 	};
 
-	const handleCheckoutAttach = async () => {
+	const handleCheckoutAttach = async ({
+		longLivedCheckout,
+	}: {
+		longLivedCheckout?: boolean;
+	} = {}) => {
 		const result = await mutation.mutateAsync({
 			useInvoice: false,
+			longLivedCheckout,
 			skipDefaultSuccess: true,
 		});
 		return { paymentUrl: result.data?.payment_url };

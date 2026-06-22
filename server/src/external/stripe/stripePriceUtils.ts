@@ -1,4 +1,5 @@
 import {
+	atmnToStripeAmount,
 	BillingInterval,
 	type Customer,
 	type Feature,
@@ -95,7 +96,7 @@ export const getInvoiceItemForUsage = ({
 
 		price_data: {
 			product: config.stripe_product_id!,
-			unit_amount: Math.max(Math.round(amount * 100), 0),
+			unit_amount: Math.max(atmnToStripeAmount({ amount, currency }), 0),
 			currency,
 		},
 		period: {

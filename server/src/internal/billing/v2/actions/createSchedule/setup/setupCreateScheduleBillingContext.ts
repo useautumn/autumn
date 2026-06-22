@@ -8,11 +8,16 @@ import {
 	type MultiAttachParamsV0,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { setupAttachEndOfCycleMs } from "@/internal/billing/v2/actions/attach/setup/setupAttachEndOfCycleMs";
 import { setupAnchorResetRefund } from "@/internal/billing/v2/setup/setupAnchorResetRefund";
 import { setupBillingCycleAnchor } from "@/internal/billing/v2/setup/setupBillingCycleAnchor";
 import { setupResetCycleAnchor } from "@/internal/billing/v2/setup/setupResetCycleAnchor";
 import { setupImmediateMultiProductBillingContext } from "../../common/immediateMultiProduct/setupImmediateMultiProductBillingContext";
-import { normalizeCreateSchedulePhases } from "../errors/normalizeCreateSchedulePhases";
+import {
+	getInitialCreateSchedulePhase,
+	normalizeCreateSchedulePhases,
+	phaseHasNumericStart,
+} from "../errors/normalizeCreateSchedulePhases";
 import { validateCreateSchedulePhasePlans } from "../errors/validateCreateSchedulePhasePlans";
 import { billingContextToRecurringAndScheduled } from "../utils/billingContextToRecurringAndScheduled";
 import { setupScheduledProductsContext } from "./setupScheduledProductsContext";
@@ -77,15 +82,14 @@ export const setupCreateScheduleBillingContext = async ({
 	params: CreateScheduleParamsV0;
 	preview?: boolean;
 }): Promise<CreateScheduleBillingContext> => {
-	const normalizedPhases = normalizeCreateSchedulePhases({
+	const initialPhase = getInitialCreateSchedulePhase({
 		phases: params.phases,
 	});
-	const [immediatePhase, ...futurePhases] = normalizedPhases;
 
 	const immediateParams = {
 		customer_id: params.customer_id,
 		entity_id: params.entity_id,
-		plans: immediatePhase.plans.map((plan) => ({
+		plans: initialPhase.plans.map((plan) => ({
 			plan_id: plan.plan_id,
 			customize: plan.customize,
 			feature_quantities: plan.feature_quantities,
@@ -104,12 +108,31 @@ export const setupCreateScheduleBillingContext = async ({
 		ctx,
 		params: immediateParams,
 		preview,
-		billingStartsAt: immediatePhase.starts_at,
+		billingStartsAt: phaseHasNumericStart(initialPhase)
+			? initialPhase.starts_at
+			: undefined,
 	});
 
 	validateCreateSchedulePhasePlans({
 		fullProducts: billingContext.fullProducts,
 	});
+
+	const cycleBoundaryMs =
+		params.billing_cycle_anchor === undefined
+			? setupAttachEndOfCycleMs({
+					planTiming: "end_of_cycle",
+					stripeSubscription: billingContext.stripeSubscription,
+					billingCycleAnchorMs: billingContext.billingCycleAnchorMs,
+					currentEpochMs: billingContext.currentEpochMs,
+				})
+			: undefined;
+
+	const normalizedPhases = normalizeCreateSchedulePhases({
+		phases: params.phases,
+		currentEpochMs: billingContext.currentEpochMs,
+		cycleBoundaryMs,
+	});
+	const [immediatePhase, ...futurePhases] = normalizedPhases;
 
 	const scheduledPhaseContexts = await setupScheduledProductsContext({
 		ctx,

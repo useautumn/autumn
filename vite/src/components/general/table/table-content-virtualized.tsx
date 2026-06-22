@@ -60,6 +60,12 @@ export function TableContentVirtualized({
 				? MIN_TABLE_HEIGHT
 				: undefined;
 
+	const viewportHeight = containerHeightPx
+		? containerHeightPx - headerHeight
+		: (minHeight ?? Number.POSITIVE_INFINITY);
+	const hasVerticalScroll = contentHeight > viewportHeight;
+	const scrollbarGutter = hasVerticalScroll ? "stable" : undefined;
+
 	// Calculate total width from visible columns to sync header and body tables
 	const visibleColumns = table.getVisibleLeafColumns();
 	const totalWidth = useMemo(() => {
@@ -89,17 +95,17 @@ export function TableContentVirtualized({
 					className,
 				)}
 			>
-			{(isLoading || isTransitioning) && (
-				<div className="bg-white/40 dark:bg-black/40 absolute pointer-events-none rounded-lg -inset-[1px] z-70" />
-			)}
+				{(isLoading || isTransitioning) && (
+					<div className="bg-white/40 dark:bg-black/40 absolute pointer-events-none rounded-lg -inset-[1px] z-70" />
+				)}
 
-			<div
-				ref={headerRef}
-					className="overflow-x-auto overflow-y-hidden scrollbar-none shrink-0"
-					style={{ scrollbarWidth: "none" }}
-				>
 				<div
-					className="relative bg-card border-b"
+					ref={headerRef}
+					className="overflow-x-auto overflow-y-hidden scrollbar-none shrink-0"
+					style={{ scrollbarWidth: "none", scrollbarGutter }}
+				>
+					<div
+						className="relative bg-card border-b"
 						style={{ minWidth: `${totalWidth}px` }}
 					>
 						{enableColumnVisibility && !columnVisibilityInToolbar && (
@@ -125,10 +131,7 @@ export function TableContentVirtualized({
 					key={visibleColumnKey}
 					ref={setScrollContainer}
 					onScroll={handleScroll}
-					className={cn(
-						"w-full overflow-auto",
-						isFlexFill && "flex-1 min-h-0",
-					)}
+					className={cn("w-full overflow-auto", isFlexFill && "flex-1 min-h-0")}
 					style={{
 						minHeight: isFlexFill ? undefined : minHeight,
 						maxHeight:
@@ -136,7 +139,7 @@ export function TableContentVirtualized({
 								? `calc(${virtualization.containerHeight} - ${headerHeight}px)`
 								: undefined,
 						willChange: "scroll-position",
-						scrollbarGutter: "stable",
+						scrollbarGutter,
 					}}
 				>
 					<Table

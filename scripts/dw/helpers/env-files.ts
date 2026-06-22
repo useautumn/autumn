@@ -1,15 +1,34 @@
-import { existsSync, readFileSync, renameSync, writeFileSync, rmSync } from "node:fs";
-import { dirname, join } from "node:path";
+import {
+	existsSync,
+	readFileSync,
+	renameSync,
+	rmSync,
+	writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
+import { dirname, join } from "node:path";
+import {
+	ENV_LOCAL_DISABLED_SUFFIX,
+	ENV_LOCAL_TARGETS,
+	PROJECT_ROOT,
+} from "../constants.ts";
+import type { RegistryEntry } from "../types.ts";
+import {
+	aliasesFor,
+	dragonflyPortFor,
+	elasticMqPortFor,
+	portlessHttpsUrl,
+} from "./ports.ts";
 import { log } from "./shell.ts";
 import { forceSslVerifyFull } from "./url.ts";
-import { aliasesFor, dragonflyPortFor, elasticMqPortFor } from "./ports.ts";
-import { PROJECT_ROOT, ENV_LOCAL_TARGETS, ENV_LOCAL_DISABLED_SUFFIX } from "../constants.ts";
-import type { RegistryEntry } from "../types.ts";
 
 // Simple KEY=VALUE parse (no quoting/multiline). Sufficient for .env.local
 // files we own end-to-end; preserves blank lines and comments untouched.
-export function parseEnvFile(contents: string): { keys: string[]; values: Record<string, string>; raw: string[] } {
+export function parseEnvFile(contents: string): {
+	keys: string[];
+	values: Record<string, string>;
+	raw: string[];
+} {
 	const raw = contents.split(/\r?\n/);
 	const values: Record<string, string> = {};
 	const keys: string[] = [];
@@ -23,11 +42,14 @@ export function parseEnvFile(contents: string): { keys: string[]; values: Record
 	return { keys, values, raw };
 }
 
-export function mergeEnvFile(existing: string | null, managed: Record<string, string>): string {
+export function mergeEnvFile(
+	existing: string | null,
+	managed: Record<string, string>,
+): string {
 	if (!existing) {
-		return Object.entries(managed)
+		return `${Object.entries(managed)
 			.map(([k, v]) => `${k}=${v}`)
-			.join("\n") + "\n";
+			.join("\n")}\n`;
 	}
 	const parsed = parseEnvFile(existing);
 	const managedKeys = new Set(Object.keys(managed));
@@ -49,7 +71,7 @@ export function mergeEnvFile(existing: string | null, managed: Record<string, st
 	while (outLines.length > 0 && outLines[outLines.length - 1] === "") {
 		outLines.pop();
 	}
-	return outLines.join("\n") + "\n";
+	return `${outLines.join("\n")}\n`;
 }
 
 export function writeEnvLocalFiles(entry: RegistryEntry): void {
@@ -68,7 +90,7 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 		DATABASE_CRITICAL_URL: dbUrl,
 		BETTER_AUTH_URL: aliases.apiUrl,
 		CLIENT_URL: aliases.viteUrl,
-		EMULATE_GOOGLE_URL: "https://google.emulate.localhost",
+		EMULATE_GOOGLE_URL: portlessHttpsUrl("google.emulate.localhost"),
 		AUTUMN_TEST_BASE_URL: `http://localhost:${serverPort}`,
 		AUTUMN_TEST_VITE_URL: aliases.viteUrl,
 		STRIPE_WEBHOOK_SKIP_VERIFY: "true",
@@ -85,6 +107,12 @@ export function writeEnvLocalFiles(entry: RegistryEntry): void {
 	}
 	if (existsSync(portlessCa)) {
 		serverEnv.NODE_EXTRA_CA_CERTS = portlessCa;
+	}
+	// Public tunnel for this worktree (CMA reaches /mcp through it). dev.ts derives
+	// MCP_SERVER_URL/CHAT_URL/SLACK_BOT_URL from NGROK_URL; we also write it here so
+	// it's visible to a standalone `cd server && bun dev` and documents the tunnel.
+	if (entry.ngrokUrl) {
+		serverEnv.NGROK_URL = entry.ngrokUrl;
 	}
 
 	const viteEnv: Record<string, string> = {
@@ -129,7 +157,11 @@ export function removeEnvLocalFiles(): void {
 	}
 }
 
-export function disableEnvLocalFiles(): { moved: number; missing: number; alreadyDisabled: number } {
+export function disableEnvLocalFiles(): {
+	moved: number;
+	missing: number;
+	alreadyDisabled: number;
+} {
 	let moved = 0;
 	let missing = 0;
 	let alreadyDisabled = 0;
@@ -150,7 +182,11 @@ export function disableEnvLocalFiles(): { moved: number; missing: number; alread
 	return { moved, missing, alreadyDisabled };
 }
 
-export function enableEnvLocalFiles(): { moved: number; missing: number; alreadyEnabled: number } {
+export function enableEnvLocalFiles(): {
+	moved: number;
+	missing: number;
+	alreadyEnabled: number;
+} {
 	let moved = 0;
 	let missing = 0;
 	let alreadyEnabled = 0;

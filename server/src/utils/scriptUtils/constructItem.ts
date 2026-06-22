@@ -80,7 +80,10 @@ export const constructPrepaidItem = ({
 	},
 	rolloverConfig,
 	usageLimit,
+	interval = ProductItemInterval.Month,
 	intervalCount = 1,
+	priceInterval,
+	priceIntervalCount,
 	resetUsageWhenEnabled,
 	entityFeatureId,
 }: {
@@ -94,7 +97,10 @@ export const constructPrepaidItem = ({
 	config?: ProductItemConfig;
 	rolloverConfig?: RolloverConfig;
 	usageLimit?: number;
+	interval?: ProductItemInterval | null;
 	intervalCount?: number;
+	priceInterval?: ProductItemInterval | null;
+	priceIntervalCount?: number;
 	resetUsageWhenEnabled?: boolean;
 	entityFeatureId?: string;
 }) => {
@@ -106,8 +112,10 @@ export const constructPrepaidItem = ({
 		tiers: tiers,
 		tier_behavior: tierBehaviour,
 		billing_units: billingUnits || 100,
-		interval: isOneOff ? null : ProductItemInterval.Month,
+		interval: isOneOff ? null : interval,
 		interval_count: intervalCount,
+		price_interval: priceInterval,
+		price_interval_count: priceIntervalCount,
 		included_usage: includedUsage,
 
 		config: {

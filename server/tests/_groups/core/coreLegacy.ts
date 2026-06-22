@@ -16,6 +16,7 @@ export const coreLegacy: TestGroup = {
 		"legacy/attach/invoice/payment-failure/legacy-attach-payment-failed.test.ts",
 		"legacy/attach/new/legacy-new-merged.test.ts",
 		"legacy/attach/new/legacy-new-oneoff.test.ts",
+		"legacy/attach/new/legacy-new-oneoff-zero-decimal.test.ts",
 		"legacy/attach/trial/legacy-trial.test.ts",
 		"legacy/attach/update-quantity/legacy-update-quantity.test.ts",
 		"legacy/attach/upgrade/legacy-upgrade.test.ts",

@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { AllocatedBillingBehavior } from "../../../productV2Models/productItemModels/productItemEnums.js";
 import { BillingInterval } from "../../intervals/billingInterval";
 import { Infinite } from "../../productEnums";
 
@@ -63,6 +64,7 @@ export const UsagePriceConfigSchema = z.object({
 	stripe_prepaid_price_v2_id: z.string().nullish(),
 
 	should_prorate: z.boolean().optional(),
+	allocated_billing_behavior: z.enum(AllocatedBillingBehavior).optional(),
 });
 
 export type UsagePriceConfig = z.infer<typeof UsagePriceConfigSchema>;

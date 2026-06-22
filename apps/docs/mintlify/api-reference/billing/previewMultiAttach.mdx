@@ -354,18 +354,36 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
         </DynamicParamField>
 
         <DynamicParamField body="spend_limits" type="object[]">
-          List of overage spend limits per feature.
+          List of overage spend limits per feature (caps overage spend).
           <Expandable title="properties">
             <DynamicParamField body="feature_id" type="string">
               Optional feature ID this spend limit applies to.
             </DynamicParamField>
 
             <DynamicParamField body="enabled" type="boolean">
-              Whether this spend limit is enabled.
+              Whether the overage spend limit is enabled.
             </DynamicParamField>
 
             <DynamicParamField body="overage_limit" type="number">
               Maximum allowed overage spend for the target feature.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="usage_limits" type="object[]">
+          List of hard usage caps per feature (max units per interval).
+          <Expandable title="properties">
+            <DynamicParamField body="feature_id" type="string" required>
+              The feature this usage limit applies to.
+            </DynamicParamField>
+
+            <DynamicParamField body="limit" type="number" required>
+              Maximum units allowed per interval.
+            </DynamicParamField>
+
+            <DynamicParamField body="interval" type="'day' | 'week' | 'month' | 'year'" required>
+              Interval for the cap, aligned to the customer's billing cycle.
             </DynamicParamField>
 
           </Expandable>
@@ -441,18 +459,36 @@ import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
       Billing controls for the entity.
       <Expandable title="properties">
         <DynamicParamField body="spend_limits" type="object[]">
-          List of overage spend limits per feature.
+          List of spend limits per feature. Each entry caps overage (overage_limit) and/or per-interval usage (usage_limit).
           <Expandable title="properties">
             <DynamicParamField body="feature_id" type="string">
               Optional feature ID this spend limit applies to.
             </DynamicParamField>
 
             <DynamicParamField body="enabled" type="boolean">
-              Whether this spend limit is enabled.
+              Whether the overage spend limit is enabled.
             </DynamicParamField>
 
             <DynamicParamField body="overage_limit" type="number">
               Maximum allowed overage spend for the target feature.
+            </DynamicParamField>
+
+          </Expandable>
+        </DynamicParamField>
+
+        <DynamicParamField body="usage_limits" type="object[]">
+          List of hard usage caps per feature for this entity. An entity entry overrides the customer's for that feature.
+          <Expandable title="properties">
+            <DynamicParamField body="feature_id" type="string" required>
+              The feature this usage limit applies to.
+            </DynamicParamField>
+
+            <DynamicParamField body="limit" type="number" required>
+              Maximum units allowed per interval.
+            </DynamicParamField>
+
+            <DynamicParamField body="interval" type="'day' | 'week' | 'month' | 'year'" required>
+              Interval for the cap, aligned to the customer's billing cycle.
             </DynamicParamField>
 
           </Expandable>

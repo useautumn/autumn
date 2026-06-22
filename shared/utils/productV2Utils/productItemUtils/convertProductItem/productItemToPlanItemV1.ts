@@ -19,7 +19,11 @@ import {
 import { toApiFeature } from "../../../featureUtils.js";
 import { getProductItemDisplay } from "../../../productDisplayUtils.js";
 import { isFeaturePriceItem } from "../getItemType.js";
-import { itemToBillingInterval } from "../itemIntervalUtils.js";
+import {
+	itemToBillingInterval,
+	itemToBillingIntervalCount,
+	itemToEntIntervalCount,
+} from "../itemIntervalUtils.js";
 import { addIncludedToTiers } from "../tierUtils.js";
 import { itemIntvToResetIntv } from "./planItemIntervals.js";
 
@@ -38,8 +42,8 @@ const itemToReset = ({
 	return {
 		interval: itemIntvToResetIntv(item.interval ?? null),
 		interval_count:
-			item.interval_count !== 1 && typeof item.interval_count === "number"
-				? item.interval_count
+			itemToEntIntervalCount({ item }) !== 1
+				? itemToEntIntervalCount({ item })
 				: undefined,
 		// Note: reset_when_enabled is NOT in V1 schema - removed
 	};
@@ -90,8 +94,8 @@ const itemToPlanFeaturePrice = ({
 
 		interval: itemToBillingInterval({ item }),
 		interval_count:
-			item.interval_count !== 1 && typeof item.interval_count === "number"
-				? item.interval_count
+			itemToBillingIntervalCount({ item }) !== 1
+				? itemToBillingIntervalCount({ item })
 				: undefined,
 
 		billing_units: item.billing_units ?? 1,
@@ -117,16 +121,27 @@ const itemToPlanFeatureRollover = ({
 
 const itemToPlanFeatureProration = ({
 	item,
+	feature,
 }: {
 	item: ProductItem;
+	feature: Feature;
 }): ApiPlanItemV1["proration"] => {
-	if (!item.config?.on_increase || !item.config?.on_decrease) return undefined;
-
 	if (!isFeaturePriceItem(item)) return undefined;
+	if (
+		isContUseFeature({ feature }) &&
+		item.usage_model === UsageModel.PayPerUse
+	) {
+		return undefined;
+	}
+
+	const hasProrationKnobs =
+		Boolean(item.config?.on_increase) && Boolean(item.config?.on_decrease);
+
+	if (!hasProrationKnobs) return undefined;
 
 	return {
-		on_increase: item.config.on_increase,
-		on_decrease: item.config.on_decrease,
+		on_increase: item.config?.on_increase ?? undefined,
+		on_decrease: item.config?.on_decrease ?? undefined,
 	};
 };
 
@@ -164,7 +179,7 @@ export const productItemsToPlanItemsV1 = ({
 		const reset = itemToReset({ item, feature });
 		const price = itemToPlanFeaturePrice({ item });
 		const rollover = itemToPlanFeatureRollover({ item });
-		const proration = itemToPlanFeatureProration({ item });
+		const proration = itemToPlanFeatureProration({ item, feature });
 
 		// Convert feature to API format if expand requested
 		const apiFeature = shouldExpandFeature

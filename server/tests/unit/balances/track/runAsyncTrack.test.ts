@@ -71,6 +71,8 @@ describe("runAsyncTrack", () => {
 		await runAsyncTrack({ ctx, body });
 
 		expect(mockState.queueCommands).toHaveLength(1);
+		expect(ctx.logger.warn).not.toHaveBeenCalled();
+		expect(ctx.extraLogs.trackQueuedForReplay).toBeUndefined();
 		expect(mockState.queueCommands[0]).toMatchObject({
 			QueueUrl: trackAsyncQueueUrl,
 			MessageGroupId: "org_123:sandbox:cus_123:none",

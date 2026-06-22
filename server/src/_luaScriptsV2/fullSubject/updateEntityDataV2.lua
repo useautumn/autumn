@@ -50,6 +50,34 @@ for field_name, field_value in pairs(updates) do
   table.insert(updated_fields, field_name)
 end
 
+if updates.usage_limits ~= nil then
+  local seen_feature_ids = {}
+  local usage_window_feature_ids = {}
+
+  local function append_usage_limit_feature_ids(usage_limits)
+    if type(usage_limits) ~= 'table' then
+      return
+    end
+
+    for _, usage_limit in ipairs(usage_limits) do
+      if type(usage_limit) == 'table' and usage_limit.feature_id ~= nil then
+        local feature_id = usage_limit.feature_id
+        if seen_feature_ids[feature_id] == nil then
+          seen_feature_ids[feature_id] = true
+          table.insert(usage_window_feature_ids, feature_id)
+        end
+      end
+    end
+  end
+
+  if cached.customer ~= nil then
+    append_usage_limit_feature_ids(cached.customer.usage_limits)
+  end
+  append_usage_limit_feature_ids(cached.entity.usage_limits)
+
+  cached.usageWindowFeatureIds = usage_window_feature_ids
+end
+
 redis.call("SET", subject_key, cjson.encode(cached), "EX", cache_ttl)
 
 return cjson.encode({ success = true, updated_fields = updated_fields })

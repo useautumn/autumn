@@ -33,6 +33,7 @@ type CustomerWithProducts = z.infer<typeof CustomerSchema> & {
 		trial_ends_at?: number | null;
 		[key: string]: unknown;
 	}>;
+	products_total_count?: number;
 	/** Full customer data with entitlements - merged from full_customers query */
 	fullCustomer?: FullCustomer;
 	/** Whether the full customer data is still loading */
@@ -83,14 +84,17 @@ const getCusProductsInfo = ({
 		return <span className="text-tertiary-foreground"></span>;
 	}
 
+	const totalCount = customer.products_total_count ?? activeProducts.length;
+	const extraCount = totalCount - 1;
+
 	return (
-		<div className="flex ">
+		<div className="flex min-w-0">
 			{activeProducts
 				.slice(0, 1)
 				.map((cusProduct: (typeof activeProducts)[number], index: number) => {
 					return (
-						<div key={index} className="flex items-center gap-2 w-full">
-							<span className="text-tertiary-foreground truncate">
+						<div key={index} className="flex items-center gap-2 w-full min-w-0">
+							<span className="text-tertiary-foreground truncate min-w-0">
 								{(cusProduct as FullCusProduct).product.name}
 							</span>
 							<CustomerProductsStatus
@@ -111,12 +115,12 @@ const getCusProductsInfo = ({
 									(cusProduct as FullCusProduct).trial_ends_at ?? undefined
 								}
 							/>
-							{activeProducts.length > 1 && (
+							{extraCount > 0 && (
 								<TooltipProvider>
 									<Tooltip delayDuration={0}>
 										<TooltipTrigger>
-											<span className="ml-1 bg-muted text-tertiary-foreground px-1 py-0.5 rounded-md font-medium">
-												+{activeProducts.length - 1}
+											<span className="ml-1 bg-muted text-tertiary-foreground px-1 py-0.5 rounded-md font-medium shrink-0">
+												+{extraCount}
 											</span>
 										</TooltipTrigger>
 										<TooltipContent>
@@ -127,6 +131,8 @@ const getCusProductsInfo = ({
 														(p as FullCusProduct).product.name,
 												)
 												.join(", ")}
+											{extraCount > activeProducts.length - 1 &&
+												` +${extraCount - (activeProducts.length - 1)} more`}
 										</TooltipContent>
 									</Tooltip>
 								</TooltipProvider>
@@ -146,16 +152,18 @@ export const createCustomerListColumns = (): ColumnDef<
 		id: "name",
 		header: "Name",
 		accessorKey: "name",
-		size: 150,
+		size: 130,
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
-			return <div className="font-medium text-foreground">{row.original.name}</div>;
+			return (
+				<div className="font-medium text-foreground">{row.original.name}</div>
+			);
 		},
 	},
 	{
 		id: "customer_id",
 		header: "ID",
 		accessorKey: "id",
-		size: 150,
+		size: 130,
 		meta: { skeleton: idSkeleton },
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			const customer = row.original;
@@ -189,7 +197,7 @@ export const createCustomerListColumns = (): ColumnDef<
 		id: "customer_products",
 		header: "Products",
 		accessorKey: "customer_products",
-		size: 120,
+		size: 110,
 		meta: { skeleton: statusSkeleton },
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			return getCusProductsInfo({
@@ -201,7 +209,7 @@ export const createCustomerListColumns = (): ColumnDef<
 		id: "created_at",
 		header: "Created At",
 		accessorKey: "created_at",
-		size: 100,
+		size: 90,
 		meta: { skeleton: dateSkeleton },
 		cell: ({ row }: { row: Row<CustomerWithProducts> }) => {
 			const { date, time } = formatUnixToDateTime(row.original.created_at);

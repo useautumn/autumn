@@ -84,27 +84,80 @@ export const cmaRepo = {
 	},
 
 	getVaultId: async ({
+		chatInstallationId,
 		db,
 		env,
 		orgId,
 	}: {
+		chatInstallationId: string;
 		db: ChatDb;
 		env: AppEnv;
 		orgId: string;
 	}) => {
 		const row = await db.query.cmaVaults.findFirst({
-			where: and(eq(cmaVaults.org_id, orgId), eq(cmaVaults.env, env)),
+			where: and(
+				eq(cmaVaults.chat_installation_id, chatInstallationId),
+				eq(cmaVaults.org_id, orgId),
+				eq(cmaVaults.env, env),
+			),
 		});
 		return row?.vault_id;
 	},
 
+	getVault: async ({
+		chatInstallationId,
+		db,
+		env,
+		orgId,
+	}: {
+		chatInstallationId: string;
+		db: ChatDb;
+		env: AppEnv;
+		orgId: string;
+	}) => {
+		const row = await db.query.cmaVaults.findFirst({
+			where: and(
+				eq(cmaVaults.chat_installation_id, chatInstallationId),
+				eq(cmaVaults.org_id, orgId),
+				eq(cmaVaults.env, env),
+			),
+		});
+		return row;
+	},
+
+	// Forces the next ensureAutumnVault to resync tokens into the vault.
+	markVaultStale: async ({
+		chatInstallationId,
+		db,
+		env,
+		orgId,
+	}: {
+		chatInstallationId: string;
+		db: ChatDb;
+		env: AppEnv;
+		orgId: string;
+	}) => {
+		await db
+			.update(cmaVaults)
+			.set({ updated_at: 0 })
+			.where(
+				and(
+					eq(cmaVaults.chat_installation_id, chatInstallationId),
+					eq(cmaVaults.org_id, orgId),
+					eq(cmaVaults.env, env),
+				),
+			);
+	},
+
 	upsertVault: async ({
+		chatInstallationId,
 		credentialId,
 		db,
 		env,
 		orgId,
 		vaultId,
 	}: {
+		chatInstallationId: string;
 		credentialId: string;
 		db: ChatDb;
 		env: AppEnv;
@@ -114,13 +167,18 @@ export const cmaRepo = {
 		await db
 			.insert(cmaVaults)
 			.values({
+				chat_installation_id: chatInstallationId,
 				org_id: orgId,
 				env,
 				vault_id: vaultId,
 				credential_id: credentialId,
 			})
 			.onConflictDoUpdate({
-				target: [cmaVaults.org_id, cmaVaults.env],
+				target: [
+					cmaVaults.chat_installation_id,
+					cmaVaults.org_id,
+					cmaVaults.env,
+				],
 				set: {
 					vault_id: vaultId,
 					credential_id: credentialId,

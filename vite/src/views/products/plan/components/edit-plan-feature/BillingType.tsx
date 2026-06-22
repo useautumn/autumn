@@ -1,9 +1,9 @@
 import {
+	AllocatedBillingBehavior,
 	BillingInterval,
 	FeatureUsageType,
 	getFeatureName,
 	Infinite,
-	isAiCreditSystem,
 	isContUseItem,
 	isFeaturePriceItem,
 	ProductItemInterval,
@@ -23,6 +23,32 @@ export function BillingType() {
 
 	// Derive billing type from item state
 	const isFeaturePrice = isFeaturePriceItem(item);
+	const feature = features.find((f) => f.id === item.feature_id);
+
+	const getConfigForBillingType = ({
+		usageModel,
+	}: {
+		usageModel?: UsageModel;
+	}) => {
+		if (!isContUseItem({ item, features })) return item.config;
+
+		if (usageModel !== UsageModel.PayPerUse) {
+			const { allocated_billing_behavior, on_increase, on_decrease, ...config } =
+				item.config ?? {};
+			return Object.keys(config).length > 0 ? config : undefined;
+		}
+
+		const hasProrationKnobs =
+			item.config?.on_increase != null || item.config?.on_decrease != null;
+		return {
+			...item.config,
+			allocated_billing_behavior:
+				item.config?.allocated_billing_behavior ??
+				(hasProrationKnobs
+					? AllocatedBillingBehavior.Prorated
+					: AllocatedBillingBehavior.Arrear),
+		};
+	};
 
 	// Determine if we should preselect based on explicit configuration
 	const hasExplicitConfig =
@@ -53,6 +79,7 @@ export function BillingType() {
 				usage_model: undefined,
 				price: null,
 				price_config: null,
+				config: getConfigForBillingType({}),
 				included_usage: item.included_usage,
 				interval: isContUseItem({ item, features }) ? null : item.interval,
 			});
@@ -65,6 +92,9 @@ export function BillingType() {
 					tiers: [{ to: Infinite, amount: 0 }],
 					billing_units: 1,
 					usage_model: UsageModel.PayPerUse,
+					config: getConfigForBillingType({
+						usageModel: UsageModel.PayPerUse,
+					}),
 					included_usage:
 						item.included_usage === Infinite ? 0 : item.included_usage,
 					interval: getPricedInterval(),
@@ -73,7 +103,6 @@ export function BillingType() {
 		}
 	};
 
-	const feature = features.find((f) => f.id === item.feature_id);
 	const featureName =
 		getFeatureName({
 			feature,
@@ -105,9 +134,7 @@ export function BillingType() {
 				<div className="flex-1">
 					<div className="text-body-highlight mb-1">Included</div>
 					<div className="text-body-secondary leading-tight">
-						{isAiCreditSystem(feature?.type)
-							? "Set an included USD budget (eg, $10 per month)."
-							: isConsumable
+						{isConsumable
 							? `Set an included usage limit (eg, 100 ${featureName} per month).`
 							: isAllocated
 								? `Set a usage limit (eg, 5 ${featureName}).`
@@ -127,9 +154,7 @@ export function BillingType() {
 				<div className="flex-1">
 					<div className="text-body-highlight mb-1">Priced</div>
 					<div className="text-body-secondary leading-tight">
-						{isAiCreditSystem(feature?.type)
-							? "Bill model usage at the markup you set in USD after the included budget is used."
-							: isConsumable
+						{isConsumable
 							? `Charge a price for usage (eg, $0.05 per ${singleFeatureName}).`
 							: isAllocated
 								? `Charge a price based on usage (eg, $10 per ${singleFeatureName}).`

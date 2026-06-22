@@ -10,6 +10,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getCachedFeatureBalance } from "@/internal/customers/cache/fullSubject/balances/getCachedFeatureBalances.js";
 import { deleteCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/deleteCachedFullCustomer.js";
 import { globalRefreshEntityAggregateBatchingManager } from "../refreshEntityAggregate/RefreshEntityAggregateBatchingManager";
+import type { UsageWindowUpdate } from "../types/usageWindowUpdate.js";
 import { logSyncItem } from "./logs/logSyncItem";
 
 const SYNC_CONFLICT_CODES = {
@@ -68,6 +69,10 @@ interface SyncItemV4 {
 	timestamp: number;
 	rolloverIds?: string[];
 	modifiedCusEntIdsByFeatureId: Record<string, string[]>;
+	/** Post-deduction counter snapshots handed straight from the Lua result
+	 *  (no Redis re-read); mirrored to the customer-scoped usage_windows table
+	 *  via full-replace per (customer, feature). */
+	usageWindowUpdates?: UsageWindowUpdate[];
 }
 
 export interface SyncEntry {
@@ -113,12 +118,17 @@ export const syncItemV4 = async ({
 	ctx: AutumnContext;
 	payload: SyncItemV4;
 }): Promise<void> => {
-	const { customerId, entityId, rolloverIds, modifiedCusEntIdsByFeatureId } =
-		payload;
+	const {
+		customerId,
+		entityId,
+		rolloverIds,
+		modifiedCusEntIdsByFeatureId,
+		usageWindowUpdates,
+	} = payload;
 	const { db } = ctx;
 
 	// Read targeted balance hashes
-	const allSubjectBalances: SubjectBalance[] = [];
+	let allSubjectBalances: SubjectBalance[] = [];
 	for (const [featureId, customerEntitlementIds] of Object.entries(
 		modifiedCusEntIdsByFeatureId,
 	)) {
@@ -131,6 +141,9 @@ export const syncItemV4 = async ({
 		});
 
 		if (outcome.kind !== "ok") {
+			ctx.logger.warn(
+				`[SYNC V4] (${customerId}) Cache miss for feature ${featureId}; skipping this feature only.`,
+			);
 			logSyncItem({
 				ctx,
 				result: {
@@ -139,7 +152,11 @@ export const syncItemV4 = async ({
 					feature: featureId,
 				},
 			});
-			return;
+			// A miss (e.g. an invalidation racing the batch) drops the BALANCE
+			// sync wholesale, but usage-window snapshots ride in the payload and
+			// need no cache read -- they must still land.
+			allSubjectBalances = [];
+			break;
 		}
 
 		allSubjectBalances.push(...outcome.value.balances);
@@ -169,7 +186,16 @@ export const syncItemV4 = async ({
 		}
 	}
 
-	if (entries.length === 0 && rolloverEntries.length === 0) {
+	// Customer-scoped usage-window counters arrive pre-built from the deduction
+	// result (same atomic Lua execution that incremented them) -- no Redis
+	// re-read here. Full-replaced per (customer, feature) by the SQL function.
+	const usageWindowEntries: UsageWindowUpdate[] = usageWindowUpdates ?? [];
+
+	if (
+		entries.length === 0 &&
+		rolloverEntries.length === 0 &&
+		usageWindowEntries.length === 0
+	) {
 		logSyncItem({ ctx, result: { kind: "skipped", reason: "no_entries" } });
 		return;
 	}
@@ -179,6 +205,7 @@ export const syncItemV4 = async ({
 			sql`SELECT * FROM sync_balances_v2(${JSON.stringify({
 				customer_entitlement_updates: entries,
 				rollover_updates: rolloverEntries,
+				usage_window_updates: usageWindowEntries,
 			})}::jsonb)`,
 		),
 	);

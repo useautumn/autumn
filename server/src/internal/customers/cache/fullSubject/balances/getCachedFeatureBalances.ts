@@ -1,8 +1,15 @@
-import type { AggregatedFeatureBalance, SubjectBalance } from "@autumn/shared";
+import type {
+	AggregatedFeatureBalance,
+	SubjectBalance,
+	UsageWindow,
+} from "@autumn/shared";
 import { runRedisOp } from "@/external/redis/utils/runRedisOp.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { buildSharedFullSubjectBalanceKey } from "../builders/buildSharedFullSubjectBalanceKey.js";
-import { AGGREGATED_BALANCE_FIELD } from "../config/fullSubjectCacheConfig.js";
+import {
+	AGGREGATED_BALANCE_FIELD,
+	USAGE_WINDOWS_FIELD,
+} from "../config/fullSubjectCacheConfig.js";
 import { roundSubjectBalance } from "../roundCacheBalance.js";
 import {
 	sanitizeCachedAggregatedFeatureBalance,
@@ -13,6 +20,24 @@ export type FeatureBalanceResult = {
 	featureId: string;
 	balances: SubjectBalance[];
 	aggregated?: AggregatedFeatureBalance;
+	/** Customer-scoped windowed-cap counters for this feature; only present for
+	 *  features in the requested usageWindowFeatureIds set. */
+	usageWindows?: UsageWindow[];
+};
+
+// Fail open: a missing/unparseable `_usage_windows` field reads as an empty
+// counter set (the window restarts). cjson also encodes an empty Lua table as
+// `{}`, so a non-array blob is an empty set, not corruption.
+const parseUsageWindowsField = (
+	usageWindowsJson: string | null,
+): UsageWindow[] => {
+	if (!usageWindowsJson) return [];
+	try {
+		const parsed = JSON.parse(usageWindowsJson);
+		return Array.isArray(parsed) ? (parsed as UsageWindow[]) : [];
+	} catch {
+		return [];
+	}
 };
 
 export type FeatureBalanceOutcome =
@@ -118,12 +143,16 @@ export const getCachedFeatureBalancesBatch = async ({
 	featureIds,
 	customerEntitlementIdsByFeatureId,
 	includeAggregated = false,
+	usageWindowFeatureIds,
 }: {
 	ctx: AutumnContext;
 	customerId: string;
 	featureIds: string[];
 	customerEntitlementIdsByFeatureId: Record<string, string[]>;
 	includeAggregated?: boolean;
+	/** Features with an armed windowed cap: their `_usage_windows` field is
+	 *  read too. A missing field fails open (reads as an empty counter set). */
+	usageWindowFeatureIds?: Set<string>;
 }): Promise<FeatureBalancesBatchOutcome> => {
 	if (featureIds.length === 0) return { kind: "ok", value: [] };
 
@@ -132,9 +161,11 @@ export const getCachedFeatureBalancesBatch = async ({
 	for (const featureId of featureIds) {
 		const customerEntitlementIds =
 			customerEntitlementIdsByFeatureId[featureId] ?? [];
-		const fields = includeAggregated
-			? [...customerEntitlementIds, AGGREGATED_BALANCE_FIELD]
-			: customerEntitlementIds;
+		const fields = [...customerEntitlementIds];
+		if (includeAggregated) fields.push(AGGREGATED_BALANCE_FIELD);
+		if (usageWindowFeatureIds?.has(featureId)) {
+			fields.push(USAGE_WINDOWS_FIELD);
+		}
 		pipeline.hmget(
 			buildSharedFullSubjectBalanceKey({
 				orgId: org.id,
@@ -167,7 +198,12 @@ export const getCachedFeatureBalancesBatch = async ({
 			};
 
 		let aggregated: AggregatedFeatureBalance | undefined;
-		let ceValues: (string | null)[];
+		let usageWindows: UsageWindow[] | undefined;
+
+		// Pop reserved fields in reverse push order: [_aggregated?, _usage_windows?].
+		if (usageWindowFeatureIds?.has(featureIds[i])) {
+			usageWindows = parseUsageWindowsField(allValues.pop() ?? null);
+		}
 
 		if (includeAggregated) {
 			const aggregatedJson = allValues.pop() ?? null;
@@ -181,10 +217,9 @@ export const getCachedFeatureBalancesBatch = async ({
 					// Malformed _aggregated is non-fatal; fall back to subject string value
 				}
 			}
-			ceValues = allValues;
-		} else {
-			ceValues = allValues;
 		}
+
+		const ceValues = allValues;
 
 		if (ceValues.length !== customerEntitlementIds.length)
 			return {
@@ -221,6 +256,7 @@ export const getCachedFeatureBalancesBatch = async ({
 			featureId: featureIds[i],
 			balances,
 			aggregated,
+			usageWindows,
 		});
 	}
 

@@ -1,3 +1,5 @@
+import { user as userTable } from "@autumn/shared";
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { handleGetRCMappings } from "@/external/revenueCat/handlers/handleGetRevenuecatMappings.js";
 import { handleGetRevenueCatProducts } from "@/external/revenueCat/handlers/handleGetRevenuecatProducts.js";
@@ -8,14 +10,19 @@ import {
 import { handlePreflightRevenueCatSync } from "@/external/revenueCat/handlers/handlePreflightRevenueCatSync.js";
 import { handleSaveRCMappings } from "@/external/revenueCat/handlers/handleSaveRevenuecatMappings.js";
 import { handleSyncRevenueCatProducts } from "@/external/revenueCat/handlers/handleSyncRevenueCatProducts.js";
+import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleDisconnectRevenueCat } from "@/internal/orgs/handlers/revenueCatHandlers/handleDisconnectRevenueCat.js";
 import {
 	handleGetRevenueCatWebhook,
 	handleRegisterRevenueCatWebhook,
 } from "@/internal/orgs/handlers/revenueCatHandlers/handleRevenueCatWebhook.js";
-import type { HonoEnv } from "@/honoUtils/HonoEnv.js";
 import { handleDeleteOrg } from "./handlers/crudHandlers/handleDeleteOrg.js";
 import { handleGetOrg } from "./handlers/crudHandlers/handleGetOrg.js";
+import {
+	handleGetCustomButtons,
+	handleUpdateCustomButtons,
+} from "./handlers/handleCustomButtons.js";
+import { handleDeleteOrgLogo } from "./handlers/handleDeleteOrgLogo.js";
 import { handleGetOrgFlags } from "./handlers/handleGetOrgFlags.js";
 import { handleGetUploadUrl } from "./handlers/handleGetUploadUrl.js";
 import {
@@ -37,35 +44,55 @@ import {
 import { handleGetInvites } from "./handlers/memberHandlers/handleGetInvites.js";
 import { handleGetOrgMembers } from "./handlers/memberHandlers/handleGetOrgMembers.js";
 import { handleRemoveMember } from "./handlers/memberHandlers/handleRemoveMember.js";
+import { handleGetRevenueCatOAuthUrl } from "./handlers/revenueCatHandlers/handleGetRevenueCatOAuthUrl.js";
 import { handleConnectStripe } from "./handlers/stripeHandlers/handleConnectStripe.js";
 import { handleDeleteStripe } from "./handlers/stripeHandlers/handleDeleteStripe.js";
 import { handleGetOAuthUrl } from "./handlers/stripeHandlers/handleGetOAuthUrl.js";
 import { handleGetStripeAccount } from "./handlers/stripeHandlers/handleGetStripeAccount.js";
-import { handleGetRevenueCatOAuthUrl } from "./handlers/revenueCatHandlers/handleGetRevenueCatOAuthUrl.js";
 
 export const internalOrgRouter = new Hono<HonoEnv>();
 
 internalOrgRouter.get("", ...handleGetOrg);
 internalOrgRouter.delete("", ...handleDeleteOrg);
 internalOrgRouter.patch("/config", ...handleUpdateOrgConfig);
+internalOrgRouter.get("/custom-buttons", ...handleGetCustomButtons);
+internalOrgRouter.patch("/custom-buttons", ...handleUpdateCustomButtons);
 internalOrgRouter.get("/members", ...handleGetOrgMembers);
 internalOrgRouter.post("/remove-member", ...handleRemoveMember);
 internalOrgRouter.get("/upload_url", ...handleGetUploadUrl);
+internalOrgRouter.delete("/logo", ...handleDeleteOrgLogo);
 internalOrgRouter.get("/invites", ...handleGetInvites);
 
 export const honoOrgRouter = new Hono<HonoEnv>();
 honoOrgRouter.get("", ...handleGetOrg);
 honoOrgRouter.get("/flags", ...handleGetOrgFlags);
-honoOrgRouter.get("/me", (c) => {
-	const { org, env } = c.get("ctx");
+honoOrgRouter.get("/me", async (c) => {
+	const { db, org, env, user, userId } = c.get("ctx");
+	const authUser =
+		user ??
+		(userId
+			? await db.query.user.findFirst({
+					where: eq(userTable.id, userId),
+				})
+			: undefined);
 	return c.json({
+		id: org.id,
 		name: org.name,
 		slug: org.slug,
 		env,
+		user: authUser
+			? {
+					id: authUser.id,
+					email: authUser.email,
+					name: authUser.name,
+				}
+			: undefined,
 	});
 });
 honoOrgRouter.patch("", ...handleUpdateOrg);
 honoOrgRouter.patch("/config", ...handleUpdateOrgConfig);
+honoOrgRouter.get("/custom-buttons", ...handleGetCustomButtons);
+honoOrgRouter.patch("/custom-buttons", ...handleUpdateCustomButtons);
 honoOrgRouter.get("/stripe", ...handleGetStripeAccount);
 honoOrgRouter.delete("/stripe", ...handleDeleteStripe);
 honoOrgRouter.post("/stripe", ...handleConnectStripe);

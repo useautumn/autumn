@@ -44,11 +44,14 @@ import READ_SUBJECT_BALANCES from "./fullSubjectDeduction/readSubjectBalances.lu
 import RUN_DEDUCTION_ON_CONTEXT_V2 from "./fullSubjectDeduction/runDeductionOnContextV2.lua";
 import SPEND_LIMIT_UTILS_V2 from "./fullSubjectDeduction/spendLimitUtilsV2.lua";
 import UPDATE_AGGREGATED_BALANCES from "./fullSubjectDeduction/updateAggregatedBalances.lua";
+import READ_USAGE_WINDOWS from "./fullSubjectDeduction/usageWindows/readUsageWindows.lua";
+import USAGE_WINDOW_CONTEXT_UTILS_V2 from "./fullSubjectDeduction/usageWindows/usageWindowContextUtilsV2.lua";
 
 // ============================================================================
 // UPDATE SUBJECT BALANCES HELPERS (V2 cache — per-feature hash updates)
 // ============================================================================
 
+import ROLL_USAGE_WINDOWS_MAIN from "./fullSubject/rollUsageWindows/rollUsageWindows.lua";
 import APPLY_FIELD_UPDATES from "./fullSubject/updateSubjectBalances/applyFieldUpdates.lua";
 import UPDATE_CONTEXT_UTILS from "./fullSubject/updateSubjectBalances/updateContextUtils.lua";
 import UPDATE_SUBJECT_BALANCES_MAIN from "./fullSubject/updateSubjectBalances/updateSubjectBalances.lua";
@@ -200,11 +203,13 @@ export const UPDATE_CUSTOMER_PRODUCT_SCRIPT =
  */
 export const DEDUCT_FROM_SUBJECT_BALANCES_SCRIPT = `${LUA_UTILS}
 ${READ_SUBJECT_BALANCES}
+${READ_USAGE_WINDOWS}
 ${CONTEXT_UTILS_V2}
 ${GET_TOTAL_BALANCE}
 ${DEDUCT_FROM_ROLLOVERS_V2}
 ${DEDUCT_FROM_MAIN_BALANCE_V2}
 ${SPEND_LIMIT_UTILS_V2}
+${USAGE_WINDOW_CONTEXT_UTILS_V2}
 ${RUN_DEDUCTION_ON_CONTEXT_V2}
 ${MUTATION_ITEM_UTILS}
 ${LOCK_RECEIPT_UTILS_V2}
@@ -238,3 +243,11 @@ ${UPDATE_CONTEXT_UTILS}
 ${APPLY_FIELD_UPDATES}
 ${UPDATE_AGGREGATED_BALANCES}
 ${UPDATE_SUBJECT_BALANCES_MAIN}`;
+
+/**
+ * Lua script for atomically rolling usage-window counters in a per-feature
+ * balance hash's '_usage_windows' field (zero expired counts, advance
+ * bounds/anchor). Called once per feature via pipeline by the lazy roll.
+ */
+export const ROLL_USAGE_WINDOWS_SCRIPT = `${LUA_UTILS}
+${ROLL_USAGE_WINDOWS_MAIN}`;

@@ -8,6 +8,7 @@ import {
 	type FullProduct,
 	getProductItemDisplay,
 	itemToBillingInterval,
+	itemToBillingIntervalCount,
 	productItemsToPlanItemsV1,
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
@@ -72,8 +73,8 @@ export const getPlanResponse = async ({
 				amount: basePriceItem.price,
 				interval: itemToBillingInterval({ item: basePriceItem }),
 				interval_count:
-					basePriceItem.interval_count !== 1
-						? (basePriceItem.interval_count ?? undefined)
+					itemToBillingIntervalCount({ item: basePriceItem }) !== 1
+						? itemToBillingIntervalCount({ item: basePriceItem })
 						: undefined,
 				display: getProductItemDisplay({
 					item: basePriceItem,

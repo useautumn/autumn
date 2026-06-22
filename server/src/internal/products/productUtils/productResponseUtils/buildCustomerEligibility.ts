@@ -116,6 +116,7 @@ export const buildCustomerEligibility = async ({
 			freeTrial: fullProduct.free_trial,
 			fingerprint: fullCus.fingerprint,
 			internalCustomerId: fullCus.internal_id,
+			internalEntityId,
 			multipleAllowed: false,
 			productId: fullProduct.id,
 		});

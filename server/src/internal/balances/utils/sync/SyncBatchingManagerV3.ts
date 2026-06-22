@@ -3,6 +3,7 @@ import { logger } from "@/external/logtail/logtailUtils.js";
 import { currentRegion } from "@/external/redis/initRedis.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
+import type { UsageWindowUpdate } from "../types/usageWindowUpdate.js";
 
 interface CustomerBatchContext {
 	customerId: string;
@@ -14,6 +15,10 @@ interface CustomerBatchContext {
 	rolloverIds: Set<string>;
 	entityId?: string;
 	modifiedCusEntIdsByFeatureId: Record<string, string[]>;
+	// Counter SNAPSHOTS keyed by capped feature: each deduction returns the
+	// complete post-deduction array, so merging across batched items is
+	// last-write-wins (unlike cusEnt/rollover ids, which accumulate).
+	usageWindowUpdatesByFeatureId: Record<string, UsageWindowUpdate>;
 }
 
 interface CustomerBatch {
@@ -33,6 +38,7 @@ export type QueueSyncV4Payload = {
 		rolloverIds: string[];
 		entityId?: string;
 		modifiedCusEntIdsByFeatureId: Record<string, string[]>;
+		usageWindowUpdates?: UsageWindowUpdate[];
 	};
 	messageGroupId?: string;
 	messageDeduplicationId: string;
@@ -78,6 +84,7 @@ export class SyncBatchingManagerV3 {
 		region,
 		entityId,
 		modifiedCusEntIdsByFeatureId,
+		usageWindowUpdates,
 	}: {
 		customerId: string;
 		orgId: string;
@@ -87,6 +94,7 @@ export class SyncBatchingManagerV3 {
 		region?: string;
 		entityId?: string;
 		modifiedCusEntIdsByFeatureId: Record<string, string[]>;
+		usageWindowUpdates?: UsageWindowUpdate[];
 	}): void {
 		const batchKey = this.buildBatchKey({ orgId, env, customerId });
 		let batch = this.customerBatches.get(batchKey);
@@ -110,6 +118,12 @@ export class SyncBatchingManagerV3 {
 				batch.context.modifiedCusEntIdsByFeatureId[featureId] = [];
 			}
 			batch.context.modifiedCusEntIdsByFeatureId[featureId].push(...ids);
+		}
+
+		for (const usageWindowUpdate of usageWindowUpdates ?? []) {
+			batch.context.usageWindowUpdatesByFeatureId[
+				usageWindowUpdate.feature_id
+			] = usageWindowUpdate;
 		}
 
 		const totalSize =
@@ -177,6 +191,7 @@ export class SyncBatchingManagerV3 {
 				cusEntIds: new Set(),
 				rolloverIds: new Set(),
 				modifiedCusEntIdsByFeatureId: {},
+				usageWindowUpdatesByFeatureId: {},
 			},
 			timer: null,
 		};
@@ -231,7 +246,13 @@ export class SyncBatchingManagerV3 {
 		this.customerBatches.delete(batchKey);
 
 		const { context } = batch;
-		if (context.cusEntIds.size === 0 && context.rolloverIds.size === 0) return;
+		if (
+			context.cusEntIds.size === 0 &&
+			context.rolloverIds.size === 0 &&
+			Object.keys(context.usageWindowUpdatesByFeatureId).length === 0
+		) {
+			return;
+		}
 
 		await this.queueSyncJob({ context });
 	}
@@ -247,10 +268,12 @@ export class SyncBatchingManagerV3 {
 		context,
 		cusEntIds,
 		rolloverIds,
+		usageWindowUpdates,
 	}: {
 		context: CustomerBatchContext;
 		cusEntIds: string[];
 		rolloverIds: string[];
+		usageWindowUpdates: UsageWindowUpdate[];
 	}): string {
 		const dedupBucket = Math.floor(Date.now() / this.DEDUP_BUCKET_MS);
 		const dedupKey = JSON.stringify({
@@ -260,6 +283,10 @@ export class SyncBatchingManagerV3 {
 			customerId: context.customerId,
 			cusEntIds,
 			rolloverIds,
+			// Snapshots ride the payload (cusEnt balances are re-read at consume
+			// time, counters are not), so a newer snapshot must never be dropped
+			// as a duplicate of an older one within the bucket.
+			usageWindowUpdates,
 			dedupBucket,
 		});
 
@@ -273,10 +300,14 @@ export class SyncBatchingManagerV3 {
 	}): Promise<void> {
 		const cusEntIds = Array.from(context.cusEntIds).sort();
 		const rolloverIds = Array.from(context.rolloverIds).sort();
+		const usageWindowUpdates = Object.values(
+			context.usageWindowUpdatesByFeatureId,
+		);
 		const messageDeduplicationId = this.buildDeduplicationId({
 			context,
 			cusEntIds,
 			rolloverIds,
+			usageWindowUpdates,
 		});
 
 		try {
@@ -292,13 +323,14 @@ export class SyncBatchingManagerV3 {
 					rolloverIds,
 					entityId: context.entityId,
 					modifiedCusEntIdsByFeatureId: context.modifiedCusEntIdsByFeatureId,
+					usageWindowUpdates,
 				},
 				// messageGroupId: `sync-v4:${context.orgId}:${context.env}:${context.customerId}`,
 				messageDeduplicationId,
 			});
 
 			logger.debug(
-				`[SyncV4] Queued sync for ${context.customerId}, ${cusEntIds.length} entitlements, ${rolloverIds.length} rollovers`,
+				`[SyncV4] Queued sync for ${context.customerId}, ${cusEntIds.length} entitlements, ${rolloverIds.length} rollovers, ${usageWindowUpdates.length} usage windows`,
 			);
 		} catch (error) {
 			logger.error(

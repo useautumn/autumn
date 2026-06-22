@@ -16,8 +16,13 @@ import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionF
 
 export function UpdateSubscriptionAdvancedSection() {
 	const { form, formValues, formContext } = useUpdateSubscriptionFormContext();
-	const { billingBehavior, resetBillingCycle, noBillingChanges, discounts } =
-		formValues;
+	const {
+		billingBehavior,
+		resetBillingCycle,
+		resetUsage,
+		noBillingChanges,
+		discounts,
+	} = formValues;
 	const { customerProduct, product } = formContext;
 
 	const hasActiveSubscription =
@@ -116,6 +121,18 @@ export function UpdateSubscriptionAdvancedSection() {
 								checked={resetBillingCycle}
 								onCheckedChange={(checked) =>
 									form.setFieldValue("resetBillingCycle", !!checked)
+								}
+							/>
+						}
+					/>
+					<ConfigRow
+						title="Reset Usage"
+						description="Reset feature balances instead of carrying usage to the new plan"
+						action={
+							<Switch
+								checked={resetUsage}
+								onCheckedChange={(checked) =>
+									form.setFieldValue("resetUsage", !!checked)
 								}
 							/>
 						}

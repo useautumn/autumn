@@ -1,5 +1,9 @@
+import type { CustomerProductsSeedRow } from "../cusUtils/buildCustomerProductsSeed.js";
+
 export type FlattenedCustomerRow = {
 	customers: any[];
+	product_counts?: Record<string, number>;
+	products_seed?: Record<string, CustomerProductsSeedRow[]>;
 	customer_products: any[];
 	customer_entitlements: any[];
 	extra_customer_entitlements: any[];

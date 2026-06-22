@@ -3,7 +3,7 @@ title: "Vercel AI SDK"
 description: "Automatically track AI token usage with the Vercel AI SDK"
 ---
 
-The `@useautumn/ai-sdk` package integrates Autumn with the [Vercel AI SDK](https://sdk.vercel.ai), automatically tracking token usage for every `generateText` or `streamText` call. No manual `trackTokens` calls needed.
+The `@useautumn/gateway` package integrates Autumn with the [Vercel AI SDK](https://sdk.vercel.ai), automatically tracking token usage for every `generateText` or `streamText` call. No manual `trackTokens` calls needed.
 
 ## Setup
 
@@ -11,19 +11,19 @@ The `@useautumn/ai-sdk` package integrates Autumn with the [Vercel AI SDK](https
 
 <CodeGroup>
 ```bash npm
-npm install @useautumn/ai-sdk
+npm install @useautumn/gateway
 ```
 
 ```bash pnpm
-pnpm add @useautumn/ai-sdk
+pnpm add @useautumn/gateway
 ```
 
 ```bash yarn
-yarn add @useautumn/ai-sdk
+yarn add @useautumn/gateway
 ```
 
 ```bash bun
-bun add @useautumn/ai-sdk
+bun add @useautumn/gateway
 ```
 </CodeGroup>
 
@@ -38,7 +38,7 @@ Use `withAutumn` to wrap any AI SDK language model. It intercepts generate and s
 ```typescript
 import { Autumn } from "autumn-js";
 import { anthropic } from "@ai-sdk/anthropic";
-import { withAutumn } from "@useautumn/ai-sdk";
+import { withAutumn } from "@useautumn/gateway/ai-sdk";
 
 const autumn = new Autumn({ secretKey: "am_sk_test_1234" });
 
@@ -120,7 +120,7 @@ const model = withAutumn({
 import { Autumn } from "autumn-js";
 import { openai } from "@ai-sdk/openai";
 import { generateText } from "ai";
-import { withAutumn } from "@useautumn/ai-sdk";
+import { withAutumn } from "@useautumn/gateway/ai-sdk";
 
 const autumn = new Autumn({ secretKey: process.env.AUTUMN_SECRET_KEY! });
 

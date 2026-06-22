@@ -26,6 +26,7 @@ import { replaceableRelations } from "../models/cusProductModels/cusEntModels/re
 import { replaceables } from "../models/cusProductModels/cusEntModels/replaceableTable.js";
 import { rolloverRelations } from "../models/cusProductModels/cusEntModels/rolloverModels/rolloverRelations.js";
 import { rollovers } from "../models/cusProductModels/cusEntModels/rolloverModels/rolloverTable.js";
+import { usageWindows } from "../models/cusProductModels/cusEntModels/usageWindowTable.js";
 import { customerPricesRelations } from "../models/cusProductModels/cusPriceModels/cusPriceRelations.js";
 import { customerPrices } from "../models/cusProductModels/cusPriceModels/cusPriceTable.js";
 // CusProduct Relations
@@ -44,6 +45,8 @@ import {
 	cmaMemory,
 	cmaSessions,
 	cmaVaults,
+	harnessSessions,
+	slackAdminThreads,
 } from "../models/leafModels/cmaStateTable.js";
 import { leafSchema } from "../models/leafModels/leafSchema.js";
 // Migration Relations
@@ -124,6 +127,8 @@ export {
 	cmaMemory,
 	cmaSessions,
 	cmaVaults,
+	harnessSessions,
+	slackAdminThreads,
 	leafSchema,
 	customerEntitlements,
 	customerEntitlementsRelations,
@@ -191,6 +196,7 @@ export {
 	schedules,
 	session,
 	subscriptions,
+	usageWindows,
 	// Auth
 	user,
 	// Auth Relations

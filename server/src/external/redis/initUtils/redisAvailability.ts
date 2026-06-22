@@ -1,8 +1,8 @@
-import { redis } from "./redisClientRegistry.js";
 import {
 	createRedisAvailability,
 	type RedisAvailabilitySnapshot,
 } from "./createRedisAvailability.js";
+import { redis } from "./redisClientRegistry.js";
 import { hasRedisConfig } from "./redisConfig.js";
 
 const redisAvailability = createRedisAvailability({

@@ -2,7 +2,6 @@ import type { FullCustomerEntitlement } from "@models/cusProductModels/cusEntMod
 import type { Feature } from "@models/featureModels/featureModels.js";
 import { Decimal } from "decimal.js";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct.js";
-import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import { isPrepaidPrice } from "../productUtils/priceUtils/classifyPriceUtils.js";
 import { cusEntToCusPrice } from "./convertCusEntUtils/cusEntToCusPrice.js";
 
@@ -76,13 +75,16 @@ export const isPrepaidCusEnt = ({
 	return true;
 };
 
-export const addCusProductToCusEnt = ({
+export const addCusProductToCusEnt = <
+	TCusEnt extends object,
+	TCusProduct,
+>({
 	cusEnt,
 	cusProduct,
 }: {
-	cusEnt: FullCustomerEntitlement;
-	cusProduct: FullCusProduct;
-}): FullCusEntWithFullCusProduct => {
+	cusEnt: TCusEnt;
+	cusProduct: TCusProduct;
+}) => {
 	return {
 		...cusEnt,
 		customer_product: cusProduct,

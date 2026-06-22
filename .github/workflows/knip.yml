@@ -22,7 +22,7 @@ jobs:
           bun-version: 1.3.10
 
       - name: Install dependencies
-        run: bun install
+        run: bun install --frozen-lockfile
 
       - name: Run Knip
         run: bun knip

@@ -1,7 +1,8 @@
-import type {
-	BillingContext,
-	StripeDiscountWithCoupon,
-	StripeInvoiceAction,
+import {
+	type BillingContext,
+	orgToCurrency,
+	type StripeDiscountWithCoupon,
+	type StripeInvoiceAction,
 } from "@autumn/shared";
 import {
 	type PayInvoiceResult,
@@ -92,12 +93,17 @@ export const createInvoiceForBilling = async ({
 	});
 
 	const wantsAutoTax = shouldEnableStripeAutomaticTax({ ctx, billingContext });
+	const stripeSubId = options.skipSubscriptionLink
+		? undefined
+		: billingContext.stripeSubscription?.id;
+
 	const draftInvoice = await createStripeInvoice({
 		stripeCli,
 		stripeCusId: billingContext.stripeCustomer?.id ?? "none",
-		stripeSubId: options.skipSubscriptionLink
-			? undefined
-			: billingContext.stripeSubscription?.id,
+		stripeSubId,
+		// Subscription-linked invoices inherit currency from the subscription;
+		// standalone invoices default to the account currency, not the org's.
+		currency: stripeSubId ? undefined : orgToCurrency({ org: ctx.org }),
 		collectionMethod,
 		daysUntilDue: invoiceMode?.daysUntilDue,
 		footer: invoiceMode?.footer,

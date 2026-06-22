@@ -50,6 +50,7 @@ import {
 	type TrackParams,
 	type UpdateBalanceParamsV0,
 	type UpdateSubscriptionV0Params,
+	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import { defaultApiVersion } from "@tests/constants.js";
 import { timeout } from "@tests/utils/genUtils";
@@ -781,6 +782,20 @@ export class AutumnInt {
 			return data;
 		},
 
+		update: async ({
+			internalId,
+			reward,
+		}: {
+			internalId: string;
+			reward: any;
+		}) => {
+			const data = await this.post(
+				`/rewards/${internalId}?legacyStripe=true`,
+				reward,
+			);
+			return data;
+		},
+
 		delete: async (rewardId: string) => {
 			const data = await this.delete(`/rewards/${rewardId}`);
 			return data;
@@ -1225,6 +1240,36 @@ export class AutumnInt {
 				...params,
 				redirect_mode: "if_required",
 			});
+			return data;
+		},
+
+		update: async <TInput = UpdateSubscriptionV1Params>(
+			params: TInput,
+			{
+				timeout,
+				skipWebhooks,
+			}: { timeout?: number; skipWebhooks?: boolean } = {},
+		): Promise<any> => {
+			const headers: Record<string, string> = {};
+			if (skipWebhooks !== undefined) {
+				headers["x-skip-webhooks"] = skipWebhooks ? "true" : "false";
+			}
+
+			const data = await this.post(
+				`/billing.update`,
+				params,
+				Object.keys(headers).length > 0 ? headers : undefined,
+			);
+			if (timeout) {
+				await new Promise((resolve) => setTimeout(resolve, timeout));
+			}
+			return data;
+		},
+
+		previewUpdate: async <TInput = UpdateSubscriptionV1Params>(
+			params: TInput,
+		): Promise<any> => {
+			const data = await this.post(`/billing.preview_update`, params);
 			return data;
 		},
 

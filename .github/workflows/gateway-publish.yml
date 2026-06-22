@@ -1,0 +1,39 @@
+name: Gateway Publish
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "packages/gateway/**"
+
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "Dry run (no actual publish)"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "true"
+          - "false"
+      version-bump:
+        description: "Version bump type (for manual triggers)"
+        required: false
+        default: "patch"
+        type: choice
+        options:
+          - "patch"
+          - "minor"
+          - "major"
+
+jobs:
+  publish:
+    uses: ./.github/workflows/npm-publish.yml
+    permissions:
+      id-token: write
+      contents: write
+    with:
+      package-dir: packages/gateway
+      version-bump: ${{ github.event_name == 'workflow_dispatch' && inputs.version-bump || '' }}
+      dry-run: ${{ github.event_name == 'workflow_dispatch' && inputs.dry-run || 'false' }}

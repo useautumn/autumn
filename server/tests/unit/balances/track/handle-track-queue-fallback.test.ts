@@ -18,6 +18,8 @@ const mockState = {
 	originalSend: null as ReturnType<typeof getSqsClient>["send"] | null,
 	runTrackV2Calls: [] as Record<string, unknown>[],
 	runTrackV3Calls: [] as Record<string, unknown>[],
+	checkCalls: [] as Record<string, unknown>[],
+	releaseCalls: [] as Record<string, unknown>[],
 	v3Error: null as unknown,
 };
 const trackQueueUrl =
@@ -40,6 +42,15 @@ mock.module("@/internal/balances/track/v3/runTrackV3.js", () => ({
 
 mock.module("@/external/redis/initUtils/redisV2Availability.js", () => ({
 	shouldUseRedisV2: () => true,
+}));
+
+mock.module("@/internal/misc/idempotency/checkIdempotencyKey.js", () => ({
+	checkIdempotencyKey: async (args: Record<string, unknown>) => {
+		mockState.checkCalls.push(args);
+	},
+	releaseIdempotencyKey: async (args: Record<string, unknown>) => {
+		mockState.releaseCalls.push(args);
+	},
 }));
 
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
@@ -74,6 +85,8 @@ describe("track queue fallback", () => {
 		mockState.queueError = null;
 		mockState.runTrackV2Calls = [];
 		mockState.runTrackV3Calls = [];
+		mockState.checkCalls = [];
+		mockState.releaseCalls = [];
 		mockState.v3Error = null;
 		process.env.TRACK_SQS_QUEUE_URL = trackQueueUrl;
 
@@ -107,6 +120,16 @@ describe("track queue fallback", () => {
 		expect(mockState.queueCommands[0]).toMatchObject({
 			QueueUrl: trackQueueUrl,
 		});
+		expect(mockState.checkCalls).toEqual([
+			expect.objectContaining({
+				idempotencyKey: "track:idem_123",
+			}),
+		]);
+		expect(mockState.releaseCalls).toEqual([
+			expect.objectContaining({
+				idempotencyKey: "track:idem_123",
+			}),
+		]);
 		expect(response).toEqual({
 			customer_id: "cus_123",
 			entity_id: undefined,

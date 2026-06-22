@@ -1,4 +1,9 @@
-import { PAGINATION_CONFIGS, type PaginationType } from "@autumn/shared";
+import {
+	ErrCode,
+	PAGINATION_CONFIGS,
+	type PaginationType,
+	RecaseError,
+} from "@autumn/shared";
 import { ADMIN_ORG_LIMITS_CONFIG_KEY } from "@/external/aws/s3/adminS3Config.js";
 import { registerEdgeConfig } from "@/internal/misc/edgeConfig/edgeConfigRegistry.js";
 import { createEdgeConfigStore } from "@/internal/misc/edgeConfig/edgeConfigStore.js";
@@ -61,6 +66,29 @@ export const getOrgPaginationMaxLimit = ({
 		(orgId ? orgs[orgId] : undefined) ?? (orgSlug ? orgs[orgSlug] : undefined);
 	const override = orgConfig?.pagination?.[type]?.maxLimit;
 	return override ?? PAGINATION_CONFIGS[type].maxLimit;
+};
+
+export const assertWithinOrgPaginationLimit = ({
+	org,
+	limit,
+	type,
+}: {
+	org: { id: string; slug?: string };
+	limit: number;
+	type: PaginationType;
+}): void => {
+	const maxLimit = getOrgPaginationMaxLimit({
+		orgId: org.id,
+		orgSlug: org.slug,
+		type,
+	});
+	if (limit > maxLimit) {
+		throw new RecaseError({
+			message: `limit ${limit} exceeds max of ${maxLimit} for this org`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
 };
 
 export const getOrgLimitsConfigFromSource = async () => {

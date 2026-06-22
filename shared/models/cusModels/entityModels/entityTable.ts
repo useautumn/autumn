@@ -15,6 +15,7 @@ import type {
 	DbOverageAllowed,
 	DbSpendLimit,
 	DbUsageAlert,
+	DbUsageLimit,
 } from "../billingControls/customerBillingControls.js";
 import { customers } from "../cusTable.js";
 
@@ -31,6 +32,7 @@ export const entities = pgTable(
 		deleted: boolean().default(false).notNull(),
 		internal_feature_id: text("internal_feature_id"),
 		spend_limits: jsonb().$type<DbSpendLimit[]>(),
+		usage_limits: jsonb().$type<DbUsageLimit[]>(),
 		usage_alerts: jsonb().$type<DbUsageAlert[]>(),
 		overage_allowed: jsonb().$type<DbOverageAllowed[]>(),
 
@@ -65,11 +67,7 @@ export const entities = pgTable(
 			table.internal_customer_id,
 			sql`${table.internal_id} DESC`,
 		),
-		index("idx_entities_org_env_id").on(
-			table.org_id,
-			table.env,
-			table.id,
-		),
+		index("idx_entities_org_env_id").on(table.org_id, table.env, table.id),
 		index("idx_entities_cursor").on(
 			table.org_id,
 			table.env,
