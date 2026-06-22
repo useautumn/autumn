@@ -98,6 +98,9 @@ export const customerJwtMiddleware = async (
 	ctx.org = auth.org;
 	ctx.features = auth.features;
 	ctx.env = env;
+	// Override the pre-auth value resolved from the raw body so downstream
+	// scoping (rate-limit bucket, cache, blocks) keys on the authenticated customer.
+	ctx.customerId = claims.customerId;
 	ctx.authType = AuthType.CustomerJwt;
 	ctx.scopes = TOKEN_SCOPES;
 	ctx.isCustomerJwt = true; // read by customerJwtVersionMiddleware (v2.3+ gate)
