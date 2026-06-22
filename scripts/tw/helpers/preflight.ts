@@ -14,6 +14,7 @@
  */
 
 import chalk from "chalk";
+import type { ProviderName } from "./provider.ts";
 
 /** Run a git command, returning trimmed stdout ("" on failure). */
 const git = (...args: string[]): string => {
@@ -93,9 +94,11 @@ const checkGit = (ref: string): PreflightProblem | undefined => {
 export const runPreflight = ({
 	ref,
 	allowDirty,
+	provider,
 }: {
 	ref: string;
 	allowDirty: boolean;
+	provider: ProviderName;
 }): void => {
 	const problems: PreflightProblem[] = [];
 	const push = (p: PreflightProblem | undefined) => {
@@ -104,7 +107,12 @@ export const runPreflight = ({
 		}
 	};
 
-	push(checkVercelAuth());
+	// Only the Vercel backend touches the Vercel SDK, so its auth gate is
+	// irrelevant (and its `vercel link` fix message misleading) for Modal runs —
+	// which are the default. Gate it on the selected provider.
+	if (provider === "vercel") {
+		push(checkVercelAuth());
+	}
 	push(checkSecrets());
 	if (!allowDirty) {
 		push(checkGit(ref));

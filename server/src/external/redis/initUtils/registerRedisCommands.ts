@@ -38,28 +38,36 @@ import {
 	UPSTASH_KEY_LOCKING_SHEBANG,
 } from "../../../_luaScriptsV2/luaScriptsV2.js";
 
-/**
- * Dedupe ioredis "error" events so an unreachable Redis doesn't spam the log
- * tens of times a second. This is what otherwise floods `bun tw` µVM boot with
- * `[Redis] Connection error: ECONNREFUSED 127.0.0.1:6379` while Dragonfly is
- * still starting (ioredis reconnects ~every 50ms). Log the first occurrence of a
- * message, then suppress repeats of the SAME message within the cooldown.
- * Prod-safe: a real, persistent error is still surfaced (once per cooldown).
- */
 const REDIS_ERROR_LOG_COOLDOWN_MS = 30_000;
-let lastRedisErrorMessage: string | undefined;
-let lastRedisErrorLoggedAt = 0;
-const logRedisConnectionError = (message: string): void => {
-	const now = Date.now();
-	if (
-		message === lastRedisErrorMessage &&
-		now - lastRedisErrorLoggedAt < REDIS_ERROR_LOG_COOLDOWN_MS
-	) {
-		return;
-	}
-	lastRedisErrorMessage = message;
-	lastRedisErrorLoggedAt = now;
-	console.error("[Redis] Connection error:", message);
+
+/**
+ * Build a per-instance deduping logger for ioredis "error" events so an
+ * unreachable Redis doesn't spam the log tens of times a second. This is what
+ * otherwise floods `bun tw` µVM boot with `[Redis] Connection error: ECONNREFUSED
+ * 127.0.0.1:6379` while Dragonfly is still starting (ioredis reconnects ~every
+ * 50ms). Logs the first occurrence of a message, then suppresses repeats of the
+ * SAME message within the cooldown. Prod-safe: a real, persistent error is still
+ * surfaced (once per cooldown).
+ *
+ * The dedup state is closed over PER instance (not module-level), so a regional
+ * Redis's error is never swallowed just because the primary logged the same
+ * string recently — each connection dedupes independently.
+ */
+const makeRedisErrorLogger = (): ((message: string) => void) => {
+	let lastMessage: string | undefined;
+	let lastLoggedAt = 0;
+	return (message: string): void => {
+		const now = Date.now();
+		if (
+			message === lastMessage &&
+			now - lastLoggedAt < REDIS_ERROR_LOG_COOLDOWN_MS
+		) {
+			return;
+		}
+		lastMessage = message;
+		lastLoggedAt = now;
+		console.error("[Redis] Connection error:", message);
+	};
 };
 
 /** Configure a Redis instance with custom commands.
@@ -74,6 +82,7 @@ export const registerRedisCommands = ({
 	redisInstance: Redis;
 	supportsUpstashShebang?: boolean;
 }): Redis => {
+	const logRedisConnectionError = makeRedisErrorLogger();
 	const prepareScript = (script: string): string =>
 		supportsUpstashShebang ? `${UPSTASH_KEY_LOCKING_SHEBANG}${script}` : script;
 	const batchDeductionScript = getBatchDeductionScript();

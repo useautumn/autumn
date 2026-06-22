@@ -211,7 +211,11 @@ const main = async (): Promise<void> => {
 	// A bare invocation (no subcommand or only flags) runs the orchestrator.
 	if (!sub || sub.startsWith("-") || !RESERVED_SUBCOMMANDS.has(sub)) {
 		const runArgs = parseRunArgs(argv);
-		runPreflight({ ref: runArgs.ref, allowDirty: runArgs.allowDirty });
+		runPreflight({
+			ref: runArgs.ref,
+			allowDirty: runArgs.allowDirty,
+			provider: runArgs.provider,
+		});
 		await run(runArgs);
 		process.exit(getLastRunExitCode());
 	}

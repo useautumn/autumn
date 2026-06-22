@@ -220,6 +220,20 @@ export class WorkerPool {
 				new Error("WorkerPool is closed; cannot acquire a worker"),
 			);
 		}
+		// If the pool is already empty, no future acquire can ever be served (the
+		// runner does not `replace()` dead workers). `markDead` only drains waiters
+		// that were ALREADY parked when the last worker died — an acquire that
+		// arrives AFTER (e.g. a worker-death reschedule calling
+		// `acquireDifferentFrom`) would otherwise park forever and hang the run.
+		// Reject it eagerly with the same exhaustion error so the runner reports the
+		// file as failed and proceeds to teardown.
+		if (this.workers.length === 0) {
+			return Promise.reject(
+				new Error(
+					"WorkerPool exhausted: all workers died and none were replaced",
+				),
+			);
+		}
 		return new Promise<WorkerHandle>((resolve, reject) => {
 			this.waiters.push({ resolve, reject, ...opts });
 			this.pump();
