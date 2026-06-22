@@ -215,6 +215,65 @@ const TEARDOWN_PER_RESOURCE_TIMEOUT_MS = 20_000;
 const TEARDOWN_STRIPE_CONCURRENCY = 16;
 const TEARDOWN_SANDBOX_CONCURRENCY = 16;
 
+/**
+ * Demand-tracked culling. During the RUN phase, idle workers beyond a buffer are
+ * terminated early so we stop paying for ~N idle sandboxes while a few stragglers
+ * finish. The buffer is a FRACTION of the initial pool (default 30%) kept idle as
+ * retry/worker-death headroom; busy workers are never culled and the pool never
+ * drops below the buffer. Tune `TW_CULL_BUFFER_FRACTION`; disable with `TW_DISABLE_CULL=1`.
+ */
+const CULL_IDLE_BUFFER_FRACTION = Number(
+	process.env.TW_CULL_BUFFER_FRACTION ?? 0.3,
+);
+const CULL_INTERVAL_MS = 2000;
+const CULL_DISABLED = process.env.TW_DISABLE_CULL === "1";
+
+/**
+ * Demand-tracked cull loop for a worker pool. Keeps `CULL_IDLE_BUFFER_FRACTION` of
+ * the INITIAL pool size as idle retry/death headroom + every busy worker, and
+ * terminates idle workers beyond that every {@link CULL_INTERVAL_MS}. The pool's
+ * `cullIdle` only ever removes idle workers and never drops below the buffer, so
+ * retries always have spare capacity. Returns a stop function; no-op if disabled.
+ */
+const startCulling = (
+	pool: WorkerPool,
+	resolveSandbox: (worker: WorkerHandle) => ProviderSandbox | undefined,
+): (() => void) => {
+	if (CULL_DISABLED) {
+		return () => {
+			/* culling disabled */
+		};
+	}
+	const bufferCount = Math.max(
+		1,
+		Math.ceil(pool.size * CULL_IDLE_BUFFER_FRACTION),
+	);
+	let culledTotal = 0;
+	const timer = setInterval(() => {
+		const excess = pool.idleCount - bufferCount;
+		if (excess <= 0) {
+			return;
+		}
+		const culled = pool.cullIdle(excess, bufferCount);
+		for (const worker of culled) {
+			setWorkerStatus(worker.name, "dead");
+			const sandbox = resolveSandbox(worker);
+			if (sandbox) {
+				void deleteSandbox(sandbox).catch(() => {
+					/* best-effort — the final teardown is idempotent */
+				});
+			}
+		}
+		if (culled.length > 0) {
+			culledTotal += culled.length;
+			milestone(
+				`cull: freed ${culled.length} idle worker(s) → pool ${pool.size} (keeping ${bufferCount} idle buffer; ${culledTotal} culled total)`,
+			);
+		}
+	}, CULL_INTERVAL_MS);
+	return () => clearInterval(timer);
+};
+
 /** How long to wait for a worker to print the READY sentinel after boot starts. */
 const WORKER_READY_TIMEOUT_MS = 5 * 60 * 1000;
 
@@ -1510,9 +1569,17 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 				1,
 				normalHandles.length * Math.max(1, args.perWorker),
 			);
-			await runFiles(normalFiles, normalExecutor, {
-				maxParallel: normalParallel,
-			});
+			// Demand-tracked culling: terminate idle workers beyond a 30%-of-initial
+			// buffer while the run drains, so we stop paying for the ~N idle sandboxes
+			// the stragglers leave behind. Busy workers are never culled.
+			const stopCulling = startCulling(normalPool, resolveSandbox);
+			try {
+				await runFiles(normalFiles, normalExecutor, {
+					maxParallel: normalParallel,
+				});
+			} finally {
+				stopCulling();
+			}
 			normalPool.close();
 		}
 

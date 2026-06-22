@@ -70,6 +70,39 @@ export class WorkerPool {
 		return this.workers.length;
 	}
 
+	/** Idle workers (no in-flight files) — candidates for culling. */
+	get idleCount(): number {
+		return this.workers.filter((w) => w.inFlight === 0).length;
+	}
+
+	/**
+	 * Demand-tracked culling: remove up to `count` IDLE workers from the pool and
+	 * return them (the caller terminates their sandboxes). Busy workers are never
+	 * touched, and the pool is never shrunk below `keepMin` total — so retries /
+	 * worker-death reschedules always have spare capacity. Synchronous (single-
+	 * threaded), so a worker can't be granted to a waiter between the idle check and
+	 * the removal.
+	 */
+	cullIdle(count: number, keepMin: number): WorkerHandle[] {
+		if (count <= 0) {
+			return [];
+		}
+		const idle = this.workers.filter((w) => w.inFlight === 0);
+		const removable = Math.min(
+			count,
+			idle.length,
+			Math.max(0, this.workers.length - keepMin),
+		);
+		const culled = idle.slice(0, removable);
+		for (const worker of culled) {
+			const index = this.workers.findIndex((w) => w.name === worker.name);
+			if (index !== -1) {
+				this.workers.splice(index, 1);
+			}
+		}
+		return culled;
+	}
+
 	/** Snapshot of all live workers (defensive copy). */
 	get all(): WorkerHandle[] {
 		return [...this.workers];
