@@ -10,7 +10,7 @@ import {
 	type Subscription,
 } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
-import { format, startOfDay, sub } from "date-fns";
+import { format, startOfDay, startOfHour, sub } from "date-fns";
 import type Stripe from "stripe";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
@@ -28,19 +28,36 @@ export const STANDARD_INTERVAL_DAYS: Record<string, number> = {
 
 const CLICKHOUSE_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ss";
 
-/** Resolves a standard interval (24h/7d/30d/90d) to a UTC start/end window
- * aligned to the day boundary. Returns undefined for non-standard intervals
- * (billing cycles, custom ranges) which the caller handles separately. */
-export const getStandardIntervalWindow = (
-	interval?: string,
-): { startDate: string; endDate: string } | undefined => {
+/** Resolves the start/end window the event-name ranking should query so it
+ * matches the chart's visible range. A custom range takes precedence; otherwise
+ * a standard interval is resolved with the same boundary alignment the chart
+ * uses — hour for 24h, day for 7d/30d/90d. Returns undefined when neither
+ * applies (e.g. billing-cycle intervals), leaving callers on all-time ranking. */
+export const getEventRankingWindow = ({
+	interval,
+	customRange,
+}: {
+	interval?: string;
+	customRange?: { start: number; end: number };
+}): { startDate: string; endDate: string } | undefined => {
+	if (customRange) {
+		return {
+			startDate: format(new UTCDate(customRange.start), CLICKHOUSE_DATE_FORMAT),
+			endDate: format(new UTCDate(customRange.end), CLICKHOUSE_DATE_FORMAT),
+		};
+	}
+
 	const days = interval ? STANDARD_INTERVAL_DAYS[interval] : undefined;
 	if (!days) {
 		return undefined;
 	}
+
 	const now = new UTCDate();
+	const unaligned = sub(now, { days });
+	const start =
+		interval === "24h" ? startOfHour(unaligned) : startOfDay(unaligned);
 	return {
-		startDate: format(startOfDay(sub(now, { days })), CLICKHOUSE_DATE_FORMAT),
+		startDate: format(start, CLICKHOUSE_DATE_FORMAT),
 		endDate: format(now, CLICKHOUSE_DATE_FORMAT),
 	};
 };

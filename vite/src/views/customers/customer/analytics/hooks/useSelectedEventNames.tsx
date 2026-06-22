@@ -15,10 +15,10 @@ export const useSelectedEventNames = () => {
 	);
 
 	const { queryStates } = useAnalyticsQueryState();
-	const { interval } = queryStates;
+	const { interval, start, end } = queryStates;
 
 	const { eventNames: cachedEventNames, isLoading: eventNamesLoading } =
-		useEventNames({ interval });
+		useEventNames({ interval, start, end });
 	const { features: featuresData, isLoading: featuresLoading } =
 		useFeaturesQuery();
 

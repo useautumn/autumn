@@ -10,15 +10,19 @@ export type EventNameWithCount = {
 export const useEventNames = ({
 	limit,
 	interval,
+	start,
+	end,
 }: {
 	limit?: number;
 	interval?: string;
+	start?: number | null;
+	end?: number | null;
 } = {}) => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
 	const { data, isLoading, error } = useQuery({
-		queryKey: buildKey(["query-event-names-list", limit, interval]),
+		queryKey: buildKey(["query-event-names-list", limit, interval, start, end]),
 		queryFn: async () => {
 			const params = new URLSearchParams();
 			if (limit) {
@@ -26,6 +30,12 @@ export const useEventNames = ({
 			}
 			if (interval) {
 				params.set("interval", interval);
+			}
+			if (start != null) {
+				params.set("start", String(start));
+			}
+			if (end != null) {
+				params.set("end", String(end));
 			}
 			const query = params.toString();
 			const url = `/query/event_names/list${query ? `?${query}` : ""}`;

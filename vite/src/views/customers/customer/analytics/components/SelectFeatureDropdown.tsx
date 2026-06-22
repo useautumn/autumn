@@ -68,6 +68,8 @@ export const SelectFeatureDropdown = () => {
 	const { queryStates } = useAnalyticsQueryState();
 	const { eventNames: eventNamesData } = useEventNames({
 		interval: queryStates.interval,
+		start: queryStates.start,
+		end: queryStates.end,
 	});
 	const [open, setOpen] = useState(false);
 	const [searchValue, setSearchValue] = useState("");

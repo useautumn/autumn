@@ -1,6 +1,6 @@
 import { getTinybirdPipes } from "@/external/tinybird/initTinybird.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
-import { getStandardIntervalWindow } from "../analyticsUtils.js";
+import { getEventRankingWindow } from "../analyticsUtils.js";
 
 export type EventNameWithCount = {
 	event_name: string;
@@ -8,20 +8,22 @@ export type EventNameWithCount = {
 };
 
 /** Lists distinct event names for the org sorted by popularity. With an
- * interval, ranks by count within that window so callers can default to events
- * that are actually active in the selected range. */
+ * interval or custom range, ranks by count within that window so callers can
+ * default to events that are actually active in the selected range. */
 export const listEventNames = async ({
 	ctx,
 	limit,
 	interval,
+	customRange,
 }: {
 	ctx: AutumnContext;
 	limit?: number;
 	interval?: string;
+	customRange?: { start: number; end: number };
 }): Promise<EventNameWithCount[]> => {
 	const { org, env } = ctx;
 	const pipes = getTinybirdPipes();
-	const window = getStandardIntervalWindow(interval);
+	const window = getEventRankingWindow({ interval, customRange });
 
 	const result = await pipes.listEventNames({
 		org_id: org.id,
