@@ -64,6 +64,7 @@ import { Result } from "../types/fp.js";
  * @param billingCycleAnchor - Reset the billing cycle anchor immediately with 'now' (optional)
  * @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
  * @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
+ * @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
  *
  * @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
  */

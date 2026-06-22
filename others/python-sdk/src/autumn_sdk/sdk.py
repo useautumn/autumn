@@ -480,7 +480,7 @@ class Autumn(BaseSDK):
         :param event_name: Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event.
         :param value: The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat).
         :param properties: Additional properties to attach to this usage event.
-        :param async_: If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information.
+        :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
         :param lock:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -595,7 +595,7 @@ class Autumn(BaseSDK):
         :param event_name: Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event.
         :param value: The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat).
         :param properties: Additional properties to attach to this usage event.
-        :param async_: If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information.
+        :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
         :param lock:
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
@@ -699,6 +699,7 @@ class Autumn(BaseSDK):
         audio_output_tokens: Optional[int] = None,
         reasoning_tokens: Optional[int] = None,
         properties: Optional[Dict[str, Any]] = None,
+        async_: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -720,6 +721,7 @@ class Autumn(BaseSDK):
         :param audio_output_tokens: Number of audio output tokens generated.
         :param reasoning_tokens: Number of reasoning tokens generated.
         :param properties: Additional properties to attach to this usage event.
+        :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -748,6 +750,7 @@ class Autumn(BaseSDK):
             audio_output_tokens=audio_output_tokens,
             reasoning_tokens=reasoning_tokens,
             properties=properties,
+            async_=async_,
         )
 
         req = self._build_request(
@@ -826,6 +829,7 @@ class Autumn(BaseSDK):
         audio_output_tokens: Optional[int] = None,
         reasoning_tokens: Optional[int] = None,
         properties: Optional[Dict[str, Any]] = None,
+        async_: Optional[bool] = None,
         retries: OptionalNullable[utils.RetryConfig] = UNSET,
         server_url: Optional[str] = None,
         timeout_ms: Optional[int] = None,
@@ -847,6 +851,7 @@ class Autumn(BaseSDK):
         :param audio_output_tokens: Number of audio output tokens generated.
         :param reasoning_tokens: Number of reasoning tokens generated.
         :param properties: Additional properties to attach to this usage event.
+        :param async_: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
         :param retries: Override the default retry configuration for this method
         :param server_url: Override the default server URL for this method
         :param timeout_ms: Override the default request timeout configuration for this method in milliseconds
@@ -875,6 +880,7 @@ class Autumn(BaseSDK):
             audio_output_tokens=audio_output_tokens,
             reasoning_tokens=reasoning_tokens,
             properties=properties,
+            async_=async_,
         )
 
         req = self._build_request_async(

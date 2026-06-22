@@ -8721,6 +8721,10 @@ paths:
         @param checkoutSessionParams - Additional parameters to pass into the
         creation of the Stripe checkout session. (optional)
 
+        @param longLivedCheckout - If true, returns an Autumn-hosted checkout
+        link that can create a fresh Stripe checkout session when opened.
+        (optional)
+
         @param customLineItems - Custom line items that override the
         auto-generated proration invoice. Only valid for immediate plan changes
         (eg. upgrades or one off plans). (optional)
@@ -9348,6 +9352,10 @@ paths:
                   additionalProperties: {}
                   description: Additional parameters to pass into the creation of the Stripe
                     checkout session.
+                long_lived_checkout:
+                  type: boolean
+                  description: If true, returns an Autumn-hosted checkout link that can create a
+                    fresh Stripe checkout session when opened.
                 custom_line_items:
                   type: array
                   items:
@@ -9519,7 +9527,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1781546357840,"plans":[{"planId":"trial_plan"}]},{"startsAt":1782755957840,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782122344554,"plans":[{"planId":"trial_plan"}]},{"startsAt":1783331944554,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -9643,8 +9651,30 @@ paths:
                     - type: object
                       properties:
                         starts_at:
-                          type: number
-                          description: When this phase should start, in epoch milliseconds.
+                          anyOf:
+                            - type: number
+                            - const: now
+                          description: When this phase should start, in epoch milliseconds, or 'now' for
+                            the immediate phase.
+                        starting_after:
+                          type: object
+                          properties:
+                            duration_type:
+                              enum:
+                                - month
+                                - year
+                              type: string
+                              description: The duration unit to offset this phase from the prior phase.
+                            duration_count:
+                              type: integer
+                              minimum: -9007199254740991
+                              maximum: 9007199254740991
+                              exclusiveMinimum: 0
+                              description: How many duration_type periods after the prior phase to start.
+                          required:
+                            - duration_type
+                            - duration_count
+                          description: Relative start offset from the previous resolved schedule phase.
                         plans:
                           type: array
                           minItems: 1
@@ -10071,6 +10101,7 @@ paths:
                                       description: Filter for matching plan items. All provided fields must match
                                         (AND).
                                     description: Filters selecting items to remove from the plan.
+                                additionalProperties: false
                                 description: Customize the plan to schedule. Can override price, replace items,
                                   or patch items with add_items and
                                   remove_items.
@@ -10082,14 +10113,35 @@ paths:
                               - plan_id
                           description: Plans to materialize for this phase.
                       required:
-                        - starts_at
                         - plans
                   items:
                     type: object
                     properties:
                       starts_at:
-                        type: number
-                        description: When this phase should start, in epoch milliseconds.
+                        anyOf:
+                          - type: number
+                          - const: now
+                        description: When this phase should start, in epoch milliseconds, or 'now' for
+                          the immediate phase.
+                      starting_after:
+                        type: object
+                        properties:
+                          duration_type:
+                            enum:
+                              - month
+                              - year
+                            type: string
+                            description: The duration unit to offset this phase from the prior phase.
+                          duration_count:
+                            type: integer
+                            minimum: -9007199254740991
+                            maximum: 9007199254740991
+                            exclusiveMinimum: 0
+                            description: How many duration_type periods after the prior phase to start.
+                        required:
+                          - duration_type
+                          - duration_count
+                        description: Relative start offset from the previous resolved schedule phase.
                       plans:
                         type: array
                         minItems: 1
@@ -10515,6 +10567,7 @@ paths:
                                     description: Filter for matching plan items. All provided fields must match
                                       (AND).
                                   description: Filters selecting items to remove from the plan.
+                              additionalProperties: false
                               description: Customize the plan to schedule. Can override price, replace items,
                                 or patch items with add_items and remove_items.
                             subscription_id:
@@ -10525,7 +10578,6 @@ paths:
                             - plan_id
                         description: Plans to materialize for this phase.
                     required:
-                      - starts_at
                       - plans
                   description: Ordered phase definitions for the schedule.
               required:
@@ -11364,6 +11416,10 @@ paths:
         @param checkoutSessionParams - Additional parameters to pass into the
         creation of the Stripe checkout session. (optional)
 
+        @param longLivedCheckout - If true, returns an Autumn-hosted checkout
+        link that can create a fresh Stripe checkout session when opened.
+        (optional)
+
         @param customLineItems - Custom line items that override the
         auto-generated proration invoice. Only valid for immediate plan changes
         (eg. upgrades or one off plans). (optional)
@@ -11991,6 +12047,10 @@ paths:
                   additionalProperties: {}
                   description: Additional parameters to pass into the creation of the Stripe
                     checkout session.
+                long_lived_checkout:
+                  type: boolean
+                  description: If true, returns an Autumn-hosted checkout link that can create a
+                    fresh Stripe checkout session when opened.
                 custom_line_items:
                   type: array
                   items:
@@ -13501,6 +13561,9 @@ paths:
         @param recalculateBalances - Controls whether balances should be
         recalculated during the subscription update. (optional)
 
+        @param carryOverUsages - Whether to carry over usages from the previous
+        plan. (optional)
+
 
         @returns A billing response with customer ID, invoice details, and
         payment URL (if next action is required).
@@ -14086,6 +14149,21 @@ paths:
                     - enabled
                   description: Controls whether balances should be recalculated during the
                     subscription update.
+                carry_over_usages:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      description: Whether to carry over usages from the previous plan.
+                    feature_ids:
+                      type: array
+                      items:
+                        type: string
+                      description: The IDs of the features to carry over usages for. If left
+                        undefined, all consumable features will be carried over.
+                  required:
+                    - enabled
+                  description: Whether to carry over usages from the previous plan.
               required:
                 - customer_id
               title: UpdateSubscriptionParams
@@ -14254,6 +14332,9 @@ paths:
 
         @param recalculateBalances - Controls whether balances should be
         recalculated during the subscription update. (optional)
+
+        @param carryOverUsages - Whether to carry over usages from the previous
+        plan. (optional)
 
 
         @returns A preview response with line items showing prorated charges or
@@ -14840,6 +14921,21 @@ paths:
                     - enabled
                   description: Controls whether balances should be recalculated during the
                     subscription update.
+                carry_over_usages:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      description: Whether to carry over usages from the previous plan.
+                    feature_ids:
+                      type: array
+                      items:
+                        type: string
+                      description: The IDs of the features to carry over usages for. If left
+                        undefined, all consumable features will be carried over.
+                  required:
+                    - enabled
+                  description: Whether to carry over usages from the previous plan.
               required:
                 - customer_id
               title: PreviewUpdateParams
@@ -17671,7 +17767,7 @@ paths:
         (optional)
 
         @param async - If true, enqueue the event for asynchronous processing
-        and return 202 immediately. The response will not include balance
+        and return 204 immediately. The response will not include balance
         information. (optional)
 
 
@@ -17716,7 +17812,7 @@ paths:
                 async:
                   type: boolean
                   description: If true, enqueue the event for asynchronous processing and return
-                    202 immediately. The response will not include balance
+                    204 immediately. The response will not include balance
                     information.
                 lock:
                   type: object
@@ -18101,6 +18197,10 @@ paths:
         @param properties - Additional properties to attach to this usage event.
         (optional)
 
+        @param async - If true, enqueue the event for asynchronous processing
+        and return 204 immediately. The response will not include balance
+        information. (optional)
+
 
         @returns The dollar value recorded and the updated AI credit system
         balance. If Autumn is experiencing degraded service from a downstream
@@ -18173,6 +18273,11 @@ paths:
                     type: string
                   additionalProperties: {}
                   description: Additional properties to attach to this usage event.
+                async:
+                  type: boolean
+                  description: If true, enqueue the event for asynchronous processing and return
+                    204 immediately. The response will not include balance
+                    information.
               required:
                 - customer_id
                 - model_id
@@ -18527,7 +18632,7 @@ paths:
                   async:
                     type: boolean
                     description: If true, enqueue the event for asynchronous processing and return
-                      202 immediately. The response will not include balance
+                      204 immediately. The response will not include balance
                       information.
                   lock:
                     type: object
