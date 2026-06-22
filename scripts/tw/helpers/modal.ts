@@ -72,13 +72,14 @@ const MODAL_REPO_ROOT = "/repo";
 const APP_NAME = "autumn-tw";
 /**
  * Worker size. Each worker runs the server + PG + Dragonfly + goaws AND up to
- * `--per-worker` (default 4) concurrent test files, so it's provisioned wider
- * than a Vercel 2-vCPU µVM: 4 vCPU + 8 GiB gives the concurrent files room
- * without thrashing. Env-overridable (`TW_MODAL_WORKER_CPU` / `_MEM_MIB`) so a
- * resource-quota kill can be ruled out by dialing down without a rebuild.
+ * `--per-worker` (default 4) concurrent test files. 2 vCPU + 4 GiB is validated
+ * at scale (full suite, 1422 passing) and ~halves the per-worker cost vs the
+ * earlier 4/8 default. Env-overridable (`TW_MODAL_WORKER_CPU` / `_MEM_MIB`) so a
+ * heavier shard can be dialed up — or a resource-quota kill ruled out — without
+ * a rebuild.
  */
-const WORKER_CPU = Number(process.env.TW_MODAL_WORKER_CPU ?? 4);
-const WORKER_MEMORY_MIB = Number(process.env.TW_MODAL_WORKER_MEM_MIB ?? 8192);
+const WORKER_CPU = Number(process.env.TW_MODAL_WORKER_CPU ?? 2);
+const WORKER_MEMORY_MIB = Number(process.env.TW_MODAL_WORKER_MEM_MIB ?? 4096);
 const INGRESS_MEMORY_MIB = 1024;
 /**
  * Snapshot budget — the warm filesystem (node_modules + migrated PGDATA, tens of
