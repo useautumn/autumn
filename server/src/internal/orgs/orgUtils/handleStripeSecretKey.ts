@@ -22,7 +22,6 @@ export const handleStripeSecretKey = async ({
 	orgId: string;
 	secretKey: string;
 	env: AppEnv;
-	// Required: the account-match + OAuth double-delivery guards below read from it.
 	org: Organization;
 }) => {
 	// 1. Check if key is valid

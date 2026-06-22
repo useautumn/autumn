@@ -8,7 +8,6 @@ import {
 	type StripeConnectConfig,
 } from "@autumn/shared";
 import { z } from "zod/v4";
-import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { orgToAccountId } from "@/external/connect/connectUtils.js";
 import { createStripeCli } from "@/external/connect/createStripeCli.js";
 import { initMasterStripe } from "@/external/connect/initStripeCli.js";
@@ -21,6 +20,19 @@ import { clearOrgCache } from "../../orgUtils/clearOrgCache.js";
 import { isStripeConnected } from "../../orgUtils.js";
 
 export type DisconnectChannel = "secret_key" | "oauth";
+
+const envFields = (env: AppEnv) =>
+	env === AppEnv.Sandbox
+		? ({
+				apiKey: "test_api_key",
+				webhookSecret: "test_webhook_secret",
+				connect: "test_stripe_connect",
+			} as const)
+		: ({
+				apiKey: "live_api_key",
+				webhookSecret: "live_webhook_secret",
+				connect: "live_stripe_connect",
+			} as const);
 
 export const resolveDisconnectChannels = ({
 	org,
@@ -36,13 +48,10 @@ export const resolveDisconnectChannels = ({
 		orgToAccountId({ org, env, noDefaultAccount: true }),
 	);
 
-	if (channel === "secret_key") {
-		return { clearSecretKey: hasSecretKey, clearOauth: false };
-	}
-	if (channel === "oauth") {
-		return { clearSecretKey: false, clearOauth: hasOauth };
-	}
-	return { clearSecretKey: hasSecretKey, clearOauth: hasOauth };
+	return {
+		clearSecretKey: channel === "oauth" ? false : hasSecretKey,
+		clearOauth: channel === "secret_key" ? false : hasOauth,
+	};
 };
 
 export const computeClearedStripeConfig = ({
@@ -52,15 +61,12 @@ export const computeClearedStripeConfig = ({
 	org: Organization;
 	env: AppEnv;
 }): StripeConfig => {
-	const newStripeConfig: any = structuredClone(org.stripe_config) || {};
-	if (env === AppEnv.Sandbox) {
-		newStripeConfig.test_api_key = null;
-		newStripeConfig.test_webhook_secret = null;
-	} else {
-		newStripeConfig.live_api_key = null;
-		newStripeConfig.live_webhook_secret = null;
-	}
-	return newStripeConfig;
+	const { apiKey, webhookSecret } = envFields(env);
+	return {
+		...(structuredClone(org.stripe_config) || {}),
+		[apiKey]: null,
+		[webhookSecret]: null,
+	};
 };
 
 export const computeClearedStripeConnect = ({
@@ -70,8 +76,7 @@ export const computeClearedStripeConnect = ({
 	org: Organization;
 	env: AppEnv;
 }): StripeConnectConfig => {
-	const current =
-		env === AppEnv.Sandbox ? org.test_stripe_connect : org.live_stripe_connect;
+	const current = org[envFields(env).connect];
 	const newConnect: StripeConnectConfig = structuredClone(current) || {};
 	delete newConnect.account_id;
 	return newConnect;
@@ -121,9 +126,10 @@ const deauthorizeOauth = async ({
 	}
 };
 
-// When OAuth went away but a secret key remains, that key's direct webhook may
-// never have been registered (it's skipped while OAuth covers the org). Register
-// it now so the org keeps receiving events. Returns the encrypted webhook secret.
+/**
+ * Registers the direct webhook for a remaining secret key whose webhook was
+ * skipped while OAuth covered the org. Returns the encrypted secret, or null.
+ */
 export const reRegisterDirectWebhook = async ({
 	org,
 	env,
@@ -133,10 +139,7 @@ export const reRegisterDirectWebhook = async ({
 	env: AppEnv;
 	logger: Logger;
 }): Promise<string | null> => {
-	const encryptedKey =
-		env === AppEnv.Sandbox
-			? org.stripe_config?.test_api_key
-			: org.stripe_config?.live_api_key;
+	const encryptedKey = org.stripe_config?.[envFields(env).apiKey];
 	if (!encryptedKey) return null;
 
 	try {
@@ -154,6 +157,77 @@ export const reRegisterDirectWebhook = async ({
 	}
 };
 
+const disconnectSecretKey = async ({
+	org,
+	env,
+	logger,
+}: {
+	org: Organization;
+	env: AppEnv;
+	logger: Logger;
+}): Promise<Partial<Organization>> => {
+	try {
+		await deleteDirectWebhook({ org, env });
+	} catch (error) {
+		logger.error(`Failed to delete direct webhook for ${org.slug}`, { error });
+	}
+	return { stripe_config: computeClearedStripeConfig({ org, env }) };
+};
+
+/**
+ * Disconnects OAuth: clears the connect account and deauthorizes it. If a secret
+ * key is kept whose direct webhook was skipped under OAuth (and none is already
+ * stored — that would mean a live webhook predates OAuth), registers one first so
+ * the org keeps receiving events.
+ */
+const disconnectOauth = async ({
+	org,
+	env,
+	logger,
+	secretKeyKept,
+}: {
+	org: Organization;
+	env: AppEnv;
+	logger: Logger;
+	secretKeyKept: boolean;
+}): Promise<Partial<Organization>> => {
+	const fields = envFields(env);
+	const updates: Partial<Organization> = {
+		[fields.connect]: computeClearedStripeConnect({ org, env }),
+	};
+
+	const needsDirectWebhook =
+		secretKeyKept &&
+		!org.stripe_config?.[fields.webhookSecret] &&
+		isStripeConnected({ org, env, throughSecretKey: true });
+
+	if (needsDirectWebhook) {
+		const webhookSecret = await reRegisterDirectWebhook({ org, env, logger });
+		if (!webhookSecret) {
+			throw new RecaseError({
+				message:
+					"Couldn't register a direct webhook for your secret key, so OAuth was not disconnected. Please try again.",
+				code: ErrCode.StripeError,
+				statusCode: 502,
+			});
+		}
+		updates.stripe_config = {
+			...(org.stripe_config || {}),
+			[fields.webhookSecret]: webhookSecret,
+		};
+	}
+
+	// Only after a successful re-register (above) — never leave the org with no
+	// working webhook if registration failed.
+	try {
+		await deauthorizeOauth({ org, env, logger });
+	} catch (error) {
+		logger.error(`Failed to deauthorize oauth for ${org.slug}`, { error });
+	}
+
+	return updates;
+};
+
 export const handleDeleteStripe = createRoute({
 	scopes: [Scopes.Organisation.Write],
 	body: z
@@ -168,77 +242,32 @@ export const handleDeleteStripe = createRoute({
 
 		await clearOrgCache({ db, orgId: org.id, logger });
 
+		// 1. Resolve which channels to disconnect
 		const { clearSecretKey, clearOauth } = resolveDisconnectChannels({
 			org,
 			env,
 			channel,
 		});
 
+		// 2. Disconnect each channel, collecting the org updates it produces
+		const updates: Partial<Organization> = {};
 		if (clearSecretKey) {
-			try {
-				await deleteDirectWebhook({ org, env });
-			} catch (error) {
-				logger.error(`Failed to delete direct webhook for ${org.slug}`, {
-					error,
-				});
-			}
-			await OrgService.update({
-				db,
-				orgId: org.id,
-				updates: { stripe_config: computeClearedStripeConfig({ org, env }) },
-			});
+			Object.assign(updates, await disconnectSecretKey({ org, env, logger }));
 		}
-
 		if (clearOauth) {
-			const clearedConnect = computeClearedStripeConnect({ org, env });
-			const updates: Partial<Organization> =
-				env === AppEnv.Sandbox
-					? { test_stripe_connect: clearedConnect }
-					: { live_stripe_connect: clearedConnect };
-
-			// Secret key kept but its direct webhook was skipped under OAuth — register
-			// it now. Skip when a webhook secret is already stored: that means a live
-			// direct webhook predates OAuth, and re-registering would orphan it.
-			const existingWebhookSecret =
-				env === AppEnv.Sandbox
-					? org.stripe_config?.test_webhook_secret
-					: org.stripe_config?.live_webhook_secret;
-			const needsDirectWebhook =
-				!clearSecretKey &&
-				!existingWebhookSecret &&
-				isStripeConnected({ org, env, throughSecretKey: true });
-
-			// Register the direct webhook BEFORE deauthorizing, so a registration
-			// failure leaves OAuth intact rather than the org with no working webhook.
-			if (needsDirectWebhook) {
-				const webhookSecret = await reRegisterDirectWebhook({
+			Object.assign(
+				updates,
+				await disconnectOauth({
 					org,
 					env,
 					logger,
-				});
-				if (!webhookSecret) {
-					throw new RecaseError({
-						message:
-							"Couldn't register a direct webhook for your secret key, so OAuth was not disconnected. Please try again.",
-						code: ErrCode.StripeError,
-						statusCode: 502,
-					});
-				}
-				const prefix = env === AppEnv.Sandbox ? "test" : "live";
-				updates.stripe_config = {
-					...(org.stripe_config || {}),
-					[`${prefix}_webhook_secret`]: webhookSecret,
-				};
-			}
-
-			try {
-				await deauthorizeOauth({ org, env, logger });
-			} catch (error) {
-				logger.error(`Failed to deauthorize oauth for ${org.slug}`, { error });
-			}
-
-			await OrgService.update({ db, orgId: org.id, updates });
+					secretKeyKept: !clearSecretKey,
+				}),
+			);
 		}
+
+		// 3. Persist
+		await OrgService.update({ db, orgId: org.id, updates });
 
 		return c.json({});
 	},
