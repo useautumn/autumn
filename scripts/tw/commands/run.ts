@@ -1524,27 +1524,10 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 			? 1
 			: 0;
 
-		// ----- TEARDOWN -------------------------------------------------------
-		milestone(
-			args.keep
-				? "teardown: skipped (--keep) — clean up later with `bun tw kill`"
-				: "teardown: releasing sandboxes + Stripe sub-accounts",
-		);
-		setPhase("teardown");
-		await teardown({ runId, skip: args.keep });
-		teardownDone = true;
-
-		// ----- SUMMARY --------------------------------------------------------
-		// Cost ESTIMATE (the SDK doesn't expose usage for running sandboxes, see
-		// cost.ts): workers + the ingress, each at WORKER_VCPUS, alive from fan-out
-		// start until teardown finished, against the Pro rate card.
-		lastRunCost = estimateCost({
-			workers: provisioned.length + 1,
-			vcpus: WORKER_VCPUS,
-			lifetimeMs: Date.now() - fanoutStart,
-		});
-		const costLine =
-			lastRunCost.totalUsd > 0 ? formatCost(lastRunCost) : undefined;
+		// Publish the summary BEFORE teardown so the dashboard shows passed/failed/
+		// crashed/wall/cost immediately — teardown takes a few seconds and the
+		// numbers shouldn't wait on it. The cost is refined after teardown (true
+		// sandbox lifetime, fan-out start → teardown complete).
 		let totalPassed = 0;
 		let totalFailed = 0;
 		let totalCrashed = 0;
@@ -1555,14 +1538,44 @@ export const run = async (args: TwRunArgs): Promise<void> => {
 				totalCrashed++;
 			}
 		}
-		setSummary({
-			passed: totalPassed,
-			failed: totalFailed,
-			crashed: totalCrashed,
-			wallMs: lastRunWallMs,
-			costLine,
-			logFile: runLogFile,
-		});
+		// Kept in scope for the final stdout line after the TUI exits.
+		let costLine: string | undefined;
+		const publishSummary = (lifetimeMs: number): void => {
+			// Cost ESTIMATE (the SDK doesn't expose usage for running sandboxes, see
+			// cost.ts): workers + the ingress at WORKER_VCPUS, alive fan-out→now.
+			lastRunCost = estimateCost({
+				workers: provisioned.length + 1,
+				vcpus: WORKER_VCPUS,
+				lifetimeMs,
+			});
+			costLine = lastRunCost.totalUsd > 0 ? formatCost(lastRunCost) : undefined;
+			setSummary({
+				passed: totalPassed,
+				failed: totalFailed,
+				crashed: totalCrashed,
+				wallMs: lastRunWallMs,
+				costLine,
+				logFile: runLogFile,
+			});
+		};
+		// Preliminary publish — sandboxes are about to be torn down, so this
+		// lifetime is within a few seconds of the final.
+		publishSummary(Date.now() - fanoutStart);
+
+		// ----- TEARDOWN -------------------------------------------------------
+		milestone(
+			args.keep
+				? "teardown: skipped (--keep) — clean up later with `bun tw kill`"
+				: "teardown: releasing sandboxes + Stripe sub-accounts",
+		);
+		setPhase("teardown");
+		await teardown({ runId, skip: args.keep });
+		teardownDone = true;
+
+		// ----- SUMMARY (refine) -----------------------------------------------
+		// Re-publish with the true sandbox lifetime (fan-out start → teardown
+		// complete); pass/fail/wall are unchanged, only the cost estimate tightens.
+		publishSummary(Date.now() - fanoutStart);
 		setPhase("done");
 
 		// Build a durable failure report (the swarm streams test output through the

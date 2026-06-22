@@ -247,6 +247,9 @@ const PaneA = ({ state }: { state: TuiState }) => (
 
 		{state.phase === "teardown" ? (
 			<box style={{ flexDirection: "column", flexShrink: 0 }}>
+				{/* Results are already known entering teardown — show them now instead
+				    of waiting for teardown to finish. */}
+				{state.summary ? <SummaryList state={state} /> : null}
 				<ProgressBar
 					color={COLOR.yellow}
 					done={state.sandboxesDone}
