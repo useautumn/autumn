@@ -246,6 +246,51 @@ const pumpStream = async <T extends string | Uint8Array>(
 	}
 };
 
+/** Transient gRPC/transport faults reaching a sandbox's exec endpoint — retryable
+ * (DNS not yet propagated, momentary UNAVAILABLE), vs a real command error. */
+const isTransientExecError = (error: unknown): boolean => {
+	const message = error instanceof Error ? error.message : String(error);
+	const code = (error as { code?: number })?.code;
+	return (
+		code === 14 /* gRPC UNAVAILABLE */ ||
+		/UNAVAILABLE|Name resolution failed|ECONNREFUSED|ECONNRESET|connection (closed|reset|refused)|deadline exceeded|temporarily unavailable|no healthy upstream/i.test(
+			message,
+		)
+	);
+};
+
+const EXEC_RETRIES = 5;
+
+/**
+ * Wrap a `sb.exec(...)` START in retry-with-backoff for transient transport
+ * faults. One flaky `TaskExecStart` (e.g. "Name resolution failed for target
+ * …w.modal.host") shouldn't kill the warm-up or a worker boot — at N=200 a few
+ * are expected. Only the START is retried; once a process is returned, streaming
+ * faults are handled by swallowStreamClose / WorkerDeathError.
+ */
+const withExecRetry = async <T>(
+	label: string,
+	start: () => Promise<T>,
+): Promise<T> => {
+	for (let attempt = 0; ; attempt++) {
+		try {
+			return await start();
+		} catch (error) {
+			if (attempt >= EXEC_RETRIES || !isTransientExecError(error)) {
+				throw error;
+			}
+			const delayMs =
+				Math.min(8000, 500 * 2 ** attempt) + Math.floor(Math.random() * 300);
+			narrate(
+				chalk.yellow(
+					`[modal] ${label}: exec start failed transiently (${(error as Error).message?.slice(0, 70)}…) — retry ${attempt + 1}/${EXEC_RETRIES} in ${delayMs}ms`,
+				),
+			);
+			await sleep(delayMs);
+		}
+	}
+};
+
 /** Clone the repo into /repo at the ref (Modal create doesn't clone git). */
 const cloneRepo = async (
 	sandbox: Sandbox,
@@ -276,11 +321,13 @@ const cloneRepo = async (
 	// doesn't exist until THIS clone creates it — execing there fails with
 	// "Unable to read current working directory".
 	const done = stage(`clone repo @ ${source.revision}`);
-	const proc = await sandbox.exec(["bash", "-lc", script], {
-		stdout: "pipe",
-		stderr: "pipe",
-		workdir: "/",
-	});
+	const proc = await withExecRetry("clone", () =>
+		sandbox.exec(["bash", "-lc", script], {
+			stdout: "pipe",
+			stderr: "pipe",
+			workdir: "/",
+		}),
+	);
 	let stderrText = "";
 	await Promise.all([
 		pumpStream(proc.stdout, (text) => sink(text)),
@@ -532,12 +579,14 @@ const makeModalProvider = (v2: boolean): ProviderImpl => ({
 		onChunk: (text: string) => void,
 		opts?: RunStreamingOptions,
 	): Promise<RunStreamingResult> {
-		const proc = await unwrap(sandbox).exec(argv, {
-			stdout: "pipe",
-			stderr: "pipe",
-			workdir: MODAL_REPO_ROOT,
-			env: opts?.env,
-		});
+		const proc = await withExecRetry("exec", () =>
+			unwrap(sandbox).exec(argv, {
+				stdout: "pipe",
+				stderr: "pipe",
+				workdir: MODAL_REPO_ROOT,
+				env: opts?.env,
+			}),
+		);
 		let stderrText = "";
 		const pumps = Promise.all([
 			pumpStream(proc.stdout, onChunk),
@@ -562,12 +611,14 @@ const makeModalProvider = (v2: boolean): ProviderImpl => ({
 		argv: string[],
 		opts: RunDetachedOptions,
 	): Promise<DetachedCommand> {
-		const proc = await unwrap(sandbox).exec(argv, {
-			stdout: "pipe",
-			stderr: "pipe",
-			workdir: opts.cwd ?? MODAL_REPO_ROOT,
-			env: opts.env,
-		});
+		const proc = await withExecRetry("boot", () =>
+			unwrap(sandbox).exec(argv, {
+				stdout: "pipe",
+				stderr: "pipe",
+				workdir: opts.cwd ?? MODAL_REPO_ROOT,
+				env: opts.env,
+			}),
+		);
 		// Long-lived (boot/server): drain output in the background; resolve `wait`
 		// only if/when the process exits. Modal exec returns immediately.
 		void pumpStream(proc.stdout, opts.onChunk).catch(() => {
