@@ -1,5 +1,4 @@
-import { cn } from "../../lib/utils";
-import { Badge } from "./badge";
+import { Badge, cn } from "@autumn/ui";
 
 export function BetaBadge({ className }: { className?: string }) {
 	return (

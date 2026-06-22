@@ -1,9 +1,8 @@
 /* eslint-disable react-refresh/only-export-components */
 
+import { Button, type ButtonProps, cn } from "@autumn/ui";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { cn } from "../../lib/utils";
-import { Button, type ButtonProps } from "./button";
 
 const iconButtonVariants = cva(
 	"", // Empty base - we'll use buttonVariants as base

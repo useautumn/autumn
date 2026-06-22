@@ -1,4 +1,4 @@
-import { cn } from "../../lib/utils";
+import { cn } from "@autumn/ui";
 
 interface SectionTagProps {
 	children: React.ReactNode;

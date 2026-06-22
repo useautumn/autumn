@@ -1,8 +1,7 @@
 "use client";
 
+import { cn, hasSubmitShortcutModifier } from "@autumn/ui";
 import { Switch as SwitchPrimitive } from "@base-ui/react/switch";
-
-import { cn, hasSubmitShortcutModifier } from "../../lib/utils";
 
 function Switch({
 	className,

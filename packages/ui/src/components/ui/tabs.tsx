@@ -1,9 +1,8 @@
 "use client";
 
+import { cn } from "@autumn/ui";
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
 import * as React from "react";
-
-import { cn } from "../../lib/utils";
 
 function Tabs({ ...props }: TabsPrimitive.Root.Props) {
 	return <TabsPrimitive.Root data-slot="tabs" {...props} />;

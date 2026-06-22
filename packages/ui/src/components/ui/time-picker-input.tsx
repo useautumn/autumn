@@ -2,15 +2,16 @@
  * Individual time-segment input (hours / minutes / 12hours).
  * Adapted from openstatusHQ/time-picker (MIT).
  */
-import React, { useEffect, useMemo, useState } from "react";
-import { cn } from "../../lib/utils";
+
 import {
+	cn,
 	getArrowByType,
 	getDateByType,
 	type Period,
 	setDateByType,
 	type TimePickerType,
-} from "./time-picker-utils";
+} from "@autumn/ui";
+import React, { useEffect, useMemo, useState } from "react";
 
 export interface TimePickerInputProps
 	extends React.InputHTMLAttributes<HTMLInputElement> {

@@ -1,8 +1,7 @@
+import { cn } from "@autumn/ui";
 import { Radio } from "@base-ui/react/radio";
 import { RadioGroup as RadioGroupPrimitive } from "@base-ui/react/radio-group";
 import * as React from "react";
-
-import { cn } from "../../lib/utils";
 
 const RadioGroup = React.forwardRef<HTMLDivElement, RadioGroupPrimitive.Props>(
 	({ className, ...props }, ref) => {

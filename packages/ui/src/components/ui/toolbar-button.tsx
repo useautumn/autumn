@@ -1,7 +1,6 @@
+import { Button, type ButtonProps, cn } from "@autumn/ui";
 import { EllipsisVertical } from "lucide-react";
 import { forwardRef } from "react";
-import { cn } from "../../lib/utils";
-import { Button, type ButtonProps } from "./button";
 
 export const ToolbarButton = forwardRef<HTMLButtonElement, ButtonProps>(
 	(props, ref) => {

@@ -1,8 +1,3 @@
-import { CheckIcon, ChevronDownIcon } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
-import { cn } from "../../lib/utils";
 import {
 	Command,
 	CommandEmpty,
@@ -10,9 +5,16 @@ import {
 	CommandInput,
 	CommandItem,
 	CommandList,
-} from "./command";
-import { Popover, PopoverContent, PopoverTrigger } from "./popover";
-import { SmallSpinner } from "./small-spinner";
+	cn,
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+	SmallSpinner,
+} from "@autumn/ui";
+import { CheckIcon, ChevronDownIcon } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 
 export type SearchableSelectProps<T> = {
 	value: string | null;

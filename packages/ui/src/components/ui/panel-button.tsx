@@ -1,5 +1,5 @@
+import { cn } from "@autumn/ui";
 import type { ReactNode } from "react";
-import { cn } from "../../lib/utils";
 
 interface PanelButtonProps {
 	isSelected: boolean;

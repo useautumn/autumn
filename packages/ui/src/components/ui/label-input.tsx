@@ -1,6 +1,6 @@
+import { Input } from "@autumn/ui";
 import type React from "react";
 import { useId } from "react";
-import { Input } from "./input";
 
 export const LabelInput = ({
 	label,

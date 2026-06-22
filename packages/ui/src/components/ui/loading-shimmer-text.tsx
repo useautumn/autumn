@@ -1,5 +1,4 @@
-import { cn } from "../../lib/utils";
-import { SmallSpinner } from "./small-spinner";
+import { cn, SmallSpinner } from "@autumn/ui";
 
 interface LoadingShimmerTextProps {
 	text: string;

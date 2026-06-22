@@ -1,5 +1,5 @@
+import { cn } from "@autumn/ui";
 import type { ComponentProps, ReactNode } from "react";
-import { cn } from "../../lib/utils";
 
 interface InlineActionProps extends ComponentProps<"button"> {
 	icon?: ReactNode;

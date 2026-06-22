@@ -1,7 +1,6 @@
+import { cn } from "@autumn/ui";
 import { Field } from "@base-ui/react/field";
 import type * as React from "react";
-
-import { cn } from "../../lib/utils";
 
 function Label({ className, ...props }: Field.Label.Props) {
 	return (

@@ -1,3 +1,11 @@
+import {
+	cn,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@autumn/ui";
 import { format, setMonth, setYear } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type * as React from "react";
@@ -7,14 +15,6 @@ import {
 	useDayPicker,
 	useNavigation,
 } from "react-day-picker";
-import { cn } from "../../lib/utils";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "./select";
 
 const MONTHS = [
 	"January",

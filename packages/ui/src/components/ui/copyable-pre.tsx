@@ -1,6 +1,6 @@
+import { CopyButton } from "@autumn/ui";
 import { Check, Copy } from "lucide-react";
 import React from "react";
-import { CopyButton } from "./copy-button";
 
 export function CopyablePre({ text }: { text: string }) {
 	return (

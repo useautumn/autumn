@@ -1,7 +1,6 @@
+import { cn } from "@autumn/ui";
 import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area";
 import type * as React from "react";
-
-import { cn } from "../../lib/utils";
 
 function ScrollArea({
 	className,

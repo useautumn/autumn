@@ -1,8 +1,7 @@
+import { cn } from "@autumn/ui";
 import { X } from "lucide-react";
 import * as React from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-
-import { cn } from "../../lib/utils";
 
 interface TagInputProps
 	extends Omit<React.ComponentProps<"input">, "value" | "onChange"> {

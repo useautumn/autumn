@@ -1,6 +1,5 @@
+import { Button, type ButtonProps, cn } from "@autumn/ui";
 import { useHotkeys } from "react-hotkeys-hook";
-import { cn } from "../../lib/utils";
-import { Button, type ButtonProps } from "./button";
 
 export const ShortcutButton = ({
 	metaShortcut,
