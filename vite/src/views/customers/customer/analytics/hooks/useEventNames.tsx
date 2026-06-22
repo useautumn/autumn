@@ -24,22 +24,14 @@ export const useEventNames = ({
 	const { data, isLoading, error } = useQuery({
 		queryKey: buildKey(["query-event-names-list", limit, interval, start, end]),
 		queryFn: async () => {
-			const params = new URLSearchParams();
-			if (limit) {
-				params.set("limit", String(limit));
-			}
-			if (interval) {
-				params.set("interval", interval);
-			}
-			if (start != null) {
-				params.set("start", String(start));
-			}
-			if (end != null) {
-				params.set("end", String(end));
-			}
-			const query = params.toString();
-			const url = `/query/event_names/list${query ? `?${query}` : ""}`;
-			const { data } = await axiosInstance.get(url);
+			const { data } = await axiosInstance.get("/query/event_names/list", {
+				params: {
+					limit,
+					interval,
+					start: start ?? undefined,
+					end: end ?? undefined,
+				},
+			});
 			return data;
 		},
 	});
