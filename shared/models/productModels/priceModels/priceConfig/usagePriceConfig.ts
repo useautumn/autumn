@@ -28,6 +28,8 @@ export const UsageTierSchema = z
 		...val,
 		amount: val.amount ?? 0,
 	}))
+	// Explicit output schema so zod-openapi can serialize this in response/webhook
+	// schemas (it rejects bare transforms) while keeping `amount` a required number.
 	// zod-openapi can't serialize transforms in output schemas; pipe declares the output shape
 	.pipe(
 		z.object({

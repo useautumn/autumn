@@ -22412,6 +22412,235 @@ paths:
                 organization_slug="acme",
                 env="test",
             )
+  /v1/keys.mint:
+    post:
+      operationId: mintKey
+      description: Mints a per-customer token (a scoped `am_jwt_` credential) so a
+        downstream / self-hosted app can call Autumn directly without your
+        secret key. Returns a short-lived access token plus a rotating refresh
+        token, both bound to the given customer. Authenticated with your secret
+        key.
+      tags:
+        - keys
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: The customer to mint a token for.
+                indefinite:
+                  type: boolean
+                  description: If true, mint a non-expiring access token (no refresh token).
+                    Revoke via keys.revoke.
+              required:
+                - customer_id
+              title: MintKeyParams
+              examples:
+                - &a88
+                  customer_id: cus_123
+            example: *a88
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: Access token (1h, or non-expiring if indefinite), prefixed
+                      `am_jwt_`.
+                  refresh_token:
+                    type: string
+                    description: Rotating refresh token (24h). Omitted for indefinite tokens.
+                  expires_at:
+                    anyOf:
+                      - type: number
+                      - type: "null"
+                    description: Access-token expiry, ms since epoch. null for indefinite tokens.
+                  refresh_expires_at:
+                    type: number
+                    description: Refresh-token expiry, ms since epoch. Omitted for indefinite
+                      tokens.
+                required:
+                  - access_token
+                  - expires_at
+                examples:
+                  - &a89
+                    access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
+                    refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
+                    expires_at: 1781113864000
+                    refresh_expires_at: 1781196664000
+              example: *a89
+      x-speakeasy-name-override: mint
+      parameters:
+        - *a5
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.keys.mint({
+              customerId: "cus_123",
+            });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.keys.mint(customer_id="cus_123")
+  /v1/keys.refresh:
+    post:
+      operationId: refreshKey
+      description: Exchanges a refresh token (sent as the Bearer credential) for a
+        freshly rotated access + refresh pair. Self-service for the token holder
+        — no secret key required. The previous refresh token is honored for one
+        rotation as a grace window; replaying an older one revokes the
+        customer's tokens.
+      tags:
+        - keys
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              title: RefreshKeyParams
+              description: No body. The refresh token is supplied as the Bearer credential;
+                the response is a freshly rotated access + refresh pair.
+              examples:
+                - &a90 {}
+            example: *a90
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: Access token (1h, or non-expiring if indefinite), prefixed
+                      `am_jwt_`.
+                  refresh_token:
+                    type: string
+                    description: Rotating refresh token (24h). Omitted for indefinite tokens.
+                  expires_at:
+                    anyOf:
+                      - type: number
+                      - type: "null"
+                    description: Access-token expiry, ms since epoch. null for indefinite tokens.
+                  refresh_expires_at:
+                    type: number
+                    description: Refresh-token expiry, ms since epoch. Omitted for indefinite
+                      tokens.
+                required:
+                  - access_token
+                  - expires_at
+                examples:
+                  - &a91
+                    access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
+                    refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
+                    expires_at: 1781113864000
+                    refresh_expires_at: 1781196664000
+              example: *a91
+      x-speakeasy-name-override: refresh
+      parameters:
+        - *a5
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.keys.refresh({});
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.keys.refresh(
+                request={},
+            )
+  /v1/keys.revoke:
+    post:
+      operationId: revokeKey
+      description: Revokes every outstanding token (access and refresh) for a
+        customer. Authenticated with your secret key. New tokens can be issued
+        afterwards with `keys.mint`.
+      tags:
+        - keys
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: The customer whose tokens (every outstanding access + refresh
+                    token) should be revoked.
+              required:
+                - customer_id
+              title: RevokeKeyParams
+              examples:
+                - &a92
+                  customer_id: cus_123
+            example: *a92
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  revoked:
+                    const: true
+                required:
+                  - revoked
+                examples:
+                  - &a93
+                    revoked: true
+              example: *a93
+      x-speakeasy-name-override: revoke
+      parameters:
+        - *a5
+      x-codeSamples:
+        - lang: typescript
+          label: Typescript (SDK)
+          source: |-
+            import { Autumn } from 'autumn-js'
+
+            const autumn = new Autumn()
+
+            const result = await autumn.keys.revoke({
+              customerId: "cus_123",
+            });
+        - lang: python
+          label: Python (SDK)
+          source: |-
+            from autumn_sdk import Autumn
+
+            autumn = Autumn(secret_key="am_sk_test...")
+
+            res = autumn.keys.revoke(customer_id="cus_123")
 security:
   - secretKey: []
 x-speakeasy-globals:

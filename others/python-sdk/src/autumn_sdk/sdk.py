@@ -33,6 +33,7 @@ if TYPE_CHECKING:
     from autumn_sdk.entities import Entities
     from autumn_sdk.events import Events
     from autumn_sdk.features import Features
+    from autumn_sdk.keys import Keys
     from autumn_sdk.plans import Plans
     from autumn_sdk.platform import Platform
     from autumn_sdk.referrals import Referrals
@@ -50,6 +51,7 @@ class Autumn(BaseSDK):
     referrals: "Referrals"
     rewards: "RewardsSDK"
     platform: "Platform"
+    keys: "Keys"
     _sub_sdk_map = {
         "customers": ("autumn_sdk.customers", "Customers"),
         "plans": ("autumn_sdk.plans", "Plans"),
@@ -61,6 +63,7 @@ class Autumn(BaseSDK):
         "referrals": ("autumn_sdk.referrals", "Referrals"),
         "rewards": ("autumn_sdk.rewards_sdk", "RewardsSDK"),
         "platform": ("autumn_sdk.platform", "Platform"),
+        "keys": ("autumn_sdk.keys", "Keys"),
     }
 
     def __init__(

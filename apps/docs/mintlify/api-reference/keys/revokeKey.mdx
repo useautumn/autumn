@@ -1,0 +1,47 @@
+---
+title: "Revoke"
+openapi: "openapi POST /v1/keys.revoke"
+---
+
+import { DynamicParamField } from "/snippets/dynamic-param-field.jsx";
+import { DynamicResponseField } from "/snippets/dynamic-response-field.jsx";
+import { DynamicResponseExample } from "/snippets/dynamic-response-example.jsx";
+
+<Note>
+  Revokes every outstanding token — access and refresh — for a customer. Authenticated with your **secret key**. Issue new tokens afterwards with [`keys.mint`](/api-reference/keys/mintKey).
+</Note>
+
+<CodeGroup>
+
+```typescript TypeScript
+await autumn.keys.revoke({ customerId: "cus_123" });
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/keys.revoke" \
+  -H "Authorization: Bearer am_sk_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{ "customer_id": "cus_123" }'
+```
+
+</CodeGroup>
+
+### Body Parameters
+
+<DynamicParamField body="customer_id" type="string" required>
+  The customer whose tokens (every outstanding access + refresh token) should be revoked.
+</DynamicParamField>
+
+
+### Response
+
+<DynamicResponseField name="revoked" type="any" />
+
+
+<ResponseExample>
+```json 200
+{
+  "revoked": true
+}
+```
+</ResponseExample>

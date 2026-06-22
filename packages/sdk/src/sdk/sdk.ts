@@ -15,6 +15,7 @@ import { Customers } from "./customers.js";
 import { Entities } from "./entities.js";
 import { Events } from "./events.js";
 import { Features } from "./features.js";
+import { Keys } from "./keys.js";
 import { Plans } from "./plans.js";
 import { Platform } from "./platform.js";
 import { Referrals } from "./referrals.js";
@@ -69,6 +70,11 @@ export class Autumn extends ClientSDK {
   private _platform?: Platform;
   get platform(): Platform {
     return (this._platform ??= new Platform(this._options));
+  }
+
+  private _keys?: Keys;
+  get keys(): Keys {
+    return (this._keys ??= new Keys(this._options));
   }
 
   /**

@@ -71,12 +71,22 @@ export const setupBillingCycleAnchor = ({
 		? secondsToMs(stripeSubscription?.trial_end)
 		: undefined;
 
-	const newIsTrialing =
-		(trialContext?.trialEndsAt && trialContext.trialEndsAt > currentEpochMs) ??
-		stripeTrialEndsAtMs;
+	// When trialContext carries a trial end, it wins (future = trialing, past =
+	// not). Only when it's absent do we defer to the existing Stripe trial.
+	const newIsTrialing: boolean =
+		trialContext?.trialEndsAt != null
+			? trialContext.trialEndsAt > currentEpochMs
+			: stripeTrialEndsAtMs != null;
 
-	// Billing cycle anchor = trial ends at if exists
-	if (newIsTrialing) return trialContext?.trialEndsAt ?? "now";
+	// Billing cycle anchor = trial ends at if exists.
+	if (newIsTrialing) {
+		if (trialContext?.trialEndsAt) return trialContext.trialEndsAt;
+		// Downgrading to Free while the current product is still trialing: let the
+		// trial run out and have Free take over at trial end, not now + 1 cycle.
+		// (Upgrades to a paid no-trial product instead end the trial now.)
+		if (newIsFree && stripeTrialEndsAtMs != null) return stripeTrialEndsAtMs;
+		return "now";
+	}
 
 	const stripeAnchorMs = secondsToMs(stripeSubscription?.billing_cycle_anchor);
 

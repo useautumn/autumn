@@ -1,12 +1,14 @@
 import type Stripe from "stripe";
-import type { SyncParamsV1 } from "../../../api/billing/sync/syncParamsV1";
-import type { SyncPlanInstance } from "../../../api/billing/sync/syncParamsV1";
+import type {
+	SyncParamsV1,
+	SyncPlanInstance,
+} from "../../../api/billing/sync/syncParamsV1";
+import type { Entity } from "../../cusModels/entityModels/entityModels";
+import type { FullCustomer } from "../../cusModels/fullCusModel";
 import type {
 	FeatureOptions,
 	FullCusProduct,
 } from "../../cusProductModels/cusProductModels";
-import type { FullCustomer } from "../../cusModels/fullCusModel";
-import type { Entity } from "../../cusModels/entityModels/entityModels";
 import type { Entitlement } from "../../productModels/entModels/entModels";
 import type { Price } from "../../productModels/priceModels/priceModels";
 import type { FullProduct } from "../../productModels/productModels";
@@ -46,4 +48,8 @@ export interface SyncBillingContext {
 
 	currentEpochMs: number;
 	acknowledgedWarnings: NonNullable<SyncParamsV1["acknowledge_warnings"]>;
+
+	/** Carry an expired plan's consumed usage onto the replacement plan's
+	 * balances for shared features on the same subject. Defaults to true. */
+	carryOverUsage: boolean;
 }

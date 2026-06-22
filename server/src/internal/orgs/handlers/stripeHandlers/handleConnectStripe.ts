@@ -1,4 +1,4 @@
-import { AppEnv, type StripeConfig, Scopes } from "@autumn/shared";
+import { AppEnv, Scopes, type StripeConfig } from "@autumn/shared";
 import { z } from "zod/v4";
 import { ensureStripeProductsWithEnv } from "@/external/stripe/stripeEnsureUtils.js";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
@@ -42,16 +42,21 @@ export const handleConnectStripe = createRoute({
 				orgId: org.id,
 				secretKey: body.secret_key,
 				env,
+				org,
 			});
 
+			/**
+			 * Always mirror the result. handleStripeSecretKey deletes any stale direct
+			 * endpoint, so its returned secret is authoritative — a fresh secret, or
+			 * null when creation was skipped under OAuth. Writing null clears the dead
+			 * secret so the DB never references a deleted endpoint.
+			 */
 			if (env === AppEnv.Sandbox) {
 				configUpdates.test_api_key = result.test_api_key;
-				configUpdates.test_webhook_secret =
-					result.test_webhook_secret ?? undefined;
+				configUpdates.test_webhook_secret = result.test_webhook_secret ?? null;
 			} else {
 				configUpdates.live_api_key = result.live_api_key;
-				configUpdates.live_webhook_secret =
-					result.live_webhook_secret ?? undefined;
+				configUpdates.live_webhook_secret = result.live_webhook_secret ?? null;
 			}
 		}
 

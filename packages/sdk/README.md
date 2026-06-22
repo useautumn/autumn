@@ -307,7 +307,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782122344554,"plans":[{"planId":"trial_plan"}]},{"startsAt":1783331944554,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782132368359,"plans":[{"planId":"trial_plan"}]},{"startsAt":1783341968359,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -739,6 +739,12 @@ const response = await client.features.delete({ featureId: "old-feature" });
 
 @returns A success flag indicating the feature was deleted.
 
+### [Keys](docs/sdks/keys/README.md)
+
+* [mint](docs/sdks/keys/README.md#mint) - Mints a per-customer token (a scoped `am_jwt_` credential) so a downstream / self-hosted app can call Autumn directly without your secret key. Returns a short-lived access token plus a rotating refresh token, both bound to the given customer. Authenticated with your secret key.
+* [refresh](docs/sdks/keys/README.md#refresh) - Exchanges a refresh token (sent as the Bearer credential) for a freshly rotated access + refresh pair. Self-service for the token holder — no secret key required. The previous refresh token is honored for one rotation as a grace window; replaying an older one revokes the customer's tokens.
+* [revoke](docs/sdks/keys/README.md#revoke) - Revokes every outstanding token (access and refresh) for a customer. Authenticated with your secret key. New tokens can be issued afterwards with `keys.mint`.
+
 ### [Plans](docs/sdks/plans/README.md)
 
 * [create](docs/sdks/plans/README.md#create) - Create a plan
@@ -843,7 +849,7 @@ Use this endpoint to schedule future plan changes (e.g. switch from a trial plan
 @example
 ```typescript
 // Schedule a transition from a trial plan to a paid plan
-const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782122344554,"plans":[{"planId":"trial_plan"}]},{"startsAt":1783331944554,"plans":[{"planId":"pro_plan"}]}] });
+const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782132368359,"plans":[{"planId":"trial_plan"}]},{"startsAt":1783341968359,"plans":[{"planId":"pro_plan"}]}] });
 ```
 
 @param customerId - The ID of the customer to create the schedule for.
@@ -1294,6 +1300,9 @@ const response = await client.features.update({ featureId: "deprecated-feature",
 @param newFeatureId - The new ID of the feature. Feature ID can only be updated if it's not being used by any customers. (optional)
 
 @returns The updated feature object.
+- [`keysMint`](docs/sdks/keys/README.md#mint) - Mints a per-customer token (a scoped `am_jwt_` credential) so a downstream / self-hosted app can call Autumn directly without your secret key. Returns a short-lived access token plus a rotating refresh token, both bound to the given customer. Authenticated with your secret key.
+- [`keysRefresh`](docs/sdks/keys/README.md#refresh) - Exchanges a refresh token (sent as the Bearer credential) for a freshly rotated access + refresh pair. Self-service for the token holder — no secret key required. The previous refresh token is honored for one rotation as a grace window; replaying an older one revokes the customer's tokens.
+- [`keysRevoke`](docs/sdks/keys/README.md#revoke) - Revokes every outstanding token (access and refresh) for a customer. Authenticated with your secret key. New tokens can be issued afterwards with `keys.mint`.
 - [`plansCreate`](docs/sdks/plans/README.md#create) - Create a plan
 - [`plansDelete`](docs/sdks/plans/README.md#delete) - Delete a plan
 - [`plansGet`](docs/sdks/plans/README.md#get) - Get a plan
