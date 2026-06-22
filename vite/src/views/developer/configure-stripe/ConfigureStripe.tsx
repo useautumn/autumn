@@ -1,4 +1,3 @@
-import { AppEnv } from "@autumn/shared";
 import {
 	KeyIcon,
 	LinkBreakIcon,
@@ -17,7 +16,6 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/v2/cards/Card";
-import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -25,7 +23,7 @@ import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
 import { getStripeDashboardLink } from "@/utils/linkUtils";
 import ConnectStripeDialog from "@/views/onboarding2/ConnectStripeDialog";
-import { DisconnectStripePopover } from "./DisconnectStripePopover";
+import { DisconnectStripeDialog } from "./DisconnectStripeDialog";
 import { StripeAccountMismatchBanner } from "./StripeAccountMismatchBanner";
 import { StripeChannelCell } from "./StripeChannelCell";
 import { StripeCheckoutSettings } from "./StripeCheckoutSettings";
@@ -38,16 +36,12 @@ export const ConfigureStripe = () => {
 		useOrgStripeQuery();
 	const axiosInstance = useAxiosInstance();
 	const { params, clear: clearOAuthParams } = useStripeOAuthParams();
-	const flags = useAutumnFlags();
 	const env = useEnv();
 
 	const [showConnectDialog, setShowConnectDialog] = useState(false);
 	const [secretKeyMismatch, setSecretKeyMismatch] = useState<string | null>(
 		null,
 	);
-
-	const canPasteSecretKey =
-		flags.stripe_key === true || flags.platform === true;
 
 	// One banner for both flows: OAuth reports the mismatch via redirect params,
 	// the secret key via the connect-dialog error callback.
@@ -79,14 +73,14 @@ export const ConfigureStripe = () => {
 	const accountName =
 		stripeAccount?.business_profile?.name ||
 		stripeAccount?.settings?.dashboard?.display_name;
-	const accountSuffix = accountName ? ` (${accountName})` : "";
+	const connectedSubtitle = accountName || "Connected";
 
 	const dashboardUrl = anyConnected
 		? getStripeDashboardLink({ env, accountId: stripeAccount?.id })
 		: null;
 
 	const description =
-		"Connect a secret key, OAuth, or both. By default the secret key is used if connected, otherwise OAuth. Both methods must be the same Stripe account.";
+		"Connect a secret key, OAuth, or both. The secret key is preferred when both are connected. Both must be the same Stripe account.";
 
 	return (
 		<div className="flex flex-col gap-4">
@@ -100,7 +94,9 @@ export const ConfigureStripe = () => {
 			<div className="flex flex-col gap-4">
 				<Card className="bg-interactive-secondary shadow-none">
 					<CardHeader>
-						<CardTitle>Connect your Stripe account</CardTitle>
+						<CardTitle className="text-base">
+							Connect your Stripe account
+						</CardTitle>
 						{isLoadingStripeAccount ? (
 							<div className="space-y-2">
 								<Skeleton className="h-4 w-full" />
@@ -128,49 +124,47 @@ export const ConfigureStripe = () => {
 					</CardHeader>
 
 					<CardContent className="flex flex-col">
-						{(canPasteSecretKey || secretKeyConnected) && (
-							<StripeChannelCell
-								title="Secret Key"
-								withBorder
-								subtitle={
-									secretKeyConnected
-										? `Connected${accountSuffix}`
-										: "Your Stripe API secret key. Used for all operations, and preferred over OAuth when both are connected."
-								}
-								connected={secretKeyConnected}
-								action={
-									secretKeyConnected ? (
-										<DisconnectStripePopover
-											channel="secret_key"
-											label="Disconnect"
-											icon={<LinkBreakIcon />}
-											onSuccess={mutate}
-										/>
-									) : (
-										<Button
-											variant="primary"
-											className="gap-1.5"
-											onClick={() => setShowConnectDialog(true)}
-										>
-											<KeyIcon />
-											Connect
-										</Button>
-									)
-								}
-							/>
-						)}
+						<StripeChannelCell
+							title="Secret Key"
+							withBorder
+							subtitle={
+								secretKeyConnected
+									? connectedSubtitle
+									: "Your Stripe API secret key, used for all operations."
+							}
+							connected={secretKeyConnected}
+							action={
+								secretKeyConnected ? (
+									<DisconnectStripeDialog
+										channel="secret_key"
+										label="Disconnect"
+										icon={<LinkBreakIcon />}
+										onSuccess={mutate}
+									/>
+								) : (
+									<Button
+										variant="primary"
+										className="w-full gap-1.5"
+										onClick={() => setShowConnectDialog(true)}
+									>
+										<KeyIcon />
+										Connect
+									</Button>
+								)
+							}
+						/>
 
 						<StripeChannelCell
 							title="OAuth"
 							subtitle={
 								oauthConnected
-									? `Connected${accountSuffix}`
-									: "Sign in with Stripe Connect. Allows the Autumn team to access your Stripe organization via Connect for support."
+									? connectedSubtitle
+									: "Sign in with Stripe Connect. Using this method means the Autumn team can access your account for support."
 							}
 							connected={oauthConnected}
 							action={
 								oauthConnected ? (
-									<DisconnectStripePopover
+									<DisconnectStripeDialog
 										channel="oauth"
 										label="Disconnect"
 										icon={<LinkBreakIcon />}
@@ -179,7 +173,7 @@ export const ConfigureStripe = () => {
 								) : (
 									<Button
 										variant="primary"
-										className="gap-1.5"
+										className="w-full gap-1.5"
 										disabled={startOAuth.isPending}
 										onClick={() => startOAuth.mutate()}
 									>

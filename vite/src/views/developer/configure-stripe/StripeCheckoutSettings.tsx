@@ -2,7 +2,13 @@ import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/v2/buttons/Button";
-import { FormLabel } from "@/components/v2/form/FormLabel";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/v2/cards/Card";
 import { Input } from "@/components/v2/inputs/Input";
 import { CurrencySelect } from "@/components/v2/selects/CurrencySelect";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -36,47 +42,65 @@ export const StripeCheckoutSettings = () => {
 			}),
 		onSuccess: async () => {
 			await mutate();
-			toast.success("Successfully connected to Stripe");
+			toast.success("Checkout settings saved");
 		},
 		onError: (error) =>
-			toast.error(getBackendErr(error, "Failed to connect Stripe")),
+			toast.error(getBackendErr(error, "Failed to save checkout settings")),
 	});
 
 	return (
 		<>
-			<div>
-				<FormLabel className="mb-1">
-					<span className="text-muted-foreground">Success URL</span>
-				</FormLabel>
-				<p className="mb-2 text-sm text-tertiary-foreground">
-					This will be the default URL that users are redirected to after a
-					successful checkout session. It can be overriden through the API.
-				</p>
-				<Input
-					value={successUrl}
-					onChange={(e) => setSuccessUrl(e.target.value)}
-					placeholder="eg. https://useautumn.com"
-					className={cn(urlError && "border-red-500")}
-				/>
-				{urlError && <p className="mt-1 text-red-500 text-sm">{urlError}</p>}
-			</div>
+			<Card className="bg-interactive-secondary shadow-none">
+				<CardHeader>
+					<CardTitle className="text-base">Checkout settings</CardTitle>
+					<CardDescription>
+						Defaults applied to every checkout session. Both settings can be
+						overridden through the API.
+					</CardDescription>
+				</CardHeader>
 
-			<div>
-				<FormLabel className="mb-1">
-					<span className="text-muted-foreground">Default Currency</span>
-				</FormLabel>
-				<p className="mb-2 text-sm text-tertiary-foreground">
-					This currency that your prices will be created in. This setting is
-					shared between your sandbox and production environment.
-				</p>
-				<CurrencySelect
-					defaultCurrency={currency.toUpperCase()}
-					setDefaultCurrency={setCurrency}
-				/>
-			</div>
+				<CardContent className="flex flex-col gap-4">
+					<div className="flex flex-col gap-1.5">
+						<span className="text-foreground text-sm font-medium">
+							Success URL
+						</span>
+						<span className="text-sm text-tertiary-foreground">
+							The URL users are redirected to after a successful checkout
+							session.
+						</span>
+						<Input
+							value={successUrl}
+							onChange={(e) => setSuccessUrl(e.target.value)}
+							placeholder="eg. https://useautumn.com"
+							className={cn(
+								"mt-1 !bg-background",
+								urlError && "border-red-500",
+							)}
+						/>
+						{urlError && <p className="text-red-500 text-sm">{urlError}</p>}
+					</div>
+
+					<div className="flex flex-col gap-1.5">
+						<span className="text-foreground text-sm font-medium">
+							Default currency
+						</span>
+						<span className="text-sm text-tertiary-foreground">
+							The currency your prices are created in. Shared between sandbox
+							and production.
+						</span>
+						<div className="mt-1">
+							<CurrencySelect
+								className="!bg-background"
+								defaultCurrency={currency.toUpperCase()}
+								setDefaultCurrency={setCurrency}
+							/>
+						</div>
+					</div>
+				</CardContent>
+			</Card>
 
 			<Button
-				className="mt-2 w-full"
+				className="w-full"
 				disabled={!canSave}
 				onClick={() => save.mutate()}
 				isLoading={save.isPending}

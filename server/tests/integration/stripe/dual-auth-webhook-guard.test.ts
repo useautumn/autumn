@@ -27,12 +27,14 @@ const calls = {
 };
 
 let staleWebhooks: Array<{ id: string; url: string }> = [];
+let deletedIds: string[] = [];
 
 const resetCalls = () => {
 	calls.create = 0;
 	calls.list = 0;
 	calls.del = 0;
 	staleWebhooks = [];
+	deletedIds = [];
 };
 
 mock.module("stripe", () => {
@@ -49,8 +51,9 @@ mock.module("stripe", () => {
 					calls.list++;
 					return { data: staleWebhooks };
 				},
-				del: async () => {
+				del: async (id: string) => {
 					calls.del++;
+					deletedIds.push(id);
 					return {};
 				},
 				create: async () => {
@@ -124,6 +127,59 @@ describe("dual-auth: handleStripeSecretKey webhook guard", () => {
 
 		expect(calls.del).toBe(1);
 		expect(calls.create).toBe(0);
+	});
+
+	// Regression: adding a key under OAuth deletes the org's stale direct endpoint
+	// AND returns a null secret, so the caller clears the now-dead stored secret
+	// instead of leaving it to fail signature verification on later events.
+	test("OAuth connected + a secret already stored -> deletes endpoint and returns null secret to clear it", async () => {
+		staleWebhooks = [
+			{
+				id: "we_stale",
+				url: "https://x/webhooks/stripe/org_webhook_guard/sandbox",
+			},
+		];
+		const org = buildOrg({
+			test_stripe_connect: { account_id: "acct_oauth_existing" },
+			stripe_config: { test_webhook_secret: "whsec_stale_stored" },
+		});
+
+		const result = await handleStripeSecretKey({
+			orgId: org.id,
+			secretKey: "sk_test_added",
+			env: AppEnv.Sandbox,
+			org,
+		});
+
+		expect(deletedIds).toEqual(["we_stale"]);
+		expect(result.test_webhook_secret ?? null).toBeNull();
+	});
+
+	test("deletes only this org's webhook for this env — leaves other env/org alone", async () => {
+		staleWebhooks = [
+			{
+				id: "we_match",
+				url: "https://x/webhooks/stripe/org_webhook_guard/sandbox",
+			},
+			{
+				id: "we_other_env",
+				url: "https://x/webhooks/stripe/org_webhook_guard/live",
+			},
+			{
+				id: "we_other_org",
+				url: "https://x/webhooks/stripe/other_org/sandbox",
+			},
+		];
+		const org = buildOrg();
+
+		await handleStripeSecretKey({
+			orgId: org.id,
+			secretKey: "sk_test_added",
+			env: AppEnv.Sandbox,
+			org,
+		});
+
+		expect(deletedIds).toEqual(["we_match"]);
 	});
 
 	test("no OAuth -> registers direct webhook and returns secret", async () => {
