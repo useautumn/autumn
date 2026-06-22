@@ -16,11 +16,13 @@ import { describe, expect, mock, test } from "bun:test";
 import { AppEnv, type Organization } from "@autumn/shared";
 
 const calls = { create: 0 };
+let createShouldThrow = false;
 
 mock.module("@/external/stripe/stripeOnboardingUtils.js", () => ({
 	checkKeyValid: async () => {},
 	createWebhookEndpoint: async () => {
 		calls.create++;
+		if (createShouldThrow) throw new Error("stripe down");
 		return { secret: "whsec_reregistered" };
 	},
 }));
@@ -64,6 +66,19 @@ describe("dual-auth: re-register direct webhook after OAuth disconnect", () => {
 		});
 
 		expect(calls.create).toBe(0);
+		expect(result).toBeNull();
+	});
+
+	test("returns null when registration fails (caller aborts the disconnect)", async () => {
+		calls.create = 0;
+		createShouldThrow = true;
+		const result = await reRegisterDirectWebhook({
+			org: buildOrg(true),
+			env: AppEnv.Sandbox,
+			logger,
+		});
+		createShouldThrow = false;
+
 		expect(result).toBeNull();
 	});
 });

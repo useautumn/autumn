@@ -1,6 +1,8 @@
 import {
 	AppEnv,
+	ErrCode,
 	type Organization,
+	RecaseError,
 	Scopes,
 	type StripeConfig,
 	type StripeConnectConfig,
@@ -188,12 +190,6 @@ export const handleDeleteStripe = createRoute({
 		}
 
 		if (clearOauth) {
-			try {
-				await deauthorizeOauth({ org, env, logger });
-			} catch (error) {
-				logger.error(`Failed to deauthorize oauth for ${org.slug}`, { error });
-			}
-
 			const clearedConnect = computeClearedStripeConnect({ org, env });
 			const updates: Partial<Organization> =
 				env === AppEnv.Sandbox
@@ -207,23 +203,38 @@ export const handleDeleteStripe = createRoute({
 				env === AppEnv.Sandbox
 					? org.stripe_config?.test_webhook_secret
 					: org.stripe_config?.live_webhook_secret;
-			if (
+			const needsDirectWebhook =
 				!clearSecretKey &&
 				!existingWebhookSecret &&
-				isStripeConnected({ org, env, throughSecretKey: true })
-			) {
+				isStripeConnected({ org, env, throughSecretKey: true });
+
+			// Register the direct webhook BEFORE deauthorizing, so a registration
+			// failure leaves OAuth intact rather than the org with no working webhook.
+			if (needsDirectWebhook) {
 				const webhookSecret = await reRegisterDirectWebhook({
 					org,
 					env,
 					logger,
 				});
-				if (webhookSecret) {
-					const prefix = env === AppEnv.Sandbox ? "test" : "live";
-					updates.stripe_config = {
-						...(org.stripe_config || {}),
-						[`${prefix}_webhook_secret`]: webhookSecret,
-					};
+				if (!webhookSecret) {
+					throw new RecaseError({
+						message:
+							"Couldn't register a direct webhook for your secret key, so OAuth was not disconnected. Please try again.",
+						code: ErrCode.StripeError,
+						statusCode: 502,
+					});
 				}
+				const prefix = env === AppEnv.Sandbox ? "test" : "live";
+				updates.stripe_config = {
+					...(org.stripe_config || {}),
+					[`${prefix}_webhook_secret`]: webhookSecret,
+				};
+			}
+
+			try {
+				await deauthorizeOauth({ org, env, logger });
+			} catch (error) {
+				logger.error(`Failed to deauthorize oauth for ${org.slug}`, { error });
 			}
 
 			await OrgService.update({ db, orgId: org.id, updates });

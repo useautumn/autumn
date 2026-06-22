@@ -22,7 +22,8 @@ export const handleStripeSecretKey = async ({
 	orgId: string;
 	secretKey: string;
 	env: AppEnv;
-	org?: Organization;
+	// Required: the account-match + OAuth double-delivery guards below read from it.
+	org: Organization;
 }) => {
 	// 1. Check if key is valid
 	await checkKeyValid(secretKey);
@@ -31,9 +32,7 @@ export const handleStripeSecretKey = async ({
 
 	// Both channels must point at the same Stripe account, else OAuth webhooks
 	// (account B) would be processed against secret-key billing state (account A).
-	const oauthAccountId = org
-		? orgToAccountId({ org, env, noDefaultAccount: true })
-		: undefined;
+	const oauthAccountId = orgToAccountId({ org, env, noDefaultAccount: true });
 
 	if (oauthAccountId && oauthAccountId !== account.id) {
 		throw new RecaseError({
