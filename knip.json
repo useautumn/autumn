@@ -38,7 +38,7 @@
 			"ignoreDependencies": ["@react-email/components", "@axiomhq/pino"],
 			"ignore": [
 				"src/external/tinybird/connections/eventsS3.ts",
-				"server/src/external/connect/attachSandboxStripeAccount.ts"
+				"src/external/connect/attachSandboxStripeAccount.ts"
 			]
 		},
 		"shared": {
