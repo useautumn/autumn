@@ -121,38 +121,13 @@ export class RolloverService {
 		overwrites: Rollover[];
 	}> {
 		const { db } = ctx;
-
-		// No cap configured → nothing to clear, skip the extra read. Returns the
-		// caller's list as-is, so callers passing an incomplete fullCusEnt (e.g.
-		// the cron's rollovers:[]) must discard the returned rollovers.
-		const rolloverConfig = fullCusEnt.entitlement.rollover;
-		if (
-			!rolloverConfig ||
-			(rolloverConfig.max == null && rolloverConfig.max_percentage == null)
-		) {
-			return {
-				rollovers: [...fullCusEnt.rollovers, ...newRows],
-				deletedIds: [],
-				overwrites: [],
-			};
-		}
-
-		// Source the live rollover set from the DB rather than trusting
-		// fullCusEnt.rollovers, which some callers pass incomplete (the reset
-		// cron hardcodes []). newRows are already inserted, so this includes them.
-		const now = Date.now();
-		const curRollovers = (await db
-			.select()
-			.from(rollovers)
-			.where(
-				and(
-					eq(rollovers.cus_ent_id, fullCusEnt.id),
-					or(isNull(rollovers.expires_at), gt(rollovers.expires_at, now)),
-				),
-			)) as Rollover[];
+		// Trust the caller's rollover set: the lazy/cached path carries live
+		// Redis balances that lead Postgres, so re-reading here would clear
+		// against stale rows. The cron path loads the set before calling insert.
+		const curRollovers = [...fullCusEnt.rollovers, ...newRows];
 
 		const { toDelete, toUpdate } = performMaximumClearing({
-			rows: curRollovers,
+			rows: curRollovers as Rollover[],
 			cusEnt: fullCusEnt,
 		});
 
