@@ -19,10 +19,10 @@ import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { useDropdownShortcut } from "@/hooks/useDropdownShortcut";
+import { useDropdownShortcut } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";

@@ -50,6 +50,7 @@ export * from "./components/ui/checkbox";
 export * from "./components/ui/collapsible";
 export * from "./components/ui/command";
 export * from "./components/ui/dialog";
+export * from "./components/ui/dropdown-menu";
 export * from "./components/ui/hover-card";
 export * from "./components/ui/input";
 export * from "./components/ui/input-group";
@@ -70,5 +71,11 @@ export * from "./components/ui/table";
 export * from "./components/ui/tabs";
 export * from "./components/ui/textarea";
 export * from "./components/ui/tooltip";
+export { useControllableState } from "./hooks/use-controllable-state";
+export {
+	type ShortcutEntry,
+	useDropdownShortcut,
+	useMenuShortcuts,
+} from "./hooks/use-dropdown-shortcut";
 export { useIsMobile } from "./hooks/use-is-mobile";
 export { cn, hasSubmitShortcutModifier } from "./lib/utils";

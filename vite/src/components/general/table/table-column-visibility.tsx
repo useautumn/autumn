@@ -11,7 +11,7 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import type { ColumnGroup } from "@/hooks/useColumnVisibility";
 import { cn } from "@/lib/utils";
 import { useTableContext } from "./table-context";

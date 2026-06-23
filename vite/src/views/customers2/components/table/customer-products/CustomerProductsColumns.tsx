@@ -9,7 +9,7 @@ import {
 	nameWithIconSkeleton,
 	statusSkeleton,
 } from "@/components/general/table/table-skeleton-presets";
-import { DropdownMenuItem } from "@/components/v2/dropdowns/DropdownMenu";
+import { DropdownMenuItem } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { getCusProductKind, getPlanKindConfig } from "@/utils/planKind";
 import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";

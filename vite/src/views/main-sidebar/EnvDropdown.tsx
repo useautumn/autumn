@@ -10,7 +10,7 @@ import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
 import { envToPath } from "@/utils/genUtils";

@@ -8,7 +8,7 @@ import {
 	DropdownMenuGroup,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { FilterStatusSubMenu } from "@/views/customers/components/filter-dropdown/FilterStatusSubMenu";
 import { ProcessorSubMenu } from "@/views/customers/components/filter-dropdown/ProcessorSubMenu";

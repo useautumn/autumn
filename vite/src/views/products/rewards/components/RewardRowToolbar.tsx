@@ -9,7 +9,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { RewardService } from "@/services/products/RewardService";

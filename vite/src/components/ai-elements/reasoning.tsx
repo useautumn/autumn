@@ -9,7 +9,7 @@ import {
 	CollapsibleContent,
 	CollapsibleTrigger,
 } from "@autumn/ui";
-import { useControllableState } from "@/hooks/useControllableState";
+import { useControllableState } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { Shimmer } from "./shimmer";
 
