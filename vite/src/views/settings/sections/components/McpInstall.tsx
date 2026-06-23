@@ -8,7 +8,7 @@ import {
 	SelectValue,
 } from "@autumn/ui";
 import { useState } from "react";
-import CopyButton from "@/components/general/CopyButton";
+import { CopyTextButton } from "@autumn/ui";
 import {
 	CodeGroup,
 	CodeGroupCode,
@@ -96,7 +96,7 @@ const CommandBar = ({ text }: { text: string }) => (
 		<code className="flex-1 overflow-x-auto whitespace-nowrap font-mono text-xs text-secondary-foreground">
 			{text}
 		</code>
-		<CopyButton text={text} variant="skeleton" className="shrink-0" />
+		<CopyTextButton text={text} variant="skeleton" className="shrink-0" />
 	</div>
 );
 

@@ -1,5 +1,5 @@
 import type { Row } from "@tanstack/react-table";
-import CopyButton from "@/components/general/CopyButton";
+import { CopyTextButton } from "@autumn/ui";
 import { dateSkeleton } from "@/components/general/table";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 

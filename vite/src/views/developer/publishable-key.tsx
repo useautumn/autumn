@@ -1,5 +1,5 @@
 import { AppEnv } from "@autumn/shared";
-import CopyButton from "@/components/general/CopyButton";
+import { CopyTextButton } from "@autumn/ui";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useEnv } from "@/utils/envUtils";
 
@@ -42,7 +42,7 @@ const CopyPublishableKey = ({
 				<div className="text-sm text-tertiary-foreground">{type}</div>
 			</div>
 
-			<CopyButton text={value}>{value}</CopyButton>
+			<CopyTextButton text={value}>{value}</CopyTextButton>
 		</div>
 	);
 };
