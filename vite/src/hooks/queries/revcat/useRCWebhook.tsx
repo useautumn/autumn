@@ -40,12 +40,17 @@ export const useRCWebhook = () => {
 			if (result.status === "registered") {
 				toast.success("Webhook registered with RevenueCat");
 			} else {
-				toast.warning("Couldn't register automatically — set it up manually below");
+				toast.warning(
+					"Couldn't register automatically — set it up manually below",
+				);
 			}
 		},
 		onError: (error) => {
 			toast.error(
-				getBackendErr(error, "Couldn't register automatically — set it up manually below"),
+				getBackendErr(
+					error,
+					"Couldn't register automatically — set it up manually below",
+				),
 			);
 		},
 	});

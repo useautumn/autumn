@@ -4,9 +4,6 @@ import {
 	fullCustomerToCustomerEntitlements,
 	numberWithCommas,
 } from "@autumn/shared";
-import { UserIcon } from "@phosphor-icons/react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Dialog,
 	DialogContent,
@@ -14,7 +11,10 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+	ShortcutButton,
+	Skeleton,
+} from "@autumn/ui";
+import { UserIcon } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { getCustomerBalanceSourceParts } from "./customerBalanceUtils";

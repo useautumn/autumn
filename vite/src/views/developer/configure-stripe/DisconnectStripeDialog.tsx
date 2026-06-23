@@ -1,7 +1,5 @@
-import { useState } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
@@ -9,8 +7,10 @@ import {
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
-} from "@/components/v2/dialogs/Dialog";
-import { Input } from "@/components/v2/inputs/Input";
+	Input,
+} from "@autumn/ui";
+import { useState } from "react";
+import { toast } from "sonner";
 import { OrgService } from "@/services/OrgService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
@@ -81,7 +81,8 @@ export const DisconnectStripeDialog = ({
 						Disconnect {channelLabel ? `${channelLabel} ` : ""}from Stripe
 					</DialogTitle>
 					<DialogDescription>
-						Type <span className="font-medium text-foreground">{CONFIRM_TEXT}</span>{" "}
+						Type{" "}
+						<span className="font-medium text-foreground">{CONFIRM_TEXT}</span>{" "}
 						to confirm. This stops Autumn from using
 						{channelLabel ? ` this ${channelLabel}` : " this connection"} for
 						Stripe operations.

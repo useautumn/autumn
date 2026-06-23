@@ -1,4 +1,4 @@
-import { SectionTag } from "@/components/v2/badges/SectionTag";
+import { SectionTag } from "@autumn/ui";
 import { PreviewPlanCard } from "./PreviewPlanCard";
 import { groupPreviewProducts, type PreviewProduct } from "./previewTypes";
 

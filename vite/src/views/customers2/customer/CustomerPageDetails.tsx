@@ -1,5 +1,5 @@
+import { CopyButton } from "@autumn/ui";
 import { FingerprintIcon, TicketIcon } from "@phosphor-icons/react";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { useCusReferralQuery } from "@/views/customers/customer/hooks/useCusReferralQuery";
 import { CustomerActions } from "./CustomerActions";
 import { useCustomerContext } from "./CustomerContext";

@@ -1,16 +1,16 @@
-import { useState } from "react";
-import { toast } from "sonner";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
 	DialogTrigger,
-} from "@/components/v2/dialogs/Dialog";
-import { Input } from "@/components/v2/inputs/Input";
+	FieldLabel,
+	Input,
+} from "@autumn/ui";
+import { useState } from "react";
+import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
 import { getBackendErr } from "@/utils/genUtils";
 

@@ -1,15 +1,18 @@
+import {
+	Badge,
+	Checkbox,
+	Sheet,
+	SheetContent,
+	ShortcutButton,
+	Skeleton,
+} from "@autumn/ui";
 import { WarningIcon } from "@phosphor-icons/react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/v2/badges/Badge";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
-import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
 import { useOrg } from "@/hooks/common/useOrg";
 import {
 	type RCPreflightItem,
@@ -108,9 +111,9 @@ export function RevenueCatSyncSheet({
 					<div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2.5 text-amber-600 dark:text-amber-500">
 						<WarningIcon className="mt-0.5 h-4 w-4 shrink-0" weight="fill" />
 						<p className="text-[12px] leading-snug">
-							Test Store prices are set automatically from each plan's price. Real
-							App Store / Google Play prices are owned by Apple/Google — set or
-							confirm those in App Store Connect / Play Console.
+							Test Store prices are set automatically from each plan's price.
+							Real App Store / Google Play prices are owned by Apple/Google —
+							set or confirm those in App Store Connect / Play Console.
 						</p>
 					</div>
 				</div>

@@ -85,7 +85,9 @@ const patchItemOnProduct = ({
 	if (!product.items?.length) return product;
 
 	const itemIndex =
-		knownIndex !== undefined && knownIndex >= 0 && knownIndex < product.items.length
+		knownIndex !== undefined &&
+		knownIndex >= 0 &&
+		knownIndex < product.items.length
 			? knownIndex
 			: product.items.findIndex((currentItem, i) => {
 					const currentItemId = getItemId({ item: currentItem, itemIndex: i });

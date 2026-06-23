@@ -3,15 +3,15 @@ import {
 	type ResourceType,
 	type ScopeString,
 } from "@autumn/shared";
-import { useEffect, useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
-import { ScopeSelector } from "@/components/v2/scope-selector";
 import {
+	Button,
 	Sheet,
 	SheetContent,
 	SheetHeader,
 	SheetTitle,
-} from "@/components/v2/sheets/Sheet";
+} from "@autumn/ui";
+import { useEffect, useState } from "react";
+import { ScopeSelector } from "@/components/v2/scope-selector";
 
 // Resources the bot can be granted, derived from the leaf OAuth scope set.
 const BOT_RESOURCES = [

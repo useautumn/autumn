@@ -15,9 +15,7 @@ export function hasValidOperations(operations: Operations): boolean {
 	});
 }
 
-function hasCustomizations(
-	customize: UpdatePlanOp["customize"],
-): boolean {
+function hasCustomizations(customize: UpdatePlanOp["customize"]): boolean {
 	if (!customize) return false;
 	if ((customize.add_items?.length ?? 0) > 0) return true;
 	if ((customize.remove_items?.length ?? 0) > 0) return true;

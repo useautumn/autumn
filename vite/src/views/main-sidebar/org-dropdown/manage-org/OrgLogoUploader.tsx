@@ -1,10 +1,9 @@
+import { Button, FormLabel } from "@autumn/ui";
 import axios from "axios";
 import { ImageIcon } from "lucide-react";
 import type React from "react";
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
-import { FormLabel } from "@/components/v2/form/FormLabel";
 import { useOrg } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 import { useAxiosInstance } from "@/services/useAxiosInstance";

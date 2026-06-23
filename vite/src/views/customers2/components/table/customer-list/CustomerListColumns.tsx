@@ -5,6 +5,13 @@ import {
 	type FullCustomer,
 	isCustomerProductTrialing,
 } from "@autumn/shared";
+import {
+	MiniCopyButton,
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import type { z } from "zod/v4";
 import {
@@ -12,14 +19,7 @@ import {
 	hiddenSkeleton,
 	idSkeleton,
 	statusSkeleton,
-} from "@/components/general/table/table-skeleton-presets";
-import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
+} from "@/components/general/table";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { CustomerProductsStatus } from "../customer-products/CustomerProductsStatus";
 import { CustomerListRowToolbar } from "./CustomerListRowToolbar";

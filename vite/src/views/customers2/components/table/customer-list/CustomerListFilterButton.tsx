@@ -1,14 +1,14 @@
+import { IconButton } from "@autumn/ui";
 import { FunnelSimpleIcon } from "@phosphor-icons/react";
 import { X } from "lucide-react";
 import { useState } from "react";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuGroup,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { FilterStatusSubMenu } from "@/views/customers/components/filter-dropdown/FilterStatusSubMenu";
 import { ProcessorSubMenu } from "@/views/customers/components/filter-dropdown/ProcessorSubMenu";
@@ -59,11 +59,16 @@ export function CustomerListFilterButton({
 
 	return (
 		<DropdownMenu open={open} onOpenChange={setOpen}>
-			<DropdownMenuTrigger render={<div className="relative" />} nativeButton={false}>
+			<DropdownMenuTrigger
+				render={<div className="relative" />}
+				nativeButton={false}
+			>
 				<IconButton
 					variant="secondary"
 					className={cn("gap-2", open && "btn-secondary-active")}
-					icon={<FunnelSimpleIcon size={14} className="text-tertiary-foreground" />}
+					icon={
+						<FunnelSimpleIcon size={14} className="text-tertiary-foreground" />
+					}
 				>
 					Filter
 				</IconButton>

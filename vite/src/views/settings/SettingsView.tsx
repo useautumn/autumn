@@ -1,3 +1,4 @@
+import { PageContainer, PageHeader } from "@autumn/ui";
 import { GearIcon } from "@phosphor-icons/react";
 import {
 	BellIcon,
@@ -12,8 +13,6 @@ import {
 	UsersIcon,
 } from "lucide-react";
 import { useSearchParams } from "react-router";
-import { PageContainer } from "@/components/general/PageContainer";
-import { PageHeader } from "@/components/general/PageHeader";
 import { cn } from "@/lib/utils";
 import { AccountSection } from "./sections/AccountSection";
 import { AgentSection } from "./sections/AgentSection";

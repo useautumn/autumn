@@ -21,8 +21,7 @@ export function useCreditSchema(form: CreditSystemFormInstance) {
 	}, [schema.length]);
 
 	const allSchemaCandidateFeatures = features.filter(
-		(f: Feature) =>
-			f.type === FeatureType.Metered || isAiCreditSystem(f.type),
+		(f: Feature) => f.type === FeatureType.Metered || isAiCreditSystem(f.type),
 	);
 
 	const handleSchemaChange = (

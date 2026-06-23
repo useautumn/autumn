@@ -1,9 +1,5 @@
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@autumn/ui";
 import { useLayoutEffect, useRef, useState } from "react";
-import {
-	HoverCard,
-	HoverCardContent,
-	HoverCardTrigger,
-} from "@/components/ui/hover-card";
 
 export type ChartLegendEntry = {
 	key: string;
@@ -132,22 +128,13 @@ export function ChartLegend({
 								type="button"
 								className="flex items-center gap-1.5 min-w-0 cursor-default focus:outline-none"
 							>
-								<OverflowPill
-									count={overflow.length}
-									total={overflowTotal}
-								/>
+								<OverflowPill count={overflow.length} total={overflowTotal} />
 							</button>
 						</HoverCardTrigger>
-						<HoverCardContent
-							align="end"
-							className="w-auto max-w-xs p-2"
-						>
+						<HoverCardContent align="end" className="w-auto max-w-xs p-2">
 							<div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
 								{overflow.map((e) => (
-									<div
-										key={e.key}
-										className="flex items-center gap-2 min-w-0"
-									>
+									<div key={e.key} className="flex items-center gap-2 min-w-0">
 										<span
 											className="w-2 h-2 rounded-sm shrink-0"
 											style={{ background: e.color }}
@@ -213,4 +200,3 @@ function OverflowPill({ count, total }: { count: number; total: number }) {
 		</div>
 	);
 }
-

@@ -1,4 +1,5 @@
 import { cp } from "@autumn/shared";
+import { PanelButton } from "@autumn/ui";
 import {
 	ArrowCounterClockwiseIcon,
 	CreditCardIcon,
@@ -7,7 +8,6 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useUpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2";
 import { COLLAPSE_TRANSITION } from "@/components/forms/update-subscription-v2/constants/animationConstants";
-import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 
 type RefundMode = "credits" | "refund" | "none";

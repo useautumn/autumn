@@ -10,20 +10,20 @@ import {
 	fullCustomerToCustomerEntitlements,
 	nullish,
 } from "@autumn/shared";
-import { useMemo, useState } from "react";
-import { toast } from "sonner";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/v2/buttons/Button";
-import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
 import {
+	Button,
+	FormLabel,
+	Input,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+	Switch,
+} from "@autumn/ui";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
 	SheetFooter,
@@ -148,9 +148,7 @@ export function BillingUsageAlertSheet() {
 		}
 
 		if (thresholdType === "remaining_percentage" && parsedThreshold > 100) {
-			toast.error(
-				"Remaining percentage threshold must be between 0 and 100",
-			);
+			toast.error("Remaining percentage threshold must be between 0 and 100");
 			return;
 		}
 
@@ -268,7 +266,16 @@ export function BillingUsageAlertSheet() {
 
 						<div>
 							<FormLabel>Threshold type</FormLabel>
-							<Select value={thresholdType} onValueChange={setThresholdType} items={{ usage: "Usage (absolute value)", usage_percentage: "Percentage used of allowance", remaining: "Remaining (absolute value)", remaining_percentage: "Percentage remaining of allowance" }}>
+							<Select
+								value={thresholdType}
+								onValueChange={setThresholdType}
+								items={{
+									usage: "Usage (absolute value)",
+									usage_percentage: "Percentage used of allowance",
+									remaining: "Remaining (absolute value)",
+									remaining_percentage: "Percentage remaining of allowance",
+								}}
+							>
 								<SelectTrigger className="w-full">
 									<SelectValue />
 								</SelectTrigger>

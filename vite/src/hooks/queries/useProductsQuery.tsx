@@ -14,7 +14,9 @@ const EMPTY_COUNTS: Record<string, ProductCounts> = {};
  */
 export const useProductsQuery = ({
 	allVersions = false,
-}: { allVersions?: boolean } = {}) => {
+}: {
+	allVersions?: boolean;
+} = {}) => {
 	const axiosInstance = useAxiosInstance();
 	const queryClient = useQueryClient();
 	const buildKey = useQueryKeyFactory();

@@ -1,12 +1,12 @@
 import { numberWithCommas } from "@autumn/shared";
-import { useState } from "react";
 import {
+	Button,
+	Input,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from "@/components/v2/buttons/Button";
-import { Input } from "@/components/v2/inputs/Input";
+} from "@autumn/ui";
+import { useState } from "react";
 import { notNullish } from "@/utils/genUtils";
 
 interface GrantedBalancePopoverProps {

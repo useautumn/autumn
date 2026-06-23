@@ -1,14 +1,9 @@
+import { Switch, Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import { type ReactNode, useEffect } from "react";
 import {
 	AdvancedSection,
 	ConfigRow,
 } from "@/components/forms/shared/advanced-section";
-import { Switch } from "@/components/ui/switch";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
 
 export function CreateScheduleAdvancedSection() {

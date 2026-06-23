@@ -4,22 +4,22 @@ import {
 	FeatureType,
 	getGlobalMaxRedemption,
 } from "@autumn/shared";
-import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
-import { CheckIcon } from "lucide-react";
-import { AnimatePresence, motion } from "motion/react";
-import { cloneElement, isValidElement } from "react";
-import { Button } from "@/components/v2/buttons/Button";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import {
+	Button,
+	FormLabel,
+	Input,
+	SearchableSelect,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
-import { Separator } from "@/components/v2/separator";
+	Separator,
+} from "@autumn/ui";
+import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
+import { CheckIcon } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import { cloneElement, isValidElement } from "react";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { cn } from "@/lib/utils";

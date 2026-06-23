@@ -22,11 +22,9 @@ export function SyncStripeSheetV2() {
 	const selectedProposal =
 		selectedProposalIndex !== null
 			? (proposals[selectedProposalIndex] ?? null)
-		: null;
+			: null;
 
-	const headerTitle = selectedProposal
-		? "Configure sync"
-		: "Sync from Stripe";
+	const headerTitle = selectedProposal ? "Configure sync" : "Sync from Stripe";
 	const headerDescription = selectedProposal
 		? "Pick the Autumn plans to attach for this Stripe object"
 		: "Pick a Stripe subscription or schedule to import";

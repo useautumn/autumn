@@ -7,9 +7,8 @@ import {
 	type ScopeString,
 	Scopes,
 } from "@autumn/shared";
+import { Checkbox, ConditionalTooltip } from "@autumn/ui";
 import { useMemo, useState } from "react";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
-import { ConditionalTooltip } from "@/components/v2/tooltips/ConditionalTooltip";
 import { cn } from "@/lib/utils";
 
 export type ScopeSelectorProps = {

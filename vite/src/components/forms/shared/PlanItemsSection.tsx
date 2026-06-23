@@ -5,13 +5,13 @@ import type {
 	ProductItem,
 } from "@autumn/shared";
 import { sortPlanItems, splitBooleanItems } from "@autumn/shared";
+import { Button } from "@autumn/ui";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { LayoutGroup, motion } from "motion/react";
 import { useMemo } from "react";
 import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
 import type { AdminPlanIds } from "@/components/forms/shared/admin/AdminPlanIdsTooltip";
 import type { UseUpdateSubscriptionForm } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionForm";
-import { Button } from "@/components/v2/buttons/Button";
 import { LAYOUT_TRANSITION } from "@/components/v2/sheets/SharedSheetComponents";
 import { CollapsedBooleanItems } from "./plan-items/CollapsedBooleanItems";
 import { DeletedItemRow } from "./plan-items/DeletedItemRow";

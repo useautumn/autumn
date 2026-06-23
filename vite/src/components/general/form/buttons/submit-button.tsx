@@ -1,7 +1,7 @@
-import { Button } from "@/components/v2/buttons/Button";
+import { Button } from "@autumn/ui";
 import { useFormContext } from "@/hooks/form/form-context";
 import { cn } from "@/lib/utils";
-import SmallSpinner from "../../SmallSpinner";
+import { SmallSpinner } from "@autumn/ui";
 
 export function SubmitButton({ label }: { label: string }) {
 	const form = useFormContext();

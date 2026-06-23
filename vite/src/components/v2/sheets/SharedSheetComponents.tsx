@@ -1,10 +1,10 @@
+import { Separator } from "@autumn/ui";
 import { CaretRightIcon } from "@phosphor-icons/react";
 import { motion } from "motion/react";
 import { useId } from "react";
-import { Separator } from "@/components/v2/separator";
 import { type SheetType, useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
-import { Checkbox } from "../checkboxes/Checkbox";
+import { Checkbox } from "@autumn/ui";
 
 export { LayoutGroup } from "motion/react";
 
@@ -184,7 +184,9 @@ function SheetBreadcrumbs({
 						}
 					}}
 				>
-					<h2 className="text-tertiary-foreground! text-main truncate">{breadcrumb.name}</h2>
+					<h2 className="text-tertiary-foreground! text-main truncate">
+						{breadcrumb.name}
+					</h2>
 					<CaretRightIcon size={14} className="shrink-0" />
 				</button>
 			))}

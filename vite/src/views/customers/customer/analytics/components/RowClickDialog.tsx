@@ -1,5 +1,4 @@
-import { CopyablePre } from "@/components/general/CopyablePre";
-import { Dialog, DialogContent } from "@/components/v2/dialogs/Dialog";
+import { CopyablePre, Dialog, DialogContent } from "@autumn/ui";
 import type { IRow } from "./analytics-types";
 
 export function RowClickDialog({

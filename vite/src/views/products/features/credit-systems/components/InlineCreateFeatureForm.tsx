@@ -1,10 +1,8 @@
 import { FeatureType } from "@autumn/shared";
+import { Button, FormLabel, Input } from "@autumn/ui";
 import type { AxiosError } from "axios";
 import { forwardRef, useCallback, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
 import { useAutoSlug } from "@/hooks/common/useAutoSlug";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { FeatureService } from "@/services/FeatureService";

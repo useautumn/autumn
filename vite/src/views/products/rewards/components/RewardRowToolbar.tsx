@@ -1,16 +1,15 @@
 import type { Reward } from "@autumn/shared";
 import { RewardType } from "@autumn/shared";
+import { SmallSpinner, ToolbarButton } from "@autumn/ui";
 import { ArrowSquareOut, Trash } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import SmallSpinner from "@/components/general/SmallSpinner";
-import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
 import { RewardService } from "@/services/products/RewardService";

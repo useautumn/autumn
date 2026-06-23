@@ -1,12 +1,7 @@
+import { Button, Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { useUpdateSubscriptionFormContext } from "../context/UpdateSubscriptionFormProvider";
@@ -77,10 +72,7 @@ export function UpdateSubscriptionFooter() {
 						</span>
 					</TooltipTrigger>
 					{invoiceDisabledReason && (
-						<TooltipContent
-							side="top"
-							className="max-w-(--anchor-width)"
-						>
+						<TooltipContent side="top" className="max-w-(--anchor-width)">
 							{invoiceDisabledReason}
 						</TooltipContent>
 					)}

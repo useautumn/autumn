@@ -1,3 +1,4 @@
+import { IconButton, Input } from "@autumn/ui";
 import { faGoogle } from "@fortawesome/free-brands-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Mail } from "lucide-react";
@@ -5,8 +6,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
 import { toast } from "sonner";
 import { CustomToaster } from "@/components/general/CustomToaster";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import { Input } from "@/components/v2/inputs/Input";
 import { authClient, signIn, useSession } from "@/lib/auth-client";
 import { getBackendErr, getSafeNextPath } from "@/utils/genUtils";
 import { AuthBackground } from "./components/AuthBackground";
@@ -94,9 +93,7 @@ export const SignIn = () => {
 				type: "sign-in",
 			});
 			if (error) {
-				toast.error(
-					error.message || "Something went wrong. Please try again.",
-				);
+				toast.error(error.message || "Something went wrong. Please try again.");
 			} else {
 				setOtpSent(true);
 			}
@@ -113,7 +110,8 @@ export const SignIn = () => {
 			const frontendUrl = import.meta.env.VITE_FRONTEND_URL;
 			const googleCallbackUrl =
 				oauthRedirectUrl || `${frontendUrl}${defaultPath}`;
-			const googleNewUserUrl = oauthRedirectUrl || `${frontendUrl}${defaultPath}`;
+			const googleNewUserUrl =
+				oauthRedirectUrl || `${frontendUrl}${defaultPath}`;
 			const { error } = await signIn.social({
 				provider: "google",
 				callbackURL: googleCallbackUrl,

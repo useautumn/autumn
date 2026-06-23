@@ -1,7 +1,7 @@
 import { FeatureType, isAnyCreditSystem, TierBehavior } from "@autumn/shared";
+import { IconButton } from "@autumn/ui";
 import { PencilSimpleIcon } from "@phosphor-icons/react";
 import { useState } from "react";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	useHasItemChanges,
 	useProduct,

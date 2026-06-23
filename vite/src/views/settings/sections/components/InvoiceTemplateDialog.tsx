@@ -1,6 +1,4 @@
 import type { InvoiceTemplate } from "@autumn/shared";
-import { FieldInfo } from "@/components/general/form/field-info";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Dialog,
 	DialogContent,
@@ -8,10 +6,12 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
-import { LongInput } from "@/components/v2/inputs/LongInput";
+	FormLabel,
+	Input,
+	LongInput,
+	ShortcutButton,
+} from "@autumn/ui";
+import { FieldInfo } from "@/components/general/form/field-info";
 import { useAppForm } from "@/hooks/form/form";
 import {
 	type InvoiceTemplateForm,

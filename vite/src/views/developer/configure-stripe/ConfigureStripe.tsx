@@ -1,4 +1,14 @@
 import {
+	Button,
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+	Skeleton,
+	SmallSpinner,
+} from "@autumn/ui";
+import {
 	KeyIcon,
 	LinkBreakIcon,
 	PlugsConnectedIcon,
@@ -6,16 +16,6 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import SmallSpinner from "@/components/general/SmallSpinner";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/v2/buttons/Button";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/v2/cards/Card";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";

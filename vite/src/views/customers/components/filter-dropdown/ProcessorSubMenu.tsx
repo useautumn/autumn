@@ -1,11 +1,11 @@
+import { Checkbox } from "@autumn/ui";
 import { CoinVerticalIcon, TriangleIcon } from "@phosphor-icons/react";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
 	DropdownMenuItem,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useCustomerFilters } from "../../hooks/useCustomerFilters";

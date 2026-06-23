@@ -37,9 +37,7 @@ export const ConfigureRevenueCat = () => {
 		isLoading: isLoadingRevenueCatAccount,
 		refetch,
 	} = useRevenueCatQuery();
-	const hasMappings = mappings.some(
-		(m) => m.revenuecat_product_ids.length > 0,
-	);
+	const hasMappings = mappings.some((m) => m.revenuecat_product_ids.length > 0);
 	const axiosInstance = useAxiosInstance();
 	const env = useEnv();
 	const [searchParams, setSearchParams] = useSearchParams();

@@ -5,16 +5,18 @@ import type {
 	FullCustomer,
 } from "@autumn/shared";
 import { FeatureType, LATEST_VERSION } from "@autumn/shared";
+import {
+	Button,
+	FormLabel,
+	Input,
+	SearchableSelect,
+	ShortcutButton,
+} from "@autumn/ui";
 import { PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { CheckIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import {
 	LayoutGroup,
 	SheetFooter,

@@ -1,4 +1,4 @@
-import { PageContainer } from "@/components/general/PageContainer";
+import { PageContainer } from "@autumn/ui";
 import { MigrationListTable } from "./migration-list/MigrationListTable";
 
 export const MigrationsView = () => {
