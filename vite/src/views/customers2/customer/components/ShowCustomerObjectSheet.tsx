@@ -41,6 +41,7 @@ export function ShowCustomerObjectSheet({
 		customerId: customer_id,
 		scopeEntityId,
 		enabled: open,
+		staleTime: 0,
 	});
 
 	const formattedJson = useMemo(

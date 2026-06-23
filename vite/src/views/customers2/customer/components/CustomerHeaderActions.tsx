@@ -75,11 +75,13 @@ export function CustomerHeaderActions() {
 	};
 
 	const billingPortalMutation = useMutation({
-		mutationFn: () =>
-			CusService.createBillingPortalSession({
+		mutationFn: () => {
+			if (!customer) throw new Error("Customer not loaded");
+			return CusService.createBillingPortalSession({
 				axios: axiosInstance,
 				customer_id: customer.id || customer.internal_id,
-			}),
+			});
+		},
 		onSuccess: ({ url }) => window.open(url, "_blank"),
 		onError: (error) =>
 			toast.error(getBackendErr(error, "Failed to open billing portal")),
@@ -101,7 +103,7 @@ export function CustomerHeaderActions() {
 				tooltip="Open customer portal"
 				icon={<UserCircleGearIcon size={14} />}
 				onClick={() => billingPortalMutation.mutate()}
-				disabled={billingPortalMutation.isPending}
+				disabled={!customer || billingPortalMutation.isPending}
 			/>
 			{showStripe && (
 				<IconTooltipButton

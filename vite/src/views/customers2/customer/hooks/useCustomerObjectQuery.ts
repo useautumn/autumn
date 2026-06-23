@@ -26,10 +26,12 @@ export function useCustomerObjectQuery({
 	customerId,
 	scopeEntityId,
 	enabled,
+	staleTime = CUSTOMER_OBJECT_GC_TIME,
 }: {
 	customerId?: string;
 	scopeEntityId?: string | null;
 	enabled: boolean;
+	staleTime?: number;
 }) {
 	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
 	const buildKey = useQueryKeyFactory();
@@ -44,6 +46,6 @@ export function useCustomerObjectQuery({
 		},
 		enabled: enabled && !!customerId,
 		gcTime: CUSTOMER_OBJECT_GC_TIME,
-		staleTime: CUSTOMER_OBJECT_GC_TIME,
+		staleTime,
 	});
 }

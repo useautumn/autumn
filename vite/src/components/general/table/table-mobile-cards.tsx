@@ -90,7 +90,8 @@ function MobileCard<T>({
 			cell.column.columnDef.meta?.mobileCard !== "hidden",
 	);
 
-	const handleClick = onRowClick ? () => onRowClick(row.original) : undefined;
+	const handleClick =
+		onRowClick && !rowHref ? () => onRowClick(row.original) : undefined;
 
 	const card = (
 		<div
