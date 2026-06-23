@@ -19,16 +19,12 @@ Autumn is the source of truth for a customer's state and what they can do. Strip
 | Feature gating | **Autumn** | `/check` evaluates access from Autumn's balances |
 | Subscriptions and payments | **Stripe** | Autumn creates Stripe subscriptions and charges customers |
 | Invoices & receipts | **Stripe** | Generated and delivered by Stripe |
-| Checkout pages | **Stripe** | Hosted by Stripe for new payment methods |
+| Checkout pages | **Stripe** | Keep Stripe Checkout pages for payment method collection |
 | Refunds & disputes | **Stripe** | Issue refunds directly in Stripe dashboard |
 
 <Check>
 Autumn syncs from Stripe automatically. If you update or cancel a subscription directly in the Stripe dashboard, Autumn will attempt to apply the same change to the corresponding customer state.
 </Check>
-
-### Migrating to Autumn
-
-You can adopt Autumn for entitlements, usage metering, and plan configuration without any changes for your billing experience.
 
 ## Connecting Stripe
 
@@ -139,7 +135,6 @@ While Autumn manages most of the Stripe lifecycle, there are a few things you sh
 
 | Task | Where |
 |---|---|
-| Issue refunds | Stripe dashboard |
 | Rename products for invoice display | Stripe dashboard |
 | View payment logs and disputes | Stripe dashboard |
 | Advanced subscription alterations (eg cycle anchors) | Stripe dashboard |
