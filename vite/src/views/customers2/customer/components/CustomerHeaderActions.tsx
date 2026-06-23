@@ -1,6 +1,7 @@
 import type { FullCustomer } from "@autumn/shared";
 import { ProcessorType } from "@autumn/shared";
 import { BracketsSquareIcon, UserCircleGearIcon } from "@phosphor-icons/react";
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useParams } from "react-router";
 import { toast } from "sonner";
@@ -42,7 +43,6 @@ export function CustomerHeaderActions() {
 		enabled: !!customer,
 	});
 
-	const [portalLoading, setPortalLoading] = useState(false);
 	const [showObjectOpen, setShowObjectOpen] = useState(false);
 
 	const stripeCustomerId = customer?.processor?.id;
@@ -74,21 +74,16 @@ export function CustomerHeaderActions() {
 		);
 	};
 
-	const handleOpenBillingPortal = async () => {
-		if (!customer) return;
-		setPortalLoading(true);
-		try {
-			const { url } = await CusService.createBillingPortalSession({
+	const billingPortalMutation = useMutation({
+		mutationFn: () =>
+			CusService.createBillingPortalSession({
 				axios: axiosInstance,
 				customer_id: customer.id || customer.internal_id,
-			});
-			window.open(url, "_blank");
-		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to open billing portal"));
-		} finally {
-			setPortalLoading(false);
-		}
-	};
+			}),
+		onSuccess: ({ url }) => window.open(url, "_blank"),
+		onError: (error) =>
+			toast.error(getBackendErr(error, "Failed to open billing portal")),
+	});
 
 	return (
 		<div className="flex items-center gap-1">
@@ -105,8 +100,8 @@ export function CustomerHeaderActions() {
 			<IconTooltipButton
 				tooltip="Open customer portal"
 				icon={<UserCircleGearIcon size={14} />}
-				onClick={handleOpenBillingPortal}
-				disabled={portalLoading}
+				onClick={() => billingPortalMutation.mutate()}
+				disabled={billingPortalMutation.isPending}
 			/>
 			{showStripe && (
 				<IconTooltipButton
