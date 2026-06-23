@@ -32,7 +32,9 @@ async function negotiateMarkdown(
 	}
 
 	if (decision === "html") {
-		return null;
+		const response = NextResponse.next();
+		response.headers.set("Vary", "Accept");
+		return response;
 	}
 
 	return serveMarkdown(request, markdownTarget);
@@ -64,11 +66,13 @@ async function serveMarkdown(
 }
 
 export async function proxy(request: NextRequest) {
-	track(request);
-
+	// The internal markdown sub-request must not be tracked or re-negotiated;
+	// return before track() so analytics counts the user request only once.
 	if (request.headers.get("x-markdown-proxy")) {
 		return NextResponse.next();
 	}
+
+	track(request);
 
 	const negotiated = await negotiateMarkdown(request);
 	if (negotiated) return negotiated;
