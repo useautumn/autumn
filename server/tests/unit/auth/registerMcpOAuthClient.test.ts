@@ -45,13 +45,22 @@ describe("getRequestedScopesForMcpClient", () => {
 		]);
 	});
 
-	test("preserves OIDC protocol scopes that Claude requests", () => {
+	test("grants Leaf scopes when Claude requests only OIDC protocol scopes", () => {
 		expect(
 			getRequestedScopesForMcpClient({
 				clientType: "claude",
 				scope: "openid profile email offline_access",
 			}),
-		).toEqual(["openid", "profile", "email", OFFLINE_ACCESS_SCOPE]);
+		).toEqual([...LEAF_OAUTH_SCOPES, "openid", "profile", "email", OFFLINE_ACCESS_SCOPE]);
+	});
+
+	test("does not inject Leaf scopes when the client already requests one", () => {
+		expect(
+			getRequestedScopesForMcpClient({
+				clientType: "dynamic",
+				scope: `${Scopes.Customers.Read} openid offline_access`,
+			}),
+		).toEqual([Scopes.Customers.Read, "openid", OFFLINE_ACCESS_SCOPE]);
 	});
 
 	test("preserves OIDC scopes in default OAuth scopes", () => {
