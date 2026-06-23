@@ -3,7 +3,7 @@ import {
 	type Rollover,
 	rollovers,
 } from "@autumn/shared";
-import { and, eq, gte, inArray } from "drizzle-orm";
+import { and, eq, gt, inArray, isNull, or } from "drizzle-orm";
 import type { CronContext } from "@/cron/utils/CronContext.js";
 import { buildConflictUpdateColumns } from "@/db/dbUtils.js";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
@@ -75,7 +75,10 @@ export class RolloverService {
 			.where(
 				and(
 					eq(rollovers.cus_ent_id, cusEntID),
-					gte(rollovers.expires_at, new Date().getTime()),
+					or(
+						isNull(rollovers.expires_at),
+						gt(rollovers.expires_at, Date.now()),
+					),
 				),
 			);
 	}
@@ -118,10 +121,38 @@ export class RolloverService {
 		overwrites: Rollover[];
 	}> {
 		const { db } = ctx;
-		const curRollovers = [...fullCusEnt.rollovers, ...newRows];
+
+		// No cap configured → nothing to clear, skip the extra read. Returns the
+		// caller's list as-is, so callers passing an incomplete fullCusEnt (e.g.
+		// the cron's rollovers:[]) must discard the returned rollovers.
+		const rolloverConfig = fullCusEnt.entitlement.rollover;
+		if (
+			!rolloverConfig ||
+			(rolloverConfig.max == null && rolloverConfig.max_percentage == null)
+		) {
+			return {
+				rollovers: [...fullCusEnt.rollovers, ...newRows],
+				deletedIds: [],
+				overwrites: [],
+			};
+		}
+
+		// Source the live rollover set from the DB rather than trusting
+		// fullCusEnt.rollovers, which some callers pass incomplete (the reset
+		// cron hardcodes []). newRows are already inserted, so this includes them.
+		const now = Date.now();
+		const curRollovers = (await db
+			.select()
+			.from(rollovers)
+			.where(
+				and(
+					eq(rollovers.cus_ent_id, fullCusEnt.id),
+					or(isNull(rollovers.expires_at), gt(rollovers.expires_at, now)),
+				),
+			)) as Rollover[];
 
 		const { toDelete, toUpdate } = performMaximumClearing({
-			rows: curRollovers as Rollover[],
+			rows: curRollovers,
 			cusEnt: fullCusEnt,
 		});
 
@@ -133,11 +164,15 @@ export class RolloverService {
 			await RolloverService.upsert({ db, rows: toUpdate });
 		}
 
-		const rollovers = curRollovers
+		const remainingRollovers = curRollovers
 			.filter((r) => !toDelete.includes(r.id))
 			.map((r) => toUpdate.find((u) => u.id === r.id) ?? r);
 
-		return { rollovers, deletedIds: toDelete, overwrites: toUpdate };
+		return {
+			rollovers: remainingRollovers,
+			deletedIds: toDelete,
+			overwrites: toUpdate,
+		};
 	}
 
 	static async delete({ db, ids }: { db: DrizzleCli; ids: string[] }) {
