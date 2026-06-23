@@ -201,6 +201,7 @@ export function CustomerProductsTable() {
 					onRowClick: handleRowClick,
 					emptyStateChildren,
 					flexibleTableColumns: true,
+					mobileCards: true,
 					selectedItemId,
 					virtualization: { containerHeight: "428px", skeletonRowCount: 3 },
 				}}

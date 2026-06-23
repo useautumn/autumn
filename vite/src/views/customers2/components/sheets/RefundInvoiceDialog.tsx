@@ -2,7 +2,7 @@ import { formatAmount, type Invoice } from "@autumn/shared";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
+import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Dialog,
 	DialogContent,
@@ -150,20 +150,15 @@ export function RefundInvoiceDialog({
 				</div>
 
 				<DialogFooter>
-					<Button
-						variant="secondary"
-						onClick={() => onOpenChange(false)}
-						disabled={refundMutation.isPending}
-					>
-						Cancel
-					</Button>
-					<Button
+					<ShortcutButton
 						variant="primary"
+						className="w-full"
 						onClick={handleSubmit}
 						isLoading={refundMutation.isPending}
+						metaShortcut="enter"
 					>
 						Refund
-					</Button>
+					</ShortcutButton>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

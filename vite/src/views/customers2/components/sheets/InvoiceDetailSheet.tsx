@@ -35,6 +35,7 @@ import {
 } from "@/utils/linkUtils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { CustomerInvoiceStatus } from "../table/customer-invoices/CustomerInvoiceStatus";
 import { RefundInvoiceDialog } from "./RefundInvoiceDialog";
 
@@ -77,7 +78,13 @@ export function InvoiceDetailSheet({
 	taxedAmount: taxedAmountProp,
 }: InvoiceDetailSheetProps = {}) {
 	const sheetData = useSheetStore((s) => s.data);
-	const invoice = invoiceProp ?? (sheetData?.invoice as Invoice | undefined);
+	const snapshotInvoice =
+		invoiceProp ?? (sheetData?.invoice as Invoice | undefined);
+	const { customer } = useCusQuery();
+	const liveInvoice = customer?.invoices?.find(
+		(inv: Invoice) => inv.id === snapshotInvoice?.id,
+	);
+	const invoice = liveInvoice ?? snapshotInvoice;
 	const lineItems =
 		lineItemsProp ?? ((sheetData?.lineItems as InvoiceLineItem[]) || []);
 	const taxedAmount =

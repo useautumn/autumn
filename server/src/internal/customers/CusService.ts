@@ -239,13 +239,19 @@ export class CusService {
 					orgId === "GG6tnmO7cHb40PNhwYBTZtxQdeL74NHF" &&
 					idOrInternalId === "698fb72e4c5fa12c1cd11ddc"
 				) {
-					fullCus.customer_products = (
-						fullCus.customer_products as FullCusProduct[]
-					)
-						.sort((a, b) => b.customer_prices.length - a.customer_prices.length)
-						.slice(0, 5);
+					if (fullCus.customer_products) {
+						fullCus.customer_products = (
+							fullCus.customer_products as FullCusProduct[]
+						)
+							.sort(
+								(a, b) => b.customer_prices.length - a.customer_prices.length,
+							)
+							.slice(0, 5);
+					}
 
-					fullCus.entities = (fullCus.entities as Entity[]).slice(0, 50);
+					if (fullCus.entities) {
+						fullCus.entities = (fullCus.entities as Entity[]).slice(0, 50);
+					}
 				}
 				if (!usedReplica && !skipReset) {
 					// Skip reset only when executeWithHealthTracking explicitly chose the
