@@ -21,6 +21,7 @@ type FullSubjectGateConfig = {
 	max_wait_ms: number;
 	per_customer_pending_max: number;
 	per_org_pending_max: number;
+	fleet_process_count: number;
 	configHealthy?: boolean;
 	configConfigured?: boolean;
 	lastSuccessAt?: string | null;
@@ -33,6 +34,7 @@ const DEFAULT_CONFIG: FullSubjectGateConfig = {
 	max_wait_ms: 2_000,
 	per_customer_pending_max: 500,
 	per_org_pending_max: 1_000,
+	fleet_process_count: 1,
 };
 
 const FIELDS: Array<{
@@ -43,6 +45,7 @@ const FIELDS: Array<{
 		| "max_wait_ms"
 		| "per_customer_pending_max"
 		| "per_org_pending_max"
+		| "fleet_process_count"
 	>;
 	label: string;
 	description: string;
@@ -50,10 +53,18 @@ const FIELDS: Array<{
 	max: number;
 }> = [
 	{
+		key: "fleet_process_count",
+		label: "Fleet process count",
+		description:
+			"Number of app processes in the fleet. The caps below are cluster-wide targets, divided by this per process. Set to the live replica count; 1 = legacy per-process caps.",
+		min: 1,
+		max: 100_000,
+	},
+	{
 		key: "per_customer_limit",
 		label: "Per-customer concurrent limit",
 		description:
-			"Max DB hydrations in flight at once for a single (org, env, customer). Per process — multiply by replica count for cluster-wide cap.",
+			"Max concurrent DB hydrations for a single (org, env, customer), cluster-wide (enforced as this ÷ fleet process count per process).",
 		min: 1,
 		max: 10_000,
 	},
@@ -61,7 +72,7 @@ const FIELDS: Array<{
 		key: "per_org_limit",
 		label: "Per-org concurrent limit",
 		description:
-			"Max DB hydrations in flight at once for a single (org, env). Per process.",
+			"Max concurrent DB hydrations for a single (org, env), cluster-wide.",
 		min: 1,
 		max: 10_000,
 	},
