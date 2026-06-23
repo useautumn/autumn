@@ -1,6 +1,6 @@
 import type { Cell, Row } from "@tanstack/react-table";
 import { flexRender } from "@tanstack/react-table";
-import { Link } from "react-router";
+import { useNavigate } from "react-router";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useTableContext } from "./table-context";
@@ -90,15 +90,24 @@ function MobileCard<T>({
 			cell.column.columnDef.meta?.mobileCard !== "hidden",
 	);
 
-	const handleClick =
-		onRowClick && !rowHref ? () => onRowClick(row.original) : undefined;
+	const navigate = useNavigate();
 
-	const card = (
+	// Navigate programmatically rather than wrapping the card in a Link so nested
+	// action controls (e.g. the actions dropdown) can stopPropagation and not
+	// trigger navigation. Matches onRowClick behavior.
+	const getClickHandler = () => {
+		if (rowHref) return () => navigate(rowHref);
+		if (onRowClick) return () => onRowClick(row.original);
+		return undefined;
+	};
+	const handleClick = getClickHandler();
+
+	return (
 		<div
 			className={cn(
 				"rounded-xl border bg-interactive-secondary p-4 flex flex-col gap-3 transition-colors",
 				isSelected ? "border-primary" : "active:bg-interactive-secondary-hover",
-				(handleClick || rowHref) && "cursor-pointer",
+				handleClick && "cursor-pointer",
 			)}
 			onClick={handleClick}
 			onKeyDown={
@@ -138,16 +147,6 @@ function MobileCard<T>({
 			)}
 		</div>
 	);
-
-	if (rowHref) {
-		return (
-			<Link to={rowHref} className="block">
-				{card}
-			</Link>
-		);
-	}
-
-	return card;
 }
 
 function CardDetailRow<T>({ cell }: { cell: Cell<T, unknown> }) {
