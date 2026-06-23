@@ -26,6 +26,21 @@ Autumn is the source of truth for a customer's state and what they can do. Strip
 Autumn does not read from Stripe. If you rename a product, change a price or cancel a subscription directly in the Stripe dashboard, Autumn won't pick up those changes. Always make changes through the Autumn dashboard or API.
 </Warning>
 
+### You keep full control of Stripe
+
+Autumn sits *on top of* Stripe, not in front of it. Your Stripe account is still your Stripe account — Autumn just automates the object lifecycle so you don't have to. Everything you rely on Stripe for today keeps working:
+
+| What you keep | How it works with Autumn |
+|---|---|
+| **Stripe Radar** | All subscriptions, invoices, and Checkout Sessions Autumn creates are evaluated by your Radar rules and risk scores as normal. No bypass, no allowlist. |
+| **Stripe Checkout** | Autumn uses real Stripe-hosted Checkout Sessions. Pass extra Stripe options (custom fields, tax IDs, billing address collection, payment method types, allow/block lists, custom session metadata, etc.) via [`checkout_session_params`](/api-reference/billing/attach) on `billing.attach`. |
+| **3DS / SCA** | Strong Customer Authentication is handled by Stripe end to end. Autumn's deferred-execution path explicitly waits on `required_action` and 3DS challenges. |
+| **Webhooks for your own logic** | Autumn's webhooks are additive. Your existing Stripe webhook endpoints continue to fire — keep using them for ledgering, anti-abuse signals, or anything else. |
+| **Stripe dashboard** | Disputes, refunds, payment logs, Radar reviews, and customer-level fraud tooling all live in the Stripe dashboard exactly as before. |
+| **Payment methods, tax, coupons** | Configured in Stripe (and exposed to Autumn via `checkout_session_params`, discount codes, and tax rate IDs). |
+
+The rule of thumb: **Autumn owns pricing, entitlements, and the subscription lifecycle. Stripe owns the money movement, risk, and compliance surface — and you keep direct access to all of it.**
+
 ## Connecting Stripe
 
 There are three ways to connect your Stripe account to Autumn:
