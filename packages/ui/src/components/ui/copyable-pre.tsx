@@ -1,6 +1,6 @@
-import { CopyButton } from "@autumn/ui";
 import { Check, Copy } from "lucide-react";
 import React from "react";
+import { CopyButton } from "./copy-button";
 
 export function CopyablePre({ text }: { text: string }) {
 	return (
@@ -46,11 +46,9 @@ export function CopyableSpan({
 
 	return (
 		<span
-			className={
-				`inline-flex items-center rounded-xl bg-muted/50 pl-3 py-1 text-md font-mono text-muted-foreground relative font-normal gap-1 cursor-pointer transition-opacity ${
-					copied ? "opacity-30" : ""
-				}${className ? ` ${className}` : ""}`
-			}
+			className={`inline-flex items-center rounded-xl bg-muted/50 pl-3 py-1 text-md font-mono text-muted-foreground relative font-normal gap-1 cursor-pointer transition-opacity ${
+				copied ? "opacity-30" : ""
+			}${className ? ` ${className}` : ""}`}
 			onClick={handleClick}
 		>
 			<span className="pr-2">{text}</span>

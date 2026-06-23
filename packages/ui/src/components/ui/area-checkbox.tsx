@@ -1,14 +1,10 @@
 /** biome-ignore-all lint/a11y/noStaticElementInteractions: shush */
 "use client";
 
-import {
-	Checkbox,
-	cn,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@autumn/ui";
 import React from "react";
+import { cn } from "../../lib/utils";
+import { Checkbox } from "./checkbox";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 interface AreaCheckboxProps {
 	className?: string;

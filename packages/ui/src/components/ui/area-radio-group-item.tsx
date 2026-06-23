@@ -1,13 +1,9 @@
 "use client";
 
-import {
-	cn,
-	RadioGroupItem,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@autumn/ui";
 import { useId } from "react";
+import { cn } from "../../lib/utils";
+import { RadioGroupItem } from "./radio-group";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 interface AreaRadioGroupItemProps {
 	className?: string;

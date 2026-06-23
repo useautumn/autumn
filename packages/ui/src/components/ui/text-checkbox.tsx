@@ -1,6 +1,7 @@
-import { Checkbox, cn } from "@autumn/ui";
 import type * as React from "react";
 import { useId } from "react";
+import { cn } from "../../lib/utils";
+import { Checkbox } from "./checkbox";
 
 interface TextCheckboxProps extends React.ComponentProps<typeof Checkbox> {
 	children: React.ReactNode;

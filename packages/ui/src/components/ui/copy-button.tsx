@@ -1,14 +1,13 @@
-import type { IconButtonProps } from "@autumn/ui";
+import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
+import { useCallback, useEffect, useState } from "react";
+import { cn } from "../../lib/utils";
+import { IconButton, type IconButtonProps } from "./icon-button";
 import {
-	cn,
-	IconButton,
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
-} from "@autumn/ui";
-import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
-import { useCallback, useEffect, useState } from "react";
+} from "./tooltip";
 
 /** Hook for copy-to-clipboard with auto-reset state */
 const useCopyAnimation = ({

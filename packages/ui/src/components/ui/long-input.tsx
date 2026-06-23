@@ -1,5 +1,5 @@
-import { cn } from "@autumn/ui";
 import * as React from "react";
+import { cn } from "../../lib/utils";
 
 function LongInput({ className, ...props }: React.ComponentProps<"textarea">) {
 	const [isFocused, setIsFocused] = React.useState(false);

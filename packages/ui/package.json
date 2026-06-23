@@ -24,8 +24,6 @@
 	"dependencies": {
 		"@base-ui/react": "^1.4.1",
 		"@phosphor-icons/react": "^2.1.10",
-		"@squircle/core": "^1.0.6",
-		"@squircle/paint-polyfill": "^1.0.6",
 		"@squircle/tailwindcss": "^1.0.6",
 		"class-variance-authority": "^0.7.1",
 		"clsx": "^2.1.1",

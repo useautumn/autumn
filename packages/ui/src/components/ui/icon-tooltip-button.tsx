@@ -1,11 +1,7 @@
-import {
-	cn,
-	IconButton,
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@autumn/ui";
 import type { ReactNode } from "react";
+import { cn } from "../../lib/utils";
+import { IconButton } from "./icon-button";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 export function IconTooltipButton({
 	tooltip,

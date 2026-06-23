@@ -1,7 +1,7 @@
+import { Skeleton } from "@autumn/ui";
 import type { Cell, Row } from "@tanstack/react-table";
 import { flexRender } from "@tanstack/react-table";
 import { useNavigate } from "react-router";
-import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useTableContext } from "./table-context";
 

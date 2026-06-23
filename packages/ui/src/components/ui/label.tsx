@@ -1,5 +1,5 @@
-import { cn } from "@autumn/ui";
 import { Field } from "@base-ui/react/field";
+import { cn } from "../../lib/utils";
 
 function Label({ className, ...props }: Field.Label.Props) {
 	return (

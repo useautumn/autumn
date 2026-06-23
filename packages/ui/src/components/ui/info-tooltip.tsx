@@ -1,5 +1,5 @@
-import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import { InfoIcon } from "@phosphor-icons/react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 export const InfoTooltip = ({
 	children,

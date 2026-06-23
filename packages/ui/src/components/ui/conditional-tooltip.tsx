@@ -1,5 +1,5 @@
-import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import type { ReactElement, ReactNode } from "react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 interface ConditionalTooltipProps {
 	enabled: boolean;

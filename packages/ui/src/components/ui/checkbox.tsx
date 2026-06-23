@@ -1,8 +1,8 @@
 "use client";
 
-import { cn, hasSubmitShortcutModifier } from "@autumn/ui";
 import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox";
 import { CheckIcon } from "lucide-react";
+import { cn, hasSubmitShortcutModifier } from "../../lib/utils";
 
 interface CheckboxProps extends CheckboxPrimitive.Root.Props {
 	size?: "sm" | "md" | "lg";

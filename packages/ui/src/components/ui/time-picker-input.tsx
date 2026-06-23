@@ -3,15 +3,15 @@
  * Adapted from openstatusHQ/time-picker (MIT).
  */
 
+import React, { useEffect, useMemo, useState } from "react";
+import { cn } from "../../lib/utils";
 import {
-	cn,
 	getArrowByType,
 	getDateByType,
 	type Period,
 	setDateByType,
 	type TimePickerType,
-} from "@autumn/ui";
-import React, { useEffect, useMemo, useState } from "react";
+} from "./time-picker-utils";
 
 export interface TimePickerInputProps
 	extends React.InputHTMLAttributes<HTMLInputElement> {
