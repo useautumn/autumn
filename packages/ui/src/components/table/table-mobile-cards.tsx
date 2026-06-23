@@ -1,9 +1,8 @@
-import { Skeleton } from "@autumn/ui";
 import type { Cell, Row } from "@tanstack/react-table";
 import { flexRender } from "@tanstack/react-table";
-import { useNavigate } from "react-router";
-import { cn } from "@/lib/utils";
-import { useTableContext } from "./table-context";
+import { cn } from "../../lib/utils";
+import { Skeleton } from "../ui/skeleton";
+import { type TableLinkComponent, useTableContext } from "./table-context";
 
 const SKELETON_CARD_COUNT = 3;
 
@@ -20,6 +19,7 @@ export function TableMobileCards() {
 		emptyStateChildren,
 		emptyStateText,
 		selectedItemId,
+		linkComponent,
 	} = useTableContext();
 
 	const rows = table.getRowModel().rows;
@@ -57,10 +57,11 @@ export function TableMobileCards() {
 			{rows.map((row) => (
 				<MobileCard
 					key={row.id}
+					isSelected={selectedItemId === (row.original as { id?: string }).id}
+					linkComponent={linkComponent}
+					onRowClick={onRowClick}
 					row={row}
 					rowHref={getRowHref?.(row.original)}
-					isSelected={selectedItemId === (row.original as { id?: string }).id}
-					onRowClick={onRowClick}
 				/>
 			))}
 		</div>
@@ -72,11 +73,13 @@ function MobileCard<T>({
 	rowHref,
 	isSelected,
 	onRowClick,
+	linkComponent: LinkComponent,
 }: {
 	row: Row<T>;
 	rowHref?: string;
 	isSelected: boolean;
 	onRowClick?: (row: T) => void;
+	linkComponent?: TableLinkComponent;
 }) {
 	const cells = row.getVisibleCells();
 	const titleCell = cells.find(
@@ -90,39 +93,15 @@ function MobileCard<T>({
 			cell.column.columnDef.meta?.mobileCard !== "hidden",
 	);
 
-	const navigate = useNavigate();
+	const interactive = Boolean(rowHref || onRowClick);
+	const cardClassName = cn(
+		"rounded-xl border bg-interactive-secondary p-4 flex flex-col gap-3 transition-colors",
+		isSelected ? "border-primary" : "active:bg-interactive-secondary-hover",
+		interactive && "cursor-pointer",
+	);
 
-	// Navigate programmatically rather than wrapping the card in a Link so nested
-	// action controls (e.g. the actions dropdown) can stopPropagation and not
-	// trigger navigation. Matches onRowClick behavior.
-	const getClickHandler = () => {
-		if (rowHref) return () => navigate(rowHref);
-		if (onRowClick) return () => onRowClick(row.original);
-		return undefined;
-	};
-	const handleClick = getClickHandler();
-
-	return (
-		<div
-			className={cn(
-				"rounded-xl border bg-interactive-secondary p-4 flex flex-col gap-3 transition-colors",
-				isSelected ? "border-primary" : "active:bg-interactive-secondary-hover",
-				handleClick && "cursor-pointer",
-			)}
-			onClick={handleClick}
-			onKeyDown={
-				handleClick
-					? (e) => {
-							if (e.key === "Enter" || e.key === " ") {
-								e.preventDefault();
-								handleClick();
-							}
-						}
-					: undefined
-			}
-			role={handleClick ? "button" : undefined}
-			tabIndex={handleClick ? 0 : undefined}
-		>
+	const content = (
+		<>
 			<div className="flex items-center justify-between gap-3">
 				<div className="min-w-0 flex-1 text-foreground font-medium text-[15px] truncate">
 					{titleCell &&
@@ -141,12 +120,41 @@ function MobileCard<T>({
 			{detailCells.length > 0 && (
 				<dl className="flex flex-col gap-1.5 border-t border-border/60 pt-3">
 					{detailCells.map((cell) => (
-						<CardDetailRow key={cell.id} cell={cell} />
+						<CardDetailRow cell={cell} key={cell.id} />
 					))}
 				</dl>
 			)}
-		</div>
+		</>
 	);
+
+	// Nested action controls stopPropagation, so wrapping the whole card in a link
+	// is safe and keeps the table router-agnostic via the injected linkComponent.
+	if (rowHref && LinkComponent) {
+		return (
+			<LinkComponent className={cardClassName} to={rowHref}>
+				{content}
+			</LinkComponent>
+		);
+	}
+	if (rowHref) {
+		return (
+			<a className={cardClassName} href={rowHref}>
+				{content}
+			</a>
+		);
+	}
+	if (onRowClick) {
+		return (
+			<button
+				className={cn(cardClassName, "text-left")}
+				onClick={() => onRowClick(row.original)}
+				type="button"
+			>
+				{content}
+			</button>
+		);
+	}
+	return <div className={cardClassName}>{content}</div>;
 }
 
 function CardDetailRow<T>({ cell }: { cell: Cell<T, unknown> }) {

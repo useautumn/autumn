@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import ErrorScreen from "@/views/general/ErrorScreen";
 import { TableContext, type TableProps } from "./table-context";
 
 interface TableProviderProps<T> {
@@ -12,11 +11,9 @@ export function TableProvider<T>(props: TableProviderProps<T>) {
 
 	if (!config) {
 		return (
-			<ErrorScreen>
-				<span className="text-muted-foreground text-sm">
-					Table config is required
-				</span>
-			</ErrorScreen>
+			<div className="text-muted-foreground text-sm">
+				Table config is required
+			</div>
 		);
 	}
 

@@ -19,7 +19,7 @@ import {
 	hiddenSkeleton,
 	idSkeleton,
 	statusSkeleton,
-} from "@/components/general/table/table-skeleton-presets";
+} from "@/components/general/table";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { CustomerProductsStatus } from "../customer-products/CustomerProductsStatus";
 import { CustomerListRowToolbar } from "./CustomerListRowToolbar";

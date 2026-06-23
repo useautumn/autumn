@@ -1,5 +1,5 @@
-import { Table } from "@autumn/ui";
-import { cn } from "@/lib/utils";
+import { Table } from "../../components/ui/table";
+import { cn } from "../../lib/utils";
 import { TableColumnVisibility } from "./table-column-visibility";
 import { useShowMobileCards, useTableContext } from "./table-context";
 import { TableMobileCards } from "./table-mobile-cards";

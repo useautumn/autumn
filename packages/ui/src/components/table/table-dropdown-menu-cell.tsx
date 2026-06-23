@@ -1,10 +1,10 @@
-import { Button } from "@autumn/ui";
 import { EllipsisVertical } from "lucide-react";
+import { Button } from "../../components/ui/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuTrigger,
-} from "@autumn/ui";
+} from "../../components/ui/dropdown-menu";
 
 export function TableDropdownMenuCell({
 	children,

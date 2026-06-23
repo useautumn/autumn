@@ -463,6 +463,8 @@
         "@base-ui/react": "^1.4.1",
         "@phosphor-icons/react": "^2.1.10",
         "@squircle/tailwindcss": "^1.0.6",
+        "@tanstack/react-table": "^8.21.3",
+        "@tanstack/react-virtual": "^3.13.18",
         "@xyflow/react": "^12.11.0",
         "ai": "^6.0.5",
         "class-variance-authority": "^0.7.1",

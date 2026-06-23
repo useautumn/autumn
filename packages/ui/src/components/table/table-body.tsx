@@ -1,6 +1,6 @@
-import { TableCell, TableRow } from "@autumn/ui";
 import { useRef } from "react";
-import { cn } from "@/lib/utils";
+import { TableCell, TableRow } from "../../components/ui/table";
+import { cn } from "../../lib/utils";
 import { useTableContext } from "./table-context";
 import { MotionTbody, TABLE_FADE_IN, TABLE_TRANSITION } from "./table-motion";
 import { TableRowCells, TableSkeletonRows } from "./table-row-cells";

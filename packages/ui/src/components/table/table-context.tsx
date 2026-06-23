@@ -1,7 +1,18 @@
-import { useIsMobile } from "@autumn/ui";
 import type { Table as TanstackTable } from "@tanstack/react-table";
-import { createContext, type ReactNode, useContext } from "react";
-import type { ColumnGroup } from "@/hooks/useColumnVisibility";
+import {
+	type ComponentType,
+	createContext,
+	type ReactNode,
+	useContext,
+} from "react";
+import type { ColumnGroup } from "../../hooks/use-column-visibility";
+import { useIsMobile } from "../../hooks/use-is-mobile";
+
+export type TableLinkComponent = ComponentType<{
+	to: string;
+	className?: string;
+	children: ReactNode;
+}>;
 
 export interface VirtualizationConfig {
 	/** Height of the scroll container, e.g., "calc(100vh - 240px)" */
@@ -35,6 +46,8 @@ export interface TableProps<T> {
 	columnVisibilityClassName?: string;
 	/** For navigation - returns href string, enables cmd+click to open in new tab */
 	getRowHref?: (row: T) => string;
+	/** Router Link component injected by the consumer; keeps the table router-agnostic */
+	linkComponent?: TableLinkComponent;
 	/** For non-navigation actions like opening sheets/modals */
 	onRowClick?: (row: T) => void;
 	/** For double-click actions (e.g. opening external links) */

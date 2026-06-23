@@ -71,6 +71,7 @@ export * from "./components/ui/table";
 export * from "./components/ui/tabs";
 export * from "./components/ui/textarea";
 export * from "./components/ui/tooltip";
+export * from "./hooks/use-column-visibility";
 export { useControllableState } from "./hooks/use-controllable-state";
 export {
 	type ShortcutEntry,

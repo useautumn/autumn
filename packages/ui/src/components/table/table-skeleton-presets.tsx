@@ -1,5 +1,5 @@
-import { Skeleton } from "@autumn/ui";
-import { cn } from "@/lib/utils";
+import { Skeleton } from "../../components/ui/skeleton";
+import { cn } from "../../lib/utils";
 import type { ColumnSkeletonMeta } from "./table-row-cells";
 
 const LABEL_WIDTHS = ["w-12", "w-16", "w-14", "w-10", "w-20", "w-14"];

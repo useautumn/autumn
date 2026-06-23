@@ -1,6 +1,6 @@
 import type { Row } from "@tanstack/react-table";
 import CopyButton from "@/components/general/CopyButton";
-import { dateSkeleton } from "@/components/general/table/table-skeleton-presets";
+import { dateSkeleton } from "@/components/general/table";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 
 export function createDateTimeColumn<T>({

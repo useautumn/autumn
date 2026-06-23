@@ -6,7 +6,7 @@ import {
 	ChevronRightIcon,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/utils";
 
 const navBtnBase =
 	"inline-flex items-center justify-center size-5 rounded text-subtle transition-colors hover:text-muted-foreground disabled:pointer-events-none disabled:opacity-30";

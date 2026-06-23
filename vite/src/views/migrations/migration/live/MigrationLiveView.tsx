@@ -47,7 +47,7 @@ import { useCallback, useDeferredValue, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { Table } from "@/components/general/table";
-import { useCursorPagination } from "@/components/general/table/useCursorPagination";
+import { useCursorPagination } from "@/components/general/table";
 import {
 	DropdownMenu,
 	DropdownMenuContent,

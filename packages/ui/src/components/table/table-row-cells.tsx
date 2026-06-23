@@ -1,15 +1,11 @@
-import {
-	Checkbox,
-	TableBody as ShadcnTableBody,
-	Skeleton,
-	TableCell,
-	TableRow,
-} from "@autumn/ui";
 import type { Row } from "@tanstack/react-table";
 import { flexRender } from "@tanstack/react-table";
 import { memo, type ReactNode } from "react";
-import { Link } from "react-router";
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/utils";
+import { Checkbox } from "../ui/checkbox";
+import { Skeleton } from "../ui/skeleton";
+import { TableBody as ShadcnTableBody, TableCell, TableRow } from "../ui/table";
+import { type TableLinkComponent, useTableContext } from "./table-context";
 
 interface TableRowCellsProps<T> {
 	row: Row<T>;
@@ -20,12 +16,38 @@ interface TableRowCellsProps<T> {
 	isExpanded?: boolean;
 }
 
+function CellLink({
+	href,
+	className,
+	linkComponent: LinkComponent,
+	children,
+}: {
+	href: string;
+	className?: string;
+	linkComponent?: TableLinkComponent;
+	children: ReactNode;
+}) {
+	if (LinkComponent) {
+		return (
+			<LinkComponent className={className} to={href}>
+				{children}
+			</LinkComponent>
+		);
+	}
+	return (
+		<a className={className} href={href}>
+			{children}
+		</a>
+	);
+}
+
 function TableRowCellsInner<T>({
 	row,
 	enableSelection,
 	flexibleTableColumns,
 	rowHref,
 }: TableRowCellsProps<T>) {
+	const { linkComponent: LinkComponent } = useTableContext<T>();
 	const visibleCells = row.getVisibleCells();
 
 	return (
@@ -62,15 +84,16 @@ function TableRowCellsInner<T>({
 						style={cellStyle}
 					>
 						{rowHref ? (
-							<Link
-								to={rowHref}
+							<CellLink
 								className={cn(
 									"flex items-center h-full w-full px-2",
 									cellIndex === 0 && "pl-4",
 								)}
+								href={rowHref}
+								linkComponent={LinkComponent}
 							>
 								{cellContent}
-							</Link>
+							</CellLink>
 						) : (
 							cellContent
 						)}
