@@ -117,7 +117,7 @@ export default function CustomerView2() {
 										<CustomerBreadcrumbs />
 										<CustomerHeaderActions />
 									</div>
-									<div className="flex items-center justify-between w-full pt-2 gap-2">
+									<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between w-full pt-2 gap-2">
 										<div className="flex items-center gap-2 min-w-0">
 											<h3
 												className={`text-md font-semibold truncate min-w-0 ${

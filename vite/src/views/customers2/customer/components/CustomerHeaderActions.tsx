@@ -1,11 +1,14 @@
+import type { FullCustomer } from "@autumn/shared";
 import { ProcessorType } from "@autumn/shared";
 import { BracketsSquareIcon, UserCircleGearIcon } from "@phosphor-icons/react";
 import { useState } from "react";
+import { useParams } from "react-router";
 import { toast } from "sonner";
 import { IconTooltipButton } from "@/components/v2/buttons/IconTooltipButton";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
+import { getInitialScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
@@ -17,6 +20,7 @@ import {
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerObjectQuery } from "../hooks/useCustomerObjectQuery";
 import { CustomButtons } from "./CustomButtons";
 import { ShowCustomerObjectSheet } from "./ShowCustomerObjectSheet";
 
@@ -28,6 +32,15 @@ export function CustomerHeaderActions() {
 	const { masterStripeAccount } = useMasterStripeAccount();
 	const env = useEnv();
 	const axiosInstance = useAxiosInstance();
+	const { customer_id } = useParams();
+
+	useCustomerObjectQuery({
+		customerId: customer_id,
+		scopeEntityId: getInitialScopeEntityId(
+			customer as FullCustomer | undefined,
+		),
+		enabled: !!customer,
+	});
 
 	const [portalLoading, setPortalLoading] = useState(false);
 	const [showObjectOpen, setShowObjectOpen] = useState(false);
