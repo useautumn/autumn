@@ -12,6 +12,7 @@ import {
 	productItemsToPlanItemsV1,
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
+	billingControlsFromColumns,
 	sortProductItems,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -133,6 +134,7 @@ export const getPlanResponse = async ({
 		base_variant_id: product.base_variant_id,
 
 		config: product.config ?? { ignore_past_due: false },
+		billing_controls: billingControlsFromColumns(product),
 
 		customer_eligibility: customerEligibility,
 	} satisfies ApiPlanV1);

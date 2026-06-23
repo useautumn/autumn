@@ -4,8 +4,10 @@ import {
 	type DbUsageAlert,
 	type Feature,
 	type FullCustomer,
+	fullCustomerToPlanProducts,
 	fullCustomerToCustomerEntitlements,
 	fullCustomerToTags,
+	getPlanBillingControlProducts,
 	getApiBalance,
 	WebhookEventType,
 } from "@autumn/shared";
@@ -13,7 +15,63 @@ import { Decimal } from "decimal.js";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-type AlertScope = "customer" | "entity" | "org";
+type AlertScope = "customer" | "entity" | "org" | "plan";
+
+const usageAlertsForFeature = ({
+	alerts,
+	feature,
+}: {
+	alerts: DbUsageAlert[];
+	feature: Feature;
+}) =>
+	alerts.filter(
+		(alert) => alert.feature_id === feature.id || !alert.feature_id,
+	);
+
+const resolveScopedUsageAlerts = ({
+	fullCustomer,
+	feature,
+	entityId,
+}: {
+	fullCustomer: FullCustomer;
+	feature: Feature;
+	entityId?: string;
+}): { alerts: DbUsageAlert[]; scope: AlertScope } => {
+	const entity = entityId
+		? fullCustomer.entities?.find((e) => e.id === entityId)
+		: undefined;
+	const entityAlerts = usageAlertsForFeature({
+		alerts: entity?.usage_alerts ?? [],
+		feature,
+	});
+	if (entityAlerts.length > 0) return { alerts: entityAlerts, scope: "entity" };
+
+	const customerAlerts = usageAlertsForFeature({
+		alerts: fullCustomer.usage_alerts ?? [],
+		feature,
+	});
+	if (customerAlerts.length > 0) {
+		return { alerts: customerAlerts, scope: "customer" };
+	}
+
+	const planProduct = getPlanBillingControlProducts({
+		customerProducts: fullCustomerToPlanProducts({ fullCustomer }),
+	}).find(
+		(customerProduct) =>
+			usageAlertsForFeature({
+				alerts: customerProduct.usage_alerts ?? [],
+				feature,
+			}).length > 0,
+	);
+
+	return {
+		alerts: usageAlertsForFeature({
+			alerts: planProduct?.usage_alerts ?? [],
+			feature,
+		}),
+		scope: "plan",
+	};
+};
 
 export const wasThresholdCrossed = ({
 	alert,
@@ -98,9 +156,8 @@ const processAlerts = async ({
 }) => {
 	if (!alerts || alerts.length === 0) return;
 
-	const matchingAlerts = alerts.filter(
-		(alert) =>
-			alert.enabled && (alert.feature_id === feature.id || !alert.feature_id),
+	const matchingAlerts = usageAlertsForFeature({ alerts, feature }).filter(
+		(alert) => alert.enabled,
 	);
 
 	if (matchingAlerts.length === 0) return;
@@ -197,14 +254,20 @@ export const checkUsageAlerts = async ({
 	feature: Feature;
 	entityId?: string;
 }) => {
-	// 1. Customer-level alerts (always checked, no entity scoping)
+	const scopedAlerts = resolveScopedUsageAlerts({
+		fullCustomer: newFullCus,
+		feature,
+		entityId,
+	});
+
 	await processAlerts({
 		ctx,
 		oldFullCus,
 		newFullCus,
 		feature,
-		alerts: newFullCus.usage_alerts ?? [],
-		scope: "customer",
+		entityId,
+		alerts: scopedAlerts.alerts,
+		scope: scopedAlerts.scope,
 	});
 
 	// 2. Org-level alerts apply to all customers and use the tracked subject.
@@ -225,16 +288,4 @@ export const checkUsageAlerts = async ({
 		});
 	}
 
-	// 3. Entity-level alerts (only when entityId is provided)
-	if (!entityId) return;
-	const entity = newFullCus.entities?.find((e) => e.id === entityId);
-	await processAlerts({
-		ctx,
-		oldFullCus,
-		newFullCus,
-		feature,
-		entityId,
-		alerts: entity?.usage_alerts ?? [],
-		scope: "entity",
-	});
 };

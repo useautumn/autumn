@@ -5,9 +5,11 @@ import {
 	type FullCusEntWithFullCusProduct,
 	type FullCustomer,
 	fullCustomerToCustomerEntitlements,
+	fullCustomerToPlanProducts,
 	isOneOffPrice,
 	isPrepaidPrice,
 	isVolumeBasedCusEnt,
+	resolveBillingControl,
 } from "@autumn/shared";
 
 /** Pure extraction of auto-topup-relevant objects from a FullCustomer. Returns null if any prerequisite is missing. */
@@ -23,11 +25,14 @@ export const fullCustomerToAutoTopupObjects = ({
 	balanceBelowThreshold: boolean;
 } | null => {
 	// 1. Find enabled auto_topup config
-	const autoTopupConfig = fullCustomer.auto_topups?.find(
-		(config) => config.feature_id === featureId && config.enabled,
-	);
+	const autoTopupConfig = resolveBillingControl<AutoTopup, "auto_topups">({
+		controlLists: [fullCustomer.auto_topups],
+		customerProducts: fullCustomerToPlanProducts({ fullCustomer }),
+		controlKey: "auto_topups",
+		matches: (config) => config.feature_id === featureId,
+	});
 
-	if (!autoTopupConfig) return null;
+	if (!autoTopupConfig?.enabled) return null;
 
 	// 2. Find cusEnts for this feature
 	const cusEnts = fullCustomerToCustomerEntitlements({

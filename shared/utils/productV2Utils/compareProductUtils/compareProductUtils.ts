@@ -1,6 +1,7 @@
 /** biome-ignore-all lint/suspicious/noDoubleEquals: comparison functions require double equals */
 import type { Feature } from "../../../models/featureModels/featureModels.js";
 import type { FullProduct } from "../../../models/productModels/productModels.js";
+import { billingControlsFromColumns } from "../../../models/cusModels/billingControls/customerBillingControls.js";
 import {
 	OnDecrease,
 	OnIncrease,
@@ -114,6 +115,19 @@ export const compareConfig = ({
 	return detailsSame;
 };
 
+export const compareBillingControls = ({
+	newBillingControls,
+	curBillingControls,
+}: {
+	newBillingControls?: ProductV2["billing_controls"];
+	curBillingControls?: ProductV2["billing_controls"];
+}) => {
+	return (
+		JSON.stringify(newBillingControls ?? {}) ===
+		JSON.stringify(curBillingControls ?? {})
+	);
+};
+
 export const prodOptionsAreSame = ({
 	curProduct,
 	newProduct,
@@ -171,6 +185,7 @@ export const productsAreSame = ({
 	let pricesChanged = false;
 	let detailsSame = true;
 	let configSame = true;
+	let billingControlsSame = true;
 	const newItems: ProductItem[] = [];
 	const removedItems: ProductItem[] = [];
 
@@ -182,6 +197,13 @@ export const productsAreSame = ({
 	configSame = compareConfig({
 		newConfig: newProductV2?.config,
 		curConfig: curProductV2?.config,
+	});
+
+	billingControlsSame = compareBillingControls({
+		newBillingControls: newProductV2?.billing_controls,
+		curBillingControls:
+			curProductV2?.billing_controls ??
+			(curProductV1 ? billingControlsFromColumns(curProductV1) : undefined),
 	});
 
 	if (items1.length !== items2.length) {
@@ -272,5 +294,6 @@ export const productsAreSame = ({
 		detailsSame,
 		optionsSame,
 		configSame,
+		billingControlsSame,
 	};
 };

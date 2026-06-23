@@ -11,6 +11,7 @@ import {
 	type FullProduct,
 	nullish,
 	type Organization,
+	pickBillingControlColumns,
 	type Price,
 	PriceSchema,
 	PriceType,
@@ -103,6 +104,7 @@ export const constructProduct = ({
 		config: {
 			ignore_past_due: productData.config?.ignore_past_due ?? false,
 		},
+		...pickBillingControlColumns(productData.billing_controls),
 	};
 
 	return newProduct;

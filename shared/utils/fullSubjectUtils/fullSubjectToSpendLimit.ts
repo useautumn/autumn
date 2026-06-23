@@ -3,6 +3,10 @@ import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubject
 import { cusEntToCusPrice } from "../cusEntUtils/index.js";
 import { isPayPerUsePrice } from "../productUtils/priceUtils/index.js";
 import { fullSubjectToCustomerEntitlements } from "./fullSubjectToCustomerEntitlements.js";
+import {
+	fullSubjectToPlanProducts,
+	resolveBillingControl,
+} from "./planBillingControlUtils.js";
 
 /**
  * Extract enabled spend limits for the requested features from a FullSubject.
@@ -24,14 +28,16 @@ export const fullSubjectToSpendLimitByFeatureId = ({
 
 	for (const featureId of uniqueFeatureIds) {
 		const isMatch = (candidate: DbSpendLimit) =>
-			candidate.feature_id === featureId &&
-			candidate.enabled &&
-			candidate.overage_limit !== undefined;
+			candidate.feature_id === featureId && candidate.overage_limit !== undefined;
 
-		const spendLimit =
-			entitySpendLimits.find(isMatch) ?? customerSpendLimits.find(isMatch);
+		const spendLimit = resolveBillingControl<DbSpendLimit, "spend_limits">({
+			controlLists: [entitySpendLimits, customerSpendLimits],
+			customerProducts: fullSubjectToPlanProducts({ fullSubject }),
+			controlKey: "spend_limits",
+			matches: isMatch,
+		});
 
-		if (spendLimit) {
+		if (spendLimit?.enabled) {
 			spendLimitByFeatureId[featureId] = spendLimit;
 		}
 	}

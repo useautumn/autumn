@@ -19,6 +19,9 @@ export const DbUsageLimitSchema = z.object({
 	feature_id: z.string().meta({
 		description: "The feature this usage limit applies to.",
 	}),
+	enabled: z.boolean().default(true).meta({
+		description: "Whether this usage limit is enabled.",
+	}),
 	limit: z.number().min(0).meta({
 		description: "Maximum units allowed per interval.",
 	}),
