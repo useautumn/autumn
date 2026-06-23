@@ -14,8 +14,13 @@ export class OrgService {
 		return await axiosInstance.post(`/v1/organization/stripe`, data);
 	}
 
-	static async disconnectStripe(axiosInstance: AxiosInstance) {
-		return await axiosInstance.delete(`/v1/organization/stripe`);
+	static async disconnectStripe(
+		axiosInstance: AxiosInstance,
+		channel?: "secret_key" | "oauth",
+	) {
+		return await axiosInstance.delete(`/v1/organization/stripe`, {
+			data: channel ? { channel } : undefined,
+		});
 	}
 
 	static async upsertVercelConfig(

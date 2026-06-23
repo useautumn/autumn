@@ -1,0 +1,59 @@
+/* Reuse the MAIN vite app's stylesheet verbatim — identical tokens, @theme,
+   fonts, presets, scrollbars. */
+@import "../../../vite/src/index.css";
+
+/* Tailwind v4 must scan both testbench's own files and the reused vite
+   components for class names. */
+@source "./**/*.tsx";
+@source "../../../vite/src/components/**/*.tsx";
+
+/* Single-screen shell: the app is h-dvh and scrolls only inside its panels (the
+   vite app's convention — `w-screen h-screen overflow-hidden`). The page itself
+   never scrolls, so no bare background shows through. */
+html,
+body,
+#root {
+	height: 100%;
+	background-color: var(--outer-background);
+}
+
+body {
+	overflow: hidden;
+}
+
+/* Indeterminate progress bar — a sliding sweep for phases with no countable
+   total (warm-up build/snapshot), so they read as "working" not "frozen". */
+@keyframes tb-indeterminate {
+	0% {
+		left: -40%;
+	}
+	100% {
+		left: 100%;
+	}
+}
+
+.tb-indeterminate {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 40%;
+	border-radius: 9999px;
+	animation: tb-indeterminate 1.1s ease-in-out infinite;
+}
+
+/* WTERM terminal surface — reuse the dashboard's own tokens so the read-only
+   output pane is seamless with the card it sits in (no shadow / radius of its
+   own; the card provides the border). The ANSI 16-color palette keeps WTERM's
+   VS-Code-style defaults, which read well on the dark card. */
+.wterm {
+	--term-bg: var(--card);
+	--term-fg: var(--foreground);
+	--term-font-size: 12px;
+	--term-line-height: 1.25;
+	--term-row-height: 16px;
+	height: 100% !important;
+	width: 100% !important;
+	padding: 10px !important;
+	border-radius: 0 !important;
+	box-shadow: none !important;
+}

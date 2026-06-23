@@ -1,0 +1,32 @@
+---
+title: "Refresh"
+openapi: "openapi POST /v1/keys.refresh"
+---
+
+<Note>
+  Exchanges a refresh token for a freshly rotated access + refresh pair. Self-service for the token holder — **no secret key required**. Send the refresh token as the Bearer credential.
+</Note>
+
+### How it works
+
+The just-replaced refresh token is honored for one more rotation (a grace window so a dropped response or a second app instance doesn't lock the customer out). Replaying a refresh token that is more than one generation old is treated as theft and revokes the customer's tokens.
+
+<CodeGroup>
+
+```typescript TypeScript
+// Client configured with the refresh token as its key
+import { Autumn } from "autumn-js";
+
+const autumn = new Autumn({
+  secretKey: JWT_REFRESH_TOKEN,
+});
+
+const { accessToken, refreshToken } = await autumn.keys.refresh({});
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/keys.refresh" \
+  -H "Authorization: Bearer am_jwt_<refresh_token>"
+```
+
+</CodeGroup>

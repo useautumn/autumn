@@ -50,6 +50,7 @@ export const autoSyncFromSubscription = async ({
 		ctx,
 		customerId,
 		subscription,
+		customerProducts: fullCustomer.customer_products,
 	});
 
 	const eligibility = canAutoSync({ match });

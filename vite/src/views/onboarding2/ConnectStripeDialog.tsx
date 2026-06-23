@@ -19,9 +19,11 @@ import { connectStripe } from "./utils/connectStripe";
 export default function ConnectStripeDialog({
 	open,
 	setOpen,
+	onMismatch,
 }: {
 	open: boolean;
 	setOpen: (open: boolean) => void;
+	onMismatch?: (message: string) => void;
 }) {
 	const { mutate: mutateOrg } = useOrg();
 
@@ -31,7 +33,12 @@ export default function ConnectStripeDialog({
 	const [loading, setLoading] = useState(false);
 	const handleConnectStripe = async () => {
 		setLoading(true);
-		await connectStripe({ testApiKey, axiosInstance, mutate: mutateOrg });
+		await connectStripe({
+			testApiKey,
+			axiosInstance,
+			mutate: mutateOrg,
+			onMismatch,
+		});
 		setOpen(false);
 		setLoading(false);
 	};

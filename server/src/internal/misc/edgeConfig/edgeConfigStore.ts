@@ -19,6 +19,39 @@ export type EdgeConfigStatus = {
 const nowIso = () => new Date().toISOString();
 
 /**
+ * Test-environment override: isolated µVMs (`bun tw`) have no AWS creds, so the
+ * S3 poll fails every interval with `CredentialsProviderError`. Setting
+ * `AUTUMN_EDGE_CONFIG_OVERRIDE_B64` to base64(JSON) of a `{ [s3Key]: config }`
+ * map makes every store serve its entry (or its default) from memory and skip S3
+ * entirely — zero credential spam, fully deterministic. Decoded once per process.
+ * Unset in prod/dev, so the real S3-backed behaviour is untouched.
+ */
+let cachedOverride: Record<string, unknown> | null | undefined;
+const getEdgeConfigOverride = (): Record<string, unknown> | null => {
+	if (cachedOverride !== undefined) {
+		return cachedOverride;
+	}
+	const encoded = process.env.AUTUMN_EDGE_CONFIG_OVERRIDE_B64;
+	if (!encoded) {
+		cachedOverride = null;
+		return cachedOverride;
+	}
+	try {
+		const json = Buffer.from(encoded, "base64").toString("utf8");
+		const parsed = JSON.parse(json);
+		cachedOverride =
+			parsed && typeof parsed === "object"
+				? (parsed as Record<string, unknown>)
+				: {};
+	} catch {
+		// Malformed override → treat as "override active but empty" so we still
+		// skip S3 (the whole point is no creds available) and serve defaults.
+		cachedOverride = {};
+	}
+	return cachedOverride;
+};
+
+/**
  * Factory that creates a typed, poll-based edge config backed by S3.
  * Fail-open: any S3 error resets the in-memory config to `defaultValue()`.
  */
@@ -45,6 +78,24 @@ export const createEdgeConfigStore = <T>({
 	};
 	let pollTimer: ReturnType<typeof setInterval> | null = null;
 
+	// When the base64 test override is present, seed this store's config from it
+	// (or its default) once and operate fully in-memory — no S3, no polling.
+	const override = getEdgeConfigOverride();
+	if (override) {
+		const raw = override[s3Key];
+		try {
+			runtimeConfig = raw === undefined ? defaultValue() : schema.parse(raw);
+		} catch {
+			runtimeConfig = defaultValue();
+		}
+		runtimeStatus = {
+			configured: true,
+			healthy: true,
+			lastFetchAt: nowIso(),
+			lastSuccessAt: nowIso(),
+		};
+	}
+
 	const getConfigLocation = () => {
 		const { bucket, region } = getAdminS3Config();
 		return {
@@ -62,6 +113,11 @@ export const createEdgeConfigStore = <T>({
 	};
 
 	const readFromSource = async (): Promise<T> => {
+		// Override mode: serve the in-memory (env-seeded) config, never touch S3.
+		if (override) {
+			return runtimeConfig;
+		}
+
 		const { bucket, key, configured } = getConfigLocation();
 
 		if (!configured || !bucket || !key) return defaultValue();
@@ -86,6 +142,18 @@ export const createEdgeConfigStore = <T>({
 	};
 
 	const writeToSource = async ({ config }: { config: T }) => {
+		// Override mode: update the in-memory config only (no S3 creds available).
+		if (override) {
+			runtimeConfig = config;
+			runtimeStatus = {
+				configured: true,
+				healthy: true,
+				lastFetchAt: nowIso(),
+				lastSuccessAt: nowIso(),
+			};
+			return;
+		}
+
 		const { bucket, key, configured } = getConfigLocation();
 
 		if (!configured || !bucket || !key) {
@@ -116,6 +184,11 @@ export const createEdgeConfigStore = <T>({
 	};
 
 	const refresh = async ({ logger }: { logger?: Logger } = {}) => {
+		// Override mode: config is fixed from env; nothing to refresh.
+		if (override) {
+			return;
+		}
+
 		const { configured } = getConfigLocation();
 		runtimeStatus = {
 			...runtimeStatus,
@@ -169,6 +242,10 @@ export const createEdgeConfigStore = <T>({
 	};
 
 	const startPolling = async ({ logger }: { logger?: Logger } = {}) => {
+		// Override mode: config is fixed from env; never start the S3 poll loop.
+		if (override) {
+			return;
+		}
 		if (pollTimer) return;
 
 		await refresh({ logger });

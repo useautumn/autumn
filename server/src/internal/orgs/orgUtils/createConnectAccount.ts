@@ -7,9 +7,11 @@ import { initMasterStripe } from "@/external/connect/initStripeCli.js";
 export const createConnectAccount = async ({
 	org,
 	user,
+	metadata,
 }: {
 	org: Organization;
 	user: User;
+	metadata?: Record<string, string>;
 }) => {
 	// For v2 API, need to use specific API version
 	const stripe = initMasterStripe({
@@ -24,6 +26,7 @@ export const createConnectAccount = async ({
 		contact_email: user.email,
 		display_name: org.name,
 		dashboard: "full",
+		...(metadata ? { metadata } : {}),
 		identity: {
 			country: "us",
 		},

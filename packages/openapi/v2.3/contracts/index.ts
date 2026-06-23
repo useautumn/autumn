@@ -46,6 +46,11 @@ import {
 	updateFeatureContract,
 } from "./featuresContract.js";
 import {
+	keysMintContract,
+	keysRefreshContract,
+	keysRevokeContract,
+} from "./keysContract.js";
+import {
 	createPlanContract,
 	deletePlanContract,
 	getPlanContract,
@@ -126,4 +131,9 @@ balancesTrackTokens: balancesTrackTokensContract,
 	platformLinkRevenueCat: platformLinkRevenueCatContract,
 	platformSyncRevenueCat: platformSyncRevenueCatContract,
 	platformGetRevenueCatKeys: platformGetRevenueCatKeysContract,
+
+	// Customer Keys (per-customer JWTs)
+	keysMint: keysMintContract,
+	keysRefresh: keysRefreshContract,
+	keysRevoke: keysRevokeContract,
 });

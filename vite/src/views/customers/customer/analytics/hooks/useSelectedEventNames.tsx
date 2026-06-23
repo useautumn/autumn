@@ -1,12 +1,11 @@
-import { FeatureType } from "@autumn/shared";
 import { parseAsArrayOf, parseAsString, useQueryStates } from "nuqs";
-import { useMemo } from "react";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { useAnalyticsQueryState } from "./useAnalyticsQueryState";
 import { type EventNameWithCount, useEventNames } from "./useEventNames";
 
 /** Resolves the event names the analytics views filter by: explicit URL
- * selection (event_names / feature_ids) or the top metered events by default.
- * Shared by the chart and the events table so they stay in sync. */
+ * selection (event_names / feature_ids) or the top events by count in the
+ * active window by default. Shared by the chart and the events table. */
 export const useSelectedEventNames = () => {
 	const [{ feature_ids: featureIds, event_names: eventNames }] = useQueryStates(
 		{
@@ -15,34 +14,27 @@ export const useSelectedEventNames = () => {
 		},
 	);
 
+	const { queryStates } = useAnalyticsQueryState();
+	const { interval, start, end } = queryStates;
+
 	const { eventNames: cachedEventNames, isLoading: eventNamesLoading } =
-		useEventNames();
+		useEventNames({ interval, start, end });
 	const { features: featuresData, isLoading: featuresLoading } =
 		useFeaturesQuery();
 
-	const featureLinkedEventNames = useMemo(() => {
-		if (!featuresData?.length) {
-			return cachedEventNames;
-		}
-		return cachedEventNames.filter((e: EventNameWithCount) =>
-			featuresData.some(
-				(f) =>
-					(f.type === FeatureType.Metered ||
-						f.type === FeatureType.CreditSystem) &&
-					(f.event_names?.includes(e.event_name) || f.id === e.event_name),
-			),
-		);
-	}, [cachedEventNames, featuresData]);
+	const defaultEventNames = cachedEventNames
+		.slice(0, 3)
+		.map((e: EventNameWithCount) => e.event_name);
 
-	const selectedEventNames =
-		eventNames || featureIds
-			? [...(eventNames || []), ...(featureIds || [])]
-			: featureLinkedEventNames
-					.slice(0, 3)
-					.map((e: EventNameWithCount) => e.event_name);
+	const hasExplicitSelection = Boolean(eventNames || featureIds);
+
+	const selectedEventNames = hasExplicitSelection
+		? [...(eventNames || []), ...(featureIds || [])]
+		: defaultEventNames;
 
 	return {
 		selectedEventNames,
+		hasExplicitSelection,
 		featuresData,
 		featuresLoading,
 		eventNamesLoading,

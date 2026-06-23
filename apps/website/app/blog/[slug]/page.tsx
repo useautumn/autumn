@@ -4,7 +4,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { mdxComponents } from "@/components/blogComponents";
+import JsonLd from "@/components/json-ld";
 import { getAllPosts, getPostBySlug } from "@/lib/blogUtils";
+import { blogPostingSchema, breadcrumbSchema } from "@/lib/seo";
 import type { BlogParams } from "@/lib/types";
 
 export function generateStaticParams() {
@@ -23,6 +25,7 @@ export async function generateMetadata({
 	return {
 		title: post.title,
 		description: post.description,
+		alternates: { canonical: `/blog/${slug}` },
 		openGraph: {
 			title: post.title,
 			description: post.description,
@@ -81,29 +84,46 @@ export default async function BlogPostPage({ params }: { params: BlogParams }) {
 
 	return (
 		<div className="py-16 md:py-24 bg-[#0F0F0F]">
+			<JsonLd
+				data={[
+					blogPostingSchema(post),
+					breadcrumbSchema([
+						{ name: "Blog", path: "/blog" },
+						{ name: post.title, path: `/blog/${post.slug}` },
+					]),
+				]}
+			/>
 			<div className="max-w-[720px] mx-auto px-4 xl:px-0">
-				<Link
-					href="/blog"
-					className="inline-flex items-center gap-2 font-mono text-[12px] md:text-[14px] uppercase tracking-[-2%] text-[#FFFFFF66] hover:text-white transition-colors duration-300 mb-10"
-				>
-					<svg
-						width="16"
-						height="16"
-						viewBox="0 0 16 16"
-						fill="none"
-						className="rotate-180"
-						aria-hidden="true"
+				<div className="flex items-center justify-between gap-4 mb-10">
+					<Link
+						href="/blog"
+						className="inline-flex items-center gap-2 font-mono text-[12px] md:text-[14px] uppercase tracking-[-2%] text-[#FFFFFF66] hover:text-white transition-colors duration-300"
 					>
-						<path
-							d="M6 3L11 8L6 13"
-							stroke="currentColor"
-							strokeWidth="1.5"
-							strokeLinecap="round"
-							strokeLinejoin="round"
-						/>
-					</svg>
-					Back to blog
-				</Link>
+						<svg
+							width="16"
+							height="16"
+							viewBox="0 0 16 16"
+							fill="none"
+							className="rotate-180"
+							aria-hidden="true"
+						>
+							<path
+								d="M6 3L11 8L6 13"
+								stroke="currentColor"
+								strokeWidth="1.5"
+								strokeLinecap="round"
+								strokeLinejoin="round"
+							/>
+						</svg>
+						Back to blog
+					</Link>
+					<a
+						href={`/blog/${post.slug}.md`}
+						className="font-mono text-[12px] md:text-[14px] uppercase tracking-[-2%] text-[#9564ff] hover:text-[#b08aff] transition-colors duration-300"
+					>
+						View as .md
+					</a>
+				</div>
 
 				<header className="mb-12">
 					<div className="flex items-center gap-3 font-mono text-[12px] md:text-[14px] uppercase tracking-[-2%] text-[#FFFFFF66] mb-4">

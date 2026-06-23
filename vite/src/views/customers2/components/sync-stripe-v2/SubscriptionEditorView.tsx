@@ -256,6 +256,7 @@ export function SubscriptionEditorView({
 		() => seedDraftPlansByPhase({ proposal }),
 	);
 	const [expirePrevious, setExpirePrevious] = useState<boolean>(true);
+	const [carryOverUsage, setCarryOverUsage] = useState<boolean>(true);
 	const [enablePlanImmediately, setEnablePlanImmediately] =
 		useState<boolean>(false);
 	const [editing, setEditing] = useState<{
@@ -410,6 +411,7 @@ export function SubscriptionEditorView({
 			stripe_subscription_id: proposal.stripe_subscription_id,
 			stripe_schedule_id: proposal.stripe_schedule_id,
 			phases,
+			carry_over_usage: carryOverUsage,
 		};
 		onSubmit(params);
 	};
@@ -534,6 +536,18 @@ export function SubscriptionEditorView({
 						/>
 					}
 				/>
+				{expirePrevious && (
+					<ConfigRow
+						title="Carry over usage"
+						description="Move the expired plan's used balances onto the new plan for any shared feature."
+						action={
+							<Switch
+								checked={carryOverUsage}
+								onCheckedChange={(checked) => setCarryOverUsage(!!checked)}
+							/>
+						}
+					/>
+				)}
 				{isNotStartedSchedule && (
 					<ConfigRow
 						title="Enable plan immediately"

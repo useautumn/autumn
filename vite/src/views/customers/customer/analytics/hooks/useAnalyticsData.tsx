@@ -128,6 +128,7 @@ export const useRawAnalyticsData = () => {
 
 	const {
 		selectedEventNames,
+		hasExplicitSelection,
 		featuresData,
 		featuresLoading,
 		eventNamesLoading,
@@ -135,12 +136,14 @@ export const useRawAnalyticsData = () => {
 
 	const isReady = !eventNamesLoading && !featuresLoading;
 
+	const tableEventNames = hasExplicitSelection ? selectedEventNames : undefined;
+
 	const postBody = {
 		customer_id: customerId || undefined,
 		entity_id: entityId || undefined,
 		interval: customRange ? undefined : interval,
 		custom_range: customRange,
-		event_names: selectedEventNames,
+		event_names: tableEventNames,
 	};
 
 	const { data, isLoading, error } = useQuery({
@@ -152,7 +155,7 @@ export const useRawAnalyticsData = () => {
 			interval,
 			String(start ?? ""),
 			String(end ?? ""),
-			...selectedEventNames.sort(),
+			...(tableEventNames ?? []).sort(),
 		]),
 		queryFn: async () => {
 			const { data } = await axiosInstance.post("/query/raw", postBody);

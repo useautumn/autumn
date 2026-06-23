@@ -12,6 +12,10 @@
 
 	--input-shadow-focus-tiny:
 		0 0 0 0.2px var(--primary), 0 4px 4px 0 rgba(0, 0, 0, 0.04);
+
+	--input-shadow-destructive:
+		0 0 0 0.5px var(--color-destructive), 0 0 8px 1px rgba(228, 0, 0, 0.25), 0
+		4px 4px 0 rgba(0, 0, 0, 0.04);
 }
 
 /* Standalone shadow classes - for direct use */

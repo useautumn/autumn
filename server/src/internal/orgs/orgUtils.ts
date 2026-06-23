@@ -212,6 +212,7 @@ export const createOrgResponse = ({
 			: "default";
 
 	const throughMaster = shouldUseMaster({ org, env });
+	const oauthConnected = notNullish(accountId);
 	return {
 		id: org.id,
 		name: org.name,
@@ -238,6 +239,8 @@ export const createOrgResponse = ({
 		success_url: toSuccessUrl({ org, env }) || "",
 		default_currency: org.default_currency || "usd",
 		stripe_connection: stripeConnection,
+		stripe_secret_key_connected: secretKeyConnected,
+		stripe_oauth_connected: oauthConnected,
 		through_master: throughMaster,
 		processor_configs: {
 			vercel: {

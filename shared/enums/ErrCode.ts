@@ -55,6 +55,7 @@ export const ErrCode = {
 	// Stripe
 	StripeError: "stripe_error",
 	StripeKeyInvalid: "stripe_key_invalid",
+	StripeAccountMismatch: "stripe_account_mismatch",
 	StripeConfigNotFound: "stripe_config_not_found",
 	StripeDeleteCustomerFailed: "stripe_delete_customer_failed",
 	StripeCreateCustomerFailed: "stripe_create_customer_failed",

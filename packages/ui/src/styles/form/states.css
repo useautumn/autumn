@@ -81,3 +81,28 @@
 		border-color: var(--primary);
 	}
 }
+
+/* Destructive variants - error state shadow and border */
+.input-destructive-shadow {
+	box-shadow: var(--input-shadow-default);
+
+	&:hover:not([data-disabled="true"]):not(:focus):not([data-state="open"]) {
+		box-shadow: var(--input-shadow-hover);
+	}
+
+	&:focus,
+	&[data-state="open"] {
+		box-shadow: var(--input-shadow-destructive);
+	}
+}
+
+.input-destructive-base {
+	&:hover:not([data-disabled="true"]):not(:disabled) {
+		border-color: var(--color-destructive);
+	}
+
+	&:focus,
+	&[data-state="open"] {
+		border-color: var(--color-destructive);
+	}
+}
