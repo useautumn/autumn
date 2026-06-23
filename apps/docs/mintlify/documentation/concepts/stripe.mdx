@@ -26,32 +26,9 @@ Autumn is the source of truth for a customer's state and what they can do. Strip
 Autumn syncs from Stripe automatically. If you update or cancel a subscription directly in the Stripe dashboard, Autumn will attempt to apply the same change to the corresponding customer state.
 </Check>
 
-### Migrating from Stripe? Your billing doesn't change
+### Migrating to Autumn
 
-If you're already on Stripe and moving to Autumn, **nothing changes for your existing customers**:
-
-- **Existing subscriptions stay live** — Autumn picks them up via the connected account. No re-billing, no proration, no forced migration.
-- **Existing prices and products are reused** — Autumn links to your current Stripe products and prices instead of replacing them.
-- **Customers keep paying through Stripe Checkout** — the same hosted checkout, the same saved payment methods, the same receipts.
-- **Stripe customer IDs are preserved** — pass `stripeId: "cus_..."` when creating the Autumn customer (or let Autumn match by email) to keep the same Stripe customer record.
-- **Invoices, refunds, and Radar continue as before** — Stripe is still the system of record for money movement.
-
-You can adopt Autumn for entitlements, usage metering, and plan configuration without ever telling your customers that anything changed.
-
-### You keep full control of Stripe
-
-Autumn sits *on top of* Stripe, not in front of it. Your Stripe account is still your Stripe account — Autumn just automates the object lifecycle so you don't have to. Everything you rely on Stripe for today keeps working:
-
-| What you keep | How it works with Autumn |
-|---|---|
-| **Stripe Radar** | All subscriptions, invoices, and Checkout Sessions Autumn creates are evaluated by your Radar rules and risk scores as normal. No bypass, no allowlist. |
-| **Stripe Checkout** | Autumn uses real Stripe-hosted Checkout Sessions. Pass extra Stripe options (custom fields, tax IDs, billing address collection, payment method types, allow/block lists, custom session metadata, etc.) via [`checkout_session_params`](/api-reference/billing/attach) on `billing.attach`. |
-| **3DS / SCA** | Strong Customer Authentication is handled by Stripe end to end. Autumn's deferred-execution path explicitly waits on `required_action` and 3DS challenges. |
-| **Webhooks for your own logic** | Autumn's webhooks are additive. Your existing Stripe webhook endpoints continue to fire — keep using them for ledgering, anti-abuse signals, or anything else. |
-| **Stripe dashboard** | Disputes, refunds, payment logs, Radar reviews, and customer-level fraud tooling all live in the Stripe dashboard exactly as before. |
-| **Payment methods, tax, coupons** | Configured in Stripe (and exposed to Autumn via `checkout_session_params`, discount codes, and tax rate IDs). |
-
-The rule of thumb: **Autumn owns pricing, entitlements, and the subscription lifecycle. Stripe owns the money movement, risk, and compliance surface — and you keep direct access to all of it.**
+You can adopt Autumn for entitlements, usage metering, and plan configuration without any changes for your billing experience.
 
 ## Connecting Stripe
 
