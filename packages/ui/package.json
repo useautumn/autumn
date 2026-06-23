@@ -4,7 +4,9 @@
 	"type": "module",
 	"private": true,
 	"author": "Autumn",
-	"sideEffects": ["*.css"],
+	"sideEffects": [
+		"*.css"
+	],
 	"main": "./src/index.ts",
 	"types": "./src/index.ts",
 	"exports": {
@@ -23,12 +25,7 @@
 			"import": "./src/components/table/index.tsx",
 			"default": "./src/components/table/index.tsx"
 		},
-		"./styles.css": "./src/styles/index.css",
-		"./*": {
-			"types": "./src/*.ts",
-			"import": "./src/*.tsx",
-			"default": "./src/*.tsx"
-		}
+		"./styles.css": "./src/styles/index.css"
 	},
 	"files": [
 		"src"
