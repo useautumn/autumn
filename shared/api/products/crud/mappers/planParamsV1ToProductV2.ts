@@ -44,6 +44,11 @@ export function planParamsV1ToProductV2({
 			? params.config
 			: undefined;
 
+	const metadata =
+		"metadata" in params && params.metadata !== undefined
+			? params.metadata
+			: undefined;
+
 	const createInStripe =
 		"create_in_stripe" in params && params.create_in_stripe !== undefined
 			? params.create_in_stripe
@@ -68,6 +73,7 @@ export function planParamsV1ToProductV2({
 			: params.free_trial,
 		...(archived !== undefined && { archived }),
 		...(config !== undefined && { config }),
+		...(metadata !== undefined && { metadata }),
 		...(createInStripe !== undefined && { create_in_stripe: createInStripe }),
 	};
 }
