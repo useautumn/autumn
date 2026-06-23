@@ -150,7 +150,9 @@ const SpendLimitRow = ({
 				Overage limit:{" "}
 				{spendLimit.overage_limit === undefined
 					? "none"
-					: spendLimit.overage_limit.toLocaleString()}
+					: `${spendLimit.overage_limit.toLocaleString()}${
+							spendLimit.limit_type === "usage_percentage" ? "%" : ""
+						}`}
 			</Pill>
 		</div>
 	</button>
@@ -182,9 +184,7 @@ const UsageLimitRow = ({
 						{`${usage.toLocaleString()} / ${limit.toLocaleString()} this ${interval}`}
 					</Pill>
 				)}
-				<Pill>
-					Usage limit: {`${limit.toLocaleString()} / ${interval}`}
-				</Pill>
+				<Pill>Usage limit: {`${limit.toLocaleString()} / ${interval}`}</Pill>
 			</div>
 		</button>
 	);

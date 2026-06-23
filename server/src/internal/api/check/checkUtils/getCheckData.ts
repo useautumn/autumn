@@ -6,12 +6,14 @@ import {
 	type Feature,
 	FeatureNotFoundError,
 	findFeatureById,
+	fullCustomerToCustomerEntitlements,
 	getFeatureToUseForCheck,
 	InternalError,
 	mergeCustomerBillingControlsForCheck,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { triggerAutoTopUp } from "@/internal/balances/autoTopUp/triggerAutoTopUp.js";
+import { resolveCheckSpendLimits } from "@/internal/balances/check/resolveCheckSpendLimits.js";
 import { getApiCustomerBase } from "@/internal/customers/cusUtils/apiCusUtils/getApiCustomerBase.js";
 import { getOrCreateCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrCreateCachedFullCustomer.js";
 import { getOrSetCachedFullCustomer } from "@/internal/customers/cusUtils/fullCustomerCacheUtils/getOrSetCachedFullCustomer.js";
@@ -101,6 +103,17 @@ export const getCheckData = async ({
 			message: "failed to get entity object from cache",
 		});
 	}
+
+	apiSubject = resolveCheckSpendLimits({
+		subject: apiSubject,
+		cusEntsForFeature: (featureId) =>
+			fullCustomerToCustomerEntitlements({
+				fullCustomer,
+				featureId,
+				entity: fullCustomer.entity,
+			}),
+		entityId: entity_id,
+	});
 
 	const featureToUseMin = getFeatureToUseForCheck({
 		creditSystems,
