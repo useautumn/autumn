@@ -1,5 +1,5 @@
 export * from "./artifact";
-export * from "./CompactPromptInput";
+export * from "./compact-prompt-input";
 export * from "./canvas";
 export * from "./chain-of-thought";
 export * from "./checkpoint";

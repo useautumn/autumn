@@ -1,7 +1,7 @@
 "use client";
 
 import "./table-meta";
-import { TablePaginationFooter } from "./TablePaginationFooter";
+import { TablePaginationFooter } from "./table-pagination-footer";
 import { TableActions } from "./table-actions";
 import { TableBody } from "./table-body";
 import { TableBodyVirtualized } from "./table-body-virtualized";
@@ -33,7 +33,7 @@ export const Table = {
 	ColumnVisibility: TableColumnVisibility,
 };
 
-export * from "./CursorPagination";
+export * from "./cursor-pagination";
 export {
 	type TableLinkComponent,
 	type TableProps,
@@ -43,4 +43,4 @@ export { TableProvider } from "./table-provider";
 export { TableDropdownMenuCell } from "./table-dropdown-menu-cell";
 export type { ColumnSkeletonMeta } from "./table-row-cells";
 export * from "./table-skeleton-presets";
-export { useCursorPagination } from "./useCursorPagination";
+export { useCursorPagination } from "./use-cursor-pagination";

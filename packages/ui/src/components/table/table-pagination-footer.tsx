@@ -1,5 +1,5 @@
 import { cn } from "../../lib/utils";
-import { CursorPagination, PageSizeSelector } from "./CursorPagination";
+import { CursorPagination, PageSizeSelector } from "./cursor-pagination";
 
 export function TablePaginationFooter({
 	currentPage,
