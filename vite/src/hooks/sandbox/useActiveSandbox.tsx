@@ -26,24 +26,30 @@ let current: ActiveSandbox | null = read();
  *  carrying the `x-sandbox-org-id` resolver tag. */
 export const setActiveSandbox = (sandbox: ActiveSandbox | null) => {
 	current = sandbox;
-	if (sandbox) {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify(sandbox));
-	} else {
-		localStorage.removeItem(STORAGE_KEY);
+	// Persistence is best-effort: storage can be unavailable (private mode,
+	// disabled, quota). Always apply in-memory + notify regardless.
+	try {
+		if (sandbox) {
+			localStorage.setItem(STORAGE_KEY, JSON.stringify(sandbox));
+		} else {
+			localStorage.removeItem(STORAGE_KEY);
+		}
+	} catch {
+		// best-effort
 	}
 	for (const listener of listeners) {
 		listener();
 	}
 };
 
-const subscribe = (listener: () => void) => {
+export const subscribeActiveSandbox = (listener: () => void) => {
 	listeners.add(listener);
 	return () => {
 		listeners.delete(listener);
 	};
 };
 
-const getSnapshot = () => current;
+export const getActiveSandbox = () => current;
 
 export const useActiveSandbox = () =>
-	useSyncExternalStore(subscribe, getSnapshot);
+	useSyncExternalStore(subscribeActiveSandbox, getActiveSandbox);

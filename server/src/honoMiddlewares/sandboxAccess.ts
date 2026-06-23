@@ -16,7 +16,6 @@ export type SandboxCandidateOrg = {
 
 export const assertSandboxAccess = ({
 	sessionOrgId,
-	sandboxOrgId,
 	candidate,
 	appEnv,
 	scopes,
@@ -44,36 +43,19 @@ export const assertSandboxAccess = ({
 		});
 	}
 
-	if (!candidate) {
+	// Uniform 404 for every target-resolution failure (missing, your own org,
+	// not yours, not a sandbox) so the response can't probe ids or ownership.
+	// preview + reseller sub-orgs also carry created_by, so created_by isn't enough.
+	if (
+		!candidate ||
+		candidate.id === sessionOrgId ||
+		candidate.created_by !== sessionOrgId ||
+		candidate.is_sandbox !== true
+	) {
 		throw new RecaseError({
-			message: `Sandbox ${sandboxOrgId} not found`,
+			message: "Sandbox not found",
 			code: ErrCode.OrgNotFound,
 			statusCode: 404,
-		});
-	}
-
-	if (candidate.id === sessionOrgId) {
-		throw new RecaseError({
-			message: "Active organization is not a sandbox",
-			code: ErrCode.InvalidRequest,
-			statusCode: 400,
-		});
-	}
-
-	if (!candidate.created_by || candidate.created_by !== sessionOrgId) {
-		throw new RecaseError({
-			message: "Sandbox does not belong to this organization",
-			code: ErrCode.InvalidRequest,
-			statusCode: 403,
-		});
-	}
-
-	// preview + reseller sub-orgs also carry created_by, so created_by isn't enough
-	if (candidate.is_sandbox !== true) {
-		throw new RecaseError({
-			message: "Target organization is not a sandbox",
-			code: ErrCode.InvalidRequest,
-			statusCode: 403,
 		});
 	}
 };

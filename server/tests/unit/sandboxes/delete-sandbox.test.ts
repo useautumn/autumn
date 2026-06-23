@@ -73,11 +73,15 @@ describe("deleteSandboxForOrg (ownership-guarded teardown)", () => {
 		).toBeUndefined();
 	});
 
-	test("rejects a missing org (OrgNotFound/404), no teardown", async () => {
+	// A missing org and a non-owned org must be indistinguishable: both report
+	// "Sandbox not found", never OrgService.get's "Organization not found"
+	// (which would leak whether the id exists at all).
+	test("rejects a missing org with the unified 404 message, no teardown", async () => {
 		state.target = null;
 		await expect(call("nope")).rejects.toMatchObject({
 			code: ErrCode.OrgNotFound,
 			statusCode: 404,
+			message: "Sandbox not found",
 		});
 		expect(state.deleteCalls.length).toBe(0);
 	});

@@ -132,28 +132,49 @@ describe("assertSandboxAccess rejection codes + precedence (leak guard)", () => 
 		expectReject({ candidate: null }, ErrCode.OrgNotFound, 404);
 	});
 
-	test("resolving to the session org -> InvalidRequest / 400", () => {
+	test("resolving to the session org -> OrgNotFound / 404", () => {
 		expectReject(
 			{ candidate: { ...validCandidate, id: MAIN_ORG } },
-			ErrCode.InvalidRequest,
-			400,
+			ErrCode.OrgNotFound,
+			404,
 		);
 	});
 
-	test("foreign sandbox -> InvalidRequest / 403", () => {
+	test("foreign sandbox -> OrgNotFound / 404", () => {
 		expectReject(
 			{ candidate: { ...validCandidate, created_by: "org_attacker" } },
-			ErrCode.InvalidRequest,
-			403,
+			ErrCode.OrgNotFound,
+			404,
 		);
 	});
 
-	test("non-sandbox org -> InvalidRequest / 403", () => {
+	test("non-sandbox org -> OrgNotFound / 404", () => {
 		expectReject(
 			{ candidate: { ...validCandidate, is_sandbox: false } },
-			ErrCode.InvalidRequest,
-			403,
+			ErrCode.OrgNotFound,
+			404,
 		);
+	});
+
+	// A scoped caller must not be able to tell "this id doesn't exist" from
+	// "exists but isn't yours" from "exists but isn't a sandbox": every target
+	// resolution failure returns the same 404 + message.
+	test("missing, self, foreign, and non-sandbox return one identical 404 (no oracle)", () => {
+		const messages = [
+			{ candidate: null },
+			{ candidate: { ...validCandidate, id: MAIN_ORG } },
+			{ candidate: { ...validCandidate, created_by: "org_attacker" } },
+			{ candidate: { ...validCandidate, is_sandbox: false } },
+		].map((overrides) => {
+			try {
+				call(overrides);
+			} catch (e) {
+				return (e as RecaseError).message;
+			}
+			return "DID_NOT_THROW";
+		});
+		expect(new Set(messages).size).toBe(1);
+		expect(messages[0]).toBe("Sandbox not found");
 	});
 
 	// Scopes are checked FIRST, so an under-scoped caller cannot use the response

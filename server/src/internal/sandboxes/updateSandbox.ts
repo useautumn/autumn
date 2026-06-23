@@ -1,12 +1,7 @@
-import {
-	ErrCode,
-	type Organization,
-	RecaseError,
-	type SandboxColor,
-	type SandboxIcon,
-} from "@autumn/shared";
+import type { Organization, SandboxColor, SandboxIcon } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
+import { getOwnedSandbox } from "./getOwnedSandbox.js";
 
 export const updateSandboxForOrg = async ({
 	db,
@@ -19,19 +14,7 @@ export const updateSandboxForOrg = async ({
 	sandboxId: string;
 	updates: { name?: string; color?: SandboxColor; icon?: SandboxIcon };
 }): Promise<void> => {
-	const target = await OrgService.get({ db, orgId: sandboxId });
-
-	if (
-		target.id === masterOrg.id ||
-		target.created_by !== masterOrg.id ||
-		target.is_sandbox !== true
-	) {
-		throw new RecaseError({
-			message: "Sandbox not found",
-			code: ErrCode.OrgNotFound,
-			statusCode: 404,
-		});
-	}
+	await getOwnedSandbox({ db, masterOrg, sandboxId });
 
 	const orgUpdates: Partial<Organization> = {};
 	if (updates.name !== undefined) {
