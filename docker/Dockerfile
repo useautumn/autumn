@@ -37,6 +37,7 @@ COPY packages/mcp/package.json packages/mcp/
 COPY packages/openapi/package.json packages/openapi/
 COPY packages/sdk/package.json packages/sdk/
 COPY packages/stripe-sync/package.json packages/stripe-sync/
+COPY packages/ui/package.json packages/ui/
 
 # bunfig.toml preloads ./scripts/preload-env.ts on every bun run; stub it so the
 # install step doesn't fail before the real source is copied.
