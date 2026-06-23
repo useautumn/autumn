@@ -8,7 +8,7 @@ import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
-} from "../../components/ui/collapsible";
+} from "../ui/collapsible";
 import { useControllableState } from "../../hooks/use-controllable-state";
 import { cn } from "../../lib/utils";
 import { Shimmer } from "./shimmer";

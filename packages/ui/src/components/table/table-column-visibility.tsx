@@ -1,9 +1,9 @@
 import { FadersHorizontalIcon } from "@phosphor-icons/react";
 import type { Column } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
-import { IconButton } from "../../components/general/icon-button";
-import { Button } from "../../components/ui/button";
-import { Checkbox } from "../../components/ui/checkbox";
+import { IconButton } from "../general/icon-button";
+import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -13,7 +13,7 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
-} from "../../components/ui/dropdown-menu";
+} from "../ui/dropdown-menu";
 import type { ColumnGroup } from "../../hooks/use-column-visibility";
 import { cn } from "../../lib/utils";
 import { useTableContext } from "./table-context";

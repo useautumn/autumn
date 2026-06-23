@@ -1,6 +1,6 @@
 import { CornerDownLeftIcon, Loader2Icon } from "lucide-react";
 import type { FormEvent, KeyboardEvent } from "react";
-import { InputGroupButton } from "../../components/ui/input-group";
+import { InputGroupButton } from "../ui/input-group";
 import { cn } from "../../lib/utils";
 
 /**

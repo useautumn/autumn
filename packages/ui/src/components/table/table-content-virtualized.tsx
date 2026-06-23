@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Table } from "../../components/ui/table";
+import { Table } from "../ui/table";
 import { cn } from "../../lib/utils";
 import { TableColumnVisibility } from "./table-column-visibility";
 import {

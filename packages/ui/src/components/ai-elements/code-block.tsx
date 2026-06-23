@@ -11,7 +11,7 @@ import {
 	useState,
 } from "react";
 import { type BundledLanguage, codeToHtml, type ShikiTransformer } from "shiki";
-import { Button } from "../../components/ui/button";
+import { Button } from "../ui/button";
 import { cn } from "../../lib/utils";
 
 type CodeBlockProps = HTMLAttributes<HTMLDivElement> & {

@@ -6,7 +6,7 @@ import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
-} from "../../components/ui/collapsible";
+} from "../ui/collapsible";
 import { cn } from "../../lib/utils";
 
 export type TaskItemFileProps = ComponentProps<"div">;
