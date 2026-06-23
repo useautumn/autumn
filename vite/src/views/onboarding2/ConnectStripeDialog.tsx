@@ -61,7 +61,7 @@ export default function ConnectStripeDialog({
 										<li>Checkout (read & write)</li>
 										<li>Billing (read & write)</li>
 										<li>All webhooks (write)</li>
-										<li>Connect → Account Links (write)</li>
+										<li>Connect (read)</li>
 									</ul>
 
 									<p className="mt-2 mb-2 text-xs">
