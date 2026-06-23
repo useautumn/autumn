@@ -8,9 +8,9 @@ import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
-} from "@autumn/ui";
-import { useControllableState } from "@autumn/ui";
-import { cn } from "@/lib/utils";
+} from "../../components/ui/collapsible";
+import { useControllableState } from "../../hooks/use-controllable-state";
+import { cn } from "../../lib/utils";
 import { Shimmer } from "./shimmer";
 
 type ReasoningContextValue = {
@@ -96,7 +96,7 @@ export const Reasoning = memo(
 
 		return (
 			<ReasoningContext.Provider
-				value={{ isStreaming, isOpen, setIsOpen, duration }}
+				value={{ isStreaming, isOpen: isOpen ?? false, setIsOpen, duration }}
 			>
 				<Collapsible
 					className={cn("not-prose mb-4", className)}

@@ -1,7 +1,10 @@
 "use client";
 
+import { ChevronsUpDownIcon } from "lucide-react";
+import type { ComponentProps } from "react";
+import { createContext, useContext } from "react";
+import { Button } from "../../components/ui/button";
 import {
-	Button,
 	Card,
 	CardAction,
 	CardContent,
@@ -9,16 +12,13 @@ import {
 	CardFooter,
 	CardHeader,
 	CardTitle,
-} from "@autumn/ui";
-import { ChevronsUpDownIcon } from "lucide-react";
-import type { ComponentProps } from "react";
-import { createContext, useContext } from "react";
+} from "../../components/ui/card";
 import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
-} from "@autumn/ui";
-import { cn } from "@/lib/utils";
+} from "../../components/ui/collapsible";
+import { cn } from "../../lib/utils";
 import { Shimmer } from "./shimmer";
 
 type PlanContextValue = {
@@ -127,16 +127,18 @@ export const PlanFooter = (props: PlanFooterProps) => (
 export type PlanTriggerProps = ComponentProps<typeof CollapsibleTrigger>;
 
 export const PlanTrigger = ({ className, ...props }: PlanTriggerProps) => (
-	<CollapsibleTrigger asChild>
-		<Button
-			className={cn("size-8", className)}
-			data-slot="plan-trigger"
-			size="icon"
-			variant="skeleton"
-			{...props}
-		>
-			<ChevronsUpDownIcon className="size-4" />
-			<span className="sr-only">Toggle plan</span>
-		</Button>
+	<CollapsibleTrigger
+		render={
+			<Button
+				className={cn("size-8", className)}
+				data-slot="plan-trigger"
+				size="icon"
+				variant="skeleton"
+			/>
+		}
+		{...props}
+	>
+		<ChevronsUpDownIcon className="size-4" />
+		<span className="sr-only">Toggle plan</span>
 	</CollapsibleTrigger>
 );

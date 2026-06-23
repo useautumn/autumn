@@ -1,3 +1,4 @@
+import type { ComponentProps, ReactNode } from "react";
 import {
 	Command,
 	CommandDialog,
@@ -8,13 +9,14 @@ import {
 	CommandList,
 	CommandSeparator,
 	CommandShortcut,
+} from "../../components/ui/command";
+import {
 	Dialog,
 	DialogContent,
 	DialogTitle,
 	DialogTrigger,
-} from "@autumn/ui";
-import type { ComponentProps, ReactNode } from "react";
-import { cn } from "@/lib/utils";
+} from "../../components/ui/dialog";
+import { cn } from "../../lib/utils";
 
 export type ModelSelectorProps = ComponentProps<typeof Dialog>;
 

@@ -1,14 +1,5 @@
 "use client";
 
-import {
-	Button,
-	ButtonGroup,
-	ButtonGroupText,
-	Tooltip,
-	TooltipContent,
-	TooltipProvider,
-	TooltipTrigger,
-} from "@autumn/ui";
 import type { FileUIPart, UIMessage } from "ai";
 import {
 	ChevronLeftIcon,
@@ -19,7 +10,15 @@ import {
 import type { ComponentProps, HTMLAttributes, ReactElement } from "react";
 import { createContext, memo, useContext, useEffect, useState } from "react";
 import { Streamdown } from "streamdown";
-import { cn } from "@/lib/utils";
+import { Button } from "../../components/ui/button";
+import { ButtonGroup, ButtonGroupText } from "../../components/ui/button-group";
+import {
+	Tooltip,
+	TooltipContent,
+	TooltipProvider,
+	TooltipTrigger,
+} from "../../components/ui/tooltip";
+import { cn } from "../../lib/utils";
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
 	from: UIMessage["role"];
@@ -78,7 +77,7 @@ export const MessageAction = ({
 	children,
 	label,
 	variant = "skeleton",
-	size = "icon-sm",
+	size = "icon",
 	...props
 }: MessageActionProps) => {
 	const button = (
@@ -247,7 +246,7 @@ export const MessageBranchPrevious = ({
 			aria-label="Previous branch"
 			disabled={totalBranches <= 1}
 			onClick={goToPrevious}
-			size="icon-sm"
+			size="icon"
 			type="button"
 			variant="skeleton"
 			{...props}
@@ -271,7 +270,7 @@ export const MessageBranchNext = ({
 			aria-label="Next branch"
 			disabled={totalBranches <= 1}
 			onClick={goToNext}
-			size="icon-sm"
+			size="icon"
 			type="button"
 			variant="skeleton"
 			{...props}

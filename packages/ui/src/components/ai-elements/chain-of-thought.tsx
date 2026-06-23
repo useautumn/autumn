@@ -8,14 +8,14 @@ import {
 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { createContext, memo, useContext, useMemo } from "react";
-import { Badge } from "@autumn/ui";
+import { Badge } from "../../components/ui/badge";
 import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
-} from "@autumn/ui";
-import { useControllableState } from "@autumn/ui";
-import { cn } from "@/lib/utils";
+} from "../../components/ui/collapsible";
+import { useControllableState } from "../../hooks/use-controllable-state";
+import { cn } from "../../lib/utils";
 
 type ChainOfThoughtContextValue = {
 	isOpen: boolean;

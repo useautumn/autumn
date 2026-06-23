@@ -1,16 +1,16 @@
 "use client";
 
-import {
-	Button,
-	HoverCard,
-	HoverCardContent,
-	HoverCardTrigger,
-} from "@autumn/ui";
 import type { LanguageModelUsage } from "ai";
 import { type ComponentProps, createContext, useContext } from "react";
 import { getUsage } from "tokenlens";
-import { Progress } from "@autumn/ui";
-import { cn } from "@/lib/utils";
+import { Button } from "../../components/ui/button";
+import {
+	HoverCard,
+	HoverCardContent,
+	HoverCardTrigger,
+} from "../../components/ui/hover-card";
+import { Progress } from "../../components/ui/progress";
+import { cn } from "../../lib/utils";
 
 const PERCENT_MAX = 100;
 const ICON_RADIUS = 10;

@@ -1,23 +1,5 @@
 "use client";
 
-import {
-	Button,
-	Command,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandItem,
-	CommandList,
-	CommandSeparator,
-	HoverCard,
-	HoverCardContent,
-	HoverCardTrigger,
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@autumn/ui";
 import type { ChatStatus, FileUIPart } from "ai";
 import {
 	CornerDownLeftIcon,
@@ -33,7 +15,6 @@ import { nanoid } from "nanoid";
 import {
 	type ChangeEvent,
 	type ChangeEventHandler,
-	Children,
 	type ClipboardEventHandler,
 	type ComponentProps,
 	createContext,
@@ -52,13 +33,35 @@ import {
 	useRef,
 	useState,
 } from "react";
+import { Button } from "../../components/ui/button";
+import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+	CommandSeparator,
+} from "../../components/ui/command";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@autumn/ui";
-import { cn } from "@/lib/utils";
+} from "../../components/ui/dropdown-menu";
+import {
+	HoverCard,
+	HoverCardContent,
+	HoverCardTrigger,
+} from "../../components/ui/hover-card";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "../../components/ui/select";
+import { cn } from "../../lib/utils";
 
 // ============================================================================
 // Provider Context & Types
@@ -717,7 +720,7 @@ export const PromptInput = ({
 		// Convert blob URLs to data URLs asynchronously
 		Promise.all(
 			files.map(async ({ id, ...item }) => {
-				if (item.url && item.url.startsWith("blob:")) {
+				if (item.url?.startsWith("blob:")) {
 					const dataUrl = await convertBlobUrlToDataUrl(item.url);
 					// If conversion failed, keep the original blob URL
 					return {
@@ -856,7 +859,7 @@ export const PromptInputTextarea = ({
 			attachments.files.length > 0
 		) {
 			e.preventDefault();
-			const lastAttachment = attachments.files.at(-1);
+			const lastAttachment = attachments.files[attachments.files.length - 1];
 			if (lastAttachment) {
 				attachments.remove(lastAttachment.id);
 			}

@@ -1,8 +1,9 @@
 "use client";
 
-import { Button, ScrollArea, ScrollBar } from "@autumn/ui";
 import type { ComponentProps } from "react";
-import { cn } from "@/lib/utils";
+import { Button } from "../../components/ui/button";
+import { ScrollArea, ScrollBar } from "../../components/ui/scroll-area";
+import { cn } from "../../lib/utils";
 
 export type SuggestionsProps = ComponentProps<typeof ScrollArea>;
 
