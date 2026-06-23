@@ -1,5 +1,8 @@
-import { cn } from "../../lib/utils";
-import { CursorPagination, PageSizeSelector } from "./cursor-pagination";
+import {
+	CursorPagination,
+	PageSizeSelector,
+} from "@autumn/ui/components/table/cursor-pagination";
+import { cn } from "@autumn/ui/lib/utils";
 
 export function TablePaginationFooter({
 	currentPage,

@@ -1,12 +1,6 @@
 "use client";
 
-import {
-	ChevronDownIcon,
-	ExternalLinkIcon,
-	MessageCircleIcon,
-} from "lucide-react";
-import { type ComponentProps, createContext, useContext } from "react";
-import { Button } from "../ui/button";
+import { Button } from "@autumn/ui/components/ui/button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -14,8 +8,14 @@ import {
 	DropdownMenuLabel,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import { cn } from "../../lib/utils";
+} from "@autumn/ui/components/ui/dropdown-menu";
+import { cn } from "@autumn/ui/lib/utils";
+import {
+	ChevronDownIcon,
+	ExternalLinkIcon,
+	MessageCircleIcon,
+} from "lucide-react";
+import { type ComponentProps, createContext, useContext } from "react";
 
 const providers = {
 	github: {

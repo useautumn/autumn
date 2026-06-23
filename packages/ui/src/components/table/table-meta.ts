@@ -1,6 +1,6 @@
+import type { ColumnSkeletonMeta } from "@autumn/ui/components/table/table-row-cells";
 import type { Row } from "@tanstack/react-table";
 import type { ReactNode } from "react";
-import type { ColumnSkeletonMeta } from "./table-row-cells";
 
 declare module "@tanstack/react-table" {
 	interface ColumnMeta<TData, TValue> {

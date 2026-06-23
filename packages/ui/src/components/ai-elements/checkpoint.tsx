@@ -1,15 +1,15 @@
 "use client";
 
-import { BookmarkIcon, type LucideProps } from "lucide-react";
-import type { ComponentProps, HTMLAttributes } from "react";
-import { Button } from "../ui/button";
-import { Separator } from "../ui/separator";
+import { Button } from "@autumn/ui/components/ui/button";
+import { Separator } from "@autumn/ui/components/ui/separator";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
-} from "../ui/tooltip";
-import { cn } from "../../lib/utils";
+} from "@autumn/ui/components/ui/tooltip";
+import { cn } from "@autumn/ui/lib/utils";
+import { BookmarkIcon, type LucideProps } from "lucide-react";
+import type { ComponentProps, HTMLAttributes } from "react";
 
 export type CheckpointProps = HTMLAttributes<HTMLDivElement>;
 

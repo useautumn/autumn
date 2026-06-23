@@ -1,5 +1,18 @@
 "use client";
 
+import { Badge } from "@autumn/ui/components/ui/badge";
+import {
+	Carousel,
+	type CarouselApi,
+	CarouselContent,
+	CarouselItem,
+} from "@autumn/ui/components/ui/carousel";
+import {
+	HoverCard,
+	HoverCardContent,
+	HoverCardTrigger,
+} from "@autumn/ui/components/ui/hover-card";
+import { cn } from "@autumn/ui/lib/utils";
 import { ArrowLeftIcon, ArrowRightIcon } from "lucide-react";
 import {
 	type ComponentProps,
@@ -9,19 +22,6 @@ import {
 	useEffect,
 	useState,
 } from "react";
-import { Badge } from "../ui/badge";
-import {
-	Carousel,
-	type CarouselApi,
-	CarouselContent,
-	CarouselItem,
-} from "../ui/carousel";
-import {
-	HoverCard,
-	HoverCardContent,
-	HoverCardTrigger,
-} from "../ui/hover-card";
-import { cn } from "../../lib/utils";
 
 export type InlineCitationProps = ComponentProps<"span">;
 

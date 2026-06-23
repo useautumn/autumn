@@ -1,18 +1,18 @@
-import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
-import { useHotkeys } from "react-hotkeys-hook";
-import { IconButton } from "../general/icon-button";
+import { IconButton } from "@autumn/ui/components/general/icon-button";
 import {
 	Pagination,
 	PaginationContent,
 	PaginationItem,
-} from "../ui/pagination";
+} from "@autumn/ui/components/ui/pagination";
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "../ui/select";
+} from "@autumn/ui/components/ui/select";
+import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
+import { useHotkeys } from "react-hotkeys-hook";
 
 export function CursorPagination({
 	currentPage,

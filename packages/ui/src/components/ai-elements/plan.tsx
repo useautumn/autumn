@@ -1,9 +1,7 @@
 "use client";
 
-import { ChevronsUpDownIcon } from "lucide-react";
-import type { ComponentProps } from "react";
-import { createContext, useContext } from "react";
-import { Button } from "../ui/button";
+import { Shimmer } from "@autumn/ui/components/ai-elements/shimmer";
+import { Button } from "@autumn/ui/components/ui/button";
 import {
 	Card,
 	CardAction,
@@ -12,14 +10,16 @@ import {
 	CardFooter,
 	CardHeader,
 	CardTitle,
-} from "../ui/card";
+} from "@autumn/ui/components/ui/card";
 import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
-} from "../ui/collapsible";
-import { cn } from "../../lib/utils";
-import { Shimmer } from "./shimmer";
+} from "@autumn/ui/components/ui/collapsible";
+import { cn } from "@autumn/ui/lib/utils";
+import { ChevronsUpDownIcon } from "lucide-react";
+import type { ComponentProps } from "react";
+import { createContext, useContext } from "react";
 
 type PlanContextValue = {
 	isStreaming: boolean;

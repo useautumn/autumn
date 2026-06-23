@@ -1,9 +1,7 @@
-import { FadersHorizontalIcon } from "@phosphor-icons/react";
-import type { Column } from "@tanstack/react-table";
-import { useMemo, useState } from "react";
-import { IconButton } from "../general/icon-button";
-import { Button } from "../ui/button";
-import { Checkbox } from "../ui/checkbox";
+import { IconButton } from "@autumn/ui/components/general/icon-button";
+import { useTableContext } from "@autumn/ui/components/table/table-context";
+import { Button } from "@autumn/ui/components/ui/button";
+import { Checkbox } from "@autumn/ui/components/ui/checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -13,10 +11,12 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import type { ColumnGroup } from "../../hooks/use-column-visibility";
-import { cn } from "../../lib/utils";
-import { useTableContext } from "./table-context";
+} from "@autumn/ui/components/ui/dropdown-menu";
+import type { ColumnGroup } from "@autumn/ui/hooks/use-column-visibility";
+import { cn } from "@autumn/ui/lib/utils";
+import { FadersHorizontalIcon } from "@phosphor-icons/react";
+import type { Column } from "@tanstack/react-table";
+import { useMemo, useState } from "react";
 
 function ColumnCheckboxItem<T>({ column }: { column: Column<T> }) {
 	const header = column.columnDef.header;

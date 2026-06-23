@@ -1,10 +1,10 @@
 "use client";
 
+import { iconButtonVariants } from "@autumn/ui/components/general/icon-button";
+import { Button, type ButtonProps } from "@autumn/ui/components/ui/button";
+import { cn, hasSubmitShortcutModifier } from "@autumn/ui/lib/utils";
 import type { VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { cn, hasSubmitShortcutModifier } from "../../lib/utils";
-import { Button, type ButtonProps } from "../ui/button";
-import { iconButtonVariants } from "./icon-button";
 
 interface IconCheckboxProps
 	extends ButtonProps,

@@ -1,6 +1,6 @@
-import { Skeleton } from "../ui/skeleton";
-import { cn } from "../../lib/utils";
-import type { ColumnSkeletonMeta } from "./table-row-cells";
+import type { ColumnSkeletonMeta } from "@autumn/ui/components/table/table-row-cells";
+import { Skeleton } from "@autumn/ui/components/ui/skeleton";
+import { cn } from "@autumn/ui/lib/utils";
 
 const LABEL_WIDTHS = ["w-12", "w-16", "w-14", "w-10", "w-20", "w-14"];
 const DATE_WIDTHS = ["w-28", "w-32", "w-30", "w-26", "w-34", "w-28"];

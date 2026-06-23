@@ -1,12 +1,19 @@
+import { useTableContext } from "@autumn/ui/components/table/table-context";
+import {
+	MotionTbody,
+	TABLE_FADE_IN,
+	TABLE_TRANSITION,
+} from "@autumn/ui/components/table/table-motion";
+import {
+	TableRowCells,
+	TableSkeletonRows,
+} from "@autumn/ui/components/table/table-row-cells";
+import { TableCell, TableRow } from "@autumn/ui/components/ui/table";
+import { cn } from "@autumn/ui/lib/utils";
 import type { Row } from "@tanstack/react-table";
 import type { VirtualItem } from "@tanstack/react-virtual";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { memo, useCallback, useMemo, useRef } from "react";
-import { TableCell, TableRow } from "../ui/table";
-import { cn } from "../../lib/utils";
-import { useTableContext } from "./table-context";
-import { MotionTbody, TABLE_FADE_IN, TABLE_TRANSITION } from "./table-motion";
-import { TableRowCells, TableSkeletonRows } from "./table-row-cells";
 
 const DEFAULT_ROW_HEIGHT = 40;
 const DEFAULT_OVERSCAN = 30;

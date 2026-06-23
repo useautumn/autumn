@@ -1,14 +1,14 @@
-import React, { useCallback, useMemo, useRef, useState } from "react";
-import { Table } from "../ui/table";
-import { cn } from "../../lib/utils";
-import { TableColumnVisibility } from "./table-column-visibility";
+import { TableColumnVisibility } from "@autumn/ui/components/table/table-column-visibility";
 import {
 	TableContext,
 	useShowMobileCards,
 	useTableContext,
-} from "./table-context";
-import { TableHeader } from "./table-header";
-import { TableMobileCards } from "./table-mobile-cards";
+} from "@autumn/ui/components/table/table-context";
+import { TableHeader } from "@autumn/ui/components/table/table-header";
+import { TableMobileCards } from "@autumn/ui/components/table/table-mobile-cards";
+import { Table } from "@autumn/ui/components/ui/table";
+import { cn } from "@autumn/ui/lib/utils";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 
 export function TableContentVirtualized({
 	children,

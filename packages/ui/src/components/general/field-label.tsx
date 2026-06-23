@@ -1,6 +1,6 @@
+import { InfoTooltip } from "@autumn/ui/components/general/info-tooltip";
+import { cn } from "@autumn/ui/lib/utils";
 import type React from "react";
-import { cn } from "../../lib/utils";
-import { InfoTooltip } from "./info-tooltip";
 
 export function FieldLabel({
 	children,

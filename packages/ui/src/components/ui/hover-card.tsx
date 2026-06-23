@@ -1,6 +1,6 @@
+import { cn } from "@autumn/ui/lib/utils";
 import { PreviewCard as PreviewCardPrimitive } from "@base-ui/react/preview-card";
 import * as React from "react";
-import { cn } from "../../lib/utils";
 
 function HoverCard({
 	openDelay: _openDelay,

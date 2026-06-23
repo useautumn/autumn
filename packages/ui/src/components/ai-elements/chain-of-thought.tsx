@@ -1,5 +1,13 @@
 "use client";
 
+import { Badge } from "@autumn/ui/components/ui/badge";
+import {
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+} from "@autumn/ui/components/ui/collapsible";
+import { useControllableState } from "@autumn/ui/hooks/use-controllable-state";
+import { cn } from "@autumn/ui/lib/utils";
 import {
 	BrainIcon,
 	ChevronDownIcon,
@@ -8,14 +16,6 @@ import {
 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { createContext, memo, useContext, useMemo } from "react";
-import { Badge } from "../ui/badge";
-import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from "../ui/collapsible";
-import { useControllableState } from "../../hooks/use-controllable-state";
-import { cn } from "../../lib/utils";
 
 type ChainOfThoughtContextValue = {
 	isOpen: boolean;

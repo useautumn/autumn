@@ -1,5 +1,5 @@
-import { useTableContext } from "./table-context";
-import { TableFooter } from "./table-footer";
+import { useTableContext } from "@autumn/ui/components/table/table-context";
+import { TableFooter } from "@autumn/ui/components/table/table-footer";
 
 export function TablePagination() {
 	const { table } = useTableContext();

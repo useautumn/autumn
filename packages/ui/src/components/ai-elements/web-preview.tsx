@@ -1,22 +1,22 @@
 "use client";
 
-import { ChevronDownIcon } from "lucide-react";
-import type { ComponentProps, ReactNode } from "react";
-import { createContext, useContext, useEffect, useState } from "react";
-import { Button } from "../ui/button";
+import { Button } from "@autumn/ui/components/ui/button";
 import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
-} from "../ui/collapsible";
-import { Input } from "../ui/input";
+} from "@autumn/ui/components/ui/collapsible";
+import { Input } from "@autumn/ui/components/ui/input";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
-} from "../ui/tooltip";
-import { cn } from "../../lib/utils";
+} from "@autumn/ui/components/ui/tooltip";
+import { cn } from "@autumn/ui/lib/utils";
+import { ChevronDownIcon } from "lucide-react";
+import type { ComponentProps, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 export type WebPreviewContextValue = {
 	url: string;

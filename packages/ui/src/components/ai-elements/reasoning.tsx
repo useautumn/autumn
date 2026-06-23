@@ -1,17 +1,17 @@
 "use client";
 
-import { BrainIcon, ChevronDownIcon } from "lucide-react";
-import type { ComponentProps, ReactNode } from "react";
-import { createContext, memo, useContext, useEffect, useState } from "react";
-import { Streamdown } from "streamdown";
+import { Shimmer } from "@autumn/ui/components/ai-elements/shimmer";
 import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
-} from "../ui/collapsible";
-import { useControllableState } from "../../hooks/use-controllable-state";
-import { cn } from "../../lib/utils";
-import { Shimmer } from "./shimmer";
+} from "@autumn/ui/components/ui/collapsible";
+import { useControllableState } from "@autumn/ui/hooks/use-controllable-state";
+import { cn } from "@autumn/ui/lib/utils";
+import { BrainIcon, ChevronDownIcon } from "lucide-react";
+import type { ComponentProps, ReactNode } from "react";
+import { createContext, memo, useContext, useEffect, useState } from "react";
+import { Streamdown } from "streamdown";
 
 type ReasoningContextValue = {
 	isStreaming: boolean;

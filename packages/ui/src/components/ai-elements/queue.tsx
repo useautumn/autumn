@@ -1,15 +1,15 @@
 "use client";
 
-import { ChevronDownIcon, PaperclipIcon } from "lucide-react";
-import type { ComponentProps } from "react";
-import { Button } from "../ui/button";
+import { Button } from "@autumn/ui/components/ui/button";
 import {
 	Collapsible,
 	CollapsibleContent,
 	CollapsibleTrigger,
-} from "../ui/collapsible";
-import { ScrollArea } from "../ui/scroll-area";
-import { cn } from "../../lib/utils";
+} from "@autumn/ui/components/ui/collapsible";
+import { ScrollArea } from "@autumn/ui/components/ui/scroll-area";
+import { cn } from "@autumn/ui/lib/utils";
+import { ChevronDownIcon, PaperclipIcon } from "lucide-react";
+import type { ComponentProps } from "react";
 
 export type QueueMessagePart = {
 	type: string;

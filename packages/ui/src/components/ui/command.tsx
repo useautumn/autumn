@@ -1,13 +1,13 @@
-import { Command as CommandPrimitive } from "cmdk";
-import type * as React from "react";
-import { cn } from "../../lib/utils";
 import {
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogHeader,
 	DialogTitle,
-} from "./dialog";
+} from "@autumn/ui/components/ui/dialog";
+import { cn } from "@autumn/ui/lib/utils";
+import { Command as CommandPrimitive } from "cmdk";
+import type * as React from "react";
 
 function Command({
 	className,

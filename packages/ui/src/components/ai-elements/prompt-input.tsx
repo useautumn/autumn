@@ -1,5 +1,34 @@
 "use client";
 
+import { Button } from "@autumn/ui/components/ui/button";
+import {
+	Command,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandItem,
+	CommandList,
+	CommandSeparator,
+} from "@autumn/ui/components/ui/command";
+import {
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@autumn/ui/components/ui/dropdown-menu";
+import {
+	HoverCard,
+	HoverCardContent,
+	HoverCardTrigger,
+} from "@autumn/ui/components/ui/hover-card";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@autumn/ui/components/ui/select";
+import { cn } from "@autumn/ui/lib/utils";
 import type { ChatStatus, FileUIPart } from "ai";
 import {
 	CornerDownLeftIcon,
@@ -33,35 +62,6 @@ import {
 	useRef,
 	useState,
 } from "react";
-import { Button } from "../ui/button";
-import {
-	Command,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandItem,
-	CommandList,
-	CommandSeparator,
-} from "../ui/command";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "../ui/dropdown-menu";
-import {
-	HoverCard,
-	HoverCardContent,
-	HoverCardTrigger,
-} from "../ui/hover-card";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "../ui/select";
-import { cn } from "../../lib/utils";
 
 // ============================================================================
 // Provider Context & Types

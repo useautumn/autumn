@@ -1,7 +1,7 @@
+import { InputGroupButton } from "@autumn/ui/components/ui/input-group";
+import { cn } from "@autumn/ui/lib/utils";
 import { CornerDownLeftIcon, Loader2Icon } from "lucide-react";
 import type { FormEvent, KeyboardEvent } from "react";
-import { InputGroupButton } from "../ui/input-group";
-import { cn } from "../../lib/utils";
 
 /**
  * Compact inline prompt input with submit button on the same line.

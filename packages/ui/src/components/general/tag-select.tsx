@@ -1,9 +1,13 @@
 /** biome-ignore-all lint/a11y/useKeyWithClickEvents: needed*/
 
+import {
+	Select,
+	SelectContent,
+	SelectTrigger,
+} from "@autumn/ui/components/ui/select";
+import { cn } from "@autumn/ui/lib/utils";
 import { X } from "lucide-react";
 import * as React from "react";
-import { cn } from "../../lib/utils";
-import { Select, SelectContent, SelectTrigger } from "../ui/select";
 
 interface TagSelectOption {
 	value: string;

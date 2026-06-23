@@ -1,9 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 
+import { Badge } from "@autumn/ui/components/ui/badge";
+import { cn } from "@autumn/ui/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
-import { cn } from "../../lib/utils";
-import { Badge } from "../ui/badge";
 
 const iconBadgeVariants = cva(
 	"flex-row justify-center gap-[3px] min-w-10", // Gap is handled in position variants

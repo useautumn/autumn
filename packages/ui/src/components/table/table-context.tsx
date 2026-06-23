@@ -1,3 +1,5 @@
+import type { ColumnGroup } from "@autumn/ui/hooks/use-column-visibility";
+import { useIsMobile } from "@autumn/ui/hooks/use-is-mobile";
 import type { Table as TanstackTable } from "@tanstack/react-table";
 import {
 	type ComponentType,
@@ -5,8 +7,6 @@ import {
 	type ReactNode,
 	useContext,
 } from "react";
-import type { ColumnGroup } from "../../hooks/use-column-visibility";
-import { useIsMobile } from "../../hooks/use-is-mobile";
 
 export type TableLinkComponent = ComponentType<{
 	to: string;

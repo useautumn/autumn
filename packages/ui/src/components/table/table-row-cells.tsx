@@ -1,11 +1,18 @@
+import {
+	type TableLinkComponent,
+	useTableContext,
+} from "@autumn/ui/components/table/table-context";
+import { Checkbox } from "@autumn/ui/components/ui/checkbox";
+import { Skeleton } from "@autumn/ui/components/ui/skeleton";
+import {
+	TableBody as ShadcnTableBody,
+	TableCell,
+	TableRow,
+} from "@autumn/ui/components/ui/table";
+import { cn } from "@autumn/ui/lib/utils";
 import type { Row } from "@tanstack/react-table";
 import { flexRender } from "@tanstack/react-table";
 import { memo, type ReactNode } from "react";
-import { cn } from "../../lib/utils";
-import { Checkbox } from "../ui/checkbox";
-import { Skeleton } from "../ui/skeleton";
-import { TableBody as ShadcnTableBody, TableCell, TableRow } from "../ui/table";
-import { type TableLinkComponent, useTableContext } from "./table-context";
 
 interface TableRowCellsProps<T> {
 	row: Row<T>;

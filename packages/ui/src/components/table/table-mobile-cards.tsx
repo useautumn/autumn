@@ -1,8 +1,11 @@
+import {
+	type TableLinkComponent,
+	useTableContext,
+} from "@autumn/ui/components/table/table-context";
+import { Skeleton } from "@autumn/ui/components/ui/skeleton";
+import { cn } from "@autumn/ui/lib/utils";
 import type { Cell, Row } from "@tanstack/react-table";
 import { flexRender } from "@tanstack/react-table";
-import { cn } from "../../lib/utils";
-import { Skeleton } from "../ui/skeleton";
-import { type TableLinkComponent, useTableContext } from "./table-context";
 
 const SKELETON_CARD_COUNT = 3;
 

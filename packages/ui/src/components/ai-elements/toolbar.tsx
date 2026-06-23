@@ -1,6 +1,6 @@
+import { cn } from "@autumn/ui/lib/utils";
 import { NodeToolbar, Position } from "@xyflow/react";
 import type { ComponentProps } from "react";
-import { cn } from "../../lib/utils";
 
 type ToolbarProps = ComponentProps<typeof NodeToolbar>;
 

@@ -1,15 +1,15 @@
 "use client";
 
+import { SmallSpinner } from "@autumn/ui/components/general/small-spinner";
+import {
+	type ShortcutEntry,
+	useMenuShortcuts,
+} from "@autumn/ui/hooks/use-dropdown-shortcut";
+import { cn } from "@autumn/ui/lib/utils";
 import { Menu as MenuPrimitive } from "@base-ui/react/menu";
 import { cva, type VariantProps } from "class-variance-authority";
 import { Check, ChevronRight } from "lucide-react";
 import * as React from "react";
-import {
-	type ShortcutEntry,
-	useMenuShortcuts,
-} from "../../hooks/use-dropdown-shortcut";
-import { cn } from "../../lib/utils";
-import { SmallSpinner } from "../general/small-spinner";
 
 const DropdownMenuContext = React.createContext<{
 	isOpen: boolean;

@@ -1,13 +1,13 @@
-import { flexRender, type HeaderGroup } from "@tanstack/react-table";
-import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
-import { Checkbox } from "../ui/checkbox";
+import { useTableContext } from "@autumn/ui/components/table/table-context";
+import { Checkbox } from "@autumn/ui/components/ui/checkbox";
 import {
 	TableHeader as ShadcnTableHeader,
 	TableHead,
 	TableRow,
-} from "../ui/table";
-import { cn } from "../../lib/utils";
-import { useTableContext } from "./table-context";
+} from "@autumn/ui/components/ui/table";
+import { cn } from "@autumn/ui/lib/utils";
+import { flexRender, type HeaderGroup } from "@tanstack/react-table";
+import { ChevronDownIcon, ChevronUpIcon } from "lucide-react";
 
 function SortIcon({ sortDirection }: { sortDirection: string | false }) {
 	if (sortDirection === "asc") {

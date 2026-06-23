@@ -1,5 +1,13 @@
 "use client";
 
+import { CodeBlock } from "@autumn/ui/components/ai-elements/code-block";
+import { Badge } from "@autumn/ui/components/ui/badge";
+import {
+	Collapsible,
+	CollapsibleContent,
+	CollapsibleTrigger,
+} from "@autumn/ui/components/ui/collapsible";
+import { cn } from "@autumn/ui/lib/utils";
 import type { ToolUIPart } from "ai";
 import {
 	CheckCircleIcon,
@@ -11,14 +19,6 @@ import {
 } from "lucide-react";
 import type { ComponentProps, ReactNode } from "react";
 import { isValidElement } from "react";
-import { Badge } from "../ui/badge";
-import {
-	Collapsible,
-	CollapsibleContent,
-	CollapsibleTrigger,
-} from "../ui/collapsible";
-import { cn } from "../../lib/utils";
-import { CodeBlock } from "./code-block";
 
 export type ToolProps = ComponentProps<typeof Collapsible>;
 

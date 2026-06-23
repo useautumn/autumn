@@ -1,10 +1,10 @@
 "use client";
 
+import { Separator } from "@autumn/ui/components/ui/separator";
+import { cn } from "@autumn/ui/lib/utils";
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
 import { ChevronDownIcon } from "lucide-react";
 import type * as React from "react";
-import { cn } from "../../lib/utils";
-import { Separator } from "../ui/separator";
 
 interface SheetAccordionProps {
 	children: React.ReactNode;

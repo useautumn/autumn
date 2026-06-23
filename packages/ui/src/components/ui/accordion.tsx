@@ -1,6 +1,6 @@
+import { cn } from "@autumn/ui/lib/utils";
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
 import { ChevronDownIcon } from "lucide-react";
-import { cn } from "../../lib/utils";
 
 type AccordionProps = AccordionPrimitive.Root.Props & {
 	type?: "single" | "multiple";

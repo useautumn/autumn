@@ -1,8 +1,11 @@
-import { Table } from "../ui/table";
-import { cn } from "../../lib/utils";
-import { TableColumnVisibility } from "./table-column-visibility";
-import { useShowMobileCards, useTableContext } from "./table-context";
-import { TableMobileCards } from "./table-mobile-cards";
+import { TableColumnVisibility } from "@autumn/ui/components/table/table-column-visibility";
+import {
+	useShowMobileCards,
+	useTableContext,
+} from "@autumn/ui/components/table/table-context";
+import { TableMobileCards } from "@autumn/ui/components/table/table-mobile-cards";
+import { Table } from "@autumn/ui/components/ui/table";
+import { cn } from "@autumn/ui/lib/utils";
 
 export function TableContent({
 	children,

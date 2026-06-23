@@ -23,7 +23,12 @@
 			"import": "./src/components/table/index.tsx",
 			"default": "./src/components/table/index.tsx"
 		},
-		"./styles.css": "./src/styles/index.css"
+		"./styles.css": "./src/styles/index.css",
+		"./*": {
+			"types": "./src/*.ts",
+			"import": "./src/*.tsx",
+			"default": "./src/*.tsx"
+		}
 	},
 	"files": [
 		"src"

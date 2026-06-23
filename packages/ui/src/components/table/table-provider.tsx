@@ -1,5 +1,8 @@
+import {
+	TableContext,
+	type TableProps,
+} from "@autumn/ui/components/table/table-context";
 import type { ReactNode } from "react";
-import { TableContext, type TableProps } from "./table-context";
 
 interface TableProviderProps<T> {
 	children: ReactNode;
