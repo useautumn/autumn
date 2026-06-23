@@ -131,6 +131,10 @@ export function TableBodyVirtualized() {
 	// Memoize virtual items to prevent unnecessary recalculations
 	const virtualRows = virtualizer.getVirtualItems();
 
+	// Mobile browsers can measure the scroll container at 0 height on init,
+	// leaving zero virtual items despite having rows — render them all instead.
+	const useFallbackRender = hasRows && virtualRows.length === 0;
+
 	// Memoize padding calculations
 	const { paddingTop, paddingBottom } = useMemo(() => {
 		const top = virtualRows[0]?.start ?? 0;
@@ -214,6 +218,39 @@ export function TableBodyVirtualized() {
 						</div>
 					</TableCell>
 				</TableRow>
+			</MotionTbody>
+		);
+	}
+
+	if (useFallbackRender) {
+		return (
+			<MotionTbody
+				key="content"
+				{...TABLE_FADE_IN}
+				transition={TABLE_TRANSITION}
+				className="bg-interactive-secondary"
+			>
+				{rows.map((row, index) => {
+					const isSelected =
+						selectedItemId === (row.original as { id?: string }).id;
+					const rowHref = getRowHref?.(row.original);
+
+					return (
+						<VirtualRow
+							key={row.id}
+							row={row}
+							virtualRow={{ index } as VirtualItem}
+							isSelected={isSelected}
+							rowHref={rowHref}
+							rowClassName={rowClassName}
+							enableSelection={enableSelection}
+							flexibleTableColumns={flexibleTableColumns}
+							onRowClick={memoizedOnRowClick}
+							onRowDoubleClick={memoizedOnRowDoubleClick}
+							visibleColumnKey={visibleColumnKey}
+						/>
+					);
+				})}
 			</MotionTbody>
 		);
 	}

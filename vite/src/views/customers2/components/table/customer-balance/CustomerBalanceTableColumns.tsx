@@ -492,6 +492,69 @@ function BalanceActionsCell({
 	);
 }
 
+function MobileBalanceBar({
+	ent,
+	fullCustomer,
+	entityId,
+	customerEntitlements,
+}: {
+	ent: FullCusEntWithFullCusProduct;
+	fullCustomer: FullCustomer | null | undefined;
+	entityId: string | null;
+	customerEntitlements: FullCusEntWithFullCusProduct[];
+}) {
+	const { allowance, balance, quantity } = useFeatureUsageBalance({
+		fullCustomer,
+		featureId: ent.entitlement.feature.id,
+		entityId,
+		customerEntitlements,
+	});
+
+	if (ent.unlimited || (allowance ?? 0) <= 0) return null;
+
+	return (
+		<div className="w-24 shrink-0 flex items-center h-4">
+			<CustomerFeatureUsageBar
+				allowance={allowance}
+				balance={balance}
+				quantity={quantity}
+				horizontal
+			/>
+		</div>
+	);
+}
+
+function MobileUsageWithBar({
+	row,
+	fullCustomer,
+	entityId,
+}: {
+	row: Row<CustomerBalanceRowData>;
+	fullCustomer: FullCustomer | null | undefined;
+	entityId: string | null;
+}) {
+	const customerEntitlements = row.original.subRows?.length
+		? row.original.subRows
+		: [row.original];
+
+	return (
+		<div className="flex items-center justify-between gap-3">
+			<UsageCell
+				row={row}
+				fullCustomer={fullCustomer}
+				entityId={entityId}
+				customerEntitlements={customerEntitlements}
+			/>
+			<MobileBalanceBar
+				ent={row.original}
+				fullCustomer={fullCustomer}
+				entityId={entityId}
+				customerEntitlements={customerEntitlements}
+			/>
+		</div>
+	);
+}
+
 // --- Column definitions ---
 
 export const CustomerBalanceTableColumns = ({
@@ -600,6 +663,16 @@ export const CustomerBalanceTableColumns = ({
 	{
 		header: "Usage",
 		accessorKey: "usage",
+		meta: {
+			mobileCard: "full" as const,
+			mobileCardCell: (row: Row<CustomerBalanceRowData>) => (
+				<MobileUsageWithBar
+					row={row}
+					fullCustomer={fullCustomer}
+					entityId={entityId}
+				/>
+			),
+		},
 		cell: ({ row }: { row: Row<CustomerBalanceRowData> }) => (
 			<UsageCell
 				row={row}
@@ -615,6 +688,7 @@ export const CustomerBalanceTableColumns = ({
 		header: "Bar",
 		size: 220,
 		accessorKey: "bar",
+		meta: { mobileCard: "hidden" as const },
 		cell: ({ row }: { row: Row<CustomerBalanceRowData> }) => (
 			<BarCell
 				row={row}

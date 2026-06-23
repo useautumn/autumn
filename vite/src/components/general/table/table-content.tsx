@@ -1,7 +1,8 @@
 import { Table } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
 import { TableColumnVisibility } from "./table-column-visibility";
-import { useTableContext } from "./table-context";
+import { useShowMobileCards, useTableContext } from "./table-context";
+import { TableMobileCards } from "./table-mobile-cards";
 
 export function TableContent({
 	children,
@@ -10,15 +11,25 @@ export function TableContent({
 	children: React.ReactNode;
 	className?: string;
 }) {
-	const { flexibleTableColumns, enableColumnVisibility, isLoading, isTransitioning, table } =
-		useTableContext();
+	const {
+		flexibleTableColumns,
+		enableColumnVisibility,
+		isLoading,
+		isTransitioning,
+		table,
+	} = useTableContext();
 	const rows = table.getRowModel().rows;
+	const showMobileCards = useShowMobileCards();
+
+	if (showMobileCards) {
+		return <TableMobileCards />;
+	}
 
 	return (
 		<div
 			className={cn(
-"rounded-lg border relative z-50 min-w-0",
-			!rows.length && "border-dashed",
+				"rounded-lg border relative z-50 min-w-0",
+				!rows.length && "border-dashed",
 				className,
 			)}
 		>

@@ -151,6 +151,7 @@ export function CustomerBalanceTable({
 					isLoading,
 					onRowClick: handleRowClick,
 					flexibleTableColumns: true,
+					mobileCards: true,
 					selectedItemId: getSelectedRowId(),
 					rowClassName: "h-10 py-0",
 				}}
