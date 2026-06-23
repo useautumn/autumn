@@ -2,8 +2,8 @@ import { format } from "date-fns";
 import { CalendarIcon, Clock } from "lucide-react";
 import { useRef, useState } from "react";
 import { cn } from "../../lib/utils";
-import { Calendar } from "./calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "./popover";
+import { Calendar } from "../ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { TimePickerInput } from "./time-picker-input";
 import {
 	display12HourValue,

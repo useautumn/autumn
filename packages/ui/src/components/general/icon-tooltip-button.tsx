@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { IconButton } from "./icon-button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
 
 export function IconTooltipButton({
 	tooltip,

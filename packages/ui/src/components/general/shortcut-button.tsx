@@ -1,6 +1,6 @@
 import { useHotkeys } from "react-hotkeys-hook";
 import { cn } from "../../lib/utils";
-import { Button, type ButtonProps } from "./button";
+import { Button, type ButtonProps } from "../ui/button";
 
 export const ShortcutButton = ({
 	metaShortcut,

@@ -10,8 +10,8 @@ import {
 	CommandInput,
 	CommandItem,
 	CommandList,
-} from "./command";
-import { Popover, PopoverContent, PopoverTrigger } from "./popover";
+} from "../ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { SmallSpinner } from "./small-spinner";
 
 export type SearchableSelectProps<T> = {

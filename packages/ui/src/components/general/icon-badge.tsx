@@ -3,7 +3,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 import { cn } from "../../lib/utils";
-import { Badge } from "./badge";
+import { Badge } from "../ui/badge";
 
 const iconBadgeVariants = cva(
 	"flex-row justify-center gap-[3px] min-w-10", // Gap is handled in position variants

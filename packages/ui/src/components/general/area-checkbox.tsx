@@ -3,8 +3,8 @@
 
 import React from "react";
 import { cn } from "../../lib/utils";
-import { Checkbox } from "./checkbox";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
+import { Checkbox } from "../ui/checkbox";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 interface AreaCheckboxProps {
 	className?: string;

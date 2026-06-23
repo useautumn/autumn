@@ -176,8 +176,9 @@
 		"calt" 1;
 }
 
-/* Override Shiki background color in dark mode */
+/* Override Shiki's inline background; !important is required to beat the inline style */
 .dark .shiki,
 .dark .shiki pre {
-	background-color: var(--background);
+	/* biome-ignore lint/complexity/noImportantStyles: overrides Shiki inline style */
+	background-color: var(--background) !important;
 }

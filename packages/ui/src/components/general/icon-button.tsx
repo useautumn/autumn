@@ -3,7 +3,7 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
 import { cn } from "../../lib/utils";
-import { Button, type ButtonProps } from "./button";
+import { Button, type ButtonProps } from "../ui/button";
 
 const iconButtonVariants = cva(
 	"", // Empty base - we'll use buttonVariants as base

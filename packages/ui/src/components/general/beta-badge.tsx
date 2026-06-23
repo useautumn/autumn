@@ -1,5 +1,5 @@
 import { cn } from "../../lib/utils";
-import { Badge } from "./badge";
+import { Badge } from "../ui/badge";
 
 export function BetaBadge({ className }: { className?: string }) {
 	return (

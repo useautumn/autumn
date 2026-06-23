@@ -3,7 +3,7 @@
 import type { VariantProps } from "class-variance-authority";
 import * as React from "react";
 import { cn, hasSubmitShortcutModifier } from "../../lib/utils";
-import { Button, type ButtonProps } from "./button";
+import { Button, type ButtonProps } from "../ui/button";
 import { iconButtonVariants } from "./icon-button";
 
 interface IconCheckboxProps

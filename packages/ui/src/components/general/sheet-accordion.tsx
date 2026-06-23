@@ -4,7 +4,7 @@ import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
 import { ChevronDownIcon } from "lucide-react";
 import type * as React from "react";
 import { cn } from "../../lib/utils";
-import { Separator } from "./separator";
+import { Separator } from "../ui/separator";
 
 interface SheetAccordionProps {
 	children: React.ReactNode;

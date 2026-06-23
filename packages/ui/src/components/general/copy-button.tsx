@@ -1,13 +1,13 @@
 import { CheckIcon, CopyIcon } from "@phosphor-icons/react";
 import { useCallback, useEffect, useState } from "react";
 import { cn } from "../../lib/utils";
-import { IconButton, type IconButtonProps } from "./icon-button";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
-} from "./tooltip";
+} from "../ui/tooltip";
+import { IconButton, type IconButtonProps } from "./icon-button";
 
 /** Hook for copy-to-clipboard with auto-reset state */
 const useCopyAnimation = ({

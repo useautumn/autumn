@@ -1,5 +1,5 @@
 import { InfoIcon } from "@phosphor-icons/react";
-import { Tooltip, TooltipContent, TooltipTrigger } from "./tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 
 export const InfoTooltip = ({
 	children,

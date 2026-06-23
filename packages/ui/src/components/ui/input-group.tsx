@@ -5,9 +5,9 @@
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
 import { cn } from "../../lib/utils";
+import { LongInput as Textarea } from "../general/long-input";
 import { Button } from "./button";
 import { Input } from "./input";
-import { LongInput as Textarea } from "./long-input";
 
 function InputGroup({
 	className,
