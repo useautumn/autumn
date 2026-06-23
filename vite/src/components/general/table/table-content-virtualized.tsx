@@ -2,8 +2,13 @@ import { Table } from "@autumn/ui";
 import React, { useCallback, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { TableColumnVisibility } from "./table-column-visibility";
-import { TableContext, useTableContext } from "./table-context";
+import {
+	TableContext,
+	useShowMobileCards,
+	useTableContext,
+} from "./table-context";
 import { TableHeader } from "./table-header";
+import { TableMobileCards } from "./table-mobile-cards";
 
 export function TableContentVirtualized({
 	children,
@@ -23,6 +28,7 @@ export function TableContentVirtualized({
 	} = context;
 	const { isLoading, isTransitioning } = context;
 	const rows = table.getRowModel().rows;
+	const showMobileCards = useShowMobileCards();
 
 	// Use state instead of ref so changes trigger re-renders for virtualizer
 	const [scrollContainer, setScrollContainer] = useState<HTMLDivElement | null>(
@@ -83,6 +89,10 @@ export function TableContentVirtualized({
 	};
 
 	const isFlexFill = virtualization?.containerHeight === "100%";
+
+	if (showMobileCards) {
+		return <TableMobileCards />;
+	}
 
 	return (
 		<TableContext.Provider value={contextWithRef}>

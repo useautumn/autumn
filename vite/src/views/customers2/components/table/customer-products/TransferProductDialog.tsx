@@ -95,7 +95,7 @@ export const TransferProductDialog = ({
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogContent
-				className="w-md bg-card"
+				className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md bg-card"
 				onClick={(e) => e.stopPropagation()}
 			>
 				<DialogHeader>

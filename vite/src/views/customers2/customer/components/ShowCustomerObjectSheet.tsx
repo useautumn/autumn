@@ -1,68 +1,48 @@
 import type { FullCustomer } from "@autumn/shared";
-import { LATEST_VERSION } from "@autumn/shared";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@autumn/ui";
 import { Spinner } from "@phosphor-icons/react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { useParams } from "react-router";
 import {
 	CodeGroup,
-	CodeGroupCode,
 	CodeGroupCopyButton,
 	CodeGroupList,
 	CodeGroupTab,
 } from "@/components/v2/CodeGroup";
-import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { VirtualizedJson } from "@/components/v2/VirtualizedJson";
 import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { EntityScopeSelector } from "../../components/sheets/EntityScopeSelector";
+import { useCustomerObjectQuery } from "../hooks/useCustomerObjectQuery";
 
 interface ShowCustomerObjectSheetProps {
 	open: boolean;
 	setOpen: (open: boolean) => void;
 }
 
-const CUSTOMER_EXPAND_PARAMS = [
-	"invoices",
-	"trials_used",
-	"rewards",
-	"entities",
-	"referrals",
-	"payment_method",
-	"billing_controls.auto_topups.purchase_limit",
-].join(",");
-
-const ENTITY_EXPAND_PARAMS = "invoices";
-
 export function ShowCustomerObjectSheet({
 	open,
 	setOpen,
 }: ShowCustomerObjectSheetProps) {
 	const { customer_id } = useParams();
-	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
-	const buildKey = useQueryKeyFactory();
 
 	const { customer } = useCusQuery();
 	const fullCustomer = customer as FullCustomer | undefined;
 	const entities = fullCustomer?.entities ?? [];
 	const [scopeEntityId, setScopeEntityId] = useSheetScopeEntityId(fullCustomer);
 
-	const { data, isLoading, error } = useQuery({
-		queryKey: buildKey(["customer-object", customer_id, scopeEntityId]),
-		queryFn: async () => {
-			const url = scopeEntityId
-				? `/v1/customers/${customer_id}/entities/${scopeEntityId}?expand=${ENTITY_EXPAND_PARAMS}`
-				: `/v1/customers/${customer_id}?expand=${CUSTOMER_EXPAND_PARAMS}`;
-			const { data } = await axiosInstance.get(url);
-			return data;
-		},
-		enabled: open && !!customer_id,
-		gcTime: 0,
+	const { data, isLoading, error } = useCustomerObjectQuery({
+		customerId: customer_id,
+		scopeEntityId,
+		enabled: open,
 		staleTime: 0,
 	});
 
-	const formattedJson = data ? JSON.stringify(data, null, 2) : "";
+	const formattedJson = useMemo(
+		() => (data ? JSON.stringify(data, null, 2) : ""),
+		[data],
+	);
 
 	const description = scopeEntityId
 		? "From entities.get"
@@ -70,7 +50,7 @@ export function ShowCustomerObjectSheet({
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetContent className="flex flex-col overflow-hidden bg-background min-w-xl">
+			<SheetContent className="flex flex-col overflow-hidden bg-background sm:min-w-xl">
 				<SheetHeader>
 					<SheetTitle>
 						{scopeEntityId ? "Entity Object" : "Customer Object"}
@@ -107,9 +87,10 @@ export function ShowCustomerObjectSheet({
 									onCopy={() => navigator.clipboard.writeText(formattedJson)}
 								/>
 							</CodeGroupList>
-							<div className="flex-1 h-0 overflow-y-auto border border-t-0 rounded-b-lg bg-white dark:bg-background p-4">
-								<CodeGroupCode language="json">{formattedJson}</CodeGroupCode>
-							</div>
+							<VirtualizedJson
+								json={formattedJson}
+								className="flex-1 h-0 border border-t-0 rounded-b-lg bg-white dark:bg-background py-4"
+							/>
 						</CodeGroup>
 					)}
 				</div>

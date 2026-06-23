@@ -1,4 +1,5 @@
 import { formatAmount, type Invoice } from "@autumn/shared";
+import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Button,
 	Dialog,
@@ -148,20 +149,15 @@ export function RefundInvoiceDialog({
 				</div>
 
 				<DialogFooter>
-					<Button
-						variant="secondary"
-						onClick={() => onOpenChange(false)}
-						disabled={refundMutation.isPending}
-					>
-						Cancel
-					</Button>
-					<Button
+					<ShortcutButton
 						variant="primary"
+						className="w-full"
 						onClick={handleSubmit}
 						isLoading={refundMutation.isPending}
+						metaShortcut="enter"
 					>
 						Refund
-					</Button>
+					</ShortcutButton>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

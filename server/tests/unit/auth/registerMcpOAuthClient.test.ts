@@ -4,26 +4,26 @@ import {
 	getOAuthResourceScopes,
 } from "@autumn/auth/oauth";
 import { LEAF_OAUTH_SCOPES } from "@autumn/shared";
-import { Scopes } from "@autumn/shared/scopeDefinitions";
+import { OPENID_SCOPES, Scopes } from "@autumn/shared/scopeDefinitions";
 import { getRequestedScopesForMcpClient } from "@/internal/auth/actions/registerMcpOAuthClient.js";
 
 const OFFLINE_ACCESS_SCOPE = "offline_access";
-const DEFAULT_MCP_SCOPES = [...LEAF_OAUTH_SCOPES, OFFLINE_ACCESS_SCOPE];
+const DEFAULT_MCP_SCOPES = [...LEAF_OAUTH_SCOPES, ...OPENID_SCOPES];
 
 describe("getRequestedScopesForMcpClient", () => {
-	test("defaults Slack MCP clients to Leaf scopes plus offline access", () => {
+	test("defaults Slack MCP clients to Leaf scopes plus OIDC scopes", () => {
 		expect(
 			getRequestedScopesForMcpClient({ clientType: "slack", scope: undefined }),
 		).toEqual(DEFAULT_MCP_SCOPES);
 	});
 
-	test("defaults Codex MCP clients to Leaf scopes plus offline access", () => {
+	test("defaults Codex MCP clients to Leaf scopes plus OIDC scopes", () => {
 		expect(
 			getRequestedScopesForMcpClient({ clientType: "codex", scope: undefined }),
 		).toEqual(DEFAULT_MCP_SCOPES);
 	});
 
-	test("defaults dynamic MCP clients to Leaf scopes plus offline access", () => {
+	test("defaults dynamic MCP clients to Leaf scopes plus OIDC scopes", () => {
 		expect(
 			getRequestedScopesForMcpClient({
 				clientType: "dynamic",
@@ -32,7 +32,7 @@ describe("getRequestedScopesForMcpClient", () => {
 		).toEqual(DEFAULT_MCP_SCOPES);
 	});
 
-	test("caps explicit requested scopes to Leaf scopes plus offline access", () => {
+	test("caps explicit requested scopes to Leaf and OIDC scopes", () => {
 		expect(
 			getRequestedScopesForMcpClient({
 				clientType: "slack",
@@ -45,11 +45,20 @@ describe("getRequestedScopesForMcpClient", () => {
 		]);
 	});
 
-	test("preserves offline access in default OAuth scopes", () => {
+	test("preserves OIDC protocol scopes that Claude requests", () => {
+		expect(
+			getRequestedScopesForMcpClient({
+				clientType: "claude",
+				scope: "openid profile email offline_access",
+			}),
+		).toEqual(["openid", "profile", "email", OFFLINE_ACCESS_SCOPE]);
+	});
+
+	test("preserves OIDC scopes in default OAuth scopes", () => {
 		expect(getDefaultOAuthScopes()).toEqual(DEFAULT_MCP_SCOPES);
 	});
 
-	test("caps OAuth grants to Leaf scopes plus offline access", () => {
+	test("caps OAuth grants to Leaf and OIDC scopes", () => {
 		expect(
 			getDefaultOAuthScopes([
 				Scopes.Customers.Read,

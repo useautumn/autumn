@@ -1,7 +1,8 @@
 import { Table } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { TableColumnVisibility } from "./table-column-visibility";
-import { useTableContext } from "./table-context";
+import { useShowMobileCards, useTableContext } from "./table-context";
+import { TableMobileCards } from "./table-mobile-cards";
 
 export function TableContent({
 	children,
@@ -18,6 +19,11 @@ export function TableContent({
 		table,
 	} = useTableContext();
 	const rows = table.getRowModel().rows;
+	const showMobileCards = useShowMobileCards();
+
+	if (showMobileCards) {
+		return <TableMobileCards />;
+	}
 
 	return (
 		<div

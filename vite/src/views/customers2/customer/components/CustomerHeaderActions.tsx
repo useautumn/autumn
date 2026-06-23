@@ -1,11 +1,15 @@
+import type { FullCustomer } from "@autumn/shared";
 import { ProcessorType } from "@autumn/shared";
 import { IconTooltipButton } from "@autumn/ui";
 import { BracketsSquareIcon, UserCircleGearIcon } from "@phosphor-icons/react";
+import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
+import { useParams } from "react-router";
 import { toast } from "sonner";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
+import { getInitialScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
@@ -17,6 +21,7 @@ import {
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { useCustomerObjectQuery } from "../hooks/useCustomerObjectQuery";
 import { CustomButtons } from "./CustomButtons";
 import { ShowCustomerObjectSheet } from "./ShowCustomerObjectSheet";
 
@@ -28,8 +33,16 @@ export function CustomerHeaderActions() {
 	const { masterStripeAccount } = useMasterStripeAccount();
 	const env = useEnv();
 	const axiosInstance = useAxiosInstance();
+	const { customer_id } = useParams();
 
-	const [portalLoading, setPortalLoading] = useState(false);
+	useCustomerObjectQuery({
+		customerId: customer_id,
+		scopeEntityId: getInitialScopeEntityId(
+			customer as FullCustomer | undefined,
+		),
+		enabled: !!customer,
+	});
+
 	const [showObjectOpen, setShowObjectOpen] = useState(false);
 
 	const stripeCustomerId = customer?.processor?.id;
@@ -61,21 +74,18 @@ export function CustomerHeaderActions() {
 		);
 	};
 
-	const handleOpenBillingPortal = async () => {
-		if (!customer) return;
-		setPortalLoading(true);
-		try {
-			const { url } = await CusService.createBillingPortalSession({
+	const billingPortalMutation = useMutation({
+		mutationFn: () => {
+			if (!customer) throw new Error("Customer not loaded");
+			return CusService.createBillingPortalSession({
 				axios: axiosInstance,
 				customer_id: customer.id || customer.internal_id,
 			});
-			window.open(url, "_blank");
-		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to open billing portal"));
-		} finally {
-			setPortalLoading(false);
-		}
-	};
+		},
+		onSuccess: ({ url }) => window.open(url, "_blank"),
+		onError: (error) =>
+			toast.error(getBackendErr(error, "Failed to open billing portal")),
+	});
 
 	return (
 		<div className="flex items-center gap-1">
@@ -92,8 +102,8 @@ export function CustomerHeaderActions() {
 			<IconTooltipButton
 				tooltip="Open customer portal"
 				icon={<UserCircleGearIcon size={14} />}
-				onClick={handleOpenBillingPortal}
-				disabled={portalLoading}
+				onClick={() => billingPortalMutation.mutate()}
+				disabled={!customer || billingPortalMutation.isPending}
 			/>
 			{showStripe && (
 				<IconTooltipButton

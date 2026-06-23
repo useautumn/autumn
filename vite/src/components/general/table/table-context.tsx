@@ -1,6 +1,7 @@
 import type { Table as TanstackTable } from "@tanstack/react-table";
 import { createContext, type ReactNode, useContext } from "react";
 import type { ColumnGroup } from "@/hooks/useColumnVisibility";
+import { useIsMobile } from "@/hooks/useIsMobile";
 
 export interface VirtualizationConfig {
 	/** Height of the scroll container, e.g., "calc(100vh - 240px)" */
@@ -42,6 +43,7 @@ export interface TableProps<T> {
 	emptyStateChildren?: ReactNode;
 	emptyStateText?: string;
 	flexibleTableColumns?: boolean;
+	mobileCards?: boolean;
 	selectedItemId?: string | null;
 	/** Virtualization config - only needed when using VirtualizedContent/VirtualizedBody */
 	virtualization?: VirtualizationConfig;
@@ -60,4 +62,10 @@ export function useTableContext<T>(): TableProps<T> {
 	}
 
 	return context as TableProps<T>;
+}
+
+export function useShowMobileCards(): boolean {
+	const { mobileCards } = useTableContext();
+	const isMobile = useIsMobile();
+	return Boolean(mobileCards) && isMobile;
 }
