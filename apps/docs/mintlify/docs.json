@@ -55,7 +55,6 @@
 						"group": " ",
 						"pages": [
 							"welcome",
-							"documentation/mcp",
 							{
 								"group": "Concepts",
 								"pages": [
@@ -68,7 +67,8 @@
 									"documentation/concepts/stripe"
 								]
 							},
-							"documentation/getting-started/migration"
+							"documentation/getting-started/migration",
+							"documentation/mcp"
 						]
 					},
 					{
