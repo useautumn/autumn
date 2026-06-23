@@ -7,7 +7,7 @@ export const rewardOps = {
 			tags: ["rewards"],
 			responses: {
 				"200": {
-					description: "",
+					description: "The org's coupons and feature grants.",
 					content: {
 						"application/json": { schema: ApiRewardsListV0Schema },
 					},

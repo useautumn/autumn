@@ -45,7 +45,8 @@ export const getApiCoupon = ({
 	return {
 		id: reward.id,
 		name: reward.name,
-		type: reward.type,
+		// caller (listApiRewards) only passes discount-category rewards
+		type: reward.type as ApiCouponV0["type"],
 		value: discountConfig?.discount_value ?? 0,
 		duration: {
 			type: durationType,

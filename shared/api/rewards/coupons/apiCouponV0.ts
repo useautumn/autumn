@@ -6,6 +6,13 @@ import {
 import { z } from "zod/v4";
 import { ApiCouponPromoCodeV0Schema } from "../components/apiCouponPromoCodeV0.js";
 
+/** Discount-category reward types surfaced as coupons (excludes feature_grant / free_product). */
+const COUPON_TYPES = [
+	RewardType.PercentageDiscount,
+	RewardType.FixedDiscount,
+	RewardType.InvoiceCredits,
+] as const;
+
 export const COUPON_V0_EXAMPLE = {
 	id: "summer_sale",
 	name: "Summer Sale",
@@ -31,7 +38,7 @@ export const ApiCouponV0Schema = z
 		name: z.string().nullish().meta({
 			description: "A human-readable name for the coupon.",
 		}),
-		type: z.enum(RewardType).meta({
+		type: z.enum(COUPON_TYPES).meta({
 			description:
 				"The type of discount: percentage_discount, fixed_discount, or invoice_credits.",
 		}),
