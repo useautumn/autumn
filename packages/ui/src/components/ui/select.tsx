@@ -151,7 +151,7 @@ function SelectItem({
 	);
 }
 
-function _SelectSeparator({ className, ...props }: React.ComponentProps<"div">) {
+function SelectSeparator({ className, ...props }: React.ComponentProps<"div">) {
 	return (
 		<div
 			data-slot="select-separator"
@@ -167,6 +167,7 @@ export {
 	SelectGroup,
 	SelectItem,
 	SelectLabel,
+	SelectSeparator,
 	SelectTrigger,
 	SelectValue,
 };

@@ -271,9 +271,9 @@ function ChartTooltipContent({
 	);
 }
 
-const _ChartLegend = RechartsPrimitive.Legend;
+const ChartLegend = RechartsPrimitive.Legend;
 
-function _ChartLegendContent({
+function ChartLegendContent({
 	className,
 	hideIcon = false,
 	payload,
@@ -369,4 +369,10 @@ function getPayloadConfigFromPayload(
 		: config[key as keyof typeof config];
 }
 
-export { ChartContainer, ChartTooltip, ChartTooltipContent };
+export {
+	ChartContainer,
+	ChartLegend,
+	ChartLegendContent,
+	ChartTooltip,
+	ChartTooltipContent,
+};

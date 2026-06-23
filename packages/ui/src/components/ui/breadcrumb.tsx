@@ -58,7 +58,7 @@ function BreadcrumbLink({
 	});
 }
 
-function _BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
+function BreadcrumbPage({ className, ...props }: React.ComponentProps<"span">) {
 	return (
 		<span
 			data-slot="breadcrumb-page"
@@ -89,7 +89,7 @@ function BreadcrumbSeparator({
 	);
 }
 
-function _BreadcrumbEllipsis({
+function BreadcrumbEllipsis({
 	className,
 	...props
 }: React.ComponentProps<"span">) {
@@ -109,8 +109,10 @@ function _BreadcrumbEllipsis({
 
 export {
 	Breadcrumb,
-	BreadcrumbList,
+	BreadcrumbEllipsis,
 	BreadcrumbItem,
 	BreadcrumbLink,
+	BreadcrumbList,
+	BreadcrumbPage,
 	BreadcrumbSeparator,
 };

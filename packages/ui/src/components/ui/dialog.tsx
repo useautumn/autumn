@@ -34,7 +34,7 @@ function DialogPortal({ ...props }: DialogPrimitive.Portal.Props) {
 	return <DialogPrimitive.Portal data-slot="dialog-portal" {...props} />;
 }
 
-function _DialogClose({
+function DialogClose({
 	asChild,
 	children,
 	...props
@@ -156,6 +156,7 @@ DialogDescription.displayName = "DialogDescription";
 
 export {
 	Dialog,
+	DialogClose,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
