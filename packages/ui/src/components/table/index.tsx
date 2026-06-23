@@ -33,13 +33,14 @@ export const Table = {
 	ColumnVisibility: TableColumnVisibility,
 };
 
-export { CursorPagination } from "./CursorPagination";
+export * from "./CursorPagination";
 export {
 	type TableLinkComponent,
 	type TableProps,
 	useTableContext,
 } from "./table-context";
+export { TableProvider } from "./table-provider";
 export { TableDropdownMenuCell } from "./table-dropdown-menu-cell";
 export type { ColumnSkeletonMeta } from "./table-row-cells";
-export { dateSkeleton } from "./table-skeleton-presets";
+export * from "./table-skeleton-presets";
 export { useCursorPagination } from "./useCursorPagination";
