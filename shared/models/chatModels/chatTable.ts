@@ -14,7 +14,8 @@ export type ChatProvider =
 	| "slack"
 	| "slack_admin"
 	| `slack_admin:${string}`
-	| "discord";
+	| "discord"
+	| "web";
 
 export const chatInstallations = pgTable(
 	"chat_installations",

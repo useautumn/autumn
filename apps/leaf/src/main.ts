@@ -1,7 +1,7 @@
 import type { HttpBindings } from "@hono/node-server";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
-import { chatAdapterNames } from "./bot.js";
+import { bot, chatAdapterNames } from "./bot.js";
 import { prewarmAiSdkHarness } from "./harness/vercelHarness/agent/prewarm.js";
 import { env } from "./lib/env.js";
 import { logger } from "./lib/logger.js";
@@ -11,9 +11,23 @@ import { slackRoutes } from "./providers/slack/routes.js";
 const app = new Hono<{ Bindings: HttpBindings }>();
 
 app.use("*", async (c, next) => {
-	c.header("Access-Control-Allow-Origin", "*");
+	// Credentialed (cookie) requests forbid `*` for Allow-Origin/Headers — echo
+	// the request's origin + requested headers so the dashboard chat can read the
+	// streamed response.
+	const origin = c.req.header("origin");
+	if (origin) {
+		c.header("Access-Control-Allow-Origin", origin);
+		c.header("Access-Control-Allow-Credentials", "true");
+		c.header("Vary", "Origin");
+	} else {
+		c.header("Access-Control-Allow-Origin", "*");
+	}
 	c.header("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-	c.header("Access-Control-Allow-Headers", "*");
+	c.header(
+		"Access-Control-Allow-Headers",
+		c.req.header("access-control-request-headers") ??
+			"content-type, authorization, x-client-type, x-autumn-environment",
+	);
 	return c.req.method === "OPTIONS" ? c.body(null, 204) : next();
 });
 
@@ -32,6 +46,39 @@ app.route(
 
 app.route("/slack", slackRoutes);
 
+// Dashboard chat (brokered through the main server). Auth happens in the web
+// adapter's getUser via the dashboard's better-auth session.
+app.post("/agent/chat", async (c) => {
+	if (!bot.webhooks.web) {
+		return c.text("Web chat is not configured", 503);
+	}
+	const response = await bot.webhooks.web(c.req.raw, {
+		waitUntil: (task) => {
+			task.catch((error) =>
+				logger.error("Web chat task failed", {
+					event: "leaf.web_chat_task_failed",
+					data: { error: String(error) },
+				}),
+			);
+		},
+	});
+	// The chat SDK returns a raw Response, so the CORS middleware's c.header()
+	// doesn't apply — add credential-safe CORS directly for the browser.
+	const origin = c.req.header("origin");
+	if (!origin) {
+		return response;
+	}
+	const headers = new Headers(response.headers);
+	headers.set("Access-Control-Allow-Origin", origin);
+	headers.set("Access-Control-Allow-Credentials", "true");
+	headers.set("Vary", "Origin");
+	return new Response(response.body, {
+		status: response.status,
+		statusText: response.statusText,
+		headers,
+	});
+});
+
 serve(
 	{
 		fetch: app.fetch,
@@ -48,13 +95,16 @@ serve(
 		});
 		// Warm the harness template snapshot in the background so the first agent
 		// turn forks from it instead of running the bridge install.
-		if (env.AGENT_HARNESS === "vercel") {
-			prewarmAiSdkHarness().catch((error) =>
-				logger.warn("Harness prewarm failed", {
-					event: "leaf.harness_prewarm_failed",
-					data: { error: String(error) },
-				}),
-			);
-		}
+			if (
+				env.SLACK_AGENT_HARNESS === "vercel" ||
+				env.WEB_AGENT_HARNESS === "vercel"
+			) {
+				prewarmAiSdkHarness().catch((error) =>
+					logger.warn("Harness prewarm failed", {
+						event: "leaf.harness_prewarm_failed",
+						data: { error: String(error) },
+					}),
+				);
+			}
 	},
 );

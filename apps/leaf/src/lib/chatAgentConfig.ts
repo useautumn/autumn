@@ -33,8 +33,9 @@ export const VERCEL_HARNESS_ADAPTER: VercelHarnessAdapter = "claudeCode";
 export type SandboxProviderName = "vercel" | "daytona" | "e2b";
 export const SANDBOX_PROVIDER: SandboxProviderName = "vercel";
 
-/** Which loop the production Slack bot runs messages through; AGENT_HARNESS env overrides. */
-export const DEFAULT_AGENT_HARNESS: AgentHarnessName = "claude-managed";
+export const DEFAULT_SLACK_AGENT_HARNESS: AgentHarnessName = "claude-managed";
+export const DEFAULT_WEB_AGENT_HARNESS: AgentHarnessName = "mastra";
+export const DEFAULT_AGENT_HARNESS = DEFAULT_SLACK_AGENT_HARNESS;
 
 /**
  * Which harness evals run through when the eval file passes no driver; EVAL_DRIVER env overrides.

@@ -1,6 +1,8 @@
+import { verifyDashboardSession } from "@autumn/auth";
 import { createSlackAdapter } from "@chat-adapter/slack";
 import { verifySlackSignature } from "@chat-adapter/slack/webhook";
 import { createPostgresState } from "@chat-adapter/state-pg";
+import { createWebAdapter } from "@chat-adapter/web";
 import type { Attachment, Message, Thread } from "chat";
 import { Chat } from "chat";
 import { runMessage } from "./agent/runMessage/runMessage.js";
@@ -35,6 +37,7 @@ import {
 } from "./providers/slack/files.js";
 import { findInstallationWithOrg } from "./providers/slack/installations.js";
 import { getRecentMessages } from "./providers/slack/threadContext.js";
+import { runWebMessage } from "./providers/web/runWebMessage.js";
 import type { ChatContextMessage } from "./types.js";
 import {
 	finishLoading,
@@ -44,7 +47,7 @@ import {
 } from "./ui/progress.js";
 import { createStatusTicker } from "./ui/statusTicker.js";
 
-export const chatAdapterNames = ["slack"];
+export const chatAdapterNames = ["slack", "web"];
 
 const getSlackAdminProvider = () =>
 	`slack_admin:${env.SLACK_CLIENT_ID}` as const;
@@ -104,6 +107,30 @@ export const bot = new Chat({
 				});
 			},
 			userName: env.CHAT_NAME,
+		}),
+		web: createWebAdapter({
+			userName: env.CHAT_NAME,
+			getUser: async (request) => {
+				const session = await verifyDashboardSession({
+					cookie: request.headers.get("cookie"),
+					authBaseUrl: env.BETTER_AUTH_URL,
+				});
+				rootLogger.info("Web chat getUser", {
+					event: "leaf.web_chat_get_user",
+					data: {
+						hasCookie: Boolean(request.headers.get("cookie")),
+						authenticated: Boolean(session?.userId),
+						hasOrg: Boolean(session?.activeOrganizationId),
+					},
+				});
+				if (!session?.activeOrganizationId) {
+					return null;
+				}
+				// Encode the server-resolved org into the user id (WebUser carries no
+				// org field); runWebMessage decodes it. `~` avoids the `:` used in
+				// chat-sdk thread ids.
+				return { id: `${session.userId}~${session.activeOrganizationId}` };
+			},
 		}),
 	},
 	state: createPostgresState({
@@ -317,6 +344,12 @@ const handleMessage = async (thread: Thread, message: Message) => {
 			event: "leaf.slack_message_skipped",
 			data: { reason: "bot_author" },
 		});
+		return;
+	}
+	// Web (dashboard) messages run Leaf's core without a Slack installation.
+	// Web thread ids follow the `web:{userId}:{conversationId}` pattern.
+	if (thread.id.startsWith("web:")) {
+		await runWebMessage({ message, thread });
 		return;
 	}
 	const runKey = slackRunKey({

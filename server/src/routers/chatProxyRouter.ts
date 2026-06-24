@@ -30,6 +30,10 @@ export const createChatProxyRouter = (
 	router.post("/slack/events", proxy);
 	router.post("/slack/interactions", proxy);
 
+	// Dashboard chat → Leaf. Pass-through (cookies forwarded); Leaf's web adapter
+	// authenticates the dashboard session in getUser.
+	router.post("/agent/chat", proxy);
+
 	// Proxy the MCP endpoint to leaf so a public origin (e.g. NGROK_URL) reaches it —
 	// Claude Managed Agents run in Anthropic's cloud and cannot hit leaf's localhost.
 	// Point MCP_SERVER_URL at this public origin so the agent + vault use it.

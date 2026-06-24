@@ -20,7 +20,8 @@ export const approveAndRun = async ({
 	providerUserId: string;
 }): Promise<ApprovalRunResult> => {
 	const harness =
-		(approval.harness as AgentHarnessName | null) ?? chatEnv.AGENT_HARNESS;
+		(approval.harness as AgentHarnessName | null) ??
+		chatEnv.SLACK_AGENT_HARNESS;
 	const resume = harnessApprovalResumers[harness];
 
 	let result: ApprovalRunResult;

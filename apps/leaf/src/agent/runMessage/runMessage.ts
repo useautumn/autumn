@@ -55,10 +55,11 @@ export const runMessage = async ({
 }: BotMessage): Promise<RunMessageOutput> => {
 	// The engine interrupts the session at the deadline; the wider outer
 	// timeout only fires if the stream itself wedges.
-	const deadlineAt = Date.now() + messageTimeoutMs[chatEnv.AGENT_HARNESS];
+	const harness = chatEnv.SLACK_AGENT_HARNESS;
+	const deadlineAt = Date.now() + messageTimeoutMs[harness];
 	return withTimeout(
 		(async () => {
-			const engine = agentEngines[chatEnv.AGENT_HARNESS];
+			const engine = agentEngines[harness];
 			const thread = {
 				channelId,
 				provider: installation.provider,

@@ -5,6 +5,7 @@ import {
 	BalloonIcon,
 	BasketIcon,
 	ChartBarIcon,
+	ChatCircleIcon,
 	CubeIcon,
 	GearIcon,
 	KeyIcon,
@@ -217,6 +218,12 @@ export const MainSidebar = ({
 							value="analytics"
 							icon={<ChartBarIcon size={16} weight="fill" />}
 							title="Analytics"
+							env={env}
+						/>
+						<NavButton
+							value="chat"
+							icon={<ChatCircleIcon size={16} weight="fill" />}
+							title="Chat"
 							env={env}
 						/>
 						{canSeeDev && (

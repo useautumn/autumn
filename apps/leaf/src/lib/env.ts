@@ -1,9 +1,12 @@
 import { z } from "zod";
 import {
-	DEFAULT_AGENT_HARNESS,
 	DEFAULT_CHAT_MODEL,
+	DEFAULT_SLACK_AGENT_HARNESS,
+	DEFAULT_WEB_AGENT_HARNESS,
 	SANDBOX_PROVIDER,
 } from "./chatAgentConfig.js";
+
+const harnessSchema = z.enum(["mastra", "claude-managed", "vercel"]);
 
 const optionalString = z.preprocess(
 	(value) => (value === "" ? undefined : value),
@@ -12,9 +15,9 @@ const optionalString = z.preprocess(
 
 const envSchema = z
 	.object({
-		AGENT_HARNESS: z
-			.enum(["mastra", "claude-managed", "vercel"])
-			.default(DEFAULT_AGENT_HARNESS),
+		AGENT_HARNESS: harnessSchema.optional(),
+		SLACK_AGENT_HARNESS: harnessSchema.optional(),
+		WEB_AGENT_HARNESS: harnessSchema.optional(),
 		ANTHROPIC_API_KEY: optionalString,
 		// Vercel Sandbox auth for the "vercel" harness. Omit all three to fall
 		// back to the ambient VERCEL_OIDC_TOKEN the SDK reads automatically.
@@ -69,6 +72,15 @@ const envSchema = z
 
 		return {
 			...values,
+			AGENT_HARNESS: values.AGENT_HARNESS ?? DEFAULT_SLACK_AGENT_HARNESS,
+			SLACK_AGENT_HARNESS:
+				values.SLACK_AGENT_HARNESS ??
+				values.AGENT_HARNESS ??
+				DEFAULT_SLACK_AGENT_HARNESS,
+			WEB_AGENT_HARNESS:
+				values.WEB_AGENT_HARNESS ??
+				values.AGENT_HARNESS ??
+				DEFAULT_WEB_AGENT_HARNESS,
 			MCP_SERVER_URL:
 				values.MCP_SERVER_URL ??
 				(process.env.NODE_ENV === "production"

@@ -72,7 +72,7 @@ const unsupportedSendUserMessage = async () => {
 		"mid-run follow-up injection is unsupported for this harness",
 	);
 };
-const usesSessionEvents = () => chatEnv.AGENT_HARNESS !== "vercel";
+const usesSessionEvents = () => chatEnv.SLACK_AGENT_HARNESS !== "vercel";
 
 export const registerRun = ({
 	key,

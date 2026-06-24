@@ -94,7 +94,7 @@ export const postApprovalRequest = async ({
 			channelId,
 			providerUserId,
 			env: approval.env,
-			harness: chatEnv.AGENT_HARNESS,
+			harness: chatEnv.SLACK_AGENT_HARNESS,
 			preview: approval.preview,
 			runId: approval.runId,
 			toolArgs: approval.toolArgs,

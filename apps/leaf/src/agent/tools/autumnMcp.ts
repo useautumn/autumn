@@ -32,6 +32,11 @@ type ToolOptions = {
 
 export { autumnMcpHeaders, createAutumnMcpClient, executeAutumnMcpTool };
 
+const stripMastraRuntimeArgs = (args: Record<string, unknown>) => {
+	const { id: _id, user: _user, ...toolArgs } = args;
+	return toolArgs;
+};
+
 export const formatToolAction = ({
 	toolName,
 	args,
@@ -89,21 +94,24 @@ export const getAutumnMcpTools = async ({
 		if (tool.execute && (options.onToolCall || options.previewCapture)) {
 			const execute = tool.execute.bind(tool);
 			tool.execute = async (args, ...rest) => {
+				const toolArgs = stripMastraRuntimeArgs(args);
 				logger.info("Calling Autumn MCP tool", {
 					event: "leaf.mcp_tool_called",
 					tool: toolName,
 				});
 				if (!isSilentTool(toolName)) {
-					await options.onToolCall?.(formatToolAction({ toolName, args }));
+					await options.onToolCall?.(
+						formatToolAction({ toolName, args: toolArgs }),
+					);
 				}
-				const result = await execute(args, ...rest);
+				const result = await execute(toolArgs, ...rest);
 				if (getWriteToolForPreview(toolName)) {
 					logger.info("Captured Autumn MCP preview", {
 						event: "leaf.mcp_preview_captured",
 						data: { preview_tool: toolName },
 					});
 					options.previewCapture?.captureFromExecution({
-						args,
+						args: toolArgs,
 						preview: result,
 						toolName,
 					});
