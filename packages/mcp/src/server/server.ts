@@ -1,7 +1,7 @@
+import { autumnMcpInstructions } from "@autumn/agent-docs/agent";
 import { withAgentDocResources } from "@autumn/agent-docs/mcp";
 import { MCPServer } from "@mastra/mcp";
 import { autumnMcpResources } from "../resources/index.js";
-import { autumnMcpInstructions } from "../resources-v2/mcpInstructions.js";
 import { createRawAutumnOperationTools } from "../tools/index.js";
 
 export const createAutumnOperationsMCPServer = () =>

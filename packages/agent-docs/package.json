@@ -6,6 +6,7 @@
 	"sideEffects": false,
 	"exports": {
 		".": "./src/index.ts",
+		"./agent": "./src/consume/agent.ts",
 		"./mcp": "./src/consume/mcp.ts",
 		"./skills": "./src/consume/skills.ts"
 	},

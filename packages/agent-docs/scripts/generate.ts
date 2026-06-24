@@ -3,6 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import config from "../agent-docs.config.js";
 import type { Source } from "../src/config/types.js";
+import { composeDocument } from "../src/translate/composeDocument.js";
 import { composeSkill } from "../src/translate/composeSkill.js";
 import { composeSources } from "../src/translate/composeSources.js";
 import { toMcpResource } from "../src/translate/formats/mcpResource.js";
@@ -15,7 +16,7 @@ import { docsPageToMarkdown } from "../src/translate/ingest/docsPage.js";
 // readable rendered .md/SKILL.md for inspection.
 const here = dirname(fileURLToPath(import.meta.url));
 const docsRoot = resolve(here, "../../../apps/docs/mintlify");
-const legacyRoot = resolve(here, "../../mcp/src/resources-v2/concepts");
+const legacyRoot = resolve(here, "../../mcp/src/resources-v2");
 const contentRoot = resolve(here, "../content");
 
 const readSource = (source: Source): string => {
@@ -35,21 +36,34 @@ const resolveDocs = (url: string): string => {
 	});
 };
 
+// `<part file="…" />` → a sibling content file, resolved next to its document.
+const contentFileResolver =
+	(documentPath: string) =>
+	(file: string): string =>
+		readFileSync(resolve(contentRoot, dirname(documentPath), file), "utf8");
+
 const mcpResources: McpResource[] = [];
 const skills: Skill[] = [];
 
 for (const entry of Object.values(config)) {
 	if (entry.formats.mcp) {
-		const body = composeSources({
-			sources: entry.formats.mcp.sources,
-			readSource,
-		});
+		const mcp = entry.formats.mcp;
+		const ownTitle = Boolean(mcp.document);
+		const body = mcp.document
+			? composeDocument({
+					path: mcp.document,
+					text: readFileSync(resolve(contentRoot, mcp.document), "utf8"),
+					resolveContentFile: contentFileResolver(mcp.document),
+					resolveDocs,
+				})
+			: composeSources({ sources: mcp.sources ?? [], readSource });
 		mcpResources.push(
 			toMcpResource({
 				title: entry.title,
 				description: entry.description,
-				format: entry.formats.mcp,
+				format: mcp,
 				body,
+				ownTitle,
 			}),
 		);
 	}
@@ -59,6 +73,7 @@ for (const entry of Object.values(config)) {
 			path: file,
 			text: readFileSync(resolve(contentRoot, file), "utf8"),
 			resolveDocs,
+			resolveContentFile: contentFileResolver(file),
 		});
 		skills.push(toSkill({ skill }));
 	}
@@ -87,6 +102,17 @@ const writeGenerated = ({
 	process.stdout.write(`Wrote ${outPath}\n`);
 };
 
+const mcpInstructions = readFileSync(
+	resolve(contentRoot, "instructions/mcpInstructions.md"),
+	"utf8",
+).trim();
+
+writeGenerated({
+	file: "instructions.generated.ts",
+	typeName: "autumnMcpInstructions: string",
+	typeImport: "",
+	value: mcpInstructions,
+});
 writeGenerated({
 	file: "mcp-resources.generated.ts",
 	typeName: "mcpResources: McpResource[]",

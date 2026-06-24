@@ -4,13 +4,17 @@ export type Source =
 	| { type: "legacy"; file: string };
 
 /**
- * MCP-resource output: sources are concatenated "as normal". `uri` becomes
- * `autumn://docs/<uri>`.
+ * MCP-resource output. `uri` becomes `autumn://docs/<uri>`. Two shapes:
+ * - `sources`: fragments (no frontmatter/title) concatenated under a generated
+ *   `# Title` heading (e.g. concepts).
+ * - `document`: a tagged mdx (own frontmatter + `# Title`) shared with the skill
+ *   format; `<part>`/`<docs>` tags are inlined. Path relative to `content/`.
  */
 export type McpFormat = {
 	uri: string;
 	priority: number;
-	sources: Source[];
+	sources?: Source[];
+	document?: string;
 };
 
 /**

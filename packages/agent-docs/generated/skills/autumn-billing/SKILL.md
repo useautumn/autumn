@@ -1,10 +1,6 @@
 ---
-name: billing
-title: Billing
-description: How agents should perform Autumn billing workflows.
-priority: 0.94
-audience:
-  - assistant
+name: autumn-billing
+description: Performing Autumn billing actions — attaching plans, updating or canceling subscriptions, creating schedules, customizing terms, previewing charges, and applying billing changes. Use when the user wants to bill a customer, change a subscription, schedule plan changes, or preview billing impact.
 ---
 
 # Billing
@@ -12,24 +8,22 @@ audience:
 Use this resource for billing actions: attaching plans, updating subscriptions, creating schedules, canceling or uncanceling subscriptions, and changing customer billing state.
 Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Plan, Subscription, Purchase, Balance, Flag, and Billing Controls.
 
-<goal>
+## Goal
 
 - Map the user's billing request to one or more Autumn billing API calls.
 - Build the params for those calls before previewing.
 - Gather requirements in natural language; do not force the user to speak in Autumn field names.
 - Preview only when the params are complete enough to represent the intended billing action.
 
-</goal>
-
-<workflow>
+## Workflow
 
 - You MUST follow this checklist in order for every billing request.
-- Resolve targets with <target-resolution>.
-- Choose the operation with <action-selection>.
-- Collect action-specific params with <param-checklist>.
-- Resolve custom terms with <customizations>.
-- Resolve timing with <timing-and-schedules>.
-- Resolve invoice, checkout, and proration behavior with <billing-behavior>.
+- Resolve targets (see Target resolution).
+- Choose the operation (see Action selection).
+- Collect action-specific params (see Param checklist).
+- Resolve custom terms (see Customizations).
+- Resolve timing (see Timing and schedules).
+- Resolve invoice, checkout, and proration behavior (see Billing behavior).
 - If one ambiguity changes which of the other questions apply, resolve it first on its own before gathering the rest.
 - Gather all remaining missing questions from the checklist and ask them together.
 - If there are no missing questions, call the preview tool.
@@ -37,9 +31,7 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 - If params change, update them and repeat from the relevant checklist step.
 - Once approved, apply the exact previewed billing action.
 
-</workflow>
-
-<rules>
+## Rules
 
 - **A mutating billing action requires approval before it takes effect — obtain it via your client's approval mechanism.**
 - Don't propose or promise steps outside what your tools can do. If the goal isn't reachable, say so plainly rather than inventing a workaround.
@@ -54,9 +46,7 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 - Before any trial action, re-read the Trials section in `autumn://docs/concepts`.
 - Adding a trial for a customer who already has a paid subscription resets the Stripe billing cycle; warn the user and offer the `on_end: "revert"` flow, then let them choose.
 
-</rules>
-
-<target-resolution>
+## Target resolution
 
 - Resolve IDs from the user's message before choosing params: customer, optional entity, and plan(s).
 - If preloaded `listPlans` / `listFeatures` results are present, treat them as already-run tool results. Do not call them again unless the needed record is absent or the user asks to refresh.
@@ -68,14 +58,12 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 - If an ID had to be inferred from a name or description, confirm the match with the user before moving on.
 - If the found customer has no email, remember that and ask for it before any invoice or checkout step.
 
-</target-resolution>
+For choosing which billing action to run (attach, updateSubscription, createSchedule), read `references/actions.md`.
 
-<!-- Action selection -->
-
-<param-checklist>
+## Param checklist
 
 - After target resolution, collect the params specific to the selected action.
-- Before previewing, resolve any required `customize` params identified in <customizations>.
+- Before previewing, resolve any required `customize` params identified in Customizations.
 - `attach`
   - If the plan has prepaid items and quantity is missing, ask for the quantity before previewing.
   - If the prepaid quantity is known, include `feature_quantities`. Undefined `feature_quantities` defaults to 0 for that feature.
@@ -91,15 +79,13 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
   - Each phase needs timing (`starts_at` or `starting_after`) and at least one `plans[]` entry.
 - If a missing value changes billing impact, ask before previewing.
 
-</param-checklist>
+For applying customer-specific plan terms or price overrides, read `references/customize.md`.
 
-<!-- Customizations -->
+For resolving when a billing change takes effect or building schedule phases, read `references/timing-schedules.md`.
 
-<!-- Timing and schedules -->
+For resolving invoice, checkout, and proration behavior, read `references/billing-behavior.md`.
 
-<!-- Billing behavior -->
-
-<preview-and-approval>
+## Preview and approval
 
 - Preview only after action, target IDs, quantities, customization, timing, and billing behavior are known or intentionally defaulted.
 - If missing information could change immediate charges, access timing, or scheduled state, ask before previewing.
@@ -112,9 +98,7 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 - Convert preview timestamps before presenting dates.
 - Apply only the exact previewed request. If params change, preview again.
 
-</preview-and-approval>
-
-<completion-response>
+## Completion response
 
 - After the billing action succeeds, respond as concisely as possible: say the action completed successfully.
 - Surface any returned customer-facing URL, especially `payment_url` or `invoice.hosted_invoice_url`.
@@ -123,5 +107,3 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 - If `required_action` is returned, explain the required payment action and include `payment_url` if present.
 - If the action fails, state that it failed and quote the server error/status clearly.
 - Do not re-summarize the full preview after completion unless the user asks.
-
-</completion-response>

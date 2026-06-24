@@ -17,13 +17,13 @@ export default defineConfig({
 				uri: "concepts",
 				priority: 0.95,
 				sources: [
-					legacy("intro.md"),
-					legacy("feature.md"),
-					legacy("plan.md"),
+					legacy("concepts/intro.md"),
+					legacy("concepts/feature.md"),
+					legacy("concepts/plan.md"),
 					docs("documentation/concepts/plan-items.mdx"),
-					legacy("trials.md"),
-					legacy("customer-entity.md"),
-					legacy("billing-controls.md"),
+					legacy("concepts/trials.md"),
+					legacy("concepts/customer-entity.md"),
+					legacy("concepts/billing-controls.md"),
 				],
 			},
 			skill: { file: "skills/concepts.mdx" },
@@ -34,6 +34,31 @@ export default defineConfig({
 		description: "Designing Autumn pricing models.",
 		formats: {
 			skill: { file: "skills/modelling-pricing.mdx" },
+		},
+	},
+	billing: {
+		title: "Billing",
+		description: "How agents should perform Autumn billing workflows.",
+		formats: {
+			mcp: {
+				uri: "billing",
+				priority: 0.94,
+				document: "skills/billing/billing.mdx",
+			},
+			skill: { file: "skills/billing/billing.mdx" },
+		},
+	},
+	investigate: {
+		title: "Logs",
+		description:
+			"How agents should investigate Autumn API request logs and Stripe webhook deliveries.",
+		formats: {
+			mcp: {
+				uri: "logs",
+				priority: 0.93,
+				document: "skills/investigate/investigate.mdx",
+			},
+			skill: { file: "skills/investigate/investigate.mdx" },
 		},
 	},
 });

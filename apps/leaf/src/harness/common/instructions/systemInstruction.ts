@@ -1,4 +1,4 @@
-import { autumnMcpInstructions } from "../../../../../../packages/mcp/src/resources-v2/mcpInstructions.js";
+import { autumnMcpInstructions } from "@autumn/agent-docs/agent";
 
 export const replyStyleInstructions = `
 - Be concise: fewest words, no fluff. No emojis. Every sentence must earn its place.

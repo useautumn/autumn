@@ -10,11 +10,14 @@ export const toMcpResource = ({
 	description,
 	format,
 	body,
+	ownTitle,
 }: {
 	title: string;
 	description: string;
 	format: McpFormat;
 	body: string;
+	/** True when the body already carries its own `# Title` (template mode). */
+	ownTitle: boolean;
 }): McpResource => ({
 	name: format.uri,
 	title,
@@ -22,5 +25,5 @@ export const toMcpResource = ({
 	priority: format.priority,
 	audience: ["assistant"],
 	uri: `autumn://docs/${format.uri}`,
-	text: [`# ${title}`, body].join("\n\n"),
+	text: ownTitle ? body : [`# ${title}`, body].join("\n\n"),
 });

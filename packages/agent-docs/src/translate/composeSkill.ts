@@ -5,6 +5,8 @@ import { parseFrontmatter } from "./ingest/frontmatter.js";
 const DOCS_TAG = /<docs\s+([^>]*?)\/>/g;
 // Split a docs page into references/<slug>.md, leaving a pointer in the body.
 const REFERENCE_TAG = /<reference\s+([^>]*?)\/>/g;
+// Split a sibling content file into references/<slug>.md, leaving a pointer.
+const PART_TAG = /<part\s+([^>]*?)\/>/g;
 // Point at a prerequisite skill the agent should load first.
 const SKILL_TAG = /<skill\s+([^>]*?)\/>/g;
 const ATTR = /(\w+)="([^"]*)"/g;
@@ -43,10 +45,12 @@ export const composeSkill = ({
 	path,
 	text,
 	resolveDocs,
+	resolveContentFile,
 }: {
 	path: string;
 	text: string;
 	resolveDocs: (url: string) => string;
+	resolveContentFile: (file: string) => string;
 }): ComposedSkill => {
 	const { data, body } = parseFrontmatter({ path, text });
 	if (!data.name) {
@@ -89,7 +93,24 @@ export const composeSkill = ({
 		},
 	);
 
-	const resolved = withReferences
+	const withParts = withReferences.replace(PART_TAG, (_match, raw: string) => {
+		const { file, when } = parseAttrs(raw);
+		if (!file) {
+			throw new Error(`<part> in ${path} is missing a file`);
+		}
+		if (!when) {
+			throw new Error(`<part file="${file}"> in ${path} is missing "when"`);
+		}
+		const slug = file.replace(/\.[^.]+$/, "");
+		const referencePath = `references/${slug}.md`;
+		references.push({
+			path: referencePath,
+			contents: resolveContentFile(file).trim(),
+		});
+		return `For ${when}, read \`${referencePath}\`.`;
+	});
+
+	const resolved = withParts
 		.replace(DOCS_TAG, (_match, raw: string) => {
 			const { url } = parseAttrs(raw);
 			if (!url) {

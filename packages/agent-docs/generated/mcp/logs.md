@@ -1,12 +1,3 @@
----
-name: logs
-title: Logs
-description: How agents should investigate Autumn API request logs and Stripe webhook deliveries.
-priority: 0.93
-audience:
-  - assistant
----
-
 # Logs
 
 Use this resource for log investigations: Autumn API requests, Stripe webhook deliveries, customer timelines, balance checks and tracking, billing calls, and request-log analytics.

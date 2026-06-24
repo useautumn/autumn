@@ -9,7 +9,7 @@ process.env.SLACK_CLIENT_SECRET ??= "test";
 process.env.SLACK_SIGNING_SECRET ??= "test";
 process.env.FIRECRAWL_API_KEY ??= "fc_test";
 
-const { agentDocUris } = await import("../../../src/agent/prompts/readDocs.js");
+const { agentDocBundleUris } = await import("@autumn/agent-docs/agent");
 const { getDefaultChatEnv, selectChatEnv } = await import(
 	"../../../src/agent/runMessage/setup/selectChatEnv.js"
 );
@@ -60,7 +60,7 @@ afterEach(() => {
 
 describe("chat environment selection", () => {
 	test("loads MCP guidance", () => {
-		expect(agentDocUris).toEqual([
+		expect(agentDocBundleUris).toEqual([
 			"autumn://docs/concepts",
 			"autumn://docs/plan-management",
 			"autumn://docs/billing",
