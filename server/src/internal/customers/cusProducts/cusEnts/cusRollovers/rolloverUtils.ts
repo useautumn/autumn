@@ -167,7 +167,12 @@ export function performMaximumClearing({
 				newBalance = newBalance.sub(toDeduct);
 				toDeduct = new Decimal(0);
 
-				toUpdate.push({ ...row, balance: newBalance.toNumber() });
+				// Drop fully-drained rows instead of keeping zero-balance zombies.
+				if (newBalance.isZero()) {
+					toDelete.push(row.id);
+				} else {
+					toUpdate.push({ ...row, balance: newBalance.toNumber() });
+				}
 			} else {
 				newBalance = new Decimal(0);
 				toDeduct = toDeduct.sub(curBalance);
@@ -207,7 +212,9 @@ export function performMaximumClearing({
 
 			if (curBalance.gte(toDeduct)) {
 				newBalance = newBalance.sub(toDeduct);
-				entityIdToTotal[entityId] = 0;
+				// Remaining running total after the full deduction (== effectiveMax),
+				// keeping the same invariant as the else-branch below.
+				entityIdToTotal[entityId] = entityTotal - toDeduct.toNumber();
 				shouldUpdate = true;
 				update.entities[entityId] = {
 					id: entityId,
@@ -216,7 +223,9 @@ export function performMaximumClearing({
 				};
 			} else {
 				newBalance = new Decimal(0);
-				entityIdToTotal[entityId] = toDeduct.sub(curBalance).toNumber();
+				// Carry the remaining running total (not the residual deduction) so
+				// the next row recomputes toDeduct correctly.
+				entityIdToTotal[entityId] = entityTotal - curBalance.toNumber();
 				shouldUpdate = true;
 				update.entities[entityId] = {
 					id: entityId,
