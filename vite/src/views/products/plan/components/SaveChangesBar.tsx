@@ -6,6 +6,7 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import {
 	useHasChanges,
 	useIsCusPlanEditor,
+	useIsMetadataOnlyChange,
 	useProductStore,
 } from "@/hooks/stores/useProductStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
@@ -43,6 +44,7 @@ export const SaveChangesBar = ({
 	);
 
 	const isCusPlanEditor = useIsCusPlanEditor();
+	const isMetadataOnlyChange = useIsMetadataOnlyChange();
 	const saveButtonText = isCusPlanEditor ? "Save and Return" : "Save";
 
 	useProductChangedAlert({
@@ -66,7 +68,7 @@ export const SaveChangesBar = ({
 				toast.error("Plan counts are loading");
 				return;
 			}
-			if ((counts?.all ?? 0) > 0) {
+			if ((counts?.all ?? 0) > 0 && !isMetadataOnlyChange) {
 				setShowNewVersionDialog(true);
 				return;
 			}

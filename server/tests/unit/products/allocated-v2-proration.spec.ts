@@ -429,6 +429,7 @@ const newProduct: Product = {
 	base_variant_id: null,
 	archived: false,
 	config: { ignore_past_due: false },
+	metadata: {},
 };
 
 const noopLogger = {

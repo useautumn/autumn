@@ -5,6 +5,7 @@ import { EntitlementSchema } from "./entModels/entModels";
 import { FreeTrialSchema } from "./freeTrialModels/freeTrialModels";
 import { PriceSchema } from "./priceModels/priceModels";
 import { ProductConfigSchema } from "./productConfig/productConfig";
+import { ProductMetadataSchema } from "./productMetadata";
 
 export const ProductSchema = z.object({
 	id: z.string(),
@@ -29,6 +30,7 @@ export const ProductSchema = z.object({
 	base_variant_id: z.string().nullable(),
 	archived: z.boolean().default(false),
 	config: ProductConfigSchema.default(() => ({ ignore_past_due: false })),
+	metadata: ProductMetadataSchema.default(() => ({})),
 });
 
 export const CreateProductSchema = z.object({

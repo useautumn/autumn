@@ -176,6 +176,13 @@
       "when": 1782294963053,
       "tag": "0024_rewards_org_env_idx",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1782317599973,
+      "tag": "0025_condemned_madelyne_pryor",
+      "breakpoints": true
     }
   ]
 }
