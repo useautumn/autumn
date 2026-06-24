@@ -7,7 +7,15 @@ import {
 	PurchaseLimitInterval,
 	ResetInterval,
 } from "@autumn/shared";
-import { Button, FormLabel, Switch } from "@autumn/ui";
+import {
+	Button,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+	FormLabel,
+	Switch,
+} from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useMemo, useState } from "react";
@@ -17,12 +25,6 @@ import {
 	hasBillingControls,
 } from "@/components/billing-controls/BillingControlsDisplay";
 import type { SelectFieldOption } from "@/components/general/form/fields/select-field";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
