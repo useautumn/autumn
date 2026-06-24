@@ -53,7 +53,7 @@ const descriptions = {
 		"Array of product items that define the product's features and pricing",
 	free_trial: "Free trial configuration for this product, if available",
 	metadata:
-		"Arbitrary key-value metadata for your own use (e.g. UI copy, feature highlights). Values are strings or arrays of strings. Metadata is shared across all versions of a plan.",
+		"Arbitrary key-value metadata for your own use (e.g. UI copy, feature highlights). Values can be any JSON-serializable value. Metadata is shared across all versions of a plan.",
 
 	// Update only
 	archived:
