@@ -34,7 +34,7 @@ export const EXE_LOBBY = "exe.dev";
 // memory caps at 8 GB on the default plan.
 export const EXE_DEFAULTS = {
 	image: process.env.SW_EXE_IMAGE ?? "ubuntu-24.04",
-	cpu: process.env.SW_EXE_CPU ?? "4",
+	cpu: process.env.SW_EXE_CPU ?? "2",
 	memory: process.env.SW_EXE_MEMORY ?? "8GB",
 	disk: process.env.SW_EXE_DISK ?? "40GB",
 } as const;
