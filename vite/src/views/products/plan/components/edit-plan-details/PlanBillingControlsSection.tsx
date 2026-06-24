@@ -220,6 +220,7 @@ function SelectFieldRow({
 						onValueChange={(value) =>
 							field.handleChange(value as typeof field.state.value)
 						}
+						items={options}
 					>
 						<SelectTrigger className="w-full">
 							<SelectValue placeholder={placeholder} />
