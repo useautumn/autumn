@@ -3,16 +3,16 @@ import type { ActionEvent } from "chat";
 import {
 	isSlackAdminProvider,
 	validateSlackAdminAccess,
-} from "../../slackAdmin/access.js";
-import { db } from "../../../lib/db.js";
-import { logger as rootLogger } from "../../../lib/logger.js";
-import { approvalStatusCard } from "../../../ui/blocks.js";
-import { createThrottledCardEditor } from "../../../ui/throttledEditor.js";
-import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
-import type { ApprovalActionDeps, ApprovalCardStatus } from "../types.js";
-import { approvalErrorResult, isErrorResult } from "../utils/approvalErrors.js";
-import { formatElapsed } from "../utils/approvalProgress.js";
-import { approveAndRun } from "./approveAndRun.js";
+} from "../../../slackAdmin/access.js";
+import { db } from "../../../../lib/db.js";
+import { logger as rootLogger } from "../../../../lib/logger.js";
+import { approvalStatusCard } from "../../../../ui/blocks.js";
+import { createThrottledCardEditor } from "../../../../ui/throttledEditor.js";
+import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
+import type { ApprovalActionDeps, ApprovalCardStatus } from "../../types.js";
+import { approvalErrorResult, isErrorResult } from "../../utils/approvalErrors.js";
+import { formatElapsed } from "../../utils/approvalProgress.js";
+import { resolveApproval } from "../../actions/resolveApproval.js";
 
 const detailsFromApproval = ({ approval }: { approval?: ChatApproval }) => ({
 	toolName: approval?.tool_name ?? "billing action",
@@ -25,7 +25,7 @@ const detailsFromApproval = ({ approval }: { approval?: ChatApproval }) => ({
 });
 
 const defaultApprovalActionDeps: ApprovalActionDeps = {
-	approveAndRun,
+	resolveApproval,
 	cancelApproval: ({ approvalId, providerUserId }) =>
 		chatApprovalRepo.cancel({ approvalId, db, providerUserId }),
 	claimApproval: ({ approvalId, providerUserId }) =>
@@ -172,9 +172,9 @@ export const handleApprovalActionWithDeps = async ({
 		}
 
 		const heartbeat = setInterval(() => editor.requestEdit(), 10_000);
-		let result: Awaited<ReturnType<ApprovalActionDeps["approveAndRun"]>>;
+		let result: Awaited<ReturnType<ApprovalActionDeps["resolveApproval"]>>;
 		try {
-			result = await deps.approveAndRun({
+			result = await deps.resolveApproval({
 				approval: claimed,
 				onProgress: (line) => {
 					statusText = line;

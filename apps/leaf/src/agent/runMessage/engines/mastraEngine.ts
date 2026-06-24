@@ -10,7 +10,6 @@ import {
 	getAutumnMcpTools,
 } from "../../tools/autumnMcp.js";
 import { createFirecrawlTools } from "../../tools/firecrawl.js";
-import { createPreviewCapture } from "../../tools/toolPolicy.js";
 import { recentMessageContext } from "../setup/selectChatEnv.js";
 import type { AgentEngine, MessageParams } from "../types.js";
 import { createAutumnChatAgent } from "./autumnChatAgent.js";
@@ -39,7 +38,6 @@ export const mastraEngine: AgentEngine = {
 			appEnv: env,
 			options: { requireApproval: true },
 		});
-		const previewCapture = createPreviewCapture();
 		try {
 			logger.info("Starting chat agent", {
 				event: "leaf.agent_started",
@@ -53,7 +51,6 @@ export const mastraEngine: AgentEngine = {
 					applyApprovalPolicy: true,
 					logger,
 					onToolCall: onAction,
-					previewCapture,
 				},
 			});
 			const firecrawlTools = createFirecrawlTools({
@@ -108,11 +105,7 @@ export const mastraEngine: AgentEngine = {
 					run_id: output.runId,
 				},
 			});
-			return agentOutputSchema.parse({
-				...output,
-				env,
-				previewApproval: previewCapture.captured,
-			});
+			return agentOutputSchema.parse({ ...output, env });
 		} finally {
 			await mcp.disconnect();
 			logger.debug("Disconnected Autumn MCP client", {

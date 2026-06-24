@@ -1,8 +1,8 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { ChatApproval } from "@autumn/shared";
-import { approvalStatusCard } from "../../../ui/blocks.js";
-import type { ReplyTarget } from "../../../ui/progress.js";
-import type { ActionMessageContent } from "../types.js";
+import { approvalStatusCard } from "../../../../ui/blocks.js";
+import type { ReplyTarget } from "../../../../ui/progress.js";
+import type { ActionMessageContent } from "../../types.js";
 
 /** Replaces auto-cancelled approval cards in place so stale Approve buttons disappear. */
 export const editSupersededApprovalCards = async ({

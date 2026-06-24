@@ -1,20 +1,20 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { ChatInstallation } from "@autumn/shared";
-import { toolLabel } from "../../../agent/tools/toolPolicy.js";
-import { db } from "../../../lib/db.js";
-import { env as chatEnv } from "../../../lib/env.js";
-import { logger as rootLogger } from "../../../lib/logger.js";
-import type { AgentOutput } from "../../../types.js";
-import { approvalCard } from "../../../ui/blocks.js";
+import { toolLabel } from "../../../../agent/tools/toolPolicy.js";
+import { db } from "../../../../lib/db.js";
+import { env as chatEnv } from "../../../../lib/env.js";
+import { logger as rootLogger } from "../../../../lib/logger.js";
+import type { AgentOutput } from "../../../../types.js";
+import { approvalCard } from "../../../../ui/blocks.js";
 import {
 	finishLoading,
 	type LoadingState,
 	type ReplyTarget,
-} from "../../../ui/progress.js";
-import { getInstallationOAuthAccessToken } from "../../installations/actions/getInstallationOAuthAccessToken.js";
-import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
-import { approvalRequestFromOutput } from "../utils/approvalRequest.js";
-import { fetchApprovalPreview } from "../utils/fetchApprovalPreview.js";
+} from "../../../../ui/progress.js";
+import { getInstallationOAuthAccessToken } from "../../../installations/actions/getInstallationOAuthAccessToken.js";
+import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
+import { approvalRequestFromOutput } from "../../utils/approvalRequest.js";
+import { fetchApprovalPreview } from "../../utils/fetchApprovalPreview.js";
 
 const getRequest = (args?: Record<string, unknown>) =>
 	args?.request && typeof args.request === "object"
@@ -22,7 +22,7 @@ const getRequest = (args?: Record<string, unknown>) =>
 		: args;
 
 /** Posts an approval card when the agent output suspended on a destructive tool. */
-export const postApprovalRequest = async ({
+export const presentApproval = async ({
 	channelId,
 	installation,
 	loading,
@@ -46,7 +46,7 @@ export const postApprovalRequest = async ({
 	const approval = approvalRequestFromOutput(output);
 	if (!approval) return false;
 
-	// approveAndRun can only confirm a suspended session tool, so a card missing
+	// resolveApproval can only confirm a suspended session tool, so a card missing
 	// either id would always fail at approval time — fall back to plain text.
 	if (!approval.runId || !approval.toolCallId) {
 		logger.warn("Skipped unexecutable approval request", {

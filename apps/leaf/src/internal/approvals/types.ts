@@ -14,7 +14,7 @@ export type ApprovalRunResult =
 	| { result: unknown; text: string; toolName?: string };
 
 export type ApprovalActionDeps = {
-	approveAndRun: (input: {
+	resolveApproval: (input: {
 		approval: ChatApproval;
 		onProgress?: (statusLine: string) => void;
 		providerUserId: string;

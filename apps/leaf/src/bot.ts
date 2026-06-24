@@ -6,10 +6,10 @@ import { createWebAdapter } from "@chat-adapter/web";
 import type { Attachment, Message, Thread } from "chat";
 import { Chat } from "chat";
 import { runMessage } from "./agent/runMessage/runMessage.js";
-import { editSupersededApprovalCards } from "./internal/approvals/actions/editSupersededApprovalCards.js";
-import { handleApprovalAction } from "./internal/approvals/actions/handleApprovalAction.js";
-import { handleViewPayloadAction } from "./internal/approvals/actions/handleViewPayloadAction.js";
-import { postApprovalRequest } from "./internal/approvals/actions/postApprovalRequest.js";
+import { editSupersededApprovalCards } from "./internal/approvals/surfaces/slack/superseded.js";
+import { handleApprovalAction } from "./internal/approvals/surfaces/slack/decide.js";
+import { handleViewPayloadAction } from "./internal/approvals/surfaces/slack/viewPayload.js";
+import { presentApproval } from "./internal/approvals/surfaces/slack/present.js";
 import { handleStopAction } from "./internal/runs/handleStopAction.js";
 import { dispatchThreadMessage } from "./internal/runs/runCoordinator.js";
 import {
@@ -300,7 +300,7 @@ const runAndReply = async ({
 		}
 
 		const outputInstallation = output.installation ?? installation;
-		const postedApproval = await postApprovalRequest({
+		const postedApproval = await presentApproval({
 			channelId,
 			installation: outputInstallation,
 			loading,

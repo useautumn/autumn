@@ -6,12 +6,7 @@ import {
 	executeAutumnMcpTool,
 } from "../../internal/autumnMcp/client.js";
 import { logger as rootLogger } from "../../lib/logger.js";
-import {
-	type createPreviewCapture,
-	getWriteToolForPreview,
-	isSilentTool,
-	toolGerund,
-} from "./toolPolicy.js";
+import { isSilentTool, toolGerund } from "./toolPolicy.js";
 
 type AutumnTool = {
 	execute?: (
@@ -27,7 +22,6 @@ type ToolOptions = {
 	applyApprovalPolicy?: boolean;
 	logger?: AutumnLogger;
 	onToolCall?: (message: string) => Promise<void> | void;
-	previewCapture?: ReturnType<typeof createPreviewCapture>;
 };
 
 export { autumnMcpHeaders, createAutumnMcpClient, executeAutumnMcpTool };
@@ -91,7 +85,7 @@ export const getAutumnMcpTools = async ({
 			tool.requireApproval = tool.mcp?.annotations?.destructiveHint === true;
 			if (!tool.requireApproval) tool.needsApprovalFn = undefined;
 		}
-		if (tool.execute && (options.onToolCall || options.previewCapture)) {
+		if (tool.execute && options.onToolCall) {
 			const execute = tool.execute.bind(tool);
 			tool.execute = async (args, ...rest) => {
 				const toolArgs = stripMastraRuntimeArgs(args);
@@ -104,19 +98,7 @@ export const getAutumnMcpTools = async ({
 						formatToolAction({ toolName, args: toolArgs }),
 					);
 				}
-				const result = await execute(toolArgs, ...rest);
-				if (getWriteToolForPreview(toolName)) {
-					logger.info("Captured Autumn MCP preview", {
-						event: "leaf.mcp_preview_captured",
-						data: { preview_tool: toolName },
-					});
-					options.previewCapture?.captureFromExecution({
-						args: toolArgs,
-						preview: result,
-						toolName,
-					});
-				}
-				return result;
+				return execute(toolArgs, ...rest);
 			};
 		}
 	}

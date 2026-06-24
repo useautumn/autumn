@@ -1,22 +1,22 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type { ChatApproval } from "@autumn/shared";
-import type { ApprovalRunResult } from "../../../internal/approvals/types.js";
+import type { ApprovalRunResult } from "../../internal/approvals/types.js";
 import {
 	approvalErrorResult,
 	isErrorResult,
-} from "../../../internal/approvals/utils/approvalErrors.js";
+} from "../../internal/approvals/utils/approvalErrors.js";
 import {
 	errorStatusLine,
 	toolStatusLine,
-} from "../../../internal/approvals/utils/approvalProgress.js";
-import { claudeManagedConfig } from "../config.js";
-import { driveSessionTurn } from "./driveSessionTurn.js";
+} from "../../internal/approvals/utils/approvalProgress.js";
+import { claudeManagedConfig } from "./config.js";
+import { driveSessionTurn } from "./session/driveSessionTurn.js";
 
 const client = new Anthropic();
 
 // Confirms an already-claimed tool in the idle Claude Managed session, then
 // returns its write result and any continuation text for the thread reply.
-// Finalization is owned by the dispatcher (approveAndRun).
+// Finalization is owned by the dispatcher (resolveApproval).
 export const resumeClaudeManagedApproval = async ({
 	approval,
 	onProgress,

@@ -176,19 +176,17 @@ export const claudeManagedEngine: AgentEngine = {
 					.then(() => undefined),
 			newSession,
 			params,
-			runTurn: ({ isCancelled, onTurnEnd, previewCapture, span }) =>
+			runTurn: ({ onTurnEnd, span }) =>
 				runClaudeManagedTurn({
 					client,
 					content,
 					env,
-					isCancelled,
 					logger,
 					onAction,
 					onActionKeyed,
 					onThinking,
 					onTurnEnd,
 					orgId: org.id,
-					previewCapture,
 					sessionId: activeSessionId,
 					span,
 				}),

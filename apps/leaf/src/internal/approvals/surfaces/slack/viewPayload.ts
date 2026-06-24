@@ -1,8 +1,8 @@
 import type { ActionEvent } from "chat";
-import { db } from "../../../lib/db.js";
-import { logger } from "../../../lib/logger.js";
-import { approvalPayloadModal } from "../../../ui/blocks.js";
-import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
+import { db } from "../../../../lib/db.js";
+import { logger } from "../../../../lib/logger.js";
+import { approvalPayloadModal } from "../../../../ui/blocks.js";
+import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 
 /** Opens a modal showing the exact tool arguments behind an approval card. */
 export const handleViewPayloadAction = async (event: ActionEvent) => {
