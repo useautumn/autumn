@@ -1,4 +1,9 @@
-import { EXE_DEFAULTS, EXE_INTEGRATIONS, EXE_LOBBY } from "../constants.ts";
+import {
+	EXE_DEFAULTS,
+	EXE_IMAGE,
+	EXE_INTEGRATIONS,
+	EXE_LOBBY,
+} from "../constants.ts";
 import { fatal, log, sh, shInherit } from "./shell.ts";
 
 export type ExeVm = {
@@ -19,13 +24,20 @@ function lobby(command: string): {
 /** Create a VM and return its ssh destination. Names are unique per account. */
 export function createVm(name: string): ExeVm {
 	log(
-		`creating exe.dev VM ${name} (${EXE_DEFAULTS.cpu}cpu/${EXE_DEFAULTS.memory}MB)`,
+		`creating exe.dev VM ${name} (${EXE_DEFAULTS.cpu}cpu/${EXE_DEFAULTS.memory})`,
 	);
-	const res = lobby(
-		`new --name=${name} --image=${EXE_DEFAULTS.image} --cpu=${EXE_DEFAULTS.cpu} ` +
-			`--memory=${EXE_DEFAULTS.memory} --disk=${EXE_DEFAULTS.disk} --tag=autumn-sw ` +
-			`--integration=${EXE_INTEGRATIONS.autumn} --integration=${EXE_INTEGRATIONS.ai} --json`,
-	);
+	const flags = [
+		`new --name=${name}`,
+		`--cpu=${EXE_DEFAULTS.cpu}`,
+		`--memory=${EXE_DEFAULTS.memory}`,
+		`--disk=${EXE_DEFAULTS.disk}`,
+		"--tag=autumn-sw",
+		`--integration=${EXE_INTEGRATIONS.autumn}`,
+		`--integration=${EXE_INTEGRATIONS.ai}`,
+	];
+	if (EXE_IMAGE) flags.push(`--image=${EXE_IMAGE}`);
+	flags.push("--json");
+	const res = lobby(flags.join(" "));
 	if (res.code !== 0) {
 		fatal(`exe.dev new failed: ${res.stderr || res.stdout}`);
 	}

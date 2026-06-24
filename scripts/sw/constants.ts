@@ -31,13 +31,18 @@ export const herdrConfigPath = (): string =>
 /** exe.dev defaults. A custom baked image keeps spin-up fast (deps pre-installed). */
 export const EXE_LOBBY = "exe.dev";
 // exe.dev `--memory`/`--disk` take unit suffixes (e.g. `8GB`), NOT megabytes;
-// memory caps at 8 GB on the default plan.
+// cpu caps at 2 and memory at 8 GB on the default plan.
 export const EXE_DEFAULTS = {
-	image: process.env.SW_EXE_IMAGE ?? "ubuntu-24.04",
 	cpu: process.env.SW_EXE_CPU ?? "2",
 	memory: process.env.SW_EXE_MEMORY ?? "8GB",
 	disk: process.env.SW_EXE_DISK ?? "40GB",
 } as const;
+
+/**
+ * Leave unset to use exe.dev's default `exeuntu` image — ~2s boot, with claude +
+ * codex pre-installed. Only override (`SW_EXE_IMAGE`) for a custom baked image.
+ */
+export const EXE_IMAGE = process.env.SW_EXE_IMAGE;
 
 /**
  * exe.dev GitHub integrations (per-repo) attached at VM-create, so the box clones
