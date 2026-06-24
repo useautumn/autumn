@@ -30,11 +30,13 @@ export const herdrConfigPath = (): string =>
 
 /** exe.dev defaults. A custom baked image keeps spin-up fast (deps pre-installed). */
 export const EXE_LOBBY = "exe.dev";
+// exe.dev `--memory`/`--disk` take unit suffixes (e.g. `8GB`), NOT megabytes;
+// memory caps at 8 GB on the default plan.
 export const EXE_DEFAULTS = {
 	image: process.env.SW_EXE_IMAGE ?? "ubuntu-24.04",
 	cpu: process.env.SW_EXE_CPU ?? "4",
-	memory: process.env.SW_EXE_MEMORY ?? "8192",
-	disk: process.env.SW_EXE_DISK ?? "40",
+	memory: process.env.SW_EXE_MEMORY ?? "8GB",
+	disk: process.env.SW_EXE_DISK ?? "40GB",
 } as const;
 
 /**
