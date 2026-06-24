@@ -221,9 +221,15 @@ export const getCachedFullCustomer = async ({
 	// and pre-existing cache entries may not have these fields at all.
 	for (const cusProduct of fullCustomer.customer_products ?? []) {
 		if (!cusProduct.product) continue;
-		const product = cusProduct.product as { config?: unknown };
+		const product = cusProduct.product as {
+			config?: unknown;
+			metadata?: unknown;
+		};
 		if (!product.config || Array.isArray(product.config)) {
 			product.config = {};
+		}
+		if (!product.metadata || Array.isArray(product.metadata)) {
+			product.metadata = {};
 		}
 	}
 

@@ -22,9 +22,15 @@ export const sanitizeCachedFullSubject = ({
 	// Safeguard for new product fields: Upstash Lua cjson collapses `{}` to `[]`,
 	// and pre-existing cache entries may not have these fields at all.
 	for (const product of normalized.products ?? []) {
-		const productAsRecord = product as { config?: unknown };
+		const productAsRecord = product as {
+			config?: unknown;
+			metadata?: unknown;
+		};
 		if (!productAsRecord.config || Array.isArray(productAsRecord.config)) {
 			productAsRecord.config = {};
+		}
+		if (!productAsRecord.metadata || Array.isArray(productAsRecord.metadata)) {
+			productAsRecord.metadata = {};
 		}
 	}
 
