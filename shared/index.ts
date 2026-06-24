@@ -65,7 +65,12 @@ export * from "./models/cusModels/billingControls/autoTopupLimitTable";
 export * from "./models/cusModels/billingControls/customerBillingControls";
 export * from "./models/cusModels/billingControls/purchaseLimitInterval";
 export * from "./models/cusModels/cusModels";
-export * from "./models/leafModels/cmaStateTable";
+export * from "./models/leafModels/chatThreadContextsTable";
+export * from "./models/leafModels/cmaMemoryTable";
+export * from "./models/leafModels/cmaSessionsTable";
+export * from "./models/leafModels/cmaVaultsTable";
+export * from "./models/leafModels/harnessSessionsTable";
+export * from "./models/leafModels/slackAdminThreadsTable";
 // Processor Models
 export * from "./models/processorModels/processorModels";
 export * from "./utils/chatState";

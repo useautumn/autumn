@@ -1,7 +1,7 @@
 import type { AutumnLogger } from "@autumn/logging";
 import { Agent } from "@mastra/core/agent";
 import { z } from "zod";
-import { DEFAULT_CHAT_ENV_MODEL } from "../../../lib/chatAgentConfig.js";
+import { DEFAULT_CHAT_ORG_MODEL } from "../../../lib/chatAgentConfig.js";
 import { logger as rootLogger } from "../../../lib/logger.js";
 import type { ChatContextMessage } from "../../../types.js";
 import { recentMessageContext } from "./selectChatEnv.js";
@@ -34,15 +34,15 @@ export const selectChatOrg = async ({
 		id: "autumn-chat-org",
 		name: "Autumn Chat Org",
 		instructions:
-			"Extract the explicit Autumn organization slug or organization ID from the latest Slack thread-starting user message. Do not infer from company names.",
-		model: DEFAULT_CHAT_ENV_MODEL,
+			"Extract the Autumn organization reference from the latest Slack thread-starting user message. Return the user's org phrase, slug, or ID; do not invent an org when none is mentioned.",
+		model: DEFAULT_CHAT_ORG_MODEL,
 	});
 	const output = await agent.generate(message, {
 		maxSteps: 1,
 		structuredOutput: {
 			schema: orgSelectionSchema,
 			instructions:
-				"Return org_identifier only when the message explicitly contains an org slug or org ID. Otherwise return null.",
+				"Return org_identifier only when the message explicitly names an org, org slug, or org ID. Otherwise return null.",
 		},
 		context: [...recentMessageContext(recentMessages)],
 	});

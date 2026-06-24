@@ -272,13 +272,14 @@ const runAndReply = async ({
 			return;
 		}
 
+		const outputInstallation = output.installation ?? installation;
 		const postedApproval = await postApprovalRequest({
 			channelId,
-			installation,
+			installation: outputInstallation,
 			loading,
 			logAction,
 			logger,
-			orgId: output.org?.id ?? installation.org_id,
+			orgId: output.org?.id ?? outputInstallation.org_id,
 			output,
 			providerUserId,
 			target,
