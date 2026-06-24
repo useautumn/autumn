@@ -20,13 +20,41 @@ export function slugFromBranch(branch: string): string {
 		.toLowerCase();
 }
 
-/** Push the branch so a devbox can fetch it. Idempotent; sets upstream. */
-export function pushBranch(checkoutPath: string, branch: string): void {
-	const res = sh("git", ["push", "-u", "origin", branch], {
-		cwd: checkoutPath,
-	});
+/**
+ * Push the worktree's current HEAD straight to the devbox's clone as `branch` —
+ * NEVER to origin. Works from a detached worktree (source is HEAD), and the box
+ * already has the base history, so only the delta transfers.
+ */
+export function pushBranchToBox({
+	checkout,
+	sshDest,
+	remotePath,
+	branch,
+}: {
+	checkout: string;
+	sshDest: string;
+	remotePath: string;
+	branch: string;
+}): void {
+	const res = sh(
+		"git",
+		[
+			"-C",
+			checkout,
+			"push",
+			"--force",
+			`${sshDest}:${remotePath}`,
+			`HEAD:refs/heads/${branch}`,
+		],
+		{
+			env: {
+				...(process.env as Record<string, string>),
+				GIT_SSH_COMMAND: "ssh -o StrictHostKeyChecking=accept-new",
+			},
+		},
+	);
 	if (res.code !== 0) {
-		fatal(`git push of ${branch} failed: ${res.stderr || res.stdout}`);
+		fatal(`pushing ${branch} to the box failed: ${res.stderr || res.stdout}`);
 	}
 }
 

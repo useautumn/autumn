@@ -9,7 +9,7 @@ import {
 } from "../constants.ts";
 import { createVm, scpTo, vmCapture, vmExec } from "../helpers/exe.ts";
 import { execForeground } from "../helpers/exec.ts";
-import { originUrl, pushBranch, toHttpsOrigin } from "../helpers/git.ts";
+import { originUrl, pushBranchToBox, toHttpsOrigin } from "../helpers/git.ts";
 import { exportDevDotenv } from "../helpers/infisical.ts";
 import { layoutPanes } from "../helpers/layout.ts";
 import { createSwBranch } from "../helpers/neon.ts";
@@ -22,9 +22,9 @@ import type { Target, WorktreeContext } from "../types.ts";
 const shQuote = (value: string): string => `'${value.replace(/'/g, "'\\''")}'`;
 
 /**
- * Remote target: push the branch, issue a Neon branch from the Mac, create an
- * exe.dev VM, provision native services on it (no Docker), then drive the panes
- * via explicit ssh — the claude pane ssh's in, this pane hosts the dev server.
+ * Remote target: issue a Neon branch from the Mac, create an exe.dev VM, provision
+ * native services + clone the base, then push the worktree branch STRAIGHT to the
+ * box (never origin) and finish setup. Finally drive the panes via explicit ssh.
  */
 export async function cmdRemote({
 	checkout,
@@ -36,7 +36,6 @@ export async function cmdRemote({
 		fatal(`target '${target}' is not implemented yet (exe.dev only)`);
 	}
 
-	pushBranch(checkout, branch);
 	const neon = createSwBranch(slug);
 	const vmName = `sw-${slug}`.slice(0, 40);
 	const vm = createVm(vmName);
@@ -60,23 +59,38 @@ export async function cmdRemote({
 	scpTo(vm.ssh_dest, baseEnvLocal, baseEnvRemote);
 
 	const httpsOrigin = toHttpsOrigin(originUrl(checkout));
-	const args = [
+
+	// Phase 1: services + clone the base branch on the box (via integrations).
+	log(`provisioning ${vm.ssh_dest} (native services, no docker)`);
+	const cloneArgs = [
 		remotePath,
-		branch,
 		httpsOrigin,
-		neon.databaseUrl,
-		slug,
-		hookRemote,
-		baseEnvRemote,
 		EXE_INTEGRATIONS.autumn,
 		EXE_INTEGRATIONS.ai,
 	]
 		.map(shQuote)
 		.join(" ");
+	if (vmExec(vm.ssh_dest, `bash ${provisionRemote} clone ${cloneArgs}`) !== 0) {
+		fatal("remote clone phase failed");
+	}
 
-	log(`provisioning ${vm.ssh_dest} (native services, no docker)`);
-	const code = vmExec(vm.ssh_dest, `bash ${provisionRemote} ${args}`);
-	if (code !== 0) fatal("remote provisioning failed");
+	// Push the worktree branch straight to the box's clone — NEVER to origin.
+	pushBranchToBox({ checkout, sshDest: vm.ssh_dest, remotePath, branch });
+
+	// Phase 2: checkout + submodules + deps + env + claude.
+	const setupArgs = [
+		remotePath,
+		branch,
+		slug,
+		neon.databaseUrl,
+		hookRemote,
+		baseEnvRemote,
+	]
+		.map(shQuote)
+		.join(" ");
+	if (vmExec(vm.ssh_dest, `bash ${provisionRemote} setup ${setupArgs}`) !== 0) {
+		fatal("remote setup phase failed");
+	}
 
 	upsertEntry({
 		path: checkout,
