@@ -56,10 +56,11 @@ export const handleDeleteCoupon = createRoute({
 
 		// Deactivate this reward's promo codes so the code is free to reuse, even if
 		// the coupon deletion above failed (a stale active promo blocks recreation).
-		for (const promoCode of reward.promo_codes) {
+		for (const promoCode of reward.promo_codes ?? []) {
 			try {
 				for await (const promo of stripeCli.promotionCodes.list({
 					code: promoCode.code,
+					coupon: reward.id,
 					active: true,
 					limit: 100,
 				})) {
