@@ -17,11 +17,10 @@ const { selectChatOrg } = await import(
 	"../../../src/agent/runMessage/setup/selectChatOrg.js"
 );
 const {
+	orgIdentifierVariants,
 	shouldUseSlackAdminInstallationForWorkspace,
 	validateSlackAdminAccessConfig,
-} = await import(
-	"../../../src/internal/slackAdmin/access.js"
-);
+} = await import("../../../src/internal/slackAdmin/access.js");
 const { autumnChatInstructions } = await import(
 	"../../../src/harness/common/instructions/index.js"
 );
@@ -259,6 +258,19 @@ describe("Firecrawl tools", () => {
 });
 
 describe("Slack admin access gate", () => {
+	test("builds flexible org identifier variants", () => {
+		expect(
+			orgIdentifierVariants({
+				identifier: "unit test org",
+			}),
+		).toContain("unit-test-org");
+		expect(
+			orgIdentifierVariants({
+				identifier: "Unit_Test Org!",
+			}),
+		).toContain("unit-test-org");
+	});
+
 	test("allows the configured admin workspace", () => {
 		expect(
 			validateSlackAdminAccessConfig({

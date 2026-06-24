@@ -7,9 +7,8 @@ import {
 	Infinite,
 	isContUseItem,
 } from "@autumn/shared";
+import { IconCheckbox, Input } from "@autumn/ui";
 import { InfinityIcon } from "@phosphor-icons/react";
-import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
-import { Input } from "@/components/v2/inputs/Input";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { isFeaturePriceItem } from "@/utils/product/getItemType";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";

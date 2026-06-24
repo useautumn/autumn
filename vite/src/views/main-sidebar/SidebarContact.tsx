@@ -1,28 +1,28 @@
 "use client";
 
-import { ChatCircleTextIcon, QuestionIcon } from "@phosphor-icons/react";
-import { GraduationCap } from "lucide-react";
-import { useState } from "react";
-import { Link } from "react-router";
-import { toast } from "sonner";
-import CopyButton from "@/components/general/CopyButton";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+	LongInput,
+} from "@autumn/ui";
+import { ChatCircleTextIcon, QuestionIcon } from "@phosphor-icons/react";
+import { GraduationCap } from "lucide-react";
+import { useState } from "react";
+import { Link } from "react-router";
+import { toast } from "sonner";
+import { CopyTextButton } from "@autumn/ui";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
-import { LongInput } from "@/components/v2/inputs/LongInput";
+} from "@autumn/ui";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { useOnboardingVisibility } from "@/views/onboarding4/hooks/useOnboardingProgress";
@@ -79,7 +79,7 @@ export function SidebarContact() {
 					>
 						<div className="flex items-center justify-between w-full">
 							<span>hey@useautumn.com</span>
-							<CopyButton
+							<CopyTextButton
 								text={email}
 								className="bg-transparent shadow-none hover:bg-zinc-200 w-6 gap-0 h-6 !px-0 py-0 flex items-center justify-center text-muted-foreground"
 							/>

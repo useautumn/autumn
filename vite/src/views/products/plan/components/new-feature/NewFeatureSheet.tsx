@@ -5,10 +5,10 @@ import {
 	FeatureUsageType,
 	featureV1ToDbFeature,
 } from "@autumn/shared";
+import { ShortcutButton } from "@autumn/ui";
 import type { AxiosError } from "axios";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	useProduct,
 	useSheet,

@@ -1,14 +1,12 @@
 import type { ProductItem, ProductV2 } from "@autumn/shared";
+import { Badge, Button, SearchableSelect } from "@autumn/ui";
 import {
 	PackageIcon,
 	PencilSimpleIcon,
 	PuzzlePieceIcon,
 	XIcon,
 } from "@phosphor-icons/react";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
 import { PriceDisplay } from "@/components/forms/update-subscription-v2/components/PriceDisplay";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
 import { useCreateScheduleFormContext } from "../context/CreateScheduleFormProvider";
@@ -115,9 +113,7 @@ export function SchedulePlanRow({
 								)}
 						</>
 					)}
-					header={
-						<CopyFromPreviousPhaseButton phaseIndex={phaseIndex} />
-					}
+					header={<CopyFromPreviousPhaseButton phaseIndex={phaseIndex} />}
 					placeholder="Select product..."
 					searchable
 					searchPlaceholder="Search products..."

@@ -68,8 +68,9 @@ export const useCustomerTimeseriesEvents = ({
 			| Record<string, { count: number; sum: number }>
 			| undefined,
 		isLoading,
-		error: error && (error as any)?.code === ErrCode.ClickHouseDisabled
-			? null
-			: error,
+		error:
+			error && (error as any)?.code === ErrCode.ClickHouseDisabled
+				? null
+				: error,
 	};
 };

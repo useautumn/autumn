@@ -20,7 +20,9 @@ interface ThemeContextType {
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 function resolveSystemTheme(): "light" | "dark" {
-	return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+	return window.matchMedia("(prefers-color-scheme: dark)").matches
+		? "dark"
+		: "light";
 }
 
 function applyMode(mode: ThemeMode): boolean {
@@ -33,7 +35,10 @@ function applyMode(mode: ThemeMode): boolean {
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
 	const [mode, setMode] = useLocalStorage<ThemeMode>("theme", "system");
-	const [preset, setPreset] = useLocalStorage<ThemePreset>("theme-preset", "classic");
+	const [preset, setPreset] = useLocalStorage<ThemePreset>(
+		"theme-preset",
+		"classic",
+	);
 	const [isDark, setIsDark] = useState(() => applyMode(mode));
 
 	useEffect(() => setIsDark(applyMode(mode)), [mode]);
@@ -59,7 +64,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
 	return (
 		<ThemeContext.Provider
-			value={{ mode, setMode, preset, setPreset, isDark, theme: mode, setTheme: setMode }}
+			value={{
+				mode,
+				setMode,
+				preset,
+				setPreset,
+				isDark,
+				theme: mode,
+				setTheme: setMode,
+			}}
 		>
 			{children}
 		</ThemeContext.Provider>

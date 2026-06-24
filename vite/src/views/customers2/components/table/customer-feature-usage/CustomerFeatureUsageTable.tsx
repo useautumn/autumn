@@ -4,12 +4,11 @@ import type {
 	FullCustomerEntitlement,
 } from "@autumn/shared";
 import { FeatureType, type FullCusProduct } from "@autumn/shared";
+import { Button, SectionTag } from "@autumn/ui";
 import { CubeIcon, PlusIcon } from "@phosphor-icons/react";
 import { type ExpandedState, getExpandedRowModel } from "@tanstack/react-table";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
-import { SectionTag } from "@/components/v2/badges/SectionTag";
-import { Button } from "@/components/v2/buttons/Button";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";

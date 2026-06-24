@@ -1,10 +1,6 @@
 import { formatAmount } from "@autumn/shared";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import { Decimal } from "decimal.js";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 
 type PreviewTotalsBlockPreviewData = {
 	currency: string;
@@ -60,7 +56,9 @@ export function PreviewTotalsBlock({
 	return (
 		<div className="space-y-2">
 			<div className="flex items-center justify-between">
-				<span className="text-sm font-medium text-muted-foreground">Subtotal</span>
+				<span className="text-sm font-medium text-muted-foreground">
+					Subtotal
+				</span>
 				<span className="text-sm font-medium tabular-nums text-muted-foreground">
 					{fmt(previewData.subtotal, currency)}
 				</span>
@@ -91,7 +89,9 @@ export function PreviewTotalsBlock({
 							</TooltipContent>
 						</Tooltip>
 					) : (
-						<span className="text-sm text-muted-foreground">Invoice Credits</span>
+						<span className="text-sm text-muted-foreground">
+							Invoice Credits
+						</span>
 					)}
 					<span className="text-sm tabular-nums text-muted-foreground">
 						-{fmt(creditApplied, currency)}

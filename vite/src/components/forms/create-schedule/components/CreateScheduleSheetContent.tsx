@@ -1,19 +1,19 @@
 import type { FullCustomer } from "@autumn/shared";
+import {
+	Button,
+	InlineAction,
+	SearchableSelect,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
-import { Button } from "@/components/v2/buttons/Button";
-import { InlineAction } from "@/components/v2/buttons/InlineAction";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import {
 	SheetFooter,
 	SheetHeader,
 	SheetSection,
 } from "@/components/v2/sheets/SharedSheetComponents";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -84,13 +84,13 @@ export function CreateScheduleSheetContent() {
 						))}
 					</div>
 
-				<InlineAction
-					icon={<PlusIcon size={11} />}
-					onClick={handleAddPhase}
-					className="mt-3"
-				>
-					Add phase
-				</InlineAction>
+					<InlineAction
+						icon={<PlusIcon size={11} />}
+						onClick={handleAddPhase}
+						className="mt-3"
+					>
+						Add phase
+					</InlineAction>
 				</SheetSection>
 			</div>
 
@@ -136,8 +136,14 @@ function getConfirmLabel({
 }
 
 export function CreateScheduleReviewContent() {
-	const { handleSubmit, isPending, isPreviewLoading, preview, error, entityId } =
-		useCreateScheduleFormContext();
+	const {
+		handleSubmit,
+		isPending,
+		isPreviewLoading,
+		preview,
+		error,
+		entityId,
+	} = useCreateScheduleFormContext();
 	const { setSheet } = useSheetStore();
 	const hasSchedule = useHasSchedule({ entityId });
 
@@ -198,10 +204,7 @@ export function CreateScheduleReviewContent() {
 							</span>
 						</TooltipTrigger>
 						{invoiceDisabledReason && (
-							<TooltipContent
-								side="top"
-								className="max-w-(--anchor-width)"
-							>
+							<TooltipContent side="top" className="max-w-(--anchor-width)">
 								{invoiceDisabledReason}
 							</TooltipContent>
 						)}

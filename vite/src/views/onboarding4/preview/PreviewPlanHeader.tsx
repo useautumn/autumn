@@ -32,7 +32,9 @@ export function PreviewPlanHeader({ product }: PreviewPlanHeaderProps) {
 					{basePrice.formattedAmount ?? basePrice.displayText}
 				</span>
 				{basePrice.intervalText && (
-					<span className="text-xs text-tertiary-foreground">{basePrice.intervalText}</span>
+					<span className="text-xs text-tertiary-foreground">
+						{basePrice.intervalText}
+					</span>
 				)}
 			</div>
 		</div>

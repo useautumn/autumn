@@ -1,24 +1,23 @@
 import { formatAmount, type Invoice } from "@autumn/shared";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { Input } from "@/components/v2/inputs/Input";
-import {
+	Input,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+	ShortcutButton,
+} from "@autumn/ui";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
+import { toast } from "sonner";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
@@ -116,19 +115,19 @@ export function RefundInvoiceDialog({
 						<span className="text-sm font-medium text-foreground">
 							Refund type
 						</span>
-					<Select
-						value={mode}
-						onValueChange={(value) => setMode(value as RefundMode)}
-						items={{ full: "Full", partial: "Partial" }}
-					>
-						<SelectTrigger>
-							<SelectValue placeholder="Select refund type" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="full">Full</SelectItem>
-							<SelectItem value="partial">Partial</SelectItem>
-						</SelectContent>
-					</Select>
+						<Select
+							value={mode}
+							onValueChange={(value) => setMode(value as RefundMode)}
+							items={{ full: "Full", partial: "Partial" }}
+						>
+							<SelectTrigger>
+								<SelectValue placeholder="Select refund type" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="full">Full</SelectItem>
+								<SelectItem value="partial">Partial</SelectItem>
+							</SelectContent>
+						</Select>
 					</div>
 
 					{mode === "partial" && (
@@ -150,20 +149,15 @@ export function RefundInvoiceDialog({
 				</div>
 
 				<DialogFooter>
-					<Button
-						variant="secondary"
-						onClick={() => onOpenChange(false)}
-						disabled={refundMutation.isPending}
-					>
-						Cancel
-					</Button>
-					<Button
+					<ShortcutButton
 						variant="primary"
+						className="w-full"
 						onClick={handleSubmit}
 						isLoading={refundMutation.isPending}
+						metaShortcut="enter"
 					>
 						Refund
-					</Button>
+					</ShortcutButton>
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>

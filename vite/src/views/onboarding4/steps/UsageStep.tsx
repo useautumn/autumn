@@ -1,5 +1,5 @@
 import { type Feature, FeatureType } from "@autumn/shared";
-import { StepBadge } from "@/components/v2/badges/StepBadge";
+import { StepBadge } from "@autumn/ui";
 import { FeatureSelector } from "@/components/v2/FeatureSelector";
 import type { Snippet } from "@/lib/snippets";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
@@ -47,7 +47,9 @@ export function UsageStep({
 				</div>
 			)}
 
-			<p className="text-sm text-muted-foreground pl-[34px]">{snippet.description}</p>
+			<p className="text-sm text-muted-foreground pl-[34px]">
+				{snippet.description}
+			</p>
 			<div className="pl-[34px]">
 				<SnippetCodeBlock snippet={snippet} />
 			</div>

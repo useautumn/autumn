@@ -1,3 +1,5 @@
+import { Scopes } from "@autumn/shared";
+import { BetaBadge, Button } from "@autumn/ui";
 import {
 	ArrowsClockwiseIcon,
 	BalloonIcon,
@@ -13,11 +15,8 @@ import {
 	UsersIcon,
 	WebhooksLogoIcon,
 } from "@phosphor-icons/react";
-import { Scopes } from "@autumn/shared";
 import { PanelLeft } from "lucide-react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { BetaBadge } from "@/components/v2/badges/BetaBadge";
-import { Button } from "@/components/v2/buttons/Button";
 import { RevenueCatIcon, StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useLocalStorage } from "@/hooks/common/useLocalStorage";

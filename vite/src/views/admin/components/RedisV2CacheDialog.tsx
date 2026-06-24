@@ -1,22 +1,20 @@
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Badge,
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
@@ -129,18 +127,25 @@ export function RedisV2CacheDialog({
 				</DialogHeader>
 
 				{loading ? (
-					<div className="py-8 text-center text-sm text-tertiary-foreground">Loading...</div>
+					<div className="py-8 text-center text-sm text-tertiary-foreground">
+						Loading...
+					</div>
 				) : (
 					<div className="flex flex-col gap-4">
 						<div className="flex flex-col gap-2">
 							<div className="text-xs font-medium uppercase tracking-wide text-tertiary-foreground">
 								Active Instance
 							</div>
-						<Select
-							value={selected}
-							onValueChange={(value) => setSelected(value as InstanceName)}
-							items={Object.fromEntries(INSTANCE_OPTIONS.map((option) => [option.value, option.label]))}
-						>
+							<Select
+								value={selected}
+								onValueChange={(value) => setSelected(value as InstanceName)}
+								items={Object.fromEntries(
+									INSTANCE_OPTIONS.map((option) => [
+										option.value,
+										option.label,
+									]),
+								)}
+							>
 								<SelectTrigger>
 									<SelectValue />
 								</SelectTrigger>
@@ -148,7 +153,9 @@ export function RedisV2CacheDialog({
 									{INSTANCE_OPTIONS.map((option) => (
 										<SelectItem key={option.value} value={option.value}>
 											<div className="flex flex-col">
-												<span className="text-sm text-foreground">{option.label}</span>
+												<span className="text-sm text-foreground">
+													{option.label}
+												</span>
 												<span className="text-xs text-tertiary-foreground">
 													{option.description}
 												</span>

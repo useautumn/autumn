@@ -9,8 +9,8 @@ import {
 	ProductItemInterval,
 	UsageModel,
 } from "@autumn/shared";
+import { PanelButton } from "@autumn/ui";
 import { CoinsIcon } from "@phosphor-icons/react";
-import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { IncludedUsageIcon } from "@/components/v2/icons/AutumnIcons";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
@@ -33,8 +33,12 @@ export function BillingType() {
 		if (!isContUseItem({ item, features })) return item.config;
 
 		if (usageModel !== UsageModel.PayPerUse) {
-			const { allocated_billing_behavior, on_increase, on_decrease, ...config } =
-				item.config ?? {};
+			const {
+				allocated_billing_behavior,
+				on_increase,
+				on_decrease,
+				...config
+			} = item.config ?? {};
 			return Object.keys(config).length > 0 ? config : undefined;
 		}
 

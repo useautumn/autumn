@@ -1,13 +1,13 @@
 import { Infinite, type ProductItem } from "@autumn/shared";
-import { useState } from "react";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import {
+	Button,
+	FieldLabel,
+	Input,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from "@/components/v2/buttons/Button";
-import { Input } from "@/components/v2/inputs/Input";
+} from "@autumn/ui";
+import { useState } from "react";
 
 export const CustomiseIntervalPopover = ({
 	item,

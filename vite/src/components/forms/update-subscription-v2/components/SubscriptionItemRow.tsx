@@ -4,17 +4,17 @@ import {
 	roundUsageToNearestBillingUnit,
 	UsageModel,
 } from "@autumn/shared";
+import {
+	ConditionalTooltip,
+	IconButton,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
 import { CheckIcon, PencilSimpleIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import { ConditionalTooltip } from "@/components/v2/tooltips/ConditionalTooltip";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -109,7 +109,9 @@ function PrepaidQuantityControl({
 	if (readOnly) {
 		return (
 			<div className="flex items-center py-1 w-fit shrink-0">
-				<span className="text-sm tabular-nums text-tertiary-foreground">{displayText}</span>
+				<span className="text-sm tabular-nums text-tertiary-foreground">
+					{displayText}
+				</span>
 			</div>
 		);
 	}
@@ -266,7 +268,9 @@ export function SubscriptionItemRow({
 						<PlanFeatureIcon item={item} position="right" />
 					</div>
 					<p className="whitespace-nowrap truncate flex-1 min-w-0">
-						<span className={cn("text-body", !hasFeatureName && "text-subtle!")}>
+						<span
+							className={cn("text-body", !hasFeatureName && "text-subtle!")}
+						>
 							{displayText}
 						</span>
 						<span className="text-body-secondary">

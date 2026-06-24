@@ -2,7 +2,9 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 
 export function useHasSchedule({
 	entityId,
-}: { entityId?: string | null } = {}) {
+}: {
+	entityId?: string | null;
+} = {}) {
 	const { schedule, customer } = useCusQuery({ schedule: true });
 	if (entityId) {
 		const entity = customer?.entities?.find(

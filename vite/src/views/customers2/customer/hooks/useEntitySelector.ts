@@ -28,8 +28,7 @@ const deriveEntityTypeText = ({
 
 	const firstFeatureId = entities[0]?.feature_id;
 	const allSameType =
-		firstFeatureId &&
-		entities.every((e) => e.feature_id === firstFeatureId);
+		firstFeatureId && entities.every((e) => e.feature_id === firstFeatureId);
 
 	if (allSameType && firstFeatureId) {
 		const feature = features.find((f) => f.id === firstFeatureId);
@@ -55,19 +54,16 @@ export const useEntitySelector = () => {
 	const isVisible = hasContinuousUseFeatures && hasEntities;
 
 	const debouncedSearch = useDebounce({ value: search, delayMs: 300 });
-	const {
-		entities,
-		totalCount,
-		isLoading,
-		refetch,
-	} = useEntitiesQuery({
+	const { entities, totalCount, isLoading, refetch } = useEntitiesQuery({
 		search: debouncedSearch || undefined,
 		enabled: isVisible,
 	});
 
 	const selectedEntity =
 		entities.find((e) => e.id === entityId || e.internal_id === entityId) ??
-		customerEntities.find((e) => e.id === entityId || e.internal_id === entityId);
+		customerEntities.find(
+			(e) => e.id === entityId || e.internal_id === entityId,
+		);
 
 	const effectiveTotalCount = totalCount ?? customerEntities.length;
 

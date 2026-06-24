@@ -1,24 +1,20 @@
 import type { AgentPricingConfig } from "@autumn/shared";
-import type { UIMessage } from "ai";
+import { Button } from "@autumn/ui";
 import {
 	Conversation,
 	ConversationContent,
-} from "@/components/ai-elements/conversation";
-import {
 	Message,
 	MessageContent,
 	MessageResponse,
-} from "@/components/ai-elements/message";
-import {
 	PromptInput,
 	PromptInputBody,
 	PromptInputFooter,
 	type PromptInputMessage,
 	PromptInputSubmit,
 	PromptInputTextarea,
-} from "@/components/ai-elements/prompt-input";
-import { Shimmer } from "@/components/ai-elements/shimmer";
-import { Button } from "@/components/v2/buttons/Button";
+	Shimmer,
+} from "@autumn/ui/ai-elements";
+import type { UIMessage } from "ai";
 import { cn } from "@/lib/utils";
 import {
 	AttachmentsHeader,

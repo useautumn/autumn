@@ -1,6 +1,3 @@
-import { CheckIcon, XIcon } from "@phosphor-icons/react";
-import type { ReactNode } from "react";
-import { useState } from "react";
 import {
 	Command,
 	CommandEmpty,
@@ -8,12 +5,13 @@ import {
 	CommandInput,
 	CommandItem,
 	CommandList,
-} from "@/components/ui/command";
-import {
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
-} from "@/components/ui/popover";
+} from "@autumn/ui";
+import { CheckIcon, XIcon } from "@phosphor-icons/react";
+import type { ReactNode } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 const MAX_VISIBLE_CHIPS = 3;

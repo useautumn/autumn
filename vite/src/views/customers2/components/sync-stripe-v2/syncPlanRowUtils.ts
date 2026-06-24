@@ -35,7 +35,9 @@ export const applyCustomizeToProduct = ({
 			} as ProductItem;
 			const existingIndex = items.findIndex((item) => isPriceItem(item));
 			if (existingIndex >= 0) {
-				items = items.map((item, i) => (i === existingIndex ? newPriceItem : item));
+				items = items.map((item, i) =>
+					i === existingIndex ? newPriceItem : item,
+				);
 			} else {
 				items = [newPriceItem, ...items];
 			}

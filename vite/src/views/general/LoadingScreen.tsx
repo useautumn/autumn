@@ -1,7 +1,7 @@
 "use client";
 
+import { LoadingShimmerText } from "@autumn/ui";
 import React from "react";
-import { LoadingShimmerText } from "@/components/v2/LoadingShimmerText";
 import { cn } from "@/lib/utils";
 
 function LoadingScreen({ fullPage = false }: { fullPage?: boolean }) {

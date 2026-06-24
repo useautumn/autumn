@@ -35,13 +35,19 @@ export const useAnalyticsData = ({
 	const customRange =
 		interval === "custom" && start && end ? { start, end } : undefined;
 
-	const { selectedEventNames, featuresData, featuresLoading, eventNamesLoading } =
-		useSelectedEventNames();
+	const {
+		selectedEventNames,
+		featuresData,
+		featuresLoading,
+		eventNamesLoading,
+	} = useSelectedEventNames();
 
 	const timezone = useMemo(() => getUserTimezone(), []);
 
 	const formattedGroupBy = groupBy
-		? groupBy === "customer_id" || groupBy === "entity_id" || groupBy === "plan_id"
+		? groupBy === "customer_id" ||
+			groupBy === "entity_id" ||
+			groupBy === "plan_id"
 			? groupBy
 			: `properties.${groupBy}`
 		: undefined;
@@ -120,17 +126,24 @@ export const useRawAnalyticsData = () => {
 	const customRange =
 		interval === "custom" && start && end ? { start, end } : undefined;
 
-	const { selectedEventNames, featuresData, featuresLoading, eventNamesLoading } =
-		useSelectedEventNames();
+	const {
+		selectedEventNames,
+		hasExplicitSelection,
+		featuresData,
+		featuresLoading,
+		eventNamesLoading,
+	} = useSelectedEventNames();
 
 	const isReady = !eventNamesLoading && !featuresLoading;
+
+	const tableEventNames = hasExplicitSelection ? selectedEventNames : undefined;
 
 	const postBody = {
 		customer_id: customerId || undefined,
 		entity_id: entityId || undefined,
 		interval: customRange ? undefined : interval,
 		custom_range: customRange,
-		event_names: selectedEventNames,
+		event_names: tableEventNames,
 	};
 
 	const { data, isLoading, error } = useQuery({
@@ -142,7 +155,7 @@ export const useRawAnalyticsData = () => {
 			interval,
 			String(start ?? ""),
 			String(end ?? ""),
-			...selectedEventNames.sort(),
+			...(tableEventNames ?? []).sort(),
 		]),
 		queryFn: async () => {
 			const { data } = await axiosInstance.post("/query/raw", postBody);

@@ -20,15 +20,15 @@ export type SvixConfig = {
 };
 
 export type StripeConfig = {
-	test_api_key?: string;
-	live_api_key?: string;
-	test_webhook_secret?: string;
-	live_webhook_secret?: string;
+	test_api_key?: string | null;
+	live_api_key?: string | null;
+	test_webhook_secret?: string | null;
+	live_webhook_secret?: string | null;
 	sandbox_success_url?: string;
 	success_url?: string;
 
-	test_connect_webhook_secret?: string;
-	live_connect_webhook_secret?: string;
+	test_connect_webhook_secret?: string | null;
+	live_connect_webhook_secret?: string | null;
 };
 export interface VersionConfig {
 	sandbox?: string;

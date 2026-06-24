@@ -6,23 +6,23 @@ import {
 	ResetInterval,
 	type RolloverConfig,
 } from "@autumn/shared";
-import { CalendarXIcon, InfinityIcon } from "@phosphor-icons/react";
-import { useState } from "react";
-import { toast } from "sonner";
-import { DateInputUnix } from "@/components/general/DateInputUnix";
-import { Button } from "@/components/v2/buttons/Button";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
-import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
-import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
 import {
+	Button,
+	DateInputUnix,
+	FormLabel,
+	IconCheckbox,
+	Input,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+	ShortcutButton,
+} from "@autumn/ui";
+import { CalendarXIcon, InfinityIcon } from "@phosphor-icons/react";
+import { useState } from "react";
+import { toast } from "sonner";
+import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
 	SheetFooter,

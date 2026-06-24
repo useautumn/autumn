@@ -1,9 +1,9 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import type { IRow } from "./analytics-types";
 import {
 	formatFullTimestamp,
 	parseUTCTimestamp,
 } from "../utils/parseTimestamp";
+import type { IRow } from "./analytics-types";
 
 function formatTimestamp(value: string): string {
 	const date = parseUTCTimestamp(value);

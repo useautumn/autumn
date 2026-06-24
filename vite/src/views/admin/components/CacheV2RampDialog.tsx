@@ -1,18 +1,18 @@
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { z } from "zod/v4";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
+	FormLabel,
+	Input,
+} from "@autumn/ui";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { z } from "zod/v4";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
@@ -60,10 +60,9 @@ export function CacheV2RampDialog({
 		useQuery<AdminCacheV2RampResponse>({
 			queryKey: ["admin-cache-v2-ramp"],
 			queryFn: async () => {
-				const { data } =
-					await axiosInstance.get<AdminCacheV2RampResponse>(
-						"/admin/cache-v2-ramp",
-					);
+				const { data } = await axiosInstance.get<AdminCacheV2RampResponse>(
+					"/admin/cache-v2-ramp",
+				);
 				return data;
 			},
 			enabled: open,
@@ -197,11 +196,7 @@ export function CacheV2RampDialog({
 					<div className="flex flex-col gap-4">
 						<div className="flex flex-col gap-1">
 							<FormLabel>Destination host</FormLabel>
-							<Input
-								value={cfg.host}
-								readOnly
-								className="font-mono text-xs"
-							/>
+							<Input value={cfg.host} readOnly className="font-mono text-xs" />
 							<span className="text-subtle text-[11px]">
 								Connection string is encrypted at rest and never sent back to
 								the frontend. To rotate credentials, set ramp to 0% then
@@ -247,7 +242,8 @@ export function CacheV2RampDialog({
 								<div className="mt-2 flex flex-col gap-1 rounded-md border border-amber-300 bg-amber-50 p-2">
 									<span className="text-[11px] text-amber-800">
 										High-impact change ({currentPercent}% → {pendingPercent}%).
-										Type <span className="font-mono">{CONFIRM_HIGH_RAMP_TEXT}</span>{" "}
+										Type{" "}
+										<span className="font-mono">{CONFIRM_HIGH_RAMP_TEXT}</span>{" "}
 										to confirm.
 									</span>
 									<Input
@@ -329,9 +325,9 @@ export function CacheV2RampDialog({
 							className="font-mono text-xs"
 						/>
 						<span className="text-subtle text-[11px]">
-							Stored encrypted (AES-256-CBC). Frontend never sees the
-							connection string after save — only the host. Ramp starts at 0%
-							(no traffic routed) until you bump it.
+							Stored encrypted (AES-256-CBC). Frontend never sees the connection
+							string after save — only the host. Ramp starts at 0% (no traffic
+							routed) until you bump it.
 						</span>
 						<Button
 							onClick={handleConnect}

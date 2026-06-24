@@ -1,4 +1,5 @@
 import { AppEnv } from "@autumn/shared";
+import { Badge, CopyButton, IconButton } from "@autumn/ui";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
 	ArrowLeft,
@@ -13,9 +14,6 @@ import {
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { Badge } from "@/components/v2/badges/Badge";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { useAxiosInstance } from "@/services/useAxiosInstance";

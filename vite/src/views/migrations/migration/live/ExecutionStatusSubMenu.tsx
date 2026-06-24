@@ -1,10 +1,10 @@
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
+import { Checkbox } from "@autumn/ui";
 import {
 	DropdownMenuItem,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 
 export const EXECUTION_STATUS_VALUES = [
 	"queued",

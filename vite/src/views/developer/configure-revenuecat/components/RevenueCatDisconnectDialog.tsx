@@ -1,11 +1,11 @@
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+} from "@autumn/ui";
 
 interface RevenueCatDisconnectDialogProps {
 	open: boolean;
@@ -37,7 +37,11 @@ export const RevenueCatDisconnectDialog = ({
 					<Button variant="secondary" onClick={() => onOpenChange(false)}>
 						Cancel
 					</Button>
-					<Button variant="destructive" onClick={onConfirm} isLoading={isLoading}>
+					<Button
+						variant="destructive"
+						onClick={onConfirm}
+						isLoading={isLoading}
+					>
 						Disconnect
 					</Button>
 				</div>

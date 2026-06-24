@@ -1,4 +1,5 @@
 import { type ApiKey, groupAndFormatScopes } from "@autumn/shared";
+import { Badge, Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import {
 	CalendarIcon,
@@ -6,12 +7,6 @@ import {
 	TerminalIcon,
 	UserIcon,
 } from "lucide-react";
-import { Badge } from "@/components/v2/badges/Badge";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { APIKeyToolbar } from "./APIKeyToolbar";
 
@@ -144,8 +139,12 @@ export const createAPIKeyTableColumns = (): ColumnDef<ApiKey, unknown>[] => [
 								const label = g.actions.includes("write") ? "write" : "read";
 								return (
 									<div key={g.resource} className="flex items-center gap-2">
-										<span className="text-xs text-muted-foreground w-20 shrink-0">{g.resourceName.toLowerCase()}</span>
-										<span className="text-tiny-id bg-muted px-1.5 py-0.5 rounded-md">{label}</span>
+										<span className="text-xs text-muted-foreground w-20 shrink-0">
+											{g.resourceName.toLowerCase()}
+										</span>
+										<span className="text-tiny-id bg-muted px-1.5 py-0.5 rounded-md">
+											{label}
+										</span>
 									</div>
 								);
 							})}

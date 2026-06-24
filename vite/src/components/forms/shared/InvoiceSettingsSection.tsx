@@ -1,13 +1,13 @@
 import type { InvoiceTemplate } from "@autumn/shared";
-import { InfoIcon } from "lucide-react";
-import { Input } from "@/components/v2/inputs/Input";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
-import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import {
+	Input,
+	SearchableSelect,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
+} from "@autumn/ui";
+import { InfoIcon } from "lucide-react";
+import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useInvoiceTemplatesQuery } from "@/hooks/queries/useInvoiceTemplatesQuery";
 import { cn } from "@/lib/utils";
 

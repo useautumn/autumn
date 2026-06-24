@@ -4,11 +4,10 @@ import {
 	FeatureType,
 	type ProductItem,
 } from "@autumn/shared";
+import { Button, FormLabel } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
-import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
 	useProduct,
 	useSheet,
@@ -139,7 +138,10 @@ export function SelectFeatureSheet({
 								className="w-full"
 								onClick={handleCreateNew}
 							>
-								<PlusIcon className="size-[14px] text-muted-foreground" weight="regular" />
+								<PlusIcon
+									className="size-[14px] text-muted-foreground"
+									weight="regular"
+								/>
 								Create new feature
 							</Button>
 						}

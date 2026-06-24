@@ -4,8 +4,8 @@ import {
 	FeatureUsageType,
 	isAnyCreditSystem,
 } from "@autumn/shared";
+import { PanelButton } from "@autumn/ui";
 import { BarcodeIcon, CoinsIcon } from "@phosphor-icons/react";
-import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { BooleanIcon } from "@/components/v2/icons/AutumnIcons";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";

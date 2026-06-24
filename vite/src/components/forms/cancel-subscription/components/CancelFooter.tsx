@@ -1,8 +1,8 @@
 import { CusProductStatus, cp } from "@autumn/shared";
+import { Button } from "@autumn/ui";
 import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { useUpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2";
-import { Button } from "@/components/v2/buttons/Button";
 import { SheetFooter } from "@/components/v2/sheets/SharedSheetComponents";
 
 const FOOTER_DELAY_MS = 350;

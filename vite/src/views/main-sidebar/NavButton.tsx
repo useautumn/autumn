@@ -94,7 +94,8 @@ export const NavButton = ({
 		`cursor-pointer font-medium
            text-sm flex items-center text-muted-foreground px-2 h-7 rounded-lg w-full hover:text-foreground border border-transparent`,
 		(!isGroup || !expanded) && " hover:text-foreground text-muted-foreground",
-		isActive && "border border-border !text-foreground bg-interactive-secondary",
+		isActive &&
+			"border border-border !text-foreground bg-interactive-secondary",
 		isSubNav &&
 			"pl-4 font-normal rounded-none rounded-tr-md rounded-br-md border-l-0 text-tertiary-foreground",
 		className,

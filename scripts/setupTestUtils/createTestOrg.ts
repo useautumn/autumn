@@ -11,11 +11,11 @@ import {
 	createHardcodedKey,
 	createKey,
 } from "@server/internal/dev/api-keys/apiKeyUtils.js";
-import chalk from "chalk";
-import { and, eq, inArray } from "drizzle-orm";
+import { afterOrgCreated } from "@server/utils/authUtils/afterOrgCreated.js";
 import { clearOrgDbOnly } from "@tests/utils/setup/clearOrg.js";
 import { setupOrg } from "@tests/utils/setup/setupOrg.js";
-import { afterOrgCreated } from "@server/utils/authUtils/afterOrgCreated.js";
+import chalk from "chalk";
+import { and, eq, inArray } from "drizzle-orm";
 
 const TEST_ORG_CONFIG = {
 	id: "org_2sWv2S8LJ9iaTjLI6UtNsfL88Kt",
@@ -25,7 +25,16 @@ const TEST_ORG_CONFIG = {
 	created_at: 1738583937426,
 };
 
-export const TEST_ORG_PUBLISHABLE_KEY = "am_pk_test_3DoBu1cmlgxWqEXYiKaBKOPHqsu";
+export const TEST_ORG_PUBLISHABLE_KEY =
+	"am_pk_test_3DoBu1cmlgxWqEXYiKaBKOPHqsu";
+
+// `bun tw` warm-up forks one shared org into N isolated workers, each minting
+// its OWN Stripe sub-account at boot (see attachSandboxStripeAccount). So the
+// warm-parent seed must NOT create a sub-account. `bun t` / `bun dw` keep the
+// shared account, so the flag defaults to off (unset env => unchanged behavior).
+const skipStripeAccountForWorkerMode = ["1", "true", "yes"].includes(
+	(process.env.TW_SKIP_STRIPE_ACCOUNT ?? "").trim().toLowerCase(),
+);
 
 // Synthetic inviter pinned to the test org; satisfies invitation.inviter_id
 // NOT-NULL FK without needing a real human user in a fresh worktree branch.
@@ -74,12 +83,18 @@ export async function createTestOrg({
 		await afterOrgCreated({
 			org: { ...existingOrg, slug: TEST_ORG_CONFIG.slug } as any,
 			user: TEST_INVITER_USER as any,
-			createStripeAccount: !existingOrg.test_stripe_connect?.default_account_id,
+			createStripeAccount:
+				!skipStripeAccountForWorkerMode &&
+				!existingOrg.test_stripe_connect?.default_account_id,
 			pkey: TEST_ORG_PUBLISHABLE_KEY,
 		});
 
 		await seedTeamInvites({ db });
-		await clearOrgDbOnly({ db, orgId: TEST_ORG_CONFIG.id, env: AppEnv.Sandbox });
+		await clearOrgDbOnly({
+			db,
+			orgId: TEST_ORG_CONFIG.id,
+			env: AppEnv.Sandbox,
+		});
 		await setupOrg({ orgId: TEST_ORG_CONFIG.id, env: AppEnv.Sandbox });
 
 		if (TEST_API_KEY) {
@@ -155,7 +170,7 @@ export async function createTestOrg({
 	await afterOrgCreated({
 		org: insertedOrg as any,
 		user: TEST_INVITER_USER as any,
-		createStripeAccount: true,
+		createStripeAccount: !skipStripeAccountForWorkerMode,
 		pkey: TEST_ORG_PUBLISHABLE_KEY,
 	});
 

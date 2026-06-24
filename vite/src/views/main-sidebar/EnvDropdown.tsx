@@ -2,16 +2,15 @@
 "use client";
 
 import { AppEnv } from "@autumn/shared";
+import { Skeleton } from "@autumn/ui";
 import { Check } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
-} from "@/components/v2/dropdowns/DropdownMenu";
-import { Skeleton } from "@/components/ui/skeleton";
+} from "@autumn/ui";
 import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
 import { envToPath } from "@/utils/genUtils";

@@ -1,23 +1,23 @@
 import type { FrontendProduct } from "@autumn/shared";
 import { productsAreSame } from "@autumn/shared";
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router";
-import { toast } from "sonner";
-import { PlanItemsSection } from "@/components/forms/shared";
-import { Switch } from "@/components/ui/switch";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
-import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
-import { Input } from "@/components/v2/inputs/Input";
 import {
+	AreaRadioGroupItem,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { RadioGroup } from "@/components/v2/radio-groups/RadioGroup";
-import { AreaRadioGroupItem } from "@/components/v2/radio-groups/AreaRadioGroupItem";
+	Input,
+	MiniCopyButton,
+	RadioGroup,
+	ShortcutButton,
+	Switch,
+} from "@autumn/ui";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
+import { PlanItemsSection } from "@/components/forms/shared";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
