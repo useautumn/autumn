@@ -5,7 +5,7 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "./Select";
+} from "@autumn/ui";
 
 /**
  * Role display metadata.
@@ -102,11 +102,7 @@ export function RoleSelect({
 			*/}
 			<SelectContent className="max-w-[340px]">
 				{allowed.map((role) => (
-					<SelectItem
-						key={role}
-						value={role}
-						className="items-start"
-					>
+					<SelectItem key={role} value={role} className="items-start">
 						<div className="flex flex-col items-start py-0.5 gap-0.5 w-full">
 							<span className="text-sm font-medium">
 								{ROLE_META[role].label}

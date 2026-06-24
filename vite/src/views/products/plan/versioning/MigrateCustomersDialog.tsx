@@ -1,33 +1,31 @@
 import type { FrontendProduct } from "@autumn/shared";
 import { productV2ToFrontendProduct } from "@autumn/shared";
-import { UserIcon } from "@phosphor-icons/react";
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router";
-import { toast } from "sonner";
-import { PlanItemsSection } from "@/components/forms/shared";
-import { IconBadge } from "@/components/v2/badges/IconBadge";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
+	AreaRadioGroupItem,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { RadioGroup } from "@/components/v2/radio-groups/RadioGroup";
-import { AreaRadioGroupItem } from "@/components/v2/radio-groups/AreaRadioGroupItem";
-import {
+	IconBadge,
+	RadioGroup,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+	ShortcutButton,
+} from "@autumn/ui";
+import { UserIcon } from "@phosphor-icons/react";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
+import { PlanItemsSection } from "@/components/forms/shared";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { useOrg } from "@/hooks/common/useOrg";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
 import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import {
@@ -363,7 +361,9 @@ export function MigrateCustomersDialog({
 						disabled={isCreating || !hasMigratableVersions}
 						className="w-full"
 					>
-						{hasMigratableVersions ? "Preview Migration" : "No changes to migrate"}
+						{hasMigratableVersions
+							? "Preview Migration"
+							: "No changes to migrate"}
 					</ShortcutButton>
 				</DialogFooter>
 			</DialogContent>

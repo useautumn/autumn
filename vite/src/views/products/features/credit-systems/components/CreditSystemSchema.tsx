@@ -1,8 +1,7 @@
 import { FeatureType, isAiCreditSystem } from "@autumn/shared";
+import { BetaBadge, GroupedTabButton } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
 import { useMemo } from "react";
-import { BetaBadge } from "@/components/v2/badges/BetaBadge";
-import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
 import { AiCreditSchema } from "./AiCreditSchema";

@@ -5,6 +5,7 @@ import {
 	InvoiceStatus,
 	ProcessorType,
 } from "@autumn/shared";
+import { Badge, Button, InfoRow, MiniCopyButton } from "@autumn/ui";
 import {
 	ArrowCounterClockwiseIcon,
 	ArrowSquareOutIcon,
@@ -15,10 +16,6 @@ import {
 import { format } from "date-fns";
 import { useMemo, useState } from "react";
 import { AdminHover } from "@/components/general/AdminHover";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
-import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
-import { InfoRow } from "@/components/v2/InfoRow";
 import { ProcessorIcon } from "@/components/v2/icons/ProcessorIcon";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";

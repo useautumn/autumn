@@ -20,6 +20,8 @@ const localConfig = {
 	ngrokApiPort: 4040,
 	redisStackPort: 6379,
 	dragonflyPort: 6380,
+	apiServerPort: 8080,
+	mcpServerPort: 3099,
 	databaseUrl: "postgresql://postgres:postgres@localhost:5432/autumn",
 	chatStateDatabaseUrl: "postgresql://postgres:postgres@localhost:5432/chat",
 	cacheUrl: "redis://localhost:6379",
@@ -91,6 +93,12 @@ const configureNgrokUrl = () => {
 	}
 
 	composeEnv.NGROK_DOMAIN = getDomainFromUrl({ url: ngrokUrl });
+};
+
+const configureNgrokTarget = ({ target }: { target: "api" | "mcp" }) => {
+	const port =
+		target === "mcp" ? localConfig.mcpServerPort : localConfig.apiServerPort;
+	composeEnv.NGROK_TARGET = `host.docker.internal:${port}`;
 };
 
 const configureNgrokToken = async () => {
@@ -350,8 +358,9 @@ const getNgrokUrl = async () => {
 	throw new Error("ngrok did not expose a public URL on :4040");
 };
 
-const up = async () => {
+const up = async ({ ngrokTarget }: { ngrokTarget: "api" | "mcp" }) => {
 	configureNgrokUrl();
+	configureNgrokTarget({ target: ngrokTarget });
 	await configureNgrokToken();
 	log("starting Docker services");
 	dockerCompose({
@@ -374,6 +383,7 @@ const up = async () => {
 	ensureNgrokRunning();
 
 	const ngrokUrl = await getNgrokUrl();
+	log(`ngrok target: ${composeEnv.NGROK_TARGET}`);
 	log(`ngrok URL: ${ngrokUrl}`);
 	log(`export NGROK_URL=${ngrokUrl}`);
 };
@@ -409,6 +419,8 @@ const help = () => {
 
 Commands:
   up                         Start local Postgres, Redis Stack, Dragonfly, and ngrok
+  up --mcp                   Start services with ngrok pointed at localhost:3099
+  up:mcp                     Alias for up --mcp
   down                       Stop local services and keep all data
   down --volumes             Stop services and delete Redis/Dragonfly data
   down --postgres            Stop services and delete Postgres data
@@ -428,7 +440,10 @@ Local service values:
 
 switch (command) {
 	case "up":
-		await up();
+		await up({ ngrokTarget: flags.has("--mcp") ? "mcp" : "api" });
+		break;
+	case "up:mcp":
+		await up({ ngrokTarget: "mcp" });
 		break;
 	case "down":
 		down();

@@ -64,8 +64,11 @@ const emulateGoogleUrl =
 // HTTPS agent worktrees go through portless (e.g. wtN-api.localhost). The
 // OAuth flow leaves and returns via a third-party host (emulate.dev), so the
 // state cookie must be SameSite=None+Secure to survive the round trip.
-const isHttpsBaseUrl = process.env.BETTER_AUTH_URL?.startsWith("https://");
 const isProductionAuth = process.env.NODE_ENV === "production";
+const configuredAuthBaseUrl = process.env.BETTER_AUTH_URL?.trim() || undefined;
+const authBaseUrl =
+	configuredAuthBaseUrl ?? (isProductionAuth ? undefined : "http://localhost:8080");
+const isHttpsBaseUrl = authBaseUrl?.startsWith("https://");
 
 const parseMcpResourceUrl = (rawUrl: string) => {
 	const resourceUrl = rawUrl.trim();
@@ -93,7 +96,7 @@ const chatServerUrl =
 
 const mcpResourcePaths = ["/mcp"];
 const mcpResourceBases = [
-	process.env.BETTER_AUTH_URL,
+	authBaseUrl,
 	mcpServerUrl,
 	chatServerUrl,
 ].filter((base): base is string => Boolean(base));
@@ -145,7 +148,7 @@ if (
 }
 
 const options = {
-	baseURL: process.env.BETTER_AUTH_URL,
+	baseURL: authBaseUrl,
 	telemetry: {
 		enabled: false,
 	},
@@ -221,7 +224,7 @@ const options = {
 			origins.push(origin);
 		}
 		if (process.env.CLIENT_URL) origins.push(process.env.CLIENT_URL);
-		if (process.env.BETTER_AUTH_URL) origins.push(process.env.BETTER_AUTH_URL);
+		if (authBaseUrl) origins.push(authBaseUrl);
 		return origins;
 	},
 	emailAndPassword: {
@@ -238,7 +241,9 @@ const options = {
 		google: {
 			clientId: process.env.GOOGLE_CLIENT_ID!,
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-			redirectURI: `${process.env.BETTER_AUTH_URL}/api/auth/callback/google`,
+			redirectURI: authBaseUrl
+				? `${authBaseUrl}/api/auth/callback/google`
+				: undefined,
 			...(emulateGoogleUrl
 				? {
 						// HS256-signed id_tokens from emulate fail real Google's RS256 JWKS check.
@@ -271,7 +276,7 @@ const options = {
 			// Resource-based scopes with R/W actions (plus legacy CRUDL +
 			// meta scopes — see shared/utils/scopeDefinitions.ts).
 			scopes: [...ALL_SCOPES],
-			validAudiences: [process.env.BETTER_AUTH_URL, ...mcpResourceUrls].filter(
+			validAudiences: [authBaseUrl, ...mcpResourceUrls].filter(
 				Boolean,
 			) as string[],
 			allowDynamicClientRegistration: true,

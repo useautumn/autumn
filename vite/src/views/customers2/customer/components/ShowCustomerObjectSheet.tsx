@@ -1,4 +1,5 @@
 import type { FullCustomer } from "@autumn/shared";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@autumn/ui";
 import { Spinner } from "@phosphor-icons/react";
 import { useMemo } from "react";
 import { useParams } from "react-router";
@@ -8,12 +9,6 @@ import {
 	CodeGroupList,
 	CodeGroupTab,
 } from "@/components/v2/CodeGroup";
-import {
-	Sheet,
-	SheetContent,
-	SheetHeader,
-	SheetTitle,
-} from "@/components/v2/sheets/Sheet";
 import { VirtualizedJson } from "@/components/v2/VirtualizedJson";
 import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { getBackendErr } from "@/utils/genUtils";

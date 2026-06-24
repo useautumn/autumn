@@ -1,5 +1,5 @@
 import { type FreeTrial, notNullish } from "@autumn/shared";
-import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
+import { AreaCheckbox } from "@autumn/ui";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { getDefaultFreeTrial } from "../../utils/getDefaultFreeTrial";

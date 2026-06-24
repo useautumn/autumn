@@ -1,7 +1,11 @@
 import type { AppEnv, FrontendOrg } from "@autumn/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useCallback, useEffect } from "react";
-import { authClient, useListOrganizations, useSession } from "@/lib/auth-client";
+import {
+	authClient,
+	useListOrganizations,
+	useSession,
+} from "@/lib/auth-client";
 import {
 	clearLastSwitchedOrgId,
 	getLastSwitchedOrgId,
@@ -21,13 +25,16 @@ export {
 export const useSwitchActiveOrg = () => {
 	const { refetch: refetchSession } = useSession();
 
-	return useCallback(async (orgId: string) => {
-		await setActiveOrg(orgId);
-		// The org query is keyed on activeOrgId, so refreshing the session
-		// (which updates activeOrgId) is enough to refetch the new org. An extra
-		// invalidate would force a redundant refetch and flash a skeleton.
-		await refetchSession();
-	}, [refetchSession]);
+	return useCallback(
+		async (orgId: string) => {
+			await setActiveOrg(orgId);
+			// The org query is keyed on activeOrgId, so refreshing the session
+			// (which updates activeOrgId) is enough to refetch the new org. An extra
+			// invalidate would force a redundant refetch and flash a skeleton.
+			await refetchSession();
+		},
+		[refetchSession],
+	);
 };
 
 export const useOrg = (params?: { env?: AppEnv }) => {
@@ -58,7 +65,10 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 	const rememberedOrgValid =
 		orgListLoading || !orgList || orgList.some((o) => o.id === lastOrgId);
 	const pendingOrgSwitch =
-		!!lastOrgId && !!activeOrgId && lastOrgId !== activeOrgId && rememberedOrgValid;
+		!!lastOrgId &&
+		!!activeOrgId &&
+		lastOrgId !== activeOrgId &&
+		rememberedOrgValid;
 
 	const orgIsReady =
 		!!org && !!activeOrgId && org.id === activeOrgId && !pendingOrgSwitch;
@@ -82,8 +92,9 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 			window.location.reload();
 		};
 
-		const onImpersonateRoute =
-			window.location.pathname.includes("impersonate-redirect");
+		const onImpersonateRoute = window.location.pathname.includes(
+			"impersonate-redirect",
+		);
 
 		if (session && !activeOrgId && !orgListLoading && !onImpersonateRoute) {
 			handleNoActiveOrg();

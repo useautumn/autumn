@@ -103,9 +103,7 @@ interface CustomerFiltersContextValue {
 const CustomerFiltersContext =
 	createContext<CustomerFiltersContextValue | null>(null);
 
-export function CustomerFiltersProvider({
-	children,
-}: { children: ReactNode }) {
+export function CustomerFiltersProvider({ children }: { children: ReactNode }) {
 	const { org } = useOrg();
 	const orgId = org?.id;
 	const env = useEnv();
@@ -123,8 +121,7 @@ export function CustomerFiltersProvider({
 		[],
 	);
 	const popCursor = useCallback(
-		() =>
-			setCursorStack((s) => (s.length > 1 ? s.slice(0, -1) : s)),
+		() => setCursorStack((s) => (s.length > 1 ? s.slice(0, -1) : s)),
 		[],
 	);
 	const resetCursor = useCallback(() => setCursorStack([""]), []);

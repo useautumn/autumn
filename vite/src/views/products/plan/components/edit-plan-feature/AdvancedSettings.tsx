@@ -6,10 +6,7 @@ import {
 	itemToBillingInterval,
 	UsageModel,
 } from "@autumn/shared";
-import {
-	SheetAccordion,
-	SheetAccordionItem,
-} from "@/components/v2/sheets/SheetAccordion";
+import { SheetAccordion, SheetAccordionItem } from "@autumn/ui";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import {
 	getFeatureCreditSystem,

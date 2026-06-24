@@ -6,11 +6,7 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useCustomerFilters } from "./useCustomerFilters";
 
 export const useCusSearchQuery = () => {
-	const {
-		queryStates,
-		isInitialized,
-		currentCursor,
-	} = useCustomerFilters();
+	const { queryStates, isInitialized, currentCursor } = useCustomerFilters();
 	const trimmedSearch = queryStates.q.trim();
 
 	const axiosInstance = useAxiosInstance();

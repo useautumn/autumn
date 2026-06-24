@@ -10,16 +10,16 @@ import {
 	nullish,
 	UsageModel,
 } from "@autumn/shared";
-import { CalendarXIcon } from "@phosphor-icons/react";
-import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
-import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
+	FormLabel,
+	IconCheckbox,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
+import { CalendarXIcon } from "@phosphor-icons/react";
 import { formatIntervalText } from "@/utils/formatUtils/formatTextUtils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { CustomiseIntervalPopover } from "../CustomiseIntervalPopover";

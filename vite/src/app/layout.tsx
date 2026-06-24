@@ -1,12 +1,12 @@
 import { AppEnv } from "@autumn/shared";
+import { IconButton } from "@autumn/ui";
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import { AutumnProvider } from "autumn-js/react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { useEffect, useRef, useState } from "react";
 import { Outlet } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
-import { SandboxBanner } from "@/components/general/SandboxBanner";
-import { IconButton } from "@/components/v2/buttons/IconButton";
+import { SandboxBanner } from "@autumn/ui";
 import { PortalContainerContext } from "@/contexts/PortalContainerContext";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";

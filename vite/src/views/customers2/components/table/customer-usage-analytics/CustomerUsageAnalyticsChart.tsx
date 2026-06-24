@@ -1,20 +1,16 @@
 "use client";
 
 import type { Event } from "@autumn/shared";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@autumn/ui";
 import { useMemo } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import {
-	ChartContainer,
-	ChartTooltip,
-	ChartTooltipContent,
-} from "@/components/ui/chart";
 import { useIsSheetOpen } from "@/hooks/stores/useSheetStore";
+import { cn } from "@/lib/utils";
 import {
 	prepareChartData,
 	prepareTimeseriesChartData,
 	type TimeseriesData,
 } from "./customerUsageAnalyticsUtils";
-import { cn } from "@/lib/utils";
 
 export function CustomerUsageAnalyticsChart({
 	timeseriesEvents,
@@ -83,8 +79,7 @@ export function CustomerUsageAnalyticsChart({
 				>
 					{eventNames.map((name) => {
 						const entry = totals?.[name] ?? { count: 0, sum: 0 };
-						const primary =
-							entry.sum !== entry.count ? entry.sum : entry.count;
+						const primary = entry.sum !== entry.count ? entry.sum : entry.count;
 						const color = (chartConfig[name] as { color?: string })?.color;
 						const showName = eventNames.length <= 3;
 						return (
@@ -114,76 +109,73 @@ export function CustomerUsageAnalyticsChart({
 					})}
 				</div>
 			)}
-			<ChartContainer
-				config={chartConfig}
-				className="flex-1 min-h-0 w-full"
-			>
-			<BarChart
-				// accessibilityLayer
-				data={chartData}
-				className={cn(
-					"[&_.recharts-cartesian-grid-bg]:fill-white dark:[&_.recharts-cartesian-grid-bg]:fill-gray-900 [&_.recharts-cartesian-grid-bg]:stroke-border [&_.recharts-cartesian-grid-bg]:stroke-1 [&_.recharts-cartesian-grid-bg]:[rx:8px] pt-3 pr-2",
-					isLoading && "animate-pulse",
-				)}
-				barCategoryGap={4}
-			>
-				{eventNames.length > 0 && !isLoading && (
-				<CartesianGrid
-					vertical={false}
-					className="fill-white dark:fill-gray-900"
-					stroke="var(--chart-grid-stroke)"
-					strokeWidth={1}
-					strokeDasharray="2 2"
-					horizontalPoints={[5, 50, 100, 150, 200]}
-				/>
-			)}
-				<XAxis
-					dataKey="date"
-					tickLine={false}
-					tickMargin={4}
-					axisLine={false}
-					strokeWidth={1}
-					// interval={3}
-					interval="equidistantPreserveStart"
-					stroke="#f7f7f7"
-					tick={{ fontSize: 11, fill: "#666" }}
-				/>
-				<YAxis
-					// domain={[0, Math.round(maxValue * 1.2)]}
-					dataKey={eventNames[0] ?? "default"}
-					ticks={yAxisTicks}
-					tickCount={5}
-					tickLine={false}
-					axisLine={false}
-					width={40}
-					tickMargin={0}
-					tick={{
-						fontSize: 11,
-						fill: "#666",
-						textAnchor: "middle",
-						dx: -15,
-						dy: -3,
-					}}
-					tickFormatter={formatYAxisTick}
-				/>
-				<ChartTooltip content={<ChartTooltipContent />} />
-				{eventNames.map((eventName: string, index: number) => (
-					<Bar
-						key={eventName}
-						dataKey={eventName}
-						stackId="a"
-						barSize={20}
-						fill={`var(--color-${eventName})`}
-						isAnimationActive={!isSheetOpen}
-						// animationDuration={300}
-						// animationEasing="ease-out"
-						// animationBegin={1}
-						// radius={
-						// 	index === eventNames.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]
-						// }
+			<ChartContainer config={chartConfig} className="flex-1 min-h-0 w-full">
+				<BarChart
+					// accessibilityLayer
+					data={chartData}
+					className={cn(
+						"[&_.recharts-cartesian-grid-bg]:fill-white dark:[&_.recharts-cartesian-grid-bg]:fill-gray-900 [&_.recharts-cartesian-grid-bg]:stroke-border [&_.recharts-cartesian-grid-bg]:stroke-1 [&_.recharts-cartesian-grid-bg]:[rx:8px] pt-3 pr-2",
+						isLoading && "animate-pulse",
+					)}
+					barCategoryGap={4}
+				>
+					{eventNames.length > 0 && !isLoading && (
+						<CartesianGrid
+							vertical={false}
+							className="fill-white dark:fill-gray-900"
+							stroke="var(--chart-grid-stroke)"
+							strokeWidth={1}
+							strokeDasharray="2 2"
+							horizontalPoints={[5, 50, 100, 150, 200]}
+						/>
+					)}
+					<XAxis
+						dataKey="date"
+						tickLine={false}
+						tickMargin={4}
+						axisLine={false}
+						strokeWidth={1}
+						// interval={3}
+						interval="equidistantPreserveStart"
+						stroke="#f7f7f7"
+						tick={{ fontSize: 11, fill: "#666" }}
 					/>
-				))}
-			</BarChart>
+					<YAxis
+						// domain={[0, Math.round(maxValue * 1.2)]}
+						dataKey={eventNames[0] ?? "default"}
+						ticks={yAxisTicks}
+						tickCount={5}
+						tickLine={false}
+						axisLine={false}
+						width={40}
+						tickMargin={0}
+						tick={{
+							fontSize: 11,
+							fill: "#666",
+							textAnchor: "middle",
+							dx: -15,
+							dy: -3,
+						}}
+						tickFormatter={formatYAxisTick}
+					/>
+					<ChartTooltip content={<ChartTooltipContent />} />
+					{eventNames.map((eventName: string, index: number) => (
+						<Bar
+							key={eventName}
+							dataKey={eventName}
+							stackId="a"
+							barSize={20}
+							fill={`var(--color-${eventName})`}
+							isAnimationActive={!isSheetOpen}
+							// animationDuration={300}
+							// animationEasing="ease-out"
+							// animationBegin={1}
+							// radius={
+							// 	index === eventNames.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]
+							// }
+						/>
+					))}
+				</BarChart>
 			</ChartContainer>
 		</div>
 	);

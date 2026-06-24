@@ -1,9 +1,8 @@
 import { type FrontendProduct, sortPlanItems } from "@autumn/shared";
+import { Button, ShortcutButton } from "@autumn/ui";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Button } from "@/components/v2/buttons/Button";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import { SheetOverlay } from "@/components/v2/sheet-overlay/SheetOverlay";
 import { cn } from "@/lib/utils";
 import { CustomerPlanInfoBox } from "@/views/customers2/customer-plan/CustomerPlanInfoBox";

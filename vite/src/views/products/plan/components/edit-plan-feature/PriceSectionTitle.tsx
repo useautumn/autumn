@@ -1,18 +1,18 @@
 import { TierBehavior } from "@autumn/shared";
 import {
-	CoinsIcon,
-	DropSimpleIcon,
-	RulerIcon,
-	StackIcon,
-} from "@phosphor-icons/react";
-import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
-import {
+	IconCheckbox,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
+import {
+	CoinsIcon,
+	DropSimpleIcon,
+	RulerIcon,
+	StackIcon,
+} from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 import type { VolumePricingMode } from "../../utils/tierUtils";
 
@@ -61,17 +61,20 @@ export function PriceSectionTitle({
 						</IconCheckbox>
 					</div>
 				)}
-				<Select value={tierBehavior} onValueChange={onTierBehaviorChange} items={{ [TierBehavior.Graduated]: "Graduated", [TierBehavior.VolumeBased]: "Volume-based" }}>
+				<Select
+					value={tierBehavior}
+					onValueChange={onTierBehaviorChange}
+					items={{
+						[TierBehavior.Graduated]: "Graduated",
+						[TierBehavior.VolumeBased]: "Volume-based",
+					}}
+				>
 					<SelectTrigger className="w-32 h-6 text-xs!" size="sm">
 						<SelectValue>
 							{tierBehavior === TierBehavior.VolumeBased ? (
-								<span className="flex items-center gap-2">
-									Volume-based
-								</span>
+								<span className="flex items-center gap-2">Volume-based</span>
 							) : (
-								<span className="flex items-center gap-2">
-									Graduated
-								</span>
+								<span className="flex items-center gap-2">Graduated</span>
 							)}
 						</SelectValue>
 					</SelectTrigger>

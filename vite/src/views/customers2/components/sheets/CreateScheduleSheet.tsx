@@ -5,6 +5,7 @@ import type {
 	ProductV2,
 } from "@autumn/shared";
 import { CusProductStatus, mapToProductItems } from "@autumn/shared";
+import { Button } from "@autumn/ui";
 import { motion } from "motion/react";
 import { useMemo } from "react";
 import { toast } from "sonner";
@@ -32,7 +33,6 @@ import {
 	STAGGER_CONTAINER,
 	STAGGER_ITEM,
 } from "@/components/forms/update-subscription-v2/constants/animationConstants";
-import { Button } from "@/components/v2/buttons/Button";
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
 import {
 	LayoutGroup,

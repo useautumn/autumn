@@ -3,15 +3,15 @@ import {
 	entToItemInterval,
 	itemToEntInterval,
 } from "@autumn/shared";
-import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
-import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
+	AreaCheckbox,
+	FormLabel,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
 import { formatIntervalText } from "@/utils/formatUtils/formatTextUtils";
 import { nullish } from "@/utils/genUtils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";

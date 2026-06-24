@@ -1,7 +1,7 @@
 import type { InvoiceTemplate } from "@autumn/shared";
+import { Button } from "@autumn/ui";
 import { TrashIcon } from "@phosphor-icons/react";
 import { motion } from "motion/react";
-import { Button } from "@/components/v2/buttons/Button";
 
 export function InvoiceTemplateRow({
 	template,

@@ -4,7 +4,7 @@ import {
 	AppEnv,
 	type ChatInstallation,
 	chatOAuthCredentials,
-	LEAF_OAUTH_SCOPES,
+	DEFAULT_OAUTH_RESOURCE_SCOPES,
 	oauthAccessToken,
 	oauthClient,
 	oauthConsent,
@@ -110,7 +110,7 @@ const ensureSlackMcpOAuthClient = async ({
 			clientId,
 			name,
 			redirectUris: ["slack://autumn-chat"],
-			scopes: [...LEAF_OAUTH_SCOPES],
+			scopes: [...DEFAULT_OAUTH_RESOURCE_SCOPES],
 			tokenEndpointAuthMethod: "none",
 			grantTypes: ["authorization_code", "refresh_token"],
 			responseTypes: ["code"],
@@ -124,7 +124,7 @@ const ensureSlackMcpOAuthClient = async ({
 			target: oauthClient.clientId,
 			set: {
 				name,
-				scopes: [...LEAF_OAUTH_SCOPES],
+				scopes: [...DEFAULT_OAUTH_RESOURCE_SCOPES],
 				tokenEndpointAuthMethod: "none",
 				grantTypes: ["authorization_code", "refresh_token"],
 				responseTypes: ["code"],
@@ -295,13 +295,16 @@ const createCredentialForEnv = async ({
 		});
 };
 
-const leafScopeSet = new Set<string>(LEAF_OAUTH_SCOPES);
+const defaultOAuthResourceScopeSet = new Set<string>(DEFAULT_OAUTH_RESOURCE_SCOPES);
 
 // Bound the requested scopes to the app's max; empty = full default set.
 const resolveAgentScopes = (agentScopes?: string[]) => {
-	if (!agentScopes || agentScopes.length === 0) return [...LEAF_OAUTH_SCOPES];
-	const bounded = agentScopes.filter((scope) => leafScopeSet.has(scope));
-	return bounded.length > 0 ? bounded : [...LEAF_OAUTH_SCOPES];
+	if (!agentScopes || agentScopes.length === 0)
+		return [...DEFAULT_OAUTH_RESOURCE_SCOPES];
+	const bounded = agentScopes.filter((scope) =>
+		defaultOAuthResourceScopeSet.has(scope),
+	);
+	return bounded.length > 0 ? bounded : [...DEFAULT_OAUTH_RESOURCE_SCOPES];
 };
 
 export const replaceInstallationOAuthCredentials = async ({

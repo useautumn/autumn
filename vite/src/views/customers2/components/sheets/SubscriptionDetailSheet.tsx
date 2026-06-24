@@ -10,6 +10,7 @@ import {
 	splitBooleanItems,
 	UsageModel,
 } from "@autumn/shared";
+import { Button, CopyButton, InfoRow } from "@autumn/ui";
 import {
 	CalendarBlankIcon,
 	CreditCardIcon,
@@ -27,10 +28,7 @@ import {
 import { format } from "date-fns";
 import { useMemo } from "react";
 import { CollapsedBooleanItems } from "@/components/forms/shared/plan-items/CollapsedBooleanItems";
-import { Button } from "@/components/v2/buttons/Button";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { OpenInStripeButton } from "@/components/v2/buttons/OpenInStripeButton";
-import { InfoRow } from "@/components/v2/InfoRow";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";

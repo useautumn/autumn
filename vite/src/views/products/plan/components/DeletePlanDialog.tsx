@@ -1,23 +1,21 @@
 import type { ProductV2 } from "@autumn/shared";
-import type { AxiosError } from "axios";
-import { useState } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
+import type { AxiosError } from "axios";
+import { useState } from "react";
+import { toast } from "sonner";
 import { useGeneralQuery } from "@/hooks/queries/useGeneralQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useProductStore } from "@/hooks/stores/useProductStore";
@@ -228,11 +226,11 @@ export const DeletePlanDialog = ({
 				{productInfo.numVersion > 1 &&
 					!product.archived &&
 					!productInfo.hasCusProductsLatest && (
-					<Select
-						value={deleteAllVersions ? "all" : "latest"}
-						onValueChange={(value) => setDeleteAllVersions(value === "all")}
-						items={{ latest: "Delete latest version", all: "Archive plan" }}
-					>
+						<Select
+							value={deleteAllVersions ? "all" : "latest"}
+							onValueChange={(value) => setDeleteAllVersions(value === "all")}
+							items={{ latest: "Delete latest version", all: "Archive plan" }}
+						>
 							<SelectTrigger className="w-6/12">
 								<SelectValue placeholder="Select a version" />
 							</SelectTrigger>

@@ -4,7 +4,6 @@ import type {
 	Operations,
 	UpdatePlanOp,
 } from "@autumn/shared";
-import { useState } from "react";
 import {
 	CaretDownIcon,
 	CheckIcon,
@@ -12,13 +11,14 @@ import {
 	PencilSimpleIcon,
 	PlusIcon,
 } from "@phosphor-icons/react";
+import { useState } from "react";
 
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { ActionCard } from "../shared/ActionCard";
 import { DASHED_BUTTON_CLASS } from "../shared/AddButton";
 import { AutumnMark, StripeMark } from "../shared/BillingScopeMarks";
@@ -72,7 +72,9 @@ export function OperationsForm({
 	return (
 		<div className="flex flex-col">
 			<div className="flex flex-col gap-2 border-b pb-3 mb-3">
-				<span className="text-sm font-medium text-foreground">Billing Scope</span>
+				<span className="text-sm font-medium text-foreground">
+					Billing Scope
+				</span>
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild>
 						<button
@@ -89,7 +91,10 @@ export function OperationsForm({
 									? "Billing changes apply to Autumn only"
 									: "Billing changes apply to Autumn and Stripe"}
 							</span>
-							<CaretDownIcon size={12} className="text-tertiary-foreground shrink-0" />
+							<CaretDownIcon
+								size={12}
+								className="text-tertiary-foreground shrink-0"
+							/>
 						</button>
 					</DropdownMenuTrigger>
 					<DropdownMenuContent align="start" className="w-(--anchor-width)">
@@ -101,7 +106,9 @@ export function OperationsForm({
 							<span className="flex-1">
 								Billing changes apply to Autumn only
 							</span>
-							{noBillingChanges && <CheckIcon size={14} className="text-tertiary-foreground" />}
+							{noBillingChanges && (
+								<CheckIcon size={14} className="text-tertiary-foreground" />
+							)}
 						</DropdownMenuItem>
 						<DropdownMenuItem
 							closeOnClick
@@ -111,7 +118,9 @@ export function OperationsForm({
 							<span className="flex-1">
 								Billing changes apply to Autumn and Stripe
 							</span>
-							{!noBillingChanges && <CheckIcon size={14} className="text-tertiary-foreground" />}
+							{!noBillingChanges && (
+								<CheckIcon size={14} className="text-tertiary-foreground" />
+							)}
 						</DropdownMenuItem>
 					</DropdownMenuContent>
 				</DropdownMenu>
@@ -119,7 +128,9 @@ export function OperationsForm({
 
 			{isEmpty ? (
 				<div className="flex flex-col gap-2">
-					<span className="text-sm font-medium text-foreground">Add Operation</span>
+					<span className="text-sm font-medium text-foreground">
+						Add Operation
+					</span>
 					<div className="flex gap-3">
 						<ActionCard
 							icon={
@@ -192,10 +203,7 @@ export function OperationsForm({
 								<PlusIcon size={10} />
 								Update or add a different plan
 							</DropdownMenuTrigger>
-							<DropdownMenuContent
-								align="start"
-								className="w-(--anchor-width)"
-							>
+							<DropdownMenuContent align="start" className="w-(--anchor-width)">
 								<DropdownMenuItem
 									closeOnClick
 									onClick={() =>

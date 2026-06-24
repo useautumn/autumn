@@ -1,5 +1,5 @@
+import { Checkbox } from "@autumn/ui";
 import { PackageIcon, XIcon } from "@phosphor-icons/react";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -9,7 +9,7 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { cn } from "@/lib/utils";
 import { getVersionCounts } from "@/utils/productUtils";

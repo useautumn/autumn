@@ -91,17 +91,11 @@ export function trimToTopSeries({
 	}
 
 	// Sorted ascending so the largest series is last → top of stack
-	const sorted = [...totals.entries()]
-		.sort((a, b) => a[1] - b[1]);
-	const kept = sorted.length > maxSeries
-		? sorted.slice(-maxSeries)
-		: sorted;
+	const sorted = [...totals.entries()].sort((a, b) => a[1] - b[1]);
+	const kept = sorted.length > maxSeries ? sorted.slice(-maxSeries) : sorted;
 	const orderedCols = kept.map(([col]) => col);
 
-	const meta = [
-		{ name: "period" },
-		...orderedCols.map((name) => ({ name })),
-	];
+	const meta = [{ name: "period" }, ...orderedCols.map((name) => ({ name }))];
 	const data = events.data.map((row) => {
 		const slim: EventRow = { period: row.period };
 		for (const col of orderedCols) slim[col] = row[col] ?? 0;

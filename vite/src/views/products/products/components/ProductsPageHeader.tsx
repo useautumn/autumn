@@ -1,6 +1,6 @@
+import { PageHeader } from "@autumn/ui";
 import { CubeIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
-import { PageHeader } from "@/components/general/PageHeader";
 
 interface ProductsPageHeaderProps {
 	children?: ReactNode;

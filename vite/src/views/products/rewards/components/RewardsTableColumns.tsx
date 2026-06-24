@@ -1,7 +1,7 @@
 import type { Reward } from "@autumn/shared";
 import { type ProductV2, RewardType } from "@autumn/shared";
+import { MiniCopyButton } from "@autumn/ui";
 import type { ColumnDef, Row } from "@tanstack/react-table";
-import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { RewardRowToolbar } from "./RewardRowToolbar";
@@ -13,7 +13,9 @@ export const createRewardsTableColumns = (): ColumnDef<Reward, unknown>[] => {
 			header: "Name",
 			accessorKey: "name",
 			cell: ({ row }: { row: Row<Reward> }) => {
-				return <div className="font-medium text-foreground">{row.original.name}</div>;
+				return (
+					<div className="font-medium text-foreground">{row.original.name}</div>
+				);
 			},
 		},
 		{

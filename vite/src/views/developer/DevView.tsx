@@ -2,9 +2,8 @@
 
 import { TriangleIcon, WebhooksLogoIcon } from "@phosphor-icons/react";
 import "svix-react/style.css";
+import { PageContainer, PageHeader } from "@autumn/ui";
 import { AppPortal } from "svix-react";
-import { PageContainer } from "@/components/general/PageContainer";
-import { PageHeader } from "@/components/general/PageHeader";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";

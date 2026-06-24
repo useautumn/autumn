@@ -1,12 +1,12 @@
 import { notNullish, productV2ToBasePrice } from "@autumn/shared";
-import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
-import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
-import { Input } from "@/components/v2/inputs/Input";
-import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
 import {
+	AreaCheckbox,
+	Input,
 	SheetAccordion,
 	SheetAccordionItem,
-} from "@/components/v2/sheets/SheetAccordion";
+} from "@autumn/ui";
+import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
+import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
 import { AdditionalOptions } from "./edit-plan-details/AdditionalOptions";
 import { MainDetailsSection } from "./edit-plan-details/MainDetailsSection";
 

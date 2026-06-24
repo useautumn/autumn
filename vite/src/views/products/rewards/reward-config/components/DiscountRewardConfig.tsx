@@ -1,18 +1,16 @@
 import { CouponDurationType } from "@autumn/shared";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
 import {
+	FormLabel,
+	Input,
 	InputGroup,
 	InputGroupAddon,
 	InputGroupText,
-} from "@/components/v2/inputs/InputGroup";
-import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useOrg } from "@/hooks/common/useOrg";
 import type { FrontendReward } from "../../types/frontendReward";

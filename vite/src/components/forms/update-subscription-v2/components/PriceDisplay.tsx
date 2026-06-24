@@ -55,7 +55,9 @@ export function PriceDisplay({ product, currency }: PriceDisplayProps) {
 			<span className="text-foreground font-semibold">
 				{priceDisplay.formattedPrice}
 			</span>
-			<span className="text-tertiary-foreground">{priceDisplay.intervalText}</span>
+			<span className="text-tertiary-foreground">
+				{priceDisplay.intervalText}
+			</span>
 		</span>
 	);
 }

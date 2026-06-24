@@ -15,10 +15,20 @@
 			"import": "./utils/scopeDefinitions.ts",
 			"default": "./utils/scopeDefinitions.ts"
 		},
-		"./leafOAuthScopes": {
-			"types": "./utils/leafOAuthScopes.ts",
-			"import": "./utils/leafOAuthScopes.ts",
-			"default": "./utils/leafOAuthScopes.ts"
+		"./autumnOAuthScopes": {
+			"types": "./utils/auth/autumnOAuthScopes.ts",
+			"import": "./utils/auth/autumnOAuthScopes.ts",
+			"default": "./utils/auth/autumnOAuthScopes.ts"
+		},
+		"./utils/auth/autumnOAuthScopes": {
+			"types": "./utils/auth/autumnOAuthScopes.ts",
+			"import": "./utils/auth/autumnOAuthScopes.ts",
+			"default": "./utils/auth/autumnOAuthScopes.ts"
+		},
+		"./utils/auth/oauthScopeUtils": {
+			"types": "./utils/auth/oauthScopeUtils.ts",
+			"import": "./utils/auth/oauthScopeUtils.ts",
+			"default": "./utils/auth/oauthScopeUtils.ts"
 		},
 		"./unixUtils": {
 			"types": "./utils/common/unixUtils.ts",

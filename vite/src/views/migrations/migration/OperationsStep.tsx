@@ -1,11 +1,11 @@
 import type { Operations } from "@autumn/shared";
+import { Button } from "@autumn/ui";
 import {
 	ArrowLeftIcon,
 	ArrowRightIcon,
 	InfoIcon,
 	WarningCircleIcon,
 } from "@phosphor-icons/react";
-import { Button } from "@/components/v2/buttons/Button";
 import { OperationsForm } from "./operations/OperationsForm";
 import { type StepId, StepIndicator } from "./StepIndicator";
 import { hasValidOperations } from "./shared/operationUtils";

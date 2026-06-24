@@ -4,7 +4,7 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { BooleanPill } from "../shared/BooleanPill";
 import { PlanVersionPicker } from "../shared/PlanVersionPicker";

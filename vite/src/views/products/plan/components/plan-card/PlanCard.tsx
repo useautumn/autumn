@@ -1,7 +1,6 @@
+import { Card, CardContent, Separator } from "@autumn/ui";
 import { useHotkeys } from "react-hotkeys-hook";
-import { Card, CardContent } from "@/components/v2/cards/Card";
 import { useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
-import { Separator } from "@/components/v2/separator";
 import { useFeatureNavigation } from "../../hooks/useFeatureNavigation";
 import { PlanCardHeader } from "./PlanCardHeader";
 import { PlanFeatureList } from "./PlanFeatureList";

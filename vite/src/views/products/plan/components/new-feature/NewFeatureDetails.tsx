@@ -3,8 +3,7 @@ import {
 	FeatureType,
 	FeatureUsageType,
 } from "@autumn/shared";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
+import { FormLabel, Input } from "@autumn/ui";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useAutoSlug } from "@/hooks/common/useAutoSlug";
 import { useFeatureStore } from "@/hooks/stores/useFeatureStore";

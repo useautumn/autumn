@@ -1,11 +1,11 @@
-import { Leaf, Monitor, Moon, Skull, Sun } from "lucide-react";
 import {
 	Card,
 	CardContent,
 	CardDescription,
 	CardHeader,
 	CardTitle,
-} from "@/components/v2/cards/Card";
+} from "@autumn/ui";
+import { Leaf, Monitor, Moon, Skull, Sun } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { cn } from "@/lib/utils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";

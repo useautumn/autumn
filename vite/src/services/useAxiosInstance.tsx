@@ -1,5 +1,5 @@
 // import { endpoint } from "@/utils/constants/constants";
-import { type ApiVersion, AppEnv } from "@autumn/shared";
+import type { ApiVersion, AppEnv } from "@autumn/shared";
 import axios from "axios";
 import { useMemo } from "react";
 import { authClient } from "@/lib/auth-client";

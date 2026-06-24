@@ -1,5 +1,5 @@
 {
-  "id": "55539f3b-a3c0-4588-8419-e52b4f9d2ce6",
+  "id": "dee3c58a-0a39-4e6c-8f4f-f64d3a1ee49c",
   "prevId": "b2230d61-9717-411a-9676-f179371336f8",
   "version": "7",
   "dialect": "postgresql",
@@ -693,6 +693,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "harness": {
+          "name": "harness",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "tool_call_id": {
           "name": "tool_call_id",
           "type": "text",
@@ -1029,11 +1035,12 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
-        "chat_oauth_credentials_installation_env_key": {
-          "name": "chat_oauth_credentials_installation_env_key",
+        "chat_oauth_credentials_installation_org_env_key": {
+          "name": "chat_oauth_credentials_installation_org_env_key",
           "nullsNotDistinct": false,
           "columns": [
             "chat_installation_id",
+            "org_id",
             "env"
           ]
         }
@@ -1072,6 +1079,103 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": true
+    },
+    "leaf.chat_thread_contexts": {
+      "name": "chat_thread_contexts",
+      "schema": "leaf",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "chat_installation_id": {
+          "name": "chat_installation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "channel_id": {
+          "name": "channel_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "thread_id": {
+          "name": "thread_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "org_slug": {
+          "name": "org_slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "target_identifier": {
+          "name": "target_identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_by_provider_user_id": {
+          "name": "created_by_provider_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "chat_thread_contexts_thread_key": {
+          "name": "chat_thread_contexts_thread_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workspace_id",
+            "channel_id",
+            "thread_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
     },
     "public.checkouts": {
       "name": "checkouts",
@@ -1298,6 +1402,12 @@
       "name": "cma_vaults",
       "schema": "leaf",
       "columns": {
+        "chat_installation_id": {
+          "name": "chat_installation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
         "org_id": {
           "name": "org_id",
           "type": "text",
@@ -1333,9 +1443,10 @@
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {
-        "cma_vaults_org_id_env_pk": {
-          "name": "cma_vaults_org_id_env_pk",
+        "cma_vaults_chat_installation_id_org_id_env_pk": {
+          "name": "cma_vaults_chat_installation_id_org_id_env_pk",
           "columns": [
+            "chat_installation_id",
             "org_id",
             "env"
           ]
@@ -1406,6 +1517,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "reset_cycle_anchor": {
+          "name": "reset_cycle_anchor",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
         "next_reset_at": {
           "name": "next_reset_at",
           "type": "numeric",
@@ -1417,6 +1534,13 @@
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
+          "default": false
+        },
+        "separate_interval": {
+          "name": "separate_interval",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
           "default": false
         },
         "adjustment": {
@@ -1558,6 +1682,28 @@
           ],
           "isUnique": false,
           "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_customer_entitlements_separate_interval_reset": {
+          "name": "idx_customer_entitlements_separate_interval_reset",
+          "columns": [
+            {
+              "expression": "next_reset_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"customer_entitlements\".\"separate_interval\" = true AND \"customer_entitlements\".\"next_reset_at\" IS NOT NULL",
+          "concurrently": true,
           "method": "btree",
           "with": {}
         },
@@ -1979,6 +2125,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "billing_cycle_anchor": {
+          "name": "billing_cycle_anchor",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
         "billing_cycle_anchor_resets_at": {
           "name": "billing_cycle_anchor_resets_at",
           "type": "numeric",
@@ -2334,6 +2486,12 @@
         },
         "spend_limits": {
           "name": "spend_limits",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "usage_limits": {
+          "name": "usage_limits",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
@@ -2715,6 +2873,12 @@
         },
         "spend_limits": {
           "name": "spend_limits",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "usage_limits": {
+          "name": "usage_limits",
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
@@ -3572,6 +3736,71 @@
         }
       },
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "leaf.harness_sessions": {
+      "name": "harness_sessions",
+      "schema": "leaf",
+      "columns": {
+        "org_id": {
+          "name": "org_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "env": {
+          "name": "env",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "thread_key": {
+          "name": "thread_key",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "session_id": {
+          "name": "session_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "resume_state": {
+          "name": "resume_state",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "braintrust_parent": {
+          "name": "braintrust_parent",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {
+        "harness_sessions_org_id_env_thread_key_pk": {
+          "name": "harness_sessions_org_id_env_thread_key_pk",
+          "columns": [
+            "org_id",
+            "env",
+            "thread_key"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
@@ -5119,6 +5348,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "oauth_consent_id": {
+          "name": "oauth_consent_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "refresh_id": {
           "name": "refresh_id",
           "type": "text",
@@ -5178,6 +5413,19 @@
           "tableTo": "user",
           "columnsFrom": [
             "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "oauth_access_token_oauth_consent_id_oauth_consent_id_fk": {
+          "name": "oauth_access_token_oauth_consent_id_oauth_consent_id_fk",
+          "tableFrom": "oauth_access_token",
+          "tableTo": "oauth_consent",
+          "columnsFrom": [
+            "oauth_consent_id"
           ],
           "columnsTo": [
             "id"
@@ -5564,6 +5812,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "oauth_consent_id": {
+          "name": "oauth_consent_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "expires_at": {
           "name": "expires_at",
           "type": "timestamp with time zone",
@@ -5629,6 +5883,19 @@
           "tableTo": "user",
           "columnsFrom": [
             "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "oauth_refresh_token_oauth_consent_id_oauth_consent_id_fk": {
+          "name": "oauth_refresh_token_oauth_consent_id_oauth_consent_id_fk",
+          "tableFrom": "oauth_refresh_token",
+          "tableTo": "oauth_consent",
+          "columnsFrom": [
+            "oauth_consent_id"
           ],
           "columnsTo": [
             "id"
@@ -5754,6 +6021,13 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'{}'::jsonb"
+        },
+        "custom_buttons": {
+          "name": "custom_buttons",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
         },
         "created_by": {
           "name": "created_by",
@@ -6934,29 +7208,7 @@
           "notNull": false
         }
       },
-      "indexes": {
-        "idx_rewards_org_id_env": {
-          "name": "idx_rewards_org_id_env",
-          "columns": [
-            {
-              "expression": "org_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "env",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
+      "indexes": {},
       "foreignKeys": {
         "coupons_org_id_fkey": {
           "name": "coupons_org_id_fkey",
@@ -7464,6 +7716,97 @@
       "checkConstraints": {},
       "isRLSEnabled": true
     },
+    "leaf.slack_admin_threads": {
+      "name": "slack_admin_threads",
+      "schema": "leaf",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "chat_installation_id": {
+          "name": "chat_installation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "channel_id": {
+          "name": "channel_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "thread_id": {
+          "name": "thread_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "org_slug": {
+          "name": "org_slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "target_identifier": {
+          "name": "target_identifier",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_by_provider_user_id": {
+          "name": "created_by_provider_user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "ROUND(date_part('epoch', NOW()) * 1000)::BIGINT"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "slack_admin_threads_thread_key": {
+          "name": "slack_admin_threads_thread_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "workspace_id",
+            "channel_id",
+            "thread_id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.subscriptions": {
       "name": "subscriptions",
       "schema": "",
@@ -7561,6 +7904,176 @@
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
+    },
+    "public.usage_windows": {
+      "name": "usage_windows",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "internal_customer_id": {
+          "name": "internal_customer_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "internal_entity_id": {
+          "name": "internal_entity_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "feature_id": {
+          "name": "feature_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "internal_feature_id": {
+          "name": "internal_feature_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "anchor_customer_entitlement_id": {
+          "name": "anchor_customer_entitlement_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "window_start_at": {
+          "name": "window_start_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "window_end_at": {
+          "name": "window_end_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "usage": {
+          "name": "usage",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 0
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {
+        "idx_usage_windows_internal_customer_id": {
+          "name": "idx_usage_windows_internal_customer_id",
+          "columns": [
+            {
+              "expression": "internal_customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_usage_windows_customer_feature_scope": {
+          "name": "idx_usage_windows_customer_feature_scope",
+          "columns": [
+            {
+              "expression": "internal_customer_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "internal_feature_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "COALESCE(\"internal_entity_id\", '')",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "usage_windows_internal_customer_id_fkey": {
+          "name": "usage_windows_internal_customer_id_fkey",
+          "tableFrom": "usage_windows",
+          "tableTo": "customers",
+          "columnsFrom": [
+            "internal_customer_id"
+          ],
+          "columnsTo": [
+            "internal_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "usage_windows_internal_entity_id_fkey": {
+          "name": "usage_windows_internal_entity_id_fkey",
+          "tableFrom": "usage_windows",
+          "tableTo": "entities",
+          "columnsFrom": [
+            "internal_entity_id"
+          ],
+          "columnsTo": [
+            "internal_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "usage_windows_internal_feature_id_fkey": {
+          "name": "usage_windows_internal_feature_id_fkey",
+          "tableFrom": "usage_windows",
+          "tableTo": "features",
+          "columnsFrom": [
+            "internal_feature_id"
+          ],
+          "columnsTo": [
+            "internal_id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "usage_windows_anchor_customer_entitlement_id_fkey": {
+          "name": "usage_windows_anchor_customer_entitlement_id_fkey",
+          "tableFrom": "usage_windows",
+          "tableTo": "customer_entitlements",
+          "columnsFrom": [
+            "anchor_customer_entitlement_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "set null",
+          "onUpdate": "cascade"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": true
     },
     "public.user": {
       "name": "user",
