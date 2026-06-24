@@ -29,6 +29,8 @@ export enum AffectedResource {
 	ApiSubscriptionUpdate = "api_subscription_update",
 	EventsAggregate = "events_aggregate",
 	Event = "event",
+	Coupon = "coupon",
+	FeatureGrant = "feature_grant",
 }
 
 /**
