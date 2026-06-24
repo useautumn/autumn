@@ -250,12 +250,14 @@ export const Consent = () => {
 			// Echo the app's originally-requested protocol scopes (openid,
 			// offline_access, …) so narrowing keeps the consent set a subset of
 			// the /authorize request — better-auth rejects anything it didn't see.
-			const consentScopes = [
-				...new Set([
-					...selectedScopes,
-					...getOAuthProtocolScopes(requestedScopes),
-				]),
-			];
+			const consentScopes = clientInfo.is_atmn
+				? requestedScopes
+				: [
+						...new Set([
+							...selectedScopes,
+							...getOAuthProtocolScopes(requestedScopes),
+						]),
+					];
 			const { data, error } = await authClient.oauth2.consent({
 				accept: true,
 				scope: consentScopes.join(" "),
@@ -496,7 +498,10 @@ export const Consent = () => {
 				<div className="border border-border rounded-xl bg-card overflow-hidden">
 					<div className="px-4 py-3 border-b border-border bg-muted/30">
 						<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-							Choose permissions for {clientInfo.client_name}
+							{clientInfo.is_atmn
+								? "Permissions for"
+								: "Choose permissions for"}{" "}
+							{clientInfo.client_name}
 						</p>
 					</div>
 					<div className="px-4 py-3">
@@ -506,8 +511,8 @@ export const Consent = () => {
 							availableScopes={sessionScopes}
 							resources={selectableResources}
 							allowUnrestricted={false}
-							disabled={isSubmitting}
-							showPresets
+							disabled={isSubmitting || clientInfo.is_atmn}
+							showPresets={!clientInfo.is_atmn}
 							defaultScopes={defaultScopes}
 						/>
 						{!canAuthorize && (

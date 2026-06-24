@@ -1,6 +1,5 @@
 import {
 	expandScopes,
-	groupAndFormatScopes,
 	RESOURCE_METADATA,
 	RESOURCES,
 	type ResourceType,
@@ -202,11 +201,6 @@ export function ScopeSelector({
 		}
 	};
 
-	const summary = useMemo(() => {
-		const grouped = groupAndFormatScopes(value);
-		return { scopeCount: value.length, resourceCount: grouped.length };
-	}, [value]);
-
 	const presets = useMemo<ScopePreset[]>(() => {
 		const readOnlyScopes = resources
 			.map((resource) => `${resource}:read` as ScopeString)
@@ -304,19 +298,6 @@ export function ScopeSelector({
 							</div>
 						);
 					})}
-
-					<div className="pt-3 text-xs text-muted-foreground">
-						Granting:{" "}
-						<span className="text-foreground">
-							{summary.scopeCount} scope
-							{summary.scopeCount === 1 ? "" : "s"}
-						</span>{" "}
-						across{" "}
-						<span className="text-foreground">
-							{summary.resourceCount} resource
-							{summary.resourceCount === 1 ? "" : "s"}
-						</span>
-					</div>
 				</div>
 			)}
 		</div>
