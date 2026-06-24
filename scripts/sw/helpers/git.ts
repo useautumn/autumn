@@ -1,5 +1,6 @@
 import { basename } from "node:path";
 import { fatal, sh } from "./shell.ts";
+import { SSH_OPTS_STR } from "./ssh.ts";
 
 export function currentBranch(checkoutPath: string): string {
 	const res = sh("git", ["rev-parse", "--abbrev-ref", "HEAD"], {
@@ -49,7 +50,7 @@ export function pushBranchToBox({
 		{
 			env: {
 				...(process.env as Record<string, string>),
-				GIT_SSH_COMMAND: "ssh -o StrictHostKeyChecking=accept-new",
+				GIT_SSH_COMMAND: SSH_OPTS_STR,
 			},
 		},
 	);

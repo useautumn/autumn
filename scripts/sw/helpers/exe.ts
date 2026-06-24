@@ -5,6 +5,7 @@ import {
 	EXE_LOBBY,
 } from "../constants.ts";
 import { fatal, log, sh, shInherit } from "./shell.ts";
+import { SSH_OPTS } from "./ssh.ts";
 
 export type ExeVm = {
 	name: string;
@@ -18,7 +19,7 @@ function lobby(command: string): {
 	stderr: string;
 	code: number;
 } {
-	return sh("ssh", [EXE_LOBBY, command]);
+	return sh("ssh", [...SSH_OPTS, EXE_LOBBY, command]);
 }
 
 /** Create a VM and return its ssh destination. Names are unique per account. */
@@ -74,11 +75,11 @@ export function removeVm(name: string): void {
 
 /** Run a command on the VM, streaming output. */
 export function vmExec(sshDest: string, command: string): number {
-	return shInherit("ssh", [sshDest, command]);
+	return shInherit("ssh", [...SSH_OPTS, sshDest, command]);
 }
 
 export function vmCapture(sshDest: string, command: string): string {
-	const res = sh("ssh", [sshDest, command]);
+	const res = sh("ssh", [...SSH_OPTS, sshDest, command]);
 	if (res.code !== 0) {
 		fatal(`ssh ${sshDest} '${command}' failed: ${res.stderr || res.stdout}`);
 	}
@@ -91,6 +92,10 @@ export function scpTo(
 	localFile: string,
 	remoteFile: string,
 ): void {
-	const code = shInherit("scp", [localFile, `${sshDest}:${remoteFile}`]);
+	const code = shInherit("scp", [
+		...SSH_OPTS,
+		localFile,
+		`${sshDest}:${remoteFile}`,
+	]);
 	if (code !== 0) fatal(`scp ${localFile} -> ${sshDest}:${remoteFile} failed`);
 }
