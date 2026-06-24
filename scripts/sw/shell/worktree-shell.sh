@@ -54,6 +54,6 @@ fi
 # is asked once, not per pane.
 exec ssh -t \
   -o ControlMaster=auto -o ControlPath=/tmp/sw-cm-%C -o ControlPersist=300 \
-  -o StrictHostKeyChecking=accept-new \
+  -o StrictHostKeyChecking=accept-new -o AddKeysToAgent=yes \
   -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$host" \
   "cd '${path}' 2>/dev/null || cd; exec \"\$SHELL\" -l"

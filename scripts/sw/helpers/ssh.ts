@@ -28,6 +28,8 @@ export const SSH_OPTS = [
 	"ControlPersist=300",
 	"-o",
 	"StrictHostKeyChecking=accept-new",
+	"-o",
+	"AddKeysToAgent=yes",
 ];
 
 /** Same options as a single string, for `GIT_SSH_COMMAND`. */
