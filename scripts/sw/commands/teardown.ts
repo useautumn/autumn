@@ -1,14 +1,13 @@
 import { tmuxServerSession } from "../constants.ts";
 import { removeVm } from "../helpers/exe.ts";
-import { removeMarker } from "../helpers/marker.ts";
 import { deleteSwBranch } from "../helpers/neon.ts";
 import { getEntry, removeEntry } from "../helpers/registry.ts";
 import { log, sh, shInherit } from "../helpers/shell.ts";
 
 /**
- * Tear down a worktree's stack. Remote: delete the exe.dev VM + Neon branch +
- * marker. Local: defer to `bun dw teardown` and kill the server tmux. Defaults to
- * the current worktree (cwd) when no path is given. Leaves the git worktree itself
+ * Tear down a worktree's stack. Remote: delete the exe.dev VM + Neon branch.
+ * Local: defer to `bun dw teardown` and kill the server tmux. Defaults to the
+ * current worktree (cwd) when no path is given. Leaves the git worktree itself
  * untouched — removal stays a deliberate herdr/git action.
  */
 export async function cmdTeardown({ path }: { path?: string }): Promise<void> {
@@ -25,7 +24,6 @@ export async function cmdTeardown({ path }: { path?: string }): Promise<void> {
 	} else {
 		if (entry.vmName) removeVm(entry.vmName);
 		if (entry.neonBranchName) deleteSwBranch(entry.neonBranchName);
-		removeMarker(entry.path);
 	}
 
 	removeEntry(entry.path);

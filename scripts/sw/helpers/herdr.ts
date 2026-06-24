@@ -16,14 +16,6 @@ function parseResult<T>(stdout: string): T | null {
 	}
 }
 
-/** First pane of a workspace — the one herdr spawned with the new worktree. */
-export function firstPaneOfWorkspace(workspaceId: string): string | null {
-	const result = parseResult<{ panes?: Array<{ pane_id?: string }> }>(
-		herdr(["pane", "list", "--workspace", workspaceId]),
-	);
-	return result?.panes?.[0]?.pane_id ?? null;
-}
-
 /** Type a command + Enter into a pane's running shell (does not respawn it). */
 export function paneRun(paneId: string, command: string): void {
 	herdr(["pane", "run", paneId, command]);

@@ -8,22 +8,8 @@ export type WorktreeContext = {
 	slug: string;
 };
 
-/**
- * Contents of the `.herdr-remote` marker (TOML-ish KEY=value, parsed by both the
- * TS CLI and the POSIX wrapper shell — keep it flat and quote-free).
- */
-export type RemoteMarker = {
-	target: Exclude<Target, "local">;
-	/** ssh target, e.g. `wt3.exe.xyz` (exe) — what the wrapper ssh's into. */
-	host: string;
-	/** Absolute worktree path on the box (wrapper does `cd <path>`). */
-	path: string;
-	/** Git branch the worktree tracks. */
-	branch: string;
-};
-
 export type SwRegistryEntry = {
-	/** Local checkout path (herdr's worktree dir on the Mac) — the registry key. */
+	/** Local checkout path (the worktree on the Mac) — the registry key. */
 	path: string;
 	branch: string;
 	slug: string;
@@ -39,11 +25,3 @@ export type SwRegistryEntry = {
 };
 
 export type SwRegistry = Record<string, SwRegistryEntry>;
-
-/** Parsed `WorktreeInfo`/`WorkspaceInfo` from a herdr `worktree.created` event. */
-export type WorktreeCreatedEvent = {
-	data?: {
-		worktree?: { checkout_path?: string; branch?: string; repo_name?: string };
-		workspace?: { workspace_id?: string; active_tab_id?: string };
-	};
-};

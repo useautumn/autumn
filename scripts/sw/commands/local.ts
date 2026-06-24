@@ -24,7 +24,7 @@ export function cmdLocal({ checkout, branch, slug }: WorktreeContext): void {
 	});
 
 	const self = process.env.HERDR_PANE_ID;
-	if (self) layoutPanes(self);
+	if (self) layoutPanes(self, "claude");
 
 	const script = serverTmuxScript({
 		slug,
