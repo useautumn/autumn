@@ -27,6 +27,11 @@ import {
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { useMemo } from "react";
+import {
+	BillingControlsList,
+	billingControlsFromSource,
+	hasBillingControls,
+} from "@/components/billing-controls/BillingControlsDisplay";
 import { CollapsedBooleanItems } from "@/components/forms/shared/plan-items/CollapsedBooleanItems";
 import { OpenInStripeButton } from "@/components/v2/buttons/OpenInStripeButton";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
@@ -116,7 +121,7 @@ function SubscriptionDetailItems({
 }
 
 export function SubscriptionDetailSheet() {
-	const { customer, testClockFrozenTimeMs } = useCusQuery();
+	const { customer, features = [], testClockFrozenTimeMs } = useCusQuery();
 	const itemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
 	// Get customer product and productV2 by itemId
@@ -191,6 +196,11 @@ export function SubscriptionDetailSheet() {
 	};
 
 	const kindConfig = getPlanKindConfig(getCusProductKind(cusProduct));
+	const planBillingControls = billingControlsFromSource(cusProduct);
+	const featureNameById = useMemo(
+		() => new Map(features.map((feature) => [feature.id, feature.name])),
+		[features],
+	);
 
 	return (
 		<div className="flex flex-col h-full overflow-y-auto">
@@ -211,6 +221,18 @@ export function SubscriptionDetailSheet() {
 					prepaidDisplayQuantities={prepaidDisplayQuantities}
 					adminIds={adminIds}
 				/>
+			)}
+
+			{hasBillingControls(planBillingControls) && (
+				<SheetSection withSeparator>
+					<div className="mb-2 text-sm font-medium text-foreground">
+						Plan billing controls
+					</div>
+					<BillingControlsList
+						billingControls={planBillingControls}
+						featureNameById={featureNameById}
+					/>
+				</SheetSection>
 			)}
 
 			<SheetSection withSeparator={true}>

@@ -3,6 +3,10 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import { FlaskIcon, PencilIcon } from "@phosphor-icons/react";
 import type { Row, Table } from "@tanstack/react-table";
 import { ArrowRightLeft, Delete, RotateCcw } from "lucide-react";
+import {
+	BillingControlsCountPill,
+	billingControlsFromSource,
+} from "@/components/billing-controls/BillingControlsDisplay";
 import { TableDropdownMenuCell } from "@/components/general/table/table-dropdown-menu-cell";
 import {
 	hiddenSkeleton,
@@ -58,6 +62,16 @@ export const CustomerProductsColumns = [
 		cell: ({ row }: { row: Row<FullCusProduct> }) => {
 			return <CustomerProductPrice cusProduct={row.original} />;
 		},
+	},
+	{
+		header: "Controls",
+		accessorKey: "controls",
+		size: 90,
+		cell: ({ row }: { row: Row<FullCusProduct> }) => (
+			<BillingControlsCountPill
+				billingControls={billingControlsFromSource(row.original)}
+			/>
+		),
 	},
 	{
 		header: "Status",

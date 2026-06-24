@@ -9,6 +9,7 @@ import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditor
 import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
 import { AdditionalOptions } from "./edit-plan-details/AdditionalOptions";
 import { MainDetailsSection } from "./edit-plan-details/MainDetailsSection";
+import { PlanBillingControlsSection } from "./edit-plan-details/PlanBillingControlsSection";
 
 export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 	const { product, setProduct } = useProduct();
@@ -73,6 +74,7 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 									})
 								}
 							/>
+							<PlanBillingControlsSection />
 						</div>
 					</SheetAccordionItem>
 				</SheetAccordion>
