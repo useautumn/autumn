@@ -25,10 +25,23 @@ export function paneRename(paneId: string, name: string): void {
 	herdr(["pane", "rename", paneId, name]);
 }
 
+/** Swap two panes' positions in the layout (processes stay with their pane id). */
+export function paneSwap(sourcePaneId: string, targetPaneId: string): void {
+	herdr([
+		"pane",
+		"swap",
+		"--source-pane",
+		sourcePaneId,
+		"--target-pane",
+		targetPaneId,
+	]);
+}
+
+// herdr `pane split` only accepts `right` or `down`.
 /** Split a pane and return the new pane id, or null on failure. */
 export function paneSplit(
 	paneId: string,
-	opts: { direction: "right" | "down" | "left" | "up"; ratio?: number },
+	opts: { direction: "right" | "down"; ratio?: number },
 ): string | null {
 	const args = ["pane", "split", paneId, "--direction", opts.direction];
 	if (opts.ratio !== undefined) args.push("--ratio", String(opts.ratio));
