@@ -294,7 +294,7 @@ export function useHasPlanChanges() {
 
 		if (!initialProduct) return false;
 
-		const { itemsSame, freeTrialsSame } = productsAreSame({
+		const { itemsSame, freeTrialsSame, billingControlsSame } = productsAreSame({
 			newProductV2: product as unknown as ProductV2,
 			curProductV2: initialProduct as unknown as ProductV2,
 			features,
@@ -302,6 +302,6 @@ export function useHasPlanChanges() {
 
 		const versionsSame = product.version === initialProduct.version;
 
-		return !(itemsSame && freeTrialsSame && versionsSame);
+		return !(itemsSame && freeTrialsSame && billingControlsSame && versionsSame);
 	}, [context?.itemDraft, product, initialProduct, features]);
 }
