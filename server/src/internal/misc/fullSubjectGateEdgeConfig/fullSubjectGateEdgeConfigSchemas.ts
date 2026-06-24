@@ -13,6 +13,9 @@ export const FullSubjectGateEdgeConfigSchema = z.object({
 	// (org,env) before rejecting new ones with 429 — bounds memory + wait time.
 	per_customer_pending_max: z.number().int().min(1).max(100_000).default(500),
 	per_org_pending_max: z.number().int().min(1).max(100_000).default(1_000),
+	// Caps above are cluster-wide targets; each process enforces
+	// target / fleet_process_count. Default 1 = per-process (no-op).
+	fleet_process_count: z.number().int().min(1).max(100_000).default(1),
 });
 
 export type FullSubjectGateEdgeConfig = z.infer<
