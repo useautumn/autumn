@@ -20,9 +20,12 @@ export function serverTmuxScript({
 	runCmd: string;
 }): string {
 	const session = tmuxServerSession(slug);
+	// Prepend ~/.bun/bin to PATH inside the tmux command — a non-interactive ssh
+	// session doesn't source the profile, so `bun` isn't found otherwise and the
+	// session would die instantly.
 	return [
 		`if ! tmux has-session -t ${session} 2>/dev/null; then`,
-		`  tmux new-session -d -s ${session} -c '${dir}' 'exec ${runCmd}';`,
+		`  tmux new-session -d -s ${session} -c '${dir}' 'export PATH="$HOME/.bun/bin:$PATH"; exec ${runCmd}';`,
 		`  tmux set-option -t ${session} status off;`,
 		`fi;`,
 		`exec tmux attach -t ${session}`,

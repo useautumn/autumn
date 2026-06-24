@@ -16,7 +16,7 @@ import { writeMarker } from "../helpers/marker.ts";
 import { createSwBranch } from "../helpers/neon.ts";
 import { upsertEntry } from "../helpers/registry.ts";
 import { fatal, log } from "../helpers/shell.ts";
-import { sshExecArgs } from "../helpers/ssh.ts";
+import { ensureSshKeyLoaded, sshExecArgs } from "../helpers/ssh.ts";
 import { serverTmuxScript } from "../helpers/tmux.ts";
 import type { Target, WorktreeContext } from "../types.ts";
 
@@ -36,6 +36,10 @@ export async function cmdRemote({
 	if (target !== "exe") {
 		fatal(`target '${target}' is not implemented yet (exe.dev only)`);
 	}
+
+	// Load the key into the agent up front → one passphrase prompt for the whole
+	// run AND for any pane opened later (the wrapper reuses the agent).
+	ensureSshKeyLoaded();
 
 	const neon = createSwBranch(slug);
 	const vmName = `sw-${slug}`.slice(0, 40);

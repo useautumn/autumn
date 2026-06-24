@@ -24,9 +24,14 @@ async function main(): Promise<void> {
 		case "list":
 			cmdList();
 			break;
-		case "teardown":
-			await cmdTeardown({ path: process.argv[3] });
+		case "teardown": {
+			const arg = process.argv[3];
+			await cmdTeardown({
+				path: arg && !arg.startsWith("--") ? arg : undefined,
+				orphans: process.argv.includes("--orphans"),
+			});
 			break;
+		}
 		default:
 			fatal(`unknown subcommand: ${sub}\n${USAGE}`);
 	}

@@ -1,6 +1,13 @@
 import { NEON_PROJECT_ID, NEON_TEMPLATE_BRANCH } from "../../dw/constants.ts";
-import { connectionString } from "../../dw/helpers/neon.ts";
+import { connectionString, listBranches } from "../../dw/helpers/neon.ts";
 import { fatal, log, sh } from "./shell.ts";
+
+/** Names of all sw-managed Neon branches (for orphan cleanup). */
+export function listSwBranchNames(): string[] {
+	return listBranches()
+		.filter((branch) => branch.name.startsWith("sw-"))
+		.map((branch) => branch.name);
+}
 
 export type SwBranch = { id: string; name: string; databaseUrl: string };
 
