@@ -5,6 +5,7 @@ import { CheckboxField } from "@/components/general/form/fields/checkbox-field";
 import { NumberField } from "@/components/general/form/fields/number-field";
 import { QuantityField } from "@/components/general/form/fields/quantity-field";
 import { SelectField } from "@/components/general/form/fields/select-field";
+import { SwitchField } from "@/components/general/form/fields/switch-field";
 import { TextField } from "@/components/general/form/fields/text-field";
 import { fieldContext, formContext } from "./form-context";
 
@@ -18,6 +19,7 @@ export const { useAppForm } = createFormHook({
 		CheckboxField,
 		NumberField,
 		AreaCheckboxField,
+		SwitchField,
 	},
 	formComponents: {
 		SubmitButton,

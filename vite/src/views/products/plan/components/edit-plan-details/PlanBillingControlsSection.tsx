@@ -140,30 +140,6 @@ function FeatureField({
 	);
 }
 
-function FormSwitchRow({
-	form,
-	name,
-	label,
-}: {
-	form: UsePlanBillingControlForm;
-	name: "has_purchase_limit" | "invoice_mode";
-	label: string;
-}) {
-	return (
-		<form.Field name={name}>
-			{(field) => (
-				<div className="flex items-center justify-between">
-					<FormLabel className="mb-0">{label}</FormLabel>
-					<Switch
-						checked={field.state.value}
-						onCheckedChange={field.handleChange}
-					/>
-				</div>
-			)}
-		</form.Field>
-	);
-}
-
 function AutoTopupFields({ form }: { form: UsePlanBillingControlForm }) {
 	return (
 		<>
@@ -175,11 +151,9 @@ function AutoTopupFields({ form }: { form: UsePlanBillingControlForm }) {
 					{(field) => <field.NumberField label="Quantity" min={1} />}
 				</form.AppField>
 			</div>
-			<FormSwitchRow
-				form={form}
-				name="has_purchase_limit"
-				label="Purchase limit"
-			/>
+			<form.AppField name="has_purchase_limit">
+				{(field) => <field.SwitchField label="Purchase limit" />}
+			</form.AppField>
 			<form.Subscribe selector={(state) => state.values.has_purchase_limit}>
 				{(hasPurchaseLimit) =>
 					hasPurchaseLimit ? (
@@ -203,7 +177,9 @@ function AutoTopupFields({ form }: { form: UsePlanBillingControlForm }) {
 					) : null
 				}
 			</form.Subscribe>
-			<FormSwitchRow form={form} name="invoice_mode" label="Invoice mode" />
+			<form.AppField name="invoice_mode">
+				{(field) => <field.SwitchField label="Invoice mode" />}
+			</form.AppField>
 		</>
 	);
 }
