@@ -1,8 +1,19 @@
 import type { BillingControlKey } from "../../models/cusModels/billingControls/customerBillingControls.js";
+import { pickStricterOverageAllowed } from "../../models/cusModels/billingControls/overageAllowed.js";
+import { pickStricterSpendLimit } from "../../models/cusModels/billingControls/spendLimit.js";
+import { pickStricterUsageLimit } from "../../models/cusModels/billingControls/usageLimit.js";
 import type { FullCustomer } from "../../models/cusModels/fullCusModel.js";
 import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubjectModel.js";
 import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
+
+type Comparator = (left: never, right: never) => unknown;
+
+const MOST_RESTRICTIVE_BY_KEY: Partial<Record<BillingControlKey, Comparator>> = {
+	usage_limits: pickStricterUsageLimit as Comparator,
+	spend_limits: pickStricterSpendLimit as Comparator,
+	overage_allowed: pickStricterOverageAllowed as Comparator,
+};
 
 const DEFAULT_PLAN_CONTROL_STATUSES = [
 	CusProductStatus.Active,
@@ -59,6 +70,11 @@ export const findPlanBillingControl = <
 	now?: number;
 	inStatuses?: CusProductStatus[];
 }): TControl | undefined => {
+	const mostRestrictive = MOST_RESTRICTIVE_BY_KEY[controlKey] as
+		| ((left: TControl, right: TControl) => TControl)
+		| undefined;
+
+	let winner: TControl | undefined;
 	for (const customerProduct of getPlanBillingControlProducts({
 		customerProducts,
 		now,
@@ -66,8 +82,11 @@ export const findPlanBillingControl = <
 	})) {
 		const controls = customerProduct[controlKey] as TControl[] | null | undefined;
 		const control = controls?.find(matches);
-		if (control) return control;
+		if (!control) continue;
+		if (!mostRestrictive) return control;
+		winner = winner ? mostRestrictive(winner, control) : control;
 	}
+	return winner;
 };
 
 export const resolveBillingControl = <

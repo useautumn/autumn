@@ -32,3 +32,11 @@ export const DbUsageLimitSchema = z.object({
 });
 
 export type DbUsageLimit = z.infer<typeof DbUsageLimitSchema>;
+
+export const pickStricterUsageLimit = (
+	left: DbUsageLimit,
+	right: DbUsageLimit,
+): DbUsageLimit => {
+	if (left.enabled !== right.enabled) return left.enabled ? left : right;
+	return right.limit < left.limit ? right : left;
+};

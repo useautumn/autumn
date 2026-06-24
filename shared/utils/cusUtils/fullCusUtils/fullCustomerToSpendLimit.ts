@@ -1,4 +1,4 @@
-import type { DbSpendLimit } from "@models/cusModels/billingControls/customerBillingControls.js";
+import type { DbSpendLimit } from "@models/cusModels/billingControls/spendLimit.js";
 import type { FullCustomer } from "@models/cusModels/fullCusModel.js";
 import {
 	fullCustomerToPlanProducts,
