@@ -25,6 +25,9 @@ const CONFIG_HOME = process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config");
  * source worktree can never dangle herdr's global default_shell. */
 export const STABLE_DIR = join(CONFIG_HOME, "atmn-sw");
 export const STABLE_WRAPPER = join(STABLE_DIR, "worktree-shell.sh");
+/** sw-managed ssh-agent socket — a fixed path every sw process + pane shares, so a
+ * herdr pane that lacks a reachable agent still authenticates once via Keychain. */
+export const SW_AGENT_SOCK = join(STABLE_DIR, "agent.sock");
 export const herdrConfigPath = (): string =>
 	join(CONFIG_HOME, "herdr", "config.toml");
 

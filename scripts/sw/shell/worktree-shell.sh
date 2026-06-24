@@ -49,9 +49,12 @@ if [ -z "${host:-}" ] || [ -z "${path:-}" ]; then
   exec_local_shell
 fi
 
-# herdr panes often don't inherit SSH_AUTH_SOCK → recover the macOS agent socket
-# so ssh uses the agent (no passphrase prompt) instead of asking every time.
-if [ -z "${SSH_AUTH_SOCK:-}" ] && command -v launchctl >/dev/null 2>&1; then
+# Use the sw-managed agent (started by `bun sw`) so ssh authenticates with no
+# prompt; fall back to the macOS launchd agent if it's reachable.
+SW_AGENT_SOCK="${XDG_CONFIG_HOME:-$HOME/.config}/atmn-sw/agent.sock"
+if [ -S "$SW_AGENT_SOCK" ]; then
+  export SSH_AUTH_SOCK="$SW_AGENT_SOCK"
+elif [ -z "${SSH_AUTH_SOCK:-}" ] && command -v launchctl >/dev/null 2>&1; then
   SSH_AUTH_SOCK="$(launchctl getenv SSH_AUTH_SOCK 2>/dev/null)"
   [ -n "$SSH_AUTH_SOCK" ] && export SSH_AUTH_SOCK
 fi

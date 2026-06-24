@@ -1,19 +1,32 @@
+import { mkdirSync, rmSync } from "node:fs";
+import { dirname } from "node:path";
+import { SW_AGENT_SOCK } from "../constants.ts";
 import { sh, shInherit } from "./shell.ts";
 
+/** ssh-add -l exit codes: 0 = has keys, 1 = agent up but empty, 2 = no agent. */
+function agentReachable(sock: string): boolean {
+	return (
+		sh("ssh-add", ["-l"], {
+			env: { ...(process.env as Record<string, string>), SSH_AUTH_SOCK: sock },
+		}).code !== 2
+	);
+}
+
 /**
- * Ensure the ssh-agent holds a key, so EVERY ssh (provisioning, branch push, and
- * every pane opened later via the wrapper) authenticates without a passphrase —
- * you enter it at most once. On macOS the passphrase is stored in the Keychain,
- * so even that one prompt only ever happens the first time (survives reboots).
+ * Point ssh at a sw-managed agent (fixed socket) and load the key once, so EVERY
+ * ssh — provisioning, branch push, and every pane opened later via the wrapper —
+ * authenticates without a passphrase. herdr panes often have no reachable agent of
+ * their own, so we run our own persistent one. On macOS the passphrase is stored
+ * in the Keychain, so the single prompt only ever happens the first time.
  */
 export function ensureSshKeyLoaded(): void {
-	// herdr panes often don't inherit SSH_AUTH_SOCK, leaving ssh with no agent (so
-	// it prompts every time). Recover the macOS launchd agent's socket.
-	if (!process.env.SSH_AUTH_SOCK && process.platform === "darwin") {
-		const sock = sh("launchctl", ["getenv", "SSH_AUTH_SOCK"]).stdout.trim();
-		if (sock) process.env.SSH_AUTH_SOCK = sock;
+	if (!agentReachable(SW_AGENT_SOCK)) {
+		rmSync(SW_AGENT_SOCK, { force: true });
+		mkdirSync(dirname(SW_AGENT_SOCK), { recursive: true });
+		sh("ssh-agent", ["-a", SW_AGENT_SOCK]); // starts a detached agent on the socket
 	}
-	if (sh("ssh-add", ["-l"]).code === 0) return; // agent already has an identity
+	process.env.SSH_AUTH_SOCK = SW_AGENT_SOCK;
+	if (sh("ssh-add", ["-l"]).code === 0) return; // already holds a key
 	shInherit(
 		"ssh-add",
 		process.platform === "darwin" ? ["--apple-use-keychain"] : [],
