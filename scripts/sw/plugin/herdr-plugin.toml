@@ -1,0 +1,13 @@
+id = "autumn.sw"
+name = "Autumn Sandbox Worktrees"
+version = "0.1.0"
+min_herdr_version = "0.7.0"
+description = "When a new @autumn worktree is created, launch the sandbox-worktree picker (local / exe.dev / modal) in its first pane."
+platforms = ["macos", "linux"]
+
+# Fires post-creation; the first pane already exists as a local shell (the picker
+# runs locally), so the handler injects the picker into it. Subsequent panes are
+# handled by the wrapper shell + .herdr-remote marker, not by this plugin.
+[[events]]
+on = "worktree.created"
+command = ["bun", "handler.ts"]
