@@ -31,21 +31,21 @@ export function InvoiceSettingsSection({
 }) {
 	const { templates } = useInvoiceTemplatesQuery();
 	const hasTemplates = templates.length > 0;
-	const options: Pick<InvoiceTemplate, "id" | "name">[] = [
-		{ id: NO_TEMPLATE_VALUE, name: "None" },
-		...templates,
-	];
+	const options: Pick<InvoiceTemplate, "id" | "name">[] = hasTemplates
+		? [{ id: NO_TEMPLATE_VALUE, name: "None" }, ...templates]
+		: [];
 	return (
 		<SheetAccordion>
-			<SheetAccordionItem
-				value="invoice-more-settings"
-				title="More settings"
-				className={cn(disabled && "opacity-50 pointer-events-none")}
-			>
-				<div className="space-y-4">
+			<SheetAccordionItem value="invoice-more-settings" title="More settings">
+				<div
+					className={cn(
+						"space-y-4",
+						disabled && "opacity-50 pointer-events-none",
+					)}
+				>
 					{hasTemplates && (
 						<div className="flex flex-col gap-1.5">
-							<span className="text-form-label block mb-1">Template</span>
+							<span className="text-form-label">Template</span>
 							<SearchableSelect
 								value={value.templateId ?? NO_TEMPLATE_VALUE}
 								onValueChange={(next) => {
