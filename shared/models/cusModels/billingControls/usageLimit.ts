@@ -33,10 +33,29 @@ export const DbUsageLimitSchema = z.object({
 
 export type DbUsageLimit = z.infer<typeof DbUsageLimitSchema>;
 
+const USAGE_LIMIT_INTERVAL_DAYS: Record<
+	(typeof USAGE_LIMIT_INTERVALS)[number],
+	number
+> = {
+	[ResetInterval.Day]: 1,
+	[ResetInterval.Week]: 7,
+	[ResetInterval.Month]: 30,
+	[ResetInterval.Year]: 365,
+};
+
+// limit per day — comparable across intervals (100/day = 100, 2000/month ≈ 66.7).
+const usageLimitPerDay = (usageLimit: DbUsageLimit) =>
+	usageLimit.limit / USAGE_LIMIT_INTERVAL_DAYS[usageLimit.interval];
+
+// Enabled beats disabled. Same interval: lower limit wins. Different intervals:
+// lower per-day rate wins (the resolver enforces a single window per feature).
 export const pickStricterUsageLimit = (
 	left: DbUsageLimit,
 	right: DbUsageLimit,
 ): DbUsageLimit => {
 	if (left.enabled !== right.enabled) return left.enabled ? left : right;
-	return right.limit < left.limit ? right : left;
+	if (left.interval === right.interval) {
+		return right.limit < left.limit ? right : left;
+	}
+	return usageLimitPerDay(right) < usageLimitPerDay(left) ? right : left;
 };

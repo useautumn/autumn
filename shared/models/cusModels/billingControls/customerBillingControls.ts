@@ -7,11 +7,20 @@ import {
 import {
 	type DbOverageAllowed,
 	DbOverageAllowedSchema,
+	pickStricterOverageAllowed,
 } from "./overageAllowed.js";
 import { PurchaseLimitIntervalEnum } from "./purchaseLimitInterval.js";
-import { type DbSpendLimit, DbSpendLimitSchema } from "./spendLimit.js";
+import {
+	type DbSpendLimit,
+	DbSpendLimitSchema,
+	pickStricterSpendLimit,
+} from "./spendLimit.js";
 import { type DbUsageAlert, DbUsageAlertSchema } from "./usageAlert.js";
-import { type DbUsageLimit, DbUsageLimitSchema } from "./usageLimit.js";
+import {
+	type DbUsageLimit,
+	DbUsageLimitSchema,
+	pickStricterUsageLimit,
+} from "./usageLimit.js";
 
 export const BILLING_CONTROL_KEYS = [
 	"auto_topups",
@@ -262,4 +271,7 @@ export {
 	DbUsageAlertSchema,
 	DbUsageLimitSchema,
 	EntityBillingControlsSchema,
+	pickStricterOverageAllowed,
+	pickStricterSpendLimit,
+	pickStricterUsageLimit,
 };
