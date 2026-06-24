@@ -14,6 +14,12 @@ import {
 	DropdownMenuItem,
 	DropdownMenuTrigger,
 	FormLabel,
+	Input,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
 	Switch,
 } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
@@ -24,7 +30,7 @@ import {
 	BillingControlsList,
 	hasBillingControls,
 } from "@/components/billing-controls/BillingControlsDisplay";
-import type { SelectFieldOption } from "@/components/general/form/fields/select-field";
+import { FieldInfo } from "@/components/general/form/field-info";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
@@ -49,21 +55,23 @@ const CONTROL_LABELS: Record<BillingControlKey, string> = {
 	overage_allowed: "Overage allowed",
 };
 
-const PURCHASE_INTERVAL_OPTIONS: SelectFieldOption[] = [
+type SelectOption = { value: string; label: string };
+
+const PURCHASE_INTERVAL_OPTIONS: SelectOption[] = [
 	{ value: PurchaseLimitInterval.Hour, label: "Hour" },
 	{ value: PurchaseLimitInterval.Day, label: "Day" },
 	{ value: PurchaseLimitInterval.Week, label: "Week" },
 	{ value: PurchaseLimitInterval.Month, label: "Month" },
 ];
 
-const USAGE_INTERVAL_OPTIONS: SelectFieldOption[] = [
+const USAGE_INTERVAL_OPTIONS: SelectOption[] = [
 	{ value: ResetInterval.Day, label: "Day" },
 	{ value: ResetInterval.Week, label: "Week" },
 	{ value: ResetInterval.Month, label: "Month" },
 	{ value: ResetInterval.Year, label: "Year" },
 ];
 
-const THRESHOLD_TYPE_OPTIONS: SelectFieldOption[] = [
+const THRESHOLD_TYPE_OPTIONS: SelectOption[] = [
 	{ value: "usage", label: "Absolute usage" },
 	{ value: "usage_percentage", label: "% used of allowance" },
 	{ value: "remaining", label: "Absolute remaining" },
@@ -140,107 +148,252 @@ function FeatureField({
 	);
 }
 
+function NumberFieldRow({
+	form,
+	name,
+	label,
+	placeholder,
+	parse,
+}: {
+	form: UsePlanBillingControlForm;
+	name:
+		| "threshold"
+		| "quantity"
+		| "purchase_limit_limit"
+		| "purchase_limit_interval_count"
+		| "overage_limit"
+		| "usage_limit"
+		| "alert_threshold";
+	label: string;
+	placeholder?: string;
+	parse: "float" | "int";
+}) {
+	return (
+		<form.Field name={name}>
+			{(field) => (
+				<div>
+					<FormLabel>{label}</FormLabel>
+					<Input
+						type="number"
+						placeholder={placeholder}
+						value={field.state.value ?? ""}
+						onChange={(e) => {
+							const v = e.target.value;
+							if (v === "") {
+								field.handleChange(null);
+								return;
+							}
+							field.handleChange(
+								parse === "float"
+									? Number.parseFloat(v)
+									: Number.parseInt(v, 10),
+							);
+						}}
+					/>
+					<FieldInfo field={field} />
+				</div>
+			)}
+		</form.Field>
+	);
+}
+
+function SelectFieldRow({
+	form,
+	name,
+	label,
+	placeholder,
+	options,
+}: {
+	form: UsePlanBillingControlForm;
+	name: "purchase_limit_interval" | "usage_interval" | "threshold_type";
+	label: string;
+	placeholder: string;
+	options: SelectOption[];
+}) {
+	return (
+		<form.Field name={name}>
+			{(field) => (
+				<div>
+					<FormLabel>{label}</FormLabel>
+					<Select
+						value={field.state.value}
+						onValueChange={(value) =>
+							field.handleChange(value as typeof field.state.value)
+						}
+					>
+						<SelectTrigger className="w-full">
+							<SelectValue placeholder={placeholder} />
+						</SelectTrigger>
+						<SelectContent>
+							{options.map((option) => (
+								<SelectItem key={option.value} value={option.value}>
+									{option.label}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+					<FieldInfo field={field} />
+				</div>
+			)}
+		</form.Field>
+	);
+}
+
 function AutoTopupFields({ form }: { form: UsePlanBillingControlForm }) {
 	return (
-		<>
+		<div className="space-y-4">
 			<div className="grid grid-cols-2 gap-3">
-				<form.AppField name="threshold">
-					{(field) => <field.NumberField label="Threshold" min={0} float />}
-				</form.AppField>
-				<form.AppField name="quantity">
-					{(field) => <field.NumberField label="Quantity" min={1} />}
-				</form.AppField>
+				<NumberFieldRow
+					form={form}
+					name="threshold"
+					label="Threshold"
+					placeholder="Balance that triggers a top-up"
+					parse="float"
+				/>
+				<NumberFieldRow
+					form={form}
+					name="quantity"
+					label="Quantity"
+					placeholder="Amount added per top-up"
+					parse="int"
+				/>
 			</div>
-			<form.AppField name="has_purchase_limit">
-				{(field) => <field.SwitchField label="Purchase limit" />}
-			</form.AppField>
-			<form.Subscribe selector={(state) => state.values.has_purchase_limit}>
-				{(hasPurchaseLimit) =>
-					hasPurchaseLimit ? (
-						<div className="grid grid-cols-3 gap-3">
-							<form.AppField name="purchase_limit_limit">
-								{(field) => <field.NumberField label="Limit" min={1} />}
-							</form.AppField>
-							<form.AppField name="purchase_limit_interval_count">
-								{(field) => <field.NumberField label="Every" min={1} />}
-							</form.AppField>
-							<form.AppField name="purchase_limit_interval">
-								{(field) => (
-									<field.SelectField
-										label="Interval"
-										placeholder="Interval"
-										options={PURCHASE_INTERVAL_OPTIONS}
-									/>
-								)}
-							</form.AppField>
+
+			<div className="flex flex-col gap-3">
+				<form.Field name="has_purchase_limit">
+					{(field) => (
+						<div className="flex items-center justify-between">
+							<FormLabel className="mb-0">Purchase limit</FormLabel>
+							<Switch
+								checked={field.state.value}
+								onCheckedChange={field.handleChange}
+							/>
 						</div>
-					) : null
-				}
-			</form.Subscribe>
-			<form.AppField name="invoice_mode">
-				{(field) => <field.SwitchField label="Invoice mode" />}
-			</form.AppField>
-		</>
+					)}
+				</form.Field>
+				<form.Subscribe selector={(state) => state.values.has_purchase_limit}>
+					{(hasPurchaseLimit) =>
+						hasPurchaseLimit ? (
+							<div className="grid grid-cols-3 gap-3">
+								<NumberFieldRow
+									form={form}
+									name="purchase_limit_limit"
+									label="Limit"
+									placeholder="Max top-ups"
+									parse="int"
+								/>
+								<NumberFieldRow
+									form={form}
+									name="purchase_limit_interval_count"
+									label="Every"
+									parse="int"
+								/>
+								<SelectFieldRow
+									form={form}
+									name="purchase_limit_interval"
+									label="Interval"
+									placeholder="Interval"
+									options={PURCHASE_INTERVAL_OPTIONS}
+								/>
+							</div>
+						) : null
+					}
+				</form.Subscribe>
+			</div>
+
+			<form.Field name="invoice_mode">
+				{(field) => (
+					<div className="flex items-center justify-between">
+						<FormLabel className="mb-0">Invoice mode</FormLabel>
+						<Switch
+							checked={field.state.value}
+							onCheckedChange={field.handleChange}
+						/>
+					</div>
+				)}
+			</form.Field>
+		</div>
 	);
 }
 
 function SpendLimitFields({ form }: { form: UsePlanBillingControlForm }) {
 	return (
-		<form.AppField name="overage_limit">
-			{(field) => (
-				<field.NumberField
-					label="Overage limit"
-					placeholder="Optional — leave empty for no limit"
-					min={0}
-					float
-				/>
-			)}
-		</form.AppField>
+		<div className="flex flex-col gap-3">
+			<NumberFieldRow
+				form={form}
+				name="overage_limit"
+				label="Overage limit"
+				placeholder="Optional — leave empty for no limit"
+				parse="float"
+			/>
+		</div>
 	);
 }
 
 function UsageLimitFields({ form }: { form: UsePlanBillingControlForm }) {
 	return (
 		<div className="grid grid-cols-2 gap-3">
-			<form.AppField name="usage_limit">
-				{(field) => <field.NumberField label="Limit" min={0} float />}
-			</form.AppField>
-			<form.AppField name="usage_interval">
-				{(field) => (
-					<field.SelectField
-						label="Interval"
-						placeholder="Interval"
-						options={USAGE_INTERVAL_OPTIONS}
-					/>
-				)}
-			</form.AppField>
+			<NumberFieldRow
+				form={form}
+				name="usage_limit"
+				label="Limit"
+				placeholder="Max usage per interval"
+				parse="float"
+			/>
+			<SelectFieldRow
+				form={form}
+				name="usage_interval"
+				label="Interval"
+				placeholder="Interval"
+				options={USAGE_INTERVAL_OPTIONS}
+			/>
 		</div>
 	);
 }
 
 function UsageAlertFields({ form }: { form: UsePlanBillingControlForm }) {
 	return (
-		<>
-			<form.AppField name="alert_name">
+		<div className="flex flex-col gap-3">
+			<form.Field name="alert_name">
 				{(field) => (
-					<field.TextField label="Name" type="text" placeholder="Optional" />
+					<div>
+						<FormLabel>Name</FormLabel>
+						<Input
+							type="text"
+							placeholder="Optional label for this alert"
+							value={field.state.value ?? ""}
+							onChange={(e) => field.handleChange(e.target.value)}
+						/>
+						<FieldInfo field={field} />
+					</div>
 				)}
-			</form.AppField>
+			</form.Field>
 			<div className="grid grid-cols-2 gap-3">
-				<form.AppField name="alert_threshold">
-					{(field) => <field.NumberField label="Threshold" min={0} float />}
-				</form.AppField>
-				<form.AppField name="threshold_type">
-					{(field) => (
-						<field.SelectField
-							label="Type"
-							placeholder="Type"
-							options={THRESHOLD_TYPE_OPTIONS}
+				<form.Subscribe selector={(state) => state.values.threshold_type}>
+					{(thresholdType) => (
+						<NumberFieldRow
+							form={form}
+							name="alert_threshold"
+							label="Threshold"
+							placeholder={
+								thresholdType === "usage_percentage" ||
+								thresholdType === "remaining_percentage"
+									? "eg. 80"
+									: "eg. 1000"
+							}
+							parse="float"
 						/>
 					)}
-				</form.AppField>
+				</form.Subscribe>
+				<SelectFieldRow
+					form={form}
+					name="threshold_type"
+					label="Type"
+					placeholder="Type"
+					options={THRESHOLD_TYPE_OPTIONS}
+				/>
 			</div>
-		</>
+		</div>
 	);
 }
 
@@ -312,7 +465,7 @@ function PlanBillingControlForm({
 		controlKey === "spend_limits" || controlKey === "usage_alerts";
 
 	return (
-		<div className="space-y-3 rounded-lg border bg-background p-3">
+		<div className="space-y-4 rounded-lg border bg-background p-3">
 			<div className="flex items-center justify-between gap-3">
 				<div className="font-medium text-sm">
 					{item ? "Edit" : "Add"} {CONTROL_LABELS[controlKey].toLowerCase()}
