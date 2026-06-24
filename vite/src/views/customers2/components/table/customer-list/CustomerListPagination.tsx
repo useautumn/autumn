@@ -1,7 +1,7 @@
 import {
 	CursorPagination,
 	PageSizeSelector,
-} from "@/components/general/table/CursorPagination";
+} from "@/components/general/table";
 import {
 	CUSTOMER_LIST_PAGE_SIZE_OPTIONS,
 	DEFAULT_CUSTOMER_LIST_PAGE_SIZE,

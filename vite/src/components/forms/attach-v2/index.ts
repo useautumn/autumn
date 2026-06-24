@@ -14,14 +14,13 @@ export * from "./components/AttachUpdatesSection";
 
 // Context & Provider
 export * from "./context/AttachFormProvider";
-
+export * from "./hooks/useAttachBillingOptionsState";
 // Hooks
 export * from "./hooks/useAttachForm";
 export * from "./hooks/useAttachMutation";
 export * from "./hooks/useAttachPreview";
 export * from "./hooks/useAttachRequestBody";
 export * from "./hooks/useGrantFree";
-export * from "./hooks/useAttachBillingOptionsState";
 export * from "./hooks/usePreviewDiff";
 
 // Utils

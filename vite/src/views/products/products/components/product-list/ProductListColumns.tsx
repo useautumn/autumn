@@ -1,8 +1,8 @@
 import type { ProductV2 } from "@autumn/shared";
+import { MiniCopyButton } from "@autumn/ui";
 import type { Row } from "@tanstack/react-table";
 import { AdminHover } from "@/components/general/AdminHover";
 import { PlanTypeBadges } from "@/components/v2/badges/PlanTypeBadges";
-import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { getPlanHoverTexts } from "@/views/admin/adminUtils";
 import { ProductCountsTooltip } from "@/views/products/products/product-row-toolbar/ProductCountsTooltip";
@@ -59,7 +59,11 @@ export const createProductListColumns = ({
 					accessorKey: "group",
 					enableSorting: false,
 					cell: ({ row }: { row: Row<ProductV2> }) => {
-						return <div className="text-muted-foreground">{row.original.group || ""}</div>;
+						return (
+							<div className="text-muted-foreground">
+								{row.original.group || ""}
+							</div>
+						);
 					},
 				},
 			]

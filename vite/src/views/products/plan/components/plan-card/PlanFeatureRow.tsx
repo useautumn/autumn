@@ -2,10 +2,10 @@
 /** biome-ignore-all lint/a11y/useSemanticElements: needed */
 import type { ProductItem } from "@autumn/shared";
 import { getProductItemDisplay } from "@autumn/shared";
+import { IconButton } from "@autumn/ui";
 import { TrashIcon } from "@phosphor-icons/react";
 import { useEffect, useRef, useState } from "react";
 import { AdminHover } from "@/components/general/AdminHover";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	useProduct,
 	useSheet,

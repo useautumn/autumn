@@ -1,14 +1,14 @@
 import { type BillingPreviewResponse, formatAmount } from "@autumn/shared";
-import { Decimal } from "decimal.js";
-import { AnimatePresence, motion } from "motion/react";
 import {
 	Accordion,
 	AccordionContent,
 	AccordionItem,
 	AccordionTrigger,
-} from "@/components/ui/accordion";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/v2/badges/Badge";
+	Badge,
+	Skeleton,
+} from "@autumn/ui";
+import { Decimal } from "decimal.js";
+import { AnimatePresence, motion } from "motion/react";
 import {
 	LAYOUT_TRANSITION,
 	SheetSection,
@@ -73,8 +73,7 @@ export function LineItemsPreview<T extends BillingLineItem>({
 		? lineItems.filter((item) => item.total !== 0)
 		: lineItems;
 
-	const hasContent =
-		filteredItems.length > 0 || totals.length > 0;
+	const hasContent = filteredItems.length > 0 || totals.length > 0;
 
 	if (!isLoading && !hasContent) return null;
 

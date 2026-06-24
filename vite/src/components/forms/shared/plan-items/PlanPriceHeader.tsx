@@ -1,7 +1,7 @@
 import type { FrontendProduct } from "@autumn/shared";
 import {
-	AdminPlanIdsTooltip,
 	type AdminPlanIds,
+	AdminPlanIdsTooltip,
 } from "@/components/forms/shared/admin/AdminPlanIdsTooltip";
 import { PriceDisplay } from "@/components/forms/update-subscription-v2/components/PriceDisplay";
 
@@ -31,8 +31,12 @@ export function PlanPriceHeader({
 				{priceChange.oldIntervalText && ` ${priceChange.oldIntervalText}`}
 			</span>
 			<span className="text-subtle">-&gt;</span>
-			<span className="font-semibold text-foreground">{priceChange.newPrice}</span>
-			<span className="text-tertiary-foreground">{priceChange.newIntervalText}</span>
+			<span className="font-semibold text-foreground">
+				{priceChange.newPrice}
+			</span>
+			<span className="text-tertiary-foreground">
+				{priceChange.newIntervalText}
+			</span>
 		</span>
 	) : (
 		<PriceDisplay product={product} currency={currency} />

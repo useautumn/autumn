@@ -1,9 +1,9 @@
 import { cp } from "@autumn/shared";
+import { PanelButton } from "@autumn/ui";
 import { CalendarCheckIcon, LightningIcon } from "@phosphor-icons/react";
 import { AnimatePresence, motion } from "motion/react";
 import { useUpdateSubscriptionFormContext } from "@/components/forms/update-subscription-v2";
 import { COLLAPSE_TRANSITION } from "@/components/forms/update-subscription-v2/constants/animationConstants";
-import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 
 export function BillingBehaviorSection() {
@@ -62,10 +62,10 @@ export function BillingBehaviorSection() {
 									icon={<CalendarCheckIcon size={18} weight="duotone" />}
 								/>
 								<div className="flex-1">
-								<div className="text-body-highlight mb-1">None</div>
-								<div className="text-body-secondary leading-tight">
-									No charges or credits issued. Access ends immediately.
-								</div>
+									<div className="text-body-highlight mb-1">None</div>
+									<div className="text-body-secondary leading-tight">
+										No charges or credits issued. Access ends immediately.
+									</div>
 								</div>
 							</div>
 						</div>

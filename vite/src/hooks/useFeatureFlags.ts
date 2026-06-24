@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { deepMerge } from "@/lib/utils";
+import { useAxiosInstance } from "@/services/useAxiosInstance";
 
 type AnalyticsMaintenance = {
 	disableRevenueMetrics: boolean;
@@ -28,7 +28,9 @@ export const useFeatureFlags = () => {
 	const { data, isLoading, isPlaceholderData } = useQuery({
 		queryKey: ["feature-flags"],
 		queryFn: async (): Promise<FeatureFlags> => {
-			const { data } = await axiosInstance.get<FeatureFlags>("/v1/organization/flags");
+			const { data } = await axiosInstance.get<FeatureFlags>(
+				"/v1/organization/flags",
+			);
 			return deepMerge(DEFAULT_FLAGS, data);
 		},
 		staleTime: 30_000,

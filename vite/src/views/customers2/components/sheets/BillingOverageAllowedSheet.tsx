@@ -4,12 +4,10 @@ import {
 	FeatureType,
 	type FullCustomer,
 } from "@autumn/shared";
+import { Button, FormLabel, Switch } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/v2/buttons/Button";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
-import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
 	LayoutGroup,
 	SheetFooter,

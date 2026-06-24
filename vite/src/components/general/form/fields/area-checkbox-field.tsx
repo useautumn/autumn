@@ -1,4 +1,4 @@
-import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
+import { AreaCheckbox } from "@autumn/ui";
 import { useFieldContext } from "@/hooks/form/form-context";
 
 export function AreaCheckboxField({

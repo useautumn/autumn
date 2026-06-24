@@ -9,18 +9,17 @@ import type {
 	Feature,
 	FullCustomer,
 } from "@autumn/shared";
+import { Button, SectionTag } from "@autumn/ui";
 import { GavelIcon, PlusIcon } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { type ReactNode, useMemo } from "react";
 import { Table } from "@/components/general/table";
-import { SectionTag } from "@/components/v2/badges/SectionTag";
-import { Button } from "@/components/v2/buttons/Button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { cn } from "@/lib/utils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
@@ -182,9 +181,7 @@ const UsageLimitRow = ({
 						{`${usage.toLocaleString()} / ${limit.toLocaleString()} this ${interval}`}
 					</Pill>
 				)}
-				<Pill>
-					Usage limit: {`${limit.toLocaleString()} / ${interval}`}
-				</Pill>
+				<Pill>Usage limit: {`${limit.toLocaleString()} / ${interval}`}</Pill>
 			</div>
 		</button>
 	);

@@ -1,3 +1,4 @@
+import { IconButton } from "@autumn/ui";
 import { EllipsisVertical } from "lucide-react";
 import { useState } from "react";
 import {
@@ -5,8 +6,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
-import { IconButton } from "@/components/v2/buttons/IconButton";
+} from "@autumn/ui";
 import { useMigrationsQueryState } from "@/views/migrations/hooks/useMigrationsQueryState";
 
 export function MigrationListMenuButton() {

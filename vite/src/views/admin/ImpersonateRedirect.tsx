@@ -1,7 +1,7 @@
+import { Button } from "@autumn/ui";
 import { AlertCircle, Loader2, ShieldCheck } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router";
-import { Button } from "@/components/v2/buttons/Button";
 import { authClient } from "@/lib/auth-client";
 import { setActiveOrg } from "@/lib/orgSync";
 import { getDefaultOrgPath, isSafeLocalPath } from "@/utils/genUtils";
@@ -100,7 +100,15 @@ export function ImpersonateRedirect() {
 			hasRun.current = true;
 			doImpersonate();
 		}
-	}, [orgId, rawRedirect, navigate, isAdmin, isPending, isCurrentlyImpersonating, axiosInstance]);
+	}, [
+		orgId,
+		rawRedirect,
+		navigate,
+		isAdmin,
+		isPending,
+		isCurrentlyImpersonating,
+		axiosInstance,
+	]);
 
 	if (!isAdmin && isPending) {
 		navigate("/");

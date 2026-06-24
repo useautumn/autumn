@@ -1,6 +1,5 @@
 import { notNullish } from "@autumn/shared";
-import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
-import { Input } from "@/components/v2/inputs/Input";
+import { AreaCheckbox, Input } from "@autumn/ui";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
 export function UsageLimit() {

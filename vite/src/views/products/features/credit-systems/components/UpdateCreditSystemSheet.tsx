@@ -1,13 +1,12 @@
 import type { CreditSchemaItem, Feature } from "@autumn/shared";
+import { Sheet, SheetContent, ShortcutButton } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
 import type { AxiosError } from "axios";
 import { toast } from "sonner";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
-import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { FeatureService } from "@/services/FeatureService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";

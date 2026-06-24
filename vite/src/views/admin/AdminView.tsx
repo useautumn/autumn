@@ -1,10 +1,9 @@
 import { AppEnv } from "@autumn/shared";
+import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from "@autumn/ui";
 import { Globe, Sliders } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/v2/buttons/Button";
 import { authClient } from "@/lib/auth-client";
 import { useEnv } from "@/utils/envUtils";
 import { AdminOrgTable } from "@/views/admin/AdminOrgTable";

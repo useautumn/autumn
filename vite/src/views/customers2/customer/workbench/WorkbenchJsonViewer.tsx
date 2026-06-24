@@ -1,6 +1,6 @@
 import Editor, { type OnMount } from "@monaco-editor/react";
 import { useCallback, useMemo, useRef } from "react";
-import CopyButton from "@/components/general/CopyButton";
+import { CopyTextButton } from "@autumn/ui";
 
 const AUTUMN_DARK_THEME = "autumn-workbench-dark";
 const AUTUMN_LIGHT_THEME = "autumn-workbench-light";
@@ -97,7 +97,7 @@ export const WorkbenchJsonViewer = ({
 				>
 					⌘F
 				</button>
-				<CopyButton
+				<CopyTextButton
 					text={formatted}
 					className="bg-stone-100 dark:bg-stone-800/80 shadow-none hover:bg-stone-200 dark:hover:bg-stone-800 w-5 gap-0 h-5 !px-0 py-0 flex items-center justify-center text-tertiary-foreground cursor-pointer border border-border/40 rounded"
 				/>

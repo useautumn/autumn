@@ -1,6 +1,6 @@
+import { Button } from "@autumn/ui";
 import { useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { Button } from "@/components/v2/buttons/Button";
 import CreateProductSheet from "../CreateProductSheet";
 
 export function ProductListCreateButton({ className }: { className?: string }) {

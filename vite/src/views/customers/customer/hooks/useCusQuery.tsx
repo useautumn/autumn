@@ -1,5 +1,9 @@
 import type { FullCusProduct, FullCustomer } from "@autumn/shared";
-import { keepPreviousData, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+	keepPreviousData,
+	useQuery,
+	useQueryClient,
+} from "@tanstack/react-query";
 import { useMemo } from "react";
 import { useParams } from "react-router";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
@@ -41,7 +45,9 @@ export const useCusQuery = ({
 	const cachedCustomer = useMemo(getCachedCustomer, [getCachedCustomer]);
 
 	const baseKey = buildKey(["customer", customer_id, null]);
-	const cachedData = queryClient.getQueryData<{ customer?: FullCustomer }>(baseKey);
+	const cachedData = queryClient.getQueryData<{ customer?: FullCustomer }>(
+		baseKey,
+	);
 	const currentCustomer = cachedData?.customer ?? cachedCustomer;
 
 	const entityAlreadyLoaded =
@@ -55,9 +61,7 @@ export const useCusQuery = ({
 
 	const fetcher = async () => {
 		try {
-			const params = effectiveEntityId
-				? `?entity_id=${effectiveEntityId}`
-				: "";
+			const params = effectiveEntityId ? `?entity_id=${effectiveEntityId}` : "";
 			const { data } = await axiosInstance.get(
 				`/customers/${customer_id}${params}`,
 			);

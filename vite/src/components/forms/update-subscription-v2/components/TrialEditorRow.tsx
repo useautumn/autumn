@@ -1,5 +1,11 @@
 import { type FreeTrialDuration, getTrialLengthInDays } from "@autumn/shared";
 import {
+	IconButton,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
+import {
 	ArrowCounterClockwiseIcon,
 	CalendarBlankIcon,
 	CheckIcon,
@@ -10,12 +16,6 @@ import { useStore } from "@tanstack/react-form";
 import { AnimatePresence, motion } from "motion/react";
 import { useRef, useState } from "react";
 import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 import { cn } from "@/lib/utils";
 import { FAST_TRANSITION } from "../constants/animationConstants";
 import {

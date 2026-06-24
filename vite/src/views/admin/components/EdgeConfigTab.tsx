@@ -1,6 +1,6 @@
+import { Button } from "@autumn/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { CacheV2RampDialog } from "./CacheV2RampDialog";
 import { CustomerBlockDialog } from "./CustomerBlockDialog";

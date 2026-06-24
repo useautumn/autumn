@@ -1,13 +1,13 @@
 import type { ApiKey } from "@autumn/shared";
+import { ToolbarButton } from "@autumn/ui";
 import { Delete } from "lucide-react";
 import { useState } from "react";
-import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { DeleteApiKeyDialog } from "./DeleteApiKeyDialog";
 
 const APIKeyToolbarItems = ({

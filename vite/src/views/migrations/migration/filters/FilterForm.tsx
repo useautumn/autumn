@@ -4,9 +4,9 @@ import type {
 	PlanFilter,
 	StringMatcher,
 } from "@autumn/shared";
+import { Button } from "@autumn/ui";
 import { FunnelSimpleIcon } from "@phosphor-icons/react";
 import { useMemo, useRef, useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 import { ActionCard } from "../shared/ActionCard";
 import { AddButton } from "../shared/AddButton";
 import { FilterGroup } from "./FilterGroup";

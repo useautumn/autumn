@@ -1,10 +1,9 @@
 import type { FrontendProduct } from "@autumn/shared";
-
+import { Button } from "@autumn/ui";
 import {
-	AdminPlanIdsTooltip,
 	type AdminPlanIds,
+	AdminPlanIdsTooltip,
 } from "@/components/forms/shared/admin/AdminPlanIdsTooltip";
-import { Button } from "@/components/v2/buttons/Button";
 import {
 	useCurrentItem,
 	useSheet,
@@ -62,7 +61,11 @@ export const BasePriceDisplay = ({
 				);
 
 			case "variable":
-				return <span className="text-tertiary-foreground!">{priceDisplay.displayText}</span>;
+				return (
+					<span className="text-tertiary-foreground!">
+						{priceDisplay.displayText}
+					</span>
+				);
 
 			case "placeholder":
 				return (
@@ -88,9 +91,7 @@ export const BasePriceDisplay = ({
 			</span>
 		);
 		if (!adminIds) return content;
-		return (
-			<AdminPlanIdsTooltip ids={adminIds}>{content}</AdminPlanIdsTooltip>
-		);
+		return <AdminPlanIdsTooltip ids={adminIds}>{content}</AdminPlanIdsTooltip>;
 	}
 
 	const button = (

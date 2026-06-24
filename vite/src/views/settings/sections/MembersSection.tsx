@@ -1,4 +1,4 @@
-import { Separator } from "@/components/v2/separator";
+import { Separator } from "@autumn/ui";
 import { InvitePopover } from "@/views/main-sidebar/org-dropdown/manage-org/InvitePopover";
 import { OrgInvitesList } from "@/views/main-sidebar/org-dropdown/manage-org/OrgInvitesList";
 import { OrgMembersList } from "@/views/main-sidebar/org-dropdown/manage-org/OrgMembersList";

@@ -7,6 +7,7 @@ import {
 	type SyncPlanInstance,
 	type SyncProposalV2,
 } from "@autumn/shared";
+import { Button, InlineAction, Switch } from "@autumn/ui";
 import {
 	ArrowLeftIcon,
 	ArrowSquareOutIcon,
@@ -20,9 +21,6 @@ import {
 	getProductWithSupportedPlanFormValues,
 	getSupportedPlanFormPatchFromDraftProduct,
 } from "@/components/forms/shared/utils/planCustomizationUtils";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/v2/buttons/Button";
-import { InlineAction } from "@/components/v2/buttons/InlineAction";
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";

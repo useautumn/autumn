@@ -8,9 +8,7 @@ import {
 	TierBehavior,
 	UsageModel,
 } from "@autumn/shared";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { AreaRadioGroupItem } from "@/components/v2/radio-groups/AreaRadioGroupItem";
-import { RadioGroup } from "@/components/v2/radio-groups/RadioGroup";
+import { AreaRadioGroupItem, FormLabel, RadioGroup } from "@autumn/ui";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 

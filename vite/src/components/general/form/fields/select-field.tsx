@@ -1,7 +1,6 @@
+import { Label, SearchableSelect } from "@autumn/ui";
 import { CheckIcon } from "lucide-react";
 import { FieldInfo } from "@/components/general/form/field-info";
-import { Label } from "@/components/ui/label";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import { useFieldContext } from "@/hooks/form/form-context";
 
 export type SelectFieldOption<T extends string | number = string> = {

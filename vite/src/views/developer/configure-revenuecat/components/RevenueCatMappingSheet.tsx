@@ -1,20 +1,21 @@
 import { isFeaturePriceItem } from "@autumn/shared";
-import { X } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+	Sheet,
+	SheetContent,
+	ShortcutButton,
+} from "@autumn/ui";
+import { X } from "lucide-react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
 import {
 	SheetFooter,
 	SheetHeader,
 } from "@/components/v2/sheets/SharedSheetComponents";
-import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
 import { useRCMappings } from "@/hooks/queries/revcat/useRCMappings";
 import { useRCProducts } from "@/hooks/queries/revcat/useRCProducts";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -62,7 +63,9 @@ const MappingRow = memo(function MappingRow({
 	return (
 		<div className="flex flex-col gap-2 p-3 border border-zinc-200 dark:border-zinc-800 rounded-lg">
 			<div className="flex items-center gap-2">
-				<span className="font-medium text-muted-foreground">{mapping.autumnProductName}</span>
+				<span className="font-medium text-muted-foreground">
+					{mapping.autumnProductName}
+				</span>
 				<span className="text-tiny-id text-tertiary-foreground bg-muted px-1.5 py-0.5 rounded-md">
 					{mapping.autumnProductId}
 				</span>
@@ -106,15 +109,17 @@ const MappingRow = memo(function MappingRow({
 					an existing mapping to change assignments.
 				</div>
 			) : (
-			<Select
-				value=""
-				onValueChange={(value) => {
-					if (value) {
-						onAddProduct(mapping.autumnProductId, value);
-					}
-				}}
-				items={Object.fromEntries(availableProducts.map((product) => [product.id, product.name]))}
-			>
+				<Select
+					value=""
+					onValueChange={(value) => {
+						if (value) {
+							onAddProduct(mapping.autumnProductId, value);
+						}
+					}}
+					items={Object.fromEntries(
+						availableProducts.map((product) => [product.id, product.name]),
+					)}
+				>
 					<SelectTrigger className="w-full">
 						<SelectValue placeholder="Add product..." />
 					</SelectTrigger>

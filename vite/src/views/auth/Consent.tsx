@@ -5,19 +5,19 @@ import {
 	isScopeSubset,
 	LEAF_OAUTH_SCOPES,
 } from "@autumn/shared";
-import { Check, Clock, ExternalLink, Shield, X } from "lucide-react";
-import { useEffect, useId, useState } from "react";
-import { useSearchParams } from "react-router";
-import { toast } from "sonner";
-import { CustomToaster } from "@/components/general/CustomToaster";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
+import { Check, Clock, ExternalLink, Shield, X } from "lucide-react";
+import { useEffect, useId, useState } from "react";
+import { useSearchParams } from "react-router";
+import { toast } from "sonner";
+import { CustomToaster } from "@/components/general/CustomToaster";
 import {
 	authClient,
 	useListOrganizations,

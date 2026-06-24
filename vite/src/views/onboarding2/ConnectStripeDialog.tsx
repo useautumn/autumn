@@ -1,17 +1,17 @@
-import { ArrowSquareOutIcon } from "@phosphor-icons/react";
-import { useState } from "react";
-import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
-import { Button } from "@/components/v2/buttons/Button";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { Input } from "@/components/v2/inputs/Input";
+	IconButton,
+	InfoTooltip,
+	Input,
+} from "@autumn/ui";
+import { ArrowSquareOutIcon } from "@phosphor-icons/react";
+import { useState } from "react";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { connectStripe } from "./utils/connectStripe";

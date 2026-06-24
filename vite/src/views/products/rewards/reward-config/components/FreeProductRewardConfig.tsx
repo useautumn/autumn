@@ -1,12 +1,12 @@
 import type { ProductV2 } from "@autumn/shared";
-import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
+	FormLabel,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { isFreeProduct } from "@/utils/product/priceUtils";

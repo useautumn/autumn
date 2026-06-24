@@ -1,3 +1,4 @@
+import { Checkbox, IconButton } from "@autumn/ui";
 import {
 	CaretDownIcon,
 	MagnifyingGlassIcon,
@@ -6,8 +7,6 @@ import {
 import { Check } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -19,7 +18,7 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { useAnalyticsContext } from "../AnalyticsContext";
 
@@ -59,8 +58,7 @@ export const SelectGroupByDropdown = ({
 		(acc: number, v: string) => acc + (planDeselected?.has(v) ? 1 : 0),
 		0,
 	);
-	const selectedPlanCount =
-		availableGroupValues.length - activeDeselectedCount;
+	const selectedPlanCount = availableGroupValues.length - activeDeselectedCount;
 	const allPlansSelected = activeDeselectedCount === 0;
 	const handlePlanSelectAll = (e: React.MouseEvent) => {
 		e.preventDefault();
@@ -168,7 +166,9 @@ export const SelectGroupByDropdown = ({
 						className="flex items-center justify-between"
 					>
 						<span className="text-xs">No grouping</span>
-						{!currentGroupBy && <Check className="ml-2 h-3 w-3 text-tertiary-foreground" />}
+						{!currentGroupBy && (
+							<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
+						)}
 					</DropdownMenuItem>
 
 					{/* Special column options */}
@@ -179,7 +179,9 @@ export const SelectGroupByDropdown = ({
 							onClick={() => handleSelect({ property: "customer_id" })}
 							className="flex items-center justify-between"
 						>
-							<span className="text-xs font-medium text-muted-foreground">Customer ID</span>
+							<span className="text-xs font-medium text-muted-foreground">
+								Customer ID
+							</span>
 							{currentGroupBy === "customer_id" && (
 								<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
 							)}
@@ -190,7 +192,9 @@ export const SelectGroupByDropdown = ({
 						onClick={() => handleSelect({ property: "entity_id" })}
 						className="flex items-center justify-between"
 					>
-						<span className="text-xs font-medium text-muted-foreground">Entity ID</span>
+						<span className="text-xs font-medium text-muted-foreground">
+							Entity ID
+						</span>
 						{currentGroupBy === "entity_id" && (
 							<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
 						)}
@@ -199,7 +203,9 @@ export const SelectGroupByDropdown = ({
 						onClick={() => handleSelect({ property: "plan_id" })}
 						className="flex items-center justify-between"
 					>
-						<span className="text-xs font-medium text-muted-foreground">Plan ID</span>
+						<span className="text-xs font-medium text-muted-foreground">
+							Plan ID
+						</span>
 						{currentGroupBy === "plan_id" && (
 							<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
 						)}
@@ -232,7 +238,9 @@ export const SelectGroupByDropdown = ({
 						<>
 							<DropdownMenuSeparator />
 							<div className="flex items-center justify-between px-2 py-1.5">
-								<span className="text-xs text-tertiary-foreground">Max groups</span>
+								<span className="text-xs text-tertiary-foreground">
+									Max groups
+								</span>
 								{editingMaxGroups ? (
 									<input
 										ref={maxGroupsInputRef}
@@ -272,120 +280,119 @@ export const SelectGroupByDropdown = ({
 						</>
 					)}
 
-					{currentGroupBy === "plan_id" &&
+					{currentGroupBy === "plan_id" && availableGroupValues.length > 0 && (
+						<>
+							<DropdownMenuSeparator />
+							<DropdownMenuSub>
+								<DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
+									<span className="text-xs">Filter plans</span>
+									{!allPlansSelected && (
+										<span className="text-xs text-tertiary-foreground bg-muted px-1 py-0 rounded-md">
+											{selectedPlanCount}
+										</span>
+									)}
+								</DropdownMenuSubTrigger>
+								<DropdownMenuSubContent className="min-w-56 max-w-none w-max !overflow-x-visible">
+									<div className="flex items-center justify-between px-2 h-6">
+										<button
+											type="button"
+											onClick={handlePlanSelectAll}
+											className={cn(
+												"px-1 h-5 flex items-center gap-1 text-muted-foreground text-xs hover:text-foreground bg-accent cursor-pointer rounded-md",
+												allPlansSelected &&
+													"bg-primary/10 text-primary hover:text-primary/80",
+											)}
+										>
+											Select all
+										</button>
+									</div>
+									<DropdownMenuSeparator />
+									<div className="max-h-64 overflow-y-auto overflow-x-visible">
+										{availableGroupValues.map((value: string) => {
+											const displayValue =
+												value === "AUTUMN_RESERVED"
+													? "Other values"
+													: value === ""
+														? "No plan"
+														: (planNames?.[value] ?? value);
+											const isChecked = !planDeselected?.has(value);
+											const wouldDeselectLast =
+												isChecked && selectedPlanCount === 1;
+											return (
+												<DropdownMenuItem
+													key={value}
+													closeOnClick={false}
+													disabled={wouldDeselectLast}
+													onClick={(e) => {
+														e.preventDefault();
+														if (wouldDeselectLast) return;
+														togglePlanDeselected(value);
+													}}
+													className="flex items-center gap-2 cursor-pointer"
+												>
+													<Checkbox
+														checked={isChecked}
+														className="border-border"
+													/>
+													<span className="text-xs whitespace-nowrap">
+														{displayValue}
+													</span>
+												</DropdownMenuItem>
+											);
+										})}
+									</div>
+								</DropdownMenuSubContent>
+							</DropdownMenuSub>
+						</>
+					)}
+
+					{currentGroupBy &&
+						currentGroupBy !== "plan_id" &&
 						availableGroupValues.length > 0 && (
 							<>
 								<DropdownMenuSeparator />
-								<DropdownMenuSub>
-									<DropdownMenuSubTrigger className="flex items-center gap-2 cursor-pointer">
-										<span className="text-xs">Filter plans</span>
-										{!allPlansSelected && (
-											<span className="text-xs text-tertiary-foreground bg-muted px-1 py-0 rounded-md">
-												{selectedPlanCount}
-											</span>
+								<DropdownMenuGroup>
+									<DropdownMenuLabel className="text-xs text-subtle font-normal">
+										Filter by value
+									</DropdownMenuLabel>
+									<DropdownMenuItem
+										closeOnClick={false}
+										onClick={() => setGroupFilter(null)}
+										className="flex items-center justify-between"
+									>
+										<span className="text-xs">All values</span>
+										{groupFilter === null && (
+											<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
 										)}
-									</DropdownMenuSubTrigger>
-									<DropdownMenuSubContent className="min-w-56 max-w-none w-max !overflow-x-visible">
-										<div className="flex items-center justify-between px-2 h-6">
-											<button
-												type="button"
-												onClick={handlePlanSelectAll}
-												className={cn(
-													"px-1 h-5 flex items-center gap-1 text-muted-foreground text-xs hover:text-foreground bg-accent cursor-pointer rounded-md",
-													allPlansSelected &&
-														"bg-primary/10 text-primary hover:text-primary/80",
-												)}
+									</DropdownMenuItem>
+									{availableGroupValues.map((value: string) => {
+										const displayValue =
+											value === "AUTUMN_RESERVED"
+												? "Other values"
+												: currentGroupBy === "entity_id"
+													? (entityNames?.[value] ?? value)
+													: currentGroupBy === "customer_id"
+														? (customerNames?.[value] ?? value)
+														: value;
+										return (
+											<DropdownMenuItem
+												key={value}
+												closeOnClick={false}
+												onClick={() => setGroupFilter(value)}
+												className="flex items-center justify-between"
 											>
-												Select all
-											</button>
-										</div>
-										<DropdownMenuSeparator />
-										<div className="max-h-64 overflow-y-auto overflow-x-visible">
-											{availableGroupValues.map((value: string) => {
-												const displayValue =
-													value === "AUTUMN_RESERVED"
-														? "Other values"
-														: value === ""
-															? "No plan"
-															: (planNames?.[value] ?? value);
-												const isChecked = !planDeselected?.has(value);
-												const wouldDeselectLast =
-													isChecked && selectedPlanCount === 1;
-												return (
-													<DropdownMenuItem
-														key={value}
-														closeOnClick={false}
-														disabled={wouldDeselectLast}
-														onClick={(e) => {
-															e.preventDefault();
-															if (wouldDeselectLast) return;
-															togglePlanDeselected(value);
-														}}
-														className="flex items-center gap-2 cursor-pointer"
-													>
-														<Checkbox
-															checked={isChecked}
-															className="border-border"
-														/>
-														<span className="text-xs whitespace-nowrap">
-															{displayValue}
-														</span>
-													</DropdownMenuItem>
-												);
-											})}
-										</div>
-									</DropdownMenuSubContent>
-								</DropdownMenuSub>
+												<span className="text-xs font-mono truncate max-w-[150px]">
+													{displayValue}
+												</span>
+												{groupFilter === value && (
+													<Check className="ml-2 h-3 w-3 text-tertiary-foreground shrink-0" />
+												)}
+											</DropdownMenuItem>
+										);
+									})}
+								</DropdownMenuGroup>
 							</>
 						)}
-
-				{currentGroupBy &&
-					currentGroupBy !== "plan_id" &&
-					availableGroupValues.length > 0 && (
-						<>
-							<DropdownMenuSeparator />
-							<DropdownMenuGroup>
-								<DropdownMenuLabel className="text-xs text-subtle font-normal">
-									Filter by value
-								</DropdownMenuLabel>
-								<DropdownMenuItem
-									closeOnClick={false}
-									onClick={() => setGroupFilter(null)}
-									className="flex items-center justify-between"
-								>
-									<span className="text-xs">All values</span>
-									{groupFilter === null && (
-										<Check className="ml-2 h-3 w-3 text-tertiary-foreground" />
-									)}
-								</DropdownMenuItem>
-								{availableGroupValues.map((value: string) => {
-									const displayValue =
-										value === "AUTUMN_RESERVED"
-											? "Other values"
-											: currentGroupBy === "entity_id"
-												? (entityNames?.[value] ?? value)
-												: currentGroupBy === "customer_id"
-													? (customerNames?.[value] ?? value)
-													: value;
-									return (
-										<DropdownMenuItem
-											key={value}
-											closeOnClick={false}
-											onClick={() => setGroupFilter(value)}
-											className="flex items-center justify-between"
-										>
-											<span className="text-xs font-mono truncate max-w-[150px]">
-												{displayValue}
-											</span>
-											{groupFilter === value && (
-												<Check className="ml-2 h-3 w-3 text-tertiary-foreground shrink-0" />
-											)}
-										</DropdownMenuItem>
-									);
-								})}
-							</DropdownMenuGroup>
-						</>
-					)}
 				</div>
 			</DropdownMenuContent>
 		</DropdownMenu>

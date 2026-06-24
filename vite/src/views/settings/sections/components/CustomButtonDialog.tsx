@@ -1,7 +1,4 @@
 import type { CustomButton } from "@autumn/shared";
-import { FieldInfo } from "@/components/general/form/field-info";
-import { Switch } from "@/components/ui/switch";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Dialog,
 	DialogContent,
@@ -9,10 +6,13 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { FormLabel } from "@/components/v2/form/FormLabel";
+	FormLabel,
+	Input,
+	ShortcutButton,
+	Switch,
+} from "@autumn/ui";
+import { FieldInfo } from "@/components/general/form/field-info";
 import { DEFAULT_PHOSPHOR_ICON } from "@/components/v2/icons/phosphorIcons";
-import { Input } from "@/components/v2/inputs/Input";
 import { useAppForm } from "@/hooks/form/form";
 import {
 	type CustomButtonForm,

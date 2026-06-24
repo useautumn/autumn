@@ -1,15 +1,10 @@
+import { Input, Popover, PopoverContent, PopoverTrigger } from "@autumn/ui";
 import { useDeferredValue, useMemo, useState } from "react";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
 import { PhosphorIcon } from "@/components/v2/icons/PhosphorIcon";
 import {
 	PHOSPHOR_ICON_NAMES,
 	STARTER_PHOSPHOR_ICONS,
 } from "@/components/v2/icons/phosphorIcons";
-import { Input } from "@/components/v2/inputs/Input";
 import { cn } from "@/lib/utils";
 
 const MAX_RESULTS = 60;

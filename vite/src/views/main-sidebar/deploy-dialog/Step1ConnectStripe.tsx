@@ -1,9 +1,8 @@
 import { AppEnv } from "@autumn/shared";
+import { Button, IconButton } from "@autumn/ui";
 import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
