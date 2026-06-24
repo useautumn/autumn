@@ -88,7 +88,7 @@ const FIELDS: Array<{
 		key: "per_customer_pending_max",
 		label: "Per-customer queue depth cap",
 		description:
-			"Reject with 429 before queueing if the per-customer pending count is at or above this. Bounds heap memory + worst-case wait.",
+			"Max queued (pending) DB hydrations for a single (org, env, customer), cluster-wide (enforced as this ÷ fleet process count per process) — reject with 429 before queueing at or above it. Bounds heap memory + worst-case wait.",
 		min: 1,
 		max: 100_000,
 	},
@@ -96,7 +96,7 @@ const FIELDS: Array<{
 		key: "per_org_pending_max",
 		label: "Per-org queue depth cap",
 		description:
-			"Reject with 429 before queueing if the per-org pending count is at or above this.",
+			"Max queued (pending) DB hydrations for a single (org, env), cluster-wide (enforced as this ÷ fleet process count per process) — reject with 429 before queueing at or above it.",
 		min: 1,
 		max: 100_000,
 	},
