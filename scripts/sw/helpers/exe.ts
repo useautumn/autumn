@@ -38,7 +38,14 @@ export function createVm(name: string): ExeVm {
 	];
 	if (EXE_IMAGE) flags.push(`--image=${EXE_IMAGE}`);
 	flags.push("--json");
-	const res = lobby(flags.join(" "));
+	let res = lobby(flags.join(" "));
+	// A stale same-named box (e.g. a teardown whose `rm` couldn't auth) blocks the
+	// name. It's ours (sw-prefixed, autumn-sw tag), so remove it and retry once.
+	if (res.code !== 0 && /not available/i.test(`${res.stdout}${res.stderr}`)) {
+		log(`name ${name} held by a stale box — removing it and retrying`);
+		removeVm(name);
+		res = lobby(flags.join(" "));
+	}
 	if (res.code !== 0) {
 		fatal(`exe.dev new failed: ${res.stderr || res.stdout}`);
 	}
