@@ -11,9 +11,15 @@ import type {
 } from "@autumn/shared";
 import { Button, SectionTag } from "@autumn/ui";
 import { format } from "date-fns";
+import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/views/customers2/components/table/EmptyState";
+
+const ROW_SWAP_TRANSITION = {
+	duration: 0.2,
+	ease: [0.32, 0.72, 0, 1] as const,
+};
 
 const pillClassName =
 	"rounded-md bg-muted px-1.5 py-0.5 text-xs text-tertiary-foreground whitespace-nowrap";
@@ -323,6 +329,43 @@ const BILLING_CONTROL_GROUPS: readonly BillingControlGroupConfig[] = [
 	},
 ];
 
+function BillingControlRowSlot({
+	isEditing,
+	editingContent,
+	children,
+}: {
+	isEditing: boolean;
+	editingContent?: () => ReactNode;
+	children: ReactNode;
+}) {
+	return (
+		<motion.div
+			layout
+			className="overflow-hidden"
+			transition={ROW_SWAP_TRANSITION}
+		>
+			<AnimatePresence initial={false} mode="popLayout">
+				<motion.div
+					key={isEditing ? "edit" : "row"}
+					initial={{ opacity: 0, filter: "blur(2px)" }}
+					animate={{
+						opacity: 1,
+						filter: "blur(0px)",
+						transition: ROW_SWAP_TRANSITION,
+					}}
+					exit={{
+						opacity: 0,
+						filter: "blur(2px)",
+						transition: { duration: 0.12, ease: "easeOut" },
+					}}
+				>
+					{isEditing && editingContent ? editingContent() : children}
+				</motion.div>
+			</AnimatePresence>
+		</motion.div>
+	);
+}
+
 export function BillingControlsList({
 	billingControls,
 	featureNameById,
@@ -356,24 +399,22 @@ export function BillingControlsList({
 					<BillingControlsGroup key={key} title={title}>
 						<div className="flex flex-col gap-1.5 rounded-lg">
 							{items.map((item, index) => {
-								if (
-									editingRow?.key === key &&
-									editingRow.index === index &&
-									renderEditingRow
-								) {
-									return (
-										<div key={getKey(item, index)}>{renderEditingRow()}</div>
-									);
-								}
+								const isEditing =
+									editingRow?.key === key && editingRow.index === index;
 								return (
-									<Row
+									<BillingControlRowSlot
 										key={getKey(item, index)}
-										item={item}
-										featureNameById={featureNameById}
-										onClick={
-											onEdit ? () => onEdit({ key, index, item }) : undefined
-										}
-									/>
+										isEditing={Boolean(isEditing && renderEditingRow)}
+										editingContent={renderEditingRow}
+									>
+										<Row
+											item={item}
+											featureNameById={featureNameById}
+											onClick={
+												onEdit ? () => onEdit({ key, index, item }) : undefined
+											}
+										/>
+									</BillingControlRowSlot>
 								);
 							})}
 						</div>
