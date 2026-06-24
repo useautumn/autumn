@@ -64,13 +64,20 @@ export const handleDeleteCoupon = createRoute({
 					active: true,
 					limit: 100,
 				})) {
-					await stripeCli.promotionCodes.update(promo.id, { active: false });
+					// Isolate each update so one failure doesn't skip the remaining
+					// promos for this code (a stale active one blocks recreation).
+					try {
+						await stripeCli.promotionCodes.update(promo.id, { active: false });
+					} catch (error) {
+						logger.warn(
+							`Failed to deactivate promo code ${promoCode.code} (${promo.id}) in stripe after deleting reward ${reward.id}`,
+							{ rewardId: reward.id, code: promoCode.code, promoId: promo.id, error },
+						);
+					}
 				}
 			} catch (error) {
-				// Code stays active in Stripe; a later recreate may hit the Stripe
-				// guard, so surface this for operators to retry.
 				logger.warn(
-					`Failed to deactivate promo code ${promoCode.code} in stripe after deleting reward ${reward.id}`,
+					`Failed to list promo codes for ${promoCode.code} in stripe after deleting reward ${reward.id}`,
 					{ rewardId: reward.id, code: promoCode.code, error },
 				);
 			}
