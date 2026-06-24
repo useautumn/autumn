@@ -141,11 +141,12 @@ export const isFullSubjectGateRejection = (error: unknown): boolean => {
 };
 
 // Configured caps are cluster-wide; each process enforces an even share.
+// Floor (not round) so cluster-wide capacity never EXCEEDS the configured target.
 export const toPerProcessLimit = (
 	clusterWideTarget: number,
 	fleetProcessCount: number,
 ): number =>
-	Math.max(1, Math.round(clusterWideTarget / Math.max(1, fleetProcessCount)));
+	Math.max(1, Math.floor(clusterWideTarget / Math.max(1, fleetProcessCount)));
 
 export const runWithFullSubjectGate = async <T>({
 	customerId,

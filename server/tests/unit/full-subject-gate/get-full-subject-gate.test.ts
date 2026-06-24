@@ -368,16 +368,29 @@ describe("runWithFullSubjectGate", () => {
 });
 
 describe("toPerProcessLimit", () => {
-	test("divides a cluster-wide target by fleet size, rounding and flooring at 1", () => {
+	test("floors the cluster-wide target divided by fleet size, with a floor of 1", () => {
 		expect(toPerProcessLimit(16, 1)).toBe(16);
 		expect(toPerProcessLimit(16, 4)).toBe(4);
-		expect(toPerProcessLimit(200, 44)).toBe(5);
+		expect(toPerProcessLimit(200, 44)).toBe(4);
 		expect(toPerProcessLimit(16, 44)).toBe(1);
 		expect(toPerProcessLimit(1, 1)).toBe(1);
 	});
 
 	test("treats a fleet size below 1 as 1 (no divide-by-zero)", () => {
 		expect(toPerProcessLimit(16, 0)).toBe(16);
+	});
+
+	test("never lets cluster-wide capacity exceed the configured target", () => {
+		for (const target of [8, 10, 16, 17, 50, 200, 500]) {
+			for (const fleet of [1, 3, 4, 20, 44]) {
+				const perProcess = toPerProcessLimit(target, fleet);
+				if (target >= fleet) {
+					expect(perProcess * fleet).toBeLessThanOrEqual(target);
+				} else {
+					expect(perProcess).toBe(1);
+				}
+			}
+		}
 	});
 });
 
