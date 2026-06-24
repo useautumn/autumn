@@ -11,7 +11,7 @@ import type {
 } from "@autumn/shared";
 import { Button, SectionTag } from "@autumn/ui";
 import { format } from "date-fns";
-import { AnimatePresence, motion } from "motion/react";
+import { motion } from "motion/react";
 import { createContext, type ReactNode, useContext } from "react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/views/customers2/components/table/EmptyState";
@@ -355,31 +355,13 @@ function BillingControlRowSlot({
 	children: ReactNode;
 }) {
 	return (
-		<AnimatePresence initial={false} mode="wait">
-			<motion.div
-				key={isEditing ? "edit" : "row"}
-				initial={{ height: 0, opacity: 0 }}
-				animate={{
-					height: "auto",
-					opacity: 1,
-					transition: {
-						height: ROW_SWAP_TRANSITION,
-						opacity: { duration: 0.15, delay: 0.05 },
-					},
-				}}
-				exit={{
-					height: 0,
-					opacity: 0,
-					transition: {
-						height: ROW_SWAP_TRANSITION,
-						opacity: { duration: 0.1 },
-					},
-				}}
-				className="overflow-hidden"
-			>
-				{isEditing && editingContent ? editingContent() : children}
-			</motion.div>
-		</AnimatePresence>
+		<motion.div
+			animate={{ height: "auto" }}
+			transition={ROW_SWAP_TRANSITION}
+			className="overflow-hidden"
+		>
+			{isEditing && editingContent ? editingContent() : children}
+		</motion.div>
 	);
 }
 
