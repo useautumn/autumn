@@ -2,10 +2,11 @@ import { cmdInstall } from "./commands/install.ts";
 import { cmdList } from "./commands/list.ts";
 import { cmdPick } from "./commands/pick.ts";
 import { cmdTeardown } from "./commands/teardown.ts";
+import { cmdUninstall } from "./commands/uninstall.ts";
 import { fatal } from "./helpers/shell.ts";
 
 const USAGE =
-	"usage: sw <pick | install | list | teardown> (pick is what the herdr plugin runs)";
+	"usage: sw <pick | install | uninstall | list | teardown> (pick is what the herdr plugin runs)";
 
 async function main(): Promise<void> {
 	const sub = process.argv[2];
@@ -15,6 +16,9 @@ async function main(): Promise<void> {
 			break;
 		case "install":
 			cmdInstall();
+			break;
+		case "uninstall":
+			cmdUninstall();
 			break;
 		case "list":
 			cmdList();

@@ -1,19 +1,20 @@
 import {
 	chmodSync,
+	copyFileSync,
 	existsSync,
 	mkdirSync,
 	readFileSync,
 	writeFileSync,
 } from "node:fs";
-import { homedir } from "node:os";
 import { dirname, join } from "node:path";
-import { PROVISION_SH, SCRIPT_DIR, WRAPPER_SH } from "../constants.ts";
+import {
+	herdrConfigPath,
+	SCRIPT_DIR,
+	STABLE_DIR,
+	STABLE_WRAPPER,
+	WRAPPER_SH,
+} from "../constants.ts";
 import { log, shInherit } from "../helpers/shell.ts";
-
-function herdrConfigPath(): string {
-	const base = process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config");
-	return join(base, "herdr", "config.toml");
-}
 
 /** Upsert `default_shell` inside the `[terminal]` table, preserving the rest. */
 function setTerminalDefaultShell(toml: string, shellPath: string): string {
@@ -48,25 +49,20 @@ function setTerminalDefaultShell(toml: string, shellPath: string): string {
 }
 
 export function cmdInstall(): void {
-	for (const script of [
-		WRAPPER_SH,
-		PROVISION_SH,
-		join(SCRIPT_DIR, "remote/herdr-agent-state.sh"),
-	]) {
-		chmodSync(script, 0o755);
-	}
+	// Copy the wrapper OUT of the worktree to a stable path, so deleting the source
+	// worktree can never dangle herdr's global default_shell.
+	mkdirSync(STABLE_DIR, { recursive: true });
+	copyFileSync(WRAPPER_SH, STABLE_WRAPPER);
+	chmodSync(STABLE_WRAPPER, 0o755);
+	log(`installed wrapper -> ${STABLE_WRAPPER}`);
 
 	const configPath = herdrConfigPath();
 	mkdirSync(dirname(configPath), { recursive: true });
 	const existing = existsSync(configPath)
 		? readFileSync(configPath, "utf8")
 		: "";
-	if (existing.includes(WRAPPER_SH)) {
-		log(`default_shell already points at the wrapper (${configPath})`);
-	} else {
-		writeFileSync(configPath, setTerminalDefaultShell(existing, WRAPPER_SH));
-		log(`set [terminal] default_shell = "${WRAPPER_SH}" in ${configPath}`);
-	}
+	writeFileSync(configPath, setTerminalDefaultShell(existing, STABLE_WRAPPER));
+	log(`set [terminal] default_shell = "${STABLE_WRAPPER}" in ${configPath}`);
 
 	log("linking herdr plugin");
 	shInherit("herdr", ["plugin", "link", join(SCRIPT_DIR, "plugin")]);

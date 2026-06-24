@@ -113,6 +113,7 @@
 		"dw:disable": "bun scripts/dw/index.ts disable",
 		"dw:admin": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts admin",
 		"sw:install": "bun scripts/sw/index.ts install",
+		"sw:uninstall": "bun scripts/sw/index.ts uninstall",
 		"sw:list": "bun scripts/sw/index.ts list",
 		"sw:teardown": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/sw/index.ts teardown",
 		"d": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dev.ts",

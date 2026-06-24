@@ -20,10 +20,22 @@ export const MARKER_FILE = ".herdr-remote";
 export const REGISTRY_DIR = join(homedir(), ".autumn-sw");
 export const REGISTRY_FILE = join(REGISTRY_DIR, "registry.json");
 
-/** The wrapper installed as herdr's `default_shell` (Mac side). */
+/** The wrapper source in the repo (copied to STABLE_WRAPPER by `sw install`). */
 export const WRAPPER_SH = join(SCRIPT_DIR, "shell/worktree-shell.sh");
 /** Box-side provisioner copied to and run on the devbox. */
 export const PROVISION_SH = join(SCRIPT_DIR, "remote/provision.sh");
+
+const CONFIG_HOME = process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config");
+/**
+ * Stable home for the installed wrapper, OUTSIDE any worktree. `default_shell`
+ * points here so deleting the source worktree can never dangle herdr's global
+ * shell (which would brick every pane). `sw install` (re-)copies the wrapper here.
+ */
+export const STABLE_DIR = join(CONFIG_HOME, "atmn-sw");
+export const STABLE_WRAPPER = join(STABLE_DIR, "worktree-shell.sh");
+
+export const herdrConfigPath = (): string =>
+	join(CONFIG_HOME, "herdr", "config.toml");
 
 export const SUPPORTED_TARGETS: Target[] = ["local", "exe", "modal"];
 
