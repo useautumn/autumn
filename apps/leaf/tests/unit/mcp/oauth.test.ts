@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { LEAF_OAUTH_SCOPES } from "@autumn/shared";
+import { DEFAULT_OAUTH_RESOURCE_SCOPES } from "@autumn/shared";
 import {
 	getProtectedResourceMetadata,
 	type OAuthHttpError,
@@ -26,7 +26,7 @@ describe("MCP OAuth auth resolution", () => {
 	test("advertises the Leaf OAuth scope allowlist", () => {
 		expect(
 			getProtectedResourceMetadata({ resourceUrl }).scopes_supported,
-		).toEqual([...LEAF_OAUTH_SCOPES]);
+		).toEqual([...DEFAULT_OAUTH_RESOURCE_SCOPES]);
 	});
 
 	test("returns a WWW-Authenticate challenge without a bearer token", async () => {
@@ -86,7 +86,7 @@ describe("MCP OAuth auth resolution", () => {
 				env: "sandbox",
 				principalId: "oauth:unverified",
 				resource: "http://localhost:2718/mcp",
-				scopes: [...LEAF_OAUTH_SCOPES],
+				scopes: [...DEFAULT_OAUTH_RESOURCE_SCOPES],
 				serverURL: "http://localhost:8080",
 			});
 			expect(fetchCalled).toBe(false);
@@ -108,7 +108,7 @@ describe("MCP OAuth auth resolution", () => {
 		expect(auth.apiKey).toBe("am_sk_test_chat");
 		expect(auth.principalId).toStartWith("secret-key:");
 		expect(auth.resource).toBe("http://localhost:2718/mcp");
-		expect(auth.scopes).toEqual([...LEAF_OAUTH_SCOPES]);
+		expect(auth.scopes).toEqual([...DEFAULT_OAUTH_RESOURCE_SCOPES]);
 	});
 
 	test("accepts an Autumn API key bearer token when OAuth is enabled", async () => {

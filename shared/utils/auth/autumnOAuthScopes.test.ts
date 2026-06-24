@@ -1,10 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { LEAF_OAUTH_SCOPES } from "./leafOAuthScopes";
-import { Scopes } from "./scopeDefinitions";
+import { DEFAULT_OAUTH_RESOURCE_SCOPES } from "./autumnOAuthScopes";
+import { Scopes } from "../scopeDefinitions";
 
-describe("LEAF_OAUTH_SCOPES", () => {
-	test("contains the exact Leaf Slack and MCP OAuth allowlist", () => {
-		expect(LEAF_OAUTH_SCOPES).toEqual([
+describe("DEFAULT_OAUTH_RESOURCE_SCOPES", () => {
+	test("contains the exact Autumn OAuth resource allowlist", () => {
+		expect(DEFAULT_OAUTH_RESOURCE_SCOPES).toEqual([
 			Scopes.Organisation.Read,
 			Scopes.Customers.Read,
 			Scopes.Customers.Write,
@@ -21,7 +21,7 @@ describe("LEAF_OAUTH_SCOPES", () => {
 	});
 
 	test("does not include elevated or unrelated product scopes", () => {
-		expect(LEAF_OAUTH_SCOPES).not.toEqual(
+		expect(DEFAULT_OAUTH_RESOURCE_SCOPES).not.toEqual(
 			expect.arrayContaining([
 				Scopes.Organisation.Write,
 				Scopes.ApiKeys.Read,

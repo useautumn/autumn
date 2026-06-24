@@ -1,5 +1,5 @@
 import {
-	LEAF_OAUTH_SCOPES,
+	DEFAULT_OAUTH_RESOURCES,
 	type ResourceType,
 	type ScopeString,
 } from "@autumn/shared";
@@ -13,10 +13,7 @@ import {
 import { useEffect, useState } from "react";
 import { ScopeSelector } from "@/components/v2/scope-selector";
 
-// Resources the bot can be granted, derived from the leaf OAuth scope set.
-const BOT_RESOURCES = [
-	...new Set(LEAF_OAUTH_SCOPES.map((scope) => scope.split(":")[0])),
-] as ResourceType[];
+const BOT_RESOURCES = DEFAULT_OAUTH_RESOURCES as ResourceType[];
 
 interface SlackScopesSheetProps {
 	open: boolean;

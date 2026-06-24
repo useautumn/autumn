@@ -37,7 +37,7 @@ services:
       NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN:-}
     command:
       - http
-      - host.docker.internal:8080
+      - ${NGROK_TARGET:-host.docker.internal:8080}
       - --url=${NGROK_DOMAIN}
       - --pooling-enabled
       - --log=stdout

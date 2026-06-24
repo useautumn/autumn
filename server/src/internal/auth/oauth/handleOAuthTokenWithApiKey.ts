@@ -154,10 +154,35 @@ const getUniqueOAuthConsentId = async ({
 	return consents.length === 1 ? consents[0]!.id : null;
 };
 
+// better-auth issues a stateless JWT access token whenever a `resource`
+// (audience) is present, which never lands in oauth_access_token and so can't
+// be validated by handleOAuthMiddleware or linked to a consent. Drop `resource`
+// before better-auth sees it to force an opaque, persisted token; we keep the
+// original `resource` (read above) for our own MCP/audience handling.
+const stripResourceParam = async (request: Request): Promise<Request> => {
+	const contentType = request.headers.get("content-type") ?? "";
+	const rawBody = await request.text();
+	if (!rawBody) return request;
+
+	if (contentType.includes("application/json")) {
+		try {
+			const body = JSON.parse(rawBody) as Record<string, unknown>;
+			delete body.resource;
+			return new Request(request, { body: JSON.stringify(body) });
+		} catch {
+			return new Request(request, { body: rawBody });
+		}
+	}
+
+	const params = new URLSearchParams(rawBody);
+	params.delete("resource");
+	return new Request(request, { body: params });
+};
+
 export const handleOAuthTokenWithApiKey = async (c: Context) => {
 	const resource = await getResourceFromOAuthTokenRequest(c.req.raw.clone());
 	const refreshTokenConsentId = await getRefreshTokenConsentId(c.req.raw.clone());
-	const response = await auth.handler(c.req.raw);
+	const response = await auth.handler(await stripResourceParam(c.req.raw.clone()));
 	if (!response.ok) return response;
 
 	let body: Record<string, unknown>;
@@ -208,7 +233,7 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 						requestedScopes: parsedRequestedScopes ?? tokenRecord.scopes,
 						userId: tokenRecord.userId,
 					});
-		tokenRecord.scopes = getOAuthResourceScopes(issuedScopes);
+		tokenRecord.scopes = issuedScopes;
 		if (tokenRecord.id) {
 			await oauthAccessTokenRepo.updateScopes({
 				db,
