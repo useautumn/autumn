@@ -428,6 +428,25 @@ export function PlanBillingControlsSection() {
 		setEditing(null);
 	};
 
+	const isAdding = editing !== null && editing.index === undefined;
+
+	const renderForm = () => {
+		if (!editing) return null;
+		return (
+			<PlanBillingControlForm
+				key={`${editing.key}-${editing.index ?? "new"}`}
+				controlKey={editing.key}
+				item={editing.item}
+				editIndex={editing.index}
+				features={features}
+				existingControls={billingControls}
+				onSave={saveItem}
+				onDelete={editing.index === undefined ? undefined : deleteItem}
+				onCancel={() => setEditing(null)}
+			/>
+		);
+	};
+
 	return (
 		<div className="space-y-3">
 			<div className="flex items-center justify-between gap-3">
@@ -460,7 +479,7 @@ export function PlanBillingControlsSection() {
 			</div>
 
 			<AnimatePresence initial={false}>
-				{editing && (
+				{isAdding && (
 					<motion.div
 						initial={{ height: 0, opacity: 0 }}
 						animate={{
@@ -474,17 +493,7 @@ export function PlanBillingControlsSection() {
 						exit={{ height: 0, opacity: 0, transition: EXPAND_TRANSITION }}
 						className="overflow-hidden"
 					>
-						<PlanBillingControlForm
-							key={`${editing.key}-${editing.index ?? "new"}`}
-							controlKey={editing.key}
-							item={editing.item}
-							editIndex={editing.index}
-							features={features}
-							existingControls={billingControls}
-							onSave={saveItem}
-							onDelete={editing.index === undefined ? undefined : deleteItem}
-							onCancel={() => setEditing(null)}
-						/>
+						{renderForm()}
 					</motion.div>
 				)}
 			</AnimatePresence>
@@ -496,6 +505,12 @@ export function PlanBillingControlsSection() {
 					onEdit={({ key, index, item }) =>
 						setEditing({ key, index, item: item as ControlItem })
 					}
+					editingRow={
+						editing && editing.index !== undefined
+							? { key: editing.key, index: editing.index }
+							: undefined
+					}
+					renderEditingRow={renderForm}
 				/>
 			) : (
 				<div className="rounded-lg border bg-muted/30 px-3 py-4 text-tertiary-foreground text-sm">

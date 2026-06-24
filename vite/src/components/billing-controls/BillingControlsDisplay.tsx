@@ -327,6 +327,8 @@ export function BillingControlsList({
 	billingControls,
 	featureNameById,
 	onEdit,
+	editingRow,
+	renderEditingRow,
 	emptyText = "No billing controls configured",
 }: {
 	billingControls?: CustomerBillingControls | null;
@@ -336,6 +338,8 @@ export function BillingControlsList({
 		index: number;
 		item: NonNullable<CustomerBillingControls[BillingControlKey]>[number];
 	}) => void;
+	editingRow?: { key: BillingControlKey; index: number };
+	renderEditingRow?: () => ReactNode;
 	emptyText?: string;
 }) {
 	if (!hasBillingControls(billingControls)) {
@@ -351,16 +355,27 @@ export function BillingControlsList({
 				return (
 					<BillingControlsGroup key={key} title={title}>
 						<div className="flex flex-col gap-1.5 rounded-lg">
-							{items.map((item, index) => (
-								<Row
-									key={getKey(item, index)}
-									item={item}
-									featureNameById={featureNameById}
-									onClick={
-										onEdit ? () => onEdit({ key, index, item }) : undefined
-									}
-								/>
-							))}
+							{items.map((item, index) => {
+								if (
+									editingRow?.key === key &&
+									editingRow.index === index &&
+									renderEditingRow
+								) {
+									return (
+										<div key={getKey(item, index)}>{renderEditingRow()}</div>
+									);
+								}
+								return (
+									<Row
+										key={getKey(item, index)}
+										item={item}
+										featureNameById={featureNameById}
+										onClick={
+											onEdit ? () => onEdit({ key, index, item }) : undefined
+										}
+									/>
+								);
+							})}
 						</div>
 					</BillingControlsGroup>
 				);
