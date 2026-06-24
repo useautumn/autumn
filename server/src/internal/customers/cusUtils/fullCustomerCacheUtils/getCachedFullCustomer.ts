@@ -16,6 +16,7 @@ import { isSnapshotCacheStale } from "@/internal/misc/rollouts/rolloutUtils.js";
 import { tryRedisRead } from "@/utils/cacheUtils/cacheUtils.js";
 import { normalizeFromSchema } from "@/utils/cacheUtils/normalizeFromSchema.js";
 import { resetCustomerEntitlements } from "../../actions/resetCustomerEntitlements/resetCustomerEntitlements.js";
+import { repairCachedProductCollections } from "../../cache/repairCachedProductCollections.js";
 import { deleteCachedFullCustomer } from "./deleteCachedFullCustomer.js";
 import { buildFullCustomerCacheKey } from "./fullCustomerCacheConfig.js";
 
@@ -221,16 +222,7 @@ export const getCachedFullCustomer = async ({
 	// and pre-existing cache entries may not have these fields at all.
 	for (const cusProduct of fullCustomer.customer_products ?? []) {
 		if (!cusProduct.product) continue;
-		const product = cusProduct.product as {
-			config?: unknown;
-			metadata?: unknown;
-		};
-		if (!product.config || Array.isArray(product.config)) {
-			product.config = {};
-		}
-		if (!product.metadata || Array.isArray(product.metadata)) {
-			product.metadata = {};
-		}
+		repairCachedProductCollections(cusProduct.product);
 	}
 
 	fullCustomer.invoices = deduplicateFullCustomerInvoices(fullCustomer);
