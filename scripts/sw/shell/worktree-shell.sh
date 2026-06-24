@@ -10,11 +10,20 @@
 # always runs locally; it appears only after a remote target is chosen.
 #
 # IMPORTANT: the local fallback must NOT exec "$SHELL" — herdr set $SHELL to THIS
-# script, so that would loop. We resolve the user's real shell explicitly.
+# script, so that would loop. We resolve the user's real shell explicitly AND reset
+# $SHELL to it, so tools that detect the shell from $SHELL (direnv, mise, zoxide,
+# p10k…) don't think they're in bash and emit the wrong syntax into the session.
 
 set -u
 
 marker="$PWD/.herdr-remote"
+
+exec_local_shell() {
+  local real
+  real="$(resolve_real_shell)"
+  export SHELL="$real"
+  exec "$real" -l
+}
 
 resolve_real_shell() {
   # Explicit override wins (install can bake the user's shell in).
@@ -39,7 +48,7 @@ resolve_real_shell() {
 }
 
 if [ ! -f "$marker" ]; then
-  exec "$(resolve_real_shell)" -l
+  exec_local_shell
 fi
 
 # --- remote worktree: ssh into the devbox -----------------------------------
@@ -48,7 +57,7 @@ fi
 
 if [ -z "${host:-}" ] || [ -z "${path:-}" ]; then
   echo "[sw] malformed $marker (missing host/path); falling back to local shell" >&2
-  exec "$(resolve_real_shell)" -l
+  exec_local_shell
 fi
 
 ssh_opts=(-t -o ServerAliveInterval=30 -o ServerAliveCountMax=3)
