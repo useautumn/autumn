@@ -1,3 +1,4 @@
+import { basename } from "node:path";
 import { fatal, sh } from "./shell.ts";
 
 export function currentBranch(checkoutPath: string): string {
@@ -5,7 +6,10 @@ export function currentBranch(checkoutPath: string): string {
 		cwd: checkoutPath,
 	});
 	if (res.code !== 0) fatal(`could not read branch at ${checkoutPath}`);
-	return res.stdout;
+	// Detached worktree → use the worktree dir name instead of literal "HEAD".
+	return res.stdout && res.stdout !== "HEAD"
+		? res.stdout
+		: basename(checkoutPath);
 }
 
 /** A filesystem/tmux-safe slug from a branch name (`fix/foo-bar` → `fix-foo-bar`). */
