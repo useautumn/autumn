@@ -1,5 +1,7 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
-import { sh, log } from "./shell.ts";
+import { PROJECT_ROOT } from "../constants.ts";
+import { getCanonicalWorktree } from "./git.ts";
 import {
 	composeProjectName,
 	dragonflyPortFor,
@@ -7,9 +9,19 @@ import {
 	ngrokApiPortFor,
 	serverPortFor,
 } from "./ports.ts";
-import { SCRIPT_DIR } from "../constants.ts";
+import { log, sh } from "./shell.ts";
 
-const composeFilePath = join(SCRIPT_DIR, "../setup/dw.compose.yml");
+function getComposeFilePath(): string {
+	const canonicalPath = join(
+		getCanonicalWorktree(),
+		"scripts/setup/dw.compose.yml",
+	);
+	if (existsSync(canonicalPath)) return canonicalPath;
+
+	return join(PROJECT_ROOT, "scripts/setup/dw.compose.yml");
+}
+
+const composeFilePath = getComposeFilePath();
 
 export function dockerComposeAvailable(): boolean {
 	const res = sh("docker", ["compose", "version"]);
@@ -84,9 +96,7 @@ export async function readNgrokTunnelUrl(
 	const maxAttempts = 60;
 	for (let attempt = 0; attempt < maxAttempts; attempt++) {
 		try {
-			const response = await fetch(
-				`http://127.0.0.1:${apiPort}/api/tunnels`,
-			);
+			const response = await fetch(`http://127.0.0.1:${apiPort}/api/tunnels`);
 			const data = (await response.json()) as {
 				tunnels?: Array<{ public_url?: string; proto?: string }>;
 			};

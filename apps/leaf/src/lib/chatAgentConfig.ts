@@ -4,6 +4,7 @@ export const DEFAULT_CHAT_MODEL = "anthropic/claude-opus-4-6";
 // Cheap/fast model for the throwaway env classifier (sandbox vs live) — it doesn't
 // need a frontier model.
 export const DEFAULT_CHAT_ENV_MODEL = "anthropic/claude-haiku-4-5";
+export const DEFAULT_CHAT_ORG_MODEL = "anthropic/claude-sonnet-4-6";
 
 export const leafChatAgentDefaults = {
 	maxSteps: 8,
