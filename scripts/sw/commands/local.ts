@@ -11,6 +11,11 @@ import type { WorktreeContext } from "../types.ts";
  * status-less tmux session.
  */
 export function cmdLocal({ checkout, branch, slug }: WorktreeContext): void {
+	log(`installing deps for ${branch}`);
+	if (shInherit("bun", ["install"], { cwd: checkout }) !== 0) {
+		fatal("`bun install` failed");
+	}
+
 	log(`provisioning local stack for ${branch}`);
 	const code = shInherit("bun", ["run", "dw:setup"], { cwd: checkout });
 	if (code !== 0) fatal("`bun dw setup` failed");
