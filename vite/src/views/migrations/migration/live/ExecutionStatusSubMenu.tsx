@@ -4,7 +4,7 @@ import {
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 
 export const EXECUTION_STATUS_VALUES = [
 	"queued",

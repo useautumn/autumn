@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@autumn/ui";
+import { cn } from "@autumn/ui/lib/utils";
 import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
 import * as React from "react";
 

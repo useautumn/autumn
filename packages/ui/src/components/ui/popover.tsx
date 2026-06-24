@@ -1,4 +1,4 @@
-import { cn } from "@autumn/ui";
+import { cn } from "@autumn/ui/lib/utils";
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
 import * as React from "react";
 

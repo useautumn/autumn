@@ -1,4 +1,4 @@
-import { cn } from "@autumn/ui";
+import { cn } from "@autumn/ui/lib/utils";
 import * as React from "react";
 import * as RechartsPrimitive from "recharts";
 

@@ -1,4 +1,4 @@
-import { cn } from "@autumn/ui";
+import { cn } from "@autumn/ui/lib/utils";
 import { Accordion as AccordionPrimitive } from "@base-ui/react/accordion";
 import { ChevronDownIcon } from "lucide-react";
 

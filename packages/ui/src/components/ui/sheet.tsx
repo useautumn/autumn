@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@autumn/ui";
+import { cn } from "@autumn/ui/lib/utils";
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog";
 import { XIcon } from "lucide-react";
 import * as React from "react";
@@ -176,6 +176,8 @@ export {
 	SheetDescription,
 	SheetFooter,
 	SheetHeader,
+	SheetOverlay,
+	SheetPortal,
 	SheetTitle,
 	SheetTrigger,
 };

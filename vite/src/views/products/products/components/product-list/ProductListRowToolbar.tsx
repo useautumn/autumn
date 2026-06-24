@@ -15,7 +15,7 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { CopyProductDialog } from "../CopyProductDialog";
 

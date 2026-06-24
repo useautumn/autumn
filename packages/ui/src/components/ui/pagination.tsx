@@ -1,4 +1,8 @@
-import { type ButtonProps, buttonVariants, cn } from "@autumn/ui";
+import {
+	type ButtonProps,
+	buttonVariants,
+} from "@autumn/ui/components/ui/button";
+import { cn } from "@autumn/ui/lib/utils";
 import { ChevronLeft, ChevronRight, MoreHorizontal } from "lucide-react";
 import * as React from "react";
 

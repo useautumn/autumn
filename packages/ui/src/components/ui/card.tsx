@@ -1,4 +1,4 @@
-import { cn } from "@autumn/ui";
+import { cn } from "@autumn/ui/lib/utils";
 import type * as React from "react";
 
 function Card({ className, ...props }: React.ComponentProps<"div">) {

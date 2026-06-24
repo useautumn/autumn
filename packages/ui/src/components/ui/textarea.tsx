@@ -1,4 +1,4 @@
-import { cn } from "@autumn/ui";
+import { cn } from "@autumn/ui/lib/utils";
 import type * as React from "react";
 
 function Textarea({ className, ...props }: React.ComponentProps<"textarea">) {

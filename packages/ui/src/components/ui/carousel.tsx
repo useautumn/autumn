@@ -1,4 +1,5 @@
-import { Button, cn } from "@autumn/ui";
+import { Button } from "@autumn/ui/components/ui/button";
+import { cn } from "@autumn/ui/lib/utils";
 import useEmblaCarousel, {
 	type UseEmblaCarouselType,
 } from "embla-carousel-react";

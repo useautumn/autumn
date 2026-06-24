@@ -1,11 +1,11 @@
 import {
-	cn,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@autumn/ui";
+} from "@autumn/ui/components/ui/select";
+import { cn } from "@autumn/ui/lib/utils";
 import { setMonth, setYear } from "date-fns";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type * as React from "react";

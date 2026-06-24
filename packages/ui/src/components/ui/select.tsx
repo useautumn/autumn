@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@autumn/ui";
+import { cn } from "@autumn/ui/lib/utils";
 import { Select as SelectPrimitive } from "@base-ui/react/select";
 import { CheckIcon, ChevronDownIcon } from "lucide-react";
 import type * as React from "react";

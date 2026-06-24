@@ -6,7 +6,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { useProductsQueryState } from "@/views/products/hooks/useProductsQueryState";
 
 export function FeatureListMenuButton() {

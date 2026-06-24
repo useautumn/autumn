@@ -2,7 +2,10 @@
 /** biome-ignore-all lint/a11y/useSemanticElements: shadcn */
 "use client";
 
-import { Button, cn, Input, LongInput as Textarea } from "@autumn/ui";
+import { LongInput as Textarea } from "@autumn/ui/components/general/long-input";
+import { Button } from "@autumn/ui/components/ui/button";
+import { Input } from "@autumn/ui/components/ui/input";
+import { cn } from "@autumn/ui/lib/utils";
 import { cva, type VariantProps } from "class-variance-authority";
 import type * as React from "react";
 

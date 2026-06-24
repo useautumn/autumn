@@ -7,13 +7,13 @@ import {
 	BillingControlsCountPill,
 	billingControlsFromSource,
 } from "@/components/billing-controls/BillingControlsDisplay";
-import { TableDropdownMenuCell } from "@/components/general/table/table-dropdown-menu-cell";
 import {
 	hiddenSkeleton,
 	nameWithIconSkeleton,
 	statusSkeleton,
-} from "@/components/general/table/table-skeleton-presets";
-import { DropdownMenuItem } from "@/components/v2/dropdowns/DropdownMenu";
+	TableDropdownMenuCell,
+} from "@/components/general/table";
+import { DropdownMenuItem } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { getCusProductKind, getPlanKindConfig } from "@/utils/planKind";
 import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";

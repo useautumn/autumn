@@ -15,7 +15,7 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 
 import { useAnalyticsContext } from "../AnalyticsContext";
 import { useAnalyticsQueryState } from "../hooks/useAnalyticsQueryState";

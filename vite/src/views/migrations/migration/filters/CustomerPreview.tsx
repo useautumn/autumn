@@ -19,7 +19,7 @@ import type { ColumnDef, Row } from "@tanstack/react-table";
 import { useDeferredValue, useState } from "react";
 import { Link } from "react-router";
 import { Table } from "@/components/general/table";
-import { useCursorPagination } from "@/components/general/table/useCursorPagination";
+import { useCursorPagination } from "@/components/general/table";
 import { useMigrationFilterPreview } from "@/hooks/queries/useMigrationFilterPreview";
 import { cn } from "@/lib/utils";
 import {

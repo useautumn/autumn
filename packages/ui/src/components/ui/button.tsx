@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 
-import { cn, SmallSpinner } from "@autumn/ui";
+import { SmallSpinner } from "@autumn/ui/components/general/small-spinner";
+import { cn } from "@autumn/ui/lib/utils";
 import { Button as ButtonPrimitive } from "@base-ui/react/button";
 import { cva, type VariantProps } from "class-variance-authority";
 import * as React from "react";
@@ -137,19 +138,17 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 				disabled={isLoading || props.disabled}
 				{...props}
 			>
-				{effectiveRender ? undefined : (
-					isLoading ? (
-							<SmallSpinner
-								size={14}
-								className={variant === "primary" ? "relative z-10" : undefined}
-							/>
-						) : variant === "primary" ? (
-							<span className="relative z-10 inline-flex items-center gap-2 transition-none">
-								{children}
-							</span>
-						) : (
-							children
-						)
+				{effectiveRender ? undefined : isLoading ? (
+					<SmallSpinner
+						size={14}
+						className={variant === "primary" ? "relative z-10" : undefined}
+					/>
+				) : variant === "primary" ? (
+					<span className="relative z-10 inline-flex items-center gap-2 transition-none">
+						{children}
+					</span>
+				) : (
+					children
 				)}
 			</ButtonPrimitive>
 		);

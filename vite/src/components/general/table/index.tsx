@@ -1,33 +1,29 @@
-"use client";
+import type { ReactNode } from "react";
+import {
+	Table as BaseTable,
+	TableProvider as BaseTableProvider,
+	type TableProps,
+} from "@autumn/ui/table";
+import { Link } from "react-router";
 
-import { TablePaginationFooter } from "./TablePaginationFooter";
-import { TableActions } from "./table-actions";
-import { TableBody } from "./table-body";
-import { TableBodyVirtualized } from "./table-body-virtualized";
-import { TableColumnVisibility } from "./table-column-visibility";
-import { TableContainer } from "./table-container";
-import { TableContent } from "./table-content";
-import { TableContentVirtualized } from "./table-content-virtualized";
-import { TableFooter } from "./table-footer";
-import { TableHeader } from "./table-header";
-import { TableHeading } from "./table-heading";
-import { TablePagination } from "./table-pagination";
-import { TableProvider } from "./table-provider";
-import { TableToolbar } from "./table-toolbar";
+// Forward everything from the package table; Table is overridden below to inject Link.
+export * from "@autumn/ui/table";
+
+function TableProvider<T>({
+	config,
+	children,
+}: {
+	config: TableProps<T>;
+	children: ReactNode;
+}) {
+	return (
+		<BaseTableProvider config={{ linkComponent: Link, ...config }}>
+			{children}
+		</BaseTableProvider>
+	);
+}
 
 export const Table = {
-	Actions: TableActions,
-	Toolbar: TableToolbar,
+	...BaseTable,
 	Provider: TableProvider,
-	Content: TableContent,
-	VirtualizedContent: TableContentVirtualized,
-	Header: TableHeader,
-	Heading: TableHeading,
-	Footer: TableFooter,
-	PaginationFooter: TablePaginationFooter,
-	Body: TableBody,
-	VirtualizedBody: TableBodyVirtualized,
-	Container: TableContainer,
-	Pagination: TablePagination,
-	ColumnVisibility: TableColumnVisibility,
 };

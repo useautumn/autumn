@@ -1,6 +1,6 @@
 "use client";
 
-import { cn, hasSubmitShortcutModifier } from "@autumn/ui";
+import { cn, hasSubmitShortcutModifier } from "@autumn/ui/lib/utils";
 import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox";
 import { CheckIcon } from "lucide-react";
 

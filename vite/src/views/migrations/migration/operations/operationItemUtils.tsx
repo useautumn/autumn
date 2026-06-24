@@ -12,7 +12,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 
 const LABEL_OVERRIDES: Record<string, string> = {

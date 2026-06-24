@@ -47,13 +47,13 @@ import { useCallback, useDeferredValue, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { Table } from "@/components/general/table";
-import { useCursorPagination } from "@/components/general/table/useCursorPagination";
+import { useCursorPagination } from "@/components/general/table";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import {
 	type MigrationPreviewCustomer,
 	useMigrationFilterPreview,

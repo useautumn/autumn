@@ -7,7 +7,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { useProductStore } from "@/hooks/stores/useProductStore";
 import { cn } from "@/lib/utils";
 import { pushPage } from "@/utils/genUtils";

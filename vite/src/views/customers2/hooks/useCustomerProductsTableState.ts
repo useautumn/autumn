@@ -4,7 +4,7 @@ import {
 } from "@autumn/shared";
 import { parseAsBoolean, parseAsStringEnum, useQueryState } from "nuqs";
 import { useCallback, useState } from "react";
-import { useCursorPagination } from "@/components/general/table/useCursorPagination";
+import { useCursorPagination } from "@/components/general/table";
 
 export const CUSTOMER_PRODUCTS_PAGE_SIZES = [10, 25, 50, 100] as const;
 export type CustomerProductsPageSize =

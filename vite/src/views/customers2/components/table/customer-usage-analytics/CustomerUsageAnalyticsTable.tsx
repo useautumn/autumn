@@ -4,7 +4,7 @@ import { ArrowSquareOutIcon, ChartBarIcon } from "@phosphor-icons/react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
-import { useColumnVisibility } from "@/hooks/useColumnVisibility";
+import { useColumnVisibility } from "@autumn/ui";
 import { useEnv } from "@/utils/envUtils";
 import { useCusEventsQuery } from "@/views/customers/customer/hooks/useCusEventsQuery";
 import { useCustomerContext } from "@/views/customers2/customer/CustomerContext";

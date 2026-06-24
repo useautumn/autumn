@@ -1,4 +1,5 @@
-import { cn, Separator } from "@autumn/ui";
+import { Separator } from "@autumn/ui/components/ui/separator";
+import { cn } from "@autumn/ui/lib/utils";
 import { mergeProps } from "@base-ui/react/merge-props";
 import { useRender } from "@base-ui/react/use-render";
 import { cva, type VariantProps } from "class-variance-authority";

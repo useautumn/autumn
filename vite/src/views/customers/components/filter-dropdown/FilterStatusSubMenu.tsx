@@ -4,7 +4,7 @@ import {
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { useCustomerFilters } from "../../hooks/useCustomerFilters";
 

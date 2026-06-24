@@ -214,13 +214,15 @@ html {
 
 .preset-modern.dark [data-slot="sheet-overlay"],
 .preset-modern.dark [data-slot="dialog-overlay"] {
-	background-color: rgb(0 0 0 / 0.6);
+	/* biome-ignore lint/complexity/noImportantStyles: override base overlay token */
+	background-color: rgb(0 0 0 / 0.6) !important;
 }
 
 /* Cursed preset — admin-only joke. Eldritch space font + hideous palette. */
 .preset-cursed {
+	/* biome-ignore lint/complexity/noImportantStyles: force joke font over component fonts */
 	font-family:
-		"Rubik Glitch", "Nabla", "Noto Sans Cuneiform", "Comic Sans MS", cursive;
+		"Rubik Glitch", "Nabla", "Noto Sans Cuneiform", "Comic Sans MS", cursive !important;
 	background-color: #ff00aa;
 	--background: #ff00aa;
 	--outer-background: #00ff88;
@@ -255,7 +257,8 @@ html {
 }
 
 .preset-cursed * {
-	font-family: inherit;
+	/* biome-ignore lint/complexity/noImportantStyles: force joke font over component fonts */
+	font-family: inherit !important;
 }
 
 @theme inline {

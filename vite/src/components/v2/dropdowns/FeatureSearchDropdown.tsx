@@ -9,7 +9,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "./DropdownMenu";
+} from "@autumn/ui";
 
 export function FeatureSearchDropdown({
 	features,

@@ -18,7 +18,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { ActionCard } from "../shared/ActionCard";
 import { DASHED_BUTTON_CLASS } from "../shared/AddButton";
 import { AutumnMark, StripeMark } from "../shared/BillingScopeMarks";

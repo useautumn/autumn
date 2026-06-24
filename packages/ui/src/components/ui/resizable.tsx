@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@autumn/ui";
+import { cn } from "@autumn/ui/lib/utils";
 import * as ResizablePrimitive from "react-resizable-panels";
 
 function ResizablePanelGroup({

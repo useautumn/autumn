@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import {
 	type ColumnGroup,
 	getVisibleUsageColumnsFromStorage,
-} from "@/hooks/useColumnVisibility";
+} from "@autumn/ui";
 import {
 	BASE_COLUMN_IDS,
 	createCustomerListColumns,

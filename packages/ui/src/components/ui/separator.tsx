@@ -1,6 +1,6 @@
 "use client";
 
-import { cn } from "@autumn/ui";
+import { cn } from "@autumn/ui/lib/utils";
 import { Separator as SeparatorPrimitive } from "@base-ui/react/separator";
 
 function Separator({
