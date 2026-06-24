@@ -59,6 +59,7 @@ export const chatThreadContextsRepo = {
 				eq(chatThreadContexts.channel_id, channelId),
 				eq(chatThreadContexts.thread_id, threadId),
 			),
+			limit: 10,
 		});
 		if (contexts.length === 0) return null;
 
