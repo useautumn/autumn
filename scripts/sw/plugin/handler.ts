@@ -140,14 +140,16 @@ function main(): void {
 	}
 
 	// One-shot guard: a single "New worktree" emits several events (worktree.created
-	// + tab.created), so prompt only once per checkout.
+	// + tab.created) that herdr runs as PARALLEL processes, so the guard must be
+	// atomic — exclusive create (`wx`) wins exactly once; the loser skips.
 	const guard = join(PROMPTED_DIR, checkout.replace(/[^a-zA-Z0-9]/g, "_"));
-	if (existsSync(guard)) {
+	mkdirSync(PROMPTED_DIR, { recursive: true });
+	try {
+		writeFileSync(guard, "", { flag: "wx" });
+	} catch {
 		debug(`skip: already prompted ${checkout}`);
 		return;
 	}
-	mkdirSync(PROMPTED_DIR, { recursive: true });
-	writeFileSync(guard, "");
 
 	// Resolve the CLI next to this plugin (the installed stable copy), NOT inside
 	// the new worktree — which may be branched off a commit without scripts/sw.
