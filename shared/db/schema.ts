@@ -41,14 +41,13 @@ import { events } from "../models/eventModels/eventTable.js";
 import { featureRelations } from "../models/featureModels/featureRelations.js";
 import { features } from "../models/featureModels/featureTable.js";
 import { invoiceTemplates } from "../models/invoiceTemplateModels/invoiceTemplateTable.js";
-import {
-	cmaMemory,
-	cmaSessions,
-	cmaVaults,
-	harnessSessions,
-	slackAdminThreads,
-} from "../models/leafModels/cmaStateTable.js";
+import { chatThreadContexts } from "../models/leafModels/chatThreadContextsTable.js";
+import { cmaMemory } from "../models/leafModels/cmaMemoryTable.js";
+import { cmaSessions } from "../models/leafModels/cmaSessionsTable.js";
+import { cmaVaults } from "../models/leafModels/cmaVaultsTable.js";
+import { harnessSessions } from "../models/leafModels/harnessSessionsTable.js";
 import { leafSchema } from "../models/leafModels/leafSchema.js";
+import { slackAdminThreads } from "../models/leafModels/slackAdminThreadsTable.js";
 // Migration Relations
 import { migrationErrorRelations } from "../models/migrationModels/migrationErrorRelations.js";
 import { migrationErrors } from "../models/migrationModels/migrationErrorTable.js";
@@ -127,6 +126,7 @@ export {
 	cmaMemory,
 	cmaSessions,
 	cmaVaults,
+	chatThreadContexts,
 	harnessSessions,
 	slackAdminThreads,
 	leafSchema,

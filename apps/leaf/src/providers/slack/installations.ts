@@ -14,7 +14,7 @@ import {
 } from "@autumn/shared";
 import { and, eq, inArray, or } from "drizzle-orm";
 import { replaceInstallationOAuthCredentials } from "../../internal/installations/actions/replaceInstallationOAuthCredentials.js";
-import { slackAdminThreadsRepo } from "../../internal/slackAdmin/repos/slackAdminThreadsRepo.js";
+import { chatThreadContextsRepo } from "../../internal/chatThreadContexts/repos/chatThreadContextsRepo.js";
 import { decrypt, encrypt } from "../../lib/crypto.js";
 import { db } from "../../lib/db.js";
 import { env } from "../../lib/env.js";
@@ -104,7 +104,7 @@ const deleteInstallationArtifacts = async (
 			.delete(oauthRefreshToken)
 			.where(inArray(oauthRefreshToken.token, refreshTokenHashes));
 	}
-	await slackAdminThreadsRepo.deleteByInstallation({
+	await chatThreadContextsRepo.deleteByInstallation({
 		db: tx,
 		chatInstallationId: installation.id,
 	});

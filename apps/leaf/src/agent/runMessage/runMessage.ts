@@ -1,3 +1,4 @@
+import type { ChatInstallation } from "@autumn/shared";
 import type { ClaudeManagedSessionRef } from "../../harness/claudeManaged/session/ensureSession.js";
 import { findClaudeManagedSessionForThread } from "../../harness/claudeManaged/session/ensureSession.js";
 import type { VercelHarnessSessionRef } from "../../harness/vercelHarness/session/ensureSession.js";
@@ -28,6 +29,7 @@ const withTimeout = <T>(promise: Promise<T>, ms: number) =>
 const TIMEOUT_BACKSTOP_GRACE_MS = 20_000;
 
 type RunMessageOutput = AgentOutput & {
+	installation?: ChatInstallation;
 	org?: { id: string; slug?: string };
 };
 
@@ -75,7 +77,14 @@ export const runMessage = async ({
 				await onAgentReady?.();
 				return { env: getDefaultChatEnv(), text: orgContext.blockedText };
 			}
+			const effectiveInstallation = orgContext.installation;
 			const { org } = orgContext;
+			const effectiveThread = {
+				channelId,
+				provider: effectiveInstallation.provider,
+				threadId,
+				workspaceId: effectiveInstallation.workspace_id,
+			};
 
 			const preparedPromise = prepareAttachmentMessage({
 				attachments,
@@ -88,14 +97,14 @@ export const runMessage = async ({
 					return findClaudeManagedSessionForThread({
 						db,
 						orgId: org.id,
-						thread,
+						thread: effectiveThread,
 					});
 				}
 				if (engine.name === "vercel") {
 					return findVercelHarnessSessionForThread({
 						db,
 						orgId: org.id,
-						thread,
+						thread: effectiveThread,
 					});
 				}
 				return Promise.resolve(undefined);
@@ -127,7 +136,7 @@ export const runMessage = async ({
 				context: {
 					env,
 					org_id: org.id,
-					provider: installation.provider,
+					provider: effectiveInstallation.provider,
 				},
 				data: {
 					source: existingHarnessSession ? "existing_session" : "selector",
@@ -135,7 +144,7 @@ export const runMessage = async ({
 			});
 
 			const token = await getInstallationOAuthAccessToken({
-				installation,
+				installation: effectiveInstallation,
 				env,
 				orgId: org.id,
 			});
@@ -168,13 +177,13 @@ export const runMessage = async ({
 				onTurnComplete,
 				providerUserId,
 				run,
-				thread,
+				thread: effectiveThread,
 				timestamp: Date.now(),
 				token,
 			};
 
 			const output = await engine.run({ ctx, params });
-			return { ...output, org };
+			return { ...output, installation: effectiveInstallation, org };
 		})(),
 		deadlineAt - Date.now() + TIMEOUT_BACKSTOP_GRACE_MS,
 	);
