@@ -112,6 +112,7 @@ type UpdateEditablePatchFields = Pick<
 	UpdateSubscriptionForm,
 	| "items"
 	| "version"
+	| "billingControls"
 	| "trialEnabled"
 	| "removeTrial"
 	| "trialLength"
@@ -122,6 +123,7 @@ type UpdateEditablePatchFields = Pick<
 const UPDATE_EDITABLE_PATCH_FIELDS = [
 	"items",
 	"version",
+	"billingControls",
 	"trialEnabled",
 	"removeTrial",
 	"trialLength",
@@ -332,6 +334,7 @@ export function UpdateSubscriptionFormProvider({
 			const updatePatch = {
 				items: patch.items,
 				version: patch.version,
+				billingControls: draftProduct.billing_controls ?? null,
 				trialEnabled: patch.trialEnabled,
 				removeTrial: patch.removeTrial,
 				trialLength: patch.trialLength,

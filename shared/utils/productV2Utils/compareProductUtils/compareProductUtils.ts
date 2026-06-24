@@ -213,7 +213,9 @@ export const productsAreSame = ({
 	});
 
 	billingControlsSame = compareBillingControls({
-		newBillingControls: newProductV2?.billing_controls,
+		newBillingControls:
+			newProductV2?.billing_controls ??
+			(newProductV1 ? billingControlsFromColumns(newProductV1) : undefined),
 		curBillingControls:
 			curProductV2?.billing_controls ??
 			(curProductV1 ? billingControlsFromColumns(curProductV1) : undefined),

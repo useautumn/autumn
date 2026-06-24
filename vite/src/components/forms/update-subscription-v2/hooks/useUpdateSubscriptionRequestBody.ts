@@ -132,6 +132,7 @@ export function useUpdateSubscriptionRequestBody({
 			refundAmount,
 			noBillingChanges,
 			discounts,
+			billingControls,
 		} = formValues;
 
 		const validDiscounts = discounts?.length
@@ -190,6 +191,7 @@ export function useUpdateSubscriptionRequestBody({
 			carry_over_usages: resetUsage ? { enabled: false } : undefined,
 			no_billing_changes: noBillingChanges || undefined,
 			discounts: validDiscounts,
+			billing_controls: billingControls ?? undefined,
 		};
 	}, [
 		form.store,

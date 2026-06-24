@@ -1,5 +1,7 @@
 import {
 	type BillingBehavior,
+	billingControlsFromColumns,
+	compareBillingControls,
 	type Feature,
 	type FullCusProduct,
 	generateItemChanges,
@@ -37,6 +39,15 @@ export function useHasSubscriptionChanges({
 		if (formValues.noBillingChanges) return true;
 
 		if (formValues.discounts?.length > 0) return true;
+
+		if (
+			!compareBillingControls({
+				newBillingControls: formValues.billingControls ?? undefined,
+				curBillingControls: billingControlsFromColumns(customerProduct),
+			})
+		) {
+			return true;
+		}
 
 		const hasOneOffPrepaidWithQty = prepaidItems.some(
 			(item) =>
@@ -102,6 +113,7 @@ export function useHasSubscriptionChanges({
 		formValues.trialCardRequired,
 		formValues.version,
 		formValues.items,
+		formValues.billingControls,
 		formValues.prepaidOptions,
 		initialPrepaidOptions,
 		prepaidItems,

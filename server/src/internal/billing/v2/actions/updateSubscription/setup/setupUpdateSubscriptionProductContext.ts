@@ -7,6 +7,7 @@ import {
 	type UpdateSubscriptionV1Params,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { applyCustomizeBillingControlsToProduct } from "@/internal/billing/v2/setup/applyCustomizeBillingControls";
 import {
 	type ReusePricesAndEntitlements,
 	setupPatchContext,
@@ -89,7 +90,10 @@ export const setupUpdateSubscriptionProductContext = async ({
 		patchContext,
 	});
 
-	const finalFullProduct = patchContext?.fullProduct ?? customFullProduct;
+	const finalFullProduct = applyCustomizeBillingControlsToProduct({
+		fullProduct: patchContext?.fullProduct ?? customFullProduct,
+		customize: params.customize,
+	});
 
 	const isUpdatingFreeCustomerProduct =
 		isCustomerProductFree(targetCustomerProduct) &&
