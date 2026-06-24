@@ -100,12 +100,21 @@ export const BillingControlsGroup = ({
 }: {
 	title: string;
 	children: ReactNode;
-}) => (
-	<div className="flex flex-col">
-		<SectionTag>{title}</SectionTag>
-		{children}
-	</div>
-);
+}) => {
+	const slim = useContext(SlimContext);
+	return (
+		<div className="flex flex-col">
+			{slim ? (
+				<div className="mb-1.5 px-0.5 text-xs text-tertiary-foreground">
+					{title}
+				</div>
+			) : (
+				<SectionTag>{title}</SectionTag>
+			)}
+			{children}
+		</div>
+	);
+};
 
 const RowButton = ({
 	children,
