@@ -1,7 +1,11 @@
 /** biome-ignore-all lint/suspicious/noDoubleEquals: comparison functions require double equals */
+
+import {
+	BILLING_CONTROL_KEYS,
+	billingControlsFromColumns,
+} from "../../../models/cusModels/billingControls/customerBillingControls.js";
 import type { Feature } from "../../../models/featureModels/featureModels.js";
 import type { FullProduct } from "../../../models/productModels/productModels.js";
-import { billingControlsFromColumns } from "../../../models/cusModels/billingControls/customerBillingControls.js";
 import {
 	OnDecrease,
 	OnIncrease,
@@ -111,9 +115,18 @@ export const compareConfig = ({
 
 	const detailsSame = Object.values(checks).every((d) => d.condition);
 
-
 	return detailsSame;
 };
+
+const normalizeBillingControls = (
+	billingControls?: ProductV2["billing_controls"],
+) =>
+	JSON.stringify(
+		BILLING_CONTROL_KEYS.flatMap((key) => {
+			const items = billingControls?.[key];
+			return items?.length ? [[key, items]] : [];
+		}),
+	);
 
 export const compareBillingControls = ({
 	newBillingControls,
@@ -123,8 +136,8 @@ export const compareBillingControls = ({
 	curBillingControls?: ProductV2["billing_controls"];
 }) => {
 	return (
-		JSON.stringify(newBillingControls ?? {}) ===
-		JSON.stringify(curBillingControls ?? {})
+		normalizeBillingControls(newBillingControls) ===
+		normalizeBillingControls(curBillingControls)
 	);
 };
 
