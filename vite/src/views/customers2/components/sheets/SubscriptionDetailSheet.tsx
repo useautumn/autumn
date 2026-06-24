@@ -223,18 +223,6 @@ export function SubscriptionDetailSheet() {
 				/>
 			)}
 
-			{hasBillingControls(planBillingControls) && (
-				<SheetSection withSeparator>
-					<div className="mb-2 text-sm font-medium text-foreground">
-						Plan billing controls
-					</div>
-					<BillingControlsList
-						billingControls={planBillingControls}
-						featureNameById={featureNameById}
-					/>
-				</SheetSection>
-			)}
-
 			<SheetSection withSeparator={true}>
 				<div className="flex gap-2 justify-between overflow-hidden">
 					<div className="space-y-3 min-w-0 overflow-hidden">
@@ -396,6 +384,17 @@ export function SubscriptionDetailSheet() {
 					)}
 				</div>
 			</SheetSection>
+
+			{hasBillingControls(planBillingControls) && (
+				<SheetSection>
+					<div className="mb-2 text-form-label">Plan billing controls</div>
+					<BillingControlsList
+						billingControls={planBillingControls}
+						featureNameById={featureNameById}
+						slim
+					/>
+				</SheetSection>
+			)}
 
 			{(canCancel || canUpdate) && (
 				<div className="sticky bottom-0 p-4 flex gap-2 bg-card">

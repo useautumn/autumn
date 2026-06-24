@@ -1,8 +1,4 @@
-import {
-	billingControlsFromColumns,
-	type FullCusProduct,
-	isCustomerProductTrialing,
-} from "@autumn/shared";
+import { type FullCusProduct, isCustomerProductTrialing } from "@autumn/shared";
 import {
 	DropdownMenuItem,
 	Tooltip,
@@ -12,7 +8,6 @@ import {
 import { FlaskIcon, PencilIcon } from "@phosphor-icons/react";
 import type { Row, Table } from "@tanstack/react-table";
 import { ArrowRightLeft, Delete, RotateCcw } from "lucide-react";
-import { BillingControlsCountPill } from "@/components/billing-controls/BillingControlsDisplay";
 import {
 	hiddenSkeleton,
 	nameWithIconSkeleton,
@@ -67,16 +62,6 @@ export const CustomerProductsColumns = [
 		cell: ({ row }: { row: Row<FullCusProduct> }) => {
 			return <CustomerProductPrice cusProduct={row.original} />;
 		},
-	},
-	{
-		header: "Controls",
-		accessorKey: "controls",
-		size: 90,
-		cell: ({ row }: { row: Row<FullCusProduct> }) => (
-			<BillingControlsCountPill
-				billingControls={billingControlsFromColumns(row.original)}
-			/>
-		),
 	},
 	{
 		header: "Status",

@@ -12,7 +12,7 @@ import type {
 import { Button, SectionTag } from "@autumn/ui";
 import { format } from "date-fns";
 import { AnimatePresence, motion } from "motion/react";
-import type { ReactNode } from "react";
+import { createContext, type ReactNode, useContext } from "react";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "@/views/customers2/components/table/EmptyState";
 
@@ -24,7 +24,9 @@ const ROW_SWAP_TRANSITION = {
 const pillClassName =
 	"rounded-md bg-muted px-1.5 py-0.5 text-xs text-tertiary-foreground whitespace-nowrap";
 const rowClassName =
-	"flex items-center gap-2 rounded-lg border h-12 px-3 min-w-0 transition-none bg-interactive-secondary";
+	"flex items-center gap-2 rounded-lg border px-3 min-w-0 transition-none bg-interactive-secondary";
+
+const SlimContext = createContext(false);
 
 type EditableRowProps<T> = {
 	item: T;
@@ -111,13 +113,17 @@ const RowButton = ({
 }: {
 	children: ReactNode;
 	onClick?: () => void;
-}) =>
-	onClick ? (
+}) => {
+	const slim = useContext(SlimContext);
+	const heightClassName = slim ? "h-9" : "h-12";
+
+	return onClick ? (
 		<Button
 			type="button"
 			variant="ghost"
 			className={cn(
 				rowClassName,
+				heightClassName,
 				"w-full justify-start hover:bg-interactive-secondary-hover",
 			)}
 			onClick={onClick}
@@ -125,8 +131,9 @@ const RowButton = ({
 			{children}
 		</Button>
 	) : (
-		<div className={rowClassName}>{children}</div>
+		<div className={cn(rowClassName, heightClassName)}>{children}</div>
 	);
+};
 
 export const AutoTopupRow = ({
 	item: autoTopup,
@@ -372,6 +379,7 @@ export function BillingControlsList({
 	onEdit,
 	editingRow,
 	renderEditingRow,
+	slim = false,
 	emptyText = "No billing controls configured",
 }: {
 	billingControls?: CustomerBillingControls | null;
@@ -383,6 +391,7 @@ export function BillingControlsList({
 	}) => void;
 	editingRow?: { key: BillingControlKey; index: number };
 	renderEditingRow?: () => ReactNode;
+	slim?: boolean;
 	emptyText?: string;
 }) {
 	if (!hasBillingControls(billingControls)) {
@@ -390,37 +399,41 @@ export function BillingControlsList({
 	}
 
 	return (
-		<div className="flex flex-col gap-4">
-			{BILLING_CONTROL_GROUPS.map(({ key, title, Row, getKey }) => {
-				const items = billingControls?.[key];
-				if (!items?.length) return null;
+		<SlimContext.Provider value={slim}>
+			<div className={cn("flex flex-col", slim ? "gap-2" : "gap-4")}>
+				{BILLING_CONTROL_GROUPS.map(({ key, title, Row, getKey }) => {
+					const items = billingControls?.[key];
+					if (!items?.length) return null;
 
-				return (
-					<BillingControlsGroup key={key} title={title}>
-						<div className="flex flex-col gap-1.5 rounded-lg">
-							{items.map((item, index) => {
-								const isEditing =
-									editingRow?.key === key && editingRow.index === index;
-								return (
-									<BillingControlRowSlot
-										key={getKey(item, index)}
-										isEditing={Boolean(isEditing && renderEditingRow)}
-										editingContent={renderEditingRow}
-									>
-										<Row
-											item={item}
-											featureNameById={featureNameById}
-											onClick={
-												onEdit ? () => onEdit({ key, index, item }) : undefined
-											}
-										/>
-									</BillingControlRowSlot>
-								);
-							})}
-						</div>
-					</BillingControlsGroup>
-				);
-			})}
-		</div>
+					return (
+						<BillingControlsGroup key={key} title={title}>
+							<div className="flex flex-col gap-1.5 rounded-lg">
+								{items.map((item, index) => {
+									const isEditing =
+										editingRow?.key === key && editingRow.index === index;
+									return (
+										<BillingControlRowSlot
+											key={getKey(item, index)}
+											isEditing={Boolean(isEditing && renderEditingRow)}
+											editingContent={renderEditingRow}
+										>
+											<Row
+												item={item}
+												featureNameById={featureNameById}
+												onClick={
+													onEdit
+														? () => onEdit({ key, index, item })
+														: undefined
+												}
+											/>
+										</BillingControlRowSlot>
+									);
+								})}
+							</div>
+						</BillingControlsGroup>
+					);
+				})}
+			</div>
+		</SlimContext.Provider>
 	);
 }

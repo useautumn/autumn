@@ -112,7 +112,6 @@ export function CustomerProductsTable() {
 			CustomerProductsColumns[2],
 			CustomerProductsColumns[3],
 			CustomerProductsColumns[4],
-			CustomerProductsColumns[5],
 		);
 
 		return baseColumns;
