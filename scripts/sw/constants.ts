@@ -32,7 +32,16 @@ const CONFIG_HOME = process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config");
  * shell (which would brick every pane). `sw install` (re-)copies the wrapper here.
  */
 export const STABLE_DIR = join(CONFIG_HOME, "atmn-sw");
-export const STABLE_WRAPPER = join(STABLE_DIR, "worktree-shell.sh");
+/** The whole `scripts/sw` tree is copied here by `sw install` so neither the
+ * wrapper, the plugin, nor the CLI depends on a worktree that may be deleted or
+ * branched off a commit that predates `scripts/sw`. */
+export const STABLE_CLI_DIR = join(STABLE_DIR, "cli");
+export const STABLE_WRAPPER = join(
+	STABLE_CLI_DIR,
+	"shell",
+	"worktree-shell.sh",
+);
+export const STABLE_PLUGIN_DIR = join(STABLE_CLI_DIR, "plugin");
 
 export const herdrConfigPath = (): string =>
 	join(CONFIG_HOME, "herdr", "config.toml");

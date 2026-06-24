@@ -1,20 +1,22 @@
 import {
 	chmodSync,
-	copyFileSync,
+	cpSync,
 	existsSync,
 	mkdirSync,
 	readFileSync,
+	rmSync,
 	writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
 import {
 	herdrConfigPath,
 	SCRIPT_DIR,
+	STABLE_CLI_DIR,
 	STABLE_DIR,
+	STABLE_PLUGIN_DIR,
 	STABLE_WRAPPER,
-	WRAPPER_SH,
 } from "../constants.ts";
-import { log, shInherit } from "../helpers/shell.ts";
+import { fatal, log, shInherit } from "../helpers/shell.ts";
 
 /** Upsert `default_shell` inside the `[terminal]` table, preserving the rest. */
 function setTerminalDefaultShell(toml: string, shellPath: string): string {
@@ -49,12 +51,24 @@ function setTerminalDefaultShell(toml: string, shellPath: string): string {
 }
 
 export function cmdInstall(): void {
-	// Copy the wrapper OUT of the worktree to a stable path, so deleting the source
-	// worktree can never dangle herdr's global default_shell.
+	if (SCRIPT_DIR === STABLE_CLI_DIR) {
+		fatal("run `sw install` from a repo checkout, not the installed copy");
+	}
+
+	// Copy the whole sw tree OUT of the worktree. So the wrapper, plugin, and CLI
+	// never depend on a worktree that may be deleted or branched off a commit
+	// without scripts/sw. Re-running refreshes the installed copy.
 	mkdirSync(STABLE_DIR, { recursive: true });
-	copyFileSync(WRAPPER_SH, STABLE_WRAPPER);
-	chmodSync(STABLE_WRAPPER, 0o755);
-	log(`installed wrapper -> ${STABLE_WRAPPER}`);
+	rmSync(STABLE_CLI_DIR, { recursive: true, force: true });
+	cpSync(SCRIPT_DIR, STABLE_CLI_DIR, { recursive: true });
+	for (const rel of [
+		"shell/worktree-shell.sh",
+		"remote/provision.sh",
+		"remote/herdr-agent-state.sh",
+	]) {
+		chmodSync(join(STABLE_CLI_DIR, rel), 0o755);
+	}
+	log(`installed sw -> ${STABLE_CLI_DIR}`);
 
 	const configPath = herdrConfigPath();
 	mkdirSync(dirname(configPath), { recursive: true });
@@ -64,8 +78,8 @@ export function cmdInstall(): void {
 	writeFileSync(configPath, setTerminalDefaultShell(existing, STABLE_WRAPPER));
 	log(`set [terminal] default_shell = "${STABLE_WRAPPER}" in ${configPath}`);
 
-	log("linking herdr plugin");
-	shInherit("herdr", ["plugin", "link", join(SCRIPT_DIR, "plugin")]);
+	log("linking herdr plugin (from the stable copy)");
+	shInherit("herdr", ["plugin", "link", STABLE_PLUGIN_DIR]);
 	shInherit("herdr", ["server", "reload-config"]);
 
 	log("done. New @autumn worktrees will prompt local/exe.dev on creation.");

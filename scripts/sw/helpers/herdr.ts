@@ -2,30 +2,26 @@ import { sh } from "./shell.ts";
 
 const herdrBin = (): string => process.env.HERDR_BIN_PATH || "herdr";
 
-function herdr(args: string[]): {
-	stdout: string;
-	stderr: string;
-	code: number;
-} {
-	return sh(herdrBin(), args);
+// herdr CLI commands emit a JSON-RPC envelope (`{id, result, ...}`) and exit 0
+// even on bad flags — so callers parse `result`, never trust the exit code.
+function herdr(args: string[]): string {
+	return sh(herdrBin(), args).stdout;
 }
 
-type PaneInfo = { pane_id?: string; id?: string };
-
-/** First pane of a workspace — the one herdr spawned with the new worktree. */
-export function firstPaneOfWorkspace(workspaceId: string): string | null {
-	const res = herdr(["pane", "list", "--workspace", workspaceId, "--json"]);
-	if (res.code !== 0) return null;
+function parseResult<T>(stdout: string): T | null {
 	try {
-		const parsed = JSON.parse(res.stdout) as
-			| PaneInfo[]
-			| { panes?: PaneInfo[] };
-		const panes = Array.isArray(parsed) ? parsed : (parsed.panes ?? []);
-		const first = panes[0];
-		return first?.pane_id ?? first?.id ?? null;
+		return (JSON.parse(stdout) as { result?: T }).result ?? null;
 	} catch {
 		return null;
 	}
+}
+
+/** First pane of a workspace — the one herdr spawned with the new worktree. */
+export function firstPaneOfWorkspace(workspaceId: string): string | null {
+	const result = parseResult<{ panes?: Array<{ pane_id?: string }> }>(
+		herdr(["pane", "list", "--workspace", workspaceId]),
+	);
+	return result?.panes?.[0]?.pane_id ?? null;
 }
 
 /** Type a command + Enter into a pane's running shell (does not respawn it). */
@@ -45,12 +41,6 @@ export function paneSplit(
 	const args = ["pane", "split", paneId, "--direction", opts.direction];
 	if (opts.ratio !== undefined) args.push("--ratio", String(opts.ratio));
 	args.push("--no-focus");
-	const res = herdr(args);
-	if (res.code !== 0) return null;
-	try {
-		const parsed = JSON.parse(res.stdout) as PaneInfo;
-		return parsed.pane_id ?? parsed.id ?? null;
-	} catch {
-		return null;
-	}
+	const result = parseResult<{ pane?: { pane_id?: string } }>(herdr(args));
+	return result?.pane?.pane_id ?? null;
 }
