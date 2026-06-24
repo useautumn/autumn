@@ -135,6 +135,7 @@ export const getPlanResponse = async ({
 
 		config: product.config ?? { ignore_past_due: false },
 		billing_controls: billingControlsFromColumns(product),
+		metadata: product.metadata ?? {},
 
 		customer_eligibility: customerEligibility,
 	} satisfies ApiPlanV1);

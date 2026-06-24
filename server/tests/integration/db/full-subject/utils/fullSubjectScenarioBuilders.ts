@@ -156,6 +156,7 @@ const buildProduct = ({
 	usage_limits: null,
 	usage_alerts: null,
 	overage_allowed: null,
+	metadata: {},
 });
 
 const buildEntitlement = ({

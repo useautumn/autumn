@@ -27,6 +27,7 @@ const baseProduct = {
 	is_add_on: false,
 	is_default: false,
 	config: { ignore_past_due: false },
+	metadata: {},
 	prices: [],
 	entitlements: [],
 	free_trial: null,

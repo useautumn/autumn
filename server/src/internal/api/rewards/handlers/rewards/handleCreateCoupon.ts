@@ -1,6 +1,8 @@
 import {
 	CreateRewardSchema,
+	ErrCode,
 	isFixedPrice,
+	RecaseError,
 	RewardCategory,
 	Scopes,
 } from "@autumn/shared";
@@ -38,6 +40,45 @@ export const handleCreateCoupon = createRoute({
 			env,
 			features: ctx.features,
 		});
+
+		// Reject duplicate reward id / promo code before any Stripe side effects.
+		const codes = newReward.promo_codes.map((promo) => promo.code);
+
+		if (new Set(codes).size !== codes.length) {
+			throw new RecaseError({
+				message: "Promo codes must be unique within a reward",
+				code: ErrCode.DuplicatePromoCode,
+				statusCode: 400,
+			});
+		}
+
+		const existingRewards = await rewardRepo.getByIdOrCode({
+			db,
+			codes: [newReward.id, ...codes],
+			orgId: org.id,
+			env,
+		});
+
+		if (existingRewards.some((reward) => reward.id === newReward.id)) {
+			throw new RecaseError({
+				message: `Reward with id ${newReward.id} already exists`,
+				code: ErrCode.DuplicateRewardId,
+				statusCode: 400,
+			});
+		}
+
+		const takenCode = codes.find((code) =>
+			existingRewards.some((reward) =>
+				reward.promo_codes.some((promo) => promo.code === code),
+			),
+		);
+		if (takenCode) {
+			throw new RecaseError({
+				message: `Promo code ${takenCode} is already in use by another reward`,
+				code: ErrCode.DuplicatePromoCode,
+				statusCode: 400,
+			});
+		}
 
 		if (getRewardCat(newReward) === RewardCategory.Discount) {
 			const discountConfig = newReward.discount_config;

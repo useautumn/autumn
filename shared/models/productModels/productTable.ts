@@ -13,6 +13,7 @@ import { sqlNow } from "../../db/utils";
 import { billingControlColumns } from "../cusModels/billingControls/billingControlTableColumns";
 import { organizations } from "../orgModels/orgTable";
 import type { ProductConfig } from "./productConfig/productConfig";
+import type { ProductMetadata } from "./productMetadata";
 
 type ProductProcessor = {
 	type: string;
@@ -36,8 +37,9 @@ export const products = pgTable(
 		processor: jsonb().$type<ProductProcessor>().default(sql`null`),
 		base_variant_id: text("base_variant_id"),
 		archived: boolean("archived").notNull().default(false),
-		config: jsonb()
-			.$type<ProductConfig>()
+		config: jsonb().$type<ProductConfig>().notNull().default(sql`'{}'::jsonb`),
+		metadata: jsonb()
+			.$type<ProductMetadata>()
 			.notNull()
 			.default(sql`'{}'::jsonb`),
 		...billingControlColumns(),

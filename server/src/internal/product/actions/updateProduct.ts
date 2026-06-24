@@ -24,6 +24,7 @@ import { ProductService } from "@/internal/products/ProductService.js";
 import { handleNewProductItems } from "@/internal/products/product-items/productItemUtils/handleNewProductItems.js";
 import { getProductResponse } from "@/internal/products/productUtils/productResponseUtils/getProductResponse.js";
 import { initProductInStripe } from "@/internal/products/productUtils.js";
+import { productRepo } from "@/internal/products/repos/productRepo.js";
 import { rewardProgramRepo } from "@/internal/rewards/repos/index.js";
 import { JobName } from "@/queue/JobName.js";
 import { addTaskToQueue } from "@/queue/queueUtils.js";
@@ -147,6 +148,17 @@ export const updateProduct = async ({
 		rewardPrograms,
 		logger: ctx.logger,
 	});
+
+	if (notNullish(updates.metadata)) {
+		await productRepo.updateMetadataByExternalId({
+			db,
+			orgId: org.id,
+			env,
+			id: updates.id || fullProduct.id,
+			metadata: updates.metadata,
+		});
+		fullProduct.metadata = updates.metadata;
+	}
 
 	// Check if versioning is needed (customers exist AND items or free trial changed)
 	if (

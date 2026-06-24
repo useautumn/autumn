@@ -48,6 +48,11 @@ export function planParamsV1ToProductV2({
 			? params.billing_controls
 			: undefined;
 
+	const metadata =
+		"metadata" in params && params.metadata !== undefined
+			? params.metadata
+			: undefined;
+
 	const createInStripe =
 		"create_in_stripe" in params && params.create_in_stripe !== undefined
 			? params.create_in_stripe
@@ -75,6 +80,7 @@ export function planParamsV1ToProductV2({
 		...(billingControls !== undefined && {
 			billing_controls: billingControls,
 		}),
+		...(metadata !== undefined && { metadata }),
 		...(createInStripe !== undefined && { create_in_stripe: createInStripe }),
 	};
 }

@@ -151,6 +151,29 @@ export const compareBillingControls = ({
 	);
 };
 
+// Order-independent deep comparison of two metadata records.
+export const compareMetadata = ({
+	newMetadata,
+	curMetadata,
+}: {
+	newMetadata?: ProductV2["metadata"];
+	curMetadata?: ProductV2["metadata"];
+}) => {
+	const stable = (value: unknown): string =>
+		JSON.stringify(value ?? {}, (_key, val) =>
+			val && typeof val === "object" && !Array.isArray(val)
+				? Object.keys(val as Record<string, unknown>)
+						.sort()
+						.reduce<Record<string, unknown>>((acc, k) => {
+							acc[k] = (val as Record<string, unknown>)[k];
+							return acc;
+						}, {})
+				: val,
+		);
+
+	return stable(newMetadata) === stable(curMetadata);
+};
+
 export const prodOptionsAreSame = ({
 	curProduct,
 	newProduct,
@@ -231,6 +254,11 @@ export const productsAreSame = ({
 			(curProductV1 ? billingControlsFromColumns(curProductV1) : undefined),
 	});
 
+	const metadataSame = compareMetadata({
+		newMetadata: newProductV2?.metadata,
+		curMetadata: curProductV2?.metadata,
+	});
+
 	if (items1.length !== items2.length) {
 		itemsSame = false;
 	}
@@ -309,6 +337,14 @@ export const productsAreSame = ({
 	// console.log(`free trials same: `, freeTrialsSame);
 	// console.log(`options same: `, optionsSame);
 
+	const same =
+		itemsSame &&
+		detailsSame &&
+		freeTrialsSame &&
+		configSame &&
+		metadataSame &&
+		billingControlsSame;
+
 	// Compare name
 	return {
 		itemsSame,
@@ -320,5 +356,7 @@ export const productsAreSame = ({
 		optionsSame,
 		configSame,
 		billingControlsSame,
+		metadataSame,
+		same,
 	};
 };

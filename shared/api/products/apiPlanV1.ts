@@ -2,6 +2,7 @@ import { AppEnv } from "@models/genModels/genEnums.js";
 import { CustomerBillingControlsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { ProductConfigSchema } from "@models/productModels/productConfig/productConfig.js";
+import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { z } from "zod/v4";
 import { ApiFreeTrialV2Schema } from "./components/apiFreeTrialV2.js";
 import { CustomerEligibilitySchema } from "./components/customerEligibility.js";
@@ -44,6 +45,7 @@ export const API_PLAN_V1_EXAMPLE = {
 		ignore_past_due: false,
 	},
 	billing_controls: {},
+	metadata: {},
 };
 
 export const ApiPlanV1Schema = z.object({
@@ -124,6 +126,11 @@ export const ApiPlanV1Schema = z.object({
 	}),
 	billing_controls: CustomerBillingControlsSchema.optional().meta({
 		description: "Plan-level billing controls used as customer defaults.",
+	}),
+
+	metadata: ProductMetadataSchema.meta({
+		description:
+			"Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan.",
 	}),
 
 	customer_eligibility: CustomerEligibilitySchema.optional(),

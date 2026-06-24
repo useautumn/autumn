@@ -105,6 +105,7 @@ export const constructProduct = ({
 			ignore_past_due: productData.config?.ignore_past_due ?? false,
 		},
 		...pickBillingControlColumns(productData.billing_controls),
+		metadata: productData.metadata ?? {},
 	};
 
 	return newProduct;

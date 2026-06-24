@@ -1,5 +1,5 @@
 {
-  "id": "b6710f86-c9bb-4637-8f84-e8b8b72e609c",
+  "id": "55539f3b-a3c0-4588-8419-e52b4f9d2ce6",
   "prevId": "dee3c58a-0a39-4e6c-8f4f-f64d3a1ee49c",
   "version": "7",
   "dialect": "postgresql",
@@ -2221,36 +2221,6 @@
         "on_trial_end": {
           "name": "on_trial_end",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "auto_topups": {
-          "name": "auto_topups",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "spend_limits": {
-          "name": "spend_limits",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "usage_limits": {
-          "name": "usage_limits",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "usage_alerts": {
-          "name": "usage_alerts",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "overage_allowed": {
-          "name": "overage_allowed",
-          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         }
@@ -6546,36 +6516,6 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'{}'::jsonb"
-        },
-        "auto_topups": {
-          "name": "auto_topups",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "spend_limits": {
-          "name": "spend_limits",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "usage_limits": {
-          "name": "usage_limits",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "usage_alerts": {
-          "name": "usage_alerts",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "overage_allowed": {
-          "name": "overage_allowed",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {
@@ -7268,7 +7208,29 @@
           "notNull": false
         }
       },
-      "indexes": {},
+      "indexes": {
+        "idx_rewards_org_id_env": {
+          "name": "idx_rewards_org_id_env",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "env",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
       "foreignKeys": {
         "coupons_org_id_fkey": {
           "name": "coupons_org_id_fkey",

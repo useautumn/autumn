@@ -96,6 +96,7 @@ export const mapToProductV2 = ({
 		archived: product.archived || false,
 		config: product.config ?? undefined,
 		billing_controls: billingControlsFromColumns(product),
+		metadata: product.metadata ?? {},
 	};
 
 	return productV2;

@@ -26,6 +26,7 @@ const makePlan = (overrides?: Partial<ApiPlanV1>): ApiPlanV1 => ({
 	archived: false,
 	base_variant_id: null,
 	config: { ignore_past_due: false },
+	metadata: {},
 	...overrides,
 });
 
