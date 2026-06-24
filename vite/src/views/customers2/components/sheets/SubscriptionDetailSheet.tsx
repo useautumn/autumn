@@ -1,5 +1,6 @@
 import type { ApiDiscount } from "@autumn/shared";
 import {
+	billingControlsFromColumns,
 	CusProductStatus,
 	cp,
 	type Entity,
@@ -29,7 +30,6 @@ import { format } from "date-fns";
 import { useMemo } from "react";
 import {
 	BillingControlsList,
-	billingControlsFromSource,
 	hasBillingControls,
 } from "@/components/billing-controls/BillingControlsDisplay";
 import { CollapsedBooleanItems } from "@/components/forms/shared/plan-items/CollapsedBooleanItems";
@@ -138,6 +138,10 @@ export function SubscriptionDetailSheet() {
 
 	// Check for prepaid items in the product (must be called before any returns)
 	const { prepaidItems } = usePrepaidItems({ product: productV2 ?? undefined });
+	const featureNameById = useMemo(
+		() => new Map(features.map((feature) => [feature.id, feature.name])),
+		[features],
+	);
 
 	if (!cusProduct) {
 		return (
@@ -196,11 +200,7 @@ export function SubscriptionDetailSheet() {
 	};
 
 	const kindConfig = getPlanKindConfig(getCusProductKind(cusProduct));
-	const planBillingControls = billingControlsFromSource(cusProduct);
-	const featureNameById = useMemo(
-		() => new Map(features.map((feature) => [feature.id, feature.name])),
-		[features],
-	);
+	const planBillingControls = billingControlsFromColumns(cusProduct);
 
 	return (
 		<div className="flex flex-col h-full overflow-y-auto">

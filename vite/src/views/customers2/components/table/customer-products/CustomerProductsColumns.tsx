@@ -1,19 +1,24 @@
-import { type FullCusProduct, isCustomerProductTrialing } from "@autumn/shared";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
+import {
+	billingControlsFromColumns,
+	type FullCusProduct,
+	isCustomerProductTrialing,
+} from "@autumn/shared";
+import {
+	DropdownMenuItem,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
 import { FlaskIcon, PencilIcon } from "@phosphor-icons/react";
 import type { Row, Table } from "@tanstack/react-table";
 import { ArrowRightLeft, Delete, RotateCcw } from "lucide-react";
-import {
-	BillingControlsCountPill,
-	billingControlsFromSource,
-} from "@/components/billing-controls/BillingControlsDisplay";
+import { BillingControlsCountPill } from "@/components/billing-controls/BillingControlsDisplay";
 import {
 	hiddenSkeleton,
 	nameWithIconSkeleton,
 	statusSkeleton,
 	TableDropdownMenuCell,
 } from "@/components/general/table";
-import { DropdownMenuItem } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { getCusProductKind, getPlanKindConfig } from "@/utils/planKind";
 import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
@@ -69,7 +74,7 @@ export const CustomerProductsColumns = [
 		size: 90,
 		cell: ({ row }: { row: Row<FullCusProduct> }) => (
 			<BillingControlsCountPill
-				billingControls={billingControlsFromSource(row.original)}
+				billingControls={billingControlsFromColumns(row.original)}
 			/>
 		),
 	},

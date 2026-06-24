@@ -1,10 +1,16 @@
-import type {
-	CustomerBillingControls,
-	Entity,
-	Feature,
-	FullCustomer,
+import {
+	billingControlsFromColumns,
+	type Entity,
+	type Feature,
+	type FullCustomer,
 } from "@autumn/shared";
-import { Button } from "@autumn/ui";
+import {
+	Button,
+	DropdownMenu,
+	DropdownMenuContent,
+	DropdownMenuItem,
+	DropdownMenuTrigger,
+} from "@autumn/ui";
 import { GavelIcon, PlusIcon } from "@phosphor-icons/react";
 import { useMemo } from "react";
 import {
@@ -12,12 +18,6 @@ import {
 	hasBillingControls,
 } from "@/components/billing-controls/BillingControlsDisplay";
 import { Table } from "@/components/general/table";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuItem,
-	DropdownMenuTrigger,
-} from "@autumn/ui";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../customer/CustomerContext";
@@ -48,20 +48,9 @@ export function CustomerBillingControlsSection() {
 		[features],
 	);
 
-	const billingControls: CustomerBillingControls = selectedEntity
-		? {
-				spend_limits: selectedEntity.spend_limits ?? undefined,
-				usage_limits: selectedEntity.usage_limits ?? undefined,
-				usage_alerts: selectedEntity.usage_alerts ?? undefined,
-				overage_allowed: selectedEntity.overage_allowed ?? undefined,
-			}
-		: {
-				auto_topups: fullCustomer?.auto_topups ?? undefined,
-				spend_limits: fullCustomer?.spend_limits ?? undefined,
-				usage_limits: fullCustomer?.usage_limits ?? undefined,
-				usage_alerts: fullCustomer?.usage_alerts ?? undefined,
-				overage_allowed: fullCustomer?.overage_allowed ?? undefined,
-			};
+	const billingControls = billingControlsFromColumns(
+		selectedEntity ?? fullCustomer,
+	);
 
 	const hasAnyControls = hasBillingControls(billingControls);
 	const entitiesWithControlsCount =

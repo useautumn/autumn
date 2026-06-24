@@ -39,25 +39,6 @@ export const hasBillingControls = (
 	billingControls?: CustomerBillingControls | null,
 ) => getBillingControlsCount(billingControls) > 0;
 
-export const billingControlsFromSource = (
-	source:
-		| (Partial<CustomerBillingControls> & {
-				auto_topups?: CustomerBillingControls["auto_topups"] | null;
-				spend_limits?: CustomerBillingControls["spend_limits"] | null;
-				usage_limits?: CustomerBillingControls["usage_limits"] | null;
-				usage_alerts?: CustomerBillingControls["usage_alerts"] | null;
-				overage_allowed?: CustomerBillingControls["overage_allowed"] | null;
-		  })
-		| null
-		| undefined,
-): CustomerBillingControls => ({
-	auto_topups: source?.auto_topups ?? undefined,
-	spend_limits: source?.spend_limits ?? undefined,
-	usage_limits: source?.usage_limits ?? undefined,
-	usage_alerts: source?.usage_alerts ?? undefined,
-	overage_allowed: source?.overage_allowed ?? undefined,
-});
-
 export function BillingControlsCountPill({
 	billingControls,
 }: {
@@ -108,21 +89,13 @@ const Pill = ({
 export const BillingControlsGroup = ({
 	title,
 	children,
-	emptyText,
-	hasItems,
 }: {
 	title: string;
 	children: ReactNode;
-	emptyText: string;
-	hasItems: boolean;
 }) => (
 	<div className="flex flex-col">
 		<SectionTag>{title}</SectionTag>
-		{hasItems ? (
-			children
-		) : (
-			<EmptyState className="h-12 min-h-0" text={emptyText} />
-		)}
+		{children}
 	</div>
 );
 
@@ -304,6 +277,52 @@ export const OverageAllowedRow = ({
 	</RowButton>
 );
 
+type BillingControlItem = NonNullable<
+	CustomerBillingControls[BillingControlKey]
+>[number];
+
+type BillingControlGroupConfig = {
+	key: BillingControlKey;
+	title: string;
+	Row: (props: EditableRowProps<BillingControlItem>) => ReactNode;
+	getKey: (item: BillingControlItem, index: number) => string;
+};
+
+const BILLING_CONTROL_GROUPS: readonly BillingControlGroupConfig[] = [
+	{
+		key: "auto_topups",
+		title: "Auto top-ups",
+		Row: AutoTopupRow as BillingControlGroupConfig["Row"],
+		getKey: (item, index) => `auto-topup-${item.feature_id}-${index}`,
+	},
+	{
+		key: "spend_limits",
+		title: "Spend limits",
+		Row: SpendLimitRow as BillingControlGroupConfig["Row"],
+		getKey: (item, index) =>
+			`spend-limit-${item.feature_id ?? "global"}-${index}`,
+	},
+	{
+		key: "usage_limits",
+		title: "Usage limits",
+		Row: UsageLimitRow as BillingControlGroupConfig["Row"],
+		getKey: (item, index) => `usage-limit-${item.feature_id}-${index}`,
+	},
+	{
+		key: "usage_alerts",
+		title: "Usage alerts",
+		Row: UsageAlertRow as BillingControlGroupConfig["Row"],
+		getKey: (item, index) =>
+			`usage-alert-${item.feature_id ?? "global"}-${item.name ?? index}`,
+	},
+	{
+		key: "overage_allowed",
+		title: "Overage allowed",
+		Row: OverageAllowedRow as BillingControlGroupConfig["Row"],
+		getKey: (item, index) => `overage-allowed-${item.feature_id}-${index}`,
+	},
+];
+
 export function BillingControlsList({
 	billingControls,
 	featureNameById,
@@ -325,100 +344,27 @@ export function BillingControlsList({
 
 	return (
 		<div className="flex flex-col gap-4">
-			{billingControls?.auto_topups?.length ? (
-				<BillingControlsGroup title="Auto top-ups" emptyText="" hasItems>
-					<div className="flex flex-col gap-1.5 rounded-lg">
-						{billingControls.auto_topups.map((item, index) => (
-							<AutoTopupRow
-								key={`auto-topup-${item.feature_id}-${index}`}
-								item={item}
-								featureNameById={featureNameById}
-								onClick={
-									onEdit
-										? () => onEdit({ key: "auto_topups", index, item })
-										: undefined
-								}
-							/>
-						))}
-					</div>
-				</BillingControlsGroup>
-			) : null}
+			{BILLING_CONTROL_GROUPS.map(({ key, title, Row, getKey }) => {
+				const items = billingControls?.[key];
+				if (!items?.length) return null;
 
-			{billingControls?.spend_limits?.length ? (
-				<BillingControlsGroup title="Spend limits" emptyText="" hasItems>
-					<div className="flex flex-col gap-1.5 rounded-lg">
-						{billingControls.spend_limits.map((item, index) => (
-							<SpendLimitRow
-								key={`spend-limit-${item.feature_id ?? "global"}-${index}`}
-								item={item}
-								featureNameById={featureNameById}
-								onClick={
-									onEdit
-										? () => onEdit({ key: "spend_limits", index, item })
-										: undefined
-								}
-							/>
-						))}
-					</div>
-				</BillingControlsGroup>
-			) : null}
-
-			{billingControls?.usage_limits?.length ? (
-				<BillingControlsGroup title="Usage limits" emptyText="" hasItems>
-					<div className="flex flex-col gap-1.5 rounded-lg">
-						{billingControls.usage_limits.map((item, index) => (
-							<UsageLimitRow
-								key={`usage-limit-${item.feature_id}-${index}`}
-								item={item}
-								featureNameById={featureNameById}
-								onClick={
-									onEdit
-										? () => onEdit({ key: "usage_limits", index, item })
-										: undefined
-								}
-							/>
-						))}
-					</div>
-				</BillingControlsGroup>
-			) : null}
-
-			{billingControls?.usage_alerts?.length ? (
-				<BillingControlsGroup title="Usage alerts" emptyText="" hasItems>
-					<div className="flex flex-col gap-1.5 rounded-lg">
-						{billingControls.usage_alerts.map((item, index) => (
-							<UsageAlertRow
-								key={`usage-alert-${item.feature_id ?? "global"}-${item.name ?? index}`}
-								item={item}
-								featureNameById={featureNameById}
-								onClick={
-									onEdit
-										? () => onEdit({ key: "usage_alerts", index, item })
-										: undefined
-								}
-							/>
-						))}
-					</div>
-				</BillingControlsGroup>
-			) : null}
-
-			{billingControls?.overage_allowed?.length ? (
-				<BillingControlsGroup title="Overage allowed" emptyText="" hasItems>
-					<div className="flex flex-col gap-1.5 rounded-lg">
-						{billingControls.overage_allowed.map((item, index) => (
-							<OverageAllowedRow
-								key={`overage-allowed-${item.feature_id}-${index}`}
-								item={item}
-								featureNameById={featureNameById}
-								onClick={
-									onEdit
-										? () => onEdit({ key: "overage_allowed", index, item })
-										: undefined
-								}
-							/>
-						))}
-					</div>
-				</BillingControlsGroup>
-			) : null}
+				return (
+					<BillingControlsGroup key={key} title={title}>
+						<div className="flex flex-col gap-1.5 rounded-lg">
+							{items.map((item, index) => (
+								<Row
+									key={getKey(item, index)}
+									item={item}
+									featureNameById={featureNameById}
+									onClick={
+										onEdit ? () => onEdit({ key, index, item }) : undefined
+									}
+								/>
+							))}
+						</div>
+					</BillingControlsGroup>
+				);
+			})}
 		</div>
 	);
 }
