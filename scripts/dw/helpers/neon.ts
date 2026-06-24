@@ -90,6 +90,11 @@ export function connectionString(
 		branchName,
 		"--project-id",
 		NEON_PROJECT_ID,
+		// The branch has both `neondb` and `chat` DBs (ensureChatDatabase), so neon
+		// errors on ambiguity without this. env.ts rewrites the path to /chat where
+		// the chat-sdk needs it.
+		"--database-name",
+		"neondb",
 	];
 	if (opts.pooled) args.push("--pooled");
 	const res = neon(args);
