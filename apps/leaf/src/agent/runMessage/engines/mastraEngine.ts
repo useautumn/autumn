@@ -1,9 +1,6 @@
 import { Mastra } from "@mastra/core/mastra";
 import { InMemoryStore } from "@mastra/core/storage";
 import { createLeafTracingOptions } from "../../../internal/observability/leafTracingOptions.js";
-import { sandboxConfig } from "../../../internal/sandbox/config.js";
-import { createE2bSandboxProvider } from "../../../internal/sandbox/e2b/sandboxProvider.js";
-import { createSandboxTools } from "../../../internal/sandbox/tool/createSandboxTools.js";
 import { leafChatAgentDefaults } from "../../../lib/chatAgentConfig.js";
 import { env as chatEnv } from "../../../lib/env.js";
 import { createMastraBraintrustObservability } from "../../../providers/braintrust/index.js";
@@ -63,36 +60,12 @@ export const mastraEngine: AgentEngine = {
 				apiKey: chatEnv.FIRECRAWL_API_KEY,
 				onAction,
 			});
-			const sandboxTools =
-				sandboxConfig.enabled && chatEnv.E2B_API_KEY
-					? createSandboxTools({
-							logger,
-							onAction,
-							provider: createE2bSandboxProvider({
-								apiKey: chatEnv.E2B_API_KEY,
-								context: {
-									channelId: thread.channelId,
-									env,
-									orgId: org.id,
-									provider: thread.provider,
-									threadId: thread.threadId,
-									workspaceId: thread.workspaceId,
-								},
-								sessionTimeoutMs: sandboxConfig.sessionTimeoutMs,
-							}),
-						})
-					: {};
-			if (sandboxConfig.enabled && !chatEnv.E2B_API_KEY) {
-				logger.warn("Sandbox is enabled without an E2B API key", {
-					event: "leaf.sandbox_disabled",
-				});
-			}
 			await onAction?.("Reasoning over the request");
 			const agent = createAutumnChatAgent({
 				docsText: agentTools.docsText,
 				env,
 				model: chatEnv.CHAT_MODEL,
-				tools: { ...tools, ...firecrawlTools, ...sandboxTools },
+				tools: { ...tools, ...firecrawlTools },
 			});
 			const mastra = new Mastra({
 				agents: { chat: agent },
