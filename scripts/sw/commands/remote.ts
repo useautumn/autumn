@@ -15,7 +15,7 @@ import { layoutPanes } from "../helpers/layout.ts";
 import { writeMarker } from "../helpers/marker.ts";
 import { createSwBranch } from "../helpers/neon.ts";
 import { upsertEntry } from "../helpers/registry.ts";
-import { fatal, log } from "../helpers/shell.ts";
+import { fatal, log, sh } from "../helpers/shell.ts";
 import { ensureSshKeyLoaded, sshExecArgs } from "../helpers/ssh.ts";
 import { serverTmuxScript } from "../helpers/tmux.ts";
 import type { Target, WorktreeContext } from "../types.ts";
@@ -40,9 +40,13 @@ export async function cmdRemote({
 	// Load the key into the agent up front → one passphrase prompt for the whole
 	// run AND for any pane opened later (the wrapper reuses the agent).
 	ensureSshKeyLoaded();
+	// Clear stale ControlMaster sockets so a fresh box never rides a dead master.
+	sh("sh", ["-c", "rm -f /tmp/sw-cm-* 2>/dev/null || true"]);
 
 	const neon = createSwBranch(slug);
-	const vmName = `sw-${slug}`.slice(0, 40);
+	// Unique per run: reusing a name reuses the hostname → stale control socket +
+	// host-key mismatch against the recreated box. Registry stores the real name.
+	const vmName = `sw-${slug}-${crypto.randomUUID().slice(0, 7)}`.slice(0, 60);
 	const vm = createVm(vmName);
 
 	const remoteHome = vmCapture(vm.ssh_dest, "echo $HOME");
