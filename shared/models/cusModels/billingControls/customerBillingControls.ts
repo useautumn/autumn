@@ -142,7 +142,7 @@ export const AutoTopupResponseSchema = AutoTopupSchema.extend({
 		}),
 });
 
-export const BillingControlsSchema = z.object({
+export const CustomerBillingControlsSchema = z.object({
 	auto_topups: z.array(AutoTopupSchema).optional().meta({
 		description: "List of auto top-up configurations per feature.",
 	}),
@@ -170,8 +170,6 @@ export const DbBillingControlsSchema = z.object({
 	usage_alerts: z.array(DbUsageAlertSchema).nullish(),
 	overage_allowed: z.array(DbOverageAllowedSchema).nullish(),
 });
-
-export const CustomerBillingControlsSchema = BillingControlsSchema;
 
 export const CustomerBillingControlsParamsSchema =
 	CustomerBillingControlsSchema.check((ctx) => {

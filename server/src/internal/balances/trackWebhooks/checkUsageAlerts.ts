@@ -4,18 +4,18 @@ import {
 	type DbUsageAlert,
 	type Feature,
 	type FullCustomer,
-	fullCustomerToPlanProducts,
 	fullCustomerToCustomerEntitlements,
+	fullCustomerToPlanProducts,
 	fullCustomerToTags,
-	getPlanBillingControlProducts,
 	getApiBalance,
+	getPlanBillingControlProducts,
 	WebhookEventType,
 } from "@autumn/shared";
 import { Decimal } from "decimal.js";
 import { sendSvixEvent } from "@/external/svix/svixHelpers.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 
-type AlertScope = "customer" | "entity" | "org" | "plan";
+export type AlertScope = "customer" | "entity" | "org" | "plan";
 
 const usageAlertsForFeature = ({
 	alerts,
@@ -28,7 +28,7 @@ const usageAlertsForFeature = ({
 		(alert) => alert.feature_id === feature.id || !alert.feature_id,
 	);
 
-const resolveScopedUsageAlerts = ({
+export const resolveScopedUsageAlerts = ({
 	fullCustomer,
 	feature,
 	entityId,
@@ -287,5 +287,4 @@ export const checkUsageAlerts = async ({
 			scope: "org",
 		});
 	}
-
 };
