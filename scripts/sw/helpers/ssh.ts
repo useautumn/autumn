@@ -7,6 +7,12 @@ import { sh, shInherit } from "./shell.ts";
  * so even that one prompt only ever happens the first time (survives reboots).
  */
 export function ensureSshKeyLoaded(): void {
+	// herdr panes often don't inherit SSH_AUTH_SOCK, leaving ssh with no agent (so
+	// it prompts every time). Recover the macOS launchd agent's socket.
+	if (!process.env.SSH_AUTH_SOCK && process.platform === "darwin") {
+		const sock = sh("launchctl", ["getenv", "SSH_AUTH_SOCK"]).stdout.trim();
+		if (sock) process.env.SSH_AUTH_SOCK = sock;
+	}
 	if (sh("ssh-add", ["-l"]).code === 0) return; // agent already has an identity
 	shInherit(
 		"ssh-add",

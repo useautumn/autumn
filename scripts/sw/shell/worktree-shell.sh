@@ -49,6 +49,13 @@ if [ -z "${host:-}" ] || [ -z "${path:-}" ]; then
   exec_local_shell
 fi
 
+# herdr panes often don't inherit SSH_AUTH_SOCK → recover the macOS agent socket
+# so ssh uses the agent (no passphrase prompt) instead of asking every time.
+if [ -z "${SSH_AUTH_SOCK:-}" ] && command -v launchctl >/dev/null 2>&1; then
+  SSH_AUTH_SOCK="$(launchctl getenv SSH_AUTH_SOCK 2>/dev/null)"
+  [ -n "$SSH_AUTH_SOCK" ] && export SSH_AUTH_SOCK
+fi
+
 # exec $SHELL on the REMOTE side resolves to the devbox's shell (not this wrapper).
 # ControlMaster reuses one connection across panes, so the key passphrase (if any)
 # is asked once, not per pane.
