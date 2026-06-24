@@ -1,6 +1,5 @@
 import type { ChatApproval } from "@autumn/shared";
 import { resumeClaudeManagedApproval } from "../../harness/claudeManaged/session/resumeApproval.js";
-import { resumeVercelApproval } from "../../harness/vercelHarness/session/resumeApproval.js";
 import type { AgentHarnessName } from "../../lib/chatAgentConfig.js";
 import type { ApprovalRunResult } from "./types.js";
 
@@ -16,5 +15,4 @@ export const harnessApprovalResumers: Partial<
 	Record<AgentHarnessName, ResumeApprovalFn>
 > = {
 	"claude-managed": resumeClaudeManagedApproval,
-	vercel: resumeVercelApproval,
 };

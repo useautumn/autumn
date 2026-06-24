@@ -1,8 +1,6 @@
 import type { ChatInstallation } from "@autumn/shared";
 import type { ClaudeManagedSessionRef } from "../../harness/claudeManaged/session/ensureSession.js";
 import { findClaudeManagedSessionForThread } from "../../harness/claudeManaged/session/ensureSession.js";
-import type { VercelHarnessSessionRef } from "../../harness/vercelHarness/session/ensureSession.js";
-import { findVercelHarnessSessionForThread } from "../../harness/vercelHarness/session/ensureSession.js";
 import { getInstallationOAuthAccessToken } from "../../internal/installations/actions/getInstallationOAuthAccessToken.js";
 import { messageTimeoutMs } from "../../lib/chatAgentConfig.js";
 import { db } from "../../lib/db.js";
@@ -101,13 +99,6 @@ export const runMessage = async ({
 						thread: effectiveThread,
 					});
 				}
-				if (engine.name === "vercel") {
-					return findVercelHarnessSessionForThread({
-						db,
-						orgId: org.id,
-						thread: effectiveThread,
-					});
-				}
 				return Promise.resolve(undefined);
 			})();
 
@@ -160,10 +151,6 @@ export const runMessage = async ({
 				claudeManagedSession:
 					engine.name === "claude-managed"
 						? (existingHarnessSession as ClaudeManagedSessionRef | undefined)
-						: undefined,
-				vercelHarnessSession:
-					engine.name === "vercel"
-						? (existingHarnessSession as VercelHarnessSessionRef | undefined)
 						: undefined,
 				deadlineAt,
 				env,

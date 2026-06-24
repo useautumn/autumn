@@ -2,7 +2,6 @@ import type { HttpBindings } from "@hono/node-server";
 import { serve } from "@hono/node-server";
 import { Hono } from "hono";
 import { bot, chatAdapterNames } from "./bot.js";
-import { prewarmAiSdkHarness } from "./harness/vercelHarness/agent/prewarm.js";
 import { env } from "./lib/env.js";
 import { logger } from "./lib/logger.js";
 import { createMcpRouter } from "./mcp/mcpRouter.js";
@@ -93,18 +92,5 @@ serve(
 				adapters: chatAdapterNames,
 			},
 		});
-		// Warm the harness template snapshot in the background so the first agent
-		// turn forks from it instead of running the bridge install.
-			if (
-				env.SLACK_AGENT_HARNESS === "vercel" ||
-				env.WEB_AGENT_HARNESS === "vercel"
-			) {
-				prewarmAiSdkHarness().catch((error) =>
-					logger.warn("Harness prewarm failed", {
-						event: "leaf.harness_prewarm_failed",
-						data: { error: String(error) },
-					}),
-				);
-			}
 	},
 );

@@ -10,7 +10,7 @@ import { db } from "../../../lib/db.js";
 import { getInstallationOAuthAccessToken } from "./getInstallationOAuthAccessToken.js";
 
 /** Resolve an org's chat installation and a fresh Autumn OAuth access token for
- * the given env. Shared by the CMA vault and the Vercel-harness egress brokering. */
+ * the given env. */
 export const getOrgInstallationToken = async ({
 	env,
 	orgId,
