@@ -355,30 +355,31 @@ function BillingControlRowSlot({
 	children: ReactNode;
 }) {
 	return (
-		<motion.div
-			layout
-			className="overflow-hidden"
-			transition={ROW_SWAP_TRANSITION}
-		>
-			<AnimatePresence initial={false} mode="popLayout">
-				<motion.div
-					key={isEditing ? "edit" : "row"}
-					initial={{ opacity: 0, filter: "blur(2px)" }}
-					animate={{
-						opacity: 1,
-						filter: "blur(0px)",
-						transition: ROW_SWAP_TRANSITION,
-					}}
-					exit={{
-						opacity: 0,
-						filter: "blur(2px)",
-						transition: { duration: 0.12, ease: "easeOut" },
-					}}
-				>
-					{isEditing && editingContent ? editingContent() : children}
-				</motion.div>
-			</AnimatePresence>
-		</motion.div>
+		<AnimatePresence initial={false} mode="wait">
+			<motion.div
+				key={isEditing ? "edit" : "row"}
+				initial={{ height: 0, opacity: 0 }}
+				animate={{
+					height: "auto",
+					opacity: 1,
+					transition: {
+						height: ROW_SWAP_TRANSITION,
+						opacity: { duration: 0.15, delay: 0.05 },
+					},
+				}}
+				exit={{
+					height: 0,
+					opacity: 0,
+					transition: {
+						height: ROW_SWAP_TRANSITION,
+						opacity: { duration: 0.1 },
+					},
+				}}
+				className="overflow-hidden"
+			>
+				{isEditing && editingContent ? editingContent() : children}
+			</motion.div>
+		</AnimatePresence>
 	);
 }
 
