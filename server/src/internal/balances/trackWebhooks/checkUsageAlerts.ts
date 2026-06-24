@@ -28,24 +28,18 @@ const usageAlertsForFeature = ({
 		(alert) => alert.feature_id === feature.id || !alert.feature_id,
 	);
 
-export const resolveScopedUsageAlerts = ({
+/**
+ * Customer-level alerts use the aggregate customer balance (no entity scope).
+ * Plan-level alerts are a fallback at the same scope, applied only when the
+ * customer has no own alert for the feature.
+ */
+export const resolveCustomerScopeAlerts = ({
 	fullCustomer,
 	feature,
-	entityId,
 }: {
 	fullCustomer: FullCustomer;
 	feature: Feature;
-	entityId?: string;
 }): { alerts: DbUsageAlert[]; scope: AlertScope } => {
-	const entity = entityId
-		? fullCustomer.entities?.find((e) => e.id === entityId)
-		: undefined;
-	const entityAlerts = usageAlertsForFeature({
-		alerts: entity?.usage_alerts ?? [],
-		feature,
-	});
-	if (entityAlerts.length > 0) return { alerts: entityAlerts, scope: "entity" };
-
 	const customerAlerts = usageAlertsForFeature({
 		alerts: fullCustomer.usage_alerts ?? [],
 		feature,
@@ -254,23 +248,39 @@ export const checkUsageAlerts = async ({
 	feature: Feature;
 	entityId?: string;
 }) => {
-	const scopedAlerts = resolveScopedUsageAlerts({
+	// 1. Customer-level alerts (aggregate balance, no entity scope), falling
+	// back to plan-level alerts when the customer has none for this feature.
+	const customerScope = resolveCustomerScopeAlerts({
 		fullCustomer: newFullCus,
 		feature,
-		entityId,
 	});
-
 	await processAlerts({
 		ctx,
 		oldFullCus,
 		newFullCus,
 		feature,
-		entityId,
-		alerts: scopedAlerts.alerts,
-		scope: scopedAlerts.scope,
+		alerts: customerScope.alerts,
+		scope: customerScope.scope,
 	});
 
-	// 2. Org-level alerts apply to all customers and use the tracked subject.
+	// 2. Entity-level alerts fire additionally, scoped to the entity's balance.
+	if (entityId) {
+		const entity = newFullCus.entities?.find((e) => e.id === entityId);
+		await processAlerts({
+			ctx,
+			oldFullCus,
+			newFullCus,
+			feature,
+			entityId,
+			alerts: usageAlertsForFeature({
+				alerts: entity?.usage_alerts ?? [],
+				feature,
+			}),
+			scope: "entity",
+		});
+	}
+
+	// 3. Org-level alerts apply to all customers and use the tracked subject.
 	// Env-scoped: sandbox reads sandbox_usage_alerts, live reads usage_alerts.
 	const orgAlerts =
 		ctx.env === AppEnv.Sandbox

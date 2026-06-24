@@ -5,7 +5,7 @@
  *   - resolveBillingControl chokepoint with controlLists [entity, customer]
  *     (usage_limits / overage_allowed / spend_limits) and [customer] only
  *     (auto_topups — no entity scope) → plan fallback.
- *   - usage_alerts: custom scope resolver resolveScopedUsageAlerts
+ *   - usage_alerts: customer-scope resolver resolveCustomerScopeAlerts
  *     (entity > customer > plan), which does NOT use resolveBillingControl.
  */
 
@@ -18,7 +18,7 @@ import {
 	type FullCustomer,
 	resolveBillingControl,
 } from "@autumn/shared";
-import { resolveScopedUsageAlerts } from "@/internal/balances/trackWebhooks/checkUsageAlerts";
+import { resolveCustomerScopeAlerts } from "@/internal/balances/trackWebhooks/checkUsageAlerts";
 
 const FEATURE = "messages";
 const NOW = Date.UTC(2026, 5, 15, 12, 0, 0);
@@ -129,29 +129,25 @@ describe("usage_alerts custom scope resolver (entity > customer > plan)", () => 
 	});
 
 	const buildFullCustomer = ({
-		entity,
 		customer,
 		plan,
 	}: {
-		entity?: ReturnType<typeof alert>[];
 		customer?: ReturnType<typeof alert>[];
 		plan?: ReturnType<typeof alert>[];
 	}) =>
 		({
 			usage_alerts: customer ?? null,
-			entities: entity ? [{ id: "ent_1", usage_alerts: entity }] : [],
+			entities: [],
 			customer_products: [planProductWith("usage_alerts", plan ?? [])],
 			aggregated_customer_products: [],
 		}) as unknown as FullCustomer;
 
 	const resolveLevel = (
 		fullCustomer: FullCustomer,
-		entityId?: string,
 	): { level?: string; scope: string } => {
-		const { alerts, scope } = resolveScopedUsageAlerts({
+		const { alerts, scope } = resolveCustomerScopeAlerts({
 			fullCustomer,
 			feature,
-			entityId,
 		});
 		return {
 			level: (alerts[0] as { __level?: string } | undefined)?.__level,
@@ -159,7 +155,9 @@ describe("usage_alerts custom scope resolver (entity > customer > plan)", () => 
 		};
 	};
 
-	test("plan applies when no customer/entity alert", () => {
+	// Entity alerts fire additively in checkUsageAlerts (not in this resolver);
+	// here we assert the customer-scope resolution: customer wins, plan fills in.
+	test("plan applies when no customer alert", () => {
 		const { level, scope } = resolveLevel(
 			buildFullCustomer({ plan: [alert("plan")] }),
 		);
@@ -176,19 +174,6 @@ describe("usage_alerts custom scope resolver (entity > customer > plan)", () => 
 		);
 		expect(level).toBe("customer");
 		expect(scope).toBe("customer");
-	});
-
-	test("entity wins over customer and plan", () => {
-		const { level, scope } = resolveLevel(
-			buildFullCustomer({
-				entity: [alert("entity")],
-				customer: [alert("customer")],
-				plan: [alert("plan")],
-			}),
-			"ent_1",
-		);
-		expect(level).toBe("entity");
-		expect(scope).toBe("entity");
 	});
 
 	test("no alert anywhere resolves to empty", () => {

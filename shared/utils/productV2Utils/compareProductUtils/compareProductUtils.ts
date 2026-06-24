@@ -118,13 +118,23 @@ export const compareConfig = ({
 	return detailsSame;
 };
 
+const sortControls = (items: Array<{ feature_id?: string }>) =>
+	[...items].sort((left, right) => {
+		const byFeature = (left.feature_id ?? "").localeCompare(
+			right.feature_id ?? "",
+		);
+		if (byFeature !== 0) return byFeature;
+		// Stable tiebreak for entries sharing (or lacking) a feature_id.
+		return JSON.stringify(left).localeCompare(JSON.stringify(right));
+	});
+
 const normalizeBillingControls = (
 	billingControls?: ProductV2["billing_controls"],
 ) =>
 	JSON.stringify(
 		BILLING_CONTROL_KEYS.flatMap((key) => {
 			const items = billingControls?.[key];
-			return items?.length ? [[key, items]] : [];
+			return items?.length ? [[key, sortControls(items)]] : [];
 		}),
 	);
 
