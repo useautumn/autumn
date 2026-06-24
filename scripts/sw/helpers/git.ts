@@ -37,11 +37,13 @@ export function originUrl(checkoutPath: string): string {
 }
 
 /**
- * Normalize an origin URL to `git@github.com:owner/repo.git` so the devbox can
- * clone over SSH using the Mac's forwarded ssh-agent (no token on the box).
+ * Normalize an origin URL to `https://github.com/owner/repo` so the devbox clones
+ * via its exe.dev GitHub integration (which rewrites that prefix to the int host).
  */
-export function toSshOrigin(url: string): string {
+export function toHttpsOrigin(url: string): string {
+	const ssh = url.match(/^git@github\.com:(.+?)(?:\.git)?\/?$/);
+	if (ssh) return `https://github.com/${ssh[1]}`;
 	const https = url.match(/^https?:\/\/github\.com\/(.+?)(?:\.git)?\/?$/);
-	if (https) return `git@github.com:${https[1]}.git`;
+	if (https) return `https://github.com/${https[1]}`;
 	return url;
 }

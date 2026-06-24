@@ -1,4 +1,4 @@
-import { EXE_DEFAULTS, EXE_LOBBY } from "../constants.ts";
+import { EXE_DEFAULTS, EXE_INTEGRATIONS, EXE_LOBBY } from "../constants.ts";
 import { fatal, log, sh, shInherit } from "./shell.ts";
 
 export type ExeVm = {
@@ -23,7 +23,8 @@ export function createVm(name: string): ExeVm {
 	);
 	const res = lobby(
 		`new --name=${name} --image=${EXE_DEFAULTS.image} --cpu=${EXE_DEFAULTS.cpu} ` +
-			`--memory=${EXE_DEFAULTS.memory} --disk=${EXE_DEFAULTS.disk} --tag=autumn-sw --json`,
+			`--memory=${EXE_DEFAULTS.memory} --disk=${EXE_DEFAULTS.disk} --tag=autumn-sw ` +
+			`--integration=${EXE_INTEGRATIONS.autumn} --integration=${EXE_INTEGRATIONS.ai} --json`,
 	);
 	if (res.code !== 0) {
 		fatal(`exe.dev new failed: ${res.stderr || res.stdout}`);
@@ -59,16 +60,9 @@ export function removeVm(name: string): void {
 	}
 }
 
-/** Run a command on the VM, streaming output. `agentForward` enables `ssh -A`. */
-export function vmExec(
-	sshDest: string,
-	command: string,
-	opts: { agentForward?: boolean } = {},
-): number {
-	const args = opts.agentForward
-		? ["-A", sshDest, command]
-		: [sshDest, command];
-	return shInherit("ssh", args);
+/** Run a command on the VM, streaming output. */
+export function vmExec(sshDest: string, command: string): number {
+	return shInherit("ssh", [sshDest, command]);
 }
 
 export function vmCapture(sshDest: string, command: string): string {

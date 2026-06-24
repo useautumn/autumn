@@ -2,13 +2,14 @@ import { writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+	EXE_INTEGRATIONS,
 	PROVISION_SH,
 	REMOTE_WORKTREES_SUBDIR,
 	SCRIPT_DIR,
 } from "../constants.ts";
 import { createVm, scpTo, vmCapture, vmExec } from "../helpers/exe.ts";
 import { execForeground } from "../helpers/exec.ts";
-import { originUrl, pushBranch, toSshOrigin } from "../helpers/git.ts";
+import { originUrl, pushBranch, toHttpsOrigin } from "../helpers/git.ts";
 import { exportDevDotenv } from "../helpers/infisical.ts";
 import { layoutPanes } from "../helpers/layout.ts";
 import { createSwBranch } from "../helpers/neon.ts";
@@ -58,23 +59,23 @@ export async function cmdRemote({
 	);
 	scpTo(vm.ssh_dest, baseEnvLocal, baseEnvRemote);
 
-	const originSsh = toSshOrigin(originUrl(checkout));
+	const httpsOrigin = toHttpsOrigin(originUrl(checkout));
 	const args = [
 		remotePath,
 		branch,
-		originSsh,
+		httpsOrigin,
 		neon.databaseUrl,
 		slug,
 		hookRemote,
 		baseEnvRemote,
+		EXE_INTEGRATIONS.autumn,
+		EXE_INTEGRATIONS.ai,
 	]
 		.map(shQuote)
 		.join(" ");
 
 	log(`provisioning ${vm.ssh_dest} (native services, no docker)`);
-	const code = vmExec(vm.ssh_dest, `bash ${provisionRemote} ${args}`, {
-		agentForward: true,
-	});
+	const code = vmExec(vm.ssh_dest, `bash ${provisionRemote} ${args}`);
 	if (code !== 0) fatal("remote provisioning failed");
 
 	upsertEntry({

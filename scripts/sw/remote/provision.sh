@@ -17,7 +17,7 @@
 set -euo pipefail
 
 REMOTE_PATH="$1"; BRANCH="$2"; ORIGIN="$3"; DATABASE_URL="$4"
-SLUG="$5"; HOOK_SRC="$6"; BASE_ENV="$7"
+SLUG="$5"; HOOK_SRC="$6"; BASE_ENV="$7"; AUTUMN_INT="$8"; AI_INT="$9"
 
 log() { echo "[sw-provision] $*"; }
 
@@ -115,12 +115,14 @@ if [ -d /etc/ssh/sshd_config.d ] && [ ! -f /etc/ssh/sshd_config.d/sw-herdr.conf 
 fi
 
 # ---------------------------------------------------------------------------
-# 4. Clone (or update) the worktree + submodules, install deps. The provision ssh
-# forwards the Mac's ssh-agent (ssh -A), so route all github HTTPS over ssh — that
-# authenticates the clone AND the private `ai` submodule with the forwarded key.
+# 4. Clone (or update) the worktree + submodules, install deps. The main repo and
+# the private `ai` submodule are each routed through their exe.dev GitHub
+# integration host (attached at VM-create), which injects auth at the network
+# layer — so plain HTTPS clones work with no credentials on the box.
 # ---------------------------------------------------------------------------
-export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new"
-git config --global url."git@github.com:".insteadOf "https://github.com/"
+REPO_PATH="$(printf '%s' "$ORIGIN" | sed -e 's#^https://github.com/##' -e 's#\.git$##')"
+git config --global url."https://${AUTUMN_INT}.int.exe.xyz/${REPO_PATH}".insteadOf "https://github.com/${REPO_PATH}"
+git config --global url."https://${AI_INT}.int.exe.xyz/useautumn/ai".insteadOf "https://github.com/useautumn/ai"
 
 if [ ! -d "$REMOTE_PATH/.git" ]; then
   log "cloning $ORIGIN ($BRANCH) -> $REMOTE_PATH"

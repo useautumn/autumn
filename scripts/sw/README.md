@@ -40,6 +40,11 @@ bun sw            # pick Local or exe.dev
 ## Notes
 
 - Prereqs on the Mac: `ssh exe.dev`, `neon`, and `infisical` authenticated.
+- GitHub access on the box uses exe.dev **integrations** (per-repo, attached at
+  VM-create). Create them once (autumn + the private `ai` submodule):
+  `ssh exe.dev integrations add github --name=useautumn-autumn --repository=useautumn/autumn`
+  and `--name=useautumn-ai --repository=useautumn/ai`. Override the names with
+  `SW_EXE_INT_AUTUMN` / `SW_EXE_INT_AI`.
 - **Modal** is intentionally not wired yet — exe.dev fits sticky dev boxes; a `modal`
   provider can slot into `commands/remote.ts` later.
 - The git worktree itself is created/removed by herdr/git; `sw` never deletes it.
