@@ -1,6 +1,7 @@
 # Per-worktree infra stack for `bun dw`.
 # Project name is set per-worktree via COMPOSE_PROJECT_NAME (e.g. autumn-wt-8).
-# Ports are substituted from env vars (DRAGONFLY_PORT, ELASTICMQ_PORT).
+# Ports are substituted from env vars (DRAGONFLY_PORT, ELASTICMQ_PORT — the latter
+# names the goaws host port; kept for parity with tw's ELASTICMQ_PORT constant).
 # The ngrok service is gated behind the `ngrok` profile so it only starts when
 # `bun dw setup` finds an NGROK_AUTHTOKEN; env vars carry `:-` defaults so
 # `docker compose down` (teardown) never warns about unset values.
@@ -15,14 +16,17 @@ services:
       memlock: -1
     restart: unless-stopped
 
-  elasticmq:
-    image: softwaremill/elasticmq-native:latest
-    container_name: ${COMPOSE_PROJECT_NAME}-elasticmq
+  # goaws (native Go SQS) replaces elasticmq — same port (9324), AccountId, and
+  # queue names, so the SQS_QUEUE_URL_V2 / TRACK_SQS_QUEUE_URL the server reads are
+  # unchanged. Unifies dw onto the same engine as tw's µVM stack.
+  goaws:
+    image: admiralpiett/goaws:latest
+    container_name: ${COMPOSE_PROJECT_NAME}-goaws
     ports:
       - "${ELASTICMQ_PORT}:9324"
     volumes:
-      - ./elasticmq.conf:/opt/elasticmq.conf:ro
-    command: ["-Dconfig.file=/opt/elasticmq.conf"]
+      - ./goaws.yaml:/app/conf/goaws.yaml:ro
+    command: ["-config", "/app/conf/goaws.yaml"]
     restart: unless-stopped
 
   # Public tunnel so Anthropic's cloud (Claude Managed Agents) + Slack can reach

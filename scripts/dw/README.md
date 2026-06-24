@@ -1,6 +1,6 @@
 # `bun dw` — Dev Worktrees
 
-Run isolated, parallel Autumn dev stacks per git worktree. Each agent gets its own Neon DB branch, Redis (Dragonfly), SQS (ElasticMQ), portless HTTPS aliases, and tmux-wrapped dev server — no port collisions, no cross-contamination.
+Run isolated, parallel Autumn dev stacks per git worktree. Each agent gets its own Neon DB branch, Redis (Dragonfly), SQS (goaws), portless HTTPS aliases, and tmux-wrapped dev server — no port collisions, no cross-contamination.
 
 ## When to use it
 
@@ -16,7 +16,7 @@ Most auto-install on first run:
 
 - **Neon CLI** — `neonctl` (logs in via OAuth on first use)
 - **psql** — for DDL against new branches
-- **Docker + Compose** — spins Dragonfly + ElasticMQ per worktree
+- **Docker + Compose** — spins Dragonfly + goaws per worktree
 - **Stripe CLI** — used by the dev server for webhooks
 - **tmux** — headless dev wrapping for agent worktrees
 - **portless** — `npm install -g @portless/cli` for HTTPS aliases

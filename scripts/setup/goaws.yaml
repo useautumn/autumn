@@ -1,0 +1,18 @@
+# goaws (native Go SQS) config for `bun dw`'s per-worktree compose stack.
+# Mirrors the tw µVM goaws config so SQS_QUEUE_URL_V2 / TRACK_SQS_QUEUE_URL
+# resolve identically across dw and tw. goaws always binds 0.0.0.0:Port, so it's
+# reachable through the compose port mapping; Host/Port only shape advertised URLs.
+# EnableDuplicates is env-level FIFO dedup against the explicit
+# MessageDeduplicationId the app always sends (queue/queueUtils.ts).
+Local:
+  Host: localhost
+  Scheme: http
+  Port: 9324
+  Region: us-east-1
+  AccountId: "000000000000"
+  LogToFile: false
+  LogLevel: warn
+  EnableDuplicates: true
+  Queues:
+    - Name: autumn.fifo
+    - Name: autumn-track.fifo

@@ -60,7 +60,7 @@ export function ensureComposeStack(
 	const up = sh("docker", args, { env });
 	if (up.code === 0) {
 		log(
-			`compose stack ${project} up (dragonfly :${dragonflyPort}, elasticmq :${elasticMqPort}${
+			`compose stack ${project} up (dragonfly :${dragonflyPort}, goaws :${elasticMqPort}${
 				ngrokEnabled
 					? `, ngrok -> :${serverPort} (api :${ngrokApiPort}${ngrokDomain ? `, domain ${ngrokDomain}` : ", random"})`
 					: ""
