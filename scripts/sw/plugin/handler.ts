@@ -1,43 +1,77 @@
-// herdr `worktree.created` handler. Self-contained on purpose (no sibling imports)
-// so it keeps working whether herdr links or copies the plugin dir. It only reads
-// the event, gates on @autumn, and injects the picker into the new worktree's
-// first pane via the herdr CLI — all real work lives in scripts/sw/index.ts.
+// herdr worktree/tab event handler. Self-contained (no sibling imports) so it
+// keeps working whether herdr links or copies the plugin dir. It logs every event
+// it receives, and injects the picker into the worktree's first pane only for a
+// fresh, unconfigured @autumn worktree — all real work lives in ../index.ts.
 
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from "node:fs";
+import {
+	appendFileSync,
+	existsSync,
+	mkdirSync,
+	readFileSync,
+	writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import Bun from "bun";
 
 const HERDR = process.env.HERDR_BIN_PATH || "herdr";
-const DEBUG_LOG = join(homedir(), ".config", "atmn-sw", "handler.log");
+const CONFIG_HOME = process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config");
+const DEBUG_LOG = join(CONFIG_HOME, "atmn-sw", "handler.log");
+const PROMPTED_DIR = join(CONFIG_HOME, "atmn-sw", "prompted");
+const REGISTRY = join(homedir(), ".autumn-sw", "registry.json");
+// Events that should PROMPT (others are logged only, for diagnosis).
+const ACT_EVENTS = new Set([
+	"worktree_created",
+	"worktree_opened",
+	"tab_created",
+]);
 
 type Worktree = { path?: string; checkout_path?: string };
-type Workspace = { workspace_id?: string };
-type EventBody = { worktree?: Worktree; workspace?: Workspace };
-type Event = EventBody & { data?: EventBody };
+type EventBody = {
+	worktree?: Worktree;
+	workspace?: { workspace_id?: string };
+	already_open?: boolean;
+};
+type Event = EventBody & { event?: string; data?: EventBody };
+type Pane = { pane_id?: string; cwd?: string };
 
 function debug(line: string): void {
 	try {
-		mkdirSync(join(homedir(), ".config", "atmn-sw"), { recursive: true });
+		mkdirSync(join(CONFIG_HOME, "atmn-sw"), { recursive: true });
 		appendFileSync(DEBUG_LOG, `${line}\n`);
 	} catch {
 		// best-effort; never let logging break the handler
 	}
 }
 
-function herdr(args: string[]): { stdout: string; code: number } {
+// herdr CLI emits a JSON-RPC envelope and exits 0 even on bad flags → parse result.
+function herdrResult<T>(args: string[]): T | null {
 	const proc = Bun.spawnSync([HERDR, ...args], {
 		stdout: "pipe",
 		stderr: "pipe",
 	});
-	return {
-		stdout: new TextDecoder().decode(proc.stdout).trim(),
-		code: proc.exitCode ?? 1,
-	};
+	try {
+		const parsed = JSON.parse(new TextDecoder().decode(proc.stdout)) as {
+			result?: T;
+		};
+		return parsed.result ?? null;
+	} catch {
+		return null;
+	}
 }
 
-function isAutumnRepo(checkoutPath: string): boolean {
-	const pkgPath = join(checkoutPath, "package.json");
+function firstPane(workspaceId: string): Pane | null {
+	const result = herdrResult<{ panes?: Pane[] }>([
+		"pane",
+		"list",
+		"--workspace",
+		workspaceId,
+	]);
+	return result?.panes?.[0] ?? null;
+}
+
+function isAutumnRepo(checkout: string): boolean {
+	const pkgPath = join(checkout, "package.json");
 	if (!existsSync(pkgPath)) return false;
 	try {
 		const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as { name?: string };
@@ -47,62 +81,79 @@ function isAutumnRepo(checkoutPath: string): boolean {
 	}
 }
 
-function firstPaneId(workspaceId: string): string | null {
-	// herdr CLI emits a JSON-RPC envelope and exits 0 even on bad flags, so parse
-	// `result.panes` rather than trusting the exit code. (No `--json` flag exists.)
-	const res = herdr(["pane", "list", "--workspace", workspaceId]);
+function alreadyConfigured(checkout: string): boolean {
+	if (existsSync(join(checkout, ".herdr-remote"))) return true;
 	try {
-		const parsed = JSON.parse(res.stdout) as {
-			result?: { panes?: Array<{ pane_id?: string }> };
-		};
-		return parsed.result?.panes?.[0]?.pane_id ?? null;
+		const reg = JSON.parse(readFileSync(REGISTRY, "utf8")) as Record<
+			string,
+			unknown
+		>;
+		return checkout in reg;
 	} catch {
-		return null;
+		return false;
 	}
 }
 
 function main(): void {
 	const raw = process.env.HERDR_PLUGIN_EVENT_JSON ?? "";
-	debug(
-		`--- invoked HERDR_WORKSPACE_ID=${process.env.HERDR_WORKSPACE_ID ?? ""}`,
-	);
-	debug(`event=${raw}`);
-	if (!raw) return;
-
-	let event: Event;
+	let event: Event = {};
 	try {
 		event = JSON.parse(raw) as Event;
 	} catch {
+		// fall through with empty event
+	}
+	const kind = event.event ?? "";
+	debug(`--- ${kind} ws=${process.env.HERDR_WORKSPACE_ID ?? ""}`);
+	debug(`event=${raw}`);
+	if (!ACT_EVENTS.has(kind)) return;
+
+	const body: EventBody = event.data ?? event;
+	if (body.already_open) {
+		debug("skip: already_open");
 		return;
 	}
 
-	// herdr's WorktreeInfo field is `path` (not `checkout_path`); accept either, and
-	// look in both the `.data` envelope and the top level to be transport-agnostic.
-	const body: EventBody = event.data ?? event;
-	const checkoutPath = body.worktree?.path ?? body.worktree?.checkout_path;
 	const workspaceId =
 		body.workspace?.workspace_id || process.env.HERDR_WORKSPACE_ID;
-	if (!checkoutPath || !workspaceId) {
-		debug(`skip: checkoutPath=${checkoutPath} workspaceId=${workspaceId}`);
-		return;
-	}
-	if (!isAutumnRepo(checkoutPath)) {
-		debug(`skip: not @autumn at ${checkoutPath}`);
+	if (!workspaceId) {
+		debug("skip: no workspace id");
 		return;
 	}
 
-	const paneId = firstPaneId(workspaceId);
-	if (!paneId) {
-		debug(`skip: no first pane for workspace ${workspaceId}`);
+	// Prefer the worktree path from the event; fall back to the first pane's cwd
+	// (tab.created carries no worktree, so we resolve it from the workspace).
+	const pane = firstPane(workspaceId);
+	const checkout =
+		body.worktree?.path ?? body.worktree?.checkout_path ?? pane?.cwd;
+	const paneId = pane?.pane_id;
+	if (!checkout || !paneId) {
+		debug(`skip: checkout=${checkout} pane=${paneId}`);
 		return;
 	}
+	if (!isAutumnRepo(checkout)) {
+		debug(`skip: not @autumn at ${checkout}`);
+		return;
+	}
+	if (alreadyConfigured(checkout)) {
+		debug(`skip: already configured ${checkout}`);
+		return;
+	}
+
+	// One-shot guard: a single "New worktree" emits several events (worktree.created
+	// + tab.created), so prompt only once per checkout.
+	const guard = join(PROMPTED_DIR, checkout.replace(/[^a-zA-Z0-9]/g, "_"));
+	if (existsSync(guard)) {
+		debug(`skip: already prompted ${checkout}`);
+		return;
+	}
+	mkdirSync(PROMPTED_DIR, { recursive: true });
+	writeFileSync(guard, "");
 
 	// Resolve the CLI next to this plugin (the installed stable copy), NOT inside
 	// the new worktree — which may be branched off a commit without scripts/sw.
 	const cli = join(import.meta.dir, "..", "index.ts");
 	debug(`inject: pane ${paneId} -> exec bun ${cli} pick`);
-	// `exec` so the CLI replaces the pane's shell — later `exec ssh` leaves no orphan.
-	herdr(["pane", "run", paneId, `exec bun ${cli} pick`]);
+	Bun.spawnSync([HERDR, "pane", "run", paneId, `exec bun ${cli} pick`]);
 }
 
 main();

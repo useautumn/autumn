@@ -5,9 +5,18 @@ min_herdr_version = "0.7.0"
 description = "When a new @autumn worktree is created, launch the sandbox-worktree picker (local / exe.dev / modal) in its first pane."
 platforms = ["macos", "linux"]
 
-# Fires post-creation; the first pane already exists as a local shell (the picker
-# runs locally), so the handler injects the picker into it. Subsequent panes are
-# handled by the wrapper shell + .herdr-remote marker, not by this plugin.
+# Subscribe to several lifecycle events because which one the TUI "New worktree"
+# emits varies by herdr build. The handler logs every event, but only PROMPTS for
+# a fresh, unconfigured @autumn worktree (idempotent via the sw registry + marker),
+# so re-opening or adding tabs to a configured worktree is a no-op.
 [[events]]
 on = "worktree.created"
+command = ["bun", "handler.ts"]
+
+[[events]]
+on = "worktree.opened"
+command = ["bun", "handler.ts"]
+
+[[events]]
+on = "tab.created"
 command = ["bun", "handler.ts"]
