@@ -115,22 +115,37 @@ if [ -d /etc/ssh/sshd_config.d ] && [ ! -f /etc/ssh/sshd_config.d/sw-herdr.conf 
 fi
 
 # ---------------------------------------------------------------------------
-# 4. Clone (or update) the worktree, install deps.
+# 4. Clone (or update) the worktree + submodules, install deps. The provision ssh
+# forwards the Mac's ssh-agent (ssh -A), so route all github HTTPS over ssh — that
+# authenticates the clone AND the private `ai` submodule with the forwarded key.
 # ---------------------------------------------------------------------------
+export GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new"
+git config --global url."git@github.com:".insteadOf "https://github.com/"
+
 if [ ! -d "$REMOTE_PATH/.git" ]; then
   log "cloning $ORIGIN ($BRANCH) -> $REMOTE_PATH"
   mkdir -p "$(dirname "$REMOTE_PATH")"
-  GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new" \
-    git clone --branch "$BRANCH" "$ORIGIN" "$REMOTE_PATH"
+  git clone --branch "$BRANCH" "$ORIGIN" "$REMOTE_PATH"
 else
   log "updating existing checkout"
   git -C "$REMOTE_PATH" fetch origin "$BRANCH" --quiet || true
   git -C "$REMOTE_PATH" checkout "$BRANCH" --quiet || true
 fi
 
+log "fetching submodules"
+git -C "$REMOTE_PATH" submodule update --init --recursive
+
 log "installing deps (bun install)"
 (cd "$REMOTE_PATH" && bun install --frozen-lockfile >/dev/null 2>&1) || \
   (cd "$REMOTE_PATH" && bun install >/dev/null 2>&1) || true
+
+# Mirror dw's ai-submodule sync (checkout main + deps + skills sync).
+if [ -d "$REMOTE_PATH/ai" ]; then
+  log "syncing ai submodule"
+  git -C "$REMOTE_PATH/ai" checkout main >/dev/null 2>&1 || true
+  (cd "$REMOTE_PATH/ai" && bun install >/dev/null 2>&1) || true
+  (cd "$REMOTE_PATH/ai" && bun sync >/dev/null 2>&1) || true
+fi
 
 # ---------------------------------------------------------------------------
 # 5. Env: infisical export (base) + per-worktree native-service overrides.
