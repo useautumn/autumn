@@ -1,0 +1,29 @@
+{
+	"name": "@autumn/agent-docs",
+	"version": "0.0.1",
+	"author": "Autumn",
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": "./src/index.ts",
+		"./mcp": "./src/consume/mcp.ts",
+		"./skills": "./src/consume/skills.ts"
+	},
+	"files": [
+		"README.md",
+		"src"
+	],
+	"scripts": {
+		"gen": "bun run scripts/generate.ts",
+		"build": "bun run gen && tsc",
+		"ts": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@mastra/mcp": "^1.8.0"
+	},
+	"devDependencies": {
+		"@types/bun": "^1.2.13",
+		"@types/node": "^18.19.3",
+		"typescript": "~5.8.3"
+	}
+}

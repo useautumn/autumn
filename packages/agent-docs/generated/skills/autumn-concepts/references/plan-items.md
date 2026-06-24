@@ -1,7 +1,4 @@
----
-title: "Plan Items"
-description: "Configure what customers get access to when they purchase a plan"
----
+## Plan Items
 
 When you add a feature to a plan, you define what customers on that plan can use, and how they should be charged for it.
 
@@ -10,7 +7,6 @@ There are 2 types of plan features:
 - **Priced Features**: features that are billed for, either as a prepaid quantity or a usage-based price. Priced features can also have an included amount.
 
 When a customer purchases a plan, the items in the plan become [balances](/documentation/concepts/balances) under the customer.
-
 
 ## Included Features
 
@@ -30,26 +26,19 @@ Reset intervals can be: `no reset`, `hour`, `day`, `week`, `month`, `quarter`, `
 
 You cannot set a reset interval for `non-consumable` features (eg, seats).
 
-
 #### Advanced
 You can additionally configure the following properties when adding a `consumable` included feature:
 - **Reset existing usage when plan is enabled**: when the plan is enabled (eg on upgrade), their usage cycle will reset, and customer's balance will be reset to full grant amount. This is `true` by default.
 
-<Info>
 **Example**
 
 You have a free plan that allows users to send 10 messages per month. A user on this plan has used 3 messages so in the current month. Then, they upgrade to a pro plan that grants 100 messages per month.
 
 If `Reset existing usage when plan is enabled` is set to `true`, their balance will be reset to 100 messages. If it's set to `false`, the 3 messages used will be carried over, and their new balance will be 97 messages.
 
-</Info>
-
 - **Rollovers**: configure whether granted usage should rollover to the next cycle. You can configure rollover duration, and a maximum rollover cap. Rollover balances can be retrieved from the `balances` object.
 
-
-
 Features that are `non-consumable` have no advanced configuration options.
-
 
 ## Priced Features
 
@@ -63,7 +52,7 @@ Tracking usage for a feature will first decrement the grant amount. The price wi
 #### Price
 A feature's price consists of:
 - **Price**: the price of the feature per billing units of usage, or tiered by usage
-- **Billing Units**: the packages of units that the price is defined for (eg, \$5 for 1000 credits)
+- **Billing Units**: the packages of units that the price is defined for (eg, $5 for 1000 credits)
 - **Billing Interval**: how often the price is applied. This can be one-time, or recurring (eg, monthly, annually).
 
 #### Usage model
@@ -80,8 +69,6 @@ You can additionally configure the following properties when adding a priced fea
 
 For priced `consumable` features, you can also set the `reset existing usage when plan is enabled` and `rollovers` properties, in the same way as included features.
 
-<Accordion title="Agent reference">
-
 Precise modeling reference with API request-body examples (the shape used by the
 API and MCP, so fields are `snake_case`).
 
@@ -92,7 +79,7 @@ API and MCP, so fields are `snake_case`).
 - Free allowance that comes with the plan.
 - For consumable features, `reset` controls the cycle, e.g. 5k credits/month on Pro.
 - `unlimited` means the feature is available without a tracked limit.
-- For `ai_credit_system` items, `included` and the balance are in dollars (`included: 10` = \$10).
+- For `ai_credit_system` items, `included` and the balance are in dollars (`included: 10` = $10).
 
 **Boolean**
 
@@ -104,9 +91,9 @@ API and MCP, so fields are `snake_case`).
 
 - Customer buys or subscribes to a consumable quantity upfront, commonly credits.
 - Use for selectable monthly buckets, volume-priced buckets, one-off credit packs, and auto top-up purchase prices.
-- Selectable monthly bucket example: \$10 per 1k credits/month, customer chooses 5k credits for \$50/month.
+- Selectable monthly bucket example: $10 per 1k credits/month, customer chooses 5k credits for $50/month.
 - Volume-priced bucket example: customer selects a monthly credit bucket whose quantity maps to a flat tier price.
-- One-off credit pack example: \$10 per 1k lifetime credits.
+- One-off credit pack example: $10 per 1k lifetime credits.
 - Auto top-up example: same one-off prepaid item is purchased automatically when customer balance falls below threshold.
 - The purchased quantity becomes prepaid balance and is drawn down as usage is tracked.
 
@@ -122,13 +109,13 @@ API and MCP, so fields are `snake_case`).
 **Usage-based — consumable**
 
 - Customer is billed in arrears for usage beyond included units.
-- Common for overage, e.g. \$0.01/credit after included credits are exhausted.
-- Can be tiered, e.g. 1k API calls free, then \$0.02/call up to 5k, then \$0.01/call after that.
+- Common for overage, e.g. $0.01/credit after included credits are exhausted.
+- Can be tiered, e.g. 1k API calls free, then $0.02/call up to 5k, then $0.01/call after that.
 
 **Usage-based — non-consumable**
 
 - Customer is billed in arrears for measured persistent usage.
-- Common for storage or compute capacity tracked through the cycle, e.g. \$0.05/GB-month for storage used.
+- Common for storage or compute capacity tracked through the cycle, e.g. $0.05/GB-month for storage used.
 - Usage does not reset like consumable balance, but the billing calculation happens each cycle.
 - If the quantity is only a static entitlement like concurrency, do not use usage-based pricing unless the app reports measured usage.
 
@@ -140,8 +127,8 @@ API and MCP, so fields are `snake_case`).
 
 ### Composition
 
-- A single item can combine included units with paid usage, e.g. 5k credits/month then \$0.01/credit.
-- A single item can combine included units with prepaid quantity, e.g. 3 seats included then \$10/seat prepaid.
+- A single item can combine included units with paid usage, e.g. 5k credits/month then $0.01/credit.
+- A single item can combine included units with prepaid quantity, e.g. 3 seats included then $10/seat prepaid.
 - The same feature can appear in multiple items when the items differ by reset interval or billing method.
 - Monthly allowance plus one-off prepaid top-up item is common for auto top-ups.
 - Prepaid monthly credit bucket plus usage-based overage item is valid when the same feature needs both selected quantity and overage pricing.
@@ -166,7 +153,7 @@ API and MCP, so fields are `snake_case`).
   ```json
   { "plan_price": { "amount": 10, "interval": "month" }, "item": { "feature_id": "seats", "included": 1, "reset": null, "price": { "amount": 10, "interval": "month", "billing_units": 1, "billing_method": "usage_based" } } }
   ```
-  Creates \$10/month base price with 1 included seat, then \$10 per additional seat.
+  Creates $10/month base price with 1 included seat, then $10 per additional seat.
 - Prepaid selectable monthly credit bucket:
   ```json
   { "feature_id": "AI_CREDITS", "included": 5000, "reset": { "interval": "month" }, "price": { "amount": 10, "interval": "month", "billing_units": 1000, "billing_method": "prepaid" } }
@@ -201,5 +188,3 @@ API and MCP, so fields are `snake_case`).
 - `max_purchase`: less common cap on purchasable units; customer billing controls are often used for spend or purchase limits.
 - `entity_feature_id`: legacy/deprecated per-entity balance scoping; prefer entity-scoped plan attachments.
 - Auto top-ups require a one-off prepaid item for the feature; customer billing controls configure threshold and quantity.
-
-</Accordion>
