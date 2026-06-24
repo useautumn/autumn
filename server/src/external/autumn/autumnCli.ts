@@ -814,6 +814,11 @@ export class AutumnInt {
 			});
 			return data;
 		},
+
+		list: async () => {
+			const data = await this.post("/rewards.list", {});
+			return data;
+		},
 	};
 
 	rewardPrograms = {

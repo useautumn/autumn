@@ -103,6 +103,7 @@ export const constructProduct = ({
 		config: {
 			ignore_past_due: productData.config?.ignore_past_due ?? false,
 		},
+		metadata: productData.metadata ?? {},
 	};
 
 	return newProduct;

@@ -21,11 +21,11 @@ export * from "./api/billingControls/index";
 export * from "./api/common/cursorPaginationSchemas";
 export * from "./api/common/paginationConfigs";
 export * from "./api/customers/components/customerExpand/customerExpand";
-// Customer keys (per-customer JWTs)
-export * from "./api/keys/keysModels";
 export * from "./api/entities/crud/createEntityParams";
 export * from "./api/entities/crud/getEntityParams";
 export * from "./api/entities/crud/listEntitiesParamsV2_3";
+// Customer keys (per-customer JWTs)
+export * from "./api/keys/keysModels";
 // Migrations v2 (operations + entity schemas)
 export * from "./api/migrations/filters/index";
 export * from "./api/migrations/operations/index";
@@ -120,12 +120,14 @@ export * from "./models/featureModels/featureModels";
 
 // export * from "./models/featureModels/featureResModels";
 
-export * from "./api/products/items/previousVersions/apiPlanItemV0";
 export * from "./api/products/components/billingMethod";
-export type { CreatePlanItemParamsV1Input } from "./api/products/items/crud/createPlanItemParamsV1";
-export * from "./api/products/items/utils/display";
 export type { CreatePlanParamsV2Input } from "./api/products/crud/createPlanParamsV1";
+export type { CreatePlanItemParamsV1Input } from "./api/products/items/crud/createPlanItemParamsV1";
+export * from "./api/products/items/previousVersions/apiPlanItemV0";
+export * from "./api/products/items/utils/display";
 export * from "./api/products/utils/display";
+// AI Models
+export * from "./models/aiModels/modelsDevTypes";
 // Attach Function Response
 export * from "./models/attachModels/attachFunctionResponse";
 // Billing Models (all from single index)
@@ -152,9 +154,9 @@ export * from "./models/migrationV2Models/migrationTable";
 export * from "./models/migrationV2Models/pendingMigrationModel";
 export * from "./models/orgModels/agent/agentRules";
 export * from "./models/orgModels/agent/agentRulesTable";
-export * from "./models/orgModels/frontendOrg";
 // 1. Org Models
 export * from "./models/orgModels/customButton";
+export * from "./models/orgModels/frontendOrg";
 export * from "./models/orgModels/frontendOrg";
 export * from "./models/orgModels/fullOrgModel";
 export * from "./models/orgModels/orgConfig";
@@ -194,6 +196,7 @@ export * from "./models/productModels/priceModels/priceTable";
 // 5. Product Models
 export * from "./models/productModels/productConfig/productConfig";
 export * from "./models/productModels/productEnums";
+export * from "./models/productModels/productMetadata";
 export * from "./models/productModels/productModels";
 export * from "./models/productModels/productRelations";
 export * from "./models/productModels/productTable";
@@ -221,8 +224,6 @@ export * from "./models/rewardModels/rewardProgramModels/rewardProgramTable";
 export * from "./models/scheduleModels/scheduleTable";
 export * from "./models/subModels/subModels";
 export * from "./models/subModels/subTable";
-// AI Models
-export * from "./models/aiModels/modelsDevTypes";
 export * from "./types";
 // Agent Types (for pricing agent AI)
 export * from "./utils/agentTypes";

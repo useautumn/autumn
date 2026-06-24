@@ -5,10 +5,12 @@ import {
 	SheetAccordion,
 	SheetAccordionItem,
 } from "@autumn/ui";
+import { useState } from "react";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetHeader } from "@/components/v2/sheets/InlineSheet";
 import { AdditionalOptions } from "./edit-plan-details/AdditionalOptions";
 import { MainDetailsSection } from "./edit-plan-details/MainDetailsSection";
+import { MetadataEditor } from "./edit-plan-details/MetadataEditor";
 
 export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 	const { product, setProduct } = useProduct();
@@ -16,6 +18,10 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 	const basePrice = productV2ToBasePrice({ product });
 
 	const hasGroup = notNullish(product.group);
+
+	const hasMetadata = Object.keys(product.metadata ?? {}).length > 0;
+	const [metadataOpened, setMetadataOpened] = useState(false);
+	const showMetadata = hasMetadata || metadataOpened;
 
 	if (!product) return null;
 
@@ -73,6 +79,23 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 									})
 								}
 							/>
+							<AreaCheckbox
+								title="Metadata"
+								description="Arbitrary JSON for your own use (e.g. UI copy). Shared across every version of the plan."
+								checked={showMetadata}
+								onCheckedChange={(checked) => {
+									if (checked) {
+										setMetadataOpened(true);
+									} else {
+										setMetadataOpened(false);
+										setProduct({ ...product, metadata: {} });
+									}
+								}}
+							>
+								{showMetadata && (
+									<MetadataEditor key={product.internal_id ?? product.id} />
+								)}
+							</AreaCheckbox>
 						</div>
 					</SheetAccordionItem>
 				</SheetAccordion>
