@@ -95,16 +95,16 @@ const UsageLimitFormSchema = z.object({
 
 const UsageAlertFormSchema = z
 	.object({
-		threshold: requireNumber(0, "Please enter a valid threshold"),
+		alert_threshold: requireNumber(0, "Please enter a valid threshold"),
 		threshold_type: z.string(),
 	})
 	.check((ctx) => {
-		const { threshold, threshold_type } = ctx.value;
-		if (threshold_type === "remaining_percentage" && threshold > 100) {
+		const { alert_threshold, threshold_type } = ctx.value;
+		if (threshold_type === "remaining_percentage" && alert_threshold > 100) {
 			ctx.issues.push({
 				code: "custom",
-				input: threshold,
-				path: ["threshold"],
+				input: alert_threshold,
+				path: ["alert_threshold"],
 				message: "Remaining percentage must be between 0 and 100",
 			});
 		}
