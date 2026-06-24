@@ -11,6 +11,23 @@ export const REGISTRY_FILE = join(REGISTRY_DIR, "registry.json");
 /** Box-side provisioner copied to and run on the devbox. */
 export const PROVISION_SH = join(SCRIPT_DIR, "remote/provision.sh");
 
+/**
+ * Marker written into a remote worktree's LOCAL checkout. The wrapper shell keys
+ * on its presence to ssh into the box (so every pane auto-routes); it persists on
+ * disk, so panes restored after a herdr restart re-ssh automatically.
+ */
+export const MARKER_FILE = ".herdr-remote";
+/** Wrapper source (copied to STABLE_WRAPPER by `sw install`). */
+export const WRAPPER_SH = join(SCRIPT_DIR, "shell/worktree-shell.sh");
+
+const CONFIG_HOME = process.env.XDG_CONFIG_HOME ?? join(homedir(), ".config");
+/** Stable home for the installed wrapper, OUTSIDE any worktree, so deleting the
+ * source worktree can never dangle herdr's global default_shell. */
+export const STABLE_DIR = join(CONFIG_HOME, "atmn-sw");
+export const STABLE_WRAPPER = join(STABLE_DIR, "worktree-shell.sh");
+export const herdrConfigPath = (): string =>
+	join(CONFIG_HOME, "herdr", "config.toml");
+
 /** exe.dev defaults. A custom baked image keeps spin-up fast (deps pre-installed). */
 export const EXE_LOBBY = "exe.dev";
 export const EXE_DEFAULTS = {

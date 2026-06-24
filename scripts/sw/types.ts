@@ -8,6 +8,12 @@ export type WorktreeContext = {
 	slug: string;
 };
 
+/** Contents of the `.herdr-remote` marker — the box the wrapper shell ssh's into. */
+export type RemoteMarker = {
+	host: string;
+	path: string;
+};
+
 export type SwRegistryEntry = {
 	/** Local checkout path (the worktree on the Mac) — the registry key. */
 	path: string;

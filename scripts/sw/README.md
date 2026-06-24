@@ -20,6 +20,20 @@ bun sw            # pick Local or exe.dev
 
 `SW_TARGET=local|exe bun sw` skips the prompt (scripted runs).
 
+## One-time: auto-ssh for new panes (remote worktrees)
+
+```sh
+bun run sw:install     # set herdr's default_shell to the sw wrapper
+bun run sw:uninstall   # reverse it
+```
+
+For an exe.dev worktree, `sw` drops a `.herdr-remote` marker in the local checkout.
+The wrapper (herdr's global `default_shell`, copied to `~/.config/atmn-sw/`) keys on
+it: panes in a remote worktree auto-ssh into the box — **including tabs/splits you
+open by hand** — while local and non-autumn panes get your normal shell instantly.
+Persists across herdr restarts (the marker is on disk). Without `sw:install`, only
+the two panes `sw` creates are on the box; manual panes stay local.
+
 ## Commands
 
 | Command | What |

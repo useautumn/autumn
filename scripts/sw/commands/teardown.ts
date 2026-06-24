@@ -1,5 +1,6 @@
 import { tmuxServerSession } from "../constants.ts";
 import { removeVm } from "../helpers/exe.ts";
+import { removeMarker } from "../helpers/marker.ts";
 import { deleteSwBranch } from "../helpers/neon.ts";
 import { getEntry, removeEntry } from "../helpers/registry.ts";
 import { log, sh, shInherit } from "../helpers/shell.ts";
@@ -24,6 +25,7 @@ export async function cmdTeardown({ path }: { path?: string }): Promise<void> {
 	} else {
 		if (entry.vmName) removeVm(entry.vmName);
 		if (entry.neonBranchName) deleteSwBranch(entry.neonBranchName);
+		removeMarker(entry.path);
 	}
 
 	removeEntry(entry.path);

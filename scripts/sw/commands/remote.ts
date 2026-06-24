@@ -12,10 +12,11 @@ import { execForeground } from "../helpers/exec.ts";
 import { originUrl, pushBranchToBox, toHttpsOrigin } from "../helpers/git.ts";
 import { exportDevDotenv } from "../helpers/infisical.ts";
 import { layoutPanes } from "../helpers/layout.ts";
+import { writeMarker } from "../helpers/marker.ts";
 import { createSwBranch } from "../helpers/neon.ts";
 import { upsertEntry } from "../helpers/registry.ts";
 import { fatal, log } from "../helpers/shell.ts";
-import { sshExecArgs, sshShellCommand } from "../helpers/ssh.ts";
+import { sshExecArgs } from "../helpers/ssh.ts";
 import { serverTmuxScript } from "../helpers/tmux.ts";
 import type { Target, WorktreeContext } from "../types.ts";
 
@@ -92,6 +93,10 @@ export async function cmdRemote({
 		fatal("remote setup phase failed");
 	}
 
+	// Drop the marker BEFORE laying out panes, so the wrapper auto-ssh's the claude
+	// split (and any pane you open later) into the box.
+	writeMarker(checkout, { host: vm.ssh_dest, path: remotePath });
+
 	upsertEntry({
 		path: checkout,
 		branch,
@@ -105,14 +110,10 @@ export async function cmdRemote({
 		vmName: vm.name,
 	});
 
-	// claude pane ssh's into the box; this (server) pane hosts `bun dev` in tmux.
+	// The claude pane is spawned by the wrapper (marker present → already on the
+	// box), so it just runs `claude`. This (server) pane hosts `bun dev` in tmux.
 	const self = process.env.HERDR_PANE_ID;
-	if (self) {
-		layoutPanes(
-			self,
-			sshShellCommand(vm.ssh_dest, `cd ${shQuote(remotePath)} && exec claude`),
-		);
-	}
+	if (self) layoutPanes(self, "claude");
 
 	const serverScript = serverTmuxScript({
 		slug,
