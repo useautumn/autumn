@@ -248,14 +248,14 @@ function AutoTopupFields({ form }: { form: UsePlanBillingControlForm }) {
 					form={form}
 					name="threshold"
 					label="Threshold"
-					placeholder="Balance that triggers a top-up"
+					placeholder="eg. 100"
 					parse="float"
 				/>
 				<NumberFieldRow
 					form={form}
 					name="quantity"
 					label="Quantity"
-					placeholder="Amount added per top-up"
+					placeholder="eg. 500"
 					parse="int"
 				/>
 			</div>
@@ -280,7 +280,7 @@ function AutoTopupFields({ form }: { form: UsePlanBillingControlForm }) {
 									form={form}
 									name="purchase_limit_limit"
 									label="Limit"
-									placeholder="Max top-ups"
+									placeholder="eg. 5"
 									parse="int"
 								/>
 								<NumberFieldRow
@@ -324,7 +324,7 @@ function SpendLimitFields({ form }: { form: UsePlanBillingControlForm }) {
 				form={form}
 				name="overage_limit"
 				label="Overage limit"
-				placeholder="Optional — leave empty for no limit"
+				placeholder="No limit"
 				parse="float"
 			/>
 		</div>
@@ -338,7 +338,7 @@ function UsageLimitFields({ form }: { form: UsePlanBillingControlForm }) {
 				form={form}
 				name="usage_limit"
 				label="Limit"
-				placeholder="Max usage per interval"
+				placeholder="eg. 1000"
 				parse="float"
 			/>
 			<SelectFieldRow
@@ -361,7 +361,7 @@ function UsageAlertFields({ form }: { form: UsePlanBillingControlForm }) {
 						<FormLabel>Name</FormLabel>
 						<Input
 							type="text"
-							placeholder="Optional label for this alert"
+							placeholder="Optional"
 							value={field.state.value ?? ""}
 							onChange={(e) => field.handleChange(e.target.value)}
 						/>
