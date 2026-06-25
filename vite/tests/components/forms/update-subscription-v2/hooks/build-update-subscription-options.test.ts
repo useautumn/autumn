@@ -192,7 +192,9 @@ describe("buildUpdateSubscriptionOptions — included usage handling", () => {
 		expect(result).toEqual([{ feature_id: "int_messages", quantity: 3000 }]);
 	});
 
-	test("should include one-off items even when quantity has not changed", () => {
+	test("should NOT resubmit a one-off item when its quantity has not changed", () => {
+		// A one-off top-up is a fresh purchase the backend ADDS — resubmitting the
+		// unchanged total would re-buy the whole balance on every update.
 		const result = buildUpdateSubscriptionOptions({
 			prepaidItems: [
 				{ feature_id: "credits", included_usage: 0, interval: null },
@@ -202,7 +204,34 @@ describe("buildUpdateSubscriptionOptions — included usage handling", () => {
 			initialBackendQuantities: { credits: 1000 },
 		});
 
-		expect(result).toEqual([{ feature_id: "credits", quantity: 1000 }]);
+		expect(result).toEqual([]);
+	});
+
+	test("should send only the increase (delta) when a one-off quantity grows", () => {
+		const result = buildUpdateSubscriptionOptions({
+			prepaidItems: [
+				{ feature_id: "credits", included_usage: 0, interval: null },
+			],
+			prepaidOptions: { credits: 1500 },
+			initialPrepaidOptions: { credits: 1000 },
+			initialBackendQuantities: { credits: 1000 },
+		});
+
+		expect(result).toEqual([{ feature_id: "credits", quantity: 500 }]);
+	});
+
+	test("should NOT resubmit a one-off item when its quantity decreases", () => {
+		// One-off top-ups can't be negative — a lower total is not a purchase.
+		const result = buildUpdateSubscriptionOptions({
+			prepaidItems: [
+				{ feature_id: "credits", included_usage: 0, interval: null },
+			],
+			prepaidOptions: { credits: 800 },
+			initialPrepaidOptions: { credits: 1000 },
+			initialBackendQuantities: { credits: 1000 },
+		});
+
+		expect(result).toEqual([]);
 	});
 
 	test("should still skip recurring items when quantity has not changed", () => {

@@ -8,6 +8,7 @@ import {
 	ErrCode,
 	type FreeTrial,
 	mapToProductV2,
+	mergeBillingControls,
 	notNullish,
 	ProductNotFoundError,
 	type ProductV2,
@@ -115,12 +116,19 @@ export const handleUpdatePlanV1 = createRoute({
 		const newFreeTrial = freeTrialExplicitlyProvided
 			? ((v1_2Body.free_trial as FreeTrial | null | undefined) ?? null)
 			: (curProductV2.free_trial ?? undefined);
+		const productPatch = Object.fromEntries(
+			Object.entries(v1_2Body).filter(([, value]) => value !== undefined),
+		) as Partial<ProductV2>;
 		const newProductV2: ProductV2 = {
 			...curProductV2,
-			...v1_2Body,
+			...productPatch,
 			group: v1_2Body.group || curProductV2.group || "",
-			items: v1_2Body.items || [],
+			items: v1_2Body.items ?? curProductV2.items,
 			free_trial: newFreeTrial,
+			billing_controls: mergeBillingControls(
+				curProductV2.billing_controls,
+				v1_2Body.billing_controls,
+			),
 		};
 
 		await validateDefaultFlag({
@@ -128,6 +136,50 @@ export const handleUpdatePlanV1 = createRoute({
 			body: v1_2Body,
 			curProduct: fullProduct,
 		});
+
+		const itemsExist = notNullish(v1_2Body.items);
+		const cusProductExists = cusProductsCurVersion.length > 0;
+		const freeTrialProvided = "free_trial" in body;
+		const billingControlsProvided = "billing_controls" in v1_2Body;
+
+		if (cusProductExists && !disable_version && billingControlsProvided) {
+			const {
+				billingControlsSame,
+				itemsSame,
+				freeTrialsSame,
+				detailsSame,
+				configSame,
+				optionsSame,
+				metadataSame,
+			} = productsAreSame({
+				newProductV2: newProductV2,
+				curProductV2,
+				features,
+			});
+
+			// Only take the billing-controls-only shortcut when nothing else
+			// changed; otherwise fall through so detail/default guards run.
+			const onlyBillingControlsChanged =
+				!billingControlsSame &&
+				itemsSame &&
+				freeTrialsSame &&
+				detailsSame &&
+				configSame &&
+				optionsSame &&
+				metadataSame;
+
+			if (onlyBillingControlsChanged) {
+				const newProduct = await handleVersionProductV2({
+					ctx,
+					newProductV2: newProductV2,
+					latestProduct: fullProduct,
+					org,
+					env,
+				});
+
+				return c.json(newProduct);
+			}
+		}
 
 		await handleUpdateProductDetails({
 			db,
@@ -151,25 +203,21 @@ export const handleUpdatePlanV1 = createRoute({
 			fullProduct.metadata = v1_2Body.metadata;
 		}
 
-		const itemsExist = notNullish(v1_2Body.items);
-
-		const cusProductExists = cusProductsCurVersion.length > 0;
-
 		// Check if versioning is needed (customers exist AND items or free trial changed)
-		const freeTrialProvided = "free_trial" in body;
 		if (
 			cusProductExists &&
 			!disable_version &&
 			(itemsExist || freeTrialProvided)
 		) {
-			const { itemsSame, freeTrialsSame } = productsAreSame({
-				newProductV2: newProductV2,
-				curProductV1: fullProduct,
-				curProductV2: curProductV2,
-				features,
-			});
+			const { itemsSame, freeTrialsSame, billingControlsSame } =
+				productsAreSame({
+					newProductV2: newProductV2,
+					curProductV1: fullProduct,
+					curProductV2: curProductV2,
+					features,
+				});
 
-			const productSame = itemsSame && freeTrialsSame;
+			const productSame = itemsSame && freeTrialsSame && billingControlsSame;
 
 			if (!productSame) {
 				const newProduct = await handleVersionProductV2({

@@ -1,6 +1,8 @@
 import {
 	ApiVersion,
 	apiPlan,
+	mapToProductV2,
+	mergeBillingControls,
 	ProductNotFoundError,
 	type ProductV2,
 	productsAreSame,
@@ -54,14 +56,29 @@ export const handlePlanHasCustomersV2 = createRoute({
 					params: planParams,
 				}) as ProductV2)
 			: (body as ProductV2);
+		const curProductV2 = mapToProductV2({
+			product,
+			features,
+		});
+		const productPatch = Object.fromEntries(
+			Object.entries(productV2).filter(([, value]) => value !== undefined),
+		) as Partial<ProductV2>;
+		const newProductV2: ProductV2 = {
+			...curProductV2,
+			...productPatch,
+			billing_controls: mergeBillingControls(
+				curProductV2.billing_controls,
+				productV2.billing_controls,
+			),
+		};
 
-		const { itemsSame, freeTrialsSame } = productsAreSame({
-			newProductV2: productV2,
-			curProductV1: product,
+		const { itemsSame, freeTrialsSame, billingControlsSame } = productsAreSame({
+			newProductV2,
+			curProductV2,
 			features,
 		});
 
-		const productSame = itemsSame && freeTrialsSame;
+		const productSame = itemsSame && freeTrialsSame && billingControlsSame;
 
 		return c.json({
 			current_version: product.version,

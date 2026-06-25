@@ -1,4 +1,8 @@
 import { z } from "zod/v4";
+import {
+	CustomerBillingControlsSchema,
+	DbBillingControlsSchema,
+} from "../cusModels/billingControls/customerBillingControls";
 import { FeatureSchema } from "../featureModels/featureModels";
 import { AppEnv } from "../genModels/genEnums";
 import { EntitlementSchema } from "./entModels/entModels";
@@ -30,6 +34,7 @@ export const ProductSchema = z.object({
 	base_variant_id: z.string().nullable(),
 	archived: z.boolean().default(false),
 	config: ProductConfigSchema.default(() => ({ ignore_past_due: false })),
+	...DbBillingControlsSchema.shape,
 	metadata: ProductMetadataSchema.default(() => ({})),
 });
 
@@ -53,6 +58,7 @@ export const UpdateProductSchema = z.object({
 	group: z.string().nullish(),
 	archived: z.boolean().optional(),
 	config: ProductConfigSchema.partial().optional(),
+	billing_controls: CustomerBillingControlsSchema.optional(),
 });
 
 export const FullProductSchema = ProductSchema.extend({

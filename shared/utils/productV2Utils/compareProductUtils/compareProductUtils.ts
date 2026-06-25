@@ -1,4 +1,9 @@
 /** biome-ignore-all lint/suspicious/noDoubleEquals: comparison functions require double equals */
+
+import {
+	BILLING_CONTROL_KEYS,
+	billingControlsFromColumns,
+} from "../../../models/cusModels/billingControls/customerBillingControls.js";
 import type { Feature } from "../../../models/featureModels/featureModels.js";
 import type { FullProduct } from "../../../models/productModels/productModels.js";
 import {
@@ -113,6 +118,39 @@ export const compareConfig = ({
 	return detailsSame;
 };
 
+const sortControls = (items: Array<{ feature_id?: string }>) =>
+	[...items].sort((left, right) => {
+		const byFeature = (left.feature_id ?? "").localeCompare(
+			right.feature_id ?? "",
+		);
+		if (byFeature !== 0) return byFeature;
+		// Stable tiebreak for entries sharing (or lacking) a feature_id.
+		return JSON.stringify(left).localeCompare(JSON.stringify(right));
+	});
+
+const normalizeBillingControls = (
+	billingControls?: ProductV2["billing_controls"],
+) =>
+	JSON.stringify(
+		BILLING_CONTROL_KEYS.flatMap((key) => {
+			const items = billingControls?.[key];
+			return items?.length ? [[key, sortControls(items)]] : [];
+		}),
+	);
+
+export const compareBillingControls = ({
+	newBillingControls,
+	curBillingControls,
+}: {
+	newBillingControls?: ProductV2["billing_controls"];
+	curBillingControls?: ProductV2["billing_controls"];
+}) => {
+	return (
+		normalizeBillingControls(newBillingControls) ===
+		normalizeBillingControls(curBillingControls)
+	);
+};
+
 // Order-independent deep comparison of two metadata records.
 export const compareMetadata = ({
 	newMetadata,
@@ -193,6 +231,7 @@ export const productsAreSame = ({
 	let pricesChanged = false;
 	let detailsSame = true;
 	let configSame = true;
+	let billingControlsSame = true;
 	const newItems: ProductItem[] = [];
 	const removedItems: ProductItem[] = [];
 
@@ -204,6 +243,15 @@ export const productsAreSame = ({
 	configSame = compareConfig({
 		newConfig: newProductV2?.config,
 		curConfig: curProductV2?.config,
+	});
+
+	billingControlsSame = compareBillingControls({
+		newBillingControls:
+			newProductV2?.billing_controls ??
+			(newProductV1 ? billingControlsFromColumns(newProductV1) : undefined),
+		curBillingControls:
+			curProductV2?.billing_controls ??
+			(curProductV1 ? billingControlsFromColumns(curProductV1) : undefined),
 	});
 
 	const metadataSame = compareMetadata({
@@ -290,7 +338,12 @@ export const productsAreSame = ({
 	// console.log(`options same: `, optionsSame);
 
 	const same =
-		itemsSame && detailsSame && freeTrialsSame && configSame && metadataSame;
+		itemsSame &&
+		detailsSame &&
+		freeTrialsSame &&
+		configSame &&
+		metadataSame &&
+		billingControlsSame;
 
 	// Compare name
 	return {
@@ -302,6 +355,7 @@ export const productsAreSame = ({
 		detailsSame,
 		optionsSame,
 		configSame,
+		billingControlsSame,
 		metadataSame,
 		same,
 	};

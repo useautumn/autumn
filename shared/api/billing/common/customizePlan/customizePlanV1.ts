@@ -2,6 +2,7 @@ import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice";
 import { CreatePlanItemParamsV1Schema } from "@api/products/items/crud/createPlanItemParamsV1";
 import { PlanItemFilterSchema } from "@api/products/items/filter/planItemFilter";
+import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls";
 import { ResetInterval } from "@models/productModels/intervals/resetInterval";
 import { z } from "zod/v4";
 
@@ -39,6 +40,7 @@ type CustomizePlanRefinementData = {
 	remove_items?: unknown;
 	update_items?: unknown;
 	free_trial?: unknown;
+	billing_controls?: unknown;
 };
 
 export const refineCustomizePlanV1Schema = <
@@ -58,7 +60,8 @@ export const refineCustomizePlanV1Schema = <
 				(includeFreeTrial && data.free_trial !== undefined) ||
 				data.add_items !== undefined ||
 				data.remove_items !== undefined ||
-				(includeUpdateItems && data.update_items !== undefined),
+				(includeUpdateItems && data.update_items !== undefined) ||
+				data.billing_controls !== undefined,
 			{
 				message: `When using customize, at least one of ${[
 					"price",
@@ -67,6 +70,7 @@ export const refineCustomizePlanV1Schema = <
 					"remove_items",
 					includeUpdateItems ? "deprecated update_items" : null,
 					includeFreeTrial ? "free_trial" : null,
+					"billing_controls",
 				]
 					.filter(Boolean)
 					.join(", ")} must be provided`,
@@ -116,6 +120,10 @@ export const CustomizePlanV1Schema = refineCustomizePlanV1Schema(
 		free_trial: FreeTrialParamsV1Schema.nullable().optional().meta({
 			description:
 				"Override the plan's default free trial. Pass an object to set a custom trial, or null to remove the trial entirely.",
+		}),
+		billing_controls: CustomerBillingControlsParamsSchema.optional().meta({
+			description:
+				"Override the plan's billing controls (auto top-ups, spend limits, usage limits, usage alerts, overage allowed) for this customer.",
 		}),
 	}),
 ).meta({

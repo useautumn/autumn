@@ -3,6 +3,11 @@ import type { UsageWindowLimit } from "../../models/cusProductModels/cusEntModel
 import type { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
 import type { Feature } from "../../models/featureModels/featureModels.js";
 import { usageLimitToUsageWindowLimit } from "../usageWindowUtils/convertUsageWindow/usageLimitToUsageWindowLimit.js";
+import type { DbUsageLimit } from "../../models/cusModels/billingControls/customerBillingControls.js";
+import {
+	fullSubjectToPlanProducts,
+	resolveBillingControl,
+} from "./planBillingControlUtils.js";
 
 /**
  * Resolves the enforceable usage-window limits for the requested features.
@@ -34,12 +39,15 @@ export const fullSubjectToUsageWindowLimits = ({
 		const entityUsageLimit = entityUsageLimits.find(
 			(candidate) => candidate.feature_id === featureId,
 		);
-		const usageLimit =
-			entityUsageLimit ??
-			customerUsageLimits.find(
-				(candidate) => candidate.feature_id === featureId,
-			);
-		if (!usageLimit) continue;
+		const usageLimit = resolveBillingControl<DbUsageLimit, "usage_limits">({
+			controlLists: [entityUsageLimits, customerUsageLimits],
+			customerProducts: fullSubjectToPlanProducts({ fullSubject }),
+			controlKey: "usage_limits",
+			matches: (candidate) => candidate.feature_id === featureId,
+			now,
+			inStatuses,
+		});
+		if (!usageLimit || usageLimit.enabled === false) continue;
 
 		const feature = features.find((candidate) => candidate.id === featureId);
 		if (!feature) continue;

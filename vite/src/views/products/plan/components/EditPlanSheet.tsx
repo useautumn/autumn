@@ -15,6 +15,7 @@ import { PlanSheetFooterContainer } from "@/components/v2/sheets/PlanSheetFooter
 import { AdditionalOptions } from "./edit-plan-details/AdditionalOptions";
 import { MainDetailsSection } from "./edit-plan-details/MainDetailsSection";
 import { MetadataEditor } from "./edit-plan-details/MetadataEditor";
+import { PlanBillingControlsSection } from "./edit-plan-details/PlanBillingControlsSection";
 
 export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 	const { product, setProduct } = useProduct();
@@ -79,6 +80,7 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 										})
 									}
 								/>
+								<PlanBillingControlsSection />
 								<AreaCheckbox
 									title="Metadata"
 									description="Arbitrary JSON for your own use (e.g. UI copy). Shared across every version of the plan."

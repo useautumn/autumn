@@ -13,6 +13,7 @@ import type { Entity } from "../../models/cusModels/entityModels/entityModels.js
 import { ProcessorType } from "../../models/genModels/genEnums.js";
 import type { BillingType } from "../../models/productModels/priceModels/priceEnums.js";
 import type { FullProduct } from "../../models/productModels/productModels.js";
+import { pickBillingControlColumns } from "../../models/cusModels/billingControls/customerBillingControls.js";
 import { getBillingType } from "../productUtils/priceUtils.js";
 
 export const cusProductsToPrices = ({
@@ -157,6 +158,7 @@ export const cusProductToProduct = ({
 }) => {
 	return {
 		...cusProduct.product,
+		...pickBillingControlColumns(cusProduct),
 		prices: cusProductToPrices({ cusProduct }),
 		entitlements: cusProductToEnts({ cusProduct }),
 		free_trial: cusProduct.free_trial,

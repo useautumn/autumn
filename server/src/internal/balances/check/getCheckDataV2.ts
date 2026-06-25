@@ -1,4 +1,5 @@
 import {
+	type ApiCustomerV5,
 	type ApiEntityV2,
 	ApiVersion,
 	type CheckParams,
@@ -8,6 +9,7 @@ import {
 	fullSubjectToFullCustomer,
 	getFeatureToUseForCheck,
 	mergeCustomerBillingControlsForCheck,
+	mergePlanBillingControlsForCheck,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
@@ -103,6 +105,12 @@ export const getCheckDataV2 = async ({
 		evaluationApiSubject = mergeCustomerBillingControlsForCheck({
 			entityApiSubject: evaluationApiSubject as ApiEntityV2,
 			customerApiSubject: apiCustomer,
+			planCustomerProducts: fullSubject.customer_products,
+		});
+	} else {
+		evaluationApiSubject = mergePlanBillingControlsForCheck({
+			customerApiSubject: evaluationApiSubject as ApiCustomerV5,
+			planCustomerProducts: fullSubject.customer_products,
 		});
 	}
 

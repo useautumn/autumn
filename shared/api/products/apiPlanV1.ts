@@ -1,4 +1,5 @@
 import { AppEnv } from "@models/genModels/genEnums.js";
+import { CustomerBillingControlsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { ProductConfigSchema } from "@models/productModels/productConfig/productConfig.js";
 import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
@@ -43,6 +44,7 @@ export const API_PLAN_V1_EXAMPLE = {
 	config: {
 		ignore_past_due: false,
 	},
+	billing_controls: {},
 	metadata: {},
 };
 
@@ -121,6 +123,9 @@ export const ApiPlanV1Schema = z.object({
 
 	config: ProductConfigSchema.meta({
 		description: "Miscellaneous plan-level configuration flags.",
+	}),
+	billing_controls: CustomerBillingControlsSchema.optional().meta({
+		description: "Plan-level billing controls used as customer defaults.",
 	}),
 
 	metadata: ProductMetadataSchema.meta({

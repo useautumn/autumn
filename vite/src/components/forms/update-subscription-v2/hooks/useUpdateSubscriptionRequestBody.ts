@@ -1,7 +1,9 @@
-import type {
-	ProductItem,
-	ProductItemInterval,
-	UpdateSubscriptionV0Params,
+import {
+	billingControlsFromColumns,
+	compareBillingControls,
+	type ProductItem,
+	type ProductItemInterval,
+	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import { useCallback } from "react";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
@@ -63,27 +65,36 @@ export function buildUpdateSubscriptionOptions({
 							includedUsage: getIncludedUsage({ item }),
 						});
 			const currentIncludedUsage = getIncludedUsage({ item });
-			const purchasedQuantityChanged =
-				getPurchasedQuantity({
-					totalQuantity: normalizedInputQuantity ?? initialQuantity,
-					includedUsage: currentIncludedUsage,
-				}) !== (initialBackendQuantities[featureId] ?? 0);
-
-			// One-off items resubmit even when oldQuant === newQuant
-			// (each submission is a fresh top-up purchase).
-			const isOneOff = item.interval === null;
-			const quantityChanged = normalizedInputQuantity !== initialQuantity;
 
 			if (
-				normalizedInputQuantity !== undefined &&
-				normalizedInputQuantity !== null &&
-				featureId &&
-				(quantityChanged || purchasedQuantityChanged || isOneOff)
+				normalizedInputQuantity === undefined ||
+				normalizedInputQuantity === null ||
+				!featureId
 			) {
-				return {
-					feature_id: featureId,
-					quantity: normalizedInputQuantity,
-				};
+				return null;
+			}
+
+			const newPurchasedQuantity = getPurchasedQuantity({
+				totalQuantity: normalizedInputQuantity,
+				includedUsage: currentIncludedUsage,
+			});
+			const currentPurchasedQuantity = getPurchasedQuantity({
+				totalQuantity: initialQuantity,
+				includedUsage: currentIncludedUsage,
+			});
+
+			const isOneOff = item.interval === null;
+			if (isOneOff) {
+				const topUpDelta = newPurchasedQuantity - currentPurchasedQuantity;
+				if (topUpDelta <= 0) return null;
+				return { feature_id: featureId, quantity: topUpDelta };
+			}
+
+			const purchasedQuantityChanged =
+				newPurchasedQuantity !== (initialBackendQuantities[featureId] ?? 0);
+			const quantityChanged = normalizedInputQuantity !== initialQuantity;
+			if (quantityChanged || purchasedQuantityChanged) {
+				return { feature_id: featureId, quantity: normalizedInputQuantity };
 			}
 			return null;
 		})
@@ -132,6 +143,7 @@ export function useUpdateSubscriptionRequestBody({
 			refundAmount,
 			noBillingChanges,
 			discounts,
+			billingControls,
 		} = formValues;
 
 		const validDiscounts = discounts?.length
@@ -179,6 +191,14 @@ export function useUpdateSubscriptionRequestBody({
 			trialCardRequired,
 		});
 
+		// Only send billing_controls when they actually changed — the backend
+		// treats their presence as UpdatePlan intent, which would misroute a
+		// quantity-only edit.
+		const billingControlsChanged = !compareBillingControls({
+			newBillingControls: billingControls ?? undefined,
+			curBillingControls: billingControlsFromColumns(customerProduct),
+		});
+
 		return {
 			...base,
 			options: options.length > 0 ? options : undefined,
@@ -190,15 +210,16 @@ export function useUpdateSubscriptionRequestBody({
 			carry_over_usages: resetUsage ? { enabled: false } : undefined,
 			no_billing_changes: noBillingChanges || undefined,
 			discounts: validDiscounts,
+			billing_controls: billingControlsChanged
+				? (billingControls ?? undefined)
+				: undefined,
 		};
 	}, [
 		form.store,
 		customerId,
 		product?.id,
 		entityId,
-		customerProduct.id,
-		customerProduct.internal_product_id,
-		customerProduct.options,
+		customerProduct,
 		initialVersion,
 		currentPrepaidItems,
 		initialPrepaidOptions,
