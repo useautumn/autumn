@@ -38,6 +38,12 @@ exec_local_shell() {
   exec "$real" -l
 }
 
+# Escape hatch: `swdown` spawns a pane with SW_LOCAL=1 to get a LOCAL shell inside
+# a remote worktree (bypassing the auto-ssh) so it can run `bun sw teardown`.
+if [ "${SW_LOCAL:-}" = "1" ]; then
+  exec_local_shell
+fi
+
 if [ ! -f "$marker" ]; then
   exec_local_shell
 fi

@@ -119,7 +119,7 @@ EOF
 }
 
 phase_setup() {
-  local REMOTE_PATH="$1" BRANCH="$2" SLUG="$3" DATABASE_URL="$4" HOOK_SRC="$5" BASE_ENV="$6"
+  local REMOTE_PATH="$1" BRANCH="$2" SLUG="$3" DATABASE_URL="$4" HOOK_SRC="$5" BASE_ENV="$6" LOCAL_CHECKOUT="$7"
 
   log "checking out $BRANCH"
   git -C "$REMOTE_PATH" checkout "$BRANCH"
@@ -176,6 +176,51 @@ phase_setup() {
     log "pre-installing zinit + p10k (first shell would otherwise clone them)"
     timeout 180 "$ZSH_BIN" -ic exit >>"$LOG_DIR/zsh-warmup.log" 2>&1 || true
   fi
+
+  # `swdown` (run on the box) tears the worktree down from your Mac. The box can't
+  # auth to exe.dev/Neon, so it bounces through the forwarded herdr socket: open a
+  # LOCAL pane in the Mac checkout (SW_LOCAL=1 bypasses the auto-ssh) and run
+  # `bun run sw:teardown` there.
+  mkdir -p "$HOME/.config/sw" "$BIN_DIR"
+  printf 'LOCAL_CHECKOUT=%s\n' "$LOCAL_CHECKOUT" >"$HOME/.config/sw/teardown.env"
+  cat >"$BIN_DIR/swdown" <<'SWDOWN'
+#!/usr/bin/env python3
+import json, os, socket, sys
+
+sock = os.environ.get("HERDR_SOCKET_PATH")
+pane = os.environ.get("HERDR_PANE_ID")
+if not (sock and pane):
+    sys.exit("swdown: not in a bridged herdr pane")
+checkout = None
+try:
+    for line in open(os.path.expanduser("~/.config/sw/teardown.env")):
+        if line.startswith("LOCAL_CHECKOUT="):
+            checkout = line.rstrip("\n").split("=", 1)[1]
+except Exception:
+    pass
+if not checkout:
+    sys.exit("swdown: no LOCAL_CHECKOUT recorded")
+
+def call(req):
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.settimeout(5)
+    s.connect(sock)
+    s.sendall((json.dumps(req) + "\n").encode())
+    data = s.recv(8192)
+    s.close()
+    return json.loads(data)
+
+res = call({"id": "1", "method": "pane.split", "params": {
+    "target_pane_id": pane, "direction": "down", "cwd": checkout,
+    "focus": True, "env": {"SW_LOCAL": "1"}}})
+newpane = (res.get("result") or {}).get("pane", {}).get("pane_id")
+if not newpane:
+    sys.exit(f"swdown: split failed: {res}")
+call({"id": "2", "method": "pane.send_input", "params": {
+    "pane_id": newpane, "text": "bun run sw:teardown", "keys": ["Enter"]}})
+print("swdown: tearing down on your Mac (in a new local pane)…")
+SWDOWN
+  chmod +x "$BIN_DIR/swdown"
 
   # --- env: infisical export (base) + per-worktree native-service overrides ---
   local OVERRIDES MERGED

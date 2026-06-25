@@ -104,6 +104,7 @@ export async function cmdRemote({
 		neon.databaseUrl,
 		hookRemote,
 		baseEnvRemote,
+		checkout, // Mac local checkout — for the `swdown` self-teardown helper
 	]
 		.map(shQuote)
 		.join(" ");
