@@ -83,7 +83,10 @@ export function NewFeatureSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 
 			await refetch();
 
-			if (!product || !newFeature.id) return;
+			if (!product || !newFeature.id) {
+				setIsCreating(false);
+				return;
+			}
 
 			const newItem = getDefaultItem({
 				feature: featureV1ToDbFeature({ apiFeature: newFeature }),
