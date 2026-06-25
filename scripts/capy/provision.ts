@@ -29,7 +29,7 @@
 // preview URL is unreachable (no Daytona auth on server-to-self), so all
 // server-internal traffic uses localhost.
 
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
@@ -60,10 +60,12 @@ const DRAGONFLY_DIR = join(CAPY_PREFIX, "dragonfly");
 
 const NEON_TEMPLATE_BRANCH = "dw-template";
 
+// Browser-facing ports — these are surfaced as Daytona preview URLs in the
+// env files. Internal-only ports (checkout :3001, leaf/chat :3099) don't
+// need to leak into env vars — `dev.ts` already hardcodes their localhost
+// URLs for sibling processes.
 const SERVER_PORT = 8080;
 const VITE_PORT = 3000;
-const CHECKOUT_PORT = 3001;
-const CHAT_PORT = 3099;
 const DRAGONFLY_PORT = 6379;
 const ELASTICMQ_PORT = 9324;
 
@@ -146,7 +148,38 @@ type State = {
 	branchId?: string;
 	databaseUrl?: string;
 	createdAt: number;
+	// Per-sandbox secrets — generated once on first run, persisted, then
+	// re-used so a server restart doesn't invalidate every session.
+	// scripts/setup/writeAgentEnv.ts does the same for the legacy bootstrap;
+	// the dw flow inherits these from infisical instead.
+	secrets?: {
+		betterAuthSecret: string;
+		encryptionIv: string;
+		encryptionPassword: string;
+	};
 };
+
+// URL-safe base64 random string. Same shape as scripts/setup/writeAgentEnv.ts
+// (`genUrlSafeBase64`) — server/src/utils/initUtils.ts::checkEnvVars exits
+// the process if BETTER_AUTH_SECRET / ENCRYPTION_IV / ENCRYPTION_PASSWORD
+// are missing, so first-run provisioning must mint these.
+function genUrlSafeBase64(bytes: number): string {
+	return randomBytes(bytes)
+		.toString("base64")
+		.replace(/\+/g, "-")
+		.replace(/\//g, "_")
+		.replace(/=+$/g, "");
+}
+
+function ensureSecrets(state: State | null): State["secrets"] {
+	if (state?.secrets) return state.secrets;
+	log("minting per-sandbox secrets (BETTER_AUTH_SECRET, ENCRYPTION_IV, ENCRYPTION_PASSWORD)");
+	return {
+		betterAuthSecret: genUrlSafeBase64(64),
+		encryptionIv: genUrlSafeBase64(16),
+		encryptionPassword: genUrlSafeBase64(64),
+	};
+}
 
 function loadState(): State | null {
 	if (!existsSync(CAPY_STATE)) return null;
@@ -319,7 +352,11 @@ function writeEnvFile(relPath: string, managed: Record<string, string>): void {
 	writeFileSync(abs, mergeEnvFile(existing, managed));
 }
 
-function writeEnvFiles(databaseUrl: string, sandboxId: string): void {
+function writeEnvFiles(
+	databaseUrl: string,
+	sandboxId: string,
+	secrets: NonNullable<State["secrets"]>,
+): void {
 	const serverUrl = daytonaPreviewUrl(SERVER_PORT, sandboxId);
 	const viteUrl = daytonaPreviewUrl(VITE_PORT, sandboxId);
 
@@ -328,6 +365,12 @@ function writeEnvFiles(databaseUrl: string, sandboxId: string): void {
 	const sqsBase = `http://localhost:${ELASTICMQ_PORT}/000000000000`;
 
 	const serverEnv: Record<string, string> = {
+		// server/src/utils/initUtils.ts::checkEnvVars exits if any of these are
+		// missing; legacy writeAgentEnv.ts handled the same set. Re-minted only
+		// on first run — the values live in $CAPY_PREFIX/state.json.
+		BETTER_AUTH_SECRET: secrets.betterAuthSecret,
+		ENCRYPTION_IV: secrets.encryptionIv,
+		ENCRYPTION_PASSWORD: secrets.encryptionPassword,
 		DATABASE_URL: dbUrl,
 		DATABASE_CRITICAL_URL: dbUrl,
 		// Dragonfly serves the redis-protocol clients for ALL three cache slots
@@ -366,6 +409,11 @@ function writeEnvFiles(databaseUrl: string, sandboxId: string): void {
 
 	const checkoutEnv: Record<string, string> = {
 		VITE_BACKEND_URL: serverUrl,
+		// apps/checkout reads VITE_API_URL directly (not VITE_BACKEND_URL) in
+		// checkoutClient.ts and LongLivedCheckoutPage.tsx — without it the
+		// browser falls back to http://localhost:8080, which from the user's
+		// laptop hits THEIR machine, not this sandbox.
+		VITE_API_URL: serverUrl,
 	};
 
 	writeEnvFile("server/.env.local", serverEnv);
@@ -436,11 +484,6 @@ function ensureNeonBranch(sandboxId: string, state: State | null): State {
 	const directUrl = connectionString(branchName, { pooled: false });
 	applyCommittedMigrations(branchName, directUrl);
 	loadDbFunctions(branchName, directUrl);
-	// Leaf's chat-sdk wants a separate `chat` DB on the same branch (env.ts
-	// rewrites /neondb -> /chat). Create it via the control plane so we don't
-	// need CREATE DATABASE privileges. Non-fatal if it fails — dw's helper
-	// already logs and continues.
-	ensureChatDatabase(branchName);
 	const pooledUrl = connectionString(branchName, { pooled: true });
 	return {
 		sandboxId,
@@ -470,12 +513,24 @@ async function main(): Promise<void> {
 
 	// 2. Neon auth + branch + migrations.
 	ensureNeonAuth();
-	const state = ensureNeonBranch(sandboxId, loadState());
-	saveState(state);
-	if (!state.databaseUrl) fatal("provisioning produced no databaseUrl");
+	const priorState = loadState();
+	const nextState = ensureNeonBranch(sandboxId, priorState);
+
+	// Per-sandbox secrets — mint on first run, then persist. Server can't
+	// boot without BETTER_AUTH_SECRET / ENCRYPTION_IV / ENCRYPTION_PASSWORD.
+	nextState.secrets = ensureSecrets(priorState);
+
+	saveState(nextState);
+	if (!nextState.databaseUrl) fatal("provisioning produced no databaseUrl");
+
+	// Leaf's chat-sdk wants a separate `chat` DB on the same branch (env.ts
+	// rewrites /neondb -> /chat). dw calls this on every setup (not just on
+	// branch creation) so a transient Neon hiccup gets retried next time;
+	// match that behavior here. Non-fatal — the helper logs and continues.
+	if (nextState.branchName) ensureChatDatabase(nextState.branchName);
 
 	// 3. Env files. preload-env.ts at every bun entry point auto-loads these.
-	writeEnvFiles(state.databaseUrl, sandboxId);
+	writeEnvFiles(nextState.databaseUrl, sandboxId, nextState.secrets);
 
 	log("capy provision complete — run `bun dev` to start the stack");
 }

@@ -71,8 +71,11 @@ re-run the `provision` command:
 ```bash
 rm -f ~/.autumn-capy/state.json
 rm -rf ~/.autumn-capy/dragonfly
-pkill -f /home/.autumn-capy/bin/dragonfly
-pkill -f /home/.autumn-capy/bin/goaws
+# Match by relative bin path so it works regardless of $HOME on this
+# sandbox (root vs. a daytona user account both leave the binaries under
+# `<home>/.autumn-capy/bin/...`).
+pkill -f '/.autumn-capy/bin/dragonfly'
+pkill -f '/.autumn-capy/bin/goaws'
 bash scripts/setup/capy-startup.sh
 ```
 

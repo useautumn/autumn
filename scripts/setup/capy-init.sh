@@ -37,8 +37,12 @@ mkdir -p "$BIN_DIR" "$GOAWS_DIR" "$DRAGONFLY_DIR" "$LOG_DIR"
 
 # Versions — mirror scripts/tw/image/build-base.sh so we share the same
 # upstream artifacts when both flows coexist on a developer's laptop.
+# Pin goaws to a specific tag (not :latest) so re-initialized sandboxes
+# stay reproducible — the `if [ ! -x ... ]` guard below makes extraction
+# one-shot, so a mutable tag would silently fork binary state across
+# sandbox generations.
 DRAGONFLY_VERSION="${DRAGONFLY_VERSION:-latest}"
-GOAWS_IMAGE="${GOAWS_IMAGE:-docker.io/admiralpiett/goaws:latest}"
+GOAWS_IMAGE="${GOAWS_IMAGE:-docker.io/admiralpiett/goaws:v0.5.4}"
 CRANE_VERSION="${CRANE_VERSION:-v0.20.2}"
 
 ARCH="$(uname -m)"
