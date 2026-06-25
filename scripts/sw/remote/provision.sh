@@ -138,6 +138,31 @@ phase_setup() {
     (cd "$REMOTE_PATH/ai" && bun sync >/dev/null 2>&1) || true
   fi
 
+  # --- shell: zsh + your zshrc + tools on PATH for interactive ssh sessions ---
+  log "setting up zsh + PATH"
+  if command -v apt-get >/dev/null 2>&1; then
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq zsh >/dev/null 2>&1 || true
+  fi
+  if [ -f /tmp/sw-zshrc ]; then
+    [ -f "$HOME/.zshrc" ] && cp "$HOME/.zshrc" "$HOME/.zshrc.sw-bak" 2>/dev/null || true
+    cp /tmp/sw-zshrc "$HOME/.zshrc"
+  fi
+  # Append a managed block so `bun`, `lazygit`, etc. are on PATH (a non-login ssh
+  # session doesn't source the profile), plus `dev` to (re)attach the server tmux.
+  for rc in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.profile"; do
+    touch "$rc"
+    if ! grep -q '# sw:env' "$rc" 2>/dev/null; then
+      {
+        printf '\n# sw:env (managed)\n'
+        printf 'export PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"\n'
+        printf "alias dev='tmux new -A -s %s-dev'\n" "$SLUG"
+        printf "alias devlog='tmux capture-pane -pt %s-dev -S -200'\n" "$SLUG"
+      } >>"$rc"
+    fi
+  done
+  ZSH_BIN="$(command -v zsh || true)"
+  [ -n "$ZSH_BIN" ] && sudo chsh -s "$ZSH_BIN" "$(id -un)" >/dev/null 2>&1 || true
+
   # --- env: infisical export (base) + per-worktree native-service overrides ---
   local OVERRIDES MERGED
   OVERRIDES="$(cat <<EOF

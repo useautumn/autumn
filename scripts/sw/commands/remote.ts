@@ -1,5 +1,5 @@
-import { writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { existsSync, writeFileSync } from "node:fs";
+import { homedir, tmpdir } from "node:os";
 import { join } from "node:path";
 import {
 	EXE_INTEGRATIONS,
@@ -66,6 +66,9 @@ export async function cmdRemote({
 		hookRemote,
 	);
 	scpTo(vm.ssh_dest, baseEnvLocal, baseEnvRemote);
+	// Ship your local zshrc so the box shell feels like home (provision installs it).
+	const localZshrc = join(homedir(), ".zshrc");
+	if (existsSync(localZshrc)) scpTo(vm.ssh_dest, localZshrc, "/tmp/sw-zshrc");
 
 	const httpsOrigin = toHttpsOrigin(originUrl(checkout));
 
