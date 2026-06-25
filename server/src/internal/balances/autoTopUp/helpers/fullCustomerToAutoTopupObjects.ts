@@ -37,8 +37,10 @@ export const fullCustomerToAutoTopupObjects = ({
 
 	if (cusEnts.length === 0) return null;
 
-	// 3. Find the one-off prepaid cusEnt
-	const customerEntitlement = cusEnts.find((ce) => {
+	// 3. Find the one-off prepaid cusEnt to charge. When the customer is on
+	// multiple plans with a one-off prepaid price for this feature, charge the
+	// MOST RECENTLY attached plan's price (not an arbitrary first match).
+	const isOneOffPrepaid = (ce: FullCusEntWithFullCusProduct) => {
 		const cp = cusEntToCusPrice({ cusEnt: ce });
 		return (
 			cp &&
@@ -46,7 +48,14 @@ export const fullCustomerToAutoTopupObjects = ({
 			isPrepaidPrice(cp.price) &&
 			!isVolumeBasedCusEnt(ce)
 		);
-	});
+	};
+	const customerEntitlement = cusEnts
+		.filter(isOneOffPrepaid)
+		.sort(
+			(left, right) =>
+				(right.customer_product?.created_at ?? 0) -
+				(left.customer_product?.created_at ?? 0),
+		)[0];
 
 	if (!customerEntitlement || !customerEntitlement.customer_product) {
 		return null;
