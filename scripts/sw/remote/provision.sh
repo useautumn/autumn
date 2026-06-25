@@ -119,7 +119,7 @@ EOF
 }
 
 phase_setup() {
-  local REMOTE_PATH="$1" BRANCH="$2" SLUG="$3" DATABASE_URL="$4" HOOK_SRC="$5" BASE_ENV="$6" LOCAL_CHECKOUT="$7"
+  local REMOTE_PATH="$1" BRANCH="$2" SLUG="$3" DATABASE_URL="$4" HOOK_SRC="$5" BASE_ENV="$6" LOCAL_CHECKOUT="$7" BOX_SSH_DEST="$8"
 
   log "checking out $BRANCH"
   git -C "$REMOTE_PATH" checkout "$BRANCH"
@@ -184,6 +184,7 @@ phase_setup() {
   # `bun run sw:teardown` there.
   mkdir -p "$HOME/.config/sw" "$BIN_DIR"
   printf 'LOCAL_CHECKOUT=%s\n' "$LOCAL_CHECKOUT" >"$HOME/.config/sw/teardown.env"
+  printf '%s\n' "$BOX_SSH_DEST" >"$HOME/.config/sw/ssh-dest"
   cat >"$BIN_DIR/swdown" <<'SWDOWN'
 #!/usr/bin/env python3
 import json, os, socket, sys
@@ -228,11 +229,13 @@ SWDOWN
   cat >"$BIN_DIR/xdg-open" <<'XDGOPEN'
 #!/bin/sh
 url="${1:-}"
-case "$url" in
-  ""|http://localhost*|https://localhost*|http://127.*|https://127.*|http://0.0.0.0*|http://10.*|http://192.168.*|http://[::1]*|https://[::1]*) exit 0 ;;
-esac
+[ -n "$url" ] || exit 0
 [ -n "${SW_OPEN_SOCK:-}" ] || exit 0
-printf '%s\n' "$url" | python3 -c "import socket,sys,os; s=socket.socket(socket.AF_UNIX); s.connect(os.environ['SW_OPEN_SOCK']); s.sendall(sys.stdin.buffer.read())" 2>/dev/null || true
+# Send the box's ssh dest + the URL; the Mac listener opens it and forwards any
+# embedded localhost port back to the box (so OAuth callbacks + dev-server links
+# work). Local URLs are no longer skipped — they're forwarded + opened.
+box="$(cat "$HOME/.config/sw/ssh-dest" 2>/dev/null)"
+printf '%s\n%s\n' "$box" "$url" | python3 -c "import socket,sys,os; s=socket.socket(socket.AF_UNIX); s.connect(os.environ['SW_OPEN_SOCK']); s.sendall(sys.stdin.buffer.read())" 2>/dev/null || true
 XDGOPEN
   chmod +x "$BIN_DIR/xdg-open"
 

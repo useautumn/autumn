@@ -109,6 +109,7 @@ export async function cmdRemote({
 		hookRemote,
 		baseEnvRemote,
 		checkout, // Mac local checkout — for the `swdown` self-teardown helper
+		vm.ssh_dest, // box ssh dest — for the browser-open port forwarding
 	]
 		.map(shQuote)
 		.join(" ");
