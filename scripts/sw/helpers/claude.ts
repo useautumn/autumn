@@ -7,8 +7,8 @@ import { SSH_OPTS } from "./ssh.ts";
  * The secret is piped Keychain → ssh → box file (never written to disk on the
  * Mac). Best-effort: no-op off macOS or if the credential isn't found.
  */
-export function installClaudeCredential(sshDest: string): void {
-	if (process.platform !== "darwin") return;
+export function installClaudeCredential(sshDest: string): boolean {
+	if (process.platform !== "darwin") return false;
 	const cred = sh("security", [
 		"find-generic-password",
 		"-s",
@@ -16,8 +16,8 @@ export function installClaudeCredential(sshDest: string): void {
 		"-w",
 	]);
 	if (cred.code !== 0 || !cred.stdout) {
-		log("no claude credential in Keychain — run `claude` on the box to log in");
-		return;
+		log("⚠ couldn't read your claude login from the Keychain (denied or missing)");
+		return false;
 	}
 	const res = sh(
 		"ssh",
@@ -29,8 +29,9 @@ export function installClaudeCredential(sshDest: string): void {
 		{ stdin: cred.stdout },
 	);
 	if (res.code === 0) {
-		log("copied your claude login to the box");
-	} else {
-		log(`copying claude login failed: ${res.stderr || res.stdout}`);
+		log("✓ copied your claude login to the box");
+		return true;
 	}
+	log(`⚠ copying claude login failed: ${res.stderr || res.stdout}`);
+	return false;
 }

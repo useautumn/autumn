@@ -118,7 +118,7 @@ export async function cmdRemote({
 	}
 
 	// Copy your claude login (Keychain → box) so claude is signed in on the box.
-	installClaudeCredential(vm.ssh_dest);
+	const claudeReady = installClaudeCredential(vm.ssh_dest);
 
 	// Drop the marker BEFORE laying out panes, so the wrapper auto-ssh's the claude
 	// split (and any pane you open later) into the box.
@@ -138,9 +138,16 @@ export async function cmdRemote({
 	});
 
 	// The claude pane is spawned by the wrapper (marker present → already on the
-	// box), so it just runs `claude`. This (server) pane hosts `bun dev` in tmux.
+	// box). Only auto-run `claude` if its login copied; otherwise leave a ready
+	// shell so we don't shove a dead login screen at you. This (server) pane hosts
+	// `bun dev` in tmux.
 	const self = process.env.HERDR_PANE_ID;
-	if (self) layoutPanes(self, "claude");
+	if (self) {
+		layoutPanes(
+			self,
+			claudeReady ? "claude" : "echo 'box ready — run: claude (logs in via your Mac browser)'",
+		);
+	}
 
 	const serverScript = serverTmuxScript({
 		slug,
