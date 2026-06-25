@@ -1,12 +1,7 @@
 import type { FullCustomer } from "@autumn/shared";
 import { ProcessorType } from "@autumn/shared";
 import { IconTooltipButton } from "@autumn/ui";
-import {
-	BracketsSquareIcon,
-	DatabaseIcon,
-	LightningIcon,
-	UserCircleGearIcon,
-} from "@phosphor-icons/react";
+import { BracketsSquareIcon, UserCircleGearIcon } from "@phosphor-icons/react";
 import { useMutation } from "@tanstack/react-query";
 import { useState } from "react";
 import { useParams } from "react-router";
@@ -14,7 +9,6 @@ import { toast } from "sonner";
 import { StripeIcon } from "@/components/v2/icons/AutumnIcons";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
-import { useBalanceSourceStore } from "@/hooks/stores/useBalanceSourceStore";
 import { getInitialScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -40,8 +34,6 @@ export function CustomerHeaderActions() {
 	const env = useEnv();
 	const axiosInstance = useAxiosInstance();
 	const { customer_id } = useParams();
-	const balanceSource = useBalanceSourceStore((s) => s.source);
-	const toggleBalanceSource = useBalanceSourceStore((s) => s.toggle);
 
 	useCustomerObjectQuery({
 		customerId: customer_id,
@@ -107,23 +99,6 @@ export function CustomerHeaderActions() {
 				icon={<BracketsSquareIcon size={14} />}
 				onClick={() => setShowObjectOpen(true)}
 			/>
-			{isAdmin && (
-				<IconTooltipButton
-					tooltip={
-						balanceSource === "live"
-							? "Showing live balances — switch to DB"
-							: "Showing DB balances — switch to live"
-					}
-					icon={
-						balanceSource === "live" ? (
-							<LightningIcon size={14} />
-						) : (
-							<DatabaseIcon size={14} />
-						)
-					}
-					onClick={toggleBalanceSource}
-				/>
-			)}
 			<IconTooltipButton
 				tooltip="Open customer portal"
 				icon={<UserCircleGearIcon size={14} />}
