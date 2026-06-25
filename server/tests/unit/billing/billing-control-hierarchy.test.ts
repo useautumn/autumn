@@ -46,6 +46,7 @@ const planProduct = (key: string, controls: Record<string, unknown>[]) =>
 		access_starts_at: NOW - 1000,
 		ended_at: null,
 		created_at: NOW - 1000,
+		customer_entitlements: [],
 		// Plan controls live on the joined product, not the customer_product.
 		product: { [key]: controls.length ? controls : null },
 	}) as unknown as FullSubject["customer_products"][number];
@@ -66,6 +67,7 @@ const buildFullSubject = ({
 		customer: { [key]: customer ?? null },
 		customer_products: [planProduct(key, plan ?? [])],
 		aggregated_customer_products: [],
+		extra_customer_entitlements: [],
 	}) as unknown as FullSubject;
 
 const levelOf = (control: unknown) =>
