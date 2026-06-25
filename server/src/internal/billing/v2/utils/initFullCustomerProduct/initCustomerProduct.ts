@@ -7,7 +7,6 @@ import {
 	type InitFullCustomerProductOptions,
 	ms,
 	notNullish,
-	pickBillingControlColumns,
 } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils";
 import { productToBillingCycleAnchor } from "./cycleAnchorUtils";
@@ -47,7 +46,8 @@ export const initCustomerProduct = ({
 	const internalEntityId =
 		initOptions?.internalEntityId ?? fullCustomer.entity?.internal_id;
 	const entityId =
-		initOptions?.internalEntityId && initOptions.internalEntityId !== fullCustomer.entity?.internal_id
+		initOptions?.internalEntityId &&
+		initOptions.internalEntityId !== fullCustomer.entity?.internal_id
 			? fullCustomer.entities?.find(
 					(e) => e.internal_id === initOptions.internalEntityId,
 				)?.id
@@ -142,7 +142,6 @@ export const initCustomerProduct = ({
 
 		previous_customer_product_id: previousCustomerProductId ?? null,
 		on_trial_end: onTrialEnd ?? null,
-		...pickBillingControlColumns(fullProduct),
 	};
 };
 

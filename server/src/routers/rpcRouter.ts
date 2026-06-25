@@ -11,6 +11,7 @@ import { logsRpcRouter } from "@/internal/logs/logsRouter";
 import { migrationRpcRouter } from "@/internal/migrations/v2/migrationRouter";
 import { platformRpcRouter } from "@/internal/platform/platformBeta/platformRpcRouter";
 import { plansRpcRouter } from "@/internal/products/productRouter";
+import { sandboxesRpcRouter } from "@/internal/sandboxes/sandboxesRouter";
 import type { HonoEnv } from "../honoUtils/HonoEnv";
 import { customerRpcRouter } from "../internal/customers/cusRouter";
 
@@ -40,3 +41,4 @@ rpcRouter.route("", featureRpcRouter);
 rpcRouter.route("", logsRpcRouter);
 rpcRouter.route("", migrationRpcRouter);
 rpcRouter.route("", platformRpcRouter);
+rpcRouter.route("", sandboxesRpcRouter);

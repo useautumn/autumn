@@ -5,10 +5,12 @@ export { fullSubjectToApiCustomerProducts } from "./fullSubjectToApiCustomerProd
 export { fullSubjectToApiUsageLimits } from "./fullSubjectToApiUsageLimits.js";
 export {
 	findPlanBillingControl,
+	findPlanBillingControlWithProduct,
 	fullCustomerToPlanProducts,
 	fullSubjectToPlanProducts,
 	getPlanBillingControlProducts,
 	resolveBillingControl,
+	resolveBillingControlWithProduct,
 } from "./planBillingControlUtils.js";
 export { fullSubjectToCustomerEntitlements } from "./fullSubjectToCustomerEntitlements.js";
 export { fullSubjectToFullCustomer } from "./fullSubjectToFullCustomer.js";

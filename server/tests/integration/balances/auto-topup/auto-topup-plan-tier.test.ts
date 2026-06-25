@@ -35,7 +35,11 @@ const oneOffItem = () =>
 test(
 	`${chalk.yellowBright("auto-topup-plan1: a PLAN-DEFAULT config fires a top-up when the customer has none")}`,
 	async () => {
-		const prod = products.oneOffAddOn({ id: "topup-plan1", items: [oneOffItem()] });
+		const prod = products.oneOffAddOn({
+			id: "topup-plan1",
+			items: [oneOffItem()],
+			billingControls: makeAutoTopupConfig({ threshold: 20, quantity: 100 }),
+		});
 
 		const { customerId, autumnV2_1 } = await initScenario({
 			customerId: "auto-topup-plan1",
@@ -47,7 +51,6 @@ test(
 				s.billing.attach({
 					productId: prod.id,
 					options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
-					billingControls: makeAutoTopupConfig({ threshold: 20, quantity: 100 }),
 				}),
 			],
 		});
@@ -79,7 +82,12 @@ test(
 test(
 	`${chalk.yellowBright("auto-topup-plan2: a CUSTOMER config overrides the plan default")}`,
 	async () => {
-		const prod = products.oneOffAddOn({ id: "topup-plan2", items: [oneOffItem()] });
+		// Plan default tops up 100.
+		const prod = products.oneOffAddOn({
+			id: "topup-plan2",
+			items: [oneOffItem()],
+			billingControls: makeAutoTopupConfig({ threshold: 20, quantity: 100 }),
+		});
 
 		const { customerId, autumnV2_1 } = await initScenario({
 			customerId: "auto-topup-plan2",
@@ -91,8 +99,6 @@ test(
 				s.billing.attach({
 					productId: prod.id,
 					options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
-					// Plan default tops up 100.
-					billingControls: makeAutoTopupConfig({ threshold: 20, quantity: 100 }),
 				}),
 			],
 		});
@@ -176,10 +182,12 @@ test(
 		const basePlan = products.oneOffAddOn({
 			id: "topup-plan4-base",
 			items: [oneOffItem()],
+			billingControls: makeAutoTopupConfig({ threshold: 20, quantity: 100 }),
 		});
 		const addOnPlan = products.oneOffAddOn({
 			id: "topup-plan4-addon",
 			items: [oneOffItem()],
+			billingControls: makeAutoTopupConfig({ threshold: 20, quantity: 300 }),
 		});
 
 		const { customerId, autumnV2_1 } = await initScenario({
@@ -192,13 +200,11 @@ test(
 				s.billing.attach({
 					productId: basePlan.id,
 					options: [{ feature_id: TestFeature.Messages, quantity: 100 }],
-					billingControls: makeAutoTopupConfig({ threshold: 20, quantity: 100 }),
 				}),
 				// Attached LAST -> recency wins: tops up 300.
 				s.billing.attach({
 					productId: addOnPlan.id,
 					options: [{ feature_id: TestFeature.Messages, quantity: 0 }],
-					billingControls: makeAutoTopupConfig({ threshold: 20, quantity: 300 }),
 				}),
 			],
 		});

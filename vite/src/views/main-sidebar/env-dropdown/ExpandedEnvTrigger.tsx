@@ -1,6 +1,9 @@
 import { AppEnv } from "@autumn/shared";
 import { ChevronDown, FlaskConical, Sailboat } from "lucide-react";
 import { DropdownMenuTrigger } from "@autumn/ui";
+import { PhosphorIcon } from "@/components/v2/icons/PhosphorIcon";
+import { sandboxPillClass } from "@/hooks/sandbox/sandboxDisplay";
+import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { useSidebarContext } from "../SidebarContext";
@@ -10,9 +13,19 @@ const liveStyles = "text-primary bg-primary/10 border-primary";
 
 export const ExpandedEnvTrigger = ({ isHovered }: { isHovered: boolean }) => {
 	const env = useEnv();
+	const activeSandbox = useActiveSandbox();
 	const { expanded } = useSidebarContext();
 
 	const isSandbox = env === AppEnv.Sandbox;
+	const TriggerIcon = isSandbox ? FlaskConical : Sailboat;
+	const resolvePillClass = () => {
+		if (!isSandbox) {
+			return liveStyles;
+		}
+		return activeSandbox
+			? sandboxPillClass(activeSandbox.color)
+			: sandboxStyles;
+	};
 	return (
 		<DropdownMenuTrigger
 			className={cn(
@@ -22,7 +35,7 @@ export const ExpandedEnvTrigger = ({ isHovered }: { isHovered: boolean }) => {
 			<div
 				className={cn(
 					"flex items-center border gap-2 rounded-md !w-full transition-all duration-300 overflow-hidden justify-between",
-					isSandbox ? sandboxStyles : liveStyles,
+					resolvePillClass(),
 					expanded ? "h-6 pl-1 pr-1" : "w-7 h-6 p-1",
 				)}
 			>
@@ -33,10 +46,10 @@ export const ExpandedEnvTrigger = ({ isHovered }: { isHovered: boolean }) => {
 							isHovered && "-translate-x-[1px]",
 						)}
 					>
-						{env === AppEnv.Sandbox ? (
-							<FlaskConical size={14} className="!h-4 w-4" />
+						{isSandbox && activeSandbox ? (
+							<PhosphorIcon name={activeSandbox.icon} className="size-4" />
 						) : (
-							<Sailboat size={14} className="!h-4 w-4" />
+							<TriggerIcon size={14} className="!h-4 w-4" />
 						)}
 					</div>
 					<p
@@ -47,7 +60,7 @@ export const ExpandedEnvTrigger = ({ isHovered }: { isHovered: boolean }) => {
 							//   : "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0"
 						)}
 					>
-						{isSandbox ? "Sandbox" : "Production"}
+						{isSandbox ? (activeSandbox?.name ?? "Sandbox") : "Production"}
 					</p>
 				</div>
 				<ChevronDown size={14} className="!h-4 w-4" />

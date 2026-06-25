@@ -1,6 +1,6 @@
 /**
  * Confirms that a usage_limit set at the CUSTOMER tier — and at the PLAN tier
- * (plan-default snapshot) — is ONE SHARED aggregate cap across the customer and
+ * (plan-default on the product) — is ONE SHARED aggregate cap across the customer and
  * every entity beneath it, NOT a per-entity cap.
  *
  * Verified by enforcement: with a cap of 5 and three entities, usage tracked
@@ -19,7 +19,12 @@
  */
 
 import { test } from "bun:test";
-import { ApiVersion, ErrCode, ResetInterval } from "@autumn/shared";
+import {
+	ApiVersion,
+	type CustomerBillingControlsParams,
+	ErrCode,
+	ResetInterval,
+} from "@autumn/shared";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
@@ -32,7 +37,10 @@ import { setEntityUsageLimit } from "../../utils/usage-limit-utils/entityUsageLi
 
 const autumnV2_3 = new AutumnInt({ version: ApiVersion.V2_3 });
 
-const perEntityProduct = (id: string) =>
+const perEntityProduct = (
+	id: string,
+	billingControls?: CustomerBillingControlsParams,
+) =>
 	products.base({
 		id,
 		items: [
@@ -41,6 +49,7 @@ const perEntityProduct = (id: string) =>
 				entityFeatureId: TestFeature.Users,
 			}),
 		],
+		billingControls,
 	});
 
 const trackOnEntity = (customerId: string, entityId: string, value: number) =>
@@ -205,7 +214,16 @@ test.concurrent(
 test.concurrent(
 	`${chalk.yellowBright("plan-limit-shared: a PLAN-DEFAULT usage_limit is one shared cap across all entities (not per-entity)")}`,
 	async () => {
-		const prod = perEntityProduct("cus-limit-shared-plan");
+		const prod = perEntityProduct("cus-limit-shared-plan", {
+			usage_limits: [
+				{
+					feature_id: TestFeature.Messages,
+					enabled: true,
+					limit: 5,
+					interval: ResetInterval.Month,
+				},
+			],
+		});
 		const customerId = "cus-limit-shared-plan-1";
 		const { entities } = await initScenario({
 			customerId,
@@ -214,21 +232,7 @@ test.concurrent(
 				s.products({ list: [prod] }),
 				s.entities({ count: 3, featureId: TestFeature.Users }),
 			],
-			actions: [
-				s.billing.attach({
-					productId: prod.id,
-					billingControls: {
-						usage_limits: [
-							{
-								feature_id: TestFeature.Messages,
-								enabled: true,
-								limit: 5,
-								interval: ResetInterval.Month,
-							},
-						],
-					},
-				}),
-			],
+			actions: [s.billing.attach({ productId: prod.id })],
 		});
 
 		await autumnV2_3.customers.get(customerId);

@@ -33,11 +33,13 @@ test.concurrent(
 		const basePlan = products.base({
 			id: "plan-spend-restrictive-base",
 			items: overageItems(),
+			billingControls: spendLimit(10),
 		});
 		const addOnPlan = products.base({
 			id: "plan-spend-restrictive-addon",
 			isAddOn: true,
 			items: overageItems(),
+			billingControls: spendLimit(50),
 		});
 
 		const { autumnV2_1, customerId } = await initScenario({
@@ -49,12 +51,10 @@ test.concurrent(
 			actions: [
 				s.billing.attach({
 					productId: basePlan.id,
-					billingControls: spendLimit(10),
 				}),
 				// Looser cap (50) attached LAST -> recency would pick 50.
 				s.billing.attach({
 					productId: addOnPlan.id,
-					billingControls: spendLimit(50),
 				}),
 			],
 		});

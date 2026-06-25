@@ -26,15 +26,8 @@ export const setupUpdateSubscriptionIntent = ({
 	const itemsChanged = hasCustomItems(params.customize);
 	const versionChanged = params.version !== undefined;
 	const freeTrialChanged = params.customize?.free_trial !== undefined;
-	const billingControlsChanged =
-		params.customize?.billing_controls !== undefined;
 
-	if (
-		itemsChanged ||
-		versionChanged ||
-		freeTrialChanged ||
-		billingControlsChanged
-	)
+	if (itemsChanged || versionChanged || freeTrialChanged)
 		return UpdateSubscriptionIntent.UpdatePlan;
 
 	// ManualTopUp wins over UpdateQuantity (and CancelAction/None): once we know

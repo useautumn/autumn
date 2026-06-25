@@ -2223,36 +2223,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
-        },
-        "auto_topups": {
-          "name": "auto_topups",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "spend_limits": {
-          "name": "spend_limits",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "usage_limits": {
-          "name": "usage_limits",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "usage_alerts": {
-          "name": "usage_alerts",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "overage_allowed": {
-          "name": "overage_allowed",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
         }
       },
       "indexes": {

@@ -53,14 +53,14 @@ export const resolveCustomerScopeAlerts = ({
 	}).find(
 		(customerProduct) =>
 			usageAlertsForFeature({
-				alerts: customerProduct.usage_alerts ?? [],
+				alerts: customerProduct.product?.usage_alerts ?? [],
 				feature,
 			}).length > 0,
 	);
 
 	return {
 		alerts: usageAlertsForFeature({
-			alerts: planProduct?.usage_alerts ?? [],
+			alerts: planProduct?.product?.usage_alerts ?? [],
 			feature,
 		}),
 		scope: "plan",

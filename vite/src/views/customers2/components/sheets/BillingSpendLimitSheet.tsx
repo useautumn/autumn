@@ -3,8 +3,19 @@ import {
 	type Feature,
 	FeatureType,
 	type FullCustomer,
+	type SpendLimitType,
 } from "@autumn/shared";
-import { Button, FormLabel, Input, Switch } from "@autumn/ui";
+import {
+	Button,
+	FormLabel,
+	Input,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Switch,
+} from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
@@ -21,6 +32,11 @@ import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { useCustomerContext } from "../../customer/CustomerContext";
+
+const LIMIT_TYPE_LABELS: Record<SpendLimitType, string> = {
+	absolute: "Absolute",
+	usage_percentage: "Usage %",
+};
 
 export function BillingSpendLimitSheet() {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
@@ -48,6 +64,11 @@ export function BillingSpendLimitSheet() {
 	const [overageLimit, setOverageLimit] = useState(
 		existingItem?.overage_limit?.toString() ?? "",
 	);
+	const [limitType, setLimitType] = useState<SpendLimitType>(
+		existingItem?.limit_type ?? "absolute",
+	);
+
+	const isUsagePercentage = limitType === "usage_percentage";
 
 	const nonArchivedFeatures = (features ?? []).filter(
 		(f: Feature) => !f.archived && f.type !== FeatureType.Boolean,
@@ -92,22 +113,26 @@ export function BillingSpendLimitSheet() {
 		const parsedOverageLimit =
 			overageLimit.trim() === "" ? undefined : Number.parseFloat(overageLimit);
 
+		// A spend limit only applies to a specific feature; without one it is
+		// silently ignored server-side.
+		if (!featureId) {
+			toast.error("Feature is required for a spend limit");
+			return;
+		}
+
 		if (parsedOverageLimit !== undefined) {
 			if (Number.isNaN(parsedOverageLimit) || parsedOverageLimit < 0) {
 				toast.error("Please enter a valid overage limit");
 				return;
 			}
-			if (!featureId) {
-				toast.error("Feature is required when overage limit is set");
-				return;
-			}
 		}
 
-		const item: DbSpendLimit = {
+		const item = {
 			feature_id: featureId || undefined,
 			enabled,
 			overage_limit: parsedOverageLimit,
-		};
+			limit_type: limitType,
+		} satisfies DbSpendLimit;
 
 		const currentSpendLimits = getCurrentSpendLimits();
 
@@ -184,9 +209,40 @@ export function BillingSpendLimitSheet() {
 						</div>
 
 						<div>
-							<FormLabel>Overage limit</FormLabel>
+							<FormLabel>Limit type</FormLabel>
+							<Select
+								value={limitType}
+								onValueChange={(value) => {
+									// Clear the amount: units and percent aren't interchangeable.
+									setLimitType(value as SpendLimitType);
+									setOverageLimit("");
+								}}
+								items={LIMIT_TYPE_LABELS}
+							>
+								<SelectTrigger className="w-full">
+									<SelectValue />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="absolute">
+										{LIMIT_TYPE_LABELS.absolute}
+									</SelectItem>
+									<SelectItem value="usage_percentage">
+										{LIMIT_TYPE_LABELS.usage_percentage}
+									</SelectItem>
+								</SelectContent>
+							</Select>
+						</div>
+
+						<div>
+							<FormLabel>
+								{isUsagePercentage ? "Overage limit (%)" : "Overage limit"}
+							</FormLabel>
 							<Input
-								placeholder="Optional — leave empty for no limit"
+								placeholder={
+									isUsagePercentage
+										? "eg, 120"
+										: "Optional — leave empty for no limit"
+								}
 								type="number"
 								value={overageLimit}
 								onChange={(e) => setOverageLimit(e.target.value)}

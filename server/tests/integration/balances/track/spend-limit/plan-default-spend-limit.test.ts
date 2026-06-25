@@ -1,11 +1,11 @@
 /**
  * Plan-default spend_limit: when the customer (and entity) have no spend_limit,
- * the plan's snapshotted overage_limit is enforced — overage spend is capped at
- * the plan value and further overage rejects.
+ * the plan's overage_limit is enforced — overage spend is capped at the plan
+ * value and further overage rejects.
  *
- * Mirrors track-customer-spend-limit1 but seeds the cap at the PLAN tier via
- * s.billing.attach({ billingControls }) instead of customers.update, exercising
- * the resolveBillingControl plan fallback.
+ * Mirrors track-customer-spend-limit1 but seeds the cap at the PLAN tier on the
+ * product (billingControls), exercising the resolveBillingControl plan fallback
+ * which reads from the joined product.
  */
 
 import { test } from "bun:test";
@@ -30,6 +30,15 @@ test.concurrent(
 					price: 0.5,
 				}),
 			],
+			billingControls: {
+				spend_limits: [
+					{
+						feature_id: TestFeature.Messages,
+						enabled: true,
+						overage_limit: 25,
+					},
+				],
+			},
 		});
 
 		const { autumnV2_1, customerId } = await initScenario({
@@ -38,20 +47,7 @@ test.concurrent(
 				s.customer({ paymentMethod: "success", testClock: false }),
 				s.products({ list: [prod] }),
 			],
-			actions: [
-				s.billing.attach({
-					productId: prod.id,
-					billingControls: {
-						spend_limits: [
-							{
-								feature_id: TestFeature.Messages,
-								enabled: true,
-								overage_limit: 25,
-							},
-						],
-					},
-				}),
-			],
+			actions: [s.billing.attach({ productId: prod.id })],
 		});
 
 		// 1000 free + 100 included + overage up to the plan's 25 spend cap.

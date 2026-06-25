@@ -1,7 +1,6 @@
 import {
 	BillingBehaviorSchema,
 	CancelActionSchema,
-	type CustomerBillingControls,
 	FreeTrialDuration,
 	type ProductItem,
 } from "@autumn/shared";
@@ -22,7 +21,6 @@ export const UpdateSubscriptionFormSchema = z.object({
 	version: z.number().positive(),
 
 	items: z.custom<ProductItem[]>().nullable(),
-	billingControls: z.custom<CustomerBillingControls>().nullable(),
 
 	cancelAction: CancelActionSchema.nullable(),
 	billingBehavior: BillingBehaviorSchema.nullable(),
