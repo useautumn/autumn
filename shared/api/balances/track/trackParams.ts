@@ -5,6 +5,7 @@ import { queryStringArray } from "../../common/queryHelpers";
 import { CheckExpand } from "../check/enums/CheckExpand";
 import { BalanceParamsBaseSchema } from "../common/balanceParamsBase";
 import { LockParamsSchema } from "../common/lockParams";
+import { TrackTimestampSchema } from "./trackTimestamp";
 
 export const TrackQuerySchema = z.object({
 	expand: queryStringArray(z.enum([CheckExpand.BalanceFeature])).optional(),
@@ -33,10 +34,7 @@ export const TrackParamsSchema = BalanceParamsBaseSchema.extend({
 		internal: true,
 	}),
 
-	timestamp: z.number().optional().meta({
-		description:
-			"Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.",
-	}),
+	timestamp: TrackTimestampSchema.optional(),
 
 	overage_behavior: z.enum(["cap", "reject"]).optional().meta({
 		internal: true,

@@ -112,7 +112,7 @@ test.concurrent(
 			actions: [s.attach({ productId: freeProd.id })],
 		});
 
-		const backdatedTimestamp = Date.UTC(2024, 0, 15, 12, 30, 0);
+		const backdatedTimestamp = Math.floor((Date.now() - 10_000) / 1000) * 1000;
 		const beforeDefaultTrack = Date.now();
 		await autumnV2_2.post("/track_tokens", {
 			customer_id: customerId,

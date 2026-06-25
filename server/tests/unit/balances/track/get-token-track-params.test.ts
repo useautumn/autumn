@@ -37,7 +37,7 @@ const createCtx = (): AutumnContext =>
 
 describe("getTokenTrackParams", () => {
 	test("forwards a backdated timestamp into the TrackParams body", async () => {
-		const timestamp = Date.UTC(2024, 0, 15, 12, 30, 0);
+		const timestamp = Date.now() - 10_000;
 		const { body } = await getTokenTrackParams({
 			ctx: createCtx(),
 			input: {
