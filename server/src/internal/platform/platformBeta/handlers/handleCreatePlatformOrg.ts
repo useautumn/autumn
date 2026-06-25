@@ -4,8 +4,8 @@ import {
 	type Organization,
 	organizations,
 	RecaseError,
-	user as userTable,
 	Scopes,
+	user as userTable,
 } from "@autumn/shared";
 import { generateId } from "better-auth";
 import { and, eq } from "drizzle-orm";
@@ -13,7 +13,7 @@ import { z } from "zod/v4";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { UserService } from "@/internal/auth/UserService.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { afterOrgCreated } from "@/utils/authUtils/afterOrgCreated.js";
+import { provisionSubOrg } from "@/internal/orgs/orgUtils/provisionSubOrg.js";
 import { createKey } from "../../../dev/api-keys/apiKeyUtils.js";
 
 const CreateOrganizationSchema = z.object({
@@ -98,37 +98,15 @@ export const handleCreatePlatformOrg = createRoute({
 
 		let org: Organization & { master?: Organization | null };
 		if (existingMembership.length === 0) {
-			// Create new organization
-			const orgId = generateId();
-
-			console.log(`Creating new organization: ${orgId} (${orgSlug})`);
-
-			const [insertedOrg] = await db
-				.insert(organizations)
-				.values({
-					id: orgId,
-					slug: orgSlug,
-					name,
-					logo: "",
-					createdAt: new Date(),
-					metadata: "",
-					created_by: masterOrg.id,
-				})
-				.returning();
-
-			org = { ...insertedOrg, master: masterOrg };
-
-			// Create membership
-			await db.insert(member).values({
-				id: generateId(),
-				organizationId: orgId,
-				userId: user.id,
-				role: "owner",
-				createdAt: new Date(),
+			org = await provisionSubOrg({
+				db,
+				masterOrg,
+				actorUser: user,
+				slug: orgSlug,
+				name,
+				isSandbox: false,
+				createMembership: true,
 			});
-
-			// Initialize org (creates default Stripe test account, svix apps, etc.)
-			await afterOrgCreated({ org, user });
 
 			logger.info(`Created new organization: ${org.id} (${orgSlug})`);
 		} else {

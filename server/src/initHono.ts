@@ -15,8 +15,8 @@ import { handleReadyCheck } from "./honoUtils/handleReadyCheck.js";
 import { handleListAuthOrganizations } from "./internal/auth/handleListAuthOrganizations.js";
 import { oauthRouter } from "./internal/auth/oauth/oauthRouter.js";
 import { cliRouter } from "./internal/dev/cli/cliRouter.js";
-import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
 import { handleRevenueCatOAuthCallback } from "./internal/orgs/handlers/revenueCatHandlers/handleRevenueCatOAuthCallback.js";
+import { handleOAuthCallback } from "./internal/orgs/handlers/stripeHandlers/handleOAuthCallback.js";
 import { apiRouter } from "./routers/apiRouter.js";
 import { createChatProxyRouter } from "./routers/chatProxyRouter.js";
 import { internalRouter } from "./routers/internalRouter.js";
@@ -26,6 +26,7 @@ import { isAllowedOrigin } from "./utils/corsOrigins.js";
 
 const ALLOWED_HEADERS = [
 	"app_env",
+	"x-sandbox-org-id",
 	"x-api-version",
 	"x-client-type",
 	"x-request-id",

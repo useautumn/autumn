@@ -1,11 +1,10 @@
 import type { DbSpendLimit } from "@models/cusModels/billingControls/spendLimit.js";
 import type { FullCustomer } from "@models/cusModels/fullCusModel.js";
+import { resolveSpendLimitOverageLimit } from "@utils/cusEntUtils";
 import {
 	fullCustomerToPlanProducts,
 	resolveBillingControl,
 } from "../../fullSubjectUtils/planBillingControlUtils.js";
-import { cusEntToCusPrice } from "@utils/cusEntUtils";
-import { isPayPerUsePrice } from "@utils/productUtils/priceUtils/index";
 import { fullCustomerToCustomerEntitlements } from "./fullCustomerToCustomerEntitlements";
 
 /**
@@ -46,7 +45,25 @@ export const fullCustomerToSpendLimitByFeatureId = ({
 		});
 
 		if (spendLimit?.enabled) {
-			spendLimitByFeatureId[featureId] = spendLimit;
+			const cusEnts = fullCustomerToCustomerEntitlements({
+				fullCustomer,
+				featureIds: [featureId],
+				entity,
+			});
+			const resolved = resolveSpendLimitOverageLimit({
+				spendLimit,
+				cusEnts,
+				entityId: entity?.id ?? entity?.internal_id ?? undefined,
+			});
+
+			// Resolve to absolute so Lua deduction reads overage_limit as absolute units.
+			if (resolved !== undefined) {
+				spendLimitByFeatureId[featureId] = {
+					...spendLimit,
+					overage_limit: resolved,
+					limit_type: "absolute",
+				};
+			}
 		}
 	}
 
@@ -73,21 +90,16 @@ export const fullCustomerToUsageBasedCusEntsByFeatureId = ({
 		featureIds,
 		entity,
 	});
-	const usageBasedCusEntsByFeatureId: Record<string, string[]> = {};
+	// Every ent for the feature counts toward the overage limit: control-based
+	// (overage_allowed) overage has no price, so it isn't pay-per-use.
+	const overageCusEntsByFeatureId: Record<string, string[]> = {};
 
 	for (const cusEnt of cusEnts) {
-		const cusPrice = cusEntToCusPrice({ cusEnt });
-
-		if (!cusPrice || !isPayPerUsePrice({ price: cusPrice.price })) {
-			continue;
+		if (!overageCusEntsByFeatureId[cusEnt.feature_id]) {
+			overageCusEntsByFeatureId[cusEnt.feature_id] = [];
 		}
-
-		if (!usageBasedCusEntsByFeatureId[cusEnt.feature_id]) {
-			usageBasedCusEntsByFeatureId[cusEnt.feature_id] = [];
-		}
-
-		usageBasedCusEntsByFeatureId[cusEnt.feature_id].push(cusEnt.id);
+		overageCusEntsByFeatureId[cusEnt.feature_id].push(cusEnt.id);
 	}
 
-	return usageBasedCusEntsByFeatureId;
+	return overageCusEntsByFeatureId;
 };
