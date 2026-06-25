@@ -14,6 +14,7 @@ import {
 	customerProductsSeedSelect,
 } from "./getCustomerProductsPageQuery.js";
 import {
+	type DashboardIntervalFilter,
 	type DashboardProductVersionFilter,
 	type DashboardStatusFilter,
 	getCustomerListFilterSql,
@@ -37,6 +38,7 @@ export type CursorPaginatedFullCusQueryArgs = {
 	statusFilters?: DashboardStatusFilter[];
 	noneFilter?: boolean;
 	productVersionFilters?: DashboardProductVersionFilter[];
+	intervalFilters?: DashboardIntervalFilter[];
 	cusProductLimit: number;
 	customerId?: string;
 };
@@ -64,6 +66,7 @@ export const getCursorPaginatedFullCusQuery = ({
 	statusFilters,
 	noneFilter,
 	productVersionFilters,
+	intervalFilters,
 	cusProductLimit,
 	customerId,
 }: CursorPaginatedFullCusQueryArgs) => {
@@ -85,6 +88,7 @@ export const getCursorPaginatedFullCusQuery = ({
 		statusFilters,
 		noneFilter,
 		productVersionFilters,
+		intervalFilters,
 	});
 
 	const cursorPredicate = cursor

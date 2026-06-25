@@ -1,10 +1,29 @@
 import {
 	type AppEnv,
+	BillingInterval,
 	CusProductStatus,
 	type ListCustomersV2Params,
 	RELEVANT_STATUSES,
 } from "@autumn/shared";
 import { type SQL, sql } from "drizzle-orm";
+
+const RECURRING_BILLING_INTERVALS = [
+	BillingInterval.Week,
+	BillingInterval.Month,
+	BillingInterval.Quarter,
+	BillingInterval.SemiAnnual,
+	BillingInterval.Year,
+] as const;
+
+export type DashboardIntervalFilter =
+	(typeof RECURRING_BILLING_INTERVALS)[number];
+
+export const parseDashboardIntervalFilter = (
+	raw: string[] | undefined,
+): DashboardIntervalFilter[] =>
+	(raw ?? []).filter((value): value is DashboardIntervalFilter =>
+		RECURRING_BILLING_INTERVALS.includes(value as DashboardIntervalFilter),
+	);
 
 export type DashboardStatusFilter =
 	| "active"
@@ -82,6 +101,20 @@ const dashboardProductFilterToCustomerListSql = (
 						AND p_lookup.version = ${filter.version}
 				)`
 			: sql`(p_dash.id = ${filter.productId} AND p_dash.version = ${filter.version})`;
+
+const intervalFilterToCustomerListSql = (
+	intervals: DashboardIntervalFilter[],
+): SQL =>
+	sql`EXISTS (
+		SELECT 1
+		FROM customer_prices cpr_interval
+		JOIN prices p_interval ON p_interval.id = cpr_interval.price_id
+		WHERE cpr_interval.customer_product_id = cp_dash.id
+			AND p_interval.config->>'interval' = ANY(ARRAY[${sql.join(
+				intervals.map((interval) => sql`${interval}`),
+				sql`, `,
+			)}])
+	)`;
 
 const buildOptimizedCusProductsCTE = ({
 	inStatuses,
@@ -941,6 +974,7 @@ export const getCustomerListFilterSql = ({
 	statusFilters,
 	noneFilter,
 	productVersionFilters,
+	intervalFilters,
 }: {
 	internalCustomerIds?: string[];
 	orgId?: string;
@@ -952,6 +986,7 @@ export const getCustomerListFilterSql = ({
 	statusFilters?: DashboardStatusFilter[];
 	noneFilter?: boolean;
 	productVersionFilters?: DashboardProductVersionFilter[];
+	intervalFilters?: DashboardIntervalFilter[];
 }) => {
 	const filters = [];
 
@@ -1035,12 +1070,14 @@ export const getCustomerListFilterSql = ({
 	}
 
 	const productFilters = productVersionFilters ?? [];
+	const intervals = intervalFilters ?? [];
 	const hasStatus = statusFilters && statusFilters.length > 0;
 	const hasProductFilter = productFilters.length > 0;
+	const hasInterval = intervals.length > 0;
 	const hasVersion = productFilters.some(isVersionDashboardProductFilter);
 	const canUseProductCandidateSet =
 		orgId && env && productFilters.every(isVersionDashboardProductFilter);
-	if (hasStatus || hasProductFilter) {
+	if (hasStatus || hasProductFilter || hasInterval) {
 		const innerClauses: SQL[] = [];
 
 		// Mirrors CusSearchService.buildSearchPredicates productMode:
@@ -1085,6 +1122,10 @@ export const getCustomerListFilterSql = ({
 				(filter) => dashboardProductFilterToCustomerListSql(filter, { orgId, env }),
 			);
 			innerClauses.push(sql`(${sql.join(versionClauses, sql` OR `)})`);
+		}
+
+		if (hasInterval) {
+			innerClauses.push(intervalFilterToCustomerListSql(intervals));
 		}
 
 		if (canUseProductCandidateSet) {
