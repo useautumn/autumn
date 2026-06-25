@@ -9,6 +9,7 @@ import { useParams } from "react-router";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
+import { useBalanceSourceStore } from "@/hooks/stores/useBalanceSourceStore";
 import { useEntity } from "@/hooks/stores/useSubscriptionStore";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { throwBackendError } from "@/utils/genUtils";
@@ -40,6 +41,7 @@ export const useCusQuery = ({
 	const buildKey = useQueryKeyFactory();
 	const { getCachedCustomer } = useCachedCustomer(customer_id);
 	const { entityId } = useEntity();
+	const balanceSource = useBalanceSourceStore((s) => s.source);
 
 	const queryClient = useQueryClient();
 	const cachedCustomer = useMemo(getCachedCustomer, [getCachedCustomer]);
@@ -61,9 +63,12 @@ export const useCusQuery = ({
 
 	const fetcher = async () => {
 		try {
-			const params = effectiveEntityId ? `?entity_id=${effectiveEntityId}` : "";
+			const searchParams = new URLSearchParams();
+			if (effectiveEntityId) searchParams.set("entity_id", effectiveEntityId);
+			if (balanceSource === "db") searchParams.set("balances", "db");
+			const query = searchParams.toString();
 			const { data } = await axiosInstance.get(
-				`/customers/${customer_id}${params}`,
+				`/customers/${customer_id}${query ? `?${query}` : ""}`,
 			);
 			return data;
 		} catch (error) {
@@ -79,7 +84,12 @@ export const useCusQuery = ({
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: buildKey(["customer", customer_id, effectiveEntityId]),
+		queryKey: buildKey([
+			"customer",
+			customer_id,
+			effectiveEntityId,
+			balanceSource,
+		]),
 		queryFn: fetcher,
 		enabled: enabled && !!customer_id,
 		retry: false,

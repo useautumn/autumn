@@ -32,6 +32,61 @@ import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { getFeatureIcon } from "@/views/products/features/utils/getFeatureIcon";
 import { EntityScopeSelector } from "./EntityScopeSelector";
 
+type TrackResponse = {
+	deductions?: { value: number }[];
+	balance?: {
+		remaining?: number | null;
+		overage_allowed?: boolean | null;
+	} | null;
+};
+
+// Track always records the event; warn when caps/exhaustion deduct less than
+// requested so the unchanged balance reads as expected, not broken.
+const showRecordUsageToast = ({
+	requested,
+	response,
+	featureName,
+}: {
+	requested: number;
+	response: TrackResponse;
+	featureName?: string;
+}) => {
+	const feature = featureName ?? "feature";
+
+	if (requested <= 0 || response.deductions === undefined) {
+		toast.success("Usage recorded");
+		return;
+	}
+
+	const deducted = response.deductions.reduce(
+		(sum, deduction) => sum + deduction.value,
+		0,
+	);
+
+	if (deducted >= requested) {
+		toast.success("Usage recorded");
+		return;
+	}
+
+	const remaining = response.balance?.remaining ?? 0;
+	const overageOff = response.balance?.overage_allowed === false;
+	const reason =
+		remaining <= 0 && overageOff
+			? `no ${feature} balance remaining`
+			: "a usage limit was reached";
+
+	if (deducted <= 0) {
+		toast.warning("Usage recorded but not deducted", {
+			description: `The event was logged, but nothing was deducted — ${reason}.`,
+		});
+		return;
+	}
+
+	toast.warning("Usage partially deducted", {
+		description: `Recorded ${requested}, but only ${deducted} was deducted — ${reason}.`,
+	});
+};
+
 export function RecordUsageSheet() {
 	const closeSheet = useSheetStore((s) => s.closeSheet);
 	const sheetData = useSheetStore((s) => s.data);
@@ -142,9 +197,16 @@ export function RecordUsageSheet() {
 
 		setIsSubmitting(true);
 		try {
-			await axiosInstance.post("/v1/track", params);
+			const { data } = await axiosInstance.post<TrackResponse>(
+				"/v1/track",
+				params,
+			);
 			closeSheet();
-			toast.success("Usage recorded");
+			showRecordUsageToast({
+				requested: parsedValue,
+				response: data,
+				featureName: trackingFeatureName,
+			});
 			await new Promise((resolve) => setTimeout(resolve, 500));
 			await queryClient.invalidateQueries({ queryKey: ["customer"] });
 			await queryClient.invalidateQueries({

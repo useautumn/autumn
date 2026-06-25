@@ -244,8 +244,12 @@ export function UpdateSubscriptionFormProvider({
 			const item = currentPrepaidItems.find(
 				(it) => it.feature_id === featureId,
 			);
+			const initialQuantity = initialPrepaidOptions[featureId];
 			const isOneOff = item?.interval == null;
-			if (quantity !== initialPrepaidOptions[featureId] || isOneOff) {
+			const changedQuantity = isOneOff
+				? quantity > (initialQuantity ?? 0)
+				: quantity !== initialQuantity;
+			if (changedQuantity) {
 				changed[featureId] = quantity;
 			}
 		}

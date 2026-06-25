@@ -10,6 +10,7 @@ import { CusService } from "@/internal/customers/CusService";
 import { getCusAutoTopupPurchaseLimits } from "@/internal/customers/cusUtils/cusResponseUtils/getCusAutoTopupPurchaseLimits";
 import { getCusRewards } from "@/internal/customers/cusUtils/cusResponseUtils/getCusRewards";
 import { getCusUsageLimitsWithUsage } from "@/internal/customers/cusUtils/cusResponseUtils/getCusUsageLimitsWithUsage";
+import { overlayLiveBalances } from "@/internal/customers/cusUtils/cusResponseUtils/overlayLiveBalances";
 
 /**
  * Internal route for get full customer object.
@@ -42,6 +43,11 @@ export const handleGetCustomer = createRoute({
 			inStatuses: ALL_STATUSES,
 			entityId: entityId || undefined,
 		});
+
+		const useDbBalances = c.req.query("balances") === "db";
+		if (!useDbBalances) {
+			await overlayLiveBalances({ ctx, fullCus });
+		}
 
 		const [
 			testClockFrozenTimeMs,
