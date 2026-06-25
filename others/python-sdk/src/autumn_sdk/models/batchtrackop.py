@@ -90,6 +90,8 @@ class RequestBodyTypedDict(TypedDict):
     r"""The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat)."""
     properties: NotRequired[Dict[str, Any]]
     r"""Additional properties to attach to this usage event."""
+    timestamp: NotRequired[float]
+    r"""Unix timestamp in milliseconds to use for the usage event. Defaults to the current time."""
     async_: NotRequired[bool]
     r"""If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information."""
     lock: NotRequired[BatchTrackLockTypedDict]
@@ -114,6 +116,9 @@ class RequestBody(BaseModel):
     properties: Optional[Dict[str, Any]] = None
     r"""Additional properties to attach to this usage event."""
 
+    timestamp: Optional[float] = None
+    r"""Unix timestamp in milliseconds to use for the usage event. Defaults to the current time."""
+
     async_: Annotated[Optional[bool], pydantic.Field(alias="async")] = None
     r"""If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information."""
 
@@ -128,6 +133,7 @@ class RequestBody(BaseModel):
                 "event_name",
                 "value",
                 "properties",
+                "timestamp",
                 "async",
                 "lock",
             ]

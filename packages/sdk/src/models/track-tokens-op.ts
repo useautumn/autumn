@@ -67,6 +67,10 @@ export type TrackTokensParams = {
    */
   properties?: { [k: string]: any } | undefined;
   /**
+   * Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.
+   */
+  timestamp?: number | undefined;
+  /**
    * If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
    */
   async?: boolean | undefined;
@@ -274,6 +278,7 @@ export type TrackTokensParams$Outbound = {
   audio_output_tokens?: number | undefined;
   reasoning_tokens?: number | undefined;
   properties?: { [k: string]: any } | undefined;
+  timestamp?: number | undefined;
   async?: boolean | undefined;
 };
 
@@ -295,6 +300,7 @@ export const TrackTokensParams$outboundSchema: z.ZodMiniType<
     audioOutputTokens: z.optional(z.int()),
     reasoningTokens: z.optional(z.int()),
     properties: z.optional(z.record(z.string(), z.any())),
+    timestamp: z.optional(z.number()),
     async: z.optional(z.boolean()),
   }),
   z.transform((v) => {

@@ -49,6 +49,7 @@ import { Result } from "../types/fp.js";
  * @param eventName - Event name to track usage for. Use instead of feature_id when multiple features should be tracked from a single event. (optional)
  * @param value - The amount of usage to record. Defaults to 1. Use negative values to credit balance (e.g., when removing a seat). (optional)
  * @param properties - Additional properties to attach to this usage event. (optional)
+ * @param timestamp - Unix timestamp in milliseconds to use for the usage event. Defaults to the current time. (optional)
  * @param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
  *
  * @returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.

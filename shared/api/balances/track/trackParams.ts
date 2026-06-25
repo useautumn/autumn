@@ -34,7 +34,8 @@ export const TrackParamsSchema = BalanceParamsBaseSchema.extend({
 	}),
 
 	timestamp: z.number().optional().meta({
-		internal: true,
+		description:
+			"Unix timestamp in milliseconds to use for the usage event. Defaults to the current time.",
 	}),
 
 	overage_behavior: z.enum(["cap", "reject"]).optional().meta({
