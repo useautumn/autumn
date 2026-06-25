@@ -22,7 +22,7 @@ const call = (
 		sandboxOrgId: SANDBOX_ORG,
 		candidate: validCandidate,
 		appEnv: AppEnv.Sandbox,
-		scopes: [Scopes.Platform.Write],
+		scopes: [Scopes.Organisation.Read],
 		...overrides,
 	});
 
@@ -31,11 +31,11 @@ describe("assertSandboxAccess (the multi-sandbox tenant-isolation spine)", () =>
 		expect(SANDBOX_ORG_HEADER).toBe("x-sandbox-org-id");
 	});
 
-	test("allows an owned, sandbox-marked sub-org with platform:write", () => {
+	test("allows an owned, sandbox-marked sub-org with organisation:read", () => {
 		expect(() => call()).not.toThrow();
 	});
 
-	test("owner scope expands to platform:write and is allowed", () => {
+	test("owner scope is allowed", () => {
 		expect(() => call({ scopes: ["owner"] })).not.toThrow();
 	});
 
@@ -51,8 +51,14 @@ describe("assertSandboxAccess (the multi-sandbox tenant-isolation spine)", () =>
 		).toThrow();
 	});
 
-	test("rejects a member with only platform:read", () => {
-		expect(() => call({ scopes: [Scopes.Platform.Read] })).toThrow();
+	test("allows a member (organisation:read) to browse", () => {
+		expect(() => call({ scopes: [Scopes.Organisation.Read] })).not.toThrow();
+	});
+
+	test("rejects a caller without organisation:read (e.g. sales)", () => {
+		expect(() =>
+			call({ scopes: [Scopes.Customers.Write, Scopes.Billing.Write] }),
+		).toThrow();
 	});
 
 	test("rejects empty scopes (no fail-open in the resolver)", () => {

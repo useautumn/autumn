@@ -105,6 +105,7 @@ const mockLiveSession = (userId: string) =>
 const teammates = {
 	developer: generateId("usr"),
 	owner: generateId("usr"),
+	member: generateId("usr"),
 	sales: generateId("usr"),
 	nonMember: generateId("usr"),
 	revoke: generateId("usr"),
@@ -136,6 +137,7 @@ describe("transitive multi-seat access + live revocation", () => {
 		}
 		await seedMember(teammates.developer, "developer");
 		await seedMember(teammates.owner, "owner");
+		await seedMember(teammates.member, "member");
 		await seedMember(teammates.sales, "sales");
 		await seedMember(teammates.revoke, "developer");
 	});
@@ -164,7 +166,15 @@ describe("transitive multi-seat access + live revocation", () => {
 		expect(ctx.org.id).toBe(sandboxOrgId);
 	});
 
-	test("a sales teammate cannot resolve (no platform:write)", async () => {
+	test("a member teammate resolves the sandbox (read-only browse)", async () => {
+		mockLiveSession(teammates.member);
+		const { ctx } = await runMiddleware({
+			[SANDBOX_ORG_HEADER]: sandboxOrgId,
+		});
+		expect(ctx.org.id).toBe(sandboxOrgId);
+	});
+
+	test("a sales teammate cannot resolve (no organisation:read)", async () => {
 		mockLiveSession(teammates.sales);
 		await expect(
 			runMiddleware({ [SANDBOX_ORG_HEADER]: sandboxOrgId }),
@@ -187,7 +197,7 @@ describe("transitive multi-seat access + live revocation", () => {
 
 		await db
 			.update(member)
-			.set({ role: "member" })
+			.set({ role: "sales" })
 			.where(
 				and(
 					eq(member.userId, teammates.revoke),

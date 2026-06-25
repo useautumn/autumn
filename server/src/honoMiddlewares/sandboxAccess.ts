@@ -26,7 +26,7 @@ export const assertSandboxAccess = ({
 	appEnv: AppEnv | string | undefined;
 	scopes: readonly string[];
 }): void => {
-	const { allowed } = checkScopes([Scopes.Platform.Write], scopes);
+	const { allowed } = checkScopes([Scopes.Organisation.Read], scopes);
 	if (!allowed) {
 		throw new RecaseError({
 			message: "Not authorized to access sandbox environments",

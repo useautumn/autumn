@@ -11,7 +11,7 @@ import {
 } from "../createSandbox.js";
 
 export const handleListSandboxes = createRoute({
-	scopes: [Scopes.Platform.Read],
+	scopes: [Scopes.Organisation.Read],
 	handler: async (c) => {
 		const { db, org, user, authType } = c.get("ctx");
 
