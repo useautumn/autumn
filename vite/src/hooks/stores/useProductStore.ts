@@ -82,9 +82,37 @@ export const useHasChanges = () => {
 			!comparison.itemsSame ||
 			!comparison.detailsSame ||
 			!comparison.freeTrialsSame ||
-			!comparison.configSame;
+			!comparison.configSame ||
+			!comparison.billingControlsSame ||
+			!comparison.metadataSame;
 
 		return hasChanges;
+	}, [product, baseProduct, features]);
+};
+
+// True when metadata is the only pending change — such saves skip the
+// "create new version?" dialog since metadata never versions.
+export const useIsMetadataOnlyChange = () => {
+	const product = useProductStore((s) => s.product);
+	const baseProduct = useProductStore((s) => s.baseProduct);
+	const { features = [] } = useFeaturesQuery();
+
+	return useMemo(() => {
+		if (!baseProduct) return false;
+
+		const comparison = productsAreSame({
+			newProductV2: product as unknown as FrontendProduct,
+			curProductV2: baseProduct as unknown as FrontendProduct,
+			features,
+		});
+
+		return (
+			!comparison.metadataSame &&
+			comparison.itemsSame &&
+			comparison.detailsSame &&
+			comparison.freeTrialsSame &&
+			comparison.configSame
+		);
 	}, [product, baseProduct, features]);
 };
 
@@ -130,7 +158,8 @@ export const useWillVersion = () => {
 		return (
 			!comparison.optionsSame ||
 			!comparison.itemsSame ||
-			!comparison.freeTrialsSame
+			!comparison.freeTrialsSame ||
+			!comparison.billingControlsSame
 		);
 	}, [product, baseProduct, features]);
 };

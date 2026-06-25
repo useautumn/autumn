@@ -18,6 +18,7 @@ import {
 	type Price,
 	ProcessorType,
 	type ProductOptions,
+	pickBillingControlColumns,
 } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import type { RepoContext } from "@/db/repoContext.js";
@@ -163,6 +164,7 @@ const initCusProduct = ({
 		api_semver: apiVersion || null,
 		billing_version: BillingVersion.V1,
 		external_id: null,
+		...pickBillingControlColumns(product),
 	};
 };
 

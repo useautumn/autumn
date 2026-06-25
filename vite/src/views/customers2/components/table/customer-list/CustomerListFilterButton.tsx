@@ -1,21 +1,25 @@
+import { IconButton } from "@autumn/ui";
 import { FunnelSimpleIcon } from "@phosphor-icons/react";
 import { X } from "lucide-react";
 import { useState } from "react";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuGroup,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { FilterStatusSubMenu } from "@/views/customers/components/filter-dropdown/FilterStatusSubMenu";
+import { IntervalSubMenu } from "@/views/customers/components/filter-dropdown/IntervalSubMenu";
 import { ProcessorSubMenu } from "@/views/customers/components/filter-dropdown/ProcessorSubMenu";
 import { ProductsSubMenu } from "@/views/customers/components/filter-dropdown/ProductsSubMenu";
 import { SaveViewPopover } from "@/views/customers/components/filter-dropdown/SavedViewPopover";
 import { SavedViews } from "@/views/customers/components/filter-dropdown/SavedViews";
-import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
+import {
+	hasActiveCustomerFilters,
+	useCustomerFilters,
+} from "@/views/customers/hooks/useCustomerFilters";
 import { useSavedViewsQuery } from "@/views/customers/hooks/useSavedViewsQuery";
 
 interface CustomerListFilterButtonProps {
@@ -37,18 +41,20 @@ export function CustomerListFilterButton({
 	const [open, setOpen] = useState(false);
 
 	const hasActiveFilters =
-		hasActiveExtraFilters ||
-		queryStates.status.length > 0 ||
-		queryStates.version.length > 0 ||
-		queryStates.none ||
-		queryStates.processor.length > 0;
+		hasActiveExtraFilters || hasActiveCustomerFilters(queryStates);
 
 	const { data, refetch: refetchSavedViews } = useSavedViewsQuery();
 
 	const views = data?.views || [];
 
 	const clearFilters = () => {
-		setFilters({ status: [], version: [], none: false, processor: [] });
+		setFilters({
+			status: [],
+			version: [],
+			none: false,
+			processor: [],
+			interval: [],
+		});
 		onFilterChange?.();
 		onClearExtra?.();
 	};
@@ -59,11 +65,16 @@ export function CustomerListFilterButton({
 
 	return (
 		<DropdownMenu open={open} onOpenChange={setOpen}>
-			<DropdownMenuTrigger render={<div className="relative" />} nativeButton={false}>
+			<DropdownMenuTrigger
+				render={<div className="relative" />}
+				nativeButton={false}
+			>
 				<IconButton
 					variant="secondary"
 					className={cn("gap-2", open && "btn-secondary-active")}
-					icon={<FunnelSimpleIcon size={14} className="text-tertiary-foreground" />}
+					icon={
+						<FunnelSimpleIcon size={14} className="text-tertiary-foreground" />
+					}
 				>
 					Filter
 				</IconButton>
@@ -79,6 +90,7 @@ export function CustomerListFilterButton({
 					{extraMenuItems}
 					<FilterStatusSubMenu onChange={onFilterChange} />
 					<ProductsSubMenu onChange={onFilterChange} />
+					<IntervalSubMenu onChange={onFilterChange} />
 					<ProcessorSubMenu onChange={onFilterChange} />
 				</DropdownMenuGroup>
 				<DropdownMenuSeparator className="m-0" />

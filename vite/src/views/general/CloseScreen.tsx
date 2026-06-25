@@ -1,6 +1,6 @@
+import { Button } from "@autumn/ui";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router";
-import { Button } from "@/components/v2/buttons/Button";
 import LoadingScreen from "./LoadingScreen";
 
 export const CloseScreen = () => {
@@ -44,7 +44,9 @@ export const CloseScreen = () => {
 			<div className="w-screen h-screen flex items-center justify-center p-8">
 				<div className="max-w-md flex flex-col gap-4 text-center">
 					<div className="text-red-600 text-5xl mb-2">⚠️</div>
-					<h1 className="text-xl font-semibold text-foreground">Connection Failed</h1>
+					<h1 className="text-xl font-semibold text-foreground">
+						Connection Failed
+					</h1>
 
 					{error === "account_already_connected" && accountId ? (
 						<p className="text-muted-foreground text-sm">
@@ -94,7 +96,9 @@ export const CloseScreen = () => {
 		<div className="w-screen h-screen flex items-center justify-center">
 			<div className="flex flex-col items-center gap-4">
 				<p className="text-lg text-green-600">✓ Connection successful!</p>
-				<p className="text-tertiary-foreground">You can close this window now.</p>
+				<p className="text-tertiary-foreground">
+					You can close this window now.
+				</p>
 			</div>
 		</div>
 	);

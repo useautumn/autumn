@@ -1,6 +1,6 @@
 import { AppEnv } from "@autumn/shared";
 import { ChevronDown, FlaskConical, Sailboat } from "lucide-react";
-import { DropdownMenuTrigger } from "@/components/v2/dropdowns/DropdownMenu";
+import { DropdownMenuTrigger } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import { useSidebarContext } from "../SidebarContext";

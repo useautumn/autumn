@@ -1,31 +1,29 @@
 import {
-	ArrowsClockwiseIcon,
-	TriangleIcon,
-	UserIcon,
-} from "@phosphor-icons/react";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import { parseAsString, useQueryStates } from "nuqs";
-import { useMemo, useState } from "react";
-import { useNavigate } from "react-router";
-import { AdminHover } from "@/components/general/AdminHover";
-import SmallSpinner from "@/components/general/SmallSpinner";
-import { IconBadge } from "@/components/v2/badges/IconBadge";
-import V2Breadcrumb from "@/components/v2/breadcrumb";
-import { Button } from "@/components/v2/buttons/Button";
-import { CopyButton } from "@/components/v2/buttons/CopyButton.tsx";
-import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
-import {
+	Button,
+	IconBadge,
+	IconButton,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
-import {
+	SmallSpinner,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
+} from "@autumn/ui";
+import {
+	ArrowsClockwiseIcon,
+	TriangleIcon,
+	UserIcon,
+} from "@phosphor-icons/react";
+import { parseAsString, useQueryStates } from "nuqs";
+import { useMemo, useState } from "react";
+import { useNavigate } from "react-router";
+import { AdminHover } from "@/components/general/AdminHover";
+import V2Breadcrumb from "@/components/v2/breadcrumb";
+import { CopyButton } from "@autumn/ui";
+import { RevenueCatIcon } from "@/components/v2/icons/AutumnIcons";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useRCMappings } from "@/hooks/queries/revcat/useRCMappings";

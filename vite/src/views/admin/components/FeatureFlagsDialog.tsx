@@ -1,16 +1,16 @@
-import Editor from "@monaco-editor/react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Badge,
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+} from "@autumn/ui";
+import Editor from "@monaco-editor/react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
@@ -118,12 +118,19 @@ export function FeatureFlagsDialog({
 					},
 				};
 				setConfig(merged);
-				const { configHealthy: _h, configConfigured: _c, lastSuccessAt: _l, error: _e, ...flagsOnly } = merged;
+				const {
+					configHealthy: _h,
+					configConfigured: _c,
+					lastSuccessAt: _l,
+					error: _e,
+					...flagsOnly
+				} = merged;
 				setJsonText(JSON.stringify(flagsOnly, null, 2));
 				setSyncSource("form");
 			})
 			.catch((error) => {
-				if (!cancelled) toast.error(getBackendErr(error, "Failed to load feature flags"));
+				if (!cancelled)
+					toast.error(getBackendErr(error, "Failed to load feature flags"));
 			})
 			.finally(() => {
 				if (!cancelled) setLoading(false);
@@ -137,7 +144,13 @@ export function FeatureFlagsDialog({
 	// Form -> JSON sync
 	useEffect(() => {
 		if (syncSource !== "form") return;
-		const { configHealthy: _h, configConfigured: _c, lastSuccessAt: _l, error: _e, ...flagsOnly } = config;
+		const {
+			configHealthy: _h,
+			configConfigured: _c,
+			lastSuccessAt: _l,
+			error: _e,
+			...flagsOnly
+		} = config;
 		setJsonText(JSON.stringify(flagsOnly, null, 2));
 		setJsonError(null);
 	}, [config, syncSource]);
@@ -146,7 +159,10 @@ export function FeatureFlagsDialog({
 		setSyncSource("form");
 		setConfig((prev) => {
 			const next = structuredClone(prev);
-			let node: Record<string, unknown> = next as unknown as Record<string, unknown>;
+			let node: Record<string, unknown> = next as unknown as Record<
+				string,
+				unknown
+			>;
 			for (let i = 0; i < path.length - 1; i++) {
 				node = node[path[i]] as Record<string, unknown>;
 			}
@@ -171,7 +187,8 @@ export function FeatureFlagsDialog({
 						...(parsed.maintenanceModes?.analytics ?? {}),
 					},
 				},
-				skipOverageSubmissionFlags: parsed.skipOverageSubmissionFlags ?? prev.skipOverageSubmissionFlags,
+				skipOverageSubmissionFlags:
+					parsed.skipOverageSubmissionFlags ?? prev.skipOverageSubmissionFlags,
 			}));
 			setJsonError(null);
 		} catch {
@@ -208,7 +225,10 @@ export function FeatureFlagsDialog({
 	const addOverageEntry = () => {
 		if (!newOrgId.trim() || !newCustomerIds.trim()) return;
 		const orgId = newOrgId.trim();
-		const customerIds = newCustomerIds.split(",").map((id) => id.trim()).filter(Boolean);
+		const customerIds = newCustomerIds
+			.split(",")
+			.map((id) => id.trim())
+			.filter(Boolean);
 		if (customerIds.length === 0) return;
 
 		setSyncSource("form");
@@ -238,47 +258,80 @@ export function FeatureFlagsDialog({
 				<DialogHeader>
 					<DialogTitle>Feature Flags</DialogTitle>
 					<DialogDescription>
-						Toggle flags on/off. Changes propagate to all servers within 30 seconds.
+						Toggle flags on/off. Changes propagate to all servers within 30
+						seconds.
 					</DialogDescription>
 				</DialogHeader>
 
 				{loading ? (
-					<div className="py-8 text-sm text-tertiary-foreground text-center">Loading...</div>
+					<div className="py-8 text-sm text-tertiary-foreground text-center">
+						Loading...
+					</div>
 				) : (
 					<div className="grid grid-cols-[300px_1fr] gap-6">
 						{/* Left: toggles */}
 						<div className="flex flex-col gap-4">
-							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">Maintenance Modes</div>
+							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">
+								Maintenance Modes
+							</div>
 
 							<FlagToggle
 								label="Disable Revenue Metrics"
 								description="Disables revenue analytics charts and API endpoints."
-								checked={config.maintenanceModes.analytics.disableRevenueMetrics}
-								onChange={(v) => setFlag(["maintenanceModes", "analytics", "disableRevenueMetrics"], v)}
+								checked={
+									config.maintenanceModes.analytics.disableRevenueMetrics
+								}
+								onChange={(v) =>
+									setFlag(
+										["maintenanceModes", "analytics", "disableRevenueMetrics"],
+										v,
+									)
+								}
 							/>
 
-							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">Skip Overage Submission</div>
+							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">
+								Skip Overage Submission
+							</div>
 							<div className="rounded-lg border border-border p-3 flex flex-col gap-2">
-								{Object.entries(config.skipOverageSubmissionFlags).length === 0 && (
-									<div className="text-xs text-tertiary-foreground italic">No entries</div>
-								)}
-								{Object.entries(config.skipOverageSubmissionFlags).map(([orgId, customerIds]) => (
-									<div key={orgId} className="flex items-center justify-between gap-2">
-										<div className="min-w-0 flex-1">
-											<div className="text-xs font-mono text-foreground truncate">{orgId}</div>
-											<div className="text-xs text-tertiary-foreground truncate">{customerIds.join(", ")}</div>
-										</div>
-										<button
-											type="button"
-											onClick={() => removeOverageEntry(orgId)}
-											className="shrink-0 text-tertiary-foreground hover:text-red-500 transition-colors"
-										>
-											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-												<path d="M18 6L6 18M6 6l12 12" />
-											</svg>
-										</button>
+								{Object.entries(config.skipOverageSubmissionFlags).length ===
+									0 && (
+									<div className="text-xs text-tertiary-foreground italic">
+										No entries
 									</div>
-								))}
+								)}
+								{Object.entries(config.skipOverageSubmissionFlags).map(
+									([orgId, customerIds]) => (
+										<div
+											key={orgId}
+											className="flex items-center justify-between gap-2"
+										>
+											<div className="min-w-0 flex-1">
+												<div className="text-xs font-mono text-foreground truncate">
+													{orgId}
+												</div>
+												<div className="text-xs text-tertiary-foreground truncate">
+													{customerIds.join(", ")}
+												</div>
+											</div>
+											<button
+												type="button"
+												onClick={() => removeOverageEntry(orgId)}
+												className="shrink-0 text-tertiary-foreground hover:text-red-500 transition-colors"
+											>
+												<svg
+													width="14"
+													height="14"
+													viewBox="0 0 24 24"
+													fill="none"
+													stroke="currentColor"
+													strokeWidth="2"
+												>
+													<path d="M18 6L6 18M6 6l12 12" />
+												</svg>
+											</button>
+										</div>
+									),
+								)}
 								<div className="flex flex-col gap-2 pt-2 border-t border-border">
 									<input
 										type="text"
@@ -294,7 +347,12 @@ export function FeatureFlagsDialog({
 										onChange={(e) => setNewCustomerIds(e.target.value)}
 										className="w-full px-2 py-1 text-xs rounded border border-border bg-input text-foreground placeholder:text-tertiary-foreground focus:outline-none focus:ring-1 focus:ring-ring"
 									/>
-									<Button variant="secondary" size="sm" onClick={addOverageEntry} disabled={!newOrgId.trim() || !newCustomerIds.trim()}>
+									<Button
+										variant="secondary"
+										size="sm"
+										onClick={addOverageEntry}
+										disabled={!newOrgId.trim() || !newCustomerIds.trim()}
+									>
 										Add
 									</Button>
 								</div>
@@ -310,10 +368,15 @@ export function FeatureFlagsDialog({
 												: "bg-amber-50 text-amber-700 border-amber-200"
 										}
 									>
-										{config.configHealthy ? "Config healthy" : "Config unavailable"}
+										{config.configHealthy
+											? "Config healthy"
+											: "Config unavailable"}
 									</Badge>
 									{config.lastSuccessAt && (
-										<span>Last refresh: {new Date(config.lastSuccessAt).toLocaleString()}</span>
+										<span>
+											Last refresh:{" "}
+											{new Date(config.lastSuccessAt).toLocaleString()}
+										</span>
 									)}
 								</div>
 								<div>
@@ -326,7 +389,9 @@ export function FeatureFlagsDialog({
 
 						{/* Right: Monaco */}
 						<div className="flex flex-col gap-2">
-							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">Raw JSON</div>
+							<div className="text-xs font-medium text-tertiary-foreground uppercase tracking-wide">
+								Raw JSON
+							</div>
 							<div className="rounded-md border border-border overflow-hidden h-[300px]">
 								<Editor
 									height="100%"
@@ -345,7 +410,9 @@ export function FeatureFlagsDialog({
 									theme="vs-dark"
 								/>
 							</div>
-							{jsonError && <div className="text-xs text-red-500">{jsonError}</div>}
+							{jsonError && (
+								<div className="text-xs text-red-500">{jsonError}</div>
+							)}
 						</div>
 					</div>
 				)}

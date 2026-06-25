@@ -1,8 +1,8 @@
+import { useIsMobile } from "@autumn/ui";
 import { motion } from "motion/react";
 import { useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetOverlay } from "@/components/v2/sheet-overlay/SheetOverlay";
 import { useIsCusPlanEditor } from "@/hooks/stores/useProductStore";
-import { useIsMobile } from "@/hooks/useIsMobile";
 import { CustomerPlanEditorBar } from "@/views/customers2/customer-plan/CustomerPlanEditorBar";
 import { CustomerPlanInfoBox } from "@/views/customers2/customer-plan/CustomerPlanInfoBox";
 import { OnboardingGuide } from "@/views/onboarding4/OnboardingGuide";

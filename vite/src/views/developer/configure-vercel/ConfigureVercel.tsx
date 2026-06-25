@@ -2,11 +2,21 @@ import type {
 	UpsertVercelProcessorConfig,
 	VercelMarketplaceMode,
 } from "@autumn/shared";
+import {
+	Button,
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+	FormLabel,
+	Input,
+	TagSelect,
+} from "@autumn/ui";
 import type { AxiosInstance } from "axios";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { AppPortal } from "svix-react";
-import { Button } from "@/components/v2/buttons/Button";
 import {
 	CodeGroup,
 	CodeGroupCodeSolidColour,
@@ -15,16 +25,6 @@ import {
 	CodeGroupList,
 	CodeGroupTab,
 } from "@/components/v2/CodeGroup";
-import {
-	Card,
-	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from "@/components/v2/cards/Card";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
-import { TagSelect } from "@/components/v2/selects/TagSelect";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
@@ -201,7 +201,9 @@ export const ConfigureVercel = () => {
 						<div className="grid grid-cols-2 gap-4 w-full">
 							<div>
 								<FormLabel className="mb-1">
-									<span className="text-muted-foreground">Client (Integration) ID</span>
+									<span className="text-muted-foreground">
+										Client (Integration) ID
+									</span>
 								</FormLabel>
 								<Input
 									value={vercelConfig.client_integration_id || ""}
@@ -219,7 +221,9 @@ export const ConfigureVercel = () => {
 							</div>
 							<div>
 								<FormLabel className="mb-1">
-									<span className="text-muted-foreground">Client (Integration) Secret</span>
+									<span className="text-muted-foreground">
+										Client (Integration) Secret
+									</span>
 								</FormLabel>
 								<Input
 									value={vercelConfig.client_secret || ""}
@@ -252,7 +256,9 @@ export const ConfigureVercel = () => {
 									renderContent={(setOpen) => (
 										<>
 											{productOptions.length === 0 ? (
-												<div className="p-2 text-placeholder">No products found</div>
+												<div className="p-2 text-placeholder">
+													No products found
+												</div>
 											) : (
 												productOptions.map((option) => {
 													const isSelected = activeAllowedProductIds.includes(
@@ -290,7 +296,9 @@ export const ConfigureVercel = () => {
 															}}
 														>
 															<div className="flex items-center justify-between w-full">
-																<span className="truncate max-w-full">{option.label}</span>
+																<span className="truncate max-w-full">
+																	{option.label}
+																</span>
 															</div>
 														</div>
 													);
@@ -368,7 +376,9 @@ export const ConfigureVercel = () => {
 								}}
 							/>
 						) : (
-							<div className="text-tertiary-foreground">Dashboard URL not found.</div>
+							<div className="text-tertiary-foreground">
+								Dashboard URL not found.
+							</div>
 						)}
 					</CardContent>
 				</Card>

@@ -89,6 +89,7 @@ export function CustomerInvoicesTable() {
 				onRowClick: handleRowClick,
 				emptyStateText: "Invoices will display when a customer makes a payment",
 				flexibleTableColumns: false,
+				mobileCards: true,
 				rowClassName: "h-10 py-0",
 			}}
 		>

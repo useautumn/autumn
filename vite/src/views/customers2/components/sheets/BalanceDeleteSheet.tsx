@@ -6,6 +6,7 @@ import {
 	fullCustomerToCustomerEntitlements,
 	numberWithCommas,
 } from "@autumn/shared";
+import { Button, PanelButton } from "@autumn/ui";
 import {
 	MinusCircleIcon,
 	ShieldCheckIcon,
@@ -13,8 +14,6 @@ import {
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
-import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import {
 	LayoutGroup,
 	SheetFooter,

@@ -12,7 +12,7 @@ import {
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 
 const LABEL_OVERRIDES: Record<string, string> = {
@@ -27,7 +27,10 @@ const allIntervals = [
 ];
 
 export const INTERVAL_OPTIONS: { value: string; label: string }[] =
-	allIntervals.map((v) => ({ value: v, label: LABEL_OVERRIDES[v] ?? keyToTitle(v) }));
+	allIntervals.map((v) => ({
+		value: v,
+		label: LABEL_OVERRIDES[v] ?? keyToTitle(v),
+	}));
 
 export const CLEAR_VALUE = "__clear__";
 
@@ -84,10 +87,7 @@ export function BillingMethodDropdown({
 					<CaretDownIcon className="size-4 opacity-50" />
 				</button>
 			</DropdownMenuTrigger>
-			<DropdownMenuContent
-				align="start"
-				className="w-(--anchor-width) p-1"
-			>
+			<DropdownMenuContent align="start" className="w-(--anchor-width) p-1">
 				{selected && (
 					<DropdownMenuItem
 						onClick={() => onChange(undefined)}
@@ -100,9 +100,7 @@ export function BillingMethodDropdown({
 					<DropdownMenuItem
 						key={o.value}
 						onClick={() =>
-							onChange(
-								o.value === "included" ? undefined : o.value,
-							)
+							onChange(o.value === "included" ? undefined : o.value)
 						}
 						className="py-1.5 px-2"
 					>

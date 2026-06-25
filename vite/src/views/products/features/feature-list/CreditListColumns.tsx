@@ -4,10 +4,10 @@ import {
 	type ModelsDevProvider,
 	splitModelId,
 } from "@autumn/shared";
+import { MiniCopyButton } from "@autumn/ui";
 import { CoinsIcon, CpuIcon } from "@phosphor-icons/react";
 import type { ColumnDef, Row } from "@tanstack/react-table";
 import { AdminHover } from "@/components/general/AdminHover";
-import { MiniCopyButton } from "@/components/v2/buttons/CopyButton";
 import { getFeatureHoverTexts } from "@/views/admin/adminUtils";
 import { FeatureListRowToolbar } from "./FeatureListRowToolbar";
 

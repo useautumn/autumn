@@ -1,16 +1,16 @@
 import type { ApiKey } from "@autumn/shared";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { Input } from "@/components/v2/inputs/Input";
+	Input,
+} from "@autumn/ui";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { DevService } from "@/services/DevService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";

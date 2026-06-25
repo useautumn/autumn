@@ -83,13 +83,20 @@ export function deleteBranch(idOrName: string): void {
 
 export function connectionString(
 	branchName: string,
-	opts: { pooled?: boolean } = {},
+	opts: { pooled?: boolean; database?: string } = {},
 ): string {
 	const args = [
 		"connection-string",
 		branchName,
 		"--project-id",
 		NEON_PROJECT_ID,
+		// Once we create the leaf `chat` DB on the same branch (see
+		// ensureChatDatabase) `neonctl` refuses to pick a default and errors
+		// with "Multiple databases found". Default to `neondb` here so the
+		// helper stays usable across the lifetime of a branch; callers can
+		// override to read the chat URL specifically.
+		"--database-name",
+		opts.database ?? "neondb",
 	];
 	if (opts.pooled) args.push("--pooled");
 	const res = neon(args);

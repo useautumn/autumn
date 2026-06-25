@@ -1,8 +1,8 @@
 "use client";
 
 import type { AppEnv } from "@autumn/shared";
+import { PageContainer } from "@autumn/ui";
 import { useEffect } from "react";
-import { PageContainer } from "@/components/general/PageContainer";
 import { useAppQueryStates } from "@/hooks/common/useAppQueryStates";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";

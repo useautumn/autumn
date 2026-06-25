@@ -1,4 +1,5 @@
 import type { FullCustomer } from "@autumn/shared";
+import { Button, Skeleton } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
 import type { AxiosError } from "axios";
@@ -30,8 +31,6 @@ import {
 	STAGGER_CONTAINER,
 	STAGGER_ITEM,
 } from "@/components/forms/update-subscription-v2/constants/animationConstants";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/v2/buttons/Button";
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
 import { PreviewTotalsBlock } from "@/components/v2/preview-totals/PreviewTotalsBlock";

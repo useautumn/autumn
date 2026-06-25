@@ -113,6 +113,7 @@ export default defineConfig({
 			"@date-fns/utc",
 			"date-fns",
 			"@orpc/contract",
+			"@autumn/ui",
 		],
 	},
 

@@ -3,10 +3,8 @@ import {
 	type ProductCounts,
 	type ProductV2,
 } from "@autumn/shared";
+import { Button, InfoRow, InfoTooltip } from "@autumn/ui";
 import { useNavigate } from "react-router";
-import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
-import { Button } from "@/components/v2/buttons/Button";
-import { InfoRow } from "@/components/v2/InfoRow";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { keyToTitle } from "@/utils/formatUtils/formatTextUtils";
 import { pushPage } from "@/utils/genUtils";

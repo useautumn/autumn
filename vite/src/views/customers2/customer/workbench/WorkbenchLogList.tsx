@@ -44,8 +44,8 @@ export const WorkbenchLogList = ({
 		if (unconfigured) {
 			return (
 				<WorkbenchEmptyState title="Axiom not configured">
-					Set <code className="text-muted-foreground">AXIOM_ADMIN_TOKEN</code> on the server
-					to enable the workbench.
+					Set <code className="text-muted-foreground">AXIOM_ADMIN_TOKEN</code>{" "}
+					on the server to enable the workbench.
 				</WorkbenchEmptyState>
 			);
 		}

@@ -1,9 +1,3 @@
-import type { AxiosError } from "axios";
-import { useCallback, useState } from "react";
-import { useNavigate } from "react-router";
-import { toast } from "sonner";
-import { migrationUid } from "@/views/migrations/migration/shared/operationUtils";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Dialog,
 	DialogContent,
@@ -11,10 +5,16 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { Input } from "@/components/v2/inputs/Input";
+	Input,
+	ShortcutButton,
+} from "@autumn/ui";
+import type { AxiosError } from "axios";
+import { useCallback, useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { useMigrationsQuery } from "@/hooks/queries/useMigrationsQuery";
 import { getBackendErr, navigateTo } from "@/utils/genUtils";
+import { migrationUid } from "@/views/migrations/migration/shared/operationUtils";
 
 export function CreateMigrationDialog({
 	open: controlledOpen,
@@ -68,12 +68,12 @@ export function CreateMigrationDialog({
 					<label htmlFor="migration-id" className="text-sm font-medium">
 						Migration ID
 					</label>
-				<Input
-					id="migration-id"
-					placeholder="migration-abc123"
-					value={id}
-					onChange={(e) => setId(e.target.value)}
-				/>
+					<Input
+						id="migration-id"
+						placeholder="migration-abc123"
+						value={id}
+						onChange={(e) => setId(e.target.value)}
+					/>
 				</div>
 
 				<DialogFooter>

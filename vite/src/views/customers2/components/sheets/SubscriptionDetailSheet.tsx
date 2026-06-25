@@ -1,5 +1,6 @@
 import type { ApiDiscount } from "@autumn/shared";
 import {
+	billingControlsFromColumns,
 	CusProductStatus,
 	cp,
 	type Entity,
@@ -10,6 +11,7 @@ import {
 	splitBooleanItems,
 	UsageModel,
 } from "@autumn/shared";
+import { Button, CopyButton, InfoRow } from "@autumn/ui";
 import {
 	CalendarBlankIcon,
 	CreditCardIcon,
@@ -26,11 +28,12 @@ import {
 } from "@phosphor-icons/react";
 import { format } from "date-fns";
 import { useMemo } from "react";
+import {
+	BillingControlsList,
+	hasBillingControls,
+} from "@/components/billing-controls/BillingControlsDisplay";
 import { CollapsedBooleanItems } from "@/components/forms/shared/plan-items/CollapsedBooleanItems";
-import { Button } from "@/components/v2/buttons/Button";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import { OpenInStripeButton } from "@/components/v2/buttons/OpenInStripeButton";
-import { InfoRow } from "@/components/v2/InfoRow";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useCusRewardsQuery } from "@/hooks/queries/useCusRewardsQuery";
 import { useProductVersionQuery } from "@/hooks/queries/useProductVersionQuery";
@@ -118,7 +121,7 @@ function SubscriptionDetailItems({
 }
 
 export function SubscriptionDetailSheet() {
-	const { customer, testClockFrozenTimeMs } = useCusQuery();
+	const { customer, features = [], testClockFrozenTimeMs } = useCusQuery();
 	const itemId = useSheetStore((s) => s.itemId);
 	const setSheet = useSheetStore((s) => s.setSheet);
 	// Get customer product and productV2 by itemId
@@ -135,6 +138,10 @@ export function SubscriptionDetailSheet() {
 
 	// Check for prepaid items in the product (must be called before any returns)
 	const { prepaidItems } = usePrepaidItems({ product: productV2 ?? undefined });
+	const featureNameById = useMemo(
+		() => new Map(features.map((feature) => [feature.id, feature.name])),
+		[features],
+	);
 
 	if (!cusProduct) {
 		return (
@@ -193,6 +200,7 @@ export function SubscriptionDetailSheet() {
 	};
 
 	const kindConfig = getPlanKindConfig(getCusProductKind(cusProduct));
+	const planBillingControls = billingControlsFromColumns(cusProduct);
 
 	return (
 		<div className="flex flex-col h-full overflow-y-auto">
@@ -376,6 +384,17 @@ export function SubscriptionDetailSheet() {
 					)}
 				</div>
 			</SheetSection>
+
+			{hasBillingControls(planBillingControls) && (
+				<SheetSection>
+					<div className="mb-2 text-form-label">Plan billing controls</div>
+					<BillingControlsList
+						billingControls={planBillingControls}
+						featureNameById={featureNameById}
+						slim
+					/>
+				</SheetSection>
+			)}
 
 			{(canCancel || canUpdate) && (
 				<div className="sticky bottom-0 p-4 flex gap-2 bg-card">

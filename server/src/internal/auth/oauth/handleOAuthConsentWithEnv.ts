@@ -5,6 +5,7 @@ import { auth } from "@/utils/auth.js";
 import { oauthConsentRepo } from "../repos/index.js";
 import { isAtmnOAuthClientId } from "./atmnOAuthClients.js";
 import { getOAuthConsentScopeGrant } from "./oauthConsentScopes.js";
+import { runBetterAuthHandler } from "./runBetterAuthHandler.js";
 import { isSummerOAuthClientId } from "./summerOAuthClient.js";
 
 type RequestFields = Record<string, unknown>;
@@ -68,9 +69,24 @@ const getRedirectUriFromFields = (fields: RequestFields) =>
 	getString(fields.redirectUri) ??
 	getNestedOAuthField(fields.oauth_query, "redirect_uri");
 
-const getScopesFromFields = (fields: RequestFields) => {
+const splitScopes = (value: unknown) =>
+	typeof value === "string" ? value.split(/\s+/).filter(Boolean) : [];
+
+export const getOAuthConsentRequestedScopesFromFields = (
+	fields: RequestFields,
+) => {
+	if ("scope" in fields) {
+		return {
+			explicit: true,
+			scopes: splitScopes(fields.scope),
+		};
+	}
+
 	const rawScope = getNestedOAuthField(fields.oauth_query, "scope");
-	return rawScope?.split(/\s+/).filter(Boolean) ?? null;
+	return {
+		explicit: false,
+		scopes: rawScope ? splitScopes(rawScope) : null,
+	};
 };
 
 const getFieldsWithScope = ({
@@ -140,10 +156,12 @@ export const handleOAuthConsentWithEnv = async (c: Context) => {
 		const orgId = session?.session?.activeOrganizationId;
 		if (userId && orgId) {
 			try {
+				const requested = getOAuthConsentRequestedScopesFromFields(fields);
 				const scopeGrant = await getOAuthConsentScopeGrant({
 					db,
 					organizationId: orgId,
-					requestedScopes: getScopesFromFields(fields),
+					requestedScopes: requested.scopes,
+					requireRequestedResourceScopes: requested.explicit,
 					userId,
 				});
 				grantedScopes = scopeGrant;
@@ -162,7 +180,11 @@ export const handleOAuthConsentWithEnv = async (c: Context) => {
 		}
 	}
 
-	const response = await auth.handler(request);
+	const response = await runBetterAuthHandler({
+		request,
+		route: "oauth2/consent",
+		context: { clientId },
+	});
 
 	if (!response.ok || !acceptedConsent(fields.accept)) {
 		return response;

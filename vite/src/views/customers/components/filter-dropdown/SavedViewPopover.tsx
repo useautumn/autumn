@@ -1,13 +1,13 @@
-import { Pin } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
 import {
+	Button,
+	Input,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from "@/components/v2/buttons/Button";
-import { Input } from "@/components/v2/inputs/Input";
+} from "@autumn/ui";
+import { Pin } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 import { useAxiosInstance } from "@/services/useAxiosInstance";

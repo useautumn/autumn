@@ -25,6 +25,7 @@ import type { CustomerListFilters } from "./customerListFilters.js";
 import { getApiCustomerBase } from "./cusUtils/apiCusUtils/getApiCustomerBase.js";
 import {
 	getPaginatedFullCusQuery,
+	parseDashboardIntervalFilter,
 	parseDashboardProcessorFilter,
 	parseDashboardStatusFilter,
 	parseDashboardVersionFilter,
@@ -316,12 +317,15 @@ export class CusBatchService {
 
 		const productVersionFilters = parseDashboardVersionFilter(filters?.version);
 
+		const intervalFilters = parseDashboardIntervalFilter(filters?.interval);
+
 		// Status/none/version filter on a different table (customer_products) than
 		// the cursor (customers). Folding it into the main query forces a merge join
 		// that abandons idx_customers_cursor and degrades to seconds.
 		const requiresResolveStep =
 			statusFilters.length > 0 ||
 			productVersionFilters.length > 0 ||
+			intervalFilters.length > 0 ||
 			!!filters?.none;
 
 		const tResolveStart = performance.now();

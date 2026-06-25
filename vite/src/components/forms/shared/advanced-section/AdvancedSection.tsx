@@ -1,9 +1,6 @@
+import { SheetAccordion, SheetAccordionItem } from "@autumn/ui";
 import type { ReactNode } from "react";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
-import {
-	SheetAccordion,
-	SheetAccordionItem,
-} from "@/components/v2/sheets/SheetAccordion";
 
 /** Shared section with always-visible children and an optional "More Options" accordion. */
 export function AdvancedSection({

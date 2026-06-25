@@ -1,4 +1,4 @@
-import { Sheet, SheetContent, SheetTitle } from "@/components/v2/sheets/Sheet";
+import { Sheet, SheetContent, SheetTitle } from "@autumn/ui";
 import { MainSidebar } from "./MainSidebar";
 
 export function MobileSidebar({

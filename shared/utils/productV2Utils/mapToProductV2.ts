@@ -4,6 +4,7 @@ import type { Price } from "../../models/productModels/priceModels/priceModels.j
 import type { FullProduct } from "../../models/productModels/productModels.js";
 import type { ProductItem } from "../../models/productV2Models/productItemModels/productItemModels.js";
 import type { ProductV2 } from "../../models/productV2Models/productV2Models.js";
+import { billingControlsFromColumns } from "../../models/cusModels/billingControls/customerBillingControls.js";
 import { entToPrice, priceToEnt } from "../productUtils/convertProductUtils.js";
 import { toProductItem } from "./productItemUtils/mapToItem.js";
 import { getItemFeatureType } from "./productItemUtils/productItemUtils.js";
@@ -94,6 +95,8 @@ export const mapToProductV2 = ({
 		stripe_id: product.processor?.id || null,
 		archived: product.archived || false,
 		config: product.config ?? undefined,
+		billing_controls: billingControlsFromColumns(product),
+		metadata: product.metadata ?? {},
 	};
 
 	return productV2;

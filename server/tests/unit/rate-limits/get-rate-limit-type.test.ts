@@ -127,7 +127,7 @@ describe("getRateLimitType", () => {
 					path: "/v1/billing.open_customer_portal",
 				}),
 			),
-		).toBe(RateLimitType.Attach);
+		).toBe(RateLimitType.General);
 	});
 
 	test("classifies entities.get into its dedicated per-customer bucket", () => {

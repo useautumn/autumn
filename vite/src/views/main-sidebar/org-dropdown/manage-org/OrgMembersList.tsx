@@ -1,7 +1,7 @@
 import type { Membership, Role } from "@autumn/shared";
+import { TableCell, TableRow } from "@autumn/ui";
 import { useState } from "react";
 import { toast } from "sonner";
-import { TableCell, TableRow } from "@/components/ui/table";
 import { RoleSelect } from "@/components/v2/selects/RoleSelect";
 import { authClient, useSession } from "@/lib/auth-client";
 import { formatDateStr } from "@/utils/formatUtils/formatDateUtils";

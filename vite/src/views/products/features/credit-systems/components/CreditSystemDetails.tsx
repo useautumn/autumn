@@ -1,6 +1,5 @@
+import { FormLabel, Input } from "@autumn/ui";
 import { useStore } from "@tanstack/react-form";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 import { slugify } from "@/utils/formatUtils/formatTextUtils";
 import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";

@@ -1,3 +1,4 @@
+import { type ChartConfig, ChartContainer } from "@autumn/ui";
 import {
 	memo,
 	startTransition,
@@ -8,7 +9,6 @@ import {
 	useState,
 } from "react";
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts";
-import { type ChartConfig, ChartContainer } from "@/components/ui/chart";
 import { cn } from "@/lib/utils";
 import type { Row } from "./components/analytics-types";
 import { useAnalyticsQueryState } from "./hooks/useAnalyticsQueryState";

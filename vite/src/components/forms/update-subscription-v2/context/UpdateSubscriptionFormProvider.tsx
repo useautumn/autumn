@@ -112,6 +112,7 @@ type UpdateEditablePatchFields = Pick<
 	UpdateSubscriptionForm,
 	| "items"
 	| "version"
+	| "billingControls"
 	| "trialEnabled"
 	| "removeTrial"
 	| "trialLength"
@@ -122,6 +123,7 @@ type UpdateEditablePatchFields = Pick<
 const UPDATE_EDITABLE_PATCH_FIELDS = [
 	"items",
 	"version",
+	"billingControls",
 	"trialEnabled",
 	"removeTrial",
 	"trialLength",
@@ -242,8 +244,12 @@ export function UpdateSubscriptionFormProvider({
 			const item = currentPrepaidItems.find(
 				(it) => it.feature_id === featureId,
 			);
+			const initialQuantity = initialPrepaidOptions[featureId];
 			const isOneOff = item?.interval == null;
-			if (quantity !== initialPrepaidOptions[featureId] || isOneOff) {
+			const changedQuantity = isOneOff
+				? quantity > (initialQuantity ?? 0)
+				: quantity !== initialQuantity;
+			if (changedQuantity) {
 				changed[featureId] = quantity;
 			}
 		}
@@ -332,6 +338,7 @@ export function UpdateSubscriptionFormProvider({
 			const updatePatch = {
 				items: patch.items,
 				version: patch.version,
+				billingControls: draftProduct.billing_controls ?? null,
 				trialEnabled: patch.trialEnabled,
 				removeTrial: patch.removeTrial,
 				trialLength: patch.trialLength,

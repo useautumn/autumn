@@ -4,6 +4,7 @@ import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { applyLiveAggregatedBalances } from "../balances/applyLiveAggregatedBalances.js";
 import { applyLiveUsageWindows } from "../balances/applyLiveUsageWindows.js";
 import { getCachedFeatureBalancesBatch } from "../balances/getCachedFeatureBalances.js";
+import { normalizedToUsageWindowFeatureIds } from "../fullSubjectCacheModel.js";
 
 /**
  * After we write a subject via `setCachedFullSubject`, the balance hashes are
@@ -33,10 +34,7 @@ export const rehydrateWithLiveBalances = async ({
 		customerEntitlementIdsByFeatureId[ce.feature_id] = list;
 	}
 	const usageWindowFeatureIds = new Set(
-		[
-			...(normalized.customer.usage_limits ?? []),
-			...(normalized.entity?.usage_limits ?? []),
-		].map((usageLimit) => usageLimit.feature_id),
+		normalizedToUsageWindowFeatureIds({ normalized }),
 	);
 	const featureIds = [
 		...new Set([

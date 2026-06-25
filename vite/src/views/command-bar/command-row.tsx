@@ -1,5 +1,5 @@
+import { CommandItem } from "@autumn/ui";
 import * as React from "react";
-import { CommandItem } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 
 /**
@@ -51,7 +51,16 @@ interface CommandRowProps {
  */
 export const CommandRow = React.forwardRef<HTMLDivElement, CommandRowProps>(
 	(
-		{ icon, title, subtext, shortcutKey, customShortcuts, onSelect, className, value },
+		{
+			icon,
+			title,
+			subtext,
+			shortcutKey,
+			customShortcuts,
+			onSelect,
+			className,
+			value,
+		},
 		ref,
 	) => {
 		const renderIcon = (icon: React.ReactNode) => {
@@ -60,7 +69,10 @@ export const CommandRow = React.forwardRef<HTMLDivElement, CommandRowProps>(
 			// Clone the icon and add consistent sizing and lighter stroke weight
 			if (React.isValidElement(icon)) {
 				return React.cloneElement(icon, {
-					className: cn("mr-1 size-3.5 text-tertiary-foreground", icon.props.className),
+					className: cn(
+						"mr-1 size-3.5 text-tertiary-foreground",
+						icon.props.className,
+					),
 					strokeWidth: icon.props.strokeWidth ?? 1.5,
 				} as React.HTMLAttributes<HTMLElement>);
 			}

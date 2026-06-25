@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 
@@ -58,7 +58,8 @@ export const useRevenueByProduct = ({
 	const env = useEnv();
 	const { flags } = useFeatureFlags();
 	const isLive = env === "live";
-	const enabled = isLive && !flags.maintenanceModes.analytics.disableRevenueMetrics;
+	const enabled =
+		isLive && !flags.maintenanceModes.analytics.disableRevenueMetrics;
 
 	const fetchGranularity = async ({
 		g,
@@ -110,7 +111,8 @@ export const useRevenueProductShare = () => {
 			return data as ProductShareRow[];
 		},
 		staleTime: 5 * 60 * 1000,
-		enabled: env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
+		enabled:
+			env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
 	});
 
 	return { data, isLoading };
@@ -129,7 +131,8 @@ export const useArpc = () => {
 			return data as ArpcRow[];
 		},
 		staleTime: 5 * 60 * 1000,
-		enabled: env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
+		enabled:
+			env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
 	});
 
 	return { data, isLoading };
@@ -151,7 +154,8 @@ export const useInvoiceStatus = () => {
 			return data as InvoiceStatusRow[];
 		},
 		staleTime: 5 * 60 * 1000,
-		enabled: env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
+		enabled:
+			env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
 	});
 
 	return { data, isLoading };
@@ -173,7 +177,8 @@ export const useCustomerLeaderboard = () => {
 			return data as CustomerLeaderboardResult;
 		},
 		staleTime: 5 * 60 * 1000,
-		enabled: env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
+		enabled:
+			env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
 	});
 
 	return { data, isLoading };
@@ -201,7 +206,8 @@ export const useEstimatedMrr = () => {
 			return data as EstimatedMrrResult;
 		},
 		staleTime: 5 * 60 * 1000,
-		enabled: env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
+		enabled:
+			env === "live" && !flags.maintenanceModes.analytics.disableRevenueMetrics,
 	});
 
 	return { data, isLoading };

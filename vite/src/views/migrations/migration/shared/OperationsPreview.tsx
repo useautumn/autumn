@@ -5,18 +5,18 @@ import {
 	type Operations,
 	type UpdatePlanOp,
 } from "@autumn/shared";
-import {
-	CurrencyCircleDollarIcon,
-	GitBranchIcon,
-} from "@phosphor-icons/react";
+import { Separator } from "@autumn/ui";
+import { CurrencyCircleDollarIcon, GitBranchIcon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { DeletedItemRow } from "@/components/forms/shared/plan-items/DeletedItemRow";
 import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/components/SubscriptionItemRow";
-import { Separator } from "@/components/v2/separator";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
-import { filterToProductItem, type ItemFilter } from "../operations/operationItemUtils";
+import {
+	filterToProductItem,
+	type ItemFilter,
+} from "../operations/operationItemUtils";
 import { extractPlanIds } from "../operations/UpdatePlanOpForm";
 import { migrationItemToProductItem } from "./migrationItemUtils";
 

@@ -1,7 +1,8 @@
 import type { Migration } from "@autumn/shared";
 import { useStore } from "@tanstack/react-form";
-import { useEffect } from "react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
+import { useEffect } from "react";
+import { useMigrationRunsQuery } from "@/hooks/queries/useMigrationRunsQuery";
 import { FilterStep } from "./FilterStep";
 import { useCustomerCount } from "./filters/CustomerPreview";
 import { useGuardedStepNavigation } from "./hooks/useGuardedStepNavigation";
@@ -10,7 +11,6 @@ import { useMigrationSheetStore } from "./live/useMigrationSheetStore";
 import { OperationsStep } from "./OperationsStep";
 import { STEPS, type StepId } from "./StepIndicator";
 import { useMigrationEditorForm } from "./useMigrationEditorForm";
-import { useMigrationRunsQuery } from "@/hooks/queries/useMigrationRunsQuery";
 
 const STEP_IDS = STEPS.map((s) => s.id);
 
@@ -78,7 +78,7 @@ export function MigrationEditor({ migration }: { migration: Migration }) {
 					operations={operations}
 					noBillingChanges={noBillingChanges}
 					step={step}
-				onStepChange={guardedSetStep}
+					onStepChange={guardedSetStep}
 				/>
 			)}
 		</div>

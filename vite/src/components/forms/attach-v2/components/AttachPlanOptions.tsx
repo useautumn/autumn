@@ -1,15 +1,14 @@
+import { Button, Switch } from "@autumn/ui";
 import { CaretDownIcon, CheckIcon } from "@phosphor-icons/react";
 import { useState } from "react";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
 import { FreeTrialConfigRow } from "@/components/forms/shared/FreeTrialConfigRow";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/v2/buttons/Button";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { useAttachFormContext } from "../context/AttachFormProvider";
 
@@ -22,12 +21,7 @@ export function AttachPlanOptions() {
 		handleGrantFreeToggle,
 		hasActiveSubscription,
 	} = useAttachFormContext();
-	const {
-		trialEnabled,
-		trialCardRequired,
-		trialOnEnd,
-		grantFree,
-	} = formValues;
+	const { trialEnabled, trialCardRequired, trialOnEnd, grantFree } = formValues;
 	const [versionOpen, setVersionOpen] = useState(false);
 
 	const showVersionSelector = numVersions > 1;

@@ -1,5 +1,5 @@
+import { Button } from "@autumn/ui";
 import { PlusIcon } from "@phosphor-icons/react";
-import { Button } from "@/components/v2/buttons/Button";
 import { useCurrentItem } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { checkItemIsValid } from "@/utils/product/entitlementUtils";
 import { useOpenAddFeatureSheet } from "../../hooks/useOpenAddFeatureSheet";

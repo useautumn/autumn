@@ -1,9 +1,6 @@
 import type { AttachPreviewResponse } from "@autumn/shared";
-import {
-	ArrowLeft,
-	CalendarCheckIcon,
-	LinkIcon,
-} from "@phosphor-icons/react";
+import { Button, Switch } from "@autumn/ui";
+import { ArrowLeft, CalendarCheckIcon, LinkIcon } from "@phosphor-icons/react";
 import { useStore } from "@tanstack/react-form";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
@@ -14,8 +11,6 @@ import {
 	getAttachPreviewLineItems,
 	getAttachScheduledStartDate,
 } from "@/components/forms/attach-v2/utils/buildAttachPreviewTotals";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/v2/buttons/Button";
 import type { BillingLineItem } from "@/components/v2/LineItemsPreview";
 import { LineItemsPreview } from "@/components/v2/LineItemsPreview";
 import {

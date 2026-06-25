@@ -1,19 +1,19 @@
 import type { Role } from "@autumn/shared";
-import { useRef, useState } from "react";
-import { toast } from "sonner";
-import { z } from "zod/v4";
-import { Button } from "@/components/v2/buttons/Button";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
+	FormLabel,
+	Input,
+	ShortcutButton,
+} from "@autumn/ui";
+import { useRef, useState } from "react";
+import { toast } from "sonner";
+import { z } from "zod/v4";
 import { RoleSelect } from "@/components/v2/selects/RoleSelect";
 import { authClient } from "@/lib/auth-client";
 import { getBackendErr } from "@/utils/genUtils";

@@ -1,16 +1,16 @@
-import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+} from "@autumn/ui";
+import { toast } from "sonner";
 import {
-	useMigrationsQuery,
 	type MigrationWithRunInfo,
+	useMigrationsQuery,
 } from "@/hooks/queries/useMigrationsQuery";
 
 export function DeleteMigrationDialog({
@@ -41,9 +41,7 @@ export function DeleteMigrationDialog({
 		>
 			<DialogContent className="max-w-md">
 				<DialogHeader>
-					<DialogTitle className="truncate">
-						Delete {migration.id}
-					</DialogTitle>
+					<DialogTitle className="truncate">Delete {migration.id}</DialogTitle>
 					<DialogDescription>
 						This migration will be permanently deleted. This action cannot be
 						undone.

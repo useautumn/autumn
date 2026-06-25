@@ -1,15 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { Input } from "@/components/v2/inputs/Input";
+	Input,
+} from "@autumn/ui";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 
@@ -106,7 +106,10 @@ export const RolloutOrgDialog = ({
 
 				<div className="flex flex-col gap-4">
 					<div className="flex flex-col gap-2">
-						<label className="text-xs font-medium text-muted-foreground" htmlFor="org-search">
+						<label
+							className="text-xs font-medium text-muted-foreground"
+							htmlFor="org-search"
+						>
 							Organization
 						</label>
 						<Input

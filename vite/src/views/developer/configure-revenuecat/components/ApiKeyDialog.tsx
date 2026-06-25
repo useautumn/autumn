@@ -1,13 +1,13 @@
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
+	FormLabel,
+	Input,
+} from "@autumn/ui";
 
 interface ApiKeyDialogProps {
 	open: boolean;

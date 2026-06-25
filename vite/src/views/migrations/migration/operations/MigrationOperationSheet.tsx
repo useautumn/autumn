@@ -1,12 +1,11 @@
 import type { FrontendProduct, ProductItem } from "@autumn/shared";
+import { Button, Sheet, SheetContent } from "@autumn/ui";
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/v2/buttons/Button";
 import {
 	ProductProvider,
 	useCurrentItem,
 	useSetCurrentItem,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
-import { Sheet, SheetContent } from "@/components/v2/sheets/Sheet";
 import { disabledItemDraftController } from "@/hooks/inline-editor/useItemDraftController";
 import { getItemId } from "@/utils/product/productItemUtils";
 import { EditPlanPriceSheet } from "@/views/products/plan/components/EditPlanPriceSheet";
@@ -198,7 +197,7 @@ function MigrationSheetInner({
 		<div className="flex flex-col h-full">
 			<div className="flex-1 overflow-y-auto">
 				{sheetType === "select-feature" && <SelectFeatureSheet />}
-				{sheetType === "edit-plan-price" && <EditPlanPriceSheet />}
+				{sheetType === "edit-plan-price" && <EditPlanPriceSheet hideFooter />}
 				{sheetType === "edit-feature" && currentItem && (
 					<ProductItemContext.Provider
 						value={{

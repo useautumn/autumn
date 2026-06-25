@@ -26,6 +26,8 @@ export * from "./referrals/apiReferralCode.js";
 export * from "./referrals/createReferralCodeParams.js";
 export * from "./referrals/redeemReferralCodeParams.js";
 export * from "./referrals/referralOpModels.js";
+// Rewards
+export * from "./rewards/index.js";
 // Helpers
 export * from "./utils/openApiHelpers.js";
 export * from "./utils/zodToJSDoc.js";

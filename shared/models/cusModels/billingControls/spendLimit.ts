@@ -29,3 +29,13 @@ export const DbSpendLimitSchema = z
 	);
 
 export type DbSpendLimit = z.infer<typeof DbSpendLimitSchema>;
+
+export const pickStricterSpendLimit = (
+	left: DbSpendLimit,
+	right: DbSpendLimit,
+): DbSpendLimit => {
+	if (left.enabled !== right.enabled) return left.enabled ? left : right;
+	const leftLimit = left.overage_limit ?? Number.POSITIVE_INFINITY;
+	const rightLimit = right.overage_limit ?? Number.POSITIVE_INFINITY;
+	return rightLimit < leftLimit ? right : left;
+};

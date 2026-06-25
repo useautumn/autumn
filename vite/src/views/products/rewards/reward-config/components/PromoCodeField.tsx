@@ -1,7 +1,5 @@
 import { getGlobalMaxRedemption } from "@autumn/shared";
-import { TextCheckbox } from "@/components/v2/checkboxes/TextCheckbox";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
+import { FormLabel, Input, TextCheckbox } from "@autumn/ui";
 import type { FrontendReward } from "../../types/frontendReward";
 import { FirstTimeTransactionTooltip } from "./FirstTimeTransactionTooltip";
 

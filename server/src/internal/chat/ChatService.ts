@@ -3,6 +3,7 @@ import {
 	AppEnv,
 	apiKeys,
 	chatInstallations,
+	chatThreadContexts,
 	chatOAuthCredentials,
 	createChatInstallState,
 } from "@autumn/shared";
@@ -105,10 +106,20 @@ export class ChatService {
 					installation.live_api_key_id,
 				])
 				.filter((id): id is string => !!id);
+			const installationIds = installations.map(
+				(installation) => installation.id,
+			);
 			for (const id of keyIds) {
 				await tx
 					.delete(apiKeys)
 					.where(and(eq(apiKeys.id, id), eq(apiKeys.org_id, ctx.org.id)));
+			}
+			if (installationIds.length > 0) {
+				await tx
+					.delete(chatThreadContexts)
+					.where(
+						inArray(chatThreadContexts.chat_installation_id, installationIds),
+					);
 			}
 
 			await tx

@@ -1,9 +1,8 @@
 import type { FreeTrialDuration, TrialOnEnd } from "@autumn/shared";
+import { Switch, TextCheckbox } from "@autumn/ui";
 import type { UseAttachForm } from "@/components/forms/attach-v2/hooks/useAttachForm";
 import { TRIAL_DURATION_OPTIONS } from "@/components/forms/update-subscription-v2/constants/trialConstants";
 import type { UseUpdateSubscriptionForm } from "@/components/forms/update-subscription-v2/hooks/useUpdateSubscriptionForm";
-import { Switch } from "@/components/ui/switch";
-import { TextCheckbox } from "@/components/v2/checkboxes/TextCheckbox";
 import { ConfigRow } from "./ConfigRow";
 
 const DEFAULT_TRIAL_LENGTH = 7;
@@ -69,10 +68,7 @@ export function FreeTrialConfigRow({
 							<TextCheckbox
 								checked={trialCardRequired}
 								onCheckedChange={(checked) =>
-									form.setFieldValue(
-										"trialCardRequired",
-										checked as boolean,
-									)
+									form.setFieldValue("trialCardRequired", checked as boolean)
 								}
 							>
 								Card Required

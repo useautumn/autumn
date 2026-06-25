@@ -3,6 +3,7 @@ import {
 	ApiVersion,
 	type CreateReward,
 	type CreateRewardProgram,
+	type CustomerBillingControlsParams,
 	type EntitlementDuration,
 	type OrgConfig,
 	type PlanTiming,
@@ -161,6 +162,7 @@ type BillingAttachAction = {
 	invoice?: boolean;
 	enableProductImmediately?: boolean;
 	finalizeInvoice?: boolean;
+	billingControls?: CustomerBillingControlsParams;
 };
 
 type MultiAttachPlan = {
@@ -709,6 +711,7 @@ const billingAttach = ({
 	invoice,
 	enableProductImmediately,
 	finalizeInvoice,
+	billingControls,
 }: {
 	productId: string;
 	customerId?: string;
@@ -722,6 +725,7 @@ const billingAttach = ({
 	invoice?: boolean;
 	enableProductImmediately?: boolean;
 	finalizeInvoice?: boolean;
+	billingControls?: CustomerBillingControlsParams;
 }): ConfigFn => {
 	const concurrency = Number(process.env.TEST_FILE_CONCURRENCY || "0");
 	const defaultTimeout = concurrency > 1 ? 8000 : 5000;
@@ -743,6 +747,7 @@ const billingAttach = ({
 				invoice,
 				enableProductImmediately,
 				finalizeInvoice,
+				billingControls,
 			},
 		],
 	});
@@ -1595,6 +1600,7 @@ export async function initScenario({
 					invoice: action.invoice,
 					enable_product_immediately: action.enableProductImmediately,
 					finalize_invoice: action.finalizeInvoice,
+					billing_controls: action.billingControls,
 				},
 				{ timeout: action.timeout },
 			);

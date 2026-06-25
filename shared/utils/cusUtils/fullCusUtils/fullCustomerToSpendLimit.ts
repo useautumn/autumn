@@ -1,6 +1,10 @@
-import type { DbSpendLimit } from "@models/cusModels/billingControls/customerBillingControls.js";
+import type { DbSpendLimit } from "@models/cusModels/billingControls/spendLimit.js";
 import type { FullCustomer } from "@models/cusModels/fullCusModel.js";
 import { resolveSpendLimitOverageLimit } from "@utils/cusEntUtils";
+import {
+	fullCustomerToPlanProducts,
+	resolveBillingControl,
+} from "../../fullSubjectUtils/planBillingControlUtils.js";
 import { fullCustomerToCustomerEntitlements } from "./fullCustomerToCustomerEntitlements";
 
 /**
@@ -31,13 +35,16 @@ export const fullCustomerToSpendLimitByFeatureId = ({
 	for (const featureId of uniqueFeatureIds) {
 		const isMatch = (candidate: DbSpendLimit) =>
 			candidate.feature_id === featureId &&
-			candidate.enabled &&
 			candidate.overage_limit !== undefined;
 
-		const spendLimit =
-			entitySpendLimits.find(isMatch) ?? customerSpendLimits.find(isMatch);
+		const spendLimit = resolveBillingControl<DbSpendLimit, "spend_limits">({
+			controlLists: [entitySpendLimits, customerSpendLimits],
+			customerProducts: fullCustomerToPlanProducts({ fullCustomer }),
+			controlKey: "spend_limits",
+			matches: isMatch,
+		});
 
-		if (spendLimit) {
+		if (spendLimit?.enabled) {
 			const cusEnts = fullCustomerToCustomerEntitlements({
 				fullCustomer,
 				featureIds: [featureId],

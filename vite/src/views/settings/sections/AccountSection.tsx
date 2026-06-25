@@ -4,7 +4,7 @@ import {
 	CardDescription,
 	CardHeader,
 	CardTitle,
-} from "@/components/v2/cards/Card";
+} from "@autumn/ui";
 import { UserDetails } from "@/views/main-sidebar/components/UserDetails";
 import { SettingsSection } from "../SettingsSection";
 import { PasskeysManager } from "./components/PasskeysManager";

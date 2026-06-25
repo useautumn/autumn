@@ -1,13 +1,13 @@
 import { FeatureUsageType } from "@autumn/shared";
-import { AreaCheckbox } from "@/components/v2/checkboxes/AreaCheckbox";
-import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
+	AreaCheckbox,
+	FormLabel,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 
@@ -43,16 +43,18 @@ export function EntityFeatureConfig() {
 			<FormLabel>
 				Link this item to a specific feature entity in your app
 			</FormLabel>
-		<Select
-			value={item.entity_feature_id || undefined}
-			onValueChange={(value) => {
-				setItem({
-					...item,
-					entity_feature_id: value,
-				});
-			}}
-			items={Object.fromEntries(continuousUseFeatures.map((feature) => [feature.id, feature.name]))}
-		>
+			<Select
+				value={item.entity_feature_id || undefined}
+				onValueChange={(value) => {
+					setItem({
+						...item,
+						entity_feature_id: value,
+					});
+				}}
+				items={Object.fromEntries(
+					continuousUseFeatures.map((feature) => [feature.id, feature.name]),
+				)}
+			>
 				<SelectTrigger
 					className="w-xs max-w-full"
 					onClick={(e) => e.stopPropagation()}

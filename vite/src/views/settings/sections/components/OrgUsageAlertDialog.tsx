@@ -1,25 +1,23 @@
 import { type DbUsageAlert, type Feature, FeatureType } from "@autumn/shared";
-import { useState } from "react";
-import { toast } from "sonner";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
-import {
+	FormLabel,
+	Input,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+	Switch,
+} from "@autumn/ui";
+import { useState } from "react";
+import { toast } from "sonner";
+import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 
 type ThresholdType = DbUsageAlert["threshold_type"];
 
@@ -66,10 +64,11 @@ export const OrgUsageAlertDialog = ({
 			toast.error("Please enter a valid threshold");
 			return;
 		}
-		if (draft.threshold_type === "remaining_percentage" && draft.threshold > 100) {
-			toast.error(
-				"Remaining percentage threshold must be between 0 and 100",
-			);
+		if (
+			draft.threshold_type === "remaining_percentage" &&
+			draft.threshold > 100
+		) {
+			toast.error("Remaining percentage threshold must be between 0 and 100");
 			return;
 		}
 

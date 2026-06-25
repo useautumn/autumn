@@ -1,12 +1,12 @@
-import { InfoIcon } from "lucide-react";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import {
+	FormLabel,
+	Input,
+	SearchableSelect,
 	Tooltip,
 	TooltipContent,
 	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
+} from "@autumn/ui";
+import { InfoIcon } from "lucide-react";
 import { useAiProviders } from "../hooks/useAiProviders";
 import type { CreditSystemFormInstance } from "../hooks/useCreditSystemForm";
 import { AiCreditSchemaTable } from "./AiCreditSchemaTable";
