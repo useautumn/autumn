@@ -32,9 +32,10 @@ export const ProcessorSubMenu = ({ onChange }: { onChange?: () => void }) => {
 	const selected = queryStates.processor || [];
 
 	const visibleOptions = PROCESSOR_OPTIONS.filter(({ value }) => {
+		if (value === "stripe") return true;
 		if (value === "revenuecat") return flags.revenuecat;
 		if (value === "vercel") return flags.vercel;
-		return true;
+		return false;
 	});
 
 	return (
