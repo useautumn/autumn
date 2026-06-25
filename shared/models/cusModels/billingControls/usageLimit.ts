@@ -53,7 +53,10 @@ export const pickStricterUsageLimit = (
 	left: DbUsageLimit,
 	right: DbUsageLimit,
 ): DbUsageLimit => {
-	if (left.enabled !== right.enabled) return left.enabled ? left : right;
+	// Legacy rows reach here as raw JSON without the schema's enabled:true default.
+	const leftEnabled = left.enabled ?? true;
+	const rightEnabled = right.enabled ?? true;
+	if (leftEnabled !== rightEnabled) return leftEnabled ? left : right;
 	if (left.interval === right.interval) {
 		return right.limit < left.limit ? right : left;
 	}

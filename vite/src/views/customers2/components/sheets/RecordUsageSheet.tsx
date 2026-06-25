@@ -77,13 +77,13 @@ const showRecordUsageToast = ({
 
 	if (deducted <= 0) {
 		toast.warning("Usage recorded but not deducted", {
-			description: `The event was logged, but nothing was deducted — ${reason}.`,
+			description: `The event was logged, but nothing was deducted because ${reason}.`,
 		});
 		return;
 	}
 
 	toast.warning("Usage partially deducted", {
-		description: `Recorded ${requested}, but only ${deducted} was deducted — ${reason}.`,
+		description: `Recorded ${requested}, but only ${deducted} was deducted because ${reason}.`,
 	});
 };
 

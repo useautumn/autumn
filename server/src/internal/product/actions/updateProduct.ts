@@ -119,13 +119,32 @@ export const updateProduct = async ({
 	const billingControlsProvided = "billing_controls" in updates;
 
 	if (cusProductExists && !disable_version && billingControlsProvided) {
-		const { billingControlsSame } = productsAreSame({
+		const {
+			billingControlsSame,
+			itemsSame,
+			freeTrialsSame,
+			detailsSame,
+			configSame,
+			optionsSame,
+			metadataSame,
+		} = productsAreSame({
 			newProductV2: newProductV2,
 			curProductV2,
 			features,
 		});
 
-		if (!billingControlsSame) {
+		// Only take the billing-controls-only shortcut when nothing else changed;
+		// otherwise fall through so detail/default guards run on other fields.
+		const onlyBillingControlsChanged =
+			!billingControlsSame &&
+			itemsSame &&
+			freeTrialsSame &&
+			detailsSame &&
+			configSame &&
+			optionsSame &&
+			metadataSame;
+
+		if (onlyBillingControlsChanged) {
 			const newProduct = await handleVersionProductV2({
 				ctx,
 				newProductV2: newProductV2,

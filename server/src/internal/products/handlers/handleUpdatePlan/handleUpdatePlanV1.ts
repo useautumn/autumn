@@ -143,13 +143,32 @@ export const handleUpdatePlanV1 = createRoute({
 		const billingControlsProvided = "billing_controls" in v1_2Body;
 
 		if (cusProductExists && !disable_version && billingControlsProvided) {
-			const { billingControlsSame } = productsAreSame({
+			const {
+				billingControlsSame,
+				itemsSame,
+				freeTrialsSame,
+				detailsSame,
+				configSame,
+				optionsSame,
+				metadataSame,
+			} = productsAreSame({
 				newProductV2: newProductV2,
 				curProductV2,
 				features,
 			});
 
-			if (!billingControlsSame) {
+			// Only take the billing-controls-only shortcut when nothing else
+			// changed; otherwise fall through so detail/default guards run.
+			const onlyBillingControlsChanged =
+				!billingControlsSame &&
+				itemsSame &&
+				freeTrialsSame &&
+				detailsSame &&
+				configSame &&
+				optionsSame &&
+				metadataSame;
+
+			if (onlyBillingControlsChanged) {
 				const newProduct = await handleVersionProductV2({
 					ctx,
 					newProductV2: newProductV2,
@@ -190,12 +209,13 @@ export const handleUpdatePlanV1 = createRoute({
 			!disable_version &&
 			(itemsExist || freeTrialProvided)
 		) {
-			const { itemsSame, freeTrialsSame, billingControlsSame } = productsAreSame({
-				newProductV2: newProductV2,
-				curProductV1: fullProduct,
-				curProductV2: curProductV2,
-				features,
-			});
+			const { itemsSame, freeTrialsSame, billingControlsSame } =
+				productsAreSame({
+					newProductV2: newProductV2,
+					curProductV1: fullProduct,
+					curProductV2: curProductV2,
+					features,
+				});
 
 			const productSame = itemsSame && freeTrialsSame && billingControlsSame;
 

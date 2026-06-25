@@ -1,7 +1,9 @@
-import type {
-	ProductItem,
-	ProductItemInterval,
-	UpdateSubscriptionV0Params,
+import {
+	billingControlsFromColumns,
+	compareBillingControls,
+	type ProductItem,
+	type ProductItemInterval,
+	type UpdateSubscriptionV0Params,
 } from "@autumn/shared";
 import { useCallback } from "react";
 import { normalizeBillingRequestItems } from "@/components/forms/shared/utils/normalizeBillingRequestItems";
@@ -189,6 +191,14 @@ export function useUpdateSubscriptionRequestBody({
 			trialCardRequired,
 		});
 
+		// Only send billing_controls when they actually changed — the backend
+		// treats their presence as UpdatePlan intent, which would misroute a
+		// quantity-only edit.
+		const billingControlsChanged = !compareBillingControls({
+			newBillingControls: billingControls ?? undefined,
+			curBillingControls: billingControlsFromColumns(customerProduct),
+		});
+
 		return {
 			...base,
 			options: options.length > 0 ? options : undefined,
@@ -200,16 +210,16 @@ export function useUpdateSubscriptionRequestBody({
 			carry_over_usages: resetUsage ? { enabled: false } : undefined,
 			no_billing_changes: noBillingChanges || undefined,
 			discounts: validDiscounts,
-			billing_controls: billingControls ?? undefined,
+			billing_controls: billingControlsChanged
+				? (billingControls ?? undefined)
+				: undefined,
 		};
 	}, [
 		form.store,
 		customerId,
 		product?.id,
 		entityId,
-		customerProduct.id,
-		customerProduct.internal_product_id,
-		customerProduct.options,
+		customerProduct,
 		initialVersion,
 		currentPrepaidItems,
 		initialPrepaidOptions,
