@@ -151,6 +151,7 @@ const buildProduct = ({
 	base_variant_id: null,
 	archived: false,
 	config: { ignore_past_due: false },
+	metadata: {},
 });
 
 const buildEntitlement = ({

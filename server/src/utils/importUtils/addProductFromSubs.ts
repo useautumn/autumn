@@ -1,16 +1,17 @@
 import {
-    type EntitlementWithFeature,
-    type FullCustomer,
-    type FullProduct,
-    isUsagePrice,
-    type Price,
-    type UsagePriceConfig,
+	type EntitlementWithFeature,
+	type FullCustomer,
+	type FullProduct,
+	isUsagePrice,
+	type Price,
+	type UsagePriceConfig,
 } from "@autumn/shared";
 import type Stripe from "stripe";
 import { subToPeriodStartEnd } from "@/external/stripe/stripeSubUtils/convertSubUtils.js";
 import { stripeSubscriptionToAutumnStatus } from "@/external/stripe/subscriptions/index.js";
 import { subToAutumnInterval } from "@/external/stripe/utils.js";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
+import { getCancelFieldsFromStripe } from "@/internal/billing/v2/actions/sync/utils/initSyncFromStripe.js";
 import { createFullCusProduct } from "@/internal/customers/add-product/createFullCusProduct.js";
 import { PriceService } from "@/internal/products/prices/PriceService.js";
 import { SubService } from "@/internal/subscriptions/SubService.js";
@@ -67,7 +68,13 @@ export const addProductFromSubs = async ({
 	}
 
 	// Handle if trialing
-	const trialEndsAt = (sub?.status === "trialing" && sub?.trial_end) ? sub.trial_end * 1000 : null;
+	const trialEndsAt =
+		sub?.status === "trialing" && sub?.trial_end ? sub.trial_end * 1000 : null;
+
+	// Cancel/end timestamps (ended_at = ended_at ?? cancel_at for cancelling subs).
+	const cancelFields = sub
+		? getCancelFieldsFromStripe({ stripeSubscription: sub })
+		: {};
 
 	// 1. Insert custom prices...
 	const customPrices = prices?.filter((p) => p.is_custom);
@@ -115,7 +122,8 @@ export const addProductFromSubs = async ({
 			? stripeSubscriptionToAutumnStatus({ stripeStatus: sub?.status })
 			: undefined,
 
-		canceledAt: sub?.canceled_at ? sub.canceled_at * 1000 : null,
+		canceledAt: cancelFields.canceledAt ?? null,
+		endedAt: cancelFields.endedAt ?? null,
 
 		createdAt: sub?.created ? sub.created * 1000 : null,
 		sendWebhook: false,

@@ -13,13 +13,13 @@ import {
 	type ProductV2,
 	productsAreSame,
 	RecaseError,
+	Scopes,
 	UpdatePlanParamsV1Schema,
 	UpdatePlanQuerySchema,
 	UpdateProductQuerySchema,
 	UpdateProductSchema,
 	type UpdateProductV2Params,
 	UpdateProductV2ParamsSchema,
-	Scopes,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService.js";
@@ -35,6 +35,7 @@ import { ProductService } from "../../ProductService.js";
 import { handleNewProductItems } from "../../product-items/productItemUtils/handleNewProductItems.js";
 import { getPlanResponse } from "../../productUtils/productResponseUtils/getPlanResponse.js";
 import { initProductInStripe } from "../../productUtils.js";
+import { productRepo } from "../../repos/productRepo.js";
 import { handleVersionProductV2 } from "../handleVersionProduct.js";
 import { handleUpdateProductDetails } from "./updateProductDetails.js";
 
@@ -139,13 +140,28 @@ export const handleUpdatePlanV1 = createRoute({
 			logger: ctx.logger,
 		});
 
+		if (notNullish(v1_2Body.metadata)) {
+			await productRepo.updateMetadataByExternalId({
+				db,
+				orgId: org.id,
+				env,
+				id: v1_2Body.id || fullProduct.id,
+				metadata: v1_2Body.metadata,
+			});
+			fullProduct.metadata = v1_2Body.metadata;
+		}
+
 		const itemsExist = notNullish(v1_2Body.items);
 
 		const cusProductExists = cusProductsCurVersion.length > 0;
 
 		// Check if versioning is needed (customers exist AND items or free trial changed)
 		const freeTrialProvided = "free_trial" in body;
-		if (cusProductExists && !disable_version && (itemsExist || freeTrialProvided)) {
+		if (
+			cusProductExists &&
+			!disable_version &&
+			(itemsExist || freeTrialProvided)
+		) {
 			const { itemsSame, freeTrialsSame } = productsAreSame({
 				newProductV2: newProductV2,
 				curProductV1: fullProduct,

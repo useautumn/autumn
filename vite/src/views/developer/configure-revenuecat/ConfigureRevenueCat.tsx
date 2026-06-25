@@ -280,6 +280,10 @@ export const ConfigureRevenueCat = () => {
 			<RevenueCatSyncSheet
 				open={showSyncSheet}
 				onOpenChange={setShowSyncSheet}
+				onEditRawMappings={() => {
+					setShowSyncSheet(false);
+					setShowMappingSheet(true);
+				}}
 			/>
 		</div>
 	);

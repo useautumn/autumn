@@ -1,6 +1,7 @@
 import { FreeTrialParamsV1Schema } from "@api/common/freeTrial/freeTrialParamsV1.js";
 import { BasePriceParamsSchema } from "@api/products/components/basePrice/basePrice.js";
 import { ProductConfigParamsSchema } from "@models/productModels/productConfig/productConfig.js";
+import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { idRegex } from "@utils/utils.js";
 import { z } from "zod/v4";
 import { CreatePlanItemParamsV1Schema } from "../items/crud/createPlanItemParamsV1.js";
@@ -47,6 +48,11 @@ export const CreatePlanParamsV1Schema = z.object({
 		description: "Miscellaneous plan-level configuration flags.",
 	}),
 
+	metadata: ProductMetadataSchema.optional().meta({
+		description:
+			"Arbitrary key-value metadata defined by you for your own use (e.g. UI copy, feature highlights). Values can be any JSON-serializable value. Shared across all versions of the plan.",
+	}),
+
 	create_in_stripe: z.boolean().default(true).meta({
 		internal: true,
 	}),
@@ -54,13 +60,9 @@ export const CreatePlanParamsV1Schema = z.object({
 
 export const CreatePlanParamsV2Schema = z
 	.object({
-		plan_id: z
-			.string()
-			.nonempty()
-			.regex(idRegex)
-			.meta({
-				description: "The ID of the plan to create.",
-			}),
+		plan_id: z.string().nonempty().regex(idRegex).meta({
+			description: "The ID of the plan to create.",
+		}),
 	})
 	.extend(CreatePlanParamsV1Schema.omit({ id: true }).shape);
 

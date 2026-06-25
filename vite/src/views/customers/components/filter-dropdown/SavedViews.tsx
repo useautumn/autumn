@@ -43,6 +43,7 @@ export const SavedViews = ({
 			const versionParam = params.get("version") || "";
 			const noneParam = params.get("none");
 			const processorParam = params.get("processor") || "";
+			const intervalParam = params.get("interval") || "";
 
 			setFilters({
 				q: params.get("q") || "",
@@ -51,6 +52,9 @@ export const SavedViews = ({
 				none: noneParam === "true",
 				processor: processorParam
 					? processorParam.split(",").filter(Boolean)
+					: [],
+				interval: intervalParam
+					? intervalParam.split(",").filter(Boolean)
 					: [],
 			});
 
