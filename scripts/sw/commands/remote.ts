@@ -7,6 +7,7 @@ import {
 	REMOTE_WORKTREES_SUBDIR,
 	SCRIPT_DIR,
 } from "../constants.ts";
+import { installClaudeCredential } from "../helpers/claude.ts";
 import {
 	createVm,
 	scpTo,
@@ -20,6 +21,7 @@ import { exportDevDotenv } from "../helpers/infisical.ts";
 import { layoutPanes } from "../helpers/layout.ts";
 import { writeMarker } from "../helpers/marker.ts";
 import { createSwBranch } from "../helpers/neon.ts";
+import { ensureOpenListener } from "../helpers/open-listener.ts";
 import { upsertEntry } from "../helpers/registry.ts";
 import { fatal, log } from "../helpers/shell.ts";
 import { ensureSshKeyLoaded, sshExecArgs } from "../helpers/ssh.ts";
@@ -46,6 +48,8 @@ export async function cmdRemote({
 	// Load the key into the agent up front → one passphrase prompt for the whole
 	// run AND for any pane opened later (the wrapper reuses the agent).
 	ensureSshKeyLoaded();
+	// Mac-side listener so the box's xdg-open shim can pop links in your browser.
+	ensureOpenListener();
 
 	const neon = createSwBranch(slug);
 	// Unique per run: reusing a name reuses the hostname → host-key mismatch against
@@ -111,6 +115,9 @@ export async function cmdRemote({
 	if (vmExec(vm.ssh_dest, `bash ${provisionRemote} setup ${setupArgs}`) !== 0) {
 		fatal("remote setup phase failed");
 	}
+
+	// Copy your claude login (Keychain → box) so claude is signed in on the box.
+	installClaudeCredential(vm.ssh_dest);
 
 	// Drop the marker BEFORE laying out panes, so the wrapper auto-ssh's the claude
 	// split (and any pane you open later) into the box.

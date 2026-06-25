@@ -164,6 +164,7 @@ phase_setup() {
       {
         printf '\n# sw:env (managed)\n'
         printf 'export PATH="$HOME/.bun/bin:$HOME/.local/bin:$PATH"\n'
+        printf 'export BROWSER="$HOME/.local/bin/xdg-open"\n'
         printf "alias dev='tmux new -A -s %s-dev'\n" "$SLUG"
         printf "alias devlog='tmux capture-pane -pt %s-dev -S -200'\n" "$SLUG"
       } >>"$rc"
@@ -221,6 +222,19 @@ call({"id": "2", "method": "pane.send_input", "params": {
 print("swdown: tearing down on your Mac (in a new local pane)…")
 SWDOWN
   chmod +x "$BIN_DIR/swdown"
+
+  # Browser shim: a CLI that opens a non-local URL pops your Mac browser via the
+  # ssh reverse-forward (SW_OPEN_SOCK, set by the wrapper). Local URLs are no-ops.
+  cat >"$BIN_DIR/xdg-open" <<'XDGOPEN'
+#!/bin/sh
+url="${1:-}"
+case "$url" in
+  ""|http://localhost*|https://localhost*|http://127.*|https://127.*|http://0.0.0.0*|http://10.*|http://192.168.*|http://[::1]*|https://[::1]*) exit 0 ;;
+esac
+[ -n "${SW_OPEN_SOCK:-}" ] || exit 0
+printf '%s\n' "$url" | python3 -c "import socket,sys,os; s=socket.socket(socket.AF_UNIX); s.connect(os.environ['SW_OPEN_SOCK']); s.sendall(sys.stdin.buffer.read())" 2>/dev/null || true
+XDGOPEN
+  chmod +x "$BIN_DIR/xdg-open"
 
   # --- env: infisical export (base) + per-worktree native-service overrides ---
   local OVERRIDES MERGED

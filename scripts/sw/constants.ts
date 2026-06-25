@@ -28,6 +28,10 @@ export const STABLE_WRAPPER = join(STABLE_DIR, "worktree-shell.sh");
 /** sw-managed ssh-agent socket — a fixed path every sw process + pane shares, so a
  * herdr pane that lacks a reachable agent still authenticates once via Keychain. */
 export const SW_AGENT_SOCK = join(STABLE_DIR, "agent.sock");
+/** Mac-side unix socket the URL-open listener binds; the box reverse-forwards to
+ * it so a CLI on the devbox can open links in your local browser. */
+export const SW_OPEN_SOCK = join(STABLE_DIR, "open.sock");
+export const OPEN_LISTENER = join(SCRIPT_DIR, "shell/sw-open-listener.py");
 export const herdrConfigPath = (): string =>
 	join(CONFIG_HOME, "herdr", "config.toml");
 

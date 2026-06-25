@@ -71,13 +71,25 @@ fi
 # allow StreamLocalForwarding (provision.sh sets it).
 bridge_opt=""
 remote_env=""
-if [ -n "${HERDR_SOCKET_PATH:-}" ] && [ -n "${HERDR_PANE_ID:-}" ]; then
-  remote_sock="/tmp/herdr-$(printf '%s' "$HERDR_PANE_ID" | tr -c 'A-Za-z0-9' '_').sock"
+pane_key=""
+[ -n "${HERDR_PANE_ID:-}" ] && pane_key="$(printf '%s' "$HERDR_PANE_ID" | tr -c 'A-Za-z0-9' '_')"
+
+if [ -n "${HERDR_SOCKET_PATH:-}" ] && [ -n "$pane_key" ]; then
+  remote_sock="/tmp/herdr-${pane_key}.sock"
   bridge_opt="-R ${remote_sock}:${HERDR_SOCKET_PATH}"
   remote_env="export HERDR_ENV=1 HERDR_SOCKET_PATH='${remote_sock}'"
   remote_env="${remote_env} HERDR_PANE_ID='${HERDR_PANE_ID}'"
   remote_env="${remote_env} HERDR_TAB_ID='${HERDR_TAB_ID:-}'"
   remote_env="${remote_env} HERDR_WORKSPACE_ID='${HERDR_WORKSPACE_ID:-}';"
+fi
+
+# Browser-open bridge: forward a socket to the Mac listener (if running) so the
+# box's xdg-open shim can pop links in your local browser.
+mac_open_sock="${XDG_CONFIG_HOME:-$HOME/.config}/atmn-sw/open.sock"
+if [ -S "$mac_open_sock" ] && [ -n "$pane_key" ]; then
+  box_open_sock="/tmp/sw-open-${pane_key}.sock"
+  bridge_opt="${bridge_opt} -R ${box_open_sock}:${mac_open_sock}"
+  remote_env="${remote_env} export SW_OPEN_SOCK='${box_open_sock}';"
 fi
 
 # exec $SHELL on the REMOTE side resolves to the devbox's shell (not this wrapper).
