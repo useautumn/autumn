@@ -3,7 +3,10 @@ import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useCustomerFilters } from "./useCustomerFilters";
+import {
+	buildCustomerFilterPayload,
+	useCustomerFilters,
+} from "./useCustomerFilters";
 
 export const useCusSearchQuery = () => {
 	const { queryStates, isInitialized, currentCursor } = useCustomerFilters();
@@ -17,12 +20,7 @@ export const useCusSearchQuery = () => {
 			search: trimmedSearch,
 			cursor: currentCursor,
 			limit: queryStates.pageSize,
-			filters: {
-				status: queryStates.status,
-				version: queryStates.version,
-				none: queryStates.none,
-				processor: queryStates.processor,
-			},
+			filters: buildCustomerFilterPayload(queryStates),
 		});
 		return {
 			customers: data.customers as CustomerWithProducts[],
@@ -33,12 +31,7 @@ export const useCusSearchQuery = () => {
 	const countFetcher = async () => {
 		const { data } = await axiosInstance.post(`/customers/all/count`, {
 			search: trimmedSearch,
-			filters: {
-				status: queryStates.status,
-				version: queryStates.version,
-				none: queryStates.none,
-				processor: queryStates.processor,
-			},
+			filters: buildCustomerFilterPayload(queryStates),
 		});
 		return data.totalCount as number;
 	};
@@ -61,6 +54,7 @@ export const useCusSearchQuery = () => {
 			queryStates.version,
 			queryStates.none,
 			queryStates.processor,
+			queryStates.interval,
 			trimmedSearch,
 		]),
 		queryFn: fetcher,
@@ -75,6 +69,7 @@ export const useCusSearchQuery = () => {
 			queryStates.version,
 			queryStates.none,
 			queryStates.processor,
+			queryStates.interval,
 			trimmedSearch,
 		]),
 		queryFn: countFetcher,
