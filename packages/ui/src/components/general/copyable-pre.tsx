@@ -6,7 +6,9 @@ export function CopyablePre({ text }: { text: string }) {
 	return (
 		<div className="relative w-full min-w-0">
 			<pre className="text-sm bg-muted/50 p-4 rounded-lg overflow-auto border w-full h-full">
-				<CopyButton text={text} className="absolute top-2 right-2 z-10" />
+				<CopyButton text={text} className="absolute top-2 right-2 z-10">
+					<></>
+				</CopyButton>
 				<code className="text-sm block w-full whitespace-pre-wrap [overflow-wrap:anywhere]">
 					{text}
 				</code>
