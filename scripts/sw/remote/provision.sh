@@ -141,14 +141,18 @@ phase_setup() {
   # --- shell: zsh + your zshrc + tools on PATH for interactive ssh sessions ---
   log "setting up zsh + PATH"
   if command -v apt-get >/dev/null 2>&1; then
-    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq zsh >/dev/null 2>&1 || true
+    sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -qq zsh fzf zoxide >/dev/null 2>&1 || true
   fi
   if [ -f /tmp/sw-zshrc ]; then
     [ -f "$HOME/.zshrc" ] && cp "$HOME/.zshrc" "$HOME/.zshrc.sw-bak" 2>/dev/null || true
-    # Comment out top-level (col-0) macOS-only lines — homebrew PATH exports and
-    # launchctl. Guarded blocks (`if [[ -f /opt/homebrew/… ]]`) self-skip on Linux,
-    # and only col-0 matches so we never empty out an if-body and break syntax.
-    sed -E 's@^(export[[:space:]].*opt/homebrew.*|launchctl[[:space:]].*)@# sw-stripped (macOS-only): \1@' \
+    # Comment out top-level (col-0) macOS-only lines: homebrew + /Users/ PATH
+    # exports, /Users/ source lines, launchctl. Guarded blocks (`[ -f … ] && …`,
+    # `if [[ -f … ]]`) start with `[`/`if`, so they're untouched and self-skip on
+    # Linux — and only col-0 matches, so we never empty an if-body and break syntax.
+    sed -E \
+      -e 's@^(export[[:space:]].*(opt/homebrew|/Users/).*)@# sw-stripped (macOS-only): \1@' \
+      -e 's@^((source|\.)[[:space:]].*/Users/.*)@# sw-stripped (macOS path): \1@' \
+      -e 's@^(launchctl[[:space:]].*)@# sw-stripped (macOS-only): \1@' \
       /tmp/sw-zshrc >"$HOME/.zshrc"
   fi
   [ -f /tmp/sw-p10k.zsh ] && cp /tmp/sw-p10k.zsh "$HOME/.p10k.zsh"

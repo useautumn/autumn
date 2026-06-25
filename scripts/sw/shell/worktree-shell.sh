@@ -59,10 +59,27 @@ elif [ -z "${SSH_AUTH_SOCK:-}" ] && command -v launchctl >/dev/null 2>&1; then
   [ -n "$SSH_AUTH_SOCK" ] && export SSH_AUTH_SOCK
 fi
 
+# Agent-status bridge: reverse-forward herdr's per-pane socket to the box and
+# re-export the ids, so a coding agent (claude) running on the box reports its
+# session back to herdr and shows up in the agents sidebar. Needs the box sshd to
+# allow StreamLocalForwarding (provision.sh sets it).
+bridge_opt=""
+remote_env=""
+if [ -n "${HERDR_SOCKET_PATH:-}" ] && [ -n "${HERDR_PANE_ID:-}" ]; then
+  remote_sock="/tmp/herdr-$(printf '%s' "$HERDR_PANE_ID" | tr -c 'A-Za-z0-9' '_').sock"
+  bridge_opt="-R ${remote_sock}:${HERDR_SOCKET_PATH}"
+  remote_env="export HERDR_ENV=1 HERDR_SOCKET_PATH='${remote_sock}'"
+  remote_env="${remote_env} HERDR_PANE_ID='${HERDR_PANE_ID}'"
+  remote_env="${remote_env} HERDR_TAB_ID='${HERDR_TAB_ID:-}'"
+  remote_env="${remote_env} HERDR_WORKSPACE_ID='${HERDR_WORKSPACE_ID:-}';"
+fi
+
 # exec $SHELL on the REMOTE side resolves to the devbox's shell (not this wrapper).
 # The agent (sw started it) makes this passwordless; no ControlMaster (it breaks
 # against a box that isn't ssh-ready yet).
+# shellcheck disable=SC2086
 exec ssh -t \
   -o StrictHostKeyChecking=accept-new -o AddKeysToAgent=yes \
-  -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$host" \
-  "cd '${path}' 2>/dev/null || cd; exec \"\$SHELL\" -l"
+  -o ServerAliveInterval=30 -o ServerAliveCountMax=3 \
+  ${bridge_opt} "$host" \
+  "${remote_env} cd '${path}' 2>/dev/null || cd; exec \"\$SHELL\" -l"
