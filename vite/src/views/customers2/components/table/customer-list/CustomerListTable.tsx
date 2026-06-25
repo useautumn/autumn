@@ -11,7 +11,10 @@ import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useColumnVisibility } from "@autumn/ui";
 import { useEnv } from "@/utils/envUtils";
 import { pushPage } from "@/utils/genUtils";
-import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
+import {
+	hasActiveCustomerFilters,
+	useCustomerFilters,
+} from "@/views/customers/hooks/useCustomerFilters";
 import { FULL_CUSTOMERS_QUERY_KEY } from "@/views/customers/hooks/useFullCusSearchQuery";
 import { useCustomerListColumns } from "@/views/customers2/hooks/useCustomerListColumns";
 import { useCustomerTable } from "@/views/customers2/hooks/useCustomerTable";
@@ -135,11 +138,7 @@ export function CustomerListTable({
 
 	const hasRows = table.getRowModel().rows.length > 0;
 	const hasSearchQuery = Boolean(queryStates.q?.trim());
-	const hasFilters =
-		queryStates.status.length > 0 ||
-		queryStates.version.length > 0 ||
-		queryStates.none ||
-		queryStates.processor.length > 0;
+	const hasFilters = hasActiveCustomerFilters(queryStates);
 	const hasActiveFiltersOrSearch = hasSearchQuery || hasFilters;
 
 	if (!hasRows && !hasActiveFiltersOrSearch && !isFetchingUncached) {

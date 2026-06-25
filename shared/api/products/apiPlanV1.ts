@@ -1,6 +1,7 @@
 import { AppEnv } from "@models/genModels/genEnums.js";
 import { BillingInterval } from "@models/productModels/intervals/billingInterval.js";
 import { ProductConfigSchema } from "@models/productModels/productConfig/productConfig.js";
+import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { z } from "zod/v4";
 import { ApiFreeTrialV2Schema } from "./components/apiFreeTrialV2.js";
 import { CustomerEligibilitySchema } from "./components/customerEligibility.js";
@@ -42,6 +43,7 @@ export const API_PLAN_V1_EXAMPLE = {
 	config: {
 		ignore_past_due: false,
 	},
+	metadata: {},
 };
 
 export const ApiPlanV1Schema = z.object({
@@ -119,6 +121,11 @@ export const ApiPlanV1Schema = z.object({
 
 	config: ProductConfigSchema.meta({
 		description: "Miscellaneous plan-level configuration flags.",
+	}),
+
+	metadata: ProductMetadataSchema.meta({
+		description:
+			"Arbitrary key-value metadata defined by you for your own use. Shared across all versions of the plan.",
 	}),
 
 	customer_eligibility: CustomerEligibilitySchema.optional(),

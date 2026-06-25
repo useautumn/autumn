@@ -255,19 +255,25 @@ export const initRevenuecatCli = ({
 		},
 
 		listProducts: async () => {
-			const url = new URL(
-				`https://api.revenuecat.com/v2/projects/${projectId}/products`,
-			);
-			url.searchParams.set("limit", "20");
+			const items: RevenueCatProduct[] = [];
+			let nextPage:
+				| string
+				| null = `/v2/projects/${projectId}/products?limit=100`;
 
-			const response = await fetchImpl(url, { headers: authHeaders });
-			await checkOk(response);
-
-			const data = (await response.json()) as RevenueCatProductsResponse;
+			while (nextPage) {
+				const response = await fetchImpl(
+					new URL(`https://api.revenuecat.com${nextPage}`),
+					{ headers: authHeaders },
+				);
+				await checkOk(response);
+				const data = (await response.json()) as RevenueCatProductsResponse;
+				items.push(...data.items);
+				nextPage = data.next_page;
+			}
 
 			// Group products by store_identifier and combine names
 			const productMap = new Map<string, string[]>();
-			for (const product of data.items) {
+			for (const product of items) {
 				const existing = productMap.get(product.store_identifier);
 				if (existing) {
 					existing.push(product.display_name);

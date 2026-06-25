@@ -197,7 +197,7 @@ function MigrationSheetInner({
 		<div className="flex flex-col h-full">
 			<div className="flex-1 overflow-y-auto">
 				{sheetType === "select-feature" && <SelectFeatureSheet />}
-				{sheetType === "edit-plan-price" && <EditPlanPriceSheet />}
+				{sheetType === "edit-plan-price" && <EditPlanPriceSheet hideFooter />}
 				{sheetType === "edit-feature" && currentItem && (
 					<ProductItemContext.Provider
 						value={{

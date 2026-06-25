@@ -124,7 +124,7 @@ export function EditPlanFeatureSheet({
 		item.tiers[0].amount === 0 &&
 		!item.included_usage;
 
-	const hasChanges = hasItemChanges || isZeroPriceItem || !isUpdate;
+	const canConfirm = hasItemChanges || isZeroPriceItem || !isUpdate;
 
 	return (
 		<div className="flex flex-col h-full overflow-hidden">
@@ -218,7 +218,8 @@ export function EditPlanFeatureSheet({
 
 			{/* Footer stays at bottom */}
 			<SheetFooterActions
-				hasChanges={hasChanges}
+				isDirty={hasItemChanges}
+				canConfirm={canConfirm}
 				onBeforeCommit={handleBeforeCommit}
 			/>
 
