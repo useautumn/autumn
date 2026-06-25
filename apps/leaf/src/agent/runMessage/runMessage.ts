@@ -143,7 +143,7 @@ export const runMessage = async ({
 
 			const agentTools =
 				engine.name === "claude-managed"
-					? { destructiveTools: new Set<string>(), docsText: "" }
+					? { destructiveTools: new Set<string>() }
 					: await setupAgentToolContext({ env, logger, token });
 
 			const ctx: MessageContext = {

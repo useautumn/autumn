@@ -1,4 +1,4 @@
-import { defineConfig, docs, legacy } from "./src/config/define.js";
+import { defineConfig } from "./src/config/define.js";
 
 /**
  * The single place to declare what docs content becomes agent-facing, and in
@@ -16,24 +16,22 @@ export default defineConfig({
 			mcp: {
 				uri: "concepts",
 				priority: 0.95,
-				sources: [
-					legacy("concepts/intro.md"),
-					legacy("concepts/feature.md"),
-					legacy("concepts/plan.md"),
-					docs("documentation/concepts/plan-items.mdx"),
-					legacy("concepts/trials.md"),
-					legacy("concepts/customer-entity.md"),
-					legacy("concepts/billing-controls.md"),
-				],
+				document: "skills/concepts/concepts.mdx",
 			},
-			skill: { file: "skills/concepts.mdx" },
+			skill: { file: "skills/concepts/concepts.mdx" },
 		},
 	},
-	"modelling-pricing": {
-		title: "Modelling Pricing",
-		description: "Designing Autumn pricing models.",
+	catalog: {
+		title: "Catalog",
+		description:
+			"Designing Autumn pricing models — features, plans, plan items.",
 		formats: {
-			skill: { file: "skills/modelling-pricing.mdx" },
+			mcp: {
+				uri: "catalog",
+				priority: 0.945,
+				document: "skills/catalog/catalog.mdx",
+			},
+			skill: { file: "skills/catalog/catalog.mdx" },
 		},
 	},
 	billing: {

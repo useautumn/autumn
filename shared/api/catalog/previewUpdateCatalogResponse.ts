@@ -12,9 +12,9 @@ export const MigrationDraftSchema = z.object({
 	no_billing_changes: z.boolean(),
 });
 
-/** Resolved preview for a single plan in the proposed catalog change. */
-export const CatalogPlanPreviewSchema = z.object({
-	plan: ApiPlanV1Schema,
+/** Resolved preview for a single plan in the proposed catalog change — the
+ * full ApiPlanV1 plus the preview-only impact fields. */
+export const CatalogPlanPreviewSchema = ApiPlanV1Schema.extend({
 	// In-place edits to a plan with customers force a new version instead.
 	will_version: z.boolean(),
 	has_customers: z.boolean(),

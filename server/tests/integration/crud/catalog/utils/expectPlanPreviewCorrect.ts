@@ -25,7 +25,7 @@ export const expectPlanPreviewCorrect = ({
 	hasMigrationDraft?: boolean;
 	items?: ItemExpectation[];
 }): CatalogPlanPreview => {
-	const result = preview.plans.find((plan) => plan.plan.id === planId);
+	const result = preview.plans.find((plan) => plan.id === planId);
 	expect(result, `No plan preview for ${planId}`).toBeDefined();
 	const planPreview = result as CatalogPlanPreview;
 
@@ -61,7 +61,7 @@ export const expectPlanPreviewCorrect = ({
 
 	if (items) {
 		for (const expectedItem of items) {
-			const item = planPreview.plan.items?.find(
+			const item = planPreview.items?.find(
 				(candidate) => candidate.feature_id === expectedItem.featureId,
 			);
 			expect(item, `item ${expectedItem.featureId} on ${planId}`).toBeDefined();

@@ -7,6 +7,7 @@ import {
 	isSilentTool,
 	isToolErrorResult,
 	normalizeToolName,
+	sandboxToolLabel,
 	toolLabel,
 } from "../../../agent/tools/toolPolicy.js";
 import { approvalErrorResult } from "../../../internal/approvals/utils/approvalErrors.js";
@@ -116,7 +117,10 @@ export const runClaudeManagedTurn = async ({
 			},
 			onAutumnToolResult: ({ id, name, output }) => {
 				if (isPreviewTool(name) && !isToolErrorResult(output)) {
-					lastPreview = { preview: output, previewTool: normalizeToolName(name) };
+					lastPreview = {
+						preview: output,
+						previewTool: normalizeToolName(name),
+					};
 				}
 				const toolSpan = openToolSpans.get(id);
 				if (toolSpan) {
@@ -125,7 +129,7 @@ export const runClaudeManagedTurn = async ({
 					openToolSpans.delete(id);
 				}
 			},
-			onSandboxTool: async ({ input }) => {
+			onSandboxTool: async ({ input, name }) => {
 				const command = typeof input.command === "string" ? input.command : "";
 				const seconds = Number(command.match(SLEEP_COMMAND_REGEX)?.[1] ?? 0);
 				if (seconds >= SURFACED_SLEEP_MIN_SECONDS) {
@@ -133,7 +137,10 @@ export const runClaudeManagedTurn = async ({
 						key: "sandbox_wait",
 						message: `Waiting ${seconds}s before retrying…`,
 					});
+					return;
 				}
+				// Surface other sandbox tools (e.g. `read` loading a skill) live.
+				await onAction?.(sandboxToolLabel(name, input));
 			},
 			onThinking,
 			onSessionRetry: async ({ message }) => {

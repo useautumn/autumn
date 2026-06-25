@@ -1,9 +1,11 @@
 ---
-name: autumn-modelling-pricing
+name: autumn-catalog
 description: Designing or changing an Autumn pricing model — features, plans, plan items, and how usage is granted or billed (in autumn.config.ts, the API, or the dashboard). Use when the user discusses pricing, plans, tiers, credits, seats, overage, prepaid, or trials.
 ---
 
-Before using this skill, first load the `autumn-concepts` skill — it defines Autumn's data model — features, plans, plan items, balances — which every modeling decision builds on.
+# Catalog
+
+<skill name="autumn-concepts" reason="it defines Autumn's data model — features, plans, plan items, balances — which every modeling decision builds on" />
 
 ## Approach
 
@@ -24,20 +26,20 @@ Before using this skill, first load the `autumn-concepts` skill — it defines A
 
 Load the matching reference when modeling that pattern.
 
-For charging for usage beyond an included allowance (pay-in-arrears overage), read `references/usage-based-pricing.md`.
+<reference url="/documentation/modelling-pricing/usage-based-pricing" when="charging for usage beyond an included allowance (pay-in-arrears overage)" />
 
-For selling a quantity bought upfront (seats, credit packs, selectable buckets), read `references/prepaid-pricing.md`.
+<reference url="/documentation/modelling-pricing/prepaid-pricing" when="selling a quantity bought upfront (seats, credit packs, selectable buckets)" />
 
-For pricing that changes by volume tier, read `references/volume-based-tiers.md`.
+<reference url="/documentation/modelling-pricing/volume-based-tiers" when="pricing that changes by volume tier" />
 
-For modeling $X per unit (seat, project) — always with a base fee, read `references/per-unit-pricing.md`.
+<reference url="/documentation/modelling-pricing/per-unit-pricing" when="modeling $X per unit (seat, project) — always with a base fee" />
 
-For modeling several actions or endpoints that draw from one shared meter, read `references/credit-systems.md`.
+<reference url="/documentation/modelling-pricing/credit-systems" when="modeling several actions or endpoints that draw from one shared meter" />
 
-For modeling a free or default plan, read `references/free-plans.md`.
+<reference url="/documentation/modelling-pricing/free-plans" when="modeling a free or default plan" />
 
-For modeling a recurring subscription plan, read `references/recurring.md`.
+<reference url="/documentation/modelling-pricing/recurring" when="modeling a recurring subscription plan" />
 
-For modeling one-off purchases or top-ups, read `references/one-off-purchases.md`.
+<reference url="/documentation/modelling-pricing/one-off-purchases" when="modeling one-off purchases or top-ups" />
 
-For adding a trial to a plan, read `references/trials.md`.
+<reference url="/documentation/modelling-pricing/trials" when="adding a trial to a plan" />

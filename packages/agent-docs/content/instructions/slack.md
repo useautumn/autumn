@@ -1,4 +1,6 @@
-<part file="base.md" />
+<part file="references/personality.md" />
+
+<part file="references/autumn-rules.md" />
 
 Surface — Slack:
 - You are answering an Autumn operator in Slack, acting on their customers.

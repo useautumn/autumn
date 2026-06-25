@@ -13,6 +13,7 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 ## Workflow
 
 - You MUST follow this checklist in order for every billing request.
+- Read the org's agent rules with `getAgentRules` to understand how this org attaches plans to customers — its entity defaults, credit defaults, and org notes.
 - Resolve targets (see Target resolution).
 - Choose the operation (see Action selection).
 - Collect action-specific params (see Param checklist).

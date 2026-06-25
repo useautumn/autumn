@@ -62,6 +62,12 @@ export const handleUpdateCatalog = createRoute({
 			}
 		}
 
+		// Reload features so plans created below resolve the ones just upserted —
+		// ctx.features is the request-start snapshot and would 404 a new feature.
+		if (features.length > 0) {
+			ctx.features = await FeatureService.list({ db, orgId: org.id, env });
+		}
+
 		// 2. Upsert plans; create migration drafts for in-place customer changes.
 		const migrations: MigrationDraft[] = [];
 		for (const planParams of plans) {

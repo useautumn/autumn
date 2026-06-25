@@ -32,7 +32,7 @@ const toMessageListInput = (params: MessageParams) => [
 export const mastraEngine: AgentEngine = {
 	name: "mastra",
 	run: async ({ ctx, params }) => {
-		const { agentTools, env, logger, onAction, org, thread, token } = ctx;
+		const { env, logger, onAction, org, thread, token } = ctx;
 		const mcp = createAutumnMcpClient({
 			token,
 			appEnv: env,
@@ -59,7 +59,6 @@ export const mastraEngine: AgentEngine = {
 			});
 			await onAction?.("Reasoning over the request");
 			const agent = createAutumnChatAgent({
-				docsText: agentTools.docsText,
 				env,
 				model: chatEnv.CHAT_MODEL,
 				tools: { ...tools, ...firecrawlTools },

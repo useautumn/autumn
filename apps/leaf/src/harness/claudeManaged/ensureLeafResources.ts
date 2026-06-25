@@ -3,8 +3,13 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv } from "@autumn/shared";
 import { setupAgentToolContext } from "../../agent/runMessage/setup/setupAgentToolContext.js";
 import { env as chatEnv } from "../../lib/env.js";
-import { leafSystemPrompt } from "@autumn/agent-docs/agent";
+import { leafSystemPrompt, type LeafSurface } from "@autumn/agent-docs/agent";
 import { claudeManagedConfig } from "./config.js";
+import {
+	ensureLeafSkills,
+	type LeafSkillRef,
+	skillsMatch,
+} from "./skills.js";
 import {
 	buildDesiredTools,
 	builtinSignatureFromToolset,
@@ -48,32 +53,40 @@ const findAgentByName = async (client: Anthropic, name: string) => {
 	return undefined;
 };
 
-// The shared Claude Managed agent serves Slack; web uses the mastra engine.
-export const buildAgentSystem = ({ docsText }: { docsText: string }) =>
-	[leafSystemPrompt("slack"), docsText].filter(Boolean).join("\n\n");
+// Knowledge is attached as skills (ensureLeafSkills) and loads on demand; the
+// system carries just the surface instructions.
+export const buildAgentSystem = ({ surface }: { surface: LeafSurface }) =>
+	leafSystemPrompt(surface);
+
+const agentNameForSurface = (surface: LeafSurface) =>
+	surface === "slack"
+		? claudeManagedConfig.agentName
+		: `${claudeManagedConfig.agentName} Dashboard`;
 
 // Keep the shared agent config in sync with local code/tunnel changes.
 // Dev re-syncs every turn; prod syncs once per process.
 const alwaysResync = process.env.NODE_ENV !== "production";
-let agentConfigSynced = false;
+const syncedSurfaces = new Set<LeafSurface>();
 const syncAgentConfig = async ({
 	agentId,
 	client,
 	destructiveTools,
-	docsText,
 	expectedUrl,
 	logger,
+	skills,
+	surface,
 }: {
 	agentId: string;
 	client: Anthropic;
 	destructiveTools: Iterable<string>;
-	docsText: string;
 	expectedUrl: string;
 	logger: AutumnLogger;
+	skills: LeafSkillRef[];
+	surface: LeafSurface;
 }) => {
-	if (agentConfigSynced && !alwaysResync) return;
+	if (syncedSurfaces.has(surface) && !alwaysResync) return;
 	const agent = await client.beta.agents.retrieve(agentId);
-	const expectedSystem = buildAgentSystem({ docsText });
+	const expectedSystem = buildAgentSystem({ surface });
 	const currentUrl = agent.mcp_servers?.find(
 		(server) => server.name === claudeManagedConfig.autumnMcpServerName,
 	)?.url;
@@ -88,7 +101,14 @@ const syncAgentConfig = async ({
 	const systemChanged = agent.system !== expectedSystem;
 	const modelChanged = agent.model.id !== claudeManagedConfig.model;
 	const toolsChanged = currentBuiltinSig !== desiredBuiltinSignature();
-	if (mcpUrlChanged || systemChanged || modelChanged || toolsChanged) {
+	const skillsChanged = !skillsMatch(agent.skills, skills);
+	if (
+		mcpUrlChanged ||
+		systemChanged ||
+		modelChanged ||
+		toolsChanged ||
+		skillsChanged
+	) {
 		await client.beta.agents.update(agentId, {
 			...(mcpUrlChanged
 				? {
@@ -106,6 +126,7 @@ const syncAgentConfig = async ({
 			...(toolsChanged
 				? { tools: buildDesiredTools({ destructiveTools }) }
 				: {}),
+			...(skillsChanged ? { skills } : {}),
 			version: agent.version,
 		});
 		logger.info("Refreshed Claude Managed agent config", {
@@ -125,42 +146,48 @@ const syncAgentConfig = async ({
 			},
 		});
 	}
-	agentConfigSynced = true;
+	syncedSurfaces.add(surface);
 };
 
-let cachedResources: { agentId: string; environmentId: string } | undefined;
+const cachedResources = new Map<
+	LeafSurface,
+	{ agentId: string; environmentId: string }
+>();
 export const ensureLeafResources = async ({
 	client,
 	env,
 	logger,
+	surface,
 	token,
 }: {
 	client: Anthropic;
 	env: AppEnv;
 	logger: AutumnLogger;
+	surface: LeafSurface;
 	token: string;
 }): Promise<{ agentId: string; environmentId: string }> => {
 	const mcpUrl = autumnMcpUrl();
-	if (cachedResources && agentConfigSynced && !alwaysResync) {
-		return cachedResources;
+	const cached = cachedResources.get(surface);
+	if (cached && syncedSurfaces.has(surface) && !alwaysResync) {
+		return cached;
 	}
 
-	const { destructiveTools, docsText } = await setupAgentToolContext({
-		env,
-		logger,
-		token,
-	});
+	const [{ destructiveTools }, skills] = await Promise.all([
+		setupAgentToolContext({ env, logger, token }),
+		ensureLeafSkills(client),
+	]);
 
-	if (cachedResources) {
+	if (cached) {
 		await syncAgentConfig({
-			agentId: cachedResources.agentId,
+			agentId: cached.agentId,
 			client,
 			destructiveTools,
-			docsText,
 			expectedUrl: mcpUrl,
 			logger,
+			skills,
+			surface,
 		});
-		return cachedResources;
+		return cached;
 	}
 
 	const environmentId =
@@ -175,21 +202,23 @@ export const ensureLeafResources = async ({
 			})
 		).id;
 
-	let agentId = await findAgentByName(client, claudeManagedConfig.agentName);
+	const agentName = agentNameForSurface(surface);
+	let agentId = await findAgentByName(client, agentName);
 	if (agentId) {
 		await syncAgentConfig({
 			agentId,
 			client,
 			destructiveTools,
-			docsText,
 			expectedUrl: mcpUrl,
 			logger,
+			skills,
+			surface,
 		});
 	} else {
 		const agent = await client.beta.agents.create({
 			model: claudeManagedConfig.model,
-			name: claudeManagedConfig.agentName,
-			system: buildAgentSystem({ docsText }),
+			name: agentName,
+			system: buildAgentSystem({ surface }),
 			mcp_servers: [
 				{
 					name: claudeManagedConfig.autumnMcpServerName,
@@ -197,16 +226,18 @@ export const ensureLeafResources = async ({
 					url: mcpUrl,
 				},
 			],
+			skills,
 			tools: buildDesiredTools({ destructiveTools }),
 		});
 		agentId = agent.id;
-		agentConfigSynced = true;
+		syncedSurfaces.add(surface);
 		logger.info("Created shared Claude Managed agent", {
 			event: "leaf.claude_managed_agent_created",
-			data: { agent_id: agentId, environment_id: environmentId },
+			data: { agent_id: agentId, environment_id: environmentId, surface },
 		});
 	}
 
-	cachedResources = { agentId, environmentId };
-	return cachedResources;
+	const resources = { agentId, environmentId };
+	cachedResources.set(surface, resources);
+	return resources;
 };

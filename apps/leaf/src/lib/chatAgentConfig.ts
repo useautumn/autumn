@@ -23,7 +23,7 @@ export const claudeManagedMemoryEnabled = false;
 export type AgentHarnessName = "claude-managed" | "mastra";
 
 export const DEFAULT_SLACK_AGENT_HARNESS: AgentHarnessName = "claude-managed";
-export const DEFAULT_WEB_AGENT_HARNESS: AgentHarnessName = "mastra";
+export const DEFAULT_WEB_AGENT_HARNESS: AgentHarnessName = "claude-managed";
 export const DEFAULT_AGENT_HARNESS = DEFAULT_SLACK_AGENT_HARNESS;
 
 /**

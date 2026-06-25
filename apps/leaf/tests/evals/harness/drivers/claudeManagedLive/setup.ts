@@ -1,38 +1,19 @@
 import type Anthropic from "@anthropic-ai/sdk";
+import { leafSkillsText, leafSystemPrompt } from "@autumn/agent-docs/agent";
 import type { AppEnv } from "@autumn/shared";
 import { MCPClient } from "@mastra/mcp";
-import { agentDocBundleUris } from "@autumn/agent-docs/agent";
-import { leafSystemPrompt } from "@autumn/agent-docs/agent";
 import { claudeManagedConfig } from "../../../../../src/harness/claudeManaged/config.js";
 import type { EvalDriverMessage } from "../types.js";
 
-const readDocs = async (mcpClient: MCPClient) => {
-	const resources = await Promise.allSettled(
-		agentDocBundleUris.map((uri) => mcpClient.resources.read("autumn", uri)),
-	);
-	return resources
-		.flatMap((result) =>
-			result.status === "fulfilled"
-				? result.value.contents.flatMap((content) =>
-						"text" in content ? [content.text] : [],
-					)
-				: [],
-		)
-		.join("\n\n");
-};
-
-// Read tool defs (for the always_ask destructive set) + docs from the LOCAL mock
-// — the eval process reaches localhost directly, no tunnel needed.
+// Read tool defs (for the always_ask destructive set) from the LOCAL mock — the
+// eval process reaches localhost directly, no tunnel needed.
 export const loadMcpMetadata = async ({ url }: { url: URL }) => {
 	const mcpClient = new MCPClient({
 		id: `cma-live-eval-${crypto.randomUUID()}`,
 		servers: { autumn: { url } },
 	});
 	try {
-		const [{ toolsets, errors }, docsText] = await Promise.all([
-			mcpClient.listToolsetsWithErrors(),
-			readDocs(mcpClient),
-		]);
+		const { toolsets, errors } = await mcpClient.listToolsetsWithErrors();
 		if (Object.keys(errors).length) {
 			throw new Error(`MCP tool discovery failed: ${JSON.stringify(errors)}`);
 		}
@@ -45,7 +26,7 @@ export const loadMcpMetadata = async ({ url }: { url: URL }) => {
 				.filter(([, tool]) => tool.mcp?.annotations?.destructiveHint === true)
 				.map(([name]) => name),
 		);
-		return { destructiveTools, docsText };
+		return { destructiveTools };
 	} finally {
 		await mcpClient.disconnect();
 	}
@@ -64,14 +45,12 @@ const ensureEvalEnvironment = async (client: Anthropic) => {
 
 const buildAgentConfig = ({
 	destructiveTools,
-	docsText,
 	env,
 	mcpUrl,
 	model,
 	today,
 }: {
 	destructiveTools: Set<string>;
-	docsText: string;
 	env: AppEnv;
 	mcpUrl: string;
 	model: string;
@@ -83,7 +62,7 @@ const buildAgentConfig = ({
 		leafSystemPrompt("slack"),
 		`Current Autumn environment: ${env}.`,
 		today ? `Current date: ${today.toISOString()}.` : null,
-		docsText,
+		leafSkillsText(),
 	]
 		.filter((section): section is string => Boolean(section))
 		.join("\n\n"),
@@ -124,7 +103,6 @@ export const ensureEvalAgent = async ({
 }: {
 	client: Anthropic;
 	destructiveTools: Set<string>;
-	docsText: string;
 	env: AppEnv;
 	mcpUrl: string;
 	model: string;

@@ -2,11 +2,9 @@ import {
 	ApiVersion,
 	ApiVersionClass,
 	type CatalogFeaturePreview,
-	type CatalogUpdateParams,
 	dbToApiFeatureV1,
 	type Feature,
 	type FullProduct,
-	featureV1ToDbFeature,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import {
@@ -14,8 +12,6 @@ import {
 	isBlockableFeatureChange,
 } from "@/internal/features/utils/updateFeatureUtils/detectFeatureUpdateBlockers.js";
 import { getObjectsUsingFeature } from "@/internal/features/utils/updateFeatureUtils/getObjectsUsingFeature.js";
-
-type FeatureParams = CatalogUpdateParams["features"][number];
 
 const FEATURE_TARGET_VERSION = new ApiVersionClass(ApiVersion.V2_1);
 
@@ -25,20 +21,15 @@ const FEATURE_TARGET_VERSION = new ApiVersionClass(ApiVersion.V2_1);
  */
 export const previewFeature = async ({
 	ctx,
-	featureParams,
+	dbFeature,
 	existing,
 	products,
 }: {
 	ctx: AutumnContext;
-	featureParams: FeatureParams;
+	dbFeature: Feature;
 	existing: Feature | null;
 	products: FullProduct[];
 }): Promise<CatalogFeaturePreview> => {
-	const dbFeature = featureV1ToDbFeature({
-		apiFeature: { id: featureParams.feature_id, ...featureParams },
-		originalFeature: existing ?? undefined,
-	});
-
 	const feature = dbToApiFeatureV1({
 		ctx,
 		dbFeature,

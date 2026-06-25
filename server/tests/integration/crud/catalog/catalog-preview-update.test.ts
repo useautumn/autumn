@@ -12,6 +12,8 @@
  *        - new feature (does not exist) → resolved, no blockers
  *        - existing feature, non-blockable change (name) → no blockers
  *        - existing feature attached to a customer, type change → attached_to_customer
+ *   D. batch upsert — a plan may reference a feature created in the SAME batch;
+ *      the preview virtually upserts features before resolving plans (no 404).
  *
  * Nothing here persists, so feature-blocker cases can safely target the shared
  * org's features.
@@ -196,6 +198,58 @@ test.concurrent(
 			preview: blocked,
 			featureId: TestFeature.Messages,
 			blockerCodes: ["attached_to_customer"],
+		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalog preview: a plan can reference a feature created in the same batch")}`,
+	async () => {
+		const customerId = "catalog-preview-batch-upsert";
+		const newFeatureId = "catalog_preview_batch_feature";
+		const planId = "catalog_preview_batch_plan";
+
+		const { autumnV2_2 } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false })],
+			actions: [],
+		});
+
+		// ── D: net-new feature + a plan that uses it, in one preview call ──
+		const preview = await autumnV2_2.post("/catalog.preview_update", {
+			features: [
+				{
+					feature_id: newFeatureId,
+					name: "Batch Feature",
+					type: "metered",
+					consumable: true,
+				},
+			],
+			plans: [
+				{
+					plan_id: planId,
+					name: "Batch Plan",
+					items: [
+						{
+							feature_id: newFeatureId,
+							included: 100,
+							reset: { interval: "month" },
+						},
+					],
+				},
+			],
+		});
+
+		expectFeaturePreviewCorrect({
+			preview,
+			featureId: newFeatureId,
+			type: FeatureType.Metered,
+			noBlockers: true,
+		});
+		expectPlanPreviewCorrect({
+			preview,
+			planId,
+			items: [{ featureId: newFeatureId, included: 100 }],
 		});
 	},
 );

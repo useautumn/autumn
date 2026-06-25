@@ -18,6 +18,7 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 ## Workflow
 
 - You MUST follow this checklist in order for every billing request.
+- Read the org's agent rules with `getAgentRules` to understand how this org attaches plans to customers — its entity defaults, credit defaults, and org notes.
 - Resolve targets (see Target resolution).
 - Choose the operation (see Action selection).
 - Collect action-specific params (see Param checklist).
@@ -58,7 +59,7 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
 - If an ID had to be inferred from a name or description, confirm the match with the user before moving on.
 - If the found customer has no email, remember that and ask for it before any invoice or checkout step.
 
-<part file="actions.md" when="choosing which billing action to run (attach, updateSubscription, createSchedule)" />
+<part file="references/actions.md" when="choosing which billing action to run (attach, updateSubscription, createSchedule)" />
 
 ## Param checklist
 
@@ -79,11 +80,11 @@ Read `autumn://docs/concepts` to understand Autumn's model: Customer, Entity, Pl
   - Each phase needs timing (`starts_at` or `starting_after`) and at least one `plans[]` entry.
 - If a missing value changes billing impact, ask before previewing.
 
-<part file="customize.md" when="applying customer-specific plan terms or price overrides" />
+<part file="references/customize.md" when="applying customer-specific plan terms or price overrides" />
 
-<part file="timing-schedules.md" when="resolving when a billing change takes effect or building schedule phases" />
+<part file="references/timing-schedules.md" when="resolving when a billing change takes effect or building schedule phases" />
 
-<part file="billing-behavior.md" when="resolving invoice, checkout, and proration behavior" />
+<part file="references/billing-behavior.md" when="resolving invoice, checkout, and proration behavior" />
 
 ## Preview and approval
 

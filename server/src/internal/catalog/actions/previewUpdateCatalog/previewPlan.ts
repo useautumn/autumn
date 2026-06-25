@@ -40,6 +40,9 @@ export const previewPlan = async ({
 		version: current?.version ?? 1,
 		created_at: current?.created_at ?? Date.now(),
 		...resolved,
+		// Project the post-update plan: keep the existing name when the update
+		// doesn't change it (falling back to the id for a brand-new plan).
+		name: resolved.name || current?.name || plan_id,
 	} as ProductV2;
 
 	const plan = productV2ToApiPlanV1({
@@ -77,7 +80,7 @@ export const previewPlan = async ({
 	}
 
 	return {
-		plan,
+		...plan,
 		will_version: willVersion,
 		has_customers: hasCustomers,
 		migration_draft: migrationDraft,

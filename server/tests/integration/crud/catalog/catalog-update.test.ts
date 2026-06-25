@@ -3,10 +3,8 @@
  *
  * Contract under test:
  *   POST /v1/catalog.preview_update (read-only, NO persist):
- *     - plans[].plan: ApiPlanV1 (proposed plan resolved, items reflect the change)
- *     - plans[].will_version: boolean (true when a plan with customers changes)
- *     - plans[].has_customers: boolean
- *     - plans[].migration_draft: { id, filter, operations, no_billing_changes } | null
+ *     - plans[]: ApiPlanV1 (proposed plan resolved, items reflect the change) +
+ *       will_version, has_customers, migration_draft impact fields, flattened
  *     - does NOT persist (plans.get still returns the original plan)
  *   POST /v1/catalog.update:
  *     - creates a new plan when plan_id does not exist
@@ -57,8 +55,8 @@ test.concurrent(
 		// ── Contract 1: resolved ApiPlan reflects the proposed change ──
 		expect(preview.plans).toHaveLength(1);
 		const result = preview.plans[0];
-		expect(result.plan.id).toBe(prod.id);
-		const messagesItem = result.plan.items.find(
+		expect(result.id).toBe(prod.id);
+		const messagesItem = result.items.find(
 			(item: { feature_id: string }) => item.feature_id === "messages",
 		);
 		expect(messagesItem?.included).toBe(500);
@@ -113,5 +111,60 @@ test.concurrent(
 		const got = await autumnV2_2.post("/plans.get", { plan_id: newPlanId });
 		expect(got.id).toBe(newPlanId);
 		expect(got.price?.amount).toBe(10);
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("catalog: update creates a plan referencing a feature created in the same call")}`,
+	async () => {
+		// Regression: the plan 404'd ("feature not found") because plan creation
+		// resolved features against the request-start snapshot, which did not
+		// include the feature created earlier in the same batch.
+		const customerId = "catalog-update-feature-plan";
+		const { autumnV2_2 } = await initScenario({
+			customerId,
+			setup: [s.customer({ testClock: false })],
+			actions: [],
+		});
+
+		const featureId = "catalog_update_batch_feature";
+		const planId = "catalog_update_batch_plan";
+		const res = await autumnV2_2.post("/catalog.update", {
+			features: [
+				{
+					feature_id: featureId,
+					name: "Credits",
+					type: "metered",
+					consumable: true,
+				},
+			],
+			plans: [
+				{
+					plan_id: planId,
+					name: "Pro",
+					price: { amount: 20, interval: "month" },
+					items: [
+						{
+							feature_id: featureId,
+							included: 100,
+							reset: { interval: "month" },
+						},
+					],
+				},
+			],
+		});
+
+		// ── Contract: feature persisted ──
+		expect(
+			res.features.find((feature: { id: string }) => feature.id === featureId),
+		).toBeDefined();
+
+		// ── Contract: plan persisted with the new feature as an item ──
+		const plan = await autumnV2_2.post("/plans.get", { plan_id: planId });
+		expect(plan.id).toBe(planId);
+		const item = plan.items.find(
+			(entry: { feature_id: string }) => entry.feature_id === featureId,
+		);
+		expect(item?.included).toBe(100);
 	},
 );

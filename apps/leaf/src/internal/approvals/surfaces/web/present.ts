@@ -1,7 +1,7 @@
 import type { AutumnLogger } from "@autumn/logging";
 import type { ChatProvider } from "@autumn/shared";
-import { db } from "../../../../lib/db.js";
 import type { AgentHarnessName } from "../../../../lib/chatAgentConfig.js";
+import { db } from "../../../../lib/db.js";
 import { logger as rootLogger } from "../../../../lib/logger.js";
 import type { AgentOutput } from "../../../../types.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
@@ -40,7 +40,7 @@ export const presentWebApproval = async ({
 	providerUserId: string;
 	token: string;
 	workspaceId: string;
-}): Promise<string | undefined> => {
+}): Promise<{ approvalId: string; preview: unknown } | undefined> => {
 	const approval = approvalRequestFromOutput(output);
 	if (!approval) return undefined;
 	if (!(approval.runId && approval.toolCallId)) {
@@ -98,5 +98,5 @@ export const presentWebApproval = async ({
 		tool: approval.toolName,
 	});
 
-	return approvalId;
+	return { approvalId, preview: approval.preview };
 };

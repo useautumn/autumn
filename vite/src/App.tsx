@@ -119,6 +119,7 @@ export default function App() {
 						)}
 
 						{envRoutes("chat", <ChatView />)}
+						{envRoutes("chat/:threadId", <ChatView />)}
 						{envRoutes("customers", <CustomersPage />)}
 						{envRoutes("customers/:customer_id", <CustomerView2 />)}
 						{envRoutes(

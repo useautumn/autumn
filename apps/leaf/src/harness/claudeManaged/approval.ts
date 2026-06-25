@@ -56,8 +56,18 @@ export const resumeClaudeManagedApproval = async ({
 	const writeResult =
 		outcome.toolResults?.find((result) => result.id === toolUseId) ??
 		outcome.toolResults?.at(-1);
-	if (isErrorResult(writeResult?.output) || (outcome.errorMessage && !text)) {
-		return approvalErrorResult(writeResult?.output ?? outcome.errorMessage);
+	// Only a clean, present write result counts as success — otherwise the
+	// dashboard would show "Applied" for a write that errored or never ran.
+	if (outcome.errorMessage) {
+		return approvalErrorResult(outcome.errorMessage);
 	}
-	return { result: writeResult?.output, text, toolName: writeResult?.name };
+	if (!writeResult) {
+		return approvalErrorResult(
+			"The write did not complete — no tool result was returned.",
+		);
+	}
+	if (isErrorResult(writeResult.output)) {
+		return approvalErrorResult(writeResult.output);
+	}
+	return { result: writeResult.output, text, toolName: writeResult.name };
 };

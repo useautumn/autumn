@@ -66,7 +66,13 @@ export const claudeManagedEngine: AgentEngine = {
 				vaultId,
 			} = await all({
 				async resources() {
-					return ensureLeafResources({ client, env, logger, token });
+					return ensureLeafResources({
+						client,
+						env,
+						logger,
+						surface: thread.provider === "web" ? "dashboard" : "slack",
+						token,
+					});
 				},
 				async vaultId() {
 					return ensureAutumnVault({

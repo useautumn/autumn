@@ -9,8 +9,8 @@ import { setupPreviewCatalogContext } from "./setupPreviewCatalogContext.js";
 
 /**
  * Resolve a proposed catalog change (features + plans) WITHOUT persisting, so a
- * live preview matches what `catalog.update` would apply. Reads are batched up
- * front by setupPreviewCatalogContext to avoid N+1 round-trips.
+ * live preview matches what `catalog.update` would apply. Reads and the virtual
+ * feature upsert are batched up front by setupPreviewCatalogContext.
  */
 export const previewUpdateCatalog = async ({
 	ctx,
@@ -19,21 +19,18 @@ export const previewUpdateCatalog = async ({
 	ctx: AutumnContext;
 	params: CatalogUpdateParams;
 }): Promise<CatalogPreviewUpdateResponse> => {
-	const { features, plans } = params;
+	const { plans } = params;
 	const currency = ctx.org.default_currency ?? "usd";
 
-	const { products, currents, withCustomers } =
-		await setupPreviewCatalogContext({ ctx, plans });
-	const featureById = new Map(
-		ctx.features.map((feature) => [feature.id, feature]),
-	);
+	const { products, currents, withCustomers, proposedFeatures, planCtx } =
+		await setupPreviewCatalogContext({ ctx, params });
 
 	const [planResults, featureResults] = await Promise.all([
 		Promise.all(
 			plans.map((planParams, index) => {
 				const current = currents[index];
 				return previewPlan({
-					ctx,
+					ctx: planCtx,
 					planParams,
 					current,
 					hasCustomers: current
@@ -44,13 +41,9 @@ export const previewUpdateCatalog = async ({
 			}),
 		),
 		Promise.all(
-			features.map((featureParams) =>
-				previewFeature({
-					ctx,
-					featureParams,
-					existing: featureById.get(featureParams.feature_id) ?? null,
-					products,
-				}),
+			proposedFeatures.map(({ existing, dbFeature }) =>
+				// Blockers are detected against the persisted catalog, so pass `ctx`.
+				previewFeature({ ctx, dbFeature, existing, products }),
 			),
 		),
 	]);

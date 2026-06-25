@@ -38,8 +38,8 @@ scripts/generate.ts      # config entry → translate → build each format → 
     `references/<slug>.md` and leave a pointer in the body, following Agent
     Skills progressive disclosure (keep SKILL.md focused; load detail on demand).
   - `<skill name="…" reason="…" />` — point at a prerequisite skill to load
-    first (e.g. modelling-pricing references concepts; integration references
-    modelling-pricing).
+    first (e.g. catalog references concepts; integration references
+    catalog).
 
 ## Commands
 

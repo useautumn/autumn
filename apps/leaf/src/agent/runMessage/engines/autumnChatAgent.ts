@@ -6,12 +6,10 @@ import { buildSystemPrompt } from "../../prompts/buildSystemPrompt.js";
 
 // Env-free module: the eval driver imports this without leaf's env schema.
 export const createAutumnChatAgent = ({
-	docsText,
 	env,
 	model = leafChatAgentDefaults.model,
 	tools,
 }: {
-	docsText: string;
 	env: AppEnv;
 	model?: string;
 	tools: ToolsInput;
@@ -19,7 +17,7 @@ export const createAutumnChatAgent = ({
 	new Agent({
 		id: "autumn-chat",
 		name: "Autumn Chat",
-		instructions: buildSystemPrompt({ docsText, env }),
+		instructions: buildSystemPrompt({ env }),
 		model,
 		tools,
 	});

@@ -1,7 +1,14 @@
-import type { CatalogUpdateParams, FullProduct } from "@autumn/shared";
+import {
+	type CatalogUpdateParams,
+	type Feature,
+	type FullProduct,
+	featureV1ToDbFeature,
+} from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { CusProdReadService } from "@/internal/customers/cusProducts/CusProdReadService.js";
 import { ProductService } from "@/internal/products/ProductService.js";
+
+type ProposedFeature = { existing: Feature | null; dbFeature: Feature };
 
 export interface PreviewCatalogContext {
 	/** Latest version of every product, for feature-usage lookups. */
@@ -10,20 +17,27 @@ export interface PreviewCatalogContext {
 	currents: (FullProduct | null)[];
 	/** Internal product ids that have at least one customer. */
 	withCustomers: Set<string>;
+	/** The batch's features resolved to DB shape, paired with what they replace. */
+	proposedFeatures: ProposedFeature[];
+	/** ctx with the batch's features virtually upserted, so plans can reference net-new ones. */
+	planCtx: AutumnContext;
 }
 
 /**
- * Batch the reads shared across the preview: the catalog (one cached listFull),
- * each plan's current product, and which products have customers.
+ * Batch the reads shared across the preview (catalog via one cached listFull,
+ * each plan's current product, which products have customers) and virtually
+ * upsert the batch's features so plans resolve against them, mirroring
+ * catalog.update's "features first, then plans" ordering.
  */
 export const setupPreviewCatalogContext = async ({
 	ctx,
-	plans,
+	params,
 }: {
 	ctx: AutumnContext;
-	plans: CatalogUpdateParams["plans"];
+	params: CatalogUpdateParams;
 }): Promise<PreviewCatalogContext> => {
 	const { db, org, env } = ctx;
+	const { features, plans } = params;
 
 	const products = await ProductService.listFull({ db, orgId: org.id, env });
 	const latestByPlanId = new Map(
@@ -55,5 +69,27 @@ export const setupPreviewCatalogContext = async ({
 		internalProductIds,
 	});
 
-	return { products, currents, withCustomers };
+	const featureById = new Map(
+		ctx.features.map((feature) => [feature.id, feature]),
+	);
+	const proposedFeatures = features.map((featureParams) => {
+		const existing = featureById.get(featureParams.feature_id) ?? null;
+		const dbFeature = featureV1ToDbFeature({
+			apiFeature: { id: featureParams.feature_id, ...featureParams },
+			originalFeature: existing ?? undefined,
+		});
+		return { existing, dbFeature };
+	});
+	const proposedById = new Map(
+		proposedFeatures.map(({ dbFeature }) => [dbFeature.id, dbFeature]),
+	);
+	const planCtx: AutumnContext = {
+		...ctx,
+		features: [
+			...ctx.features.filter((feature) => !proposedById.has(feature.id)),
+			...proposedById.values(),
+		],
+	};
+
+	return { products, currents, withCustomers, proposedFeatures, planCtx };
 };

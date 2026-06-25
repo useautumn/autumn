@@ -9,7 +9,6 @@ import type { KeyedActionLogger } from "../../ui/progress.js";
 /** Leaf's ctx.features analog: what the agent may do, loaded once per message. */
 export type AgentToolContext = {
 	destructiveTools: Set<string>;
-	docsText: string;
 };
 
 export type MessageAttachment = {

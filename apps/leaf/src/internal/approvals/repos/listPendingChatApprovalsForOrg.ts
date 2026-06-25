@@ -5,11 +5,13 @@ import type { ChatDb } from "../../../lib/db.js";
 /** Pending, unexpired approvals for an org's provider workspace — used by the
  * web surface, where the dashboard fetches approvals by org rather than run. */
 export const listPendingChatApprovalsForOrg = async ({
+	channelId,
 	db,
 	orgId,
 	provider,
 	workspaceId,
 }: {
+	channelId?: string;
 	db: ChatDb;
 	orgId: string;
 	provider: ChatProvider;
@@ -21,6 +23,7 @@ export const listPendingChatApprovalsForOrg = async ({
 			eq(chatApprovals.org_id, orgId),
 			eq(chatApprovals.provider, provider),
 			eq(chatApprovals.workspace_id, workspaceId),
+			channelId ? eq(chatApprovals.channel_id, channelId) : undefined,
 			eq(chatApprovals.status, "pending"),
 			gt(chatApprovals.expires_at, Date.now()),
 		),

@@ -1,6 +1,18 @@
 import type { MessageParams } from "../../agent/runMessage/types.js";
 import type { AutumnOrgContext } from "../../internal/autumnMcp/orgContextService.js";
 
+const USER_MESSAGE_OPEN = "<user_message>";
+const USER_MESSAGE_CLOSE = "</user_message>";
+
+/** The user's actual text, stripped of the injected env/org-context preamble.
+ * Used when replaying history so the preamble stays hidden from the dashboard. */
+export const extractUserMessageText = (text: string): string => {
+	const start = text.lastIndexOf(USER_MESSAGE_OPEN);
+	const end = text.lastIndexOf(USER_MESSAGE_CLOSE);
+	if (start === -1 || end === -1 || end < start) return text;
+	return text.slice(start + USER_MESSAGE_OPEN.length, end).trim();
+};
+
 export const buildHarnessMessageText = ({
 	env,
 	newSession,
@@ -27,5 +39,8 @@ export const buildHarnessMessageText = ({
 	]
 		.filter((section): section is string => Boolean(section))
 		.join("\n\n");
-	return preamble ? `${preamble}\n\n${params.text}` : params.text;
+	// Wrap the user's text so history replay can strip the preamble cleanly (and
+	// the agent gets an unambiguous boundary between context and the request).
+	const wrapped = `${USER_MESSAGE_OPEN}\n${params.text}\n${USER_MESSAGE_CLOSE}`;
+	return preamble ? `${preamble}\n\n${wrapped}` : wrapped;
 };

@@ -1,5 +1,6 @@
 import type { ChatProvider } from "@autumn/shared";
 import { db } from "../../../../lib/db.js";
+import { parsePreviewPayload } from "../../../../ui/previewContent.js";
 import { chatApprovalRepo } from "../../repos/chatApprovalRepo.js";
 
 /** A pending approval, shaped for the dashboard to render (preview + the write's args). */
@@ -11,17 +12,20 @@ export type WebApproval = {
 	created_at: number;
 };
 
-/** Pending approvals for an org's web chat, newest first. */
+/** Pending approvals for a web chat thread, newest first. */
 export const listWebApprovals = async ({
+	channelId,
 	orgId,
 	provider,
 	workspaceId,
 }: {
+	channelId?: string;
 	orgId: string;
 	provider: ChatProvider;
 	workspaceId: string;
 }): Promise<WebApproval[]> => {
 	const approvals = await chatApprovalRepo.listPendingForOrg({
+		channelId,
 		db,
 		orgId,
 		provider,
@@ -31,7 +35,8 @@ export const listWebApprovals = async ({
 		id: approval.id,
 		tool_name: approval.tool_name,
 		tool_args: approval.tool_args,
-		preview: approval.preview,
+		// Stored raw as the MCP tool envelope; unwrap to the inner { plans, features }.
+		preview: parsePreviewPayload(approval.preview),
 		created_at: approval.created_at,
 	}));
 };

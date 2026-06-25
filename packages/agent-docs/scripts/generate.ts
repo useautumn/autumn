@@ -102,20 +102,9 @@ const writeGenerated = ({
 	process.stdout.write(`Wrote ${outPath}\n`);
 };
 
-const mcpInstructions = readFileSync(
-	resolve(contentRoot, "instructions/mcpInstructions.md"),
-	"utf8",
-).trim();
-
-writeGenerated({
-	file: "instructions.generated.ts",
-	typeName: "autumnMcpInstructions: string",
-	typeImport: "",
-	value: mcpInstructions,
-});
-
-// Recursively inline `<part file="…" />` (relative to each file) so surface
-// prompts compose a shared base + nested parts (e.g. mcpInstructions) DRY.
+// Recursively inline `<part file="…" />` (relative to each file) so each
+// surface prompt + the MCP instructions compose the shared personality +
+// autumn-rules core DRY.
 const PROMPT_PART = /<part\s+file="([^"]+)"\s*\/>/g;
 const composePrompt = (relPath: string): string =>
 	readFileSync(resolve(contentRoot, relPath), "utf8")
@@ -126,12 +115,19 @@ const composePrompt = (relPath: string): string =>
 		.trim();
 
 writeGenerated({
+	file: "instructions.generated.ts",
+	typeName: "autumnMcpInstructions: string",
+	typeImport: "",
+	value: composePrompt("instructions/mcp.md"),
+});
+
+writeGenerated({
 	file: "leaf-prompts.generated.ts",
 	typeName: 'leafPrompts: Record<"dashboard" | "slack", string>',
 	typeImport: "",
 	value: {
-		dashboard: composePrompt("instructions/leaf/dashboard.md"),
-		slack: composePrompt("instructions/leaf/slack.md"),
+		dashboard: composePrompt("instructions/dashboard.md"),
+		slack: composePrompt("instructions/slack.md"),
 	},
 });
 writeGenerated({

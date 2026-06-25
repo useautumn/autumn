@@ -4,7 +4,6 @@ import type { MessageListItem } from "@mastra/core/agent/message-list";
 import { Mastra } from "@mastra/core/mastra";
 import { InMemoryStore } from "@mastra/core/storage";
 import { MCPClient } from "@mastra/mcp";
-import { agentDocBundleUris } from "@autumn/agent-docs/agent";
 import { createRequestContext } from "../../../../../../packages/mcp/src/server/auth/auth.js";
 import { createAutumnChatAgent } from "../../../../src/agent/runMessage/engines/autumnChatAgent.js";
 import { createLeafTracingOptions } from "../../../../src/internal/observability/leafTracingOptions.js";
@@ -64,21 +63,6 @@ const instrumentToolCalls = ({
 	}
 };
 
-const readDocs = async (mcpClient: MCPClient) => {
-	const resources = await Promise.allSettled(
-		agentDocBundleUris.map((uri) => mcpClient.resources.read("autumn", uri)),
-	);
-	return resources
-		.flatMap((result) =>
-			result.status === "fulfilled"
-				? result.value.contents.flatMap((content) =>
-						"text" in content ? [content.text] : [],
-					)
-				: [],
-		)
-		.join("\n\n");
-};
-
 const appendUserMessage = ({
 	input,
 	messages,
@@ -109,10 +93,7 @@ export const createLeafAgentDriver = ({
 				},
 			},
 		});
-		const [{ toolsets, errors }, docsText] = await Promise.all([
-			mcpClient.listToolsetsWithErrors(),
-			readDocs(mcpClient),
-		]);
+		const { toolsets, errors } = await mcpClient.listToolsetsWithErrors();
 		if (Object.keys(errors).length) {
 			throw new Error(`MCP tool discovery failed: ${JSON.stringify(errors)}`);
 		}
@@ -124,7 +105,6 @@ export const createLeafAgentDriver = ({
 		instrumentToolCalls({ toolCalls, tools, trace });
 
 		const agent = createAutumnChatAgent({
-			docsText,
 			env,
 			model,
 			tools: tools as ToolsInput,

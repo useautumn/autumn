@@ -101,7 +101,12 @@ export const composeSkill = ({
 		if (!when) {
 			throw new Error(`<part file="${file}"> in ${path} is missing "when"`);
 		}
-		const slug = file.replace(/\.[^.]+$/, "");
+		// Output is always references/<basename>.md, so the source file may live
+		// alongside the skill or under its own references/ folder.
+		const slug = file
+			.split("/")
+			.pop()
+			?.replace(/\.[^.]+$/, "");
 		const referencePath = `references/${slug}.md`;
 		references.push({
 			path: referencePath,

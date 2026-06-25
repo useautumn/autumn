@@ -41,7 +41,7 @@ export const runWebMessage = async ({
 	});
 	const agentTools =
 		harness === "claude-managed"
-			? { destructiveTools: new Set<string>(), docsText: "" }
+			? { destructiveTools: new Set<string>() }
 			: await setupAgentToolContext({ env, logger, token: accessToken });
 
 	const ctx: MessageContext = {
