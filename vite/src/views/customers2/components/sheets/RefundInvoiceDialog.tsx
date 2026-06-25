@@ -1,5 +1,4 @@
 import { formatAmount, type Invoice } from "@autumn/shared";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Button,
 	Dialog,
@@ -14,6 +13,7 @@ import {
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
+	ShortcutButton,
 } from "@autumn/ui";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";

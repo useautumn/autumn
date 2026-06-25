@@ -1,33 +1,19 @@
-import type { ProductItem } from "@autumn/shared";
 import { AnimatePresence, motion } from "motion/react";
 import { createPortal } from "react-dom";
-import {
-	useCurrentItem,
-	useHasItemChanges,
-	useSheet,
-} from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
+import { useSheet } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 
 /**
  * Determines if the sheet should close based on the mouse down event.
- * Handles edge cases like unsaved changes and input blur behavior.
+ * Clicking out while an input inside the sheet is focused blurs it first instead
+ * of closing, so a stray click after typing doesn't unexpectedly dismiss the sheet.
  */
 function shouldCloseSheetOnMouseDown({
 	e,
-	item,
 	sheetType,
-	hasItemChanges,
 }: {
 	e: React.MouseEvent<HTMLDivElement>;
-	item: ProductItem | null;
 	sheetType: string | null;
-	hasItemChanges: boolean;
 }): boolean {
-	// Don't close if item has unsaved changes
-	if (hasItemChanges) {
-		return false;
-	}
-
-	// Get the active element before blur happens
 	const activeElement = document.activeElement;
 
 	if (
@@ -35,29 +21,25 @@ function shouldCloseSheetOnMouseDown({
 		activeElement !== document.body &&
 		activeElement instanceof HTMLElement
 	) {
-		// Only apply blur behavior to inputs, textareas, and selects
 		const isInputElement =
 			activeElement.tagName === "INPUT" ||
 			activeElement.tagName === "TEXTAREA" ||
 			activeElement.tagName === "SELECT";
 
 		if (!isInputElement) {
-			// Not an input, proceed with normal close behavior
 			return !!sheetType;
 		}
 
-		// Check if the active element is within the sheet (not in the main content area)
 		const clickTarget = e.target as HTMLElement;
 		const isActiveInSheet = !clickTarget.contains(activeElement);
 
 		if (isActiveInSheet) {
 			activeElement.blur();
-			e.preventDefault(); // Prevent default to stop the click from propagating
+			e.preventDefault();
 			return false;
 		}
 	}
 
-	// If the click is outside the sheet and no input is focused, close the sheet
 	return !!sheetType;
 }
 
@@ -67,11 +49,9 @@ function shouldCloseSheetOnMouseDown({
  */
 export function SheetOverlay({ inline = false }: { inline?: boolean }) {
 	const { sheetType, closeSheet } = useSheet();
-	const item = useCurrentItem();
-	const hasItemChanges = useHasItemChanges();
 
 	const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
-		if (shouldCloseSheetOnMouseDown({ e, item, sheetType, hasItemChanges })) {
+		if (shouldCloseSheetOnMouseDown({ e, sheetType })) {
 			closeSheet();
 		}
 	};

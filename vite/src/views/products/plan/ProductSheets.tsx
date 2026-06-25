@@ -1,7 +1,6 @@
 import { type ProductItem, productV2ToFeatureItems } from "@autumn/shared";
 import { useEffect, useRef } from "react";
 import {
-	useDiscardItemAndClose,
 	useProduct,
 	useSheet,
 } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
@@ -35,8 +34,6 @@ export const ProductSheets = () => {
 		commitItem: commitItemDraft,
 		clearItemSession: clearItemDraftSession,
 	} = itemDraft;
-
-	const discardAndClose = useDiscardItemAndClose();
 
 	const featureItems = productV2ToFeatureItems({ items: product.items });
 
@@ -188,7 +185,7 @@ export const ProductSheets = () => {
 	return (
 		<InlineSheetPanel
 			isOpen={!!sheetType}
-			onClose={discardAndClose}
+			onClose={closeSheet}
 			transition={SHEET_ANIMATION}
 		>
 			{renderSheet()}

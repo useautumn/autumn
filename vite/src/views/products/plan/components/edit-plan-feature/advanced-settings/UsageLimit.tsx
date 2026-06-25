@@ -17,12 +17,10 @@ export function UsageLimit() {
 				let usage_limit: number | null;
 
 				if (checked) {
-					usage_limit = 100; // Default value
+					usage_limit = 100;
 				} else {
 					usage_limit = null;
 				}
-
-				console.log("checked", checked, "setting usage limit to", usage_limit);
 
 				setItem({
 					...item,

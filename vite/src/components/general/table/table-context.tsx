@@ -1,7 +1,7 @@
 import type { Table as TanstackTable } from "@tanstack/react-table";
 import { createContext, type ReactNode, useContext } from "react";
 import type { ColumnGroup } from "@/hooks/useColumnVisibility";
-import { useIsMobile } from "@/hooks/useIsMobile";
+import { useIsMobile } from "@autumn/ui";
 
 export interface VirtualizationConfig {
 	/** Height of the scroll container, e.g., "calc(100vh - 240px)" */
