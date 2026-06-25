@@ -52,10 +52,16 @@ export function createVm(name: string): ExeVm {
 	try {
 		const vm = JSON.parse(res.stdout) as ExeVm;
 		if (!vm.ssh_dest) fatal(`exe.dev new returned no ssh_dest:\n${res.stdout}`);
-		return vm;
+		// exe.dev's JSON may omit `name`; we know it (we passed --name), so pin it.
+		return { ...vm, name };
 	} catch {
 		fatal(`could not parse exe.dev new output:\n${res.stdout}`);
 	}
+}
+
+/** VM name from its ssh dest (`sw-foo-abc.exe.xyz` → `sw-foo-abc`). */
+export function vmNameFromSshDest(sshDest: string): string {
+	return sshDest.replace(/\.exe\.xyz$/, "");
 }
 
 export function listVms(): ExeVm[] {

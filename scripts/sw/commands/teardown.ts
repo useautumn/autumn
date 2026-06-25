@@ -1,5 +1,5 @@
 import { tmuxServerSession } from "../constants.ts";
-import { listVms, removeVm } from "../helpers/exe.ts";
+import { listVms, removeVm, vmNameFromSshDest } from "../helpers/exe.ts";
 import { removeMarker } from "../helpers/marker.ts";
 import { deleteSwBranch, listSwBranchNames } from "../helpers/neon.ts";
 import { getEntry, loadRegistry, removeEntry } from "../helpers/registry.ts";
@@ -18,8 +18,9 @@ function teardownOrphans(): void {
 
 	let removed = 0;
 	for (const vm of listVms()) {
-		if (vm.name.startsWith("sw-") && !knownVms.has(vm.name)) {
-			removeVm(vm.name);
+		const name = vm.name || (vm.ssh_dest ? vmNameFromSshDest(vm.ssh_dest) : "");
+		if (name.startsWith("sw-") && !knownVms.has(name)) {
+			removeVm(name);
 			removed++;
 		}
 	}
@@ -62,7 +63,10 @@ export async function cmdTeardown({
 		sh("tmux", ["kill-session", "-t", tmuxServerSession(entry.slug)]);
 	} else {
 		ensureSshKeyLoaded(); // removeVm ssh's the lobby
-		if (entry.vmName) removeVm(entry.vmName);
+		// Derive the VM name from the host if it wasn't recorded (older entries).
+		const vmName =
+			entry.vmName || (entry.host ? vmNameFromSshDest(entry.host) : "");
+		if (vmName) removeVm(vmName);
 		if (entry.neonBranchName) deleteSwBranch(entry.neonBranchName);
 		removeMarker(entry.path);
 	}
