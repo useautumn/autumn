@@ -6,6 +6,7 @@ import {
 	type Feature,
 	FeatureNotFoundError,
 	findFeatureById,
+	fullSubjectToCustomerEntitlements,
 	fullSubjectToFullCustomer,
 	getFeatureToUseForCheck,
 	mergeCustomerBillingControlsForCheck,
@@ -21,6 +22,7 @@ import { getApiSubject } from "@/internal/customers/cusUtils/getApiCustomerV2/ge
 import { getCreditSystemsFromFeature } from "@/internal/features/creditSystemUtils.js";
 import { triggerAutoTopUp } from "../autoTopUp/triggerAutoTopUp.js";
 import type { CheckDataV2 } from "./checkTypes/CheckDataV2.js";
+import { resolveCheckSpendLimits } from "./resolveCheckSpendLimits.js";
 
 const getFeatureAndCreditSystems = ({
 	features,
@@ -113,6 +115,16 @@ export const getCheckDataV2 = async ({
 			planCustomerProducts: fullSubject.customer_products,
 		});
 	}
+
+	evaluationApiSubject = resolveCheckSpendLimits({
+		subject: evaluationApiSubject,
+		cusEntsForFeature: (featureId) =>
+			fullSubjectToCustomerEntitlements({
+				fullSubject,
+				featureIds: [featureId],
+			}),
+		entityId: entity_id,
+	});
 
 	const featureToUseMin = getFeatureToUseForCheck({
 		creditSystems,
