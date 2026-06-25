@@ -2,17 +2,16 @@ import crypto from "node:crypto";
 import { AppEnv, type ChatProvider } from "@autumn/shared";
 import type { Message, Thread } from "chat";
 import { agentEngines } from "../../agent/runMessage/engines/engines.js";
-import { setupAgentToolContext } from "../../agent/runMessage/setup/setupAgentToolContext.js";
 import type { MessageContext } from "../../agent/runMessage/types.js";
+import { presentWebApproval } from "../../internal/approvals/surfaces/web/present.js";
 import {
 	ensureWebChatAuth,
 	WEB_CHAT_PROVIDER,
 } from "../../internal/installations/actions/ensureWebChatAuth.js";
-import { presentWebApproval } from "../../internal/approvals/surfaces/web/present.js";
-import { getRecentMessages } from "../slack/threadContext.js";
 import { getOrgInstallationToken } from "../../internal/installations/actions/getOrgInstallationToken.js";
 import { env as chatEnv } from "../../lib/env.js";
 import { logger as rootLogger } from "../../lib/logger.js";
+import { getRecentMessages } from "../slack/threadContext.js";
 
 /** Web dashboard chat: resolve org auth, build context, dispatch via WEB_AGENT_HARNESS. */
 export const runWebMessage = async ({
@@ -39,13 +38,11 @@ export const runWebMessage = async ({
 		provider: WEB_CHAT_PROVIDER,
 		workspaceId: orgId,
 	});
-	const agentTools =
-		harness === "claude-managed"
-			? { destructiveTools: new Set<string>() }
-			: await setupAgentToolContext({ env, logger, token: accessToken });
 
 	const ctx: MessageContext = {
-		agentTools,
+		// Neither engine reads ctx.agentTools (CMA loads its own toolset in
+		// ensureLeafResources; mastra loads tools in-engine), so skip the load.
+		agentTools: { destructiveTools: new Set<string>() },
 		env,
 		id: crypto.randomUUID(),
 		logger,

@@ -3,8 +3,8 @@ import type { AgentHarnessName } from "../../../lib/chatAgentConfig.js";
 import { db } from "../../../lib/db.js";
 import { env as chatEnv } from "../../../lib/env.js";
 import { logger } from "../../../lib/logger.js";
-import { approvalRuntimes } from "../runtimes.js";
 import { chatApprovalRepo } from "../repos/chatApprovalRepo.js";
+import { approvalRuntimes } from "../runtimes.js";
 import type { ApprovalRunResult } from "../types.js";
 import { approvalErrorResult } from "../utils/approvalErrors.js";
 
@@ -31,24 +31,23 @@ export const resolveApproval = async ({
 		}
 		result = await resume({ approval, onProgress, providerUserId });
 	} catch (error) {
+		// A thrown resumer error means the write never ran — keep the approval
+		// pending so the user can retry.
 		logger.error("[chat] Approval run failed", error, {
 			event: "leaf.approval_run_failed",
 			approval_id: approval.id,
 		});
+		return approvalErrorResult(error, { retryable: true });
+	}
+
+	// Retryable errors leave the row pending; everything else is finalized.
+	if (!("error" in result && result.retryable)) {
 		await chatApprovalRepo.finalize({
 			approvalId: approval.id,
 			db,
 			providerUserId,
-			status: "failed",
+			status: "error" in result ? "failed" : "approved",
 		});
-		return approvalErrorResult(error);
 	}
-
-	await chatApprovalRepo.finalize({
-		approvalId: approval.id,
-		db,
-		providerUserId,
-		status: "error" in result ? "failed" : "approved",
-	});
 	return result;
 };

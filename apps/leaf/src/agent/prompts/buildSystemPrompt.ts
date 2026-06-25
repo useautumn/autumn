@@ -9,10 +9,14 @@ import type { ChatContextMessage } from "../../types.js";
  */
 export const buildSystemPrompt = ({
 	env,
+	inlineSkills = true,
 	recentMessages,
 	thread,
 }: {
 	env: AppEnv;
+	/** Inline all skill text into the prompt. Off for engines that read skills on
+	 * demand (mastra via the `readAutumnDoc` tool) to keep context lean. */
+	inlineSkills?: boolean;
 	recentMessages?: ChatContextMessage[];
 	thread?: { provider: string; resourceId: string; threadId: string };
 }) =>
@@ -33,7 +37,7 @@ export const buildSystemPrompt = ({
 					)
 					.join("\n")}`
 			: null,
-		leafSkillsText(),
+		inlineSkills ? leafSkillsText() : null,
 	]
 		.filter((section): section is string => Boolean(section))
 		.join("\n\n");

@@ -2,8 +2,11 @@ import {
 	apiPlan,
 	buildMigrationDraft,
 	type CatalogPlanPreview,
+	composeMatchKey,
+	diffPlanV1,
 	type FullProduct,
 	type ProductV2,
+	planItemFilterMatchKey,
 	productsAreSame,
 	productV2ToApiPlanV1,
 	type UpdatePlanParamsV2,
@@ -53,6 +56,7 @@ export const previewPlan = async ({
 
 	let willVersion = false;
 	let migrationDraft: CatalogPlanPreview["migration_draft"] = null;
+	let diff: CatalogPlanPreview["diff"] = null;
 
 	if (current) {
 		const { itemsSame, freeTrialsSame } = productsAreSame({
@@ -62,13 +66,33 @@ export const previewPlan = async ({
 		});
 		willVersion = !(itemsSame && freeTrialsSame) && hasCustomers;
 
+		// Always diff current → proposed for the preview card; the migration draft
+		// (customer-facing) reuses the same diff but only when a version is forced.
+		const from = await getPlanResponse({
+			ctx,
+			product: current,
+			features: ctx.features,
+			currency,
+		});
+		const rawDiff = diffPlanV1({ from, to: plan });
+
+		// Resolve the lossy add/remove filters back to full items (with display
+		// text) from each side, so the card renders real "10,000 agent requests".
+		const addedKeys = new Set((rawDiff.add_items ?? []).map(composeMatchKey));
+		const removedKeys = new Set(
+			(rawDiff.remove_items ?? []).map(planItemFilterMatchKey),
+		);
+		diff = {
+			added_items: plan.items.filter((item) =>
+				addedKeys.has(composeMatchKey(item)),
+			),
+			removed_items: from.items.filter((item) =>
+				removedKeys.has(composeMatchKey(item)),
+			),
+			price: rawDiff.price,
+		};
+
 		if (willVersion) {
-			const from = await getPlanResponse({
-				ctx,
-				product: current,
-				features: ctx.features,
-				currency,
-			});
 			migrationDraft = buildMigrationDraft({
 				from,
 				to: plan,
@@ -84,5 +108,6 @@ export const previewPlan = async ({
 		will_version: willVersion,
 		has_customers: hasCustomers,
 		migration_draft: migrationDraft,
+		diff,
 	};
 };

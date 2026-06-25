@@ -58,6 +58,9 @@ const envSchema = z
 				(process.env.NODE_ENV === "production"
 					? "https://mcp.useautumn.com/mcp"
 					: `http://localhost:${values.PORT}`),
+			// In-process callers (mastra, tool context) hit leaf's own /mcp on
+			// loopback — MCP_SERVER_URL is the public tunnel for Claude Managed Agents.
+			LOCAL_MCP_URL: `http://localhost:${values.PORT}`,
 			BETTER_AUTH_URL:
 				values.BETTER_AUTH_URL ??
 				(process.env.NODE_ENV === "production"

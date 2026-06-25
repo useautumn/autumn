@@ -10,7 +10,9 @@ export type ActionMessageContent = Parameters<
 >[2];
 
 export type ApprovalRunResult =
-	| { error: true; message: string }
+	// `retryable` means the write never ran to completion (a session crash /
+	// interruption), so the approval stays pending and the user can re-apply.
+	| { error: true; message: string; retryable?: boolean }
 	| { result: unknown; text: string; toolName?: string };
 
 export type ApprovalActionDeps = {

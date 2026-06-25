@@ -55,15 +55,23 @@ const gerunds: Record<string, string> = {
 export const toolGerund = (toolName: string) =>
 	gerunds[normalizeToolName(toolName)] ?? toolLabel(toolName);
 
-/** Label for a sandbox builtin tool (e.g. `read` loading a skill), with the
- * file's basename when present. */
+/** Label for a sandbox builtin tool (e.g. `read` loading a skill). A skill is
+ * read as `<skill-name>/SKILL.md`, so name it by the skill, not "SKILL.md". */
 export const sandboxToolLabel = (
 	name: string,
 	input: Record<string, unknown>,
 ) => {
 	const verb = name.charAt(0).toUpperCase() + name.slice(1);
 	const path = input.file_path ?? input.path;
-	return typeof path === "string" ? `${verb} ${path.split("/").pop()}` : verb;
+	if (typeof path !== "string") return verb;
+
+	const segments = path.split("/").filter(Boolean);
+	const basename = segments.at(-1);
+	if (basename?.toUpperCase() === "SKILL.MD" && segments.length >= 2) {
+		const skill = (segments.at(-2) ?? "").replace(/^autumn-/, "");
+		return `Reading the ${skill || "Autumn"} skill`;
+	}
+	return `${verb} ${basename}`;
 };
 
 export const isToolErrorResult = (output: unknown) => {

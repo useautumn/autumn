@@ -12,6 +12,7 @@ export type {
 export const driveSessionTurn = async ({
 	autumnMcpServerName,
 	client,
+	expectedToolResult,
 	kickoff,
 	onAutumnTool,
 	onAutumnToolResult,
@@ -24,6 +25,9 @@ export const driveSessionTurn = async ({
 }: {
 	autumnMcpServerName: string;
 	client: Anthropic;
+	/** A tool whose `mcp_tool_use` happened in an earlier turn (e.g. an approval
+	 * being resumed) — seed its id+name so this turn captures its result. */
+	expectedToolResult?: { toolName: string; toolUseId: string };
 	kickoff: () => Promise<unknown>;
 	onAutumnTool?: (input: {
 		id: string;
@@ -68,6 +72,12 @@ export const driveSessionTurn = async ({
 	>();
 	const autumnToolNames = new Map<string, string>();
 	const mcpToolNames = new Map<string, string>();
+	if (expectedToolResult) {
+		autumnToolNames.set(
+			expectedToolResult.toolUseId,
+			expectedToolResult.toolName,
+		);
+	}
 
 	const stream = await client.beta.sessions.events.stream(sessionId);
 	await kickoff();

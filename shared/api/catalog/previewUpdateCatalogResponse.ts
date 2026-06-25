@@ -1,7 +1,9 @@
+import { CustomizePlanV1Schema } from "@api/billing/common/customizePlan/customizePlanV1.js";
 import { ApiFeatureV1Schema } from "@api/features/apiFeatureV1.js";
 import { MigrationFilterSchema } from "@api/migrations/filters/migrationFilter.js";
 import { OperationsSchema } from "@api/migrations/operations/operations.js";
 import { ApiPlanV1Schema } from "@api/products/apiPlanV1.js";
+import { ApiPlanItemV1Schema } from "@api/products/items/apiPlanItemV1.js";
 import { z } from "zod/v4";
 
 /** Draft migration that would move existing customers onto the new plan shape. */
@@ -12,6 +14,18 @@ export const MigrationDraftSchema = z.object({
 	no_billing_changes: z.boolean(),
 });
 
+/** Current → proposed diff, display-ready: full items on both sides (unlike
+ * diffPlanV1's lossy remove_items filters) so the card can render real text. A
+ * changed item appears in both lists (diffPlanV1 models a change as remove+add). */
+export const PlanPreviewDiffSchema = z.object({
+	added_items: z.array(ApiPlanItemV1Schema),
+	removed_items: z.array(ApiPlanItemV1Schema),
+	// undefined = unchanged, null = removed, value = added/changed.
+	price: CustomizePlanV1Schema.shape.price,
+});
+
+export type PlanPreviewDiff = z.infer<typeof PlanPreviewDiffSchema>;
+
 /** Resolved preview for a single plan in the proposed catalog change — the
  * full ApiPlanV1 plus the preview-only impact fields. */
 export const CatalogPlanPreviewSchema = ApiPlanV1Schema.extend({
@@ -19,6 +33,8 @@ export const CatalogPlanPreviewSchema = ApiPlanV1Schema.extend({
 	will_version: z.boolean(),
 	has_customers: z.boolean(),
 	migration_draft: MigrationDraftSchema.nullable(),
+	// Null for a brand-new plan; otherwise the change vs the current plan.
+	diff: PlanPreviewDiffSchema.nullable(),
 });
 
 export type CatalogPlanPreview = z.infer<typeof CatalogPlanPreviewSchema>;

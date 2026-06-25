@@ -11,6 +11,7 @@ import {
 } from "../../internal/approvals/utils/approvalProgress.js";
 import { claudeManagedConfig } from "./config.js";
 import { driveSessionTurn } from "./session/driveSessionTurn.js";
+import { findSessionToolResult } from "./session/findSessionToolResult.js";
 
 const client = new Anthropic();
 
@@ -33,6 +34,9 @@ export const resumeClaudeManagedApproval = async ({
 	const outcome = await driveSessionTurn({
 		autumnMcpServerName: claudeManagedConfig.autumnMcpServerName,
 		client,
+		// The tool_use was emitted in the suspended turn, so seed it here to
+		// capture its result in this resume turn.
+		expectedToolResult: { toolName: approval.tool_name, toolUseId },
 		kickoff: () =>
 			client.beta.sessions.events.send(sessionId, {
 				events: [
@@ -53,21 +57,45 @@ export const resumeClaudeManagedApproval = async ({
 		sessionId,
 	});
 	const text = outcome.textParts.join("\n\n");
-	const writeResult =
+	let writeResult =
 		outcome.toolResults?.find((result) => result.id === toolUseId) ??
 		outcome.toolResults?.at(-1);
-	// Only a clean, present write result counts as success — otherwise the
-	// dashboard would show "Applied" for a write that errored or never ran.
-	if (outcome.errorMessage) {
-		return approvalErrorResult(outcome.errorMessage);
-	}
+
+	// The live stream can crash after the MCP write ran but before we captured its
+	// result. Recover the result from session history so a lost result isn't
+	// misreported as a failure (and retried into a double-write).
 	if (!writeResult) {
-		return approvalErrorResult(
-			"The write did not complete — no tool result was returned.",
-		);
+		const recovered = await findSessionToolResult({
+			client,
+			sessionId,
+			toolUseId,
+		});
+		if (recovered) {
+			writeResult = {
+				id: toolUseId,
+				name: approval.tool_name,
+				output: recovered.output,
+			};
+		}
 	}
-	if (isErrorResult(writeResult.output)) {
-		return approvalErrorResult(writeResult.output);
+
+	// The captured write result is the source of truth. A clean result means the
+	// write succeeded — even if the session crashed afterwards (e.g. while
+	// generating follow-up text), which is just noise. A captured error result
+	// means the tool ran and failed — terminal.
+	if (writeResult) {
+		if (isErrorResult(writeResult.output)) {
+			return approvalErrorResult(writeResult.output);
+		}
+		return { result: writeResult.output, text, toolName: writeResult.name };
 	}
-	return { result: writeResult.output, text, toolName: writeResult.name };
+	// No result anywhere — the write never ran. Retryable, so the approval stays
+	// pending and the user can apply again.
+	if (outcome.errorMessage) {
+		return approvalErrorResult(outcome.errorMessage, { retryable: true });
+	}
+	return approvalErrorResult(
+		"The write did not complete — no tool result was returned.",
+		{ retryable: true },
+	);
 };

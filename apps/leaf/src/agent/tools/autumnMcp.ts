@@ -1,5 +1,7 @@
 import type { AutumnLogger } from "@autumn/logging";
+import { createTool } from "@mastra/core/tools";
 import type { MCPClient } from "@mastra/mcp";
+import { z } from "zod";
 import {
 	autumnMcpHeaders,
 	createAutumnMcpClient,
@@ -7,6 +9,39 @@ import {
 } from "../../internal/autumnMcp/client.js";
 import { logger as rootLogger } from "../../lib/logger.js";
 import { isSilentTool, toolGerund } from "./toolPolicy.js";
+
+/** Lets mastra read an Autumn knowledge doc on demand (instead of inlining every
+ * skill into context) — the MCP server exposes them as `autumn://docs/*` resources. */
+export const createReadAutumnDocTool = ({
+	mcp,
+	onAction,
+}: {
+	mcp: MCPClient;
+	onAction?: (message: string) => Promise<void> | void;
+}) =>
+	createTool({
+		id: "readAutumnDoc",
+		description:
+			"Read an Autumn knowledge doc before modelling pricing or doing billing/investigation work. concepts = Autumn's model; catalog = features/plans/pricing; billing = attach/subscriptions/schedules; logs = request logs + Stripe webhooks.",
+		inputSchema: z
+			.object({
+				uri: z.enum([
+					"autumn://docs/concepts",
+					"autumn://docs/catalog",
+					"autumn://docs/billing",
+					"autumn://docs/logs",
+				]),
+			})
+			.strict(),
+		execute: async ({ uri }) => {
+			await onAction?.(`Reading ${uri.split("/").pop()} guidance`);
+			const result = await mcp.resources.read("autumn", uri);
+			const content = (result.contents ?? [])
+				.map((entry) => ("text" in entry ? entry.text : ""))
+				.join("\n\n");
+			return { content, uri };
+		},
+	});
 
 type AutumnTool = {
 	execute?: (

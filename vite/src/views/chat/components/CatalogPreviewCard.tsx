@@ -1,94 +1,14 @@
 import {
-	type ApiPlanItemV1,
-	type ApiPlanV1,
 	type CatalogFeaturePreview,
 	type CatalogPreviewUpdateResponse,
-	type Feature,
 	FeatureUsageType,
 } from "@autumn/shared";
-import { Card, CardContent, CardHeader } from "@autumn/ui";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { InfoBox } from "@/views/onboarding2/integrate/components/InfoBox";
 import { getFeatureIconConfig } from "@/views/products/features/utils/getFeatureIcon";
-
-const itemPrimaryText = (item: ApiPlanItemV1) =>
-	item.display?.primary_text ??
-	(item.unlimited ? "Unlimited" : `${item.included} ${item.feature_id}`);
-
-/** One plan item row: feature type icon + the server-resolved display text. */
-const PlanItemRow = ({
-	feature,
-	item,
-}: {
-	feature?: Feature;
-	item: ApiPlanItemV1;
-}) => {
-	const config = getFeatureIconConfig(
-		feature?.type,
-		feature?.config?.usage_type,
-		14,
-	);
-	return (
-		<div className="flex items-center gap-2 text-xs">
-			<span className={config.color}>{config.icon}</span>
-			<span className="text-foreground">{itemPrimaryText(item)}</span>
-			{item.display?.secondary_text && (
-				<span className="text-tertiary-foreground">
-					{item.display.secondary_text}
-				</span>
-			)}
-		</div>
-	);
-};
-
-/** Plan pricing card rendered directly off ApiPlanV1 (no conversion) — the
- * server already resolves each item's display text and the base price. */
-const PlanCard = ({
-	featuresById,
-	plan,
-}: {
-	featuresById: Map<string, Feature>;
-	plan: ApiPlanV1;
-}) => {
-	const priceText = plan.price?.display?.primary_text ?? "Free";
-	const priceSecondary =
-		plan.price?.display?.secondary_text ??
-		(plan.price?.interval ? `per ${plan.price.interval}` : null);
-	return (
-		<Card className="flex w-[270px] flex-col gap-0 rounded-xl bg-interactive-secondary dark:bg-background">
-			<CardHeader>
-				<div className="flex items-center gap-2">
-					<span className="font-medium text-foreground text-sm">
-						{plan.name || plan.id}
-					</span>
-					{plan.auto_enable && (
-						<span className="rounded bg-secondary px-1.5 py-0.5 text-[10px] text-tertiary-foreground">
-							Auto-enable
-						</span>
-					)}
-				</div>
-				<div className="flex items-baseline gap-1 pt-1">
-					<span className="font-semibold text-foreground text-lg">
-						{priceText}
-					</span>
-					{priceSecondary && (
-						<span className="text-tertiary-foreground text-xs">
-							{priceSecondary}
-						</span>
-					)}
-				</div>
-			</CardHeader>
-			<CardContent className="flex flex-col gap-1.5 pt-1">
-				{plan.items.map((item) => (
-					<PlanItemRow
-						key={item.feature_id}
-						feature={featuresById.get(item.feature_id)}
-						item={item}
-					/>
-				))}
-			</CardContent>
-		</Card>
-	);
-};
+import type { ResolvedFeature, ResolveFeature } from "./CreditSchemaSheet";
+import { CreditSystemRow, isCreditSystem } from "./CreditSystemRow";
+import { PlanPreviewCard, PlansBackdrop } from "./PlanPreviewCard";
 
 /** One feature as a list row: type icon (hover for the type label) + name + id,
  * with the type label trailing — mirrors the Features table. */
@@ -144,17 +64,61 @@ export function CatalogPreviewCard({
 		orgFeatures.map((feature) => [feature.id, feature]),
 	);
 
+	// Resolve a feature id across the org's features and the ones in this preview
+	// (a credit system can reference features created in the same call).
+	const featureMeta = new Map<string, ResolvedFeature>(
+		orgFeatures.map((feature) => [
+			feature.id,
+			{
+				name: feature.name,
+				type: feature.type,
+				usageType: feature.config?.usage_type,
+			},
+		]),
+	);
+	for (const entry of features) {
+		featureMeta.set(entry.feature.id, {
+			name: entry.feature.name,
+			type: entry.feature.type,
+			usageType:
+				entry.feature.consumable === false
+					? FeatureUsageType.Continuous
+					: FeatureUsageType.Single,
+		});
+	}
+	const resolveFeature: ResolveFeature = (featureId) =>
+		featureMeta.get(featureId) ?? { name: featureId };
+
+	const versionedPlans = plans
+		.filter((plan) => plan.will_version)
+		.map((plan) => plan.name || plan.id);
+
 	return (
 		<div className="flex flex-col gap-3">
+			{versionedPlans.length > 0 && (
+				<InfoBox classNames={{ infoBox: "max-w-xl" }} variant="warning">
+					This creates a new version of{" "}
+					<span className="font-medium">{versionedPlans.join(", ")}</span> —
+					existing customers stay on their current version until migrated.
+				</InfoBox>
+			)}
 			{features.length > 0 && (
 				<div className="flex flex-col gap-1.5">
 					<span className="font-medium text-tertiary-foreground text-xs">
 						Features
 					</span>
 					<div className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
-						{features.map((entry) => (
-							<FeatureRow key={entry.feature.id} entry={entry} />
-						))}
+						{features.map((entry) =>
+							isCreditSystem(entry.feature) ? (
+								<CreditSystemRow
+									feature={entry.feature}
+									key={entry.feature.id}
+									resolveFeature={resolveFeature}
+								/>
+							) : (
+								<FeatureRow entry={entry} key={entry.feature.id} />
+							),
+						)}
 					</div>
 				</div>
 			)}
@@ -163,18 +127,16 @@ export function CatalogPreviewCard({
 					<span className="font-medium text-tertiary-foreground text-xs">
 						Plans
 					</span>
-					<div
-						className="flex flex-wrap justify-center gap-2 rounded-xl border border-border/50 bg-card p-3 [--dot-color:rgba(0,0,0,0.15)] dark:[--dot-color:rgba(255,255,255,0.12)]"
-						style={{
-							backgroundImage:
-								"radial-gradient(circle, var(--dot-color) 1px, transparent 1px)",
-							backgroundSize: "16px 16px",
-						}}
-					>
+					<PlansBackdrop>
 						{plans.map((plan) => (
-							<PlanCard key={plan.id} featuresById={featuresById} plan={plan} />
+							<PlanPreviewCard
+								key={plan.id}
+								diff={plan.diff}
+								featuresById={featuresById}
+								plan={plan}
+							/>
 						))}
-					</div>
+					</PlansBackdrop>
 				</div>
 			)}
 		</div>

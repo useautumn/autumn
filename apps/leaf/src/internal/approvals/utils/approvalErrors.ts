@@ -76,7 +76,10 @@ const getObjectMessage = (value: Record<string, unknown>): string | null => {
 	return null;
 };
 
-export const approvalErrorResult = (error: unknown) => {
+export const approvalErrorResult = (
+	error: unknown,
+	options?: { retryable?: boolean },
+) => {
 	const rawMessage =
 		error instanceof Error
 			? error.message
@@ -94,5 +97,6 @@ export const approvalErrorResult = (error: unknown) => {
 	return {
 		error: true as const,
 		message: truncateMessage(message || "The action failed."),
+		...(options?.retryable ? { retryable: true as const } : {}),
 	};
 };

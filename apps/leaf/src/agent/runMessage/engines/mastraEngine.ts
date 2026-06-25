@@ -1,5 +1,6 @@
 import { Mastra } from "@mastra/core/mastra";
 import { InMemoryStore } from "@mastra/core/storage";
+import { autumnOrgContextService } from "../../../internal/autumnMcp/orgContextService.js";
 import { createLeafTracingOptions } from "../../../internal/observability/leafTracingOptions.js";
 import { leafChatAgentDefaults } from "../../../lib/chatAgentConfig.js";
 import { env as chatEnv } from "../../../lib/env.js";
@@ -7,6 +8,7 @@ import { createMastraBraintrustObservability } from "../../../providers/braintru
 import { agentOutputSchema } from "../../../types.js";
 import {
 	createAutumnMcpClient,
+	createReadAutumnDocTool,
 	getAutumnMcpTools,
 } from "../../tools/autumnMcp.js";
 import { createFirecrawlTools } from "../../tools/firecrawl.js";
@@ -57,11 +59,23 @@ export const mastraEngine: AgentEngine = {
 				apiKey: chatEnv.FIRECRAWL_API_KEY,
 				onAction,
 			});
+			const readAutumnDoc = createReadAutumnDocTool({ mcp, onAction });
+			// Preload the org's plans/features/agent rules once, on the first turn,
+			// so the agent doesn't have to fetch them itself (mirrors the CMA flow).
+			const isFirstMessage = !params.recentMessages?.some(
+				(message) => message.isBot === true,
+			);
+			const orgContext = isFirstMessage
+				? await autumnOrgContextService.load({ env, logger, token })
+				: undefined;
+
 			await onAction?.("Reasoning over the request");
 			const agent = createAutumnChatAgent({
 				env,
+				// Skills are read on demand via readAutumnDoc instead of inlined.
+				inlineSkills: false,
 				model: chatEnv.CHAT_MODEL,
-				tools: { ...tools, ...firecrawlTools },
+				tools: { ...tools, ...firecrawlTools, readAutumnDoc },
 			});
 			const mastra = new Mastra({
 				agents: { chat: agent },
@@ -82,6 +96,14 @@ export const mastraEngine: AgentEngine = {
 							"Answer the latest user message. Use prior thread messages only as context.",
 						].join("\n\n"),
 					},
+					...(orgContext?.text
+						? [
+								{
+									role: "system" as const,
+									content: `Org context (already-run Autumn tool results — don't re-fetch unless a record is absent or the user asks to refresh):\n${orgContext.text}`,
+								},
+							]
+						: []),
 					...recentMessageContext(params.recentMessages),
 				],
 				tracingOptions: createLeafTracingOptions({

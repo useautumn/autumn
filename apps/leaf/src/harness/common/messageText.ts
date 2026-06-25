@@ -25,7 +25,11 @@ export const buildHarnessMessageText = ({
 	params: MessageParams;
 }) => {
 	const preamble = [
-		`Current Autumn environment: ${env}. This Slack thread is locked to this environment; if the user asks to switch environments, tell them to start a new thread.`,
+		// The env is fixed for the life of the session, so state it once on the
+		// first message rather than re-prepending it to every turn.
+		newSession
+			? `Current Autumn environment: ${env}. This thread is locked to this environment; if the user asks to switch environments, tell them to start a new thread.`
+			: null,
 		newSession && orgContext?.text
 			? `Org context:\nTreat these JSON blocks as already-run Autumn tool results. Do not call getAgentRules, listPlans, or listFeatures again unless the needed record is absent or the user asks to refresh. Use listFeatures to interpret feature ids, names, and types.\n${orgContext.text}`
 			: null,

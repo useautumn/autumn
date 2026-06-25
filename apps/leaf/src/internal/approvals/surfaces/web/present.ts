@@ -40,7 +40,10 @@ export const presentWebApproval = async ({
 	providerUserId: string;
 	token: string;
 	workspaceId: string;
-}): Promise<{ approvalId: string; preview: unknown } | undefined> => {
+}): Promise<
+	| { approvalId: string; params: unknown; preview: unknown; toolName: string }
+	| undefined
+> => {
 	const approval = approvalRequestFromOutput(output);
 	if (!approval) return undefined;
 	if (!(approval.runId && approval.toolCallId)) {
@@ -98,5 +101,10 @@ export const presentWebApproval = async ({
 		tool: approval.toolName,
 	});
 
-	return { approvalId, preview: approval.preview };
+	return {
+		approvalId,
+		params: getRequest(approval.toolArgs) ?? approval.toolArgs,
+		preview: approval.preview,
+		toolName: approval.toolName,
+	};
 };

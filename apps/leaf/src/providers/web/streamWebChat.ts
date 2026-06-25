@@ -188,8 +188,10 @@ export const streamWebChat = async ({
 					writer.write({
 						data: {
 							approvalId: approval.approvalId,
+							params: approval.params,
 							preview: parsePreviewPayload(approval.preview),
 							status: "pending",
+							toolName: approval.toolName,
 						},
 						id: approval.approvalId,
 						type: "data-approval",

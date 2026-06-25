@@ -16,8 +16,10 @@ export type LeafUiMessage = UIMessage<
 	{
 		approval: {
 			approvalId: string;
+			params?: unknown;
 			preview: unknown;
 			status: LeafApprovalStatus;
+			toolName?: string;
 		};
 		step: { label: string; status: "running" | "done" | "error" };
 	}

@@ -91,7 +91,7 @@ export const MainSidebar = ({
 	const env = useEnv();
 
 	const flags = useAutumnFlags();
-	const { has } = useScopes();
+	const { has, isAdmin } = useScopes();
 	const canSeeDev = has(Scopes.ApiKeys.Read);
 	const canSeeMigrations = has(Scopes.Migrations.Read);
 
@@ -220,12 +220,6 @@ export const MainSidebar = ({
 							title="Analytics"
 							env={env}
 						/>
-						<NavButton
-							value="chat"
-							icon={<ChatCircleIcon size={16} weight="fill" />}
-							title="Chat"
-							env={env}
-						/>
 						{canSeeDev && (
 							<CollapsibleNavGroup
 								value="dev"
@@ -243,6 +237,14 @@ export const MainSidebar = ({
 							title="Settings"
 							env={env}
 						/>
+						{isAdmin && (
+							<NavButton
+								value="chat"
+								icon={<ChatCircleIcon size={16} weight="fill" />}
+								title="Chat"
+								env={env}
+							/>
+						)}
 					</div>
 				</div>
 

@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
+import { useScopes } from "@/hooks/useScopes";
+import { DefaultView } from "../DefaultView";
 import { LeafChatPanel } from "./components/LeafChatPanel";
 import { useLeafChat } from "./hooks/useLeafChat";
 
@@ -7,6 +9,7 @@ export default function ChatView() {
 	const { threadId: routeThreadId } = useParams<{ threadId?: string }>();
 	const navigate = useNavigate();
 	const location = useLocation();
+	const { isAdmin } = useScopes();
 	const draftThreadId = useMemo(() => crypto.randomUUID(), []);
 	const threadId = routeThreadId ?? draftThreadId;
 	const chatBasePath = location.pathname.startsWith("/sandbox/")
@@ -32,8 +35,13 @@ export default function ChatView() {
 		threadId,
 	});
 
+	// Chat is admin-only; non-admins who navigate here get the default view.
+	if (!isAdmin) {
+		return <DefaultView />;
+	}
+
 	return (
-		<div className="flex flex-col h-full min-h-0 w-full max-w-4xl mx-auto pt-6 pb-2">
+		<div className="flex flex-col h-full min-h-0 w-full max-w-3xl mx-auto pt-6 pb-2">
 			<LeafChatPanel
 				messages={messages}
 				input={input}

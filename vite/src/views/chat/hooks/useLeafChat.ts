@@ -8,6 +8,7 @@ import type {
 	LeafApproval,
 	LeafUIMessage,
 } from "../chatTypes";
+import { unwrapRequestParams } from "../chatTypes";
 import { useDecideApprovalMutation } from "./useDecideApprovalMutation";
 import { useLeafInteractionsQuery } from "./useLeafInteractionsQuery";
 import { useLeafThreadQuery } from "./useLeafThreadQuery";
@@ -37,8 +38,10 @@ const approvalMessage = (approval: LeafApproval): LeafUIMessage => ({
 		{
 			data: {
 				approvalId: approval.id,
+				params: unwrapRequestParams(approval.tool_args),
 				preview: approval.preview,
 				status: "pending",
+				toolName: approval.tool_name,
 			},
 			id: approval.id,
 			type: "data-approval",

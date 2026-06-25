@@ -12,6 +12,11 @@ import { parsePreviewPayload } from "../../ui/previewContent.js";
 
 const client = new Anthropic();
 
+const unwrapRequest = (args: unknown) =>
+	args && typeof args === "object" && "request" in args
+		? (args as { request: unknown }).request
+		: args;
+
 const toApprovalStatus = (status: string): LeafApprovalStatus => {
 	if (status === "approved") return "approved";
 	if (status === "pending") return "pending";
@@ -56,8 +61,10 @@ export const buildWebHistory = async ({
 		const part = {
 			data: {
 				approvalId: approval.id,
+				params: unwrapRequest(approval.tool_args),
 				preview: parsePreviewPayload(approval.preview),
 				status: toApprovalStatus(approval.status),
+				toolName: approval.tool_name,
 			},
 			id: approval.id,
 			type: "data-approval" as const,

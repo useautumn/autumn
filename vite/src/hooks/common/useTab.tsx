@@ -20,6 +20,10 @@ export const useTab = () => {
 		return "analytics";
 	}
 
+	if (pathname.startsWith("/chat") || pathname.startsWith("/sandbox/chat")) {
+		return "chat";
+	}
+
 	if (
 		pathname.startsWith("/features") ||
 		pathname.startsWith("/sandbox/features")
