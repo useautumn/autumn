@@ -30,19 +30,61 @@ Optional pass-through env vars used by `bun dev` if present:
 `STRIPE_SANDBOX_CLIENT_ID`, `ANTHROPIC_API_KEY`, `RESEND_API_KEY`,
 `POSTHOG_API_KEY`, `SLACK_BOT_TOKEN`.
 
+## Ports
+
+| Port | Owner |
+| --- | --- |
+| 3000 | vite frontend (`Vite` preview tab) |
+| 3001 | checkout app |
+| 3099 | leaf / chat |
+| **8090** | **Autumn server** (`Server` preview tab) — NOT 8080 |
+| 6379 | Dragonfly |
+| 9324 | goaws |
+
+`SERVER_PORT=8090` instead of the usual 8080 because Capy's `kappu` visual
+desktop streaming server (the one driving the desktop view) already owns
+:8080. Binding `bun dev` there sends `kappu` FATAL and blacks out the
+desktop. `provision.ts` emits `SERVER_PORT=8090` into `server/.env.local`
+and all preview URLs use 8090 to match.
+
 ## Daytona preview URLs
 
 The sandbox exposes browser-reachable URLs at
 `https://{port}-{DAYTONA_SANDBOX_ID}.proxy.daytona.work` — Capy's UI tabs
-for "Vite" and "Server" use this pattern. The auth gate at the proxy
-edge accepts the user's Daytona session cookie, so the browser flow works
-transparently.
+for "Vite" (port 3000) and "Server" (port 8090) use this pattern. The
+auth gate at the proxy edge accepts the user's Daytona session cookie, so
+the browser flow works transparently when accessed via the Capy UI.
 
 Server-internal traffic stays on `http://localhost:{port}` (the proxy edge
 won't honor server-to-self requests — they redirect to Auth0). `dev.ts`
 defaults to localhost for inter-process calls; the Daytona URLs only land
-in `BETTER_AUTH_URL`, `CLIENT_URL`, `VITE_BACKEND_URL`, and
-`VITE_FRONTEND_URL`.
+in `BETTER_AUTH_URL`, `CLIENT_URL`, `VITE_BACKEND_URL`,
+`VITE_FRONTEND_URL`, and `VITE_API_URL`.
+
+### Validating the auth flow from inside the sandbox
+
+In-sandbox browsers (the one the `computer` tool drives) don't have a
+Daytona session, so hitting the public preview URL from inside the
+sandbox gets you a 307 to Auth0 — you can't exercise the full auth round
+trip without temporarily swapping env vars to localhost.
+
+To dry-run the email-OTP flow end-to-end from a sandbox-internal browser:
+
+```bash
+# Point both vite + checkout at localhost for an isolated test session.
+sed -i 's|^VITE_BACKEND_URL=.*|VITE_BACKEND_URL=http://localhost:8090|' \
+  vite/.env.local apps/checkout/.env.local
+sed -i 's|^VITE_API_URL=.*|VITE_API_URL=http://localhost:8090|' \
+  apps/checkout/.env.local
+# Wipe vite caches so the new env values land in the bundle.
+rm -rf vite/node_modules/.vite apps/checkout/node_modules/.vite
+# Restart dev. The OTP will print in the dev log:
+#   `RESEND NOT SET UP, SIGN IN OTP: NNNNNN`
+bun dev
+```
+
+When done, re-run `bash scripts/setup/capy-startup.sh` to restore the
+Daytona-URL config that real users see.
 
 ## Logging in locally
 

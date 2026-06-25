@@ -64,7 +64,16 @@ const NEON_TEMPLATE_BRANCH = "dw-template";
 // env files. Internal-only ports (checkout :3001, leaf/chat :3099) don't
 // need to leak into env vars — `dev.ts` already hardcodes their localhost
 // URLs for sibling processes.
-const SERVER_PORT = 8080;
+//
+// SERVER_PORT is NOT 8080 because Capy's `kappu` visual desktop server (the
+// one the `computer` tool drives) listens there as a supervisord-managed
+// process; binding `bun dev`'s server to 8080 sends kappu FATAL and kills
+// the desktop stream the user (and the agent) need for browser checks. 8090
+// is close enough to remember and outside Capy's reserved range (8000
+// internal bun_server, 8080 kappu, 7681 ttyd, 2280 toolbox, 22220 ssh,
+// 22222 web terminal, 33333 recording dashboard). We emit SERVER_PORT into
+// server/.env.local so scripts/dev.ts picks it up via the preload-env shim.
+const SERVER_PORT = 8090;
 const VITE_PORT = 3000;
 const DRAGONFLY_PORT = 6379;
 const ELASTICMQ_PORT = 9324;
@@ -365,6 +374,9 @@ function writeEnvFiles(
 	const sqsBase = `http://localhost:${ELASTICMQ_PORT}/000000000000`;
 
 	const serverEnv: Record<string, string> = {
+		// scripts/dev.ts reads SERVER_PORT from env (default 8080) — we set 8090
+		// to dodge kappu, the supervisord-managed visual desktop server.
+		SERVER_PORT: String(SERVER_PORT),
 		// server/src/utils/initUtils.ts::checkEnvVars exits if any of these are
 		// missing; legacy writeAgentEnv.ts handled the same set. Re-minted only
 		// on first run — the values live in $CAPY_PREFIX/state.json.
