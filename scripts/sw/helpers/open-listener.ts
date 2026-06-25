@@ -7,11 +7,9 @@ import { sh } from "./shell.ts";
  * opens them in your local browser. Detached so it outlives `bun sw`.
  */
 export function ensureOpenListener(): void {
-	const probe = sh("python3", [
-		"-c",
-		`import socket; socket.socket(socket.AF_UNIX).connect(${JSON.stringify(SW_OPEN_SOCK)})`,
-	]);
-	if (probe.code === 0) return; // already listening
+	// Restart (rather than skip-if-running) so a stale listener from an older sw
+	// is replaced with the current code.
+	sh("pkill", ["-f", "sw-open-listener.py"]);
 	sh("bash", [
 		"-c",
 		`nohup python3 ${JSON.stringify(OPEN_LISTENER)} ${JSON.stringify(SW_OPEN_SOCK)} >/dev/null 2>&1 &`,
