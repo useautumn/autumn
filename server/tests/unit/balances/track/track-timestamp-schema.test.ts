@@ -1,7 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { TrackParamsSchema } from "@api/balances/track/trackParams";
 import { TrackTokensParamsSchema } from "@api/balances/track/trackTokensParams";
-import { MAX_TRACK_TIMESTAMP_AGE_MS } from "@api/balances/track/trackTimestamp";
 
 const schemaCases = [
 	[
@@ -24,13 +23,13 @@ const schemaCases = [
 
 describe("track timestamp schemas", () => {
 	test.each(schemaCases)(
-		"%s accepts omitted and recent timestamps",
+		"%s accepts omitted and historical timestamps",
 		(_, schema, params) => {
 			expect(schema.safeParse(params).success).toBe(true);
 			expect(
 				schema.safeParse({
 					...params,
-					timestamp: Date.now() - 10_000,
+					timestamp: Date.UTC(2024, 0, 15, 12, 30, 0),
 				}).success,
 			).toBe(true);
 		},
@@ -54,20 +53,6 @@ describe("track timestamp schemas", () => {
 					}).success,
 				).toBe(false);
 			}
-		},
-	);
-
-	test.each(schemaCases)(
-		"%s rejects timestamps more than 30 days old",
-		(_, schema, params) => {
-			const timestamp = Date.now() - MAX_TRACK_TIMESTAMP_AGE_MS - 1;
-
-			expect(
-				schema.safeParse({
-					...params,
-					timestamp,
-				}).success,
-			).toBe(false);
 		},
 	);
 
