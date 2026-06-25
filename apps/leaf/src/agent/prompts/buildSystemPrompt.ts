@@ -1,5 +1,5 @@
+import { leafSystemPrompt } from "@autumn/agent-docs/agent";
 import type { AppEnv } from "@autumn/shared";
-import { autumnChatInstructions } from "../../harness/common/instructions/index.js";
 import type { ChatContextMessage } from "../../types.js";
 
 /**
@@ -18,7 +18,7 @@ export const buildSystemPrompt = ({
 	thread?: { provider: string; resourceId: string; threadId: string };
 }) =>
 	[
-		autumnChatInstructions,
+		leafSystemPrompt(thread?.provider === "slack" ? "slack" : "dashboard"),
 		`Current Autumn environment: ${env}.`,
 		thread
 			? `${thread.provider} thread: ${thread.threadId}. Autumn resource: ${thread.resourceId}.`

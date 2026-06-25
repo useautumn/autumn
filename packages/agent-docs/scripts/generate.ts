@@ -1,5 +1,5 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import config from "../agent-docs.config.js";
 import type { Source } from "../src/config/types.js";
@@ -112,6 +112,27 @@ writeGenerated({
 	typeName: "autumnMcpInstructions: string",
 	typeImport: "",
 	value: mcpInstructions,
+});
+
+// Recursively inline `<part file="…" />` (relative to each file) so surface
+// prompts compose a shared base + nested parts (e.g. mcpInstructions) DRY.
+const PROMPT_PART = /<part\s+file="([^"]+)"\s*\/>/g;
+const composePrompt = (relPath: string): string =>
+	readFileSync(resolve(contentRoot, relPath), "utf8")
+		.replace(PROMPT_PART, (_match, file: string) =>
+			composePrompt(join(dirname(relPath), file)).trim(),
+		)
+		.replace(/\n{3,}/g, "\n\n")
+		.trim();
+
+writeGenerated({
+	file: "leaf-prompts.generated.ts",
+	typeName: 'leafPrompts: Record<"dashboard" | "slack", string>',
+	typeImport: "",
+	value: {
+		dashboard: composePrompt("instructions/leaf/dashboard.md"),
+		slack: composePrompt("instructions/leaf/slack.md"),
+	},
 });
 writeGenerated({
 	file: "mcp-resources.generated.ts",

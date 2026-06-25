@@ -8,6 +8,8 @@ import {
 	ensureWebChatAuth,
 	WEB_CHAT_PROVIDER,
 } from "../../internal/installations/actions/ensureWebChatAuth.js";
+import { presentWebApproval } from "../../internal/approvals/surfaces/web/present.js";
+import { getRecentMessages } from "../slack/threadContext.js";
 import { getOrgInstallationToken } from "../../internal/installations/actions/getOrgInstallationToken.js";
 import { env as chatEnv } from "../../lib/env.js";
 import { logger as rootLogger } from "../../lib/logger.js";
@@ -62,11 +64,28 @@ export const runWebMessage = async ({
 		token: accessToken,
 	};
 
+	const recentMessages = await getRecentMessages(thread, message);
 	const output = await agentEngines[harness].run({
 		ctx,
-		params: { text: message.text },
+		params: { text: message.text, recentMessages },
 	});
 	if (output.text) {
 		await thread.post(output.text);
+	}
+
+	// A destructive write suspended the turn — record an approval the dashboard
+	// fetches + resolves via /agent/interactions (the web stream is text-only).
+	if (output.suspension) {
+		await presentWebApproval({
+			channelId: thread.id,
+			harness,
+			logger,
+			orgId,
+			output,
+			provider: WEB_CHAT_PROVIDER as ChatProvider,
+			providerUserId: userId,
+			token: accessToken,
+			workspaceId: orgId,
+		});
 	}
 };

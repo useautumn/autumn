@@ -1,6 +1,17 @@
 import { autumnMcpInstructions } from "../generated/instructions.generated.js";
+import { leafPrompts } from "../generated/leaf-prompts.generated.js";
 
 export { autumnMcpInstructions };
+
+export type LeafSurface = keyof typeof leafPrompts;
+
+/**
+ * Leaf's base system instructions for a surface, composed from
+ * `content/instructions/leaf/*` (shared base + per-surface nudge). The dashboard
+ * leans toward plan management; Slack toward billing + investigation.
+ */
+export const leafSystemPrompt = (surface: LeafSurface): string =>
+	leafPrompts[surface];
 
 /**
  * The canonical doc bundle a chat agent (Leaf, in-app chat) loads into its

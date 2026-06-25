@@ -21,6 +21,9 @@ export * from "./others/apiDiscount.js";
 export * from "./others/apiInvoice/apiInvoiceV1.js";
 // Product
 export * from "./products/index.js";
+export * from "./catalog/previewUpdateCatalogParams.js";
+export * from "./catalog/previewUpdateCatalogResponse.js";
+export * from "./catalog/utils/index.js";
 // Referrals
 export * from "./referrals/apiReferralCode.js";
 export * from "./referrals/createReferralCodeParams.js";

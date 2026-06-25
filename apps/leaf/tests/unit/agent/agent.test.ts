@@ -9,7 +9,10 @@ process.env.SLACK_CLIENT_SECRET ??= "test";
 process.env.SLACK_SIGNING_SECRET ??= "test";
 process.env.FIRECRAWL_API_KEY ??= "fc_test";
 
-const { agentDocBundleUris } = await import("@autumn/agent-docs/agent");
+const { agentDocBundleUris, leafSystemPrompt } = await import(
+	"@autumn/agent-docs/agent"
+);
+const autumnChatInstructions = leafSystemPrompt("slack");
 const { getDefaultChatEnv, selectChatEnv } = await import(
 	"../../../src/agent/runMessage/setup/selectChatEnv.js"
 );
@@ -21,9 +24,6 @@ const {
 	shouldUseSlackAdminInstallationForWorkspace,
 	validateSlackAdminAccessConfig,
 } = await import("../../../src/internal/slackAdmin/access.js");
-const { autumnChatInstructions } = await import(
-	"../../../src/harness/common/instructions/index.js"
-);
 const { orgMemoryInstructions } = await import(
 	"../../../src/harness/common/instructions/index.js"
 );

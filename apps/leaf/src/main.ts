@@ -1,11 +1,25 @@
 import type { HttpBindings } from "@hono/node-server";
 import { serve } from "@hono/node-server";
-import { Hono } from "hono";
+import { verifyDashboardSession } from "@autumn/auth";
+import type { ChatProvider } from "@autumn/shared";
+import { type Context, Hono } from "hono";
 import { bot, chatAdapterNames } from "./bot.js";
+import { decideWebApproval } from "./internal/approvals/surfaces/web/decide.js";
+import { listWebApprovals } from "./internal/approvals/surfaces/web/list.js";
+import { WEB_CHAT_PROVIDER } from "./internal/installations/actions/ensureWebChatAuth.js";
 import { env } from "./lib/env.js";
 import { logger } from "./lib/logger.js";
 import { createMcpRouter } from "./mcp/mcpRouter.js";
 import { slackRoutes } from "./providers/slack/routes.js";
+
+const authDashboard = async (cookie: string | null | undefined) => {
+	const session = await verifyDashboardSession({
+		cookie,
+		authBaseUrl: env.BETTER_AUTH_URL,
+	});
+	if (!session?.activeOrganizationId) return null;
+	return { orgId: session.activeOrganizationId, userId: session.userId };
+};
 
 const app = new Hono<{ Bindings: HttpBindings }>();
 
@@ -77,6 +91,36 @@ app.post("/agent/chat", async (c) => {
 		headers,
 	});
 });
+
+// Pending plan-preview / approval interactions for the dashboard chat. The chat
+// stream is text-only, so the dashboard fetches these beside the stream.
+app.get("/agent/interactions", async (c) => {
+	const auth = await authDashboard(c.req.header("cookie"));
+	if (!auth) return c.json({ error: "Not authenticated" }, 401);
+	const approvals = await listWebApprovals({
+		orgId: auth.orgId,
+		provider: WEB_CHAT_PROVIDER as ChatProvider,
+		workspaceId: auth.orgId,
+	});
+	return c.json({ approvals });
+});
+
+const decideRoute = (action: "approve" | "reject") => async (c: Context) => {
+	const auth = await authDashboard(c.req.header("cookie"));
+	if (!auth) return c.json({ error: "Not authenticated" }, 401);
+	const { approvalId } = await c.req.json<{ approvalId?: string }>();
+	if (!approvalId) return c.json({ error: "approvalId required" }, 400);
+	const result = await decideWebApproval({
+		action,
+		approvalId,
+		orgId: auth.orgId,
+		providerUserId: auth.userId,
+	});
+	return c.json(result);
+};
+
+app.post("/agent/approve", decideRoute("approve"));
+app.post("/agent/reject", decideRoute("reject"));
 
 serve(
 	{

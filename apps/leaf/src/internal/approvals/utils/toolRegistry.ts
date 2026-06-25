@@ -6,6 +6,7 @@ const writePreviewTools: Record<string, string> = {
 	attach: "previewAttach",
 	createBalance: "previewCreateBalance",
 	createSchedule: "previewCreateSchedule",
+	updateCatalog: "previewUpdateCatalog",
 	updateSubscription: "previewUpdateSubscription",
 };
 

@@ -3,7 +3,7 @@ import type { AutumnLogger } from "@autumn/logging";
 import type { AppEnv } from "@autumn/shared";
 import { setupAgentToolContext } from "../../agent/runMessage/setup/setupAgentToolContext.js";
 import { env as chatEnv } from "../../lib/env.js";
-import { autumnChatInstructions } from "../common/instructions/index.js";
+import { leafSystemPrompt } from "@autumn/agent-docs/agent";
 import { claudeManagedConfig } from "./config.js";
 import {
 	buildDesiredTools,
@@ -48,8 +48,9 @@ const findAgentByName = async (client: Anthropic, name: string) => {
 	return undefined;
 };
 
+// The shared Claude Managed agent serves Slack; web uses the mastra engine.
 export const buildAgentSystem = ({ docsText }: { docsText: string }) =>
-	[autumnChatInstructions, docsText].filter(Boolean).join("\n\n");
+	[leafSystemPrompt("slack"), docsText].filter(Boolean).join("\n\n");
 
 // Keep the shared agent config in sync with local code/tunnel changes.
 // Dev re-syncs every turn; prod syncs once per process.

@@ -34,6 +34,12 @@ export const createChatProxyRouter = (
 	// authenticates the dashboard session in getUser.
 	router.post("/agent/chat", proxy);
 
+	// Plan-preview / approval interactions for the dashboard chat (state-backed,
+	// fetched + resolved beside the text-only stream).
+	router.get("/agent/interactions", proxy);
+	router.post("/agent/approve", proxy);
+	router.post("/agent/reject", proxy);
+
 	// Proxy the MCP endpoint to leaf so a public origin (e.g. NGROK_URL) reaches it —
 	// Claude Managed Agents run in Anthropic's cloud and cannot hit leaf's localhost.
 	// Point MCP_SERVER_URL at this public origin so the agent + vault use it.

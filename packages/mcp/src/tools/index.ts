@@ -6,6 +6,7 @@ import { type AutumnMcpAuth, getAutumnAuth } from "../server/auth/auth.js";
 import { agent } from "./agent.js";
 import { balances } from "./balances.js";
 import { billing } from "./billing.js";
+import { catalog } from "./catalog.js";
 import { customers } from "./customers.js";
 import { entities } from "./entities.js";
 import { features } from "./features.js";
@@ -41,6 +42,7 @@ export const endpointByTool = {
 	...entities.endpoints,
 	...features.endpoints,
 	...plans.endpoints,
+	...catalog.endpoints,
 	...billing.endpoints,
 	...balances.endpoints,
 	...logs.endpoints,
@@ -53,6 +55,7 @@ export const schemaByTool = {
 	...entities.schemas,
 	...features.schemas,
 	...plans.schemas,
+	...catalog.schemas,
 	...billing.schemas,
 	...balances.schemas,
 	...logs.schemas,
@@ -67,6 +70,7 @@ const domains: ToolDomain[] = [
 	entities.domain,
 	features.domain,
 	plans.domain,
+	catalog.domain,
 	billing.domain,
 	balances.domain,
 	logs.domain,

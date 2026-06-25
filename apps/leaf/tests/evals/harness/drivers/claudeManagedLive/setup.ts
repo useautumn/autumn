@@ -2,7 +2,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { AppEnv } from "@autumn/shared";
 import { MCPClient } from "@mastra/mcp";
 import { agentDocBundleUris } from "@autumn/agent-docs/agent";
-import { autumnChatInstructions } from "../../../../../src/harness/common/instructions/index.js";
+import { leafSystemPrompt } from "@autumn/agent-docs/agent";
 import { claudeManagedConfig } from "../../../../../src/harness/claudeManaged/config.js";
 import type { EvalDriverMessage } from "../types.js";
 
@@ -80,7 +80,7 @@ const buildAgentConfig = ({
 	model: model.replace(/^anthropic\//, ""),
 	name: "Autumn Leaf (eval)",
 	system: [
-		autumnChatInstructions,
+		leafSystemPrompt("slack"),
 		`Current Autumn environment: ${env}.`,
 		today ? `Current date: ${today.toISOString()}.` : null,
 		docsText,
