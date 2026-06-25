@@ -1,17 +1,17 @@
-import { ArrowSquareOutIcon } from "@phosphor-icons/react";
-import { useState } from "react";
-import { InfoTooltip } from "@/components/general/modal-components/InfoTooltip";
-import { Button } from "@/components/v2/buttons/Button";
-import { IconButton } from "@/components/v2/buttons/IconButton";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { Input } from "@/components/v2/inputs/Input";
+	IconButton,
+	InfoTooltip,
+	Input,
+} from "@autumn/ui";
+import { ArrowSquareOutIcon } from "@phosphor-icons/react";
+import { useState } from "react";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { connectStripe } from "./utils/connectStripe";
@@ -19,9 +19,11 @@ import { connectStripe } from "./utils/connectStripe";
 export default function ConnectStripeDialog({
 	open,
 	setOpen,
+	onMismatch,
 }: {
 	open: boolean;
 	setOpen: (open: boolean) => void;
+	onMismatch?: (message: string) => void;
 }) {
 	const { mutate: mutateOrg } = useOrg();
 
@@ -31,7 +33,12 @@ export default function ConnectStripeDialog({
 	const [loading, setLoading] = useState(false);
 	const handleConnectStripe = async () => {
 		setLoading(true);
-		await connectStripe({ testApiKey, axiosInstance, mutate: mutateOrg });
+		await connectStripe({
+			testApiKey,
+			axiosInstance,
+			mutate: mutateOrg,
+			onMismatch,
+		});
 		setOpen(false);
 		setLoading(false);
 	};
@@ -54,7 +61,7 @@ export default function ConnectStripeDialog({
 										<li>Checkout (read & write)</li>
 										<li>Billing (read & write)</li>
 										<li>All webhooks (write)</li>
-										<li>Connect → Account Links (write)</li>
+										<li>Connect (read)</li>
 									</ul>
 
 									<p className="mt-2 mb-2 text-xs">

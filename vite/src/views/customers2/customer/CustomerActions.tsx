@@ -1,51 +1,40 @@
-import type { Feature, FullCusProduct } from "@autumn/shared";
-import { AppEnv, FeatureUsageType, ProcessorType } from "@autumn/shared";
+import type { FullCusProduct } from "@autumn/shared";
+import { AppEnv, ProcessorType } from "@autumn/shared";
+import { Button, Dialog } from "@autumn/ui";
 import {
 	ArrowSquareOutIcon,
 	ArrowsClockwiseIcon,
-	BracketsSquareIcon,
 	BroomIcon,
 	CaretDownIcon,
 	PencilSimpleIcon,
 	SubtractIcon,
 	TicketIcon,
 	TrashIcon,
-	UserCircleGearIcon,
 } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
-import { Dialog } from "@/components/v2/dialogs/Dialog";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { useOrg } from "@/hooks/common/useOrg";
-import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
-import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
-import { useDropdownShortcut } from "@/hooks/useDropdownShortcut";
+import { useDropdownShortcut } from "@autumn/ui";
 import { cn } from "@/lib/utils";
 import { CusService } from "@/services/customers/CusService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
-import {
-	getRevenueCatCusLink,
-	getStripeConnectViewAsLink,
-	getStripeCusLink,
-} from "@/utils/linkUtils";
+import { getRevenueCatCusLink } from "@/utils/linkUtils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
-import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
 import { DeleteCustomerDialog } from "@/views/customers/customer/components/DeleteCustomerDialog";
 import UpdateCustomerDialog from "@/views/customers/customer/components/UpdateCustomerDialog";
 import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
 import { AddCouponDialog } from "./components/AddCouponDialog";
 import { CreateEntity } from "./components/CreateEntity";
-import { ShowCustomerObjectSheet } from "./components/ShowCustomerObjectSheet";
 
 export function CustomerActions() {
 	const [isModalOpen, setIsModalOpen] = useState(false);
@@ -53,35 +42,15 @@ export function CustomerActions() {
 	const [createEntityOpen, setCreateEntityOpen] = useState(false);
 	const [addCouponOpen, setAddCouponOpen] = useState(false);
 	const [actionsOpen, setActionsOpen] = useState(false);
-	const [portalLoading, setPortalLoading] = useState(false);
-	const [showObjectOpen, setShowObjectOpen] = useState(false);
 	const [clearCacheLoading, setClearCacheLoading] = useState(false);
 	const { customer } = useCusQuery();
-	const { features } = useFeaturesQuery();
 	const { org } = useOrg();
-	const { stripeAccount } = useOrgStripeQuery();
 	const { isAdmin } = useAdmin();
-	const { masterStripeAccount } = useMasterStripeAccount();
 	const setSheet = useSheetStore((s) => s.setSheet);
 	const env = useEnv();
 	const axiosInstance = useAxiosInstance();
 
 	const stripeCustomerId = customer?.processor?.id;
-
-	const stripeConnectViewAsCustomerLink =
-		isAdmin && masterStripeAccount?.id && stripeAccount?.id && stripeCustomerId
-			? getStripeConnectViewAsLink({
-					masterAccountId: masterStripeAccount.id,
-					connectedAccountId: stripeAccount.id,
-					env,
-					path: `customers/${stripeCustomerId}`,
-				})
-			: null;
-
-	const hasContinuousUseFeatures = features?.some(
-		(feature: Feature) =>
-			feature.config?.usage_type === FeatureUsageType.Continuous,
-	);
 
 	// Open dropdown with "a" key
 	useDropdownShortcut({
@@ -107,23 +76,6 @@ export function CustomerActions() {
 		}
 	};
 
-	const handleOpenBillingPortal = async () => {
-		if (!customer) return;
-
-		setPortalLoading(true);
-		try {
-			const { url } = await CusService.createBillingPortalSession({
-				axios: axiosInstance,
-				customer_id: customer.id || customer.internal_id,
-			});
-			window.open(url, "_blank");
-		} catch (error) {
-			toast.error(getBackendErr(error, "Failed to open billing portal"));
-		} finally {
-			setPortalLoading(false);
-		}
-	};
-
 	return (
 		<div className="flex items-center gap-2">
 			<Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -141,10 +93,6 @@ export function CustomerActions() {
 			/>
 			<CreateEntity open={createEntityOpen} setOpen={setCreateEntityOpen} />
 			<AddCouponDialog open={addCouponOpen} setOpen={setAddCouponOpen} />
-			<ShowCustomerObjectSheet
-				open={showObjectOpen}
-				setOpen={setShowObjectOpen}
-			/>
 
 			<DropdownMenu open={actionsOpen} onOpenChange={setActionsOpen}>
 				<DropdownMenuTrigger asChild>
@@ -166,16 +114,14 @@ export function CustomerActions() {
 						<PencilSimpleIcon />
 						Edit customer
 					</DropdownMenuItem>
-					{hasContinuousUseFeatures && (
-						<DropdownMenuItem
-							onClick={() => setCreateEntityOpen(true)}
-							className="flex gap-2"
-							shortcut="n"
-						>
-							<SubtractIcon />
-							Create entity
-						</DropdownMenuItem>
-					)}
+					<DropdownMenuItem
+						onClick={() => setCreateEntityOpen(true)}
+						className="flex gap-2"
+						shortcut="n"
+					>
+						<SubtractIcon />
+						Create entity
+					</DropdownMenuItem>
 					<DropdownMenuItem
 						onClick={() => setAddCouponOpen(true)}
 						className="flex gap-2"
@@ -183,14 +129,6 @@ export function CustomerActions() {
 					>
 						<TicketIcon />
 						Add coupon
-					</DropdownMenuItem>
-					<DropdownMenuItem
-						onClick={() => setShowObjectOpen(true)}
-						className="flex gap-2"
-						shortcut="o"
-					>
-						<BracketsSquareIcon />
-						Show customer object
 					</DropdownMenuItem>
 					{stripeCustomerId &&
 						customer?.processor?.type === ProcessorType.Stripe && (
@@ -204,36 +142,6 @@ export function CustomerActions() {
 							>
 								<ArrowsClockwiseIcon />
 								Sync from Stripe
-							</DropdownMenuItem>
-						)}
-					<DropdownMenuItem
-						onClick={handleOpenBillingPortal}
-						className="flex gap-2"
-						disabled={portalLoading}
-						shortcut="b"
-					>
-						<UserCircleGearIcon />
-						{portalLoading ? "Opening..." : "Open customer portal"}
-					</DropdownMenuItem>
-					{stripeCustomerId &&
-						customer?.processor?.type === ProcessorType.Stripe && (
-							<DropdownMenuItem
-								onClick={() => {
-									window.open(
-										stripeConnectViewAsCustomerLink ??
-											getStripeCusLink({
-												customerId: stripeCustomerId,
-												env,
-												accountId: stripeAccount?.id,
-											}),
-										"_blank",
-									);
-								}}
-								className="flex gap-2"
-								shortcut="s"
-							>
-								<ArrowSquareOutIcon className="size-3.5" />
-								Open in Stripe
 							</DropdownMenuItem>
 						)}
 					{isAdmin && (

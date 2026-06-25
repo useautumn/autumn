@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { authClient, useSession } from "@/lib/auth-client";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr, notNullish } from "@/utils/genUtils";

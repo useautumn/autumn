@@ -7,18 +7,19 @@ import {
 	isFeaturePriceItem,
 	itemToBillingInterval,
 	itemToEntInterval,
+	nullish,
 	UsageModel,
 } from "@autumn/shared";
-import { CalendarXIcon } from "@phosphor-icons/react";
-import { IconCheckbox } from "@/components/v2/checkboxes/IconCheckbox";
-import { FormLabel } from "@/components/v2/form/FormLabel";
 import {
+	FormLabel,
+	IconCheckbox,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
+import { CalendarXIcon } from "@phosphor-icons/react";
 import { formatIntervalText } from "@/utils/formatUtils/formatTextUtils";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import { CustomiseIntervalPopover } from "../CustomiseIntervalPopover";
@@ -34,6 +35,14 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 
 	const isFeaturePrice = isFeaturePriceItem(item);
 	const isUnlimited = item.included_usage === Infinite;
+
+	// When a prepaid feature resets on a different cycle to billing, this dropdown
+	// drives the billing interval (price_interval); the reset lives in `interval`.
+	const isSeparateResetActive = isFeaturePrice && !nullish(item.price_interval);
+	const intervalField = isSeparateResetActive ? "price_interval" : "interval";
+	const countField = isSeparateResetActive
+		? "price_interval_count"
+		: "interval_count";
 
 	// Helper functions to reduce repetition
 	const getIntervalValue = () => {
@@ -69,7 +78,7 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 				value === BillingInterval.OneOff
 					? UsageModel.Prepaid
 					: item.usage_model,
-			interval: convertToItemInterval(value),
+			[intervalField]: convertToItemInterval(value),
 		});
 	};
 
@@ -95,12 +104,21 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 		<div className={showBillingLabel ? "mt-3" : ""}>
 			<FormLabel>Interval</FormLabel>
 			<div className="flex items-center gap-2">
-			<Select
-				value={isSelectDisabled ? undefined : intervalValue}
-				onValueChange={handleIntervalChange}
-				disabled={isSelectDisabled}
-				items={Object.fromEntries(availableIntervals.map((interval) => [interval, formatIntervalText({ billingInterval: interval, intervalCount: item.interval_count || undefined, isBillingInterval: true })]))}
-			>
+				<Select
+					value={isSelectDisabled ? undefined : intervalValue}
+					onValueChange={handleIntervalChange}
+					disabled={isSelectDisabled}
+					items={Object.fromEntries(
+						availableIntervals.map((interval) => [
+							interval,
+							formatIntervalText({
+								billingInterval: interval,
+								intervalCount: item[countField] || undefined,
+								isBillingInterval: true,
+							}),
+						]),
+					)}
+				>
 					<SelectTrigger className="w-full">
 						<SelectValue placeholder="None" />
 					</SelectTrigger>
@@ -109,12 +127,16 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 							<SelectItem key={interval} value={interval}>
 								{formatIntervalText({
 									billingInterval: interval,
-									intervalCount: item.interval_count || undefined,
+									intervalCount: item[countField] || undefined,
 									isBillingInterval: true,
 								})}
 							</SelectItem>
 						))}
-						<CustomiseIntervalPopover item={item} setItem={setItem} />
+						<CustomiseIntervalPopover
+							item={item}
+							setItem={setItem}
+							countField={countField}
+						/>
 					</SelectContent>
 				</Select>
 
@@ -126,7 +148,7 @@ export function UsageReset({ showBillingLabel = false }: UsageResetProps) {
 					size="default"
 					checked={isOneOff}
 					onCheckedChange={handleOneOffToggle}
-					disabled={isUnlimited}
+					disabled={isUnlimited || isSeparateResetActive}
 					className="py-1 w-26 text-subtle gap-2 justify-start"
 				>
 					One-off

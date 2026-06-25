@@ -18,6 +18,7 @@
         additional_balance: number | null,
         adjustment: number | null,
         entities: object | null,
+        reset_cycle_anchor: number | null,
         next_reset_at: number | null,
         expected_next_reset_at: number | null,
         rollover_insert: { id, cus_ent_id, balance, usage, expires_at, entities } | null,
@@ -114,6 +115,10 @@ for _, update in ipairs(updates) do
       -- Set entities if provided (entity-scoped entitlement)
       if not is_nil(update.entities) then
         redis.call('JSON.SET', cache_key, base_path .. '.entities', cjson.encode(update.entities))
+      end
+
+      if not is_nil(update.reset_cycle_anchor) then
+        redis.call('JSON.SET', cache_key, base_path .. '.reset_cycle_anchor', tostring(update.reset_cycle_anchor))
       end
 
       -- Set next_reset_at if provided (reset operation)

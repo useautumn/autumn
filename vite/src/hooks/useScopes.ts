@@ -1,6 +1,6 @@
+import { makeScopeChecker } from "@autumn/shared";
 import { useMemo } from "react";
 import { useSession } from "@/lib/auth-client";
-import { makeScopeChecker } from "@autumn/shared";
 
 /**
  * React wrapper around `makeScopeChecker` that reads scopes from the

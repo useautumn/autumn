@@ -1,5 +1,5 @@
 {
-  "id": "225f1120-dd75-4681-83f1-58d8feab3e81",
+  "id": "60d2509d-6e67-45f0-afe7-1b0d254106aa",
   "prevId": "1e753dde-3672-42cb-aeb3-85ef5c6d3cb6",
   "version": "7",
   "dialect": "postgresql",
@@ -1412,6 +1412,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "reset_cycle_anchor": {
+          "name": "reset_cycle_anchor",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
         "next_reset_at": {
           "name": "next_reset_at",
           "type": "numeric",
@@ -1423,6 +1429,13 @@
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
+          "default": false
+        },
+        "separate_interval": {
+          "name": "separate_interval",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
           "default": false
         },
         "adjustment": {
@@ -1564,6 +1577,28 @@
           ],
           "isUnique": false,
           "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_customer_entitlements_separate_interval_reset": {
+          "name": "idx_customer_entitlements_separate_interval_reset",
+          "columns": [
+            {
+              "expression": "next_reset_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"customer_entitlements\".\"separate_interval\" = true AND \"customer_entitlements\".\"next_reset_at\" IS NOT NULL",
+          "concurrently": true,
           "method": "btree",
           "with": {}
         },
@@ -1889,6 +1924,12 @@
         },
         "trial_ends_at": {
           "name": "trial_ends_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "billing_cycle_anchor": {
+          "name": "billing_cycle_anchor",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
@@ -5764,13 +5805,6 @@
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
-          "default": false
-        },
-        "is_sandbox": {
-          "name": "is_sandbox",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
           "default": false
         },
         "redis_config": {

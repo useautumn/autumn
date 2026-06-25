@@ -4,15 +4,15 @@ import {
 	TierBehavior,
 	UsageModel,
 } from "@autumn/shared";
-import { PlusIcon, TrashSimpleIcon } from "@phosphor-icons/react";
-import { useEffect, useState } from "react";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import { Input } from "@/components/v2/inputs/Input";
 import {
+	IconButton,
+	Input,
 	InputGroup,
 	InputGroupAddon,
 	InputGroupInput,
-} from "@/components/v2/inputs/InputGroup";
+} from "@autumn/ui";
+import { PlusIcon, TrashSimpleIcon } from "@phosphor-icons/react";
+import { useEffect, useState } from "react";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductItemContext } from "@/views/products/product/product-item/ProductItemContext";
 import {
@@ -191,7 +191,9 @@ export function PriceTiers({
 							}}
 						/>
 						<InputGroupAddon align="inline-end">
-							<span className="text-tertiary-foreground text-tiny">{currency}</span>
+							<span className="text-tertiary-foreground text-tiny">
+								{currency}
+							</span>
 						</InputGroupAddon>
 					</InputGroup>
 
@@ -223,7 +225,10 @@ export function PriceTiers({
 				const amountValue = isFlatMode ? (tier.flat_amount ?? 0) : tier.amount;
 
 				return (
-					<div key={`${index}-${tier.to}`} className="flex gap-2 w-full items-center">
+					<div
+						key={`${index}-${tier.to}`}
+						className="flex gap-2 w-full items-center"
+					>
 						<span className="text-tertiary-foreground text-xs min-w-0 w-18 shrink-0 h-full">
 							{Number(includedUsage) === 0 && index === 0
 								? "first"
@@ -249,7 +254,9 @@ export function PriceTiers({
 								placeholder="0.00"
 							/>
 							<InputGroupAddon align="inline-end">
-								<span className="text-tertiary-foreground text-tiny">{currency}</span>
+								<span className="text-tertiary-foreground text-tiny">
+									{currency}
+								</span>
 							</InputGroupAddon>
 						</InputGroup>
 

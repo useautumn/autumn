@@ -1,6 +1,5 @@
 import { SANDBOX_COLORS } from "@autumn/shared";
-import { FormLabel as FieldLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
+import { FormLabel as FieldLabel, Input } from "@autumn/ui";
 import { sandboxColorClass } from "@/hooks/sandbox/sandboxDisplay";
 import { cn } from "@/lib/utils";
 import { IconPicker } from "@/views/settings/sections/components/IconPicker";

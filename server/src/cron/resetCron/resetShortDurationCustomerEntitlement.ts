@@ -1,8 +1,4 @@
-import type {
-	EntInterval,
-	FullEntitlement,
-	ResetCusEnt,
-} from "@autumn/shared";
+import type { EntInterval, FullEntitlement, ResetCusEnt } from "@autumn/shared";
 import { UTCDate } from "@date-fns/utc";
 import { Decimal } from "decimal.js";
 import type { RepoContext } from "@/db/repoContext";
@@ -47,10 +43,16 @@ export const resetShortDurationCustomerEntitlement = async ({
 	});
 
 	if (rolloverUpdate?.toInsert && rolloverUpdate.toInsert.length > 0) {
+		// The cron loader hands us cusEnt.rollovers as [], so load the live
+		// set before insert lets clearExcessRollovers enforce the cap.
+		const existingRollovers = await RolloverService.getCurrentRollovers({
+			ctx,
+			cusEntID: cusEnt.id,
+		});
 		await RolloverService.insert({
 			ctx,
 			rows: rolloverUpdate.toInsert,
-			fullCusEnt: cusEnt,
+			fullCusEnt: { ...cusEnt, rollovers: existingRollovers },
 		});
 	}
 

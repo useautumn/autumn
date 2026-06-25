@@ -86,6 +86,8 @@ export type SubjectBalance = {
 	adjustment: number | null;
 	additional_balance: number;
 	usage_allowed: boolean | null;
+	separate_interval: boolean;
+	reset_cycle_anchor: number | null;
 	next_reset_at: number | null;
 	expires_at: number | null;
 	external_id: string | null;

@@ -1165,6 +1165,41 @@ class BillingUpdateRecalculateBalances(BaseModel):
     r"""If true, recalculates balances during the subscription update. Only applicable when updating feature quantities."""
 
 
+class BillingUpdateCarryOverUsagesTypedDict(TypedDict):
+    r"""Whether to carry over usages from the previous plan."""
+
+    enabled: bool
+    r"""Whether to carry over usages from the previous plan."""
+    feature_ids: NotRequired[List[str]]
+    r"""The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over."""
+
+
+class BillingUpdateCarryOverUsages(BaseModel):
+    r"""Whether to carry over usages from the previous plan."""
+
+    enabled: bool
+    r"""Whether to carry over usages from the previous plan."""
+
+    feature_ids: Optional[List[str]] = None
+    r"""The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["feature_ids"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
+
+
 class UpdateSubscriptionParamsTypedDict(TypedDict):
     customer_id: str
     r"""The ID of the customer to attach the plan to."""
@@ -1196,6 +1231,8 @@ class UpdateSubscriptionParamsTypedDict(TypedDict):
     r"""If true, the subscription is updated internally without applying billing changes in Stripe."""
     recalculate_balances: NotRequired[BillingUpdateRecalculateBalancesTypedDict]
     r"""Controls whether balances should be recalculated during the subscription update."""
+    carry_over_usages: NotRequired[BillingUpdateCarryOverUsagesTypedDict]
+    r"""Whether to carry over usages from the previous plan."""
 
 
 class UpdateSubscriptionParams(BaseModel):
@@ -1247,6 +1284,9 @@ class UpdateSubscriptionParams(BaseModel):
     recalculate_balances: Optional[BillingUpdateRecalculateBalances] = None
     r"""Controls whether balances should be recalculated during the subscription update."""
 
+    carry_over_usages: Optional[BillingUpdateCarryOverUsages] = None
+    r"""Whether to carry over usages from the previous plan."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -1265,6 +1305,7 @@ class UpdateSubscriptionParams(BaseModel):
                 "billing_cycle_anchor",
                 "no_billing_changes",
                 "recalculate_balances",
+                "carry_over_usages",
             ]
         )
         serialized = handler(self)

@@ -7,17 +7,23 @@ import {
 	cusEntsToBalance,
 	cusEntsToGrantedBalance,
 	cusEntsToPrepaidQuantity,
-	cusEntToPrepaidQuantity,
 	getRolloverFields,
 	isFreeCustomerEntitlement,
 	isPrepaidCustomerEntitlement,
 	nullish,
 } from "@autumn/shared";
 import {
+	ToolbarButton,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
+} from "@autumn/ui";
+import {
 	ArrowsClockwiseIcon,
 	BoxArrowDownIcon,
 	BracketsSquareIcon,
 	CaretRightIcon,
+	ClockCountdownIcon,
 	MoneyWavyIcon,
 	PulseIcon,
 	WalletIcon,
@@ -25,20 +31,14 @@ import {
 import type { Row } from "@tanstack/react-table";
 import { Trash } from "lucide-react";
 import { AdminHover } from "@/components/general/AdminHover";
-import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
+} from "@autumn/ui";
 import { cn } from "@/lib/utils";
-import { formatUnixToDateTimeString } from "@/utils/formatUtils/formatDateUtils";
+import { formatUnixToDateTime } from "@/utils/formatUtils/formatDateUtils";
 import { getCusEntHoverTexts } from "@/views/admin/adminUtils";
 import { useFeatureUsageBalance } from "@/views/customers2/hooks/useFeatureUsageBalance";
 import { CustomerFeatureUsageBar } from "../customer-feature-usage/CustomerFeatureUsageBar";
@@ -120,20 +120,15 @@ function getIndividualEntValues({
 		cusEnts: [ent],
 		sumAcrossEntities: nullish(entityId),
 	});
-	void grantedBalance;
-	void prepaidAllowance;
 
 	const rolloverBalance =
 		getRolloverFields({ cusEnt: ent, entityId: entityId ?? undefined })
 			?.balance ?? 0;
 
 	const quantity = ent.customer_product?.quantity || 1;
-	const allowance =
-		(ent.entitlement.allowance ?? 0) * quantity +
-		(entityId && ent.entities?.[entityId]
-			? (ent.entities[entityId].adjustment ?? ent.adjustment ?? 0)
-			: (ent.adjustment ?? 0)) +
-		cusEntToPrepaidQuantity({ cusEnt: ent });
+	// grantedBalance/prepaidAllowance already account for per-entity multiplication
+	// at customer level; the manual sum here dropped it, undercounting to one entity.
+	const allowance = grantedBalance + prepaidAllowance;
 	return { balance, allowance, quantity, rolloverBalance };
 }
 
@@ -239,6 +234,29 @@ function UsageCell({
 
 // --- Bar cells ---
 
+const formatChipDate = (timestamp: number | null | undefined) => {
+	if (!timestamp) return "";
+	const { date, time } = formatUnixToDateTime(timestamp, { withYear: true });
+	return `${date} ${time}`;
+};
+
+function BalanceExpiryIcon({
+	expiresAt,
+}: {
+	expiresAt: number | null | undefined;
+}) {
+	return (
+		<Tooltip>
+			<TooltipTrigger asChild>
+				<div className="shrink-0 text-amber-500">
+					<ClockCountdownIcon size={14} weight="duotone" />
+				</div>
+			</TooltipTrigger>
+			<TooltipContent>Expires {formatChipDate(expiresAt)}</TooltipContent>
+		</Tooltip>
+	);
+}
+
 function BarCellContent({
 	ent,
 	allowance,
@@ -252,23 +270,28 @@ function BarCellContent({
 }) {
 	const hasReset = ent.next_reset_at != null;
 	const hasExpiry = ent.expires_at != null;
+	const expiryIcon = hasExpiry ? (
+		<BalanceExpiryIcon expiresAt={ent.expires_at} />
+	) : null;
 
 	return (
 		<div className="flex gap-3 items-center">
-			{hasExpiry ? (
-				<span className="text-tertiary-foreground text-tiny flex justify-center !px-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-md min-w-30">
-					Expires {formatUnixToDateTimeString(ent.expires_at)}
-				</span>
-			) : (
-				<span
-					className={cn(
-						"text-tertiary-foreground text-tiny flex justify-center !px-1 bg-muted rounded-md min-w-30",
-						hasReset ? "opacity-100" : "opacity-0",
-					)}
-				>
-					Resets {formatUnixToDateTimeString(ent.next_reset_at)}
-				</span>
-			)}
+			<div className="flex items-center justify-end gap-1.5 shrink-0 min-w-44">
+				{hasReset ? (
+					<>
+						{hasExpiry && (
+							<div className="w-3.5 shrink-0 flex justify-center mr-auto">
+								{expiryIcon}
+							</div>
+						)}
+						<span className="text-tertiary-foreground text-tiny flex justify-center !px-1 bg-muted rounded-md min-w-36 whitespace-nowrap">
+							Resets {formatChipDate(ent.next_reset_at)}
+						</span>
+					</>
+				) : (
+					expiryIcon
+				)}
+			</div>
 			<div
 				className={cn(
 					"w-full max-w-50 flex justify-center pr-2 h-full items-center min-w-16",
@@ -469,6 +492,69 @@ function BalanceActionsCell({
 	);
 }
 
+function MobileBalanceBar({
+	ent,
+	fullCustomer,
+	entityId,
+	customerEntitlements,
+}: {
+	ent: FullCusEntWithFullCusProduct;
+	fullCustomer: FullCustomer | null | undefined;
+	entityId: string | null;
+	customerEntitlements: FullCusEntWithFullCusProduct[];
+}) {
+	const { allowance, balance, quantity } = useFeatureUsageBalance({
+		fullCustomer,
+		featureId: ent.entitlement.feature.id,
+		entityId,
+		customerEntitlements,
+	});
+
+	if (ent.unlimited || (allowance ?? 0) <= 0) return null;
+
+	return (
+		<div className="w-24 shrink-0 flex items-center h-4">
+			<CustomerFeatureUsageBar
+				allowance={allowance}
+				balance={balance}
+				quantity={quantity}
+				horizontal
+			/>
+		</div>
+	);
+}
+
+function MobileUsageWithBar({
+	row,
+	fullCustomer,
+	entityId,
+}: {
+	row: Row<CustomerBalanceRowData>;
+	fullCustomer: FullCustomer | null | undefined;
+	entityId: string | null;
+}) {
+	const customerEntitlements = row.original.subRows?.length
+		? row.original.subRows
+		: [row.original];
+
+	return (
+		<div className="flex items-center justify-between gap-3">
+			<UsageCell
+				row={row}
+				fullCustomer={fullCustomer}
+				entityId={entityId}
+				customerEntitlements={customerEntitlements}
+			/>
+			<MobileBalanceBar
+				ent={row.original}
+				fullCustomer={fullCustomer}
+				entityId={entityId}
+				customerEntitlements={customerEntitlements}
+			/>
+		</div>
+	);
+}
+
 // --- Column definitions ---
 
 export const CustomerBalanceTableColumns = ({
@@ -577,6 +663,16 @@ export const CustomerBalanceTableColumns = ({
 	{
 		header: "Usage",
 		accessorKey: "usage",
+		meta: {
+			mobileCard: "full" as const,
+			mobileCardCell: (row: Row<CustomerBalanceRowData>) => (
+				<MobileUsageWithBar
+					row={row}
+					fullCustomer={fullCustomer}
+					entityId={entityId}
+				/>
+			),
+		},
 		cell: ({ row }: { row: Row<CustomerBalanceRowData> }) => (
 			<UsageCell
 				row={row}
@@ -592,6 +688,7 @@ export const CustomerBalanceTableColumns = ({
 		header: "Bar",
 		size: 220,
 		accessorKey: "bar",
+		meta: { mobileCard: "hidden" as const },
 		cell: ({ row }: { row: Row<CustomerBalanceRowData> }) => (
 			<BarCell
 				row={row}

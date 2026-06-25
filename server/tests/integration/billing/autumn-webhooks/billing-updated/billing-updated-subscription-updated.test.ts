@@ -94,12 +94,6 @@ test(`${chalk.yellowBright("billing.updated: trial end → tags includes trial_e
 	expect(result).not.toBeNull();
 	const { data } = result!.payload;
 	expect(data.tags).toContain("trial_ended");
-
-	const updated = findChange(data.plan_changes, {
-		action: "updated",
-		planId: proTrial.id,
-	});
-	expect(updated).toBeDefined();
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════

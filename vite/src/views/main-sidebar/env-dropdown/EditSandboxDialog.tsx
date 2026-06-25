@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Dialog,
 	DialogContent,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+	ShortcutButton,
+} from "@autumn/ui";
 import {
 	type SandboxSummary,
 	useUpdateSandbox,

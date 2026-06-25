@@ -1,5 +1,6 @@
 import { prefixOAuthToken } from "@autumn/auth";
 import {
+	AUTUMN_ADMIN_OAUTH_CLIENT_ID,
 	getOAuthResourceScopes,
 	getResourceFromOAuthTokenRequest,
 	returnsOAuthAccessTokenForClientId,
@@ -8,7 +9,12 @@ import { ErrCode, RecaseError } from "@autumn/shared";
 import type { Context } from "hono";
 import { db } from "@/db/initDrizzle.js";
 import { auth } from "@/utils/auth.js";
-import { oauthAccessTokenRepo, oauthRefreshTokenRepo } from "../repos/index.js";
+import { hashOAuthToken } from "@/utils/oauthUtils.js";
+import {
+	oauthAccessTokenRepo,
+	oauthConsentRepo,
+	oauthRefreshTokenRepo,
+} from "../repos/index.js";
 import { isMcpOAuthClient } from "./mcpOAuthScopes.js";
 import {
 	getExternalOAuthApiKeyForToken,
@@ -108,9 +114,75 @@ const jsonTokenResponse = ({
 		headers: tokenResponseHeaders(response),
 	});
 
+const getRefreshToken = async (request: Request) => {
+	try {
+		const body = new URLSearchParams(await request.text());
+		return getString(body.get("refresh_token"));
+	} catch {
+		return null;
+	}
+};
+
+const getRefreshTokenConsentId = async (request: Request) => {
+	const refreshToken = await getRefreshToken(request);
+	if (!refreshToken) return null;
+
+	const hashedToken = await hashOAuthToken(refreshToken);
+	const tokenValues = [...new Set([hashedToken, refreshToken])];
+	const tokenRecord = await oauthRefreshTokenRepo.getByTokenValues({
+		db,
+		tokenValues,
+	});
+	return tokenRecord?.oauthConsentId ?? null;
+};
+
+const getUniqueOAuthConsentId = async ({
+	clientId,
+	referenceId,
+	userId,
+}: {
+	clientId: string;
+	referenceId: string;
+	userId: string;
+}) => {
+	const consents = await oauthConsentRepo.listForClientUserOrg({
+		db,
+		clientId,
+		referenceId,
+		userId,
+	});
+	return consents.length === 1 ? consents[0]!.id : null;
+};
+
+// better-auth issues a stateless JWT access token whenever a `resource`
+// (audience) is present, which never lands in oauth_access_token and so can't
+// be validated by handleOAuthMiddleware or linked to a consent. Drop `resource`
+// before better-auth sees it to force an opaque, persisted token; we keep the
+// original `resource` (read above) for our own MCP/audience handling.
+const stripResourceParam = async (request: Request): Promise<Request> => {
+	const contentType = request.headers.get("content-type") ?? "";
+	const rawBody = await request.text();
+	if (!rawBody) return request;
+
+	if (contentType.includes("application/json")) {
+		try {
+			const body = JSON.parse(rawBody) as Record<string, unknown>;
+			delete body.resource;
+			return new Request(request, { body: JSON.stringify(body) });
+		} catch {
+			return new Request(request, { body: rawBody });
+		}
+	}
+
+	const params = new URLSearchParams(rawBody);
+	params.delete("resource");
+	return new Request(request, { body: params });
+};
+
 export const handleOAuthTokenWithApiKey = async (c: Context) => {
 	const resource = await getResourceFromOAuthTokenRequest(c.req.raw.clone());
-	const response = await auth.handler(c.req.raw);
+	const refreshTokenConsentId = await getRefreshTokenConsentId(c.req.raw.clone());
+	const response = await auth.handler(await stripResourceParam(c.req.raw.clone()));
 	if (!response.ok) return response;
 
 	let body: Record<string, unknown>;
@@ -136,6 +208,15 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 			resource,
 			requestedScopes,
 		});
+		const oauthConsentId =
+			tokenRecord.oauthConsentId ??
+			refreshTokenConsentId ??
+			(await getUniqueOAuthConsentId({
+				clientId: tokenRecord.clientId,
+				referenceId: tokenRecord.referenceId,
+				userId: tokenRecord.userId,
+			}));
+		tokenRecord.oauthConsentId = oauthConsentId;
 		if (tokenRecord.scopes.length === 0) {
 			throw new RecaseError({
 				message: "OAuth token has no scopes",
@@ -143,19 +224,29 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 				statusCode: 401,
 			});
 		}
-		const issuedScopes = await getOAuthConsentScopeGrant({
-			db,
-			organizationId: tokenRecord.referenceId,
-			requestedScopes: parsedRequestedScopes ?? tokenRecord.scopes,
-			userId: tokenRecord.userId,
-		});
-		tokenRecord.scopes = getOAuthResourceScopes(issuedScopes);
+		const issuedScopes =
+			tokenRecord.clientId === AUTUMN_ADMIN_OAUTH_CLIENT_ID
+				? (parsedRequestedScopes ?? tokenRecord.scopes)
+				: await getOAuthConsentScopeGrant({
+						db,
+						organizationId: tokenRecord.referenceId,
+						requestedScopes: parsedRequestedScopes ?? tokenRecord.scopes,
+						userId: tokenRecord.userId,
+					});
+		tokenRecord.scopes = issuedScopes;
 		if (tokenRecord.id) {
 			await oauthAccessTokenRepo.updateScopes({
 				db,
 				id: tokenRecord.id,
 				scopes: tokenRecord.scopes,
 			});
+			if (oauthConsentId) {
+				await oauthAccessTokenRepo.updateConsent({
+					db,
+					id: tokenRecord.id,
+					oauthConsentId,
+				});
+			}
 		}
 		if (tokenRecord.refreshId) {
 			await oauthRefreshTokenRepo.updateScopes({
@@ -163,12 +254,26 @@ export const handleOAuthTokenWithApiKey = async (c: Context) => {
 				id: tokenRecord.refreshId,
 				scopes: issuedScopes,
 			});
+			if (oauthConsentId) {
+				await oauthRefreshTokenRepo.updateConsent({
+					db,
+					id: tokenRecord.refreshId,
+					oauthConsentId,
+				});
+			}
 		}
 		const isMcpClient = await isMcpOAuthClient({
 			clientId: tokenRecord.clientId,
 			db,
 			resource: resource ?? undefined,
 		});
+		if (isMcpClient && !tokenRecord.oauthConsentId) {
+			throw new RecaseError({
+				message: "OAuth token consent is ambiguous",
+				code: ErrCode.InvalidRequest,
+				statusCode: 401,
+			});
+		}
 		if (
 			isMcpClient ||
 			returnsOAuthAccessTokenForClientId({ clientId: tokenRecord.clientId })

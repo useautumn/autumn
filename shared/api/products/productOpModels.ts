@@ -1,5 +1,7 @@
 import { CreateFreeTrialSchema } from "@models/productModels/freeTrialModels/freeTrialModels.js";
+import { CustomerBillingControlsParamsSchema } from "@models/cusModels/billingControls/customerBillingControls.js";
 import { ProductConfigParamsSchema } from "@models/productModels/productConfig/productConfig.js";
+import { ProductMetadataSchema } from "@models/productModels/productMetadata.js";
 import { ProductItemSchema } from "@models/productV2Models/productItemModels/productItemModels.js";
 import { idRegex } from "@utils/utils.js";
 import { z } from "zod/v4";
@@ -51,6 +53,8 @@ const descriptions = {
 	items:
 		"Array of product items that define the product's features and pricing",
 	free_trial: "Free trial configuration for this product, if available",
+	metadata:
+		"Arbitrary key-value metadata for your own use (e.g. UI copy, feature highlights). Values can be any JSON-serializable value. Metadata is shared across all versions of a plan.",
 
 	// Update only
 	archived:
@@ -98,6 +102,13 @@ export const CreateProductV2ParamsSchema = z
 
 		config: ProductConfigParamsSchema.optional().meta({
 			description: "Miscellaneous product-level configuration flags.",
+		}),
+		billing_controls: CustomerBillingControlsParamsSchema.optional().meta({
+			description: "Plan-level billing controls used as customer defaults.",
+		}),
+
+		metadata: ProductMetadataSchema.optional().meta({
+			description: descriptions.metadata,
 		}),
 
 		create_in_stripe: z.boolean().optional().meta({
@@ -149,6 +160,13 @@ export const UpdateProductV2ParamsSchema = z.object({
 
 	config: ProductConfigParamsSchema.optional().meta({
 		description: "Miscellaneous product-level configuration flags.",
+	}),
+	billing_controls: CustomerBillingControlsParamsSchema.optional().meta({
+		description: "Plan-level billing controls used as customer defaults.",
+	}),
+
+	metadata: ProductMetadataSchema.optional().meta({
+		description: descriptions.metadata,
 	}),
 });
 

@@ -27,11 +27,19 @@ const tokenEndpoint = () => {
 
 export const isCmaVaultStale = ({
 	credentialUpdatedAt,
+	currentMcpServerUrl,
+	storedMcpServerUrl,
 	vaultUpdatedAt,
 }: {
 	credentialUpdatedAt: number;
+	currentMcpServerUrl?: string;
+	storedMcpServerUrl?: string | null;
 	vaultUpdatedAt?: number | null;
-}) => !vaultUpdatedAt || credentialUpdatedAt > vaultUpdatedAt;
+}) =>
+	!vaultUpdatedAt ||
+	credentialUpdatedAt > vaultUpdatedAt ||
+	(currentMcpServerUrl !== undefined &&
+		storedMcpServerUrl !== currentMcpServerUrl);
 
 const buildCredentialAuth = ({
 	accessToken,
@@ -54,6 +62,56 @@ const buildCredentialAuth = ({
 		token_endpoint_auth: { type: "none" as const },
 	},
 });
+
+const createVaultCredential = ({
+	accessToken,
+	credential,
+	env,
+	mcpServerUrl,
+	orgId,
+	vaultId,
+	client,
+}: {
+	accessToken: string;
+	credential: NonNullable<
+		Awaited<ReturnType<typeof getChatOAuthCredentialByInstallationEnv>>
+	>;
+	env: AppEnv;
+	mcpServerUrl: string;
+	orgId: string;
+	vaultId: string;
+	client: Anthropic;
+}) =>
+	client.beta.vaults.credentials.create(vaultId, {
+		display_name: `autumn-mcp/${orgId}/${env}`,
+		auth: buildCredentialAuth({ accessToken, credential, mcpServerUrl }),
+		metadata: {
+			credential_updated_at: String(credential.updated_at),
+		},
+	});
+
+const getVaultCredentialMcpServerUrl = async ({
+	client,
+	credentialId,
+	vaultId,
+}: {
+	client: Anthropic;
+	credentialId: string;
+	vaultId: string;
+}) => {
+	try {
+		const credential = await client.beta.vaults.credentials.retrieve(
+			credentialId,
+			{ vault_id: vaultId },
+		);
+		if (credential.archived_at || credential.auth.type !== "mcp_oauth") {
+			return undefined;
+		}
+		return credential.auth.mcp_server_url;
+	} catch {
+		return undefined;
+	}
+};
 
 // Mirrors the org's Autumn MCP OAuth credential into a CMA vault so Anthropic
 // injects it after egress. Resync when our local OAuth credential rotates.
@@ -80,17 +138,32 @@ export const ensureAutumnVault = async ({
 		db,
 		chatInstallationId: installation.id,
 		env,
+		orgId,
 	});
 	if (!credential) {
 		throw new Error(`Missing ${env} Autumn OAuth credential for vault`);
 	}
 
 	const mcpServerUrl = new URL("/mcp", chatEnv.MCP_SERVER_URL).toString();
-	const existing = await cmaRepo.getVault({ db, env, orgId });
+	const existing = await cmaRepo.getVault({
+		chatInstallationId: installation.id,
+		db,
+		env,
+		orgId,
+	});
+	const storedMcpServerUrl = existing
+		? await getVaultCredentialMcpServerUrl({
+				client,
+				credentialId: existing.credential_id,
+				vaultId: existing.vault_id,
+			})
+		: undefined;
 	if (
 		existing &&
 		!isCmaVaultStale({
 			credentialUpdatedAt: credential.updated_at,
+			currentMcpServerUrl: mcpServerUrl,
+			storedMcpServerUrl,
 			vaultUpdatedAt: existing.updated_at,
 		})
 	) {
@@ -99,6 +172,29 @@ export const ensureAutumnVault = async ({
 
 	const auth = buildCredentialAuth({ accessToken, credential, mcpServerUrl });
 	if (existing) {
+		if (storedMcpServerUrl !== mcpServerUrl) {
+			await client.beta.vaults.credentials
+				.delete(existing.credential_id, { vault_id: existing.vault_id })
+				.catch(() => undefined);
+			const created = await createVaultCredential({
+				accessToken,
+				client,
+				credential,
+				env,
+				mcpServerUrl,
+				orgId,
+				vaultId: existing.vault_id,
+			});
+			await cmaRepo.upsertVault({
+				chatInstallationId: installation.id,
+				credentialId: created.id,
+				db,
+				env,
+				orgId,
+				vaultId: existing.vault_id,
+			});
+			return existing.vault_id;
+		}
 		const updated = await client.beta.vaults.credentials.update(
 			existing.credential_id,
 			{
@@ -117,6 +213,7 @@ export const ensureAutumnVault = async ({
 			},
 		);
 		await cmaRepo.upsertVault({
+			chatInstallationId: installation.id,
 			credentialId: updated.id,
 			db,
 			env,
@@ -130,14 +227,17 @@ export const ensureAutumnVault = async ({
 		display_name: `autumn/${orgId}/${env}`,
 		metadata: { app: "leaf", env, orgId },
 	});
-	const created = await client.beta.vaults.credentials.create(vault.id, {
-		display_name: `autumn-mcp/${orgId}/${env}`,
-		auth,
-		metadata: {
-			credential_updated_at: String(credential.updated_at),
-		},
+	const created = await createVaultCredential({
+		accessToken,
+		client,
+		credential,
+		env,
+		mcpServerUrl,
+		orgId,
+		vaultId: vault.id,
 	});
 	await cmaRepo.upsertVault({
+		chatInstallationId: installation.id,
 		credentialId: created.id,
 		db,
 		env,

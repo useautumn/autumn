@@ -1,9 +1,10 @@
 "use client";
 
+import { LoadingShimmerText } from "@autumn/ui";
 import React from "react";
-import { LoadingShimmerText } from "@/components/v2/LoadingShimmerText";
+import { cn } from "@/lib/utils";
 
-function LoadingScreen() {
+function LoadingScreen({ fullPage = false }: { fullPage?: boolean }) {
 	const texts = [
 		"Counting pennies",
 		"Forging plans",
@@ -37,10 +38,15 @@ function LoadingScreen() {
 	// 	</div>
 	// );
 	return (
-		<div className="flex h-full w-full items-center justify-center flex-col gap-4">
+		<div
+			className={cn(
+				"flex w-full items-center justify-center flex-col gap-4",
+				fullPage ? "min-h-screen" : "h-full",
+			)}
+		>
 			<LoadingShimmerText
 				text={loadingText}
-				className="py-4 text-tiny-id w-48 justify-start whitespace-nowrap overflow-visible translate-x-[25%]"
+				className="py-4 text-tiny-id justify-center whitespace-nowrap"
 			/>
 		</div>
 	);

@@ -1,65 +1,82 @@
 import type { AppEnv, FrontendOrg } from "@autumn/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useEffect } from "react";
-import { authClient, useListOrganizations } from "@/lib/auth-client";
+import { useCallback, useEffect } from "react";
+import {
+	authClient,
+	useListOrganizations,
+	useSession,
+} from "@/lib/auth-client";
+import {
+	clearLastSwitchedOrgId,
+	getLastSwitchedOrgId,
+	setActiveOrg,
+	setLastSwitchedOrgId,
+} from "@/lib/orgSync";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 
-const LAST_ORG_KEY = "autumn_last_active_org_id";
-
-export const setLastSwitchedOrgId = (id: string) => {
-	try {
-		localStorage.setItem(LAST_ORG_KEY, id);
-	} catch {}
+export {
+	clearLastSwitchedOrgId,
+	getLastSwitchedOrgId,
+	setActiveOrg,
+	setLastSwitchedOrgId,
 };
 
-export const getLastSwitchedOrgId = (): string | null => {
-	try {
-		return localStorage.getItem(LAST_ORG_KEY);
-	} catch {
-		return null;
-	}
+export const useSwitchActiveOrg = () => {
+	const { refetch: refetchSession } = useSession();
+
+	return useCallback(
+		async (orgId: string) => {
+			await setActiveOrg(orgId);
+			// The org query is keyed on activeOrgId, so refreshing the session
+			// (which updates activeOrgId) is enough to refetch the new org. An extra
+			// invalidate would force a redundant refetch and flash a skeleton.
+			await refetchSession();
+		},
+		[refetchSession],
+	);
 };
 
 export const useOrg = (params?: { env?: AppEnv }) => {
 	const currentEnv = useEnv();
-	// useOrg is your authenticated main org, never the active sandbox sub-org —
-	// the switcher, query-key namespace and canSwitch all key off it.
 	const axiosInstance = useAxiosInstance({ env: params?.env, skipSandbox: true });
-	const { data: orgList } = useListOrganizations();
+	const { data: orgList, isPending: orgListLoading } = useListOrganizations();
+	const { data: session } = useSession();
+	const activeOrgId = session?.session.activeOrganizationId;
 
 	const fetcher = async () => {
-		try {
-			const { data } = await axiosInstance.get("/organization");
-			return data;
-		} catch {
-			return null;
-		}
+		const { data } = await axiosInstance.get("/organization");
+		return data;
 	};
 
 	const {
 		data: org,
-		isLoading,
 		error,
 		refetch,
 	} = useQuery({
-		queryKey: params?.env ? ["org", params.env] : ["org", currentEnv],
+		queryKey: ["org", params?.env ?? currentEnv, activeOrgId],
 		queryFn: fetcher,
 		placeholderData: keepPreviousData,
 		refetchOnWindowFocus: true,
 		staleTime: 30_000,
+		enabled: !!activeOrgId,
 	});
+	const lastOrgId = getLastSwitchedOrgId();
+	const rememberedOrgValid =
+		orgListLoading || !orgList || orgList.some((o) => o.id === lastOrgId);
+	const pendingOrgSwitch =
+		!!lastOrgId &&
+		!!activeOrgId &&
+		lastOrgId !== activeOrgId &&
+		rememberedOrgValid;
 
-	useEffect(() => {
-		if (org?.id) {
-			setLastSwitchedOrgId(org.id);
-		}
-	}, [org?.id]);
+	const orgIsReady =
+		!!org && !!activeOrgId && org.id === activeOrgId && !pendingOrgSwitch;
+	const orgLoading = !session || (!!activeOrgId && !orgIsReady);
 
 	useEffect(() => {
 		const handleNoActiveOrg = async () => {
 			if (!orgList || orgList.length === 0) {
-				console.log("No org to set active, signing out");
 				await authClient.signOut();
 				window.location.href = "/sign-in";
 				return;
@@ -71,16 +88,23 @@ export const useOrg = (params?: { env?: AppEnv }) => {
 				: null;
 			const targetOrgId = preferredOrg?.id ?? orgList[0].id;
 
-			await authClient.organization.setActive({
-				organizationId: targetOrgId,
-			});
+			await setActiveOrg(targetOrgId);
 			window.location.reload();
 		};
 
-		if (!org && !isLoading) {
+		const onImpersonateRoute = window.location.pathname.includes(
+			"impersonate-redirect",
+		);
+
+		if (session && !activeOrgId && !orgListLoading && !onImpersonateRoute) {
 			handleNoActiveOrg();
 		}
-	}, [org, orgList, isLoading]);
+	}, [activeOrgId, orgList, orgListLoading, session]);
 
-	return { org: org as FrontendOrg, isLoading, error, mutate: refetch };
+	return {
+		org: org as FrontendOrg,
+		isLoading: orgLoading,
+		error,
+		mutate: refetch,
+	};
 };

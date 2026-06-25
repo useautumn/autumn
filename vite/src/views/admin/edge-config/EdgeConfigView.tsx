@@ -1,4 +1,14 @@
 import { AppEnv } from "@autumn/shared";
+import {
+	Badge,
+	Button,
+	Card,
+	CardContent,
+	CardHeader,
+	CardTitle,
+	IconButton,
+	Input,
+} from "@autumn/ui";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
 	ArrowLeft,
@@ -11,16 +21,6 @@ import {
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import {
-	Card,
-	CardContent,
-	CardHeader,
-	CardTitle,
-} from "@/components/v2/cards/Card";
-import { Input } from "@/components/v2/inputs/Input";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { useEnv } from "@/utils/envUtils";
 import { getBackendErr } from "@/utils/genUtils";
@@ -415,7 +415,11 @@ export const EdgeConfigView = () => {
 	});
 
 	const handleDeleteRollout = ({ rolloutId }: { rolloutId: string }) => {
-		if (!confirm(`Delete rollout "${rolloutId}"? This resets the staleness window.`))
+		if (
+			!confirm(
+				`Delete rollout "${rolloutId}"? This resets the staleness window.`,
+			)
+		)
 			return;
 		deleteRolloutMutation.mutate({ rolloutId });
 	};
@@ -444,7 +448,9 @@ export const EdgeConfigView = () => {
 	const rollouts = data?.rollouts ?? {};
 	const orgsById = data?.orgsById ?? {};
 	const rolloutEntries = Object.entries(rollouts);
-	const rolloutSource = source?.configs.find((config) => config.id === "rollouts");
+	const rolloutSource = source?.configs.find(
+		(config) => config.id === "rollouts",
+	);
 
 	return (
 		<div className="mx-auto flex max-w-5xl flex-col gap-6 p-6">

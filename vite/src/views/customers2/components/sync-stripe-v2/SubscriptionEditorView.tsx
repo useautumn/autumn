@@ -1,12 +1,13 @@
 import {
-	type FrontendProduct,
 	FreeTrialDuration,
+	type FrontendProduct,
 	productV2ToFrontendProduct,
 	type SyncParamsV1,
 	type SyncPhase,
 	type SyncPlanInstance,
 	type SyncProposalV2,
 } from "@autumn/shared";
+import { Button, InlineAction, Switch } from "@autumn/ui";
 import {
 	ArrowLeftIcon,
 	ArrowSquareOutIcon,
@@ -20,9 +21,6 @@ import {
 	getProductWithSupportedPlanFormValues,
 	getSupportedPlanFormPatchFromDraftProduct,
 } from "@/components/forms/shared/utils/planCustomizationUtils";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/v2/buttons/Button";
-import { InlineAction } from "@/components/v2/buttons/InlineAction";
 import { InlinePlanEditor } from "@/components/v2/inline-custom-plan-editor/InlinePlanEditor";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useOrgStripeQuery } from "@/hooks/queries/useOrgStripeQuery";
@@ -30,8 +28,8 @@ import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useEnv } from "@/utils/envUtils";
 import {
 	getStripeConnectViewAsLink,
-	getStripeSubScheduleLink,
 	getStripeSubLink,
+	getStripeSubScheduleLink,
 } from "@/utils/linkUtils";
 import { useAdmin } from "@/views/admin/hooks/useAdmin";
 import { useMasterStripeAccount } from "@/views/admin/hooks/useMasterStripeAccount";
@@ -147,8 +145,9 @@ const buildPhaseSections = ({
 		const matchingSchedulePhase = schedule
 			? schedule.phases.find((schedulePhase) => {
 					if (phase.starts_at === "now") {
-						return findScheduleStartDateMs({ phase: schedulePhase }) <=
-							Date.now();
+						return (
+							findScheduleStartDateMs({ phase: schedulePhase }) <= Date.now()
+						);
 					}
 					return (
 						findScheduleStartDateMs({ phase: schedulePhase }) ===
@@ -257,6 +256,7 @@ export function SubscriptionEditorView({
 		() => seedDraftPlansByPhase({ proposal }),
 	);
 	const [expirePrevious, setExpirePrevious] = useState<boolean>(true);
+	const [carryOverUsage, setCarryOverUsage] = useState<boolean>(true);
 	const [enablePlanImmediately, setEnablePlanImmediately] =
 		useState<boolean>(false);
 	const [editing, setEditing] = useState<{
@@ -389,11 +389,7 @@ export function SubscriptionEditorView({
 					Boolean(p.plan_id),
 				);
 				const planInstances: SyncPlanInstance[] = validPlans.map(
-					({
-						_key: _ignore,
-						enable_plan_immediately: _ignored,
-						...rest
-					}) => ({
+					({ _key: _ignore, enable_plan_immediately: _ignored, ...rest }) => ({
 						...rest,
 						expire_previous: expirePrevious,
 						enable_plan_immediately:
@@ -415,6 +411,7 @@ export function SubscriptionEditorView({
 			stripe_subscription_id: proposal.stripe_subscription_id,
 			stripe_schedule_id: proposal.stripe_schedule_id,
 			phases,
+			carry_over_usage: carryOverUsage,
 		};
 		onSubmit(params);
 	};
@@ -461,9 +458,6 @@ export function SubscriptionEditorView({
 
 				{phaseSections.map((section, phaseIndex) => {
 					const phasePlans = draftPlansByPhase[phaseIndex] ?? [];
-					const usedPlanIds = new Set(
-						phasePlans.map((p) => p.plan_id).filter(Boolean) as string[],
-					);
 
 					return (
 						<div
@@ -483,7 +477,9 @@ export function SubscriptionEditorView({
 
 							{section.displayItems.length > 0 && (
 								<div className="space-y-1">
-									<div className="text-xs text-tertiary-foreground">Subscription items</div>
+									<div className="text-xs text-tertiary-foreground">
+										Subscription items
+									</div>
 									<div className="space-y-1">
 										{section.displayItems.map((item) => (
 											<div
@@ -491,7 +487,9 @@ export function SubscriptionEditorView({
 												className="flex items-center justify-between text-xs"
 											>
 												<span className="text-foreground">{item.name}</span>
-												<span className="text-tertiary-foreground">{item.priceLabel}</span>
+												<span className="text-tertiary-foreground">
+													{item.priceLabel}
+												</span>
 											</div>
 										))}
 									</div>
@@ -499,19 +497,14 @@ export function SubscriptionEditorView({
 							)}
 
 							<div className="space-y-2">
-								<div className="text-xs text-tertiary-foreground">Autumn plans</div>
+								<div className="text-xs text-tertiary-foreground">
+									Autumn plans
+								</div>
 								{phasePlans.map((plan, planIndex) => (
 									<SyncPlanRow
 										key={plan._key}
 										plan={plan}
 										products={products ?? []}
-										usedPlanIds={
-											new Set(
-												Array.from(usedPlanIds).filter(
-													(id) => id !== plan.plan_id,
-												),
-											)
-										}
 										entities={entities}
 										onChange={(next) =>
 											handlePlanChange(phaseIndex, planIndex, next)
@@ -522,12 +515,12 @@ export function SubscriptionEditorView({
 										}
 									/>
 								))}
-							<InlineAction
-								icon={<PlusIcon size={11} />}
-								onClick={() => handleAddPlan(phaseIndex)}
-							>
-								Add plan
-							</InlineAction>
+								<InlineAction
+									icon={<PlusIcon size={11} />}
+									onClick={() => handleAddPlan(phaseIndex)}
+								>
+									Add plan
+								</InlineAction>
 							</div>
 						</div>
 					);
@@ -543,6 +536,18 @@ export function SubscriptionEditorView({
 						/>
 					}
 				/>
+				{expirePrevious && (
+					<ConfigRow
+						title="Carry over usage"
+						description="Move the expired plan's used balances onto the new plan for any shared feature."
+						action={
+							<Switch
+								checked={carryOverUsage}
+								onCheckedChange={(checked) => setCarryOverUsage(!!checked)}
+							/>
+						}
+					/>
+				)}
 				{isNotStartedSchedule && (
 					<ConfigRow
 						title="Enable plan immediately"

@@ -1,13 +1,17 @@
-import { type Invoice, type InvoiceDiscount, ProcessorType } from "@autumn/shared";
-import type { Row } from "@tanstack/react-table";
-import { AdminHover } from "@/components/general/AdminHover";
-import { ProcessorIcon } from "@/components/v2/icons/ProcessorIcon";
+import {
+	type Invoice,
+	type InvoiceDiscount,
+	ProcessorType,
+} from "@autumn/shared";
 import {
 	Tooltip,
 	TooltipContent,
 	TooltipProvider,
 	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
+} from "@autumn/ui";
+import type { Row } from "@tanstack/react-table";
+import { AdminHover } from "@/components/general/AdminHover";
+import { ProcessorIcon } from "@/components/v2/icons/ProcessorIcon";
 import { getInvoiceHoverTexts } from "@/views/admin/adminUtils";
 import { createDateTimeColumn } from "@/views/customers2/utils/ColumnHelpers";
 import { CustomerInvoiceStatus } from "./CustomerInvoiceStatus";
@@ -55,8 +59,7 @@ const processorColumn = {
 export const hasNonStripeInvoice = (invoices: CustomerInvoice[]) =>
 	invoices.some(
 		(inv) =>
-			inv.processor_type != null &&
-			inv.processor_type !== ProcessorType.Stripe,
+			inv.processor_type != null && inv.processor_type !== ProcessorType.Stripe,
 	);
 
 export const getCustomerInvoicesColumns = ({
@@ -92,7 +95,10 @@ export const getCustomerInvoicesColumns = ({
 				<div>
 					{invoice.total.toFixed(2)} {invoice.currency.toUpperCase()}
 					{discountAmount > 0 && (
-						<span className="text-tertiary-foreground"> (-{discountAmount.toFixed(2)})</span>
+						<span className="text-tertiary-foreground">
+							{" "}
+							(-{discountAmount.toFixed(2)})
+						</span>
 					)}
 				</div>
 			);

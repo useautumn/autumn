@@ -1,5 +1,6 @@
 import type {
 	CancelAction,
+	CarryOverUsages,
 	Entitlement,
 	FullCusProduct,
 	FullCustomerEntitlement,
@@ -59,6 +60,9 @@ export interface UpdateSubscriptionBillingContext extends BillingContext {
 	 * consumable usages forward when initializing the new customer_product.
 	 */
 	skipExistingUsageCarry?: boolean;
+
+	/** Customer-facing `carry_over_usages` param; resolved into the carry config per reader. */
+	carryOverUsages?: CarryOverUsages;
 }
 
 export interface UpdateSubscriptionBillingContextOverrides {

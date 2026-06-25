@@ -24,6 +24,7 @@ COPY apps/leaf/package.json apps/leaf/
 COPY apps/checkout/package.json apps/checkout/
 COPY apps/docs/package.json apps/docs/
 COPY apps/sdk-test/package.json apps/sdk-test/
+COPY apps/testbench/package.json apps/testbench/
 COPY apps/website/package.json apps/website/
 COPY packages/atmn/package.json packages/atmn/
 COPY packages/atmn-tests/package.json packages/atmn-tests/
@@ -36,16 +37,16 @@ COPY packages/mcp/package.json packages/mcp/
 COPY packages/openapi/package.json packages/openapi/
 COPY packages/sdk/package.json packages/sdk/
 COPY packages/stripe-sync/package.json packages/stripe-sync/
+COPY packages/ui/package.json packages/ui/
 
 # bunfig.toml preloads ./scripts/preload-env.ts on every bun run; stub it so the
 # install step doesn't fail before the real source is copied.
 RUN mkdir -p scripts && touch scripts/preload-env.ts
 
-# Install the full workspace because runtime source imports cross package boundaries.
-# --no-save keeps this image layer from mutating bun.lock.
+# Install the full workspace (runtime source imports cross package boundaries).
+# --frozen-lockfile pins bun.lock exactly; --ignore-scripts blocks postinstall hooks.
 RUN --mount=type=cache,target=/root/.bun/install/cache \
-	bun install --ignore-scripts --no-save \
-		--minimum-release-age 0
+	bun install --ignore-scripts --frozen-lockfile
 
 FROM oven/bun:1.3.10
 WORKDIR /app

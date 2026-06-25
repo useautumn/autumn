@@ -6,6 +6,7 @@ import type {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
 import { computeCancelFields } from "@/internal/billing/v2/actions/updateSubscription/compute/cancel/computeCancelFields";
+import { resolveUpdateExistingUsagesConfig } from "@/internal/billing/v2/utils/handleCarryOvers/resolveUpdateExistingUsagesConfig";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 
 export const computeCustomPlanNewCustomerProduct = ({
@@ -33,6 +34,7 @@ export const computeCustomPlanNewCustomerProduct = ({
 		cancelAction,
 		billingVersion,
 		skipExistingUsageCarry,
+		carryOverUsages,
 	} = updateSubscriptionContext;
 
 	const cancelFields = computeCancelFields({
@@ -66,12 +68,12 @@ export const computeCustomPlanNewCustomerProduct = ({
 			trialEndsAt: trialContext?.trialEndsAt ?? undefined,
 			billingVersion: billingVersion,
 
-			existingUsagesConfig: skipExistingUsageCarry
-				? undefined
-				: {
-						fromCustomerProduct: customerProduct,
-						carryAllConsumableFeatures: true,
-					},
+			existingUsagesConfig: resolveUpdateExistingUsagesConfig({
+				ctx,
+				skipExistingUsageCarry,
+				carryOverUsages,
+				currentCustomerProduct: customerProduct,
+			}),
 
 			existingRolloversConfig: {
 				fromCustomerProduct: customerProduct,
@@ -82,7 +84,8 @@ export const computeCustomPlanNewCustomerProduct = ({
 			isCustom: updateSubscriptionContext.isCustom,
 			subscriptionId: stripeSubscription?.id, // don't populate if it's starting in the future.
 			subscriptionScheduleId:
-				stripeSubscriptionSchedule?.id ?? currentCustomerProduct.scheduled_ids?.[0],
+				stripeSubscriptionSchedule?.id ??
+				currentCustomerProduct.scheduled_ids?.[0],
 			externalId: currentCustomerProduct.external_id ?? undefined,
 			startsAt: currentCustomerProduct.starts_at ?? undefined,
 			...cancelFields,
@@ -94,9 +97,7 @@ export const computeCustomPlanNewCustomerProduct = ({
 			status: params.status ?? currentCustomerProduct.status,
 
 			onTrialEnd:
-				trialContext?.onEnd ??
-				currentCustomerProduct.on_trial_end ??
-				undefined,
+				trialContext?.onEnd ?? currentCustomerProduct.on_trial_end ?? undefined,
 			previousCustomerProductId:
 				currentCustomerProduct.previous_customer_product_id ?? undefined,
 		},

@@ -1,5 +1,25 @@
 import { AppEnv, type MigrationFilter, type Operations } from "@autumn/shared";
 import {
+	Badge,
+	Button,
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	IconButton,
+	Input,
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+	Separator,
+	ShortcutButton,
+	Switch,
+} from "@autumn/ui";
+import {
 	ArrowSquareOutIcon,
 	CaretDownIcon,
 	CaretLeftIcon,
@@ -27,34 +47,13 @@ import { useCallback, useDeferredValue, useMemo, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { Table } from "@/components/general/table";
-import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
-import {
-	Dialog,
-	DialogContent,
-	DialogDescription,
-	DialogFooter,
-	DialogHeader,
-	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+import { useCursorPagination } from "@/components/general/table";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
-import { Input } from "@/components/v2/inputs/Input";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/v2/selects/Select";
-import { Separator } from "@/components/v2/separator";
+} from "@autumn/ui";
 import {
 	type MigrationPreviewCustomer,
 	useMigrationFilterPreview,
@@ -83,7 +82,6 @@ import { ItemEventStatusBadge } from "../runs/RunStatusBadge";
 import { type StepId, StepIndicator } from "../StepIndicator";
 import { OperationsPreview } from "../shared/OperationsPreview";
 import { RunSummaryRows } from "../shared/RunSummaryRows";
-import { useCursorPagination } from "../shared/useCursorPagination";
 import { ActiveDot } from "./ActiveDot";
 import {
 	EXECUTION_STATUS_VALUES,
@@ -403,12 +401,10 @@ export function MigrationLiveView({
 					c.migration_item_run?.migration_run_id === activeRunId;
 				const hasResultForRun =
 					!!hasEventInActiveRun ||
-					(isClaimedInActiveRun &&
-						c.migration_item_run?.status !== "running");
+					(isClaimedInActiveRun && c.migration_item_run?.status !== "running");
 				const hasPersistedResult =
 					!!event ||
-					(!!c.migration_item_run &&
-						c.migration_item_run.status !== "running");
+					(!!c.migration_item_run && c.migration_item_run.status !== "running");
 				const showPending =
 					!!pendingRunStatus &&
 					isTargeted &&

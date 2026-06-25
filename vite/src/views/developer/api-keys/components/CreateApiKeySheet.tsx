@@ -1,17 +1,17 @@
 import type { ScopeString } from "@autumn/shared";
-import { Check, Copy } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { z } from "zod/v4";
-import { Button } from "@/components/v2/buttons/Button";
-import { Input } from "@/components/v2/inputs/Input";
-import { ScopeSelector } from "@/components/v2/scope-selector";
 import {
+	Button,
+	Input,
 	Sheet,
 	SheetContent,
 	SheetHeader,
 	SheetTitle,
-} from "@/components/v2/sheets/Sheet";
+} from "@autumn/ui";
+import { Check, Copy } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { z } from "zod/v4";
+import { ScopeSelector } from "@/components/v2/scope-selector";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { useSession } from "@/lib/auth-client";
 import { DevService } from "@/services/DevService";
@@ -34,7 +34,7 @@ export const CreateApiKeySheet = ({
 	// better-auth's TS inference doesn't auto-propagate customSession
 	// additions in all setups, so we cast — this mirrors the server-side
 	// `betterAuthMiddleware` pattern.
-	const callerScopes = (((session as any)?.scopes ?? []) as string[]);
+	const callerScopes = ((session as any)?.scopes ?? []) as string[];
 
 	const [loading, setLoading] = useState(false);
 	const [name, setName] = useState("");
@@ -114,12 +114,12 @@ export const CreateApiKeySheet = ({
 				side="right"
 				className="!w-[28rem] !max-w-[28rem] sm:!w-[28rem] sm:!max-w-[28rem]"
 			>
-			<SheetHeader>
-				<SheetTitle>Create Secret API Key</SheetTitle>
+				<SheetHeader>
+					<SheetTitle>Create Secret API Key</SheetTitle>
 					{apiKey && (
 						<p className="text-muted-foreground text-sm">
-							Please copy your API Key and keep it somewhere safe. You
-							won't be able to view it anymore after this
+							Please copy your API Key and keep it somewhere safe. You won't be
+							able to view it anymore after this
 						</p>
 					)}
 				</SheetHeader>
@@ -160,9 +160,7 @@ export const CreateApiKeySheet = ({
 								}}
 							/>
 							{validationError && (
-								<p className="mt-2 text-sm text-red-500">
-									{validationError}
-								</p>
+								<p className="mt-2 text-sm text-red-500">{validationError}</p>
 							)}
 
 							<div className="mt-6">

@@ -1,0 +1,31 @@
+---
+title: "Mint"
+openapi: "openapi POST /v1/keys.mint"
+---
+
+<Note>
+  Mints a per-customer token — a scoped `am_jwt_` credential — so a self-hosted or downstream app can call Autumn directly without your secret key. Authenticated with your **secret key**. Returns a short-lived access token (1h) and a rotating refresh token (24h), both bound to a single customer.
+</Note>
+
+### How it works
+
+1. Your backend calls `keys.mint` with your secret key to issue a token pair for a customer.
+2. Hand the **access token** to that customer's app. It can call `check`, `track`, `customers.get` and `entities.get` — always scoped to that customer, even if a different `customer_id` is sent.
+3. Before the access token expires, the app calls [`keys.refresh`](/api-reference/keys/refreshKey) with its **refresh token** to rotate a fresh pair — no secret key required.
+
+<CodeGroup>
+
+```typescript TypeScript
+const { accessToken, refreshToken } = await autumn.keys.mint({
+  customerId: "cus_123",
+});
+```
+
+```bash cURL
+curl -X POST "https://api.useautumn.com/v1/keys.mint" \
+  -H "Authorization: Bearer am_sk_live_..." \
+  -H "Content-Type: application/json" \
+  -d '{ "customer_id": "cus_123" }'
+```
+
+</CodeGroup>

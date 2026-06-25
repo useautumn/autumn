@@ -1,18 +1,7 @@
-import { CaretLeftIcon, CaretRightIcon } from "@phosphor-icons/react";
-import { useHotkeys } from "react-hotkeys-hook";
 import {
-	Pagination,
-	PaginationContent,
-	PaginationItem,
-} from "@/components/ui/pagination";
-import { IconButton } from "@/components/v2/buttons/IconButton";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/v2/selects/Select";
+	CursorPagination,
+	PageSizeSelector,
+} from "@/components/general/table";
 import {
 	CUSTOMER_LIST_PAGE_SIZE_OPTIONS,
 	DEFAULT_CUSTOMER_LIST_PAGE_SIZE,
@@ -22,80 +11,23 @@ import { useCustomerFilters } from "@/views/customers/hooks/useCustomerFilters";
 
 export function CustomerListPagination() {
 	const { totalCount, nextCursor, isFetchingUncached } = useCusSearchQuery();
-	const {
-		queryStates,
-		currentPage,
-		pushCursor,
-		popCursor,
-	} = useCustomerFilters();
+	const { queryStates, currentPage, pushCursor, popCursor } =
+		useCustomerFilters();
 
 	const pageSize = queryStates.pageSize || DEFAULT_CUSTOMER_LIST_PAGE_SIZE;
-	const totalPages = Math.ceil((totalCount || 0) / pageSize);
-	const hasPaginationData = totalCount > 0;
-	const canGoPrev = currentPage > 1;
-	const canGoNext = Boolean(nextCursor);
-	const isDisabled = isFetchingUncached;
-
-	useHotkeys(
-		"left",
-		(e) => {
-			if (!canGoPrev) return;
-			e.preventDefault();
-			popCursor();
-		},
-		{ enabled: canGoPrev },
-	);
-
-	useHotkeys(
-		"right",
-		(e) => {
-			if (!canGoNext || !nextCursor) return;
-			e.preventDefault();
-			pushCursor(nextCursor);
-		},
-		{ enabled: canGoNext },
-	);
+	const totalPages = totalCount > 0 ? Math.ceil(totalCount / pageSize) : null;
 
 	return (
-		<div className="flex justify-center items-center gap-2 text-xs text-tertiary-foreground shrink-0 select-none">
-			<Pagination className="w-fit h-7 text-xs">
-				<PaginationContent className="w-full flex justify-between items-center gap-2">
-					<PaginationItem>
-						<IconButton
-							variant="secondary"
-							size="default"
-							icon={<CaretLeftIcon size={12} weight="bold" />}
-							onClick={(e) => {
-								e.preventDefault();
-								if (!canGoPrev) return;
-								popCursor();
-							}}
-							disabled={isDisabled || !canGoPrev}
-							className={isDisabled || !canGoPrev ? "pointer-events-none opacity-50" : ""}
-						/>
-					</PaginationItem>
-					<PaginationItem className="text-muted-foreground font-medium text-center tabular-nums">
-						{hasPaginationData
-							? `${currentPage} / ${totalPages}`
-							: "..."}
-					</PaginationItem>
-					<PaginationItem>
-						<IconButton
-							variant="secondary"
-							size="default"
-							icon={<CaretRightIcon size={12} weight="bold" />}
-							onClick={(e) => {
-								e.preventDefault();
-								if (!canGoNext || !nextCursor) return;
-								pushCursor(nextCursor);
-							}}
-							disabled={isDisabled || !canGoNext}
-							className={isDisabled || !canGoNext ? "pointer-events-none opacity-50" : ""}
-						/>
-					</PaginationItem>
-				</PaginationContent>
-			</Pagination>
-		</div>
+		<CursorPagination
+			currentPage={currentPage}
+			totalPages={totalPages}
+			canGoPrev={currentPage > 1}
+			canGoNext={Boolean(nextCursor)}
+			onPrev={popCursor}
+			onNext={() => nextCursor && pushCursor(nextCursor)}
+			disabled={isFetchingUncached}
+			enableHotkeys
+		/>
 	);
 }
 
@@ -104,30 +36,10 @@ export function CustomerListPageSizeSelector() {
 	const pageSize = queryStates.pageSize || DEFAULT_CUSTOMER_LIST_PAGE_SIZE;
 
 	return (
-		<Select
-			value={pageSize.toString()}
-			onValueChange={(value) => {
-				setFilters({
-					pageSize: Number(value),
-				});
-			}}
-			items={Object.fromEntries(
-				CUSTOMER_LIST_PAGE_SIZE_OPTIONS.map((size) => [
-					size.toString(),
-					size.toString(),
-				]),
-			)}
-		>
-			<SelectTrigger className="h-7 w-fit px-2 text-xs">
-				<SelectValue />
-			</SelectTrigger>
-			<SelectContent>
-				{CUSTOMER_LIST_PAGE_SIZE_OPTIONS.map((size) => (
-					<SelectItem key={size} value={size.toString()}>
-						{size}
-					</SelectItem>
-				))}
-			</SelectContent>
-		</Select>
+		<PageSizeSelector
+			pageSize={pageSize}
+			options={CUSTOMER_LIST_PAGE_SIZE_OPTIONS}
+			onChange={(size) => setFilters({ pageSize: size })}
+		/>
 	);
 }

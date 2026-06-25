@@ -8099,6 +8099,8 @@ paths:
 
         @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 
+        @param longLivedCheckout - If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened. (optional)
+
         @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
 
         @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
@@ -8645,6 +8647,9 @@ paths:
                     type: string
                   additionalProperties: {}
                   description: Additional parameters to pass into the creation of the Stripe checkout session.
+                long_lived_checkout:
+                  type: boolean
+                  description: If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened.
                 custom_line_items:
                   type: array
                   items:
@@ -8799,7 +8804,7 @@ paths:
         @example
         ```typescript
         // Schedule a transition from a trial plan to a paid plan
-        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1781265695558,"plans":[{"planId":"trial_plan"}]},{"startsAt":1782475295558,"plans":[{"planId":"pro_plan"}]}] });
+        const response = await client.billing.createSchedule({ customerId: "cus_123", phases: [{"startsAt":1782132368359,"plans":[{"planId":"trial_plan"}]},{"startsAt":1783341968359,"plans":[{"planId":"pro_plan"}]}] });
         ```
 
         @param customerId - The ID of the customer to create the schedule for.
@@ -8905,8 +8910,29 @@ paths:
                     - type: object
                       properties:
                         starts_at:
-                          type: number
-                          description: When this phase should start, in epoch milliseconds.
+                          anyOf:
+                            - type: number
+                            - const: now
+                          description: When this phase should start, in epoch milliseconds, or 'now' for the immediate phase.
+                        starting_after:
+                          type: object
+                          properties:
+                            duration_type:
+                              enum:
+                                - month
+                                - year
+                              type: string
+                              description: The duration unit to offset this phase from the prior phase.
+                            duration_count:
+                              type: integer
+                              minimum: -9.007199254740991e+15
+                              maximum: 9.007199254740991e+15
+                              exclusiveMinimum: 0
+                              description: How many duration_type periods after the prior phase to start.
+                          required:
+                            - duration_type
+                            - duration_count
+                          description: Relative start offset from the previous resolved schedule phase.
                         plans:
                           type: array
                           minItems: 1
@@ -9292,6 +9318,7 @@ paths:
                                       title: PlanItemFilter
                                       description: Filter for matching plan items. All provided fields must match (AND).
                                     description: Filters selecting items to remove from the plan.
+                                additionalProperties: false
                                 description: Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items.
                               subscription_id:
                                 type: string
@@ -9300,14 +9327,34 @@ paths:
                               - plan_id
                           description: Plans to materialize for this phase.
                       required:
-                        - starts_at
                         - plans
                   items:
                     type: object
                     properties:
                       starts_at:
-                        type: number
-                        description: When this phase should start, in epoch milliseconds.
+                        anyOf:
+                          - type: number
+                          - const: now
+                        description: When this phase should start, in epoch milliseconds, or 'now' for the immediate phase.
+                      starting_after:
+                        type: object
+                        properties:
+                          duration_type:
+                            enum:
+                              - month
+                              - year
+                            type: string
+                            description: The duration unit to offset this phase from the prior phase.
+                          duration_count:
+                            type: integer
+                            minimum: -9.007199254740991e+15
+                            maximum: 9.007199254740991e+15
+                            exclusiveMinimum: 0
+                            description: How many duration_type periods after the prior phase to start.
+                        required:
+                          - duration_type
+                          - duration_count
+                        description: Relative start offset from the previous resolved schedule phase.
                       plans:
                         type: array
                         minItems: 1
@@ -9693,6 +9740,7 @@ paths:
                                     title: PlanItemFilter
                                     description: Filter for matching plan items. All provided fields must match (AND).
                                   description: Filters selecting items to remove from the plan.
+                              additionalProperties: false
                               description: Customize the plan to schedule. Can override price, replace items, or patch items with add_items and remove_items.
                             subscription_id:
                               type: string
@@ -9701,7 +9749,6 @@ paths:
                             - plan_id
                         description: Plans to materialize for this phase.
                     required:
-                      - starts_at
                       - plans
                   description: Ordered phase definitions for the schedule.
               required:
@@ -10459,6 +10506,8 @@ paths:
 
         @param checkoutSessionParams - Additional parameters to pass into the creation of the Stripe checkout session. (optional)
 
+        @param longLivedCheckout - If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened. (optional)
+
         @param customLineItems - Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans). (optional)
 
         @param processorSubscriptionId - The processor subscription ID to link. Use this to attach an existing Stripe subscription instead of creating a new one. (optional)
@@ -11005,6 +11054,9 @@ paths:
                     type: string
                   additionalProperties: {}
                   description: Additional parameters to pass into the creation of the Stripe checkout session.
+                long_lived_checkout:
+                  type: boolean
+                  description: If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened.
                 custom_line_items:
                   type: array
                   items:
@@ -12381,6 +12433,8 @@ paths:
 
         @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
 
+        @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
+
 
         @returns A billing response with customer ID, invoice details, and payment URL (if next action is required).
       tags:
@@ -12902,6 +12956,20 @@ paths:
                   required:
                     - enabled
                   description: Controls whether balances should be recalculated during the subscription update.
+                carry_over_usages:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      description: Whether to carry over usages from the previous plan.
+                    feature_ids:
+                      type: array
+                      items:
+                        type: string
+                      description: The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over.
+                  required:
+                    - enabled
+                  description: Whether to carry over usages from the previous plan.
               required:
                 - customer_id
               title: UpdateSubscriptionParams
@@ -13041,6 +13109,8 @@ paths:
         @param noBillingChanges - If true, the subscription is updated internally without applying billing changes in Stripe. (optional)
 
         @param recalculateBalances - Controls whether balances should be recalculated during the subscription update. (optional)
+
+        @param carryOverUsages - Whether to carry over usages from the previous plan. (optional)
 
 
         @returns A preview response with line items showing prorated charges or credits for the proposed changes.
@@ -13563,6 +13633,20 @@ paths:
                   required:
                     - enabled
                   description: Controls whether balances should be recalculated during the subscription update.
+                carry_over_usages:
+                  type: object
+                  properties:
+                    enabled:
+                      type: boolean
+                      description: Whether to carry over usages from the previous plan.
+                    feature_ids:
+                      type: array
+                      items:
+                        type: string
+                      description: The IDs of the features to carry over usages for. If left undefined, all consumable features will be carried over.
+                  required:
+                    - enabled
+                  description: Whether to carry over usages from the previous plan.
               required:
                 - customer_id
               title: PreviewUpdateParams
@@ -14663,6 +14747,9 @@ paths:
                 expires_at:
                   type: number
                   description: Unix timestamp (milliseconds) when the balance expires. Mutually exclusive with reset.
+                next_reset_at:
+                  type: number
+                  description: Unix timestamp (milliseconds) for the first reset boundary, allowing a custom (e.g. shorter) first period. Requires 'reset', and must occur before 'expires_at' if both are provided. Subsequent resets advance by one reset interval from this boundary.
                 balance_id:
                   type: string
                   description: A unique identifier for this balance. Use this to target the balance in future update / delete calls.
@@ -16145,7 +16232,7 @@ paths:
 
         @param properties - Additional properties to attach to this usage event. (optional)
 
-        @param async - If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information. (optional)
+        @param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
 
 
         @returns The usage value recorded, with either a single updated balance or a map of updated balances. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the event for replay so it can be tracked as soon as the service is restored.
@@ -16180,7 +16267,7 @@ paths:
                   description: Additional properties to attach to this usage event.
                 async:
                   type: boolean
-                  description: If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information.
+                  description: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
                 lock:
                   type: object
                   properties:
@@ -16516,6 +16603,8 @@ paths:
 
         @param properties - Additional properties to attach to this usage event. (optional)
 
+        @param async - If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information. (optional)
+
 
         @returns The dollar value recorded and the updated AI credit system balance. If Autumn is experiencing degraded service from a downstream provider, the API may return 202 after accepting the token usage event for replay so it can be tracked as soon as the service is restored.
       requestBody:
@@ -16578,6 +16667,9 @@ paths:
                     type: string
                   additionalProperties: {}
                   description: Additional properties to attach to this usage event.
+                async:
+                  type: boolean
+                  description: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
               required:
                 - customer_id
                 - model_id
@@ -16889,7 +16981,7 @@ paths:
                     description: Additional properties to attach to this usage event.
                   async:
                     type: boolean
-                    description: If true, enqueue the event for asynchronous processing and return 202 immediately. The response will not include balance information.
+                    description: If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information.
                   lock:
                     type: object
                     properties:
@@ -17178,6 +17270,7 @@ paths:
                   enum:
                     - day
                     - hour
+                    - week
                     - month
                   type: string
                   default: day
@@ -20284,6 +20377,150 @@ paths:
                             app_id: app1a2b3c4
                     oauth_access_token: atk_aBcDeFgHiJkLmNoPqRsTuVwXyZ
       x-speakeasy-name-override: getRevenueCatKeys
+      parameters:
+        - *a1
+  /v1/keys.mint:
+    post:
+      operationId: mintKey
+      description: Mints a per-customer token (a scoped `am_jwt_` credential) so a downstream / self-hosted app can call Autumn directly without your secret key. Returns a short-lived access token plus a rotating refresh token, both bound to the given customer. Authenticated with your secret key.
+      tags:
+        - keys
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: The customer to mint a token for.
+                indefinite:
+                  type: boolean
+                  description: If true, mint a non-expiring access token (no refresh token). Revoke via keys.revoke.
+              required:
+                - customer_id
+              title: MintKeyParams
+              examples:
+                - customer_id: cus_123
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: Access token (1h, or non-expiring if indefinite), prefixed `am_jwt_`.
+                  refresh_token:
+                    type: string
+                    description: Rotating refresh token (24h). Omitted for indefinite tokens.
+                  expires_at:
+                    anyOf:
+                      - type: number
+                      - type: "null"
+                    description: Access-token expiry, ms since epoch. null for indefinite tokens.
+                  refresh_expires_at:
+                    type: number
+                    description: Refresh-token expiry, ms since epoch. Omitted for indefinite tokens.
+                required:
+                  - access_token
+                  - expires_at
+                examples:
+                  - access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
+                    refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
+                    expires_at: 1781113864000
+                    refresh_expires_at: 1781196664000
+      x-speakeasy-name-override: mint
+      parameters:
+        - *a1
+  /v1/keys.refresh:
+    post:
+      operationId: refreshKey
+      description: Exchanges a refresh token (sent as the Bearer credential) for a freshly rotated access + refresh pair. Self-service for the token holder — no secret key required. The previous refresh token is honored for one rotation as a grace window; replaying an older one revokes the customer's tokens.
+      tags:
+        - keys
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              title: RefreshKeyParams
+              description: No body. The refresh token is supplied as the Bearer credential; the response is a freshly rotated access + refresh pair.
+              examples:
+                - {}
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                    description: Access token (1h, or non-expiring if indefinite), prefixed `am_jwt_`.
+                  refresh_token:
+                    type: string
+                    description: Rotating refresh token (24h). Omitted for indefinite tokens.
+                  expires_at:
+                    anyOf:
+                      - type: number
+                      - type: "null"
+                    description: Access-token expiry, ms since epoch. null for indefinite tokens.
+                  refresh_expires_at:
+                    type: number
+                    description: Refresh-token expiry, ms since epoch. Omitted for indefinite tokens.
+                required:
+                  - access_token
+                  - expires_at
+                examples:
+                  - access_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
+                    refresh_token: am_jwt_eyJhbGciOiJIUzI1NiJ9...
+                    expires_at: 1781113864000
+                    refresh_expires_at: 1781196664000
+      x-speakeasy-name-override: refresh
+      parameters:
+        - *a1
+  /v1/keys.revoke:
+    post:
+      operationId: revokeKey
+      description: Revokes every outstanding token (access and refresh) for a customer. Authenticated with your secret key. New tokens can be issued afterwards with `keys.mint`.
+      tags:
+        - keys
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                customer_id:
+                  type: string
+                  description: The customer whose tokens (every outstanding access + refresh token) should be revoked.
+              required:
+                - customer_id
+              title: RevokeKeyParams
+              examples:
+                - customer_id: cus_123
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  revoked:
+                    const: true
+                required:
+                  - revoked
+                examples:
+                  - revoked: true
+      x-speakeasy-name-override: revoke
       parameters:
         - *a1
 security:

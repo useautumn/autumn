@@ -1,6 +1,6 @@
-import { AppEnv } from "@autumn/shared";
 import React from "react";
 import { Link, useNavigate } from "react-router";
+import { useSwitchActiveOrg } from "@/hooks/common/useOrg";
 import { authClient } from "@/lib/auth-client";
 import { useEnv } from "@/utils/envUtils";
 import { getRedirectUrl } from "@/utils/genUtils";
@@ -16,8 +16,9 @@ function ErrorScreen({
 	errorCode?: string;
 	errorData?: any;
 }) {
-	const env = useEnv();
 	const navigate = useNavigate();
+	const env = useEnv();
+	const switchActiveOrg = useSwitchActiveOrg();
 
 	const handleOrgRemovalError = async () => {
 		if (errorCode === "USER_REMOVED_FROM_ORG" && errorData) {
@@ -31,12 +32,8 @@ function ErrorScreen({
 						(org) => org.id !== errorData.orgId,
 					);
 					if (nextOrg) {
-						await authClient.organization.setActive({
-							organizationId: nextOrg.id,
-						});
-						// Redirect to products page of the new organization
-						const envPath = env === AppEnv.Sandbox ? "sandbox" : "production";
-						navigate(`/${envPath}/products`);
+						await switchActiveOrg(nextOrg.id);
+						navigate("/");
 						return;
 					}
 				}
@@ -74,7 +71,9 @@ function ErrorScreen({
 
 	return (
 		<div className="flex h-full w-full items-center justify-center flex-col gap-2">
-			<div className="text-muted-foreground text-sm max-w-sm text-center">{children}</div>
+			<div className="text-muted-foreground text-sm max-w-sm text-center">
+				{children}
+			</div>
 			{returnUrl && (
 				<Link
 					className="text-tertiary-foreground text-sm hover:underline"

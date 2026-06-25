@@ -14,6 +14,7 @@ import {
 	type PatchContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
+import { applyCustomizeBillingControls } from "@/internal/billing/v2/setup/applyCustomizeBillingControls";
 import { setupPatchContext } from "@/internal/billing/v2/setup/patch";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils";
@@ -95,25 +96,17 @@ const setupAttachPatchProductContext = ({
 	};
 };
 
-/**
- * Loads the product being attached, handling version and custom items params.
- */
-export const setupAttachProductContext = async ({
+const resolveAttachProductContext = async ({
 	ctx,
 	params,
-	contextOverride = {},
 	fullCustomer,
 	currentEpochMs,
 }: {
 	ctx: AutumnContext;
 	params: AttachParamsV1 | MultiAttachParamsV0["plans"][number];
-	contextOverride?: BillingContextOverride;
 	fullCustomer?: FullCustomer;
 	currentEpochMs?: number;
 }) => {
-	const { productContext } = contextOverride;
-	if (productContext) return productContext;
-
 	const { db, org, env } = ctx;
 
 	// 1. Fetch the product being attached
@@ -136,25 +129,45 @@ export const setupAttachProductContext = async ({
 			currentEpochMs,
 		});
 
-		if (patchProductContext) {
-			return patchProductContext;
-		}
+		if (patchProductContext) return patchProductContext;
 	}
 
 	// 2. Handle custom items if provided
-	const {
-		fullProduct: customFullProduct,
-		customPrices,
-		customEnts,
-	} = await setupCustomFullProduct({
+	return await setupCustomFullProduct({
 		ctx,
 		currentFullProduct: fullProduct,
 		customizePlan: params.customize,
 	});
+};
 
-	return {
-		fullProduct: customFullProduct,
-		customPrices,
-		customEnts,
-	};
+/**
+ * Loads the product being attached, handling version and custom items params.
+ */
+export const setupAttachProductContext = async ({
+	ctx,
+	params,
+	contextOverride = {},
+	fullCustomer,
+	currentEpochMs,
+}: {
+	ctx: AutumnContext;
+	params: AttachParamsV1 | MultiAttachParamsV0["plans"][number];
+	contextOverride?: BillingContextOverride;
+	fullCustomer?: FullCustomer;
+	currentEpochMs?: number;
+}) => {
+	const { productContext } = contextOverride;
+	if (productContext) return productContext;
+
+	const productContextResult = await resolveAttachProductContext({
+		ctx,
+		params,
+		fullCustomer,
+		currentEpochMs,
+	});
+
+	return applyCustomizeBillingControls({
+		productContext: productContextResult,
+		customize: params.customize,
+	});
 };

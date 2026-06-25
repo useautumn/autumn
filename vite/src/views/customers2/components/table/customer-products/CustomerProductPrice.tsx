@@ -35,13 +35,21 @@ export const CustomerProductPrice = ({
 		case "price":
 			return (
 				<div className="flex items-center gap-1">
-					<span className="text-muted-foreground">{priceDisplay.formattedAmount}</span>
-					<span className="text-tertiary-foreground">{priceDisplay.intervalText}</span>
+					<span className="text-muted-foreground">
+						{priceDisplay.formattedAmount}
+					</span>
+					<span className="text-tertiary-foreground">
+						{priceDisplay.intervalText}
+					</span>
 				</div>
 			);
 		case "free":
 		case "variable":
-			return <div className="text-tertiary-foreground">{priceDisplay.displayText}</div>;
+			return (
+				<div className="text-tertiary-foreground">
+					{priceDisplay.displayText}
+				</div>
+			);
 		case "placeholder":
 			return <div className="text-tertiary-foreground">-</div>;
 	}

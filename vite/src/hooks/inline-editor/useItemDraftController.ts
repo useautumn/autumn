@@ -1,4 +1,8 @@
-import type { FrontendProduct, ProductItem } from "@autumn/shared";
+import {
+	compareBillingControls,
+	type FrontendProduct,
+	type ProductItem,
+} from "@autumn/shared";
 import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useMemo, useState } from "react";
 import { getItemId } from "@/utils/product/productItemUtils";
@@ -21,6 +25,7 @@ export interface SupportedCustomizationSnapshot {
 		duration: string;
 		cardRequired: boolean;
 	} | null;
+	billingControls: FrontendProduct["billing_controls"];
 }
 
 export interface ItemDraftController {
@@ -61,6 +66,7 @@ const toSupportedCustomization = ({
 		items: structuredClone(product.items ?? []),
 		version: product.version,
 		freeTrial,
+		billingControls: product.billing_controls,
 	};
 };
 
@@ -85,7 +91,9 @@ const patchItemOnProduct = ({
 	if (!product.items?.length) return product;
 
 	const itemIndex =
-		knownIndex !== undefined && knownIndex >= 0 && knownIndex < product.items.length
+		knownIndex !== undefined &&
+		knownIndex >= 0 &&
+		knownIndex < product.items.length
 			? knownIndex
 			: product.items.findIndex((currentItem, i) => {
 					const currentItemId = getItemId({ item: currentItem, itemIndex: i });
@@ -293,17 +301,20 @@ export const useItemDraftController = ({
 	const isDirtySupported = useMemo(() => {
 		if (!initialProduct || !draftProduct) return false;
 
-		const initialCustomization = toSupportedCustomization({
-			product: initialProduct,
-		});
-		const draftCustomization = toSupportedCustomization({
-			product: draftProduct,
+		const { billingControls: initialControls, ...initialCustomization } =
+			toSupportedCustomization({ product: initialProduct });
+		const { billingControls: draftControls, ...draftCustomization } =
+			toSupportedCustomization({ product: draftProduct });
+
+		const billingControlsChanged = !compareBillingControls({
+			newBillingControls: draftControls,
+			curBillingControls: initialControls,
 		});
 
-		return !areEqual({
-			left: initialCustomization,
-			right: draftCustomization,
-		});
+		return (
+			billingControlsChanged ||
+			!areEqual({ left: initialCustomization, right: draftCustomization })
+		);
 	}, [initialProduct, draftProduct]);
 
 	return {

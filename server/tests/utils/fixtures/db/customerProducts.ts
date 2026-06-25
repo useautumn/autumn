@@ -56,6 +56,8 @@ const create = ({
 	canceled: false,
 	starts_at: startsAt ?? Date.now(),
 	trial_ends_at: null,
+	billing_cycle_anchor: null,
+	billing_cycle_anchor_resets_at: null,
 	canceled_at: null,
 	ended_at: endedAt ?? null,
 	options,

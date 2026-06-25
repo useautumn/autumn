@@ -2,6 +2,7 @@ import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import { BillingVersion } from "@models/billingModels/context/billingContext.js";
 import { ProcessorType } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
+import { DbBillingControlsSchema } from "../cusModels/billingControls/customerBillingControls.js";
 import { CustomerSchema } from "../cusModels/cusModels.js";
 import { FreeTrialSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
 import { ProductSchema } from "../productModels/productModels.js";
@@ -44,6 +45,7 @@ export const CusProductSchema = z.object({
 	starts_at: z.number().default(Date.now()),
 	access_starts_at: z.number().optional().nullable(),
 	trial_ends_at: z.number().optional().nullable(),
+	billing_cycle_anchor: z.number().optional().nullable(),
 	billing_cycle_anchor_resets_at: z.number().optional().nullable(),
 	canceled_at: z.number().optional().nullable(),
 	ended_at: z.number().optional().nullable(),
@@ -77,6 +79,7 @@ export const CusProductSchema = z.object({
 
 	previous_customer_product_id: z.string().nullish(),
 	on_trial_end: z.enum(["bill", "revert"]).nullish(),
+	...DbBillingControlsSchema.shape,
 });
 
 export const FullCusProductSchema = CusProductSchema.extend({

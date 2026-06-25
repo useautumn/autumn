@@ -87,6 +87,11 @@ export const SyncParamsV1Schema = z
 				"Caller-supplied plan instances grouped by phase. Omit for pure auto-sync.",
 		}),
 
+		carry_over_usage: z.boolean().optional().meta({
+			description:
+				"When a synced plan expires an existing plan (via expire_previous), carry the existing plan's consumed usage onto the new plan's balances for any shared feature on the same subject. Defaults to true. Set false to sync without touching balances.",
+		}),
+
 		acknowledge_warnings: z.array(z.string()).optional().meta({
 			description:
 				"Detection warning types the caller accepts (e.g. 'extra_items_under_plan').",

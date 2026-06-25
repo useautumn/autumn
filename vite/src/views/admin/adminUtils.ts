@@ -11,6 +11,7 @@ import type {
 } from "@autumn/shared";
 import { toast } from "sonner";
 import { authClient } from "@/lib/auth-client";
+import { setActiveOrg } from "@/lib/orgSync";
 import { formatUnixToDate } from "../../utils/formatUtils/formatDateUtils";
 
 export const getCusProductHoverTexts = (cusProduct: FullCusProduct) => {
@@ -66,9 +67,22 @@ export const impersonateUser = async ({
 		toast.error("Something went wrong");
 		return;
 	}
+
 	if (organizationId) {
-		await authClient.organization.setActive({ organizationId });
+		await setActiveOrg(organizationId);
+
+		// Confirm the session reflects the target before reloading. The
+		// impersonation session is born with no active org, so a premature reload
+		// lets handleNoActiveOrg pick the wrong org.
+		const { data } = await authClient.getSession({
+			query: { disableCookieCache: true },
+		});
+		if (data?.session.activeOrganizationId !== organizationId) {
+			toast.error("Failed to switch to the target organization");
+			return;
+		}
 	}
+
 	window.location.reload();
 };
 

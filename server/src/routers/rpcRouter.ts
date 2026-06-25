@@ -6,6 +6,7 @@ import { billingRpcRouter } from "@/internal/billing/billingRouter";
 import { entityRpcRouter } from "@/internal/entities/entityRouter";
 import { eventsRpcRouter } from "@/internal/events/eventsRouter";
 import { featureRpcRouter } from "@/internal/features/featureRouter";
+import { keysRpcRouter } from "@/internal/keys/keysRouter";
 import { logsRpcRouter } from "@/internal/logs/logsRouter";
 import { migrationRpcRouter } from "@/internal/migrations/v2/migrationRouter";
 import { platformRpcRouter } from "@/internal/platform/platformBeta/platformRpcRouter";
@@ -29,6 +30,7 @@ export const rpcRouter = new Hono<HonoEnv>();
 
 rpcRouter.route("", customerRpcRouter);
 rpcRouter.route("", agentRulesRpcRouter);
+rpcRouter.route("", keysRpcRouter);
 rpcRouter.route("", plansRpcRouter);
 rpcRouter.route("", billingRpcRouter);
 rpcRouter.route("", balancesRpcRouter);

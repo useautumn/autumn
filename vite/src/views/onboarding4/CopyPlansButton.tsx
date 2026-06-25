@@ -1,17 +1,17 @@
 import type { AgentPricingConfig } from "@autumn/shared";
-import { useState } from "react";
-import { useNavigate } from "react-router";
-import { toast } from "sonner";
-import SmallSpinner from "@/components/general/SmallSpinner";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+	SmallSpinner,
+} from "@autumn/ui";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { useAxiosInstance } from "@/services/useAxiosInstance";

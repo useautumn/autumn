@@ -55,6 +55,7 @@ export const ErrCode = {
 	// Stripe
 	StripeError: "stripe_error",
 	StripeKeyInvalid: "stripe_key_invalid",
+	StripeAccountMismatch: "stripe_account_mismatch",
 	StripeConfigNotFound: "stripe_config_not_found",
 	StripeDeleteCustomerFailed: "stripe_delete_customer_failed",
 	StripeCreateCustomerFailed: "stripe_create_customer_failed",
@@ -126,6 +127,8 @@ export const ErrCode = {
 
 	// Rewards
 	InvalidReward: "invalid_reward",
+	DuplicateRewardId: "duplicate_reward_id",
+	DuplicatePromoCode: "duplicate_promo_code",
 	PromoCodeAlreadyExistsInStripe: "promo_code_already_exists_in_stripe",
 	PromoCodeFirstTimeOnly: "promo_code_first_time_only",
 

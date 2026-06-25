@@ -3,19 +3,25 @@ import { expect, test } from "bun:test";
 import type {
 	ApiCustomerV3,
 	ApiCustomerV5,
+	ApiEventsListResponse,
 	TrackResponseV2,
 	TrackResponseV3,
 } from "@autumn/shared";
-import { ErrCode } from "@autumn/shared";
+import { ErrCode, events } from "@autumn/shared";
 import { expectBalanceCorrect } from "@tests/integration/utils/expectBalanceCorrect.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
 import { expectAutumnError } from "@tests/utils/expectUtils/expectErrUtils.js";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
+import { timeout } from "@tests/utils/genUtils.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { Decimal } from "decimal.js";
+import { and, desc, eq } from "drizzle-orm";
+import { db } from "@/db/initDrizzle.js";
 import { getModelCreditCost } from "@/internal/features/aiCreditSystemUtils.js";
+
+const TINYBIRD_INGEST_WAIT_MS = 3000;
 
 // ═══════════════════════════════════════════════════════════════════
 // TRACK-TOKENS-1: Basic trackTokens with models.dev pricing
@@ -81,6 +87,117 @@ test.concurrent(
 			balance: new Decimal(1000).minus(expectedCost).toNumber(),
 			usage: expectedCost,
 		});
+	},
+);
+
+test.concurrent(
+	`${chalk.yellowBright("track-tokens timestamp: backdated timestamp is recorded on token usage events")}`,
+	async () => {
+		const aiCreditsItem = items.free({
+			featureId: TestFeature.AiCredits,
+			includedUsage: 1000,
+		});
+		const freeProd = products.base({
+			id: "free",
+			items: [aiCreditsItem],
+		});
+
+		const runId = Date.now();
+		const { customerId, autumnV1, autumnV2_2, ctx } = await initScenario({
+			customerId: `track-tokens-timestamp-${runId}`,
+			setup: [
+				s.customer({ testClock: false }),
+				s.products({ list: [freeProd] }),
+			],
+			actions: [s.attach({ productId: freeProd.id })],
+		});
+
+		const backdatedTimestamp = Date.UTC(2024, 0, 15, 12, 30, 0);
+		const beforeDefaultTrack = Date.now();
+		await autumnV2_2.post("/track_tokens", {
+			customer_id: customerId,
+			feature_id: TestFeature.AiCredits,
+			model_id: "anthropic/claude-sonnet-4-20250514",
+			input_tokens: 100,
+			output_tokens: 50,
+			properties: { marker: "backdated" },
+			timestamp: backdatedTimestamp,
+			idempotency_key: `track-tokens-timestamp-backdated-${runId}`,
+		});
+		await autumnV2_2.post("/track_tokens", {
+			customer_id: customerId,
+			feature_id: TestFeature.AiCredits,
+			model_id: "anthropic/claude-sonnet-4-20250514",
+			input_tokens: 100,
+			output_tokens: 50,
+			properties: { marker: "default-now" },
+			idempotency_key: `track-tokens-timestamp-default-now-${runId}`,
+		});
+		const afterDefaultTrack = Date.now();
+
+		let publicBackdatedEvent:
+			| ApiEventsListResponse["list"][number]
+			| undefined;
+		let publicDefaultEvent:
+			| ApiEventsListResponse["list"][number]
+			| undefined;
+		for (let attempt = 0; attempt < 5; attempt++) {
+			await timeout(TINYBIRD_INGEST_WAIT_MS);
+			const eventsList = (await autumnV1.events.list({
+				customer_id: customerId,
+			})) as ApiEventsListResponse;
+			publicBackdatedEvent = eventsList.list.find(
+				(event) => event.properties?.marker === "backdated",
+			);
+			publicDefaultEvent = eventsList.list.find(
+				(event) => event.properties?.marker === "default-now",
+			);
+			if (publicBackdatedEvent && publicDefaultEvent) break;
+		}
+
+		expect(publicBackdatedEvent?.timestamp).toBe(backdatedTimestamp);
+		expect(publicDefaultEvent?.timestamp).toBeGreaterThanOrEqual(
+			beforeDefaultTrack,
+		);
+		expect(publicDefaultEvent?.timestamp).toBeLessThanOrEqual(
+			afterDefaultTrack + TINYBIRD_INGEST_WAIT_MS,
+		);
+
+		const customer = (await autumnV2_2.customers.get(customerId, {
+			with_autumn_id: true,
+		})) as ApiCustomerV5 & { autumn_id?: string };
+		const eventRows = await db
+			.select({
+				created_at: events.created_at,
+				timestamp: events.timestamp,
+				properties: events.properties,
+			})
+			.from(events)
+			.where(
+				and(
+					eq(events.org_id, ctx.org.id),
+					eq(events.env, ctx.env),
+					eq(events.internal_customer_id, customer.autumn_id as string),
+				),
+			)
+			.orderBy(desc(events.created_at))
+			.limit(5);
+
+		const dbBackdatedEvent = eventRows.find(
+			(event) => event.properties?.marker === "backdated",
+		);
+		const dbDefaultEvent = eventRows.find(
+			(event) => event.properties?.marker === "default-now",
+		);
+
+		expect(dbBackdatedEvent?.created_at).toBe(backdatedTimestamp);
+		expect(dbBackdatedEvent?.timestamp?.getTime()).toBe(backdatedTimestamp);
+		expect(dbDefaultEvent?.created_at).toBeGreaterThanOrEqual(
+			beforeDefaultTrack,
+		);
+		expect(dbDefaultEvent?.created_at).toBeLessThanOrEqual(
+			afterDefaultTrack + TINYBIRD_INGEST_WAIT_MS,
+		);
 	},
 );
 

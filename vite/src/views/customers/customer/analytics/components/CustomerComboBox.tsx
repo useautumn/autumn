@@ -1,26 +1,24 @@
 "use client";
 
 import type { CustomerWithProducts } from "@autumn/shared";
-import { CaretDownIcon } from "@phosphor-icons/react";
-import { debounce } from "lodash";
-import { Loader2 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { useLocation, useNavigate } from "react-router";
 import {
+	Button,
 	Command,
 	CommandEmpty,
 	CommandGroup,
 	CommandInput,
 	CommandItem,
 	CommandList,
-} from "@/components/ui/command";
-import {
+	IconButton,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
-} from "@/components/ui/popover";
-import { Button } from "@/components/v2/buttons/Button";
-import { IconButton } from "@/components/v2/buttons/IconButton";
+} from "@autumn/ui";
+import { CaretDownIcon } from "@phosphor-icons/react";
+import { debounce } from "lodash";
+import { Loader2 } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router";
 import { useEnv } from "@/utils/envUtils";
 import { navigateTo } from "@/utils/genUtils";
 import { useCusSearchQueryV2 } from "@/views/customers/hooks/useCusSearchQuery";
@@ -101,7 +99,10 @@ export function CustomerComboBox() {
 					<CommandList>
 						{isSearching ? (
 							<div className="flex items-center justify-center py-4">
-								<Loader2 className="animate-spin text-tertiary-foreground" size={14} />
+								<Loader2
+									className="animate-spin text-tertiary-foreground"
+									size={14}
+								/>
 								<span className="ml-2 text-sm text-muted-foreground">
 									Searching...
 								</span>

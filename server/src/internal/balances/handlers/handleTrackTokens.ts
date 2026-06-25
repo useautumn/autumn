@@ -4,6 +4,7 @@ import {
 	TrackTokensParamsSchema,
 } from "@autumn/shared";
 import { createRoute } from "@/honoMiddlewares/routeHandler.js";
+import { runAsyncTrack } from "@/internal/balances/track/runAsyncTrack.js";
 import { runTrackWithRollout } from "@/internal/balances/track/runTrackWithRollout.js";
 import { getTokenTrackParams } from "@/internal/balances/track/utils/getTokenTrackParams.js";
 
@@ -19,6 +20,11 @@ export const handleTrackTokens = createRoute({
 			ctx,
 			input: body,
 		});
+
+		if (trackBody.async === true) {
+			await runAsyncTrack({ ctx, body: trackBody });
+			return c.json({ success: true }, 202);
+		}
 
 		const response = await runTrackWithRollout({
 			ctx,

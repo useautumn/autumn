@@ -1,11 +1,20 @@
-import type {
-	AppEnv,
-	CusProductStatus,
-	ListCustomersV2Params,
-	StandardCursorFields,
+import {
+	ACTIVE_STATUSES,
+	type AppEnv,
+	CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
+	type CusProductStatus,
+	type ListCustomersV2Params,
+	RELEVANT_STATUSES,
+	type StandardCursorFields,
 } from "@autumn/shared";
 import { sql } from "drizzle-orm";
 import {
+	cpStatusInClause,
+	customerProductsSeedCte,
+	customerProductsSeedSelect,
+} from "./getCustomerProductsPageQuery.js";
+import {
+	type DashboardIntervalFilter,
 	type DashboardProductVersionFilter,
 	type DashboardStatusFilter,
 	getCustomerListFilterSql,
@@ -29,6 +38,7 @@ export type CursorPaginatedFullCusQueryArgs = {
 	statusFilters?: DashboardStatusFilter[];
 	noneFilter?: boolean;
 	productVersionFilters?: DashboardProductVersionFilter[];
+	intervalFilters?: DashboardIntervalFilter[];
 	cusProductLimit: number;
 	customerId?: string;
 };
@@ -56,15 +66,16 @@ export const getCursorPaginatedFullCusQuery = ({
 	statusFilters,
 	noneFilter,
 	productVersionFilters,
+	intervalFilters,
 	cusProductLimit,
 	customerId,
 }: CursorPaginatedFullCusQueryArgs) => {
-	const cpStatusFilter = inStatuses?.length
-		? sql`AND cp.status = ANY(ARRAY[${sql.join(
-				inStatuses.map((status) => sql`${status}`),
-				sql`, `,
-			)}])`
-		: sql``;
+	const cpStatusFilter = cpStatusInClause(inStatuses);
+
+	const productsSeedCte = customerProductsSeedCte({
+		inStatuses: RELEVANT_STATUSES,
+		limit: CUSTOMER_PRODUCTS_DEFAULT_LIMIT,
+	});
 
 	const customerListFilterSql = getCustomerListFilterSql({
 		internalCustomerIds,
@@ -77,6 +88,7 @@ export const getCursorPaginatedFullCusQuery = ({
 		statusFilters,
 		noneFilter,
 		productVersionFilters,
+		intervalFilters,
 	});
 
 	const cursorPredicate = cursor
@@ -155,6 +167,7 @@ export const getCursorPaginatedFullCusQuery = ({
 				cp.internal_product_id,
 				cp.free_trial_id,
 				cp.subscription_ids,
+				cp.status,
 				cp.created_at,
 				row_to_json(cp) AS cp_json,
 				prod.is_add_on AS prod_is_add_on,
@@ -179,6 +192,15 @@ export const getCursorPaginatedFullCusQuery = ({
 			FROM cp_ranked_raw cp
 			WHERE cp.rn <= ${cusProductLimit}
 		),
+		cp_counts AS MATERIALIZED (
+			SELECT internal_customer_id, COUNT(*)::int AS n
+			FROM cp_ranked_raw
+			WHERE status = ANY(ARRAY[${sql.join(
+				ACTIVE_STATUSES.map((status) => sql`${status}`),
+				sql`, `,
+			)}])
+			GROUP BY internal_customer_id
+		),
 		ces_bound AS MATERIALIZED (
 			SELECT ce.id, ce.entitlement_id, row_to_json(ce) AS row_json
 			FROM cps_ranked
@@ -201,11 +223,14 @@ export const getCursorPaginatedFullCusQuery = ({
 			SELECT id, entitlement_id FROM ces_bound
 			UNION ALL
 			SELECT id, entitlement_id FROM ces_loose
-		)
+		),
+		${productsSeedCte}
 		${entitiesCte}
 		${invoicesCte}
 		SELECT
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cr) AS customers,
+			(SELECT COALESCE(json_object_agg(internal_customer_id, n), '{}'::json) FROM cp_counts) AS product_counts,
+			${customerProductsSeedSelect},
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM cps_ranked) AS customer_products,
 			(SELECT COALESCE(json_agg(row_json), '[]'::json) FROM ces_bound) AS customer_entitlements,
 			(SELECT COALESCE(json_agg(row_json ORDER BY id DESC), '[]'::json) FROM ces_loose) AS extra_customer_entitlements,

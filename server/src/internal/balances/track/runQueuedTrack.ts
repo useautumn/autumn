@@ -6,6 +6,7 @@ import {
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
 import { getTrackFeatureDeductionsForBody } from "./utils/getFeatureDeductions.js";
+import { withTrackBodyIdempotency } from "./utils/withTrackBodyIdempotency.js";
 import { runTrackV3 } from "./v3/runTrackV3.js";
 
 export const runQueuedTrack = async ({
@@ -20,11 +21,16 @@ export const runQueuedTrack = async ({
 	const featureDeductions = getTrackFeatureDeductionsForBody({ ctx, body });
 
 	try {
-		await runTrackV3({
+		await withTrackBodyIdempotency({
 			ctx,
 			body,
-			featureDeductions,
-			apiVersion,
+			run: () =>
+				runTrackV3({
+					ctx,
+					body,
+					featureDeductions,
+					apiVersion,
+				}),
 		});
 	} catch (error) {
 		if (

@@ -1273,6 +1273,8 @@ class PreviewAttachParamsTypedDict(TypedDict):
     r"""Unix timestamp in milliseconds for when the attached plan should end."""
     checkout_session_params: NotRequired[Dict[str, Any]]
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
+    long_lived_checkout: NotRequired[bool]
+    r"""If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened."""
     custom_line_items: NotRequired[List[PreviewAttachCustomLineItemTypedDict]]
     r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
     processor_subscription_id: NotRequired[str]
@@ -1349,6 +1351,9 @@ class PreviewAttachParams(BaseModel):
     checkout_session_params: Optional[Dict[str, Any]] = None
     r"""Additional parameters to pass into the creation of the Stripe checkout session."""
 
+    long_lived_checkout: Optional[bool] = None
+    r"""If true, returns an Autumn-hosted checkout link that can create a fresh Stripe checkout session when opened."""
+
     custom_line_items: Optional[List[PreviewAttachCustomLineItem]] = None
     r"""Custom line items that override the auto-generated proration invoice. Only valid for immediate plan changes (eg. upgrades or one off plans)."""
 
@@ -1393,6 +1398,7 @@ class PreviewAttachParams(BaseModel):
                 "starts_at",
                 "ends_at",
                 "checkout_session_params",
+                "long_lived_checkout",
                 "custom_line_items",
                 "processor_subscription_id",
                 "carry_over_balances",

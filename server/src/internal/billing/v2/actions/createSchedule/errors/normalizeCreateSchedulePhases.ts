@@ -2,6 +2,7 @@ import {
 	addDuration,
 	type CreateScheduleParamsV0,
 	ErrCode,
+	ms,
 	RecaseError,
 	type ResolvedCreateSchedulePhaseV0,
 } from "@autumn/shared";
@@ -100,13 +101,49 @@ export const getInitialCreateSchedulePhase = ({
 	return firstPhase;
 };
 
+const CYCLE_BOUNDARY_SNAP_WINDOW_MS = ms.hours(12);
+
+const snapResolvedPhasesToCycleBoundary = ({
+	phases,
+	cycleBoundaryMs,
+}: {
+	phases: ResolvedPhase[];
+	cycleBoundaryMs: number;
+}): ResolvedPhase[] => {
+	let snapIndex = -1;
+	let snapDistance = CYCLE_BOUNDARY_SNAP_WINDOW_MS;
+	for (let index = 1; index < phases.length; index++) {
+		const phase = phases[index];
+		if (!phase) continue;
+		const distance = Math.abs(phase.starts_at - cycleBoundaryMs);
+		if (distance <= snapDistance) {
+			snapDistance = distance;
+			snapIndex = index;
+		}
+	}
+
+	if (snapIndex === -1) return phases;
+
+	const previousPhase = phases[snapIndex - 1];
+	const nextPhase = phases[snapIndex + 1];
+	if (previousPhase && cycleBoundaryMs <= previousPhase.starts_at)
+		return phases;
+	if (nextPhase && cycleBoundaryMs >= nextPhase.starts_at) return phases;
+
+	return phases.map((phase, index) =>
+		index === snapIndex ? { ...phase, starts_at: cycleBoundaryMs } : phase,
+	);
+};
+
 /** Sort phases for downstream create_schedule setup and execution. */
 export const normalizeCreateSchedulePhases = ({
 	phases,
 	currentEpochMs,
+	cycleBoundaryMs,
 }: {
 	phases: CreateScheduleParamsV0["phases"];
 	currentEpochMs: number;
+	cycleBoundaryMs?: number;
 }): [ResolvedPhase, ...ResolvedPhase[]] => {
 	const orderedPhases = hasRelativeTiming({ phases })
 		? [...phases]
@@ -147,7 +184,8 @@ export const normalizeCreateSchedulePhases = ({
 			});
 		} else {
 			throw new RecaseError({
-				message: "Each phase must include exactly one of starts_at or starting_after",
+				message:
+					"Each phase must include exactly one of starts_at or starting_after",
 				code: ErrCode.InvalidRequest,
 				statusCode: 400,
 			});
@@ -156,7 +194,15 @@ export const normalizeCreateSchedulePhases = ({
 		resolvedPhases.push(phaseToResolvedPhase({ phase, startsAt }));
 	}
 
-	assertStrictlyIncreasing({ phases: resolvedPhases });
+	const snappedPhases =
+		cycleBoundaryMs === undefined
+			? resolvedPhases
+			: snapResolvedPhasesToCycleBoundary({
+					phases: resolvedPhases,
+					cycleBoundaryMs,
+				});
 
-	return toNonEmptyResolvedPhases({ phases: resolvedPhases });
+	assertStrictlyIncreasing({ phases: snappedPhases });
+
+	return toNonEmptyResolvedPhases({ phases: snappedPhases });
 };

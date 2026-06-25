@@ -1,6 +1,6 @@
 {
-  "id": "964727fa-256f-430d-b506-93d6e2a84076",
-  "prevId": "225f1120-dd75-4681-83f1-58d8feab3e81",
+  "id": "de543951-f255-4201-a1da-9ad6efed6c5c",
+  "prevId": "60d2509d-6e67-45f0-afe7-1b0d254106aa",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1412,6 +1412,12 @@
           "primaryKey": false,
           "notNull": true
         },
+        "reset_cycle_anchor": {
+          "name": "reset_cycle_anchor",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
         "next_reset_at": {
           "name": "next_reset_at",
           "type": "numeric",
@@ -1423,6 +1429,13 @@
           "type": "boolean",
           "primaryKey": false,
           "notNull": false,
+          "default": false
+        },
+        "separate_interval": {
+          "name": "separate_interval",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
           "default": false
         },
         "adjustment": {
@@ -1564,6 +1577,28 @@
           ],
           "isUnique": false,
           "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_customer_entitlements_separate_interval_reset": {
+          "name": "idx_customer_entitlements_separate_interval_reset",
+          "columns": [
+            {
+              "expression": "next_reset_at",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "\"customer_entitlements\".\"separate_interval\" = true AND \"customer_entitlements\".\"next_reset_at\" IS NOT NULL",
+          "concurrently": true,
           "method": "btree",
           "with": {}
         },
@@ -1889,6 +1924,12 @@
         },
         "trial_ends_at": {
           "name": "trial_ends_at",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "billing_cycle_anchor": {
+          "name": "billing_cycle_anchor",
           "type": "numeric",
           "primaryKey": false,
           "notNull": false
@@ -5110,6 +5151,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "oauth_consent_id": {
+          "name": "oauth_consent_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "refresh_id": {
           "name": "refresh_id",
           "type": "text",
@@ -5169,6 +5216,19 @@
           "tableTo": "user",
           "columnsFrom": [
             "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "oauth_access_token_oauth_consent_id_oauth_consent_id_fk": {
+          "name": "oauth_access_token_oauth_consent_id_oauth_consent_id_fk",
+          "tableFrom": "oauth_access_token",
+          "tableTo": "oauth_consent",
+          "columnsFrom": [
+            "oauth_consent_id"
           ],
           "columnsTo": [
             "id"
@@ -5555,6 +5615,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "oauth_consent_id": {
+          "name": "oauth_consent_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "expires_at": {
           "name": "expires_at",
           "type": "timestamp with time zone",
@@ -5620,6 +5686,19 @@
           "tableTo": "user",
           "columnsFrom": [
             "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "oauth_refresh_token_oauth_consent_id_oauth_consent_id_fk": {
+          "name": "oauth_refresh_token_oauth_consent_id_oauth_consent_id_fk",
+          "tableFrom": "oauth_refresh_token",
+          "tableTo": "oauth_consent",
+          "columnsFrom": [
+            "oauth_consent_id"
           ],
           "columnsTo": [
             "id"
@@ -5765,25 +5844,6 @@
           "primaryKey": false,
           "notNull": false,
           "default": false
-        },
-        "is_sandbox": {
-          "name": "is_sandbox",
-          "type": "boolean",
-          "primaryKey": false,
-          "notNull": true,
-          "default": false
-        },
-        "sandbox_color": {
-          "name": "sandbox_color",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "sandbox_icon": {
-          "name": "sandbox_icon",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
         },
         "redis_config": {
           "name": "redis_config",

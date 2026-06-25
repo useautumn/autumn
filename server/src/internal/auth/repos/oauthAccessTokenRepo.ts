@@ -57,8 +57,23 @@ export const updateOAuthAccessTokenScopes = async ({
 		.set({ scopes })
 		.where(eq(oauthAccessToken.id, id));
 
+export const updateOAuthAccessTokenConsent = async ({
+	db,
+	id,
+	oauthConsentId,
+}: {
+	db: DrizzleCli;
+	id: string;
+	oauthConsentId: string;
+}) =>
+	db
+		.update(oauthAccessToken)
+		.set({ oauthConsentId })
+		.where(eq(oauthAccessToken.id, id));
+
 export const oauthAccessTokenRepo = {
 	getValidByTokenValues: getValidOAuthAccessTokenByTokenValues,
 	deleteByClientAndReference: deleteOAuthAccessTokensByClientAndReference,
 	updateScopes: updateOAuthAccessTokenScopes,
+	updateConsent: updateOAuthAccessTokenConsent,
 };

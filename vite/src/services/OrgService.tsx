@@ -14,8 +14,13 @@ export class OrgService {
 		return await axiosInstance.post(`/v1/organization/stripe`, data);
 	}
 
-	static async disconnectStripe(axiosInstance: AxiosInstance) {
-		return await axiosInstance.delete(`/v1/organization/stripe`);
+	static async disconnectStripe(
+		axiosInstance: AxiosInstance,
+		channel?: "secret_key" | "oauth",
+	) {
+		return await axiosInstance.delete(`/v1/organization/stripe`, {
+			data: channel ? { channel } : undefined,
+		});
 	}
 
 	static async upsertVercelConfig(
@@ -31,7 +36,7 @@ export class OrgService {
 
 	static async createChatInstall(
 		axiosInstance: AxiosInstance,
-		data: { provider: "slack"; env: string },
+		data: { provider: "slack"; env: string; scopes?: string[] },
 	) {
 		return await axiosInstance.post(`/organization/chat/install`, data);
 	}

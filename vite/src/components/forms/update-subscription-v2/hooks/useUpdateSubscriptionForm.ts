@@ -1,4 +1,5 @@
 import {
+	billingControlsFromColumns,
 	FreeTrialDuration,
 	getRemainingTrialDays,
 	isCustomerProductTrialing,
@@ -50,9 +51,11 @@ export function useUpdateSubscriptionForm({
 			trialEnabled: isTrialing,
 			version: currentVersion,
 			items: null,
+			billingControls: billingControlsFromColumns(customerProduct),
 			cancelAction: null,
 			billingBehavior: null,
 			resetBillingCycle: false,
+			resetUsage: false,
 			refundBehavior: null,
 			refundAmount: null,
 			noBillingChanges: false,

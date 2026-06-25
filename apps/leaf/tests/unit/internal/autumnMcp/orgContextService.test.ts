@@ -17,6 +17,7 @@ const createLogger = () => {
 	const warnings: unknown[] = [];
 	return {
 		logger: {
+			debug: () => undefined,
 			warn: (_message: string, input: unknown) => warnings.push(input),
 		},
 		warnings,

@@ -13,9 +13,9 @@ import {
 	productV2ToFeatureItems,
 	sortProductItems,
 } from "@autumn/shared";
-import type { DiffedCustomizePlanV1 } from "@autumn/shared/utils/planV1Utils/diff/diffPlanV1.js";
 import type { MigrationFilter } from "@autumn/shared/api/migrations/filters/migrationFilter.js";
 import type { Operations } from "@autumn/shared/api/migrations/operations/operations.js";
+import type { DiffedCustomizePlanV1 } from "@autumn/shared/utils/planV1Utils/diff/diffPlanV1.js";
 import { migrationUid } from "@/views/migrations/migration/shared/operationUtils";
 
 export interface MigrationDraft {
@@ -78,30 +78,33 @@ export function frontendProductToApiPlanV1(
 		archived: product.archived ?? false,
 		base_variant_id: null,
 		config: product.config ?? { ignore_past_due: false },
+		billing_controls: product.billing_controls,
 	} satisfies ApiPlanV1;
 }
 
 function planItemsToUpdateParams(
 	items: ApiPlanV1["items"],
 ): NonNullable<UpdatePlanParamsV2Input["items"]> {
-	return items.map(({ feature, display, reset, price, proration, rollover, ...item }) => ({
-		...item,
-		...(reset ? { reset } : {}),
-		...(price ? { price } : {}),
-		...(proration ? { proration } : {}),
-		...(rollover
-			? {
-					rollover: {
-						expiry_duration_type: rollover.expiry_duration_type,
-						expiry_duration_length: rollover.expiry_duration_length,
-						...(rollover.max != null ? { max: rollover.max } : {}),
-						...(rollover.max_percentage != null
-							? { max_percentage: rollover.max_percentage }
-							: {}),
-					},
-				}
-			: {}),
-	}));
+	return items.map(
+		({ feature, display, reset, price, proration, rollover, ...item }) => ({
+			...item,
+			...(reset ? { reset } : {}),
+			...(price ? { price } : {}),
+			...(proration ? { proration } : {}),
+			...(rollover
+				? {
+						rollover: {
+							expiry_duration_type: rollover.expiry_duration_type,
+							expiry_duration_length: rollover.expiry_duration_length,
+							...(rollover.max != null ? { max: rollover.max } : {}),
+							...(rollover.max_percentage != null
+								? { max_percentage: rollover.max_percentage }
+								: {}),
+						},
+					}
+				: {}),
+		}),
+	);
 }
 
 export function buildInPlaceUpdatePlanParams({
@@ -127,6 +130,7 @@ export function buildInPlaceUpdatePlanParams({
 		items: planItemsToUpdateParams(plan.items),
 		free_trial: plan.free_trial ?? null,
 		config: plan.config,
+		billing_controls: plan.billing_controls,
 		disable_version: true,
 	} satisfies UpdatePlanParamsV2Input;
 }
@@ -258,9 +262,7 @@ export function buildMigrationDraft({
 
 	const basePlanFilter = {
 		plan_id: baseProduct.id,
-		...(scope === "this_version"
-			? { version: baseProduct.version }
-			: {}),
+		...(scope === "this_version" ? { version: baseProduct.version } : {}),
 	};
 	const planFilter = includeCustom
 		? basePlanFilter
@@ -275,8 +277,7 @@ export function buildMigrationDraft({
 		customer: { plan: planFilter },
 	};
 
-	const suffix =
-		scope === "all_customers" ? "update-all" : "update";
+	const suffix = scope === "all_customers" ? "update-all" : "update";
 
 	return {
 		id: `${baseProduct.id}-${suffix}-${migrationUid()}`,

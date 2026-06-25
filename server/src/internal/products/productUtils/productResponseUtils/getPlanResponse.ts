@@ -8,9 +8,11 @@ import {
 	type FullProduct,
 	getProductItemDisplay,
 	itemToBillingInterval,
+	itemToBillingIntervalCount,
 	productItemsToPlanItemsV1,
 	productV2ToBasePrice,
 	productV2ToFeatureItems,
+	billingControlsFromColumns,
 	sortProductItems,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv.js";
@@ -72,8 +74,8 @@ export const getPlanResponse = async ({
 				amount: basePriceItem.price,
 				interval: itemToBillingInterval({ item: basePriceItem }),
 				interval_count:
-					basePriceItem.interval_count !== 1
-						? (basePriceItem.interval_count ?? undefined)
+					itemToBillingIntervalCount({ item: basePriceItem }) !== 1
+						? itemToBillingIntervalCount({ item: basePriceItem })
 						: undefined,
 				display: getProductItemDisplay({
 					item: basePriceItem,
@@ -132,6 +134,8 @@ export const getPlanResponse = async ({
 		base_variant_id: product.base_variant_id,
 
 		config: product.config ?? { ignore_past_due: false },
+		billing_controls: billingControlsFromColumns(product),
+		metadata: product.metadata ?? {},
 
 		customer_eligibility: customerEligibility,
 	} satisfies ApiPlanV1);

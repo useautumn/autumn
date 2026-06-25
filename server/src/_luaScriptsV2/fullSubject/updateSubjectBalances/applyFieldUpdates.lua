@@ -87,11 +87,20 @@ local function apply_entities_update(params)
 end
 
 local function apply_next_reset_at_update(params)
+	local subject_balance = params.subject_balance
+	local update = params.update
+
+	if not is_absent(update.next_reset_at) then
+		subject_balance.next_reset_at = update.next_reset_at
+	end
+end
+
+local function apply_reset_cycle_anchor_update(params)
   local subject_balance = params.subject_balance
   local update = params.update
 
-  if not is_absent(update.next_reset_at) then
-    subject_balance.next_reset_at = update.next_reset_at
+  if not is_absent(update.reset_cycle_anchor) then
+    subject_balance.reset_cycle_anchor = update.reset_cycle_anchor
   end
 end
 

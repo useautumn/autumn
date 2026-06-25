@@ -1,5 +1,13 @@
 import { AppEnv, type Customer } from "@autumn/shared";
 import {
+	CommandDialog,
+	CommandEmpty,
+	CommandGroup,
+	CommandInput,
+	CommandList,
+	Skeleton,
+} from "@autumn/ui";
+import {
 	ArrowsClockwiseIcon,
 	AtIcon,
 	FingerprintIcon,
@@ -18,14 +26,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import {
-	CommandDialog,
-	CommandEmpty,
-	CommandGroup,
-	CommandInput,
-	CommandList,
-} from "@/components/ui/command";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useTheme } from "@/contexts/ThemeProvider";
 import { useOrg } from "@/hooks/common/useOrg";
 import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
@@ -692,10 +692,7 @@ const CommandBar = () => {
 											value={`org:${org.id}`}
 											icon={
 												isOrgFav(org.id) ? (
-													<StarIcon
-														weight="fill"
-														className="text-yellow-500"
-													/>
+													<StarIcon weight="fill" className="text-yellow-500" />
 												) : (
 													<AtIcon />
 												)
@@ -734,10 +731,7 @@ const CommandBar = () => {
 											value={`user:${user.id}`}
 											icon={
 												isUserFav(user.id) ? (
-													<StarIcon
-														weight="fill"
-														className="text-yellow-500"
-													/>
+													<StarIcon weight="fill" className="text-yellow-500" />
 												) : (
 													<CircleUserRoundIcon />
 												)

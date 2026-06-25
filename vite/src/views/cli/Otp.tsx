@@ -1,11 +1,6 @@
+import { Button, InputOTP, InputOTPGroup, InputOTPSlot } from "@autumn/ui";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
-import {
-	InputOTP,
-	InputOTPGroup,
-	InputOTPSlot,
-} from "@/components/ui/input-otp";
 import { DevService } from "@/services/DevService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 

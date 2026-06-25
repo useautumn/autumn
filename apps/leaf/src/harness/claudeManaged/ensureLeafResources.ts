@@ -18,14 +18,17 @@ const isLoopback = (hostname: string) =>
 	hostname === "::1" ||
 	hostname === "[::1]";
 
-// CMA runs in Anthropic's cloud and cannot reach a loopback host, so MCP_SERVER_URL
-// must be publicly reachable. Fail fast with an actionable message instead of the
-// opaque Anthropic 400 ("resolves to loopback").
 const autumnMcpUrl = () => {
 	const base = chatEnv.MCP_SERVER_URL;
-	if (isLoopback(new URL(base).hostname)) {
+	const url = new URL(base);
+	if (isLoopback(url.hostname)) {
 		throw new Error(
 			`MCP_SERVER_URL must be publicly reachable for Claude Managed Agents, but is "${base}". Point it at your public tunnel (e.g. https://j.dev.useautumn.com), which proxies /mcp to leaf.`,
+		);
+	}
+	if (url.protocol !== "https:") {
+		throw new Error(
+			`MCP_SERVER_URL must be HTTPS for Claude Managed Agents, but is "${base}". Point it at your public tunnel (e.g. https://j.dev.useautumn.com), which proxies /mcp to leaf.`,
 		);
 	}
 	return new URL("/mcp", base).toString();
@@ -49,8 +52,7 @@ export const buildAgentSystem = ({ docsText }: { docsText: string }) =>
 	[autumnChatInstructions, docsText].filter(Boolean).join("\n\n");
 
 // Keep the shared agent config in sync with local code/tunnel changes.
-// Re-syncs every turn in dev so prompt edits land without a restart; once per
-// process in prod.
+// Dev re-syncs every turn; prod syncs once per process.
 const alwaysResync = process.env.NODE_ENV !== "production";
 let agentConfigSynced = false;
 const syncAgentConfig = async ({
@@ -125,8 +127,6 @@ const syncAgentConfig = async ({
 	agentConfigSynced = true;
 };
 
-// Find-or-create the ONE shared Agent + Environment, cached in-memory.
-// The agent is env-agnostic; env/thread context is carried per session.
 let cachedResources: { agentId: string; environmentId: string } | undefined;
 export const ensureLeafResources = async ({
 	client,

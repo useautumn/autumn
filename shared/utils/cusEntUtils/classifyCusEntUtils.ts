@@ -15,13 +15,22 @@ import type {
 	FullCustomerEntitlement,
 } from "../../models/cusProductModels/cusEntModels/cusEntModels";
 import type { FullCusEntWithFullCusProduct } from "../../models/cusProductModels/cusEntModels/cusEntWithProduct";
+import type { FullCustomerPrice } from "../../models/cusProductModels/cusPriceModels/cusPriceModels";
 import {
 	FeatureType,
 	FeatureUsageType,
 } from "../../models/featureModels/featureEnums";
-import { AllowanceType } from "../../models/productModels/entModels/entModels";
+import {
+	AllowanceType,
+	type Entitlement,
+} from "../../models/productModels/entModels/entModels";
+import type { Price } from "../../models/productModels/priceModels/priceModels";
+import { billingAndEntIntervalsDifferent } from "../intervalUtils";
 import { notNullish, nullish } from "../utils";
-import { cusEntToCusPrice } from "./convertCusEntUtils/cusEntToCusPrice";
+import {
+	cusEntToCusPrice,
+	type CustomerEntitlementWithCustomerPrices,
+} from "./convertCusEntUtils/cusEntToCusPrice";
 
 export const isBooleanCusEnt = ({
 	cusEnt,
@@ -173,6 +182,63 @@ export const isPrepaidCustomerEntitlement = (
 	const cusPrice = cusEntToCusPrice({ cusEnt });
 	if (!cusPrice) return false;
 	return isPrepaidPrice(cusPrice.price);
+};
+
+export const entitlementAndPriceHaveSeparateInterval = ({
+	entitlement,
+	price,
+}: {
+	entitlement: Entitlement;
+	price?: Price;
+}) => {
+	if (!price) return false;
+
+	const resetInterval = entitlement.interval;
+	const priceInterval = price.config.interval;
+
+	if (!resetInterval || !priceInterval) return false;
+
+	return billingAndEntIntervalsDifferent({
+		billingInterval: priceInterval,
+		billingIntervalCount: price.config.interval_count,
+		entInterval: resetInterval,
+		entIntervalCount: entitlement.interval_count,
+	});
+};
+
+export const customerEntitlementHasDifferentResetAndPriceInterval = ({
+	customerEntitlement,
+	customerPrice: providedCustomerPrice,
+}: {
+	customerEntitlement: CustomerEntitlementWithCustomerPrices;
+	customerPrice?: FullCustomerPrice;
+}) => {
+	const customerPrice =
+		providedCustomerPrice ?? cusEntToCusPrice({ cusEnt: customerEntitlement });
+	if (!customerPrice) return false;
+
+	return entitlementAndPriceHaveSeparateInterval({
+		entitlement: customerEntitlement.entitlement,
+		price: customerPrice.price,
+	});
+};
+
+export const isCustomerEntitlementPrepaidWithSeparateResetInterval = ({
+	customerEntitlement,
+	customerPrice: providedCustomerPrice,
+}: {
+	customerEntitlement: CustomerEntitlementWithCustomerPrices;
+	customerPrice?: FullCustomerPrice;
+}) => {
+	const customerPrice =
+		providedCustomerPrice ?? cusEntToCusPrice({ cusEnt: customerEntitlement });
+	if (!customerPrice) return false;
+	if (!isPrepaidPrice(customerPrice.price)) return false;
+
+	return customerEntitlementHasDifferentResetAndPriceInterval({
+		customerEntitlement,
+		customerPrice,
+	});
 };
 
 /** Whether the customer entitlement has a pay-per-use price (usage billed in arrears). */

@@ -271,5 +271,6 @@ export const setupUpdateSubscriptionBillingContext = async ({
 
 		chargeExistingOverages: contextOverride.chargeExistingOverages,
 		skipExistingUsageCarry: contextOverride.skipExistingUsageCarry,
+		carryOverUsages: params.carry_over_usages,
 	};
 };

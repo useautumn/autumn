@@ -138,6 +138,7 @@ const customerProduct = ({
 			base_variant_id: null,
 			archived: false,
 			config: { ignore_past_due: false },
+			metadata: {},
 		},
 		free_trial: null,
 	}) as FullCusProduct;

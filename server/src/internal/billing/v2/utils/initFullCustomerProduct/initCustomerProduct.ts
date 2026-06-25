@@ -7,8 +7,10 @@ import {
 	type InitFullCustomerProductOptions,
 	ms,
 	notNullish,
+	pickBillingControlColumns,
 } from "@autumn/shared";
 import { generateId } from "@/utils/genUtils";
+import { productToBillingCycleAnchor } from "./cycleAnchorUtils";
 
 export const initCustomerProduct = ({
 	initContext,
@@ -81,6 +83,12 @@ export const initCustomerProduct = ({
 		: undefined;
 
 	const billingVersion = initContext.billingVersion ?? BillingVersion.V1;
+	const billingCycleAnchor = productToBillingCycleAnchor({
+		product: fullProduct,
+		billingCycleAnchor:
+			initContext.billingCycleAnchor ?? initContext.resetCycleAnchor,
+		now,
+	});
 
 	return {
 		id: customerProductId ?? generateId("cus_prod"),
@@ -107,6 +115,7 @@ export const initCustomerProduct = ({
 		ended_at: endedAt,
 
 		trial_ends_at: trialEndsAt,
+		billing_cycle_anchor: billingCycleAnchor,
 		billing_cycle_anchor_resets_at: billingCycleAnchorResetsAt,
 		free_trial_id: freeTrial?.id,
 
@@ -133,6 +142,7 @@ export const initCustomerProduct = ({
 
 		previous_customer_product_id: previousCustomerProductId ?? null,
 		on_trial_end: onTrialEnd ?? null,
+		...pickBillingControlColumns(fullProduct),
 	};
 };
 

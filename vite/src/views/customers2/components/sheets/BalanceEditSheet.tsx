@@ -1,5 +1,6 @@
 import {
 	computeGrantedBalanceInput,
+	customerEntitlementToBillingCycleEnd,
 	type Entity,
 	type FullCusProduct,
 	type FullCustomerEntitlement,
@@ -8,19 +9,20 @@ import {
 	isUnlimitedCusEnt,
 	numberWithCommas,
 } from "@autumn/shared";
+import {
+	Button,
+	CopyButton,
+	DateInputUnix,
+	GroupedTabButton,
+	InfoRow,
+	LabelInput,
+	Switch,
+} from "@autumn/ui";
 import { ClockCountdownIcon } from "@phosphor-icons/react";
-
 import { useStore } from "@tanstack/react-form";
 import { useState } from "react";
 import { toast } from "sonner";
 import { ConfigRow } from "@/components/forms/shared/ConfigRow";
-import { DateInputUnix } from "@/components/general/DateInputUnix";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/v2/buttons/Button";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
-import { GroupedTabButton } from "@/components/v2/buttons/GroupedTabButton";
-import { InfoRow } from "@/components/v2/InfoRow";
-import { LabelInput } from "@/components/v2/inputs/LabelInput";
 import { SheetHeader, SheetSection } from "@/components/v2/sheets/InlineSheet";
 import { useCustomerBalanceSheetStore } from "@/hooks/stores/useCustomerBalanceSheetStore";
 import { useSheetStore } from "@/hooks/stores/useSheetStore";
@@ -69,6 +71,10 @@ export function BalanceEditSheet() {
 
 	const isUnlimited = isUnlimitedCusEnt(selectedCusEnt);
 	const feature = selectedCusEnt.entitlement.feature;
+	const billingCycleEnd = customerEntitlementToBillingCycleEnd({
+		customerEntitlement: selectedCusEnt,
+		now: Date.now(),
+	});
 
 	const cusProduct = customer?.customer_products.find(
 		(cp: FullCusProduct) => cp.id === selectedCusEnt.customer_product_id,
@@ -106,6 +112,7 @@ export function BalanceEditSheet() {
 					entity={derivedEntity}
 					selectedCusEnt={selectedCusEnt}
 					cusProduct={cusProduct}
+					billingCycleEnd={billingCycleEnd}
 				/>
 			) : (
 				<BalanceEditForm
@@ -115,6 +122,7 @@ export function BalanceEditSheet() {
 					cusProduct={cusProduct}
 					cusPrice={cusPrice}
 					featureId={featureId}
+					billingCycleEnd={billingCycleEnd}
 				/>
 			)}
 		</div>
@@ -127,10 +135,12 @@ function UnlimitedBalanceInfo({
 	entity,
 	selectedCusEnt,
 	cusProduct,
+	billingCycleEnd,
 }: {
 	entity: Entity | undefined;
 	selectedCusEnt: FullCustomerEntitlement;
 	cusProduct: FullCusProduct | undefined;
+	billingCycleEnd: number | null;
 }) {
 	return (
 		<div className="flex-1 overflow-y-auto">
@@ -140,6 +150,7 @@ function UnlimitedBalanceInfo({
 					selectedCusEnt={selectedCusEnt}
 					cusProduct={cusProduct}
 					isUnlimited
+					billingCycleEnd={billingCycleEnd}
 				/>
 			</SheetSection>
 			<RolloversSection selectedCusEnt={selectedCusEnt} />
@@ -156,6 +167,7 @@ function BalanceEditForm({
 	cusProduct,
 	cusPrice,
 	featureId,
+	billingCycleEnd,
 }: {
 	selectedCusEnt: FullCustomerEntitlement;
 	entity: Entity | undefined;
@@ -163,6 +175,7 @@ function BalanceEditForm({
 	cusProduct: FullCusProduct | undefined;
 	cusPrice: FullCustomerPrice | undefined;
 	featureId: string;
+	billingCycleEnd: number | null;
 }) {
 	const { customer } = useCusQuery();
 	const form = useBalanceEditForm({
@@ -178,6 +191,7 @@ function BalanceEditForm({
 					selectedCusEnt={selectedCusEnt}
 					cusProduct={cusProduct}
 					isUnlimited={false}
+					billingCycleEnd={billingCycleEnd}
 				/>
 			</SheetSection>
 
@@ -265,11 +279,13 @@ function EntitlementInfoRows({
 	selectedCusEnt,
 	cusProduct,
 	isUnlimited,
+	billingCycleEnd,
 }: {
 	entity: Entity | undefined;
 	selectedCusEnt: FullCustomerEntitlement;
 	cusProduct: FullCusProduct | undefined;
 	isUnlimited: boolean;
+	billingCycleEnd: number | null;
 }) {
 	return (
 		<div className="flex flex-col gap-2 rounded-lg">
@@ -306,6 +322,14 @@ function EntitlementInfoRows({
 							Unlimited
 						</span>
 					}
+				/>
+			)}
+			{billingCycleEnd && (
+				<InfoRow
+					label="Bills"
+					value={`${
+						formatUnixToDateTime(billingCycleEnd, { withYear: true }).date
+					}, ${formatUnixToDateTime(billingCycleEnd).time}`}
 				/>
 			)}
 			{selectedCusEnt.expires_at && (

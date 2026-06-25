@@ -1,11 +1,11 @@
 import type { Event } from "@autumn/shared";
-import { CopyablePre } from "@/components/general/CopyablePre";
 import {
+	CopyablePre,
 	Dialog,
 	DialogContent,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+} from "@autumn/ui";
 
 export function EventDetailsDialog({
 	event,

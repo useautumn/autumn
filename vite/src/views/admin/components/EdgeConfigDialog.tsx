@@ -1,18 +1,18 @@
-import Editor from "@monaco-editor/react";
-import { Plus, Trash2 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { Input } from "@/components/v2/inputs/Input";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Badge,
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+	Input,
+} from "@autumn/ui";
+import Editor from "@monaco-editor/react";
+import { Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
@@ -262,7 +262,9 @@ export function EdgeConfigDialog({
 						</div>
 					</div>
 				) : loading ? (
-					<div className="py-8 text-sm text-tertiary-foreground text-center">Loading...</div>
+					<div className="py-8 text-sm text-tertiary-foreground text-center">
+						Loading...
+					</div>
 				) : (
 					<div className="grid grid-cols-2 gap-6">
 						{/* Left: structured editor */}

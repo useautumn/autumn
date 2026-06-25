@@ -1,9 +1,8 @@
+import { SheetCloseButton, useIsMobile } from "@autumn/ui";
 import { AnimatePresence, motion } from "motion/react";
 import type { ReactNode } from "react";
-import { SheetContainer } from "@/components/v2/sheets/InlineSheet";
-import { SheetCloseButton } from "@/components/v2/sheets/SheetCloseButton";
-import { useIsMobile } from "@/hooks/useIsMobile";
 import { cn } from "@/lib/utils";
+import { SheetContainer } from "./InlineSheet";
 
 const SHEET_PANEL_WIDTH = "28rem";
 const SHEET_PANEL_Z_INDEX = 100;

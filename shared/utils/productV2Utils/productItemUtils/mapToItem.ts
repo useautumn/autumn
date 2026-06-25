@@ -115,8 +115,10 @@ export const toFeaturePriceItem = ({
 
 		included_usage: ent.allowance,
 
-		interval: billingToItemInterval({ billingInterval: config.interval }),
-		interval_count: config.interval_count ?? 1,
+		interval: entToItemInterval({ entInterval: ent.interval }),
+		interval_count: ent.interval_count ?? 1,
+		price_interval: billingToItemInterval({ billingInterval: config.interval }),
+		price_interval_count: config.interval_count ?? 1,
 
 		price: null,
 		tiers,

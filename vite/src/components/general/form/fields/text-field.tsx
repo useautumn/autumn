@@ -1,8 +1,7 @@
+import { Input, Label } from "@autumn/ui";
 import { FieldInfo } from "@/components/general/form/field-info";
-import { Input } from "@/components/v2/inputs/Input";
-import { Label } from "@/components/ui/label";
 import { useFieldContext } from "@/hooks/form/form-context";
-import SmallSpinner from "../../SmallSpinner";
+import { SmallSpinner } from "@autumn/ui";
 
 export function TextField({
 	label,

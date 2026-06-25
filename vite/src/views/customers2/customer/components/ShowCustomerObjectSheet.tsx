@@ -1,71 +1,70 @@
-import { LATEST_VERSION } from "@autumn/shared";
+import type { FullCustomer } from "@autumn/shared";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@autumn/ui";
 import { Spinner } from "@phosphor-icons/react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo } from "react";
 import { useParams } from "react-router";
 import {
 	CodeGroup,
-	CodeGroupCode,
 	CodeGroupCopyButton,
 	CodeGroupList,
 	CodeGroupTab,
 } from "@/components/v2/CodeGroup";
-import {
-	Sheet,
-	SheetContent,
-	SheetHeader,
-	SheetTitle,
-} from "@/components/v2/sheets/Sheet";
-import { useQueryKeyFactory } from "@/hooks/common/useQueryKeyFactory";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
+import { VirtualizedJson } from "@/components/v2/VirtualizedJson";
+import { useSheetScopeEntityId } from "@/hooks/useSheetScopeEntityId";
 import { getBackendErr } from "@/utils/genUtils";
+import { useCusQuery } from "@/views/customers/customer/hooks/useCusQuery";
+import { EntityScopeSelector } from "../../components/sheets/EntityScopeSelector";
+import { useCustomerObjectQuery } from "../hooks/useCustomerObjectQuery";
 
 interface ShowCustomerObjectSheetProps {
 	open: boolean;
 	setOpen: (open: boolean) => void;
 }
 
-const EXPAND_PARAMS = [
-	"invoices",
-	"trials_used",
-	"rewards",
-	"entities",
-	"referrals",
-	"payment_method",
-	"billing_controls.auto_topups.purchase_limit",
-].join(",");
-
 export function ShowCustomerObjectSheet({
 	open,
 	setOpen,
 }: ShowCustomerObjectSheetProps) {
 	const { customer_id } = useParams();
-	const axiosInstance = useAxiosInstance({ version: LATEST_VERSION });
-	const buildKey = useQueryKeyFactory();
 
-	const { data, isLoading, error } = useQuery({
-		queryKey: buildKey(["customer-object", customer_id, "expanded"]),
-		queryFn: async () => {
-			const { data } = await axiosInstance.get(
-				`/v1/customers/${customer_id}?expand=${EXPAND_PARAMS}`,
-			);
-			return data;
-		},
-		enabled: open && !!customer_id,
-		gcTime: 0,
+	const { customer } = useCusQuery();
+	const fullCustomer = customer as FullCustomer | undefined;
+	const entities = fullCustomer?.entities ?? [];
+	const [scopeEntityId, setScopeEntityId] = useSheetScopeEntityId(fullCustomer);
+
+	const { data, isLoading, error } = useCustomerObjectQuery({
+		customerId: customer_id,
+		scopeEntityId,
+		enabled: open,
 		staleTime: 0,
 	});
 
-	const formattedJson = data ? JSON.stringify(data, null, 2) : "";
+	const formattedJson = useMemo(
+		() => (data ? JSON.stringify(data, null, 2) : ""),
+		[data],
+	);
+
+	const description = scopeEntityId
+		? "From entities.get"
+		: "From customers.get";
 
 	return (
 		<Sheet open={open} onOpenChange={setOpen}>
-			<SheetContent className="flex flex-col overflow-hidden bg-background min-w-xl">
+			<SheetContent className="flex flex-col overflow-hidden bg-background sm:min-w-xl">
 				<SheetHeader>
-					<SheetTitle>Customer Object</SheetTitle>
-					<p className="text-tertiary-foreground text-sm">
-						Customer state from GET /customers/{customer_id}
-					</p>
+					<SheetTitle>
+						{scopeEntityId ? "Entity Object" : "Customer Object"}
+					</SheetTitle>
+					<p className="text-tertiary-foreground text-sm">{description}</p>
 				</SheetHeader>
+
+				{entities.length > 0 && (
+					<EntityScopeSelector
+						entities={entities}
+						scopeEntityId={scopeEntityId}
+						onScopeChange={setScopeEntityId}
+					/>
+				)}
 
 				<div className="flex-1 overflow-hidden flex flex-col px-4 pb-4">
 					{isLoading && (
@@ -88,9 +87,10 @@ export function ShowCustomerObjectSheet({
 									onCopy={() => navigator.clipboard.writeText(formattedJson)}
 								/>
 							</CodeGroupList>
-							<div className="flex-1 h-0 overflow-y-auto border border-t-0 rounded-b-lg bg-white dark:bg-background p-4">
-								<CodeGroupCode language="json">{formattedJson}</CodeGroupCode>
-							</div>
+							<VirtualizedJson
+								json={formattedJson}
+								className="flex-1 h-0 border border-t-0 rounded-b-lg bg-white dark:bg-background py-4"
+							/>
 						</CodeGroup>
 					)}
 				</div>

@@ -1,0 +1,33 @@
+NODE export
+SQL >
+    %
+    SELECT
+        id,
+        org_id,
+        org_slug,
+        internal_customer_id,
+        env,
+        created_at,
+        timestamp,
+        event_name,
+        idempotency_key,
+        value,
+        entity_id,
+        internal_entity_id,
+        internal_product_id,
+        customer_id,
+        properties,
+        deductions
+    FROM events_by_org_ts
+    WHERE ({{String(org_id, '')}} = '' OR org_id = {{String(org_id, '')}})
+      AND timestamp >= if({{String(start_ts, '')}} = '', subtractHours(now(), {{Int32(start_hours_ago, 2)}}), parseDateTimeBestEffortOrZero({{String(start_ts, '')}}))
+      AND timestamp <  if({{String(end_ts, '')}} = '', subtractHours(now(), {{Int32(end_hours_ago, 1)}}), parseDateTimeBestEffortOrZero({{String(end_ts, '')}}))
+
+TYPE sink
+EXPORT_CONNECTION_NAME "events_s3"
+EXPORT_BUCKET_URI "s3://autumn-events-prod-us-east-2/events"
+EXPORT_FILE_TEMPLATE "org_id={org_id}/year={timestamp, '%Y'}/month={timestamp, '%m'}/day={timestamp, '%d'}/ev_{timestamp, '%H'}"
+EXPORT_SCHEDULE "0 * * * *"
+EXPORT_FORMAT "parquet"
+EXPORT_COMPRESSION "zstd"
+EXPORT_STRATEGY "create_new"

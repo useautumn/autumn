@@ -63,6 +63,8 @@ class TrackTokensParamsTypedDict(TypedDict):
     r"""Number of reasoning tokens generated."""
     properties: NotRequired[Dict[str, Any]]
     r"""Additional properties to attach to this usage event."""
+    async_: NotRequired[bool]
+    r"""If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information."""
 
 
 class TrackTokensParams(BaseModel):
@@ -102,6 +104,9 @@ class TrackTokensParams(BaseModel):
     properties: Optional[Dict[str, Any]] = None
     r"""Additional properties to attach to this usage event."""
 
+    async_: Annotated[Optional[bool], pydantic.Field(alias="async")] = None
+    r"""If true, enqueue the event for asynchronous processing and return 204 immediately. The response will not include balance information."""
+
     @model_serializer(mode="wrap")
     def serialize_model(self, handler):
         optional_fields = set(
@@ -114,6 +119,7 @@ class TrackTokensParams(BaseModel):
                 "audio_output_tokens",
                 "reasoning_tokens",
                 "properties",
+                "async",
             ]
         )
         serialized = handler(self)
@@ -511,3 +517,9 @@ TrackTokensResponseTypedDict = TypeAliasType(
 TrackTokensResponse = TypeAliasType(
     "TrackTokensResponse", Union[TrackTokensResponseBody1, TrackTokensResponseBody2]
 )
+
+
+try:
+    TrackTokensParams.model_rebuild()
+except NameError:
+    pass

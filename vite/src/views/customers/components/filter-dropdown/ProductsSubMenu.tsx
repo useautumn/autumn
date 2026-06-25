@@ -1,11 +1,11 @@
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
+import { Checkbox } from "@autumn/ui";
 import {
 	DropdownMenuItem,
 	DropdownMenuSeparator,
 	DropdownMenuSub,
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { cn } from "@/lib/utils";
 import { getVersionCounts } from "@/utils/productUtils";
@@ -241,7 +241,8 @@ export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 														ref={(ref: any) => {
 															if (
 																ref &&
-																(someProductVersionsSelected || customSelected) &&
+																(someProductVersionsSelected ||
+																	customSelected) &&
 																!allProductVersionsSelected
 															) {
 																ref.indeterminate = true;
@@ -302,7 +303,9 @@ export const ProductsSubMenu = ({ onChange }: { onChange?: () => void }) => {
 														className="flex items-center gap-2 cursor-pointer text-sm"
 													>
 														<Checkbox
-															checked={selectedVersions.includes(`${product.id}:custom`)}
+															checked={selectedVersions.includes(
+																`${product.id}:custom`,
+															)}
 															className="border-border"
 														/>
 														Custom

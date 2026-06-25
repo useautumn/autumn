@@ -1,25 +1,23 @@
 import { AppEnv, type ProductV2 } from "@autumn/shared";
-import type { AxiosError } from "axios";
-import { useState } from "react";
-import { useNavigate } from "react-router";
-import { toast } from "sonner";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Dialog,
 	DialogContent,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
-import {
+	FormLabel,
+	Input,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
+import type { AxiosError } from "axios";
+import { useState } from "react";
+import { useNavigate } from "react-router";
+import { toast } from "sonner";
 import { useProductsQuery } from "@/hooks/queries/useProductsQuery";
 import { ProductService } from "@/services/products/ProductService";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
@@ -134,11 +132,14 @@ export const CopyProductDialog = ({
 					{!targetEnv && (
 						<div>
 							<FormLabel>Copy to environment</FormLabel>
-						<Select
-							value={toEnv}
-							onValueChange={(value) => setToEnv(value as AppEnv)}
-							items={{ [AppEnv.Live]: "Production", [AppEnv.Sandbox]: "Sandbox" }}
-						>
+							<Select
+								value={toEnv}
+								onValueChange={(value) => setToEnv(value as AppEnv)}
+								items={{
+									[AppEnv.Live]: "Production",
+									[AppEnv.Sandbox]: "Sandbox",
+								}}
+							>
 								<SelectTrigger className="w-5/12">
 									<SelectValue placeholder="Select environment" />
 								</SelectTrigger>

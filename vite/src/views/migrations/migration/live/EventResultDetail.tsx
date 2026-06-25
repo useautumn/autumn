@@ -3,13 +3,9 @@ import type {
 	CustomerPlanChange,
 	CustomerPlanItemChange,
 } from "@autumn/shared/api/billing/common/customerPlanChange";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@autumn/ui";
 import { PackageIcon } from "@phosphor-icons/react";
 import { SubscriptionItemRow } from "@/components/forms/update-subscription-v2/components/SubscriptionItemRow";
-import {
-	Tooltip,
-	TooltipContent,
-	TooltipTrigger,
-} from "@/components/v2/tooltips/Tooltip";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import type { MigrationItemEvent } from "@/hooks/queries/useMigrationRunsQuery";
 import { cn } from "@/lib/utils";
@@ -119,15 +115,15 @@ function StatusDot({ action }: { action: string }) {
 	);
 }
 
-
 function getPlanId(change: PlanChange): string | undefined {
-	return change.subscription?.plan_id ?? change.purchase?.plan_id ?? change.plan_id;
+	return (
+		change.subscription?.plan_id ?? change.purchase?.plan_id ?? change.plan_id
+	);
 }
 
 function getPlanStatus(change: PlanChange): string | undefined {
 	return change.subscription?.status ?? change.purchase?.status;
 }
-
 
 function ChangeRow({
 	action,
@@ -170,7 +166,8 @@ function buildItemTooltipLines(
 	} | null;
 	if (price) {
 		const parts: string[] = [];
-		if (price.billing_method) parts.push(price.billing_method.replaceAll("_", " "));
+		if (price.billing_method)
+			parts.push(price.billing_method.replaceAll("_", " "));
 		if (typeof price.amount === "number") parts.push(`$${price.amount}`);
 		if (price.interval) parts.push(`per ${price.interval}`);
 		if (parts.length > 0) lines.push(parts.join(" · "));
@@ -178,11 +175,7 @@ function buildItemTooltipLines(
 	return lines;
 }
 
-function ItemChangeRow({
-	item,
-}: {
-	item: ItemChange;
-}) {
+function ItemChangeRow({ item }: { item: ItemChange }) {
 	const { features } = useFeaturesQuery();
 	const action = item.action ?? "unknown";
 
@@ -195,19 +188,17 @@ function ItemChangeRow({
 	const isDeleted = action === "deleted";
 	const isCreated = action === "created";
 
-	const tooltipLines = apiItem
-		? buildItemTooltipLines(apiItem, feature)
-		: [];
+	const tooltipLines = apiItem ? buildItemTooltipLines(apiItem, feature) : [];
 
 	const row = productItem ? (
 		<div className="ml-4">
-		<SubscriptionItemRow
-			item={productItem}
-			featureId={item.feature_id}
-			isDeleted={isDeleted}
-			isCreated={isCreated}
-			readOnly={!isDeleted}
-		/>
+			<SubscriptionItemRow
+				item={productItem}
+				featureId={item.feature_id}
+				isDeleted={isDeleted}
+				isCreated={isCreated}
+				readOnly={!isDeleted}
+			/>
 		</div>
 	) : (
 		<ChangeRow className="ml-4">
@@ -233,7 +224,11 @@ function ItemChangeRow({
 	);
 }
 
-function FeatureIconByFeatureId({ featureId }: { featureId: string | undefined }) {
+function FeatureIconByFeatureId({
+	featureId,
+}: {
+	featureId: string | undefined;
+}) {
 	const { features } = useFeaturesQuery();
 	const feature = features.find((f) => f.id === featureId);
 	const config = feature
@@ -242,8 +237,10 @@ function FeatureIconByFeatureId({ featureId }: { featureId: string | undefined }
 	return <span className={cn("shrink-0", config.color)}>{config.icon}</span>;
 }
 
-
-function balanceToItemChange(bc: BalanceChange, action = "updated"): ItemChange {
+function balanceToItemChange(
+	bc: BalanceChange,
+	action = "updated",
+): ItemChange {
 	const balance = bc.balance ?? {};
 	const item: Record<string, unknown> = { feature_id: bc.feature_id };
 	if (balance.unlimited) item.unlimited = true;
@@ -253,15 +250,28 @@ function balanceToItemChange(bc: BalanceChange, action = "updated"): ItemChange 
 }
 
 function flagToItemChange(fc: FlagChange, action?: string): ItemChange {
-	return { action: action ?? fc.action ?? "updated", feature_id: fc.feature_id, item: { feature_id: fc.feature_id } };
+	return {
+		action: action ?? fc.action ?? "updated",
+		feature_id: fc.feature_id,
+		item: { feature_id: fc.feature_id },
+	};
 }
 
-function PlanChangeRows({ change, absorbedBalances, absorbedFlags }: { change: PlanChange; absorbedBalances?: BalanceChange[]; absorbedFlags?: FlagChange[] }) {
+function PlanChangeRows({
+	change,
+	absorbedBalances,
+	absorbedFlags,
+}: {
+	change: PlanChange;
+	absorbedBalances?: BalanceChange[];
+	absorbedFlags?: FlagChange[];
+}) {
 	const action = change.action ?? "unknown";
 	const items = change.item_changes ?? [];
 	const planId = getPlanId(change);
 	const status = getPlanStatus(change);
-	const hasAbsorbed = (absorbedBalances?.length ?? 0) > 0 || (absorbedFlags?.length ?? 0) > 0;
+	const hasAbsorbed =
+		(absorbedBalances?.length ?? 0) > 0 || (absorbedFlags?.length ?? 0) > 0;
 
 	return (
 		<>
@@ -270,12 +280,18 @@ function PlanChangeRows({ change, absorbedBalances, absorbedFlags }: { change: P
 				<span className="text-xs text-tertiary-foreground w-14 shrink-0">
 					{ACTION_LABELS[action] ?? action}
 				</span>
-				<PackageIcon size={14} weight="duotone" className="text-tertiary-foreground shrink-0" />
+				<PackageIcon
+					size={14}
+					weight="duotone"
+					className="text-tertiary-foreground shrink-0"
+				/>
 				<span className="text-body flex-1 min-w-0 truncate">
 					{planId ?? "Unknown plan"}
 				</span>
 				{status && (
-					<span className="text-body-secondary shrink-0 capitalize">{status}</span>
+					<span className="text-body-secondary shrink-0 capitalize">
+						{status}
+					</span>
 				)}
 			</ChangeRow>
 			{items.map((item, i) => (
@@ -284,10 +300,16 @@ function PlanChangeRows({ change, absorbedBalances, absorbedFlags }: { change: P
 			{items.length === 0 && hasAbsorbed && (
 				<>
 					{absorbedFlags?.map((fc, i) => (
-						<ItemChangeRow key={fc.feature_id ?? i} item={flagToItemChange(fc, "created")} />
+						<ItemChangeRow
+							key={fc.feature_id ?? i}
+							item={flagToItemChange(fc, "created")}
+						/>
 					))}
 					{absorbedBalances?.map((bc) => (
-						<ItemChangeRow key={bc.feature_id} item={balanceToItemChange(bc, "created")} />
+						<ItemChangeRow
+							key={bc.feature_id}
+							item={balanceToItemChange(bc, "created")}
+						/>
 					))}
 				</>
 			)}
@@ -325,7 +347,7 @@ function PreviewSummary({ preview }: { preview: MigrationPreview }) {
 	const newPlanIndex = planChanges.findIndex(
 		(pc) =>
 			(pc.action === "activated" || pc.action === "created") &&
-			!(pc.item_changes?.length),
+			!pc.item_changes?.length,
 	);
 	const absorbed =
 		newPlanIndex >= 0 &&
@@ -345,16 +367,20 @@ function PreviewSummary({ preview }: { preview: MigrationPreview }) {
 				<PlanChangeRows
 					key={getPlanId(c) ?? i}
 					change={c}
-					absorbedBalances={i === newPlanIndex ? standaloneBalanceChanges : undefined}
+					absorbedBalances={
+						i === newPlanIndex ? standaloneBalanceChanges : undefined
+					}
 					absorbedFlags={i === newPlanIndex ? standaloneFlagChanges : undefined}
 				/>
 			))}
-			{!absorbed && standaloneBalanceChanges.map((c) => (
-				<ItemChangeRow key={c.feature_id} item={balanceToItemChange(c)} />
-			))}
-			{!absorbed && standaloneFlagChanges.map((c, i) => (
-				<ItemChangeRow key={c.feature_id ?? i} item={flagToItemChange(c)} />
-			))}
+			{!absorbed &&
+				standaloneBalanceChanges.map((c) => (
+					<ItemChangeRow key={c.feature_id} item={balanceToItemChange(c)} />
+				))}
+			{!absorbed &&
+				standaloneFlagChanges.map((c, i) => (
+					<ItemChangeRow key={c.feature_id ?? i} item={flagToItemChange(c)} />
+				))}
 		</div>
 	);
 }
@@ -384,7 +410,8 @@ export function EventResultDetail({ event }: { event: MigrationItemEvent }) {
 		const skipped = response.skipped as { reason?: unknown } | undefined;
 		const guard = response.guard as { reason?: unknown } | undefined;
 		const reason = formatUnknownError(skipped?.reason ?? guard?.reason);
-		if (reason) return <span className="text-sm text-tertiary-foreground">{reason}</span>;
+		if (reason)
+			return <span className="text-sm text-tertiary-foreground">{reason}</span>;
 	}
 
 	return null;

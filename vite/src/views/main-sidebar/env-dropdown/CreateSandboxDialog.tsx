@@ -2,7 +2,6 @@ import { DEFAULT_SANDBOX_COLOR, DEFAULT_SANDBOX_ICON } from "@autumn/shared";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
-import { ShortcutButton } from "@/components/v2/buttons/ShortcutButton";
 import {
 	Dialog,
 	DialogContent,
@@ -10,7 +9,8 @@ import {
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
+	ShortcutButton,
+} from "@autumn/ui";
 import { useCreateSandbox } from "@/hooks/queries/useSandboxesQuery";
 import { setActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { getBackendErr } from "@/utils/genUtils";

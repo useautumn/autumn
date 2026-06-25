@@ -7,15 +7,31 @@ export type EventNameWithCount = {
 	event_count: number;
 };
 
-export const useEventNames = (limit?: number) => {
+export const useEventNames = ({
+	limit,
+	interval,
+	start,
+	end,
+}: {
+	limit?: number;
+	interval?: string;
+	start?: number | null;
+	end?: number | null;
+} = {}) => {
 	const axiosInstance = useAxiosInstance();
 	const buildKey = useQueryKeyFactory();
 
 	const { data, isLoading, error } = useQuery({
-		queryKey: buildKey(["query-event-names-list", limit]),
+		queryKey: buildKey(["query-event-names-list", limit, interval, start, end]),
 		queryFn: async () => {
-			const url = `/query/event_names/list${limit ? `?limit=${limit}` : ""}`;
-			const { data } = await axiosInstance.get(url);
+			const { data } = await axiosInstance.get("/query/event_names/list", {
+				params: {
+					limit,
+					interval,
+					start: start ?? undefined,
+					end: end ?? undefined,
+				},
+			});
 			return data;
 		},
 	});

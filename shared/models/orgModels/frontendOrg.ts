@@ -1,6 +1,7 @@
 import { VercelMarketplaceMode } from "@models/genModels/processorSchemas";
-import { OrgConfigSchema } from "./orgConfig";
 import { z } from "zod/v4";
+import { CustomButtonSchema } from "./customButton";
+import { OrgConfigSchema } from "./orgConfig";
 
 export const FrontendOrgSchema = z.object({
 	id: z.string(),
@@ -15,6 +16,8 @@ export const FrontendOrgSchema = z.object({
 	live_pkey: z.string().nullable(),
 
 	stripe_connection: z.string(),
+	stripe_secret_key_connected: z.boolean(),
+	stripe_oauth_connected: z.boolean(),
 	master: z
 		.object({
 			id: z.string(),
@@ -26,6 +29,7 @@ export const FrontendOrgSchema = z.object({
 	onboarded: z.boolean(),
 	deployed: z.boolean(),
 	config: OrgConfigSchema,
+	custom_buttons: z.array(CustomButtonSchema),
 	redis_config: z
 		.object({
 			host: z.string(),

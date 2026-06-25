@@ -11,6 +11,7 @@ import {
 	timestamp,
 	unique,
 } from "drizzle-orm/pg-core";
+import type { CustomButton } from "./customButton.js";
 import type { OrgConfig } from "./orgConfig.js";
 
 export type SvixConfig = {
@@ -19,15 +20,15 @@ export type SvixConfig = {
 };
 
 export type StripeConfig = {
-	test_api_key?: string;
-	live_api_key?: string;
-	test_webhook_secret?: string;
-	live_webhook_secret?: string;
+	test_api_key?: string | null;
+	live_api_key?: string | null;
+	test_webhook_secret?: string | null;
+	live_webhook_secret?: string | null;
 	sandbox_success_url?: string;
 	success_url?: string;
 
-	test_connect_webhook_secret?: string;
-	live_connect_webhook_secret?: string;
+	test_connect_webhook_secret?: string | null;
+	live_connect_webhook_secret?: string | null;
 };
 export interface VersionConfig {
 	sandbox?: string;
@@ -97,6 +98,10 @@ export const organizations = pgTable(
 
 		created_at: numeric({ mode: "number" }),
 		config: jsonb().default({}).notNull().$type<OrgConfig>(),
+		custom_buttons: jsonb("custom_buttons")
+			.default(sql`'[]'::jsonb`)
+			.notNull()
+			.$type<CustomButton[]>(),
 		created_by: text("created_by"),
 		onboarded: boolean("onboarded").default(false),
 		deployed: boolean("deployed").default(false),

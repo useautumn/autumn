@@ -1,6 +1,6 @@
+import { Button } from "@autumn/ui";
 import { useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
-import { Button } from "@/components/v2/buttons/Button";
 import CreateFeatureSheet from "../components/CreateFeatureSheet";
 
 export function FeatureListCreateButton() {

@@ -49,12 +49,16 @@ describe("runQueuedTrack", () => {
 	});
 
 	test("replays queued track through runTrackV3", async () => {
+		const timestamp = Date.UTC(2024, 1, 15, 12, 30, 0);
 		await runQueuedTrack({
 			ctx,
 			body: {
 				customer_id: "cus_123",
 				feature_id: "messages",
+				idempotency_key: "queued-track-1",
+				timestamp,
 				value: 1,
+				async: true,
 			},
 			apiVersion: ApiVersion.V2_1,
 		});
@@ -66,6 +70,9 @@ describe("runQueuedTrack", () => {
 			body: {
 				customer_id: "cus_123",
 				feature_id: "messages",
+				idempotency_key: "queued-track-1",
+				timestamp,
+				async: true,
 			},
 			featureDeductions: [],
 			apiVersion: ApiVersion.V2_1,

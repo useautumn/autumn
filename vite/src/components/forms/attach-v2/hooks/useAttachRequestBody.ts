@@ -309,12 +309,14 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				finalizeInvoice,
 				invoiceTemplateId,
 				netTermsDays,
+				longLivedCheckout,
 			}: {
 				useInvoice?: boolean;
 				enableProductImmediately?: boolean;
 				finalizeInvoice?: boolean;
 				invoiceTemplateId?: string;
 				netTermsDays?: number;
+				longLivedCheckout?: boolean;
 			} = {}): AttachParamsV0 | null => {
 				if (!requestBody) return null;
 
@@ -333,6 +335,10 @@ export function useAttachRequestBody(params: BuildAttachRequestBodyParams) {
 				// copying a checkout URL too.
 				if (enableProductImmediately !== undefined) {
 					body.enable_product_immediately = enableProductImmediately;
+				}
+
+				if (longLivedCheckout) {
+					body.long_lived_checkout = true;
 				}
 
 				return body;

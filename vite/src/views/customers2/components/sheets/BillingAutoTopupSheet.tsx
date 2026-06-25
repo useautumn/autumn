@@ -13,28 +13,26 @@ import {
 	PurchaseLimitInterval,
 	type UsagePriceConfig,
 } from "@autumn/shared";
-import { format } from "date-fns";
-import { useMemo, useState } from "react";
-import { toast } from "sonner";
-import FieldLabel from "@/components/general/modal-components/FieldLabel";
 import {
+	Button,
+	Checkbox,
+	FieldLabel,
+	FormLabel,
+	Input,
 	Popover,
 	PopoverContent,
 	PopoverTrigger,
-} from "@/components/ui/popover";
-import { Switch } from "@/components/ui/switch";
-import { Button } from "@/components/v2/buttons/Button";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
-import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
-import { FormLabel } from "@/components/v2/form/FormLabel";
-import { Input } from "@/components/v2/inputs/Input";
-import {
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+	Switch,
+} from "@autumn/ui";
+import { format } from "date-fns";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
+import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
 	SheetFooter,
@@ -86,7 +84,8 @@ export function BillingAutoTopupSheet() {
 		existingItem?.quantity?.toString() ?? "",
 	);
 	const [hasPurchaseLimit, setHasPurchaseLimit] = useState(
-		!!existingItem?.purchase_limit?.limit && !!existingItem?.purchase_limit?.interval,
+		!!existingItem?.purchase_limit?.limit &&
+			!!existingItem?.purchase_limit?.interval,
 	);
 	const [purchaseLimitInterval, setPurchaseLimitInterval] = useState(
 		existingItem?.purchase_limit?.interval ?? "",
@@ -342,10 +341,11 @@ export function BillingAutoTopupSheet() {
 					</div>
 
 					{hasPurchaseLimit && expandedPurchaseLimit && (
-						<InfoBox variant="note"
-						classNames={{
-							infoBox: "my-3"
-						}}
+						<InfoBox
+							variant="note"
+							classNames={{
+								infoBox: "my-3",
+							}}
 						>
 							{expandedPurchaseLimit.count} of{" "}
 							{expandedPurchaseLimit.limit ?? "∞"} top-ups used this window
@@ -365,14 +365,24 @@ export function BillingAutoTopupSheet() {
 						<div className="flex flex-col gap-3">
 							<div>
 								<FormLabel>Interval</FormLabel>
-							<Select
-								value={purchaseLimitInterval}
-								onValueChange={setPurchaseLimitInterval}
-								items={Object.fromEntries(Object.entries(INTERVAL_LABELS).map(([value, label]) => {
-									const count = Number.parseInt(purchaseLimitIntervalCount, 10);
-									return [value, count > 1 ? `Every ${count} ${label.toLowerCase()}s` : label];
-								}))}
-							>
+								<Select
+									value={purchaseLimitInterval}
+									onValueChange={setPurchaseLimitInterval}
+									items={Object.fromEntries(
+										Object.entries(INTERVAL_LABELS).map(([value, label]) => {
+											const count = Number.parseInt(
+												purchaseLimitIntervalCount,
+												10,
+											);
+											return [
+												value,
+												count > 1
+													? `Every ${count} ${label.toLowerCase()}s`
+													: label,
+											];
+										}),
+									)}
+								>
 									<SelectTrigger className="w-full">
 										<SelectValue placeholder="Select interval" />
 									</SelectTrigger>

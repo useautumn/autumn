@@ -1,6 +1,6 @@
+import { Skeleton } from "@autumn/ui";
 import { useReducedMotion } from "motion/react";
 import { useMemo } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useAnalyticsQueryState } from "../hooks/useAnalyticsQueryState";
 import {
 	bandGridStyle,
@@ -62,13 +62,19 @@ export const ChartSkeleton = ({
 						))}
 					</div>
 
-					<div className="relative min-w-0 flex-1" style={bandGridStyle(barCount)}>
+					<div
+						className="relative min-w-0 flex-1"
+						style={bandGridStyle(barCount)}
+					>
 						<div className="pointer-events-none absolute inset-0">
 							{Y_POSITIONS.map((top) => (
 								<div
 									key={top}
 									className="absolute inset-x-0 border-t border-dashed"
-									style={{ top: `${top}%`, borderColor: "var(--chart-grid-stroke)" }}
+									style={{
+										top: `${top}%`,
+										borderColor: "var(--chart-grid-stroke)",
+									}}
 								/>
 							))}
 						</div>

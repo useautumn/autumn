@@ -1,4 +1,5 @@
 import type { Entity, ProductV2, SyncPlanInstance } from "@autumn/shared";
+import { Badge, Button, Input, SearchableSelect } from "@autumn/ui";
 import {
 	BuildingsIcon,
 	PackageIcon,
@@ -8,16 +9,9 @@ import {
 } from "@phosphor-icons/react";
 import { CheckIcon } from "lucide-react";
 import { useState } from "react";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
-import { Input } from "@/components/v2/inputs/Input";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import { useOrg } from "@/hooks/common/useOrg";
 import { cn } from "@/lib/utils";
-import {
-	applyCustomizeToProduct,
-	getBasePriceLabel,
-} from "./syncPlanRowUtils";
+import { applyCustomizeToProduct, getBasePriceLabel } from "./syncPlanRowUtils";
 
 export type DraftPlan = SyncPlanInstance & { _key: string };
 
@@ -66,7 +60,9 @@ const EntityScopeSubRow = ({
 						: option.id || option.internal_id
 				}
 				getOptionLabel={(option) =>
-					option === null ? "Customer-level" : option.name || option.id || "PENDING"
+					option === null
+						? "Customer-level"
+						: option.name || option.id || "PENDING"
 				}
 				triggerClassName="w-full h-input"
 				placeholder="Select entity"
@@ -75,7 +71,9 @@ const EntityScopeSubRow = ({
 				emptyText="No entities found"
 				renderValue={(option) =>
 					option === null || option === undefined ? (
-						<span className="text-muted-foreground text-xs">Customer-level</span>
+						<span className="text-muted-foreground text-xs">
+							Customer-level
+						</span>
 					) : (
 						<span className="text-muted-foreground text-xs truncate">
 							{option.name || option.id || "PENDING"}
@@ -113,7 +111,6 @@ const EntityScopeSubRow = ({
 export function SyncPlanRow({
 	plan,
 	products,
-	usedPlanIds,
 	entities,
 	onChange,
 	onRemove,
@@ -121,7 +118,6 @@ export function SyncPlanRow({
 }: {
 	plan: DraftPlan;
 	products: ProductV2[];
-	usedPlanIds: Set<string>;
 	entities: Entity[];
 	onChange: (plan: DraftPlan) => void;
 	onRemove: () => void;
@@ -145,14 +141,8 @@ export function SyncPlanRow({
 				options={availableProducts}
 				getOptionValue={(product) => product.id}
 				getOptionLabel={(product) => product.name}
-				getOptionDisabled={(product) => usedPlanIds.has(product.id)}
 				renderOption={(product) => (
-					<>
-						<span className="flex-1 truncate min-w-0">{product.name}</span>
-						{usedPlanIds.has(product.id) && (
-							<span className="text-xs text-subtle shrink-0">Already added</span>
-						)}
-					</>
+					<span className="flex-1 truncate min-w-0">{product.name}</span>
 				)}
 				placeholder="Select plan…"
 				searchable
@@ -229,10 +219,7 @@ export function SyncPlanRow({
 							</Badge>
 						)}
 						{currentPriceLabel && (
-							<PriceLabel
-								label={currentPriceLabel}
-								isCustom={isPriceCustom}
-							/>
+							<PriceLabel label={currentPriceLabel} isCustom={isPriceCustom} />
 						)}
 					</div>
 					<div
@@ -280,9 +267,7 @@ export function SyncPlanRow({
 				<EntityScopeSubRow
 					entities={entities}
 					scopeEntityId={plan.entity_id}
-					onChange={(entityId) =>
-						onChange({ ...plan, entity_id: entityId })
-					}
+					onChange={(entityId) => onChange({ ...plan, entity_id: entityId })}
 				/>
 			)}
 		</div>

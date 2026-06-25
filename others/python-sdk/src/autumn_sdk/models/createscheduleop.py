@@ -152,6 +152,40 @@ BillingBehavior = Literal[
 r"""Whether to prorate the immediate phase. 'none' skips proration charges and credits."""
 
 
+StartsAt2TypedDict = TypeAliasType("StartsAt2TypedDict", Union[float, str])
+r"""When this phase should start, in epoch milliseconds, or 'now' for the immediate phase."""
+
+
+StartsAt2 = TypeAliasType("StartsAt2", Union[float, str])
+r"""When this phase should start, in epoch milliseconds, or 'now' for the immediate phase."""
+
+
+CreateScheduleDurationType2 = Literal[
+    "month",
+    "year",
+]
+r"""The duration unit to offset this phase from the prior phase."""
+
+
+class StartingAfter2TypedDict(TypedDict):
+    r"""Relative start offset from the previous resolved schedule phase."""
+
+    duration_type: CreateScheduleDurationType2
+    r"""The duration unit to offset this phase from the prior phase."""
+    duration_count: int
+    r"""How many duration_type periods after the prior phase to start."""
+
+
+class StartingAfter2(BaseModel):
+    r"""Relative start offset from the previous resolved schedule phase."""
+
+    duration_type: CreateScheduleDurationType2
+    r"""The duration unit to offset this phase from the prior phase."""
+
+    duration_count: int
+    r"""How many duration_type periods after the prior phase to start."""
+
+
 class CreateScheduleFeatureQuantity2TypedDict(TypedDict):
     r"""Quantity configuration for a prepaid feature."""
 
@@ -1109,18 +1143,39 @@ class CreateSchedulePlan2(BaseModel):
 
 
 class PhaseRequest2TypedDict(TypedDict):
-    starts_at: float
-    r"""When this phase should start, in epoch milliseconds."""
     plans: List[CreateSchedulePlan2TypedDict]
     r"""Plans to materialize for this phase."""
+    starts_at: NotRequired[StartsAt2TypedDict]
+    r"""When this phase should start, in epoch milliseconds, or 'now' for the immediate phase."""
+    starting_after: NotRequired[StartingAfter2TypedDict]
+    r"""Relative start offset from the previous resolved schedule phase."""
 
 
 class PhaseRequest2(BaseModel):
-    starts_at: float
-    r"""When this phase should start, in epoch milliseconds."""
-
     plans: List[CreateSchedulePlan2]
     r"""Plans to materialize for this phase."""
+
+    starts_at: Optional[StartsAt2] = None
+    r"""When this phase should start, in epoch milliseconds, or 'now' for the immediate phase."""
+
+    starting_after: Optional[StartingAfter2] = None
+    r"""Relative start offset from the previous resolved schedule phase."""
+
+    @model_serializer(mode="wrap")
+    def serialize_model(self, handler):
+        optional_fields = set(["starts_at", "starting_after"])
+        serialized = handler(self)
+        m = {}
+
+        for n, f in type(self).model_fields.items():
+            k = f.alias or n
+            val = serialized.get(k, serialized.get(n))
+
+            if val != UNSET_SENTINEL:
+                if val is not None or k not in optional_fields:
+                    m[k] = val
+
+        return m
 
 
 PhaseTypedDict = PhaseRequest2TypedDict

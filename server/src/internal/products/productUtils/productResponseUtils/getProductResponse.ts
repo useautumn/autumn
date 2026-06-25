@@ -6,6 +6,7 @@ import {
 	ApiProductSchema,
 	AttachScenario,
 	BillingInterval,
+	billingControlsFromColumns,
 	type Feature,
 	type FeatureOptions,
 	type FullCustomer,
@@ -101,6 +102,7 @@ const getFreeTrialResponse = async ({
 			freeTrial: product.free_trial,
 			fingerprint: fullCus.fingerprint,
 			internalCustomerId: fullCus.internal_id,
+			internalEntityId: fullCus.entity?.internal_id,
 			multipleAllowed: false,
 			productId: product.id,
 		});
@@ -212,6 +214,7 @@ export const getProductResponse = async ({
 		group: product.group || null,
 		items: items,
 		free_trial: freeTrial || null,
+		billing_controls: billingControlsFromColumns(product),
 		scenario: attachScenario,
 		properties: getProductProperties({ product, freeTrial }),
 	});

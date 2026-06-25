@@ -1,8 +1,7 @@
+import { Button, Input } from "@autumn/ui";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Table } from "@/components/general/table";
-import { Input } from "@/components/v2/inputs/Input";
-import { Button } from "@/components/v2/buttons/Button";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { type AdminUser, createAdminUserColumns } from "./AdminUserColumns";
 import { useAdminTable } from "./hooks/useAdminTable";
@@ -114,7 +113,9 @@ export const AdminUserTable = () => {
 				>
 					Previous
 				</Button>
-				<span className="text-sm text-tertiary-foreground">Page {pageInfo.page}</span>
+				<span className="text-sm text-tertiary-foreground">
+					Page {pageInfo.page}
+				</span>
 				<Button
 					variant="secondary"
 					size="sm"

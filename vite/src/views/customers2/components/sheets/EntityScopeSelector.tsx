@@ -1,7 +1,7 @@
 import type { Entity } from "@autumn/shared";
+import { SearchableSelect } from "@autumn/ui";
 import { CheckIcon } from "lucide-react";
 import type { ReactNode } from "react";
-import { SearchableSelect } from "@/components/v2/selects/SearchableSelect";
 import { SheetSection } from "@/components/v2/sheets/SharedSheetComponents";
 
 const CUSTOMER_LEVEL_VALUE = "";
@@ -15,6 +15,8 @@ export function EntityScopeSelector({
 	footer,
 	withSeparator = true,
 	wrapInSection = true,
+	onSearchChange,
+	isLoading,
 }: {
 	entities: Entity[];
 	scopeEntityId: string | undefined;
@@ -22,6 +24,8 @@ export function EntityScopeSelector({
 	footer?: ReactNode;
 	withSeparator?: boolean;
 	wrapInSection?: boolean;
+	onSearchChange?: (search: string) => void;
+	isLoading?: boolean;
 }) {
 	const entityOptions: EntityOption[] = [null, ...entities];
 
@@ -47,6 +51,8 @@ export function EntityScopeSelector({
 				searchPlaceholder="Search entities..."
 				emptyText="No entities found"
 				triggerClassName="w-full"
+				onSearchChange={onSearchChange}
+				isLoading={isLoading}
 				renderValue={(option) =>
 					option === null || option === undefined ? (
 						<span className="text-muted-foreground">Customer-level</span>

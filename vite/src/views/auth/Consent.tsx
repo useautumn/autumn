@@ -1,28 +1,32 @@
 import {
 	AppEnv,
-	type GroupedPermission,
-	groupAndFormatScopes,
+	getOAuthProtocolScopes,
+	getOAuthResourcesForScopes,
+	getSelectableOAuthResourceScopes,
 	isScopeSubset,
-	LEAF_OAUTH_SCOPES,
+	type ScopeString,
 } from "@autumn/shared";
-import { Check, Clock, ExternalLink, Shield, X } from "lucide-react";
-import { useEffect, useId, useState } from "react";
-import { useSearchParams } from "react-router";
-import { toast } from "sonner";
-import { CustomToaster } from "@/components/general/CustomToaster";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Button,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
+import { useQuery } from "@tanstack/react-query";
+import { Clock, ExternalLink, Shield } from "lucide-react";
+import { useId, useState } from "react";
+import { useSearchParams } from "react-router";
+import { toast } from "sonner";
+import { CustomToaster } from "@/components/general/CustomToaster";
+import { ScopeSelector } from "@/components/v2/scope-selector";
 import {
 	authClient,
 	useListOrganizations,
 	useSession,
 } from "@/lib/auth-client";
+import { setActiveOrg } from "@/lib/orgSync";
 
 interface ClientInfo {
 	client_id: string;
@@ -33,70 +37,13 @@ interface ClientInfo {
 	policy_uri?: string;
 	tos_uri?: string;
 	is_internal_mcp?: boolean;
+	default_env?: AppEnv;
 }
 
 type SessionWithScopes = {
 	scopes?: string[];
 };
 
-// Joke scopes - one is randomly selected to show at the end
-const JOKE_SCOPES = [
-	{ name: "Increase your MRR", description: "Automatically 10x your revenue" },
-	{
-		name: "Steal all your Stripe keys",
-		description: "For safekeeping, of course",
-	},
-	{ name: "Delete production database", description: "What could go wrong?" },
-	{
-		name: "Charge customers twice",
-		description: "Double the revenue, double the fun",
-	},
-	{
-		name: "Leak your pricing strategy",
-		description: "Competitors love this one trick",
-	},
-	{ name: "Downgrade all paid users", description: "Free tier for everyone!" },
-	{
-		name: "Refund all transactions",
-		description: "Your accountant will love this",
-	},
-	{
-		name: "Email investors your burn rate",
-		description: "Transparency is key",
-	},
-	{
-		name: "Set all prices to $0.01",
-		description: "Aggressive pricing strategy",
-	},
-	{
-		name: "Auto-approve all refunds",
-		description: "Customer satisfaction guaranteed",
-	},
-	{
-		name: "Share your churn rate on Twitter",
-		description: "Radical transparency",
-	},
-	{
-		name: "Convert annual plans to monthly",
-		description: "Cash flow is overrated",
-	},
-	{
-		name: "Add hidden fees to invoices",
-		description: "Airlines hate this one trick",
-	},
-	{
-		name: "Send payment reminders at 3am",
-		description: "Urgency drives conversions",
-	},
-];
-
-// Get a random joke scope (seeded by session to stay consistent)
-const getRandomJokeScope = () => {
-	const index = Math.floor(Math.random() * JOKE_SCOPES.length);
-	return JOKE_SCOPES[index];
-};
-
-// Org logo component (simplified version)
 const OrgLogo = ({ org }: { org: { name: string; logo?: string | null } }) => {
 	const firstLetter = org?.name?.charAt(0).toUpperCase() || "A";
 
@@ -122,6 +69,32 @@ const getConsentRedirectUrl = (data: unknown) => {
 	);
 };
 
+const parseAppEnv = (value: unknown) =>
+	value === AppEnv.Sandbox || value === AppEnv.Live ? value : null;
+
+const getOAuthQueryParam = (
+	searchParams: URLSearchParams,
+	key: string,
+): string | null => {
+	const directValue = searchParams.get(key);
+	if (directValue) return directValue;
+
+	const rawOAuthQuery = searchParams.get("oauth_query");
+	if (!rawOAuthQuery) return null;
+
+	try {
+		const parsed = JSON.parse(rawOAuthQuery);
+		if (parsed && typeof parsed === "object") {
+			const value = (parsed as Record<string, unknown>)[key];
+			return typeof value === "string" && value.length > 0 ? value : null;
+		}
+	} catch {
+		return new URLSearchParams(rawOAuthQuery).get(key);
+	}
+
+	return null;
+};
+
 const isExternalAppRedirect = (redirectUrl: string) => {
 	if (!URL.canParse(redirectUrl)) return false;
 	const protocol = new URL(redirectUrl).protocol;
@@ -143,21 +116,64 @@ const openConsentRedirect = ({
 	}
 };
 
-const leafScopeSet = new Set<string>(LEAF_OAUTH_SCOPES);
+const fetchOAuthClientInfo = async ({
+	clientId,
+	redirectUri,
+}: {
+	clientId: string;
+	redirectUri: string | null;
+}): Promise<ClientInfo> => {
+	try {
+		const clientInfoUrl = new URL(
+			`${import.meta.env.VITE_BACKEND_URL}/oauth/client/${encodeURIComponent(clientId)}`,
+		);
+		if (redirectUri)
+			clientInfoUrl.searchParams.set("redirect_uri", redirectUri);
 
-const getGrantableMcpScopes = ({
+		const response = await fetch(clientInfoUrl.toString());
+		if (!response.ok) {
+			return {
+				client_id: clientId,
+				client_name: "External Application",
+				is_atmn: false,
+				is_internal_mcp: false,
+			};
+		}
+
+		const data = await response.json();
+		const defaultEnv = parseAppEnv(data.default_env);
+		return {
+			client_id: clientId,
+			client_name: data.name || "Unknown Application",
+			is_atmn: data.is_atmn === true,
+			is_internal_mcp: data.is_internal_mcp === true,
+			default_env: defaultEnv ?? undefined,
+		};
+	} catch (error) {
+		console.error("Error fetching client info:", error);
+		return {
+			client_id: clientId,
+			client_name: "External Application",
+			is_atmn: false,
+			is_internal_mcp: false,
+		};
+	}
+};
+
+const splitScopeString = (value: string | null) =>
+	value?.split(/\s+/).filter(Boolean) ?? [];
+
+const getGrantableOAuthScopes = ({
 	requestedScopes,
 	sessionScopes,
 }: {
 	requestedScopes: string[];
 	sessionScopes: string[];
 }) => {
-	const requested =
-		requestedScopes.length > 0 ? requestedScopes : [...LEAF_OAUTH_SCOPES];
-
-	return [...new Set(requested)]
-		.filter((scope) => leafScopeSet.has(scope))
-		.filter((scope) => isScopeSubset([scope], sessionScopes));
+	const selectableScopes = getSelectableOAuthResourceScopes(requestedScopes);
+	return selectableScopes.filter((scope) =>
+		isScopeSubset([scope], sessionScopes),
+	);
 };
 
 export const Consent = () => {
@@ -168,35 +184,49 @@ export const Consent = () => {
 	const errorIconMaskId = useId();
 	const consentIconMaskId = useId();
 
-	const [clientInfo, setClientInfo] = useState<ClientInfo | null>(null);
-	const [groupedPermissions, setGroupedPermissions] = useState<
-		GroupedPermission[]
-	>([]);
-	const [jokeScope] = useState(() => getRandomJokeScope());
-	const [isLoading, setIsLoading] = useState(true);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [pendingRedirectUrl, setPendingRedirectUrl] = useState<string | null>(
 		null,
 	);
-	const [selectedEnv, setSelectedEnv] = useState<AppEnv>(AppEnv.Live);
 	const [switchingOrg, setSwitchingOrg] = useState(false);
+	const [scopeOverride, setScopeOverride] = useState<ScopeString[] | null>(
+		null,
+	);
+	const [envOverride, setEnvOverride] = useState<AppEnv | null>(null);
 
 	const clientId = searchParams.get("client_id");
 	const redirectUri = searchParams.get("redirect_uri");
-	const requestedScopes =
-		searchParams.get("scope")?.split(/\s+/).filter(Boolean) || [];
+	const requestedScopes = splitScopeString(
+		getOAuthQueryParam(searchParams, "scope"),
+	);
+	const requestedEnv = getOAuthQueryParam(searchParams, "env");
+	const initialEnv = parseAppEnv(requestedEnv) ?? AppEnv.Live;
 	const sessionScopes =
 		(session as SessionWithScopes | null | undefined)?.scopes ?? [];
+	const clientInfoQuery = useQuery({
+		queryKey: ["oauth-client-info", clientId, redirectUri],
+		queryFn: () => fetchOAuthClientInfo({ clientId: clientId!, redirectUri }),
+		enabled: !!clientId,
+	});
+	const clientInfo = clientInfoQuery.data ?? null;
+	const defaultScopes = getGrantableOAuthScopes({
+		requestedScopes,
+		sessionScopes,
+	});
+	const selectableResources = getOAuthResourcesForScopes(
+		getSelectableOAuthResourceScopes(requestedScopes),
+	);
+	const selectedScopes = scopeOverride ?? defaultScopes;
+	const selectedEnv = envOverride ?? clientInfo?.default_env ?? initialEnv;
+	const isLoading = !!clientId && clientInfoQuery.isLoading;
+	const canAuthorize = selectedScopes.length > 0;
 
-	// Get the current org (active or first available)
 	const currentOrg = activeOrganization || orgs?.[0];
 
 	const handleSwitchOrg = async (orgId: string) => {
 		setSwitchingOrg(true);
 		try {
-			await authClient.organization.setActive({
-				organizationId: orgId,
-			});
+			await setActiveOrg(orgId);
 			window.location.reload();
 		} catch (_) {
 			toast.error("Failed to switch organization");
@@ -204,91 +234,33 @@ export const Consent = () => {
 		}
 	};
 
-	useEffect(() => {
-		async function fetchClientInfo() {
-			if (!clientId) {
-				toast.error("Missing client_id parameter");
-				setIsLoading(false);
-				return;
-			}
-
-			let isInternalMcp = false;
-			try {
-				// Fetch client name from our own endpoint
-				const clientInfoUrl = new URL(
-					`${import.meta.env.VITE_BACKEND_URL}/oauth/client/${encodeURIComponent(clientId)}`,
-				);
-				if (redirectUri) {
-					clientInfoUrl.searchParams.set("redirect_uri", redirectUri);
-				}
-
-				const response = await fetch(clientInfoUrl.toString());
-
-				if (response.ok) {
-					const data = await response.json();
-					isInternalMcp = data.is_internal_mcp === true;
-					setClientInfo({
-						client_id: clientId,
-						client_name: data.name || "Unknown Application",
-						is_atmn: data.is_atmn === true,
-						is_internal_mcp: isInternalMcp,
-					});
-				} else {
-					console.error("Error fetching client info:", response.status);
-					// Fallback - just use the client_id
-					setClientInfo({
-						client_id: clientId,
-						client_name: "External Application",
-						is_atmn: false,
-						is_internal_mcp: false,
-					});
-				}
-			} catch (error) {
-				console.error("Error fetching client info:", error);
-				// Fallback - just use the client_id
-				setClientInfo({
-					client_id: clientId,
-					client_name: "External Application",
-					is_atmn: false,
-					is_internal_mcp: false,
-				});
-			}
-
-			// Parse and group scopes by resource
-			const displayScopes =
-				isInternalMcp === true
-					? getGrantableMcpScopes({ requestedScopes, sessionScopes })
-					: requestedScopes;
-			const grouped = groupAndFormatScopes(displayScopes);
-			setGroupedPermissions(grouped);
-			setIsLoading(false);
-		}
-
-		fetchClientInfo();
-	}, [
-		clientId,
-		redirectUri,
-		requestedScopes.join(","),
-		sessionScopes.join(","),
-	]);
-
 	const handleAuthorize = async () => {
 		if (!clientInfo) {
 			toast.error("Authorization failed");
+			return;
+		}
+		if (selectedScopes.length === 0) {
+			toast.error("Select at least one Autumn permission");
 			return;
 		}
 
 		setIsSubmitting(true);
 		setPendingRedirectUrl(null);
 		try {
-			const grantedScopes =
-				clientInfo.is_internal_mcp === true
-					? getGrantableMcpScopes({ requestedScopes, sessionScopes }).join(" ")
-					: requestedScopes.join(" ");
-
+			// Echo the app's originally-requested protocol scopes (openid,
+			// offline_access, …) so narrowing keeps the consent set a subset of
+			// the /authorize request — better-auth rejects anything it didn't see.
+			const consentScopes = clientInfo.is_atmn
+				? requestedScopes
+				: [
+						...new Set([
+							...selectedScopes,
+							...getOAuthProtocolScopes(requestedScopes),
+						]),
+					];
 			const { data, error } = await authClient.oauth2.consent({
 				accept: true,
-				scope: grantedScopes,
+				scope: consentScopes.join(" "),
 				client_id: clientId,
 				redirect_uri: redirectUri,
 				env: clientInfo.is_atmn ? undefined : selectedEnv,
@@ -504,7 +476,7 @@ export const Consent = () => {
 								</span>
 								<Select
 									value={selectedEnv}
-									onValueChange={(value) => setSelectedEnv(value as AppEnv)}
+									onValueChange={(value) => setEnvOverride(value as AppEnv)}
 									items={{
 										[AppEnv.Sandbox]: "Sandbox",
 										[AppEnv.Live]: "Production",
@@ -523,49 +495,31 @@ export const Consent = () => {
 					</div>
 				)}
 
-				{/* Permissions Card */}
 				<div className="border border-border rounded-xl bg-card overflow-hidden">
-					{/* Header */}
 					<div className="px-4 py-3 border-b border-border bg-muted/30">
 						<p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-							This will allow {clientInfo.client_name} to:
+							{clientInfo.is_atmn
+								? "Permissions for"
+								: "Choose permissions for"}{" "}
+							{clientInfo.client_name}
 						</p>
 					</div>
-
-					{/* Grouped Permissions List */}
-					<div className="divide-y divide-border">
-						{groupedPermissions.map((permission) => (
-							<div
-								key={permission.resource}
-								className="w-full flex items-start gap-3 px-4 py-3 text-left"
-							>
-								<div className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center bg-green-500/10 text-green-600">
-									<Check className="w-3 h-3" />
-								</div>
-								<div className="flex-1 min-w-0">
-									<p className="text-sm font-medium text-foreground">
-										{permission.formattedPermission}
-									</p>
-									<p className="text-xs text-muted-foreground mt-0.5">
-										{permission.description}
-									</p>
-								</div>
-							</div>
-						))}
-						{/* Joke scope - always denied */}
-						<div className="w-full flex items-start gap-3 px-4 py-3 text-left cursor-default">
-							<div className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full flex items-center justify-center bg-red-500/10 text-red-500">
-								<X className="w-3 h-3" />
-							</div>
-							<div className="flex-1 min-w-0">
-								<p className="text-sm font-medium text-muted-foreground">
-									{jokeScope.name}
-								</p>
-								<p className="text-xs text-muted-foreground mt-0.5">
-									{jokeScope.description}
-								</p>
-							</div>
-						</div>
+					<div className="px-4 py-3">
+						<ScopeSelector
+							value={selectedScopes}
+							onChange={setScopeOverride}
+							availableScopes={sessionScopes}
+							resources={selectableResources}
+							allowUnrestricted={false}
+							disabled={isSubmitting || clientInfo.is_atmn}
+							showPresets={!clientInfo.is_atmn}
+							defaultScopes={defaultScopes}
+						/>
+						{!canAuthorize && (
+							<p className="text-xs text-destructive mt-3">
+								Select at least one permission to authorize this app.
+							</p>
+						)}
 					</div>
 				</div>
 
@@ -647,6 +601,7 @@ export const Consent = () => {
 							pendingRedirectUrl ? handleOpenPendingRedirect : handleAuthorize
 						}
 						isLoading={isSubmitting}
+						disabled={isSubmitting || (!pendingRedirectUrl && !canAuthorize)}
 						className="flex-1"
 					>
 						{pendingRedirectUrl

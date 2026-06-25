@@ -13,6 +13,7 @@
 			"apps/website",
 			"apps/leaf",
 			"apps/sdk-test",
+		"apps/testbench",
 			"packages/atmn",
 			"packages/atmn-tests",
 			"packages/auth",
@@ -23,7 +24,8 @@
 			"packages/openapi",
 			"packages/ksuid",
 			"packages/stripe-sync",
-			"packages/gateway"
+			"packages/gateway",
+			"packages/ui"
 		],
 		"catalog": {
 			"stripe": "19.3.0-beta.1",
@@ -54,6 +56,11 @@
 	},
 	"overrides": {
 		"@better-auth/passkey": "1.6.5",
+		"@mastra/braintrust": "1.1.3",
+		"@mastra/core": "1.42.0",
+		"@mastra/mcp": "1.10.0",
+		"@mastra/observability": "1.14.1",
+		"@mastra/schema-compat": "1.2.11",
 		"@modelcontextprotocol/sdk": "1.29.0",
 		"@isaacs/brace-expansion": "5.0.1",
 		"fast-xml-parser": "5.3.4",
@@ -67,6 +74,11 @@
 	"resolutions": {
 		"@better-auth/core": "1.6.5",
 		"@better-auth/passkey": "1.6.5",
+		"@mastra/braintrust": "1.1.3",
+		"@mastra/core": "1.42.0",
+		"@mastra/mcp": "1.10.0",
+		"@mastra/observability": "1.14.1",
+		"@mastra/schema-compat": "1.2.11",
 		"better-auth": "1.6.5",
 		"@modelcontextprotocol/sdk": "1.29.0",
 		"@isaacs/brace-expansion": "5.0.1",
@@ -86,6 +98,11 @@
 		"t": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/testScripts/testDispatcher.ts",
 		"cm": "cd server && bun cm",
 		"scenario": "cd server && bun scenario",
+		"tw": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/tw/index.ts",
+		"tw:list": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/tw/index.ts list",
+		"tw:kill": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/tw/index.ts kill",
+		"tw:kill-all": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/tw/index.ts kill-all",
+		"tw:spike": "bun scripts/tw/spike.ts",
 		"dw": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts",
 		"dw:teardown": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts teardown",
 		"dw:list": "ENV_FILE=.env infisical run --env=dev --recursive -- bun scripts/dw/index.ts list",

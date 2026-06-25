@@ -67,6 +67,54 @@ export const getOAuthConsentOwner = async ({
 	return consent ?? null;
 };
 
+export const getOAuthConsentApiKeyRecord = async ({
+	db,
+	consentId,
+}: {
+	db: DrizzleCli;
+	consentId: string;
+}) => {
+	const [consent] = await db
+		.select({
+			id: oauthConsent.id,
+			env: oauthConsent.env,
+			oauthApiKeyId: oauthConsent.oauthApiKeyId,
+			redirectUri: oauthConsent.redirectUri,
+			scopes: oauthConsent.scopes,
+		})
+		.from(oauthConsent)
+		.where(eq(oauthConsent.id, consentId))
+		.limit(1);
+
+	return consent ?? null;
+};
+
+export const listOAuthConsentsForClientUserOrg = async ({
+	db,
+	clientId,
+	userId,
+	referenceId,
+}: {
+	db: DrizzleCli;
+	clientId: string;
+	userId: string;
+	referenceId: string;
+}) =>
+	db
+		.select({
+			id: oauthConsent.id,
+			env: oauthConsent.env,
+		})
+		.from(oauthConsent)
+		.where(
+			and(
+				eq(oauthConsent.clientId, clientId),
+				eq(oauthConsent.userId, userId),
+				eq(oauthConsent.referenceId, referenceId),
+			),
+		)
+		.limit(2);
+
 export const updateOAuthConsentEnv = async ({
 	db,
 	clientId,
@@ -166,6 +214,8 @@ export const deleteOAuthConsentById = async ({
 export const oauthConsentRepo = {
 	listByReferenceId: listOAuthConsentsByReferenceId,
 	getOwner: getOAuthConsentOwner,
+	getApiKeyRecord: getOAuthConsentApiKeyRecord,
+	listForClientUserOrg: listOAuthConsentsForClientUserOrg,
 	updateEnv: updateOAuthConsentEnv,
 	getForClientUserOrg: getOAuthConsentForClientUserOrg,
 	updateApiKey: updateOAuthConsentApiKey,

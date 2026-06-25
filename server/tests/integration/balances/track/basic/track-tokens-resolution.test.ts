@@ -13,6 +13,7 @@ import { products } from "@tests/utils/fixtures/products.js";
 import { initScenario, s } from "@tests/utils/testInitUtils/initScenario.js";
 import chalk from "chalk";
 import { AutumnInt } from "@/external/autumn/autumnCli.js";
+import { timeout } from "@/utils/genUtils";
 
 // custom/internal-model: input_cost=5 $/M, output_cost=15 $/M, markup=0%
 
@@ -133,6 +134,7 @@ test.concurrent(
 			},
 		});
 
+		await timeout(4000);
 		// Explicit feature_id resolves from freshly loaded org features → 0.4
 		const trackRes2: TrackResponseV3 = await autumnV2_2.post(
 			"/track_tokens",

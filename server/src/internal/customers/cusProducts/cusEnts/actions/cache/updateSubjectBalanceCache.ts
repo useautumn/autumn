@@ -19,6 +19,7 @@ export const updateSubjectBalanceCache = async ({
 		additional_balance?: number | null;
 		adjustment?: number | null;
 		entities?: Record<string, unknown> | null;
+		reset_cycle_anchor?: number | null;
 		next_reset_at?: number | null;
 	};
 }) => {
@@ -45,6 +46,7 @@ export const updateSubjectBalanceCache = async ({
 							additional_balance: updates.additional_balance ?? null,
 							adjustment: updates.adjustment ?? null,
 							entities: updates.entities ?? null,
+							reset_cycle_anchor: updates.reset_cycle_anchor ?? null,
 							next_reset_at: updates.next_reset_at ?? null,
 							expected_next_reset_at: null,
 							rollover_insert: null,

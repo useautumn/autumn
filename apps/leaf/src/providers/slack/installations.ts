@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { stripOAuthTokenPrefix } from "@autumn/auth";
 import {
 	AppEnv,
 	apiKeys,
@@ -6,10 +7,14 @@ import {
 	type ChatInstallState,
 	type ChatProvider,
 	chatInstallations,
+	chatOAuthCredentials,
+	oauthAccessToken,
+	oauthRefreshToken,
 	organizations,
 } from "@autumn/shared";
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { replaceInstallationOAuthCredentials } from "../../internal/installations/actions/replaceInstallationOAuthCredentials.js";
+import { chatThreadContextsRepo } from "../../internal/chatThreadContexts/repos/chatThreadContextsRepo.js";
 import { decrypt, encrypt } from "../../lib/crypto.js";
 import { db } from "../../lib/db.js";
 import { env } from "../../lib/env.js";
@@ -69,10 +74,40 @@ export const getInstallationKey = (
 	return decrypt(key);
 };
 
-const deleteInstallationApiKeys = async (
+const deleteInstallationArtifacts = async (
 	tx: ChatTransaction,
 	installation: ChatInstallation,
 ) => {
+	const credentials = await tx.query.chatOAuthCredentials.findMany({
+		where: eq(chatOAuthCredentials.chat_installation_id, installation.id),
+	});
+	const tokenHash = ({ token }: { token: string }) =>
+		crypto.createHash("sha256").update(token).digest("base64url");
+	const accessTokenHashes = credentials.map((credential) =>
+		tokenHash({
+			token: stripOAuthTokenPrefix({
+				token: decrypt(credential.access_token),
+			}),
+		}),
+	);
+	const refreshTokenHashes = credentials.map((credential) =>
+		tokenHash({ token: decrypt(credential.refresh_token) }),
+	);
+
+	if (accessTokenHashes.length > 0) {
+		await tx
+			.delete(oauthAccessToken)
+			.where(inArray(oauthAccessToken.token, accessTokenHashes));
+	}
+	if (refreshTokenHashes.length > 0) {
+		await tx
+			.delete(oauthRefreshToken)
+			.where(inArray(oauthRefreshToken.token, refreshTokenHashes));
+	}
+	await chatThreadContextsRepo.deleteByInstallation({
+		db: tx,
+		chatInstallationId: installation.id,
+	});
 	for (const id of [
 		installation.sandbox_api_key_id,
 		installation.live_api_key_id,
@@ -92,6 +127,7 @@ export const replaceInstallation = async ({
 	botUserId,
 	botAccessToken,
 	scopes,
+	agentScopes,
 	installedByProviderUserId,
 }: {
 	state: ChatInstallState;
@@ -101,6 +137,7 @@ export const replaceInstallation = async ({
 	botUserId?: string;
 	botAccessToken: string;
 	scopes: string[];
+	agentScopes?: string[];
 	installedByProviderUserId?: string;
 }) => {
 	const sameOrg = and(
@@ -117,7 +154,7 @@ export const replaceInstallation = async ({
 			where: or(sameOrg, sameWorkspace),
 		});
 		for (const installation of existingInstallations) {
-			await deleteInstallationApiKeys(tx, installation);
+			await deleteInstallationArtifacts(tx, installation);
 		}
 
 		await tx.delete(chatInstallations).where(or(sameOrg, sameWorkspace));
@@ -144,6 +181,7 @@ export const replaceInstallation = async ({
 			tx,
 			installation,
 			userId: state.userId,
+			agentScopes,
 		});
 	});
 };

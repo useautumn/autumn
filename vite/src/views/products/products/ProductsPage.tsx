@@ -21,7 +21,9 @@ export const ProductsPage = () => {
 	const hasPlans = products && products.length > 0;
 
 	if (!isLoading && !hasPlans) {
-		return <EmptyState type="plans" actionButton={<ProductListCreateButton />} />;
+		return (
+			<EmptyState type="plans" actionButton={<ProductListCreateButton />} />
+		);
 	}
 
 	return (

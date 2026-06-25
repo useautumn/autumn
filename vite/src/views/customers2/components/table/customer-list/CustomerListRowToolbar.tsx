@@ -1,12 +1,12 @@
+import { ToolbarButton } from "@autumn/ui";
 import { Trash } from "lucide-react";
 import { useState } from "react";
-import { ToolbarButton } from "@/components/general/table-components/ToolbarButton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { DeleteCustomerDialog } from "@/views/customers/customer/components/DeleteCustomerDialog";
 import type { CustomerWithProducts } from "./CustomerListColumns";
 
@@ -27,8 +27,14 @@ export const CustomerListRowToolbar = ({
 			/>
 			<DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
 				<div
-					onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
-					onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); }}
+					onClick={(e) => {
+						e.preventDefault();
+						e.stopPropagation();
+					}}
+					onMouseDown={(e) => {
+						e.preventDefault();
+						e.stopPropagation();
+					}}
 				>
 					<DropdownMenuTrigger asChild>
 						<ToolbarButton />

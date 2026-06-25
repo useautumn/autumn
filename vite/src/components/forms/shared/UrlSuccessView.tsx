@@ -1,6 +1,5 @@
+import { Button, CopyButton } from "@autumn/ui";
 import { CheckCircleIcon } from "@phosphor-icons/react";
-import { Button } from "@/components/v2/buttons/Button";
-import { CopyButton } from "@/components/v2/buttons/CopyButton";
 import {
 	SheetFooter,
 	SheetHeader,

@@ -1,24 +1,22 @@
-import Editor from "@monaco-editor/react";
-import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
-import { Badge } from "@/components/v2/badges/Badge";
-import { Button } from "@/components/v2/buttons/Button";
 import {
+	Badge,
+	Button,
 	Dialog,
 	DialogContent,
 	DialogDescription,
 	DialogFooter,
 	DialogHeader,
 	DialogTitle,
-} from "@/components/v2/dialogs/Dialog";
-import { Input } from "@/components/v2/inputs/Input";
-import {
+	Input,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+} from "@autumn/ui";
+import Editor from "@monaco-editor/react";
+import { useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 import { useAxiosInstance } from "@/services/useAxiosInstance";
 import { getBackendErr } from "@/utils/genUtils";
 
@@ -46,7 +44,11 @@ const DEFAULT_CONFIG: RateLimitOverridesConfig = {
 	error: null,
 };
 
-const getEditableConfig = ({ config }: { config: RateLimitOverridesConfig }) => ({
+const getEditableConfig = ({
+	config,
+}: {
+	config: RateLimitOverridesConfig;
+}) => ({
 	orgs: config.orgs,
 });
 
@@ -222,9 +224,7 @@ export function RateLimitOverridesDialog({
 			toast.success("Rate limit overrides saved");
 			onOpenChange(false);
 		} catch (error) {
-			toast.error(
-				getBackendErr(error, "Failed to save rate limit overrides"),
-			);
+			toast.error(getBackendErr(error, "Failed to save rate limit overrides"));
 		} finally {
 			setSaving(false);
 		}

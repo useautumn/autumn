@@ -1,19 +1,17 @@
 import {
 	expandScopes,
-	groupAndFormatScopes,
 	RESOURCE_METADATA,
 	RESOURCES,
 	type ResourceType,
-	Scopes,
 	type ScopeString,
+	Scopes,
 } from "@autumn/shared";
+import { Checkbox, ConditionalTooltip } from "@autumn/ui";
 import { useMemo, useState } from "react";
-import { Checkbox } from "@/components/v2/checkboxes/Checkbox";
-import { ConditionalTooltip } from "@/components/v2/tooltips/ConditionalTooltip";
 import { cn } from "@/lib/utils";
+import { type ScopePreset, ScopePresetBar } from "./ScopePresetBar";
 
 export type ScopeSelectorProps = {
-	/** Current scopes. Empty array = unrestricted (all scopes granted). */
 	value: ScopeString[];
 	onChange: (scopes: ScopeString[]) => void;
 	/**
@@ -21,7 +19,17 @@ export type ScopeSelectorProps = {
 	 * set is disabled with a tooltip explaining the caller can't grant it.
 	 */
 	availableScopes?: readonly string[];
+	/** Optional: limit the picker to these resources (defaults to all). */
+	resources?: readonly ResourceType[];
+	allowUnrestricted?: boolean;
 	disabled?: boolean;
+	/**
+	 * Optional: render quick-apply presets above the grid. When `defaultScopes`
+	 * is supplied it becomes the "Default" preset; "Read only" is always derived
+	 * from the grantable resources.
+	 */
+	showPresets?: boolean;
+	defaultScopes?: ScopeString[];
 };
 
 type TriState = "none" | "read" | "write";
@@ -34,8 +42,7 @@ const TRI_OPTIONS_FULL: TriOption[] = [
 	{ value: "write", label: "Write" },
 ];
 
-const UNAVAILABLE_TOOLTIP =
-	"You don't have this scope on your current session";
+const UNAVAILABLE_TOOLTIP = "You don't have this scope on your current session";
 const READ_ONLY_RESOURCE_TOOLTIP =
 	"This resource is read-only — no write scope exists";
 
@@ -153,8 +160,12 @@ function TriStatePicker({
 export function ScopeSelector({
 	value,
 	onChange,
+	allowUnrestricted = true,
 	availableScopes,
+	resources = RESOURCES,
 	disabled = false,
+	showPresets = false,
+	defaultScopes,
 }: ScopeSelectorProps) {
 	// Restricted mode is a local UI concern. We seed it from the initial
 	// `value` length so a key that already has scopes opens in restricted
@@ -162,6 +173,7 @@ export function ScopeSelector({
 	// render — otherwise the user toggling all scopes to "None" would
 	// flip the checkbox off and lose the grid.
 	const [restricted, setRestricted] = useState(value.length > 0);
+	const showScopeGrid = allowUnrestricted ? restricted : true;
 
 	const expandedAvailable = useMemo(
 		() => (availableScopes ? expandScopes(availableScopes) : null),
@@ -189,32 +201,52 @@ export function ScopeSelector({
 		}
 	};
 
-	const summary = useMemo(() => {
-		const grouped = groupAndFormatScopes(value);
-		return { scopeCount: value.length, resourceCount: grouped.length };
-	}, [value]);
+	const presets = useMemo<ScopePreset[]>(() => {
+		const readOnlyScopes = resources
+			.map((resource) => `${resource}:read` as ScopeString)
+			.filter(isScopeAvailable);
+		const list: ScopePreset[] = [];
+		if (defaultScopes) {
+			list.push({ id: "default", label: "Default", scopes: defaultScopes });
+		}
+		list.push({ id: "read", label: "Read only", scopes: readOnlyScopes });
+		return list;
+		// isScopeAvailable is derived from expandedAvailable; depend on that.
+		// biome-ignore lint/correctness/useExhaustiveDependencies: stable derived fn
+	}, [resources, defaultScopes, expandedAvailable]);
 
 	return (
 		<div className="flex flex-col gap-3">
-			<label className="flex items-start gap-2.5 cursor-pointer select-none">
-				<Checkbox
-					checked={restricted}
-					onCheckedChange={(c) => handleToggleRestricted(c === true)}
-					disabled={disabled}
-					className="mt-0.5"
-				/>
-				<div className="flex flex-col gap-0.5">
-					<span className="text-sm text-foreground">Restricted mode</span>
-					<span className="text-xs text-muted-foreground">
-						Limit this key to specific scopes. Leave unchecked for full
-						access.
-					</span>
-				</div>
-			</label>
+			{allowUnrestricted && (
+				<label className="flex items-start gap-2.5 cursor-pointer select-none">
+					<Checkbox
+						checked={restricted}
+						onCheckedChange={(c) => handleToggleRestricted(c === true)}
+						disabled={disabled}
+						className="mt-0.5"
+					/>
+					<div className="flex flex-col gap-0.5">
+						<span className="text-sm text-foreground">Restricted mode</span>
+						<span className="text-xs text-muted-foreground">
+							Limit this key to specific scopes. Leave unchecked for full
+							access.
+						</span>
+					</div>
+				</label>
+			)}
 
-			{restricted && (
+			{showScopeGrid && showPresets && presets.length > 0 && (
+				<ScopePresetBar
+					presets={presets}
+					value={value}
+					onSelect={onChange}
+					disabled={disabled}
+				/>
+			)}
+
+			{showScopeGrid && (
 				<div className="flex flex-col border-t border-border">
-					{RESOURCES.map((resource) => {
+					{resources.map((resource) => {
 						const meta = RESOURCE_METADATA[resource];
 						const isAnalytics = resource === "analytics";
 
@@ -222,9 +254,7 @@ export function ScopeSelector({
 						const readAvailable = isScopeAvailable(readScope);
 						const writeAvailable = isAnalytics
 							? false
-							: isScopeAvailable(
-									`${resource}:write` as ScopeString,
-								);
+							: isScopeAvailable(`${resource}:write` as ScopeString);
 
 						const fullyUnavailable =
 							!!expandedAvailable &&
@@ -235,9 +265,7 @@ export function ScopeSelector({
 						// Always render 3 segments so every row has the same
 						// width. For analytics, `Write` is permanently disabled
 						// with an explanatory tooltip.
-						const writeReason = isAnalytics
-							? READ_ONLY_RESOURCE_TOOLTIP
-							: null;
+						const writeReason = isAnalytics ? READ_ONLY_RESOURCE_TOOLTIP : null;
 
 						return (
 							<div
@@ -270,19 +298,6 @@ export function ScopeSelector({
 							</div>
 						);
 					})}
-
-					<div className="pt-3 text-xs text-muted-foreground">
-						Granting:{" "}
-						<span className="text-foreground">
-							{summary.scopeCount} scope
-							{summary.scopeCount === 1 ? "" : "s"}
-						</span>{" "}
-						across{" "}
-						<span className="text-foreground">
-							{summary.resourceCount} resource
-							{summary.resourceCount === 1 ? "" : "s"}
-						</span>
-					</div>
 				</div>
 			)}
 		</div>

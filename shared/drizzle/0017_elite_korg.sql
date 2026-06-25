@@ -1,1 +1,0 @@
-ALTER TABLE "organizations" ADD COLUMN "is_sandbox" boolean DEFAULT false NOT NULL;

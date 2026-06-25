@@ -1,0 +1,95 @@
+---
+slug: autumn-vs-orb
+title: Autumn vs Orb
+description: Orb is built for usage events, complex pricing queries, ledgers, simulations, and invoicing workflows. Autumn is built to manage application billing state like credits, limits, entitlements, rollovers, reset intervals, and custom packages.
+date: "2026-06-22"
+updated: "2026-06-22"
+author: Autumn
+category: Comparisons
+summary: "Orb fits teams whose billing problem starts from usage events, complex pricing queries, ledgers, and invoicing. Autumn fits teams whose billing problem starts from application billing state: credits, limits, entitlements, resets, rollovers, and runtime checks."
+relatedDocs:
+  - { label: "Autumn overview", href: "https://docs.useautumn.com/welcome" }
+  - { label: "Checking access", href: "https://docs.useautumn.com/documentation/customers/check" }
+  - { label: "Credit systems", href: "https://docs.useautumn.com/documentation/modelling-pricing/credit-systems" }
+relatedAlog:
+  - autumn-vs-metronome
+  - autumn-vs-stripe-billing
+  - usage-based-billing-for-ai-startups
+---
+
+# Autumn vs Orb
+
+> Orb works best when billing starts from event data and pricing analysis. Autumn works best when your application needs billing state it can read and update in real time.
+
+## Short Answer
+
+Orb is a strong fit for companies with event-heavy usage billing, complex billable metrics, pricing simulations, credit ledgers, invoice workflows, and revenue reporting. If your hardest problem is turning raw usage events into accurate billing across changing pricing models, Orb is built for that world.
+
+Autumn is a better fit when your application needs to manage billing state directly: credits, limits, entitlements, rollovers, reset intervals, feature access, custom packages, committed spend, and plan changes. Your app calls `check()` when it needs the current state and `track()` when usage happens, while Autumn keeps the customer billing state up to date.
+
+## When To Use Autumn
+
+- You need a synchronous `check()` before allowing a customer to use a feature or consume credits.
+- You sell credits, allowances, feature access, or hybrid subscription plus usage plans.
+- You want credits, limits, entitlements, reset schedules, rollovers, and customer package rules in one application-facing state layer.
+- You are PLG, sales-led, or hybrid, and deal with custom enterprise packages.
+- You iterate on pricing often and want those changes to show up in product behavior, not only invoices.
+
+## When Orb Fits
+
+- Your billing model starts from raw usage events.
+- You need complex queries over usage data, dimensional pricing, or SQL-like metric analysis.
+- You want a detailed prepaid credit ledger with strong auditability and revenue workflows.
+- You need to simulate pricing changes against historical usage before rolling them out.
+- You want a dedicated usage-based billing platform for pricing, subscriptions, invoices, credits, and enterprise contracts.
+
+## Product Difference
+
+Orb starts from usage data. You send events into Orb, define billable metrics over those events, configure pricing and plans, then Orb turns that into invoices, credit drawdowns, alerts, simulations, and reporting.
+
+Autumn starts from the billing state your application needs at runtime. A customer has a plan, balances, limits, entitlements, reset schedules, rollover rules, add-ons, and custom terms. Your app reads that state through `check()` and updates it through `track()`.
+
+Both approaches are valid. The difference is where the billing system needs to be most useful: in usage-query, ledger, and invoicing workflows, or in the application state that controls credits, limits, entitlements, and package behavior.
+
+## Credits and Billing State
+
+Orb supports prepaid credits, credit ledgers, balance alerts, and product access workflows based on prepaid balances. It is not just a metering tool.
+
+The distinction is the integration model. Orb's documented product-access pattern uses credit balances, alerts, webhooks, and application-side policy. Autumn's state model is synchronous: call `check()` to read current credit, limit, and entitlement state, call `track()` to record usage, and keep reset behavior, rollovers, package rules, and usage history in the same system.
+
+Autumn also keeps event and usage history for billing state changes. The difference is emphasis: Orb's ledger and query tools are built for deep usage analysis, invoice calculation, and revenue workflows; Autumn's event history supports real-time application billing state.
+
+## Pricing Changes
+
+Both Orb and Autumn are useful when pricing changes often, but they optimize for different parts of the change.
+
+Orb has strong tools for usage-pricing iteration: versioned plans, migration previews, simulations, and metrics that can be recalculated from historical usage. This is useful when a pricing change depends on how usage events are queried, grouped, rated, and displayed on invoices.
+
+Autumn focuses on pricing changes that alter application billing state: which plan a customer is on, how many credits they get, what resets monthly, what resets on another interval, what rolls over, which features unlock, and what custom enterprise terms apply. This is useful when a pricing change needs to show up in the product as soon as the customer uses it.
+
+## Implementation Model
+
+With Orb, the typical model is:
+
+```text
+Application -> usage events -> Orb
+Orb -> metrics / pricing / credit ledger / invoices / alerts
+Your app -> Orb alerts + APIs -> product policy
+```
+
+With Autumn, the typical model is:
+
+```text
+Autumn -> plans / credits / usage / limits / entitlements / reset rules
+Your app -> Autumn check() / track() -> billing state reads and writes
+Autumn -> billing provider -> subscriptions / invoices / payments
+```
+
+## Sources
+
+- Autumn: [overview](https://docs.useautumn.com/welcome), [checking access](https://docs.useautumn.com/documentation/customers/check), [credit systems](https://docs.useautumn.com/documentation/modelling-pricing/credit-systems)
+- Orb: [what is Orb](https://docs.withorb.com/introduction), [prepaid credits](https://docs.withorb.com/product-catalog/prepurchase), [product access](https://docs.withorb.com/self-serve/product-access), [price changes](https://docs.withorb.com/product-catalog/price-changes), [dimensional pricing](https://docs.withorb.com/product-catalog/dimensional-pricing)
+
+## Last Updated
+
+2026-06-22

@@ -2,16 +2,16 @@
 "use client";
 
 import { AppEnv } from "@autumn/shared";
+import { Skeleton } from "@autumn/ui";
 import { Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
-
 import {
 	DropdownMenu,
 	DropdownMenuContent,
 	DropdownMenuItem,
 	DropdownMenuSeparator,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { PhosphorIcon } from "@/components/v2/icons/PhosphorIcon";
 import { useOrg } from "@/hooks/common/useOrg";
 import {
@@ -31,6 +31,7 @@ import { DeleteSandboxDialog } from "./env-dropdown/DeleteSandboxDialog";
 import { EditSandboxDialog } from "./env-dropdown/EditSandboxDialog";
 import { ExpandedEnvTrigger } from "./env-dropdown/ExpandedEnvTrigger";
 import { StaticEnvPill } from "./env-dropdown/StaticEnvPill";
+import { useSidebarContext } from "./SidebarContext";
 
 export const useEnvChange = () => {
 	const navigate = useNavigate();
@@ -55,9 +56,10 @@ export const useEnvChange = () => {
 
 export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 	const { org, isLoading } = useOrg();
-	const canSwitch = !isLoading && !!org?.deployed;
 	const activeSandbox = useActiveSandbox();
-	const { sandboxes } = useSandboxesQuery({ enabled: canSwitch });
+	const { sandboxes } = useSandboxesQuery({
+		enabled: !isLoading && !!org?.deployed,
+	});
 
 	const [isHovered, setIsHovered] = useState(false);
 	const [open, setOpen] = useState(false);
@@ -69,7 +71,20 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 		null,
 	);
 	const handleEnvChange = useEnvChange();
+	const { expanded } = useSidebarContext();
 
+	const isResolving = isLoading || !org;
+	const willRedirectToSandbox = !!org && !org.deployed && env === AppEnv.Live;
+
+	if (isResolving || willRedirectToSandbox) {
+		return (
+			<div className={cn("flex text-muted-foreground text-xs gap-1 px-3")}>
+				<Skeleton className={cn("h-6", expanded ? "w-full" : "w-7")} />
+			</div>
+		);
+	}
+
+	const canSwitch = !!org?.deployed;
 	if (!canSwitch) {
 		return (
 			<div className={cn("flex text-muted-foreground text-xs gap-1 px-3")}>

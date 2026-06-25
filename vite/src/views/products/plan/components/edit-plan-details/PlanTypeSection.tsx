@@ -1,99 +1,19 @@
 import {
-	type BillingInterval,
 	isPriceItem,
-	notNullish,
 	type ProductItem,
 	ProductItemInterval,
-	productV2ToBasePrice,
 	productV2ToPlanType,
 } from "@autumn/shared";
+import { PanelButton } from "@autumn/ui";
 import { CoinsIcon } from "@phosphor-icons/react";
-import { PanelButton } from "@/components/v2/buttons/PanelButton";
 import { IncludedUsageIcon } from "@/components/v2/icons/AutumnIcons";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { SheetSection } from "@/components/v2/sheets/InlineSheet";
 
-export const PlanTypeSection = ({
-	withSeparator = true,
-}: {
-	withSeparator?: boolean;
-}) => {
+export const PlanTypeSection = () => {
 	const { product, setProduct } = useProduct();
 
 	const planType = productV2ToPlanType({ product });
-
-	// if (!product.items) return null;
-
-	const basePrice = productV2ToBasePrice({ product });
-
-	const handleDeleteBasePrice = () => {
-		setProduct({
-			...product,
-			items: product.items.filter((item: ProductItem) => !isPriceItem(item)),
-		});
-	};
-
-	const getBasePriceIndex = () => {
-		return product.items.findIndex(
-			(item: ProductItem) =>
-				item.price === basePrice?.price && isPriceItem(item),
-		);
-	};
-
-	const setItem = (item: ProductItem) => {
-		const newItems = [...product.items];
-		newItems[getBasePriceIndex()] = item;
-		setProduct({
-			...product,
-			items: newItems,
-		});
-	};
-
-	const handleUpdateBasePrice = ({
-		amount = "",
-		interval,
-		intervalCount,
-	}: {
-		amount?: string;
-		interval?: BillingInterval;
-		intervalCount?: number;
-	}) => {
-		const newItems = [...product.items];
-
-		// Find base price item by isBasePrice flag, not by price match
-		const basePriceIndex = newItems.findIndex((item: ProductItem) =>
-			isPriceItem(item),
-		);
-
-		if (basePriceIndex !== -1) {
-			const newAmount =
-				amount === ""
-					? amount
-					: notNullish(amount)
-						? Number.parseFloat(amount ?? "")
-						: basePrice?.price;
-
-			newItems[basePriceIndex] = {
-				...newItems[basePriceIndex],
-				price: newAmount as number,
-				interval: interval as unknown as ProductItemInterval,
-				// 	? billingToItemInterval({ billingInterval: interval })
-				// 	: basePrice?.interval,
-				interval_count: interval ? intervalCount : basePrice?.interval_count,
-			};
-		} else {
-			newItems.push({
-				price: Number.parseFloat(amount ?? "") as number,
-				interval: interval as unknown as ProductItemInterval,
-				interval_count: intervalCount,
-			});
-		}
-
-		setProduct({
-			...product,
-			items: newItems,
-		});
-	};
 
 	return (
 		<SheetSection title="Select Plan Type">
@@ -103,7 +23,6 @@ export const PlanTypeSection = ({
 						<PanelButton
 							isSelected={planType === "free"}
 							onClick={() => {
-								// handleDeleteBasePrice();
 								setProduct({
 									...product,
 									planType: "free",

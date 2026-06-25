@@ -44,8 +44,34 @@ describe("getRateLimitType", () => {
 			getRateLimitType(createContext({ method: "POST", path: "/v1/track" })),
 		).toBe(RateLimitType.Track);
 		expect(
+			getRateLimitType(
+				createContext({ method: "POST", path: "/v1/track_tokens" }),
+			),
+		).toBe(RateLimitType.Track);
+		expect(
 			getRateLimitType(createContext({ method: "POST", path: "/v1/events" })),
 		).toBe(RateLimitType.Track);
+		expect(
+			getRateLimitType(
+				createContext({ method: "POST", path: "/v1/balances.track_tokens" }),
+			),
+		).toBe(RateLimitType.Track);
+	});
+
+	test("classifies batch track endpoints into the batch track bucket", () => {
+		expect(
+			getRateLimitType(
+				createContext({ method: "POST", path: "/v1/balances.batch_track" }),
+			),
+		).toBe(RateLimitType.BatchTrack);
+		expect(
+			getRateLimitType(
+				createContext({
+					method: "POST",
+					path: "/v1/balances.batch_track_tokens",
+				}),
+			),
+		).toBe(RateLimitType.BatchTrack);
 	});
 
 	test("classifies check endpoints into the check bucket", () => {
@@ -101,7 +127,7 @@ describe("getRateLimitType", () => {
 					path: "/v1/billing.open_customer_portal",
 				}),
 			),
-		).toBe(RateLimitType.Attach);
+		).toBe(RateLimitType.General);
 	});
 
 	test("classifies entities.get into its dedicated per-customer bucket", () => {

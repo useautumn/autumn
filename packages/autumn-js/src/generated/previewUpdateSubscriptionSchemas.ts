@@ -44,6 +44,11 @@ export const previewUpdateRecalculateBalancesSchema = z.object({
 	enabled: z.boolean(),
 });
 
+export const previewUpdateCarryOverUsagesSchema = z.object({
+	enabled: z.boolean(),
+	featureIds: z.union([z.array(z.string()), z.undefined()]).optional(),
+});
+
 export const previewUpdateDiscountSchema = z.object({
 	amountOff: z.number(),
 	percentOff: z.union([z.number(), z.undefined()]).optional(),
@@ -323,6 +328,11 @@ export const previewUpdateRecalculateBalancesOutboundSchema = z.object({
 	enabled: z.boolean(),
 });
 
+export const previewUpdateCarryOverUsagesOutboundSchema = z.object({
+	enabled: z.boolean(),
+	feature_ids: z.union([z.array(z.string()), z.undefined()]).optional(),
+});
+
 export const previewUpdateParamsOutboundSchema = z.object({
 	customer_id: z.string(),
 	entity_id: z.union([z.string(), z.undefined()]).optional(),
@@ -351,6 +361,9 @@ export const previewUpdateParamsOutboundSchema = z.object({
 	no_billing_changes: z.union([z.boolean(), z.undefined()]).optional(),
 	recalculate_balances: z
 		.union([previewUpdateRecalculateBalancesOutboundSchema, z.undefined()])
+		.optional(),
+	carry_over_usages: z
+		.union([previewUpdateCarryOverUsagesOutboundSchema, z.undefined()])
 		.optional(),
 });
 
@@ -582,6 +595,9 @@ export const previewUpdateParamsSchema = z.object({
 	noBillingChanges: z.union([z.boolean(), z.undefined()]).optional(),
 	recalculateBalances: z
 		.union([previewUpdateRecalculateBalancesSchema, z.undefined()])
+		.optional(),
+	carryOverUsages: z
+		.union([previewUpdateCarryOverUsagesSchema, z.undefined()])
 		.optional(),
 });
 

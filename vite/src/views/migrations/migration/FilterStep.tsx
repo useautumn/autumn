@@ -1,6 +1,6 @@
 import type { CustomerFilter, MigrationFilter } from "@autumn/shared";
+import { Button } from "@autumn/ui";
 import { ArrowRightIcon } from "@phosphor-icons/react";
-import { Button } from "@/components/v2/buttons/Button";
 import { CustomerPreview, useCustomerCount } from "./filters/CustomerPreview";
 import { FilterForm } from "./filters/FilterForm";
 import { type StepId, StepIndicator } from "./StepIndicator";

@@ -1,26 +1,25 @@
 import { AppEnv } from "@autumn/shared";
+import { IconButton } from "@autumn/ui";
 import { ArrowRightIcon } from "@phosphor-icons/react";
 import { AutumnProvider } from "autumn-js/react";
 import { NuqsAdapter } from "nuqs/adapters/react-router/v7";
 import { useEffect, useRef, useState } from "react";
-import { Navigate, Outlet, useNavigate } from "react-router";
+import { Outlet } from "react-router";
 import { CustomToaster } from "@/components/general/CustomToaster";
-import { SandboxBanner } from "@/components/general/SandboxBanner";
-import { IconButton } from "@/components/v2/buttons/IconButton";
+import { SandboxBanner } from "@autumn/ui";
 import { PortalContainerContext } from "@/contexts/PortalContainerContext";
 import { useAutumnFlags } from "@/hooks/common/useAutumnFlags";
-import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { useGlobalErrorHandler } from "@/hooks/common/useGlobalErrorHandler";
-import { getLastSwitchedOrgId, useOrg } from "@/hooks/common/useOrg";
+import { useOrg } from "@/hooks/common/useOrg";
 import { useDevQuery } from "@/hooks/queries/useDevQuery";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
 import { useRewardsQuery } from "@/hooks/queries/useRewardsQuery";
-import { useSession } from "@/lib/auth-client";
+import { useFeatureFlags } from "@/hooks/useFeatureFlags";
 import { cn } from "@/lib/utils";
 import { useEnv } from "@/utils/envUtils";
 import CommandBar from "@/views/command-bar/CommandBar";
-import LoadingScreen from "@/views/general/LoadingScreen";
 import { useEventNames } from "@/views/customers/customer/analytics/hooks/useEventNames";
+import LoadingScreen from "@/views/general/LoadingScreen";
 import { InviteNotifications } from "@/views/general/notifications/InviteNotifications";
 import { DeployToProdDialog } from "@/views/main-sidebar/components/deploy-button/DeployToProdDialog";
 import { MainSidebar } from "@/views/main-sidebar/MainSidebar";
@@ -29,14 +28,9 @@ import { MobileTopBar } from "@/views/main-sidebar/MobileTopBar";
 import { AppContext } from "./AppContext";
 
 export function MainLayout() {
-	const env = useEnv();
-	const { data, isPending } = useSession();
-	const { org, isLoading: orgLoading } = useOrg();
 	const { handleApiError } = useGlobalErrorHandler();
 	const containerRef = useRef<HTMLDivElement>(null);
 	const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-
-	const navigate = useNavigate();
 
 	// Global error handler for API errors
 	useEffect(() => {
@@ -49,51 +43,6 @@ export function MainLayout() {
 		window.addEventListener("error", handleGlobalError);
 		return () => window.removeEventListener("error", handleGlobalError);
 	}, [handleApiError]);
-
-	// Redirect to sign in if no session
-	useEffect(() => {
-		if (!isPending && !data) {
-			navigate("/sign-in");
-		}
-	}, [isPending, data, navigate]);
-
-	// Redirect to sandbox if not deployed
-	useEffect(() => {
-		if (!orgLoading && org && !org.deployed && env !== AppEnv.Sandbox) {
-			const lastSwitchedId = getLastSwitchedOrgId();
-			if (lastSwitchedId && org.id !== lastSwitchedId) return;
-			const pathname = window.location.pathname;
-			const search = window.location.search;
-			navigate(`/sandbox${pathname}${search}`);
-		}
-	}, [orgLoading, org, env, navigate]);
-
-	if (isPending) {
-		return (
-			<AutumnProvider
-				backendUrl={import.meta.env.VITE_BACKEND_URL}
-				includeCredentials={true}
-			>
-				<div className="w-screen h-screen flex bg-outer-background">
-					<div className="hidden sm:flex">
-						<MainSidebar />
-					</div>
-					<div className="w-full h-screen flex flex-col overflow-hidden sm:py-3 sm:pr-3">
-						<div className="w-full h-full flex flex-col overflow-hidden sm:rounded-lg sm:border">
-							{env === AppEnv.Sandbox && <SandboxBanner />}
-							<div className="flex bg-background flex-col h-full">
-								<LoadingScreen />
-							</div>
-						</div>
-					</div>
-				</div>
-			</AutumnProvider>
-		);
-	}
-
-	if (!data) {
-		return <Navigate to="/sign-in" replace={true} />;
-	}
 
 	return (
 		<AutumnProvider
@@ -134,7 +83,7 @@ const MainContent = ({
 	onOpenMobileSidebar: () => void;
 }) => {
 	const env = useEnv();
-	const { org } = useOrg();
+	const { org, isLoading: orgLoading } = useOrg();
 	const [showDeployDialog, setShowDeployDialog] = useState(false);
 
 	useDevQuery();
@@ -143,6 +92,8 @@ const MainContent = ({
 	useFeaturesQuery();
 	useRewardsQuery();
 	useEventNames();
+
+	const showLoading = orgLoading || !org;
 
 	return (
 		<AppContext.Provider value={{}}>
@@ -185,7 +136,7 @@ const MainContent = ({
 						)}
 					>
 						<div className="w-full h-full justify-center">
-							<Outlet />
+							{showLoading ? <LoadingScreen /> : <Outlet />}
 						</div>
 					</div>
 				</div>

@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { Button, Skeleton } from "@autumn/ui";
 import {
 	ChevronDown,
 	Monitor,
@@ -11,8 +11,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { AdminHover } from "@/components/general/AdminHover";
-import { Button } from "@/components/v2/buttons/Button";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
 	DropdownMenu,
 	DropdownMenuContent,
@@ -24,21 +22,19 @@ import {
 	DropdownMenuSubContent,
 	DropdownMenuSubTrigger,
 	DropdownMenuTrigger,
-} from "@/components/v2/dropdowns/DropdownMenu";
+} from "@autumn/ui";
 import { useTheme } from "@/contexts/ThemeProvider";
-import { setLastSwitchedOrgId, useOrg } from "@/hooks/common/useOrg";
+import { useOrg, useSwitchActiveOrg } from "@/hooks/common/useOrg";
 import {
 	authClient,
 	useListOrganizations,
 	useSession,
 } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-import { useAxiosInstance } from "@/services/useAxiosInstance";
-import { useEnv } from "@/utils/envUtils";
+import { navigateTo } from "@/utils/genUtils";
 import { OrgLogo } from "../org-dropdown/components/OrgLogo";
 import { useMemberships } from "../org-dropdown/hooks/useMemberships";
 import { useSidebarContext } from "../SidebarContext";
-import { navigateTo } from "@/utils/genUtils";
 import { AdminDropdownItems } from "./AdminDropdownItems";
 import { CreateNewOrg } from "./CreateNewOrg";
 import { LogOutItem } from "./LogOutItem";
@@ -109,16 +105,15 @@ export const OrgDropdown = () => {
 										: "opacity-0 -translate-x-2 pointer-events-none w-0 m-0 p-0",
 								)}
 							>
-								<span className="text-muted-foreground max-w-24 truncate">{org?.name}</span>
+								<span className="text-muted-foreground max-w-24 truncate">
+									{org?.name}
+								</span>
 								<ChevronDown size={14} className="text-tertiary-foreground" />
 							</div>
 						</Button>
 					</DropdownMenuTrigger>
 				</AdminHover>
-				<DropdownMenuContent
-					align="start"
-					className="w-48"
-				>
+				<DropdownMenuContent align="start" className="w-48">
 					<AdminDropdownItems />
 					<DropdownMenuItem
 						className="flex justify-between w-full items-center gap-2 text-muted-foreground cursor-pointer"
@@ -222,10 +217,8 @@ export const OrgDropdown = () => {
 
 /** Switches the active org via client-side state update (no page reload). */
 export const useOrgSwitch = () => {
-	const queryClient = useQueryClient();
 	const navigate = useNavigate();
-	const axiosInstance = useAxiosInstance();
-	const env = useEnv();
+	const switchActiveOrg = useSwitchActiveOrg();
 
 	return async ({
 		orgId,
@@ -236,26 +229,8 @@ export const useOrgSwitch = () => {
 	}) => {
 		setLoading?.(true);
 		try {
-			await authClient.organization.setActive({
-				organizationId: orgId,
-			});
-
-			const { data: newOrg } = await axiosInstance.get("/organization");
-
-			if (newOrg?.id) setLastSwitchedOrgId(newOrg.id);
-
-			queryClient.setQueryData(["org", env], newOrg);
-			queryClient.invalidateQueries({ queryKey: ["org"] });
-
-			if (
-				newOrg &&
-				!newOrg.deployed &&
-				!window.location.pathname.includes("/sandbox")
-			) {
-				const pathname = window.location.pathname;
-				const search = window.location.search;
-				navigate(`/sandbox${pathname}${search}`);
-			}
+			await switchActiveOrg(orgId);
+			navigate("/");
 		} catch (error) {
 			toast.error(
 				error instanceof Error
