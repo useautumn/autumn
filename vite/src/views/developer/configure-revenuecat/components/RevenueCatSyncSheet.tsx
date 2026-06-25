@@ -1,5 +1,6 @@
 import {
 	Badge,
+	Button,
 	Checkbox,
 	Sheet,
 	SheetContent,
@@ -27,6 +28,7 @@ import { getBackendErr } from "@/utils/genUtils";
 interface RevenueCatSyncSheetProps {
 	open: boolean;
 	onOpenChange: (open: boolean) => void;
+	onEditRawMappings: () => void;
 }
 
 type SyncAction = "create" | "rename" | "in_sync";
@@ -49,6 +51,7 @@ const getPriceWarning = (item?: RCPreflightItem): string | null => {
 export function RevenueCatSyncSheet({
 	open,
 	onOpenChange,
+	onEditRawMappings,
 }: RevenueCatSyncSheetProps) {
 	const env = useEnv();
 	const { org } = useOrg();
@@ -188,6 +191,13 @@ export function RevenueCatSyncSheet({
 				</div>
 
 				<SheetFooter>
+					<Button
+						variant="skeleton"
+						className="col-span-2 w-full"
+						onClick={onEditRawMappings}
+					>
+						Edit raw mappings
+					</Button>
 					<ShortcutButton
 						variant="secondary"
 						className="w-full"
