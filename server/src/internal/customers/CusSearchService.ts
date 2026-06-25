@@ -26,9 +26,11 @@ import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { getOrgCusProductLimit } from "../misc/edgeConfig/orgLimitsStore.js";
 import type { CustomerListFilters } from "./customerListFilters.js";
 import {
+	type DashboardIntervalFilter,
 	type DashboardProductVersionFilter,
 	isCustomDashboardProductFilter,
 	isVersionDashboardProductFilter,
+	parseDashboardIntervalFilter,
 	parseDashboardVersionFilter,
 } from "./getFullCusQuery.js";
 
@@ -79,6 +81,18 @@ const dashboardProductFilterToRawSql = (
 	isCustomDashboardProductFilter(filter)
 		? sql`(${customerProducts.product_id} = ${filter.productId} AND ${customerProducts.is_custom} = true)`
 		: sql`(${products.id} = ${filter.productId} AND ${products.version} = ${filter.version})`;
+
+const dashboardIntervalFilterToRawSql = (intervals: DashboardIntervalFilter[]) =>
+	sql`EXISTS (
+		SELECT 1
+		FROM customer_prices cpr_interval
+		JOIN prices p_interval ON p_interval.id = cpr_interval.price_id
+		WHERE cpr_interval.customer_product_id = ${customerProducts.id}
+			AND p_interval.config->>'interval' = ANY(ARRAY[${sql.join(
+				intervals.map((interval) => sql`${interval}`),
+				sql`, `,
+			)}])
+	)`;
 
 type SearchFilters = CustomerListFilters;
 
@@ -967,8 +981,14 @@ const buildSearchPredicates = ({
 	const hasNumberedVersion = productVersionFilters.some(
 		isVersionDashboardProductFilter,
 	);
+	const intervalFilters = parseDashboardIntervalFilter(filters?.interval);
 
-	if (statuses.length === 0 && productVersionFilters.length === 0) {
+	const hasProductLevelFilter =
+		statuses.length > 0 ||
+		productVersionFilters.length > 0 ||
+		intervalFilters.length > 0;
+
+	if (!hasProductLevelFilter) {
 		return {
 			kind: "default",
 			where: and(...cusBaseClauses),
@@ -1014,6 +1034,11 @@ const buildSearchPredicates = ({
 				)})`
 			: null;
 
+	const intervalRaw =
+		intervalFilters.length > 0
+			? dashboardIntervalFilterToRawSql(intervalFilters)
+			: null;
+
 	const hasNonActiveStatus = statuses.some(
 		(status) => status !== "active" && status !== "",
 	);
@@ -1025,6 +1050,7 @@ const buildSearchPredicates = ({
 		shouldApplyActiveFilter ? activeProdRaw : null,
 		statusRaw,
 		versionRaw,
+		intervalRaw,
 	].filter((c): c is NonNullable<typeof c> => c !== null);
 
 	const whereRaw =
@@ -1041,6 +1067,9 @@ const buildSearchPredicates = ({
 			? or(
 					...productVersionFilters.map(dashboardProductFilterToDrizzleSql),
 				)
+			: undefined,
+		intervalFilters.length > 0
+			? dashboardIntervalFilterToRawSql(intervalFilters)
 			: undefined,
 		statuses.length > 0
 			? or(
