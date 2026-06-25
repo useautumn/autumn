@@ -105,6 +105,12 @@ export const ConfigureStripe = () => {
 						) : (
 							<CardDescription>
 								{description}
+								{!anyConnected && (
+									<span className="text-muted-foreground">
+										{" "}
+										You're currently connected to Autumn's default sandbox.
+									</span>
+								)}
 								{dashboardUrl && (
 									<span className="text-muted-foreground">
 										{" "}
@@ -125,43 +131,13 @@ export const ConfigureStripe = () => {
 
 					<CardContent className="flex flex-col">
 						<StripeChannelCell
-							title="Secret Key"
-							icon={<KeyIcon />}
-							withBorder
-							subtitle={
-								secretKeyConnected
-									? connectedSubtitle
-									: "Your Stripe API secret key, used for all operations."
-							}
-							connected={secretKeyConnected}
-							action={
-								secretKeyConnected ? (
-									<DisconnectStripeDialog
-										channel="secret_key"
-										label="Disconnect"
-										icon={<LinkBreakIcon />}
-										onSuccess={mutate}
-									/>
-								) : (
-									<Button
-										variant="primary"
-										className="w-full gap-1.5"
-										onClick={() => setShowConnectDialog(true)}
-									>
-										<KeyIcon />
-										Connect
-									</Button>
-								)
-							}
-						/>
-
-						<StripeChannelCell
 							title="OAuth"
 							icon={<PlugsConnectedIcon />}
+							withBorder
 							subtitle={
 								oauthConnected
 									? connectedSubtitle
-									: "Sign in with Stripe Connect. Using this method means the Autumn team can access your account for support."
+									: "Sign in with Stripe Connect. Recommended."
 							}
 							connected={oauthConnected}
 							action={
@@ -184,6 +160,36 @@ export const ConfigureStripe = () => {
 										) : (
 											<PlugsConnectedIcon />
 										)}
+										Connect
+									</Button>
+								)
+							}
+						/>
+
+						<StripeChannelCell
+							title="Secret Key"
+							icon={<KeyIcon />}
+							subtitle={
+								secretKeyConnected
+									? connectedSubtitle
+									: "Your Stripe API secret key, used for all operations."
+							}
+							connected={secretKeyConnected}
+							action={
+								secretKeyConnected ? (
+									<DisconnectStripeDialog
+										channel="secret_key"
+										label="Disconnect"
+										icon={<LinkBreakIcon />}
+										onSuccess={mutate}
+									/>
+								) : (
+									<Button
+										variant="primary"
+										className="w-full gap-1.5"
+										onClick={() => setShowConnectDialog(true)}
+									>
+										<KeyIcon />
 										Connect
 									</Button>
 								)
