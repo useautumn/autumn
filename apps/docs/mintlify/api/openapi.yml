@@ -17712,6 +17712,10 @@ paths:
                     type: string
                   additionalProperties: {}
                   description: Additional properties to attach to this usage event.
+                timestamp:
+                  type: number
+                  description: Unix timestamp in milliseconds to use for the usage event. Defaults
+                    to the current time.
                 async:
                   type: boolean
                   description: If true, enqueue the event for asynchronous processing and return
@@ -18142,6 +18146,10 @@ paths:
                     type: string
                   additionalProperties: {}
                   description: Additional properties to attach to this usage event.
+                timestamp:
+                  type: number
+                  description: Unix timestamp in milliseconds to use for the usage event. Defaults
+                    to the current time.
                 async:
                   type: boolean
                   description: If true, enqueue the event for asynchronous processing and return
@@ -18533,6 +18541,10 @@ paths:
                       type: string
                     additionalProperties: {}
                     description: Additional properties to attach to this usage event.
+                  timestamp:
+                    type: number
+                    description: Unix timestamp in milliseconds to use for the usage event. Defaults
+                      to the current time.
                   async:
                     type: boolean
                     description: If true, enqueue the event for asynchronous processing and return
