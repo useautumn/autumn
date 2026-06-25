@@ -9,7 +9,7 @@ import {
 	DropdownMenuSeparator,
 	Skeleton,
 } from "@autumn/ui";
-import { Check, Pencil, Trash2 } from "lucide-react";
+import { Check, Pencil, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { PhosphorIcon } from "@/components/v2/icons/PhosphorIcon";
@@ -201,7 +201,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 						);
 					})}
 
-					{/* <DropdownMenuSeparator />
+					<DropdownMenuSeparator />
 					<DropdownMenuItem
 						className="flex items-center gap-2 text-muted-foreground"
 						onClick={() => {
@@ -211,7 +211,7 @@ export const EnvDropdown = ({ env }: { env: AppEnv }) => {
 					>
 						<Plus size={12} className="!h-3 w-3 shrink-0" />
 						<span>New sandbox</span>
-					</DropdownMenuItem> */}
+					</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
 			<CreateSandboxDialog open={createOpen} onOpenChange={setCreateOpen} />
