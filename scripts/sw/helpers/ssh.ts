@@ -34,17 +34,12 @@ export function ensureSshKeyLoaded(): void {
 }
 
 /**
- * Shared ssh options for every connection sw makes. ControlMaster multiplexes all
- * ssh/scp/git calls over ONE connection; accept-new skips the host-key prompt for
- * fresh boxes.
+ * Shared ssh options for every connection sw makes. No ControlMaster — the agent
+ * already gives password-once, and multiplexing breaks when a just-created box
+ * isn't ssh-ready yet ("failed to connect to new control master"). accept-new
+ * skips the host-key prompt; AddKeysToAgent caches the key after first use.
  */
 export const SSH_OPTS = [
-	"-o",
-	"ControlMaster=auto",
-	"-o",
-	"ControlPath=/tmp/sw-cm-%C",
-	"-o",
-	"ControlPersist=300",
 	"-o",
 	"StrictHostKeyChecking=accept-new",
 	"-o",

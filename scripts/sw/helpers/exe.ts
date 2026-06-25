@@ -80,6 +80,22 @@ export function removeVm(name: string): void {
 	}
 }
 
+/** Poll ssh until a just-created box accepts connections (it isn't ready at once). */
+export function vmWaitReady(sshDest: string): void {
+	for (let attempt = 0; attempt < 40; attempt++) {
+		const res = sh("ssh", [
+			...SSH_OPTS,
+			"-o",
+			"ConnectTimeout=5",
+			sshDest,
+			"true",
+		]);
+		if (res.code === 0) return;
+		Bun.sleepSync(2000);
+	}
+	fatal(`box ${sshDest} never became ssh-ready`);
+}
+
 /** Run a command on the VM, streaming output. */
 export function vmExec(sshDest: string, command: string): number {
 	return shInherit("ssh", [...SSH_OPTS, sshDest, command]);

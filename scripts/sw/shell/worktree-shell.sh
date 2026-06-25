@@ -60,10 +60,9 @@ elif [ -z "${SSH_AUTH_SOCK:-}" ] && command -v launchctl >/dev/null 2>&1; then
 fi
 
 # exec $SHELL on the REMOTE side resolves to the devbox's shell (not this wrapper).
-# ControlMaster reuses one connection across panes, so the key passphrase (if any)
-# is asked once, not per pane.
+# The agent (sw started it) makes this passwordless; no ControlMaster (it breaks
+# against a box that isn't ssh-ready yet).
 exec ssh -t \
-  -o ControlMaster=auto -o ControlPath=/tmp/sw-cm-%C -o ControlPersist=300 \
   -o StrictHostKeyChecking=accept-new -o AddKeysToAgent=yes \
   -o ServerAliveInterval=30 -o ServerAliveCountMax=3 "$host" \
   "cd '${path}' 2>/dev/null || cd; exec \"\$SHELL\" -l"
