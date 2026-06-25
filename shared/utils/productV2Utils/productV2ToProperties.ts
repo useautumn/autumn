@@ -25,11 +25,15 @@ export const productV2ToProperties = ({
 	// 1. Is free
 	const isFree = items.every(isFeatureItem);
 
+	const pricedItems = items.filter(
+		(i) => isPriceItem(i) || isFeaturePriceItem(i),
+	);
 	const isOneOff =
 		!isFree &&
-		items
-			.filter((i) => isPriceItem(i) || isFeaturePriceItem(i))
-			.some((i) => i.interval === null);
+		pricedItems.length > 0 &&
+		pricedItems.every(
+			(i) => itemToBillingInterval({ item: i }) === BillingInterval.OneOff,
+		);
 
 	// Get largest interval
 	// Interval group:
