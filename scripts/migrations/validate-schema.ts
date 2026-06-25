@@ -2,8 +2,13 @@ import { initDrizzle } from "@server/db/initDrizzle";
 import { validateDbSchema } from "@server/db/validateDbSchema";
 import { validateSqlFunctions } from "@server/db/validateSqlFunctions";
 
+const maxConnections = Number(process.env.DB_MAX_CONNECTIONS ?? 5);
+const schemaValidationConcurrency = Number(
+	process.env.DB_SCHEMA_VALIDATION_CONCURRENCY ?? maxConnections,
+);
+
 const { db } = initDrizzle({
-	maxConnections: Number(process.env.DB_MAX_CONNECTIONS ?? 5),
+	maxConnections,
 });
 
 // Check if --validate-content flag is passed
@@ -11,7 +16,7 @@ const validateContent = process.argv.includes("--validate-content");
 
 try {
 	console.log("Validating database schema...");
-	await validateDbSchema({ db });
+	await validateDbSchema({ db, concurrency: schemaValidationConcurrency });
 	console.log("✅ Database schema validated successfully\n");
 
 	console.log(
