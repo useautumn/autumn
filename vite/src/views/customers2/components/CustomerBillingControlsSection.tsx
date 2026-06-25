@@ -93,7 +93,7 @@ export function CustomerBillingControlsSection() {
 		});
 		for (const planProduct of planProducts) {
 			for (const key of BILLING_CONTROL_KEYS) {
-				for (const control of planProduct[key] ?? []) {
+				for (const control of planProduct.product[key] ?? []) {
 					const overridden = (billingControls[key] ?? []).some(
 						(editable) => editable.feature_id === control.feature_id,
 					);
@@ -120,7 +120,7 @@ export function CustomerBillingControlsSection() {
 			const planItems = isEntityView
 				? []
 				: planProducts
-						.flatMap((planProduct) => planProduct[key] ?? [])
+						.flatMap((planProduct) => planProduct.product[key] ?? [])
 						.filter((control) =>
 							planControlSource.has(`${key}:${control.feature_id ?? ""}`),
 						);

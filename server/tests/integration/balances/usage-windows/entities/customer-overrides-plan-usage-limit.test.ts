@@ -26,6 +26,17 @@ test(
 		const prod = products.base({
 			id: "customer-overrides-plan-usage-limit",
 			items: [items.monthlyMessages({ includedUsage: 1000 })],
+			// Plan default usage_limit: 5.
+			billingControls: {
+				usage_limits: [
+					{
+						feature_id: TestFeature.Messages,
+						enabled: true,
+						limit: 5,
+						interval: ResetInterval.Month,
+					},
+				],
+			},
 		});
 
 		const customerId = "customer-overrides-plan-usage-limit-1";
@@ -35,22 +46,7 @@ test(
 				s.customer({ testClock: false }),
 				s.products({ list: [prod] }),
 			],
-			actions: [
-				// Plan default usage_limit: 5.
-				s.billing.attach({
-					productId: prod.id,
-					billingControls: {
-						usage_limits: [
-							{
-								feature_id: TestFeature.Messages,
-								enabled: true,
-								limit: 5,
-								interval: ResetInterval.Month,
-							},
-						],
-					},
-				}),
-			],
+			actions: [s.billing.attach({ productId: prod.id })],
 		});
 
 		// Customer overrides with a looser cap of 100.

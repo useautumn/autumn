@@ -1,5 +1,7 @@
 import {
 	BillingInterval,
+	type CustomerBillingControls,
+	type CustomerBillingControlsParams,
 	type FreeTrial,
 	FreeTrialDuration,
 	type ProductItem,
@@ -28,6 +30,7 @@ const base = ({
 	group,
 	trialDays,
 	freeTrial,
+	billingControls,
 }: {
 	items: ProductItem[];
 	id?: string;
@@ -41,9 +44,13 @@ const base = ({
 		cardRequired?: boolean;
 		uniqueFingerprint?: boolean;
 	};
+	billingControls?: CustomerBillingControlsParams;
 }): ProductV2 => ({
 	...constructRawProduct({ id, items, isAddOn, group }),
 	is_default: isDefault,
+	...(billingControls
+		? { billing_controls: billingControls as CustomerBillingControls }
+		: {}),
 	...(freeTrial
 		? {
 				free_trial: {
@@ -344,17 +351,23 @@ const recurringAddOn = ({
 const oneOffAddOn = ({
 	items,
 	id = "one-off-addon",
+	billingControls,
 }: {
 	items: ProductItem[];
 	id?: string;
-}): ProductV2 =>
-	constructProduct({
+	billingControls?: CustomerBillingControlsParams;
+}): ProductV2 => ({
+	...constructProduct({
 		id,
 		items: [...items],
 		type: "one_off",
 		isDefault: false,
 		isAddOn: true,
-	});
+	}),
+	...(billingControls
+		? { billing_controls: billingControls as CustomerBillingControls }
+		: {}),
+});
 
 export const products = {
 	base,

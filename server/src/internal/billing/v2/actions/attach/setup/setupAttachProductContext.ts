@@ -14,7 +14,6 @@ import {
 	type PatchContext,
 } from "@autumn/shared";
 import type { AutumnContext } from "@/honoUtils/HonoEnv";
-import { applyCustomizeBillingControls } from "@/internal/billing/v2/setup/applyCustomizeBillingControls";
 import { setupPatchContext } from "@/internal/billing/v2/setup/patch";
 import { initFullCustomerProduct } from "@/internal/billing/v2/utils/initFullCustomerProduct/initFullCustomerProduct";
 import { getEntsWithFeature } from "@/internal/products/entitlements/entitlementUtils";
@@ -159,15 +158,10 @@ export const setupAttachProductContext = async ({
 	const { productContext } = contextOverride;
 	if (productContext) return productContext;
 
-	const productContextResult = await resolveAttachProductContext({
+	return await resolveAttachProductContext({
 		ctx,
 		params,
 		fullCustomer,
 		currentEpochMs,
-	});
-
-	return applyCustomizeBillingControls({
-		productContext: productContextResult,
-		customize: params.customize,
 	});
 };

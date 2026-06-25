@@ -4,16 +4,17 @@ import { pickStricterSpendLimit } from "../../models/cusModels/billingControls/s
 import { pickStricterUsageLimit } from "../../models/cusModels/billingControls/usageLimit.js";
 import type { FullCustomer } from "../../models/cusModels/fullCusModel.js";
 import type { FullSubject } from "../../models/cusModels/fullSubject/fullSubjectModel.js";
-import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 import { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
+import type { FullCusProduct } from "../../models/cusProductModels/cusProductModels.js";
 
 type Comparator = (left: never, right: never) => unknown;
 
-const MOST_RESTRICTIVE_BY_KEY: Partial<Record<BillingControlKey, Comparator>> = {
-	usage_limits: pickStricterUsageLimit as Comparator,
-	spend_limits: pickStricterSpendLimit as Comparator,
-	overage_allowed: pickStricterOverageAllowed as Comparator,
-};
+const MOST_RESTRICTIVE_BY_KEY: Partial<Record<BillingControlKey, Comparator>> =
+	{
+		usage_limits: pickStricterUsageLimit as Comparator,
+		spend_limits: pickStricterSpendLimit as Comparator,
+		overage_allowed: pickStricterOverageAllowed as Comparator,
+	};
 
 const DEFAULT_PLAN_CONTROL_STATUSES = [
 	CusProductStatus.Active,
@@ -54,7 +55,7 @@ export const getPlanBillingControlProducts = ({
 				right.id.localeCompare(left.id),
 		);
 
-export const findPlanBillingControl = <
+export const findPlanBillingControlWithProduct = <
 	TControl extends { feature_id?: string },
 	TKey extends BillingControlKey,
 >({
@@ -69,27 +70,50 @@ export const findPlanBillingControl = <
 	matches: (control: TControl) => boolean;
 	now?: number;
 	inStatuses?: CusProductStatus[];
-}): TControl | undefined => {
+}): { control: TControl; customerProduct: FullCusProduct } | undefined => {
 	const mostRestrictive = MOST_RESTRICTIVE_BY_KEY[controlKey] as
 		| ((left: TControl, right: TControl) => TControl)
 		| undefined;
 
-	let winner: TControl | undefined;
+	let winner: { control: TControl; customerProduct: FullCusProduct } | undefined;
 	for (const customerProduct of getPlanBillingControlProducts({
 		customerProducts,
 		now,
 		inStatuses,
 	})) {
-		const controls = customerProduct[controlKey] as TControl[] | null | undefined;
+		const controls = customerProduct.product?.[controlKey] as
+			| TControl[]
+			| null
+			| undefined;
 		const control = controls?.find(matches);
 		if (!control) continue;
-		if (!mostRestrictive) return control;
-		winner = winner ? mostRestrictive(winner, control) : control;
+		if (!mostRestrictive) return { control, customerProduct };
+		winner =
+			winner && mostRestrictive(winner.control, control) === winner.control
+				? winner
+				: { control, customerProduct };
 	}
 	return winner;
 };
 
-export const resolveBillingControl = <
+export const findPlanBillingControl = <
+	TControl extends { feature_id?: string },
+	TKey extends BillingControlKey,
+>(args: {
+	customerProducts: FullCusProduct[];
+	controlKey: TKey;
+	matches: (control: TControl) => boolean;
+	now?: number;
+	inStatuses?: CusProductStatus[];
+}): TControl | undefined =>
+	findPlanBillingControlWithProduct<TControl, TKey>(args)?.control;
+
+/**
+ * Resolve a billing control and report which plan it came from.
+ * `customerProduct` is undefined when the control resolved from `controlLists`
+ * (entity/customer scope), set when it resolved from a plan's product columns.
+ */
+export const resolveBillingControlWithProduct = <
 	TControl extends { feature_id?: string },
 	TKey extends BillingControlKey,
 >({
@@ -106,15 +130,15 @@ export const resolveBillingControl = <
 	matches: (control: TControl) => boolean;
 	now?: number;
 	inStatuses?: CusProductStatus[];
-}) => {
+}): { control: TControl; customerProduct?: FullCusProduct } | undefined => {
 	for (const controls of controlLists) {
 		const control = controls?.find(matches);
-		if (control) return control;
+		if (control) return { control };
 	}
 
 	if (!customerProducts || !controlKey) return undefined;
 
-	return findPlanBillingControl<TControl, TKey>({
+	return findPlanBillingControlWithProduct<TControl, TKey>({
 		customerProducts,
 		controlKey,
 		matches,
@@ -122,6 +146,18 @@ export const resolveBillingControl = <
 		inStatuses,
 	});
 };
+
+export const resolveBillingControl = <
+	TControl extends { feature_id?: string },
+	TKey extends BillingControlKey,
+>(args: {
+	controlLists: Array<TControl[] | null | undefined>;
+	customerProducts?: FullCusProduct[];
+	controlKey?: TKey;
+	matches: (control: TControl) => boolean;
+	now?: number;
+	inStatuses?: CusProductStatus[];
+}) => resolveBillingControlWithProduct<TControl, TKey>(args)?.control;
 
 export const fullSubjectToPlanProducts = ({
 	fullSubject,

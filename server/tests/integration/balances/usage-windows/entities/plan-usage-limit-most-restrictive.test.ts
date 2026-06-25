@@ -47,11 +47,13 @@ test.concurrent(
 		const basePlan = products.base({
 			id: "plan-restrictive-base",
 			items: [items.monthlyMessages({ includedUsage: 100 })],
+			billingControls: usageLimit(5),
 		});
 		const addOnPlan = products.base({
 			id: "plan-restrictive-addon",
 			isAddOn: true,
 			items: [items.monthlyMessages({ includedUsage: 100 })],
+			billingControls: usageLimit(20),
 		});
 
 		const customerId = "plan-restrictive-1";
@@ -64,12 +66,10 @@ test.concurrent(
 			actions: [
 				s.billing.attach({
 					productId: basePlan.id,
-					billingControls: usageLimit(5),
 				}),
 				// Looser plan attached LAST -> recency-wins would pick 20.
 				s.billing.attach({
 					productId: addOnPlan.id,
-					billingControls: usageLimit(20),
 				}),
 			],
 		});

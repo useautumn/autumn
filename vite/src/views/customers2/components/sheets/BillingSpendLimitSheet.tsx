@@ -5,17 +5,20 @@ import {
 	type FullCustomer,
 	type SpendLimitType,
 } from "@autumn/shared";
-import { Button, FormLabel, Input, Switch } from "@autumn/ui";
-import { useState } from "react";
-import { toast } from "sonner";
-import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
+	Button,
+	FormLabel,
+	Input,
 	Select,
 	SelectContent,
 	SelectItem,
 	SelectTrigger,
 	SelectValue,
-} from "@/components/v2/selects/Select";
+	Switch,
+} from "@autumn/ui";
+import { useState } from "react";
+import { toast } from "sonner";
+import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import {
 	LayoutGroup,
 	SheetFooter,

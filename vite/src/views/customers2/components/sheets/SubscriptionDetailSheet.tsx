@@ -200,7 +200,7 @@ export function SubscriptionDetailSheet() {
 	};
 
 	const kindConfig = getPlanKindConfig(getCusProductKind(cusProduct));
-	const planBillingControls = billingControlsFromColumns(cusProduct);
+	const planBillingControls = billingControlsFromColumns(cusProduct.product);
 
 	return (
 		<div className="flex flex-col h-full overflow-y-auto">

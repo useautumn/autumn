@@ -114,8 +114,18 @@ export const getFeatureIconConfig = (
  * Returns the appropriate icon component for a given feature.
  * Uses getFeatureIconConfig as the single source of truth.
  */
-export const getFeatureIcon = ({ feature }: { feature: Feature }) => {
-	const config = getFeatureIconConfig(feature.type, feature.config?.usage_type);
+export const getFeatureIcon = ({
+	feature,
+	size = 16,
+}: {
+	feature: Feature;
+	size?: number;
+}) => {
+	const config = getFeatureIconConfig(
+		feature.type,
+		feature.config?.usage_type,
+		size,
+	);
 	return <span className={config.color}>{config.icon}</span>;
 };
 

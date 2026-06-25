@@ -39,7 +39,8 @@ const planProductWith = (key: string, items: unknown[]): FullCusProduct =>
 		access_starts_at: NOW - 1000,
 		ended_at: null,
 		created_at: NOW - 1000,
-		[key]: items.length ? items : null,
+		// Plan controls live on the joined product, not the customer_product.
+		product: { [key]: items.length ? items : null },
 	}) as unknown as FullCusProduct;
 
 const matchesFeature = (c: LeveledControl) => c.feature_id === FEATURE;

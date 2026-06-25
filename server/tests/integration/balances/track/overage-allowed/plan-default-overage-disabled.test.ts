@@ -26,6 +26,11 @@ test.concurrent(
 					price: 0.5,
 				}),
 			],
+			billingControls: {
+				overage_allowed: [
+					{ feature_id: TestFeature.Messages, enabled: false },
+				],
+			},
 		});
 
 		const { autumnV2_1, customerId } = await initScenario({
@@ -37,11 +42,6 @@ test.concurrent(
 			actions: [
 				s.billing.attach({
 					productId: prod.id,
-					billingControls: {
-						overage_allowed: [
-							{ feature_id: TestFeature.Messages, enabled: false },
-						],
-					},
 				}),
 			],
 		});

@@ -1,9 +1,8 @@
 /**
  * Billing-control resolution precedence: entity > customer > plan.
  *
- * Plan-level controls (snapshotted onto the customer product) are a FALLBACK —
- * they must NOT override a customer-level or entity-level control for the same
- * feature.
+ * Plan-level controls (read from the joined product) are a FALLBACK — they must
+ * NOT override a customer-level or entity-level control for the same feature.
  *
  * Covers every control type that resolves through the shared
  * `resolveBillingControl` chokepoint with the entity > customer > plan shape:
@@ -47,7 +46,9 @@ const planProduct = (key: string, controls: Record<string, unknown>[]) =>
 		access_starts_at: NOW - 1000,
 		ended_at: null,
 		created_at: NOW - 1000,
-		[key]: controls.length ? controls : null,
+		customer_entitlements: [],
+		// Plan controls live on the joined product, not the customer_product.
+		product: { [key]: controls.length ? controls : null },
 	}) as unknown as FullSubject["customer_products"][number];
 
 const buildFullSubject = ({
@@ -66,6 +67,7 @@ const buildFullSubject = ({
 		customer: { [key]: customer ?? null },
 		customer_products: [planProduct(key, plan ?? [])],
 		aggregated_customer_products: [],
+		extra_customer_entitlements: [],
 	}) as unknown as FullSubject;
 
 const levelOf = (control: unknown) =>
