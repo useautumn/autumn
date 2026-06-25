@@ -23,11 +23,13 @@ test.concurrent(
 		const basePlan = products.base({
 			id: "plan-overage-restrictive-base",
 			items: [items.lifetimeMessages({ includedUsage: 100 })],
+			billingControls: overageAllowed(true),
 		});
 		const addOnPlan = products.base({
 			id: "plan-overage-restrictive-addon",
 			isAddOn: true,
 			items: [items.lifetimeMessages({ includedUsage: 100 })],
+			billingControls: overageAllowed(false),
 		});
 
 		const { autumnV2_1, customerId } = await initScenario({
@@ -38,14 +40,8 @@ test.concurrent(
 			],
 			actions: [
 				// Base ENABLES overage; add-on (attached last) DISABLES it.
-				s.billing.attach({
-					productId: basePlan.id,
-					billingControls: overageAllowed(true),
-				}),
-				s.billing.attach({
-					productId: addOnPlan.id,
-					billingControls: overageAllowed(false),
-				}),
+				s.billing.attach({ productId: basePlan.id }),
+				s.billing.attach({ productId: addOnPlan.id }),
 			],
 		});
 

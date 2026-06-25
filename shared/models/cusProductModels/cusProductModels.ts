@@ -2,7 +2,6 @@ import { ApiVersion } from "@api/versionUtils/ApiVersion.js";
 import { BillingVersion } from "@models/billingModels/context/billingContext.js";
 import { ProcessorType } from "@models/genModels/genEnums.js";
 import { z } from "zod/v4";
-import { DbBillingControlsSchema } from "../cusModels/billingControls/customerBillingControls.js";
 import { CustomerSchema } from "../cusModels/cusModels.js";
 import { FreeTrialSchema } from "../productModels/freeTrialModels/freeTrialModels.js";
 import { ProductSchema } from "../productModels/productModels.js";
@@ -79,7 +78,6 @@ export const CusProductSchema = z.object({
 
 	previous_customer_product_id: z.string().nullish(),
 	on_trial_end: z.enum(["bill", "revert"]).nullish(),
-	...DbBillingControlsSchema.shape,
 });
 
 export const FullCusProductSchema = CusProductSchema.extend({

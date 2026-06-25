@@ -1,7 +1,7 @@
 /**
  * A plan-default overage_allowed:true enables overage on a free feature when the
- * customer/entity have no control of their own. The plan's snapshotted control
- * resolves through resolveBillingControl and overrides usage_allowed at
+ * customer/entity have no control of their own. The plan-level control on the
+ * product resolves through resolveBillingControl and overrides usage_allowed at
  * deduction-prep, so the balance may go negative.
  */
 
@@ -20,6 +20,9 @@ test.concurrent(
 		const prod = products.base({
 			id: "plan-default-overage-allowed",
 			items: [items.lifetimeMessages({ includedUsage: 100 })],
+			billingControls: {
+				overage_allowed: [{ feature_id: TestFeature.Messages, enabled: true }],
+			},
 		});
 
 		const { autumnV2_1, customerId } = await initScenario({
@@ -28,11 +31,6 @@ test.concurrent(
 			actions: [
 				s.billing.attach({
 					productId: prod.id,
-					billingControls: {
-						overage_allowed: [
-							{ feature_id: TestFeature.Messages, enabled: true },
-						],
-					},
 				}),
 			],
 		});

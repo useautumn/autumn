@@ -34,6 +34,7 @@ import { FieldInfo } from "@/components/general/form/field-info";
 import { FeatureSearchDropdown } from "@/components/v2/dropdowns/FeatureSearchDropdown";
 import { useProduct } from "@/components/v2/inline-custom-plan-editor/PlanEditorContext";
 import { useFeaturesQuery } from "@/hooks/queries/useFeaturesQuery";
+import { cn } from "@/lib/utils";
 import {
 	buildControlItem,
 	type ControlItem,
@@ -120,11 +121,16 @@ function FeatureField({
 		<form.Field name="feature_id">
 			{(field) => (
 				<div>
-					<FormLabel>Feature</FormLabel>
+					<FormLabel className="mb-0.5 text-tertiary-foreground text-xs">
+						Feature
+					</FormLabel>
 					<FeatureSearchDropdown
 						features={features}
 						value={field.state.value || null}
 						onSelect={(value) => field.handleChange(value)}
+						iconSize={14}
+						itemClassName="py-1 text-xs"
+						listClassName="max-h-44"
 						placeholder={
 							optional
 								? "Optional — leave empty for global"
@@ -172,7 +178,9 @@ function NumberFieldRow({
 		<form.Field name={name}>
 			{(field) => (
 				<div>
-					<FormLabel>{label}</FormLabel>
+					<FormLabel className="mb-0.5 text-tertiary-foreground text-xs">
+						{label}
+					</FormLabel>
 					<Input
 						type="number"
 						placeholder={placeholder}
@@ -214,7 +222,9 @@ function SelectFieldRow({
 		<form.Field name={name}>
 			{(field) => (
 				<div>
-					<FormLabel>{label}</FormLabel>
+					<FormLabel className="mb-0.5 text-tertiary-foreground text-xs">
+						{label}
+					</FormLabel>
 					<Select
 						value={field.state.value}
 						onValueChange={(value) =>
@@ -242,8 +252,8 @@ function SelectFieldRow({
 
 function AutoTopupFields({ form }: { form: UsePlanBillingControlForm }) {
 	return (
-		<div className="space-y-4">
-			<div className="grid grid-cols-2 gap-3">
+		<div className="space-y-2.5">
+			<div className="grid grid-cols-2 gap-2.5">
 				<NumberFieldRow
 					form={form}
 					name="threshold"
@@ -260,7 +270,7 @@ function AutoTopupFields({ form }: { form: UsePlanBillingControlForm }) {
 				/>
 			</div>
 
-			<div className="flex flex-col gap-3">
+			<div className="flex flex-col gap-2.5">
 				<form.Field name="has_purchase_limit">
 					{(field) => (
 						<div className="flex items-center justify-between">
@@ -275,7 +285,7 @@ function AutoTopupFields({ form }: { form: UsePlanBillingControlForm }) {
 				<form.Subscribe selector={(state) => state.values.has_purchase_limit}>
 					{(hasPurchaseLimit) =>
 						hasPurchaseLimit ? (
-							<div className="grid grid-cols-3 gap-3">
+							<div className="grid grid-cols-3 gap-2.5">
 								<NumberFieldRow
 									form={form}
 									name="purchase_limit_limit"
@@ -319,7 +329,7 @@ function AutoTopupFields({ form }: { form: UsePlanBillingControlForm }) {
 
 function SpendLimitFields({ form }: { form: UsePlanBillingControlForm }) {
 	return (
-		<div className="flex flex-col gap-3">
+		<div className="flex flex-col gap-2.5">
 			<NumberFieldRow
 				form={form}
 				name="overage_limit"
@@ -333,7 +343,7 @@ function SpendLimitFields({ form }: { form: UsePlanBillingControlForm }) {
 
 function UsageLimitFields({ form }: { form: UsePlanBillingControlForm }) {
 	return (
-		<div className="grid grid-cols-2 gap-3">
+		<div className="grid grid-cols-2 gap-2.5">
 			<NumberFieldRow
 				form={form}
 				name="usage_limit"
@@ -354,11 +364,13 @@ function UsageLimitFields({ form }: { form: UsePlanBillingControlForm }) {
 
 function UsageAlertFields({ form }: { form: UsePlanBillingControlForm }) {
 	return (
-		<div className="flex flex-col gap-3">
+		<div className="flex flex-col gap-2.5">
 			<form.Field name="alert_name">
 				{(field) => (
 					<div>
-						<FormLabel>Name</FormLabel>
+						<FormLabel className="mb-0.5 text-tertiary-foreground text-xs">
+							Name
+						</FormLabel>
 						<Input
 							type="text"
 							placeholder="Optional"
@@ -369,7 +381,7 @@ function UsageAlertFields({ form }: { form: UsePlanBillingControlForm }) {
 					</div>
 				)}
 			</form.Field>
-			<div className="grid grid-cols-2 gap-3">
+			<div className="grid grid-cols-2 gap-2.5">
 				<form.Subscribe selector={(state) => state.values.threshold_type}>
 					{(thresholdType) => (
 						<NumberFieldRow
@@ -466,7 +478,7 @@ function PlanBillingControlForm({
 		controlKey === "spend_limits" || controlKey === "usage_alerts";
 
 	return (
-		<div className="space-y-4 rounded-lg border bg-background p-3">
+		<div className="space-y-3 rounded-lg border bg-background p-3">
 			<div className="flex items-center justify-between gap-3">
 				<div className="font-medium text-sm">
 					{item ? "Edit" : "Add"} {CONTROL_LABELS[controlKey].toLowerCase()}
@@ -494,11 +506,12 @@ function PlanBillingControlForm({
 
 			<ControlTypeFields controlKey={controlKey} form={form} />
 
-			<div className="flex justify-between gap-2 pt-1">
+			<div className="flex justify-between gap-2">
 				<div>
 					{onDelete && (
 						<Button
 							variant="ghost"
+							size="sm"
 							className="text-destructive hover:text-destructive"
 							onClick={onDelete}
 						>
@@ -507,17 +520,23 @@ function PlanBillingControlForm({
 					)}
 				</div>
 				<div className="flex gap-2">
-					<Button variant="secondary" onClick={onCancel}>
+					<Button variant="secondary" size="sm" onClick={onCancel}>
 						Cancel
 					</Button>
-					<Button onClick={() => form.handleSubmit()}>Save</Button>
+					<Button size="sm" onClick={() => form.handleSubmit()}>
+						Save
+					</Button>
 				</div>
 			</div>
 		</div>
 	);
 }
 
-export function PlanBillingControlsSection() {
+export function PlanBillingControlsSection({
+	hideHeader = false,
+}: {
+	hideHeader?: boolean;
+} = {}) {
 	const { product, setProduct } = useProduct();
 	const { features = [] } = useFeaturesQuery();
 	const [editing, setEditing] = useState<{
@@ -585,36 +604,49 @@ export function PlanBillingControlsSection() {
 		);
 	};
 
+	const addMenu = ({ fullWidth }: { fullWidth?: boolean }) => (
+		<DropdownMenu>
+			<DropdownMenuTrigger asChild>
+				<Button
+					variant="secondary"
+					size={fullWidth ? "sm" : "mini"}
+					className={cn("gap-2", fullWidth && "w-full")}
+				>
+					<PlusIcon className="size-3.5" />
+					Add billing control
+				</Button>
+			</DropdownMenuTrigger>
+			<DropdownMenuContent
+				align={fullWidth ? "start" : "end"}
+				className={cn(fullWidth && "w-(--anchor-width)")}
+			>
+				{Object.entries(CONTROL_LABELS).map(([key, label]) => (
+					<DropdownMenuItem
+						key={key}
+						onClick={() => setEditing({ key: key as BillingControlKey })}
+					>
+						{label}
+					</DropdownMenuItem>
+				))}
+			</DropdownMenuContent>
+		</DropdownMenu>
+	);
+
 	return (
 		<div className="space-y-3">
-			<div className="flex items-center justify-between gap-3">
-				<div className="min-w-0">
-					<div className="font-medium text-foreground text-sm">
-						Billing controls
+			{!hideHeader && (
+				<div className="flex items-center justify-between gap-3">
+					<div className="min-w-0">
+						<div className="font-medium text-foreground text-sm">
+							Billing controls
+						</div>
+						<div className="text-tertiary-foreground text-xs">
+							Default controls applied when this plan is attached.
+						</div>
 					</div>
-					<div className="text-tertiary-foreground text-xs">
-						Default controls applied when this plan is attached.
-					</div>
+					{addMenu({})}
 				</div>
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild>
-						<Button variant="secondary" size="mini" className="gap-2">
-							<PlusIcon className="size-3.5" />
-							Add
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent align="end">
-						{Object.entries(CONTROL_LABELS).map(([key, label]) => (
-							<DropdownMenuItem
-								key={key}
-								onClick={() => setEditing({ key: key as BillingControlKey })}
-							>
-								{label}
-							</DropdownMenuItem>
-						))}
-					</DropdownMenuContent>
-				</DropdownMenu>
-			</div>
+			)}
 
 			<AnimatePresence initial={false}>
 				{isAdding && (
@@ -651,10 +683,14 @@ export function PlanBillingControlsSection() {
 					renderEditingRow={renderForm}
 				/>
 			) : (
-				<div className="rounded-lg border bg-muted/30 px-3 py-4 text-tertiary-foreground text-sm">
-					No plan-level billing controls configured
-				</div>
+				!hideHeader && (
+					<div className="rounded-lg border bg-muted/30 px-3 py-4 text-tertiary-foreground text-sm">
+						No plan-level billing controls configured
+					</div>
+				)
 			)}
+
+			{hideHeader && addMenu({ fullWidth: true })}
 		</div>
 	);
 }

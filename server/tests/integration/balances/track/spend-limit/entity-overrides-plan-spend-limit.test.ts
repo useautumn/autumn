@@ -35,6 +35,15 @@ test.concurrent(
 					entityFeatureId: TestFeature.Users,
 				}),
 			],
+			billingControls: {
+				spend_limits: [
+					{
+						feature_id: TestFeature.Messages,
+						enabled: true,
+						overage_limit: 50,
+					},
+				],
+			},
 		});
 
 		const { autumnV2_1, customerId, entities } = await initScenario({
@@ -47,15 +56,6 @@ test.concurrent(
 			actions: [
 				s.billing.attach({
 					productId: perEntityProduct.id,
-					billingControls: {
-						spend_limits: [
-							{
-								feature_id: TestFeature.Messages,
-								enabled: true,
-								overage_limit: 50,
-							},
-						],
-					},
 				}),
 			],
 		});

@@ -15,7 +15,7 @@
  * Track 90 on the ENTITY -> aggregate 150 -> 60 (= 40% left), crosses 40%.
  *
  * Variant 3a: alert at the customer tier (customers.update).
- * Variant 3b: alert at the plan tier (attach billingControls snapshot).
+ * Variant 3b: alert at the plan tier (plan-level controls on the product).
  * Both: alert fires with NO entity_id; no entity-scoped event fires.
  */
 
@@ -29,6 +29,7 @@ import {
 	waitForWebhook,
 } from "@tests/integration/utils/svixWebhookTestUtils.js";
 import { TestFeature } from "@tests/setup/v2Features.js";
+import type { CustomerBillingControls } from "@autumn/shared";
 import { items } from "@tests/utils/fixtures/items.js";
 import { products } from "@tests/utils/fixtures/products.js";
 import { timeout } from "@tests/utils/genUtils.js";
@@ -90,7 +91,7 @@ const fortyPercentAlert = {
 	enabled: true,
 };
 
-const buildProduct = (id: string) =>
+const buildProduct = (id: string, billingControls?: CustomerBillingControls) =>
 	products.base({
 		id,
 		items: [
@@ -100,6 +101,7 @@ const buildProduct = (id: string) =>
 				entityFeatureId: TestFeature.Users,
 			}),
 		],
+		billingControls,
 	});
 
 test(`${chalk.yellowBright("inherited-3a: customer alert fires on an entity track (no entity_id, aggregate scope)")}`, async () => {
@@ -152,7 +154,9 @@ test(`${chalk.yellowBright("inherited-3a: customer alert fires on an entity trac
 });
 
 test(`${chalk.yellowBright("inherited-3b: plan-default alert fires on an entity track (no entity_id, aggregate scope)")}`, async () => {
-	const prod = buildProduct("inherited-entity-track-plan");
+	const prod = buildProduct("inherited-entity-track-plan", {
+		usage_alerts: [fortyPercentAlert],
+	});
 	const customerId = "usage-alert-inherited-plan-1";
 	const { autumnV2_1, entities } = await initScenario({
 		customerId,
@@ -161,12 +165,7 @@ test(`${chalk.yellowBright("inherited-3b: plan-default alert fires on an entity 
 			s.products({ list: [prod] }),
 			s.entities({ count: 1, featureId: TestFeature.Users }),
 		],
-		actions: [
-			s.billing.attach({
-				productId: prod.id,
-				billingControls: { usage_alerts: [fortyPercentAlert] },
-			}),
-		],
+		actions: [s.billing.attach({ productId: prod.id })],
 	});
 	const entityId = entities[0].id;
 

@@ -1,11 +1,18 @@
 import { notNullish, productV2ToBasePrice } from "@autumn/shared";
 import {
 	AreaCheckbox,
+	Checkbox,
 	Input,
 	SheetAccordion,
 	SheetAccordionItem,
+	Tooltip,
+	TooltipContent,
+	TooltipTrigger,
 } from "@autumn/ui";
+import { InfoIcon } from "@phosphor-icons/react";
 import { useState } from "react";
+import { useParams } from "react-router";
+import { hasBillingControls } from "@/components/billing-controls/BillingControlsDisplay";
 import {
 	useProduct,
 	useSheet,
@@ -20,10 +27,19 @@ import { PlanBillingControlsSection } from "./edit-plan-details/PlanBillingContr
 export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 	const { product, setProduct } = useProduct();
 	const { sheetType } = useSheet();
+	const { customer_id } = useParams();
+	const isCustomPlan = notNullish(customer_id);
 
 	const hasMetadata = Object.keys(product.metadata ?? {}).length > 0;
 	const [metadataOpened, setMetadataOpened] = useState(false);
 	const showMetadata = hasMetadata || metadataOpened;
+
+	const hasBillingControlsConfigured = hasBillingControls(
+		product.billing_controls,
+	);
+	const [billingControlsOpened, setBillingControlsOpened] = useState(false);
+	const showBillingControls =
+		hasBillingControlsConfigured || billingControlsOpened;
 
 	if (!product) return null;
 
@@ -80,7 +96,52 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 										})
 									}
 								/>
-								<PlanBillingControlsSection />
+								{isCustomPlan ? (
+									<div className="flex items-start gap-[6px] text-sm">
+										<Checkbox
+											checked={false}
+											disabled
+											size="sm"
+											className="mt-[3px]"
+										/>
+										<div className="flex items-center gap-1.5">
+											<span className="cursor-not-allowed select-none font-medium text-muted-foreground opacity-50">
+												Billing controls
+											</span>
+											<Tooltip>
+												<TooltipTrigger asChild>
+													<InfoIcon
+														className="size-3.5 text-tertiary-foreground"
+														weight="fill"
+													/>
+												</TooltipTrigger>
+												<TooltipContent side="right" className="max-w-60">
+													Billing controls can't be set per subscription. Edit
+													the customer's billing controls to change them for
+													this customer, or the plan to change the default.
+												</TooltipContent>
+											</Tooltip>
+										</div>
+									</div>
+								) : (
+									<AreaCheckbox
+										title="Billing controls"
+										description="Default controls applied when this plan is attached."
+										checked={showBillingControls}
+										onCheckedChange={(checked) => {
+											if (checked) {
+												setBillingControlsOpened(true);
+											} else {
+												setBillingControlsOpened(false);
+												setProduct({ ...product, billing_controls: {} });
+											}
+										}}
+									>
+										{showBillingControls && (
+											<PlanBillingControlsSection hideHeader />
+										)}
+									</AreaCheckbox>
+								)}
 								<AreaCheckbox
 									title="Metadata"
 									description="Arbitrary JSON for your own use (e.g. UI copy). Shared across every version of the plan."

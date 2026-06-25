@@ -53,7 +53,6 @@ export const getSupportedFormOverridesFromProductCustomization = ({
 	const overrides: Partial<UpdateSubscriptionForm> = {
 		items: customizedProduct.items ?? null,
 		version: customizedProduct.version ?? currentVersion,
-		billingControls: customizedProduct.billing_controls ?? null,
 	};
 
 	const hasExplicitTrial = customizedProduct.free_trial !== undefined;

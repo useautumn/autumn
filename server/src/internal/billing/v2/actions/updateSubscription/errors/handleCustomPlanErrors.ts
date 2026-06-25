@@ -37,13 +37,13 @@ export const handleCustomPlanErrors = ({
 		cusProduct: newCustomerProduct,
 	});
 
-	const { itemsSame, onlyEntsChanged, billingControlsSame } = productsAreSame({
+	const { itemsSame, onlyEntsChanged } = productsAreSame({
 		curProductV1: currentFullProduct,
 		newProductV1: newFullProduct,
 		features: ctx.features,
 	});
 
-	if (itemsSame && billingControlsSame) {
+	if (itemsSame) {
 		throw new RecaseError({
 			message:
 				"Custom plan configuration is identical to the current subscription; no update is needed",

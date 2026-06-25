@@ -3,14 +3,13 @@
  *
  * checkUsageAlerts runs two passes:
  *   1. customer scope — resolveCustomerScopeAlerts returns the customer's own
- *      alerts, or FALLS BACK to the plan's snapshotted alerts when the customer
- *      has none for the feature. Measured against the pooled balance, no entity_id.
+ *      alerts, or FALLS BACK to the plan-level alerts (on the product) when the
+ *      customer has none for the feature. Measured against the pooled balance, no entity_id.
  *   2. entity scope — only runs when the track is entity-scoped (`if (entityId)`).
  *
  * Setup: pooled messages 100 + per-entity messages 50, one entity.
- *   - plan default alert: remaining 10 (seeded via customize.billing_controls on
- *     attach → snapshotted onto the customer_product = the plan-default the
- *     runtime resolver reads).
+ *   - plan default alert: remaining 10 (seeded as plan-level billing_controls on
+ *     the product = the plan-default the runtime resolver reads).
  *   - customer: no alert.
  *   - entity alert: remaining 20.
  *
@@ -99,6 +98,16 @@ test(`${chalk.yellowBright("plan-default-cus-track: customer-level track uses th
 	const prod = products.base({
 		id: "plan-default-cus-track-1",
 		items: [pooledMessages, perEntityMessages],
+		billingControls: {
+			usage_alerts: [
+				{
+					feature_id: TestFeature.Messages,
+					threshold: 10,
+					threshold_type: "remaining",
+					enabled: true,
+				},
+			],
+		},
 	});
 
 	const customerId = "usage-alert-plan-default-cus-track-1";
@@ -112,16 +121,6 @@ test(`${chalk.yellowBright("plan-default-cus-track: customer-level track uses th
 		actions: [
 			s.billing.attach({
 				productId: prod.id,
-				billingControls: {
-					usage_alerts: [
-						{
-							feature_id: TestFeature.Messages,
-							threshold: 10,
-							threshold_type: "remaining",
-							enabled: true,
-						},
-					],
-				},
 			}),
 		],
 	});

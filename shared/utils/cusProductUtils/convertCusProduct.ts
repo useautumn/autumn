@@ -3,17 +3,16 @@ import { customerEntitlementToBillingType } from "@utils/cusEntUtils/convertCusE
 import { sortCusEntsForDeduction } from "@utils/cusEntUtils/sortCusEntsForDeduction.js";
 import { isOneOffPrice } from "@utils/productUtils/priceUtils/classifyPriceUtils.js";
 import { notNullish } from "@utils/utils.js";
+import type { Entity } from "../../models/cusModels/entityModels/entityModels.js";
 import type { FullCustomerPrice } from "../../models/cusProductModels/cusPriceModels/cusPriceModels.js";
 import type { CusProductStatus } from "../../models/cusProductModels/cusProductEnums.js";
 import type {
 	CusProduct,
 	FullCusProduct,
 } from "../../models/cusProductModels/cusProductModels.js";
-import type { Entity } from "../../models/cusModels/entityModels/entityModels.js";
 import { ProcessorType } from "../../models/genModels/genEnums.js";
 import type { BillingType } from "../../models/productModels/priceModels/priceEnums.js";
 import type { FullProduct } from "../../models/productModels/productModels.js";
-import { pickBillingControlColumns } from "../../models/cusModels/billingControls/customerBillingControls.js";
 import { getBillingType } from "../productUtils/priceUtils.js";
 
 export const cusProductsToPrices = ({
@@ -158,7 +157,6 @@ export const cusProductToProduct = ({
 }) => {
 	return {
 		...cusProduct.product,
-		...pickBillingControlColumns(cusProduct),
 		prices: cusProductToPrices({ cusProduct }),
 		entitlements: cusProductToEnts({ cusProduct }),
 		free_trial: cusProduct.free_trial,

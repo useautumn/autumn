@@ -43,7 +43,10 @@ const mergeControlsByFeature = <
 			planCustomerProducts.flatMap(
 				(customerProduct) =>
 					(
-						customerProduct[controlKey] as TControl[] | null | undefined
+						customerProduct.product?.[controlKey] as
+							| TControl[]
+							| null
+							| undefined
 					)?.map((entry) => entry.feature_id) ?? [],
 			),
 		),

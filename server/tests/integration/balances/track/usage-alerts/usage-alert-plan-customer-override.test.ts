@@ -4,7 +4,7 @@
  * checkUsageAlerts:
  *   1. customer-scope pass — resolveCustomerScopeAlerts returns the customer's
  *      own alerts if it has ANY for the feature, otherwise falls back to the
- *      plan's snapshotted alerts. So a customer alert SHADOWS every plan alert
+ *      plan's alerts (resolved from the product). So a customer alert SHADOWS every plan alert
  *      for that feature. Measured against the customer-scope AGGREGATE balance
  *      (pooled + every per-entity pool), no entity_id.
  *   2. entity-scope pass — the entity's own alerts, measured against the
@@ -13,7 +13,7 @@
  * Setup: pooled messages 100 + per-entity messages 50, one entity.
  *   - customer-scope aggregate granted = 150 (100 pooled + 50 entity)
  *   - entity-scope combined granted     = 150 (50 own + 100 shared)
- *   - plan alert:     remaining 60 (snapshot via attach billingControls)
+ *   - plan alert:     remaining 60 (seeded on the product fixture)
  *   - customer alert: remaining 50
  *   - entity alert:   remaining 40
  *
@@ -99,6 +99,16 @@ test(`${chalk.yellowBright("plan-cus-override: customer alert shadows plan alert
 	const prod = products.base({
 		id: "plan-cus-override-1",
 		items: [pooledMessages, perEntityMessages],
+		billingControls: {
+			usage_alerts: [
+				{
+					feature_id: TestFeature.Messages,
+					threshold: 60,
+					threshold_type: "remaining",
+					enabled: true,
+				},
+			],
+		},
 	});
 
 	const customerId = "usage-alert-plan-cus-override-1";
@@ -112,16 +122,6 @@ test(`${chalk.yellowBright("plan-cus-override: customer alert shadows plan alert
 		actions: [
 			s.billing.attach({
 				productId: prod.id,
-				billingControls: {
-					usage_alerts: [
-						{
-							feature_id: TestFeature.Messages,
-							threshold: 60,
-							threshold_type: "remaining",
-							enabled: true,
-						},
-					],
-				},
 			}),
 		],
 	});
