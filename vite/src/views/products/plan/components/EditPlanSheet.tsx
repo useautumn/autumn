@@ -110,10 +110,13 @@ export function EditPlanSheet({ isOnboarding }: { isOnboarding?: boolean }) {
 											</span>
 											<Tooltip>
 												<TooltipTrigger asChild>
-													<InfoIcon
-														className="size-3.5 text-tertiary-foreground"
-														weight="fill"
-													/>
+													<button
+														type="button"
+														aria-label="Why billing controls are disabled here"
+														className="inline-flex cursor-help text-tertiary-foreground"
+													>
+														<InfoIcon className="size-3.5" weight="fill" />
+													</button>
 												</TooltipTrigger>
 												<TooltipContent side="right" className="max-w-60">
 													Billing controls can't be set per subscription. Edit
