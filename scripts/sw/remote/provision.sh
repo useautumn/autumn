@@ -145,8 +145,13 @@ phase_setup() {
   fi
   if [ -f /tmp/sw-zshrc ]; then
     [ -f "$HOME/.zshrc" ] && cp "$HOME/.zshrc" "$HOME/.zshrc.sw-bak" 2>/dev/null || true
-    cp /tmp/sw-zshrc "$HOME/.zshrc"
+    # Comment out top-level (col-0) macOS-only lines — homebrew PATH exports and
+    # launchctl. Guarded blocks (`if [[ -f /opt/homebrew/… ]]`) self-skip on Linux,
+    # and only col-0 matches so we never empty out an if-body and break syntax.
+    sed -E 's@^(export[[:space:]].*opt/homebrew.*|launchctl[[:space:]].*)@# sw-stripped (macOS-only): \1@' \
+      /tmp/sw-zshrc >"$HOME/.zshrc"
   fi
+  [ -f /tmp/sw-p10k.zsh ] && cp /tmp/sw-p10k.zsh "$HOME/.p10k.zsh"
   # Append a managed block so `bun`, `lazygit`, etc. are on PATH (a non-login ssh
   # session doesn't source the profile), plus `dev` to (re)attach the server tmux.
   for rc in "$HOME/.zshrc" "$HOME/.bashrc" "$HOME/.profile"; do
@@ -162,6 +167,11 @@ phase_setup() {
   done
   ZSH_BIN="$(command -v zsh || true)"
   [ -n "$ZSH_BIN" ] && sudo chsh -s "$ZSH_BIN" "$(id -un)" >/dev/null 2>&1 || true
+  # Pre-warm zinit so it clones p10k + plugins now (not on your first pane).
+  if [ -n "$ZSH_BIN" ]; then
+    log "pre-installing zinit + p10k (first shell would otherwise clone them)"
+    timeout 180 "$ZSH_BIN" -ic exit >>"$LOG_DIR/zsh-warmup.log" 2>&1 || true
+  fi
 
   # --- env: infisical export (base) + per-worktree native-service overrides ---
   local OVERRIDES MERGED

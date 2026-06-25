@@ -66,9 +66,11 @@ export async function cmdRemote({
 		hookRemote,
 	);
 	scpTo(vm.ssh_dest, baseEnvLocal, baseEnvRemote);
-	// Ship your local zshrc so the box shell feels like home (provision installs it).
+	// Ship your local zshrc + p10k config so the box shell feels like home.
 	const localZshrc = join(homedir(), ".zshrc");
 	if (existsSync(localZshrc)) scpTo(vm.ssh_dest, localZshrc, "/tmp/sw-zshrc");
+	const localP10k = join(homedir(), ".p10k.zsh");
+	if (existsSync(localP10k)) scpTo(vm.ssh_dest, localP10k, "/tmp/sw-p10k.zsh");
 
 	const httpsOrigin = toHttpsOrigin(originUrl(checkout));
 
