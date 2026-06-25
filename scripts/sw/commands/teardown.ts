@@ -4,10 +4,12 @@ import { removeMarker } from "../helpers/marker.ts";
 import { deleteSwBranch, listSwBranchNames } from "../helpers/neon.ts";
 import { getEntry, loadRegistry, removeEntry } from "../helpers/registry.ts";
 import { log, sh, shInherit } from "../helpers/shell.ts";
+import { ensureSshKeyLoaded } from "../helpers/ssh.ts";
 
 /** Delete exe.dev VMs + Neon branches that sw created but the registry forgot
  * (e.g. an interrupted `bun sw` that died before recording the entry). */
 function teardownOrphans(): void {
+	ensureSshKeyLoaded(); // removeVm ssh's the lobby
 	const entries = Object.values(loadRegistry());
 	const knownVms = new Set(entries.map((e) => e.vmName).filter(Boolean));
 	const knownBranches = new Set(
@@ -59,6 +61,7 @@ export async function cmdTeardown({
 		shInherit("bun", ["run", "dw:teardown"], { cwd: entry.path });
 		sh("tmux", ["kill-session", "-t", tmuxServerSession(entry.slug)]);
 	} else {
+		ensureSshKeyLoaded(); // removeVm ssh's the lobby
 		if (entry.vmName) removeVm(entry.vmName);
 		if (entry.neonBranchName) deleteSwBranch(entry.neonBranchName);
 		removeMarker(entry.path);
