@@ -1,19 +1,10 @@
 {
   "$schema": "https://capy.ai/settings.schema.json",
   "hooks": {
-    "setup": [
-      {
-        "command": "bun agent:bootstrap"
-      }
-    ],
     "terminals": [
       {
         "name": "dev",
-        "command": "bun dev:agent"
-      },
-      {
-        "name": "cron",
-        "command": "bun run c"
+        "command": "bun dev"
       }
     ],
     "previews": [
@@ -25,9 +16,6 @@
         "name": "Server",
         "port": 8080
       }
-    ],
-    "context": {
-      "maxOutputLength": 2000
-    }
+    ]
   }
 }
