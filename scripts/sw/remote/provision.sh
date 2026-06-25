@@ -239,6 +239,18 @@ printf '%s\n%s\n' "$box" "$url" | python3 -c "import socket,sys,os; s=socket.soc
 XDGOPEN
   chmod +x "$BIN_DIR/xdg-open"
 
+  # `swcursor` prints a Cursor remote-ssh deeplink for this box + path. Click it
+  # (herdr opens it on your Mac) to open the worktree in Cursor over Remote-SSH.
+  cat >"$BIN_DIR/swcursor" <<'SWCURSOR'
+#!/bin/sh
+host="$(cat "$HOME/.config/sw/ssh-dest" 2>/dev/null)"
+[ -n "$host" ] || { echo "swcursor: no box ssh-dest recorded" >&2; exit 1; }
+path="${1:-$PWD}"
+hexhost="$(printf '%s' "$host" | python3 -c "import sys; print(sys.stdin.read().strip().encode().hex())")"
+printf 'cursor://vscode-remote/ssh-remote+%s%s\n' "$hexhost" "$path"
+SWCURSOR
+  chmod +x "$BIN_DIR/swcursor"
+
   # --- env: infisical export (base) + per-worktree native-service overrides ---
   local OVERRIDES MERGED
   OVERRIDES="$(cat <<EOF
