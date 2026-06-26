@@ -1,5 +1,5 @@
 // import { endpoint } from "@/utils/constants/constants";
-import type { ApiVersion, AppEnv } from "@autumn/shared";
+import { AppEnv, type ApiVersion } from "@autumn/shared";
 import axios from "axios";
 import { useMemo } from "react";
 import { useActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
