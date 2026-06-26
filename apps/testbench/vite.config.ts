@@ -12,10 +12,10 @@ export default defineConfig({
 	resolve: {
 		dedupe: ["react", "react-dom"],
 		alias: [
-			// `@` resolves into the MAIN vite app's src so its reused components find
-			// their own `@/components/ui/...` + `@/lib/utils` imports unmodified.
-			// Testbench's own files import each other via relative paths.
-			{ find: "@", replacement: path.resolve(__dirname, "../../vite/src") },
+			// `@` resolves into the shared @autumn/ui package src so reused components
+			// find their `@/components/ui/...` + `@/lib/utils` paths. Testbench's own
+			// files import each other via relative paths.
+			{ find: "@", replacement: path.resolve(__dirname, "../../packages/ui/src") },
 			{ find: /^react$/, replacement: require.resolve("react") },
 			{ find: /^react-dom$/, replacement: require.resolve("react-dom") },
 			{
