@@ -785,6 +785,50 @@ test.concurrent(
 );
 
 test.concurrent(
+	`${chalk.yellowBright("create-schedule preview 13b: stale immediate first phase does not backdate an existing subscription")}`,
+	async () => {
+		const pro = products.pro({
+			id: "preview-stale-immediate-pro",
+			items: [items.monthlyMessages({ includedUsage: 100 })],
+		});
+		const premium = products.premium({
+			id: "preview-stale-immediate-premium",
+			items: [items.monthlyMessages({ includedUsage: 500 })],
+		});
+
+		const { customerId, autumnV1, advancedTo } = await initScenario({
+			customerId: "create-schedule-preview-stale-immediate",
+			setup: [
+				s.customer({ paymentMethod: "success" }),
+				s.products({ list: [pro, premium] }),
+			],
+			actions: [s.billing.attach({ productId: pro.id })],
+		});
+
+		const transitionAt = truncateMsToSecondPrecision(advancedTo + ms.days(15));
+		const preview = await previewCreateSchedule({
+			autumnV1,
+			params: {
+				customer_id: customerId,
+				phases: [
+					{
+						starts_at: advancedTo - ms.minutes(2),
+						plans: [{ plan_id: pro.id }],
+					},
+					{
+						starts_at: transitionAt,
+						plans: [{ plan_id: premium.id }],
+					},
+				],
+			},
+		});
+
+		expect(preview.line_items).toHaveLength(0);
+		expect(preview.next_cycle?.starts_at).toBe(transitionAt);
+	},
+);
+
+test.concurrent(
 	`${chalk.yellowBright("create-schedule preview 14: phase boundary prorates annual and monthly items independently")}`,
 	async () => {
 		const group = "preview-mixed-interval-phase";
