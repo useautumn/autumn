@@ -1,8 +1,12 @@
 import type Stripe from "stripe";
-import { filterCustomerProductsByStripeSubscriptionId } from "@autumn/shared";
+import {
+	filterCustomerProductsByStripeSubscriptionId,
+	type FullCusProduct,
+} from "@autumn/shared";
 import { billingActions } from "@/internal/billing/v2/actions";
 import { canAutoSync } from "@/internal/billing/v2/actions/sync/canAutoSync";
 import { subscriptionToSyncParams } from "@/internal/billing/v2/actions/sync/subscriptionToSyncParams";
+import type { SyncV2Result } from "@/internal/billing/v2/actions/sync/syncV2";
 import { isAutumnManagedSubscriptionMetadata } from "@/internal/billing/v2/providers/stripe/utils/common/autumnStripeMetadata";
 import { CusProductService } from "@/internal/customers/cusProducts/CusProductService";
 import type { StripeWebhookContext } from "../../../webhookMiddlewares/stripeWebhookContext";
@@ -11,6 +15,8 @@ import {
 	trackCustomerProductUpdate,
 } from "../../common/trackCustomerProductUpdate";
 import type { StripeSubscriptionUpdatedContext } from "../stripeSubscriptionUpdatedContext";
+
+type SyncParamsResult = Awaited<ReturnType<typeof subscriptionToSyncParams>>;
 
 const stripeProductId = (
 	product: string | Stripe.Product | Stripe.DeletedProduct,
@@ -40,6 +46,74 @@ const priceOrProductChanged = ({
 				stripeProductId(previousItem.price.product)
 		);
 	});
+};
+
+const shouldSyncPlanChange = ({
+	match,
+	params,
+	linkedProduct,
+}: {
+	match: SyncParamsResult["match"];
+	params: SyncParamsResult["params"];
+	linkedProduct: FullCusProduct;
+}) => {
+	const currentPhase = match.phaseMatches.find((phase) => phase.is_current);
+	const matchedPlan = currentPhase?.plans[0];
+
+	return (
+		currentPhase?.plans.length === 1 &&
+		params.phases?.length === 1 &&
+		params.phases[0].plans.length === 1 &&
+		matchedPlan?.product.id !== linkedProduct.product.id &&
+		matchedPlan?.product.group === linkedProduct.product.group
+	);
+};
+
+const trackSyncResult = async ({
+	ctx,
+	subscriptionUpdatedContext,
+	result,
+	linkedProducts,
+}: {
+	ctx: StripeWebhookContext;
+	subscriptionUpdatedContext: StripeSubscriptionUpdatedContext;
+	result: SyncV2Result;
+	linkedProducts: FullCusProduct[];
+}) => {
+	const { customerProducts, fullCustomer } = subscriptionUpdatedContext;
+
+	for (const id of result.expired_cus_product_ids) {
+		const customerProduct =
+			customerProducts.find((cp) => cp.id === id) ??
+			linkedProducts.find((cp) => cp.id === id);
+		const syncedProduct = await CusProductService.getFull({ db: ctx.db, id });
+		if (!customerProduct || !syncedProduct) continue;
+
+		trackCustomerProductUpdate({
+			eventContext: subscriptionUpdatedContext,
+			customerProduct,
+			updates: {
+				status: syncedProduct.status,
+				canceled: syncedProduct.canceled,
+				canceled_at: syncedProduct.canceled_at,
+				ended_at: syncedProduct.ended_at,
+			},
+		});
+	}
+
+	for (const id of result.inserted_cus_product_ids) {
+		const customerProduct = await CusProductService.getFull({ db: ctx.db, id });
+		if (!customerProduct) continue;
+
+		if (!fullCustomer.customer_products.some((cp) => cp.id === id)) {
+			fullCustomer.customer_products.push(customerProduct);
+		}
+
+		trackCustomerProductInsertion({
+			eventContext: subscriptionUpdatedContext,
+			customerProduct,
+		});
+	}
 };
 
 export const autoSyncUpdatedSubscription = async ({
@@ -88,52 +162,14 @@ export const autoSyncUpdatedSubscription = async ({
 		return;
 	}
 
-	const currentPhase = match.phaseMatches.find((phase) => phase.is_current);
-	const matchedPlan = currentPhase?.plans[0];
-	const linkedProduct = linkedProducts[0].product;
-	if (
-		!currentPhase ||
-		currentPhase.plans.length !== 1 ||
-		params.phases?.length !== 1 ||
-		params.phases[0].plans.length !== 1 ||
-		matchedPlan?.product.id === linkedProduct.id ||
-		matchedPlan?.product.group !== linkedProduct.group
-	) {
-		return;
-	}
+	const linkedProduct = linkedProducts[0];
+	if (!shouldSyncPlanChange({ match, params, linkedProduct })) return;
 
 	const result = await billingActions.syncV2({ ctx, params });
-
-	for (const id of result.expired_cus_product_ids) {
-		const customerProduct =
-			customerProducts.find((cp) => cp.id === id) ??
-			linkedProducts.find((cp) => cp.id === id);
-		const syncedProduct = await CusProductService.getFull({ db: ctx.db, id });
-		if (!customerProduct || !syncedProduct) continue;
-
-		trackCustomerProductUpdate({
-			eventContext: subscriptionUpdatedContext,
-			customerProduct,
-			updates: {
-				status: syncedProduct.status,
-				canceled: syncedProduct.canceled,
-				canceled_at: syncedProduct.canceled_at,
-				ended_at: syncedProduct.ended_at,
-			},
-		});
-	}
-
-	for (const id of result.inserted_cus_product_ids) {
-		const customerProduct = await CusProductService.getFull({ db: ctx.db, id });
-		if (!customerProduct) continue;
-
-		if (!fullCustomer.customer_products.some((cp) => cp.id === id)) {
-			fullCustomer.customer_products.push(customerProduct);
-		}
-
-		trackCustomerProductInsertion({
-			eventContext: subscriptionUpdatedContext,
-			customerProduct,
-		});
-	}
+	await trackSyncResult({
+		ctx,
+		subscriptionUpdatedContext,
+		result,
+		linkedProducts,
+	});
 };
