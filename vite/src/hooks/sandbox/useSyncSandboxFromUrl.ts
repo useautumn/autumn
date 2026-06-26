@@ -1,3 +1,4 @@
+import { sandboxSlug } from "@autumn/shared";
 import { useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router";
 import { useOrg } from "@/hooks/common/useOrg";
@@ -5,7 +6,6 @@ import { useSandboxesQuery } from "@/hooks/queries/useSandboxesQuery";
 import {
 	getSandboxSlugFromPath,
 	SANDBOX_PREFIX,
-	sandboxSlug,
 } from "@/hooks/sandbox/sandboxUrl";
 import {
 	getActiveSandbox,

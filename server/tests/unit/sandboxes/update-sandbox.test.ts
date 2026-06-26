@@ -68,6 +68,22 @@ describe("updateSandboxForOrg (ownership-guarded)", () => {
 		});
 	});
 
+	test("rejects a rename to a reserved-slug name, no update", async () => {
+		state.target = sandbox();
+		await expect(
+			call("org_sandbox", { name: "Products" }),
+		).rejects.toMatchObject({ code: ErrCode.InvalidRequest });
+		expect(state.updateCalls.length).toBe(0);
+	});
+
+	test("rejects a rename to a name that slugifies to empty, no update", async () => {
+		state.target = sandbox();
+		await expect(call("org_sandbox", { name: "🚀🎉" })).rejects.toMatchObject({
+			code: ErrCode.InvalidRequest,
+		});
+		expect(state.updateCalls.length).toBe(0);
+	});
+
 	test("updates an owned sandbox, mapping tokens to columns", async () => {
 		state.target = sandbox();
 		await call("org_sandbox", {

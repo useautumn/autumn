@@ -1,4 +1,9 @@
-import { DEFAULT_SANDBOX_COLOR, DEFAULT_SANDBOX_ICON } from "@autumn/shared";
+import {
+	DEFAULT_SANDBOX_COLOR,
+	DEFAULT_SANDBOX_ICON,
+	sandboxSlug,
+	validateSandboxName,
+} from "@autumn/shared";
 import {
 	Dialog,
 	DialogContent,
@@ -12,7 +17,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router";
 import { toast } from "sonner";
 import { useCreateSandbox } from "@/hooks/queries/useSandboxesQuery";
-import { sandboxSlug, validateSandboxName } from "@/hooks/sandbox/sandboxUrl";
 import { setActiveSandbox } from "@/hooks/sandbox/useActiveSandbox";
 import { getBackendErr } from "@/utils/genUtils";
 import { SandboxFormFields } from "./SandboxFormFields";

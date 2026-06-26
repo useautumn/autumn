@@ -1,3 +1,4 @@
+import { validateSandboxName } from "@autumn/shared";
 import {
 	Dialog,
 	DialogContent,
@@ -12,7 +13,6 @@ import {
 	type SandboxSummary,
 	useUpdateSandbox,
 } from "@/hooks/queries/useSandboxesQuery";
-import { validateSandboxName } from "@/hooks/sandbox/sandboxUrl";
 import { getBackendErr } from "@/utils/genUtils";
 import { SandboxFormFields } from "./SandboxFormFields";
 
@@ -35,10 +35,12 @@ export const EditSandboxDialog = ({
 		if (!trimmed) {
 			return;
 		}
-		const nameError = validateSandboxName(trimmed);
-		if (nameError) {
-			toast.error(nameError);
-			return;
+		if (trimmed !== sandbox.name) {
+			const nameError = validateSandboxName(trimmed);
+			if (nameError) {
+				toast.error(nameError);
+				return;
+			}
 		}
 
 		try {

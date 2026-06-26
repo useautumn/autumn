@@ -8,6 +8,8 @@ import {
 	RecaseError,
 	type SandboxColor,
 	type SandboxIcon,
+	sandboxSlug,
+	validateSandboxName,
 } from "@autumn/shared";
 import { Autumn } from "autumn-js";
 import type { User } from "better-auth";
@@ -18,7 +20,6 @@ import { createKey } from "@/internal/dev/api-keys/apiKeyUtils.js";
 import { deletePlatformSubOrg } from "@/internal/orgs/deleteOrg/deletePlatformSubOrg.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
 import { provisionSubOrg } from "@/internal/orgs/orgUtils/provisionSubOrg.js";
-import { slugify } from "@/utils/genUtils.js";
 
 /**
  * Sandbox creation is a dashboard action: it needs the acting user (for Stripe
@@ -90,15 +91,18 @@ export const assertSandboxCapacity = async ({
 	db,
 	masterOrgId,
 	checkCapacity = defaultSandboxCapacityCheck,
+	existing,
 }: {
 	db: DrizzleCli;
 	masterOrgId: string;
 	checkCapacity?: SandboxCapacityCheck;
+	existing?: Awaited<ReturnType<typeof OrgService.listSandboxes>>;
 }): Promise<void> => {
-	const existing = await OrgService.listSandboxes({ db, masterOrgId });
+	const sandboxes =
+		existing ?? (await OrgService.listSandboxes({ db, masterOrgId }));
 	const { allowed } = await checkCapacity({
 		customerId: masterOrgId,
-		requiredBalance: existing.length + 1,
+		requiredBalance: sandboxes.length + 1,
 	});
 	if (allowed === false) {
 		throw new RecaseError({
@@ -114,21 +118,35 @@ export const assertSandboxNameUnique = async ({
 	masterOrgId,
 	name,
 	excludeOrgId,
+	existing,
 }: {
 	db: DrizzleCli;
 	masterOrgId: string;
 	name: string;
 	excludeOrgId?: string;
+	existing?: Awaited<ReturnType<typeof OrgService.listSandboxes>>;
 }): Promise<void> => {
-	const slug = slugify(name, "dash");
-	const existing = await OrgService.listSandboxes({ db, masterOrgId });
-	const taken = existing.some(
+	const slug = sandboxSlug(name);
+	const sandboxes =
+		existing ?? (await OrgService.listSandboxes({ db, masterOrgId }));
+	const taken = sandboxes.some(
 		(sandbox) =>
-			sandbox.id !== excludeOrgId && slugify(sandbox.name, "dash") === slug,
+			sandbox.id !== excludeOrgId && sandboxSlug(sandbox.name) === slug,
 	);
 	if (taken) {
 		throw new RecaseError({
 			message: `A sandbox named "${name}" already exists`,
+			code: ErrCode.InvalidRequest,
+			statusCode: 400,
+		});
+	}
+};
+
+export const assertSandboxNameValid = ({ name }: { name: string }): void => {
+	const error = validateSandboxName(name);
+	if (error) {
+		throw new RecaseError({
+			message: error,
 			code: ErrCode.InvalidRequest,
 			statusCode: 400,
 		});
@@ -150,10 +168,20 @@ export const createSandboxForOrg = async ({
 	color?: SandboxColor;
 	icon?: SandboxIcon;
 }): Promise<{ org: Organization; secret_key: string }> => {
-	await assertSandboxCapacity({ db, masterOrgId: masterOrg.id });
-	await assertSandboxNameUnique({ db, masterOrgId: masterOrg.id, name });
+	assertSandboxNameValid({ name });
+	const existing = await OrgService.listSandboxes({
+		db,
+		masterOrgId: masterOrg.id,
+	});
+	await assertSandboxCapacity({ db, masterOrgId: masterOrg.id, existing });
+	await assertSandboxNameUnique({
+		db,
+		masterOrgId: masterOrg.id,
+		name,
+		existing,
+	});
 
-	const slug = `${slugify(name, "dash")}-${generateId()}|${masterOrg.id}`;
+	const slug = `${sandboxSlug(name)}-${generateId()}|${masterOrg.id}`;
 
 	const org = await provisionSubOrg({
 		db,

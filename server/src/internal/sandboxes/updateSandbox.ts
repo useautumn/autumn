@@ -1,7 +1,10 @@
 import type { Organization, SandboxColor, SandboxIcon } from "@autumn/shared";
 import type { DrizzleCli } from "@/db/initDrizzle.js";
 import { OrgService } from "@/internal/orgs/OrgService.js";
-import { assertSandboxNameUnique } from "./createSandbox.js";
+import {
+	assertSandboxNameUnique,
+	assertSandboxNameValid,
+} from "./createSandbox.js";
 import { getOwnedSandbox } from "./getOwnedSandbox.js";
 
 export const updateSandboxForOrg = async ({
@@ -18,6 +21,7 @@ export const updateSandboxForOrg = async ({
 	await getOwnedSandbox({ db, masterOrg, sandboxId });
 
 	if (updates.name !== undefined) {
+		assertSandboxNameValid({ name: updates.name });
 		await assertSandboxNameUnique({
 			db,
 			masterOrgId: masterOrg.id,
